@@ -105,7 +105,7 @@ button.big:active{transform:translateY(3px)}
 
 /* ---- shop: riveted hardware plates with drawn unit silhouettes ---- */
 #shop{display:flex;gap:12px;margin-top:10px;align-items:stretch}
-#shop-cards{display:grid;grid-template-columns:repeat(9,1fr);gap:8px;flex:1}
+#shop-cards{display:grid;grid-template-columns:repeat(10,1fr);gap:7px;flex:1}
 .card{position:relative;background:linear-gradient(180deg,#28321f,#161d11 70%);
   border:1.5px solid var(--line);
   clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
@@ -228,6 +228,13 @@ button.big:active{transform:translateY(3px)}
         <path d="M14 34h10M40 34h10" stroke-width="2"/>
       </g>
     </symbol>
+    <symbol id="i-builder" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M8 34h36l8-6H8z"/><path d="M15 34v5M28 34v5M43 34v5" stroke-width="4"/>
+        <path d="M18 28V12l28-7-17 12v11"/><path d="M46 5v12M41 17h10" stroke-width="2.3"/>
+        <path d="M12 24h14M12 19h10" stroke-width="2.2"/><circle cx="29" cy="28" r="3" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
     <symbol id="i-missile" viewBox="0 0 64 48">
       <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
         <path d="M18 36L43 11l8-4-2 9L25 41z"/><path d="M43 11l6 6M25 41l-8 2 3-8M31 35l-10 1 9-9M34 32l1-10-9 9" stroke-width="2.3"/>
@@ -287,10 +294,11 @@ button.big:active{transform:translateY(3px)}
           танки, БТР, РСЗО, FPV-дроны, бомбардировщики, ПВО, РЭБ и крылатые ракеты.
         </p>
         <p class="brief"><b>Цель кампании:</b> захватить <b>три города</b> противника подряд. После падения первого карта расширится, захваченный город станет твоей передовой базой, а впереди откроется следующий. Третий город — финальный. Если враг уничтожит твою текущую базу — кампания проиграна.<br>
-        Кредиты идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки.<br><b>Штаб врага адаптивный:</b> против твоих танков он соберёт FPV, против дронов — щит ПВО+РЭБ, против пехоты — РСЗО. Танки, пехота, РСЗО, ПВО и РЭБ врага действуют одной боевой группой.</p>
+        Кредиты идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки.<br><b>Штаб врага адаптивный:</b> против твоих танков он соберёт FPV, против дронов — щит ПВО+РЭБ, против пехоты — РСЗО. Танки, пехота, РСЗО, ПВО и РЭБ врага действуют одной боевой группой.<br><b>После первого города</b> откроются строители: новые города, бункеры, башни ПВО, склады и ремонт.</p>
         <div class="keys">
           <div><kbd>1</kbd>–<kbd>8</kbd> купить юнит</div>
           <div><kbd>9</kbd> ракета, затем клик по цели</div>
+          <div><kbd>0</kbd> строители после первого города</div>
           <div><kbd>F</kbd> ручное управление FPV</div>
           <div><kbd>Пробел</kbd> пауза</div>
         </div>
@@ -323,6 +331,7 @@ button.big:active{transform:translateY(3px)}
           <li><svg class="help-ic"><use href="#i-bomber" xlink:href="#i-bomber"></use></svg><b>Дрон-бомбардировщик (140)</b> — зависает над целью и делает 3 сброса.</li>
           <li><svg class="help-ic"><use href="#i-pvo" xlink:href="#i-pvo"></use></svg><b>ПВО (260)</b> — выезжает от города и разворачивается. Сбивает дроны и крылатые ракеты.</li>
           <li><svg class="help-ic"><use href="#i-reb" xlink:href="#i-reb"></use></svg><b>РЭБ (180)</b> — глушит вражеские дроны в радиусе. Едет за танками — идеальная пара.</li>
+          <li><svg class="help-ic"><use href="#i-builder" xlink:href="#i-builder"></use></svg><b>Строители (170)</b> — клавиша <kbd>0</kbd>, открываются после первого города. Строят <b>новый город</b> (доход и передовая точка войск), бункер, башню ПВО и склад; чинят технику, постройки и базу. Клик по строителю или клавиша <kbd>B</kbd> меняет следующий проект.</li>
           <li><svg class="help-ic"><use href="#i-missile" xlink:href="#i-missile"></use></svg><b>Крылатая ракета (450)</b> — клавиша 9, затем клик по карте. ПВО врага может её перехватить.</li>
         </ul>
         <p><b>Комбо:</b> танки + РЭБ рядом + ПВО сзади. Красный маркер цели даёт около 2,5 секунды предупреждения о вражеской ракете.</p>
@@ -335,7 +344,7 @@ button.big:active{transform:translateY(3px)}
     <div id="shop-cards"></div>
     <div id="log"></div>
   </div>
-  <div id="hint">Карточки внизу или клавиши 1–8. FPV ведётся вручную клавишей <b>F</b>. Когда карта расширится: камера — стрелками или <b>A</b>/<b>D</b>, края экрана и клик по миникарте; <b>C</b> — вернуться к текущему сектору.</div>
+  <div id="hint">Карточки внизу или клавиши 1–8, <b>0</b> — строители после первого города (клик по ним или <b>B</b> — проект). FPV ведётся вручную клавишей <b>F</b>. Камера — стрелки/<b>A</b>/<b>D</b>, края экрана и миникарта; <b>C</b> — текущий сектор.</div>
 </div>
 
 <script>
@@ -355,7 +364,7 @@ window.addEventListener('error', function(e){
 <script>
 'use strict';
 /* ============================================================
-   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.2 (ИИ-командир)
+   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.4 (Строители и сектора)
    Canvas 2D top-down strategy. Symmetric arsenal, Blue vs Red.
    ============================================================ */
 let W = 1600;                       // world width — grows by 950 with each captured enemy city
@@ -382,9 +391,20 @@ const DEFS = {
   bomber:  {name:'Дрон-бомбардировщик', icon:'i-bomber', cost:140, hp:30, speed:88, range:26, dmg:48, rof:2.4, radius:13, desc:'3 сброса с зависания', build:0.9, air:true},
   pvo:     {name:'ПВО', icon:'i-pvo', cost:260, hp:170, speed:30, range:290, dmg:22, rof:0.85, radius:19, desc:'Сбивает дроны и ракеты', build:1.6},
   reb:     {name:'РЭБ', icon:'i-reb', cost:180, hp:150, speed:38, range:105, dmg:5,  rof:0.6, radius:17, desc:'Глушит дроны в радиусе 140', build:1.2},
+  builder: {name:'Строители', icon:'i-builder', cost:170, hp:115, speed:48, range:0, dmg:0, rof:0, radius:16, desc:'После 1-го города: строит и чинит всё', build:1.4},
 };
-const ORDER = ['infantry','btr','tank','mlrs','fpv','bomber','pvo','reb'];
+const ORDER = ['infantry','btr','tank','mlrs','fpv','bomber','pvo','reb','builder'];
 const MISSILE = {cost:450, cd:22};
+/* Builder projects. A finished settlement is a real small city: income,
+   forward spawn point and a repair aura. The three campaign cities remain
+   the victory objectives. */
+const STRUCT_DEFS = {
+  settlement:{name:'Новый город',       cost:420, hp:720, buildTime:18, radius:42, income:3, limit:2},
+  bunker:    {name:'Бункер',             cost:180, hp:380, buildTime:9,  radius:24, range:195, dmg:11, rof:0.75, limit:3},
+  aaTower:   {name:'Башня ПВО',          cost:240, hp:270, buildTime:11, radius:23, range:305, dmg:17, rof:0.8,  limit:2},
+  depot:     {name:'Склад снабжения',    cost:220, hp:320, buildTime:10, radius:27, income:2, limit:2},
+};
+const BUILD_PROJECTS = ['settlement','bunker','aaTower','depot'];
 const SIDE_COLOR = {player:'#4da3ff', enemy:'#ff5545'};
 const DIFF = [ {aiIncome:10.5, aiAggro:1.35, missileEvery:44}, {aiIncome:13.5, aiAggro:1.0, missileEvery:34}, {aiIncome:17.5, aiAggro:0.8, missileEvery:25} ];
 /* Enemy commander brains per difficulty: how fast it re-plans, how much it
@@ -407,7 +427,7 @@ function resetGame(){
     // Campaign of 3 enemy cities: capture one -> world grows, it becomes your forward base.
     sector:1, playerBaseZone:0, enemyCityZone:1, captured:0,
     zoneMax:[2000,2000,2400,2800], zoneHp:[2000,2000,2400,2800],
-    camX:0, camTargetX:0, camManualT:0,
+    camX:0, camTargetX:0, camManualT:0, buildersUnlocked:false, structures:[],
     units:[], projectiles:[], particles:[], floaters:[], craters:[], wrecks:[], warnings:[],
     kills:0, losses:0, shake:0, shopCd:{}, missileCd:0,
     targeting:false, controlled:null, aiT:2.2, aiMissileT:26, alertT:0, cityWarnT:0, uid:1,
@@ -416,11 +436,11 @@ function resetGame(){
     ai:{
       thinkT:0.4, phase:'buildup', phaseT:0, wave:1, attackLane:1, failedLane:-1, failedLaneUntil:0,
       plan:null, pvoPosts:[], pvoPlanT:0, rally:{x:1170,y:450}, waveStartValue:0, assaultCityHp:2000,
-      lastIntelLog:-30, disperse:false,
+      lastIntelLog:-30, disperse:false, missileWait:0,
       strategy:'breakthrough', strategySince:-30, strategyScores:{}, groupTarget:null,
       intel:{spawns:[], missiles:[], estMoney:520, lastSpawnT:0, forecast:{}, style:'mixed',
              airThreat:0, armorThreat:0, swarmThreat:0, artilleryThreat:0, missileThreat:0, airLaneY:450},
-      stats:{waves:0, retreats:0, repositions:0, plannedBuys:0, missiles:0, phases:0},
+      stats:{waves:0, retreats:0, repositions:0, plannedBuys:0, missiles:0, phases:0, forcedAssaults:0},
     },
   };
   ORDER.forEach(k=>G.shopCd[k]=0);
@@ -438,6 +458,17 @@ function sectorFocusX(){ return clamp(playerBaseX0()-180, 0, Math.max(0,W-VIEW_W
 function revealedZones(){ const zs=[]; for(let i=0;i<CITY_ZONE_X.length;i++) if(i===0||CITY_ZONE_X[i]<W) zs.push(i); return zs; }
 function zoneFrac(z){ if(!G||!G.zoneHp) return 1; return clamp(G.zoneHp[z]/G.zoneMax[z],0,1); }
 function syncZoneHp(){ if(!G||!G.zoneHp) return; G.zoneHp[G.playerBaseZone]=G.city.player; G.zoneHp[G.enemyCityZone]=G.city.enemy; }
+function structureIncome(side){ if(!G||!G.structures) return 0; let sum=0;
+  for(const st of G.structures) if(!st.dead&&st.complete&&st.side===side) sum+=STRUCT_DEFS[st.type].income||0;
+  return sum; }
+function playerIncomeRate(){ return (G?G.income:14)+structureIncome('player'); }
+function spawnAnchor(side){
+  const list=(G&&G.structures?G.structures:[]).filter(st=>st.type==='settlement'&&st.complete&&!st.dead&&st.side===side
+    &&st.x>playerBaseWall()+65&&st.x<enemyWallX()-65);
+  if(list.length){ list.sort((a,b)=>side==='player'?b.x-a.x:a.x-b.x); const st=list[0];
+    return {x:st.x+(side==='player'?st.radius+18:-st.radius-18), y:st.y, settlement:st}; }
+  return {x:side==='player'?playerBaseWall()+18:enemyWallX()-18, y:450, settlement:null};
+}
 
 /* ---------------- AUDIO (procedural, no files) ---------------- */
 let AC=null, soundOn=true, noiseBuf=null; const lastSfx={};
@@ -546,8 +577,17 @@ function makeTerrain(){
     c.fillStyle='rgba(160,190,110,0.35)'; c.beginPath(); c.arc(x-r*0.3,y-r*0.3,r*0.45,0,7); c.fill(); }
   // old craters
   for(let i=0;i<Math.round(30*W/1600);i++) drawCrater(c, rand(200,W-200), rand(120,H-120), rand(10,26));
-  // city ground for every revealed city zone
-  for(const z of revealedZones()){ const x0=CITY_ZONE_X[z]; c.fillStyle='#6e6a60'; c.fillRect(x0,0,CITY_W,H);
+  // Distinct ground language per campaign sector (no mid-map buildings).
+  SECTOR_RANGES.forEach((range,i)=>{ if(range[1]<=W) paintSectorTexture(c,range,i); });
+  // city ground for every revealed city zone — each city has its own surface
+  const cityGround=['#6e6a60','#716b5f','#5f625f','#4f4d4b'];
+  for(const z of revealedZones()){ const x0=CITY_ZONE_X[z]; c.fillStyle=cityGround[z]||cityGround[0]; c.fillRect(x0,0,CITY_W,H);
+    c.strokeStyle='rgba(20,20,18,0.28)'; c.lineWidth=1;
+    for(let xx=x0+24;xx<x0+CITY_W;xx+=24){ c.beginPath(); c.moveTo(xx,0); c.lineTo(xx,H); c.stroke(); }
+    for(let yy=48;yy<H;yy+=72){ c.beginPath(); c.moveTo(x0,yy); c.lineTo(x0+CITY_W,yy); c.stroke(); }
+    if(z>=2){ c.fillStyle='rgba(227,185,62,0.5)'; for(let yy=10;yy<H;yy+=42) c.fillRect(x0+5,yy,4,20);
+      c.fillStyle='rgba(15,15,14,0.34)'; for(let yy=31;yy<H;yy+=42) c.fillRect(x0+5,yy,4,16); }
+    if(z===3){ c.fillStyle='rgba(0,0,0,0.22)'; for(let i=0;i<11;i++) c.fillRect(x0+rand(10,CITY_W-28),rand(H-50),rand(12,24),rand(18,42)); }
     for(let i=0;i<900;i++){ c.fillStyle=`rgba(0,0,0,${rand(0.05,0.22)})`; c.fillRect(x0+rand(CITY_W),rand(H),2,2);} }
   // generate city buildings (tagged with their zone for per-city damage state)
   buildings=[];
@@ -560,12 +600,72 @@ function drawCrater(c,x,y,r){
   c.fillStyle=g; c.beginPath(); c.ellipse(x,y,r,r*0.78,0,0,7); c.fill();
 }
 
+/* Sector ground textures: 1 = farmland/forest, 2 = industrial concrete and
+   rail, 3 = dark fortified concrete approach. Decorative only. */
+function paintSectorTexture(c,range,idx){
+  const x1=range[0],x2=range[1],w=x2-x1,mid=(x1+x2)/2;
+  if(idx===0){
+    // crop rows and hedgerows away from the central battle road
+    c.strokeStyle='rgba(54,72,34,0.32)'; c.lineWidth=2;
+    for(const band of [[70,250],[650,835]]){
+      for(let y=band[0];y<band[1];y+=18){ c.beginPath(); c.moveTo(x1+25,y+Math.sin(y)*3); c.lineTo(x2-25,y+Math.cos(y*0.4)*3); c.stroke(); }
+    }
+    c.strokeStyle='rgba(38,58,28,0.5)'; c.lineWidth=5;
+    for(const y of [118,786]){ c.beginPath(); for(let x=x1+20;x<=x2-20;x+=28){ const yy=y+Math.sin(x*0.018+idx)*7; x===x1+20?c.moveTo(x,yy):c.lineTo(x,yy); } c.stroke(); }
+    return;
+  }
+  if(idx===1){
+    c.fillStyle='rgba(76,76,70,0.20)'; c.fillRect(x1,0,w,H);
+    // worn concrete slabs
+    for(let x=x1+18;x<x2-80;x+=118) for(let y=42;y<H-80;y+=104){
+      if(Math.random()<0.16) continue;
+      c.fillStyle=`rgba(${118+rand(24)|0},${118+rand(20)|0},${108+rand(16)|0},${rand(0.10,0.22)})`;
+      c.fillRect(x+rand(-4,4),y+rand(-3,3),rand(82,108),rand(66,94));
+      c.strokeStyle='rgba(35,35,32,0.25)'; c.strokeRect(x,y,104,90);
+    }
+    // railway: ballast, sleepers and two steel rails
+    const ry=632; c.fillStyle='rgba(55,49,42,0.72)'; c.fillRect(x1,ry-17,w,34);
+    c.fillStyle='rgba(88,70,48,0.8)'; for(let x=x1+8;x<x2-8;x+=24) c.fillRect(x,ry-13,13,26);
+    c.strokeStyle='rgba(190,198,205,0.78)'; c.lineWidth=3;
+    for(const off of [-8,8]){ c.beginPath(); c.moveTo(x1,ry+off); c.lineTo(x2,ry+off); c.stroke(); }
+    // service road, oil, rust and standing water
+    c.strokeStyle='rgba(210,205,180,0.34)'; c.lineWidth=4; c.setLineDash([26,20]);
+    c.beginPath(); c.moveTo(x1,238); c.lineTo(x2,238); c.stroke(); c.setLineDash([]);
+    for(let i=0;i<20;i++){ c.fillStyle=i%3?'rgba(20,20,20,0.24)':'rgba(150,88,44,0.20)';
+      c.beginPath(); c.ellipse(rand(x1+35,x2-35),rand(70,H-70),rand(12,44),rand(6,20),rand(Math.PI),0,7); c.fill(); }
+    for(let i=0;i<9;i++){ c.fillStyle='rgba(150,175,190,0.20)';
+      c.beginPath(); c.ellipse(rand(x1+40,x2-40),rand(80,H-80),rand(18,46),rand(6,15),0,0,7); c.fill(); }
+    return;
+  }
+  // Final sector: scorched fortified concrete, dragon's teeth and wire.
+  c.fillStyle='rgba(48,45,40,0.28)'; c.fillRect(x1,0,w,H);
+  c.strokeStyle='rgba(18,18,16,0.32)'; c.lineWidth=2;
+  for(let x=x1+55;x<x2;x+=92){ c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); }
+  for(let y=70;y<H;y+=112){ c.beginPath(); c.moveTo(x1,y); c.lineTo(x2,y); c.stroke(); }
+  for(let i=0;i<34;i++){ c.fillStyle=`rgba(15,13,11,${rand(0.12,0.30)})`;
+    c.beginPath(); c.ellipse(rand(x1+30,x2-30),rand(65,H-65),rand(18,70),rand(8,28),rand(Math.PI),0,7); c.fill(); }
+  // concrete dragon's teeth, seen from above
+  for(const tx of [mid-150,mid+150]) for(let y=145;y<=760;y+=50){
+    if(Math.random()<0.12) continue; const x=tx+rand(-7,7), yy=y+rand(-6,6);
+    c.fillStyle='rgba(0,0,0,0.28)'; c.beginPath(); c.moveTo(x-8,yy+9); c.lineTo(x+10,yy+9); c.lineTo(x+2,yy-6); c.closePath(); c.fill();
+    c.fillStyle='rgba(158,158,150,0.82)'; c.beginPath(); c.moveTo(x-8,yy+7); c.lineTo(x+8,yy+7); c.lineTo(x,yy-9); c.closePath(); c.fill();
+    c.fillStyle='rgba(230,230,220,0.45)'; c.beginPath(); c.moveTo(x-3,yy+3); c.lineTo(x,yy-6); c.lineTo(x+3,yy+3); c.closePath(); c.fill();
+  }
+  // coils of wire flanking the teeth
+  c.strokeStyle='rgba(30,30,28,0.75)'; c.lineWidth=1.6;
+  for(const wx of [mid-190,mid+190]){
+    c.beginPath(); for(let y=120;y<=790;y+=18){ const xx=wx+Math.sin(y*0.11)*7; y===120?c.moveTo(xx,y):c.lineTo(xx,y); } c.stroke();
+    for(let y=128;y<=790;y+=28){ c.beginPath(); c.moveTo(wx-8,y-5); c.lineTo(wx+8,y+5); c.moveTo(wx-8,y+5); c.lineTo(wx+8,y-5); c.stroke(); }
+  }
+  for(let i=0;i<500;i++){ const g=rand(75,150)|0; c.fillStyle=`rgba(${g},${g},${g-8},${rand(0.08,0.24)})`; c.fillRect(rand(x1,x2),rand(H),rand(1.5,4),rand(1.5,4)); }
+}
+
 /* ---------------- HUD / LOG ---------------- */
 function log(html, cls=''){ const el=$('log'); const d=document.createElement('div'); if(cls)d.className=cls; d.innerHTML=html; el.insertBefore(d, el.firstChild); while(el.children.length>8) el.removeChild(el.lastChild); }
 function setAlert(txt,danger=false,t=3){ const a=$('alert'); a.textContent=txt; a.className=danger?'danger':''; G.alertT=t; }
 function updateHUD(){
   $('ui-money').textContent=Math.floor(G.money);
-  $('ui-income').textContent='+'+G.income+'/с';
+  $('ui-income').textContent='+'+playerIncomeRate()+'/с';
   $('ui-kills').textContent=G.kills;
   $('ui-time').textContent=fmtTime(G.time);
   const maxP=G.zoneMax?G.zoneMax[G.playerBaseZone]:G.cityMax, maxE=G.zoneMax?G.zoneMax[G.enemyCityZone]:G.cityMax;
@@ -579,14 +679,19 @@ function updateHUD(){
   document.querySelectorAll('.card').forEach(card=>{
     const k=card.dataset.unit;
     if(k==='missile'){ card.classList.toggle('cant', G.money<MISSILE.cost||G.missileCd>0); card.classList.toggle('armed',G.targeting); card.querySelector('.cd').style.width=(G.missileCd>0?(100*(1-G.missileCd/MISSILE.cd)):100)+'%'; }
-    else { const d=DEFS[k]; card.classList.toggle('cant', G.money<d.cost||G.shopCd[k]>0); card.querySelector('.cd').style.width=(G.shopCd[k]>0?(100*(1-G.shopCd[k]/d.build)):100)+'%'; }
+    else { const d=DEFS[k]; const locked=k==='builder'&&!G.buildersUnlocked;
+      card.classList.toggle('cant', locked||G.money<d.cost||G.shopCd[k]>0);
+      card.classList.toggle('locked', locked);
+      const ds=card.querySelector('.ds'); if(ds&&k==='builder') ds.textContent=locked?'ЗАКРЫТО: откроется после первого города':d.desc;
+      card.querySelector('.cd').style.width=(G.shopCd[k]>0?(100*(1-G.shopCd[k]/d.build)):100)+'%'; }
   });
 }
 function buildShop(){
   const wrap=$('shop-cards'); wrap.innerHTML='';
   ORDER.forEach((k,i)=>{ const d=DEFS[k]; const el=document.createElement('div'); el.className='card'; el.dataset.unit=k;
-    el.innerHTML=`<div class="key">${i+1}</div><div class="ic"><svg class="uic" aria-hidden="true"><use href="#${d.icon}" xlink:href="#${d.icon}"></use></svg></div><div class="nm">${d.name}</div><div class="cost"><span class="cur">КР</span>${d.cost}</div><div class="ds">${d.desc}</div><div class="cd"></div>`;
-    el.title=`${d.name} — HP ${d.hp}, урон ${d.dmg}`; el.onclick=()=>buy(k); wrap.appendChild(el); });
+    const keyLabel=k==='builder'?'0':String(i+1);
+    el.innerHTML=`<div class="key">${keyLabel}</div><div class="ic"><svg class="uic" aria-hidden="true"><use href="#${d.icon}" xlink:href="#${d.icon}"></use></svg></div><div class="nm">${d.name}</div><div class="cost"><span class="cur">КР</span>${d.cost}</div><div class="ds">${d.desc}</div><div class="cd"></div>`;
+    el.title=k==='builder'?`${d.name} — HP ${d.hp}. Клавиша 0. Клик по строителю на поле меняет проект.`:`${d.name} — HP ${d.hp}, урон ${d.dmg}`; el.onclick=()=>buy(k); wrap.appendChild(el); });
   const el=document.createElement('div'); el.className='card missile-card'; el.dataset.unit='missile';
   el.innerHTML=`<div class="key">9</div><div class="ic"><svg class="uic" aria-hidden="true"><use href="#i-missile" xlink:href="#i-missile"></use></svg></div><div class="nm">Крылатая ракета</div><div class="cost"><span class="cur">КР</span>${MISSILE.cost}</div><div class="ds">Удар по клику. ПВО может перехватить!</div><div class="cd"></div>`;
   el.onclick=armMissile; wrap.appendChild(el);
@@ -595,18 +700,20 @@ function buildShop(){
 /* ---------------- SPAWNING / ECONOMY ---------------- */
 function buy(type){
   if(!G.started||G.over) return; initAudio();
-  const d=DEFS[type]; if(G.money<d.cost||G.shopCd[type]>0) return;
+  if(type==='builder'&&!G.buildersUnlocked){ setAlert('[СТРОЙКА] Строители откроются после первого взятого города',false,3); log('[СТРОЙКА] Сначала захвати первый город — тогда штаб пришлёт <b>строителей</b>.'); return; }
+  const d=DEFS[type]; if(!d||G.money<d.cost||G.shopCd[type]>0) return;
   G.money-=d.cost; G.shopCd[type]=d.build; spawnUnit('player',type);
 }
 function spawnUnit(side,type){
-  const d=DEFS[type], dir= side==='player'?1:-1;
-  const u={ id:G.uid++, type, side, dir, x: side==='player'? playerBaseWall()+18 : enemyWallX()-18,
-    y: clamp(450+rand(-190,190),170,730), hp:d.hp, maxHp:d.hp, angle: dir>0?0:Math.PI, turret: dir>0?0:Math.PI,
+  const d=DEFS[type], dir= side==='player'?1:-1, anchor=spawnAnchor(side);
+  const u={ id:G.uid++, type, side, dir, x: anchor.x,
+    y: clamp((anchor.settlement?anchor.y:450)+rand(-190,190),170,730), hp:d.hp, maxHp:d.hp, angle: dir>0?0:Math.PI, turret: dir>0?0:Math.PI,
     cd:rand(0.2,0.6), scanT:rand(0.2), target:null, track:0, radar:rand(6), recoil:0, jamT:0, salvo:0, salvoT:0,
     ammo: type==='bomber'?3:0, deployed:false, manual:false, seed:rand(1000), wob:rand(6), dead:false, radius:d.radius, air:!!d.air,
     // commander orders / motion tracking (used by the enemy AI; harmless for the player)
     order:null, deployPos:null, priorityTarget:null, repositionCd:0, escortKind:null, vx:0, vy:0, px:0, py:0 };
   if(type==='pvo') u.y=clamp(450+rand(-260,260),150,750);
+  if(type==='builder'){ u.buildPref='settlement'; u.siteId=0; u.buildCd=rand(0.5,2); u.workT=0; }
   u.px=u.x; u.py=u.y;
   // The enemy staff observes every player unit that enters the field and
   // learns the player's build habits from it (see aiAssess forecast).
@@ -631,8 +738,11 @@ function launchMissile(side,tx,ty){
 }
 
 /* ---------------- COMBAT HELPERS ---------------- */
-function enemiesOf(side){ return G.units.filter(u=>!u.dead&&u.side!==side); }
+function enemiesOf(side){ const arr=G.units.filter(u=>!u.dead&&u.side!==side);
+  for(const st of (G.structures||[])) if(!st.dead&&st.side!==side) arr.push(st);
+  return arr; }
 function armorMult(target, dmgType){
+  if(target.structure&&dmgType==='bullet') return target.type==='bunker'?0.22 : target.type==='settlement'?0.55 : 0.7;
   if(dmgType==='bullet'){ if(target.type==='tank')return 0.18; if(target.type==='btr'||target.type==='pvo')return 0.55; if(target.type==='mlrs'||target.type==='reb')return 0.7; }
   if(dmgType==='explosive'&&target.type==='infantry') return 1.35;
   return 1;
@@ -645,6 +755,13 @@ function damageUnit(u,dmg,bySide,dmgType='bullet'){
 }
 function killUnit(u,bySide){
   if(u.dead) return; u.dead=true;
+  if(u.structure){
+    spawnExplosion(u.x,u.y,u.type==='settlement'?1.45:1.0);
+    if(bySide==='player'&&u.side==='enemy'){ const b=Math.round((STRUCT_DEFS[u.type].cost||0)*0.25); G.money+=b; G.kills++; addFloater(u.x,u.y-22,'+'+b+' КР','#ffd34d'); if(G.ai)G.ai.intel.estMoney+=b; }
+    if(bySide==='enemy'&&u.side==='player'){ G.losses++; G.aiMoney+=Math.round((STRUCT_DEFS[u.type].cost||0)*0.25); }
+    log((u.side==='player'?'[СТРОЙКА] Потеряно: <b>':'[РАЗВЕДКА] Уничтожено вражеское: <b>')+STRUCT_DEFS[u.type].name+'</b>',u.side==='player'?'bad':'good');
+    return;
+  }
   const big=['tank','mlrs','pvo'].includes(u.type);
   spawnExplosion(u.x,u.y, u.air?0.55: big?1.15:0.8);
   if(!u.air&&u.type!=='infantry'&&G.wrecks.length<42) G.wrecks.push({x:u.x,y:u.y,angle:u.angle,type:u.type,t:0});
@@ -669,6 +786,8 @@ function captureEnemyCity(){
   const zx=CITY_ZONE_X[z];
   for(let i=0;i<6;i++) spawnExplosion(zx+rand(15,CITY_W-15), rand(140,H-140), 1.25);
   G.captured=z;
+  const firstUnlock=!G.buildersUnlocked;
+  G.buildersUnlocked=true;                        // both staffs receive engineer/builder units
   G.zoneHp[z]=Math.round(G.zoneMax[z]*0.65);     // field repair of the captured city
   G.playerBaseZone=z; G.enemyCityZone=z+1; G.sector=z+1;
   G.city.player=G.zoneHp[z]; G.city.enemy=G.zoneHp[z+1];
@@ -679,6 +798,9 @@ function captureEnemyCity(){
   G.warnings.length=0;
   for(const pr of G.projectiles) if(pr.target&&pr.target.isCity) pr.dead=true; // stale city shells fizzle
   if(typeof _cpCache!=='undefined'){ _cpCache.player=null; _cpCache.enemy=null; }
+  for(const st of (G.structures||[])){
+    if(st.side==='enemy'&&st.x<=zx+CITY_W){ if(st.complete) st.side='player'; else st.dead=true; } // captured fortifications change hands
+  }
   for(const u of G.units){
     if(u.side==='enemy'){ u.order=null; u.priorityTarget=null; if(u.type==='pvo'){ u.deployed=false; u.deployPos=null; } }
     else if(!u.air) u.hp=Math.min(u.maxHp, u.hp+u.maxHp*0.2);   // field repair at the new forward base
@@ -691,17 +813,20 @@ function captureEnemyCity(){
   addFloater(zx+CITY_W/2, 120, 'ГОРОД '+z+' ЗАХВАЧЕН! +350 КР', '#8fd0ff');
   setAlert('[ФРОНТ] Город '+z+' захвачен! Карта расширена — впереди город '+(z+1)+' из 3', true, 6);
   log('[ФРОНТ] <b>Город '+z+' твой!</b> Это теперь передовая база (+3 кр/с). Впереди — город '+(z+1)+'.','good');
+  if(firstUnlock) log('[СТРОЙКА] Новый класс открыт: <b>Строители</b> (клавиша 0). Они строят новые города, бункеры, ПВО и склады, а также чинят технику и базы.','good');
   sfx('launch',0.3);
 }
 function explodeAOE(x,y,radius,dmg,bySide,dmgType='explosive'){
   spawnExplosion(x,y,clamp(radius/55,0.6,1.7));
-  for(const u of [...G.units]){ if(u.dead||u.side===bySide||u.air) continue; const d=Math.hypot(u.x-x,u.y-y);
+  for(const u of [...G.units,...(G.structures||[])]){ if(u.dead||u.side===bySide||u.air) continue; const d=Math.hypot(u.x-x,u.y-y);
     if(d<radius+u.radius) damageUnit(u, dmg*(1-0.45*(d/(radius+u.radius))), bySide, dmgType); }
   const pb0=playerBaseX0(), ew=enemyWallX();
   if(bySide!=='player' && x>pb0-radius*0.5 && x<pb0+CITY_W+radius*0.5) damageCity('player',dmg*0.9,x,y,bySide);
   if(bySide!=='enemy'  && x>ew-radius*0.5 && x<W+radius*0.5)          damageCity('enemy', dmg*0.9,x,y,bySide);
 }
 function validFor(u,e){
+  if(u.type==='builder') return false;
+  if(e.structure) return u.type!=='pvo'&&u.type!=='reb';
   if(u.type==='pvo') return e.air;
   if(u.type==='fpv'||u.type==='bomber') return !e.air;
   if(e.air) return (u.type==='infantry'||u.type==='btr');
@@ -710,8 +835,9 @@ function validFor(u,e){
 function findTarget(u){
   const foes=enemiesOf(u.side).filter(e=>validFor(u,e));
   if(!foes.length) return null;
-  if(u.type==='fpv'){ const prio={tank:0,mlrs:1,pvo:1,btr:2,reb:2,infantry:3};
-    foes.sort((a,b)=> (prio[a.type]-prio[b.type])*220 + (dist(u,a)-dist(u,b))); return foes[0]; }
+  if(u.type==='fpv'){ const prio={tank:0,mlrs:1,pvo:1,aaTower:1,btr:2,reb:2,builder:2,settlement:2,bunker:3,depot:3,infantry:3};
+    const pv=t=>prio[t]===undefined?3:prio[t];
+    foes.sort((a,b)=> (pv(a.type)-pv(b.type))*220 + (dist(u,a)-dist(u,b))); return foes[0]; }
   if(!u.air && u.type!=='pvo'){ foes.sort((a,b)=>dist(u,a)-dist(u,b));
     if(dist(u,foes[0])<=DEFS[u.type].range+26) return foes[0]; // engage whatever is close (incl. drones overhead)
     const ground=foes.filter(e=>!e.air); return (ground.length?ground:foes)[0]; }
@@ -722,6 +848,207 @@ function cityPoint(u){ const toEnemy=u.side==='player';
   return {isCity:true, dead:false, air:false, type:'city', radius:34,
     citySide: toEnemy?'enemy':'player', zone: toEnemy?G.enemyCityZone:G.playerBaseZone,
     x: toEnemy? W-55 : playerBaseX0()+55, y: clamp(u.y+rand(-36,36),50,H-50)}; }
+
+
+/* ---------------- BUILDERS & STRUCTURES ----------------
+   Builders are an autonomous engineer class for both sides. They repair,
+   then found/raise four kinds of real battlefield structures. Clicking a
+   player builder (or pressing B) changes its preferred next project. */
+function sideFunds(side){ return side==='player'?G.money:G.aiMoney; }
+function spendSide(side,amount){ if(side==='player')G.money-=amount; else G.aiMoney-=amount; }
+function countStructures(side,type,completeOnly){
+  let n=0; for(const st of (G.structures||[]))
+    if(!st.dead&&st.side===side&&(!type||st.type===type)&&(!completeOnly||st.complete)) n++;
+  return n;
+}
+function structureById(id,side){
+  for(const st of (G.structures||[])) if(st.id===id&&!st.dead&&(!side||st.side===side)) return st;
+  return null;
+}
+function cycleBuilderProject(u,announce){
+  if(!u||u.type!=='builder') return null;
+  const idx=BUILD_PROJECTS.indexOf(u.buildPref||'settlement');
+  u.buildPref=BUILD_PROJECTS[(idx+1)%BUILD_PROJECTS.length];
+  u.buildCd=Math.min(u.buildCd||0,0.4);
+  if(announce&&u.side==='player'){
+    addFloater(u.x,u.y-24,'ПРОЕКТ: '+STRUCT_DEFS[u.buildPref].name.toUpperCase(),'#ffd34d');
+    setAlert('[СТРОЙКА] Следующий проект: '+STRUCT_DEFS[u.buildPref].name,false,2.4);
+  }
+  return u.buildPref;
+}
+function cycleAllBuilderProjects(){
+  const builders=G.units.filter(u=>u.side==='player'&&u.type==='builder'&&!u.dead);
+  if(!builders.length){ setAlert('[СТРОЙКА] Нет строителей на поле (клавиша 0 после первого города)',false,2.5); return; }
+  const next=cycleBuilderProject(builders[0],true);
+  for(const u of builders){ u.buildPref=next; u.buildCd=Math.min(u.buildCd||0,0.4); }
+}
+function chooseBuildSite(side,type,builder){
+  const pb=playerBaseWall(), ew=enemyWallX(), span=Math.max(260,ew-pb);
+  const forward={settlement:0.28,bunker:0.40,aaTower:0.29,depot:0.17}[type]||0.25;
+  const depth=clamp(span*forward,145,400)+(countStructures(side,type)%2?30:-8);
+  const x=clamp(side==='player'?pb+depth:ew-depth,pb+82,ew-82);
+  const lanes=[clamp(builder?builder.y:450,120,780),240,450,660];
+  let bestY=450,bestScore=-Infinity;
+  for(const y of lanes){
+    let minD=9999;
+    for(const st of (G.structures||[])) if(!st.dead&&st.side===side) minD=Math.min(minD,Math.hypot(st.x-x,st.y-y));
+    const score=minD-Math.abs(y-450)*0.08;
+    if(score>bestScore){bestScore=score;bestY=y;}
+  }
+  return {x:x,y:bestY};
+}
+function startConstruction(builder,requested){
+  if(!builder||!G.buildersUnlocked) return null;
+  const side=builder.side;
+  const attempts=[requested||builder.buildPref||'settlement',...BUILD_PROJECTS];
+  const seen={};
+  for(const type of attempts){
+    if(!type||seen[type]||!STRUCT_DEFS[type]) continue; seen[type]=true;
+    const def=STRUCT_DEFS[type];
+    if(countStructures(side,type)>=def.limit) continue;
+    const reserve=side==='player'?70:30;
+    if(sideFunds(side)<def.cost+reserve){
+      if(side==='player'&&type===(requested||builder.buildPref)) return null; // wait for the chosen project
+      continue;
+    }
+    const site=chooseBuildSite(side,type,builder);
+    spendSide(side,def.cost);
+    const st={id:G.uid++, structure:true, type:type, side:side, x:site.x, y:site.y,
+      hp:Math.round(def.hp*0.45), maxHp:def.hp, radius:def.radius, progress:0, buildTime:def.buildTime,
+      complete:false, dead:false, air:false, angle:side==='player'?0:Math.PI, turret:side==='player'?0:Math.PI,
+      cd:rand(0.3,0.8), vx:0, vy:0, seed:rand(1000)};
+    G.structures.push(st);
+    builder.siteId=st.id; builder.buildPref=type;
+    addFloater(st.x,st.y-st.radius-14,(side==='player'?'СТРОЙКА: ':'ВРАГ СТРОИТ: ')+def.name.toUpperCase(),side==='player'?'#8fd0ff':'#ff8d80');
+    if(side==='player') log('[СТРОЙКА] Начато строительство: <b>'+def.name+'</b> (−'+def.cost+' КР)','good');
+    else if(Math.random()<0.65) log('[РАЗВЕДКА] Строители врага начали: <b>'+def.name+'</b>','bad');
+    return st;
+  }
+  return null;
+}
+function builderProjectFor(u){
+  if(u.side==='player') return u.buildPref||'settlement';
+  const strategy=G.ai?G.ai.strategy:'balanced';
+  if(countStructures('enemy','settlement')===0) return 'settlement';
+  if((strategy==='airShield'||strategy==='missileGuard')&&countStructures('enemy','aaTower')<1) return 'aaTower';
+  if((strategy==='cityDefense'||(G.ai&&G.ai.phase==='defend'))&&countStructures('enemy','bunker')<2) return 'bunker';
+  if(countStructures('enemy','depot')<1) return 'depot';
+  if(strategy==='breakthrough'&&countStructures('enemy','settlement')<2) return 'settlement';
+  return BUILD_PROJECTS[Math.abs(u.id)%BUILD_PROJECTS.length];
+}
+function findBuilderRepair(u){
+  let best=null,bestScore=-Infinity;
+  for(const st of (G.structures||[])){
+    if(st.dead||st.side!==u.side||st.hp>=st.maxHp*0.88) continue;
+    const score=(1-st.hp/st.maxHp)*340-dist(u,st)*0.16+(st.type==='settlement'?45:0);
+    if(score>bestScore){bestScore=score;best={kind:'structure',target:st,x:st.x,y:st.y,radius:st.radius};}
+  }
+  for(const t of G.units){
+    if(t.dead||t.side!==u.side||t.air||t.type==='builder'||t.hp>=t.maxHp*0.78) continue;
+    const d=dist(u,t); if(d>760) continue;
+    const score=unitValue(t)*(1-t.hp/t.maxHp)-d*0.18+(t.type==='tank'?25:0);
+    if(score>bestScore){bestScore=score;best={kind:'unit',target:t,x:t.x,y:t.y,radius:t.radius};}
+  }
+  const owner=u.side, maxHp=G.zoneMax[owner==='player'?G.playerBaseZone:G.enemyCityZone];
+  const frac=G.city[owner]/maxHp;
+  const cityPt={x:owner==='player'?playerBaseWall()+18:enemyWallX()-18,y:clamp(u.y,110,790)};
+  if(frac<0.88&&(dist(u,cityPt)<620||frac<0.62)){
+    const score=(1-frac)*360-dist(u,cityPt)*0.12;
+    if(score>bestScore) best={kind:'city',target:null,x:cityPt.x,y:cityPt.y,radius:42};
+  }
+  return best;
+}
+function completeStructure(st,builder){
+  st.complete=true; st.progress=1; st.hp=Math.min(st.maxHp,Math.max(st.hp,st.maxHp*0.75));
+  addFloater(st.x,st.y-st.radius-16,STRUCT_DEFS[st.type].name.toUpperCase()+' ГОТОВ',st.side==='player'?'#8fd0ff':'#ff8d80');
+  log(st.side==='player'?'[СТРОЙКА] Построено: <b>'+STRUCT_DEFS[st.type].name+'</b>':'[РАЗВЕДКА] Враг достроил: <b>'+STRUCT_DEFS[st.type].name+'</b>',st.side==='player'?'good':'bad');
+  if(builder) builder.buildCd=4;
+  sfx('launch',0.18);
+}
+function updateBuilder(u,dt){
+  const d=DEFS.builder;
+  u.buildCd=Math.max(0,(u.buildCd||0)-dt); u.workT=Math.max(0,(u.workT||0)-dt);
+  // Engineers avoid point-blank firefights when no friendly screen is near.
+  const danger=enemiesOf(u.side).find(e=>!e.structure&&!e.air&&dist(u,e)<108);
+  if(danger&&!G.units.some(f=>!f.dead&&f.side===u.side&&f!==u&&!f.air&&['tank','btr','infantry'].includes(f.type)&&dist(u,f)<175)){
+    moveToward(u,u.side==='player'?playerBaseWall()+95:enemyWallX()-95,u.y,d.speed*1.18,dt); return;
+  }
+  // 1) Finish the assigned/nearest friendly construction site.
+  let site=structureById(u.siteId,u.side);
+  if(site&&site.complete){ u.siteId=0; site=null; }
+  if(!site){
+    const sites=(G.structures||[]).filter(st=>!st.dead&&st.side===u.side&&!st.complete)
+      .sort((a,b)=>((b.type===u.buildPref)-(a.type===u.buildPref))||dist(u,a)-dist(u,b));
+    site=sites[0]||null; if(site)u.siteId=site.id;
+  }
+  if(site){
+    const standX=site.x+(u.side==='player'?-site.radius-17:site.radius+17);
+    const standY=clamp(site.y+(((u.id%3)-1)*15),75,H-75);
+    if(Math.hypot(u.x-standX,u.y-standY)>15) moveToward(u,standX,standY,d.speed,dt);
+    else {
+      u.angle=angLerp(u.angle,Math.atan2(site.y-u.y,site.x-u.x),dt*7); u.turret=u.angle;
+      const before=site.progress;
+      site.progress=clamp(site.progress+dt/site.buildTime,0,1);
+      site.hp=Math.min(site.maxHp,site.hp+site.maxHp*0.55*(dt/site.buildTime));
+      if(u.workT<=0){u.workT=0.16;spawnParticles(site.x+rand(-site.radius,site.radius)*0.5,site.y+rand(-site.radius,site.radius)*0.35,2,'spark');}
+      if(before<1&&site.progress>=1&&!site.complete){ completeStructure(site,u); u.siteId=0; }
+    }
+    return;
+  }
+  // 2) Repair the most valuable damaged friend/structure/base nearby.
+  const repair=findBuilderRepair(u);
+  if(repair){
+    const t=repair.target;
+    const px=t?t.x:repair.x, py=t?t.y:repair.y, reach=(repair.radius||18)+30;
+    if(Math.hypot(u.x-px,u.y-py)>reach) moveToward(u,px,py,d.speed*1.05,dt);
+    else {
+      u.angle=angLerp(u.angle,Math.atan2(py-u.y,px-u.x),dt*7); u.turret=u.angle;
+      if(repair.kind==='city'){ const maxHp=G.zoneMax[u.side==='player'?G.playerBaseZone:G.enemyCityZone];
+        G.city[u.side]=Math.min(maxHp,G.city[u.side]+5*dt); syncZoneHp(); }
+      else if(t&&!t.dead) t.hp=Math.min(t.maxHp,t.hp+(repair.kind==='structure'?18:15)*dt);
+      if(u.workT<=0){u.workT=0.2;spawnParticles(px,py,2,'spark');}
+    }
+    return;
+  }
+  // 3) Start a new project when the class is unlocked and funds allow.
+  if(G.buildersUnlocked&&u.buildCd<=0){
+    const project=builderProjectFor(u);
+    if(startConstruction(u,project)) return;
+    u.buildCd=2.5;
+  }
+  // 4) Idle: shadow the friendly armour from behind, otherwise wait by the base.
+  const friends=G.units.filter(f=>!f.dead&&f.side===u.side&&(f.type==='tank'||f.type==='btr'));
+  let sx,sy;
+  if(friends.length){ let cx=0,cy=0; for(const f of friends){cx+=f.x;cy+=f.y;} cx/=friends.length;cy/=friends.length;
+    sx=cx-u.dir*92; sy=clamp(cy+((u.id%2)?48:-48),90,H-90); }
+  else { sx=u.side==='player'?playerBaseWall()+170:enemyWallX()-170; sy=clamp(450+((u.id%3)-1)*85,120,780); }
+  moveToward(u,sx,sy,d.speed*0.82,dt);
+}
+function updateStructure(st,dt){
+  if(st.dead) return;
+  st.cd=Math.max(0,(st.cd||0)-dt);
+  if(st.hp<st.maxHp*0.35&&Math.random()<dt*1.2) spawnParticles(st.x,st.y,1,'smoke');
+  if(!st.complete) return;
+  const def=STRUCT_DEFS[st.type];
+  if(st.type==='depot'||st.type==='settlement'){
+    const auraR=st.type==='depot'?160:180, rate=st.type==='depot'?3.2:1.6;
+    for(const f of G.units) if(!f.dead&&f.side===st.side&&!f.air&&f.hp<f.maxHp&&dist(st,f)<auraR)
+      f.hp=Math.min(f.maxHp,f.hp+rate*dt);
+  }
+  if(st.type==='bunker'&&st.cd<=0){
+    const foes=enemiesOf(st.side).filter(e=>dist(st,e)<=def.range&&(!e.air||e.type==='fpv'||e.type==='bomber'))
+      .sort((a,b)=>dist(st,a)-dist(st,b));
+    const t=foes[0];
+    if(t){ st.cd=def.rof; st.turret=Math.atan2(t.y-st.y,t.x-st.x); muzzle(st.x+Math.cos(st.turret)*18,st.y+Math.sin(st.turret)*18,st.turret); sfx('shot',0.07);
+      G.projectiles.push({kind:'bullet',side:st.side,x:st.x+Math.cos(st.turret)*18,y:st.y+Math.sin(st.turret)*18,target:t,speed:900,dmg:def.dmg*(t.air?0.45:1),dead:false}); }
+  }
+  if(st.type==='aaTower'&&st.cd<=0){
+    let t=G.projectiles.find(p=>p.kind==='cruise'&&!p.dead&&p.side!==st.side&&dist(st,p)<=def.range);
+    if(!t){ const airs=enemiesOf(st.side).filter(e=>e.air&&dist(st,e)<=def.range).sort((a,b)=>dist(st,a)-dist(st,b)); t=airs[0]||null; }
+    if(t){ st.cd=def.rof; st.turret=Math.atan2(t.y-st.y,t.x-st.x); muzzle(st.x,st.y-8,st.turret); sfx('aa',0.08);
+      G.projectiles.push({kind:'aa',side:st.side,x:st.x,y:st.y-8,target:t,speed:700,dmg:def.dmg,dead:false,trail:0}); }
+  }
+}
 
 /* ---------------- PARTICLES / EFFECTS ---------------- */
 function spawnParticles(x,y,n,kind){
@@ -764,7 +1091,7 @@ function fireRocket(u,tx,ty){
 
 /* ---------------- UPDATE ---------------- */
 function update(dt){
-  G.time+=dt; G.money+=G.income*dt; G.aiMoney+=(DIFF[G.diff].aiIncome+(G.aiIncomeBonus||0))*dt;
+  G.time+=dt; G.money+=playerIncomeRate()*dt; G.aiMoney+=(DIFF[G.diff].aiIncome+(G.aiIncomeBonus||0)+structureIncome('enemy'))*dt;
   for(const k of ORDER) G.shopCd[k]=Math.max(0,G.shopCd[k]-dt);
   G.missileCd=Math.max(0,G.missileCd-dt); G.cityWarnT=Math.max(0,G.cityWarnT-dt);
   if(G.alertT>0){ G.alertT-=dt; if(G.alertT<=0) setAlert(G.controlled?'[FPV] Ты ведёшь FPV вручную!':'Фронт в движении…'); G.alertT=Math.max(0,G.alertT); }
@@ -792,9 +1119,10 @@ function update(dt){
     if(jam){ u.jamT+=dt; if(Math.random()<dt*8) spawnParticles(u.x,u.y,1,'spark');
       if(u.jamT>0.85){ addFloater(u.x,u.y-16,'ЗАГЛУШЕН РЭБ!','#8fd0ff'); killUnit(u, u.side==='player'?'enemy':'player'); } }
     else u.jamT=Math.max(0,u.jamT-dt*1.5); }
+  for(const st of (G.structures||[])) if(!st.dead) updateStructure(st,dt);
   for(const u of G.units) if(!u.dead) updateUnit(u,dt);
   separation();
-  G.units=G.units.filter(u=>!u.dead);
+  G.units=G.units.filter(u=>!u.dead); G.structures=(G.structures||[]).filter(st=>!st.dead);
   updateProjectiles(dt);
   // particles / floaters
   for(const p of G.particles){ p.life+=dt; if(p.kind==='ring'){p.size=lerp(8,p.maxR,p.life/p.max);}
@@ -806,6 +1134,10 @@ function separation(){
   const g=G.units.filter(u=>!u.air);
   for(let i=0;i<g.length;i++) for(let j=i+1;j<g.length;j++){ const a=g[i],b=g[j],d=dist(a,b),min=a.radius+b.radius+3;
     if(d>0.01&&d<min){ const push=(min-d)/2, nx=(b.x-a.x)/d, ny=(b.y-a.y)/d; a.x-=nx*push; a.y-=ny*push; b.x+=nx*push; b.y+=ny*push; } }
+  for(const u of g) for(const st of (G.structures||[])){
+    if(st.dead) continue; const d=dist(u,st), min=u.radius+st.radius+2;
+    if(d>0.01&&d<min){ const push=min-d,nx=(u.x-st.x)/d,ny=(u.y-st.y)/d; u.x+=nx*push; u.y=clamp(u.y+ny*push,55,H-55); }
+  }
 }
 function moveToward(u,tx,ty,speed,dt){
   const dx=tx-u.x, dy=ty-u.y, d=Math.hypot(dx,dy); if(d<3) return 0;
@@ -823,6 +1155,7 @@ function updateUnit(u,dt){
     u.vx=lerp(u.vx||0,ivx,0.22); u.vy=lerp(u.vy||0,ivy,0.22); u.px=u.x; u.py=u.y; }
   // MLRS salvo in progress
   if(u.salvo>0){ u.salvoT-=dt; if(u.salvoT<=0){ fireRocket(u,u.salvoTarget.x,u.salvoTarget.y); u.salvo--; u.salvoT=0.14; } }
+  if(u.type==='builder'){ updateBuilder(u,dt); return; }
   // target acquisition
   if(u.scanT<=0){ u.scanT=0.18+rand(0.12);
     if(u.type==='pvo'){ const mis=G.projectiles.find(p=>p.kind==='cruise'&&!p.dead&&p.side!==u.side&&dist(u,p)<d.range); u.target=mis||findTarget(u); }
@@ -986,9 +1319,10 @@ const AI_STRATEGIES={
 function laneOfY(y){ return y<330?0 : y<570?1 : 2; }
 function countType(arr,t){ let n=0; for(const u of arr) if(u.type===t)n++; return n; }
 function unitValue(u){
-  if(!u||!DEFS[u.type]) return 0;
-  const mult={tank:1.18,mlrs:1.12,btr:1.0,infantry:0.8,fpv:0.95,bomber:0.95,pvo:0.9,reb:0.8}[u.type]||1;
-  return DEFS[u.type].cost*(0.35+0.65*clamp(u.hp/u.maxHp,0,1))*mult;
+  const def=u&&(DEFS[u.type]||STRUCT_DEFS[u.type]);
+  if(!u||!def) return 0;
+  const mult={tank:1.18,mlrs:1.12,btr:1.0,infantry:0.8,fpv:0.95,bomber:0.95,pvo:0.9,reb:0.8,builder:0.85}[u.type]||1;
+  return def.cost*(0.35+0.65*clamp(u.hp/u.maxHp,0,1))*mult;
 }
 function forceValue(arr){ let s=0; for(const u of arr)s+=unitValue(u); return s; }
 function clusterOf(members){
@@ -1185,6 +1519,7 @@ function aiGroupFrame(plan){
     const idx=strategyPriority.indexOf(u.type);
     let sc=unitValue(u)*0.55 + (idx>=0?(6-idx)*34:0) - dist(center,u)*0.13 - Math.abs(u.y-laneY)*0.08;
     sc+=25*(1-clamp(u.hp/u.maxHp,0,1));                              // finish damaged vehicles
+    if(u.type==='builder') sc+=38;                                   // kill engineers before they fortify
     if(A.strategy==='cityDefense'||A.phase==='defend') sc+=Math.max(0,760-cityDist(u))*0.12;
     return sc;
   };
@@ -1261,15 +1596,32 @@ function aiUpdatePhase(plan){
   const A=G.ai, brain=aiBrain(); A.phaseT+=brain.think;
   const profile=plan.strategyProfile||AI_STRATEGIES[A.strategy]||AI_STRATEGIES.balanced;
   if((plan.cityThreatValue>300||plan.incursionValue>560)&&A.phase!=='defend'){ aiSetPhase('defend'); return; }
-  if(A.phase==='defend'){ if(plan.cityThreatValue<110&&A.phaseT>3) aiSetPhase('buildup'); return; }
+  if(A.phase==='defend'){
+    // A clearly superior army counter-attacks instead of sitting in defence forever.
+    if(A.phaseT>24&&plan.forceRatio>1.3&&plan.assaultValue>720&&plan.cityThreatValue<650){ A.stats.forcedAssaults++; aiSetPhase('stage'); return; }
+    if(plan.cityThreatValue<110&&A.phaseT>3) aiSetPhase('buildup'); return;
+  }
   if(A.phase==='buildup'){
-    const threshold=brain.waveValue*profile.waveMult*(A.wave===1?0.75:1)*(A.phaseT>34?0.85:1);
+    // Staff impatience: a ready army cannot wait forever for perfect support.
+    // Threshold and required local edge decay with time; forward/air combat
+    // value counts too, not only units still sitting behind the midline.
+    const ageMult=A.phaseT>42?0.62 : A.phaseT>30?0.74 : A.phaseT>18?0.86 : 1;
+    const threshold=brain.waveValue*profile.waveMult*(A.wave===1?0.75:1)*ageMult;
+    const attackValue=Math.max(plan.stagedValue,plan.assaultValue*0.82);
     const laneDefense=plan.lanes[A.attackLane].defense;
-    const localEdge = plan.stagedValue>=laneDefense*profile.localEdge; // strategy sets how bold the attack is
-    const pvoReady = countType(plan.his,'pvo')>=Math.min(plan.desiredPvo,1)||A.phaseT>28;
-    const rebReady = plan.desiredReb===0||countType(plan.his,'reb')>=1||A.phaseT>28;
-    const supportReady = !plan.group||plan.group.supportReady||A.phaseT>30; // combined-arms group must be covered
-    if((plan.stagedValue>=threshold&&localEdge&&pvoReady&&rebReady&&supportReady)||(A.phaseT>55&&plan.stagedValue>=500)) aiSetPhase('stage');
+    const edgeNeed=profile.localEdge*(A.phaseT>30?0.8 : A.phaseT>18?0.9 : 1);
+    const localEdge = attackValue>=laneDefense*edgeNeed; // strategy sets how bold the attack is
+    const pvoReady = countType(plan.his,'pvo')>=Math.min(plan.desiredPvo,1)||A.phaseT>20;
+    const rebReady = plan.desiredReb===0||countType(plan.his,'reb')>=1||A.phaseT>20;
+    const strongGroup=plan.group&&plan.group.armorValue>=430&&plan.group.infantryScreenValue>=80;
+    const supportReady = !plan.group||plan.group.supportReady||A.phaseT>22||(strongGroup&&A.phaseT>10);
+    const strongArmy = attackValue>=brain.waveValue*0.72 && plan.forceRatio>=0.92 && (!plan.group||(plan.group.armorValue>=180&&plan.group.infantryScreenValue>=50));
+    const hardDeadline = A.phaseT>38&&attackValue>=430;
+    if((attackValue>=threshold&&localEdge&&pvoReady&&rebReady&&supportReady)
+      ||(strongArmy&&A.phaseT>16&&localEdge)||hardDeadline){
+      if(hardDeadline||(strongArmy&&attackValue<threshold)) A.stats.forcedAssaults++;
+      aiSetPhase('stage');
+    }
   }
   else if(A.phase==='stage'){
     const ready=plan.staged.length? plan.staged.filter(u=>u.order&&dist(u,u.order)<200).length/plan.staged.length : 1;
@@ -1398,7 +1750,7 @@ function aiAssignOrders(plan){
       if(Object.keys(interceptorIds).length>=4) break; }
   }
   for(const u of plan.his){
-    if(u.type==='pvo'||u.type==='reb') continue;
+    if(u.type==='pvo'||u.type==='reb'||u.type==='builder') continue;
     const slotX=(((u.id*37)%90)-45)*spread, slotY=(((u.id*53)%130)-65)*spread;
     const form=formationOffset(plan,u);
     if(u.air){
@@ -1429,7 +1781,7 @@ function aiAssignOrders(plan){
   }
   // Combined-arms focus fire: each arm gets the target its role should kill.
   for(const u of plan.his){
-    if(u.type==='pvo'||u.type==='reb'){ u.priorityTarget=null; continue; }
+    if(u.type==='pvo'||u.type==='reb'||u.type==='builder'){ u.priorityTarget=null; continue; }
     let pri=null;
     if(u.type==='mlrs') pri=(A.phase==='suppress'||A.phase==='assault'||A.strategy==='suppressSupport')
       ? (grp.supportFocus||plan.suppressionTarget) : (plan.playerCluster?plan.playerCluster.anchor:grp.focus);
@@ -1458,7 +1810,7 @@ function aiAssignOrders(plan){
 function aiPurchaseScores(plan){
   const A=G.ai, I=A.intel, brain=aiBrain(), his=plan.his, mine=plan.mine;
   const cnt=t=>countType(his,t), pcnt=t=>countType(mine,t);
-  const s={infantry:26,btr:30,tank:34,mlrs:20,fpv:24,bomber:16,pvo:8,reb:8};
+  const s={infantry:26,btr:30,tank:34,mlrs:20,fpv:24,bomber:16,pvo:8,reb:8,builder:0};
   const ws=A.wave===1?0.75:1+Math.min(0.35,A.wave*0.05);
   const quota={tank:Math.round(3*ws),btr:Math.round(2*ws),infantry:Math.round(3*ws),mlrs:A.wave>2?2:1};
   if(A.phase==='buildup'||A.phase==='stage')
@@ -1507,6 +1859,17 @@ function aiPurchaseScores(plan){
   }
   // finishing blow on a weak player city
   if(G.city.player<650){ s.tank+=14; s.mlrs+=12; s.fpv+=10; s.pvo*=0.6; }
+  // Builders: locked until the first city falls, then engineer support matters.
+  if(!G.buildersUnlocked) s.builder=-999;
+  else {
+    const desiredBuilders=(G.sector>=3?2:1)+(plan.ownCityFrac<0.75?1:0);
+    if(cnt('builder')<desiredBuilders){
+      s.builder+=52*(desiredBuilders-cnt('builder'))
+        +(countStructures('enemy','settlement')===0?18:0)
+        +(A.strategy==='cityDefense'?16:0)+(plan.ownCityFrac<0.8?14:0);
+    } else s.builder*=0.2;
+    if(A.phase==='assault'&&plan.forceRatio<0.9) s.builder*=0.55; // do not drain the fist mid-push
+  }
   for(const k of ORDER) s[k]=(s[k]-DEFS[k].cost*0.025)*(1+rand(-brain.noise,brain.noise));
   return s;
 }
@@ -1515,6 +1878,7 @@ function aiBuyUnit(type,plan){
   G.aiMoney-=cost;
   const u=spawnUnit('enemy',type); G.ai.stats.plannedBuys++;
   if(type==='pvo') aiAssignNewPvo(u,plan);
+  if(type==='builder') u.buildPref=builderProjectFor(u);
   if(u.air&&G.ai.phase!=='assault'&&G.ai.phase!=='defend')
     u.order={mode:'hold',x:enemyWallX()-292,y:AI_LANES[G.ai.attackLane]};        // drones wait for the assault window
   return true;
@@ -1523,8 +1887,9 @@ function aiDecideBuy(plan){
   const A=G.ai, scores=aiPurchaseScores(plan);
   const sorted=ORDER.map(k=>({k:k,s:scores[k]})).sort((a,b)=>b.s-a.s);
   const emergency=plan.cityThreatValue>240||plan.incursionValue>330;
-  // keep a missile in the pocket while preparing the suppression phase
-  const reserve=(!emergency&&(A.phase==='stage'||A.phase==='suppress')&&G.aiMissileT<14)?300:0;
+  // Keep a missile in the pocket once the staff starts preparing an attack.
+  const missileUseful=G.aiMissileT<18&&(A.phase!=='buildup'||A.phaseT>10||A.strategy==='suppressSupport'||A.strategy==='finishCity');
+  const reserve=(!emergency&&missileUseful)?300:0;
   const afford=k=>G.aiMoney-reserve>=DEFS[k].cost;
   const top=sorted[0];
   if(afford(top.k)) return aiBuyUnit(top.k,plan);
@@ -1543,17 +1908,18 @@ function aiMaybeMissile(plan){
   const riskAt=(tx,ty)=>{ let r=0;
     for(const p of pvoList){ const d=segPointDist(p.x,p.y,W-60,ty,tx,ty);
       if(d<DEFS.pvo.range) r=Math.max(r,(DEFS.pvo.range-d)/DEFS.pvo.range); } return r; };
+  const missileTargets=[...plan.pGround,...(G.structures||[]).filter(st=>st.side==='player'&&!st.dead)];
   let best=null,bestScore=-Infinity;
-  for(const anchor of plan.pGround){
-    const members=plan.pGround.filter(u=>dist(anchor,u)<150);
-    if(members.length<2&&!['pvo','mlrs'].includes(anchor.type)) continue;
+  for(const anchor of missileTargets){
+    const members=missileTargets.filter(u=>dist(anchor,u)<150);
+    if(members.length<2&&!['pvo','mlrs','settlement','aaTower'].includes(anchor.type)) continue;
     const flight=2.6+Math.hypot(anchor.x-(W-60),0)/270;               // warning time + cruise flight
     const preds=members.map(u=>({u:u,p:predictedPoint(u,flight,brain.lead)}));
-    let sw=0,cx=0,cy=0; for(const pr of preds){const w=DEFS[pr.u.type].cost;sw+=w;cx+=pr.p.x*w;cy+=pr.p.y*w;}
+    let sw=0,cx=0,cy=0; for(const pr of preds){const w=(DEFS[pr.u.type]||STRUCT_DEFS[pr.u.type]).cost;sw+=w;cx+=pr.p.x*w;cy+=pr.p.y*w;}
     cx/=sw; cy/=sw;
     let expected=0;
     for(const pr of preds) if(Math.hypot(pr.p.x-cx,pr.p.y-cy)<110)
-      expected+=unitValue(pr.u)*({pvo:1.3,reb:1.2,mlrs:1.2,tank:1.1}[pr.u.type]||1);
+      expected+=unitValue(pr.u)*({pvo:1.3,reb:1.2,mlrs:1.2,tank:1.1,builder:1.25,settlement:1.2,aaTower:1.25}[pr.u.type]||1);
     const risk=riskAt(cx,cy);
     let score=expected*(1-risk*0.78)-risk*95;
     if(A.phase==='suppress'&&plan.suppressionTarget&&members.includes(plan.suppressionTarget)) score+=70;
@@ -1562,24 +1928,28 @@ function aiMaybeMissile(plan){
     if(A.strategy==='finishCity') score+=45;
     if(score>bestScore){bestScore=score;best={x:cx,y:cy};}
   }
-  if(G.city.player<280){                                                // finishing strike on the city
-    for(const cy of [230,450,670]){ const cx0=playerBaseX0()+80; const risk=riskAt(cx0,cy); const score=330*(1-risk*0.85)-risk*80;
+  if(G.city.player<620||(A.phase==='assault'&&G.city.player<1050)){     // city suppression / finishing strike
+    for(const cy of [230,450,670]){ const cx0=playerBaseX0()+80; const risk=riskAt(cx0,cy);
+      const score=430*(1-risk*0.85)-risk*80+(A.strategy==='finishCity'?70:0);
       if(score>bestScore){bestScore=score;best={x:cx0,y:cy};} }
   }
-  const threshold = plan.cityThreatValue>420?360 : A.strategy==='suppressSupport'?340 : A.strategy==='finishCity'?360 : A.phase==='suppress'?380 : 600;
+  let threshold = plan.cityThreatValue>420?300 : A.strategy==='suppressSupport'?280 : A.strategy==='finishCity'?300 : A.phase==='suppress'?320 : A.phase==='assault'?420 : 470;
+  // A missile kept in reserve for a long time becomes an opportunity strike.
+  const wait=A.missileWait||0;
+  threshold*= wait>36?0.52 : wait>24?0.68 : wait>12?0.84 : 1;
   if(best&&bestScore>=threshold){
-    G.aiMoney-=300; A.stats.missiles++;
+    G.aiMoney-=300; A.stats.missiles++; A.missileWait=0;
     G.aiMissileT=DIFF[G.diff].missileEvery*rand(0.85,1.2);
     G.warnings.push({x:best.x,y:best.y,t:2.6,side:'enemy',done:false});
     setAlert('[ТРЕВОГА] РАКЕТНАЯ ОПАСНОСТЬ! Цель подсвечена!',true,3);
     log('[ТРЕВОГА] Враг готовит <b>ракетный удар</b>!','bad'); sfx('aa',0.2);
-  } else G.aiMissileT=2.5;                                              // hold the missile for a worthwhile target
+  } else { A.missileWait=(A.missileWait||0)+3.2; G.aiMissileT=2.5; }   // hold, but not forever
 }
 
 function updateAI(dt){
   const A=G.ai; if(!A) return;
   const brain=aiBrain();
-  A.intel.estMoney=clamp(A.intel.estMoney+G.income*dt,0,1600);          // track the player's wallet estimate
+  A.intel.estMoney=clamp(A.intel.estMoney+playerIncomeRate()*dt,0,1800);          // track the player's wallet estimate
   G.aiT-=dt; G.aiMissileT-=dt; A.thinkT-=dt; A.pvoPlanT-=dt;
   if(A.thinkT<=0){
     A.thinkT=brain.think;
@@ -1606,6 +1976,7 @@ function draw(){
   ctx.drawImage(terrain,0,0);
   for(const cr of G.craters) drawCrater(ctx,cr.x,cr.y,cr.r);
   drawCities();
+  drawStructures();
   for(const wr of G.wrecks) drawWreck(wr);
   // EW radius under units
   for(const u of G.units) if(u.type==='reb'){ ctx.fillStyle=u.side==='player'?'rgba(77,163,255,0.07)':'rgba(255,85,69,0.07)';
@@ -1649,10 +2020,59 @@ function drawMinimap(){
   ctx.fillStyle='#3d4a2f'; ctx.fillRect(mm.x,mm.y,mm.w,mm.h);
   for(const z of revealedZones()){ const owner=z<=(G.playerBaseZone||0)?'player':'enemy';
     ctx.fillStyle=SIDE_COLOR[owner]; ctx.fillRect(mm.x+CITY_ZONE_X[z]*sc,mm.y,Math.max(5,CITY_W*sc),mm.h); }
+  for(const st of (G.structures||[])){ ctx.fillStyle=st.complete?'#ffe08a':'rgba(255,224,138,0.55)'; ctx.fillRect(mm.x+st.x*sc-2.5,mm.y+(st.y/H)*mm.h-2.5,5,5); }
   for(const u of G.units){ ctx.fillStyle=SIDE_COLOR[u.side]; ctx.fillRect(mm.x+u.x*sc-1.5,mm.y+(u.y/H)*mm.h-1.5,3,3); }
   ctx.strokeStyle='#ffe08a'; ctx.lineWidth=1.6; ctx.strokeRect(mm.x+camX*sc,mm.y,VIEW_W*sc,mm.h);
   ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='bold 10px Arial'; ctx.textAlign='left';
   ctx.fillText('КАРТА · ГОРОД '+(G.enemyCityZone||1)+' / 3', mm.x+2, mm.y-7);
+}
+function drawStructures(){
+  for(const st of (G.structures||[])){
+    if(st.dead) continue;
+    const def=STRUCT_DEFS[st.type], sideCol=SIDE_COLOR[st.side];
+    ctx.save(); ctx.translate(st.x,st.y);
+    ctx.fillStyle='rgba(0,0,0,0.30)'; ctx.beginPath(); ctx.ellipse(5,7,st.radius+6,st.radius*0.66,0,0,7); ctx.fill();
+    ctx.strokeStyle=sideCol; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,st.radius+2,0,7); ctx.stroke();
+    if(st.type==='settlement'){
+      ctx.fillStyle='#777268'; rr(-39,-31,78,62,5);
+      ctx.strokeStyle='rgba(45,42,36,0.55)'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(-39,0); ctx.lineTo(39,0); ctx.moveTo(0,-31); ctx.lineTo(0,31); ctx.stroke();
+      const roofs=[[-27,-20],[-7,-18],[16,-20],[-25,9],[2,12],[22,8]];
+      roofs.forEach((r,i)=>{ ctx.fillStyle=['#9aa3ad','#a89a84','#8a929c'][i%3]; ctx.fillRect(r[0],r[1],18,14);
+        ctx.fillStyle='rgba(255,220,130,0.85)'; if((st.seed+i*3)%2)ctx.fillRect(r[0]+4,r[1]+5,4,4); });
+      ctx.fillStyle=sideCol; ctx.fillRect(-3,-35,6,12); ctx.fillStyle='#fff'; ctx.font='bold 8px Arial'; ctx.textAlign='center'; ctx.fillText('★',0,-26);
+    } else if(st.type==='bunker'){
+      ctx.fillStyle='#6f6e66'; rr(-25,-18,50,36,9); ctx.fillStyle='#838278'; rr(-19,-13,38,26,7);
+      ctx.fillStyle='#4c4b45'; for(let i=0;i<5;i++)ctx.fillRect(-20+i*9,-16,5,5);
+      ctx.strokeStyle='#20211e'; ctx.lineWidth=5; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(st.turret)*27,Math.sin(st.turret)*27); ctx.stroke();
+      ctx.fillStyle='#31322e'; ctx.beginPath(); ctx.arc(0,0,7,0,7); ctx.fill();
+    } else if(st.type==='aaTower'){
+      ctx.fillStyle='#66685e'; rr(-21,-18,42,36,5); ctx.fillStyle='#777a6c'; ctx.beginPath(); ctx.arc(0,0,16,0,7); ctx.fill();
+      ctx.save(); ctx.rotate(G.time*1.7+st.seed); ctx.fillStyle='#9fb47e'; ctx.fillRect(-3,-19,6,38); ctx.restore();
+      ctx.strokeStyle='#22251f'; ctx.lineWidth=4;
+      for(const off of [-5,5]){ const px=-Math.sin(st.turret)*off, py=Math.cos(st.turret)*off;
+        ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(px+Math.cos(st.turret)*28,py+Math.sin(st.turret)*28); ctx.stroke(); }
+      ctx.fillStyle='#39442a'; ctx.beginPath(); ctx.arc(0,0,8,0,7); ctx.fill();
+    } else if(st.type==='depot'){
+      ctx.fillStyle='#6b6250'; rr(-28,-20,56,40,4);
+      ctx.fillStyle='#7a4f36'; ctx.fillRect(-24,-15,22,13); ctx.fillStyle='#516579'; ctx.fillRect(3,-15,21,13);
+      ctx.fillStyle='#746a54'; ctx.fillRect(-18,4,17,12); ctx.fillRect(4,4,18,12);
+      ctx.fillStyle='#3e4d3d'; for(const bx of [-19,-8,14]){ctx.beginPath();ctx.arc(bx,11,4.5,0,7);ctx.fill();}
+      ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.4; ctx.strokeRect(-24,-15,22,13); ctx.strokeRect(3,-15,21,13);
+    }
+    if(!st.complete){
+      ctx.strokeStyle='rgba(255,211,77,0.9)'; ctx.lineWidth=2; ctx.setLineDash([7,6]);
+      ctx.beginPath(); ctx.arc(0,0,st.radius+8,0,7); ctx.stroke(); ctx.setLineDash([]);
+      ctx.strokeStyle='rgba(240,240,220,0.55)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(-st.radius,-st.radius); ctx.lineTo(st.radius,st.radius); ctx.moveTo(st.radius,-st.radius); ctx.lineTo(-st.radius,st.radius); ctx.stroke();
+      ctx.fillStyle='rgba(0,0,0,0.62)'; ctx.fillRect(-30,-st.radius-24,60,7);
+      ctx.fillStyle='#ffd34d'; ctx.fillRect(-29,-st.radius-23,58*clamp(st.progress,0,1),5);
+      ctx.fillStyle='#ffd34d'; ctx.font='bold 10px Arial'; ctx.textAlign='center'; ctx.fillText(Math.round(st.progress*100)+'%',0,-st.radius-29);
+    }
+    ctx.fillStyle='rgba(255,255,255,0.92)'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText(def.name.toUpperCase(),0,st.radius+18);
+    ctx.restore();
+    hpBar(st, st.type==='settlement'?76:52);
+  }
 }
 function drawCities(){
   for(const b of buildings){ const dead=zoneFrac(b.zone)<b.th;
@@ -1774,6 +2194,21 @@ function drawUnit(u){
       ctx.beginPath(); ctx.arc(-6,0,pulse,0,7); ctx.stroke();
       ctx.fillStyle=sideCol; ctx.fillRect(-21,-2.5,6,5);
     }
+    else if(u.type==='builder'){
+      ctx.fillStyle='#1f211c'; for(const wy of [-11,11]) for(const wx of [-16,0,16]){ ctx.beginPath(); ctx.arc(wx,wy,4.8,0,7); ctx.fill(); }
+      ctx.fillStyle='#6d663f'; rr(-23,-10,46,20,4); camo(-20,-8,25,15,u.seed,cols);
+      ctx.fillStyle='#a87432'; ctx.fillRect(10,-8,11,16); // engineering cab
+      ctx.fillStyle='#9fc4d8'; ctx.fillRect(17,-6.5,4,13);
+      ctx.fillStyle='#77522e'; ctx.fillRect(-21,-7,15,14); // crates / materials
+      ctx.strokeStyle='rgba(30,25,18,0.8)'; ctx.lineWidth=1.4; ctx.strokeRect(-21,-7,15,14); ctx.beginPath(); ctx.moveTo(-21,0); ctx.lineTo(-6,0); ctx.stroke();
+      // small crane, slewing toward the work target
+      ctx.save(); ctx.translate(-2,0); ctx.rotate(u.turret-u.angle);
+      ctx.strokeStyle='#2d2d28'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(25,-4); ctx.stroke();
+      ctx.strokeStyle='rgba(20,20,20,0.75)'; ctx.lineWidth=1.3; ctx.beginPath(); ctx.moveTo(25,-4); ctx.lineTo(25,5); ctx.stroke();
+      ctx.fillStyle='#c9973f'; ctx.fillRect(22,5,7,6); ctx.restore();
+      if(Math.sin(G.time*7+u.seed)>0.45){ ctx.fillStyle='#ffd34d'; ctx.beginPath(); ctx.arc(12,-9,3,0,7); ctx.fill(); }
+      ctx.fillStyle=sideCol; ctx.fillRect(-22,-2.5,6,5);
+    }
     if(u.hp<u.maxHp*0.35&&G.started&&!G.paused&&Math.random()<0.18) spawnParticles(u.x,u.y,1,'smoke');
   }
   ctx.restore();
@@ -1859,6 +2294,8 @@ cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x
     G.camTargetX=clamp((p.sx-MINIMAP.x)/MINIMAP.w*W-VIEW_W/2, 0, W-VIEW_W); G.camManualT=5; return; }
   if(G.targeting){ G.targeting=false; cvs.classList.remove('targeting');
     if(G.money>=MISSILE.cost&&G.missileCd<=0){ G.money-=MISSILE.cost; G.missileCd=MISSILE.cd; launchMissile('player',p.x,p.y); } return; }
+  const b=G.units.find(u=>u.side==='player'&&u.type==='builder'&&!u.dead&&dist(u,p)<38);
+  if(b){ cycleBuilderProject(b,true); return; }
   const f=G.units.find(u=>u.side==='player'&&u.type==='fpv'&&dist(u,p)<34);
   if(f){ if(G.controlled)G.controlled.manual=false; G.controlled=f; f.manual=true; setAlert('[FPV] ТЫ ВЕДЁШЬ ДРОН!',true,3); }
 });
@@ -1872,8 +2309,10 @@ window.addEventListener('keydown',e=>{
   if(!G.started||G.over) return;
   const n=parseInt(e.key,10);
   if(n>=1&&n<=8) buy(ORDER[n-1]);
+  else if(e.key==='0') buy('builder');
   else if(n===9||e.key==='r'||e.key==='R'||e.key==='к'||e.key==='К') armMissile();
   else if(e.key==='f'||e.key==='F'||e.key==='а'||e.key==='А') takeControlFPV();
+  else if(e.key==='b'||e.key==='B'||e.key==='и'||e.key==='И') cycleAllBuilderProjects();
 });
 window.addEventListener('keyup',e=>{ keysDown[(e.key||'').toLowerCase()]=false; });
 function togglePause(){ if(!G.started||G.over)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА'; }

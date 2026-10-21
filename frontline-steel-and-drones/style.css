@@ -98,7 +98,7 @@ button.big:active{transform:translateY(3px)}
 
 /* ---- shop: riveted hardware plates with drawn unit silhouettes ---- */
 #shop{display:flex;gap:12px;margin-top:10px;align-items:stretch}
-#shop-cards{display:grid;grid-template-columns:repeat(9,1fr);gap:8px;flex:1}
+#shop-cards{display:grid;grid-template-columns:repeat(10,1fr);gap:7px;flex:1}
 .card{position:relative;background:linear-gradient(180deg,#28321f,#161d11 70%);
   border:1.5px solid var(--line);
   clip-path:polygon(11px 0,100% 0,100% calc(100% - 11px),calc(100% - 11px) 100%,0 100%,0 11px);
