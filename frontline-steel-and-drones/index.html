@@ -119,12 +119,12 @@
 
   <div id="citybars">
     <div class="city-wrap">
-      <div class="city-label blue">ТВОЙ ГОРОД</div>
+      <div class="city-label blue" id="city-label-player">ТВОЙ ГОРОД</div>
       <div class="city-bar"><div id="hp-player" class="fill blue"></div><span id="hp-player-txt">2000</span></div>
     </div>
     <div id="alert">Фронт спокоен… пока что</div>
     <div class="city-wrap right">
-      <div class="city-label red">ГОРОД ПРОТИВНИКА</div>
+      <div class="city-label red" id="city-label-enemy">ГОРОД ПРОТИВНИКА 1 / 3</div>
       <div class="city-bar"><div id="hp-enemy" class="fill red"></div><span id="hp-enemy-txt">2000</span></div>
     </div>
   </div>
@@ -134,7 +134,7 @@
 
     <div id="screen-start" class="screen">
       <div class="panel start-panel">
-        <div class="panel-plate">ОПЕРАТИВНАЯ СВОДКА // СЕКТОР 04</div>
+        <div class="panel-plate">ОПЕРАТИВНАЯ СВОДКА // КАМПАНИЯ: ТРИ ГОРОДА</div>
         <svg class="start-cross"><use href="#i-cross" xlink:href="#i-cross"></use></svg>
         <h1>ЛИНИЯ ФРОНТА</h1>
         <h2>СТАЛЬ И ДРОНЫ</h2>
@@ -143,8 +143,8 @@
           <b style="color:#ff6b5e">Красных</b>. Арсенал у вас <b>одинаковый</b>:
           танки, БТР, РСЗО, FPV-дроны, бомбардировщики, ПВО, РЭБ и крылатые ракеты.
         </p>
-        <p class="brief"><b>Цель:</b> уничтожить город противника раньше, чем он уничтожит твой.<br>
-        Кредиты идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки.</p>
+        <p class="brief"><b>Цель кампании:</b> захватить <b>три города</b> противника подряд. После падения первого карта расширится, захваченный город станет твоей передовой базой, а впереди откроется следующий. Третий город — финальный. Если враг уничтожит твою текущую базу — кампания проиграна.<br>
+        Кредиты идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки.<br><b>Штаб врага адаптивный:</b> против твоих танков он соберёт FPV, против дронов — щит ПВО+РЭБ, против пехоты — РСЗО. Танки, пехота, РСЗО, ПВО и РЭБ врага действуют одной боевой группой.</p>
         <div class="keys">
           <div><kbd>1</kbd>–<kbd>8</kbd> купить юнит</div>
           <div><kbd>9</kbd> ракета, затем клик по цели</div>
@@ -192,7 +192,7 @@
     <div id="shop-cards"></div>
     <div id="log"></div>
   </div>
-  <div id="hint">Карточки внизу или клавиши 1–8. FPV ведётся вручную клавишей <b>F</b>: наведи мышь на технику врага и доводи дрон до цели.</div>
+  <div id="hint">Карточки внизу или клавиши 1–8. FPV ведётся вручную клавишей <b>F</b>. Когда карта расширится: камера — стрелками или <b>A</b>/<b>D</b>, края экрана и клик по миникарте; <b>C</b> — вернуться к текущему сектору.</div>
 </div>
 
 <script>

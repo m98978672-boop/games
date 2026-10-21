@@ -262,12 +262,12 @@ button.big:active{transform:translateY(3px)}
 
   <div id="citybars">
     <div class="city-wrap">
-      <div class="city-label blue">ТВОЙ ГОРОД</div>
+      <div class="city-label blue" id="city-label-player">ТВОЙ ГОРОД</div>
       <div class="city-bar"><div id="hp-player" class="fill blue"></div><span id="hp-player-txt">2000</span></div>
     </div>
     <div id="alert">Фронт спокоен… пока что</div>
     <div class="city-wrap right">
-      <div class="city-label red">ГОРОД ПРОТИВНИКА</div>
+      <div class="city-label red" id="city-label-enemy">ГОРОД ПРОТИВНИКА 1 / 3</div>
       <div class="city-bar"><div id="hp-enemy" class="fill red"></div><span id="hp-enemy-txt">2000</span></div>
     </div>
   </div>
@@ -277,7 +277,7 @@ button.big:active{transform:translateY(3px)}
 
     <div id="screen-start" class="screen">
       <div class="panel start-panel">
-        <div class="panel-plate">ОПЕРАТИВНАЯ СВОДКА // СЕКТОР 04</div>
+        <div class="panel-plate">ОПЕРАТИВНАЯ СВОДКА // КАМПАНИЯ: ТРИ ГОРОДА</div>
         <svg class="start-cross"><use href="#i-cross" xlink:href="#i-cross"></use></svg>
         <h1>ЛИНИЯ ФРОНТА</h1>
         <h2>СТАЛЬ И ДРОНЫ</h2>
@@ -286,8 +286,8 @@ button.big:active{transform:translateY(3px)}
           <b style="color:#ff6b5e">Красных</b>. Арсенал у вас <b>одинаковый</b>:
           танки, БТР, РСЗО, FPV-дроны, бомбардировщики, ПВО, РЭБ и крылатые ракеты.
         </p>
-        <p class="brief"><b>Цель:</b> уничтожить город противника раньше, чем он уничтожит твой.<br>
-        Кредиты идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки.</p>
+        <p class="brief"><b>Цель кампании:</b> захватить <b>три города</b> противника подряд. После падения первого карта расширится, захваченный город станет твоей передовой базой, а впереди откроется следующий. Третий город — финальный. Если враг уничтожит твою текущую базу — кампания проиграна.<br>
+        Кредиты идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки.<br><b>Штаб врага адаптивный:</b> против твоих танков он соберёт FPV, против дронов — щит ПВО+РЭБ, против пехоты — РСЗО. Танки, пехота, РСЗО, ПВО и РЭБ врага действуют одной боевой группой.</p>
         <div class="keys">
           <div><kbd>1</kbd>–<kbd>8</kbd> купить юнит</div>
           <div><kbd>9</kbd> ракета, затем клик по цели</div>
@@ -335,7 +335,7 @@ button.big:active{transform:translateY(3px)}
     <div id="shop-cards"></div>
     <div id="log"></div>
   </div>
-  <div id="hint">Карточки внизу или клавиши 1–8. FPV ведётся вручную клавишей <b>F</b>: наведи мышь на технику врага и доводи дрон до цели.</div>
+  <div id="hint">Карточки внизу или клавиши 1–8. FPV ведётся вручную клавишей <b>F</b>. Когда карта расширится: камера — стрелками или <b>A</b>/<b>D</b>, края экрана и клик по миникарте; <b>C</b> — вернуться к текущему сектору.</div>
 </div>
 
 <script>
@@ -358,7 +358,10 @@ window.addEventListener('error', function(e){
    ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.2 (ИИ-командир)
    Canvas 2D top-down strategy. Symmetric arsenal, Blue vs Red.
    ============================================================ */
-const W = 1600, H = 900, CITY_W = 118;
+let W = 1600;                       // world width — grows by 950 with each captured enemy city
+const VIEW_W = 1600, H = 900, CITY_W = 118;
+const CITY_ZONE_X = [0, 1482, 2432, 3382];   // your base, then enemy cities 1..3 (left edges)
+const SECTOR_RANGES = [[118,1482],[1600,2432],[2550,3382]]; // battlefield between current bases
 const cvs = document.getElementById('game'), ctx = cvs.getContext('2d');
 const $ = id => document.getElementById(id);
 
@@ -396,10 +399,15 @@ const AI_LANES = [215, 450, 685]; // top / centre / bottom lane centres
 /* ---------------- STATE ---------------- */
 let G;
 function resetGame(){
+  if(W!==1600){ W=1600; makeTerrain(); }   // restart after an expanded campaign
   G = {
     started:false, over:false, paused:false, speed:1, time:0,
-    money:520, aiMoney:520, income:14,
+    money:520, aiMoney:520, income:14, aiIncomeBonus:0,
     city:{player:2000, enemy:2000}, cityMax:2000,
+    // Campaign of 3 enemy cities: capture one -> world grows, it becomes your forward base.
+    sector:1, playerBaseZone:0, enemyCityZone:1, captured:0,
+    zoneMax:[2000,2000,2400,2800], zoneHp:[2000,2000,2400,2800],
+    camX:0, camTargetX:0, camManualT:0,
     units:[], projectiles:[], particles:[], floaters:[], craters:[], wrecks:[], warnings:[],
     kills:0, losses:0, shake:0, shopCd:{}, missileCd:0,
     targeting:false, controlled:null, aiT:2.2, aiMissileT:26, alertT:0, cityWarnT:0, uid:1,
@@ -409,6 +417,7 @@ function resetGame(){
       thinkT:0.4, phase:'buildup', phaseT:0, wave:1, attackLane:1, failedLane:-1, failedLaneUntil:0,
       plan:null, pvoPosts:[], pvoPlanT:0, rally:{x:1170,y:450}, waveStartValue:0, assaultCityHp:2000,
       lastIntelLog:-30, disperse:false,
+      strategy:'breakthrough', strategySince:-30, strategyScores:{}, groupTarget:null,
       intel:{spawns:[], missiles:[], estMoney:520, lastSpawnT:0, forecast:{}, style:'mixed',
              airThreat:0, armorThreat:0, swarmThreat:0, artilleryThreat:0, missileThreat:0, airLaneY:450},
       stats:{waves:0, retreats:0, repositions:0, plannedBuys:0, missiles:0, phases:0},
@@ -418,7 +427,17 @@ function resetGame(){
   $('log').innerHTML='';
   log('Штаб на связи. Строй армию, командир!','good');
 }
-const mouse = {x:W/2, y:H/2};
+const mouse = {x:VIEW_W/2, y:H/2, sx:VIEW_W/2, sy:H/2};   // x/y = world, sx/sy = screen
+const keysDown = {};
+/* ----- campaign geography helpers (current sector bases move as cities fall) ----- */
+function playerBaseX0(){ return CITY_ZONE_X[G?(G.playerBaseZone||0):0]; }
+function playerBaseWall(){ return playerBaseX0()+CITY_W; }        // edge of your current base facing the enemy
+function enemyWallX(){ return W-CITY_W; }                          // left edge of the current enemy city
+function sectorMidX(){ return (playerBaseWall()+enemyWallX())/2; }
+function sectorFocusX(){ return clamp(playerBaseX0()-180, 0, Math.max(0,W-VIEW_W)); }
+function revealedZones(){ const zs=[]; for(let i=0;i<CITY_ZONE_X.length;i++) if(i===0||CITY_ZONE_X[i]<W) zs.push(i); return zs; }
+function zoneFrac(z){ if(!G||!G.zoneHp) return 1; return clamp(G.zoneHp[z]/G.zoneMax[z],0,1); }
+function syncZoneHp(){ if(!G||!G.zoneHp) return; G.zoneHp[G.playerBaseZone]=G.city.player; G.zoneHp[G.enemyCityZone]=G.city.enemy; }
 
 /* ---------------- AUDIO (procedural, no files) ---------------- */
 let AC=null, soundOn=true, noiseBuf=null; const lastSfx={};
@@ -447,7 +466,7 @@ function sfx(kind, vol=0.15){
 }
 
 /* ---------------- TERRAIN (pre-rendered realistic texture) ---------------- */
-let terrain=null, buildings={player:[],enemy:[]};
+let terrain=null, buildings=[]; // flat list, each building has .zone
 function makeTerrain(){
   terrain = document.createElement('canvas'); terrain.width=W; terrain.height=H;
   const c = terrain.getContext('2d');
@@ -456,85 +475,85 @@ function makeTerrain(){
   // agricultural fields top/bottom
   for(let i=0;i<14;i++){ const y=i%2? rand(0,120):rand(H-150,H-40); c.fillStyle=`rgba(${140+rand(40)|0},${120+rand(30)|0},60,0.20)`; c.fillRect(rand(150,W-420),y,rand(150,330),rand(40,90)); }
   // dirt patches
-  for(let i=0;i<170;i++){ c.fillStyle=`rgba(${105+rand(40)|0},${88+rand(28)|0},${55+rand(20)|0},${rand(0.08,0.3)})`;
+  for(let i=0;i<Math.round(170*W/1600);i++){ c.fillStyle=`rgba(${105+rand(40)|0},${88+rand(28)|0},${55+rand(20)|0},${rand(0.08,0.3)})`;
     c.beginPath(); c.ellipse(rand(W),rand(H),rand(14,85),rand(8,40),rand(Math.PI),0,7); c.fill(); }
   // grass noise speckle
-  for(let i=0;i<11000;i++){ const g=rand(70,150)|0; c.fillStyle=`rgba(${g*0.55|0},${g},${g*0.38|0},${rand(0.15,0.5)})`; c.fillRect(rand(W),rand(H),rand(1,3.4),rand(1,3.4)); }
+  for(let i=0;i<Math.round(11000*W/1600);i++){ const g=rand(70,150)|0; c.fillStyle=`rgba(${g*0.55|0},${g},${g*0.38|0},${rand(0.15,0.5)})`; c.fillRect(rand(W),rand(H),rand(1,3.4),rand(1,3.4)); }
   // main dirt road (wavy, horizontal)
   const roadY = t => 450 + Math.sin(t*Math.PI*2.2)*36 + Math.sin(t*Math.PI*5.1)*10;
   for(const [w,col] of [[92,'#7d6748'],[76,'#93785a'],[56,'#a08662']]){
     c.strokeStyle=col; c.lineWidth=w; c.beginPath();
-    for(let x=0;x<=W;x+=20){ const y=roadY(x/W); x===0?c.moveTo(x,y):c.lineTo(x,y);} c.stroke();
+    for(let x=0;x<=W;x+=20){ const y=roadY(x/1600); x===0?c.moveTo(x,y):c.lineTo(x,y);} c.stroke();
   }
   c.strokeStyle='rgba(60,45,30,0.5)'; c.lineWidth=5; c.setLineDash([16,22]);
-  for(const off of [-18,18]){ c.beginPath(); for(let x=0;x<=W;x+=20){ const y=roadY(x/W)+off; x===0?c.moveTo(x,y):c.lineTo(x,y);} c.stroke(); }
+  for(const off of [-18,18]){ c.beginPath(); for(let x=0;x<=W;x+=20){ const y=roadY(x/1600)+off; x===0?c.moveTo(x,y):c.lineTo(x,y);} c.stroke(); }
   c.setLineDash([]);
-  // side roads into cities
-  c.strokeStyle='#8d7554'; c.lineWidth=40; c.beginPath(); c.moveTo(60,0); c.lineTo(60,H); c.moveTo(W-60,0); c.lineTo(W-60,H); c.stroke();
-  // trenches (zig-zag) centre
-  c.strokeStyle='rgba(52,40,26,0.9)'; c.lineWidth=9;
-  for(const tx of [690,915]){ c.beginPath(); let y=170; c.moveTo(tx,y); while(y<740){ y+=34; c.lineTo(tx+((y/34)%2?26:-26),y);} c.stroke(); }
-  c.strokeStyle='rgba(120,95,60,0.7)'; c.lineWidth=3;
-  for(const tx of [678,903]){ c.beginPath(); let y=170; c.moveTo(tx,y); while(y<740){ y+=34; c.lineTo(tx+((y/34)%2?26:-26),y);} c.stroke(); }
-  // Scarred no-man's-land in the centre: torn earth, craters, tank tracks,
-  // a few anti-tank hedgehogs and dead trees. No buildings outside the cities.
-  for(let i=0;i<64;i++){
-    const x=rand(635,965), y=rand(105,H-105);
-    c.fillStyle=`rgba(${54+rand(42)|0},${43+rand(30)|0},${27+rand(20)|0},${rand(0.10,0.30)})`;
-    c.beginPath(); c.ellipse(x,y,rand(18,78),rand(8,34),rand(Math.PI),0,7); c.fill();
-  }
-  for(let i=0;i<18;i++) drawCrater(c, rand(650,950), rand(125,H-125), rand(11,27));
-  // Broken double tank tracks wandering through the centre.
-  c.strokeStyle='rgba(48,38,26,0.34)'; c.lineWidth=4; c.setLineDash([13,10]);
-  for(const off of [-11,11]){
-    c.beginPath();
-    for(let x=610;x<=990;x+=20){
-      const y=455+Math.sin(x*0.012)*95+Math.sin(x*0.031)*22+off;
-      x===610?c.moveTo(x,y):c.lineTo(x,y);
+  // side roads into every revealed city
+  c.strokeStyle='#8d7554'; c.lineWidth=40; c.beginPath();
+  for(const z of revealedZones()){ const cx=CITY_ZONE_X[z]+60; c.moveTo(cx,0); c.lineTo(cx,H); }
+  c.stroke();
+  // Trenches + scarred no-man's-land in the centre of every revealed sector.
+  for(const range of SECTOR_RANGES){
+    if(range[1]>W) continue;
+    const mid=(range[0]+range[1])/2, half=(range[1]-range[0])/2, density=half*2/1364;
+    c.strokeStyle='rgba(52,40,26,0.9)'; c.lineWidth=9;
+    for(const tx of [mid-110,mid+110]){ c.beginPath(); let y=170; c.moveTo(tx,y); while(y<740){ y+=34; c.lineTo(tx+((y/34)%2?26:-26),y);} c.stroke(); }
+    c.strokeStyle='rgba(120,95,60,0.7)'; c.lineWidth=3;
+    for(const tx of [mid-122,mid+98]){ c.beginPath(); let y=170; c.moveTo(tx,y); while(y<740){ y+=34; c.lineTo(tx+((y/34)%2?26:-26),y);} c.stroke(); }
+    for(let i=0;i<Math.max(24,Math.round(64*density));i++){
+      const x=rand(mid-half*0.5,mid+half*0.5), y=rand(105,H-105);
+      c.fillStyle=`rgba(${54+rand(42)|0},${43+rand(30)|0},${27+rand(20)|0},${rand(0.10,0.30)})`;
+      c.beginPath(); c.ellipse(x,y,rand(18,78),rand(8,34),rand(Math.PI),0,7); c.fill();
     }
-    c.stroke();
-  }
-  c.setLineDash([]);
-  // Small steel hedgehogs, drawn as three crossed bars from above.
-  c.strokeStyle='rgba(38,39,36,0.88)'; c.lineWidth=3; c.lineCap='round';
-  for(const hx of [735,865]){
-    for(let y=205;y<=705;y+=62){
-      if(Math.random()<0.18) continue;
-      const x=hx+rand(-10,10), yy=y+rand(-9,9), r=rand(6,9), a=rand(Math.PI);
-      for(let k=0;k<3;k++){
-        const aa=a+k*Math.PI/3;
-        c.beginPath(); c.moveTo(x-Math.cos(aa)*r,yy-Math.sin(aa)*r); c.lineTo(x+Math.cos(aa)*r,yy+Math.sin(aa)*r); c.stroke();
+    for(let i=0;i<Math.max(8,Math.round(18*density));i++) drawCrater(c, rand(mid-half*0.46,mid+half*0.46), rand(125,H-125), rand(11,27));
+    c.strokeStyle='rgba(48,38,26,0.34)'; c.lineWidth=4; c.setLineDash([13,10]);
+    for(const off of [-11,11]){
+      c.beginPath();
+      for(let x=mid-half*0.62;x<=mid+half*0.62;x+=20){
+        const y=455+Math.sin(x*0.012)*95+Math.sin(x*0.031)*22+off;
+        x<=mid-half*0.62+1?c.moveTo(x,y):c.lineTo(x,y);
+      }
+      c.stroke();
+    }
+    c.setLineDash([]);
+    c.strokeStyle='rgba(38,39,36,0.88)'; c.lineWidth=3; c.lineCap='round';
+    for(const hx of [mid-65,mid+65]){
+      for(let y=205;y<=705;y+=62){
+        if(Math.random()<0.18) continue;
+        const x=hx+rand(-10,10), yy=y+rand(-9,9), r=rand(6,9), a=rand(Math.PI);
+        for(let k=0;k<3;k++){
+          const aa=a+k*Math.PI/3;
+          c.beginPath(); c.moveTo(x-Math.cos(aa)*r,yy-Math.sin(aa)*r); c.lineTo(x+Math.cos(aa)*r,yy+Math.sin(aa)*r); c.stroke();
+        }
       }
     }
-  }
-  // A few bare, shell-broken trees instead of green canopies in no-man's-land.
-  c.strokeStyle='rgba(43,36,28,0.88)'; c.lineWidth=2.4;
-  for(let i=0;i<22;i++){
-    const x=rand(650,950), y=rand(105,H-105), r=rand(7,15);
-    c.fillStyle='rgba(35,29,22,0.72)'; c.beginPath(); c.arc(x,y,2.2,0,7); c.fill();
-    for(let k=0;k<4;k++){
-      const a=rand(Math.PI*2), bend=rand(-0.6,0.6);
-      c.beginPath(); c.moveTo(x,y);
-      c.quadraticCurveTo(x+Math.cos(a)*r*0.55,y+Math.sin(a)*r*0.55,x+Math.cos(a+bend)*r,y+Math.sin(a+bend)*r); c.stroke();
+    c.strokeStyle='rgba(43,36,28,0.88)'; c.lineWidth=2.4;
+    for(let i=0;i<Math.max(8,Math.round(22*density));i++){
+      const x=rand(mid-half*0.46,mid+half*0.46), y=rand(105,H-105), r=rand(7,15);
+      c.fillStyle='rgba(35,29,22,0.72)'; c.beginPath(); c.arc(x,y,2.2,0,7); c.fill();
+      for(let k=0;k<4;k++){
+        const a=rand(Math.PI*2), bend=rand(-0.6,0.6);
+        c.beginPath(); c.moveTo(x,y);
+        c.quadraticCurveTo(x+Math.cos(a)*r*0.55,y+Math.sin(a)*r*0.55,x+Math.cos(a+bend)*r,y+Math.sin(a+bend)*r); c.stroke();
+      }
     }
   }
   c.lineCap='butt';
   // tree belts
-  for(let i=0;i<210;i++){ const x=rand(140,W-140), y=(Math.random()<0.5? rand(40,300):rand(600,860)) + rand(-30,30);
+  for(let i=0;i<Math.round(210*W/1600);i++){ const x=rand(140,W-140), y=(Math.random()<0.5? rand(40,300):rand(600,860)) + rand(-30,30);
     const r=rand(7,17); c.fillStyle='rgba(0,0,0,0.22)'; c.beginPath(); c.arc(x+3,y+4,r,0,7); c.fill();
     c.fillStyle=`rgb(${38+rand(22)|0},${74+rand(34)|0},${30+rand(18)|0})`; c.beginPath(); c.arc(x,y,r,0,7); c.fill();
     c.fillStyle='rgba(160,190,110,0.35)'; c.beginPath(); c.arc(x-r*0.3,y-r*0.3,r*0.45,0,7); c.fill(); }
   // old craters
-  for(let i=0;i<30;i++) drawCrater(c, rand(200,W-200), rand(120,H-120), rand(10,26));
-  // city ground
-  for(const x0 of [0,W-CITY_W]){ c.fillStyle='#6e6a60'; c.fillRect(x0,0,CITY_W,H);
+  for(let i=0;i<Math.round(30*W/1600);i++) drawCrater(c, rand(200,W-200), rand(120,H-120), rand(10,26));
+  // city ground for every revealed city zone
+  for(const z of revealedZones()){ const x0=CITY_ZONE_X[z]; c.fillStyle='#6e6a60'; c.fillRect(x0,0,CITY_W,H);
     for(let i=0;i<900;i++){ c.fillStyle=`rgba(0,0,0,${rand(0.05,0.22)})`; c.fillRect(x0+rand(CITY_W),rand(H),2,2);} }
-  // generate city buildings
-  buildings={player:[],enemy:[]};
-  const mk=(side)=>{ const x0= side==='player'?6:W-CITY_W+6;
+  // generate city buildings (tagged with their zone for per-city damage state)
+  buildings=[];
+  for(const z of revealedZones()){ const x0=CITY_ZONE_X[z]+6;
     for(let r=0;r<9;r++) for(let col=0;col<2;col++){ if(Math.random()<0.14) continue;
-      buildings[side].push({x:x0+col*56+rand(-3,3), y:26+r*96+rand(-5,5), w:rand(38,48), h:rand(56,78), th:rand(0.08,0.92), hue:rand(0,3)|0, seed:rand(100)}); } };
-  mk('player'); mk('enemy');
+      buildings.push({zone:z, x:x0+col*56+rand(-3,3), y:26+r*96+rand(-5,5), w:rand(38,48), h:rand(56,78), th:rand(0.08,0.92), hue:rand(0,3)|0, seed:rand(100)}); } }
 }
 function drawCrater(c,x,y,r){
   const g=c.createRadialGradient(x,y,1,x,y,r); g.addColorStop(0,'rgba(28,22,16,0.95)'); g.addColorStop(0.65,'rgba(62,48,32,0.85)'); g.addColorStop(1,'rgba(90,72,48,0)');
@@ -549,7 +568,14 @@ function updateHUD(){
   $('ui-income').textContent='+'+G.income+'/с';
   $('ui-kills').textContent=G.kills;
   $('ui-time').textContent=fmtTime(G.time);
-  for(const s of ['player','enemy']){ const f=clamp(G.city[s]/G.cityMax,0,1); $('hp-'+s).style.width=(f*100)+'%'; $('hp-'+s+'-txt').textContent=Math.max(0,Math.ceil(G.city[s]))+' / '+G.cityMax; }
+  const maxP=G.zoneMax?G.zoneMax[G.playerBaseZone]:G.cityMax, maxE=G.zoneMax?G.zoneMax[G.enemyCityZone]:G.cityMax;
+  $('hp-player').style.width=(clamp(G.city.player/maxP,0,1)*100)+'%';
+  $('hp-player-txt').textContent=Math.max(0,Math.ceil(G.city.player))+' / '+maxP;
+  $('hp-enemy').style.width=(clamp(G.city.enemy/maxE,0,1)*100)+'%';
+  $('hp-enemy-txt').textContent=Math.max(0,Math.ceil(G.city.enemy))+' / '+maxE;
+  const lp=$('city-label-player'), le=$('city-label-enemy');
+  if(lp) lp.textContent = G.playerBaseZone? ('ПЕРЕДОВАЯ БАЗА · ГОРОД '+G.playerBaseZone) : 'ТВОЙ ГОРОД';
+  if(le) le.textContent = 'ГОРОД ПРОТИВНИКА '+G.enemyCityZone+' / 3'+(G.enemyCityZone===3?' · ФИНАЛЬНЫЙ':'');
   document.querySelectorAll('.card').forEach(card=>{
     const k=card.dataset.unit;
     if(k==='missile'){ card.classList.toggle('cant', G.money<MISSILE.cost||G.missileCd>0); card.classList.toggle('armed',G.targeting); card.querySelector('.cd').style.width=(G.missileCd>0?(100*(1-G.missileCd/MISSILE.cd)):100)+'%'; }
@@ -574,7 +600,7 @@ function buy(type){
 }
 function spawnUnit(side,type){
   const d=DEFS[type], dir= side==='player'?1:-1;
-  const u={ id:G.uid++, type, side, dir, x: side==='player'? CITY_W+18 : W-CITY_W-18,
+  const u={ id:G.uid++, type, side, dir, x: side==='player'? playerBaseWall()+18 : enemyWallX()-18,
     y: clamp(450+rand(-190,190),170,730), hp:d.hp, maxHp:d.hp, angle: dir>0?0:Math.PI, turret: dir>0?0:Math.PI,
     cd:rand(0.2,0.6), scanT:rand(0.2), target:null, track:0, radar:rand(6), recoil:0, jamT:0, salvo:0, salvoT:0,
     ammo: type==='bomber'?3:0, deployed:false, manual:false, seed:rand(1000), wob:rand(6), dead:false, radius:d.radius, air:!!d.air,
@@ -599,7 +625,7 @@ function launchMissile(side,tx,ty){
   if(side==='player'&&G.ai){ const I=G.ai.intel; // enemy staff marks the launch & the spending
     I.missiles.push({t:G.time,x:tx,y:ty}); if(I.missiles.length>12) I.missiles.shift();
     I.estMoney=Math.max(0,I.estMoney-MISSILE.cost); }
-  const sx= side==='player'? 60:W-60, sy=clamp(ty+rand(-120,120),80,H-80);
+  const sx= side==='player'? playerBaseX0()+60 : W-60, sy=clamp(ty+rand(-120,120),80,H-80);
   G.projectiles.push({kind:'cruise', side, x:sx, y:sy, tx, ty, hp:34, maxHp:34, speed:270, dead:false, air:true, radius:14, trail:0});
   sfx('launch',0.3); log(side==='player'?'[РАКЕТА] <b>Твоя ракета</b> запущена!':'[РАКЕТА] <b>Вражеская ракета</b> в воздухе!', side==='player'?'good':'bad');
 }
@@ -628,17 +654,52 @@ function killUnit(u,bySide){
   if(bySide==='enemy'&&u.side==='player'){ G.losses++; G.aiMoney+=Math.round(DEFS[u.type].cost*0.25); }
 }
 function damageCity(owner,dmg,x,y,bySide){
-  if(G.city[owner]<=0) return;
-  G.city[owner]-=dmg; spawnExplosion(x,y,0.8);
-  if(owner==='player'&&G.cityWarnT<=0){ setAlert('[ТРЕВОГА] ТВОЙ ГОРОД ПОД ОГНЁМ!',true,3); G.cityWarnT=5; log('[ТРЕВОГА] Город под обстрелом!','bad'); }
-  if(G.city[owner]<=0) endGame(owner==='enemy');
+  if(G.city[owner]<=0||G.over) return;
+  G.city[owner]-=dmg; syncZoneHp(); spawnExplosion(x,y,0.8);
+  if(owner==='player'&&G.cityWarnT<=0){ setAlert('[ТРЕВОГА] ТВОЯ БАЗА ПОД ОГНЁМ!',true,3); G.cityWarnT=5; log('[ТРЕВОГА] База под обстрелом!','bad'); }
+  if(G.city[owner]<=0){
+    if(owner==='enemy'&&G.enemyCityZone<3) captureEnemyCity();
+    else { if(owner==='enemy') G.captured=3; endGame(owner==='enemy'); }
+  }
+}
+/* An enemy city fell (not the final one): the world grows by a new sector,
+   the captured city becomes the player's forward base, the next city opens. */
+function captureEnemyCity(){
+  const z=G.enemyCityZone;                       // 1 or 2 (3 is final -> endGame)
+  const zx=CITY_ZONE_X[z];
+  for(let i=0;i<6;i++) spawnExplosion(zx+rand(15,CITY_W-15), rand(140,H-140), 1.25);
+  G.captured=z;
+  G.zoneHp[z]=Math.round(G.zoneMax[z]*0.65);     // field repair of the captured city
+  G.playerBaseZone=z; G.enemyCityZone=z+1; G.sector=z+1;
+  G.city.player=G.zoneHp[z]; G.city.enemy=G.zoneHp[z+1];
+  G.money+=350; G.income+=3;                      // captured city feeds your economy
+  G.aiMoney+=300; G.aiIncomeBonus=(G.aiIncomeBonus||0)+2; // the next city is richer too
+  W=CITY_ZONE_X[z+1]+CITY_W;                      // 1600 -> 2550 -> 3500
+  makeTerrain();
+  G.warnings.length=0;
+  for(const pr of G.projectiles) if(pr.target&&pr.target.isCity) pr.dead=true; // stale city shells fizzle
+  if(typeof _cpCache!=='undefined'){ _cpCache.player=null; _cpCache.enemy=null; }
+  for(const u of G.units){
+    if(u.side==='enemy'){ u.order=null; u.priorityTarget=null; if(u.type==='pvo'){ u.deployed=false; u.deployPos=null; } }
+    else if(!u.air) u.hp=Math.min(u.maxHp, u.hp+u.maxHp*0.2);   // field repair at the new forward base
+  }
+  if(G.ai){ G.ai.phase='buildup'; G.ai.phaseT=0; G.ai.thinkT=0; G.ai.pvoPosts=[]; G.ai.pvoPlanT=0;
+    G.ai.strategy='cityDefense'; G.ai.strategySince=G.time; }
+  const garrison = z===1 ? ['tank','btr','pvo','infantry'] : ['tank','tank','btr','pvo','reb','infantry'];
+  for(const t of garrison) spawnUnit('enemy',t);
+  G.camTargetX=sectorFocusX(); G.camManualT=0;
+  addFloater(zx+CITY_W/2, 120, 'ГОРОД '+z+' ЗАХВАЧЕН! +350 КР', '#8fd0ff');
+  setAlert('[ФРОНТ] Город '+z+' захвачен! Карта расширена — впереди город '+(z+1)+' из 3', true, 6);
+  log('[ФРОНТ] <b>Город '+z+' твой!</b> Это теперь передовая база (+3 кр/с). Впереди — город '+(z+1)+'.','good');
+  sfx('launch',0.3);
 }
 function explodeAOE(x,y,radius,dmg,bySide,dmgType='explosive'){
   spawnExplosion(x,y,clamp(radius/55,0.6,1.7));
   for(const u of [...G.units]){ if(u.dead||u.side===bySide||u.air) continue; const d=Math.hypot(u.x-x,u.y-y);
     if(d<radius+u.radius) damageUnit(u, dmg*(1-0.45*(d/(radius+u.radius))), bySide, dmgType); }
-  if(x<CITY_W+radius*0.5 && bySide!=='player') damageCity('player',dmg*0.9,x,y,bySide);
-  if(x>W-CITY_W-radius*0.5 && bySide!=='enemy') damageCity('enemy',dmg*0.9,x,y,bySide);
+  const pb0=playerBaseX0(), ew=enemyWallX();
+  if(bySide!=='player' && x>pb0-radius*0.5 && x<pb0+CITY_W+radius*0.5) damageCity('player',dmg*0.9,x,y,bySide);
+  if(bySide!=='enemy'  && x>ew-radius*0.5 && x<W+radius*0.5)          damageCity('enemy', dmg*0.9,x,y,bySide);
 }
 function validFor(u,e){
   if(u.type==='pvo') return e.air;
@@ -656,9 +717,11 @@ function findTarget(u){
     const ground=foes.filter(e=>!e.air); return (ground.length?ground:foes)[0]; }
   foes.sort((a,b)=>dist(u,a)-dist(u,b)); return foes[0];
 }
-function cityDist(u){ return u.side==='player' ? (W-CITY_W)-u.x : u.x-CITY_W; }
-function cityPoint(u){ return {isCity:true, dead:false, air:false, type:'city', radius:34, citySide: u.side==='player'?'enemy':'player',
-  x: u.side==='player'? W-55:55, y: clamp(u.y+rand(-36,36),50,H-50)}; }
+function cityDist(u){ return u.side==='player' ? enemyWallX()-u.x : u.x-playerBaseWall(); }
+function cityPoint(u){ const toEnemy=u.side==='player';
+  return {isCity:true, dead:false, air:false, type:'city', radius:34,
+    citySide: toEnemy?'enemy':'player', zone: toEnemy?G.enemyCityZone:G.playerBaseZone,
+    x: toEnemy? W-55 : playerBaseX0()+55, y: clamp(u.y+rand(-36,36),50,H-50)}; }
 
 /* ---------------- PARTICLES / EFFECTS ---------------- */
 function spawnParticles(x,y,n,kind){
@@ -701,18 +764,27 @@ function fireRocket(u,tx,ty){
 
 /* ---------------- UPDATE ---------------- */
 function update(dt){
-  G.time+=dt; G.money+=G.income*dt; G.aiMoney+=DIFF[G.diff].aiIncome*dt;
+  G.time+=dt; G.money+=G.income*dt; G.aiMoney+=(DIFF[G.diff].aiIncome+(G.aiIncomeBonus||0))*dt;
   for(const k of ORDER) G.shopCd[k]=Math.max(0,G.shopCd[k]-dt);
   G.missileCd=Math.max(0,G.missileCd-dt); G.cityWarnT=Math.max(0,G.cityWarnT-dt);
   if(G.alertT>0){ G.alertT-=dt; if(G.alertT<=0) setAlert(G.controlled?'[FPV] Ты ведёшь FPV вручную!':'Фронт в движении…'); G.alertT=Math.max(0,G.alertT); }
   G.shake=Math.max(0,G.shake-dt*26);
+  // Camera: follows the current sector; Arrows/A/D, screen edges or minimap pan it manually.
+  { const maxCam=Math.max(0,W-VIEW_W); let pan=0;
+    if(keysDown['arrowleft']||keysDown['a']||keysDown['ф']) pan-=1;
+    if(keysDown['arrowright']||keysDown['d']||keysDown['в']) pan+=1;
+    if(!pan&&W>VIEW_W){ if(mouse.sx<26) pan=-1; else if(mouse.sx>VIEW_W-26) pan=1; }
+    if(pan){ G.camTargetX=clamp((G.camTargetX||0)+pan*720*dt,0,maxCam); G.camManualT=4; }
+    else if(G.camManualT>0) G.camManualT-=dt;
+    if(G.camManualT<=0) G.camTargetX=sectorFocusX();
+    G.camX=lerp(G.camX||0, clamp(G.camTargetX||0,0,maxCam), clamp(dt*2.4,0,1));
+    mouse.x=mouse.sx+G.camX; mouse.y=mouse.sy; }
   updateAI(dt);
   // pending enemy missile warnings
   for(const w of G.warnings){ w.t-=dt; if(w.t<=0&&!w.done){ w.done=true; launchMissile(w.side,w.x,w.y);} }
   G.warnings=G.warnings.filter(w=>!w.done);
-  // building smoke
-  for(const s of ['player','enemy']){ const f=G.city[s]/G.cityMax;
-    for(const b of buildings[s]) if(f<b.th&&Math.random()<dt*0.25) spawnParticles(b.x+b.w/2,b.y+b.h/2,1,'smoke'); }
+  // building smoke (per city zone)
+  for(const b of buildings) if(zoneFrac(b.zone)<b.th&&Math.random()<dt*0.22) spawnParticles(b.x+b.w/2,b.y+b.h/2,1,'smoke');
   for(const wr of G.wrecks){ wr.t+=dt; if(wr.t<16&&Math.random()<dt*0.7) spawnParticles(wr.x,wr.y,1,'smoke'); }
   // REB jamming first (affects air movement)
   for(const u of G.units){ if(!u.air||u.dead) continue; let jam=false;
@@ -754,8 +826,16 @@ function updateUnit(u,dt){
   // target acquisition
   if(u.scanT<=0){ u.scanT=0.18+rand(0.12);
     if(u.type==='pvo'){ const mis=G.projectiles.find(p=>p.kind==='cruise'&&!p.dead&&p.side!==u.side&&dist(u,p)<d.range); u.target=mis||findTarget(u); }
-    // enemy MLRS obey the commander's suppression target (player PVO/REB first)
-    else if(u.side==='enemy'&&u.type==='mlrs'&&u.priorityTarget&&!u.priorityTarget.dead&&dist(u,u.priorityTarget)<640) u.target=u.priorityTarget;
+    // Combined-arms focus fire, but never ignore a close threat: a nearby
+    // valid target overrides the staff focus (self-defence), except that
+    // MLRS/FPV keep their assigned suppression/armour victim.
+    else if(u.side==='enemy'){
+      const near=findTarget(u);
+      const pri=(u.priorityTarget&&!u.priorityTarget.dead&&validFor(u,u.priorityTarget)
+        &&dist(u,u.priorityTarget)<(u.type==='mlrs'?640:620))?u.priorityTarget:null;
+      const closeLimit=u.type==='mlrs'?210 : u.air?0 : Math.max(d.range+35,185);
+      u.target=(near&&dist(u,near)<=closeLimit)?near:(pri||near);
+    }
     else u.target=findTarget(u); }
   const tgt=(u.target&&!u.target.dead)?u.target:null;
   /* ----- AIR ----- */
@@ -774,12 +854,12 @@ function updateUnit(u,dt){
     }
     if(tgt){ const dd=moveToward(u,tgt.x,tgt.y,d.speed,dt);
       if(dd<22){ explodeAOE(u.x,u.y,46,d.dmg,u.side); killUnitSilent(u); } }
-    else { moveToward(u, u.side==='player'?W-60:60, u.y, d.speed, dt);
+    else { moveToward(u, u.side==='player'?W-60:playerBaseX0()+60, u.y, d.speed, dt);
       if(cityDist(u)<18){ explodeAOE(u.x,u.y,46,d.dmg,u.side); killUnitSilent(u); } }
     return;
   }
   if(u.type==='bomber'){
-    if(u.ammo<=0){ const homeX=u.side==='player'?70:W-70; if(moveToward(u,homeX,u.y,d.speed*1.15,dt)<26) u.dead=true; return; }
+    if(u.ammo<=0){ const homeX=u.side==='player'?playerBaseX0()+70:W-70; if(moveToward(u,homeX,u.y,d.speed*1.15,dt)<26) u.dead=true; return; }
     // enemy bomber reserve: stay back until released (keeps it out of player PVO while waiting)
     if(u.side==='enemy'&&u.order&&u.order.mode==='hold'){
       moveToward(u, u.order.x+Math.cos(G.time*0.7+u.seed)*42, u.order.y+Math.sin(G.time*0.95+u.seed)*26, d.speed*0.8, dt);
@@ -793,7 +873,7 @@ function updateUnit(u,dt){
   }
   /* ----- PVO: drive to its post & deploy (enemy posts are planned by the commander) ----- */
   if(u.type==='pvo'){
-    const post = u.deployPos || {x:(u.side==='player'? CITY_W+215 : W-CITY_W-215), y:u.y};
+    const post = u.deployPos || {x:(u.side==='player'? playerBaseWall()+215 : enemyWallX()-215), y:u.y};
     if(!u.deployed){ if(moveToward(u,post.x,post.y,d.speed,dt)<8){ u.deployed=true; if(u.side==='player')log('[ПВО] Развёрнута и прикрывает небо','good'); } }
     else if(tgt){ u.turret=angLerp(u.turret,Math.atan2(tgt.y-u.y,tgt.x-u.x),dt*8);
       if(dist(u,tgt)<=d.range&&u.cd<=0){ u.cd=d.rof; shootAt(u,tgt); } }
@@ -827,16 +907,26 @@ function updateUnit(u,dt){
     }
   }
   // advance: toward nearby enemy (aggro) or straight to enemy city
-  let tx,ty;
-  if(tgt&&dist(u,tgt)<(u.type==='mlrs'?560:330)){ tx=tgt.x; ty=tgt.y; if(u.type==='mlrs'&&dist(u,tgt)<150){ tx=u.x-u.dir*60; ty=u.y; } }
-  else { tx=u.side==='player'? W-CITY_W-8:CITY_W+8; ty=u.y+Math.sin(u.wob*0.24+u.seed)*8;
-    if(ord&&ord.mode==='assault') ty=ord.y; // converge on the chosen attack lane
+  let tx,ty,moveSpeed=d.speed;
+  const aggroChase = tgt&&dist(u,tgt)<(u.type==='mlrs'?560:330);
+  if(aggroChase){ tx=tgt.x; ty=tgt.y; if(u.type==='mlrs'&&dist(u,tgt)<150){ tx=u.x-u.dir*60; ty=u.y; } }
+  else { tx=u.side==='player'? enemyWallX()-8 : playerBaseWall()+8; ty=u.y+Math.sin(u.wob*0.24+u.seed)*8;
+    if(ord&&ord.mode==='assault'){ ty=ord.y; // converge on the chosen attack lane
+      // Formation cohesion: nobody races ahead of the armour fist, laggards hurry up.
+      if(ord.groupX!==undefined){ const desiredX=ord.groupX+(ord.formDX||0);
+        if(u.x<desiredX-70){ tx=desiredX; }              // too far ahead: fall back into the formation
+        else if(u.x>desiredX+130) moveSpeed*=1.22; }     // lagging behind the group
+    }
   }
-  moveToward(u,tx,ty,d.speed,dt);
+  moveToward(u,tx,ty,moveSpeed,dt);
   u.turret=angLerp(u.turret,u.angle,dt*3);
 }
 const _cpCache={};
-function cityPointCache(u){ const k=u.side; if(!_cpCache[k]||Math.random()<0.01)_cpCache[k]={dead:false,air:false,type:'city',x:u.side==='player'?W-60:60,y:450+rand(-160,160)}; return _cpCache[k]; }
+function cityPointCache(u){ const k=u.side, zone=u.side==='player'?G.enemyCityZone:G.playerBaseZone;
+  if(!_cpCache[k]||_cpCache[k].zone!==zone||Math.random()<0.01)
+    _cpCache[k]={dead:false,air:false,type:'city',isCity:true,citySide:u.side==='player'?'enemy':'player',zone:zone,
+      x:u.side==='player'?W-60:playerBaseX0()+60, y:450+rand(-160,160)};
+  return _cpCache[k]; }
 function killUnitSilent(u){ u.dead=true; if(G.controlled===u)G.controlled=null; }
 
 function updateProjectiles(dt){
@@ -848,7 +938,7 @@ function updateProjectiles(dt){
       if(p.kind==='aa'){ p.trail=(p.trail||0)-dt; if(p.trail<=0){p.trail=0.03; spawnParticles(p.x,p.y,1,'smoke');} }
       if(dd<=Math.max(step,13)){ p.dead=true;
         if(t&&!t.dead){
-          if(t.isCity) damageCity(t.citySide,p.dmg,tx,ty,p.side);
+          if(t.isCity){ if(t.zone===undefined||t.zone===(t.citySide==='enemy'?G.enemyCityZone:G.playerBaseZone)) damageCity(t.citySide,p.dmg,tx,ty,p.side); }
           else if(t.kind==='cruise'){ t.hp-=p.dmg; spawnParticles(tx,ty,4,'spark');
             if(t.hp<=0&&!t.dead){ t.dead=true; spawnExplosion(tx,ty,0.9); addFloater(tx,ty-20,'ПЕРЕХВАТ!','#8fd0ff'); if(p.side==='player'){G.money+=60; log('[ПВО] Твоя ПВО <b>перехватила ракету</b>! +60 КР','good');} } }
           else if(p.kind==='shell') explodeAOE(tx,ty,26,p.dmg,p.side,'cannon');
@@ -878,6 +968,21 @@ function updateProjectiles(dt){
    It only uses observable information (spawned units, launches, economy
    estimates), with accuracy scaled by difficulty. */
 function aiBrain(){ return AI_BRAIN[clamp(G.diff||0,0,2)]; }
+
+/* Strategy layer: the commander picks an attack/defence algorithm from the
+   player's actual composition, forecast and battlefield geometry. */
+const AI_STRATEGIES={
+  antiArmor:      {label:'противотанковый кулак', waveMult:0.95, localEdge:0.82, buy:{fpv:34,tank:18,btr:10,reb:12,pvo:6,mlrs:6,bomber:6,infantry:-4}},
+  airShield:      {label:'воздушный щит ПВО+РЭБ', waveMult:1.15, localEdge:0.95, buy:{pvo:42,reb:34,btr:14,infantry:10,fpv:-6,bomber:-14,tank:-6}},
+  counterSwarm:   {label:'огневой вал по пехоте', waveMult:0.90, localEdge:0.80, buy:{mlrs:34,btr:26,tank:16,infantry:12,bomber:16,pvo:-4,reb:-2}},
+  suppressSupport:{label:'подавление ПВО/РЭБ/РСЗО',waveMult:1.05, localEdge:0.90, buy:{mlrs:28,fpv:24,bomber:12,tank:8,btr:8}},
+  flankBreak:     {label:'прорыв по слабому флангу',waveMult:0.95, localEdge:0.75, buy:{tank:22,btr:20,infantry:12,fpv:12,mlrs:8}},
+  missileGuard:   {label:'противоракетная оборона',waveMult:1.20, localEdge:1.00, buy:{pvo:30,reb:16,infantry:8,btr:8,tank:-4,mlrs:-6}},
+  cityDefense:    {label:'оборона города',        waveMult:1.35, localEdge:1.10, buy:{tank:20,btr:18,fpv:20,pvo:20,reb:14,infantry:10,mlrs:12}},
+  breakthrough:   {label:'лобовой прорыв',        waveMult:0.80, localEdge:0.65, buy:{tank:24,btr:18,infantry:10,mlrs:14,fpv:10}},
+  balanced:       {label:'сбалансированное наступление',waveMult:1.00,localEdge:0.85,buy:{tank:7,btr:7,infantry:5,fpv:5,mlrs:5,pvo:5,reb:5}},
+  finishCity:     {label:'добивание базы',        waveMult:0.65, localEdge:0.45, buy:{tank:24,mlrs:22,fpv:16,btr:10}},
+};
 function laneOfY(y){ return y<330?0 : y<570?1 : 2; }
 function countType(arr,t){ let n=0; for(const u of arr) if(u.type===t)n++; return n; }
 function unitValue(u){
@@ -917,6 +1022,7 @@ function aiAssess(){
   const mine=G.units.filter(u=>!u.dead&&u.side==='player');
   const his =G.units.filter(u=>!u.dead&&u.side==='enemy');
   const pGround=mine.filter(u=>!u.air), eGround=his.filter(u=>!u.air);
+  const ew=enemyWallX(), pb=playerBaseWall(), mid=(ew+pb)/2;   // current-sector frame
   // --- intel: prune, then forecast the player's next builds from spawn history
   I.spawns=I.spawns.filter(s=>G.time-s.t<80);
   I.missiles=I.missiles.filter(m=>G.time-m.t<70);
@@ -956,14 +1062,14 @@ function aiAssess(){
     if(L.lane===A.attackLane) s-=45;                                  // persistence: avoid flip-flopping
     if(L.lane===A.failedLane&&G.time<A.failedLaneUntil) s+=220;       // do not repeat a failed push at once
     if(s<bestScore){bestScore=s;bestLane=L.lane;} }
-  A.attackLane=bestLane; A.rally={x:1080,y:AI_LANES[bestLane]};
+  A.attackLane=bestLane; A.rally={x:ew-402,y:AI_LANES[bestLane]};
   // --- groups & situation
   const armorCluster=bestCluster(his.filter(u=>u.type==='tank'||u.type==='btr'),205);
   const rearCluster =bestCluster(his.filter(u=>u.type==='mlrs'||u.type==='pvo'),230);
   const playerCluster=bestCluster(pGround,150);
-  const incursionCluster=bestCluster(pGround.filter(u=>u.x>860),185); // player force inside AI half
+  const incursionCluster=bestCluster(pGround.filter(u=>u.x>mid+60),185); // player force inside AI half
   const combatTypes=['infantry','btr','tank','mlrs'];
-  const staged=eGround.filter(u=>combatTypes.includes(u.type)&&u.x>820);
+  const staged=eGround.filter(u=>combatTypes.includes(u.type)&&u.x>mid+20);
   const eCombat=his.filter(u=>combatTypes.includes(u.type)||u.air);
   const cityThreatUnits=pGround.filter(u=>cityDist(u)<390);
   let desiredPvo=0;
@@ -978,18 +1084,164 @@ function aiAssess(){
   // suppression priority: forward player PVO/REB/MLRS near the attack lane
   let suppressionTarget=null, supScore=-1;
   for(const u of pGround){ if(!['pvo','reb','mlrs'].includes(u.type)) continue;
-    const s=({pvo:360,reb:300,mlrs:260}[u.type]) + unitValue(u)*0.4 - Math.abs(u.y-AI_LANES[bestLane])*0.12 + (u.x>430?70:0);
+    const s=({pvo:360,reb:300,mlrs:260}[u.type]) + unitValue(u)*0.4 - Math.abs(u.y-AI_LANES[bestLane])*0.12 + (u.x>pb+312?70:0);
     if(s>supScore){supScore=s;suppressionTarget=u;} }
   const frontArr=eGround.filter(u=>u.type!=='pvo');
+  // --- composition metrics the strategy layer reasons about
+  const playerCounts={}, ownCounts={};
+  for(const k of ORDER){ playerCounts[k]=countType(mine,k); ownCounts[k]=countType(his,k); }
+  const playerValue=Math.max(1,forceValue(mine)), ownValue=Math.max(1,forceValue(his));
+  const supportUnits=pGround.filter(u=>['pvo','reb','mlrs'].includes(u.type));
+  const weakestLane=lanes.reduce((a,b)=>a.defense<b.defense?a:b,lanes[0]);
+  const strongestLane=lanes.reduce((a,b)=>a.defense>b.defense?a:b,lanes[0]);
   const plan={mine:mine,his:his,pGround:pGround,eGround:eGround,lanes:lanes,
     armorCluster:armorCluster,rearCluster:rearCluster,playerCluster:playerCluster,
     staged:staged,stagedValue:forceValue(staged),assaultValue:forceValue(eCombat),
-    forwardValue:forceValue(eCombat.filter(u=>u.x<820)),
+    forwardValue:forceValue(eCombat.filter(u=>u.x<mid+20)),
     cityThreatValue:forceValue(cityThreatUnits),incursionCluster:incursionCluster,
     incursionValue:incursionCluster?incursionCluster.value:0,desiredPvo:desiredPvo,desiredReb:desiredReb,
     suppressionTarget:suppressionTarget,airShare:airShare,armorShare:armorShare,
-    frontX:frontArr.length?Math.min.apply(null,frontArr.map(u=>u.x)):1320};
+    frontX:frontArr.length?Math.min.apply(null,frontArr.map(u=>u.x)):ew-162,
+    playerCounts:playerCounts,ownCounts:ownCounts,playerValue:playerValue,ownValue:ownValue,
+    armorForceValue:forceValue(mine.filter(u=>u.type==='tank'||u.type==='btr')),
+    airForceValue:forceValue(mine.filter(u=>u.air)),
+    infantryForceValue:forceValue(mine.filter(u=>u.type==='infantry')),
+    supportUnits:supportUnits,supportCluster:bestCluster(supportUnits,190),supportValue:forceValue(supportUnits),
+    playerSaving:(I.estMoney>=430?0.65:0)+(I.estMoney>=720?0.35:0),
+    weakestLane:weakestLane,strongestLane:strongestLane,
+    laneImbalance:clamp((strongestLane.defense-weakestLane.defense)/Math.max(300,strongestLane.defense),0,1),
+    ownCityFrac:clamp(G.city.enemy/G.zoneMax[G.enemyCityZone],0,1),
+    playerCityFrac:clamp(G.city.player/G.zoneMax[G.playerBaseZone],0,1),
+    forceRatio:ownValue/playerValue};
   A.plan=plan; return plan;
+}
+
+
+function aiSelectStrategy(plan){
+  const A=G.ai, I=A.intel, brain=aiBrain();
+  const armorShareNow=plan.armorForceValue/plan.playerValue;
+  const airShareNow=plan.airForceValue/plan.playerValue;
+  const infantryShareNow=plan.infantryForceValue/plan.playerValue;
+  const forecastArmor=(I.forecast.tank||0)+(I.forecast.btr||0)*0.7;
+  const forecastInfantry=I.forecast.infantry||0;
+  const scores={};
+  scores.antiArmor=8 + I.armorThreat*38 + armorShareNow*35 + Math.max(0,forecastArmor-0.16)*48;
+  scores.airShield=5 + I.airThreat*42 + airShareNow*30 + (plan.airShare||0)*30 + (plan.armorCluster?Math.min(12,plan.armorCluster.value/60):0);
+  scores.counterSwarm=5 + I.swarmThreat*36 + infantryShareNow*30 + Math.max(0,forecastInfantry-0.18)*42;
+  scores.suppressSupport=8 + plan.supportValue/17 + (plan.supportCluster?plan.supportCluster.value/24:0) + I.artilleryThreat*22 + (plan.suppressionTarget?14:0);
+  scores.flankBreak= plan.playerValue>240
+    ? 8 + plan.laneImbalance*38 + (plan.weakestLane.defense<220?14:0) + (plan.forceRatio>0.9?8:0)
+    : 6;
+  scores.missileGuard=4 + I.missileThreat*34 + plan.playerSaving*22;
+  scores.cityDefense= plan.cityThreatValue/7 + plan.incursionValue/10 + (plan.ownCityFrac<0.62?22:0) + (plan.ownCityFrac<0.38?20:0);
+  scores.breakthrough=10 + (plan.forceRatio-1)*32 + (plan.playerValue<500?10:0) + (I.style==='mixed'?4:0);
+  scores.balanced=12;
+  scores.finishCity= plan.playerCityFrac<0.35?46 : plan.playerCityFrac<0.52?22 : 0;
+  if(plan.forceRatio>1.05&&plan.playerCityFrac<0.62) scores.finishCity+=10;
+  if(A.phase==='defend') scores.cityDefense+=100;
+  if(A.strategy&&scores[A.strategy]!==undefined) scores[A.strategy]+= A.phase==='assault'?18:8; // no flip-flopping mid-attack
+  for(const k in scores) scores[k]+=rand(-brain.noise,brain.noise)*14;
+  let best='balanced', bestScore=-Infinity;
+  for(const k in scores) if(scores[k]>bestScore){ bestScore=scores[k]; best=k; }
+  const urgent = plan.cityThreatValue>300 || plan.incursionValue>560 || plan.ownCityFrac<0.35;
+  const minHold=[14,10,6][clamp(G.diff||0,0,2)];
+  const currentScore=scores[A.strategy]||0;
+  if(best!==A.strategy && (urgent || (G.time-(A.strategySince||0)>=minHold && bestScore>currentScore+5))){
+    A.strategy=best; A.strategySince=G.time;
+    if(G.time>8 && G.time-A.lastIntelLog>9){ A.lastIntelLog=G.time;
+      log('[РАЗВЕДКА] Враг смотрит на твой состав и выбирает алгоритм: <b>'+AI_STRATEGIES[best].label+'</b>','bad'); }
+  }
+  A.strategyScores=scores;
+  plan.strategy=A.strategy;
+  plan.strategyProfile=AI_STRATEGIES[A.strategy]||AI_STRATEGIES.balanced;
+  return plan.strategyProfile;
+}
+
+/* Combined-arms battle group: one frame shared by tanks, infantry, MLRS,
+   PVO and EW so they advance, cover and focus fire as a single fist. */
+function aiGroupFrame(plan){
+  const A=G.ai, laneY=AI_LANES[A.attackLane];
+  const by=t=>plan.his.filter(u=>u.type===t);
+  const tanks=by('tank'), btrs=by('btr'), infantry=by('infantry');
+  const mlrs=by('mlrs'), reb=by('reb'), pvo=by('pvo');
+  const spear=tanks.length?tanks:(btrs.length?btrs:infantry);
+  let center={x:A.rally.x,y:laneY,vx:0,vy:0};
+  if(spear.length){
+    let sw=0,x=0,y=0,vx=0,vy=0;
+    for(const u of spear){ const w=DEFS[u.type].cost; sw+=w; x+=u.x*w; y+=u.y*w; vx+=(u.vx||0)*w; vy+=(u.vy||0)*w; }
+    center={x:x/sw,y:y/sw,vx:vx/sw,vy:vy/sw};
+  } else if(plan.armorCluster) center={x:plan.armorCluster.x,y:plan.armorCluster.y,vx:plan.armorCluster.vx||0,vy:plan.armorCluster.vy||0};
+  const combat=[...tanks,...btrs,...infantry];
+  const spreadY=clamp(85+combat.length*9,95,190)*(A.disperse?1.35:1);
+  const frontX=spear.length?Math.min.apply(null,spear.map(u=>u.x)):center.x;
+  // Role focus targets: armour kills armour, MLRS/FPV suppress support, screens clear infantry.
+  const strategyPriority={
+    antiArmor:['tank','btr','mlrs','reb','pvo','infantry'],
+    suppressSupport:['pvo','reb','mlrs','tank','btr','infantry'],
+    counterSwarm:['infantry','btr','tank','mlrs','reb','pvo'],
+    cityDefense:['tank','btr','infantry','mlrs','pvo','reb'],
+  }[A.strategy]||['pvo','reb','tank','mlrs','btr','infantry'];
+  const focusScore=u=>{
+    const idx=strategyPriority.indexOf(u.type);
+    let sc=unitValue(u)*0.55 + (idx>=0?(6-idx)*34:0) - dist(center,u)*0.13 - Math.abs(u.y-laneY)*0.08;
+    sc+=25*(1-clamp(u.hp/u.maxHp,0,1));                              // finish damaged vehicles
+    if(A.strategy==='cityDefense'||A.phase==='defend') sc+=Math.max(0,760-cityDist(u))*0.12;
+    return sc;
+  };
+  const near=plan.pGround.filter(u=>dist(center,u)<860);
+  let focus=null,fs=-Infinity;
+  for(const u of near){ const sc=focusScore(u); if(sc>fs){fs=sc;focus=u;} }
+  const pick=(types,range)=>{
+    let b=null,bs=-Infinity;
+    for(const u of plan.pGround){ if(!types.includes(u.type)||dist(center,u)>range) continue;
+      const sc=unitValue(u)-dist(center,u)*0.16-Math.abs(u.y-laneY)*0.08;
+      if(sc>bs){bs=sc;b=u;} }
+    return b;
+  };
+  const armorFocus=pick(['tank','btr'],700)||focus;
+  const supportFocus=(!plan.suppressionTarget||plan.suppressionTarget.dead)
+    ? pick(['pvo','reb','mlrs'],760) : plan.suppressionTarget;
+  const infantryFocus=pick(['infantry','btr'],620)||focus;
+  const deployedPvo=pvo.filter(u=>u.deployed);
+  const deployedCover=deployedPvo.length?deployedPvo.filter(u=>dist(u,center)<DEFS.pvo.range*1.25).length/pvo.length||0:0;
+  const armorValue=forceValue([...tanks,...btrs]);
+  const infantryScreenValue=forceValue([...infantry,...btrs]);
+  const supportReady=
+    (plan.desiredPvo===0 || deployedPvo.length>=1 || (pvo.length===0&&plan.airForceValue<100)) &&
+    (plan.desiredReb===0 || armorValue<180 || reb.some(u=>dist(u,center)<260));
+  const cohesion=combat.length
+    ? combat.filter(u=>dist(u,center)<Math.max(250,spreadY+150)).length/combat.length : 0.5;
+  const ready=armorValue>=(A.strategy==='cityDefense'?120:180) && infantryScreenValue>=50 && supportReady && cohesion>=0.5;
+  const playerPvoNear=plan.mine.filter(u=>u.type==='pvo'&&u.deployed&&Math.abs(u.y-laneY)<340&&u.x<center.x+180);
+  const airWindow=playerPvoNear.length===0 ||
+    (supportFocus&&supportFocus.type==='pvo'&&supportFocus.hp/supportFocus.maxHp<0.45) ||
+    (A.phase==='assault'&&A.phaseT>3);
+  // Formation slots relative to the spearhead (enemy attacks toward -x).
+  const slots={};
+  const assign=(list,dx,step)=>{
+    [...list].sort((a,b)=>a.id-b.id).forEach((u,i)=>{
+      const mag=Math.ceil(i/2)*step, sign=i===0?0:(i%2?1:-1);
+      slots[u.id]={dx:dx,dy:clamp(sign*mag,-spreadY,spreadY)};
+    });
+  };
+  assign(tanks,0,58);          // armour fist
+  assign(infantry,-48,72);     // infantry screen just ahead/flanks of tanks
+  assign(btrs,72,66);          // BTRs immediately behind, covering infantry
+  assign(mlrs,288,82);         // artillery follows at firing distance
+  assign(pvo,118,120);         // planned air-cover shoulder behind armour
+  reb.sort((a,b)=>a.id-b.id).forEach((u,i)=>{ slots[u.id]={dx:84,dy:i===0?-62:62}; });
+  plan.his.filter(u=>u.air).sort((a,b)=>a.id-b.id).forEach((u,i)=>{ slots[u.id]={dx:150,dy:(i%2?54:-54)}; });
+  const group={center:center,frontX:frontX,spreadY:spreadY,focus:focus,armorFocus:armorFocus,
+    supportFocus:supportFocus,infantryFocus:infantryFocus,armorValue:armorValue,
+    infantryScreenValue:infantryScreenValue,supportReady:supportReady,cohesion:cohesion,
+    ready:ready,airWindow:airWindow,slots:slots,deployedCover:deployedCover,
+    counts:{tank:tanks.length,btr:btrs.length,infantry:infantry.length,mlrs:mlrs.length,pvo:pvo.length,reb:reb.length}};
+  A.group=group; A.groupTarget=focus;
+  plan.group=group;
+  return group;
+}
+function formationOffset(plan,u){
+  return (plan&&plan.group&&plan.group.slots&&plan.group.slots[u.id]) || {dx:0,dy:0};
 }
 
 function aiSetPhase(next){
@@ -999,7 +1251,7 @@ function aiSetPhase(next){
   if(next==='stage') log('[РАЗВЕДКА] Враг собирает <b>ударную группу</b>','bad');
   else if(next==='suppress') log('[РАЗВЕДКА] Враг подавляет твою <b>ПВО и РЭБ</b> перед атакой','bad');
   else if(next==='assault'){ A.stats.waves++; A.waveStartValue=Math.max(1,A.plan?A.plan.assaultValue:1); A.assaultCityHp=G.city.player; A.wavePeakForward=0;
-    log('[ТРЕВОГА] Враг начал <b>наступление</b> по '+laneName,'bad');
+    log('[ТРЕВОГА] Враг начал <b>наступление</b> по '+laneName+' · '+(AI_STRATEGIES[A.strategy]?AI_STRATEGIES[A.strategy].label:''),'bad');
     setAlert('[ТРЕВОГА] Наступление врага по '+laneName+'!',true,3); }
   else if(next==='retreat'){ A.stats.retreats++; A.failedLane=A.attackLane; A.failedLaneUntil=G.time+50;
     log('[РАЗВЕДКА] Атака врага захлебнулась — он отходит на <b>перегруппировку</b>','good'); }
@@ -1007,26 +1259,29 @@ function aiSetPhase(next){
 }
 function aiUpdatePhase(plan){
   const A=G.ai, brain=aiBrain(); A.phaseT+=brain.think;
+  const profile=plan.strategyProfile||AI_STRATEGIES[A.strategy]||AI_STRATEGIES.balanced;
   if((plan.cityThreatValue>300||plan.incursionValue>560)&&A.phase!=='defend'){ aiSetPhase('defend'); return; }
   if(A.phase==='defend'){ if(plan.cityThreatValue<110&&A.phaseT>3) aiSetPhase('buildup'); return; }
   if(A.phase==='buildup'){
-    const threshold=brain.waveValue*(A.wave===1?0.75:1)*(A.phaseT>34?0.85:1);
+    const threshold=brain.waveValue*profile.waveMult*(A.wave===1?0.75:1)*(A.phaseT>34?0.85:1);
     const laneDefense=plan.lanes[A.attackLane].defense;
-    const localEdge = plan.stagedValue>=laneDefense*0.85;             // do not attack into clear inferiority
+    const localEdge = plan.stagedValue>=laneDefense*profile.localEdge; // strategy sets how bold the attack is
     const pvoReady = countType(plan.his,'pvo')>=Math.min(plan.desiredPvo,1)||A.phaseT>28;
     const rebReady = plan.desiredReb===0||countType(plan.his,'reb')>=1||A.phaseT>28;
-    if((plan.stagedValue>=threshold&&localEdge&&pvoReady&&rebReady)||(A.phaseT>55&&plan.stagedValue>=500)) aiSetPhase('stage');
+    const supportReady = !plan.group||plan.group.supportReady||A.phaseT>30; // combined-arms group must be covered
+    if((plan.stagedValue>=threshold&&localEdge&&pvoReady&&rebReady&&supportReady)||(A.phaseT>55&&plan.stagedValue>=500)) aiSetPhase('stage');
   }
   else if(A.phase==='stage'){
     const ready=plan.staged.length? plan.staged.filter(u=>u.order&&dist(u,u.order)<200).length/plan.staged.length : 1;
-    if(A.phaseT>6||ready>0.62) aiSetPhase('suppress');
+    if(A.phaseT>6||ready>0.62||(plan.group&&plan.group.ready)) aiSetPhase('suppress');
   }
   else if(A.phase==='suppress'){
-    if(A.phaseT>(plan.suppressionTarget?5.5:2.2)) aiSetPhase('assault');
+    const suppressNeed=A.strategy==='suppressSupport'?7:(plan.suppressionTarget?5.5:2.2);
+    if(A.phaseT>suppressNeed) aiSetPhase('assault');
   }
   else if(A.phase==='assault'){
     A.wavePeakForward=Math.max(A.wavePeakForward||0,plan.forwardValue);
-    const nearCity=forceValue(plan.eGround.filter(u=>u.x<360));
+    const nearCity=forceValue(plan.eGround.filter(u=>u.x<playerBaseWall()+242));
     const sieging = G.city.player<A.assaultCityHp-80 && nearCity>120;
     // Pull out when the forward fist has melted away — measured against its own
     // peak strength during this push, not against units still back at base.
@@ -1035,7 +1290,7 @@ function aiUpdatePhase(plan){
   }
   else if(A.phase==='retreat'){
     const surv=plan.eGround.filter(u=>['infantry','btr','tank','mlrs'].includes(u.type));
-    const frac=surv.length? surv.filter(u=>u.x>1030).length/surv.length : 1;
+    const frac=surv.length? surv.filter(u=>u.x>enemyWallX()-452).length/surv.length : 1;
     if(A.phaseT>9||frac>0.72){ A.wave++; aiSetPhase('buildup'); }
   }
 }
@@ -1046,7 +1301,7 @@ function aiScorePvoPost(pt,plan,selected,current){
   for(const a of plan.his){ if(a.air||a.type==='pvo') continue; const d=dist(pt,a);
     if(d<R) score+=unitValue(a)*(1-d/R)*((a.type==='tank'||a.type==='mlrs')?0.55:0.28); }
   const rd=dist(pt,A.rally); if(rd<R) score+=110*(1-rd/R);
-  for(const cy of [250,450,650]){ const d=Math.hypot(pt.x-1545,pt.y-cy);
+  for(const cy of [250,450,650]){ const d=Math.hypot(pt.x-(W-55),pt.y-cy);
     if(d<R) score+=55*I.missileThreat*(1-d/R); }                       // city missile shield
   score+=150*I.airThreat*Math.exp(-Math.abs(pt.y-I.airLaneY)/200);     // expected drone corridor
   score+=65*Math.exp(-Math.abs(pt.y-AI_LANES[A.attackLane])/230);      // cover the assault lane
@@ -1065,13 +1320,17 @@ function aiPlanPvoPosts(plan){
   const existing=plan.his.filter(u=>u.type==='pvo');
   const wanted=Math.max(plan.desiredPvo,existing.length);
   if(wanted===0){ A.pvoPosts=[]; A.pvoPlanT=2; return []; }
-  const cand=[];
-  for(const x of [1305,1235,1150,1060]) for(const y of [190,310,450,590,710]) cand.push({x:x,y:y});
+  const cand=[], ew=enemyWallX(), pb=playerBaseWall();
+  const pvoLo=Math.max(pb+160,ew-472), pvoHi=ew-147;
+  for(const x of [ew-177,ew-247,ew-332,ew-422]) for(const y of [190,310,450,590,710]) cand.push({x:x,y:y});
   for(const c of [plan.armorCluster,plan.rearCluster]) if(c){
-    cand.push({x:clamp(c.x+95,1010,1335),y:clamp(c.y,130,770)});
-    cand.push({x:clamp(c.x+95,1010,1335),y:clamp(c.y-140,130,770)});
-    cand.push({x:clamp(c.x+95,1010,1335),y:clamp(c.y+140,130,770)}); }
-  cand.push({x:1200,y:AI_LANES[A.attackLane]});
+    cand.push({x:clamp(c.x+95,pvoLo,pvoHi),y:clamp(c.y,130,770)});
+    cand.push({x:clamp(c.x+95,pvoLo,pvoHi),y:clamp(c.y-140,130,770)});
+    cand.push({x:clamp(c.x+95,pvoLo,pvoHi),y:clamp(c.y+140,130,770)}); }
+  cand.push({x:ew-282,y:AI_LANES[A.attackLane]});
+  if(plan.group&&plan.group.center){ const gc=plan.group.center;
+    for(const dy of [-plan.group.spreadY,0,plan.group.spreadY])
+      cand.push({x:clamp(gc.x+118,pb+160,ew-120),y:clamp(gc.y+dy,130,770)}); }
   const selected=[];
   for(let i=0;i<wanted;i++){ let bp=null,bs=-Infinity;
     // hard spacing first (no stacked umbrellas), relaxed only if nothing fits
@@ -1114,7 +1373,7 @@ function aiPlanPvoPosts(plan){
 function aiAssignNewPvo(u,plan){
   const A=G.ai; let posts=A.pvoPosts;
   if(!posts.length&&plan) posts=aiPlanPvoPosts(plan);
-  if(!posts.length){ u.deployPos={x:1275,y:450}; return; }
+  if(!posts.length){ u.deployPos={x:enemyWallX()-207,y:450}; return; }
   const free=posts.find(p=>!G.units.some(o=>o!==u&&o.side==='enemy'&&o.type==='pvo'&&o.deployPos&&dist(o.deployPos,p)<45));
   const p=free||posts[0]; u.deployPos={x:p.x,y:p.y};
 }
@@ -1122,7 +1381,9 @@ function aiAssignNewPvo(u,plan){
 /* ----- orders: rally / assault lanes / EW escort / air reserve ----- */
 function aiAssignOrders(plan){
   const A=G.ai, I=A.intel, brain=aiBrain(), laneY=AI_LANES[A.attackLane], spread=A.disperse?1.65:1;
-  A.rally={x:1080,y:laneY};
+  const ew=enemyWallX(), pb=playerBaseWall(), mid=(ew+pb)/2;
+  A.rally={x:ew-402,y:laneY};
+  const grp=plan.group||aiGroupFrame(plan);
   const emergency=plan.cityThreatValue>240||plan.incursionValue>330;
   const playerPvo=countType(plan.mine,'pvo');
   // Minor breakthroughs are intercepted by the nearest staged units without
@@ -1139,44 +1400,56 @@ function aiAssignOrders(plan){
   for(const u of plan.his){
     if(u.type==='pvo'||u.type==='reb') continue;
     const slotX=(((u.id*37)%90)-45)*spread, slotY=(((u.id*53)%130)-65)*spread;
+    const form=formationOffset(plan,u);
     if(u.air){
       let release=emergency||A.phase==='assault'||A.phase==='defend';
-      if(A.phase==='suppress') release = u.type==='fpv' ? (A.phaseT>2||playerPvo===0) : (playerPvo===0);
-      u.order=release?{mode:'attack',x:60,y:u.y}
-                     :{mode:'hold',x:1190,y:clamp(laneY+slotY,110,790)};
+      if(A.phase==='suppress') release = grp.airWindow || (u.type==='fpv' ? (A.phaseT>2||playerPvo===0) : (playerPvo===0));
+      if(A.phase==='assault'&&!grp.airWindow&&A.phaseT<3) release=false; // drones wait for the suppression window
+      u.order=release?{mode:'attack',x:playerBaseX0()+60,y:u.y}
+                     :{mode:'hold',x:clamp(grp.center.x+form.dx,pb+180,ew-110),y:clamp(laneY+form.dy+slotY*0.35,110,790)};
       continue;
     }
     if(u.type==='mlrs'){
-      let sx=1180;
-      if(A.phase==='suppress') sx=1120;
-      if(A.phase==='assault'&&plan.armorCluster) sx=clamp(plan.armorCluster.x+275,720,1180);
-      if(A.phase==='retreat') u.order={mode:'retreat',x:1260,y:clamp(laneY+slotY*0.5,110,790)};
-      else u.order={mode:'support',x:sx+slotX*0.35,y:clamp(laneY+slotY*0.55,110,790)};
+      let sx=ew-302;
+      if(A.phase==='suppress') sx=ew-362;                         // forward enough to suppress PVO/REB
+      else if(grp&&grp.center) sx=clamp(grp.center.x+form.dx,Math.min(ew-160,pb+260),ew-160); // follows the group
+      else if(A.phase==='assault'&&plan.armorCluster) sx=clamp(plan.armorCluster.x+275,Math.min(ew-302,Math.max(pb+300,mid-80)),ew-302);
+      if(A.phase==='retreat') u.order={mode:'retreat',x:ew-222,y:clamp(laneY+slotY*0.5,110,790)};
+      else u.order={mode:'support',x:sx+slotX*0.2,y:clamp(laneY+form.dy+slotY*0.25,110,790)};
       continue;
     }
     if(interceptorIds[u.id]){ const pp=predictedPoint(plan.incursionCluster,0.8,brain.lead);
       u.order={mode:'intercept',x:pp.x,y:pp.y}; }
     else if(A.phase==='defend') u.order=null;                         // free hunt near the threatened city
-    else if(A.phase==='retreat') u.order={mode:'retreat',x:1245+slotX*0.25,y:clamp(laneY+slotY*0.7,110,790)};
-    else if(A.phase==='assault') u.order={mode:'assault',x:CITY_W+8,y:clamp(laneY+slotY,90,810)};
-    else { const rx=u.type==='tank'?1040 : u.type==='btr'?1080 : 1110; // buildup/stage/suppress: assemble
-      u.order={mode:'rally',x:rx+slotX,y:clamp(laneY+slotY,100,800)}; }
+    else if(A.phase==='retreat') u.order={mode:'retreat',x:ew-237+slotX*0.25,y:clamp(laneY+slotY*0.7,110,790)};
+    else if(A.phase==='assault') u.order={mode:'assault',x:pb+8,y:clamp(laneY+form.dy+slotY*0.35,90,810),
+      groupX:grp.center.x,formDX:form.dx,formDY:form.dy};
+    else { const rx=(ew-442)+form.dx; // buildup/stage/suppress: assemble as one formation
+      u.order={mode:'rally',x:rx+slotX*0.55,y:clamp(laneY+form.dy+slotY*0.25,100,800)}; }
   }
-  // MLRS suppression target for the whole battery
-  const pri=(A.phase==='suppress'||A.phase==='assault')?plan.suppressionTarget
-            :(plan.playerCluster?plan.playerCluster.anchor:null);
-  for(const u of plan.his) if(u.type==='mlrs') u.priorityTarget=(pri&&!pri.dead)?pri:null;
-  // EW escort: first jammer shadows the armour fist, the second guards the rear
+  // Combined-arms focus fire: each arm gets the target its role should kill.
+  for(const u of plan.his){
+    if(u.type==='pvo'||u.type==='reb'){ u.priorityTarget=null; continue; }
+    let pri=null;
+    if(u.type==='mlrs') pri=(A.phase==='suppress'||A.phase==='assault'||A.strategy==='suppressSupport')
+      ? (grp.supportFocus||plan.suppressionTarget) : (plan.playerCluster?plan.playerCluster.anchor:grp.focus);
+    else if(u.type==='tank'||u.type==='btr') pri=grp.armorFocus||grp.focus;
+    else if(u.type==='infantry') pri=grp.infantryFocus||grp.focus;
+    else if(u.type==='fpv') pri=(A.strategy==='suppressSupport'&&grp.supportFocus)?grp.supportFocus:(grp.armorFocus||grp.focus);
+    else if(u.type==='bomber') pri=(A.strategy==='counterSwarm'&&plan.playerCluster)?plan.playerCluster.anchor:grp.focus;
+    u.priorityTarget=(pri&&!pri.dead&&validFor(u,pri))?pri:null;
+  }
+  // EW escort: first jammer rides on the battle group's shoulder, the second guards the rear.
   const rebs=plan.his.filter(u=>u.type==='reb').sort((a,b)=>a.id-b.id);
+  const hasCombat=(grp.counts.tank+grp.counts.btr+grp.counts.infantry)>0;
   rebs.forEach((u,i)=>{
-    let grp=null,kind='city';
-    if(i===0&&plan.armorCluster){grp=plan.armorCluster;kind='armor';}
-    else if(plan.rearCluster&&(!plan.armorCluster||dist(plan.rearCluster,plan.armorCluster)>180||i>0)){grp=plan.rearCluster;kind='rear';}
-    else if(plan.armorCluster){grp=plan.armorCluster;kind='armor';}
-    if(grp){ u.order={mode:'escort',
-        x:clamp(grp.x+(grp.vx||0)*0.7+78,180,1395),                  // follows the fist even deep in the assault
-        y:clamp(grp.y+(grp.vy||0)*0.7+(i%2?58:-58),95,805)}; }
-    else u.order={mode:'escort',x:1290,y:clamp(I.airLaneY,120,780)};
+    const off=formationOffset(plan,u);
+    let anchor=grp.center,kind='armor';
+    if(i>0&&plan.rearCluster&&(!plan.armorCluster||dist(plan.rearCluster,plan.armorCluster)>180)){anchor=plan.rearCluster;kind='rear';}
+    if(hasCombat||anchor!==grp.center){ u.order={mode:'escort',
+        x:clamp(anchor.x+(anchor.vx||0)*0.7+off.dx,pb+62,ew-87),       // follows the fist even deep in the assault
+        y:clamp(anchor.y+(anchor.vy||0)*0.7+off.dy,95,805)}; }
+    else { u.order={mode:'escort',x:ew-192,y:clamp(I.airLaneY,120,780)}; kind='city'; }
     u.escortKind=kind;
   });
 }
@@ -1190,6 +1463,18 @@ function aiPurchaseScores(plan){
   const quota={tank:Math.round(3*ws),btr:Math.round(2*ws),infantry:Math.round(3*ws),mlrs:A.wave>2?2:1};
   if(A.phase==='buildup'||A.phase==='stage')
     for(const k in quota) if(cnt(k)<quota[k]) s[k]+=(quota[k]-cnt(k))*13;
+  // chosen strategy biases the whole shopping list
+  const profile=plan.strategyProfile||AI_STRATEGIES[A.strategy]||AI_STRATEGIES.balanced;
+  for(const k in profile.buy) s[k]+=profile.buy[k];
+  // combined-arms completeness: no armour fist without a screen, no screen without fire support
+  const grp=plan.group;
+  if(grp){
+    if(grp.armorValue<260&&grp.infantryScreenValue>=90){ s.tank+=16; s.btr+=8; }
+    if(grp.armorValue>=220&&grp.infantryScreenValue<120){ s.infantry+=18; s.btr+=14; }
+    if(grp.armorValue>=180&&cnt('mlrs')===0) s.mlrs+=16;
+    if(grp.armorValue>=220&&I.airThreat>0.25){ if(cnt('pvo')<1)s.pvo+=18; if(cnt('reb')<1)s.reb+=16; }
+    if(!grp.airWindow&&(A.phase==='suppress'||A.phase==='stage')){ s.fpv-=8; s.bomber-=10; s.mlrs+=8; }
+  }
   // counters — current threat blended with the forecast of what is coming
   const armorNow=pcnt('tank')*1.4+pcnt('btr')*0.8;
   s.fpv += armorNow*9 + I.armorThreat*20;
@@ -1202,6 +1487,11 @@ function aiPurchaseScores(plan){
   s.reb += Math.max(0,plan.desiredReb-cnt('reb'))*42 + I.airThreat*13;
   if(cnt('pvo')>=plan.desiredPvo&&plan.desiredPvo>0) s.pvo*=0.25;
   if(cnt('reb')>=Math.max(1,plan.desiredReb)) s.reb*=0.3;
+  // strategy minimums can demand more air cover than the generic forecast
+  const stratMinPvo=A.strategy==='airShield'?2:(A.strategy==='missileGuard'||A.strategy==='cityDefense'?1:0);
+  const stratMinReb=A.strategy==='airShield'?1:0;
+  if(cnt('pvo')<stratMinPvo) s.pvo+=(stratMinPvo-cnt('pvo'))*36;
+  if(cnt('reb')<stratMinReb) s.reb+=(stratMinReb-cnt('reb'))*34;
   // Rebuild the fist first when badly outnumbered; support can wait unless air is dire.
   const myCombat=forceValue(his.filter(u=>['infantry','btr','tank','mlrs'].includes(u.type)));
   const plCombat=forceValue(mine.filter(u=>['infantry','btr','tank','mlrs'].includes(u.type)));
@@ -1226,7 +1516,7 @@ function aiBuyUnit(type,plan){
   const u=spawnUnit('enemy',type); G.ai.stats.plannedBuys++;
   if(type==='pvo') aiAssignNewPvo(u,plan);
   if(u.air&&G.ai.phase!=='assault'&&G.ai.phase!=='defend')
-    u.order={mode:'hold',x:1190,y:AI_LANES[G.ai.attackLane]};        // drones wait for the assault window
+    u.order={mode:'hold',x:enemyWallX()-292,y:AI_LANES[G.ai.attackLane]};        // drones wait for the assault window
   return true;
 }
 function aiDecideBuy(plan){
@@ -1267,13 +1557,16 @@ function aiMaybeMissile(plan){
     const risk=riskAt(cx,cy);
     let score=expected*(1-risk*0.78)-risk*95;
     if(A.phase==='suppress'&&plan.suppressionTarget&&members.includes(plan.suppressionTarget)) score+=70;
+    if(A.strategy==='suppressSupport'&&plan.group&&plan.group.supportFocus&&members.includes(plan.group.supportFocus)) score+=85;
+    if(A.strategy==='counterSwarm'&&members.filter(u=>u.type==='infantry').length>=3) score+=65;
+    if(A.strategy==='finishCity') score+=45;
     if(score>bestScore){bestScore=score;best={x:cx,y:cy};}
   }
   if(G.city.player<280){                                                // finishing strike on the city
-    for(const cy of [230,450,670]){ const risk=riskAt(80,cy); const score=330*(1-risk*0.85)-risk*80;
-      if(score>bestScore){bestScore=score;best={x:80,y:cy};} }
+    for(const cy of [230,450,670]){ const cx0=playerBaseX0()+80; const risk=riskAt(cx0,cy); const score=330*(1-risk*0.85)-risk*80;
+      if(score>bestScore){bestScore=score;best={x:cx0,y:cy};} }
   }
-  const threshold = plan.cityThreatValue>420?360 : A.phase==='suppress'?380 : 600;
+  const threshold = plan.cityThreatValue>420?360 : A.strategy==='suppressSupport'?340 : A.strategy==='finishCity'?360 : A.phase==='suppress'?380 : 600;
   if(best&&bestScore>=threshold){
     G.aiMoney-=300; A.stats.missiles++;
     G.aiMissileT=DIFF[G.diff].missileEvery*rand(0.85,1.2);
@@ -1291,6 +1584,8 @@ function updateAI(dt){
   if(A.thinkT<=0){
     A.thinkT=brain.think;
     const plan=aiAssess();
+    aiSelectStrategy(plan);       // choose attack/defence algorithm from the player's troops
+    aiGroupFrame(plan);           // one combined-arms frame for armour, infantry, MLRS, PVO and EW
     aiUpdatePhase(plan);
     aiPlanPvoPosts(plan);
     aiAssignOrders(plan);
@@ -1303,9 +1598,11 @@ function updateAI(dt){
 }
 
 /* ---------------- DRAWING ---------------- */
+const MINIMAP={x:VIEW_W-344,y:24,w:332,h:40};
 function draw(){
   ctx.save();
-  if(G.shake>0) ctx.translate(rand(-G.shake,G.shake),rand(-G.shake,G.shake));
+  const camX=G?(G.camX||0):0;
+  ctx.translate(-camX+(G.shake>0?rand(-G.shake,G.shake):0), (G.shake>0?rand(-G.shake,G.shake):0));
   ctx.drawImage(terrain,0,0);
   for(const cr of G.craters) drawCrater(ctx,cr.x,cr.y,cr.r);
   drawCities();
@@ -1339,24 +1636,44 @@ function draw(){
   for(const f of G.floaters){ ctx.globalAlpha=1-f.life/1.15; ctx.fillStyle=f.col; ctx.fillText(f.txt,f.x,f.y); }
   ctx.globalAlpha=1;
   ctx.restore();
+  drawMinimap();
   if(G.controlled&&!G.controlled.dead) drawFPVOverlay(G.controlled);
-  if(G.paused&&G.started&&!G.over){ ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#fff'; ctx.font='bold 46px Arial'; ctx.textAlign='center'; ctx.fillText('ПАУЗА',W/2,H/2); }
+  if(G.paused&&G.started&&!G.over){ ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,VIEW_W,H);
+    ctx.fillStyle='#fff'; ctx.font='bold 46px Arial'; ctx.textAlign='center'; ctx.fillText('ПАУЗА',VIEW_W/2,H/2); }
+}
+function drawMinimap(){
+  if(W<=VIEW_W||!G) return;
+  const mm=MINIMAP, sc=mm.w/W, camX=G.camX||0;
+  ctx.fillStyle='rgba(8,11,7,0.82)'; ctx.fillRect(mm.x-4,mm.y-4,mm.w+8,mm.h+8);
+  ctx.strokeStyle='rgba(227,185,62,0.7)'; ctx.lineWidth=1.5; ctx.strokeRect(mm.x-4,mm.y-4,mm.w+8,mm.h+8);
+  ctx.fillStyle='#3d4a2f'; ctx.fillRect(mm.x,mm.y,mm.w,mm.h);
+  for(const z of revealedZones()){ const owner=z<=(G.playerBaseZone||0)?'player':'enemy';
+    ctx.fillStyle=SIDE_COLOR[owner]; ctx.fillRect(mm.x+CITY_ZONE_X[z]*sc,mm.y,Math.max(5,CITY_W*sc),mm.h); }
+  for(const u of G.units){ ctx.fillStyle=SIDE_COLOR[u.side]; ctx.fillRect(mm.x+u.x*sc-1.5,mm.y+(u.y/H)*mm.h-1.5,3,3); }
+  ctx.strokeStyle='#ffe08a'; ctx.lineWidth=1.6; ctx.strokeRect(mm.x+camX*sc,mm.y,VIEW_W*sc,mm.h);
+  ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='bold 10px Arial'; ctx.textAlign='left';
+  ctx.fillText('КАРТА · ГОРОД '+(G.enemyCityZone||1)+' / 3', mm.x+2, mm.y-7);
 }
 function drawCities(){
-  for(const s of ['player','enemy']){ const f=G.city[s]/G.cityMax;
-    for(const b of buildings[s]){ const dead=f<b.th;
-      ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(b.x+4,b.y+5,b.w,b.h);
-      if(dead){ ctx.fillStyle='#4a443c'; ctx.fillRect(b.x,b.y+b.h*0.25,b.w,b.h*0.65);
-        ctx.fillStyle='#655d50'; for(let i=0;i<6;i++) ctx.fillRect(b.x+((b.seed*i*7)%b.w), b.y+b.h*0.3+((b.seed*i*11)%(b.h*0.5)), 7,5); }
-      else { ctx.fillStyle=['#9aa3ad','#8b93a0','#a8a090'][b.hue]; ctx.fillRect(b.x,b.y,b.w,b.h);
-        ctx.strokeStyle='#565d66'; ctx.lineWidth=2; ctx.strokeRect(b.x,b.y,b.w,b.h);
-        ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.fillRect(b.x,b.y,b.w,5);
-        ctx.fillStyle='#6d757f'; ctx.fillRect(b.x+b.w*0.2,b.y+b.h*0.25,12,9); ctx.fillRect(b.x+b.w*0.55,b.y+b.h*0.6,10,8);
-        ctx.fillStyle='rgba(255,214,120,0.85)'; for(let i=0;i<3;i++) if(((b.seed+i*3)|0)%2) ctx.fillRect(b.x+6+i*13,b.y+b.h-12,5,5); } }
-    // side banners
-    ctx.fillStyle=SIDE_COLOR[s]; const bx=s==='player'?8:W-26; ctx.fillRect(bx,430,18,44);
-    ctx.fillStyle='#fff'; ctx.font='bold 15px Arial'; ctx.textAlign='center'; ctx.fillText(s==='player'?'★':'★',bx+9,458); }
+  for(const b of buildings){ const dead=zoneFrac(b.zone)<b.th;
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(b.x+4,b.y+5,b.w,b.h);
+    if(dead){ ctx.fillStyle='#4a443c'; ctx.fillRect(b.x,b.y+b.h*0.25,b.w,b.h*0.65);
+      ctx.fillStyle='#655d50'; for(let i=0;i<6;i++) ctx.fillRect(b.x+((b.seed*i*7)%b.w), b.y+b.h*0.3+((b.seed*i*11)%(b.h*0.5)), 7,5); }
+    else { ctx.fillStyle=['#9aa3ad','#8b93a0','#a8a090'][b.hue]; ctx.fillRect(b.x,b.y,b.w,b.h);
+      ctx.strokeStyle='#565d66'; ctx.lineWidth=2; ctx.strokeRect(b.x,b.y,b.w,b.h);
+      ctx.fillStyle='rgba(255,255,255,0.25)'; ctx.fillRect(b.x,b.y,b.w,5);
+      ctx.fillStyle='#6d757f'; ctx.fillRect(b.x+b.w*0.2,b.y+b.h*0.25,12,9); ctx.fillRect(b.x+b.w*0.55,b.y+b.h*0.6,10,8);
+      ctx.fillStyle='rgba(255,214,120,0.85)'; for(let i=0;i<3;i++) if(((b.seed+i*3)|0)%2) ctx.fillRect(b.x+6+i*13,b.y+b.h-12,5,5); } }
+  // owner banners + city numbers for every revealed zone
+  for(const z of revealedZones()){
+    const owner=z<=(G?(G.playerBaseZone||0):0)?'player':'enemy', x0=CITY_ZONE_X[z];
+    ctx.fillStyle=SIDE_COLOR[owner]; ctx.fillRect(x0+8,430,18,44);
+    ctx.fillStyle='#fff'; ctx.font='bold 15px Arial'; ctx.textAlign='center'; ctx.fillText('★',x0+17,458);
+    ctx.fillStyle='rgba(5,7,4,0.72)'; ctx.fillRect(x0+8,8,102,22);
+    ctx.strokeStyle=SIDE_COLOR[owner]; ctx.lineWidth=1.2; ctx.strokeRect(x0+8,8,102,22);
+    ctx.fillStyle='#fff'; ctx.font='bold 12px Arial';
+    ctx.fillText(z===0?'ТВОЯ БАЗА':('ГОРОД '+z+(z===(G?G.enemyCityZone:1)?' · ЦЕЛЬ':'')), x0+59, 23);
+  }
 }
 function drawWreck(wr){
   ctx.save(); ctx.translate(wr.x,wr.y); ctx.rotate(wr.angle); ctx.globalAlpha=0.92;
@@ -1500,25 +1817,27 @@ function drawParticles(){
     else { ctx.globalAlpha=f; ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,p.size*f+0.5,0,7); ctx.fill(); ctx.globalAlpha=1; } }
 }
 function drawFPVOverlay(u){
-  ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.fillRect(0,0,W,26); ctx.fillRect(0,H-26,W,26);
-  for(let i=0;i<7;i++){ ctx.fillStyle=`rgba(255,255,255,${rand(0.03,0.1)})`; ctx.fillRect(0,rand(H),W,rand(1,3)); } // signal noise
+  const ux=u.x-(G.camX||0), uy=u.y; // screen space
+  ctx.fillStyle='rgba(0,0,0,0.14)'; ctx.fillRect(0,0,VIEW_W,26); ctx.fillRect(0,H-26,VIEW_W,26);
+  for(let i=0;i<7;i++){ ctx.fillStyle=`rgba(255,255,255,${rand(0.03,0.1)})`; ctx.fillRect(0,rand(H),VIEW_W,rand(1,3)); } // signal noise
   ctx.strokeStyle='#7dff8a'; ctx.lineWidth=2;
-  ctx.beginPath(); ctx.arc(u.x,u.y,34,0,7); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(u.x-52,u.y); ctx.lineTo(u.x-16,u.y); ctx.moveTo(u.x+16,u.y); ctx.lineTo(u.x+52,u.y);
-  ctx.moveTo(u.x,u.y-52); ctx.lineTo(u.x,u.y-16); ctx.moveTo(u.x,u.y+16); ctx.lineTo(u.x,u.y+52); ctx.stroke();
-  ctx.strokeStyle='rgba(125,255,138,0.6)'; ctx.beginPath(); ctx.moveTo(u.x,u.y); ctx.lineTo(mouse.x,mouse.y); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ux,uy,34,0,7); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ux-52,uy); ctx.lineTo(ux-16,uy); ctx.moveTo(ux+16,uy); ctx.lineTo(ux+52,uy);
+  ctx.moveTo(ux,uy-52); ctx.lineTo(ux,uy-16); ctx.moveTo(ux,uy+16); ctx.lineTo(ux,uy+52); ctx.stroke();
+  ctx.strokeStyle='rgba(125,255,138,0.6)'; ctx.beginPath(); ctx.moveTo(ux,uy); ctx.lineTo(mouse.sx,mouse.sy); ctx.stroke();
   ctx.fillStyle='#7dff8a'; ctx.font='bold 20px monospace'; ctx.textAlign='left';
   const jam=u.jamT>0.05; ctx.fillText(`FPV-CAM ● REC  ${jam?'!! РЭБ! СИГНАЛ ТЕРЯЕТСЯ':'СИГНАЛ ▂▄▆█'}  БАТ ${Math.max(8,86-(G.time*1.4|0)%70)}%`,22,42);
-  ctx.textAlign='right'; ctx.fillText('ESC — отпустить дрон',W-22,42);
+  ctx.textAlign='right'; ctx.fillText('ESC — отпустить дрон',VIEW_W-22,42);
 }
 
 /* ---------------- GAME FLOW ---------------- */
 function endGame(win){
   if(G.over) return; G.over=true; G.controlled=null;
-  for(let i=0;i<7;i++) spawnExplosion(win?rand(W-CITY_W,W-10):rand(10,CITY_W), rand(120,H-120), 1.5);
-  $('over-title').textContent=win?'ПОБЕДА!':'ГОРОД ПАЛ…';
-  $('over-text').textContent=win?'Город противника уничтожен. Линия фронта прорвана, командир!':'Твой город разрушен. Но штаб уже готовит контрнаступление…';
-  $('over-stats').innerHTML=`Время боя: <b>${fmtTime(G.time)}</b> &nbsp; Подбито техники врага: <b>${G.kills}</b> &nbsp; Свои потери: <b>${G.losses}</b>`;
+  const zx=win?W-CITY_W:playerBaseX0();
+  for(let i=0;i<7;i++) spawnExplosion(rand(zx+10,zx+CITY_W-10), rand(120,H-120), 1.5);
+  $('over-title').textContent=win?'ПОБЕДА! ВСЕ 3 ГОРОДА ТВОИ!':'БАЗА ПАЛА…';
+  $('over-text').textContent=win?'Третий — финальный — город взят! Кампания завершена, линия фронта полностью прорвана, командир!':'Противник уничтожил твою текущую базу. Штаб уже готовит новую кампанию…';
+  $('over-stats').innerHTML=`Время кампании: <b>${fmtTime(G.time)}</b> &nbsp; Городов захвачено: <b>${win?3:(G.captured||0)} / 3</b> &nbsp; Подбито техники врага: <b>${G.kills}</b> &nbsp; Свои потери: <b>${G.losses}</b>`;
   $('screen-over').classList.remove('hidden'); sfx('boom',0.5);
 }
 function takeControlFPV(){
@@ -1531,16 +1850,21 @@ function takeControlFPV(){
 }
 
 /* ---------------- INPUT ---------------- */
-function canvasPos(e){ const r=cvs.getBoundingClientRect(); return {x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H}; }
-cvs.addEventListener('mousemove',e=>{ const p=canvasPos(e); mouse.x=p.x; mouse.y=p.y; });
-cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x; mouse.y=p.y;
+function canvasPos(e){ const r=cvs.getBoundingClientRect(); const sx=(e.clientX-r.left)/r.width*VIEW_W, sy=(e.clientY-r.top)/r.height*H;
+  return {x:sx+(G?(G.camX||0):0), y:sy, sx:sx, sy:sy}; }
+cvs.addEventListener('mousemove',e=>{ const p=canvasPos(e); mouse.x=p.x; mouse.y=p.y; mouse.sx=p.sx; mouse.sy=p.sy; });
+cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x; mouse.y=p.y; mouse.sx=p.sx; mouse.sy=p.sy;
   if(!G.started||G.over) return;
+  if(W>VIEW_W && p.sx>=MINIMAP.x-4 && p.sx<=MINIMAP.x+MINIMAP.w+4 && p.sy>=MINIMAP.y-4 && p.sy<=MINIMAP.y+MINIMAP.h+4){
+    G.camTargetX=clamp((p.sx-MINIMAP.x)/MINIMAP.w*W-VIEW_W/2, 0, W-VIEW_W); G.camManualT=5; return; }
   if(G.targeting){ G.targeting=false; cvs.classList.remove('targeting');
     if(G.money>=MISSILE.cost&&G.missileCd<=0){ G.money-=MISSILE.cost; G.missileCd=MISSILE.cd; launchMissile('player',p.x,p.y); } return; }
   const f=G.units.find(u=>u.side==='player'&&u.type==='fpv'&&dist(u,p)<34);
   if(f){ if(G.controlled)G.controlled.manual=false; G.controlled=f; f.manual=true; setAlert('[FPV] ТЫ ВЕДЁШЬ ДРОН!',true,3); }
 });
 window.addEventListener('keydown',e=>{
+  keysDown[(e.key||'').toLowerCase()]=true;
+  if(e.key&&(e.key==='c'||e.key==='C'||e.key==='с'||e.key==='С')&&G&&G.started){ G.camManualT=0; G.camTargetX=sectorFocusX(); }
   if(e.code==='Space'){ e.preventDefault(); togglePause(); return; }
   if(G&&!G.started&&e.key==='Enter'){ e.preventDefault(); frontlineStart(); return; }
   if(e.key==='Escape'){ if(G.targeting){G.targeting=false;cvs.classList.remove('targeting');}
@@ -1551,6 +1875,7 @@ window.addEventListener('keydown',e=>{
   else if(n===9||e.key==='r'||e.key==='R'||e.key==='к'||e.key==='К') armMissile();
   else if(e.key==='f'||e.key==='F'||e.key==='а'||e.key==='А') takeControlFPV();
 });
+window.addEventListener('keyup',e=>{ keysDown[(e.key||'').toLowerCase()]=false; });
 function togglePause(){ if(!G.started||G.over)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА'; }
 $('btn-pause').onclick=()=>{initAudio();togglePause();};
 $('btn-speed').onclick=function(){ initAudio(); G.speed=G.speed===1?2:1; this.textContent='СКОРОСТЬ ×'+G.speed; };
