@@ -104,14 +104,49 @@ function makeTerrain(){
   for(const tx of [690,915]){ c.beginPath(); let y=170; c.moveTo(tx,y); while(y<740){ y+=34; c.lineTo(tx+((y/34)%2?26:-26),y);} c.stroke(); }
   c.strokeStyle='rgba(120,95,60,0.7)'; c.lineWidth=3;
   for(const tx of [678,903]){ c.beginPath(); let y=170; c.moveTo(tx,y); while(y<740){ y+=34; c.lineTo(tx+((y/34)%2?26:-26),y);} c.stroke(); }
-  // ruined buildings centre
-  for(let i=0;i<11;i++){ const x=rand(735,845), y=rand(210,660), w=rand(34,64), h=rand(28,52);
-    c.fillStyle='rgba(0,0,0,0.28)'; c.fillRect(x+5,y+6,w,h);
-    c.fillStyle=['#8f8a80','#7d786e','#98917f'][i%3]; c.fillRect(x,y,w,h);
-    c.strokeStyle='#4c4840'; c.lineWidth=2.5; c.strokeRect(x,y,w,h);
-    c.strokeStyle='rgba(50,46,40,0.7)'; c.lineWidth=1.4;
-    for(let k=0;k<4;k++){ c.beginPath(); c.moveTo(x+rand(w),y); c.lineTo(x+rand(w),y+h); c.stroke(); }
-    for(let k=0;k<16;k++){ c.fillStyle='rgba(70,64,55,0.8)'; c.fillRect(x+rand(-8,w),y+rand(-6,h),rand(2,6),rand(2,5)); } }
+  // Scarred no-man's-land in the centre: torn earth, craters, tank tracks,
+  // a few anti-tank hedgehogs and dead trees. No buildings outside the cities.
+  for(let i=0;i<64;i++){
+    const x=rand(635,965), y=rand(105,H-105);
+    c.fillStyle=`rgba(${54+rand(42)|0},${43+rand(30)|0},${27+rand(20)|0},${rand(0.10,0.30)})`;
+    c.beginPath(); c.ellipse(x,y,rand(18,78),rand(8,34),rand(Math.PI),0,7); c.fill();
+  }
+  for(let i=0;i<18;i++) drawCrater(c, rand(650,950), rand(125,H-125), rand(11,27));
+  // Broken double tank tracks wandering through the centre.
+  c.strokeStyle='rgba(48,38,26,0.34)'; c.lineWidth=4; c.setLineDash([13,10]);
+  for(const off of [-11,11]){
+    c.beginPath();
+    for(let x=610;x<=990;x+=20){
+      const y=455+Math.sin(x*0.012)*95+Math.sin(x*0.031)*22+off;
+      x===610?c.moveTo(x,y):c.lineTo(x,y);
+    }
+    c.stroke();
+  }
+  c.setLineDash([]);
+  // Small steel hedgehogs, drawn as three crossed bars from above.
+  c.strokeStyle='rgba(38,39,36,0.88)'; c.lineWidth=3; c.lineCap='round';
+  for(const hx of [735,865]){
+    for(let y=205;y<=705;y+=62){
+      if(Math.random()<0.18) continue;
+      const x=hx+rand(-10,10), yy=y+rand(-9,9), r=rand(6,9), a=rand(Math.PI);
+      for(let k=0;k<3;k++){
+        const aa=a+k*Math.PI/3;
+        c.beginPath(); c.moveTo(x-Math.cos(aa)*r,yy-Math.sin(aa)*r); c.lineTo(x+Math.cos(aa)*r,yy+Math.sin(aa)*r); c.stroke();
+      }
+    }
+  }
+  // A few bare, shell-broken trees instead of green canopies in no-man's-land.
+  c.strokeStyle='rgba(43,36,28,0.88)'; c.lineWidth=2.4;
+  for(let i=0;i<22;i++){
+    const x=rand(650,950), y=rand(105,H-105), r=rand(7,15);
+    c.fillStyle='rgba(35,29,22,0.72)'; c.beginPath(); c.arc(x,y,2.2,0,7); c.fill();
+    for(let k=0;k<4;k++){
+      const a=rand(Math.PI*2), bend=rand(-0.6,0.6);
+      c.beginPath(); c.moveTo(x,y);
+      c.quadraticCurveTo(x+Math.cos(a)*r*0.55,y+Math.sin(a)*r*0.55,x+Math.cos(a+bend)*r,y+Math.sin(a+bend)*r); c.stroke();
+    }
+  }
+  c.lineCap='butt';
   // tree belts
   for(let i=0;i<210;i++){ const x=rand(140,W-140), y=(Math.random()<0.5? rand(40,300):rand(600,860)) + rand(-30,30);
     const r=rand(7,17); c.fillStyle='rgba(0,0,0,0.22)'; c.beginPath(); c.arc(x+3,y+4,r,0,7); c.fill();
