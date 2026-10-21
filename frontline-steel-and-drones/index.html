@@ -7,36 +7,124 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+<!-- Hand-drawn vector icon sprite (no emoji, no generated raster icons) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <symbol id="i-cross" viewBox="0 0 64 64">
+      <g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="square">
+        <circle cx="32" cy="32" r="17"/><path d="M32 3v16M32 45v16M3 32h16M45 32h16"/>
+        <circle cx="32" cy="32" r="3.5" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+    <symbol id="i-infantry" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 19a7 7 0 0 1 14 0zM25 14a7 7 0 0 1 14 0zM43 19a7 7 0 0 1 14 0z" fill="currentColor" stroke="none"/>
+        <path d="M5 20h18M23 15h18M41 20h18"/>
+        <path d="M8 42l3-15h7l3 15M26 42l3-20h6l3 20M44 42l3-15h6l3 15"/>
+        <path d="M36 27l18 8M18 30L4 38" stroke-width="2.4"/>
+      </g>
+    </symbol>
+    <symbol id="i-btr" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 17h35l11 7-11 7H7z"/>
+        <circle cx="29" cy="24" r="6"/><path d="M34 22l18-4" stroke-width="3.4"/>
+        <path d="M14 31v5M25 31v5M37 31v5M47 29l3 5M14 17v-5M25 17v-5M37 17v-5" stroke-width="4"/>
+        <path d="M12 21h10M12 27h8" stroke-width="2"/>
+      </g>
+    </symbol>
+    <symbol id="i-tank" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="7" y="7" width="43" height="9"/><rect x="7" y="32" width="43" height="9"/>
+        <path d="M15 7v9M24 7v9M33 7v9M42 7v9M15 32v9M24 32v9M33 32v9M42 32v9" stroke-width="2"/>
+        <rect x="9" y="15" width="40" height="18"/>
+        <rect x="23" y="18" width="17" height="12"/><path d="M40 24h20" stroke-width="4"/>
+        <circle cx="29" cy="24" r="2.6" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+    <symbol id="i-mlrs" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="7" y="10" width="28" height="28"/>
+        <path d="M16 10v28M26 10v28M7 19h28M7 29h28" stroke-width="2"/>
+        <path d="M35 17h13l8 7-8 7H35z"/><path d="M48 18v12" stroke-width="2"/>
+        <path d="M14 38v4M29 38v4M45 31v5M14 10V6M29 10V6M45 17v-5" stroke-width="4"/>
+      </g>
+    </symbol>
+    <symbol id="i-fpv" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="13" cy="11" r="7"/><circle cx="51" cy="11" r="7"/><circle cx="13" cy="37" r="7"/><circle cx="51" cy="37" r="7"/>
+        <path d="M18 16l9 5M46 16l-9 5M18 32l9-5M46 32l-9-5"/>
+        <rect x="25" y="19" width="14" height="10"/>
+        <path d="M39 21l12 3-12 3z" fill="currentColor" stroke="none"/>
+        <circle cx="32" cy="24" r="2.2" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+    <symbol id="i-bomber" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="10" r="6.5"/><circle cx="52" cy="10" r="6.5"/><circle cx="12" cy="32" r="6.5"/><circle cx="52" cy="32" r="6.5"/>
+        <path d="M17 14l9 5M47 14l-9 5M17 28l9-4M47 28l-9-4"/>
+        <rect x="24" y="16" width="16" height="10"/>
+        <path d="M32 26v6M27 39c0-5 2-8 5-8s5 3 5 8c0 3-2 5-5 5s-5-2-5-5z" fill="currentColor" stroke="none"/>
+        <path d="M27 34l-4-3M37 34l4-3" stroke-width="2.2"/>
+      </g>
+    </symbol>
+    <symbol id="i-pvo" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 32h39l10 6H7z"/><path d="M15 38v4M29 38v4M44 38v4" stroke-width="4"/>
+        <path d="M18 32V17M18 17l18-8M18 17l18 5" />
+        <path d="M36 6a15 15 0 0 1 5 14M43 3a22 22 0 0 1 7 20" stroke-width="2.4"/>
+        <path d="M36 31l8-15M42 31l10-13" stroke-width="3.4"/>
+        <rect x="34" y="25" width="10" height="7"/>
+      </g>
+    </symbol>
+    <symbol id="i-reb" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="8" y="28" width="48" height="12"/><path d="M16 40v4M30 40v4M47 40v4" stroke-width="4"/>
+        <path d="M32 28V9"/><circle cx="32" cy="7" r="2.6" fill="currentColor" stroke="none"/>
+        <path d="M22 18a14 14 0 0 1 0-10M42 8a14 14 0 0 1 0 10M16 22a22 22 0 0 1 0-18M48 4a22 22 0 0 1 0 18" stroke-width="2.4"/>
+        <path d="M14 34h10M40 34h10" stroke-width="2"/>
+      </g>
+    </symbol>
+    <symbol id="i-missile" viewBox="0 0 64 48">
+      <g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M18 36L43 11l8-4-2 9L25 41z"/><path d="M43 11l6 6M25 41l-8 2 3-8M31 35l-10 1 9-9M34 32l1-10-9 9" stroke-width="2.3"/>
+        <path d="M14 40l-7 5M19 43l-4 4M11 35l-6 2" stroke-width="2.4"/>
+        <circle cx="37" cy="19" r="2.2" fill="currentColor" stroke="none"/>
+      </g>
+    </symbol>
+  </defs>
+</svg>
+
 <div id="app">
   <header id="topbar">
-    <div class="logo">🎯 <b>ЛИНИЯ ФРОНТА</b> <span>Сталь и Дроны</span></div>
+    <div class="logo"><svg class="logo-ic"><use href="#i-cross" xlink:href="#i-cross"></use></svg><span class="logo-main">ЛИНИЯ ФРОНТА</span> <span class="logo-sub">СТАЛЬ И ДРОНЫ</span></div>
     <div class="hud-group">
-      <div class="hud-item money">💰 <b id="ui-money">500</b> <small id="ui-income">+14/с</small></div>
-      <div class="hud-item">💥 Подбито: <b id="ui-kills">0</b></div>
-      <div class="hud-item">⏱ <b id="ui-time">00:00</b></div>
+      <div class="hud-item money"><small>КРЕДИТЫ</small> <b id="ui-money">500</b> <small id="ui-income">+14/с</small></div>
+      <div class="hud-item"><small>ПОДБИТО</small> <b id="ui-kills">0</b></div>
+      <div class="hud-item"><small>ВРЕМЯ</small> <b id="ui-time">00:00</b></div>
     </div>
     <div class="hud-group controls">
       <select id="ui-diff" title="Сложность">
-        <option value="0">😌 Легко</option>
-        <option value="1" selected>⚔️ Нормально</option>
-        <option value="2">🔥 Хард</option>
+        <option value="0">ЛЕГКО</option>
+        <option value="1" selected>НОРМАЛЬНО</option>
+        <option value="2">ХАРД</option>
       </select>
-      <button id="btn-pause" title="Пауза (Пробел)">⏸ Пауза</button>
-      <button id="btn-speed" title="Скорость игры">⏩ x1</button>
-      <button id="btn-sound" title="Звук">🔊</button>
-      <button id="btn-restart" title="Заново">🔄</button>
-      <button id="btn-help" title="Справка">❓</button>
+      <button type="button" id="btn-pause" title="Пауза (Пробел)">ПАУЗА</button>
+      <button type="button" id="btn-speed" title="Скорость игры">СКОРОСТЬ ×1</button>
+      <button type="button" id="btn-sound" title="Звук">ЗВУК: ВКЛ</button>
+      <button type="button" id="btn-restart" title="Заново">ЗАНОВО</button>
+      <button type="button" id="btn-help" title="Справка">СПРАВКА</button>
     </div>
   </header>
 
   <div id="citybars">
     <div class="city-wrap">
-      <div class="city-label blue">🏙 ТВОЙ ГОРОД</div>
+      <div class="city-label blue">ТВОЙ ГОРОД</div>
       <div class="city-bar"><div id="hp-player" class="fill blue"></div><span id="hp-player-txt">2000</span></div>
     </div>
     <div id="alert">Фронт спокоен… пока что</div>
     <div class="city-wrap right">
-      <div class="city-label red">ГОРОД ПРОТИВНИКА 🏙</div>
+      <div class="city-label red">ГОРОД ПРОТИВНИКА</div>
       <div class="city-bar"><div id="hp-enemy" class="fill red"></div><span id="hp-enemy-txt">2000</span></div>
     </div>
   </div>
@@ -45,52 +133,57 @@
     <canvas id="game" width="1600" height="900"></canvas>
 
     <div id="screen-start" class="screen">
-      <div class="panel">
-        <h1>🎯 ЛИНИЯ ФРОНТА</h1>
-        <h2>Сталь и Дроны</h2>
+      <div class="panel start-panel">
+        <div class="panel-plate">ОПЕРАТИВНАЯ СВОДКА // СЕКТОР 04</div>
+        <svg class="start-cross"><use href="#i-cross" xlink:href="#i-cross"></use></svg>
+        <h1>ЛИНИЯ ФРОНТА</h1>
+        <h2>СТАЛЬ И ДРОНЫ</h2>
         <p class="brief">
           Ты — командир <b style="color:#5eb1ff">Синих</b>. Справа — город
           <b style="color:#ff6b5e">Красных</b>. Арсенал у вас <b>одинаковый</b>:
           танки, БТР, РСЗО, FPV-дроны, бомбардировщики, ПВО, РЭБ и крылатые ракеты.
         </p>
-        <p class="brief">🏆 <b>Цель:</b> уничтожить город противника раньше, чем он уничтожит твой.<br>
-        💰 Деньги идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки!</p>
+        <p class="brief"><b>Цель:</b> уничтожить город противника раньше, чем он уничтожит твой.<br>
+        Кредиты идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки.</p>
         <div class="keys">
           <div><kbd>1</kbd>–<kbd>8</kbd> купить юнит</div>
-          <div><kbd>9</kbd> ракета → клик по цели</div>
-          <div><kbd>F</kbd> ручное управление FPV 🛸</div>
+          <div><kbd>9</kbd> ракета, затем клик по цели</div>
+          <div><kbd>F</kbd> ручное управление FPV</div>
           <div><kbd>Пробел</kbd> пауза</div>
         </div>
-        <button id="btn-start" class="big">⚔️ В БОЙ!</button>
-        <p class="tiny">Вымышленная игра. Обе стороны симметричны — побеждает тактика, а не флаг.</p>
+        <button type="button" id="btn-start" class="big" onclick="startGame()">В БОЙ</button>
+        <div id="boot-error" hidden></div>
+        <p class="tiny">Если кнопка не сработала с первого раза — нажми ещё раз или клавишу Enter. Вымышленная игра: стороны симметричны, побеждает тактика.</p>
       </div>
     </div>
 
     <div id="screen-over" class="screen hidden">
       <div class="panel">
-        <h1 id="over-title">🏆 ПОБЕДА!</h1>
+        <div class="panel-plate">ИТОГ ОПЕРАЦИИ</div>
+        <h1 id="over-title">ПОБЕДА</h1>
         <p id="over-text" class="brief"></p>
         <div id="over-stats" class="brief"></div>
-        <button id="btn-again" class="big">🔄 ИГРАТЬ СНОВА</button>
+        <button type="button" id="btn-again" class="big">ИГРАТЬ СНОВА</button>
       </div>
     </div>
 
     <div id="screen-help" class="screen hidden">
       <div class="panel help">
-        <h2>📖 Справка командира</h2>
+        <div class="panel-plate">СПРАВОЧНИК КОМАНДИРА</div>
+        <h2 class="help-title">АРСЕНАЛ И ТАКТИКА</h2>
         <ul>
-          <li>🪖 <b>Штурмовая группа (60)</b> — дешёвая пехота. Хороша массой, умирает от БТР и РСЗО.</li>
-          <li>🚛 <b>БТР (120)</b> — быстрая автопушка против пехоты и РСЗО. Боится танков и FPV.</li>
-          <li>🛡️ <b>Танк (220)</b> — броня и пушка. Главная добыча для FPV противника — прикрывай!</li>
-          <li>🚀 <b>РСЗО (280)</b> — залп 6 ракет по площади с большой дистанции. Беспомощна вблизи.</li>
-          <li>🛸 <b>FPV-камикадзе (90)</b> — пикирует в бронетехнику. Жми <kbd>F</kbd> и веди мышью сам!</li>
-          <li>💣 <b>Дрон-бомбардировщик (140)</b> — зависает над целью и делает 3 сброса.</li>
-          <li>📡 <b>ПВО (260)</b> — выезжает от города и разворачивается. Сбивает дроны И крылатые ракеты.</li>
-          <li>📶 <b>РЭБ (180)</b> — глушит вражеские дроны в радиусе: они падают. Едет за танками — идеальная пара.</li>
-          <li>☄️ <b>Крылатая ракета (450)</b> — кнопка 9, затем клик по карте. Враг может перехватить её ПВО!</li>
+          <li><svg class="help-ic"><use href="#i-infantry" xlink:href="#i-infantry"></use></svg><b>Штурмовая группа (60)</b> — дешёвая пехота. Хороша массой, умирает от БТР и РСЗО.</li>
+          <li><svg class="help-ic"><use href="#i-btr" xlink:href="#i-btr"></use></svg><b>БТР (120)</b> — быстрая автопушка против пехоты и РСЗО. Боится танков и FPV.</li>
+          <li><svg class="help-ic"><use href="#i-tank" xlink:href="#i-tank"></use></svg><b>Танк (220)</b> — броня и пушка. Главная добыча для FPV противника — прикрывай.</li>
+          <li><svg class="help-ic"><use href="#i-mlrs" xlink:href="#i-mlrs"></use></svg><b>РСЗО (280)</b> — залп 6 ракет по площади с большой дистанции. Беспомощна вблизи.</li>
+          <li><svg class="help-ic"><use href="#i-fpv" xlink:href="#i-fpv"></use></svg><b>FPV-камикадзе (90)</b> — пикирует в бронетехнику. Клавишей <kbd>F</kbd> ведётся вручную мышью.</li>
+          <li><svg class="help-ic"><use href="#i-bomber" xlink:href="#i-bomber"></use></svg><b>Дрон-бомбардировщик (140)</b> — зависает над целью и делает 3 сброса.</li>
+          <li><svg class="help-ic"><use href="#i-pvo" xlink:href="#i-pvo"></use></svg><b>ПВО (260)</b> — выезжает от города и разворачивается. Сбивает дроны и крылатые ракеты.</li>
+          <li><svg class="help-ic"><use href="#i-reb" xlink:href="#i-reb"></use></svg><b>РЭБ (180)</b> — глушит вражеские дроны в радиусе. Едет за танками — идеальная пара.</li>
+          <li><svg class="help-ic"><use href="#i-missile" xlink:href="#i-missile"></use></svg><b>Крылатая ракета (450)</b> — клавиша 9, затем клик по карте. ПВО врага может её перехватить.</li>
         </ul>
-        <p>💡 Комбо: <b>Танки + РЭБ + ПВО сзади</b>. Враг бьёт по тебе ракетами — красный маркер цели даёт ~2.5 сек предупреждения.</p>
-        <button id="btn-help-close" class="big">ПОНЯТНО</button>
+        <p><b>Комбо:</b> танки + РЭБ рядом + ПВО сзади. Красный маркер цели даёт около 2,5 секунды предупреждения о вражеской ракете.</p>
+        <button type="button" id="btn-help-close" class="big">ПОНЯТНО</button>
       </div>
     </div>
   </div>
@@ -99,8 +192,23 @@
     <div id="shop-cards"></div>
     <div id="log"></div>
   </div>
-  <div id="hint">Кликай карточки внизу или жми 1–8. FPV можно вести вручную клавишей <b>F</b> — наведи мышь на танк врага и не отпускай курс!</div>
+  <div id="hint">Карточки внизу или клавиши 1–8. FPV ведётся вручную клавишей <b>F</b>: наведи мышь на технику врага и доводи дрон до цели.</div>
 </div>
+
+<script>
+// Reserve start handler: works even if the main script is still loading.
+// game.js replaces window.startGame with the real one and honours __wantStart.
+window.__wantStart = false;
+window.startGame = function(){
+  window.__wantStart = true;
+  var b = document.getElementById('btn-start');
+  if (b) b.textContent = 'ЗАГРУЗКА…';
+};
+window.addEventListener('error', function(e){
+  var x = document.getElementById('boot-error');
+  if (x) { x.hidden = false; x.textContent = 'Ошибка запуска: ' + (e.message || 'неизвестная ошибка') + '. Обнови страницу (Ctrl+R).'; }
+});
+</script>
 <script src="game.js"></script>
 </body>
 </html>

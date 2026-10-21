@@ -16,14 +16,14 @@ const fmtTime = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.
 
 /* ---------------- UNIT DEFINITIONS ---------------- */
 const DEFS = {
-  infantry:{name:'Штурм. группа', icon:'🪖', cost:60,  hp:60,  speed:36, range:115, dmg:7,  rof:0.45, radius:13, desc:'Дешёвая пехота, берёт массой', build:0.7},
-  btr:     {name:'БТР / автопушка', icon:'🚛', cost:120, hp:140, speed:66, range:140, dmg:9,  rof:0.22, radius:17, desc:'Быстрый, косит пехоту', build:1.0},
-  tank:    {name:'Танк', icon:'🛡️', cost:220, hp:360, speed:40, range:170, dmg:42, rof:2.1, radius:20, desc:'Броня и мощная пушка', build:1.5},
-  mlrs:    {name:'РСЗО', icon:'🚀', cost:280, hp:115, speed:32, range:430, dmg:24, rof:7.5, radius:19, desc:'Залп 6 ракет по площади', build:1.8},
-  fpv:     {name:'FPV-камикадзе', icon:'🛸', cost:90,  hp:20,  speed:155, range:0,  dmg:135, rof:0,   radius:11, desc:'Пикирует в бронетехнику (F — вручную!)', build:0.6, air:true},
-  bomber:  {name:'Дрон-бомбардировщик', icon:'💣', cost:140, hp:30, speed:88, range:26, dmg:48, rof:2.4, radius:13, desc:'3 сброса с зависания', build:0.9, air:true},
-  pvo:     {name:'ПВО', icon:'📡', cost:260, hp:170, speed:30, range:290, dmg:22, rof:0.85, radius:19, desc:'Сбивает дроны и ракеты', build:1.6},
-  reb:     {name:'РЭБ', icon:'📶', cost:180, hp:150, speed:38, range:105, dmg:5,  rof:0.6, radius:17, desc:'Глушит дроны в радиусе 140', build:1.2},
+  infantry:{name:'Штурм. группа', icon:'i-infantry', cost:60,  hp:60,  speed:36, range:115, dmg:7,  rof:0.45, radius:13, desc:'Дешёвая пехота, берёт массой', build:0.7},
+  btr:     {name:'БТР / автопушка', icon:'i-btr', cost:120, hp:140, speed:66, range:140, dmg:9,  rof:0.22, radius:17, desc:'Быстрый, косит пехоту', build:1.0},
+  tank:    {name:'Танк', icon:'i-tank', cost:220, hp:360, speed:40, range:170, dmg:42, rof:2.1, radius:20, desc:'Броня и мощная пушка', build:1.5},
+  mlrs:    {name:'РСЗО', icon:'i-mlrs', cost:280, hp:115, speed:32, range:430, dmg:24, rof:7.5, radius:19, desc:'Залп 6 ракет по площади', build:1.8},
+  fpv:     {name:'FPV-камикадзе', icon:'i-fpv', cost:90,  hp:20,  speed:155, range:0,  dmg:135, rof:0,   radius:11, desc:'Пикирует в бронетехнику (F — вручную!)', build:0.6, air:true},
+  bomber:  {name:'Дрон-бомбардировщик', icon:'i-bomber', cost:140, hp:30, speed:88, range:26, dmg:48, rof:2.4, radius:13, desc:'3 сброса с зависания', build:0.9, air:true},
+  pvo:     {name:'ПВО', icon:'i-pvo', cost:260, hp:170, speed:30, range:290, dmg:22, rof:0.85, radius:19, desc:'Сбивает дроны и ракеты', build:1.6},
+  reb:     {name:'РЭБ', icon:'i-reb', cost:180, hp:150, speed:38, range:105, dmg:5,  rof:0.6, radius:17, desc:'Глушит дроны в радиусе 140', build:1.2},
 };
 const ORDER = ['infantry','btr','tank','mlrs','fpv','bomber','pvo','reb'];
 const MISSILE = {cost:450, cd:22};
@@ -135,7 +135,7 @@ function drawCrater(c,x,y,r){
 }
 
 /* ---------------- HUD / LOG ---------------- */
-function log(html, cls=''){ const el=$('log'); const d=document.createElement('div'); if(cls)d.className=cls; d.innerHTML=html; el.prepend(d); while(el.children.length>8) el.lastChild.remove(); }
+function log(html, cls=''){ const el=$('log'); const d=document.createElement('div'); if(cls)d.className=cls; d.innerHTML=html; el.insertBefore(d, el.firstChild); while(el.children.length>8) el.removeChild(el.lastChild); }
 function setAlert(txt,danger=false,t=3){ const a=$('alert'); a.textContent=txt; a.className=danger?'danger':''; G.alertT=t; }
 function updateHUD(){
   $('ui-money').textContent=Math.floor(G.money);
@@ -152,10 +152,10 @@ function updateHUD(){
 function buildShop(){
   const wrap=$('shop-cards'); wrap.innerHTML='';
   ORDER.forEach((k,i)=>{ const d=DEFS[k]; const el=document.createElement('div'); el.className='card'; el.dataset.unit=k;
-    el.innerHTML=`<div class="key">${i+1}</div><div class="ic">${d.icon}</div><div class="nm">${d.name}</div><div class="cost">💰 ${d.cost}</div><div class="ds">${d.desc}</div><div class="cd"></div>`;
+    el.innerHTML=`<div class="key">${i+1}</div><div class="ic"><svg class="uic" aria-hidden="true"><use href="#${d.icon}" xlink:href="#${d.icon}"></use></svg></div><div class="nm">${d.name}</div><div class="cost"><span class="cur">КР</span>${d.cost}</div><div class="ds">${d.desc}</div><div class="cd"></div>`;
     el.title=`${d.name} — HP ${d.hp}, урон ${d.dmg}`; el.onclick=()=>buy(k); wrap.appendChild(el); });
-  const el=document.createElement('div'); el.className='card'; el.dataset.unit='missile';
-  el.innerHTML=`<div class="key">9</div><div class="ic">☄️</div><div class="nm">Крылатая ракета</div><div class="cost">💰 ${MISSILE.cost}</div><div class="ds">Удар по клику. ПВО может перехватить!</div><div class="cd"></div>`;
+  const el=document.createElement('div'); el.className='card missile-card'; el.dataset.unit='missile';
+  el.innerHTML=`<div class="key">9</div><div class="ic"><svg class="uic" aria-hidden="true"><use href="#i-missile" xlink:href="#i-missile"></use></svg></div><div class="nm">Крылатая ракета</div><div class="cost"><span class="cur">КР</span>${MISSILE.cost}</div><div class="ds">Удар по клику. ПВО может перехватить!</div><div class="cd"></div>`;
   el.onclick=armMissile; wrap.appendChild(el);
 }
 
@@ -176,14 +176,14 @@ function spawnUnit(side,type){
 }
 function armMissile(){
   if(!G.started||G.over) return; initAudio();
-  if(G.money<MISSILE.cost){ setAlert('Не хватает денег на ракету!',false,2); return; }
+  if(G.money<MISSILE.cost){ setAlert('Не хватает кредитов на ракету!',false,2); return; }
   if(G.missileCd>0){ setAlert('Ракета перезаряжается…',false,2); return; }
-  G.targeting=true; cvs.classList.add('targeting'); setAlert('☄️ Кликни по цели на карте!',true,6);
+  G.targeting=true; cvs.classList.add('targeting'); setAlert('[РАКЕТА] Кликни по цели на карте!',true,6);
 }
 function launchMissile(side,tx,ty){
   const sx= side==='player'? 60:W-60, sy=clamp(ty+rand(-120,120),80,H-80);
   G.projectiles.push({kind:'cruise', side, x:sx, y:sy, tx, ty, hp:34, maxHp:34, speed:270, dead:false, air:true, radius:14, trail:0});
-  sfx('launch',0.3); log(side==='player'?'☄️ <b>Твоя ракета</b> запущена!':'☄️ <b>Вражеская ракета</b> в воздухе!', side==='player'?'good':'bad');
+  sfx('launch',0.3); log(side==='player'?'[РАКЕТА] <b>Твоя ракета</b> запущена!':'[РАКЕТА] <b>Вражеская ракета</b> в воздухе!', side==='player'?'good':'bad');
 }
 
 /* ---------------- COMBAT HELPERS ---------------- */
@@ -205,13 +205,13 @@ function killUnit(u,bySide){
   spawnExplosion(u.x,u.y, u.air?0.55: big?1.15:0.8);
   if(!u.air&&u.type!=='infantry'&&G.wrecks.length<42) G.wrecks.push({x:u.x,y:u.y,angle:u.angle,type:u.type,t:0});
   if(G.controlled===u) G.controlled=null;
-  if(bySide==='player'&&u.side==='enemy'){ const b=Math.round(DEFS[u.type].cost*0.25); G.money+=b; G.kills++; addFloater(u.x,u.y-18,'+'+b+'💰','#ffd34d'); }
+  if(bySide==='player'&&u.side==='enemy'){ const b=Math.round(DEFS[u.type].cost*0.25); G.money+=b; G.kills++; addFloater(u.x,u.y-18,'+'+b+' КР','#ffd34d'); }
   if(bySide==='enemy'&&u.side==='player'){ G.losses++; G.aiMoney+=Math.round(DEFS[u.type].cost*0.25); }
 }
 function damageCity(owner,dmg,x,y,bySide){
   if(G.city[owner]<=0) return;
   G.city[owner]-=dmg; spawnExplosion(x,y,0.8);
-  if(owner==='player'&&G.cityWarnT<=0){ setAlert('🚨 ТВОЙ ГОРОД ПОД ОГНЁМ!',true,3); G.cityWarnT=5; log('🚨 Город под обстрелом!','bad'); }
+  if(owner==='player'&&G.cityWarnT<=0){ setAlert('[ТРЕВОГА] ТВОЙ ГОРОД ПОД ОГНЁМ!',true,3); G.cityWarnT=5; log('[ТРЕВОГА] Город под обстрелом!','bad'); }
   if(G.city[owner]<=0) endGame(owner==='enemy');
 }
 function explodeAOE(x,y,radius,dmg,bySide,dmgType='explosive'){
@@ -282,7 +282,7 @@ function update(dt){
   G.time+=dt; G.money+=G.income*dt; G.aiMoney+=DIFF[G.diff].aiIncome*dt;
   for(const k of ORDER) G.shopCd[k]=Math.max(0,G.shopCd[k]-dt);
   G.missileCd=Math.max(0,G.missileCd-dt); G.cityWarnT=Math.max(0,G.cityWarnT-dt);
-  if(G.alertT>0){ G.alertT-=dt; if(G.alertT<=0) setAlert(G.controlled?'🛸 Ты ведёшь FPV вручную!':'Фронт в движении…'); G.alertT=Math.max(0,G.alertT); }
+  if(G.alertT>0){ G.alertT-=dt; if(G.alertT<=0) setAlert(G.controlled?'[FPV] Ты ведёшь FPV вручную!':'Фронт в движении…'); G.alertT=Math.max(0,G.alertT); }
   G.shake=Math.max(0,G.shake-dt*26);
   updateAI(dt);
   // pending enemy missile warnings
@@ -296,7 +296,7 @@ function update(dt){
   for(const u of G.units){ if(!u.air||u.dead) continue; let jam=false;
     for(const r of G.units) if(!r.dead&&r.type==='reb'&&r.side!==u.side&&dist(r,u)<140) jam=true;
     if(jam){ u.jamT+=dt; if(Math.random()<dt*8) spawnParticles(u.x,u.y,1,'spark');
-      if(u.jamT>0.85){ addFloater(u.x,u.y-16,'📶 ЗАГЛУШЕН!','#8fd0ff'); killUnit(u, u.side==='player'?'enemy':'player'); } }
+      if(u.jamT>0.85){ addFloater(u.x,u.y-16,'ЗАГЛУШЕН РЭБ!','#8fd0ff'); killUnit(u, u.side==='player'?'enemy':'player'); } }
     else u.jamT=Math.max(0,u.jamT-dt*1.5); }
   for(const u of G.units) if(!u.dead) updateUnit(u,dt);
   separation();
@@ -356,7 +356,7 @@ function updateUnit(u,dt){
   /* ----- PVO: drive out & deploy ----- */
   if(u.type==='pvo'){
     const deployX = u.side==='player'? CITY_W+215 : W-CITY_W-215;
-    if(!u.deployed){ if(moveToward(u,deployX,u.y,d.speed,dt)<8){ u.deployed=true; if(u.side==='player')log('📡 ПВО развёрнута и прикрывает небо','good'); } }
+    if(!u.deployed){ if(moveToward(u,deployX,u.y,d.speed,dt)<8){ u.deployed=true; if(u.side==='player')log('[ПВО] Развёрнута и прикрывает небо','good'); } }
     else if(tgt){ u.turret=angLerp(u.turret,Math.atan2(tgt.y-u.y,tgt.x-u.x),dt*8);
       if(dist(u,tgt)<=d.range&&u.cd<=0){ u.cd=d.rof; shootAt(u,tgt); } }
     return;
@@ -382,7 +382,7 @@ function killUnitSilent(u){ u.dead=true; if(G.controlled===u)G.controlled=null; 
 function updateProjectiles(dt){
   for(const p of G.projectiles){ if(p.dead) continue;
     if(p.kind==='bullet'||p.kind==='shell'||p.kind==='aa'){
-      const t=p.target; let tx=p.tx??p.x, ty=p.ty??p.y;
+      const t=p.target; let tx=(p.tx===undefined?p.x:p.tx), ty=(p.ty===undefined?p.y:p.ty);
       if(t&&!t.dead){ tx=t.x; ty=t.y; p.tx=tx; p.ty=ty; }
       const dx=tx-p.x, dy=ty-p.y, dd=Math.hypot(dx,dy), step=p.speed*dt;
       if(p.kind==='aa'){ p.trail=(p.trail||0)-dt; if(p.trail<=0){p.trail=0.03; spawnParticles(p.x,p.y,1,'smoke');} }
@@ -390,7 +390,7 @@ function updateProjectiles(dt){
         if(t&&!t.dead){
           if(t.isCity) damageCity(t.citySide,p.dmg,tx,ty,p.side);
           else if(t.kind==='cruise'){ t.hp-=p.dmg; spawnParticles(tx,ty,4,'spark');
-            if(t.hp<=0&&!t.dead){ t.dead=true; spawnExplosion(tx,ty,0.9); addFloater(tx,ty-20,'🎯 ПЕРЕХВАТ!','#8fd0ff'); if(p.side==='player'){G.money+=60; log('📡 Твоя ПВО <b>перехватила ракету</b>! +60💰','good');} } }
+            if(t.hp<=0&&!t.dead){ t.dead=true; spawnExplosion(tx,ty,0.9); addFloater(tx,ty-20,'ПЕРЕХВАТ!','#8fd0ff'); if(p.side==='player'){G.money+=60; log('[ПВО] Твоя ПВО <b>перехватила ракету</b>! +60 КР','good');} } }
           else if(p.kind==='shell') explodeAOE(tx,ty,26,p.dmg,p.side,'cannon');
           else damageUnit(t,p.dmg,p.side,p.kind==='aa'?'aa':'bullet');
         } else if(p.kind==='shell') explodeAOE(tx,ty,24,p.dmg*0.7,p.side,'cannon');
@@ -405,7 +405,7 @@ function updateProjectiles(dt){
     else if(p.kind==='cruise'){
       const dx=p.tx-p.x, dy=p.ty-p.y, dd=Math.hypot(dx,dy), step=p.speed*dt; p.angle=Math.atan2(dy,dx);
       p.trail-=dt; if(p.trail<=0){ p.trail=0.02; G.particles.push({kind:'fire',x:p.x-Math.cos(p.angle)*16,y:p.y-Math.sin(p.angle)*16,vx:-Math.cos(p.angle)*40,vy:-Math.sin(p.angle)*40,life:0,max:0.3,size:rand(3,6),col:'#ffb347'}); spawnParticles(p.x,p.y,1,'smoke'); }
-      if(dd<=Math.max(step,16)){ p.dead=true; explodeAOE(p.tx,p.ty,92,185,p.side,'explosive'); addFloater(p.tx,p.ty-26,'☄️ ПОПАДАНИЕ!','#ff8d80'); }
+      if(dd<=Math.max(step,16)){ p.dead=true; explodeAOE(p.tx,p.ty,92,185,p.side,'explosive'); addFloater(p.tx,p.ty-26,'ПОПАДАНИЕ!','#ff8d80'); }
       else { p.x+=dx/dd*step; p.y+=dy/dd*step; }
     }
   }
@@ -438,7 +438,7 @@ function updateAI(dt){
       for(const u of mine){ let s=0; for(const o of mine) if(dist(u,o)<110)s+=DEFS[o.type].cost; if(u.type==='pvo')s+=160; if(s>bestScore){bestScore=s;best=u;} }
       const tx=best?best.x:rand(40,110), ty=best?best.y:rand(200,700);
       G.warnings.push({x:tx,y:ty,t:2.6,side:'enemy',done:false});
-      setAlert('🚨 РАКЕТНАЯ ОПАСНОСТЬ! Цель подсвечена!',true,3); log('🚨 Враг готовит <b>ракетный удар</b>!','bad'); sfx('aa',0.2);
+      setAlert('[ТРЕВОГА] РАКЕТНАЯ ОПАСНОСТЬ! Цель подсвечена!',true,3); log('[ТРЕВОГА] Враг готовит <b>ракетный удар</b>!','bad'); sfx('aa',0.2);
     } }
 }
 
@@ -469,7 +469,7 @@ function draw(){
   for(const w of G.warnings){ const p=0.6+0.4*Math.sin(G.time*10);
     ctx.strokeStyle=`rgba(255,60,40,${p})`; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(w.x,w.y,46*p+18,0,7); ctx.stroke();
     ctx.beginPath(); ctx.moveTo(w.x-58,w.y); ctx.lineTo(w.x+58,w.y); ctx.moveTo(w.x,w.y-58); ctx.lineTo(w.x,w.y+58); ctx.stroke();
-    ctx.fillStyle='#ff5545'; ctx.font='bold 19px Arial'; ctx.textAlign='center'; ctx.fillText('⚠ ЦЕЛЬ',w.x,w.y-62); }
+    ctx.fillStyle='#ff5545'; ctx.font='bold 19px Arial'; ctx.textAlign='center'; ctx.fillText('ЦЕЛЬ',w.x,w.y-62); }
   // targeting cursor
   if(G.targeting){ ctx.strokeStyle='rgba(255,85,69,0.95)'; ctx.lineWidth=2.5;
     ctx.beginPath(); ctx.arc(mouse.x,mouse.y,52,0,7); ctx.stroke();
@@ -481,7 +481,7 @@ function draw(){
   ctx.restore();
   if(G.controlled&&!G.controlled.dead) drawFPVOverlay(G.controlled);
   if(G.paused&&G.started&&!G.over){ ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#fff'; ctx.font='bold 46px Arial'; ctx.textAlign='center'; ctx.fillText('⏸ ПАУЗА',W/2,H/2); }
+    ctx.fillStyle='#fff'; ctx.font='bold 46px Arial'; ctx.textAlign='center'; ctx.fillText('ПАУЗА',W/2,H/2); }
 }
 function drawCities(){
   for(const s of ['player','enemy']){ const f=G.city[s]/G.cityMax;
@@ -505,7 +505,11 @@ function drawWreck(wr){
   ctx.fillStyle='rgba(255,110,40,0.5)'; ctx.beginPath(); ctx.arc(rand(-4,4),rand(-3,3),rand(2,4.5),0,7); ctx.fill();
   ctx.restore(); ctx.globalAlpha=1;
 }
-function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill(); }
+function rr(x,y,w,h,r){ r=Math.min(r,w/2,h/2); ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y); ctx.closePath(); ctx.fill(); }
 function camo(x,y,w,h,seed,cols){ for(let i=0;i<5;i++){ ctx.fillStyle=cols[i%cols.length]; const px=x+((seed*(i+3)*13)%w), py=y+((seed*(i+5)*7)%h);
   const rx=4+((seed*(i+2)*3)%40)/10, ry=3+((seed*(i+4)*2)%24)/10; // deterministic sizes - no flicker
   ctx.beginPath(); ctx.ellipse(px,py,rx,ry,(seed+i)%3,0,7); ctx.fill(); } }
@@ -535,7 +539,7 @@ function drawUnit(u){
     if(u.type==='fpv'){ ctx.fillStyle='#c98a2d'; ctx.beginPath(); ctx.moveTo(6,-3); ctx.lineTo(15,0); ctx.lineTo(6,3); ctx.fill(); } // warhead cone
     else { ctx.fillStyle='#222'; for(let i=0;i<u.ammo;i++) ctx.fillRect(-4+i*4.4,5,3,5); }
     ctx.fillStyle=sideCol; ctx.fillRect(-2,-2,4,4);
-    if(u.jamT>0.05){ ctx.fillStyle='#8fd0ff'; ctx.font='bold 13px Arial'; ctx.textAlign='center'; ctx.fillText('⚡',0,-17); }
+    if(u.jamT>0.05){ ctx.fillStyle='#8fd0ff'; ctx.font='bold 13px Arial'; ctx.textAlign='center'; ctx.fillText('РЭБ',0,-17); }
     if(u===G.controlled){ ctx.strokeStyle='#ffd34d'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,21+Math.sin(G.time*6)*2,0,7); ctx.stroke(); }
   }
   else {
@@ -613,12 +617,12 @@ function drawProjectiles(airLayer){
     }
     else if(!airLayer&&(p.kind==='bullet'||p.kind==='shell')){
       ctx.strokeStyle=p.kind==='shell'?'rgba(255,200,110,0.95)':'rgba(255,240,170,0.85)'; ctx.lineWidth=p.kind==='shell'?3.2:1.8;
-      const a=Math.atan2((p.ty??p.y)-p.y,(p.tx??p.x)-p.x);
+      const a=Math.atan2((p.ty===undefined?p.y:p.ty)-p.y,(p.tx===undefined?p.x:p.tx)-p.x);
       ctx.beginPath(); ctx.moveTo(p.x-Math.cos(a)*(p.kind==='shell'?15:10),p.y-Math.sin(a)*(p.kind==='shell'?15:10)); ctx.lineTo(p.x,p.y); ctx.stroke();
       if(p.kind==='shell'){ ctx.fillStyle='#ffe9a3'; ctx.beginPath(); ctx.arc(p.x,p.y,3,0,7); ctx.fill(); }
     }
     else if(airLayer&&(p.kind==='aa'||p.kind==='cruise')){
-      if(p.kind==='aa'){ const a=Math.atan2((p.ty??p.y)-p.y,(p.tx??p.x)-p.x); ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(a);
+      if(p.kind==='aa'){ const a=Math.atan2((p.ty===undefined?p.y:p.ty)-p.y,(p.tx===undefined?p.x:p.tx)-p.x); ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(a);
         ctx.fillStyle='#e8e4da'; rr(-7,-2,13,4,2); ctx.fillStyle='#ff9a3c'; ctx.beginPath(); ctx.moveTo(-7,-2.4); ctx.lineTo(-13,0); ctx.lineTo(-7,2.4); ctx.fill(); ctx.restore(); }
       else { ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.beginPath(); ctx.ellipse(p.x+16,p.y+24,15,5,p.angle||0,0,7); ctx.fill();
         ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.angle||0);
@@ -644,7 +648,7 @@ function drawFPVOverlay(u){
   ctx.moveTo(u.x,u.y-52); ctx.lineTo(u.x,u.y-16); ctx.moveTo(u.x,u.y+16); ctx.lineTo(u.x,u.y+52); ctx.stroke();
   ctx.strokeStyle='rgba(125,255,138,0.6)'; ctx.beginPath(); ctx.moveTo(u.x,u.y); ctx.lineTo(mouse.x,mouse.y); ctx.stroke();
   ctx.fillStyle='#7dff8a'; ctx.font='bold 20px monospace'; ctx.textAlign='left';
-  const jam=u.jamT>0.05; ctx.fillText(`FPV-CAM ● REC  ${jam?'⚡ РЭБ! СИГНАЛ ТЕРЯЕТСЯ':'СИГНАЛ ▂▄▆█'}  БАТ ${Math.max(8,86-(G.time*1.4|0)%70)}%`,22,42);
+  const jam=u.jamT>0.05; ctx.fillText(`FPV-CAM ● REC  ${jam?'!! РЭБ! СИГНАЛ ТЕРЯЕТСЯ':'СИГНАЛ ▂▄▆█'}  БАТ ${Math.max(8,86-(G.time*1.4|0)%70)}%`,22,42);
   ctx.textAlign='right'; ctx.fillText('ESC — отпустить дрон',W-22,42);
 }
 
@@ -652,9 +656,9 @@ function drawFPVOverlay(u){
 function endGame(win){
   if(G.over) return; G.over=true; G.controlled=null;
   for(let i=0;i<7;i++) spawnExplosion(win?rand(W-CITY_W,W-10):rand(10,CITY_W), rand(120,H-120), 1.5);
-  $('over-title').textContent=win?'🏆 ПОБЕДА!':'💀 ГОРОД ПАЛ…';
+  $('over-title').textContent=win?'ПОБЕДА!':'ГОРОД ПАЛ…';
   $('over-text').textContent=win?'Город противника уничтожен. Линия фронта прорвана, командир!':'Твой город разрушен. Но штаб уже готовит контрнаступление…';
-  $('over-stats').innerHTML=`⏱ Время боя: <b>${fmtTime(G.time)}</b> &nbsp; 💥 Подбито техники врага: <b>${G.kills}</b> &nbsp; 🕯 Свои потери: <b>${G.losses}</b>`;
+  $('over-stats').innerHTML=`Время боя: <b>${fmtTime(G.time)}</b> &nbsp; Подбито техники врага: <b>${G.kills}</b> &nbsp; Свои потери: <b>${G.losses}</b>`;
   $('screen-over').classList.remove('hidden'); sfx('boom',0.5);
 }
 function takeControlFPV(){
@@ -663,7 +667,7 @@ function takeControlFPV(){
   cands.sort((a,b)=>dist(a,mouse)-dist(b,mouse));
   if(G.controlled) G.controlled.manual=false;
   G.controlled=cands[0]; G.controlled.manual=true;
-  setAlert('🛸 ТЫ ВЕДЁШЬ FPV! Мышь — курс. Врежься в технику врага!',true,4); log('🛸 <b>Ручное управление FPV</b> включено','good');
+  setAlert('[FPV] ТЫ ВЕДЁШЬ ДРОН! Мышь — курс. Врежься в технику врага!',true,4); log('[FPV] <b>Ручное управление</b> включено','good');
 }
 
 /* ---------------- INPUT ---------------- */
@@ -674,10 +678,11 @@ cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x
   if(G.targeting){ G.targeting=false; cvs.classList.remove('targeting');
     if(G.money>=MISSILE.cost&&G.missileCd<=0){ G.money-=MISSILE.cost; G.missileCd=MISSILE.cd; launchMissile('player',p.x,p.y); } return; }
   const f=G.units.find(u=>u.side==='player'&&u.type==='fpv'&&dist(u,p)<34);
-  if(f){ if(G.controlled)G.controlled.manual=false; G.controlled=f; f.manual=true; setAlert('🛸 ТЫ ВЕДЁШЬ FPV!',true,3); }
+  if(f){ if(G.controlled)G.controlled.manual=false; G.controlled=f; f.manual=true; setAlert('[FPV] ТЫ ВЕДЁШЬ ДРОН!',true,3); }
 });
 window.addEventListener('keydown',e=>{
   if(e.code==='Space'){ e.preventDefault(); togglePause(); return; }
+  if(G&&!G.started&&e.key==='Enter'){ e.preventDefault(); startGame(); return; }
   if(e.key==='Escape'){ if(G.targeting){G.targeting=false;cvs.classList.remove('targeting');}
     if(G.controlled){G.controlled.manual=false;G.controlled=null;setAlert('FPV перешёл на автопилот',false,2);} return; }
   if(!G.started||G.over) return;
@@ -686,17 +691,25 @@ window.addEventListener('keydown',e=>{
   else if(n===9||e.key==='r'||e.key==='R'||e.key==='к'||e.key==='К') armMissile();
   else if(e.key==='f'||e.key==='F'||e.key==='а'||e.key==='А') takeControlFPV();
 });
-function togglePause(){ if(!G.started||G.over)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'▶ Играть':'⏸ Пауза'; }
+function togglePause(){ if(!G.started||G.over)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА'; }
 $('btn-pause').onclick=()=>{initAudio();togglePause();};
-$('btn-speed').onclick=function(){ initAudio(); G.speed=G.speed===1?2:1; this.textContent='⏩ x'+G.speed; };
-$('btn-sound').onclick=function(){ soundOn=!soundOn; this.textContent=soundOn?'🔊':'🔇'; if(soundOn)initAudio(); };
-$('btn-restart').onclick=()=>{ initAudio(); const was=G.started; resetGame(); G.started=was; $('screen-over').classList.add('hidden'); if(!was)$('screen-start').classList.remove('hidden'); $('btn-pause').textContent='⏸ Пауза'; };
+$('btn-speed').onclick=function(){ initAudio(); G.speed=G.speed===1?2:1; this.textContent='СКОРОСТЬ ×'+G.speed; };
+$('btn-sound').onclick=function(){ soundOn=!soundOn; this.textContent=soundOn?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ'; if(soundOn)initAudio(); };
+$('btn-restart').onclick=()=>{ initAudio(); const was=G.started; resetGame(); G.started=was; $('screen-over').classList.add('hidden'); if(!was)$('screen-start').classList.remove('hidden'); $('btn-pause').textContent='ПАУЗА'; };
 $('btn-help').onclick=()=>$('screen-help').classList.remove('hidden');
 $('btn-help-close').onclick=()=>$('screen-help').classList.add('hidden');
 $('ui-diff').onchange=function(){ G.diff=parseInt(this.value,10); log('Сложность изменена: <b>'+this.options[this.selectedIndex].text+'</b>'); };
-$('btn-start').onclick=()=>{ initAudio(); G.started=true; $('screen-start').classList.add('hidden'); setAlert('⚔️ Бой начался! Строй пехоту и БТР (1, 2), копи на танк и ПВО',true,5);
-  // opening skirmish so the field is alive immediately
-  spawnUnit('player','infantry'); spawnUnit('enemy','infantry'); };
+function startGame(){
+  if(!G||G.started||G.over) return;             // guard: inline onclick + listener may both fire
+  try{ initAudio(); }catch(e){}                  // audio must never block the start
+  G.started=true; window.__wantStart=false;
+  $('screen-start').classList.add('hidden');
+  setAlert('Бой начался! Строй пехоту и БТР (1, 2), копи на танк и ПВО',true,5);
+  log('[ШТАБ] Бой начался. Удачи, командир!','good');
+  spawnUnit('player','infantry'); spawnUnit('enemy','infantry'); // opening skirmish
+}
+window.startGame=startGame;
+$('btn-start').addEventListener('click',startGame);
 $('btn-again').onclick=()=>{ initAudio(); resetGame(); G.started=true; $('screen-over').classList.add('hidden'); spawnUnit('player','infantry'); spawnUnit('enemy','infantry'); };
 
 /* ---------------- MAIN LOOP ---------------- */
@@ -712,4 +725,5 @@ function loop(now){
 }
 /* ---------------- BOOT ---------------- */
 makeTerrain(); resetGame(); buildShop(); updateHUD();
+if(window.__wantStart) startGame();              // player clicked while script was loading
 requestAnimationFrame(loop);
