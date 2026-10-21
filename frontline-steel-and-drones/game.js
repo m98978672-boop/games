@@ -717,7 +717,7 @@ cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x
 });
 window.addEventListener('keydown',e=>{
   if(e.code==='Space'){ e.preventDefault(); togglePause(); return; }
-  if(G&&!G.started&&e.key==='Enter'){ e.preventDefault(); startGame(); return; }
+  if(G&&!G.started&&e.key==='Enter'){ e.preventDefault(); frontlineStart(); return; }
   if(e.key==='Escape'){ if(G.targeting){G.targeting=false;cvs.classList.remove('targeting');}
     if(G.controlled){G.controlled.manual=false;G.controlled=null;setAlert('FPV перешёл на автопилот',false,2);} return; }
   if(!G.started||G.over) return;
@@ -734,7 +734,7 @@ $('btn-restart').onclick=()=>{ initAudio(); const was=G.started; resetGame(); G.
 $('btn-help').onclick=()=>$('screen-help').classList.remove('hidden');
 $('btn-help-close').onclick=()=>$('screen-help').classList.add('hidden');
 $('ui-diff').onchange=function(){ G.diff=parseInt(this.value,10); log('Сложность изменена: <b>'+this.options[this.selectedIndex].text+'</b>'); };
-function startGame(){
+function frontlineStart(){
   if(!G||G.started||G.over) return;             // guard: inline onclick + listener may both fire
   try{ initAudio(); }catch(e){}                  // audio must never block the start
   G.started=true; window.__wantStart=false;
@@ -743,8 +743,8 @@ function startGame(){
   log('[ШТАБ] Бой начался. Удачи, командир!','good');
   spawnUnit('player','infantry'); spawnUnit('enemy','infantry'); // opening skirmish
 }
-window.startGame=startGame;
-$('btn-start').addEventListener('click',startGame);
+window.startGame=frontlineStart;
+$('btn-start').addEventListener('click',frontlineStart);
 $('btn-again').onclick=()=>{ initAudio(); resetGame(); G.started=true; $('screen-over').classList.add('hidden'); spawnUnit('player','infantry'); spawnUnit('enemy','infantry'); };
 
 /* ---------------- MAIN LOOP ---------------- */
@@ -760,5 +760,5 @@ function loop(now){
 }
 /* ---------------- BOOT ---------------- */
 makeTerrain(); resetGame(); buildShop(); updateHUD();
-if(window.__wantStart) startGame();              // player clicked while script was loading
+if(window.__wantStart) frontlineStart();              // player clicked while script was loading
 requestAnimationFrame(loop);

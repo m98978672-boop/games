@@ -14,7 +14,8 @@
 - 🎨 Анимации: вращающиеся башни и радары, гусеницы, винты дронов, трассеры,
   взрывы, дым, воронки и сгоревшие остовы техники
 
-▶️ **Играть:** открой `index.html` в корне (меню) или сразу `frontline-steel-and-drones/index.html`.
+▶️ **Играть:** открой `index.html` в корне репозитория — это сама игра одним файлом
+(собирается из исходников в `frontline-steel-and-drones/` командой `python3 frontline-steel-and-drones/build_standalone.py`).
 Для GitHub Pages: Settings → Pages → ветка `main`, папка `/ (root)`.
 
 📋 План развития игры: [frontline-steel-and-drones/PLAN.md](./frontline-steel-and-drones/PLAN.md)
