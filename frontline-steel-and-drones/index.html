@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Линия Фронта: Сталь и Дроны — Frontline: Steel & Drones</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="logo">🎯 <b>ЛИНИЯ ФРОНТА</b> <span>Сталь и Дроны</span></div>
+    <div class="hud-group">
+      <div class="hud-item money">💰 <b id="ui-money">500</b> <small id="ui-income">+14/с</small></div>
+      <div class="hud-item">💥 Подбито: <b id="ui-kills">0</b></div>
+      <div class="hud-item">⏱ <b id="ui-time">00:00</b></div>
+    </div>
+    <div class="hud-group controls">
+      <select id="ui-diff" title="Сложность">
+        <option value="0">😌 Легко</option>
+        <option value="1" selected>⚔️ Нормально</option>
+        <option value="2">🔥 Хард</option>
+      </select>
+      <button id="btn-pause" title="Пауза (Пробел)">⏸ Пауза</button>
+      <button id="btn-speed" title="Скорость игры">⏩ x1</button>
+      <button id="btn-sound" title="Звук">🔊</button>
+      <button id="btn-restart" title="Заново">🔄</button>
+      <button id="btn-help" title="Справка">❓</button>
+    </div>
+  </header>
+
+  <div id="citybars">
+    <div class="city-wrap">
+      <div class="city-label blue">🏙 ТВОЙ ГОРОД</div>
+      <div class="city-bar"><div id="hp-player" class="fill blue"></div><span id="hp-player-txt">2000</span></div>
+    </div>
+    <div id="alert">Фронт спокоен… пока что</div>
+    <div class="city-wrap right">
+      <div class="city-label red">ГОРОД ПРОТИВНИКА 🏙</div>
+      <div class="city-bar"><div id="hp-enemy" class="fill red"></div><span id="hp-enemy-txt">2000</span></div>
+    </div>
+  </div>
+
+  <div id="stage">
+    <canvas id="game" width="1600" height="900"></canvas>
+
+    <div id="screen-start" class="screen">
+      <div class="panel">
+        <h1>🎯 ЛИНИЯ ФРОНТА</h1>
+        <h2>Сталь и Дроны</h2>
+        <p class="brief">
+          Ты — командир <b style="color:#5eb1ff">Синих</b>. Справа — город
+          <b style="color:#ff6b5e">Красных</b>. Арсенал у вас <b>одинаковый</b>:
+          танки, БТР, РСЗО, FPV-дроны, бомбардировщики, ПВО, РЭБ и крылатые ракеты.
+        </p>
+        <p class="brief">🏆 <b>Цель:</b> уничтожить город противника раньше, чем он уничтожит твой.<br>
+        💰 Деньги идут со временем и за подбитую технику. Не забывай про ПВО и РЭБ — без них FPV разнесут твои танки!</p>
+        <div class="keys">
+          <div><kbd>1</kbd>–<kbd>8</kbd> купить юнит</div>
+          <div><kbd>9</kbd> ракета → клик по цели</div>
+          <div><kbd>F</kbd> ручное управление FPV 🛸</div>
+          <div><kbd>Пробел</kbd> пауза</div>
+        </div>
+        <button id="btn-start" class="big">⚔️ В БОЙ!</button>
+        <p class="tiny">Вымышленная игра. Обе стороны симметричны — побеждает тактика, а не флаг.</p>
+      </div>
+    </div>
+
+    <div id="screen-over" class="screen hidden">
+      <div class="panel">
+        <h1 id="over-title">🏆 ПОБЕДА!</h1>
+        <p id="over-text" class="brief"></p>
+        <div id="over-stats" class="brief"></div>
+        <button id="btn-again" class="big">🔄 ИГРАТЬ СНОВА</button>
+      </div>
+    </div>
+
+    <div id="screen-help" class="screen hidden">
+      <div class="panel help">
+        <h2>📖 Справка командира</h2>
+        <ul>
+          <li>🪖 <b>Штурмовая группа (60)</b> — дешёвая пехота. Хороша массой, умирает от БТР и РСЗО.</li>
+          <li>🚛 <b>БТР (120)</b> — быстрая автопушка против пехоты и РСЗО. Боится танков и FPV.</li>
+          <li>🛡️ <b>Танк (220)</b> — броня и пушка. Главная добыча для FPV противника — прикрывай!</li>
+          <li>🚀 <b>РСЗО (280)</b> — залп 6 ракет по площади с большой дистанции. Беспомощна вблизи.</li>
+          <li>🛸 <b>FPV-камикадзе (90)</b> — пикирует в бронетехнику. Жми <kbd>F</kbd> и веди мышью сам!</li>
+          <li>💣 <b>Дрон-бомбардировщик (140)</b> — зависает над целью и делает 3 сброса.</li>
+          <li>📡 <b>ПВО (260)</b> — выезжает от города и разворачивается. Сбивает дроны И крылатые ракеты.</li>
+          <li>📶 <b>РЭБ (180)</b> — глушит вражеские дроны в радиусе: они падают. Едет за танками — идеальная пара.</li>
+          <li>☄️ <b>Крылатая ракета (450)</b> — кнопка 9, затем клик по карте. Враг может перехватить её ПВО!</li>
+        </ul>
+        <p>💡 Комбо: <b>Танки + РЭБ + ПВО сзади</b>. Враг бьёт по тебе ракетами — красный маркер цели даёт ~2.5 сек предупреждения.</p>
+        <button id="btn-help-close" class="big">ПОНЯТНО</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop">
+    <div id="shop-cards"></div>
+    <div id="log"></div>
+  </div>
+  <div id="hint">Кликай карточки внизу или жми 1–8. FPV можно вести вручную клавишей <b>F</b> — наведи мышь на танк врага и не отпускай курс!</div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
