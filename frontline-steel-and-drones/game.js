@@ -1,12 +1,12 @@
 'use strict';
 /* ============================================================
-   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.5 (Отряды, прогноз и резервные города)
+   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.6 (Масштаб, управление армией и отбитие городов)
    Canvas 2D top-down strategy. Symmetric arsenal, Blue vs Red.
    ============================================================ */
-let W = 1600;                       // world width — grows by 950 with each captured enemy city
+let W = 2100;                       // world width — grows as cities are captured or lost
 const VIEW_W = 1600, H = 900, CITY_W = 118;
-const CITY_ZONE_X = [0, 1482, 2432, 3382];   // your base, then enemy cities 1..3 (left edges)
-const SECTOR_RANGES = [[118,1482],[1600,2432],[2550,3382]]; // battlefield between current bases
+const CITY_STEP = 1350;             // distance between neighbouring cities (v0.6: a longer front)
+const CITY_ZONE_X = [0, 1982, 3332, 4682];   // your base, then enemy cities 1..3 (left edges)
 const cvs = document.getElementById('game'), ctx = cvs.getContext('2d');
 const $ = id => document.getElementById(id);
 
@@ -63,7 +63,10 @@ function resetGame(){
     // Campaign of 3 enemy cities: capture one -> world grows, it becomes your forward base.
     sector:1, playerBaseZone:0, enemyCityZone:1, captured:0, reserveCitiesUsed:0, playerBasesLost:0, playerBaseCityNo:0,
     zoneMax:[2000,2000,2400,2800], zoneHp:[2000,2000,2400,2800],
-    camX:0, camTargetX:0, camManualT:0, buildersUnlocked:false, structures:[],
+    zoneOwner:['player','enemy','enemy','enemy'], zoneCityNo:[0,1,2,3], // cities can change hands both ways
+    camX:0, camTargetX:0, camY:0, camTargetY:0, camManualT:0, zoom:1, zoomTarget:1, showcaseT:0,
+    playerOrder:{mode:'advance',x:0,y:450},   // army tactics: advance / rally (group up) / hold (defend)
+    buildersUnlocked:false, structures:[],
     units:[], projectiles:[], particles:[], floaters:[], craters:[], wrecks:[], warnings:[],
     kills:0, losses:0, shake:0, shopCd:{}, missileCd:0,
     targeting:false, controlled:null, aiT:2.2, aiMissileT:26, alertT:0, cityWarnT:0, uid:1,
@@ -88,22 +91,90 @@ const keysDown = {};
 /* ----- campaign geography helpers (current sector bases move as cities fall) ----- */
 function playerBaseX0(){ return CITY_ZONE_X[G?(G.playerBaseZone||0):0]; }
 function playerBaseWall(){ return playerBaseX0()+CITY_W; }        // edge of your current base facing the enemy
-function enemyWallX(){ return W-CITY_W; }                          // left edge of the current enemy city
+function enemyCityX0(){ return CITY_ZONE_X[G?(G.enemyCityZone===undefined?1:G.enemyCityZone):1]; }
+function enemyWallX(){ return enemyCityX0(); }                     // left edge of the current objective city
 function sectorMidX(){ return (playerBaseWall()+enemyWallX())/2; }
-function sectorFocusX(){ return clamp(playerBaseX0()-180, 0, Math.max(0,W-VIEW_W)); }
+function sectorFocusX(){ const vw=G?VIEW_W/Math.max(0.2,G.zoomTarget||1):VIEW_W;
+  return clamp(playerBaseX0()-180, 0, Math.max(0,W-vw)); }
 function resetWorldGeometry(){
-  const changed=W!==1600||CITY_ZONE_X.length!==4||CITY_ZONE_X[1]!==1482||CITY_ZONE_X[2]!==2432;
-  W=1600; CITY_ZONE_X.splice(0,CITY_ZONE_X.length,0,1482,2432,3382);
+  const changed=W!==2100||CITY_ZONE_X.length!==4||CITY_ZONE_X[1]!==1982||CITY_ZONE_X[2]!==3332;
+  W=2100; CITY_ZONE_X.splice(0,CITY_ZONE_X.length,0,1982,3332,4682);
   return changed;
 }
 function sectorRanges(){ const rs=[]; for(let i=0;i<CITY_ZONE_X.length-1;i++) if(CITY_ZONE_X[i+1]<=W) rs.push([CITY_ZONE_X[i]+CITY_W,CITY_ZONE_X[i+1]]); return rs; }
-function enemyCityNo(){ return clamp((G?(G.captured||0):0)+1,1,3); }
+function enemyCityNo(){ if(G&&G.zoneCityNo&&G.zoneCityNo[G.enemyCityZone]>0) return G.zoneCityNo[G.enemyCityZone];
+  return clamp((G?(G.captured||0):0)+1,1,3); }
+function enemyObjectiveLabel(){ if(G&&G.zoneCityNo&&G.zoneCityNo[G.enemyCityZone]===0) return 'ТВОЙ ГОРОД ЗАХВАЧЕН · ОТБИТЬ!';
+  const n=enemyCityNo(); return 'ГОРОД ПРОТИВНИКА '+n+' / 3'+(n===3?' · ФИНАЛЬНЫЙ':''); }
+function recountCaptured(){ let n=0; if(G&&G.zoneOwner) for(let i=0;i<G.zoneOwner.length;i++)
+  if(G.zoneCityNo[i]>0&&G.zoneOwner[i]==='player') n++; if(G) G.captured=n; return n; }
 function playerBaseLabel(){
   if(!G) return 'ТВОЙ ГОРОД';
-  if(G.playerBaseCityNo>0) return 'ПЕРЕДОВАЯ БАЗА · ГОРОД '+G.playerBaseCityNo;
+  const cn=G.zoneCityNo?G.zoneCityNo[G.playerBaseZone]:G.playerBaseCityNo;
+  if(cn>0) return 'ПЕРЕДОВАЯ БАЗА · ГОРОД '+cn;
   if(G.playerBaseZone===0&&(G.reserveCitiesUsed||0)>0) return 'РЕЗЕРВНЫЙ ГОРОД '+((G.reserveCitiesUsed||0)+1)+' / 3';
-  if(G.playerBaseZone>0) return 'ТЫЛОВАЯ БАЗА';
+  if(G.playerBaseZone>0) return 'ОТБИТЫЙ ГОРОД';
   return 'ТВОЙ ГОРОД';
+}
+/* ----- camera zoom (mouse wheel / + / - / M = whole map) ----- */
+function fitZoom(){ return clamp(VIEW_W/Math.max(1,W),0.18,1); }
+function zoomMinLim(){ return Math.min(1,fitZoom())*0.95; }
+function viewOffY(){ const z=G?(G.zoom||1):1; return z<1?(H-H*z)/2:0; }
+function viewW(){ return VIEW_W/(G?(G.zoom||1):1); }
+function screenToWorld(sx,sy){ const z=G?(G.zoom||1):1;
+  return {x:(G?(G.camX||0):0)+sx/z, y:(G?(G.camY||0):0)+(sy-viewOffY())/z}; }
+function setZoomAt(newZoom,sx,sy){ if(!G) return;
+  newZoom=clamp(newZoom,zoomMinLim(),2);
+  const before=screenToWorld(sx,sy); G.zoom=newZoom; G.zoomTarget=newZoom; G.showcaseT=0;
+  G.camTargetX=G.camX=clamp(before.x-sx/newZoom,0,Math.max(0,W-VIEW_W/newZoom));
+  G.camTargetY=G.camY=clamp(before.y-(sy-viewOffY())/newZoom,0,Math.max(0,H-H/newZoom));
+  G.camManualT=6;
+  const m=screenToWorld(mouse.sx,mouse.sy); mouse.x=clamp(m.x,20,W-20); mouse.y=clamp(m.y,30,H-30);
+}
+/* ----- player army tactics: group up at a point, attack, or defend ----- */
+function defaultRallyPoint(){ return {x:clamp(playerBaseWall()+320,140,Math.max(200,enemyWallX()-220)), y:450}; }
+function setPlayerOrder(mode,x,y){
+  if(!G||G.over) return;
+  const po=G.playerOrder||(G.playerOrder={mode:'advance',x:0,y:450});
+  if(mode==='rally'){
+    po.mode='rally';
+    if(x!==undefined){ po.x=clamp(x,playerBaseWall()+40,enemyWallX()+50); po.y=clamp(y,80,820); }
+    else if(!po.x){ const d=defaultRallyPoint(); po.x=d.x; po.y=d.y; }
+    log('[ШТАБ] <b>Точка сбора</b> установлена — войска стягиваются в кулак. Правый клик — новая точка, <b>E</b> — в атаку','good');
+    setAlert('[ШТАБ] Армия собирается в точке. Наберёшь силу — жми E (АТАКА)',false,3);
+  } else if(mode==='hold'){
+    po.mode='hold'; po.x=playerBaseWall()+200; po.y=450;
+    log('[ШТАБ] Войска переходят к <b>обороне города</b>','good');
+    setAlert('[ШТАБ] Оборона города. E — вернуться в наступление',false,3);
+  } else {
+    po.mode='advance';
+    log('[ШТАБ] <b>Общее наступление!</b> Вся армия атакует город врага','good');
+    setAlert('[ШТАБ] В АТАКУ! Q — снова собраться в кулак',false,3);
+  }
+  applyPlayerOrders();
+}
+function applyPlayerOrders(){
+  if(!G||!G.units) return;
+  const po=G.playerOrder||{mode:'advance',x:0,y:450};
+  const mine=G.units.filter(u=>u.side==='player'&&!u.dead);
+  if(po.mode==='advance'){ for(const u of mine) if(u.type!=='pvo'&&u.type!=='builder') u.order=null; return; }
+  const dflt=defaultRallyPoint();
+  const cx=clamp(po.x||dflt.x, playerBaseWall()+40, enemyWallX()+50), cy=clamp(po.y||450,80,820);
+  po.x=cx; po.y=cy;
+  const assign=(list,dx,step,mode)=>{ [...list].sort((a,b)=>a.id-b.id).forEach((u,i)=>{
+    const mag=Math.ceil(i/2)*step, sign=i===0?0:(i%2?1:-1);
+    u.order={mode:mode||'rally', x:clamp(cx+dx,60,W-60), y:clamp(cy+sign*mag,80,820)}; }); };
+  assign(mine.filter(u=>u.type==='tank'),0,58);            // armour fist at the point
+  assign(mine.filter(u=>u.type==='infantry'),54,70);       // infantry screen ahead (toward the enemy)
+  assign(mine.filter(u=>u.type==='btr'),-72,64);           // BTR fire support behind
+  assign(mine.filter(u=>u.type==='mlrs'),-285,82,'support'); // artillery at firing distance
+  assign(mine.filter(u=>u.type==='reb'),-84,124);          // EW on the group's shoulders
+  mine.filter(u=>u.air&&!u.manual).sort((a,b)=>a.id-b.id).forEach((u,i)=>{  // drones wait over the group
+    u.order={mode:'hold', x:clamp(cx-120,80,W-80), y:clamp(cy+(i%2?55:-55),90,810)}; });
+  mine.filter(u=>u.type==='pvo').sort((a,b)=>a.id-b.id).forEach((u,i)=>{    // move the AA umbrella over the group
+    const post={x:clamp(cx-110,playerBaseWall()+60,enemyWallX()-30), y:clamp(cy+(i===0?0:(i%2?135:-135)),110,790)};
+    if(!u.deployPos||Math.hypot(u.deployPos.x-post.x,u.deployPos.y-post.y)>110){
+      u.deployPos=post; if(Math.hypot(u.x-post.x,u.y-post.y)>90) u.deployed=false; } });
 }
 function shiftWorldWest(dx){
   for(let i=0;i<CITY_ZONE_X.length;i++) CITY_ZONE_X[i]+=dx;
@@ -115,6 +186,7 @@ function shiftWorldWest(dx){
   for(const arrName of ['particles','floaters','craters','wrecks','warnings']) for(const o of (G?G[arrName]||[]:[])) sx(o);
   for(const b of buildings) b.x+=dx;
   if(G){ G.camX=(G.camX||0)+dx; G.camTargetX=(G.camTargetX||0)+dx;
+    if(G.playerOrder) G.playerOrder.x=(G.playerOrder.x||0)+dx;
     if(G.ai){ sx(G.ai.rally); for(const p of (G.ai.pvoPosts||[]))sx(p); G.ai.plan=null; G.ai.group=null; G.ai.groupTarget=null; } }
   mouse.x+=dx;
 }
@@ -337,7 +409,10 @@ function updateHUD(){
   $('hp-enemy-txt').textContent=Math.max(0,Math.ceil(G.city.enemy))+' / '+maxE;
   const lp=$('city-label-player'), le=$('city-label-enemy');
   if(lp) lp.textContent = playerBaseLabel();
-  if(le) le.textContent = 'ГОРОД ПРОТИВНИКА '+enemyCityNo()+' / 3'+(enemyCityNo()===3?' · ФИНАЛЬНЫЙ':'');
+  if(le) le.textContent = enemyObjectiveLabel();
+  const tacMode=G.playerOrder?G.playerOrder.mode:'advance';
+  const _tb=(id,on)=>{ const el=$(id); if(el&&el.classList) el.classList.toggle('tac-on',!!on); };
+  _tb('btn-tac-rally',tacMode==='rally'); _tb('btn-tac-attack',tacMode==='advance'); _tb('btn-tac-hold',tacMode==='hold');
   document.querySelectorAll('.card').forEach(card=>{
     const k=card.dataset.unit;
     if(k==='missile'){ card.classList.toggle('cant', G.money<MISSILE.cost||G.missileCd>0); card.classList.toggle('armed',G.targeting); card.querySelector('.cd').style.width=(G.missileCd>0?(100*(1-G.missileCd/MISSILE.cd)):100)+'%'; }
@@ -382,7 +457,9 @@ function spawnUnit(side,type){
   if(side==='player'&&G.ai){ const I=G.ai.intel;
     I.spawns.push({type:type, t:G.time, y:u.y}); if(I.spawns.length>90) I.spawns.shift();
     I.estMoney=Math.max(0,I.estMoney-d.cost); I.lastSpawnT=G.time; }
-  G.units.push(u); return u;
+  G.units.push(u);
+  if(side==='player'&&G.playerOrder&&G.playerOrder.mode!=='advance') applyPlayerOrders();
+  return u;
 }
 function armMissile(){
   if(!G.started||G.over) return; initAudio();
@@ -394,7 +471,7 @@ function launchMissile(side,tx,ty){
   if(side==='player'&&G.ai){ const I=G.ai.intel; // enemy staff marks the launch & the spending
     I.missiles.push({t:G.time,x:tx,y:ty}); if(I.missiles.length>12) I.missiles.shift();
     I.estMoney=Math.max(0,I.estMoney-MISSILE.cost); }
-  const sx= side==='player'? playerBaseX0()+60 : W-60, sy=clamp(ty+rand(-120,120),80,H-80);
+  const sx= side==='player'? playerBaseX0()+60 : enemyCityX0()+60, sy=clamp(ty+rand(-120,120),80,H-80);
   G.projectiles.push({kind:'cruise', side, x:sx, y:sy, tx, ty, hp:34, maxHp:34, speed:270, dead:false, air:true, radius:14, trail:0});
   sfx('launch',0.3); log(side==='player'?'[РАКЕТА] <b>Твоя ракета</b> запущена!':'[РАКЕТА] <b>Вражеская ракета</b> в воздухе!', side==='player'?'good':'bad');
 }
@@ -437,24 +514,26 @@ function damageCity(owner,dmg,x,y,bySide){
   G.city[owner]-=dmg; syncZoneHp(); spawnExplosion(x,y,0.8);
   if(owner==='player'&&G.cityWarnT<=0){ setAlert('[ТРЕВОГА] ТВОЯ БАЗА ПОД ОГНЁМ!',true,3); G.cityWarnT=5; log('[ТРЕВОГА] База под обстрелом!','bad'); }
   if(G.city[owner]<=0){
-    if(owner==='enemy'){
-      if((G.captured||0)<2) captureEnemyCity();
-      else { G.captured=3; endGame(true); }
-    } else if(!losePlayerCity()) endGame(false);
+    if(owner==='enemy') captureEnemyCity();       // handles recaptures and the final city too
+    else if(!losePlayerCity()) endGame(false);
   }
 }
-/* A player city fell. The staff first falls back to the previous owned city;
-   if the leftmost home city falls, a brand-new reserve city is added on the
-   west edge (world expands left), up to two times. Returns false only when
-   the last possible player city has fallen. */
+/* A player city fell: it flips to the enemy and becomes the objective again
+   (recapture it!). The staff falls back to the previous owned city; if the
+   westernmost home city falls, a brand-new reserve city is ADDED on the west
+   edge and the world literally expands left, up to two times. Returns false
+   only when the last possible player city has fallen. */
 function losePlayerCity(){
   if(G.over) return false;
   const fallen=G.playerBaseZone, zx=CITY_ZONE_X[fallen];
+  const fallenCityNo=G.zoneCityNo?G.zoneCityNo[fallen]:0;
   for(let i=0;i<6;i++) spawnExplosion(zx+rand(15,CITY_W-15),rand(140,H-140),1.25);
   const firstUnlock=!G.buildersUnlocked;
   G.buildersUnlocked=true;                      // a fallen first city unlocks builders too
   G.playerBasesLost=(G.playerBasesLost||0)+1;
+  G.zoneOwner[fallen]='enemy';
   G.zoneHp[fallen]=Math.round(G.zoneMax[fallen]*0.65); // enemy occupies and repairs it
+  if(fallenCityNo>0){ G.income=Math.max(14,G.income-3); G.aiIncomeBonus=Math.max(0,(G.aiIncomeBonus||0)-2); } // lost the captured-city income
   for(const st of (G.structures||[])){
     if(st.side==='player'&&st.x>=zx){ if(st.complete) st.side='enemy'; else st.dead=true; }
   }
@@ -467,45 +546,56 @@ function losePlayerCity(){
   let addedReserve=false;
   if(fallen>0){
     G.playerBaseZone=fallen-1;
-    G.playerBaseCityNo=Math.max(0,(G.playerBaseCityNo||0)-1);
+    G.enemyCityZone=fallen;                      // the fallen city is the objective again — take it back!
+    G.playerBaseCityNo=G.zoneCityNo?G.zoneCityNo[G.playerBaseZone]:0;
     if(G.zoneHp[G.playerBaseZone]<=0) G.zoneHp[G.playerBaseZone]=Math.round(G.zoneMax[G.playerBaseZone]*0.65);
     G.city.player=G.zoneHp[G.playerBaseZone];
+    G.city.enemy=G.zoneHp[fallen];
   } else {
     if((G.reserveCitiesUsed||0)>=2) return false;
     const newMax=G.reserveCitiesUsed===0?2300:2600;
-    shiftWorldWest(950);
+    shiftWorldWest(CITY_STEP);                   // the map literally grows by a whole sector on the west
     G.reserveCitiesUsed++;
     G.zoneMax.unshift(newMax); G.zoneHp.unshift(newMax);
-    G.enemyCityZone++; G.playerBaseZone=0; G.playerBaseCityNo=0;
-    G.city.player=newMax; G.city.enemy=G.zoneHp[G.enemyCityZone];
+    G.zoneOwner.unshift('player'); G.zoneCityNo.unshift(0);
+    G.playerBaseZone=0; G.enemyCityZone=1; G.playerBaseCityNo=0; // recapture your old home first
+    G.city.player=newMax; G.city.enemy=G.zoneHp[1];
     makeTerrain();
     addedReserve=true;
   }
+  recountCaptured(); G.sector=(G.captured||0)+1;
   const garrison=(G.reserveCitiesUsed||0)>=2?['tank','btr','pvo','reb','infantry']:['tank','btr','pvo','infantry'];
   for(const t of garrison) spawnUnit('player',t);
-  G.camTargetX=sectorFocusX(); G.camManualT=0;
-  addFloater(playerBaseX0()+CITY_W/2,120,addedReserve?'НОВЫЙ РЕЗЕРВНЫЙ ГОРОД!':'ШТАБ ОТОШЁЛ В ТЫЛ','#8fd0ff');
-  setAlert(addedReserve?'[ФРОНТ] Город пал — на западе открыт резервный город '+((G.reserveCitiesUsed||0)+1)+' / 3':'[ФРОНТ] Передовая база пала — штаб отошёл в предыдущий город',true,6);
-  log(addedReserve?'[ФРОНТ] <b>Твой город пал</b>, но кампания продолжается: карта расширилась влево и открыт <b>резервный город '+((G.reserveCitiesUsed||0)+1)+' / 3</b>.':'[ФРОНТ] <b>Передовая база потеряна.</b> Штаб и производство перенесены в предыдущий город.','bad');
+  if(addedReserve){ G.showcaseT=4.5; G.zoomTarget=fitZoom(); G.camTargetX=0; G.camTargetY=0; G.camManualT=0; } // zoom out: show the expanded map
+  else { G.camTargetX=sectorFocusX(); G.camManualT=0; }
+  applyPlayerOrders();
+  addFloater(playerBaseX0()+CITY_W/2,120,addedReserve?'КАРТА РАСШИРЕНА! НОВЫЙ ГОРОД':'ШТАБ ОТОШЁЛ — ОТБЕЙ ГОРОД!','#8fd0ff');
+  setAlert(addedReserve?'[ФРОНТ] Город пал — карта расширилась влево, открыт резервный город! Отбей свой город обратно':'[ФРОНТ] Город потерян! Он теперь цель — отбей его обратно',true,6);
+  log(addedReserve?'[ФРОНТ] <b>Твой город пал</b>, но кампания продолжается: карта <b>расширилась влево</b> на целый сектор и открыт <b>резервный город</b>. Колесо мыши — масштаб, M — вся карта. Сначала отбей свой старый город!':'[ФРОНТ] <b>Город занят врагом.</b> Штаб отошёл в предыдущий город, а павший город — теперь твоя цель: <b>отбей его обратно</b>.','bad');
   if(firstUnlock) log('[СТРОЙКА] Новый класс открыт: <b>Строители</b> (клавиша 0). Теперь можно строить новые города и укрепления и чинить базы.','good');
   sfx('launch',0.3);
   return true;
 }
-/* An enemy city fell (not the final one): the world grows by a new sector,
-   the captured city becomes the player's forward base, the next city opens. */
+/* The objective city fell to the player: an enemy campaign city (the world
+   grows by the next sector and it becomes the forward base), the final city
+   (victory), or the player's own lost city being retaken. */
 function captureEnemyCity(){
-  const z=G.enemyCityZone, cityNo=(G.captured||0)+1; // zone index can shift after west expansions
-  const zx=CITY_ZONE_X[z];
+  const z=G.enemyCityZone, zx=CITY_ZONE_X[z];
+  const cityNo=G.zoneCityNo?G.zoneCityNo[z]:0, ownRecapture=cityNo===0;
   for(let i=0;i<6;i++) spawnExplosion(zx+rand(15,CITY_W-15), rand(140,H-140), 1.25);
-  G.captured=cityNo; G.playerBaseCityNo=cityNo;
+  G.zoneOwner[z]='player';
+  G.zoneHp[z]=Math.round(G.zoneMax[z]*0.65);     // field repair of the taken city
+  G.playerBaseZone=z; G.playerBaseCityNo=cityNo;
+  G.city.player=G.zoneHp[z];
+  recountCaptured();
+  if(cityNo===3){ G.captured=3; endGame(true); return; }   // final city — campaign won
   const firstUnlock=!G.buildersUnlocked;
   G.buildersUnlocked=true;                        // both staffs receive engineer/builder units
-  G.zoneHp[z]=Math.round(G.zoneMax[z]*0.65);     // field repair of the captured city
-  G.playerBaseZone=z; G.enemyCityZone=z+1; G.sector=cityNo+1;
-  G.city.player=G.zoneHp[z]; G.city.enemy=G.zoneHp[z+1];
-  G.money+=350; G.income+=3;                      // captured city feeds your economy
-  G.aiMoney+=300; G.aiIncomeBonus=(G.aiIncomeBonus||0)+2; // the next city is richer too
-  W=CITY_ZONE_X[z+1]+CITY_W;                      // 1600 -> 2550 -> 3500
+  G.enemyCityZone=z+1; G.sector=(G.captured||0)+1;
+  G.city.enemy=G.zoneHp[z+1];
+  if(ownRecapture){ G.money+=200; G.aiMoney+=150; }
+  else { G.money+=350; G.income+=3; G.aiMoney+=300; G.aiIncomeBonus=(G.aiIncomeBonus||0)+2; }
+  W=Math.max(W,CITY_ZONE_X[z+1]+CITY_W);         // the next sector opens to the east
   makeTerrain();
   G.warnings.length=0;
   for(const pr of G.projectiles) if(pr.target&&pr.target.isCity) pr.dead=true; // stale city shells fizzle
@@ -519,12 +609,20 @@ function captureEnemyCity(){
   }
   if(G.ai){ G.ai.phase='buildup'; G.ai.phaseT=0; G.ai.thinkT=0; G.ai.pvoPosts=[]; G.ai.pvoPlanT=0;
     G.ai.strategy='cityDefense'; G.ai.strategySince=G.time; }
-  const garrison = cityNo===1 ? ['tank','btr','pvo','infantry'] : ['tank','tank','btr','pvo','reb','infantry'];
+  const garrison = cityNo<=1 ? ['tank','btr','pvo','infantry'] : ['tank','tank','btr','pvo','reb','infantry'];
   for(const t of garrison) spawnUnit('enemy',t);
   G.camTargetX=sectorFocusX(); G.camManualT=0;
-  addFloater(zx+CITY_W/2, 120, 'ГОРОД '+cityNo+' ЗАХВАЧЕН! +350 КР', '#8fd0ff');
-  setAlert('[ФРОНТ] Город '+cityNo+' захвачен! Карта расширена — впереди город '+(cityNo+1)+' из 3', true, 6);
-  log('[ФРОНТ] <b>Город '+cityNo+' твой!</b> Это теперь передовая база (+3 кр/с). Впереди — город '+(cityNo+1)+'.','good');
+  applyPlayerOrders();
+  const nextNo=G.zoneCityNo?G.zoneCityNo[z+1]:0;
+  if(ownRecapture){
+    addFloater(zx+CITY_W/2, 120, 'ГОРОД ОТБИТ! +200 КР', '#8fd0ff');
+    setAlert('[ФРОНТ] Свой город отбит обратно! Впереди — город '+nextNo+' из 3', true, 6);
+    log('[ФРОНТ] <b>Город снова твой!</b> Это передовая база. Впереди — город '+nextNo+' противника.','good');
+  } else {
+    addFloater(zx+CITY_W/2, 120, 'ГОРОД '+cityNo+' ЗАХВАЧЕН! +350 КР', '#8fd0ff');
+    setAlert('[ФРОНТ] Город '+cityNo+' захвачен! Карта расширена — впереди город '+nextNo+' из 3', true, 6);
+    log('[ФРОНТ] <b>Город '+cityNo+' твой!</b> Это теперь передовая база (+3 кр/с). Впереди — город '+nextNo+'. Но враг может отбить этот город обратно!','good');
+  }
   if(firstUnlock) log('[СТРОЙКА] Новый класс открыт: <b>Строители</b> (клавиша 0). Они строят новые города, бункеры, ПВО и склады, а также чинят технику и базы.','good');
   sfx('launch',0.3);
 }
@@ -534,7 +632,7 @@ function explodeAOE(x,y,radius,dmg,bySide,dmgType='explosive'){
     if(d<radius+u.radius) damageUnit(u, dmg*(1-0.45*(d/(radius+u.radius))), bySide, dmgType); }
   const pb0=playerBaseX0(), ew=enemyWallX();
   if(bySide!=='player' && x>pb0-radius*0.5 && x<pb0+CITY_W+radius*0.5) damageCity('player',dmg*0.9,x,y,bySide);
-  if(bySide!=='enemy'  && x>ew-radius*0.5 && x<W+radius*0.5)          damageCity('enemy', dmg*0.9,x,y,bySide);
+  if(bySide!=='enemy'  && x>ew-radius*0.5 && x<ew+CITY_W+radius*0.5)          damageCity('enemy', dmg*0.9,x,y,bySide);
 }
 function validFor(u,e){
   if(u.type==='builder') return false;
@@ -559,7 +657,7 @@ function cityDist(u){ return u.side==='player' ? enemyWallX()-u.x : u.x-playerBa
 function cityPoint(u){ const toEnemy=u.side==='player';
   return {isCity:true, dead:false, air:false, type:'city', radius:34,
     citySide: toEnemy?'enemy':'player', zone: toEnemy?G.enemyCityZone:G.playerBaseZone,
-    x: toEnemy? W-55 : playerBaseX0()+55, y: clamp(u.y+rand(-36,36),50,H-50)}; }
+    x: toEnemy? enemyCityX0()+55 : playerBaseX0()+55, y: clamp(u.y+rand(-36,36),50,H-50)}; }
 
 
 /* ---------------- BUILDERS & STRUCTURES ----------------
@@ -808,16 +906,32 @@ function update(dt){
   G.missileCd=Math.max(0,G.missileCd-dt); G.cityWarnT=Math.max(0,G.cityWarnT-dt);
   if(G.alertT>0){ G.alertT-=dt; if(G.alertT<=0) setAlert(G.controlled?'[FPV] Ты ведёшь FPV вручную!':'Фронт в движении…'); G.alertT=Math.max(0,G.alertT); }
   G.shake=Math.max(0,G.shake-dt*26);
-  // Camera: follows the current sector; Arrows/A/D, screen edges or minimap pan it manually.
-  { const maxCam=Math.max(0,W-VIEW_W); let pan=0;
+  // Camera + zoom: Arrows/ADWS, screen edges or minimap pan; wheel / + / - / M zoom.
+  { let pan=0, panY=0;
     if(keysDown['arrowleft']||keysDown['a']||keysDown['ф']) pan-=1;
     if(keysDown['arrowright']||keysDown['d']||keysDown['в']) pan+=1;
-    if(!pan&&W>VIEW_W){ if(mouse.sx<26) pan=-1; else if(mouse.sx>VIEW_W-26) pan=1; }
-    if(pan){ G.camTargetX=clamp((G.camTargetX||0)+pan*720*dt,0,maxCam); G.camManualT=4; }
+    if(keysDown['arrowup']||keysDown['w']||keysDown['ц']) panY-=1;
+    if(keysDown['arrowdown']||keysDown['s']||keysDown['ы']) panY+=1;
+    const zNow=G.zoom||1, maxCamX0=Math.max(0,W-VIEW_W/zNow), maxCamY0=Math.max(0,H-H/zNow);
+    if(!pan&&maxCamX0>0){ if(mouse.sx<26) pan=-1; else if(mouse.sx>VIEW_W-26) pan=1; }
+    if(!panY&&maxCamY0>0){ if(mouse.sy<26) panY=-1; else if(mouse.sy>H-26) panY=1; }
+    if(pan||panY){ const spd=800/zNow*dt;
+      G.camTargetX=clamp((G.camTargetX||0)+pan*spd,0,maxCamX0);
+      G.camTargetY=clamp((G.camTargetY||0)+panY*spd,0,maxCamY0);
+      G.camManualT=4; G.showcaseT=0; G.zoomTarget=G.zoom; }
     else if(G.camManualT>0) G.camManualT-=dt;
-    if(G.camManualT<=0) G.camTargetX=sectorFocusX();
-    G.camX=lerp(G.camX||0, clamp(G.camTargetX||0,0,maxCam), clamp(dt*2.4,0,1));
-    mouse.x=mouse.sx+G.camX; mouse.y=mouse.sy; }
+    if(G.showcaseT>0){ G.showcaseT-=dt; G.zoomTarget=fitZoom(); G.camTargetX=0; G.camTargetY=0;
+      if(G.showcaseT<=0){ G.zoomTarget=1; G.camTargetX=sectorFocusX(); } }
+    else if(G.camManualT<=0&&(G.zoomTarget||1)>=0.99) G.camTargetX=sectorFocusX();
+    // smooth zoom (showcase / keys), anchored at the view centre
+    const zt=G.zoomTarget||1;
+    if(Math.abs((G.zoom||1)-zt)>0.001){ const oz=G.zoom||1, nz=lerp(oz,zt,clamp(dt*3.2,0,1));
+      const ccx=(G.camX||0)+(VIEW_W/oz)/2, ccy=(G.camY||0)+(H/oz)/2;
+      G.zoom=nz; G.camX=ccx-(VIEW_W/nz)/2; G.camY=ccy-(H/nz)/2; }
+    const maxCamX=Math.max(0,W-VIEW_W/(G.zoom||1)), maxCamY=Math.max(0,H-H/(G.zoom||1));
+    G.camX=clamp(lerp(G.camX||0, clamp(G.camTargetX||0,0,maxCamX), clamp(dt*2.4,0,1)),0,maxCamX);
+    G.camY=clamp(lerp(G.camY||0, clamp(G.camTargetY||0,0,maxCamY), clamp(dt*2.4,0,1)),0,maxCamY);
+    const mw=screenToWorld(mouse.sx,mouse.sy); mouse.x=clamp(mw.x,20,W-20); mouse.y=clamp(mw.y,30,H-30); }
   updateAI(dt);
   // pending enemy missile warnings
   for(const w of G.warnings){ w.t-=dt; if(w.t<=0&&!w.done){ w.done=true; launchMissile(w.side,w.x,w.y);} }
@@ -893,20 +1007,20 @@ function updateUnit(u,dt){
       return;
     }
     // enemy FPV reserve: loiter over the rally point until the commander releases it
-    if(u.side==='enemy'&&u.order&&u.order.mode==='hold'){
+    if(u.order&&u.order.mode==='hold'){
       moveToward(u, u.order.x+Math.cos(G.time*0.85+u.seed)*48, u.order.y+Math.sin(G.time*1.13+u.seed)*30, d.speed*0.78, dt);
       return;
     }
     if(tgt){ const dd=moveToward(u,tgt.x,tgt.y,d.speed,dt);
       if(dd<22){ explodeAOE(u.x,u.y,46,d.dmg,u.side); killUnitSilent(u); } }
-    else { moveToward(u, u.side==='player'?W-60:playerBaseX0()+60, u.y, d.speed, dt);
+    else { moveToward(u, u.side==='player'?enemyCityX0()+60:playerBaseX0()+60, u.y, d.speed, dt);
       if(cityDist(u)<18){ explodeAOE(u.x,u.y,46,d.dmg,u.side); killUnitSilent(u); } }
     return;
   }
   if(u.type==='bomber'){
-    if(u.ammo<=0){ const homeX=u.side==='player'?playerBaseX0()+70:W-70; if(moveToward(u,homeX,u.y,d.speed*1.15,dt)<26) u.dead=true; return; }
+    if(u.ammo<=0){ const homeX=u.side==='player'?playerBaseX0()+70:enemyCityX0()+48; if(moveToward(u,homeX,u.y,d.speed*1.15,dt)<26) u.dead=true; return; }
     // enemy bomber reserve: stay back until released (keeps it out of player PVO while waiting)
-    if(u.side==='enemy'&&u.order&&u.order.mode==='hold'){
+    if(u.order&&u.order.mode==='hold'){
       moveToward(u, u.order.x+Math.cos(G.time*0.7+u.seed)*42, u.order.y+Math.sin(G.time*0.95+u.seed)*26, d.speed*0.8, dt);
       return;
     }
@@ -927,7 +1041,7 @@ function updateUnit(u,dt){
   /* ----- GROUND COMBAT ----- */
   const inRange = tgt && dist(u,tgt)<=d.range && !(u.type==='mlrs'&&dist(u,tgt)<150);
   const atCity = cityDist(u)<=d.range;
-  const ord = (u.side==='enemy') ? u.order : null;
+  const ord = u.order;   // the player can now order his own army too (rally/hold/attack)
   // Retreat order: fall back to the rally point while returning fire.
   if(ord&&ord.mode==='retreat'){
     if(inRange&&u.cd<=0){ u.cd=d.rof*rand(0.95,1.15); shootAt(u,tgt); }
@@ -970,7 +1084,7 @@ const _cpCache={};
 function cityPointCache(u){ const k=u.side, zone=u.side==='player'?G.enemyCityZone:G.playerBaseZone;
   if(!_cpCache[k]||_cpCache[k].zone!==zone||Math.random()<0.01)
     _cpCache[k]={dead:false,air:false,type:'city',isCity:true,citySide:u.side==='player'?'enemy':'player',zone:zone,
-      x:u.side==='player'?W-60:playerBaseX0()+60, y:450+rand(-160,160)};
+      x:u.side==='player'?enemyCityX0()+60:playerBaseX0()+60, y:450+rand(-160,160)};
   return _cpCache[k]; }
 function killUnitSilent(u){ u.dead=true; if(G.controlled===u)G.controlled=null; }
 
@@ -1496,12 +1610,12 @@ function aiScorePvoPost(pt,plan,selected,current){
   const armorTarget=plan.armorCluster||A.rally;
   const airSeg=segPointDist(pt.x,pt.y,pbScore+90,I.airLaneY,armorTarget.x,armorTarget.y);
   if(airSeg<R) score+=105*I.airThreat*(1-airSeg/R);                    // sit across the drone approach line
-  const missileSeg=segPointDist(pt.x,pt.y,pbScore+80,450,W-55,450);
+  const missileSeg=segPointDist(pt.x,pt.y,pbScore+80,450,enemyCityX0()+55,450);
   if(missileSeg<R) score+=78*I.missileThreat*(1-missileSeg/R);          // and across the city missile line
   if(plan.airIntercept) score+=92*I.airThreat*Math.exp(-dist(pt,plan.airIntercept)/270);
   if(plan.airLaneThreat) score+=42*(plan.airLaneThreat[laneOfY(pt.y)]||0);
   const rd=dist(pt,A.rally); if(rd<R) score+=110*(1-rd/R);
-  for(const cy of [250,450,650]){ const d=Math.hypot(pt.x-(W-55),pt.y-cy);
+  for(const cy of [250,450,650]){ const d=Math.hypot(pt.x-(enemyCityX0()+55),pt.y-cy);
     if(d<R) score+=55*I.missileThreat*(1-d/R); }                       // city missile shield
   score+=150*I.airThreat*Math.exp(-Math.abs(pt.y-I.airLaneY)/200);     // expected drone corridor
   score+=65*Math.exp(-Math.abs(pt.y-AI_LANES[A.attackLane])/230);      // cover the assault lane
@@ -1801,14 +1915,14 @@ function aiMaybeMissile(plan){
   if(G.aiMissileT>0||G.aiMoney<300) return;
   const pvoList=plan.mine.filter(u=>u.type==='pvo'&&u.deployed);
   const riskAt=(tx,ty)=>{ let r=0;
-    for(const p of pvoList){ const d=segPointDist(p.x,p.y,W-60,ty,tx,ty);
+    for(const p of pvoList){ const d=segPointDist(p.x,p.y,enemyCityX0()+60,ty,tx,ty);
       if(d<DEFS.pvo.range) r=Math.max(r,(DEFS.pvo.range-d)/DEFS.pvo.range); } return r; };
   const missileTargets=[...plan.pGround,...(G.structures||[]).filter(st=>st.side==='player'&&!st.dead)];
   let best=null,bestScore=-Infinity;
   for(const anchor of missileTargets){
     const members=missileTargets.filter(u=>dist(anchor,u)<150);
     if(members.length<2&&!['pvo','mlrs','settlement','aaTower'].includes(anchor.type)) continue;
-    const flight=2.6+Math.hypot(anchor.x-(W-60),0)/270;               // warning time + cruise flight
+    const flight=2.6+Math.hypot(anchor.x-(enemyCityX0()+60),0)/270;               // warning time + cruise flight
     const preds=members.map(u=>({u:u,p:predictedPoint(u,flight,brain.lead)}));
     let sw=0,cx=0,cy=0; for(const pr of preds){const w=(DEFS[pr.u.type]||STRUCT_DEFS[pr.u.type]).cost;sw+=w;cx+=pr.p.x*w;cy+=pr.p.y*w;}
     cx/=sw; cy/=sw;
@@ -1866,9 +1980,13 @@ function updateAI(dt){
 /* ---------------- DRAWING ---------------- */
 const MINIMAP={x:VIEW_W-344,y:24,w:332,h:40};
 function draw(){
+  const zoom=G?(G.zoom||1):1;
+  ctx.fillStyle='#1c2315'; ctx.fillRect(0,0,VIEW_W,H);   // margins when zoomed out past the world height
   ctx.save();
-  const camX=G?(G.camX||0):0;
-  ctx.translate(-camX+(G.shake>0?rand(-G.shake,G.shake):0), (G.shake>0?rand(-G.shake,G.shake):0));
+  const camX=G?(G.camX||0):0, camY=G?(G.camY||0):0;
+  ctx.translate((G.shake>0?rand(-G.shake,G.shake):0), viewOffY()+(G.shake>0?rand(-G.shake,G.shake):0));
+  ctx.scale(zoom,zoom);
+  ctx.translate(-camX,-camY);
   ctx.drawImage(terrain,0,0);
   for(const cr of G.craters) drawCrater(ctx,cr.x,cr.y,cr.r);
   drawCities();
@@ -1902,8 +2020,26 @@ function draw(){
   ctx.font='bold 16px Arial'; ctx.textAlign='center';
   for(const f of G.floaters){ ctx.globalAlpha=1-f.life/1.15; ctx.fillStyle=f.col; ctx.fillText(f.txt,f.x,f.y); }
   ctx.globalAlpha=1;
+  // player rally flag (army group-up point)
+  if(G.playerOrder&&G.playerOrder.mode!=='advance'&&G.started&&!G.over){ const po=G.playerOrder;
+    const pulse=0.65+0.35*Math.sin(G.time*4);
+    ctx.strokeStyle='rgba(77,163,255,'+pulse+')'; ctx.lineWidth=2.5/zoom+1;
+    ctx.beginPath(); ctx.arc(po.x,po.y,34+6*Math.sin(G.time*3),0,7); ctx.stroke();
+    ctx.strokeStyle='#dfeeff'; ctx.lineWidth=3/zoom+1; ctx.beginPath(); ctx.moveTo(po.x,po.y+16); ctx.lineTo(po.x,po.y-30); ctx.stroke();
+    ctx.fillStyle='#4da3ff'; ctx.beginPath(); ctx.moveTo(po.x,po.y-30); ctx.lineTo(po.x+24,po.y-22); ctx.lineTo(po.x,po.y-14); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font='bold '+(13/zoom+4)+'px Arial'; ctx.textAlign='center';
+    ctx.fillText(po.mode==='hold'?'ОБОРОНА':'СБОР', po.x, po.y+34); }
   ctx.restore();
   drawMinimap();
+  // zoom readout + map-expanded banner (screen space)
+  if(G&&G.started){ ctx.fillStyle='rgba(8,11,7,0.82)'; ctx.fillRect(VIEW_W-238,H-34,228,24);
+    ctx.strokeStyle='rgba(227,185,62,0.7)'; ctx.lineWidth=1; ctx.strokeRect(VIEW_W-238,H-34,228,24);
+    ctx.fillStyle='#ffe08a'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+    ctx.fillText('МАСШТАБ ×'+zoom.toFixed(2)+' · колесо/+/- · M — вся карта', VIEW_W-124, H-18);
+    if(G.showcaseT>0){ ctx.fillStyle='rgba(8,11,7,0.88)'; ctx.fillRect(VIEW_W/2-330,64,660,44);
+      ctx.strokeStyle='#4da3ff'; ctx.lineWidth=2; ctx.strokeRect(VIEW_W/2-330,64,660,44);
+      ctx.fillStyle='#bfe0ff'; ctx.font='bold 21px Arial';
+      ctx.fillText('КАРТА РАСШИРЕНА — НОВЫЙ РЕЗЕРВНЫЙ ГОРОД НА ЗАПАДЕ', VIEW_W/2, 93); } }
   if(G.controlled&&!G.controlled.dead) drawFPVOverlay(G.controlled);
   if(G.paused&&G.started&&!G.over){ ctx.fillStyle='rgba(0,0,0,0.35)'; ctx.fillRect(0,0,VIEW_W,H);
     ctx.fillStyle='#fff'; ctx.font='bold 46px Arial'; ctx.textAlign='center'; ctx.fillText('ПАУЗА',VIEW_W/2,H/2); }
@@ -1914,13 +2050,13 @@ function drawMinimap(){
   ctx.fillStyle='rgba(8,11,7,0.82)'; ctx.fillRect(mm.x-4,mm.y-4,mm.w+8,mm.h+8);
   ctx.strokeStyle='rgba(227,185,62,0.7)'; ctx.lineWidth=1.5; ctx.strokeRect(mm.x-4,mm.y-4,mm.w+8,mm.h+8);
   ctx.fillStyle='#3d4a2f'; ctx.fillRect(mm.x,mm.y,mm.w,mm.h);
-  for(const z of revealedZones()){ const owner=z<=(G.playerBaseZone||0)?'player':'enemy';
+  for(const z of revealedZones()){ const owner=(G.zoneOwner&&G.zoneOwner[z])?G.zoneOwner[z]:(z<=(G.playerBaseZone||0)?'player':'enemy');
     ctx.fillStyle=SIDE_COLOR[owner]; ctx.fillRect(mm.x+CITY_ZONE_X[z]*sc,mm.y,Math.max(5,CITY_W*sc),mm.h); }
   for(const st of (G.structures||[])){ ctx.fillStyle=st.complete?'#ffe08a':'rgba(255,224,138,0.55)'; ctx.fillRect(mm.x+st.x*sc-2.5,mm.y+(st.y/H)*mm.h-2.5,5,5); }
   for(const u of G.units){ ctx.fillStyle=SIDE_COLOR[u.side]; ctx.fillRect(mm.x+u.x*sc-1.5,mm.y+(u.y/H)*mm.h-1.5,3,3); }
-  ctx.strokeStyle='#ffe08a'; ctx.lineWidth=1.6; ctx.strokeRect(mm.x+camX*sc,mm.y,VIEW_W*sc,mm.h);
+  ctx.strokeStyle='#ffe08a'; ctx.lineWidth=1.6; ctx.strokeRect(mm.x+camX*sc,mm.y,viewW()*sc,mm.h);
   ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='bold 10px Arial'; ctx.textAlign='left';
-  ctx.fillText('КАРТА · ГОРОД '+enemyCityNo()+' / 3', mm.x+2, mm.y-7);
+  ctx.fillText((G.zoneCityNo&&G.zoneCityNo[G.enemyCityZone]===0)?'КАРТА · ОТБИТЬ СВОЙ ГОРОД!':'КАРТА · ГОРОД '+enemyCityNo()+' / 3', mm.x+2, mm.y-7);
 }
 function drawStructures(){
   for(const st of (G.structures||[])){
@@ -1982,17 +2118,16 @@ function drawCities(){
       ctx.fillStyle='rgba(255,214,120,0.85)'; for(let i=0;i<3;i++) if(((b.seed+i*3)|0)%2) ctx.fillRect(b.x+6+i*13,b.y+b.h-12,5,5); } }
   // owner banners + city numbers for every revealed zone
   for(const z of revealedZones()){
-    const owner=z<=(G?(G.playerBaseZone||0):0)?'player':'enemy', x0=CITY_ZONE_X[z];
+    const owner=(G&&G.zoneOwner&&G.zoneOwner[z])?G.zoneOwner[z]:(z<=(G?(G.playerBaseZone||0):0)?'player':'enemy'), x0=CITY_ZONE_X[z];
     ctx.fillStyle=SIDE_COLOR[owner]; ctx.fillRect(x0+8,430,18,44);
     ctx.fillStyle='#fff'; ctx.font='bold 15px Arial'; ctx.textAlign='center'; ctx.fillText('★',x0+17,458);
     ctx.fillStyle='rgba(5,7,4,0.72)'; ctx.fillRect(x0+8,8,102,22);
     ctx.strokeStyle=SIDE_COLOR[owner]; ctx.lineWidth=1.2; ctx.strokeRect(x0+8,8,102,22);
     ctx.fillStyle='#fff'; ctx.font='bold 12px Arial';
     let zLabel='ГОРОД ВРАГА';
-    if(G&&z===G.playerBaseZone) zLabel=G.playerBaseCityNo?'ПЕРЕДОВАЯ БАЗА':'ТВОЯ БАЗА';
-    else if(G&&z===G.enemyCityZone) zLabel='ГОРОД '+enemyCityNo()+' · ЦЕЛЬ';
-    else if(G&&z<G.playerBaseZone) zLabel='ТЫЛОВОЙ ГОРОД';
-    else if(G&&z>G.playerBaseZone&&z<G.enemyCityZone) zLabel='ПАВШИЙ ГОРОД';
+    if(G&&z===G.playerBaseZone) zLabel=(G.zoneCityNo&&G.zoneCityNo[z]>0)?'ПЕРЕДОВАЯ БАЗА':'ТВОЯ БАЗА';
+    else if(G&&z===G.enemyCityZone) zLabel=(G.zoneCityNo&&G.zoneCityNo[z]===0)?'ОТБЕЙ ГОРОД!':'ГОРОД '+enemyCityNo()+' · ЦЕЛЬ';
+    else if(G&&owner==='player') zLabel='ТЫЛОВОЙ ГОРОД';
     ctx.fillText(zLabel, x0+59, 23);
   }
 }
@@ -2169,7 +2304,7 @@ function drawFPVOverlay(u){
 /* ---------------- GAME FLOW ---------------- */
 function endGame(win){
   if(G.over) return; G.over=true; G.controlled=null;
-  const zx=win?W-CITY_W:playerBaseX0();
+  const zx=win?enemyCityX0():playerBaseX0();
   for(let i=0;i<7;i++) spawnExplosion(rand(zx+10,zx+CITY_W-10), rand(120,H-120), 1.5);
   $('over-title').textContent=win?'ПОБЕДА! ВСЕ 3 ГОРОДА ТВОИ!':'ВСЕ ГОРОДА ПАЛИ…';
   $('over-text').textContent=win?'Третий — финальный — город взят! Кампания завершена, линия фронта полностью прорвана, командир!':'Противник взял твой последний город: штаб отходил в тыл и открывал резервные города, но фронт всё же рухнул. Новая кампания уже готовится…';
@@ -2187,12 +2322,12 @@ function takeControlFPV(){
 
 /* ---------------- INPUT ---------------- */
 function canvasPos(e){ const r=cvs.getBoundingClientRect(); const sx=(e.clientX-r.left)/r.width*VIEW_W, sy=(e.clientY-r.top)/r.height*H;
-  return {x:sx+(G?(G.camX||0):0), y:sy, sx:sx, sy:sy}; }
+  const w=screenToWorld(sx,sy); return {x:clamp(w.x,20,W-20), y:clamp(w.y,30,H-30), sx:sx, sy:sy}; }
 cvs.addEventListener('mousemove',e=>{ const p=canvasPos(e); mouse.x=p.x; mouse.y=p.y; mouse.sx=p.sx; mouse.sy=p.sy; });
 cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x; mouse.y=p.y; mouse.sx=p.sx; mouse.sy=p.sy;
   if(!G.started||G.over) return;
   if(W>VIEW_W && p.sx>=MINIMAP.x-4 && p.sx<=MINIMAP.x+MINIMAP.w+4 && p.sy>=MINIMAP.y-4 && p.sy<=MINIMAP.y+MINIMAP.h+4){
-    G.camTargetX=clamp((p.sx-MINIMAP.x)/MINIMAP.w*W-VIEW_W/2, 0, W-VIEW_W); G.camManualT=5; return; }
+    G.camTargetX=clamp((p.sx-MINIMAP.x)/MINIMAP.w*W-viewW()/2, 0, Math.max(0,W-viewW())); G.camTargetY=(G.camY||0); G.camManualT=5; G.showcaseT=0; G.zoomTarget=G.zoom; return; }
   if(G.targeting){ G.targeting=false; cvs.classList.remove('targeting');
     if(G.money>=MISSILE.cost&&G.missileCd<=0){ G.money-=MISSILE.cost; G.missileCd=MISSILE.cd; launchMissile('player',p.x,p.y); } return; }
   const b=G.units.find(u=>u.side==='player'&&u.type==='builder'&&!u.dead&&dist(u,p)<38);
@@ -2200,9 +2335,14 @@ cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x
   const f=G.units.find(u=>u.side==='player'&&u.type==='fpv'&&dist(u,p)<34);
   if(f){ if(G.controlled)G.controlled.manual=false; G.controlled=f; f.manual=true; setAlert('[FPV] ТЫ ВЕДЁШЬ ДРОН!',true,3); }
 });
+cvs.addEventListener('wheel',e=>{ e.preventDefault(); if(!G||!G.started||G.over) return;
+  const p=canvasPos(e); mouse.sx=p.sx; mouse.sy=p.sy;
+  setZoomAt((G.zoom||1)*(e.deltaY<0?1.13:1/1.13), p.sx, p.sy); },{passive:false});
+cvs.addEventListener('contextmenu',e=>{ e.preventDefault(); if(!G||!G.started||G.over) return;
+  const p=canvasPos(e); setPlayerOrder('rally',p.x,p.y); });
 window.addEventListener('keydown',e=>{
   keysDown[(e.key||'').toLowerCase()]=true;
-  if(e.key&&(e.key==='c'||e.key==='C'||e.key==='с'||e.key==='С')&&G&&G.started){ G.camManualT=0; G.camTargetX=sectorFocusX(); }
+  if(e.key&&(e.key==='c'||e.key==='C'||e.key==='с'||e.key==='С')&&G&&G.started){ G.camManualT=0; G.showcaseT=0; G.zoomTarget=1; G.camTargetX=sectorFocusX(); G.camTargetY=0; }
   if(e.code==='Space'){ e.preventDefault(); togglePause(); return; }
   if(G&&!G.started&&e.key==='Enter'){ e.preventDefault(); frontlineStart(); return; }
   if(e.key==='Escape'){ if(G.targeting){G.targeting=false;cvs.classList.remove('targeting');}
@@ -2214,6 +2354,14 @@ window.addEventListener('keydown',e=>{
   else if(n===9||e.key==='r'||e.key==='R'||e.key==='к'||e.key==='К') armMissile();
   else if(e.key==='f'||e.key==='F'||e.key==='а'||e.key==='А') takeControlFPV();
   else if(e.key==='b'||e.key==='B'||e.key==='и'||e.key==='И') cycleAllBuilderProjects();
+  else if(e.key==='q'||e.key==='Q'||e.key==='й'||e.key==='Й') setPlayerOrder('rally');
+  else if(e.key==='e'||e.key==='E'||e.key==='у'||e.key==='У') setPlayerOrder('advance');
+  else if(e.key==='t'||e.key==='T'||e.key==='е'||e.key==='Е') setPlayerOrder('hold');
+  else if(e.key==='+'||e.key==='=') setZoomAt((G.zoom||1)*1.18,VIEW_W/2,H/2);
+  else if(e.key==='-'||e.key==='_') setZoomAt((G.zoom||1)/1.18,VIEW_W/2,H/2);
+  else if(e.key==='m'||e.key==='M'||e.key==='ь'||e.key==='Ь'){
+    if((G.zoom||1)>fitZoom()*1.08){ G.zoomTarget=fitZoom(); G.camTargetX=0; G.camTargetY=0; G.camManualT=6; G.showcaseT=0; }
+    else { G.zoomTarget=1; G.camTargetX=sectorFocusX(); G.camManualT=2; } }
 });
 window.addEventListener('keyup',e=>{ keysDown[(e.key||'').toLowerCase()]=false; });
 function togglePause(){ if(!G.started||G.over)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА'; }
@@ -2222,6 +2370,14 @@ $('btn-speed').onclick=function(){ initAudio(); G.speed=G.speed===1?2:1; this.te
 $('btn-sound').onclick=function(){ soundOn=!soundOn; this.textContent=soundOn?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ'; if(soundOn)initAudio(); };
 $('btn-restart').onclick=()=>{ initAudio(); const was=G.started; resetGame(); G.started=was; $('screen-over').classList.add('hidden'); if(!was)$('screen-start').classList.remove('hidden'); $('btn-pause').textContent='ПАУЗА'; };
 $('btn-help').onclick=()=>$('screen-help').classList.remove('hidden');
+$('btn-tac-rally').onclick=()=>{ initAudio(); setPlayerOrder('rally'); };
+$('btn-tac-attack').onclick=()=>{ initAudio(); setPlayerOrder('advance'); };
+$('btn-tac-hold').onclick=()=>{ initAudio(); setPlayerOrder('hold'); };
+$('btn-zoom-in').onclick=()=>{ initAudio(); setZoomAt((G.zoom||1)*1.2,VIEW_W/2,H/2); };
+$('btn-zoom-out').onclick=()=>{ initAudio(); setZoomAt((G.zoom||1)/1.2,VIEW_W/2,H/2); };
+$('btn-zoom-fit').onclick=()=>{ initAudio(); if(!G)return;
+  if((G.zoom||1)>fitZoom()*1.08){ G.zoomTarget=fitZoom(); G.camTargetX=0; G.camTargetY=0; G.camManualT=6; G.showcaseT=0; }
+  else { G.zoomTarget=1; G.camTargetX=sectorFocusX(); G.camManualT=2; } };
 $('btn-help-close').onclick=()=>$('screen-help').classList.add('hidden');
 $('ui-diff').onchange=function(){ G.diff=parseInt(this.value,10); log('Сложность изменена: <b>'+this.options[this.selectedIndex].text+'</b>'); };
 function frontlineStart(){
