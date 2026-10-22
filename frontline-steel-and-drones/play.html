@@ -70,6 +70,24 @@ canvas#game.targeting{outline:3px solid var(--red);outline-offset:-3px}
 .screen{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
   background:rgba(5,7,4,.72);padding:14px;overflow:auto}
 .screen.hidden{display:none}
+/* ---- builder control panel (in-stage, bottom-left) ---- */
+#builder-panel{position:absolute;left:10px;bottom:10px;z-index:30;max-width:430px;
+  background:linear-gradient(180deg,#232d1b,#131a0f);border:1.5px solid var(--gold);
+  clip-path:polygon(12px 0,100% 0,100% calc(100% - 12px),calc(100% - 12px) 100%,0 100%,0 12px);
+  padding:9px 11px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+#builder-panel.hidden{display:none}
+.bp-head{font-family:var(--stencil);font-size:13px;letter-spacing:1.2px;margin-bottom:7px}
+.bp-head span{font-family:ui-monospace,Consolas,monospace;font-size:12px;color:var(--gold2);letter-spacing:0}
+.bp-row{display:flex;gap:6px;flex-wrap:wrap;margin:5px 0}
+.bp-hint{font-size:11.5px;color:var(--dim);line-height:1.45;margin-top:5px}
+/* ---- HQ overview ---- */
+.screen .panel.hq{max-width:860px;width:100%;text-align:left;max-height:92vh;overflow:auto}
+.hq-h{font-family:var(--stencil);color:var(--gold);letter-spacing:2px;font-size:15px;margin:15px 0 7px}
+.hq-h:first-child{margin-top:2px}
+.hq-row{font-size:14px;line-height:1.75;color:#d7e4c4}
+.hq-row button{padding:3px 9px;font-size:10.5px;margin-left:8px}
+.hq-note{font-size:13.5px;line-height:1.65;color:var(--dim)}
+.hq-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;font-size:14px;line-height:1.65;color:#d7e4c4}
 .screen .panel{position:relative;background:
   repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 4px),
   linear-gradient(180deg,#232d1b,#131a0f);
@@ -270,6 +288,7 @@ button.big:active{transform:translateY(3px)}
       <button type="button" id="btn-speed" title="Скорость игры">СКОРОСТЬ ×1</button>
       <button type="button" id="btn-sound" title="Звук">ЗВУК: ВКЛ</button>
       <button type="button" id="btn-restart" title="Заново">ЗАНОВО</button>
+      <button type="button" id="btn-hq" title="Штаб: все города, армии, постройки и строители (H)">ШТАБ H</button>
       <button type="button" id="btn-help" title="Справка">СПРАВКА</button>
     </div>
   </header>
@@ -288,6 +307,21 @@ button.big:active{transform:translateY(3px)}
 
   <div id="stage">
     <canvas id="game" width="1600" height="900"></canvas>
+
+    <div id="builder-panel" class="hidden">
+      <div class="bp-head"><b>👷 СТРОИТЕЛЬ</b> <span id="bp-status"></span></div>
+      <div class="bp-row" id="bp-projects">
+        <button type="button" data-proj="settlement">ГОРОД · 420</button>
+        <button type="button" data-proj="bunker">БУНКЕР · 180</button>
+        <button type="button" data-proj="aaTower">ПВО · 240</button>
+        <button type="button" data-proj="depot">СКЛАД · 220</button>
+      </div>
+      <div class="bp-row">
+        <button type="button" id="bp-auto">АВТО: ВКЛ</button>
+        <button type="button" id="bp-close">СНЯТЬ (ESC)</button>
+      </div>
+      <div class="bp-hint">Правый клик: по земле — строить выбранный проект там · по своей технике / постройке / базе — чинить · второй клик по строителю или B — сменить проект</div>
+    </div>
 
     <div id="screen-start" class="screen">
       <div class="panel start-panel">
@@ -309,6 +343,7 @@ button.big:active{transform:translateY(3px)}
           <div><kbd>F</kbd> ручное управление FPV</div>
           <div><kbd>Q</kbd>/<kbd>E</kbd>/<kbd>T</kbd> армия: сбор / атака / оборона · правый клик — точка сбора</div>
           <div>Колесо мыши, <kbd>+</kbd>/<kbd>−</kbd> — масштаб · <kbd>M</kbd> — вся карта</div>
+          <div><kbd>H</kbd> ШТАБ — все города, армии и постройки · клик по строителю — управлять им</div>
           <div><kbd>Пробел</kbd> пауза</div>
         </div>
         <button type="button" id="btn-start" class="big" onclick="startGame()">ИГРАТЬ</button>
@@ -327,6 +362,15 @@ button.big:active{transform:translateY(3px)}
       </div>
     </div>
 
+    <div id="screen-hq" class="screen hidden">
+      <div class="panel hq">
+        <div class="panel-plate">ШТАБ // ОБЗОР ФРОНТА — ВСЁ НА ОДНОМ ЭКРАНЕ</div>
+        <h2 class="help-title">ОБЗОР ФРОНТА</h2>
+        <div id="hq-content"></div>
+        <button type="button" id="btn-hq-close" class="big">К БОЮ (H / ESC)</button>
+      </div>
+    </div>
+
     <div id="screen-help" class="screen hidden">
       <div class="panel help">
         <div class="panel-plate">СПРАВОЧНИК КОМАНДИРА</div>
@@ -340,7 +384,7 @@ button.big:active{transform:translateY(3px)}
           <li><svg class="help-ic"><use href="#i-bomber" xlink:href="#i-bomber"></use></svg><b>Дрон-бомбардировщик (140)</b> — зависает над целью и делает 3 сброса.</li>
           <li><svg class="help-ic"><use href="#i-pvo" xlink:href="#i-pvo"></use></svg><b>ПВО (260)</b> — выезжает от города и разворачивается. Сбивает дроны и крылатые ракеты.</li>
           <li><svg class="help-ic"><use href="#i-reb" xlink:href="#i-reb"></use></svg><b>РЭБ (180)</b> — глушит вражеские дроны в радиусе. Едет за танками — идеальная пара.</li>
-          <li><svg class="help-ic"><use href="#i-builder" xlink:href="#i-builder"></use></svg><b>Строители (170)</b> — клавиша <kbd>0</kbd>, открываются после первого павшего города (взятого или потерянного). Строят <b>новый город</b> (доход и передовая точка войск), бункер, башню ПВО и склад; чинят технику, постройки и базу. Клик по строителю или клавиша <kbd>B</kbd> меняет следующий проект.</li>
+          <li><svg class="help-ic"><use href="#i-builder" xlink:href="#i-builder"></use></svg><b>Строители (170)</b> — клавиша <kbd>0</kbd>, открываются после первого павшего города (взятого или потерянного). Строят <b>новый город</b> (доход и передовая точка войск), бункер, башню ПВО и склад; чинят технику, постройки и базу. <b>Управление:</b> клик по строителю выбирает его (панель слева внизу), правый клик — построить выбранный проект в этой точке или чинить то, по чему кликнул; режим «Авто» — прежняя самостоятельная работа. Кнопка <b>ШТАБ (H)</b> показывает всё: города, армии, постройки, строителей и экономику.</li>
           <li><svg class="help-ic"><use href="#i-missile" xlink:href="#i-missile"></use></svg><b>Крылатая ракета (450)</b> — клавиша 9, затем клик по карте. ПВО врага может её перехватить.</li>
         </ul>
         <p><b>Комбо:</b> танки + РЭБ рядом + ПВО сзади. Собери кулак клавишей <kbd>Q</kbd> (точка — правым кликом по карте), дождись РСЗО и ПВО, потом <kbd>E</kbd> — вся армия в атаку. Отдали карту колесом или <kbd>M</kbd>, чтобы видеть все города и оба фронта сразу. Потерянный город не конец — отбей его обратно! Красный маркер цели даёт около 2,5 секунды предупреждения о вражеской ракете.</p>
@@ -353,7 +397,7 @@ button.big:active{transform:translateY(3px)}
     <div id="shop-cards"></div>
     <div id="log"></div>
   </div>
-  <div id="hint">Клавиши 1–8, <b>0</b> — строители. Армия: <b>Q</b> — сбор в кулак (точка — правый клик), <b>E</b> — атака, <b>T</b> — оборона. Масштаб: колесо мыши, <b>+</b>/<b>−</b>, <b>M</b> — вся карта. FPV — <b>F</b>. Камера — стрелки/<b>WASD</b>, края экрана и миникарта; <b>C</b> — текущий сектор.</div>
+  <div id="hint">Клавиши 1–8, <b>0</b> — строители (клик по нему — выбрать, правый клик — приказ строить/чинить). <b>H</b> — ШТАБ: всё видно сразу. Армия: <b>Q/E/T</b>. Масштаб: колесо, <b>+</b>/<b>−</b>, <b>M</b> — вся карта. FPV — <b>F</b>. Камера — стрелки/<b>WASD</b> и миникарта; <b>C</b> — сектор.</div>
 </div>
 
 <script>
@@ -373,7 +417,7 @@ window.addEventListener('error', function(e){
 <script>
 'use strict';
 /* ============================================================
-   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.6 (Масштаб, управление армией и отбитие городов)
+   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.7 (Строитель под контролем, штабное меню, ремонт текстур)
    Canvas 2D top-down strategy. Symmetric arsenal, Blue vs Red.
    ============================================================ */
 let W = 2100;                       // world width — grows as cities are captured or lost
@@ -439,6 +483,7 @@ function resetGame(){
     zoneOwner:['player','enemy','enemy','enemy'], zoneCityNo:[0,1,2,3], // cities can change hands both ways
     camX:0, camTargetX:0, camY:0, camTargetY:0, camManualT:0, zoom:1, zoomTarget:1, showcaseT:0,
     playerOrder:{mode:'advance',x:0,y:450},   // army tactics: advance / rally (group up) / hold (defend)
+    selectedBuilder:null, hqOpen:false, hqWasPaused:false,   // builder control + HQ overview menu
     buildersUnlocked:false, structures:[],
     units:[], projectiles:[], particles:[], floaters:[], craters:[], wrecks:[], warnings:[],
     kills:0, losses:0, shake:0, shopCd:{}, missileCd:0,
@@ -474,7 +519,19 @@ function resetWorldGeometry(){
   W=2100; CITY_ZONE_X.splice(0,CITY_ZONE_X.length,0,1982,3332,4682);
   return changed;
 }
-function sectorRanges(){ const rs=[]; for(let i=0;i<CITY_ZONE_X.length-1;i++) if(CITY_ZONE_X[i+1]<=W) rs.push([CITY_ZONE_X[i]+CITY_W,CITY_ZONE_X[i+1]]); return rs; }
+function sectorRanges(){ const rs=[]; for(let i=0;i<CITY_ZONE_X.length-1;i++) if(CITY_ZONE_X[i+1]<=W) rs.push([CITY_ZONE_X[i]+CITY_W,CITY_ZONE_X[i+1],i+1]); return rs; }
+/* Sector texture theme by the CAMPAIGN NUMBER of the city at its east end:
+   0 farmland (to city 1 / own cities), 1 industrial (to city 2), 2 fortified
+   (to city 3) — stable across west expansions and recaptures. */
+function sectorThemeIndex(eastZone){ const cn=(G&&G.zoneCityNo&&G.zoneCityNo[eastZone]!==undefined)?G.zoneCityNo[eastZone]:eastZone;
+  return clamp((cn||1)-1,0,2); }
+function cityThemeIndex(z){ const cn=(G&&G.zoneCityNo&&G.zoneCityNo[z]!==undefined)?G.zoneCityNo[z]:z;
+  return clamp(cn,0,3); }
+function zoneLabelFor(z){ if(!G) return 'ГОРОД ВРАГА';
+  const owner=(G.zoneOwner&&G.zoneOwner[z])?G.zoneOwner[z]:(z<=G.playerBaseZone?'player':'enemy');
+  if(z===G.playerBaseZone) return (G.zoneCityNo&&G.zoneCityNo[z]>0)?'ПЕРЕДОВАЯ БАЗА':'ТВОЯ БАЗА';
+  if(z===G.enemyCityZone) return (G.zoneCityNo&&G.zoneCityNo[z]===0)?'ОТБЕЙ ГОРОД!':'ГОРОД '+enemyCityNo()+' · ЦЕЛЬ';
+  return owner==='player'?'ТЫЛОВОЙ ГОРОД':'ГОРОД ВРАГА'; }
 function enemyCityNo(){ if(G&&G.zoneCityNo&&G.zoneCityNo[G.enemyCityZone]>0) return G.zoneCityNo[G.enemyCityZone];
   return clamp((G?(G.captured||0):0)+1,1,3); }
 function enemyObjectiveLabel(){ if(G&&G.zoneCityNo&&G.zoneCityNo[G.enemyCityZone]===0) return 'ТВОЙ ГОРОД ЗАХВАЧЕН · ОТБИТЬ!';
@@ -633,7 +690,7 @@ function makeTerrain(){
   c.stroke();
   // Trenches + scarred no-man's-land in the centre of every revealed sector.
   for(const range of sectorRanges()){
-    const mid=(range[0]+range[1])/2, half=(range[1]-range[0])/2, density=half*2/1364;
+    const mid=(range[0]+range[1])/2, half=(range[1]-range[0])/2, density=half*2/1600;
     c.strokeStyle='rgba(52,40,26,0.9)'; c.lineWidth=9;
     for(const tx of [mid-110,mid+110]){ c.beginPath(); let y=170; c.moveTo(tx,y); while(y<740){ y+=34; c.lineTo(tx+((y/34)%2?26:-26),y);} c.stroke(); }
     c.strokeStyle='rgba(120,95,60,0.7)'; c.lineWidth=3;
@@ -685,16 +742,16 @@ function makeTerrain(){
   // old craters
   for(let i=0;i<Math.round(30*W/1600);i++) drawCrater(c, rand(200,W-200), rand(120,H-120), rand(10,26));
   // Distinct ground language per campaign sector (no mid-map buildings).
-  sectorRanges().forEach((range,i)=>{ paintSectorTexture(c,range,clamp(i-((G&&G.reserveCitiesUsed)||0),0,2)); });
+  sectorRanges().forEach(range=>{ paintSectorTexture(c,range,sectorThemeIndex(range[2])); });
   // city ground for every revealed city zone — each city has its own surface
   const cityGround=['#6e6a60','#716b5f','#5f625f','#4f4d4b'];
-  for(const z of revealedZones()){ const x0=CITY_ZONE_X[z]; c.fillStyle=cityGround[z]||cityGround[0]; c.fillRect(x0,0,CITY_W,H);
+  for(const z of revealedZones()){ const x0=CITY_ZONE_X[z], cn=cityThemeIndex(z); c.fillStyle=cityGround[cn]||cityGround[0]; c.fillRect(x0,0,CITY_W,H);
     c.strokeStyle='rgba(20,20,18,0.28)'; c.lineWidth=1;
     for(let xx=x0+24;xx<x0+CITY_W;xx+=24){ c.beginPath(); c.moveTo(xx,0); c.lineTo(xx,H); c.stroke(); }
     for(let yy=48;yy<H;yy+=72){ c.beginPath(); c.moveTo(x0,yy); c.lineTo(x0+CITY_W,yy); c.stroke(); }
-    if(z>=2){ c.fillStyle='rgba(227,185,62,0.5)'; for(let yy=10;yy<H;yy+=42) c.fillRect(x0+5,yy,4,20);
+    if(cn>=2){ c.fillStyle='rgba(227,185,62,0.5)'; for(let yy=10;yy<H;yy+=42) c.fillRect(x0+5,yy,4,20);
       c.fillStyle='rgba(15,15,14,0.34)'; for(let yy=31;yy<H;yy+=42) c.fillRect(x0+5,yy,4,16); }
-    if(z===3){ c.fillStyle='rgba(0,0,0,0.22)'; for(let i=0;i<11;i++) c.fillRect(x0+rand(10,CITY_W-28),rand(H-50),rand(12,24),rand(18,42)); }
+    if(cn===3){ c.fillStyle='rgba(0,0,0,0.22)'; for(let i=0;i<11;i++) c.fillRect(x0+rand(10,CITY_W-28),rand(H-50),rand(12,24),rand(18,42)); }
     for(let i=0;i<900;i++){ c.fillStyle=`rgba(0,0,0,${rand(0.05,0.22)})`; c.fillRect(x0+rand(CITY_W),rand(H),2,2);} }
   // generate city buildings (tagged with their zone for per-city damage state)
   buildings=[];
@@ -709,6 +766,16 @@ function drawCrater(c,x,y,r){
 
 /* Sector ground textures: 1 = farmland/forest, 2 = industrial concrete and
    rail, 3 = dark fortified concrete approach. Decorative only. */
+function sectorTint(c,x1,x2,rgb,alpha){          // full-sector wash with feathered vertical edges (no hard seams)
+  const w=x2-x1, fade=Math.min(80,w*0.18);
+  c.fillStyle='rgba('+rgb+','+alpha+')'; c.fillRect(x1+fade,0,Math.max(0,w-2*fade),H);
+  const gl=c.createLinearGradient(x1,0,x1+fade,0);
+  gl.addColorStop(0,'rgba('+rgb+',0)'); gl.addColorStop(1,'rgba('+rgb+','+alpha+')');
+  c.fillStyle=gl; c.fillRect(x1,0,fade,H);
+  const gr=c.createLinearGradient(x2-fade,0,x2,0);
+  gr.addColorStop(0,'rgba('+rgb+','+alpha+')'); gr.addColorStop(1,'rgba('+rgb+',0)');
+  c.fillStyle=gr; c.fillRect(x2-fade,0,fade,H);
+}
 function paintSectorTexture(c,range,idx){
   const x1=range[0],x2=range[1],w=x2-x1,mid=(x1+x2)/2;
   if(idx===0){
@@ -722,13 +789,14 @@ function paintSectorTexture(c,range,idx){
     return;
   }
   if(idx===1){
-    c.fillStyle='rgba(76,76,70,0.20)'; c.fillRect(x1,0,w,H);
+    sectorTint(c,x1,x2,'76,76,70',0.20);
     // worn concrete slabs
     for(let x=x1+18;x<x2-80;x+=118) for(let y=42;y<H-80;y+=104){
       if(Math.random()<0.16) continue;
+      const jx=x+rand(-4,4), jy=y+rand(-3,3), jw=rand(82,108), jh=rand(66,94);   // one rect for fill AND outline (was mismatched -> "broken tiles")
       c.fillStyle=`rgba(${118+rand(24)|0},${118+rand(20)|0},${108+rand(16)|0},${rand(0.10,0.22)})`;
-      c.fillRect(x+rand(-4,4),y+rand(-3,3),rand(82,108),rand(66,94));
-      c.strokeStyle='rgba(35,35,32,0.25)'; c.strokeRect(x,y,104,90);
+      c.fillRect(jx,jy,jw,jh);
+      c.strokeStyle='rgba(35,35,32,0.25)'; c.strokeRect(jx,jy,jw,jh);
     }
     // railway: ballast, sleepers and two steel rails
     const ry=632; c.fillStyle='rgba(55,49,42,0.72)'; c.fillRect(x1,ry-17,w,34);
@@ -745,7 +813,7 @@ function paintSectorTexture(c,range,idx){
     return;
   }
   // Final sector: scorched fortified concrete, dragon's teeth and wire.
-  c.fillStyle='rgba(48,45,40,0.28)'; c.fillRect(x1,0,w,H);
+  sectorTint(c,x1,x2,'48,45,40',0.28);
   c.strokeStyle='rgba(18,18,16,0.32)'; c.lineWidth=2;
   for(let x=x1+55;x<x2;x+=92){ c.beginPath(); c.moveTo(x,0); c.lineTo(x,H); c.stroke(); }
   for(let y=70;y<H;y+=112){ c.beginPath(); c.moveTo(x1,y); c.lineTo(x2,y); c.stroke(); }
@@ -783,6 +851,7 @@ function updateHUD(){
   const lp=$('city-label-player'), le=$('city-label-enemy');
   if(lp) lp.textContent = playerBaseLabel();
   if(le) le.textContent = enemyObjectiveLabel();
+  updateBuilderPanel();
   const tacMode=G.playerOrder?G.playerOrder.mode:'advance';
   const _tb=(id,on)=>{ const el=$(id); if(el&&el.classList) el.classList.toggle('tac-on',!!on); };
   _tb('btn-tac-rally',tacMode==='rally'); _tb('btn-tac-attack',tacMode==='advance'); _tb('btn-tac-hold',tacMode==='hold');
@@ -823,7 +892,7 @@ function spawnUnit(side,type){
     // commander orders / motion tracking (used by the enemy AI; harmless for the player)
     order:null, deployPos:null, priorityTarget:null, repositionCd:0, escortKind:null, vx:0, vy:0, px:0, py:0 };
   if(type==='pvo') u.y=clamp(450+rand(-260,260),150,750);
-  if(type==='builder'){ u.buildPref='settlement'; u.siteId=0; u.buildCd=rand(0.5,2); u.workT=0; }
+  if(type==='builder'){ u.buildPref='settlement'; u.siteId=0; u.buildCd=rand(0.5,2); u.workT=0; u.auto=true; u.manualOrder=null; }
   u.px=u.x; u.py=u.y;
   // The enemy staff observes every player unit that enters the field and
   // learns the player's build habits from it (see aiAssess forecast).
@@ -1109,6 +1178,84 @@ function startConstruction(builder,requested){
   }
   return null;
 }
+/* Place a chosen project at an exact point (manual builder control).
+   Returns the structure, or a string reason: 'locked'|'limit'|'funds'|'space'. */
+function tryStartConstructionAt(builder,type,x,y){
+  if(!builder||!G.buildersUnlocked) return 'locked';
+  const def=STRUCT_DEFS[type]; if(!def) return 'locked';
+  const side=builder.side;
+  if(countStructures(side,type)>=def.limit) return 'limit';
+  if(sideFunds(side)<def.cost) return 'funds';
+  x=clamp(x,playerBaseWall()+82,enemyWallX()-82); y=clamp(y,85,H-85);
+  for(const st of (G.structures||[])) if(!st.dead&&Math.hypot(st.x-x,st.y-y)<st.radius+def.radius+26) return 'space';
+  spendSide(side,def.cost);
+  const st={id:G.uid++, structure:true, type:type, side:side, x:x, y:y,
+    hp:Math.round(def.hp*0.45), maxHp:def.hp, radius:def.radius, progress:0, buildTime:def.buildTime,
+    complete:false, dead:false, air:false, angle:side==='player'?0:Math.PI, turret:side==='player'?0:Math.PI,
+    cd:rand(0.3,0.8), vx:0, vy:0, seed:rand(1000)};
+  G.structures.push(st);
+  builder.siteId=st.id; builder.buildPref=type;
+  addFloater(st.x,st.y-st.radius-14,'СТРОЙКА: '+def.name.toUpperCase(),'#8fd0ff');
+  log('[СТРОЙКА] Строитель по твоему приказу начал: <b>'+def.name+'</b> (−'+def.cost+' КР)','good');
+  return st;
+}
+function builderStatusText(u){
+  if(!u||u.dead) return '—';
+  const site=structureById(u.siteId,u.side);
+  if(site&&!site.complete) return 'Строит: '+STRUCT_DEFS[site.type].name+' · '+Math.round(site.progress*100)+'%';
+  const mo=u.manualOrder;
+  if(mo&&mo.mode==='repair') return 'Чинит по приказу'+(mo.kind==='city'?' (база)':'');
+  if(mo&&mo.mode==='buildAt') return 'Идёт строить: '+STRUCT_DEFS[mo.type].name+' (ждёт место/кредиты)';
+  if(mo&&mo.mode==='move') return 'Перемещается по приказу';
+  if(u.auto===false) return 'Ждёт твоего приказа · проект: '+STRUCT_DEFS[u.buildPref||'settlement'].name;
+  return 'Авто · проект: '+STRUCT_DEFS[u.buildPref||'settlement'].name;
+}
+function selectBuilder(u){
+  if(!u||u.dead||u.type!=='builder'||u.side!=='player') return;
+  G.selectedBuilder=u;
+  addFloater(u.x,u.y-26,'СТРОИТЕЛЬ ВЫБРАН','#ffd34d');
+  setAlert('[СТРОЙКА] Правый клик: по земле — строить там · по своей технике/базе — чинить · панель слева внизу',false,3.2);
+}
+function builderContextOrder(p){
+  const u=G.selectedBuilder;
+  if(!u||u.dead){ G.selectedBuilder=null; return; }
+  // repair a friendly unit / structure / the base under the cursor
+  const repU=G.units.find(t=>t.side==='player'&&!t.dead&&!t.air&&t!==u&&dist(t,p)<54);
+  const repS=(G.structures||[]).find(st=>st.side==='player'&&!st.dead&&dist(st,p)<st.radius+36);
+  u.auto=false;
+  if(repS&&(!repU||dist(repS,p)<=dist(repU,p))){ u.manualOrder={mode:'repair',kind:'structure',target:repS};
+    setAlert('[СТРОЙКА] Приказ: чинить «'+STRUCT_DEFS[repS.type].name+'»',false,2.4); return; }
+  if(repU){ u.manualOrder={mode:'repair',kind:'unit',target:repU};
+    setAlert('[СТРОЙКА] Приказ: чинить технику ('+DEFS[repU.type].name+')',false,2.4); return; }
+  if(p.x<=playerBaseWall()+34){ u.manualOrder={mode:'repair',kind:'city',x:playerBaseWall()+20,y:clamp(p.y,110,790)};
+    setAlert('[СТРОЙКА] Приказ: чинить базу',false,2.4); return; }
+  // build the chosen project right there
+  if(p.x>playerBaseWall()+60&&p.x<enemyWallX()-30){
+    const type=u.buildPref||'settlement';
+    const r=tryStartConstructionAt(u,type,p.x,p.y);
+    if(r&&r.structure){ u.manualOrder=null; return; }
+    if(r==='limit'){ setAlert('[СТРОЙКА] Лимит построек «'+STRUCT_DEFS[type].name+'» исчерпан — выбери другой проект (B)',true,3); return; }
+    if(r==='space'){ setAlert('[СТРОЙКА] Там тесно — выбери точку подальше от построек',true,2.6);
+      u.manualOrder={mode:'move',x:p.x,y:p.y}; return; }
+    u.manualOrder={mode:'buildAt',type:type,x:p.x,y:p.y};   // not enough credits yet: walk there and wait
+    setAlert('[СТРОЙКА] Строитель идёт на точку и начнёт, когда хватит кредитов ('+STRUCT_DEFS[type].cost+' КР)',false,3);
+    return;
+  }
+  u.manualOrder={mode:'move',x:clamp(p.x,60,W-60),y:clamp(p.y,70,H-70)};
+  setAlert('[СТРОЙКА] Строитель перемещается',false,2);
+}
+function updateBuilderPanel(){
+  const el=$('builder-panel'); if(!el||!el.classList) return;
+  let u=G?G.selectedBuilder:null;
+  if(u&&(u.dead||u.type!=='builder')){ G.selectedBuilder=null; u=null; }
+  if(!u){ el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  const st=$('bp-status'); if(st) st.textContent='HP '+Math.max(0,Math.ceil(u.hp))+'/'+u.maxHp+' · '+builderStatusText(u);
+  const au=$('bp-auto'); if(au){ au.textContent='АВТО: '+(u.auto===false?'ВЫКЛ':'ВКЛ'); au.classList.toggle('tac-on',u.auto!==false); }
+  if(document.querySelectorAll) document.querySelectorAll('#bp-projects button').forEach(b=>{
+    b.classList.toggle('tac-on', b.dataset&&b.dataset.proj===(u.buildPref||'settlement')); });
+}
+
 function builderProjectFor(u){
   if(u.side==='player') return u.buildPref||'settlement';
   const strategy=G.ai?G.ai.strategy:'balanced';
@@ -1156,10 +1303,29 @@ function updateBuilder(u,dt){
   if(danger&&!G.units.some(f=>!f.dead&&f.side===u.side&&f!==u&&!f.air&&['tank','btr','infantry'].includes(f.type)&&dist(u,f)<175)){
     moveToward(u,u.side==='player'?playerBaseWall()+95:enemyWallX()-95,u.y,d.speed*1.18,dt); return;
   }
+  // Manual repair order from the player outranks everything except self-preservation.
+  const mo=(u.side==='player')?u.manualOrder:null;
+  if(mo&&mo.mode==='repair'){
+    const t=mo.kind==='city'?null:mo.target;
+    const cityMax=G.zoneMax[G.playerBaseZone];
+    const done=mo.kind==='city' ? G.city.player>=cityMax-0.5 : (!t||t.dead||t.hp>=t.maxHp-0.5);
+    if(done){ u.manualOrder=null; addFloater(u.x,u.y-22,'РЕМОНТ ГОТОВ','#8fd0ff'); }
+    else {
+      const px=t?t.x:(mo.x||playerBaseWall()+20), py=t?t.y:(mo.y||u.y);
+      const reach=(t?(t.radius||18):44)+30;
+      if(Math.hypot(u.x-px,u.y-py)>reach) moveToward(u,px,py,d.speed*1.05,dt);
+      else { u.angle=angLerp(u.angle,Math.atan2(py-u.y,px-u.x),dt*7); u.turret=u.angle;
+        if(mo.kind==='city'){ G.city.player=Math.min(cityMax,G.city.player+5*dt); syncZoneHp(); }
+        else if(t&&!t.dead) t.hp=Math.min(t.maxHp,t.hp+(mo.kind==='structure'?18:15)*dt);
+        if(u.workT<=0){u.workT=0.2;spawnParticles(px,py,2,'spark');} }
+      return;
+    }
+  }
   // 1) Finish the assigned/nearest friendly construction site.
   let site=structureById(u.siteId,u.side);
   if(site&&site.complete){ u.siteId=0; site=null; }
-  if(!site){
+  if(!site&&u.auto===false){ /* manual mode: do not grab other sites on your own */ }
+  else if(!site){
     const sites=(G.structures||[]).filter(st=>!st.dead&&st.side===u.side&&!st.complete)
       .sort((a,b)=>((b.type===u.buildPref)-(a.type===u.buildPref))||dist(u,a)-dist(u,b));
     site=sites[0]||null; if(site)u.siteId=site.id;
@@ -1178,6 +1344,14 @@ function updateBuilder(u,dt){
     }
     return;
   }
+  // Manual pending build / move / wait-for-orders (player builders only).
+  if(mo&&mo.mode==='buildAt'){
+    if(G.buildersUnlocked&&u.buildCd<=0){ const r=tryStartConstructionAt(u,mo.type,mo.x,mo.y);
+      if(r&&r.structure){ u.manualOrder=null; return; } u.buildCd=1.2; }
+    moveToward(u,mo.x-44,mo.y,d.speed,dt); return;
+  }
+  if(mo&&mo.mode==='move'){ if(Math.hypot(u.x-mo.x,u.y-mo.y)>12) moveToward(u,mo.x,mo.y,d.speed*1.05,dt); return; }
+  if(u.side==='player'&&u.auto===false) return;   // manual: hold position and wait for orders
   // 2) Repair the most valuable damaged friend/structure/base nearby.
   const repair=findBuilderRepair(u);
   if(repair){
@@ -2371,6 +2545,16 @@ function draw(){
     ctx.strokeStyle=u.side==='player'?'rgba(77,163,255,0.35)':'rgba(255,85,69,0.35)'; ctx.setLineDash([7,9]); ctx.stroke(); ctx.setLineDash([]); }
   // PVO range hint (player only, faint)
   for(const u of G.units) if(u.type==='pvo'&&u.side==='player'&&u.deployed){ ctx.strokeStyle='rgba(77,163,255,0.14)'; ctx.beginPath(); ctx.arc(u.x,u.y,DEFS.pvo.range,0,7); ctx.stroke(); }
+  // selected builder highlight + order line
+  if(G.selectedBuilder&&!G.selectedBuilder.dead){ const u=G.selectedBuilder;
+    ctx.strokeStyle='rgba(255,211,77,'+(0.7+0.3*Math.sin(G.time*5))+')'; ctx.lineWidth=2.5/zoom+1;
+    ctx.beginPath(); ctx.arc(u.x,u.y,u.radius+9+2*Math.sin(G.time*4),0,7); ctx.stroke();
+    ctx.fillStyle='#ffd34d'; ctx.font='bold '+(11/zoom+4)+'px Arial'; ctx.textAlign='center';
+    ctx.fillText('СТРОИТЕЛЬ · '+(u.auto===false?'РУЧНОЙ':'АВТО'),u.x,u.y-u.radius-16);
+    const site2=structureById(u.siteId,u.side), mo3=u.manualOrder;
+    const tgt3=site2||(mo3&&mo3.target)||(mo3&&(mo3.mode==='buildAt'||mo3.mode==='move'||mo3.kind==='city')?{x:mo3.x,y:mo3.y}:null);
+    if(tgt3){ ctx.strokeStyle='rgba(255,211,77,0.55)'; ctx.setLineDash([7,7]); ctx.lineWidth=1.6/zoom+0.6;
+      ctx.beginPath(); ctx.moveTo(u.x,u.y); ctx.lineTo(tgt3.x,tgt3.y); ctx.stroke(); ctx.setLineDash([]); } }
   // ground units
   for(const u of G.units) if(!u.air) drawUnit(u);
   // indirect shadows + bodies below air units
@@ -2497,10 +2681,7 @@ function drawCities(){
     ctx.fillStyle='rgba(5,7,4,0.72)'; ctx.fillRect(x0+8,8,102,22);
     ctx.strokeStyle=SIDE_COLOR[owner]; ctx.lineWidth=1.2; ctx.strokeRect(x0+8,8,102,22);
     ctx.fillStyle='#fff'; ctx.font='bold 12px Arial';
-    let zLabel='ГОРОД ВРАГА';
-    if(G&&z===G.playerBaseZone) zLabel=(G.zoneCityNo&&G.zoneCityNo[z]>0)?'ПЕРЕДОВАЯ БАЗА':'ТВОЯ БАЗА';
-    else if(G&&z===G.enemyCityZone) zLabel=(G.zoneCityNo&&G.zoneCityNo[z]===0)?'ОТБЕЙ ГОРОД!':'ГОРОД '+enemyCityNo()+' · ЦЕЛЬ';
-    else if(G&&owner==='player') zLabel='ТЫЛОВОЙ ГОРОД';
+    const zLabel=zoneLabelFor(z);
     ctx.fillText(zLabel, x0+59, 23);
   }
 }
@@ -2693,6 +2874,76 @@ function takeControlFPV(){
   setAlert('[FPV] ТЫ ВЕДЁШЬ ДРОН! Мышь — курс. Врежься в технику врага!',true,4); log('[FPV] <b>Ручное управление</b> включено','good');
 }
 
+/* ================= HQ OVERVIEW MENU («ШТАБ») =================
+   One screen with everything: cities, armies, structures, builders, economy.
+   Opening it pauses the battle so the commander can actually read. */
+function hqBar(frac,col){ const f=clamp(frac,0,1);
+  return '<span style="display:inline-block;vertical-align:middle;width:120px;height:9px;background:#0a0d08;border:1px solid #46543a;margin:0 6px"><span style="display:block;height:100%;width:'+Math.round(f*100)+'%;background:'+col+'"></span></span>'; }
+function renderHQ(){
+  const el=$('hq-content'); if(!el||!G) return;
+  const my=G.units.filter(u=>!u.dead&&u.side==='player'), his=G.units.filter(u=>!u.dead&&u.side==='enemy');
+  const cnt=(arr,t)=>arr.filter(u=>u.type===t).length;
+  let h='';
+  // ---- cities ----
+  h+='<h3 class="hq-h">🏙️ ГОРОДА ФРОНТА</h3>';
+  for(const z of revealedZones()){
+    const own=(G.zoneOwner&&G.zoneOwner[z])||(z<=G.playerBaseZone?'player':'enemy');
+    const hp=G.zoneHp[z], mx=G.zoneMax[z], cn=G.zoneCityNo?G.zoneCityNo[z]:0;
+    h+='<div class="hq-row"><b style="color:'+(own==='player'?'#5eb1ff':'#ff6b5e')+'">'+zoneLabelFor(z)+'</b>'
+      +(cn>0?' · город '+cn+' из 3':' · твой город')+hqBar(hp/mx,own==='player'?'#2a72cf':'#d8402f')
+      +Math.max(0,Math.ceil(hp))+' / '+mx+' HP</div>';
+  }
+  h+='<div class="hq-note">Захвачено городов врага: <b>'+(G.captured||0)+' / 3</b> · своих потеряно: <b>'+(G.playerBasesLost||0)+'</b> · резервных открыто: <b>'+(G.reserveCitiesUsed||0)+' / 2</b> · ширина мира: <b>'+W+'</b> px</div>';
+  // ---- armies ----
+  h+='<h3 class="hq-h">⚔️ АРМИИ</h3><div class="hq-grid"><div><b style="color:#5eb1ff">ТВОЯ АРМИЯ</b> · сила ≈ '+Math.round(forceValue(my))+' КР<br>';
+  for(const k of ORDER) h+=DEFS[k].name+': <b>'+cnt(my,k)+'</b><br>';
+  const tac={advance:'АТАКА (E)',rally:'СБОР (Q)',hold:'ОБОРОНА (T)'}[G.playerOrder?G.playerOrder.mode:'advance'];
+  h+='Тактика: <b>'+tac+'</b></div><div><b style="color:#ff6b5e">АРМИЯ ВРАГА (разведка)</b> · сила ≈ '+Math.round(forceValue(his))+' КР<br>';
+  for(const k of ORDER) h+=DEFS[k].name+': <b>'+cnt(his,k)+'</b><br>';
+  h+='Стратегия врага: <b>'+(AI_STRATEGIES[G.ai.strategy]?AI_STRATEGIES[G.ai.strategy].label:G.ai.strategy)+'</b> · фаза: '+G.ai.phase+'</div></div>';
+  // ---- structures ----
+  h+='<h3 class="hq-h">🏗️ ПОСТРОЙКИ</h3>';
+  const sts=(G.structures||[]).filter(st=>!st.dead);
+  if(!sts.length) h+='<div class="hq-note">Построек пока нет — строители открываются после первого павшего города (клавиша 0).</div>';
+  for(const st of sts){ const def=STRUCT_DEFS[st.type];
+    h+='<div class="hq-row"><b style="color:'+(st.side==='player'?'#5eb1ff':'#ff6b5e')+'">'+def.name+'</b> ('+(st.side==='player'?'твоя':'врага')+') '
+      +(st.complete?'готово':'строится '+Math.round(st.progress*100)+'%')+hqBar(st.hp/st.maxHp,'#ffe08a')+Math.ceil(st.hp)+' HP</div>'; }
+  // ---- builders ----
+  h+='<h3 class="hq-h">👷 ТВОИ СТРОИТЕЛИ</h3>';
+  const bs=my.filter(u=>u.type==='builder');
+  if(!bs.length) h+='<div class="hq-note">Строителей на поле нет. Купи клавишей <b>0</b> (после первого павшего города), кликни по нему и управляй: правый клик — построить там или чинить.</div>';
+  for(const u of bs) h+='<div class="hq-row"><b>Строитель #'+u.id+'</b> · HP '+Math.ceil(u.hp)+' · '+builderStatusText(u)
+    +' <button type="button" data-bid="'+u.id+'">ВЫБРАТЬ И К НЕМУ</button></div>';
+  // ---- economy ----
+  h+='<h3 class="hq-h">💰 ЭКОНОМИКА И РАКЕТЫ</h3><div class="hq-row">Кредиты: <b>'+Math.floor(G.money)+'</b> · доход: <b>+'+playerIncomeRate()+'/с</b>'
+    +' (штаб и города +'+G.income+', постройки +'+structureIncome('player')+')<br>'
+    +'Крылатая ракета: '+(G.missileCd>0?'<b>перезарядка '+G.missileCd.toFixed(1)+' с</b>':'<b>ГОТОВА</b> (450 КР, клавиша 9)')+'<br>'
+    +'Оценка казны врага: ≈ '+Math.round(G.ai.intel.estMoney)+' КР · ракет врага запущено: '+G.ai.stats.missiles+' · волн: '+G.ai.stats.waves+'</div>';
+  // ---- controls ----
+  h+='<h3 class="hq-h">⌨️ УПРАВЛЕНИЕ — ВСЁ</h3><div class="hq-note">'
+    +'<b>1–8</b> юниты · <b>0</b> строители · <b>9</b> ракета · <b>F</b> ручной FPV<br>'
+    +'<b>Q/E/T</b> армия: сбор/атака/оборона · <b>правый клик</b> — точка сбора (или приказ выбранному строителю)<br>'
+    +'<b>Клик по строителю</b> — выбрать, второй клик или <b>B</b> — проект, <b>Esc</b> — снять выбор<br>'
+    +'<b>Колесо, +/−</b> — масштаб · <b>M</b> — вся карта · <b>C</b> — камера на сектор · стрелки/<b>WASD</b> — камера<br>'
+    +'<b>H</b> или кнопка ШТАБ — этот экран · <b>Пробел</b> — пауза · <b>Enter</b> — старт</div>';
+  el.innerHTML=h;
+  if(el.querySelectorAll) el.querySelectorAll('[data-bid]').forEach(btn=>{
+    btn.onclick=()=>{ const id=parseInt(btn.dataset.bid,10);
+      const u=G.units.find(x=>x.id===id&&x.type==='builder'&&x.side==='player'&&!x.dead);
+      closeHQ(); if(u){ selectBuilder(u); G.camTargetX=clamp(u.x-viewW()/2,0,Math.max(0,W-viewW())); G.camTargetY=clamp(u.y-(H/(G.zoom||1))/2,0,Math.max(0,H-H/(G.zoom||1))); G.camManualT=4; } };
+  });
+}
+function openHQ(){ if(!G||!G.started) return; initAudio();
+  G.hqOpen=true; G.hqWasPaused=G.paused; G.paused=true;
+  $('btn-pause').textContent='ПРОДОЛЖИТЬ';
+  $('screen-hq').classList.remove('hidden'); renderHQ();
+}
+function closeHQ(){ if(!G) return;
+  G.hqOpen=false; $('screen-hq').classList.add('hidden');
+  G.paused=!!G.hqWasPaused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА';
+}
+function toggleHQ(){ if(G&&G.hqOpen) closeHQ(); else openHQ(); }
+
 /* ---------------- INPUT ---------------- */
 function canvasPos(e){ const r=cvs.getBoundingClientRect(); const sx=(e.clientX-r.left)/r.width*VIEW_W, sy=(e.clientY-r.top)/r.height*H;
   const w=screenToWorld(sx,sy); return {x:clamp(w.x,20,W-20), y:clamp(w.y,30,H-30), sx:sx, sy:sy}; }
@@ -2703,8 +2954,8 @@ cvs.addEventListener('click',e=>{ initAudio(); const p=canvasPos(e); mouse.x=p.x
     G.camTargetX=clamp((p.sx-MINIMAP.x)/MINIMAP.w*W-viewW()/2, 0, Math.max(0,W-viewW())); G.camTargetY=(G.camY||0); G.camManualT=5; G.showcaseT=0; G.zoomTarget=G.zoom; return; }
   if(G.targeting){ G.targeting=false; cvs.classList.remove('targeting');
     if(G.money>=MISSILE.cost&&G.missileCd<=0){ G.money-=MISSILE.cost; G.missileCd=MISSILE.cd; launchMissile('player',p.x,p.y); } return; }
-  const b=G.units.find(u=>u.side==='player'&&u.type==='builder'&&!u.dead&&dist(u,p)<38);
-  if(b){ cycleBuilderProject(b,true); return; }
+  const b=G.units.find(u=>u.side==='player'&&u.type==='builder'&&!u.dead&&dist(u,p)<Math.max(38,22/(G.zoom||1)));
+  if(b){ if(G.selectedBuilder===b) cycleBuilderProject(b,true); else selectBuilder(b); return; }
   const f=G.units.find(u=>u.side==='player'&&u.type==='fpv'&&dist(u,p)<34);
   if(f){ if(G.controlled)G.controlled.manual=false; G.controlled=f; f.manual=true; setAlert('[FPV] ТЫ ВЕДЁШЬ ДРОН!',true,3); }
 });
@@ -2712,13 +2963,17 @@ cvs.addEventListener('wheel',e=>{ e.preventDefault(); if(!G||!G.started||G.over)
   const p=canvasPos(e); mouse.sx=p.sx; mouse.sy=p.sy;
   setZoomAt((G.zoom||1)*(e.deltaY<0?1.13:1/1.13), p.sx, p.sy); },{passive:false});
 cvs.addEventListener('contextmenu',e=>{ e.preventDefault(); if(!G||!G.started||G.over) return;
-  const p=canvasPos(e); setPlayerOrder('rally',p.x,p.y); });
+  const p=canvasPos(e);
+  if(G.selectedBuilder&&!G.selectedBuilder.dead){ builderContextOrder(p); return; }   // builder command
+  setPlayerOrder('rally',p.x,p.y); });
 window.addEventListener('keydown',e=>{
   keysDown[(e.key||'').toLowerCase()]=true;
   if(e.key&&(e.key==='c'||e.key==='C'||e.key==='с'||e.key==='С')&&G&&G.started){ G.camManualT=0; G.showcaseT=0; G.zoomTarget=1; G.camTargetX=sectorFocusX(); G.camTargetY=0; }
-  if(e.code==='Space'){ e.preventDefault(); togglePause(); return; }
+  if(e.code==='Space'){ e.preventDefault(); if(G&&G.hqOpen){ closeHQ(); return; } togglePause(); return; }
   if(G&&!G.started&&e.key==='Enter'){ e.preventDefault(); frontlineStart(); return; }
   if(e.key==='Escape'){ if(G.targeting){G.targeting=false;cvs.classList.remove('targeting');}
+    if(G.hqOpen){ closeHQ(); return; }
+    if(G.selectedBuilder){G.selectedBuilder=null;setAlert('Строитель снят с ручного выбора',false,2); return;}
     if(G.controlled){G.controlled.manual=false;G.controlled=null;setAlert('FPV перешёл на автопилот',false,2);} return; }
   if(!G.started||G.over) return;
   const n=parseInt(e.key,10);
@@ -2726,23 +2981,38 @@ window.addEventListener('keydown',e=>{
   else if(e.key==='0') buy('builder');
   else if(n===9||e.key==='r'||e.key==='R'||e.key==='к'||e.key==='К') armMissile();
   else if(e.key==='f'||e.key==='F'||e.key==='а'||e.key==='А') takeControlFPV();
-  else if(e.key==='b'||e.key==='B'||e.key==='и'||e.key==='И') cycleAllBuilderProjects();
+  else if(e.key==='b'||e.key==='B'||e.key==='и'||e.key==='И'){
+    if(G.selectedBuilder&&!G.selectedBuilder.dead){ cycleBuilderProject(G.selectedBuilder,true);
+      if(G.selectedBuilder.manualOrder&&G.selectedBuilder.manualOrder.mode==='buildAt') G.selectedBuilder.manualOrder.type=G.selectedBuilder.buildPref; }
+    else cycleAllBuilderProjects(); }
   else if(e.key==='q'||e.key==='Q'||e.key==='й'||e.key==='Й') setPlayerOrder('rally');
   else if(e.key==='e'||e.key==='E'||e.key==='у'||e.key==='У') setPlayerOrder('advance');
   else if(e.key==='t'||e.key==='T'||e.key==='е'||e.key==='Е') setPlayerOrder('hold');
   else if(e.key==='+'||e.key==='=') setZoomAt((G.zoom||1)*1.18,VIEW_W/2,H/2);
   else if(e.key==='-'||e.key==='_') setZoomAt((G.zoom||1)/1.18,VIEW_W/2,H/2);
+  else if(e.key==='h'||e.key==='H'||e.key==='р'||e.key==='Р') toggleHQ();
   else if(e.key==='m'||e.key==='M'||e.key==='ь'||e.key==='Ь'){
     if((G.zoom||1)>fitZoom()*1.08){ G.zoomTarget=fitZoom(); G.camTargetX=0; G.camTargetY=0; G.camManualT=6; G.showcaseT=0; }
     else { G.zoomTarget=1; G.camTargetX=sectorFocusX(); G.camManualT=2; } }
 });
 window.addEventListener('keyup',e=>{ keysDown[(e.key||'').toLowerCase()]=false; });
-function togglePause(){ if(!G.started||G.over)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА'; }
+function togglePause(){ if(!G.started||G.over||G.hqOpen)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА'; }
 $('btn-pause').onclick=()=>{initAudio();togglePause();};
 $('btn-speed').onclick=function(){ initAudio(); G.speed=G.speed===1?2:1; this.textContent='СКОРОСТЬ ×'+G.speed; };
 $('btn-sound').onclick=function(){ soundOn=!soundOn; this.textContent=soundOn?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ'; if(soundOn)initAudio(); };
 $('btn-restart').onclick=()=>{ initAudio(); const was=G.started; resetGame(); G.started=was; $('screen-over').classList.add('hidden'); if(!was)$('screen-start').classList.remove('hidden'); $('btn-pause').textContent='ПАУЗА'; };
 $('btn-help').onclick=()=>$('screen-help').classList.remove('hidden');
+$('btn-hq').onclick=()=>toggleHQ();
+$('btn-hq-close').onclick=()=>closeHQ();
+$('bp-auto').onclick=()=>{ const u=G.selectedBuilder; if(!u||u.dead)return; initAudio();
+  u.auto=(u.auto===false)?true:false; if(u.auto) u.manualOrder=null;
+  setAlert('[СТРОЙКА] Режим строителя: '+(u.auto?'АВТО (сам строит и чинит)':'РУЧНОЙ (ждёт твоих приказов правым кликом)'),false,2.6); updateBuilderPanel(); };
+$('bp-close').onclick=()=>{ G.selectedBuilder=null; updateBuilderPanel(); };
+if(document.querySelectorAll) document.querySelectorAll('#bp-projects button').forEach(b=>{
+  b.onclick=()=>{ const u=G.selectedBuilder; if(!u||u.dead||!b.dataset)return; initAudio();
+    u.buildPref=b.dataset.proj; u.buildCd=Math.min(u.buildCd||0,0.4);
+    if(u.manualOrder&&u.manualOrder.mode==='buildAt') u.manualOrder.type=u.buildPref;
+    addFloater(u.x,u.y-24,'ПРОЕКТ: '+STRUCT_DEFS[u.buildPref].name.toUpperCase(),'#ffd34d'); updateBuilderPanel(); }; });
 $('btn-tac-rally').onclick=()=>{ initAudio(); setPlayerOrder('rally'); };
 $('btn-tac-attack').onclick=()=>{ initAudio(); setPlayerOrder('advance'); };
 $('btn-tac-hold').onclick=()=>{ initAudio(); setPlayerOrder('hold'); };
