@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CONFIG, COLORS } from './config.js';
+import { createTerrainMaterial, createPlantMaterial, createStoneMaterial } from './terrain.js';
 import { fbm, ridged, makeRng, clamp, smoothstep } from './noise.js';
 
 const SIZE = CONFIG.world.size;
@@ -52,34 +53,39 @@ function addPart(parts, geo, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
   return geo;
 }
 
-// ---------- модели растений ----------
+// ---------- модели растений (отдельными слоями: ствол / крона) ----------
 
-function makePalmGeometry(rng) {
-  const parts = [];
+/**
+ * Каждая модель возвращает набор слоёв: { bark: геометрия, leaf: геометрия }.
+ * Так стволы получают кору, а кроны — листву, без склейки в один меш.
+ */
+function makePalmParts(rng) {
+  const bark = [];
+  const leaf = [];
+
   const h = 6.5 + rng() * 3.5;
   const lean = (rng() - 0.5) * 0.35;
-  const seg = 7;
-  const trunk = new THREE.CylinderGeometry(0.17, 0.32, h, seg, 1);
-  addPart(parts, trunk, COLORS.trunk, 0, h / 2, 0, 0, 0, lean * 0.35);
+  const trunk = new THREE.CylinderGeometry(0.16, 0.34, h, 8, 3);
+  // лёгкая «ребристость» ствола
+  addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0, 0, 0, lean * 0.35);
 
   const topX = Math.sin(lean * 0.35) * h * 0.9;
   const topY = h - 0.15;
 
-  // листья-«перья»
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + rng() * 0.3;
-    const len = 2.6 + rng() * 1.6;
-    const frond = new THREE.ConeGeometry(0.55, len, 4, 1);
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + rng() * 0.3;
+    const len = 2.8 + rng() * 1.8;
+    const frond = new THREE.ConeGeometry(0.6, len, 4, 2);
     const geo = frond.clone();
-    geo.scale(1, 1, 0.28);
+    geo.scale(1, 1, 0.24);
     addPart(
-      parts,
+      leaf,
       geo,
       i % 2 ? COLORS.frond : COLORS.frondLight,
       topX + Math.cos(a) * len * 0.42,
-      topY + 0.1 - 0.25,
+      topY + 0.1 - 0.3,
       Math.sin(a) * len * 0.42,
-      Math.PI / 2 - 0.55,
+      Math.PI / 2 - 0.5,
       -a,
       0
     );
@@ -87,81 +93,72 @@ function makePalmGeometry(rng) {
   // кокосы
   for (let i = 0; i < 3; i++) {
     const a = rng() * Math.PI * 2;
-    addPart(
-      parts,
-      new THREE.IcosahedronGeometry(0.22, 0),
-      COLORS.coconut,
-      topX + Math.cos(a) * 0.3,
-      topY - 0.35,
-      Math.sin(a) * 0.3
-    );
+    addPart(leaf, new THREE.IcosahedronGeometry(0.22, 0), COLORS.coconut,
+      topX + Math.cos(a) * 0.3, topY - 0.4, Math.sin(a) * 0.3);
   }
-  const merged = mergeGeometries(parts, false);
-  merged.computeVertexNormals();
-  return merged;
+
+  return {
+    bark: mergeGeometries(bark.map((g) => (g.index ? g.toNonIndexed() : g)), false),
+    leaf: mergeGeometries(leaf.map((g) => (g.index ? g.toNonIndexed() : g)), false),
+  };
 }
 
-function makeTreeGeometry(rng) {
-  const parts = [];
+function makeTreeParts(rng) {
+  const bark = [];
+  const leaf = [];
+
   const h = 4.5 + rng() * 5.5;
-  const trunk = new THREE.CylinderGeometry(0.28, 0.55, h, 6, 1);
-  addPart(parts, trunk, COLORS.trunk, 0, h / 2, 0);
+  const trunk = new THREE.CylinderGeometry(0.26, 0.6, h, 7, 3);
+  addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0);
 
-  const crownY = h * 0.78;
-  const blobs = 3 + Math.floor(rng() * 3);
-  for (let i = 0; i < blobs; i++) {
-    const r = 1.9 + rng() * 1.7;
+  // пара веток — силуэт живее
+  for (let i = 0; i < 2; i++) {
     const a = rng() * Math.PI * 2;
-    const d = rng() * 1.5;
-    const geo = new THREE.IcosahedronGeometry(r, 0);
-    addPart(
-      parts,
-      geo,
-      i % 2 ? COLORS.jungle : 0x4d7a3d,
-      Math.cos(a) * d,
-      crownY + rng() * 2.2,
-      Math.sin(a) * d
-    );
+    const bl = 2 + rng() * 2;
+    const branch = new THREE.CylinderGeometry(0.08, 0.16, bl, 5, 1);
+    addPart(bark, branch, COLORS.trunk,
+      Math.cos(a) * bl * 0.35, h * (0.55 + rng() * 0.2), Math.sin(a) * bl * 0.35,
+      0, 0, Math.PI / 3);
   }
-  const merged = mergeGeometries(parts, false);
-  merged.computeVertexNormals();
-  return merged;
+
+  // крона: компактная, начинается выше головы — иначе камера утопает в листве
+  const blobs = 4 + Math.floor(rng() * 3);
+  for (let i = 0; i < blobs; i++) {
+    const r = 1.2 + rng() * 1.15;
+    const a = rng() * Math.PI * 2;
+    const d = rng() * 1.1;
+    const geo = new THREE.IcosahedronGeometry(r, 1);
+    addPart(leaf, geo, i % 2 ? 0x6a9455 : 0x7ea863,
+      Math.cos(a) * d, h * 0.86 + r * 0.55 + rng() * 1.8, Math.sin(a) * d);
+  }
+
+  return {
+    bark: mergeGeometries(bark.map((g) => (g.index ? g.toNonIndexed() : g)), false),
+    leaf: mergeGeometries(leaf.map((g) => (g.index ? g.toNonIndexed() : g)), false),
+  };
 }
 
-function makeBushGeometry(rng, withBerries) {
-  const parts = [];
-  const n = 3 + Math.floor(rng() * 3);
+function makeBushParts(rng, withBerries) {
+  const leaf = [];
+  const n = 4 + Math.floor(rng() * 3);
   for (let i = 0; i < n; i++) {
-    const r = 0.45 + rng() * 0.45;
-    addPart(
-      parts,
-      new THREE.IcosahedronGeometry(r, 0),
-      i % 2 ? COLORS.bush : 0x5a8a46,
-      (rng() - 0.5) * 0.9,
-      r * 0.7 + rng() * 0.25,
-      (rng() - 0.5) * 0.9
-    );
+    const r = 0.4 + rng() * 0.45;
+    addPart(leaf, new THREE.IcosahedronGeometry(r, 1),
+      i % 2 ? COLORS.bush : 0x5f9150,
+      (rng() - 0.5) * 1.0, r * 0.7 + rng() * 0.25, (rng() - 0.5) * 1.0);
   }
   if (withBerries) {
-    for (let i = 0; i < 6; i++) {
-      addPart(
-        parts,
-        new THREE.IcosahedronGeometry(0.09, 0),
-        COLORS.berry,
-        (rng() - 0.5) * 1.1,
-        0.5 + rng() * 0.6,
-        (rng() - 0.5) * 1.1
-      );
+    for (let i = 0; i < 7; i++) {
+      addPart(leaf, new THREE.IcosahedronGeometry(0.1, 0), COLORS.berry,
+        (rng() - 0.5) * 1.2, 0.5 + rng() * 0.6, (rng() - 0.5) * 1.2);
     }
   }
-  const merged = mergeGeometries(parts, false);
-  merged.computeVertexNormals();
-  return merged;
+  return { leaf: mergeGeometries(leaf.map((g) => (g.index ? g.toNonIndexed() : g)), false) };
 }
 
 function makeRockGeometry(rng) {
-  const geo = new THREE.IcosahedronGeometry(1, 0);
-  jitterGeo(geo, 0.45, rng);
+  const geo = new THREE.IcosahedronGeometry(1, 1);
+  jitterGeo(geo, 0.32, rng);
   geo.scale(1, 0.72, 1);
   return colorize(geo, COLORS.stone);
 }
@@ -169,9 +166,11 @@ function makeRockGeometry(rng) {
 // ---------- мир ----------
 
 export class World {
-  constructor(scene, seed = CONFIG.world.seed) {
+  constructor(scene, seed = CONFIG.world.seed, textures = null) {
     this.scene = scene;
     this.seed = seed;
+    this.textures = textures;
+    this.windMaterials = [];
     this.rng = makeRng(seed);
     this.heights = new Float32Array(GRID * GRID);
     this.colliders = [];        // { x, z, r }
@@ -275,6 +274,7 @@ export class World {
 
     const pos = geo.attributes.position;
     const colors = new Float32Array(pos.count * 3);
+    const splat = new Float32Array(pos.count * 4);
     const tmp = new THREE.Color();
 
     for (let i = 0; i < pos.count; i++) {
@@ -289,16 +289,31 @@ export class World {
       colors[i * 3] = tmp.r;
       colors[i * 3 + 1] = tmp.g;
       colors[i * 3 + 2] = tmp.b;
+
+      // веса текстур: песок / трава / камень / земля
+      const sandW = Math.max(
+        smoothstep(2.6, 1.2, h),                       // пляж
+        1 - smoothstep(0.1, 1.4, h)                     // мокрый песок
+      );
+      const grassW = smoothstep(1.9, 3.2, h) * (1 - smoothstep(13, 18, h)) * (0.55 + moisture * 0.6);
+      const rockW = Math.max(smoothstep(0.55, 1.1, slope), smoothstep(12, 19, h));
+      const dirtW = 0.25 * (1 - grassW) * smoothstep(2.4, 4.5, h);
+
+      // порядок каналов совпадает с шейдером: трава, песок, камень, земля
+      const sum = sandW + grassW + rockW + dirtW || 1;
+      splat[i * 4] = grassW / sum;
+      splat[i * 4 + 1] = sandW / sum;
+      splat[i * 4 + 2] = rockW / sum;
+      splat[i * 4 + 3] = dirtW / sum;
     }
 
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('splat', new THREE.BufferAttribute(splat, 4));
     geo.computeVertexNormals();
 
-    const mat = new THREE.MeshStandardMaterial({
-      vertexColors: true,
-      roughness: 0.96,
-      metalness: 0,
-    });
+    const mat = this.textures
+      ? createTerrainMaterial(this.textures)
+      : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
 
     this.terrain = new THREE.Mesh(geo, mat);
     this.terrain.receiveShadow = true;
@@ -307,17 +322,35 @@ export class World {
   }
 
   _buildWater() {
-    const geo = new THREE.PlaneGeometry(SIZE * 1.9, SIZE * 1.9, 110, 110);
+    // карта высот как текстура: по ней вода узнаёт глубину и рисует прибой
+    const data = new Uint8Array(GRID * GRID);
+    for (let i = 0; i < this.heights.length; i++) {
+      const h = this.heights[i];
+      data[i] = Math.max(0, Math.min(255, Math.round(((h + 16) / 44) * 255)));
+    }
+    const depthTex = new THREE.DataTexture(data, GRID, GRID, THREE.RedFormat, THREE.UnsignedByteType);
+    depthTex.magFilter = THREE.LinearFilter;
+    depthTex.minFilter = THREE.LinearFilter;
+    depthTex.wrapS = THREE.ClampToEdgeWrapping;
+    depthTex.wrapT = THREE.ClampToEdgeWrapping;
+    depthTex.needsUpdate = true;
+    this.depthTexture = depthTex;
+
+    const geo = new THREE.PlaneGeometry(SIZE * 1.9, SIZE * 1.9, 180, 180);
     geo.rotateX(-Math.PI / 2);
 
     this.waterUniforms = {
       uTime: { value: 0 },
-      uDeep: { value: new THREE.Color(0x0d4358) },
-      uShallow: { value: new THREE.Color(0x2fa3b8) },
+      uDeep: { value: new THREE.Color(0x0a3550) },
+      uMid: { value: new THREE.Color(0x105f84) },
+      uShallow: { value: new THREE.Color(0x3fbcbf) },
+      uFoam: { value: new THREE.Color(0xf2fbff) },
       uSunDir: { value: new THREE.Vector3(0.4, 0.8, 0.3) },
       uSunColor: { value: new THREE.Color(0xffe8b0) },
       uFog: { value: new THREE.Color(0x9fc3d6) },
       uNight: { value: 0 },
+      uDepth: { value: depthTex },
+      uSize: { value: SIZE },
     };
 
     const mat = new THREE.ShaderMaterial({
@@ -329,46 +362,97 @@ export class World {
         uniform float uTime;
         varying vec3 vWorldPos;
         varying float vWave;
+
+        float wave(vec2 p, float t) {
+          return sin(p.x * 0.115 + t * 1.15) * 0.15
+               + sin(p.y * 0.165 - t * 0.9) * 0.11
+               + sin((p.x + p.y) * 0.055 + t * 0.6) * 0.22
+               + sin(length(p) * 0.22 - t * 1.4) * 0.07;
+        }
+
         void main() {
           vec3 pos = position;
-          float w = sin(pos.x * 0.12 + uTime * 1.25) * 0.16
-                  + sin(pos.z * 0.17 - uTime * 0.95) * 0.12
-                  + sin((pos.x + pos.z) * 0.06 + uTime * 0.65) * 0.22;
+          float w = wave(pos.xz, uTime);
           pos.y += w;
-          vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
           vWave = w;
+          vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
           gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPos, 1.0);
         }
       `,
       fragmentShader: /* glsl */ `
         uniform vec3 uDeep;
+        uniform vec3 uMid;
         uniform vec3 uShallow;
+        uniform vec3 uFoam;
         uniform vec3 uSunDir;
         uniform vec3 uSunColor;
         uniform vec3 uFog;
         uniform float uNight;
         uniform float uTime;
+        uniform float uSize;
+        uniform sampler2D uDepth;
+
         varying vec3 vWorldPos;
         varying float vWave;
 
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+
+        float vnoise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+                     mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+        }
+
         void main() {
+          vec2 huv = (vWorldPos.xz / uSize) + 0.5;
+          float encoded = texture2D(uDepth, clamp(huv, 0.001, 0.999)).r;
+          float ground = encoded * 44.0 - 16.0;   // обратно в метры
+          float depth = max(0.0, -ground);
+
+          // полностью на суше воды нет
+          if (depth <= 0.02) discard;
+
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
-          float dx = cos(vWorldPos.x * 0.12) * 0.16 * 0.12
-                   + cos((vWorldPos.x + vWorldPos.z) * 0.06) * 0.22 * 0.06;
-          float dz = -sin(vWorldPos.z * 0.17) * 0.12 * 0.17
-                   + cos((vWorldPos.x + vWorldPos.z) * 0.06) * 0.22 * 0.06;
-          vec3 n = normalize(vec3(-dx * 9.0, 1.0, -dz * 9.0));
+
+          // нормаль по производным волн
+          float e = 0.6;
+          float hx = sin((vWorldPos.x + e) * 0.115 + uTime * 1.15) * 0.15 - sin(vWorldPos.x * 0.115 + uTime * 1.15) * 0.15;
+          float hz = sin((vWorldPos.z + e) * 0.165 - uTime * 0.9) * 0.11 - sin(vWorldPos.z * 0.165 - uTime * 0.9) * 0.11;
+          vec3 n = normalize(vec3(-hx * 2.2, e * 0.9, -hz * 2.2));
 
           float fres = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0);
-          float diff = max(dot(n, normalize(uSunDir)), 0.0);
-          vec3 col = mix(uDeep, uShallow, clamp(0.45 + vWave * 1.1, 0.0, 1.0));
-          col += uSunColor * pow(diff, 28.0) * 1.1 * (1.0 - uNight * 0.85);
-          col = mix(col, vec3(0.72, 0.84, 0.9), fres * 0.32 * (1.0 - uNight * 0.6));
+          float diff = max(dot(reflect(-normalize(uSunDir), n), viewDir), 0.0);
+
+          // цвет по глубине: бирюза у берега → глубокая синева
+          vec3 col = mix(uShallow, uMid, smoothstep(0.2, 3.2, depth));
+          col = mix(col, uDeep, smoothstep(3.0, 11.0, depth));
+          col *= 0.86 + vWave * 0.55;
+
+          // солнечные блики на гребнях
+          col += uSunColor * pow(diff, 60.0) * 1.6 * (1.0 - uNight * 0.9);
+          col = mix(col, vec3(0.70, 0.86, 0.94), fres * 0.42 * (1.0 - uNight * 0.7));
+
+          // прибой: пена у самой кромки, бежит волнами
+          float foamNoise = vnoise(vWorldPos.xz * 0.55 + vec2(uTime * 0.22, uTime * 0.14));
+          float bands = sin(depth * 9.0 - uTime * 2.2 + foamNoise * 3.0) * 0.5 + 0.5;
+          float shore = 1.0 - smoothstep(0.0, 1.15, depth);
+          float foam = shore * smoothstep(0.55, 0.98, bands * (0.5 + foamNoise * 0.55)) * 0.8;
+          foam += (1.0 - smoothstep(0.0, 0.11, depth)) * 0.45;
+          col = mix(col, uFoam, clamp(foam, 0.0, 0.92) * (0.65 + 0.35 * (1.0 - uNight)));
+
+          // прозрачность: у берега почти прозрачно
+          float alpha = mix(0.24, 0.9, smoothstep(0.05, 2.6, depth));
+          alpha = max(alpha, foam * 0.9);
 
           float dist = length(cameraPosition - vWorldPos);
-          col = mix(col, uFog, clamp((dist - 45.0) / 190.0, 0.0, 0.8));
+          col = mix(col, uFog, clamp((dist - 45.0) / 200.0, 0.0, 0.82));
+          alpha = mix(alpha, 1.0, clamp((dist - 120.0) / 220.0, 0.0, 0.9));
 
-          gl_FragColor = vec4(col, 0.9);
+          gl_FragColor = vec4(col, alpha);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }
@@ -378,6 +462,7 @@ export class World {
     this.water = new THREE.Mesh(geo, mat);
     this.water.position.y = CONFIG.world.seaLevel;
     this.water.renderOrder = 2;
+    this.water.frustumCulled = false;
     this.scene.add(this.water);
   }
 
@@ -468,48 +553,90 @@ export class World {
       if (tufts.length >= 2600) break;
     }
 
-    // --- инстансы ---
-    const plantMat = new THREE.MeshStandardMaterial({
-      vertexColors: true, roughness: 0.9, metalness: 0, flatShading: true,
-    });
+    // --- материалы ---
+    const barkMat = this.textures
+      ? createPlantMaterial(this.textures.bark, { sway: 0.005, name: 'bark', repeat: [2, 3] })
+      : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
+    const leafMat = this.textures
+      ? createPlantMaterial(this.textures.leaf, { sway: 0.013, name: 'leaf', repeat: [2, 2] })
+      : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    const grassMat = this.textures
+      ? createPlantMaterial(this.textures.grassDetail, { sway: 0.13, name: 'grass' })
+      : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+    const stoneMat = this.textures
+      ? createStoneMaterial(this.textures.rockDetail, { repeat: [2, 2] })
+      : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
 
-    const makeInstanced = (geos, list, opts = {}) => {
-      if (!list.length) return [];
-      return geos.map((geo, idx) => {
-        const mesh = new THREE.InstancedMesh(geo, plantMat, Math.ceil((list.length - idx) / geos.length));
-        mesh.castShadow = opts.castShadow !== false;
-        mesh.receiveShadow = false;
-        const dummy = new THREE.Object3D();
-        let k = 0;
-        for (let i = idx; i < list.length; i += geos.length) {
-          const it = list[i];
-          dummy.position.set(it.x, it.h - 0.15, it.z);
-          dummy.rotation.set(0, it.rot, 0);
-          const s = it.s ?? 1;
-          dummy.scale.set(s, s, s);
-          dummy.updateMatrix();
-          mesh.setMatrixAt(k, dummy.matrix);
-          // обратная ссылка: по ней можно спрятать конкретное дерево
-          it.mesh = mesh;
-          it.instIdx = k;
-          it.baseMatrix = dummy.matrix.clone();
-          it.baseScale = s;
-          k++;
+    // кора темнее и серее — не выглядит «пластиковым деревом»
+    if (this.textures) barkMat.color.setHex(0x9a8468);
+    if (this.textures) leafMat.color.setHex(0xffffff);
+    if (this.textures) grassMat.color.setHex(0xffffff);
+    if (this.textures) stoneMat.color.setHex(0x8d8880);
+
+    for (const m of [barkMat, leafMat, grassMat]) {
+      if (m.userData && m.userData.uniforms) this.windMaterials.push(m);
+    }
+
+    const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat };
+
+    /**
+     * Ставит список объектов как InstancedMesh по слоям модели.
+     * Каждый объект может состоять из нескольких мешей (ствол + крона),
+     * их ссылки хранятся в item.parts — так дерево можно спрятать целиком.
+     */
+    const buildInstances = (variants, list, { castShadow = true } = {}) => {
+      const meshes = [];
+      if (!list.length) return meshes;
+      const groups = variants.length;
+      const dummy = new THREE.Object3D();
+
+      for (let v = 0; v < groups; v++) {
+        const variant = variants[v];
+        const items = [];
+        for (let i = v; i < list.length; i += groups) items.push(list[i]);
+        if (!items.length) continue;
+
+        for (const [layer, geo] of Object.entries(variant)) {
+          if (!geo) continue;
+          const mat = layerMaterials[layer] || leafMat;
+          const mesh = new THREE.InstancedMesh(geo, mat, items.length);
+          mesh.castShadow = castShadow;
+          mesh.receiveShadow = false;
+          mesh.frustumCulled = false;
+
+          items.forEach((it, k) => {
+            const s = it.s ?? 1;
+            dummy.position.set(it.x, it.h - 0.15, it.z);
+            dummy.rotation.set(0, it.rot, 0);
+            dummy.scale.set(s, s, s);
+            dummy.updateMatrix();
+            mesh.setMatrixAt(k, dummy.matrix);
+            mesh.instanceMatrix.needsUpdate = true;
+
+            it.parts = it.parts || [];
+            it.parts.push({ mesh, idx: k, baseScale: s });
+            it.mesh = mesh;
+            it.instIdx = k;
+          });
+
+          mesh.count = items.length;
+          this.scene.add(mesh);
+          meshes.push(mesh);
         }
-        mesh.count = k;
-        mesh.frustumCulled = false;
-        this.scene.add(mesh);
-        return mesh;
-      });
+      }
+      return meshes;
     };
 
-    const palmGeos = [makePalmGeometry(rng), makePalmGeometry(rng), makePalmGeometry(rng)];
-    const treeGeos = [makeTreeGeometry(rng), makeTreeGeometry(rng), makeTreeGeometry(rng), makeTreeGeometry(rng)];
-    const bushGeos = [
-      makeBushGeometry(rng, false), makeBushGeometry(rng, true),
-      makeBushGeometry(rng, false), makeBushGeometry(rng, true),
+    // варианты моделей
+    const palmVariants = [makePalmParts(rng), makePalmParts(rng), makePalmParts(rng)];
+    const treeVariants = [makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng)];
+    const bushVariants = [
+      makeBushParts(rng, false), makeBushParts(rng, true),
+      makeBushParts(rng, false), makeBushParts(rng, true),
     ];
-    const rockGeos = [makeRockGeometry(rng), makeRockGeometry(rng), makeRockGeometry(rng)];
+    const rockVariants = [
+      { rock: makeRockGeometry(rng) }, { rock: makeRockGeometry(rng) }, { rock: makeRockGeometry(rng) },
+    ];
 
     this.stats = {
       palms: palms.length, trees: trees.length, bushes: bushes.length,
@@ -521,21 +648,23 @@ export class World {
     this.bushList = bushes;
     this.rockList = rocks;
 
-    this.palms = makeInstanced(palmGeos, palms);
-    this.trees = makeInstanced(treeGeos, trees);
-    this.bushes = makeInstanced(bushGeos, bushes);
-    this.rocks = makeInstanced(rockGeos, rocks);
+    this.palms = buildInstances(palmVariants, palms);
+    this.trees = buildInstances(treeVariants, trees);
+    this.bushes = buildInstances(bushVariants, bushes);
+    this.rocks = buildInstances(rockVariants, rocks);
 
-    // трава: много, без теней
-    // пучок травы: три узких «пера» вместо одного конуса
+    // трава: пучок из нескольких «перьев», качается сильнее всех
     const blades = [];
-    for (let i = 0; i < 3; i++) {
-      const blade = new THREE.ConeGeometry(0.13, 0.55 + i * 0.12, 3, 1);
-      blade.translate((i - 1) * 0.16, 0.28, (i % 2) * 0.12);
-      blades.push(colorize(blade, i === 1 ? 0x74a052 : 0x608c47));
+    for (let i = 0; i < 5; i++) {
+      const height = 0.45 + (i % 3) * 0.16;
+      const blade = new THREE.ConeGeometry(0.1, height, 3, 1);
+      blade.translate((i - 2) * 0.13, height / 2, (i % 2 ? 0.1 : -0.08));
+      blades.push(colorize(blade, i % 2 ? 0xb6dd86 : 0x9ecd6f));
     }
     const tuftGeo = mergeGeometries(blades, false);
-    this.tufts = makeInstanced([tuftGeo], tufts, { castShadow: false });
+    this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
+    // у травы свой материал (сильнее качается)
+    for (const mesh of this.tufts) mesh.material = grassMat;
   }
 
   // --- подбираемые вещи ---
@@ -629,15 +758,17 @@ export class World {
 
   /** Погасить или вернуть объект растительности (срубленное дерево, добытый камень) */
   setNodeVisible(item, visible) {
-    if (!item || !item.mesh) return;
+    if (!item || !item.parts || !item.parts.length) return;
     const dummy = this._dummy || (this._dummy = new THREE.Object3D());
-    const target = item.baseScale ?? 1;
-    dummy.position.set(item.x, item.h - 0.15, item.z);
-    dummy.rotation.set(0, item.rot || 0, 0);
-    dummy.scale.setScalar(visible ? target : 0.0001);
-    dummy.updateMatrix();
-    item.mesh.setMatrixAt(item.instIdx, dummy.matrix);
-    item.mesh.instanceMatrix.needsUpdate = true;
+    for (const part of item.parts) {
+      const target = part.baseScale ?? 1;
+      dummy.position.set(item.x, item.h - 0.15, item.z);
+      dummy.rotation.set(0, item.rot || 0, 0);
+      dummy.scale.setScalar(visible ? target : 0.0001);
+      dummy.updateMatrix();
+      part.mesh.setMatrixAt(part.idx, dummy.matrix);
+      part.mesh.instanceMatrix.needsUpdate = true;
+    }
   }
 
   /** Ближайший подбираемый предмет в радиусе */
@@ -695,6 +826,10 @@ export class World {
 
   update(dt, camera, sunDir, nightFactor, fogColor) {
     this.time += dt;
+    for (const mat of this.windMaterials) {
+      const u = mat.userData.uniforms;
+      if (u && u.uTime) u.uTime.value = this.time;
+    }
     this.waterUniforms.uTime.value = this.time;
     this.waterUniforms.uNight.value = nightFactor;
     if (sunDir) this.waterUniforms.uSunDir.value.copy(sunDir);

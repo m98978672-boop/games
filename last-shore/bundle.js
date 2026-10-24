@@ -13241,6 +13241,26 @@
       this.image = value;
     }
   };
+  var CanvasTexture = class extends Texture {
+    /**
+     * Constructs a new texture.
+     *
+     * @param {HTMLCanvasElement} [canvas] - The HTML canvas element.
+     * @param {number} [mapping=Texture.DEFAULT_MAPPING] - The texture mapping.
+     * @param {number} [wrapS=ClampToEdgeWrapping] - The wrapS value.
+     * @param {number} [wrapT=ClampToEdgeWrapping] - The wrapT value.
+     * @param {number} [magFilter=LinearFilter] - The mag filter value.
+     * @param {number} [minFilter=LinearMipmapLinearFilter] - The min filter value.
+     * @param {number} [format=RGBAFormat] - The texture format.
+     * @param {number} [type=UnsignedByteType] - The texture type.
+     * @param {number} [anisotropy=Texture.DEFAULT_ANISOTROPY] - The anisotropy value.
+     */
+    constructor(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy) {
+      super(canvas, mapping, wrapS, wrapT, magFilter, minFilter, format, type, anisotropy);
+      this.isCanvasTexture = true;
+      this.needsUpdate = true;
+    }
+  };
   var DepthTexture = class extends Texture {
     /**
      * Constructs a new depth texture.
@@ -29008,6 +29028,164 @@ void main() {
     return result;
   }
 
+  // src/terrain.js
+  function createTerrainMaterial(textures) {
+    const material = new MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.95,
+      metalness: 0
+    });
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.uGrass = { value: textures.grass };
+      shader.uniforms.uSand = { value: textures.sand };
+      shader.uniforms.uRock = { value: textures.rock };
+      shader.uniforms.uDirt = { value: textures.dirt };
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <common>",
+        `#include <common>
+         attribute vec4 splat;
+         varying vec4 vSplat;
+         varying vec3 vWPos;
+         varying vec3 vWNormal;`
+      ).replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         vSplat = splat;
+         vWPos = (modelMatrix * vec4(transformed, 1.0)).xyz;
+         vWNormal = normalize(mat3(modelMatrix) * objectNormal);`
+      );
+      shader.fragmentShader = shader.fragmentShader.replace(
+        "#include <common>",
+        `#include <common>
+         uniform sampler2D uGrass;
+         uniform sampler2D uSand;
+         uniform sampler2D uRock;
+         uniform sampler2D uDirt;
+         varying vec4 vSplat;
+         varying vec3 vWPos;
+         varying vec3 vWNormal;
+
+         // \u043B\u0451\u0433\u043A\u043E\u0435 \u0438\u0441\u043A\u0430\u0436\u0435\u043D\u0438\u0435 \u043A\u043E\u043E\u0440\u0434\u0438\u043D\u0430\u0442 \u2014 \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0430 \u043D\u0435 \u0432\u044B\u0433\u043B\u044F\u0434\u0438\u0442 \xAB\u043F\u043B\u0438\u0442\u043A\u043E\u0439\xBB
+         vec2 warpUV(vec2 uv, float scale) {
+           float n = texture2D(uGrass, uv * 0.07 * scale).r;
+           float m = texture2D(uGrass, uv * 0.031 * scale + 0.37).r;
+           return uv + vec2(n - 0.5, m - 0.5) * 0.55;
+         }`
+      ).replace(
+        "#include <map_fragment>",
+        `
+         vec2 uvNear = vWPos.xz * 0.62;
+         vec2 uvFar = vWPos.xz * 0.085;
+         vec2 uvA = warpUV(uvNear, 1.0);
+         vec2 uvB = warpUV(uvFar, 2.0);
+
+         vec3 cGrass = texture2D(uGrass, uvA).rgb;
+         vec3 cSand = texture2D(uSand, uvA * 1.15).rgb;
+         vec3 cRock = texture2D(uRock, uvA * 0.85).rgb;
+         vec3 cDirt = texture2D(uDirt, uvA * 1.1).rgb;
+
+         // \u043A\u0440\u0443\u043F\u043D\u044B\u0439 \u0440\u0438\u0441\u0443\u043D\u043E\u043A: \u0440\u0435\u043B\u044C\u0435\u0444\u043D\u044B\u0435 \u043F\u044F\u0442\u043D\u0430 \u043E\u0434\u043D\u043E\u0433\u043E \u043C\u0430\u0441\u0448\u0442\u0430\u0431\u0430
+         float macro = texture2D(uGrass, uvB).r;
+
+         // \u0441\u043A\u043B\u043E\u043D: \u0447\u0435\u043C \u043A\u0440\u0443\u0447\u0435, \u0442\u0435\u043C \u0431\u043E\u043B\u044C\u0448\u0435 \u043A\u0430\u043C\u043D\u044F
+         float slope = 1.0 - clamp(vWNormal.y, 0.0, 1.0);
+         vec4 w = vSplat;
+         w.z += smoothstep(0.22, 0.62, slope) * 1.6;   // \u043A\u0430\u043C\u0435\u043D\u044C \u043D\u0430 \u043E\u0431\u0440\u044B\u0432\u0430\u0445
+         w.w += smoothstep(0.4, 0.9, slope) * 0.25;
+         float wsum = max(w.x + w.y + w.z + w.w, 0.0001);
+         w /= wsum;
+
+         vec3 mixTex = cGrass * w.x + cSand * w.y + cRock * w.z + cDirt * w.w;
+
+         // \u0446\u0432\u0435\u0442 \u0431\u0438\u043E\u043C\u0430 \u2014 \u043E\u0441\u043D\u043E\u0432\u0430; \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0430 \u0434\u0430\u0451\u0442 \u044F\u0440\u043A\u043E\u0441\u0442\u044C (\u0440\u0435\u043B\u044C\u0435\u0444) \u0438 \u043E\u0442\u0442\u0435\u043D\u043E\u043A
+         vec3 base = diffuseColor.rgb;
+         float baseLum = dot(base, vec3(0.299, 0.587, 0.114));
+         float texLum = dot(mixTex, vec3(0.299, 0.587, 0.114));
+
+         // \u043E\u0442\u043D\u043E\u0441\u0438\u0442\u0435\u043B\u044C\u043D\u0430\u044F \u044F\u0440\u043A\u043E\u0441\u0442\u044C \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u044B \u0432\u043E\u043A\u0440\u0443\u0433 \u0435\u0451 \u0441\u0440\u0435\u0434\u043D\u0435\u0433\u043E (0.55), \u0441\u0436\u0430\u0442\u0430\u044F \u0432 \u0431\u0435\u0437\u043E\u043F\u0430\u0441\u043D\u044B\u0439 \u0434\u0438\u0430\u043F\u0430\u0437\u043E\u043D
+         float rel = texLum / 0.55;
+         rel = clamp(mix(1.0, rel, 1.45), 0.45, 1.75);
+
+         // \u043E\u0442\u0442\u0435\u043D\u043E\u043A \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u044B \u043F\u043E\u0434\u043C\u0435\u0448\u0438\u0432\u0430\u0435\u043C \u043B\u0438\u0448\u044C \u0447\u0430\u0441\u0442\u0438\u0447\u043D\u043E, \u0447\u0442\u043E\u0431\u044B \u043D\u0435 \u0441\u0431\u0438\u0442\u044C \u043F\u0430\u043B\u0438\u0442\u0440\u0443 \u0431\u0438\u043E\u043C\u0430
+         vec3 hueTex = mixTex / max(texLum, 0.03);
+         vec3 hue = mix(vec3(1.0), hueTex, 0.4);
+
+         // \u043A\u0440\u0443\u043F\u043D\u0430\u044F \u043F\u044F\u0442\u043D\u0438\u0441\u0442\u043E\u0441\u0442\u044C: \u0442\u0440\u0430\u0432\u0430 \u0438 \u043F\u0435\u0441\u043E\u043A \xAB\u0434\u044B\u0448\u0430\u0442\xBB \u043F\u044F\u0442\u043D\u0430\u043C\u0438
+         float macroMod = mix(0.9, 1.1, macro);
+
+         diffuseColor.rgb = base * rel * hue * macroMod;
+
+         // \u043F\u0441\u0435\u0432\u0434\u043E-\u0440\u0435\u043B\u044C\u0435\u0444: \u0432\u044B\u0441\u043E\u043A\u043E\u0447\u0430\u0441\u0442\u043E\u0442\u043D\u0430\u044F \u043A\u0430\u0440\u0442\u0430 \u0447\u0443\u0442\u044C \u043F\u043E\u0434\u0441\u0432\u0435\u0447\u0438\u0432\u0430\u0435\u0442 \u0433\u0440\u0430\u043D\u0438
+         float hi = texture2D(uGrass, uvA * 3.1).r - 0.5;
+         diffuseColor.rgb *= 1.0 + hi * 0.16;
+
+         // \u043C\u043E\u043A\u0440\u044B\u0439 \u043F\u0435\u0441\u043E\u043A \u0443 \u0432\u043E\u0434\u044B \u0442\u0435\u043C\u043D\u0435\u0435 \u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u0435\u0435
+         float wet = 1.0 - smoothstep(0.25, 1.1, vWPos.y);
+         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.62, 0.66, 0.7), wet);
+        `
+      );
+      material.userData.shader = shader;
+    };
+    material.customProgramCacheKey = () => "lastshore-terrain-v1";
+    return material;
+  }
+  function withRepeat(map, repeat) {
+    if (!map || !repeat) return map;
+    const clone = map.clone();
+    clone.wrapS = clone.wrapT = RepeatWrapping;
+    clone.repeat.set(repeat[0], repeat[1]);
+    clone.needsUpdate = true;
+    return clone;
+  }
+  function createPlantMaterial(map, { sway = 0.035, name = "plant", repeat = null } = {}) {
+    const material = new MeshStandardMaterial({
+      map: withRepeat(map, repeat),
+      vertexColors: true,
+      roughness: 0.9,
+      metalness: 0,
+      flatShading: true
+    });
+    const uniforms = { uTime: { value: 0 }, uSway: { value: sway } };
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.uTime = uniforms.uTime;
+      shader.uniforms.uSway = uniforms.uSway;
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <common>",
+        `#include <common>
+         uniform float uTime;
+         uniform float uSway;`
+      ).replace(
+        "#include <begin_vertex>",
+        `#include <begin_vertex>
+         #ifdef USE_INSTANCING
+           vec3 iPos = instanceMatrix[3].xyz;
+         #else
+           vec3 iPos = vec3(0.0);
+         #endif
+         float phase = iPos.x * 0.21 + iPos.z * 0.17;
+         float wind = sin(uTime * 1.15 + phase) * 0.6 + sin(uTime * 2.3 + phase * 1.7) * 0.25;
+         float h = max(transformed.y, 0.0);
+         transformed.x += wind * uSway * h;
+         transformed.z += wind * uSway * h * 0.6;`
+      );
+      material.userData.shader = shader;
+    };
+    material.customProgramCacheKey = () => "lastshore-plant-" + name;
+    material.userData.uniforms = uniforms;
+    return material;
+  }
+  function createStoneMaterial(map, { repeat = null } = {}) {
+    const material = new MeshStandardMaterial({
+      map: withRepeat(map, repeat),
+      vertexColors: true,
+      roughness: 0.85,
+      metalness: 0,
+      flatShading: true
+    });
+    material.customProgramCacheKey = () => "lastshore-stone-v1";
+    return material;
+  }
+
   // src/noise.js
   function hash2(ix, iz, seed) {
     let h = Math.imul(ix, 374761393) + Math.imul(iz, 668265263) + Math.imul(seed, 1274126177);
@@ -29104,29 +29282,29 @@ void main() {
     parts.push(geo);
     return geo;
   }
-  function makePalmGeometry(rng) {
-    const parts = [];
+  function makePalmParts(rng) {
+    const bark = [];
+    const leaf = [];
     const h = 6.5 + rng() * 3.5;
     const lean = (rng() - 0.5) * 0.35;
-    const seg = 7;
-    const trunk = new CylinderGeometry(0.17, 0.32, h, seg, 1);
-    addPart(parts, trunk, COLORS.trunk, 0, h / 2, 0, 0, 0, lean * 0.35);
+    const trunk = new CylinderGeometry(0.16, 0.34, h, 8, 3);
+    addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0, 0, 0, lean * 0.35);
     const topX = Math.sin(lean * 0.35) * h * 0.9;
     const topY = h - 0.15;
-    for (let i = 0; i < 8; i++) {
-      const a = i / 8 * Math.PI * 2 + rng() * 0.3;
-      const len = 2.6 + rng() * 1.6;
-      const frond = new ConeGeometry(0.55, len, 4, 1);
+    for (let i = 0; i < 9; i++) {
+      const a = i / 9 * Math.PI * 2 + rng() * 0.3;
+      const len = 2.8 + rng() * 1.8;
+      const frond = new ConeGeometry(0.6, len, 4, 2);
       const geo = frond.clone();
-      geo.scale(1, 1, 0.28);
+      geo.scale(1, 1, 0.24);
       addPart(
-        parts,
+        leaf,
         geo,
         i % 2 ? COLORS.frond : COLORS.frondLight,
         topX + Math.cos(a) * len * 0.42,
-        topY + 0.1 - 0.25,
+        topY + 0.1 - 0.3,
         Math.sin(a) * len * 0.42,
-        Math.PI / 2 - 0.55,
+        Math.PI / 2 - 0.5,
         -a,
         0
       );
@@ -29134,83 +29312,101 @@ void main() {
     for (let i = 0; i < 3; i++) {
       const a = rng() * Math.PI * 2;
       addPart(
-        parts,
+        leaf,
         new IcosahedronGeometry(0.22, 0),
         COLORS.coconut,
         topX + Math.cos(a) * 0.3,
-        topY - 0.35,
+        topY - 0.4,
         Math.sin(a) * 0.3
       );
     }
-    const merged = mergeGeometries(parts, false);
-    merged.computeVertexNormals();
-    return merged;
+    return {
+      bark: mergeGeometries(bark.map((g) => g.index ? g.toNonIndexed() : g), false),
+      leaf: mergeGeometries(leaf.map((g) => g.index ? g.toNonIndexed() : g), false)
+    };
   }
-  function makeTreeGeometry(rng) {
-    const parts = [];
+  function makeTreeParts(rng) {
+    const bark = [];
+    const leaf = [];
     const h = 4.5 + rng() * 5.5;
-    const trunk = new CylinderGeometry(0.28, 0.55, h, 6, 1);
-    addPart(parts, trunk, COLORS.trunk, 0, h / 2, 0);
-    const crownY = h * 0.78;
-    const blobs = 3 + Math.floor(rng() * 3);
-    for (let i = 0; i < blobs; i++) {
-      const r = 1.9 + rng() * 1.7;
+    const trunk = new CylinderGeometry(0.26, 0.6, h, 7, 3);
+    addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0);
+    for (let i = 0; i < 2; i++) {
       const a = rng() * Math.PI * 2;
-      const d = rng() * 1.5;
-      const geo = new IcosahedronGeometry(r, 0);
+      const bl = 2 + rng() * 2;
+      const branch = new CylinderGeometry(0.08, 0.16, bl, 5, 1);
       addPart(
-        parts,
+        bark,
+        branch,
+        COLORS.trunk,
+        Math.cos(a) * bl * 0.35,
+        h * (0.55 + rng() * 0.2),
+        Math.sin(a) * bl * 0.35,
+        0,
+        0,
+        Math.PI / 3
+      );
+    }
+    const blobs = 4 + Math.floor(rng() * 3);
+    for (let i = 0; i < blobs; i++) {
+      const r = 1.2 + rng() * 1.15;
+      const a = rng() * Math.PI * 2;
+      const d = rng() * 1.1;
+      const geo = new IcosahedronGeometry(r, 1);
+      addPart(
+        leaf,
         geo,
-        i % 2 ? COLORS.jungle : 5077565,
+        i % 2 ? 6984789 : 8300643,
         Math.cos(a) * d,
-        crownY + rng() * 2.2,
+        h * 0.86 + r * 0.55 + rng() * 1.8,
         Math.sin(a) * d
       );
     }
-    const merged = mergeGeometries(parts, false);
-    merged.computeVertexNormals();
-    return merged;
+    return {
+      bark: mergeGeometries(bark.map((g) => g.index ? g.toNonIndexed() : g), false),
+      leaf: mergeGeometries(leaf.map((g) => g.index ? g.toNonIndexed() : g), false)
+    };
   }
-  function makeBushGeometry(rng, withBerries) {
-    const parts = [];
-    const n = 3 + Math.floor(rng() * 3);
+  function makeBushParts(rng, withBerries) {
+    const leaf = [];
+    const n = 4 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) {
-      const r = 0.45 + rng() * 0.45;
+      const r = 0.4 + rng() * 0.45;
       addPart(
-        parts,
-        new IcosahedronGeometry(r, 0),
-        i % 2 ? COLORS.bush : 5933638,
-        (rng() - 0.5) * 0.9,
+        leaf,
+        new IcosahedronGeometry(r, 1),
+        i % 2 ? COLORS.bush : 6263120,
+        (rng() - 0.5) * 1,
         r * 0.7 + rng() * 0.25,
-        (rng() - 0.5) * 0.9
+        (rng() - 0.5) * 1
       );
     }
     if (withBerries) {
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 7; i++) {
         addPart(
-          parts,
-          new IcosahedronGeometry(0.09, 0),
+          leaf,
+          new IcosahedronGeometry(0.1, 0),
           COLORS.berry,
-          (rng() - 0.5) * 1.1,
+          (rng() - 0.5) * 1.2,
           0.5 + rng() * 0.6,
-          (rng() - 0.5) * 1.1
+          (rng() - 0.5) * 1.2
         );
       }
     }
-    const merged = mergeGeometries(parts, false);
-    merged.computeVertexNormals();
-    return merged;
+    return { leaf: mergeGeometries(leaf.map((g) => g.index ? g.toNonIndexed() : g), false) };
   }
   function makeRockGeometry(rng) {
-    const geo = new IcosahedronGeometry(1, 0);
-    jitterGeo(geo, 0.45, rng);
+    const geo = new IcosahedronGeometry(1, 1);
+    jitterGeo(geo, 0.32, rng);
     geo.scale(1, 0.72, 1);
     return colorize(geo, COLORS.stone);
   }
   var World = class {
-    constructor(scene, seed = CONFIG.world.seed) {
+    constructor(scene, seed = CONFIG.world.seed, textures = null) {
       this.scene = scene;
       this.seed = seed;
+      this.textures = textures;
+      this.windMaterials = [];
       this.rng = makeRng(seed);
       this.heights = new Float32Array(GRID * GRID);
       this.colliders = [];
@@ -29296,6 +29492,7 @@ void main() {
       geo.rotateX(-Math.PI / 2);
       const pos = geo.attributes.position;
       const colors = new Float32Array(pos.count * 3);
+      const splat = new Float32Array(pos.count * 4);
       const tmp = new Color();
       for (let i = 0; i < pos.count; i++) {
         const x = pos.getX(i);
@@ -29308,30 +29505,57 @@ void main() {
         colors[i * 3] = tmp.r;
         colors[i * 3 + 1] = tmp.g;
         colors[i * 3 + 2] = tmp.b;
+        const sandW = Math.max(
+          smoothstep2(2.6, 1.2, h),
+          // пляж
+          1 - smoothstep2(0.1, 1.4, h)
+          // мокрый песок
+        );
+        const grassW = smoothstep2(1.9, 3.2, h) * (1 - smoothstep2(13, 18, h)) * (0.55 + moisture * 0.6);
+        const rockW = Math.max(smoothstep2(0.55, 1.1, slope), smoothstep2(12, 19, h));
+        const dirtW = 0.25 * (1 - grassW) * smoothstep2(2.4, 4.5, h);
+        const sum = sandW + grassW + rockW + dirtW || 1;
+        splat[i * 4] = grassW / sum;
+        splat[i * 4 + 1] = sandW / sum;
+        splat[i * 4 + 2] = rockW / sum;
+        splat[i * 4 + 3] = dirtW / sum;
       }
       geo.setAttribute("color", new BufferAttribute(colors, 3));
+      geo.setAttribute("splat", new BufferAttribute(splat, 4));
       geo.computeVertexNormals();
-      const mat = new MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.96,
-        metalness: 0
-      });
+      const mat = this.textures ? createTerrainMaterial(this.textures) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
       this.terrain = new Mesh(geo, mat);
       this.terrain.receiveShadow = true;
       this.terrain.castShadow = false;
       this.scene.add(this.terrain);
     }
     _buildWater() {
-      const geo = new PlaneGeometry(SIZE * 1.9, SIZE * 1.9, 110, 110);
+      const data = new Uint8Array(GRID * GRID);
+      for (let i = 0; i < this.heights.length; i++) {
+        const h = this.heights[i];
+        data[i] = Math.max(0, Math.min(255, Math.round((h + 16) / 44 * 255)));
+      }
+      const depthTex = new DataTexture(data, GRID, GRID, RedFormat, UnsignedByteType);
+      depthTex.magFilter = LinearFilter;
+      depthTex.minFilter = LinearFilter;
+      depthTex.wrapS = ClampToEdgeWrapping;
+      depthTex.wrapT = ClampToEdgeWrapping;
+      depthTex.needsUpdate = true;
+      this.depthTexture = depthTex;
+      const geo = new PlaneGeometry(SIZE * 1.9, SIZE * 1.9, 180, 180);
       geo.rotateX(-Math.PI / 2);
       this.waterUniforms = {
         uTime: { value: 0 },
-        uDeep: { value: new Color(869208) },
-        uShallow: { value: new Color(3122104) },
+        uDeep: { value: new Color(669008) },
+        uMid: { value: new Color(1073028) },
+        uShallow: { value: new Color(4177087) },
+        uFoam: { value: new Color(15924223) },
         uSunDir: { value: new Vector3(0.4, 0.8, 0.3) },
         uSunColor: { value: new Color(16771248) },
         uFog: { value: new Color(10470358) },
-        uNight: { value: 0 }
+        uNight: { value: 0 },
+        uDepth: { value: depthTex },
+        uSize: { value: SIZE }
       };
       const mat = new ShaderMaterial({
         uniforms: this.waterUniforms,
@@ -29344,14 +29568,20 @@ void main() {
         uniform float uTime;
         varying vec3 vWorldPos;
         varying float vWave;
+
+        float wave(vec2 p, float t) {
+          return sin(p.x * 0.115 + t * 1.15) * 0.15
+               + sin(p.y * 0.165 - t * 0.9) * 0.11
+               + sin((p.x + p.y) * 0.055 + t * 0.6) * 0.22
+               + sin(length(p) * 0.22 - t * 1.4) * 0.07;
+        }
+
         void main() {
           vec3 pos = position;
-          float w = sin(pos.x * 0.12 + uTime * 1.25) * 0.16
-                  + sin(pos.z * 0.17 - uTime * 0.95) * 0.12
-                  + sin((pos.x + pos.z) * 0.06 + uTime * 0.65) * 0.22;
+          float w = wave(pos.xz, uTime);
           pos.y += w;
-          vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
           vWave = w;
+          vWorldPos = (modelMatrix * vec4(pos, 1.0)).xyz;
           gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPos, 1.0);
         }
       `
@@ -29360,33 +29590,78 @@ void main() {
           /* glsl */
           `
         uniform vec3 uDeep;
+        uniform vec3 uMid;
         uniform vec3 uShallow;
+        uniform vec3 uFoam;
         uniform vec3 uSunDir;
         uniform vec3 uSunColor;
         uniform vec3 uFog;
         uniform float uNight;
         uniform float uTime;
+        uniform float uSize;
+        uniform sampler2D uDepth;
+
         varying vec3 vWorldPos;
         varying float vWave;
 
+        float hash(vec2 p) {
+          return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+
+        float vnoise(vec2 p) {
+          vec2 i = floor(p);
+          vec2 f = fract(p);
+          vec2 u = f * f * (3.0 - 2.0 * f);
+          return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x),
+                     mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+        }
+
         void main() {
+          vec2 huv = (vWorldPos.xz / uSize) + 0.5;
+          float encoded = texture2D(uDepth, clamp(huv, 0.001, 0.999)).r;
+          float ground = encoded * 44.0 - 16.0;   // \u043E\u0431\u0440\u0430\u0442\u043D\u043E \u0432 \u043C\u0435\u0442\u0440\u044B
+          float depth = max(0.0, -ground);
+
+          // \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E \u043D\u0430 \u0441\u0443\u0448\u0435 \u0432\u043E\u0434\u044B \u043D\u0435\u0442
+          if (depth <= 0.02) discard;
+
           vec3 viewDir = normalize(cameraPosition - vWorldPos);
-          float dx = cos(vWorldPos.x * 0.12) * 0.16 * 0.12
-                   + cos((vWorldPos.x + vWorldPos.z) * 0.06) * 0.22 * 0.06;
-          float dz = -sin(vWorldPos.z * 0.17) * 0.12 * 0.17
-                   + cos((vWorldPos.x + vWorldPos.z) * 0.06) * 0.22 * 0.06;
-          vec3 n = normalize(vec3(-dx * 9.0, 1.0, -dz * 9.0));
+
+          // \u043D\u043E\u0440\u043C\u0430\u043B\u044C \u043F\u043E \u043F\u0440\u043E\u0438\u0437\u0432\u043E\u0434\u043D\u044B\u043C \u0432\u043E\u043B\u043D
+          float e = 0.6;
+          float hx = sin((vWorldPos.x + e) * 0.115 + uTime * 1.15) * 0.15 - sin(vWorldPos.x * 0.115 + uTime * 1.15) * 0.15;
+          float hz = sin((vWorldPos.z + e) * 0.165 - uTime * 0.9) * 0.11 - sin(vWorldPos.z * 0.165 - uTime * 0.9) * 0.11;
+          vec3 n = normalize(vec3(-hx * 2.2, e * 0.9, -hz * 2.2));
 
           float fres = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0);
-          float diff = max(dot(n, normalize(uSunDir)), 0.0);
-          vec3 col = mix(uDeep, uShallow, clamp(0.45 + vWave * 1.1, 0.0, 1.0));
-          col += uSunColor * pow(diff, 28.0) * 1.1 * (1.0 - uNight * 0.85);
-          col = mix(col, vec3(0.72, 0.84, 0.9), fres * 0.32 * (1.0 - uNight * 0.6));
+          float diff = max(dot(reflect(-normalize(uSunDir), n), viewDir), 0.0);
+
+          // \u0446\u0432\u0435\u0442 \u043F\u043E \u0433\u043B\u0443\u0431\u0438\u043D\u0435: \u0431\u0438\u0440\u044E\u0437\u0430 \u0443 \u0431\u0435\u0440\u0435\u0433\u0430 \u2192 \u0433\u043B\u0443\u0431\u043E\u043A\u0430\u044F \u0441\u0438\u043D\u0435\u0432\u0430
+          vec3 col = mix(uShallow, uMid, smoothstep(0.2, 3.2, depth));
+          col = mix(col, uDeep, smoothstep(3.0, 11.0, depth));
+          col *= 0.86 + vWave * 0.55;
+
+          // \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0435 \u0431\u043B\u0438\u043A\u0438 \u043D\u0430 \u0433\u0440\u0435\u0431\u043D\u044F\u0445
+          col += uSunColor * pow(diff, 60.0) * 1.6 * (1.0 - uNight * 0.9);
+          col = mix(col, vec3(0.70, 0.86, 0.94), fres * 0.42 * (1.0 - uNight * 0.7));
+
+          // \u043F\u0440\u0438\u0431\u043E\u0439: \u043F\u0435\u043D\u0430 \u0443 \u0441\u0430\u043C\u043E\u0439 \u043A\u0440\u043E\u043C\u043A\u0438, \u0431\u0435\u0436\u0438\u0442 \u0432\u043E\u043B\u043D\u0430\u043C\u0438
+          float foamNoise = vnoise(vWorldPos.xz * 0.55 + vec2(uTime * 0.22, uTime * 0.14));
+          float bands = sin(depth * 9.0 - uTime * 2.2 + foamNoise * 3.0) * 0.5 + 0.5;
+          float shore = 1.0 - smoothstep(0.0, 1.15, depth);
+          float foam = shore * smoothstep(0.55, 0.98, bands * (0.5 + foamNoise * 0.55)) * 0.8;
+          foam += (1.0 - smoothstep(0.0, 0.11, depth)) * 0.45;
+          col = mix(col, uFoam, clamp(foam, 0.0, 0.92) * (0.65 + 0.35 * (1.0 - uNight)));
+
+          // \u043F\u0440\u043E\u0437\u0440\u0430\u0447\u043D\u043E\u0441\u0442\u044C: \u0443 \u0431\u0435\u0440\u0435\u0433\u0430 \u043F\u043E\u0447\u0442\u0438 \u043F\u0440\u043E\u0437\u0440\u0430\u0447\u043D\u043E
+          float alpha = mix(0.24, 0.9, smoothstep(0.05, 2.6, depth));
+          alpha = max(alpha, foam * 0.9);
 
           float dist = length(cameraPosition - vWorldPos);
-          col = mix(col, uFog, clamp((dist - 45.0) / 190.0, 0.0, 0.8));
+          col = mix(col, uFog, clamp((dist - 45.0) / 200.0, 0.0, 0.82));
+          alpha = mix(alpha, 1.0, clamp((dist - 120.0) / 220.0, 0.0, 0.9));
 
-          gl_FragColor = vec4(col, 0.9);
+          gl_FragColor = vec4(col, alpha);
           #include <tonemapping_fragment>
           #include <colorspace_fragment>
         }
@@ -29396,6 +29671,7 @@ void main() {
       this.water = new Mesh(geo, mat);
       this.water.position.y = CONFIG.world.seaLevel;
       this.water.renderOrder = 2;
+      this.water.frustumCulled = false;
       this.scene.add(this.water);
     }
     _buildVegetation() {
@@ -29471,50 +29747,69 @@ void main() {
         tufts.push({ x, z, h, s: 0.6 + rng() * 0.9, rot: rng() * Math.PI * 2 });
         if (tufts.length >= 2600) break;
       }
-      const plantMat = new MeshStandardMaterial({
-        vertexColors: true,
-        roughness: 0.9,
-        metalness: 0,
-        flatShading: true
-      });
-      const makeInstanced = (geos, list, opts = {}) => {
-        if (!list.length) return [];
-        return geos.map((geo, idx) => {
-          var _a;
-          const mesh = new InstancedMesh(geo, plantMat, Math.ceil((list.length - idx) / geos.length));
-          mesh.castShadow = opts.castShadow !== false;
-          mesh.receiveShadow = false;
-          const dummy = new Object3D();
-          let k = 0;
-          for (let i = idx; i < list.length; i += geos.length) {
-            const it = list[i];
-            dummy.position.set(it.x, it.h - 0.15, it.z);
-            dummy.rotation.set(0, it.rot, 0);
-            const s = (_a = it.s) != null ? _a : 1;
-            dummy.scale.set(s, s, s);
-            dummy.updateMatrix();
-            mesh.setMatrixAt(k, dummy.matrix);
-            it.mesh = mesh;
-            it.instIdx = k;
-            it.baseMatrix = dummy.matrix.clone();
-            it.baseScale = s;
-            k++;
+      const barkMat = this.textures ? createPlantMaterial(this.textures.bark, { sway: 5e-3, name: "bark", repeat: [2, 3] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
+      const leafMat = this.textures ? createPlantMaterial(this.textures.leaf, { sway: 0.013, name: "leaf", repeat: [2, 2] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+      const grassMat = this.textures ? createPlantMaterial(this.textures.grassDetail, { sway: 0.13, name: "grass" }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+      const stoneMat = this.textures ? createStoneMaterial(this.textures.rockDetail, { repeat: [2, 2] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+      if (this.textures) barkMat.color.setHex(10126440);
+      if (this.textures) leafMat.color.setHex(16777215);
+      if (this.textures) grassMat.color.setHex(16777215);
+      if (this.textures) stoneMat.color.setHex(9275520);
+      for (const m of [barkMat, leafMat, grassMat]) {
+        if (m.userData && m.userData.uniforms) this.windMaterials.push(m);
+      }
+      const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat };
+      const buildInstances = (variants, list, { castShadow = true } = {}) => {
+        const meshes = [];
+        if (!list.length) return meshes;
+        const groups = variants.length;
+        const dummy = new Object3D();
+        for (let v = 0; v < groups; v++) {
+          const variant = variants[v];
+          const items = [];
+          for (let i = v; i < list.length; i += groups) items.push(list[i]);
+          if (!items.length) continue;
+          for (const [layer, geo] of Object.entries(variant)) {
+            if (!geo) continue;
+            const mat = layerMaterials[layer] || leafMat;
+            const mesh = new InstancedMesh(geo, mat, items.length);
+            mesh.castShadow = castShadow;
+            mesh.receiveShadow = false;
+            mesh.frustumCulled = false;
+            items.forEach((it, k) => {
+              var _a;
+              const s = (_a = it.s) != null ? _a : 1;
+              dummy.position.set(it.x, it.h - 0.15, it.z);
+              dummy.rotation.set(0, it.rot, 0);
+              dummy.scale.set(s, s, s);
+              dummy.updateMatrix();
+              mesh.setMatrixAt(k, dummy.matrix);
+              mesh.instanceMatrix.needsUpdate = true;
+              it.parts = it.parts || [];
+              it.parts.push({ mesh, idx: k, baseScale: s });
+              it.mesh = mesh;
+              it.instIdx = k;
+            });
+            mesh.count = items.length;
+            this.scene.add(mesh);
+            meshes.push(mesh);
           }
-          mesh.count = k;
-          mesh.frustumCulled = false;
-          this.scene.add(mesh);
-          return mesh;
-        });
+        }
+        return meshes;
       };
-      const palmGeos = [makePalmGeometry(rng), makePalmGeometry(rng), makePalmGeometry(rng)];
-      const treeGeos = [makeTreeGeometry(rng), makeTreeGeometry(rng), makeTreeGeometry(rng), makeTreeGeometry(rng)];
-      const bushGeos = [
-        makeBushGeometry(rng, false),
-        makeBushGeometry(rng, true),
-        makeBushGeometry(rng, false),
-        makeBushGeometry(rng, true)
+      const palmVariants = [makePalmParts(rng), makePalmParts(rng), makePalmParts(rng)];
+      const treeVariants = [makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng)];
+      const bushVariants = [
+        makeBushParts(rng, false),
+        makeBushParts(rng, true),
+        makeBushParts(rng, false),
+        makeBushParts(rng, true)
       ];
-      const rockGeos = [makeRockGeometry(rng), makeRockGeometry(rng), makeRockGeometry(rng)];
+      const rockVariants = [
+        { rock: makeRockGeometry(rng) },
+        { rock: makeRockGeometry(rng) },
+        { rock: makeRockGeometry(rng) }
+      ];
       this.stats = {
         palms: palms.length,
         trees: trees.length,
@@ -29526,18 +29821,20 @@ void main() {
       this.treeList = trees;
       this.bushList = bushes;
       this.rockList = rocks;
-      this.palms = makeInstanced(palmGeos, palms);
-      this.trees = makeInstanced(treeGeos, trees);
-      this.bushes = makeInstanced(bushGeos, bushes);
-      this.rocks = makeInstanced(rockGeos, rocks);
+      this.palms = buildInstances(palmVariants, palms);
+      this.trees = buildInstances(treeVariants, trees);
+      this.bushes = buildInstances(bushVariants, bushes);
+      this.rocks = buildInstances(rockVariants, rocks);
       const blades = [];
-      for (let i = 0; i < 3; i++) {
-        const blade = new ConeGeometry(0.13, 0.55 + i * 0.12, 3, 1);
-        blade.translate((i - 1) * 0.16, 0.28, i % 2 * 0.12);
-        blades.push(colorize(blade, i === 1 ? 7643218 : 6327367));
+      for (let i = 0; i < 5; i++) {
+        const height = 0.45 + i % 3 * 0.16;
+        const blade = new ConeGeometry(0.1, height, 3, 1);
+        blade.translate((i - 2) * 0.13, height / 2, i % 2 ? 0.1 : -0.08);
+        blades.push(colorize(blade, i % 2 ? 11984262 : 10407279));
       }
       const tuftGeo = mergeGeometries(blades, false);
-      this.tufts = makeInstanced([tuftGeo], tufts, { castShadow: false });
+      this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
+      for (const mesh of this.tufts) mesh.material = grassMat;
     }
     // --- подбираемые вещи ---
     _buildPickups() {
@@ -29622,15 +29919,17 @@ void main() {
     /** Погасить или вернуть объект растительности (срубленное дерево, добытый камень) */
     setNodeVisible(item, visible) {
       var _a;
-      if (!item || !item.mesh) return;
+      if (!item || !item.parts || !item.parts.length) return;
       const dummy = this._dummy || (this._dummy = new Object3D());
-      const target = (_a = item.baseScale) != null ? _a : 1;
-      dummy.position.set(item.x, item.h - 0.15, item.z);
-      dummy.rotation.set(0, item.rot || 0, 0);
-      dummy.scale.setScalar(visible ? target : 1e-4);
-      dummy.updateMatrix();
-      item.mesh.setMatrixAt(item.instIdx, dummy.matrix);
-      item.mesh.instanceMatrix.needsUpdate = true;
+      for (const part of item.parts) {
+        const target = (_a = part.baseScale) != null ? _a : 1;
+        dummy.position.set(item.x, item.h - 0.15, item.z);
+        dummy.rotation.set(0, item.rot || 0, 0);
+        dummy.scale.setScalar(visible ? target : 1e-4);
+        dummy.updateMatrix();
+        part.mesh.setMatrixAt(part.idx, dummy.matrix);
+        part.mesh.instanceMatrix.needsUpdate = true;
+      }
     }
     /** Ближайший подбираемый предмет в радиусе */
     nearestPickup(pos, reach) {
@@ -29684,6 +29983,10 @@ void main() {
     }
     update(dt, camera, sunDir, nightFactor, fogColor) {
       this.time += dt;
+      for (const mat of this.windMaterials) {
+        const u = mat.userData.uniforms;
+        if (u && u.uTime) u.uTime.value = this.time;
+      }
       this.waterUniforms.uTime.value = this.time;
       this.waterUniforms.uNight.value = nightFactor;
       if (sunDir) this.waterUniforms.uSunDir.value.copy(sunDir);
@@ -29735,8 +30038,9 @@ void main() {
 `
   );
   var Sky = class {
-    constructor(scene, renderer) {
+    constructor(scene, renderer, textures = null) {
       this.scene = scene;
+      this.textures = textures;
       this.renderer = renderer;
       this.hour = CONFIG.time.startHour;
       this.day = 1;
@@ -29816,6 +30120,30 @@ void main() {
       );
       this.moonDisk.renderOrder = -8;
       scene.add(this.moonDisk);
+      this.clouds = new Group();
+      this.cloudMaterials = [];
+      scene.add(this.clouds);
+      const cloudGeo = new PlaneGeometry(180, 110);
+      for (let i = 0; i < 9; i++) {
+        const mat = new MeshBasicMaterial({
+          color: 16777215,
+          map: textures ? textures.cloud : null,
+          transparent: true,
+          opacity: 0.5,
+          depthWrite: false,
+          fog: false
+        });
+        this.cloudMaterials.push(mat);
+        const mesh = new Mesh(cloudGeo, mat);
+        const angle = i / 9 * Math.PI * 2 + Math.random();
+        const radius = 260 + Math.random() * 260;
+        mesh.position.set(Math.cos(angle) * radius, 95 + Math.random() * 60, Math.sin(angle) * radius);
+        mesh.rotation.x = -Math.PI / 2;
+        mesh.rotation.z = Math.random() * Math.PI;
+        mesh.scale.setScalar(0.7 + Math.random() * 0.9);
+        mesh.renderOrder = -7;
+        this.clouds.add(mesh);
+      }
       scene.fog = new Fog(12574960, 60, 340);
       this.sunDir = new Vector3(0.4, 0.7, 0.3).normalize();
       this.nightFactor = 0;
@@ -29831,7 +30159,7 @@ void main() {
     }
     /** Возвращает фактор ночи и цвет тумана — их использует вода */
     update(dt, playerPos) {
-      var _a, _b;
+      var _a, _b, _c;
       const dayLen = CONFIG.time.dayLength;
       const prevHour = this.hour;
       this.hour += dt / dayLen * 24;
@@ -29856,10 +30184,10 @@ void main() {
       const moonDir = this.sunDir.clone().multiplyScalar(-1);
       this.moon.position.copy(playerPos).add(moonDir.multiplyScalar(100));
       this.moon.target.position.copy(playerPos);
-      this.moon.intensity = 1.15 * night;
-      this.hemi.intensity = 0.62 + 0.75 * lightUp;
-      this.hemi.color.setHex(10471144).lerp(new Color(2766160), night);
-      this.ambient.intensity = 0.34 + 0.22 * (1 - night);
+      this.moon.intensity = 1.5 * night;
+      this.hemi.intensity = 0.8 + 0.85 * lightUp + 0.35 * night;
+      this.hemi.color.setHex(10471144).lerp(new Color(4018036), night);
+      this.ambient.intensity = 0.42 + 0.3 * (1 - night) + 0.32 * night;
       this.sunDisk.position.copy(this.sunDir).multiplyScalar(760);
       this.sunDisk.visible = elev > -0.15;
       this.moonDisk.position.copy(this.sunDir).multiplyScalar(-760);
@@ -29876,10 +30204,17 @@ void main() {
       this.starMat.opacity = clamp2(smoothstep2(0.25, 0.9, night), 0, 1) * 0.9;
       this.fogColor.copy(this.skyUniforms.uBottom.value).multiplyScalar(0.92);
       this.scene.fog.color.copy(this.fogColor);
-      this.scene.fog.near = 70 - night * 25;
-      this.scene.fog.far = 360 - night * 150;
+      this.scene.fog.near = 95 - night * 30;
+      this.scene.fog.far = 430 - night * 170;
       this.skyDome.position.copy(playerPos);
       this.stars.position.copy(playerPos);
+      this.clouds.position.set(playerPos.x, 0, playerPos.z);
+      this.clouds.rotation.y += dt * 4e-3;
+      const cloudTint = 0.55 + dayMix * 0.45;
+      for (const mat of this.cloudMaterials) {
+        mat.color.setRGB(cloudTint, cloudTint * 0.98, cloudTint * 0.95);
+        mat.opacity = (0.18 + dayMix * 0.42) * ((_c = this.cloudiness) != null ? _c : 1);
+      }
       return { night, sunDir: this.sunDir, fogColor: this.fogColor };
     }
     /** Часы в формате ЧЧ:ММ */
@@ -29918,111 +30253,200 @@ void main() {
       const shirtMat = new MeshStandardMaterial({ color: 9071429, roughness: 0.9, flatShading: true });
       const pantsMat = new MeshStandardMaterial({ color: COLORS.pants, roughness: 0.9, flatShading: true });
       const packMat = new MeshStandardMaterial({ color: 7033397, roughness: 0.95, flatShading: true });
-      const torso = new Mesh(new BoxGeometry(0.52, 0.62, 0.3), shirtMat);
+      const bootMat = new MeshStandardMaterial({ color: 3812384, roughness: 1, flatShading: true });
+      const box = (w, h, d, mat) => {
+        const mesh = new Mesh(new BoxGeometry(w, h, d), mat);
+        mesh.castShadow = true;
+        return mesh;
+      };
+      const torso = box(0.52, 0.62, 0.3, shirtMat);
       torso.position.y = 1.16;
-      torso.castShadow = true;
       g.add(torso);
-      const belt = new Mesh(new BoxGeometry(0.5, 0.12, 0.32), pantsMat);
+      const belt = box(0.5, 0.12, 0.32, pantsMat);
       belt.position.y = 0.85;
       g.add(belt);
-      const head = new Mesh(new BoxGeometry(0.32, 0.34, 0.3), skinMat);
-      head.position.y = 1.65;
-      head.castShadow = true;
-      g.add(head);
-      const hair = new Mesh(new BoxGeometry(0.34, 0.12, 0.32), new MeshStandardMaterial({ color: 2892056, roughness: 1 }));
-      hair.position.y = 1.82;
-      g.add(hair);
-      const pack = new Mesh(new BoxGeometry(0.38, 0.44, 0.2), packMat);
+      this.head = box(0.32, 0.34, 0.3, skinMat);
+      this.head.position.y = 1.65;
+      g.add(this.head);
+      const hair = box(0.34, 0.12, 0.32, new MeshStandardMaterial({ color: 2892056, roughness: 1 }));
+      hair.position.y = 0.2;
+      this.head.add(hair);
+      const pack = box(0.38, 0.44, 0.2, packMat);
       pack.position.set(0, 1.2, 0.25);
-      pack.castShadow = true;
       g.add(pack);
-      this.armL = new Group();
-      this.armL.position.set(-0.295, 1.44, 0);
-      const armMeshL = new Mesh(new BoxGeometry(0.16, 0.6, 0.18), skinMat);
-      armMeshL.position.y = -0.3;
-      armMeshL.castShadow = true;
-      this.armL.add(armMeshL);
-      g.add(this.armL);
-      this.armR = new Group();
-      this.armR.position.set(0.295, 1.44, 0);
-      const armMeshR = armMeshL.clone();
-      this.armR.add(armMeshR);
-      g.add(this.armR);
-      this.legL = new Group();
-      this.legL.position.set(-0.14, 0.82, 0);
-      const legMeshL = new Mesh(new BoxGeometry(0.19, 0.8, 0.2), pantsMat);
-      legMeshL.position.y = -0.4;
-      legMeshL.castShadow = true;
-      this.legL.add(legMeshL);
-      g.add(this.legL);
-      this.legR = new Group();
-      this.legR.position.set(0.14, 0.82, 0);
-      const legMeshR = legMeshL.clone();
-      this.legR.add(legMeshR);
-      g.add(this.legR);
+      const makeArm = (side) => {
+        const shoulder = new Group();
+        shoulder.position.set(0.295 * side, 1.44, 0);
+        const upper = box(0.15, 0.32, 0.17, shirtMat);
+        upper.position.y = -0.15;
+        shoulder.add(upper);
+        const elbow = new Group();
+        elbow.position.y = -0.31;
+        const lower = box(0.13, 0.3, 0.15, skinMat);
+        lower.position.y = -0.14;
+        elbow.add(lower);
+        const hand = box(0.14, 0.12, 0.16, skinMat);
+        hand.position.y = -0.3;
+        elbow.add(hand);
+        shoulder.add(elbow);
+        g.add(shoulder);
+        return { shoulder, elbow };
+      };
+      const armL = makeArm(-1);
+      const armR = makeArm(1);
+      this.armL = armL.shoulder;
+      this.armR = armR.shoulder;
+      this.elbowL = armL.elbow;
+      this.elbowR = armR.elbow;
+      const makeLeg = (side) => {
+        const hip = new Group();
+        hip.position.set(0.14 * side, 0.82, 0);
+        const thigh = box(0.2, 0.42, 0.21, pantsMat);
+        thigh.position.y = -0.2;
+        hip.add(thigh);
+        const knee = new Group();
+        knee.position.y = -0.42;
+        const shin = box(0.17, 0.38, 0.18, pantsMat);
+        shin.position.y = -0.18;
+        knee.add(shin);
+        const boot2 = box(0.2, 0.12, 0.28, bootMat);
+        boot2.position.set(0, -0.4, 0.04);
+        knee.add(boot2);
+        hip.add(knee);
+        g.add(hip);
+        return { hip, knee };
+      };
+      const legL = makeLeg(-1);
+      const legR = makeLeg(1);
+      this.legL = legL.hip;
+      this.legR = legR.hip;
+      this.kneeL = legL.knee;
+      this.kneeR = legR.knee;
+      this.torso = torso;
       this.handSlot = new Group();
-      this.handSlot.position.set(0, -0.5, 0.06);
-      this.handSlot.rotation.x = 0.25;
-      this.armR.add(this.handSlot);
+      this.handSlot.position.set(0, -0.34, 0.06);
+      this.handSlot.rotation.x = 0.3;
+      this.elbowR.add(this.handSlot);
       this.equippedId = null;
       this.equippedMesh = null;
       this.swingPhase = -1;
-      this.swingSpeed = 3.4;
+      this.swingSpeed = 3.2;
+      this.walkPhase = 0;
+      this.lean = 0;
+      this.landDip = 0;
       this.model = g;
       this.scene.add(g);
+      this.viewModel = new Group();
+      this.viewModelHand = new Group();
+      this.viewModel.add(this.viewModelHand);
+      this.buildFirstPersonHand(skinMat, shirtMat);
+      this.viewModel.position.set(0.26, -0.24, -0.6);
+      this.viewModel.rotation.set(0.12, -0.22, -0.08);
+      this.viewModel.scale.setScalar(0.78);
+      this.viewModel.visible = false;
+      this.viewMode = "third";
+      this.headBob = 0;
     }
-    /** Что держим в руке. Модели простые: палка + наконечник/лезвие. */
-    setEquipped(itemId) {
-      if (this.equippedId === itemId) return;
-      this.equippedId = itemId;
-      if (this.equippedMesh) {
-        this.handSlot.remove(this.equippedMesh);
-        this.equippedMesh.traverse((o) => {
-          var _a, _b;
-          (_b = (_a = o.geometry) == null ? void 0 : _a.dispose) == null ? void 0 : _b.call(_a);
-        });
-        this.equippedMesh = null;
+    /** Рука и предплечье в первом лице: они видны всегда, даже без инструмента */
+    buildFirstPersonHand(skinMat, shirtMat) {
+      const arm = new Group();
+      const sleeve = new Mesh(new BoxGeometry(0.16, 0.3, 0.18), shirtMat);
+      sleeve.position.set(0.03, -0.16, 0.22);
+      sleeve.rotation.x = -0.5;
+      arm.add(sleeve);
+      const forearm = new Mesh(new BoxGeometry(0.13, 0.13, 0.34), skinMat);
+      forearm.position.set(0.02, -0.05, 0);
+      forearm.rotation.x = 0.35;
+      arm.add(forearm);
+      const hand = new Mesh(new BoxGeometry(0.13, 0.12, 0.15), skinMat);
+      hand.position.set(0.01, -0.01, -0.17);
+      arm.add(hand);
+      this.viewModelHand.add(arm);
+    }
+    /** Переключить вид: 'third' или 'first' */
+    setViewMode(mode, camera) {
+      this.viewMode = mode;
+      const first = mode === "first";
+      this.model.visible = !first;
+      if (first && camera) {
+        if (!this.viewModel.parent) camera.add(this.viewModel);
+        this.viewModel.visible = true;
+        this.scene.add(camera);
+      } else {
+        this.viewModel.visible = false;
       }
-      if (!itemId) return;
+    }
+    /** Меш инструмента: палка + наконечник/лезвие + огонь у факела */
+    buildItemMesh(itemId) {
       const group = new Group();
       const woodMat = new MeshStandardMaterial({ color: 9071170, roughness: 0.95, flatShading: true });
-      const stoneMat = new MeshStandardMaterial({ color: 12173512, roughness: 0.6, flatShading: true });
-      const stick = new Mesh(new CylinderGeometry(0.035, 0.045, 0.95, 5), woodMat);
-      stick.rotation.x = Math.PI / 2.4;
-      stick.position.set(0, 0, 0.28);
+      const stoneMat = new MeshStandardMaterial({ color: 12173512, roughness: 0.55, flatShading: true });
+      if (itemId === "campfireKit") {
+        const stones = new Mesh(new TorusGeometry(0.22, 0.06, 5, 9), stoneMat);
+        stones.rotation.x = Math.PI / 2;
+        group.add(stones);
+        return group;
+      }
+      const stick = new Mesh(new CylinderGeometry(0.03, 0.042, 0.92, 6), woodMat);
+      stick.rotation.x = Math.PI / 2.5;
+      stick.position.set(0, 0, 0.26);
       stick.castShadow = true;
       group.add(stick);
-      if (itemId === "knife" || itemId === "spear" || itemId === "axe" || itemId === "pickaxe") {
+      if (["knife", "spear", "axe", "pickaxe"].includes(itemId)) {
         const head = new Mesh(
-          itemId === "spear" ? new ConeGeometry(0.06, 0.34, 4) : new BoxGeometry(0.06, itemId === "axe" ? 0.26 : 0.2, itemId === "pickaxe" ? 0.3 : 0.12),
+          itemId === "spear" ? new ConeGeometry(0.055, 0.34, 5) : new BoxGeometry(0.055, itemId === "axe" ? 0.26 : 0.19, itemId === "pickaxe" ? 0.3 : 0.11),
           stoneMat
         );
-        head.position.set(0, 0.12, itemId === "spear" ? 0.86 : 0.6);
-        head.rotation.x = itemId === "spear" ? 0 : 0.3;
+        head.position.set(0, itemId === "spear" ? 0.28 : 0.14, itemId === "spear" ? 0.92 : 0.6);
+        head.rotation.x = itemId === "spear" ? 0.75 : 0.3;
         head.castShadow = true;
         group.add(head);
       }
       if (itemId === "torch") {
-        const flame = new Mesh(
-          new ConeGeometry(0.09, 0.26, 5),
-          new MeshBasicMaterial({ color: 16764784 })
-        );
-        flame.position.set(0, 0.12, 0.78);
+        const flame = new Mesh(new ConeGeometry(0.1, 0.3, 6), new MeshBasicMaterial({ color: 16764784 }));
+        flame.position.set(0, 0.16, 0.78);
         group.add(flame);
-        const light = new PointLight(16757596, 1.7, 11, 2);
+        const light = new PointLight(16757596, 1.8, 12, 2);
         light.position.set(0, 0.3, 0.6);
         group.add(light);
       }
-      if (itemId === "campfireKit") {
-        group.clear();
-        const stones = new Mesh(new TorusGeometry(0.24, 0.07, 5, 8), stoneMat);
-        stones.rotation.x = Math.PI / 2;
-        group.add(stones);
-      }
-      this.equippedMesh = group;
-      this.handSlot.add(group);
+      return group;
     }
-    /** Запустить замах (визуально) */
+    /** Что держим в руке: в третьем лице — у кисти, в первом — перед камерой */
+    setEquipped(itemId) {
+      var _a, _b, _c;
+      if (this.equippedId === itemId) return;
+      this.equippedId = itemId;
+      if (this.handSlot) {
+        while (this.handSlot.children.length) {
+          const child = this.handSlot.children.pop();
+          (_a = child.traverse) == null ? void 0 : _a.call(child, (o) => {
+            var _a2, _b2;
+            (_b2 = (_a2 = o.geometry) == null ? void 0 : _a2.dispose) == null ? void 0 : _b2.call(_a2);
+          });
+        }
+      }
+      if (this.viewModelItem) {
+        this.viewModelHand.remove(this.viewModelItem);
+        (_c = (_b = this.viewModelItem).traverse) == null ? void 0 : _c.call(_b, (o) => {
+          var _a2, _b2;
+          (_b2 = (_a2 = o.geometry) == null ? void 0 : _a2.dispose) == null ? void 0 : _b2.call(_a2);
+        });
+        this.viewModelItem = null;
+      }
+      this.equippedMesh = null;
+      if (!itemId) return;
+      const thirdPersonMesh = this.buildItemMesh(itemId);
+      this.handSlot.add(thirdPersonMesh);
+      this.equippedMesh = thirdPersonMesh;
+      const firstPersonMesh = this.buildItemMesh(itemId);
+      firstPersonMesh.scale.setScalar(1.15);
+      firstPersonMesh.rotation.set(-0.4, Math.PI, -0.32);
+      firstPersonMesh.position.set(0, -0.03, -0.14);
+      this.viewModelItem = firstPersonMesh;
+      this.viewModelHand.add(firstPersonMesh);
+    }
+    /** Запустить замах */
     swing() {
       if (this.swingPhase < 0) this.swingPhase = 0;
     }
@@ -30122,38 +30546,103 @@ void main() {
         this.facing += diff * clamp2(dt * 12, 0, 1);
       }
       this.bobPhase += dt * (2.2 + hspeed * 1.35);
-      const swing = Math.sin(this.bobPhase * 3.2) * clamp2(hspeed / 6, 0, 1) * 0.85;
-      this.legL.rotation.x = swing;
-      this.legR.rotation.x = -swing;
-      this.armL.rotation.x = -swing * 0.8;
-      let swingArm = swing * 0.8;
+      const strideSpeed = hspeed > 5.5 ? 9.5 : 6.4;
+      this.walkPhase += dt * strideSpeed * clamp2(hspeed / 4, 0, 1.4);
+      const speedRatio = clamp2(hspeed / 8, 0, 1);
+      const sw = Math.sin(this.walkPhase) * (0.45 + speedRatio * 0.7);
+      const swOpp = Math.sin(this.walkPhase + Math.PI) * (0.45 + speedRatio * 0.7);
+      this.legL.rotation.x = sw;
+      this.legR.rotation.x = swOpp;
+      this.kneeL.rotation.x = Math.max(0, -Math.sin(this.walkPhase - 0.7)) * (0.35 + speedRatio * 0.75);
+      this.kneeR.rotation.x = Math.max(0, -Math.sin(this.walkPhase + Math.PI - 0.7)) * (0.35 + speedRatio * 0.75);
+      const idle = Math.sin(this.bobPhase * 1.1) * 0.035;
+      this.armL.rotation.x = sw * (0.55 + speedRatio * 0.35) - idle;
+      this.armL.rotation.z = -0.06 - speedRatio * 0.05;
+      let armRSwing = swOpp * (0.55 + speedRatio * 0.35) + idle;
+      this.elbowR.rotation.x = -0.3 - speedRatio * 0.4;
       if (this.swingPhase >= 0) {
         this.swingPhase += dt * this.swingSpeed;
         if (this.swingPhase >= 1) this.swingPhase = -1;
         else {
           const p = this.swingPhase;
-          const arc = Math.sin(p * Math.PI);
-          swingArm = -1.75 * arc;
+          const arc = p < 0.32 ? -1 * (p / 0.32) : Math.sin((p - 0.32) / 0.68 * Math.PI) * 2 - 1;
+          armRSwing = arc;
+          this.elbowR.rotation.x = -0.25 - Math.max(0, arc) * 0.55;
         }
       }
-      this.armR.rotation.x = swingArm;
+      this.armL.rotation.x += 0;
+      this.armR.rotation.x = armRSwing;
+      const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0);
+      this.lean += (targetLean - this.lean) * clamp2(dt * 6, 0, 1);
+      this.torso.rotation.x = this.lean;
+      this.torso.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
+      if (this.head) this.head.rotation.y = Math.sin(this.bobPhase * 0.4) * 0.05 * (1 - speedRatio);
+      this.landDip = Math.max(0, this.landDip - dt * 3);
+      const bobY = Math.abs(Math.sin(this.walkPhase)) * 0.05 * speedRatio;
       this.model.position.copy(this.position);
       if (inWater) this.model.position.y -= this.wading * 0.55;
+      this.model.position.y += bobY - this.landDip * 0.14;
       this.model.rotation.y = this.facing;
-      this.model.position.y += Math.abs(Math.sin(this.bobPhase * 3.2)) * 0.035 * clamp2(hspeed / 5, 0, 1);
+      if (this.viewMode === "first") {
+        const bx = Math.sin(this.walkPhase) * 0.02 * speedRatio;
+        const by = Math.abs(Math.cos(this.walkPhase)) * 0.018 * speedRatio;
+        const sway = Math.sin(this.bobPhase * 0.9) * 5e-3;
+        let swing = 0;
+        let forward = 0;
+        if (this.swingPhase >= 0) {
+          const arc = Math.sin(Math.min(1, this.swingPhase) * Math.PI);
+          swing = arc;
+          forward = -arc * 0.16;
+        }
+        this.viewModel.position.set(0.26 + bx + sway, -0.24 + by, -0.6 + forward);
+        this.viewModel.rotation.set(0.08 + swing * 0.25, -0.22, swing * 0.3);
+        this.viewModelHand.rotation.x = swing * 0.7;
+      }
       this.landShake = Math.max(0, this.landShake - dt);
     }
-    /** Позиция камеры: третье лицо с подъёмом над рельефом */
+    /** Камера: третье лицо или вид от первого лица */
     applyCamera(camera, world, dt) {
       const sin = Math.sin(this.yaw);
       const cos = Math.cos(this.yaw);
+      if (this.viewMode === "first") {
+        const eyeY = this.position.y + 1.62 + (this.swimming ? -0.25 : 0);
+        const target2 = new Vector3(this.position.x, eyeY, this.position.z);
+        camera.position.copy(target2);
+        camera.rotation.set(0, 0, 0);
+        camera.rotateY(this.yaw);
+        camera.rotateX(-this.pitch);
+        const shake = this.landShake > 0 ? this.landShake * 2.4 : 0;
+        if (shake > 0) camera.rotateZ(Math.sin(performance.now() * 0.05) * shake * 0.06);
+        return;
+      }
       const fwd = new Vector3(-sin, 0, -cos);
       const target = this.position.clone().add(new Vector3(0, 1.45, 0));
       const dist = P.cameraDistance;
       const horiz = Math.cos(this.pitch) * dist;
       const vert = Math.sin(this.pitch) * dist;
-      const desired = target.clone().addScaledVector(fwd, -horiz);
-      desired.y += vert;
+      let cameraDist = dist;
+      for (let step = 0.6; step <= dist; step += 0.6) {
+        const cx = target.x - fwd.x * Math.cos(this.pitch) * step;
+        const cz = target.z - fwd.z * Math.cos(this.pitch) * step;
+        let blocked = false;
+        for (const c of world.colliders) {
+          if (c.disabled) continue;
+          const dx = c.x - cx;
+          const dz = c.z - cz;
+          if (dx * dx + dz * dz < (c.r + 0.45) * (c.r + 0.45)) {
+            blocked = true;
+            break;
+          }
+        }
+        if (blocked) {
+          cameraDist = Math.max(1.6, step - 0.8);
+          break;
+        }
+      }
+      const finalHoriz = Math.cos(this.pitch) * cameraDist;
+      const finalVert = Math.sin(this.pitch) * cameraDist;
+      const desired = target.clone().addScaledVector(fwd, -finalHoriz);
+      desired.y += finalVert;
       const h = world.heightAt(desired.x, desired.z);
       if (desired.y < h + 0.7) desired.y = h + 0.7;
       if (desired.y < CONFIG.world.seaLevel + 0.5) desired.y = CONFIG.world.seaLevel + 0.5;
@@ -30908,7 +31397,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-24 17:30" : "dev";
+  var BUILD = true ? "2026-10-24 19:13" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -31003,6 +31492,438 @@ void main() {
     return params.get("safe") === "1" || params.get("safe") === "";
   }
 
+  // src/textures.js
+  var SIZE2 = 192;
+  function makeCanvas(size = SIZE2) {
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const original = canvas.getContext.bind(canvas);
+    canvas.getContext = (type, options) => original(type, { willReadFrequently: true, ...options });
+    return canvas;
+  }
+  function tileableNoise(size, cells, seed) {
+    const data = new Float32Array(size * size);
+    const fade2 = (t) => t * t * (3 - 2 * t);
+    const lerp3 = (a, b, t) => a + (b - a) * t;
+    const at = (ix, iy) => {
+      const x = (ix % cells + cells) % cells;
+      const y = (iy % cells + cells) % cells;
+      return valueNoise(x + 0.5, y + 0.5, seed);
+    };
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x++) {
+        const fx = x / size * cells;
+        const fy = y / size * cells;
+        const ix = Math.floor(fx);
+        const iy = Math.floor(fy);
+        const tx = fade2(fx - ix);
+        const ty = fade2(fy - iy);
+        const a = at(ix, iy);
+        const b = at(ix + 1, iy);
+        const c = at(ix, iy + 1);
+        const d = at(ix + 1, iy + 1);
+        data[y * size + x] = lerp3(lerp3(a, b, tx), lerp3(c, d, tx), ty);
+      }
+    }
+    return data;
+  }
+  function fbmNoise(size, octaves, seed, baseCells = 4, gain = 0.5) {
+    const out = new Float32Array(size * size);
+    let amp = 1;
+    let norm = 0;
+    let cells = baseCells;
+    for (let i = 0; i < octaves; i++) {
+      const layer = tileableNoise(size, cells, seed + i * 97);
+      for (let k = 0; k < out.length; k++) out[k] += layer[k] * amp;
+      norm += amp;
+      amp *= gain;
+      cells *= 2;
+    }
+    for (let k = 0; k < out.length; k++) out[k] /= norm;
+    return out;
+  }
+  function paintNoise(ctx, data, size, colorA, colorB, alpha = 1) {
+    const img = ctx.getImageData(0, 0, size, size);
+    const px = img.data;
+    const a = new Color(colorA);
+    const b = new Color(colorB);
+    for (let i = 0; i < size * size; i++) {
+      const t = data[i];
+      const r = a.r + (b.r - a.r) * t;
+      const g = a.g + (b.g - a.g) * t;
+      const bl = a.b + (b.b - a.b) * t;
+      px[i * 4] = Math.round(r * 255);
+      px[i * 4 + 1] = Math.round(g * 255);
+      px[i * 4 + 2] = Math.round(bl * 255);
+      px[i * 4 + 3] = Math.round(255 * alpha);
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  function speckle(ctx, size, count, rng, colors, radiusRange = [0.4, 1.6], alphaRange = [0.05, 0.22]) {
+    for (let i = 0; i < count; i++) {
+      const x = rng() * size;
+      const y = rng() * size;
+      const r = radiusRange[0] + rng() * (radiusRange[1] - radiusRange[0]);
+      const color = colors[Math.floor(rng() * colors.length)];
+      ctx.globalAlpha = alphaRange[0] + rng() * (alphaRange[1] - alphaRange[0]);
+      ctx.fillStyle = color;
+      for (const dx of [-size, 0, size]) {
+        for (const dy of [-size, 0, size]) {
+          ctx.beginPath();
+          ctx.arc(x + dx, y + dy, r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  function strokes(ctx, size, count, rng, color, width = 1, lenRange = [4, 14], alpha = 0.3) {
+    ctx.strokeStyle = color;
+    ctx.lineCap = "round";
+    for (let i = 0; i < count; i++) {
+      const x = rng() * size;
+      const y = rng() * size;
+      const len = lenRange[0] + rng() * (lenRange[1] - lenRange[0]);
+      const angle = rng() * Math.PI * 2;
+      ctx.globalAlpha = alpha * (0.4 + rng() * 0.6);
+      ctx.lineWidth = width * (0.6 + rng() * 0.9);
+      for (const dx of [-size, 0, size]) {
+        for (const dy of [-size, 0, size]) {
+          ctx.beginPath();
+          ctx.moveTo(x + dx, y + dy);
+          ctx.quadraticCurveTo(
+            x + dx + Math.cos(angle) * len * 0.5 + (rng() - 0.5) * 3,
+            y + dy + Math.sin(angle) * len * 0.5 + (rng() - 0.5) * 3,
+            x + dx + Math.cos(angle) * len,
+            y + dy + Math.sin(angle) * len
+          );
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  function stripes(ctx, size, rng, color, count, alpha = 0.18) {
+    ctx.strokeStyle = color;
+    for (let i = 0; i < count; i++) {
+      const x = rng() * size;
+      const w = 1 + rng() * 3;
+      ctx.globalAlpha = alpha * (0.3 + rng());
+      ctx.lineWidth = w;
+      for (const dx of [-size, 0, size]) {
+        ctx.beginPath();
+        const wobble = 3 + rng() * 7;
+        ctx.moveTo(x + dx, -4);
+        for (let y = 0; y <= size; y += 16) {
+          ctx.lineTo(x + dx + Math.sin(y * 0.05 + i) * wobble, y);
+        }
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+  function cracks(ctx, size, rng, color, count) {
+    ctx.strokeStyle = color;
+    ctx.lineCap = "round";
+    for (let i = 0; i < count; i++) {
+      let x = rng() * size;
+      let y = rng() * size;
+      let angle = rng() * Math.PI * 2;
+      const segs = 3 + Math.floor(rng() * 4);
+      ctx.globalAlpha = 0.18 + rng() * 0.22;
+      ctx.lineWidth = 0.7 + rng() * 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      for (let s = 0; s < segs; s++) {
+        angle += (rng() - 0.5) * 1.1;
+        const step = 6 + rng() * 16;
+        x += Math.cos(angle) * step;
+        y += Math.sin(angle) * step;
+        ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function detailize(canvas, { lift = 0.62, contrast = 1.9, tint = 0.25 } = {}) {
+    const size = canvas.width;
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const img = ctx.getImageData(0, 0, size, size);
+    const px = img.data;
+    let sum = 0;
+    for (let i = 0; i < size * size; i++) {
+      sum += (px[i * 4] * 0.299 + px[i * 4 + 1] * 0.587 + px[i * 4 + 2] * 0.114) / 255;
+    }
+    const mean = sum / (size * size) || 0.5;
+    const out = document.createElement("canvas");
+    out.width = size;
+    out.height = size;
+    const octx = out.getContext("2d");
+    const oimg = octx.createImageData(size, size);
+    for (let i = 0; i < size * size; i++) {
+      const r = px[i * 4] / 255;
+      const g = px[i * 4 + 1] / 255;
+      const b = px[i * 4 + 2] / 255;
+      const lum = r * 0.299 + g * 0.587 + b * 0.114;
+      let v = 1 - lift + (lum - mean) * contrast + lift * 0.92;
+      v = Math.max(0.55, Math.min(1, v));
+      const dr = v + (r - lum) * tint;
+      const dg = v + (g - lum) * tint;
+      const db = v + (b - lum) * tint;
+      oimg.data[i * 4] = Math.max(0, Math.min(255, Math.round(dr * 255)));
+      oimg.data[i * 4 + 1] = Math.max(0, Math.min(255, Math.round(dg * 255)));
+      oimg.data[i * 4 + 2] = Math.max(0, Math.min(255, Math.round(db * 255)));
+      oimg.data[i * 4 + 3] = 255;
+    }
+    octx.putImageData(oimg, 0, 0);
+    return out;
+  }
+  function toTexture(canvas, { repeat = 1, srgb = true, aniso = 4 } = {}) {
+    const tex = new CanvasTexture(canvas);
+    tex.wrapS = RepeatWrapping;
+    tex.wrapT = RepeatWrapping;
+    tex.repeat.set(repeat, repeat);
+    tex.anisotropy = aniso;
+    if (srgb) tex.colorSpace = SRGBColorSpace;
+    tex.needsUpdate = true;
+    return tex;
+  }
+  function grassCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d", { willReadFrequently: true });
+    const rng = makeRng(1021);
+    paintNoise(ctx, fbmNoise(size, 4, 11, 4), size, 5208631, 9090135);
+    const patches = fbmNoise(size, 2, 55, 2);
+    const img = ctx.getImageData(0, 0, size, size);
+    for (let i = 0; i < size * size; i++) {
+      const t = patches[i];
+      const warm = Math.max(0, t - 0.55) * 1.4;
+      img.data[i * 4] = Math.min(255, img.data[i * 4] + warm * 90);
+      img.data[i * 4 + 1] = Math.min(255, img.data[i * 4 + 1] + warm * 55);
+      img.data[i * 4 + 2] = Math.max(0, img.data[i * 4 + 2] - warm * 25);
+    }
+    ctx.putImageData(img, 0, 0);
+    strokes(ctx, size, 900, rng, "#9fc46a", 1, [5, 16], 0.35);
+    strokes(ctx, size, 600, rng, "#3f6330", 1, [4, 12], 0.3);
+    speckle(ctx, size, 500, rng, ["#c3d98a", "#6a9448", "#2f4d24"], [0.5, 1.6], [0.08, 0.25]);
+    return canvas;
+  }
+  function sandCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(2027);
+    paintNoise(ctx, fbmNoise(size, 4, 23, 3), size, 13348982, 15259558);
+    ctx.strokeStyle = "rgba(150, 125, 85, 0.22)";
+    for (let i = 0; i < 18; i++) {
+      const y = i / 18 * size + rng() * 6;
+      ctx.lineWidth = 1 + rng() * 2.2;
+      for (const dy of [-size, 0, size]) {
+        ctx.beginPath();
+        for (let x = -8; x <= size + 8; x += 6) {
+          const yy = y + dy + Math.sin(x / size * Math.PI * 4 + i) * 4;
+          x === -8 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
+        }
+        ctx.stroke();
+      }
+    }
+    speckle(ctx, size, 1600, rng, ["#f2e4bf", "#a98f5f", "#7d6844"], [0.3, 1.1], [0.1, 0.3]);
+    speckle(ctx, size, 90, rng, ["#8b8377", "#6f6a61"], [1, 2.4], [0.25, 0.5]);
+    return canvas;
+  }
+  function rockCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(3301);
+    paintNoise(ctx, fbmNoise(size, 4, 41, 5), size, 7236194, 11051414);
+    cracks(ctx, size, rng, "#4a463f", 34);
+    cracks(ctx, size, rng, "#c8c1b4", 16);
+    for (let i = 0; i < 40; i++) {
+      const cx = rng() * size;
+      const cy = rng() * size;
+      const r = 10 + rng() * 30;
+      const sides = 3 + Math.floor(rng() * 3);
+      ctx.globalAlpha = 0.05 + rng() * 0.12;
+      ctx.fillStyle = rng() > 0.5 ? "#e0d9cc" : "#3a362f";
+      for (const dx of [-size, 0, size]) {
+        for (const dy of [-size, 0, size]) {
+          ctx.beginPath();
+          for (let s = 0; s < sides; s++) {
+            const a = s / sides * Math.PI * 2 + rng() * 0.3;
+            const rr = r * (0.7 + rng() * 0.5);
+            const x = cx + dx + Math.cos(a) * rr;
+            const y = cy + dy + Math.sin(a) * rr;
+            s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+          }
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    speckle(ctx, size, 700, rng, ["#bdb5a6", "#57534b", "#8b8579"], [0.4, 1.4], [0.1, 0.3]);
+    return canvas;
+  }
+  function dirtCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(4409);
+    paintNoise(ctx, fbmNoise(size, 4, 67, 4), size, 5981746, 9071434);
+    speckle(ctx, size, 900, rng, ["#3f3022", "#a2805c", "#6b5238"], [0.4, 1.8], [0.1, 0.3]);
+    strokes(ctx, size, 220, rng, "#3a2c1f", 1, [4, 10], 0.25);
+    return canvas;
+  }
+  function barkCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(5501);
+    paintNoise(ctx, fbmNoise(size, 3, 71, 4, 0.55), size, 6966321, 10121288);
+    stripes(ctx, size, rng, "#3f2d1c", 90, 0.3);
+    stripes(ctx, size, rng, "#b48c5c", 50, 0.16);
+    speckle(ctx, size, 300, rng, ["#33241a", "#8a6644"], [0.5, 1.4], [0.1, 0.28]);
+    return canvas;
+  }
+  function leafCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(6607);
+    paintNoise(ctx, fbmNoise(size, 3, 83, 5), size, 3103787, 6922314);
+    strokes(ctx, size, 260, rng, "#8fc46a", 1, [6, 18], 0.22);
+    strokes(ctx, size, 200, rng, "#203f1e", 1, [5, 14], 0.25);
+    speckle(ctx, size, 400, rng, ["#a8d17c", "#254a22"], [0.6, 2], [0.1, 0.26]);
+    return canvas;
+  }
+  function woodCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(7703);
+    paintNoise(ctx, fbmNoise(size, 3, 97, 3), size, 10123855, 12886641);
+    stripes(ctx, size, rng, "#6d5232", 40, 0.28);
+    strokes(ctx, size, 180, rng, "#7a5c38", 1, [8, 26], 0.2);
+    return canvas;
+  }
+  function clothCanvas(size = SIZE2) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(8809);
+    paintNoise(ctx, fbmNoise(size, 3, 109, 4), size, 9071429, 11111005);
+    ctx.globalAlpha = 0.12;
+    ctx.strokeStyle = "#4a3826";
+    for (let i = 0; i < size; i += 3) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(size, i);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+    speckle(ctx, size, 260, rng, ["#c2a377", "#6b5235"], [0.5, 1.4], [0.08, 0.22]);
+    return canvas;
+  }
+  function skinCanvas(size = 128) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(9911);
+    paintNoise(ctx, fbmNoise(size, 3, 127, 4), size, 11696463, 14262385);
+    speckle(ctx, size, 200, rng, ["#e8b98c", "#9a6642"], [0.4, 1.2], [0.06, 0.16]);
+    return canvas;
+  }
+  function cloudCanvas(size = 256) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const rng = makeRng(1113);
+    ctx.clearRect(0, 0, size, size);
+    for (let i = 0; i < 26; i++) {
+      const x = size * 0.5 + (rng() - 0.5) * size * 0.62;
+      const y = size * 0.5 + (rng() - 0.5) * size * 0.4;
+      const r = size * (0.1 + rng() * 0.17);
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, "rgba(255,255,255,0.42)");
+      g.addColorStop(0.55, "rgba(255,255,255,0.20)");
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    return canvas;
+  }
+  function softDotCanvas(size = 64) {
+    const canvas = makeCanvas(size);
+    const ctx = canvas.getContext("2d");
+    const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+    g.addColorStop(0, "rgba(255,255,255,1)");
+    g.addColorStop(0.4, "rgba(255,255,255,0.65)");
+    g.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, size, size);
+    return canvas;
+  }
+  function fallbackTextures() {
+    const keys = [
+      "grass",
+      "sand",
+      "rock",
+      "dirt",
+      "bark",
+      "leaf",
+      "wood",
+      "cloth",
+      "skin",
+      "rockDetail",
+      "cloud",
+      "dot"
+    ];
+    const out = {};
+    const data = new Uint8Array([235, 235, 235, 255]);
+    for (const key of keys) {
+      const texture = new DataTexture(data, 1, 1);
+      texture.needsUpdate = true;
+      out[key] = texture;
+    }
+    return out;
+  }
+  function createTextures(maxAnisotropy = 4) {
+    try {
+      return buildTextures(maxAnisotropy);
+    } catch (err) {
+      console.warn("\u0422\u0435\u043A\u0441\u0442\u0443\u0440\u044B \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u044B, \u0438\u0441\u043F\u043E\u043B\u044C\u0437\u0443\u044E\u0442\u0441\u044F \u0437\u0430\u0433\u043B\u0443\u0448\u043A\u0438:", err && err.message);
+      return fallbackTextures();
+    }
+  }
+  function buildTextures(maxAnisotropy = 4) {
+    const tex = (canvas, repeat, srgb = true) => toTexture(canvas, { repeat, srgb, aniso: maxAnisotropy });
+    const bark = barkCanvas();
+    const leaf = leafCanvas();
+    const wood = woodCanvas();
+    const cloth = clothCanvas();
+    const skin = skinCanvas();
+    const rock = rockCanvas();
+    const grass = grassCanvas();
+    const sand = sandCanvas();
+    const dirt = dirtCanvas();
+    return {
+      // цветные карты — для местности (там цвет берётся из текстуры)
+      grass: tex(grass, 1),
+      sand: tex(sand, 1),
+      rock: tex(rock, 1),
+      dirt: tex(dirt, 1),
+      // светлые detail-карты — для растений и предметов
+      bark: tex(detailize(bark, { lift: 0.5, contrast: 3.1, tint: 0.5 }), 1),
+      leaf: tex(detailize(leaf, { lift: 0.5, contrast: 2.1 }), 1),
+      wood: tex(detailize(wood), 1),
+      cloth: tex(detailize(cloth), 1),
+      skin: tex(detailize(skin, { lift: 0.35, contrast: 1.2, tint: 0.6 }), 1),
+      rockDetail: tex(detailize(rock, { lift: 0.5, contrast: 2.8 }), 1),
+      grassDetail: tex(detailize(grass, { lift: 0.55, contrast: 1.9, tint: 0.45 }), 1),
+      cloud: toTexture(cloudCanvas(), { repeat: 1, srgb: true, aniso: 1 }),
+      dot: toTexture(softDotCanvas(), { repeat: 1, srgb: false, aniso: 1 })
+    };
+  }
+
   // src/main.js
   var SAVE_KEY = "lastshore.save.v1";
   function emptyInventory() {
@@ -31078,8 +31999,10 @@ void main() {
       this.renderer.toneMappingExposure = 1.05;
       this.scene = new Scene();
       this.camera = new PerspectiveCamera(64, window.innerWidth / window.innerHeight, 0.25, 1400);
-      this.world = new World(this.scene);
-      this.sky = new Sky(this.scene, this.renderer);
+      const maxAniso = this.renderer.capabilities ? this.renderer.capabilities.getMaxAnisotropy() : 4;
+      this.textures = createTextures(Math.min(8, maxAniso || 4));
+      this.world = new World(this.scene, CONFIG.world.seed, this.textures);
+      this.sky = new Sky(this.scene, this.renderer, this.textures);
       this.player = new Player(this.scene);
       this.rain = new Rain(this.scene);
       this.resources = new Resources(this.scene, this.world);
@@ -31092,6 +32015,7 @@ void main() {
         collected: 0
       };
       this.selected = 0;
+      this.view = "third";
       this.attackCooldown = 0;
       this.holdingAttack = false;
       this.nearNode = null;
@@ -31327,6 +32251,9 @@ void main() {
           break;
         case "KeyF":
           this.placeCampfire();
+          break;
+        case "KeyV":
+          this.toggleView();
           break;
         case "F1":
           e.preventDefault();
@@ -31675,6 +32602,7 @@ void main() {
       this.scene.fog.near /= this.weatherFogMul;
       this.sky.skyUniforms.uTop.value.multiplyScalar(0.75 + this.weatherSunMul * 0.3);
       this.sky.skyUniforms.uBottom.value.multiplyScalar(0.8 + this.weatherSunMul * 0.2);
+      this.sky.cloudiness = this.weather === "clear" ? 0.55 : this.weather === "cloudy" ? 1 : 1.5;
       this.rain.setIntensity(this.rainIntensity);
       this.rain.update(dt, this.player.position);
       this.audio.setNight(skyInfo.night);
@@ -31798,6 +32726,7 @@ void main() {
           need: [this.state.health, this.state.thirst, this.state.hunger, this.state.warmth],
           inv: this.state.inventory,
           selected: this.selected,
+          view: this.view,
           campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
           collected: this.state.collected,
           weather: this.weather,
@@ -31836,6 +32765,7 @@ void main() {
       this.state.warmth = warmth;
       this.state.inventory = Object.assign(emptyInventory(), data.inv || {});
       this.selected = Math.max(0, Math.min(HOTBAR.length - 1, data.selected || 0));
+      this.view = data.view === "first" ? "first" : "third";
       this.state.collected = data.collected || 0;
       for (const f of data.campfires || []) {
         const fire = this.resources.addCampfire(f.x, f.z);
@@ -31846,6 +32776,13 @@ void main() {
       this.ui.renderBag(this.state.inventory);
       this.player.setEquipped(this.equippedId());
       this.ui.toast(`\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E: \u0434\u0435\u043D\u044C ${this.sky.day}, ${this.sky.clockString()}`);
+    }
+    /** Переключение «третье лицо / от первого лица» */
+    toggleView() {
+      this.view = this.view === "first" ? "third" : "first";
+      this.player.setViewMode(this.view, this.camera);
+      this.ui.toast(this.view === "first" ? "\u0412\u0438\u0434 \u043E\u0442 \u043F\u0435\u0440\u0432\u043E\u0433\u043E \u043B\u0438\u0446\u0430" : "\u0412\u0438\u0434 \u043E\u0442 \u0442\u0440\u0435\u0442\u044C\u0435\u0433\u043E \u043B\u0438\u0446\u0430");
+      this.audio.uiClick();
     }
     /** Панель диагностики: всё, что нужно для «не работает» */
     showDiag() {
