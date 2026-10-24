@@ -7,6 +7,9 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CONFIG, COLORS } from './config.js';
 import { createTerrainMaterial, createPlantMaterial, createStoneMaterial } from './terrain.js';
 import { fbm, ridged, makeRng, clamp, smoothstep } from './noise.js';
+import {
+  makePalmParts, makeTreeParts, makeBushParts, makeRockGeometry, makePickupGeometries,
+} from './models.js';
 
 const SIZE = CONFIG.world.size;
 const GRID = CONFIG.world.segments + 1; // 201 точка на сторону
@@ -51,116 +54,6 @@ function addPart(parts, geo, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
   geo.translate(x, y, z);
   parts.push(geo);
   return geo;
-}
-
-// ---------- модели растений (отдельными слоями: ствол / крона) ----------
-
-/**
- * Каждая модель возвращает набор слоёв: { bark: геометрия, leaf: геометрия }.
- * Так стволы получают кору, а кроны — листву, без склейки в один меш.
- */
-function makePalmParts(rng) {
-  const bark = [];
-  const leaf = [];
-
-  const h = 6.5 + rng() * 3.5;
-  const lean = (rng() - 0.5) * 0.35;
-  const trunk = new THREE.CylinderGeometry(0.16, 0.34, h, 8, 3);
-  // лёгкая «ребристость» ствола
-  addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0, 0, 0, lean * 0.35);
-
-  const topX = Math.sin(lean * 0.35) * h * 0.9;
-  const topY = h - 0.15;
-
-  for (let i = 0; i < 9; i++) {
-    const a = (i / 9) * Math.PI * 2 + rng() * 0.3;
-    const len = 2.8 + rng() * 1.8;
-    const frond = new THREE.ConeGeometry(0.6, len, 4, 2);
-    const geo = frond.clone();
-    geo.scale(1, 1, 0.24);
-    addPart(
-      leaf,
-      geo,
-      i % 2 ? COLORS.frond : COLORS.frondLight,
-      topX + Math.cos(a) * len * 0.42,
-      topY + 0.1 - 0.3,
-      Math.sin(a) * len * 0.42,
-      Math.PI / 2 - 0.5,
-      -a,
-      0
-    );
-  }
-  // кокосы
-  for (let i = 0; i < 3; i++) {
-    const a = rng() * Math.PI * 2;
-    addPart(leaf, new THREE.IcosahedronGeometry(0.22, 0), COLORS.coconut,
-      topX + Math.cos(a) * 0.3, topY - 0.4, Math.sin(a) * 0.3);
-  }
-
-  return {
-    bark: mergeGeometries(bark.map((g) => (g.index ? g.toNonIndexed() : g)), false),
-    leaf: mergeGeometries(leaf.map((g) => (g.index ? g.toNonIndexed() : g)), false),
-  };
-}
-
-function makeTreeParts(rng) {
-  const bark = [];
-  const leaf = [];
-
-  const h = 4.5 + rng() * 5.5;
-  const trunk = new THREE.CylinderGeometry(0.26, 0.6, h, 7, 3);
-  addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0);
-
-  // пара веток — силуэт живее
-  for (let i = 0; i < 2; i++) {
-    const a = rng() * Math.PI * 2;
-    const bl = 2 + rng() * 2;
-    const branch = new THREE.CylinderGeometry(0.08, 0.16, bl, 5, 1);
-    addPart(bark, branch, COLORS.trunk,
-      Math.cos(a) * bl * 0.35, h * (0.55 + rng() * 0.2), Math.sin(a) * bl * 0.35,
-      0, 0, Math.PI / 3);
-  }
-
-  // крона: компактная, начинается выше головы — иначе камера утопает в листве
-  const blobs = 4 + Math.floor(rng() * 3);
-  for (let i = 0; i < blobs; i++) {
-    const r = 1.2 + rng() * 1.15;
-    const a = rng() * Math.PI * 2;
-    const d = rng() * 1.1;
-    const geo = new THREE.IcosahedronGeometry(r, 1);
-    addPart(leaf, geo, i % 2 ? 0x6a9455 : 0x7ea863,
-      Math.cos(a) * d, h * 0.86 + r * 0.55 + rng() * 1.8, Math.sin(a) * d);
-  }
-
-  return {
-    bark: mergeGeometries(bark.map((g) => (g.index ? g.toNonIndexed() : g)), false),
-    leaf: mergeGeometries(leaf.map((g) => (g.index ? g.toNonIndexed() : g)), false),
-  };
-}
-
-function makeBushParts(rng, withBerries) {
-  const leaf = [];
-  const n = 4 + Math.floor(rng() * 3);
-  for (let i = 0; i < n; i++) {
-    const r = 0.4 + rng() * 0.45;
-    addPart(leaf, new THREE.IcosahedronGeometry(r, 1),
-      i % 2 ? COLORS.bush : 0x5f9150,
-      (rng() - 0.5) * 1.0, r * 0.7 + rng() * 0.25, (rng() - 0.5) * 1.0);
-  }
-  if (withBerries) {
-    for (let i = 0; i < 7; i++) {
-      addPart(leaf, new THREE.IcosahedronGeometry(0.1, 0), COLORS.berry,
-        (rng() - 0.5) * 1.2, 0.5 + rng() * 0.6, (rng() - 0.5) * 1.2);
-    }
-  }
-  return { leaf: mergeGeometries(leaf.map((g) => (g.index ? g.toNonIndexed() : g)), false) };
-}
-
-function makeRockGeometry(rng) {
-  const geo = new THREE.IcosahedronGeometry(1, 1);
-  jitterGeo(geo, 0.32, rng);
-  geo.scale(1, 0.72, 1);
-  return colorize(geo, COLORS.stone);
 }
 
 // ---------- мир ----------
@@ -571,13 +464,14 @@ export class World {
     if (this.textures) barkMat.color.setHex(0x9a8468);
     if (this.textures) leafMat.color.setHex(0xffffff);
     if (this.textures) grassMat.color.setHex(0xffffff);
-    if (this.textures) stoneMat.color.setHex(0x8d8880);
+    if (this.textures) stoneMat.color.setHex(0x9d978e);
 
     for (const m of [barkMat, leafMat, grassMat]) {
       if (m.userData && m.userData.uniforms) this.windMaterials.push(m);
     }
 
-    const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat };
+    const fruitMat = new THREE.MeshStandardMaterial({ color: 0xc23b52, roughness: 0.55, vertexColors: true });
+    const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat, fruit: fruitMat };
 
     /**
      * Ставит список объектов как InstancedMesh по слоям модели.
@@ -659,7 +553,7 @@ export class World {
       const height = 0.45 + (i % 3) * 0.16;
       const blade = new THREE.ConeGeometry(0.1, height, 3, 1);
       blade.translate((i - 2) * 0.13, height / 2, (i % 2 ? 0.1 : -0.08));
-      blades.push(colorize(blade, i % 2 ? 0xb6dd86 : 0x9ecd6f));
+      blades.push(colorize(blade, i % 2 ? 0x86b556 : 0x6f9b45));
     }
     const tuftGeo = mergeGeometries(blades, false);
     this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
@@ -683,20 +577,14 @@ export class World {
       berry: new THREE.MeshStandardMaterial({ color: 0xb9334a, roughness: 0.6 }),
     };
 
-    this.pickupGeos = {
-      wood: new THREE.CylinderGeometry(0.07, 0.09, 0.95, 5),
-      stone: new THREE.IcosahedronGeometry(0.3, 0),
-      coconut: new THREE.IcosahedronGeometry(0.24, 1),
-      fiber: new THREE.ConeGeometry(0.2, 0.7, 4),
-      berry: new THREE.IcosahedronGeometry(0.11, 0),
-    };
+    this.pickupGeos = makePickupGeometries();
 
     const kinds = [
       { kind: 'wood', name: 'Палка', geo: 'wood', mat: 'wood' },
       { kind: 'stone', name: 'Камень', geo: 'stone', mat: 'stone' },
       { kind: 'fiber', name: 'Волокно', geo: 'fiber', mat: 'fiber' },
       { kind: 'coconut', name: 'Кокос', geo: 'coconut', mat: 'coconut' },
-      { kind: 'berries', name: 'Ягоды', geo: 'berry', mat: 'berry' },
+      { kind: 'berries', name: 'Ягоды', geo: 'berries', mat: 'berry' },
     ];
     this.kindInfo = Object.fromEntries(kinds.map((k) => [k.kind, k]));
 

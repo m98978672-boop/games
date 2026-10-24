@@ -35,6 +35,20 @@ await shot('http://127.0.0.1:8081/last-shore/index.html', '../site/assets/last-s
     g.state.inventory.wood = 4;
     g.placeCampfire();
     g.player.refresh?.();
+    // зверь в кадре: обложка должна показывать, что на острове есть жизнь
+    const boar = g.mobs?.list.find((m) => m.type === 'boar');
+    if (boar) {
+      const fx = Math.sin(g.player.facing);
+      const fz = Math.cos(g.player.facing);
+      boar.x = g.player.position.x + fx * 6 - fz * 3;
+      boar.z = g.player.position.z + fz * 6 + fx * 3;
+      boar.group.visible = true;
+      boar.state = 'wander';
+      boar.timer = 8;
+      boar.targetX = boar.x;
+      boar.targetZ = boar.z;
+      boar.facing = g.player.facing + Math.PI / 2;
+    }
     document.getElementById('hud').style.opacity = '0.55';
   });
 }, 2600);
