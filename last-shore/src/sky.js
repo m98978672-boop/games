@@ -70,7 +70,7 @@ export class Sky {
     scene.add(this.moon.target);
 
     // --- заполняющий свет ---
-    this.hemi = new THREE.HemisphereLight(0xbcd8f0, 0x3d4a33, 0.85);
+    this.hemi = new THREE.HemisphereLight(0xc6e0f4, 0x6b7a52, 0.95);
     scene.add(this.hemi);
 
     this.ambient = new THREE.AmbientLight(0x334455, 0.25);
@@ -188,11 +188,11 @@ export class Sky {
     const moonDir = this.sunDir.clone().multiplyScalar(-1);
     this.moon.position.copy(playerPos).add(moonDir.multiplyScalar(100));
     this.moon.target.position.copy(playerPos);
-    this.moon.intensity = 0.42 * night;
+    this.moon.intensity = 1.15 * night;
 
-    this.hemi.intensity = 0.22 + 0.75 * lightUp;
+    this.hemi.intensity = 0.62 + 0.75 * lightUp;
     this.hemi.color.setHex(0x9fc6e8).lerp(new THREE.Color(0x2a3550), night);
-    this.ambient.intensity = 0.16 + 0.14 * (1 - night);
+    this.ambient.intensity = 0.34 + 0.22 * (1 - night);
 
     // солнце/луна на небе
     this.sunDisk.position.copy(this.sunDir).multiplyScalar(760);

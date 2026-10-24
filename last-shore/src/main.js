@@ -10,8 +10,16 @@ import { Player } from './player.js';
 import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Rain } from './effects.js';
+import { ITEMS, HOTBAR, BAG_ORDER, RECIPES } from './items.js';
+import { Resources, NODE_DEFS } from './nodes.js';
 
 const SAVE_KEY = 'lastshore.save.v1';
+
+function emptyInventory() {
+  const inv = {};
+  for (const id of Object.keys(ITEMS)) inv[id] = 0;
+  return inv;
+}
 
 const WEATHERS = {
   clear: { label: 'ясно', rain: 0, sun: 1.0, fog: 1.0, next: { clear: 0.45, cloudy: 0.4, rain: 0.15 } },
@@ -23,7 +31,7 @@ const WEATHERS = {
 class Game {
   constructor() {
     this.canvas = document.getElementById('scene');
-    this.ui = new UI();
+    this.ui = new UI(ITEMS, HOTBAR, BAG_ORDER);
     this.audio = new Audio();
 
     try {
@@ -44,7 +52,7 @@ class Game {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.setClearColor(0x9fc3d6, 1);
 
@@ -67,15 +75,21 @@ class Game {
     this.sky = new Sky(this.scene, this.renderer);
     this.player = new Player(this.scene);
     this.rain = new Rain(this.scene);
+    this.resources = new Resources(this.scene, this.world);
 
     this.state = {
       health: 100,
       thirst: 78,
       hunger: 72,
       warmth: 100,
-      inventory: { wood: 0, stone: 0, fiber: 0, coconut: 0, berries: 0 },
+      inventory: emptyInventory(),
       collected: 0,
     };
+    this.selected = 0;
+    this.attackCooldown = 0;
+    this.holdingAttack = false;
+    this.nearNode = null;
+    this.target = null;
 
     this.weather = 'clear';
     this.weatherTimer = 2.5;      // в игровых часах до смены погоды
@@ -103,8 +117,8 @@ class Game {
     this.buildHighlight();
     this.bindEvents();
 
-    this.updateHotbarUI();
-    this.ui.setCounts(this.state.inventory);
+    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.ui.renderBag(this.state.inventory);
 
     this.renderer.setAnimationLoop(() => this.frame());
   }
@@ -114,29 +128,79 @@ class Game {
   // ------------------------------------------------------------
 
   spawnPlayer() {
-    const R = (CONFIG.world.size / 2) * 0.94;
-    let best = null;
-    for (let i = 0; i < 900 && !best; i++) {
-      const angle = Math.PI / 2 + (i / 900) * Math.PI * 2 + Math.random() * 0.02;
-      for (let r = R; r > R * 0.35; r -= 2) {
+    const world = this.world;
+    const half = CONFIG.world.size / 2;
+
+    // 1) ищем пологий пляж с видом на воду и без деревьев вплотную
+    const candidates = [];
+    for (let i = 0; i < 2400; i++) {
+      const angle = (i / 2400) * Math.PI * 2;
+      for (let r = half * 1.02; r > half * 0.35; r -= 2) {
         const x = Math.cos(angle) * r;
         const z = Math.sin(angle) * r;
-        const h = this.world.heightAt(x, z);
-        if (h > 1.1 && h < 3.2 && this.world.slopeAt(x, z) < 0.4) {
-          best = { x, z };
-          break;
+        const h = world.heightAt(x, z);
+        if (h < 0.8 || h > 2.6) continue;
+        if (world.slopeAt(x, z) > 0.42) continue;
+
+        // куда смотрит море: ищем воду в 12-30 м
+        let seaX = 0;
+        let seaZ = 0;
+        let seaDist = 999;
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+          for (let d = 10; d < 34; d += 3) {
+            const hx = x + Math.cos(a) * d;
+            const hz = z + Math.sin(a) * d;
+            if (world.heightAt(hx, hz) < -0.5) {
+              if (d < seaDist) { seaDist = d; seaX = Math.cos(a); seaZ = Math.sin(a); }
+              break;
+            }
+          }
         }
+        if (seaDist > 30) continue;
+
+        // свободная площадка: 6 м без стволов
+        let clear = true;
+        for (const c of world.colliders) {
+          const dx = c.x - x;
+          const dz = c.z - z;
+          if (dx * dx + dz * dz < 36) { clear = false; break; }
+        }
+        // площадь пляжа — не крошечный пятачок
+        let sand = 0;
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+          const hh = world.heightAt(x + Math.cos(a) * 5, z + Math.sin(a) * 5);
+          if (hh > 0.5 && hh < 4) sand++;
+        }
+
+        candidates.push({ x, z, seaX, seaZ, seaDist, clear, sand, h });
+        break;
       }
     }
-    if (!best) best = { x: 4, z: 40 };
 
-    this.player.setPosition(best.x, best.z, this.world);
+    let best = null;
+    let bestScore = -Infinity;
+    for (const c of candidates) {
+      const score = (c.clear ? 6 : 0) + c.sand * 0.8 + (30 - Math.abs(c.seaDist - 18)) * 0.2;
+      if (score > bestScore) { bestScore = score; best = c; }
+    }
+
+    if (!best) {
+      for (let i = 0; i < 6000 && !best; i++) {
+        const x = (Math.random() - 0.5) * CONFIG.world.size * 0.7;
+        const z = (Math.random() - 0.5) * CONFIG.world.size * 0.7;
+        const h = world.heightAt(x, z);
+        if (h > 0.8 && h < 3.4 && world.slopeAt(x, z) < 0.55) best = { x, z, seaX: -x, seaZ: -z };
+      }
+    }
+    if (!best) best = { x: 4, z: 40, seaX: 0, seaZ: 1 };
+
+    this.player.setPosition(best.x, best.z, world);
     this.world.spawnStarterKit(this.player.position);
-    const dx = -best.x;
-    const dz = -best.z;
-    this.player.yaw = Math.atan2(-dx, -dz);
+    this.player.yaw = Math.atan2(-best.seaX, -best.seaZ);
     this.player.facing = this.player.yaw + Math.PI;
-    this.player.applyCamera(this.camera, this.world, 1);
+    this.player.applyCamera(this.camera, world, 1);
+    this.spawnPoint = { x: best.x, z: best.z };
+    console.log(`[LAST SHORE] высадка: ${best.x.toFixed(1)}, ${best.z.toFixed(1)} · море в ${best.seaDist | 0} м · пляж ${best.sand}/12`);
   }
 
   buildHighlight() {
@@ -158,12 +222,10 @@ class Game {
   bindEvents() {
     window.addEventListener('resize', () => this.onResize());
 
-    document.querySelectorAll('.slot').forEach((slot) => {
-      slot.addEventListener('click', () => {
-        const key = slot.dataset.slot === '0' ? 'coconut' : 'berries';
-        this.consume(key);
-      });
-    });
+    this.ui.bindHotbar(
+      (index) => this.selectSlot(index),
+      () => this.useSelected()
+    );
 
     window.addEventListener('keydown', (e) => this.onKeyDown(e));
     window.addEventListener('keyup', (e) => this.onKeyUp(e));
@@ -174,9 +236,13 @@ class Game {
         this.dragging = true;
         this.tryLock();
       }
-      if (e.button === 0) this.audio.resume();
+      if (e.button === 0) {
+        this.audio.resume();
+        this.holdingAttack = true;
+        this.attack();
+      }
     });
-    window.addEventListener('mouseup', () => { this.dragging = false; });
+    window.addEventListener('mouseup', () => { this.dragging = false; this.holdingAttack = false; });
 
     window.addEventListener('mousemove', (e) => {
       if (!this.running || this.paused) return;
@@ -240,7 +306,7 @@ class Game {
     const code = e.code;
 
     if (code === 'Escape') {
-      if (this.ui.isInventoryOpen()) { this.ui.toggleInventory(false); return; }
+      if (this.ui.isPanelOpen()) { this.ui.closePanels(); return; }
       if (this.running && !this.paused) this.pause();
       return;
     }
@@ -254,14 +320,25 @@ class Game {
       case 'KeyD': case 'ArrowRight': this.input.right = true; break;
       case 'ShiftLeft': case 'ShiftRight': this.input.sprint = true; break;
       case 'Space': this.input.jump = true; e.preventDefault(); break;
-      case 'KeyE': this.pickup(); break;
-      case 'Digit1': this.consume('coconut'); break;
-      case 'Digit2': this.consume('berries'); break;
+      case 'KeyE': this.interact(); break;
+      case 'KeyF': this.placeCampfire(); break;
+      case 'KeyC': {
+        e.preventDefault();
+        this.ui.toggleCraft(undefined, RECIPES, this.state.inventory, (id) => this.craft(id));
+        break;
+      }
       case 'KeyI': case 'Tab':
         e.preventDefault();
-        this.ui.toggleInventory();
-        this.ui.setInventory(this.state.inventory);
+        this.ui.toggleBag(undefined);
+        this.ui.renderBag(this.state.inventory);
         break;
+      case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4':
+      case 'Digit5': case 'Digit6': case 'Digit7': case 'Digit8': {
+        const n = Number(code.replace('Digit', '')) - 1;
+        this.selectSlot(n);
+        this.useSelected();
+        break;
+      }
     }
   }
 
@@ -297,7 +374,9 @@ class Game {
 
     this.ui.hideScreens();
     this.ui.setBars(this.readBars());
-    this.ui.setInventory(this.state.inventory);
+    this.ui.renderBag(this.state.inventory);
+    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.player.setEquipped(this.equippedId());
     this.running = true;
     this.paused = false;
     this.dead = false;
@@ -327,6 +406,10 @@ class Game {
     this.audio.resume();
   }
 
+  nodeDef(node) {
+    return NODE_DEFS[node.type] || { label: 'Объект', need: null };
+  }
+
   readBars() {
     return {
       health: this.state.health,
@@ -341,40 +424,222 @@ class Game {
   //  Действия
   // ------------------------------------------------------------
 
+  equippedId() {
+    const id = HOTBAR[this.selected];
+    if (!id) return null;
+    const item = ITEMS[id];
+    if (item.kind === 'tool' || item.kind === 'placeable') {
+      return (this.state.inventory[id] || 0) > 0 ? id : null;
+    }
+    return null;
+  }
+
+  equippedTool() {
+    const id = this.equippedId();
+    return id && ITEMS[id].tool ? ITEMS[id].tool : null;
+  }
+
+  selectSlot(index) {
+    if (index < 0 || index >= HOTBAR.length) return;
+    this.selected = index;
+    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.player.setEquipped(this.equippedId());
+  }
+
+  addItem(id, count = 1) {
+    if (!ITEMS[id]) return;
+    this.state.inventory[id] = (this.state.inventory[id] || 0) + count;
+    this.state.collected += count;
+    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.ui.renderBag(this.state.inventory);
+    if (this.ui.el.craft && !this.ui.el.craft.classList.contains('hidden')) {
+      this.ui._lastCraftSig = '';
+      this.ui.renderCraft(RECIPES, this.state.inventory, (rid) => this.craft(rid));
+    }
+  }
+
+  takeItem(id, count = 1) {
+    if ((this.state.inventory[id] || 0) < count) return false;
+    this.state.inventory[id] -= count;
+    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.ui.renderBag(this.state.inventory);
+    this.ui._lastCraftSig = '';
+    return true;
+  }
+
   pickup() {
     const p = this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
-    if (!p) return;
-    this.state.inventory[p.kind] = (this.state.inventory[p.kind] || 0) + 1;
-    this.state.collected++;
+    if (!p) return false;
+    this.addItem(p.kind, 1);
     this.world.removePickup(p);
     this.audio.pickup();
     this.ui.toast(`+ ${p.name}`);
-    this.ui.setCounts(this.state.inventory);
-    this.ui.setInventory(this.state.inventory);
     this.highlight.visible = false;
+    return true;
+  }
+
+  /** E — универсальное действие: подобрать, попить, подложить дров */
+  interact() {
+    if (!this.running || this.paused || this.dead) return;
+
+    if (this.pickup()) return;
+
+    const target = this.resources.nearest(this.player.position, 4.6);
+    if (!target) {
+      this.ui.toast('Рядом нечего взять', true);
+      return;
+    }
+
+    if (target.kind === 'spring') {
+      const before = this.state.thirst;
+      this.state.thirst = Math.min(100, before + 30);
+      this.audio.drink();
+      this.ui.toast(before > 99 ? 'Ты не хочешь пить' : 'Родник: +30 жажды');
+      return;
+    }
+
+    if (target.kind === 'campfire') {
+      if ((this.state.inventory.wood || 0) <= 0) {
+        this.ui.toast('Нужны палки для костра', true);
+        return;
+      }
+      this.takeItem('wood', 1);
+      this.resources.addFuel(target.fire, 45);
+      this.audio.eat();
+      this.ui.toast(`Костёр: +45 с огня`);
+      return;
+    }
+
+    if (target.kind === 'node') {
+      this.ui.toast('Добывай ударами: зажми левую кнопку мыши', true);
+    }
+  }
+
+  /** ЛКМ: удар по дереву/камню/кусту или в воздух */
+  attack() {
+    if (!this.running || this.paused || this.dead) return;
+    if (this.attackCooldown > 0) return;
+    this.attackCooldown = 0.62;
+
+    this.player.swing();
+    this.audio.step('grass', false);
+
+    const target = this.resources.nearest(this.player.position, 3.8);
+    if (!target || target.kind !== 'node') return;
+
+    const node = target.node;
+    const tool = this.equippedTool();
+    const def = this.resources.strike(node, tool);
+
+    // не тот инструмент — предупреждаем, но добыча всё равно идёт медленно
+    const power = tool && tool[this.nodeDef(node).tool ?? 'chop'] !== undefined
+      ? tool[this.nodeDef(node).tool ?? 'chop']
+      : 0.35;
+    if (def.need && (!tool || power < 1)) {
+      this.ui.toast(`Нужен ${def.need}: так почти не выходит`, true);
+    }
+
+    if (def.depleted) {
+      const parts = [];
+      for (const [id, n] of Object.entries(def.drops)) {
+        this.addItem(id, n);
+        parts.push(`${ITEMS[id].name} +${n}`);
+      }
+      this.ui.toast(parts.length ? `${node.label} добыт: ${parts.join(', ')}` : `${node.label} пуст`);
+      this.audio.pickup();
+      if (this.nearNode === node) this.nearNode = null;
+    } else {
+      this.audio.step('rock', true);
+    }
+  }
+
+  craft(recipeId) {
+    const recipe = RECIPES.find((r) => r.id === recipeId);
+    if (!recipe) return;
+    const inv = this.state.inventory;
+
+    for (const [id, need] of Object.entries(recipe.need)) {
+      if ((inv[id] || 0) < need) {
+        this.ui.toast(`Не хватает: ${ITEMS[id].name}`, true);
+        return;
+      }
+    }
+    for (const [id, need] of Object.entries(recipe.need)) this.takeItem(id, need);
+    for (const [id, give] of Object.entries(recipe.gives)) this.addItem(id, give);
+
+    this.audio.pickup();
+    this.ui.toast(`Сделано: ${recipe.name}`);
+    this.ui._lastCraftSig = '';
+    this.ui.renderCraft(RECIPES, inv, (rid) => this.craft(rid));
+
+    // если сделали инструмент — сразу берём его в руку
+    if (ITEMS[recipeId]?.kind === 'tool') {
+      const idx = HOTBAR.indexOf(recipeId);
+      if (idx >= 0) this.selectSlot(idx);
+    }
+  }
+
+  /** F — поставить костёр из набора */
+  placeCampfire() {
+    if (!this.running || this.paused || this.dead) return;
+    if ((this.state.inventory.campfireKit || 0) <= 0) {
+      this.ui.toast('Сначала сделай костровое место (C)', true);
+      return;
+    }
+    const p = this.player.position;
+    const x = p.x + Math.sin(this.player.facing) * 1.9;
+    const z = p.z + Math.cos(this.player.facing) * 1.9;
+    const h = this.world.heightAt(x, z);
+    if (h < 0.45) {
+      this.ui.toast('В воде костёр не поставить', true);
+      return;
+    }
+    this.takeItem('campfireKit', 1);
+    const fire = this.resources.addCampfire(x, z);
+    this.resources.addFuel(fire, 90);
+    this.audio.pickup();
+    this.ui.toast('Костёр горит · E — подложить палки');
+    if (this.equippedId() === 'campfireKit' && (this.state.inventory.campfireKit || 0) === 0) {
+      this.player.setEquipped(null);
+    }
+  }
+
+  /** Использовать выбранный слот: еда/питьё — съесть, инструмент — просто держим */
+  useSelected() {
+    const id = HOTBAR[this.selected];
+    if (!id) return;
+    const item = ITEMS[id];
+    if (item.kind === 'food') this.consume(id);
+    else if (this.equippedId() !== id) this.selectSlot(this.selected);
   }
 
   consume(kind) {
     if (!this.running || this.paused || this.dead) return;
     const inv = this.state.inventory;
     if ((inv[kind] || 0) <= 0) {
-      this.ui.toast(kind === 'coconut' ? 'Кокосов нет' : 'Ягод нет', true);
+      this.ui.toast(`${ITEMS[kind].name}: нет`, true);
       return;
     }
-    inv[kind]--;
+    const effects = {
+      coconut: { thirst: 22, hunger: 6, text: 'Кокос: +22 жажды, +6 еды' },
+      berries: { hunger: 12, thirst: 2, text: 'Горсть ягод: +12 еды' },
+      cookedMeat: { hunger: 34, thirst: -4, text: 'Жареное мясо: +34 еды' },
+      rawMeat: { hunger: 16, thirst: -2, text: 'Сырое мясо: +16 еды, противно' },
+      cookedWater: { thirst: 38, hunger: 0, text: 'Кипячёная вода: +38 жажды' },
+    };
+    const ef = effects[kind];
+    if (!ef) return;
 
-    if (kind === 'coconut') {
-      this.state.thirst = Math.min(100, this.state.thirst + CONFIG.food.coconut.thirst);
-      this.state.hunger = Math.min(100, this.state.hunger + CONFIG.food.coconut.hunger);
-      this.audio.drink();
-      this.ui.toast('Кокос: +20 жажды, +6 еды');
-    } else {
-      this.state.hunger = Math.min(100, this.state.hunger + CONFIG.food.berries.hunger);
-      this.audio.eat();
-      this.ui.toast('Горсть ягод: +12 еды');
+    this.takeItem(kind, 1);
+    this.state.thirst = Math.max(0, Math.min(100, this.state.thirst + (ef.thirst || 0)));
+    this.state.hunger = Math.max(0, Math.min(100, this.state.hunger + (ef.hunger || 0)));
+    if (kind === 'rawMeat' && Math.random() < 0.45) {
+      this.state.health = Math.max(1, this.state.health - 6);
+      this.ui.toast('Сырое мясо — живот скрутило', true);
     }
-    this.ui.setCounts(inv);
-    this.ui.setInventory(inv);
+    if (ef.thirst > 0) this.audio.drink();
+    else this.audio.eat();
+    this.ui.toast(ef.text);
   }
 
   // ------------------------------------------------------------
@@ -431,17 +696,48 @@ class Game {
 
     this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
 
-    // --- подсветка ближайшего предмета ---
+    // --- ресурсы и костры ---
+    this.resources.update(dt);
+    this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+    if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
+
+    const fireWarm = this.resources.fireWarmth(this.player.position);
+    this.nearFire = fireWarm.fire;
+    this.ui.setFuel(fireWarm.warmth > 0.05 && fireWarm.fire ? fireWarm.fire : null);
+
+    // --- подсветка цели и подсказка ---
     this.nearest = this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
+    const nodeTarget = this.resources.nearest(this.player.position, 3.9);
+    let marker = null;
+
     if (this.nearest) {
-      this.highlight.visible = true;
-      const p = this.nearest.mesh.position;
-      this.highlight.position.set(p.x, this.world.heightAt(p.x, p.z) + 0.06, p.z);
-      this.highlight.material.opacity = 0.6 + Math.sin(performance.now() * 0.005) * 0.25;
+      marker = this.nearest.mesh.position;
       this.ui.setPrompt(`<b>E</b> — подобрать ${this.nearest.name.toLowerCase()}`);
+    } else if (nodeTarget && nodeTarget.kind === 'node') {
+      const def = this.nodeDef(nodeTarget.node);
+      marker = new THREE.Vector3(nodeTarget.node.x, nodeTarget.node.y + 0.1, nodeTarget.node.z);
+      const toolOk = !def.need || this.equippedTool();
+      this.ui.setPrompt(
+        `<b>ЛКМ</b> — ${def.label.toLowerCase()}${def.need ? ` (нужен ${def.need})` : ''}` +
+        (toolOk ? '' : ' · <span class="prompt-warn">медленно</span>')
+      );
+    } else if (nodeTarget && nodeTarget.kind === 'campfire') {
+      marker = new THREE.Vector3(nodeTarget.fire.x, nodeTarget.fire.y + 0.1, nodeTarget.fire.z);
+      const fuelPct = Math.round((nodeTarget.fire.fuel / nodeTarget.fire.maxFuel) * 100);
+      this.ui.setPrompt(`<b>E</b> — подложить палки (огонь ${fuelPct}%)`);
+    } else if (nodeTarget && nodeTarget.kind === 'spring') {
+      marker = new THREE.Vector3(nodeTarget.spring.x, nodeTarget.spring.y + 0.1, nodeTarget.spring.z);
+      this.ui.setPrompt('<b>E</b> — попить из родника');
+    } else {
+      this.ui.setPrompt(null);
+    }
+
+    if (marker) {
+      this.highlight.visible = true;
+      this.highlight.position.set(marker.x, this.world.heightAt(marker.x, marker.z) + 0.06, marker.z);
+      this.highlight.material.opacity = 0.55 + Math.sin(performance.now() * 0.005) * 0.25;
     } else {
       this.highlight.visible = false;
-      this.ui.setPrompt(null);
     }
 
     // --- потребности ---
@@ -452,7 +748,8 @@ class Game {
     state.thirst = Math.max(0, state.thirst - CONFIG.needs.thirstDrain * moveMul * wetMul * dt);
     state.hunger = Math.max(0, state.hunger - CONFIG.needs.hungerDrain * moveMul * wetMul * dt);
 
-    const warmthTarget = Math.max(26, 100 - skyInfo.night * 42 - this.rainIntensity * 26);
+    let warmthTarget = Math.max(26, 100 - skyInfo.night * 42 - this.rainIntensity * 26);
+    if (fireWarm.warmth > 0) warmthTarget = Math.max(warmthTarget, 60 + fireWarm.warmth * 45);
     const dw = warmthTarget - state.warmth;
     state.warmth = Math.max(0, Math.min(100, state.warmth + Math.sign(dw) * Math.min(Math.abs(dw), dt * 3.4)));
 
@@ -495,7 +792,7 @@ class Game {
       weather: WEATHERS[this.weather].label,
     });
 
-    if (this.ui.isInventoryOpen()) this.ui.setInventory(state.inventory);
+    if (this.ui.isPanelOpen()) this.ui.renderBag(state.inventory);
 
     // --- автосейв ---
     this.saveTimer += dt;
@@ -532,6 +829,8 @@ class Game {
         facing: this.player.facing,
         need: [this.state.health, this.state.thirst, this.state.hunger, this.state.warmth],
         inv: this.state.inventory,
+        selected: this.selected,
+        campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
         collected: this.state.collected,
         weather: this.weather,
         savedAt: Date.now(),
@@ -569,20 +868,24 @@ class Game {
     this.state.thirst = thirst;
     this.state.hunger = hunger;
     this.state.warmth = warmth;
-    this.state.inventory = Object.assign({ wood: 0, stone: 0, fiber: 0, coconut: 0, berries: 0 }, data.inv || {});
+    this.state.inventory = Object.assign(emptyInventory(), data.inv || {});
+    this.selected = Math.max(0, Math.min(HOTBAR.length - 1, data.selected || 0));
     this.state.collected = data.collected || 0;
+
+    for (const f of data.campfires || []) {
+      const fire = this.resources.addCampfire(f.x, f.z);
+      fire.fuel = Math.max(0, Math.min(fire.maxFuel, f.fuel || 0));
+    }
     this.player.applyCamera(this.camera, this.world, 1);
-    this.ui.setCounts(this.state.inventory);
+    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.ui.renderBag(this.state.inventory);
+    this.player.setEquipped(this.equippedId());
     this.ui.toast(`Загружено: день ${this.sky.day}, ${this.sky.clockString()}`);
   }
 
   // ------------------------------------------------------------
   //  Цикл
   // ------------------------------------------------------------
-
-  updateHotbarUI() {
-    this.ui.setCounts(this.state.inventory);
-  }
 
   frame() {
     const now = performance.now();

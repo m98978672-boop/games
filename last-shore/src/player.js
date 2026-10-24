@@ -71,15 +71,15 @@ export class Player {
 
     // руки (с шарниром в плече)
     this.armL = new THREE.Group();
-    this.armL.position.set(-0.33, 1.42, 0);
-    const armMeshL = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.56, 0.16), skinMat);
-    armMeshL.position.y = -0.28;
+    this.armL.position.set(-0.295, 1.44, 0);
+    const armMeshL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.6, 0.18), skinMat);
+    armMeshL.position.y = -0.3;
     armMeshL.castShadow = true;
     this.armL.add(armMeshL);
     g.add(this.armL);
 
     this.armR = new THREE.Group();
-    this.armR.position.set(0.33, 1.42, 0);
+    this.armR.position.set(0.295, 1.44, 0);
     const armMeshR = armMeshL.clone();
     this.armR.add(armMeshR);
     g.add(this.armR);
@@ -99,8 +99,81 @@ export class Player {
     this.legR.add(legMeshR);
     g.add(this.legR);
 
+    // --- предмет в правой руке ---
+    this.handSlot = new THREE.Group();
+    this.handSlot.position.set(0, -0.5, 0.06);
+    this.handSlot.rotation.x = 0.25;
+    this.armR.add(this.handSlot);
+    this.equippedId = null;
+    this.equippedMesh = null;
+
+    this.swingPhase = -1;      // -1 — покой, 0..1 — замах
+    this.swingSpeed = 3.4;
+
     this.model = g;
     this.scene.add(g);
+  }
+
+  /** Что держим в руке. Модели простые: палка + наконечник/лезвие. */
+  setEquipped(itemId) {
+    if (this.equippedId === itemId) return;
+    this.equippedId = itemId;
+    if (this.equippedMesh) {
+      this.handSlot.remove(this.equippedMesh);
+      this.equippedMesh.traverse((o) => { o.geometry?.dispose?.(); });
+      this.equippedMesh = null;
+    }
+    if (!itemId) return;
+
+    const group = new THREE.Group();
+    const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.95, flatShading: true });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb9c0c8, roughness: 0.6, flatShading: true });
+
+    const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.95, 5), woodMat);
+    stick.rotation.x = Math.PI / 2.4;
+    stick.position.set(0, 0, 0.28);
+    stick.castShadow = true;
+    group.add(stick);
+
+    if (itemId === 'knife' || itemId === 'spear' || itemId === 'axe' || itemId === 'pickaxe') {
+      const head = new THREE.Mesh(
+        itemId === 'spear'
+          ? new THREE.ConeGeometry(0.06, 0.34, 4)
+          : new THREE.BoxGeometry(0.06, itemId === 'axe' ? 0.26 : 0.2, itemId === 'pickaxe' ? 0.3 : 0.12),
+        stoneMat
+      );
+      head.position.set(0, 0.12, itemId === 'spear' ? 0.86 : 0.6);
+      head.rotation.x = itemId === 'spear' ? 0 : 0.3;
+      head.castShadow = true;
+      group.add(head);
+    }
+
+    if (itemId === 'torch') {
+      const flame = new THREE.Mesh(
+        new THREE.ConeGeometry(0.09, 0.26, 5),
+        new THREE.MeshBasicMaterial({ color: 0xffcf70 })
+      );
+      flame.position.set(0, 0.12, 0.78);
+      group.add(flame);
+      const light = new THREE.PointLight(0xffb35c, 1.7, 11, 2);
+      light.position.set(0, 0.3, 0.6);
+      group.add(light);
+    }
+
+    if (itemId === 'campfireKit') {
+      group.clear();
+      const stones = new THREE.Mesh(new THREE.TorusGeometry(0.24, 0.07, 5, 8), stoneMat);
+      stones.rotation.x = Math.PI / 2;
+      group.add(stones);
+    }
+
+    this.equippedMesh = group;
+    this.handSlot.add(group);
+  }
+
+  /** Запустить замах (визуально) */
+  swing() {
+    if (this.swingPhase < 0) this.swingPhase = 0;
   }
 
   setPosition(x, z, world) {
@@ -218,7 +291,19 @@ export class Player {
     this.legL.rotation.x = swing;
     this.legR.rotation.x = -swing;
     this.armL.rotation.x = -swing * 0.8;
-    this.armR.rotation.x = swing * 0.8;
+
+    // замах рукой с инструментом
+    let swingArm = swing * 0.8;
+    if (this.swingPhase >= 0) {
+      this.swingPhase += dt * this.swingSpeed;
+      if (this.swingPhase >= 1) this.swingPhase = -1;
+      else {
+        const p = this.swingPhase;
+        const arc = Math.sin(p * Math.PI);
+        swingArm = -1.75 * arc;
+      }
+    }
+    this.armR.rotation.x = swingArm;
     this.model.position.copy(this.position);
     if (inWater) this.model.position.y -= this.wading * 0.55;
     this.model.rotation.y = this.facing;

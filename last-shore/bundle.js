@@ -13433,6 +13433,69 @@
       return new _BoxGeometry(data.width, data.height, data.depth, data.widthSegments, data.heightSegments, data.depthSegments);
     }
   };
+  var CircleGeometry = class _CircleGeometry extends BufferGeometry {
+    /**
+     * Constructs a new circle geometry.
+     *
+     * @param {number} [radius=1] - Radius of the circle.
+     * @param {number} [segments=32] - Number of segments (triangles), minimum = `3`.
+     * @param {number} [thetaStart=0] - Start angle for first segment in radians.
+     * @param {number} [thetaLength=Math.PI*2] - The central angle, often called theta,
+     * of the circular sector in radians. The default value results in a complete circle.
+     */
+    constructor(radius = 1, segments = 32, thetaStart = 0, thetaLength = Math.PI * 2) {
+      super();
+      this.type = "CircleGeometry";
+      this.parameters = {
+        radius,
+        segments,
+        thetaStart,
+        thetaLength
+      };
+      segments = Math.max(3, segments);
+      const indices = [];
+      const vertices = [];
+      const normals = [];
+      const uvs = [];
+      const vertex2 = new Vector3();
+      const uv = new Vector2();
+      vertices.push(0, 0, 0);
+      normals.push(0, 0, 1);
+      uvs.push(0.5, 0.5);
+      for (let s = 0, i = 3; s <= segments; s++, i += 3) {
+        const segment = thetaStart + s / segments * thetaLength;
+        vertex2.x = radius * Math.cos(segment);
+        vertex2.y = radius * Math.sin(segment);
+        vertices.push(vertex2.x, vertex2.y, vertex2.z);
+        normals.push(0, 0, 1);
+        uv.x = (vertices[i] / radius + 1) / 2;
+        uv.y = (vertices[i + 1] / radius + 1) / 2;
+        uvs.push(uv.x, uv.y);
+      }
+      for (let i = 1; i <= segments; i++) {
+        indices.push(i, i + 1, 0);
+      }
+      this.setIndex(indices);
+      this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+      this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+      this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    }
+    copy(source) {
+      super.copy(source);
+      this.parameters = Object.assign({}, source.parameters);
+      return this;
+    }
+    /**
+     * Factory method for creating an instance of this class from the given
+     * JSON object.
+     *
+     * @param {Object} data - A JSON object representing the serialized geometry.
+     * @return {CircleGeometry} A new instance.
+     */
+    static fromJSON(data) {
+      return new _CircleGeometry(data.radius, data.segments, data.thetaStart, data.thetaLength);
+    }
+  };
   var CylinderGeometry = class _CylinderGeometry extends BufferGeometry {
     /**
      * Constructs a new cylinder geometry.
@@ -14160,6 +14223,86 @@
      */
     static fromJSON(data) {
       return new _SphereGeometry(data.radius, data.widthSegments, data.heightSegments, data.phiStart, data.phiLength, data.thetaStart, data.thetaLength);
+    }
+  };
+  var TorusGeometry = class _TorusGeometry extends BufferGeometry {
+    /**
+     * Constructs a new torus geometry.
+     *
+     * @param {number} [radius=1] - Radius of the torus, from the center of the torus to the center of the tube.
+     * @param {number} [tube=0.4] - Radius of the tube. Must be smaller than `radius`.
+     * @param {number} [radialSegments=12] - The number of radial segments.
+     * @param {number} [tubularSegments=48] - The number of tubular segments.
+     * @param {number} [arc=Math.PI*2] - Central angle in radians.
+     * @param {number} [thetaStart=0] - Start of the tubular sweep in radians.
+     * @param {number} [thetaLength=Math.PI*2] - Length of the tubular sweep in radians.
+     */
+    constructor(radius = 1, tube = 0.4, radialSegments = 12, tubularSegments = 48, arc = Math.PI * 2, thetaStart = 0, thetaLength = Math.PI * 2) {
+      super();
+      this.type = "TorusGeometry";
+      this.parameters = {
+        radius,
+        tube,
+        radialSegments,
+        tubularSegments,
+        arc,
+        thetaStart,
+        thetaLength
+      };
+      radialSegments = Math.floor(radialSegments);
+      tubularSegments = Math.floor(tubularSegments);
+      const indices = [];
+      const vertices = [];
+      const normals = [];
+      const uvs = [];
+      const center = new Vector3();
+      const vertex2 = new Vector3();
+      const normal = new Vector3();
+      for (let j = 0; j <= radialSegments; j++) {
+        const v = thetaStart + j / radialSegments * thetaLength;
+        for (let i = 0; i <= tubularSegments; i++) {
+          const u = i / tubularSegments * arc;
+          vertex2.x = (radius + tube * Math.cos(v)) * Math.cos(u);
+          vertex2.y = (radius + tube * Math.cos(v)) * Math.sin(u);
+          vertex2.z = tube * Math.sin(v);
+          vertices.push(vertex2.x, vertex2.y, vertex2.z);
+          center.x = radius * Math.cos(u);
+          center.y = radius * Math.sin(u);
+          normal.subVectors(vertex2, center).normalize();
+          normals.push(normal.x, normal.y, normal.z);
+          uvs.push(i / tubularSegments);
+          uvs.push(j / radialSegments);
+        }
+      }
+      for (let j = 1; j <= radialSegments; j++) {
+        for (let i = 1; i <= tubularSegments; i++) {
+          const a = (tubularSegments + 1) * j + i - 1;
+          const b = (tubularSegments + 1) * (j - 1) + i - 1;
+          const c = (tubularSegments + 1) * (j - 1) + i;
+          const d = (tubularSegments + 1) * j + i;
+          indices.push(a, b, d);
+          indices.push(b, c, d);
+        }
+      }
+      this.setIndex(indices);
+      this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+      this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+      this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    }
+    copy(source) {
+      super.copy(source);
+      this.parameters = Object.assign({}, source.parameters);
+      return this;
+    }
+    /**
+     * Factory method for creating an instance of this class from the given
+     * JSON object.
+     *
+     * @param {Object} data - A JSON object representing the serialized geometry.
+     * @return {TorusGeometry} A new instance.
+     */
+    static fromJSON(data) {
+      return new _TorusGeometry(data.radius, data.tube, data.radialSegments, data.tubularSegments, data.arc, data.thetaStart, data.thetaLength);
     }
   };
   function cloneUniforms(src) {
@@ -16135,6 +16278,63 @@
       if (this.view !== null) data.object.view = Object.assign({}, this.view);
       data.object.filmGauge = this.filmGauge;
       data.object.filmOffset = this.filmOffset;
+      return data;
+    }
+  };
+  var PointLightShadow = class extends LightShadow {
+    /**
+     * Constructs a new point light shadow.
+     */
+    constructor() {
+      super(new PerspectiveCamera(90, 1, 0.5, 500));
+      this.isPointLightShadow = true;
+    }
+  };
+  var PointLight = class extends Light {
+    /**
+     * Constructs a new point light.
+     *
+     * @param {(number|Color|string)} [color=0xffffff] - The light's color.
+     * @param {number} [intensity=1] - The light's strength/intensity measured in candela (cd).
+     * @param {number} [distance=0] - Maximum range of the light. `0` means no limit.
+     * @param {number} [decay=2] - The amount the light dims along the distance of the light.
+     */
+    constructor(color, intensity, distance = 0, decay = 2) {
+      super(color, intensity);
+      this.isPointLight = true;
+      this.type = "PointLight";
+      this.distance = distance;
+      this.decay = decay;
+      this.shadow = new PointLightShadow();
+    }
+    /**
+     * The light's power. Power is the luminous power of the light measured in lumens (lm).
+     * Changing the power will also change the light's intensity.
+     *
+     * @type {number}
+     */
+    get power() {
+      return this.intensity * 4 * Math.PI;
+    }
+    set power(power) {
+      this.intensity = power / (4 * Math.PI);
+    }
+    dispose() {
+      super.dispose();
+      this.shadow.dispose();
+    }
+    copy(source, recursive) {
+      super.copy(source, recursive);
+      this.distance = source.distance;
+      this.decay = source.decay;
+      this.shadow = source.shadow.clone();
+      return this;
+    }
+    toJSON(meta) {
+      const data = super.toJSON(meta);
+      data.object.distance = this.distance;
+      data.object.decay = this.decay;
+      data.object.shadow = this.shadow.toJSON();
       return data;
     }
   };
@@ -28637,10 +28837,10 @@ void main() {
     }
   };
   var COLORS = {
-    sand: 14206095,
-    sandWet: 12626040,
-    grass: 7313994,
-    jungle: 4220474,
+    sand: 14666645,
+    sandWet: 13086851,
+    grass: 8694613,
+    jungle: 5143107,
     rock: 9143416,
     rockDark: 7169628,
     snow: 14673636,
@@ -29073,7 +29273,7 @@ void main() {
       const c = new Color();
       if (h < 0.35) {
         c.setHex(COLORS.sandWet);
-      } else if (h < 1.55 + moisture * 0.3) {
+      } else if (h < 2.15 + moisture * 0.45) {
         c.setHex(COLORS.sand);
       } else if (slope > 0.85 || h > 19) {
         c.setHex(slope > 1.2 ? COLORS.rockDark : COLORS.rock);
@@ -29082,7 +29282,9 @@ void main() {
       } else {
         const grass = new Color(COLORS.grass);
         const jungle = new Color(COLORS.jungle);
-        c.copy(grass).lerp(jungle, clamp2(moisture * 1.25, 0, 1));
+        c.copy(grass).lerp(jungle, clamp2((moisture - 0.25) * 1.05, 0, 1));
+        const dry = fbm(x * 0.021 + 60, z * 0.021 - 12, 3, this.seed + 91);
+        if (dry > 0.58) c.lerp(new Color(11708261), (dry - 0.58) * 1.6);
         const n = fbm(x * 0.09, z * 0.09, 2, this.seed + 55);
         c.offsetHSL(0, 0, (n - 0.5) * 0.06);
         if (slope > 0.6) c.lerp(new Color(COLORS.rock), smoothstep2(0.6, 0.9, slope) * 0.7);
@@ -29267,7 +29469,7 @@ void main() {
         if (h < 1.4 || h > 15) continue;
         if (this.slopeAt(x, z) > 0.85) continue;
         tufts.push({ x, z, h, s: 0.6 + rng() * 0.9, rot: rng() * Math.PI * 2 });
-        if (tufts.length >= 4200) break;
+        if (tufts.length >= 2600) break;
       }
       const plantMat = new MeshStandardMaterial({
         vertexColors: true,
@@ -29291,7 +29493,12 @@ void main() {
             const s = (_a = it.s) != null ? _a : 1;
             dummy.scale.set(s, s, s);
             dummy.updateMatrix();
-            mesh.setMatrixAt(k++, dummy.matrix);
+            mesh.setMatrixAt(k, dummy.matrix);
+            it.mesh = mesh;
+            it.instIdx = k;
+            it.baseMatrix = dummy.matrix.clone();
+            it.baseScale = s;
+            k++;
           }
           mesh.count = k;
           mesh.frustumCulled = false;
@@ -29315,12 +29522,21 @@ void main() {
         rocks: rocks.length,
         tufts: tufts.length
       };
+      this.palmList = palms;
+      this.treeList = trees;
+      this.bushList = bushes;
+      this.rockList = rocks;
       this.palms = makeInstanced(palmGeos, palms);
       this.trees = makeInstanced(treeGeos, trees);
       this.bushes = makeInstanced(bushGeos, bushes);
       this.rocks = makeInstanced(rockGeos, rocks);
-      const tuftGeo = colorize(new ConeGeometry(0.22, 0.85, 3, 1), 6262597);
-      tuftGeo.translate(0, 0.42, 0);
+      const blades = [];
+      for (let i = 0; i < 3; i++) {
+        const blade = new ConeGeometry(0.13, 0.55 + i * 0.12, 3, 1);
+        blade.translate((i - 1) * 0.16, 0.28, i % 2 * 0.12);
+        blades.push(colorize(blade, i === 1 ? 7643218 : 6327367));
+      }
+      const tuftGeo = mergeGeometries(blades, false);
       this.tufts = makeInstanced([tuftGeo], tufts, { castShadow: false });
     }
     // --- подбираемые вещи ---
@@ -29403,6 +29619,19 @@ void main() {
         }
       });
     }
+    /** Погасить или вернуть объект растительности (срубленное дерево, добытый камень) */
+    setNodeVisible(item, visible) {
+      var _a;
+      if (!item || !item.mesh) return;
+      const dummy = this._dummy || (this._dummy = new Object3D());
+      const target = (_a = item.baseScale) != null ? _a : 1;
+      dummy.position.set(item.x, item.h - 0.15, item.z);
+      dummy.rotation.set(0, item.rot || 0, 0);
+      dummy.scale.setScalar(visible ? target : 1e-4);
+      dummy.updateMatrix();
+      item.mesh.setMatrixAt(item.instIdx, dummy.matrix);
+      item.mesh.instanceMatrix.needsUpdate = true;
+    }
     /** Ближайший подбираемый предмет в радиусе */
     nearestPickup(pos, reach) {
       let best = null;
@@ -29431,6 +29660,7 @@ void main() {
      */
     resolveCollisions(pos, radius, velocity = null) {
       for (const c of this.colliders) {
+        if (c.disabled) continue;
         const dx = pos.x - c.x;
         const dz = pos.z - c.z;
         const min = c.r + radius;
@@ -29528,7 +29758,7 @@ void main() {
       this.moon.castShadow = false;
       scene.add(this.moon);
       scene.add(this.moon.target);
-      this.hemi = new HemisphereLight(12376304, 4016691, 0.85);
+      this.hemi = new HemisphereLight(13033716, 7043666, 0.95);
       scene.add(this.hemi);
       this.ambient = new AmbientLight(3359829, 0.25);
       scene.add(this.ambient);
@@ -29626,10 +29856,10 @@ void main() {
       const moonDir = this.sunDir.clone().multiplyScalar(-1);
       this.moon.position.copy(playerPos).add(moonDir.multiplyScalar(100));
       this.moon.target.position.copy(playerPos);
-      this.moon.intensity = 0.42 * night;
-      this.hemi.intensity = 0.22 + 0.75 * lightUp;
+      this.moon.intensity = 1.15 * night;
+      this.hemi.intensity = 0.62 + 0.75 * lightUp;
       this.hemi.color.setHex(10471144).lerp(new Color(2766160), night);
-      this.ambient.intensity = 0.16 + 0.14 * (1 - night);
+      this.ambient.intensity = 0.34 + 0.22 * (1 - night);
       this.sunDisk.position.copy(this.sunDir).multiplyScalar(760);
       this.sunDisk.visible = elev > -0.15;
       this.moonDisk.position.copy(this.sunDir).multiplyScalar(-760);
@@ -29707,14 +29937,14 @@ void main() {
       pack.castShadow = true;
       g.add(pack);
       this.armL = new Group();
-      this.armL.position.set(-0.33, 1.42, 0);
-      const armMeshL = new Mesh(new BoxGeometry(0.14, 0.56, 0.16), skinMat);
-      armMeshL.position.y = -0.28;
+      this.armL.position.set(-0.295, 1.44, 0);
+      const armMeshL = new Mesh(new BoxGeometry(0.16, 0.6, 0.18), skinMat);
+      armMeshL.position.y = -0.3;
       armMeshL.castShadow = true;
       this.armL.add(armMeshL);
       g.add(this.armL);
       this.armR = new Group();
-      this.armR.position.set(0.33, 1.42, 0);
+      this.armR.position.set(0.295, 1.44, 0);
       const armMeshR = armMeshL.clone();
       this.armR.add(armMeshR);
       g.add(this.armR);
@@ -29730,8 +29960,71 @@ void main() {
       const legMeshR = legMeshL.clone();
       this.legR.add(legMeshR);
       g.add(this.legR);
+      this.handSlot = new Group();
+      this.handSlot.position.set(0, -0.5, 0.06);
+      this.handSlot.rotation.x = 0.25;
+      this.armR.add(this.handSlot);
+      this.equippedId = null;
+      this.equippedMesh = null;
+      this.swingPhase = -1;
+      this.swingSpeed = 3.4;
       this.model = g;
       this.scene.add(g);
+    }
+    /** Что держим в руке. Модели простые: палка + наконечник/лезвие. */
+    setEquipped(itemId) {
+      if (this.equippedId === itemId) return;
+      this.equippedId = itemId;
+      if (this.equippedMesh) {
+        this.handSlot.remove(this.equippedMesh);
+        this.equippedMesh.traverse((o) => {
+          var _a, _b;
+          (_b = (_a = o.geometry) == null ? void 0 : _a.dispose) == null ? void 0 : _b.call(_a);
+        });
+        this.equippedMesh = null;
+      }
+      if (!itemId) return;
+      const group = new Group();
+      const woodMat = new MeshStandardMaterial({ color: 9071170, roughness: 0.95, flatShading: true });
+      const stoneMat = new MeshStandardMaterial({ color: 12173512, roughness: 0.6, flatShading: true });
+      const stick = new Mesh(new CylinderGeometry(0.035, 0.045, 0.95, 5), woodMat);
+      stick.rotation.x = Math.PI / 2.4;
+      stick.position.set(0, 0, 0.28);
+      stick.castShadow = true;
+      group.add(stick);
+      if (itemId === "knife" || itemId === "spear" || itemId === "axe" || itemId === "pickaxe") {
+        const head = new Mesh(
+          itemId === "spear" ? new ConeGeometry(0.06, 0.34, 4) : new BoxGeometry(0.06, itemId === "axe" ? 0.26 : 0.2, itemId === "pickaxe" ? 0.3 : 0.12),
+          stoneMat
+        );
+        head.position.set(0, 0.12, itemId === "spear" ? 0.86 : 0.6);
+        head.rotation.x = itemId === "spear" ? 0 : 0.3;
+        head.castShadow = true;
+        group.add(head);
+      }
+      if (itemId === "torch") {
+        const flame = new Mesh(
+          new ConeGeometry(0.09, 0.26, 5),
+          new MeshBasicMaterial({ color: 16764784 })
+        );
+        flame.position.set(0, 0.12, 0.78);
+        group.add(flame);
+        const light = new PointLight(16757596, 1.7, 11, 2);
+        light.position.set(0, 0.3, 0.6);
+        group.add(light);
+      }
+      if (itemId === "campfireKit") {
+        group.clear();
+        const stones = new Mesh(new TorusGeometry(0.24, 0.07, 5, 8), stoneMat);
+        stones.rotation.x = Math.PI / 2;
+        group.add(stones);
+      }
+      this.equippedMesh = group;
+      this.handSlot.add(group);
+    }
+    /** Запустить замах (визуально) */
+    swing() {
+      if (this.swingPhase < 0) this.swingPhase = 0;
     }
     setPosition(x, z, world) {
       this.position.set(x, world.heightAt(x, z), z);
@@ -29833,7 +30126,17 @@ void main() {
       this.legL.rotation.x = swing;
       this.legR.rotation.x = -swing;
       this.armL.rotation.x = -swing * 0.8;
-      this.armR.rotation.x = swing * 0.8;
+      let swingArm = swing * 0.8;
+      if (this.swingPhase >= 0) {
+        this.swingPhase += dt * this.swingSpeed;
+        if (this.swingPhase >= 1) this.swingPhase = -1;
+        else {
+          const p = this.swingPhase;
+          const arc = Math.sin(p * Math.PI);
+          swingArm = -1.75 * arc;
+        }
+      }
+      this.armR.rotation.x = swingArm;
       this.model.position.copy(this.position);
       if (inWater) this.model.position.y -= this.wading * 0.55;
       this.model.rotation.y = this.facing;
@@ -29992,15 +30295,11 @@ void main() {
 
   // src/ui.js
   var $ = (id) => document.getElementById(id);
-  var ITEM_NAMES = {
-    wood: "\u041F\u0430\u043B\u043A\u0438",
-    stone: "\u041A\u0430\u043C\u043D\u0438",
-    fiber: "\u0412\u043E\u043B\u043E\u043A\u043D\u043E",
-    coconut: "\u041A\u043E\u043A\u043E\u0441\u044B",
-    berries: "\u042F\u0433\u043E\u0434\u044B"
-  };
   var UI = class {
-    constructor() {
+    constructor(items, hotbarOrder, bagOrder) {
+      this.items = items;
+      this.hotbarOrder = hotbarOrder;
+      this.bagOrder = bagOrder;
       this.el = {
         hud: $("hud"),
         day: $("hud-day"),
@@ -30012,12 +30311,17 @@ void main() {
         hint: $("hint"),
         inv: $("inventory"),
         invList: $("inv-list"),
+        craft: $("crafting"),
+        craftList: $("craft-list"),
+        hotbar: $("hotbar"),
         start: $("start"),
         pause: $("pause"),
         death: $("death"),
         deathText: $("death-text"),
         pauseStats: $("pause-stats"),
-        nogl: $("nogl")
+        nogl: $("nogl"),
+        fatal: $("fatal"),
+        fuel: $("hud-fuel")
       };
       this.bars = {
         health: { fill: $("bar-health"), value: $("val-health"), node: document.querySelector(".bar-health") },
@@ -30026,11 +30330,61 @@ void main() {
         warmth: { fill: $("bar-warmth"), value: $("val-warmth"), node: document.querySelector(".bar-warmth") },
         stamina: { fill: $("bar-stamina"), value: $("val-stamina"), node: document.querySelector(".bar-stamina") }
       };
-      this.counts = { coconut: $("count-coconut"), berries: $("count-berries") };
       this._lastPrompt = null;
-      this._lastInv = "";
-      this._hintTimer = setTimeout(() => this.el.hint && this.el.hint.classList.add("hidden"), 22e3);
+      this._lastBagSig = "";
+      this._lastCraftSig = "";
+      this._hintTimer = setTimeout(() => this.el.hint && this.el.hint.classList.add("hidden"), 26e3);
+      this.buildHotbar();
     }
+    // ------------------------------------------------------------
+    //  Хотбар
+    // ------------------------------------------------------------
+    buildHotbar() {
+      const bar = this.el.hotbar;
+      if (!bar) return;
+      bar.innerHTML = this.hotbarOrder.map((id, i) => {
+        const item = this.items[id];
+        return `<div class="slot" data-index="${i}" data-item="${id}" title="${item.name}">
+          <span class="slot-key">${i + 1}</span>
+          <span class="slot-icon">${item.icon}</span>
+          <span class="slot-name">${item.name}</span>
+          <span class="slot-count" data-count="${id}"></span>
+        </div>`;
+      }).join("");
+    }
+    bindHotbar(onSelect, onUse) {
+      this.el.hotbar.querySelectorAll(".slot").forEach((slot) => {
+        slot.addEventListener("click", () => {
+          onSelect(Number(slot.dataset.index));
+          onUse == null ? void 0 : onUse(slot.dataset.item);
+        });
+      });
+    }
+    setHotbar(inv, selected, toolDurability = null) {
+      this.hotbarOrder.forEach((id, i) => {
+        const slot = this.el.hotbar.querySelector(`.slot[data-index="${i}"]`);
+        if (!slot) return;
+        const count = inv[id] || 0;
+        const counter = slot.querySelector("[data-count]");
+        if (counter) counter.textContent = count > 0 ? count : "";
+        slot.classList.toggle("empty", count === 0);
+        slot.classList.toggle("active", i === selected);
+      });
+      if (this.el.fuel) this.el.fuel.classList.add("hidden");
+    }
+    setFuel(fire) {
+      if (!this.el.fuel) return;
+      if (!fire) {
+        this.el.fuel.classList.add("hidden");
+        return;
+      }
+      const pct = Math.round(fire.fuel / fire.maxFuel * 100);
+      this.el.fuel.classList.remove("hidden");
+      this.el.fuel.innerHTML = `<span>\u{1F525}</span><div class="fuel-track"><i style="width:${pct}%"></i></div><b>${Math.ceil(fire.fuel)}\u0441</b>`;
+    }
+    // ------------------------------------------------------------
+    //  Шкалы и верхняя строка
+    // ------------------------------------------------------------
     setBars(s) {
       const pairs = [
         ["health", s.health],
@@ -30057,9 +30411,8 @@ void main() {
     setPrompt(html) {
       if (html === this._lastPrompt) return;
       this._lastPrompt = html;
-      if (!html) {
-        this.el.prompt.classList.add("hidden");
-      } else {
+      if (!html) this.el.prompt.classList.add("hidden");
+      else {
         this.el.prompt.innerHTML = html;
         this.el.prompt.classList.remove("hidden");
       }
@@ -30073,43 +30426,78 @@ void main() {
       setTimeout(() => node.remove(), 3100);
       while (this.el.toasts.children.length > 5) this.el.toasts.firstChild.remove();
     }
-    setCounts(inv) {
-      for (const key of Object.keys(this.counts)) {
-        const n = inv[key] || 0;
-        this.counts[key].textContent = n;
-        const slot = this.counts[key].closest(".slot");
-        if (slot) slot.classList.toggle("empty", n === 0);
-      }
+    // ------------------------------------------------------------
+    //  Сумка и крафт
+    // ------------------------------------------------------------
+    renderBag(inv) {
+      const rows = this.bagOrder.filter((id) => (inv[id] || 0) > 0).map((id) => {
+        const item = this.items[id];
+        return `<li><span class="row-icon">${item.icon}</span><span class="row-name">${item.name}</span><span class="row-count">${inv[id]}</span></li>`;
+      });
+      const sig = rows.join("|");
+      if (sig === this._lastBagSig) return;
+      this._lastBagSig = sig;
+      this.el.invList.innerHTML = rows.length ? rows.join("") : '<li class="empty-row">\u041F\u0443\u0441\u0442\u043E. \u0414\u043E\u0431\u044B\u0432\u0430\u0439 \u043F\u0430\u043B\u043A\u0438 (\u041B\u041A\u041C \u043F\u043E \u0434\u0435\u0440\u0435\u0432\u0443), \u043A\u0430\u043C\u043D\u0438 \u0438 \u0432\u043E\u043B\u043E\u043A\u043D\u043E.</li>';
     }
-    setInventory(inv) {
-      const entries = Object.entries(ITEM_NAMES).map(([key, name]) => [name, inv[key] || 0]).filter(([, n]) => n > 0);
-      const signature = entries.map(([n, c]) => `${n}:${c}`).join("|");
-      if (signature === this._lastInv) return;
-      this._lastInv = signature;
-      if (!entries.length) {
-        this.el.invList.innerHTML = '<li class="empty-row">\u041F\u0443\u0441\u0442\u043E. \u041F\u043E\u0434\u043E\u0439\u0434\u0438 \u043A \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u0443 \u0438 \u043D\u0430\u0436\u043C\u0438 E.</li>';
-        return;
-      }
-      this.el.invList.innerHTML = entries.map(([name, n]) => `<li><span>${name}</span><span>${n}</span></li>`).join("");
+    renderCraft(recipes, inv, onCraft) {
+      const sig = recipes.map((r) => Object.entries(r.need).map(([k, v]) => (inv[k] || 0) >= v).join("")).join("");
+      if (sig === this._lastCraftSig) return;
+      this._lastCraftSig = sig;
+      this.el.craftList.innerHTML = recipes.map((r) => {
+        const can = Object.entries(r.need).every(([k, v]) => (inv[k] || 0) >= v);
+        const cost = Object.entries(r.need).map(([k, v]) => {
+          const has = (inv[k] || 0) >= v;
+          return `<span class="cost ${has ? "ok" : "lack"}">${this.items[k].name} ${inv[k] || 0}/${v}</span>`;
+        }).join("");
+        return `<li class="recipe ${can ? "can" : "cannot"}" data-recipe="${r.id}">
+          <span class="row-icon">${this.items[r.id].icon}</span>
+          <div class="recipe-body">
+            <b>${r.name}</b>
+            <em>${r.note}</em>
+            <div class="costs">${cost}</div>
+          </div>
+          <button class="craft-btn" data-craft="${r.id}" ${can ? "" : "disabled"}>${can ? "\u0421\u0434\u0435\u043B\u0430\u0442\u044C" : "\u2014"}</button>
+        </li>`;
+      }).join("");
+      this.el.craftList.querySelectorAll("[data-craft]").forEach((btn) => {
+        btn.addEventListener("click", () => onCraft(btn.dataset.craft));
+      });
     }
-    toggleInventory(force) {
-      const isHidden = this.el.inv.classList.contains("hidden");
-      const show = force !== void 0 ? force : isHidden;
+    toggleBag(force) {
+      const show = force !== void 0 ? force : this.el.inv.classList.contains("hidden");
       this.el.inv.classList.toggle("hidden", !show);
+      if (show) this.el.craft.classList.add("hidden");
       return show;
     }
-    isInventoryOpen() {
-      return !this.el.inv.classList.contains("hidden");
+    toggleCraft(force, recipes, inv, onCraft) {
+      const show = force !== void 0 ? force : this.el.craft.classList.contains("hidden");
+      this.el.craft.classList.toggle("hidden", !show);
+      if (show) {
+        this.el.inv.classList.add("hidden");
+        this._lastCraftSig = "";
+        this.renderCraft(recipes, inv, onCraft);
+      }
+      return show;
     }
+    isPanelOpen() {
+      return !this.el.inv.classList.contains("hidden") || !this.el.craft.classList.contains("hidden");
+    }
+    closePanels() {
+      this.el.inv.classList.add("hidden");
+      this.el.craft.classList.add("hidden");
+    }
+    // ------------------------------------------------------------
+    //  Экраны
+    // ------------------------------------------------------------
     showScreen(name) {
       for (const id of ["start", "pause", "death", "nogl"]) {
         this.el[id].classList.toggle("hidden", id !== name);
       }
       this.el.hud.classList.toggle("hidden", name !== null);
-      if (name !== null) this.el.inv.classList.add("hidden");
+      if (name !== null) this.closePanels();
     }
     hideScreens() {
-      for (const id of ["start", "pause", "death", "nogl"]) this.el[id].classList.add("hidden");
+      for (const id of ["start", "pause", "death", "nogl", "fatal"]) this.el[id].classList.add("hidden");
       this.el.hud.classList.remove("hidden");
     }
     showDeath(days, cause) {
@@ -30182,8 +30570,350 @@ void main() {
     }
   };
 
+  // src/items.js
+  var svg = (body) => `<svg viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
+  var ICONS = {
+    coconut: svg('<circle cx="12" cy="13" r="7" fill="#6b4a2a"/><circle cx="9.5" cy="10.5" r="2" fill="#8a6440"/><path d="M8 6.5q4-2.5 8 0" stroke="#3f7a3a" stroke-width="1.6" fill="none"/>'),
+    berries: svg('<circle cx="9" cy="14" r="3.2" fill="#b9334a"/><circle cx="15" cy="15" r="3" fill="#9d2740"/><circle cx="12" cy="9.5" r="2.8" fill="#c93c52"/><path d="M12 6.5V3" stroke="#3f7a3a" stroke-width="1.6"/>'),
+    wood: svg('<rect x="4" y="9" width="16" height="6" rx="3" fill="#8a6a42" transform="rotate(-18 12 12)"/><circle cx="19" cy="8.5" r="1.6" fill="#b08a58"/>'),
+    stone: svg('<path d="M4 15l3-7 5-2 6 4 2 6-5 3H8z" fill="#9a958c"/><path d="M7 11l4 2-2 4" stroke="#7a756d" stroke-width="1.2" fill="none"/>'),
+    flint: svg('<path d="M6 16l4-9 6 3 2 7-6 3z" fill="#4a4a52"/><path d="M10 7l2 6 4-3" stroke="#8f8f9c" stroke-width="1.2" fill="none"/>'),
+    fiber: svg('<path d="M7 19q2-8 5-14M11 19q1-9 3-13M15 18q0-7 3-11" stroke="#9cae5e" stroke-width="1.8" fill="none" stroke-linecap="round"/>'),
+    rope: svg('<path d="M5 16c3-6 5 4 8-2s4 2 6-1" stroke="#c2a06a" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M5 11c3-4 5 3 8-1s4 3 6 0" stroke="#a3854f" stroke-width="1.8" fill="none"/>'),
+    knife: svg('<path d="M5 19l3-1 9-12-2-2L6 16z" fill="#c8ccd2"/><path d="M4 20l3-3" stroke="#7a5a3a" stroke-width="2.6" stroke-linecap="round"/>'),
+    spear: svg('<path d="M4 20L18 5" stroke="#8a6a42" stroke-width="2"/><path d="M18 3l3 3-4 1z" fill="#c8ccd2"/><path d="M16 7l2 2" stroke="#c8ccd2" stroke-width="1.4"/>'),
+    axe: svg('<path d="M6 20l8-9" stroke="#7a5a3a" stroke-width="2.4" stroke-linecap="round"/><path d="M13 5l6 3-2 5-5-2z" fill="#b9c0c8"/>'),
+    pickaxe: svg('<path d="M6 20l8-9" stroke="#7a5a3a" stroke-width="2.4" stroke-linecap="round"/><path d="M10 9q4-4 9-2-3 1-4 4l-3 1z" fill="#b9c0c8"/>'),
+    torch: svg('<rect x="10.5" y="10" width="3" height="11" rx="1.4" fill="#8a6a42" transform="rotate(8 12 16)"/><path d="M12 9c-2-2 0-4 1-6 2 3 3 5 1 7z" fill="#f0a93c"/><path d="M12 8c-1-1 0-2 .6-3 1 1.6 1.5 2.6.4 3.6z" fill="#ffe08a"/>'),
+    campfireKit: svg('<path d="M5 18l7-10 7 10z" fill="#7a5a3a"/><path d="M9 17l3-6 3 6z" fill="#8a6a42"/><path d="M12 15c-2-3 1-5 1.6-8 2.4 4 2.4 7 .4 8.6z" fill="#f0a93c"/>'),
+    water: svg('<path d="M12 3c4 5 6 8 6 11a6 6 0 05 12 6 6 0 01-6-11c0-3 2-6 6-11z" fill="#4aa9d8"/>'),
+    cookedWater: svg('<path d="M12 3c4 5 6 8 6 11a6 6 0 01-12 0c0-3 2-6 6-11z" fill="#7dd0e8"/><path d="M9 10c1 3 2 4 3 6" stroke="#e8f7ff" stroke-width="1.2" fill="none"/>'),
+    cookedMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#a25c34"/><path d="M9 12l6 4" stroke="#7a3f22" stroke-width="1.4"/>'),
+    rawMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#c46a72"/><path d="M9 12l6 4" stroke="#8f444c" stroke-width="1.4"/>')
+  };
+  var ITEMS = {
+    coconut: { id: "coconut", name: "\u041A\u043E\u043A\u043E\u0441", icon: ICONS.coconut, kind: "food", hotbar: true, action: "\u041E\u0442\u043A\u0440\u044B\u0442\u044C \u0438 \u0432\u044B\u043F\u0438\u0442\u044C" },
+    berries: { id: "berries", name: "\u042F\u0433\u043E\u0434\u044B", icon: ICONS.berries, kind: "food", hotbar: true, action: "\u0421\u044A\u0435\u0441\u0442\u044C" },
+    wood: { id: "wood", name: "\u041F\u0430\u043B\u043A\u0438", icon: ICONS.wood, kind: "resource" },
+    stone: { id: "stone", name: "\u041A\u0430\u043C\u043D\u0438", icon: ICONS.stone, kind: "resource" },
+    flint: { id: "flint", name: "\u041A\u0440\u0435\u043C\u0435\u043D\u044C", icon: ICONS.flint, kind: "resource" },
+    fiber: { id: "fiber", name: "\u0412\u043E\u043B\u043E\u043A\u043D\u043E", icon: ICONS.fiber, kind: "resource" },
+    rope: { id: "rope", name: "\u0412\u0435\u0440\u0451\u0432\u043A\u0430", icon: ICONS.rope, kind: "resource" },
+    rawMeat: { id: "rawMeat", name: "\u0421\u044B\u0440\u043E\u0435 \u043C\u044F\u0441\u043E", icon: ICONS.rawMeat, kind: "food" },
+    cookedMeat: { id: "cookedMeat", name: "\u0416\u0430\u0440\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", icon: ICONS.cookedMeat, kind: "food", hotbar: true, action: "\u0421\u044A\u0435\u0441\u0442\u044C" },
+    cookedWater: { id: "cookedWater", name: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430", icon: ICONS.cookedWater, kind: "food", hotbar: true, action: "\u0412\u044B\u043F\u0438\u0442\u044C" },
+    knife: { id: "knife", name: "\u041A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u043D\u043E\u0436", icon: ICONS.knife, kind: "tool", hotbar: true, tool: { chop: 1.2, mine: 0.4, weapon: 8 } },
+    spear: { id: "spear", name: "\u041A\u043E\u043F\u044C\u0451", icon: ICONS.spear, kind: "tool", hotbar: true, tool: { chop: 0.9, mine: 0.3, weapon: 18 } },
+    axe: { id: "axe", name: "\u0422\u043E\u043F\u043E\u0440", icon: ICONS.axe, kind: "tool", hotbar: true, tool: { chop: 3.2, mine: 0.8, weapon: 12 } },
+    pickaxe: { id: "pickaxe", name: "\u041A\u0438\u0440\u043A\u0430", icon: ICONS.pickaxe, kind: "tool", hotbar: true, tool: { chop: 1, mine: 3, weapon: 7 } },
+    torch: { id: "torch", name: "\u0424\u0430\u043A\u0435\u043B", icon: ICONS.torch, kind: "tool", hotbar: true, light: true, tool: { chop: 0.6, mine: 0.2, weapon: 4 } },
+    campfireKit: { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", icon: ICONS.campfireKit, kind: "placeable", hotbar: true }
+  };
+  var HOTBAR = ["coconut", "berries", "knife", "spear", "axe", "pickaxe", "torch", "campfireKit"];
+  var BAG_ORDER = [
+    "wood",
+    "stone",
+    "flint",
+    "fiber",
+    "rope",
+    "coconut",
+    "berries",
+    "rawMeat",
+    "cookedMeat",
+    "cookedWater",
+    "knife",
+    "spear",
+    "axe",
+    "pickaxe",
+    "torch",
+    "campfireKit"
+  ];
+  var RECIPES = [
+    { id: "rope", name: "\u0412\u0435\u0440\u0451\u0432\u043A\u0430", need: { fiber: 2 }, gives: { rope: 1 }, note: "\u0412\u043E\u043B\u043E\u043A\u043D\u043E, \u0441\u043A\u0440\u0443\u0447\u0435\u043D\u043D\u043E\u0435 \u0432 \u0448\u043D\u0443\u0440" },
+    { id: "knife", name: "\u041A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u043D\u043E\u0436", need: { wood: 1, flint: 1, rope: 1 }, gives: { knife: 1 }, note: "\u041F\u0435\u0440\u0432\u044B\u0439 \u043D\u0430\u0441\u0442\u043E\u044F\u0449\u0438\u0439 \u0438\u043D\u0441\u0442\u0440\u0443\u043C\u0435\u043D\u0442" },
+    { id: "spear", name: "\u041A\u043E\u043F\u044C\u0451", need: { wood: 2, flint: 1, rope: 1 }, gives: { spear: 1 }, note: "\u041E\u0440\u0443\u0436\u0438\u0435 \u043F\u0440\u043E\u0442\u0438\u0432 \u0437\u0432\u0435\u0440\u044F" },
+    { id: "axe", name: "\u0422\u043E\u043F\u043E\u0440", need: { wood: 2, stone: 2, rope: 1 }, gives: { axe: 1 }, note: "\u0412\u0430\u043B\u0438\u0442 \u0434\u0435\u0440\u0435\u0432\u044C\u044F \u0432\u0442\u0440\u043E\u0435 \u0431\u044B\u0441\u0442\u0440\u0435\u0435" },
+    { id: "pickaxe", name: "\u041A\u0438\u0440\u043A\u0430", need: { wood: 2, stone: 3, rope: 1 }, gives: { pickaxe: 1 }, note: "\u0411\u0435\u0437 \u043D\u0435\u0451 \u043A\u0430\u043C\u043D\u0438 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u043F\u043E\u0434\u0434\u0430\u044E\u0442\u0441\u044F" },
+    { id: "torch", name: "\u0424\u0430\u043A\u0435\u043B", need: { wood: 1, fiber: 2 }, gives: { torch: 1 }, note: "\u0421\u0432\u0435\u0442\u0438\u0442 \u043D\u043E\u0447\u044C\u044E, \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u0432 \u0440\u0443\u043A\u0435" },
+    { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", need: { wood: 3, stone: 5 }, gives: { campfireKit: 1 }, note: "\u0421\u0442\u0430\u0432\u0438\u0442\u0441\u044F \u043D\u0430 \u0437\u0435\u043C\u043B\u044E \u043A\u043B\u0430\u0432\u0438\u0448\u0435\u0439 F" }
+  ];
+
+  // src/nodes.js
+  var REACH = 3.4;
+  var NODE_DEFS = {
+    tree: {
+      label: "\u0414\u0435\u0440\u0435\u0432\u043E",
+      hp: 10,
+      respawn: 260,
+      need: "\u0442\u043E\u043F\u043E\u0440",
+      tool: "chop",
+      drop: [{ id: "wood", min: 2, max: 4 }, { id: "fiber", min: 0, max: 2 }]
+    },
+    palm: {
+      label: "\u041F\u0430\u043B\u044C\u043C\u0430",
+      hp: 8,
+      respawn: 240,
+      need: "\u0442\u043E\u043F\u043E\u0440",
+      tool: "chop",
+      drop: [{ id: "wood", min: 1, max: 2 }, { id: "coconut", min: 0, max: 2 }, { id: "fiber", min: 0, max: 1 }]
+    },
+    rock: {
+      label: "\u0412\u0430\u043B\u0443\u043D",
+      hp: 14,
+      respawn: 300,
+      need: "\u043A\u0438\u0440\u043A\u0430",
+      tool: "mine",
+      drop: [{ id: "stone", min: 2, max: 4 }, { id: "flint", min: 0, max: 2 }]
+    },
+    bush: {
+      label: "\u041A\u0443\u0441\u0442",
+      hp: 4,
+      respawn: 150,
+      need: null,
+      tool: "chop",
+      drop: [{ id: "berries", min: 1, max: 2 }, { id: "fiber", min: 1, max: 2 }]
+    }
+  };
+  var Resources = class {
+    constructor(scene, world) {
+      this.scene = scene;
+      this.world = world;
+      this.rng = makeRng(world.seed + 777);
+      this.nodes = [];
+      this.campfires = [];
+      this.springs = [];
+      this.time = 0;
+      this._buildNodes();
+      this._buildSprings();
+    }
+    _buildNodes() {
+      const add = (list, type, every = 1) => {
+        list.forEach((item, i) => {
+          if (i % every !== 0) return;
+          const def = NODE_DEFS[type];
+          this.nodes.push({
+            type,
+            item,
+            x: item.x,
+            z: item.z,
+            y: item.h,
+            hp: def.hp,
+            maxHp: def.hp,
+            alive: true,
+            respawnAt: 0,
+            label: def.label
+          });
+        });
+      };
+      add(this.world.treeList, "tree", 1);
+      add(this.world.palmList, "palm", 1);
+      add(this.world.rockList, "rock", 1);
+      add(this.world.bushList, "bush", 1);
+    }
+    _buildSprings() {
+      const world = this.world;
+      const spots = [];
+      const rng = this.rng;
+      for (let attempt = 0; attempt < 6e3 && spots.length < 3; attempt++) {
+        const a = rng() * Math.PI * 2;
+        const rad = (0.15 + rng() * 0.3) * 180;
+        const x = Math.cos(a) * rad;
+        const z = Math.sin(a) * rad;
+        const h = world.heightAt(x, z);
+        if (h < 2.5 || h > 12) continue;
+        if (world.slopeAt(x, z) > 0.35) continue;
+        if (spots.some((s) => Math.hypot(s.x - x, s.z - z) < 70)) continue;
+        spots.push({ x, z, h });
+      }
+      for (const spot of spots) {
+        const group = new Group();
+        group.position.set(spot.x, spot.h + 0.02, spot.z);
+        const water = new Mesh(
+          new CircleGeometry(1.7, 20),
+          new MeshStandardMaterial({ color: 4168376, roughness: 0.18, metalness: 0.1, transparent: true, opacity: 0.9 })
+        );
+        water.rotation.x = -Math.PI / 2;
+        water.position.y = 0.04;
+        group.add(water);
+        const stoneMat = new MeshStandardMaterial({ color: 9209983, roughness: 0.9, flatShading: true });
+        for (let i = 0; i < 7; i++) {
+          const ang = i / 7 * Math.PI * 2;
+          const rock = new Mesh(new IcosahedronGeometry(0.28 + Math.random() * 0.2, 0), stoneMat);
+          rock.position.set(Math.cos(ang) * 1.85, 0.08, Math.sin(ang) * 1.85);
+          rock.castShadow = true;
+          group.add(rock);
+        }
+        this.scene.add(group);
+        const spring = { x: spot.x, z: spot.z, y: spot.h, group, label: "\u0420\u043E\u0434\u043D\u0438\u043A" };
+        this.springs.push(spring);
+        world.colliders.push({ x: spot.x, z: spot.z, r: 1.5, spring: true });
+      }
+    }
+    // ------------------------------------------------------------
+    //  Поиск цели и удар
+    // ------------------------------------------------------------
+    nearest(pos, reach = REACH) {
+      let best = null;
+      let bestD = reach * reach;
+      for (const node of this.nodes) {
+        if (!node.alive) continue;
+        const dx = node.x - pos.x;
+        const dz = node.z - pos.z;
+        const d = dx * dx + dz * dz;
+        if (d < bestD) {
+          bestD = d;
+          best = node;
+        }
+      }
+      if (best) return { kind: "node", node: best, dist: Math.sqrt(bestD) };
+      for (const fire of this.campfires) {
+        const d = (fire.x - pos.x) ** 2 + (fire.z - pos.z) ** 2;
+        if (d < reach * reach) return { kind: "campfire", fire, dist: Math.sqrt(d) };
+      }
+      for (const s of this.springs) {
+        const d = (s.x - pos.x) ** 2 + (s.z - pos.z) ** 2;
+        if (d < (reach + 1.2) ** 2) return { kind: "spring", spring: s, dist: Math.sqrt(d) };
+      }
+      return null;
+    }
+    /**
+     * Удар по узлу. tool — данные инструмента из items.js (или рука).
+     * Возвращает { hit, depleted, drops: {id: n}, need }
+     */
+    strike(node, tool) {
+      const def = NODE_DEFS[node.type];
+      const power = tool && tool[def.tool] ? tool[def.tool] : 0.35;
+      const damage = 1 + power * 2.4;
+      node.hp -= damage;
+      const result = { hit: true, depleted: false, drops: {}, need: def.need, power };
+      if (node.hp <= 0) {
+        node.alive = false;
+        node.respawnAt = this.time + def.respawn;
+        node.hp = def.hp;
+        this.world.setNodeVisible(node.item, false);
+        result.depleted = true;
+        for (const drop of def.drop) {
+          const amount = drop.min + Math.floor(this.rng() * (drop.max - drop.min + 1));
+          if (amount > 0) result.drops[drop.id] = (result.drops[drop.id] || 0) + amount;
+        }
+        const collider = this.world.colliders.find(
+          (c) => Math.abs(c.x - node.x) < 0.01 && Math.abs(c.z - node.z) < 0.01
+        );
+        if (collider) collider.disabled = true;
+      }
+      return result;
+    }
+    // ------------------------------------------------------------
+    //  Костры
+    // ------------------------------------------------------------
+    addCampfire(x, z) {
+      const world = this.world;
+      const y = world.heightAt(x, z);
+      const group = new Group();
+      group.position.set(x, y, z);
+      const stoneMat = new MeshStandardMaterial({ color: 8222831, roughness: 0.95, flatShading: true });
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2;
+        const rock = new Mesh(new IcosahedronGeometry(0.19 + Math.random() * 0.07, 0), stoneMat);
+        rock.position.set(Math.cos(a) * 0.72, 0.1, Math.sin(a) * 0.72);
+        rock.castShadow = true;
+        group.add(rock);
+      }
+      const logMat = new MeshStandardMaterial({ color: 7164466, roughness: 1 });
+      for (let i = 0; i < 4; i++) {
+        const a = i / 4 * Math.PI;
+        const log2 = new Mesh(new CylinderGeometry(0.08, 0.1, 1.15, 5), logMat);
+        log2.rotation.set(0, a, Math.PI / 2);
+        log2.position.y = 0.14;
+        log2.castShadow = true;
+        group.add(log2);
+      }
+      const flameMat = new MeshBasicMaterial({ color: 16757575, transparent: true, opacity: 0.92 });
+      const flame = new Mesh(new ConeGeometry(0.42, 1.15, 6), flameMat);
+      flame.position.y = 0.72;
+      group.add(flame);
+      const coreMat = new MeshBasicMaterial({ color: 16771496 });
+      const core = new Mesh(new ConeGeometry(0.2, 0.7, 5), coreMat);
+      core.position.y = 0.52;
+      group.add(core);
+      const light = new PointLight(16754253, 2.6, 16, 2);
+      light.position.y = 1.1;
+      group.add(light);
+      this.scene.add(group);
+      world.colliders.push({ x, z, r: 0.85, fire: true });
+      const fire = {
+        x,
+        z,
+        y,
+        group,
+        flame,
+        core,
+        light,
+        fuel: 60,
+        // секунд горения при полной загрузке
+        maxFuel: 180,
+        label: "\u041A\u043E\u0441\u0442\u0451\u0440"
+      };
+      this.campfires.push(fire);
+      return fire;
+    }
+    addFuel(fire, seconds) {
+      fire.fuel = Math.min(fire.maxFuel, fire.fuel + seconds);
+      return fire.fuel;
+    }
+    /** Ближайший костёр и его близость: 1 — вплотную, 0 — далеко */
+    fireWarmth(pos) {
+      let best = 0;
+      let near = null;
+      for (const fire of this.campfires) {
+        if (fire.fuel <= 0) continue;
+        const d = Math.hypot(fire.x - pos.x, fire.z - pos.z);
+        const w = Math.max(0, 1 - d / 9);
+        if (w > best) {
+          best = w;
+          near = fire;
+        }
+      }
+      return { warmth: best, fire: near };
+    }
+    update(dt) {
+      this.time += dt;
+      for (const node of this.nodes) {
+        if (node.alive || this.time < node.respawnAt) continue;
+        node.alive = true;
+        node.hp = node.maxHp;
+        this.world.setNodeVisible(node.item, true);
+        const collider = this.world.colliders.find(
+          (c) => Math.abs(c.x - node.x) < 0.01 && Math.abs(c.z - node.z) < 0.01
+        );
+        if (collider) collider.disabled = false;
+      }
+      for (const fire of this.campfires) {
+        if (fire.fuel > 0) {
+          fire.fuel = Math.max(0, fire.fuel - dt);
+          const t = this.time * 9 + fire.x;
+          const flicker = 0.82 + Math.sin(t) * 0.1 + Math.sin(t * 2.7) * 0.06;
+          fire.flame.scale.set(1, flicker, 1);
+          fire.core.scale.set(0.9 + Math.sin(t * 1.7) * 0.08, flicker * 1.05, 0.9);
+          fire.light.intensity = 2.4 * flicker;
+          fire.flame.visible = true;
+          fire.core.visible = true;
+        } else {
+          fire.flame.visible = false;
+          fire.core.visible = false;
+          fire.light.intensity = 0.15;
+        }
+      }
+    }
+  };
+
   // src/main.js
   var SAVE_KEY = "lastshore.save.v1";
+  function emptyInventory() {
+    const inv = {};
+    for (const id of Object.keys(ITEMS)) inv[id] = 0;
+    return inv;
+  }
   var WEATHERS = {
     clear: { label: "\u044F\u0441\u043D\u043E", rain: 0, sun: 1, fog: 1, next: { clear: 0.45, cloudy: 0.4, rain: 0.15 } },
     cloudy: { label: "\u043E\u0431\u043B\u0430\u0447\u043D\u043E", rain: 0, sun: 0.68, fog: 1.25, next: { clear: 0.35, cloudy: 0.35, rain: 0.3 } },
@@ -30193,7 +30923,7 @@ void main() {
   var Game = class {
     constructor() {
       this.canvas = document.getElementById("scene");
-      this.ui = new UI();
+      this.ui = new UI(ITEMS, HOTBAR, BAG_ORDER);
       this.audio = new Audio2();
       try {
         this.renderer = new WebGLRenderer({
@@ -30212,7 +30942,7 @@ void main() {
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.shadowMap.enabled = true;
-      this.renderer.shadowMap.type = PCFSoftShadowMap;
+      this.renderer.shadowMap.type = PCFShadowMap;
       this.renderer.outputColorSpace = SRGBColorSpace;
       this.renderer.setClearColor(10470358, 1);
       this.canvas.addEventListener("webglcontextlost", (e) => {
@@ -30231,14 +30961,20 @@ void main() {
       this.sky = new Sky(this.scene, this.renderer);
       this.player = new Player(this.scene);
       this.rain = new Rain(this.scene);
+      this.resources = new Resources(this.scene, this.world);
       this.state = {
         health: 100,
         thirst: 78,
         hunger: 72,
         warmth: 100,
-        inventory: { wood: 0, stone: 0, fiber: 0, coconut: 0, berries: 0 },
+        inventory: emptyInventory(),
         collected: 0
       };
+      this.selected = 0;
+      this.attackCooldown = 0;
+      this.holdingAttack = false;
+      this.nearNode = null;
+      this.target = null;
       this.weather = "clear";
       this.weatherTimer = 2.5;
       this.rainIntensity = 0;
@@ -30260,36 +30996,86 @@ void main() {
       this.spawnPlayer();
       this.buildHighlight();
       this.bindEvents();
-      this.updateHotbarUI();
-      this.ui.setCounts(this.state.inventory);
+      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.ui.renderBag(this.state.inventory);
       this.renderer.setAnimationLoop(() => this.frame());
     }
     // ------------------------------------------------------------
     //  Старт
     // ------------------------------------------------------------
     spawnPlayer() {
-      const R = CONFIG.world.size / 2 * 0.94;
-      let best = null;
-      for (let i = 0; i < 900 && !best; i++) {
-        const angle = Math.PI / 2 + i / 900 * Math.PI * 2 + Math.random() * 0.02;
-        for (let r = R; r > R * 0.35; r -= 2) {
+      const world = this.world;
+      const half = CONFIG.world.size / 2;
+      const candidates = [];
+      for (let i = 0; i < 2400; i++) {
+        const angle = i / 2400 * Math.PI * 2;
+        for (let r = half * 1.02; r > half * 0.35; r -= 2) {
           const x = Math.cos(angle) * r;
           const z = Math.sin(angle) * r;
-          const h = this.world.heightAt(x, z);
-          if (h > 1.1 && h < 3.2 && this.world.slopeAt(x, z) < 0.4) {
-            best = { x, z };
-            break;
+          const h = world.heightAt(x, z);
+          if (h < 0.8 || h > 2.6) continue;
+          if (world.slopeAt(x, z) > 0.42) continue;
+          let seaX = 0;
+          let seaZ = 0;
+          let seaDist = 999;
+          for (let a = 0; a < Math.PI * 2; a += Math.PI / 8) {
+            for (let d = 10; d < 34; d += 3) {
+              const hx = x + Math.cos(a) * d;
+              const hz = z + Math.sin(a) * d;
+              if (world.heightAt(hx, hz) < -0.5) {
+                if (d < seaDist) {
+                  seaDist = d;
+                  seaX = Math.cos(a);
+                  seaZ = Math.sin(a);
+                }
+                break;
+              }
+            }
           }
+          if (seaDist > 30) continue;
+          let clear = true;
+          for (const c of world.colliders) {
+            const dx = c.x - x;
+            const dz = c.z - z;
+            if (dx * dx + dz * dz < 36) {
+              clear = false;
+              break;
+            }
+          }
+          let sand = 0;
+          for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+            const hh = world.heightAt(x + Math.cos(a) * 5, z + Math.sin(a) * 5);
+            if (hh > 0.5 && hh < 4) sand++;
+          }
+          candidates.push({ x, z, seaX, seaZ, seaDist, clear, sand, h });
+          break;
         }
       }
-      if (!best) best = { x: 4, z: 40 };
-      this.player.setPosition(best.x, best.z, this.world);
+      let best = null;
+      let bestScore = -Infinity;
+      for (const c of candidates) {
+        const score = (c.clear ? 6 : 0) + c.sand * 0.8 + (30 - Math.abs(c.seaDist - 18)) * 0.2;
+        if (score > bestScore) {
+          bestScore = score;
+          best = c;
+        }
+      }
+      if (!best) {
+        for (let i = 0; i < 6e3 && !best; i++) {
+          const x = (Math.random() - 0.5) * CONFIG.world.size * 0.7;
+          const z = (Math.random() - 0.5) * CONFIG.world.size * 0.7;
+          const h = world.heightAt(x, z);
+          if (h > 0.8 && h < 3.4 && world.slopeAt(x, z) < 0.55) best = { x, z, seaX: -x, seaZ: -z };
+        }
+      }
+      if (!best) best = { x: 4, z: 40, seaX: 0, seaZ: 1 };
+      this.player.setPosition(best.x, best.z, world);
       this.world.spawnStarterKit(this.player.position);
-      const dx = -best.x;
-      const dz = -best.z;
-      this.player.yaw = Math.atan2(-dx, -dz);
+      this.player.yaw = Math.atan2(-best.seaX, -best.seaZ);
       this.player.facing = this.player.yaw + Math.PI;
-      this.player.applyCamera(this.camera, this.world, 1);
+      this.player.applyCamera(this.camera, world, 1);
+      this.spawnPoint = { x: best.x, z: best.z };
+      console.log(`[LAST SHORE] \u0432\u044B\u0441\u0430\u0434\u043A\u0430: ${best.x.toFixed(1)}, ${best.z.toFixed(1)} \xB7 \u043C\u043E\u0440\u0435 \u0432 ${best.seaDist | 0} \u043C \xB7 \u043F\u043B\u044F\u0436 ${best.sand}/12`);
     }
     buildHighlight() {
       const geo = new RingGeometry(0.32, 0.44, 24);
@@ -30307,12 +31093,10 @@ void main() {
     // ------------------------------------------------------------
     bindEvents() {
       window.addEventListener("resize", () => this.onResize());
-      document.querySelectorAll(".slot").forEach((slot) => {
-        slot.addEventListener("click", () => {
-          const key = slot.dataset.slot === "0" ? "coconut" : "berries";
-          this.consume(key);
-        });
-      });
+      this.ui.bindHotbar(
+        (index) => this.selectSlot(index),
+        () => this.useSelected()
+      );
       window.addEventListener("keydown", (e) => this.onKeyDown(e));
       window.addEventListener("keyup", (e) => this.onKeyUp(e));
       this.canvas.addEventListener("mousedown", (e) => {
@@ -30321,10 +31105,15 @@ void main() {
           this.dragging = true;
           this.tryLock();
         }
-        if (e.button === 0) this.audio.resume();
+        if (e.button === 0) {
+          this.audio.resume();
+          this.holdingAttack = true;
+          this.attack();
+        }
       });
       window.addEventListener("mouseup", () => {
         this.dragging = false;
+        this.holdingAttack = false;
       });
       window.addEventListener("mousemove", (e) => {
         if (!this.running || this.paused) return;
@@ -30379,8 +31168,8 @@ void main() {
       if (e.repeat) return;
       const code = e.code;
       if (code === "Escape") {
-        if (this.ui.isInventoryOpen()) {
-          this.ui.toggleInventory(false);
+        if (this.ui.isPanelOpen()) {
+          this.ui.closePanels();
           return;
         }
         if (this.running && !this.paused) this.pause();
@@ -30413,20 +31202,35 @@ void main() {
           e.preventDefault();
           break;
         case "KeyE":
-          this.pickup();
+          this.interact();
           break;
-        case "Digit1":
-          this.consume("coconut");
+        case "KeyF":
+          this.placeCampfire();
           break;
-        case "Digit2":
-          this.consume("berries");
+        case "KeyC": {
+          e.preventDefault();
+          this.ui.toggleCraft(void 0, RECIPES, this.state.inventory, (id) => this.craft(id));
           break;
+        }
         case "KeyI":
         case "Tab":
           e.preventDefault();
-          this.ui.toggleInventory();
-          this.ui.setInventory(this.state.inventory);
+          this.ui.toggleBag(void 0);
+          this.ui.renderBag(this.state.inventory);
           break;
+        case "Digit1":
+        case "Digit2":
+        case "Digit3":
+        case "Digit4":
+        case "Digit5":
+        case "Digit6":
+        case "Digit7":
+        case "Digit8": {
+          const n = Number(code.replace("Digit", "")) - 1;
+          this.selectSlot(n);
+          this.useSelected();
+          break;
+        }
       }
     }
     onKeyUp(e) {
@@ -30471,7 +31275,9 @@ void main() {
       if (continueSave) this.loadGame();
       this.ui.hideScreens();
       this.ui.setBars(this.readBars());
-      this.ui.setInventory(this.state.inventory);
+      this.ui.renderBag(this.state.inventory);
+      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.player.setEquipped(this.equippedId());
       this.running = true;
       this.paused = false;
       this.dead = false;
@@ -30498,6 +31304,9 @@ void main() {
       this.tryLock();
       this.audio.resume();
     }
+    nodeDef(node) {
+      return NODE_DEFS[node.type] || { label: "\u041E\u0431\u044A\u0435\u043A\u0442", need: null };
+    }
     readBars() {
       return {
         health: this.state.health,
@@ -30510,38 +31319,195 @@ void main() {
     // ------------------------------------------------------------
     //  Действия
     // ------------------------------------------------------------
+    equippedId() {
+      const id = HOTBAR[this.selected];
+      if (!id) return null;
+      const item = ITEMS[id];
+      if (item.kind === "tool" || item.kind === "placeable") {
+        return (this.state.inventory[id] || 0) > 0 ? id : null;
+      }
+      return null;
+    }
+    equippedTool() {
+      const id = this.equippedId();
+      return id && ITEMS[id].tool ? ITEMS[id].tool : null;
+    }
+    selectSlot(index) {
+      if (index < 0 || index >= HOTBAR.length) return;
+      this.selected = index;
+      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.player.setEquipped(this.equippedId());
+    }
+    addItem(id, count = 1) {
+      if (!ITEMS[id]) return;
+      this.state.inventory[id] = (this.state.inventory[id] || 0) + count;
+      this.state.collected += count;
+      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.ui.renderBag(this.state.inventory);
+      if (this.ui.el.craft && !this.ui.el.craft.classList.contains("hidden")) {
+        this.ui._lastCraftSig = "";
+        this.ui.renderCraft(RECIPES, this.state.inventory, (rid) => this.craft(rid));
+      }
+    }
+    takeItem(id, count = 1) {
+      if ((this.state.inventory[id] || 0) < count) return false;
+      this.state.inventory[id] -= count;
+      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.ui.renderBag(this.state.inventory);
+      this.ui._lastCraftSig = "";
+      return true;
+    }
     pickup() {
       const p = this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
-      if (!p) return;
-      this.state.inventory[p.kind] = (this.state.inventory[p.kind] || 0) + 1;
-      this.state.collected++;
+      if (!p) return false;
+      this.addItem(p.kind, 1);
       this.world.removePickup(p);
       this.audio.pickup();
       this.ui.toast(`+ ${p.name}`);
-      this.ui.setCounts(this.state.inventory);
-      this.ui.setInventory(this.state.inventory);
       this.highlight.visible = false;
+      return true;
+    }
+    /** E — универсальное действие: подобрать, попить, подложить дров */
+    interact() {
+      if (!this.running || this.paused || this.dead) return;
+      if (this.pickup()) return;
+      const target = this.resources.nearest(this.player.position, 4.6);
+      if (!target) {
+        this.ui.toast("\u0420\u044F\u0434\u043E\u043C \u043D\u0435\u0447\u0435\u0433\u043E \u0432\u0437\u044F\u0442\u044C", true);
+        return;
+      }
+      if (target.kind === "spring") {
+        const before = this.state.thirst;
+        this.state.thirst = Math.min(100, before + 30);
+        this.audio.drink();
+        this.ui.toast(before > 99 ? "\u0422\u044B \u043D\u0435 \u0445\u043E\u0447\u0435\u0448\u044C \u043F\u0438\u0442\u044C" : "\u0420\u043E\u0434\u043D\u0438\u043A: +30 \u0436\u0430\u0436\u0434\u044B");
+        return;
+      }
+      if (target.kind === "campfire") {
+        if ((this.state.inventory.wood || 0) <= 0) {
+          this.ui.toast("\u041D\u0443\u0436\u043D\u044B \u043F\u0430\u043B\u043A\u0438 \u0434\u043B\u044F \u043A\u043E\u0441\u0442\u0440\u0430", true);
+          return;
+        }
+        this.takeItem("wood", 1);
+        this.resources.addFuel(target.fire, 45);
+        this.audio.eat();
+        this.ui.toast(`\u041A\u043E\u0441\u0442\u0451\u0440: +45 \u0441 \u043E\u0433\u043D\u044F`);
+        return;
+      }
+      if (target.kind === "node") {
+        this.ui.toast("\u0414\u043E\u0431\u044B\u0432\u0430\u0439 \u0443\u0434\u0430\u0440\u0430\u043C\u0438: \u0437\u0430\u0436\u043C\u0438 \u043B\u0435\u0432\u0443\u044E \u043A\u043D\u043E\u043F\u043A\u0443 \u043C\u044B\u0448\u0438", true);
+      }
+    }
+    /** ЛКМ: удар по дереву/камню/кусту или в воздух */
+    attack() {
+      var _a, _b;
+      if (!this.running || this.paused || this.dead) return;
+      if (this.attackCooldown > 0) return;
+      this.attackCooldown = 0.62;
+      this.player.swing();
+      this.audio.step("grass", false);
+      const target = this.resources.nearest(this.player.position, 3.8);
+      if (!target || target.kind !== "node") return;
+      const node = target.node;
+      const tool = this.equippedTool();
+      const def = this.resources.strike(node, tool);
+      const power = tool && tool[(_a = this.nodeDef(node).tool) != null ? _a : "chop"] !== void 0 ? tool[(_b = this.nodeDef(node).tool) != null ? _b : "chop"] : 0.35;
+      if (def.need && (!tool || power < 1)) {
+        this.ui.toast(`\u041D\u0443\u0436\u0435\u043D ${def.need}: \u0442\u0430\u043A \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0432\u044B\u0445\u043E\u0434\u0438\u0442`, true);
+      }
+      if (def.depleted) {
+        const parts = [];
+        for (const [id, n] of Object.entries(def.drops)) {
+          this.addItem(id, n);
+          parts.push(`${ITEMS[id].name} +${n}`);
+        }
+        this.ui.toast(parts.length ? `${node.label} \u0434\u043E\u0431\u044B\u0442: ${parts.join(", ")}` : `${node.label} \u043F\u0443\u0441\u0442`);
+        this.audio.pickup();
+        if (this.nearNode === node) this.nearNode = null;
+      } else {
+        this.audio.step("rock", true);
+      }
+    }
+    craft(recipeId) {
+      var _a;
+      const recipe = RECIPES.find((r) => r.id === recipeId);
+      if (!recipe) return;
+      const inv = this.state.inventory;
+      for (const [id, need] of Object.entries(recipe.need)) {
+        if ((inv[id] || 0) < need) {
+          this.ui.toast(`\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442: ${ITEMS[id].name}`, true);
+          return;
+        }
+      }
+      for (const [id, need] of Object.entries(recipe.need)) this.takeItem(id, need);
+      for (const [id, give] of Object.entries(recipe.gives)) this.addItem(id, give);
+      this.audio.pickup();
+      this.ui.toast(`\u0421\u0434\u0435\u043B\u0430\u043D\u043E: ${recipe.name}`);
+      this.ui._lastCraftSig = "";
+      this.ui.renderCraft(RECIPES, inv, (rid) => this.craft(rid));
+      if (((_a = ITEMS[recipeId]) == null ? void 0 : _a.kind) === "tool") {
+        const idx = HOTBAR.indexOf(recipeId);
+        if (idx >= 0) this.selectSlot(idx);
+      }
+    }
+    /** F — поставить костёр из набора */
+    placeCampfire() {
+      if (!this.running || this.paused || this.dead) return;
+      if ((this.state.inventory.campfireKit || 0) <= 0) {
+        this.ui.toast("\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u0434\u0435\u043B\u0430\u0439 \u043A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E (C)", true);
+        return;
+      }
+      const p = this.player.position;
+      const x = p.x + Math.sin(this.player.facing) * 1.9;
+      const z = p.z + Math.cos(this.player.facing) * 1.9;
+      const h = this.world.heightAt(x, z);
+      if (h < 0.45) {
+        this.ui.toast("\u0412 \u0432\u043E\u0434\u0435 \u043A\u043E\u0441\u0442\u0451\u0440 \u043D\u0435 \u043F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u044C", true);
+        return;
+      }
+      this.takeItem("campfireKit", 1);
+      const fire = this.resources.addCampfire(x, z);
+      this.resources.addFuel(fire, 90);
+      this.audio.pickup();
+      this.ui.toast("\u041A\u043E\u0441\u0442\u0451\u0440 \u0433\u043E\u0440\u0438\u0442 \xB7 E \u2014 \u043F\u043E\u0434\u043B\u043E\u0436\u0438\u0442\u044C \u043F\u0430\u043B\u043A\u0438");
+      if (this.equippedId() === "campfireKit" && (this.state.inventory.campfireKit || 0) === 0) {
+        this.player.setEquipped(null);
+      }
+    }
+    /** Использовать выбранный слот: еда/питьё — съесть, инструмент — просто держим */
+    useSelected() {
+      const id = HOTBAR[this.selected];
+      if (!id) return;
+      const item = ITEMS[id];
+      if (item.kind === "food") this.consume(id);
+      else if (this.equippedId() !== id) this.selectSlot(this.selected);
     }
     consume(kind) {
       if (!this.running || this.paused || this.dead) return;
       const inv = this.state.inventory;
       if ((inv[kind] || 0) <= 0) {
-        this.ui.toast(kind === "coconut" ? "\u041A\u043E\u043A\u043E\u0441\u043E\u0432 \u043D\u0435\u0442" : "\u042F\u0433\u043E\u0434 \u043D\u0435\u0442", true);
+        this.ui.toast(`${ITEMS[kind].name}: \u043D\u0435\u0442`, true);
         return;
       }
-      inv[kind]--;
-      if (kind === "coconut") {
-        this.state.thirst = Math.min(100, this.state.thirst + CONFIG.food.coconut.thirst);
-        this.state.hunger = Math.min(100, this.state.hunger + CONFIG.food.coconut.hunger);
-        this.audio.drink();
-        this.ui.toast("\u041A\u043E\u043A\u043E\u0441: +20 \u0436\u0430\u0436\u0434\u044B, +6 \u0435\u0434\u044B");
-      } else {
-        this.state.hunger = Math.min(100, this.state.hunger + CONFIG.food.berries.hunger);
-        this.audio.eat();
-        this.ui.toast("\u0413\u043E\u0440\u0441\u0442\u044C \u044F\u0433\u043E\u0434: +12 \u0435\u0434\u044B");
+      const effects = {
+        coconut: { thirst: 22, hunger: 6, text: "\u041A\u043E\u043A\u043E\u0441: +22 \u0436\u0430\u0436\u0434\u044B, +6 \u0435\u0434\u044B" },
+        berries: { hunger: 12, thirst: 2, text: "\u0413\u043E\u0440\u0441\u0442\u044C \u044F\u0433\u043E\u0434: +12 \u0435\u0434\u044B" },
+        cookedMeat: { hunger: 34, thirst: -4, text: "\u0416\u0430\u0440\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E: +34 \u0435\u0434\u044B" },
+        rawMeat: { hunger: 16, thirst: -2, text: "\u0421\u044B\u0440\u043E\u0435 \u043C\u044F\u0441\u043E: +16 \u0435\u0434\u044B, \u043F\u0440\u043E\u0442\u0438\u0432\u043D\u043E" },
+        cookedWater: { thirst: 38, hunger: 0, text: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430: +38 \u0436\u0430\u0436\u0434\u044B" }
+      };
+      const ef = effects[kind];
+      if (!ef) return;
+      this.takeItem(kind, 1);
+      this.state.thirst = Math.max(0, Math.min(100, this.state.thirst + (ef.thirst || 0)));
+      this.state.hunger = Math.max(0, Math.min(100, this.state.hunger + (ef.hunger || 0)));
+      if (kind === "rawMeat" && Math.random() < 0.45) {
+        this.state.health = Math.max(1, this.state.health - 6);
+        this.ui.toast("\u0421\u044B\u0440\u043E\u0435 \u043C\u044F\u0441\u043E \u2014 \u0436\u0438\u0432\u043E\u0442 \u0441\u043A\u0440\u0443\u0442\u0438\u043B\u043E", true);
       }
-      this.ui.setCounts(inv);
-      this.ui.setInventory(inv);
+      if (ef.thirst > 0) this.audio.drink();
+      else this.audio.eat();
+      this.ui.toast(ef.text);
     }
     // ------------------------------------------------------------
     //  Погода
@@ -30588,23 +31554,49 @@ void main() {
       this.rain.update(dt, this.player.position);
       this.audio.setNight(skyInfo.night);
       this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
+      this.resources.update(dt);
+      this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+      if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
+      const fireWarm = this.resources.fireWarmth(this.player.position);
+      this.nearFire = fireWarm.fire;
+      this.ui.setFuel(fireWarm.warmth > 0.05 && fireWarm.fire ? fireWarm.fire : null);
       this.nearest = this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
+      const nodeTarget = this.resources.nearest(this.player.position, 3.9);
+      let marker = null;
       if (this.nearest) {
-        this.highlight.visible = true;
-        const p = this.nearest.mesh.position;
-        this.highlight.position.set(p.x, this.world.heightAt(p.x, p.z) + 0.06, p.z);
-        this.highlight.material.opacity = 0.6 + Math.sin(performance.now() * 5e-3) * 0.25;
+        marker = this.nearest.mesh.position;
         this.ui.setPrompt(`<b>E</b> \u2014 \u043F\u043E\u0434\u043E\u0431\u0440\u0430\u0442\u044C ${this.nearest.name.toLowerCase()}`);
+      } else if (nodeTarget && nodeTarget.kind === "node") {
+        const def = this.nodeDef(nodeTarget.node);
+        marker = new Vector3(nodeTarget.node.x, nodeTarget.node.y + 0.1, nodeTarget.node.z);
+        const toolOk = !def.need || this.equippedTool();
+        this.ui.setPrompt(
+          `<b>\u041B\u041A\u041C</b> \u2014 ${def.label.toLowerCase()}${def.need ? ` (\u043D\u0443\u0436\u0435\u043D ${def.need})` : ""}` + (toolOk ? "" : ' \xB7 <span class="prompt-warn">\u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E</span>')
+        );
+      } else if (nodeTarget && nodeTarget.kind === "campfire") {
+        marker = new Vector3(nodeTarget.fire.x, nodeTarget.fire.y + 0.1, nodeTarget.fire.z);
+        const fuelPct = Math.round(nodeTarget.fire.fuel / nodeTarget.fire.maxFuel * 100);
+        this.ui.setPrompt(`<b>E</b> \u2014 \u043F\u043E\u0434\u043B\u043E\u0436\u0438\u0442\u044C \u043F\u0430\u043B\u043A\u0438 (\u043E\u0433\u043E\u043D\u044C ${fuelPct}%)`);
+      } else if (nodeTarget && nodeTarget.kind === "spring") {
+        marker = new Vector3(nodeTarget.spring.x, nodeTarget.spring.y + 0.1, nodeTarget.spring.z);
+        this.ui.setPrompt("<b>E</b> \u2014 \u043F\u043E\u043F\u0438\u0442\u044C \u0438\u0437 \u0440\u043E\u0434\u043D\u0438\u043A\u0430");
+      } else {
+        this.ui.setPrompt(null);
+      }
+      if (marker) {
+        this.highlight.visible = true;
+        this.highlight.position.set(marker.x, this.world.heightAt(marker.x, marker.z) + 0.06, marker.z);
+        this.highlight.material.opacity = 0.55 + Math.sin(performance.now() * 5e-3) * 0.25;
       } else {
         this.highlight.visible = false;
-        this.ui.setPrompt(null);
       }
       const sprinting = this.input.sprint && Math.hypot(this.player.velocity.x, this.player.velocity.z) > 5;
       const moveMul = sprinting ? 1.3 : 1;
       const wetMul = this.rainIntensity > 0.3 ? 1.12 : 1;
       state.thirst = Math.max(0, state.thirst - CONFIG.needs.thirstDrain * moveMul * wetMul * dt);
       state.hunger = Math.max(0, state.hunger - CONFIG.needs.hungerDrain * moveMul * wetMul * dt);
-      const warmthTarget = Math.max(26, 100 - skyInfo.night * 42 - this.rainIntensity * 26);
+      let warmthTarget = Math.max(26, 100 - skyInfo.night * 42 - this.rainIntensity * 26);
+      if (fireWarm.warmth > 0) warmthTarget = Math.max(warmthTarget, 60 + fireWarm.warmth * 45);
       const dw = warmthTarget - state.warmth;
       state.warmth = Math.max(0, Math.min(100, state.warmth + Math.sign(dw) * Math.min(Math.abs(dw), dt * 3.4)));
       let cause = null;
@@ -30646,7 +31638,7 @@ void main() {
         clock: this.sky.clockString(),
         weather: WEATHERS[this.weather].label
       });
-      if (this.ui.isInventoryOpen()) this.ui.setInventory(state.inventory);
+      if (this.ui.isPanelOpen()) this.ui.renderBag(state.inventory);
       this.saveTimer += dt;
       if (this.saveTimer > 15) {
         this.saveTimer = 0;
@@ -30680,6 +31672,8 @@ void main() {
           facing: this.player.facing,
           need: [this.state.health, this.state.thirst, this.state.hunger, this.state.warmth],
           inv: this.state.inventory,
+          selected: this.selected,
+          campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
           collected: this.state.collected,
           weather: this.weather,
           savedAt: Date.now()
@@ -30715,18 +31709,22 @@ void main() {
       this.state.thirst = thirst;
       this.state.hunger = hunger;
       this.state.warmth = warmth;
-      this.state.inventory = Object.assign({ wood: 0, stone: 0, fiber: 0, coconut: 0, berries: 0 }, data.inv || {});
+      this.state.inventory = Object.assign(emptyInventory(), data.inv || {});
+      this.selected = Math.max(0, Math.min(HOTBAR.length - 1, data.selected || 0));
       this.state.collected = data.collected || 0;
+      for (const f of data.campfires || []) {
+        const fire = this.resources.addCampfire(f.x, f.z);
+        fire.fuel = Math.max(0, Math.min(fire.maxFuel, f.fuel || 0));
+      }
       this.player.applyCamera(this.camera, this.world, 1);
-      this.ui.setCounts(this.state.inventory);
+      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.ui.renderBag(this.state.inventory);
+      this.player.setEquipped(this.equippedId());
       this.ui.toast(`\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E: \u0434\u0435\u043D\u044C ${this.sky.day}, ${this.sky.clockString()}`);
     }
     // ------------------------------------------------------------
     //  Цикл
     // ------------------------------------------------------------
-    updateHotbarUI() {
-      this.ui.setCounts(this.state.inventory);
-    }
     frame() {
       const now = performance.now();
       let dt = (now - this.lastTime) / 1e3;

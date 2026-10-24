@@ -47,24 +47,12 @@
       </div>
     </div>
 
-    <div class="hotbar" id="hotbar">
-      <div class="slot" data-slot="0">
-        <span class="slot-key">1</span>
-        <span class="slot-icon">🥥</span>
-        <span class="slot-name">Кокос</span>
-        <span class="slot-count" id="count-coconut">0</span>
-      </div>
-      <div class="slot" data-slot="1">
-        <span class="slot-key">2</span>
-        <span class="slot-icon">🍒</span>
-        <span class="slot-name">Ягоды</span>
-        <span class="slot-count" id="count-berries">0</span>
-      </div>
-    </div>
+    <div class="hotbar" id="hotbar"></div>
+    <div class="fuel hidden" id="hud-fuel"></div>
 
     <div class="prompt hidden" id="prompt"></div>
     <div class="toasts" id="toasts"></div>
-    <div class="hint" id="hint">WASD — идти · Shift — бежать · мышь — смотреть · E — подобрать · I — сумка</div>
+    <div class="hint" id="hint">WASD — идти · Shift — бежать · ЛКМ — добывать · E — взаимодействие · C — крафт · I — сумка · F — поставить костёр</div>
   </div>
 
   <!-- ======================= Сумка ======================= -->
@@ -74,22 +62,30 @@
     <p class="panel-note">I или Esc — закрыть</p>
   </div>
 
+  <!-- ======================= Крафт ======================= -->
+  <div id="crafting" class="panel panel-right hidden">
+    <h2>Крафт</h2>
+    <ul id="craft-list"></ul>
+    <p class="panel-note">C или Esc — закрыть</p>
+  </div>
+
   <!-- ======================= Стартовый экран ======================= -->
   <div id="start" class="overlay">
     <div class="overlay-inner">
       <h1>LAST SHORE<span class="sub">Последний берег</span></h1>
       <p class="tagline">Ты очнулся на пустом берегу. Корабль разбит, связи нет, карты нет.<br>
-        Продержись, найди воду и еду — а дальше решай, как отсюда выбраться.</p>
+        Найди воду и еду, сделай нож и топор, разведи огонь — и решай, как отсюда выбраться.<br>
+        <span class="tagline-dim">Сейчас в игре: остров, сутки и ночь, вода и еда, добыча, крафт и костёр.</span></p>
 
       <div class="controls-grid">
         <div><b>W A S D</b><span>идти</span></div>
         <div><b>Shift</b><span>бежать</span></div>
-        <div><b>Space</b><span>прыжок</span></div>
-        <div><b>Мышь</b><span>камера</span></div>
-        <div><b>E</b><span>подобрать</span></div>
-        <div><b>1 / 2</b><span>кокос / ягоды</span></div>
+        <div><b>ЛКМ</b><span>добывать</span></div>
+        <div><b>E</b><span>подобрать / пить</span></div>
+        <div><b>1…8</b><span>слоты</span></div>
+        <div><b>C</b><span>крафт</span></div>
         <div><b>I</b><span>сумка</span></div>
-        <div><b>Esc</b><span>пауза</span></div>
+        <div><b>F</b><span>ставить костёр</span></div>
       </div>
 
       <div class="btn-row">

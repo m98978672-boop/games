@@ -63,10 +63,10 @@ export const CONFIG = {
 };
 
 export const COLORS = {
-  sand: 0xd8c48f,
-  sandWet: 0xc0a878,
-  grass: 0x6f9a4a,
-  jungle: 0x40663a,
+  sand: 0xdfcb95,
+  sandWet: 0xc7b083,
+  grass: 0x84ab55,
+  jungle: 0x4e7a43,
   rock: 0x8b8478,
   rockDark: 0x6d665c,
   snow: 0xdfe6e4,

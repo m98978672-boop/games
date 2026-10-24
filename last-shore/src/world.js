@@ -248,7 +248,7 @@ export class World {
     const c = new THREE.Color();
     if (h < 0.35) {
       c.setHex(COLORS.sandWet);
-    } else if (h < 1.55 + moisture * 0.3) {
+    } else if (h < 2.15 + moisture * 0.45) {
       c.setHex(COLORS.sand);
     } else if (slope > 0.85 || h > 19) {
       c.setHex(slope > 1.2 ? COLORS.rockDark : COLORS.rock);
@@ -257,7 +257,10 @@ export class World {
     } else {
       const grass = new THREE.Color(COLORS.grass);
       const jungle = new THREE.Color(COLORS.jungle);
-      c.copy(grass).lerp(jungle, clamp(moisture * 1.25, 0, 1));
+      c.copy(grass).lerp(jungle, clamp((moisture - 0.25) * 1.05, 0, 1));
+      // сухая трава на прогалинах
+      const dry = fbm(x * 0.021 + 60, z * 0.021 - 12, 3, this.seed + 91);
+      if (dry > 0.58) c.lerp(new THREE.Color(0xb2a765), (dry - 0.58) * 1.6);
       // мелкая «пятнистость» травы
       const n = fbm(x * 0.09, z * 0.09, 2, this.seed + 55);
       c.offsetHSL(0, 0, (n - 0.5) * 0.06);
@@ -462,7 +465,7 @@ export class World {
       if (h < 1.4 || h > 15) continue;
       if (this.slopeAt(x, z) > 0.85) continue;
       tufts.push({ x, z, h, s: 0.6 + rng() * 0.9, rot: rng() * Math.PI * 2 });
-      if (tufts.length >= 4200) break;
+      if (tufts.length >= 2600) break;
     }
 
     // --- инстансы ---
@@ -485,7 +488,13 @@ export class World {
           const s = it.s ?? 1;
           dummy.scale.set(s, s, s);
           dummy.updateMatrix();
-          mesh.setMatrixAt(k++, dummy.matrix);
+          mesh.setMatrixAt(k, dummy.matrix);
+          // обратная ссылка: по ней можно спрятать конкретное дерево
+          it.mesh = mesh;
+          it.instIdx = k;
+          it.baseMatrix = dummy.matrix.clone();
+          it.baseScale = s;
+          k++;
         }
         mesh.count = k;
         mesh.frustumCulled = false;
@@ -507,14 +516,25 @@ export class World {
       rocks: rocks.length, tufts: tufts.length,
     };
 
+    this.palmList = palms;
+    this.treeList = trees;
+    this.bushList = bushes;
+    this.rockList = rocks;
+
     this.palms = makeInstanced(palmGeos, palms);
     this.trees = makeInstanced(treeGeos, trees);
     this.bushes = makeInstanced(bushGeos, bushes);
     this.rocks = makeInstanced(rockGeos, rocks);
 
     // трава: много, без теней
-    const tuftGeo = colorize(new THREE.ConeGeometry(0.22, 0.85, 3, 1), 0x5f8f45);
-    tuftGeo.translate(0, 0.42, 0);
+    // пучок травы: три узких «пера» вместо одного конуса
+    const blades = [];
+    for (let i = 0; i < 3; i++) {
+      const blade = new THREE.ConeGeometry(0.13, 0.55 + i * 0.12, 3, 1);
+      blade.translate((i - 1) * 0.16, 0.28, (i % 2) * 0.12);
+      blades.push(colorize(blade, i === 1 ? 0x74a052 : 0x608c47));
+    }
+    const tuftGeo = mergeGeometries(blades, false);
     this.tufts = makeInstanced([tuftGeo], tufts, { castShadow: false });
   }
 
@@ -607,6 +627,19 @@ export class World {
     });
   }
 
+  /** Погасить или вернуть объект растительности (срубленное дерево, добытый камень) */
+  setNodeVisible(item, visible) {
+    if (!item || !item.mesh) return;
+    const dummy = this._dummy || (this._dummy = new THREE.Object3D());
+    const target = item.baseScale ?? 1;
+    dummy.position.set(item.x, item.h - 0.15, item.z);
+    dummy.rotation.set(0, item.rot || 0, 0);
+    dummy.scale.setScalar(visible ? target : 0.0001);
+    dummy.updateMatrix();
+    item.mesh.setMatrixAt(item.instIdx, dummy.matrix);
+    item.mesh.instanceMatrix.needsUpdate = true;
+  }
+
   /** Ближайший подбираемый предмет в радиусе */
   nearestPickup(pos, reach) {
     let best = null;
@@ -637,6 +670,7 @@ export class World {
    */
   resolveCollisions(pos, radius, velocity = null) {
     for (const c of this.colliders) {
+      if (c.disabled) continue;
       const dx = pos.x - c.x;
       const dz = pos.z - c.z;
       const min = c.r + radius;

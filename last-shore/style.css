@@ -108,8 +108,8 @@ html, body {
 
 .slot {
   position: relative;
-  width: 76px;
-  height: 76px;
+  width: 68px;
+  height: 68px;
   border-radius: 12px;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -126,7 +126,8 @@ html, body {
 .slot:hover { transform: translateY(-3px); border-color: rgba(232, 180, 90, 0.5); }
 .slot.active { border-color: var(--accent); background: rgba(60, 44, 20, 0.66); }
 .slot.empty { opacity: 0.42; }
-.slot-icon { font-size: 22px; line-height: 1; }
+.slot-icon { width: 24px; height: 24px; display: block; }
+.slot-icon svg { width: 24px; height: 24px; display: block; }
 .slot-name { font-size: 10px; color: var(--ink-dim); letter-spacing: 0.4px; }
 .slot-count { position: absolute; right: 7px; bottom: 5px; font-size: 12px; font-weight: bold; color: var(--accent); font-variant-numeric: tabular-nums; }
 .slot-key { position: absolute; left: 7px; top: 4px; font-size: 10px; color: var(--ink-dim); }
@@ -324,3 +325,67 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
   .needs { width: 160px; }
   .hint { display: none; }
 }
+
+
+/* ------------------------- Крафт и сумка ------------------------- */
+
+.panel-right { top: 74px; right: 16px; width: 320px; max-height: 68vh; overflow: auto; }
+
+#craft-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+
+.recipe {
+  display: grid;
+  grid-template-columns: 26px 1fr auto;
+  gap: 9px;
+  align-items: center;
+  padding: 8px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(242, 236, 223, 0.08);
+}
+.recipe.can { border-color: rgba(232, 180, 90, 0.45); background: rgba(232, 180, 90, 0.07); }
+.recipe.cannot { opacity: 0.62; }
+.recipe-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.recipe-body b { font-size: 13px; font-weight: 600; }
+.recipe-body em { font-size: 10.5px; color: var(--ink-dim); font-style: normal; }
+.costs { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
+.cost { font-size: 10px; padding: 1px 5px; border-radius: 5px; background: rgba(0, 0, 0, 0.35); }
+.cost.ok { color: #a8d68a; }
+.cost.lack { color: #e08a80; }
+
+.craft-btn {
+  font-size: 10px;
+  letter-spacing: 1px;
+  padding: 7px 10px;
+  border-radius: 7px;
+  box-shadow: none;
+}
+.craft-btn:disabled { background: rgba(255, 255, 255, 0.08); color: var(--ink-dim); cursor: default; }
+
+.row-icon { width: 22px; height: 22px; flex: 0 0 22px; }
+.row-icon svg { width: 22px; height: 22px; }
+#inv-list li { align-items: center; gap: 8px; }
+#inv-list li .row-name { flex: 1; font-size: 13px; }
+#inv-list li .row-count { color: var(--accent); font-variant-numeric: tabular-nums; font-size: 13px; }
+
+.tagline-dim { color: var(--ink-dim); font-size: 13px; }
+
+/* ------------------------- Топливо костра ------------------------- */
+
+.fuel {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  background: var(--panel-solid);
+  border: 1px solid rgba(240, 170, 80, 0.35);
+  font-size: 11px;
+}
+.fuel-track { width: 120px; height: 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.5); overflow: hidden; }
+.fuel-track i { display: block; height: 100%; background: linear-gradient(90deg, #f0a93c, #ffe08a); }
+.fuel b { color: var(--accent); font-weight: 600; }
