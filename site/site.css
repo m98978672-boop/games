@@ -1,0 +1,291 @@
+/* ============================================================
+   Games — витрина двух игр. Тёмная тема, тёплый акцент.
+   ============================================================ */
+
+:root {
+  --bg: #0a0c0b;
+  --bg-soft: #101413;
+  --panel: rgba(255, 255, 255, 0.035);
+  --line: rgba(242, 236, 223, 0.12);
+  --ink: #f2ecdf;
+  --ink-dim: #a9a294;
+  --accent: #e8b45a;
+  --ls: #6fbf8b;
+  --fl: #e88a5a;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Trebuchet MS', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ---------------------------- Герой ---------------------------- */
+
+.hero {
+  position: relative;
+  min-height: 78vh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+}
+
+#hero-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hero-inner {
+  position: relative;
+  z-index: 1;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 80px 24px;
+  width: 100%;
+}
+
+.kicker {
+  font-size: 12px;
+  letter-spacing: 3.5px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  margin-bottom: 14px;
+}
+
+.hero h1 {
+  font-size: clamp(56px, 11vw, 132px);
+  line-height: 0.92;
+  letter-spacing: 6px;
+  font-weight: 700;
+  background: linear-gradient(180deg, #fff6e0 10%, #e0a94f 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lede {
+  margin: 22px 0 30px;
+  max-width: 560px;
+  font-size: 17px;
+  color: #d8d0c1;
+}
+
+.cta {
+  display: inline-block;
+  padding: 13px 30px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f3cf88, #d9a04c);
+  color: #1a1409;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  transition: transform 0.15s, filter 0.2s;
+}
+.cta:hover { transform: translateY(-2px); filter: brightness(1.07); text-decoration: none; }
+
+/* --------------------------- Секции --------------------------- */
+
+main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+
+.games {
+  display: flex;
+  flex-direction: column;
+  gap: 34px;
+  padding: 64px 0 24px;
+}
+
+.panel { padding: 44px 0; border-top: 1px solid var(--line); }
+.panel h2 {
+  font-size: 13px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+/* --------------------------- Карточки --------------------------- */
+
+.card {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: 0;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.25s, transform 0.25s;
+}
+.card:hover { border-color: rgba(232, 180, 90, 0.35); transform: translateY(-2px); }
+
+.card:nth-child(even) .card-art { order: 2; }
+
+.card-art { position: relative; min-height: 320px; background: #0d1211; }
+.card-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.badge {
+  position: absolute;
+  left: 14px;
+  top: 14px;
+  padding: 5px 10px;
+  border-radius: 7px;
+  font-size: 10.5px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  background: rgba(8, 10, 9, 0.78);
+  border: 1px solid var(--line);
+  color: var(--ink-dim);
+  backdrop-filter: blur(6px);
+}
+.badge-new { color: var(--ls); border-color: rgba(111, 191, 139, 0.4); }
+
+.card-body { padding: 26px 26px 24px; display: flex; flex-direction: column; gap: 12px; }
+
+.card-body h2 {
+  font-size: 25px;
+  letter-spacing: 2px;
+  line-height: 1.1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.card-body h2 span {
+  font-size: 11.5px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-weight: 400;
+}
+
+.desc { font-size: 14.5px; color: #d3cbba; }
+
+.features {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 5px;
+  margin-top: 2px;
+}
+.features li {
+  font-size: 13px;
+  color: var(--ink-dim);
+  padding-left: 16px;
+  position: relative;
+}
+.features li::before {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+.card-lastshore .features li::before { background: var(--ls); }
+.card-frontline .features li::before { background: var(--fl); }
+
+.card-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-block;
+  padding: 11px 22px;
+  border-radius: 9px;
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  transition: border-color 0.2s, background 0.2s, transform 0.15s;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; transform: translateY(-1px); }
+.btn-primary {
+  background: linear-gradient(180deg, #f3cf88, #d9a04c);
+  border: none;
+  color: #1a1409;
+  font-weight: 700;
+}
+.btn-primary:hover { color: #1a1409; filter: brightness(1.07); }
+
+/* --------------------------- Плитки --------------------------- */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 16px 18px;
+}
+.tile b { display: block; font-size: 13.5px; margin-bottom: 6px; letter-spacing: 0.4px; }
+.tile p { font-size: 13px; color: var(--ink-dim); }
+
+/* --------------------------- Роадмап --------------------------- */
+
+.roadmap { display: flex; flex-direction: column; gap: 14px; }
+
+.road {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.road p { font-size: 13.5px; color: #d3cbba; margin-top: 6px; }
+
+.tag {
+  font-size: 10.5px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+.tag.ls { color: var(--ls); }
+.tag.fl { color: var(--fl); }
+
+/* --------------------------- Подвал --------------------------- */
+
+footer {
+  border-top: 1px solid var(--line);
+  padding: 26px 24px 40px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
+
+/* --------------------------- Адаптив --------------------------- */
+
+@media (max-width: 860px) {
+  .card { grid-template-columns: 1fr; }
+  .card:nth-child(even) .card-art { order: 0; }
+  .card-art { min-height: 220px; }
+  .hero { min-height: 66vh; }
+  .hero-inner { padding: 56px 20px; }
+  main { padding: 0 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .card, .btn, .cta { transition: none; }
+}

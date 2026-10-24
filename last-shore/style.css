@@ -428,3 +428,7 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
   .controls-grid { margin-bottom: 16px; }
   button { padding: 11px 32px; font-size: 14px; }
 }
+
+
+.back-link { color: var(--ink-dim); text-decoration: none; border-bottom: 1px dotted rgba(242, 236, 223, 0.35); }
+.back-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
