@@ -29,6 +29,20 @@ node tests/harness.mjs
 На обычной машине с браузером это не нужно.
 
 
+## 3.1. Первый запуск headless в песочнице
+
+`bash tools/setup-headless.sh` — распаковывает Chromium и собирает заглушки `libnspr4/libnss3/libnssutil3`
+в `/tmp/nssstub` (один раз на новую песочницу). После этого работают `tests/browser.mjs`, `tests/covers.mjs`
+и скрипты скриншотов.
+
+## 3.2. Скриншоты и шейдеры
+
+```bash
+cd last-shore && python3 tools/serve.py 8080 &   # сервер игры
+node tests/shaderlog.mjs   # ошибки компиляции шейдеров в консоли
+node tests/shots.mjs       # tests/shot-fp.png, shot-forest.png, shot-night2.png
+```
+
 ## 4. Устойчивость (WebGL, safe-режим, диагностика)
 
 `node tests/robust.mjs` — три сценария в Chromium:

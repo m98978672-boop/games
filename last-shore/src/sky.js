@@ -41,8 +41,9 @@ const SKY_FRAG = /* glsl */ `
 `;
 
 export class Sky {
-  constructor(scene, renderer) {
+  constructor(scene, renderer, textures = null) {
     this.scene = scene;
+    this.textures = textures;
     this.renderer = renderer;
     this.hour = CONFIG.time.startHour;
     this.day = 1;
@@ -137,6 +138,32 @@ export class Sky {
     this.moonDisk.renderOrder = -8;
     scene.add(this.moonDisk);
 
+    // --- облака: несколько рыхлых «пятен» на высоте, медленно плывут ---
+    this.clouds = new THREE.Group();
+    this.cloudMaterials = [];
+    scene.add(this.clouds);
+    const cloudGeo = new THREE.PlaneGeometry(180, 110);
+    for (let i = 0; i < 9; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        map: textures ? textures.cloud : null,
+        transparent: true,
+        opacity: 0.5,
+        depthWrite: false,
+        fog: false,
+      });
+      this.cloudMaterials.push(mat);
+      const mesh = new THREE.Mesh(cloudGeo, mat);
+      const angle = (i / 9) * Math.PI * 2 + Math.random();
+      const radius = 260 + Math.random() * 260;
+      mesh.position.set(Math.cos(angle) * radius, 95 + Math.random() * 60, Math.sin(angle) * radius);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.rotation.z = Math.random() * Math.PI;
+      mesh.scale.setScalar(0.7 + Math.random() * 0.9);
+      mesh.renderOrder = -7;
+      this.clouds.add(mesh);
+    }
+
     // туман
     scene.fog = new THREE.Fog(0xbfe0f0, 60, 340);
 
@@ -188,11 +215,11 @@ export class Sky {
     const moonDir = this.sunDir.clone().multiplyScalar(-1);
     this.moon.position.copy(playerPos).add(moonDir.multiplyScalar(100));
     this.moon.target.position.copy(playerPos);
-    this.moon.intensity = 1.15 * night;
+    this.moon.intensity = 1.5 * night;
 
-    this.hemi.intensity = 0.62 + 0.75 * lightUp;
-    this.hemi.color.setHex(0x9fc6e8).lerp(new THREE.Color(0x2a3550), night);
-    this.ambient.intensity = 0.34 + 0.22 * (1 - night);
+    this.hemi.intensity = 0.8 + 0.85 * lightUp + 0.35 * night;
+    this.hemi.color.setHex(0x9fc6e8).lerp(new THREE.Color(0x3d4f74), night);
+    this.ambient.intensity = 0.42 + 0.3 * (1 - night) + 0.32 * night;
 
     // солнце/луна на небе
     this.sunDisk.position.copy(this.sunDir).multiplyScalar(760);
@@ -220,11 +247,20 @@ export class Sky {
     // туман = цвет горизонта, чуть темнее
     this.fogColor.copy(this.skyUniforms.uBottom.value).multiplyScalar(0.92);
     this.scene.fog.color.copy(this.fogColor);
-    this.scene.fog.near = 70 - night * 25;
-    this.scene.fog.far = 360 - night * 150;
+    this.scene.fog.near = 95 - night * 30;
+    this.scene.fog.far = 430 - night * 170;
 
     this.skyDome.position.copy(playerPos);
     this.stars.position.copy(playerPos);
+
+    // облака: держим вокруг игрока и крутим медленно по кругу
+    this.clouds.position.set(playerPos.x, 0, playerPos.z);
+    this.clouds.rotation.y += dt * 0.004;
+    const cloudTint = 0.55 + dayMix * 0.45;
+    for (const mat of this.cloudMaterials) {
+      mat.color.setRGB(cloudTint, cloudTint * 0.98, cloudTint * 0.95);
+      mat.opacity = (0.18 + dayMix * 0.42) * (this.cloudiness ?? 1);
+    }
 
     return { night, sunDir: this.sunDir, fogColor: this.fogColor };
   }

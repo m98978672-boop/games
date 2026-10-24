@@ -13,6 +13,7 @@ import { Rain } from './effects.js';
 import { ITEMS, HOTBAR, BAG_ORDER, RECIPES } from './items.js';
 import { Resources, NODE_DEFS } from './nodes.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
+import { createTextures } from './textures.js';
 
 const SAVE_KEY = 'lastshore.save.v1';
 
@@ -102,8 +103,10 @@ class Game {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(64, window.innerWidth / window.innerHeight, 0.25, 1400);
 
-    this.world = new World(this.scene);
-    this.sky = new Sky(this.scene, this.renderer);
+    const maxAniso = this.renderer.capabilities ? this.renderer.capabilities.getMaxAnisotropy() : 4;
+    this.textures = createTextures(Math.min(8, maxAniso || 4));
+    this.world = new World(this.scene, CONFIG.world.seed, this.textures);
+    this.sky = new Sky(this.scene, this.renderer, this.textures);
     this.player = new Player(this.scene);
     this.rain = new Rain(this.scene);
     this.resources = new Resources(this.scene, this.world);
@@ -117,6 +120,7 @@ class Game {
       collected: 0,
     };
     this.selected = 0;
+    this.view = 'third';
     this.attackCooldown = 0;
     this.holdingAttack = false;
     this.nearNode = null;
@@ -354,6 +358,7 @@ class Game {
       case 'Space': this.input.jump = true; e.preventDefault(); break;
       case 'KeyE': this.interact(); break;
       case 'KeyF': this.placeCampfire(); break;
+      case 'KeyV': this.toggleView(); break;
       case 'F1': e.preventDefault(); this.showDiag(); break;
       case 'KeyC': {
         e.preventDefault();
@@ -723,6 +728,7 @@ class Game {
     this.sky.skyUniforms.uTop.value.multiplyScalar(0.75 + this.weatherSunMul * 0.3);
     this.sky.skyUniforms.uBottom.value.multiplyScalar(0.8 + this.weatherSunMul * 0.2);
 
+    this.sky.cloudiness = this.weather === 'clear' ? 0.55 : this.weather === 'cloudy' ? 1.0 : 1.5;
     this.rain.setIntensity(this.rainIntensity);
     this.rain.update(dt, this.player.position);
     this.audio.setNight(skyInfo.night);
@@ -863,6 +869,7 @@ class Game {
         need: [this.state.health, this.state.thirst, this.state.hunger, this.state.warmth],
         inv: this.state.inventory,
         selected: this.selected,
+        view: this.view,
         campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
         collected: this.state.collected,
         weather: this.weather,
@@ -903,6 +910,7 @@ class Game {
     this.state.warmth = warmth;
     this.state.inventory = Object.assign(emptyInventory(), data.inv || {});
     this.selected = Math.max(0, Math.min(HOTBAR.length - 1, data.selected || 0));
+    this.view = data.view === 'first' ? 'first' : 'third';
     this.state.collected = data.collected || 0;
 
     for (const f of data.campfires || []) {
@@ -914,6 +922,14 @@ class Game {
     this.ui.renderBag(this.state.inventory);
     this.player.setEquipped(this.equippedId());
     this.ui.toast(`Загружено: день ${this.sky.day}, ${this.sky.clockString()}`);
+  }
+
+  /** Переключение «третье лицо / от первого лица» */
+  toggleView() {
+    this.view = this.view === 'first' ? 'third' : 'first';
+    this.player.setViewMode(this.view, this.camera);
+    this.ui.toast(this.view === 'first' ? 'Вид от первого лица' : 'Вид от третьего лица');
+    this.audio.uiClick();
   }
 
   /** Панель диагностики: всё, что нужно для «не работает» */
