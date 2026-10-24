@@ -19098,8 +19098,8 @@
       return cubeUVRenderTarget;
     }
     _compileMaterial(material) {
-      const mesh = new Mesh(new BufferGeometry(), material);
-      this._renderer.compile(mesh, _flatCamera);
+      const mesh2 = new Mesh(new BufferGeometry(), material);
+      this._renderer.compile(mesh2, _flatCamera);
     }
     _sceneToCubeUV(scene, near, far, cubeUVRenderTarget, position) {
       const fov2 = 90;
@@ -19185,14 +19185,14 @@
         }
       }
       const material = isCubeTexture ? this._cubemapMaterial : this._equirectMaterial;
-      const mesh = this._lodMeshes[0];
-      mesh.material = material;
+      const mesh2 = this._lodMeshes[0];
+      mesh2.material = material;
       const uniforms = material.uniforms;
       uniforms["envMap"].value = texture;
       const size = this._cubeSize;
       _setViewport(cubeUVRenderTarget, 0, 0, 3 * size, 2 * size);
       renderer.setRenderTarget(cubeUVRenderTarget);
-      renderer.render(mesh, _flatCamera);
+      renderer.render(mesh2, _flatCamera);
     }
     _applyPMREM(cubeUVRenderTarget) {
       const renderer = this._renderer;
@@ -19751,14 +19751,14 @@
         blending: NoBlending
       });
       material.uniforms.tEquirect.value = texture;
-      const mesh = new Mesh(geometry, material);
+      const mesh2 = new Mesh(geometry, material);
       const currentMinFilter = texture.minFilter;
       if (texture.minFilter === LinearMipmapLinearFilter) texture.minFilter = LinearFilter;
       const camera = new CubeCamera(1, 10, this);
-      camera.update(renderer, mesh);
+      camera.update(renderer, mesh2);
       texture.minFilter = currentMinFilter;
-      mesh.geometry.dispose();
-      mesh.material.dispose();
+      mesh2.geometry.dispose();
+      mesh2.material.dispose();
       return this;
     }
     /**
@@ -20324,7 +20324,7 @@
       depthTest: false,
       depthWrite: false
     });
-    const mesh = new Mesh(geometry, material);
+    const mesh2 = new Mesh(geometry, material);
     const camera = new OrthographicCamera(-1, 1, 1, -1, 0, 1);
     let _outputColorSpace = null;
     let _outputToneMapping = null;
@@ -20402,7 +20402,7 @@
       }
       material.uniforms.tDiffuse.value = readBuffer.texture;
       renderer.setRenderTarget(_savedRenderTarget);
-      renderer.render(mesh, camera);
+      renderer.render(mesh2, camera);
       _savedRenderTarget = null;
       _isCompositing = false;
     };
@@ -22990,7 +22990,7 @@
         scene.traverse(function(object) {
           if (object.material) {
             if (Array.isArray(object.material)) {
-              object.material.forEach((mat) => mat.needsUpdate = true);
+              object.material.forEach((mat2) => mat2.needsUpdate = true);
             } else {
               object.material.needsUpdate = true;
             }
@@ -29243,10 +29243,7 @@ void main() {
     };
   }
 
-  // src/world.js
-  var SIZE = CONFIG.world.size;
-  var GRID = CONFIG.world.segments + 1;
-  var STEP = SIZE / (GRID - 1);
+  // src/models.js
   function colorize(geo, hex) {
     const c = new Color(hex);
     const n = geo.attributes.position.count;
@@ -29272,134 +29269,483 @@ void main() {
     geo.computeVertexNormals();
     return geo;
   }
-  function addPart(parts, geo, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+  function flat(geo) {
+    return geo.index ? geo.toNonIndexed() : geo;
+  }
+  function part(parts, geo, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
     if (geo.index) geo = geo.toNonIndexed();
     colorize(geo, hex);
-    geo.rotateX(rx);
-    geo.rotateY(ry);
-    geo.rotateZ(rz);
+    if (rx) geo.rotateX(rx);
+    if (ry) geo.rotateY(ry);
+    if (rz) geo.rotateZ(rz);
     geo.translate(x, y, z);
     parts.push(geo);
     return geo;
   }
+  function merge(parts) {
+    if (!parts.length) return null;
+    return mergeGeometries(parts, false);
+  }
+  function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, sides = 8) {
+    const segments = 5;
+    let x = 0;
+    let z = 0;
+    let y = 0;
+    const segH = height / segments;
+    for (let i = 0; i < segments; i++) {
+      const t = i / segments;
+      const r0 = baseR + (topR - baseR) * t;
+      const r1 = baseR + (topR - baseR) * (t + 1 / segments);
+      const geo = new CylinderGeometry(r1, r0 * 1.06, segH * 1.04, sides, 1);
+      const twist = bend * (i / segments);
+      x += Math.sin(twist) * segH * 0.55;
+      z += Math.cos(twist * 0.7) * segH * 0.12;
+      part(parts, geo, i % 2 ? hexA : hexB, x, y + segH / 2, z);
+      y += segH;
+    }
+    return { x, y, z };
+  }
   function makePalmParts(rng) {
     const bark = [];
     const leaf = [];
-    const h = 6.5 + rng() * 3.5;
-    const lean = (rng() - 0.5) * 0.35;
-    const trunk = new CylinderGeometry(0.16, 0.34, h, 8, 3);
-    addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0, 0, 0, lean * 0.35);
-    const topX = Math.sin(lean * 0.35) * h * 0.9;
-    const topY = h - 0.15;
-    for (let i = 0; i < 9; i++) {
-      const a = i / 9 * Math.PI * 2 + rng() * 0.3;
-      const len = 2.8 + rng() * 1.8;
-      const frond = new ConeGeometry(0.6, len, 4, 2);
-      const geo = frond.clone();
-      geo.scale(1, 1, 0.24);
-      addPart(
-        leaf,
-        geo,
-        i % 2 ? COLORS.frond : COLORS.frondLight,
-        topX + Math.cos(a) * len * 0.42,
-        topY + 0.1 - 0.3,
-        Math.sin(a) * len * 0.42,
-        Math.PI / 2 - 0.5,
-        -a,
-        0
+    const h = 6.4 + rng() * 3.6;
+    const lean = (rng() - 0.5) * 0.75;
+    const top = trunkPart(bark, rng, h, 0.38, 0.19, COLORS.trunk, 6966320, lean, 8);
+    for (let i = 1; i < 6; i++) {
+      const t = i / 6;
+      const r = 0.38 + (0.19 - 0.38) * t;
+      const ring = new CylinderGeometry(r + 0.012, r + 0.022, 0.05, 8, 1);
+      part(
+        bark,
+        ring,
+        6045994,
+        Math.sin(lean * t) * h * 0.55,
+        h * t,
+        Math.cos(lean * 0.7 * t) * h * 0.12
       );
     }
-    for (let i = 0; i < 3; i++) {
-      const a = rng() * Math.PI * 2;
-      addPart(
+    const fronds = 11;
+    for (let i = 0; i < fronds; i++) {
+      const a = i / fronds * Math.PI * 2 + rng() * 0.25;
+      const len = 2.6 + rng() * 1.7;
+      const droop = 0.42 + rng() * 0.38;
+      let px = top.x;
+      let pz = top.z;
+      let py = top.y;
+      for (let s = 0; s < 4; s++) {
+        const t0 = s / 4;
+        const t1 = (s + 1) / 4;
+        const w = (0.34 - t0 * 0.24) * (1 + rng() * 0.15);
+        const segLen = len / 4;
+        const geo = new BoxGeometry(w, 0.055, segLen * 1.12);
+        const dx = Math.cos(a) * segLen * (1 - t0 * 0.35);
+        const dz = Math.sin(a) * segLen * (1 - t0 * 0.35);
+        const drop = droop * t1 * t1;
+        part(
+          leaf,
+          geo,
+          s % 2 ? COLORS.frond : COLORS.frondLight,
+          px + dx * 0.5,
+          py - drop * 0.5,
+          pz + dz * 0.5,
+          drop * 0.9,
+          -a + Math.PI / 2,
+          0
+        );
+        px += dx;
+        pz += dz;
+        py -= drop;
+      }
+    }
+    const nuts = 3 + Math.floor(rng() * 3);
+    for (let i = 0; i < nuts; i++) {
+      const a = i / nuts * Math.PI * 2;
+      part(
         leaf,
-        new IcosahedronGeometry(0.22, 0),
+        new IcosahedronGeometry(0.2 + rng() * 0.06, 0),
         COLORS.coconut,
-        topX + Math.cos(a) * 0.3,
-        topY - 0.4,
-        Math.sin(a) * 0.3
+        top.x + Math.cos(a) * 0.34,
+        top.y - 0.42 - rng() * 0.12,
+        top.z + Math.sin(a) * 0.34
       );
     }
-    return {
-      bark: mergeGeometries(bark.map((g) => g.index ? g.toNonIndexed() : g), false),
-      leaf: mergeGeometries(leaf.map((g) => g.index ? g.toNonIndexed() : g), false)
-    };
+    return { bark: merge(bark), leaf: merge(leaf) };
   }
   function makeTreeParts(rng) {
     const bark = [];
     const leaf = [];
-    const h = 4.5 + rng() * 5.5;
-    const trunk = new CylinderGeometry(0.26, 0.6, h, 7, 3);
-    addPart(bark, trunk, COLORS.trunk, 0, h / 2, 0);
-    for (let i = 0; i < 2; i++) {
-      const a = rng() * Math.PI * 2;
-      const bl = 2 + rng() * 2;
-      const branch = new CylinderGeometry(0.08, 0.16, bl, 5, 1);
-      addPart(
+    const h = 5.2 + rng() * 5.2;
+    const bend = (rng() - 0.5) * 0.5;
+    const top = trunkPart(bark, rng, h, 0.48, 0.2, COLORS.trunk, 6966320, bend, 9);
+    for (let i = 0; i < 4; i++) {
+      const a = i / 4 * Math.PI * 2 + rng() * 0.4;
+      const root = new ConeGeometry(0.18, 0.85, 5, 1);
+      part(
+        bark,
+        root,
+        6111528,
+        Math.cos(a) * 0.34,
+        0.34,
+        Math.sin(a) * 0.34,
+        Math.PI * 0.32,
+        0,
+        -a
+      );
+    }
+    const branches = 3 + Math.floor(rng() * 2);
+    for (let i = 0; i < branches; i++) {
+      const a = i / branches * Math.PI * 2 + rng();
+      const bl = 1.1 + rng() * 1;
+      const y = h * (0.52 + rng() * 0.22);
+      const branch = new CylinderGeometry(0.07, 0.15, bl, 5, 1);
+      part(
         bark,
         branch,
-        COLORS.trunk,
-        Math.cos(a) * bl * 0.35,
-        h * (0.55 + rng() * 0.2),
-        Math.sin(a) * bl * 0.35,
+        6966320,
+        top.x * 0.7 + Math.cos(a) * bl * 0.42,
+        y + bl * 0.3,
+        top.z * 0.7 + Math.sin(a) * bl * 0.42,
         0,
         0,
-        Math.PI / 3
+        0.95
       );
     }
-    const blobs = 4 + Math.floor(rng() * 3);
+    const blobs = 6 + Math.floor(rng() * 3);
     for (let i = 0; i < blobs; i++) {
-      const r = 1.2 + rng() * 1.15;
+      const r = 1.15 + rng() * 1.05;
       const a = rng() * Math.PI * 2;
-      const d = rng() * 1.1;
+      const d = rng() * 1.35;
       const geo = new IcosahedronGeometry(r, 1);
-      addPart(
+      part(
         leaf,
         geo,
-        i % 2 ? 6984789 : 8300643,
-        Math.cos(a) * d,
-        h * 0.86 + r * 0.55 + rng() * 1.8,
-        Math.sin(a) * d
+        i % 3 === 0 ? COLORS.jungle : i % 2 ? 6984789 : 8300643,
+        top.x * 0.8 + Math.cos(a) * d,
+        h * 0.9 + r * 0.5 + rng() * 1.9,
+        top.z * 0.8 + Math.sin(a) * d
       );
     }
-    return {
-      bark: mergeGeometries(bark.map((g) => g.index ? g.toNonIndexed() : g), false),
-      leaf: mergeGeometries(leaf.map((g) => g.index ? g.toNonIndexed() : g), false)
-    };
+    return { bark: merge(bark), leaf: merge(leaf) };
   }
   function makeBushParts(rng, withBerries) {
     const leaf = [];
-    const n = 4 + Math.floor(rng() * 3);
+    const fruit = [];
+    const n = 5 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) {
-      const r = 0.4 + rng() * 0.45;
-      addPart(
+      const r = 0.36 + rng() * 0.42;
+      part(
         leaf,
         new IcosahedronGeometry(r, 1),
         i % 2 ? COLORS.bush : 6263120,
-        (rng() - 0.5) * 1,
-        r * 0.7 + rng() * 0.25,
-        (rng() - 0.5) * 1
+        (rng() - 0.5) * 1.05,
+        r * 0.62 + rng() * 0.3,
+        (rng() - 0.5) * 1.05
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      const a = rng() * Math.PI * 2;
+      part(
+        leaf,
+        new CylinderGeometry(0.03, 0.05, 0.7, 4, 1),
+        6966320,
+        Math.cos(a) * 0.2,
+        0.35,
+        Math.sin(a) * 0.2,
+        0.25,
+        0,
+        0.2
       );
     }
     if (withBerries) {
-      for (let i = 0; i < 7; i++) {
-        addPart(
-          leaf,
-          new IcosahedronGeometry(0.1, 0),
+      for (let i = 0; i < 9; i++) {
+        part(
+          fruit,
+          new IcosahedronGeometry(0.085 + rng() * 0.03, 0),
           COLORS.berry,
-          (rng() - 0.5) * 1.2,
-          0.5 + rng() * 0.6,
-          (rng() - 0.5) * 1.2
+          (rng() - 0.5) * 1.15,
+          0.45 + rng() * 0.7,
+          (rng() - 0.5) * 1.15
         );
       }
     }
-    return { leaf: mergeGeometries(leaf.map((g) => g.index ? g.toNonIndexed() : g), false) };
+    const out = { leaf: merge(leaf) };
+    if (fruit.length) out.fruit = merge(fruit);
+    return out;
   }
   function makeRockGeometry(rng) {
-    const geo = new IcosahedronGeometry(1, 1);
-    jitterGeo(geo, 0.32, rng);
-    geo.scale(1, 0.72, 1);
-    return colorize(geo, COLORS.stone);
+    const parts = [];
+    const main = new IcosahedronGeometry(1, 1);
+    jitterGeo(main, 0.34, rng);
+    main.scale(1.05, 0.72, 0.95);
+    part(parts, main, COLORS.stone, 0, 0.42, 0);
+    for (let i = 0; i < 2; i++) {
+      const frag = new IcosahedronGeometry(0.3 + rng() * 0.22, 0);
+      jitterGeo(frag, 0.16, rng);
+      const a = rng() * Math.PI * 2;
+      part(
+        parts,
+        frag,
+        COLORS.rockDark,
+        Math.cos(a) * 0.95,
+        0.16,
+        Math.sin(a) * 0.95
+      );
+    }
+    for (let i = 0; i < 2; i++) {
+      const moss = new IcosahedronGeometry(0.34 + rng() * 0.2, 0);
+      moss.scale(1, 0.34, 1);
+      part(parts, moss, 7311178, (rng() - 0.5) * 0.7, 0.85 + rng() * 0.1, (rng() - 0.5) * 0.7);
+    }
+    return merge(parts);
+  }
+  function makePickupGeometries() {
+    const geos = {};
+    {
+      const a = new CylinderGeometry(0.06, 0.075, 0.9, 5, 1);
+      a.rotateZ(Math.PI / 2.1);
+      a.translate(0, 0.07, 0);
+      const b = new CylinderGeometry(0.05, 0.065, 0.78, 5, 1);
+      b.rotateZ(Math.PI / 2.4);
+      b.rotateY(0.9);
+      b.translate(0.05, 0.16, 0.05);
+      geos.wood = mergeGeometries([colorize(flat(a), 10123855), colorize(flat(b), 8216633)], false);
+    }
+    {
+      const parts = [];
+      const big = new IcosahedronGeometry(0.26, 0);
+      big.scale(1, 0.8, 0.9);
+      parts.push(colorize(flat(big), 10722192));
+      const small = new IcosahedronGeometry(0.15, 0);
+      small.translate(0.24, -0.06, 0.1);
+      parts.push(colorize(flat(small), 9143416));
+      const small2 = new IcosahedronGeometry(0.12, 0);
+      small2.translate(-0.2, -0.08, -0.12);
+      parts.push(colorize(flat(small2), 10130828));
+      geos.stone = mergeGeometries(parts, false);
+    }
+    {
+      const nut = new IcosahedronGeometry(0.23, 1);
+      const parts = [colorize(flat(nut), 9068342)];
+      const stem = new ConeGeometry(0.06, 0.16, 4, 1);
+      stem.translate(0, 0.24, 0);
+      parts.push(colorize(flat(stem), 6126138));
+      geos.coconut = mergeGeometries(parts, false);
+    }
+    {
+      const parts = [];
+      for (let i = 0; i < 4; i++) {
+        const blade = new ConeGeometry(0.055, 0.62, 3, 1);
+        blade.rotateZ((i - 1.5) * 0.16);
+        blade.rotateX(i * 0.22);
+        blade.translate((i - 1.5) * 0.05, 0.1, 0);
+        parts.push(colorize(flat(blade), i % 2 ? 11123562 : 9414741));
+      }
+      geos.fiber = mergeGeometries(parts, false);
+    }
+    {
+      const parts = [];
+      const spots = [[0, 0.12, 0], [0.14, 0.06, 0.06], [-0.12, 0.05, -0.07], [0.02, 0.18, -0.12]];
+      spots.forEach(([x, y, z], i) => {
+        const berry = new IcosahedronGeometry(0.1, 0);
+        berry.translate(x, y, z);
+        parts.push(colorize(flat(berry), i % 2 ? 12729170 : 10299200));
+      });
+      geos.berries = mergeGeometries(parts, false);
+    }
+    return geos;
+  }
+  function mat(hex, { roughness = 0.85, flat: flat2 = true } = {}) {
+    return new MeshStandardMaterial({ color: hex, roughness, flatShading: flat2 });
+  }
+  function mesh(geo, material, x = 0, y = 0, z = 0) {
+    const m = new Mesh(geo, material);
+    m.position.set(x, y, z);
+    m.castShadow = true;
+    return m;
+  }
+  function makeBoar() {
+    const group = new Group();
+    const fur = mat(9071436);
+    const furDark = mat(7164472);
+    const tusk = mat(15261903, { roughness: 0.5 });
+    const body = mesh(new IcosahedronGeometry(0.62, 1), fur);
+    body.scale.set(1.35, 0.9, 0.9);
+    body.position.y = 0.82;
+    group.add(body);
+    const hump = mesh(new IcosahedronGeometry(0.34, 1), furDark);
+    hump.scale.set(1.1, 0.9, 0.9);
+    hump.position.set(-0.1, 1.16, 0);
+    group.add(hump);
+    const head = new Group();
+    head.position.set(0.78, 0.88, 0);
+    const skull = mesh(new IcosahedronGeometry(0.34, 1), fur);
+    skull.scale.set(1.1, 0.95, 0.95);
+    head.add(skull);
+    const snout = mesh(new CylinderGeometry(0.13, 0.18, 0.3, 6, 1), furDark);
+    snout.rotation.z = Math.PI / 2;
+    snout.position.set(0.3, -0.05, 0);
+    head.add(snout);
+    for (const side of [-1, 1]) {
+      const t = mesh(new ConeGeometry(0.045, 0.24, 4, 1), tusk);
+      t.position.set(0.3, 0, 0.14 * side);
+      t.rotation.z = -0.9;
+      head.add(t);
+      const ear = mesh(new ConeGeometry(0.1, 0.16, 4, 1), furDark);
+      ear.position.set(-0.1, 0.3, 0.18 * side);
+      ear.rotation.x = 0.3 * side;
+      head.add(ear);
+    }
+    group.add(head);
+    const legs = [];
+    for (const [x, z] of [[0.36, 0.28], [0.36, -0.28], [-0.38, 0.28], [-0.38, -0.28]]) {
+      const leg = mesh(new CylinderGeometry(0.09, 0.07, 0.55, 5, 1), furDark);
+      leg.position.set(x, 0.28, z);
+      leg.geometry.translate(0, -0.27, 0);
+      group.add(leg);
+      legs.push(leg);
+    }
+    const tail = mesh(new CylinderGeometry(0.03, 0.05, 0.4, 4, 1), furDark);
+    tail.position.set(-0.85, 0.95, 0);
+    tail.rotation.z = 0.5;
+    group.add(tail);
+    return { group, parts: { body, head, legs, tail } };
+  }
+  function makeCrab() {
+    const group = new Group();
+    const shell = mat(11681839, { roughness: 0.6 });
+    const shellLight = mat(13653308, { roughness: 0.6 });
+    const clawMat = mat(13191732, { roughness: 0.55 });
+    const body = mesh(new IcosahedronGeometry(0.34, 1), shell);
+    body.scale.set(1.4, 0.6, 1);
+    body.position.y = 0.32;
+    group.add(body);
+    const back = mesh(new IcosahedronGeometry(0.2, 0), shellLight);
+    back.scale.set(1.6, 0.4, 1);
+    back.position.y = 0.42;
+    group.add(back);
+    const legs = [];
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < 4; i++) {
+        const leg = new Group();
+        leg.position.set(0.28 - i * 0.2, 0.28, 0.22 * side);
+        const seg = mesh(new CylinderGeometry(0.034, 0.026, 0.42, 4, 1), shell);
+        seg.geometry.translate(0, -0.17, 0);
+        seg.rotation.x = 0.7 * side;
+        leg.add(seg);
+        group.add(leg);
+        legs.push(leg);
+      }
+    }
+    const claws = [];
+    for (const side of [-1, 1]) {
+      const arm = new Group();
+      arm.position.set(0.4, 0.32, 0.24 * side);
+      const upper = mesh(new CylinderGeometry(0.035, 0.03, 0.2, 4, 1), clawMat);
+      upper.rotation.z = 1.1;
+      upper.position.set(0.08, 0.02, 0.04 * side);
+      arm.add(upper);
+      const claw = mesh(new IcosahedronGeometry(0.12, 0), clawMat);
+      claw.scale.set(1.5, 0.9, 1);
+      claw.position.set(0.2, 0.02, 0.06 * side);
+      arm.add(claw);
+      group.add(arm);
+      claws.push(arm);
+    }
+    const eyes = new Group();
+    for (const side of [-1, 1]) {
+      const stalk = mesh(new CylinderGeometry(0.015, 0.015, 0.14, 4, 1), shell);
+      stalk.position.set(0.16, 0.52, 0.12 * side);
+      eyes.add(stalk);
+      const eye = mesh(new IcosahedronGeometry(0.05, 0), mat(1842210, { roughness: 0.3 }));
+      eye.position.set(0.16, 0.62, 0.12 * side);
+      eyes.add(eye);
+    }
+    group.add(eyes);
+    return { group, parts: { body, legs, claws, eyes } };
+  }
+  function makeGull() {
+    const group = new Group();
+    const white = mat(15790572, { roughness: 0.7 });
+    const grey = mat(12371145, { roughness: 0.75 });
+    const beakMat = mat(14518831, { roughness: 0.5 });
+    const body = mesh(new IcosahedronGeometry(0.26, 1), white);
+    body.scale.set(1.5, 0.85, 0.85);
+    group.add(body);
+    const head = new Group();
+    head.position.set(0.28, 0.08, 0);
+    const skull = mesh(new IcosahedronGeometry(0.13, 1), white);
+    head.add(skull);
+    const beak = mesh(new ConeGeometry(0.04, 0.16, 4, 1), beakMat);
+    beak.rotation.z = -Math.PI / 2;
+    beak.position.set(0.15, 0, 0);
+    head.add(beak);
+    group.add(head);
+    const wings = [];
+    for (const side of [-1, 1]) {
+      const wing = new Group();
+      wing.position.set(0, 0.06, 0.1 * side);
+      const feather = mesh(new BoxGeometry(0.34, 0.03, 0.52), grey);
+      feather.position.set(0, 0, 0.26 * side);
+      wing.add(feather);
+      const tip = mesh(new BoxGeometry(0.22, 0.025, 0.3), white);
+      tip.position.set(-0.06, 0, 0.55 * side);
+      wing.add(tip);
+      group.add(wing);
+      wings.push(wing);
+    }
+    const tail = mesh(new BoxGeometry(0.22, 0.02, 0.16), grey);
+    tail.position.set(-0.34, 0.02, 0);
+    group.add(tail);
+    return { group, parts: { body, head, wings, tail } };
+  }
+  function makeSnake() {
+    const group = new Group();
+    const skinMat = mat(6257210, { roughness: 0.7 });
+    const bellyMat = mat(11055210, { roughness: 0.7 });
+    const segments = [];
+    for (let i = 0; i < 7; i++) {
+      const seg = new Group();
+      seg.position.set(-i * 0.13, 0.09, 0);
+      const r = 0.115 - i * 0.011;
+      const ball = mesh(new IcosahedronGeometry(r, 1), skinMat);
+      ball.scale.set(1.5, 0.82, 0.95);
+      seg.add(ball);
+      if (i % 2 === 0) {
+        const stripe = mesh(new IcosahedronGeometry(r * 0.62, 0), bellyMat);
+        stripe.scale.set(1.1, 0.5, 1.05);
+        stripe.position.y = -0.045;
+        seg.add(stripe);
+      }
+      group.add(seg);
+      segments.push(seg);
+    }
+    const head = new Group();
+    head.position.set(0.2, 0.12, 0);
+    const skull = mesh(new IcosahedronGeometry(0.12, 0), skinMat);
+    skull.scale.set(1.4, 0.8, 1);
+    head.add(skull);
+    const tongue = mesh(new BoxGeometry(0.12, 0.01, 0.02), mat(12727627, { roughness: 0.5 }));
+    tongue.position.set(0.16, -0.01, 0);
+    head.add(tongue);
+    group.add(head);
+    return { group, parts: { segments, head, tongue } };
+  }
+
+  // src/world.js
+  var SIZE = CONFIG.world.size;
+  var GRID = CONFIG.world.segments + 1;
+  var STEP = SIZE / (GRID - 1);
+  function colorize2(geo, hex) {
+    const c = new Color(hex);
+    const n = geo.attributes.position.count;
+    const arr = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) {
+      arr[i * 3] = c.r;
+      arr[i * 3 + 1] = c.g;
+      arr[i * 3 + 2] = c.b;
+    }
+    geo.setAttribute("color", new BufferAttribute(arr, 3));
+    return geo;
   }
   var World = class {
     constructor(scene, seed = CONFIG.world.seed, textures = null) {
@@ -29523,8 +29869,8 @@ void main() {
       geo.setAttribute("color", new BufferAttribute(colors, 3));
       geo.setAttribute("splat", new BufferAttribute(splat, 4));
       geo.computeVertexNormals();
-      const mat = this.textures ? createTerrainMaterial(this.textures) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
-      this.terrain = new Mesh(geo, mat);
+      const mat2 = this.textures ? createTerrainMaterial(this.textures) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
+      this.terrain = new Mesh(geo, mat2);
       this.terrain.receiveShadow = true;
       this.terrain.castShadow = false;
       this.scene.add(this.terrain);
@@ -29557,7 +29903,7 @@ void main() {
         uDepth: { value: depthTex },
         uSize: { value: SIZE }
       };
-      const mat = new ShaderMaterial({
+      const mat2 = new ShaderMaterial({
         uniforms: this.waterUniforms,
         transparent: true,
         depthWrite: false,
@@ -29668,7 +30014,7 @@ void main() {
       `
         )
       });
-      this.water = new Mesh(geo, mat);
+      this.water = new Mesh(geo, mat2);
       this.water.position.y = CONFIG.world.seaLevel;
       this.water.renderOrder = 2;
       this.water.frustumCulled = false;
@@ -29754,11 +30100,12 @@ void main() {
       if (this.textures) barkMat.color.setHex(10126440);
       if (this.textures) leafMat.color.setHex(16777215);
       if (this.textures) grassMat.color.setHex(16777215);
-      if (this.textures) stoneMat.color.setHex(9275520);
+      if (this.textures) stoneMat.color.setHex(10327950);
       for (const m of [barkMat, leafMat, grassMat]) {
         if (m.userData && m.userData.uniforms) this.windMaterials.push(m);
       }
-      const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat };
+      const fruitMat = new MeshStandardMaterial({ color: 12729170, roughness: 0.55, vertexColors: true });
+      const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat, fruit: fruitMat };
       const buildInstances = (variants, list, { castShadow = true } = {}) => {
         const meshes = [];
         if (!list.length) return meshes;
@@ -29771,11 +30118,11 @@ void main() {
           if (!items.length) continue;
           for (const [layer, geo] of Object.entries(variant)) {
             if (!geo) continue;
-            const mat = layerMaterials[layer] || leafMat;
-            const mesh = new InstancedMesh(geo, mat, items.length);
-            mesh.castShadow = castShadow;
-            mesh.receiveShadow = false;
-            mesh.frustumCulled = false;
+            const mat2 = layerMaterials[layer] || leafMat;
+            const mesh2 = new InstancedMesh(geo, mat2, items.length);
+            mesh2.castShadow = castShadow;
+            mesh2.receiveShadow = false;
+            mesh2.frustumCulled = false;
             items.forEach((it, k) => {
               var _a;
               const s = (_a = it.s) != null ? _a : 1;
@@ -29783,16 +30130,16 @@ void main() {
               dummy.rotation.set(0, it.rot, 0);
               dummy.scale.set(s, s, s);
               dummy.updateMatrix();
-              mesh.setMatrixAt(k, dummy.matrix);
-              mesh.instanceMatrix.needsUpdate = true;
+              mesh2.setMatrixAt(k, dummy.matrix);
+              mesh2.instanceMatrix.needsUpdate = true;
               it.parts = it.parts || [];
-              it.parts.push({ mesh, idx: k, baseScale: s });
-              it.mesh = mesh;
+              it.parts.push({ mesh: mesh2, idx: k, baseScale: s });
+              it.mesh = mesh2;
               it.instIdx = k;
             });
-            mesh.count = items.length;
-            this.scene.add(mesh);
-            meshes.push(mesh);
+            mesh2.count = items.length;
+            this.scene.add(mesh2);
+            meshes.push(mesh2);
           }
         }
         return meshes;
@@ -29830,11 +30177,11 @@ void main() {
         const height = 0.45 + i % 3 * 0.16;
         const blade = new ConeGeometry(0.1, height, 3, 1);
         blade.translate((i - 2) * 0.13, height / 2, i % 2 ? 0.1 : -0.08);
-        blades.push(colorize(blade, i % 2 ? 11984262 : 10407279));
+        blades.push(colorize2(blade, i % 2 ? 8828246 : 7314245));
       }
       const tuftGeo = mergeGeometries(blades, false);
       this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
-      for (const mesh of this.tufts) mesh.material = grassMat;
+      for (const mesh2 of this.tufts) mesh2.material = grassMat;
     }
     // --- подбираемые вещи ---
     _buildPickups() {
@@ -29850,19 +30197,13 @@ void main() {
         fiber: new MeshStandardMaterial({ color: 10268254, roughness: 0.9 }),
         berry: new MeshStandardMaterial({ color: 12137290, roughness: 0.6 })
       };
-      this.pickupGeos = {
-        wood: new CylinderGeometry(0.07, 0.09, 0.95, 5),
-        stone: new IcosahedronGeometry(0.3, 0),
-        coconut: new IcosahedronGeometry(0.24, 1),
-        fiber: new ConeGeometry(0.2, 0.7, 4),
-        berry: new IcosahedronGeometry(0.11, 0)
-      };
+      this.pickupGeos = makePickupGeometries();
       const kinds = [
         { kind: "wood", name: "\u041F\u0430\u043B\u043A\u0430", geo: "wood", mat: "wood" },
         { kind: "stone", name: "\u041A\u0430\u043C\u0435\u043D\u044C", geo: "stone", mat: "stone" },
         { kind: "fiber", name: "\u0412\u043E\u043B\u043E\u043A\u043D\u043E", geo: "fiber", mat: "fiber" },
         { kind: "coconut", name: "\u041A\u043E\u043A\u043E\u0441", geo: "coconut", mat: "coconut" },
-        { kind: "berries", name: "\u042F\u0433\u043E\u0434\u044B", geo: "berry", mat: "berry" }
+        { kind: "berries", name: "\u042F\u0433\u043E\u0434\u044B", geo: "berries", mat: "berry" }
       ];
       this.kindInfo = Object.fromEntries(kinds.map((k) => [k.kind, k]));
       let attempts = 0;
@@ -29886,13 +30227,13 @@ void main() {
       const info = this.kindInfo[kind];
       if (!info) return null;
       const h = this.heightAt(x, z);
-      const mesh = new Mesh(this.pickupGeos[info.geo], this.pickupMats[info.mat]);
-      mesh.castShadow = true;
-      mesh.scale.setScalar(scale);
-      mesh.position.set(x, h + 0.22, z);
-      mesh.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.4);
-      this.pickupGroup.add(mesh);
-      const item = { mesh, kind, name: info.name, baseY: h + 0.22 };
+      const mesh2 = new Mesh(this.pickupGeos[info.geo], this.pickupMats[info.mat]);
+      mesh2.castShadow = true;
+      mesh2.scale.setScalar(scale);
+      mesh2.position.set(x, h + 0.22, z);
+      mesh2.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.4);
+      this.pickupGroup.add(mesh2);
+      const item = { mesh: mesh2, kind, name: info.name, baseY: h + 0.22 };
       this.pickups.push(item);
       return item;
     }
@@ -29921,14 +30262,14 @@ void main() {
       var _a;
       if (!item || !item.parts || !item.parts.length) return;
       const dummy = this._dummy || (this._dummy = new Object3D());
-      for (const part of item.parts) {
-        const target = (_a = part.baseScale) != null ? _a : 1;
+      for (const part2 of item.parts) {
+        const target = (_a = part2.baseScale) != null ? _a : 1;
         dummy.position.set(item.x, item.h - 0.15, item.z);
         dummy.rotation.set(0, item.rot || 0, 0);
         dummy.scale.setScalar(visible ? target : 1e-4);
         dummy.updateMatrix();
-        part.mesh.setMatrixAt(part.idx, dummy.matrix);
-        part.mesh.instanceMatrix.needsUpdate = true;
+        part2.mesh.setMatrixAt(part2.idx, dummy.matrix);
+        part2.mesh.instanceMatrix.needsUpdate = true;
       }
     }
     /** Ближайший подбираемый предмет в радиусе */
@@ -29983,8 +30324,8 @@ void main() {
     }
     update(dt, camera, sunDir, nightFactor, fogColor) {
       this.time += dt;
-      for (const mat of this.windMaterials) {
-        const u = mat.userData.uniforms;
+      for (const mat2 of this.windMaterials) {
+        const u = mat2.userData.uniforms;
         if (u && u.uTime) u.uTime.value = this.time;
       }
       this.waterUniforms.uTime.value = this.time;
@@ -30125,7 +30466,7 @@ void main() {
       scene.add(this.clouds);
       const cloudGeo = new PlaneGeometry(180, 110);
       for (let i = 0; i < 9; i++) {
-        const mat = new MeshBasicMaterial({
+        const mat2 = new MeshBasicMaterial({
           color: 16777215,
           map: textures ? textures.cloud : null,
           transparent: true,
@@ -30133,16 +30474,16 @@ void main() {
           depthWrite: false,
           fog: false
         });
-        this.cloudMaterials.push(mat);
-        const mesh = new Mesh(cloudGeo, mat);
+        this.cloudMaterials.push(mat2);
+        const mesh2 = new Mesh(cloudGeo, mat2);
         const angle = i / 9 * Math.PI * 2 + Math.random();
         const radius = 260 + Math.random() * 260;
-        mesh.position.set(Math.cos(angle) * radius, 95 + Math.random() * 60, Math.sin(angle) * radius);
-        mesh.rotation.x = -Math.PI / 2;
-        mesh.rotation.z = Math.random() * Math.PI;
-        mesh.scale.setScalar(0.7 + Math.random() * 0.9);
-        mesh.renderOrder = -7;
-        this.clouds.add(mesh);
+        mesh2.position.set(Math.cos(angle) * radius, 95 + Math.random() * 60, Math.sin(angle) * radius);
+        mesh2.rotation.x = -Math.PI / 2;
+        mesh2.rotation.z = Math.random() * Math.PI;
+        mesh2.scale.setScalar(0.7 + Math.random() * 0.9);
+        mesh2.renderOrder = -7;
+        this.clouds.add(mesh2);
       }
       scene.fog = new Fog(12574960, 60, 340);
       this.sunDir = new Vector3(0.4, 0.7, 0.3).normalize();
@@ -30211,9 +30552,9 @@ void main() {
       this.clouds.position.set(playerPos.x, 0, playerPos.z);
       this.clouds.rotation.y += dt * 4e-3;
       const cloudTint = 0.55 + dayMix * 0.45;
-      for (const mat of this.cloudMaterials) {
-        mat.color.setRGB(cloudTint, cloudTint * 0.98, cloudTint * 0.95);
-        mat.opacity = (0.18 + dayMix * 0.42) * ((_c = this.cloudiness) != null ? _c : 1);
+      for (const mat2 of this.cloudMaterials) {
+        mat2.color.setRGB(cloudTint, cloudTint * 0.98, cloudTint * 0.95);
+        mat2.opacity = (0.18 + dayMix * 0.42) * ((_c = this.cloudiness) != null ? _c : 1);
       }
       return { night, sunDir: this.sunDir, fogColor: this.fogColor };
     }
@@ -30254,10 +30595,10 @@ void main() {
       const pantsMat = new MeshStandardMaterial({ color: COLORS.pants, roughness: 0.9, flatShading: true });
       const packMat = new MeshStandardMaterial({ color: 7033397, roughness: 0.95, flatShading: true });
       const bootMat = new MeshStandardMaterial({ color: 3812384, roughness: 1, flatShading: true });
-      const box = (w, h, d, mat) => {
-        const mesh = new Mesh(new BoxGeometry(w, h, d), mat);
-        mesh.castShadow = true;
-        return mesh;
+      const box = (w, h, d, mat2) => {
+        const mesh2 = new Mesh(new BoxGeometry(w, h, d), mat2);
+        mesh2.castShadow = true;
+        return mesh2;
       };
       const torso = box(0.52, 0.62, 0.3, shirtMat);
       torso.position.y = 1.16;
@@ -30658,6 +30999,9 @@ void main() {
       this.enabled = true;
       this.ready = false;
       this.stepTimer = 0;
+      this.birdTimer = 3;
+      this.cricketsGain = null;
+      this.fireGain = null;
     }
     init() {
       if (this.ctx) return;
@@ -30705,7 +31049,77 @@ void main() {
       this.windGain.gain.value = 0.05;
       wind.connect(windFilter).connect(this.windGain).connect(this.master);
       wind.start();
+      const fire = this.ctx.createBufferSource();
+      fire.buffer = buffer;
+      fire.loop = true;
+      fire.playbackRate.value = 1.6;
+      const fireFilter = this.ctx.createBiquadFilter();
+      fireFilter.type = "bandpass";
+      fireFilter.frequency.value = 1500;
+      fireFilter.Q.value = 0.6;
+      this.fireGain = this.ctx.createGain();
+      this.fireGain.gain.value = 0;
+      fire.connect(fireFilter).connect(this.fireGain).connect(this.master);
+      fire.start();
+      const crickets = this.ctx.createBufferSource();
+      crickets.buffer = buffer;
+      crickets.loop = true;
+      crickets.playbackRate.value = 3.4;
+      const cricketFilter = this.ctx.createBiquadFilter();
+      cricketFilter.type = "bandpass";
+      cricketFilter.frequency.value = 4200;
+      cricketFilter.Q.value = 8;
+      this.cricketsGain = this.ctx.createGain();
+      this.cricketsGain.gain.value = 0;
+      crickets.connect(cricketFilter).connect(this.cricketsGain).connect(this.master);
+      crickets.start();
+      this.musicGain = this.ctx.createGain();
+      this.musicGain.gain.value = 0.05;
+      this.musicGain.connect(this.master);
+      this.chordStep = 0;
+      this.musicTimer = 0;
       this.ready = true;
+    }
+    /** Медленная «музыка»: три ноты, меняющиеся раз в несколько секунд */
+    updateMusic(dt, night) {
+      if (!this.ready) return;
+      this.musicTimer -= dt;
+      if (this.musicTimer > 0) return;
+      this.musicTimer = 7 + Math.random() * 5;
+      const roots = night ? [110, 98, 87, 123] : [147, 165, 131, 175];
+      const root = roots[this.chordStep % roots.length];
+      this.chordStep++;
+      const now = this.ctx.currentTime;
+      [1, 1.5, 2].forEach((mul, i) => {
+        const osc = this.ctx.createOscillator();
+        osc.type = i === 0 ? "sine" : "triangle";
+        osc.frequency.value = root * mul;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(1e-4, now);
+        g.gain.exponentialRampToValueAtTime(0.05, now + 1.2);
+        g.gain.exponentialRampToValueAtTime(1e-4, now + 6.5);
+        osc.connect(g).connect(this.musicGain);
+        osc.start(now);
+        osc.stop(now + 7);
+      });
+    }
+    /** Птицы днём, сверчки ночью, треск огня рядом */
+    updateAmbience(dt, { night = 0, fire = 0 } = {}) {
+      if (!this.ready) return;
+      const now = this.ctx.currentTime;
+      if (this.fireGain) this.fireGain.gain.setTargetAtTime(0.02 + fire * 0.14, now, 0.3);
+      if (this.cricketsGain) this.cricketsGain.gain.setTargetAtTime(night * 0.02, now, 0.8);
+      this.birdTimer -= dt;
+      if (this.birdTimer <= 0) {
+        this.birdTimer = 4 + Math.random() * 9;
+        if (night < 0.4 && Math.random() < 0.75) this.birdCall();
+      }
+    }
+    birdCall() {
+      const base = 1800 + Math.random() * 1400;
+      this._tone(base, 0.07, 0.03, "sine", base * 1.5);
+      this._tone(base * 1.2, 0.06, 0.022, "sine", base * 1.8, 0.09);
+      if (Math.random() < 0.4) this._tone(base * 0.9, 0.08, 0.02, "sine", base * 1.3, 0.19);
     }
     resume() {
       if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
@@ -30767,6 +31181,56 @@ void main() {
     eat() {
       this._noiseBurst(0.1, 950, 1.6, 0.09, "bandpass");
       this._noiseBurst(0.1, 700, 1.6, 0.07, "bandpass");
+    }
+    /** Взмах инструментом: короткий шумовой «вжух» */
+    swing() {
+      this._noiseBurst(0.16, 1400, 1.4, 0.05, "bandpass");
+    }
+    /** Топор по дереву */
+    chop() {
+      this._noiseBurst(0.11, 420, 1.1, 0.16);
+      this._tone(150, 0.12, 0.09, "square", 90);
+    }
+    /** Кирка по камню */
+    mine() {
+      this._noiseBurst(0.1, 2600, 1.8, 0.12, "bandpass");
+      this._tone(420, 0.07, 0.05, "square", 300);
+    }
+    craft() {
+      this._noiseBurst(0.08, 900, 1.2, 0.06);
+      this._tone(520, 0.08, 0.05, "triangle");
+      this._tone(780, 0.1, 0.04, "triangle", null, 0.07);
+      this._tone(1040, 0.12, 0.035, "triangle", null, 0.15);
+    }
+    hitFlesh() {
+      this._noiseBurst(0.12, 260, 0.8, 0.14);
+      this._tone(120, 0.1, 0.07, "sine", 70);
+    }
+    bowShot() {
+      this._noiseBurst(0.07, 2200, 2, 0.09, "bandpass");
+      this._tone(300, 0.16, 0.05, "triangle", 140);
+    }
+    mobDeath() {
+      this._tone(180, 0.3, 0.07, "sawtooth", 70);
+      this._noiseBurst(0.24, 300, 0.8, 0.07);
+    }
+    heal() {
+      this._tone(520, 0.18, 0.045, "sine", 780);
+      this._tone(780, 0.22, 0.03, "sine", 1040, 0.1);
+    }
+    grunt() {
+      this._noiseBurst(0.18, 260, 0.9, 0.11);
+      this._tone(96, 0.2, 0.09, "sawtooth", 72);
+    }
+    crab() {
+      for (let i = 0; i < 3; i++) this._noiseBurst(0.04, 3200, 3, 0.05, "bandpass");
+    }
+    gull() {
+      this._tone(1650, 0.16, 0.05, "sawtooth", 900);
+      this._tone(1500, 0.18, 0.04, "sawtooth", 820, 0.18);
+    }
+    hiss() {
+      this._noiseBurst(0.5, 5200, 1.2, 0.06, "highpass");
     }
     hurt() {
       this._tone(180, 0.22, 0.1, "sawtooth", 90);
@@ -30941,7 +31405,7 @@ void main() {
         return `<li class="recipe ${can ? "can" : "cannot"}" data-recipe="${r.id}">
           <span class="row-icon">${this.items[r.id].icon}</span>
           <div class="recipe-body">
-            <b>${r.name}</b>
+            <b>${r.name}${r.needFire ? ' <span class="prompt-warn">\u{1F525} \u0443 \u043A\u043E\u0441\u0442\u0440\u0430</span>' : ""}</b>
             <em>${r.note}</em>
             <div class="costs">${cost}</div>
           </div>
@@ -31078,6 +31542,13 @@ void main() {
     water: svg('<path d="M12 3c4 5 6 8 6 11a6 6 0 05 12 6 6 0 01-6-11c0-3 2-6 6-11z" fill="#4aa9d8"/>'),
     cookedWater: svg('<path d="M12 3c4 5 6 8 6 11a6 6 0 01-12 0c0-3 2-6 6-11z" fill="#7dd0e8"/><path d="M9 10c1 3 2 4 3 6" stroke="#e8f7ff" stroke-width="1.2" fill="none"/>'),
     cookedMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#a25c34"/><path d="M9 12l6 4" stroke="#7a3f22" stroke-width="1.4"/>'),
+    hide: svg('<path d="M5 8q3-3 7-3t7 3q2 4-1 6 2 4-2 6-4 1-8-1-4-2-2-6-3-2-1-5z" fill="#a9784a"/><path d="M9 11q3 2 6 0" stroke="#7a5230" stroke-width="1.2" fill="none"/>'),
+    feather: svg('<path d="M6 18q6-2 9-8 2-4 1-7-4 0-7 2-5 4-3 13z" fill="#e8ecef"/><path d="M7 17q4-5 8-8" stroke="#b6bcc2" stroke-width="1.1" fill="none"/>'),
+    bandage: svg('<rect x="3" y="9" width="18" height="7" rx="3" fill="#e8e2d4" transform="rotate(-12 12 12)"/><path d="M9 10v5M15 9v5" stroke="#c9a07a" stroke-width="1.2"/>'),
+    bow: svg('<path d="M6 3q12 9 0 18" stroke="#8a6a42" stroke-width="2.2" fill="none"/><path d="M6 3v18" stroke="#d8cfbc" stroke-width="1"/>'),
+    arrows: svg('<path d="M4 20L18 5" stroke="#8a6a42" stroke-width="1.6"/><path d="M18 3l3 2-2 2z" fill="#c8ccd2"/><path d="M5 17l-2 3 3-1z" fill="#e8ecef"/>'),
+    driedMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#7d4526"/><path d="M9 12l6 4M10 16l4-2" stroke="#5d3018" stroke-width="1.2"/>'),
+    brew: svg('<path d="M7 7h10l-1 12a2 2 0 01-2 2H10a2 2 0 01-2-2z" fill="#8a6a42"/><path d="M7 10h10" stroke="#c9a07a" stroke-width="1.2"/><path d="M9 4q3 2 6 0" stroke="#c23b52" stroke-width="2" fill="none"/>'),
     rawMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#c46a72"/><path d="M9 12l6 4" stroke="#8f444c" stroke-width="1.4"/>')
   };
   var ITEMS = {
@@ -31091,29 +31562,54 @@ void main() {
     rawMeat: { id: "rawMeat", name: "\u0421\u044B\u0440\u043E\u0435 \u043C\u044F\u0441\u043E", icon: ICONS.rawMeat, kind: "food" },
     cookedMeat: { id: "cookedMeat", name: "\u0416\u0430\u0440\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", icon: ICONS.cookedMeat, kind: "food", hotbar: true, action: "\u0421\u044A\u0435\u0441\u0442\u044C" },
     cookedWater: { id: "cookedWater", name: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430", icon: ICONS.cookedWater, kind: "food", hotbar: true, action: "\u0412\u044B\u043F\u0438\u0442\u044C" },
+    hide: { id: "hide", name: "\u0428\u043A\u0443\u0440\u0430", icon: ICONS.hide, kind: "resource" },
+    feather: { id: "feather", name: "\u041F\u0435\u0440\u043E", icon: ICONS.feather, kind: "resource" },
+    bandage: { id: "bandage", name: "\u0411\u0438\u043D\u0442", icon: ICONS.bandage, kind: "food", hotbar: true, action: "\u041F\u0435\u0440\u0435\u0432\u044F\u0437\u0430\u0442\u044C" },
+    driedMeat: { id: "driedMeat", name: "\u0412\u044F\u043B\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", icon: ICONS.driedMeat, kind: "food", hotbar: true, action: "\u0421\u044A\u0435\u0441\u0442\u044C" },
+    brew: { id: "brew", name: "\u042F\u0433\u043E\u0434\u043D\u044B\u0439 \u043E\u0442\u0432\u0430\u0440", icon: ICONS.brew, kind: "food", hotbar: true, action: "\u0412\u044B\u043F\u0438\u0442\u044C" },
+    arrows: { id: "arrows", name: "\u0421\u0442\u0440\u0435\u043B\u044B", icon: ICONS.arrows, kind: "resource" },
     knife: { id: "knife", name: "\u041A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u043D\u043E\u0436", icon: ICONS.knife, kind: "tool", hotbar: true, tool: { chop: 1.2, mine: 0.4, weapon: 8 } },
     spear: { id: "spear", name: "\u041A\u043E\u043F\u044C\u0451", icon: ICONS.spear, kind: "tool", hotbar: true, tool: { chop: 0.9, mine: 0.3, weapon: 18 } },
     axe: { id: "axe", name: "\u0422\u043E\u043F\u043E\u0440", icon: ICONS.axe, kind: "tool", hotbar: true, tool: { chop: 3.2, mine: 0.8, weapon: 12 } },
     pickaxe: { id: "pickaxe", name: "\u041A\u0438\u0440\u043A\u0430", icon: ICONS.pickaxe, kind: "tool", hotbar: true, tool: { chop: 1, mine: 3, weapon: 7 } },
     torch: { id: "torch", name: "\u0424\u0430\u043A\u0435\u043B", icon: ICONS.torch, kind: "tool", hotbar: true, light: true, tool: { chop: 0.6, mine: 0.2, weapon: 4 } },
+    bow: { id: "bow", name: "\u041B\u0443\u043A", icon: ICONS.bow, kind: "tool", hotbar: true, ranged: true, tool: { chop: 0.3, mine: 0.1, weapon: 14 } },
     campfireKit: { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", icon: ICONS.campfireKit, kind: "placeable", hotbar: true }
   };
-  var HOTBAR = ["coconut", "berries", "knife", "spear", "axe", "pickaxe", "torch", "campfireKit"];
+  var HOTBAR = [
+    "coconut",
+    "berries",
+    "bandage",
+    "knife",
+    "spear",
+    "axe",
+    "pickaxe",
+    "bow",
+    "torch",
+    "campfireKit"
+  ];
   var BAG_ORDER = [
     "wood",
     "stone",
     "flint",
     "fiber",
     "rope",
+    "hide",
+    "feather",
+    "arrows",
     "coconut",
     "berries",
     "rawMeat",
     "cookedMeat",
+    "driedMeat",
     "cookedWater",
+    "brew",
+    "bandage",
     "knife",
     "spear",
     "axe",
     "pickaxe",
+    "bow",
     "torch",
     "campfireKit"
   ];
@@ -31124,7 +31620,15 @@ void main() {
     { id: "axe", name: "\u0422\u043E\u043F\u043E\u0440", need: { wood: 2, stone: 2, rope: 1 }, gives: { axe: 1 }, note: "\u0412\u0430\u043B\u0438\u0442 \u0434\u0435\u0440\u0435\u0432\u044C\u044F \u0432\u0442\u0440\u043E\u0435 \u0431\u044B\u0441\u0442\u0440\u0435\u0435" },
     { id: "pickaxe", name: "\u041A\u0438\u0440\u043A\u0430", need: { wood: 2, stone: 3, rope: 1 }, gives: { pickaxe: 1 }, note: "\u0411\u0435\u0437 \u043D\u0435\u0451 \u043A\u0430\u043C\u043D\u0438 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u043F\u043E\u0434\u0434\u0430\u044E\u0442\u0441\u044F" },
     { id: "torch", name: "\u0424\u0430\u043A\u0435\u043B", need: { wood: 1, fiber: 2 }, gives: { torch: 1 }, note: "\u0421\u0432\u0435\u0442\u0438\u0442 \u043D\u043E\u0447\u044C\u044E, \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u0432 \u0440\u0443\u043A\u0435" },
-    { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", need: { wood: 3, stone: 5 }, gives: { campfireKit: 1 }, note: "\u0421\u0442\u0430\u0432\u0438\u0442\u0441\u044F \u043D\u0430 \u0437\u0435\u043C\u043B\u044E \u043A\u043B\u0430\u0432\u0438\u0448\u0435\u0439 F" }
+    { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", need: { wood: 3, stone: 5 }, gives: { campfireKit: 1 }, note: "\u0421\u0442\u0430\u0432\u0438\u0442\u0441\u044F \u043D\u0430 \u0437\u0435\u043C\u043B\u044E \u043A\u043B\u0430\u0432\u0438\u0448\u0435\u0439 F" },
+    // --- вторая волна: охота, лечение, готовка ---
+    { id: "bandage", name: "\u0411\u0438\u043D\u0442", need: { fiber: 2, hide: 1 }, gives: { bandage: 1 }, note: "+30 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F, \u043D\u0435 \u0442\u0440\u0430\u0442\u0438\u0442 \u0435\u0434\u0443" },
+    { id: "arrows", name: "\u0421\u0442\u0440\u0435\u043B\u044B \xD73", need: { wood: 1, flint: 1, feather: 1 }, gives: { arrows: 3 }, note: "\u0411\u043E\u0435\u043F\u0440\u0438\u043F\u0430\u0441 \u0434\u043B\u044F \u043B\u0443\u043A\u0430" },
+    { id: "bow", name: "\u041B\u0443\u043A", need: { wood: 3, rope: 2, hide: 1 }, gives: { bow: 1 }, note: "\u0411\u044C\u0451\u0442 \u0437\u0432\u0435\u0440\u044F \u043D\u0430 \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0438" },
+    { id: "cookedMeat", name: "\u0416\u0430\u0440\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", need: { rawMeat: 1, wood: 1 }, gives: { cookedMeat: 1 }, needFire: true, note: "\u041D\u0443\u0436\u0435\u043D \u043A\u043E\u0441\u0442\u0451\u0440 \u0440\u044F\u0434\u043E\u043C" },
+    { id: "cookedWater", name: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430", need: { coconut: 1, wood: 1 }, gives: { cookedWater: 1 }, needFire: true, note: "\u041A\u043E\u043A\u043E\u0441\u043E\u0432\u0430\u044F \u0432\u043E\u0434\u0430 \u0441 \u043E\u0433\u043D\u044F \u2014 +38 \u0436\u0430\u0436\u0434\u044B" },
+    { id: "driedMeat", name: "\u0412\u044F\u043B\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", need: { rawMeat: 2, fiber: 1 }, gives: { driedMeat: 1 }, needFire: true, note: "\u0421\u044B\u0442\u043D\u043E \u0438 \u043D\u0435 \u043F\u043E\u0440\u0442\u0438\u0442\u0441\u044F \u0432 \u0434\u043E\u0440\u043E\u0433\u0435" },
+    { id: "brew", name: "\u042F\u0433\u043E\u0434\u043D\u044B\u0439 \u043E\u0442\u0432\u0430\u0440", need: { berries: 3, cookedWater: 1 }, gives: { brew: 1 }, note: "\u041F\u0438\u0442\u044C\u0451 \u0438 \u043B\u0435\u0447\u0435\u043D\u0438\u0435 \u0440\u0430\u0437\u043E\u043C" }
   ];
 
   // src/nodes.js
@@ -31396,8 +31900,376 @@ void main() {
     }
   };
 
+  // src/mobs.js
+  var TYPES = {
+    boar: {
+      model: makeBoar,
+      hp: 34,
+      radius: 0.75,
+      speed: 1.3,
+      chaseSpeed: 4.4,
+      aggro: 8.5,
+      damage: 9,
+      biteCooldown: 1.6,
+      fleeBelow: 0.35,
+      label: "\u041A\u0430\u0431\u0430\u043D",
+      sound: "grunt",
+      drops: [{ id: "rawMeat", min: 1, max: 3 }, { id: "hide", min: 0, max: 2 }],
+      count: 6,
+      biomes: "land"
+    },
+    crab: {
+      model: makeCrab,
+      hp: 9,
+      radius: 0.4,
+      speed: 0.9,
+      chaseSpeed: 2.4,
+      aggro: 0,
+      damage: 0,
+      biteCooldown: 2,
+      fleeBelow: 1,
+      label: "\u041A\u0440\u0430\u0431",
+      sound: "crab",
+      drops: [{ id: "rawMeat", min: 1, max: 1 }, { id: "hide", min: 0, max: 1 }],
+      count: 7,
+      biomes: "beach"
+    },
+    gull: {
+      model: makeGull,
+      hp: 6,
+      radius: 0.4,
+      speed: 3.2,
+      chaseSpeed: 3.2,
+      aggro: 0,
+      damage: 0,
+      biteCooldown: 2,
+      fleeBelow: 1,
+      label: "\u0427\u0430\u0439\u043A\u0430",
+      sound: "gull",
+      flying: true,
+      drops: [{ id: "feather", min: 1, max: 2 }],
+      count: 5,
+      biomes: "beach"
+    },
+    snake: {
+      model: makeSnake,
+      hp: 8,
+      radius: 0.35,
+      speed: 0.55,
+      chaseSpeed: 2.6,
+      aggro: 2.6,
+      damage: 6,
+      biteCooldown: 2.2,
+      fleeBelow: 1,
+      label: "\u0417\u043C\u0435\u044F",
+      sound: "hiss",
+      drops: [{ id: "hide", min: 1, max: 1 }, { id: "rawMeat", min: 0, max: 1 }],
+      count: 4,
+      biomes: "land"
+    }
+  };
+  var Mobs = class {
+    constructor(scene, world, seed = 1) {
+      this.scene = scene;
+      this.world = world;
+      this.rng = makeRng(seed + 4242);
+      this.list = [];
+      this.time = 0;
+      this.group = new Group();
+      this.group.name = "mobs";
+      scene.add(this.group);
+      for (const [type, def] of Object.entries(TYPES)) {
+        for (let i = 0; i < def.count; i++) this.spawn(type);
+      }
+    }
+    /** Найти пологое место нужного биома под зверя */
+    _spot(kind) {
+      const world = this.world;
+      const rng = this.rng;
+      for (let attempt = 0; attempt < 400; attempt++) {
+        const a = rng() * Math.PI * 2;
+        const r = Math.sqrt(rng()) * (kind === "beach" ? 120 : 95);
+        const x = Math.cos(a) * r;
+        const z = Math.sin(a) * r;
+        const h = world.heightAt(x, z);
+        if (world.slopeAt(x, z) > 0.6) continue;
+        if (kind === "beach" && (h < 0.6 || h > 2.4)) continue;
+        if (kind === "land" && (h < 1.6 || h > 14)) continue;
+        return { x, z, h };
+      }
+      return { x: 20, z: 20, h: world.heightAt(20, 20) };
+    }
+    spawn(type) {
+      const def = TYPES[type];
+      const spot = this._spot(def.biomes);
+      const built = def.model();
+      const mob = {
+        type,
+        def,
+        group: built.group,
+        parts: built.parts,
+        x: spot.x,
+        z: spot.z,
+        y: spot.h,
+        home: { x: spot.x, z: spot.z },
+        hp: def.hp,
+        maxHp: def.hp,
+        facing: this.rng() * Math.PI * 2,
+        state: "wander",
+        timer: this.rng() * 2,
+        targetX: spot.x,
+        targetZ: spot.z,
+        biteTimer: 0,
+        phase: this.rng() * Math.PI * 2,
+        alive: true,
+        deadTimer: 0,
+        flyY: def.flying ? 4 + this.rng() * 5 : 0,
+        respawnAt: 0
+      };
+      this.group.add(mob.group);
+      this.list.push(mob);
+      return mob;
+    }
+    _respawn(mob) {
+      const spot = this._spot(mob.def.biomes);
+      mob.x = spot.x;
+      mob.z = spot.z;
+      mob.y = spot.h;
+      mob.home = { x: spot.x, z: spot.z };
+      mob.hp = mob.maxHp;
+      mob.alive = true;
+      mob.state = "wander";
+      mob.deadTimer = 0;
+      mob.group.visible = true;
+      mob.group.rotation.set(0, 0, 0);
+      mob.group.traverse((o) => {
+        if (o.isMesh) o.material.opacity = 1;
+      });
+    }
+    /** Ближайший живой зверь в радиусе (для подсказки и удара) */
+    nearest(pos, range) {
+      let best = null;
+      let bestD = range * range;
+      for (const mob of this.list) {
+        if (!mob.alive) continue;
+        const d = (mob.x - pos.x) ** 2 + (mob.z - pos.z) ** 2;
+        if (d < bestD) {
+          bestD = d;
+          best = mob;
+        }
+      }
+      return best;
+    }
+    /**
+     * Удар по зверю: ищем ближайшего в направлении взгляда.
+     * Возвращает { mob, killed } или null.
+     */
+    hit(origin, dirX, dirZ, range, damage) {
+      const dl = Math.hypot(dirX, dirZ) || 1;
+      dirX /= dl;
+      dirZ /= dl;
+      let best = null;
+      let bestD = Infinity;
+      for (const mob of this.list) {
+        if (!mob.alive) continue;
+        const dx = mob.x - origin.x;
+        const dz = mob.z - origin.z;
+        const d = Math.hypot(dx, dz);
+        if (d > range + mob.def.radius) continue;
+        const dot = d > 1e-3 ? dx / d * dirX + dz / d * dirZ : 1;
+        if (dot < 0.35) continue;
+        if (d < bestD) {
+          bestD = d;
+          best = mob;
+        }
+      }
+      if (!best) return null;
+      best.hp -= damage;
+      best.state = "hurt";
+      best.timer = 0.35;
+      if (best.hp <= 0) {
+        this.kill(best);
+        return { mob: best, killed: true };
+      }
+      return { mob: best, killed: false };
+    }
+    kill(mob) {
+      mob.alive = false;
+      mob.deadTimer = 0;
+      mob.respawnAt = this.time + 45 + this.rng() * 45;
+      mob.state = "dead";
+    }
+    /** Один кадр: ИИ, анимация, урон игроку */
+    update(dt, player, ctx) {
+      this.time += dt;
+      const px = player.position.x;
+      const pz = player.position.z;
+      for (const mob of this.list) {
+        if (!mob.alive) {
+          mob.deadTimer += dt;
+          mob.group.rotation.z = Math.min(1.5, mob.group.rotation.z + dt * 4);
+          if (mob.deadTimer > 1.4) {
+            mob.group.traverse((o) => {
+              if (o.isMesh && o.material.transparent !== void 0) {
+                o.material.transparent = true;
+                o.material.opacity = Math.max(0, 1 - (mob.deadTimer - 1.4) / 0.8);
+              }
+            });
+            if (mob.deadTimer > 2.4) mob.group.visible = false;
+          }
+          if (this.time > mob.respawnAt) this._respawn(mob);
+          continue;
+        }
+        const dx = px - mob.x;
+        const dz = pz - mob.z;
+        const dist = Math.hypot(dx, dz);
+        const def = mob.def;
+        if (dist > 85) {
+          mob.group.visible = false;
+          mob.timer -= dt;
+          if (mob.timer <= 0) {
+            mob.timer = 3 + this.rng() * 4;
+            mob.targetX = mob.home.x + (this.rng() - 0.5) * 14;
+            mob.targetZ = mob.home.z + (this.rng() - 0.5) * 14;
+          }
+          mob.x += clamp2(mob.targetX - mob.x, -0.4, 0.4) * dt;
+          mob.z += clamp2(mob.targetZ - mob.z, -0.4, 0.4) * dt;
+          continue;
+        }
+        mob.group.visible = true;
+        mob.biteTimer = Math.max(0, mob.biteTimer - dt);
+        if (mob.state === "hurt") {
+          mob.timer -= dt;
+          if (mob.timer <= 0) mob.state = def.aggro > 0 ? "chase" : "flee";
+        } else if (mob.timer > 0) {
+          mob.timer -= dt;
+        } else if (mob.state === "wander") {
+          if (dist < def.aggro && def.aggro > 0) {
+            mob.state = "chase";
+            this._sound(ctx, def.sound);
+          } else if (dist < 5 && def.aggro === 0) {
+            mob.state = "flee";
+            mob.timer = 1.6;
+          } else if (Math.hypot(mob.x - mob.targetX, mob.z - mob.targetZ) < 1.2) {
+            mob.targetX = mob.home.x + (this.rng() - 0.5) * 16;
+            mob.targetZ = mob.home.z + (this.rng() - 0.5) * 16;
+            mob.timer = 2 + this.rng() * 3;
+          }
+        } else if (mob.state === "chase") {
+          if (dist > def.aggro + 6 || mob.hp < mob.maxHp * def.fleeBelow) {
+            mob.state = def.hp < mob.maxHp * def.fleeBelow ? "flee" : "wander";
+            mob.timer = 2;
+          }
+        } else if (mob.state === "flee") {
+          if (dist > 12) {
+            mob.state = "wander";
+            mob.timer = 1;
+          }
+        }
+        let speed = 0;
+        let aimX = mob.targetX;
+        let aimZ = mob.targetZ;
+        if (mob.state === "chase") {
+          aimX = px;
+          aimZ = pz;
+          speed = def.chaseSpeed;
+        } else if (mob.state === "flee") {
+          aimX = mob.x - dx;
+          aimZ = mob.z - dz;
+          speed = def.chaseSpeed;
+        } else if (mob.state !== "hurt") {
+          speed = def.speed;
+        }
+        if (speed > 0) {
+          let ax = aimX - mob.x;
+          let az = aimZ - mob.z;
+          const al = Math.hypot(ax, az) || 1;
+          ax /= al;
+          az /= al;
+          const nx = mob.x + ax * speed * dt;
+          const nz = mob.z + az * speed * dt;
+          if (this.world.heightAt(nx, nz) > 0.35) {
+            mob.x = nx;
+            mob.z = nz;
+          } else {
+            mob.targetX = mob.home.x;
+            mob.targetZ = mob.home.z;
+            mob.state = "wander";
+            mob.timer = 2;
+          }
+          const want = Math.atan2(ax, az);
+          let diff = want - mob.facing;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          mob.facing += diff * clamp2(dt * 6, 0, 1);
+        }
+        if (mob.state === "chase" && def.damage > 0 && dist < def.radius + 1.1 && mob.biteTimer <= 0) {
+          mob.biteTimer = def.biteCooldown;
+          ctx.onHit(def.damage, mob.type === "snake" ? "\u0443\u043A\u0443\u0441 \u0437\u043C\u0435\u0438" : "\u043A\u0430\u0431\u0430\u043D");
+          this._sound(ctx, def.sound);
+        }
+        const groundY = this.world.heightAt(mob.x, mob.z);
+        mob.y = groundY;
+        mob.phase += dt * (2.5 + speed * 1.6);
+        const bob = def.flying ? 0 : Math.abs(Math.sin(mob.phase)) * 0.05 * Math.min(1, speed);
+        mob.group.position.set(mob.x, groundY + bob + (def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0), mob.z);
+        mob.group.rotation.y = mob.facing;
+        this._animate(mob, dt, speed, def);
+      }
+    }
+    _sound(ctx, name) {
+      if (!ctx.audio) return;
+      const fn = ctx.audio[name];
+      if (typeof fn === "function") fn.call(ctx.audio);
+    }
+    /** Анимация лап, крыльев и хвоста */
+    _animate(mob, dt, speed, def) {
+      var _a;
+      const p = mob.parts;
+      const walk = Math.min(1, speed / 2);
+      const t = mob.phase;
+      if (p.legs) {
+        p.legs.forEach((leg, i) => {
+          leg.rotation.x = Math.sin(t + (i % 2 ? Math.PI : 0) + Math.floor(i / 2) * 0.6) * 0.55 * walk;
+        });
+      }
+      if (p.tail) {
+        p.tail.rotation.z = 0.5 + Math.sin(t * 1.4) * 0.22;
+        p.tail.rotation.y = Math.sin(t * 0.9) * 0.2;
+      }
+      if (p.head) {
+        p.head.position.y = ((_a = p.head.userData.baseY) != null ? _a : p.head.userData.baseY = p.head.position.y) + Math.sin(t * 1.6) * 0.03;
+      }
+      if (p.claws) {
+        p.claws.forEach((claw, i) => {
+          claw.rotation.y = Math.sin(t * 3 + i) * 0.35;
+        });
+      }
+      if (p.wings) {
+        const flap = def.flying ? Math.sin(t * 3.4) * 0.7 : Math.sin(t * 1.2) * 0.12;
+        p.wings.forEach((wing, i) => {
+          wing.rotation.x = flap * (i === 0 ? 1 : -1);
+        });
+      }
+      if (p.segments) {
+        p.segments.forEach((seg, i) => {
+          seg.position.z = Math.sin(t * 2.2 - i * 0.9) * 0.16;
+          seg.rotation.y = Math.sin(t * 2.2 - i * 0.9) * 0.3;
+        });
+      }
+      if (p.tongue) {
+        const flick = Math.sin(mob.phase * 4) > 0.85 ? 1 : 0.2;
+        p.tongue.scale.x = flick;
+      }
+    }
+    /** Сколько зверей рядом — для диагностики и подсказок */
+    countNear(pos, range) {
+      return this.list.filter((m) => m.alive && Math.hypot(m.x - pos.x, m.z - pos.z) < range).length;
+    }
+  };
+
   // src/diag.js
-  var BUILD = true ? "2026-10-24 19:13" : "dev";
+  var BUILD = true ? "2026-10-24 20:18" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -32006,6 +32878,8 @@ void main() {
       this.player = new Player(this.scene);
       this.rain = new Rain(this.scene);
       this.resources = new Resources(this.scene, this.world);
+      this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
+      this.projectiles = [];
       this.state = {
         health: 100,
         thirst: 78,
@@ -32156,6 +33030,8 @@ void main() {
           this.audio.resume();
           this.holdingAttack = true;
           this.attack();
+        } else if (e.button === 2) {
+          this.useSelected();
         }
       });
       window.addEventListener("mouseup", () => {
@@ -32170,8 +33046,14 @@ void main() {
       });
       window.addEventListener("wheel", (e) => {
         if (!this.running || this.paused) return;
-        const dist = CONFIG.player.cameraDistance + e.deltaY * 4e-3;
-        CONFIG.player.cameraDistance = Math.max(2.2, Math.min(12, dist));
+        if (e.shiftKey) {
+          const dist = CONFIG.player.cameraDistance + e.deltaY * 4e-3;
+          CONFIG.player.cameraDistance = Math.max(2.2, Math.min(12, dist));
+          return;
+        }
+        const step = e.deltaY > 0 ? 1 : -1;
+        const next = (this.selected + step + HOTBAR.length) % HOTBAR.length;
+        this.selectSlot(next);
       }, { passive: true });
       document.addEventListener("pointerlockchange", () => {
         const wasLocked = this.locked;
@@ -32277,8 +33159,11 @@ void main() {
         case "Digit5":
         case "Digit6":
         case "Digit7":
-        case "Digit8": {
-          const n = Number(code.replace("Digit", "")) - 1;
+        case "Digit8":
+        case "Digit9":
+        case "Digit0": {
+          const digit = Number(code.replace("Digit", ""));
+          const n = digit === 0 ? 9 : digit - 1;
           this.selectSlot(n);
           this.useSelected();
           break;
@@ -32452,18 +33337,48 @@ void main() {
     }
     /** ЛКМ: удар по дереву/камню/кусту или в воздух */
     attack() {
-      var _a, _b;
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m2;
       if (!this.running || this.paused || this.dead) return;
       if (this.attackCooldown > 0) return;
       this.attackCooldown = 0.62;
       this.player.swing();
-      this.audio.step("grass", false);
+      const toolId = this.equippedId();
+      const ranged = toolId && ITEMS[toolId].ranged;
+      if (ranged) {
+        this.shootArrow();
+        return;
+      }
+      (_b = (_a = this.audio).swing) == null ? void 0 : _b.call(_a);
+      const facing = this.player.facing;
+      const dirX = Math.sin(facing);
+      const dirZ = Math.cos(facing);
+      const weapon = ((_c = this.equippedTool()) == null ? void 0 : _c.weapon) || 4;
+      const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
+      if (mobHit) {
+        (_e = (_d = this.audio).hitFlesh) == null ? void 0 : _e.call(_d);
+        if (mobHit.killed) {
+          (_g = (_f = this.audio).mobDeath) == null ? void 0 : _g.call(_f);
+          const drops = [];
+          for (const drop of mobHit.mob.def.drops) {
+            const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+            if (n > 0) {
+              this.addItem(drop.id, n);
+              drops.push(`${ITEMS[drop.id].name} +${n}`);
+            }
+          }
+          this.ui.toast(`${mobHit.mob.def.label} \u043F\u043E\u0431\u0435\u0436\u0434\u0451\u043D: ${drops.join(", ") || "\u0431\u0435\u0437 \u0434\u043E\u0431\u044B\u0447\u0438"}`);
+        } else {
+          this.ui.toast(`${mobHit.mob.def.label}: ${Math.max(0, Math.round(mobHit.mob.hp))}/${mobHit.mob.maxHp}`);
+        }
+        this.attackCooldown = ranged ? 0.9 : 0.62;
+        return;
+      }
       const target = this.resources.nearest(this.player.position, 3.8);
       if (!target || target.kind !== "node") return;
       const node = target.node;
       const tool = this.equippedTool();
       const def = this.resources.strike(node, tool);
-      const power = tool && tool[(_a = this.nodeDef(node).tool) != null ? _a : "chop"] !== void 0 ? tool[(_b = this.nodeDef(node).tool) != null ? _b : "chop"] : 0.35;
+      const power = tool && tool[(_h = this.nodeDef(node).tool) != null ? _h : "chop"] !== void 0 ? tool[(_i = this.nodeDef(node).tool) != null ? _i : "chop"] : 0.35;
       if (def.need && (!tool || power < 1)) {
         this.ui.toast(`\u041D\u0443\u0436\u0435\u043D ${def.need}: \u0442\u0430\u043A \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0432\u044B\u0445\u043E\u0434\u0438\u0442`, true);
       }
@@ -32476,15 +33391,84 @@ void main() {
         this.ui.toast(parts.length ? `${node.label} \u0434\u043E\u0431\u044B\u0442: ${parts.join(", ")}` : `${node.label} \u043F\u0443\u0441\u0442`);
         this.audio.pickup();
         if (this.nearNode === node) this.nearNode = null;
+      } else if (node.type === "rock") {
+        (_k = (_j = this.audio).mine) == null ? void 0 : _k.call(_j);
       } else {
-        this.audio.step("rock", true);
+        (_m2 = (_l = this.audio).chop) == null ? void 0 : _m2.call(_l);
+      }
+    }
+    /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
+    shootArrow() {
+      var _a, _b;
+      if ((this.state.inventory.arrows || 0) <= 0) {
+        this.ui.toast("\u041D\u0435\u0442 \u0441\u0442\u0440\u0435\u043B: \u0441\u0434\u0435\u043B\u0430\u0439 \u0438\u0445 \u0438\u0437 \u043F\u0430\u043B\u043A\u0438, \u043A\u0440\u0435\u043C\u043D\u044F \u0438 \u043F\u0435\u0440\u0430", true);
+        return;
+      }
+      this.takeItem("arrows", 1);
+      (_b = (_a = this.audio).bowShot) == null ? void 0 : _b.call(_a);
+      const mesh2 = new Mesh(
+        new CylinderGeometry(0.02, 0.02, 0.7, 4),
+        new MeshStandardMaterial({ color: 14208956, roughness: 0.7 })
+      );
+      const p = this.player.position;
+      const facing = this.player.facing;
+      const dirX = Math.sin(facing);
+      const dirZ = Math.cos(facing);
+      const pitch = this.player.pitch || 0;
+      mesh2.position.set(p.x + dirX * 0.6, p.y + 1.35, p.z + dirZ * 0.6);
+      mesh2.rotation.set(-pitch - Math.PI / 2, facing, 0);
+      this.scene.add(mesh2);
+      this.projectiles.push({
+        mesh: mesh2,
+        vx: dirX * 34,
+        vy: 2.5 - pitch * 8,
+        vz: dirZ * 34,
+        life: 2.2
+      });
+    }
+    updateProjectiles(dt) {
+      var _a, _b, _c, _d;
+      for (let i = this.projectiles.length - 1; i >= 0; i--) {
+        const a = this.projectiles[i];
+        a.life -= dt;
+        a.vy -= 9.8 * dt;
+        a.mesh.position.x += a.vx * dt;
+        a.mesh.position.y += a.vy * dt;
+        a.mesh.position.z += a.vz * dt;
+        const hitGround = a.mesh.position.y < this.world.heightAt(a.mesh.position.x, a.mesh.position.z) + 0.1;
+        const hp = a.mesh.position;
+        const strike = this.mobs.hit(hp, a.vx, a.vz, 0.9, 16);
+        if (strike) {
+          (_b = (_a = this.audio).hitFlesh) == null ? void 0 : _b.call(_a);
+          if (strike.killed) {
+            (_d = (_c = this.audio).mobDeath) == null ? void 0 : _d.call(_c);
+            const drops = [];
+            for (const drop of strike.mob.def.drops) {
+              const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+              if (n > 0) {
+                this.addItem(drop.id, n);
+                drops.push(`${ITEMS[drop.id].name} +${n}`);
+              }
+            }
+            this.ui.toast(`${strike.mob.def.label} \u043F\u043E\u0431\u0435\u0436\u0434\u0451\u043D \u0441\u0442\u0440\u0435\u043B\u043E\u0439: ${drops.join(", ") || "\u0431\u0435\u0437 \u0434\u043E\u0431\u044B\u0447\u0438"}`);
+          }
+        }
+        if (strike || hitGround || a.life <= 0) {
+          this.scene.remove(a.mesh);
+          a.mesh.geometry.dispose();
+          this.projectiles.splice(i, 1);
+        }
       }
     }
     craft(recipeId) {
-      var _a;
+      var _a, _b, _c;
       const recipe = RECIPES.find((r) => r.id === recipeId);
       if (!recipe) return;
       const inv = this.state.inventory;
+      if (recipe.needFire && !this.nearFire) {
+        this.ui.toast(`${recipe.name}: \u043D\u0443\u0436\u0435\u043D \u043A\u043E\u0441\u0442\u0451\u0440 \u0440\u044F\u0434\u043E\u043C`, true);
+        return;
+      }
       for (const [id, need] of Object.entries(recipe.need)) {
         if ((inv[id] || 0) < need) {
           this.ui.toast(`\u041D\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442: ${ITEMS[id].name}`, true);
@@ -32493,11 +33477,11 @@ void main() {
       }
       for (const [id, need] of Object.entries(recipe.need)) this.takeItem(id, need);
       for (const [id, give] of Object.entries(recipe.gives)) this.addItem(id, give);
-      this.audio.pickup();
+      (_b = (_a = this.audio).craft) == null ? void 0 : _b.call(_a);
       this.ui.toast(`\u0421\u0434\u0435\u043B\u0430\u043D\u043E: ${recipe.name}`);
       this.ui._lastCraftSig = "";
       this.ui.renderCraft(RECIPES, inv, (rid) => this.craft(rid));
-      if (((_a = ITEMS[recipeId]) == null ? void 0 : _a.kind) === "tool") {
+      if (((_c = ITEMS[recipeId]) == null ? void 0 : _c.kind) === "tool") {
         const idx = HOTBAR.indexOf(recipeId);
         if (idx >= 0) this.selectSlot(idx);
       }
@@ -32535,6 +33519,7 @@ void main() {
       else if (this.equippedId() !== id) this.selectSlot(this.selected);
     }
     consume(kind) {
+      var _a, _b;
       if (!this.running || this.paused || this.dead) return;
       const inv = this.state.inventory;
       if ((inv[kind] || 0) <= 0) {
@@ -32546,13 +33531,20 @@ void main() {
         berries: { hunger: 12, thirst: 2, text: "\u0413\u043E\u0440\u0441\u0442\u044C \u044F\u0433\u043E\u0434: +12 \u0435\u0434\u044B" },
         cookedMeat: { hunger: 34, thirst: -4, text: "\u0416\u0430\u0440\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E: +34 \u0435\u0434\u044B" },
         rawMeat: { hunger: 16, thirst: -2, text: "\u0421\u044B\u0440\u043E\u0435 \u043C\u044F\u0441\u043E: +16 \u0435\u0434\u044B, \u043F\u0440\u043E\u0442\u0438\u0432\u043D\u043E" },
-        cookedWater: { thirst: 38, hunger: 0, text: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430: +38 \u0436\u0430\u0436\u0434\u044B" }
+        cookedWater: { thirst: 38, hunger: 0, text: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430: +38 \u0436\u0430\u0436\u0434\u044B" },
+        driedMeat: { hunger: 26, thirst: -1, text: "\u0412\u044F\u043B\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E: +26 \u0435\u0434\u044B" },
+        brew: { thirst: 30, hunger: 8, health: 14, text: "\u041E\u0442\u0432\u0430\u0440: +30 \u0436\u0430\u0436\u0434\u044B \u0438 +14 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F" },
+        bandage: { health: 30, text: "\u041F\u0435\u0440\u0435\u0432\u044F\u0437\u0430\u043B \u0440\u0430\u043D\u044B: +30 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F" }
       };
       const ef = effects[kind];
       if (!ef) return;
       this.takeItem(kind, 1);
       this.state.thirst = Math.max(0, Math.min(100, this.state.thirst + (ef.thirst || 0)));
       this.state.hunger = Math.max(0, Math.min(100, this.state.hunger + (ef.hunger || 0)));
+      if (ef.health) {
+        this.state.health = Math.max(1, Math.min(100, this.state.health + ef.health));
+        (_b = (_a = this.audio).heal) == null ? void 0 : _b.call(_a);
+      }
       if (kind === "rawMeat" && Math.random() < 0.45) {
         this.state.health = Math.max(1, this.state.health - 6);
         this.ui.toast("\u0421\u044B\u0440\u043E\u0435 \u043C\u044F\u0441\u043E \u2014 \u0436\u0438\u0432\u043E\u0442 \u0441\u043A\u0440\u0443\u0442\u0438\u043B\u043E", true);
@@ -32606,17 +33598,33 @@ void main() {
       this.rain.setIntensity(this.rainIntensity);
       this.rain.update(dt, this.player.position);
       this.audio.setNight(skyInfo.night);
+      this.audio.updateMusic(dt, skyInfo.night);
       this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
       this.resources.update(dt);
+      this.mobs.update(dt, this.player, {
+        audio: this.audio,
+        onHit: (dmg2, cause2) => this.takeDamage(dmg2, cause2),
+        onDrop: (items) => {
+          for (const [id, n] of Object.entries(items)) this.addItem(id, n);
+        }
+      });
+      this.updateProjectiles(dt);
       this.attackCooldown = Math.max(0, this.attackCooldown - dt);
       if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
       const fireWarm = this.resources.fireWarmth(this.player.position);
       this.nearFire = fireWarm.fire;
+      this.audio.updateAmbience(dt, { night: skyInfo.night, fire: fireWarm.warmth > 0 ? fireWarm.warmth : 0 });
       this.ui.setFuel(fireWarm.warmth > 0.05 && fireWarm.fire ? fireWarm.fire : null);
       this.nearest = this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
       const nodeTarget = this.resources.nearest(this.player.position, 3.9);
       let marker = null;
-      if (this.nearest) {
+      const nearMob = this.mobs.nearest(this.player.position, 6.5);
+      if (nearMob && (nearMob.state === "chase" || nearMob.hp < nearMob.maxHp)) {
+        this.ui.setPrompt(
+          `<b>\u041B\u041A\u041C</b> \u2014 ${nearMob.def.label.toLowerCase()} <span class="prompt-warn">${Math.max(0, Math.round(nearMob.hp))}/${nearMob.maxHp}</span>`
+        );
+        marker = new Vector3(nearMob.x, nearMob.y + 0.1, nearMob.z);
+      } else if (this.nearest) {
         marker = this.nearest.mesh.position;
         this.ui.setPrompt(`<b>E</b> \u2014 \u043F\u043E\u0434\u043E\u0431\u0440\u0430\u0442\u044C ${this.nearest.name.toLowerCase()}`);
       } else if (nodeTarget && nodeTarget.kind === "node") {
@@ -32697,6 +33705,15 @@ void main() {
         this.saveTimer = 0;
         this.save();
       }
+    }
+    /** Урон от зверя: тряска, звук, предупреждение */
+    takeDamage(amount, cause) {
+      if (!this.running || this.paused || this.dead || amount <= 0) return;
+      this.state.health = Math.max(0, this.state.health - amount);
+      this.player.landShake = Math.max(this.player.landShake, 0.45);
+      this.audio.hurt();
+      this.ui.toast(`\u2212${Math.round(amount)} \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F: ${cause}`, true);
+      if (this.state.health <= 0) this.die(cause);
     }
     die(cause) {
       this.dead = true;

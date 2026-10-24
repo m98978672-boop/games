@@ -185,7 +185,7 @@ export class UI {
         return `<li class="recipe ${can ? 'can' : 'cannot'}" data-recipe="${r.id}">
           <span class="row-icon">${this.items[r.id].icon}</span>
           <div class="recipe-body">
-            <b>${r.name}</b>
+            <b>${r.name}${r.needFire ? ' <span class="prompt-warn">🔥 у костра</span>' : ''}</b>
             <em>${r.note}</em>
             <div class="costs">${cost}</div>
           </div>

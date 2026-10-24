@@ -12,6 +12,7 @@ import { UI } from './ui.js';
 import { Rain } from './effects.js';
 import { ITEMS, HOTBAR, BAG_ORDER, RECIPES } from './items.js';
 import { Resources, NODE_DEFS } from './nodes.js';
+import { Mobs } from './mobs.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 import { createTextures } from './textures.js';
 
@@ -110,6 +111,8 @@ class Game {
     this.player = new Player(this.scene);
     this.rain = new Rain(this.scene);
     this.resources = new Resources(this.scene, this.world);
+    this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
+    this.projectiles = [];
 
     this.state = {
       health: 100,
@@ -277,6 +280,8 @@ class Game {
         this.audio.resume();
         this.holdingAttack = true;
         this.attack();
+      } else if (e.button === 2) {
+        this.useSelected();
       }
     });
     window.addEventListener('mouseup', () => { this.dragging = false; this.holdingAttack = false; });
@@ -290,8 +295,14 @@ class Game {
 
     window.addEventListener('wheel', (e) => {
       if (!this.running || this.paused) return;
-      const dist = CONFIG.player.cameraDistance + e.deltaY * 0.004;
-      CONFIG.player.cameraDistance = Math.max(2.2, Math.min(12, dist));
+      if (e.shiftKey) {
+        const dist = CONFIG.player.cameraDistance + e.deltaY * 0.004;
+        CONFIG.player.cameraDistance = Math.max(2.2, Math.min(12, dist));
+        return;
+      }
+      const step = e.deltaY > 0 ? 1 : -1;
+      const next = (this.selected + step + HOTBAR.length) % HOTBAR.length;
+      this.selectSlot(next);
     }, { passive: true });
 
     document.addEventListener('pointerlockchange', () => {
@@ -370,9 +381,10 @@ class Game {
         this.ui.toggleBag(undefined);
         this.ui.renderBag(this.state.inventory);
         break;
-      case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4':
-      case 'Digit5': case 'Digit6': case 'Digit7': case 'Digit8': {
-        const n = Number(code.replace('Digit', '')) - 1;
+      case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5':
+      case 'Digit6': case 'Digit7': case 'Digit8': case 'Digit9': case 'Digit0': {
+        const digit = Number(code.replace('Digit', ''));
+        const n = digit === 0 ? 9 : digit - 1;
         this.selectSlot(n);
         this.useSelected();
         break;
@@ -560,7 +572,39 @@ class Game {
     this.attackCooldown = 0.62;
 
     this.player.swing();
-    this.audio.step('grass', false);
+    const toolId = this.equippedId();
+    const ranged = toolId && ITEMS[toolId].ranged;
+    if (ranged) {
+      this.shootArrow();
+      return;
+    }
+    this.audio.swing?.();
+
+    // сначала звери: они ближе и подвижнее
+    const facing = this.player.facing;
+    const dirX = Math.sin(facing);
+    const dirZ = Math.cos(facing);
+    const weapon = (this.equippedTool()?.weapon) || 4;
+    const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
+    if (mobHit) {
+      this.audio.hitFlesh?.();
+      if (mobHit.killed) {
+        this.audio.mobDeath?.();
+        const drops = [];
+        for (const drop of mobHit.mob.def.drops) {
+          const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+          if (n > 0) {
+            this.addItem(drop.id, n);
+            drops.push(`${ITEMS[drop.id].name} +${n}`);
+          }
+        }
+        this.ui.toast(`${mobHit.mob.def.label} побеждён: ${drops.join(', ') || 'без добычи'}`);
+      } else {
+        this.ui.toast(`${mobHit.mob.def.label}: ${Math.max(0, Math.round(mobHit.mob.hp))}/${mobHit.mob.maxHp}`);
+      }
+      this.attackCooldown = ranged ? 0.9 : 0.62;
+      return;
+    }
 
     const target = this.resources.nearest(this.player.position, 3.8);
     if (!target || target.kind !== 'node') return;
@@ -586,8 +630,75 @@ class Game {
       this.ui.toast(parts.length ? `${node.label} добыт: ${parts.join(', ')}` : `${node.label} пуст`);
       this.audio.pickup();
       if (this.nearNode === node) this.nearNode = null;
+    } else if (node.type === 'rock') {
+      this.audio.mine?.();
     } else {
-      this.audio.step('rock', true);
+      this.audio.chop?.();
+    }
+  }
+
+  /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
+  shootArrow() {
+    if ((this.state.inventory.arrows || 0) <= 0) {
+      this.ui.toast('Нет стрел: сделай их из палки, кремня и пера', true);
+      return;
+    }
+    this.takeItem('arrows', 1);
+    this.audio.bowShot?.();
+
+    const mesh = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.02, 0.02, 0.7, 4),
+      new THREE.MeshStandardMaterial({ color: 0xd8cfbc, roughness: 0.7 })
+    );
+    const p = this.player.position;
+    const facing = this.player.facing;
+    const dirX = Math.sin(facing);
+    const dirZ = Math.cos(facing);
+    const pitch = this.player.pitch || 0;
+    mesh.position.set(p.x + dirX * 0.6, p.y + 1.35, p.z + dirZ * 0.6);
+    mesh.rotation.set(-pitch - Math.PI / 2, facing, 0);
+    this.scene.add(mesh);
+    this.projectiles.push({
+      mesh,
+      vx: dirX * 34,
+      vy: 2.5 - pitch * 8,
+      vz: dirZ * 34,
+      life: 2.2,
+    });
+  }
+
+  updateProjectiles(dt) {
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const a = this.projectiles[i];
+      a.life -= dt;
+      a.vy -= 9.8 * dt;
+      a.mesh.position.x += a.vx * dt;
+      a.mesh.position.y += a.vy * dt;
+      a.mesh.position.z += a.vz * dt;
+      const hitGround = a.mesh.position.y < this.world.heightAt(a.mesh.position.x, a.mesh.position.z) + 0.1;
+
+      const hp = a.mesh.position;
+      const strike = this.mobs.hit(hp, a.vx, a.vz, 0.9, 16);
+      if (strike) {
+        this.audio.hitFlesh?.();
+        if (strike.killed) {
+          this.audio.mobDeath?.();
+          const drops = [];
+          for (const drop of strike.mob.def.drops) {
+            const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+            if (n > 0) {
+              this.addItem(drop.id, n);
+              drops.push(`${ITEMS[drop.id].name} +${n}`);
+            }
+          }
+          this.ui.toast(`${strike.mob.def.label} побеждён стрелой: ${drops.join(', ') || 'без добычи'}`);
+        }
+      }
+      if (strike || hitGround || a.life <= 0) {
+        this.scene.remove(a.mesh);
+        a.mesh.geometry.dispose();
+        this.projectiles.splice(i, 1);
+      }
     }
   }
 
@@ -596,6 +707,10 @@ class Game {
     if (!recipe) return;
     const inv = this.state.inventory;
 
+    if (recipe.needFire && !this.nearFire) {
+      this.ui.toast(`${recipe.name}: нужен костёр рядом`, true);
+      return;
+    }
     for (const [id, need] of Object.entries(recipe.need)) {
       if ((inv[id] || 0) < need) {
         this.ui.toast(`Не хватает: ${ITEMS[id].name}`, true);
@@ -605,7 +720,7 @@ class Game {
     for (const [id, need] of Object.entries(recipe.need)) this.takeItem(id, need);
     for (const [id, give] of Object.entries(recipe.gives)) this.addItem(id, give);
 
-    this.audio.pickup();
+    this.audio.craft?.();
     this.ui.toast(`Сделано: ${recipe.name}`);
     this.ui._lastCraftSig = '';
     this.ui.renderCraft(RECIPES, inv, (rid) => this.craft(rid));
@@ -664,6 +779,9 @@ class Game {
       cookedMeat: { hunger: 34, thirst: -4, text: 'Жареное мясо: +34 еды' },
       rawMeat: { hunger: 16, thirst: -2, text: 'Сырое мясо: +16 еды, противно' },
       cookedWater: { thirst: 38, hunger: 0, text: 'Кипячёная вода: +38 жажды' },
+      driedMeat: { hunger: 26, thirst: -1, text: 'Вяленое мясо: +26 еды' },
+      brew: { thirst: 30, hunger: 8, health: 14, text: 'Отвар: +30 жажды и +14 здоровья' },
+      bandage: { health: 30, text: 'Перевязал раны: +30 здоровья' },
     };
     const ef = effects[kind];
     if (!ef) return;
@@ -671,6 +789,10 @@ class Game {
     this.takeItem(kind, 1);
     this.state.thirst = Math.max(0, Math.min(100, this.state.thirst + (ef.thirst || 0)));
     this.state.hunger = Math.max(0, Math.min(100, this.state.hunger + (ef.hunger || 0)));
+    if (ef.health) {
+      this.state.health = Math.max(1, Math.min(100, this.state.health + ef.health));
+      this.audio.heal?.();
+    }
     if (kind === 'rawMeat' && Math.random() < 0.45) {
       this.state.health = Math.max(1, this.state.health - 6);
       this.ui.toast('Сырое мясо — живот скрутило', true);
@@ -732,16 +854,26 @@ class Game {
     this.rain.setIntensity(this.rainIntensity);
     this.rain.update(dt, this.player.position);
     this.audio.setNight(skyInfo.night);
+    this.audio.updateMusic(dt, skyInfo.night);
 
     this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
 
     // --- ресурсы и костры ---
     this.resources.update(dt);
+
+    // --- звери и стрелы ---
+    this.mobs.update(dt, this.player, {
+      audio: this.audio,
+      onHit: (dmg, cause) => this.takeDamage(dmg, cause),
+      onDrop: (items) => { for (const [id, n] of Object.entries(items)) this.addItem(id, n); },
+    });
+    this.updateProjectiles(dt);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
 
     const fireWarm = this.resources.fireWarmth(this.player.position);
     this.nearFire = fireWarm.fire;
+    this.audio.updateAmbience(dt, { night: skyInfo.night, fire: fireWarm.warmth > 0 ? fireWarm.warmth : 0 });
     this.ui.setFuel(fireWarm.warmth > 0.05 && fireWarm.fire ? fireWarm.fire : null);
 
     // --- подсветка цели и подсказка ---
@@ -749,7 +881,14 @@ class Game {
     const nodeTarget = this.resources.nearest(this.player.position, 3.9);
     let marker = null;
 
-    if (this.nearest) {
+    const nearMob = this.mobs.nearest(this.player.position, 6.5);
+    if (nearMob && (nearMob.state === 'chase' || nearMob.hp < nearMob.maxHp)) {
+      this.ui.setPrompt(
+        `<b>ЛКМ</b> — ${nearMob.def.label.toLowerCase()} ` +
+        `<span class="prompt-warn">${Math.max(0, Math.round(nearMob.hp))}/${nearMob.maxHp}</span>`
+      );
+      marker = new THREE.Vector3(nearMob.x, nearMob.y + 0.1, nearMob.z);
+    } else if (this.nearest) {
       marker = this.nearest.mesh.position;
       this.ui.setPrompt(`<b>E</b> — подобрать ${this.nearest.name.toLowerCase()}`);
     } else if (nodeTarget && nodeTarget.kind === 'node') {
@@ -839,6 +978,16 @@ class Game {
       this.saveTimer = 0;
       this.save();
     }
+  }
+
+  /** Урон от зверя: тряска, звук, предупреждение */
+  takeDamage(amount, cause) {
+    if (!this.running || this.paused || this.dead || amount <= 0) return;
+    this.state.health = Math.max(0, this.state.health - amount);
+    this.player.landShake = Math.max(this.player.landShake, 0.45);
+    this.audio.hurt();
+    this.ui.toast(`−${Math.round(amount)} здоровья: ${cause}`, true);
+    if (this.state.health <= 0) this.die(cause);
   }
 
   die(cause) {

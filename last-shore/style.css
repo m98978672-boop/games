@@ -123,6 +123,12 @@ html, body {
   transition: transform 0.12s, border-color 0.2s, background 0.2s;
 }
 
+@media (max-width: 900px) {
+  .slot { width: 54px; height: 54px; border-radius: 10px; }
+  .slot-icon, .slot-icon svg { width: 20px; height: 20px; }
+  .slot-name { display: none; }
+}
+
 .slot:hover { transform: translateY(-3px); border-color: rgba(232, 180, 90, 0.5); }
 .slot.active { border-color: var(--accent); background: rgba(60, 44, 20, 0.66); }
 .slot.empty { opacity: 0.42; }

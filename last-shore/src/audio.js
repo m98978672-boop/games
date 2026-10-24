@@ -9,6 +9,9 @@ export class Audio {
     this.enabled = true;
     this.ready = false;
     this.stepTimer = 0;
+    this.birdTimer = 3;
+    this.cricketsGain = null;
+    this.fireGain = null;
   }
 
   init() {
@@ -67,7 +70,88 @@ export class Audio {
     wind.connect(windFilter).connect(this.windGain).connect(this.master);
     wind.start();
 
+    // --- треск костра (громкость поднимается, когда игрок рядом) ---
+    const fire = this.ctx.createBufferSource();
+    fire.buffer = buffer;
+    fire.loop = true;
+    fire.playbackRate.value = 1.6;
+    const fireFilter = this.ctx.createBiquadFilter();
+    fireFilter.type = 'bandpass';
+    fireFilter.frequency.value = 1500;
+    fireFilter.Q.value = 0.6;
+    this.fireGain = this.ctx.createGain();
+    this.fireGain.gain.value = 0;
+    fire.connect(fireFilter).connect(this.fireGain).connect(this.master);
+    fire.start();
+
+    // --- сверчки: узкий высокий шум с медленной пульсацией ---
+    const crickets = this.ctx.createBufferSource();
+    crickets.buffer = buffer;
+    crickets.loop = true;
+    crickets.playbackRate.value = 3.4;
+    const cricketFilter = this.ctx.createBiquadFilter();
+    cricketFilter.type = 'bandpass';
+    cricketFilter.frequency.value = 4200;
+    cricketFilter.Q.value = 8;
+    this.cricketsGain = this.ctx.createGain();
+    this.cricketsGain.gain.value = 0;
+    crickets.connect(cricketFilter).connect(this.cricketsGain).connect(this.master);
+    crickets.start();
+
+    // --- тихий музыкальный фон: медленные аккорды ---
+    this.musicGain = this.ctx.createGain();
+    this.musicGain.gain.value = 0.05;
+    this.musicGain.connect(this.master);
+    this.chordStep = 0;
+    this.musicTimer = 0;
+
     this.ready = true;
+  }
+
+  /** Медленная «музыка»: три ноты, меняющиеся раз в несколько секунд */
+  updateMusic(dt, night) {
+    if (!this.ready) return;
+    this.musicTimer -= dt;
+    if (this.musicTimer > 0) return;
+    this.musicTimer = 7 + Math.random() * 5;
+
+    const roots = night ? [110, 98, 87, 123] : [147, 165, 131, 175];
+    const root = roots[this.chordStep % roots.length];
+    this.chordStep++;
+    const now = this.ctx.currentTime;
+    [1, 1.5, 2.0].forEach((mul, i) => {
+      const osc = this.ctx.createOscillator();
+      osc.type = i === 0 ? 'sine' : 'triangle';
+      osc.frequency.value = root * mul;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.05, now + 1.2);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 6.5);
+      osc.connect(g).connect(this.musicGain);
+      osc.start(now);
+      osc.stop(now + 7);
+    });
+  }
+
+  /** Птицы днём, сверчки ночью, треск огня рядом */
+  updateAmbience(dt, { night = 0, fire = 0 } = {}) {
+    if (!this.ready) return;
+    const now = this.ctx.currentTime;
+    if (this.fireGain) this.fireGain.gain.setTargetAtTime(0.02 + fire * 0.14, now, 0.3);
+    if (this.cricketsGain) this.cricketsGain.gain.setTargetAtTime(night * 0.02, now, 0.8);
+
+    this.birdTimer -= dt;
+    if (this.birdTimer <= 0) {
+      this.birdTimer = 4 + Math.random() * 9;
+      if (night < 0.4 && Math.random() < 0.75) this.birdCall();
+    }
+  }
+
+  birdCall() {
+    const base = 1800 + Math.random() * 1400;
+    this._tone(base, 0.07, 0.03, 'sine', base * 1.5);
+    this._tone(base * 1.2, 0.06, 0.022, 'sine', base * 1.8, 0.09);
+    if (Math.random() < 0.4) this._tone(base * 0.9, 0.08, 0.02, 'sine', base * 1.3, 0.19);
   }
 
   resume() {
@@ -136,6 +220,68 @@ export class Audio {
   eat() {
     this._noiseBurst(0.1, 950, 1.6, 0.09, 'bandpass');
     this._noiseBurst(0.1, 700, 1.6, 0.07, 'bandpass');
+  }
+
+  /** Взмах инструментом: короткий шумовой «вжух» */
+  swing() {
+    this._noiseBurst(0.16, 1400, 1.4, 0.05, 'bandpass');
+  }
+
+  /** Топор по дереву */
+  chop() {
+    this._noiseBurst(0.11, 420, 1.1, 0.16);
+    this._tone(150, 0.12, 0.09, 'square', 90);
+  }
+
+  /** Кирка по камню */
+  mine() {
+    this._noiseBurst(0.1, 2600, 1.8, 0.12, 'bandpass');
+    this._tone(420, 0.07, 0.05, 'square', 300);
+  }
+
+  craft() {
+    this._noiseBurst(0.08, 900, 1.2, 0.06);
+    this._tone(520, 0.08, 0.05, 'triangle');
+    this._tone(780, 0.1, 0.04, 'triangle', null, 0.07);
+    this._tone(1040, 0.12, 0.035, 'triangle', null, 0.15);
+  }
+
+  hitFlesh() {
+    this._noiseBurst(0.12, 260, 0.8, 0.14);
+    this._tone(120, 0.1, 0.07, 'sine', 70);
+  }
+
+  bowShot() {
+    this._noiseBurst(0.07, 2200, 2.0, 0.09, 'bandpass');
+    this._tone(300, 0.16, 0.05, 'triangle', 140);
+  }
+
+  mobDeath() {
+    this._tone(180, 0.3, 0.07, 'sawtooth', 70);
+    this._noiseBurst(0.24, 300, 0.8, 0.07);
+  }
+
+  heal() {
+    this._tone(520, 0.18, 0.045, 'sine', 780);
+    this._tone(780, 0.22, 0.03, 'sine', 1040, 0.1);
+  }
+
+  grunt() {
+    this._noiseBurst(0.18, 260, 0.9, 0.11);
+    this._tone(96, 0.2, 0.09, 'sawtooth', 72);
+  }
+
+  crab() {
+    for (let i = 0; i < 3; i++) this._noiseBurst(0.04, 3200, 3, 0.05, 'bandpass');
+  }
+
+  gull() {
+    this._tone(1650, 0.16, 0.05, 'sawtooth', 900);
+    this._tone(1500, 0.18, 0.04, 'sawtooth', 820, 0.18);
+  }
+
+  hiss() {
+    this._noiseBurst(0.5, 5200, 1.2, 0.06, 'highpass');
   }
 
   hurt() {
