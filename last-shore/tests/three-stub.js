@@ -12,6 +12,7 @@ export class WebGLRenderer {
     this.pixelRatio = 1;
   }
   setPixelRatio(v) { this.pixelRatio = v; }
+  setClearColor(c, a) { this.clearColor = [c, a]; }
   setSize(w, h) { this.width = w; this.height = h; }
   setAnimationLoop(cb) { this.loop = cb; }
   render() { this.renders++; }

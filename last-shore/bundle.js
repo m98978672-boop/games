@@ -29278,6 +29278,7 @@ void main() {
       const makeInstanced = (geos, list, opts = {}) => {
         if (!list.length) return [];
         return geos.map((geo, idx) => {
+          var _a;
           const mesh = new InstancedMesh(geo, plantMat, Math.ceil((list.length - idx) / geos.length));
           mesh.castShadow = opts.castShadow !== false;
           mesh.receiveShadow = false;
@@ -29287,7 +29288,7 @@ void main() {
             const it = list[i];
             dummy.position.set(it.x, it.h - 0.15, it.z);
             dummy.rotation.set(0, it.rot, 0);
-            const s = it.s ?? 1;
+            const s = (_a = it.s) != null ? _a : 1;
             dummy.scale.set(s, s, s);
             dummy.updateMatrix();
             mesh.setMatrixAt(k++, dummy.matrix);
@@ -29600,15 +29601,16 @@ void main() {
     }
     /** Возвращает фактор ночи и цвет тумана — их использует вода */
     update(dt, playerPos) {
+      var _a, _b;
       const dayLen = CONFIG.time.dayLength;
       const prevHour = this.hour;
       this.hour += dt / dayLen * 24;
       if (this.hour >= 24) {
         this.hour -= 24;
         this.day += 1;
-        this.onNewDay?.();
+        (_a = this.onNewDay) == null ? void 0 : _a.call(this);
       }
-      if (prevHour < 6 && this.hour >= 6) this.onSunrise?.();
+      if (prevHour < 6 && this.hour >= 6) (_b = this.onSunrise) == null ? void 0 : _b.call(this);
       const t = this.hour / 24;
       const angle = (t - 0.25) * Math.PI * 2;
       const elev = Math.sin(angle);
@@ -30201,17 +30203,26 @@ void main() {
         });
       } catch (err) {
         this.ui.showScreen("nogl");
-        return;
+        throw err;
       }
       if (!this.renderer.getContext()) {
         this.ui.showScreen("nogl");
-        return;
+        throw new Error("WebGL: \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043D\u0435 \u0441\u043E\u0437\u0434\u0430\u043D");
       }
       this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.setSize(window.innerWidth, window.innerHeight);
       this.renderer.shadowMap.enabled = true;
       this.renderer.shadowMap.type = PCFSoftShadowMap;
       this.renderer.outputColorSpace = SRGBColorSpace;
+      this.renderer.setClearColor(10470358, 1);
+      this.canvas.addEventListener("webglcontextlost", (e) => {
+        e.preventDefault();
+        if (!this._contextLostShown) {
+          this._contextLostShown = true;
+          this.ui.toast("\u0412\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430 \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u043B\u0430 3D. \u041F\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0437\u0438 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0443.", true);
+          showFatal(new Error("WebGL context lost"), "\u0432\u0438\u0434\u0435\u043E\u043A\u0430\u0440\u0442\u0430");
+        }
+      });
       this.renderer.toneMapping = ACESFilmicToneMapping;
       this.renderer.toneMappingExposure = 1.05;
       this.scene = new Scene();
@@ -30251,11 +30262,6 @@ void main() {
       this.bindEvents();
       this.updateHotbarUI();
       this.ui.setCounts(this.state.inventory);
-      const save = this.loadSave();
-      if (save) {
-        document.getElementById("btn-continue").classList.remove("hidden");
-        document.getElementById("btn-continue").textContent = `\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u2014 \u0434\u0435\u043D\u044C ${save.day}`;
-      }
       this.renderer.setAnimationLoop(() => this.frame());
     }
     // ------------------------------------------------------------
@@ -30301,16 +30307,6 @@ void main() {
     // ------------------------------------------------------------
     bindEvents() {
       window.addEventListener("resize", () => this.onResize());
-      document.getElementById("btn-start").addEventListener("click", () => this.start(false));
-      document.getElementById("btn-continue").addEventListener("click", () => this.start(true));
-      document.getElementById("btn-resume").addEventListener("click", () => this.resume());
-      document.getElementById("btn-restart").addEventListener("click", () => {
-        try {
-          localStorage.removeItem(SAVE_KEY);
-        } catch (err) {
-        }
-        window.location.reload();
-      });
       document.querySelectorAll(".slot").forEach((slot) => {
         slot.addEventListener("click", () => {
           const key = slot.dataset.slot === "0" ? "coconut" : "berries";
@@ -30361,15 +30357,23 @@ void main() {
       });
     }
     tryLock() {
+      var _a, _b;
       if (this.dragLook) return;
       try {
-        const p = this.canvas.requestPointerLock?.();
-        if (p && typeof p.catch === "function") p.catch(() => {
-          this.dragLook = true;
-        });
+        const p = (_b = (_a = this.canvas).requestPointerLock) == null ? void 0 : _b.call(_a);
+        if (p && typeof p.catch === "function") p.catch(() => this.fallbackLook());
       } catch (err) {
-        this.dragLook = true;
+        this.fallbackLook();
+        return;
       }
+      setTimeout(() => {
+        if (!this.locked && this.running && !this.paused) this.fallbackLook();
+      }, 700);
+    }
+    fallbackLook() {
+      if (this.dragLook) return;
+      this.dragLook = true;
+      this.ui.toast("\u041E\u0431\u0437\u043E\u0440: \u0437\u0430\u0436\u043C\u0438 \u043B\u0435\u0432\u0443\u044E \u043A\u043D\u043E\u043F\u043A\u0443 \u043C\u044B\u0448\u0438 \u0438 \u0432\u0435\u0434\u0438");
     }
     onKeyDown(e) {
       if (e.repeat) return;
@@ -30458,8 +30462,12 @@ void main() {
     //  Состояния игры
     // ------------------------------------------------------------
     start(continueSave = false) {
-      this.audio.init();
-      this.audio.resume();
+      try {
+        this.audio.init();
+        this.audio.resume();
+      } catch (err) {
+        console.warn("audio disabled:", err);
+      }
       if (continueSave) this.loadGame();
       this.ui.hideScreens();
       this.ui.setBars(this.readBars());
@@ -30692,15 +30700,16 @@ void main() {
       }
     }
     loadGame() {
+      var _a, _b, _c;
       const data = this.loadSave();
       if (!data) return;
       this.sky.day = data.day || 1;
-      this.sky.hour = data.hour ?? CONFIG.time.startHour;
+      this.sky.hour = (_a = data.hour) != null ? _a : CONFIG.time.startHour;
       this.weather = data.weather && WEATHERS[data.weather] ? data.weather : "clear";
       const [x, z] = data.pos || [4, 40];
       this.player.setPosition(x, z, this.world);
-      this.player.yaw = data.yaw ?? this.player.yaw;
-      this.player.facing = data.facing ?? this.player.facing;
+      this.player.yaw = (_b = data.yaw) != null ? _b : this.player.yaw;
+      this.player.facing = (_c = data.facing) != null ? _c : this.player.facing;
       const [health, thirst, hunger, warmth] = data.need || [100, 78, 72, 100];
       this.state.health = health;
       this.state.thirst = thirst;
@@ -30725,7 +30734,14 @@ void main() {
       if (dt > 0.1) dt = 0.1;
       if (this.running && !this.paused && !this.dead) this.update(dt);
       else if (this.paused || this.dead) this.world.update(dt * 0.2, this.camera);
-      this.renderer.render(this.scene, this.camera);
+      try {
+        this.renderer.render(this.scene, this.camera);
+      } catch (err) {
+        if (!this._renderErrorShown) {
+          this._renderErrorShown = true;
+          showFatal(err, "\u043E\u0442\u0440\u0438\u0441\u043E\u0432\u043A\u0430 \u043A\u0430\u0434\u0440\u0430");
+        }
+      }
       this.fpsAccum += dt;
       this.fpsFrames++;
       if (this.fpsAccum > 0.5) {
@@ -30736,9 +30752,132 @@ void main() {
       }
     }
   };
-  window.addEventListener("DOMContentLoaded", () => {
-    window.__game = new Game();
+  var booting = false;
+  var menuReady = false;
+  function showFatal(err, where = "\u0437\u0430\u043F\u0443\u0441\u043A") {
+    const box = document.getElementById("fatal");
+    const text = document.getElementById("fatal-text");
+    const whereEl = document.getElementById("fatal-where");
+    if (!box || !text) return;
+    const msg = err && (err.stack || err.message) || String(err);
+    text.textContent = String(msg).slice(0, 4e3);
+    if (whereEl) whereEl.textContent = where;
+    box.classList.remove("hidden");
+    const hud = document.getElementById("hud");
+    if (hud) hud.classList.add("hidden");
+    console.error(err);
+  }
+  function setBootStatus(text, bad = false) {
+    const el = document.getElementById("boot-status");
+    if (!el) return;
+    el.textContent = text;
+    el.style.color = bad ? "#e08070" : "";
+  }
+  function hasSave() {
+    try {
+      return !!localStorage.getItem(SAVE_KEY);
+    } catch (err) {
+      return false;
+    }
+  }
+  function boot(continueSave = false) {
+    if (booting) return;
+    booting = true;
+    try {
+      if (!window.__game) {
+        const t0 = performance.now();
+        const game = new Game();
+        window.__game = game;
+        console.log(`[LAST SHORE] \u043C\u0438\u0440 \u0441\u043E\u0431\u0440\u0430\u043D \u0437\u0430 ${Math.round(performance.now() - t0)} \u043C\u0441`);
+      }
+      window.__game.start(continueSave);
+      setBootStatus("\u0434\u0432\u0438\u0436\u043E\u043A \u0433\u043E\u0442\u043E\u0432 \xB7 \u0434\u0435\u043D\u044C " + window.__game.sky.day);
+    } catch (err) {
+      showFatal(err, "\u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043C\u0438\u0440\u0430");
+      setBootStatus("\u043E\u0448\u0438\u0431\u043A\u0430 \u0437\u0430\u043F\u0443\u0441\u043A\u0430 \u2014 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u044D\u043A\u0440\u0430\u043D\u0435", true);
+      const btn = document.getElementById("btn-start");
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = "\u041D\u0430\u0447\u0430\u0442\u044C";
+      }
+    } finally {
+      booting = false;
+    }
+  }
+  function scheduleBoot(continueSave) {
+    if (booting) return;
+    booting = true;
+    const btn = document.getElementById("btn-start");
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "\u0421\u0442\u0440\u043E\u0438\u043C \u043E\u0441\u0442\u0440\u043E\u0432\u2026";
+    }
+    setBootStatus("\u0441\u0442\u0440\u043E\u0438\u043C \u043E\u0441\u0442\u0440\u043E\u0432\u2026");
+    setTimeout(() => {
+      booting = false;
+      boot(continueSave);
+    }, 40);
+  }
+  function initMenu() {
+    if (menuReady) return;
+    menuReady = true;
+    const continueBtn = document.getElementById("btn-continue");
+    const reloadBtn = document.getElementById("btn-reload");
+    if (reloadBtn) reloadBtn.addEventListener("click", () => window.location.reload());
+    document.addEventListener("click", (e) => {
+      const t = e.target;
+      if (!t || !t.closest) return;
+      if (t.closest("#btn-start")) {
+        scheduleBoot(false);
+        return;
+      }
+      if (t.closest("#btn-continue")) {
+        scheduleBoot(true);
+        return;
+      }
+      if (t.closest("#btn-resume") && window.__game) {
+        window.__game.resume();
+        return;
+      }
+      if (t.closest("#btn-restart")) {
+        try {
+          localStorage.removeItem(SAVE_KEY);
+        } catch (err) {
+        }
+        window.location.reload();
+      }
+    });
+    window.addEventListener("keydown", (e) => {
+      if (window.__game && window.__game.running) return;
+      if (e.code === "Enter" || e.code === "NumpadEnter" || e.code === "Space") {
+        e.preventDefault();
+        scheduleBoot(false);
+      }
+    });
+    if (hasSave()) {
+      try {
+        const data = JSON.parse(localStorage.getItem(SAVE_KEY));
+        if (continueBtn) {
+          continueBtn.classList.remove("hidden");
+          continueBtn.textContent = `\u041F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442\u044C \u2014 \u0434\u0435\u043D\u044C ${data.day || 1}`;
+        }
+      } catch (err) {
+      }
+    }
+    setBootStatus("\u0434\u0432\u0438\u0436\u043E\u043A \u0433\u043E\u0442\u043E\u0432 \xB7 \u043D\u0430\u0436\u043C\u0438 \xAB\u041D\u0430\u0447\u0430\u0442\u044C\xBB");
+  }
+  window.addEventListener("error", (e) => {
+    if (!window.__game) showFatal(e.error || new Error(e.message), "\u0437\u0430\u0433\u0440\u0443\u0437\u043A\u0430 \u0441\u043A\u0440\u0438\u043F\u0442\u0430");
   });
+  window.addEventListener("unhandledrejection", (e) => {
+    if (!window.__game) showFatal(e.reason, "\u043E\u0431\u0435\u0449\u0430\u043D\u0438\u0435");
+  });
+  window.__boot = boot;
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initMenu);
+  } else {
+    initMenu();
+  }
 })();
 /*! Bundled license information:
 

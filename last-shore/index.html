@@ -97,6 +97,7 @@
         <button id="btn-continue" class="btn-ghost hidden">Продолжить</button>
       </div>
       <p class="small">3D на Three.js · без внешних ассетов · прогресс сохраняется в браузере</p>
+      <p class="small boot-status" id="boot-status">движок загружается…</p>
     </div>
   </div>
 
@@ -119,6 +120,16 @@
     </div>
   </div>
 
+  <div id="fatal" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1 class="dead">Ошибка</h1>
+      <p class="tagline" id="fatal-where"></p>
+      <pre id="fatal-text"></pre>
+      <p class="small">Пришли этот текст — починю сразу.</p>
+      <button id="btn-reload">Перезагрузить</button>
+    </div>
+  </div>
+
   <div id="nogl" class="overlay hidden">
     <div class="overlay-inner">
       <h1>Нет WebGL</h1>
@@ -128,6 +139,19 @@
   </div>
 </div>
 
+<script>
+// Ловим ошибки ещё до загрузки игры: они сразу появятся в строке статуса.
+window.__errors = [];
+window.addEventListener('error', function (e) {
+  var line = (e.message || 'error') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : '');
+  window.__errors.push(line);
+  var el = document.getElementById('boot-status');
+  if (el) {
+    el.textContent = 'Ошибка: ' + window.__errors.slice(0, 3).join(' | ');
+    el.style.color = '#e08070';
+  }
+});
+</script>
 <script src="bundle.js"></script>
 </body>
 </html>

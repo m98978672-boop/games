@@ -34,11 +34,11 @@ class Game {
       });
     } catch (err) {
       this.ui.showScreen('nogl');
-      return;
+      throw err;
     }
     if (!this.renderer.getContext()) {
       this.ui.showScreen('nogl');
-      return;
+      throw new Error('WebGL: контекст не создан');
     }
 
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -46,6 +46,17 @@ class Game {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.setClearColor(0x9fc3d6, 1);
+
+    // потеря WebGL-контекста (редко, но бывает на слабых GPU) — говорим об этом
+    this.canvas.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      if (!this._contextLostShown) {
+        this._contextLostShown = true;
+        this.ui.toast('Видеокарта отключила 3D. Перезагрузи страницу.', true);
+        showFatal(new Error('WebGL context lost'), 'видеокарта');
+      }
+    });
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.05;
 
@@ -94,12 +105,6 @@ class Game {
 
     this.updateHotbarUI();
     this.ui.setCounts(this.state.inventory);
-
-    const save = this.loadSave();
-    if (save) {
-      document.getElementById('btn-continue').classList.remove('hidden');
-      document.getElementById('btn-continue').textContent = `Продолжить — день ${save.day}`;
-    }
 
     this.renderer.setAnimationLoop(() => this.frame());
   }
@@ -152,14 +157,6 @@ class Game {
 
   bindEvents() {
     window.addEventListener('resize', () => this.onResize());
-
-    document.getElementById('btn-start').addEventListener('click', () => this.start(false));
-    document.getElementById('btn-continue').addEventListener('click', () => this.start(true));
-    document.getElementById('btn-resume').addEventListener('click', () => this.resume());
-    document.getElementById('btn-restart').addEventListener('click', () => {
-      try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
-      window.location.reload();
-    });
 
     document.querySelectorAll('.slot').forEach((slot) => {
       slot.addEventListener('click', () => {
@@ -221,10 +218,21 @@ class Game {
     if (this.dragLook) return;
     try {
       const p = this.canvas.requestPointerLock?.();
-      if (p && typeof p.catch === 'function') p.catch(() => { this.dragLook = true; });
+      if (p && typeof p.catch === 'function') p.catch(() => this.fallbackLook());
     } catch (err) {
-      this.dragLook = true;
+      this.fallbackLook();
+      return;
     }
+    // некоторые браузеры просто игнорируют запрос (например, в iframe)
+    setTimeout(() => {
+      if (!this.locked && this.running && !this.paused) this.fallbackLook();
+    }, 700);
+  }
+
+  fallbackLook() {
+    if (this.dragLook) return;
+    this.dragLook = true;
+    this.ui.toast('Обзор: зажми левую кнопку мыши и веди');
   }
 
   onKeyDown(e) {
@@ -278,8 +286,12 @@ class Game {
   // ------------------------------------------------------------
 
   start(continueSave = false) {
-    this.audio.init();
-    this.audio.resume();
+    try {
+      this.audio.init();
+      this.audio.resume();
+    } catch (err) {
+      console.warn('audio disabled:', err);
+    }
 
     if (continueSave) this.loadGame();
 
@@ -581,7 +593,14 @@ class Game {
     if (this.running && !this.paused && !this.dead) this.update(dt);
     else if (this.paused || this.dead) this.world.update(dt * 0.2, this.camera);
 
-    this.renderer.render(this.scene, this.camera);
+    try {
+      this.renderer.render(this.scene, this.camera);
+    } catch (err) {
+      if (!this._renderErrorShown) {
+        this._renderErrorShown = true;
+        showFatal(err, 'отрисовка кадра');
+      }
+    }
 
     // счётчик FPS
     this.fpsAccum += dt;
@@ -595,6 +614,134 @@ class Game {
   }
 }
 
-window.addEventListener('DOMContentLoaded', () => {
-  window.__game = new Game();
+// ============================================================
+//  Запуск: мир строится по клику, любая ошибка видна на экране.
+// ============================================================
+
+let booting = false;
+let menuReady = false;
+
+function showFatal(err, where = 'запуск') {
+  const box = document.getElementById('fatal');
+  const text = document.getElementById('fatal-text');
+  const whereEl = document.getElementById('fatal-where');
+  if (!box || !text) return;
+  const msg = (err && (err.stack || err.message)) || String(err);
+  text.textContent = String(msg).slice(0, 4000);
+  if (whereEl) whereEl.textContent = where;
+  box.classList.remove('hidden');
+  const hud = document.getElementById('hud');
+  if (hud) hud.classList.add('hidden');
+  console.error(err);
+}
+
+function setBootStatus(text, bad = false) {
+  const el = document.getElementById('boot-status');
+  if (!el) return;
+  el.textContent = text;
+  el.style.color = bad ? '#e08070' : '';
+}
+
+function hasSave() {
+  try {
+    return !!localStorage.getItem(SAVE_KEY);
+  } catch (err) {
+    return false;
+  }
+}
+
+/** Создаёт игру (один раз) и запускает её. Все ошибки — на экран. */
+function boot(continueSave = false) {
+  if (booting) return;
+  booting = true;
+
+  try {
+    if (!window.__game) {
+      const t0 = performance.now();
+      const game = new Game();
+      window.__game = game;
+      console.log(`[LAST SHORE] мир собран за ${Math.round(performance.now() - t0)} мс`);
+    }
+    window.__game.start(continueSave);
+    setBootStatus('движок готов · день ' + window.__game.sky.day);
+  } catch (err) {
+    showFatal(err, 'создание мира');
+    setBootStatus('ошибка запуска — текст на экране', true);
+    const btn = document.getElementById('btn-start');
+    if (btn) { btn.disabled = false; btn.textContent = 'Начать'; }
+  } finally {
+    booting = false;
+  }
+}
+
+/** Клик -> пауза на 40 мс (чтобы кнопка успела перерисоваться) -> сборка мира */
+function scheduleBoot(continueSave) {
+  if (booting) return;
+  booting = true;
+  const btn = document.getElementById('btn-start');
+  if (btn) { btn.disabled = true; btn.textContent = 'Строим остров…'; }
+  setBootStatus('строим остров…');
+  setTimeout(() => {
+    booting = false;
+    boot(continueSave);
+  }, 40);
+}
+
+function initMenu() {
+  if (menuReady) return;
+  menuReady = true;
+
+  const continueBtn = document.getElementById('btn-continue');
+  const reloadBtn = document.getElementById('btn-reload');
+  if (reloadBtn) reloadBtn.addEventListener('click', () => window.location.reload());
+
+  // Делегирование: работает, даже если кнопка перерисована или перекрыта
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('#btn-start')) { scheduleBoot(false); return; }
+    if (t.closest('#btn-continue')) { scheduleBoot(true); return; }
+    if (t.closest('#btn-resume') && window.__game) { window.__game.resume(); return; }
+    if (t.closest('#btn-restart')) {
+      try { localStorage.removeItem(SAVE_KEY); } catch (err) { /* ignore */ }
+      window.location.reload();
+    }
+  });
+
+  // запасной путь: Enter или пробел на стартовом экране
+  window.addEventListener('keydown', (e) => {
+    if (window.__game && window.__game.running) return;
+    if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') {
+      e.preventDefault();
+      scheduleBoot(false);
+    }
+  });
+
+  if (hasSave()) {
+    try {
+      const data = JSON.parse(localStorage.getItem(SAVE_KEY));
+      if (continueBtn) {
+        continueBtn.classList.remove('hidden');
+        continueBtn.textContent = `Продолжить — день ${data.day || 1}`;
+      }
+    } catch (err) { /* ignore */ }
+  }
+
+  setBootStatus('движок готов · нажми «Начать»');
+}
+
+// ошибки до старта игры показываем сразу и по-русски
+window.addEventListener('error', (e) => {
+  if (!window.__game) showFatal(e.error || new Error(e.message), 'загрузка скрипта');
 });
+window.addEventListener('unhandledrejection', (e) => {
+  if (!window.__game) showFatal(e.reason, 'обещание');
+});
+
+window.__boot = boot;
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initMenu);
+} else {
+  initMenu();
+}

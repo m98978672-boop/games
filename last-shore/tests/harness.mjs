@@ -25,18 +25,25 @@ const code = fs.readFileSync(path.join(dir, 'tests/.harness-bundle.js'), 'utf8')
 new Function(code)();
 
 try {
-  window.dispatchEvent(new window.Event('DOMContentLoaded'));
+  // в браузере событие рождается на document и всплывает до window
+  window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
 } catch (err) {
   console.error('startup error:', err);
 }
-console.log('game present:', !!window.__game);
+if (!window.document.getElementById('boot-status').textContent.includes('нажми')) window.__initMenu?.();
+console.log('boot status:', window.document.getElementById('boot-status').textContent);
+console.log('game built lazily (not yet):', !window.__game);
+
+// клик по «Начать» -> отложенный запуск
+window.document.getElementById('btn-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+await new Promise((r) => setTimeout(r, 250));
 
 const game = window.__game;
-if (!game) throw new Error('game not created');
+if (!game) {
+  console.log('fatal panel says:', window.document.getElementById('fatal-text').textContent.slice(0, 400));
+  throw new Error('game not created');
+}
 console.log('renderer ok, world children:', game.scene.children.length);
-
-// клик по «Начать»
-window.document.getElementById('btn-start').dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 console.log('started:', game.running, 'paused:', game.paused);
 
 // прокрутка времени: 600 кадров по 1/60 (10 секунд игры)
