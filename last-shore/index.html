@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>LAST SHORE — Последний берег</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- ======================= HUD ======================= -->
+  <div id="hud" class="hidden">
+    <div class="topbar">
+      <div class="chip"><span class="chip-label">День</span><span id="hud-day">1</span></div>
+      <div class="chip"><span class="chip-label">Время</span><span id="hud-clock">07:00</span></div>
+      <div class="chip chip-weather" id="hud-weather">ясно</div>
+      <div class="chip chip-dim" id="hud-fps">60 fps</div>
+    </div>
+
+    <div class="needs">
+      <div class="bar bar-health">
+        <span class="bar-label">Здоровье</span>
+        <div class="bar-track"><i id="bar-health"></i></div>
+        <span class="bar-value" id="val-health">100</span>
+      </div>
+      <div class="bar bar-thirst">
+        <span class="bar-label">Жажда</span>
+        <div class="bar-track"><i id="bar-thirst"></i></div>
+        <span class="bar-value" id="val-thirst">80</span>
+      </div>
+      <div class="bar bar-hunger">
+        <span class="bar-label">Голод</span>
+        <div class="bar-track"><i id="bar-hunger"></i></div>
+        <span class="bar-value" id="val-hunger">80</span>
+      </div>
+      <div class="bar bar-warmth">
+        <span class="bar-label">Тепло</span>
+        <div class="bar-track"><i id="bar-warmth"></i></div>
+        <span class="bar-value" id="val-warmth">100</span>
+      </div>
+      <div class="bar bar-stamina">
+        <span class="bar-label">Силы</span>
+        <div class="bar-track"><i id="bar-stamina"></i></div>
+        <span class="bar-value" id="val-stamina">100</span>
+      </div>
+    </div>
+
+    <div class="hotbar" id="hotbar">
+      <div class="slot" data-slot="0">
+        <span class="slot-key">1</span>
+        <span class="slot-icon">🥥</span>
+        <span class="slot-name">Кокос</span>
+        <span class="slot-count" id="count-coconut">0</span>
+      </div>
+      <div class="slot" data-slot="1">
+        <span class="slot-key">2</span>
+        <span class="slot-icon">🍒</span>
+        <span class="slot-name">Ягоды</span>
+        <span class="slot-count" id="count-berries">0</span>
+      </div>
+    </div>
+
+    <div class="prompt hidden" id="prompt"></div>
+    <div class="toasts" id="toasts"></div>
+    <div class="hint" id="hint">WASD — идти · Shift — бежать · мышь — смотреть · E — подобрать · I — сумка</div>
+  </div>
+
+  <!-- ======================= Сумка ======================= -->
+  <div id="inventory" class="panel hidden">
+    <h2>Сумка</h2>
+    <ul id="inv-list"></ul>
+    <p class="panel-note">I или Esc — закрыть</p>
+  </div>
+
+  <!-- ======================= Стартовый экран ======================= -->
+  <div id="start" class="overlay">
+    <div class="overlay-inner">
+      <h1>LAST SHORE<span class="sub">Последний берег</span></h1>
+      <p class="tagline">Ты очнулся на пустом берегу. Корабль разбит, связи нет, карты нет.<br>
+        Продержись, найди воду и еду — а дальше решай, как отсюда выбраться.</p>
+
+      <div class="controls-grid">
+        <div><b>W A S D</b><span>идти</span></div>
+        <div><b>Shift</b><span>бежать</span></div>
+        <div><b>Space</b><span>прыжок</span></div>
+        <div><b>Мышь</b><span>камера</span></div>
+        <div><b>E</b><span>подобрать</span></div>
+        <div><b>1 / 2</b><span>кокос / ягоды</span></div>
+        <div><b>I</b><span>сумка</span></div>
+        <div><b>Esc</b><span>пауза</span></div>
+      </div>
+
+      <div class="btn-row">
+        <button id="btn-start">Начать</button>
+        <button id="btn-continue" class="btn-ghost hidden">Продолжить</button>
+      </div>
+      <p class="small">3D на Three.js · без внешних ассетов · прогресс сохраняется в браузере</p>
+    </div>
+  </div>
+
+  <!-- ======================= Пауза ======================= -->
+  <div id="pause" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1>Пауза</h1>
+      <p class="tagline">Остров подождёт.</p>
+      <button id="btn-resume">Продолжить</button>
+      <p class="small" id="pause-stats"></p>
+    </div>
+  </div>
+
+  <!-- ======================= Смерть ======================= -->
+  <div id="death" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1 class="dead">Ты не выжил</h1>
+      <p class="tagline" id="death-text"></p>
+      <button id="btn-restart">Ещё раз</button>
+    </div>
+  </div>
+
+  <div id="nogl" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1>Нет WebGL</h1>
+      <p class="tagline">Браузер не даёт доступ к 3D. Попробуй Chrome, Firefox или Edge
+        последней версии и включи аппаратное ускорение.</p>
+    </div>
+  </div>
+</div>
+
+<script src="bundle.js"></script>
+</body>
+</html>
