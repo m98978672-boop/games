@@ -5,8 +5,8 @@
   "type": "module",
   "description": "LAST SHORE — 3D survival game (Three.js), one island, one life",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --format=iife --target=es2019 --outfile=bundle.js",
-    "dev": "esbuild src/main.js --bundle --format=iife --target=es2019 --sourcemap --outfile=bundle.js --watch",
+    "build": "node tools/build.mjs",
+    "test:build": "node tools/build-test.mjs",
     "serve": "python3 -m http.server 8080 --bind 0.0.0.0"
   },
   "dependencies": {

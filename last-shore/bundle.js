@@ -30907,6 +30907,102 @@ void main() {
     }
   };
 
+  // src/diag.js
+  var BUILD = true ? "2026-10-24 17:30" : "dev";
+  var probeResult = null;
+  function probeWebGL() {
+    if (probeResult) return probeResult;
+    const result = {
+      webgl2: false,
+      webgl: false,
+      vendor: "\u2014",
+      renderer: "\u2014",
+      reason: null,
+      error: null
+    };
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 32;
+    const tryCtx = (name, attrs) => {
+      try {
+        return canvas.getContext(name, attrs);
+      } catch (err) {
+        result.error = `${name}: ${err.message}`;
+        return null;
+      }
+    };
+    let ctx = tryCtx("webgl2", { failIfMajorPerformanceCaveat: false });
+    if (ctx) result.webgl2 = true;
+    if (!ctx) ctx = tryCtx("webgl", { failIfMajorPerformanceCaveat: false });
+    if (!ctx) ctx = tryCtx("experimental-webgl", {});
+    if (ctx) result.webgl = true;
+    if (!ctx) {
+      result.reason = "\u0411\u0440\u0430\u0443\u0437\u0435\u0440 \u043D\u0435 \u0432\u044B\u0434\u0430\u043B WebGL-\u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 (\u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0435 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u043E \u0438\u043B\u0438 \u0434\u0440\u0430\u0439\u0432\u0435\u0440 \u0432 \u0431\u043B\u043E\u043A-\u043B\u0438\u0441\u0442\u0435)";
+      probeResult = result;
+      return result;
+    }
+    try {
+      const dbg = ctx.getExtension("WEBGL_debug_renderer_info");
+      if (dbg) {
+        result.vendor = ctx.getParameter(dbg.UNMASKED_VENDOR_WEBGL) || "\u2014";
+        result.renderer = ctx.getParameter(dbg.UNMASKED_RENDERER_WEBGL) || "\u2014";
+      } else {
+        result.vendor = ctx.getParameter(ctx.VENDOR) || "\u2014";
+        result.renderer = ctx.getParameter(ctx.RENDERER) || "\u2014";
+      }
+    } catch (err) {
+      result.error = err.message;
+    }
+    probeResult = result;
+    return result;
+  }
+  function collectDiag(extra = {}) {
+    const gl = probeWebGL();
+    const lines = [
+      `LAST SHORE \xB7 \u0441\u0431\u043E\u0440\u043A\u0430 ${BUILD}`,
+      `WebGL2: ${gl.webgl2 ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 WebGL1: ${gl.webgl ? "\u0434\u0430" : "\u043D\u0435\u0442"}`,
+      `\u0412\u0438\u0434\u0435\u043E: ${gl.renderer}`,
+      `\u0414\u0440\u0430\u0439\u0432\u0435\u0440: ${gl.vendor}`,
+      `\u042D\u043A\u0440\u0430\u043D: ${window.innerWidth}\xD7${window.innerHeight} @${(window.devicePixelRatio || 1).toFixed(2)}x`,
+      `\u0417\u0430\u0433\u0440\u0443\u0437\u043A\u0430: ${window.location ? window.location.origin + window.location.pathname : "\u2014"}`,
+      `\u0412 iframe: ${(() => {
+        try {
+          return window.top !== window.self ? "\u0434\u0430" : "\u043D\u0435\u0442";
+        } catch (e) {
+          return "\u0434\u0430 (\u0434\u043E\u0441\u0442\u0443\u043F \u0437\u0430\u043A\u0440\u044B\u0442)";
+        }
+      })()}`,
+      `Pointer lock: ${"requestPointerLock" in Element.prototype ? "\u0435\u0441\u0442\u044C" : "\u043D\u0435\u0442"}`,
+      `localStorage: ${isStorageOk() ? "\u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442" : "\u0437\u0430\u0431\u043B\u043E\u043A\u0438\u0440\u043E\u0432\u0430\u043D"}`,
+      `\u0411\u0440\u0430\u0443\u0437\u0435\u0440: ${window.navigator && window.navigator.userAgent || "\u2014"}`
+    ];
+    if (gl.reason) lines.push(`\u041F\u0440\u0438\u0447\u0438\u043D\u0430: ${gl.reason}`);
+    if (gl.error) lines.push(`\u041E\u0448\u0438\u0431\u043A\u0430 \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442\u0430: ${gl.error}`);
+    const errors = window.__errors || [];
+    if (errors.length) {
+      lines.push("", "\u041E\u0448\u0438\u0431\u043A\u0438 \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u044B:");
+      for (const e of errors.slice(0, 8)) lines.push(`\xB7 ${e}`);
+    }
+    for (const [key, value] of Object.entries(extra)) {
+      if (value !== void 0 && value !== null && value !== "") lines.push(`${key}: ${value}`);
+    }
+    return lines.join("\n");
+  }
+  function isStorageOk() {
+    try {
+      window.localStorage.setItem("lastshore.probe", "1");
+      window.localStorage.removeItem("lastshore.probe");
+      return true;
+    } catch (err) {
+      return false;
+    }
+  }
+  function wantsSafeMode() {
+    const search = window.location && window.location.search || "";
+    const params = new URLSearchParams(search);
+    return params.get("safe") === "1" || params.get("safe") === "";
+  }
+
   // src/main.js
   var SAVE_KEY = "lastshore.save.v1";
   function emptyInventory() {
@@ -30925,23 +31021,48 @@ void main() {
       this.canvas = document.getElementById("scene");
       this.ui = new UI(ITEMS, HOTBAR, BAG_ORDER);
       this.audio = new Audio2();
-      try {
-        this.renderer = new WebGLRenderer({
-          canvas: this.canvas,
-          antialias: true,
-          powerPreference: "high-performance"
-        });
-      } catch (err) {
+      const safe = wantsSafeMode();
+      this.quality = safe ? 2 : 0;
+      const attempts = [
+        { antialias: true, powerPreference: "high-performance", shadows: true, label: "\u0432\u044B\u0441\u043E\u043A\u043E\u0435" },
+        { antialias: false, powerPreference: "default", shadows: true, label: "\u043E\u0431\u044B\u0447\u043D\u043E\u0435" },
+        { antialias: false, powerPreference: "default", shadows: false, label: "\u043B\u0451\u0433\u043A\u043E\u0435" }
+      ];
+      let lastError = null;
+      for (let i = this.quality; i < attempts.length; i++) {
+        const attempt = attempts[i];
+        try {
+          this.renderer = new WebGLRenderer({
+            canvas: this.canvas,
+            antialias: attempt.antialias,
+            powerPreference: attempt.powerPreference,
+            failIfMajorPerformanceCaveat: false,
+            alpha: false
+          });
+          if (!this.renderer || !this.renderer.getContext()) throw new Error("\u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043D\u0435 \u0441\u043E\u0437\u0434\u0430\u043D");
+          this.quality = i;
+          this.qualityLabel = attempt.label;
+          this.useShadows = attempt.shadows;
+          break;
+        } catch (err) {
+          lastError = err;
+          this.renderer = null;
+        }
+      }
+      if (!this.renderer) {
+        const gl = probeWebGL();
         this.ui.showScreen("nogl");
+        const reason = document.getElementById("nogl-reason");
+        if (reason) {
+          reason.textContent = gl.reason ? `${gl.reason}. ${gl.error || ""}` : `\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0437\u0434\u0430\u0442\u044C 3D-\u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442: ${(lastError == null ? void 0 : lastError.message) || "\u043D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u043E\u0448\u0438\u0431\u043A\u0430"}`;
+        }
+        const err = lastError || new Error("WebGL \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D");
+        err.handled = true;
         throw err;
       }
-      if (!this.renderer.getContext()) {
-        this.ui.showScreen("nogl");
-        throw new Error("WebGL: \u043A\u043E\u043D\u0442\u0435\u043A\u0441\u0442 \u043D\u0435 \u0441\u043E\u0437\u0434\u0430\u043D");
-      }
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      this.renderer.setPixelRatio(this.quality >= 2 ? 1 : Math.min(window.devicePixelRatio || 1, 2));
       this.renderer.setSize(window.innerWidth, window.innerHeight);
-      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.enabled = this.useShadows !== false;
       this.renderer.shadowMap.type = PCFShadowMap;
       this.renderer.outputColorSpace = SRGBColorSpace;
       this.renderer.setClearColor(10470358, 1);
@@ -30988,6 +31109,8 @@ void main() {
       this.locked = false;
       this.dragging = false;
       this.dragLook = false;
+      this.slowFrames = 0;
+      this.slowTimer = 0;
       this.lastTime = performance.now();
       this.fpsAccum = 0;
       this.fpsFrames = 0;
@@ -31136,14 +31259,12 @@ void main() {
       document.addEventListener("pointerlockerror", () => {
         this.dragLook = true;
       });
-      window.addEventListener("blur", () => {
-        const settled = performance.now() - (this.startedAt || 0) > 1500;
-        if (settled && this.running && !this.paused && !this.dead) this.pause();
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) return;
+        if (this.running && !this.paused && !this.dead) this.pause();
+        this.save();
       });
       window.addEventListener("beforeunload", () => this.save());
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) this.save();
-      });
     }
     tryLock() {
       var _a, _b;
@@ -31206,6 +31327,10 @@ void main() {
           break;
         case "KeyF":
           this.placeCampfire();
+          break;
+        case "F1":
+          e.preventDefault();
+          this.showDiag();
           break;
         case "KeyC": {
           e.preventDefault();
@@ -31722,6 +31847,51 @@ void main() {
       this.player.setEquipped(this.equippedId());
       this.ui.toast(`\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E: \u0434\u0435\u043D\u044C ${this.sky.day}, ${this.sky.clockString()}`);
     }
+    /** Панель диагностики: всё, что нужно для «не работает» */
+    showDiag() {
+      var _a, _b, _c, _d;
+      const diag = document.getElementById("diag");
+      const text = document.getElementById("diag-text");
+      if (!diag || !text) return;
+      text.textContent = collectDiag({
+        "\u0420\u0435\u0436\u0438\u043C \u0433\u0440\u0430\u0444\u0438\u043A\u0438": this.qualityLabel || "\u2014",
+        "\u0422\u0435\u043D\u0438": ((_b = (_a = this.renderer) == null ? void 0 : _a.shadowMap) == null ? void 0 : _b.enabled) ? "\u0432\u043A\u043B" : "\u0432\u044B\u043A\u043B",
+        "FPS": this.fpsValue,
+        "\u041C\u0438\u0440": this.world ? `${this.world.pickups.length} \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u043E\u0432, ${((_d = (_c = this.resources) == null ? void 0 : _c.nodes) == null ? void 0 : _d.length) || 0} \u0443\u0437\u043B\u043E\u0432` : "\u043D\u0435 \u043F\u043E\u0441\u0442\u0440\u043E\u0435\u043D",
+        "\u0418\u0433\u0440\u0430 \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u0430": this.running ? "\u0434\u0430" : "\u043D\u0435\u0442",
+        "\u041F\u0430\u0443\u0437\u0430": this.paused ? "\u0434\u0430" : "\u043D\u0435\u0442",
+        "Pointer lock": this.locked ? "\u0437\u0430\u0445\u0432\u0430\u0447\u0435\u043D" : this.dragLook ? "\u043E\u0431\u0437\u043E\u0440 \u043F\u0435\u0440\u0435\u0442\u0430\u0441\u043A\u0438\u0432\u0430\u043D\u0438\u0435\u043C" : "\u043D\u0435\u0442"
+      });
+      diag.classList.remove("hidden");
+      if (this.running && !this.paused) this.pause();
+    }
+    /** Если долго меньше 26 fps — упрощаем графику, чтобы игра не превращалась в слайд-шоу */
+    autoQuality() {
+      if (!this.running || this.paused) return;
+      if (this.fpsValue < 26) {
+        this.slowTimer += 0.5;
+        if (this.slowTimer > 4) {
+          this.slowTimer = 0;
+          this.degradeQuality();
+        }
+      } else {
+        this.slowTimer = Math.max(0, this.slowTimer - 0.5);
+      }
+    }
+    degradeQuality() {
+      if (this.quality >= 2) return;
+      this.quality += 1;
+      if (this.quality === 1) {
+        this.renderer.setPixelRatio(1);
+        this.rain.count = Math.min(this.rain.count, 900);
+        this.ui.toast("\u0413\u0440\u0430\u0444\u0438\u043A\u0430 \u0443\u043F\u0440\u043E\u0449\u0435\u043D\u0430: \u0441\u0433\u043B\u0430\u0436\u0438\u0432\u0430\u043D\u0438\u0435 \u0438 \u043B\u0438\u0448\u043D\u0438\u0435 \u0447\u0430\u0441\u0442\u0438\u0446\u044B \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B");
+      } else {
+        this.renderer.shadowMap.enabled = false;
+        this.sky.sun.castShadow = false;
+        this.renderer.setPixelRatio(1);
+        this.ui.toast("\u0422\u0435\u043D\u0438 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B \u2014 \u0442\u0430\u043A \u0431\u044B\u0441\u0442\u0440\u0435\u0435");
+      }
+    }
     // ------------------------------------------------------------
     //  Цикл
     // ------------------------------------------------------------
@@ -31747,6 +31917,7 @@ void main() {
         this.fpsAccum = 0;
         this.fpsFrames = 0;
         if (this.running) this.ui.setTop({ fps: this.fpsValue });
+        this.autoQuality(dt);
       }
     }
   };
@@ -31791,8 +31962,11 @@ void main() {
       window.__game.start(continueSave);
       setBootStatus("\u0434\u0432\u0438\u0436\u043E\u043A \u0433\u043E\u0442\u043E\u0432 \xB7 \u0434\u0435\u043D\u044C " + window.__game.sky.day);
     } catch (err) {
-      showFatal(err, "\u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043C\u0438\u0440\u0430");
-      setBootStatus("\u043E\u0448\u0438\u0431\u043A\u0430 \u0437\u0430\u043F\u0443\u0441\u043A\u0430 \u2014 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u044D\u043A\u0440\u0430\u043D\u0435", true);
+      if (!err || !err.handled) showFatal(err, "\u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043C\u0438\u0440\u0430");
+      else setBootStatus("\u043D\u0435\u0442 3D-\u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u044F \u2014 \u0441\u043C\u043E\u0442\u0440\u0438 \u043F\u043E\u044F\u0441\u043D\u0435\u043D\u0438\u0435 \u043D\u0430 \u044D\u043A\u0440\u0430\u043D\u0435", true);
+      if (err && err.handled) {
+        setBootStatus("\u043D\u0435\u0442 3D-\u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u044F \u2014 \u0432\u043A\u043B\u044E\u0447\u0438 \u0430\u043F\u043F\u0430\u0440\u0430\u0442\u043D\u043E\u0435 \u0443\u0441\u043A\u043E\u0440\u0435\u043D\u0438\u0435 \u0432 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0435", true);
+      }
       const btn = document.getElementById("btn-start");
       if (btn) {
         btn.disabled = false;
@@ -31822,6 +31996,47 @@ void main() {
     const continueBtn = document.getElementById("btn-continue");
     const reloadBtn = document.getElementById("btn-reload");
     if (reloadBtn) reloadBtn.addEventListener("click", () => window.location.reload());
+    const diagBtn = document.getElementById("btn-diag");
+    if (diagBtn) {
+      diagBtn.addEventListener("click", () => {
+        var _a;
+        const diag = document.getElementById("diag");
+        const text = document.getElementById("diag-text");
+        if (!diag || !text) return;
+        text.textContent = collectDiag({ "\u0418\u0433\u0440\u0430 \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u0430": ((_a = window.__game) == null ? void 0 : _a.running) ? "\u0434\u0430" : "\u043D\u0435\u0442" });
+        diag.classList.remove("hidden");
+      });
+    }
+    const noglDiag = document.getElementById("btn-nogl-diag");
+    if (noglDiag) {
+      noglDiag.addEventListener("click", () => {
+        const diag = document.getElementById("diag");
+        const text = document.getElementById("diag-text");
+        if (!diag || !text) return;
+        text.textContent = collectDiag();
+        diag.classList.remove("hidden");
+      });
+    }
+    const diagClose = document.getElementById("btn-diag-close");
+    if (diagClose) {
+      diagClose.addEventListener("click", () => {
+        var _a;
+        return (_a = document.getElementById("diag")) == null ? void 0 : _a.classList.add("hidden");
+      });
+    }
+    const diagCopy = document.getElementById("btn-diag-copy");
+    if (diagCopy) {
+      diagCopy.addEventListener("click", async () => {
+        var _a;
+        const text = ((_a = document.getElementById("diag-text")) == null ? void 0 : _a.textContent) || "";
+        try {
+          await navigator.clipboard.writeText(text);
+          diagCopy.textContent = "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E";
+        } catch (err) {
+          diagCopy.textContent = "\u0412\u044B\u0434\u0435\u043B\u0438 \u0438 \u0441\u043A\u043E\u043F\u0438\u0440\u0443\u0439 \u0442\u0435\u043A\u0441\u0442";
+        }
+      });
+    }
     document.addEventListener("click", (e) => {
       const t = e.target;
       if (!t || !t.closest) return;

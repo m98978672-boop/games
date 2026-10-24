@@ -12,6 +12,7 @@ import { UI } from './ui.js';
 import { Rain } from './effects.js';
 import { ITEMS, HOTBAR, BAG_ORDER, RECIPES } from './items.js';
 import { Resources, NODE_DEFS } from './nodes.js';
+import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 
 const SAVE_KEY = 'lastshore.save.v1';
 
@@ -34,24 +35,54 @@ class Game {
     this.ui = new UI(ITEMS, HOTBAR, BAG_ORDER);
     this.audio = new Audio();
 
-    try {
-      this.renderer = new THREE.WebGLRenderer({
-        canvas: this.canvas,
-        antialias: true,
-        powerPreference: 'high-performance',
-      });
-    } catch (err) {
-      this.ui.showScreen('nogl');
-      throw err;
-    }
-    if (!this.renderer.getContext()) {
-      this.ui.showScreen('nogl');
-      throw new Error('WebGL: контекст не создан');
+    // Пытаемся создать контекст по трём ступеням: от красивого к «хоть как-нибудь»
+    const safe = wantsSafeMode();
+    this.quality = safe ? 2 : 0;
+    const attempts = [
+      { antialias: true, powerPreference: 'high-performance', shadows: true, label: 'высокое' },
+      { antialias: false, powerPreference: 'default', shadows: true, label: 'обычное' },
+      { antialias: false, powerPreference: 'default', shadows: false, label: 'лёгкое' },
+    ];
+
+    let lastError = null;
+    for (let i = this.quality; i < attempts.length; i++) {
+      const attempt = attempts[i];
+      try {
+        this.renderer = new THREE.WebGLRenderer({
+          canvas: this.canvas,
+          antialias: attempt.antialias,
+          powerPreference: attempt.powerPreference,
+          failIfMajorPerformanceCaveat: false,
+          alpha: false,
+        });
+        if (!this.renderer || !this.renderer.getContext()) throw new Error('контекст не создан');
+        this.quality = i;
+        this.qualityLabel = attempt.label;
+        this.useShadows = attempt.shadows;
+        break;
+      } catch (err) {
+        lastError = err;
+        this.renderer = null;
+      }
     }
 
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    if (!this.renderer) {
+      const gl = probeWebGL();
+      this.ui.showScreen('nogl');
+      const reason = document.getElementById('nogl-reason');
+      if (reason) {
+        reason.textContent = gl.reason
+          ? `${gl.reason}. ${gl.error || ''}`
+          : `Не удалось создать 3D-контекст: ${lastError?.message || 'неизвестная ошибка'}`;
+      }
+      const err = lastError || new Error('WebGL недоступен');
+      err.handled = true;               // панель «нет WebGL» уже показана
+      throw err;
+    }
+
+    this.renderer.setPixelRatio(this.quality >= 2 ? 1 : Math.min(window.devicePixelRatio || 1, 2));
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.enabled = this.useShadows !== false;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.setClearColor(0x9fc3d6, 1);
@@ -107,6 +138,8 @@ class Game {
     this.dragging = false;
     this.dragLook = false;
 
+    this.slowFrames = 0;
+    this.slowTimer = 0;
     this.lastTime = performance.now();
     this.fpsAccum = 0;
     this.fpsFrames = 0;
@@ -268,16 +301,15 @@ class Game {
       this.dragLook = true;
     });
 
-    // потеря фокуса — ставим на паузу, чтобы не умереть «за кадром»
-    window.addEventListener('blur', () => {
-      const settled = performance.now() - (this.startedAt || 0) > 1500;
-      if (settled && this.running && !this.paused && !this.dead) this.pause();
+    // Сворачивание вкладки — пауза и сохранение.
+    // (blur специально не слушаем: внутри iframe он срабатывает ложно и «ломает» игру.)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) return;
+      if (this.running && !this.paused && !this.dead) this.pause();
+      this.save();
     });
 
     window.addEventListener('beforeunload', () => this.save());
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) this.save();
-    });
   }
 
   tryLock() {
@@ -322,6 +354,7 @@ class Game {
       case 'Space': this.input.jump = true; e.preventDefault(); break;
       case 'KeyE': this.interact(); break;
       case 'KeyF': this.placeCampfire(); break;
+      case 'F1': e.preventDefault(); this.showDiag(); break;
       case 'KeyC': {
         e.preventDefault();
         this.ui.toggleCraft(undefined, RECIPES, this.state.inventory, (id) => this.craft(id));
@@ -883,6 +916,53 @@ class Game {
     this.ui.toast(`Загружено: день ${this.sky.day}, ${this.sky.clockString()}`);
   }
 
+  /** Панель диагностики: всё, что нужно для «не работает» */
+  showDiag() {
+    const diag = document.getElementById('diag');
+    const text = document.getElementById('diag-text');
+    if (!diag || !text) return;
+    text.textContent = collectDiag({
+      'Режим графики': this.qualityLabel || '—',
+      'Тени': this.renderer?.shadowMap?.enabled ? 'вкл' : 'выкл',
+      'FPS': this.fpsValue,
+      'Мир': this.world ? `${this.world.pickups.length} предметов, ${this.resources?.nodes?.length || 0} узлов` : 'не построен',
+      'Игра запущена': this.running ? 'да' : 'нет',
+      'Пауза': this.paused ? 'да' : 'нет',
+      'Pointer lock': this.locked ? 'захвачен' : (this.dragLook ? 'обзор перетаскиванием' : 'нет'),
+    });
+    diag.classList.remove('hidden');
+    if (this.running && !this.paused) this.pause();
+  }
+
+  /** Если долго меньше 26 fps — упрощаем графику, чтобы игра не превращалась в слайд-шоу */
+  autoQuality() {
+    if (!this.running || this.paused) return;
+    if (this.fpsValue < 26) {
+      this.slowTimer += 0.5;
+      if (this.slowTimer > 4) {
+        this.slowTimer = 0;
+        this.degradeQuality();
+      }
+    } else {
+      this.slowTimer = Math.max(0, this.slowTimer - 0.5);
+    }
+  }
+
+  degradeQuality() {
+    if (this.quality >= 2) return;
+    this.quality += 1;
+    if (this.quality === 1) {
+      this.renderer.setPixelRatio(1);
+      this.rain.count = Math.min(this.rain.count, 900);
+      this.ui.toast('Графика упрощена: сглаживание и лишние частицы выключены');
+    } else {
+      this.renderer.shadowMap.enabled = false;
+      this.sky.sun.castShadow = false;
+      this.renderer.setPixelRatio(1);
+      this.ui.toast('Тени выключены — так быстрее');
+    }
+  }
+
   // ------------------------------------------------------------
   //  Цикл
   // ------------------------------------------------------------
@@ -913,6 +993,7 @@ class Game {
       this.fpsAccum = 0;
       this.fpsFrames = 0;
       if (this.running) this.ui.setTop({ fps: this.fpsValue });
+      this.autoQuality(dt);
     }
   }
 }
@@ -968,8 +1049,11 @@ function boot(continueSave = false) {
     window.__game.start(continueSave);
     setBootStatus('движок готов · день ' + window.__game.sky.day);
   } catch (err) {
-    showFatal(err, 'создание мира');
-    setBootStatus('ошибка запуска — текст на экране', true);
+    if (!err || !err.handled) showFatal(err, 'создание мира');
+    else setBootStatus('нет 3D-ускорения — смотри пояснение на экране', true);
+    if (err && err.handled) {
+      setBootStatus('нет 3D-ускорения — включи аппаратное ускорение в браузере', true);
+    }
     const btn = document.getElementById('btn-start');
     if (btn) { btn.disabled = false; btn.textContent = 'Начать'; }
   } finally {
@@ -997,6 +1081,43 @@ function initMenu() {
   const continueBtn = document.getElementById('btn-continue');
   const reloadBtn = document.getElementById('btn-reload');
   if (reloadBtn) reloadBtn.addEventListener('click', () => window.location.reload());
+
+  const diagBtn = document.getElementById('btn-diag');
+  if (diagBtn) {
+    diagBtn.addEventListener('click', () => {
+      const diag = document.getElementById('diag');
+      const text = document.getElementById('diag-text');
+      if (!diag || !text) return;
+      text.textContent = collectDiag({ 'Игра запущена': window.__game?.running ? 'да' : 'нет' });
+      diag.classList.remove('hidden');
+    });
+  }
+  const noglDiag = document.getElementById('btn-nogl-diag');
+  if (noglDiag) {
+    noglDiag.addEventListener('click', () => {
+      const diag = document.getElementById('diag');
+      const text = document.getElementById('diag-text');
+      if (!diag || !text) return;
+      text.textContent = collectDiag();
+      diag.classList.remove('hidden');
+    });
+  }
+  const diagClose = document.getElementById('btn-diag-close');
+  if (diagClose) {
+    diagClose.addEventListener('click', () => document.getElementById('diag')?.classList.add('hidden'));
+  }
+  const diagCopy = document.getElementById('btn-diag-copy');
+  if (diagCopy) {
+    diagCopy.addEventListener('click', async () => {
+      const text = document.getElementById('diag-text')?.textContent || '';
+      try {
+        await navigator.clipboard.writeText(text);
+        diagCopy.textContent = 'Скопировано';
+      } catch (err) {
+        diagCopy.textContent = 'Выдели и скопируй текст';
+      }
+    });
+  }
 
   // Делегирование: работает, даже если кнопка перерисована или перекрыта
   document.addEventListener('click', (e) => {

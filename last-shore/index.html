@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>LAST SHORE — Последний берег</title>
-<link rel="stylesheet" href="style.css">
+<!-- стили подгружает загрузчик в конце страницы, с меткой версии против кэша -->
 </head>
 <body>
 <div id="app">
@@ -94,6 +94,7 @@
       </div>
       <p class="small">3D на Three.js · без внешних ассетов · прогресс сохраняется в браузере</p>
       <p class="small boot-status" id="boot-status">движок загружается…</p>
+      <p class="small"><button id="btn-diag" class="btn-link">Диагностика (если не работает)</button></p>
     </div>
   </div>
 
@@ -116,6 +117,18 @@
     </div>
   </div>
 
+  <div id="diag" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1>Диагностика</h1>
+      <pre id="diag-text"></pre>
+      <div class="btn-row">
+        <button id="btn-diag-copy" class="btn-ghost">Скопировать</button>
+        <button id="btn-diag-close" class="btn-ghost">Закрыть</button>
+      </div>
+      <p class="small">F1 — открыть в игре. Адрес с <code>?safe=1</code> включает лёгкую графику.</p>
+    </div>
+  </div>
+
   <div id="fatal" class="overlay hidden">
     <div class="overlay-inner">
       <h1 class="dead">Ошибка</h1>
@@ -131,6 +144,8 @@
       <h1>Нет WebGL</h1>
       <p class="tagline">Браузер не даёт доступ к 3D. Попробуй Chrome, Firefox или Edge
         последней версии и включи аппаратное ускорение.</p>
+      <p class="tagline" id="nogl-reason"></p>
+      <button id="btn-nogl-diag" class="btn-ghost">Показать диагностику</button>
     </div>
   </div>
 </div>
@@ -148,6 +163,26 @@ window.addEventListener('error', function (e) {
   }
 });
 </script>
-<script src="bundle.js"></script>
+<script>
+// Загрузчик с меткой версии: гарантирует, что браузер не возьмёт старый bundle.js из кэша.
+(function () {
+  var v = Date.now().toString(36);
+  var css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = 'style.css?v=' + v;
+  document.head.appendChild(css);
+
+  var js = document.createElement('script');
+  js.src = 'bundle.js?v=' + v;
+  js.onerror = function () {
+    var el = document.getElementById('boot-status');
+    if (el) {
+      el.textContent = 'Не удалось загрузить bundle.js — файл не найден или сервер отдаёт ошибку';
+      el.style.color = '#e08070';
+    }
+  };
+  document.body.appendChild(js);
+})();
+</script>
 </body>
 </html>

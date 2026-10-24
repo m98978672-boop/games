@@ -214,6 +214,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: auto;
+  padding: 18px 0;
   background: radial-gradient(circle at 50% 35%, rgba(8, 14, 16, 0.42), rgba(5, 7, 8, 0.88));
   backdrop-filter: blur(3px);
   z-index: 10;
@@ -221,8 +223,9 @@ html, body {
 
 .overlay-inner {
   max-width: 640px;
-  padding: 34px 38px;
+  padding: 26px 34px;
   text-align: center;
+  margin: auto;
 }
 
 .overlay h1 {
@@ -389,3 +392,39 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .fuel-track { width: 120px; height: 5px; border-radius: 4px; background: rgba(0, 0, 0, 0.5); overflow: hidden; }
 .fuel-track i { display: block; height: 100%; background: linear-gradient(90deg, #f0a93c, #ffe08a); }
 .fuel b { color: var(--accent); font-weight: 600; }
+
+
+.btn-link {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  color: var(--ink-dim);
+  text-decoration: underline dotted;
+  cursor: pointer;
+}
+.btn-link:hover { color: var(--accent); filter: none; transform: none; }
+
+/* Диагностика и ошибки — плотный фон, чтобы текст не наезжал на меню */
+#diag, #fatal, #nogl {
+  background: rgba(6, 8, 9, 0.97);
+  backdrop-filter: none;
+}
+#diag pre, #fatal pre {
+  text-align: left;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 48vh;
+}
+#diag .overlay-inner, #fatal .overlay-inner { max-width: min(720px, 92vw); }
+#diag h1, #fatal h1 { font-size: 26px; letter-spacing: 3px; }
+
+@media (max-height: 620px) {
+  .overlay h1 { font-size: 32px; letter-spacing: 3px; }
+  .tagline { margin: 10px 0 14px; font-size: 13px; }
+  .controls-grid { margin-bottom: 16px; }
+  button { padding: 11px 32px; font-size: 14px; }
+}
