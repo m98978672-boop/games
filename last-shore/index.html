@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>LAST SHORE — Последний берег</title>
+<meta name="description" content="3D-выживание на необитаемом острове: сутки и ночь, жажда и голод, добыча, крафт и костёр. Играть в браузере — установка не нужна.">
+<!-- стили подгружает загрузчик в конце страницы, с меткой версии против кэша -->
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- ======================= HUD ======================= -->
+  <div id="hud" class="hidden">
+    <div class="topbar">
+      <div class="chip"><span class="chip-label">День</span><span id="hud-day">1</span></div>
+      <div class="chip"><span class="chip-label">Время</span><span id="hud-clock">07:00</span></div>
+      <div class="chip chip-weather" id="hud-weather">ясно</div>
+      <div class="chip chip-dim" id="hud-fps">60 fps</div>
+    </div>
+
+    <div class="needs">
+      <div class="bar bar-health">
+        <span class="bar-label">Здоровье</span>
+        <div class="bar-track"><i id="bar-health"></i></div>
+        <span class="bar-value" id="val-health">100</span>
+      </div>
+      <div class="bar bar-thirst">
+        <span class="bar-label">Жажда</span>
+        <div class="bar-track"><i id="bar-thirst"></i></div>
+        <span class="bar-value" id="val-thirst">80</span>
+      </div>
+      <div class="bar bar-hunger">
+        <span class="bar-label">Голод</span>
+        <div class="bar-track"><i id="bar-hunger"></i></div>
+        <span class="bar-value" id="val-hunger">80</span>
+      </div>
+      <div class="bar bar-warmth">
+        <span class="bar-label">Тепло</span>
+        <div class="bar-track"><i id="bar-warmth"></i></div>
+        <span class="bar-value" id="val-warmth">100</span>
+      </div>
+      <div class="bar bar-stamina">
+        <span class="bar-label">Силы</span>
+        <div class="bar-track"><i id="bar-stamina"></i></div>
+        <span class="bar-value" id="val-stamina">100</span>
+      </div>
+    </div>
+
+    <div class="hotbar" id="hotbar"></div>
+    <div class="fuel hidden" id="hud-fuel"></div>
+
+    <div class="prompt hidden" id="prompt"></div>
+    <div class="toasts" id="toasts"></div>
+    <div class="hint" id="hint">WASD — идти · Shift — бежать · ЛКМ — добывать · E — взаимодействие · C — крафт · I — сумка · F — поставить костёр</div>
+  </div>
+
+  <!-- ======================= Сумка ======================= -->
+  <div id="inventory" class="panel hidden">
+    <h2>Сумка</h2>
+    <ul id="inv-list"></ul>
+    <p class="panel-note">I или Esc — закрыть</p>
+  </div>
+
+  <!-- ======================= Крафт ======================= -->
+  <div id="crafting" class="panel panel-right hidden">
+    <h2>Крафт</h2>
+    <ul id="craft-list"></ul>
+    <p class="panel-note">C или Esc — закрыть</p>
+  </div>
+
+  <!-- ======================= Стартовый экран ======================= -->
+  <div id="start" class="overlay">
+    <div class="overlay-inner">
+      <h1>LAST SHORE<span class="sub">Последний берег</span></h1>
+      <p class="tagline">Ты очнулся на пустом берегу. Корабль разбит, связи нет, карты нет.<br>
+        Найди воду и еду, сделай нож и топор, разведи огонь — и решай, как отсюда выбраться.<br>
+        <span class="tagline-dim">Сейчас в игре: остров, сутки и ночь, вода и еда, добыча, крафт и костёр.</span></p>
+
+      <div class="controls-grid">
+        <div><b>W A S D</b><span>идти</span></div>
+        <div><b>Shift</b><span>бежать</span></div>
+        <div><b>ЛКМ</b><span>добывать</span></div>
+        <div><b>E</b><span>подобрать / пить</span></div>
+        <div><b>1…8</b><span>слоты</span></div>
+        <div><b>C</b><span>крафт</span></div>
+        <div><b>I</b><span>сумка</span></div>
+        <div><b>F</b><span>ставить костёр</span></div>
+      </div>
+
+      <div class="btn-row">
+        <button id="btn-start">Начать</button>
+        <button id="btn-continue" class="btn-ghost hidden">Продолжить</button>
+      </div>
+      <p class="small">3D на Three.js · без внешних ассетов · прогресс сохраняется в браузере</p>
+      <p class="small"><a class="back-link" href="../site/index.html">← все игры</a></p>
+      <p class="small boot-status" id="boot-status">движок загружается…</p>
+      <p class="small"><button id="btn-diag" class="btn-link">Диагностика (если не работает)</button></p>
+    </div>
+  </div>
+
+  <!-- ======================= Пауза ======================= -->
+  <div id="pause" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1>Пауза</h1>
+      <p class="tagline">Остров подождёт.</p>
+      <button id="btn-resume">Продолжить</button>
+      <p class="small" id="pause-stats"></p>
+    </div>
+  </div>
+
+  <!-- ======================= Смерть ======================= -->
+  <div id="death" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1 class="dead">Ты не выжил</h1>
+      <p class="tagline" id="death-text"></p>
+      <button id="btn-restart">Ещё раз</button>
+    </div>
+  </div>
+
+  <div id="diag" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1>Диагностика</h1>
+      <pre id="diag-text"></pre>
+      <div class="btn-row">
+        <button id="btn-diag-copy" class="btn-ghost">Скопировать</button>
+        <button id="btn-diag-close" class="btn-ghost">Закрыть</button>
+      </div>
+      <p class="small">F1 — открыть в игре. Адрес с <code>?safe=1</code> включает лёгкую графику.</p>
+    </div>
+  </div>
+
+  <div id="fatal" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1 class="dead">Ошибка</h1>
+      <p class="tagline" id="fatal-where"></p>
+      <pre id="fatal-text"></pre>
+      <p class="small">Пришли этот текст — починю сразу.</p>
+      <button id="btn-reload">Перезагрузить</button>
+    </div>
+  </div>
+
+  <div id="nogl" class="overlay hidden">
+    <div class="overlay-inner">
+      <h1>Нет WebGL</h1>
+      <p class="tagline">Браузер не даёт доступ к 3D. Попробуй Chrome, Firefox или Edge
+        последней версии и включи аппаратное ускорение.</p>
+      <p class="tagline" id="nogl-reason"></p>
+      <button id="btn-nogl-diag" class="btn-ghost">Показать диагностику</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Ловим ошибки ещё до загрузки игры: они сразу появятся в строке статуса.
+window.__errors = [];
+window.addEventListener('error', function (e) {
+  var line = (e.message || 'error') + (e.filename ? ' @ ' + e.filename.split('/').pop() + ':' + e.lineno : '');
+  window.__errors.push(line);
+  var el = document.getElementById('boot-status');
+  if (el) {
+    el.textContent = 'Ошибка: ' + window.__errors.slice(0, 3).join(' | ');
+    el.style.color = '#e08070';
+  }
+});
+</script>
+<script>
+// Загрузчик с меткой версии: гарантирует, что браузер не возьмёт старый bundle.js из кэша.
+(function () {
+  var v = Date.now().toString(36);
+  var css = document.createElement('link');
+  css.rel = 'stylesheet';
+  css.href = 'style.css?v=' + v;
+  document.head.appendChild(css);
+
+  var js = document.createElement('script');
+  js.src = 'bundle.js?v=' + v;
+  js.onerror = function () {
+    var el = document.getElementById('boot-status');
+    if (el) {
+      el.textContent = 'Не удалось загрузить bundle.js — файл не найден или сервер отдаёт ошибку';
+      el.style.color = '#e08070';
+    }
+  };
+  document.body.appendChild(js);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "last-shore",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "LAST SHORE — 3D survival game (Three.js), one island, one life",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "test:build": "node tools/build-test.mjs",
+    "serve": "python3 -m http.server 8080 --bind 0.0.0.0"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@sparticuz/chromium": "^153.0.0",
+    "esbuild": "^0.25.0",
+    "jsdom": "^30.1.3",
+    "puppeteer-core": "^25.16.0"
+  }
+}
