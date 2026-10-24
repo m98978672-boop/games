@@ -27,20 +27,25 @@ console.log('scene children:', scene.children.length);
 const instanced = scene.children.filter((c) => c.isInstancedMesh);
 console.log('instanced meshes:', instanced.length, 'instances:', instanced.reduce((a, c) => a + c.count, 0));
 
-// --- ищем точку спавна ---
-function findLand() {
-  for (let i = 0; i < 200000; i++) {
-    const x = (Math.random() - 0.5) * CONFIG.world.size * 0.7;
-    const z = (Math.random() - 0.5) * CONFIG.world.size * 0.7;
-    const h = world.heightAt(x, z);
-    if (h > 1.5 && h < 8 && world.slopeAt(x, z) < 0.5) return { x, z };
+// --- точка спавна: та же логика, что в игре (южный берег) ---
+function findSpawn() {
+  const R = (CONFIG.world.size / 2) * 0.94;
+  for (let i = 0; i < 900; i++) {
+    const angle = Math.PI / 2 + (i / 900) * Math.PI * 2;
+    for (let r = R; r > R * 0.35; r -= 2) {
+      const x = Math.cos(angle) * r;
+      const z = Math.sin(angle) * r;
+      const h = world.heightAt(x, z);
+      if (h > 1.1 && h < 3.2 && world.slopeAt(x, z) < 0.4) return { x, z };
+    }
   }
-  throw new Error('no land');
+  throw new Error('no spawn point');
 }
 
 // --- игрок: ходьба ---
 const player = new Player(scene);
-const spawn = findLand();
+const spawn = findSpawn();
+console.log('spawn:', spawn.x.toFixed(1), spawn.z.toFixed(1), 'height:', world.heightAt(spawn.x, spawn.z).toFixed(2));
 player.setPosition(spawn.x, spawn.z, world);
 const start = player.position.clone();
 const input = { forward: true, back: false, left: false, right: false, sprint: false, jump: false };
@@ -50,6 +55,11 @@ for (let i = 0; i < 600; i++) {
 }
 const moved = player.position.distanceTo(start);
 console.log('walked 10s ->', moved.toFixed(2), 'm; speed m/s:', (moved / 10).toFixed(2), 'grounded:', player.grounded, 'y:', player.position.y.toFixed(2));
+
+// --- стартовый набор и подбор ---
+world.spawnStarterKit(player.position);
+const nearSpawn = world.pickups.filter((p) => p.mesh.position.distanceTo(player.position) < 22).length;
+console.log('starter pickups near spawn:', nearSpawn);
 
 // --- столкновения не затаскивают в воду ---
 let deep = 0;

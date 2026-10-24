@@ -526,7 +526,7 @@ export class World {
     this.scene.add(group);
     this.pickupGroup = group;
 
-    const mats = {
+    this.pickupMats = {
       wood: new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.9 }),
       stone: new THREE.MeshStandardMaterial({ color: 0x9a958c, roughness: 0.85, flatShading: true }),
       coconut: new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.8, flatShading: true }),
@@ -534,7 +534,7 @@ export class World {
       berry: new THREE.MeshStandardMaterial({ color: 0xb9334a, roughness: 0.6 }),
     };
 
-    const geos = {
+    this.pickupGeos = {
       wood: new THREE.CylinderGeometry(0.07, 0.09, 0.95, 5),
       stone: new THREE.IcosahedronGeometry(0.3, 0),
       coconut: new THREE.IcosahedronGeometry(0.24, 1),
@@ -543,12 +543,13 @@ export class World {
     };
 
     const kinds = [
-      { kind: 'wood', name: 'Палка', label: 'палки', geo: 'wood', mat: 'wood', respawn: true },
-      { kind: 'stone', name: 'Камень', label: 'камни', geo: 'stone', mat: 'stone', respawn: true },
-      { kind: 'fiber', name: 'Волокно', label: 'волокно', geo: 'fiber', mat: 'fiber', respawn: true },
-      { kind: 'coconut', name: 'Кокос', label: 'кокосы', geo: 'coconut', mat: 'coconut', respawn: true },
-      { kind: 'berries', name: 'Ягоды', label: 'ягоды', geo: 'berry', mat: 'berry', respawn: false },
+      { kind: 'wood', name: 'Палка', geo: 'wood', mat: 'wood' },
+      { kind: 'stone', name: 'Камень', geo: 'stone', mat: 'stone' },
+      { kind: 'fiber', name: 'Волокно', geo: 'fiber', mat: 'fiber' },
+      { kind: 'coconut', name: 'Кокос', geo: 'coconut', mat: 'coconut' },
+      { kind: 'berries', name: 'Ягоды', geo: 'berry', mat: 'berry' },
     ];
+    this.kindInfo = Object.fromEntries(kinds.map((k) => [k.kind, k]));
 
     let attempts = 0;
     while (this.pickups.length < 190 && attempts < 8000) {
@@ -565,16 +566,45 @@ export class World {
       if (t.kind === 'coconut' && rng() > 0.35) continue;
       if (t.kind === 'berries' && rng() > 0.6) continue;
 
-      const mesh = new THREE.Mesh(geos[t.geo], mats[t.mat]);
-      mesh.castShadow = true;
-      const s = 0.85 + rng() * 0.35;
-      mesh.scale.setScalar(s);
-      mesh.position.set(x, h + 0.22, z);
-      mesh.rotation.set(rng() * 0.4, rng() * Math.PI * 2, rng() * 0.4);
-      group.add(mesh);
-
-      this.pickups.push({ mesh, kind: t.kind, name: t.name, baseY: h + 0.22 });
+      this.addPickup(t.kind, x, z, 0.85 + rng() * 0.35);
     }
+  }
+
+  /** Положить предмет на землю (используется и для стартового набора) */
+  addPickup(kind, x, z, scale = 1) {
+    const info = this.kindInfo[kind];
+    if (!info) return null;
+    const h = this.heightAt(x, z);
+    const mesh = new THREE.Mesh(this.pickupGeos[info.geo], this.pickupMats[info.mat]);
+    mesh.castShadow = true;
+    mesh.scale.setScalar(scale);
+    mesh.position.set(x, h + 0.22, z);
+    mesh.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.4);
+    this.pickupGroup.add(mesh);
+    const item = { mesh, kind, name: info.name, baseY: h + 0.22 };
+    this.pickups.push(item);
+    return item;
+  }
+
+  /**
+   * Стартовый набор на берегу: немного ресурсов вокруг точки высадки,
+   * чтобы первые минуты не были блужданием по пустому пляжу.
+   */
+  spawnStarterKit(pos) {
+    const kit = ['coconut', 'coconut', 'wood', 'wood', 'fiber', 'stone', 'berries', 'fiber', 'coconut'];
+    kit.forEach((kind, i) => {
+      const a = (i / kit.length) * Math.PI * 2 + 0.7;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        const r = 2.6 + attempt * 1.7;
+        const x = pos.x + Math.cos(a) * r;
+        const z = pos.z + Math.sin(a) * r;
+        const h = this.heightAt(x, z);
+        if (h > 0.45 && h < 20 && this.slopeAt(x, z) < 0.75) {
+          this.addPickup(kind, x, z);
+          break;
+        }
+      }
+    });
   }
 
   /** Ближайший подбираемый предмет в радиусе */

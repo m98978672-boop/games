@@ -29329,14 +29329,14 @@ void main() {
       group.name = "pickups";
       this.scene.add(group);
       this.pickupGroup = group;
-      const mats = {
+      this.pickupMats = {
         wood: new MeshStandardMaterial({ color: 9071170, roughness: 0.9 }),
         stone: new MeshStandardMaterial({ color: 10130828, roughness: 0.85, flatShading: true }),
         coconut: new MeshStandardMaterial({ color: 7031338, roughness: 0.8, flatShading: true }),
         fiber: new MeshStandardMaterial({ color: 10268254, roughness: 0.9 }),
         berry: new MeshStandardMaterial({ color: 12137290, roughness: 0.6 })
       };
-      const geos = {
+      this.pickupGeos = {
         wood: new CylinderGeometry(0.07, 0.09, 0.95, 5),
         stone: new IcosahedronGeometry(0.3, 0),
         coconut: new IcosahedronGeometry(0.24, 1),
@@ -29344,12 +29344,13 @@ void main() {
         berry: new IcosahedronGeometry(0.11, 0)
       };
       const kinds = [
-        { kind: "wood", name: "\u041F\u0430\u043B\u043A\u0430", label: "\u043F\u0430\u043B\u043A\u0438", geo: "wood", mat: "wood", respawn: true },
-        { kind: "stone", name: "\u041A\u0430\u043C\u0435\u043D\u044C", label: "\u043A\u0430\u043C\u043D\u0438", geo: "stone", mat: "stone", respawn: true },
-        { kind: "fiber", name: "\u0412\u043E\u043B\u043E\u043A\u043D\u043E", label: "\u0432\u043E\u043B\u043E\u043A\u043D\u043E", geo: "fiber", mat: "fiber", respawn: true },
-        { kind: "coconut", name: "\u041A\u043E\u043A\u043E\u0441", label: "\u043A\u043E\u043A\u043E\u0441\u044B", geo: "coconut", mat: "coconut", respawn: true },
-        { kind: "berries", name: "\u042F\u0433\u043E\u0434\u044B", label: "\u044F\u0433\u043E\u0434\u044B", geo: "berry", mat: "berry", respawn: false }
+        { kind: "wood", name: "\u041F\u0430\u043B\u043A\u0430", geo: "wood", mat: "wood" },
+        { kind: "stone", name: "\u041A\u0430\u043C\u0435\u043D\u044C", geo: "stone", mat: "stone" },
+        { kind: "fiber", name: "\u0412\u043E\u043B\u043E\u043A\u043D\u043E", geo: "fiber", mat: "fiber" },
+        { kind: "coconut", name: "\u041A\u043E\u043A\u043E\u0441", geo: "coconut", mat: "coconut" },
+        { kind: "berries", name: "\u042F\u0433\u043E\u0434\u044B", geo: "berry", mat: "berry" }
       ];
+      this.kindInfo = Object.fromEntries(kinds.map((k) => [k.kind, k]));
       let attempts = 0;
       while (this.pickups.length < 190 && attempts < 8e3) {
         attempts++;
@@ -29363,15 +29364,43 @@ void main() {
         const t = kinds[Math.floor(rng() * kinds.length)];
         if (t.kind === "coconut" && rng() > 0.35) continue;
         if (t.kind === "berries" && rng() > 0.6) continue;
-        const mesh = new Mesh(geos[t.geo], mats[t.mat]);
-        mesh.castShadow = true;
-        const s = 0.85 + rng() * 0.35;
-        mesh.scale.setScalar(s);
-        mesh.position.set(x, h + 0.22, z);
-        mesh.rotation.set(rng() * 0.4, rng() * Math.PI * 2, rng() * 0.4);
-        group.add(mesh);
-        this.pickups.push({ mesh, kind: t.kind, name: t.name, baseY: h + 0.22 });
+        this.addPickup(t.kind, x, z, 0.85 + rng() * 0.35);
       }
+    }
+    /** Положить предмет на землю (используется и для стартового набора) */
+    addPickup(kind, x, z, scale = 1) {
+      const info = this.kindInfo[kind];
+      if (!info) return null;
+      const h = this.heightAt(x, z);
+      const mesh = new Mesh(this.pickupGeos[info.geo], this.pickupMats[info.mat]);
+      mesh.castShadow = true;
+      mesh.scale.setScalar(scale);
+      mesh.position.set(x, h + 0.22, z);
+      mesh.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.4);
+      this.pickupGroup.add(mesh);
+      const item = { mesh, kind, name: info.name, baseY: h + 0.22 };
+      this.pickups.push(item);
+      return item;
+    }
+    /**
+     * Стартовый набор на берегу: немного ресурсов вокруг точки высадки,
+     * чтобы первые минуты не были блужданием по пустому пляжу.
+     */
+    spawnStarterKit(pos) {
+      const kit = ["coconut", "coconut", "wood", "wood", "fiber", "stone", "berries", "fiber", "coconut"];
+      kit.forEach((kind, i) => {
+        const a = i / kit.length * Math.PI * 2 + 0.7;
+        for (let attempt = 0; attempt < 10; attempt++) {
+          const r = 2.6 + attempt * 1.7;
+          const x = pos.x + Math.cos(a) * r;
+          const z = pos.z + Math.sin(a) * r;
+          const h = this.heightAt(x, z);
+          if (h > 0.45 && h < 20 && this.slopeAt(x, z) < 0.75) {
+            this.addPickup(kind, x, z);
+            break;
+          }
+        }
+      });
     }
     /** Ближайший подбираемый предмет в радиусе */
     nearestPickup(pos, reach) {
@@ -30249,6 +30278,7 @@ void main() {
       }
       if (!best) best = { x: 4, z: 40 };
       this.player.setPosition(best.x, best.z, this.world);
+      this.world.spawnStarterKit(this.player.position);
       const dx = -best.x;
       const dz = -best.z;
       this.player.yaw = Math.atan2(-dx, -dz);

@@ -126,6 +126,7 @@ class Game {
     if (!best) best = { x: 4, z: 40 };
 
     this.player.setPosition(best.x, best.z, this.world);
+    this.world.spawnStarterKit(this.player.position);
     const dx = -best.x;
     const dz = -best.z;
     this.player.yaw = Math.atan2(-dx, -dz);
