@@ -1,15 +1,26 @@
 // ============================================================
 //  Интерфейс: шкалы, часы, хотбар, сумка, крафт, подсказки, оверлеи.
 //  Никакой логики игры — только отображение и вызовы колбэков.
+//
+//  Хотбар пустой: игрок сам перетаскивает в него предметы из сумки.
 // ============================================================
 
 const $ = (id) => document.getElementById(id);
 
 export class UI {
-  constructor(items, hotbarOrder, bagOrder) {
+  constructor(items, hotbarSize, bagOrder) {
     this.items = items;
-    this.hotbarOrder = hotbarOrder;
+    this.hotbarSize = hotbarSize;
     this.bagOrder = bagOrder;
+
+    this.hotbar = new Array(hotbarSize).fill(null);
+    this.inv = {};
+    this.selectedSlot = 0;
+
+    // колбэки ставит игра
+    this.onAssign = null;      // (id, индекс слота) — положить предмет в слот
+    this.onClear = null;       // (индекс слота) — убрать предмет из слота
+    this.onClickItem = null;   // (id) — клик по предмету в сумке
 
     this.el = {
       hud: $('hud'),
@@ -22,6 +33,7 @@ export class UI {
       hint: $('hint'),
       inv: $('inventory'),
       invList: $('inv-list'),
+      invHotbar: $('inv-hotbar'),
       craft: $('crafting'),
       craftList: $('craft-list'),
       hotbar: $('hotbar'),
@@ -47,49 +59,83 @@ export class UI {
     this._lastCraftSig = '';
     this._hintTimer = setTimeout(() => this.el.hint && this.el.hint.classList.add('hidden'), 26000);
 
+    this.drag = null;
+    this.ghost = null;
+
     this.buildHotbar();
+    this.buildInvHotbar();
+    this.bindDrag();
   }
 
   // ------------------------------------------------------------
   //  Хотбар
   // ------------------------------------------------------------
 
+  _slotMarkup(index, cls) {
+    return `<div class="${cls}" data-index="${index}" data-drop="slot">
+      <span class="slot-key">${(index + 1) % 10}</span>
+      <span class="slot-icon"></span>
+      <span class="slot-name"></span>
+      <span class="slot-count"></span>
+    </div>`;
+  }
+
   buildHotbar() {
     const bar = this.el.hotbar;
     if (!bar) return;
-    bar.innerHTML = this.hotbarOrder
-      .map((id, i) => {
-        const item = this.items[id];
-        return `<div class="slot" data-index="${i}" data-item="${id}" title="${item.name}">
-          <span class="slot-key">${i + 1}</span>
-          <span class="slot-icon">${item.icon}</span>
-          <span class="slot-name">${item.name}</span>
-          <span class="slot-count" data-count="${id}"></span>
-        </div>`;
-      })
-      .join('');
+    bar.innerHTML = Array.from({ length: this.hotbarSize }, (_, i) => this._slotMarkup(i, 'slot')).join('');
+  }
+
+  buildInvHotbar() {
+    const bar = this.el.invHotbar;
+    if (!bar) return;
+    bar.innerHTML = Array.from({ length: this.hotbarSize }, (_, i) => this._slotMarkup(i, 'mini-slot')).join('');
   }
 
   bindHotbar(onSelect, onUse) {
     this.el.hotbar.querySelectorAll('.slot').forEach((slot) => {
       slot.addEventListener('click', () => {
         onSelect(Number(slot.dataset.index));
-        onUse?.(slot.dataset.item);
+        onUse?.();
       });
     });
   }
 
-  setHotbar(inv, selected, toolDurability = null) {
-    this.hotbarOrder.forEach((id, i) => {
-      const slot = this.el.hotbar.querySelector(`.slot[data-index="${i}"]`);
-      if (!slot) return;
-      const count = inv[id] || 0;
-      const counter = slot.querySelector('[data-count]');
-      if (counter) counter.textContent = count > 0 ? count : '';
-      slot.classList.toggle('empty', count === 0);
-      slot.classList.toggle('active', i === selected);
+  /** id — предмет в слоте, active — выбран ли он, big — крупный слот HUD */
+  _paintSlot(slot, id, optional = {}) {
+    if (!slot) return;
+    const inv = this.inv;
+    const item = id && this.items[id] ? this.items[id] : null;
+    const count = item ? (inv[id] || 0) : 0;
+
+    slot.classList.toggle('active', !!optional.active);
+    slot.classList.toggle('empty', !item || count === 0);
+    slot.dataset.item = item ? id : '';
+    slot.title = item
+      ? `${item.name} · ${count} шт.`
+      : 'Пусто — открой сумку (I) и перетащи предмет';
+
+    const icon = slot.querySelector('.slot-icon');
+    const name = slot.querySelector('.slot-name');
+    const counter = slot.querySelector('.slot-count');
+    if (icon) icon.innerHTML = item ? item.icon : '';
+    if (name) name.textContent = item ? item.name : '';
+    if (counter) counter.textContent = item && count > 1 ? count : '';
+  }
+
+  setHotbar(inv, hotbar, selected) {
+    if (inv) this.inv = inv;
+    if (hotbar) this.hotbar = hotbar;
+    if (typeof selected === 'number') this.selectedSlot = selected;
+
+    this.el.hotbar.querySelectorAll('.slot').forEach((slot, i) => {
+      this._paintSlot(slot, this.hotbar[i], { active: i === this.selectedSlot });
     });
-    if (this.el.fuel) this.el.fuel.classList.add('hidden');
+    if (this.el.invHotbar) {
+      this.el.invHotbar.querySelectorAll('.mini-slot').forEach((slot, i) => {
+        this._paintSlot(slot, this.hotbar[i], { active: i === this.selectedSlot });
+      });
+    }
   }
 
   setFuel(fire) {
@@ -150,36 +196,135 @@ export class UI {
   }
 
   // ------------------------------------------------------------
-  //  Сумка и крафт
+  //  Сумка
   // ------------------------------------------------------------
 
-  renderBag(inv) {
-    const rows = this.bagOrder
-      .filter((id) => (inv[id] || 0) > 0)
-      .map((id) => {
-        const item = this.items[id];
-        return `<li><span class="row-icon">${item.icon}</span><span class="row-name">${item.name}</span><span class="row-count">${inv[id]}</span></li>`;
-      });
-    const sig = rows.join('|');
+  renderBag(inv, hotbar) {
+    if (inv) this.inv = inv;
+    if (hotbar) this.hotbar = hotbar;
+    if (!this.el.invList) return;
+
+    const ids = this.bagOrder.filter((id) => (this.inv[id] || 0) > 0);
+    const sig = ids.map((id) => `${id}:${this.inv[id]}`).join('|') + '#' + this.hotbar.join(',');
     if (sig === this._lastBagSig) return;
     this._lastBagSig = sig;
-    this.el.invList.innerHTML = rows.length
-      ? rows.join('')
-      : '<li class="empty-row">Пусто. Добывай палки (ЛКМ по дереву), камни и волокно.</li>';
+
+    if (!ids.length) {
+      this.el.invList.innerHTML = '<li class="inv-empty">Пусто. Добывай палки (ЛКМ по дереву), камни и волокно.</li>';
+      return;
+    }
+
+    this.el.invList.innerHTML = ids
+      .map((id) => {
+        const item = this.items[id];
+        const inHand = this.hotbar.includes(id);
+        return `<li class="inv-card${inHand ? ' in-hand' : ''}" data-item="${id}">
+          <span class="card-icon">${item.icon}</span>
+          <span class="card-name">${item.name}</span>
+          <span class="card-count">${this.inv[id]}</span>
+        </li>`;
+      })
+      .join('');
   }
 
+  // ------------------------------------------------------------
+  //  Перетаскивание предметов в слоты
+  // ------------------------------------------------------------
+
+  bindDrag() {
+    document.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      const el = e.target instanceof Element ? e.target : null;
+      if (!el) return;
+
+      const mini = el.closest('.mini-slot');
+      if (mini && this.el.inv && !this.el.inv.classList.contains('hidden')) {
+        const index = Number(mini.dataset.index);
+        const id = this.hotbar[index];
+        if (id) {
+          this._startDrag(e, { id, from: 'slot', index });
+          return;
+        }
+      }
+
+      const card = el.closest('.inv-card');
+      if (card && this.el.inv && !this.el.inv.classList.contains('hidden')) {
+        const id = card.dataset.item;
+        if (id && (this.inv[id] || 0) > 0) this._startDrag(e, { id, from: 'bag' });
+      }
+    });
+
+    document.addEventListener('pointermove', (e) => {
+      if (!this.drag) return;
+      if (Math.abs(e.clientX - this.drag.x0) + Math.abs(e.clientY - this.drag.y0) > 4) this.drag.moved = true;
+      this._moveGhost(e);
+      const slot = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-drop="slot"]');
+      document.querySelectorAll('.slot.hover, .mini-slot.hover').forEach((n) => n.classList.remove('hover'));
+      if (slot) slot.classList.add('hover');
+    });
+
+    document.addEventListener('pointerup', (e) => {
+      if (!this.drag) return;
+      const drag = this.drag;
+      const target = document.elementFromPoint(e.clientX, e.clientY);
+      const slot = target?.closest('[data-drop="slot"]');
+      this._endDrag();
+
+      if (slot) {
+        this.onAssign?.(drag.id, Number(slot.dataset.index), drag);
+      } else if (drag.from === 'slot' && target?.closest('#inventory')) {
+        this.onClear?.(drag.index);
+      } else if (!drag.moved) {
+        this.onClickItem?.(drag.id);
+      }
+    });
+
+    document.addEventListener('pointercancel', () => this._endDrag());
+  }
+
+  _startDrag(e, drag) {
+    this.drag = { ...drag, x0: e.clientX, y0: e.clientY, moved: false };
+    const item = this.items[drag.id];
+    const ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.innerHTML = `${item.icon}<b>${item.name}</b>`;
+    document.body.appendChild(ghost);
+    this.ghost = ghost;
+    this._moveGhost(e);
+    document.body.classList.add('dragging-item');
+  }
+
+  _moveGhost(e) {
+    if (!this.ghost) return;
+    this.ghost.style.left = e.clientX + 'px';
+    this.ghost.style.top = e.clientY + 'px';
+  }
+
+  _endDrag() {
+    if (this.ghost) this.ghost.remove();
+    this.ghost = null;
+    this.drag = null;
+    document.body.classList.remove('dragging-item');
+    document.querySelectorAll('.slot.hover, .mini-slot.hover').forEach((n) => n.classList.remove('hover'));
+  }
+
+  // ------------------------------------------------------------
+  //  Крафт
+  // ------------------------------------------------------------
+
   renderCraft(recipes, inv, onCraft) {
-    const sig = recipes.map((r) => Object.entries(r.need).map(([k, v]) => (inv[k] || 0) >= v).join('')).join('');
+    if (inv) this.inv = inv;
+    const sig = recipes.map((r) => Object.entries(r.need).map(([k, v]) => ((this.inv[k] || 0) >= v ? 1 : 0)).join('')).join('');
     if (sig === this._lastCraftSig) return;
     this._lastCraftSig = sig;
 
     this.el.craftList.innerHTML = recipes
       .map((r) => {
-        const can = Object.entries(r.need).every(([k, v]) => (inv[k] || 0) >= v);
+        const can = Object.entries(r.need).every(([k, v]) => (this.inv[k] || 0) >= v);
         const cost = Object.entries(r.need)
           .map(([k, v]) => {
-            const has = (inv[k] || 0) >= v;
-            return `<span class="cost ${has ? 'ok' : 'lack'}">${this.items[k].name} ${inv[k] || 0}/${v}</span>`;
+            const has = (this.inv[k] || 0) >= v;
+            return `<span class="cost ${has ? 'ok' : 'lack'}">${this.items[k].name} ${this.inv[k] || 0}/${v}</span>`;
           })
           .join('');
         return `<li class="recipe ${can ? 'can' : 'cannot'}" data-recipe="${r.id}">
@@ -224,6 +369,7 @@ export class UI {
   closePanels() {
     this.el.inv.classList.add('hidden');
     this.el.craft.classList.add('hidden');
+    this._endDrag();
   }
 
   // ------------------------------------------------------------
