@@ -74,7 +74,7 @@ export class Sky {
     this.hemi = new THREE.HemisphereLight(0xc6e0f4, 0x6b7a52, 0.95);
     scene.add(this.hemi);
 
-    this.ambient = new THREE.AmbientLight(0x334455, 0.25);
+    this.ambient = new THREE.AmbientLight(0x4d6478, 0.25);
     scene.add(this.ambient);
 
     // --- небесный купол ---
@@ -219,7 +219,7 @@ export class Sky {
 
     this.hemi.intensity = 0.8 + 0.85 * lightUp + 0.35 * night;
     this.hemi.color.setHex(0x9fc6e8).lerp(new THREE.Color(0x3d4f74), night);
-    this.ambient.intensity = 0.42 + 0.3 * (1 - night) + 0.32 * night;
+    this.ambient.intensity = 0.5 + 0.45 * (1 - night) + 0.3 * night;
 
     // солнце/луна на небе
     this.sunDisk.position.copy(this.sunDir).multiplyScalar(760);

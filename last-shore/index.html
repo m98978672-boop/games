@@ -57,10 +57,15 @@
   </div>
 
   <!-- ======================= Сумка ======================= -->
-  <div id="inventory" class="panel hidden">
-    <h2>Сумка</h2>
-    <ul id="inv-list"></ul>
-    <p class="panel-note">I или Esc — закрыть</p>
+  <div id="inventory" class="panel panel-inv hidden">
+    <div class="panel-head">
+      <h2>Сумка</h2>
+      <span class="panel-sub">перетащи предмет в слот внизу</span>
+    </div>
+    <ul id="inv-list" data-drop="bag"></ul>
+    <div class="inv-hotbar-title">Быстрый доступ <span>клик по предмету — в свободный слот</span></div>
+    <div class="inv-hotbar" id="inv-hotbar"></div>
+    <p class="panel-note">Перетаскивай мышью · на слот можно бросить обратно в сумку, чтобы убрать · I или Esc — закрыть</p>
   </div>
 
   <!-- ======================= Крафт ======================= -->
@@ -86,7 +91,7 @@
         <div><b>Колесо</b><span>выбор слота</span></div>
         <div><b>ЛКМ</b><span>удар / добыча</span></div>
         <div><b>E</b><span>подобрать / пить</span></div>
-        <div><b>1…8</b><span>слоты</span></div>
+        <div><b>1…0</b><span>слоты</span></div>
         <div><b>C</b><span>крафт</span></div>
         <div><b>I</b><span>сумка</span></div>
         <div><b>F</b><span>ставить костёр</span></div>
@@ -96,6 +101,7 @@
         <button id="btn-start">Начать</button>
         <button id="btn-continue" class="btn-ghost hidden">Продолжить</button>
       </div>
+      <p class="small">Быстрый доступ внизу пуст: открой сумку (I) и перетащи туда предметы мышью.</p>
       <p class="small">3D на Three.js · без внешних ассетов · прогресс сохраняется в браузере</p>
       <p class="small"><a class="back-link" href="../site/index.html">← все игры</a></p>
       <p class="small boot-status" id="boot-status">движок загружается…</p>

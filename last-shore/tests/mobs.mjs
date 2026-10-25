@@ -29,13 +29,15 @@ const log = (...a) => console.log(...a);
 log('зверей в мире:', game.mobs.list.length,
   '· видов:', new Set(game.mobs.list.map((m) => m.type)).size);
 log('предметов:', Object.keys(game.ui.items).length,
-  '· рецептов:', game.ui.hotbarOrder.length, 'слотов');
+  '· слотов быстрого доступа:', game.ui.hotbarSize,
+  '· пустой хотбар на старте:', game.state.hotbar.every((id) => id === null));
 
 // --- удар по кабану ---
 const boar = game.mobs.list.find((m) => m.type === 'boar');
 game.player.setPosition(boar.x + 1.6, boar.z, game.world);
 game.player.facing = Math.atan2(boar.x - game.player.position.x, boar.z - game.player.position.z);
 game.state.inventory.spear = 1;
+game.assignHotbar('spear', 4);
 game.selectSlot(4);
 const hpBefore = boar.hp;
 game.attack();
@@ -54,8 +56,8 @@ log('кабан побеждён:', killed, '· сырое мясо:', game.stat
 // --- лук ---
 game.state.inventory.bow = 1;
 game.state.inventory.arrows = 5;
-const bowSlot = game.ui.hotbarOrder.indexOf('bow');
-game.selectSlot(bowSlot);
+game.assignHotbar('bow', 5);
+game.selectSlot(5);
 const arrowsBefore = game.state.inventory.arrows;
 game.attackCooldown = 0;
 game.attack();
@@ -67,8 +69,8 @@ game.state.inventory.fiber = 4;
 game.state.inventory.hide = 2;
 game.state.health = 40;
 game.craft('bandage');
-const bandageSlot = game.ui.hotbarOrder.indexOf('bandage');
-game.selectSlot(bandageSlot);
+game.assignHotbar('bandage', 2);
+game.selectSlot(2);
 game.useSelected();
 log('бинт: здоровье стало', Math.round(game.state.health), '· осталось бинтов:', game.state.inventory.bandage || 0);
 
@@ -77,6 +79,10 @@ const before = game.state.inventory.cookedMeat || 0;
 game.state.inventory.rawMeat = 2;
 game.craft('cookedMeat');
 log('жарка без костра заблокирована:', (game.state.inventory.cookedMeat || 0) === before);
+
+// --- хотбар: слот убирается, сумка остаётся ---
+game.clearHotbar(5);
+log('слот 5 очищен:', game.state.hotbar[5] === null, '· лук в сумке:', (game.state.inventory.bow || 0) > 0);
 
 // --- колесо мыши переключает слот ---
 const slotBefore = game.selected;

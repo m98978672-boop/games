@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { valueNoise, makeRng } from './noise.js';
 
-const SIZE = 192;   // меньше — быстрее генерация, для лоу-поли этого достаточно
+const SIZE = 256;   // меньше — быстрее генерация, для лоу-поли этого достаточно
 
 function makeCanvas(size = SIZE) {
   const canvas = document.createElement('canvas');
@@ -105,7 +105,7 @@ function speckle(ctx, size, count, rng, colors, radiusRange = [0.4, 1.6], alphaR
   ctx.globalAlpha = 1;
 }
 
-/** Маленькие штрихи (травинки, волокна) с заворотом */
+/** Маленькие штрихи (травинки, волокна); форма считается один раз — шва нет */
 function strokes(ctx, size, count, rng, color, width = 1, lenRange = [4, 14], alpha = 0.3) {
   ctx.strokeStyle = color;
   ctx.lineCap = 'round';
@@ -114,18 +114,24 @@ function strokes(ctx, size, count, rng, color, width = 1, lenRange = [4, 14], al
     const y = rng() * size;
     const len = lenRange[0] + rng() * (lenRange[1] - lenRange[0]);
     const angle = rng() * Math.PI * 2;
-    ctx.globalAlpha = alpha * (0.4 + rng() * 0.6);
-    ctx.lineWidth = width * (0.6 + rng() * 0.9);
+    const bend = (rng() - 0.5) * 5;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    // контрольная точка изгиба и конец — постоянные для всех копий
+    const midX = cos * len * 0.5 - sin * bend;
+    const midY = sin * len * 0.5 + cos * bend;
+    const endX = cos * len;
+    const endY = sin * len;
+    const a = alpha * (0.4 + rng() * 0.6);
+    const lw = width * (0.6 + rng() * 0.9);
+
+    ctx.globalAlpha = a;
+    ctx.lineWidth = lw;
     for (const dx of [-size, 0, size]) {
       for (const dy of [-size, 0, size]) {
         ctx.beginPath();
         ctx.moveTo(x + dx, y + dy);
-        ctx.quadraticCurveTo(
-          x + dx + Math.cos(angle) * len * 0.5 + (rng() - 0.5) * 3,
-          y + dy + Math.sin(angle) * len * 0.5 + (rng() - 0.5) * 3,
-          x + dx + Math.cos(angle) * len,
-          y + dy + Math.sin(angle) * len
-        );
+        ctx.quadraticCurveTo(x + dx + midX, y + dy + midY, x + dx + endX, y + dy + endY);
         ctx.stroke();
       }
     }
@@ -135,19 +141,35 @@ function strokes(ctx, size, count, rng, color, width = 1, lenRange = [4, 14], al
 
 function stripes(ctx, size, rng, color, count, alpha = 0.18) {
   ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
   for (let i = 0; i < count; i++) {
     const x = rng() * size;
-    const w = 1 + rng() * 3;
-    ctx.globalAlpha = alpha * (0.3 + rng());
-    ctx.lineWidth = w;
+    const lw = 1 + rng() * 3;
+    const wobble = 3 + rng() * 7;
+    // целое число волн: значение и наклон на верхней и нижней кромке совпадают
+    const waves = 1 + Math.floor(rng() * 3);
+    const phase = rng() * Math.PI * 2;
+    const a = alpha * (0.3 + rng());
+
+    const pts = [];
+    for (let k = 0; k <= 24; k++) {
+      const t = k / 24;
+      pts.push([x + Math.sin(t * Math.PI * 2 * waves + phase) * wobble, t * size]);
+    }
+    // хвост за кромкой, чтобы линия не обрывалась
+    pts.unshift([pts[0][0], -2]);
+    pts.push([pts[pts.length - 1][0], size + 2]);
+
+    ctx.globalAlpha = a;
+    ctx.lineWidth = lw;
     for (const dx of [-size, 0, size]) {
-      ctx.beginPath();
-      const wobble = 3 + rng() * 7;
-      ctx.moveTo(x + dx, -4);
-      for (let y = 0; y <= size; y += 16) {
-        ctx.lineTo(x + dx + Math.sin(y * 0.05 + i) * wobble, y);
+      for (const dy of [-size, 0, size]) {
+        ctx.beginPath();
+        pts.forEach(([px, py], idx) => {
+          idx === 0 ? ctx.moveTo(px + dx, py + dy) : ctx.lineTo(px + dx, py + dy);
+        });
+        ctx.stroke();
       }
-      ctx.stroke();
     }
   }
   ctx.globalAlpha = 1;
@@ -311,33 +333,29 @@ function rockCanvas(size = SIZE) {
   paintNoise(ctx, fbmNoise(size, 2, 77, 7, 0.5), size, 0x767168, 0xa39c91, 0.35);
 
   // прожилки: тонкие и полупрозрачные, с заворотом по краям
-  cracks(ctx, size, rng, '#56514a', 18);
-  cracks(ctx, size, rng, '#c4bcae', 10);
+  cracks(ctx, size, rng, '#56514a', 14);
+  cracks(ctx, size, rng, '#c4bcae', 8);
 
-  // мягкие грани-пятна
-  for (let i = 0; i < 26; i++) {
+  // мягкие пятна вместо многоугольников: у камня не должно быть «рваных» граней
+  for (let i = 0; i < 30; i++) {
     const cx = rng() * size;
     const cy = rng() * size;
-    const r = 12 + rng() * 34;
-    const sides = 4 + Math.floor(rng() * 3);
-    ctx.globalAlpha = 0.03 + rng() * 0.06;
-    ctx.fillStyle = rng() > 0.5 ? '#ded6c8' : '#4a463f';
+    const r = 16 + rng() * 40;
+    const light = rng() > 0.5;
+    const alpha = 0.04 + rng() * 0.05;
     for (const dx of [-size, 0, size]) {
       for (const dy of [-size, 0, size]) {
+        const g = ctx.createRadialGradient(cx + dx, cy + dy, r * 0.15, cx + dx, cy + dy, r);
+        g.addColorStop(0, light ? `rgba(232,226,214,${alpha})` : `rgba(52,48,42,${alpha})`);
+        g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
         ctx.beginPath();
-        for (let s = 0; s < sides; s++) {
-          const a = (s / sides) * Math.PI * 2 + rng() * 0.2;
-          const rr = r * (0.8 + rng() * 0.35);
-          const x = cx + dx + Math.cos(a) * rr;
-          const y = cy + dy + Math.sin(a) * rr;
-          s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-        }
-        ctx.closePath();
+        ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2);
         ctx.fill();
       }
     }
   }
-  ctx.globalAlpha = 1;
+
   // мелкая крошка — редко и бледно
   speckle(ctx, size, 320, rng, ['#b6ae9f', '#6b665d'], [0.4, 1.1], [0.06, 0.16]);
   return canvas;
@@ -358,9 +376,43 @@ function barkCanvas(size = SIZE) {
   const ctx = canvas.getContext('2d');
   const rng = makeRng(5501);
   paintNoise(ctx, fbmNoise(size, 3, 71, 4, 0.55), size, 0x6a4c31, 0x9a7048);
-  stripes(ctx, size, rng, '#3f2d1c', 90, 0.3);
-  stripes(ctx, size, rng, '#b48c5c', 50, 0.16);
-  speckle(ctx, size, 300, rng, ['#33241a', '#8a6644'], [0.5, 1.4], [0.1, 0.28]);
+
+  // продольные борозды: рисуем линиями с периодом, чтобы стык совпадал
+  for (let pass = 0; pass < 2; pass++) {
+    const color = pass === 0 ? '#4a3521' : '#b48c5c';
+    const count = pass === 0 ? 46 : 28;
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < count; i++) {
+      const x = rng() * size;
+      const lw = 1.5 + rng() * 4;
+      const wobble = 2 + rng() * 5;
+      const waves = 1 + Math.floor(rng() * 3);
+      const phase = rng() * Math.PI * 2;
+      const a = (pass === 0 ? 0.16 : 0.1) * (0.5 + rng());
+      const pts = [];
+      for (let k = 0; k <= 20; k++) {
+        const t = k / 20;
+        pts.push([x + Math.sin(t * Math.PI * 2 * waves + phase) * wobble, t * size]);
+      }
+      pts.unshift([pts[0][0], -3]);
+      pts.push([pts[pts.length - 1][0], size + 3]);
+      ctx.globalAlpha = a;
+      ctx.lineWidth = lw;
+      for (const dx of [-size, 0, size]) {
+        for (const dy of [-size, 0, size]) {
+          ctx.beginPath();
+          pts.forEach(([px, py], idx) => {
+            idx === 0 ? ctx.moveTo(px + dx, py + dy) : ctx.lineTo(px + dx, py + dy);
+          });
+          ctx.stroke();
+        }
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  speckle(ctx, size, 260, rng, ['#33241a', '#8a6644'], [0.5, 1.4], [0.08, 0.2]);
   return canvas;
 }
 
@@ -495,13 +547,13 @@ function buildTextures(maxAnisotropy = 4) {
     dirt: tex(dirt, 1),
 
     // светлые detail-карты — для растений и предметов
-    bark: tex(detailize(bark, { lift: 0.5, contrast: 3.1, tint: 0.5 }), 1),
-    leaf: tex(detailize(leaf, { lift: 0.5, contrast: 2.1 }), 1),
-    wood: tex(detailize(wood), 1),
-    cloth: tex(detailize(cloth), 1),
+    bark: tex(detailize(bark, { lift: 0.66, contrast: 1.15, tint: 0.5 }), 1),
+    leaf: tex(detailize(leaf, { lift: 0.58, contrast: 1.4 }), 1),
+    wood: tex(detailize(wood, { contrast: 1.3 }), 1),
+    cloth: tex(detailize(cloth, { contrast: 1.25 }), 1),
     skin: tex(detailize(skin, { lift: 0.35, contrast: 1.2, tint: 0.6 }), 1),
-    rockDetail: tex(detailize(rock, { lift: 0.62, contrast: 1.5, tint: 0.3 }), 1),
-    grassDetail: tex(detailize(grass, { lift: 0.55, contrast: 1.9, tint: 0.45 }), 1),
+    rockDetail: tex(detailize(rock, { lift: 0.76, contrast: 0.9, tint: 0.35 }), 1),
+    grassDetail: tex(detailize(grass, { lift: 0.6, contrast: 1.4, tint: 0.45 }), 1),
     cloud: toTexture(cloudCanvas(), { repeat: 1, srgb: true, aniso: 1 }),
     dot: toTexture(softDotCanvas(), { repeat: 1, srgb: false, aniso: 1 }),
   };

@@ -87,7 +87,14 @@ export class Mobs {
     this.group.name = 'mobs';
     scene.add(this.group);
 
-    this._hitMat = new THREE.LineBasicMaterial({ color: 0x66ff88, transparent: true, opacity: 0.9, depthTest: false });
+    this._hitMat = new THREE.LineBasicMaterial({
+      color: 0x6dff9a,
+      transparent: true,
+      opacity: 0.95,
+      depthTest: false,     // рисуем поверх любых моделей
+      depthWrite: false,
+      toneMapped: false,
+    });
     this.showHitboxes = false;
 
     for (const [type, def] of Object.entries(TYPES)) {
@@ -131,7 +138,9 @@ export class Mobs {
     );
     hitbox.position.y = def.hitbox.h / 2;
     hitbox.visible = false;
-    hitbox.renderOrder = 999;
+    hitbox.renderOrder = 9999;      // последним — значит поверх всех
+    hitbox.frustumCulled = false;
+    hitbox.name = 'hitbox';
     built.group.add(hitbox);
 
     const mob = {
@@ -494,7 +503,7 @@ export class Mobs {
       mob.dormant = false;
 
       // видимость: спрятанных за деревом/камнем не рисуем и не анимируем
-      const onScreen = ctx.culler ? ctx.culler.isVisible(mob.group) : true;
+      const onScreen = (ctx.culler ? ctx.culler.isVisible(mob.group) : true) || this.showHitboxes;
       if (mob.group.visible !== onScreen) mob.group.visible = onScreen;
 
       // слышит/видит игрока
@@ -787,7 +796,7 @@ export class Mobs {
     const fly = def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0;
     mob.group.position.set(mob.x, groundY + bob + fly, mob.z);
     mob.group.rotation.y = mob.facing;
-    if (mob.hitbox) mob.hitbox.visible = this.showHitboxes;
+    if (mob.hitbox) mob.hitbox.visible = this.showHitboxes && mob.alive;
   }
 
   // ------------------------------------------------------------
@@ -813,6 +822,7 @@ export class Mobs {
     this.showHitboxes = force !== undefined ? force : !this.showHitboxes;
     for (const mob of this.list) {
       if (mob.hitbox) mob.hitbox.visible = this.showHitboxes && mob.alive;
+      if (mob.group && this.showHitboxes) mob.group.visible = true;
     }
     return this.showHitboxes;
   }

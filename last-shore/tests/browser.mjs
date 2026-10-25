@@ -11,6 +11,7 @@ const browser = await puppeteer.launch({
   args,
   executablePath: exe,
   headless: 'shell',
+  protocolTimeout: 420000,
   // в песочнице нет системных libnss3/libnspr4 — подсовываем заглушки из /tmp/nssstub
   env: { ...process.env, LD_LIBRARY_PATH: process.env.LD_LIBRARY_PATH || '/tmp/nssstub' },
 });
@@ -28,7 +29,7 @@ await new Promise((r) => setTimeout(r, 800));
 
 const status = await page.$eval('#boot-status', (el) => el.textContent);
 console.log('boot status:', status);
-await page.screenshot({ path: 'tests/shot-start.png' });
+await page.screenshot({ path: 'tests/shot-start.png', timeout: 240000 });
 
 // жмём «Начать»
 await page.click('#btn-start');
@@ -50,7 +51,7 @@ const info = await page.evaluate(() => {
   };
 });
 console.log('runtime:', JSON.stringify(info, null, 1));
-await page.screenshot({ path: 'tests/shot-game.png' });
+await page.screenshot({ path: 'tests/shot-game.png', timeout: 240000 });
 
 // проверим добычу: телепорт к дереву и удары
 const harvest = await page.evaluate(async () => {
@@ -82,7 +83,7 @@ const craftAndFire = await page.evaluate(() => {
 });
 console.log('craft/fire:', JSON.stringify(craftAndFire));
 await new Promise((r) => setTimeout(r, 600));
-await page.screenshot({ path: 'tests/shot-craft.png' });
+await page.screenshot({ path: 'tests/shot-craft.png', timeout: 240000 });
 
 // немножко ходьбы
 await page.evaluate(() => {
@@ -94,7 +95,7 @@ await page.evaluate(() => {
 });
 const after = await page.evaluate(() => (window.__game ? window.__game.player.position.toArray().map((v) => +v.toFixed(2)) : null));
 console.log('after walking:', after);
-await page.screenshot({ path: 'tests/shot-walk.png' });
+await page.screenshot({ path: 'tests/shot-walk.png', timeout: 240000 });
 
 console.log('--- console ---');
 console.log(logs.slice(0, 40).join('\n') || '(пусто)');

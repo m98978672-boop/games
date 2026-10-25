@@ -10,7 +10,7 @@ import { Player } from './player.js';
 import { Audio } from './audio.js';
 import { UI } from './ui.js';
 import { Rain } from './effects.js';
-import { ITEMS, HOTBAR, BAG_ORDER, RECIPES } from './items.js';
+import { ITEMS, HOTBAR_SIZE, BAG_ORDER, RECIPES } from './items.js';
 import { Resources, NODE_DEFS } from './nodes.js';
 import { Mobs } from './mobs.js';
 import { VisibilityCuller } from './visibility.js';
@@ -25,6 +25,16 @@ function emptyInventory() {
   return inv;
 }
 
+/** Хотбар из сохранения: ровно 10 слотов, только известные предметы */
+function normalizeHotbar(raw) {
+  const out = new Array(HOTBAR_SIZE).fill(null);
+  if (!Array.isArray(raw)) return out;
+  raw.slice(0, HOTBAR_SIZE).forEach((id, i) => {
+    if (id && ITEMS[id]) out[i] = id;
+  });
+  return out;
+}
+
 const WEATHERS = {
   clear: { label: 'ясно', rain: 0, sun: 1.0, fog: 1.0, next: { clear: 0.45, cloudy: 0.4, rain: 0.15 } },
   cloudy: { label: 'облачно', rain: 0, sun: 0.68, fog: 1.25, next: { clear: 0.35, cloudy: 0.35, rain: 0.3 } },
@@ -35,7 +45,11 @@ const WEATHERS = {
 class Game {
   constructor() {
     this.canvas = document.getElementById('scene');
-    this.ui = new UI(ITEMS, HOTBAR, BAG_ORDER);
+    this.ui = new UI(ITEMS, HOTBAR_SIZE, BAG_ORDER);
+    this.ui.onAssign = (id, slot) => this.assignHotbar(id, slot);
+    this.ui.onClear = (slot) => this.clearHotbar(slot);
+    this.ui.onClickItem = (id) => this.assignHotbarFirst(id);
+
     this.audio = new Audio();
 
     // Пытаемся создать контекст по трём ступеням: от красивого к «хоть как-нибудь»
@@ -133,6 +147,7 @@ class Game {
       hunger: 72,
       warmth: 100,
       inventory: emptyInventory(),
+      hotbar: new Array(HOTBAR_SIZE).fill(null),   // игрок заполняет сам
       collected: 0,
     };
     this.selected = 0;
@@ -173,8 +188,8 @@ class Game {
     this.buildHighlight();
     this.bindEvents();
 
-    this.ui.setHotbar(this.state.inventory, this.selected);
-    this.ui.renderBag(this.state.inventory);
+    this.refreshHotbar();
+    this.ui.renderBag(this.state.inventory, this.state.hotbar);
 
     this.renderer.setAnimationLoop(() => this.frame());
   }
@@ -318,7 +333,7 @@ class Game {
         return;
       }
       const step = e.deltaY > 0 ? 1 : -1;
-      const next = (this.selected + step + HOTBAR.length) % HOTBAR.length;
+      const next = (this.selected + step + HOTBAR_SIZE) % HOTBAR_SIZE;
       this.selectSlot(next);
     }, { passive: true });
 
@@ -464,8 +479,8 @@ class Game {
 
     this.ui.hideScreens();
     this.ui.setBars(this.readBars());
-    this.ui.renderBag(this.state.inventory);
-    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.ui.renderBag(this.state.inventory, this.state.hotbar);
+    this.refreshHotbar();
     this.player.setEquipped(this.equippedId());
     this.running = true;
     this.paused = false;
@@ -515,7 +530,7 @@ class Game {
   // ------------------------------------------------------------
 
   equippedId() {
-    const id = HOTBAR[this.selected];
+    const id = this.state.hotbar[this.selected];
     if (!id) return null;
     const item = ITEMS[id];
     if (item.kind === 'tool' || item.kind === 'placeable') {
@@ -530,18 +545,70 @@ class Game {
   }
 
   selectSlot(index) {
-    if (index < 0 || index >= HOTBAR.length) return;
+    if (index < 0 || index >= HOTBAR_SIZE) return;
     this.selected = index;
-    this.ui.setHotbar(this.state.inventory, this.selected);
+    this.refreshHotbar();
     this.player.setEquipped(this.equippedId());
+  }
+
+  /** Перерисовать хотбар и сумку одним движением */
+  refreshHotbar() {
+    this.ui.setHotbar(this.state.inventory, this.state.hotbar, this.selected);
+  }
+
+  refreshBag() {
+    this.ui.renderBag(this.state.inventory, this.state.hotbar);
+  }
+
+  /** Положить предмет в конкретный слот (перетаскивание из сумки) */
+  assignHotbar(id, slot) {
+    if (!ITEMS[id] || slot < 0 || slot >= HOTBAR_SIZE) return;
+    if ((this.state.inventory[id] || 0) <= 0) {
+      this.ui.toast(`${ITEMS[id].name}: в сумке пусто`, true);
+      return;
+    }
+    const prev = this.state.hotbar[slot];
+    this.state.hotbar[slot] = id;
+    this.refreshHotbar();
+    this.refreshBag();
+    this.player.setEquipped(this.equippedId());
+
+    if (prev && prev !== id) this.ui.toast(`${ITEMS[prev].name} убран из слота ${slot + 1}`);
+    else this.ui.toast(`${ITEMS[id].name} → слот ${slot + 1}`);
+    this.audio.uiClick?.();
+    this.save();
+  }
+
+  /** Убрать предмет из слота (перетащили обратно в сумку) */
+  clearHotbar(slot) {
+    if (slot < 0 || slot >= HOTBAR_SIZE) return;
+    const id = this.state.hotbar[slot];
+    if (!id) return;
+    this.state.hotbar[slot] = null;
+    this.refreshHotbar();
+    this.refreshBag();
+    this.player.setEquipped(this.equippedId());
+    this.ui.toast(`${ITEMS[id].name} убран из слота`);
+    this.audio.uiClick?.();
+    this.save();
+  }
+
+  /** Клик по предмету в сумке — в первый свободный слот */
+  assignHotbarFirst(id) {
+    const free = this.state.hotbar.indexOf(null);
+    if (free < 0) {
+      this.ui.toast('Все слоты заняты — перетащи предмет на нужный', true);
+      return;
+    }
+    this.assignHotbar(id, free);
   }
 
   addItem(id, count = 1) {
     if (!ITEMS[id]) return;
     this.state.inventory[id] = (this.state.inventory[id] || 0) + count;
     this.state.collected += count;
-    this.ui.setHotbar(this.state.inventory, this.selected);
-    this.ui.renderBag(this.state.inventory);
+    this.refreshHotbar();
+    this.ui.renderBag(this.state.inventory, this.state.hotbar);
     if (this.ui.el.craft && !this.ui.el.craft.classList.contains('hidden')) {
       this.ui._lastCraftSig = '';
       this.ui.renderCraft(RECIPES, this.state.inventory, (rid) => this.craft(rid));
@@ -551,8 +618,8 @@ class Game {
   takeItem(id, count = 1) {
     if ((this.state.inventory[id] || 0) < count) return false;
     this.state.inventory[id] -= count;
-    this.ui.setHotbar(this.state.inventory, this.selected);
-    this.ui.renderBag(this.state.inventory);
+    this.refreshHotbar();
+    this.ui.renderBag(this.state.inventory, this.state.hotbar);
     this.ui._lastCraftSig = '';
     return true;
   }
@@ -765,10 +832,9 @@ class Game {
     this.ui._lastCraftSig = '';
     this.ui.renderCraft(RECIPES, inv, (rid) => this.craft(rid));
 
-    // если сделали инструмент — сразу берём его в руку
-    if (ITEMS[recipeId]?.kind === 'tool') {
-      const idx = HOTBAR.indexOf(recipeId);
-      if (idx >= 0) this.selectSlot(idx);
+    // хотбар заполняет игрок сам: подсказываем, что вещь лежит в сумке
+    if (ITEMS[recipeId] && !this.state.hotbar.includes(recipeId)) {
+      this.ui.toast(`${ITEMS[recipeId].name} — в сумке (I), перетащи в слот`);
     }
   }
 
@@ -799,8 +865,11 @@ class Game {
 
   /** Использовать выбранный слот: еда/питьё — съесть, инструмент — просто держим */
   useSelected() {
-    const id = HOTBAR[this.selected];
-    if (!id) return;
+    const id = this.state.hotbar[this.selected];
+    if (!id) {
+      this.ui.toast('Слот пуст — открой сумку (I) и перетащи предмет', true);
+      return;
+    }
     const item = ITEMS[id];
     if (item.kind === 'food') this.consume(id);
     else if (this.equippedId() !== id) this.selectSlot(this.selected);
@@ -1018,7 +1087,7 @@ class Game {
       weather: WEATHERS[this.weather].label,
     });
 
-    if (this.ui.isPanelOpen()) this.ui.renderBag(state.inventory);
+    if (this.ui.isPanelOpen()) this.ui.renderBag(state.inventory, this.state.hotbar);
 
     // --- автосейв ---
     this.saveTimer += dt;
@@ -1065,6 +1134,7 @@ class Game {
         facing: this.player.facing,
         need: [this.state.health, this.state.thirst, this.state.hunger, this.state.warmth],
         inv: this.state.inventory,
+        hotbar: this.state.hotbar,
         selected: this.selected,
         view: this.view,
         campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
@@ -1106,7 +1176,8 @@ class Game {
     this.state.hunger = hunger;
     this.state.warmth = warmth;
     this.state.inventory = Object.assign(emptyInventory(), data.inv || {});
-    this.selected = Math.max(0, Math.min(HOTBAR.length - 1, data.selected || 0));
+    this.selected = Math.max(0, Math.min(HOTBAR_SIZE - 1, data.selected || 0));
+    this.state.hotbar = normalizeHotbar(data.hotbar);
     this.view = data.view === 'first' ? 'first' : 'third';
     this.state.collected = data.collected || 0;
 
@@ -1115,8 +1186,8 @@ class Game {
       fire.fuel = Math.max(0, Math.min(fire.maxFuel, f.fuel || 0));
     }
     this.player.applyCamera(this.camera, this.world, 1);
-    this.ui.setHotbar(this.state.inventory, this.selected);
-    this.ui.renderBag(this.state.inventory);
+    this.refreshHotbar();
+    this.ui.renderBag(this.state.inventory, this.state.hotbar);
     this.player.setEquipped(this.equippedId());
     this.ui.toast(`Загружено: день ${this.sky.day}, ${this.sky.clockString()}`);
   }
@@ -1153,7 +1224,7 @@ class Game {
       this.ui.toggleCraft(true, RECIPES, this.state.inventory, (id) => this.craft(id));
     } else {
       this.ui.toggleBag(true);
-      this.ui.renderBag(this.state.inventory);
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
     }
     this.audio.uiClick();
   }

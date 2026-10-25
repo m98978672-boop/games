@@ -31120,7 +31120,7 @@ void main() {
       scene.add(this.moon.target);
       this.hemi = new HemisphereLight(13033716, 7043666, 0.95);
       scene.add(this.hemi);
-      this.ambient = new AmbientLight(3359829, 0.25);
+      this.ambient = new AmbientLight(5071992, 0.25);
       scene.add(this.ambient);
       this.skyUniforms = {
         uTop: { value: new Color(3112912) },
@@ -31243,7 +31243,7 @@ void main() {
       this.moon.intensity = 1.5 * night;
       this.hemi.intensity = 0.8 + 0.85 * lightUp + 0.35 * night;
       this.hemi.color.setHex(10471144).lerp(new Color(4018036), night);
-      this.ambient.intensity = 0.42 + 0.3 * (1 - night) + 0.32 * night;
+      this.ambient.intensity = 0.5 + 0.45 * (1 - night) + 0.3 * night;
       this.sunDisk.position.copy(this.sunDir).multiplyScalar(760);
       this.sunDisk.visible = elev > -0.15;
       this.moonDisk.position.copy(this.sunDir).multiplyScalar(-760);
@@ -32069,10 +32069,16 @@ void main() {
   // src/ui.js
   var $ = (id) => document.getElementById(id);
   var UI = class {
-    constructor(items, hotbarOrder, bagOrder) {
+    constructor(items, hotbarSize, bagOrder) {
       this.items = items;
-      this.hotbarOrder = hotbarOrder;
+      this.hotbarSize = hotbarSize;
       this.bagOrder = bagOrder;
+      this.hotbar = new Array(hotbarSize).fill(null);
+      this.inv = {};
+      this.selectedSlot = 0;
+      this.onAssign = null;
+      this.onClear = null;
+      this.onClickItem = null;
       this.el = {
         hud: $("hud"),
         day: $("hud-day"),
@@ -32084,6 +32090,7 @@ void main() {
         hint: $("hint"),
         inv: $("inventory"),
         invList: $("inv-list"),
+        invHotbar: $("inv-hotbar"),
         craft: $("crafting"),
         craftList: $("craft-list"),
         hotbar: $("hotbar"),
@@ -32107,43 +32114,70 @@ void main() {
       this._lastBagSig = "";
       this._lastCraftSig = "";
       this._hintTimer = setTimeout(() => this.el.hint && this.el.hint.classList.add("hidden"), 26e3);
+      this.drag = null;
+      this.ghost = null;
       this.buildHotbar();
+      this.buildInvHotbar();
+      this.bindDrag();
     }
     // ------------------------------------------------------------
     //  Хотбар
     // ------------------------------------------------------------
+    _slotMarkup(index, cls) {
+      return `<div class="${cls}" data-index="${index}" data-drop="slot">
+      <span class="slot-key">${(index + 1) % 10}</span>
+      <span class="slot-icon"></span>
+      <span class="slot-name"></span>
+      <span class="slot-count"></span>
+    </div>`;
+    }
     buildHotbar() {
       const bar = this.el.hotbar;
       if (!bar) return;
-      bar.innerHTML = this.hotbarOrder.map((id, i) => {
-        const item = this.items[id];
-        return `<div class="slot" data-index="${i}" data-item="${id}" title="${item.name}">
-          <span class="slot-key">${i + 1}</span>
-          <span class="slot-icon">${item.icon}</span>
-          <span class="slot-name">${item.name}</span>
-          <span class="slot-count" data-count="${id}"></span>
-        </div>`;
-      }).join("");
+      bar.innerHTML = Array.from({ length: this.hotbarSize }, (_, i) => this._slotMarkup(i, "slot")).join("");
+    }
+    buildInvHotbar() {
+      const bar = this.el.invHotbar;
+      if (!bar) return;
+      bar.innerHTML = Array.from({ length: this.hotbarSize }, (_, i) => this._slotMarkup(i, "mini-slot")).join("");
     }
     bindHotbar(onSelect, onUse) {
       this.el.hotbar.querySelectorAll(".slot").forEach((slot) => {
         slot.addEventListener("click", () => {
           onSelect(Number(slot.dataset.index));
-          onUse == null ? void 0 : onUse(slot.dataset.item);
+          onUse == null ? void 0 : onUse();
         });
       });
     }
-    setHotbar(inv, selected, toolDurability = null) {
-      this.hotbarOrder.forEach((id, i) => {
-        const slot = this.el.hotbar.querySelector(`.slot[data-index="${i}"]`);
-        if (!slot) return;
-        const count = inv[id] || 0;
-        const counter = slot.querySelector("[data-count]");
-        if (counter) counter.textContent = count > 0 ? count : "";
-        slot.classList.toggle("empty", count === 0);
-        slot.classList.toggle("active", i === selected);
+    /** id — предмет в слоте, active — выбран ли он, big — крупный слот HUD */
+    _paintSlot(slot, id, optional = {}) {
+      if (!slot) return;
+      const inv = this.inv;
+      const item = id && this.items[id] ? this.items[id] : null;
+      const count = item ? inv[id] || 0 : 0;
+      slot.classList.toggle("active", !!optional.active);
+      slot.classList.toggle("empty", !item || count === 0);
+      slot.dataset.item = item ? id : "";
+      slot.title = item ? `${item.name} \xB7 ${count} \u0448\u0442.` : "\u041F\u0443\u0441\u0442\u043E \u2014 \u043E\u0442\u043A\u0440\u043E\u0439 \u0441\u0443\u043C\u043A\u0443 (I) \u0438 \u043F\u0435\u0440\u0435\u0442\u0430\u0449\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442";
+      const icon = slot.querySelector(".slot-icon");
+      const name = slot.querySelector(".slot-name");
+      const counter = slot.querySelector(".slot-count");
+      if (icon) icon.innerHTML = item ? item.icon : "";
+      if (name) name.textContent = item ? item.name : "";
+      if (counter) counter.textContent = item && count > 1 ? count : "";
+    }
+    setHotbar(inv, hotbar, selected) {
+      if (inv) this.inv = inv;
+      if (hotbar) this.hotbar = hotbar;
+      if (typeof selected === "number") this.selectedSlot = selected;
+      this.el.hotbar.querySelectorAll(".slot").forEach((slot, i) => {
+        this._paintSlot(slot, this.hotbar[i], { active: i === this.selectedSlot });
       });
-      if (this.el.fuel) this.el.fuel.classList.add("hidden");
+      if (this.el.invHotbar) {
+        this.el.invHotbar.querySelectorAll(".mini-slot").forEach((slot, i) => {
+          this._paintSlot(slot, this.hotbar[i], { active: i === this.selectedSlot });
+        });
+      }
     }
     setFuel(fire) {
       if (!this.el.fuel) return;
@@ -32200,27 +32234,115 @@ void main() {
       while (this.el.toasts.children.length > 5) this.el.toasts.firstChild.remove();
     }
     // ------------------------------------------------------------
-    //  Сумка и крафт
+    //  Сумка
     // ------------------------------------------------------------
-    renderBag(inv) {
-      const rows = this.bagOrder.filter((id) => (inv[id] || 0) > 0).map((id) => {
-        const item = this.items[id];
-        return `<li><span class="row-icon">${item.icon}</span><span class="row-name">${item.name}</span><span class="row-count">${inv[id]}</span></li>`;
-      });
-      const sig = rows.join("|");
+    renderBag(inv, hotbar) {
+      if (inv) this.inv = inv;
+      if (hotbar) this.hotbar = hotbar;
+      if (!this.el.invList) return;
+      const ids = this.bagOrder.filter((id) => (this.inv[id] || 0) > 0);
+      const sig = ids.map((id) => `${id}:${this.inv[id]}`).join("|") + "#" + this.hotbar.join(",");
       if (sig === this._lastBagSig) return;
       this._lastBagSig = sig;
-      this.el.invList.innerHTML = rows.length ? rows.join("") : '<li class="empty-row">\u041F\u0443\u0441\u0442\u043E. \u0414\u043E\u0431\u044B\u0432\u0430\u0439 \u043F\u0430\u043B\u043A\u0438 (\u041B\u041A\u041C \u043F\u043E \u0434\u0435\u0440\u0435\u0432\u0443), \u043A\u0430\u043C\u043D\u0438 \u0438 \u0432\u043E\u043B\u043E\u043A\u043D\u043E.</li>';
+      if (!ids.length) {
+        this.el.invList.innerHTML = '<li class="inv-empty">\u041F\u0443\u0441\u0442\u043E. \u0414\u043E\u0431\u044B\u0432\u0430\u0439 \u043F\u0430\u043B\u043A\u0438 (\u041B\u041A\u041C \u043F\u043E \u0434\u0435\u0440\u0435\u0432\u0443), \u043A\u0430\u043C\u043D\u0438 \u0438 \u0432\u043E\u043B\u043E\u043A\u043D\u043E.</li>';
+        return;
+      }
+      this.el.invList.innerHTML = ids.map((id) => {
+        const item = this.items[id];
+        const inHand = this.hotbar.includes(id);
+        return `<li class="inv-card${inHand ? " in-hand" : ""}" data-item="${id}">
+          <span class="card-icon">${item.icon}</span>
+          <span class="card-name">${item.name}</span>
+          <span class="card-count">${this.inv[id]}</span>
+        </li>`;
+      }).join("");
     }
+    // ------------------------------------------------------------
+    //  Перетаскивание предметов в слоты
+    // ------------------------------------------------------------
+    bindDrag() {
+      document.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        const el = e.target instanceof Element ? e.target : null;
+        if (!el) return;
+        const mini = el.closest(".mini-slot");
+        if (mini && this.el.inv && !this.el.inv.classList.contains("hidden")) {
+          const index = Number(mini.dataset.index);
+          const id = this.hotbar[index];
+          if (id) {
+            this._startDrag(e, { id, from: "slot", index });
+            return;
+          }
+        }
+        const card = el.closest(".inv-card");
+        if (card && this.el.inv && !this.el.inv.classList.contains("hidden")) {
+          const id = card.dataset.item;
+          if (id && (this.inv[id] || 0) > 0) this._startDrag(e, { id, from: "bag" });
+        }
+      });
+      document.addEventListener("pointermove", (e) => {
+        var _a;
+        if (!this.drag) return;
+        if (Math.abs(e.clientX - this.drag.x0) + Math.abs(e.clientY - this.drag.y0) > 4) this.drag.moved = true;
+        this._moveGhost(e);
+        const slot = (_a = document.elementFromPoint(e.clientX, e.clientY)) == null ? void 0 : _a.closest('[data-drop="slot"]');
+        document.querySelectorAll(".slot.hover, .mini-slot.hover").forEach((n) => n.classList.remove("hover"));
+        if (slot) slot.classList.add("hover");
+      });
+      document.addEventListener("pointerup", (e) => {
+        var _a, _b, _c;
+        if (!this.drag) return;
+        const drag = this.drag;
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        const slot = target == null ? void 0 : target.closest('[data-drop="slot"]');
+        this._endDrag();
+        if (slot) {
+          (_a = this.onAssign) == null ? void 0 : _a.call(this, drag.id, Number(slot.dataset.index), drag);
+        } else if (drag.from === "slot" && (target == null ? void 0 : target.closest("#inventory"))) {
+          (_b = this.onClear) == null ? void 0 : _b.call(this, drag.index);
+        } else if (!drag.moved) {
+          (_c = this.onClickItem) == null ? void 0 : _c.call(this, drag.id);
+        }
+      });
+      document.addEventListener("pointercancel", () => this._endDrag());
+    }
+    _startDrag(e, drag) {
+      this.drag = { ...drag, x0: e.clientX, y0: e.clientY, moved: false };
+      const item = this.items[drag.id];
+      const ghost = document.createElement("div");
+      ghost.className = "drag-ghost";
+      ghost.innerHTML = `${item.icon}<b>${item.name}</b>`;
+      document.body.appendChild(ghost);
+      this.ghost = ghost;
+      this._moveGhost(e);
+      document.body.classList.add("dragging-item");
+    }
+    _moveGhost(e) {
+      if (!this.ghost) return;
+      this.ghost.style.left = e.clientX + "px";
+      this.ghost.style.top = e.clientY + "px";
+    }
+    _endDrag() {
+      if (this.ghost) this.ghost.remove();
+      this.ghost = null;
+      this.drag = null;
+      document.body.classList.remove("dragging-item");
+      document.querySelectorAll(".slot.hover, .mini-slot.hover").forEach((n) => n.classList.remove("hover"));
+    }
+    // ------------------------------------------------------------
+    //  Крафт
+    // ------------------------------------------------------------
     renderCraft(recipes, inv, onCraft) {
-      const sig = recipes.map((r) => Object.entries(r.need).map(([k, v]) => (inv[k] || 0) >= v).join("")).join("");
+      if (inv) this.inv = inv;
+      const sig = recipes.map((r) => Object.entries(r.need).map(([k, v]) => (this.inv[k] || 0) >= v ? 1 : 0).join("")).join("");
       if (sig === this._lastCraftSig) return;
       this._lastCraftSig = sig;
       this.el.craftList.innerHTML = recipes.map((r) => {
-        const can = Object.entries(r.need).every(([k, v]) => (inv[k] || 0) >= v);
+        const can = Object.entries(r.need).every(([k, v]) => (this.inv[k] || 0) >= v);
         const cost = Object.entries(r.need).map(([k, v]) => {
-          const has = (inv[k] || 0) >= v;
-          return `<span class="cost ${has ? "ok" : "lack"}">${this.items[k].name} ${inv[k] || 0}/${v}</span>`;
+          const has = (this.inv[k] || 0) >= v;
+          return `<span class="cost ${has ? "ok" : "lack"}">${this.items[k].name} ${this.inv[k] || 0}/${v}</span>`;
         }).join("");
         return `<li class="recipe ${can ? "can" : "cannot"}" data-recipe="${r.id}">
           <span class="row-icon">${this.items[r.id].icon}</span>
@@ -32258,6 +32380,7 @@ void main() {
     closePanels() {
       this.el.inv.classList.add("hidden");
       this.el.craft.classList.add("hidden");
+      this._endDrag();
     }
     // ------------------------------------------------------------
     //  Экраны
@@ -32396,18 +32519,7 @@ void main() {
     bow: { id: "bow", name: "\u041B\u0443\u043A", icon: ICONS.bow, kind: "tool", hotbar: true, ranged: true, tool: { chop: 0.3, mine: 0.1, weapon: 14 } },
     campfireKit: { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", icon: ICONS.campfireKit, kind: "placeable", hotbar: true }
   };
-  var HOTBAR = [
-    "coconut",
-    "berries",
-    "bandage",
-    "knife",
-    "spear",
-    "axe",
-    "pickaxe",
-    "bow",
-    "torch",
-    "campfireKit"
-  ];
+  var HOTBAR_SIZE = 10;
   var BAG_ORDER = [
     "wood",
     "stone",
@@ -32824,7 +32936,15 @@ void main() {
       this.group = new Group();
       this.group.name = "mobs";
       scene.add(this.group);
-      this._hitMat = new LineBasicMaterial({ color: 6750088, transparent: true, opacity: 0.9, depthTest: false });
+      this._hitMat = new LineBasicMaterial({
+        color: 7208858,
+        transparent: true,
+        opacity: 0.95,
+        depthTest: false,
+        // рисуем поверх любых моделей
+        depthWrite: false,
+        toneMapped: false
+      });
       this.showHitboxes = false;
       for (const [type, def] of Object.entries(TYPES)) {
         for (let i = 0; i < def.count; i++) this.spawn(type);
@@ -32862,7 +32982,9 @@ void main() {
       );
       hitbox.position.y = def.hitbox.h / 2;
       hitbox.visible = false;
-      hitbox.renderOrder = 999;
+      hitbox.renderOrder = 9999;
+      hitbox.frustumCulled = false;
+      hitbox.name = "hitbox";
       built.group.add(hitbox);
       const mob = {
         type,
@@ -33186,7 +33308,7 @@ void main() {
           continue;
         }
         mob.dormant = false;
-        const onScreen = ctx.culler ? ctx.culler.isVisible(mob.group) : true;
+        const onScreen = (ctx.culler ? ctx.culler.isVisible(mob.group) : true) || this.showHitboxes;
         if (mob.group.visible !== onScreen) mob.group.visible = onScreen;
         const seesPlayer = this._detects(mob, dist, noise, {
           x: px,
@@ -33429,7 +33551,7 @@ void main() {
       const fly = def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0;
       mob.group.position.set(mob.x, groundY + bob + fly, mob.z);
       mob.group.rotation.y = mob.facing;
-      if (mob.hitbox) mob.hitbox.visible = this.showHitboxes;
+      if (mob.hitbox) mob.hitbox.visible = this.showHitboxes && mob.alive;
     }
     // ------------------------------------------------------------
     //  Звук
@@ -33451,6 +33573,7 @@ void main() {
       this.showHitboxes = force !== void 0 ? force : !this.showHitboxes;
       for (const mob of this.list) {
         if (mob.hitbox) mob.hitbox.visible = this.showHitboxes && mob.alive;
+        if (mob.group && this.showHitboxes) mob.group.visible = true;
       }
       return this.showHitboxes;
     }
@@ -33663,7 +33786,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-25 13:09" : "dev";
+  var BUILD = true ? "2026-10-25 14:27" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -33759,7 +33882,7 @@ void main() {
   }
 
   // src/textures.js
-  var SIZE2 = 192;
+  var SIZE2 = 256;
   function makeCanvas(size = SIZE2) {
     const canvas = document.createElement("canvas");
     canvas.width = size;
@@ -33852,18 +33975,22 @@ void main() {
       const y = rng() * size;
       const len = lenRange[0] + rng() * (lenRange[1] - lenRange[0]);
       const angle = rng() * Math.PI * 2;
-      ctx.globalAlpha = alpha * (0.4 + rng() * 0.6);
-      ctx.lineWidth = width * (0.6 + rng() * 0.9);
+      const bend = (rng() - 0.5) * 5;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const midX = cos * len * 0.5 - sin * bend;
+      const midY = sin * len * 0.5 + cos * bend;
+      const endX = cos * len;
+      const endY = sin * len;
+      const a = alpha * (0.4 + rng() * 0.6);
+      const lw = width * (0.6 + rng() * 0.9);
+      ctx.globalAlpha = a;
+      ctx.lineWidth = lw;
       for (const dx of [-size, 0, size]) {
         for (const dy of [-size, 0, size]) {
           ctx.beginPath();
           ctx.moveTo(x + dx, y + dy);
-          ctx.quadraticCurveTo(
-            x + dx + Math.cos(angle) * len * 0.5 + (rng() - 0.5) * 3,
-            y + dy + Math.sin(angle) * len * 0.5 + (rng() - 0.5) * 3,
-            x + dx + Math.cos(angle) * len,
-            y + dy + Math.sin(angle) * len
-          );
+          ctx.quadraticCurveTo(x + dx + midX, y + dy + midY, x + dx + endX, y + dy + endY);
           ctx.stroke();
         }
       }
@@ -33872,19 +33999,31 @@ void main() {
   }
   function stripes(ctx, size, rng, color, count, alpha = 0.18) {
     ctx.strokeStyle = color;
+    ctx.lineCap = "round";
     for (let i = 0; i < count; i++) {
       const x = rng() * size;
-      const w = 1 + rng() * 3;
-      ctx.globalAlpha = alpha * (0.3 + rng());
-      ctx.lineWidth = w;
+      const lw = 1 + rng() * 3;
+      const wobble = 3 + rng() * 7;
+      const waves = 1 + Math.floor(rng() * 3);
+      const phase = rng() * Math.PI * 2;
+      const a = alpha * (0.3 + rng());
+      const pts = [];
+      for (let k = 0; k <= 24; k++) {
+        const t = k / 24;
+        pts.push([x + Math.sin(t * Math.PI * 2 * waves + phase) * wobble, t * size]);
+      }
+      pts.unshift([pts[0][0], -2]);
+      pts.push([pts[pts.length - 1][0], size + 2]);
+      ctx.globalAlpha = a;
+      ctx.lineWidth = lw;
       for (const dx of [-size, 0, size]) {
-        ctx.beginPath();
-        const wobble = 3 + rng() * 7;
-        ctx.moveTo(x + dx, -4);
-        for (let y = 0; y <= size; y += 16) {
-          ctx.lineTo(x + dx + Math.sin(y * 0.05 + i) * wobble, y);
+        for (const dy of [-size, 0, size]) {
+          ctx.beginPath();
+          pts.forEach(([px, py], idx) => {
+            idx === 0 ? ctx.moveTo(px + dx, py + dy) : ctx.lineTo(px + dx, py + dy);
+          });
+          ctx.stroke();
         }
-        ctx.stroke();
       }
     }
     ctx.globalAlpha = 1;
@@ -34014,31 +34153,26 @@ void main() {
     const rng = makeRng(3301);
     paintNoise(ctx, fbmNoise(size, 3, 41, 3, 0.55), size, 8222832, 11117208);
     paintNoise(ctx, fbmNoise(size, 2, 77, 7, 0.5), size, 7762280, 10722449, 0.35);
-    cracks(ctx, size, rng, "#56514a", 18);
-    cracks(ctx, size, rng, "#c4bcae", 10);
-    for (let i = 0; i < 26; i++) {
+    cracks(ctx, size, rng, "#56514a", 14);
+    cracks(ctx, size, rng, "#c4bcae", 8);
+    for (let i = 0; i < 30; i++) {
       const cx = rng() * size;
       const cy = rng() * size;
-      const r = 12 + rng() * 34;
-      const sides = 4 + Math.floor(rng() * 3);
-      ctx.globalAlpha = 0.03 + rng() * 0.06;
-      ctx.fillStyle = rng() > 0.5 ? "#ded6c8" : "#4a463f";
+      const r = 16 + rng() * 40;
+      const light = rng() > 0.5;
+      const alpha = 0.04 + rng() * 0.05;
       for (const dx of [-size, 0, size]) {
         for (const dy of [-size, 0, size]) {
+          const g = ctx.createRadialGradient(cx + dx, cy + dy, r * 0.15, cx + dx, cy + dy, r);
+          g.addColorStop(0, light ? `rgba(232,226,214,${alpha})` : `rgba(52,48,42,${alpha})`);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = g;
           ctx.beginPath();
-          for (let s = 0; s < sides; s++) {
-            const a = s / sides * Math.PI * 2 + rng() * 0.2;
-            const rr = r * (0.8 + rng() * 0.35);
-            const x = cx + dx + Math.cos(a) * rr;
-            const y = cy + dy + Math.sin(a) * rr;
-            s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-          }
-          ctx.closePath();
+          ctx.arc(cx + dx, cy + dy, r, 0, Math.PI * 2);
           ctx.fill();
         }
       }
     }
-    ctx.globalAlpha = 1;
     speckle(ctx, size, 320, rng, ["#b6ae9f", "#6b665d"], [0.4, 1.1], [0.06, 0.16]);
     return canvas;
   }
@@ -34056,9 +34190,40 @@ void main() {
     const ctx = canvas.getContext("2d");
     const rng = makeRng(5501);
     paintNoise(ctx, fbmNoise(size, 3, 71, 4, 0.55), size, 6966321, 10121288);
-    stripes(ctx, size, rng, "#3f2d1c", 90, 0.3);
-    stripes(ctx, size, rng, "#b48c5c", 50, 0.16);
-    speckle(ctx, size, 300, rng, ["#33241a", "#8a6644"], [0.5, 1.4], [0.1, 0.28]);
+    for (let pass = 0; pass < 2; pass++) {
+      const color = pass === 0 ? "#4a3521" : "#b48c5c";
+      const count = pass === 0 ? 46 : 28;
+      ctx.strokeStyle = color;
+      ctx.lineCap = "round";
+      for (let i = 0; i < count; i++) {
+        const x = rng() * size;
+        const lw = 1.5 + rng() * 4;
+        const wobble = 2 + rng() * 5;
+        const waves = 1 + Math.floor(rng() * 3);
+        const phase = rng() * Math.PI * 2;
+        const a = (pass === 0 ? 0.16 : 0.1) * (0.5 + rng());
+        const pts = [];
+        for (let k = 0; k <= 20; k++) {
+          const t = k / 20;
+          pts.push([x + Math.sin(t * Math.PI * 2 * waves + phase) * wobble, t * size]);
+        }
+        pts.unshift([pts[0][0], -3]);
+        pts.push([pts[pts.length - 1][0], size + 3]);
+        ctx.globalAlpha = a;
+        ctx.lineWidth = lw;
+        for (const dx of [-size, 0, size]) {
+          for (const dy of [-size, 0, size]) {
+            ctx.beginPath();
+            pts.forEach(([px, py], idx) => {
+              idx === 0 ? ctx.moveTo(px + dx, py + dy) : ctx.lineTo(px + dx, py + dy);
+            });
+            ctx.stroke();
+          }
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    speckle(ctx, size, 260, rng, ["#33241a", "#8a6644"], [0.5, 1.4], [0.08, 0.2]);
     return canvas;
   }
   function leafCanvas(size = SIZE2) {
@@ -34190,13 +34355,13 @@ void main() {
       rock: tex(rock, 1),
       dirt: tex(dirt, 1),
       // светлые detail-карты — для растений и предметов
-      bark: tex(detailize(bark, { lift: 0.5, contrast: 3.1, tint: 0.5 }), 1),
-      leaf: tex(detailize(leaf, { lift: 0.5, contrast: 2.1 }), 1),
-      wood: tex(detailize(wood), 1),
-      cloth: tex(detailize(cloth), 1),
+      bark: tex(detailize(bark, { lift: 0.66, contrast: 1.15, tint: 0.5 }), 1),
+      leaf: tex(detailize(leaf, { lift: 0.58, contrast: 1.4 }), 1),
+      wood: tex(detailize(wood, { contrast: 1.3 }), 1),
+      cloth: tex(detailize(cloth, { contrast: 1.25 }), 1),
       skin: tex(detailize(skin, { lift: 0.35, contrast: 1.2, tint: 0.6 }), 1),
-      rockDetail: tex(detailize(rock, { lift: 0.62, contrast: 1.5, tint: 0.3 }), 1),
-      grassDetail: tex(detailize(grass, { lift: 0.55, contrast: 1.9, tint: 0.45 }), 1),
+      rockDetail: tex(detailize(rock, { lift: 0.76, contrast: 0.9, tint: 0.35 }), 1),
+      grassDetail: tex(detailize(grass, { lift: 0.6, contrast: 1.4, tint: 0.45 }), 1),
       cloud: toTexture(cloudCanvas(), { repeat: 1, srgb: true, aniso: 1 }),
       dot: toTexture(softDotCanvas(), { repeat: 1, srgb: false, aniso: 1 })
     };
@@ -34209,6 +34374,14 @@ void main() {
     for (const id of Object.keys(ITEMS)) inv[id] = 0;
     return inv;
   }
+  function normalizeHotbar(raw) {
+    const out = new Array(HOTBAR_SIZE).fill(null);
+    if (!Array.isArray(raw)) return out;
+    raw.slice(0, HOTBAR_SIZE).forEach((id, i) => {
+      if (id && ITEMS[id]) out[i] = id;
+    });
+    return out;
+  }
   var WEATHERS = {
     clear: { label: "\u044F\u0441\u043D\u043E", rain: 0, sun: 1, fog: 1, next: { clear: 0.45, cloudy: 0.4, rain: 0.15 } },
     cloudy: { label: "\u043E\u0431\u043B\u0430\u0447\u043D\u043E", rain: 0, sun: 0.68, fog: 1.25, next: { clear: 0.35, cloudy: 0.35, rain: 0.3 } },
@@ -34218,7 +34391,10 @@ void main() {
   var Game = class {
     constructor() {
       this.canvas = document.getElementById("scene");
-      this.ui = new UI(ITEMS, HOTBAR, BAG_ORDER);
+      this.ui = new UI(ITEMS, HOTBAR_SIZE, BAG_ORDER);
+      this.ui.onAssign = (id, slot) => this.assignHotbar(id, slot);
+      this.ui.onClear = (slot) => this.clearHotbar(slot);
+      this.ui.onClickItem = (id) => this.assignHotbarFirst(id);
       this.audio = new Audio2();
       const safe = wantsSafeMode();
       this.quality = safe ? 2 : 0;
@@ -34302,6 +34478,8 @@ void main() {
         hunger: 72,
         warmth: 100,
         inventory: emptyInventory(),
+        hotbar: new Array(HOTBAR_SIZE).fill(null),
+        // игрок заполняет сам
         collected: 0
       };
       this.selected = 0;
@@ -34336,8 +34514,8 @@ void main() {
       this.spawnPlayer();
       this.buildHighlight();
       this.bindEvents();
-      this.ui.setHotbar(this.state.inventory, this.selected);
-      this.ui.renderBag(this.state.inventory);
+      this.refreshHotbar();
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
       this.renderer.setAnimationLoop(() => this.frame());
     }
     // ------------------------------------------------------------
@@ -34472,7 +34650,7 @@ void main() {
           return;
         }
         const step = e.deltaY > 0 ? 1 : -1;
-        const next = (this.selected + step + HOTBAR.length) % HOTBAR.length;
+        const next = (this.selected + step + HOTBAR_SIZE) % HOTBAR_SIZE;
         this.selectSlot(next);
       }, { passive: true });
       document.addEventListener("pointerlockchange", () => {
@@ -34648,8 +34826,8 @@ void main() {
       if (continueSave) this.loadGame();
       this.ui.hideScreens();
       this.ui.setBars(this.readBars());
-      this.ui.renderBag(this.state.inventory);
-      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
+      this.refreshHotbar();
       this.player.setEquipped(this.equippedId());
       this.running = true;
       this.paused = false;
@@ -34693,7 +34871,7 @@ void main() {
     //  Действия
     // ------------------------------------------------------------
     equippedId() {
-      const id = HOTBAR[this.selected];
+      const id = this.state.hotbar[this.selected];
       if (!id) return null;
       const item = ITEMS[id];
       if (item.kind === "tool" || item.kind === "placeable") {
@@ -34706,17 +34884,65 @@ void main() {
       return id && ITEMS[id].tool ? ITEMS[id].tool : null;
     }
     selectSlot(index) {
-      if (index < 0 || index >= HOTBAR.length) return;
+      if (index < 0 || index >= HOTBAR_SIZE) return;
       this.selected = index;
-      this.ui.setHotbar(this.state.inventory, this.selected);
+      this.refreshHotbar();
       this.player.setEquipped(this.equippedId());
+    }
+    /** Перерисовать хотбар и сумку одним движением */
+    refreshHotbar() {
+      this.ui.setHotbar(this.state.inventory, this.state.hotbar, this.selected);
+    }
+    refreshBag() {
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
+    }
+    /** Положить предмет в конкретный слот (перетаскивание из сумки) */
+    assignHotbar(id, slot) {
+      var _a, _b;
+      if (!ITEMS[id] || slot < 0 || slot >= HOTBAR_SIZE) return;
+      if ((this.state.inventory[id] || 0) <= 0) {
+        this.ui.toast(`${ITEMS[id].name}: \u0432 \u0441\u0443\u043C\u043A\u0435 \u043F\u0443\u0441\u0442\u043E`, true);
+        return;
+      }
+      const prev = this.state.hotbar[slot];
+      this.state.hotbar[slot] = id;
+      this.refreshHotbar();
+      this.refreshBag();
+      this.player.setEquipped(this.equippedId());
+      if (prev && prev !== id) this.ui.toast(`${ITEMS[prev].name} \u0443\u0431\u0440\u0430\u043D \u0438\u0437 \u0441\u043B\u043E\u0442\u0430 ${slot + 1}`);
+      else this.ui.toast(`${ITEMS[id].name} \u2192 \u0441\u043B\u043E\u0442 ${slot + 1}`);
+      (_b = (_a = this.audio).uiClick) == null ? void 0 : _b.call(_a);
+      this.save();
+    }
+    /** Убрать предмет из слота (перетащили обратно в сумку) */
+    clearHotbar(slot) {
+      var _a, _b;
+      if (slot < 0 || slot >= HOTBAR_SIZE) return;
+      const id = this.state.hotbar[slot];
+      if (!id) return;
+      this.state.hotbar[slot] = null;
+      this.refreshHotbar();
+      this.refreshBag();
+      this.player.setEquipped(this.equippedId());
+      this.ui.toast(`${ITEMS[id].name} \u0443\u0431\u0440\u0430\u043D \u0438\u0437 \u0441\u043B\u043E\u0442\u0430`);
+      (_b = (_a = this.audio).uiClick) == null ? void 0 : _b.call(_a);
+      this.save();
+    }
+    /** Клик по предмету в сумке — в первый свободный слот */
+    assignHotbarFirst(id) {
+      const free = this.state.hotbar.indexOf(null);
+      if (free < 0) {
+        this.ui.toast("\u0412\u0441\u0435 \u0441\u043B\u043E\u0442\u044B \u0437\u0430\u043D\u044F\u0442\u044B \u2014 \u043F\u0435\u0440\u0435\u0442\u0430\u0449\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442 \u043D\u0430 \u043D\u0443\u0436\u043D\u044B\u0439", true);
+        return;
+      }
+      this.assignHotbar(id, free);
     }
     addItem(id, count = 1) {
       if (!ITEMS[id]) return;
       this.state.inventory[id] = (this.state.inventory[id] || 0) + count;
       this.state.collected += count;
-      this.ui.setHotbar(this.state.inventory, this.selected);
-      this.ui.renderBag(this.state.inventory);
+      this.refreshHotbar();
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
       if (this.ui.el.craft && !this.ui.el.craft.classList.contains("hidden")) {
         this.ui._lastCraftSig = "";
         this.ui.renderCraft(RECIPES, this.state.inventory, (rid) => this.craft(rid));
@@ -34725,8 +34951,8 @@ void main() {
     takeItem(id, count = 1) {
       if ((this.state.inventory[id] || 0) < count) return false;
       this.state.inventory[id] -= count;
-      this.ui.setHotbar(this.state.inventory, this.selected);
-      this.ui.renderBag(this.state.inventory);
+      this.refreshHotbar();
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
       this.ui._lastCraftSig = "";
       return true;
     }
@@ -34897,7 +35123,7 @@ void main() {
       }
     }
     craft(recipeId) {
-      var _a, _b, _c;
+      var _a, _b;
       const recipe = RECIPES.find((r) => r.id === recipeId);
       if (!recipe) return;
       const inv = this.state.inventory;
@@ -34917,9 +35143,8 @@ void main() {
       this.ui.toast(`\u0421\u0434\u0435\u043B\u0430\u043D\u043E: ${recipe.name}`);
       this.ui._lastCraftSig = "";
       this.ui.renderCraft(RECIPES, inv, (rid) => this.craft(rid));
-      if (((_c = ITEMS[recipeId]) == null ? void 0 : _c.kind) === "tool") {
-        const idx = HOTBAR.indexOf(recipeId);
-        if (idx >= 0) this.selectSlot(idx);
+      if (ITEMS[recipeId] && !this.state.hotbar.includes(recipeId)) {
+        this.ui.toast(`${ITEMS[recipeId].name} \u2014 \u0432 \u0441\u0443\u043C\u043A\u0435 (I), \u043F\u0435\u0440\u0435\u0442\u0430\u0449\u0438 \u0432 \u0441\u043B\u043E\u0442`);
       }
     }
     /** F — поставить костёр из набора */
@@ -34948,8 +35173,11 @@ void main() {
     }
     /** Использовать выбранный слот: еда/питьё — съесть, инструмент — просто держим */
     useSelected() {
-      const id = HOTBAR[this.selected];
-      if (!id) return;
+      const id = this.state.hotbar[this.selected];
+      if (!id) {
+        this.ui.toast("\u0421\u043B\u043E\u0442 \u043F\u0443\u0441\u0442 \u2014 \u043E\u0442\u043A\u0440\u043E\u0439 \u0441\u0443\u043C\u043A\u0443 (I) \u0438 \u043F\u0435\u0440\u0435\u0442\u0430\u0449\u0438 \u043F\u0440\u0435\u0434\u043C\u0435\u0442", true);
+        return;
+      }
       const item = ITEMS[id];
       if (item.kind === "food") this.consume(id);
       else if (this.equippedId() !== id) this.selectSlot(this.selected);
@@ -35141,7 +35369,7 @@ void main() {
         clock: this.sky.clockString(),
         weather: WEATHERS[this.weather].label
       });
-      if (this.ui.isPanelOpen()) this.ui.renderBag(state.inventory);
+      if (this.ui.isPanelOpen()) this.ui.renderBag(state.inventory, this.state.hotbar);
       this.saveTimer += dt;
       if (this.saveTimer > 15) {
         this.saveTimer = 0;
@@ -35184,6 +35412,7 @@ void main() {
           facing: this.player.facing,
           need: [this.state.health, this.state.thirst, this.state.hunger, this.state.warmth],
           inv: this.state.inventory,
+          hotbar: this.state.hotbar,
           selected: this.selected,
           view: this.view,
           campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
@@ -35223,7 +35452,8 @@ void main() {
       this.state.hunger = hunger;
       this.state.warmth = warmth;
       this.state.inventory = Object.assign(emptyInventory(), data.inv || {});
-      this.selected = Math.max(0, Math.min(HOTBAR.length - 1, data.selected || 0));
+      this.selected = Math.max(0, Math.min(HOTBAR_SIZE - 1, data.selected || 0));
+      this.state.hotbar = normalizeHotbar(data.hotbar);
       this.view = data.view === "first" ? "first" : "third";
       this.state.collected = data.collected || 0;
       for (const f of data.campfires || []) {
@@ -35231,8 +35461,8 @@ void main() {
         fire.fuel = Math.max(0, Math.min(fire.maxFuel, f.fuel || 0));
       }
       this.player.applyCamera(this.camera, this.world, 1);
-      this.ui.setHotbar(this.state.inventory, this.selected);
-      this.ui.renderBag(this.state.inventory);
+      this.refreshHotbar();
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
       this.player.setEquipped(this.equippedId());
       this.ui.toast(`\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E: \u0434\u0435\u043D\u044C ${this.sky.day}, ${this.sky.clockString()}`);
     }
@@ -35264,7 +35494,7 @@ void main() {
         this.ui.toggleCraft(true, RECIPES, this.state.inventory, (id) => this.craft(id));
       } else {
         this.ui.toggleBag(true);
-        this.ui.renderBag(this.state.inventory);
+        this.ui.renderBag(this.state.inventory, this.state.hotbar);
       }
       this.audio.uiClick();
     }

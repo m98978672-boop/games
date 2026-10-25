@@ -68,11 +68,11 @@ export const ITEMS = {
   campfireKit: { id: 'campfireKit', name: 'Костровое место', icon: ICONS.campfireKit, kind: 'placeable', hotbar: true },
 };
 
-/** Порядок слотов хотбара */
-export const HOTBAR = [
-  'coconut', 'berries', 'bandage', 'knife', 'spear',
-  'axe', 'pickaxe', 'bow', 'torch', 'campfireKit',
-];
+/**
+ * Хотбар пустой: игрок сам решает, что в нём лежит, и перетаскивает
+ * предметы из сумки. Здесь только размер — 10 слотов.
+ */
+export const HOTBAR_SIZE = 10;
 
 /** Порядок сумки */
 export const BAG_ORDER = [
