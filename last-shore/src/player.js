@@ -41,6 +41,7 @@ export class Player {
     const pantsMat = new THREE.MeshStandardMaterial({ color: COLORS.pants, roughness: 0.9, flatShading: true });
     const packMat = new THREE.MeshStandardMaterial({ color: 0x6b5235, roughness: 0.95, flatShading: true });
     const bootMat = new THREE.MeshStandardMaterial({ color: 0x3a2c20, roughness: 1, flatShading: true });
+    const clothMat = new THREE.MeshStandardMaterial({ color: 0x9a8663, roughness: 1, flatShading: true });
 
     const box = (w, h, d, mat) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -48,43 +49,105 @@ export class Player {
       return mesh;
     };
 
-    // корпус и голова
-    const torso = box(0.52, 0.62, 0.3, shirtMat);
+    // корпус: грудь + куртка с воротом, чуть скошенные плечи
+    const torso = new THREE.Group();
     torso.position.y = 1.16;
-    g.add(torso);
 
-    const belt = box(0.5, 0.12, 0.32, pantsMat);
-    belt.position.y = 0.85;
+    const chest = box(0.5, 0.5, 0.3, shirtMat);
+    chest.position.y = 0.06;
+    torso.add(chest);
+
+    // плечи чуть шире — силуэт человечнее
+    const shoulders = box(0.56, 0.16, 0.32, shirtMat);
+    shoulders.position.y = 0.3;
+    torso.add(shoulders);
+
+    // воротник и полы куртки
+    const collar = box(0.26, 0.08, 0.3, new THREE.MeshStandardMaterial({ color: 0x74593a, roughness: 0.95, flatShading: true }));
+    collar.position.set(0, 0.36, 0.01);
+    torso.add(collar);
+
+    const jacket = box(0.52, 0.2, 0.31, new THREE.MeshStandardMaterial({ color: 0x7a5e3d, roughness: 0.95, flatShading: true }));
+    jacket.position.y = -0.2;
+    torso.add(jacket);
+    g.add(torso);
+    this.torsoGroup = torso;
+
+    const belt = box(0.5, 0.12, 0.32, new THREE.MeshStandardMaterial({ color: 0x40301f, roughness: 1, flatShading: true }));
+    belt.position.y = 0.86;
     g.add(belt);
 
-    this.head = box(0.32, 0.34, 0.3, skinMat);
-    this.head.position.y = 1.65;
+    // пряжка
+    const buckle = box(0.1, 0.08, 0.03, new THREE.MeshStandardMaterial({ color: 0xc7a252, roughness: 0.4, metalness: 0.6 }));
+    buckle.position.set(0, 0.86, 0.17);
+    g.add(buckle);
+
+    // --- голова: череп, лицо, волосы, борода ---
+    this.head = new THREE.Group();
+    this.head.position.y = 1.62;
+    const skull = box(0.3, 0.32, 0.29, skinMat);
+    this.head.add(skull);
+
+    const hairMat = new THREE.MeshStandardMaterial({ color: 0x2c2118, roughness: 1, flatShading: true });
+    const hair = box(0.32, 0.11, 0.31, hairMat);
+    hair.position.y = 0.16;
+    this.head.add(hair);
+    // затылок
+    const backHair = box(0.32, 0.16, 0.08, hairMat);
+    backHair.position.set(0, 0.06, -0.13);
+    this.head.add(backHair);
+
+    const nose = box(0.06, 0.08, 0.06, new THREE.MeshStandardMaterial({ color: 0xb87c52, roughness: 0.8, flatShading: true }));
+    nose.position.set(0, -0.01, 0.16);
+    this.head.add(nose);
+
+    const eyeMat = new THREE.MeshStandardMaterial({ color: 0x1d1a16, roughness: 0.5 });
+    for (const side of [-1, 1]) {
+      const eye = box(0.045, 0.04, 0.02, eyeMat);
+      eye.position.set(0.075 * side, 0.05, 0.15);
+      this.head.add(eye);
+    }
+
+    const beard = box(0.2, 0.09, 0.06, hairMat);
+    beard.position.set(0, -0.13, 0.13);
+    this.head.add(beard);
     g.add(this.head);
 
-    const hair = box(0.34, 0.12, 0.32, new THREE.MeshStandardMaterial({ color: 0x2c2118, roughness: 1 }));
-    hair.position.y = 0.2;
-    this.head.add(hair);
-
-    const pack = box(0.38, 0.44, 0.2, packMat);
-    pack.position.set(0, 1.2, 0.25);
+    // --- рюкзак со стяжками ---
+    const pack = box(0.36, 0.42, 0.2, packMat);
+    pack.position.set(0, 1.2, 0.26);
     g.add(pack);
+    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.34, 6, 1), clothMat);
+    roll.rotation.z = Math.PI / 2;
+    roll.position.set(0, 1.43, 0.26);
+    roll.castShadow = true;
+    g.add(roll);
+    for (const side of [-1, 1]) {
+      const strap = box(0.06, 0.42, 0.05, new THREE.MeshStandardMaterial({ color: 0x54402a, roughness: 1 }));
+      strap.position.set(0.14 * side, 1.22, 0.15);
+      g.add(strap);
+    }
 
     // --- руки: плечо -> локоть ---
     const makeArm = (side) => {
       const shoulder = new THREE.Group();
-      shoulder.position.set(0.295 * side, 1.44, 0);
-      const upper = box(0.15, 0.32, 0.17, shirtMat);
-      upper.position.y = -0.15;
+      shoulder.position.set(0.32 * side, 1.42, 0);
+      const upper = box(0.15, 0.3, 0.17, shirtMat);
+      upper.position.y = -0.14;
       shoulder.add(upper);
 
       const elbow = new THREE.Group();
-      elbow.position.y = -0.31;
-      const lower = box(0.13, 0.3, 0.15, skinMat);
-      lower.position.y = -0.14;
+      elbow.position.y = -0.29;
+      const lower = box(0.13, 0.28, 0.15, skinMat);
+      lower.position.y = -0.13;
       elbow.add(lower);
 
+      const cuff = box(0.145, 0.06, 0.165, new THREE.MeshStandardMaterial({ color: 0x74593a, roughness: 0.95, flatShading: true }));
+      cuff.position.y = -0.26;
+      elbow.add(cuff);
+
       const hand = box(0.14, 0.12, 0.16, skinMat);
-      hand.position.y = -0.3;
+      hand.position.y = -0.32;
       elbow.add(hand);
 
       shoulder.add(elbow);
@@ -102,20 +165,29 @@ export class Player {
     // --- ноги: бедро -> колено -> ступня ---
     const makeLeg = (side) => {
       const hip = new THREE.Group();
-      hip.position.set(0.14 * side, 0.82, 0);
-      const thigh = box(0.2, 0.42, 0.21, pantsMat);
-      thigh.position.y = -0.2;
+      hip.position.set(0.14 * side, 0.84, 0);
+      const thigh = box(0.21, 0.4, 0.22, pantsMat);
+      thigh.position.y = -0.19;
       hip.add(thigh);
 
       const knee = new THREE.Group();
-      knee.position.y = -0.42;
-      const shin = box(0.17, 0.38, 0.18, pantsMat);
-      shin.position.y = -0.18;
+      knee.position.y = -0.4;
+      const shin = box(0.18, 0.36, 0.19, pantsMat);
+      shin.position.y = -0.17;
       knee.add(shin);
 
-      const boot = box(0.2, 0.12, 0.28, bootMat);
-      boot.position.set(0, -0.4, 0.04);
+      // голенище сапога и подошва
+      const bootTop = box(0.2, 0.16, 0.21, bootMat);
+      bootTop.position.y = -0.32;
+      knee.add(bootTop);
+
+      const boot = box(0.2, 0.1, 0.3, bootMat);
+      boot.position.set(0, -0.4, 0.05);
       knee.add(boot);
+
+      const sole = box(0.21, 0.04, 0.32, new THREE.MeshStandardMaterial({ color: 0x241a12, roughness: 1 }));
+      sole.position.set(0, -0.45, 0.05);
+      knee.add(sole);
 
       hip.add(knee);
       g.add(hip);
@@ -128,7 +200,6 @@ export class Player {
     this.legR = legR.hip;
     this.kneeL = legL.knee;
     this.kneeR = legR.knee;
-    this.torso = torso;
 
     // --- предмет в правой руке ---
     this.handSlot = new THREE.Group();
@@ -427,8 +498,8 @@ export class Player {
 
     const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0);
     this.lean += (targetLean - this.lean) * clamp(dt * 6, 0, 1);
-    this.torso.rotation.x = this.lean;
-    this.torso.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
+    this.torsoGroup.rotation.x = this.lean;
+    this.torsoGroup.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
 
     if (this.head) this.head.rotation.y = Math.sin(this.bobPhase * 0.4) * 0.05 * (1 - speedRatio);
 
