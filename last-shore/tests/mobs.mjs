@@ -143,26 +143,38 @@ log('хитбоксы включаются:', bboxOn, '· у всех звере
   '· размер кабана:', JSON.stringify(game.mobs.list.find((m) => m.type === 'boar').def.hitbox));
 game.mobs.toggleHitboxes(false);
 
-// --- видимость: то, что вне кадра или за стволом, не рисуется ---
-const culler = game.culler;
-const target = game.mobs.list.find((m) => m.type === 'boar');
+// --- хитбоксы моделей: своя коробка у каждого, ча未被 загрузки нет ---
+const stats = game.hitboxes.stats();
+log('хитбоксов моделей:', stats.models, '· частей тела героя:', stats.parts,
+  '· скрытых моделей нет:', game.mobs.list.every((m) => !m.alive || m.group.visible));
+
+// прицел попадает в коробку зверя
 const cam = game.camera;
-culler.update(0.016, 0);
-// ставим камеру вплотную к зверю и смотрим на него
-target.x = 0; target.z = 0; target.group.position.set(0, game.world.heightAt(0, 0), 0);
-cam.position.set(6, game.world.heightAt(0, 0) + 2, 6);
-cam.lookAt(0, game.world.heightAt(0, 0) + 0.7, 0);
+const target = game.mobs.list.find((m) => m.alive && m.type === 'boar') || game.mobs.list.find((m) => m.alive);
+target.x = 0; target.z = 0;
+target.y = game.world.heightAt(0, 0);
+cam.position.set(3, target.y + 1.5, 3);
+cam.lookAt(0, target.y + 0.7, 0);
 cam.updateMatrixWorld(true);
-culler.update(0.016, 0);
-const seen = culler.isVisible(target.group);
-// отворачиваемся
-cam.lookAt(60, game.world.heightAt(0, 0) + 2, 60);
-cam.updateMatrixWorld(true);
-culler.update(0.4, 0);
-culler.update(0.4, 0);
-const unseen = culler.isVisible(target.group);
-log('видимость: смотрит →', seen, '· отвернулись →', unseen, '· отсечка работает:', seen && !unseen);
-log('объектов под отсечкой:', culler.items.size);
+game.computeAim();
+log('прицел по коробке зверя:', game.aim.target ? game.aim.target.kind : 'нет',
+  '· тот самый кабан:', game.aim.target && game.aim.target.mob === target);
+
+// части тела не сливаются с чужой моделью: дерево не пускает героя
+const treeCol = game.world.colliders.find((c) => c.kind === 'tree' && !c.disabled);
+game.player.setPosition(treeCol.x, treeCol.z, game.world);
+game.player.velocity.set(0, 0, 0);
+game.hitboxes.resolvePlayer(game.player, game.world, { mobs: game.mobs });
+const parts = game.hitboxes.worldParts(game.player.position, game.player.facing || 0, 0);
+const trunk = game.hitboxes.boxes().find((b) => b.kind === 'tree'
+  && Math.abs((b.minX + b.maxX) / 2 - treeCol.x) < 0.6);
+const overlapCount = trunk
+  ? parts.filter((p) => p.minX < trunk.maxX && p.maxX > trunk.minX
+      && p.minZ < trunk.maxZ && p.maxZ > trunk.minZ).length
+  : 0;
+const distToTree = Math.hypot(game.player.position.x - treeCol.x, game.player.position.z - treeCol.z);
+log('выталкивание из ствола: дистанция', distToTree.toFixed(2), '≥', (treeCol.r + 0.06).toFixed(2),
+  '· частей внутри чужой коробки:', overlapCount, '· разведено:', overlapCount === 0);
 
 // --- куст: сбор ягод руками, куст остаётся ---
 const bushNode = game.resources.nodes.find((n) => n.type === 'bush' && n.berries);

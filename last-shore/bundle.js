@@ -33910,7 +33910,7 @@ void main() {
     /**
      * @param {number} dt
      * @param {object} player — позиция игрока
-     * @param {object} ctx — { audio, onHit, culler, camera }
+     * @param {object} ctx — { audio, onHit, camera }
      */
     update(dt, player, ctx) {
       var _a, _b, _c;
@@ -33935,13 +33935,12 @@ void main() {
         mob.stateTime += dt;
         if (dist > 70) {
           mob.dormant = true;
-          if (mob.group.visible) mob.group.visible = false;
+          if (!mob.group.visible) mob.group.visible = true;
           this._dormantStep(mob, dt);
           continue;
         }
         mob.dormant = false;
-        const onScreen = (ctx.culler ? ctx.culler.isVisible(mob.group) : true) || this.showHitboxes;
-        if (mob.group.visible !== onScreen) mob.group.visible = onScreen;
+        if (!mob.group.visible) mob.group.visible = true;
         const seesPlayer = this._detects(mob, dist, noise, {
           x: px,
           z: pz,
@@ -35042,259 +35041,535 @@ void main() {
     return adapter;
   }
 
-  // src/visibility.js
-  var CELL2 = 10;
-  var HYSTERESIS = 0.25;
-  var VisibilityCuller = class {
-    constructor(world, camera) {
-      this.world = world;
-      this.camera = camera;
-      this.sphere = new Sphere(new Vector3(), 1);
-      this.tmp = new Vector3();
-      this.items = /* @__PURE__ */ new Map();
-      this.grid = /* @__PURE__ */ new Map();
-      this._buildGrid();
-      this.stats = { total: 0, visible: 0, partial: 0, hides: 0 };
-      this.frame = 0;
-      this._wp = new Vector3();
-    }
-    /** Сетка по коллайдерам: проверять луч нужно только в соседних ячейках */
-    _buildGrid() {
-      const key = (cx, cz) => cx * 1e4 + cz;
-      for (const c of this.world.colliders) {
-        if (c.disabled || c.soft) continue;
-        if (c.r < 0.35) continue;
-        if (!(c.height > 0.5) && !c.kind) continue;
-        if (c.fire || c.spring) continue;
-        const cx = Math.floor(c.x / CELL2);
-        const cz = Math.floor(c.z / CELL2);
-        for (let dx = -1; dx <= 1; dx++) {
-          for (let dz = -1; dz <= 1; dz++) {
-            const k = key(cx + dx, cz + dz);
-            let bucket = this.grid.get(k);
-            if (!bucket) this.grid.set(k, bucket = []);
-            bucket.push(c);
-          }
-        }
+  // src/hitboxes.js
+  var PLAYER_PARTS = [
+    { id: "head", x: 0, y: 1.66, w: 0.3, h: 0.3, d: 0.3 },
+    { id: "neck", x: 0, y: 1.47, w: 0.18, h: 0.12, d: 0.18 },
+    { id: "chest", x: 0, y: 1.26, w: 0.52, h: 0.36, d: 0.3 },
+    { id: "belly", x: 0, y: 1.02, w: 0.44, h: 0.2, d: 0.28 },
+    { id: "hip", x: 0, y: 0.86, w: 0.46, h: 0.16, d: 0.28 },
+    { id: "shoulderL", x: -0.3, y: 1.38, w: 0.18, h: 0.18, d: 0.2 },
+    { id: "shoulderR", x: 0.3, y: 1.38, w: 0.18, h: 0.18, d: 0.2 },
+    { id: "armL", x: -0.36, y: 1.16, w: 0.15, h: 0.32, d: 0.17 },
+    { id: "armR", x: 0.36, y: 1.16, w: 0.15, h: 0.32, d: 0.17 },
+    { id: "forearmL", x: -0.39, y: 0.9, w: 0.13, h: 0.28, d: 0.15 },
+    { id: "forearmR", x: 0.39, y: 0.9, w: 0.13, h: 0.28, d: 0.15 },
+    { id: "handL", x: -0.4, y: 0.71, w: 0.13, h: 0.15, d: 0.16 },
+    { id: "handR", x: 0.4, y: 0.71, w: 0.13, h: 0.15, d: 0.16 },
+    { id: "thighL", x: -0.13, y: 0.6, w: 0.19, h: 0.44, d: 0.22 },
+    { id: "thighR", x: 0.13, y: 0.6, w: 0.19, h: 0.44, d: 0.22 },
+    { id: "shinL", x: -0.13, y: 0.24, w: 0.16, h: 0.34, d: 0.19 },
+    { id: "shinR", x: 0.13, y: 0.24, w: 0.16, h: 0.34, d: 0.19 },
+    { id: "footL", x: -0.13, y: 0.055, w: 0.16, h: 0.11, d: 0.28 },
+    { id: "footR", x: 0.13, y: 0.055, w: 0.16, h: 0.11, d: 0.28 }
+  ];
+  var KIND_COLOR = {
+    player: 8315903,
+    mob: 16747100,
+    tree: 9098346,
+    rock: 13157044,
+    bush: 7323477,
+    station: 16765286,
+    fire: 16742973,
+    spring: 6276863,
+    mine: 12356863,
+    pickup: 16772744,
+    model: 16777215
+  };
+  function boxOf(x, yBottom, z, w, h, d, yaw = 0) {
+    const c = Math.abs(Math.cos(yaw));
+    const s = Math.abs(Math.sin(yaw));
+    const ww = w * c + d * s;
+    const dd = w * s + d * c;
+    return {
+      minX: x - ww / 2,
+      maxX: x + ww / 2,
+      minY: yBottom,
+      maxY: yBottom + h,
+      minZ: z - dd / 2,
+      maxZ: z + dd / 2
+    };
+  }
+  function overlap3(a, b) {
+    return a.minX < b.maxX && a.maxX > b.minX && a.minY < b.maxY && a.maxY > b.minY && a.minZ < b.maxZ && a.maxZ > b.minZ;
+  }
+  function rayBox(origin, dir, box2, maxDist) {
+    let tmin = 0;
+    let tmax = maxDist;
+    const axes = [
+      ["x", "minX", "maxX"],
+      ["y", "minY", "maxY"],
+      ["z", "minZ", "maxZ"]
+    ];
+    for (const [axis, lo, hi] of axes) {
+      const o = origin[axis];
+      const d = dir[axis];
+      const min = box2[lo];
+      const max = box2[hi];
+      if (Math.abs(d) < 1e-8) {
+        if (o < min || o > max) return null;
+        continue;
       }
+      let t1 = (min - o) / d;
+      let t2 = (max - o) / d;
+      if (t1 > t2) {
+        const t = t1;
+        t1 = t2;
+        t2 = t;
+      }
+      if (t1 > tmin) tmin = t1;
+      if (t2 < tmax) tmax = t2;
+      if (tmin > tmax) return null;
     }
-    /** Добавить объект под управление (радиус и высота — для проверки видимости) */
-    track(object, { radius = 1, height = 1, getPos = null } = {}) {
-      this.items.set(object, { radius, height, getPos, visibleFor: 0, wasVisible: true });
-      return object;
+    return tmin > 0 ? tmin : null;
+  }
+  var HitboxSystem = class {
+    constructor(scene, player) {
+      this.scene = scene;
+      this.player = player;
+      this.registry = /* @__PURE__ */ new Map();
+      this.staticBoxes = [];
+      this.staticGrid = /* @__PURE__ */ new Map();
+      this.gridCell = 8;
+      this.colliderGrids = /* @__PURE__ */ new WeakMap();
+      this.nextId = 1;
+      this.debug = false;
+      this.debugGroup = new Group();
+      this.debugGroup.name = "hitboxes";
+      this.debugGroup.visible = false;
+      this.scene.add(this.debugGroup);
+      this.debugMeshes = /* @__PURE__ */ new Map();
+      this._wireGeo = new BoxGeometry(1, 1, 1);
+      this._wireMat = new LineBasicMaterial({ color: 8315903, transparent: true, opacity: 0.9, depthTest: false });
+      this._wireCache = /* @__PURE__ */ new Map();
+      this.partBuffer = [];
+      this.lastPushes = 0;
     }
-    untrack(object) {
-      this.items.delete(object);
+    // ------------------------------------------------------------
+    //  Регистрация моделей
+    // ------------------------------------------------------------
+    /**
+     * Зарегистрировать модель.
+     * box() возвращает { x, y, z, w, h, d, yaw } в мировых координатах.
+     * physical — должна ли модель выталкивать героя.
+     */
+    register(kind, box2, { physical = true, ref = null, skipAim = false } = {}) {
+      const id = this.nextId++;
+      this.registry.set(id, { id, kind, box: box2, physical, ref, skipAim });
+      return id;
     }
-    isVisible(object) {
-      const item = this.items.get(object);
-      return item ? item.wasVisible : object.visible;
-    }
-    _occludersAlong(x0, z0, x1, z1) {
-      const minX = Math.floor(Math.min(x0, x1) / CELL2);
-      const maxX = Math.floor(Math.max(x0, x1) / CELL2);
-      const minZ = Math.floor(Math.min(z0, z1) / CELL2);
-      const maxZ = Math.floor(Math.max(z0, z1) / CELL2);
-      const out = [];
-      const seen = /* @__PURE__ */ new Set();
+    /**
+     * Неподвижная модель: коробка считается один раз и кладётся в сетку.
+     * Так тысячи деревьев и камней не пересчитываются каждый кадр.
+     */
+    registerStatic(kind, b, { physical = false, ref = null, enabled = null, skipAim = false } = {}) {
+      const id = this.nextId++;
+      const box2 = boxOf(b.x, b.y, b.z, b.w, b.h, b.d, b.yaw || 0);
+      const entry = { id, kind, physical, ref, enabled, skipAim, box: box2 };
+      const index = this.staticBoxes.push(entry) - 1;
+      const cell = this.gridCell;
+      const minX = Math.floor(box2.minX / cell);
+      const maxX = Math.floor(box2.maxX / cell);
+      const minZ = Math.floor(box2.minZ / cell);
+      const maxZ = Math.floor(box2.maxZ / cell);
       for (let cx = minX; cx <= maxX; cx++) {
         for (let cz = minZ; cz <= maxZ; cz++) {
-          const bucket = this.grid.get(cx * 1e4 + cz);
+          const key = cx * 1e5 + cz;
+          let bucket = this.staticGrid.get(key);
+          if (!bucket) this.staticGrid.set(key, bucket = []);
+          bucket.push(index);
+        }
+      }
+      return id;
+    }
+    unregister(id) {
+      this.registry.delete(id);
+      this._dropDebug(id);
+    }
+    /** Сетка по коллайдерам мира: не проверяем все стволы каждый кадр */
+    _colliderNear(world, x, z, radius) {
+      if (!world || !world.colliders || !world.colliders.length) return [];
+      let grid = this.colliderGrids.get(world);
+      if (!grid) {
+        grid = /* @__PURE__ */ new Map();
+        const cell2 = this.gridCell;
+        for (const c of world.colliders) {
+          if (!Number.isFinite(c.x) || !Number.isFinite(c.z) || !Number.isFinite(c.r)) continue;
+          const key = Math.floor(c.x / cell2) * 1e5 + Math.floor(c.z / cell2);
+          let bucket = grid.get(key);
+          if (!bucket) grid.set(key, bucket = []);
+          bucket.push(c);
+        }
+        this.colliderGrids.set(world, grid);
+      }
+      const cell = this.gridCell;
+      const out = [];
+      const minX = Math.floor((x - radius) / cell);
+      const maxX = Math.floor((x + radius) / cell);
+      const minZ = Math.floor((z - radius) / cell);
+      const maxZ = Math.floor((z + radius) / cell);
+      for (let cx = minX; cx <= maxX; cx++) {
+        for (let cz = minZ; cz <= maxZ; cz++) {
+          const bucket = grid.get(cx * 1e5 + cz);
           if (!bucket) continue;
-          for (const c of bucket) {
-            if (c.disabled || seen.has(c)) continue;
-            seen.add(c);
-            out.push(c);
+          for (const c of bucket) out.push(c);
+        }
+      }
+      return out;
+    }
+    /** Неподвижные коробки вокруг точки (из сетки) */
+    staticNear(x, z, radius = 6) {
+      const cell = this.gridCell;
+      const out = [];
+      const seen = /* @__PURE__ */ new Set();
+      const minX = Math.floor((x - radius) / cell);
+      const maxX = Math.floor((x + radius) / cell);
+      const minZ = Math.floor((z - radius) / cell);
+      const maxZ = Math.floor((z + radius) / cell);
+      for (let cx = minX; cx <= maxX; cx++) {
+        for (let cz = minZ; cz <= maxZ; cz++) {
+          const bucket = this.staticGrid.get(cx * 1e5 + cz);
+          if (!bucket) continue;
+          for (const i of bucket) {
+            if (seen.has(i)) continue;
+            seen.add(i);
+            const entry = this.staticBoxes[i];
+            if (entry.enabled && !entry.enabled()) continue;
+            out.push(entry);
           }
         }
       }
       return out;
     }
-    /** Пересекает ли отрезок «камера → объект» ствол/валун */
-    _blockedByProps(cam, target) {
-      const list = this._occludersAlong(cam.x, cam.z, target.x, target.z);
-      if (!list.length) return false;
-      const dx = target.x - cam.x;
-      const dz = target.z - cam.z;
-      const len2 = dx * dx + dz * dz || 1e-6;
-      for (const c of list) {
-        let t = ((c.x - cam.x) * dx + (c.z - cam.z) * dz) / len2;
-        if (t <= 0.05 || t >= 0.97) continue;
-        const px = cam.x + dx * t;
-        const pz = cam.z + dz * t;
-        const rr = c.r * 0.9;
-        if ((px - c.x) ** 2 + (pz - c.z) ** 2 < rr * rr) {
-          const camY = cam.y;
-          const targetY = target.y;
-          const lineY = camY + (targetY - camY) * t;
-          const groundY = this.world.heightAt(c.x, c.z);
-          const propTop = groundY + (c.height || 4.5);
-          if (propTop > lineY) return true;
+    /** Подвижные коробки (звери, предметы) + неподвижные рядом */
+    boxes(x = ((_c) => (_c = ((_b) => (_b = ((_a) => (_a = this.player) == null ? void 0 : _a.position)()) == null ? void 0 : _b.x)()) != null ? _c : 0)(), z = ((_f) => (_f = ((_e2) => (_e2 = ((_d) => (_d = this.player) == null ? void 0 : _d.position)()) == null ? void 0 : _e2.z)()) != null ? _f : 0)(), radius = 8) {
+      const out = [];
+      for (const entry of this.registry.values()) {
+        let b;
+        try {
+          b = entry.box();
+        } catch (err) {
+          continue;
         }
+        if (!b) continue;
+        out.push({
+          ...boxOf(b.x, b.y, b.z, b.w, b.h, b.d, b.yaw || 0),
+          kind: entry.kind,
+          physical: entry.physical,
+          ref: entry.ref,
+          id: entry.id
+        });
       }
-      return false;
-    }
-    /** Пересекает ли отрезок рельеф (объект за холмом) */
-    _blockedByTerrain(cam, target) {
-      const steps = 6;
-      const dx = target.x - cam.x;
-      const dz = target.z - cam.z;
-      const dy = target.y - cam.y;
-      for (let i = 1; i < steps; i++) {
-        const t = i / steps;
-        const x = cam.x + dx * t;
-        const z = cam.z + dz * t;
-        const lineY = cam.y + dy * t;
-        const ground = this.world.heightAt(x, z);
-        if (ground > lineY + 0.35) return true;
+      for (const entry of this.staticNear(x, z, radius)) {
+        out.push({ ...entry.box, kind: entry.kind, physical: entry.physical, ref: entry.ref, id: entry.id });
       }
-      return false;
+      return out;
     }
+    // ------------------------------------------------------------
+    //  Части тела героя в мировых координатах
+    // ------------------------------------------------------------
+    playerParts(pos, yaw, crouch = 0) {
+      const cos = Math.cos(yaw);
+      const sin = Math.sin(yaw);
+      const out = this.partBuffer;
+      out.length = 0;
+      for (const p of PLAYER_PARTS) {
+        const lz = p.z || 0;
+        const wx = pos.x + p.x * cos + lz * sin;
+        const wz = pos.z - p.x * sin + lz * cos;
+        out.push({
+          id: p.id,
+          x: wx,
+          y: pos.y + p.y - crouch,
+          z: wz,
+          w: p.w,
+          h: p.h,
+          d: p.d,
+          yaw
+        });
+      }
+      return out;
+    }
+    worldParts(pos, yaw, crouch = 0) {
+      return this.playerParts(pos, yaw, crouch).map((p) => ({
+        ...boxOf(p.x, p.y - p.h / 2, p.z, p.w, p.h, p.d, yaw),
+        part: p.id
+      }));
+    }
+    // ------------------------------------------------------------
+    //  Столкновения: зазор между частями героя и чужими коробками
+    // ------------------------------------------------------------
     /**
-     * Обновить видимость всех отслеживаемых объектов.
-     * @param {number} dt
-     * @param {number} frame — номер кадра, для «круглого» обновления дальних объектов
+     * Вытолкнуть героя так, чтобы ни одна его часть не пересекалась
+     * с чужими хитбоксами. Возвращает число исправленных пересечений.
      */
-    /**
-     * Доля видимых точек объекта: 0 — закрыт целиком, 1 — виден весь.
-     * Девять лучей от камеры к центру и краям габарита дают грубую,
-     * но честную оценку «сколько модели реально видно из-за укрытия».
-     */
-    _coverage(cam, pos, radius, height) {
-      let seen = 0;
-      let total = 0;
-      const r = Math.max(0.35, radius * 0.8);
-      for (let i = 0; i < 9; i++) {
-        let px = pos.x;
-        let py = pos.y;
-        let pz = pos.z;
-        if (i > 0) {
-          const a = (i - 1) % 8 * (Math.PI / 4);
-          px += Math.cos(a) * r;
-          pz += Math.sin(a) * r;
-          py += (i % 2 === 0 ? 1 : -1) * height * 0.28;
-        }
-        total++;
-        const blocked = this._blockedByProps(cam, { x: px, y: py, z: pz }) || this._blockedByTerrain(cam, { x: px, y: py, z: pz });
-        if (!blocked) seen++;
-      }
-      return total ? seen / total : 1;
-    }
-    /** Спрятать части, которые полностью закрыты укрытием, оставив видимые */
-    _cullParts(object, item, cam) {
-      if (!item.hiddenParts) item.hiddenParts = [];
-      object.updateMatrixWorld(true);
-      const parts = [];
-      object.traverse((o) => {
-        if (o !== object && o.isMesh && o.userData.noCull !== true) parts.push(o);
-      });
-      for (const part2 of parts) {
-        if (this._wp === null) break;
-        part2.getWorldPosition(this._wp);
-        const geo = part2.geometry;
-        if (geo && !geo.boundingSphere) geo.computeBoundingSphere();
-        const rad = Math.max(0.18, (geo && geo.boundingSphere ? geo.boundingSphere.radius : 0.4) * 0.85);
-        const p = { x: this._wp.x, y: this._wp.y, z: this._wp.z };
-        const blocked = this._blockedByProps(cam, p) || this._blockedByTerrain(cam, p);
-        if (blocked && rad < 0.55) {
-          if (part2.visible) {
-            part2.visible = false;
-            item.hiddenParts.push(part2);
+    resolvePlayer(player, world, options = {}) {
+      var _a;
+      const { mobs = null, extraBoxes = [], iterations = 3 } = options;
+      const pos = player.position;
+      const velocity = player.velocity;
+      let fixed = 0;
+      for (let iter = 0; iter < iterations; iter++) {
+        const yaw = player.facing || 0;
+        const parts = this.playerParts(pos, yaw, 0);
+        let moved = false;
+        const boxes = this.boxes(pos.x, pos.z, 7);
+        for (const b of extraBoxes) boxes.push(b);
+        for (const b of boxes) {
+          if (!b.physical) continue;
+          let best = 0;
+          let bx = 0;
+          let bz = 0;
+          for (const part2 of parts) {
+            if (!Number.isFinite(part2.x) || !Number.isFinite(part2.z)) continue;
+            const pb = boxOf(part2.x, part2.y - part2.h / 2, part2.z, part2.w, part2.h, part2.d, yaw);
+            if (!overlap3(pb, b)) continue;
+            const overlapX = Math.min(pb.maxX, b.maxX) - Math.max(pb.minX, b.minX);
+            const overlapZ = Math.min(pb.maxZ, b.maxZ) - Math.max(pb.minZ, b.minZ);
+            if (overlapX <= 0 || overlapZ <= 0) continue;
+            const pen = Math.min(overlapX, overlapZ);
+            if (pen <= best) continue;
+            best = pen;
+            const signX = (pb.minX + pb.maxX) / 2 >= (b.minX + b.maxX) / 2 ? 1 : -1;
+            const signZ = (pb.minZ + pb.maxZ) / 2 >= (b.minZ + b.maxZ) / 2 ? 1 : -1;
+            bx = overlapX < overlapZ ? signX * (overlapX + 0.01) : 0;
+            bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.01);
           }
-        } else if (!part2.visible && item.hiddenParts.includes(part2)) {
-          part2.visible = true;
-          item.hiddenParts = item.hiddenParts.filter((x) => x !== part2);
-        }
-      }
-      item.culled = true;
-    }
-    /** Вернуть все ранее спрятанные части */
-    _restoreParts(item) {
-      if (!item.hiddenParts || !item.hiddenParts.length) {
-        item.culled = false;
-        return;
-      }
-      for (const part2 of item.hiddenParts) part2.visible = true;
-      item.hiddenParts.length = 0;
-      item.culled = false;
-    }
-    update(dt) {
-      const camera = this.camera;
-      camera.updateMatrixWorld();
-      camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
-      const cam = camera.position;
-      const tanY = Math.tan(camera.fov * Math.PI / 360);
-      const tanX = tanY * camera.aspect;
-      const maxDist = 120;
-      this.frame++;
-      let visible = 0;
-      let partial = 0;
-      let hides = 0;
-      let idx = 0;
-      for (const [object, item] of this.items) {
-        idx++;
-        if (!object.parent) continue;
-        const pos = item.getPos ? item.getPos() : object.position;
-        const dist = Math.hypot(pos.x - cam.x, pos.z - cam.z);
-        let shown = false;
-        if (dist < maxDist) {
-          this.sphere.center.set(pos.x, pos.y + item.height * 0.5, pos.z);
-          this.tmp.copy(this.sphere.center).project(camera);
-          const margin = item.radius + 0.6;
-          const rx = margin / (Math.max(dist, 0.6) * tanX);
-          const ry = margin / (Math.max(dist, 0.6) * tanY);
-          shown = this.tmp.z > -1 && this.tmp.z < 1 && Math.abs(this.tmp.x) < 1 + rx && Math.abs(this.tmp.y) < 1 + ry;
-          if (shown && dist > 3 && dist < 60) {
-            const aim = this.sphere.center;
-            if (this._blockedByProps(cam, aim) || this._blockedByTerrain(cam, aim)) shown = false;
-            if (shown && dist < 34) {
-              if (item.coverage === void 0 || (this.frame + idx) % 6 === 0) {
-                item.coverage = this._coverage(cam, aim, item.radius, item.height);
+          if (best > 0) {
+            pos.x += bx;
+            pos.z += bz;
+            if (velocity) {
+              const len = Math.hypot(bx, bz) || 1;
+              const nx = bx / len;
+              const nz = bz / len;
+              const into = velocity.x * nx + velocity.z * nz;
+              if (into < 0) {
+                velocity.x -= nx * into;
+                velocity.z -= nz * into;
               }
-              if (item.coverage <= 1e-3) {
-                shown = false;
-                hides++;
-              } else if (item.coverage < 0.999) {
-                partial++;
-              }
-            } else {
-              item.coverage = 1;
             }
-          } else {
-            item.coverage = 1;
+            fixed++;
+            moved = true;
           }
         }
-        item.last = { dist, shown };
-        if (shown) {
-          item.visibleFor = HYSTERESIS;
-          item.wasVisible = true;
-        } else if (item.visibleFor > 0) {
-          item.visibleFor -= dt;
-          item.wasVisible = true;
-        } else {
-          item.wasVisible = false;
-        }
-        if (object.visible !== item.wasVisible) object.visible = item.wasVisible;
-        if (item.wasVisible) {
-          visible++;
-          if (item.coverage !== void 0 && item.coverage < 0.999) {
-            if (dist < 30) this._cullParts(object, item, cam);
-          } else if (item.culled) {
-            this._restoreParts(item);
+        for (const c of this._colliderNear(world, pos.x, pos.z, 4)) {
+          if (c.disabled || c.soft) continue;
+          if (!Number.isFinite(c.x) || !Number.isFinite(c.z) || !Number.isFinite(c.r)) continue;
+          const groundY = world.heightAt(c.x, c.z);
+          const top = groundY + (c.height || 1.2);
+          let best = 0;
+          let nx = 0;
+          let nz = 0;
+          for (const part2 of parts) {
+            if (!Number.isFinite(part2.x) || !Number.isFinite(part2.z)) continue;
+            if (part2.y + part2.h / 2 < groundY - 0.1 || part2.y - part2.h / 2 > top) continue;
+            const r = Math.max(part2.w, part2.d) / 2;
+            const dx = part2.x - c.x;
+            const dz = part2.z - c.z;
+            const min = c.r + r;
+            const d2 = dx * dx + dz * dz;
+            if (d2 >= min * min) continue;
+            const d = Math.sqrt(d2);
+            const pen = min - (Number.isFinite(d) ? d : 0);
+            if (pen <= best) continue;
+            best = pen;
+            if (d > 1e-4) {
+              nx = dx / d;
+              nz = dz / d;
+            } else {
+              nx = 1;
+              nz = 0;
+            }
           }
-        } else if (item.culled) {
-          this._restoreParts(item);
+          if (best > 0) {
+            pos.x += nx * (best + 5e-3);
+            pos.z += nz * (best + 5e-3);
+            if (velocity) {
+              const into = velocity.x * nx + velocity.z * nz;
+              if (into < 0) {
+                velocity.x -= nx * into;
+                velocity.z -= nz * into;
+              }
+            }
+            fixed++;
+            moved = true;
+          }
+        }
+        if (mobs) {
+          for (const mob of mobs.list) {
+            if (!mob.alive) continue;
+            const hb = mob.hitboxSize || { w: 1, h: 1, d: 1 };
+            const mb = boxOf(mob.x, (mob.y || 0) + (((_a = mob.def) == null ? void 0 : _a.flying) ? 2.5 : 0), mob.z, hb.w, hb.h, hb.d, mob.facing || 0);
+            let best = 0;
+            let bx = 0;
+            let bz = 0;
+            for (const part2 of parts) {
+              const pb = boxOf(part2.x, part2.y - part2.h / 2, part2.z, part2.w, part2.h, part2.d, yaw);
+              if (!overlap3(pb, mb)) continue;
+              const overlapX = Math.min(pb.maxX, mb.maxX) - Math.max(pb.minX, mb.minX);
+              const overlapZ = Math.min(pb.maxZ, mb.maxZ) - Math.max(pb.minZ, mb.minZ);
+              if (overlapX <= 0 || overlapZ <= 0) continue;
+              const pen = Math.min(overlapX, overlapZ);
+              if (pen <= best) continue;
+              best = pen;
+              const signX = (pb.minX + pb.maxX) / 2 >= (mb.minX + mb.maxX) / 2 ? 1 : -1;
+              const signZ = (pb.minZ + pb.maxZ) / 2 >= (mb.minZ + mb.maxZ) / 2 ? 1 : -1;
+              bx = overlapX < overlapZ ? signX * (overlapX + 0.02) : 0;
+              bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.02);
+            }
+            if (best > 0) {
+              pos.x += bx;
+              pos.z += bz;
+              if (velocity) {
+                velocity.x *= 0.3;
+                velocity.z *= 0.3;
+              }
+              fixed++;
+              moved = true;
+            }
+          }
+        }
+        if (!moved) break;
+      }
+      this.lastPushes = fixed;
+      return fixed;
+    }
+    /** Вытолкнуть героя из чужой коробки по наименьшей оси */
+    _pushOut(pos, velocity, pb, b, pad = 0) {
+      const overlapX = Math.min(pb.maxX, b.maxX) - Math.max(pb.minX, b.minX);
+      const overlapZ = Math.min(pb.maxZ, b.maxZ) - Math.max(pb.minZ, b.minZ);
+      if (overlapX <= 0 || overlapZ <= 0) return false;
+      const bx = (b.minX + b.maxX) / 2;
+      const bz = (b.minZ + b.maxZ) / 2;
+      const px = (pb.minX + pb.maxX) / 2;
+      const pz = (pb.minZ + pb.maxZ) / 2;
+      if (overlapX < overlapZ) {
+        const sign = px >= bx ? 1 : -1;
+        const push = overlapX + pad;
+        pos.x += sign * push;
+        if (velocity && Math.sign(velocity.x) === -sign) velocity.x *= 0.1;
+      } else {
+        const sign = pz >= bz ? 1 : -1;
+        const push = overlapZ + pad;
+        pos.z += sign * push;
+        if (velocity && Math.sign(velocity.z) === -sign) velocity.z *= 0.1;
+      }
+      return true;
+    }
+    // ------------------------------------------------------------
+    //  Прицел по хитбоксам
+    // ------------------------------------------------------------
+    /**
+     * Ближайшая коробка под лучом.
+     * Возвращает { kind, ref, dist, box, id } или null.
+     */
+    raycast(origin, dir, maxDist = 8) {
+      let best = null;
+      const consider = (entry, box2) => {
+        if (entry.skipAim) return;
+        const t = rayBox(origin, dir, box2, maxDist);
+        if (t === null) return;
+        if (!best || t < best.dist) {
+          best = { kind: entry.kind, ref: entry.ref, dist: t, box: box2, id: entry.id };
+        }
+      };
+      for (const entry of this.registry.values()) {
+        let b;
+        try {
+          b = entry.box();
+        } catch (err) {
+          continue;
+        }
+        if (!b) continue;
+        consider(entry, boxOf(b.x, b.y, b.z, b.w, b.h, b.d, b.yaw || 0));
+      }
+      const seen = /* @__PURE__ */ new Set();
+      const step = this.gridCell * 0.9;
+      for (let d = 0; d <= maxDist + step; d += step) {
+        const px = origin.x + dir.x * d;
+        const pz = origin.z + dir.z * d;
+        for (const entry of this.staticNear(px, pz, step)) {
+          if (seen.has(entry.id)) continue;
+          seen.add(entry.id);
+          consider(entry, entry.box);
         }
       }
-      this.stats.total = this.items.size;
-      this.stats.visible = visible;
-      this.stats.partial = partial;
-      this.stats.hides = hides;
+      return best;
+    }
+    // ------------------------------------------------------------
+    //  Отладка: показать все коробки (F3 → F)
+    // ------------------------------------------------------------
+    setDebug(show) {
+      this.debug = !!show;
+      this.debugGroup.visible = this.debug;
+      return this.debug;
+    }
+    updateDebug(player) {
+      if (!this.debug) return;
+      let id = 0;
+      const parts = this.playerParts(player.position, player.facing || 0, 0);
+      const color = KIND_COLOR.player;
+      for (const part2 of parts) {
+        this._drawBox(id++, boxOf(part2.x, part2.y - part2.h / 2, part2.z, part2.w, part2.h, part2.d, part2.yaw), color, part2.id);
+      }
+      for (const entry of this.registry.values()) {
+        let b;
+        try {
+          b = entry.box();
+        } catch (err) {
+          continue;
+        }
+        if (!b) continue;
+        this._drawBox(id++, boxOf(b.x, b.y, b.z, b.w, b.h, b.d, b.yaw || 0), KIND_COLOR[entry.kind] || 16777215, "");
+      }
+      for (const entry of this.staticNear(player.position.x, player.position.z, 16)) {
+        this._drawBox(id++, entry.box, KIND_COLOR[entry.kind] || 16777215, "");
+      }
+      for (const [key, mesh2] of this.debugMeshes) {
+        if (key >= id) {
+          this.debugGroup.remove(mesh2);
+          this.debugMeshes.delete(key);
+        }
+      }
+    }
+    _drawBox(index, box2, color, label) {
+      let mesh2 = this.debugMeshes.get(index);
+      const w = Math.max(0.02, box2.maxX - box2.minX);
+      const h = Math.max(0.02, box2.maxY - box2.minY);
+      const d = Math.max(0.02, box2.maxZ - box2.minZ);
+      if (!mesh2) {
+        const geo = new EdgesGeometry(this._wireGeo);
+        mesh2 = new LineSegments(geo, this._wireMat.clone());
+        mesh2.frustumCulled = false;
+        mesh2.renderOrder = 9999;
+        mesh2.userData.label = label;
+        this.debugGroup.add(mesh2);
+        this.debugMeshes.set(index, mesh2);
+      }
+      mesh2.material.color.setHex(color);
+      mesh2.position.set((box2.minX + box2.maxX) / 2, (box2.minY + box2.maxY) / 2, (box2.minZ + box2.maxZ) / 2);
+      mesh2.scale.set(w, h, d);
+    }
+    _dropDebug(id) {
+      void id;
+    }
+    clearDebug() {
+      for (const mesh2 of this.debugMeshes.values()) this.debugGroup.remove(mesh2);
+      this.debugMeshes.clear();
+    }
+    stats() {
+      return {
+        models: this.registry.size + this.staticBoxes.length,
+        dynamic: this.registry.size,
+        static: this.staticBoxes.length,
+        parts: PLAYER_PARTS.length,
+        pushes: this.lastPushes
+      };
     }
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-25 15:46" : "dev";
+  var BUILD = true ? "2026-10-25 16:37" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -35981,16 +36256,11 @@ void main() {
       this.scene.add(this.mineLight);
       this.projectiles = [];
       this.chips = [];
-      this.culler = new VisibilityCuller(this.world, this.camera);
-      for (const mob of this.mobs.list) {
-        this.culler.track(mob.group, {
-          radius: mob.def.radius + 0.6,
-          height: mob.def.hitbox.h,
-          getPos: () => ({ x: mob.x, y: mob.y || 0, z: mob.z })
-        });
-      }
-      this.trackedPickups = /* @__PURE__ */ new Set();
-      this.syncCuller();
+      this.hitboxes = new HitboxSystem(this.scene, this.player);
+      this.hitboxIds = { mobs: /* @__PURE__ */ new Map(), nodes: /* @__PURE__ */ new Map(), pickups: /* @__PURE__ */ new Map() };
+      this.registerStaticHitboxes();
+      this.registerMobHitboxes();
+      this.syncPickupHitboxes();
       this.state = {
         health: 100,
         thirst: 78,
@@ -36041,6 +36311,72 @@ void main() {
       this.refreshHotbar();
       this.ui.renderBag(this.state.inventory, this.state.hotbar);
       this.renderer.setAnimationLoop(() => this.frame());
+    }
+    // ------------------------------------------------------------
+    //  Хитбоксы всех моделей мира
+    // ------------------------------------------------------------
+    /** Деревья, камни, кусты, костры, родники, станки, входы в шахту */
+    registerStaticHitboxes() {
+      for (const node of this.resources.nodes) {
+        const h = node.type === "tree" || node.type === "palm" ? 5.2 : node.type === "rock" ? 1.5 : 1.1;
+        const w = node.type === "rock" ? 1.6 : node.type === "bush" ? 1.5 : 0.9;
+        const id = this.hitboxes.registerStatic(
+          node.type === "tree" || node.type === "palm" ? "tree" : node.type,
+          { x: node.x, y: node.y, z: node.z, w, h, d: w },
+          { physical: false, ref: node, enabled: () => node.alive }
+        );
+        this.hitboxIds.nodes.set(node, id);
+      }
+      for (const fire of this.resources.campfires) {
+        this.hitboxes.registerStatic("fire", { x: fire.x, y: fire.y, z: fire.z, w: 1.2, h: 0.9, d: 1.2 }, { ref: fire, physical: false });
+      }
+      for (const spring of this.resources.springs) {
+        this.hitboxes.registerStatic("spring", { x: spring.x, y: spring.y, z: spring.z, w: 3.2, h: 0.4, d: 3.2 }, { ref: spring, physical: false });
+      }
+      for (const st of this.stations) {
+        st.hitboxId = this.hitboxes.registerStatic("station", { x: st.x, y: st.y, z: st.z, w: 1.5, h: 1.15, d: 0.9 }, { ref: st, physical: true });
+      }
+      for (const e of this.mine.entrances) {
+        this.hitboxes.registerStatic("mine", { x: e.x, y: e.y, z: e.z, w: 4.2, h: 3, d: 4.2 }, { ref: e, physical: false });
+      }
+    }
+    /** У каждого зверя — своя коробка, отдельная от остальных */
+    registerMobHitboxes() {
+      for (const mob of this.mobs.list) {
+        const hb = mob.hitboxSize || mob.def.hitbox;
+        const id = this.hitboxes.register("mob", () => {
+          if (!mob.alive) return null;
+          return {
+            x: mob.x,
+            y: (mob.y || 0) + (mob.def.flying ? mob.flyY || 0 : 0),
+            z: mob.z,
+            w: hb.w,
+            h: hb.h,
+            d: hb.d,
+            yaw: mob.facing || 0
+          };
+        }, { physical: true, ref: mob });
+        this.hitboxIds.mobs.set(mob, id);
+      }
+    }
+    /** Хитбоксы лежащих на земле предметов */
+    syncPickupHitboxes() {
+      for (const p of this.world.pickups) {
+        if (this.hitboxIds.pickups.has(p)) continue;
+        const pos = p.mesh.position;
+        const id = this.hitboxes.registerStatic(
+          "pickup",
+          { x: pos.x, y: pos.y, z: pos.z, w: 0.5, h: 0.5, d: 0.5 },
+          { physical: false, ref: p, enabled: () => !!(p.mesh && p.mesh.parent) }
+        );
+        this.hitboxIds.pickups.set(p, id);
+      }
+      for (const [p, id] of this.hitboxIds.pickups) {
+        if (!this.world.pickups.includes(p)) {
+          this.hitboxes.unregister(id);
+          this.hitboxIds.pickups.delete(p);
+        }
+      }
     }
     // ------------------------------------------------------------
     //  Старт
@@ -36309,7 +36645,9 @@ void main() {
           if (this.debugArmed) {
             this.debugArmed = false;
             const on = this.mobs.toggleHitboxes();
-            this.ui.toast(on ? "\u0425\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u044B (F3 \u2192 F)" : "\u0425\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B");
+            this.hitboxes.setDebug(on);
+            if (!on) this.hitboxes.clearDebug();
+            this.ui.toast(on ? `\u0425\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u044B: ${this.hitboxes.stats().models} \u043C\u043E\u0434\u0435\u043B\u0435\u0439, ${this.hitboxes.stats().parts} \u0447\u0430\u0441\u0442\u0435\u0439 \u0442\u0435\u043B\u0430` : "\u0425\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B");
             this.audio.uiClick();
           } else {
             this.placeSelected();
@@ -36541,6 +36879,11 @@ void main() {
       const station = { type, x, y: h, z, group };
       this.stations.push(station);
       this.world.colliders.push({ x, z, r: 0.95, height: 1.1, kind: "station" });
+      station.hitboxId = this.hitboxes.registerStatic(
+        "station",
+        { x: station.x, y: station.y, z: station.z, w: 1.5, h: 1.15, d: 0.9 },
+        { physical: true, ref: station }
+      );
       (_b = (_a = this.audio).craft) == null ? void 0 : _b.call(_a);
       this.ui.toast(`${ITEMS[id].name} \u043F\u043E\u0441\u0442\u0430\u0432\u043B\u0435\u043D \xB7 E \u2014 \u0440\u0430\u0431\u043E\u0442\u0430\u0442\u044C`);
       if (this.equippedId() === id && (this.state.inventory[id] || 0) === 0) this.player.setEquipped(null);
@@ -36664,9 +37007,8 @@ void main() {
       const t = -b - Math.sqrt(disc);
       return t > 0.15 ? t : null;
     }
-    /** Пересчитать цель под прицелом (раз в кадр) */
+    /** Пересчитать цель под прицелом: луч идёт по хитбоксам моделей */
     computeAim() {
-      var _a, _b;
       const cam = this.camera;
       cam.updateMatrixWorld();
       const dir = new Vector3();
@@ -36674,56 +37016,54 @@ void main() {
       const origin = cam.position.clone();
       const reach = 6.5;
       const aim = { dir, origin, target: null, t: reach, entrance: null };
-      const push = (kind, t, data) => {
-        if (t === null || t > reach || t >= aim.t) return;
-        aim.t = t;
-        aim.target = { kind, t, ...data };
+      const apply = (kind, dist, data) => {
+        if (dist === null || dist === void 0 || dist > reach || dist >= aim.t) return;
+        aim.t = dist;
+        aim.target = { kind, t: dist, ...data };
       };
       if (this.underground) {
         const probe = this.mine.probe(origin, dir.x, dir.z, Math.min(reach, 4.2));
-        if (probe) push("minewall", probe.dist, { probe });
+        if (probe) apply("minewall", probe.dist, { probe });
         const lvl = this.mine.level;
         if (lvl && lvl.lightPos) {
-          const t = this._raySphere(origin, dir, { x: lvl.lightPos.x, y: lvl.y + 1.4, z: lvl.lightPos.z }, 1.5);
-          push("ladder", t, { ladder: lvl.lightPos });
+          const t = this._raySphere(origin, dir, { x: lvl.lightPos.x, y: lvl.y + 1.4, z: lvl.lightPos.z }, 1.2);
+          apply("ladder", t, { ladder: lvl.lightPos });
         }
         aim.underground = true;
         this.aim = aim;
         return aim;
       }
-      for (const e of this.mine.entrances) {
-        const t = this._raySphere(origin, dir, { x: e.x, y: e.y + 1.2, z: e.z }, 2.3);
-        if (t !== null && t < aim.t) {
-          aim.t = t;
-          aim.target = { kind: "entrance", t, entrance: e };
-          aim.entrance = e;
+      const hit = this.hitboxes.raycast(origin, dir, reach);
+      if (hit) {
+        switch (hit.kind) {
+          case "mob":
+            apply("mob", hit.dist, { mob: hit.ref });
+            break;
+          case "tree":
+          case "palm":
+          case "rock":
+          case "bush":
+            apply("node", hit.dist, { node: hit.ref });
+            break;
+          case "station":
+            apply("station", hit.dist, { station: hit.ref });
+            break;
+          case "fire":
+            apply("campfire", hit.dist, { fire: hit.ref });
+            break;
+          case "spring":
+            apply("spring", hit.dist, { spring: hit.ref });
+            break;
+          case "mine":
+            apply("entrance", hit.dist, { entrance: hit.ref });
+            aim.entrance = hit.ref;
+            break;
+          case "pickup":
+            apply("pickup", hit.dist, { pickup: hit.ref });
+            break;
+          default:
+            break;
         }
-      }
-      for (const m of this.mobs.list) {
-        if (!m.alive) continue;
-        const r = Math.max(0.7, (((_a = m.def.hitbox) == null ? void 0 : _a.r) || 0.8) + 0.35);
-        const t = this._raySphere(origin, dir, { x: m.x, y: (m.y || 0) + (((_b = m.def.hitbox) == null ? void 0 : _b.h) || 1.2) * 0.5, z: m.z }, r);
-        push("mob", t, { mob: m });
-      }
-      for (const node of this.resources.nodes) {
-        if (!node.alive) continue;
-        const h = node.type === "tree" || node.type === "palm" ? 1.9 : node.type === "rock" ? 0.75 : 0.65;
-        const r = node.type === "tree" || node.type === "palm" ? 1.15 : 0.95;
-        const t = this._raySphere(origin, dir, { x: node.x, y: node.y + h, z: node.z }, r);
-        push("node", t, { node });
-      }
-      for (const fire of this.resources.campfires) {
-        push("campfire", this._raySphere(origin, dir, { x: fire.x, y: fire.y + 0.5, z: fire.z }, 1), { fire });
-      }
-      for (const sp of this.resources.springs) {
-        push("spring", this._raySphere(origin, dir, { x: sp.x, y: sp.y + 0.35, z: sp.z }, 1.5), { spring: sp });
-      }
-      for (const st of this.stations) {
-        push("station", this._raySphere(origin, dir, { x: st.x, y: st.y + 0.8, z: st.z }, 1.1), { station: st });
-      }
-      for (const p of this.world.pickups) {
-        const pos = p.mesh.position;
-        push("pickup", this._raySphere(origin, dir, { x: pos.x, y: pos.y + 0.15, z: pos.z }, 0.55), { pickup: p });
       }
       this.aim = aim;
       return aim;
@@ -37265,6 +37605,7 @@ void main() {
       this.takeItem("campfireKit", 1);
       const fire = this.resources.addCampfire(x, z);
       this.resources.addFuel(fire, 90);
+      this.hitboxes.registerStatic("fire", { x: fire.x, y: fire.y, z: fire.z, w: 1.2, h: 0.9, d: 1.2 }, { ref: fire, physical: false });
       this.audio.pickup();
       this.ui.toast("\u041A\u043E\u0441\u0442\u0451\u0440 \u0433\u043E\u0440\u0438\u0442 \xB7 E \u2014 \u043F\u043E\u0434\u043B\u043E\u0436\u0438\u0442\u044C \u043F\u0430\u043B\u043A\u0438");
       if (this.equippedId() === "campfireKit" && (this.state.inventory.campfireKit || 0) === 0) {
@@ -37353,6 +37694,7 @@ void main() {
       if (!this.underground) {
         this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
       }
+      this.hitboxes.resolvePlayer(this.player, this.mineWorld, { mobs: this.mobs });
       this.player.applyCamera(this.camera, this.mineWorld, dt);
       this.computeAim();
       this.updateWeather(dt);
@@ -37376,6 +37718,7 @@ void main() {
         this.scene.fog.far = 26;
       }
       this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
+      if (this.hitboxes.debug) this.hitboxes.updateDebug(this.player);
       this.updateFireflies(dt, skyInfo.night);
       this.thoughtTimer -= dt;
       if (this.thoughtTimer <= 0) {
@@ -37421,11 +37764,9 @@ void main() {
         if (wheel) wheel.rotation.x += dt * 0.4;
       }
       this.resources.update(dt);
-      if (this.frameIndex % 30 === 0) this.syncCuller();
-      this.culler.update(dt);
+      if (this.frameIndex % 30 === 0) this.syncPickupHitboxes();
       this.mobs.update(dt, this.player, {
         audio: this.audio,
-        culler: this.culler,
         night: skyInfo.night,
         listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
         onHit: (dmg2, cause2) => this.takeDamage(dmg2, cause2),
@@ -37607,21 +37948,19 @@ void main() {
           }
         });
         this.scene.add(group);
-        this.stations.push({ type: st.type, x: st.x, y: h, z: st.z, group });
+        const station = { type: st.type, x: st.x, y: h, z: st.z, group };
+        this.stations.push(station);
+        station.hitboxId = this.hitboxes.registerStatic(
+          "station",
+          { x: station.x, y: station.y, z: station.z, w: 1.5, h: 1.15, d: 0.9 },
+          { physical: true, ref: station }
+        );
       }
       this.player.applyCamera(this.camera, this.world, 1);
       this.refreshHotbar();
       this.ui.renderBag(this.state.inventory, this.state.hotbar);
       this.player.setEquipped(this.equippedId());
       this.ui.toast(`\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E: \u0434\u0435\u043D\u044C ${this.sky.day}, ${this.sky.clockString()}`);
-    }
-    /** Новые предметы на земле тоже попадают под отсечку видимости */
-    syncCuller() {
-      for (const p of this.world.pickups) {
-        if (this.trackedPickups.has(p.mesh)) continue;
-        this.trackedPickups.add(p.mesh);
-        this.culler.track(p.mesh, { radius: 0.5, height: 0.6 });
-      }
     }
     /**
      * Панели (сумка/крафт) требуют свободного курсора: отпускаем pointer lock,
