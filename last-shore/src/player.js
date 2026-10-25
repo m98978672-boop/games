@@ -5,6 +5,8 @@
 import * as THREE from 'three';
 import { CONFIG, COLORS } from './config.js';
 import { clamp } from './noise.js';
+import { ITEMS } from './items.js';
+import { buildModel as buildForgedModel, animateForged } from './forge.js';
 
 const P = CONFIG.player;
 
@@ -294,6 +296,14 @@ export class Player {
 
   /** Меш инструмента: палка + наконечник/лезвие + огонь у факела */
   buildItemMesh(itemId) {
+    const def = ITEMS[itemId];
+    // кованый предмет рисуется своей процедурной моделью
+    if (def && def.forged) {
+      const model = buildForgedModel(def);
+      model.scale.setScalar(def.form === 'spear' ? 0.8 : 1.05);
+      return model;
+    }
+
     const group = new THREE.Group();
     const woodMat = new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.95, flatShading: true });
     const stoneMat = new THREE.MeshStandardMaterial({ color: 0xb9c0c8, roughness: 0.55, flatShading: true });
@@ -386,6 +396,9 @@ export class Player {
 
   setPosition(x, z, world) {
     this.position.set(x, world.heightAt(x, z), z);
+    // мерцание камня в кованом клинке — модель «живая», а не статуя
+    if (this.equippedMesh) animateForged(this.equippedMesh, performance.now() * 0.001);
+
     this.model.position.copy(this.position);
   }
 
@@ -425,9 +438,11 @@ export class Player {
     else this.stamina = Math.min(100, this.stamina + (moving ? CONFIG.needs.staminaRegen : CONFIG.needs.staminaRegenRest) * dt);
 
     // --- глубина воды под ногами ---
+    // под землёй воды нет: там своя физика — клетки, стены и лава
+    const underground = !!world.underground;
     const groundHere = world.heightAt(this.position.x, this.position.z);
-    this.wading = clamp(-groundHere / 1.1, 0, 1);
-    const inWater = groundHere < 0.05;
+    this.wading = underground ? 0 : clamp(-groundHere / 1.1, 0, 1);
+    const inWater = !underground && groundHere < 0.05;
 
     let speed = sprinting ? P.sprintSpeed : P.walkSpeed;
     if (inWater) speed = THREE.MathUtils.lerp(speed, P.wadeSpeed, this.wading);
@@ -444,6 +459,7 @@ export class Player {
     const nz = this.position.z + this.velocity.z * dt;
 
     const tryMove = (x, z) => {
+      if (underground) return true;        // стены шахты отсекает resolveCollisions
       if (Math.abs(x) > CONFIG.world.size * 0.75 || Math.abs(z) > CONFIG.world.size * 0.75) return false;
       const h = world.heightAt(x, z);
       if (h < -P.maxDepth) return false;   // слишком глубоко
@@ -460,7 +476,7 @@ export class Player {
 
     // --- вертикаль: прилипание к рельефу + прыжок ---
     const ground = world.heightAt(this.position.x, this.position.z);
-    const floor = Math.max(ground, CONFIG.world.seaLevel - 0.9);
+    const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
 
     if (input.jump && this.grounded) {
       this.velocity.y = P.jumpSpeed;
@@ -482,7 +498,7 @@ export class Player {
       if (floor - this.position.y < -0.6) this.grounded = false;
     }
 
-    this.swimming = ground < -0.6;
+    this.swimming = !underground && ground < -0.6;
 
     // --- модель: поворот в сторону движения и анимация ---
     const hspeed = Math.hypot(this.velocity.x, this.velocity.z);

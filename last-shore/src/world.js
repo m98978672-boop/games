@@ -430,7 +430,9 @@ export class World {
       if (h < 0.6 || h > 26) continue;
       if (slope < 0.35 && rng() > 0.25) continue;
       const s = 0.45 + rng() * 1.5;
-      pushOne(rocks, x, z, h, { s });
+      // руда на поверхности — редкость: основная добыча будет под землёй
+      const ore = s > 0.8 && rng() < 0.07;
+      pushOne(rocks, x, z, h, { s, ore, kind: ore ? 'ore' : 'stone' });
       if (s > 0.8 && rng() < 0.85) this.colliders.push({ x, z, r: s * 0.8, height: s * 1.1, kind: 'rock' });
       if (rocks.length >= 520) break;
     }
@@ -493,7 +495,7 @@ export class World {
      * Каждый объект может состоять из нескольких мешей (ствол + крона),
      * их ссылки хранятся в item.parts — так дерево можно спрятать целиком.
      */
-    const buildInstances = (variants, list, { castShadow = true } = {}) => {
+    const buildInstances = (variants, list, { castShadow = true, variantOf = null } = {}) => {
       const meshes = [];
       if (!list.length) return meshes;
       const groups = variants.length;
@@ -502,7 +504,10 @@ export class World {
       for (let v = 0; v < groups; v++) {
         const variant = variants[v];
         const items = [];
-        for (let i = v; i < list.length; i += groups) items.push(list[i]);
+        list.forEach((it, i) => {
+          const want = variantOf ? variantOf(it, i) : i % groups;
+          if (want === v) items.push(it);
+        });
         if (!items.length) continue;
 
         for (const [layer, geo] of Object.entries(variant)) {
@@ -552,7 +557,6 @@ export class World {
       makeRockParts(rng, 'boulder'),
       makeRockParts(rng, 'slab'),
       makeRockParts(rng, 'ore'),
-      makeRockParts(rng, 'boulder'),
     ];
 
     this.stats = {
@@ -568,7 +572,10 @@ export class World {
     this.palms = buildInstances(palmVariants, palms);
     this.trees = buildInstances(treeVariants, trees);
     this.bushes = buildInstances(bushVariants, bushes);
-    this.rocks = buildInstances(rockVariants, rocks);
+    // валуны чередуются, а рудный вариант достаётся только рудным камням
+    this.rocks = buildInstances(rockVariants, rocks, {
+      variantOf: (it, i) => (it.ore ? 2 : i % 2 === 0 ? 0 : 1),
+    });
 
     // трава: пучок из нескольких «перьев», качается сильнее всех
     const blades = [];

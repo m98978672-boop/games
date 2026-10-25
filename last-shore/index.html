@@ -53,7 +53,7 @@
 
     <div class="prompt hidden" id="prompt"></div>
     <div class="toasts" id="toasts"></div>
-    <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар · ПКМ — применить · колесо — слот · E — действие · C — крафт · I — сумка · F — костёр</div>
+    <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар по прицелу · ПКМ — применить · E — действие по прицелу · R — вниз в шахте · C — крафт · I — сумка · F — поставить</div>
   </div>
 
   <!-- ======================= Сумка ======================= -->
@@ -75,13 +75,20 @@
     <p class="panel-note">C или Esc — закрыть</p>
   </div>
 
+  <!-- ======================= Верстак / точило ======================= -->
+  <div id="workshop" class="panel panel-right hidden">
+    <h2 id="ws-title">Верстак</h2>
+    <div id="ws-body"></div>
+    <p class="panel-note">Esc — закрыть</p>
+  </div>
+
   <!-- ======================= Стартовый экран ======================= -->
   <div id="start" class="overlay">
     <div class="overlay-inner">
       <h1>LAST SHORE<span class="sub">Последний берег</span></h1>
       <p class="tagline">Ты очнулся на пустом берегу. Корабль разбит, связи нет, карты нет.<br>
         Найди воду и еду, сделай нож и топор, разведи огонь — и решай, как отсюда выбраться.<br>
-        <span class="tagline-dim">Сейчас в игре: остров, сутки и ночь, вода и еда, добыча, крафт и костёр.</span></p>
+        <span class="tagline-dim">Сейчас в игре: остров, сутки и ночь, вода и еда, добыча по прицелу, шахта с двумя слоями, верстак с ковкой и заточкой, звери и костёр.</span></p>
 
       <div class="controls-grid">
         <div><b>W A S D</b><span>идти</span></div>
@@ -94,7 +101,9 @@
         <div><b>1…0</b><span>слоты</span></div>
         <div><b>C</b><span>крафт</span></div>
         <div><b>I</b><span>сумка</span></div>
-        <div><b>F</b><span>ставить костёр</span></div>
+        <div><b>F</b><span>костёр / верстак</span></div>
+        <div><b>E</b><span>шахта, станки</span></div>
+        <div><b>R</b><span>вниз, к магме</span></div>
       </div>
 
       <div class="btn-row">

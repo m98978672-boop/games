@@ -58,7 +58,7 @@ export function createTerrainMaterial(textures) {
       .replace(
         '#include <map_fragment>',
         `
-         vec2 uvNear = vWPos.xz * 0.62;
+         vec2 uvNear = vWPos.xz * 0.9;
          vec2 uvFar = vWPos.xz * 0.085;
          vec2 uvA = warpUV(uvNear, 1.0);
          vec2 uvB = warpUV(uvFar, 2.0);
@@ -88,11 +88,13 @@ export function createTerrainMaterial(textures) {
 
          // относительная яркость текстуры вокруг её среднего (0.55), сжатая в безопасный диапазон
          float rel = texLum / 0.55;
-         rel = clamp(mix(1.0, rel, 1.45), 0.45, 1.75);
+         // текстура должна читаться под ногами: контраст и вклад выше,
+         // но без выкручивания в белое/чёрное
+         rel = clamp(mix(1.0, rel, 2.35), 0.34, 1.95);
 
          // оттенок текстуры подмешиваем лишь частично, чтобы не сбить палитру биома
          vec3 hueTex = mixTex / max(texLum, 0.03);
-         vec3 hue = mix(vec3(1.0), hueTex, 0.4);
+         vec3 hue = mix(vec3(1.0), hueTex, 0.58);
 
          // крупная пятнистость: трава и песок «дышат» пятнами
          float macroMod = mix(0.9, 1.1, macro);
@@ -101,7 +103,7 @@ export function createTerrainMaterial(textures) {
 
          // псевдо-рельеф: высокочастотная карта чуть подсвечивает грани
          float hi = texture2D(uGrass, uvA * 3.1).r - 0.5;
-         diffuseColor.rgb *= 1.0 + hi * 0.16;
+         diffuseColor.rgb *= 1.0 + hi * 0.3;
 
          // мокрый песок у воды темнее и холоднее
          float wet = 1.0 - smoothstep(0.25, 1.1, vWPos.y);

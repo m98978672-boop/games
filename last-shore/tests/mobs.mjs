@@ -26,6 +26,17 @@ const game = window.__game;
 if (!game) throw new Error('game not created');
 const log = (...a) => console.log(...a);
 
+/** Навести прицел: камера в глазах героя смотрит на точку — так же, как в игре */
+function aimAt(x, y, z) {
+  const p = game.player.position;
+  game.camera.position.set(p.x, p.y + 1.55, p.z);
+  game.camera.lookAt(x, y, z);
+  game.camera.updateMatrixWorld(true);
+  game.computeAim();
+  return game.aim;
+}
+
+
 log('зверей в мире:', game.mobs.list.length,
   '· видов:', new Set(game.mobs.list.map((m) => m.type)).size);
 log('предметов:', Object.keys(game.ui.items).length,
@@ -39,6 +50,7 @@ game.player.facing = Math.atan2(boar.x - game.player.position.x, boar.z - game.p
 game.state.inventory.spear = 1;
 game.assignHotbar('spear', 4);
 game.selectSlot(4);
+aimAt(boar.x, (boar.y || 0) + 0.7, boar.z);
 const hpBefore = boar.hp;
 game.attack();
 log('удар копьём: hp', hpBefore, '->', boar.hp, '· урон:', hpBefore - boar.hp);
@@ -47,6 +59,7 @@ log('удар копьём: hp', hpBefore, '->', boar.hp, '· урон:', hpBefo
 let killed = false;
 for (let i = 0; i < 12 && !killed; i++) {
   game.attackCooldown = 0;
+  aimAt(boar.x, (boar.y || 0) + 0.7, boar.z);
   game.attack();
   killed = !boar.alive;
 }
@@ -155,6 +168,7 @@ log('объектов под отсечкой:', culler.items.size);
 const bushNode = game.resources.nodes.find((n) => n.type === 'bush' && n.berries);
 game.player.setPosition(bushNode.x + 1.3, bushNode.z, game.world);
 const berriesBefore = game.state.inventory.berries || 0;
+aimAt(bushNode.x, bushNode.y + 0.65, bushNode.z);
 game.interact();
 log('сбор ягод: ягод', berriesBefore, '->', game.state.inventory.berries || 0,
   '· куст цел:', bushNode.alive, '· повторно нельзя:', !game.resources.canPickBerries(bushNode));
@@ -199,6 +213,7 @@ game.selectSlot(0);
 const treeNode = game.resources.nodes.find((n) => n.type === 'tree');
 game.player.setPosition(treeNode.x + 2, treeNode.z, game.world);
 game.attackCooldown = 0;
+aimAt(treeNode.x, treeNode.y + 1.9, treeNode.z);
 game.attack();
 const chopKind = game.player.actionKind;
 const chipsAfterChop = game.chips.length;
@@ -208,6 +223,7 @@ game.selectSlot(1);
 const rockNode = game.resources.nodes.find((n) => n.type === 'rock');
 game.player.setPosition(rockNode.x + 2, rockNode.z, game.world);
 game.attackCooldown = 0;
+aimAt(rockNode.x, rockNode.y + 0.75, rockNode.z);
 game.attack();
 log('виды удара: рубка =', chopKind, '· кирка =', game.player.actionKind,
   '· щепки летят:', chipsAfterChop > 0);
