@@ -19,7 +19,7 @@ import {
   effectiveTool, effectiveWeapon, registerForged,
   buildWorkbench, buildGrindstone, buildModel as buildForgedModel,
 } from './forge.js';
-import { VisibilityCuller } from './visibility.js';
+import { HitboxSystem } from './hitboxes.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 import { createTextures } from './textures.js';
 
@@ -151,17 +151,14 @@ class Game {
     this.projectiles = [];
     this.chips = [];            // щепки, крошка и ягоды — короткие частицы
 
-    // всё, что может быть спрятано за деревом/камнем/кустом
-    this.culler = new VisibilityCuller(this.world, this.camera);
-    for (const mob of this.mobs.list) {
-      this.culler.track(mob.group, {
-        radius: mob.def.radius + 0.6,
-        height: mob.def.hitbox.h,
-        getPos: () => ({ x: mob.x, y: mob.y || 0, z: mob.z }),
-      });
-    }
-    this.trackedPickups = new Set();
-    this.syncCuller();
+    // ---- хитбоксы: у каждой модели своя невидимая коробка ----
+    // Ничего не прячем и не «догружаем»: модели всегда на месте,
+    // зато у каждой есть своя коробка — и у героя по частям тела.
+    this.hitboxes = new HitboxSystem(this.scene, this.player);
+    this.hitboxIds = { mobs: new Map(), nodes: new Map(), pickups: new Map() };
+    this.registerStaticHitboxes();
+    this.registerMobHitboxes();
+    this.syncPickupHitboxes();
 
     this.state = {
       health: 100,
@@ -219,6 +216,75 @@ class Game {
     this.ui.renderBag(this.state.inventory, this.state.hotbar);
 
     this.renderer.setAnimationLoop(() => this.frame());
+  }
+
+  // ------------------------------------------------------------
+  //  Хитбоксы всех моделей мира
+  // ------------------------------------------------------------
+
+  /** Деревья, камни, кусты, костры, родники, станки, входы в шахту */
+  registerStaticHitboxes() {
+    for (const node of this.resources.nodes) {
+      const h = node.type === 'tree' || node.type === 'palm' ? 5.2 : node.type === 'rock' ? 1.5 : 1.1;
+      const w = node.type === 'rock' ? 1.6 : node.type === 'bush' ? 1.5 : 0.9;
+      const id = this.hitboxes.registerStatic(
+        node.type === 'tree' || node.type === 'palm' ? 'tree' : node.type,
+        { x: node.x, y: node.y, z: node.z, w, h, d: w },
+        { physical: false, ref: node, enabled: () => node.alive }
+      );
+      this.hitboxIds.nodes.set(node, id);
+    }
+
+    for (const fire of this.resources.campfires) {
+      this.hitboxes.registerStatic('fire', { x: fire.x, y: fire.y, z: fire.z, w: 1.2, h: 0.9, d: 1.2 }, { ref: fire, physical: false });
+    }
+    for (const spring of this.resources.springs) {
+      this.hitboxes.registerStatic('spring', { x: spring.x, y: spring.y, z: spring.z, w: 3.2, h: 0.4, d: 3.2 }, { ref: spring, physical: false });
+    }
+    for (const st of this.stations) {
+      st.hitboxId = this.hitboxes.registerStatic('station', { x: st.x, y: st.y, z: st.z, w: 1.5, h: 1.15, d: 0.9 }, { ref: st, physical: true });
+    }
+    for (const e of this.mine.entrances) {
+      this.hitboxes.registerStatic('mine', { x: e.x, y: e.y, z: e.z, w: 4.2, h: 3.0, d: 4.2 }, { ref: e, physical: false });
+    }
+  }
+
+  /** У каждого зверя — своя коробка, отдельная от остальных */
+  registerMobHitboxes() {
+    for (const mob of this.mobs.list) {
+      const hb = mob.hitboxSize || mob.def.hitbox;
+      const id = this.hitboxes.register('mob', () => {
+        if (!mob.alive) return null;
+        return {
+          x: mob.x,
+          y: (mob.y || 0) + (mob.def.flying ? mob.flyY || 0 : 0),
+          z: mob.z,
+          w: hb.w,
+          h: hb.h,
+          d: hb.d,
+          yaw: mob.facing || 0,
+        };
+      }, { physical: true, ref: mob });
+      this.hitboxIds.mobs.set(mob, id);
+    }
+  }
+
+  /** Хитбоксы лежащих на земле предметов */
+  syncPickupHitboxes() {
+    for (const p of this.world.pickups) {
+      if (this.hitboxIds.pickups.has(p)) continue;
+      const pos = p.mesh.position;
+      const id = this.hitboxes.registerStatic('pickup',
+        { x: pos.x, y: pos.y, z: pos.z, w: 0.5, h: 0.5, d: 0.5 },
+        { physical: false, ref: p, enabled: () => !!(p.mesh && p.mesh.parent) });
+      this.hitboxIds.pickups.set(p, id);
+    }
+    for (const [p, id] of this.hitboxIds.pickups) {
+      if (!this.world.pickups.includes(p)) {
+        this.hitboxes.unregister(id);
+        this.hitboxIds.pickups.delete(p);
+      }
+    }
   }
 
   // ------------------------------------------------------------
@@ -485,7 +551,11 @@ class Game {
         if (this.debugArmed) {
           this.debugArmed = false;
           const on = this.mobs.toggleHitboxes();
-          this.ui.toast(on ? 'Хитбоксы включены (F3 → F)' : 'Хитбоксы выключены');
+          this.hitboxes.setDebug(on);
+          if (!on) this.hitboxes.clearDebug();
+          this.ui.toast(on
+            ? `Хитбоксы включены: ${this.hitboxes.stats().models} моделей, ${this.hitboxes.stats().parts} частей тела`
+            : 'Хитбоксы выключены');
           this.audio.uiClick();
         } else {
           this.placeSelected();
@@ -696,6 +766,9 @@ class Game {
     const station = { type, x, y: h, z, group };
     this.stations.push(station);
     this.world.colliders.push({ x, z, r: 0.95, height: 1.1, kind: 'station' });
+    station.hitboxId = this.hitboxes.registerStatic('station',
+      { x: station.x, y: station.y, z: station.z, w: 1.5, h: 1.15, d: 0.9 },
+      { physical: true, ref: station });
     this.audio.craft?.();
     this.ui.toast(`${ITEMS[id].name} поставлен · E — работать`);
     if (this.equippedId() === id && (this.state.inventory[id] || 0) === 0) this.player.setEquipped(null);
@@ -815,7 +888,7 @@ class Game {
     return t > 0.15 ? t : null;
   }
 
-  /** Пересчитать цель под прицелом (раз в кадр) */
+  /** Пересчитать цель под прицелом: луч идёт по хитбоксам моделей */
   computeAim() {
     const cam = this.camera;
     cam.updateMatrixWorld();
@@ -825,66 +898,47 @@ class Game {
     const reach = 6.5;
     const aim = { dir, origin, target: null, t: reach, entrance: null };
 
-    const push = (kind, t, data) => {
-      if (t === null || t > reach || t >= aim.t) return;
-      aim.t = t;
-      aim.target = { kind, t, ...data };
+    const apply = (kind, dist, data) => {
+      if (dist === null || dist === undefined || dist > reach || dist >= aim.t) return;
+      aim.t = dist;
+      aim.target = { kind, t: dist, ...data };
     };
 
     if (this.underground) {
-      // стены шахты
+      // стены шахты и лестница
       const probe = this.mine.probe(origin, dir.x, dir.z, Math.min(reach, 4.2));
-      if (probe) push('minewall', probe.dist, { probe });
+      if (probe) apply('minewall', probe.dist, { probe });
       const lvl = this.mine.level;
       if (lvl && lvl.lightPos) {
-        const t = this._raySphere(origin, dir, { x: lvl.lightPos.x, y: lvl.y + 1.4, z: lvl.lightPos.z }, 1.5);
-        push('ladder', t, { ladder: lvl.lightPos });
+        const t = this._raySphere(origin, dir, { x: lvl.lightPos.x, y: lvl.y + 1.4, z: lvl.lightPos.z }, 1.2);
+        apply('ladder', t, { ladder: lvl.lightPos });
       }
       aim.underground = true;
       this.aim = aim;
       return aim;
     }
 
-    // арки-входы в шахту
-    for (const e of this.mine.entrances) {
-      const t = this._raySphere(origin, dir, { x: e.x, y: e.y + 1.2, z: e.z }, 2.3);
-      if (t !== null && t < aim.t) { aim.t = t; aim.target = { kind: 'entrance', t, entrance: e }; aim.entrance = e; }
-    }
-
-    // звери
-    for (const m of this.mobs.list) {
-      if (!m.alive) continue;
-      const r = Math.max(0.7, (m.def.hitbox?.r || 0.8) + 0.35);
-      const t = this._raySphere(origin, dir, { x: m.x, y: (m.y || 0) + (m.def.hitbox?.h || 1.2) * 0.5, z: m.z }, r);
-      push('mob', t, { mob: m });
-    }
-
-    // узлы: деревья, камни, кусты, руда на поверхности
-    for (const node of this.resources.nodes) {
-      if (!node.alive) continue;
-      const h = node.type === 'tree' || node.type === 'palm' ? 1.9 : node.type === 'rock' ? 0.75 : 0.65;
-      const r = node.type === 'tree' || node.type === 'palm' ? 1.15 : 0.95;
-      const t = this._raySphere(origin, dir, { x: node.x, y: node.y + h, z: node.z }, r);
-      push('node', t, { node });
-    }
-
-    // костры, родники
-    for (const fire of this.resources.campfires) {
-      push('campfire', this._raySphere(origin, dir, { x: fire.x, y: fire.y + 0.5, z: fire.z }, 1.0), { fire });
-    }
-    for (const sp of this.resources.springs) {
-      push('spring', this._raySphere(origin, dir, { x: sp.x, y: sp.y + 0.35, z: sp.z }, 1.5), { spring: sp });
-    }
-
-    // верстак / точило
-    for (const st of this.stations) {
-      push('station', this._raySphere(origin, dir, { x: st.x, y: st.y + 0.8, z: st.z }, 1.1), { station: st });
-    }
-
-    // предметы на земле
-    for (const p of this.world.pickups) {
-      const pos = p.mesh.position;
-      push('pickup', this._raySphere(origin, dir, { x: pos.x, y: pos.y + 0.15, z: pos.z }, 0.55), { pickup: p });
+    // всё остальное — по невидимым хитбоксам моделей
+    const hit = this.hitboxes.raycast(origin, dir, reach);
+    if (hit) {
+      switch (hit.kind) {
+        case 'mob': apply('mob', hit.dist, { mob: hit.ref }); break;
+        case 'tree':
+        case 'palm':
+        case 'rock':
+        case 'bush':
+          apply('node', hit.dist, { node: hit.ref });
+          break;
+        case 'station': apply('station', hit.dist, { station: hit.ref }); break;
+        case 'fire': apply('campfire', hit.dist, { fire: hit.ref }); break;
+        case 'spring': apply('spring', hit.dist, { spring: hit.ref }); break;
+        case 'mine':
+          apply('entrance', hit.dist, { entrance: hit.ref });
+          aim.entrance = hit.ref;
+          break;
+        case 'pickup': apply('pickup', hit.dist, { pickup: hit.ref }); break;
+        default: break;
+      }
     }
 
     this.aim = aim;
@@ -1468,6 +1522,7 @@ class Game {
     this.takeItem('campfireKit', 1);
     const fire = this.resources.addCampfire(x, z);
     this.resources.addFuel(fire, 90);
+    this.hitboxes.registerStatic('fire', { x: fire.x, y: fire.y, z: fire.z, w: 1.2, h: 0.9, d: 1.2 }, { ref: fire, physical: false });
     this.audio.pickup();
     this.ui.toast('Костёр горит · E — подложить палки');
     if (this.equippedId() === 'campfireKit' && (this.state.inventory.campfireKit || 0) === 0) {
@@ -1565,6 +1620,8 @@ class Game {
     if (!this.underground) {
       this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
     }
+    // ни одна часть тела не влезает в чужую модель: разводим хитбоксы
+    this.hitboxes.resolvePlayer(this.player, this.mineWorld, { mobs: this.mobs });
     this.player.applyCamera(this.camera, this.mineWorld, dt);
     this.computeAim();
 
@@ -1593,6 +1650,8 @@ class Game {
       this.scene.fog.far = 26;
     }
     this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
+
+    if (this.hitboxes.debug) this.hitboxes.updateDebug(this.player);
 
     // --- жизнь вокруг: светляки ночью, мысли героя о своём ---
     this.updateFireflies(dt, skyInfo.night);
@@ -1645,12 +1704,10 @@ class Game {
     // --- ресурсы и костры ---
     this.resources.update(dt);
 
-    // --- видимость и звери ---
-    if (this.frameIndex % 30 === 0) this.syncCuller();
-    this.culler.update(dt);
+    // --- звери (ничего не прячем: все модели прогружены) ---
+    if (this.frameIndex % 30 === 0) this.syncPickupHitboxes();
     this.mobs.update(dt, this.player, {
       audio: this.audio,
-      culler: this.culler,
       night: skyInfo.night,
       listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
       onHit: (dmg, cause) => this.takeDamage(dmg, cause),
@@ -1846,22 +1903,17 @@ class Game {
       group.position.set(st.x, h, st.z);
       group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
       this.scene.add(group);
-      this.stations.push({ type: st.type, x: st.x, y: h, z: st.z, group });
+      const station = { type: st.type, x: st.x, y: h, z: st.z, group };
+      this.stations.push(station);
+      station.hitboxId = this.hitboxes.registerStatic('station',
+        { x: station.x, y: station.y, z: station.z, w: 1.5, h: 1.15, d: 0.9 },
+        { physical: true, ref: station });
     }
     this.player.applyCamera(this.camera, this.world, 1);
     this.refreshHotbar();
     this.ui.renderBag(this.state.inventory, this.state.hotbar);
     this.player.setEquipped(this.equippedId());
     this.ui.toast(`Загружено: день ${this.sky.day}, ${this.sky.clockString()}`);
-  }
-
-  /** Новые предметы на земле тоже попадают под отсечку видимости */
-  syncCuller() {
-    for (const p of this.world.pickups) {
-      if (this.trackedPickups.has(p.mesh)) continue;
-      this.trackedPickups.add(p.mesh);
-      this.culler.track(p.mesh, { radius: 0.5, height: 0.6 });
-    }
   }
 
   /**

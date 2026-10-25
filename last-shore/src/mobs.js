@@ -483,7 +483,7 @@ export class Mobs {
   /**
    * @param {number} dt
    * @param {object} player — позиция игрока
-   * @param {object} ctx — { audio, onHit, culler, camera }
+   * @param {object} ctx — { audio, onHit, camera }
    */
   update(dt, player, ctx) {
     this.time += dt;
@@ -513,16 +513,15 @@ export class Mobs {
 
       // --- очень далёких зверей не считаем каждый кадр ---
       if (dist > 70) {
+        // далеко — не считаем поведение каждый кадр, но модель остаётся в мире
         mob.dormant = true;
-        if (mob.group.visible) mob.group.visible = false;
+        if (!mob.group.visible) mob.group.visible = true;
         this._dormantStep(mob, dt);
         continue;
       }
       mob.dormant = false;
-
-      // видимость: спрятанных за деревом/камнем не рисуем и не анимируем
-      const onScreen = (ctx.culler ? ctx.culler.isVisible(mob.group) : true) || this.showHitboxes;
-      if (mob.group.visible !== onScreen) mob.group.visible = onScreen;
+      // ничего не скрываем: модель всегда прогружена, у неё свой хитбокс
+      if (!mob.group.visible) mob.group.visible = true;
 
       // слышит/видит игрока
       const seesPlayer = this._detects(mob, dist, noise, {
