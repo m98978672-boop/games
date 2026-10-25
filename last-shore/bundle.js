@@ -13058,6 +13058,237 @@
       return new this.constructor().copy(this);
     }
   };
+  var LineBasicMaterial = class extends Material {
+    /**
+     * Constructs a new line basic material.
+     *
+     * @param {Object} [parameters] - An object with one or more properties
+     * defining the material's appearance. Any property of the material
+     * (including any property from inherited materials) can be passed
+     * in here. Color values can be passed any type of value accepted
+     * by {@link Color#set}.
+     */
+    constructor(parameters) {
+      super();
+      this.isLineBasicMaterial = true;
+      this.type = "LineBasicMaterial";
+      this.color = new Color(16777215);
+      this.map = null;
+      this.linewidth = 1;
+      this.linecap = "round";
+      this.linejoin = "round";
+      this.fog = true;
+      this.setValues(parameters);
+    }
+    copy(source) {
+      super.copy(source);
+      this.color.copy(source.color);
+      this.map = source.map;
+      this.linewidth = source.linewidth;
+      this.linecap = source.linecap;
+      this.linejoin = source.linejoin;
+      this.fog = source.fog;
+      return this;
+    }
+  };
+  var _vStart = /* @__PURE__ */ new Vector3();
+  var _vEnd = /* @__PURE__ */ new Vector3();
+  var _inverseMatrix$1 = /* @__PURE__ */ new Matrix4();
+  var _ray$1 = /* @__PURE__ */ new Ray();
+  var _sphere$1 = /* @__PURE__ */ new Sphere();
+  var _intersectPointOnRay = /* @__PURE__ */ new Vector3();
+  var _intersectPointOnSegment = /* @__PURE__ */ new Vector3();
+  var Line = class extends Object3D {
+    /**
+     * Constructs a new line.
+     *
+     * @param {BufferGeometry} [geometry] - The line geometry.
+     * @param {Material|Array<Material>} [material] - The line material.
+     */
+    constructor(geometry = new BufferGeometry(), material = new LineBasicMaterial()) {
+      super();
+      this.isLine = true;
+      this.type = "Line";
+      this.geometry = geometry;
+      this.material = material;
+      this.morphTargetDictionary = void 0;
+      this.morphTargetInfluences = void 0;
+      this.updateMorphTargets();
+    }
+    copy(source, recursive) {
+      super.copy(source, recursive);
+      this.material = Array.isArray(source.material) ? source.material.slice() : source.material;
+      this.geometry = source.geometry;
+      return this;
+    }
+    /**
+     * Computes an array of distance values which are necessary for rendering dashed lines.
+     * For each vertex in the geometry, the method calculates the cumulative length from the
+     * current point to the very beginning of the line.
+     *
+     * @return {Line} A reference to this line.
+     */
+    computeLineDistances() {
+      const geometry = this.geometry;
+      if (geometry.index === null) {
+        const positionAttribute = geometry.attributes.position;
+        const lineDistances = [0];
+        for (let i = 1, l = positionAttribute.count; i < l; i++) {
+          _vStart.fromBufferAttribute(positionAttribute, i - 1);
+          _vEnd.fromBufferAttribute(positionAttribute, i);
+          lineDistances[i] = lineDistances[i - 1];
+          lineDistances[i] += _vStart.distanceTo(_vEnd);
+        }
+        geometry.setAttribute("lineDistance", new Float32BufferAttribute(lineDistances, 1));
+      } else {
+        warn("Line.computeLineDistances(): Computation only possible with non-indexed BufferGeometry.");
+      }
+      return this;
+    }
+    /**
+     * Returns `true` if this line intersects the given frustum.
+     *
+     * @param {Frustum|FrustumArray} frustum - The frustum to test.
+     * @return {boolean} Whether this line intersects the given frustum or not.
+     */
+    intersectsFrustum(frustum) {
+      return frustum.intersectsObject(this);
+    }
+    /**
+     * Computes intersection points between a casted ray and this line.
+     *
+     * @param {Raycaster} raycaster - The raycaster.
+     * @param {Array<Object>} intersects - The target array that holds the intersection points.
+     */
+    raycast(raycaster, intersects) {
+      const geometry = this.geometry;
+      const matrixWorld = this.matrixWorld;
+      const threshold = raycaster.params.Line.threshold;
+      const drawRange = geometry.drawRange;
+      if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
+      _sphere$1.copy(geometry.boundingSphere);
+      _sphere$1.applyMatrix4(matrixWorld);
+      _sphere$1.radius += threshold;
+      if (raycaster.ray.intersectsSphere(_sphere$1) === false) return;
+      _inverseMatrix$1.copy(matrixWorld).invert();
+      _ray$1.copy(raycaster.ray).applyMatrix4(_inverseMatrix$1);
+      const localThreshold = threshold / ((this.scale.x + this.scale.y + this.scale.z) / 3);
+      const localThresholdSq = localThreshold * localThreshold;
+      const step = this.isLineSegments ? 2 : 1;
+      const index = geometry.index;
+      const attributes = geometry.attributes;
+      const positionAttribute = attributes.position;
+      if (index !== null) {
+        const start = Math.max(0, drawRange.start);
+        const end = Math.min(index.count, drawRange.start + drawRange.count);
+        for (let i = start, l = end - 1; i < l; i += step) {
+          const a = index.getX(i);
+          const b = index.getX(i + 1);
+          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b, i);
+          if (intersect) {
+            intersects.push(intersect);
+          }
+        }
+        if (this.isLineLoop) {
+          const a = index.getX(end - 1);
+          const b = index.getX(start);
+          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b, end - 1);
+          if (intersect) {
+            intersects.push(intersect);
+          }
+        }
+      } else {
+        const start = Math.max(0, drawRange.start);
+        const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
+        for (let i = start, l = end - 1; i < l; i += step) {
+          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, i, i + 1, i);
+          if (intersect) {
+            intersects.push(intersect);
+          }
+        }
+        if (this.isLineLoop) {
+          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, end - 1, start, end - 1);
+          if (intersect) {
+            intersects.push(intersect);
+          }
+        }
+      }
+    }
+    /**
+     * Sets the values of {@link Line#morphTargetDictionary} and {@link Line#morphTargetInfluences}
+     * to make sure existing morph targets can influence this 3D object.
+     */
+    updateMorphTargets() {
+      const geometry = this.geometry;
+      const morphAttributes = geometry.morphAttributes;
+      const keys = Object.keys(morphAttributes);
+      if (keys.length > 0) {
+        const morphAttribute = morphAttributes[keys[0]];
+        if (morphAttribute !== void 0) {
+          this.morphTargetInfluences = [];
+          this.morphTargetDictionary = {};
+          for (let m = 0, ml = morphAttribute.length; m < ml; m++) {
+            const name = morphAttribute[m].name || String(m);
+            this.morphTargetInfluences.push(0);
+            this.morphTargetDictionary[name] = m;
+          }
+        }
+      }
+    }
+  };
+  function checkIntersection(object, raycaster, ray, thresholdSq, a, b, i) {
+    const positionAttribute = object.geometry.attributes.position;
+    _vStart.fromBufferAttribute(positionAttribute, a);
+    _vEnd.fromBufferAttribute(positionAttribute, b);
+    const distSq = ray.distanceSqToSegment(_vStart, _vEnd, _intersectPointOnRay, _intersectPointOnSegment);
+    if (distSq > thresholdSq) return;
+    _intersectPointOnRay.applyMatrix4(object.matrixWorld);
+    const distance = raycaster.ray.origin.distanceTo(_intersectPointOnRay);
+    if (distance < raycaster.near || distance > raycaster.far) return;
+    return {
+      distance,
+      // What do we want? intersection point on the ray or on the segment??
+      // point: raycaster.ray.at( distance ),
+      point: _intersectPointOnSegment.clone().applyMatrix4(object.matrixWorld),
+      index: i,
+      face: null,
+      faceIndex: null,
+      barycoord: null,
+      object
+    };
+  }
+  var _start = /* @__PURE__ */ new Vector3();
+  var _end = /* @__PURE__ */ new Vector3();
+  var LineSegments = class extends Line {
+    /**
+     * Constructs a new line segments.
+     *
+     * @param {BufferGeometry} [geometry] - The line geometry.
+     * @param {Material|Array<Material>} [material] - The line material.
+     */
+    constructor(geometry, material) {
+      super(geometry, material);
+      this.isLineSegments = true;
+      this.type = "LineSegments";
+    }
+    computeLineDistances() {
+      const geometry = this.geometry;
+      if (geometry.index === null) {
+        const positionAttribute = geometry.attributes.position;
+        const lineDistances = [];
+        for (let i = 0, l = positionAttribute.count; i < l; i += 2) {
+          _start.fromBufferAttribute(positionAttribute, i);
+          _end.fromBufferAttribute(positionAttribute, i + 1);
+          lineDistances[i] = i === 0 ? 0 : lineDistances[i - 1];
+          lineDistances[i + 1] = lineDistances[i] + _start.distanceTo(_end);
+        }
+        geometry.setAttribute("lineDistance", new Float32BufferAttribute(lineDistances, 1));
+      } else {
+        warn("LineSegments.computeLineDistances(): Computation only possible with non-indexed BufferGeometry.");
+      }
+      return this;
+    }
+  };
   var PointsMaterial = class extends Material {
     /**
      * Constructs a new points material.
@@ -14079,6 +14310,99 @@
      */
     static fromJSON(data) {
       return new _DodecahedronGeometry(data.radius, data.detail);
+    }
+  };
+  var _v0 = /* @__PURE__ */ new Vector3();
+  var _v1$1 = /* @__PURE__ */ new Vector3();
+  var _normal = /* @__PURE__ */ new Vector3();
+  var _triangle = /* @__PURE__ */ new Triangle();
+  var EdgesGeometry = class extends BufferGeometry {
+    /**
+     * Constructs a new edges geometry.
+     *
+     * @param {?BufferGeometry} [geometry=null] - The geometry.
+     * @param {number} [thresholdAngle=1] - An edge is only rendered if the angle (in degrees)
+     * between the face normals of the adjoining faces exceeds this value.
+     */
+    constructor(geometry = null, thresholdAngle = 1) {
+      super();
+      this.type = "EdgesGeometry";
+      this.parameters = {
+        geometry,
+        thresholdAngle
+      };
+      if (geometry !== null) {
+        const precisionPoints = 4;
+        const precision = Math.pow(10, precisionPoints);
+        const thresholdDot = Math.cos(DEG2RAD * thresholdAngle);
+        const indexAttr = geometry.getIndex();
+        const positionAttr = geometry.getAttribute("position");
+        const indexCount = indexAttr ? indexAttr.count : positionAttr.count;
+        const indexArr = [0, 0, 0];
+        const vertKeys = ["a", "b", "c"];
+        const hashes = new Array(3);
+        const edgeData = {};
+        const vertices = [];
+        for (let i = 0; i < indexCount; i += 3) {
+          if (indexAttr) {
+            indexArr[0] = indexAttr.getX(i);
+            indexArr[1] = indexAttr.getX(i + 1);
+            indexArr[2] = indexAttr.getX(i + 2);
+          } else {
+            indexArr[0] = i;
+            indexArr[1] = i + 1;
+            indexArr[2] = i + 2;
+          }
+          const { a, b, c } = _triangle;
+          a.fromBufferAttribute(positionAttr, indexArr[0]);
+          b.fromBufferAttribute(positionAttr, indexArr[1]);
+          c.fromBufferAttribute(positionAttr, indexArr[2]);
+          _triangle.getNormal(_normal);
+          hashes[0] = `${Math.round(a.x * precision)},${Math.round(a.y * precision)},${Math.round(a.z * precision)}`;
+          hashes[1] = `${Math.round(b.x * precision)},${Math.round(b.y * precision)},${Math.round(b.z * precision)}`;
+          hashes[2] = `${Math.round(c.x * precision)},${Math.round(c.y * precision)},${Math.round(c.z * precision)}`;
+          if (hashes[0] === hashes[1] || hashes[1] === hashes[2] || hashes[2] === hashes[0]) {
+            continue;
+          }
+          for (let j = 0; j < 3; j++) {
+            const jNext = (j + 1) % 3;
+            const vecHash0 = hashes[j];
+            const vecHash1 = hashes[jNext];
+            const v0 = _triangle[vertKeys[j]];
+            const v1 = _triangle[vertKeys[jNext]];
+            const hash = `${vecHash0}_${vecHash1}`;
+            const reverseHash = `${vecHash1}_${vecHash0}`;
+            if (reverseHash in edgeData && edgeData[reverseHash]) {
+              if (_normal.dot(edgeData[reverseHash].normal) <= thresholdDot) {
+                vertices.push(v0.x, v0.y, v0.z);
+                vertices.push(v1.x, v1.y, v1.z);
+              }
+              edgeData[reverseHash] = null;
+            } else if (!(hash in edgeData)) {
+              edgeData[hash] = {
+                index0: indexArr[j],
+                index1: indexArr[jNext],
+                normal: _normal.clone()
+              };
+            }
+          }
+        }
+        for (const key in edgeData) {
+          if (edgeData[key]) {
+            const { index0, index1 } = edgeData[key];
+            _v0.fromBufferAttribute(positionAttr, index0);
+            _v1$1.fromBufferAttribute(positionAttr, index1);
+            vertices.push(_v0.x, _v0.y, _v0.z);
+            vertices.push(_v1$1.x, _v1$1.y, _v1$1.z);
+          }
+        }
+        this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+      }
+    }
+    copy(source) {
+      super.copy(source);
+      this.parameters = Object.assign({}, source.parameters);
+      return this;
     }
   };
   var IcosahedronGeometry = class _IcosahedronGeometry extends PolyhedronGeometry {
@@ -21370,12 +21694,12 @@
     }
     return "vec3 " + functionName + "( vec3 color ) { return " + toneMappingName + "ToneMapping( color ); }";
   }
-  var _v0 = /* @__PURE__ */ new Vector3();
+  var _v02 = /* @__PURE__ */ new Vector3();
   function getLuminanceFunction() {
-    ColorManagement.getLuminanceCoefficients(_v0);
-    const r = _v0.x.toFixed(4);
-    const g = _v0.y.toFixed(4);
-    const b = _v0.z.toFixed(4);
+    ColorManagement.getLuminanceCoefficients(_v02);
+    const r = _v02.x.toFixed(4);
+    const g = _v02.y.toFixed(4);
+    const b = _v02.z.toFixed(4);
     return [
       "float luminance( const in vec3 rgb ) {",
       `	const vec3 weights = vec3( ${r}, ${g}, ${b} );`,
@@ -30421,7 +30745,7 @@ void main() {
         const h = this.heightAt(x, z);
         if (h > 1 && h < 3.6 && this.slopeAt(x, z) < 0.5) {
           pushOne(palms, x, z, h);
-          this.colliders.push({ x, z, r: 0.38 });
+          this.colliders.push({ x, z, r: 0.38, height: 8, kind: "palm" });
         }
       }
       for (let i = 0; i < 4e3; i++) {
@@ -30436,7 +30760,7 @@ void main() {
         if (f < 0.42) continue;
         if (rng() > 0.55 + f * 0.4) continue;
         pushOne(trees, x, z, h);
-        this.colliders.push({ x, z, r: 0.36 });
+        this.colliders.push({ x, z, r: 0.36, height: 6.5, kind: "tree" });
         if (trees.length >= 900) break;
       }
       for (let i = 0; i < 2600; i++) {
@@ -30449,6 +30773,7 @@ void main() {
         if (this.slopeAt(x, z) > 0.7) continue;
         if (moistureAt(x, z) < 0.42) continue;
         pushOne(bushes, x, z, h, { berries: rng() < 0.35 });
+        if (this.colliders.length < 4e3) this.colliders.push({ x, z, r: 0.55, height: 1.1, kind: "bush", soft: true });
         if (bushes.length >= 700) break;
       }
       for (let i = 0; i < 4e3; i++) {
@@ -30462,7 +30787,7 @@ void main() {
         if (slope < 0.35 && rng() > 0.25) continue;
         const s = 0.45 + rng() * 1.5;
         pushOne(rocks, x, z, h, { s });
-        if (s > 0.8 && rng() < 0.85) this.colliders.push({ x, z, r: s * 0.8 });
+        if (s > 0.8 && rng() < 0.85) this.colliders.push({ x, z, r: s * 0.8, height: s * 1.1, kind: "rock" });
         if (rocks.length >= 520) break;
       }
       for (let i = 0; i < 9e3; i++) {
@@ -30479,7 +30804,7 @@ void main() {
       const barkMat = this.textures ? createPlantMaterial(this.textures.bark, { sway: 5e-3, name: "bark", repeat: [2, 3] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
       const leafMat = this.textures ? createPlantMaterial(this.textures.leaf, { sway: 0.013, name: "leaf", repeat: [2, 2] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
       const grassMat = this.textures ? createPlantMaterial(this.textures.grassDetail, { sway: 0.13, name: "grass" }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
-      const stoneMat = this.textures ? createStoneMaterial(this.textures.rockDetail, { repeat: [2, 2] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
+      const stoneMat = this.textures ? createStoneMaterial(this.textures.rockDetail, { repeat: [1, 1] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
       if (this.textures) barkMat.color.setHex(10126440);
       if (this.textures) leafMat.color.setHex(16777215);
       if (this.textures) grassMat.color.setHex(16777215);
@@ -30690,7 +31015,7 @@ void main() {
      */
     resolveCollisions(pos, radius, velocity = null) {
       for (const c of this.colliders) {
-        if (c.disabled) continue;
+        if (c.disabled || c.soft) continue;
         const dx = pos.x - c.x;
         const dz = pos.z - c.z;
         const min = c.r + radius;
@@ -31037,18 +31362,24 @@ void main() {
       beard.position.set(0, -0.13, 0.13);
       this.head.add(beard);
       g.add(this.head);
-      const pack = box(0.36, 0.42, 0.2, packMat);
-      pack.position.set(0, 1.2, 0.26);
+      const pack = box(0.38, 0.44, 0.22, packMat);
+      pack.position.set(0, 1.2, -0.25);
       g.add(pack);
-      const roll = new Mesh(new CylinderGeometry(0.075, 0.075, 0.34, 6, 1), clothMat);
+      const flap = box(0.38, 0.14, 0.06, new MeshStandardMaterial({ color: 6047532, roughness: 1, flatShading: true }));
+      flap.position.set(0, 1.38, -0.34);
+      g.add(flap);
+      const roll = new Mesh(new CylinderGeometry(0.075, 0.075, 0.36, 6, 1), clothMat);
       roll.rotation.z = Math.PI / 2;
-      roll.position.set(0, 1.43, 0.26);
+      roll.position.set(0, 1.45, -0.26);
       roll.castShadow = true;
       g.add(roll);
       for (const side of [-1, 1]) {
-        const strap = box(0.06, 0.42, 0.05, new MeshStandardMaterial({ color: 5521450, roughness: 1 }));
-        strap.position.set(0.14 * side, 1.22, 0.15);
+        const strap = box(0.06, 0.44, 0.05, new MeshStandardMaterial({ color: 5521450, roughness: 1 }));
+        strap.position.set(0.13 * side, 1.2, 0.14);
         g.add(strap);
+        const over = box(0.07, 0.06, 0.34, new MeshStandardMaterial({ color: 5521450, roughness: 1 }));
+        over.position.set(0.13 * side, 1.42, -0.04);
+        g.add(over);
       }
       const makeArm = (side) => {
         const shoulder = new Group();
@@ -31436,6 +31767,7 @@ void main() {
   };
 
   // src/audio.js
+  var clampNum = (v, a, b) => Math.max(a, Math.min(b, v));
   var Audio2 = class {
     constructor() {
       this.ctx = null;
@@ -31564,6 +31896,47 @@ void main() {
       this._tone(base * 1.2, 0.06, 0.022, "sine", base * 1.8, 0.09);
       if (Math.random() < 0.4) this._tone(base * 0.9, 0.08, 0.02, "sine", base * 1.3, 0.19);
     }
+    /**
+     * Звук из точки мира: панорама по направлению, громкость по расстоянию.
+     * listener — { x, z, yaw } — позиция и поворот игрока.
+     */
+    playAt(name, { x = 0, z = 0, listener, gain = 1 } = {}) {
+      if (!this.ready || !listener) return;
+      const fn = this[name];
+      if (typeof fn !== "function") return;
+      const dx = x - listener.x;
+      const dz = z - listener.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 45) return;
+      const yaw = listener.yaw || 0;
+      const rightX = Math.cos(yaw);
+      const rightZ = -Math.sin(yaw);
+      const pan = dist > 0.6 ? clampNum((dx * rightX + dz * rightZ) / dist, -1, 1) * 0.8 : 0;
+      const vol = gain * Math.pow(Math.max(0, 1 - dist / 45), 1.6);
+      this._pan = pan;
+      this._vol = vol;
+      try {
+        fn.call(this);
+      } finally {
+        this._pan = 0;
+        this._vol = 1;
+      }
+    }
+    /** Выход звука: громкость и панорама текущего вызова */
+    _out() {
+      var _a;
+      if (!this._pan && (this._vol === void 0 || this._vol === 1)) return this.master;
+      const g = this.ctx.createGain();
+      g.gain.value = (_a = this._vol) != null ? _a : 1;
+      if (this._pan && this.ctx.createStereoPanner) {
+        const panner = this.ctx.createStereoPanner();
+        panner.pan.value = this._pan;
+        g.connect(panner).connect(this.master);
+      } else {
+        g.connect(this.master);
+      }
+      return g;
+    }
     resume() {
       if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
     }
@@ -31581,7 +31954,7 @@ void main() {
       g.gain.setValueAtTime(1e-4, t);
       g.gain.exponentialRampToValueAtTime(gain, t + 8e-3);
       g.gain.exponentialRampToValueAtTime(1e-4, t + duration);
-      src.connect(filter).connect(g).connect(this.master);
+      src.connect(filter).connect(g).connect(this._out());
       src.start(t);
       src.stop(t + duration + 0.02);
     }
@@ -31596,7 +31969,7 @@ void main() {
       g.gain.setValueAtTime(1e-4, t);
       g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
       g.gain.exponentialRampToValueAtTime(1e-4, t + duration);
-      osc.connect(g).connect(this.master);
+      osc.connect(g).connect(this._out());
       osc.start(t);
       osc.stop(t + duration + 0.03);
     }
@@ -31674,6 +32047,10 @@ void main() {
     }
     hiss() {
       this._noiseBurst(0.5, 5200, 1.2, 0.06, "highpass");
+    }
+    /** Мягкий шаг зверя по земле */
+    mobStep() {
+      this._noiseBurst(0.09, 320 + Math.random() * 140, 0.9, 0.06);
     }
     hurt() {
       this._tone(180, 0.22, 0.1, "sawtooth", 90);
@@ -32348,15 +32725,24 @@ void main() {
     boar: {
       model: makeBoar,
       hp: 34,
-      radius: 0.75,
-      speed: 1.3,
-      chaseSpeed: 4.4,
-      aggro: 8.5,
+      radius: 0.7,
+      // радиус столкновения
+      hitbox: { w: 1.9, h: 1.4, d: 1 },
+      speed: 1.25,
+      chaseSpeed: 4.5,
+      detect: 9.5,
+      // радиус обнаружения
+      hearMul: 1.7,
+      // во сколько раз дальше слышит бегущего
+      attackRange: 2,
       damage: 9,
-      biteCooldown: 1.6,
-      fleeBelow: 0.35,
+      biteCooldown: 1.8,
+      fleeBelow: 0.34,
+      // доля здоровья, при которой убегает
+      territory: 16,
+      // не отходит от дома дальше
+      temperament: "territorial",
       label: "\u041A\u0430\u0431\u0430\u043D",
-      sound: "grunt",
       drops: [{ id: "rawMeat", min: 1, max: 3 }, { id: "hide", min: 0, max: 2 }],
       count: 6,
       biomes: "land"
@@ -32364,15 +32750,19 @@ void main() {
     crab: {
       model: makeCrab,
       hp: 9,
-      radius: 0.4,
-      speed: 0.9,
-      chaseSpeed: 2.4,
-      aggro: 0,
+      radius: 0.42,
+      hitbox: { w: 0.95, h: 0.7, d: 0.95 },
+      speed: 0.85,
+      chaseSpeed: 2.6,
+      detect: 6,
+      hearMul: 1.4,
+      attackRange: 0,
       damage: 0,
       biteCooldown: 2,
       fleeBelow: 1,
+      territory: 10,
+      temperament: "skittish",
       label: "\u041A\u0440\u0430\u0431",
-      sound: "crab",
       drops: [{ id: "rawMeat", min: 1, max: 1 }, { id: "hide", min: 0, max: 1 }],
       count: 7,
       biomes: "beach"
@@ -32381,15 +32771,19 @@ void main() {
       model: makeGull,
       hp: 6,
       radius: 0.4,
+      hitbox: { w: 1, h: 0.5, d: 1.4 },
       speed: 3.2,
-      chaseSpeed: 3.2,
-      aggro: 0,
+      chaseSpeed: 3.4,
+      detect: 14,
+      hearMul: 1.2,
+      attackRange: 0,
       damage: 0,
       biteCooldown: 2,
       fleeBelow: 1,
-      label: "\u0427\u0430\u0439\u043A\u0430",
-      sound: "gull",
+      territory: 26,
+      temperament: "skittish",
       flying: true,
+      label: "\u0427\u0430\u0439\u043A\u0430",
       drops: [{ id: "feather", min: 1, max: 2 }],
       count: 5,
       biomes: "beach"
@@ -32397,19 +32791,28 @@ void main() {
     snake: {
       model: makeSnake,
       hp: 8,
-      radius: 0.35,
-      speed: 0.55,
-      chaseSpeed: 2.6,
-      aggro: 2.6,
+      radius: 0.34,
+      hitbox: { w: 1.5, h: 0.35, d: 0.45 },
+      speed: 0.5,
+      chaseSpeed: 3,
+      detect: 3.2,
+      hearMul: 2.2,
+      attackRange: 1.3,
       damage: 6,
-      biteCooldown: 2.2,
-      fleeBelow: 1,
+      biteCooldown: 2.4,
+      fleeBelow: 0.5,
+      territory: 6,
+      temperament: "ambusher",
       label: "\u0417\u043C\u0435\u044F",
-      sound: "hiss",
       drops: [{ id: "hide", min: 1, max: 1 }, { id: "rawMeat", min: 0, max: 1 }],
       count: 4,
       biomes: "land"
     }
+  };
+  var SOUND_BY_STATE = {
+    alert: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull" },
+    attack: { boar: "grunt", snake: "hiss" },
+    hurt: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull" }
   };
   var Mobs = class {
     constructor(scene, world, seed = 1) {
@@ -32421,12 +32824,17 @@ void main() {
       this.group = new Group();
       this.group.name = "mobs";
       scene.add(this.group);
+      this._hitMat = new LineBasicMaterial({ color: 6750088, transparent: true, opacity: 0.9, depthTest: false });
+      this.showHitboxes = false;
       for (const [type, def] of Object.entries(TYPES)) {
         for (let i = 0; i < def.count; i++) this.spawn(type);
       }
     }
-    /** Найти пологое место нужного биома под зверя */
-    _spot(kind) {
+    // ------------------------------------------------------------
+    //  Появление
+    // ------------------------------------------------------------
+    /** Найти пологое место нужного биома, не рядом с игроком и другими зверями */
+    _spot(kind, near = null, minDist = 0) {
       const world = this.world;
       const rng = this.rng;
       for (let attempt = 0; attempt < 400; attempt++) {
@@ -32438,6 +32846,8 @@ void main() {
         if (world.slopeAt(x, z) > 0.6) continue;
         if (kind === "beach" && (h < 0.6 || h > 2.4)) continue;
         if (kind === "land" && (h < 1.6 || h > 14)) continue;
+        if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) continue;
+        if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) continue;
         return { x, z, h };
       }
       return { x: 20, z: 20, h: world.heightAt(20, 20) };
@@ -32446,11 +32856,20 @@ void main() {
       const def = TYPES[type];
       const spot = this._spot(def.biomes);
       const built = def.model();
+      const hitbox = new LineSegments(
+        new EdgesGeometry(new BoxGeometry(def.hitbox.w, def.hitbox.h, def.hitbox.d)),
+        this._hitMat
+      );
+      hitbox.position.y = def.hitbox.h / 2;
+      hitbox.visible = false;
+      hitbox.renderOrder = 999;
+      built.group.add(hitbox);
       const mob = {
         type,
         def,
         group: built.group,
         parts: built.parts,
+        hitbox,
         x: spot.x,
         z: spot.z,
         y: spot.h,
@@ -32458,16 +32877,22 @@ void main() {
         hp: def.hp,
         maxHp: def.hp,
         facing: this.rng() * Math.PI * 2,
-        state: "wander",
-        timer: this.rng() * 2,
-        targetX: spot.x,
-        targetZ: spot.z,
+        state: "idle",
+        stateTime: 0,
+        think: this.rng() * 0.5,
         biteTimer: 0,
         phase: this.rng() * Math.PI * 2,
+        stepTimer: 0,
         alive: true,
         deadTimer: 0,
         flyY: def.flying ? 4 + this.rng() * 5 : 0,
-        respawnAt: 0
+        respawnAt: 0,
+        alerted: false,
+        targetX: spot.x,
+        targetZ: spot.z,
+        speedNow: 0,
+        lastSeen: 0,
+        restTimer: 0
       };
       this.group.add(mob.group);
       this.list.push(mob);
@@ -32481,15 +32906,22 @@ void main() {
       mob.home = { x: spot.x, z: spot.z };
       mob.hp = mob.maxHp;
       mob.alive = true;
-      mob.state = "wander";
+      mob.state = "idle";
+      mob.stateTime = 0;
       mob.deadTimer = 0;
+      mob.alerted = false;
       mob.group.visible = true;
       mob.group.rotation.set(0, 0, 0);
       mob.group.traverse((o) => {
-        if (o.isMesh) o.material.opacity = 1;
+        if (o.isMesh && o.material) {
+          o.material.transparent = false;
+          o.material.opacity = 1;
+        }
       });
     }
-    /** Ближайший живой зверь в радиусе (для подсказки и удара) */
+    // ------------------------------------------------------------
+    //  Взаимодействие
+    // ------------------------------------------------------------
     nearest(pos, range) {
       let best = null;
       let bestD = range * range;
@@ -32503,10 +32935,7 @@ void main() {
       }
       return best;
     }
-    /**
-     * Удар по зверю: ищем ближайшего в направлении взгляда.
-     * Возвращает { mob, killed } или null.
-     */
+    /** Удар по зверю в секторе перед игроком. Возвращает { mob, killed } */
     hit(origin, dirX, dirZ, range, damage) {
       const dl = Math.hypot(dirX, dirZ) || 1;
       dirX /= dl;
@@ -32528,11 +32957,16 @@ void main() {
       }
       if (!best) return null;
       best.hp -= damage;
-      best.state = "hurt";
-      best.timer = 0.35;
+      best.lastSeen = this.time;
       if (best.hp <= 0) {
         this.kill(best);
         return { mob: best, killed: true };
+      }
+      const ratio = best.hp / best.maxHp;
+      if (ratio <= best.def.fleeBelow) {
+        this.setState(best, "retreat");
+      } else {
+        this.setState(best, best.def.damage > 0 ? "chase" : "flee");
       }
       return { mob: best, killed: false };
     }
@@ -32541,135 +32975,497 @@ void main() {
       mob.deadTimer = 0;
       mob.respawnAt = this.time + 45 + this.rng() * 45;
       mob.state = "dead";
+      if (mob.hitbox) mob.hitbox.visible = false;
     }
-    /** Один кадр: ИИ, анимация, урон игроку */
+    // ------------------------------------------------------------
+    //  Столкновения
+    // ------------------------------------------------------------
+    /** Игрок не проходит сквозь зверей: мягко выталкиваем его из их радиусов */
+    resolvePlayer(playerPos, velocity = null, playerRadius = 0.35) {
+      for (const mob of this.list) {
+        if (!mob.alive || mob.def.flying) continue;
+        const dx = playerPos.x - mob.x;
+        const dz = playerPos.z - mob.z;
+        const min = mob.def.radius + playerRadius;
+        const d2 = dx * dx + dz * dz;
+        if (d2 >= min * min) continue;
+        let d = Math.sqrt(d2);
+        let nx = 1;
+        let nz = 0;
+        if (d > 1e-4) {
+          nx = dx / d;
+          nz = dz / d;
+        } else {
+          d = 1e-4;
+          nx = Math.cos(mob.facing);
+          nz = Math.sin(mob.facing);
+        }
+        const push = min - d;
+        playerPos.x += nx * push;
+        playerPos.z += nz * push;
+        if (velocity) {
+          const into = velocity.x * nx + velocity.z * nz;
+          if (into < 0) {
+            velocity.x -= nx * into;
+            velocity.z -= nz * into;
+          }
+        }
+        mob.x -= nx * push * 0.25;
+        mob.z -= nz * push * 0.25;
+      }
+    }
+    /** Звери не слипаются: расталкиваем их между собой (два прохода — стабильнее) */
+    _separate() {
+      this._separateOnce();
+      this._separateOnce();
+    }
+    _separateOnce() {
+      const list = this.list;
+      for (let i = 0; i < list.length; i++) {
+        const a = list[i];
+        if (!a.alive) continue;
+        for (let j = i + 1; j < list.length; j++) {
+          const b = list[j];
+          if (!b.alive) continue;
+          if (a.def.flying !== b.def.flying) continue;
+          const dx = a.x - b.x;
+          const dz = a.z - b.z;
+          const min = a.def.radius + b.def.radius + 0.15;
+          const d2 = dx * dx + dz * dz;
+          if (d2 >= min * min) continue;
+          let d = Math.sqrt(d2);
+          let nx;
+          let nz;
+          if (d < 0.02) {
+            const ang = i * 2.399 + a.phase;
+            nx = Math.cos(ang);
+            nz = Math.sin(ang);
+            d = 0.02;
+          } else {
+            nx = dx / d;
+            nz = dz / d;
+          }
+          const push = (min - d) * 0.5;
+          a.x += nx * push;
+          a.z += nz * push;
+          b.x -= nx * push;
+          b.z -= nz * push;
+        }
+      }
+    }
+    // ------------------------------------------------------------
+    //  Восприятие
+    // ------------------------------------------------------------
+    /** Линия видимости: строго по прямой между зверем и игроком не должно быть стволов/камней */
+    _hasLineOfSight(mob, target) {
+      var _a;
+      const camHeight = (_a = target.eyeY) != null ? _a : 1.4;
+      const from = { x: mob.x, y: this.world.heightAt(mob.x, mob.z) + 0.7, z: mob.z };
+      const to = { x: target.x, y: camHeight, z: target.z };
+      for (const c of this.world.colliders) {
+        if (c.disabled) continue;
+        if (c.r < 0.3) continue;
+        if (this._segmentHitsCircle(from, to, c, c.r * 0.85)) return false;
+      }
+      return true;
+    }
+    _segmentHitsCircle(a, b, c, r) {
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const len2 = dx * dx + dz * dz || 1e-6;
+      let t = ((c.x - a.x) * dx + (c.z - a.z) * dz) / len2;
+      t = Math.max(0, Math.min(1, t));
+      const px = a.x + dx * t;
+      const pz = a.z + dz * t;
+      const d2 = (px - c.x) ** 2 + (pz - c.z) ** 2;
+      return d2 < r * r;
+    }
+    /** Замечает ли зверь игрока: дистанция + шум + обзор */
+    _detects(mob, dist, noise, target) {
+      const def = mob.def;
+      let range = def.detect;
+      range *= 1 + (def.hearMul - 1) * clamp2(noise, 0, 1);
+      if (mob.state === "sleep") range *= 0.55;
+      if (mob.state === "graze") range *= 0.85;
+      if (def.temperament === "territorial" && this.night > 0.6) range *= 0.7;
+      if (dist > range) return false;
+      return this._hasLineOfSight(mob, target);
+    }
+    // ------------------------------------------------------------
+    //  Состояния
+    // ------------------------------------------------------------
+    setState(mob, state) {
+      if (mob.state === state) return;
+      mob.state = state;
+      mob.stateTime = 0;
+      switch (state) {
+        case "idle":
+          mob.think = 0.8 + this.rng() * 1.6;
+          break;
+        case "graze":
+          mob.think = 1.4 + this.rng() * 2.2;
+          break;
+        case "patrol":
+          this._pickPatrolPoint(mob);
+          mob.think = 3 + this.rng() * 3;
+          break;
+        case "alert":
+          mob.think = 0.7 + this.rng() * 0.6;
+          break;
+        case "chase":
+          mob.think = 0.3;
+          break;
+        case "attack":
+          mob.think = 0.45;
+          break;
+        case "retreat":
+          mob.think = 2.5 + this.rng() * 1.5;
+          break;
+        case "flee":
+          mob.think = 1.4 + this.rng();
+          break;
+        case "rest":
+          mob.think = 3 + this.rng() * 3;
+          break;
+        case "sleep":
+          mob.think = 6 + this.rng() * 6;
+          break;
+        default:
+          mob.think = 1;
+      }
+    }
+    _pickPatrolPoint(mob) {
+      const t = mob.def.territory;
+      for (let i = 0; i < 8; i++) {
+        const a = this.rng() * Math.PI * 2;
+        const r = this.rng() * t * 0.8;
+        const x = mob.home.x + Math.cos(a) * r;
+        const z = mob.home.z + Math.sin(a) * r;
+        if (this.world.heightAt(x, z) > 0.45) {
+          mob.targetX = x;
+          mob.targetZ = z;
+          return;
+        }
+      }
+      mob.targetX = mob.home.x;
+      mob.targetZ = mob.home.z;
+    }
+    // ------------------------------------------------------------
+    //  Кадр
+    // ------------------------------------------------------------
+    /**
+     * @param {number} dt
+     * @param {object} player — позиция игрока
+     * @param {object} ctx — { audio, onHit, culler, camera }
+     */
     update(dt, player, ctx) {
+      var _a, _b, _c;
       this.time += dt;
       const px = player.position.x;
       const pz = player.position.z;
+      const speed = Math.hypot(((_a = player.velocity) == null ? void 0 : _a.x) || 0, ((_b = player.velocity) == null ? void 0 : _b.z) || 0);
+      const noise = clamp2(speed / 6, 0, 1.4);
+      this.night = (_c = ctx.night) != null ? _c : 0;
       for (const mob of this.list) {
         if (!mob.alive) {
-          mob.deadTimer += dt;
-          mob.group.rotation.z = Math.min(1.5, mob.group.rotation.z + dt * 4);
-          if (mob.deadTimer > 1.4) {
-            mob.group.traverse((o) => {
-              if (o.isMesh && o.material.transparent !== void 0) {
-                o.material.transparent = true;
-                o.material.opacity = Math.max(0, 1 - (mob.deadTimer - 1.4) / 0.8);
-              }
-            });
-            if (mob.deadTimer > 2.4) mob.group.visible = false;
-          }
-          if (this.time > mob.respawnAt) this._respawn(mob);
+          this._updateDead(mob, dt);
           continue;
         }
         const dx = px - mob.x;
         const dz = pz - mob.z;
         const dist = Math.hypot(dx, dz);
         const def = mob.def;
-        if (dist > 85) {
-          mob.group.visible = false;
-          mob.timer -= dt;
-          if (mob.timer <= 0) {
-            mob.timer = 3 + this.rng() * 4;
-            mob.targetX = mob.home.x + (this.rng() - 0.5) * 14;
-            mob.targetZ = mob.home.z + (this.rng() - 0.5) * 14;
-          }
-          mob.x += clamp2(mob.targetX - mob.x, -0.4, 0.4) * dt;
-          mob.z += clamp2(mob.targetZ - mob.z, -0.4, 0.4) * dt;
+        mob.distToPlayer = dist;
+        mob.biteTimer = Math.max(0, mob.biteTimer - dt);
+        mob.think -= dt;
+        mob.stateTime += dt;
+        if (dist > 70) {
+          mob.dormant = true;
+          if (mob.group.visible) mob.group.visible = false;
+          this._dormantStep(mob, dt);
           continue;
         }
-        mob.group.visible = true;
-        mob.biteTimer = Math.max(0, mob.biteTimer - dt);
-        if (mob.state === "hurt") {
-          mob.timer -= dt;
-          if (mob.timer <= 0) mob.state = def.aggro > 0 ? "chase" : "flee";
-        } else if (mob.timer > 0) {
-          mob.timer -= dt;
-        } else if (mob.state === "wander") {
-          if (dist < def.aggro && def.aggro > 0) {
-            mob.state = "chase";
-            this._sound(ctx, def.sound);
-          } else if (dist < 5 && def.aggro === 0) {
-            mob.state = "flee";
-            mob.timer = 1.6;
-          } else if (Math.hypot(mob.x - mob.targetX, mob.z - mob.targetZ) < 1.2) {
-            mob.targetX = mob.home.x + (this.rng() - 0.5) * 16;
-            mob.targetZ = mob.home.z + (this.rng() - 0.5) * 16;
-            mob.timer = 2 + this.rng() * 3;
-          }
-        } else if (mob.state === "chase") {
-          if (dist > def.aggro + 6 || mob.hp < mob.maxHp * def.fleeBelow) {
-            mob.state = def.hp < mob.maxHp * def.fleeBelow ? "flee" : "wander";
-            mob.timer = 2;
-          }
-        } else if (mob.state === "flee") {
-          if (dist > 12) {
-            mob.state = "wander";
-            mob.timer = 1;
+        mob.dormant = false;
+        const onScreen = ctx.culler ? ctx.culler.isVisible(mob.group) : true;
+        if (mob.group.visible !== onScreen) mob.group.visible = onScreen;
+        const seesPlayer = this._detects(mob, dist, noise, {
+          x: px,
+          z: pz,
+          eyeY: player.position.y + 1.5
+        });
+        if (seesPlayer) mob.lastSeen = this.time;
+        if (mob.state !== "sleep" || seesPlayer) this._think(mob, { px, pz, dist, seesPlayer, dt });
+        if (mob.wantsSound) {
+          this._sound(ctx, mob.wantsSound, mob, 1);
+          mob.wantsSound = null;
+        }
+        this._move(mob, dt, { px, pz, dist });
+        if (mob.state === "attack" && def.damage > 0) {
+          if (!mob.didHit && mob.stateTime > 0.18) {
+            const reach = def.attackRange + 0.6;
+            if (dist < reach && mob.biteTimer <= 0) {
+              mob.biteTimer = def.biteCooldown;
+              mob.didHit = true;
+              ctx.onHit(def.damage, mob.type === "snake" ? "\u0443\u043A\u0443\u0441 \u0437\u043C\u0435\u0438" : "\u043A\u043B\u044B\u043A\u0438 \u043A\u0430\u0431\u0430\u043D\u0430");
+              this._sound(ctx, "attack", mob, 1);
+            }
           }
         }
-        let speed = 0;
-        let aimX = mob.targetX;
-        let aimZ = mob.targetZ;
-        if (mob.state === "chase") {
+        this._place(mob, dt);
+        if (!mob.group.visible) continue;
+        mob.stepTimer -= dt;
+        if (mob.speedNow > 0.4 && mob.stepTimer <= 0) {
+          mob.stepTimer = mob.speedNow > 3 ? 0.28 : 0.55;
+          if (!def.flying) this._sound(ctx, "step", mob, 0.5);
+        }
+        if (mob.group.visible) this._animate(mob, dt);
+      }
+      this._separate();
+    }
+    _dormantStep(mob, dt) {
+      if (mob.think > 0) return;
+      mob.think = 3 + this.rng() * 4;
+      const a = this.rng() * Math.PI * 2;
+      const r = this.rng() * mob.def.territory * 0.7;
+      const tx = mob.home.x + Math.cos(a) * r;
+      const tz = mob.home.z + Math.sin(a) * r;
+      mob.x += clamp2(tx - mob.x, -1, 1) * dt * 0.6;
+      mob.z += clamp2(tz - mob.z, -1, 1) * dt * 0.6;
+    }
+    _updateDead(mob, dt) {
+      mob.deadTimer += dt;
+      mob.group.visible = true;
+      mob.group.rotation.z = Math.min(1.5, mob.group.rotation.z + dt * 4);
+      if (mob.deadTimer > 1.4) {
+        mob.group.traverse((o) => {
+          if (o.isMesh && o.material) {
+            o.material.transparent = true;
+            o.material.opacity = Math.max(0, 1 - (mob.deadTimer - 1.4) / 0.8);
+          }
+        });
+        if (mob.deadTimer > 2.6) mob.group.visible = false;
+      }
+      if (this.time > mob.respawnAt) this._respawn(mob);
+    }
+    /** Принятие решения: чистый автомат, без магии чисел по месту */
+    _think(mob, { px, pz, dist, seesPlayer }) {
+      const def = mob.def;
+      const hpRatio = mob.hp / mob.maxHp;
+      const distHome = Math.hypot(mob.x - mob.home.x, mob.z - mob.home.z);
+      const aggressive = def.damage > 0;
+      if (hpRatio <= def.fleeBelow && mob.state !== "retreat" && mob.state !== "rest") {
+        this.setState(mob, aggressive ? "retreat" : "flee");
+        return;
+      }
+      switch (mob.state) {
+        case "sleep":
+          if (seesPlayer && dist < def.detect) this.setState(mob, aggressive ? "alert" : "flee");
+          else if (mob.think <= 0) this.setState(mob, "idle");
+          break;
+        case "idle":
+          if (seesPlayer && dist < def.detect * 1.1) {
+            this.setState(mob, aggressive ? "alert" : "flee");
+            mob.wantsSound = "alert";
+          } else if (mob.think <= 0) {
+            const roll = this.rng();
+            if (def.flying) this.setState(mob, roll < 0.6 ? "patrol" : "idle");
+            else this.setState(mob, roll < 0.45 ? "graze" : roll < 0.85 ? "patrol" : "idle");
+          }
+          break;
+        case "graze":
+          if (seesPlayer && dist < def.detect) {
+            this.setState(mob, aggressive ? "alert" : "flee");
+          } else if (mob.think <= 0) {
+            this.setState(mob, this.rng() < 0.5 ? "patrol" : "idle");
+          }
+          break;
+        case "patrol":
+          if (seesPlayer && dist < def.detect * 0.85) {
+            this.setState(mob, aggressive ? "alert" : "flee");
+          } else if (distHome > def.territory) {
+            mob.targetX = mob.home.x;
+            mob.targetZ = mob.home.z;
+            if (mob.think <= 0) this.setState(mob, "patrol");
+          } else if (mob.think <= 0 || Math.hypot(mob.x - mob.targetX, mob.z - mob.targetZ) < 1.3) {
+            this.setState(mob, this.rng() < 0.5 ? "idle" : "graze");
+          }
+          break;
+        case "alert":
+          mob.facing = Math.atan2(px - mob.x, pz - mob.z);
+          if (!seesPlayer && dist > def.detect * 0.9) {
+            this.setState(mob, "patrol");
+          } else if (mob.think <= 0) {
+            if (aggressive && dist < def.detect) this.setState(mob, "chase");
+            else this.setState(mob, "patrol");
+          }
+          break;
+        case "chase":
+          if (hpRatio <= def.fleeBelow) {
+            this.setState(mob, aggressive ? "retreat" : "flee");
+          } else if (dist > def.detect * 1.9 || this.time - mob.lastSeen > 2.5) {
+            this.setState(mob, "patrol");
+          } else if (distHome > def.territory * 1.6) {
+            mob.targetX = mob.home.x;
+            mob.targetZ = mob.home.z;
+            this.setState(mob, "patrol");
+          } else if (dist < def.attackRange) {
+            this.setState(mob, "attack");
+            mob.didHit = false;
+          } else if (mob.think <= 0) {
+            mob.think = 0.3;
+          }
+          break;
+        case "attack":
+          if (mob.think <= 0) {
+            if (dist < def.attackRange + 0.4) {
+              mob.didHit = false;
+              this.setState(mob, "attack");
+            } else {
+              this.setState(mob, "chase");
+            }
+          }
+          break;
+        case "retreat":
+          if (mob.think <= 0 && dist > def.detect) this.setState(mob, "rest");
+          else if (mob.think <= 0 && hpRatio > def.fleeBelow + 0.25) this.setState(mob, "chase");
+          break;
+        case "rest":
+          if (mob.think <= 0) {
+            if (hpRatio > 0.6) this.setState(mob, "patrol");
+            else this.setState(mob, "idle");
+          }
+          break;
+        case "flee":
+          if (dist > def.detect * 1.6) this.setState(mob, "idle");
+          else if (mob.think <= 0) this.setState(mob, "flee");
+          break;
+        default:
+          this.setState(mob, "idle");
+      }
+    }
+    _move(mob, dt, { px, pz, dist }) {
+      const def = mob.def;
+      let speed = 0;
+      let aimX = mob.targetX;
+      let aimZ = mob.targetZ;
+      switch (mob.state) {
+        case "chase":
+        case "attack":
           aimX = px;
           aimZ = pz;
           speed = def.chaseSpeed;
-        } else if (mob.state === "flee") {
-          aimX = mob.x - dx;
-          aimZ = mob.z - dz;
+          break;
+        case "retreat":
+        case "flee":
+          aimX = mob.x * 2 - px;
+          aimZ = mob.z * 2 - pz;
           speed = def.chaseSpeed;
-        } else if (mob.state !== "hurt") {
+          break;
+        case "patrol":
           speed = def.speed;
-        }
-        if (speed > 0) {
-          let ax = aimX - mob.x;
-          let az = aimZ - mob.z;
-          const al = Math.hypot(ax, az) || 1;
-          ax /= al;
-          az /= al;
-          const nx = mob.x + ax * speed * dt;
-          const nz = mob.z + az * speed * dt;
-          if (this.world.heightAt(nx, nz) > 0.35) {
-            mob.x = nx;
-            mob.z = nz;
-          } else {
-            mob.targetX = mob.home.x;
-            mob.targetZ = mob.home.z;
-            mob.state = "wander";
-            mob.timer = 2;
-          }
-          const want = Math.atan2(ax, az);
-          let diff = want - mob.facing;
-          while (diff > Math.PI) diff -= Math.PI * 2;
-          while (diff < -Math.PI) diff += Math.PI * 2;
-          mob.facing += diff * clamp2(dt * 6, 0, 1);
-        }
-        if (mob.state === "chase" && def.damage > 0 && dist < def.radius + 1.1 && mob.biteTimer <= 0) {
-          mob.biteTimer = def.biteCooldown;
-          ctx.onHit(def.damage, mob.type === "snake" ? "\u0443\u043A\u0443\u0441 \u0437\u043C\u0435\u0438" : "\u043A\u0430\u0431\u0430\u043D");
-          this._sound(ctx, def.sound);
-        }
-        const groundY = this.world.heightAt(mob.x, mob.z);
-        mob.y = groundY;
-        mob.phase += dt * (2.5 + speed * 1.6);
-        const bob = def.flying ? 0 : Math.abs(Math.sin(mob.phase)) * 0.05 * Math.min(1, speed);
-        mob.group.position.set(mob.x, groundY + bob + (def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0), mob.z);
-        mob.group.rotation.y = mob.facing;
-        this._animate(mob, dt, speed, def);
+          break;
+        case "graze":
+          speed = def.speed * 0.35;
+          break;
+        default:
+          speed = 0;
       }
+      if (mob.state === "attack") speed *= 0.25;
+      if (speed > 0 && (mob.state === "chase" || mob.state === "attack")) {
+        const stop = def.radius + 0.55;
+        if (dist < stop) speed = 0;
+      }
+      mob.speedNow = speed;
+      if (speed <= 0) return;
+      let ax = aimX - mob.x;
+      let az = aimZ - mob.z;
+      const len = Math.hypot(ax, az);
+      if (len < 0.05) return;
+      ax /= len;
+      az /= len;
+      const step = speed * dt;
+      const nx = mob.x + ax * step;
+      const nz = mob.z + az * step;
+      if (this.world.heightAt(nx, nz) < 0.45) {
+        mob.targetX = mob.home.x;
+        mob.targetZ = mob.home.z;
+        if (mob.state === "chase") this.setState(mob, "patrol");
+        return;
+      }
+      if (!this._blocked(nx, nz, def.radius)) {
+        mob.x = nx;
+        mob.z = nz;
+      } else {
+        const sideX = mob.x - az * step;
+        const sideZ = mob.z + ax * step;
+        if (!this._blocked(sideX, sideZ, def.radius)) {
+          mob.x = sideX;
+          mob.z = sideZ;
+        }
+      }
+      const want = Math.atan2(ax, az);
+      let diff = want - mob.facing;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      mob.facing += diff * clamp2(dt * 7, 0, 1);
     }
-    _sound(ctx, name) {
-      if (!ctx.audio) return;
-      const fn = ctx.audio[name];
-      if (typeof fn === "function") fn.call(ctx.audio);
+    _blocked(x, z, r) {
+      for (const c of this.world.colliders) {
+        if (c.disabled || c.fire || c.soft) continue;
+        if (c.r < 0.3) continue;
+        const dx = x - c.x;
+        const dz = z - c.z;
+        const min = c.r + r * 0.8;
+        if (dx * dx + dz * dz < min * min) return true;
+      }
+      return false;
     }
-    /** Анимация лап, крыльев и хвоста */
-    _animate(mob, dt, speed, def) {
+    _place(mob, dt) {
+      const def = mob.def;
+      const groundY = this.world.heightAt(mob.x, mob.z);
+      mob.y = groundY;
+      mob.phase += dt * (2.2 + mob.speedNow * 1.8);
+      const bob = def.flying ? 0 : Math.abs(Math.sin(mob.phase)) * 0.05 * Math.min(1, mob.speedNow);
+      const fly = def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0;
+      mob.group.position.set(mob.x, groundY + bob + fly, mob.z);
+      mob.group.rotation.y = mob.facing;
+      if (mob.hitbox) mob.hitbox.visible = this.showHitboxes;
+    }
+    // ------------------------------------------------------------
+    //  Звук
+    // ------------------------------------------------------------
+    _sound(ctx, kind, mob, gain = 1) {
+      var _a, _b;
+      if (!ctx.audio || !ctx.listener) return;
+      const table = kind === "step" ? null : SOUND_BY_STATE[kind];
+      const name = kind === "step" ? mob.def.flying ? null : "mobStep" : table ? table[mob.type] : null;
+      if (!name) return;
+      (_b = (_a = ctx.audio).playAt) == null ? void 0 : _b.call(_a, name, {
+        x: mob.x,
+        z: mob.z,
+        listener: ctx.listener,
+        gain: (kind === "step" ? 0.35 : 0.8) * gain
+      });
+    }
+    toggleHitboxes(force) {
+      this.showHitboxes = force !== void 0 ? force : !this.showHitboxes;
+      for (const mob of this.list) {
+        if (mob.hitbox) mob.hitbox.visible = this.showHitboxes && mob.alive;
+      }
+      return this.showHitboxes;
+    }
+    /** Сколько зверей рядом — для диагностики и подсказок */
+    countNear(pos, range) {
+      return this.list.filter((m) => m.alive && Math.hypot(m.x - pos.x, m.z - pos.z) < range).length;
+    }
+    // ------------------------------------------------------------
+    //  Анимация (только для видимых)
+    // ------------------------------------------------------------
+    _animate(mob, dt) {
       var _a;
       const p = mob.parts;
-      const walk = Math.min(1, speed / 2);
+      const def = mob.def;
+      const walk = Math.min(1, mob.speedNow / 2);
       const t = mob.phase;
       if (p.legs) {
         p.legs.forEach((leg, i) => {
@@ -32681,7 +33477,11 @@ void main() {
         p.tail.rotation.y = Math.sin(t * 0.9) * 0.2;
       }
       if (p.head) {
-        p.head.position.y = ((_a = p.head.userData.baseY) != null ? _a : p.head.userData.baseY = p.head.position.y) + Math.sin(t * 1.6) * 0.03;
+        const base = (_a = p.head.userData.baseY) != null ? _a : p.head.userData.baseY = p.head.position.y;
+        const grazeDrop = mob.state === "graze" ? -0.28 : 0;
+        const lunge = mob.state === "attack" ? 0.16 : 0;
+        p.head.position.y = base + grazeDrop + lunge * Math.sin(mob.stateTime * 12);
+        p.head.rotation.x = mob.state === "graze" ? 0.5 : mob.state === "alert" ? -0.15 : 0;
       }
       if (p.claws) {
         p.claws.forEach((claw, i) => {
@@ -32705,14 +33505,165 @@ void main() {
         p.tongue.scale.x = flick;
       }
     }
-    /** Сколько зверей рядом — для диагностики и подсказок */
-    countNear(pos, range) {
-      return this.list.filter((m) => m.alive && Math.hypot(m.x - pos.x, m.z - pos.z) < range).length;
+  };
+
+  // src/visibility.js
+  var CELL = 10;
+  var HYSTERESIS = 0.25;
+  var VisibilityCuller = class {
+    constructor(world, camera) {
+      this.world = world;
+      this.camera = camera;
+      this.sphere = new Sphere(new Vector3(), 1);
+      this.tmp = new Vector3();
+      this.items = /* @__PURE__ */ new Map();
+      this.grid = /* @__PURE__ */ new Map();
+      this._buildGrid();
+      this.stats = { total: 0, visible: 0 };
+    }
+    /** Сетка по коллайдерам: проверять луч нужно только в соседних ячейках */
+    _buildGrid() {
+      const key = (cx, cz) => cx * 1e4 + cz;
+      for (const c of this.world.colliders) {
+        if (c.disabled || c.soft) continue;
+        if (c.r < 0.35) continue;
+        if (!(c.height > 0.5) && !c.kind) continue;
+        if (c.fire || c.spring) continue;
+        const cx = Math.floor(c.x / CELL);
+        const cz = Math.floor(c.z / CELL);
+        for (let dx = -1; dx <= 1; dx++) {
+          for (let dz = -1; dz <= 1; dz++) {
+            const k = key(cx + dx, cz + dz);
+            let bucket = this.grid.get(k);
+            if (!bucket) this.grid.set(k, bucket = []);
+            bucket.push(c);
+          }
+        }
+      }
+    }
+    /** Добавить объект под управление (радиус и высота — для проверки видимости) */
+    track(object, { radius = 1, height = 1, getPos = null } = {}) {
+      this.items.set(object, { radius, height, getPos, visibleFor: 0, wasVisible: true });
+      return object;
+    }
+    untrack(object) {
+      this.items.delete(object);
+    }
+    isVisible(object) {
+      const item = this.items.get(object);
+      return item ? item.wasVisible : object.visible;
+    }
+    _occludersAlong(x0, z0, x1, z1) {
+      const minX = Math.floor(Math.min(x0, x1) / CELL);
+      const maxX = Math.floor(Math.max(x0, x1) / CELL);
+      const minZ = Math.floor(Math.min(z0, z1) / CELL);
+      const maxZ = Math.floor(Math.max(z0, z1) / CELL);
+      const out = [];
+      const seen = /* @__PURE__ */ new Set();
+      for (let cx = minX; cx <= maxX; cx++) {
+        for (let cz = minZ; cz <= maxZ; cz++) {
+          const bucket = this.grid.get(cx * 1e4 + cz);
+          if (!bucket) continue;
+          for (const c of bucket) {
+            if (c.disabled || seen.has(c)) continue;
+            seen.add(c);
+            out.push(c);
+          }
+        }
+      }
+      return out;
+    }
+    /** Пересекает ли отрезок «камера → объект» ствол/валун */
+    _blockedByProps(cam, target) {
+      const list = this._occludersAlong(cam.x, cam.z, target.x, target.z);
+      if (!list.length) return false;
+      const dx = target.x - cam.x;
+      const dz = target.z - cam.z;
+      const len2 = dx * dx + dz * dz || 1e-6;
+      for (const c of list) {
+        let t = ((c.x - cam.x) * dx + (c.z - cam.z) * dz) / len2;
+        if (t <= 0.05 || t >= 0.97) continue;
+        const px = cam.x + dx * t;
+        const pz = cam.z + dz * t;
+        const rr = c.r * 0.9;
+        if ((px - c.x) ** 2 + (pz - c.z) ** 2 < rr * rr) {
+          const camY = cam.y;
+          const targetY = target.y;
+          const lineY = camY + (targetY - camY) * t;
+          const groundY = this.world.heightAt(c.x, c.z);
+          const propTop = groundY + (c.height || 4.5);
+          if (propTop > lineY) return true;
+        }
+      }
+      return false;
+    }
+    /** Пересекает ли отрезок рельеф (объект за холмом) */
+    _blockedByTerrain(cam, target) {
+      const steps = 6;
+      const dx = target.x - cam.x;
+      const dz = target.z - cam.z;
+      const dy = target.y - cam.y;
+      for (let i = 1; i < steps; i++) {
+        const t = i / steps;
+        const x = cam.x + dx * t;
+        const z = cam.z + dz * t;
+        const lineY = cam.y + dy * t;
+        const ground = this.world.heightAt(x, z);
+        if (ground > lineY + 0.35) return true;
+      }
+      return false;
+    }
+    /**
+     * Обновить видимость всех отслеживаемых объектов.
+     * @param {number} dt
+     * @param {number} frame — номер кадра, для «круглого» обновления дальних объектов
+     */
+    update(dt) {
+      const camera = this.camera;
+      camera.updateMatrixWorld();
+      camera.matrixWorldInverse.copy(camera.matrixWorld).invert();
+      const cam = camera.position;
+      const tanY = Math.tan(camera.fov * Math.PI / 360);
+      const tanX = tanY * camera.aspect;
+      const maxDist = 120;
+      let visible = 0;
+      for (const [object, item] of this.items) {
+        if (!object.parent) continue;
+        const pos = item.getPos ? item.getPos() : object.position;
+        const dist = Math.hypot(pos.x - cam.x, pos.z - cam.z);
+        let shown = false;
+        if (dist < maxDist) {
+          this.sphere.center.set(pos.x, pos.y + item.height * 0.5, pos.z);
+          this.tmp.copy(this.sphere.center).project(camera);
+          const margin = item.radius + 0.6;
+          const rx = margin / (Math.max(dist, 0.6) * tanX);
+          const ry = margin / (Math.max(dist, 0.6) * tanY);
+          shown = this.tmp.z > -1 && this.tmp.z < 1 && Math.abs(this.tmp.x) < 1 + rx && Math.abs(this.tmp.y) < 1 + ry;
+          if (shown && dist > 3 && dist < 60) {
+            const aim = this.sphere.center;
+            if (this._blockedByProps(cam, aim) || this._blockedByTerrain(cam, aim)) shown = false;
+          }
+        }
+        item.last = { dist, shown };
+        if (shown) {
+          item.visibleFor = HYSTERESIS;
+          item.wasVisible = true;
+        } else if (item.visibleFor > 0) {
+          item.visibleFor -= dt;
+          item.wasVisible = true;
+        } else {
+          item.wasVisible = false;
+        }
+        if (object.visible !== item.wasVisible) object.visible = item.wasVisible;
+        if (item.wasVisible) visible++;
+      }
+      this.stats.total = this.items.size;
+      this.stats.visible = visible;
     }
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-25 11:56" : "dev";
+  var BUILD = true ? "2026-10-25 13:09" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -32942,22 +33893,33 @@ void main() {
     ctx.strokeStyle = color;
     ctx.lineCap = "round";
     for (let i = 0; i < count; i++) {
-      let x = rng() * size;
-      let y = rng() * size;
+      const startX = rng() * size;
+      const startY = rng() * size;
       let angle = rng() * Math.PI * 2;
       const segs = 3 + Math.floor(rng() * 4);
-      ctx.globalAlpha = 0.18 + rng() * 0.22;
-      ctx.lineWidth = 0.7 + rng() * 1.4;
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+      ctx.globalAlpha = 0.12 + rng() * 0.16;
+      ctx.lineWidth = 0.7 + rng() * 1.2;
+      const pts = [[startX, startY]];
+      let x = startX;
+      let y = startY;
       for (let s = 0; s < segs; s++) {
         angle += (rng() - 0.5) * 1.1;
         const step = 6 + rng() * 16;
         x += Math.cos(angle) * step;
         y += Math.sin(angle) * step;
-        ctx.lineTo(x, y);
+        pts.push([x, y]);
       }
-      ctx.stroke();
+      for (const dx of [-size, 0, size]) {
+        for (const dy of [-size, 0, size]) {
+          ctx.beginPath();
+          pts.forEach(([px, py], idx) => {
+            const px2 = px + dx;
+            const py2 = py + dy;
+            idx === 0 ? ctx.moveTo(px2, py2) : ctx.lineTo(px2, py2);
+          });
+          ctx.stroke();
+        }
+      }
     }
     ctx.globalAlpha = 1;
   }
@@ -33050,22 +34012,23 @@ void main() {
     const canvas = makeCanvas(size);
     const ctx = canvas.getContext("2d");
     const rng = makeRng(3301);
-    paintNoise(ctx, fbmNoise(size, 4, 41, 5), size, 7236194, 11051414);
-    cracks(ctx, size, rng, "#4a463f", 34);
-    cracks(ctx, size, rng, "#c8c1b4", 16);
-    for (let i = 0; i < 40; i++) {
+    paintNoise(ctx, fbmNoise(size, 3, 41, 3, 0.55), size, 8222832, 11117208);
+    paintNoise(ctx, fbmNoise(size, 2, 77, 7, 0.5), size, 7762280, 10722449, 0.35);
+    cracks(ctx, size, rng, "#56514a", 18);
+    cracks(ctx, size, rng, "#c4bcae", 10);
+    for (let i = 0; i < 26; i++) {
       const cx = rng() * size;
       const cy = rng() * size;
-      const r = 10 + rng() * 30;
-      const sides = 3 + Math.floor(rng() * 3);
-      ctx.globalAlpha = 0.05 + rng() * 0.12;
-      ctx.fillStyle = rng() > 0.5 ? "#e0d9cc" : "#3a362f";
+      const r = 12 + rng() * 34;
+      const sides = 4 + Math.floor(rng() * 3);
+      ctx.globalAlpha = 0.03 + rng() * 0.06;
+      ctx.fillStyle = rng() > 0.5 ? "#ded6c8" : "#4a463f";
       for (const dx of [-size, 0, size]) {
         for (const dy of [-size, 0, size]) {
           ctx.beginPath();
           for (let s = 0; s < sides; s++) {
-            const a = s / sides * Math.PI * 2 + rng() * 0.3;
-            const rr = r * (0.7 + rng() * 0.5);
+            const a = s / sides * Math.PI * 2 + rng() * 0.2;
+            const rr = r * (0.8 + rng() * 0.35);
             const x = cx + dx + Math.cos(a) * rr;
             const y = cy + dy + Math.sin(a) * rr;
             s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -33076,7 +34039,7 @@ void main() {
       }
     }
     ctx.globalAlpha = 1;
-    speckle(ctx, size, 700, rng, ["#bdb5a6", "#57534b", "#8b8579"], [0.4, 1.4], [0.1, 0.3]);
+    speckle(ctx, size, 320, rng, ["#b6ae9f", "#6b665d"], [0.4, 1.1], [0.06, 0.16]);
     return canvas;
   }
   function dirtCanvas(size = SIZE2) {
@@ -33232,7 +34195,7 @@ void main() {
       wood: tex(detailize(wood), 1),
       cloth: tex(detailize(cloth), 1),
       skin: tex(detailize(skin, { lift: 0.35, contrast: 1.2, tint: 0.6 }), 1),
-      rockDetail: tex(detailize(rock, { lift: 0.5, contrast: 2.8 }), 1),
+      rockDetail: tex(detailize(rock, { lift: 0.62, contrast: 1.5, tint: 0.3 }), 1),
       grassDetail: tex(detailize(grass, { lift: 0.55, contrast: 1.9, tint: 0.45 }), 1),
       cloud: toTexture(cloudCanvas(), { repeat: 1, srgb: true, aniso: 1 }),
       dot: toTexture(softDotCanvas(), { repeat: 1, srgb: false, aniso: 1 })
@@ -33323,6 +34286,16 @@ void main() {
       this.resources = new Resources(this.scene, this.world);
       this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
       this.projectiles = [];
+      this.culler = new VisibilityCuller(this.world, this.camera);
+      for (const mob of this.mobs.list) {
+        this.culler.track(mob.group, {
+          radius: mob.def.radius + 0.6,
+          height: mob.def.hitbox.h,
+          getPos: () => ({ x: mob.x, y: mob.y || 0, z: mob.z })
+        });
+      }
+      this.trackedPickups = /* @__PURE__ */ new Set();
+      this.syncCuller();
       this.state = {
         health: 100,
         thirst: 78,
@@ -33350,6 +34323,9 @@ void main() {
       this.locked = false;
       this.dragging = false;
       this.dragLook = false;
+      this.debugArmed = false;
+      this.frameIndex = 0;
+      this.panelUnlock = false;
       this.slowFrames = 0;
       this.slowTimer = 0;
       this.lastTime = performance.now();
@@ -33465,6 +34441,7 @@ void main() {
       window.addEventListener("keyup", (e) => this.onKeyUp(e));
       this.canvas.addEventListener("mousedown", (e) => {
         if (!this.running || this.paused) return;
+        if (this.ui.isPanelOpen()) return;
         if (!this.locked) {
           this.dragging = true;
           this.tryLock();
@@ -33501,6 +34478,10 @@ void main() {
       document.addEventListener("pointerlockchange", () => {
         const wasLocked = this.locked;
         this.locked = document.pointerLockElement === this.canvas;
+        if (!this.locked && this.panelUnlock) {
+          this.panelUnlock = false;
+          return;
+        }
         if (wasLocked && !this.locked && this.running && !this.paused && !this.dead) {
           this.pause();
         }
@@ -33540,6 +34521,7 @@ void main() {
       if (code === "Escape") {
         if (this.ui.isPanelOpen()) {
           this.ui.closePanels();
+          this.relock();
           return;
         }
         if (this.running && !this.paused) this.pause();
@@ -33575,7 +34557,19 @@ void main() {
           this.interact();
           break;
         case "KeyF":
-          this.placeCampfire();
+          if (this.debugArmed) {
+            this.debugArmed = false;
+            const on = this.mobs.toggleHitboxes();
+            this.ui.toast(on ? "\u0425\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u044B (F3 \u2192 F)" : "\u0425\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B");
+            this.audio.uiClick();
+          } else {
+            this.placeCampfire();
+          }
+          break;
+        case "F3":
+          e.preventDefault();
+          this.debugArmed = true;
+          this.ui.toast("\u041E\u0442\u043B\u0430\u0434\u043A\u0430: \u043D\u0430\u0436\u043C\u0438 F \u2014 \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0445\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0437\u0432\u0435\u0440\u0435\u0439");
           break;
         case "KeyV":
           this.toggleView();
@@ -33586,14 +34580,13 @@ void main() {
           break;
         case "KeyC": {
           e.preventDefault();
-          this.ui.toggleCraft(void 0, RECIPES, this.state.inventory, (id) => this.craft(id));
+          this.togglePanel("craft");
           break;
         }
         case "KeyI":
         case "Tab":
           e.preventDefault();
-          this.ui.toggleBag(void 0);
-          this.ui.renderBag(this.state.inventory);
+          this.togglePanel("bag");
           break;
         case "Digit1":
         case "Digit2":
@@ -34028,6 +35021,7 @@ void main() {
       const state = this.state;
       this.player.update(dt, this.input, this.world);
       this.input.jump = false;
+      this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
       this.player.applyCamera(this.camera, this.world, dt);
       this.updateWeather(dt);
       const skyInfo = this.sky.update(dt, this.player.position);
@@ -34044,8 +35038,13 @@ void main() {
       this.audio.updateMusic(dt, skyInfo.night);
       this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
       this.resources.update(dt);
+      if (this.frameIndex % 30 === 0) this.syncCuller();
+      this.culler.update(dt);
       this.mobs.update(dt, this.player, {
         audio: this.audio,
+        culler: this.culler,
+        night: skyInfo.night,
+        listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
         onHit: (dmg2, cause2) => this.takeDamage(dmg2, cause2),
         onDrop: (items) => {
           for (const [id, n] of Object.entries(items)) this.addItem(id, n);
@@ -34237,6 +35236,44 @@ void main() {
       this.player.setEquipped(this.equippedId());
       this.ui.toast(`\u0417\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u043E: \u0434\u0435\u043D\u044C ${this.sky.day}, ${this.sky.clockString()}`);
     }
+    /** Новые предметы на земле тоже попадают под отсечку видимости */
+    syncCuller() {
+      for (const p of this.world.pickups) {
+        if (this.trackedPickups.has(p.mesh)) continue;
+        this.trackedPickups.add(p.mesh);
+        this.culler.track(p.mesh, { radius: 0.5, height: 0.6 });
+      }
+    }
+    /**
+     * Панели (сумка/крафт) требуют свободного курсора: отпускаем pointer lock,
+     * а при закрытии — возвращаем его в игру.
+     */
+    togglePanel(kind) {
+      const wasOpen = this.ui.isPanelOpen();
+      if (wasOpen) {
+        this.ui.closePanels();
+        this.relock();
+        this.audio.uiClick();
+        return;
+      }
+      if (document.pointerLockElement) {
+        this.panelUnlock = true;
+        document.exitPointerLock();
+      }
+      if (kind === "craft") {
+        this.ui.toggleCraft(true, RECIPES, this.state.inventory, (id) => this.craft(id));
+      } else {
+        this.ui.toggleBag(true);
+        this.ui.renderBag(this.state.inventory);
+      }
+      this.audio.uiClick();
+    }
+    /** Вернуть управление мышью (если игра идёт) */
+    relock() {
+      if (!this.running || this.paused || this.dead) return;
+      if (this.dragLook) return;
+      this.tryLock();
+    }
     /** Переключение «третье лицо / от первого лица» */
     toggleView() {
       this.view = this.view === "first" ? "third" : "first";
@@ -34293,6 +35330,7 @@ void main() {
     //  Цикл
     // ------------------------------------------------------------
     frame() {
+      this.frameIndex = (this.frameIndex + 1) % 1e5;
       const now = performance.now();
       let dt = (now - this.lastTime) / 1e3;
       this.lastTime = now;

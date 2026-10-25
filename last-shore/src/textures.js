@@ -158,22 +158,37 @@ function cracks(ctx, size, rng, color, count) {
   ctx.strokeStyle = color;
   ctx.lineCap = 'round';
   for (let i = 0; i < count; i++) {
-    let x = rng() * size;
-    let y = rng() * size;
+    const startX = rng() * size;
+    const startY = rng() * size;
     let angle = rng() * Math.PI * 2;
     const segs = 3 + Math.floor(rng() * 4);
-    ctx.globalAlpha = 0.18 + rng() * 0.22;
-    ctx.lineWidth = 0.7 + rng() * 1.4;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
+    ctx.globalAlpha = 0.12 + rng() * 0.16;
+    ctx.lineWidth = 0.7 + rng() * 1.2;
+
+    // строим ломаную один раз, потом рисуем её со сдвигами по краям —
+    // так трещина продолжается через границу и шва не видно
+    const pts = [[startX, startY]];
+    let x = startX;
+    let y = startY;
     for (let s = 0; s < segs; s++) {
       angle += (rng() - 0.5) * 1.1;
       const step = 6 + rng() * 16;
       x += Math.cos(angle) * step;
       y += Math.sin(angle) * step;
-      ctx.lineTo(x, y);
+      pts.push([x, y]);
     }
-    ctx.stroke();
+
+    for (const dx of [-size, 0, size]) {
+      for (const dy of [-size, 0, size]) {
+        ctx.beginPath();
+        pts.forEach(([px, py], idx) => {
+          const px2 = px + dx;
+          const py2 = py + dy;
+          idx === 0 ? ctx.moveTo(px2, py2) : ctx.lineTo(px2, py2);
+        });
+        ctx.stroke();
+      }
+    }
   }
   ctx.globalAlpha = 1;
 }
@@ -291,24 +306,28 @@ function rockCanvas(size = SIZE) {
   const ctx = canvas.getContext('2d');
   const rng = makeRng(3301);
 
-  paintNoise(ctx, fbmNoise(size, 4, 41, 5), size, 0x6e6a62, 0xa8a196);
-  cracks(ctx, size, rng, '#4a463f', 34);
-  cracks(ctx, size, rng, '#c8c1b4', 16);
+  // крупные мягкие пятна + мелкая крошка: без резких перепадов
+  paintNoise(ctx, fbmNoise(size, 3, 41, 3, 0.55), size, 0x7d7870, 0xa9a298);
+  paintNoise(ctx, fbmNoise(size, 2, 77, 7, 0.5), size, 0x767168, 0xa39c91, 0.35);
 
-  // грани: случайные многоугольники с лёгкой заливкой
-  for (let i = 0; i < 40; i++) {
+  // прожилки: тонкие и полупрозрачные, с заворотом по краям
+  cracks(ctx, size, rng, '#56514a', 18);
+  cracks(ctx, size, rng, '#c4bcae', 10);
+
+  // мягкие грани-пятна
+  for (let i = 0; i < 26; i++) {
     const cx = rng() * size;
     const cy = rng() * size;
-    const r = 10 + rng() * 30;
-    const sides = 3 + Math.floor(rng() * 3);
-    ctx.globalAlpha = 0.05 + rng() * 0.12;
-    ctx.fillStyle = rng() > 0.5 ? '#e0d9cc' : '#3a362f';
+    const r = 12 + rng() * 34;
+    const sides = 4 + Math.floor(rng() * 3);
+    ctx.globalAlpha = 0.03 + rng() * 0.06;
+    ctx.fillStyle = rng() > 0.5 ? '#ded6c8' : '#4a463f';
     for (const dx of [-size, 0, size]) {
       for (const dy of [-size, 0, size]) {
         ctx.beginPath();
         for (let s = 0; s < sides; s++) {
-          const a = (s / sides) * Math.PI * 2 + rng() * 0.3;
-          const rr = r * (0.7 + rng() * 0.5);
+          const a = (s / sides) * Math.PI * 2 + rng() * 0.2;
+          const rr = r * (0.8 + rng() * 0.35);
           const x = cx + dx + Math.cos(a) * rr;
           const y = cy + dy + Math.sin(a) * rr;
           s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
@@ -319,7 +338,8 @@ function rockCanvas(size = SIZE) {
     }
   }
   ctx.globalAlpha = 1;
-  speckle(ctx, size, 700, rng, ['#bdb5a6', '#57534b', '#8b8579'], [0.4, 1.4], [0.1, 0.3]);
+  // мелкая крошка — редко и бледно
+  speckle(ctx, size, 320, rng, ['#b6ae9f', '#6b665d'], [0.4, 1.1], [0.06, 0.16]);
   return canvas;
 }
 
@@ -480,7 +500,7 @@ function buildTextures(maxAnisotropy = 4) {
     wood: tex(detailize(wood), 1),
     cloth: tex(detailize(cloth), 1),
     skin: tex(detailize(skin, { lift: 0.35, contrast: 1.2, tint: 0.6 }), 1),
-    rockDetail: tex(detailize(rock, { lift: 0.5, contrast: 2.8 }), 1),
+    rockDetail: tex(detailize(rock, { lift: 0.62, contrast: 1.5, tint: 0.3 }), 1),
     grassDetail: tex(detailize(grass, { lift: 0.55, contrast: 1.9, tint: 0.45 }), 1),
     cloud: toTexture(cloudCanvas(), { repeat: 1, srgb: true, aniso: 1 }),
     dot: toTexture(softDotCanvas(), { repeat: 1, srgb: false, aniso: 1 }),
