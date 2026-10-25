@@ -128,6 +128,7 @@ class Game {
     this.resources = new Resources(this.scene, this.world);
     this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
     this.projectiles = [];
+    this.chips = [];            // щепки, крошка и ягоды — короткие частицы
 
     // всё, что может быть спрятано за деревом/камнем/кустом
     this.culler = new VisibilityCuller(this.world, this.camera);
@@ -668,6 +669,15 @@ class Game {
     }
 
     if (target.kind === 'node') {
+      const node = target.node;
+      if (node.type === 'bush' && this.resources.canPickBerries(node)) {
+        this.gatherBerries(node);
+        return;
+      }
+      if (node.type === 'bush') {
+        this.ui.toast('Ягоды ещё не поспели — подожди немного', true);
+        return;
+      }
       this.ui.toast('Добывай ударами: зажми левую кнопку мыши', true);
     }
   }
@@ -676,56 +686,102 @@ class Game {
   attack() {
     if (!this.running || this.paused || this.dead) return;
     if (this.attackCooldown > 0) return;
-    this.attackCooldown = 0.62;
 
-    this.player.swing();
     const toolId = this.equippedId();
     const ranged = toolId && ITEMS[toolId].ranged;
+
+    // что перед нами — от этого зависит и замах, и звук, и частицы
+    const mobNear = ranged ? null : this.mobs.nearest(this.player.position, 3.2);
+    const target = this.resources.nearest(this.player.position, 3.8);
+    const node = !mobNear && target && target.kind === 'node' ? target.node : null;
+
+    let kind = 'attack';
+    if (node) {
+      kind = node.type === 'rock' ? 'mine' : node.type === 'bush' ? 'chop' : 'chop';
+    }
+
+    this.player.swing(kind);
+    this.attackCooldown = kind === 'mine' ? 0.7 : kind === 'chop' ? 0.66 : 0.62;
+
     if (ranged) {
+      this.audio.swing?.();
       this.shootArrow();
       return;
     }
     this.audio.swing?.();
 
-    // сначала звери: они ближе и подвижнее
-    const facing = this.player.facing;
-    const dirX = Math.sin(facing);
-    const dirZ = Math.cos(facing);
-    const weapon = (this.equippedTool()?.weapon) || 4;
-    const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
-    if (mobHit) {
-      this.audio.hitFlesh?.();
-      if (mobHit.killed) {
-        this.audio.mobDeath?.();
-        const drops = [];
-        for (const drop of mobHit.mob.def.drops) {
-          const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
-          if (n > 0) {
-            this.addItem(drop.id, n);
-            drops.push(`${ITEMS[drop.id].name} +${n}`);
+    // --- звери ---
+    if (mobNear) {
+      const facing = this.player.facing;
+      const dirX = Math.sin(facing);
+      const dirZ = Math.cos(facing);
+      const weapon = (this.equippedTool()?.weapon) || 4;
+      const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
+      if (mobHit) {
+        this.audio.hitFlesh?.();
+        this.player.shake(0.18);
+        const m = mobHit.mob;
+        this.spawnChips(m.x, m.y + 0.9, m.z, { count: 5, color: 0x9c2c3c, size: 0.06, spread: 1.4, up: 1.6 });
+        if (mobHit.killed) {
+          this.audio.mobDeath?.();
+          const drops = [];
+          for (const drop of m.def.drops) {
+            const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+            if (n > 0) {
+              this.addItem(drop.id, n);
+              drops.push(`${ITEMS[drop.id].name} +${n}`);
+            }
           }
+          this.ui.toast(`${m.def.label} побеждён: ${drops.join(', ') || 'без добычи'}`);
+        } else {
+          this.ui.toast(`${m.def.label}: ${Math.max(0, Math.round(m.hp))}/${m.maxHp}`);
         }
-        this.ui.toast(`${mobHit.mob.def.label} побеждён: ${drops.join(', ') || 'без добычи'}`);
-      } else {
-        this.ui.toast(`${mobHit.mob.def.label}: ${Math.max(0, Math.round(mobHit.mob.hp))}/${mobHit.mob.maxHp}`);
+        return;
       }
-      this.attackCooldown = ranged ? 0.9 : 0.62;
+    }
+
+    if (!node) {
+      // ударили в пустоту — только шорох воздуха
+      this.audio.whoosh?.();
       return;
     }
 
-    const target = this.resources.nearest(this.player.position, 3.8);
-    if (!target || target.kind !== 'node') return;
+    // --- ягоды с куста: сначала урожай, потом уже ветки ---
+    if (node.type === 'bush' && this.resources.canPickBerries(node)) {
+      this.gatherBerries(node);
+      this.attackCooldown = 0.6;
+      return;
+    }
 
-    const node = target.node;
     const tool = this.equippedTool();
     const def = this.resources.strike(node, tool);
-
-    // не тот инструмент — предупреждаем, но добыча всё равно идёт медленно
-    const power = tool && tool[this.nodeDef(node).tool ?? 'chop'] !== undefined
-      ? tool[this.nodeDef(node).tool ?? 'chop']
+    const actionDef = this.nodeDef(node);
+    const power = tool && tool[actionDef.tool ?? 'chop'] !== undefined
+      ? tool[actionDef.tool ?? 'chop']
       : 0.35;
+
     if (def.need && (!tool || power < 1)) {
       this.ui.toast(`Нужен ${def.need}: так почти не выходит`, true);
+    }
+
+    // попадание: частицы, звук, отдача — у дерева, камня и руды по-разному
+    const hitY = node.y + (node.type === 'tree' || node.type === 'palm' ? 1.1 : 0.7);
+    if (node.type === 'rock') {
+      this.player.shake(0.14);
+      this.spawnChips(node.x, hitY, node.z, {
+        count: 7,
+        color: node.ore ? 0x8fc9d8 : 0x9a958c,
+        size: 0.06,
+        spread: 1.8,
+        up: 2.0,
+      });
+      if (node.ore) this.audio.oreHit?.(); else this.audio.mine?.();
+      this.audio.stoneCrack?.();
+    } else {
+      this.player.shake(0.08);
+      this.spawnChips(node.x, hitY, node.z, { count: 6, color: 0x8a6a42, size: 0.06, spread: 1.5, up: 2.0 });
+      this.spawnChips(node.x, hitY + 0.2, node.z, { count: 3, color: 0x5f9150, size: 0.05, spread: 1.2, up: 1.4 });
+      this.audio.chop?.();
     }
 
     if (def.depleted) {
@@ -735,13 +791,84 @@ class Game {
         parts.push(`${ITEMS[id].name} +${n}`);
       }
       this.ui.toast(parts.length ? `${node.label} добыт: ${parts.join(', ')}` : `${node.label} пуст`);
+      if (node.type === 'tree' || node.type === 'palm') {
+        this.audio.treeFall?.();
+        this.spawnChips(node.x, hitY + 0.8, node.z, { count: 14, color: 0x5f9150, size: 0.07, spread: 2.4, up: 2.6 });
+      } else if (node.type === 'rock') {
+        this.audio.stoneBreak?.();
+        this.spawnChips(node.x, hitY, node.z, { count: 12, color: node.ore ? 0x9fd8e6 : 0x9a958c, size: 0.07, spread: 2.4, up: 2.4 });
+      } else {
+        this.audio.rustle?.();
+        this.spawnChips(node.x, hitY, node.z, { count: 10, color: 0x6b9c55, size: 0.07, spread: 2.2, up: 2.2 });
+      }
       this.audio.pickup();
       if (this.nearNode === node) this.nearNode = null;
-    } else if (node.type === 'rock') {
-      this.audio.mine?.();
-    } else {
-      this.audio.chop?.();
     }
+  }
+
+  /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
+  /**
+   * Короткий выброс частиц: щепки от дерева, крошка от камня, ягоды с куста.
+   * Живут меньше секунды и падают вниз — дешёвый, но убедительный отклик.
+   */
+  spawnChips(x, y, z, { count = 8, color = 0x8a6a42, size = 0.07, spread = 1.6, up = 2.2 } = {}) {
+    const geo = new THREE.BoxGeometry(size, size, size);
+    for (let i = 0; i < count; i++) {
+      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x + (Math.random() - 0.5) * 0.35, y + Math.random() * 0.5, z + (Math.random() - 0.5) * 0.35);
+      mesh.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+      this.scene.add(mesh);
+      this.chips.push({
+        mesh,
+        vx: (Math.random() - 0.5) * spread,
+        vy: up * (0.4 + Math.random() * 0.8),
+        vz: (Math.random() - 0.5) * spread,
+        spin: (Math.random() - 0.5) * 12,
+        life: 0.7 + Math.random() * 0.5,
+      });
+    }
+  }
+
+  updateChips(dt) {
+    for (let i = this.chips.length - 1; i >= 0; i--) {
+      const c = this.chips[i];
+      c.life -= dt;
+      if (c.life <= 0) {
+        this.scene.remove(c.mesh);
+        c.mesh.material.dispose();
+        this.chips.splice(i, 1);
+        continue;
+      }
+      c.vy -= 9.5 * dt;
+      c.mesh.position.x += c.vx * dt;
+      c.mesh.position.y += c.vy * dt;
+      c.mesh.position.z += c.vz * dt;
+      c.mesh.rotation.x += c.spin * dt;
+      c.mesh.rotation.z += c.spin * 0.7 * dt;
+      c.mesh.scale.setScalar(Math.min(1, c.life / 0.35));
+    }
+  }
+
+  /** Собрать ягоды с ближайшего куста (E или удар по кусту) */
+  gatherBerries(node) {
+    const res = this.resources.pickBerries(node);
+    this.player.swing('gather');
+    this.audio.berryPick?.();
+    this.audio.rustle?.();
+
+    // ягоды осыпаются с куста
+    this.spawnChips(node.x, node.y + 0.85, node.z, { count: 7, color: 0xb9334a, size: 0.08, spread: 1.2, up: 1.6 });
+    if (res.fiber) this.spawnChips(node.x, node.y + 0.5, node.z, { count: 3, color: 0x8fae5a, size: 0.05, spread: 1.0, up: 1.2 });
+
+    if (res.berries) this.addItem('berries', res.berries);
+    if (res.fiber) this.addItem('fiber', res.fiber);
+
+    const parts = [];
+    if (res.berries) parts.push(`${ITEMS.berries.name} +${res.berries}`);
+    if (res.fiber) parts.push(`${ITEMS.fiber.name} +${res.fiber}`);
+    this.ui.toast(parts.length ? `Собрано: ${parts.join(', ')}` : 'Ягод больше нет');
+    this.audio.pickup?.();
   }
 
   /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
@@ -985,6 +1112,7 @@ class Game {
       onDrop: (items) => { for (const [id, n] of Object.entries(items)) this.addItem(id, n); },
     });
     this.updateProjectiles(dt);
+    this.updateChips(dt);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
 
@@ -1009,13 +1137,18 @@ class Game {
       marker = this.nearest.mesh.position;
       this.ui.setPrompt(`<b>E</b> — подобрать ${this.nearest.name.toLowerCase()}`);
     } else if (nodeTarget && nodeTarget.kind === 'node') {
-      const def = this.nodeDef(nodeTarget.node);
-      marker = new THREE.Vector3(nodeTarget.node.x, nodeTarget.node.y + 0.1, nodeTarget.node.z);
+      const node = nodeTarget.node;
+      const def = this.nodeDef(node);
+      marker = new THREE.Vector3(node.x, node.y + 0.1, node.z);
       const toolOk = !def.need || this.equippedTool();
-      this.ui.setPrompt(
-        `<b>ЛКМ</b> — ${def.label.toLowerCase()}${def.need ? ` (нужен ${def.need})` : ''}` +
-        (toolOk ? '' : ' · <span class="prompt-warn">медленно</span>')
-      );
+      if (node.type === 'bush' && this.resources.canPickBerries(node)) {
+        this.ui.setPrompt('<b>E</b> или <b>ЛКМ</b> — собрать ягоды');
+      } else {
+        this.ui.setPrompt(
+          `<b>ЛКМ</b> — ${def.label.toLowerCase()}${def.need ? ` (нужен ${def.need})` : ''}` +
+          (toolOk ? '' : ' · <span class="prompt-warn">медленно</span>')
+        );
+      }
     } else if (nodeTarget && nodeTarget.kind === 'campfire') {
       marker = new THREE.Vector3(nodeTarget.fire.x, nodeTarget.fire.y + 0.1, nodeTarget.fire.z);
       const fuelPct = Math.round((nodeTarget.fire.fuel / nodeTarget.fire.maxFuel) * 100);

@@ -286,6 +286,52 @@ export class Audio {
     this._tone(420, 0.07, 0.05, 'square', 300);
   }
 
+  /** Плётка/кирка прошла мимо: только воздух */
+  whoosh() {
+    this._noiseBurst(0.14, 900 + Math.random() * 500, 1.6, 0.04, 'bandpass');
+  }
+
+  /** Ягоды: тихий щелчок и шелест листвы */
+  berryPick() {
+    this._noiseBurst(0.07, 2600, 2.2, 0.07, 'bandpass');
+    this._tone(880, 0.1, 0.035, 'sine', 1180, 0.03);
+    this._noiseBurst(0.2, 4200, 1.1, 0.03, 'highpass');
+  }
+
+  /** Листва/куст: шорох при задевании */
+  rustle() {
+    this._noiseBurst(0.26, 3600 + Math.random() * 1200, 0.9, 0.045, 'highpass');
+    this._noiseBurst(0.14, 1500, 1.2, 0.03, 'bandpass');
+  }
+
+  /** Треск: дерево не выдержало */
+  treeFall() {
+    this._noiseBurst(0.5, 320, 0.7, 0.14, 'lowpass');
+    this._tone(110, 0.5, 0.08, 'sawtooth', 48);
+    this._noiseBurst(0.35, 900, 0.9, 0.07, 'bandpass');
+  }
+
+  /** Камень развалился: осыпь */
+  stoneBreak() {
+    this._noiseBurst(0.22, 1400, 0.9, 0.13, 'bandpass');
+    for (let i = 0; i < 4; i++) {
+      this._noiseBurst(0.07, 2200 + Math.random() * 1600, 2.4, 0.05, 'bandpass');
+      this._tone(240 + Math.random() * 160, 0.06, 0.03, 'square', 140, i * 0.035);
+    }
+  }
+
+  /** Тихий хруст, когда кирка вошла в камень */
+  stoneCrack() {
+    this._noiseBurst(0.08, 1800 + Math.random() * 700, 2.2, 0.045, 'bandpass');
+  }
+
+  /** Рудный камень: звонкий удар с металлическим призвуком */
+  oreHit() {
+    this._tone(1180, 0.18, 0.05, 'triangle', 760);
+    this._tone(1760, 0.14, 0.03, 'sine', 1320, 0.02);
+    this._noiseBurst(0.1, 3000, 2.6, 0.07, 'bandpass');
+  }
+
   craft() {
     this._noiseBurst(0.08, 900, 1.2, 0.06);
     this._tone(520, 0.08, 0.05, 'triangle');

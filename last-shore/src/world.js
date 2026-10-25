@@ -474,8 +474,18 @@ export class World {
 
     const fruitMat = new THREE.MeshStandardMaterial({ color: 0xc23b52, roughness: 0.55, vertexColors: true });
     const mossMat = new THREE.MeshStandardMaterial({ color: 0x7fa257, roughness: 0.95, vertexColors: true, flatShading: true });
+    // руда слегка светится в тени — её видно издалека
+    const oreMat = new THREE.MeshStandardMaterial({
+      color: 0xcfe9f2,
+      roughness: 0.32,
+      metalness: 0.45,
+      vertexColors: true,
+      flatShading: true,
+      emissive: 0x1d5d74,
+      emissiveIntensity: 0.55,
+    });
     const layerMaterials = {
-      bark: barkMat, leaf: leafMat, rock: stoneMat, fruit: fruitMat, moss: mossMat,
+      bark: barkMat, leaf: leafMat, rock: stoneMat, fruit: fruitMat, moss: mossMat, ore: oreMat,
     };
 
     /**
@@ -513,7 +523,7 @@ export class World {
             mesh.instanceMatrix.needsUpdate = true;
 
             it.parts = it.parts || [];
-            it.parts.push({ mesh, idx: k, baseScale: s });
+            it.parts.push({ mesh, idx: k, baseScale: s, layer });
             it.mesh = mesh;
             it.instIdx = k;
           });
@@ -522,6 +532,11 @@ export class World {
           this.scene.add(mesh);
           meshes.push(mesh);
         }
+
+        // вариант с ягодами — значит, с этого куста можно собрать урожай
+        if (variant.fruit) items.forEach((it) => { it.berries = true; });
+        // рудный вариант: другой дроп и название в подсказке
+        if (variant.ore) items.forEach((it) => { it.kind = 'ore'; });
       }
       return meshes;
     };
@@ -536,6 +551,7 @@ export class World {
     const rockVariants = [
       makeRockParts(rng, 'boulder'),
       makeRockParts(rng, 'slab'),
+      makeRockParts(rng, 'ore'),
       makeRockParts(rng, 'boulder'),
     ];
 
@@ -664,6 +680,27 @@ export class World {
       part.mesh.setMatrixAt(part.idx, dummy.matrix);
       part.mesh.instanceMatrix.needsUpdate = true;
     }
+  }
+
+  /** Спрятать/показать один слой модели (например, ягоды на кусте) */
+  setLayerVisible(item, layer, visible) {
+    if (!item || !item.parts) return;
+    const dummy = this._dummy || (this._dummy = new THREE.Object3D());
+    for (const part of item.parts) {
+      if (part.layer !== layer) continue;
+      const target = part.baseScale ?? 1;
+      dummy.position.set(item.x, item.h - 0.15, item.z);
+      dummy.rotation.set(0, item.rot || 0, 0);
+      dummy.scale.setScalar(visible ? target : 0.0001);
+      dummy.updateMatrix();
+      part.mesh.setMatrixAt(part.idx, dummy.matrix);
+      part.mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  /** Есть ли у куста слой ягод */
+  hasLayer(item, layer) {
+    return !!item && !!item.parts && item.parts.some((p) => p.layer === layer);
   }
 
   /** Ближайший подбираемый предмет в радиусе */

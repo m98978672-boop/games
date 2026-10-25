@@ -28,6 +28,7 @@ const NODE_DEFS = {
     label: 'Куст', hp: 4, respawn: 150,
     need: null, tool: 'chop',
     drop: [{ id: 'berries', min: 1, max: 2 }, { id: 'fiber', min: 1, max: 2 }],
+    berryRegrow: 85,
   },
 };
 
@@ -50,6 +51,7 @@ export class Resources {
       list.forEach((item, i) => {
         if (i % every !== 0) return;
         const def = NODE_DEFS[type];
+        const ore = type === 'rock' && item.kind === 'ore';
         this.nodes.push({
           type,
           item,
@@ -60,7 +62,11 @@ export class Resources {
           maxHp: def.hp,
           alive: true,
           respawnAt: 0,
-          label: def.label,
+          label: ore ? 'Рудный камень' : def.label,
+          ore,
+          // у куста с ягодами ягоды можно собрать руками
+          berries: type === 'bush' ? !!item.berries : false,
+          berryAt: 0,
         });
       });
     };
@@ -170,7 +176,10 @@ export class Resources {
       result.depleted = true;
 
       for (const drop of def.drop) {
-        const amount = drop.min + Math.floor(this.rng() * (drop.max - drop.min + 1));
+        let amount = drop.min + Math.floor(this.rng() * (drop.max - drop.min + 1));
+        // рудный камень даёт больше кремня
+        if (node.ore && drop.id === 'flint') amount += 1 + Math.floor(this.rng() * 2);
+        if (node.ore && drop.id === 'stone') amount += 1;
         if (amount > 0) result.drops[drop.id] = (result.drops[drop.id] || 0) + amount;
       }
       // срубленное дерево перестаёт быть препятствием
@@ -180,6 +189,26 @@ export class Resources {
       if (collider) collider.disabled = true;
     }
     return result;
+  }
+
+  // ------------------------------------------------------------
+  //  Ягоды: собираются руками, куст остаётся целым
+  // ------------------------------------------------------------
+
+  /** Можно ли сейчас собрать ягоды с этого куста */
+  canPickBerries(node) {
+    return !!node && node.type === 'bush' && node.alive && node.berries && this.time >= node.berryAt;
+  }
+
+  /** Собрать ягоды: возвращает { berries, fiber } */
+  pickBerries(node) {
+    const def = NODE_DEFS.bush;
+    const berries = 2 + Math.floor(this.rng() * 3);
+    const fiber = this.rng() > 0.55 ? 1 : 0;
+    node.berries = false;
+    node.berryAt = this.time + def.berryRegrow;
+    this.world.setLayerVisible(node.item, 'fruit', false);
+    return { berries, fiber, regrow: def.berryRegrow };
   }
 
   // ------------------------------------------------------------
@@ -269,6 +298,14 @@ export class Resources {
         (c) => Math.abs(c.x - node.x) < 0.01 && Math.abs(c.z - node.z) < 0.01
       );
       if (collider) collider.disabled = false;
+    }
+
+    // ягоды отрастают на кустах
+    for (const node of this.nodes) {
+      if (node.type !== 'bush' || node.berries || !node.alive) continue;
+      if (this.time < node.berryAt) continue;
+      node.berries = true;
+      this.world.setLayerVisible(node.item, 'fruit', true);
     }
 
     // костры
