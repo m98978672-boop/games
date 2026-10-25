@@ -37,6 +37,12 @@ const ICONS = {
   arrows: svg('<path d="M4 20L18 5" stroke="#8a6a42" stroke-width="1.6"/><path d="M18 3l3 2-2 2z" fill="#c8ccd2"/><path d="M5 17l-2 3 3-1z" fill="#e8ecef"/>'),
   driedMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#7d4526"/><path d="M9 12l6 4M10 16l4-2" stroke="#5d3018" stroke-width="1.2"/>'),
   brew: svg('<path d="M7 7h10l-1 12a2 2 0 01-2 2H10a2 2 0 01-2-2z" fill="#8a6a42"/><path d="M7 10h10" stroke="#c9a07a" stroke-width="1.2"/><path d="M9 4q3 2 6 0" stroke="#c23b52" stroke-width="2" fill="none"/>'),
+  ironOre: svg('<path d="M5 15l3-6 6-2 6 4-1 6-7 2z" fill="#8a8378"/><circle cx="9" cy="11" r="1.7" fill="#a8b0b8"/><circle cx="14" cy="14" r="2" fill="#c6ced6"/><circle cx="11" cy="16" r="1.2" fill="#8f9aa4"/>'),
+  iron: svg('<path d="M5 14l3-5h8l3 5-4 4H9z" fill="#9aa3ad"/><path d="M8 12h8" stroke="#e8eef5" stroke-width="1.2"/>'),
+  crystal: svg('<path d="M12 3l5 6-5 12-5-12z" fill="#62e6d8"/><path d="M12 3l2 8-2 10" stroke="#d8fff9" stroke-width="1"/>'),
+  obsidian: svg('<path d="M6 16l3-9 5-2 5 6-2 7-6 2z" fill="#3a2b56"/><path d="M9 7l3 6 4-4" stroke="#b083ff" stroke-width="1.2" fill="none"/>'),
+  workbench: svg('<rect x="3" y="11" width="18" height="3" rx="1" fill="#8a6a42"/><rect x="5" y="14" width="3" height="7" fill="#5d4529"/><rect x="16" y="14" width="3" height="7" fill="#5d4529"/><path d="M14 5l3 3-5 4" stroke="#8d96a0" stroke-width="1.8" fill="none"/>'),
+  grindstone: svg('<circle cx="12" cy="10" r="6" fill="#9a9488"/><circle cx="12" cy="10" r="2" fill="#6f6a61"/><rect x="4" y="17" width="16" height="2.4" rx="1" fill="#8a6a42"/><path d="M15 15l4 5" stroke="#8a6a42" stroke-width="2"/>'),
   rawMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#c46a72"/><path d="M9 12l6 4" stroke="#8f444c" stroke-width="1.4"/>'),
 };
 
@@ -65,6 +71,16 @@ export const ITEMS = {
   pickaxe: { id: 'pickaxe', name: 'Кирка', icon: ICONS.pickaxe, kind: 'tool', hotbar: true, tool: { chop: 1.0, mine: 3.0, weapon: 7 } },
   torch: { id: 'torch', name: 'Факел', icon: ICONS.torch, kind: 'tool', hotbar: true, light: true, tool: { chop: 0.6, mine: 0.2, weapon: 4 } },
   bow: { id: 'bow', name: 'Лук', icon: ICONS.bow, kind: 'tool', hotbar: true, ranged: true, tool: { chop: 0.3, mine: 0.1, weapon: 14 } },
+
+  // --- то, что достают из-под земли ---
+  ironOre: { id: 'ironOre', name: 'Железная руда', icon: ICONS.ironOre, kind: 'resource' },
+  iron: { id: 'iron', name: 'Железо', icon: ICONS.iron, kind: 'resource' },
+  crystal: { id: 'crystal', name: 'Кристалл', icon: ICONS.crystal, kind: 'resource' },
+  obsidian: { id: 'obsidian', name: 'Обсидиан', icon: ICONS.obsidian, kind: 'resource' },
+
+  // --- мастерская ---
+  workbench: { id: 'workbench', name: 'Верстак', icon: ICONS.workbench, kind: 'placeable', hotbar: true, action: 'Поставить: F' },
+  grindstone: { id: 'grindstone', name: 'Точильный станок', icon: ICONS.grindstone, kind: 'placeable', hotbar: true, action: 'Поставить: F' },
   campfireKit: { id: 'campfireKit', name: 'Костровое место', icon: ICONS.campfireKit, kind: 'placeable', hotbar: true },
 };
 
@@ -76,9 +92,9 @@ export const HOTBAR_SIZE = 10;
 
 /** Порядок сумки */
 export const BAG_ORDER = [
-  'wood', 'stone', 'flint', 'fiber', 'rope', 'hide', 'feather', 'arrows',
+  'wood', 'stone', 'flint', 'ironOre', 'iron', 'crystal', 'obsidian', 'fiber', 'rope', 'hide', 'feather', 'arrows',
   'coconut', 'berries', 'rawMeat', 'cookedMeat', 'driedMeat', 'cookedWater', 'brew', 'bandage',
-  'knife', 'spear', 'axe', 'pickaxe', 'bow', 'torch', 'campfireKit',
+  'knife', 'spear', 'axe', 'pickaxe', 'bow', 'torch', 'campfireKit', 'workbench', 'grindstone',
 ];
 
 /**
@@ -86,6 +102,11 @@ export const BAG_ORDER = [
  * Требуется верстак? Нет: всё «дикое», руками на коленке.
  */
 export const RECIPES = [
+
+  // --- подземелье и мастерская ---
+  { id: 'iron', name: 'Железо', need: { ironOre: 2, wood: 1 }, gives: { iron: 1 }, needFire: true, note: 'Плавится у костра из железной руды' },
+  { id: 'workbench', name: 'Верстак', need: { wood: 5, stone: 3 }, gives: { workbench: 1 }, note: 'Здесь куют предметы, которых нет в рецептах' },
+  { id: 'grindstone', name: 'Точильный станок', need: { stone: 4, wood: 2, iron: 1 }, gives: { grindstone: 1 }, note: 'Затачивает кованые клинки' },
   { id: 'rope', name: 'Верёвка', need: { fiber: 2 }, gives: { rope: 1 }, note: 'Волокно, скрученное в шнур' },
   { id: 'knife', name: 'Каменный нож', need: { wood: 1, flint: 1, rope: 1 }, gives: { knife: 1 }, note: 'Первый настоящий инструмент' },
   { id: 'spear', name: 'Копьё', need: { wood: 2, flint: 1, rope: 1 }, gives: { spear: 1 }, note: 'Оружие против зверя' },

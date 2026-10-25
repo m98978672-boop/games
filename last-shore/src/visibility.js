@@ -24,7 +24,9 @@ export class VisibilityCuller {
     this.items = new Map();     // object -> { radius, height, visibleFor }
     this.grid = new Map();
     this._buildGrid();
-    this.stats = { total: 0, visible: 0 };
+    this.stats = { total: 0, visible: 0, partial: 0, hides: 0 };
+    this.frame = 0;
+    this._wp = new THREE.Vector3();
   }
 
   /** Сетка по коллайдерам: проверять луч нужно только в соседних ячейках */
@@ -135,6 +137,67 @@ export class VisibilityCuller {
    * @param {number} dt
    * @param {number} frame — номер кадра, для «круглого» обновления дальних объектов
    */
+  /**
+   * Доля видимых точек объекта: 0 — закрыт целиком, 1 — виден весь.
+   * Девять лучей от камеры к центру и краям габарита дают грубую,
+   * но честную оценку «сколько модели реально видно из-за укрытия».
+   */
+  _coverage(cam, pos, radius, height) {
+    let seen = 0;
+    let total = 0;
+    const r = Math.max(0.35, radius * 0.8);
+    for (let i = 0; i < 9; i++) {
+      let px = pos.x;
+      let py = pos.y;
+      let pz = pos.z;
+      if (i > 0) {
+        const a = ((i - 1) % 8) * (Math.PI / 4);
+        px += Math.cos(a) * r;
+        pz += Math.sin(a) * r;
+        py += (i % 2 === 0 ? 1 : -1) * height * 0.28;
+      }
+      total++;
+      const blocked = this._blockedByProps(cam, { x: px, y: py, z: pz })
+        || this._blockedByTerrain(cam, { x: px, y: py, z: pz });
+      if (!blocked) seen++;
+    }
+    return total ? seen / total : 1;
+  }
+
+  /** Спрятать части, которые полностью закрыты укрытием, оставив видимые */
+  _cullParts(object, item, cam) {
+    if (!item.hiddenParts) item.hiddenParts = [];
+    object.updateMatrixWorld(true);
+    const parts = [];
+    object.traverse((o) => {
+      if (o !== object && o.isMesh && o.userData.noCull !== true) parts.push(o);
+    });
+    for (const part of parts) {
+      if (this._wp === null) break;
+      part.getWorldPosition(this._wp);
+      const geo = part.geometry;
+      if (geo && !geo.boundingSphere) geo.computeBoundingSphere();
+      const rad = Math.max(0.18, (geo && geo.boundingSphere ? geo.boundingSphere.radius : 0.4) * 0.85);
+      const p = { x: this._wp.x, y: this._wp.y, z: this._wp.z };
+      const blocked = this._blockedByProps(cam, p) || this._blockedByTerrain(cam, p);
+      if (blocked && rad < 0.55) {
+        if (part.visible) { part.visible = false; item.hiddenParts.push(part); }
+      } else if (!part.visible && item.hiddenParts.includes(part)) {
+        part.visible = true;
+        item.hiddenParts = item.hiddenParts.filter((x) => x !== part);
+      }
+    }
+    item.culled = true;
+  }
+
+  /** Вернуть все ранее спрятанные части */
+  _restoreParts(item) {
+    if (!item.hiddenParts || !item.hiddenParts.length) { item.culled = false; return; }
+    for (const part of item.hiddenParts) part.visible = true;
+    item.hiddenParts.length = 0;
+    item.culled = false;
+  }
+
   update(dt) {
     // матрицы камеры обновляем сами: куллер работает до отрисовки кадра
     const camera = this.camera;
@@ -146,8 +209,13 @@ export class VisibilityCuller {
     const tanX = tanY * camera.aspect;
     const maxDist = 120;
 
+    this.frame++;
     let visible = 0;
+    let partial = 0;
+    let hides = 0;
+    let idx = 0;
     for (const [object, item] of this.items) {
+      idx++;
       if (!object.parent) continue;
 
       const pos = item.getPos ? item.getPos() : object.position;
@@ -169,6 +237,23 @@ export class VisibilityCuller {
         if (shown && dist > 3 && dist < 60) {
           const aim = this.sphere.center;
           if (this._blockedByProps(cam, aim) || this._blockedByTerrain(cam, aim)) shown = false;
+
+          // 3) частичное перекрытие: считаем долю видимого, но не каждый кадр
+          if (shown && dist < 34) {
+            if (item.coverage === undefined || (this.frame + idx) % 6 === 0) {
+              item.coverage = this._coverage(cam, aim, item.radius, item.height);
+            }
+            if (item.coverage <= 0.001) {
+              shown = false;
+              hides++;
+            } else if (item.coverage < 0.999) {
+              partial++;
+            }
+          } else {
+            item.coverage = 1;
+          }
+        } else {
+          item.coverage = 1;
         }
       }
       item.last = { dist, shown };
@@ -184,10 +269,22 @@ export class VisibilityCuller {
       }
 
       if (object.visible !== item.wasVisible) object.visible = item.wasVisible;
-      if (item.wasVisible) visible++;
+      if (item.wasVisible) {
+        visible++;
+        // видна только часть модели — грузим ровно то, что не закрыто
+        if (item.coverage !== undefined && item.coverage < 0.999) {
+          if (dist < 30) this._cullParts(object, item, cam);
+        } else if (item.culled) {
+          this._restoreParts(item);
+        }
+      } else if (item.culled) {
+        this._restoreParts(item);
+      }
     }
 
     this.stats.total = this.items.size;
     this.stats.visible = visible;
+    this.stats.partial = partial;
+    this.stats.hides = hides;
   }
 }

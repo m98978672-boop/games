@@ -36,6 +36,9 @@ export class UI {
       invHotbar: $('inv-hotbar'),
       craft: $('crafting'),
       craftList: $('craft-list'),
+      workshop: $('workshop'),
+      wsTitle: $('ws-title'),
+      wsBody: $('ws-body'),
       hotbar: $('hotbar'),
       start: $('start'),
       pause: $('pause'),
@@ -363,13 +366,105 @@ export class UI {
   }
 
   isPanelOpen() {
-    return !this.el.inv.classList.contains('hidden') || !this.el.craft.classList.contains('hidden');
+    return !this.el.inv.classList.contains('hidden')
+      || !this.el.craft.classList.contains('hidden')
+      || !!(this.el.workshop && !this.el.workshop.classList.contains('hidden'));
   }
 
   closePanels() {
     this.el.inv.classList.add('hidden');
     this.el.craft.classList.add('hidden');
+    if (this.el.workshop) this.el.workshop.classList.add('hidden');
     this._endDrag();
+  }
+
+  // ------------------------------------------------------------
+  //  Верстак: ковка предметов, которых нет в рецептах,
+  //  и точильный станок: заточка кованого
+  // ------------------------------------------------------------
+
+  toggleWorkshop(show) {
+    if (!this.el.workshop) return false;
+    const open = show !== undefined ? show : this.el.workshop.classList.contains('hidden');
+    this.el.workshop.classList.toggle('hidden', !open);
+    if (open) {
+      this.el.inv.classList.add('hidden');
+      this.el.craft.classList.add('hidden');
+    }
+    return open;
+  }
+
+  /**
+   * data: {
+   *   mode: 'forge' | 'grind',
+   *   forms, materials, materialsDef, inv,
+   *   form, mat,
+   *   onPick(kind, id), onForge(), onSharpen(id),
+   *   tools: [{ def, cost, can }]
+   * }
+   */
+  renderWorkshop(data) {
+    if (!this.el.wsBody) return;
+    const { mode, forms, materials, inv, form, mat } = data;
+    this.el.wsTitle.textContent = mode === 'forge' ? 'Верстак' : 'Точильный станок';
+
+    if (mode === 'grind') {
+      const tools = data.tools || [];
+      this.el.wsBody.innerHTML = `
+        <p class="ws-empty">${tools.length
+          ? 'Кованые вещи выходят из-под молота тупыми: проведи их по камню — урон вырастет. Инструменты из обычных рецептов уже заточены, станок им не нужен.'
+          : 'Тут пока нечего точить. Скуй клинок на верстаке — и возвращайся.'}</p>
+        ${tools.map((t) => `
+          <div class="ws-tool">
+            <span class="row-icon">${t.def.icon}</span>
+            <div class="ws-tool-body">
+              <b>${t.def.name}</b>
+              <em>урон ${t.dmg}${t.def.sharp >= 0.999 ? ' · бритва' : ` · заточка ${Math.round((t.def.sharp || 0) * 100)}%`}</em>
+              <div class="ws-sharp-bar"><i style="width:${Math.round((t.def.sharp || 0) * 100)}%"></i></div>
+            </div>
+            <button class="ws-forge" style="width:auto;margin:0;padding:6px 10px" data-sharpen="${t.def.id}" ${t.can ? '' : 'disabled'}>${t.can ? 'Точить' : 'Готова'}</button>
+          </div>`).join('')}
+        <p class="panel-note">Точило тратит камень: 1 камень за проход</p>`;
+      this.el.wsBody.querySelectorAll('[data-sharpen]').forEach((btn) => {
+        btn.addEventListener('click', () => data.onSharpen(btn.dataset.sharpen));
+      });
+      return;
+    }
+
+    const matDef = data.materialsDef && data.materialsDef[mat];
+    const cost = matDef ? matDef.cost : {};
+    const costHtml = Object.entries(cost).map(([id, n]) => {
+      const have = this.inv[id] || 0;
+      return `<span class="cost ${have >= n ? 'ok' : 'lack'}">${this.items[id] ? this.items[id].name : id} ${have}/${n}</span>`;
+    }).join('');
+    const canForge = Object.entries(cost).every(([id, n]) => (this.inv[id] || 0) >= n);
+
+    this.el.wsBody.innerHTML = `
+      <div class="ws-section">
+        <div class="ws-label">Форма</div>
+        <div class="ws-grid">
+          ${forms.map((f) => `<div class="ws-chip ${f.id === form ? 'on' : ''}" data-form="${f.id}"><b>${f.name}</b></div>`).join('')}
+        </div>
+      </div>
+      <div class="ws-section">
+        <div class="ws-label">Материал</div>
+        <div class="ws-grid">
+          ${materials.map((m) => `<div class="ws-chip ${m.id === mat ? 'on' : ''} ${Object.entries(m.cost).every(([id, n]) => (this.inv[id] || 0) >= n) ? '' : 'lack'}" data-mat="${m.id}">${m.name.replace(/^./, (c) => c.toUpperCase())}</div>`).join('')}
+        </div>
+      </div>
+      <p class="ws-empty">${forms.find((f) => f.id === form)?.note || ''}</p>
+      <div class="ws-cost">${costHtml}</div>
+      <button class="ws-forge" data-forge="1" ${canForge ? '' : 'disabled'}>Выковать</button>
+      <p class="panel-note">Свежая ковка не заточена — неси её к точильному станку. Случайный разброс: качество и урон у каждой вещи свои.</p>`;
+
+    this.el.wsBody.querySelectorAll('[data-form]').forEach((el) => {
+      el.addEventListener('click', () => data.onPick('form', el.dataset.form));
+    });
+    this.el.wsBody.querySelectorAll('[data-mat]').forEach((el) => {
+      el.addEventListener('click', () => data.onPick('mat', el.dataset.mat));
+    });
+    const forgeBtn = this.el.wsBody.querySelector('[data-forge]');
+    if (forgeBtn) forgeBtn.addEventListener('click', () => data.onForge());
   }
 
   // ------------------------------------------------------------

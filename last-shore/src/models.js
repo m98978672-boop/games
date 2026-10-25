@@ -409,28 +409,41 @@ export function makeBushParts(rng, withBerries) {
       [(rng() - 0.5) * 0.25, rng() * 0.6, (rng() - 0.5) * 0.25]);
   }
 
-  // --- листва: несколько кубов-«глыб» разного размера ---
-  // листва светлее: цвет материала умножается на текстуру, иначе куст «чернеет»
+  // --- листва: шапка из кубов разного размера, светлая сверху, тёмная снизу ---
   const greens = [0x8fc06a, 0x7cb45e, 0x9ccf78, 0x6fa855];
-  const count = 6 + Math.floor(rng() * 4);
+  const count = 9 + Math.floor(rng() * 5);
   for (let i = 0; i < count; i++) {
-    const size = 0.34 + rng() * 0.3;
-    const a = (i / count) * Math.PI * 2 + rng() * 0.8;
-    const d = i === 0 ? 0 : 0.2 + rng() * 0.34;
-    piece(leaf, box(size, size * (0.8 + rng() * 0.4), size), greens[Math.floor(rng() * greens.length)],
-      [Math.cos(a) * d, 0.38 + rng() * 0.4, Math.sin(a) * d],
-      [(rng() - 0.5) * 0.25, rng() * Math.PI, (rng() - 0.5) * 0.25]);
+    const size = 0.24 + rng() * 0.34;
+    const a = (i / count) * Math.PI * 2 + rng() * 0.9;
+    const d = i < 3 ? rng() * 0.12 : 0.24 + rng() * 0.4;
+    const y = 0.24 + rng() * 0.62;
+    // низ куста темнее, макушка светлее — силуэт читается даже издалека
+    const tone = greens[Math.min(greens.length - 1, Math.floor((y - 0.2) * 4 + rng() * 1.5))];
+    piece(leaf, box(size, size * (0.75 + rng() * 0.45), size), tone,
+      [Math.cos(a) * d, y, Math.sin(a) * d],
+      [(rng() - 0.5) * 0.4, rng() * Math.PI, (rng() - 0.5) * 0.4]);
+  }
+  // пара торчащих вверх веточек с листиком — куст не выглядит «кубиком»
+  for (let i = 0; i < 2; i++) {
+    const a = rng() * Math.PI * 2;
+    const h = 0.28 + rng() * 0.2;
+    piece(bark, box(0.05, h, 0.05), 0x6a4c30,
+      [Math.cos(a) * 0.18, 0.6 + h / 2, Math.sin(a) * 0.18],
+      [(rng() - 0.5) * 0.5, 0, (rng() - 0.5) * 0.5]);
+    piece(leaf, box(0.16, 0.05, 0.12), 0xa3d47c,
+      [Math.cos(a) * 0.24, 0.62 + h, Math.sin(a) * 0.24],
+      [0, rng() * 3, (rng() - 0.5) * 0.6]);
   }
 
   if (withBerries) {
     const clusters = 4 + Math.floor(rng() * 3);
     for (let i = 0; i < clusters; i++) {
       const a = rng() * Math.PI * 2;
-      const d = 0.28 + rng() * 0.34;
-      const cy = 0.5 + rng() * 0.42;
+      const d = 0.34 + rng() * 0.3;
+      const cy = 0.42 + rng() * 0.42;
       for (let j = 0; j < 3; j++) {
-        const size = 0.12 + rng() * 0.05;
-        piece(fruit, box(size, size, size), rng() > 0.5 ? COLORS.berry : 0x9d2740,
+        const size = 0.15 + rng() * 0.06;
+        piece(fruit, box(size, size * 1.15, size), rng() > 0.4 ? 0xd6304a : COLORS.berry,
           [Math.cos(a) * d + (rng() - 0.5) * 0.14, cy + (rng() - 0.5) * 0.14, Math.sin(a) * d + (rng() - 0.5) * 0.14],
           [rng(), rng(), rng()]);
       }
@@ -476,36 +489,42 @@ export function makeRockParts(rng, kind = null) {
   } else {
     // валун: два сросшихся блока + обломки у основания
     const w = 1.05 + rng() * 0.3;
-    const mainH = 0.85 + rng() * 0.2;
-    chunk(rock, w, mainH, w * (0.82 + rng() * 0.2), 0, mainH / 2 + 0.02, 0);
-    chunk(rock, w * 0.78, 0.62 + rng() * 0.3, w * 0.7,
-      (rng() - 0.5) * 0.5, 0.95 + rng() * 0.12, (rng() - 0.5) * 0.45);
+    const mainH = (type === 'ore' ? 1.15 : 0.85) + rng() * 0.22;
+    const dark = type === 'ore';
+    const tone = () => (dark ? 0x8a8378 : stoneTones[Math.floor(rng() * stoneTones.length)]);
+    chunk(rock, w, mainH, w * (0.82 + rng() * 0.2), 0, mainH / 2 + 0.02, 0, null, tone());
+    chunk(rock, w * 0.72, 0.55 + rng() * 0.24, w * 0.64,
+      (rng() - 0.5) * 0.5, mainH + 0.14, (rng() - 0.5) * 0.45, null, tone());
     const extra = 2 + Math.floor(rng() * 3);
     for (let i = 0; i < extra; i++) {
       const a = (i / extra) * Math.PI * 2 + rng();
       const s = 0.34 + rng() * 0.3;
       chunk(rock, s, s * (0.7 + rng() * 0.4), s,
-        Math.cos(a) * (0.6 + rng() * 0.2), 0.16 + rng() * 0.24, Math.sin(a) * (0.6 + rng() * 0.2));
+        Math.cos(a) * (0.6 + rng() * 0.2), 0.16 + rng() * 0.24, Math.sin(a) * (0.6 + rng() * 0.2), null, tone());
     }
 
     if (type === 'ore') {
-      // вкрапления сидят «в теле» камня: половина кубика утоплена в грань
+      // руда выглядит иначе: тёмная скала с яркими кристаллами, торчащими наружу
+      const gems = [0x7fe4ff, 0x4fc3e8, 0xa8f0ff];
       const halfW = w / 2;
-      const veins = 6 + Math.floor(rng() * 4);
+      const veins = 9 + Math.floor(rng() * 5);
       for (let i = 0; i < veins; i++) {
         const a = rng() * Math.PI * 2;
-        const y = 0.3 + rng() * (mainH - 0.15);
-        const sz = 0.16 + rng() * 0.13;
-        const r = halfW * (0.82 + rng() * 0.1);
-        piece(ore, box(sz, sz * (0.7 + rng() * 0.6), sz), rng() > 0.3 ? 0x9fe0f2 : 0x6aa8bd,
+        const y = 0.28 + rng() * (mainH - 0.1);
+        const sz = 0.2 + rng() * 0.16;
+        const r = halfW * (0.86 + rng() * 0.12);
+        piece(ore, box(sz, sz * (0.8 + rng() * 0.7), sz), gems[Math.floor(rng() * gems.length)],
           [Math.cos(a) * r, y, Math.sin(a) * r],
           [rng() * 3, rng() * 3, rng() * 3]);
       }
-      // пара кристаллов торчит из верхней грани
-      for (let i = 0; i < 2; i++) {
-        piece(ore, new THREE.ConeGeometry(0.09 + rng() * 0.04, 0.24 + rng() * 0.14, 4), 0xb6e8f4,
-          [(rng() - 0.5) * 0.5, mainH + 0.1, (rng() - 0.5) * 0.5],
-          [(rng() - 0.5) * 0.35, rng() * 3, (rng() - 0.5) * 0.35]);
+      // кристаллы-шипы: именно они читаются издалека как «руда»
+      const spikes = 3 + Math.floor(rng() * 3);
+      for (let i = 0; i < spikes; i++) {
+        const a = rng() * Math.PI * 2;
+        const hgt = 0.34 + rng() * 0.3;
+        piece(ore, new THREE.ConeGeometry(0.1 + rng() * 0.07, hgt, 4), gems[i % gems.length],
+          [Math.cos(a) * 0.42, mainH + hgt * 0.35, Math.sin(a) * 0.42],
+          [(rng() - 0.5) * 0.5, rng() * 3, (rng() - 0.5) * 0.5]);
       }
     }
   }

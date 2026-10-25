@@ -13,6 +13,12 @@ import { Rain } from './effects.js';
 import { ITEMS, HOTBAR_SIZE, BAG_ORDER, RECIPES } from './items.js';
 import { Resources, NODE_DEFS } from './nodes.js';
 import { Mobs } from './mobs.js';
+import { Mine, createMineWorld } from './mine.js';
+import {
+  FORMS, MATERIALS, forge, forgeCost, sharpen, canSharpen,
+  effectiveTool, effectiveWeapon, registerForged,
+  buildWorkbench, buildGrindstone, buildModel as buildForgedModel,
+} from './forge.js';
 import { VisibilityCuller } from './visibility.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 import { createTextures } from './textures.js';
@@ -127,6 +133,21 @@ class Game {
     this.rain = new Rain(this.scene);
     this.resources = new Resources(this.scene, this.world);
     this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
+
+    // --- подземелье: два слоя под островом ---
+    this.mine = new Mine(this.scene, this.world, CONFIG.world.seed);
+    this.mineWorld = createMineWorld(this.mine, this.world);
+    this.underground = false;
+    this.stations = [];          // верстаки и точила, поставленные игроком
+    this.forged = {};            // id -> данные кованого предмета (для сохранения)
+    this.ws = { mode: 'forge', form: 'sword', mat: 'flint', station: null };
+    this.aim = null;
+
+    // фонарь под землёй: без него в шахте нечего делать
+    this.mineLight = new THREE.PointLight(0xffcf8a, 2.3, 16, 2);
+    this.mineLight.visible = false;
+    this.scene.add(this.mineLight);
+
     this.projectiles = [];
     this.chips = [];            // щепки, крошка и ягоды — короткие частицы
 
@@ -157,6 +178,10 @@ class Game {
     this.holdingAttack = false;
     this.nearNode = null;
     this.target = null;
+    this.inLavaTimer = 0;
+    this.lavaHurtAt = 0;
+    this.thoughtTimer = 45 + Math.random() * 40;
+    this.fireflies = null;
 
     this.weather = 'clear';
     this.weatherTimer = 2.5;      // в игровых часах до смены погоды
@@ -185,6 +210,7 @@ class Game {
     this.fpsValue = 60;
     this.saveTimer = 0;
 
+    this.buildFireflies();
     this.spawnPlayer();
     this.buildHighlight();
     this.bindEvents();
@@ -273,6 +299,50 @@ class Game {
     this.player.applyCamera(this.camera, world, 1);
     this.spawnPoint = { x: best.x, z: best.z };
     console.log(`[LAST SHORE] высадка: ${best.x.toFixed(1)}, ${best.z.toFixed(1)} · море в ${best.seaDist | 0} м · пляж ${best.sand}/12`);
+  }
+
+  /** Светляки: ночью над травой — маленькие тёплые точки, живые и даром */
+  buildFireflies() {
+    const count = 180;
+    const pos = new Float32Array(count * 3);
+    const phase = new Float32Array(count);
+    for (let i = 0; i < count; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 40;
+      pos[i * 3 + 1] = 0.6 + Math.random() * 3.2;
+      pos[i * 3 + 2] = (Math.random() - 0.5) * 40;
+      phase[i] = Math.random() * Math.PI * 2;
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({
+      color: 0xffe6a0, size: 0.14, transparent: true, opacity: 0.9,
+      depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true,
+    });
+    this.fireflies = new THREE.Points(geo, mat);
+    this.fireflies.frustumCulled = false;
+    this.fireflies.visible = false;
+    this.scene.add(this.fireflies);
+    this.fireflyPhase = phase;
+    this.fireflyClock = 0;
+  }
+
+  updateFireflies(dt, night) {
+    if (!this.fireflies) return;
+    const show = night > 0.35 && !this.underground;
+    this.fireflies.visible = show;
+    if (!show) return;
+    this.fireflyClock += dt;
+    const p = this.player.position;
+    this.fireflies.position.set(p.x, p.y, p.z);
+    this.fireflies.material.opacity = 0.35 + Math.sin(this.fireflyClock * 1.7) * 0.25 + night * 0.35;
+    const pos = this.fireflies.geometry.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const ph = this.fireflyPhase[i];
+      pos.setX(i, pos.getX(i) + Math.sin(this.fireflyClock * 0.8 + ph) * 0.02);
+      pos.setY(i, pos.getY(i) + Math.cos(this.fireflyClock * 1.1 + ph) * 0.014);
+      pos.setZ(i, pos.getZ(i) + Math.cos(this.fireflyClock * 0.7 + ph) * 0.02);
+    }
+    pos.needsUpdate = true;
   }
 
   buildHighlight() {
@@ -418,8 +488,17 @@ class Game {
           this.ui.toast(on ? 'Хитбоксы включены (F3 → F)' : 'Хитбоксы выключены');
           this.audio.uiClick();
         } else {
-          this.placeCampfire();
+          this.placeSelected();
         }
+        break;
+      case 'KeyR':
+        // вниз по лестнице: глубинный слой с магмой
+        if (!this.underground) break;
+        if (!this.mine.nearLadder(this.player.position, 3.2)) {
+          this.ui.toast('Спуск глубже — только у лестницы (жёлтая метка)', true);
+          break;
+        }
+        this.descendMine();
         break;
       case 'F3':
         e.preventDefault();
@@ -490,6 +569,11 @@ class Game {
     this.lastTime = performance.now();
     this.tryLock();
     this.audio.uiClick();
+    if (!continueSave) {
+      setTimeout(() => {
+        this.ui.toast('В горах — арки с дымкой: это вход в шахту. Там руда, кристаллы и обсидиан.');
+      }, 4000);
+    }
   }
 
   pause() {
@@ -514,6 +598,364 @@ class Game {
 
   nodeDef(node) {
     return NODE_DEFS[node.type] || { label: 'Объект', need: null };
+  }
+
+  // ------------------------------------------------------------
+  //  Подземелье
+  // ------------------------------------------------------------
+
+  /** Войти в шахту через арку на поверхности */
+  enterMine(entrance) {
+    const spot = this.mine.enter(0, entrance || this.aim?.entrance || null);
+    this.underground = true;
+    this.mineLight.visible = true;
+    this.player.setPosition(spot.x, spot.z, this.mineWorld);
+    this.player.position.y = this.mine.floorAt(spot.x, spot.z);
+    this.player.pitch = 0.04;
+    this.player.applyCamera(this.camera, this.mineWorld, 1);
+    this.audio.mineEnter?.() || this.audio.rustle?.();
+    this.ui.toast('Ты в шахте. Каменный слой: руда, жилы, темнота. Кирка обязательна.');
+    this.save();
+  }
+
+  /** Выйти на поверхность */
+  exitMine() {
+    const spot = this.mine.leave();
+    this.underground = false;
+    this.mineLight.visible = false;
+    this.player.setPosition(spot.x, spot.z, this.world);
+    this.player.applyCamera(this.camera, this.world, 1);
+    this.audio.pickup?.();
+    this.ui.toast('Снова наверху. Свет, ветер, чайки.');
+    this.save();
+  }
+
+  /** Спуститься на глубинный слой — туда, где магма и драгоценные жилы */
+  descendMine() {
+    if (this.mine.active === null) return;
+    if (this.mine.active === 1) {
+      this.ui.toast('Глубже уже некуда: под тобой магма', true);
+      return;
+    }
+    const spot = this.mine.switchLevel();
+    if (!spot) return;
+    this.player.setPosition(spot.x, spot.z, this.mineWorld);
+    this.player.position.y = this.mine.floorAt(spot.x, spot.z);
+    this.player.applyCamera(this.camera, this.mineWorld, 1);
+    this.audio.stoneCrack?.();
+    this.ui.toast('Глубинный слой: жар, лава и жилы обсидиана с кристаллами');
+    this.save();
+  }
+
+  /** Подняться на слой выше (из глубины — в камень) */
+  ascendMine() {
+    if (this.mine.active === null) {
+      this.exitMine();
+      return;
+    }
+    if (this.mine.active === 0) {
+      this.exitMine();
+      return;
+    }
+    const spot = this.mine.switchLevel();
+    if (!spot) return;
+    this.player.setPosition(spot.x, spot.z, this.mineWorld);
+    this.player.position.y = this.mine.floorAt(spot.x, spot.z);
+    this.player.applyCamera(this.camera, this.mineWorld, 1);
+    this.ui.toast('Каменный слой: прохладнее, но руды здесь меньше');
+  }
+
+  // ------------------------------------------------------------
+  //  Верстак и точильный станок
+  // ------------------------------------------------------------
+
+  placeStation(type) {
+    const id = type === 'grind' ? 'grindstone' : 'workbench';
+    if ((this.state.inventory[id] || 0) <= 0) {
+      this.ui.toast(`Сначала сделай: ${ITEMS[id].name} (C)`, true);
+      return;
+    }
+    const p = this.player.position;
+    const x = p.x + Math.sin(this.player.facing) * 1.9;
+    const z = p.z + Math.cos(this.player.facing) * 1.9;
+    if (this.underground) {
+      this.ui.toast('Под землёй ставить некуда — поднимись наверх', true);
+      return;
+    }
+    const h = this.world.heightAt(x, z);
+    if (h < 0.45) {
+      this.ui.toast('В воде станок не поставить', true);
+      return;
+    }
+    this.takeItem(id, 1);
+    const group = type === 'grind' ? buildGrindstone() : buildWorkbench();
+    group.position.set(x, h, z);
+    group.rotation.y = -this.player.facing + Math.PI / 2;
+    group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    this.scene.add(group);
+    const station = { type, x, y: h, z, group };
+    this.stations.push(station);
+    this.world.colliders.push({ x, z, r: 0.95, height: 1.1, kind: 'station' });
+    this.audio.craft?.();
+    this.ui.toast(`${ITEMS[id].name} поставлен · E — работать`);
+    if (this.equippedId() === id && (this.state.inventory[id] || 0) === 0) this.player.setEquipped(null);
+    this.save();
+  }
+
+  openStation(station) {
+    if (!this.running || this.paused || this.dead) return;
+    this.ws.mode = station.type === 'grind' ? 'grind' : 'forge';
+    this.ws.station = station;
+    if (document.pointerLockElement) {
+      this.panelUnlock = true;
+      document.exitPointerLock();
+    }
+    this.ui.toggleWorkshop(true);
+    this.renderWorkshop();
+    this.audio.uiClick?.();
+  }
+
+  renderWorkshop() {
+    const inv = this.state.inventory;
+    const tools = Object.values(ITEMS)
+      .filter((def) => def.forged && (inv[def.id] || 0) > 0)
+      .map((def) => ({
+        def,
+        dmg: effectiveWeapon(def).toFixed(0),
+        can: canSharpen(def) && (inv.stone || 0) > 0,
+      }));
+
+    this.ui.renderWorkshop({
+      mode: this.ws.mode,
+      forms: Object.values(FORMS),
+      materials: Object.values(MATERIALS),
+      materialsDef: MATERIALS,
+      inv,
+      form: this.ws.form,
+      mat: this.ws.mat,
+      tools,
+      onPick: (kind, id) => {
+        if (kind === 'form') this.ws.form = id;
+        else this.ws.mat = id;
+        this.renderWorkshop();
+      },
+      onForge: () => this.forgeItem(),
+      onSharpen: (id) => this.sharpenItem(id),
+    });
+  }
+
+  forgeItem() {
+    const cost = forgeCost(this.ws.form, this.ws.mat);
+    const inv = this.state.inventory;
+    for (const [id, n] of Object.entries(cost)) {
+      if ((inv[id] || 0) < n) {
+        this.ui.toast(`Не хватает: ${ITEMS[id]?.name || id}`, true);
+        return;
+      }
+    }
+    for (const [id, n] of Object.entries(cost)) this.takeItem(id, n);
+    const def = forge(this.ws.form, this.ws.mat, (Date.now() ^ (Math.random() * 1e9)) >>> 0);
+    this.forged[def.id] = {
+      id: def.id, form: def.form, mat: def.mat, name: def.name,
+      quality: def.quality, roll: def.roll, tool: def.tool,
+      sharp: def.sharp, tuned: def.tuned, icon: def.icon,
+    };
+    this.addItem(def.id, 1);
+    this.audio.craft?.();
+    this.audio.hammer?.() || this.audio.stoneCrack?.();
+    this.player.shake(0.08);
+    this.spawnChips(this.player.position.x, this.player.position.y + 1.1, this.player.position.z,
+      { count: 10, color: 0xffd08a, size: 0.05, spread: 1.6, up: 2.2 });
+    this.ui.toast(`Выковано: ${def.name} · урон ${def.tool.weapon} · не заточено`);
+    this.ui._lastCraftSig = '';
+    this.renderWorkshop();
+    this.refreshBag();
+    this.save();
+  }
+
+  sharpenItem(id) {
+    const def = ITEMS[id];
+    if (!def) return;
+    if ((this.state.inventory.stone || 0) <= 0) {
+      this.ui.toast('Нужен камень для точила', true);
+      return;
+    }
+    const res = sharpen(def);
+    if (!res.ok) {
+      this.ui.toast(res.text, true);
+      return;
+    }
+    this.takeItem('stone', 1);
+    if (this.forged[id]) {
+      this.forged[id].sharp = def.sharp;
+      this.forged[id].tuned = def.tuned;
+    }
+    this.audio.grind?.() || this.audio.stoneCrack?.();
+    const p = this.player.position;
+    this.spawnChips(p.x, p.y + 1.0, p.z, { count: 8, color: 0xffc46a, size: 0.04, spread: 1.2, up: 1.8 });
+    this.ui.toast(res.text);
+    this.player.setEquipped(this.equippedId());
+    this.renderWorkshop();
+    this.save();
+  }
+
+  // ------------------------------------------------------------
+  //  Прицел в центре экрана: всё, что делаем, делаем по нему
+  // ------------------------------------------------------------
+
+  _raySphere(origin, dir, p, r) {
+    const ox = origin.x - p.x;
+    const oy = origin.y - p.y;
+    const oz = origin.z - p.z;
+    const b = ox * dir.x + oy * dir.y + oz * dir.z;
+    const c = ox * ox + oy * oy + oz * oz - r * r;
+    const disc = b * b - c;
+    if (disc < 0) return null;
+    const t = -b - Math.sqrt(disc);
+    return t > 0.15 ? t : null;
+  }
+
+  /** Пересчитать цель под прицелом (раз в кадр) */
+  computeAim() {
+    const cam = this.camera;
+    cam.updateMatrixWorld();
+    const dir = new THREE.Vector3();
+    cam.getWorldDirection(dir);
+    const origin = cam.position.clone();
+    const reach = 6.5;
+    const aim = { dir, origin, target: null, t: reach, entrance: null };
+
+    const push = (kind, t, data) => {
+      if (t === null || t > reach || t >= aim.t) return;
+      aim.t = t;
+      aim.target = { kind, t, ...data };
+    };
+
+    if (this.underground) {
+      // стены шахты
+      const probe = this.mine.probe(origin, dir.x, dir.z, Math.min(reach, 4.2));
+      if (probe) push('minewall', probe.dist, { probe });
+      const lvl = this.mine.level;
+      if (lvl && lvl.lightPos) {
+        const t = this._raySphere(origin, dir, { x: lvl.lightPos.x, y: lvl.y + 1.4, z: lvl.lightPos.z }, 1.5);
+        push('ladder', t, { ladder: lvl.lightPos });
+      }
+      aim.underground = true;
+      this.aim = aim;
+      return aim;
+    }
+
+    // арки-входы в шахту
+    for (const e of this.mine.entrances) {
+      const t = this._raySphere(origin, dir, { x: e.x, y: e.y + 1.2, z: e.z }, 2.3);
+      if (t !== null && t < aim.t) { aim.t = t; aim.target = { kind: 'entrance', t, entrance: e }; aim.entrance = e; }
+    }
+
+    // звери
+    for (const m of this.mobs.list) {
+      if (!m.alive) continue;
+      const r = Math.max(0.7, (m.def.hitbox?.r || 0.8) + 0.35);
+      const t = this._raySphere(origin, dir, { x: m.x, y: (m.y || 0) + (m.def.hitbox?.h || 1.2) * 0.5, z: m.z }, r);
+      push('mob', t, { mob: m });
+    }
+
+    // узлы: деревья, камни, кусты, руда на поверхности
+    for (const node of this.resources.nodes) {
+      if (!node.alive) continue;
+      const h = node.type === 'tree' || node.type === 'palm' ? 1.9 : node.type === 'rock' ? 0.75 : 0.65;
+      const r = node.type === 'tree' || node.type === 'palm' ? 1.15 : 0.95;
+      const t = this._raySphere(origin, dir, { x: node.x, y: node.y + h, z: node.z }, r);
+      push('node', t, { node });
+    }
+
+    // костры, родники
+    for (const fire of this.resources.campfires) {
+      push('campfire', this._raySphere(origin, dir, { x: fire.x, y: fire.y + 0.5, z: fire.z }, 1.0), { fire });
+    }
+    for (const sp of this.resources.springs) {
+      push('spring', this._raySphere(origin, dir, { x: sp.x, y: sp.y + 0.35, z: sp.z }, 1.5), { spring: sp });
+    }
+
+    // верстак / точило
+    for (const st of this.stations) {
+      push('station', this._raySphere(origin, dir, { x: st.x, y: st.y + 0.8, z: st.z }, 1.1), { station: st });
+    }
+
+    // предметы на земле
+    for (const p of this.world.pickups) {
+      const pos = p.mesh.position;
+      push('pickup', this._raySphere(origin, dir, { x: pos.x, y: pos.y + 0.15, z: pos.z }, 0.55), { pickup: p });
+    }
+
+    this.aim = aim;
+    return aim;
+  }
+
+  /** Что показать в прицеле словами */
+  aimPromptHtml() {
+    const aim = this.aim;
+    if (!aim || !aim.target) {
+      return this.underground
+        ? '<span class="prompt-dim">Прицелься в стену и бей киркой</span>'
+        : null;
+    }
+    const t = aim.target;
+    switch (t.kind) {
+      case 'minewall': {
+        const type = t.probe.type;
+        const names = { stone: 'порода', ore: 'железная жила', crystal: 'кристальная жила', obsidian: 'обсидиановая жила' };
+        return `<b>ЛКМ</b> — ${names[type] || 'порода'}${type === 'stone' ? '' : ' <span class="prompt-warn">ценная</span>'}`;
+      }
+      case 'ladder':
+        return '<b>E</b> — подняться · <b>R</b> — спуститься';
+      case 'entrance':
+        return '<b>E</b> — спуститься в шахту';
+      case 'mob':
+        return `<b>ЛКМ</b> — ${t.mob.def.label.toLowerCase()} <span class="prompt-warn">${Math.max(0, Math.round(t.mob.hp))}/${t.mob.maxHp}</span>`;
+      case 'node': {
+        const node = t.node;
+        const def = this.nodeDef(node);
+        if (node.type === 'bush' && this.resources.canPickBerries(node)) return '<b>E</b> или <b>ЛКМ</b> — собрать ягоды';
+        return `<b>ЛКМ</b> — ${def.label.toLowerCase()}${def.need ? ` (нужен ${def.need})` : ''}`;
+      }
+      case 'campfire': {
+        const pct = Math.round((t.fire.fuel / t.fire.maxFuel) * 100);
+        return `<b>E</b> — подложить палки (огонь ${pct}%)`;
+      }
+      case 'spring':
+        return '<b>E</b> — попить из родника';
+      case 'station':
+        return t.station.type === 'grind'
+          ? '<b>E</b> — точить кованое'
+          : '<b>E</b> — верстак: ковать';
+      case 'pickup':
+        return `<b>E</b> — подобрать ${t.pickup.name.toLowerCase()}`;
+      default:
+        return null;
+    }
+  }
+
+  /** Где нарисовать кольцо-подсветку под целью */
+  aimMarkerPos() {
+    const aim = this.aim;
+    if (!aim || !aim.target) return null;
+    const t = aim.target;
+    switch (t.kind) {
+      case 'minewall':
+        return { x: this.mine._worldX(t.probe.cx), z: this.mine._worldZ(t.probe.cz), y: this.mine.level.y };
+      case 'ladder': {
+        const lvl = this.mine.level;
+        return { x: lvl.lightPos.x, z: lvl.lightPos.z, y: lvl.y };
+      }
+      case 'entrance': return { x: t.entrance.x, z: t.entrance.z, y: t.entrance.y };
+      case 'mob': return { x: t.mob.x, z: t.mob.z, y: t.mob.y || 0 };
+      case 'node': return { x: t.node.x, z: t.node.z, y: t.node.y };
+      case 'campfire': return { x: t.fire.x, z: t.fire.z, y: t.fire.y };
+      case 'spring': return { x: t.spring.x, z: t.spring.z, y: t.spring.y };
+      case 'station': return { x: t.station.x, z: t.station.z, y: t.station.y };
+      case 'pickup': return { x: t.pickup.mesh.position.x, z: t.pickup.mesh.position.z, y: t.pickup.mesh.position.y };
+      default: return null;
+    }
   }
 
   readBars() {
@@ -542,7 +984,9 @@ class Game {
 
   equippedTool() {
     const id = this.equippedId();
-    return id && ITEMS[id].tool ? ITEMS[id].tool : null;
+    if (!id || !ITEMS[id].tool) return null;
+    // кованый клинок бьёт по-разному в зависимости от заточки
+    return ITEMS[id].forged ? effectiveTool(ITEMS[id]) : ITEMS[id].tool;
   }
 
   selectSlot(index) {
@@ -625,8 +1069,8 @@ class Game {
     return true;
   }
 
-  pickup() {
-    const p = this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
+  pickup(target = null) {
+    const p = target || this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
     if (!p) return false;
     this.addItem(p.kind, 1);
     this.world.removePickup(p);
@@ -636,72 +1080,82 @@ class Game {
     return true;
   }
 
-  /** E — универсальное действие: подобрать, попить, подложить дров */
+  /** E — действие по прицелу: подобрать, попить, войти в шахту, открыть станок */
   interact() {
     if (!this.running || this.paused || this.dead) return;
-
-    if (this.pickup()) return;
-
-    const target = this.resources.nearest(this.player.position, 4.6);
-    if (!target) {
-      this.ui.toast('Рядом нечего взять', true);
+    const t = this.aim && this.aim.target;
+    if (!t) {
+      this.ui.toast(this.underground ? 'Наведи прицел на стену или лестницу' : 'Наведи прицел на предмет', true);
       return;
     }
 
-    if (target.kind === 'spring') {
-      const before = this.state.thirst;
-      this.state.thirst = Math.min(100, before + 30);
-      this.audio.drink();
-      this.ui.toast(before > 99 ? 'Ты не хочешь пить' : 'Родник: +30 жажды');
-      return;
-    }
-
-    if (target.kind === 'campfire') {
-      if ((this.state.inventory.wood || 0) <= 0) {
-        this.ui.toast('Нужны палки для костра', true);
+    switch (t.kind) {
+      case 'pickup':
+        this.pickup(t.pickup);
+        return;
+      case 'spring': {
+        const before = this.state.thirst;
+        this.state.thirst = Math.min(100, before + 30);
+        this.audio.drink();
+        this.ui.toast(before > 99 ? 'Ты не хочешь пить' : 'Родник: +30 жажды');
         return;
       }
-      this.takeItem('wood', 1);
-      this.resources.addFuel(target.fire, 45);
-      this.audio.eat();
-      this.ui.toast(`Костёр: +45 с огня`);
-      return;
-    }
-
-    if (target.kind === 'node') {
-      const node = target.node;
-      if (node.type === 'bush' && this.resources.canPickBerries(node)) {
-        this.gatherBerries(node);
+      case 'campfire': {
+        if ((this.state.inventory.wood || 0) <= 0) {
+          this.ui.toast('Нужны палки для костра', true);
+          return;
+        }
+        this.takeItem('wood', 1);
+        this.resources.addFuel(t.fire.fire || t.fire, 45);
+        this.audio.eat();
+        this.ui.toast('Костёр: +45 с огня');
         return;
       }
-      if (node.type === 'bush') {
-        this.ui.toast('Ягоды ещё не поспели — подожди немного', true);
+      case 'node': {
+        const node = t.node;
+        if (node.type === 'bush' && this.resources.canPickBerries(node)) {
+          this.gatherBerries(node);
+        } else if (node.type === 'bush') {
+          this.ui.toast('Ягоды ещё не поспели — подожди немного', true);
+        } else {
+          this.ui.toast('Добывай ударами: зажми левую кнопку мыши', true);
+        }
         return;
       }
-      this.ui.toast('Добывай ударами: зажми левую кнопку мыши', true);
+      case 'station':
+        this.openStation(t.station);
+        return;
+      case 'entrance':
+        this.enterMine(t.entrance);
+        return;
+      case 'ladder':
+        this.ascendMine();
+        return;
+      case 'minewall':
+        this.ui.toast('Стену не открыть руками: нужна кирка (ЛКМ)', true);
+        return;
+      default:
+        this.ui.toast('Здесь нечего делать', true);
     }
   }
 
-  /** ЛКМ: удар по дереву/камню/кусту или в воздух */
+  /** ЛКМ: удар строго по прицелу — по зверю, дереву, камню или стене шахты */
   attack() {
     if (!this.running || this.paused || this.dead) return;
     if (this.attackCooldown > 0) return;
 
     const toolId = this.equippedId();
-    const ranged = toolId && ITEMS[toolId].ranged;
+    const def = toolId ? ITEMS[toolId] : null;
+    const ranged = def && def.ranged;
+    const target = this.aim && this.aim.target;
+    const kindName = target ? target.kind : 'air';
 
-    // что перед нами — от этого зависит и замах, и звук, и частицы
-    const mobNear = ranged ? null : this.mobs.nearest(this.player.position, 3.2);
-    const target = this.resources.nearest(this.player.position, 3.8);
-    const node = !mobNear && target && target.kind === 'node' ? target.node : null;
-
-    let kind = 'attack';
-    if (node) {
-      kind = node.type === 'rock' ? 'mine' : node.type === 'bush' ? 'chop' : 'chop';
-    }
-
-    this.player.swing(kind);
-    this.attackCooldown = kind === 'mine' ? 0.7 : kind === 'chop' ? 0.66 : 0.62;
+    // замах и скорость удара зависят от того, во что целимся
+    let swing = 'attack';
+    if (kindName === 'minewall') swing = 'mine';
+    else if (kindName === 'node') swing = target.node.type === 'rock' ? 'mine' : 'chop';
+    this.player.swing(swing);
+    this.attackCooldown = swing === 'mine' ? 0.7 : swing === 'chop' ? 0.66 : 0.62;
 
     if (ranged) {
       this.audio.swing?.();
@@ -710,100 +1164,123 @@ class Game {
     }
     this.audio.swing?.();
 
-    // --- звери ---
-    if (mobNear) {
-      const facing = this.player.facing;
-      const dirX = Math.sin(facing);
-      const dirZ = Math.cos(facing);
-      const weapon = (this.equippedTool()?.weapon) || 4;
-      const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
-      if (mobHit) {
-        this.audio.hitFlesh?.();
-        this.player.shake(0.18);
-        const m = mobHit.mob;
-        this.spawnChips(m.x, m.y + 0.9, m.z, { count: 5, color: 0x9c2c3c, size: 0.06, spread: 1.4, up: 1.6 });
-        if (mobHit.killed) {
-          this.audio.mobDeath?.();
-          const drops = [];
-          for (const drop of m.def.drops) {
-            const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
-            if (n > 0) {
-              this.addItem(drop.id, n);
-              drops.push(`${ITEMS[drop.id].name} +${n}`);
-            }
-          }
-          this.ui.toast(`${m.def.label} побеждён: ${drops.join(', ') || 'без добычи'}`);
-        } else {
-          this.ui.toast(`${m.def.label}: ${Math.max(0, Math.round(m.hp))}/${m.maxHp}`);
-        }
-        return;
-      }
-    }
-
-    if (!node) {
-      // ударили в пустоту — только шорох воздуха
+    if (!target) {
       this.audio.whoosh?.();
       return;
     }
 
-    // --- ягоды с куста: сначала урожай, потом уже ветки ---
-    if (node.type === 'bush' && this.resources.canPickBerries(node)) {
-      this.gatherBerries(node);
-      this.attackCooldown = 0.6;
+    // --- стена шахты: пробиваем клетку и получаем руду ---
+    if (target.kind === 'minewall') {
+      const tool = this.equippedTool() || {};
+      const power = tool.mine !== undefined ? tool.mine : 0.25;
+      const aimDir = this.aim && this.aim.dir;
+      const dx = aimDir ? aimDir.x : Math.sin(this.player.facing);
+      const dz = aimDir ? aimDir.z : Math.cos(this.player.facing);
+      const res = this.mine.strike(this.player.position, dx, dz, power, 3.4);
+      const probe = target.probe;
+      const pos = { x: this.mine._worldX(probe.cx), z: this.mine._worldZ(probe.cz), y: this.mine.level.y + 1.2 };
+      const color = probe.type === 'crystal' ? 0x62e6d8
+        : probe.type === 'obsidian' ? 0xa16ff0
+          : probe.type === 'ore' ? 0x9fc4d4 : 0x9a958c;
+      this.spawnChips(pos.x, pos.y, pos.z, { count: 8, color, size: 0.07, spread: 1.8, up: 2.2 });
+      this.player.shake(0.16);
+      this.audio.stoneCrack?.();
+      if (power < 0.5) this.ui.toast('Без кирки порода почти не поддаётся', true);
+
+      if (res && res.broken) {
+        this.audio.stoneBreak?.();
+        this.spawnChips(pos.x, pos.y, pos.z, { count: 14, color, size: 0.08, spread: 2.6, up: 2.6 });
+        const parts = [];
+        for (const [id, n] of Object.entries(res.drops)) {
+          this.addItem(id, n);
+          parts.push(`${ITEMS[id].name} +${n}`);
+        }
+        if (parts.length) this.ui.toast(`Из жилы: ${parts.join(', ')}`);
+        else this.ui.toast('Порода пробита — пусто');
+        this.audio.pickup?.();
+      }
       return;
     }
 
-    const tool = this.equippedTool();
-    const def = this.resources.strike(node, tool);
-    const actionDef = this.nodeDef(node);
-    const power = tool && tool[actionDef.tool ?? 'chop'] !== undefined
-      ? tool[actionDef.tool ?? 'chop']
-      : 0.35;
-
-    if (def.need && (!tool || power < 1)) {
-      this.ui.toast(`Нужен ${def.need}: так почти не выходит`, true);
-    }
-
-    // попадание: частицы, звук, отдача — у дерева, камня и руды по-разному
-    const hitY = node.y + (node.type === 'tree' || node.type === 'palm' ? 1.1 : 0.7);
-    if (node.type === 'rock') {
-      this.player.shake(0.14);
-      this.spawnChips(node.x, hitY, node.z, {
-        count: 7,
-        color: node.ore ? 0x8fc9d8 : 0x9a958c,
-        size: 0.06,
-        spread: 1.8,
-        up: 2.0,
-      });
-      if (node.ore) this.audio.oreHit?.(); else this.audio.mine?.();
-      this.audio.stoneCrack?.();
-    } else {
-      this.player.shake(0.08);
-      this.spawnChips(node.x, hitY, node.z, { count: 6, color: 0x8a6a42, size: 0.06, spread: 1.5, up: 2.0 });
-      this.spawnChips(node.x, hitY + 0.2, node.z, { count: 3, color: 0x5f9150, size: 0.05, spread: 1.2, up: 1.4 });
-      this.audio.chop?.();
-    }
-
-    if (def.depleted) {
-      const parts = [];
-      for (const [id, n] of Object.entries(def.drops)) {
-        this.addItem(id, n);
-        parts.push(`${ITEMS[id].name} +${n}`);
-      }
-      this.ui.toast(parts.length ? `${node.label} добыт: ${parts.join(', ')}` : `${node.label} пуст`);
-      if (node.type === 'tree' || node.type === 'palm') {
-        this.audio.treeFall?.();
-        this.spawnChips(node.x, hitY + 0.8, node.z, { count: 14, color: 0x5f9150, size: 0.07, spread: 2.4, up: 2.6 });
-      } else if (node.type === 'rock') {
-        this.audio.stoneBreak?.();
-        this.spawnChips(node.x, hitY, node.z, { count: 12, color: node.ore ? 0x9fd8e6 : 0x9a958c, size: 0.07, spread: 2.4, up: 2.4 });
+    // --- зверь ---
+    if (target.kind === 'mob') {
+      const m = target.mob;
+      const weapon = def ? effectiveWeapon(def) : 4;
+      // луч прицела точнее веера: бьём именно того, на кого смотрим
+      const got = this.mobs.hitAt(m, weapon);
+      if (!got) { this.audio.whoosh?.(); return; }
+      const killed = got.killed;
+      this.audio.hitFlesh?.();
+      this.player.shake(0.18);
+      this.spawnChips(m.x, (m.y || 0) + 0.9, m.z, { count: 5, color: 0x9c2c3c, size: 0.06, spread: 1.4, up: 1.6 });
+      if (killed) {
+        this.audio.mobDeath?.();
+        const drops = [];
+        for (const drop of m.def.drops) {
+          const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+          if (n > 0) {
+            this.addItem(drop.id, n);
+            drops.push(`${ITEMS[drop.id].name} +${n}`);
+          }
+        }
+        this.ui.toast(`${m.def.label} побеждён: ${drops.join(', ') || 'без добычи'}`);
       } else {
-        this.audio.rustle?.();
-        this.spawnChips(node.x, hitY, node.z, { count: 10, color: 0x6b9c55, size: 0.07, spread: 2.2, up: 2.2 });
+        this.ui.toast(`${m.def.label}: ${Math.max(0, Math.round(m.hp))}/${m.maxHp}`);
       }
-      this.audio.pickup();
-      if (this.nearNode === node) this.nearNode = null;
+      return;
     }
+
+    // --- узел: дерево, камень, куст ---
+    if (target.kind === 'node') {
+      const node = target.node;
+      if (node.type === 'bush' && this.resources.canPickBerries(node)) {
+        this.gatherBerries(node);
+        this.attackCooldown = 0.6;
+        return;
+      }
+      const tool = this.equippedTool();
+      const res = this.resources.strike(node, tool);
+      const actionDef = this.nodeDef(node);
+      const power = tool && tool[actionDef.tool ?? 'chop'] !== undefined ? tool[actionDef.tool ?? 'chop'] : 0.35;
+      if (res.need && (!tool || power < 1)) this.ui.toast(`Нужен ${res.need}: так почти не выходит`, true);
+
+      const hitY = node.y + (node.type === 'tree' || node.type === 'palm' ? 1.1 : 0.7);
+      if (node.type === 'rock') {
+        this.player.shake(0.14);
+        this.spawnChips(node.x, hitY, node.z, { count: 7, color: node.ore ? 0x8fc9d8 : 0x9a958c, size: 0.06, spread: 1.8, up: 2.0 });
+        if (node.ore) this.audio.oreHit?.(); else this.audio.mine?.();
+        this.audio.stoneCrack?.();
+      } else {
+        this.player.shake(0.08);
+        this.spawnChips(node.x, hitY, node.z, { count: 6, color: 0x8a6a42, size: 0.06, spread: 1.5, up: 2.0 });
+        this.spawnChips(node.x, hitY + 0.2, node.z, { count: 3, color: 0x5f9150, size: 0.05, spread: 1.2, up: 1.4 });
+        this.audio.chop?.();
+      }
+
+      if (res.depleted) {
+        const parts = [];
+        for (const [id, n] of Object.entries(res.drops)) {
+          this.addItem(id, n);
+          parts.push(`${ITEMS[id].name} +${n}`);
+        }
+        this.ui.toast(parts.length ? `${node.label} добыт: ${parts.join(', ')}` : `${node.label} пуст`);
+        if (node.type === 'tree' || node.type === 'palm') {
+          this.audio.treeFall?.();
+          this.spawnChips(node.x, hitY + 0.8, node.z, { count: 14, color: 0x5f9150, size: 0.07, spread: 2.4, up: 2.6 });
+        } else if (node.type === 'rock') {
+          this.audio.stoneBreak?.();
+          this.spawnChips(node.x, hitY, node.z, { count: 12, color: node.ore ? 0x9fd8e6 : 0x9a958c, size: 0.07, spread: 2.4, up: 2.4 });
+        } else {
+          this.audio.rustle?.();
+          this.spawnChips(node.x, hitY, node.z, { count: 10, color: 0x6b9c55, size: 0.07, spread: 2.2, up: 2.2 });
+        }
+        this.audio.pickup();
+        if (this.nearNode === node) this.nearNode = null;
+      }
+      return;
+    }
+
+    this.audio.whoosh?.();
   }
 
   /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
@@ -965,6 +1442,14 @@ class Game {
     }
   }
 
+  /** F — поставить то, что держим: костёр, верстак или точило */
+  placeSelected() {
+    const id = this.equippedId();
+    if (id === 'workbench') this.placeStation('bench');
+    else if (id === 'grindstone') this.placeStation('grind');
+    else this.placeCampfire();
+  }
+
   /** F — поставить костёр из набора */
   placeCampfire() {
     if (!this.running || this.paused || this.dead) return;
@@ -1072,12 +1557,16 @@ class Game {
     const state = this.state;
 
     // --- игрок ---
-    this.player.update(dt, this.input, this.world);
+    // под землёй физика другая: клетки шахты вместо рельефа острова
+    this.player.update(dt, this.input, this.mineWorld);
     this.input.jump = false;
 
     // сквозь зверей не пройти: расталкиваем игрока и зверя
-    this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
-    this.player.applyCamera(this.camera, this.world, dt);
+    if (!this.underground) {
+      this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
+    }
+    this.player.applyCamera(this.camera, this.mineWorld, dt);
+    this.computeAim();
 
     // --- небо и погода ---
     this.updateWeather(dt);
@@ -1095,7 +1584,63 @@ class Game {
     this.audio.setNight(skyInfo.night);
     this.audio.updateMusic(dt, skyInfo.night);
 
+    // под землёй солнце не достаёт: остаётся только фонарь в руке
+    if (this.underground) {
+      this.sky.sun.intensity *= 0.06;
+      this.sky.hemi.intensity *= 0.14;
+      this.scene.fog.color.setHex(0x0b0d10);
+      this.scene.fog.near = 2;
+      this.scene.fog.far = 26;
+    }
     this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
+
+    // --- жизнь вокруг: светляки ночью, мысли героя о своём ---
+    this.updateFireflies(dt, skyInfo.night);
+    this.thoughtTimer -= dt;
+    if (this.thoughtTimer <= 0) {
+      this.thoughtTimer = 50 + Math.random() * 55;
+      const thoughts = this.underground
+        ? [
+            'Здесь пахнет железом и старой землёй.',
+            'Если лампа погаснет, дорогу обратно придётся искать на ощупь.',
+            'Где-то ниже гудит магма. Она не спит.',
+            'Обсидиан холодит ладонь даже через рукав.',
+          ]
+        : [
+            'Море шумит так, будто ему всё равно.',
+            'Птицы знают дорогу, а я — нет.',
+            'Пахнет солью и дымом. Неплохо для начала.',
+            'Когда-нибудь я уплыву отсюда. Когда-нибудь.',
+            'Кокос — это не еда, кокос — это надежда.',
+          ];
+      this.ui.toast(thoughts[Math.floor(Math.random() * thoughts.length)]);
+    }
+
+    // --- шахта ---
+    this.mine.update(dt);
+    if (this.underground) {
+      this.mineLight.position.set(this.player.position.x, this.player.position.y + 1.5, this.player.position.z);
+      this.mineLight.intensity = 2.2 + Math.sin(performance.now() * 0.007) * 0.22;
+      if (this.mine.inLava(this.player.position.x, this.player.position.z)) {
+        this.inLavaTimer += dt;
+        if (performance.now() - this.lavaHurtAt > 700) {
+          this.lavaHurtAt = performance.now();
+          this.takeDamage(6, 'лава');
+          this.spawnChips(this.player.position.x, this.player.position.y + 0.4, this.player.position.z,
+            { count: 8, color: 0xff8a3a, size: 0.06, spread: 1.4, up: 2.4 });
+        }
+      } else {
+        this.inLavaTimer = 0;
+      }
+    } else {
+      this.mineLight.visible = false;
+    }
+
+    // станки живут: камень точила крутится, когда рядом работают
+    for (const st of this.stations) {
+      const wheel = st.group?.userData?.wheel;
+      if (wheel) wheel.rotation.x += dt * 0.4;
+    }
 
     // --- ресурсы и костры ---
     this.resources.update(dt);
@@ -1121,49 +1666,16 @@ class Game {
     this.audio.updateAmbience(dt, { night: skyInfo.night, fire: fireWarm.warmth > 0 ? fireWarm.warmth : 0 });
     this.ui.setFuel(fireWarm.warmth > 0.05 && fireWarm.fire ? fireWarm.fire : null);
 
-    // --- подсветка цели и подсказка ---
-    this.nearest = this.world.nearestPickup(this.player.position, CONFIG.interact.reach + 0.6);
-    const nodeTarget = this.resources.nearest(this.player.position, 3.9);
-    let marker = null;
-
-    const nearMob = this.mobs.nearest(this.player.position, 6.5);
-    if (nearMob && (nearMob.state === 'chase' || nearMob.hp < nearMob.maxHp)) {
-      this.ui.setPrompt(
-        `<b>ЛКМ</b> — ${nearMob.def.label.toLowerCase()} ` +
-        `<span class="prompt-warn">${Math.max(0, Math.round(nearMob.hp))}/${nearMob.maxHp}</span>`
-      );
-      marker = new THREE.Vector3(nearMob.x, nearMob.y + 0.1, nearMob.z);
-    } else if (this.nearest) {
-      marker = this.nearest.mesh.position;
-      this.ui.setPrompt(`<b>E</b> — подобрать ${this.nearest.name.toLowerCase()}`);
-    } else if (nodeTarget && nodeTarget.kind === 'node') {
-      const node = nodeTarget.node;
-      const def = this.nodeDef(node);
-      marker = new THREE.Vector3(node.x, node.y + 0.1, node.z);
-      const toolOk = !def.need || this.equippedTool();
-      if (node.type === 'bush' && this.resources.canPickBerries(node)) {
-        this.ui.setPrompt('<b>E</b> или <b>ЛКМ</b> — собрать ягоды');
-      } else {
-        this.ui.setPrompt(
-          `<b>ЛКМ</b> — ${def.label.toLowerCase()}${def.need ? ` (нужен ${def.need})` : ''}` +
-          (toolOk ? '' : ' · <span class="prompt-warn">медленно</span>')
-        );
-      }
-    } else if (nodeTarget && nodeTarget.kind === 'campfire') {
-      marker = new THREE.Vector3(nodeTarget.fire.x, nodeTarget.fire.y + 0.1, nodeTarget.fire.z);
-      const fuelPct = Math.round((nodeTarget.fire.fuel / nodeTarget.fire.maxFuel) * 100);
-      this.ui.setPrompt(`<b>E</b> — подложить палки (огонь ${fuelPct}%)`);
-    } else if (nodeTarget && nodeTarget.kind === 'spring') {
-      marker = new THREE.Vector3(nodeTarget.spring.x, nodeTarget.spring.y + 0.1, nodeTarget.spring.z);
-      this.ui.setPrompt('<b>E</b> — попить из родника');
-    } else {
-      this.ui.setPrompt(null);
-    }
-
-    if (marker) {
+    // --- подсветка цели и подсказка: всё по прицелу ---
+    const markerInfo = this.aimMarkerPos();
+    this.ui.setPrompt(this.aimPromptHtml());
+    if (markerInfo) {
       this.highlight.visible = true;
-      this.highlight.position.set(marker.x, this.world.heightAt(marker.x, marker.z) + 0.06, marker.z);
-      this.highlight.material.opacity = 0.55 + Math.sin(performance.now() * 0.005) * 0.25;
+      const groundY = this.underground
+        ? this.mine.floorAt(markerInfo.x, markerInfo.z)
+        : this.world.heightAt(markerInfo.x, markerInfo.z);
+      this.highlight.position.set(markerInfo.x, groundY + 0.07, markerInfo.z);
+      this.highlight.material.opacity = 0.5 + Math.sin(performance.now() * 0.005) * 0.28;
     } else {
       this.highlight.visible = false;
     }
@@ -1262,7 +1774,10 @@ class Game {
         v: 1,
         day: this.sky.day,
         hour: this.sky.hour,
-        pos: [this.player.position.x, this.player.position.z],
+        pos: this.underground && this.mine.currentEntrance
+          ? [this.mine.currentEntrance.x, this.mine.currentEntrance.z]
+          : [this.player.position.x, this.player.position.z],
+        under: this.underground,
         yaw: this.player.yaw,
         facing: this.player.facing,
         need: [this.state.health, this.state.thirst, this.state.hunger, this.state.warmth],
@@ -1271,6 +1786,8 @@ class Game {
         selected: this.selected,
         view: this.view,
         campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
+        stations: this.stations.map((st) => ({ type: st.type, x: st.x, z: st.z })),
+        forged: this.forged,
         collected: this.state.collected,
         weather: this.weather,
         savedAt: Date.now(),
@@ -1296,6 +1813,10 @@ class Game {
   loadGame() {
     const data = this.loadSave();
     if (!data) return;
+
+    // кованые предметы восстанавливаем до чтения сумки: иначе id незнаком
+    this.forged = data.forged || {};
+    for (const meta of Object.values(this.forged)) registerForged(meta);
     this.sky.day = data.day || 1;
     this.sky.hour = data.hour ?? CONFIG.time.startHour;
     this.weather = data.weather && WEATHERS[data.weather] ? data.weather : 'clear';
@@ -1317,6 +1838,15 @@ class Game {
     for (const f of data.campfires || []) {
       const fire = this.resources.addCampfire(f.x, f.z);
       fire.fuel = Math.max(0, Math.min(fire.maxFuel, f.fuel || 0));
+    }
+    for (const st of data.stations || []) {
+      if (st.type !== 'bench' && st.type !== 'grind') continue;
+      const group = st.type === 'grind' ? buildGrindstone() : buildWorkbench();
+      const h = this.world.heightAt(st.x, st.z);
+      group.position.set(st.x, h, st.z);
+      group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+      this.scene.add(group);
+      this.stations.push({ type: st.type, x: st.x, y: h, z: st.z, group });
     }
     this.player.applyCamera(this.camera, this.world, 1);
     this.refreshHotbar();
@@ -1625,6 +2155,8 @@ window.addEventListener('unhandledrejection', (e) => {
 });
 
 window.__boot = boot;
+// для тестов и консоли: кузница доступна снаружи
+window.__forge = { forge, sharpen, canSharpen, buildModel: buildForgedModel, effectiveWeapon, FORMS, MATERIALS };
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initMenu);

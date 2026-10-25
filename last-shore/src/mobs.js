@@ -135,11 +135,18 @@ export class Mobs {
     const spot = this._spot(def.biomes);
     const built = def.model();
 
+    // хитбокс строим по фактическим габаритам модели: коробка всегда
+    // обнимает зверя целиком, даже с мордой, клыками и хвостом
+    const box = new THREE.Box3().setFromObject(built.group);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const hb = { w: Math.max(0.35, size.x), h: Math.max(0.3, size.y), d: Math.max(0.35, size.z) };
+    const offsetY = (box.min.y + box.max.y) / 2;
     const hitbox = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(def.hitbox.w, def.hitbox.h, def.hitbox.d)),
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(hb.w, hb.h, hb.d)),
       this._hitMat
     );
-    hitbox.position.y = def.hitbox.h / 2;
+    hitbox.position.y = offsetY;
     hitbox.visible = false;
     hitbox.renderOrder = 9999;      // последним — значит поверх всех
     hitbox.frustumCulled = false;
@@ -158,6 +165,7 @@ export class Mobs {
       home: { x: spot.x, z: spot.z },
       hp: def.hp,
       maxHp: def.hp,
+      hitboxSize: hb,
       facing: this.rng() * Math.PI * 2,
       state: 'idle',
       stateTime: 0,
@@ -243,7 +251,13 @@ export class Mobs {
       }
     }
     if (!best) return null;
+    return this.hitAt(best, damage);
+  }
 
+  /** Удар именно по этому зверю — когда цель взята прицелом, а не сектором */
+  hitAt(mob, damage) {
+    if (!mob || !mob.alive) return null;
+    const best = mob;
     best.hp -= damage;
     // зверь замечает обидчика даже со спины
     best.lastSeen = this.time;

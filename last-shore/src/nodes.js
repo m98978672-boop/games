@@ -99,29 +99,57 @@ export class Resources {
       const group = new THREE.Group();
       group.position.set(spot.x, spot.h + 0.02, spot.z);
 
-      // чаша воды
-      const water = new THREE.Mesh(
-        new THREE.CircleGeometry(1.7, 20),
-        new THREE.MeshStandardMaterial({ color: 0x3f9ab8, roughness: 0.18, metalness: 0.1, transparent: true, opacity: 0.9 })
-      );
+      // чаша: вода чуть ниже земли, чтобы это был родник, а не «лужа-стена»
+      const waterMat = new THREE.MeshStandardMaterial({
+        color: 0x2f8ba8,
+        roughness: 0.12,
+        metalness: 0.15,
+        transparent: true,
+        opacity: 0.88,
+      });
+      const water = new THREE.Mesh(new THREE.CircleGeometry(1.55, 28), waterMat);
       water.rotation.x = -Math.PI / 2;
-      water.position.y = 0.04;
+      water.position.y = 0.012;
       group.add(water);
 
-      // камни по краю
-      const stoneMat = new THREE.MeshStandardMaterial({ color: 0x8c887f, roughness: 0.9, flatShading: true });
-      for (let i = 0; i < 7; i++) {
-        const ang = (i / 7) * Math.PI * 2;
-        const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28 + Math.random() * 0.2, 0), stoneMat);
-        rock.position.set(Math.cos(ang) * 1.85, 0.08, Math.sin(ang) * 1.85);
-        rock.castShadow = true;
-        group.add(rock);
+      // тёмное дно под водой — без него вода кажется пятном на траве
+      const bottom = new THREE.Mesh(
+        new THREE.CircleGeometry(1.6, 24),
+        new THREE.MeshStandardMaterial({ color: 0x2c3a33, roughness: 1 })
+      );
+      bottom.rotation.x = -Math.PI / 2;
+      bottom.position.y = -0.16;
+      group.add(bottom);
+
+      // каменный бортик: кольцо из кубиков-валунов
+      const rimMat = new THREE.MeshStandardMaterial({ color: 0x8e887c, roughness: 0.95, flatShading: true });
+      const rimCount = 13;
+      for (let i = 0; i < rimCount; i++) {
+        const ang = (i / rimCount) * Math.PI * 2 + Math.random() * 0.16;
+        const r = 1.72 + Math.random() * 0.12;
+        const size = 0.3 + Math.random() * 0.22;
+        const stone = new THREE.Mesh(new THREE.BoxGeometry(size, size * 0.75, size), rimMat);
+        stone.position.set(Math.cos(ang) * r, 0.06 + Math.random() * 0.04, Math.sin(ang) * r);
+        stone.rotation.set(Math.random() * 0.3, Math.random() * Math.PI, Math.random() * 0.3);
+        stone.castShadow = true;
+        group.add(stone);
+      }
+
+      // мелкие камешки по дну
+      for (let i = 0; i < 5; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        const r = Math.random() * 1.2;
+        const pebble = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.14), rimMat);
+        pebble.position.set(Math.cos(ang) * r, -0.11, Math.sin(ang) * r);
+        pebble.rotation.y = Math.random() * 3;
+        group.add(pebble);
       }
 
       this.scene.add(group);
-      const spring = { x: spot.x, z: spot.z, y: spot.h, group, label: 'Родник' };
+      const spring = { x: spot.x, z: spot.z, y: spot.h, group, water, label: 'Родник' };
       this.springs.push(spring);
-      world.colliders.push({ x: spot.x, z: spot.z, r: 1.5, spring: true });
+      // ходить по роднику можно: он больше не стена, только замедляет
+      world.colliders.push({ x: spot.x, z: spot.z, r: 1.5, spring: true, soft: true });
     }
   }
 
@@ -306,6 +334,14 @@ export class Resources {
       if (this.time < node.berryAt) continue;
       node.berries = true;
       this.world.setLayerVisible(node.item, 'fruit', true);
+    }
+
+    // рябь на родниках
+    for (const spring of this.springs) {
+      if (!spring.water) continue;
+      const t = this.time;
+      spring.water.rotation.z = Math.sin(t * 0.6 + spring.x) * 0.02;
+      spring.water.scale.setScalar(1 + Math.sin(t * 1.3 + spring.z) * 0.012);
     }
 
     // костры

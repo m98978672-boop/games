@@ -579,3 +579,35 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 
 .back-link { color: var(--ink-dim); text-decoration: none; border-bottom: 1px dotted rgba(242, 236, 223, 0.35); }
 .back-link:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ---------- Верстак и точильный станок ---------- */
+.ws-section { margin-bottom: 12px; }
+.ws-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.4px; color: var(--ink-dim); margin-bottom: 6px; }
+.ws-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.ws-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 9px; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(255,255,255,0.13); background: rgba(255,255,255,0.045);
+  color: var(--ink); font-size: 12px; transition: background .15s, border-color .15s, transform .1s;
+}
+.ws-chip:hover { background: rgba(255,255,255,0.1); transform: translateY(-1px); }
+.ws-chip.on { border-color: rgba(232,180,90,0.75); background: rgba(232,180,90,0.16); }
+.ws-chip svg { width: 16px; height: 16px; }
+.ws-chip.lack { opacity: 0.5; }
+.ws-forge {
+  width: 100%; margin-top: 4px; padding: 9px; border-radius: 8px; cursor: pointer;
+  border: 1px solid rgba(232,180,90,0.5); background: rgba(232,180,90,0.2); color: var(--ink);
+  font-size: 13px; letter-spacing: 0.4px;
+}
+.ws-forge:disabled { opacity: 0.45; cursor: default; border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.06); }
+.ws-cost { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+.ws-tool {
+  display: flex; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); margin-bottom: 6px;
+}
+.ws-tool .ws-tool-body { flex: 1; min-width: 0; }
+.ws-tool b { display: block; font-size: 12px; font-weight: 600; }
+.ws-tool em { font-size: 10.5px; color: var(--ink-dim); font-style: normal; }
+.ws-sharp-bar { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.12); margin-top: 4px; overflow: hidden; }
+.ws-sharp-bar i { display: block; height: 100%; background: linear-gradient(90deg, #c98f4a, #ffe6a8); }
+.ws-empty { font-size: 11.5px; color: var(--ink-dim); }
