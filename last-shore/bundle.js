@@ -13877,6 +13877,210 @@
       return new _PolyhedronGeometry(data.vertices, data.indices, data.radius, data.detail);
     }
   };
+  var DodecahedronGeometry = class _DodecahedronGeometry extends PolyhedronGeometry {
+    /**
+     * Constructs a new dodecahedron geometry.
+     *
+     * @param {number} [radius=1] - Radius of the dodecahedron.
+     * @param {number} [detail=0] - Setting this to a value greater than `0` adds vertices making it no longer a dodecahedron.
+     */
+    constructor(radius = 1, detail = 0) {
+      const t = (1 + Math.sqrt(5)) / 2;
+      const r = 1 / t;
+      const vertices = [
+        // (±1, ±1, ±1)
+        -1,
+        -1,
+        -1,
+        -1,
+        -1,
+        1,
+        -1,
+        1,
+        -1,
+        -1,
+        1,
+        1,
+        1,
+        -1,
+        -1,
+        1,
+        -1,
+        1,
+        1,
+        1,
+        -1,
+        1,
+        1,
+        1,
+        // (0, ±1/φ, ±φ)
+        0,
+        -r,
+        -t,
+        0,
+        -r,
+        t,
+        0,
+        r,
+        -t,
+        0,
+        r,
+        t,
+        // (±1/φ, ±φ, 0)
+        -r,
+        -t,
+        0,
+        -r,
+        t,
+        0,
+        r,
+        -t,
+        0,
+        r,
+        t,
+        0,
+        // (±φ, 0, ±1/φ)
+        -t,
+        0,
+        -r,
+        t,
+        0,
+        -r,
+        -t,
+        0,
+        r,
+        t,
+        0,
+        r
+      ];
+      const indices = [
+        3,
+        11,
+        7,
+        3,
+        7,
+        15,
+        3,
+        15,
+        13,
+        7,
+        19,
+        17,
+        7,
+        17,
+        6,
+        7,
+        6,
+        15,
+        17,
+        4,
+        8,
+        17,
+        8,
+        10,
+        17,
+        10,
+        6,
+        8,
+        0,
+        16,
+        8,
+        16,
+        2,
+        8,
+        2,
+        10,
+        0,
+        12,
+        1,
+        0,
+        1,
+        18,
+        0,
+        18,
+        16,
+        6,
+        10,
+        2,
+        6,
+        2,
+        13,
+        6,
+        13,
+        15,
+        2,
+        16,
+        18,
+        2,
+        18,
+        3,
+        2,
+        3,
+        13,
+        18,
+        1,
+        9,
+        18,
+        9,
+        11,
+        18,
+        11,
+        3,
+        4,
+        14,
+        12,
+        4,
+        12,
+        0,
+        4,
+        0,
+        8,
+        11,
+        9,
+        5,
+        11,
+        5,
+        19,
+        11,
+        19,
+        7,
+        19,
+        5,
+        14,
+        19,
+        14,
+        4,
+        19,
+        4,
+        17,
+        1,
+        12,
+        14,
+        1,
+        14,
+        5,
+        1,
+        5,
+        9
+      ];
+      super(vertices, indices, radius, detail);
+      this.type = "DodecahedronGeometry";
+      this.parameters = {
+        radius,
+        detail
+      };
+    }
+    /**
+     * Factory method for creating an instance of this class from the given
+     * JSON object.
+     *
+     * @param {Object} data - A JSON object representing the serialized geometry.
+     * @return {DodecahedronGeometry} A new instance.
+     */
+    static fromJSON(data) {
+      return new _DodecahedronGeometry(data.radius, data.detail);
+    }
+  };
   var IcosahedronGeometry = class _IcosahedronGeometry extends PolyhedronGeometry {
     /**
      * Constructs a new icosahedron geometry.
@@ -28866,8 +29070,8 @@ void main() {
     snow: 14673636,
     water: 1929100,
     trunk: 8018490,
-    frond: 4160058,
-    frondLight: 6003270,
+    frond: 6068805,
+    frondLight: 8042586,
     bush: 4947264,
     berry: 12137290,
     coconut: 7031594,
@@ -29269,6 +29473,63 @@ void main() {
     geo.computeVertexNormals();
     return geo;
   }
+  var _v = new Vector3();
+  var _q = new Quaternion();
+  var _e = new Euler();
+  var _s = new Vector3();
+  var _m2 = new Matrix4();
+  var UP = new Vector3(0, 1, 0);
+  var RIGHT = new Vector3(1, 0, 0);
+  function piece(parts, geo, hex, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1]) {
+    const g = flat(geo);
+    _q.setFromEuler(_e.set(rot[0], rot[1], rot[2], "YXZ"));
+    _m2.compose(_v.set(pos[0], pos[1], pos[2]), _q, _s.set(scale[0], scale[1], scale[2]));
+    g.applyMatrix4(_m2);
+    colorize(g, hex);
+    parts.push(g);
+    return g;
+  }
+  function ribbonGeometry(points, halfWidth, upTilt = 0.35) {
+    const positions = [];
+    const uvs = [];
+    const left = [];
+    const right = [];
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const prev = points[Math.max(0, i - 1)];
+      const next = points[Math.min(points.length - 1, i + 1)];
+      const dir = next.clone().sub(prev).normalize();
+      const side = new Vector3(-dir.z, 0, dir.x).normalize();
+      if (side.lengthSq() < 1e-3) side.set(0, 0, 1);
+      const t = i / (points.length - 1);
+      const w = halfWidth * Math.sin(Math.PI * Math.min(1, 0.18 + t * 0.95)) * (1 - t * 0.25);
+      const lift = new Vector3(0, w * upTilt, 0);
+      left.push(p.clone().addScaledVector(side, w).add(lift));
+      right.push(p.clone().addScaledVector(side, -w).add(lift));
+    }
+    const n = points.length - 1;
+    for (let i = 0; i < n; i++) {
+      const a = left[i];
+      const b = right[i];
+      const c = left[i + 1];
+      const d = right[i + 1];
+      const v0 = i / n;
+      const v1 = (i + 1) / n;
+      positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+      uvs.push(0, v0, 1, v0, 0, v1);
+      positions.push(b.x, b.y, b.z, d.x, d.y, d.z, c.x, c.y, c.z);
+      uvs.push(1, v0, 1, v1, 0, v1);
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute("position", new Float32BufferAttribute(positions, 3));
+    geo.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    return geo;
+  }
+  function alignQuat(from, to) {
+    const dir = to.clone().sub(from).normalize();
+    return new Quaternion().setFromUnitVectors(UP, dir);
+  }
   function flat(geo) {
     return geo.index ? geo.toNonIndexed() : geo;
   }
@@ -29286,87 +29547,97 @@ void main() {
     if (!parts.length) return null;
     return mergeGeometries(parts, false);
   }
-  function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, sides = 8) {
-    const segments = 5;
-    let x = 0;
-    let z = 0;
-    let y = 0;
-    const segH = height / segments;
-    for (let i = 0; i < segments; i++) {
-      const t = i / segments;
-      const r0 = baseR + (topR - baseR) * t;
-      const r1 = baseR + (topR - baseR) * (t + 1 / segments);
-      const geo = new CylinderGeometry(r1, r0 * 1.06, segH * 1.04, sides, 1);
-      const twist = bend * (i / segments);
-      x += Math.sin(twist) * segH * 0.55;
-      z += Math.cos(twist * 0.7) * segH * 0.12;
-      part(parts, geo, i % 2 ? hexA : hexB, x, y + segH / 2, z);
-      y += segH;
-    }
-    return { x, y, z };
-  }
   function makePalmParts(rng) {
     const bark = [];
     const leaf = [];
-    const h = 6.4 + rng() * 3.6;
-    const lean = (rng() - 0.5) * 0.75;
-    const top = trunkPart(bark, rng, h, 0.38, 0.19, COLORS.trunk, 6966320, lean, 8);
-    for (let i = 1; i < 6; i++) {
-      const t = i / 6;
-      const r = 0.38 + (0.19 - 0.38) * t;
-      const ring = new CylinderGeometry(r + 0.012, r + 0.022, 0.05, 8, 1);
-      part(
-        bark,
-        ring,
-        6045994,
-        Math.sin(lean * t) * h * 0.55,
-        h * t,
-        Math.cos(lean * 0.7 * t) * h * 0.12
-      );
+    const h = 6.6 + rng() * 4;
+    const leanX = (rng() - 0.5) * 2.2;
+    const leanZ = (rng() - 0.5) * 1.1;
+    const bend = 0.55 + rng() * 0.5;
+    const baseR = 0.33 + rng() * 0.06;
+    const topR = 0.15;
+    const spine = (t) => new Vector3(
+      leanX * Math.pow(t, bend + 0.6),
+      h * t,
+      leanZ * Math.pow(t, bend + 0.6)
+    );
+    const segments = 10;
+    for (let i = 0; i < segments; i++) {
+      const t0 = i / segments;
+      const t1 = (i + 1) / segments;
+      const a = spine(t0);
+      const b = spine(t1);
+      const mid = a.clone().add(b).multiplyScalar(0.5);
+      const len = a.distanceTo(b) * 1.06;
+      const r0 = baseR + (topR - baseR) * t0;
+      const r1 = baseR + (topR - baseR) * t1;
+      let geo = new CylinderGeometry(r1, r0, len, 9, 1);
+      geo.applyQuaternion(alignQuat(a, b));
+      geo.translate(mid.x, mid.y, mid.z);
+      geo = flat(geo);
+      bark.push(colorize(geo, i % 2 ? COLORS.trunk : 7163699));
     }
-    const fronds = 11;
+    const rings = 9;
+    for (let i = 1; i <= rings; i++) {
+      const t = i / (rings + 1);
+      const p = spine(t);
+      const above = spine(Math.min(1, t + 0.02));
+      const ringR = baseR + (topR - baseR) * t + 0.035;
+      const ring = new CylinderGeometry(ringR, ringR * 1.04, 0.075, 9, 1);
+      ring.applyQuaternion(alignQuat(p, above));
+      ring.translate(p.x, p.y, p.z);
+      piece(bark, ring, 5980200);
+    }
+    const top = spine(1);
+    piece(leaf, new IcosahedronGeometry(0.34, 1), 5143103, [top.x, top.y - 0.06, top.z], [0, 0, 0], [1, 0.85, 1]);
+    const fronds = 9;
     for (let i = 0; i < fronds; i++) {
-      const a = i / fronds * Math.PI * 2 + rng() * 0.25;
-      const len = 2.6 + rng() * 1.7;
-      const droop = 0.42 + rng() * 0.38;
-      let px = top.x;
-      let pz = top.z;
-      let py = top.y;
-      for (let s = 0; s < 4; s++) {
-        const t0 = s / 4;
-        const t1 = (s + 1) / 4;
-        const w = (0.34 - t0 * 0.24) * (1 + rng() * 0.15);
-        const segLen = len / 4;
-        const geo = new BoxGeometry(w, 0.055, segLen * 1.12);
-        const dx = Math.cos(a) * segLen * (1 - t0 * 0.35);
-        const dz = Math.sin(a) * segLen * (1 - t0 * 0.35);
-        const drop = droop * t1 * t1;
-        part(
-          leaf,
-          geo,
-          s % 2 ? COLORS.frond : COLORS.frondLight,
-          px + dx * 0.5,
-          py - drop * 0.5,
-          pz + dz * 0.5,
-          drop * 0.9,
-          -a + Math.PI / 2,
+      const yaw = i / fronds * Math.PI * 2 + (rng() - 0.5) * 0.4;
+      const len = 2.4 + rng() * 1.5;
+      const rise = 0.42 + rng() * 0.4;
+      const droop = 0.95 + rng() * 0.75;
+      const leafletColor = i % 2 ? COLORS.frond : COLORS.frondLight;
+      const steps = 9;
+      const pts = [];
+      for (let k = 0; k <= steps; k++) {
+        const t = k / steps;
+        pts.push(new Vector3(
+          t * len,
+          (rise * t - droop * t * t) * len * 0.5,
           0
-        );
-        px += dx;
-        pz += dz;
-        py -= drop;
+        ));
+      }
+      const pieces = [];
+      pieces.push({ geo: ribbonGeometry(pts, 0.44 + rng() * 0.1, 0.26), color: leafletColor });
+      for (let k = 1; k < steps; k++) {
+        const t = k / steps;
+        const p = pts[k];
+        const ll = (0.66 - Math.abs(t - 0.45) * 0.6) * (0.7 + len * 0.16);
+        for (const side of [1, -1]) {
+          let feather = new BoxGeometry(ll, 0.03, 0.08);
+          feather.translate(ll * 0.44, 0, 0);
+          feather.rotateZ(-0.42 - t * 0.22);
+          feather.rotateY(side * (1.3 + t * 0.25));
+          feather.translate(p.x, p.y - 0.02, 0);
+          pieces.push({ geo: feather, color: side > 0 ? leafletColor : 5147198 });
+        }
+      }
+      for (const { geo, color } of pieces) {
+        let g = flat(geo);
+        g.rotateY(yaw);
+        g.translate(top.x, top.y, top.z);
+        leaf.push(colorize(g, color));
       }
     }
     const nuts = 3 + Math.floor(rng() * 3);
     for (let i = 0; i < nuts; i++) {
-      const a = i / nuts * Math.PI * 2;
-      part(
+      const a = i / nuts * Math.PI * 2 + rng();
+      const r = 0.17 + rng() * 0.06;
+      piece(
         leaf,
-        new IcosahedronGeometry(0.2 + rng() * 0.06, 0),
+        new IcosahedronGeometry(r, 1),
         COLORS.coconut,
-        top.x + Math.cos(a) * 0.34,
-        top.y - 0.42 - rng() * 0.12,
-        top.z + Math.sin(a) * 0.34
+        [top.x + Math.cos(a) * 0.3, top.y - 0.32 - rng() * 0.2, top.z + Math.sin(a) * 0.3]
       );
     }
     return { bark: merge(bark), leaf: merge(leaf) };
@@ -29374,129 +29645,241 @@ void main() {
   function makeTreeParts(rng) {
     const bark = [];
     const leaf = [];
-    const h = 5.2 + rng() * 5.2;
-    const bend = (rng() - 0.5) * 0.5;
-    const top = trunkPart(bark, rng, h, 0.48, 0.2, COLORS.trunk, 6966320, bend, 9);
-    for (let i = 0; i < 4; i++) {
-      const a = i / 4 * Math.PI * 2 + rng() * 0.4;
-      const root = new ConeGeometry(0.18, 0.85, 5, 1);
+    const h = 5.6 + rng() * 5;
+    const leanX = (rng() - 0.5) * 1.1;
+    const leanZ = (rng() - 0.5) * 1.1;
+    const baseR = 0.42 + rng() * 0.12;
+    const topR = 0.16;
+    const spine = (t) => new Vector3(
+      leanX * t * t,
+      h * t,
+      leanZ * t * t
+    );
+    const segments = 8;
+    for (let i = 0; i < segments; i++) {
+      const t0 = i / segments;
+      const t1 = (i + 1) / segments;
+      const a = spine(t0);
+      const b = spine(t1);
+      const mid = a.clone().add(b).multiplyScalar(0.5);
+      const len = a.distanceTo(b) * 1.08;
+      const flare = i === 0 ? 1.45 : 1;
+      const r0 = (baseR + (topR - baseR) * t0) * flare;
+      const r1 = baseR + (topR - baseR) * t1;
+      let geo = new CylinderGeometry(r1, r0, len, 9, 1);
+      geo.applyQuaternion(alignQuat(a, b));
+      geo.translate(mid.x, mid.y, mid.z);
+      geo = flat(geo);
+      bark.push(colorize(geo, i % 2 ? COLORS.trunk : 6966320));
+    }
+    const rootCount = 4 + Math.floor(rng() * 2);
+    for (let i = 0; i < rootCount; i++) {
+      const a = i / rootCount * Math.PI * 2 + rng() * 0.4;
+      const root = new ConeGeometry(0.2 + rng() * 0.08, 1 + rng() * 0.3, 5, 1);
       part(
         bark,
         root,
         6111528,
-        Math.cos(a) * 0.34,
-        0.34,
-        Math.sin(a) * 0.34,
-        Math.PI * 0.32,
-        0,
-        -a
+        Math.cos(a) * 0.42,
+        0.25,
+        Math.sin(a) * 0.42,
+        Math.PI * 0.34,
+        -a,
+        0
       );
     }
     const branches = 3 + Math.floor(rng() * 2);
     for (let i = 0; i < branches; i++) {
-      const a = i / branches * Math.PI * 2 + rng();
-      const bl = 1.1 + rng() * 1;
-      const y = h * (0.52 + rng() * 0.22);
-      const branch = new CylinderGeometry(0.07, 0.15, bl, 5, 1);
-      part(
-        bark,
-        branch,
-        6966320,
-        top.x * 0.7 + Math.cos(a) * bl * 0.42,
-        y + bl * 0.3,
-        top.z * 0.7 + Math.sin(a) * bl * 0.42,
-        0,
-        0,
-        0.95
+      const a = i / branches * Math.PI * 2 + rng() * 0.7;
+      const t = 0.5 + rng() * 0.3;
+      const origin = spine(t);
+      const bl = 1.3 + rng() * 1.1;
+      const dir = new Vector3(Math.cos(a), 0.55 + rng() * 0.45, Math.sin(a)).normalize();
+      const end = origin.clone().addScaledVector(dir, bl);
+      let branch = new CylinderGeometry(0.06, 0.14, bl, 6, 1);
+      branch.applyQuaternion(alignQuat(origin, end));
+      branch.translate(
+        (origin.x + end.x) / 2,
+        (origin.y + end.y) / 2,
+        (origin.z + end.z) / 2
       );
+      branch = flat(branch);
+      bark.push(colorize(branch, 6966320));
+      const a2 = a + (rng() - 0.5) * 1.4;
+      const dir2 = new Vector3(Math.cos(a2), 0.8, Math.sin(a2)).normalize();
+      const end2 = end.clone().addScaledVector(dir2, bl * 0.55);
+      let twig = new CylinderGeometry(0.035, 0.07, bl * 0.6, 5, 1);
+      twig.applyQuaternion(alignQuat(end, end2));
+      twig.translate((end.x + end2.x) / 2, (end.y + end2.y) / 2, (end.z + end2.z) / 2);
+      twig = flat(twig);
+      bark.push(colorize(twig, 7623482));
+      for (let k = 0; k < 2; k++) {
+        const r = 0.75 + rng() * 0.6;
+        const jitter = new Vector3(
+          (rng() - 0.5) * 0.8,
+          (rng() - 0.5) * 0.5,
+          (rng() - 0.5) * 0.8
+        );
+        piece(
+          leaf,
+          new IcosahedronGeometry(r, 1),
+          k % 2 ? 6984789 : 8300643,
+          [end2.x + jitter.x, end2.y + jitter.y, end2.z + jitter.z]
+        );
+      }
     }
-    const blobs = 6 + Math.floor(rng() * 3);
-    for (let i = 0; i < blobs; i++) {
-      const r = 1.15 + rng() * 1.05;
-      const a = rng() * Math.PI * 2;
-      const d = rng() * 1.35;
-      const geo = new IcosahedronGeometry(r, 1);
-      part(
-        leaf,
-        geo,
-        i % 3 === 0 ? COLORS.jungle : i % 2 ? 6984789 : 8300643,
-        top.x * 0.8 + Math.cos(a) * d,
-        h * 0.9 + r * 0.5 + rng() * 1.9,
-        top.z * 0.8 + Math.sin(a) * d
-      );
+    const layers = 3;
+    for (let l = 0; l < layers; l++) {
+      const ly = h * (0.72 + l * 0.11);
+      const count = 4 - l;
+      const rad = 1.5 - l * 0.3;
+      for (let i = 0; i < count; i++) {
+        const a = i / count * Math.PI * 2 + l * 0.7 + rng() * 0.5;
+        const d = rad * (0.55 + rng() * 0.6);
+        const r = (1.25 - l * 0.22) * (0.85 + rng() * 0.45);
+        piece(
+          leaf,
+          new IcosahedronGeometry(r, 1),
+          l === 0 ? COLORS.jungle : i % 2 ? 6984789 : 8563814,
+          [Math.cos(a) * d, ly + r * 0.3 + rng() * 0.3, Math.sin(a) * d]
+        );
+      }
     }
+    piece(
+      leaf,
+      new IcosahedronGeometry(1.15 + rng() * 0.4, 1),
+      9091180,
+      [0, h * 1.03, 0]
+    );
     return { bark: merge(bark), leaf: merge(leaf) };
   }
   function makeBushParts(rng, withBerries) {
+    const bark = [];
     const leaf = [];
     const fruit = [];
-    const n = 5 + Math.floor(rng() * 3);
+    const branches = 3 + Math.floor(rng() * 3);
+    const tips = [];
+    for (let i = 0; i < branches; i++) {
+      const a = i / branches * Math.PI * 2 + rng() * 0.8;
+      const len = 0.55 + rng() * 0.5;
+      const dir = new Vector3(Math.cos(a) * 0.6, 1, Math.sin(a) * 0.6).normalize();
+      const end = dir.clone().multiplyScalar(len);
+      let stem = new CylinderGeometry(0.028, 0.06, len, 5, 1);
+      stem.applyQuaternion(alignQuat(new Vector3(0, 0, 0), end));
+      stem.translate(end.x / 2, end.y / 2, end.z / 2);
+      stem = flat(stem);
+      bark.push(colorize(stem, 6966320));
+      tips.push(end);
+    }
+    for (const tip of tips) {
+      const r = 0.3 + rng() * 0.22;
+      piece(
+        leaf,
+        new IcosahedronGeometry(r, 1),
+        rng() > 0.5 ? COLORS.bush : 7052373,
+        [tip.x, tip.y + r * 0.4, tip.z]
+      );
+    }
+    const n = 3 + Math.floor(rng() * 3);
     for (let i = 0; i < n; i++) {
-      const r = 0.36 + rng() * 0.42;
-      part(
+      const r = 0.34 + rng() * 0.3;
+      const a = rng() * Math.PI * 2;
+      const d = rng() * 0.5;
+      piece(
         leaf,
         new IcosahedronGeometry(r, 1),
         i % 2 ? COLORS.bush : 6263120,
-        (rng() - 0.5) * 1.05,
-        r * 0.62 + rng() * 0.3,
-        (rng() - 0.5) * 1.05
-      );
-    }
-    for (let i = 0; i < 2; i++) {
-      const a = rng() * Math.PI * 2;
-      part(
-        leaf,
-        new CylinderGeometry(0.03, 0.05, 0.7, 4, 1),
-        6966320,
-        Math.cos(a) * 0.2,
-        0.35,
-        Math.sin(a) * 0.2,
-        0.25,
-        0,
-        0.2
+        [Math.cos(a) * d, 0.42 + rng() * 0.34, Math.sin(a) * d]
       );
     }
     if (withBerries) {
-      for (let i = 0; i < 9; i++) {
-        part(
+      for (let i = 0; i < 10; i++) {
+        const a = rng() * Math.PI * 2;
+        const d = 0.18 + rng() * 0.5;
+        piece(
           fruit,
           new IcosahedronGeometry(0.085 + rng() * 0.03, 0),
           COLORS.berry,
-          (rng() - 0.5) * 1.15,
-          0.45 + rng() * 0.7,
-          (rng() - 0.5) * 1.15
+          [Math.cos(a) * d, 0.5 + rng() * 0.45, Math.sin(a) * d]
         );
       }
     }
     const out = { leaf: merge(leaf) };
+    if (bark.length) out.bark = merge(bark);
     if (fruit.length) out.fruit = merge(fruit);
     return out;
   }
-  function makeRockGeometry(rng) {
-    const parts = [];
-    const main = new IcosahedronGeometry(1, 1);
-    jitterGeo(main, 0.34, rng);
-    main.scale(1.05, 0.72, 0.95);
-    part(parts, main, COLORS.stone, 0, 0.42, 0);
-    for (let i = 0; i < 2; i++) {
-      const frag = new IcosahedronGeometry(0.3 + rng() * 0.22, 0);
-      jitterGeo(frag, 0.16, rng);
+  function makeRockParts(rng, kind = null) {
+    const rock = [];
+    const moss = [];
+    const type = kind || ["boulder", "boulder", "slab"][Math.floor(rng() * 3)];
+    if (type === "slab") {
+      for (let i = 0; i < 3; i++) {
+        const chunk = new DodecahedronGeometry(0.95 - i * 0.16, 0);
+        jitterGeo(chunk, 0.12, rng);
+        chunk.scale(1.15, 0.34, 0.95);
+        part(
+          rock,
+          chunk,
+          i % 2 ? 10327950 : COLORS.stone,
+          (rng() - 0.5) * 0.45,
+          0.22 + i * 0.22,
+          (rng() - 0.5) * 0.4,
+          (rng() - 0.5) * 0.12,
+          rng() * 3,
+          (rng() - 0.5) * 0.12
+        );
+      }
+      const chip = new DodecahedronGeometry(0.36, 0);
+      jitterGeo(chip, 0.06, rng);
+      part(rock, chip, COLORS.rockDark, 1.05, 0.1, 0.35, rng(), rng(), 0);
+    } else {
+      const main = new DodecahedronGeometry(1, 0);
+      jitterGeo(main, 0.09, rng);
+      main.scale(1 + rng() * 0.25, 0.72 + rng() * 0.12, 0.92 + rng() * 0.2);
+      part(rock, main, COLORS.stone, 0, 0, 0, 0, rng() * 3, 0);
+      for (let i = 0; i < 2; i++) {
+        const a = rng() * Math.PI * 2;
+        const chip = new DodecahedronGeometry(0.4 + rng() * 0.16, 0);
+        jitterGeo(chip, 0.05, rng);
+        part(
+          rock,
+          chip,
+          i ? COLORS.rockDark : 10327950,
+          Math.cos(a) * 0.85,
+          -0.32,
+          Math.sin(a) * 0.85,
+          rng() * 0.4,
+          rng() * 3,
+          rng() * 0.4
+        );
+      }
+    }
+    const body = merge(rock);
+    body.computeBoundingBox();
+    const bb = body.boundingBox;
+    const sizeY = bb.max.y - bb.min.y;
+    const radius = Math.max(Math.abs(bb.max.x), Math.abs(bb.min.x), Math.abs(bb.max.z), Math.abs(bb.min.z));
+    body.translate(0, -bb.min.y - 0.14, 0);
+    body.computeBoundingBox();
+    const topY = body.boundingBox.max.y;
+    const patches = 2 + Math.floor(rng() * 2);
+    for (let i = 0; i < patches; i++) {
       const a = rng() * Math.PI * 2;
-      part(
-        parts,
-        frag,
-        COLORS.rockDark,
-        Math.cos(a) * 0.95,
-        0.16,
-        Math.sin(a) * 0.95
+      const d = rng() * radius * 0.45;
+      const r = radius * (0.26 + rng() * 0.14);
+      const blob = new IcosahedronGeometry(r, 1);
+      jitterGeo(blob, r * 0.18, rng);
+      piece(
+        moss,
+        blob,
+        i % 2 ? 7180101 : 5929786,
+        [Math.cos(a) * d, topY - sizeY * (0.12 + rng() * 0.16), Math.sin(a) * d],
+        [0, rng() * 3, 0],
+        [1, 0.34, 1]
       );
     }
-    for (let i = 0; i < 2; i++) {
-      const moss = new IcosahedronGeometry(0.34 + rng() * 0.2, 0);
-      moss.scale(1, 0.34, 1);
-      part(parts, moss, 7311178, (rng() - 0.5) * 0.7, 0.85 + rng() * 0.1, (rng() - 0.5) * 0.7);
-    }
-    return merge(parts);
+    return { rock: body, moss: merge(moss) };
   }
   function makePickupGeometries() {
     const geos = {};
@@ -30105,7 +30488,14 @@ void main() {
         if (m.userData && m.userData.uniforms) this.windMaterials.push(m);
       }
       const fruitMat = new MeshStandardMaterial({ color: 12729170, roughness: 0.55, vertexColors: true });
-      const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat, fruit: fruitMat };
+      const mossMat = new MeshStandardMaterial({ color: 8364631, roughness: 0.95, vertexColors: true, flatShading: true });
+      const layerMaterials = {
+        bark: barkMat,
+        leaf: leafMat,
+        rock: stoneMat,
+        fruit: fruitMat,
+        moss: mossMat
+      };
       const buildInstances = (variants, list, { castShadow = true } = {}) => {
         const meshes = [];
         if (!list.length) return meshes;
@@ -30153,9 +30543,9 @@ void main() {
         makeBushParts(rng, true)
       ];
       const rockVariants = [
-        { rock: makeRockGeometry(rng) },
-        { rock: makeRockGeometry(rng) },
-        { rock: makeRockGeometry(rng) }
+        makeRockParts(rng, "boulder"),
+        makeRockParts(rng, "slab"),
+        makeRockParts(rng, "boulder")
       ];
       this.stats = {
         palms: palms.length,
@@ -30595,39 +30985,87 @@ void main() {
       const pantsMat = new MeshStandardMaterial({ color: COLORS.pants, roughness: 0.9, flatShading: true });
       const packMat = new MeshStandardMaterial({ color: 7033397, roughness: 0.95, flatShading: true });
       const bootMat = new MeshStandardMaterial({ color: 3812384, roughness: 1, flatShading: true });
+      const clothMat = new MeshStandardMaterial({ color: 10126947, roughness: 1, flatShading: true });
       const box = (w, h, d, mat2) => {
         const mesh2 = new Mesh(new BoxGeometry(w, h, d), mat2);
         mesh2.castShadow = true;
         return mesh2;
       };
-      const torso = box(0.52, 0.62, 0.3, shirtMat);
+      const torso = new Group();
       torso.position.y = 1.16;
+      const chest = box(0.5, 0.5, 0.3, shirtMat);
+      chest.position.y = 0.06;
+      torso.add(chest);
+      const shoulders = box(0.56, 0.16, 0.32, shirtMat);
+      shoulders.position.y = 0.3;
+      torso.add(shoulders);
+      const collar = box(0.26, 0.08, 0.3, new MeshStandardMaterial({ color: 7625018, roughness: 0.95, flatShading: true }));
+      collar.position.set(0, 0.36, 0.01);
+      torso.add(collar);
+      const jacket = box(0.52, 0.2, 0.31, new MeshStandardMaterial({ color: 8019517, roughness: 0.95, flatShading: true }));
+      jacket.position.y = -0.2;
+      torso.add(jacket);
       g.add(torso);
-      const belt = box(0.5, 0.12, 0.32, pantsMat);
-      belt.position.y = 0.85;
+      this.torsoGroup = torso;
+      const belt = box(0.5, 0.12, 0.32, new MeshStandardMaterial({ color: 4206623, roughness: 1, flatShading: true }));
+      belt.position.y = 0.86;
       g.add(belt);
-      this.head = box(0.32, 0.34, 0.3, skinMat);
-      this.head.position.y = 1.65;
-      g.add(this.head);
-      const hair = box(0.34, 0.12, 0.32, new MeshStandardMaterial({ color: 2892056, roughness: 1 }));
-      hair.position.y = 0.2;
+      const buckle = box(0.1, 0.08, 0.03, new MeshStandardMaterial({ color: 13083218, roughness: 0.4, metalness: 0.6 }));
+      buckle.position.set(0, 0.86, 0.17);
+      g.add(buckle);
+      this.head = new Group();
+      this.head.position.y = 1.62;
+      const skull = box(0.3, 0.32, 0.29, skinMat);
+      this.head.add(skull);
+      const hairMat = new MeshStandardMaterial({ color: 2892056, roughness: 1, flatShading: true });
+      const hair = box(0.32, 0.11, 0.31, hairMat);
+      hair.position.y = 0.16;
       this.head.add(hair);
-      const pack = box(0.38, 0.44, 0.2, packMat);
-      pack.position.set(0, 1.2, 0.25);
+      const backHair = box(0.32, 0.16, 0.08, hairMat);
+      backHair.position.set(0, 0.06, -0.13);
+      this.head.add(backHair);
+      const nose = box(0.06, 0.08, 0.06, new MeshStandardMaterial({ color: 12090450, roughness: 0.8, flatShading: true }));
+      nose.position.set(0, -0.01, 0.16);
+      this.head.add(nose);
+      const eyeMat = new MeshStandardMaterial({ color: 1907222, roughness: 0.5 });
+      for (const side of [-1, 1]) {
+        const eye = box(0.045, 0.04, 0.02, eyeMat);
+        eye.position.set(0.075 * side, 0.05, 0.15);
+        this.head.add(eye);
+      }
+      const beard = box(0.2, 0.09, 0.06, hairMat);
+      beard.position.set(0, -0.13, 0.13);
+      this.head.add(beard);
+      g.add(this.head);
+      const pack = box(0.36, 0.42, 0.2, packMat);
+      pack.position.set(0, 1.2, 0.26);
       g.add(pack);
+      const roll = new Mesh(new CylinderGeometry(0.075, 0.075, 0.34, 6, 1), clothMat);
+      roll.rotation.z = Math.PI / 2;
+      roll.position.set(0, 1.43, 0.26);
+      roll.castShadow = true;
+      g.add(roll);
+      for (const side of [-1, 1]) {
+        const strap = box(0.06, 0.42, 0.05, new MeshStandardMaterial({ color: 5521450, roughness: 1 }));
+        strap.position.set(0.14 * side, 1.22, 0.15);
+        g.add(strap);
+      }
       const makeArm = (side) => {
         const shoulder = new Group();
-        shoulder.position.set(0.295 * side, 1.44, 0);
-        const upper = box(0.15, 0.32, 0.17, shirtMat);
-        upper.position.y = -0.15;
+        shoulder.position.set(0.32 * side, 1.42, 0);
+        const upper = box(0.15, 0.3, 0.17, shirtMat);
+        upper.position.y = -0.14;
         shoulder.add(upper);
         const elbow = new Group();
-        elbow.position.y = -0.31;
-        const lower = box(0.13, 0.3, 0.15, skinMat);
-        lower.position.y = -0.14;
+        elbow.position.y = -0.29;
+        const lower = box(0.13, 0.28, 0.15, skinMat);
+        lower.position.y = -0.13;
         elbow.add(lower);
+        const cuff = box(0.145, 0.06, 0.165, new MeshStandardMaterial({ color: 7625018, roughness: 0.95, flatShading: true }));
+        cuff.position.y = -0.26;
+        elbow.add(cuff);
         const hand = box(0.14, 0.12, 0.16, skinMat);
-        hand.position.y = -0.3;
+        hand.position.y = -0.32;
         elbow.add(hand);
         shoulder.add(elbow);
         g.add(shoulder);
@@ -30641,18 +31079,24 @@ void main() {
       this.elbowR = armR.elbow;
       const makeLeg = (side) => {
         const hip = new Group();
-        hip.position.set(0.14 * side, 0.82, 0);
-        const thigh = box(0.2, 0.42, 0.21, pantsMat);
-        thigh.position.y = -0.2;
+        hip.position.set(0.14 * side, 0.84, 0);
+        const thigh = box(0.21, 0.4, 0.22, pantsMat);
+        thigh.position.y = -0.19;
         hip.add(thigh);
         const knee = new Group();
-        knee.position.y = -0.42;
-        const shin = box(0.17, 0.38, 0.18, pantsMat);
-        shin.position.y = -0.18;
+        knee.position.y = -0.4;
+        const shin = box(0.18, 0.36, 0.19, pantsMat);
+        shin.position.y = -0.17;
         knee.add(shin);
-        const boot2 = box(0.2, 0.12, 0.28, bootMat);
-        boot2.position.set(0, -0.4, 0.04);
+        const bootTop = box(0.2, 0.16, 0.21, bootMat);
+        bootTop.position.y = -0.32;
+        knee.add(bootTop);
+        const boot2 = box(0.2, 0.1, 0.3, bootMat);
+        boot2.position.set(0, -0.4, 0.05);
         knee.add(boot2);
+        const sole = box(0.21, 0.04, 0.32, new MeshStandardMaterial({ color: 2365970, roughness: 1 }));
+        sole.position.set(0, -0.45, 0.05);
+        knee.add(sole);
         hip.add(knee);
         g.add(hip);
         return { hip, knee };
@@ -30663,7 +31107,6 @@ void main() {
       this.legR = legR.hip;
       this.kneeL = legL.knee;
       this.kneeR = legR.knee;
-      this.torso = torso;
       this.handSlot = new Group();
       this.handSlot.position.set(0, -0.34, 0.06);
       this.handSlot.rotation.x = 0.3;
@@ -30915,8 +31358,8 @@ void main() {
       this.armR.rotation.x = armRSwing;
       const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0);
       this.lean += (targetLean - this.lean) * clamp2(dt * 6, 0, 1);
-      this.torso.rotation.x = this.lean;
-      this.torso.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
+      this.torsoGroup.rotation.x = this.lean;
+      this.torsoGroup.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
       if (this.head) this.head.rotation.y = Math.sin(this.bobPhase * 0.4) * 0.05 * (1 - speedRatio);
       this.landDip = Math.max(0, this.landDip - dt * 3);
       const bobY = Math.abs(Math.sin(this.walkPhase)) * 0.05 * speedRatio;
@@ -32269,7 +32712,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-24 20:18" : "dev";
+  var BUILD = true ? "2026-10-25 11:56" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -33337,7 +33780,7 @@ void main() {
     }
     /** ЛКМ: удар по дереву/камню/кусту или в воздух */
     attack() {
-      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m2;
+      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4;
       if (!this.running || this.paused || this.dead) return;
       if (this.attackCooldown > 0) return;
       this.attackCooldown = 0.62;
@@ -33355,7 +33798,7 @@ void main() {
       const weapon = ((_c = this.equippedTool()) == null ? void 0 : _c.weapon) || 4;
       const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
       if (mobHit) {
-        (_e = (_d = this.audio).hitFlesh) == null ? void 0 : _e.call(_d);
+        (_e2 = (_d = this.audio).hitFlesh) == null ? void 0 : _e2.call(_d);
         if (mobHit.killed) {
           (_g = (_f = this.audio).mobDeath) == null ? void 0 : _g.call(_f);
           const drops = [];
@@ -33394,7 +33837,7 @@ void main() {
       } else if (node.type === "rock") {
         (_k = (_j = this.audio).mine) == null ? void 0 : _k.call(_j);
       } else {
-        (_m2 = (_l = this.audio).chop) == null ? void 0 : _m2.call(_l);
+        (_m4 = (_l = this.audio).chop) == null ? void 0 : _m4.call(_l);
       }
     }
     /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */

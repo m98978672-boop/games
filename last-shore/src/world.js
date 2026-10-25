@@ -8,7 +8,7 @@ import { CONFIG, COLORS } from './config.js';
 import { createTerrainMaterial, createPlantMaterial, createStoneMaterial } from './terrain.js';
 import { fbm, ridged, makeRng, clamp, smoothstep } from './noise.js';
 import {
-  makePalmParts, makeTreeParts, makeBushParts, makeRockGeometry, makePickupGeometries,
+  makePalmParts, makeTreeParts, makeBushParts, makeRockParts, makePickupGeometries,
 } from './models.js';
 
 const SIZE = CONFIG.world.size;
@@ -471,7 +471,10 @@ export class World {
     }
 
     const fruitMat = new THREE.MeshStandardMaterial({ color: 0xc23b52, roughness: 0.55, vertexColors: true });
-    const layerMaterials = { bark: barkMat, leaf: leafMat, rock: stoneMat, fruit: fruitMat };
+    const mossMat = new THREE.MeshStandardMaterial({ color: 0x7fa257, roughness: 0.95, vertexColors: true, flatShading: true });
+    const layerMaterials = {
+      bark: barkMat, leaf: leafMat, rock: stoneMat, fruit: fruitMat, moss: mossMat,
+    };
 
     /**
      * Ставит список объектов как InstancedMesh по слоям модели.
@@ -529,7 +532,9 @@ export class World {
       makeBushParts(rng, false), makeBushParts(rng, true),
     ];
     const rockVariants = [
-      { rock: makeRockGeometry(rng) }, { rock: makeRockGeometry(rng) }, { rock: makeRockGeometry(rng) },
+      makeRockParts(rng, 'boulder'),
+      makeRockParts(rng, 'slab'),
+      makeRockParts(rng, 'boulder'),
     ];
 
     this.stats = {

@@ -38,6 +38,77 @@ function jitterGeo(geo, amount, rng) {
   return geo;
 }
 
+const _v = new THREE.Vector3();
+const _q = new THREE.Quaternion();
+const _e = new THREE.Euler();
+const _s = new THREE.Vector3();
+const _m = new THREE.Matrix4();
+const UP = new THREE.Vector3(0, 1, 0);
+const RIGHT = new THREE.Vector3(1, 0, 0);
+
+/** Положить геометрию в слой, применив позицию/поворот/масштаб и цвет */
+function piece(parts, geo, hex, pos = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1, 1]) {
+  const g = flat(geo);
+  _q.setFromEuler(_e.set(rot[0], rot[1], rot[2], 'YXZ'));
+  _m.compose(_v.set(pos[0], pos[1], pos[2]), _q, _s.set(scale[0], scale[1], scale[2]));
+  g.applyMatrix4(_m);
+  colorize(g, hex);
+  parts.push(g);
+  return g;
+}
+
+/**
+ * Плоская лента по точкам (стержень листа пальмы): строится из квадов
+ * по обе стороны от центральной линии, с сужением к концу.
+ */
+function ribbonGeometry(points, halfWidth, upTilt = 0.35) {
+  const positions = [];
+  const uvs = [];
+  const left = [];
+  const right = [];
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const prev = points[Math.max(0, i - 1)];
+    const next = points[Math.min(points.length - 1, i + 1)];
+    const dir = next.clone().sub(prev).normalize();
+    // боковой вектор — в плоскости листа (перпендикуляр к направлению, «вбок»)
+    const side = new THREE.Vector3(-dir.z, 0, dir.x).normalize();
+    if (side.lengthSq() < 0.001) side.set(0, 0, 1);
+    const t = i / (points.length - 1);
+    const w = halfWidth * Math.sin(Math.PI * Math.min(1, 0.18 + t * 0.95)) * (1 - t * 0.25);
+    // края чуть приподняты — лист не совсем плоский (V-образный профиль)
+    const lift = new THREE.Vector3(0, w * upTilt, 0);
+    left.push(p.clone().addScaledVector(side, w).add(lift));
+    right.push(p.clone().addScaledVector(side, -w).add(lift));
+  }
+
+  const n = points.length - 1;
+  for (let i = 0; i < n; i++) {
+    const a = left[i];
+    const b = right[i];
+    const c = left[i + 1];
+    const d = right[i + 1];
+    const v0 = i / n;
+    const v1 = (i + 1) / n;
+    positions.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+    uvs.push(0, v0, 1, v0, 0, v1);
+    positions.push(b.x, b.y, b.z, d.x, d.y, d.z, c.x, c.y, c.z);
+    uvs.push(1, v0, 1, v1, 0, v1);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geo.computeVertexNormals();
+  return geo;
+}
+
+/** Куда смотрит вектор: поворот «вдоль направления» для цилиндра */
+function alignQuat(from, to) {
+  const dir = to.clone().sub(from).normalize();
+  return new THREE.Quaternion().setFromUnitVectors(UP, dir);
+}
+
 /** Деталь модели: красим, поворачиваем, сдвигаем и кладём в слой */
 /** Привести геометрию к non-indexed без лишних предупреждений Three.js */
 function flat(geo) {
@@ -92,53 +163,113 @@ export function makePalmParts(rng) {
   const bark = [];
   const leaf = [];
 
-  const h = 6.4 + rng() * 3.6;
-  const lean = (rng() - 0.5) * 0.75;
-  const top = trunkPart(bark, rng, h, 0.38, 0.19, COLORS.trunk, 0x6a4c30, lean, 8);
+  const h = 6.6 + rng() * 4.0;
+  const leanX = (rng() - 0.5) * 2.2;      // насколько уходит верхушка
+  const leanZ = (rng() - 0.5) * 1.1;
+  const bend = 0.55 + rng() * 0.5;         // изгиб ствола
+  const baseR = 0.33 + rng() * 0.06;
+  const topR = 0.15;
 
-  // кольца на стволе — плоские диски чуть шире ствола
-  for (let i = 1; i < 6; i++) {
-    const t = i / 6;
-    const r = 0.38 + (0.19 - 0.38) * t;
-    const ring = new THREE.CylinderGeometry(r + 0.012, r + 0.022, 0.05, 8, 1);
-    part(bark, ring, 0x5c412a,
-      Math.sin(lean * t) * h * 0.55, h * t, Math.cos(lean * 0.7 * t) * h * 0.12);
+  // ствол идёт по плавной кривой — кольца и крона берут точки оттуда же
+  const spine = (t) => new THREE.Vector3(
+    leanX * Math.pow(t, bend + 0.6),
+    h * t,
+    leanZ * Math.pow(t, bend + 0.6)
+  );
+
+  const segments = 10;
+  for (let i = 0; i < segments; i++) {
+    const t0 = i / segments;
+    const t1 = (i + 1) / segments;
+    const a = spine(t0);
+    const b = spine(t1);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const len = a.distanceTo(b) * 1.06;
+    const r0 = baseR + (topR - baseR) * t0;
+    const r1 = baseR + (topR - baseR) * t1;
+
+    let geo = new THREE.CylinderGeometry(r1, r0, len, 9, 1);
+    geo.applyQuaternion(alignQuat(a, b));
+    geo.translate(mid.x, mid.y, mid.z);
+    geo = flat(geo);
+    bark.push(colorize(geo, i % 2 ? COLORS.trunk : 0x6d4f33));
   }
 
-  // крона: 11 листьев-«перьев», поникающих к концам
-  const fronds = 11;
-  for (let i = 0; i < fronds; i++) {
-    const a = (i / fronds) * Math.PI * 2 + rng() * 0.25;
-    const len = 2.6 + rng() * 1.7;
-    const droop = 0.42 + rng() * 0.38;
-    let px = top.x;
-    let pz = top.z;
-    let py = top.y;
+  // кольца от старых черешков — по той же кривой, с наклоном вдоль ствола
+  const rings = 9;
+  for (let i = 1; i <= rings; i++) {
+    const t = i / (rings + 1);
+    const p = spine(t);
+    const above = spine(Math.min(1, t + 0.02));
+    const ringR = (baseR + (topR - baseR) * t) + 0.035;
+    const ring = new THREE.CylinderGeometry(ringR, ringR * 1.04, 0.075, 9, 1);
+    ring.applyQuaternion(alignQuat(p, above));
+    ring.translate(p.x, p.y, p.z);
+    piece(bark, ring, 0x5b4028);
+  }
 
-    for (let s = 0; s < 4; s++) {
-      const t0 = s / 4;
-      const t1 = (s + 1) / 4;
-      const w = (0.34 - t0 * 0.24) * (1 + rng() * 0.15);
-      const segLen = len / 4;
-      const geo = new THREE.BoxGeometry(w, 0.055, segLen * 1.12);
-      const dx = Math.cos(a) * segLen * (1 - t0 * 0.35);
-      const dz = Math.sin(a) * segLen * (1 - t0 * 0.35);
-      const drop = droop * t1 * t1;
-      part(leaf, geo, s % 2 ? COLORS.frond : COLORS.frondLight,
-        px + dx * 0.5, py - drop * 0.5, pz + dz * 0.5,
-        drop * 0.9, -a + Math.PI / 2, 0);
-      px += dx;
-      pz += dz;
-      py -= drop;
+  // --- крона ---
+  const top = spine(1);
+
+  // «ананас» у основания листьев, чтобы не было дыры
+  piece(leaf, new THREE.IcosahedronGeometry(0.34, 1), 0x4e7a3f, [top.x, top.y - 0.06, top.z], [0, 0, 0], [1, 0.85, 1]);
+
+  const fronds = 9;
+  for (let i = 0; i < fronds; i++) {
+    const yaw = (i / fronds) * Math.PI * 2 + (rng() - 0.5) * 0.4;
+    const len = 2.4 + rng() * 1.5;
+    const rise = 0.42 + rng() * 0.4;      // подъём у основания
+    const droop = 0.95 + rng() * 0.75;    // провисание к концу
+    const leafletColor = i % 2 ? COLORS.frond : COLORS.frondLight;
+
+    // точки центральной линии листа
+    const steps = 9;
+    const pts = [];
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps;
+      pts.push(new THREE.Vector3(
+        t * len,
+        (rise * t - droop * t * t) * len * 0.5,
+        0
+      ));
+    }
+
+    // --- собираем лист в локальных координатах, потом поворачиваем ---
+    const pieces = [];
+
+    // плотная лента-лезвие
+    pieces.push({ geo: ribbonGeometry(pts, 0.44 + rng() * 0.1, 0.26), color: leafletColor });
+
+    // свисающие «перья» по краям
+    for (let k = 1; k < steps; k++) {
+      const t = k / steps;
+      const p = pts[k];
+      const ll = (0.66 - Math.abs(t - 0.45) * 0.6) * (0.7 + len * 0.16);
+      for (const side of [1, -1]) {
+        let feather = new THREE.BoxGeometry(ll, 0.03, 0.08);
+        feather.translate(ll * 0.44, 0, 0);
+        feather.rotateZ(-0.42 - t * 0.22);
+        feather.rotateY(side * (1.3 + t * 0.25));
+        feather.translate(p.x, p.y - 0.02, 0);
+        pieces.push({ geo: feather, color: side > 0 ? leafletColor : 0x4e8a3e });
+      }
+    }
+
+    for (const { geo, color } of pieces) {
+      let g = flat(geo);
+      g.rotateY(yaw);
+      g.translate(top.x, top.y, top.z);
+      leaf.push(colorize(g, color));
     }
   }
 
   // кокосы под кроной
   const nuts = 3 + Math.floor(rng() * 3);
   for (let i = 0; i < nuts; i++) {
-    const a = (i / nuts) * Math.PI * 2;
-    part(leaf, new THREE.IcosahedronGeometry(0.2 + rng() * 0.06, 0), COLORS.coconut,
-      top.x + Math.cos(a) * 0.34, top.y - 0.42 - rng() * 0.12, top.z + Math.sin(a) * 0.34);
+    const a = (i / nuts) * Math.PI * 2 + rng();
+    const r = 0.17 + rng() * 0.06;
+    piece(leaf, new THREE.IcosahedronGeometry(r, 1), COLORS.coconut,
+      [top.x + Math.cos(a) * 0.3, top.y - 0.32 - rng() * 0.2, top.z + Math.sin(a) * 0.3]);
   }
 
   return { bark: merge(bark), leaf: merge(leaf) };
@@ -151,102 +282,227 @@ export function makeTreeParts(rng) {
   const bark = [];
   const leaf = [];
 
-  const h = 5.2 + rng() * 5.2;
-  const bend = (rng() - 0.5) * 0.5;
-  const top = trunkPart(bark, rng, h, 0.48, 0.2, COLORS.trunk, 0x6a4c30, bend, 9);
+  const h = 5.6 + rng() * 5.0;
+  const leanX = (rng() - 0.5) * 1.1;
+  const leanZ = (rng() - 0.5) * 1.1;
+  const baseR = 0.42 + rng() * 0.12;
+  const topR = 0.16;
 
-  // корни-подпорки
-  for (let i = 0; i < 4; i++) {
-    const a = (i / 4) * Math.PI * 2 + rng() * 0.4;
-    const root = new THREE.ConeGeometry(0.18, 0.85, 5, 1);
-    part(bark, root, 0x5d4128,
-      Math.cos(a) * 0.34, 0.34, Math.sin(a) * 0.34,
-      Math.PI * 0.32, 0, -a);
+  const spine = (t) => new THREE.Vector3(
+    leanX * t * t,
+    h * t,
+    leanZ * t * t
+  );
+
+  // ствол — сегментами по кривой
+  const segments = 8;
+  for (let i = 0; i < segments; i++) {
+    const t0 = i / segments;
+    const t1 = (i + 1) / segments;
+    const a = spine(t0);
+    const b = spine(t1);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const len = a.distanceTo(b) * 1.08;
+    // у корней ствол заметно толще — «модельный» силуэт
+    const flare = i === 0 ? 1.45 : 1;
+    const r0 = (baseR + (topR - baseR) * t0) * flare;
+    const r1 = baseR + (topR - baseR) * t1;
+
+    let geo = new THREE.CylinderGeometry(r1, r0, len, 9, 1);
+    geo.applyQuaternion(alignQuat(a, b));
+    geo.translate(mid.x, mid.y, mid.z);
+    geo = flat(geo);
+    bark.push(colorize(geo, i % 2 ? COLORS.trunk : 0x6a4c30));
   }
 
-  // ветки
+  // корни-подпорки: треугольные «крылья» у основания
+  const rootCount = 4 + Math.floor(rng() * 2);
+  for (let i = 0; i < rootCount; i++) {
+    const a = (i / rootCount) * Math.PI * 2 + rng() * 0.4;
+    const root = new THREE.ConeGeometry(0.2 + rng() * 0.08, 1.0 + rng() * 0.3, 5, 1);
+    part(bark, root, 0x5d4128,
+      Math.cos(a) * 0.42, 0.25, Math.sin(a) * 0.42,
+      Math.PI * 0.34, -a, 0);
+  }
+
+  // ветки: каждая — два колена, второе короче и тоньше
   const branches = 3 + Math.floor(rng() * 2);
   for (let i = 0; i < branches; i++) {
-    const a = (i / branches) * Math.PI * 2 + rng();
-    const bl = 1.1 + rng() * 1.0;
-    const y = h * (0.52 + rng() * 0.22);
-    const branch = new THREE.CylinderGeometry(0.07, 0.15, bl, 5, 1);
-    part(bark, branch, 0x6a4c30,
-      top.x * 0.7 + Math.cos(a) * bl * 0.42, y + bl * 0.3, top.z * 0.7 + Math.sin(a) * bl * 0.42,
-      0, 0, 0.95);
+    const a = (i / branches) * Math.PI * 2 + rng() * 0.7;
+    const t = 0.5 + rng() * 0.3;
+    const origin = spine(t);
+    const bl = 1.3 + rng() * 1.1;
+    const dir = new THREE.Vector3(Math.cos(a), 0.55 + rng() * 0.45, Math.sin(a)).normalize();
+    const end = origin.clone().addScaledVector(dir, bl);
+
+    let branch = new THREE.CylinderGeometry(0.06, 0.14, bl, 6, 1);
+    branch.applyQuaternion(alignQuat(origin, end));
+    branch.translate(
+      (origin.x + end.x) / 2, (origin.y + end.y) / 2, (origin.z + end.z) / 2
+    );
+    branch = flat(branch);
+    bark.push(colorize(branch, 0x6a4c30));
+
+    // отводок
+    const a2 = a + (rng() - 0.5) * 1.4;
+    const dir2 = new THREE.Vector3(Math.cos(a2), 0.8, Math.sin(a2)).normalize();
+    const end2 = end.clone().addScaledVector(dir2, bl * 0.55);
+    let twig = new THREE.CylinderGeometry(0.035, 0.07, bl * 0.6, 5, 1);
+    twig.applyQuaternion(alignQuat(end, end2));
+    twig.translate((end.x + end2.x) / 2, (end.y + end2.y) / 2, (end.z + end2.z) / 2);
+    twig = flat(twig);
+    bark.push(colorize(twig, 0x74533a));
+
+    // листва на конце ветки — пучок
+    for (let k = 0; k < 2; k++) {
+      const r = 0.75 + rng() * 0.6;
+      const jitter = new THREE.Vector3(
+        (rng() - 0.5) * 0.8, (rng() - 0.5) * 0.5, (rng() - 0.5) * 0.8
+      );
+      piece(leaf, new THREE.IcosahedronGeometry(r, 1),
+        k % 2 ? 0x6a9455 : 0x7ea863,
+        [end2.x + jitter.x, end2.y + jitter.y, end2.z + jitter.z]);
+    }
   }
 
-  // крона: тёмная «подложка» + светлые шапки сверху
-  const blobs = 6 + Math.floor(rng() * 3);
-  for (let i = 0; i < blobs; i++) {
-    const r = 1.15 + rng() * 1.05;
-    const a = rng() * Math.PI * 2;
-    const d = rng() * 1.35;
-    const geo = new THREE.IcosahedronGeometry(r, 1);
-    part(leaf, geo, i % 3 === 0 ? COLORS.jungle : (i % 2 ? 0x6a9455 : 0x7ea863),
-      top.x * 0.8 + Math.cos(a) * d,
-      h * 0.9 + r * 0.5 + rng() * 1.9,
-      top.z * 0.8 + Math.sin(a) * d);
+  // основная крона: ярусами, крупные шапки сверху
+  const layers = 3;
+  for (let l = 0; l < layers; l++) {
+    const ly = h * (0.72 + l * 0.11);
+    const count = 4 - l;
+    const rad = 1.5 - l * 0.3;
+    for (let i = 0; i < count; i++) {
+      const a = (i / count) * Math.PI * 2 + l * 0.7 + rng() * 0.5;
+      const d = rad * (0.55 + rng() * 0.6);
+      const r = (1.25 - l * 0.22) * (0.85 + rng() * 0.45);
+      piece(leaf, new THREE.IcosahedronGeometry(r, 1),
+        l === 0 ? COLORS.jungle : (i % 2 ? 0x6a9455 : 0x82ac66),
+        [Math.cos(a) * d, ly + r * 0.3 + rng() * 0.3, Math.sin(a) * d]);
+    }
   }
+  // макушка
+  piece(leaf, new THREE.IcosahedronGeometry(1.15 + rng() * 0.4, 1), 0x8ab86c,
+    [0, h * 1.03, 0]);
 
   return { bark: merge(bark), leaf: merge(leaf) };
 }
 
-/** Куст: рыхлая шапка листвы, ягоды — отдельным слоем */
+/** Куст: несколько веток из земли и рыхлая листва поверх */
 export function makeBushParts(rng, withBerries) {
+  const bark = [];
   const leaf = [];
   const fruit = [];
 
-  const n = 5 + Math.floor(rng() * 3);
-  for (let i = 0; i < n; i++) {
-    const r = 0.36 + rng() * 0.42;
-    part(leaf, new THREE.IcosahedronGeometry(r, 1),
-      i % 2 ? COLORS.bush : 0x5f9150,
-      (rng() - 0.5) * 1.05, r * 0.62 + rng() * 0.3, (rng() - 0.5) * 1.05);
+  const branches = 3 + Math.floor(rng() * 3);
+  const tips = [];
+  for (let i = 0; i < branches; i++) {
+    const a = (i / branches) * Math.PI * 2 + rng() * 0.8;
+    const len = 0.55 + rng() * 0.5;
+    const dir = new THREE.Vector3(Math.cos(a) * 0.6, 1, Math.sin(a) * 0.6).normalize();
+    const end = dir.clone().multiplyScalar(len);
+
+    let stem = new THREE.CylinderGeometry(0.028, 0.06, len, 5, 1);
+    stem.applyQuaternion(alignQuat(new THREE.Vector3(0, 0, 0), end));
+    stem.translate(end.x / 2, end.y / 2, end.z / 2);
+    stem = flat(stem);
+    bark.push(colorize(stem, 0x6a4c30));
+    tips.push(end);
   }
-  // пара тонких веточек
-  for (let i = 0; i < 2; i++) {
+
+  // листва: мелкие шапки на концах веток + общий объём
+  for (const tip of tips) {
+    const r = 0.3 + rng() * 0.22;
+    piece(leaf, new THREE.IcosahedronGeometry(r, 1), rng() > 0.5 ? COLORS.bush : 0x6b9c55,
+      [tip.x, tip.y + r * 0.4, tip.z]);
+  }
+  const n = 3 + Math.floor(rng() * 3);
+  for (let i = 0; i < n; i++) {
+    const r = 0.34 + rng() * 0.3;
     const a = rng() * Math.PI * 2;
-    part(leaf, new THREE.CylinderGeometry(0.03, 0.05, 0.7, 4, 1), 0x6a4c30,
-      Math.cos(a) * 0.2, 0.35, Math.sin(a) * 0.2, 0.25, 0, 0.2);
+    const d = rng() * 0.5;
+    piece(leaf, new THREE.IcosahedronGeometry(r, 1), i % 2 ? COLORS.bush : 0x5f9150,
+      [Math.cos(a) * d, 0.42 + rng() * 0.34, Math.sin(a) * d]);
   }
 
   if (withBerries) {
-    for (let i = 0; i < 9; i++) {
-      part(fruit, new THREE.IcosahedronGeometry(0.085 + rng() * 0.03, 0), COLORS.berry,
-        (rng() - 0.5) * 1.15, 0.45 + rng() * 0.7, (rng() - 0.5) * 1.15);
+    for (let i = 0; i < 10; i++) {
+      const a = rng() * Math.PI * 2;
+      const d = 0.18 + rng() * 0.5;
+      piece(fruit, new THREE.IcosahedronGeometry(0.085 + rng() * 0.03, 0), COLORS.berry,
+        [Math.cos(a) * d, 0.5 + rng() * 0.45, Math.sin(a) * d]);
     }
   }
 
   const out = { leaf: merge(leaf) };
+  if (bark.length) out.bark = merge(bark);
   if (fruit.length) out.fruit = merge(fruit);
   return out;
 }
 
-/** Валун: крупный обломок со сколами и мшистой шапкой */
-export function makeRockGeometry(rng) {
-  const parts = [];
-  const main = new THREE.IcosahedronGeometry(1, 1);
-  jitterGeo(main, 0.34, rng);
-  main.scale(1.05, 0.72, 0.95);
-  part(parts, main, COLORS.stone, 0, 0.42, 0);
+/**
+ * Камни: три разные формы — валун, гранёный обломок и слоистая плита.
+ * Возвращаем два слоя: сам камень и мох, который лежит только сверху.
+ */
+export function makeRockParts(rng, kind = null) {
+  const rock = [];
+  const moss = [];
+  const type = kind || ['boulder', 'boulder', 'slab'][Math.floor(rng() * 3)];
 
-  for (let i = 0; i < 2; i++) {
-    const frag = new THREE.IcosahedronGeometry(0.3 + rng() * 0.22, 0);
-    jitterGeo(frag, 0.16, rng);
+  if (type === 'slab') {
+    // плита: плоские гранёные глыбы, лежащие друг на друге
+    for (let i = 0; i < 3; i++) {
+      const chunk = new THREE.DodecahedronGeometry(0.95 - i * 0.16, 0);
+      jitterGeo(chunk, 0.12, rng);
+      chunk.scale(1.15, 0.34, 0.95);
+      part(rock, chunk, i % 2 ? 0x9d978e : COLORS.stone,
+        (rng() - 0.5) * 0.45, 0.22 + i * 0.22, (rng() - 0.5) * 0.4,
+        (rng() - 0.5) * 0.12, rng() * 3, (rng() - 0.5) * 0.12);
+    }
+    const chip = new THREE.DodecahedronGeometry(0.36, 0);
+    jitterGeo(chip, 0.06, rng);
+    part(rock, chip, COLORS.rockDark, 1.05, 0.1, 0.35, rng(), rng(), 0);
+  } else {
+    // валун: один крупный цельный объём, немного приплюснутый
+    const main = new THREE.DodecahedronGeometry(1, 0);
+    jitterGeo(main, 0.09, rng);
+    main.scale(1.0 + rng() * 0.25, 0.72 + rng() * 0.12, 0.92 + rng() * 0.2);
+    part(rock, main, COLORS.stone, 0, 0, 0, 0, rng() * 3, 0);
+
+    // пара вросших обломков у основания — «сидит в земле»
+    for (let i = 0; i < 2; i++) {
+      const a = rng() * Math.PI * 2;
+      const chip = new THREE.DodecahedronGeometry(0.4 + rng() * 0.16, 0);
+      jitterGeo(chip, 0.05, rng);
+      part(rock, chip, i ? COLORS.rockDark : 0x9d978e,
+        Math.cos(a) * 0.85, -0.32, Math.sin(a) * 0.85, rng() * 0.4, rng() * 3, rng() * 0.4);
+    }
+  }
+
+  const body = merge(rock);
+  body.computeBoundingBox();
+  const bb = body.boundingBox;
+  const sizeY = bb.max.y - bb.min.y;
+  const radius = Math.max(Math.abs(bb.max.x), Math.abs(bb.min.x), Math.abs(bb.max.z), Math.abs(bb.min.z));
+  // утапливаем низ в землю, чтобы камень не «левитировал» на склоне
+  body.translate(0, -bb.min.y - 0.14, 0);
+  body.computeBoundingBox();
+
+  // мох: мелкие пятна только сверху
+  const topY = body.boundingBox.max.y;
+  const patches = 2 + Math.floor(rng() * 2);
+  for (let i = 0; i < patches; i++) {
     const a = rng() * Math.PI * 2;
-    part(parts, frag, COLORS.rockDark,
-      Math.cos(a) * 0.95, 0.16, Math.sin(a) * 0.95);
+    const d = rng() * radius * 0.45;
+    const r = radius * (0.26 + rng() * 0.14);
+    const blob = new THREE.IcosahedronGeometry(r, 1);
+    jitterGeo(blob, r * 0.18, rng);
+    piece(moss, blob, i % 2 ? 0x6d8f45 : 0x5a7b3a,
+      [Math.cos(a) * d, topY - sizeY * (0.12 + rng() * 0.16), Math.sin(a) * d],
+      [0, rng() * 3, 0],
+      [1, 0.34, 1]);
   }
 
-  // мох
-  for (let i = 0; i < 2; i++) {
-    const moss = new THREE.IcosahedronGeometry(0.34 + rng() * 0.2, 0);
-    moss.scale(1, 0.34, 1);
-    part(parts, moss, 0x6f8f4a, (rng() - 0.5) * 0.7, 0.85 + rng() * 0.1, (rng() - 0.5) * 0.7);
-  }
-
-  return merge(parts);
+  return { rock: body, moss: merge(moss) };
 }
 
 // ---------- подбираемые вещи ----------

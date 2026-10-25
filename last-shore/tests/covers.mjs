@@ -6,13 +6,13 @@ const chromium = chromiumPkg.default || chromiumPkg;
 const browser = await puppeteer.launch({
   args: [...chromium.args, '--no-sandbox', '--enable-unsafe-swiftshader'],
   executablePath: await chromium.executablePath(),
-  headless: 'shell',
+  headless: 'shell', protocolTimeout: 420000,
   env: { ...process.env, LD_LIBRARY_PATH: '/tmp/nssstub' },
 });
 
 async function shot(url, file, prepare, wait = 3000) {
   const page = await browser.newPage();
-  await page.setViewport({ width: 1440, height: 810, deviceScaleFactor: 1 });
+  await page.setViewport({ width: 1280, height: 720, deviceScaleFactor: 1 });
   await page.goto(url, { waitUntil: 'load' });
   await new Promise((r) => setTimeout(r, 1200));
   if (prepare) await prepare(page);
