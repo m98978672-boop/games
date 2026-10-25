@@ -447,7 +447,8 @@ export class Player {
     const inWater = !underground && groundHere < 0.05;
 
     let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
-    if (this.fly) speed = (sprinting ? P.sprintSpeed * 2.2 : P.walkSpeed * 1.7);
+    // в полёте Shift уходит на спуск, поэтому горизонт всегда «беговой»
+    if (this.fly) speed = P.flyHorizontal;
     if (inWater) speed = THREE.MathUtils.lerp(speed, P.wadeSpeed, this.wading);
 
     const targetVX = wx * speed * (moving ? 1 : 0);
@@ -482,10 +483,17 @@ export class Player {
     const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
 
     if (this.fly) {
-      // креатив: летим, не касаясь земли
+      // креатив: настоящий полёт — плавный разгон, зависание, земля не липнет
       const up = (input.jump ? 1 : 0) - (input.sprint ? 1 : 0);
-      this.position.y += up * 7 * dt;
-      this.velocity.y = 0;
+      const targetVy = up * P.flySpeed;
+      this.velocity.y += (targetVy - this.velocity.y) * clamp(dt * (up ? 9 : 12), 0, 1);
+      this.position.y += this.velocity.y * dt;
+      // не проваливаемся в рельеф и не ныряем под воду глубже колена
+      const minY = underground ? floor : Math.max(ground + 0.25, CONFIG.world.seaLevel - 0.55);
+      if (this.position.y < minY) {
+        this.position.y = minY;
+        if (this.velocity.y < 0) this.velocity.y = 0;
+      }
       this.grounded = false;
       this.wading = 0;
       this.swimming = false;
@@ -590,6 +598,20 @@ export class Player {
     this.armL.rotation.x = armLSwing;
     this.armR.rotation.x = armRSwing;
     this.elbowR.rotation.x = elbowRSwing;
+
+    if (this.fly) {
+      // поза полёта: ноги поджаты, руки разведены, лёгкое покачивание
+      const t = performance.now() * 0.002;
+      const f = clamp(dt * 7, 0, 1);
+      this.legL.rotation.x += (-0.38 + Math.sin(t) * 0.05 - this.legL.rotation.x) * f;
+      this.legR.rotation.x += (-0.52 + Math.sin(t * 1.2) * 0.05 - this.legR.rotation.x) * f;
+      this.kneeL.rotation.x += (0.55 - this.kneeL.rotation.x) * f;
+      this.kneeR.rotation.x += (0.38 - this.kneeR.rotation.x) * f;
+      this.armL.rotation.x += (-0.25 - this.armL.rotation.x) * f;
+      this.armR.rotation.x += (-0.25 - this.armR.rotation.x) * f;
+      this.armL.rotation.z += (-0.6 - this.armL.rotation.z) * f;
+      this.armR.rotation.z += (0.6 - this.armR.rotation.z) * f;
+    }
 
     const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0) + leanExtra;
     this.lean += (targetLean - this.lean) * clamp(dt * 10, 0, 1);

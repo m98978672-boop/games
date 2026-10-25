@@ -28,6 +28,8 @@ export const CONFIG = {
     accel: 14,
     jumpSpeed: 6.2,
     gravity: -22,
+    flySpeed: 7.5,        // креатив: вертикальная скорость полёта
+    flyHorizontal: 9.5,   // креатив: скорость по горизонту
     maxDepth: 1.15,     // глубже — не пройти (пока нет плавания)
     radius: 0.42,
     height: 1.8,

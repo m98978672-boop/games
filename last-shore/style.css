@@ -652,3 +652,47 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .wound .wound-track { width: 46px; height: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.15); overflow: hidden; }
 .wound .wound-track i { display: block; height: 100%; background: linear-gradient(90deg, #d4453f, #ffb08a); }
 @keyframes woundIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: none; } }
+
+/* ---------- Отчёт бота-инспектора (F8) ---------- */
+.panel.panel-bot {
+  left: 50%;
+  top: 64px;
+  transform: translateX(-50%);
+  width: min(620px, calc(100vw - 40px));
+  max-height: 72vh;
+  overflow: auto;
+  background: linear-gradient(180deg, rgba(12, 26, 30, 0.94), rgba(10, 18, 22, 0.96));
+  border: 1px solid rgba(94, 214, 200, 0.35);
+  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55);
+}
+.panel-bot .bot-head h2 { display: flex; align-items: baseline; gap: 10px; }
+.bot-count {
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: #7fd8cd;
+  border: 1px solid rgba(127, 216, 205, 0.4);
+  border-radius: 999px;
+  padding: 2px 8px;
+}
+#bot-list { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.bot-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+  border-left: 3px solid transparent;
+  animation: botIn 0.25s ease-out;
+}
+.bot-row.bot-ok { border-left-color: #5ad19a; }
+.bot-row.bot-bad { border-left-color: #ff6b6b; background: rgba(120, 24, 24, 0.28); }
+.bot-row.bot-wait { color: #8fb9b4; font-size: 12px; border-left-color: rgba(127, 216, 205, 0.5); }
+.bot-mark { font-weight: 700; font-size: 14px; line-height: 1.3; }
+.bot-ok .bot-mark { color: #63e2a9; }
+.bot-bad .bot-mark { color: #ff7b7b; }
+.bot-body { display: flex; flex-direction: column; gap: 2px; font-size: 12.5px; }
+.bot-body b { font-weight: 600; color: #eaf6f5; }
+.bot-fact { color: #a9c6c3; }
+.bot-want { color: #ffb3a7; font-style: normal; font-size: 11.5px; }
+@keyframes botIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }

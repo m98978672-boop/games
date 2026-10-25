@@ -453,6 +453,8 @@ export function makeBushParts(rng, withBerries) {
   const out = { leaf: merge(leaf) };
   if (bark.length) out.bark = merge(bark);
   if (fruit.length) out.fruit = merge(fruit);
+  // куст собран только из кубиков — отмечаем для проверок и для подсказок
+  for (const geo of Object.values(out)) if (geo) geo.userData.boxOnly = true;
   return out;
 }
 
@@ -554,6 +556,9 @@ export function makeRockParts(rng, kind = null) {
 
   const out = { rock: body, moss: merge(moss) };
   if (ore.length) out.ore = merge(ore);
+  // тело валуна и мох — из кубиков (вкрапления руды — гранёные кристаллы)
+  if (out.rock) out.rock.userData.boxOnly = true;
+  if (out.moss) out.moss.userData.boxOnly = true;
   return out;
 }
 

@@ -70,6 +70,9 @@ export function createTerrainMaterial(textures) {
 
          // крупный рисунок: рельефные пятна одного масштаба
          float macro = texture2D(uGrass, uvB).r;
+         // второй, более мелкий рисунок — пятна голой земли, мха и сухой травы
+         float macro2 = texture2D(uDirt, uvB * 2.9 + vec2(0.21, 0.63)).r;
+         float macro3 = texture2D(uRock, uvB * 6.1 - vec2(0.44, 0.17)).r;
 
          // склон: чем круче, тем больше камня
          float slope = 1.0 - clamp(vWNormal.y, 0.0, 1.0);
@@ -79,7 +82,20 @@ export function createTerrainMaterial(textures) {
          float wsum = max(w.x + w.y + w.z + w.w, 0.0001);
          w /= wsum;
 
-         vec3 mixTex = cGrass * w.x + cSand * w.y + cRock * w.z + cDirt * w.w;
+         // пятна земли прямо в траве: утоптанные прогалины и проплешины
+         float bare = smoothstep(0.56, 0.84, macro2 * 0.7 + macro3 * 0.45);
+         w.w += bare * w.x * 1.25;
+         // мох в сырых низинах — свой оттенок, а не «трава темнее»
+         float moss = smoothstep(0.58, 0.82, macro3) * w.x;
+         float wsum2 = max(w.x + w.y + w.z + w.w, 0.0001);
+         w /= wsum2;
+
+         vec3 cMoss = vec3(0.30, 0.42, 0.20);
+         vec3 mixTex = cGrass * w.x * (1.0 - bare * 0.55) * (1.0 - moss * 0.5)
+                     + cSand * w.y
+                     + cRock * w.z
+                     + cDirt * w.w
+                     + cMoss * moss * 0.5;
 
          // цвет биома — основа; текстура даёт яркость (рельеф) и оттенок
          vec3 base = diffuseColor.rgb;
@@ -104,6 +120,12 @@ export function createTerrainMaterial(textures) {
          // псевдо-рельеф: высокочастотная карта чуть подсвечивает грани
          float hi = texture2D(uGrass, uvA * 3.1).r - 0.5;
          diffuseColor.rgb *= 1.0 + hi * 0.3;
+         // мелкая галька и комочки: под ногами видно «зерно» земли
+         float peb = texture2D(uRock, uvA * 4.3 + vec2(0.13, 0.71)).r;
+         float gravel = smoothstep(0.62, 0.82, peb) * (1.0 - w.x * 0.4);
+         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.22 + vec3(0.04, 0.035, 0.025), gravel * 0.5);
+         // выгоревшая на солнце трава — тёплый оттенок пятнами
+         diffuseColor.rgb *= mix(vec3(1.0), vec3(1.07, 1.0, 0.86), smoothstep(0.55, 0.85, macro3) * w.x);
 
          // мокрый песок у воды темнее и холоднее
          float wet = 1.0 - smoothstep(0.25, 1.1, vWPos.y);
@@ -115,7 +137,7 @@ export function createTerrainMaterial(textures) {
   };
 
   // пересобирать шейдер при смене материала не нужно, но кэш ключей обязателен
-  material.customProgramCacheKey = () => 'lastshore-terrain-v1';
+  material.customProgramCacheKey = () => 'lastshore-terrain-v2';
   return material;
 }
 

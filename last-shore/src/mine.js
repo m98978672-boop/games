@@ -375,6 +375,8 @@ export class Mine {
       if (h < 2 || h > 16) continue;
       if (world.slopeAt(x, z) > 0.45) continue;
       if (spots.some((s) => Math.hypot(s.x - x, s.z - z) < 55)) continue;
+      // арка не должна стоять в дереве или камне: вокруг 3.2 м свободны
+      if (typeof world.isFree === 'function' && !world.isFree(x, z, 3.2)) continue;
       spots.push({ x, z, h });
     }
 
@@ -447,6 +449,31 @@ export class Mine {
     }
     const lvl = this.levels[index];
     return { x: this._worldX(lvl.start.cx), y: lvl.y, z: this._worldZ(lvl.start.cz) + 0.6 };
+  }
+
+  /**
+   * Вход в шахту из выкопанного хода: ищем ближайшую открытую клетку
+   * каменного слоя к точке на поверхности и ставим героя туда.
+   */
+  enterNear(x, z, index = 0) {
+    const lvl = this.levels[index];
+    if (!lvl) return this.enter(index, null);
+    const cx0 = Math.round((x + HALF - CELL / 2) / CELL);
+    const cz0 = Math.round((z + HALF - CELL / 2) / CELL);
+    let best = null;
+    let bestD = Infinity;
+    for (let cz = 1; cz < W - 1; cz++) {
+      for (let cx = 1; cx < W - 1; cx++) {
+        const cell = lvl.grid[this._cellKey(cx, cz)];
+        if (!cell || !cell.open) continue;
+        const d = Math.hypot(cx - cx0, cz - cz0);
+        if (d < bestD) { bestD = d; best = { cx, cz }; }
+      }
+    }
+    const entrance = this.currentEntrance || this.entrances[0] || null;
+    this.enter(index, entrance);
+    if (!best) return { x: this._worldX(lvl.start.cx), y: lvl.y, z: this._worldZ(lvl.start.cz) + 0.6 };
+    return { x: this._worldX(best.cx), y: lvl.y, z: this._worldZ(best.cz) };
   }
 
   leave() {

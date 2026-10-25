@@ -15,6 +15,12 @@ const SIZE = CONFIG.world.size;
 const GRID = CONFIG.world.segments + 1; // 201 точка на сторону
 const STEP = SIZE / (GRID - 1);
 
+// Толщина слоёв под ногами: сначала земля/песок, под ней — камень (тот самый
+// каменный слой, в котором идут шахты). Пробив камень насквозь, попадаешь в пустоту.
+const SOIL_THICK = 1.35;
+const STONE_THICK = 2.4;
+const DIG_CELL = 1.4;
+
 // ---------- вспомогательное ----------
 
 function colorize(geo, hex) {
@@ -69,6 +75,9 @@ export class World {
     this.colliders = [];        // { x, z, r }
     this.digStore = new Map();  // выкопанные лунки: ключ клетки -> глубина
     this.digEvents = 0;
+    this.surfaceStore = new Map();  // чем была клетка до копания: песок/земля/камень
+    this.pits = new Map();          // выкопанные лунки: стенки и дно со срезом породы
+    this.baseColors = null;     // исходные цвета рельефа (для показа среза породы)
     this.pickups = [];          // { mesh, kind, name }
     this.time = 0;
 
@@ -77,6 +86,9 @@ export class World {
     this._buildWater();
     this._buildVegetation();
     this._buildPickups();
+    this.pitGroup = new THREE.Group();
+    this.pitGroup.name = 'pits';
+    this.scene.add(this.pitGroup);
   }
 
   // --- высота острова (аналитическая, считается один раз в сетку) ---
@@ -192,7 +204,19 @@ export class World {
       );
       const grassW = smoothstep(1.9, 3.2, h) * (1 - smoothstep(13, 18, h)) * (0.55 + moisture * 0.6);
       const rockW = Math.max(smoothstep(0.55, 1.1, slope), smoothstep(12, 19, h));
-      const dirtW = 0.25 * (1 - grassW) * smoothstep(2.4, 4.5, h);
+      // пятна голой земли и мха: земля не выглядит одним ровным ковром
+      const patch = fbm(x * 0.047 + 11, z * 0.047 - 5, 3, this.seed + 77);
+      const patch2 = fbm(x * 0.017 - 40, z * 0.017 + 23, 2, this.seed + 13);
+      const bare = smoothstep(0.56, 0.82, patch * 0.65 + patch2 * 0.45);
+      const dirtW = 0.25 * (1 - grassW) * smoothstep(2.4, 4.5, h) + bare * 0.85 * (1 - smoothstep(12, 16, h));
+      const moss = smoothstep(0.6, 0.78, patch2) * grassW * 0.5;
+      if (moss > 0.02) {
+        // тёмно-зелёный мох в низинах — отдельный оттенок травы
+        tmp.lerp(new THREE.Color(0x5f7f3a), moss * 0.75);
+        colors[i * 3] = tmp.r;
+        colors[i * 3 + 1] = tmp.g;
+        colors[i * 3 + 2] = tmp.b;
+      }
 
       // порядок каналов совпадает с шейдером: трава, песок, камень, земля
       const sum = sandW + grassW + rockW + dirtW || 1;
@@ -203,6 +227,7 @@ export class World {
     }
 
     geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    this.baseColors = colors.slice();
     geo.setAttribute('splat', new THREE.BufferAttribute(splat, 4));
     geo.computeVertexNormals();
 
@@ -373,20 +398,11 @@ export class World {
     const moistureAt = (x, z) => fbm(x * 0.009 + 3, z * 0.009 - 8, 3, this.seed + 31);
     const forestAt = (x, z) => fbm(x * 0.012 - 17, z * 0.012 + 6, 3, this.seed + 44);
 
+    const nextScale = () => 0.8 + rng() * 0.55;
     const pushOne = (arr, x, z, h, extra) => arr.push({ x, z, h, s: 0.8 + rng() * 0.55, rot: rng() * Math.PI * 2, ...extra });
 
     // зазор между моделями: хитбокс не должен рождаться внутри чужого
-    const GAP = 0.05;
-    const freeSpot = (x, z, r) => {
-      for (const c of this.colliders) {
-        if (c.disabled) continue;
-        const dx = x - c.x;
-        const dz = z - c.z;
-        const min = c.r + r + GAP;
-        if (dx * dx + dz * dz < min * min) return false;
-      }
-      return true;
-    };
+    const freeSpot = (x, z, r) => this.isFree(x, z, r);
 
     // пальмы — вдоль берега
     for (let i = 0; i < 1400; i++) {
@@ -395,9 +411,10 @@ export class World {
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
       const h = this.heightAt(x, z);
-      if (h > 1.0 && h < 3.6 && this.slopeAt(x, z) < 0.5 && freeSpot(x, z, 0.38)) {
-        pushOne(palms, x, z, h);
-        this.colliders.push({ x, z, r: 0.38, height: 8, kind: 'palm' });
+      const s = nextScale();
+      if (h > 1.0 && h < 3.6 && this.slopeAt(x, z) < 0.5 && freeSpot(x, z, 0.55 * s)) {
+        pushOne(palms, x, z, h, { s });
+        this.colliders.push({ x, z, r: 0.55 * s, height: 8, kind: 'palm' });
       }
     }
 
@@ -413,9 +430,10 @@ export class World {
       const f = forestAt(x, z);
       if (f < 0.42) continue;
       if (rng() > 0.55 + f * 0.4) continue;
-      if (!freeSpot(x, z, 0.36)) continue;
-      pushOne(trees, x, z, h);
-      this.colliders.push({ x, z, r: 0.36, height: 6.5, kind: 'tree' });
+      const s = nextScale();
+      if (!freeSpot(x, z, 0.55 * s)) continue;
+      pushOne(trees, x, z, h, { s });
+      this.colliders.push({ x, z, r: 0.55 * s, height: 6.5, kind: 'tree' });
       if (trees.length >= 900) break;
     }
 
@@ -429,10 +447,11 @@ export class World {
       if (h < 1.3 || h > 14) continue;
       if (this.slopeAt(x, z) > 0.7) continue;
       if (moistureAt(x, z) < 0.42) continue;
-      if (!freeSpot(x, z, 0.55)) continue;
-      pushOne(bushes, x, z, h, { berries: rng() < 0.35 });
+      const s = nextScale();
+      if (!freeSpot(x, z, 0.95 * s)) continue;
+      pushOne(bushes, x, z, h, { s, berries: rng() < 0.35 });
       // куст не мешает ходить, но закрывает обзор мелким зверям
-      if (this.colliders.length < 4000) this.colliders.push({ x, z, r: 0.55, height: 1.1, kind: 'bush', soft: true });
+      if (this.colliders.length < 4000) this.colliders.push({ x, z, r: 0.95 * s, height: 1.1, kind: 'bush', soft: true });
       if (bushes.length >= 700) break;
     }
 
@@ -451,9 +470,9 @@ export class World {
       const s = 0.45 + rng() * 1.2;
       // руда на поверхности — большая редкость: всё ценное ушло под землю
       const ore = s > 0.9 && rng() < 0.035;
-      if (!freeSpot(x, z, s * 0.6)) continue;
+      if (!freeSpot(x, z, s * 1.0)) continue;
       pushOne(rocks, x, z, h, { s, ore, kind: ore ? 'ore' : 'stone' });
-      if (s > 0.8) this.colliders.push({ x, z, r: s * 0.8, height: s * 1.1, kind: 'rock' });
+      this.colliders.push({ x, z, r: s * 1.0, height: s * 1.1, kind: 'rock' });
       if (rocks.length >= 210) break;
     }
 
@@ -515,7 +534,7 @@ export class World {
      * Каждый объект может состоять из нескольких мешей (ствол + крона),
      * их ссылки хранятся в item.parts — так дерево можно спрятать целиком.
      */
-    const buildInstances = (variants, list, { castShadow = true, variantOf = null } = {}) => {
+    const buildInstances = (variants, list, { castShadow = true, variantOf = null, solidR = 0 } = {}) => {
       const meshes = [];
       if (!list.length) return meshes;
       const groups = variants.length;
@@ -532,6 +551,7 @@ export class World {
           if (!geo.boundingBox) geo.computeBoundingBox();
           vbox = vbox ? vbox.clone().union(geo.boundingBox) : geo.boundingBox.clone();
         }
+
         list.forEach((it, i) => {
           const want = variantOf ? variantOf(it, i) : i % groups;
           if (want === v) items.push(it);
@@ -562,6 +582,19 @@ export class World {
                 d: (vbox.max.z - vbox.min.z) * s,
                 minY: vbox.min.y * s,
               };
+            }
+            // «твёрдая» часть модели: ствол/куст/валун по footprint'у, а не крона.
+            // Крона не должна становиться невидимой стеной, а хитбоксы —
+            // наезжать друг на друга: footprint уже радиуса расстановки.
+            if (!it.bboxSolid) {
+              it.bboxSolid = solidR && vbox
+                ? {
+                  w: solidR * 2 * s,
+                  h: (vbox.max.y - vbox.min.y) * s,
+                  d: solidR * 2 * s,
+                  minY: vbox.min.y * s,
+                }
+                : it.bbox;
             }
             it.parts = it.parts || [];
             it.parts.push({ mesh, idx: k, baseScale: s, layer });
@@ -605,11 +638,12 @@ export class World {
     this.bushList = bushes;
     this.rockList = rocks;
 
-    this.palms = buildInstances(palmVariants, palms);
-    this.trees = buildInstances(treeVariants, trees);
-    this.bushes = buildInstances(bushVariants, bushes);
+    this.palms = buildInstances(palmVariants, palms, { solidR: 0.55 });
+    this.trees = buildInstances(treeVariants, trees, { solidR: 0.55 });
+    this.bushes = buildInstances(bushVariants, bushes, { solidR: 0.95 });
     // валуны чередуются, а рудный вариант достаётся только рудным камням
     this.rocks = buildInstances(rockVariants, rocks, {
+      solidR: 1.0,
       variantOf: (it, i) => (it.ore ? 2 : i % 2 === 0 ? 0 : 1),
     });
 
@@ -778,7 +812,21 @@ export class World {
   //  Копание: снимаем один слой земли, песок осыпается, вода заливает
   // ------------------------------------------------------------
 
-  /** Слой земли в точке: песок, дёрн/земля или камень */
+  /**
+   * Свободно ли место для модели радиусом r. Основания деревьев, кустов и
+   * камней — квадратные коробки, поэтому меряем по осям (а не по кругу):
+   * так между хитбоксами остаётся честный зазор 5 см даже по диагонали.
+   */
+  isFree(x, z, r = 0.5, gap = 0.05) {
+    for (const c of this.colliders) {
+      if (c.disabled) continue;
+      const min = c.r + r + gap;
+      if (Math.abs(x - c.x) < min && Math.abs(z - c.z) < min) return false;
+    }
+    return true;
+  }
+
+  /** Верхний слой земли в точке: песок, дёрн/земля или камень */
   layerAt(x, z) {
     const h = this.heightAt(x, z);
     if (h < 2.6) return 'sand';
@@ -787,8 +835,7 @@ export class World {
   }
 
   _digKey(x, z) {
-    const cell = 1.4;
-    return `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
+    return `${Math.floor(x / DIG_CELL)},${Math.floor(z / DIG_CELL)}`;
   }
 
   /** Сколько уже выкопано в этой точке (метры) */
@@ -796,46 +843,95 @@ export class World {
     return this.digStore.get(this._digKey(x, z)) || 0;
   }
 
+  /** Верхний слой клетки до копания: не меняется, пока яма углубляется */
+  surfaceOf(x, z) {
+    const stored = this.surfaceStore.get(this._digKey(x, z));
+    if (stored) return stored;
+    const rec = { surface: this.layerAt(x, z), h0: this.heightAt(x, z) };
+    this.surfaceStore.set(this._digKey(x, z), rec);
+    return rec;
+  }
+
+  /** До какой глубины в этой точке вообще можно копать: земля + камень */
+  digCapAt(x, z) {
+    return this.surfaceOf(x, z).surface === 'stone' ? STONE_THICK : SOIL_THICK + STONE_THICK;
+  }
+
+  /**
+   * Что под лопатой прямо сейчас:
+   *   surface — что лежит сверху (песок/земля/камень),
+   *   layer   — что режется сейчас: 'sand' | 'soil' | 'stone' | 'void',
+   *   dug/cap — сколько снято и сколько до пустоты,
+   *   stone   — сколько из этого камень.
+   * Под землёй всегда камень: это и есть каменный слой, в котором идут шахты.
+   */
+  probeAt(x, z) {
+    const surface = this.surfaceOf(x, z).surface;
+    const dug = this.dugAt(x, z);
+    const cap = this.digCapAt(x, z);
+    let layer;
+    if (surface === 'stone') layer = 'stone';
+    else if (dug < SOIL_THICK) layer = surface;
+    else layer = 'stone';
+    if (dug >= cap - 0.001) layer = 'void';
+    return {
+      surface,
+      layer,
+      dug,
+      cap,
+      stone: surface === 'stone' ? dug : Math.max(0, dug - SOIL_THICK),
+      bottom: this.heightAt(x, z),
+    };
+  }
+
   /**
    * Снять один слой земли в радиусе. Возвращает
-   * { layer, dug, flooded, sandFill } или null, если копать нельзя.
+   * { layer, dug, flooded, sandFill, stone } или { hard: true } для камня без кирки.
+   * mine — сила кирки: без неё каменный слой не берётся.
    */
-  dig(x, z, { radius = 2.0, depth = 0.45, maxDug = 6.5 } = {}) {
+  dig(x, z, { radius = 2.0, depth = 0.45, mine = 0 } = {}) {
     if (!this.terrain) return null;
     const key = this._digKey(x, z);
-    const already = this.digStore.get(key) || 0;
-    if (already >= maxDug) return { layer: 'stone', dug: already, flooded: false, hard: true, sandFill: 0 };
+    const probe = this.probeAt(x, z);
+    const already = probe.dug;
 
-    const layer = this.layerAt(x, z);
-    if (layer === 'stone' && already < 0.6) {
+    if (probe.layer === 'void') {
+      return { layer: 'void', void: true, dug: already, flooded: false, hard: false, sandFill: 0, depth: 0 };
+    }
+    if (probe.layer === 'stone' && mine < 1.5) {
       // камень без кирки не берётся
-      return { layer, dug: already, flooded: false, hard: true, sandFill: 0 };
+      return { layer: 'stone', dug: already, flooded: false, hard: true, sandFill: 0, depth: 0 };
     }
 
+    // камень идёт тяжелее и мельче: кирка снимает 0.35 м, креатив — слой целиком
+    const isStone = probe.layer === 'stone';
+    const stepDepth = isStone
+      ? depth * (mine >= 40 ? 0.8 : mine >= 2.5 ? 0.8 : 0.55)
+      : depth;
+
     const before = this.heightAt(x, z);
-    const step = this.step || STEP;
     const half = SIZE / 2;
-    const ix0 = Math.max(1, Math.floor((x - radius + half) / step));
-    const ix1 = Math.min(GRID - 2, Math.ceil((x + radius + half) / step));
-    const iz0 = Math.max(1, Math.floor((z - radius + half) / step));
-    const iz1 = Math.min(GRID - 2, Math.ceil((z + radius + half) / step));
+    const ix0 = Math.max(1, Math.floor((x - radius + half) / STEP));
+    const ix1 = Math.min(GRID - 2, Math.ceil((x + radius + half) / STEP));
+    const iz0 = Math.max(1, Math.floor((z - radius + half) / STEP));
+    const iz1 = Math.min(GRID - 2, Math.ceil((z + radius + half) / STEP));
 
     for (let iz = iz0; iz <= iz1; iz++) {
       for (let ix = ix0; ix <= ix1; ix++) {
-        const vx = -half + ix * step;
-        const vz = -half + iz * step;
+        const vx = -half + ix * STEP;
+        const vz = -half + iz * STEP;
         const d = Math.hypot(vx - x, vz - z);
         if (d > radius) continue;
         // в центре лунки снимаем полный слой, к краям — меньше
-        const falloff = d <= step * 0.8 ? 1 : 1 - Math.pow((d - step * 0.8) / Math.max(0.001, radius - step * 0.8), 1.5);
+        const falloff = d <= STEP * 0.8 ? 1 : 1 - Math.pow((d - STEP * 0.8) / Math.max(0.001, radius - STEP * 0.8), 1.5);
         const k = iz * GRID + ix;
-        this.heights[k] = Math.max(-6, this.heights[k] - depth * Math.max(0, falloff));
+        this.heights[k] = Math.max(-6, this.heights[k] - stepDepth * Math.max(0, falloff));
       }
     }
 
     // песок не держит стенку: часть осыпается обратно в яму
     let sandFill = 0;
-    if (layer === 'sand') {
+    if (probe.layer === 'sand') {
       let ring = 0;
       let ringCount = 0;
       for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
@@ -851,8 +947,8 @@ export class World {
         const lift = Math.min(sandFill, depth);
         for (let iz = iz0; iz <= iz1; iz++) {
           for (let ix = ix0; ix <= ix1; ix++) {
-            const vx = -half + ix * step;
-            const vz = -half + iz * step;
+            const vx = -half + ix * STEP;
+            const vz = -half + iz * STEP;
             const d = Math.hypot(vx - x, vz - z);
             if (d > radius * 0.75) continue;
             this.heights[iz * GRID + ix] += lift;
@@ -861,19 +957,72 @@ export class World {
       }
     }
 
-    this.digStore.set(key, already + depth);
+    this.digStore.set(key, already + stepDepth);
     this.digEvents++;
     this._applyHeights();
+    this._updatePit(x, z, radius, this.surfaceOf(x, z).h0, already + stepDepth, probe.surface);
 
     const after = this.heightAt(x, z);
+    const next = this.probeAt(x, z);
+    // вода появляется только там, где яма дошла до морской воды —
+    // то есть на песчаном пляже, ниже уровня моря. В глубине острова её нет.
+    const flooded = probe.surface === 'sand' && after < CONFIG.world.seaLevel - 0.05;
     return {
-      layer,
-      dug: already + depth,
+      layer: probe.layer,
+      dug: already + stepDepth,
       depth: before - after,
-      flooded: after < -0.05,
+      flooded,
+      waterSource: flooded ? 'sea' : null,
       hard: false,
       sandFill,
+      stone: probe.layer === 'stone',
+      stoneLeft: Math.max(0, next.cap - next.dug),
+      void: next.layer === 'void',
+      bottom: after,
     };
+  }
+
+  /**
+   * Лунка как модель: стенки и дно со срезом породы.
+   * Рельеф — сетка в 1.8 м, одной ямки в пару метров она не покажет,
+   * поэтому в яме ставится конус из камня/земли нужной глубины.
+   */
+  _updatePit(x, z, radius, surfaceH, dug, surface) {
+    if (!this.pitGroup) return;
+    const key = this._digKey(x, z);
+    let pit = this.pits.get(key);
+    const depth = Math.max(0.35, dug + 0.15);
+    if (!pit) {
+      const wallMat = this.textures
+        ? createStoneMaterial(this.textures.rockDetail, { repeat: [2.5, 1.6] })
+        : new THREE.MeshStandardMaterial({ color: 0x8b8478, roughness: 1, flatShading: true });
+      wallMat.side = THREE.DoubleSide;
+      wallMat.color = new THREE.Color(surface === 'sand' ? 0xcbb488 : surface === 'stone' ? 0x8f8a80 : 0x96775a);
+      const group = new THREE.Group();
+      const wall = new THREE.Mesh(new THREE.CylinderGeometry(1, 0.72, 1, 12, 1, true), wallMat);
+      const bottom = new THREE.Mesh(new THREE.CircleGeometry(0.74, 12), wallMat);
+      bottom.rotation.x = -Math.PI / 2;
+      wall.castShadow = false;
+      wall.receiveShadow = true;
+      bottom.receiveShadow = true;
+      group.add(wall, bottom);
+      group.position.set(x, surfaceH, z);
+      group.renderOrder = 1;
+      this.pitGroup.add(group);
+      pit = { group, wall, bottom, mat: wallMat, dug: 0 };
+      this.pits.set(key, pit);
+    }
+    pit.dug = dug;
+    const r = Math.max(0.9, radius * 0.92);
+    pit.wall.scale.set(r, depth, r);
+    pit.wall.position.y = -depth / 2 + 0.02;
+    pit.bottom.scale.setScalar(r);
+    pit.bottom.position.y = -depth + 0.03;
+    // чем глубже, тем темнее и «каменнее» срез
+    const rock = dug > SOIL_THICK;
+    const tint = rock ? 0x7d766a : surface === 'sand' ? 0xc0a985 : 0x7d6446;
+    pit.mat.color.setHex(tint);
+    pit.mat.roughness = rock ? 0.9 : 1;
   }
 
   /** Пересчитать вершины рельефа и карту глубин для воды */
@@ -881,12 +1030,37 @@ export class World {
     const geo = this.terrain && this.terrain.geometry;
     if (!geo) return;
     const pos = geo.attributes.position;
+    const col = geo.attributes.color;
+    const base = this.baseColors;
+    const soilCut = new THREE.Color(0x6a5334);
+    const rockCut = new THREE.Color(0x7d766a);
+    const darkCut = new THREE.Color(0x4a463f);
+    const tmp = new THREE.Color();
+    const needColor = !!(col && base);
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const z = pos.getZ(i);
       pos.setY(i, this.heightAt(x, z));
+      // у выкопанной лунки показываем срез породы: земля -> камень -> темнота
+      if (needColor) {
+        const dug = this.dugAt(x, z);
+        if (dug > 0.4) {
+          const k = clamp((dug - 0.4) / 1.1, 0, 1);
+          tmp.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
+          if (dug < SOIL_THICK) tmp.lerp(soilCut, k * 0.75);
+          else if (dug < SOIL_THICK + STONE_THICK * 0.72) {
+            tmp.lerp(rockCut, clamp(0.55 + (dug - SOIL_THICK) * 0.4, 0, 1));
+          } else {
+            tmp.copy(rockCut).lerp(darkCut, clamp((dug - SOIL_THICK - STONE_THICK * 0.72) * 1.4, 0, 1));
+          }
+          col.setXYZ(i, tmp.r, tmp.g, tmp.b);
+        } else if (col.getX(i) !== base[i * 3]) {
+          col.setXYZ(i, base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
+        }
+      }
     }
     pos.needsUpdate = true;
+    if (col) col.needsUpdate = true;
     geo.computeVertexNormals();
     geo.computeBoundingSphere();
 
