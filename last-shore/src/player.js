@@ -44,6 +44,8 @@ export class Player {
     this.wading = 0;
     this.bobPhase = 0;
     this.landShake = 0;
+    this.fly = false;          // режим креатива: полёт
+    this.speedMul = 1;         // ранение в ногу замедляет
 
     this.buildModel();
   }
@@ -444,7 +446,8 @@ export class Player {
     this.wading = underground ? 0 : clamp(-groundHere / 1.1, 0, 1);
     const inWater = !underground && groundHere < 0.05;
 
-    let speed = sprinting ? P.sprintSpeed : P.walkSpeed;
+    let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
+    if (this.fly) speed = (sprinting ? P.sprintSpeed * 2.2 : P.walkSpeed * 1.7);
     if (inWater) speed = THREE.MathUtils.lerp(speed, P.wadeSpeed, this.wading);
 
     const targetVX = wx * speed * (moving ? 1 : 0);
@@ -478,12 +481,22 @@ export class Player {
     const ground = world.heightAt(this.position.x, this.position.z);
     const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
 
-    if (input.jump && this.grounded) {
+    if (this.fly) {
+      // креатив: летим, не касаясь земли
+      const up = (input.jump ? 1 : 0) - (input.sprint ? 1 : 0);
+      this.position.y += up * 7 * dt;
+      this.velocity.y = 0;
+      this.grounded = false;
+      this.wading = 0;
+      this.swimming = false;
+    } else if (input.jump && this.grounded) {
       this.velocity.y = P.jumpSpeed;
       this.grounded = false;
     }
 
-    if (!this.grounded) {
+    if (this.fly) {
+      // ничего: вертикаль уже посчитана выше
+    } else if (!this.grounded) {
       this.velocity.y += P.gravity * dt;
       this.position.y += this.velocity.y * dt;
       if (this.position.y <= floor) {
@@ -498,7 +511,7 @@ export class Player {
       if (floor - this.position.y < -0.6) this.grounded = false;
     }
 
-    this.swimming = !underground && ground < -0.6;
+    this.swimming = !this.fly && !underground && ground < -0.6;
 
     // --- модель: поворот в сторону движения и анимация ---
     const hspeed = Math.hypot(this.velocity.x, this.velocity.z);

@@ -320,8 +320,8 @@ export class HitboxSystem {
           best = pen;
           const signX = (pb.minX + pb.maxX) / 2 >= (b.minX + b.maxX) / 2 ? 1 : -1;
           const signZ = (pb.minZ + pb.maxZ) / 2 >= (b.minZ + b.maxZ) / 2 ? 1 : -1;
-          bx = overlapX < overlapZ ? signX * (overlapX + 0.01) : 0;
-          bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.01);
+          bx = overlapX < overlapZ ? signX * (overlapX + 0.05) : 0;
+          bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.05);
         }
         if (best > 0) {
           pos.x += bx;
@@ -363,8 +363,8 @@ export class HitboxSystem {
           if (d > 0.0001) { nx = dx / d; nz = dz / d; } else { nx = 1; nz = 0; }
         }
         if (best > 0) {
-          pos.x += nx * (best + 0.005);
-          pos.z += nz * (best + 0.005);
+          pos.x += nx * (best + 0.05);
+          pos.z += nz * (best + 0.05);
           if (velocity) {
             const into = velocity.x * nx + velocity.z * nz;
             if (into < 0) { velocity.x -= nx * into; velocity.z -= nz * into; }
@@ -394,8 +394,8 @@ export class HitboxSystem {
             best = pen;
             const signX = (pb.minX + pb.maxX) / 2 >= (mb.minX + mb.maxX) / 2 ? 1 : -1;
             const signZ = (pb.minZ + pb.maxZ) / 2 >= (mb.minZ + mb.maxZ) / 2 ? 1 : -1;
-            bx = overlapX < overlapZ ? signX * (overlapX + 0.02) : 0;
-            bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.02);
+            bx = overlapX < overlapZ ? signX * (overlapX + 0.05) : 0;
+            bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.05);
           }
           if (best > 0) {
             pos.x += bx;

@@ -460,9 +460,90 @@ export class Mine {
     return { x: 0, y: this.world.heightAt(0, 0) + 0.05, z: 0 };
   }
 
-  switchLevel() {
+  /**
+   * Копать вглубь: под текущим слоем появляется новый — с жилами,
+   * лавой и своей лестницей. Так шахта растёт, а не кончается.
+   */
+  digDown() {
+    const cur = this.level;
+    if (!cur) return null;
+    if (this.levels.length >= 7) return null;
+
+    const y = cur.y - 16;
+    const start = { cx: cur.start.cx, cz: cur.start.cz };
+    const grid = new Array(W * W).fill(null);
+    const open = (cx, cz) => {
+      if (cx < 1 || cz < 1 || cx >= W - 1 || cz >= W - 1) return;
+      const k = this._cellKey(cx, cz);
+      if (!grid[k]) grid[k] = { open: true, type: 'air' };
+    };
+
+    // шахта вниз: комната под лестницей и два штрека
+    for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) open(start.cx + dx, start.cz + dz);
+    for (let i = 0; i < 30; i++) {
+      open(start.cx + i, start.cz);
+      open(start.cx, start.cz - i);
+      if (i % 6 === 0) open(start.cx + i, start.cz - 1);
+    }
+
+    const level = {
+      index: this.levels.length,
+      deep: true,
+      y,
+      grid,
+      veins: new Map(),
+      start,
+      meshes: [],
+    };
+
+    // жилы: чем глубже, тем больше драгоценного
+    const depthIndex = this.levels.length;
+    for (let cz = 1; cz < W - 1; cz++) {
+      for (let cx = 1; cx < W - 1; cx++) {
+        const k = this._cellKey(cx, cz);
+        if (grid[k]) continue;
+        const nearOpen = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => {
+          const n = grid[this._cellKey(cx + dx, cz + dz)];
+          return n && n.open;
+        });
+        if (!nearOpen) continue;
+        const roll = this.rng();
+        let type = 'stone';
+        const rareBias = Math.min(0.34, depthIndex * 0.09);
+        if (roll < 0.24) type = 'ore';
+        else if (roll < 0.24 + 0.2 + rareBias) type = 'crystal';
+        else if (roll < 0.24 + 0.34 + rareBias * 1.3) type = 'obsidian';
+        level.veins.set(k, { cx, cz, type, hp: VEIN_HP[type] });
+      }
+    }
+
+    // лава в новых залах
+    let lava = 0;
+    for (let cz = 2; cz < W - 2 && lava < 24; cz++) {
+      for (let cx = 2; cx < W - 2 && lava < 24; cx++) {
+        const cell = grid[this._cellKey(cx, cz)];
+        if (!cell || !cell.open) continue;
+        if (this.rng() < 0.2) { cell.type = 'lava'; lava++; }
+      }
+    }
+
+    this.levels.push(level);
+    this._renderLevel(level);
+    this.deepest = level.index;
+    return this.enter(level.index, this.currentEntrance);
+  }
+
+  /** Есть ли слой ниже текущего */
+  hasDeeper() {
+    return this.active !== null && this.active + 1 < this.levels.length;
+  }
+
+  switchLevel(dir = 1) {
     if (this.active === null) return null;
-    return this.enter(this.active === 0 ? 1 : 0, this.currentEntrance);
+    const next = this.active + dir;
+    if (next < 0) return null;
+    if (next >= this.levels.length) return null;
+    return this.enter(next, this.currentEntrance);
   }
 
   get level() {

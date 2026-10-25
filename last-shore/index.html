@@ -18,7 +18,10 @@
       <div class="chip"><span class="chip-label">Время</span><span id="hud-clock">07:00</span></div>
       <div class="chip chip-weather" id="hud-weather">ясно</div>
       <div class="chip chip-dim" id="hud-fps">60 fps</div>
+      <div class="chip chip-creative hidden" id="hud-creative">КРЕАТИВ</div>
     </div>
+
+    <div class="wounds hidden" id="hud-wounds"></div>
 
     <div class="needs">
       <div class="bar bar-health">
@@ -53,7 +56,7 @@
 
     <div class="prompt hidden" id="prompt"></div>
     <div class="toasts" id="toasts"></div>
-    <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар по прицелу · ПКМ — применить · E — действие по прицелу · R — вниз в шахте · C — крафт · I — сумка · F — поставить</div>
+    <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар/копать по прицелу · E — действие · G — копать вглубь шахты · X — выход из шахты · F2→F — креатив · C — крафт · I — сумка · F — поставить</div>
   </div>
 
   <!-- ======================= Сумка ======================= -->
@@ -88,7 +91,7 @@
       <h1>LAST SHORE<span class="sub">Последний берег</span></h1>
       <p class="tagline">Ты очнулся на пустом берегу. Корабль разбит, связи нет, карты нет.<br>
         Найди воду и еду, сделай нож и топор, разведи огонь — и решай, как отсюда выбраться.<br>
-        <span class="tagline-dim">Сейчас в игре: остров, сутки и ночь, вода и еда, добыча по прицелу, шахта с двумя слоями, верстак с ковкой и заточкой, звери и костёр.</span></p>
+        <span class="tagline-dim">Сейчас в игре: остров, сутки и ночь, копание слоя земли лопатой и руками (песок осыпается, вода заливает), шахта, которая растёт вглубь, креатив (F2 → F), ранения по частям тела, верстак с ковкой и заточкой.</span></p>
 
       <div class="controls-grid">
         <div><b>W A S D</b><span>идти</span></div>
@@ -103,7 +106,10 @@
         <div><b>I</b><span>сумка</span></div>
         <div><b>F</b><span>костёр / верстак</span></div>
         <div><b>E</b><span>шахта, станки</span></div>
-        <div><b>R</b><span>вниз, к магме</span></div>
+        <div><b>R</b><span>вниз по лестнице</span></div>
+        <div><b>G</b><span>копать вглубь</span></div>
+        <div><b>X</b><span>выход из шахты</span></div>
+        <div><b>F2 → F</b><span>режим креатива</span></div>
       </div>
 
       <div class="btn-row">
