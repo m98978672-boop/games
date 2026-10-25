@@ -113,19 +113,30 @@ export class Player {
     this.head.add(beard);
     g.add(this.head);
 
-    // --- рюкзак со стяжками ---
-    const pack = box(0.36, 0.42, 0.2, packMat);
-    pack.position.set(0, 1.2, 0.26);
+    // --- рюкзак на спине (спина — это -Z, лицо смотрит в +Z) ---
+    const pack = box(0.38, 0.44, 0.22, packMat);
+    pack.position.set(0, 1.2, -0.25);
     g.add(pack);
-    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.34, 6, 1), clothMat);
+
+    // клапан рюкзака
+    const flap = box(0.38, 0.14, 0.06, new THREE.MeshStandardMaterial({ color: 0x5c472c, roughness: 1, flatShading: true }));
+    flap.position.set(0, 1.38, -0.34);
+    g.add(flap);
+
+    const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.36, 6, 1), clothMat);
     roll.rotation.z = Math.PI / 2;
-    roll.position.set(0, 1.43, 0.26);
+    roll.position.set(0, 1.45, -0.26);
     roll.castShadow = true;
     g.add(roll);
+
+    // лямки — спереди на груди, переходят через плечи
     for (const side of [-1, 1]) {
-      const strap = box(0.06, 0.42, 0.05, new THREE.MeshStandardMaterial({ color: 0x54402a, roughness: 1 }));
-      strap.position.set(0.14 * side, 1.22, 0.15);
+      const strap = box(0.06, 0.44, 0.05, new THREE.MeshStandardMaterial({ color: 0x54402a, roughness: 1 }));
+      strap.position.set(0.13 * side, 1.2, 0.14);
       g.add(strap);
+      const over = box(0.07, 0.06, 0.34, new THREE.MeshStandardMaterial({ color: 0x54402a, roughness: 1 }));
+      over.position.set(0.13 * side, 1.42, -0.04);
+      g.add(over);
     }
 
     // --- руки: плечо -> локоть ---

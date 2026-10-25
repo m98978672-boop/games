@@ -382,7 +382,7 @@ export class World {
       const h = this.heightAt(x, z);
       if (h > 1.0 && h < 3.6 && this.slopeAt(x, z) < 0.5) {
         pushOne(palms, x, z, h);
-        this.colliders.push({ x, z, r: 0.38 });
+        this.colliders.push({ x, z, r: 0.38, height: 8, kind: 'palm' });
       }
     }
 
@@ -399,7 +399,7 @@ export class World {
       if (f < 0.42) continue;
       if (rng() > 0.55 + f * 0.4) continue;
       pushOne(trees, x, z, h);
-      this.colliders.push({ x, z, r: 0.36 });
+      this.colliders.push({ x, z, r: 0.36, height: 6.5, kind: 'tree' });
       if (trees.length >= 900) break;
     }
 
@@ -414,6 +414,8 @@ export class World {
       if (this.slopeAt(x, z) > 0.7) continue;
       if (moistureAt(x, z) < 0.42) continue;
       pushOne(bushes, x, z, h, { berries: rng() < 0.35 });
+      // куст не мешает ходить, но закрывает обзор мелким зверям
+      if (this.colliders.length < 4000) this.colliders.push({ x, z, r: 0.55, height: 1.1, kind: 'bush', soft: true });
       if (bushes.length >= 700) break;
     }
 
@@ -429,7 +431,7 @@ export class World {
       if (slope < 0.35 && rng() > 0.25) continue;
       const s = 0.45 + rng() * 1.5;
       pushOne(rocks, x, z, h, { s });
-      if (s > 0.8 && rng() < 0.85) this.colliders.push({ x, z, r: s * 0.8 });
+      if (s > 0.8 && rng() < 0.85) this.colliders.push({ x, z, r: s * 0.8, height: s * 1.1, kind: 'rock' });
       if (rocks.length >= 520) break;
     }
 
@@ -457,7 +459,7 @@ export class World {
       ? createPlantMaterial(this.textures.grassDetail, { sway: 0.13, name: 'grass' })
       : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
     const stoneMat = this.textures
-      ? createStoneMaterial(this.textures.rockDetail, { repeat: [2, 2] })
+      ? createStoneMaterial(this.textures.rockDetail, { repeat: [1, 1] })
       : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, flatShading: true });
 
     // кора темнее и серее — не выглядит «пластиковым деревом»
@@ -694,7 +696,7 @@ export class World {
    */
   resolveCollisions(pos, radius, velocity = null) {
     for (const c of this.colliders) {
-      if (c.disabled) continue;
+      if (c.disabled || c.soft) continue;
       const dx = pos.x - c.x;
       const dz = pos.z - c.z;
       const min = c.r + radius;

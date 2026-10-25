@@ -3,6 +3,8 @@
 //  Внешних файлов нет — всё синтезируется.
 // ============================================================
 
+const clampNum = (v, a, b) => Math.max(a, Math.min(b, v));
+
 export class Audio {
   constructor() {
     this.ctx = null;
@@ -154,6 +156,51 @@ export class Audio {
     if (Math.random() < 0.4) this._tone(base * 0.9, 0.08, 0.02, 'sine', base * 1.3, 0.19);
   }
 
+  /**
+   * Звук из точки мира: панорама по направлению, громкость по расстоянию.
+   * listener — { x, z, yaw } — позиция и поворот игрока.
+   */
+  playAt(name, { x = 0, z = 0, listener, gain = 1 } = {}) {
+    if (!this.ready || !listener) return;
+    const fn = this[name];
+    if (typeof fn !== 'function') return;
+
+    const dx = x - listener.x;
+    const dz = z - listener.z;
+    const dist = Math.hypot(dx, dz);
+    if (dist > 45) return;
+
+    const yaw = listener.yaw || 0;
+    const rightX = Math.cos(yaw);
+    const rightZ = -Math.sin(yaw);
+    const pan = dist > 0.6 ? clampNum((dx * rightX + dz * rightZ) / dist, -1, 1) * 0.8 : 0;
+    const vol = gain * Math.pow(Math.max(0, 1 - dist / 45), 1.6);
+
+    this._pan = pan;
+    this._vol = vol;
+    try {
+      fn.call(this);
+    } finally {
+      this._pan = 0;
+      this._vol = 1;
+    }
+  }
+
+  /** Выход звука: громкость и панорама текущего вызова */
+  _out() {
+    if (!this._pan && (this._vol === undefined || this._vol === 1)) return this.master;
+    const g = this.ctx.createGain();
+    g.gain.value = this._vol ?? 1;
+    if (this._pan && this.ctx.createStereoPanner) {
+      const panner = this.ctx.createStereoPanner();
+      panner.pan.value = this._pan;
+      g.connect(panner).connect(this.master);
+    } else {
+      g.connect(this.master);
+    }
+    return g;
+  }
+
   resume() {
     if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
   }
@@ -172,7 +219,7 @@ export class Audio {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(gain, t + 0.008);
     g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    src.connect(filter).connect(g).connect(this.master);
+    src.connect(filter).connect(g).connect(this._out());
     src.start(t);
     src.stop(t + duration + 0.02);
   }
@@ -188,7 +235,7 @@ export class Audio {
     g.gain.setValueAtTime(0.0001, t);
     g.gain.exponentialRampToValueAtTime(gain, t + 0.012);
     g.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-    osc.connect(g).connect(this.master);
+    osc.connect(g).connect(this._out());
     osc.start(t);
     osc.stop(t + duration + 0.03);
   }
@@ -282,6 +329,11 @@ export class Audio {
 
   hiss() {
     this._noiseBurst(0.5, 5200, 1.2, 0.06, 'highpass');
+  }
+
+  /** Мягкий шаг зверя по земле */
+  mobStep() {
+    this._noiseBurst(0.09, 320 + Math.random() * 140, 0.9, 0.06);
   }
 
   hurt() {

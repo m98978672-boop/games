@@ -13,6 +13,7 @@ import { Rain } from './effects.js';
 import { ITEMS, HOTBAR, BAG_ORDER, RECIPES } from './items.js';
 import { Resources, NODE_DEFS } from './nodes.js';
 import { Mobs } from './mobs.js';
+import { VisibilityCuller } from './visibility.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 import { createTextures } from './textures.js';
 
@@ -114,6 +115,18 @@ class Game {
     this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
     this.projectiles = [];
 
+    // всё, что может быть спрятано за деревом/камнем/кустом
+    this.culler = new VisibilityCuller(this.world, this.camera);
+    for (const mob of this.mobs.list) {
+      this.culler.track(mob.group, {
+        radius: mob.def.radius + 0.6,
+        height: mob.def.hitbox.h,
+        getPos: () => ({ x: mob.x, y: mob.y || 0, z: mob.z }),
+      });
+    }
+    this.trackedPickups = new Set();
+    this.syncCuller();
+
     this.state = {
       health: 100,
       thirst: 78,
@@ -145,6 +158,9 @@ class Game {
     this.dragging = false;
     this.dragLook = false;
 
+    this.debugArmed = false;       // F3 нажат — следующий F переключит хитбоксы
+    this.frameIndex = 0;
+    this.panelUnlock = false;      // курсор отпущен ради панели, а не паузы
     this.slowFrames = 0;
     this.slowTimer = 0;
     this.lastTime = performance.now();
@@ -272,6 +288,7 @@ class Game {
 
     this.canvas.addEventListener('mousedown', (e) => {
       if (!this.running || this.paused) return;
+      if (this.ui.isPanelOpen()) return;     // панель открыта — клики по ней, а не по миру
       if (!this.locked) {
         this.dragging = true;
         this.tryLock();
@@ -308,6 +325,12 @@ class Game {
     document.addEventListener('pointerlockchange', () => {
       const wasLocked = this.locked;
       this.locked = document.pointerLockElement === this.canvas;
+
+      // курсор отпустили специально, чтобы кликать по крафту/сумке
+      if (!this.locked && this.panelUnlock) {
+        this.panelUnlock = false;
+        return;
+      }
       if (wasLocked && !this.locked && this.running && !this.paused && !this.dead) {
         this.pause();
       }
@@ -353,7 +376,11 @@ class Game {
     const code = e.code;
 
     if (code === 'Escape') {
-      if (this.ui.isPanelOpen()) { this.ui.closePanels(); return; }
+      if (this.ui.isPanelOpen()) {
+        this.ui.closePanels();
+        this.relock();
+        return;
+      }
       if (this.running && !this.paused) this.pause();
       return;
     }
@@ -368,18 +395,31 @@ class Game {
       case 'ShiftLeft': case 'ShiftRight': this.input.sprint = true; break;
       case 'Space': this.input.jump = true; e.preventDefault(); break;
       case 'KeyE': this.interact(); break;
-      case 'KeyF': this.placeCampfire(); break;
+      case 'KeyF':
+        if (this.debugArmed) {
+          this.debugArmed = false;
+          const on = this.mobs.toggleHitboxes();
+          this.ui.toast(on ? 'Хитбоксы включены (F3 → F)' : 'Хитбоксы выключены');
+          this.audio.uiClick();
+        } else {
+          this.placeCampfire();
+        }
+        break;
+      case 'F3':
+        e.preventDefault();
+        this.debugArmed = true;
+        this.ui.toast('Отладка: нажми F — показать хитбоксы зверей');
+        break;
       case 'KeyV': this.toggleView(); break;
       case 'F1': e.preventDefault(); this.showDiag(); break;
       case 'KeyC': {
         e.preventDefault();
-        this.ui.toggleCraft(undefined, RECIPES, this.state.inventory, (id) => this.craft(id));
+        this.togglePanel('craft');
         break;
       }
       case 'KeyI': case 'Tab':
         e.preventDefault();
-        this.ui.toggleBag(undefined);
-        this.ui.renderBag(this.state.inventory);
+        this.togglePanel('bag');
         break;
       case 'Digit1': case 'Digit2': case 'Digit3': case 'Digit4': case 'Digit5':
       case 'Digit6': case 'Digit7': case 'Digit8': case 'Digit9': case 'Digit0': {
@@ -838,6 +878,9 @@ class Game {
     // --- игрок ---
     this.player.update(dt, this.input, this.world);
     this.input.jump = false;
+
+    // сквозь зверей не пройти: расталкиваем игрока и зверя
+    this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
     this.player.applyCamera(this.camera, this.world, dt);
 
     // --- небо и погода ---
@@ -861,9 +904,14 @@ class Game {
     // --- ресурсы и костры ---
     this.resources.update(dt);
 
-    // --- звери и стрелы ---
+    // --- видимость и звери ---
+    if (this.frameIndex % 30 === 0) this.syncCuller();
+    this.culler.update(dt);
     this.mobs.update(dt, this.player, {
       audio: this.audio,
+      culler: this.culler,
+      night: skyInfo.night,
+      listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
       onHit: (dmg, cause) => this.takeDamage(dmg, cause),
       onDrop: (items) => { for (const [id, n] of Object.entries(items)) this.addItem(id, n); },
     });
@@ -1073,6 +1121,50 @@ class Game {
     this.ui.toast(`Загружено: день ${this.sky.day}, ${this.sky.clockString()}`);
   }
 
+  /** Новые предметы на земле тоже попадают под отсечку видимости */
+  syncCuller() {
+    for (const p of this.world.pickups) {
+      if (this.trackedPickups.has(p.mesh)) continue;
+      this.trackedPickups.add(p.mesh);
+      this.culler.track(p.mesh, { radius: 0.5, height: 0.6 });
+    }
+  }
+
+  /**
+   * Панели (сумка/крафт) требуют свободного курсора: отпускаем pointer lock,
+   * а при закрытии — возвращаем его в игру.
+   */
+  togglePanel(kind) {
+    const wasOpen = this.ui.isPanelOpen();
+
+    if (wasOpen) {
+      this.ui.closePanels();
+      this.relock();
+      this.audio.uiClick();
+      return;
+    }
+
+    if (document.pointerLockElement) {
+      this.panelUnlock = true;
+      document.exitPointerLock();
+    }
+
+    if (kind === 'craft') {
+      this.ui.toggleCraft(true, RECIPES, this.state.inventory, (id) => this.craft(id));
+    } else {
+      this.ui.toggleBag(true);
+      this.ui.renderBag(this.state.inventory);
+    }
+    this.audio.uiClick();
+  }
+
+  /** Вернуть управление мышью (если игра идёт) */
+  relock() {
+    if (!this.running || this.paused || this.dead) return;
+    if (this.dragLook) return;
+    this.tryLock();
+  }
+
   /** Переключение «третье лицо / от первого лица» */
   toggleView() {
     this.view = this.view === 'first' ? 'third' : 'first';
@@ -1133,6 +1225,7 @@ class Game {
   // ------------------------------------------------------------
 
   frame() {
+    this.frameIndex = (this.frameIndex + 1) % 100000;
     const now = performance.now();
     let dt = (now - this.lastTime) / 1000;
     this.lastTime = now;
