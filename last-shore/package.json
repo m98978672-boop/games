@@ -1,6 +1,6 @@
 {
   "name": "last-shore",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "private": true,
   "type": "module",
   "description": "LAST SHORE — 3D survival game (Three.js), one island, one life",

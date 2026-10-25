@@ -151,4 +151,69 @@ const unseen = culler.isVisible(target.group);
 log('видимость: смотрит →', seen, '· отвернулись →', unseen, '· отсечка работает:', seen && !unseen);
 log('объектов под отсечкой:', culler.items.size);
 
+// --- куст: сбор ягод руками, куст остаётся ---
+const bushNode = game.resources.nodes.find((n) => n.type === 'bush' && n.berries);
+game.player.setPosition(bushNode.x + 1.3, bushNode.z, game.world);
+const berriesBefore = game.state.inventory.berries || 0;
+game.interact();
+log('сбор ягод: ягод', berriesBefore, '->', game.state.inventory.berries || 0,
+  '· куст цел:', bushNode.alive, '· повторно нельзя:', !game.resources.canPickBerries(bushNode));
+
+// --- рудный камень ---
+const oreNode = game.resources.nodes.find((n) => n.ore);
+let oreDrops = {};
+if (oreNode) {
+  for (let i = 0; i < 4; i++) {
+    const r = game.resources.strike(oreNode, { mine: 3 });
+    if (r.depleted) { oreDrops = r.drops; break; }
+  }
+}
+log('рудный камень есть:', !!oreNode, '· добыча:', JSON.stringify(oreDrops),
+  '· кремня больше обычного:', (oreDrops.flint || 0) >= 3);
+
+// --- анимации зверей: узлы двигаются ---
+const animMoved = {};
+for (const type of ['boar', 'crab', 'gull', 'snake']) {
+  const m = game.mobs.list.find((x) => x.type === type);
+  m.state = 'patrol';
+  m.speedNow = 2;
+  const snap = () => JSON.stringify({
+    legs: m.parts.legs?.map((l) => [+l.rotation.x.toFixed(3), +l.rotation.z.toFixed(3)]),
+    head: m.parts.head ? +m.parts.head.rotation.y.toFixed(3) : null,
+    tail: m.parts.tail ? +m.parts.tail.rotation.y.toFixed(3) : null,
+    claws: m.parts.claws?.map((c) => +c.rotation.z.toFixed(3)),
+    wings: m.parts.wings?.map((w) => +w.rotation.x.toFixed(3)),
+    segs: m.parts.segments?.map((s) => +s.position.z.toFixed(3)),
+  });
+  const a = snap();
+  for (let i = 0; i < 12; i++) game.mobs._animate(m, 0.06);
+  animMoved[type] = a !== snap();
+}
+log('анимации зверей:', JSON.stringify(animMoved),
+  '· все двигаются:', Object.values(animMoved).every(Boolean));
+
+// --- виды удара: рубка, кирка, сбор ---
+game.addItem('axe', 1);
+game.assignHotbar('axe', 0);
+game.selectSlot(0);
+const treeNode = game.resources.nodes.find((n) => n.type === 'tree');
+game.player.setPosition(treeNode.x + 2, treeNode.z, game.world);
+game.attackCooldown = 0;
+game.attack();
+const chopKind = game.player.actionKind;
+const chipsAfterChop = game.chips.length;
+game.addItem('pickaxe', 1);
+game.assignHotbar('pickaxe', 1);
+game.selectSlot(1);
+const rockNode = game.resources.nodes.find((n) => n.type === 'rock');
+game.player.setPosition(rockNode.x + 2, rockNode.z, game.world);
+game.attackCooldown = 0;
+game.attack();
+log('виды удара: рубка =', chopKind, '· кирка =', game.player.actionKind,
+  '· щепки летят:', chipsAfterChop > 0);
+
+// --- звуки, которых раньше не было ---
+const soundNames = ['berryPick', 'rustle', 'treeFall', 'stoneBreak', 'oreHit', 'stoneCrack', 'whoosh'];
+log('новые звуки на месте:', soundNames.every((n) => typeof game.audio[n] === 'function'));
+
 log('ошибок нет');

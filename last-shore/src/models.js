@@ -388,48 +388,52 @@ export function makeTreeParts(rng) {
 }
 
 /** Куст: несколько веток из земли и рыхлая листва поверх */
+/**
+ * Куст из кубиков: у куба каждая грань получает свои UV 0..1,
+ * поэтому текстура ложится ровно и не «рвётся» на полюсах сферы.
+ */
 export function makeBushParts(rng, withBerries) {
   const bark = [];
   const leaf = [];
   const fruit = [];
 
-  const branches = 3 + Math.floor(rng() * 3);
-  const tips = [];
+  const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+
+  // --- стволики: короткие наклонные бруски ---
+  const branches = 2 + Math.floor(rng() * 2);
   for (let i = 0; i < branches; i++) {
-    const a = (i / branches) * Math.PI * 2 + rng() * 0.8;
-    const len = 0.55 + rng() * 0.5;
-    const dir = new THREE.Vector3(Math.cos(a) * 0.6, 1, Math.sin(a) * 0.6).normalize();
-    const end = dir.clone().multiplyScalar(len);
-
-    let stem = new THREE.CylinderGeometry(0.028, 0.06, len, 5, 1);
-    stem.applyQuaternion(alignQuat(new THREE.Vector3(0, 0, 0), end));
-    stem.translate(end.x / 2, end.y / 2, end.z / 2);
-    stem = flat(stem);
-    bark.push(colorize(stem, 0x6a4c30));
-    tips.push(end);
+    const a = (i / branches) * Math.PI * 2 + rng() * 0.9;
+    const h = 0.5 + rng() * 0.4;
+    piece(bark, box(0.09, h, 0.09), rng() > 0.5 ? 0x6a4c30 : 0x5a3f28,
+      [Math.cos(a) * 0.1, h / 2, Math.sin(a) * 0.1],
+      [(rng() - 0.5) * 0.25, rng() * 0.6, (rng() - 0.5) * 0.25]);
   }
 
-  // листва: мелкие шапки на концах веток + общий объём
-  for (const tip of tips) {
-    const r = 0.3 + rng() * 0.22;
-    piece(leaf, new THREE.IcosahedronGeometry(r, 1), rng() > 0.5 ? COLORS.bush : 0x6b9c55,
-      [tip.x, tip.y + r * 0.4, tip.z]);
-  }
-  const n = 3 + Math.floor(rng() * 3);
-  for (let i = 0; i < n; i++) {
-    const r = 0.34 + rng() * 0.3;
-    const a = rng() * Math.PI * 2;
-    const d = rng() * 0.5;
-    piece(leaf, new THREE.IcosahedronGeometry(r, 1), i % 2 ? COLORS.bush : 0x5f9150,
-      [Math.cos(a) * d, 0.42 + rng() * 0.34, Math.sin(a) * d]);
+  // --- листва: несколько кубов-«глыб» разного размера ---
+  // листва светлее: цвет материала умножается на текстуру, иначе куст «чернеет»
+  const greens = [0x8fc06a, 0x7cb45e, 0x9ccf78, 0x6fa855];
+  const count = 6 + Math.floor(rng() * 4);
+  for (let i = 0; i < count; i++) {
+    const size = 0.34 + rng() * 0.3;
+    const a = (i / count) * Math.PI * 2 + rng() * 0.8;
+    const d = i === 0 ? 0 : 0.2 + rng() * 0.34;
+    piece(leaf, box(size, size * (0.8 + rng() * 0.4), size), greens[Math.floor(rng() * greens.length)],
+      [Math.cos(a) * d, 0.38 + rng() * 0.4, Math.sin(a) * d],
+      [(rng() - 0.5) * 0.25, rng() * Math.PI, (rng() - 0.5) * 0.25]);
   }
 
   if (withBerries) {
-    for (let i = 0; i < 10; i++) {
+    const clusters = 4 + Math.floor(rng() * 3);
+    for (let i = 0; i < clusters; i++) {
       const a = rng() * Math.PI * 2;
-      const d = 0.18 + rng() * 0.5;
-      piece(fruit, new THREE.IcosahedronGeometry(0.085 + rng() * 0.03, 0), COLORS.berry,
-        [Math.cos(a) * d, 0.5 + rng() * 0.45, Math.sin(a) * d]);
+      const d = 0.28 + rng() * 0.34;
+      const cy = 0.5 + rng() * 0.42;
+      for (let j = 0; j < 3; j++) {
+        const size = 0.12 + rng() * 0.05;
+        piece(fruit, box(size, size, size), rng() > 0.5 ? COLORS.berry : 0x9d2740,
+          [Math.cos(a) * d + (rng() - 0.5) * 0.14, cy + (rng() - 0.5) * 0.14, Math.sin(a) * d + (rng() - 0.5) * 0.14],
+          [rng(), rng(), rng()]);
+      }
     }
   }
 
@@ -440,41 +444,69 @@ export function makeBushParts(rng, withBerries) {
 }
 
 /**
- * Камни: три разные формы — валун, гранёный обломок и слоистая плита.
- * Возвращаем два слоя: сам камень и мох, который лежит только сверху.
+ * Камни и руда из кубиков: валун, слоистая плита и рудный камень с вкраплениями.
+ * Кубы дают ровные грани и чистые UV — никакой «рвани» на стыках.
+ * Слои: rock (тело), moss (мох сверху), ore (светящиеся вкрапления руды).
  */
 export function makeRockParts(rng, kind = null) {
   const rock = [];
   const moss = [];
-  const type = kind || ['boulder', 'boulder', 'slab'][Math.floor(rng() * 3)];
+  const ore = [];
+  const type = kind || ['boulder', 'ore', 'slab'][Math.floor(rng() * 3)];
+  const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+  // цвет материала камня уже затемняет — вершинные тона держим светлыми,
+  // иначе грани уходят в чёрное
+  const stoneTones = [0xe3ddd1, 0xd6cfc2, 0xc7c0b3, 0xb3aca0];
+
+  const chunk = (arr, w, h, d, x, y, z, ry = null, hex = null) => {
+    piece(arr, box(w, h, d), hex ?? stoneTones[Math.floor(rng() * stoneTones.length)],
+      [x, y, z],
+      [(rng() - 0.5) * 0.16, ry ?? rng() * Math.PI, (rng() - 0.5) * 0.16]);
+  };
 
   if (type === 'slab') {
-    // плита: плоские гранёные глыбы, лежащие друг на друге
+    // плита: плоские кубы, лежащие друг на друге со сдвигом
     for (let i = 0; i < 3; i++) {
-      const chunk = new THREE.DodecahedronGeometry(0.95 - i * 0.16, 0);
-      jitterGeo(chunk, 0.12, rng);
-      chunk.scale(1.15, 0.34, 0.95);
-      part(rock, chunk, i % 2 ? 0x9d978e : COLORS.stone,
-        (rng() - 0.5) * 0.45, 0.22 + i * 0.22, (rng() - 0.5) * 0.4,
-        (rng() - 0.5) * 0.12, rng() * 3, (rng() - 0.5) * 0.12);
+      const w = 1.3 - i * 0.26;
+      chunk(rock, w, 0.32, w * (0.72 + rng() * 0.2),
+        (rng() - 0.5) * 0.35, 0.16 + i * 0.28, (rng() - 0.5) * 0.3);
     }
-    const chip = new THREE.DodecahedronGeometry(0.36, 0);
-    jitterGeo(chip, 0.06, rng);
-    part(rock, chip, COLORS.rockDark, 1.05, 0.1, 0.35, rng(), rng(), 0);
+    // скол в стороне
+    chunk(rock, 0.45, 0.3, 0.4, 0.95, 0.14, 0.3);
   } else {
-    // валун: один крупный цельный объём, немного приплюснутый
-    const main = new THREE.DodecahedronGeometry(1, 0);
-    jitterGeo(main, 0.09, rng);
-    main.scale(1.0 + rng() * 0.25, 0.72 + rng() * 0.12, 0.92 + rng() * 0.2);
-    part(rock, main, COLORS.stone, 0, 0, 0, 0, rng() * 3, 0);
+    // валун: два сросшихся блока + обломки у основания
+    const w = 1.05 + rng() * 0.3;
+    const mainH = 0.85 + rng() * 0.2;
+    chunk(rock, w, mainH, w * (0.82 + rng() * 0.2), 0, mainH / 2 + 0.02, 0);
+    chunk(rock, w * 0.78, 0.62 + rng() * 0.3, w * 0.7,
+      (rng() - 0.5) * 0.5, 0.95 + rng() * 0.12, (rng() - 0.5) * 0.45);
+    const extra = 2 + Math.floor(rng() * 3);
+    for (let i = 0; i < extra; i++) {
+      const a = (i / extra) * Math.PI * 2 + rng();
+      const s = 0.34 + rng() * 0.3;
+      chunk(rock, s, s * (0.7 + rng() * 0.4), s,
+        Math.cos(a) * (0.6 + rng() * 0.2), 0.16 + rng() * 0.24, Math.sin(a) * (0.6 + rng() * 0.2));
+    }
 
-    // пара вросших обломков у основания — «сидит в земле»
-    for (let i = 0; i < 2; i++) {
-      const a = rng() * Math.PI * 2;
-      const chip = new THREE.DodecahedronGeometry(0.4 + rng() * 0.16, 0);
-      jitterGeo(chip, 0.05, rng);
-      part(rock, chip, i ? COLORS.rockDark : 0x9d978e,
-        Math.cos(a) * 0.85, -0.32, Math.sin(a) * 0.85, rng() * 0.4, rng() * 3, rng() * 0.4);
+    if (type === 'ore') {
+      // вкрапления сидят «в теле» камня: половина кубика утоплена в грань
+      const halfW = w / 2;
+      const veins = 6 + Math.floor(rng() * 4);
+      for (let i = 0; i < veins; i++) {
+        const a = rng() * Math.PI * 2;
+        const y = 0.3 + rng() * (mainH - 0.15);
+        const sz = 0.16 + rng() * 0.13;
+        const r = halfW * (0.82 + rng() * 0.1);
+        piece(ore, box(sz, sz * (0.7 + rng() * 0.6), sz), rng() > 0.3 ? 0x9fe0f2 : 0x6aa8bd,
+          [Math.cos(a) * r, y, Math.sin(a) * r],
+          [rng() * 3, rng() * 3, rng() * 3]);
+      }
+      // пара кристаллов торчит из верхней грани
+      for (let i = 0; i < 2; i++) {
+        piece(ore, new THREE.ConeGeometry(0.09 + rng() * 0.04, 0.24 + rng() * 0.14, 4), 0xb6e8f4,
+          [(rng() - 0.5) * 0.5, mainH + 0.1, (rng() - 0.5) * 0.5],
+          [(rng() - 0.5) * 0.35, rng() * 3, (rng() - 0.5) * 0.35]);
+      }
     }
   }
 
@@ -484,25 +516,26 @@ export function makeRockParts(rng, kind = null) {
   const sizeY = bb.max.y - bb.min.y;
   const radius = Math.max(Math.abs(bb.max.x), Math.abs(bb.min.x), Math.abs(bb.max.z), Math.abs(bb.min.z));
   // утапливаем низ в землю, чтобы камень не «левитировал» на склоне
-  body.translate(0, -bb.min.y - 0.14, 0);
+  const sink = -bb.min.y - 0.14;
+  body.translate(0, sink, 0);
   body.computeBoundingBox();
+  if (ore.length) for (const g of ore) g.translate(0, sink, 0);
 
-  // мох: мелкие пятна только сверху
+  // мох: плоские кубики-нашлёпки только сверху
   const topY = body.boundingBox.max.y;
   const patches = 2 + Math.floor(rng() * 2);
   for (let i = 0; i < patches; i++) {
     const a = rng() * Math.PI * 2;
-    const d = rng() * radius * 0.45;
-    const r = radius * (0.26 + rng() * 0.14);
-    const blob = new THREE.IcosahedronGeometry(r, 1);
-    jitterGeo(blob, r * 0.18, rng);
-    piece(moss, blob, i % 2 ? 0x6d8f45 : 0x5a7b3a,
-      [Math.cos(a) * d, topY - sizeY * (0.12 + rng() * 0.16), Math.sin(a) * d],
-      [0, rng() * 3, 0],
-      [1, 0.34, 1]);
+    const d = rng() * radius * 0.4;
+    const s = radius * (0.5 + rng() * 0.3);
+    piece(moss, box(s, 0.09, s * (0.7 + rng() * 0.4)), i % 2 ? 0x9bbf6a : 0x87ad5b,
+      [Math.cos(a) * d, topY - sizeY * (0.06 + rng() * 0.1), Math.sin(a) * d],
+      [0, rng() * Math.PI, 0]);
   }
 
-  return { rock: body, moss: merge(moss) };
+  const out = { rock: body, moss: merge(moss) };
+  if (ore.length) out.ore = merge(ore);
+  return out;
 }
 
 // ---------- подбираемые вещи ----------

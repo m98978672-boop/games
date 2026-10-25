@@ -14108,210 +14108,6 @@
       return new _PolyhedronGeometry(data.vertices, data.indices, data.radius, data.detail);
     }
   };
-  var DodecahedronGeometry = class _DodecahedronGeometry extends PolyhedronGeometry {
-    /**
-     * Constructs a new dodecahedron geometry.
-     *
-     * @param {number} [radius=1] - Radius of the dodecahedron.
-     * @param {number} [detail=0] - Setting this to a value greater than `0` adds vertices making it no longer a dodecahedron.
-     */
-    constructor(radius = 1, detail = 0) {
-      const t = (1 + Math.sqrt(5)) / 2;
-      const r = 1 / t;
-      const vertices = [
-        // (±1, ±1, ±1)
-        -1,
-        -1,
-        -1,
-        -1,
-        -1,
-        1,
-        -1,
-        1,
-        -1,
-        -1,
-        1,
-        1,
-        1,
-        -1,
-        -1,
-        1,
-        -1,
-        1,
-        1,
-        1,
-        -1,
-        1,
-        1,
-        1,
-        // (0, ±1/φ, ±φ)
-        0,
-        -r,
-        -t,
-        0,
-        -r,
-        t,
-        0,
-        r,
-        -t,
-        0,
-        r,
-        t,
-        // (±1/φ, ±φ, 0)
-        -r,
-        -t,
-        0,
-        -r,
-        t,
-        0,
-        r,
-        -t,
-        0,
-        r,
-        t,
-        0,
-        // (±φ, 0, ±1/φ)
-        -t,
-        0,
-        -r,
-        t,
-        0,
-        -r,
-        -t,
-        0,
-        r,
-        t,
-        0,
-        r
-      ];
-      const indices = [
-        3,
-        11,
-        7,
-        3,
-        7,
-        15,
-        3,
-        15,
-        13,
-        7,
-        19,
-        17,
-        7,
-        17,
-        6,
-        7,
-        6,
-        15,
-        17,
-        4,
-        8,
-        17,
-        8,
-        10,
-        17,
-        10,
-        6,
-        8,
-        0,
-        16,
-        8,
-        16,
-        2,
-        8,
-        2,
-        10,
-        0,
-        12,
-        1,
-        0,
-        1,
-        18,
-        0,
-        18,
-        16,
-        6,
-        10,
-        2,
-        6,
-        2,
-        13,
-        6,
-        13,
-        15,
-        2,
-        16,
-        18,
-        2,
-        18,
-        3,
-        2,
-        3,
-        13,
-        18,
-        1,
-        9,
-        18,
-        9,
-        11,
-        18,
-        11,
-        3,
-        4,
-        14,
-        12,
-        4,
-        12,
-        0,
-        4,
-        0,
-        8,
-        11,
-        9,
-        5,
-        11,
-        5,
-        19,
-        11,
-        19,
-        7,
-        19,
-        5,
-        14,
-        19,
-        14,
-        4,
-        19,
-        4,
-        17,
-        1,
-        12,
-        14,
-        1,
-        14,
-        5,
-        1,
-        5,
-        9
-      ];
-      super(vertices, indices, radius, detail);
-      this.type = "DodecahedronGeometry";
-      this.parameters = {
-        radius,
-        detail
-      };
-    }
-    /**
-     * Factory method for creating an instance of this class from the given
-     * JSON object.
-     *
-     * @param {Object} data - A JSON object representing the serialized geometry.
-     * @return {DodecahedronGeometry} A new instance.
-     */
-    static fromJSON(data) {
-      return new _DodecahedronGeometry(data.radius, data.detail);
-    }
-  };
   var _v0 = /* @__PURE__ */ new Vector3();
   var _v1$1 = /* @__PURE__ */ new Vector3();
   var _normal = /* @__PURE__ */ new Vector3();
@@ -29784,19 +29580,6 @@ void main() {
     geo.setAttribute("color", new BufferAttribute(arr, 3));
     return geo;
   }
-  function jitterGeo(geo, amount, rng) {
-    const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
-      pos.setXYZ(
-        i,
-        pos.getX(i) + (rng() - 0.5) * amount,
-        pos.getY(i) + (rng() - 0.5) * amount,
-        pos.getZ(i) + (rng() - 0.5) * amount
-      );
-    }
-    geo.computeVertexNormals();
-    return geo;
-  }
   var _v = new Vector3();
   var _q = new Quaternion();
   var _e = new Euler();
@@ -30081,51 +29864,49 @@ void main() {
     const bark = [];
     const leaf = [];
     const fruit = [];
-    const branches = 3 + Math.floor(rng() * 3);
-    const tips = [];
+    const box = (w, h, d) => new BoxGeometry(w, h, d);
+    const branches = 2 + Math.floor(rng() * 2);
     for (let i = 0; i < branches; i++) {
-      const a = i / branches * Math.PI * 2 + rng() * 0.8;
-      const len = 0.55 + rng() * 0.5;
-      const dir = new Vector3(Math.cos(a) * 0.6, 1, Math.sin(a) * 0.6).normalize();
-      const end = dir.clone().multiplyScalar(len);
-      let stem = new CylinderGeometry(0.028, 0.06, len, 5, 1);
-      stem.applyQuaternion(alignQuat(new Vector3(0, 0, 0), end));
-      stem.translate(end.x / 2, end.y / 2, end.z / 2);
-      stem = flat(stem);
-      bark.push(colorize(stem, 6966320));
-      tips.push(end);
-    }
-    for (const tip of tips) {
-      const r = 0.3 + rng() * 0.22;
+      const a = i / branches * Math.PI * 2 + rng() * 0.9;
+      const h = 0.5 + rng() * 0.4;
       piece(
-        leaf,
-        new IcosahedronGeometry(r, 1),
-        rng() > 0.5 ? COLORS.bush : 7052373,
-        [tip.x, tip.y + r * 0.4, tip.z]
+        bark,
+        box(0.09, h, 0.09),
+        rng() > 0.5 ? 6966320 : 5914408,
+        [Math.cos(a) * 0.1, h / 2, Math.sin(a) * 0.1],
+        [(rng() - 0.5) * 0.25, rng() * 0.6, (rng() - 0.5) * 0.25]
       );
     }
-    const n = 3 + Math.floor(rng() * 3);
-    for (let i = 0; i < n; i++) {
-      const r = 0.34 + rng() * 0.3;
-      const a = rng() * Math.PI * 2;
-      const d = rng() * 0.5;
+    const greens = [9420906, 8172638, 10276728, 7317589];
+    const count = 6 + Math.floor(rng() * 4);
+    for (let i = 0; i < count; i++) {
+      const size = 0.34 + rng() * 0.3;
+      const a = i / count * Math.PI * 2 + rng() * 0.8;
+      const d = i === 0 ? 0 : 0.2 + rng() * 0.34;
       piece(
         leaf,
-        new IcosahedronGeometry(r, 1),
-        i % 2 ? COLORS.bush : 6263120,
-        [Math.cos(a) * d, 0.42 + rng() * 0.34, Math.sin(a) * d]
+        box(size, size * (0.8 + rng() * 0.4), size),
+        greens[Math.floor(rng() * greens.length)],
+        [Math.cos(a) * d, 0.38 + rng() * 0.4, Math.sin(a) * d],
+        [(rng() - 0.5) * 0.25, rng() * Math.PI, (rng() - 0.5) * 0.25]
       );
     }
     if (withBerries) {
-      for (let i = 0; i < 10; i++) {
+      const clusters = 4 + Math.floor(rng() * 3);
+      for (let i = 0; i < clusters; i++) {
         const a = rng() * Math.PI * 2;
-        const d = 0.18 + rng() * 0.5;
-        piece(
-          fruit,
-          new IcosahedronGeometry(0.085 + rng() * 0.03, 0),
-          COLORS.berry,
-          [Math.cos(a) * d, 0.5 + rng() * 0.45, Math.sin(a) * d]
-        );
+        const d = 0.28 + rng() * 0.34;
+        const cy = 0.5 + rng() * 0.42;
+        for (let j = 0; j < 3; j++) {
+          const size = 0.12 + rng() * 0.05;
+          piece(
+            fruit,
+            box(size, size, size),
+            rng() > 0.5 ? COLORS.berry : 10299200,
+            [Math.cos(a) * d + (rng() - 0.5) * 0.14, cy + (rng() - 0.5) * 0.14, Math.sin(a) * d + (rng() - 0.5) * 0.14],
+            [rng(), rng(), rng()]
+          );
+        }
       }
     }
     const out = { leaf: merge(leaf) };
@@ -30136,47 +29917,85 @@ void main() {
   function makeRockParts(rng, kind = null) {
     const rock = [];
     const moss = [];
-    const type = kind || ["boulder", "boulder", "slab"][Math.floor(rng() * 3)];
+    const ore = [];
+    const type = kind || ["boulder", "ore", "slab"][Math.floor(rng() * 3)];
+    const box = (w, h, d) => new BoxGeometry(w, h, d);
+    const stoneTones = [14933457, 14077890, 13090995, 11775136];
+    const chunk = (arr, w, h, d, x, y, z, ry = null, hex = null) => {
+      piece(
+        arr,
+        box(w, h, d),
+        hex != null ? hex : stoneTones[Math.floor(rng() * stoneTones.length)],
+        [x, y, z],
+        [(rng() - 0.5) * 0.16, ry != null ? ry : rng() * Math.PI, (rng() - 0.5) * 0.16]
+      );
+    };
     if (type === "slab") {
       for (let i = 0; i < 3; i++) {
-        const chunk = new DodecahedronGeometry(0.95 - i * 0.16, 0);
-        jitterGeo(chunk, 0.12, rng);
-        chunk.scale(1.15, 0.34, 0.95);
-        part(
+        const w = 1.3 - i * 0.26;
+        chunk(
           rock,
-          chunk,
-          i % 2 ? 10327950 : COLORS.stone,
-          (rng() - 0.5) * 0.45,
-          0.22 + i * 0.22,
-          (rng() - 0.5) * 0.4,
-          (rng() - 0.5) * 0.12,
-          rng() * 3,
-          (rng() - 0.5) * 0.12
+          w,
+          0.32,
+          w * (0.72 + rng() * 0.2),
+          (rng() - 0.5) * 0.35,
+          0.16 + i * 0.28,
+          (rng() - 0.5) * 0.3
         );
       }
-      const chip = new DodecahedronGeometry(0.36, 0);
-      jitterGeo(chip, 0.06, rng);
-      part(rock, chip, COLORS.rockDark, 1.05, 0.1, 0.35, rng(), rng(), 0);
+      chunk(rock, 0.45, 0.3, 0.4, 0.95, 0.14, 0.3);
     } else {
-      const main = new DodecahedronGeometry(1, 0);
-      jitterGeo(main, 0.09, rng);
-      main.scale(1 + rng() * 0.25, 0.72 + rng() * 0.12, 0.92 + rng() * 0.2);
-      part(rock, main, COLORS.stone, 0, 0, 0, 0, rng() * 3, 0);
-      for (let i = 0; i < 2; i++) {
-        const a = rng() * Math.PI * 2;
-        const chip = new DodecahedronGeometry(0.4 + rng() * 0.16, 0);
-        jitterGeo(chip, 0.05, rng);
-        part(
+      const w = 1.05 + rng() * 0.3;
+      const mainH = 0.85 + rng() * 0.2;
+      chunk(rock, w, mainH, w * (0.82 + rng() * 0.2), 0, mainH / 2 + 0.02, 0);
+      chunk(
+        rock,
+        w * 0.78,
+        0.62 + rng() * 0.3,
+        w * 0.7,
+        (rng() - 0.5) * 0.5,
+        0.95 + rng() * 0.12,
+        (rng() - 0.5) * 0.45
+      );
+      const extra = 2 + Math.floor(rng() * 3);
+      for (let i = 0; i < extra; i++) {
+        const a = i / extra * Math.PI * 2 + rng();
+        const s = 0.34 + rng() * 0.3;
+        chunk(
           rock,
-          chip,
-          i ? COLORS.rockDark : 10327950,
-          Math.cos(a) * 0.85,
-          -0.32,
-          Math.sin(a) * 0.85,
-          rng() * 0.4,
-          rng() * 3,
-          rng() * 0.4
+          s,
+          s * (0.7 + rng() * 0.4),
+          s,
+          Math.cos(a) * (0.6 + rng() * 0.2),
+          0.16 + rng() * 0.24,
+          Math.sin(a) * (0.6 + rng() * 0.2)
         );
+      }
+      if (type === "ore") {
+        const halfW = w / 2;
+        const veins = 6 + Math.floor(rng() * 4);
+        for (let i = 0; i < veins; i++) {
+          const a = rng() * Math.PI * 2;
+          const y = 0.3 + rng() * (mainH - 0.15);
+          const sz = 0.16 + rng() * 0.13;
+          const r = halfW * (0.82 + rng() * 0.1);
+          piece(
+            ore,
+            box(sz, sz * (0.7 + rng() * 0.6), sz),
+            rng() > 0.3 ? 10477810 : 6990013,
+            [Math.cos(a) * r, y, Math.sin(a) * r],
+            [rng() * 3, rng() * 3, rng() * 3]
+          );
+        }
+        for (let i = 0; i < 2; i++) {
+          piece(
+            ore,
+            new ConeGeometry(0.09 + rng() * 0.04, 0.24 + rng() * 0.14, 4),
+            11987188,
+            [(rng() - 0.5) * 0.5, mainH + 0.1, (rng() - 0.5) * 0.5],
+            [(rng() - 0.5) * 0.35, rng() * 3, (rng() - 0.5) * 0.35]
+          );
+        }
       }
     }
     const body = merge(rock);
@@ -30184,26 +30003,27 @@ void main() {
     const bb = body.boundingBox;
     const sizeY = bb.max.y - bb.min.y;
     const radius = Math.max(Math.abs(bb.max.x), Math.abs(bb.min.x), Math.abs(bb.max.z), Math.abs(bb.min.z));
-    body.translate(0, -bb.min.y - 0.14, 0);
+    const sink = -bb.min.y - 0.14;
+    body.translate(0, sink, 0);
     body.computeBoundingBox();
+    if (ore.length) for (const g of ore) g.translate(0, sink, 0);
     const topY = body.boundingBox.max.y;
     const patches = 2 + Math.floor(rng() * 2);
     for (let i = 0; i < patches; i++) {
       const a = rng() * Math.PI * 2;
-      const d = rng() * radius * 0.45;
-      const r = radius * (0.26 + rng() * 0.14);
-      const blob = new IcosahedronGeometry(r, 1);
-      jitterGeo(blob, r * 0.18, rng);
+      const d = rng() * radius * 0.4;
+      const s = radius * (0.5 + rng() * 0.3);
       piece(
         moss,
-        blob,
-        i % 2 ? 7180101 : 5929786,
-        [Math.cos(a) * d, topY - sizeY * (0.12 + rng() * 0.16), Math.sin(a) * d],
-        [0, rng() * 3, 0],
-        [1, 0.34, 1]
+        box(s, 0.09, s * (0.7 + rng() * 0.4)),
+        i % 2 ? 10207082 : 8891739,
+        [Math.cos(a) * d, topY - sizeY * (0.06 + rng() * 0.1), Math.sin(a) * d],
+        [0, rng() * Math.PI, 0]
       );
     }
-    return { rock: body, moss: merge(moss) };
+    const out = { rock: body, moss: merge(moss) };
+    if (ore.length) out.ore = merge(ore);
+    return out;
   }
   function makePickupGeometries() {
     const geos = {};
@@ -30814,12 +30634,22 @@ void main() {
       }
       const fruitMat = new MeshStandardMaterial({ color: 12729170, roughness: 0.55, vertexColors: true });
       const mossMat = new MeshStandardMaterial({ color: 8364631, roughness: 0.95, vertexColors: true, flatShading: true });
+      const oreMat = new MeshStandardMaterial({
+        color: 13625842,
+        roughness: 0.32,
+        metalness: 0.45,
+        vertexColors: true,
+        flatShading: true,
+        emissive: 1924468,
+        emissiveIntensity: 0.55
+      });
       const layerMaterials = {
         bark: barkMat,
         leaf: leafMat,
         rock: stoneMat,
         fruit: fruitMat,
-        moss: mossMat
+        moss: mossMat,
+        ore: oreMat
       };
       const buildInstances = (variants, list, { castShadow = true } = {}) => {
         const meshes = [];
@@ -30848,7 +30678,7 @@ void main() {
               mesh2.setMatrixAt(k, dummy.matrix);
               mesh2.instanceMatrix.needsUpdate = true;
               it.parts = it.parts || [];
-              it.parts.push({ mesh: mesh2, idx: k, baseScale: s });
+              it.parts.push({ mesh: mesh2, idx: k, baseScale: s, layer });
               it.mesh = mesh2;
               it.instIdx = k;
             });
@@ -30856,6 +30686,12 @@ void main() {
             this.scene.add(mesh2);
             meshes.push(mesh2);
           }
+          if (variant.fruit) items.forEach((it) => {
+            it.berries = true;
+          });
+          if (variant.ore) items.forEach((it) => {
+            it.kind = "ore";
+          });
         }
         return meshes;
       };
@@ -30870,6 +30706,7 @@ void main() {
       const rockVariants = [
         makeRockParts(rng, "boulder"),
         makeRockParts(rng, "slab"),
+        makeRockParts(rng, "ore"),
         makeRockParts(rng, "boulder")
       ];
       this.stats = {
@@ -30986,6 +30823,26 @@ void main() {
         part2.mesh.setMatrixAt(part2.idx, dummy.matrix);
         part2.mesh.instanceMatrix.needsUpdate = true;
       }
+    }
+    /** Спрятать/показать один слой модели (например, ягоды на кусте) */
+    setLayerVisible(item, layer, visible) {
+      var _a;
+      if (!item || !item.parts) return;
+      const dummy = this._dummy || (this._dummy = new Object3D());
+      for (const part2 of item.parts) {
+        if (part2.layer !== layer) continue;
+        const target = (_a = part2.baseScale) != null ? _a : 1;
+        dummy.position.set(item.x, item.h - 0.15, item.z);
+        dummy.rotation.set(0, item.rot || 0, 0);
+        dummy.scale.setScalar(visible ? target : 1e-4);
+        dummy.updateMatrix();
+        part2.mesh.setMatrixAt(part2.idx, dummy.matrix);
+        part2.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+    /** Есть ли у куста слой ягод */
+    hasLayer(item, layer) {
+      return !!item && !!item.parts && item.parts.some((p) => p.layer === layer);
     }
     /** Ближайший подбираемый предмет в радиусе */
     nearestPickup(pos, reach) {
@@ -31287,6 +31144,12 @@ void main() {
 
   // src/player.js
   var P = CONFIG.player;
+  var ACTIONS = {
+    attack: { speed: 3.2, windup: 0.32, back: -1, hit: 1, lean: 0.06, dip: 0, reach: 0 },
+    chop: { speed: 2.5, windup: 0.46, back: -1.75, hit: 1.25, lean: 0.22, dip: 0.03, reach: 0 },
+    mine: { speed: 3.5, windup: 0.36, back: -1.35, hit: 0.85, lean: 0.3, dip: 0.07, reach: 0 },
+    gather: { speed: 2.2, windup: 0.5, back: -0.35, hit: 0.05, lean: 0.55, dip: 0.12, reach: 1.15 }
+  };
   var Player = class {
     constructor(scene) {
       this.scene = scene;
@@ -31446,6 +31309,8 @@ void main() {
       this.equippedMesh = null;
       this.swingPhase = -1;
       this.swingSpeed = 3.2;
+      this.actionKind = "attack";
+      this.hitShake = 0;
       this.walkPhase = 0;
       this.lean = 0;
       this.landDip = 0;
@@ -31561,9 +31426,19 @@ void main() {
       this.viewModelItem = firstPersonMesh;
       this.viewModelHand.add(firstPersonMesh);
     }
-    /** Запустить замах */
-    swing() {
+    /**
+     * Запустить замах. Вид удара зависит от цели:
+     *   attack — короткий тычок, chop — широкий замах топором,
+     *   mine — резкий удар киркой, gather — наклон и сбор руками.
+     */
+    swing(kind = "attack") {
+      this.actionKind = ACTIONS[kind] ? kind : "attack";
+      this.swingSpeed = ACTIONS[this.actionKind].speed;
       if (this.swingPhase < 0) this.swingPhase = 0;
+    }
+    /** Небольшая отдача: камера дёргается после попадания */
+    shake(amount = 0.12) {
+      this.hitShake = Math.max(this.hitShake, amount);
     }
     setPosition(x, z, world) {
       this.position.set(x, world.heightAt(x, z), z);
@@ -31674,21 +31549,45 @@ void main() {
       this.armL.rotation.x = sw * (0.55 + speedRatio * 0.35) - idle;
       this.armL.rotation.z = -0.06 - speedRatio * 0.05;
       let armRSwing = swOpp * (0.55 + speedRatio * 0.35) + idle;
-      this.elbowR.rotation.x = -0.3 - speedRatio * 0.4;
+      let elbowRSwing = -0.3 - speedRatio * 0.4;
+      let armLSwing = sw * (0.55 + speedRatio * 0.35) - idle;
+      let leanExtra = 0;
+      let dipExtra = 0;
+      let actionT = -1;
       if (this.swingPhase >= 0) {
         this.swingPhase += dt * this.swingSpeed;
         if (this.swingPhase >= 1) this.swingPhase = -1;
         else {
+          const act = ACTIONS[this.actionKind] || ACTIONS.attack;
           const p = this.swingPhase;
-          const arc = p < 0.32 ? -1 * (p / 0.32) : Math.sin((p - 0.32) / 0.68 * Math.PI) * 2 - 1;
+          actionT = p;
+          let arc;
+          if (p < act.windup) {
+            const k = p / act.windup;
+            arc = act.back * (k * k * (3 - 2 * k));
+          } else {
+            const k = (p - act.windup) / (1 - act.windup);
+            arc = act.hit * Math.sin(k * Math.PI) * (1 - k * 0.35) + act.back * (1 - k) * (1 - k);
+          }
           armRSwing = arc;
-          this.elbowR.rotation.x = -0.25 - Math.max(0, arc) * 0.55;
+          elbowRSwing = -0.25 - Math.max(0, arc) * 0.55;
+          const punch = p < act.windup ? p / act.windup * 0.35 : Math.max(0, Math.sin((p - act.windup) / (1 - act.windup) * Math.PI));
+          leanExtra = act.lean * punch;
+          dipExtra = act.dip * punch;
+          if (act.reach) {
+            const reach = Math.sin(Math.min(1, p / 0.75) * Math.PI * 0.9);
+            armLSwing = -act.reach * reach;
+            leanExtra = act.lean * reach;
+            dipExtra = act.dip * reach;
+            armRSwing = -0.55 * reach;
+          }
         }
       }
-      this.armL.rotation.x += 0;
+      this.armL.rotation.x = armLSwing;
       this.armR.rotation.x = armRSwing;
-      const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0);
-      this.lean += (targetLean - this.lean) * clamp2(dt * 6, 0, 1);
+      this.elbowR.rotation.x = elbowRSwing;
+      const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0) + leanExtra;
+      this.lean += (targetLean - this.lean) * clamp2(dt * 10, 0, 1);
       this.torsoGroup.rotation.x = this.lean;
       this.torsoGroup.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
       if (this.head) this.head.rotation.y = Math.sin(this.bobPhase * 0.4) * 0.05 * (1 - speedRatio);
@@ -31696,7 +31595,8 @@ void main() {
       const bobY = Math.abs(Math.sin(this.walkPhase)) * 0.05 * speedRatio;
       this.model.position.copy(this.position);
       if (inWater) this.model.position.y -= this.wading * 0.55;
-      this.model.position.y += bobY - this.landDip * 0.14;
+      this.model.position.y += bobY - this.landDip * 0.14 - dipExtra;
+      this.actionT = actionT;
       this.model.rotation.y = this.facing;
       if (this.viewMode === "first") {
         const bx = Math.sin(this.walkPhase) * 0.02 * speedRatio;
@@ -31704,14 +31604,30 @@ void main() {
         const sway = Math.sin(this.bobPhase * 0.9) * 5e-3;
         let swing = 0;
         let forward = 0;
+        let twist = 0;
+        let drop = 0;
         if (this.swingPhase >= 0) {
-          const arc = Math.sin(Math.min(1, this.swingPhase) * Math.PI);
+          const p = this.swingPhase;
+          const arc = Math.sin(Math.min(1, p) * Math.PI);
           swing = arc;
-          forward = -arc * 0.16;
+          if (this.actionKind === "chop") {
+            forward = -arc * 0.26;
+            twist = arc * 0.55;
+            drop = arc * 0.1;
+          } else if (this.actionKind === "mine") {
+            forward = -arc * 0.2;
+            twist = arc * 0.35;
+            drop = arc * 0.13;
+          } else if (this.actionKind === "gather") {
+            forward = -arc * 0.1;
+            drop = arc * 0.34;
+          } else {
+            forward = -arc * 0.16;
+          }
         }
-        this.viewModel.position.set(0.26 + bx + sway, -0.24 + by, -0.6 + forward);
-        this.viewModel.rotation.set(0.08 + swing * 0.25, -0.22, swing * 0.3);
-        this.viewModelHand.rotation.x = swing * 0.7;
+        this.viewModel.position.set(0.26 + bx + sway, -0.24 + by - drop, -0.6 + forward);
+        this.viewModel.rotation.set(0.08 + swing * 0.25 + twist * 0.2, -0.22, swing * 0.3);
+        this.viewModelHand.rotation.x = swing * 0.7 + twist;
       }
       this.landShake = Math.max(0, this.landShake - dt);
     }
@@ -31719,6 +31635,8 @@ void main() {
     applyCamera(camera, world, dt) {
       const sin = Math.sin(this.yaw);
       const cos = Math.cos(this.yaw);
+      const hit = this.hitShake;
+      if (hit > 0) this.hitShake = Math.max(0, hit - dt * 0.9);
       if (this.viewMode === "first") {
         const eyeY = this.position.y + 1.62 + (this.swimming ? -0.25 : 0);
         const target2 = new Vector3(this.position.x, eyeY, this.position.z);
@@ -31728,6 +31646,11 @@ void main() {
         camera.rotateX(-this.pitch);
         const shake = this.landShake > 0 ? this.landShake * 2.4 : 0;
         if (shake > 0) camera.rotateZ(Math.sin(performance.now() * 0.05) * shake * 0.06);
+        if (hit > 0) {
+          const a = hit * 0.35;
+          camera.rotateX(Math.sin(performance.now() * 0.06) * a * 0.05);
+          camera.rotateZ(Math.sin(performance.now() * 0.045) * a * 0.04);
+        }
         return;
       }
       const fwd = new Vector3(-sin, 0, -cos);
@@ -31762,6 +31685,9 @@ void main() {
       if (desired.y < h + 0.7) desired.y = h + 0.7;
       if (desired.y < CONFIG.world.seaLevel + 0.5) desired.y = CONFIG.world.seaLevel + 0.5;
       camera.position.lerp(desired, clamp2(dt * 14, 0, 1));
+      if (hit > 0) {
+        camera.position.y += Math.sin(performance.now() * 0.06) * hit * 0.03;
+      }
       camera.lookAt(target);
     }
   };
@@ -32011,6 +31937,45 @@ void main() {
     mine() {
       this._noiseBurst(0.1, 2600, 1.8, 0.12, "bandpass");
       this._tone(420, 0.07, 0.05, "square", 300);
+    }
+    /** Плётка/кирка прошла мимо: только воздух */
+    whoosh() {
+      this._noiseBurst(0.14, 900 + Math.random() * 500, 1.6, 0.04, "bandpass");
+    }
+    /** Ягоды: тихий щелчок и шелест листвы */
+    berryPick() {
+      this._noiseBurst(0.07, 2600, 2.2, 0.07, "bandpass");
+      this._tone(880, 0.1, 0.035, "sine", 1180, 0.03);
+      this._noiseBurst(0.2, 4200, 1.1, 0.03, "highpass");
+    }
+    /** Листва/куст: шорох при задевании */
+    rustle() {
+      this._noiseBurst(0.26, 3600 + Math.random() * 1200, 0.9, 0.045, "highpass");
+      this._noiseBurst(0.14, 1500, 1.2, 0.03, "bandpass");
+    }
+    /** Треск: дерево не выдержало */
+    treeFall() {
+      this._noiseBurst(0.5, 320, 0.7, 0.14, "lowpass");
+      this._tone(110, 0.5, 0.08, "sawtooth", 48);
+      this._noiseBurst(0.35, 900, 0.9, 0.07, "bandpass");
+    }
+    /** Камень развалился: осыпь */
+    stoneBreak() {
+      this._noiseBurst(0.22, 1400, 0.9, 0.13, "bandpass");
+      for (let i = 0; i < 4; i++) {
+        this._noiseBurst(0.07, 2200 + Math.random() * 1600, 2.4, 0.05, "bandpass");
+        this._tone(240 + Math.random() * 160, 0.06, 0.03, "square", 140, i * 0.035);
+      }
+    }
+    /** Тихий хруст, когда кирка вошла в камень */
+    stoneCrack() {
+      this._noiseBurst(0.08, 1800 + Math.random() * 700, 2.2, 0.045, "bandpass");
+    }
+    /** Рудный камень: звонкий удар с металлическим призвуком */
+    oreHit() {
+      this._tone(1180, 0.18, 0.05, "triangle", 760);
+      this._tone(1760, 0.14, 0.03, "sine", 1320, 0.02);
+      this._noiseBurst(0.1, 3e3, 2.6, 0.07, "bandpass");
     }
     craft() {
       this._noiseBurst(0.08, 900, 1.2, 0.06);
@@ -32596,7 +32561,8 @@ void main() {
       respawn: 150,
       need: null,
       tool: "chop",
-      drop: [{ id: "berries", min: 1, max: 2 }, { id: "fiber", min: 1, max: 2 }]
+      drop: [{ id: "berries", min: 1, max: 2 }, { id: "fiber", min: 1, max: 2 }],
+      berryRegrow: 85
     }
   };
   var Resources = class {
@@ -32616,6 +32582,7 @@ void main() {
         list.forEach((item, i) => {
           if (i % every !== 0) return;
           const def = NODE_DEFS[type];
+          const ore = type === "rock" && item.kind === "ore";
           this.nodes.push({
             type,
             item,
@@ -32626,7 +32593,11 @@ void main() {
             maxHp: def.hp,
             alive: true,
             respawnAt: 0,
-            label: def.label
+            label: ore ? "\u0420\u0443\u0434\u043D\u044B\u0439 \u043A\u0430\u043C\u0435\u043D\u044C" : def.label,
+            ore,
+            // у куста с ягодами ягоды можно собрать руками
+            berries: type === "bush" ? !!item.berries : false,
+            berryAt: 0
           });
         });
       };
@@ -32718,7 +32689,9 @@ void main() {
         this.world.setNodeVisible(node.item, false);
         result.depleted = true;
         for (const drop of def.drop) {
-          const amount = drop.min + Math.floor(this.rng() * (drop.max - drop.min + 1));
+          let amount = drop.min + Math.floor(this.rng() * (drop.max - drop.min + 1));
+          if (node.ore && drop.id === "flint") amount += 1 + Math.floor(this.rng() * 2);
+          if (node.ore && drop.id === "stone") amount += 1;
           if (amount > 0) result.drops[drop.id] = (result.drops[drop.id] || 0) + amount;
         }
         const collider = this.world.colliders.find(
@@ -32727,6 +32700,23 @@ void main() {
         if (collider) collider.disabled = true;
       }
       return result;
+    }
+    // ------------------------------------------------------------
+    //  Ягоды: собираются руками, куст остаётся целым
+    // ------------------------------------------------------------
+    /** Можно ли сейчас собрать ягоды с этого куста */
+    canPickBerries(node) {
+      return !!node && node.type === "bush" && node.alive && node.berries && this.time >= node.berryAt;
+    }
+    /** Собрать ягоды: возвращает { berries, fiber } */
+    pickBerries(node) {
+      const def = NODE_DEFS.bush;
+      const berries = 2 + Math.floor(this.rng() * 3);
+      const fiber = this.rng() > 0.55 ? 1 : 0;
+      node.berries = false;
+      node.berryAt = this.time + def.berryRegrow;
+      this.world.setLayerVisible(node.item, "fruit", false);
+      return { berries, fiber, regrow: def.berryRegrow };
     }
     // ------------------------------------------------------------
     //  Костры
@@ -32812,6 +32802,12 @@ void main() {
           (c) => Math.abs(c.x - node.x) < 0.01 && Math.abs(c.z - node.z) < 0.01
         );
         if (collider) collider.disabled = false;
+      }
+      for (const node of this.nodes) {
+        if (node.type !== "bush" || node.berries || !node.alive) continue;
+        if (this.time < node.berryAt) continue;
+        node.berries = true;
+        this.world.setLayerVisible(node.item, "fruit", true);
       }
       for (const fire of this.campfires) {
         if (fire.fuel > 0) {
@@ -32922,9 +32918,12 @@ void main() {
     }
   };
   var SOUND_BY_STATE = {
+    // спокойные звуки: кабан похрюкивает, змея шипит, краб щёлкает, чайка кричит
+    idle: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull" },
     alert: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull" },
     attack: { boar: "grunt", snake: "hiss" },
-    hurt: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull" }
+    hurt: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull" },
+    step: { crab: "crab" }
   };
   var Mobs = class {
     constructor(scene, world, seed = 1) {
@@ -33009,6 +33008,7 @@ void main() {
         deadTimer: 0,
         flyY: def.flying ? 4 + this.rng() * 5 : 0,
         respawnAt: 0,
+        soundTimer: 3 + this.rng() * 8,
         alerted: false,
         targetX: spot.x,
         targetZ: spot.z,
@@ -33337,8 +33337,14 @@ void main() {
         if (!mob.group.visible) continue;
         mob.stepTimer -= dt;
         if (mob.speedNow > 0.4 && mob.stepTimer <= 0) {
-          mob.stepTimer = mob.speedNow > 3 ? 0.28 : 0.55;
-          if (!def.flying) this._sound(ctx, "step", mob, 0.5);
+          mob.stepTimer = mob.speedNow > 3 ? 0.3 : 0.6;
+          if (!def.flying) this._sound(ctx, "step", mob, mob.type === "crab" ? 0.35 : 0.5);
+        }
+        mob.soundTimer -= dt;
+        if (mob.soundTimer <= 0) {
+          mob.soundTimer = 7 + this.rng() * 11;
+          const calm = mob.state === "idle" || mob.state === "graze" || mob.state === "patrol" || mob.state === "rest";
+          if (calm && dist < 24 && mob.group.visible) this._sound(ctx, "idle", mob, 0.45);
         }
         if (mob.group.visible) this._animate(mob, dt);
       }
@@ -33559,14 +33565,25 @@ void main() {
     _sound(ctx, kind, mob, gain = 1) {
       var _a, _b;
       if (!ctx.audio || !ctx.listener) return;
-      const table = kind === "step" ? null : SOUND_BY_STATE[kind];
-      const name = kind === "step" ? mob.def.flying ? null : "mobStep" : table ? table[mob.type] : null;
+      let name = null;
+      let volume = 0.8;
+      if (kind === "step") {
+        name = mob.def.flying ? null : mob.type === "crab" ? "crab" : "mobStep";
+        volume = 0.35;
+      } else if (kind === "idle") {
+        const table = SOUND_BY_STATE.idle;
+        name = table ? table[mob.type] : null;
+        volume = 0.35;
+      } else {
+        const table = SOUND_BY_STATE[kind];
+        name = table ? table[mob.type] : null;
+      }
       if (!name) return;
       (_b = (_a = ctx.audio).playAt) == null ? void 0 : _b.call(_a, name, {
         x: mob.x,
         z: mob.z,
         listener: ctx.listener,
-        gain: (kind === "step" ? 0.35 : 0.8) * gain
+        gain: volume * gain
       });
     }
     toggleHitboxes(force) {
@@ -33584,48 +33601,119 @@ void main() {
     // ------------------------------------------------------------
     //  Анимация (только для видимых)
     // ------------------------------------------------------------
+    /**
+     * Анимация зверя. У каждого вида свой характер движения:
+     * кабан топает и мотает головой, краб семенит боком и щёлкает клешнями,
+     * чайка машет крыльями и планирует, змея идёт волной и высовывает язык.
+     */
     _animate(mob, dt) {
-      var _a;
+      var _a, _b, _c;
       const p = mob.parts;
       const def = mob.def;
       const walk = Math.min(1, mob.speedNow / 2);
+      const run = Math.max(0, Math.min(1, (mob.speedNow - 2) / 4));
       const t = mob.phase;
-      if (p.legs) {
-        p.legs.forEach((leg, i) => {
-          leg.rotation.x = Math.sin(t + (i % 2 ? Math.PI : 0) + Math.floor(i / 2) * 0.6) * 0.55 * walk;
-        });
+      const state = mob.state;
+      const sleeping = state === "sleep";
+      const alert = state === "alert" || state === "chase" || state === "attack";
+      const scared = state === "flee" || state === "retreat";
+      const graze = state === "graze";
+      mob.animTime = (mob.animTime || 0) + dt;
+      if (p.body) {
+        const base = (_a = mob.bodyBaseY) != null ? _a : mob.bodyBaseY = p.body.position.y;
+        const bounce = def.type === "crab" ? 0 : Math.abs(Math.sin(t * 1.6)) * 0.05 * (walk + run * 0.7);
+        const breathe = Math.sin(mob.animTime * (sleeping ? 1.1 : 2.1)) * (sleeping ? 0.022 : 0.012);
+        const fluff = alert ? 0.03 : 0;
+        p.body.position.y = base + bounce + breathe + fluff - (sleeping ? 0.09 : 0);
+        p.body.rotation.z = def.type === "boar" ? -run * 0.16 : 0;
       }
-      if (p.tail) {
-        p.tail.rotation.z = 0.5 + Math.sin(t * 1.4) * 0.22;
-        p.tail.rotation.y = Math.sin(t * 0.9) * 0.2;
+      if (p.legs) {
+        if (def.type === "crab") {
+          p.legs.forEach((leg, i) => {
+            const ph = t * 3.2 + i * 0.8;
+            leg.rotation.z = Math.sin(ph) * 0.3 * (0.35 + walk);
+            leg.rotation.x = (i < 4 ? 1 : -1) * (0.12 + Math.cos(ph) * 0.12 * walk);
+          });
+        } else {
+          const amp = 0.5 + run * 0.5;
+          p.legs.forEach((leg, i) => {
+            const ph = t + (i % 2 ? Math.PI : 0) + Math.floor(i / 2) * 0.6;
+            leg.rotation.x = Math.sin(ph) * amp * (0.25 + walk);
+          });
+        }
+      }
+      if (p.tail && def.type !== "gull") {
+        const wag = 0.35 + walk * 0.3 + (scared ? 0.4 : 0);
+        p.tail.rotation.z = 0.5 + Math.sin(t * (1.2 + walk * 2)) * 0.22;
+        p.tail.rotation.y = Math.sin(t * (0.9 + walk * 1.6)) * wag;
+      }
+      if (p.tail && def.type === "gull") {
+        p.tail.rotation.y = Math.sin(t * 1.4) * 0.25;
       }
       if (p.head) {
-        const base = (_a = p.head.userData.baseY) != null ? _a : p.head.userData.baseY = p.head.position.y;
-        const grazeDrop = mob.state === "graze" ? -0.28 : 0;
-        const lunge = mob.state === "attack" ? 0.16 : 0;
-        p.head.position.y = base + grazeDrop + lunge * Math.sin(mob.stateTime * 12);
-        p.head.rotation.x = mob.state === "graze" ? 0.5 : mob.state === "alert" ? -0.15 : 0;
+        const base = (_b = p.head.userData.baseY) != null ? _b : p.head.userData.baseY = p.head.position.y;
+        const grazeDrop = graze ? -0.26 : 0;
+        const lunge = state === "attack" ? 0.14 : 0;
+        const bob = Math.sin(t * 2.2) * 0.02 * walk;
+        p.head.position.y = base + grazeDrop + bob + lunge * Math.sin(mob.stateTime * 12);
+        let pitch = 0;
+        if (graze) pitch = 0.55;
+        else if (state === "alert") pitch = -0.18 + Math.sin(mob.animTime * 4) * 0.05;
+        else if (state === "chase" || state === "attack") pitch = 0.18;
+        else if (sleeping) pitch = 0.5;
+        p.head.rotation.x = pitch;
+        const lookaround = state === "idle" || graze ? Math.sin(mob.animTime * 0.7) * 0.35 : Math.sin(t * 0.8) * 0.06;
+        p.head.rotation.y = lookaround;
       }
       if (p.claws) {
         p.claws.forEach((claw, i) => {
-          claw.rotation.y = Math.sin(t * 3 + i) * 0.35;
+          const side = i === 0 ? 1 : -1;
+          const raise = alert ? 0.5 : 0;
+          claw.rotation.y = Math.sin(t * 2.6 + i * 1.7) * 0.25 * (0.4 + walk);
+          claw.rotation.z = side * (raise + Math.sin(mob.animTime * 6 + i) * (alert ? 0.12 : 0.04));
         });
+      }
+      if (p.eyes) {
+        p.eyes.rotation.z = Math.sin(t * 2.2) * 0.06;
+        p.eyes.position.y = Math.sin(mob.animTime * 1.8) * 0.012;
       }
       if (p.wings) {
-        const flap = def.flying ? Math.sin(t * 3.4) * 0.7 : Math.sin(t * 1.2) * 0.12;
+        const flying = def.flying && mob.y + 0.2 > ((_c = mob.flyY) != null ? _c : 0);
+        const rate = 3 + walk * 4.5;
+        const amp = def.flying ? 0.25 + walk * 0.6 : 0.1;
         p.wings.forEach((wing, i) => {
-          wing.rotation.x = flap * (i === 0 ? 1 : -1);
+          const side = i === 0 ? 1 : -1;
+          const flap = Math.sin(t * rate) * amp;
+          wing.rotation.x = flap * side;
+          wing.rotation.z = flap * 0.35 * side;
+          if (sleeping) wing.rotation.x = -0.5 * side;
         });
+        void flying;
+        if (p.body) p.body.rotation.x = Math.sin(t * rate) * 0.05 * walk;
       }
       if (p.segments) {
+        const amp = 0.12 + walk * 0.2;
         p.segments.forEach((seg, i) => {
-          seg.position.z = Math.sin(t * 2.2 - i * 0.9) * 0.16;
-          seg.rotation.y = Math.sin(t * 2.2 - i * 0.9) * 0.3;
+          const ph = t * (1.8 + walk * 2.2) - i * 0.85;
+          seg.position.z = Math.sin(ph) * amp;
+          seg.position.x = -i * 0.13 + Math.cos(ph) * amp * 0.35;
+          seg.rotation.y = Math.cos(ph) * (0.22 + walk * 0.2);
         });
+        if (p.head) {
+          p.head.rotation.x = alert ? -0.35 + Math.sin(mob.animTime * 5) * 0.08 : 0.02;
+          p.head.position.x = 0.2 + Math.cos(t * 2.2) * 0.03;
+          p.head.position.y = 0.12 + (alert ? 0.1 : 0) + Math.sin(mob.animTime * 3) * 0.01;
+        }
       }
       if (p.tongue) {
-        const flick = Math.sin(mob.phase * 4) > 0.85 ? 1 : 0.2;
+        const speed = alert || state === "chase" ? 6 : 2.4;
+        const flick = Math.sin(mob.animTime * speed) > 0.55 ? 1 : 0.25;
         p.tongue.scale.x = flick;
+        p.tongue.visible = !sleeping;
+      }
+      if (mob.group) {
+        const targetLean = sleeping ? 0.12 : 0;
+        mob.group.rotation.x = (mob.group.rotation.x || 0) * 0.9 + targetLean * 0.1;
       }
     }
   };
@@ -33786,7 +33874,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-25 14:27" : "dev";
+  var BUILD = true ? "2026-10-25 15:01" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -34462,6 +34550,7 @@ void main() {
       this.resources = new Resources(this.scene, this.world);
       this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
       this.projectiles = [];
+      this.chips = [];
       this.culler = new VisibilityCuller(this.world, this.camera);
       for (const mob of this.mobs.list) {
         this.culler.track(mob.group, {
@@ -34994,55 +35083,102 @@ void main() {
         return;
       }
       if (target.kind === "node") {
+        const node = target.node;
+        if (node.type === "bush" && this.resources.canPickBerries(node)) {
+          this.gatherBerries(node);
+          return;
+        }
+        if (node.type === "bush") {
+          this.ui.toast("\u042F\u0433\u043E\u0434\u044B \u0435\u0449\u0451 \u043D\u0435 \u043F\u043E\u0441\u043F\u0435\u043B\u0438 \u2014 \u043F\u043E\u0434\u043E\u0436\u0434\u0438 \u043D\u0435\u043C\u043D\u043E\u0433\u043E", true);
+          return;
+        }
         this.ui.toast("\u0414\u043E\u0431\u044B\u0432\u0430\u0439 \u0443\u0434\u0430\u0440\u0430\u043C\u0438: \u0437\u0430\u0436\u043C\u0438 \u043B\u0435\u0432\u0443\u044E \u043A\u043D\u043E\u043F\u043A\u0443 \u043C\u044B\u0448\u0438", true);
       }
     }
     /** ЛКМ: удар по дереву/камню/кусту или в воздух */
     attack() {
-      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4;
+      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4, _n, _o, _p, _q2, _r, _s2, _t, _u, _v2, _w, _x2, _y2, _z2, _A;
       if (!this.running || this.paused || this.dead) return;
       if (this.attackCooldown > 0) return;
-      this.attackCooldown = 0.62;
-      this.player.swing();
       const toolId = this.equippedId();
       const ranged = toolId && ITEMS[toolId].ranged;
+      const mobNear = ranged ? null : this.mobs.nearest(this.player.position, 3.2);
+      const target = this.resources.nearest(this.player.position, 3.8);
+      const node = !mobNear && target && target.kind === "node" ? target.node : null;
+      let kind = "attack";
+      if (node) {
+        kind = node.type === "rock" ? "mine" : node.type === "bush" ? "chop" : "chop";
+      }
+      this.player.swing(kind);
+      this.attackCooldown = kind === "mine" ? 0.7 : kind === "chop" ? 0.66 : 0.62;
       if (ranged) {
+        (_b = (_a = this.audio).swing) == null ? void 0 : _b.call(_a);
         this.shootArrow();
         return;
       }
-      (_b = (_a = this.audio).swing) == null ? void 0 : _b.call(_a);
-      const facing = this.player.facing;
-      const dirX = Math.sin(facing);
-      const dirZ = Math.cos(facing);
-      const weapon = ((_c = this.equippedTool()) == null ? void 0 : _c.weapon) || 4;
-      const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
-      if (mobHit) {
-        (_e2 = (_d = this.audio).hitFlesh) == null ? void 0 : _e2.call(_d);
-        if (mobHit.killed) {
-          (_g = (_f = this.audio).mobDeath) == null ? void 0 : _g.call(_f);
-          const drops = [];
-          for (const drop of mobHit.mob.def.drops) {
-            const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
-            if (n > 0) {
-              this.addItem(drop.id, n);
-              drops.push(`${ITEMS[drop.id].name} +${n}`);
+      (_d = (_c = this.audio).swing) == null ? void 0 : _d.call(_c);
+      if (mobNear) {
+        const facing = this.player.facing;
+        const dirX = Math.sin(facing);
+        const dirZ = Math.cos(facing);
+        const weapon = ((_e2 = this.equippedTool()) == null ? void 0 : _e2.weapon) || 4;
+        const mobHit = this.mobs.hit(this.player.position, dirX, dirZ, 3.2, weapon);
+        if (mobHit) {
+          (_g = (_f = this.audio).hitFlesh) == null ? void 0 : _g.call(_f);
+          this.player.shake(0.18);
+          const m = mobHit.mob;
+          this.spawnChips(m.x, m.y + 0.9, m.z, { count: 5, color: 10234940, size: 0.06, spread: 1.4, up: 1.6 });
+          if (mobHit.killed) {
+            (_i = (_h = this.audio).mobDeath) == null ? void 0 : _i.call(_h);
+            const drops = [];
+            for (const drop of m.def.drops) {
+              const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
+              if (n > 0) {
+                this.addItem(drop.id, n);
+                drops.push(`${ITEMS[drop.id].name} +${n}`);
+              }
             }
+            this.ui.toast(`${m.def.label} \u043F\u043E\u0431\u0435\u0436\u0434\u0451\u043D: ${drops.join(", ") || "\u0431\u0435\u0437 \u0434\u043E\u0431\u044B\u0447\u0438"}`);
+          } else {
+            this.ui.toast(`${m.def.label}: ${Math.max(0, Math.round(m.hp))}/${m.maxHp}`);
           }
-          this.ui.toast(`${mobHit.mob.def.label} \u043F\u043E\u0431\u0435\u0436\u0434\u0451\u043D: ${drops.join(", ") || "\u0431\u0435\u0437 \u0434\u043E\u0431\u044B\u0447\u0438"}`);
-        } else {
-          this.ui.toast(`${mobHit.mob.def.label}: ${Math.max(0, Math.round(mobHit.mob.hp))}/${mobHit.mob.maxHp}`);
+          return;
         }
-        this.attackCooldown = ranged ? 0.9 : 0.62;
+      }
+      if (!node) {
+        (_k = (_j = this.audio).whoosh) == null ? void 0 : _k.call(_j);
         return;
       }
-      const target = this.resources.nearest(this.player.position, 3.8);
-      if (!target || target.kind !== "node") return;
-      const node = target.node;
+      if (node.type === "bush" && this.resources.canPickBerries(node)) {
+        this.gatherBerries(node);
+        this.attackCooldown = 0.6;
+        return;
+      }
       const tool = this.equippedTool();
       const def = this.resources.strike(node, tool);
-      const power = tool && tool[(_h = this.nodeDef(node).tool) != null ? _h : "chop"] !== void 0 ? tool[(_i = this.nodeDef(node).tool) != null ? _i : "chop"] : 0.35;
+      const actionDef = this.nodeDef(node);
+      const power = tool && tool[(_l = actionDef.tool) != null ? _l : "chop"] !== void 0 ? tool[(_m4 = actionDef.tool) != null ? _m4 : "chop"] : 0.35;
       if (def.need && (!tool || power < 1)) {
         this.ui.toast(`\u041D\u0443\u0436\u0435\u043D ${def.need}: \u0442\u0430\u043A \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0432\u044B\u0445\u043E\u0434\u0438\u0442`, true);
+      }
+      const hitY = node.y + (node.type === "tree" || node.type === "palm" ? 1.1 : 0.7);
+      if (node.type === "rock") {
+        this.player.shake(0.14);
+        this.spawnChips(node.x, hitY, node.z, {
+          count: 7,
+          color: node.ore ? 9423320 : 10130828,
+          size: 0.06,
+          spread: 1.8,
+          up: 2
+        });
+        if (node.ore) (_o = (_n = this.audio).oreHit) == null ? void 0 : _o.call(_n);
+        else (_q2 = (_p = this.audio).mine) == null ? void 0 : _q2.call(_p);
+        (_s2 = (_r = this.audio).stoneCrack) == null ? void 0 : _s2.call(_r);
+      } else {
+        this.player.shake(0.08);
+        this.spawnChips(node.x, hitY, node.z, { count: 6, color: 9071170, size: 0.06, spread: 1.5, up: 2 });
+        this.spawnChips(node.x, hitY + 0.2, node.z, { count: 3, color: 6263120, size: 0.05, spread: 1.2, up: 1.4 });
+        (_u = (_t = this.audio).chop) == null ? void 0 : _u.call(_t);
       }
       if (def.depleted) {
         const parts = [];
@@ -35051,13 +35187,78 @@ void main() {
           parts.push(`${ITEMS[id].name} +${n}`);
         }
         this.ui.toast(parts.length ? `${node.label} \u0434\u043E\u0431\u044B\u0442: ${parts.join(", ")}` : `${node.label} \u043F\u0443\u0441\u0442`);
+        if (node.type === "tree" || node.type === "palm") {
+          (_w = (_v2 = this.audio).treeFall) == null ? void 0 : _w.call(_v2);
+          this.spawnChips(node.x, hitY + 0.8, node.z, { count: 14, color: 6263120, size: 0.07, spread: 2.4, up: 2.6 });
+        } else if (node.type === "rock") {
+          (_y2 = (_x2 = this.audio).stoneBreak) == null ? void 0 : _y2.call(_x2);
+          this.spawnChips(node.x, hitY, node.z, { count: 12, color: node.ore ? 10475750 : 10130828, size: 0.07, spread: 2.4, up: 2.4 });
+        } else {
+          (_A = (_z2 = this.audio).rustle) == null ? void 0 : _A.call(_z2);
+          this.spawnChips(node.x, hitY, node.z, { count: 10, color: 7052373, size: 0.07, spread: 2.2, up: 2.2 });
+        }
         this.audio.pickup();
         if (this.nearNode === node) this.nearNode = null;
-      } else if (node.type === "rock") {
-        (_k = (_j = this.audio).mine) == null ? void 0 : _k.call(_j);
-      } else {
-        (_m4 = (_l = this.audio).chop) == null ? void 0 : _m4.call(_l);
       }
+    }
+    /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
+    /**
+     * Короткий выброс частиц: щепки от дерева, крошка от камня, ягоды с куста.
+     * Живут меньше секунды и падают вниз — дешёвый, но убедительный отклик.
+     */
+    spawnChips(x, y, z, { count = 8, color = 9071170, size = 0.07, spread = 1.6, up = 2.2 } = {}) {
+      const geo = new BoxGeometry(size, size, size);
+      for (let i = 0; i < count; i++) {
+        const mat2 = new MeshStandardMaterial({ color, roughness: 0.9, flatShading: true });
+        const mesh2 = new Mesh(geo, mat2);
+        mesh2.position.set(x + (Math.random() - 0.5) * 0.35, y + Math.random() * 0.5, z + (Math.random() - 0.5) * 0.35);
+        mesh2.rotation.set(Math.random() * 3, Math.random() * 3, Math.random() * 3);
+        this.scene.add(mesh2);
+        this.chips.push({
+          mesh: mesh2,
+          vx: (Math.random() - 0.5) * spread,
+          vy: up * (0.4 + Math.random() * 0.8),
+          vz: (Math.random() - 0.5) * spread,
+          spin: (Math.random() - 0.5) * 12,
+          life: 0.7 + Math.random() * 0.5
+        });
+      }
+    }
+    updateChips(dt) {
+      for (let i = this.chips.length - 1; i >= 0; i--) {
+        const c = this.chips[i];
+        c.life -= dt;
+        if (c.life <= 0) {
+          this.scene.remove(c.mesh);
+          c.mesh.material.dispose();
+          this.chips.splice(i, 1);
+          continue;
+        }
+        c.vy -= 9.5 * dt;
+        c.mesh.position.x += c.vx * dt;
+        c.mesh.position.y += c.vy * dt;
+        c.mesh.position.z += c.vz * dt;
+        c.mesh.rotation.x += c.spin * dt;
+        c.mesh.rotation.z += c.spin * 0.7 * dt;
+        c.mesh.scale.setScalar(Math.min(1, c.life / 0.35));
+      }
+    }
+    /** Собрать ягоды с ближайшего куста (E или удар по кусту) */
+    gatherBerries(node) {
+      var _a, _b, _c, _d, _e2, _f;
+      const res = this.resources.pickBerries(node);
+      this.player.swing("gather");
+      (_b = (_a = this.audio).berryPick) == null ? void 0 : _b.call(_a);
+      (_d = (_c = this.audio).rustle) == null ? void 0 : _d.call(_c);
+      this.spawnChips(node.x, node.y + 0.85, node.z, { count: 7, color: 12137290, size: 0.08, spread: 1.2, up: 1.6 });
+      if (res.fiber) this.spawnChips(node.x, node.y + 0.5, node.z, { count: 3, color: 9416282, size: 0.05, spread: 1, up: 1.2 });
+      if (res.berries) this.addItem("berries", res.berries);
+      if (res.fiber) this.addItem("fiber", res.fiber);
+      const parts = [];
+      if (res.berries) parts.push(`${ITEMS.berries.name} +${res.berries}`);
+      if (res.fiber) parts.push(`${ITEMS.fiber.name} +${res.fiber}`);
+      this.ui.toast(parts.length ? `\u0421\u043E\u0431\u0440\u0430\u043D\u043E: ${parts.join(", ")}` : "\u042F\u0433\u043E\u0434 \u0431\u043E\u043B\u044C\u0448\u0435 \u043D\u0435\u0442");
+      (_f = (_e2 = this.audio).pickup) == null ? void 0 : _f.call(_e2);
     }
     /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
     shootArrow() {
@@ -35279,6 +35480,7 @@ void main() {
         }
       });
       this.updateProjectiles(dt);
+      this.updateChips(dt);
       this.attackCooldown = Math.max(0, this.attackCooldown - dt);
       if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
       const fireWarm = this.resources.fireWarmth(this.player.position);
@@ -35298,12 +35500,17 @@ void main() {
         marker = this.nearest.mesh.position;
         this.ui.setPrompt(`<b>E</b> \u2014 \u043F\u043E\u0434\u043E\u0431\u0440\u0430\u0442\u044C ${this.nearest.name.toLowerCase()}`);
       } else if (nodeTarget && nodeTarget.kind === "node") {
-        const def = this.nodeDef(nodeTarget.node);
-        marker = new Vector3(nodeTarget.node.x, nodeTarget.node.y + 0.1, nodeTarget.node.z);
+        const node = nodeTarget.node;
+        const def = this.nodeDef(node);
+        marker = new Vector3(node.x, node.y + 0.1, node.z);
         const toolOk = !def.need || this.equippedTool();
-        this.ui.setPrompt(
-          `<b>\u041B\u041A\u041C</b> \u2014 ${def.label.toLowerCase()}${def.need ? ` (\u043D\u0443\u0436\u0435\u043D ${def.need})` : ""}` + (toolOk ? "" : ' \xB7 <span class="prompt-warn">\u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E</span>')
-        );
+        if (node.type === "bush" && this.resources.canPickBerries(node)) {
+          this.ui.setPrompt("<b>E</b> \u0438\u043B\u0438 <b>\u041B\u041A\u041C</b> \u2014 \u0441\u043E\u0431\u0440\u0430\u0442\u044C \u044F\u0433\u043E\u0434\u044B");
+        } else {
+          this.ui.setPrompt(
+            `<b>\u041B\u041A\u041C</b> \u2014 ${def.label.toLowerCase()}${def.need ? ` (\u043D\u0443\u0436\u0435\u043D ${def.need})` : ""}` + (toolOk ? "" : ' \xB7 <span class="prompt-warn">\u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E</span>')
+          );
+        }
       } else if (nodeTarget && nodeTarget.kind === "campfire") {
         marker = new Vector3(nodeTarget.fire.x, nodeTarget.fire.y + 0.1, nodeTarget.fire.z);
         const fuelPct = Math.round(nodeTarget.fire.fuel / nodeTarget.fire.maxFuel * 100);

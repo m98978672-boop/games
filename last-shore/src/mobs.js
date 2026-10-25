@@ -71,9 +71,12 @@ const TYPES = {
 };
 
 const SOUND_BY_STATE = {
+  // спокойные звуки: кабан похрюкивает, змея шипит, краб щёлкает, чайка кричит
+  idle: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull' },
   alert: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull' },
   attack: { boar: 'grunt', snake: 'hiss' },
   hurt: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull' },
+  step: { crab: 'crab' },
 };
 
 export class Mobs {
@@ -166,6 +169,7 @@ export class Mobs {
       deadTimer: 0,
       flyY: def.flying ? 4 + this.rng() * 5 : 0,
       respawnAt: 0,
+      soundTimer: 3 + this.rng() * 8,
       alerted: false,
       targetX: spot.x,
       targetZ: spot.z,
@@ -543,8 +547,16 @@ export class Mobs {
       if (!mob.group.visible) continue;
       mob.stepTimer -= dt;
       if (mob.speedNow > 0.4 && mob.stepTimer <= 0) {
-        mob.stepTimer = mob.speedNow > 3 ? 0.28 : 0.55;
-        if (!def.flying) this._sound(ctx, 'step', mob, 0.5);
+        mob.stepTimer = mob.speedNow > 3 ? 0.3 : 0.6;
+        if (!def.flying) this._sound(ctx, 'step', mob, mob.type === 'crab' ? 0.35 : 0.5);
+      }
+
+      // спокойные звуки зверя: слышно, что лес живой
+      mob.soundTimer -= dt;
+      if (mob.soundTimer <= 0) {
+        mob.soundTimer = 7 + this.rng() * 11;
+        const calm = mob.state === 'idle' || mob.state === 'graze' || mob.state === 'patrol' || mob.state === 'rest';
+        if (calm && dist < 24 && mob.group.visible) this._sound(ctx, 'idle', mob, 0.45);
       }
 
       if (mob.group.visible) this._animate(mob, dt);
@@ -805,18 +817,29 @@ export class Mobs {
 
   _sound(ctx, kind, mob, gain = 1) {
     if (!ctx.audio || !ctx.listener) return;
-    const table = kind === 'step' ? null : SOUND_BY_STATE[kind];
-    const name = kind === 'step'
-      ? (mob.def.flying ? null : 'mobStep')
-      : (table ? table[mob.type] : null);
+    let name = null;
+    let volume = 0.8;
+    if (kind === 'step') {
+      // у краба вместо шага — щелчки хитина
+      name = mob.def.flying ? null : mob.type === 'crab' ? 'crab' : 'mobStep';
+      volume = 0.35;
+    } else if (kind === 'idle') {
+      const table = SOUND_BY_STATE.idle;
+      name = table ? table[mob.type] : null;
+      volume = 0.35;
+    } else {
+      const table = SOUND_BY_STATE[kind];
+      name = table ? table[mob.type] : null;
+    }
     if (!name) return;
     ctx.audio.playAt?.(name, {
       x: mob.x,
       z: mob.z,
       listener: ctx.listener,
-      gain: (kind === 'step' ? 0.35 : 0.8) * gain,
+      gain: volume * gain,
     });
   }
+
 
   toggleHitboxes(force) {
     this.showHitboxes = force !== undefined ? force : !this.showHitboxes;
@@ -836,49 +859,144 @@ export class Mobs {
   //  Анимация (только для видимых)
   // ------------------------------------------------------------
 
+  /**
+   * Анимация зверя. У каждого вида свой характер движения:
+   * кабан топает и мотает головой, краб семенит боком и щёлкает клешнями,
+   * чайка машет крыльями и планирует, змея идёт волной и высовывает язык.
+   */
   _animate(mob, dt) {
     const p = mob.parts;
     const def = mob.def;
     const walk = Math.min(1, mob.speedNow / 2);
+    const run = Math.max(0, Math.min(1, (mob.speedNow - 2) / 4));
     const t = mob.phase;
+    const state = mob.state;
+    const sleeping = state === 'sleep';
+    const alert = state === 'alert' || state === 'chase' || state === 'attack';
+    const scared = state === 'flee' || state === 'retreat';
+    const graze = state === 'graze';
 
+    mob.animTime = (mob.animTime || 0) + dt;
+
+    // --- общее: тело покачивается на шаге и дышит в покое ---
+    if (p.body) {
+      const base = mob.bodyBaseY ?? (mob.bodyBaseY = p.body.position.y);
+      const bounce = def.type === 'crab' ? 0 : Math.abs(Math.sin(t * 1.6)) * 0.05 * (walk + run * 0.7);
+      const breathe = Math.sin(mob.animTime * (sleeping ? 1.1 : 2.1)) * (sleeping ? 0.022 : 0.012);
+      const fluff = alert ? 0.03 : 0;
+      p.body.position.y = base + bounce + breathe + fluff - (sleeping ? 0.09 : 0);
+      // при беге тело наклоняется вперёд
+      p.body.rotation.z = def.type === 'boar' ? -run * 0.16 : 0;
+    }
+
+    // --- лапы/ноги ---
     if (p.legs) {
-      p.legs.forEach((leg, i) => {
-        leg.rotation.x = Math.sin(t + (i % 2 ? Math.PI : 0) + Math.floor(i / 2) * 0.6) * 0.55 * walk;
-      });
+      if (def.type === 'crab') {
+        // краб бежит боком: ноги семенят попарно
+        p.legs.forEach((leg, i) => {
+          const ph = t * 3.2 + i * 0.8;
+          leg.rotation.z = Math.sin(ph) * 0.3 * (0.35 + walk);
+          leg.rotation.x = (i < 4 ? 1 : -1) * (0.12 + Math.cos(ph) * 0.12 * walk);
+        });
+      } else {
+        const amp = 0.5 + run * 0.5;
+        p.legs.forEach((leg, i) => {
+          const ph = t + (i % 2 ? Math.PI : 0) + Math.floor(i / 2) * 0.6;
+          leg.rotation.x = Math.sin(ph) * amp * (0.25 + walk);
+        });
+      }
     }
-    if (p.tail) {
-      p.tail.rotation.z = 0.5 + Math.sin(t * 1.4) * 0.22;
-      p.tail.rotation.y = Math.sin(t * 0.9) * 0.2;
+
+    // --- хвост ---
+    if (p.tail && def.type !== 'gull') {
+      const wag = 0.35 + walk * 0.3 + (scared ? 0.4 : 0);
+      p.tail.rotation.z = 0.5 + Math.sin(t * (1.2 + walk * 2)) * 0.22;
+      p.tail.rotation.y = Math.sin(t * (0.9 + walk * 1.6)) * wag;
     }
+    if (p.tail && def.type === 'gull') {
+      // хвост-веер на поворотах
+      p.tail.rotation.y = Math.sin(t * 1.4) * 0.25;
+    }
+
+    // --- голова: пасётся, тревожится, бодает ---
     if (p.head) {
       const base = p.head.userData.baseY ?? (p.head.userData.baseY = p.head.position.y);
-      // пасётся — голова вниз, атакует — вперёд
-      const grazeDrop = mob.state === 'graze' ? -0.28 : 0;
-      const lunge = mob.state === 'attack' ? 0.16 : 0;
-      p.head.position.y = base + grazeDrop + lunge * Math.sin(mob.stateTime * 12);
-      p.head.rotation.x = mob.state === 'graze' ? 0.5 : (mob.state === 'alert' ? -0.15 : 0);
+      const grazeDrop = graze ? -0.26 : 0;
+      const lunge = state === 'attack' ? 0.14 : 0;
+      const bob = Math.sin(t * 2.2) * 0.02 * walk;
+      p.head.position.y = base + grazeDrop + bob + lunge * Math.sin(mob.stateTime * 12);
+      let pitch = 0;
+      if (graze) pitch = 0.55;
+      else if (state === 'alert') pitch = -0.18 + Math.sin(mob.animTime * 4) * 0.05;
+      else if (state === 'chase' || state === 'attack') pitch = 0.18;
+      else if (sleeping) pitch = 0.5;
+      p.head.rotation.x = pitch;
+      // озирается, когда спокоен; смотрит вперёд на охоте
+      const lookaround = (state === 'idle' || graze) ? Math.sin(mob.animTime * 0.7) * 0.35 : Math.sin(t * 0.8) * 0.06;
+      p.head.rotation.y = lookaround;
     }
+
+    // --- клешни краба ---
     if (p.claws) {
       p.claws.forEach((claw, i) => {
-        claw.rotation.y = Math.sin(t * 3 + i) * 0.35;
+        const side = i === 0 ? 1 : -1;
+        const raise = alert ? 0.5 : 0;
+        claw.rotation.y = Math.sin(t * 2.6 + i * 1.7) * 0.25 * (0.4 + walk);
+        claw.rotation.z = side * (raise + Math.sin(mob.animTime * 6 + i) * (alert ? 0.12 : 0.04));
       });
     }
+
+    // --- глаза на стебельках ---
+    if (p.eyes) {
+      p.eyes.rotation.z = Math.sin(t * 2.2) * 0.06;
+      p.eyes.position.y = Math.sin(mob.animTime * 1.8) * 0.012;
+    }
+
+    // --- крылья чайки ---
     if (p.wings) {
-      const flap = def.flying ? Math.sin(t * 3.4) * 0.7 : Math.sin(t * 1.2) * 0.12;
+      const flying = def.flying && mob.y + 0.2 > (mob.flyY ?? 0);
+      // частота взмахов растёт с движением, в покое крылья сложены
+      const rate = 3.0 + walk * 4.5;
+      const amp = def.flying ? (0.25 + walk * 0.6) : 0.1;
       p.wings.forEach((wing, i) => {
-        wing.rotation.x = flap * (i === 0 ? 1 : -1);
+        const side = i === 0 ? 1 : -1;
+        const flap = Math.sin(t * rate) * amp;
+        wing.rotation.x = flap * side;
+        wing.rotation.z = flap * 0.35 * side;
+        if (sleeping) wing.rotation.x = -0.5 * side;
       });
+      void flying;
+      if (p.body) p.body.rotation.x = Math.sin(t * rate) * 0.05 * walk;
     }
+
+    // --- змея: тело идёт волной ---
     if (p.segments) {
+      const amp = 0.12 + walk * 0.2;
       p.segments.forEach((seg, i) => {
-        seg.position.z = Math.sin(t * 2.2 - i * 0.9) * 0.16;
-        seg.rotation.y = Math.sin(t * 2.2 - i * 0.9) * 0.3;
+        const ph = t * (1.8 + walk * 2.2) - i * 0.85;
+        seg.position.z = Math.sin(ph) * amp;
+        seg.position.x = -i * 0.13 + Math.cos(ph) * amp * 0.35;
+        seg.rotation.y = Math.cos(ph) * (0.22 + walk * 0.2);
       });
+      if (p.head) {
+        p.head.rotation.x = alert ? -0.35 + Math.sin(mob.animTime * 5) * 0.08 : 0.02;
+        p.head.position.x = 0.2 + Math.cos(t * 2.2) * 0.03;
+        p.head.position.y = 0.12 + (alert ? 0.1 : 0) + Math.sin(mob.animTime * 3) * 0.01;
+      }
     }
+
+    // --- язык змеи ---
     if (p.tongue) {
-      const flick = Math.sin(mob.phase * 4) > 0.85 ? 1 : 0.2;
+      const speed = alert || state === 'chase' ? 6 : 2.4;
+      const flick = Math.sin(mob.animTime * speed) > 0.55 ? 1 : 0.25;
       p.tongue.scale.x = flick;
+      p.tongue.visible = !sleeping;
+    }
+
+    // --- сон: зверь ложится и не дёргается ---
+    if (mob.group) {
+      const targetLean = sleeping ? 0.12 : 0;
+      mob.group.rotation.x = (mob.group.rotation.x || 0) * 0.9 + targetLean * 0.1;
     }
   }
 }

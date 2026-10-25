@@ -8,6 +8,18 @@ import { clamp } from './noise.js';
 
 const P = CONFIG.player;
 
+/**
+ * Как выглядит каждый вид действия: скорость проигрывания, дуга руки,
+ * наклон корпуса и «просадка» — чтобы рубка, добыча камня и сбор ягод
+ * ощущались по-разному, а не одним ударом на всё.
+ */
+const ACTIONS = {
+  attack: { speed: 3.2, windup: 0.32, back: -1.0, hit: 1.0, lean: 0.06, dip: 0.0, reach: 0 },
+  chop:   { speed: 2.5, windup: 0.46, back: -1.75, hit: 1.25, lean: 0.22, dip: 0.03, reach: 0 },
+  mine:   { speed: 3.5, windup: 0.36, back: -1.35, hit: 0.85, lean: 0.3, dip: 0.07, reach: 0 },
+  gather: { speed: 2.2, windup: 0.5, back: -0.35, hit: 0.05, lean: 0.55, dip: 0.12, reach: 1.15 },
+};
+
 function limb(w, h, d, color) {
   const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.85, flatShading: true });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -222,6 +234,8 @@ export class Player {
 
     this.swingPhase = -1;      // -1 — покой, 0..1 — удар
     this.swingSpeed = 3.2;
+    this.actionKind = 'attack'; // attack | chop | mine | gather
+    this.hitShake = 0;         // короткая отдача после удара по дереву/камню
     this.walkPhase = 0;
     this.lean = 0;
     this.landDip = 0;
@@ -354,9 +368,20 @@ export class Player {
     this.viewModelHand.add(firstPersonMesh);
   }
 
-  /** Запустить замах */
-  swing() {
+  /**
+   * Запустить замах. Вид удара зависит от цели:
+   *   attack — короткий тычок, chop — широкий замах топором,
+   *   mine — резкий удар киркой, gather — наклон и сбор руками.
+   */
+  swing(kind = 'attack') {
+    this.actionKind = ACTIONS[kind] ? kind : 'attack';
+    this.swingSpeed = ACTIONS[this.actionKind].speed;
     if (this.swingPhase < 0) this.swingPhase = 0;
+  }
+
+  /** Небольшая отдача: камера дёргается после попадания */
+  shake(amount = 0.12) {
+    this.hitShake = Math.max(this.hitShake, amount);
   }
 
   setPosition(x, z, world) {
@@ -489,26 +514,56 @@ export class Player {
     this.armL.rotation.z = -0.06 - speedRatio * 0.05;
 
     let armRSwing = swOpp * (0.55 + speedRatio * 0.35) + idle;
-    this.elbowR.rotation.x = -0.3 - speedRatio * 0.4;
+    let elbowRSwing = -0.3 - speedRatio * 0.4;
+    let armLSwing = sw * (0.55 + speedRatio * 0.35) - idle;
+    let leanExtra = 0;
+    let dipExtra = 0;
+    let actionT = -1;
 
     if (this.swingPhase >= 0) {
       this.swingPhase += dt * this.swingSpeed;
       if (this.swingPhase >= 1) this.swingPhase = -1;
       else {
+        const act = ACTIONS[this.actionKind] || ACTIONS.attack;
         const p = this.swingPhase;
-        // замах назад -> резкий удар -> возврат
-        const arc = p < 0.32
-          ? -1.0 * (p / 0.32)
-          : Math.sin(((p - 0.32) / 0.68) * Math.PI) * 2.0 - 1.0;
+        actionT = p;
+
+        // замах назад -> быстрый удар -> плавный возврат
+        let arc;
+        if (p < act.windup) {
+          const k = p / act.windup;
+          arc = act.back * (k * k * (3 - 2 * k));
+        } else {
+          const k = (p - act.windup) / (1 - act.windup);
+          // резкий выпад и мягкое возвращение к нулю
+          arc = act.hit * Math.sin(k * Math.PI) * (1 - k * 0.35) + act.back * (1 - k) * (1 - k);
+        }
+
         armRSwing = arc;
-        this.elbowR.rotation.x = -0.25 - Math.max(0, arc) * 0.55;
+        elbowRSwing = -0.25 - Math.max(0, arc) * 0.55;
+
+        // корпус наклоняется на ударе, колени чуть подгибаются
+        const punch = p < act.windup ? p / act.windup * 0.35 : Math.max(0, Math.sin(((p - act.windup) / (1 - act.windup)) * Math.PI));
+        leanExtra = act.lean * punch;
+        dipExtra = act.dip * punch;
+
+        // сбор ягод: левая рука тянется вниз-вперёд
+        if (act.reach) {
+          const reach = Math.sin(Math.min(1, p / 0.75) * Math.PI * 0.9);
+          armLSwing = -act.reach * reach;
+          leanExtra = act.lean * reach;
+          dipExtra = act.dip * reach;
+          armRSwing = -0.55 * reach;
+        }
       }
     }
-    this.armL.rotation.x += 0;
-    this.armR.rotation.x = armRSwing;
 
-    const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0);
-    this.lean += (targetLean - this.lean) * clamp(dt * 6, 0, 1);
+    this.armL.rotation.x = armLSwing;
+    this.armR.rotation.x = armRSwing;
+    this.elbowR.rotation.x = elbowRSwing;
+
+    const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0) + leanExtra;
+    this.lean += (targetLean - this.lean) * clamp(dt * 10, 0, 1);
     this.torsoGroup.rotation.x = this.lean;
     this.torsoGroup.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
 
@@ -518,7 +573,8 @@ export class Player {
     const bobY = Math.abs(Math.sin(this.walkPhase)) * 0.05 * speedRatio;
     this.model.position.copy(this.position);
     if (inWater) this.model.position.y -= this.wading * 0.55;
-    this.model.position.y += bobY - this.landDip * 0.14;
+    this.model.position.y += bobY - this.landDip * 0.14 - dipExtra;
+    this.actionT = actionT;
     this.model.rotation.y = this.facing;
 
     // руки от первого лица: покачивание, замах, лёгкая инерция
@@ -528,14 +584,30 @@ export class Player {
       const sway = Math.sin(this.bobPhase * 0.9) * 0.005;
       let swing = 0;
       let forward = 0;
+      let twist = 0;
+      let drop = 0;
       if (this.swingPhase >= 0) {
-        const arc = Math.sin(Math.min(1, this.swingPhase) * Math.PI);
+        const p = this.swingPhase;
+        const arc = Math.sin(Math.min(1, p) * Math.PI);
         swing = arc;
-        forward = -arc * 0.16;
+        if (this.actionKind === 'chop') {
+          forward = -arc * 0.26;
+          twist = arc * 0.55;
+          drop = arc * 0.1;
+        } else if (this.actionKind === 'mine') {
+          forward = -arc * 0.2;
+          twist = arc * 0.35;
+          drop = arc * 0.13;
+        } else if (this.actionKind === 'gather') {
+          forward = -arc * 0.1;
+          drop = arc * 0.34;
+        } else {
+          forward = -arc * 0.16;
+        }
       }
-      this.viewModel.position.set(0.26 + bx + sway, -0.24 + by, -0.6 + forward);
-      this.viewModel.rotation.set(0.08 + swing * 0.25, -0.22, swing * 0.3);
-      this.viewModelHand.rotation.x = swing * 0.7;
+      this.viewModel.position.set(0.26 + bx + sway, -0.24 + by - drop, -0.6 + forward);
+      this.viewModel.rotation.set(0.08 + swing * 0.25 + twist * 0.2, -0.22, swing * 0.3);
+      this.viewModelHand.rotation.x = swing * 0.7 + twist;
     }
 
     this.landShake = Math.max(0, this.landShake - dt);
@@ -545,6 +617,9 @@ export class Player {
   applyCamera(camera, world, dt) {
     const sin = Math.sin(this.yaw);
     const cos = Math.cos(this.yaw);
+    // отдача от удара гаснет за пару кадров
+    const hit = this.hitShake;
+    if (hit > 0) this.hitShake = Math.max(0, hit - dt * 0.9);
 
     if (this.viewMode === 'first') {
       const eyeY = this.position.y + 1.62 + (this.swimming ? -0.25 : 0);
@@ -553,9 +628,14 @@ export class Player {
       camera.rotation.set(0, 0, 0);
       camera.rotateY(this.yaw);
       camera.rotateX(-this.pitch);
-      // тряска от удара/шага
+      // тряска от удара/шага/попадания по дереву
       const shake = this.landShake > 0 ? this.landShake * 2.4 : 0;
       if (shake > 0) camera.rotateZ(Math.sin(performance.now() * 0.05) * shake * 0.06);
+      if (hit > 0) {
+        const a = hit * 0.35;
+        camera.rotateX(Math.sin(performance.now() * 0.06) * a * 0.05);
+        camera.rotateZ(Math.sin(performance.now() * 0.045) * a * 0.04);
+      }
       return;
     }
 
@@ -593,6 +673,10 @@ export class Player {
     if (desired.y < CONFIG.world.seaLevel + 0.5) desired.y = CONFIG.world.seaLevel + 0.5;
 
     camera.position.lerp(desired, clamp(dt * 14, 0, 1));
+    if (hit > 0) {
+      // короткий толчок камеры назад при ударе
+      camera.position.y += Math.sin(performance.now() * 0.06) * hit * 0.03;
+    }
     camera.lookAt(target);
   }
 }
