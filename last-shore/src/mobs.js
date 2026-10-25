@@ -110,7 +110,7 @@ export class Mobs {
   // ------------------------------------------------------------
 
   /** Найти пологое место нужного биома, не рядом с игроком и другими зверями */
-  _spot(kind, near = null, minDist = 0) {
+  _spot(kind, near = null, minDist = 0, def = null) {
     const world = this.world;
     const rng = this.rng;
     for (let attempt = 0; attempt < 400; attempt++) {
@@ -125,6 +125,9 @@ export class Mobs {
       if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) continue;
       // не появляться вплотную к другому зверю
       if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) continue;
+      // и не рождаться внутри чужого хитбокса: минимум 5 см зазора
+      const bodyR = (def && def.hitbox ? Math.max(def.hitbox.w, def.hitbox.d) : 0.8) * 0.5;
+      if (this._blocked(x, z, bodyR + 0.05)) continue;
       return { x, z, h };
     }
     return { x: 20, z: 20, h: world.heightAt(20, 20) };
@@ -132,7 +135,7 @@ export class Mobs {
 
   spawn(type) {
     const def = TYPES[type];
-    const spot = this._spot(def.biomes);
+    const spot = this._spot(def.biomes, null, 0, def);
     const built = def.model();
 
     // хитбокс строим по фактическим габаритам модели: коробка всегда
@@ -141,12 +144,16 @@ export class Mobs {
     const size = new THREE.Vector3();
     box.getSize(size);
     const hb = { w: Math.max(0.35, size.x), h: Math.max(0.3, size.y), d: Math.max(0.35, size.z) };
-    const offsetY = (box.min.y + box.max.y) / 2;
+    const center = {
+      x: (box.min.x + box.max.x) / 2,
+      y: (box.min.y + box.max.y) / 2,
+      z: (box.min.z + box.max.z) / 2,
+    };
     const hitbox = new THREE.LineSegments(
       new THREE.EdgesGeometry(new THREE.BoxGeometry(hb.w, hb.h, hb.d)),
       this._hitMat
     );
-    hitbox.position.y = offsetY;
+    hitbox.position.set(center.x, center.y, center.z);
     hitbox.visible = false;
     hitbox.renderOrder = 9999;      // последним — значит поверх всех
     hitbox.frustumCulled = false;
@@ -159,6 +166,7 @@ export class Mobs {
       group: built.group,
       parts: built.parts,
       hitbox,
+      hitboxCenter: center,
       x: spot.x,
       z: spot.z,
       y: spot.h,
@@ -546,7 +554,7 @@ export class Mobs {
           if (dist < reach && mob.biteTimer <= 0) {
             mob.biteTimer = def.biteCooldown;
             mob.didHit = true;
-            ctx.onHit(def.damage, mob.type === 'snake' ? 'укус змеи' : 'клыки кабана');
+            ctx.onHit(def.damage, mob.type === 'snake' ? 'укус змеи' : 'клыки кабана', mob);
             this._sound(ctx, 'attack', mob, 1);
           }
         }
@@ -820,7 +828,9 @@ export class Mobs {
     const bob = def.flying ? 0 : Math.abs(Math.sin(mob.phase)) * 0.05 * Math.min(1, mob.speedNow);
     const fly = def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0;
     mob.group.position.set(mob.x, groundY + bob + fly, mob.z);
-    mob.group.rotation.y = mob.facing;
+    // модели зверей собраны вдоль +X, поэтому курс = facing − 90°:
+    // без этой поправки кабан, краб и чайка едут боком
+    mob.group.rotation.y = mob.facing - Math.PI / 2;
     if (mob.hitbox) mob.hitbox.visible = this.showHitboxes && mob.alive;
   }
 

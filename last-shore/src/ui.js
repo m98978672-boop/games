@@ -48,6 +48,8 @@ export class UI {
       nogl: $('nogl'),
       fatal: $('fatal'),
       fuel: $('hud-fuel'),
+      creative: $('hud-creative'),
+      wounds: $('hud-wounds'),
     };
     this.bars = {
       health: { fill: $('bar-health'), value: $('val-health'), node: document.querySelector('.bar-health') },
@@ -176,6 +178,32 @@ export class UI {
     if (clock !== undefined) this.el.clock.textContent = clock;
     if (weather !== undefined) this.el.weather.textContent = weather;
     if (fps !== undefined) this.el.fps.textContent = fps + ' fps';
+  }
+
+  /** Метка режима креатива */
+  setCreative(on) {
+    if (!this.el.creative) return;
+    this.el.creative.classList.toggle('hidden', !on);
+  }
+
+  /** Ранения по частям тела: список с прогрессом заживления */
+  setWounds(list) {
+    if (!this.el.wounds) return;
+    const sig = list.map((w) => `${w.part}:${Math.round(w.severity * 10)}`).join('|');
+    if (sig === this._lastWounds) return;
+    this._lastWounds = sig;
+    if (!list.length) {
+      this.el.wounds.classList.add('hidden');
+      this.el.wounds.innerHTML = '';
+      return;
+    }
+    this.el.wounds.classList.remove('hidden');
+    this.el.wounds.innerHTML = list.map((w) => `
+      <div class="wound ${w.severity > 0.6 ? 'heavy' : ''}">
+        <span>${w.icon || '🩸'}</span>
+        <b>${w.label}</b>
+        <span class="wound-track"><i style="width:${Math.round(w.severity * 100)}%"></i></span>
+      </div>`).join('');
   }
 
   setPrompt(html) {

@@ -177,6 +177,11 @@ class Game {
     this.target = null;
     this.inLavaTimer = 0;
     this.lavaHurtAt = 0;
+    this.creative = false;
+    this.creativeArmed = false;
+    this.digCooldown = 0;
+    this.wounds = [];            // ранения по частям тела
+    this.woundTimer = 0;
     this.thoughtTimer = 45 + Math.random() * 40;
     this.fireflies = null;
 
@@ -225,11 +230,21 @@ class Game {
   /** Деревья, камни, кусты, костры, родники, станки, входы в шахту */
   registerStaticHitboxes() {
     for (const node of this.resources.nodes) {
-      const h = node.type === 'tree' || node.type === 'palm' ? 5.2 : node.type === 'rock' ? 1.5 : 1.1;
-      const w = node.type === 'rock' ? 1.6 : node.type === 'bush' ? 1.5 : 0.9;
+      // коробка ровно по габаритам модели (их считает world при сборке)
+      const bbox = node.item && node.item.bbox
+        ? node.item.bbox
+        : { w: 1, h: 2, d: 1, minY: 0 };
       const id = this.hitboxes.registerStatic(
         node.type === 'tree' || node.type === 'palm' ? 'tree' : node.type,
-        { x: node.x, y: node.y, z: node.z, w, h, d: w },
+        {
+          x: node.x,
+          y: node.y + (bbox.minY || -0.15),
+          z: node.z,
+          w: bbox.w,
+          h: bbox.h,
+          d: bbox.d,
+          yaw: (node.item && node.item.rot) || 0,
+        },
         { physical: false, ref: node, enabled: () => node.alive }
       );
       this.hitboxIds.nodes.set(node, id);
@@ -253,16 +268,23 @@ class Game {
   registerMobHitboxes() {
     for (const mob of this.mobs.list) {
       const hb = mob.hitboxSize || mob.def.hitbox;
+      const c = mob.hitboxCenter || { x: 0, y: hb.h / 2, z: 0 };
       const id = this.hitboxes.register('mob', () => {
         if (!mob.alive) return null;
+        // модель повёрнута на facing − 90°, значит и смещение коробки тоже
+        const yaw = (mob.facing || 0) - Math.PI / 2;
+        const cos = Math.cos(yaw);
+        const sin = Math.sin(yaw);
+        const ox = c.x * cos + c.z * sin;
+        const oz = -c.x * sin + c.z * cos;
         return {
-          x: mob.x,
-          y: (mob.y || 0) + (mob.def.flying ? mob.flyY || 0 : 0),
-          z: mob.z,
+          x: mob.x + ox,
+          y: (mob.y || 0) + (mob.def.flying ? mob.flyY || 0 : 0) + c.y - hb.h / 2,
+          z: mob.z + oz,
           w: hb.w,
           h: hb.h,
           d: hb.d,
-          yaw: mob.facing || 0,
+          yaw,
         };
       }, { physical: true, ref: mob });
       this.hitboxIds.mobs.set(mob, id);
@@ -548,6 +570,11 @@ class Game {
       case 'Space': this.input.jump = true; e.preventDefault(); break;
       case 'KeyE': this.interact(); break;
       case 'KeyF':
+        if (this.creativeArmed) {
+          this.creativeArmed = false;
+          this.toggleCreative();
+          break;
+        }
         if (this.debugArmed) {
           this.debugArmed = false;
           const on = this.mobs.toggleHitboxes();
@@ -561,6 +588,35 @@ class Game {
           this.placeSelected();
         }
         break;
+      case 'KeyX':
+        // выход из шахты в любой точке
+        if (this.underground) this.exitMine();
+        break;
+      case 'KeyG':
+        // копать вглубь: новый слой под ногами
+        if (!this.underground) break;
+        if (!this.creative) {
+          const tool = this.equippedTool();
+          if (!tool || !(tool.mine > 1.5)) {
+            this.ui.toast('Копать вглубь — только киркой', true);
+            break;
+          }
+        }
+        {
+          const spot = this.mine.digDown();
+          if (!spot) {
+            this.ui.toast('Глубже уже не пробиться', true);
+            break;
+          }
+          this.player.setPosition(spot.x, spot.z, this.mineWorld);
+          this.player.position.y = this.mine.floorAt(spot.x, spot.z);
+          this.player.applyCamera(this.camera, this.mineWorld, 1);
+          this.audio.stoneBreak?.();
+          this.spawnChips(spot.x, spot.y + 0.6, spot.z, { count: 16, color: 0x9a958c, size: 0.08, spread: 2.4, up: 2.4 });
+          this.ui.toast(`Новый слой: −${Math.abs(this.mine.level.y) | 0} м. Жил здесь больше.`);
+          this.save();
+        }
+        break;
       case 'KeyR':
         // вниз по лестнице: глубинный слой с магмой
         if (!this.underground) break;
@@ -570,10 +626,15 @@ class Game {
         }
         this.descendMine();
         break;
+      case 'F2':
+        e.preventDefault();
+        this.creativeArmed = true;
+        this.ui.toast('Креатив: нажми F — включить/выключить режим');
+        break;
       case 'F3':
         e.preventDefault();
         this.debugArmed = true;
-        this.ui.toast('Отладка: нажми F — показать хитбоксы зверей');
+        this.ui.toast('Отладка: нажми F — показать хитбоксы всех моделей');
         break;
       case 'KeyV': this.toggleView(); break;
       case 'F1': e.preventDefault(); this.showDiag(); break;
@@ -671,6 +732,188 @@ class Game {
   }
 
   // ------------------------------------------------------------
+  //  Креатив (F2 → F)
+  // ------------------------------------------------------------
+
+  toggleCreative() {
+    this.creative = !this.creative;
+    this.player.fly = this.creative;
+    this.ui.setCreative(this.creative);
+    this.audio.uiClick?.();
+
+    if (this.creative) {
+      // всё под рукой и бесконечно
+      for (const id of Object.keys(ITEMS)) {
+        this.state.inventory[id] = Math.max(this.state.inventory[id] || 0, 999);
+      }
+      this.wounds = [];
+      this.ui.setWounds([]);
+      this.state.health = 100;
+      this.state.thirst = 100;
+      this.state.hunger = 100;
+      this.state.warmth = 100;
+      this.refreshHotbar();
+      this.ui.renderBag(this.state.inventory, this.state.hotbar);
+      this.ui.toast('Креатив: ∞ предметы, полёт (Space — вверх, Shift — вниз), мгновенная добыча');
+    } else {
+      this.state.health = 100;
+      this.ui.toast('Креатив выключен: снова выживание');
+    }
+    this.player.setEquipped(this.equippedId());
+    this.save();
+  }
+
+  // ------------------------------------------------------------
+  //  Копание земли: один слой за удар, песок осыпается, вода заливает
+  // ------------------------------------------------------------
+
+  /** Сила копания: лопата быстрее, руками медленно, в креативе — сразу */
+  digPower() {
+    if (this.creative) return 99;
+    const tool = this.equippedTool();
+    if (tool && tool.dig) return tool.dig;
+    return 0.9;           // руками: медленно, но можно
+  }
+
+  /** Снять слой земли под прицелом */
+  digGroundAt(point) {
+    const w = this.world;
+    const layer = w.layerAt(point.x, point.z);
+    const power = this.digPower();
+
+    // камень руками не взять — только киркой
+    if (layer === 'stone' && !this.creative) {
+      const tool = this.equippedTool();
+      if (!tool || !(tool.mine > 1.5)) {
+        this.ui.toast('Камень руками не взять — нужна кирка', true);
+        this.audio.stoneCrack?.();
+        return;
+      }
+    }
+
+    if (power < 2 && Math.random() < 0.45) {
+      // руками: первый удар только рыхлит
+      this.spawnChips(point.x, point.y + 0.15, point.z, {
+        count: 4, color: layer === 'sand' ? 0xdfcb95 : 0x7d6544, size: 0.05, spread: 1.1, up: 1.2,
+      });
+      this.audio.rustle?.();
+      this.ui.toast('Разрыхлил землю — ещё удар', true);
+      return;
+    }
+
+    const res = w.dig(point.x, point.z, {
+      radius: power > 2 ? 2.0 : 1.45,
+      depth: this.creative ? 0.7 : 0.45,
+    });
+    if (!res) return;
+    if (res.hard) {
+      this.ui.toast('Дальше камень — тут нужна кирка и шахта', true);
+      return;
+    }
+
+    this.player.shake(0.07);
+    this.audio.rustle?.();
+    const color = layer === 'sand' ? 0xdfcb95 : 0x6f5a3c;
+    this.spawnChips(point.x, point.y + 0.2, point.z, { count: 9, color, size: 0.06, spread: 1.6, up: 1.8 });
+    if (layer === 'sand') this.addItem('sand', 1);
+    else if (Math.random() < 0.5) this.addItem('stone', 1);
+
+    if (res.flooded) {
+      this.ui.toast('Яму залило водой — здесь уже глубоко');
+      this.audio.drink?.();
+    } else if (res.sandFill > 0.05) {
+      this.ui.toast('Песок осыпался в яму — края поплыли');
+    } else {
+      this.ui.toast(`Снят слой: ${layer === 'sand' ? 'песок' : 'земля'} · глубина ${res.dug.toFixed(1)} м`);
+    }
+  }
+
+  // ------------------------------------------------------------
+  //  Ранения по частям тела
+  // ------------------------------------------------------------
+
+  woundPartLabel(part) {
+    if (part.startsWith('head') || part === 'neck') return { label: 'Голова', icon: '🧠' };
+    if (part === 'chest' || part === 'belly' || part === 'hip') return { label: 'Торс', icon: '🩹' };
+    if (part.startsWith('arm') || part.startsWith('forearm') || part.startsWith('hand') || part.startsWith('shoulder')) {
+      return { label: part.endsWith('L') ? 'Левая рука' : 'Правая рука', icon: '💪' };
+    }
+    return { label: part.endsWith('L') ? 'Левая нога' : 'Правая нога', icon: '🦵' };
+  }
+
+  /** Куда пришёлся удар: по хитбоксам ищем ближайшую к зверю часть тела */
+  pickWoundPart(source) {
+    const parts = this.hitboxes.playerParts(this.player.position, this.player.facing || 0, 0);
+    if (!parts.length) return 'chest';
+    const sx = source && Number.isFinite(source.x) ? source.x : this.player.position.x + Math.sin(this.player.facing) * 2;
+    const sz = source && Number.isFinite(source.z) ? source.z : this.player.position.z + Math.cos(this.player.facing) * 2;
+    let best = null;
+    let bestD = Infinity;
+    for (const p of parts) {
+      if (p.id === 'footL' || p.id === 'footR') continue;
+      const d = Math.hypot(p.x - sx, p.z - sz) + (p.y < this.player.position.y + 0.9 ? 0.05 : 0);
+      if (d < bestD) { bestD = d; best = p.id; }
+    }
+    // торс чаще остального: зверь бьёт в корпус, а не в мизинец
+    if (best && Math.random() < 0.35) return 'chest';
+    return best || 'chest';
+  }
+
+  addWound(part, severity = 0.55) {
+    const existing = this.wounds.find((w) => w.part === part);
+    if (existing) {
+      existing.severity = Math.min(1, existing.severity + severity * 0.6);
+      return existing;
+    }
+    const info = this.woundPartLabel(part);
+    const wound = { part, severity, label: info.label, icon: info.icon, time: 0 };
+    this.wounds.push(wound);
+    // последствия: рука слабее бьёт, нога медленнее, голова мутная
+    if (part.startsWith('thigh') || part.startsWith('shin')) {
+      this.player.speedMul = 0.72;
+      this.ui.toast('Ранена нога: идёшь медленнее', true);
+    } else if (part.startsWith('arm') || part.startsWith('forearm') || part.startsWith('hand')) {
+      this.armPenalty = 0.65;
+      this.ui.toast('Ранена рука: удары слабее', true);
+    } else if (part === 'head' || part === 'neck') {
+      this.player.landShake = Math.max(this.player.landShake, 0.6);
+      this.ui.toast('Удар в голову: в глазах темнеет', true);
+    } else {
+      this.ui.toast('Рана в корпус: идёт кровь', true);
+    }
+    return wound;
+  }
+
+  healWound() {
+    if (!this.wounds.length) return false;
+    this.wounds.sort((a, b) => b.severity - a.severity);
+    const w = this.wounds.shift();
+    if (w.part.startsWith('thigh') || w.part.startsWith('shin')) this.player.speedMul = 1;
+    if (w.part.startsWith('arm') || w.part.startsWith('forearm') || w.part.startsWith('hand')) this.armPenalty = 1;
+    this.ui.toast(`Перевязано: ${w.label.toLowerCase()}`);
+    return true;
+  }
+
+  /** Раны заживают и понемногу кровят */
+  updateWounds(dt) {
+    if (this.creative) {
+      if (this.wounds.length) { this.wounds = []; this.ui.setWounds([]); }
+      return;
+    }
+    let bleed = 0;
+    for (const w of this.wounds) {
+      w.time += dt;
+      w.severity = Math.max(0, w.severity - dt * 0.0075);
+      bleed += w.severity * 0.22;
+    }
+    this.wounds = this.wounds.filter((w) => w.severity > 0.02);
+    if (!this.wounds.some((w) => w.part.startsWith('thigh') || w.part.startsWith('shin'))) this.player.speedMul = 1;
+    if (!this.wounds.some((w) => w.part.startsWith('arm') || w.part.startsWith('forearm') || w.part.startsWith('hand'))) this.armPenalty = 1;
+    if (bleed > 0) this.state.health = Math.max(0, this.state.health - bleed * dt);
+    this.ui.setWounds(this.wounds.map((w) => ({ part: w.part, label: w.label, severity: w.severity, icon: w.icon })));
+  }
+
+  // ------------------------------------------------------------
   //  Подземелье
   // ------------------------------------------------------------
 
@@ -700,20 +943,20 @@ class Game {
     this.save();
   }
 
-  /** Спуститься на глубинный слой — туда, где магма и драгоценные жилы */
+  /** Спуститься на слой ниже — туда, где магма и драгоценные жилы */
   descendMine() {
     if (this.mine.active === null) return;
-    if (this.mine.active === 1) {
-      this.ui.toast('Глубже уже некуда: под тобой магма', true);
+    if (!this.mine.hasDeeper()) {
+      this.ui.toast('Ниже пока нет хода — копай вглубь (G) киркой', true);
       return;
     }
-    const spot = this.mine.switchLevel();
+    const spot = this.mine.switchLevel(1);
     if (!spot) return;
     this.player.setPosition(spot.x, spot.z, this.mineWorld);
     this.player.position.y = this.mine.floorAt(spot.x, spot.z);
     this.player.applyCamera(this.camera, this.mineWorld, 1);
     this.audio.stoneCrack?.();
-    this.ui.toast('Глубинный слой: жар, лава и жилы обсидиана с кристаллами');
+    this.ui.toast(`Ниже: −${Math.abs(this.mine.level.y) | 0} м, жар и жилы`);
     this.save();
   }
 
@@ -727,12 +970,12 @@ class Game {
       this.exitMine();
       return;
     }
-    const spot = this.mine.switchLevel();
+    const spot = this.mine.switchLevel(-1);
     if (!spot) return;
     this.player.setPosition(spot.x, spot.z, this.mineWorld);
     this.player.position.y = this.mine.floorAt(spot.x, spot.z);
     this.player.applyCamera(this.camera, this.mineWorld, 1);
-    this.ui.toast('Каменный слой: прохладнее, но руды здесь меньше');
+    this.ui.toast(`Выше: −${Math.abs(this.mine.level.y) | 0} м`);
   }
 
   // ------------------------------------------------------------
@@ -918,6 +1161,10 @@ class Game {
       return aim;
     }
 
+    // земля под прицелом: один слой можно снять руками или лопатой
+    const ground = this._aimGround(origin, dir, 3.6);
+    if (ground) apply('ground', ground.t, { point: ground.point });
+
     // всё остальное — по невидимым хитбоксам моделей
     const hit = this.hitboxes.raycast(origin, dir, reach);
     if (hit) {
@@ -945,6 +1192,21 @@ class Game {
     return aim;
   }
 
+  /** Пересечение луча с рельефом (шагами по высоте) */
+  _aimGround(origin, dir, reach = 3.6) {
+    if (this.underground) return null;
+    for (let d = 0.5; d <= reach; d += 0.22) {
+      const x = origin.x + dir.x * d;
+      const z = origin.z + dir.z * d;
+      const y = origin.y + dir.y * d;
+      const h = this.world.heightAt(x, z);
+      if (y <= h) {
+        return { t: d, point: { x, y: h, z } };
+      }
+    }
+    return null;
+  }
+
   /** Что показать в прицеле словами */
   aimPromptHtml() {
     const aim = this.aim;
@@ -961,7 +1223,7 @@ class Game {
         return `<b>ЛКМ</b> — ${names[type] || 'порода'}${type === 'stone' ? '' : ' <span class="prompt-warn">ценная</span>'}`;
       }
       case 'ladder':
-        return '<b>E</b> — подняться · <b>R</b> — спуститься';
+        return '<b>E</b> — на слой выше · <b>R</b> — вниз · <b>G</b> — копать глубже · <b>X</b> — выход';
       case 'entrance':
         return '<b>E</b> — спуститься в шахту';
       case 'mob':
@@ -982,6 +1244,13 @@ class Game {
         return t.station.type === 'grind'
           ? '<b>E</b> — точить кованое'
           : '<b>E</b> — верстак: ковать';
+      case 'ground': {
+        const layer = this.world.layerAt(t.point.x, t.point.z);
+        const tool = this.equippedTool();
+        const fast = this.creative || (tool && tool.dig);
+        const name = layer === 'sand' ? 'песок' : layer === 'stone' ? 'камень' : 'земля';
+        return `<b>ЛКМ</b> — копать ${name} ${fast ? '' : '· <span class="prompt-warn">руками медленно</span>'}`;
+      }
       case 'pickup':
         return `<b>E</b> — подобрать ${t.pickup.name.toLowerCase()}`;
       default:
@@ -1007,6 +1276,7 @@ class Game {
       case 'campfire': return { x: t.fire.x, z: t.fire.z, y: t.fire.y };
       case 'spring': return { x: t.spring.x, z: t.spring.z, y: t.spring.y };
       case 'station': return { x: t.station.x, z: t.station.z, y: t.station.y };
+      case 'ground': return { x: t.point.x, z: t.point.z, y: t.point.y };
       case 'pickup': return { x: t.pickup.mesh.position.x, z: t.pickup.mesh.position.z, y: t.pickup.mesh.position.y };
       default: return null;
     }
@@ -1115,6 +1385,7 @@ class Game {
   }
 
   takeItem(id, count = 1) {
+    if (this.creative) return true;          // креатив ничего не тратит
     if ((this.state.inventory[id] || 0) < count) return false;
     this.state.inventory[id] -= count;
     this.refreshHotbar();
@@ -1207,6 +1478,7 @@ class Game {
     // замах и скорость удара зависят от того, во что целимся
     let swing = 'attack';
     if (kindName === 'minewall') swing = 'mine';
+    else if (kindName === 'ground') swing = 'gather';
     else if (kindName === 'node') swing = target.node.type === 'rock' ? 'mine' : 'chop';
     this.player.swing(swing);
     this.attackCooldown = swing === 'mine' ? 0.7 : swing === 'chop' ? 0.66 : 0.62;
@@ -1223,10 +1495,18 @@ class Game {
       return;
     }
 
+    // --- земля: снимаем слой ---
+    if (target.kind === 'ground') {
+      if (this.digCooldown > 0) return;
+      this.digCooldown = this.creative ? 0.12 : this.equippedTool()?.dig ? 0.42 : 0.62;
+      this.digGroundAt(target.point);
+      return;
+    }
+
     // --- стена шахты: пробиваем клетку и получаем руду ---
     if (target.kind === 'minewall') {
       const tool = this.equippedTool() || {};
-      const power = tool.mine !== undefined ? tool.mine : 0.25;
+      const power = this.creative ? 99 : tool.mine !== undefined ? tool.mine : 0.25;
       const aimDir = this.aim && this.aim.dir;
       const dx = aimDir ? aimDir.x : Math.sin(this.player.facing);
       const dz = aimDir ? aimDir.z : Math.cos(this.player.facing);
@@ -1259,7 +1539,7 @@ class Game {
     // --- зверь ---
     if (target.kind === 'mob') {
       const m = target.mob;
-      const weapon = def ? effectiveWeapon(def) : 4;
+      const weapon = (def ? effectiveWeapon(def) : 4) * (this.armPenalty || 1);
       // луч прицела точнее веера: бьём именно того, на кого смотрим
       const got = this.mobs.hitAt(m, weapon);
       if (!got) { this.audio.whoosh?.(); return; }
@@ -1292,7 +1572,7 @@ class Game {
         this.attackCooldown = 0.6;
         return;
       }
-      const tool = this.equippedTool();
+      const tool = this.creative ? { chop: 99, mine: 99, weapon: 99 } : this.equippedTool();
       const res = this.resources.strike(node, tool);
       const actionDef = this.nodeDef(node);
       const power = tool && tool[actionDef.tool ?? 'chop'] !== undefined ? tool[actionDef.tool ?? 'chop'] : 0.35;
@@ -1569,6 +1849,7 @@ class Game {
       this.state.health = Math.max(1, Math.min(100, this.state.health + ef.health));
       this.audio.heal?.();
     }
+    if (kind === 'bandage') this.healWound();
     if (kind === 'rawMeat' && Math.random() < 0.45) {
       this.state.health = Math.max(1, this.state.health - 6);
       this.ui.toast('Сырое мясо — живот скрутило', true);
@@ -1710,12 +1991,14 @@ class Game {
       audio: this.audio,
       night: skyInfo.night,
       listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
-      onHit: (dmg, cause) => this.takeDamage(dmg, cause),
+      onHit: (dmg, cause, mob) => this.takeDamage(dmg, cause, mob),
       onDrop: (items) => { for (const [id, n] of Object.entries(items)) this.addItem(id, n); },
     });
     this.updateProjectiles(dt);
     this.updateChips(dt);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+    this.digCooldown = Math.max(0, (this.digCooldown || 0) - dt);
+    this.updateWounds(dt);
     if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
 
     const fireWarm = this.resources.fireWarmth(this.player.position);
@@ -1799,12 +2082,20 @@ class Game {
     }
   }
 
-  /** Урон от зверя: тряска, звук, предупреждение */
-  takeDamage(amount, cause) {
+  /** Урон от зверя: тряска, звук, предупреждение, ранение части тела */
+  takeDamage(amount, cause, source = null) {
     if (!this.running || this.paused || this.dead || amount <= 0) return;
+    if (this.creative) return;              // в креативе не ранят
     this.state.health = Math.max(0, this.state.health - amount);
     this.player.landShake = Math.max(this.player.landShake, 0.45);
     this.audio.hurt();
+
+    // удар приходится в конкретную часть тела — по хитбоксам
+    if (source || cause.includes('клык') || cause.includes('змеи') || cause.includes('звер')) {
+      const part = this.pickWoundPart(source);
+      this.addWound(part, Math.min(1, 0.35 + amount / 40));
+    }
+
     this.ui.toast(`−${Math.round(amount)} здоровья: ${cause}`, true);
     if (this.state.health <= 0) this.die(cause);
   }
@@ -1845,6 +2136,7 @@ class Game {
         campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
         stations: this.stations.map((st) => ({ type: st.type, x: st.x, z: st.z })),
         forged: this.forged,
+        wounds: this.wounds.map((w) => ({ part: w.part, severity: w.severity })),
         collected: this.state.collected,
         weather: this.weather,
         savedAt: Date.now(),
@@ -1891,6 +2183,14 @@ class Game {
     this.state.hotbar = normalizeHotbar(data.hotbar);
     this.view = data.view === 'first' ? 'first' : 'third';
     this.state.collected = data.collected || 0;
+    this.wounds = [];
+    for (const w of data.wounds || []) {
+      if (typeof w.part === 'string' && typeof w.severity === 'number' && w.severity > 0.02) {
+        const info = this.woundPartLabel(w.part);
+        this.wounds.push({ part: w.part, severity: w.severity, label: info.label, icon: info.icon, time: 0 });
+      }
+    }
+    this.ui.setWounds(this.wounds);
 
     for (const f of data.campfires || []) {
       const fire = this.resources.addCampfire(f.x, f.z);

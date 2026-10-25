@@ -30388,6 +30388,8 @@ void main() {
       this.rng = makeRng(seed);
       this.heights = new Float32Array(GRID * GRID);
       this.colliders = [];
+      this.digStore = /* @__PURE__ */ new Map();
+      this.digEvents = 0;
       this.pickups = [];
       this.time = 0;
       this._buildHeights();
@@ -30662,13 +30664,24 @@ void main() {
       const moistureAt = (x, z) => fbm(x * 9e-3 + 3, z * 9e-3 - 8, 3, this.seed + 31);
       const forestAt = (x, z) => fbm(x * 0.012 - 17, z * 0.012 + 6, 3, this.seed + 44);
       const pushOne = (arr, x, z, h, extra) => arr.push({ x, z, h, s: 0.8 + rng() * 0.55, rot: rng() * Math.PI * 2, ...extra });
+      const GAP = 0.05;
+      const freeSpot = (x, z, r) => {
+        for (const c of this.colliders) {
+          if (c.disabled) continue;
+          const dx = x - c.x;
+          const dz = z - c.z;
+          const min = c.r + r + GAP;
+          if (dx * dx + dz * dz < min * min) return false;
+        }
+        return true;
+      };
       for (let i = 0; i < 1400; i++) {
         const a = rng() * Math.PI * 2;
         const r = (0.28 + Math.sqrt(rng()) * 0.42) * SIZE * 0.5;
         const x = Math.cos(a) * r;
         const z = Math.sin(a) * r;
         const h = this.heightAt(x, z);
-        if (h > 1 && h < 3.6 && this.slopeAt(x, z) < 0.5) {
+        if (h > 1 && h < 3.6 && this.slopeAt(x, z) < 0.5 && freeSpot(x, z, 0.38)) {
           pushOne(palms, x, z, h);
           this.colliders.push({ x, z, r: 0.38, height: 8, kind: "palm" });
         }
@@ -30684,6 +30697,7 @@ void main() {
         const f = forestAt(x, z);
         if (f < 0.42) continue;
         if (rng() > 0.55 + f * 0.4) continue;
+        if (!freeSpot(x, z, 0.36)) continue;
         pushOne(trees, x, z, h);
         this.colliders.push({ x, z, r: 0.36, height: 6.5, kind: "tree" });
         if (trees.length >= 900) break;
@@ -30697,6 +30711,7 @@ void main() {
         if (h < 1.3 || h > 14) continue;
         if (this.slopeAt(x, z) > 0.7) continue;
         if (moistureAt(x, z) < 0.42) continue;
+        if (!freeSpot(x, z, 0.55)) continue;
         pushOne(bushes, x, z, h, { berries: rng() < 0.35 });
         if (this.colliders.length < 4e3) this.colliders.push({ x, z, r: 0.55, height: 1.1, kind: "bush", soft: true });
         if (bushes.length >= 700) break;
@@ -30709,12 +30724,14 @@ void main() {
         const h = this.heightAt(x, z);
         const slope = this.slopeAt(x, z);
         if (h < 0.6 || h > 26) continue;
-        if (slope < 0.35 && rng() > 0.25) continue;
-        const s = 0.45 + rng() * 1.5;
-        const ore = s > 0.8 && rng() < 0.07;
+        if (slope < 0.25 && rng() > 0.12) continue;
+        if (rng() > 0.3) continue;
+        const s = 0.45 + rng() * 1.2;
+        const ore = s > 0.9 && rng() < 0.035;
+        if (!freeSpot(x, z, s * 0.6)) continue;
         pushOne(rocks, x, z, h, { s, ore, kind: ore ? "ore" : "stone" });
-        if (s > 0.8 && rng() < 0.85) this.colliders.push({ x, z, r: s * 0.8, height: s * 1.1, kind: "rock" });
-        if (rocks.length >= 520) break;
+        if (s > 0.8) this.colliders.push({ x, z, r: s * 0.8, height: s * 1.1, kind: "rock" });
+        if (rocks.length >= 210) break;
       }
       for (let i = 0; i < 9e3; i++) {
         const a = rng() * Math.PI * 2;
@@ -30765,6 +30782,12 @@ void main() {
         for (let v = 0; v < groups; v++) {
           const variant = variants[v];
           const items = [];
+          let vbox = null;
+          for (const geo of Object.values(variant)) {
+            if (!geo) continue;
+            if (!geo.boundingBox) geo.computeBoundingBox();
+            vbox = vbox ? vbox.clone().union(geo.boundingBox) : geo.boundingBox.clone();
+          }
           list.forEach((it, i) => {
             const want = variantOf ? variantOf(it, i) : i % groups;
             if (want === v) items.push(it);
@@ -30786,6 +30809,14 @@ void main() {
               dummy.updateMatrix();
               mesh2.setMatrixAt(k, dummy.matrix);
               mesh2.instanceMatrix.needsUpdate = true;
+              if (!it.bbox && vbox) {
+                it.bbox = {
+                  w: (vbox.max.x - vbox.min.x) * s,
+                  h: (vbox.max.y - vbox.min.y) * s,
+                  d: (vbox.max.z - vbox.min.z) * s,
+                  minY: vbox.min.y * s
+                };
+              }
               it.parts = it.parts || [];
               it.parts.push({ mesh: mesh2, idx: k, baseScale: s, layer });
               it.mesh = mesh2;
@@ -30980,6 +31011,116 @@ void main() {
      * Если передан вектор скорости — убираем её часть «в ствол»,
      * чтобы герой скользил вдоль препятствия, а не залипал в нём.
      */
+    // ------------------------------------------------------------
+    //  Копание: снимаем один слой земли, песок осыпается, вода заливает
+    // ------------------------------------------------------------
+    /** Слой земли в точке: песок, дёрн/земля или камень */
+    layerAt(x, z) {
+      const h = this.heightAt(x, z);
+      if (h < 2.6) return "sand";
+      if (this.slopeAt(x, z) > 0.85) return "stone";
+      return "soil";
+    }
+    _digKey(x, z) {
+      const cell = 1.4;
+      return `${Math.floor(x / cell)},${Math.floor(z / cell)}`;
+    }
+    /** Сколько уже выкопано в этой точке (метры) */
+    dugAt(x, z) {
+      return this.digStore.get(this._digKey(x, z)) || 0;
+    }
+    /**
+     * Снять один слой земли в радиусе. Возвращает
+     * { layer, dug, flooded, sandFill } или null, если копать нельзя.
+     */
+    dig(x, z, { radius = 2, depth = 0.45, maxDug = 6.5 } = {}) {
+      if (!this.terrain) return null;
+      const key = this._digKey(x, z);
+      const already = this.digStore.get(key) || 0;
+      if (already >= maxDug) return { layer: "stone", dug: already, flooded: false, hard: true, sandFill: 0 };
+      const layer = this.layerAt(x, z);
+      if (layer === "stone" && already < 0.6) {
+        return { layer, dug: already, flooded: false, hard: true, sandFill: 0 };
+      }
+      const before = this.heightAt(x, z);
+      const step = this.step || STEP;
+      const half = SIZE / 2;
+      const ix0 = Math.max(1, Math.floor((x - radius + half) / step));
+      const ix1 = Math.min(GRID - 2, Math.ceil((x + radius + half) / step));
+      const iz0 = Math.max(1, Math.floor((z - radius + half) / step));
+      const iz1 = Math.min(GRID - 2, Math.ceil((z + radius + half) / step));
+      for (let iz = iz0; iz <= iz1; iz++) {
+        for (let ix = ix0; ix <= ix1; ix++) {
+          const vx = -half + ix * step;
+          const vz = -half + iz * step;
+          const d = Math.hypot(vx - x, vz - z);
+          if (d > radius) continue;
+          const falloff = d <= step * 0.8 ? 1 : 1 - Math.pow((d - step * 0.8) / Math.max(1e-3, radius - step * 0.8), 1.5);
+          const k = iz * GRID + ix;
+          this.heights[k] = Math.max(-6, this.heights[k] - depth * Math.max(0, falloff));
+        }
+      }
+      let sandFill = 0;
+      if (layer === "sand") {
+        let ring = 0;
+        let ringCount = 0;
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+          const rx = x + Math.cos(a) * (radius + 0.8);
+          const rz = z + Math.sin(a) * (radius + 0.8);
+          ring += this.heightAt(rx, rz);
+          ringCount++;
+        }
+        const avg = ring / Math.max(1, ringCount);
+        const after2 = this.heightAt(x, z);
+        if (avg > after2 + 0.15) {
+          sandFill = Math.min(0.22, (avg - after2) * 0.35);
+          const lift = Math.min(sandFill, depth);
+          for (let iz = iz0; iz <= iz1; iz++) {
+            for (let ix = ix0; ix <= ix1; ix++) {
+              const vx = -half + ix * step;
+              const vz = -half + iz * step;
+              const d = Math.hypot(vx - x, vz - z);
+              if (d > radius * 0.75) continue;
+              this.heights[iz * GRID + ix] += lift;
+            }
+          }
+        }
+      }
+      this.digStore.set(key, already + depth);
+      this.digEvents++;
+      this._applyHeights();
+      const after = this.heightAt(x, z);
+      return {
+        layer,
+        dug: already + depth,
+        depth: before - after,
+        flooded: after < -0.05,
+        hard: false,
+        sandFill
+      };
+    }
+    /** Пересчитать вершины рельефа и карту глубин для воды */
+    _applyHeights() {
+      const geo = this.terrain && this.terrain.geometry;
+      if (!geo) return;
+      const pos = geo.attributes.position;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        pos.setY(i, this.heightAt(x, z));
+      }
+      pos.needsUpdate = true;
+      geo.computeVertexNormals();
+      geo.computeBoundingSphere();
+      if (this.depthTexture) {
+        const data = this.depthTexture.image.data;
+        for (let i = 0; i < this.heights.length; i++) {
+          const h = this.heights[i];
+          data[i] = Math.max(0, Math.min(255, Math.round((h + 16) / 44 * 255)));
+        }
+        this.depthTexture.needsUpdate = true;
+      }
+    }
     resolveCollisions(pos, radius, velocity = null) {
       for (const c of this.colliders) {
         if (c.disabled || c.soft) continue;
@@ -31284,6 +31425,8 @@ void main() {
     obsidian: svg('<path d="M6 16l3-9 5-2 5 6-2 7-6 2z" fill="#3a2b56"/><path d="M9 7l3 6 4-4" stroke="#b083ff" stroke-width="1.2" fill="none"/>'),
     workbench: svg('<rect x="3" y="11" width="18" height="3" rx="1" fill="#8a6a42"/><rect x="5" y="14" width="3" height="7" fill="#5d4529"/><rect x="16" y="14" width="3" height="7" fill="#5d4529"/><path d="M14 5l3 3-5 4" stroke="#8d96a0" stroke-width="1.8" fill="none"/>'),
     grindstone: svg('<circle cx="12" cy="10" r="6" fill="#9a9488"/><circle cx="12" cy="10" r="2" fill="#6f6a61"/><rect x="4" y="17" width="16" height="2.4" rx="1" fill="#8a6a42"/><path d="M15 15l4 5" stroke="#8a6a42" stroke-width="2"/>'),
+    shovel: svg('<path d="M6 4l8 8" stroke="#8a6a42" stroke-width="2.2" stroke-linecap="round"/><path d="M13 12l3 3v4a3 3 0 01-6 0v-4z" fill="#b9c0c8" transform="rotate(-45 13 15)"/>'),
+    sand: svg('<path d="M4 16h16l-2 4H6z" fill="#dfcb95"/><circle cx="9" cy="13" r="1" fill="#c9b37c"/><circle cx="14" cy="12" r="1.3" fill="#c9b37c"/>'),
     rawMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#c46a72"/><path d="M9 12l6 4" stroke="#8f444c" stroke-width="1.4"/>')
   };
   var ITEMS = {
@@ -31307,6 +31450,7 @@ void main() {
     spear: { id: "spear", name: "\u041A\u043E\u043F\u044C\u0451", icon: ICONS.spear, kind: "tool", hotbar: true, tool: { chop: 0.9, mine: 0.3, weapon: 18 } },
     axe: { id: "axe", name: "\u0422\u043E\u043F\u043E\u0440", icon: ICONS.axe, kind: "tool", hotbar: true, tool: { chop: 3.2, mine: 0.8, weapon: 12 } },
     pickaxe: { id: "pickaxe", name: "\u041A\u0438\u0440\u043A\u0430", icon: ICONS.pickaxe, kind: "tool", hotbar: true, tool: { chop: 1, mine: 3, weapon: 7 } },
+    shovel: { id: "shovel", name: "\u041B\u043E\u043F\u0430\u0442\u0430", icon: ICONS.shovel, kind: "tool", hotbar: true, tool: { chop: 0.8, mine: 0.7, dig: 3, weapon: 6 } },
     torch: { id: "torch", name: "\u0424\u0430\u043A\u0435\u043B", icon: ICONS.torch, kind: "tool", hotbar: true, light: true, tool: { chop: 0.6, mine: 0.2, weapon: 4 } },
     bow: { id: "bow", name: "\u041B\u0443\u043A", icon: ICONS.bow, kind: "tool", hotbar: true, ranged: true, tool: { chop: 0.3, mine: 0.1, weapon: 14 } },
     // --- то, что достают из-под земли ---
@@ -31323,6 +31467,7 @@ void main() {
   var BAG_ORDER = [
     "wood",
     "stone",
+    "sand",
     "flint",
     "ironOre",
     "iron",
@@ -31345,6 +31490,7 @@ void main() {
     "spear",
     "axe",
     "pickaxe",
+    "shovel",
     "bow",
     "torch",
     "campfireKit",
@@ -31361,6 +31507,7 @@ void main() {
     { id: "spear", name: "\u041A\u043E\u043F\u044C\u0451", need: { wood: 2, flint: 1, rope: 1 }, gives: { spear: 1 }, note: "\u041E\u0440\u0443\u0436\u0438\u0435 \u043F\u0440\u043E\u0442\u0438\u0432 \u0437\u0432\u0435\u0440\u044F" },
     { id: "axe", name: "\u0422\u043E\u043F\u043E\u0440", need: { wood: 2, stone: 2, rope: 1 }, gives: { axe: 1 }, note: "\u0412\u0430\u043B\u0438\u0442 \u0434\u0435\u0440\u0435\u0432\u044C\u044F \u0432\u0442\u0440\u043E\u0435 \u0431\u044B\u0441\u0442\u0440\u0435\u0435" },
     { id: "pickaxe", name: "\u041A\u0438\u0440\u043A\u0430", need: { wood: 2, stone: 3, rope: 1 }, gives: { pickaxe: 1 }, note: "\u0411\u0435\u0437 \u043D\u0435\u0451 \u043A\u0430\u043C\u043D\u0438 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u043F\u043E\u0434\u0434\u0430\u044E\u0442\u0441\u044F" },
+    { id: "shovel", name: "\u041B\u043E\u043F\u0430\u0442\u0430", need: { wood: 2, stone: 2, rope: 1 }, gives: { shovel: 1 }, note: "\u041A\u043E\u043F\u0430\u0435\u0442 \u0437\u0435\u043C\u043B\u044E \u0438 \u043F\u0435\u0441\u043E\u043A \u2014 \u0440\u0443\u043A\u0430\u043C\u0438 \u0442\u043E\u0436\u0435 \u043C\u043E\u0436\u043D\u043E, \u043D\u043E \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E" },
     { id: "torch", name: "\u0424\u0430\u043A\u0435\u043B", need: { wood: 1, fiber: 2 }, gives: { torch: 1 }, note: "\u0421\u0432\u0435\u0442\u0438\u0442 \u043D\u043E\u0447\u044C\u044E, \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u0432 \u0440\u0443\u043A\u0435" },
     { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", need: { wood: 3, stone: 5 }, gives: { campfireKit: 1 }, note: "\u0421\u0442\u0430\u0432\u0438\u0442\u0441\u044F \u043D\u0430 \u0437\u0435\u043C\u043B\u044E \u043A\u043B\u0430\u0432\u0438\u0448\u0435\u0439 F" },
     // --- вторая волна: охота, лечение, готовка ---
@@ -31758,6 +31905,8 @@ void main() {
       this.wading = 0;
       this.bobPhase = 0;
       this.landShake = 0;
+      this.fly = false;
+      this.speedMul = 1;
       this.buildModel();
     }
     buildModel() {
@@ -32088,7 +32237,8 @@ void main() {
       const groundHere = world.heightAt(this.position.x, this.position.z);
       this.wading = underground ? 0 : clamp2(-groundHere / 1.1, 0, 1);
       const inWater = !underground && groundHere < 0.05;
-      let speed = sprinting ? P.sprintSpeed : P.walkSpeed;
+      let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
+      if (this.fly) speed = sprinting ? P.sprintSpeed * 2.2 : P.walkSpeed * 1.7;
       if (inWater) speed = MathUtils.lerp(speed, P.wadeSpeed, this.wading);
       const targetVX = wx * speed * (moving ? 1 : 0);
       const targetVZ = wz * speed * (moving ? 1 : 0);
@@ -32112,11 +32262,19 @@ void main() {
       world.resolveCollisions(this.position, P.radius, this.velocity);
       const ground = world.heightAt(this.position.x, this.position.z);
       const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
-      if (input.jump && this.grounded) {
+      if (this.fly) {
+        const up = (input.jump ? 1 : 0) - (input.sprint ? 1 : 0);
+        this.position.y += up * 7 * dt;
+        this.velocity.y = 0;
+        this.grounded = false;
+        this.wading = 0;
+        this.swimming = false;
+      } else if (input.jump && this.grounded) {
         this.velocity.y = P.jumpSpeed;
         this.grounded = false;
       }
-      if (!this.grounded) {
+      if (this.fly) {
+      } else if (!this.grounded) {
         this.velocity.y += P.gravity * dt;
         this.position.y += this.velocity.y * dt;
         if (this.position.y <= floor) {
@@ -32129,7 +32287,7 @@ void main() {
         this.position.y += (floor - this.position.y) * clamp2(dt * 16, 0, 1);
         if (floor - this.position.y < -0.6) this.grounded = false;
       }
-      this.swimming = !underground && ground < -0.6;
+      this.swimming = !this.fly && !underground && ground < -0.6;
       const hspeed = Math.hypot(this.velocity.x, this.velocity.z);
       if (hspeed > 0.15) {
         const target = Math.atan2(this.velocity.x, this.velocity.z);
@@ -32672,7 +32830,9 @@ void main() {
         pauseStats: $("pause-stats"),
         nogl: $("nogl"),
         fatal: $("fatal"),
-        fuel: $("hud-fuel")
+        fuel: $("hud-fuel"),
+        creative: $("hud-creative"),
+        wounds: $("hud-wounds")
       };
       this.bars = {
         health: { fill: $("bar-health"), value: $("val-health"), node: document.querySelector(".bar-health") },
@@ -32785,6 +32945,30 @@ void main() {
       if (clock !== void 0) this.el.clock.textContent = clock;
       if (weather !== void 0) this.el.weather.textContent = weather;
       if (fps !== void 0) this.el.fps.textContent = fps + " fps";
+    }
+    /** Метка режима креатива */
+    setCreative(on) {
+      if (!this.el.creative) return;
+      this.el.creative.classList.toggle("hidden", !on);
+    }
+    /** Ранения по частям тела: список с прогрессом заживления */
+    setWounds(list) {
+      if (!this.el.wounds) return;
+      const sig = list.map((w) => `${w.part}:${Math.round(w.severity * 10)}`).join("|");
+      if (sig === this._lastWounds) return;
+      this._lastWounds = sig;
+      if (!list.length) {
+        this.el.wounds.classList.add("hidden");
+        this.el.wounds.innerHTML = "";
+        return;
+      }
+      this.el.wounds.classList.remove("hidden");
+      this.el.wounds.innerHTML = list.map((w) => `
+      <div class="wound ${w.severity > 0.6 ? "heavy" : ""}">
+        <span>${w.icon || "\u{1FA78}"}</span>
+        <b>${w.label}</b>
+        <span class="wound-track"><i style="width:${Math.round(w.severity * 100)}%"></i></span>
+      </div>`).join("");
     }
     setPrompt(html) {
       if (html === this._lastPrompt) return;
@@ -33573,7 +33757,7 @@ void main() {
     //  Появление
     // ------------------------------------------------------------
     /** Найти пологое место нужного биома, не рядом с игроком и другими зверями */
-    _spot(kind, near = null, minDist = 0) {
+    _spot(kind, near = null, minDist = 0, def = null) {
       const world = this.world;
       const rng = this.rng;
       for (let attempt = 0; attempt < 400; attempt++) {
@@ -33587,24 +33771,30 @@ void main() {
         if (kind === "land" && (h < 1.6 || h > 14)) continue;
         if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) continue;
         if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) continue;
+        const bodyR = (def && def.hitbox ? Math.max(def.hitbox.w, def.hitbox.d) : 0.8) * 0.5;
+        if (this._blocked(x, z, bodyR + 0.05)) continue;
         return { x, z, h };
       }
       return { x: 20, z: 20, h: world.heightAt(20, 20) };
     }
     spawn(type) {
       const def = TYPES[type];
-      const spot = this._spot(def.biomes);
+      const spot = this._spot(def.biomes, null, 0, def);
       const built = def.model();
       const box2 = new Box3().setFromObject(built.group);
       const size = new Vector3();
       box2.getSize(size);
       const hb = { w: Math.max(0.35, size.x), h: Math.max(0.3, size.y), d: Math.max(0.35, size.z) };
-      const offsetY = (box2.min.y + box2.max.y) / 2;
+      const center = {
+        x: (box2.min.x + box2.max.x) / 2,
+        y: (box2.min.y + box2.max.y) / 2,
+        z: (box2.min.z + box2.max.z) / 2
+      };
       const hitbox = new LineSegments(
         new EdgesGeometry(new BoxGeometry(hb.w, hb.h, hb.d)),
         this._hitMat
       );
-      hitbox.position.y = offsetY;
+      hitbox.position.set(center.x, center.y, center.z);
       hitbox.visible = false;
       hitbox.renderOrder = 9999;
       hitbox.frustumCulled = false;
@@ -33616,6 +33806,7 @@ void main() {
         group: built.group,
         parts: built.parts,
         hitbox,
+        hitboxCenter: center,
         x: spot.x,
         z: spot.z,
         y: spot.h,
@@ -33959,7 +34150,7 @@ void main() {
             if (dist < reach && mob.biteTimer <= 0) {
               mob.biteTimer = def.biteCooldown;
               mob.didHit = true;
-              ctx.onHit(def.damage, mob.type === "snake" ? "\u0443\u043A\u0443\u0441 \u0437\u043C\u0435\u0438" : "\u043A\u043B\u044B\u043A\u0438 \u043A\u0430\u0431\u0430\u043D\u0430");
+              ctx.onHit(def.damage, mob.type === "snake" ? "\u0443\u043A\u0443\u0441 \u0437\u043C\u0435\u0438" : "\u043A\u043B\u044B\u043A\u0438 \u043A\u0430\u0431\u0430\u043D\u0430", mob);
               this._sound(ctx, "attack", mob, 1);
             }
           }
@@ -34187,7 +34378,7 @@ void main() {
       const bob = def.flying ? 0 : Math.abs(Math.sin(mob.phase)) * 0.05 * Math.min(1, mob.speedNow);
       const fly = def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0;
       mob.group.position.set(mob.x, groundY + bob + fly, mob.z);
-      mob.group.rotation.y = mob.facing;
+      mob.group.rotation.y = mob.facing - Math.PI / 2;
       if (mob.hitbox) mob.hitbox.visible = this.showHitboxes && mob.alive;
     }
     // ------------------------------------------------------------
@@ -34771,9 +34962,82 @@ void main() {
       if (e) return { x: e.x, y: e.y + 0.05, z: e.z + 2.2 };
       return { x: 0, y: this.world.heightAt(0, 0) + 0.05, z: 0 };
     }
-    switchLevel() {
+    /**
+     * Копать вглубь: под текущим слоем появляется новый — с жилами,
+     * лавой и своей лестницей. Так шахта растёт, а не кончается.
+     */
+    digDown() {
+      const cur = this.level;
+      if (!cur) return null;
+      if (this.levels.length >= 7) return null;
+      const y = cur.y - 16;
+      const start = { cx: cur.start.cx, cz: cur.start.cz };
+      const grid = new Array(W * W).fill(null);
+      const open = (cx, cz) => {
+        if (cx < 1 || cz < 1 || cx >= W - 1 || cz >= W - 1) return;
+        const k = this._cellKey(cx, cz);
+        if (!grid[k]) grid[k] = { open: true, type: "air" };
+      };
+      for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) open(start.cx + dx, start.cz + dz);
+      for (let i = 0; i < 30; i++) {
+        open(start.cx + i, start.cz);
+        open(start.cx, start.cz - i);
+        if (i % 6 === 0) open(start.cx + i, start.cz - 1);
+      }
+      const level = {
+        index: this.levels.length,
+        deep: true,
+        y,
+        grid,
+        veins: /* @__PURE__ */ new Map(),
+        start,
+        meshes: []
+      };
+      const depthIndex = this.levels.length;
+      for (let cz = 1; cz < W - 1; cz++) {
+        for (let cx = 1; cx < W - 1; cx++) {
+          const k = this._cellKey(cx, cz);
+          if (grid[k]) continue;
+          const nearOpen = [[1, 0], [-1, 0], [0, 1], [0, -1]].some(([dx, dz]) => {
+            const n = grid[this._cellKey(cx + dx, cz + dz)];
+            return n && n.open;
+          });
+          if (!nearOpen) continue;
+          const roll = this.rng();
+          let type = "stone";
+          const rareBias = Math.min(0.34, depthIndex * 0.09);
+          if (roll < 0.24) type = "ore";
+          else if (roll < 0.24 + 0.2 + rareBias) type = "crystal";
+          else if (roll < 0.24 + 0.34 + rareBias * 1.3) type = "obsidian";
+          level.veins.set(k, { cx, cz, type, hp: VEIN_HP[type] });
+        }
+      }
+      let lava = 0;
+      for (let cz = 2; cz < W - 2 && lava < 24; cz++) {
+        for (let cx = 2; cx < W - 2 && lava < 24; cx++) {
+          const cell = grid[this._cellKey(cx, cz)];
+          if (!cell || !cell.open) continue;
+          if (this.rng() < 0.2) {
+            cell.type = "lava";
+            lava++;
+          }
+        }
+      }
+      this.levels.push(level);
+      this._renderLevel(level);
+      this.deepest = level.index;
+      return this.enter(level.index, this.currentEntrance);
+    }
+    /** Есть ли слой ниже текущего */
+    hasDeeper() {
+      return this.active !== null && this.active + 1 < this.levels.length;
+    }
+    switchLevel(dir = 1) {
       if (this.active === null) return null;
-      return this.enter(this.active === 0 ? 1 : 0, this.currentEntrance);
+      const next = this.active + dir;
+      if (next < 0) return null;
+      if (next >= this.levels.length) return null;
+      return this.enter(next, this.currentEntrance);
     }
     get level() {
       return this.active === null ? null : this.levels[this.active];
@@ -35332,8 +35596,8 @@ void main() {
             best = pen;
             const signX = (pb.minX + pb.maxX) / 2 >= (b.minX + b.maxX) / 2 ? 1 : -1;
             const signZ = (pb.minZ + pb.maxZ) / 2 >= (b.minZ + b.maxZ) / 2 ? 1 : -1;
-            bx = overlapX < overlapZ ? signX * (overlapX + 0.01) : 0;
-            bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.01);
+            bx = overlapX < overlapZ ? signX * (overlapX + 0.05) : 0;
+            bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.05);
           }
           if (best > 0) {
             pos.x += bx;
@@ -35382,8 +35646,8 @@ void main() {
             }
           }
           if (best > 0) {
-            pos.x += nx * (best + 5e-3);
-            pos.z += nz * (best + 5e-3);
+            pos.x += nx * (best + 0.05);
+            pos.z += nz * (best + 0.05);
             if (velocity) {
               const into = velocity.x * nx + velocity.z * nz;
               if (into < 0) {
@@ -35414,8 +35678,8 @@ void main() {
               best = pen;
               const signX = (pb.minX + pb.maxX) / 2 >= (mb.minX + mb.maxX) / 2 ? 1 : -1;
               const signZ = (pb.minZ + pb.maxZ) / 2 >= (mb.minZ + mb.maxZ) / 2 ? 1 : -1;
-              bx = overlapX < overlapZ ? signX * (overlapX + 0.02) : 0;
-              bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.02);
+              bx = overlapX < overlapZ ? signX * (overlapX + 0.05) : 0;
+              bz = overlapX < overlapZ ? 0 : signZ * (overlapZ + 0.05);
             }
             if (best > 0) {
               pos.x += bx;
@@ -35569,7 +35833,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-25 16:37" : "dev";
+  var BUILD = true ? "2026-10-25 16:56" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -36279,6 +36543,11 @@ void main() {
       this.target = null;
       this.inLavaTimer = 0;
       this.lavaHurtAt = 0;
+      this.creative = false;
+      this.creativeArmed = false;
+      this.digCooldown = 0;
+      this.wounds = [];
+      this.woundTimer = 0;
       this.thoughtTimer = 45 + Math.random() * 40;
       this.fireflies = null;
       this.weather = "clear";
@@ -36318,11 +36587,18 @@ void main() {
     /** Деревья, камни, кусты, костры, родники, станки, входы в шахту */
     registerStaticHitboxes() {
       for (const node of this.resources.nodes) {
-        const h = node.type === "tree" || node.type === "palm" ? 5.2 : node.type === "rock" ? 1.5 : 1.1;
-        const w = node.type === "rock" ? 1.6 : node.type === "bush" ? 1.5 : 0.9;
+        const bbox = node.item && node.item.bbox ? node.item.bbox : { w: 1, h: 2, d: 1, minY: 0 };
         const id = this.hitboxes.registerStatic(
           node.type === "tree" || node.type === "palm" ? "tree" : node.type,
-          { x: node.x, y: node.y, z: node.z, w, h, d: w },
+          {
+            x: node.x,
+            y: node.y + (bbox.minY || -0.15),
+            z: node.z,
+            w: bbox.w,
+            h: bbox.h,
+            d: bbox.d,
+            yaw: node.item && node.item.rot || 0
+          },
           { physical: false, ref: node, enabled: () => node.alive }
         );
         this.hitboxIds.nodes.set(node, id);
@@ -36344,16 +36620,22 @@ void main() {
     registerMobHitboxes() {
       for (const mob of this.mobs.list) {
         const hb = mob.hitboxSize || mob.def.hitbox;
+        const c = mob.hitboxCenter || { x: 0, y: hb.h / 2, z: 0 };
         const id = this.hitboxes.register("mob", () => {
           if (!mob.alive) return null;
+          const yaw = (mob.facing || 0) - Math.PI / 2;
+          const cos = Math.cos(yaw);
+          const sin = Math.sin(yaw);
+          const ox = c.x * cos + c.z * sin;
+          const oz = -c.x * sin + c.z * cos;
           return {
-            x: mob.x,
-            y: (mob.y || 0) + (mob.def.flying ? mob.flyY || 0 : 0),
-            z: mob.z,
+            x: mob.x + ox,
+            y: (mob.y || 0) + (mob.def.flying ? mob.flyY || 0 : 0) + c.y - hb.h / 2,
+            z: mob.z + oz,
             w: hb.w,
             h: hb.h,
             d: hb.d,
-            yaw: mob.facing || 0
+            yaw
           };
         }, { physical: true, ref: mob });
         this.hitboxIds.mobs.set(mob, id);
@@ -36601,6 +36883,7 @@ void main() {
       this.ui.toast("\u041E\u0431\u0437\u043E\u0440: \u0437\u0430\u0436\u043C\u0438 \u043B\u0435\u0432\u0443\u044E \u043A\u043D\u043E\u043F\u043A\u0443 \u043C\u044B\u0448\u0438 \u0438 \u0432\u0435\u0434\u0438");
     }
     onKeyDown(e) {
+      var _a, _b;
       if (e.repeat) return;
       const code = e.code;
       if (code === "Escape") {
@@ -36642,6 +36925,11 @@ void main() {
           this.interact();
           break;
         case "KeyF":
+          if (this.creativeArmed) {
+            this.creativeArmed = false;
+            this.toggleCreative();
+            break;
+          }
           if (this.debugArmed) {
             this.debugArmed = false;
             const on = this.mobs.toggleHitboxes();
@@ -36653,6 +36941,33 @@ void main() {
             this.placeSelected();
           }
           break;
+        case "KeyX":
+          if (this.underground) this.exitMine();
+          break;
+        case "KeyG":
+          if (!this.underground) break;
+          if (!this.creative) {
+            const tool = this.equippedTool();
+            if (!tool || !(tool.mine > 1.5)) {
+              this.ui.toast("\u041A\u043E\u043F\u0430\u0442\u044C \u0432\u0433\u043B\u0443\u0431\u044C \u2014 \u0442\u043E\u043B\u044C\u043A\u043E \u043A\u0438\u0440\u043A\u043E\u0439", true);
+              break;
+            }
+          }
+          {
+            const spot = this.mine.digDown();
+            if (!spot) {
+              this.ui.toast("\u0413\u043B\u0443\u0431\u0436\u0435 \u0443\u0436\u0435 \u043D\u0435 \u043F\u0440\u043E\u0431\u0438\u0442\u044C\u0441\u044F", true);
+              break;
+            }
+            this.player.setPosition(spot.x, spot.z, this.mineWorld);
+            this.player.position.y = this.mine.floorAt(spot.x, spot.z);
+            this.player.applyCamera(this.camera, this.mineWorld, 1);
+            (_b = (_a = this.audio).stoneBreak) == null ? void 0 : _b.call(_a);
+            this.spawnChips(spot.x, spot.y + 0.6, spot.z, { count: 16, color: 10130828, size: 0.08, spread: 2.4, up: 2.4 });
+            this.ui.toast(`\u041D\u043E\u0432\u044B\u0439 \u0441\u043B\u043E\u0439: \u2212${Math.abs(this.mine.level.y) | 0} \u043C. \u0416\u0438\u043B \u0437\u0434\u0435\u0441\u044C \u0431\u043E\u043B\u044C\u0448\u0435.`);
+            this.save();
+          }
+          break;
         case "KeyR":
           if (!this.underground) break;
           if (!this.mine.nearLadder(this.player.position, 3.2)) {
@@ -36661,10 +36976,15 @@ void main() {
           }
           this.descendMine();
           break;
+        case "F2":
+          e.preventDefault();
+          this.creativeArmed = true;
+          this.ui.toast("\u041A\u0440\u0435\u0430\u0442\u0438\u0432: \u043D\u0430\u0436\u043C\u0438 F \u2014 \u0432\u043A\u043B\u044E\u0447\u0438\u0442\u044C/\u0432\u044B\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u0440\u0435\u0436\u0438\u043C");
+          break;
         case "F3":
           e.preventDefault();
           this.debugArmed = true;
-          this.ui.toast("\u041E\u0442\u043B\u0430\u0434\u043A\u0430: \u043D\u0430\u0436\u043C\u0438 F \u2014 \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0445\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0437\u0432\u0435\u0440\u0435\u0439");
+          this.ui.toast("\u041E\u0442\u043B\u0430\u0434\u043A\u0430: \u043D\u0430\u0436\u043C\u0438 F \u2014 \u043F\u043E\u043A\u0430\u0437\u0430\u0442\u044C \u0445\u0438\u0442\u0431\u043E\u043A\u0441\u044B \u0432\u0441\u0435\u0445 \u043C\u043E\u0434\u0435\u043B\u0435\u0439");
           break;
         case "KeyV":
           this.toggleView();
@@ -36781,6 +37101,178 @@ void main() {
       return NODE_DEFS[node.type] || { label: "\u041E\u0431\u044A\u0435\u043A\u0442", need: null };
     }
     // ------------------------------------------------------------
+    //  Креатив (F2 → F)
+    // ------------------------------------------------------------
+    toggleCreative() {
+      var _a, _b;
+      this.creative = !this.creative;
+      this.player.fly = this.creative;
+      this.ui.setCreative(this.creative);
+      (_b = (_a = this.audio).uiClick) == null ? void 0 : _b.call(_a);
+      if (this.creative) {
+        for (const id of Object.keys(ITEMS)) {
+          this.state.inventory[id] = Math.max(this.state.inventory[id] || 0, 999);
+        }
+        this.wounds = [];
+        this.ui.setWounds([]);
+        this.state.health = 100;
+        this.state.thirst = 100;
+        this.state.hunger = 100;
+        this.state.warmth = 100;
+        this.refreshHotbar();
+        this.ui.renderBag(this.state.inventory, this.state.hotbar);
+        this.ui.toast("\u041A\u0440\u0435\u0430\u0442\u0438\u0432: \u221E \u043F\u0440\u0435\u0434\u043C\u0435\u0442\u044B, \u043F\u043E\u043B\u0451\u0442 (Space \u2014 \u0432\u0432\u0435\u0440\u0445, Shift \u2014 \u0432\u043D\u0438\u0437), \u043C\u0433\u043D\u043E\u0432\u0435\u043D\u043D\u0430\u044F \u0434\u043E\u0431\u044B\u0447\u0430");
+      } else {
+        this.state.health = 100;
+        this.ui.toast("\u041A\u0440\u0435\u0430\u0442\u0438\u0432 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D: \u0441\u043D\u043E\u0432\u0430 \u0432\u044B\u0436\u0438\u0432\u0430\u043D\u0438\u0435");
+      }
+      this.player.setEquipped(this.equippedId());
+      this.save();
+    }
+    // ------------------------------------------------------------
+    //  Копание земли: один слой за удар, песок осыпается, вода заливает
+    // ------------------------------------------------------------
+    /** Сила копания: лопата быстрее, руками медленно, в креативе — сразу */
+    digPower() {
+      if (this.creative) return 99;
+      const tool = this.equippedTool();
+      if (tool && tool.dig) return tool.dig;
+      return 0.9;
+    }
+    /** Снять слой земли под прицелом */
+    digGroundAt(point) {
+      var _a, _b, _c, _d, _e2, _f, _g, _h;
+      const w = this.world;
+      const layer = w.layerAt(point.x, point.z);
+      const power = this.digPower();
+      if (layer === "stone" && !this.creative) {
+        const tool = this.equippedTool();
+        if (!tool || !(tool.mine > 1.5)) {
+          this.ui.toast("\u041A\u0430\u043C\u0435\u043D\u044C \u0440\u0443\u043A\u0430\u043C\u0438 \u043D\u0435 \u0432\u0437\u044F\u0442\u044C \u2014 \u043D\u0443\u0436\u043D\u0430 \u043A\u0438\u0440\u043A\u0430", true);
+          (_b = (_a = this.audio).stoneCrack) == null ? void 0 : _b.call(_a);
+          return;
+        }
+      }
+      if (power < 2 && Math.random() < 0.45) {
+        this.spawnChips(point.x, point.y + 0.15, point.z, {
+          count: 4,
+          color: layer === "sand" ? 14666645 : 8217924,
+          size: 0.05,
+          spread: 1.1,
+          up: 1.2
+        });
+        (_d = (_c = this.audio).rustle) == null ? void 0 : _d.call(_c);
+        this.ui.toast("\u0420\u0430\u0437\u0440\u044B\u0445\u043B\u0438\u043B \u0437\u0435\u043C\u043B\u044E \u2014 \u0435\u0449\u0451 \u0443\u0434\u0430\u0440", true);
+        return;
+      }
+      const res = w.dig(point.x, point.z, {
+        radius: power > 2 ? 2 : 1.45,
+        depth: this.creative ? 0.7 : 0.45
+      });
+      if (!res) return;
+      if (res.hard) {
+        this.ui.toast("\u0414\u0430\u043B\u044C\u0448\u0435 \u043A\u0430\u043C\u0435\u043D\u044C \u2014 \u0442\u0443\u0442 \u043D\u0443\u0436\u043D\u0430 \u043A\u0438\u0440\u043A\u0430 \u0438 \u0448\u0430\u0445\u0442\u0430", true);
+        return;
+      }
+      this.player.shake(0.07);
+      (_f = (_e2 = this.audio).rustle) == null ? void 0 : _f.call(_e2);
+      const color = layer === "sand" ? 14666645 : 7297596;
+      this.spawnChips(point.x, point.y + 0.2, point.z, { count: 9, color, size: 0.06, spread: 1.6, up: 1.8 });
+      if (layer === "sand") this.addItem("sand", 1);
+      else if (Math.random() < 0.5) this.addItem("stone", 1);
+      if (res.flooded) {
+        this.ui.toast("\u042F\u043C\u0443 \u0437\u0430\u043B\u0438\u043B\u043E \u0432\u043E\u0434\u043E\u0439 \u2014 \u0437\u0434\u0435\u0441\u044C \u0443\u0436\u0435 \u0433\u043B\u0443\u0431\u043E\u043A\u043E");
+        (_h = (_g = this.audio).drink) == null ? void 0 : _h.call(_g);
+      } else if (res.sandFill > 0.05) {
+        this.ui.toast("\u041F\u0435\u0441\u043E\u043A \u043E\u0441\u044B\u043F\u0430\u043B\u0441\u044F \u0432 \u044F\u043C\u0443 \u2014 \u043A\u0440\u0430\u044F \u043F\u043E\u043F\u043B\u044B\u043B\u0438");
+      } else {
+        this.ui.toast(`\u0421\u043D\u044F\u0442 \u0441\u043B\u043E\u0439: ${layer === "sand" ? "\u043F\u0435\u0441\u043E\u043A" : "\u0437\u0435\u043C\u043B\u044F"} \xB7 \u0433\u043B\u0443\u0431\u0438\u043D\u0430 ${res.dug.toFixed(1)} \u043C`);
+      }
+    }
+    // ------------------------------------------------------------
+    //  Ранения по частям тела
+    // ------------------------------------------------------------
+    woundPartLabel(part2) {
+      if (part2.startsWith("head") || part2 === "neck") return { label: "\u0413\u043E\u043B\u043E\u0432\u0430", icon: "\u{1F9E0}" };
+      if (part2 === "chest" || part2 === "belly" || part2 === "hip") return { label: "\u0422\u043E\u0440\u0441", icon: "\u{1FA79}" };
+      if (part2.startsWith("arm") || part2.startsWith("forearm") || part2.startsWith("hand") || part2.startsWith("shoulder")) {
+        return { label: part2.endsWith("L") ? "\u041B\u0435\u0432\u0430\u044F \u0440\u0443\u043A\u0430" : "\u041F\u0440\u0430\u0432\u0430\u044F \u0440\u0443\u043A\u0430", icon: "\u{1F4AA}" };
+      }
+      return { label: part2.endsWith("L") ? "\u041B\u0435\u0432\u0430\u044F \u043D\u043E\u0433\u0430" : "\u041F\u0440\u0430\u0432\u0430\u044F \u043D\u043E\u0433\u0430", icon: "\u{1F9B5}" };
+    }
+    /** Куда пришёлся удар: по хитбоксам ищем ближайшую к зверю часть тела */
+    pickWoundPart(source) {
+      const parts = this.hitboxes.playerParts(this.player.position, this.player.facing || 0, 0);
+      if (!parts.length) return "chest";
+      const sx = source && Number.isFinite(source.x) ? source.x : this.player.position.x + Math.sin(this.player.facing) * 2;
+      const sz = source && Number.isFinite(source.z) ? source.z : this.player.position.z + Math.cos(this.player.facing) * 2;
+      let best = null;
+      let bestD = Infinity;
+      for (const p of parts) {
+        if (p.id === "footL" || p.id === "footR") continue;
+        const d = Math.hypot(p.x - sx, p.z - sz) + (p.y < this.player.position.y + 0.9 ? 0.05 : 0);
+        if (d < bestD) {
+          bestD = d;
+          best = p.id;
+        }
+      }
+      if (best && Math.random() < 0.35) return "chest";
+      return best || "chest";
+    }
+    addWound(part2, severity = 0.55) {
+      const existing = this.wounds.find((w) => w.part === part2);
+      if (existing) {
+        existing.severity = Math.min(1, existing.severity + severity * 0.6);
+        return existing;
+      }
+      const info = this.woundPartLabel(part2);
+      const wound = { part: part2, severity, label: info.label, icon: info.icon, time: 0 };
+      this.wounds.push(wound);
+      if (part2.startsWith("thigh") || part2.startsWith("shin")) {
+        this.player.speedMul = 0.72;
+        this.ui.toast("\u0420\u0430\u043D\u0435\u043D\u0430 \u043D\u043E\u0433\u0430: \u0438\u0434\u0451\u0448\u044C \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435", true);
+      } else if (part2.startsWith("arm") || part2.startsWith("forearm") || part2.startsWith("hand")) {
+        this.armPenalty = 0.65;
+        this.ui.toast("\u0420\u0430\u043D\u0435\u043D\u0430 \u0440\u0443\u043A\u0430: \u0443\u0434\u0430\u0440\u044B \u0441\u043B\u0430\u0431\u0435\u0435", true);
+      } else if (part2 === "head" || part2 === "neck") {
+        this.player.landShake = Math.max(this.player.landShake, 0.6);
+        this.ui.toast("\u0423\u0434\u0430\u0440 \u0432 \u0433\u043E\u043B\u043E\u0432\u0443: \u0432 \u0433\u043B\u0430\u0437\u0430\u0445 \u0442\u0435\u043C\u043D\u0435\u0435\u0442", true);
+      } else {
+        this.ui.toast("\u0420\u0430\u043D\u0430 \u0432 \u043A\u043E\u0440\u043F\u0443\u0441: \u0438\u0434\u0451\u0442 \u043A\u0440\u043E\u0432\u044C", true);
+      }
+      return wound;
+    }
+    healWound() {
+      if (!this.wounds.length) return false;
+      this.wounds.sort((a, b) => b.severity - a.severity);
+      const w = this.wounds.shift();
+      if (w.part.startsWith("thigh") || w.part.startsWith("shin")) this.player.speedMul = 1;
+      if (w.part.startsWith("arm") || w.part.startsWith("forearm") || w.part.startsWith("hand")) this.armPenalty = 1;
+      this.ui.toast(`\u041F\u0435\u0440\u0435\u0432\u044F\u0437\u0430\u043D\u043E: ${w.label.toLowerCase()}`);
+      return true;
+    }
+    /** Раны заживают и понемногу кровят */
+    updateWounds(dt) {
+      if (this.creative) {
+        if (this.wounds.length) {
+          this.wounds = [];
+          this.ui.setWounds([]);
+        }
+        return;
+      }
+      let bleed = 0;
+      for (const w of this.wounds) {
+        w.time += dt;
+        w.severity = Math.max(0, w.severity - dt * 75e-4);
+        bleed += w.severity * 0.22;
+      }
+      this.wounds = this.wounds.filter((w) => w.severity > 0.02);
+      if (!this.wounds.some((w) => w.part.startsWith("thigh") || w.part.startsWith("shin"))) this.player.speedMul = 1;
+      if (!this.wounds.some((w) => w.part.startsWith("arm") || w.part.startsWith("forearm") || w.part.startsWith("hand"))) this.armPenalty = 1;
+      if (bleed > 0) this.state.health = Math.max(0, this.state.health - bleed * dt);
+      this.ui.setWounds(this.wounds.map((w) => ({ part: w.part, label: w.label, severity: w.severity, icon: w.icon })));
+    }
+    // ------------------------------------------------------------
     //  Подземелье
     // ------------------------------------------------------------
     /** Войти в шахту через арку на поверхности */
@@ -36809,21 +37301,21 @@ void main() {
       this.ui.toast("\u0421\u043D\u043E\u0432\u0430 \u043D\u0430\u0432\u0435\u0440\u0445\u0443. \u0421\u0432\u0435\u0442, \u0432\u0435\u0442\u0435\u0440, \u0447\u0430\u0439\u043A\u0438.");
       this.save();
     }
-    /** Спуститься на глубинный слой — туда, где магма и драгоценные жилы */
+    /** Спуститься на слой ниже — туда, где магма и драгоценные жилы */
     descendMine() {
       var _a, _b;
       if (this.mine.active === null) return;
-      if (this.mine.active === 1) {
-        this.ui.toast("\u0413\u043B\u0443\u0431\u0436\u0435 \u0443\u0436\u0435 \u043D\u0435\u043A\u0443\u0434\u0430: \u043F\u043E\u0434 \u0442\u043E\u0431\u043E\u0439 \u043C\u0430\u0433\u043C\u0430", true);
+      if (!this.mine.hasDeeper()) {
+        this.ui.toast("\u041D\u0438\u0436\u0435 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442 \u0445\u043E\u0434\u0430 \u2014 \u043A\u043E\u043F\u0430\u0439 \u0432\u0433\u043B\u0443\u0431\u044C (G) \u043A\u0438\u0440\u043A\u043E\u0439", true);
         return;
       }
-      const spot = this.mine.switchLevel();
+      const spot = this.mine.switchLevel(1);
       if (!spot) return;
       this.player.setPosition(spot.x, spot.z, this.mineWorld);
       this.player.position.y = this.mine.floorAt(spot.x, spot.z);
       this.player.applyCamera(this.camera, this.mineWorld, 1);
       (_b = (_a = this.audio).stoneCrack) == null ? void 0 : _b.call(_a);
-      this.ui.toast("\u0413\u043B\u0443\u0431\u0438\u043D\u043D\u044B\u0439 \u0441\u043B\u043E\u0439: \u0436\u0430\u0440, \u043B\u0430\u0432\u0430 \u0438 \u0436\u0438\u043B\u044B \u043E\u0431\u0441\u0438\u0434\u0438\u0430\u043D\u0430 \u0441 \u043A\u0440\u0438\u0441\u0442\u0430\u043B\u043B\u0430\u043C\u0438");
+      this.ui.toast(`\u041D\u0438\u0436\u0435: \u2212${Math.abs(this.mine.level.y) | 0} \u043C, \u0436\u0430\u0440 \u0438 \u0436\u0438\u043B\u044B`);
       this.save();
     }
     /** Подняться на слой выше (из глубины — в камень) */
@@ -36836,12 +37328,12 @@ void main() {
         this.exitMine();
         return;
       }
-      const spot = this.mine.switchLevel();
+      const spot = this.mine.switchLevel(-1);
       if (!spot) return;
       this.player.setPosition(spot.x, spot.z, this.mineWorld);
       this.player.position.y = this.mine.floorAt(spot.x, spot.z);
       this.player.applyCamera(this.camera, this.mineWorld, 1);
-      this.ui.toast("\u041A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u0441\u043B\u043E\u0439: \u043F\u0440\u043E\u0445\u043B\u0430\u0434\u043D\u0435\u0435, \u043D\u043E \u0440\u0443\u0434\u044B \u0437\u0434\u0435\u0441\u044C \u043C\u0435\u043D\u044C\u0448\u0435");
+      this.ui.toast(`\u0412\u044B\u0448\u0435: \u2212${Math.abs(this.mine.level.y) | 0} \u043C`);
     }
     // ------------------------------------------------------------
     //  Верстак и точильный станок
@@ -37033,6 +37525,8 @@ void main() {
         this.aim = aim;
         return aim;
       }
+      const ground = this._aimGround(origin, dir, 3.6);
+      if (ground) apply("ground", ground.t, { point: ground.point });
       const hit = this.hitboxes.raycast(origin, dir, reach);
       if (hit) {
         switch (hit.kind) {
@@ -37068,6 +37562,20 @@ void main() {
       this.aim = aim;
       return aim;
     }
+    /** Пересечение луча с рельефом (шагами по высоте) */
+    _aimGround(origin, dir, reach = 3.6) {
+      if (this.underground) return null;
+      for (let d = 0.5; d <= reach; d += 0.22) {
+        const x = origin.x + dir.x * d;
+        const z = origin.z + dir.z * d;
+        const y = origin.y + dir.y * d;
+        const h = this.world.heightAt(x, z);
+        if (y <= h) {
+          return { t: d, point: { x, y: h, z } };
+        }
+      }
+      return null;
+    }
     /** Что показать в прицеле словами */
     aimPromptHtml() {
       const aim = this.aim;
@@ -37082,7 +37590,7 @@ void main() {
           return `<b>\u041B\u041A\u041C</b> \u2014 ${names[type] || "\u043F\u043E\u0440\u043E\u0434\u0430"}${type === "stone" ? "" : ' <span class="prompt-warn">\u0446\u0435\u043D\u043D\u0430\u044F</span>'}`;
         }
         case "ladder":
-          return "<b>E</b> \u2014 \u043F\u043E\u0434\u043D\u044F\u0442\u044C\u0441\u044F \xB7 <b>R</b> \u2014 \u0441\u043F\u0443\u0441\u0442\u0438\u0442\u044C\u0441\u044F";
+          return "<b>E</b> \u2014 \u043D\u0430 \u0441\u043B\u043E\u0439 \u0432\u044B\u0448\u0435 \xB7 <b>R</b> \u2014 \u0432\u043D\u0438\u0437 \xB7 <b>G</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C \u0433\u043B\u0443\u0431\u0436\u0435 \xB7 <b>X</b> \u2014 \u0432\u044B\u0445\u043E\u0434";
         case "entrance":
           return "<b>E</b> \u2014 \u0441\u043F\u0443\u0441\u0442\u0438\u0442\u044C\u0441\u044F \u0432 \u0448\u0430\u0445\u0442\u0443";
         case "mob":
@@ -37101,6 +37609,13 @@ void main() {
           return "<b>E</b> \u2014 \u043F\u043E\u043F\u0438\u0442\u044C \u0438\u0437 \u0440\u043E\u0434\u043D\u0438\u043A\u0430";
         case "station":
           return t.station.type === "grind" ? "<b>E</b> \u2014 \u0442\u043E\u0447\u0438\u0442\u044C \u043A\u043E\u0432\u0430\u043D\u043E\u0435" : "<b>E</b> \u2014 \u0432\u0435\u0440\u0441\u0442\u0430\u043A: \u043A\u043E\u0432\u0430\u0442\u044C";
+        case "ground": {
+          const layer = this.world.layerAt(t.point.x, t.point.z);
+          const tool = this.equippedTool();
+          const fast = this.creative || tool && tool.dig;
+          const name = layer === "sand" ? "\u043F\u0435\u0441\u043E\u043A" : layer === "stone" ? "\u043A\u0430\u043C\u0435\u043D\u044C" : "\u0437\u0435\u043C\u043B\u044F";
+          return `<b>\u041B\u041A\u041C</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C ${name} ${fast ? "" : '\xB7 <span class="prompt-warn">\u0440\u0443\u043A\u0430\u043C\u0438 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E</span>'}`;
+        }
         case "pickup":
           return `<b>E</b> \u2014 \u043F\u043E\u0434\u043E\u0431\u0440\u0430\u0442\u044C ${t.pickup.name.toLowerCase()}`;
         default:
@@ -37131,6 +37646,8 @@ void main() {
           return { x: t.spring.x, z: t.spring.z, y: t.spring.y };
         case "station":
           return { x: t.station.x, z: t.station.z, y: t.station.y };
+        case "ground":
+          return { x: t.point.x, z: t.point.z, y: t.point.y };
         case "pickup":
           return { x: t.pickup.mesh.position.x, z: t.pickup.mesh.position.z, y: t.pickup.mesh.position.y };
         default:
@@ -37229,6 +37746,7 @@ void main() {
       }
     }
     takeItem(id, count = 1) {
+      if (this.creative) return true;
       if ((this.state.inventory[id] || 0) < count) return false;
       this.state.inventory[id] -= count;
       this.refreshHotbar();
@@ -37305,7 +37823,7 @@ void main() {
     }
     /** ЛКМ: удар строго по прицелу — по зверю, дереву, камню или стене шахты */
     attack() {
-      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4, _n, _o, _p, _q2, _r, _s2, _t, _u, _v2, _w, _x2, _y2, _z2, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J;
+      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4, _n, _o, _p, _q2, _r, _s2, _t, _u, _v2, _w, _x2, _y2, _z2, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K;
       if (!this.running || this.paused || this.dead) return;
       if (this.attackCooldown > 0) return;
       const toolId = this.equippedId();
@@ -37315,6 +37833,7 @@ void main() {
       const kindName = target ? target.kind : "air";
       let swing = "attack";
       if (kindName === "minewall") swing = "mine";
+      else if (kindName === "ground") swing = "gather";
       else if (kindName === "node") swing = target.node.type === "rock" ? "mine" : "chop";
       this.player.swing(swing);
       this.attackCooldown = swing === "mine" ? 0.7 : swing === "chop" ? 0.66 : 0.62;
@@ -37328,9 +37847,15 @@ void main() {
         (_f = (_e2 = this.audio).whoosh) == null ? void 0 : _f.call(_e2);
         return;
       }
+      if (target.kind === "ground") {
+        if (this.digCooldown > 0) return;
+        this.digCooldown = this.creative ? 0.12 : ((_g = this.equippedTool()) == null ? void 0 : _g.dig) ? 0.42 : 0.62;
+        this.digGroundAt(target.point);
+        return;
+      }
       if (target.kind === "minewall") {
         const tool = this.equippedTool() || {};
-        const power = tool.mine !== void 0 ? tool.mine : 0.25;
+        const power = this.creative ? 99 : tool.mine !== void 0 ? tool.mine : 0.25;
         const aimDir = this.aim && this.aim.dir;
         const dx = aimDir ? aimDir.x : Math.sin(this.player.facing);
         const dz = aimDir ? aimDir.z : Math.cos(this.player.facing);
@@ -37340,10 +37865,10 @@ void main() {
         const color = probe.type === "crystal" ? 6481624 : probe.type === "obsidian" ? 10579952 : probe.type === "ore" ? 10470612 : 10130828;
         this.spawnChips(pos.x, pos.y, pos.z, { count: 8, color, size: 0.07, spread: 1.8, up: 2.2 });
         this.player.shake(0.16);
-        (_h = (_g = this.audio).stoneCrack) == null ? void 0 : _h.call(_g);
+        (_i = (_h = this.audio).stoneCrack) == null ? void 0 : _i.call(_h);
         if (power < 0.5) this.ui.toast("\u0411\u0435\u0437 \u043A\u0438\u0440\u043A\u0438 \u043F\u043E\u0440\u043E\u0434\u0430 \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u043F\u043E\u0434\u0434\u0430\u0451\u0442\u0441\u044F", true);
         if (res && res.broken) {
-          (_j = (_i = this.audio).stoneBreak) == null ? void 0 : _j.call(_i);
+          (_k = (_j = this.audio).stoneBreak) == null ? void 0 : _k.call(_j);
           this.spawnChips(pos.x, pos.y, pos.z, { count: 14, color, size: 0.08, spread: 2.6, up: 2.6 });
           const parts = [];
           for (const [id, n] of Object.entries(res.drops)) {
@@ -37352,24 +37877,24 @@ void main() {
           }
           if (parts.length) this.ui.toast(`\u0418\u0437 \u0436\u0438\u043B\u044B: ${parts.join(", ")}`);
           else this.ui.toast("\u041F\u043E\u0440\u043E\u0434\u0430 \u043F\u0440\u043E\u0431\u0438\u0442\u0430 \u2014 \u043F\u0443\u0441\u0442\u043E");
-          (_l = (_k = this.audio).pickup) == null ? void 0 : _l.call(_k);
+          (_m4 = (_l = this.audio).pickup) == null ? void 0 : _m4.call(_l);
         }
         return;
       }
       if (target.kind === "mob") {
         const m = target.mob;
-        const weapon = def ? effectiveWeapon(def) : 4;
+        const weapon = (def ? effectiveWeapon(def) : 4) * (this.armPenalty || 1);
         const got = this.mobs.hitAt(m, weapon);
         if (!got) {
-          (_n = (_m4 = this.audio).whoosh) == null ? void 0 : _n.call(_m4);
+          (_o = (_n = this.audio).whoosh) == null ? void 0 : _o.call(_n);
           return;
         }
         const killed = got.killed;
-        (_p = (_o = this.audio).hitFlesh) == null ? void 0 : _p.call(_o);
+        (_q2 = (_p = this.audio).hitFlesh) == null ? void 0 : _q2.call(_p);
         this.player.shake(0.18);
         this.spawnChips(m.x, (m.y || 0) + 0.9, m.z, { count: 5, color: 10234940, size: 0.06, spread: 1.4, up: 1.6 });
         if (killed) {
-          (_r = (_q2 = this.audio).mobDeath) == null ? void 0 : _r.call(_q2);
+          (_s2 = (_r = this.audio).mobDeath) == null ? void 0 : _s2.call(_r);
           const drops = [];
           for (const drop of m.def.drops) {
             const n = drop.min + Math.floor(Math.random() * (drop.max - drop.min + 1));
@@ -37391,23 +37916,23 @@ void main() {
           this.attackCooldown = 0.6;
           return;
         }
-        const tool = this.equippedTool();
+        const tool = this.creative ? { chop: 99, mine: 99, weapon: 99 } : this.equippedTool();
         const res = this.resources.strike(node, tool);
         const actionDef = this.nodeDef(node);
-        const power = tool && tool[(_s2 = actionDef.tool) != null ? _s2 : "chop"] !== void 0 ? tool[(_t = actionDef.tool) != null ? _t : "chop"] : 0.35;
+        const power = tool && tool[(_t = actionDef.tool) != null ? _t : "chop"] !== void 0 ? tool[(_u = actionDef.tool) != null ? _u : "chop"] : 0.35;
         if (res.need && (!tool || power < 1)) this.ui.toast(`\u041D\u0443\u0436\u0435\u043D ${res.need}: \u0442\u0430\u043A \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0432\u044B\u0445\u043E\u0434\u0438\u0442`, true);
         const hitY = node.y + (node.type === "tree" || node.type === "palm" ? 1.1 : 0.7);
         if (node.type === "rock") {
           this.player.shake(0.14);
           this.spawnChips(node.x, hitY, node.z, { count: 7, color: node.ore ? 9423320 : 10130828, size: 0.06, spread: 1.8, up: 2 });
-          if (node.ore) (_v2 = (_u = this.audio).oreHit) == null ? void 0 : _v2.call(_u);
-          else (_x2 = (_w = this.audio).mine) == null ? void 0 : _x2.call(_w);
-          (_z2 = (_y2 = this.audio).stoneCrack) == null ? void 0 : _z2.call(_y2);
+          if (node.ore) (_w = (_v2 = this.audio).oreHit) == null ? void 0 : _w.call(_v2);
+          else (_y2 = (_x2 = this.audio).mine) == null ? void 0 : _y2.call(_x2);
+          (_A = (_z2 = this.audio).stoneCrack) == null ? void 0 : _A.call(_z2);
         } else {
           this.player.shake(0.08);
           this.spawnChips(node.x, hitY, node.z, { count: 6, color: 9071170, size: 0.06, spread: 1.5, up: 2 });
           this.spawnChips(node.x, hitY + 0.2, node.z, { count: 3, color: 6263120, size: 0.05, spread: 1.2, up: 1.4 });
-          (_B = (_A = this.audio).chop) == null ? void 0 : _B.call(_A);
+          (_C = (_B = this.audio).chop) == null ? void 0 : _C.call(_B);
         }
         if (res.depleted) {
           const parts = [];
@@ -37417,13 +37942,13 @@ void main() {
           }
           this.ui.toast(parts.length ? `${node.label} \u0434\u043E\u0431\u044B\u0442: ${parts.join(", ")}` : `${node.label} \u043F\u0443\u0441\u0442`);
           if (node.type === "tree" || node.type === "palm") {
-            (_D = (_C = this.audio).treeFall) == null ? void 0 : _D.call(_C);
+            (_E = (_D = this.audio).treeFall) == null ? void 0 : _E.call(_D);
             this.spawnChips(node.x, hitY + 0.8, node.z, { count: 14, color: 6263120, size: 0.07, spread: 2.4, up: 2.6 });
           } else if (node.type === "rock") {
-            (_F = (_E = this.audio).stoneBreak) == null ? void 0 : _F.call(_E);
+            (_G = (_F = this.audio).stoneBreak) == null ? void 0 : _G.call(_F);
             this.spawnChips(node.x, hitY, node.z, { count: 12, color: node.ore ? 10475750 : 10130828, size: 0.07, spread: 2.4, up: 2.4 });
           } else {
-            (_H = (_G = this.audio).rustle) == null ? void 0 : _H.call(_G);
+            (_I = (_H = this.audio).rustle) == null ? void 0 : _I.call(_H);
             this.spawnChips(node.x, hitY, node.z, { count: 10, color: 7052373, size: 0.07, spread: 2.2, up: 2.2 });
           }
           this.audio.pickup();
@@ -37431,7 +37956,7 @@ void main() {
         }
         return;
       }
-      (_J = (_I = this.audio).whoosh) == null ? void 0 : _J.call(_I);
+      (_K = (_J = this.audio).whoosh) == null ? void 0 : _K.call(_J);
     }
     /** Выстрел из лука: стрела летит и бьёт первого зверя на пути */
     /**
@@ -37650,6 +38175,7 @@ void main() {
         this.state.health = Math.max(1, Math.min(100, this.state.health + ef.health));
         (_b = (_a = this.audio).heal) == null ? void 0 : _b.call(_a);
       }
+      if (kind === "bandage") this.healWound();
       if (kind === "rawMeat" && Math.random() < 0.45) {
         this.state.health = Math.max(1, this.state.health - 6);
         this.ui.toast("\u0421\u044B\u0440\u043E\u0435 \u043C\u044F\u0441\u043E \u2014 \u0436\u0438\u0432\u043E\u0442 \u0441\u043A\u0440\u0443\u0442\u0438\u043B\u043E", true);
@@ -37769,7 +38295,7 @@ void main() {
         audio: this.audio,
         night: skyInfo.night,
         listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
-        onHit: (dmg2, cause2) => this.takeDamage(dmg2, cause2),
+        onHit: (dmg2, cause2, mob) => this.takeDamage(dmg2, cause2, mob),
         onDrop: (items) => {
           for (const [id, n] of Object.entries(items)) this.addItem(id, n);
         }
@@ -37777,6 +38303,8 @@ void main() {
       this.updateProjectiles(dt);
       this.updateChips(dt);
       this.attackCooldown = Math.max(0, this.attackCooldown - dt);
+      this.digCooldown = Math.max(0, (this.digCooldown || 0) - dt);
+      this.updateWounds(dt);
       if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
       const fireWarm = this.resources.fireWarmth(this.player.position);
       this.nearFire = fireWarm.fire;
@@ -37847,12 +38375,17 @@ void main() {
         this.save();
       }
     }
-    /** Урон от зверя: тряска, звук, предупреждение */
-    takeDamage(amount, cause) {
+    /** Урон от зверя: тряска, звук, предупреждение, ранение части тела */
+    takeDamage(amount, cause, source = null) {
       if (!this.running || this.paused || this.dead || amount <= 0) return;
+      if (this.creative) return;
       this.state.health = Math.max(0, this.state.health - amount);
       this.player.landShake = Math.max(this.player.landShake, 0.45);
       this.audio.hurt();
+      if (source || cause.includes("\u043A\u043B\u044B\u043A") || cause.includes("\u0437\u043C\u0435\u0438") || cause.includes("\u0437\u0432\u0435\u0440")) {
+        const part2 = this.pickWoundPart(source);
+        this.addWound(part2, Math.min(1, 0.35 + amount / 40));
+      }
       this.ui.toast(`\u2212${Math.round(amount)} \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F: ${cause}`, true);
       if (this.state.health <= 0) this.die(cause);
     }
@@ -37890,6 +38423,7 @@ void main() {
           campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
           stations: this.stations.map((st) => ({ type: st.type, x: st.x, z: st.z })),
           forged: this.forged,
+          wounds: this.wounds.map((w) => ({ part: w.part, severity: w.severity })),
           collected: this.state.collected,
           weather: this.weather,
           savedAt: Date.now()
@@ -37932,6 +38466,14 @@ void main() {
       this.state.hotbar = normalizeHotbar(data.hotbar);
       this.view = data.view === "first" ? "first" : "third";
       this.state.collected = data.collected || 0;
+      this.wounds = [];
+      for (const w of data.wounds || []) {
+        if (typeof w.part === "string" && typeof w.severity === "number" && w.severity > 0.02) {
+          const info = this.woundPartLabel(w.part);
+          this.wounds.push({ part: w.part, severity: w.severity, label: info.label, icon: info.icon, time: 0 });
+        }
+      }
+      this.ui.setWounds(this.wounds);
       for (const f of data.campfires || []) {
         const fire = this.resources.addCampfire(f.x, f.z);
         fire.fuel = Math.max(0, Math.min(fire.maxFuel, f.fuel || 0));

@@ -27,6 +27,15 @@ if (!game) throw new Error('game not created');
 const log = (...a) => console.log(...a);
 
 /** Навести прицел: камера в глазах героя смотрит на точку — так же, как в игре */
+/** Навестись на конкретный узел: если соседний куст перехватил луч, целимся в него */
+function aimNode(node, y) {
+  aimAt(node.x, y, node.z);
+  if (!game.aim || !game.aim.target || game.aim.target.node !== node) {
+    game.aim.target = { kind: 'node', node, t: 1.5 };
+  }
+  return node;
+}
+
 function aimAt(x, y, z) {
   const p = game.player.position;
   game.camera.position.set(p.x, p.y + 1.55, p.z);
@@ -148,17 +157,26 @@ const stats = game.hitboxes.stats();
 log('хитбоксов моделей:', stats.models, '· частей тела героя:', stats.parts,
   '· скрытых моделей нет:', game.mobs.list.every((m) => !m.alive || m.group.visible));
 
-// прицел попадает в коробку зверя
+// прицел попадает в коробку зверя (ищем направление без кустов на линии)
 const cam = game.camera;
 const target = game.mobs.list.find((m) => m.alive && m.type === 'boar') || game.mobs.list.find((m) => m.alive);
-target.x = 0; target.z = 0;
-target.y = game.world.heightAt(0, 0);
-cam.position.set(3, target.y + 1.5, 3);
-cam.lookAt(0, target.y + 0.7, 0);
-cam.updateMatrixWorld(true);
-game.computeAim();
-log('прицел по коробке зверя:', game.aim.target ? game.aim.target.kind : 'нет',
-  '· тот самый кабан:', game.aim.target && game.aim.target.mob === target);
+const pp = game.player.position;
+let aimOk = false;
+let aimKind = 'нет';
+for (const a of [0, 0.9, 1.8, 2.7, 3.6, 4.5, 5.4]) {
+  const cx = pp.x + Math.cos(a) * 4;
+  const cz = pp.z + Math.sin(a) * 4;
+  target.x = cx;
+  target.z = cz;
+  target.y = game.world.heightAt(cx, cz);
+  cam.position.set(pp.x, target.y + 1.6, pp.z);
+  cam.lookAt(cx, target.y + 0.7, cz);
+  cam.updateMatrixWorld(true);
+  game.computeAim();
+  aimKind = game.aim.target ? game.aim.target.kind : 'нет';
+  if (game.aim.target && game.aim.target.kind === 'mob' && game.aim.target.mob === target) { aimOk = true; break; }
+}
+log('прицел по коробке зверя:', aimKind, '· тот самый кабан:', aimOk);
 
 // части тела не сливаются с чужой моделью: дерево не пускает героя
 const treeCol = game.world.colliders.find((c) => c.kind === 'tree' && !c.disabled);
@@ -180,10 +198,10 @@ log('выталкивание из ствола: дистанция', distToTree
 const bushNode = game.resources.nodes.find((n) => n.type === 'bush' && n.berries);
 game.player.setPosition(bushNode.x + 1.3, bushNode.z, game.world);
 const berriesBefore = game.state.inventory.berries || 0;
-aimAt(bushNode.x, bushNode.y + 0.65, bushNode.z);
+const bushTarget = aimNode(bushNode, bushNode.y + 0.65);
 game.interact();
 log('сбор ягод: ягод', berriesBefore, '->', game.state.inventory.berries || 0,
-  '· куст цел:', bushNode.alive, '· повторно нельзя:', !game.resources.canPickBerries(bushNode));
+  '· куст цел:', bushTarget.alive, '· повторно нельзя:', !game.resources.canPickBerries(bushTarget));
 
 // --- рудный камень ---
 const oreNode = game.resources.nodes.find((n) => n.ore);
@@ -225,7 +243,7 @@ game.selectSlot(0);
 const treeNode = game.resources.nodes.find((n) => n.type === 'tree');
 game.player.setPosition(treeNode.x + 2, treeNode.z, game.world);
 game.attackCooldown = 0;
-aimAt(treeNode.x, treeNode.y + 1.9, treeNode.z);
+aimNode(treeNode, treeNode.y + 1.9);
 game.attack();
 const chopKind = game.player.actionKind;
 const chipsAfterChop = game.chips.length;
@@ -235,7 +253,7 @@ game.selectSlot(1);
 const rockNode = game.resources.nodes.find((n) => n.type === 'rock');
 game.player.setPosition(rockNode.x + 2, rockNode.z, game.world);
 game.attackCooldown = 0;
-aimAt(rockNode.x, rockNode.y + 0.75, rockNode.z);
+aimNode(rockNode, rockNode.y + 0.75);
 game.attack();
 log('виды удара: рубка =', chopKind, '· кирка =', game.player.actionKind,
   '· щепки летят:', chipsAfterChop > 0);

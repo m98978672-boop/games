@@ -43,6 +43,8 @@ const ICONS = {
   obsidian: svg('<path d="M6 16l3-9 5-2 5 6-2 7-6 2z" fill="#3a2b56"/><path d="M9 7l3 6 4-4" stroke="#b083ff" stroke-width="1.2" fill="none"/>'),
   workbench: svg('<rect x="3" y="11" width="18" height="3" rx="1" fill="#8a6a42"/><rect x="5" y="14" width="3" height="7" fill="#5d4529"/><rect x="16" y="14" width="3" height="7" fill="#5d4529"/><path d="M14 5l3 3-5 4" stroke="#8d96a0" stroke-width="1.8" fill="none"/>'),
   grindstone: svg('<circle cx="12" cy="10" r="6" fill="#9a9488"/><circle cx="12" cy="10" r="2" fill="#6f6a61"/><rect x="4" y="17" width="16" height="2.4" rx="1" fill="#8a6a42"/><path d="M15 15l4 5" stroke="#8a6a42" stroke-width="2"/>'),
+  shovel: svg('<path d="M6 4l8 8" stroke="#8a6a42" stroke-width="2.2" stroke-linecap="round"/><path d="M13 12l3 3v4a3 3 0 01-6 0v-4z" fill="#b9c0c8" transform="rotate(-45 13 15)"/>'),
+  sand: svg('<path d="M4 16h16l-2 4H6z" fill="#dfcb95"/><circle cx="9" cy="13" r="1" fill="#c9b37c"/><circle cx="14" cy="12" r="1.3" fill="#c9b37c"/>'),
   rawMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#c46a72"/><path d="M9 12l6 4" stroke="#8f444c" stroke-width="1.4"/>'),
 };
 
@@ -69,6 +71,7 @@ export const ITEMS = {
   spear: { id: 'spear', name: 'Копьё', icon: ICONS.spear, kind: 'tool', hotbar: true, tool: { chop: 0.9, mine: 0.3, weapon: 18 } },
   axe: { id: 'axe', name: 'Топор', icon: ICONS.axe, kind: 'tool', hotbar: true, tool: { chop: 3.2, mine: 0.8, weapon: 12 } },
   pickaxe: { id: 'pickaxe', name: 'Кирка', icon: ICONS.pickaxe, kind: 'tool', hotbar: true, tool: { chop: 1.0, mine: 3.0, weapon: 7 } },
+  shovel: { id: 'shovel', name: 'Лопата', icon: ICONS.shovel, kind: 'tool', hotbar: true, tool: { chop: 0.8, mine: 0.7, dig: 3.0, weapon: 6 } },
   torch: { id: 'torch', name: 'Факел', icon: ICONS.torch, kind: 'tool', hotbar: true, light: true, tool: { chop: 0.6, mine: 0.2, weapon: 4 } },
   bow: { id: 'bow', name: 'Лук', icon: ICONS.bow, kind: 'tool', hotbar: true, ranged: true, tool: { chop: 0.3, mine: 0.1, weapon: 14 } },
 
@@ -92,9 +95,9 @@ export const HOTBAR_SIZE = 10;
 
 /** Порядок сумки */
 export const BAG_ORDER = [
-  'wood', 'stone', 'flint', 'ironOre', 'iron', 'crystal', 'obsidian', 'fiber', 'rope', 'hide', 'feather', 'arrows',
+  'wood', 'stone', 'sand', 'flint', 'ironOre', 'iron', 'crystal', 'obsidian', 'fiber', 'rope', 'hide', 'feather', 'arrows',
   'coconut', 'berries', 'rawMeat', 'cookedMeat', 'driedMeat', 'cookedWater', 'brew', 'bandage',
-  'knife', 'spear', 'axe', 'pickaxe', 'bow', 'torch', 'campfireKit', 'workbench', 'grindstone',
+  'knife', 'spear', 'axe', 'pickaxe', 'shovel', 'bow', 'torch', 'campfireKit', 'workbench', 'grindstone',
 ];
 
 /**
@@ -112,6 +115,7 @@ export const RECIPES = [
   { id: 'spear', name: 'Копьё', need: { wood: 2, flint: 1, rope: 1 }, gives: { spear: 1 }, note: 'Оружие против зверя' },
   { id: 'axe', name: 'Топор', need: { wood: 2, stone: 2, rope: 1 }, gives: { axe: 1 }, note: 'Валит деревья втрое быстрее' },
   { id: 'pickaxe', name: 'Кирка', need: { wood: 2, stone: 3, rope: 1 }, gives: { pickaxe: 1 }, note: 'Без неё камни почти не поддаются' },
+  { id: 'shovel', name: 'Лопата', need: { wood: 2, stone: 2, rope: 1 }, gives: { shovel: 1 }, note: 'Копает землю и песок — руками тоже можно, но медленно' },
   { id: 'torch', name: 'Факел', need: { wood: 1, fiber: 2 }, gives: { torch: 1 }, note: 'Светит ночью, держится в руке' },
   { id: 'campfireKit', name: 'Костровое место', need: { wood: 3, stone: 5 }, gives: { campfireKit: 1 }, note: 'Ставится на землю клавишей F' },
 
