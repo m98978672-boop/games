@@ -50,6 +50,8 @@ export class UI {
       fuel: $('hud-fuel'),
       creative: $('hud-creative'),
       wounds: $('hud-wounds'),
+      botReport: $('bot-report'),
+      botList: $('bot-list'),
     };
     this.bars = {
       health: { fill: $('bar-health'), value: $('val-health'), node: document.querySelector('.bar-health') },
@@ -519,6 +521,94 @@ export class UI {
 
   setPauseStats(text) {
     this.el.pauseStats.textContent = text;
+  }
+
+  // ------------------------------------------------------------
+  //  Отчёт бота-инспектора (F8)
+  // ------------------------------------------------------------
+
+  _botRow(entry) {
+    const li = document.createElement('li');
+    li.className = `bot-row ${entry.ok ? 'bot-ok' : 'bot-bad'}`;
+    const mark = document.createElement('span');
+    mark.className = 'bot-mark';
+    mark.textContent = entry.ok ? '✓' : '✕';
+    const body = document.createElement('div');
+    body.className = 'bot-body';
+    const name = document.createElement('b');
+    name.textContent = entry.name;
+    const fact = document.createElement('span');
+    fact.className = 'bot-fact';
+    fact.textContent = entry.fact;
+    body.append(name, fact);
+    if (!entry.ok && entry.expect) {
+      const want = document.createElement('i');
+      want.className = 'bot-want';
+      want.textContent = `должно быть: ${entry.expect}`;
+      body.append(want);
+    }
+    li.append(mark, body);
+    return li;
+  }
+
+  _botHead(state = {}) {
+    const total = state.total || 0;
+    const done = state.entries || 0;
+    const bad = state.bad || 0;
+    if (state.running) {
+      return `<h2>Бот проверяет игру <span class="bot-count">${done}/${total}</span></h2>
+        <p class="panel-sub">${state.current ? `сейчас: ${state.current}` : 'осматривается…'}</p>`;
+    }
+    return `<h2>Отчёт бота <span class="bot-count">${done}/${total}</span></h2>
+      <p class="panel-sub">${bad ? `${bad} не сходится с описанием` : 'всё сходится с описанием'}</p>`;
+  }
+
+  showBotReport(entries, state = {}) {
+    const panel = this.el.botReport;
+    const list = this.el.botList;
+    if (!panel || !list) return;
+    this._botEntries = entries || [];
+    this._botState = { ...state };
+    panel.classList.remove('hidden');
+    this._paintBot();
+  }
+
+  updateBotReport(entries, state = {}) {
+    this._botEntries = entries || [];
+    this._botState = { ...state };
+    if (!this.el.botReport || this.el.botReport.classList.contains('hidden')) return;
+    this._paintBot();
+  }
+
+  _paintBot() {
+    const panel = this.el.botReport;
+    const list = this.el.botList;
+    if (!panel || !list) return;
+    const entries = this._botEntries || [];
+    const state = this._botState || {};
+    const bad = entries.filter((e) => !e.ok).length;
+    const head = panel.querySelector('.bot-head');
+    if (head) {
+      head.innerHTML = this._botHead({
+        running: state.running,
+        total: state.total || entries.length,
+        entries: entries.length,
+        bad,
+        current: state.current,
+      });
+    }
+    list.textContent = '';
+    for (const entry of entries) list.append(this._botRow(entry));
+    if (state.running) {
+      const li = document.createElement('li');
+      li.className = 'bot-row bot-wait';
+      li.textContent = '…проверяю дальше';
+      list.append(li);
+    }
+  }
+
+  hideBotReport() {
+    if (this.el.botReport) this.el.botReport.classList.add('hidden');
   }
 }
 

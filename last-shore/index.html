@@ -56,7 +56,7 @@
 
     <div class="prompt hidden" id="prompt"></div>
     <div class="toasts" id="toasts"></div>
-    <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар/копать по прицелу · E — действие · G — копать вглубь шахты · X — выход из шахты · F2→F — креатив · C — крафт · I — сумка · F — поставить</div>
+    <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар/копать по прицелу · E — действие · G — копать вглубь / спуск по ходу · X — выход из шахты · F2→F — креатив · F8 — бот-инспектор · F9 — курсор · C — крафт · I — сумка · F — поставить</div>
   </div>
 
   <!-- ======================= Сумка ======================= -->
@@ -85,6 +85,16 @@
     <p class="panel-note">Esc — закрыть</p>
   </div>
 
+  <!-- ======================= Отчёт бота (F8) ======================= -->
+  <div id="bot-report" class="panel panel-bot hidden">
+    <div class="bot-head">
+      <h2>Отчёт бота</h2>
+      <p class="panel-sub">проверяю, всё ли так, как вы описали</p>
+    </div>
+    <ul id="bot-list"></ul>
+    <p class="panel-note">F8 — закрыть · бот ходит по острову и проверяет механики</p>
+  </div>
+
   <!-- ======================= Стартовый экран ======================= -->
   <div id="start" class="overlay">
     <div class="overlay-inner">
@@ -110,6 +120,8 @@
         <div><b>G</b><span>копать вглубь</span></div>
         <div><b>X</b><span>выход из шахты</span></div>
         <div><b>F2 → F</b><span>режим креатива</span></div>
+        <div><b>F8</b><span>бот проверяет игру</span></div>
+        <div><b>F9</b><span>отпустить/захватить курсор</span></div>
       </div>
 
       <div class="btn-row">

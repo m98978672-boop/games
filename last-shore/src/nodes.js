@@ -92,6 +92,8 @@ export class Resources {
       if (h < 2.5 || h > 12) continue;
       if (world.slopeAt(x, z) > 0.35) continue;
       if (spots.some((s) => Math.hypot(s.x - x, s.z - z) < 70)) continue;
+      // родник не рождается внутри чужих хитбоксов: вокруг чаши нужно 2.3 м
+      if (typeof world.isFree === 'function' && !world.isFree(x, z, 2.3)) continue;
       spots.push({ x, z, h });
     }
 

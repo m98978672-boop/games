@@ -20,6 +20,7 @@ import {
   buildWorkbench, buildGrindstone, buildModel as buildForgedModel,
 } from './forge.js';
 import { HitboxSystem } from './hitboxes.js';
+import { InspectorBot } from './bot.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 import { createTextures } from './textures.js';
 
@@ -154,7 +155,10 @@ class Game {
     // ---- хитбоксы: у каждой модели своя невидимая коробка ----
     // Ничего не прячем и не «догружаем»: модели всегда на месте,
     // зато у каждой есть своя коробка — и у героя по частям тела.
+    this.recipes = RECIPES;
     this.hitboxes = new HitboxSystem(this.scene, this.player);
+    this.bot = null;            // бот-инспектор по F8
+    this.cursorFree = false;    // F9: курсор отпущен, обзор мышью выключен
     this.hitboxIds = { mobs: new Map(), nodes: new Map(), pickups: new Map() };
     this.registerStaticHitboxes();
     this.registerMobHitboxes();
@@ -180,7 +184,8 @@ class Game {
     this.creative = false;
     this.creativeArmed = false;
     this.digCooldown = 0;
-    this.wounds = [];            // ранения по частям тела
+    this.wounds = [];
+    this.armPenalty = 1;            // ранения по частям тела
     this.woundTimer = 0;
     this.thoughtTimer = 45 + Math.random() * 40;
     this.fireflies = null;
@@ -231,8 +236,8 @@ class Game {
   registerStaticHitboxes() {
     for (const node of this.resources.nodes) {
       // коробка ровно по габаритам модели (их считает world при сборке)
-      const bbox = node.item && node.item.bbox
-        ? node.item.bbox
+      const bbox = node.item && (node.item.bboxSolid || node.item.bbox)
+        ? (node.item.bboxSolid || node.item.bbox)
         : { w: 1, h: 2, d: 1, minY: 0 };
       const id = this.hitboxes.registerStatic(
         node.type === 'tree' || node.type === 'palm' ? 'tree' : node.type,
@@ -243,7 +248,8 @@ class Game {
           w: bbox.w,
           h: bbox.h,
           d: bbox.d,
-          yaw: (node.item && node.item.rot) || 0,
+          // footprint деревьев/камней квадратный: поворот не раздувает коробку
+          yaw: 0,
         },
         { physical: false, ref: node, enabled: () => node.alive }
       );
@@ -465,6 +471,7 @@ class Game {
       if (this.ui.isPanelOpen()) return;     // панель открыта — клики по ней, а не по миру
       if (!this.locked) {
         this.dragging = true;
+        this.cursorFree = false;
         this.tryLock();
       }
       if (e.button === 0) {
@@ -505,7 +512,7 @@ class Game {
         this.panelUnlock = false;
         return;
       }
-      if (wasLocked && !this.locked && this.running && !this.paused && !this.dead) {
+      if (wasLocked && !this.locked && this.running && !this.paused && !this.dead && !this.cursorFree) {
         this.pause();
       }
     });
@@ -559,6 +566,18 @@ class Game {
       return;
     }
 
+    // F8 и F9 работают и на паузе: это служебные клавиши
+    if (code === 'F8') {
+      e.preventDefault();
+      if (this.running) this.toggleBot();
+      return;
+    }
+    if (code === 'F9') {
+      e.preventDefault();
+      if (this.running) this.toggleCursor();
+      return;
+    }
+
     if (!this.running || this.paused) return;
 
     switch (code) {
@@ -593,8 +612,27 @@ class Game {
         if (this.underground) this.exitMine();
         break;
       case 'KeyG':
-        // копать вглубь: новый слой под ногами
-        if (!this.underground) break;
+        // на поверхности: если под прицелом пробита пустота — спускаемся в шахту
+        if (!this.underground) {
+          const t = this.aim && this.aim.target;
+          const pt = t && t.kind === 'ground' ? t.point : this.player.position;
+          const pr = this.world.probeAt(pt.x, pt.z);
+          if (pr.layer !== 'void') {
+            this.ui.toast('Ход в шахту ещё не пробит: копай вниз (земля → камень → пустота)', true);
+            break;
+          }
+          const spot = this.mine.enterNear(pt.x, pt.z, 0);
+          this.underground = true;
+          this.mineLight.visible = true;
+          this.player.setPosition(spot.x, spot.z, this.mineWorld);
+          this.player.position.y = this.mine.floorAt(spot.x, spot.z);
+          this.player.applyCamera(this.camera, this.mineWorld, 1);
+          this.audio.stoneBreak?.();
+          this.spawnChips(spot.x, spot.y + 0.6, spot.z, { count: 18, color: 0x8f8a80, size: 0.09, spread: 2.6, up: 2.6 });
+          this.ui.toast('Ты спустился по своему ходу в каменный слой шахты');
+          this.save();
+          break;
+        }
         if (!this.creative) {
           const tool = this.equippedTool();
           if (!tool || !(tool.mine > 1.5)) {
@@ -775,26 +813,41 @@ class Game {
     return 0.9;           // руками: медленно, но можно
   }
 
-  /** Снять слой земли под прицелом */
+  /** Кирка в руках? Без неё каменный слой не берётся */
+  digMinePower() {
+    if (this.creative) return 99;
+    const tool = this.equippedTool();
+    return tool && tool.mine ? tool.mine : 0;
+  }
+
+  /** Снять слой земли под прицелом: земля → песок → камень → пустота шахты */
   digGroundAt(point) {
     const w = this.world;
-    const layer = w.layerAt(point.x, point.z);
+    const probe = w.probeAt(point.x, point.z);
     const power = this.digPower();
+    const minePower = this.digMinePower();
 
-    // камень руками не взять — только киркой
-    if (layer === 'stone' && !this.creative) {
-      const tool = this.equippedTool();
-      if (!tool || !(tool.mine > 1.5)) {
-        this.ui.toast('Камень руками не взять — нужна кирка', true);
-        this.audio.stoneCrack?.();
-        return;
-      }
+    // под землёй уже пустота — предлагаем спуститься в шахту
+    if (probe.layer === 'void') {
+      this.ui.toast('Дальше пустота — это ход в шахту. Нажми G, чтобы спуститься', true);
+      this.audio.rustle?.();
+      return;
     }
 
-    if (power < 2 && Math.random() < 0.45) {
+    // камень руками не взять — только киркой
+    if (probe.layer === 'stone' && minePower < 1.5) {
+      this.ui.toast('Дальше каменный слой — нужна кирка. Тут уже начинаются шахты', true);
+      this.audio.stoneCrack?.();
+      this.spawnChips(point.x, point.y + 0.15, point.z, {
+        count: 5, color: 0x8b8478, size: 0.05, spread: 1.0, up: 1.4,
+      });
+      return;
+    }
+
+    if (power < 2 && probe.layer !== 'stone' && Math.random() < 0.45) {
       // руками: первый удар только рыхлит
       this.spawnChips(point.x, point.y + 0.15, point.z, {
-        count: 4, color: layer === 'sand' ? 0xdfcb95 : 0x7d6544, size: 0.05, spread: 1.1, up: 1.2,
+        count: 4, color: probe.layer === 'sand' ? 0xdfcb95 : 0x7d6544, size: 0.05, spread: 1.1, up: 1.2,
       });
       this.audio.rustle?.();
       this.ui.toast('Разрыхлил землю — ещё удар', true);
@@ -804,27 +857,54 @@ class Game {
     const res = w.dig(point.x, point.z, {
       radius: power > 2 ? 2.0 : 1.45,
       depth: this.creative ? 0.7 : 0.45,
+      mine: minePower,
     });
     if (!res) return;
     if (res.hard) {
-      this.ui.toast('Дальше камень — тут нужна кирка и шахта', true);
+      this.ui.toast('Камень не поддаётся — нужна кирка', true);
+      this.audio.stoneCrack?.();
       return;
     }
 
     this.player.shake(0.07);
+
+    if (res.stone) {
+      // каменный слой: твёрдо, но именно отсюда идут шахты
+      this.audio.stoneCrack?.();
+      this.audio.oreHit?.();
+      this.spawnChips(point.x, point.y + 0.2, point.z, {
+        count: 10, color: 0x8f8a80, size: 0.07, spread: 1.5, up: 1.7,
+      });
+      this.addItem('stone', 1);
+      if (Math.random() < 0.22) this.addItem('flint', 1);
+      if (Math.random() < 0.08) this.addItem('ironOre', 1);
+      if (res.void) {
+        this.ui.toast('Каменный слой пробит: внизу пустота шахты. Нажми G, чтобы спуститься');
+        this.audio.stoneBreak?.();
+      } else {
+        this.ui.toast(`Каменный слой: снято ${res.depth.toFixed(2)} м · до пустоты ${res.stoneLeft.toFixed(1)} м`);
+      }
+      return;
+    }
+
     this.audio.rustle?.();
-    const color = layer === 'sand' ? 0xdfcb95 : 0x6f5a3c;
+    const color = res.layer === 'sand' ? 0xdfcb95 : 0x6f5a3c;
     this.spawnChips(point.x, point.y + 0.2, point.z, { count: 9, color, size: 0.06, spread: 1.6, up: 1.8 });
-    if (layer === 'sand') this.addItem('sand', 1);
-    else if (Math.random() < 0.5) this.addItem('stone', 1);
+    if (res.layer === 'sand') this.addItem('sand', 1);
+    else if (Math.random() < 0.35) this.addItem('stone', 1);
 
     if (res.flooded) {
-      this.ui.toast('Яму залило водой — здесь уже глубоко');
+      this.ui.toast('На пляже яма дошла до морской воды — дно заливает. В глубине острова воды нет');
       this.audio.drink?.();
     } else if (res.sandFill > 0.05) {
       this.ui.toast('Песок осыпался в яму — края поплыли');
     } else {
-      this.ui.toast(`Снят слой: ${layer === 'sand' ? 'песок' : 'земля'} · глубина ${res.dug.toFixed(1)} м`);
+      const name = res.layer === 'sand' ? 'песок' : 'земля';
+      const pr2 = w.probeAt(point.x, point.z);
+      const hint = pr2.dug < 1.35
+        ? `до камня ${(1.35 - pr2.dug).toFixed(1)} м`
+        : `до пустоты ${Math.max(0, pr2.cap - pr2.dug).toFixed(1)} м`;
+      this.ui.toast(`Снят слой: ${name} · ${res.dug.toFixed(1)} м · ${hint}`);
     }
   }
 
@@ -1999,6 +2079,7 @@ class Game {
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
     this.digCooldown = Math.max(0, (this.digCooldown || 0) - dt);
     this.updateWounds(dt);
+    if (this.bot) this.bot.update(dt);
     if (this.holdingAttack && this.attackCooldown <= 0) this.attack();
 
     const fireWarm = this.resources.fireWarmth(this.player.position);
@@ -2249,6 +2330,28 @@ class Game {
     if (!this.running || this.paused || this.dead) return;
     if (this.dragLook) return;
     this.tryLock();
+  }
+
+  /** F9: отпустить курсор для кликов по интерфейсу и вернуть его обратно */
+  toggleCursor() {
+    if (this.cursorFree) {
+      this.cursorFree = false;
+      this.ui.toast('Курсор захвачен — обзор мышью снова работает');
+      this.tryLock();
+      return;
+    }
+    this.cursorFree = true;
+    this.dragging = false;
+    this.holdingAttack = false;
+    if (document.pointerLockElement) document.exitPointerLock();
+    this.ui.toast('Курсор свободен: можно кликать по кнопкам и панелям. F9 — вернуть');
+    this.audio.uiClick?.();
+  }
+
+  /** F8: робот-инспектор проверяет игру по описанию */
+  toggleBot() {
+    if (!this.bot) this.bot = new InspectorBot(this);
+    this.bot.toggle();
   }
 
   /** Переключение «третье лицо / от первого лица» */
@@ -2509,6 +2612,7 @@ window.addEventListener('unhandledrejection', (e) => {
 window.__boot = boot;
 // для тестов и консоли: кузница доступна снаружи
 window.__forge = { forge, sharpen, canSharpen, buildModel: buildForgedModel, effectiveWeapon, FORMS, MATERIALS };
+window.__botCtor = InspectorBot;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initMenu);
