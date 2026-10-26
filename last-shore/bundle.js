@@ -29523,14 +29523,16 @@ void main() {
          float rel = texLum / 0.55;
          // \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u0430 \u0434\u043E\u043B\u0436\u043D\u0430 \u0447\u0438\u0442\u0430\u0442\u044C\u0441\u044F \u043F\u043E\u0434 \u043D\u043E\u0433\u0430\u043C\u0438: \u043A\u043E\u043D\u0442\u0440\u0430\u0441\u0442 \u0438 \u0432\u043A\u043B\u0430\u0434 \u0432\u044B\u0448\u0435,
          // \u043D\u043E \u0431\u0435\u0437 \u0432\u044B\u043A\u0440\u0443\u0447\u0438\u0432\u0430\u043D\u0438\u044F \u0432 \u0431\u0435\u043B\u043E\u0435/\u0447\u0451\u0440\u043D\u043E\u0435
-         rel = clamp(mix(1.0, rel, 2.35), 0.34, 1.95);
+         rel = clamp(mix(1.0, rel, 1.5), 0.5, 1.62);
 
          // \u043E\u0442\u0442\u0435\u043D\u043E\u043A \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u044B \u043F\u043E\u0434\u043C\u0435\u0448\u0438\u0432\u0430\u0435\u043C \u043B\u0438\u0448\u044C \u0447\u0430\u0441\u0442\u0438\u0447\u043D\u043E, \u0447\u0442\u043E\u0431\u044B \u043D\u0435 \u0441\u0431\u0438\u0442\u044C \u043F\u0430\u043B\u0438\u0442\u0440\u0443 \u0431\u0438\u043E\u043C\u0430
          vec3 hueTex = mixTex / max(texLum, 0.03);
-         vec3 hue = mix(vec3(1.0), hueTex, 0.58);
+         // \u043E\u0442\u0442\u0435\u043D\u043E\u043A \u0442\u0435\u043A\u0441\u0442\u0443\u0440\u044B \u043F\u043E\u0434\u043C\u0435\u0448\u0438\u0432\u0430\u0435\u043C \u0443\u043C\u0435\u0440\u0435\u043D\u043D\u043E: \u0446\u0432\u0435\u0442 \u0431\u0438\u043E\u043C\u0430 (\u0440\u0430\u0437\u043D\u044B\u0435 \u043E\u0442\u0442\u0435\u043D\u043A\u0438
+         // \u0442\u0440\u0430\u0432\u044B) \u0434\u043E\u043B\u0436\u0435\u043D \u0447\u0438\u0442\u0430\u0442\u044C\u0441\u044F, \u0430 \u043D\u0435 \u0440\u0430\u0441\u0442\u0432\u043E\u0440\u044F\u0442\u044C\u0441\u044F \u0432 \u043E\u0434\u043D\u043E\u0439 \u043A\u0430\u0440\u0442\u0435
+         vec3 hue = mix(vec3(1.0), hueTex, 0.34);
 
          // \u043A\u0440\u0443\u043F\u043D\u0430\u044F \u043F\u044F\u0442\u043D\u0438\u0441\u0442\u043E\u0441\u0442\u044C: \u0442\u0440\u0430\u0432\u0430 \u0438 \u043F\u0435\u0441\u043E\u043A \xAB\u0434\u044B\u0448\u0430\u0442\xBB \u043F\u044F\u0442\u043D\u0430\u043C\u0438
-         float macroMod = mix(0.9, 1.1, macro);
+         float macroMod = mix(0.86, 1.14, macro);
 
          diffuseColor.rgb = base * rel * hue * macroMod;
 
@@ -29541,6 +29543,28 @@ void main() {
          float peb = texture2D(uRock, uvA * 4.3 + vec2(0.13, 0.71)).r;
          float gravel = smoothstep(0.62, 0.82, peb) * (1.0 - w.x * 0.4);
          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.22 + vec3(0.04, 0.035, 0.025), gravel * 0.5);
+         // --- \u0442\u0440\u0430\u0432\u0430 \u0438\u0437 \u0440\u0430\u0437\u043D\u044B\u0445 \u043E\u0442\u0442\u0435\u043D\u043A\u043E\u0432: \u043A\u0440\u0443\u043F\u043D\u044B\u0435 \u043F\u044F\u0442\u043D\u0430 \u043F\u0440\u044F\u043C\u043E \u043F\u043E\u0434 \u043D\u043E\u0433\u0430\u043C\u0438 ---
+         float tFresh = texture2D(uGrass, uvA * 0.19 + vec2(0.31, 0.07)).g;
+         float tDry   = texture2D(uDirt,  uvA * 0.13 + vec2(0.70, 0.44)).r;
+         float tLush  = texture2D(uGrass, uvA * 0.31 - vec2(0.12, 0.55)).b;
+         float tDark  = texture2D(uDirt,  uvA * 0.07 + vec2(0.05, 0.91)).g;
+
+         float patchDry  = smoothstep(0.42, 0.72, tDry * 0.65 + tLush * 0.35);
+         float patchLush = smoothstep(0.44, 0.76, tFresh * 0.7 + (1.0 - tDry) * 0.3);
+         float patchDark = smoothstep(0.50, 0.82, tDark * 0.8 + tFresh * 0.25);
+
+         // \u043A\u0440\u0443\u043F\u043D\u044B\u0435 \u043F\u044F\u0442\u043D\u0430 \u043F\u043E \xAB\u0434\u0430\u043B\u0451\u043A\u043E\u0439\xBB \u043A\u0430\u0440\u0442\u0435: \u043B\u0443\u0433, \u0432\u044B\u0433\u043E\u0440\u0435\u0432\u0448\u0430\u044F \u0442\u0440\u0430\u0432\u0430, \u0442\u0435\u043D\u044C
+         float farDry = smoothstep(0.40, 0.70, texture2D(uDirt, uvB * 0.35 + vec2(0.61, 0.13)).r);
+         float farLush = smoothstep(0.42, 0.72, texture2D(uGrass, uvB * 0.31 - vec2(0.22, 0.48)).g);
+
+         vec3 grassTint = vec3(1.0);
+         grassTint = mix(grassTint, vec3(1.62, 1.34, 0.70), patchDry * w.x * 1.5);    // \u0441\u0443\u0445\u0430\u044F, \u0436\u0451\u043B\u0442\u0430\u044F
+         grassTint = mix(grassTint, vec3(0.72, 1.42, 0.68), patchLush * w.x * 1.35);  // \u0441\u0432\u0435\u0436\u0430\u044F, \u0437\u0435\u043B\u0451\u043D\u0430\u044F
+         grassTint = mix(grassTint, vec3(0.52, 0.82, 0.56), patchDark * w.x * 1.2);   // \u0442\u0451\u043C\u043D\u0430\u044F, \u0442\u0435\u043D\u0438\u0441\u0442\u0430\u044F
+         grassTint = mix(grassTint, vec3(1.35, 1.30, 0.86), farDry * w.x * 0.95);     // \u0432\u044B\u0433\u043E\u0440\u0435\u0432\u0448\u0438\u0439 \u043B\u0443\u0433
+         grassTint = mix(grassTint, vec3(0.86, 1.18, 0.74), farLush * w.x * 0.8);     // \u0441\u043E\u0447\u043D\u0430\u044F \u0437\u0435\u043B\u0435\u043D\u044C
+         diffuseColor.rgb *= grassTint;
+
          // \u0432\u044B\u0433\u043E\u0440\u0435\u0432\u0448\u0430\u044F \u043D\u0430 \u0441\u043E\u043B\u043D\u0446\u0435 \u0442\u0440\u0430\u0432\u0430 \u2014 \u0442\u0451\u043F\u043B\u044B\u0439 \u043E\u0442\u0442\u0435\u043D\u043E\u043A \u043F\u044F\u0442\u043D\u0430\u043C\u0438
          diffuseColor.rgb *= mix(vec3(1.0), vec3(1.07, 1.0, 0.86), smoothstep(0.55, 0.85, macro3) * w.x);
 
@@ -29551,7 +29575,7 @@ void main() {
       );
       material2.userData.shader = shader;
     };
-    material2.customProgramCacheKey = () => "lastshore-terrain-v2";
+    material2.customProgramCacheKey = () => "lastshore-terrain-v5";
     return material2;
   }
   function withRepeat(map, repeat) {
@@ -30399,6 +30423,32 @@ void main() {
   var SOIL_THICK = 1.35;
   var STONE_THICK = 2.4;
   var DIG_CELL = 1.4;
+  var GRASS_ZONES = [
+    { name: "\u0441\u043E\u0447\u043D\u044B\u0439", color: new Color(6266684) },
+    // насыщенный зелёный
+    { name: "\u0441\u0432\u0435\u0436\u0438\u0439", color: new Color(9226330) },
+    // светлый, после дождя
+    { name: "\u0442\u0451\u043C\u043D\u044B\u0439", color: new Color(4156207) },
+    // тенистый, под кронами
+    { name: "\u0432\u044B\u0433\u043E\u0440\u0435\u0432\u0448\u0438\u0439", color: new Color(11122255) },
+    // жёлто-зелёный
+    { name: "\u0437\u043E\u043B\u043E\u0442\u0438\u0441\u0442\u044B\u0439", color: new Color(13220710) }
+    // сухой, почти соломенный
+  ];
+  var GRASS_TONES = {
+    fresh: new Color(9288539),
+    // свежая после дождя
+    rich: new Color(7052358),
+    // сочная
+    jungle: new Color(4880956),
+    // тёмные джунгли
+    dry: new Color(11905901),
+    // выгоревшая на солнце
+    moss: new Color(6061891),
+    // мох в низинах
+    bloom: new Color(10997612)
+    // цветущий луг, светлая
+  };
   function colorize2(geo, hex2) {
     const c = new Color(hex2);
     const n = geo.attributes.position.count;
@@ -30428,6 +30478,7 @@ void main() {
       this.pickups = [];
       this.time = 0;
       this._buildHeights();
+      this.baseHeights = this.heights.slice();
       this._buildTerrain();
       this._buildWater();
       this._buildVegetation();
@@ -30494,13 +30545,21 @@ void main() {
       } else if (h > 15) {
         c.lerpColors(new Color(COLORS.rock), new Color(COLORS.snow), smoothstep2(17, 24, h));
       } else {
-        const grass = new Color(COLORS.grass);
-        const jungle = new Color(COLORS.jungle);
-        c.copy(grass).lerp(jungle, clamp2((moisture - 0.25) * 1.05, 0, 1));
-        const dry = fbm(x * 0.021 + 60, z * 0.021 - 12, 3, this.seed + 91);
-        if (dry > 0.58) c.lerp(new Color(11708261), (dry - 0.58) * 1.6);
-        const n = fbm(x * 0.09, z * 0.09, 2, this.seed + 55);
-        c.offsetHSL(0, 0, (n - 0.5) * 0.06);
+        const n1 = fbm(x * 0.019 + 60, z * 0.019 - 12, 3, this.seed + 91);
+        const n2 = fbm(x * 95e-4 - 24, z * 95e-4 + 41, 2, this.seed + 137);
+        const n3 = fbm(x * 0.075 + 7, z * 0.075 + 90, 2, this.seed + 211);
+        const tones = GRASS_TONES;
+        const pick = n1 * 0.62 + n2 * 0.38 + (n3 - 0.5) * 0.16;
+        const zones = GRASS_ZONES;
+        let tone = zones[0];
+        if (pick > 0.34) tone = zones[1];
+        if (pick > 0.45) tone = zones[2];
+        if (pick > 0.55) tone = zones[3];
+        if (pick > 0.64) tone = zones[4];
+        c.copy(tone.color);
+        c.lerp(tones.jungle, clamp2((moisture - 0.5) * 1.2, 0, 1) * 0.45);
+        c.lerp(tones.dry, smoothstep2(0.6, 0.85, n1) * 0.3);
+        c.offsetHSL((n3 - 0.5) * 0.035, (n3 - 0.5) * 0.2, (n3 - 0.5) * 0.08);
         if (slope > 0.6) c.lerp(new Color(COLORS.rock), smoothstep2(0.6, 0.9, slope) * 0.7);
       }
       return c;
@@ -30926,6 +30985,7 @@ void main() {
       }
       const tuftGeo = mergeGeometries(blades, false);
       this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
+      this.tuftItems = tufts;
       for (const mesh2 of this.tufts) mesh2.material = grassMat;
     }
     // --- подбираемые вещи ---
@@ -31150,52 +31210,25 @@ void main() {
       const isStone = probe.layer === "stone";
       const stepDepth = isStone ? depth * (mine >= 40 ? 0.8 : mine >= 2.5 ? 0.8 : 0.55) : depth;
       const before = this.heightAt(x, z);
-      const half = SIZE / 2;
-      const ix0 = Math.max(1, Math.floor((x - radius + half) / STEP));
-      const ix1 = Math.min(GRID - 2, Math.ceil((x + radius + half) / STEP));
-      const iz0 = Math.max(1, Math.floor((z - radius + half) / STEP));
-      const iz1 = Math.min(GRID - 2, Math.ceil((z + radius + half) / STEP));
-      for (let iz = iz0; iz <= iz1; iz++) {
-        for (let ix = ix0; ix <= ix1; ix++) {
-          const vx = -half + ix * STEP;
-          const vz = -half + iz * STEP;
-          const d = Math.hypot(vx - x, vz - z);
-          if (d > radius) continue;
-          const falloff = d <= STEP * 0.8 ? 1 : 1 - Math.pow((d - STEP * 0.8) / Math.max(1e-3, radius - STEP * 0.8), 1.5);
-          const k = iz * GRID + ix;
-          this.heights[k] = Math.max(-6, this.heights[k] - stepDepth * Math.max(0, falloff));
+      const newDug = already + stepDepth;
+      const topY = this.surfaceOf(x, z).h0;
+      const floorY = Math.max(-5, topY - (newDug + 0.25));
+      const block = this._pitBlock(x, z, radius);
+      for (let iz = block.vz0; iz <= block.vz1; iz++) {
+        for (let ix = block.vx0; ix <= block.vx1; ix++) {
+          this.heights[iz * GRID + ix] = Math.min(this.heights[iz * GRID + ix], floorY);
         }
       }
       let sandFill = 0;
       if (probe.layer === "sand") {
-        let ring = 0;
-        let ringCount = 0;
-        for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-          const rx = x + Math.cos(a) * (radius + 0.8);
-          const rz = z + Math.sin(a) * (radius + 0.8);
-          ring += this.heightAt(rx, rz);
-          ringCount++;
-        }
-        const avg = ring / Math.max(1, ringCount);
-        const after2 = this.heightAt(x, z);
-        if (avg > after2 + 0.15) {
-          sandFill = Math.min(0.22, (avg - after2) * 0.35);
-          const lift = Math.min(sandFill, depth);
-          for (let iz = iz0; iz <= iz1; iz++) {
-            for (let ix = ix0; ix <= ix1; ix++) {
-              const vx = -half + ix * STEP;
-              const vz = -half + iz * STEP;
-              const d = Math.hypot(vx - x, vz - z);
-              if (d > radius * 0.75) continue;
-              this.heights[iz * GRID + ix] += lift;
-            }
-          }
-        }
+        const edge = this.baseHeightAt(block.edgeX, block.edgeZ);
+        if (edge > floorY + 0.2) sandFill = Math.min(0.18, (edge - floorY) * 0.12);
       }
-      this.digStore.set(key, already + stepDepth);
+      this.digStore.set(key, newDug);
       this.digEvents++;
       this._applyHeights();
-      this._updatePit(x, z, radius, this.surfaceOf(x, z).h0, already + stepDepth, probe.surface);
+      this._clearTufts(x, z, radius);
+      this._updatePit(x, z, radius, already + stepDepth, probe.surface);
       const after = this.heightAt(x, z);
       const next = this.probeAt(x, z);
       const flooded = probe.surface === "sand" && after < CONFIG.world.seaLevel - 0.05;
@@ -31213,44 +31246,210 @@ void main() {
         bottom: after
       };
     }
+    /** Высота земли ДО копания: нужна для края ямы и комьев */
+    baseHeightAt(x, z) {
+      const arr = this.baseHeights || this.heights;
+      const gx = clamp2((x + SIZE / 2) / STEP, 0, GRID - 1.001);
+      const gz = clamp2((z + SIZE / 2) / STEP, 0, GRID - 1.001);
+      const ix = Math.floor(gx);
+      const iz = Math.floor(gz);
+      const fx = gx - ix;
+      const fz = gz - iz;
+      const h00 = arr[iz * GRID + ix];
+      const h10 = arr[iz * GRID + ix + 1];
+      const h01 = arr[(iz + 1) * GRID + ix];
+      const h11 = arr[(iz + 1) * GRID + ix + 1];
+      const a = h00 + (h10 - h00) * fx;
+      const b = h01 + (h11 - h01) * fx;
+      return a + (b - a) * fz;
+    }
+    /** Половина стороны ямы: по ней режется рельеф и ставятся стенки */
+    pitHalf(radius) {
+      return Math.max(1.1, radius * 0.96);
+    }
+    /** Блок узлов сетки, которые опускаются на дно ямы */
+    _pitBlock(x, z, radius) {
+      const half = SIZE / 2;
+      const h = this.pitHalf(radius);
+      const vx0 = clamp2(Math.round((x - h + half) / STEP), 1, GRID - 2);
+      const vx1 = clamp2(Math.round((x + h + half) / STEP), 1, GRID - 2);
+      const vz0 = clamp2(Math.round((z - h + half) / STEP), 1, GRID - 2);
+      const vz1 = clamp2(Math.round((z + h + half) / STEP), 1, GRID - 2);
+      return {
+        half: h,
+        vx0,
+        vx1,
+        vz0,
+        vz1,
+        edgeX: x + h * 1.5,
+        edgeZ: z + h * 1.5,
+        x0: -half + vx0 * STEP,
+        x1: -half + vx1 * STEP,
+        z0: -half + vz0 * STEP,
+        z1: -half + vz1 * STEP
+      };
+    }
+    /** Убрать траву с места, где выкопали яму (иначе травинки висят в воздухе) */
+    _clearTufts(x, z, radius) {
+      const items = this.tuftItems;
+      if (!items || !items.length) return;
+      const r2 = (radius * 1.35) ** 2;
+      const dummy = new Object3D();
+      for (const it of items) {
+        if (it.hidden) continue;
+        const dx = it.x - x;
+        const dz = it.z - z;
+        if (dx * dx + dz * dz > r2) continue;
+        it.hidden = true;
+        for (const part2 of it.parts || []) {
+          dummy.position.set(it.x, it.h - 0.15, it.z);
+          dummy.rotation.set(0, it.rot, 0);
+          dummy.scale.setScalar(1e-4);
+          dummy.updateMatrix();
+          part2.mesh.setMatrixAt(part2.idx, dummy.matrix);
+          part2.mesh.instanceMatrix.needsUpdate = true;
+        }
+      }
+    }
     /**
-     * Лунка как модель: стенки и дно со срезом породы.
-     * Рельеф — сетка в 1.8 м, одной ямки в пару метров она не покажет,
-     * поэтому в яме ставится конус из камня/земли нужной глубины.
+     * Яма в блоках: клетки земли вырезаются ТОЧНО по сетке рельефа
+     * (маска dugCut), а на их место вставляется коробка — стенки и дно со
+     * слоями «земля → камень». Никаких рваных краёв: край ямы идёт по линиям
+     * сетки, как блоки в шахте.
      */
-    _updatePit(x, z, radius, surfaceH, dug, surface) {
+    _updatePit(x, z, radius, dug, surface) {
       if (!this.pitGroup) return;
+      const block = this._pitBlock(x, z, radius);
       const key = this._digKey(x, z);
+      const topY = this.surfaceOf(x, z).h0;
+      const floorY = Math.max(-5, topY - (dug + 0.25));
       let pit = this.pits.get(key);
-      const depth = Math.max(0.35, dug + 0.15);
       if (!pit) {
-        const wallMat = this.textures ? createStoneMaterial(this.textures.rockDetail, { repeat: [2.5, 1.6] }) : new MeshStandardMaterial({ color: 9143416, roughness: 1, flatShading: true });
+        const wallMat = this.textures ? createStoneMaterial(this.textures.rockDetail, { repeat: [1.4, 1] }) : new MeshStandardMaterial({ roughness: 0.98, flatShading: true });
         wallMat.side = DoubleSide;
-        wallMat.color = new Color(surface === "sand" ? 13350024 : surface === "stone" ? 9407104 : 9860954);
+        wallMat.color.setHex(16777215);
         const group = new Group();
-        const wall = new Mesh(new CylinderGeometry(1, 0.72, 1, 12, 1, true), wallMat);
-        const bottom = new Mesh(new CircleGeometry(0.74, 12), wallMat);
-        bottom.rotation.x = -Math.PI / 2;
-        wall.castShadow = false;
-        wall.receiveShadow = true;
-        bottom.receiveShadow = true;
-        group.add(wall, bottom);
-        group.position.set(x, surfaceH, z);
-        group.renderOrder = 1;
+        group.name = "pit";
+        const walls = new Mesh(new BufferGeometry(), wallMat);
+        walls.receiveShadow = true;
+        walls.castShadow = false;
+        group.add(walls);
+        const lumpMat = new MeshStandardMaterial({ roughness: 1, flatShading: true, color: 9072711 });
+        const debris = new Group();
+        for (let i = 0; i < 6; i++) {
+          const size = 0.13 + i % 3 * 0.045;
+          debris.add(new Mesh(new BoxGeometry(size, size * 0.72, size * 0.9), lumpMat));
+        }
+        group.add(debris);
         this.pitGroup.add(group);
-        pit = { group, wall, bottom, mat: wallMat, dug: 0 };
+        pit = { group, walls, debris, mat: wallMat, lumpMat, sig: "" };
         this.pits.set(key, pit);
       }
-      pit.dug = dug;
-      const r = Math.max(0.9, radius * 0.92);
-      pit.wall.scale.set(r, depth, r);
-      pit.wall.position.y = -depth / 2 + 0.02;
-      pit.bottom.scale.setScalar(r);
-      pit.bottom.position.y = -depth + 0.03;
-      const rock = dug > SOIL_THICK;
-      const tint = rock ? 8222314 : surface === "sand" ? 12626309 : 8217670;
-      pit.mat.color.setHex(tint);
-      pit.mat.roughness = rock ? 0.9 : 1;
+      const sig = `${block.vx0},${block.vz0},${block.vx1},${block.vz1}|${dug.toFixed(2)}|${surface}`;
+      if (pit.sig !== sig) {
+        pit.sig = sig;
+        const soilTop = new Color(surface === "sand" ? 14205331 : surface === "stone" ? 11906722 : 9729612);
+        const soilLow = new Color(surface === "sand" ? 12428923 : surface === "stone" ? 10261898 : 7560252);
+        const rock = new Color(9406588);
+        const rockDeep = new Color(8222573);
+        const pos = [];
+        const col = [];
+        const push = (px, py, pz, c) => {
+          pos.push(px, py, pz);
+          col.push(c.r, c.g, c.b);
+        };
+        const quad = (ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, c) => {
+          push(ax, ay, az, c);
+          push(bx, by, bz, c);
+          push(cx, cy, cz, c);
+          push(ax, ay, az, c);
+          push(cx, cy, cz, c);
+          push(dx, dy, dz, c);
+        };
+        const inset = 0.09;
+        const x0 = block.x0 + inset;
+        const x1 = block.x1 - inset;
+        const z0 = block.z0 + inset;
+        const z1 = block.z1 - inset;
+        const depth = topY - floorY;
+        const soilD = Math.min(Math.max(0.5, depth * 0.55), 1.15);
+        const segs = 6;
+        for (let side = 0; side < 4; side++) {
+          const vertical = side % 2 === 1;
+          for (let i = 0; i < segs; i++) {
+            const f0 = i / segs;
+            const f1 = (i + 1) / segs;
+            let ax;
+            let az;
+            let bx;
+            let bz;
+            if (vertical) {
+              const px = side === 1 ? x1 : x0;
+              ax = px;
+              bx = px;
+              az = z0 + (z1 - z0) * f0;
+              bz = z0 + (z1 - z0) * f1;
+            } else {
+              const pz = side === 0 ? z0 : z1;
+              az = pz;
+              bz = pz;
+              ax = x0 + (x1 - x0) * f0;
+              bx = x0 + (x1 - x0) * f1;
+            }
+            const topA = this.baseHeightAt(ax, az) - 0.04;
+            const topB = this.baseHeightAt(bx, bz) - 0.04;
+            const midA = Math.max(floorY + 0.1, topA - soilD);
+            const midB = Math.max(floorY + 0.1, topB - soilD);
+            const tone = i % 2 === 0 ? soilTop : soilLow;
+            quad(ax, topA, az, bx, topB, bz, bx, midB, bz, ax, midA, az, tone);
+            if (midA > floorY + 0.1 || midB > floorY + 0.1) {
+              quad(ax, midA, az, bx, midB, bz, bx, floorY, bz, ax, floorY, az, i % 2 ? rockDeep : rock);
+            }
+          }
+        }
+        quad(x0, floorY, z0, x1, floorY, z0, x1, floorY, z1, x0, floorY, z1, dug > 1.3 ? rockDeep : soilLow);
+        const geo = new BufferGeometry();
+        geo.setAttribute("position", new Float32BufferAttribute(pos, 3));
+        geo.setAttribute("color", new Float32BufferAttribute(col, 3));
+        geo.computeVertexNormals();
+        geo.computeBoundingSphere();
+        pit.walls.geometry.dispose();
+        pit.walls.geometry = geo;
+        pit.mat.color.setHex(16777215);
+        pit.lumpMat.color.setHex(surface === "sand" ? 12626300 : 8809285);
+      }
+      const chunks = pit.debris.children;
+      const cxm = (block.x0 + block.x1) / 2;
+      const czm = (block.z0 + block.z1) / 2;
+      const halfW = (block.x1 - block.x0) / 2;
+      const halfD = (block.z1 - block.z0) / 2;
+      for (let i = 0; i < chunks.length; i++) {
+        const a = i / chunks.length * Math.PI * 2 + 0.55;
+        const px = cxm + Math.cos(a) * halfW * 1.06;
+        const pz = czm + Math.sin(a) * halfD * 1.06;
+        chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.08, pz);
+        chunks[i].rotation.y = a * 2.1;
+      }
+      pit.group.position.set(0, 0, 0);
+      pit.group.visible = true;
+      pit.floorY = floorY;
+    }
+    /** Копание с учётом соседних клеток: у края ямы глубина меньше */
+    dugAtWeighted(x, z) {
+      let best = 0;
+      const cells = [
+        [0, 0, 1],
+        [1, 0, 0.6],
+        [-1, 0, 0.6],
+        [0, 1, 0.6],
+        [0, -1, 0.6]
+      ];
+      for (const [dx, dz, w] of cells) {
+        const k = this._digKey(x + dx * DIG_CELL, z + dz * DIG_CELL);
+        const d = this.digStore.get(k);
+        if (d) best = Math.max(best, d * w);
+      }
+      return best;
     }
     /** Пересчитать вершины рельефа и карту глубин для воды */
     _applyHeights() {
@@ -31259,9 +31458,9 @@ void main() {
       const pos = geo.attributes.position;
       const col = geo.attributes.color;
       const base = this.baseColors;
-      const soilCut = new Color(6968116);
-      const rockCut = new Color(8222314);
-      const darkCut = new Color(4867647);
+      const soilCut = new Color(9072969);
+      const rockCut = new Color(9407104);
+      const darkCut = new Color(7301730);
       const tmp = new Color();
       const needColor = !!(col && base);
       for (let i = 0; i < pos.count; i++) {
@@ -31269,18 +31468,18 @@ void main() {
         const z = pos.getZ(i);
         pos.setY(i, this.heightAt(x, z));
         if (needColor) {
-          const dug = this.dugAt(x, z);
-          if (dug > 0.4) {
-            const k = clamp2((dug - 0.4) / 1.1, 0, 1);
+          const dug = this.dugAtWeighted(x, z);
+          if (dug > 0.25) {
+            const k = clamp2((dug - 0.25) / 1.1, 0, 1);
             tmp.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
-            if (dug < SOIL_THICK) tmp.lerp(soilCut, k * 0.75);
+            if (dug < SOIL_THICK) tmp.lerp(soilCut, k * 0.6);
             else if (dug < SOIL_THICK + STONE_THICK * 0.72) {
-              tmp.lerp(rockCut, clamp2(0.55 + (dug - SOIL_THICK) * 0.4, 0, 1));
+              tmp.lerp(rockCut, clamp2(0.5 + (dug - SOIL_THICK) * 0.4, 0, 1));
             } else {
-              tmp.copy(rockCut).lerp(darkCut, clamp2((dug - SOIL_THICK - STONE_THICK * 0.72) * 1.4, 0, 1));
+              tmp.copy(rockCut).lerp(darkCut, clamp2((dug - SOIL_THICK - STONE_THICK * 0.72) * 1.2, 0, 1));
             }
             col.setXYZ(i, tmp.r, tmp.g, tmp.b);
-          } else if (col.getX(i) !== base[i * 3]) {
+          } else if (Math.abs(col.getX(i) - base[i * 3]) > 1e-4) {
             col.setXYZ(i, base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
           }
         }
@@ -33027,6 +33226,7 @@ void main() {
         fatal: $("fatal"),
         fuel: $("hud-fuel"),
         creative: $("hud-creative"),
+        cursor: $("hud-cursor"),
         wounds: $("hud-wounds"),
         botReport: $("bot-report"),
         botList: $("bot-list")
@@ -33149,6 +33349,10 @@ void main() {
       this.el.creative.classList.toggle("hidden", !on);
     }
     /** Ранения по частям тела: список с прогрессом заживления */
+    /** F9: подсказка, что курсор отпущен */
+    setCursorFree(on) {
+      if (this.el.cursor) this.el.cursor.classList.toggle("hidden", !on);
+    }
     setWounds(list) {
       if (!this.el.wounds) return;
       const sig = list.map((w) => `${w.part}:${Math.round(w.severity * 10)}`).join("|");
@@ -36362,6 +36566,60 @@ void main() {
             fact: `\u0440\u0443\u043A\u0430 \xD7${fmt(hand.power, 2)} \xB7 \u043A\u0438\u0440\u043A\u0430 \xD7${fmt(pick.power, 2)}${oreDrops ? ` \xB7 \u0440\u0443\u0434\u0430: HP ${fmt(oreDrops.power * 2.4, 1)} \u0443\u0440\u043E\u043D\u0430` : ""}`
           };
         } },
+        { name: "\u0422\u0440\u0430\u0432\u0430 \u0438\u0437 \u0440\u0430\u0437\u043D\u044B\u0445 \u043E\u0442\u0442\u0435\u043D\u043A\u043E\u0432", walk: null, run: (g) => {
+          const geo = g.world.terrain && g.world.terrain.geometry;
+          if (!geo || !geo.attributes.color) return { ok: false, expect: "\u0446\u0432\u0435\u0442\u0430 \u0442\u0440\u0430\u0432\u044B \u0432 \u0440\u0435\u043B\u044C\u0435\u0444\u0435", fact: "\u043D\u0435\u0442 \u0446\u0432\u0435\u0442\u043E\u0432" };
+          const col = geo.attributes.color;
+          const pos = geo.attributes.position;
+          const lums = [];
+          const hues = [];
+          for (let i = 0; i < pos.count; i += 7) {
+            const y = pos.getY(i);
+            if (y < 3 || y > 12) continue;
+            const r = col.getX(i);
+            const gg = col.getY(i);
+            const b = col.getZ(i);
+            lums.push(0.299 * r + 0.587 * gg + 0.114 * b);
+            hues.push(Math.max(r, gg, b) - Math.min(r, gg, b));
+          }
+          if (!lums.length) return { ok: false, expect: "\u0442\u0440\u0430\u0432\u044F\u043D\u044B\u0435 \u0432\u0435\u0440\u0448\u0438\u043D\u044B", fact: "\u0442\u0440\u0430\u0432\u044B \u043D\u0435 \u043D\u0430\u0439\u0434\u0435\u043D\u043E" };
+          const span = Math.max(...lums) - Math.min(...lums);
+          const hueSpan = Math.max(...hues) - Math.min(...hues);
+          return {
+            ok: span > 0.1 && hueSpan > 0.12,
+            expect: "\u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u043E\u0442\u0442\u0435\u043D\u043A\u043E\u0432 \u0442\u0440\u0430\u0432\u044B (\u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u044F\u0440\u043A\u043E\u0441\u0442\u0438 \u0438 \u043D\u0430\u0441\u044B\u0449\u0435\u043D\u043D\u043E\u0441\u0442\u0438)",
+            fact: `\u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u044F\u0440\u043A\u043E\u0441\u0442\u0438 ${fmt(span)} \xB7 \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u043E\u0442\u0442\u0435\u043D\u043A\u0430 ${fmt(hueSpan)} \xB7 \u0442\u0440\u0430\u0432\u044F\u043D\u044B\u0445 \u0442\u043E\u0447\u0435\u043A ${lums.length}`
+          };
+        } },
+        { name: "\u042F\u043C\u0430 \u043E\u0442 \u043B\u043E\u043F\u0430\u0442\u044B \u2014 \u0431\u043B\u043E\u043A, \u0430 \u043D\u0435 \u0434\u044B\u0440\u0430", walk: "dig", run: (g) => {
+          const w = g.world;
+          const p = g.player.position;
+          let spot = null;
+          for (let r = 3; r <= 12 && !spot; r += 1.5) {
+            for (let i = 0; i < 12 && !spot; i++) {
+              const a = i / 12 * Math.PI * 2;
+              const x = p.x + Math.cos(a) * r;
+              const z = p.z + Math.sin(a) * r;
+              if (w.heightAt(x, z) > 2.5 && w.slopeAt(x, z) < 0.4) spot = { x, z };
+            }
+          }
+          if (!spot) return { ok: false, expect: "\u0441\u0443\u0445\u043E\u0435 \u0440\u043E\u0432\u043D\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", fact: "\u043C\u0435\u0441\u0442\u0430 \u043D\u0435\u0442" };
+          const before = w.baseHeightAt(spot.x, spot.z);
+          let res = null;
+          for (let i = 0; i < 6; i++) res = w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
+          const pit = w.pits.get(w._digKey(spot.x, spot.z));
+          const sunk = before - w.heightAt(spot.x, spot.z);
+          const walls = pit ? pit.walls.geometry.attributes.position.count : 0;
+          const hasLayers = pit ? pit.walls.geometry.attributes.color.count === walls : false;
+          const restored = { heights: w.heights.slice() };
+          void restored;
+          void res;
+          return {
+            ok: !!pit && sunk > 0.5 && walls > 0 && hasLayers,
+            expect: "\u0437\u0435\u043C\u043B\u044F \u043F\u0440\u043E\u0441\u0435\u0434\u0430\u0435\u0442 \u0431\u043B\u043E\u043A\u043E\u043C, \u0443 \u044F\u043C\u044B \u0435\u0441\u0442\u044C \u0441\u0442\u0435\u043D\u043A\u0438 \u0441\u043E \u0441\u043B\u043E\u044F\u043C\u0438",
+            fact: `\u043F\u0440\u043E\u0441\u0430\u0434\u043A\u0430 ${fmt(sunk)} \u043C \xB7 \u0441\u0442\u0435\u043D\u043A\u0438 ${walls} \u0432\u0435\u0440\u0448\u0438\u043D \xB7 \u0441\u043B\u043E\u0438 \u0432\u0438\u0434\u043D\u044B: ${hasLayers ? "\u0434\u0430" : "\u043D\u0435\u0442"}`
+          };
+        } },
         { name: "\u0425\u0438\u0442\u0431\u043E\u043A\u0441 \u043F\u043E \u0433\u0430\u0431\u0430\u0440\u0438\u0442\u0430\u043C \u043C\u043E\u0434\u0435\u043B\u0438", walk: null, run: (g) => {
           const mob = g.mobs.list.find((m) => m.alive && m.type === "boar") || g.mobs.list.find((m) => m.alive);
           if (!mob) return { ok: false, expect: "\u0436\u0438\u0432\u043E\u0439 \u0437\u0432\u0435\u0440\u044C", fact: "\u0437\u0432\u0435\u0440\u0435\u0439 \u043D\u0435\u0442" };
@@ -36761,7 +37019,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-25 17:49" : "dev";
+  var BUILD = true ? "2026-10-26 16:08" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -37095,9 +37353,13 @@ void main() {
       img.data[i * 4 + 2] = Math.max(0, img.data[i * 4 + 2] - warm * 25);
     }
     ctx.putImageData(img, 0, 0);
-    strokes(ctx, size, 900, rng, "#9fc46a", 1, [5, 16], 0.35);
-    strokes(ctx, size, 600, rng, "#3f6330", 1, [4, 12], 0.3);
-    speckle(ctx, size, 500, rng, ["#c3d98a", "#6a9448", "#2f4d24"], [0.5, 1.6], [0.08, 0.25]);
+    const blades = ["#a8cc72", "#8fbd63", "#c2cf7f", "#d6cd85", "#6f9c4a", "#5c8b41", "#486e34", "#3d5f2c"];
+    for (const [i, color] of blades.entries()) {
+      strokes(ctx, size, 150 + i % 3 * 60, rng, color, 1, [4, 15], 0.22 + i % 4 * 0.05);
+    }
+    strokes(ctx, size, 420, rng, "#c9c07c", 1, [5, 18], 0.26);
+    strokes(ctx, size, 260, rng, "#365a28", 1, [4, 11], 0.22);
+    speckle(ctx, size, 620, rng, ["#cfe195", "#a3c46b", "#6a9448", "#2f4d24", "#d8d08a"], [0.5, 1.7], [0.08, 0.26]);
     return canvas;
   }
   function sandCanvas(size = SIZE2) {
@@ -37742,9 +38004,13 @@ void main() {
       this.canvas.addEventListener("mousedown", (e) => {
         if (!this.running || this.paused) return;
         if (this.ui.isPanelOpen()) return;
+        if (this.cursorFree) {
+          this.captureCursor();
+          e.preventDefault();
+          return;
+        }
         if (!this.locked) {
           this.dragging = true;
-          this.cursorFree = false;
           this.tryLock();
         }
         if (e.button === 0) {
@@ -37761,6 +38027,7 @@ void main() {
       });
       window.addEventListener("mousemove", (e) => {
         if (!this.running || this.paused) return;
+        if (this.cursorFree) return;
         if (this.locked || this.dragging) {
           this.player.look(e.movementX || 0, e.movementY || 0);
         }
@@ -37777,8 +38044,14 @@ void main() {
         this.selectSlot(next);
       }, { passive: true });
       document.addEventListener("pointerlockchange", () => {
+        var _a, _b;
         const wasLocked = this.locked;
         this.locked = document.pointerLockElement === this.canvas;
+        if (this.locked) {
+          this.lockErrors = 0;
+          this.cursorFree = false;
+          (_b = (_a = this.ui).setCursorFree) == null ? void 0 : _b.call(_a, false);
+        }
         if (!this.locked && this.panelUnlock) {
           this.panelUnlock = false;
           return;
@@ -37788,7 +38061,18 @@ void main() {
         }
       });
       document.addEventListener("pointerlockerror", () => {
-        this.dragLook = true;
+        this.lockErrors = (this.lockErrors || 0) + 1;
+        if (this.cursorFree) {
+          return;
+        }
+        if (this.lockErrors <= 2) {
+          clearTimeout(this._lockRetry);
+          this._lockRetry = setTimeout(() => {
+            if (!this.locked && !this.cursorFree && this.running && !this.paused) this.tryLock(true);
+          }, 1200);
+          return;
+        }
+        this.fallbackLook();
       });
       document.addEventListener("visibilitychange", () => {
         if (!document.hidden) return;
@@ -37797,9 +38081,9 @@ void main() {
       });
       window.addEventListener("beforeunload", () => this.save());
     }
-    tryLock() {
+    tryLock(force = false) {
       var _a, _b;
-      if (this.dragLook) return;
+      if (this.dragLook && !force) return;
       try {
         const p = (_b = (_a = this.canvas).requestPointerLock) == null ? void 0 : _b.call(_a);
         if (p && typeof p.catch === "function") p.catch(() => this.fallbackLook());
@@ -37808,8 +38092,8 @@ void main() {
         return;
       }
       setTimeout(() => {
-        if (!this.locked && this.running && !this.paused) this.fallbackLook();
-      }, 700);
+        if (!this.locked && this.running && !this.paused && !this.cursorFree) this.fallbackLook();
+      }, 900);
     }
     fallbackLook() {
       if (this.dragLook) return;
@@ -37824,6 +38108,10 @@ void main() {
         if (this.ui.isPanelOpen()) {
           this.ui.closePanels();
           this.relock();
+          return;
+        }
+        if (this.cursorFree) {
+          this.captureCursor();
           return;
         }
         if (this.running && !this.paused) this.pause();
@@ -38043,8 +38331,11 @@ void main() {
       }
     }
     pause() {
+      var _a, _b;
       if (!this.running || this.dead) return;
       this.paused = true;
+      this.cursorFree = false;
+      (_b = (_a = this.ui).setCursorFree) == null ? void 0 : _b.call(_a, false);
       this.save();
       const days = this.sky.day;
       const mins = Math.floor((performance.now() - (this.startedAt || performance.now())) / 6e4);
@@ -39536,25 +39827,44 @@ void main() {
     }
     /** Вернуть управление мышью (если игра идёт) */
     relock() {
+      var _a, _b;
       if (!this.running || this.paused || this.dead) return;
-      if (this.dragLook) return;
-      this.tryLock();
+      this.cursorFree = false;
+      (_b = (_a = this.ui).setCursorFree) == null ? void 0 : _b.call(_a, false);
+      this.tryLock(true);
     }
     /** F9: отпустить курсор для кликов по интерфейсу и вернуть его обратно */
     toggleCursor() {
-      var _a, _b;
-      if (this.cursorFree) {
-        this.cursorFree = false;
-        this.ui.toast("\u041A\u0443\u0440\u0441\u043E\u0440 \u0437\u0430\u0445\u0432\u0430\u0447\u0435\u043D \u2014 \u043E\u0431\u0437\u043E\u0440 \u043C\u044B\u0448\u044C\u044E \u0441\u043D\u043E\u0432\u0430 \u0440\u0430\u0431\u043E\u0442\u0430\u0435\u0442");
-        this.tryLock();
-        return;
-      }
+      if (this.cursorFree) this.captureCursor();
+      else this.releaseCursor();
+    }
+    /** F9: курсор свободен — игра идёт, но мышь не крутит камеру */
+    releaseCursor() {
+      var _a, _b, _c, _d;
       this.cursorFree = true;
       this.dragging = false;
       this.holdingAttack = false;
+      this.lockErrors = 0;
+      (_b = (_a = this.ui).setCursorFree) == null ? void 0 : _b.call(_a, true);
       if (document.pointerLockElement) document.exitPointerLock();
-      this.ui.toast("\u041A\u0443\u0440\u0441\u043E\u0440 \u0441\u0432\u043E\u0431\u043E\u0434\u0435\u043D: \u043C\u043E\u0436\u043D\u043E \u043A\u043B\u0438\u043A\u0430\u0442\u044C \u043F\u043E \u043A\u043D\u043E\u043F\u043A\u0430\u043C \u0438 \u043F\u0430\u043D\u0435\u043B\u044F\u043C. F9 \u2014 \u0432\u0435\u0440\u043D\u0443\u0442\u044C");
-      (_b = (_a = this.audio).uiClick) == null ? void 0 : _b.call(_a);
+      this.ui.toast("F9: \u043A\u0443\u0440\u0441\u043E\u0440 \u0441\u0432\u043E\u0431\u043E\u0434\u0435\u043D \u2014 \u043C\u043E\u0436\u043D\u043E \u043A\u043B\u0438\u043A\u0430\u0442\u044C \u043F\u043E \u043F\u0430\u043D\u0435\u043B\u044F\u043C. \u0415\u0449\u0451 \u0440\u0430\u0437 F9 \u0438\u043B\u0438 \u043A\u043B\u0438\u043A \u043F\u043E \u0441\u0446\u0435\u043D\u0435 \u0432\u0435\u0440\u043D\u0443\u0442 \u043E\u0431\u0437\u043E\u0440");
+      (_d = (_c = this.audio).uiClick) == null ? void 0 : _d.call(_c);
+    }
+    /** F9 повторно: снова захватить мышь для обзора */
+    captureCursor() {
+      var _a, _b, _c, _d;
+      this.cursorFree = false;
+      (_b = (_a = this.ui).setCursorFree) == null ? void 0 : _b.call(_a, false);
+      if (this.dragLook) {
+        this.ui.toast("\u041E\u0431\u0437\u043E\u0440: \u0437\u0430\u0436\u043C\u0438 \u043B\u0435\u0432\u0443\u044E \u043A\u043D\u043E\u043F\u043A\u0443 \u043C\u044B\u0448\u0438 \u0438 \u0432\u0435\u0434\u0438");
+        return;
+      }
+      this.tryLock(true);
+      clearTimeout(this._cursorHint);
+      this._cursorHint = setTimeout(() => {
+        if (!this.locked && !this.cursorFree && !this.dragLook) this.fallbackLook();
+      }, 1e3);
+      (_d = (_c = this.audio).uiClick) == null ? void 0 : _d.call(_c);
     }
     /** F8: робот-инспектор проверяет игру по описанию */
     toggleBot() {

@@ -258,6 +258,63 @@ export class InspectorBot {
         };
       } },
 
+      { name: 'Трава из разных оттенков', walk: null, run: (g) => {
+        const geo = g.world.terrain && g.world.terrain.geometry;
+        if (!geo || !geo.attributes.color) return { ok: false, expect: 'цвета травы в рельефе', fact: 'нет цветов' };
+        const col = geo.attributes.color;
+        const pos = geo.attributes.position;
+        const lums = [];
+        const hues = [];
+        for (let i = 0; i < pos.count; i += 7) {
+          const y = pos.getY(i);
+          if (y < 3 || y > 12) continue;
+          const r = col.getX(i);
+          const gg = col.getY(i);
+          const b = col.getZ(i);
+          lums.push(0.299 * r + 0.587 * gg + 0.114 * b);
+          hues.push(Math.max(r, gg, b) - Math.min(r, gg, b));
+        }
+        if (!lums.length) return { ok: false, expect: 'травяные вершины', fact: 'травы не найдено' };
+        const span = Math.max(...lums) - Math.min(...lums);
+        const hueSpan = Math.max(...hues) - Math.min(...hues);
+        return {
+          ok: span > 0.1 && hueSpan > 0.12,
+          expect: 'несколько оттенков травы (разброс яркости и насыщенности)',
+          fact: `разброс яркости ${fmt(span)} · разброс оттенка ${fmt(hueSpan)} · травяных точек ${lums.length}`,
+        };
+      } },
+
+      { name: 'Яма от лопаты — блок, а не дыра', walk: 'dig', run: (g) => {
+        const w = g.world;
+        const p = g.player.position;
+        let spot = null;
+        for (let r = 3; r <= 12 && !spot; r += 1.5) {
+          for (let i = 0; i < 12 && !spot; i++) {
+            const a = (i / 12) * Math.PI * 2;
+            const x = p.x + Math.cos(a) * r;
+            const z = p.z + Math.sin(a) * r;
+            if (w.heightAt(x, z) > 2.5 && w.slopeAt(x, z) < 0.4) spot = { x, z };
+          }
+        }
+        if (!spot) return { ok: false, expect: 'сухое ровное место', fact: 'места нет' };
+        const before = w.baseHeightAt(spot.x, spot.z);
+        let res = null;
+        for (let i = 0; i < 6; i++) res = w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
+        const pit = w.pits.get(w._digKey(spot.x, spot.z));
+        const sunk = before - w.heightAt(spot.x, spot.z);
+        const walls = pit ? pit.walls.geometry.attributes.position.count : 0;
+        const hasLayers = pit ? pit.walls.geometry.attributes.color.count === walls : false;
+        const restored = { heights: w.heights.slice() };
+        // яму не убираем: это честно выкопанная земля, игрок сам решит
+        void restored;
+        void res;
+        return {
+          ok: !!pit && sunk > 0.5 && walls > 0 && hasLayers,
+          expect: 'земля проседает блоком, у ямы есть стенки со слоями',
+          fact: `просадка ${fmt(sunk)} м · стенки ${walls} вершин · слои видны: ${hasLayers ? 'да' : 'нет'}`,
+        };
+      } },
+
       { name: 'Хитбокс по габаритам модели', walk: null, run: (g) => {
         const mob = g.mobs.list.find((m) => m.alive && m.type === 'boar') || g.mobs.list.find((m) => m.alive);
         if (!mob) return { ok: false, expect: 'живой зверь', fact: 'зверей нет' };

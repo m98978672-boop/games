@@ -61,17 +61,54 @@ for (let i = 0; i < col.count; i++) {
 }
 log('вершин с показанной породой в лунке:', recolored, '· срез виден:', recolored > 0);
 
-for (let i = 0; i < snap.length; i++) w.heights[i] = snap[i];
-// лунка-модель: стенки и дно со срезом породы
+// накладная лунка: заплатка по вершинам рельефа, со срезом породы
 const pit = w.pits.get(w._digKey(dry.x, dry.z));
-const pitDepth = pit ? +pit.wall.scale.y.toFixed(2) : 0;
-log('лунка как модель: стенки', !!pit, '· глубина', pitDepth, 'м · дно со срезом:', !!pit && !!pit.bottom);
+const pitVerts = pit ? pit.walls.geometry.attributes.position.count : 0;
+const pitCols = pit ? pit.walls.geometry.attributes.color.count : 0;
+// рельеф проседает блоком: в центре заметно ниже, вокруг — как было
+const block = w._pitBlock(dry.x, dry.z, 1.2);
+const G = Math.round(Math.sqrt(w.heights.length));
+const colAt = (ix, iz) => w.baseHeights[iz * G + ix] - w.heights[iz * G + ix];
+const cx0 = Math.round((dry.x + 180) / 1.8);
+const cz0 = Math.round((dry.z + 180) / 1.8);
+const sunk = Math.max(...[cx0 - 1, cx0, cx0 + 1].flatMap((ix) => [cz0 - 1, cz0, cz0 + 1].map((iz) => colAt(ix, iz))));
+const outside = colAt(block.vx0 - 3, block.vz0 - 3);
+const floorY2 = pit ? pit.floorY : null;
+log('яма: просадка в центре', sunk.toFixed(2), 'м · вокруг нетронуто:', Math.abs(outside) < 0.01,
+  '· стенки:', pitVerts > 0 && pitCols === pitVerts,
+  '· дно на', floorY2 !== null ? (w.surfaceOf(dry.x, dry.z).h0 - floorY2).toFixed(2) : '?', 'м ниже земли',
+  '· комьев земли:', pit ? pit.debris.children.length : 0);
+
+for (let i = 0; i < snap.length; i++) w.heights[i] = snap[i];
 
 w.digStore.clear();
 w.surfaceStore.clear();
-w.pits.forEach((p) => w.pitGroup.remove(p.group));
+w.pits.forEach((p) => { w.pitGroup.remove(p.group); p.walls.geometry.dispose(); });
+
 w.pits.clear();
 w._applyHeights();
+
+// --- 1b. трава из разных оттенков: разброс яркости и насыщенности ---
+{
+  const geo = w.terrain.geometry;
+  const colAttr = geo.attributes.color;
+  const posAttr = geo.attributes.position;
+  const lums = [];
+  const hues = [];
+  for (let i = 0; i < posAttr.count; i += 5) {
+    const y = posAttr.getY(i);
+    if (y < 3 || y > 12) continue;
+    const r = colAttr.getX(i);
+    const gg = colAttr.getY(i);
+    const b = colAttr.getZ(i);
+    lums.push(0.299 * r + 0.587 * gg + 0.114 * b);
+    hues.push(Math.max(r, gg, b) - Math.min(r, gg, b));
+  }
+  const span = Math.max(...lums) - Math.min(...lums);
+  const hueSpan = Math.max(...hues) - Math.min(...hues);
+  log('трава из разных оттенков: разброс яркости', span.toFixed(2), '· оттенка', hueSpan.toFixed(2),
+    '· разные оттенки:', span > 0.1 && hueSpan > 0.12);
+}
 
 // --- 2. вода появляется только на пляже (ниже уровня моря) ---
 let beach = null;
@@ -92,7 +129,7 @@ log('пляж: дно', (beachRes.bottom ?? w.heightAt(beach.x, beach.z)).toFixe
 for (let i = 0; i < beachSnap.length; i++) w.heights[i] = beachSnap[i];
 w.digStore.clear();
 w.surfaceStore.clear();
-w.pits.forEach((p) => w.pitGroup.remove(p.group));
+w.pits.forEach((p) => { w.pitGroup.remove(p.group); p.walls.geometry.dispose(); });
 w.pits.clear();
 w._applyHeights();
 
@@ -108,7 +145,7 @@ log('камень: слой', probeStone.layer, '· руками hard:', noPick.
 for (let i = 0; i < snap.length; i++) w.heights[i] = snap[i];
 w.digStore.clear();
 w.surfaceStore.clear();
-w.pits.forEach((p) => w.pitGroup.remove(p.group));
+w.pits.forEach((p) => { w.pitGroup.remove(p.group); p.walls.geometry.dispose(); });
 w.pits.clear();
 w._applyHeights();
 

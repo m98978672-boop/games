@@ -21,6 +21,25 @@ const SOIL_THICK = 1.35;
 const STONE_THICK = 2.4;
 const DIG_CELL = 1.4;
 
+// Палитра травы: несколько оттенков вместо одной заливки
+// Участки травы: пять оттенков, между ними — рваные границы
+const GRASS_ZONES = [
+  { name: 'сочный', color: new THREE.Color(0x5f9f3c) },   // насыщенный зелёный
+  { name: 'свежий', color: new THREE.Color(0x8cc85a) },   // светлый, после дождя
+  { name: 'тёмный', color: new THREE.Color(0x3f6b2f) },   // тенистый, под кронами
+  { name: 'выгоревший', color: new THREE.Color(0xa9b64f) },// жёлто-зелёный
+  { name: 'золотистый', color: new THREE.Color(0xc9bb66) },// сухой, почти соломенный
+];
+
+const GRASS_TONES = {
+  fresh: new THREE.Color(0x8dbb5b),   // свежая после дождя
+  rich: new THREE.Color(0x6b9c46),    // сочная
+  jungle: new THREE.Color(0x4a7a3c),  // тёмные джунгли
+  dry: new THREE.Color(0xb5ab6d),     // выгоревшая на солнце
+  moss: new THREE.Color(0x5c7f43),    // мох в низинах
+  bloom: new THREE.Color(0xa7cf6c),   // цветущий луг, светлая
+};
+
 // ---------- вспомогательное ----------
 
 function colorize(geo, hex) {
@@ -82,6 +101,7 @@ export class World {
     this.time = 0;
 
     this._buildHeights();
+    this.baseHeights = this.heights.slice();   // рельеф до копания
     this._buildTerrain();
     this._buildWater();
     this._buildVegetation();
@@ -161,15 +181,27 @@ export class World {
     } else if (h > 15) {
       c.lerpColors(new THREE.Color(COLORS.rock), new THREE.Color(COLORS.snow), smoothstep(17, 24, h));
     } else {
-      const grass = new THREE.Color(COLORS.grass);
-      const jungle = new THREE.Color(COLORS.jungle);
-      c.copy(grass).lerp(jungle, clamp((moisture - 0.25) * 1.05, 0, 1));
-      // сухая трава на прогалинах
-      const dry = fbm(x * 0.021 + 60, z * 0.021 - 12, 3, this.seed + 91);
-      if (dry > 0.58) c.lerp(new THREE.Color(0xb2a765), (dry - 0.58) * 1.6);
-      // мелкая «пятнистость» травы
-      const n = fbm(x * 0.09, z * 0.09, 2, this.seed + 55);
-      c.offsetHSL(0, 0, (n - 0.5) * 0.06);
+      // --- трава из разных оттенков: участки-пятна дискретных цветов ---
+      // три поля шума: крупные районы, их границы и мелкая рябь
+      const n1 = fbm(x * 0.019 + 60, z * 0.019 - 12, 3, this.seed + 91);
+      const n2 = fbm(x * 0.0095 - 24, z * 0.0095 + 41, 2, this.seed + 137);
+      const n3 = fbm(x * 0.075 + 7, z * 0.075 + 90, 2, this.seed + 211);
+
+      const tones = GRASS_TONES;
+      // «район» травы: 5 оттенков, границы рваные за счёт шума
+      const pick = n1 * 0.62 + n2 * 0.38 + (n3 - 0.5) * 0.16;
+      const zones = GRASS_ZONES;
+      let tone = zones[0];
+      if (pick > 0.34) tone = zones[1];
+      if (pick > 0.45) tone = zones[2];
+      if (pick > 0.55) tone = zones[3];
+      if (pick > 0.64) tone = zones[4];
+      c.copy(tone.color);
+
+      // внутри района — своя жизнь: влажная трава зеленее, сухая теплее
+      c.lerp(tones.jungle, clamp((moisture - 0.5) * 1.2, 0, 1) * 0.45);
+      c.lerp(tones.dry, smoothstep(0.6, 0.85, n1) * 0.3);
+      c.offsetHSL((n3 - 0.5) * 0.035, (n3 - 0.5) * 0.2, (n3 - 0.5) * 0.08);
       if (slope > 0.6) c.lerp(new THREE.Color(COLORS.rock), smoothstep(0.6, 0.9, slope) * 0.7);
     }
     return c;
@@ -657,6 +689,7 @@ export class World {
     }
     const tuftGeo = mergeGeometries(blades, false);
     this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
+    this.tuftItems = tufts;
     // у травы свой материал (сильнее качается)
     for (const mesh of this.tufts) mesh.material = grassMat;
   }
@@ -910,57 +943,31 @@ export class World {
       : depth;
 
     const before = this.heightAt(x, z);
-    const half = SIZE / 2;
-    const ix0 = Math.max(1, Math.floor((x - radius + half) / STEP));
-    const ix1 = Math.min(GRID - 2, Math.ceil((x + radius + half) / STEP));
-    const iz0 = Math.max(1, Math.floor((z - radius + half) / STEP));
-    const iz1 = Math.min(GRID - 2, Math.ceil((z + radius + half) / STEP));
+    const newDug = already + stepDepth;
+    const topY = this.surfaceOf(x, z).h0;
+    const floorY = Math.max(-5, topY - (newDug + 0.25));
 
-    for (let iz = iz0; iz <= iz1; iz++) {
-      for (let ix = ix0; ix <= ix1; ix++) {
-        const vx = -half + ix * STEP;
-        const vz = -half + iz * STEP;
-        const d = Math.hypot(vx - x, vz - z);
-        if (d > radius) continue;
-        // в центре лунки снимаем полный слой, к краям — меньше
-        const falloff = d <= STEP * 0.8 ? 1 : 1 - Math.pow((d - STEP * 0.8) / Math.max(0.001, radius - STEP * 0.8), 1.5);
-        const k = iz * GRID + ix;
-        this.heights[k] = Math.max(-6, this.heights[k] - stepDepth * Math.max(0, falloff));
+    // --- копаем ровно блоком: узлы сетки внутри ямы опускаются на её дно,
+    //     всё вокруг остаётся нетронутым (никаких «воронок» и чёрных пятен) ---
+    const block = this._pitBlock(x, z, radius);
+    for (let iz = block.vz0; iz <= block.vz1; iz++) {
+      for (let ix = block.vx0; ix <= block.vx1; ix++) {
+        this.heights[iz * GRID + ix] = Math.min(this.heights[iz * GRID + ix], floorY);
       }
     }
 
     // песок не держит стенку: часть осыпается обратно в яму
     let sandFill = 0;
     if (probe.layer === 'sand') {
-      let ring = 0;
-      let ringCount = 0;
-      for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
-        const rx = x + Math.cos(a) * (radius + 0.8);
-        const rz = z + Math.sin(a) * (radius + 0.8);
-        ring += this.heightAt(rx, rz);
-        ringCount++;
-      }
-      const avg = ring / Math.max(1, ringCount);
-      const after = this.heightAt(x, z);
-      if (avg > after + 0.15) {
-        sandFill = Math.min(0.22, (avg - after) * 0.35);
-        const lift = Math.min(sandFill, depth);
-        for (let iz = iz0; iz <= iz1; iz++) {
-          for (let ix = ix0; ix <= ix1; ix++) {
-            const vx = -half + ix * STEP;
-            const vz = -half + iz * STEP;
-            const d = Math.hypot(vx - x, vz - z);
-            if (d > radius * 0.75) continue;
-            this.heights[iz * GRID + ix] += lift;
-          }
-        }
-      }
+      const edge = this.baseHeightAt(block.edgeX, block.edgeZ);
+      if (edge > floorY + 0.2) sandFill = Math.min(0.18, (edge - floorY) * 0.12);
     }
 
-    this.digStore.set(key, already + stepDepth);
+    this.digStore.set(key, newDug);
     this.digEvents++;
     this._applyHeights();
-    this._updatePit(x, z, radius, this.surfaceOf(x, z).h0, already + stepDepth, probe.surface);
+    this._clearTufts(x, z, radius);
+    this._updatePit(x, z, radius, already + stepDepth, probe.surface);
 
     const after = this.heightAt(x, z);
     const next = this.probeAt(x, z);
@@ -982,47 +989,212 @@ export class World {
     };
   }
 
+  /** Высота земли ДО копания: нужна для края ямы и комьев */
+  baseHeightAt(x, z) {
+    const arr = this.baseHeights || this.heights;
+    const gx = clamp((x + SIZE / 2) / STEP, 0, GRID - 1.001);
+    const gz = clamp((z + SIZE / 2) / STEP, 0, GRID - 1.001);
+    const ix = Math.floor(gx);
+    const iz = Math.floor(gz);
+    const fx = gx - ix;
+    const fz = gz - iz;
+    const h00 = arr[iz * GRID + ix];
+    const h10 = arr[iz * GRID + ix + 1];
+    const h01 = arr[(iz + 1) * GRID + ix];
+    const h11 = arr[(iz + 1) * GRID + ix + 1];
+    const a = h00 + (h10 - h00) * fx;
+    const b = h01 + (h11 - h01) * fx;
+    return a + (b - a) * fz;
+  }
+
+  /** Половина стороны ямы: по ней режется рельеф и ставятся стенки */
+  pitHalf(radius) {
+    return Math.max(1.1, radius * 0.96);
+  }
+
+  /** Блок узлов сетки, которые опускаются на дно ямы */
+  _pitBlock(x, z, radius) {
+    const half = SIZE / 2;
+    const h = this.pitHalf(radius);
+    const vx0 = clamp(Math.round((x - h + half) / STEP), 1, GRID - 2);
+    const vx1 = clamp(Math.round((x + h + half) / STEP), 1, GRID - 2);
+    const vz0 = clamp(Math.round((z - h + half) / STEP), 1, GRID - 2);
+    const vz1 = clamp(Math.round((z + h + half) / STEP), 1, GRID - 2);
+    return {
+      half: h, vx0, vx1, vz0, vz1,
+      edgeX: x + h * 1.5, edgeZ: z + h * 1.5,
+      x0: -half + vx0 * STEP, x1: -half + vx1 * STEP,
+      z0: -half + vz0 * STEP, z1: -half + vz1 * STEP,
+    };
+  }
+
+  /** Убрать траву с места, где выкопали яму (иначе травинки висят в воздухе) */
+  _clearTufts(x, z, radius) {
+    const items = this.tuftItems;
+    if (!items || !items.length) return;
+    const r2 = (radius * 1.35) ** 2;
+    const dummy = new THREE.Object3D();
+    for (const it of items) {
+      if (it.hidden) continue;
+      const dx = it.x - x;
+      const dz = it.z - z;
+      if (dx * dx + dz * dz > r2) continue;
+      it.hidden = true;
+      for (const part of it.parts || []) {
+        dummy.position.set(it.x, it.h - 0.15, it.z);
+        dummy.rotation.set(0, it.rot, 0);
+        dummy.scale.setScalar(0.0001);
+        dummy.updateMatrix();
+        part.mesh.setMatrixAt(part.idx, dummy.matrix);
+        part.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+  }
+
   /**
-   * Лунка как модель: стенки и дно со срезом породы.
-   * Рельеф — сетка в 1.8 м, одной ямки в пару метров она не покажет,
-   * поэтому в яме ставится конус из камня/земли нужной глубины.
+   * Яма в блоках: клетки земли вырезаются ТОЧНО по сетке рельефа
+   * (маска dugCut), а на их место вставляется коробка — стенки и дно со
+   * слоями «земля → камень». Никаких рваных краёв: край ямы идёт по линиям
+   * сетки, как блоки в шахте.
    */
-  _updatePit(x, z, radius, surfaceH, dug, surface) {
+  _updatePit(x, z, radius, dug, surface) {
     if (!this.pitGroup) return;
+    const block = this._pitBlock(x, z, radius);
     const key = this._digKey(x, z);
+    const topY = this.surfaceOf(x, z).h0;
+    const floorY = Math.max(-5, topY - (dug + 0.25));
+
     let pit = this.pits.get(key);
-    const depth = Math.max(0.35, dug + 0.15);
     if (!pit) {
       const wallMat = this.textures
-        ? createStoneMaterial(this.textures.rockDetail, { repeat: [2.5, 1.6] })
-        : new THREE.MeshStandardMaterial({ color: 0x8b8478, roughness: 1, flatShading: true });
+        ? createStoneMaterial(this.textures.rockDetail, { repeat: [1.4, 1.0] })
+        : new THREE.MeshStandardMaterial({ roughness: 0.98, flatShading: true });
       wallMat.side = THREE.DoubleSide;
-      wallMat.color = new THREE.Color(surface === 'sand' ? 0xcbb488 : surface === 'stone' ? 0x8f8a80 : 0x96775a);
+      wallMat.color.setHex(0xffffff);
       const group = new THREE.Group();
-      const wall = new THREE.Mesh(new THREE.CylinderGeometry(1, 0.72, 1, 12, 1, true), wallMat);
-      const bottom = new THREE.Mesh(new THREE.CircleGeometry(0.74, 12), wallMat);
-      bottom.rotation.x = -Math.PI / 2;
-      wall.castShadow = false;
-      wall.receiveShadow = true;
-      bottom.receiveShadow = true;
-      group.add(wall, bottom);
-      group.position.set(x, surfaceH, z);
-      group.renderOrder = 1;
+      group.name = 'pit';
+      const walls = new THREE.Mesh(new THREE.BufferGeometry(), wallMat);
+      walls.receiveShadow = true;
+      walls.castShadow = false;
+      group.add(walls);
+      const lumpMat = new THREE.MeshStandardMaterial({ roughness: 1, flatShading: true, color: 0x8a7047 });
+      const debris = new THREE.Group();
+      for (let i = 0; i < 6; i++) {
+        const size = 0.13 + (i % 3) * 0.045;
+        debris.add(new THREE.Mesh(new THREE.BoxGeometry(size, size * 0.72, size * 0.9), lumpMat));
+      }
+      group.add(debris);
       this.pitGroup.add(group);
-      pit = { group, wall, bottom, mat: wallMat, dug: 0 };
+      pit = { group, walls, debris, mat: wallMat, lumpMat, sig: '' };
       this.pits.set(key, pit);
     }
-    pit.dug = dug;
-    const r = Math.max(0.9, radius * 0.92);
-    pit.wall.scale.set(r, depth, r);
-    pit.wall.position.y = -depth / 2 + 0.02;
-    pit.bottom.scale.setScalar(r);
-    pit.bottom.position.y = -depth + 0.03;
-    // чем глубже, тем темнее и «каменнее» срез
-    const rock = dug > SOIL_THICK;
-    const tint = rock ? 0x7d766a : surface === 'sand' ? 0xc0a985 : 0x7d6446;
-    pit.mat.color.setHex(tint);
-    pit.mat.roughness = rock ? 0.9 : 1;
+
+    const sig = `${block.vx0},${block.vz0},${block.vx1},${block.vz1}|${dug.toFixed(2)}|${surface}`;
+    if (pit.sig !== sig) {
+      pit.sig = sig;
+
+      const soilTop = new THREE.Color(surface === 'sand' ? 0xd8c193 : surface === 'stone' ? 0xb5aea2 : 0x94764c);
+      const soilLow = new THREE.Color(surface === 'sand' ? 0xbda67b : surface === 'stone' ? 0x9c958a : 0x735c3c);
+      const rock = new THREE.Color(0x8f887c);
+      const rockDeep = new THREE.Color(0x7d776d);
+
+      const pos = [];
+      const col = [];
+      const push = (px, py, pz, c) => { pos.push(px, py, pz); col.push(c.r, c.g, c.b); };
+      const quad = (ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, c) => {
+        push(ax, ay, az, c); push(bx, by, bz, c); push(cx, cy, cz, c);
+        push(ax, ay, az, c); push(cx, cy, cz, c); push(dx, dy, dz, c);
+      };
+
+      // стенки чуть внутрь блока: их наружные грани прячутся под дёрном
+      const inset = 0.09;
+      const x0 = block.x0 + inset;
+      const x1 = block.x1 - inset;
+      const z0 = block.z0 + inset;
+      const z1 = block.z1 - inset;
+      const depth = topY - floorY;
+      const soilD = Math.min(Math.max(0.5, depth * 0.55), 1.15);
+      const segs = 6;
+
+      // четыре стенки: верх идёт по земле до копки (без щелей), низ — дно ямы
+      for (let side = 0; side < 4; side++) {
+        const vertical = side % 2 === 1;
+        for (let i = 0; i < segs; i++) {
+          const f0 = i / segs;
+          const f1 = (i + 1) / segs;
+          let ax; let az; let bx; let bz;
+          if (vertical) {
+            const px = side === 1 ? x1 : x0;
+            ax = px; bx = px;
+            az = z0 + (z1 - z0) * f0;
+            bz = z0 + (z1 - z0) * f1;
+          } else {
+            const pz = side === 0 ? z0 : z1;
+            az = pz; bz = pz;
+            ax = x0 + (x1 - x0) * f0;
+            bx = x0 + (x1 - x0) * f1;
+          }
+          // верх стенки — чуть ниже дёрна: наружу ничего не торчит,
+          // а изнутри ямы стенка доходит до самого края
+          const topA = this.baseHeightAt(ax, az) - 0.04;
+          const topB = this.baseHeightAt(bx, bz) - 0.04;
+          const midA = Math.max(floorY + 0.1, topA - soilD);
+          const midB = Math.max(floorY + 0.1, topB - soilD);
+          const tone = i % 2 === 0 ? soilTop : soilLow;
+
+          // земля
+          quad(ax, topA, az, bx, topB, bz, bx, midB, bz, ax, midA, az, tone);
+          // камень до дна
+          if (midA > floorY + 0.1 || midB > floorY + 0.1) {
+            quad(ax, midA, az, bx, midB, bz, bx, floorY, bz, ax, floorY, az, i % 2 ? rockDeep : rock);
+          }
+        }
+      }
+
+      // дно ямы
+      quad(x0, floorY, z0, x1, floorY, z0, x1, floorY, z1, x0, floorY, z1, dug > 1.3 ? rockDeep : soilLow);
+
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+      geo.computeVertexNormals();
+      geo.computeBoundingSphere();
+      pit.walls.geometry.dispose();
+      pit.walls.geometry = geo;
+      pit.mat.color.setHex(0xffffff);
+      pit.lumpMat.color.setHex(surface === 'sand' ? 0xc0a97c : 0x866b45);
+    }
+
+    // комья выброшенной земли по краю
+    const chunks = pit.debris.children;
+    const cxm = (block.x0 + block.x1) / 2;
+    const czm = (block.z0 + block.z1) / 2;
+    const halfW = (block.x1 - block.x0) / 2;
+    const halfD = (block.z1 - block.z0) / 2;
+    for (let i = 0; i < chunks.length; i++) {
+      const a = (i / chunks.length) * Math.PI * 2 + 0.55;
+      const px = cxm + Math.cos(a) * halfW * 1.06;
+      const pz = czm + Math.sin(a) * halfD * 1.06;
+      chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.08, pz);
+      chunks[i].rotation.y = a * 2.1;
+    }
+    pit.group.position.set(0, 0, 0);
+    pit.group.visible = true;
+    pit.floorY = floorY;
+  }
+
+  /** Копание с учётом соседних клеток: у края ямы глубина меньше */
+  dugAtWeighted(x, z) {
+    let best = 0;
+    const cells = [
+      [0, 0, 1], [1, 0, 0.6], [-1, 0, 0.6], [0, 1, 0.6], [0, -1, 0.6],
+    ];
+    for (const [dx, dz, w] of cells) {
+      const k = this._digKey(x + dx * DIG_CELL, z + dz * DIG_CELL);
+      const d = this.digStore.get(k);
+      if (d) best = Math.max(best, d * w);
+    }
+    return best;
   }
 
   /** Пересчитать вершины рельефа и карту глубин для воды */
@@ -1032,9 +1204,9 @@ export class World {
     const pos = geo.attributes.position;
     const col = geo.attributes.color;
     const base = this.baseColors;
-    const soilCut = new THREE.Color(0x6a5334);
-    const rockCut = new THREE.Color(0x7d766a);
-    const darkCut = new THREE.Color(0x4a463f);
+    const soilCut = new THREE.Color(0x8a7149);
+    const rockCut = new THREE.Color(0x8f8a80);
+    const darkCut = new THREE.Color(0x6f6a62);
     const tmp = new THREE.Color();
     const needColor = !!(col && base);
     for (let i = 0; i < pos.count; i++) {
@@ -1043,18 +1215,18 @@ export class World {
       pos.setY(i, this.heightAt(x, z));
       // у выкопанной лунки показываем срез породы: земля -> камень -> темнота
       if (needColor) {
-        const dug = this.dugAt(x, z);
-        if (dug > 0.4) {
-          const k = clamp((dug - 0.4) / 1.1, 0, 1);
+        const dug = this.dugAtWeighted(x, z);
+        if (dug > 0.25) {
+          const k = clamp((dug - 0.25) / 1.1, 0, 1);
           tmp.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
-          if (dug < SOIL_THICK) tmp.lerp(soilCut, k * 0.75);
+          if (dug < SOIL_THICK) tmp.lerp(soilCut, k * 0.6);
           else if (dug < SOIL_THICK + STONE_THICK * 0.72) {
-            tmp.lerp(rockCut, clamp(0.55 + (dug - SOIL_THICK) * 0.4, 0, 1));
+            tmp.lerp(rockCut, clamp(0.5 + (dug - SOIL_THICK) * 0.4, 0, 1));
           } else {
-            tmp.copy(rockCut).lerp(darkCut, clamp((dug - SOIL_THICK - STONE_THICK * 0.72) * 1.4, 0, 1));
+            tmp.copy(rockCut).lerp(darkCut, clamp((dug - SOIL_THICK - STONE_THICK * 0.72) * 1.2, 0, 1));
           }
           col.setXYZ(i, tmp.r, tmp.g, tmp.b);
-        } else if (col.getX(i) !== base[i * 3]) {
+        } else if (Math.abs(col.getX(i) - base[i * 3]) > 1e-4) {
           col.setXYZ(i, base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
         }
       }

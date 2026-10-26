@@ -289,9 +289,15 @@ function grassCanvas(size = SIZE) {
   }
   ctx.putImageData(img, 0, 0);
 
-  strokes(ctx, size, 900, rng, '#9fc46a', 1, [5, 16], 0.35);
-  strokes(ctx, size, 600, rng, '#3f6330', 1, [4, 12], 0.3);
-  speckle(ctx, size, 500, rng, ['#c3d98a', '#6a9448', '#2f4d24'], [0.5, 1.6], [0.08, 0.25]);
+  // трава из разных оттенков: светлые, сочные, выгоревшие и тёмные травинки
+  const blades = ['#a8cc72', '#8fbd63', '#c2cf7f', '#d6cd85', '#6f9c4a', '#5c8b41', '#486e34', '#3d5f2c'];
+  for (const [i, color] of blades.entries()) {
+    strokes(ctx, size, 150 + (i % 3) * 60, rng, color, 1, [4, 15], 0.22 + (i % 4) * 0.05);
+  }
+  // пятна выгоревшей травы отдельным слоем, чтобы «сухие» участки читались и вблизи
+  strokes(ctx, size, 420, rng, '#c9c07c', 1, [5, 18], 0.26);
+  strokes(ctx, size, 260, rng, '#365a28', 1, [4, 11], 0.22);
+  speckle(ctx, size, 620, rng, ['#cfe195', '#a3c46b', '#6a9448', '#2f4d24', '#d8d08a'], [0.5, 1.7], [0.08, 0.26]);
   return canvas;
 }
 
