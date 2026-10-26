@@ -469,9 +469,14 @@ class Game {
     this.canvas.addEventListener('mousedown', (e) => {
       if (!this.running || this.paused) return;
       if (this.ui.isPanelOpen()) return;     // панель открыта — клики по ней, а не по миру
+      // F9: курсор был отпущен — первый клик только возвращает обзор, без удара
+      if (this.cursorFree) {
+        this.captureCursor();
+        e.preventDefault();
+        return;
+      }
       if (!this.locked) {
         this.dragging = true;
-        this.cursorFree = false;
         this.tryLock();
       }
       if (e.button === 0) {
@@ -486,6 +491,7 @@ class Game {
 
     window.addEventListener('mousemove', (e) => {
       if (!this.running || this.paused) return;
+      if (this.cursorFree) return;
       if (this.locked || this.dragging) {
         this.player.look(e.movementX || 0, e.movementY || 0);
       }
@@ -506,6 +512,11 @@ class Game {
     document.addEventListener('pointerlockchange', () => {
       const wasLocked = this.locked;
       this.locked = document.pointerLockElement === this.canvas;
+      if (this.locked) {
+        this.lockErrors = 0;
+        this.cursorFree = false;
+        this.ui.setCursorFree?.(false);
+      }
 
       // курсор отпустили специально, чтобы кликать по крафту/сумке
       if (!this.locked && this.panelUnlock) {
@@ -517,7 +528,21 @@ class Game {
       }
     });
     document.addEventListener('pointerlockerror', () => {
-      this.dragLook = true;
+      // браузер не даёт захватить мышь сразу после Esc/F9 — пробуем ещё раз,
+      // и только если не вышло дважды, включаем обзор «зажми ЛКМ и веди»
+      this.lockErrors = (this.lockErrors || 0) + 1;
+      if (this.cursorFree) {
+        // пока курсор отпущен, ошибка захвата ни на что не влияет
+        return;
+      }
+      if (this.lockErrors <= 2) {
+        clearTimeout(this._lockRetry);
+        this._lockRetry = setTimeout(() => {
+          if (!this.locked && !this.cursorFree && this.running && !this.paused) this.tryLock(true);
+        }, 1200);
+        return;
+      }
+      this.fallbackLook();
     });
 
     // Сворачивание вкладки — пауза и сохранение.
@@ -531,8 +556,9 @@ class Game {
     window.addEventListener('beforeunload', () => this.save());
   }
 
-  tryLock() {
-    if (this.dragLook) return;
+  tryLock(force = false) {
+    // dragLook — режим обзора «зажми ЛКМ»; F9 может принудительно попробовать захват
+    if (this.dragLook && !force) return;
     try {
       const p = this.canvas.requestPointerLock?.();
       if (p && typeof p.catch === 'function') p.catch(() => this.fallbackLook());
@@ -542,8 +568,8 @@ class Game {
     }
     // некоторые браузеры просто игнорируют запрос (например, в iframe)
     setTimeout(() => {
-      if (!this.locked && this.running && !this.paused) this.fallbackLook();
-    }, 700);
+      if (!this.locked && this.running && !this.paused && !this.cursorFree) this.fallbackLook();
+    }, 900);
   }
 
   fallbackLook() {
@@ -560,6 +586,10 @@ class Game {
       if (this.ui.isPanelOpen()) {
         this.ui.closePanels();
         this.relock();
+        return;
+      }
+      if (this.cursorFree) {
+        this.captureCursor();
         return;
       }
       if (this.running && !this.paused) this.pause();
@@ -748,6 +778,9 @@ class Game {
   pause() {
     if (!this.running || this.dead) return;
     this.paused = true;
+    // на паузе курсор всегда обычный: иначе после «Продолжить» обзор не вернётся
+    this.cursorFree = false;
+    this.ui.setCursorFree?.(false);
     this.save();
     const days = this.sky.day;
     const mins = Math.floor((performance.now() - (this.startedAt || performance.now())) / 60000);
@@ -2328,23 +2361,45 @@ class Game {
   /** Вернуть управление мышью (если игра идёт) */
   relock() {
     if (!this.running || this.paused || this.dead) return;
-    if (this.dragLook) return;
-    this.tryLock();
+    this.cursorFree = false;
+    this.ui.setCursorFree?.(false);
+    this.tryLock(true);
   }
 
   /** F9: отпустить курсор для кликов по интерфейсу и вернуть его обратно */
   toggleCursor() {
-    if (this.cursorFree) {
-      this.cursorFree = false;
-      this.ui.toast('Курсор захвачен — обзор мышью снова работает');
-      this.tryLock();
-      return;
-    }
+    if (this.cursorFree) this.captureCursor();
+    else this.releaseCursor();
+  }
+
+  /** F9: курсор свободен — игра идёт, но мышь не крутит камеру */
+  releaseCursor() {
     this.cursorFree = true;
     this.dragging = false;
     this.holdingAttack = false;
+    this.lockErrors = 0;
+    // пока курсор свободен, автозахват по клику и фолбэк-обзор не вмешиваются
+    this.ui.setCursorFree?.(true);
     if (document.pointerLockElement) document.exitPointerLock();
-    this.ui.toast('Курсор свободен: можно кликать по кнопкам и панелям. F9 — вернуть');
+    this.ui.toast('F9: курсор свободен — можно кликать по панелям. Ещё раз F9 или клик по сцене вернут обзор');
+    this.audio.uiClick?.();
+  }
+
+  /** F9 повторно: снова захватить мышь для обзора */
+  captureCursor() {
+    this.cursorFree = false;
+    this.ui.setCursorFree?.(false);
+    if (this.dragLook) {
+      // мышь не захватывается (iframe/настройки браузера) — обзор зажатой ЛКМ
+      this.ui.toast('Обзор: зажми левую кнопку мыши и веди');
+      return;
+    }
+    this.tryLock(true);
+    // если браузер не дал захват, честно говорим, как смотреть
+    clearTimeout(this._cursorHint);
+    this._cursorHint = setTimeout(() => {
+      if (!this.locked && !this.cursorFree && !this.dragLook) this.fallbackLook();
+    }, 1000);
     this.audio.uiClick?.();
   }
 

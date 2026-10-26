@@ -49,6 +49,7 @@ export class UI {
       fatal: $('fatal'),
       fuel: $('hud-fuel'),
       creative: $('hud-creative'),
+      cursor: $('hud-cursor'),
       wounds: $('hud-wounds'),
       botReport: $('bot-report'),
       botList: $('bot-list'),
@@ -189,6 +190,11 @@ export class UI {
   }
 
   /** Ранения по частям тела: список с прогрессом заживления */
+  /** F9: подсказка, что курсор отпущен */
+  setCursorFree(on) {
+    if (this.el.cursor) this.el.cursor.classList.toggle('hidden', !on);
+  }
+
   setWounds(list) {
     if (!this.el.wounds) return;
     const sig = list.map((w) => `${w.part}:${Math.round(w.severity * 10)}`).join('|');

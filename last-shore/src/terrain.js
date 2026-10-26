@@ -106,14 +106,16 @@ export function createTerrainMaterial(textures) {
          float rel = texLum / 0.55;
          // текстура должна читаться под ногами: контраст и вклад выше,
          // но без выкручивания в белое/чёрное
-         rel = clamp(mix(1.0, rel, 2.35), 0.34, 1.95);
+         rel = clamp(mix(1.0, rel, 1.5), 0.5, 1.62);
 
          // оттенок текстуры подмешиваем лишь частично, чтобы не сбить палитру биома
          vec3 hueTex = mixTex / max(texLum, 0.03);
-         vec3 hue = mix(vec3(1.0), hueTex, 0.58);
+         // оттенок текстуры подмешиваем умеренно: цвет биома (разные оттенки
+         // травы) должен читаться, а не растворяться в одной карте
+         vec3 hue = mix(vec3(1.0), hueTex, 0.34);
 
          // крупная пятнистость: трава и песок «дышат» пятнами
-         float macroMod = mix(0.9, 1.1, macro);
+         float macroMod = mix(0.86, 1.14, macro);
 
          diffuseColor.rgb = base * rel * hue * macroMod;
 
@@ -124,6 +126,28 @@ export function createTerrainMaterial(textures) {
          float peb = texture2D(uRock, uvA * 4.3 + vec2(0.13, 0.71)).r;
          float gravel = smoothstep(0.62, 0.82, peb) * (1.0 - w.x * 0.4);
          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.22 + vec3(0.04, 0.035, 0.025), gravel * 0.5);
+         // --- трава из разных оттенков: крупные пятна прямо под ногами ---
+         float tFresh = texture2D(uGrass, uvA * 0.19 + vec2(0.31, 0.07)).g;
+         float tDry   = texture2D(uDirt,  uvA * 0.13 + vec2(0.70, 0.44)).r;
+         float tLush  = texture2D(uGrass, uvA * 0.31 - vec2(0.12, 0.55)).b;
+         float tDark  = texture2D(uDirt,  uvA * 0.07 + vec2(0.05, 0.91)).g;
+
+         float patchDry  = smoothstep(0.42, 0.72, tDry * 0.65 + tLush * 0.35);
+         float patchLush = smoothstep(0.44, 0.76, tFresh * 0.7 + (1.0 - tDry) * 0.3);
+         float patchDark = smoothstep(0.50, 0.82, tDark * 0.8 + tFresh * 0.25);
+
+         // крупные пятна по «далёкой» карте: луг, выгоревшая трава, тень
+         float farDry = smoothstep(0.40, 0.70, texture2D(uDirt, uvB * 0.35 + vec2(0.61, 0.13)).r);
+         float farLush = smoothstep(0.42, 0.72, texture2D(uGrass, uvB * 0.31 - vec2(0.22, 0.48)).g);
+
+         vec3 grassTint = vec3(1.0);
+         grassTint = mix(grassTint, vec3(1.62, 1.34, 0.70), patchDry * w.x * 1.5);    // сухая, жёлтая
+         grassTint = mix(grassTint, vec3(0.72, 1.42, 0.68), patchLush * w.x * 1.35);  // свежая, зелёная
+         grassTint = mix(grassTint, vec3(0.52, 0.82, 0.56), patchDark * w.x * 1.2);   // тёмная, тенистая
+         grassTint = mix(grassTint, vec3(1.35, 1.30, 0.86), farDry * w.x * 0.95);     // выгоревший луг
+         grassTint = mix(grassTint, vec3(0.86, 1.18, 0.74), farLush * w.x * 0.8);     // сочная зелень
+         diffuseColor.rgb *= grassTint;
+
          // выгоревшая на солнце трава — тёплый оттенок пятнами
          diffuseColor.rgb *= mix(vec3(1.0), vec3(1.07, 1.0, 0.86), smoothstep(0.55, 0.85, macro3) * w.x);
 
@@ -137,7 +161,7 @@ export function createTerrainMaterial(textures) {
   };
 
   // пересобирать шейдер при смене материала не нужно, но кэш ключей обязателен
-  material.customProgramCacheKey = () => 'lastshore-terrain-v2';
+  material.customProgramCacheKey = () => 'lastshore-terrain-v5';
   return material;
 }
 
