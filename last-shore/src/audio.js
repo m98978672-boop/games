@@ -388,6 +388,21 @@ export class Audio {
     this._noiseBurst(0.5, 5200, 1.2, 0.06, 'highpass');
   }
 
+  /** Обезьяна: короткие вскрики с восходящим тоном */
+  monkey() {
+    this._tone(760, 0.09, 0.05, 'square', 1180);
+    this._tone(900, 0.07, 0.04, 'square', 1320, 0.11);
+    if (Math.random() < 0.5) this._tone(680, 0.08, 0.035, 'square', 980, 0.22);
+  }
+
+  /** Рыба у поверхности: бульканье и всплеск */
+  bubble() {
+    for (let i = 0; i < 3; i++) {
+      this._tone(320 + i * 90, 0.05, 0.03, 'sine', 620 + i * 120, i * 0.05);
+    }
+    this._noiseBurst(0.12, 1400, 1.6, 0.03, 'bandpass');
+  }
+
   /** Мягкий шаг зверя по земле */
   mobStep() {
     this._noiseBurst(0.09, 320 + Math.random() * 140, 0.9, 0.06);

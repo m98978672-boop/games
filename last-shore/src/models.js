@@ -389,6 +389,100 @@ export function makeTreeParts(rng) {
 
 /** Куст: несколько веток из земли и рыхлая листва поверх */
 /**
+ * Сосна (высокогорье): ровный ствол и ярусы тёмной хвои конусами.
+ * Силуэт совсем другой, чем у джунглевого дерева: узкая свеча.
+ */
+export function makePineParts(rng) {
+  const bark = [];
+  const leaf = [];
+  const h = 7.5 + rng() * 4.0;
+  trunkPart(bark, rng, h, 0.34 + rng() * 0.08, 0.1, 0x5b432c, 0x6d5236, 0.12, 7);
+
+  // корни-подпорки
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + rng() * 0.5;
+    part(bark, new THREE.ConeGeometry(0.16, 0.7, 5, 1), 0x4f3a26,
+      Math.cos(a) * 0.3, 0.2, Math.sin(a) * 0.3, Math.PI * 0.36, -a, 0);
+  }
+
+  const tiers = 5;
+  for (let i = 0; i < tiers; i++) {
+    const t = i / (tiers - 1);
+    const y = h * (0.42 + t * 0.52);
+    const r = (2.0 - t * 1.35) * (0.9 + rng() * 0.2);
+    const tint = t > 0.6 ? 0x33583a : 0x2f5a3a;
+    part(leaf, new THREE.ConeGeometry(r, 1.5 + r * 0.5, 7, 1), i % 2 ? tint : 0x3a6644, 0, y, 0, 0, rng() * 0.6, 0);
+  }
+  // макушка
+  piece(leaf, new THREE.ConeGeometry(0.55, 1.8, 6, 1), 0x3f6f49, [0, h * 0.99, 0]);
+  return { bark: merge(bark), leaf: merge(leaf) };
+}
+
+/**
+ * Мангровое дерево: низкий ствол на арках-корнях над водой,
+ * широкая плоская крона. Растёт на границе песка и суши.
+ */
+export function makeMangroveParts(rng) {
+  const bark = [];
+  const leaf = [];
+  const h = 3.2 + rng() * 1.6;
+
+  // арки корней: цилиндры, расходящиеся от ствола вниз
+  const legs = 5 + Math.floor(rng() * 2);
+  for (let i = 0; i < legs; i++) {
+    const a = (i / legs) * Math.PI * 2 + rng() * 0.4;
+    const rad = 0.9 + rng() * 0.6;
+    const top = new THREE.Vector3(Math.cos(a) * 0.25, h * 0.55, Math.sin(a) * 0.25);
+    const foot = new THREE.Vector3(Math.cos(a) * rad, 0.02, Math.sin(a) * rad);
+    const len = top.distanceTo(foot) * 1.05;
+    const geo = new THREE.CylinderGeometry(0.075, 0.14, len, 5, 1);
+    geo.applyQuaternion(alignQuat(top, foot));
+    geo.translate((top.x + foot.x) / 2, (top.y + foot.y) / 2, (top.z + foot.z) / 2);
+    bark.push(colorize(flat(geo), i % 2 ? 0x6b5440 : 0x7a6249));
+  }
+
+  trunkPart(bark, rng, h * 0.62, 0.3, 0.16, 0x6b5440, 0x7d664c, 0.5, 7);
+
+  // плоская крона: широкие «тарелки» из сплюснутых сфер
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + rng() * 0.5;
+    const d = 0.6 + rng() * 1.5;
+    const r = 0.9 + rng() * 0.5;
+    piece(leaf, new THREE.IcosahedronGeometry(r, 1),
+      i % 2 ? 0x6f9c46 : 0x86af4e,
+      [Math.cos(a) * d, h * 0.82 + rng() * 0.25, Math.sin(a) * d],
+      [0, 0, 0], [1.25, 0.62, 1.25]);
+  }
+  return { bark: merge(bark), leaf: merge(leaf) };
+}
+
+/**
+ * Сухостой: мёртвое дерево без листьев — серебристо-серый ствол,
+ * обломанные ветки. Ставится на выгоревших склонах.
+ */
+export function makeDeadTreeParts(rng) {
+  const bark = [];
+  const h = 4.2 + rng() * 3.2;
+  trunkPart(bark, rng, h, 0.36, 0.07, 0x8b8274, 0x9c9384, 0.6, 7);
+
+  const branches = 4 + Math.floor(rng() * 3);
+  for (let i = 0; i < branches; i++) {
+    const a = (i / branches) * Math.PI * 2 + rng() * 0.9;
+    const y = h * (0.4 + rng() * 0.5);
+    const len = 0.9 + rng() * 1.3;
+    const origin = new THREE.Vector3(Math.sin(a) * 0.1, y, Math.cos(a) * 0.1);
+    const end = new THREE.Vector3(
+      Math.cos(a) * len, y + len * (0.35 + rng() * 0.5), Math.sin(a) * len,
+    );
+    const geo = new THREE.CylinderGeometry(0.035, 0.1, origin.distanceTo(end), 5, 1);
+    geo.applyQuaternion(alignQuat(origin, end));
+    geo.translate((origin.x + end.x) / 2, (origin.y + end.y) / 2, (origin.z + end.z) / 2);
+    bark.push(colorize(flat(geo), i % 3 ? 0x8b8274 : 0x7b7364));
+  }
+  return { bark: merge(bark) };
+}
+
+/**
  * Куст из кубиков: у куба каждая грань получает свои UV 0..1,
  * поэтому текстура ложится ровно и не «рвётся» на полюсах сферы.
  */
@@ -803,6 +897,191 @@ export function makeGull() {
   group.add(tail);
 
   return { group, parts: { body, head, wings, tail } };
+}
+
+/** Обезьяна: долгие руки, цепкий хвост, светлая морда */
+export function makeMonkey() {
+  const group = new THREE.Group();
+  const fur = mat(0x7e5a3a);
+  const furDark = mat(0x5d4128);
+  const face = mat(0xd9b184, { roughness: 0.8 });
+
+  const body = mesh(new THREE.IcosahedronGeometry(0.3, 1), fur);
+  body.scale.set(1.0, 1.25, 0.9);
+  body.position.y = 0.86;
+  group.add(body);
+
+  const head = new THREE.Group();
+  head.position.set(0.12, 1.22, 0);
+  const skull = mesh(new THREE.IcosahedronGeometry(0.19, 1), fur);
+  skull.scale.set(1.0, 1.0, 1.05);
+  head.add(skull);
+  const muzzle = mesh(new THREE.IcosahedronGeometry(0.13, 1), face);
+  muzzle.scale.set(1.1, 0.85, 0.95);
+  muzzle.position.set(0.11, -0.03, 0);
+  head.add(muzzle);
+  for (const side of [-1, 1]) {
+    const ear = mesh(new THREE.IcosahedronGeometry(0.07, 0), face);
+    ear.position.set(-0.02, 0.08, 0.17 * side);
+    head.add(ear);
+    const eye = mesh(new THREE.IcosahedronGeometry(0.028, 0), mat(0x14100c, { roughness: 0.3 }));
+    eye.position.set(0.16, 0.03, 0.06 * side);
+    head.add(eye);
+  }
+  group.add(head);
+
+  const arms = [];
+  for (const side of [-1, 1]) {
+    const arm = new THREE.Group();
+    arm.position.set(0.02, 1.0, 0.2 * side);
+    const upper = mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.34, 5, 1), furDark);
+    upper.geometry.translate(0, -0.17, 0);
+    arm.add(upper);
+    const fore = mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.3, 5, 1), fur);
+    fore.geometry.translate(0, -0.45, 0);
+    arm.add(fore);
+    const hand = mesh(new THREE.IcosahedronGeometry(0.06, 0), face);
+    hand.position.y = -0.6;
+    arm.add(hand);
+    group.add(arm);
+    arms.push(arm);
+  }
+
+  const legs = [];
+  for (const side of [-1, 1]) {
+    const leg = new THREE.Group();
+    leg.position.set(-0.04, 0.6, 0.13 * side);
+    const thigh = mesh(new THREE.CylinderGeometry(0.062, 0.05, 0.3, 5, 1), furDark);
+    thigh.geometry.translate(0, -0.14, 0);
+    leg.add(thigh);
+    const foot = mesh(new THREE.BoxGeometry(0.16, 0.06, 0.1), face);
+    foot.position.set(0.04, -0.31, 0);
+    leg.add(foot);
+    group.add(leg);
+    legs.push(leg);
+  }
+
+  // хвост: цепочка сегментов, загибается крючком
+  const tail = new THREE.Group();
+  tail.position.set(-0.26, 0.92, 0);
+  const segs = [];
+  let parent = tail;
+  for (let i = 0; i < 5; i++) {
+    const seg = new THREE.Group();
+    seg.position.set(0, 0, 0);
+    seg.rotation.z = -0.5 + i * 0.12;
+    const ball = mesh(new THREE.CylinderGeometry(0.035 - i * 0.003, 0.04 - i * 0.003, 0.17, 4, 1), furDark);
+    ball.geometry.translate(0, -0.085, 0);
+    seg.add(ball);
+    parent.add(seg);
+    if (i > 0) seg.position.y = -0.15;
+    parent = seg;
+    segs.push(seg);
+  }
+  group.add(tail);
+
+  return { group, parts: { body, head, arms, legs, tail, tailSegs: segs } };
+}
+
+/** Черепаха: низкий панцирь из щитков, медленные лапы */
+export function makeTurtle() {
+  const group = new THREE.Group();
+  const shellMat = mat(0x4c6b3c, { roughness: 0.85 });
+  const shellDark = mat(0x3a5530, { roughness: 0.9 });
+  const skin = mat(0x8c9a63, { roughness: 0.9 });
+
+  const body = new THREE.Group();
+  const dome = mesh(new THREE.IcosahedronGeometry(0.42, 1), shellMat);
+  dome.scale.set(1.15, 0.55, 1.0);
+  dome.position.y = 0.3;
+  body.add(dome);
+  // щитки панциря
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2;
+    const plate = mesh(new THREE.BoxGeometry(0.2, 0.06, 0.2), shellDark);
+    plate.position.set(Math.cos(a) * 0.2, 0.44, Math.sin(a) * 0.2);
+    plate.rotation.y = -a;
+    body.add(plate);
+  }
+  const belly = mesh(new THREE.BoxGeometry(0.7, 0.1, 0.62), mat(0xc7bd8c, { roughness: 0.9 }));
+  belly.position.y = 0.12;
+  body.add(belly);
+  group.add(body);
+
+  const head = new THREE.Group();
+  head.position.set(0.58, 0.2, 0);
+  const skull = mesh(new THREE.IcosahedronGeometry(0.12, 1), skin);
+  skull.scale.set(1.3, 0.9, 1);
+  head.add(skull);
+  for (const side of [-1, 1]) {
+    const eye = mesh(new THREE.IcosahedronGeometry(0.022, 0), mat(0x1a1a14, { roughness: 0.3 }));
+    eye.position.set(0.08, 0.04, 0.07 * side);
+    head.add(eye);
+  }
+  group.add(head);
+
+  const legs = [];
+  const spots = [[0.3, 0.26], [0.3, -0.26], [-0.28, 0.26], [-0.28, -0.26]];
+  spots.forEach(([x, z]) => {
+    const leg = new THREE.Group();
+    leg.position.set(x, 0.14, z);
+    const foot = mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.18, 5, 1), skin);
+    foot.geometry.translate(0, -0.06, 0);
+    leg.add(foot);
+    group.add(leg);
+    legs.push(leg);
+  });
+
+  const tail = mesh(new THREE.ConeGeometry(0.06, 0.2, 4, 1), skin);
+  tail.position.set(-0.5, 0.14, 0);
+  tail.rotation.z = Math.PI / 2.4;
+  group.add(tail);
+
+  return { group, parts: { body, head, legs, tail } };
+}
+
+/** Рыба: веретенообразное тело, хвост-плавник и спинной гребень */
+export function makeFish(rng = Math.random, tone = null) {
+  const group = new THREE.Group();
+  const palettes = [
+    [0x6fa8b8, 0xb9d7dd],   // серебристо-голубая
+    [0xc8a24a, 0xe6d08a],   // золотая
+    [0x8a5fb0, 0xc7a8e0],   // лиловая
+    [0x5b9c6a, 0xa8d4a8],   // зелёная
+  ];
+  const pal = palettes[Math.floor(rng() * palettes.length)];
+  const [main, belly] = tone ? [tone, tone] : pal;
+
+  const body = mesh(new THREE.IcosahedronGeometry(0.26, 1), mat(main, { roughness: 0.4 }));
+  body.scale.set(1.9, 0.78, 0.55);
+  group.add(body);
+
+  const back = mesh(new THREE.IcosahedronGeometry(0.2, 1), mat(belly, { roughness: 0.45 }));
+  back.scale.set(1.5, 0.5, 0.5);
+  back.position.y = -0.07;
+  group.add(back);
+
+  const tail = new THREE.Group();
+  tail.position.set(-0.44, 0, 0);
+  const fin = mesh(new THREE.ConeGeometry(0.2, 0.3, 3, 1), mat(belly, { roughness: 0.5 }));
+  fin.rotation.z = Math.PI / 2;
+  fin.rotation.y = Math.PI / 2;
+  fin.scale.set(1, 0.35, 1);
+  tail.add(fin);
+  group.add(tail);
+
+  const dorsal = mesh(new THREE.ConeGeometry(0.13, 0.22, 3, 1), mat(belly, { roughness: 0.5 }));
+  dorsal.position.set(-0.02, 0.2, 0);
+  dorsal.scale.set(1, 1, 0.35);
+  group.add(dorsal);
+
+  for (const side of [-1, 1]) {
+    const eye = mesh(new THREE.IcosahedronGeometry(0.035, 0), mat(0x14181c, { roughness: 0.25 }));
+    eye.position.set(0.34, 0.03, 0.08 * side);
+    group.add(eye);
+  }
+
+  return { group, parts: { body, tail, fins: [dorsal] } };
 }
 
 /** Змея: цепочка сегментов, которая извивается */
