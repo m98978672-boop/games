@@ -887,6 +887,8 @@ class Game {
       return;
     }
 
+    // ступени в яме разворачиваются туда, где стоит герой
+    w.playerPos = this.player.position;
     const res = w.dig(point.x, point.z, {
       radius: power > 2 ? 2.0 : 1.45,
       depth: this.creative ? 0.7 : 0.45,

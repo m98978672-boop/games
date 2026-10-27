@@ -467,6 +467,12 @@ export class Player {
       if (Math.abs(x) > CONFIG.world.size * 0.75 || Math.abs(z) > CONFIG.world.size * 0.75) return false;
       const h = world.heightAt(x, z);
       if (h < -P.maxDepth) return false;   // слишком глубоко
+      // стенку выкопанной ямы не перелезть: подъём больше 0.55 м не пускает.
+      // Спуск и прыжок вниз при этом свободны — в яму герой падает сам.
+      if (!this.fly) {
+        const rise = h - world.heightAt(this.position.x, this.position.z);
+        if (rise > 0.55) return false;
+      }
       if (world.slopeAt(x, z) > 2.4) return false; // почти скала
       return true;
     };

@@ -284,7 +284,7 @@ export class InspectorBot {
         };
       } },
 
-      { name: 'Яма от лопаты — блок, а не дыра', walk: 'dig', run: (g) => {
+      { name: 'Яма — дыра в рельефе, край по сетке', walk: 'dig', run: (g) => {
         const w = g.world;
         const p = g.player.position;
         let spot = null;
@@ -298,20 +298,24 @@ export class InspectorBot {
         }
         if (!spot) return { ok: false, expect: 'сухое ровное место', fact: 'места нет' };
         const before = w.baseHeightAt(spot.x, spot.z);
-        let res = null;
-        for (let i = 0; i < 6; i++) res = w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
-        const pit = w.pits.get(w._digKey(spot.x, spot.z));
+        const triBase = w.terrainIndexBase ? w.terrainIndexBase.length / 3 : 0;
+        for (let i = 0; i < 5; i++) w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
+        const idx = w.terrain.geometry.index;
+        const cutTris = triBase - (idx ? idx.count / 3 : 0);
+        const pit = w.pitAt(spot.x, spot.z);
+        if (!pit) return { ok: false, expect: 'выкопанная яма', fact: 'ям нет' };
         const sunk = before - w.heightAt(spot.x, spot.z);
-        const walls = pit ? pit.walls.geometry.attributes.position.count : 0;
-        const hasLayers = pit ? pit.walls.geometry.attributes.color.count === walls : false;
-        const restored = { heights: w.heights.slice() };
-        // яму не убираем: это честно выкопанная земля, игрок сам решит
-        void restored;
-        void res;
+        const walls = pit.walls.geometry.attributes.position.count;
+        const step = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+        const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1]
+          .every((v) => Math.abs((v + 180) / step - Math.round((v + 180) / step)) < 1e-6);
+        // в яму спускаешься, а по ступеням вылезаешь: стенка не перелезается
+        const g0 = w.heightAt(pit.rect.x0 + (pit.rect.x1 - pit.rect.x0) / 2, pit.rect.z0 + (pit.rect.z1 - pit.rect.z0) / 2);
+        const dugIn = Math.abs(g0 - before) > 0.05;
         return {
-          ok: !!pit && sunk > 0.5 && walls > 0 && hasLayers,
-          expect: 'земля проседает блоком, у ямы есть стенки со слоями',
-          fact: `просадка ${fmt(sunk)} м · стенки ${walls} вершин · слои видны: ${hasLayers ? 'да' : 'нет'}`,
+          ok: cutTris >= 2 && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
+          expect: 'треугольники земли вырезаны по сетке, внутри дно, стенки и ступени',
+          fact: `вырезано ${cutTris} треугольников · клеток ${pit.rect.cells}×${pit.rect.cells} · край по сетке: ${onGrid ? 'да' : 'нет'} · дно на ${fmt(sunk)} м ниже дёрна · стенки ${walls} вершин · ступеней ${pit.steps}`,
         };
       } },
 

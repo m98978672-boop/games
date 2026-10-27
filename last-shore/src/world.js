@@ -95,7 +95,11 @@ export class World {
     this.digStore = new Map();  // выкопанные лунки: ключ клетки -> глубина
     this.digEvents = 0;
     this.surfaceStore = new Map();  // чем была клетка до копания: песок/земля/камень
-    this.pits = new Map();          // выкопанные лунки: стенки и дно со срезом породы
+    this.pits = new Map();          // выкопанные ямы: дно, стенки, ступени
+    this.cutCells = new Set();      // клетки сетки, вырезанные из рельефа (дыра)
+    this.cutPits = new Map();       // ключ клетки -> яма (для heightAt)
+    this.terrainIndexBase = null;   // полный индекс рельефа до вырезания
+    this.playerPos = null;          // где герой: ступени разворачиваются к нему
     this.baseColors = null;     // исходные цвета рельефа (для показа среза породы)
     this.pickups = [];          // { mesh, kind, name }
     this.time = 0;
@@ -146,21 +150,31 @@ export class World {
     }
   }
 
-  /** Высота рельефа в мировых координатах (билинейно по сетке) */
-  heightAt(x, z) {
+  /** Высота сетки рельефа (билинейно), без учёта выкопанных ям */
+  _gridHeightAt(x, z, arr = this.heights) {
     const gx = clamp((x + SIZE / 2) / STEP, 0, GRID - 1.001);
     const gz = clamp((z + SIZE / 2) / STEP, 0, GRID - 1.001);
     const ix = Math.floor(gx);
     const iz = Math.floor(gz);
     const fx = gx - ix;
     const fz = gz - iz;
-    const h00 = this.heights[iz * GRID + ix];
-    const h10 = this.heights[iz * GRID + ix + 1];
-    const h01 = this.heights[(iz + 1) * GRID + ix];
-    const h11 = this.heights[(iz + 1) * GRID + ix + 1];
+    const h00 = arr[iz * GRID + ix];
+    const h10 = arr[iz * GRID + ix + 1];
+    const h01 = arr[(iz + 1) * GRID + ix];
+    const h11 = arr[(iz + 1) * GRID + ix + 1];
     const a = h00 + (h10 - h00) * fx;
     const b = h01 + (h11 - h01) * fx;
     return a + (b - a) * fz;
+  }
+
+  /**
+   * Высота земли в мировых координатах. Яма вырезана из рельефа, поэтому
+   * внутри неё высота — пол ямы или ступень, а не дёрн: герой туда падает.
+   */
+  heightAt(x, z) {
+    const pitY = this.pitFloorAt(x, z);
+    if (pitY !== null) return pitY;
+    return this._gridHeightAt(x, z);
   }
 
   slopeAt(x, z) {
@@ -271,6 +285,8 @@ export class World {
     this.terrain.receiveShadow = true;
     this.terrain.castShadow = false;
     this.scene.add(this.terrain);
+    // полный индекс рельефа — из него вырезаются клетки выкопанных ям
+    this.terrainIndexBase = geo.index ? geo.index.array.slice() : null;
   }
 
   _buildWater() {
@@ -947,27 +963,20 @@ export class World {
     const topY = this.surfaceOf(x, z).h0;
     const floorY = Math.max(-5, topY - (newDug + 0.25));
 
-    // --- копаем ровно блоком: узлы сетки внутри ямы опускаются на её дно,
-    //     всё вокруг остаётся нетронутым (никаких «воронок» и чёрных пятен) ---
-    const block = this._pitBlock(x, z, radius);
-    for (let iz = block.vz0; iz <= block.vz1; iz++) {
-      for (let ix = block.vx0; ix <= block.vx1; ix++) {
-        this.heights[iz * GRID + ix] = Math.min(this.heights[iz * GRID + ix], floorY);
-      }
-    }
-
     // песок не держит стенку: часть осыпается обратно в яму
-    let sandFill = 0;
-    if (probe.layer === 'sand') {
-      const edge = this.baseHeightAt(block.edgeX, block.edgeZ);
-      if (edge > floorY + 0.2) sandFill = Math.min(0.18, (edge - floorY) * 0.12);
-    }
+    const sandFill = probe.layer === 'sand' ? Math.min(0.2, stepDepth * 0.15) : 0;
 
     this.digStore.set(key, newDug);
     this.digEvents++;
-    this._applyHeights();
-    this._clearTufts(x, z, radius);
-    this._updatePit(x, z, radius, already + stepDepth, probe.surface);
+    // --- вырезаем яму из рельефа ровно по клеткам сетки ---
+    //     высоты узлов не трогаем: край дыры совпадает с линиями сетки,
+    //     поэтому ничем не «насаливается» поверх земли
+    const pit = this._carvePit(x, z, radius, floorY + sandFill, probe.surface);
+    if (pit) {
+      const cx = (pit.rect.x0 + pit.rect.x1) / 2;
+      const cz = (pit.rect.z0 + pit.rect.z1) / 2;
+      this._clearTufts(cx, cz, pit.rect.cells * STEP * 0.85 + 0.55);
+    }
 
     const after = this.heightAt(x, z);
     const next = this.probeAt(x, z);
@@ -1007,25 +1016,104 @@ export class World {
     return a + (b - a) * fz;
   }
 
-  /** Половина стороны ямы: по ней режется рельеф и ставятся стенки */
-  pitHalf(radius) {
-    return Math.max(1.1, radius * 0.96);
+  /** Ключ клетки сетки (ix, iz) числом: быстрый поиск в Set/Map */
+  _cellKey(ix, iz) {
+    return ix * 1024 + iz;
   }
 
-  /** Блок узлов сетки, которые опускаются на дно ямы */
-  _pitBlock(x, z, radius) {
+  /** Прямоугольник ямы — ровно по клеткам сетки рельефа (1..4 клетки) */
+  _pitRect(x, z, radius) {
     const half = SIZE / 2;
-    const h = this.pitHalf(radius);
-    const vx0 = clamp(Math.round((x - h + half) / STEP), 1, GRID - 2);
-    const vx1 = clamp(Math.round((x + h + half) / STEP), 1, GRID - 2);
-    const vz0 = clamp(Math.round((z - h + half) / STEP), 1, GRID - 2);
-    const vz1 = clamp(Math.round((z + h + half) / STEP), 1, GRID - 2);
+    const cells = clamp(Math.round((radius * 2) / STEP), 1, 4);
+    // клетка = квадрат сетки, в котором лежит точка: край дыры идёт по узлам
+    // яма стоит вокруг точки копания, чтобы под лопатой был отвесный спуск
+    const ix0 = clamp(Math.round((x + half) / STEP - cells / 2), 1, GRID - 1 - cells);
+    const iz0 = clamp(Math.round((z + half) / STEP - cells / 2), 1, GRID - 1 - cells);
     return {
-      half: h, vx0, vx1, vz0, vz1,
-      edgeX: x + h * 1.5, edgeZ: z + h * 1.5,
-      x0: -half + vx0 * STEP, x1: -half + vx1 * STEP,
-      z0: -half + vz0 * STEP, z1: -half + vz1 * STEP,
+      cells,
+      ix0,
+      iz0,
+      ix1: ix0 + cells,
+      iz1: iz0 + cells,
+      x0: -half + ix0 * STEP,
+      x1: -half + (ix0 + cells) * STEP,
+      z0: -half + iz0 * STEP,
+      z1: -half + (iz0 + cells) * STEP,
     };
+  }
+
+  /**
+   * Пол ямы под точкой (null — если точки в яме нет). У одной из стенок
+   * идут ступени: они и поднимают пол, по ним из ямы выбираются наружу.
+   */
+  pitFloorAt(x, z) {
+    const pits = this.cutPits;
+    if (!pits || pits.size === 0) return null;
+    const half = SIZE / 2;
+    const ix = Math.floor((x + half) / STEP);
+    const iz = Math.floor((z + half) / STEP);
+    if (ix < 0 || iz < 0 || ix >= GRID || iz >= GRID) return null;
+    const pit = pits.get(ix * 1024 + iz);
+    if (!pit) return null;
+    let t;
+    if (pit.side === 'n') t = z - pit.z0;
+    else if (pit.side === 's') t = pit.z1 - z;
+    else if (pit.side === 'w') t = x - pit.x0;
+    else t = pit.x1 - x;
+    const run = pit.runPerStep || 1;
+    const k = Math.max(0, Math.min(pit.steps - 1, pit.steps - 1 - Math.floor(Math.max(0, t) / run)));
+    return Math.min(pit.exitY - 0.05, pit.floorY + k * pit.stepH);
+  }
+
+  /** Яма, в которой лежит точка (или null) */
+  pitAt(x, z) {
+    const half = SIZE / 2;
+    const ix = Math.floor((x + half) / STEP);
+    const iz = Math.floor((z + half) / STEP);
+    return this.cutPits.get(ix * 1024 + iz) || null;
+  }
+
+  /** Пересобрать индекс рельефа без клеток ям — это и есть настоящая дыра */
+  _rebuildTerrainIndex() {
+    const geo = this.terrain && this.terrain.geometry;
+    const base = this.terrainIndexBase;
+    if (!geo || !base) return 0;
+    if (!this.cutCells || this.cutCells.size === 0) {
+      geo.setIndex(new THREE.BufferAttribute(base.slice(), 1));
+      geo.computeBoundingSphere();
+      return 0;
+    }
+    const out = [];
+    for (let q = 0; q < base.length; q += 6) {
+      const v = base[q];
+      const ix = v % GRID;
+      const iz = (v - ix) / GRID;
+      if (this.cutCells.has(ix * 1024 + iz)) continue;
+      out.push(base[q], base[q + 1], base[q + 2], base[q + 3], base[q + 4], base[q + 5]);
+    }
+    const arr = base.constructor.from(out);
+    geo.setIndex(new THREE.BufferAttribute(arr, 1));
+    geo.computeBoundingSphere();
+    return out.length;
+  }
+
+  /** Убрать яму: её клетки возвращаются рельефу */
+  _dropPit(pit) {
+    if (!pit) return false;
+    let changed = false;
+    for (const ck of pit.cells) {
+      if (this.cutPits.get(ck) === pit) {
+        this.cutPits.delete(ck);
+        this.cutCells.delete(ck);
+        changed = true;
+      }
+    }
+    if (pit.group) {
+      this.pitGroup.remove(pit.group);
+      if (pit.walls && pit.walls.geometry) pit.walls.geometry.dispose();
+    }
+    this.pits.delete(pit.key);
+    return changed;
   }
 
   /** Убрать траву с места, где выкопали яму (иначе травинки висят в воздухе) */
@@ -1052,17 +1140,52 @@ export class World {
   }
 
   /**
-   * Яма в блоках: клетки земли вырезаются ТОЧНО по сетке рельефа
-   * (маска dugCut), а на их место вставляется коробка — стенки и дно со
-   * слоями «земля → камень». Никаких рваных краёв: край ямы идёт по линиям
-   * сетки, как блоки в шахте.
+   * ВЫКОПАТЬ ЯМУ. Клетки сетки вырезаются из индекса рельефа — в земле
+   * появляется настоящая дыра, край которой идёт точно по линиям сетки.
+   * Внутрь ставится дно, стенки со слоями «земля → камень» и ступени,
+   * по которым можно вылезти. Высоты узлов рельефа при этом не меняются,
+   * поэтому ничего не «насаливается» поверх земли.
    */
-  _updatePit(x, z, radius, dug, surface) {
-    if (!this.pitGroup) return;
-    const block = this._pitBlock(x, z, radius);
-    const key = this._digKey(x, z);
-    const topY = this.surfaceOf(x, z).h0;
-    const floorY = Math.max(-5, topY - (dug + 0.25));
+  _carvePit(x, z, radius, floorY, surface) {
+    if (!this.pitGroup) return null;
+    const rect = this._pitRect(x, z, radius);
+    const key = `${rect.ix0},${rect.iz0}`;
+    const cx = (rect.x0 + rect.x1) / 2;
+    const cz = (rect.z0 + rect.z1) / 2;
+
+    // ступени выводят к игроку, если он рядом, иначе — туда, где земля ниже
+    const out = Math.max(0.8, rect.cells * STEP * 0.55);
+    const cands = [
+      { side: 'n', x: cx, z: rect.z0 - out, wx: cx, wz: rect.z0 },
+      { side: 's', x: cx, z: rect.z1 + out, wx: cx, wz: rect.z1 },
+      { side: 'w', x: rect.x0 - out, z: cz, wx: rect.x0, wz: cz },
+      { side: 'e', x: rect.x1 + out, z: cz, wx: rect.x1, wz: cz },
+    ];
+    for (const c of cands) c.h = this.baseHeightAt(c.x, c.z);
+    let pick = null;
+    const pp = this.playerPos;
+    if (pp) {
+      const dx = pp.x - cx;
+      const dz = pp.z - cz;
+      const d = Math.hypot(dx, dz);
+      if (d > 0.4 && d < 14) {
+        // ступени — у дальней от героя стены: там, где он копает, получается
+        // честная отвесная яма, а не пологий ступенчатый спуск под ногами
+        const want = Math.abs(dx) > Math.abs(dz) ? (dx > 0 ? 'w' : 'e') : (dz > 0 ? 'n' : 's');
+        pick = cands.find((c) => c.side === want) || null;
+      }
+    }
+    if (!pick) pick = cands.reduce((a, b) => (b.h < a.h ? b : a));
+
+    // верх ступеней — по земле у выхода, чтобы вылезти можно было всегда
+    const exitY = this.baseHeightAt(pick.wx, pick.wz);
+    const depth = Math.max(0.35, exitY - floorY);
+    const steps = clamp(Math.ceil(depth / 0.42), 2, 16);
+    const stepH = depth / steps;
+    const alongX = pick.side === 'n' || pick.side === 's';
+    const span = alongX ? rect.z1 - rect.z0 : rect.x1 - rect.x0;
+    const stairRun = Math.min(Math.max(1.0, depth * 0.72), span * 0.72);
+    const runPerStep = stairRun / steps;
 
     let pit = this.pits.get(key);
     if (!pit) {
@@ -1070,6 +1193,7 @@ export class World {
         ? createStoneMaterial(this.textures.rockDetail, { repeat: [1.4, 1.0] })
         : new THREE.MeshStandardMaterial({ roughness: 0.98, flatShading: true });
       wallMat.side = THREE.DoubleSide;
+      wallMat.vertexColors = true;
       wallMat.color.setHex(0xffffff);
       const group = new THREE.Group();
       group.name = 'pit';
@@ -1085,102 +1209,168 @@ export class World {
       }
       group.add(debris);
       this.pitGroup.add(group);
-      pit = { group, walls, debris, mat: wallMat, lumpMat, sig: '' };
+      pit = { key, group, walls, debris, mat: wallMat, lumpMat, sig: '', cells: new Set() };
       this.pits.set(key, pit);
     }
 
-    const sig = `${block.vx0},${block.vz0},${block.vx1},${block.vz1}|${dug.toFixed(2)}|${surface}`;
-    if (pit.sig !== sig) {
-      pit.sig = sig;
+    // клетки, которые раньше принадлежали другой яме, забираем себе
+    let changed = false;
+    const stolen = new Set();
+    for (let iz = rect.iz0; iz < rect.iz1; iz++) {
+      for (let ix = rect.ix0; ix < rect.ix1; ix++) {
+        const o = this.cutPits.get(ix * 1024 + iz);
+        if (o && o !== pit) stolen.add(o);
+      }
+    }
+    for (const o of stolen) if (this._dropPit(o)) changed = true;
 
-      const soilTop = new THREE.Color(surface === 'sand' ? 0xd8c193 : surface === 'stone' ? 0xb5aea2 : 0x94764c);
-      const soilLow = new THREE.Color(surface === 'sand' ? 0xbda67b : surface === 'stone' ? 0x9c958a : 0x735c3c);
-      const rock = new THREE.Color(0x8f887c);
-      const rockDeep = new THREE.Color(0x7d776d);
-
-      const pos = [];
-      const col = [];
-      const push = (px, py, pz, c) => { pos.push(px, py, pz); col.push(c.r, c.g, c.b); };
-      const quad = (ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, c) => {
-        push(ax, ay, az, c); push(bx, by, bz, c); push(cx, cy, cz, c);
-        push(ax, ay, az, c); push(cx, cy, cz, c); push(dx, dy, dz, c);
-      };
-
-      // стенки чуть внутрь блока: их наружные грани прячутся под дёрном
-      const inset = 0.09;
-      const x0 = block.x0 + inset;
-      const x1 = block.x1 - inset;
-      const z0 = block.z0 + inset;
-      const z1 = block.z1 - inset;
-      const depth = topY - floorY;
-      const soilD = Math.min(Math.max(0.5, depth * 0.55), 1.15);
-      const segs = 6;
-
-      // четыре стенки: верх идёт по земле до копки (без щелей), низ — дно ямы
-      for (let side = 0; side < 4; side++) {
-        const vertical = side % 2 === 1;
-        for (let i = 0; i < segs; i++) {
-          const f0 = i / segs;
-          const f1 = (i + 1) / segs;
-          let ax; let az; let bx; let bz;
-          if (vertical) {
-            const px = side === 1 ? x1 : x0;
-            ax = px; bx = px;
-            az = z0 + (z1 - z0) * f0;
-            bz = z0 + (z1 - z0) * f1;
-          } else {
-            const pz = side === 0 ? z0 : z1;
-            az = pz; bz = pz;
-            ax = x0 + (x1 - x0) * f0;
-            bx = x0 + (x1 - x0) * f1;
-          }
-          // верх стенки — чуть ниже дёрна: наружу ничего не торчит,
-          // а изнутри ямы стенка доходит до самого края
-          const topA = this.baseHeightAt(ax, az) - 0.04;
-          const topB = this.baseHeightAt(bx, bz) - 0.04;
-          const midA = Math.max(floorY + 0.1, topA - soilD);
-          const midB = Math.max(floorY + 0.1, topB - soilD);
-          const tone = i % 2 === 0 ? soilTop : soilLow;
-
-          // земля
-          quad(ax, topA, az, bx, topB, bz, bx, midB, bz, ax, midA, az, tone);
-          // камень до дна
-          if (midA > floorY + 0.1 || midB > floorY + 0.1) {
-            quad(ax, midA, az, bx, midB, bz, bx, floorY, bz, ax, floorY, az, i % 2 ? rockDeep : rock);
-          }
+    const cells = new Set();
+    for (let iz = rect.iz0; iz < rect.iz1; iz++) {
+      for (let ix = rect.ix0; ix < rect.ix1; ix++) {
+        const ck = ix * 1024 + iz;
+        cells.add(ck);
+        this.cutPits.set(ck, pit);
+        if (!this.cutCells.has(ck)) {
+          this.cutCells.add(ck);
+          changed = true;
         }
       }
+    }
+    pit.cells = cells;
+    Object.assign(pit, {
+      rect, floorY, exitY, steps, stepH, runPerStep, stairRun, side: pick.side, surface,
+      x0: rect.x0, x1: rect.x1, z0: rect.z0, z1: rect.z1,
+    });
+    if (changed) this._rebuildTerrainIndex();
 
-      // дно ямы
-      quad(x0, floorY, z0, x1, floorY, z0, x1, floorY, z1, x0, floorY, z1, dug > 1.3 ? rockDeep : soilLow);
-
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-      geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
-      geo.computeVertexNormals();
-      geo.computeBoundingSphere();
-      pit.walls.geometry.dispose();
-      pit.walls.geometry = geo;
-      pit.mat.color.setHex(0xffffff);
-      pit.lumpMat.color.setHex(surface === 'sand' ? 0xc0a97c : 0x866b45);
+    const sig = `${rect.ix0},${rect.iz0},${rect.cells}|${floorY.toFixed(3)}|${pick.side}|${steps}|${surface}`;
+    if (pit.sig !== sig) {
+      pit.sig = sig;
+      this._buildPitGeometry(pit);
     }
 
-    // комья выброшенной земли по краю
+    // комья выброшенной земли по краю — уже снаружи дыры
     const chunks = pit.debris.children;
-    const cxm = (block.x0 + block.x1) / 2;
-    const czm = (block.z0 + block.z1) / 2;
-    const halfW = (block.x1 - block.x0) / 2;
-    const halfD = (block.z1 - block.z0) / 2;
+    const halfW = (rect.x1 - rect.x0) / 2 + 0.16;
+    const halfD = (rect.z1 - rect.z0) / 2 + 0.16;
     for (let i = 0; i < chunks.length; i++) {
       const a = (i / chunks.length) * Math.PI * 2 + 0.55;
-      const px = cxm + Math.cos(a) * halfW * 1.06;
-      const pz = czm + Math.sin(a) * halfD * 1.06;
-      chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.08, pz);
+      const px = cx + Math.cos(a) * halfW;
+      const pz = cz + Math.sin(a) * halfD;
+      chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.07, pz);
       chunks[i].rotation.y = a * 2.1;
     }
     pit.group.position.set(0, 0, 0);
     pit.group.visible = true;
-    pit.floorY = floorY;
+    return pit;
+  }
+
+  /** Дно, стенки со слоями и ступени выкопанной ямы */
+  _buildPitGeometry(pit) {
+    const rect = pit.rect;
+    const floorY = pit.floorY;
+    const surface = pit.surface;
+    const side = pit.side;
+    const steps = pit.steps;
+    const stepH = pit.stepH;
+    const runPerStep = pit.runPerStep;
+
+    const soilTop = new THREE.Color(surface === 'sand' ? 0xd8c193 : surface === 'stone' ? 0xb5aea2 : 0x94764c);
+    const soilLow = new THREE.Color(surface === 'sand' ? 0xbda67b : surface === 'stone' ? 0x9c958a : 0x735c3c);
+    const rock = new THREE.Color(0x8f887c);
+    const rockDeep = new THREE.Color(0x7d776d);
+
+    const pos = [];
+    const col = [];
+    const uvs = [];
+    const vtx = (px, py, pz, c) => {
+      pos.push(px, py, pz);
+      col.push(c.r, c.g, c.b);
+      uvs.push((px + pz) * 0.55, py * 0.55);
+    };
+    const quad = (a, b, c, d, tone) => {
+      vtx(a[0], a[1], a[2], tone);
+      vtx(b[0], b[1], b[2], tone);
+      vtx(c[0], c[1], c[2], tone);
+      vtx(a[0], a[1], a[2], tone);
+      vtx(c[0], c[1], c[2], tone);
+      vtx(d[0], d[1], d[2], tone);
+    };
+
+    // стенки: верх идёт точно по земле до копки, низ — по дну ямы
+    const seg = Math.max(2, rect.cells * 3);
+    for (let i = 0; i < 4; i++) {
+      const vertical = i % 2 === 1;
+      for (let k = 0; k < seg; k++) {
+        const f0 = k / seg;
+        const f1 = (k + 1) / seg;
+        let ax; let az; let bx; let bz;
+        if (vertical) {
+          const px = i === 1 ? rect.x1 : rect.x0;
+          ax = px; bx = px;
+          az = rect.z0 + (rect.z1 - rect.z0) * f0;
+          bz = rect.z0 + (rect.z1 - rect.z0) * f1;
+        } else {
+          const pz = i === 0 ? rect.z0 : rect.z1;
+          az = pz; bz = pz;
+          ax = rect.x0 + (rect.x1 - rect.x0) * f0;
+          bx = rect.x0 + (rect.x1 - rect.x0) * f1;
+        }
+        // верх стенки повторяет дёрн один в один: щелей по краю дыры нет
+        const topA = this.baseHeightAt(ax, az) + 0.03;
+        const topB = this.baseHeightAt(bx, bz) + 0.03;
+        const soilD = Math.min(Math.max(0.45, (topA - floorY) * 0.45), 1.1);
+        const midA = Math.max(floorY, topA - soilD);
+        const midB = Math.max(floorY, topB - soilD);
+        const tone = k % 2 === 0 ? soilTop : soilLow;
+        quad([ax, topA, az], [bx, topB, bz], [bx, midB, bz], [ax, midA, az], tone);
+        if (midA > floorY + 0.02 || midB > floorY + 0.02) {
+          quad([ax, midA, az], [bx, midB, bz], [bx, floorY, bz], [ax, floorY, az], k % 2 ? rockDeep : rock);
+        }
+      }
+    }
+
+    // дно
+    quad(
+      [rect.x0, floorY, rect.z0], [rect.x1, floorY, rect.z0],
+      [rect.x1, floorY, rect.z1], [rect.x0, floorY, rect.z1],
+      floorY < pit.exitY - 1.3 ? rockDeep : soilLow,
+    );
+
+    // ступени: у стены выхода — самая высокая, дальше вниз, к полу
+    const alongX = side === 'n' || side === 's';
+    const wallC = side === 'n' ? rect.z0 : side === 's' ? rect.z1 : side === 'w' ? rect.x0 : rect.x1;
+    const dir = side === 'n' || side === 'w' ? 1 : -1;
+    const w0 = alongX ? rect.x0 : rect.z0;
+    const w1 = alongX ? rect.x1 : rect.z1;
+    const spanA = alongX ? rect.z1 - rect.z0 : rect.x1 - rect.x0;
+    const P = (u, t, y) => (alongX
+      ? [u, y, wallC + dir * Math.min(t, spanA)]
+      : [wallC + dir * Math.min(t, spanA), y, u]);
+
+    for (let k = 0; k < steps; k++) {
+      const t0 = (steps - 1 - k) * runPerStep;
+      if (t0 >= spanA - 1e-3) continue;
+      const t1 = Math.min((steps - k) * runPerStep, spanA);
+      const y = floorY + k * stepH;
+      const tone = k <= 1 ? rockDeep : k === 2 ? rock : (k % 2 ? soilLow : soilTop);
+      quad(P(w0, t0, y), P(w1, t0, y), P(w1, t1, y), P(w0, t1, y), tone);
+      if (k > 0) {
+        const yLow = Math.max(floorY, y - stepH);
+        quad(P(w0, t1, y), P(w1, t1, y), P(w1, t1, yLow), P(w0, t1, yLow), k > 2 ? soilLow : rock);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+    geo.computeVertexNormals();
+    geo.computeBoundingSphere();
+    pit.walls.geometry.dispose();
+    pit.walls.geometry = geo;
+    pit.mat.color.setHex(0xffffff);
+    pit.lumpMat.color.setHex(surface === 'sand' ? 0xc0a97c : 0x866b45);
   }
 
   /** Копание с учётом соседних клеток: у края ямы глубина меньше */
@@ -1202,37 +1392,10 @@ export class World {
     const geo = this.terrain && this.terrain.geometry;
     if (!geo) return;
     const pos = geo.attributes.position;
-    const col = geo.attributes.color;
-    const base = this.baseColors;
-    const soilCut = new THREE.Color(0x8a7149);
-    const rockCut = new THREE.Color(0x8f8a80);
-    const darkCut = new THREE.Color(0x6f6a62);
-    const tmp = new THREE.Color();
-    const needColor = !!(col && base);
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const z = pos.getZ(i);
-      pos.setY(i, this.heightAt(x, z));
-      // у выкопанной лунки показываем срез породы: земля -> камень -> темнота
-      if (needColor) {
-        const dug = this.dugAtWeighted(x, z);
-        if (dug > 0.25) {
-          const k = clamp((dug - 0.25) / 1.1, 0, 1);
-          tmp.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
-          if (dug < SOIL_THICK) tmp.lerp(soilCut, k * 0.6);
-          else if (dug < SOIL_THICK + STONE_THICK * 0.72) {
-            tmp.lerp(rockCut, clamp(0.5 + (dug - SOIL_THICK) * 0.4, 0, 1));
-          } else {
-            tmp.copy(rockCut).lerp(darkCut, clamp((dug - SOIL_THICK - STONE_THICK * 0.72) * 1.2, 0, 1));
-          }
-          col.setXYZ(i, tmp.r, tmp.g, tmp.b);
-        } else if (Math.abs(col.getX(i) - base[i * 3]) > 1e-4) {
-          col.setXYZ(i, base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
-        }
-      }
+      pos.setY(i, this._gridHeightAt(pos.getX(i), pos.getZ(i)));
     }
     pos.needsUpdate = true;
-    if (col) col.needsUpdate = true;
     geo.computeVertexNormals();
     geo.computeBoundingSphere();
 

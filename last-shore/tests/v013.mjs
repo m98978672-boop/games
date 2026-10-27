@@ -31,6 +31,17 @@ const key = (code, type = 'keydown') => window.dispatchEvent(new window.Keyboard
 
 // --- 1. слои под ногами: земля → камень → пустота, без воды в глубине ---
 const w = game.world;
+// вернуть рельеф в исходное состояние: ямы убираются, дыры в сетке заделываются
+const resetDig = () => {
+  w.digStore.clear();
+  w.surfaceStore.clear();
+  w.pits.forEach((p) => { w.pitGroup.remove(p.group); if (p.walls.geometry) p.walls.geometry.dispose(); });
+  w.pits.clear();
+  w.cutPits.clear();
+  w.cutCells.clear();
+  w._rebuildTerrainIndex();
+  w._applyHeights();
+};
 let dry = null;
 for (let i = 0; i < 400 && !dry; i++) {
   const x = (game.world.rng() - 0.5) * 120;
@@ -51,42 +62,63 @@ const floodedDry = seen.includes('sand');
 log('слои в глубине острова:', order.join(' → '),
   '· до пустоты', res.dug.toFixed(2), 'м · воды нет:', !floodedDry);
 
-// цвет дна лунки: срез породы отличается от травы
-const col = w.terrain.geometry.attributes.color;
-const base = w.baseColors;
-let recolored = 0;
-for (let i = 0; i < col.count; i++) {
-  const x = col.getX(i); // заглушка на случай отсутствия атрибута позиции
-  if (Math.abs(base[i * 3] - col.getX(i)) > 0.001) recolored++;
-}
-log('вершин с показанной породой в лунке:', recolored, '· срез виден:', recolored > 0);
-
-// накладная лунка: заплатка по вершинам рельефа, со срезом породы
-const pit = w.pits.get(w._digKey(dry.x, dry.z));
-const pitVerts = pit ? pit.walls.geometry.attributes.position.count : 0;
-const pitCols = pit ? pit.walls.geometry.attributes.color.count : 0;
-// рельеф проседает блоком: в центре заметно ниже, вокруг — как было
-const block = w._pitBlock(dry.x, dry.z, 1.2);
+// --- 1a. яма вырезана из рельефа ровно по клеткам сетки ---
 const G = Math.round(Math.sqrt(w.heights.length));
-const colAt = (ix, iz) => w.baseHeights[iz * G + ix] - w.heights[iz * G + ix];
-const cx0 = Math.round((dry.x + 180) / 1.8);
-const cz0 = Math.round((dry.z + 180) / 1.8);
-const sunk = Math.max(...[cx0 - 1, cx0, cx0 + 1].flatMap((ix) => [cz0 - 1, cz0, cz0 + 1].map((iz) => colAt(ix, iz))));
-const outside = colAt(block.vx0 - 3, block.vz0 - 3);
-const floorY2 = pit ? pit.floorY : null;
-log('яма: просадка в центре', sunk.toFixed(2), 'м · вокруг нетронуто:', Math.abs(outside) < 0.01,
-  '· стенки:', pitVerts > 0 && pitCols === pitVerts,
-  '· дно на', floorY2 !== null ? (w.surfaceOf(dry.x, dry.z).h0 - floorY2).toFixed(2) : '?', 'м ниже земли',
-  '· комьев земли:', pit ? pit.debris.children.length : 0);
+const gridStep = 360 / (G - 1);
+const pit = w.pitAt(dry.x, dry.z);
+if (!pit) throw new Error('яма не выкопана');
+const triBase = w.terrainIndexBase ? w.terrainIndexBase.length / 3 : 0;
+const idxNow = w.terrain.geometry.index;
+const cutTris = triBase - (idxNow ? idxNow.count / 3 : 0);
+const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1]
+  .every((v) => Math.abs((v + 180) / gridStep - Math.round((v + 180) / gridStep)) < 1e-6);
+// высоты узлов рельефа не тронуты: яма не «насаливается» поверх земли
+const gix = Math.round((dry.x + 180) / gridStep);
+const giz = Math.round((dry.z + 180) / gridStep);
+const heightsUntouched = Math.abs(w.heights[giz * G + gix] - w.baseHeights[giz * G + gix]) < 1e-6;
+const sunk = w.baseHeightAt(dry.x, dry.z) - w.heightAt(dry.x, dry.z);
 
-for (let i = 0; i < snap.length; i++) w.heights[i] = snap[i];
+// по ступеням из ямы вылезаешь: подъём от дна к стене ступеней не рвётся
+const rx0 = pit.rect.x0; const rx1 = pit.rect.x1;
+const rz0 = pit.rect.z0; const rz1 = pit.rect.z1;
+const along = pit.side === 'n' || pit.side === 's';
+const reach = along ? rz1 - rz0 : rx1 - rx0;
+const pointAt = (t) => {
+  if (pit.side === 'n') return { x: (rx0 + rx1) / 2, z: rz0 + t };
+  if (pit.side === 's') return { x: (rx0 + rx1) / 2, z: rz1 - t };
+  if (pit.side === 'w') return { x: rx0 + t, z: (rz0 + rz1) / 2 };
+  return { x: rx1 - t, z: (rz0 + rz1) / 2 };
+};
+let prevH = null; let worstRise = 0; let climbed = true;
+for (let i = 0; i <= 30; i++) {
+  const q = pointAt(reach * (1 - i / 30));
+  const h = w.heightAt(q.x, q.z);
+  if (prevH !== null) {
+    const rise = h - prevH;
+    worstRise = Math.max(worstRise, rise);
+    if (rise > 0.551) climbed = false;
+  }
+  prevH = h;
+}
+const topStep = w.heightAt(pointAt(0.01).x, pointAt(0.01).z);
+const exitGap = Math.abs(w.baseHeightAt(pit.rect.x0 - 0.6, pit.rect.z0 - 0.6) - topStep);
+const wallsVerts = pit.walls.geometry.attributes.position.count;
+const hasColors = pit.walls.geometry.attributes.color.count === wallsVerts;
+const cutCellsN = w.cutCells.size;
+console.log('яма-дыра: вырезано треугольников рельефа', cutTris,
+  '· клеток', pit.rect.cells + '×' + pit.rect.cells, '(' + cutCellsN + ' клеток сетки)',
+  '· край по сетке:', onGrid, '· высоты узлов не тронуты:', heightsUntouched);
+console.log('  дно на', sunk.toFixed(2), 'м ниже дёрна · стенки', wallsVerts, 'вершин · слои видны:', hasColors,
+  '· ступеней', pit.steps, '· наибольший подъём по ступеням', worstRise.toFixed(2), 'м · вылезти можно:', climbed);
+console.log('  верх ступеней', topStep.toFixed(2), 'м · земля у выхода', (topStep + exitGap).toFixed(2), 'м');
 
-w.digStore.clear();
-w.surfaceStore.clear();
-w.pits.forEach((p) => { w.pitGroup.remove(p.group); p.walls.geometry.dispose(); });
+// в яму герой реально спускается (heightAt внутри ниже дёрна), у края — нет
+const inPit = w.heightAt((rx0 + rx1) / 2, (rz0 + rz1) / 2);
+const outside = w.heightAt(rx0 - gridStep * 1.2, rz0 - gridStep * 1.2);
+console.log('  внутри ямы', inPit.toFixed(2), 'м · за краем', outside.toFixed(2), 'м · комьев у края:',
+  pit.debris.children.length);
 
-w.pits.clear();
-w._applyHeights();
+resetDig();
 
 // --- 1b. трава из разных оттенков: разброс яркости и насыщенности ---
 {
@@ -127,11 +159,7 @@ for (let i = 0; i < 20; i++) {
 log('пляж: дно', (beachRes.bottom ?? w.heightAt(beach.x, beach.z)).toFixed(2), 'м · вода залила:',
   beachRes.flooded, '· источник:', beachRes.waterSource || 'нет');
 for (let i = 0; i < beachSnap.length; i++) w.heights[i] = beachSnap[i];
-w.digStore.clear();
-w.surfaceStore.clear();
-w.pits.forEach((p) => { w.pitGroup.remove(p.group); p.walls.geometry.dispose(); });
-w.pits.clear();
-w._applyHeights();
+resetDig();
 
 // --- 3. каменный слой требует кирку ---
 const stoneSpot = { ...dry };
@@ -143,11 +171,7 @@ const withPick = w.dig(stoneSpot.x, stoneSpot.z, { radius: 1.2, depth: 0.45, min
 log('камень: слой', probeStone.layer, '· руками hard:', noPick.hard === true,
   '· киркой режется:', withPick.hard === false && withPick.depth > 0);
 for (let i = 0; i < snap.length; i++) w.heights[i] = snap[i];
-w.digStore.clear();
-w.surfaceStore.clear();
-w.pits.forEach((p) => { w.pitGroup.remove(p.group); p.walls.geometry.dispose(); });
-w.pits.clear();
-w._applyHeights();
+resetDig();
 
 // --- 4. полёт: Space вверх, Shift вниз, зависание ---
 const wasCreative = game.creative;
