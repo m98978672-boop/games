@@ -18,7 +18,32 @@ const STEP = SIZE / (GRID - 1);
 // Толщина слоёв под ногами: сначала земля/песок, под ней — камень (тот самый
 // каменный слой, в котором идут шахты). Пробив камень насквозь, попадаешь в пустоту.
 const SOIL_THICK = 1.35;
-const STONE_THICK = 2.4;
+
+// Породы под землёй: чем глубже, тем прочнее. У каждой свой цвет среза,
+// своя прочность (сколько метров снимает удар) и своя минимальная кирка.
+// Сумма thick = 2.4 м — это и есть каменный слой до пустоты шахты.
+const STRATA = [
+  {
+    id: 'sandstone', name: 'Песчаник', thick: 0.6, hard: 1.2, mine: 1.5,
+    top: 0xa78b5c, deep: 0x8f7449, dust: 0xc0a97c,
+  },
+  {
+    id: 'granite', name: 'Гранит', thick: 0.7, hard: 2.0, mine: 2.0,
+    top: 0x928f88, deep: 0x77746d, dust: 0x8f8a80,
+  },
+  {
+    id: 'basalt', name: 'Базальт', thick: 0.65, hard: 3.0, mine: 2.4,
+    top: 0x6b665f, deep: 0x504c45, dust: 0x5f5a54,
+  },
+  {
+    id: 'obsidian', name: 'Обсидиан', thick: 0.45, hard: 4.6, mine: 2.8,
+    top: 0x4b3f52, deep: 0x342b3d, dust: 0x4a3d52,
+  },
+];
+const STONE_THICK = STRATA.reduce((sum, st) => sum + st.thick, 0);
+const VOID_COLOR = 0x2b2433;
+// Предел роста одной ямы после обвалов: 8 клеток в сторону (14.4 м)
+const MAX_PIT_CELLS = 8;
 const DIG_CELL = 1.4;
 
 // Палитра травы: несколько оттенков вместо одной заливки
@@ -901,6 +926,21 @@ export class World {
     return rec;
   }
 
+  /**
+   * Порода на глубине dug метров от поверхности.
+   * Возвращает описание слоя: песчаник → гранит → базальт → обсидиан.
+   */
+  rockAt(dug, surface = 'soil') {
+    const d = surface === 'stone' ? dug : dug - SOIL_THICK;
+    if (d < 0) return null;                 // ещё земля/песок
+    let acc = 0;
+    for (let i = 0; i < STRATA.length; i++) {
+      acc += STRATA[i].thick;
+      if (d < acc - 1e-6) return STRATA[i];
+    }
+    return STRATA[STRATA.length - 1];
+  }
+
   /** До какой глубины в этой точке вообще можно копать: земля + камень */
   digCapAt(x, z) {
     return this.surfaceOf(x, z).surface === 'stone' ? STONE_THICK : SOIL_THICK + STONE_THICK;
@@ -923,11 +963,16 @@ export class World {
     else if (dug < SOIL_THICK) layer = surface;
     else layer = 'stone';
     if (dug >= cap - 0.001) layer = 'void';
+    const rock = layer === 'stone' ? this.rockAt(dug, surface) : null;
     return {
       surface,
       layer,
       dug,
       cap,
+      rock,
+      rockName: rock ? rock.name : null,
+      hardness: rock ? rock.hard : 1,
+      needMine: rock ? rock.mine : 0,
       stone: surface === 'stone' ? dug : Math.max(0, dug - SOIL_THICK),
       bottom: this.heightAt(x, z),
     };
@@ -947,15 +992,21 @@ export class World {
     if (probe.layer === 'void') {
       return { layer: 'void', void: true, dug: already, flooded: false, hard: false, sandFill: 0, depth: 0 };
     }
-    if (probe.layer === 'stone' && mine < 1.5) {
-      // камень без кирки не берётся
-      return { layer: 'stone', dug: already, flooded: false, hard: true, sandFill: 0, depth: 0 };
+    const rock = probe.rock;
+    if (probe.layer === 'stone' && mine < (rock ? rock.mine : 1.5)) {
+      // порода крепче кирки — не берётся
+      return {
+        layer: 'stone', dug: already, flooded: false, hard: true, sandFill: 0, depth: 0,
+        rock, rockName: rock ? rock.name : 'Камень', needMine: rock ? rock.mine : 1.5,
+      };
     }
 
-    // камень идёт тяжелее и мельче: кирка снимает 0.35 м, креатив — слой целиком
+    // --- разная прочность у разных пород: песчаник крошится легко,
+    //     гранит вдвое тяжелее, базальт втрое, обсидиан почти не берётся
     const isStone = probe.layer === 'stone';
+    const hard = isStone && rock ? rock.hard : 1;
     const stepDepth = isStone
-      ? depth * (mine >= 40 ? 0.8 : mine >= 2.5 ? 0.8 : 0.55)
+      ? Math.max(0.05, depth * (mine >= 40 ? 2 : 1) / hard)
       : depth;
 
     const before = this.heightAt(x, z);
@@ -986,12 +1037,19 @@ export class World {
     return {
       layer: probe.layer,
       dug: already + stepDepth,
+      step: stepDepth,           // сколько метров породы реально снял удар
       depth: before - after,
       flooded,
       waterSource: flooded ? 'sea' : null,
       hard: false,
       sandFill,
       stone: probe.layer === 'stone',
+      rock,
+      rockName: rock ? rock.name : null,
+      hardness: hard,
+      // перегородка рухнула: ямы слились в одну большую дыру
+      collapse: !!pit && !!pit.collapsedNow,
+      collapsedPits: pit ? pit.collapsedCount || 0 : 0,
       stoneLeft: Math.max(0, next.cap - next.dug),
       void: next.layer === 'void',
       bottom: after,
@@ -1139,19 +1197,89 @@ export class World {
     }
   }
 
+  /** Прямоугольник ямы из клеток сетки: мировые координаты и размер */
+  _rectBox(r) {
+    const half = SIZE / 2;
+    return {
+      ix0: r.ix0,
+      ix1: r.ix1,
+      iz0: r.iz0,
+      iz1: r.iz1,
+      cells: Math.max(r.ix1 - r.ix0, r.iz1 - r.iz0),
+      x0: -half + r.ix0 * STEP,
+      x1: -half + r.ix1 * STEP,
+      z0: -half + r.iz0 * STEP,
+      z1: -half + r.iz1 * STEP,
+    };
+  }
+
+  /** Касаются ли ямы друг друга (общая стенка или нахлёст клеток) */
+  _rectsTouch(a, b) {
+    return a.ix0 <= b.ix1 && b.ix0 <= a.ix1 && a.iz0 <= b.iz1 && b.iz0 <= a.iz1;
+  }
+
+  /** Это одна и та же яма (тот же прямоугольник) */
+  _sameRect(a, b) {
+    return a.ix0 === b.ix0 && a.ix1 === b.ix1 && a.iz0 === b.iz0 && a.iz1 === b.iz1;
+  }
+
   /**
    * ВЫКОПАТЬ ЯМУ. Клетки сетки вырезаются из индекса рельефа — в земле
    * появляется настоящая дыра, край которой идёт точно по линиям сетки.
-   * Внутрь ставится дно, стенки со слоями «земля → камень» и ступени,
-   * по которым можно вылезти. Высоты узлов рельефа при этом не меняются,
-   * поэтому ничего не «насаливается» поверх земли.
+   * Внутрь ставится дно, стенки со слоями пород и ступени, по которым
+   * можно вылезти. Высоты узлов рельефа не меняются, поэтому ничего не
+   * «насаливается» поверх земли.
+   *
+   * ОБВАЛ: если рядом (вплотную) уже есть яма, перегородка между ними
+   * рушится — обе ямы сливаются в одну большую дыру без внутренней стенки,
+   * а пол выравнивается по самой глубокой из них.
    */
   _carvePit(x, z, radius, floorY, surface) {
     if (!this.pitGroup) return null;
-    const rect = this._pitRect(x, z, radius);
+
+    let r = this._pitRect(x, z, radius);
+    let floor = floorY;
+    let collapsed = 0;
+
+    // --- обвал: подтягиваем все ямы, которые касаются этой (и далее по цепочке)
+    const absorbed = new Set();
+    let grew = true;
+    while (grew) {
+      grew = false;
+      for (const [, other] of this.pits) {
+        if (absorbed.has(other) || !other.rect) continue;
+        const o = other.rect;
+        if (!this._rectsTouch(r, o)) continue;
+        if (this._sameRect(r, o)) continue;         // та же яма — её только углубляем
+        const u = {
+          ix0: Math.min(r.ix0, o.ix0),
+          ix1: Math.max(r.ix1, o.ix1),
+          iz0: Math.min(r.iz0, o.iz0),
+          iz1: Math.max(r.iz1, o.iz1),
+        };
+        if (u.ix1 - u.ix0 > MAX_PIT_CELLS || u.iz1 - u.iz0 > MAX_PIT_CELLS) continue;
+        r = u;
+        floor = Math.min(floor, other.floorY);
+        absorbed.add(other);
+        collapsed++;
+        grew = true;
+      }
+    }
+
+    const rect = this._rectBox(r);
     const key = `${rect.ix0},${rect.iz0}`;
     const cx = (rect.x0 + rect.x1) / 2;
     const cz = (rect.z0 + rect.z1) / 2;
+
+    // яма с точно таким же прямоугольником — та же дыра, просто глубже
+    let pit = null;
+    for (const [, other] of this.pits) {
+      if (other.rect && this._sameRect(other.rect, rect)) { pit = other; break; }
+    }
+    if (pit) absorbed.delete(pit);
+
+    let changed = false;
+    for (const o of absorbed) if (this._dropPit(o)) changed = true;
 
     // ступени выводят к игроку, если он рядом, иначе — туда, где земля ниже
     const out = Math.max(0.8, rect.cells * STEP * 0.55);
@@ -1179,15 +1307,14 @@ export class World {
 
     // верх ступеней — по земле у выхода, чтобы вылезти можно было всегда
     const exitY = this.baseHeightAt(pick.wx, pick.wz);
-    const depth = Math.max(0.35, exitY - floorY);
+    const depth = Math.max(0.35, exitY - floor);
     const steps = clamp(Math.ceil(depth / 0.42), 2, 16);
     const stepH = depth / steps;
     const alongX = pick.side === 'n' || pick.side === 's';
     const span = alongX ? rect.z1 - rect.z0 : rect.x1 - rect.x0;
-    const stairRun = Math.min(Math.max(1.0, depth * 0.72), span * 0.72);
+    const stairRun = Math.min(Math.max(1.0, depth * 0.72), span * 0.92);
     const runPerStep = stairRun / steps;
 
-    let pit = this.pits.get(key);
     if (!pit) {
       const wallMat = this.textures
         ? createStoneMaterial(this.textures.rockDetail, { repeat: [1.4, 1.0] })
@@ -1211,19 +1338,13 @@ export class World {
       this.pitGroup.add(group);
       pit = { key, group, walls, debris, mat: wallMat, lumpMat, sig: '', cells: new Set() };
       this.pits.set(key, pit);
+    } else if (pit.key !== key) {
+      this.pits.delete(pit.key);
+      pit.key = key;
+      this.pits.set(key, pit);
     }
 
-    // клетки, которые раньше принадлежали другой яме, забираем себе
-    let changed = false;
-    const stolen = new Set();
-    for (let iz = rect.iz0; iz < rect.iz1; iz++) {
-      for (let ix = rect.ix0; ix < rect.ix1; ix++) {
-        const o = this.cutPits.get(ix * 1024 + iz);
-        if (o && o !== pit) stolen.add(o);
-      }
-    }
-    for (const o of stolen) if (this._dropPit(o)) changed = true;
-
+    // все клетки прямоугольника теперь принадлежат этой яме
     const cells = new Set();
     for (let iz = rect.iz0; iz < rect.iz1; iz++) {
       for (let ix = rect.ix0; ix < rect.ix1; ix++) {
@@ -1237,13 +1358,15 @@ export class World {
       }
     }
     pit.cells = cells;
+    pit.collapsedNow = collapsed > 0;
+    pit.collapsedCount = collapsed;
     Object.assign(pit, {
-      rect, floorY, exitY, steps, stepH, runPerStep, stairRun, side: pick.side, surface,
+      rect, floorY: floor, exitY, steps, stepH, runPerStep, stairRun, side: pick.side, surface,
       x0: rect.x0, x1: rect.x1, z0: rect.z0, z1: rect.z1,
     });
     if (changed) this._rebuildTerrainIndex();
 
-    const sig = `${rect.ix0},${rect.iz0},${rect.cells}|${floorY.toFixed(3)}|${pick.side}|${steps}|${surface}`;
+    const sig = `${rect.ix0},${rect.iz0},${rect.ix1},${rect.iz1}|${floor.toFixed(3)}|${pick.side}|${steps}|${surface}`;
     if (pit.sig !== sig) {
       pit.sig = sig;
       this._buildPitGeometry(pit);
@@ -1265,7 +1388,11 @@ export class World {
     return pit;
   }
 
-  /** Дно, стенки со слоями и ступени выкопанной ямы */
+  /**
+   * Дно, стенки и ступени выкопанной ямы.
+   * Стенка собрана слоями настоящих пород: дёрн → песчаник → гранит →
+   * базальт → обсидиан, поэтому срез ямы видно и понятно, что копаешь.
+   */
   _buildPitGeometry(pit) {
     const rect = pit.rect;
     const floorY = pit.floorY;
@@ -1277,8 +1404,41 @@ export class World {
 
     const soilTop = new THREE.Color(surface === 'sand' ? 0xd8c193 : surface === 'stone' ? 0xb5aea2 : 0x94764c);
     const soilLow = new THREE.Color(surface === 'sand' ? 0xbda67b : surface === 'stone' ? 0x9c958a : 0x735c3c);
-    const rock = new THREE.Color(0x8f887c);
-    const rockDeep = new THREE.Color(0x7d776d);
+
+    // полосы среза: от дёрна вниз по породам
+    const turf = new THREE.Color(surface === 'sand' ? 0xd9c694 : 0x4e7a34);
+    const bands = [
+      { d0: 0, d1: 0.14, flat: turf },              // тонкая кромка дёрна/песка
+      { d0: 0.14, d1: SOIL_THICK, soil: true },
+    ];
+    let depthAcc = SOIL_THICK;
+    for (const st of STRATA) {
+      bands.push({
+        d0: depthAcc,
+        d1: depthAcc + st.thick,
+        a: new THREE.Color(st.top),
+        b: new THREE.Color(st.deep),
+      });
+      depthAcc += st.thick;
+    }
+    bands.push({ d0: depthAcc, d1: depthAcc + 6, a: new THREE.Color(VOID_COLOR), b: new THREE.Color(VOID_COLOR) });
+
+    // цвет по глубине ниже дёрна: для ступеней и дна
+    const toneAt = (dep) => {
+      if (dep < 0.14) return turf;
+      if (dep < 0.25) return soilTop;
+      if (dep < SOIL_THICK) return soilLow;
+      for (const st of STRATA) if (dep < st.d0b) return st.tone;
+      return new THREE.Color(VOID_COLOR);
+    };
+    {
+      let acc = SOIL_THICK;
+      for (const st of STRATA) {
+        acc += st.thick;
+        st.d0b = acc;                       // глубина низа этой породы
+        st.tone = new THREE.Color(st.top);
+      }
+    }
 
     const pos = [];
     const col = [];
@@ -1297,35 +1457,38 @@ export class World {
       vtx(d[0], d[1], d[2], tone);
     };
 
-    // стенки: верх идёт точно по земле до копки, низ — по дну ямы
-    const seg = Math.max(2, rect.cells * 3);
-    for (let i = 0; i < 4; i++) {
-      const vertical = i % 2 === 1;
-      for (let k = 0; k < seg; k++) {
-        const f0 = k / seg;
-        const f1 = (k + 1) / seg;
-        let ax; let az; let bx; let bz;
-        if (vertical) {
-          const px = i === 1 ? rect.x1 : rect.x0;
-          ax = px; bx = px;
-          az = rect.z0 + (rect.z1 - rect.z0) * f0;
-          bz = rect.z0 + (rect.z1 - rect.z0) * f1;
-        } else {
-          const pz = i === 0 ? rect.z0 : rect.z1;
-          az = pz; bz = pz;
-          ax = rect.x0 + (rect.x1 - rect.x0) * f0;
-          bx = rect.x0 + (rect.x1 - rect.x0) * f1;
-        }
-        // верх стенки повторяет дёрн один в один: щелей по краю дыры нет
-        const topA = this.baseHeightAt(ax, az) + 0.03;
-        const topB = this.baseHeightAt(bx, bz) + 0.03;
-        const soilD = Math.min(Math.max(0.45, (topA - floorY) * 0.45), 1.1);
-        const midA = Math.max(floorY, topA - soilD);
-        const midB = Math.max(floorY, topB - soilD);
-        const tone = k % 2 === 0 ? soilTop : soilLow;
-        quad([ax, topA, az], [bx, topB, bz], [bx, midB, bz], [ax, midA, az], tone);
-        if (midA > floorY + 0.02 || midB > floorY + 0.02) {
-          quad([ax, midA, az], [bx, midB, bz], [bx, floorY, bz], [ax, floorY, az], k % 2 ? rockDeep : rock);
+    // стенки: срез пород строится по каждой клетке сетки отдельно,
+    // верх каждой грани идёт точно по узлам сетки — щелей по краю нет
+    const ixN = rect.ix1 - rect.ix0;
+    const izN = rect.iz1 - rect.iz0;
+    for (let cz = 0; cz < izN; cz++) {
+      for (let cx = 0; cx < ixN; cx++) {
+        const w0 = rect.x0 + cx * STEP;
+        const w1 = w0 + STEP;
+        const d0 = rect.z0 + cz * STEP;
+        const d1 = d0 + STEP;
+        // только внешний контур ямы: внутри клеток стенок нет,
+        // иначе в большой дыре получились бы перегородки
+        const sides = [];
+        if (cz === 0) sides.push({ ax: w0, az: d0, bx: w1, bz: d0 });
+        if (cx === ixN - 1) sides.push({ ax: w1, az: d0, bx: w1, bz: d1 });
+        if (cz === izN - 1) sides.push({ ax: w1, az: d1, bx: w0, bz: d1 });
+        if (cx === 0) sides.push({ ax: w0, az: d1, bx: w0, bz: d0 });
+        for (const sd of sides) {
+          // верх стенки повторяет дёрн один в один: щелей по краю дыры нет
+          const topA = this.baseHeightAt(sd.ax, sd.az) + 0.02;
+          const topB = this.baseHeightAt(sd.bx, sd.bz) + 0.02;
+          for (const band of bands) {
+            const hiA = Math.min(topA, topA - band.d0);
+            const hiB = Math.min(topB, topB - band.d0);
+            const lowA = Math.max(floorY, topA - band.d1);
+            const lowB = Math.max(floorY, topB - band.d1);
+            if (hiA <= floorY + 0.01 && hiB <= floorY + 0.01) break;
+            if (hiA <= lowA + 0.005 && hiB <= lowB + 0.005) continue;
+            const odd = (cx + cz) % 2 === 0;
+            const tone = band.flat ? band.flat : band.soil ? (odd ? soilTop : soilLow) : (odd ? band.a : band.b);
+            quad([sd.ax, hiA, sd.az], [sd.bx, hiB, sd.bz], [sd.bx, lowB, sd.bz], [sd.ax, lowA, sd.az], tone);
+          }
         }
       }
     }
@@ -1334,7 +1497,7 @@ export class World {
     quad(
       [rect.x0, floorY, rect.z0], [rect.x1, floorY, rect.z0],
       [rect.x1, floorY, rect.z1], [rect.x0, floorY, rect.z1],
-      floorY < pit.exitY - 1.3 ? rockDeep : soilLow,
+      toneAt(pit.exitY - floorY),
     );
 
     // ступени: у стены выхода — самая высокая, дальше вниз, к полу
@@ -1353,11 +1516,11 @@ export class World {
       if (t0 >= spanA - 1e-3) continue;
       const t1 = Math.min((steps - k) * runPerStep, spanA);
       const y = floorY + k * stepH;
-      const tone = k <= 1 ? rockDeep : k === 2 ? rock : (k % 2 ? soilLow : soilTop);
+      const tone = toneAt(pit.exitY - (y + stepH * 0.5));
       quad(P(w0, t0, y), P(w1, t0, y), P(w1, t1, y), P(w0, t1, y), tone);
       if (k > 0) {
         const yLow = Math.max(floorY, y - stepH);
-        quad(P(w0, t1, y), P(w1, t1, y), P(w1, t1, yLow), P(w0, t1, yLow), k > 2 ? soilLow : rock);
+        quad(P(w0, t1, y), P(w1, t1, y), P(w1, t1, yLow), P(w0, t1, yLow), toneAt(pit.exitY - yLow));
       }
     }
 

@@ -30421,7 +30421,51 @@ void main() {
   var GRID = CONFIG.world.segments + 1;
   var STEP = SIZE / (GRID - 1);
   var SOIL_THICK = 1.35;
-  var STONE_THICK = 2.4;
+  var STRATA = [
+    {
+      id: "sandstone",
+      name: "\u041F\u0435\u0441\u0447\u0430\u043D\u0438\u043A",
+      thick: 0.6,
+      hard: 1.2,
+      mine: 1.5,
+      top: 10980188,
+      deep: 9401417,
+      dust: 12626300
+    },
+    {
+      id: "granite",
+      name: "\u0413\u0440\u0430\u043D\u0438\u0442",
+      thick: 0.7,
+      hard: 2,
+      mine: 2,
+      top: 9605e3,
+      deep: 7828589,
+      dust: 9407104
+    },
+    {
+      id: "basalt",
+      name: "\u0411\u0430\u0437\u0430\u043B\u044C\u0442",
+      thick: 0.65,
+      hard: 3,
+      mine: 2.4,
+      top: 7038559,
+      deep: 5262405,
+      dust: 6249044
+    },
+    {
+      id: "obsidian",
+      name: "\u041E\u0431\u0441\u0438\u0434\u0438\u0430\u043D",
+      thick: 0.45,
+      hard: 4.6,
+      mine: 2.8,
+      top: 4931410,
+      deep: 3418941,
+      dust: 4865362
+    }
+  ];
+  var STONE_THICK = STRATA.reduce((sum, st) => sum + st.thick, 0);
+  var VOID_COLOR = 2827315;
+  var MAX_PIT_CELLS = 8;
   var DIG_CELL = 1.4;
   var GRASS_ZONES = [
     { name: "\u0441\u043E\u0447\u043D\u044B\u0439", color: new Color(6266684) },
@@ -31175,6 +31219,20 @@ void main() {
       this.surfaceStore.set(this._digKey(x, z), rec);
       return rec;
     }
+    /**
+     * Порода на глубине dug метров от поверхности.
+     * Возвращает описание слоя: песчаник → гранит → базальт → обсидиан.
+     */
+    rockAt(dug, surface = "soil") {
+      const d = surface === "stone" ? dug : dug - SOIL_THICK;
+      if (d < 0) return null;
+      let acc = 0;
+      for (let i = 0; i < STRATA.length; i++) {
+        acc += STRATA[i].thick;
+        if (d < acc - 1e-6) return STRATA[i];
+      }
+      return STRATA[STRATA.length - 1];
+    }
     /** До какой глубины в этой точке вообще можно копать: земля + камень */
     digCapAt(x, z) {
       return this.surfaceOf(x, z).surface === "stone" ? STONE_THICK : SOIL_THICK + STONE_THICK;
@@ -31196,11 +31254,16 @@ void main() {
       else if (dug < SOIL_THICK) layer = surface;
       else layer = "stone";
       if (dug >= cap - 1e-3) layer = "void";
+      const rock = layer === "stone" ? this.rockAt(dug, surface) : null;
       return {
         surface,
         layer,
         dug,
         cap,
+        rock,
+        rockName: rock ? rock.name : null,
+        hardness: rock ? rock.hard : 1,
+        needMine: rock ? rock.mine : 0,
         stone: surface === "stone" ? dug : Math.max(0, dug - SOIL_THICK),
         bottom: this.heightAt(x, z)
       };
@@ -31218,11 +31281,23 @@ void main() {
       if (probe.layer === "void") {
         return { layer: "void", void: true, dug: already, flooded: false, hard: false, sandFill: 0, depth: 0 };
       }
-      if (probe.layer === "stone" && mine < 1.5) {
-        return { layer: "stone", dug: already, flooded: false, hard: true, sandFill: 0, depth: 0 };
+      const rock = probe.rock;
+      if (probe.layer === "stone" && mine < (rock ? rock.mine : 1.5)) {
+        return {
+          layer: "stone",
+          dug: already,
+          flooded: false,
+          hard: true,
+          sandFill: 0,
+          depth: 0,
+          rock,
+          rockName: rock ? rock.name : "\u041A\u0430\u043C\u0435\u043D\u044C",
+          needMine: rock ? rock.mine : 1.5
+        };
       }
       const isStone = probe.layer === "stone";
-      const stepDepth = isStone ? depth * (mine >= 40 ? 0.8 : mine >= 2.5 ? 0.8 : 0.55) : depth;
+      const hard = isStone && rock ? rock.hard : 1;
+      const stepDepth = isStone ? Math.max(0.05, depth * (mine >= 40 ? 2 : 1) / hard) : depth;
       const before = this.heightAt(x, z);
       const newDug = already + stepDepth;
       const topY = this.surfaceOf(x, z).h0;
@@ -31242,12 +31317,20 @@ void main() {
       return {
         layer: probe.layer,
         dug: already + stepDepth,
+        step: stepDepth,
+        // сколько метров породы реально снял удар
         depth: before - after,
         flooded,
         waterSource: flooded ? "sea" : null,
         hard: false,
         sandFill,
         stone: probe.layer === "stone",
+        rock,
+        rockName: rock ? rock.name : null,
+        hardness: hard,
+        // перегородка рухнула: ямы слились в одну большую дыру
+        collapse: !!pit && !!pit.collapsedNow,
+        collapsedPits: pit ? pit.collapsedCount || 0 : 0,
         stoneLeft: Math.max(0, next.cap - next.dug),
         void: next.layer === "void",
         bottom: after
@@ -31384,19 +31467,82 @@ void main() {
         }
       }
     }
+    /** Прямоугольник ямы из клеток сетки: мировые координаты и размер */
+    _rectBox(r) {
+      const half = SIZE / 2;
+      return {
+        ix0: r.ix0,
+        ix1: r.ix1,
+        iz0: r.iz0,
+        iz1: r.iz1,
+        cells: Math.max(r.ix1 - r.ix0, r.iz1 - r.iz0),
+        x0: -half + r.ix0 * STEP,
+        x1: -half + r.ix1 * STEP,
+        z0: -half + r.iz0 * STEP,
+        z1: -half + r.iz1 * STEP
+      };
+    }
+    /** Касаются ли ямы друг друга (общая стенка или нахлёст клеток) */
+    _rectsTouch(a, b) {
+      return a.ix0 <= b.ix1 && b.ix0 <= a.ix1 && a.iz0 <= b.iz1 && b.iz0 <= a.iz1;
+    }
+    /** Это одна и та же яма (тот же прямоугольник) */
+    _sameRect(a, b) {
+      return a.ix0 === b.ix0 && a.ix1 === b.ix1 && a.iz0 === b.iz0 && a.iz1 === b.iz1;
+    }
     /**
      * ВЫКОПАТЬ ЯМУ. Клетки сетки вырезаются из индекса рельефа — в земле
      * появляется настоящая дыра, край которой идёт точно по линиям сетки.
-     * Внутрь ставится дно, стенки со слоями «земля → камень» и ступени,
-     * по которым можно вылезти. Высоты узлов рельефа при этом не меняются,
-     * поэтому ничего не «насаливается» поверх земли.
+     * Внутрь ставится дно, стенки со слоями пород и ступени, по которым
+     * можно вылезти. Высоты узлов рельефа не меняются, поэтому ничего не
+     * «насаливается» поверх земли.
+     *
+     * ОБВАЛ: если рядом (вплотную) уже есть яма, перегородка между ними
+     * рушится — обе ямы сливаются в одну большую дыру без внутренней стенки,
+     * а пол выравнивается по самой глубокой из них.
      */
     _carvePit(x, z, radius, floorY, surface) {
       if (!this.pitGroup) return null;
-      const rect = this._pitRect(x, z, radius);
+      let r = this._pitRect(x, z, radius);
+      let floor = floorY;
+      let collapsed = 0;
+      const absorbed = /* @__PURE__ */ new Set();
+      let grew = true;
+      while (grew) {
+        grew = false;
+        for (const [, other] of this.pits) {
+          if (absorbed.has(other) || !other.rect) continue;
+          const o = other.rect;
+          if (!this._rectsTouch(r, o)) continue;
+          if (this._sameRect(r, o)) continue;
+          const u = {
+            ix0: Math.min(r.ix0, o.ix0),
+            ix1: Math.max(r.ix1, o.ix1),
+            iz0: Math.min(r.iz0, o.iz0),
+            iz1: Math.max(r.iz1, o.iz1)
+          };
+          if (u.ix1 - u.ix0 > MAX_PIT_CELLS || u.iz1 - u.iz0 > MAX_PIT_CELLS) continue;
+          r = u;
+          floor = Math.min(floor, other.floorY);
+          absorbed.add(other);
+          collapsed++;
+          grew = true;
+        }
+      }
+      const rect = this._rectBox(r);
       const key = `${rect.ix0},${rect.iz0}`;
       const cx = (rect.x0 + rect.x1) / 2;
       const cz = (rect.z0 + rect.z1) / 2;
+      let pit = null;
+      for (const [, other] of this.pits) {
+        if (other.rect && this._sameRect(other.rect, rect)) {
+          pit = other;
+          break;
+        }
+      }
+      if (pit) absorbed.delete(pit);
+      let changed = false;
+      for (const o of absorbed) if (this._dropPit(o)) changed = true;
       const out = Math.max(0.8, rect.cells * STEP * 0.55);
       const cands = [
         { side: "n", x: cx, z: rect.z0 - out, wx: cx, wz: rect.z0 },
@@ -31418,14 +31564,13 @@ void main() {
       }
       if (!pick) pick = cands.reduce((a, b) => b.h < a.h ? b : a);
       const exitY = this.baseHeightAt(pick.wx, pick.wz);
-      const depth = Math.max(0.35, exitY - floorY);
+      const depth = Math.max(0.35, exitY - floor);
       const steps = clamp2(Math.ceil(depth / 0.42), 2, 16);
       const stepH = depth / steps;
       const alongX = pick.side === "n" || pick.side === "s";
       const span = alongX ? rect.z1 - rect.z0 : rect.x1 - rect.x0;
-      const stairRun = Math.min(Math.max(1, depth * 0.72), span * 0.72);
+      const stairRun = Math.min(Math.max(1, depth * 0.72), span * 0.92);
       const runPerStep = stairRun / steps;
-      let pit = this.pits.get(key);
       if (!pit) {
         const wallMat = this.textures ? createStoneMaterial(this.textures.rockDetail, { repeat: [1.4, 1] }) : new MeshStandardMaterial({ roughness: 0.98, flatShading: true });
         wallMat.side = DoubleSide;
@@ -31447,16 +31592,11 @@ void main() {
         this.pitGroup.add(group);
         pit = { key, group, walls, debris, mat: wallMat, lumpMat, sig: "", cells: /* @__PURE__ */ new Set() };
         this.pits.set(key, pit);
+      } else if (pit.key !== key) {
+        this.pits.delete(pit.key);
+        pit.key = key;
+        this.pits.set(key, pit);
       }
-      let changed = false;
-      const stolen = /* @__PURE__ */ new Set();
-      for (let iz = rect.iz0; iz < rect.iz1; iz++) {
-        for (let ix = rect.ix0; ix < rect.ix1; ix++) {
-          const o = this.cutPits.get(ix * 1024 + iz);
-          if (o && o !== pit) stolen.add(o);
-        }
-      }
-      for (const o of stolen) if (this._dropPit(o)) changed = true;
       const cells = /* @__PURE__ */ new Set();
       for (let iz = rect.iz0; iz < rect.iz1; iz++) {
         for (let ix = rect.ix0; ix < rect.ix1; ix++) {
@@ -31470,9 +31610,11 @@ void main() {
         }
       }
       pit.cells = cells;
+      pit.collapsedNow = collapsed > 0;
+      pit.collapsedCount = collapsed;
       Object.assign(pit, {
         rect,
-        floorY,
+        floorY: floor,
         exitY,
         steps,
         stepH,
@@ -31486,7 +31628,7 @@ void main() {
         z1: rect.z1
       });
       if (changed) this._rebuildTerrainIndex();
-      const sig = `${rect.ix0},${rect.iz0},${rect.cells}|${floorY.toFixed(3)}|${pick.side}|${steps}|${surface}`;
+      const sig = `${rect.ix0},${rect.iz0},${rect.ix1},${rect.iz1}|${floor.toFixed(3)}|${pick.side}|${steps}|${surface}`;
       if (pit.sig !== sig) {
         pit.sig = sig;
         this._buildPitGeometry(pit);
@@ -31505,7 +31647,11 @@ void main() {
       pit.group.visible = true;
       return pit;
     }
-    /** Дно, стенки со слоями и ступени выкопанной ямы */
+    /**
+     * Дно, стенки и ступени выкопанной ямы.
+     * Стенка собрана слоями настоящих пород: дёрн → песчаник → гранит →
+     * базальт → обсидиан, поэтому срез ямы видно и понятно, что копаешь.
+     */
     _buildPitGeometry(pit) {
       const rect = pit.rect;
       const floorY = pit.floorY;
@@ -31516,8 +31662,38 @@ void main() {
       const runPerStep = pit.runPerStep;
       const soilTop = new Color(surface === "sand" ? 14205331 : surface === "stone" ? 11906722 : 9729612);
       const soilLow = new Color(surface === "sand" ? 12428923 : surface === "stone" ? 10261898 : 7560252);
-      const rock = new Color(9406588);
-      const rockDeep = new Color(8222573);
+      const turf = new Color(surface === "sand" ? 14272148 : 5143092);
+      const bands = [
+        { d0: 0, d1: 0.14, flat: turf },
+        // тонкая кромка дёрна/песка
+        { d0: 0.14, d1: SOIL_THICK, soil: true }
+      ];
+      let depthAcc = SOIL_THICK;
+      for (const st of STRATA) {
+        bands.push({
+          d0: depthAcc,
+          d1: depthAcc + st.thick,
+          a: new Color(st.top),
+          b: new Color(st.deep)
+        });
+        depthAcc += st.thick;
+      }
+      bands.push({ d0: depthAcc, d1: depthAcc + 6, a: new Color(VOID_COLOR), b: new Color(VOID_COLOR) });
+      const toneAt = (dep) => {
+        if (dep < 0.14) return turf;
+        if (dep < 0.25) return soilTop;
+        if (dep < SOIL_THICK) return soilLow;
+        for (const st of STRATA) if (dep < st.d0b) return st.tone;
+        return new Color(VOID_COLOR);
+      };
+      {
+        let acc = SOIL_THICK;
+        for (const st of STRATA) {
+          acc += st.thick;
+          st.d0b = acc;
+          st.tone = new Color(st.top);
+        }
+      }
       const pos = [];
       const col = [];
       const uvs = [];
@@ -31534,38 +31710,33 @@ void main() {
         vtx(c[0], c[1], c[2], tone);
         vtx(d[0], d[1], d[2], tone);
       };
-      const seg = Math.max(2, rect.cells * 3);
-      for (let i = 0; i < 4; i++) {
-        const vertical = i % 2 === 1;
-        for (let k = 0; k < seg; k++) {
-          const f0 = k / seg;
-          const f1 = (k + 1) / seg;
-          let ax;
-          let az;
-          let bx;
-          let bz;
-          if (vertical) {
-            const px = i === 1 ? rect.x1 : rect.x0;
-            ax = px;
-            bx = px;
-            az = rect.z0 + (rect.z1 - rect.z0) * f0;
-            bz = rect.z0 + (rect.z1 - rect.z0) * f1;
-          } else {
-            const pz = i === 0 ? rect.z0 : rect.z1;
-            az = pz;
-            bz = pz;
-            ax = rect.x0 + (rect.x1 - rect.x0) * f0;
-            bx = rect.x0 + (rect.x1 - rect.x0) * f1;
-          }
-          const topA = this.baseHeightAt(ax, az) + 0.03;
-          const topB = this.baseHeightAt(bx, bz) + 0.03;
-          const soilD = Math.min(Math.max(0.45, (topA - floorY) * 0.45), 1.1);
-          const midA = Math.max(floorY, topA - soilD);
-          const midB = Math.max(floorY, topB - soilD);
-          const tone = k % 2 === 0 ? soilTop : soilLow;
-          quad([ax, topA, az], [bx, topB, bz], [bx, midB, bz], [ax, midA, az], tone);
-          if (midA > floorY + 0.02 || midB > floorY + 0.02) {
-            quad([ax, midA, az], [bx, midB, bz], [bx, floorY, bz], [ax, floorY, az], k % 2 ? rockDeep : rock);
+      const ixN = rect.ix1 - rect.ix0;
+      const izN = rect.iz1 - rect.iz0;
+      for (let cz = 0; cz < izN; cz++) {
+        for (let cx = 0; cx < ixN; cx++) {
+          const w02 = rect.x0 + cx * STEP;
+          const w12 = w02 + STEP;
+          const d0 = rect.z0 + cz * STEP;
+          const d1 = d0 + STEP;
+          const sides = [];
+          if (cz === 0) sides.push({ ax: w02, az: d0, bx: w12, bz: d0 });
+          if (cx === ixN - 1) sides.push({ ax: w12, az: d0, bx: w12, bz: d1 });
+          if (cz === izN - 1) sides.push({ ax: w12, az: d1, bx: w02, bz: d1 });
+          if (cx === 0) sides.push({ ax: w02, az: d1, bx: w02, bz: d0 });
+          for (const sd of sides) {
+            const topA = this.baseHeightAt(sd.ax, sd.az) + 0.02;
+            const topB = this.baseHeightAt(sd.bx, sd.bz) + 0.02;
+            for (const band of bands) {
+              const hiA = Math.min(topA, topA - band.d0);
+              const hiB = Math.min(topB, topB - band.d0);
+              const lowA = Math.max(floorY, topA - band.d1);
+              const lowB = Math.max(floorY, topB - band.d1);
+              if (hiA <= floorY + 0.01 && hiB <= floorY + 0.01) break;
+              if (hiA <= lowA + 5e-3 && hiB <= lowB + 5e-3) continue;
+              const odd = (cx + cz) % 2 === 0;
+              const tone = band.flat ? band.flat : band.soil ? odd ? soilTop : soilLow : odd ? band.a : band.b;
+              quad([sd.ax, hiA, sd.az], [sd.bx, hiB, sd.bz], [sd.bx, lowB, sd.bz], [sd.ax, lowA, sd.az], tone);
+            }
           }
         }
       }
@@ -31574,7 +31745,7 @@ void main() {
         [rect.x1, floorY, rect.z0],
         [rect.x1, floorY, rect.z1],
         [rect.x0, floorY, rect.z1],
-        floorY < pit.exitY - 1.3 ? rockDeep : soilLow
+        toneAt(pit.exitY - floorY)
       );
       const alongX = side === "n" || side === "s";
       const wallC = side === "n" ? rect.z0 : side === "s" ? rect.z1 : side === "w" ? rect.x0 : rect.x1;
@@ -31588,11 +31759,11 @@ void main() {
         if (t0 >= spanA - 1e-3) continue;
         const t1 = Math.min((steps - k) * runPerStep, spanA);
         const y = floorY + k * stepH;
-        const tone = k <= 1 ? rockDeep : k === 2 ? rock : k % 2 ? soilLow : soilTop;
+        const tone = toneAt(pit.exitY - (y + stepH * 0.5));
         quad(P2(w0, t0, y), P2(w1, t0, y), P2(w1, t1, y), P2(w0, t1, y), tone);
         if (k > 0) {
           const yLow = Math.max(floorY, y - stepH);
-          quad(P2(w0, t1, y), P2(w1, t1, y), P2(w1, t1, yLow), P2(w0, t1, yLow), k > 2 ? soilLow : rock);
+          quad(P2(w0, t1, y), P2(w1, t1, y), P2(w1, t1, yLow), P2(w0, t1, yLow), toneAt(pit.exitY - yLow));
         }
       }
       const geo = new BufferGeometry();
@@ -33275,6 +33446,16 @@ void main() {
     /** Тихий хруст, когда кирка вошла в камень */
     stoneCrack() {
       this._noiseBurst(0.08, 1800 + Math.random() * 700, 2.2, 0.045, "bandpass");
+    }
+    /** Обвал: стенка ямы рухнула, земля осыпается вниз */
+    collapse() {
+      this._noiseBurst(0.85, 260, 0.6, 0.22, "lowpass");
+      this._noiseBurst(0.5, 900, 0.8, 0.12, "bandpass");
+      this._tone(64, 0.7, 0.12, "sine", 38);
+      for (let i = 0; i < 7; i++) {
+        this._tone(200 + Math.random() * 260, 0.07, 0.035, "square", 120, i * 0.055);
+        this._noiseBurst(0.06, 1500 + Math.random() * 2200, 2.6, 0.05, "bandpass");
+      }
     }
     /** Рудный камень: звонкий удар с металлическим призвуком */
     oreHit() {
@@ -36770,7 +36951,107 @@ void main() {
           return {
             ok: cutTris >= 2 && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
             expect: "\u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0437\u0435\u043C\u043B\u0438 \u0432\u044B\u0440\u0435\u0437\u0430\u043D\u044B \u043F\u043E \u0441\u0435\u0442\u043A\u0435, \u0432\u043D\u0443\u0442\u0440\u0438 \u0434\u043D\u043E, \u0441\u0442\u0435\u043D\u043A\u0438 \u0438 \u0441\u0442\u0443\u043F\u0435\u043D\u0438",
-            fact: `\u0432\u044B\u0440\u0435\u0437\u0430\u043D\u043E ${cutTris} \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \xB7 \u043A\u043B\u0435\u0442\u043E\u043A ${pit.rect.cells}\xD7${pit.rect.cells} \xB7 \u043A\u0440\u0430\u0439 \u043F\u043E \u0441\u0435\u0442\u043A\u0435: ${onGrid ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 \u0434\u043D\u043E \u043D\u0430 ${fmt(sunk)} \u043C \u043D\u0438\u0436\u0435 \u0434\u0451\u0440\u043D\u0430 \xB7 \u0441\u0442\u0435\u043D\u043A\u0438 ${walls} \u0432\u0435\u0440\u0448\u0438\u043D \xB7 \u0441\u0442\u0443\u043F\u0435\u043D\u0435\u0439 ${pit.steps}`
+            fact: `\u0432\u044B\u0440\u0435\u0437\u0430\u043D\u043E ${cutTris} \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \xB7 \u043A\u043B\u0435\u0442\u043E\u043A ${pit.rect.ix1 - pit.rect.ix0}\xD7${pit.rect.iz1 - pit.rect.iz0} \xB7 \u043A\u0440\u0430\u0439 \u043F\u043E \u0441\u0435\u0442\u043A\u0435: ${onGrid ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 \u0434\u043D\u043E \u043D\u0430 ${fmt(sunk)} \u043C \u043D\u0438\u0436\u0435 \u0434\u0451\u0440\u043D\u0430 \xB7 \u0441\u0442\u0435\u043D\u043A\u0438 ${walls} \u0432\u0435\u0440\u0448\u0438\u043D \xB7 \u0441\u0442\u0443\u043F\u0435\u043D\u0435\u0439 ${pit.steps}`
+          };
+        } },
+        { name: "\u041E\u0431\u0432\u0430\u043B: \u0441\u043E\u0441\u0435\u0434\u043D\u0438\u0435 \u044F\u043C\u044B \u0431\u0435\u0437 \u043F\u0435\u0440\u0435\u0433\u043E\u0440\u043E\u0434\u043A\u0438", walk: null, run: (g) => {
+          const w = g.world;
+          const p = g.player.position;
+          let spot = null;
+          for (let r = 16; r <= 34 && !spot; r += 2) {
+            for (let i = 0; i < 16 && !spot; i++) {
+              const a = i / 16 * Math.PI * 2;
+              const x = p.x + Math.cos(a) * r;
+              const z = p.z + Math.sin(a) * r;
+              if (w.heightAt(x, z) > 3 && w.slopeAt(x, z) < 0.4 && w.isFree(x, z, 2.2)) spot = { x, z };
+            }
+          }
+          if (!spot) return { ok: false, expect: "\u0434\u0432\u0430 \u0441\u0432\u043E\u0431\u043E\u0434\u043D\u044B\u0445 \u043C\u0435\u0441\u0442\u0430 \u0440\u044F\u0434\u043E\u043C", fact: "\u043C\u0435\u0441\u0442\u0430 \u043D\u0435\u0442" };
+          const mk = () => {
+            w.digStore.clear();
+            w.surfaceStore.clear();
+            w.pits.forEach((pp) => {
+              w.pitGroup.remove(pp.group);
+              pp.walls.geometry.dispose();
+            });
+            w.pits.clear();
+            w.cutPits.clear();
+            w.cutCells.clear();
+            w._rebuildTerrainIndex();
+            w._applyHeights();
+          };
+          mk();
+          w.playerPos = { x: spot.x - 4, z: spot.z };
+          for (let i = 0; i < 3; i++) w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
+          const first = w.pitAt(spot.x, spot.z);
+          if (!first) return { ok: false, expect: "\u043F\u0435\u0440\u0432\u0430\u044F \u044F\u043C\u0430", fact: "\u043D\u0435 \u0432\u044B\u043A\u043E\u043F\u0430\u043B\u0430\u0441\u044C" };
+          const second = { x: spot.x + (first.rect.x1 - first.rect.x0) + 0.6, z: spot.z };
+          const res = w.dig(second.x, second.z, { radius: 1.6, depth: 0.45, mine: 99 });
+          const pit = w.pitAt(second.x, second.z);
+          const same = pit && w.pitAt(spot.x, spot.z) === pit;
+          const mid = { x: (spot.x + second.x) / 2, z: spot.z };
+          const midH = w.heightAt(mid.x, mid.z);
+          const wallGone = Math.abs(midH - pit.floorY) < 0.4;
+          const onePit = w.pits.size === 1;
+          const out = {
+            ok: !!res.collapse && same && onePit && wallGone,
+            expect: "\u0441\u0442\u0435\u043D\u043A\u0430 \u043C\u0435\u0436\u0434\u0443 \u0441\u043E\u0441\u0435\u0434\u043D\u0438\u043C\u0438 \u044F\u043C\u0430\u043C\u0438 \u0440\u0443\u0448\u0438\u0442\u0441\u044F, \u0434\u044B\u0440\u0430 \u043E\u0434\u043D\u0430, \u043F\u043E\u043B \u043E\u0431\u0449\u0438\u0439",
+            fact: `\u043E\u0431\u0432\u0430\u043B: ${res.collapse ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 \u044F\u043C \u043D\u0430 \u043C\u0435\u0441\u0442\u0435: ${w.pits.size} \xB7 \u043C\u0435\u0436\u0434\u0443 \u043D\u0438\u043C\u0438 \u0432\u044B\u0441\u043E\u0442\u0430 ${fmt(midH)} \u043C \u043F\u0440\u0438 \u043F\u043E\u043B\u0443 ${fmt(pit.floorY)} \xB7 \u043F\u0435\u0440\u0435\u0433\u043E\u0440\u043E\u0434\u043A\u0438 \u043D\u0435\u0442: ${wallGone ? "\u0434\u0430" : "\u043D\u0435\u0442"}`
+          };
+          mk();
+          return out;
+        } },
+        { name: "\u041F\u043E\u0440\u043E\u0434\u044B \u0440\u0430\u0437\u043D\u043E\u0439 \u043F\u0440\u043E\u0447\u043D\u043E\u0441\u0442\u0438", walk: null, run: (g) => {
+          var _a;
+          const w = g.world;
+          const rows = [];
+          for (const d of [1.5, 2.2, 2.9, 3.5]) {
+            const rk = w.rockAt(d, "soil");
+            if (rk) rows.push(rk);
+          }
+          const names = [...new Set(rows.map((r) => r.name))];
+          const hards = rows.map((r) => r.hard);
+          const grows = hards.every((h, i) => i === 0 || h > hards[i - 1]);
+          const p = g.player.position;
+          let spot = null;
+          for (let r = 16; r <= 40 && !spot; r += 2) {
+            for (let i = 0; i < 16 && !spot; i++) {
+              const a = i / 16 * Math.PI * 2;
+              const x = p.x + Math.cos(a) * r;
+              const z = p.z + Math.sin(a) * r;
+              if (w.heightAt(x, z) > 3 && w.slopeAt(x, z) < 0.4 && w.isFree(x, z, 2.2)) spot = { x, z };
+            }
+          }
+          if (!spot) return { ok: false, expect: "\u043C\u0435\u0441\u0442\u043E \u0434\u043B\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0438 \u043F\u043E\u0440\u043E\u0434", fact: "\u043C\u0435\u0441\u0442\u0430 \u043D\u0435\u0442" };
+          const mk = () => {
+            w.digStore.clear();
+            w.surfaceStore.clear();
+            w.pits.forEach((pp) => {
+              w.pitGroup.remove(pp.group);
+              pp.walls.geometry.dispose();
+            });
+            w.pits.clear();
+            w.cutPits.clear();
+            w.cutCells.clear();
+            w._rebuildTerrainIndex();
+            w._applyHeights();
+          };
+          mk();
+          const steps = {};
+          for (let i = 0; i < 40; i++) {
+            const res = w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 3 });
+            if (!res || res.void) break;
+            if (res.rockName) (steps[_a = res.rockName] || (steps[_a] = [])).push(res.step);
+          }
+          const avg = {};
+          for (const [k, v] of Object.entries(steps)) avg[k] = v.reduce((a, b) => a + b, 0) / v.length;
+          const order = Object.keys(avg);
+          mk();
+          const slower = order.length >= 3 && order.every((k, i) => i === 0 || avg[k] < avg[order[i - 1]]);
+          return {
+            ok: names.length >= 3 && grows && slower,
+            expect: "\u043F\u043E\u0440\u043E\u0434\u044B \u043E\u0442 \u043F\u0435\u0441\u0447\u0430\u043D\u0438\u043A\u0430 \u043A \u043E\u0431\u0441\u0438\u0434\u0438\u0430\u043D\u0443 \u043F\u0440\u043E\u0447\u043D\u0435\u0435, \u0443\u0434\u0430\u0440 \u0441\u043D\u0438\u043C\u0430\u0435\u0442 \u043C\u0435\u043D\u044C\u0448\u0435",
+            fact: `\u043F\u043E\u0440\u043E\u0434\u044B: ${names.join(" \u2192 ")} \xB7 \u043F\u0440\u043E\u0447\u043D\u043E\u0441\u0442\u044C ${hards.join(" \u2192 ")} \xB7 \u0448\u0430\u0433 \u0437\u0430 \u0443\u0434\u0430\u0440: ${order.map((k) => `${k} ${avg[k].toFixed(2)} \u043C`).join(", ")}`
           };
         } },
         { name: "\u0425\u0438\u0442\u0431\u043E\u043A\u0441 \u043F\u043E \u0433\u0430\u0431\u0430\u0440\u0438\u0442\u0430\u043C \u043C\u043E\u0434\u0435\u043B\u0438", walk: null, run: (g) => {
@@ -37172,7 +37453,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-27 13:40" : "dev";
+  var BUILD = true ? "2026-10-27 14:28" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -38554,7 +38835,7 @@ void main() {
     }
     /** Снять слой земли под прицелом: земля → песок → камень → пустота шахты */
     digGroundAt(point) {
-      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4, _n, _o, _p, _q2, _r;
+      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4, _n, _o, _p, _q2, _r, _s2, _t, _u;
       const w = this.world;
       const probe = w.probeAt(point.x, point.z);
       const power = this.digPower();
@@ -38564,8 +38845,9 @@ void main() {
         (_b = (_a = this.audio).rustle) == null ? void 0 : _b.call(_a);
         return;
       }
-      if (probe.layer === "stone" && minePower < 1.5) {
-        this.ui.toast("\u0414\u0430\u043B\u044C\u0448\u0435 \u043A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u0441\u043B\u043E\u0439 \u2014 \u043D\u0443\u0436\u043D\u0430 \u043A\u0438\u0440\u043A\u0430. \u0422\u0443\u0442 \u0443\u0436\u0435 \u043D\u0430\u0447\u0438\u043D\u0430\u044E\u0442\u0441\u044F \u0448\u0430\u0445\u0442\u044B", true);
+      if (probe.layer === "stone" && minePower < (probe.needMine || 1.5)) {
+        const rockName = probe.rockName || "\u043A\u0430\u043C\u0435\u043D\u044C";
+        this.ui.toast(`${rockName} \u043D\u0435 \u043F\u043E\u0434\u0434\u0430\u0451\u0442\u0441\u044F \u2014 \u043D\u0443\u0436\u043D\u0430 \u043A\u0438\u0440\u043A\u0430 \u043A\u0440\u0435\u043F\u0447\u0435 (\u043F\u0440\u043E\u0447\u043D\u043E\u0441\u0442\u044C ${(probe.needMine || 1.5).toFixed(1)}). \u0422\u0443\u0442 \u0443\u0436\u0435 \u043D\u0430\u0447\u0438\u043D\u0430\u044E\u0442\u0441\u044F \u0448\u0430\u0445\u0442\u044B`, true);
         (_d = (_c = this.audio).stoneCrack) == null ? void 0 : _d.call(_c);
         this.spawnChips(point.x, point.y + 0.15, point.z, {
           count: 5,
@@ -38601,35 +38883,67 @@ void main() {
         return;
       }
       this.player.shake(0.07);
+      if (res.collapse) {
+        (_j = (_i = this.audio).collapse) == null ? void 0 : _j.call(_i);
+        this.player.shake(0.18);
+        this.spawnChips(point.x, point.y + 0.1, point.z, {
+          count: 22,
+          color: 9072711,
+          size: 0.09,
+          spread: 2.6,
+          up: 2.2
+        });
+        this.spawnChips(point.x, point.y + 0.05, point.z, {
+          count: 14,
+          color: 7297596,
+          size: 0.11,
+          spread: 3.2,
+          up: 1.4
+        });
+        this.ui.toast("\u0421\u0442\u0435\u043D\u043A\u0430 \u043E\u0431\u0432\u0430\u043B\u0438\u043B\u0430\u0441\u044C \u2014 \u044F\u043C\u044B \u0441\u043E\u0435\u0434\u0438\u043D\u0438\u043B\u0438\u0441\u044C \u0432 \u043E\u0434\u043D\u0443", true);
+      }
       if (res.stone) {
-        (_j = (_i = this.audio).stoneCrack) == null ? void 0 : _j.call(_i);
-        (_l = (_k = this.audio).oreHit) == null ? void 0 : _l.call(_k);
+        const rock = res.rock || { name: "\u041A\u0430\u043C\u0435\u043D\u044C", id: "granite", dust: 9407104, hard: 1 };
+        (_l = (_k = this.audio).stoneCrack) == null ? void 0 : _l.call(_k);
+        (_n = (_m4 = this.audio).oreHit) == null ? void 0 : _n.call(_m4);
         this.spawnChips(point.x, point.y + 0.2, point.z, {
           count: 10,
-          color: 9407104,
+          color: rock.dust,
           size: 0.07,
           spread: 1.5,
           up: 1.7
         });
-        this.addItem("stone", 1);
-        if (Math.random() < 0.22) this.addItem("flint", 1);
-        if (Math.random() < 0.08) this.addItem("ironOre", 1);
+        if (rock.id === "sandstone") {
+          this.addItem("stone", 1);
+          if (Math.random() < 0.35) this.addItem("sand", 1);
+        } else if (rock.id === "granite") {
+          this.addItem("stone", 2);
+          if (Math.random() < 0.3) this.addItem("flint", 1);
+          if (Math.random() < 0.1) this.addItem("ironOre", 1);
+        } else if (rock.id === "basalt") {
+          this.addItem("stone", 1);
+          if (Math.random() < 0.4) this.addItem("ironOre", 1);
+        } else {
+          if (Math.random() < 0.45) this.addItem("obsidian", 1);
+          if (Math.random() < 0.18) this.addItem("crystal", 1);
+          this.addItem("stone", 1);
+        }
         if (res.void) {
           this.ui.toast("\u041A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u0441\u043B\u043E\u0439 \u043F\u0440\u043E\u0431\u0438\u0442: \u0432\u043D\u0438\u0437\u0443 \u043F\u0443\u0441\u0442\u043E\u0442\u0430 \u0448\u0430\u0445\u0442\u044B. \u041D\u0430\u0436\u043C\u0438 G, \u0447\u0442\u043E\u0431\u044B \u0441\u043F\u0443\u0441\u0442\u0438\u0442\u044C\u0441\u044F");
-          (_n = (_m4 = this.audio).stoneBreak) == null ? void 0 : _n.call(_m4);
+          (_p = (_o = this.audio).stoneBreak) == null ? void 0 : _p.call(_o);
         } else {
-          this.ui.toast(`\u041A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u0441\u043B\u043E\u0439: \u0441\u043D\u044F\u0442\u043E ${res.depth.toFixed(2)} \u043C \xB7 \u0434\u043E \u043F\u0443\u0441\u0442\u043E\u0442\u044B ${res.stoneLeft.toFixed(1)} \u043C`);
+          this.ui.toast(`${rock.name} (\u043F\u0440\u043E\u0447\u043D\u043E\u0441\u0442\u044C ${rock.hard.toFixed(1)}): \u0441\u043D\u044F\u0442\u043E ${((_q2 = res.step) != null ? _q2 : res.depth).toFixed(2)} \u043C \xB7 \u0434\u043E \u043F\u0443\u0441\u0442\u043E\u0442\u044B ${res.stoneLeft.toFixed(1)} \u043C`);
         }
         return;
       }
-      (_p = (_o = this.audio).rustle) == null ? void 0 : _p.call(_o);
+      (_s2 = (_r = this.audio).rustle) == null ? void 0 : _s2.call(_r);
       const color = res.layer === "sand" ? 14666645 : 7297596;
       this.spawnChips(point.x, point.y + 0.2, point.z, { count: 9, color, size: 0.06, spread: 1.6, up: 1.8 });
       if (res.layer === "sand") this.addItem("sand", 1);
       else if (Math.random() < 0.35) this.addItem("stone", 1);
       if (res.flooded) {
         this.ui.toast("\u041D\u0430 \u043F\u043B\u044F\u0436\u0435 \u044F\u043C\u0430 \u0434\u043E\u0448\u043B\u0430 \u0434\u043E \u043C\u043E\u0440\u0441\u043A\u043E\u0439 \u0432\u043E\u0434\u044B \u2014 \u0434\u043D\u043E \u0437\u0430\u043B\u0438\u0432\u0430\u0435\u0442. \u0412 \u0433\u043B\u0443\u0431\u0438\u043D\u0435 \u043E\u0441\u0442\u0440\u043E\u0432\u0430 \u0432\u043E\u0434\u044B \u043D\u0435\u0442");
-        (_r = (_q2 = this.audio).drink) == null ? void 0 : _r.call(_q2);
+        (_u = (_t = this.audio).drink) == null ? void 0 : _u.call(_t);
       } else if (res.sandFill > 0.05) {
         this.ui.toast("\u041F\u0435\u0441\u043E\u043A \u043E\u0441\u044B\u043F\u0430\u043B\u0441\u044F \u0432 \u044F\u043C\u0443 \u2014 \u043A\u0440\u0430\u044F \u043F\u043E\u043F\u043B\u044B\u043B\u0438");
       } else {
