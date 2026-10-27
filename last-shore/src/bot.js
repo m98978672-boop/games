@@ -315,7 +315,95 @@ export class InspectorBot {
         return {
           ok: cutTris >= 2 && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
           expect: 'треугольники земли вырезаны по сетке, внутри дно, стенки и ступени',
-          fact: `вырезано ${cutTris} треугольников · клеток ${pit.rect.cells}×${pit.rect.cells} · край по сетке: ${onGrid ? 'да' : 'нет'} · дно на ${fmt(sunk)} м ниже дёрна · стенки ${walls} вершин · ступеней ${pit.steps}`,
+          fact: `вырезано ${cutTris} треугольников · клеток ${pit.rect.ix1 - pit.rect.ix0}×${pit.rect.iz1 - pit.rect.iz0} · край по сетке: ${onGrid ? 'да' : 'нет'} · дно на ${fmt(sunk)} м ниже дёрна · стенки ${walls} вершин · ступеней ${pit.steps}`,
+        };
+      } },
+
+      { name: 'Обвал: соседние ямы без перегородки', walk: null, run: (g) => {
+        const w = g.world;
+        const p = g.player.position;
+        let spot = null;
+        for (let r = 16; r <= 34 && !spot; r += 2) {
+          for (let i = 0; i < 16 && !spot; i++) {
+            const a = (i / 16) * Math.PI * 2;
+            const x = p.x + Math.cos(a) * r;
+            const z = p.z + Math.sin(a) * r;
+            if (w.heightAt(x, z) > 3 && w.slopeAt(x, z) < 0.4 && w.isFree(x, z, 2.2)) spot = { x, z };
+          }
+        }
+        if (!spot) return { ok: false, expect: 'два свободных места рядом', fact: 'места нет' };
+        const mk = () => {
+          w.digStore.clear(); w.surfaceStore.clear();
+          w.pits.forEach((pp) => { w.pitGroup.remove(pp.group); pp.walls.geometry.dispose(); });
+          w.pits.clear(); w.cutPits.clear(); w.cutCells.clear();
+          w._rebuildTerrainIndex(); w._applyHeights();
+        };
+        mk();
+        w.playerPos = { x: spot.x - 4, z: spot.z };
+        for (let i = 0; i < 3; i++) w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
+        const first = w.pitAt(spot.x, spot.z);
+        if (!first) return { ok: false, expect: 'первая яма', fact: 'не выкопалась' };
+        const second = { x: spot.x + (first.rect.x1 - first.rect.x0) + 0.6, z: spot.z };
+        const res = w.dig(second.x, second.z, { radius: 1.6, depth: 0.45, mine: 99 });
+        const pit = w.pitAt(second.x, second.z);
+        const same = pit && w.pitAt(spot.x, spot.z) === pit;
+        const mid = { x: (spot.x + second.x) / 2, z: spot.z };
+        const midH = w.heightAt(mid.x, mid.z);
+        const wallGone = Math.abs(midH - pit.floorY) < 0.4;
+        const onePit = w.pits.size === 1;
+        const out = {
+          ok: !!res.collapse && same && onePit && wallGone,
+          expect: 'стенка между соседними ямами рушится, дыра одна, пол общий',
+          fact: `обвал: ${res.collapse ? 'да' : 'нет'} · ям на месте: ${w.pits.size} · между ними высота ${fmt(midH)} м при полу ${fmt(pit.floorY)} · перегородки нет: ${wallGone ? 'да' : 'нет'}`,
+        };
+        mk();
+        return out;
+      } },
+
+      { name: 'Породы разной прочности', walk: null, run: (g) => {
+        const w = g.world;
+        const rows = [];
+        for (const d of [1.5, 2.2, 2.9, 3.5]) {
+          const rk = w.rockAt(d, 'soil');
+          if (rk) rows.push(rk);
+        }
+        const names = [...new Set(rows.map((r) => r.name))];
+        const hards = rows.map((r) => r.hard);
+        const grows = hards.every((h, i) => i === 0 || h > hards[i - 1]);
+        // и на деле: один и тот же удар кирки снимает тем меньше, чем глубже порода
+        const p = g.player.position;
+        let spot = null;
+        for (let r = 16; r <= 40 && !spot; r += 2) {
+          for (let i = 0; i < 16 && !spot; i++) {
+            const a = (i / 16) * Math.PI * 2;
+            const x = p.x + Math.cos(a) * r;
+            const z = p.z + Math.sin(a) * r;
+            if (w.heightAt(x, z) > 3 && w.slopeAt(x, z) < 0.4 && w.isFree(x, z, 2.2)) spot = { x, z };
+          }
+        }
+        if (!spot) return { ok: false, expect: 'место для проверки пород', fact: 'места нет' };
+        const mk = () => {
+          w.digStore.clear(); w.surfaceStore.clear();
+          w.pits.forEach((pp) => { w.pitGroup.remove(pp.group); pp.walls.geometry.dispose(); });
+          w.pits.clear(); w.cutPits.clear(); w.cutCells.clear();
+          w._rebuildTerrainIndex(); w._applyHeights();
+        };
+        mk();
+        const steps = {};
+        for (let i = 0; i < 40; i++) {
+          const res = w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 3.0 });
+          if (!res || res.void) break;
+          if (res.rockName) (steps[res.rockName] ||= []).push(res.step);
+        }
+        const avg = {};
+        for (const [k, v] of Object.entries(steps)) avg[k] = v.reduce((a, b) => a + b, 0) / v.length;
+        const order = Object.keys(avg);
+        mk();
+        const slower = order.length >= 3 && order.every((k, i) => i === 0 || avg[k] < avg[order[i - 1]]);
+        return {
+          ok: names.length >= 3 && grows && slower,
+          expect: 'породы от песчаника к обсидиану прочнее, удар снимает меньше',
+          fact: `породы: ${names.join(' → ')} · прочность ${hards.join(' → ')} · шаг за удар: ${order.map((k) => `${k} ${avg[k].toFixed(2)} м`).join(', ')}`,
         };
       } },
 

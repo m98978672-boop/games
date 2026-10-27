@@ -867,9 +867,10 @@ class Game {
       return;
     }
 
-    // камень руками не взять — только киркой
-    if (probe.layer === 'stone' && minePower < 1.5) {
-      this.ui.toast('Дальше каменный слой — нужна кирка. Тут уже начинаются шахты', true);
+    // камень руками не взять — только киркой, и у каждой породы свой порог
+    if (probe.layer === 'stone' && minePower < (probe.needMine || 1.5)) {
+      const rockName = probe.rockName || 'камень';
+      this.ui.toast(`${rockName} не поддаётся — нужна кирка крепче (прочность ${(probe.needMine || 1.5).toFixed(1)}). Тут уже начинаются шахты`, true);
       this.audio.stoneCrack?.();
       this.spawnChips(point.x, point.y + 0.15, point.z, {
         count: 5, color: 0x8b8478, size: 0.05, spread: 1.0, up: 1.4,
@@ -903,21 +904,49 @@ class Game {
 
     this.player.shake(0.07);
 
+    // --- обвал: стенка между ямами рухнула, дыры слились в одну ---
+    if (res.collapse) {
+      this.audio.collapse?.();
+      this.player.shake(0.18);
+      this.spawnChips(point.x, point.y + 0.1, point.z, {
+        count: 22, color: 0x8a7047, size: 0.09, spread: 2.6, up: 2.2,
+      });
+      this.spawnChips(point.x, point.y + 0.05, point.z, {
+        count: 14, color: 0x6f5a3c, size: 0.11, spread: 3.2, up: 1.4,
+      });
+      this.ui.toast('Стенка обвалилась — ямы соединились в одну', true);
+    }
+
     if (res.stone) {
-      // каменный слой: твёрдо, но именно отсюда идут шахты
+      // каменный слой: у каждой породы своя прочность, цвет и добыча
+      const rock = res.rock || { name: 'Камень', id: 'granite', dust: 0x8f8a80, hard: 1 };
       this.audio.stoneCrack?.();
       this.audio.oreHit?.();
       this.spawnChips(point.x, point.y + 0.2, point.z, {
-        count: 10, color: 0x8f8a80, size: 0.07, spread: 1.5, up: 1.7,
+        count: 10, color: rock.dust, size: 0.07, spread: 1.5, up: 1.7,
       });
-      this.addItem('stone', 1);
-      if (Math.random() < 0.22) this.addItem('flint', 1);
-      if (Math.random() < 0.08) this.addItem('ironOre', 1);
+      // добыча зависит от породы: гранит даёт камень, базальт — железо,
+      // обсидиан — обсидиан и иногда кристалл
+      if (rock.id === 'sandstone') {
+        this.addItem('stone', 1);
+        if (Math.random() < 0.35) this.addItem('sand', 1);
+      } else if (rock.id === 'granite') {
+        this.addItem('stone', 2);
+        if (Math.random() < 0.3) this.addItem('flint', 1);
+        if (Math.random() < 0.1) this.addItem('ironOre', 1);
+      } else if (rock.id === 'basalt') {
+        this.addItem('stone', 1);
+        if (Math.random() < 0.4) this.addItem('ironOre', 1);
+      } else {
+        if (Math.random() < 0.45) this.addItem('obsidian', 1);
+        if (Math.random() < 0.18) this.addItem('crystal', 1);
+        this.addItem('stone', 1);
+      }
       if (res.void) {
         this.ui.toast('Каменный слой пробит: внизу пустота шахты. Нажми G, чтобы спуститься');
         this.audio.stoneBreak?.();
       } else {
-        this.ui.toast(`Каменный слой: снято ${res.depth.toFixed(2)} м · до пустоты ${res.stoneLeft.toFixed(1)} м`);
+        this.ui.toast(`${rock.name} (прочность ${rock.hard.toFixed(1)}): снято ${(res.step ?? res.depth).toFixed(2)} м · до пустоты ${res.stoneLeft.toFixed(1)} м`);
       }
       return;
     }

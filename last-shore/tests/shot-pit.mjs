@@ -41,8 +41,17 @@ const info = await page.evaluate(() => {
     w.playerPos = { x: spot.x + 3.5, z: spot.z };
     w.dig(spot.x, spot.z, { radius: 2.0, depth: 0.45, mine: 99 });
   }
-  const pit = w.pitAt(spot.x, spot.z);
+  let pit = w.pitAt(spot.x, spot.z);
   if (!pit) return { ok: false, why: 'ямы нет' };
+  // вторая яма вплотную: стенка между ними должна обвалиться
+  const second = { x: pit.rect.x1 + 0.6, z: spot.z };
+  let collapse = false;
+  for (let i = 0; i < 6; i++) {
+    w.playerPos = { x: second.x + 3.5, z: second.z };
+    collapse = w.dig(second.x, second.z, { radius: 2.0, depth: 0.45, mine: 99 }).collapse || collapse;
+  }
+  pit = w.pitAt(spot.x, spot.z);
+  const midH = w.heightAt((spot.x + second.x) / 2, spot.z);
   // герой стоит у края, камера — свободная, из-за плеча
   const px = pit.x1 + 1.4;
   const pz = (pit.z0 + pit.z1) / 2;
@@ -58,6 +67,10 @@ const info = await page.evaluate(() => {
   return {
     ok: true,
     cells: pit.rect.cells,
+    collapse,
+    wallGone: Math.abs(midH - pit.floorY) < 0.4,
+    spanX: +(pit.rect.x1 - pit.rect.x0).toFixed(1),
+    spanZ: +(pit.rect.z1 - pit.rect.z0).toFixed(1),
     side: pit.side,
     steps: pit.steps,
     stepH: +pit.stepH.toFixed(2),

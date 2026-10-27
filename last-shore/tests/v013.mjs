@@ -106,7 +106,7 @@ const wallsVerts = pit.walls.geometry.attributes.position.count;
 const hasColors = pit.walls.geometry.attributes.color.count === wallsVerts;
 const cutCellsN = w.cutCells.size;
 console.log('яма-дыра: вырезано треугольников рельефа', cutTris,
-  '· клеток', pit.rect.cells + '×' + pit.rect.cells, '(' + cutCellsN + ' клеток сетки)',
+  '· клеток', (pit.rect.ix1 - pit.rect.ix0) + '×' + (pit.rect.iz1 - pit.rect.iz0), '(' + cutCellsN + ' клеток сетки)',
   '· край по сетке:', onGrid, '· высоты узлов не тронуты:', heightsUntouched);
 console.log('  дно на', sunk.toFixed(2), 'м ниже дёрна · стенки', wallsVerts, 'вершин · слои видны:', hasColors,
   '· ступеней', pit.steps, '· наибольший подъём по ступеням', worstRise.toFixed(2), 'м · вылезти можно:', climbed);
@@ -119,6 +119,46 @@ console.log('  внутри ямы', inPit.toFixed(2), 'м · за краем', 
   pit.debris.children.length);
 
 resetDig();
+
+// --- 1a2. обвал: соседние ямы сливаются, перегородки между ними нет ---
+{
+  const w2 = w;
+  w2.playerPos = { x: dry.x - 4, z: dry.z };
+  for (let i = 0; i < 3; i++) w2.dig(dry.x, dry.z, { radius: 1.6, depth: 0.45, mine: 99 });
+  const first = w2.pitAt(dry.x, dry.z);
+  const second = { x: dry.x + (first.rect.x1 - first.rect.x0) + 0.6, z: dry.z };
+  const res = w2.dig(second.x, second.z, { radius: 1.6, depth: 0.45, mine: 99 });
+  const merged = w2.pitAt(second.x, second.z);
+  const samePit = w2.pitAt(dry.x, dry.z) === merged;
+  const midH = w2.heightAt((dry.x + second.x) / 2, dry.z);
+  const wallGone = Math.abs(midH - merged.floorY) < 0.4;
+  console.log('обвал: стенка рухнула:', res.collapse, '· ям на месте:', w2.pits.size,
+    '· одна дыра:', samePit, '· между ямами высота', midH.toFixed(2),
+    'м при полу', merged.floorY.toFixed(2), 'м · перегородки нет:', wallGone);
+  resetDig();
+}
+
+// --- 1a3. породы разной прочности: песчаник → гранит → базальт → обсидиан ---
+{
+  const rows = [1.5, 2.2, 2.9, 3.5].map((d) => w.rockAt(d, 'soil'));
+  const names = rows.map((r) => r.name);
+  const hards = rows.map((r) => r.hard);
+  const grows = hards.every((h, i) => i === 0 || h > hards[i - 1]);
+  const steps = {};
+  for (let i = 0; i < 40; i++) {
+    const res = w.dig(dry.x, dry.z, { radius: 1.6, depth: 0.45, mine: 3.0 });
+    if (!res || res.void) break;
+    if (res.rockName) (steps[res.rockName] ||= []).push(res.step);
+  }
+  const avg = {};
+  for (const [k, v] of Object.entries(steps)) avg[k] = v.reduce((a, b) => a + b, 0) / v.length;
+  const order = Object.keys(avg);
+  const slower = order.length >= 3 && order.every((k, i) => i === 0 || avg[k] < avg[order[i - 1]]);
+  console.log('породы:', names.join(' → '), '· прочность', hards.join(' → '),
+    '· шаг за удар:', order.map((k) => `${k} ${avg[k].toFixed(2)} м`).join(', '),
+    '· глубже — прочнее:', grows && slower);
+  resetDig();
+}
 
 // --- 1b. трава из разных оттенков: разброс яркости и насыщенности ---
 {

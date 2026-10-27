@@ -325,6 +325,17 @@ export class Audio {
     this._noiseBurst(0.08, 1800 + Math.random() * 700, 2.2, 0.045, 'bandpass');
   }
 
+  /** Обвал: стенка ямы рухнула, земля осыпается вниз */
+  collapse() {
+    this._noiseBurst(0.85, 260, 0.6, 0.22, 'lowpass');
+    this._noiseBurst(0.5, 900, 0.8, 0.12, 'bandpass');
+    this._tone(64, 0.7, 0.12, 'sine', 38);
+    for (let i = 0; i < 7; i++) {
+      this._tone(200 + Math.random() * 260, 0.07, 0.035, 'square', 120, i * 0.055);
+      this._noiseBurst(0.06, 1500 + Math.random() * 2200, 2.6, 0.05, 'bandpass');
+    }
+  }
+
   /** Рудный камень: звонкий удар с металлическим призвуком */
   oreHit() {
     this._tone(1180, 0.18, 0.05, 'triangle', 760);
