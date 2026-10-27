@@ -407,6 +407,118 @@ export class InspectorBot {
         };
       } },
 
+      { name: 'Обводки моделей: сквозь них не пройти', walk: null, run: (g) => {
+        const w = g.world;
+        if (!w.shells) return { ok: false, expect: 'обводки моделей', fact: 'системы обводок нет' };
+        const tree = w.treeList.find((t) => t.shell && t.collider && !t.collider.disabled && !t.collider.soft);
+        if (!tree) return { ok: false, expect: 'дерево с обводкой', fact: 'не нашлось' };
+        const pos = { x: tree.x + 5, z: tree.z };
+        const vel = { x: -6, z: 0 };
+        for (let i = 0; i < 200; i++) {
+          pos.x += vel.x * 0.016;
+          w.shells.resolve(pos, 0.35, vel, w.heightAt(pos.x, pos.z), 0.35);
+        }
+        const gap = pos.x - tree.x;
+        const stopped = gap > 0.3;
+        const prisms = w.shells.stats.prisms;
+        // обводка исчезает вместе с моделью
+        const before = tree.collider.disabled;
+        tree.collider.disabled = true;
+        const inside = { x: tree.x, z: tree.z };
+        w.shells.resolve(inside, 0.35, null, w.heightAt(inside.x, inside.z), 0.35);
+        const passes = Math.abs(inside.x - tree.x) < 1e-6;
+        tree.collider.disabled = before;
+        return {
+          ok: stopped && passes && prisms > 200,
+          expect: 'у каждой модели треугольная обводка, живой хитбокс сквозь неё не проходит',
+          fact: `обводок ${prisms} · герой остановился в ${fmt(gap)} м от ствола · сквозь спиленное дерево проходит: ${passes ? 'да' : 'нет'}`,
+        };
+      } },
+
+      { name: 'Новые породы деревьев', walk: null, run: (g) => {
+        const w = g.world;
+        const counts = {
+          сосны: w.pineList ? w.pineList.length : 0,
+          мангры: w.mangroveList ? w.mangroveList.length : 0,
+          сухостой: w.deadList ? w.deadList.length : 0,
+        };
+        const list = w.treeList.filter((t) => t.bbox);
+        const heights = [...new Set(list.map((t) => Math.round(t.bbox.h)))];
+        const all = Object.values(counts).every((n) => n > 0);
+        // силуэты разные: высоты и ширина моделей заметно отличаются
+        const pine = w.pineList && w.pineList[0];
+        const mang = w.mangroveList && w.mangroveList[0];
+        const differ = pine && mang && Math.abs(pine.bbox.h - mang.bbox.h) > 2;
+        return {
+          ok: all && differ,
+          expect: 'сосны, мангры и сухостой — отдельные модели, не копии',
+          fact: `${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(' · ')} · высоты моделей от ${Math.min(...heights)} до ${Math.max(...heights)} м · силуэты разные: ${differ ? 'да' : 'нет'}`,
+        };
+      } },
+
+      { name: 'Постройки на ровной поверхности', walk: null, run: (g) => {
+        const w = g.world;
+        const p = g.player.position;
+        let spot = null;
+        for (let r = 4; r <= 24 && !spot; r += 1.5) {
+          for (let i = 0; i < 16 && !spot; i++) {
+            const a = (i / 16) * Math.PI * 2;
+            const x = p.x + Math.cos(a) * r;
+            const z = p.z + Math.sin(a) * r;
+            if (w.heightAt(x, z) > 3 && w.slopeAt(x, z) > 0.12 && w.isFree(x, z, 2.2)) spot = { x, z };
+          }
+        }
+        if (!spot) return { ok: false, expect: 'склон под площадку', fact: 'ровного места и склона не нашлось' };
+        const y = w.levelSpot(spot.x, spot.z, 1.7);
+        let maxDev = 0;
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          for (const d of [0.2, 0.5, 0.8]) {
+            const h = w.heightAt(spot.x + Math.cos(a) * d, spot.z + Math.sin(a) * d);
+            maxDev = Math.max(maxDev, Math.abs(h - y));
+          }
+        }
+        const flat = maxDev < 0.05 && w.slopeAt(spot.x, spot.z) < 0.05;
+        return {
+          ok: flat,
+          expect: 'под костром и станком земля выравнивается в площадку',
+          fact: `площадка ${fmt(y)} м · перепад по ней ${maxDev.toFixed(3)} м · уклон ${fmt(w.slopeAt(spot.x, spot.z))}`,
+        };
+      } },
+
+      { name: 'Новые звери и рыбы', walk: null, run: (g) => {
+        const list = g.mobs.list;
+        const get = (t) => list.filter((m) => m.alive && m.type === t);
+        const monkeys = get('monkey');
+        const turtles = get('turtle');
+        const fishes = get('fish');
+        const w = g.world;
+        const inWater = fishes.length > 0 && fishes.every((f) => w.heightAt(f.x, f.z) < -0.5);
+        // анимация ходьбы: у зверя двигаются лапы, у рыбы — хвост
+        const probe = (mob, pick) => {
+          const part = pick(mob.parts);
+          if (!part) return false;
+          const before = part.rotation.x + part.rotation.y;
+          // шагаем: фаза растёт, как при настоящей ходьбе
+          mob.speedNow = 1.4;
+          mob.phase += 0.9;
+          g.mobs._animate(mob, 0.12);
+          mob.phase += 0.9;
+          g.mobs._animate(mob, 0.12);
+          const after = part.rotation.x + part.rotation.y;
+          return Math.abs(after - before) > 1e-4;
+        };
+        const walk = monkeys.length > 0 && probe(monkeys[0], (p) => p.legs && p.legs[0]);
+        const arm = monkeys.length > 0 && probe(monkeys[0], (p) => p.arms && p.arms[0]);
+        const flipper = turtles.length > 0 && probe(turtles[0], (p) => p.legs && p.legs[0]);
+        const swimTail = fishes.length > 0 && probe(fishes[0], (p) => p.tail);
+        return {
+          ok: monkeys.length > 0 && turtles.length > 0 && fishes.length > 0 && inWater && walk && arm && flipper && swimTail,
+          expect: 'обезьяны, черепахи и рыбы: модели, ходьба и плавание',
+          fact: `обезьян ${monkeys.length} (лапы ${walk ? 'ходят' : 'стоят'}, руки ${arm ? 'машут' : 'нет'}) · черепах ${turtles.length} (лапы ${flipper ? 'ходят' : 'стоят'}) · рыб ${fishes.length}, в воде: ${inWater ? 'да' : 'нет'}, хвост ${swimTail ? 'виляет' : 'нет'}`,
+        };
+      } },
+
       { name: 'Хитбокс по габаритам модели', walk: null, run: (g) => {
         const mob = g.mobs.list.find((m) => m.alive && m.type === 'boar') || g.mobs.list.find((m) => m.alive);
         if (!mob) return { ok: false, expect: 'живой зверь', fact: 'зверей нет' };
@@ -475,6 +587,8 @@ export class InspectorBot {
         const collect = (list) => {
           for (const it of list || []) {
             for (const part of it.parts || []) {
+              // вкрапления руды — намеренно гранёные кристаллы, их не считаем
+              if (part.layer === 'ore') continue;
               const geo = part.mesh.geometry;
               if (geo?.userData?.boxOnly) marks.add('кубики');
               else marks.add(geo?.type || '?');

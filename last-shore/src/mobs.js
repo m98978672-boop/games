@@ -10,7 +10,8 @@
 
 import * as THREE from 'three';
 import { makeRng, clamp } from './noise.js';
-import { makeBoar, makeCrab, makeGull, makeSnake } from './models.js';
+import { makeBoar, makeCrab, makeGull, makeSnake, makeMonkey, makeTurtle, makeFish } from './models.js';
+import { CONFIG } from './config.js';
 
 const TYPES = {
   boar: {
@@ -55,6 +56,45 @@ const TYPES = {
     drops: [{ id: 'feather', min: 1, max: 2 }],
     count: 5, biomes: 'beach',
   },
+  monkey: {
+    model: makeMonkey, hp: 15,
+    radius: 0.4,
+    hitbox: { w: 0.6, h: 1.4, d: 0.6 },
+    speed: 1.35, chaseSpeed: 4.4,
+    detect: 12, hearMul: 1.5, attackRange: 0,
+    damage: 0, biteCooldown: 2,
+    fleeBelow: 1, territory: 22,
+    temperament: 'skittish',
+    label: 'Обезьяна',
+    drops: [{ id: 'fiber', min: 1, max: 3 }, { id: 'berries', min: 0, max: 2 }],
+    count: 7, biomes: 'land',
+  },
+  turtle: {
+    model: makeTurtle, hp: 26,
+    radius: 0.55,
+    hitbox: { w: 1.0, h: 0.6, d: 0.85 },
+    speed: 0.42, chaseSpeed: 0.6,
+    detect: 5, hearMul: 1.1, attackRange: 0,
+    damage: 0, biteCooldown: 3,
+    fleeBelow: 1, territory: 7,
+    temperament: 'skittish',
+    label: 'Черепаха',
+    drops: [{ id: 'hide', min: 1, max: 2 }, { id: 'rawMeat', min: 1, max: 1 }],
+    count: 6, biomes: 'beach',
+  },
+  fish: {
+    model: makeFish, hp: 4,
+    radius: 0.3,
+    hitbox: { w: 0.95, h: 0.45, d: 0.45 },
+    speed: 1.3, chaseSpeed: 2.6,
+    detect: 7, hearMul: 1.2, attackRange: 0,
+    damage: 0, biteCooldown: 3,
+    fleeBelow: 1, territory: 12,
+    temperament: 'skittish', swim: true,
+    label: 'Рыба',
+    drops: [{ id: 'rawMeat', min: 1, max: 1 }],
+    count: 18, biomes: 'water',
+  },
   snake: {
     model: makeSnake, hp: 8,
     radius: 0.34,
@@ -72,10 +112,10 @@ const TYPES = {
 
 const SOUND_BY_STATE = {
   // спокойные звуки: кабан похрюкивает, змея шипит, краб щёлкает, чайка кричит
-  idle: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull' },
-  alert: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull' },
+  idle: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey', fish: 'bubble', turtle: 'grunt' },
+  alert: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey', fish: 'bubble' },
   attack: { boar: 'grunt', snake: 'hiss' },
-  hurt: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull' },
+  hurt: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey' },
   step: { crab: 'crab' },
 };
 
@@ -122,6 +162,8 @@ export class Mobs {
       if (world.slopeAt(x, z) > 0.6) continue;
       if (kind === 'beach' && (h < 0.6 || h > 2.4)) continue;
       if (kind === 'land' && (h < 1.6 || h > 14)) continue;
+      // рыба живёт только там, где действительно глубоко
+      if (kind === 'water' && (h > -0.9 || h < -7)) continue;
       if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) continue;
       // не появляться вплотную к другому зверю
       if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) continue;
@@ -297,7 +339,7 @@ export class Mobs {
   /** Игрок не проходит сквозь зверей: мягко выталкиваем его из их радиусов */
   resolvePlayer(playerPos, velocity = null, playerRadius = 0.35) {
     for (const mob of this.list) {
-      if (!mob.alive || mob.def.flying) continue;
+      if (!mob.alive || mob.def.flying || mob.def.swim) continue;
       const dx = playerPos.x - mob.x;
       const dz = playerPos.z - mob.z;
       const min = mob.def.radius + playerRadius;
@@ -779,8 +821,15 @@ export class Mobs {
     const nx = mob.x + ax * step;
     const nz = mob.z + az * step;
 
-    // в воду не лезем
-    if (this.world.heightAt(nx, nz) < 0.45) {
+    // в воду не лезем, а рыба — наоборот, из воды не выходит
+    if (def.swim) {
+      if (this.world.heightAt(nx, nz) > -0.5) {
+        mob.targetX = mob.home.x;
+        mob.targetZ = mob.home.z;
+        if (mob.state === 'chase') this.setState(mob, 'patrol');
+        return;
+      }
+    } else if (this.world.heightAt(nx, nz) < 0.45) {
       mob.targetX = mob.home.x;
       mob.targetZ = mob.home.z;
       if (mob.state === 'chase') this.setState(mob, 'patrol');
@@ -808,6 +857,8 @@ export class Mobs {
   }
 
   _blocked(x, z, r) {
+    // обводки моделей: зверь тоже не проходит сквозь оболочку
+    if (this.world.shells && this.world.shells.blocked(x, z, r * 0.8, this.world.heightAt(x, z))) return true;
     for (const c of this.world.colliders) {
       if (c.disabled || c.fire || c.soft) continue;
       if (c.r < 0.3) continue;
@@ -825,9 +876,13 @@ export class Mobs {
     mob.y = groundY;
     mob.phase += dt * (2.2 + mob.speedNow * 1.8);
 
-    const bob = def.flying ? 0 : Math.abs(Math.sin(mob.phase)) * 0.05 * Math.min(1, mob.speedNow);
+    const bob = def.flying || def.swim ? 0 : Math.abs(Math.sin(mob.phase)) * 0.05 * Math.min(1, mob.speedNow);
     const fly = def.flying ? mob.flyY + Math.sin(mob.phase * 0.4) * 0.8 : 0;
-    mob.group.position.set(mob.x, groundY + bob + fly, mob.z);
+    // рыба идёт под поверхностью: не выше 40 см от воды и не ниже дна
+    const swimY = def.swim
+      ? Math.min(CONFIG.world.seaLevel - 0.55, groundY + 0.9) + Math.sin(mob.phase * 0.6) * 0.18
+      : 0;
+    mob.group.position.set(mob.x, def.swim ? swimY : groundY + bob + fly, mob.z);
     // модели зверей собраны вдоль +X, поэтому курс = facing − 90°:
     // без этой поправки кабан, краб и чайка едут боком
     mob.group.rotation.y = mob.facing - Math.PI / 2;
@@ -1014,6 +1069,56 @@ export class Mobs {
       const flick = Math.sin(mob.animTime * speed) > 0.55 ? 1 : 0.25;
       p.tongue.scale.x = flick;
       p.tongue.visible = !sleeping;
+    }
+
+    // --- обезьяна: длинные руки машут вразнобой с ногами ---
+    if (p.arms) {
+      const amp = 0.55 + run * 0.45;
+      p.arms.forEach((arm, i) => {
+        const ph = t * 1.15 + (i ? Math.PI : 0);
+        arm.rotation.x = Math.sin(ph) * amp * (0.3 + walk);
+        arm.rotation.z = (i ? -1 : 1) * (0.12 + Math.cos(ph) * 0.12 * walk);
+      });
+    }
+    if (p.tailSegs) {
+      // хвост закручивается в крючок и подрагивает на бегу
+      p.tailSegs.forEach((seg, i) => {
+        seg.rotation.z = -0.5 + i * 0.12 + Math.sin(mob.animTime * (1.4 + walk * 2) - i * 0.5) * (0.08 + walk * 0.1);
+        seg.rotation.y = Math.sin(mob.animTime * 1.1 - i * 0.4) * 0.12 * (0.5 + walk);
+      });
+    }
+
+    // --- черепаха: лапы переставляются медленно, голова покачивается ---
+    if (def.type === 'turtle') {
+      p.legs?.forEach((leg, i) => {
+        const ph = t * 1.1 + (i % 2 ? Math.PI : 0);
+        leg.rotation.x = Math.sin(ph) * 0.32 * (0.25 + walk);
+        leg.position.y = 0.14 + Math.max(0, Math.sin(ph)) * 0.03 * walk;
+      });
+      if (p.head) {
+        p.head.position.y = 0.2 + Math.sin(mob.animTime * 1.2) * 0.015;
+        p.head.rotation.y = state === 'idle' ? Math.sin(mob.animTime * 0.5) * 0.4 : 0;
+      }
+      // панцирь чуть покачивается при ходьбе
+      if (p.body) p.body.rotation.z = Math.sin(t * 1.1) * 0.05 * walk;
+    }
+
+    // --- рыба: тело виляет, хвост работает как весло ---
+    if (def.type === 'fish') {
+      const wiggle = 0.25 + walk * 0.55;
+      if (p.body) {
+        p.body.rotation.y = Math.sin(t * (4 + walk * 4)) * 0.16;
+        p.body.rotation.z = Math.sin(t * (2 + walk * 2)) * 0.08;
+      }
+      if (p.tail) {
+        p.tail.rotation.y = Math.sin(t * (4.5 + walk * 4.5)) * wiggle;
+        p.tail.rotation.z = Math.sin(t * 2.5) * 0.1;
+      }
+      if (p.fins) {
+        p.fins.forEach((fin, i) => {
+          fin.rotation.x = Math.sin(t * 3 + i) * 0.18;
+        });
+      }
     }
 
     // --- сон: зверь ложится и не дёргается ---

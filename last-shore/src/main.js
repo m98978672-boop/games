@@ -702,8 +702,20 @@ class Game {
       case 'F3':
         e.preventDefault();
         this.debugArmed = true;
-        this.ui.toast('Отладка: нажми F — показать хитбоксы всех моделей');
+        this.ui.toast('Отладка: F — хитбоксы, Ж — обводки моделей (невидимые треугольники)');
         break;
+      // Ж на клавиатуре — та же клавиша, что «;» в латинской раскладке
+      case 'Semicolon':
+      case 'KeyZ': {
+        if (!this.debugArmed) break;
+        e.preventDefault();
+        this.debugArmed = false;
+        const on = this.world.shells.toggle();
+        this.ui.toast(on
+          ? `Обводки включены: ${this.world.shells.stats.prisms} моделей, ${this.world.shells.stats.triangles} треугольников — сквозь них не пройти`
+          : 'Обводки выключены (F3 → Ж — снова показать)');
+        break;
+      }
       case 'KeyV': this.toggleView(); break;
       case 'F1': e.preventDefault(); this.showDiag(); break;
       case 'KeyC': {
@@ -1144,13 +1156,15 @@ class Game {
       this.ui.toast('В воде станок не поставить', true);
       return;
     }
+    // под станком выравниваем площадку: он должен стоять на ровном
+    const flatY = this.world.levelSpot(x, z, 1.7, h);
     this.takeItem(id, 1);
     const group = type === 'grind' ? buildGrindstone() : buildWorkbench();
-    group.position.set(x, h, z);
+    group.position.set(x, flatY, z);
     group.rotation.y = -this.player.facing + Math.PI / 2;
     group.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     this.scene.add(group);
-    const station = { type, x, y: h, z, group };
+    const station = { type, x, y: flatY, z, group };
     this.stations.push(station);
     this.world.colliders.push({ x, z, r: 0.95, height: 1.1, kind: 'station' });
     station.hitboxId = this.hitboxes.registerStatic('station',
@@ -1943,6 +1957,8 @@ class Game {
       this.ui.toast('В воде костёр не поставить', true);
       return;
     }
+    // костёр тоже ставим на ровную площадку, а не на косогор
+    this.world.levelSpot(x, z, 1.6, h);
     this.takeItem('campfireKit', 1);
     const fire = this.resources.addCampfire(x, z);
     this.resources.addFuel(fire, 90);
