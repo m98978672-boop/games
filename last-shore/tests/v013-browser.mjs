@@ -94,23 +94,42 @@ const dig = await page.evaluate(() => {
     seen.push(res.layer);
     if (res.void) { reached = true; break; }
   }
-  // цвет дна лунки: срез породы темнее травы
-  const col = w.terrain.geometry.attributes.color;
-  const base = w.baseColors;
-  let changed = 0;
-  for (let i = 0; i < col.count; i++) if (Math.abs(col.getX(i) - base[i * 3]) > 0.004) changed++;
+  // яма вырезана из рельефа по клеткам сетки, а не наложена поверху
+  const triBase = w.terrainIndexBase ? w.terrainIndexBase.length / 3 : 0;
+  const idx = w.terrain.geometry.index;
+  const cutTris = triBase - (idx ? idx.count / 3 : 0);
+  const pit = w.pitAt(spot.x, spot.z);
+  const step = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+  const onGrid = pit
+    ? [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1]
+      .every((v) => Math.abs((v + 180) / step - Math.round((v + 180) / step)) < 1e-6)
+    : false;
+  const heightsKept = Math.abs(w.heights[0] - snap[0]) < 1e-6;
+  const sunk = pit ? w.baseHeightAt(spot.x, spot.z) - w.heightAt(spot.x, spot.z) : 0;
   for (let i = 0; i < snap.length; i++) w.heights[i] = snap[i];
   w.digStore.clear();
   w.surfaceStore.clear();
+  w.pits.forEach((pp) => { w.pitGroup.remove(pp.group); if (pp.walls.geometry) pp.walls.geometry.dispose(); });
+  w.pits.clear();
+  w.cutPits.clear();
+  w.cutCells.clear();
+  w._rebuildTerrainIndex();
   w._applyHeights();
   return {
-    ok: reached && seen.includes('stone') && !seen.includes('sand'),
+    ok: reached && seen.includes('stone') && !seen.includes('sand') && cutTris > 0 && onGrid && !!pit && pit.steps >= 2,
     layers: [...new Set(seen)].join(' → '),
-    recolored: changed,
+    cutTris,
+    onGrid,
+    cells: pit ? pit.rect.cells : 0,
+    steps: pit ? pit.steps : 0,
+    sunk: +sunk.toFixed(2),
+    heightsKept,
     water: seen.includes('sand'),
   };
 });
-console.log('копание:', dig.layers, '· до пустоты шахты:', dig.ok, '· вершин со срезом:', dig.recolored);
+console.log('копание:', dig.layers, '· до пустоты шахты:', dig.ok, '· вырезано треугольников:', dig.cutTris,
+  '· клеток', dig.cells + '×' + dig.cells, '· край по сетке:', dig.onGrid, '· дно на', dig.sunk, 'м ниже · ступеней', dig.steps,
+  '· высоты узлов целы:', dig.heightsKept);
 
 // --- полёт в креативе ---
 const fly = await page.evaluate(() => {

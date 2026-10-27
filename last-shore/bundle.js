@@ -30474,6 +30474,10 @@ void main() {
       this.digEvents = 0;
       this.surfaceStore = /* @__PURE__ */ new Map();
       this.pits = /* @__PURE__ */ new Map();
+      this.cutCells = /* @__PURE__ */ new Set();
+      this.cutPits = /* @__PURE__ */ new Map();
+      this.terrainIndexBase = null;
+      this.playerPos = null;
       this.baseColors = null;
       this.pickups = [];
       this.time = 0;
@@ -30512,21 +30516,30 @@ void main() {
         }
       }
     }
-    /** Высота рельефа в мировых координатах (билинейно по сетке) */
-    heightAt(x, z) {
+    /** Высота сетки рельефа (билинейно), без учёта выкопанных ям */
+    _gridHeightAt(x, z, arr = this.heights) {
       const gx = clamp2((x + SIZE / 2) / STEP, 0, GRID - 1.001);
       const gz = clamp2((z + SIZE / 2) / STEP, 0, GRID - 1.001);
       const ix = Math.floor(gx);
       const iz = Math.floor(gz);
       const fx = gx - ix;
       const fz = gz - iz;
-      const h00 = this.heights[iz * GRID + ix];
-      const h10 = this.heights[iz * GRID + ix + 1];
-      const h01 = this.heights[(iz + 1) * GRID + ix];
-      const h11 = this.heights[(iz + 1) * GRID + ix + 1];
+      const h00 = arr[iz * GRID + ix];
+      const h10 = arr[iz * GRID + ix + 1];
+      const h01 = arr[(iz + 1) * GRID + ix];
+      const h11 = arr[(iz + 1) * GRID + ix + 1];
       const a = h00 + (h10 - h00) * fx;
       const b = h01 + (h11 - h01) * fx;
       return a + (b - a) * fz;
+    }
+    /**
+     * Высота земли в мировых координатах. Яма вырезана из рельефа, поэтому
+     * внутри неё высота — пол ямы или ступень, а не дёрн: герой туда падает.
+     */
+    heightAt(x, z) {
+      const pitY = this.pitFloorAt(x, z);
+      if (pitY !== null) return pitY;
+      return this._gridHeightAt(x, z);
     }
     slopeAt(x, z) {
       const d = 1.5;
@@ -30616,6 +30629,7 @@ void main() {
       this.terrain.receiveShadow = true;
       this.terrain.castShadow = false;
       this.scene.add(this.terrain);
+      this.terrainIndexBase = geo.index ? geo.index.array.slice() : null;
     }
     _buildWater() {
       const data = new Uint8Array(GRID * GRID);
@@ -31213,22 +31227,15 @@ void main() {
       const newDug = already + stepDepth;
       const topY = this.surfaceOf(x, z).h0;
       const floorY = Math.max(-5, topY - (newDug + 0.25));
-      const block = this._pitBlock(x, z, radius);
-      for (let iz = block.vz0; iz <= block.vz1; iz++) {
-        for (let ix = block.vx0; ix <= block.vx1; ix++) {
-          this.heights[iz * GRID + ix] = Math.min(this.heights[iz * GRID + ix], floorY);
-        }
-      }
-      let sandFill = 0;
-      if (probe.layer === "sand") {
-        const edge = this.baseHeightAt(block.edgeX, block.edgeZ);
-        if (edge > floorY + 0.2) sandFill = Math.min(0.18, (edge - floorY) * 0.12);
-      }
+      const sandFill = probe.layer === "sand" ? Math.min(0.2, stepDepth * 0.15) : 0;
       this.digStore.set(key, newDug);
       this.digEvents++;
-      this._applyHeights();
-      this._clearTufts(x, z, radius);
-      this._updatePit(x, z, radius, already + stepDepth, probe.surface);
+      const pit = this._carvePit(x, z, radius, floorY + sandFill, probe.surface);
+      if (pit) {
+        const cx = (pit.rect.x0 + pit.rect.x1) / 2;
+        const cz = (pit.rect.z0 + pit.rect.z1) / 2;
+        this._clearTufts(cx, cz, pit.rect.cells * STEP * 0.85 + 0.55);
+      }
       const after = this.heightAt(x, z);
       const next = this.probeAt(x, z);
       const flooded = probe.surface === "sand" && after < CONFIG.world.seaLevel - 0.05;
@@ -31263,31 +31270,97 @@ void main() {
       const b = h01 + (h11 - h01) * fx;
       return a + (b - a) * fz;
     }
-    /** Половина стороны ямы: по ней режется рельеф и ставятся стенки */
-    pitHalf(radius) {
-      return Math.max(1.1, radius * 0.96);
+    /** Ключ клетки сетки (ix, iz) числом: быстрый поиск в Set/Map */
+    _cellKey(ix, iz) {
+      return ix * 1024 + iz;
     }
-    /** Блок узлов сетки, которые опускаются на дно ямы */
-    _pitBlock(x, z, radius) {
+    /** Прямоугольник ямы — ровно по клеткам сетки рельефа (1..4 клетки) */
+    _pitRect(x, z, radius) {
       const half = SIZE / 2;
-      const h = this.pitHalf(radius);
-      const vx0 = clamp2(Math.round((x - h + half) / STEP), 1, GRID - 2);
-      const vx1 = clamp2(Math.round((x + h + half) / STEP), 1, GRID - 2);
-      const vz0 = clamp2(Math.round((z - h + half) / STEP), 1, GRID - 2);
-      const vz1 = clamp2(Math.round((z + h + half) / STEP), 1, GRID - 2);
+      const cells = clamp2(Math.round(radius * 2 / STEP), 1, 4);
+      const ix0 = clamp2(Math.round((x + half) / STEP - cells / 2), 1, GRID - 1 - cells);
+      const iz0 = clamp2(Math.round((z + half) / STEP - cells / 2), 1, GRID - 1 - cells);
       return {
-        half: h,
-        vx0,
-        vx1,
-        vz0,
-        vz1,
-        edgeX: x + h * 1.5,
-        edgeZ: z + h * 1.5,
-        x0: -half + vx0 * STEP,
-        x1: -half + vx1 * STEP,
-        z0: -half + vz0 * STEP,
-        z1: -half + vz1 * STEP
+        cells,
+        ix0,
+        iz0,
+        ix1: ix0 + cells,
+        iz1: iz0 + cells,
+        x0: -half + ix0 * STEP,
+        x1: -half + (ix0 + cells) * STEP,
+        z0: -half + iz0 * STEP,
+        z1: -half + (iz0 + cells) * STEP
       };
+    }
+    /**
+     * Пол ямы под точкой (null — если точки в яме нет). У одной из стенок
+     * идут ступени: они и поднимают пол, по ним из ямы выбираются наружу.
+     */
+    pitFloorAt(x, z) {
+      const pits = this.cutPits;
+      if (!pits || pits.size === 0) return null;
+      const half = SIZE / 2;
+      const ix = Math.floor((x + half) / STEP);
+      const iz = Math.floor((z + half) / STEP);
+      if (ix < 0 || iz < 0 || ix >= GRID || iz >= GRID) return null;
+      const pit = pits.get(ix * 1024 + iz);
+      if (!pit) return null;
+      let t;
+      if (pit.side === "n") t = z - pit.z0;
+      else if (pit.side === "s") t = pit.z1 - z;
+      else if (pit.side === "w") t = x - pit.x0;
+      else t = pit.x1 - x;
+      const run = pit.runPerStep || 1;
+      const k = Math.max(0, Math.min(pit.steps - 1, pit.steps - 1 - Math.floor(Math.max(0, t) / run)));
+      return Math.min(pit.exitY - 0.05, pit.floorY + k * pit.stepH);
+    }
+    /** Яма, в которой лежит точка (или null) */
+    pitAt(x, z) {
+      const half = SIZE / 2;
+      const ix = Math.floor((x + half) / STEP);
+      const iz = Math.floor((z + half) / STEP);
+      return this.cutPits.get(ix * 1024 + iz) || null;
+    }
+    /** Пересобрать индекс рельефа без клеток ям — это и есть настоящая дыра */
+    _rebuildTerrainIndex() {
+      const geo = this.terrain && this.terrain.geometry;
+      const base = this.terrainIndexBase;
+      if (!geo || !base) return 0;
+      if (!this.cutCells || this.cutCells.size === 0) {
+        geo.setIndex(new BufferAttribute(base.slice(), 1));
+        geo.computeBoundingSphere();
+        return 0;
+      }
+      const out = [];
+      for (let q = 0; q < base.length; q += 6) {
+        const v = base[q];
+        const ix = v % GRID;
+        const iz = (v - ix) / GRID;
+        if (this.cutCells.has(ix * 1024 + iz)) continue;
+        out.push(base[q], base[q + 1], base[q + 2], base[q + 3], base[q + 4], base[q + 5]);
+      }
+      const arr = base.constructor.from(out);
+      geo.setIndex(new BufferAttribute(arr, 1));
+      geo.computeBoundingSphere();
+      return out.length;
+    }
+    /** Убрать яму: её клетки возвращаются рельефу */
+    _dropPit(pit) {
+      if (!pit) return false;
+      let changed = false;
+      for (const ck of pit.cells) {
+        if (this.cutPits.get(ck) === pit) {
+          this.cutPits.delete(ck);
+          this.cutCells.delete(ck);
+          changed = true;
+        }
+      }
+      if (pit.group) {
+        this.pitGroup.remove(pit.group);
+        if (pit.walls && pit.walls.geometry) pit.walls.geometry.dispose();
+      }
+      this.pits.delete(pit.key);
+      return changed;
     }
     /** Убрать траву с места, где выкопали яму (иначе травинки висят в воздухе) */
     _clearTufts(x, z, radius) {
@@ -31312,21 +31385,51 @@ void main() {
       }
     }
     /**
-     * Яма в блоках: клетки земли вырезаются ТОЧНО по сетке рельефа
-     * (маска dugCut), а на их место вставляется коробка — стенки и дно со
-     * слоями «земля → камень». Никаких рваных краёв: край ямы идёт по линиям
-     * сетки, как блоки в шахте.
+     * ВЫКОПАТЬ ЯМУ. Клетки сетки вырезаются из индекса рельефа — в земле
+     * появляется настоящая дыра, край которой идёт точно по линиям сетки.
+     * Внутрь ставится дно, стенки со слоями «земля → камень» и ступени,
+     * по которым можно вылезти. Высоты узлов рельефа при этом не меняются,
+     * поэтому ничего не «насаливается» поверх земли.
      */
-    _updatePit(x, z, radius, dug, surface) {
-      if (!this.pitGroup) return;
-      const block = this._pitBlock(x, z, radius);
-      const key = this._digKey(x, z);
-      const topY = this.surfaceOf(x, z).h0;
-      const floorY = Math.max(-5, topY - (dug + 0.25));
+    _carvePit(x, z, radius, floorY, surface) {
+      if (!this.pitGroup) return null;
+      const rect = this._pitRect(x, z, radius);
+      const key = `${rect.ix0},${rect.iz0}`;
+      const cx = (rect.x0 + rect.x1) / 2;
+      const cz = (rect.z0 + rect.z1) / 2;
+      const out = Math.max(0.8, rect.cells * STEP * 0.55);
+      const cands = [
+        { side: "n", x: cx, z: rect.z0 - out, wx: cx, wz: rect.z0 },
+        { side: "s", x: cx, z: rect.z1 + out, wx: cx, wz: rect.z1 },
+        { side: "w", x: rect.x0 - out, z: cz, wx: rect.x0, wz: cz },
+        { side: "e", x: rect.x1 + out, z: cz, wx: rect.x1, wz: cz }
+      ];
+      for (const c of cands) c.h = this.baseHeightAt(c.x, c.z);
+      let pick = null;
+      const pp = this.playerPos;
+      if (pp) {
+        const dx = pp.x - cx;
+        const dz = pp.z - cz;
+        const d = Math.hypot(dx, dz);
+        if (d > 0.4 && d < 14) {
+          const want = Math.abs(dx) > Math.abs(dz) ? dx > 0 ? "w" : "e" : dz > 0 ? "n" : "s";
+          pick = cands.find((c) => c.side === want) || null;
+        }
+      }
+      if (!pick) pick = cands.reduce((a, b) => b.h < a.h ? b : a);
+      const exitY = this.baseHeightAt(pick.wx, pick.wz);
+      const depth = Math.max(0.35, exitY - floorY);
+      const steps = clamp2(Math.ceil(depth / 0.42), 2, 16);
+      const stepH = depth / steps;
+      const alongX = pick.side === "n" || pick.side === "s";
+      const span = alongX ? rect.z1 - rect.z0 : rect.x1 - rect.x0;
+      const stairRun = Math.min(Math.max(1, depth * 0.72), span * 0.72);
+      const runPerStep = stairRun / steps;
       let pit = this.pits.get(key);
       if (!pit) {
         const wallMat = this.textures ? createStoneMaterial(this.textures.rockDetail, { repeat: [1.4, 1] }) : new MeshStandardMaterial({ roughness: 0.98, flatShading: true });
         wallMat.side = DoubleSide;
+        wallMat.vertexColors = true;
         wallMat.color.setHex(16777215);
         const group = new Group();
         group.name = "pit";
@@ -31342,97 +31445,166 @@ void main() {
         }
         group.add(debris);
         this.pitGroup.add(group);
-        pit = { group, walls, debris, mat: wallMat, lumpMat, sig: "" };
+        pit = { key, group, walls, debris, mat: wallMat, lumpMat, sig: "", cells: /* @__PURE__ */ new Set() };
         this.pits.set(key, pit);
       }
-      const sig = `${block.vx0},${block.vz0},${block.vx1},${block.vz1}|${dug.toFixed(2)}|${surface}`;
-      if (pit.sig !== sig) {
-        pit.sig = sig;
-        const soilTop = new Color(surface === "sand" ? 14205331 : surface === "stone" ? 11906722 : 9729612);
-        const soilLow = new Color(surface === "sand" ? 12428923 : surface === "stone" ? 10261898 : 7560252);
-        const rock = new Color(9406588);
-        const rockDeep = new Color(8222573);
-        const pos = [];
-        const col = [];
-        const push = (px, py, pz, c) => {
-          pos.push(px, py, pz);
-          col.push(c.r, c.g, c.b);
-        };
-        const quad = (ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz, c) => {
-          push(ax, ay, az, c);
-          push(bx, by, bz, c);
-          push(cx, cy, cz, c);
-          push(ax, ay, az, c);
-          push(cx, cy, cz, c);
-          push(dx, dy, dz, c);
-        };
-        const inset = 0.09;
-        const x0 = block.x0 + inset;
-        const x1 = block.x1 - inset;
-        const z0 = block.z0 + inset;
-        const z1 = block.z1 - inset;
-        const depth = topY - floorY;
-        const soilD = Math.min(Math.max(0.5, depth * 0.55), 1.15);
-        const segs = 6;
-        for (let side = 0; side < 4; side++) {
-          const vertical = side % 2 === 1;
-          for (let i = 0; i < segs; i++) {
-            const f0 = i / segs;
-            const f1 = (i + 1) / segs;
-            let ax;
-            let az;
-            let bx;
-            let bz;
-            if (vertical) {
-              const px = side === 1 ? x1 : x0;
-              ax = px;
-              bx = px;
-              az = z0 + (z1 - z0) * f0;
-              bz = z0 + (z1 - z0) * f1;
-            } else {
-              const pz = side === 0 ? z0 : z1;
-              az = pz;
-              bz = pz;
-              ax = x0 + (x1 - x0) * f0;
-              bx = x0 + (x1 - x0) * f1;
-            }
-            const topA = this.baseHeightAt(ax, az) - 0.04;
-            const topB = this.baseHeightAt(bx, bz) - 0.04;
-            const midA = Math.max(floorY + 0.1, topA - soilD);
-            const midB = Math.max(floorY + 0.1, topB - soilD);
-            const tone = i % 2 === 0 ? soilTop : soilLow;
-            quad(ax, topA, az, bx, topB, bz, bx, midB, bz, ax, midA, az, tone);
-            if (midA > floorY + 0.1 || midB > floorY + 0.1) {
-              quad(ax, midA, az, bx, midB, bz, bx, floorY, bz, ax, floorY, az, i % 2 ? rockDeep : rock);
-            }
+      let changed = false;
+      const stolen = /* @__PURE__ */ new Set();
+      for (let iz = rect.iz0; iz < rect.iz1; iz++) {
+        for (let ix = rect.ix0; ix < rect.ix1; ix++) {
+          const o = this.cutPits.get(ix * 1024 + iz);
+          if (o && o !== pit) stolen.add(o);
+        }
+      }
+      for (const o of stolen) if (this._dropPit(o)) changed = true;
+      const cells = /* @__PURE__ */ new Set();
+      for (let iz = rect.iz0; iz < rect.iz1; iz++) {
+        for (let ix = rect.ix0; ix < rect.ix1; ix++) {
+          const ck = ix * 1024 + iz;
+          cells.add(ck);
+          this.cutPits.set(ck, pit);
+          if (!this.cutCells.has(ck)) {
+            this.cutCells.add(ck);
+            changed = true;
           }
         }
-        quad(x0, floorY, z0, x1, floorY, z0, x1, floorY, z1, x0, floorY, z1, dug > 1.3 ? rockDeep : soilLow);
-        const geo = new BufferGeometry();
-        geo.setAttribute("position", new Float32BufferAttribute(pos, 3));
-        geo.setAttribute("color", new Float32BufferAttribute(col, 3));
-        geo.computeVertexNormals();
-        geo.computeBoundingSphere();
-        pit.walls.geometry.dispose();
-        pit.walls.geometry = geo;
-        pit.mat.color.setHex(16777215);
-        pit.lumpMat.color.setHex(surface === "sand" ? 12626300 : 8809285);
+      }
+      pit.cells = cells;
+      Object.assign(pit, {
+        rect,
+        floorY,
+        exitY,
+        steps,
+        stepH,
+        runPerStep,
+        stairRun,
+        side: pick.side,
+        surface,
+        x0: rect.x0,
+        x1: rect.x1,
+        z0: rect.z0,
+        z1: rect.z1
+      });
+      if (changed) this._rebuildTerrainIndex();
+      const sig = `${rect.ix0},${rect.iz0},${rect.cells}|${floorY.toFixed(3)}|${pick.side}|${steps}|${surface}`;
+      if (pit.sig !== sig) {
+        pit.sig = sig;
+        this._buildPitGeometry(pit);
       }
       const chunks = pit.debris.children;
-      const cxm = (block.x0 + block.x1) / 2;
-      const czm = (block.z0 + block.z1) / 2;
-      const halfW = (block.x1 - block.x0) / 2;
-      const halfD = (block.z1 - block.z0) / 2;
+      const halfW = (rect.x1 - rect.x0) / 2 + 0.16;
+      const halfD = (rect.z1 - rect.z0) / 2 + 0.16;
       for (let i = 0; i < chunks.length; i++) {
         const a = i / chunks.length * Math.PI * 2 + 0.55;
-        const px = cxm + Math.cos(a) * halfW * 1.06;
-        const pz = czm + Math.sin(a) * halfD * 1.06;
-        chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.08, pz);
+        const px = cx + Math.cos(a) * halfW;
+        const pz = cz + Math.sin(a) * halfD;
+        chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.07, pz);
         chunks[i].rotation.y = a * 2.1;
       }
       pit.group.position.set(0, 0, 0);
       pit.group.visible = true;
-      pit.floorY = floorY;
+      return pit;
+    }
+    /** Дно, стенки со слоями и ступени выкопанной ямы */
+    _buildPitGeometry(pit) {
+      const rect = pit.rect;
+      const floorY = pit.floorY;
+      const surface = pit.surface;
+      const side = pit.side;
+      const steps = pit.steps;
+      const stepH = pit.stepH;
+      const runPerStep = pit.runPerStep;
+      const soilTop = new Color(surface === "sand" ? 14205331 : surface === "stone" ? 11906722 : 9729612);
+      const soilLow = new Color(surface === "sand" ? 12428923 : surface === "stone" ? 10261898 : 7560252);
+      const rock = new Color(9406588);
+      const rockDeep = new Color(8222573);
+      const pos = [];
+      const col = [];
+      const uvs = [];
+      const vtx = (px, py, pz, c) => {
+        pos.push(px, py, pz);
+        col.push(c.r, c.g, c.b);
+        uvs.push((px + pz) * 0.55, py * 0.55);
+      };
+      const quad = (a, b, c, d, tone) => {
+        vtx(a[0], a[1], a[2], tone);
+        vtx(b[0], b[1], b[2], tone);
+        vtx(c[0], c[1], c[2], tone);
+        vtx(a[0], a[1], a[2], tone);
+        vtx(c[0], c[1], c[2], tone);
+        vtx(d[0], d[1], d[2], tone);
+      };
+      const seg = Math.max(2, rect.cells * 3);
+      for (let i = 0; i < 4; i++) {
+        const vertical = i % 2 === 1;
+        for (let k = 0; k < seg; k++) {
+          const f0 = k / seg;
+          const f1 = (k + 1) / seg;
+          let ax;
+          let az;
+          let bx;
+          let bz;
+          if (vertical) {
+            const px = i === 1 ? rect.x1 : rect.x0;
+            ax = px;
+            bx = px;
+            az = rect.z0 + (rect.z1 - rect.z0) * f0;
+            bz = rect.z0 + (rect.z1 - rect.z0) * f1;
+          } else {
+            const pz = i === 0 ? rect.z0 : rect.z1;
+            az = pz;
+            bz = pz;
+            ax = rect.x0 + (rect.x1 - rect.x0) * f0;
+            bx = rect.x0 + (rect.x1 - rect.x0) * f1;
+          }
+          const topA = this.baseHeightAt(ax, az) + 0.03;
+          const topB = this.baseHeightAt(bx, bz) + 0.03;
+          const soilD = Math.min(Math.max(0.45, (topA - floorY) * 0.45), 1.1);
+          const midA = Math.max(floorY, topA - soilD);
+          const midB = Math.max(floorY, topB - soilD);
+          const tone = k % 2 === 0 ? soilTop : soilLow;
+          quad([ax, topA, az], [bx, topB, bz], [bx, midB, bz], [ax, midA, az], tone);
+          if (midA > floorY + 0.02 || midB > floorY + 0.02) {
+            quad([ax, midA, az], [bx, midB, bz], [bx, floorY, bz], [ax, floorY, az], k % 2 ? rockDeep : rock);
+          }
+        }
+      }
+      quad(
+        [rect.x0, floorY, rect.z0],
+        [rect.x1, floorY, rect.z0],
+        [rect.x1, floorY, rect.z1],
+        [rect.x0, floorY, rect.z1],
+        floorY < pit.exitY - 1.3 ? rockDeep : soilLow
+      );
+      const alongX = side === "n" || side === "s";
+      const wallC = side === "n" ? rect.z0 : side === "s" ? rect.z1 : side === "w" ? rect.x0 : rect.x1;
+      const dir = side === "n" || side === "w" ? 1 : -1;
+      const w0 = alongX ? rect.x0 : rect.z0;
+      const w1 = alongX ? rect.x1 : rect.z1;
+      const spanA = alongX ? rect.z1 - rect.z0 : rect.x1 - rect.x0;
+      const P2 = (u, t, y) => alongX ? [u, y, wallC + dir * Math.min(t, spanA)] : [wallC + dir * Math.min(t, spanA), y, u];
+      for (let k = 0; k < steps; k++) {
+        const t0 = (steps - 1 - k) * runPerStep;
+        if (t0 >= spanA - 1e-3) continue;
+        const t1 = Math.min((steps - k) * runPerStep, spanA);
+        const y = floorY + k * stepH;
+        const tone = k <= 1 ? rockDeep : k === 2 ? rock : k % 2 ? soilLow : soilTop;
+        quad(P2(w0, t0, y), P2(w1, t0, y), P2(w1, t1, y), P2(w0, t1, y), tone);
+        if (k > 0) {
+          const yLow = Math.max(floorY, y - stepH);
+          quad(P2(w0, t1, y), P2(w1, t1, y), P2(w1, t1, yLow), P2(w0, t1, yLow), k > 2 ? soilLow : rock);
+        }
+      }
+      const geo = new BufferGeometry();
+      geo.setAttribute("position", new Float32BufferAttribute(pos, 3));
+      geo.setAttribute("color", new Float32BufferAttribute(col, 3));
+      geo.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+      geo.computeVertexNormals();
+      geo.computeBoundingSphere();
+      pit.walls.geometry.dispose();
+      pit.walls.geometry = geo;
+      pit.mat.color.setHex(16777215);
+      pit.lumpMat.color.setHex(surface === "sand" ? 12626300 : 8809285);
     }
     /** Копание с учётом соседних клеток: у края ямы глубина меньше */
     dugAtWeighted(x, z) {
@@ -31456,36 +31628,10 @@ void main() {
       const geo = this.terrain && this.terrain.geometry;
       if (!geo) return;
       const pos = geo.attributes.position;
-      const col = geo.attributes.color;
-      const base = this.baseColors;
-      const soilCut = new Color(9072969);
-      const rockCut = new Color(9407104);
-      const darkCut = new Color(7301730);
-      const tmp = new Color();
-      const needColor = !!(col && base);
       for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        const z = pos.getZ(i);
-        pos.setY(i, this.heightAt(x, z));
-        if (needColor) {
-          const dug = this.dugAtWeighted(x, z);
-          if (dug > 0.25) {
-            const k = clamp2((dug - 0.25) / 1.1, 0, 1);
-            tmp.setRGB(base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
-            if (dug < SOIL_THICK) tmp.lerp(soilCut, k * 0.6);
-            else if (dug < SOIL_THICK + STONE_THICK * 0.72) {
-              tmp.lerp(rockCut, clamp2(0.5 + (dug - SOIL_THICK) * 0.4, 0, 1));
-            } else {
-              tmp.copy(rockCut).lerp(darkCut, clamp2((dug - SOIL_THICK - STONE_THICK * 0.72) * 1.2, 0, 1));
-            }
-            col.setXYZ(i, tmp.r, tmp.g, tmp.b);
-          } else if (Math.abs(col.getX(i) - base[i * 3]) > 1e-4) {
-            col.setXYZ(i, base[i * 3], base[i * 3 + 1], base[i * 3 + 2]);
-          }
-        }
+        pos.setY(i, this._gridHeightAt(pos.getX(i), pos.getZ(i)));
       }
       pos.needsUpdate = true;
-      if (col) col.needsUpdate = true;
       geo.computeVertexNormals();
       geo.computeBoundingSphere();
       if (this.depthTexture) {
@@ -32628,6 +32774,10 @@ void main() {
         if (Math.abs(x) > CONFIG.world.size * 0.75 || Math.abs(z) > CONFIG.world.size * 0.75) return false;
         const h = world.heightAt(x, z);
         if (h < -P.maxDepth) return false;
+        if (!this.fly) {
+          const rise = h - world.heightAt(this.position.x, this.position.z);
+          if (rise > 0.55) return false;
+        }
         if (world.slopeAt(x, z) > 2.4) return false;
         return true;
       };
@@ -36591,7 +36741,7 @@ void main() {
             fact: `\u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u044F\u0440\u043A\u043E\u0441\u0442\u0438 ${fmt(span)} \xB7 \u0440\u0430\u0437\u0431\u0440\u043E\u0441 \u043E\u0442\u0442\u0435\u043D\u043A\u0430 ${fmt(hueSpan)} \xB7 \u0442\u0440\u0430\u0432\u044F\u043D\u044B\u0445 \u0442\u043E\u0447\u0435\u043A ${lums.length}`
           };
         } },
-        { name: "\u042F\u043C\u0430 \u043E\u0442 \u043B\u043E\u043F\u0430\u0442\u044B \u2014 \u0431\u043B\u043E\u043A, \u0430 \u043D\u0435 \u0434\u044B\u0440\u0430", walk: "dig", run: (g) => {
+        { name: "\u042F\u043C\u0430 \u2014 \u0434\u044B\u0440\u0430 \u0432 \u0440\u0435\u043B\u044C\u0435\u0444\u0435, \u043A\u0440\u0430\u0439 \u043F\u043E \u0441\u0435\u0442\u043A\u0435", walk: "dig", run: (g) => {
           const w = g.world;
           const p = g.player.position;
           let spot = null;
@@ -36605,19 +36755,22 @@ void main() {
           }
           if (!spot) return { ok: false, expect: "\u0441\u0443\u0445\u043E\u0435 \u0440\u043E\u0432\u043D\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", fact: "\u043C\u0435\u0441\u0442\u0430 \u043D\u0435\u0442" };
           const before = w.baseHeightAt(spot.x, spot.z);
-          let res = null;
-          for (let i = 0; i < 6; i++) res = w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
-          const pit = w.pits.get(w._digKey(spot.x, spot.z));
+          const triBase = w.terrainIndexBase ? w.terrainIndexBase.length / 3 : 0;
+          for (let i = 0; i < 5; i++) w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
+          const idx = w.terrain.geometry.index;
+          const cutTris = triBase - (idx ? idx.count / 3 : 0);
+          const pit = w.pitAt(spot.x, spot.z);
+          if (!pit) return { ok: false, expect: "\u0432\u044B\u043A\u043E\u043F\u0430\u043D\u043D\u0430\u044F \u044F\u043C\u0430", fact: "\u044F\u043C \u043D\u0435\u0442" };
           const sunk = before - w.heightAt(spot.x, spot.z);
-          const walls = pit ? pit.walls.geometry.attributes.position.count : 0;
-          const hasLayers = pit ? pit.walls.geometry.attributes.color.count === walls : false;
-          const restored = { heights: w.heights.slice() };
-          void restored;
-          void res;
+          const walls = pit.walls.geometry.attributes.position.count;
+          const step = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+          const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1].every((v) => Math.abs((v + 180) / step - Math.round((v + 180) / step)) < 1e-6);
+          const g0 = w.heightAt(pit.rect.x0 + (pit.rect.x1 - pit.rect.x0) / 2, pit.rect.z0 + (pit.rect.z1 - pit.rect.z0) / 2);
+          const dugIn = Math.abs(g0 - before) > 0.05;
           return {
-            ok: !!pit && sunk > 0.5 && walls > 0 && hasLayers,
-            expect: "\u0437\u0435\u043C\u043B\u044F \u043F\u0440\u043E\u0441\u0435\u0434\u0430\u0435\u0442 \u0431\u043B\u043E\u043A\u043E\u043C, \u0443 \u044F\u043C\u044B \u0435\u0441\u0442\u044C \u0441\u0442\u0435\u043D\u043A\u0438 \u0441\u043E \u0441\u043B\u043E\u044F\u043C\u0438",
-            fact: `\u043F\u0440\u043E\u0441\u0430\u0434\u043A\u0430 ${fmt(sunk)} \u043C \xB7 \u0441\u0442\u0435\u043D\u043A\u0438 ${walls} \u0432\u0435\u0440\u0448\u0438\u043D \xB7 \u0441\u043B\u043E\u0438 \u0432\u0438\u0434\u043D\u044B: ${hasLayers ? "\u0434\u0430" : "\u043D\u0435\u0442"}`
+            ok: cutTris >= 2 && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
+            expect: "\u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0437\u0435\u043C\u043B\u0438 \u0432\u044B\u0440\u0435\u0437\u0430\u043D\u044B \u043F\u043E \u0441\u0435\u0442\u043A\u0435, \u0432\u043D\u0443\u0442\u0440\u0438 \u0434\u043D\u043E, \u0441\u0442\u0435\u043D\u043A\u0438 \u0438 \u0441\u0442\u0443\u043F\u0435\u043D\u0438",
+            fact: `\u0432\u044B\u0440\u0435\u0437\u0430\u043D\u043E ${cutTris} \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \xB7 \u043A\u043B\u0435\u0442\u043E\u043A ${pit.rect.cells}\xD7${pit.rect.cells} \xB7 \u043A\u0440\u0430\u0439 \u043F\u043E \u0441\u0435\u0442\u043A\u0435: ${onGrid ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 \u0434\u043D\u043E \u043D\u0430 ${fmt(sunk)} \u043C \u043D\u0438\u0436\u0435 \u0434\u0451\u0440\u043D\u0430 \xB7 \u0441\u0442\u0435\u043D\u043A\u0438 ${walls} \u0432\u0435\u0440\u0448\u0438\u043D \xB7 \u0441\u0442\u0443\u043F\u0435\u043D\u0435\u0439 ${pit.steps}`
           };
         } },
         { name: "\u0425\u0438\u0442\u0431\u043E\u043A\u0441 \u043F\u043E \u0433\u0430\u0431\u0430\u0440\u0438\u0442\u0430\u043C \u043C\u043E\u0434\u0435\u043B\u0438", walk: null, run: (g) => {
@@ -37019,7 +37172,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-26 16:08" : "dev";
+  var BUILD = true ? "2026-10-27 13:40" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -38435,6 +38588,7 @@ void main() {
         this.ui.toast("\u0420\u0430\u0437\u0440\u044B\u0445\u043B\u0438\u043B \u0437\u0435\u043C\u043B\u044E \u2014 \u0435\u0449\u0451 \u0443\u0434\u0430\u0440", true);
         return;
       }
+      w.playerPos = this.player.position;
       const res = w.dig(point.x, point.z, {
         radius: power > 2 ? 2 : 1.45,
         depth: this.creative ? 0.7 : 0.45,
