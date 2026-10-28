@@ -285,7 +285,7 @@ button.big:active{transform:translateY(3px)}
       <button type="button" id="btn-zoom-fit" title="Вся карта на экране / обычный масштаб (M)">КАРТА M</button>
       <button type="button" id="btn-zoom-in" title="Приблизить карту (клавиша +)">+</button>
       <button type="button" id="btn-pause" title="Пауза (Пробел)">ПАУЗА</button>
-      <button type="button" id="btn-speed" title="Скорость игры">СКОРОСТЬ ×1</button>
+      <button type="button" id="btn-speed" title="Скорость игры: ×1 → ×2 → ×5 → ×10 (клавиша V)">СКОРОСТЬ ×1</button>
       <button type="button" id="btn-sound" title="Звук">ЗВУК: ВКЛ</button>
       <button type="button" id="btn-restart" title="Заново">ЗАНОВО</button>
       <button type="button" id="btn-hq" title="Штаб: все города, армии, постройки и строители (H)">ШТАБ H</button>
@@ -344,6 +344,7 @@ button.big:active{transform:translateY(3px)}
           <div><kbd>Q</kbd>/<kbd>E</kbd>/<kbd>T</kbd> армия: сбор / атака / оборона · правый клик — точка сбора</div>
           <div>Колесо мыши, <kbd>+</kbd>/<kbd>−</kbd> — масштаб · <kbd>M</kbd> — вся карта</div>
           <div><kbd>H</kbd> ШТАБ — все города, армии и постройки · клик по строителю — управлять им</div>
+          <div><kbd>V</kbd> скорость: ×1 / ×2 / ×5 / ×10</div>
           <div><kbd>Пробел</kbd> пауза</div>
         </div>
         <button type="button" id="btn-start" class="big" onclick="startGame()">ИГРАТЬ</button>
@@ -397,7 +398,7 @@ button.big:active{transform:translateY(3px)}
     <div id="shop-cards"></div>
     <div id="log"></div>
   </div>
-  <div id="hint">Клавиши 1–8, <b>0</b> — строители (клик по нему — выбрать, правый клик — приказ строить/чинить). <b>H</b> — ШТАБ: всё видно сразу. Армия: <b>Q/E/T</b>. Масштаб: колесо, <b>+</b>/<b>−</b>, <b>M</b> — вся карта. FPV — <b>F</b>. Камера — стрелки/<b>WASD</b> и миникарта; <b>C</b> — сектор.</div>
+  <div id="hint">Клавиши 1–8, <b>0</b> — строители (клик по нему — выбрать, правый клик — приказ строить/чинить). <b>H</b> — ШТАБ: всё видно сразу. Армия: <b>Q/E/T</b>. Скорость: <b>V</b> — ×1/×2/×5/×10. Масштаб: колесо, <b>+</b>/<b>−</b>, <b>M</b> — вся карта. FPV — <b>F</b>. Камера — стрелки/<b>WASD</b> и миникарта; <b>C</b> — сектор.</div>
 </div>
 
 <script>
@@ -417,7 +418,7 @@ window.addEventListener('error', function(e){
 <script>
 'use strict';
 /* ============================================================
-   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.7 (Строитель под контролем, штабное меню, ремонт текстур)
+   ЛИНИЯ ФРОНТА: Сталь и Дроны — v0.7.1 (скорости ×5 и ×10)
    Canvas 2D top-down strategy. Symmetric arsenal, Blue vs Red.
    ============================================================ */
 let W = 2100;                       // world width — grows as cities are captured or lost
@@ -433,6 +434,17 @@ const dist = (a,b) => Math.hypot(a.x-b.x, a.y-b.y);
 const lerp = (a,b,t) => a+(b-a)*t;
 function angLerp(a,b,t){ let d=(b-a)%(Math.PI*2); if(d>Math.PI)d-=Math.PI*2; if(d<-Math.PI)d+=Math.PI*2; return a+d*clamp(t,0,1); }
 const fmtTime = s => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
+function setGameSpeed(speed){
+  if(!G) return;
+  G.speed = GAME_SPEEDS.includes(speed) ? speed : 1;
+  const btn=$('btn-speed'); if(btn) btn.textContent='СКОРОСТЬ ×'+G.speed;
+}
+function cycleGameSpeed(){
+  if(!G) return;
+  const idx=GAME_SPEEDS.indexOf(G.speed);
+  setGameSpeed(GAME_SPEEDS[(idx+1)%GAME_SPEEDS.length]);
+  if(G.started&&!G.over) setAlert('[ШТАБ] Скорость игры: ×'+G.speed,false,1.5*G.speed);
+}
 
 /* ---------------- UNIT DEFINITIONS ---------------- */
 const DEFS = {
@@ -448,6 +460,7 @@ const DEFS = {
 };
 const ORDER = ['infantry','btr','tank','mlrs','fpv','bomber','pvo','reb','builder'];
 const MISSILE = {cost:450, cd:22};
+const GAME_SPEEDS = [1, 2, 5, 10];
 /* Builder projects. A finished settlement is a real small city: income,
    forward spawn point and a repair aura. The three campaign cities remain
    the victory objectives. */
@@ -501,6 +514,7 @@ function resetGame(){
     },
   };
   ORDER.forEach(k=>G.shopCd[k]=0);
+  setGameSpeed(1);
   $('log').innerHTML='';
   log('Штаб на связи. Строй армию, командир!','good');
 }
@@ -2925,7 +2939,7 @@ function renderHQ(){
     +'<b>Q/E/T</b> армия: сбор/атака/оборона · <b>правый клик</b> — точка сбора (или приказ выбранному строителю)<br>'
     +'<b>Клик по строителю</b> — выбрать, второй клик или <b>B</b> — проект, <b>Esc</b> — снять выбор<br>'
     +'<b>Колесо, +/−</b> — масштаб · <b>M</b> — вся карта · <b>C</b> — камера на сектор · стрелки/<b>WASD</b> — камера<br>'
-    +'<b>H</b> или кнопка ШТАБ — этот экран · <b>Пробел</b> — пауза · <b>Enter</b> — старт</div>';
+    +'<b>H</b> или кнопка ШТАБ — этот экран · <b>V</b> или кнопка скорости — ×1/×2/×5/×10 · <b>Пробел</b> — пауза · <b>Enter</b> — старт</div>';
   el.innerHTML=h;
   if(el.querySelectorAll) el.querySelectorAll('[data-bid]').forEach(btn=>{
     btn.onclick=()=>{ const id=parseInt(btn.dataset.bid,10);
@@ -2990,6 +3004,7 @@ window.addEventListener('keydown',e=>{
   else if(e.key==='t'||e.key==='T'||e.key==='е'||e.key==='Е') setPlayerOrder('hold');
   else if(e.key==='+'||e.key==='=') setZoomAt((G.zoom||1)*1.18,VIEW_W/2,H/2);
   else if(e.key==='-'||e.key==='_') setZoomAt((G.zoom||1)/1.18,VIEW_W/2,H/2);
+  else if(e.key==='v'||e.key==='V'||e.key==='м'||e.key==='М'){ initAudio(); cycleGameSpeed(); }
   else if(e.key==='h'||e.key==='H'||e.key==='р'||e.key==='Р') toggleHQ();
   else if(e.key==='m'||e.key==='M'||e.key==='ь'||e.key==='Ь'){
     if((G.zoom||1)>fitZoom()*1.08){ G.zoomTarget=fitZoom(); G.camTargetX=0; G.camTargetY=0; G.camManualT=6; G.showcaseT=0; }
@@ -2998,7 +3013,7 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{ keysDown[(e.key||'').toLowerCase()]=false; });
 function togglePause(){ if(!G.started||G.over||G.hqOpen)return; G.paused=!G.paused; $('btn-pause').textContent=G.paused?'ПРОДОЛЖИТЬ':'ПАУЗА'; }
 $('btn-pause').onclick=()=>{initAudio();togglePause();};
-$('btn-speed').onclick=function(){ initAudio(); G.speed=G.speed===1?2:1; this.textContent='СКОРОСТЬ ×'+G.speed; };
+$('btn-speed').onclick=function(){ initAudio(); cycleGameSpeed(); };
 $('btn-sound').onclick=function(){ soundOn=!soundOn; this.textContent=soundOn?'ЗВУК: ВКЛ':'ЗВУК: ВЫКЛ'; if(soundOn)initAudio(); };
 $('btn-restart').onclick=()=>{ initAudio(); const was=G.started; resetGame(); G.started=was; $('screen-over').classList.add('hidden'); if(!was)$('screen-start').classList.remove('hidden'); $('btn-pause').textContent='ПАУЗА'; };
 $('btn-help').onclick=()=>$('screen-help').classList.remove('hidden');
@@ -3041,7 +3056,7 @@ let last=performance.now(), uiT=0;
 function loop(now){
   requestAnimationFrame(loop);
   let dt=Math.min(0.05,(now-last)/1000); last=now;
-  if(G.started&&!G.paused&&!G.over){ const sdt=dt*G.speed; const steps=G.speed; for(let i=0;i<steps;i++) update(sdt/steps); }
+  if(G.started&&!G.paused&&!G.over){ const speed=GAME_SPEEDS.includes(G.speed)?G.speed:1; const sdt=dt*speed; for(let i=0;i<speed;i++) update(sdt/speed); }
   else if(G.over){ // keep explosions/smoke alive behind the panel
     for(const p of G.particles){ p.life+=dt; if(p.kind!=='ring'){p.x+=p.vx*dt;p.y+=p.vy*dt;} } G.particles=G.particles.filter(p=>p.life<p.max); }
   draw();
