@@ -46,6 +46,21 @@ const STONE_THICK = STRATA.reduce((sum, st) => sum + st.thick, 0);
 const VOID_COLOR = 0x2b2433;
 // Предел роста одной ямы после обвалов: 8 клеток в сторону (14.4 м)
 const MAX_PIT_CELLS = 8;
+const rng0 = (i) => (i * 2.399963) % (Math.PI * 2);
+
+// Размер чанка для отсечения невидимой растительности (м)
+const CHUNK = 90;
+
+// Малые острова: кольцо вокруг главного, вне его берегового вала.
+// x, z — центр, rad — радиус основания, h — высота холма.
+const ISLETS = [
+  { x: -122, z: -84, rad: 46, h: 8.5 },
+  { x: 128, z: -66, rad: 38, h: 6.0 },
+  { x: 96, z: 124, rad: 52, h: 10.5 },
+  { x: -108, z: 118, rad: 34, h: 5.0 },
+  { x: 8, z: -146, rad: 30, h: 4.2 },
+  { x: -160, z: 22, rad: 27, h: 3.6 },
+];
 const DIG_CELL = 1.4;
 
 // Почва под ногами: у каждой полосы свой цвет — от светлого песка
@@ -149,6 +164,9 @@ export class World {
     this.playerPos = null;          // где герой: ступени разворачиваются к нему
     this.baseColors = null;     // исходные цвета рельефа (для показа среза породы)
     this.pickups = [];          // { mesh, kind, name }
+    this.chunkMeshes = [];      // куски растительности по чанкам (отсечение видимости)
+    this.flatCore = new Set();  // узлы ровных площадок: их уклоны не трогаем
+    this.dens = [];             // дома зверей
     this.time = 0;
 
     // обводки моделей: невидимые треугольные оболочки, сквозь них не пройти
@@ -187,7 +205,35 @@ export class World {
     const landH = 1.2 + Math.pow(hills, 1.15) * 6.2 + detail * 1.2 + mountain * (0.4 + mass * 0.6);
     const seaH = -1.6 - (1 - mass) * 11.0;
 
-    return seaH + (landH - seaH) * mass;
+    const main = seaH + (landH - seaH) * mass;
+    return Math.max(main, this._isletHeight(x, z, s));
+  }
+
+  /**
+   * Малые острова вокруг главного: у каждого свой холм, свой пляж и
+   * пролив между ним и большой землёй. Высота берётся как максимум —
+   * так острова не «привариваются» к берегу, а встают отдельными пятнами.
+   */
+  _isletHeight(x, z, s = this.seed) {
+    let best = -Infinity;
+    for (const isl of ISLETS) {
+      const dx = x - isl.x;
+      const dz = z - isl.z;
+      const d = Math.hypot(dx, dz) / isl.rad;
+      if (d > 1.5) continue;
+      // рваный контур: шум по углу, чтобы остров не был правильным кругом
+      const a = Math.atan2(dz, dx);
+      const wobble = (fbm(Math.cos(a) * 2.1 + isl.x * 0.01, Math.sin(a) * 2.1 + isl.z * 0.01, 2, s + 71) - 0.5) * 0.34;
+      const rr = d * (1 + wobble);
+      const shore = smoothstep(1.02, 0.72, rr);
+      if (shore <= 0) { best = Math.max(best, -12); continue; }
+      const hills = fbm(x * 0.03 + isl.x, z * 0.03 - isl.z, 3, s + 91);
+      const peak = isl.h * (0.55 + hills * 0.85) * shore;
+      const beach = 0.9 * smoothstep(1.0, 0.86, rr);
+      const sea = -1.4 - (1 - shore) * 8.5;
+      best = Math.max(best, sea + (peak + beach - sea) * shore);
+    }
+    return best;
   }
 
   _buildHeights() {
@@ -198,6 +244,102 @@ export class World {
         this.heights[iz * GRID + ix] = this._rawHeight(x, z);
       }
     }
+    this._quantizeSlopes();
+  }
+
+  /**
+   * Уклоны земли — только из разрешённого набора: 0°, 15°, 30°, 40°.
+   * Каждая пара соседних узлов приводится к ближайшей ступени, поэтому
+   * склоны получаются «террасами», а обрывов круче 40° на поверхности нет
+   * (90° остаются только у стенок выкопанных ям и шахт).
+   */
+  _quantizeSlopes() {
+    // Уклон земли — кратен 15°: 0°, 15°, 30°, а круче 3 ступеней (≈40°) нельзя.
+    // Одна ступень = tan(15°) * шаг сетки, поэтому работаем в целых ступенях:
+    // heights = k * stepH. Узлы ровных площадок (под моделями) не трогаем.
+    const stepH = Math.tan(15 * Math.PI / 180) * STEP;
+    const maxSteps = 3;                 // 3 × 15° = 38.8° — предел поверхности
+    const maxStepsDiag = 4;             // по диагонали то же ограничение
+    const lock = this.flatCore || new Set();
+    const n = this.heights.length;
+    const k = new Int16Array(n);
+    for (let i = 0; i < n; i++) {
+      if (lock.has(i)) { k[i] = Math.round(this.heights[i] / stepH); continue; }
+      k[i] = Math.round(this.heights[i] / stepH);
+    }
+    // Ограничение уклонов распространением «вниз»: узел не может быть выше
+    // соседа больше чем на лимит. Значения только убывают, поэтому обход
+    // сходится всегда и даёт точный предел (никаких зажатых узлов).
+    const lim = maxSteps;
+    const limD = maxStepsDiag;
+    const inQueue = new Uint8Array(n);
+    const qn = n + 1;
+    const queue = new Int32Array(qn);
+    let head = 0;
+    let tail = 0;
+    const push = (i) => {
+      if (inQueue[i]) return;
+      inQueue[i] = 1;
+      queue[tail] = i;
+      tail = (tail + 1) % qn;
+    };
+    for (let i = 0; i < n; i++) push(i);
+    const pairsOf = (i, ix, iz) => {
+      // соседи со своим лимитом; понижаем тех, кто выше i + лимит
+      let changed = 0;
+      const down = (j, d) => {
+        if (k[j] > k[i] + d) { k[j] = k[i] + d; push(j); changed++; }
+      };
+      if (ix > 0) down(i - 1, lim);
+      if (ix < GRID - 1) down(i + 1, lim);
+      if (iz > 0) down(i - GRID, lim);
+      if (iz < GRID - 1) down(i + GRID, lim);
+      if (ix > 0 && iz > 0) down(i - GRID - 1, limD);
+      if (ix < GRID - 1 && iz > 0) down(i - GRID + 1, limD);
+      if (ix > 0 && iz < GRID - 1) down(i + GRID - 1, limD);
+      if (ix < GRID - 1 && iz < GRID - 1) down(i + GRID + 1, limD);
+      return changed;
+    };
+    let guard = 0;
+    const guardMax = n * 400;
+    while (head !== tail && guard < guardMax) {
+      const i = queue[head];
+      head = (head + 1) % qn;
+      inQueue[i] = 0;
+      guard++;
+      if (lock.has(i)) continue;
+      const ix = i % GRID;
+      const iz = (i - ix) / GRID;
+      // сам узел мог стать выше соседа — сначала подтягиваем его вниз
+      let low = k[i];
+      if (ix > 0) low = Math.min(low, k[i - 1] + lim);
+      if (ix < GRID - 1) low = Math.min(low, k[i + 1] + lim);
+      if (iz > 0) low = Math.min(low, k[i - GRID] + lim);
+      if (iz < GRID - 1) low = Math.min(low, k[i + GRID] + lim);
+      if (ix > 0 && iz > 0) low = Math.min(low, k[i - GRID - 1] + limD);
+      if (ix < GRID - 1 && iz > 0) low = Math.min(low, k[i - GRID + 1] + limD);
+      if (ix > 0 && iz < GRID - 1) low = Math.min(low, k[i + GRID - 1] + limD);
+      if (ix < GRID - 1 && iz < GRID - 1) low = Math.min(low, k[i + GRID + 1] + limD);
+      if (low < k[i]) { k[i] = low; pairsOf(i, ix, iz); continue; }
+      pairsOf(i, ix, iz);
+    }
+    for (let i = 0; i < n; i++) {
+      if (lock.has(i)) continue;
+      this.heights[i] = k[i] * stepH;
+    }
+    this._quantGuard = guard;
+    this._quantGuardMax = guardMax;
+    // самопроверка: максимальный уклон поверхности
+    this._quantCalls = (this._quantCalls || 0) + 1;
+    let worst = 0;
+    for (let iz = 0; iz < GRID; iz++) {
+      for (let ix = 0; ix < GRID - 1; ix++) {
+        const i = iz * GRID + ix;
+        if (lock.has(i) || lock.has(i + 1)) continue;
+        worst = Math.max(worst, Math.abs(this.heights[i + 1] - this.heights[i]));
+      }
+    }
+    this._quantWorst = worst / stepH;
   }
 
   /** Высота сетки рельефа (билинейно), без учёта выкопанных ям */
@@ -504,6 +646,218 @@ export class World {
     this.scene.add(this.water);
   }
 
+  /**
+   * Дома зверей. У каждого вида своя поляна: вокруг логовища не растёт
+   * ни дерево, ни куст, ни камень — зверю есть где встать, и он не
+   * рождается внутри модели.
+   */
+  _planDens() {
+    const rng = this.rng;
+    const specs = [
+      { kind: 'boar', count: 4, hMin: 2.6, hMax: 13, radius: 9 },
+      { kind: 'crab', count: 4, hMin: 0.7, hMax: 2.2, radius: 7 },
+      { kind: 'gull', count: 3, hMin: 1.0, hMax: 2.6, radius: 8 },
+      { kind: 'snake', count: 3, hMin: 2.6, hMax: 11, radius: 7 },
+      { kind: 'monkey', count: 4, hMin: 3.5, hMax: 14, radius: 10 },
+      { kind: 'turtle', count: 4, hMin: 0.7, hMax: 2.2, radius: 7 },
+    ];
+    const dens = [];
+    for (const sp of specs) {
+      let made = 0;
+      for (let i = 0; i < 9000 && made < sp.count; i++) {
+        const x = (rng() - 0.5) * SIZE * 0.9;
+        const z = (rng() - 0.5) * SIZE * 0.9;
+        const h = this.heightAt(x, z);
+        if (h < sp.hMin || h > sp.hMax) continue;
+        if (this.slopeAt(x, z) > 0.45) continue;
+        // не на месте высадки героя и не вплотную к другому дому
+        if (this.spawnPoint && Math.hypot(x - this.spawnPoint.x, z - this.spawnPoint.z) < 30) continue;
+        if (dens.some((d) => Math.hypot(d.x - x, d.z - z) < 28)) continue;
+        dens.push({ x, z, kind: sp.kind, radius: sp.radius, y: h });
+        made++;
+      }
+    }
+    this.dens = dens;
+    this._flatSpots = this._flatSpots || [];
+    for (const d of dens) this._flatSpots.push({ x: d.x, z: d.z, r: d.radius * 0.42, y: d.y, tag: 'den' });
+  }
+
+  /** Дом зверя в точке (для мобов): ближайший подходящий по биому */
+  denFor(kind, near = null) {
+    const list = (this.dens || []).filter((d) => d.kind === kind);
+    if (!list.length) return null;
+    if (!near) return list[Math.floor(this.rng() * list.length)];
+    let best = null;
+    let bd = Infinity;
+    for (const d of list) {
+      const dd = Math.hypot(d.x - near.x, d.z - near.z);
+      if (dd < bd) { bd = dd; best = d; }
+    }
+    return best;
+  }
+
+  /**
+   * Применить все заявки на ровную землю. Под каждой моделью узлы сетки
+   * садятся на одну высоту, а сразу за краем — плавный переход.
+   */
+  _applyFlatSpots() {
+    if (!this._flatSpots || !this._flatSpots.length) return;
+    const half = SIZE / 2;
+    const reachPad = STEP * 1.2;
+    for (const sp of this._flatSpots) {
+      const cx = Math.round((sp.x + half) / STEP);
+      const cz = Math.round((sp.z + half) / STEP);
+      const reach = Math.ceil((sp.r + reachPad) / STEP) + 1;
+      // цель площадки — среднее по уже сложившемуся рельефу под ней:
+      // так соседние площадки не спорят друг с другом
+      let sum = 0;
+      let n = 0;
+      for (let iz = Math.max(1, cz - 1); iz <= Math.min(GRID - 2, cz + 1); iz++) {
+        for (let ix = Math.max(1, cx - 1); ix <= Math.min(GRID - 2, cx + 1); ix++) {
+          sum += this.heights[iz * GRID + ix];
+          n++;
+        }
+      }
+      if (n) sp.y = sum / n;
+      for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
+        for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
+          if (this.cutCells && this.cutCells.has(ix * 1024 + iz)) continue;
+          // чужое ядро (уже ровная земля под соседней моделью) не трогаем
+          if (this.flatCore.has(iz * GRID + ix)) continue;
+          const nx = -half + ix * STEP;
+          const nz = -half + iz * STEP;
+          const d = Math.hypot(nx - sp.x, nz - sp.z);
+          if (d > sp.r + reachPad) continue;
+          const t = d <= sp.r ? 1 : 1 - smoothstep(sp.r, sp.r + reachPad, d);
+          const i = iz * GRID + ix;
+          this.heights[i] = this.heights[i] * (1 - t) + sp.y * t;
+          if (t >= 1) this.flatCore.add(i);
+        }
+      }
+    }
+    this._flatLog = this._flatSpots.slice();
+    this._flatSpots.length = 0;
+    // ровные площадки не должны давать обрывов по краю: снова усаживаем
+    // рельеф на разрешённые ступени (0/15/30/40°)
+    this._quantizeSlopes();
+    this._applyHeights();
+    if (this.baseHeights) this.baseHeights.set(this.heights);
+  }
+
+  /**
+   * Дома зверей на земле: логовище кабана, нора змеи, гнездо чайки,
+   * куча песка краба, гнездо черепахи и веточный настил обезьяны.
+   */
+  _buildDens() {
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true, roughness: 0.95, flatShading: true,
+    });
+    const byKind = new Map();
+    for (const d of this.dens) {
+      if (!byKind.has(d.kind)) byKind.set(d.kind, []);
+      byKind.get(d.kind).push(d);
+    }
+    const geos = {
+      boar: () => {
+        const parts = [];
+        addPart(parts, new THREE.IcosahedronGeometry(1.5, 1), 0x5b4430, 0, 0.12, 0, 0, 0, 0);
+        addPart(parts, new THREE.CylinderGeometry(0.55, 0.7, 0.9, 7, 1), 0x2a2118, 0, 0.35, -1.1, Math.PI / 2.1, 0, 0);
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          addPart(parts, new THREE.CylinderGeometry(0.04, 0.06, 1.1, 4, 1), 0x6b4c30,
+            Math.cos(a) * 1.1, 0.5, Math.sin(a) * 1.1, 1.1, -a, 0);
+        }
+        return mergeGeometries(parts, false);
+      },
+      crab: () => {
+        const parts = [];
+        addPart(parts, new THREE.IcosahedronGeometry(1.1, 1), 0xd9c79b, 0, 0.05, 0, 0, 0, 0);
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2 + 0.4;
+          addPart(parts, new THREE.CylinderGeometry(0.16, 0.2, 0.5, 6, 1), 0x3a2f24,
+            Math.cos(a) * 0.5, 0.32, Math.sin(a) * 0.5);
+        }
+        for (let i = 0; i < 6; i++) {
+          const a = rng0(i);
+          addPart(parts, new THREE.IcosahedronGeometry(0.12, 0), 0xf0e6cf,
+            Math.cos(a) * 1.2, 0.12, Math.sin(a) * 1.2);
+        }
+        return mergeGeometries(parts, false);
+      },
+      gull: () => {
+        const parts = [];
+        addPart(parts, new THREE.CylinderGeometry(1.0, 0.8, 0.22, 9, 1), 0x8a7a55, 0, 0.11, 0);
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          addPart(parts, new THREE.CylinderGeometry(0.03, 0.05, 0.9, 4, 1), 0x6f5f43,
+            Math.cos(a) * 0.75, 0.22, Math.sin(a) * 0.75, 0.5, -a, 0);
+        }
+        for (let i = 0; i < 3; i++) {
+          const a = (i / 3) * Math.PI * 2;
+          addPart(parts, new THREE.IcosahedronGeometry(0.18, 0), 0xf2ecd8,
+            Math.cos(a) * 0.25, 0.28, Math.sin(a) * 0.25);
+        }
+        return mergeGeometries(parts, false);
+      },
+      snake: () => {
+        const parts = [];
+        addPart(parts, new THREE.IcosahedronGeometry(1.2, 1), 0x7d7568, 0, 0.05, 0, 0, 0, 0);
+        addPart(parts, new THREE.CylinderGeometry(0.3, 0.42, 0.7, 7, 1), 0x2b2620, 0.2, 0.3, 0.3, 0.4, 0, 0);
+        for (let i = 0; i < 4; i++) {
+          const a = (i / 4) * Math.PI * 2;
+          addPart(parts, new THREE.IcosahedronGeometry(0.3, 0), 0x8e8779,
+            Math.cos(a) * 1.1, 0.2, Math.sin(a) * 1.1);
+        }
+        return mergeGeometries(parts, false);
+      },
+      monkey: () => {
+        const parts = [];
+        addPart(parts, new THREE.CylinderGeometry(1.5, 1.6, 0.2, 8, 1), 0x6a4d2f, 0, 0.1, 0);
+        for (let i = 0; i < 7; i++) {
+          const a = (i / 7) * Math.PI * 2;
+          addPart(parts, new THREE.CylinderGeometry(0.05, 0.08, 1.4, 4, 1), 0x7d5c38,
+            Math.cos(a) * 1.0, 0.3, Math.sin(a) * 1.0, 1.35, -a, 0);
+        }
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2;
+          addPart(parts, new THREE.IcosahedronGeometry(0.34, 1), 0x6f9c46,
+            Math.cos(a) * 0.9, 0.28, Math.sin(a) * 0.9);
+        }
+        return mergeGeometries(parts, false);
+      },
+      turtle: () => {
+        const parts = [];
+        addPart(parts, new THREE.CylinderGeometry(1.0, 1.25, 0.3, 9, 1), 0xd8c79c, 0, 0.1, 0);
+        addPart(parts, new THREE.CylinderGeometry(0.4, 0.5, 0.45, 7, 1), 0x3a3126, -0.3, 0.28, 0.2, 0.35, 0, 0);
+        for (let i = 0; i < 5; i++) {
+          const a = rng0(i + 2);
+          addPart(parts, new THREE.IcosahedronGeometry(0.1, 0), 0xf1e8d2,
+            Math.cos(a) * 1.05, 0.16, Math.sin(a) * 1.05);
+        }
+        return mergeGeometries(parts, false);
+      },
+    };
+    this.denMeshes = [];
+    for (const [kind, list] of byKind) {
+      const geo = geos[kind] ? geos[kind]() : null;
+      if (!geo) continue;
+      const mesh = new THREE.InstancedMesh(geo, mat, list.length);
+      mesh.castShadow = true;
+      mesh.frustumCulled = false;
+      const dummy = new THREE.Object3D();
+      list.forEach((d, i) => {
+        dummy.position.set(d.x, d.y - 0.12, d.z);
+        dummy.rotation.set(0, this.rng() * Math.PI * 2, 0);
+        dummy.scale.setScalar(0.85 + this.rng() * 0.35);
+        dummy.updateMatrix();
+        mesh.setMatrixAt(i, dummy.matrix);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+      this.scene.add(mesh);
+      this.denMeshes.push(mesh);
+    }
+  }
+
   _buildVegetation() {
     const rng = this.rng;
     const palms = [];
@@ -515,148 +869,168 @@ export class World {
     const rocks = [];
     const tufts = [];
 
-
     const moistureAt = (x, z) => fbm(x * 0.009 + 3, z * 0.009 - 8, 3, this.seed + 31);
     const forestAt = (x, z) => fbm(x * 0.012 - 17, z * 0.012 + 6, 3, this.seed + 44);
 
     const nextScale = () => 0.8 + rng() * 0.55;
-    const pushOne = (arr, x, z, h, extra) => arr.push({ x, z, h, s: 0.8 + rng() * 0.55, rot: rng() * Math.PI * 2, ...extra });
 
-    // зазор между моделями: хитбокс не должен рождаться внутри чужого
-    const freeSpot = (x, z, r) => this.isFree(x, z, r);
+    // --- дома зверей: поляны без единой модели ---
+    this._planDens();
+    const nearDen = (x, z, pad = 0) => {
+      for (const d of this.dens) if (Math.hypot(x - d.x, z - d.z) < d.radius + pad) return d;
+      return null;
+    };
 
-    // пальмы — вдоль берега
-    for (let i = 0; i < 1400; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = (0.28 + Math.sqrt(rng()) * 0.42) * SIZE * 0.5;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
-      const h = this.heightAt(x, z);
-      const s = nextScale();
-      if (h > 1.0 && h < 3.6 && this.slopeAt(x, z) < 0.5 && freeSpot(x, z, 0.55 * s)) {
-        pushOne(palms, x, z, h, { s });
-        this.colliders.push({ x, z, r: 0.55 * s, height: 8, kind: 'palm' });
+    // --- ровная земля под каждой моделью ---
+    // Заявки копятся и применяются одним проходом: иначе на каждый куст
+    // пришлось бы пересчитывать все 40 тысяч вершин рельефа.
+    this._flatSpots = [];
+    // Площадки не пересекаются: иначе одна заявка «перетирает» другую и
+    // под моделью снова получается склон. Нет места — нет модели.
+    this._flatStats = { ask: 0, deny: 0 };
+    const requestFlat = (x, z, r) => {
+      this._flatStats.ask++;
+      for (const sp of this._flatSpots) {
+        if (Math.hypot(x - sp.x, z - sp.z) < r + sp.r + 0.45) { this._flatStats.deny++; return null; }
       }
-    }
+      const y = this.heightAt(x, z);
+      this._flatSpots.push({ x, z, r, y, y0: y, tag: 'veg' });
+      return y;
+    };
 
-    // джунгли и редколесье
-    for (let i = 0; i < 4000; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = Math.sqrt(rng()) * SIZE * 0.36;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
-      const h = this.heightAt(x, z);
-      if (h < 1.8 || h > 16) continue;
-      if (this.slopeAt(x, z) > 0.8) continue;
-      const f = forestAt(x, z);
-      if (f < 0.42) continue;
-      if (rng() > 0.55 + f * 0.4) continue;
-      const s = nextScale();
-      if (!freeSpot(x, z, 0.55 * s)) continue;
-      pushOne(trees, x, z, h, { s });
-      this.colliders.push({ x, z, r: 0.55 * s, height: 6.5, kind: 'tree' });
-      if (trees.length >= 900) break;
-    }
+    // зазор между моделями и свободная от домов земля
+    const freeSpot = (x, z, r) => this.isFree(x, z, r) && !nearDen(x, z, r + 1.0);
 
-    // кусты
-    for (let i = 0; i < 2600; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = Math.sqrt(rng()) * SIZE * 0.38;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
-      const h = this.heightAt(x, z);
-      if (h < 1.3 || h > 14) continue;
-      if (this.slopeAt(x, z) > 0.7) continue;
-      if (moistureAt(x, z) < 0.42) continue;
-      const s = nextScale();
-      if (!freeSpot(x, z, 0.95 * s)) continue;
-      pushOne(bushes, x, z, h, { s, berries: rng() < 0.35 });
-      // куст не мешает ходить, но закрывает обзор мелким зверям
-      if (this.colliders.length < 4000) this.colliders.push({ x, z, r: 0.95 * s, height: 1.1, kind: 'bush', soft: true });
-      if (bushes.length >= 700) break;
-    }
+    /**
+     * Поставить модель: плоская земля под ней + тугой коллайдер по стволу.
+     * Коллайдер идёт по самому стволу (0.3 м), а не по кроне — иначе между
+     * деревьями нельзя пробежать. Обводка (shells) добирает точность силуэта.
+     */
+    const place = (arr, x, z, { s = nextScale(), solid = 0.32, height = 6, kind = 'tree', soft = false, pad = 0, extra = {} } = {}) => {
+      // земля под моделью становится ровной; не нашлось места под площадку —
+      // модель здесь не появляется
+      const h = requestFlat(x, z, Math.max(solid * s + 0.55, pad || STEP * 1.25));
+      if (h === null) return null;
+      const it = { x, z, h, s, rot: rng() * Math.PI * 2, ...extra };
+      arr.push(it);
+      const col = { x, z, r: solid * s, height, kind };
+      if (soft) col.soft = true;
+      this.colliders.push(col);
+      it.collider = col;
+      return it;
+    };
 
-    // --- сосны: высокогорье, узкая «свеча» из ярусов хвои ---
-    for (let i = 0; i < 2600; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = Math.sqrt(rng()) * SIZE * 0.34;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
-      const h = this.heightAt(x, z);
-      if (h < 7.5 || h > 22) continue;
-      if (this.slopeAt(x, z) > 0.75) continue;
-      const s = 0.75 + rng() * 0.45;
-      if (!freeSpot(x, z, 0.45 * s)) continue;
-      pushOne(pines, x, z, h, { s });
-      this.colliders.push({ x, z, r: 0.45 * s, height: 9, kind: 'tree' });
-      if (pines.length >= 340) break;
-    }
+    // выбор места по всему острову, а не только вокруг центра:
+    // так заселяются и малые острова
+    const scatter = (tries, fn) => {
+      for (let i = 0; i < tries; i++) {
+        const x = (rng() - 0.5) * SIZE * 0.94;
+        const z = (rng() - 0.5) * SIZE * 0.94;
+        fn(x, z);
+      }
+    };
 
-    // --- мангры: на границе песка и суши, корни-арки над водой ---
-    for (let i = 0; i < 3200; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = (0.2 + Math.sqrt(rng()) * 0.42) * SIZE * 0.5;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
-      const h = this.heightAt(x, z);
-      if (h < 0.55 || h > 1.9) continue;
-      if (this.slopeAt(x, z) > 0.45) continue;
-      const s = 0.85 + rng() * 0.4;
-      if (!freeSpot(x, z, 0.5 * s)) continue;
-      pushOne(mangroves, x, z, h, { s });
-      this.colliders.push({ x, z, r: 0.5 * s, height: 4, kind: 'tree' });
-      if (mangroves.length >= 170) break;
-    }
-
-    // --- сухостой: там, где сухо и ветрено, листвы нет вовсе ---
-    for (let i = 0; i < 2600; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = Math.sqrt(rng()) * SIZE * 0.36;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
-      const h = this.heightAt(x, z);
-      if (h < 2.2 || h > 15) continue;
-      if (moistureAt(x, z) > 0.44) continue;
-      if (this.slopeAt(x, z) > 0.85) continue;
-      const s = 0.8 + rng() * 0.5;
-      if (!freeSpot(x, z, 0.42 * s)) continue;
-      pushOne(deads, x, z, h, { s });
-      this.colliders.push({ x, z, r: 0.42 * s, height: 6, kind: 'tree' });
-      if (deads.length >= 130) break;
-    }
-
-    // камни
-    for (let i = 0; i < 4000; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = Math.sqrt(rng()) * SIZE * 0.4;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
+    // камни: на кручах и осыпях, по одному, без грядок
+    scatter(14000, (x, z) => {
+      if (rocks.length >= 240) return;
       const h = this.heightAt(x, z);
       const slope = this.slopeAt(x, z);
-      if (h < 0.6 || h > 26) continue;
-      // камней на поверхности заметно меньше: они лежат на кручах и осыпях
-      if (slope < 0.25 && rng() > 0.12) continue;
-      if (rng() > 0.3) continue;
+      if (h < 0.6 || h > 26) return;
+      if (slope < 0.25 && rng() > 0.2) return;
+      if (rng() > 0.45) return;
       const s = 0.45 + rng() * 1.2;
-      // руда на поверхности — большая редкость: всё ценное ушло под землю
       const ore = s > 0.9 && rng() < 0.035;
-      if (!freeSpot(x, z, s * 1.0)) continue;
-      pushOne(rocks, x, z, h, { s, ore, kind: ore ? 'ore' : 'stone' });
-      this.colliders.push({ x, z, r: s * 1.0, height: s * 1.1, kind: 'rock' });
-      if (rocks.length >= 210) break;
-    }
+      if (!freeSpot(x, z, 0.7 * s)) return;
+      // низкие валуны переступаем, поэтому коллайдер чуть уже модели
+      place(rocks, x, z, {
+        s, solid: 0.62, height: s * 0.95, kind: 'rock', pad: Math.max(1.55, 0.62 * s + 0.5),
+        extra: { ore, kind: ore ? 'ore' : 'stone' },
+      });
+    });
 
-    // трава
-    for (let i = 0; i < 9000; i++) {
-      const a = rng() * Math.PI * 2;
-      const r = Math.sqrt(rng()) * SIZE * 0.4;
-      const x = Math.cos(a) * r;
-      const z = Math.sin(a) * r;
+    // пальмы — вдоль берега
+    scatter(4200, (x, z) => {
+      if (palms.length >= 190) return;
       const h = this.heightAt(x, z);
-      if (h < 1.4 || h > 15) continue;
-      if (this.slopeAt(x, z) > 0.85) continue;
+      if (h < 1.0 || h > 3.6) return;
+      const s = nextScale();
+      if (!freeSpot(x, z, 0.4 * s)) return;
+      place(palms, x, z, { s, solid: 0.3, height: 8, kind: 'palm' });
+    });
+
+    // джунгли и редколесье
+    scatter(9000, (x, z) => {
+      if (trees.length >= 900) return;
+      const h = this.heightAt(x, z);
+      if (h < 1.8 || h > 16) return;
+      const f = forestAt(x, z);
+      if (f < 0.42) return;
+      if (rng() > 0.62 + f * 0.4) return;
+      const s = nextScale();
+      if (!freeSpot(x, z, 0.42 * s)) return;
+      place(trees, x, z, { s, solid: 0.34, height: 6.5, kind: 'tree' });
+    });
+
+    // кусты
+    scatter(7000, (x, z) => {
+      if (bushes.length >= 700) return;
+      const h = this.heightAt(x, z);
+      if (h < 1.3 || h > 14) return;
+      if (moistureAt(x, z) < 0.42) return;
+      const s = nextScale();
+      if (!freeSpot(x, z, 0.55 * s)) return;
+      // сквозь куст можно пройти: коллайдер мягкий
+      place(bushes, x, z, {
+        s, solid: 0.42, height: 1.05, kind: 'bush', soft: true,
+        extra: { berries: rng() < 0.35, soft: true },
+      });
+    });
+
+    // сосны — высокогорье, узкая «свеча» из ярусов хвои
+    scatter(6000, (x, z) => {
+      if (pines.length >= 340) return;
+      const h = this.heightAt(x, z);
+      if (h < 5.5 || h > 22) return;
+      const s = 0.75 + rng() * 0.45;
+      if (!freeSpot(x, z, 0.34 * s)) return;
+      place(pines, x, z, { s, solid: 0.32, height: 9, kind: 'tree' });
+    });
+
+    // мангры — на границе песка и суши, корни-арки над водой
+    scatter(6000, (x, z) => {
+      if (mangroves.length >= 120) return;
+      const h = this.heightAt(x, z);
+      if (h < 0.45 || h > 2.4) return;
+      const s = 0.85 + rng() * 0.4;
+      if (!freeSpot(x, z, 0.4 * s)) return;
+      place(mangroves, x, z, { s, solid: 0.3, height: 4, kind: 'tree' });
+    });
+
+    // сухостой — там, где сухо и ветрено
+    scatter(6000, (x, z) => {
+      if (deads.length >= 130) return;
+      const h = this.heightAt(x, z);
+      if (h < 2.2 || h > 15) return;
+      if (moistureAt(x, z) > 0.44) return;
+      const s = 0.8 + rng() * 0.5;
+      if (!freeSpot(x, z, 0.34 * s)) return;
+      place(deads, x, z, { s, solid: 0.32, height: 6, kind: 'tree' });
+    });
+
+    // трава — просто украшение, ровнять землю под ней не нужно
+    scatter(16000, (x, z) => {
+      if (tufts.length >= 2600) return;
+      const h = this.heightAt(x, z);
+      if (h < 1.4 || h > 15) return;
+      if (this.slopeAt(x, z) > 0.85) return;
       tufts.push({ x, z, h, s: 0.6 + rng() * 0.9, rot: rng() * Math.PI * 2 });
-      if (tufts.length >= 2600) break;
+    });
+
+    // все заявки на ровную землю — одним проходом
+    this._applyFlatSpots();
+    // после выравнивания каждая модель садится точно на свою землю
+    for (const list of [palms, trees, pines, mangroves, deads, bushes, rocks]) {
+      for (const it of list) it.h = this.heightAt(it.x, it.z);
     }
 
     // --- материалы ---
@@ -704,7 +1078,15 @@ export class World {
      * Каждый объект может состоять из нескольких мешей (ствол + крона),
      * их ссылки хранятся в item.parts — так дерево можно спрятать целиком.
      */
-    const buildInstances = (variants, list, { castShadow = true, variantOf = null, solidR = 0 } = {}) => {
+    /**
+     * Ставит список объектов как InstancedMesh по слоям модели — по чанкам.
+     * Чанк (CHUNK × CHUNK метров) прячется целиком, если его не видно:
+     * он за камерой, далеко или вне пирамиды видимости. Далёкие чанки
+     * растворяются в тумане, поэтому переход незаметен.
+     */
+    const buildInstances = (variants, list, {
+      castShadow = true, variantOf = null, solidR = 0, cullFar = 340, name = 'veg',
+    } = {}) => {
       const meshes = [];
       if (!list.length) return meshes;
       const groups = variants.length;
@@ -722,13 +1104,18 @@ export class World {
           vbox = vbox ? vbox.clone().union(geo.boundingBox) : geo.boundingBox.clone();
         }
         // обводка варианта: выпуклая оболочка силуэта в плане (локальные оси).
-        // У высоких моделей обводим только основание — ствол, корни, валун:
-        // крона не должна становиться невидимой стеной.
+        // Обводим только ствол/основание и не шире «твёрдой» части модели:
+        // иначе между деревьями нельзя пробежать, а маленький камень
+        // превращается в невидимую стену.
         const height = vbox ? vbox.max.y - vbox.min.y : 0;
-        const hullTop = height > 3 ? vbox.min.y + 1.7 : vbox.max.y;
+        // контур обводки — по основанию (ствол, корни, валун), но сама призма
+        // идёт на всю высоту модели: иначе на склоне можно «перешагнуть» ствол
+        const hullTop = height > 3 ? vbox.min.y + 1.35 : vbox.max.y;
+        const shellTop = vbox ? vbox.max.y : hullTop;
         const hullLocal = hullFromGeometry(Object.values(variant), {
-          pad: 0.03,
+          pad: 0.02,
           belowY: hullTop,
+          maxRadius: solidR ? solidR * 1.12 : undefined,
         });
 
         list.forEach((it, i) => {
@@ -737,55 +1124,78 @@ export class World {
         });
         if (!items.length) continue;
 
-        for (const [layer, geo] of Object.entries(variant)) {
-          if (!geo) continue;
-          const mat = layerMaterials[layer] || leafMat;
-          const mesh = new THREE.InstancedMesh(geo, mat, items.length);
-          mesh.castShadow = castShadow;
-          mesh.receiveShadow = false;
-          mesh.frustumCulled = false;
+        // --- разбиваем на чанки, чтобы прятать невидимое ---
+        const buckets = new Map();
+        for (const it of items) {
+          const ck = `${Math.floor(it.x / CHUNK)}|${Math.floor(it.z / CHUNK)}`;
+          let b = buckets.get(ck);
+          if (!b) buckets.set(ck, (b = []));
+          b.push(it);
+        }
 
-          items.forEach((it, k) => {
-            const s = it.s ?? 1;
-            dummy.position.set(it.x, it.h - 0.15, it.z);
-            dummy.rotation.set(0, it.rot, 0);
-            dummy.scale.set(s, s, s);
-            dummy.updateMatrix();
-            mesh.setMatrixAt(k, dummy.matrix);
-            mesh.instanceMatrix.needsUpdate = true;
+        for (const bucket of buckets.values()) {
+          for (const [layer, geo] of Object.entries(variant)) {
+            if (!geo) continue;
+            const mat = layerMaterials[layer] || leafMat;
+            const mesh = new THREE.InstancedMesh(geo, mat, bucket.length);
+            mesh.castShadow = castShadow;
+            mesh.receiveShadow = false;
+            mesh.frustumCulled = false;
+            mesh.name = `${name}:${layer}`;
 
-            if (!it.bbox && vbox) {
-              it.bbox = {
-                w: (vbox.max.x - vbox.min.x) * s,
-                h: (vbox.max.y - vbox.min.y) * s,
-                d: (vbox.max.z - vbox.min.z) * s,
-                minY: vbox.min.y * s,
-              };
-            }
-            // «твёрдая» часть модели: ствол/куст/валун по footprint'у, а не крона.
-            // Крона не должна становиться невидимой стеной, а хитбоксы —
-            // наезжать друг на друга: footprint уже радиуса расстановки.
-            if (!it.bboxSolid) {
-              it.bboxSolid = solidR && vbox
-                ? {
-                  w: solidR * 2 * s,
+            bucket.forEach((it, k) => {
+              const s = it.s ?? 1;
+              dummy.position.set(it.x, it.h - 0.15, it.z);
+              dummy.rotation.set(0, it.rot, 0);
+              dummy.scale.set(s, s, s);
+              dummy.updateMatrix();
+              mesh.setMatrixAt(k, dummy.matrix);
+
+              if (!it.bbox && vbox) {
+                it.bbox = {
+                  w: (vbox.max.x - vbox.min.x) * s,
                   h: (vbox.max.y - vbox.min.y) * s,
-                  d: solidR * 2 * s,
+                  d: (vbox.max.z - vbox.min.z) * s,
                   minY: vbox.min.y * s,
-                }
-                : it.bbox;
-            }
-            if (!it.hullLocal && hullLocal) it.hullLocal = hullLocal;
-            if (!it.hullY && vbox) it.hullY = { min: vbox.min.y, max: Math.min(vbox.max.y, hullTop) };
-            it.parts = it.parts || [];
-            it.parts.push({ mesh, idx: k, baseScale: s, layer });
-            it.mesh = mesh;
-            it.instIdx = k;
-          });
+                };
+              }
+              // «твёрдая» часть модели: ствол/куст/валун по footprint'у, а не крона
+              if (!it.bboxSolid) {
+                it.bboxSolid = solidR && vbox
+                  ? {
+                    w: solidR * 2 * s,
+                    h: (vbox.max.y - vbox.min.y) * s,
+                    d: solidR * 2 * s,
+                    minY: vbox.min.y * s,
+                  }
+                  : it.bbox;
+              }
+              if (!it.hullLocal && hullLocal) it.hullLocal = hullLocal;
+              if (!it.hullY && vbox) it.hullY = { min: vbox.min.y, max: shellTop };
+              it.parts = it.parts || [];
+              it.parts.push({ mesh, idx: k, baseScale: s, layer });
+              it.mesh = mesh;
+              it.instIdx = k;
+            });
+            mesh.instanceMatrix.needsUpdate = true;
+            mesh.count = bucket.length;
+            this.scene.add(mesh);
+            meshes.push(mesh);
 
-          mesh.count = items.length;
-          this.scene.add(mesh);
-          meshes.push(mesh);
+            // границы чанка — по ним считается видимость
+            let cx = 0;
+            let cz = 0;
+            let maxS = 1;
+            for (const it of bucket) { cx += it.x; cz += it.z; maxS = Math.max(maxS, it.s ?? 1); }
+            cx /= bucket.length;
+            cz /= bucket.length;
+            const radius = CHUNK * 0.75 + maxS * 8;
+            this.chunkMeshes.push({
+              mesh, x: cx, z: cz, far: cullFar,
+              center: new THREE.Vector3(cx, (vbox ? (vbox.min.y + vbox.max.y) * 0.5 : 4) + 2, cz),
+              radius,
+            });
+          }
         }
 
         // вариант с ягодами — значит, с этого куста можно собрать урожай
@@ -797,15 +1207,12 @@ export class World {
     };
 
     // варианты моделей
-    const palmVariants = [makePalmParts(rng), makePalmParts(rng), makePalmParts(rng)];
-    const treeVariants = [makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng)];
-    const pineVariants = [makePineParts(rng), makePineParts(rng), makePineParts(rng)];
-    const mangroveVariants = [makeMangroveParts(rng), makeMangroveParts(rng), makeMangroveParts(rng)];
-    const deadVariants = [makeDeadTreeParts(rng), makeDeadTreeParts(rng), makeDeadTreeParts(rng)];
-    const bushVariants = [
-      makeBushParts(rng, false), makeBushParts(rng, true),
-      makeBushParts(rng, false), makeBushParts(rng, true),
-    ];
+    const palmVariants = [makePalmParts(rng), makePalmParts(rng)];
+    const treeVariants = [makeTreeParts(rng), makeTreeParts(rng)];
+    const pineVariants = [makePineParts(rng), makePineParts(rng)];
+    const mangroveVariants = [makeMangroveParts(rng), makeMangroveParts(rng)];
+    const deadVariants = [makeDeadTreeParts(rng)];
+    const bushVariants = [makeBushParts(rng, false), makeBushParts(rng, true)];
     const rockVariants = [
       makeRockParts(rng, 'boulder'),
       makeRockParts(rng, 'slab'),
@@ -843,15 +1250,15 @@ export class World {
     linkColliders(bushes);
     linkColliders(rocks);
 
-    this.palms = buildInstances(palmVariants, palms, { solidR: 0.55 });
-    this.trees = buildInstances(treeVariants, trees, { solidR: 0.55 });
-    this.pines = buildInstances(pineVariants, pines, { solidR: 0.45 });
-    this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.5 });
-    this.deads = buildInstances(deadVariants, deads, { solidR: 0.42 });
-    this.bushes = buildInstances(bushVariants, bushes, { solidR: 0.95 });
+    this.palms = buildInstances(palmVariants, palms, { solidR: 0.3, cullFar: 360, name: 'palm' });
+    this.trees = buildInstances(treeVariants, trees, { solidR: 0.34, cullFar: 360, name: 'tree' });
+    this.pines = buildInstances(pineVariants, pines, { solidR: 0.32, cullFar: 380, name: 'pine' });
+    this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.3, cullFar: 340, name: 'mangrove' });
+    this.deads = buildInstances(deadVariants, deads, { solidR: 0.32, cullFar: 340, name: 'dead' });
+    this.bushes = buildInstances(bushVariants, bushes, { solidR: 0.42, cullFar: 220, name: 'bush' });
     // валуны чередуются, а рудный вариант достаётся только рудным камням
     this.rocks = buildInstances(rockVariants, rocks, {
-      solidR: 1.0,
+      solidR: 0.7, cullFar: 260, name: 'rock',
       variantOf: (it, i) => (it.ore ? 2 : i % 2 === 0 ? 0 : 1),
     });
 
@@ -864,10 +1271,13 @@ export class World {
       blades.push(colorize(blade, i % 2 ? 0x86b556 : 0x6f9b45));
     }
     const tuftGeo = mergeGeometries(blades, false);
-    this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
+    this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false, cullFar: 95, name: 'tuft' });
     this.tuftItems = tufts;
     // у травы свой материал (сильнее качается)
     for (const mesh of this.tufts) mesh.material = grassMat;
+
+    // --- дома зверей на полянах ---
+    this._buildDens();
 
     // --- обводки: у каждой модели своя треугольная оболочка по силуэту ---
     this._buildShells();
@@ -1744,9 +2154,11 @@ export class World {
       }
     }
     const target = y !== null ? y : count ? sum / count : this.heightAt(x, z);
-    // узлы сетки редкие (1.8 м), поэтому ровной площадку делает не радиус,
-    // а гарантия, что все узлы под постройкой стоят на одной высоте
-    const outer = radius + STEP * 1.3;
+    // Узлы сетки редкие (1.8 м), поэтому ровной площадку делает не радиус,
+    // а гарантия, что все узлы под постройкой стоят на одной высоте.
+    // Ядро площадки — радиус плюс полшага: тогда уклон по ней строго 0.
+    const inner = radius + STEP * 0.62;
+    const outer = inner + STEP * 1.1;
     for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
       for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
         // клетки выкопанных ям не трогаем: иначе дыра «зарастёт» обратно
@@ -1755,14 +2167,16 @@ export class World {
         const nz = -half + iz * STEP;
         const d = Math.hypot(nx - x, nz - z);
         if (d > outer) continue;
-        const t = d <= radius ? 1 : 1 - smoothstep(radius, outer, d);
+        const t = d <= inner ? 1 : 1 - smoothstep(inner, outer, d);
         const i = iz * GRID + ix;
         this.heights[i] = this.heights[i] * (1 - t) + target * t;
+        if (t >= 1) this.flatCore.add(i);
         // «рельеф до копания» тоже двигаем: край будущей ямы рядом с
         // площадкой должен идти по новой, ровной земле
         if (this.baseHeights) this.baseHeights[i] = this.heights[i];
       }
     }
+    this._quantizeSlopes();
     this._applyHeights();
     return target;
   }
@@ -1789,9 +2203,15 @@ export class World {
     }
   }
 
-  resolveCollisions(pos, radius, velocity = null) {
+  /**
+   * Столкновения со стволами, валунами и постройками.
+   * feetY — низ героя: низкие валуны (ниже колена) переступаем, а не упираемся.
+   */
+  resolveCollisions(pos, radius, velocity = null, feetY = -Infinity, stepUp = 0.55) {
     for (const c of this.colliders) {
       if (c.disabled || c.soft) continue;
+      // низкий предмет под ногами — переступаем
+      if (c.height && c.height < stepUp && feetY > -Infinity) continue;
       const dx = pos.x - c.x;
       const dz = pos.z - c.z;
       const min = c.r + radius;
@@ -1812,6 +2232,36 @@ export class World {
         }
       }
     }
+  }
+
+  /**
+   * Отсечение растительности по чанкам: невидимые (за камерой, вне пирамиды
+   * видимости или слишком далёкие) чанки не рисуются вовсе. Дальние плавно
+   * уходят в туман, поэтому «моргания» на границе не видно.
+   */
+  updateChunks(camera) {
+    if (!camera || !this.chunkMeshes.length) return;
+    this._frustum = this._frustum || new THREE.Frustum();
+    this._proj = this._proj || new THREE.Matrix4();
+    this._sphere = this._sphere || new THREE.Sphere();
+    this._proj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+    this._frustum.setFromProjectionMatrix(this._proj);
+    const cp = camera.position;
+    let visible = 0;
+    for (const c of this.chunkMeshes) {
+      const dx = c.x - cp.x;
+      const dz = c.z - cp.z;
+      const d2 = dx * dx + dz * dz;
+      let vis = d2 < c.far * c.far;
+      if (vis) {
+        this._sphere.center.copy(c.center);
+        this._sphere.radius = c.radius;
+        vis = this._frustum.intersectsSphere(this._sphere);
+      }
+      c.mesh.visible = vis;
+      if (vis) visible++;
+    }
+    this.chunkStats = { total: this.chunkMeshes.length, visible };
   }
 
   update(dt, camera, sunDir, nightFactor, fogColor) {

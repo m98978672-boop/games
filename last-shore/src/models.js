@@ -9,6 +9,8 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { COLORS } from './config.js';
 
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
 // ---------- вспомогательное ----------
 
 export function colorize(geo, hex) {
@@ -132,9 +134,14 @@ function merge(parts) {
   return mergeGeometries(parts, false);
 }
 
-/** Ступенчатый ствол: несколько сужающихся колен с лёгким изгибом */
+/**
+ * Ступенчатый ствол: несколько сужающихся колен с лёгким изгибом.
+ * Возвращает осевую линию spine(t) — по ней крепятся ветки и крона,
+ * иначе они «висят в воздухе» рядом с изогнутым стволом.
+ */
 function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, sides = 8) {
   const segments = 5;
+  const centers = [{ x: 0, y: 0, z: 0 }];
   let x = 0;
   let z = 0;
   let y = 0;
@@ -149,8 +156,17 @@ function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, side
     z += Math.cos(twist * 0.7) * segH * 0.12;
     part(parts, geo, i % 2 ? hexA : hexB, x, y + segH / 2, z);
     y += segH;
+    centers.push({ x, y, z });
   }
-  return { x, y, z };
+  const spine = (t) => {
+    const k = clamp01(t) * (centers.length - 1);
+    const i = Math.min(centers.length - 2, Math.floor(k));
+    const f = k - i;
+    const a = centers[i];
+    const b = centers[i + 1];
+    return new THREE.Vector3(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, a.z + (b.z - a.z) * f);
+  };
+  return { x, y, z, spine, segments, centers, baseR, topR };
 }
 
 // ---------- растения ----------
@@ -389,32 +405,43 @@ export function makeTreeParts(rng) {
 
 /** Куст: несколько веток из земли и рыхлая листва поверх */
 /**
- * Сосна (высокогорье): ровный ствол и ярусы тёмной хвои конусами.
- * Силуэт совсем другой, чем у джунглевого дерева: узкая свеча.
+ * Сосна (высокогорье): ровный ствол и плотные ярусы хвои.
+ * Ярусы надеты на ствол с перекрытием — силуэт цельный, без «висящих» конусов.
  */
 export function makePineParts(rng) {
   const bark = [];
   const leaf = [];
-  const h = 7.5 + rng() * 4.0;
-  trunkPart(bark, rng, h, 0.34 + rng() * 0.08, 0.1, 0x5b432c, 0x6d5236, 0.12, 7);
+  const h = 8.2 + rng() * 4.2;
+  const baseR = 0.3 + rng() * 0.07;
+  const trunk = trunkPart(bark, rng, h * 0.97, baseR, 0.06, 0x5b432c, 0x6d5236, 0.06, 7);
 
-  // корни-подпорки
-  for (let i = 0; i < 3; i++) {
-    const a = (i / 3) * Math.PI * 2 + rng() * 0.5;
-    part(bark, new THREE.ConeGeometry(0.16, 0.7, 5, 1), 0x4f3a26,
-      Math.cos(a) * 0.3, 0.2, Math.sin(a) * 0.3, Math.PI * 0.36, -a, 0);
+  // корни-подпорки — прижаты к стволу, а не «в воздухе»
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + rng() * 0.4;
+    part(bark, new THREE.ConeGeometry(0.15, 0.72, 5, 1), 0x4f3a26,
+      Math.cos(a) * (baseR + 0.12), 0.22, Math.sin(a) * (baseR + 0.12), Math.PI * 0.34, -a, 0);
   }
 
-  const tiers = 5;
+  // ярусы хвои: снизу вверх, каждый конус «надет» на ствол и перекрывает
+  // нижний ярус — между ними не видно просветов
+  const tiers = 7;
+  const bottom = h * 0.26;
+  const top = h * 0.99;
+  const stepH = (top - bottom) / (tiers - 1);
+  const coneH = stepH * 1.95;              // перекрытие почти в два яруса
+  const tints = [0x2e5236, 0x35603c, 0x3d6b43, 0x477a4a];
   for (let i = 0; i < tiers; i++) {
     const t = i / (tiers - 1);
-    const y = h * (0.42 + t * 0.52);
-    const r = (2.0 - t * 1.35) * (0.9 + rng() * 0.2);
-    const tint = t > 0.6 ? 0x33583a : 0x2f5a3a;
-    part(leaf, new THREE.ConeGeometry(r, 1.5 + r * 0.5, 7, 1), i % 2 ? tint : 0x3a6644, 0, y, 0, 0, rng() * 0.6, 0);
+    const y = bottom + stepH * i;
+    const sp = trunk.spine(0.26 + t * 0.7);
+    const r = (2.15 - t * 1.78) * (0.93 + rng() * 0.14);
+    const tint = tints[Math.min(tints.length - 1, Math.floor(t * 3.2))];
+    part(leaf, new THREE.ConeGeometry(r, coneH, 8, 1), tint,
+      sp.x * 0.8, y + coneH / 2 - 0.12, sp.z * 0.8, 0, rng() * 0.7, 0);
   }
-  // макушка
-  piece(leaf, new THREE.ConeGeometry(0.55, 1.8, 6, 1), 0x3f6f49, [0, h * 0.99, 0]);
+  // макушка: узкий шпиль, продолжающий ствол
+  const tip = trunk.spine(1);
+  part(leaf, new THREE.ConeGeometry(0.34, h * 0.16, 6, 1), 0x4e8352, tip.x, tip.y + h * 0.03, tip.z);
   return { bark: merge(bark), leaf: merge(leaf) };
 }
 
@@ -425,60 +452,89 @@ export function makePineParts(rng) {
 export function makeMangroveParts(rng) {
   const bark = [];
   const leaf = [];
-  const h = 3.2 + rng() * 1.6;
+  const h = 3.6 + rng() * 1.5;
 
-  // арки корней: цилиндры, расходящиеся от ствола вниз
+  // арки корней: от ствола вниз, начинаются на самом стволе (не «парят»)
   const legs = 5 + Math.floor(rng() * 2);
   for (let i = 0; i < legs; i++) {
     const a = (i / legs) * Math.PI * 2 + rng() * 0.4;
-    const rad = 0.9 + rng() * 0.6;
-    const top = new THREE.Vector3(Math.cos(a) * 0.25, h * 0.55, Math.sin(a) * 0.25);
-    const foot = new THREE.Vector3(Math.cos(a) * rad, 0.02, Math.sin(a) * rad);
-    const len = top.distanceTo(foot) * 1.05;
-    const geo = new THREE.CylinderGeometry(0.075, 0.14, len, 5, 1);
+    const rad = 0.85 + rng() * 0.55;
+    const top = new THREE.Vector3(Math.cos(a) * 0.18, h * 0.5, Math.sin(a) * 0.18);
+    const foot = new THREE.Vector3(Math.cos(a) * rad, 0.01, Math.sin(a) * rad);
+    const len = top.distanceTo(foot) * 1.08;
+    const geo = new THREE.CylinderGeometry(0.06, 0.13, len, 5, 1);
     geo.applyQuaternion(alignQuat(top, foot));
     geo.translate((top.x + foot.x) / 2, (top.y + foot.y) / 2, (top.z + foot.z) / 2);
     bark.push(colorize(flat(geo), i % 2 ? 0x6b5440 : 0x7a6249));
   }
 
-  trunkPart(bark, rng, h * 0.62, 0.3, 0.16, 0x6b5440, 0x7d664c, 0.5, 7);
+  const trunk = trunkPart(bark, rng, h * 0.78, 0.3, 0.14, 0x6b5440, 0x7d664c, 0.35, 7);
 
-  // плоская крона: широкие «тарелки» из сплюснутых сфер
-  for (let i = 0; i < 7; i++) {
-    const a = (i / 7) * Math.PI * 2 + rng() * 0.5;
-    const d = 0.6 + rng() * 1.5;
-    const r = 0.9 + rng() * 0.5;
-    piece(leaf, new THREE.IcosahedronGeometry(r, 1),
-      i % 2 ? 0x6f9c46 : 0x86af4e,
-      [Math.cos(a) * d, h * 0.82 + rng() * 0.25, Math.sin(a) * d],
-      [0, 0, 0], [1.25, 0.62, 1.25]);
+  // крона: три яруса плоских «тарелок», нижний шире, верхний на стволе
+  const layers = [
+    { y: h * 0.78, count: 6, spread: 1.5, r: 1.05, squash: 0.5 },
+    { y: h * 0.9, count: 5, spread: 1.15, r: 0.9, squash: 0.52 },
+    { y: h * 1.0, count: 3, spread: 0.6, r: 0.78, squash: 0.55 },
+  ];
+  const tint = [0x6f9c46, 0x86af4e, 0x5e8a3d];
+  for (let li = 0; li < layers.length; li++) {
+    const L = layers[li];
+    const center = trunk.spine(0.5 + li * 0.2);
+    for (let i = 0; i < L.count; i++) {
+      const a = (i / L.count) * Math.PI * 2 + li * 0.6 + rng() * 0.4;
+      const d = L.spread * (0.5 + rng() * 0.5);
+      const r = L.r * (0.85 + rng() * 0.3);
+      piece(leaf, new THREE.IcosahedronGeometry(r, 1),
+        tint[(i + li) % tint.length],
+        [center.x + Math.cos(a) * d, L.y + rng() * 0.12, center.z + Math.sin(a) * d],
+        [0, rng() * Math.PI, 0], [1.3, L.squash * 1.2, 1.3]);
+    }
   }
+  // шапка на самой макушке ствола — крона держится на дереве
+  const topC = trunk.spine(1);
+  piece(leaf, new THREE.IcosahedronGeometry(0.62, 1), 0x93bb58,
+    [topC.x, topC.y + 0.1, topC.z], [0, 0, 0], [1.35, 0.6, 1.35]);
   return { bark: merge(bark), leaf: merge(leaf) };
 }
 
 /**
  * Сухостой: мёртвое дерево без листьев — серебристо-серый ствол,
- * обломанные ветки. Ставится на выгоревших склонах.
+ * обломанные ветки, которые растут прямо из изогнутого ствола.
  */
 export function makeDeadTreeParts(rng) {
   const bark = [];
-  const h = 4.2 + rng() * 3.2;
-  trunkPart(bark, rng, h, 0.36, 0.07, 0x8b8274, 0x9c9384, 0.6, 7);
+  const h = 4.4 + rng() * 3.0;
+  const trunk = trunkPart(bark, rng, h, 0.34, 0.06, 0x8b8274, 0x9c9384, 0.55, 7);
 
-  const branches = 4 + Math.floor(rng() * 3);
+  const branches = 5 + Math.floor(rng() * 3);
   for (let i = 0; i < branches; i++) {
     const a = (i / branches) * Math.PI * 2 + rng() * 0.9;
-    const y = h * (0.4 + rng() * 0.5);
-    const len = 0.9 + rng() * 1.3;
-    const origin = new THREE.Vector3(Math.sin(a) * 0.1, y, Math.cos(a) * 0.1);
-    const end = new THREE.Vector3(
-      Math.cos(a) * len, y + len * (0.35 + rng() * 0.5), Math.sin(a) * len,
-    );
-    const geo = new THREE.CylinderGeometry(0.035, 0.1, origin.distanceTo(end), 5, 1);
+    const t = 0.42 + (i / branches) * 0.5;
+    const len = 0.85 + rng() * 1.15;
+    const origin = trunk.spine(t);            // ветка растёт из осевой линии
+    const end = origin.clone().add(new THREE.Vector3(
+      Math.cos(a) * len, len * (0.3 + rng() * 0.6), Math.sin(a) * len,
+    ));
+    const geo = new THREE.CylinderGeometry(0.03, 0.085, origin.distanceTo(end), 5, 1);
     geo.applyQuaternion(alignQuat(origin, end));
     geo.translate((origin.x + end.x) / 2, (origin.y + end.y) / 2, (origin.z + end.z) / 2);
     bark.push(colorize(flat(geo), i % 3 ? 0x8b8274 : 0x7b7364));
+
+    // пара обломанных сучков на ветке — силуэт живее
+    if (rng() > 0.45) {
+      const mid = origin.clone().lerp(end, 0.6);
+      const end2 = mid.clone().add(new THREE.Vector3(
+        Math.cos(a + 1.2) * len * 0.4, len * 0.3, Math.sin(a + 1.2) * len * 0.4,
+      ));
+      const twig = new THREE.CylinderGeometry(0.02, 0.05, mid.distanceTo(end2), 4, 1);
+      twig.applyQuaternion(alignQuat(mid, end2));
+      twig.translate((mid.x + end2.x) / 2, (mid.y + end2.y) / 2, (mid.z + end2.z) / 2);
+      bark.push(colorize(flat(twig), 0x9a9284));
+    }
   }
+  // сломанная макушка
+  const tip = trunk.spine(1);
+  part(bark, new THREE.ConeGeometry(0.11, 0.42, 5, 1), 0xa39b8c, tip.x, tip.y + 0.1, tip.z, 0.15, 0.3, 0);
   return { bark: merge(bark) };
 }
 
@@ -1125,4 +1181,147 @@ export function makeSnake() {
   group.add(head);
 
   return { group, parts: { segments, head, tongue } };
+}
+
+/**
+ * Лодка: долблёная пирога с бортами, кормовым веслом и мачтой с парусом.
+ * Собрана из отдельных мешей, чтобы парус качался на ветру, а корпус — на волне.
+ */
+export function makeBoat() {
+  const hullMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.85, flatShading: true, vertexColors: true, side: THREE.DoubleSide,
+  });
+  const trimMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, flatShading: true, vertexColors: true });
+  const sailMat = new THREE.MeshStandardMaterial({
+    color: 0xffffff, roughness: 0.95, flatShading: true, vertexColors: true, side: THREE.DoubleSide,
+  });
+
+  const group = new THREE.Group();
+  group.name = 'boat';
+
+  // --- корпус: шпангоуты от носа к корме (z, полуширина, верх, низ) ---
+  const stations = [
+    { z: -1.95, w: 0.10, top: 0.66, bot: 0.40 },
+    { z: -1.55, w: 0.38, top: 0.62, bot: 0.14 },
+    { z: -0.95, w: 0.60, top: 0.58, bot: 0.00 },
+    { z: -0.20, w: 0.70, top: 0.55, bot: 0.00 },
+    { z: 0.55, w: 0.68, top: 0.54, bot: 0.00 },
+    { z: 1.25, w: 0.52, top: 0.53, bot: 0.06 },
+    { z: 1.85, w: 0.34, top: 0.54, bot: 0.20 },
+  ];
+  // кольцо шпангоута: полка слева, борт слева, днище, борт справа, полка справа
+  const ring = (st) => {
+    const inner = Math.max(0.03, st.w - 0.13);
+    const wid = st.w * 0.58;
+    return [
+      [-inner, st.top, st.z],
+      [-st.w, st.top, st.z],
+      [-wid, st.bot, st.z],
+      [wid, st.bot, st.z],
+      [st.w, st.top, st.z],
+      [inner, st.top, st.z],
+    ];
+  };
+  const rings = stations.map(ring);
+
+  const pos = [];
+  const col = [];
+  const push3 = (a, hex) => {
+    const c = new THREE.Color(hex);
+    pos.push(a[0], a[1], a[2]);
+    col.push(c.r, c.g, c.b);
+  };
+  const quad = (a, b, c, d, hex1, hex2) => {
+    push3(a, hex1); push3(b, hex2); push3(c, hex1);
+    push3(a, hex1); push3(c, hex1); push3(d, hex2);
+  };
+  const outer = 0x8a5a34;
+  const innerCol = 0x6f4526;
+  const bottomCol = 0x7b4d2c;
+  for (let i = 0; i < rings.length - 1; i++) {
+    const A = rings[i];
+    const B = rings[i + 1];
+    // полки (верх борта)
+    quad(A[0], A[1], B[1], B[0], 0xa06a3c, 0x8a5a34);
+    // борт левый / правый
+    quad(A[1], A[2], B[2], B[1], outer, 0x7d5230);
+    quad(A[4], A[5], B[5], B[4], outer, 0x7d5230);
+    // внутренняя сторона борта
+    quad(A[2], A[3], B[3], B[2], bottomCol, 0x6a4426);
+    // полка правая
+    quad(A[5], A[4], B[4], B[5], 0xa06a3c, 0x8a5a34);
+  }
+  // транец (корма): веер от центра последнего шпангоута
+  const last = rings[rings.length - 1];
+  const lc = [0, (last[1][1] + last[2][1]) / 2 + 0.06, last[1][2]];
+  for (let i = 0; i < last.length - 1; i++) {
+    push3(lc, 0x74492a); push3(last[i], 0x8a5a34); push3(last[i + 1], 0x74492a);
+  }
+  // нос: тоже закрываем
+  const first = rings[0];
+  const fc = [0, (first[1][1] + first[2][1]) / 2 + 0.02, first[1][2]];
+  for (let i = 0; i < first.length - 1; i++) {
+    push3(fc, 0x74492a); push3(first[i + 1], 0x8a5a34); push3(first[i], 0x74492a);
+  }
+
+  const hullGeo = new THREE.BufferGeometry();
+  hullGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  hullGeo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  hullGeo.computeVertexNormals();
+  const hull = new THREE.Mesh(hullGeo, hullMat);
+  hull.castShadow = true;
+  hull.receiveShadow = true;
+  group.add(hull);
+
+  // --- банки и крепления ---
+  const trimParts = [];
+  for (const [z, y] of [[-0.55, 0.4], [0.45, 0.38]]) {
+    piece(trimParts, new THREE.BoxGeometry(1.15, 0.09, 0.3), 0x8b6039, [0, y, z]);
+  }
+  // киль-полоз снизу: лодка не «режет» воду пузом
+  piece(trimParts, new THREE.BoxGeometry(0.12, 0.1, 3.3), 0x5c3b22, [0, -0.05, 0]);
+  // руль на транце
+  piece(trimParts, new THREE.BoxGeometry(0.07, 0.5, 0.34), 0x5f3d22, [0, 0.18, 1.98], [0.18, 0, 0]);
+  const trim = new THREE.Mesh(merge(trimParts), trimMat);
+  trim.castShadow = true;
+  group.add(trim);
+
+  // --- мачта ---
+  const mastParts = [];
+  piece(mastParts, new THREE.CylinderGeometry(0.055, 0.075, 2.7, 6, 1), 0x6a4a2e, [0, 1.6, -0.35]);
+  piece(mastParts, new THREE.CylinderGeometry(0.04, 0.04, 1.7, 5, 1), 0x6a4a2e, [0, 2.35, 0.45], [Math.PI / 2, 0, 0]);
+  piece(mastParts, new THREE.CylinderGeometry(0.035, 0.035, 1.5, 5, 1), 0x5c3f27, [0, 0.62, 0.1], [0, 0, Math.PI / 2]);
+  const mast = new THREE.Mesh(merge(mastParts), trimMat);
+  mast.castShadow = true;
+  group.add(mast);
+
+  // --- парус: два треугольника, натянутых на рей ---
+  const sailParts = [];
+  const sailVerts = (a, b, c) => {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute([
+      ...a, ...b, ...c,
+      ...a, ...c, ...b,
+    ], 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array(12).fill(0), 2));
+    g.computeVertexNormals();
+    return g;
+  };
+  const main = sailVerts([0.03, 2.55, -0.32], [0.03, 0.72, -0.3], [0.03, 0.9, 1.15]);
+  piece(sailParts, main, 0xe8dfc6, [0, 0, 0]);
+  const jib = sailVerts([0.02, 2.4, -0.4], [0.02, 0.85, -0.45], [0.02, 0.62, -1.72]);
+  piece(sailParts, jib, 0xdfd4b8, [0, 0, 0]);
+  piece(sailParts, new THREE.BoxGeometry(0.05, 0.05, 1.55), 0xb8a684, [0, 0.95, 0.4], [0.3, 0, 0]);
+  const sail = new THREE.Mesh(merge(sailParts), sailMat);
+  sail.castShadow = true;
+  group.add(sail);
+
+  // --- весло ---
+  const oarParts = [];
+  piece(oarParts, new THREE.CylinderGeometry(0.035, 0.035, 1.9, 5, 1), 0x7d5733, [0.5, 0.46, 0.2], [0, 0, Math.PI / 2.6]);
+  piece(oarParts, new THREE.BoxGeometry(0.3, 0.05, 0.46), 0x7d5733, [1.22, 0.2, 0.2], [0, 0, Math.PI / 2.6]);
+  const oar = new THREE.Mesh(merge(oarParts), trimMat);
+  group.add(oar);
+
+  return { group, parts: { hull, trim, mast, sail, oar } };
 }

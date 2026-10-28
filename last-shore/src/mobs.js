@@ -209,9 +209,37 @@ export class Mobs {
     return { x: 20, z: 20, h: world.heightAt(20, 20) };
   }
 
+  /**
+   * Место рядом с домом зверя: вокруг дома нет ни деревьев, ни камней,
+   * поэтому зверь не рождается внутри модели и не «застревает» с первого кадра.
+   */
+  _denSpot(type, def) {
+    const dens = (this.world.dens || []).filter((d) => d.kind === type);
+    if (!dens.length) return null;
+    const busy = (d) => this.list.filter(
+      (m) => m.alive && m.den === d
+    ).length;
+    const order = dens.slice().sort((a, b) => busy(a) - busy(b));
+    for (const d of order.slice(0, 4)) {
+      for (let i = 0; i < 48; i++) {
+        const a = this.rng() * Math.PI * 2;
+        const r = Math.sqrt(this.rng()) * d.radius * 0.55;
+        const x = d.x + Math.cos(a) * r;
+        const z = d.z + Math.sin(a) * r;
+        const h = this.world.heightAt(x, z);
+        if (def.swim) {
+          if (h > -0.9 || h < -7) continue;
+        } else if (h < 0.45) continue;
+        if (this._blocked(x, z, (def.radius || 0.5) + 0.05, true)) continue;
+        return { x, z, h, den: d };
+      }
+    }
+    return null;
+  }
+
   spawn(type) {
     const def = TYPES[type];
-    const spot = this._spot(def.biomes, null, 0, def);
+    const spot = this._denSpot(type, def) || this._spot(def.biomes, null, 0, def);
     const built = def.model();
 
     // хитбокс строим по фактическим габаритам модели: коробка всегда
@@ -246,6 +274,7 @@ export class Mobs {
       x: spot.x,
       z: spot.z,
       y: spot.h,
+      den: spot.den || null,
       home: { x: spot.x, z: spot.z },
       hp: def.hp,
       maxHp: def.hp,
@@ -312,7 +341,8 @@ export class Mobs {
   }
 
   _respawn(mob) {
-    const spot = this._spot(mob.def.biomes, null, 0, mob.def);
+    const spot = this._denSpot(mob.type, mob.def) || this._spot(mob.def.biomes, null, 0, mob.def);
+    if (spot.den) mob.den = spot.den;
     mob.x = spot.x;
     mob.z = spot.z;
     mob.y = spot.h;
@@ -869,6 +899,14 @@ export class Mobs {
         break;
       case 'patrol':
         speed = def.speed;
+        // дом зверя — его логово: далеко от него не уходит
+        if (mob.den) {
+          const dHome = Math.hypot(mob.x - mob.den.x, mob.z - mob.den.z);
+          if (dHome > mob.den.radius * 0.9) {
+            aimX = mob.den.x;
+            aimZ = mob.den.z;
+          }
+        }
         break;
       case 'graze':
         // пасётся почти на месте
