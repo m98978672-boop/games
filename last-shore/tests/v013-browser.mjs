@@ -159,6 +159,7 @@ const heldFly = await page.evaluate(() => {
   // включаем именно полёт, независимо от того, что осталось от прошлых проверок
   if (!g.creative) g.toggleCreative();
   g.creative = true;
+  g.paused = false;                 // после панелей/шахты игра могла встать на паузу
   g.player.fly = true;
   const p = g.player;
   p.position.set(0, 14, 0);
@@ -183,11 +184,12 @@ const heldFly = await page.evaluate(() => {
   g.toggleCreative();
   return { up: +up.toFixed(2), down: +down.toFixed(2), hover: +hover.toFixed(2),
     dbg: { fly: p.fly, y0: +y0.toFixed(2), y1: +p.position.y.toFixed(2),
-      held: g.input.jumpHeld, und: !!g.underground, alive: p.alive, dead: g.dead } };
+      held: g.input.jumpHeld, und: !!g.underground, alive: p.alive, dead: g.dead, running: g.running, paused: g.paused } };
 });
 console.log('полёт зажатием клавиш: вверх', heldFly.up, 'м · вниз', heldFly.down,
   'м · зависание', heldFly.hover, 'м · работает:',
-  heldFly.up > 4 && heldFly.down < -4 && heldFly.hover < 0.4);
+  heldFly.up > 4 && heldFly.down < -4 && heldFly.hover < 0.4,
+  '· отладка', JSON.stringify(heldFly.dbg));
 
 console.log(errors.length ? 'ОШИБКИ:\n' + errors.slice(0, 8).join('\n') : 'ошибок нет');
 await browser.close();

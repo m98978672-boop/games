@@ -45,8 +45,9 @@ export function convexHull2D(points) {
  * belowY — брать только то, что ниже этой высоты: у дерева обводка должна
  * обнимать ствол и корни, а не крону (иначе получилась бы невидимая стена).
  */
-export function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity } = {}) {
+export function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity, maxRadius = undefined } = {}) {
   const pts = [];
+  const limit = maxRadius === undefined ? null : Math.max(0.12, maxRadius);
   for (const geo of geometries) {
     if (!geo) continue;
     const pos = geo.attributes && geo.attributes.position;
@@ -54,7 +55,18 @@ export function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity } =
     const step = Math.max(1, Math.floor(pos.count / 900));   // прореживаем: контур не изменится
     for (let i = 0; i < pos.count; i += step) {
       if (pos.getY(i) > belowY) continue;
-      pts.push({ x: pos.getX(i), z: pos.getZ(i) });
+      let px = pos.getX(i);
+      let pz = pos.getZ(i);
+      // обводка не шире «твёрдой» части модели: крона и раскидистые ветки
+      // не должны превращаться в невидимую стену
+      if (limit !== null) {
+        const d = Math.hypot(px, pz);
+        if (d > limit) {
+          px = (px / d) * limit;
+          pz = (pz / d) * limit;
+        }
+      }
+      pts.push({ x: px, z: pz });
     }
   }
   const hull = convexHull2D(pts);
@@ -172,6 +184,16 @@ export class ShellField {
       fixed++;
     }
     return fixed;
+  }
+
+  /** Внутри ли точка обводки (для проверок и бота) */
+  contains(x, z, y = null) {
+    for (const p of this.near(x, z, 0.5)) {
+      if (p.enabled && !p.enabled()) continue;
+      if (y !== null && (y > p.maxY || y + 1.85 < p.minY)) continue;
+      if (this._inside(p.poly, x, z)) return true;
+    }
+    return false;
   }
 
   /** Пройдёт ли круг — нужно зверям */

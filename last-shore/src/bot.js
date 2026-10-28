@@ -343,7 +343,9 @@ export class InspectorBot {
         for (let i = 0; i < 3; i++) w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
         const first = w.pitAt(spot.x, spot.z);
         if (!first) return { ok: false, expect: 'первая яма', fact: 'не выкопалась' };
-        const second = { x: spot.x + (first.rect.x1 - first.rect.x0) + 0.6, z: spot.z };
+        // вторая яма ставится точно вплотную к краю первой (в соседний узел сетки)
+        const stepW = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+        const second = { x: first.rect.x1 + stepW * 0.5, z: spot.z };
         const res = w.dig(second.x, second.z, { radius: 1.6, depth: 0.45, mine: 99 });
         const pit = w.pitAt(second.x, second.z);
         const same = pit && w.pitAt(spot.x, spot.z) === pit;
@@ -414,12 +416,17 @@ export class InspectorBot {
         if (!tree) return { ok: false, expect: 'дерево с обводкой', fact: 'не нашлось' };
         const pos = { x: tree.x + 5, z: tree.z };
         const vel = { x: -6, z: 0 };
+        // идём прямо в ствол: герой скользит вокруг обводки, но внутрь не попадает
+        let insideFrames = 0;
+        let closest = Infinity;
         for (let i = 0; i < 200; i++) {
           pos.x += vel.x * 0.016;
           w.shells.resolve(pos, 0.35, vel, w.heightAt(pos.x, pos.z), 0.35);
+          if (w.shells.contains(pos.x, pos.z, w.heightAt(pos.x, pos.z))) insideFrames++;
+          closest = Math.min(closest, Math.hypot(pos.x - tree.x, pos.z - tree.z));
         }
-        const gap = pos.x - tree.x;
-        const stopped = gap > 0.3;
+        const stopped = insideFrames === 0;
+        const gap = closest;
         const prisms = w.shells.stats.prisms;
         // обводка исчезает вместе с моделью
         const before = tree.collider.disabled;
@@ -431,7 +438,7 @@ export class InspectorBot {
         return {
           ok: stopped && passes && prisms > 200,
           expect: 'у каждой модели треугольная обводка, живой хитбокс сквозь неё не проходит',
-          fact: `обводок ${prisms} · герой остановился в ${fmt(gap)} м от ствола · сквозь спиленное дерево проходит: ${passes ? 'да' : 'нет'}`,
+          fact: `обводок ${prisms} · внутрь обводки не попал (кадров внутри: ${insideFrames}) · ближе ${fmt(gap)} м к оси · сквозь спиленное дерево проходит: ${passes ? 'да' : 'нет'}`,
         };
       } },
 

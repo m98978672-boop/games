@@ -482,9 +482,9 @@ export class Player {
     if (tryMove(this.position.x, nz)) this.position.z = nz;
     else this.velocity.z *= 0.2;
 
-    world.resolveCollisions(this.position, P.radius, this.velocity);
+    world.resolveCollisions(this.position, P.radius, this.velocity, this.position.y, 0.55);
     // обводки моделей: живой хитбокс не проходит сквозь треугольную оболочку
-    world.shells?.resolve(this.position, P.radius, this.velocity, this.position.y, 0.35);
+    world.shells?.resolve(this.position, P.radius, this.velocity, this.position.y, 0.55);
 
     // --- вертикаль: прилипание к рельефу + прыжок ---
     const ground = world.heightAt(this.position.x, this.position.z);

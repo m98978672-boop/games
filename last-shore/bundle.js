@@ -29655,8 +29655,9 @@ void main() {
     upper.pop();
     return lower.concat(upper);
   }
-  function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity } = {}) {
+  function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity, maxRadius = void 0 } = {}) {
     const pts = [];
+    const limit = maxRadius === void 0 ? null : Math.max(0.12, maxRadius);
     for (const geo of geometries) {
       if (!geo) continue;
       const pos = geo.attributes && geo.attributes.position;
@@ -29664,7 +29665,16 @@ void main() {
       const step = Math.max(1, Math.floor(pos.count / 900));
       for (let i = 0; i < pos.count; i += step) {
         if (pos.getY(i) > belowY) continue;
-        pts.push({ x: pos.getX(i), z: pos.getZ(i) });
+        let px = pos.getX(i);
+        let pz = pos.getZ(i);
+        if (limit !== null) {
+          const d = Math.hypot(px, pz);
+          if (d > limit) {
+            px = px / d * limit;
+            pz = pz / d * limit;
+          }
+        }
+        pts.push({ x: px, z: pz });
       }
     }
     const hull = convexHull2D(pts);
@@ -29774,6 +29784,15 @@ void main() {
         fixed++;
       }
       return fixed;
+    }
+    /** Внутри ли точка обводки (для проверок и бота) */
+    contains(x, z, y = null) {
+      for (const p of this.near(x, z, 0.5)) {
+        if (p.enabled && !p.enabled()) continue;
+        if (y !== null && (y > p.maxY || y + 1.85 < p.minY)) continue;
+        if (this._inside(p.poly, x, z)) return true;
+      }
+      return false;
     }
     /** Пройдёт ли круг — нужно зверям */
     blocked(x, z, radius, y = 0) {
@@ -29993,6 +30012,7 @@ void main() {
   }
 
   // src/models.js
+  var clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function colorize(geo, hex2) {
     const c = new Color(hex2);
     const n = geo.attributes.position.count;
@@ -30081,6 +30101,7 @@ void main() {
   }
   function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, sides = 8) {
     const segments = 5;
+    const centers = [{ x: 0, y: 0, z: 0 }];
     let x = 0;
     let z = 0;
     let y = 0;
@@ -30095,8 +30116,17 @@ void main() {
       z += Math.cos(twist * 0.7) * segH * 0.12;
       part(parts, geo, i % 2 ? hexA : hexB, x, y + segH / 2, z);
       y += segH;
+      centers.push({ x, y, z });
     }
-    return { x, y, z };
+    const spine = (t) => {
+      const k = clamp01(t) * (centers.length - 1);
+      const i = Math.min(centers.length - 2, Math.floor(k));
+      const f = k - i;
+      const a = centers[i];
+      const b = centers[i + 1];
+      return new Vector3(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, a.z + (b.z - a.z) * f);
+    };
+    return { x, y, z, spine, segments, centers, baseR, topR };
   }
   function makePalmParts(rng) {
     const bark = [];
@@ -30307,85 +30337,136 @@ void main() {
   function makePineParts(rng) {
     const bark = [];
     const leaf = [];
-    const h = 7.5 + rng() * 4;
-    trunkPart(bark, rng, h, 0.34 + rng() * 0.08, 0.1, 5980972, 7164470, 0.12, 7);
-    for (let i = 0; i < 3; i++) {
-      const a = i / 3 * Math.PI * 2 + rng() * 0.5;
+    const h = 8.2 + rng() * 4.2;
+    const baseR = 0.3 + rng() * 0.07;
+    const trunk = trunkPart(bark, rng, h * 0.97, baseR, 0.06, 5980972, 7164470, 0.06, 7);
+    for (let i = 0; i < 4; i++) {
+      const a = i / 4 * Math.PI * 2 + rng() * 0.4;
       part(
         bark,
-        new ConeGeometry(0.16, 0.7, 5, 1),
+        new ConeGeometry(0.15, 0.72, 5, 1),
         5192230,
-        Math.cos(a) * 0.3,
-        0.2,
-        Math.sin(a) * 0.3,
-        Math.PI * 0.36,
+        Math.cos(a) * (baseR + 0.12),
+        0.22,
+        Math.sin(a) * (baseR + 0.12),
+        Math.PI * 0.34,
         -a,
         0
       );
     }
-    const tiers = 5;
+    const tiers = 7;
+    const bottom = h * 0.26;
+    const top = h * 0.99;
+    const stepH = (top - bottom) / (tiers - 1);
+    const coneH = stepH * 1.95;
+    const tints = [3035702, 3498044, 4025155, 4684362];
     for (let i = 0; i < tiers; i++) {
       const t = i / (tiers - 1);
-      const y = h * (0.42 + t * 0.52);
-      const r = (2 - t * 1.35) * (0.9 + rng() * 0.2);
-      const tint = t > 0.6 ? 3364922 : 3103290;
-      part(leaf, new ConeGeometry(r, 1.5 + r * 0.5, 7, 1), i % 2 ? tint : 3827268, 0, y, 0, 0, rng() * 0.6, 0);
+      const y = bottom + stepH * i;
+      const sp = trunk.spine(0.26 + t * 0.7);
+      const r = (2.15 - t * 1.78) * (0.93 + rng() * 0.14);
+      const tint = tints[Math.min(tints.length - 1, Math.floor(t * 3.2))];
+      part(
+        leaf,
+        new ConeGeometry(r, coneH, 8, 1),
+        tint,
+        sp.x * 0.8,
+        y + coneH / 2 - 0.12,
+        sp.z * 0.8,
+        0,
+        rng() * 0.7,
+        0
+      );
     }
-    piece(leaf, new ConeGeometry(0.55, 1.8, 6, 1), 4157257, [0, h * 0.99, 0]);
+    const tip = trunk.spine(1);
+    part(leaf, new ConeGeometry(0.34, h * 0.16, 6, 1), 5145426, tip.x, tip.y + h * 0.03, tip.z);
     return { bark: merge(bark), leaf: merge(leaf) };
   }
   function makeMangroveParts(rng) {
     const bark = [];
     const leaf = [];
-    const h = 3.2 + rng() * 1.6;
+    const h = 3.6 + rng() * 1.5;
     const legs = 5 + Math.floor(rng() * 2);
     for (let i = 0; i < legs; i++) {
       const a = i / legs * Math.PI * 2 + rng() * 0.4;
-      const rad = 0.9 + rng() * 0.6;
-      const top = new Vector3(Math.cos(a) * 0.25, h * 0.55, Math.sin(a) * 0.25);
-      const foot = new Vector3(Math.cos(a) * rad, 0.02, Math.sin(a) * rad);
-      const len = top.distanceTo(foot) * 1.05;
-      const geo = new CylinderGeometry(0.075, 0.14, len, 5, 1);
+      const rad = 0.85 + rng() * 0.55;
+      const top = new Vector3(Math.cos(a) * 0.18, h * 0.5, Math.sin(a) * 0.18);
+      const foot = new Vector3(Math.cos(a) * rad, 0.01, Math.sin(a) * rad);
+      const len = top.distanceTo(foot) * 1.08;
+      const geo = new CylinderGeometry(0.06, 0.13, len, 5, 1);
       geo.applyQuaternion(alignQuat(top, foot));
       geo.translate((top.x + foot.x) / 2, (top.y + foot.y) / 2, (top.z + foot.z) / 2);
       bark.push(colorize(flat(geo), i % 2 ? 7033920 : 8020553));
     }
-    trunkPart(bark, rng, h * 0.62, 0.3, 0.16, 7033920, 8218188, 0.5, 7);
-    for (let i = 0; i < 7; i++) {
-      const a = i / 7 * Math.PI * 2 + rng() * 0.5;
-      const d = 0.6 + rng() * 1.5;
-      const r = 0.9 + rng() * 0.5;
-      piece(
-        leaf,
-        new IcosahedronGeometry(r, 1),
-        i % 2 ? 7314502 : 8826702,
-        [Math.cos(a) * d, h * 0.82 + rng() * 0.25, Math.sin(a) * d],
-        [0, 0, 0],
-        [1.25, 0.62, 1.25]
-      );
+    const trunk = trunkPart(bark, rng, h * 0.78, 0.3, 0.14, 7033920, 8218188, 0.35, 7);
+    const layers = [
+      { y: h * 0.78, count: 6, spread: 1.5, r: 1.05, squash: 0.5 },
+      { y: h * 0.9, count: 5, spread: 1.15, r: 0.9, squash: 0.52 },
+      { y: h * 1, count: 3, spread: 0.6, r: 0.78, squash: 0.55 }
+    ];
+    const tint = [7314502, 8826702, 6195773];
+    for (let li = 0; li < layers.length; li++) {
+      const L = layers[li];
+      const center = trunk.spine(0.5 + li * 0.2);
+      for (let i = 0; i < L.count; i++) {
+        const a = i / L.count * Math.PI * 2 + li * 0.6 + rng() * 0.4;
+        const d = L.spread * (0.5 + rng() * 0.5);
+        const r = L.r * (0.85 + rng() * 0.3);
+        piece(
+          leaf,
+          new IcosahedronGeometry(r, 1),
+          tint[(i + li) % tint.length],
+          [center.x + Math.cos(a) * d, L.y + rng() * 0.12, center.z + Math.sin(a) * d],
+          [0, rng() * Math.PI, 0],
+          [1.3, L.squash * 1.2, 1.3]
+        );
+      }
     }
+    const topC = trunk.spine(1);
+    piece(
+      leaf,
+      new IcosahedronGeometry(0.62, 1),
+      9681752,
+      [topC.x, topC.y + 0.1, topC.z],
+      [0, 0, 0],
+      [1.35, 0.6, 1.35]
+    );
     return { bark: merge(bark), leaf: merge(leaf) };
   }
   function makeDeadTreeParts(rng) {
     const bark = [];
-    const h = 4.2 + rng() * 3.2;
-    trunkPart(bark, rng, h, 0.36, 0.07, 9142900, 10261380, 0.6, 7);
-    const branches = 4 + Math.floor(rng() * 3);
+    const h = 4.4 + rng() * 3;
+    const trunk = trunkPart(bark, rng, h, 0.34, 0.06, 9142900, 10261380, 0.55, 7);
+    const branches = 5 + Math.floor(rng() * 3);
     for (let i = 0; i < branches; i++) {
       const a = i / branches * Math.PI * 2 + rng() * 0.9;
-      const y = h * (0.4 + rng() * 0.5);
-      const len = 0.9 + rng() * 1.3;
-      const origin = new Vector3(Math.sin(a) * 0.1, y, Math.cos(a) * 0.1);
-      const end = new Vector3(
+      const t = 0.42 + i / branches * 0.5;
+      const len = 0.85 + rng() * 1.15;
+      const origin = trunk.spine(t);
+      const end = origin.clone().add(new Vector3(
         Math.cos(a) * len,
-        y + len * (0.35 + rng() * 0.5),
+        len * (0.3 + rng() * 0.6),
         Math.sin(a) * len
-      );
-      const geo = new CylinderGeometry(0.035, 0.1, origin.distanceTo(end), 5, 1);
+      ));
+      const geo = new CylinderGeometry(0.03, 0.085, origin.distanceTo(end), 5, 1);
       geo.applyQuaternion(alignQuat(origin, end));
       geo.translate((origin.x + end.x) / 2, (origin.y + end.y) / 2, (origin.z + end.z) / 2);
       bark.push(colorize(flat(geo), i % 3 ? 9142900 : 8090468));
+      if (rng() > 0.45) {
+        const mid = origin.clone().lerp(end, 0.6);
+        const end2 = mid.clone().add(new Vector3(
+          Math.cos(a + 1.2) * len * 0.4,
+          len * 0.3,
+          Math.sin(a + 1.2) * len * 0.4
+        ));
+        const twig = new CylinderGeometry(0.02, 0.05, mid.distanceTo(end2), 4, 1);
+        twig.applyQuaternion(alignQuat(mid, end2));
+        twig.translate((mid.x + end2.x) / 2, (mid.y + end2.y) / 2, (mid.z + end2.z) / 2);
+        bark.push(colorize(flat(twig), 10130052));
+      }
     }
+    const tip = trunk.spine(1);
+    part(bark, new ConeGeometry(0.11, 0.42, 5, 1), 10722188, tip.x, tip.y + 0.1, tip.z, 0.15, 0.3, 0);
     return { bark: merge(bark) };
   }
   function makeBushParts(rng, withBerries) {
@@ -30986,6 +31067,141 @@ void main() {
     group.add(head);
     return { group, parts: { segments, head, tongue } };
   }
+  function makeBoat() {
+    const hullMat = new MeshStandardMaterial({
+      color: 16777215,
+      roughness: 0.85,
+      flatShading: true,
+      vertexColors: true,
+      side: DoubleSide
+    });
+    const trimMat = new MeshStandardMaterial({ color: 16777215, roughness: 0.9, flatShading: true, vertexColors: true });
+    const sailMat = new MeshStandardMaterial({
+      color: 16777215,
+      roughness: 0.95,
+      flatShading: true,
+      vertexColors: true,
+      side: DoubleSide
+    });
+    const group = new Group();
+    group.name = "boat";
+    const stations = [
+      { z: -1.95, w: 0.1, top: 0.66, bot: 0.4 },
+      { z: -1.55, w: 0.38, top: 0.62, bot: 0.14 },
+      { z: -0.95, w: 0.6, top: 0.58, bot: 0 },
+      { z: -0.2, w: 0.7, top: 0.55, bot: 0 },
+      { z: 0.55, w: 0.68, top: 0.54, bot: 0 },
+      { z: 1.25, w: 0.52, top: 0.53, bot: 0.06 },
+      { z: 1.85, w: 0.34, top: 0.54, bot: 0.2 }
+    ];
+    const ring = (st) => {
+      const inner = Math.max(0.03, st.w - 0.13);
+      const wid = st.w * 0.58;
+      return [
+        [-inner, st.top, st.z],
+        [-st.w, st.top, st.z],
+        [-wid, st.bot, st.z],
+        [wid, st.bot, st.z],
+        [st.w, st.top, st.z],
+        [inner, st.top, st.z]
+      ];
+    };
+    const rings = stations.map(ring);
+    const pos = [];
+    const col = [];
+    const push3 = (a, hex2) => {
+      const c = new Color(hex2);
+      pos.push(a[0], a[1], a[2]);
+      col.push(c.r, c.g, c.b);
+    };
+    const quad = (a, b, c, d, hex1, hex2) => {
+      push3(a, hex1);
+      push3(b, hex2);
+      push3(c, hex1);
+      push3(a, hex1);
+      push3(c, hex1);
+      push3(d, hex2);
+    };
+    const outer = 9067060;
+    const innerCol = 7292198;
+    const bottomCol = 8080684;
+    for (let i = 0; i < rings.length - 1; i++) {
+      const A = rings[i];
+      const B = rings[i + 1];
+      quad(A[0], A[1], B[1], B[0], 10512956, 9067060);
+      quad(A[1], A[2], B[2], B[1], outer, 8213040);
+      quad(A[4], A[5], B[5], B[4], outer, 8213040);
+      quad(A[2], A[3], B[3], B[2], bottomCol, 6964262);
+      quad(A[5], A[4], B[4], B[5], 10512956, 9067060);
+    }
+    const last = rings[rings.length - 1];
+    const lc = [0, (last[1][1] + last[2][1]) / 2 + 0.06, last[1][2]];
+    for (let i = 0; i < last.length - 1; i++) {
+      push3(lc, 7620906);
+      push3(last[i], 9067060);
+      push3(last[i + 1], 7620906);
+    }
+    const first = rings[0];
+    const fc = [0, (first[1][1] + first[2][1]) / 2 + 0.02, first[1][2]];
+    for (let i = 0; i < first.length - 1; i++) {
+      push3(fc, 7620906);
+      push3(first[i + 1], 9067060);
+      push3(first[i], 7620906);
+    }
+    const hullGeo = new BufferGeometry();
+    hullGeo.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    hullGeo.setAttribute("color", new Float32BufferAttribute(col, 3));
+    hullGeo.computeVertexNormals();
+    const hull = new Mesh(hullGeo, hullMat);
+    hull.castShadow = true;
+    hull.receiveShadow = true;
+    group.add(hull);
+    const trimParts = [];
+    for (const [z, y] of [[-0.55, 0.4], [0.45, 0.38]]) {
+      piece(trimParts, new BoxGeometry(1.15, 0.09, 0.3), 9134137, [0, y, z]);
+    }
+    piece(trimParts, new BoxGeometry(0.12, 0.1, 3.3), 6044450, [0, -0.05, 0]);
+    piece(trimParts, new BoxGeometry(0.07, 0.5, 0.34), 6241570, [0, 0.18, 1.98], [0.18, 0, 0]);
+    const trim = new Mesh(merge(trimParts), trimMat);
+    trim.castShadow = true;
+    group.add(trim);
+    const mastParts = [];
+    piece(mastParts, new CylinderGeometry(0.055, 0.075, 2.7, 6, 1), 6965806, [0, 1.6, -0.35]);
+    piece(mastParts, new CylinderGeometry(0.04, 0.04, 1.7, 5, 1), 6965806, [0, 2.35, 0.45], [Math.PI / 2, 0, 0]);
+    piece(mastParts, new CylinderGeometry(0.035, 0.035, 1.5, 5, 1), 6045479, [0, 0.62, 0.1], [0, 0, Math.PI / 2]);
+    const mast = new Mesh(merge(mastParts), trimMat);
+    mast.castShadow = true;
+    group.add(mast);
+    const sailParts = [];
+    const sailVerts = (a, b, c) => {
+      const g = new BufferGeometry();
+      g.setAttribute("position", new Float32BufferAttribute([
+        ...a,
+        ...b,
+        ...c,
+        ...a,
+        ...c,
+        ...b
+      ], 3));
+      g.setAttribute("uv", new Float32BufferAttribute(new Array(12).fill(0), 2));
+      g.computeVertexNormals();
+      return g;
+    };
+    const main = sailVerts([0.03, 2.55, -0.32], [0.03, 0.72, -0.3], [0.03, 0.9, 1.15]);
+    piece(sailParts, main, 15261638, [0, 0, 0]);
+    const jib = sailVerts([0.02, 2.4, -0.4], [0.02, 0.85, -0.45], [0.02, 0.62, -1.72]);
+    piece(sailParts, jib, 14668984, [0, 0, 0]);
+    piece(sailParts, new BoxGeometry(0.05, 0.05, 1.55), 12101252, [0, 0.95, 0.4], [0.3, 0, 0]);
+    const sail = new Mesh(merge(sailParts), sailMat);
+    sail.castShadow = true;
+    group.add(sail);
+    const oarParts = [];
+    piece(oarParts, new CylinderGeometry(0.035, 0.035, 1.9, 5, 1), 8214323, [0.5, 0.46, 0.2], [0, 0, Math.PI / 2.6]);
+    piece(oarParts, new BoxGeometry(0.3, 0.05, 0.46), 8214323, [1.22, 0.2, 0.2], [0, 0, Math.PI / 2.6]);
+    const oar = new Mesh(merge(oarParts), trimMat);
+    group.add(oar);
+    return { group, parts: { hull, trim, mast, sail, oar } };
+  }
 
   // src/world.js
   var SIZE = CONFIG.world.size;
@@ -31037,6 +31253,16 @@ void main() {
   var STONE_THICK = STRATA.reduce((sum, st) => sum + st.thick, 0);
   var VOID_COLOR = 2827315;
   var MAX_PIT_CELLS = 8;
+  var rng0 = (i) => i * 2.399963 % (Math.PI * 2);
+  var CHUNK = 90;
+  var ISLETS = [
+    { x: -122, z: -84, rad: 46, h: 8.5 },
+    { x: 128, z: -66, rad: 38, h: 6 },
+    { x: 96, z: 124, rad: 52, h: 10.5 },
+    { x: -108, z: 118, rad: 34, h: 5 },
+    { x: 8, z: -146, rad: 30, h: 4.2 },
+    { x: -160, z: 22, rad: 27, h: 3.6 }
+  ];
   var DIG_CELL = 1.4;
   var SAND_ZONES = [
     new Color(15721400),
@@ -31098,6 +31324,16 @@ void main() {
     geo.setAttribute("color", new BufferAttribute(arr, 3));
     return geo;
   }
+  function addPart(parts, geo, hex2, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
+    if (geo.index) geo = geo.toNonIndexed();
+    colorize2(geo, hex2);
+    geo.rotateX(rx);
+    geo.rotateY(ry);
+    geo.rotateZ(rz);
+    geo.translate(x, y, z);
+    parts.push(geo);
+    return geo;
+  }
   var World = class {
     constructor(scene, seed = CONFIG.world.seed, textures = null) {
       this.scene = scene;
@@ -31117,6 +31353,9 @@ void main() {
       this.playerPos = null;
       this.baseColors = null;
       this.pickups = [];
+      this.chunkMeshes = [];
+      this.flatCore = /* @__PURE__ */ new Set();
+      this.dens = [];
       this.time = 0;
       this.shells = new ShellField(scene);
       this._buildHeights();
@@ -31143,7 +31382,36 @@ void main() {
       const mountain = Math.pow(ridged(x * 0.012, z * 0.012, 3, s + 11), 1.2) * 27 * inner * ridgeMask;
       const landH = 1.2 + Math.pow(hills, 1.15) * 6.2 + detail * 1.2 + mountain * (0.4 + mass * 0.6);
       const seaH = -1.6 - (1 - mass) * 11;
-      return seaH + (landH - seaH) * mass;
+      const main = seaH + (landH - seaH) * mass;
+      return Math.max(main, this._isletHeight(x, z, s));
+    }
+    /**
+     * Малые острова вокруг главного: у каждого свой холм, свой пляж и
+     * пролив между ним и большой землёй. Высота берётся как максимум —
+     * так острова не «привариваются» к берегу, а встают отдельными пятнами.
+     */
+    _isletHeight(x, z, s = this.seed) {
+      let best = -Infinity;
+      for (const isl of ISLETS) {
+        const dx = x - isl.x;
+        const dz = z - isl.z;
+        const d = Math.hypot(dx, dz) / isl.rad;
+        if (d > 1.5) continue;
+        const a = Math.atan2(dz, dx);
+        const wobble = (fbm(Math.cos(a) * 2.1 + isl.x * 0.01, Math.sin(a) * 2.1 + isl.z * 0.01, 2, s + 71) - 0.5) * 0.34;
+        const rr = d * (1 + wobble);
+        const shore = smoothstep2(1.02, 0.72, rr);
+        if (shore <= 0) {
+          best = Math.max(best, -12);
+          continue;
+        }
+        const hills = fbm(x * 0.03 + isl.x, z * 0.03 - isl.z, 3, s + 91);
+        const peak = isl.h * (0.55 + hills * 0.85) * shore;
+        const beach = 0.9 * smoothstep2(1, 0.86, rr);
+        const sea = -1.4 - (1 - shore) * 8.5;
+        best = Math.max(best, sea + (peak + beach - sea) * shore);
+      }
+      return best;
     }
     _buildHeights() {
       for (let iz = 0; iz < GRID; iz++) {
@@ -31153,6 +31421,103 @@ void main() {
           this.heights[iz * GRID + ix] = this._rawHeight(x, z);
         }
       }
+      this._quantizeSlopes();
+    }
+    /**
+     * Уклоны земли — только из разрешённого набора: 0°, 15°, 30°, 40°.
+     * Каждая пара соседних узлов приводится к ближайшей ступени, поэтому
+     * склоны получаются «террасами», а обрывов круче 40° на поверхности нет
+     * (90° остаются только у стенок выкопанных ям и шахт).
+     */
+    _quantizeSlopes() {
+      const stepH = Math.tan(15 * Math.PI / 180) * STEP;
+      const maxSteps = 3;
+      const maxStepsDiag = 4;
+      const lock = this.flatCore || /* @__PURE__ */ new Set();
+      const n = this.heights.length;
+      const k = new Int16Array(n);
+      for (let i = 0; i < n; i++) {
+        if (lock.has(i)) {
+          k[i] = Math.round(this.heights[i] / stepH);
+          continue;
+        }
+        k[i] = Math.round(this.heights[i] / stepH);
+      }
+      const lim = maxSteps;
+      const limD = maxStepsDiag;
+      const inQueue = new Uint8Array(n);
+      const qn = n + 1;
+      const queue = new Int32Array(qn);
+      let head = 0;
+      let tail = 0;
+      const push = (i) => {
+        if (inQueue[i]) return;
+        inQueue[i] = 1;
+        queue[tail] = i;
+        tail = (tail + 1) % qn;
+      };
+      for (let i = 0; i < n; i++) push(i);
+      const pairsOf = (i, ix, iz) => {
+        let changed = 0;
+        const down = (j, d) => {
+          if (k[j] > k[i] + d) {
+            k[j] = k[i] + d;
+            push(j);
+            changed++;
+          }
+        };
+        if (ix > 0) down(i - 1, lim);
+        if (ix < GRID - 1) down(i + 1, lim);
+        if (iz > 0) down(i - GRID, lim);
+        if (iz < GRID - 1) down(i + GRID, lim);
+        if (ix > 0 && iz > 0) down(i - GRID - 1, limD);
+        if (ix < GRID - 1 && iz > 0) down(i - GRID + 1, limD);
+        if (ix > 0 && iz < GRID - 1) down(i + GRID - 1, limD);
+        if (ix < GRID - 1 && iz < GRID - 1) down(i + GRID + 1, limD);
+        return changed;
+      };
+      let guard = 0;
+      const guardMax = n * 400;
+      while (head !== tail && guard < guardMax) {
+        const i = queue[head];
+        head = (head + 1) % qn;
+        inQueue[i] = 0;
+        guard++;
+        if (lock.has(i)) continue;
+        const ix = i % GRID;
+        const iz = (i - ix) / GRID;
+        let low = k[i];
+        if (ix > 0) low = Math.min(low, k[i - 1] + lim);
+        if (ix < GRID - 1) low = Math.min(low, k[i + 1] + lim);
+        if (iz > 0) low = Math.min(low, k[i - GRID] + lim);
+        if (iz < GRID - 1) low = Math.min(low, k[i + GRID] + lim);
+        if (ix > 0 && iz > 0) low = Math.min(low, k[i - GRID - 1] + limD);
+        if (ix < GRID - 1 && iz > 0) low = Math.min(low, k[i - GRID + 1] + limD);
+        if (ix > 0 && iz < GRID - 1) low = Math.min(low, k[i + GRID - 1] + limD);
+        if (ix < GRID - 1 && iz < GRID - 1) low = Math.min(low, k[i + GRID + 1] + limD);
+        if (low < k[i]) {
+          k[i] = low;
+          pairsOf(i, ix, iz);
+          continue;
+        }
+        pairsOf(i, ix, iz);
+      }
+      for (let i = 0; i < n; i++) {
+        if (lock.has(i)) continue;
+        this.heights[i] = k[i] * stepH;
+      }
+      this._quantGuard = guard;
+      this._quantGuardMax = guardMax;
+      this._quantCalls = (this._quantCalls || 0) + 1;
+      let worst = 0;
+      for (let iz = 0; iz < GRID; iz++) {
+        for (let ix = 0; ix < GRID - 1; ix++) {
+          const i = iz * GRID + ix;
+          if (lock.has(i) || lock.has(i + 1)) continue;
+          worst = Math.max(worst, Math.abs(this.heights[i + 1] - this.heights[i]));
+        }
+      }
+      this._quantWorst = worst / stepH;
     }
     /** Высота сетки рельефа (билинейно), без учёта выкопанных ям */
     _gridHeightAt(x, z, arr = this.heights) {
@@ -31428,6 +31793,276 @@ void main() {
       this.water.frustumCulled = false;
       this.scene.add(this.water);
     }
+    /**
+     * Дома зверей. У каждого вида своя поляна: вокруг логовища не растёт
+     * ни дерево, ни куст, ни камень — зверю есть где встать, и он не
+     * рождается внутри модели.
+     */
+    _planDens() {
+      const rng = this.rng;
+      const specs = [
+        { kind: "boar", count: 4, hMin: 2.6, hMax: 13, radius: 9 },
+        { kind: "crab", count: 4, hMin: 0.7, hMax: 2.2, radius: 7 },
+        { kind: "gull", count: 3, hMin: 1, hMax: 2.6, radius: 8 },
+        { kind: "snake", count: 3, hMin: 2.6, hMax: 11, radius: 7 },
+        { kind: "monkey", count: 4, hMin: 3.5, hMax: 14, radius: 10 },
+        { kind: "turtle", count: 4, hMin: 0.7, hMax: 2.2, radius: 7 }
+      ];
+      const dens = [];
+      for (const sp of specs) {
+        let made = 0;
+        for (let i = 0; i < 9e3 && made < sp.count; i++) {
+          const x = (rng() - 0.5) * SIZE * 0.9;
+          const z = (rng() - 0.5) * SIZE * 0.9;
+          const h = this.heightAt(x, z);
+          if (h < sp.hMin || h > sp.hMax) continue;
+          if (this.slopeAt(x, z) > 0.45) continue;
+          if (this.spawnPoint && Math.hypot(x - this.spawnPoint.x, z - this.spawnPoint.z) < 30) continue;
+          if (dens.some((d) => Math.hypot(d.x - x, d.z - z) < 28)) continue;
+          dens.push({ x, z, kind: sp.kind, radius: sp.radius, y: h });
+          made++;
+        }
+      }
+      this.dens = dens;
+      this._flatSpots = this._flatSpots || [];
+      for (const d of dens) this._flatSpots.push({ x: d.x, z: d.z, r: d.radius * 0.42, y: d.y, tag: "den" });
+    }
+    /** Дом зверя в точке (для мобов): ближайший подходящий по биому */
+    denFor(kind, near = null) {
+      const list = (this.dens || []).filter((d) => d.kind === kind);
+      if (!list.length) return null;
+      if (!near) return list[Math.floor(this.rng() * list.length)];
+      let best = null;
+      let bd = Infinity;
+      for (const d of list) {
+        const dd = Math.hypot(d.x - near.x, d.z - near.z);
+        if (dd < bd) {
+          bd = dd;
+          best = d;
+        }
+      }
+      return best;
+    }
+    /**
+     * Применить все заявки на ровную землю. Под каждой моделью узлы сетки
+     * садятся на одну высоту, а сразу за краем — плавный переход.
+     */
+    _applyFlatSpots() {
+      if (!this._flatSpots || !this._flatSpots.length) return;
+      const half = SIZE / 2;
+      const reachPad = STEP * 1.2;
+      for (const sp of this._flatSpots) {
+        const cx = Math.round((sp.x + half) / STEP);
+        const cz = Math.round((sp.z + half) / STEP);
+        const reach = Math.ceil((sp.r + reachPad) / STEP) + 1;
+        let sum = 0;
+        let n = 0;
+        for (let iz = Math.max(1, cz - 1); iz <= Math.min(GRID - 2, cz + 1); iz++) {
+          for (let ix = Math.max(1, cx - 1); ix <= Math.min(GRID - 2, cx + 1); ix++) {
+            sum += this.heights[iz * GRID + ix];
+            n++;
+          }
+        }
+        if (n) sp.y = sum / n;
+        for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
+          for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
+            if (this.cutCells && this.cutCells.has(ix * 1024 + iz)) continue;
+            if (this.flatCore.has(iz * GRID + ix)) continue;
+            const nx = -half + ix * STEP;
+            const nz = -half + iz * STEP;
+            const d = Math.hypot(nx - sp.x, nz - sp.z);
+            if (d > sp.r + reachPad) continue;
+            const t = d <= sp.r ? 1 : 1 - smoothstep2(sp.r, sp.r + reachPad, d);
+            const i = iz * GRID + ix;
+            this.heights[i] = this.heights[i] * (1 - t) + sp.y * t;
+            if (t >= 1) this.flatCore.add(i);
+          }
+        }
+      }
+      this._flatLog = this._flatSpots.slice();
+      this._flatSpots.length = 0;
+      this._quantizeSlopes();
+      this._applyHeights();
+      if (this.baseHeights) this.baseHeights.set(this.heights);
+    }
+    /**
+     * Дома зверей на земле: логовище кабана, нора змеи, гнездо чайки,
+     * куча песка краба, гнездо черепахи и веточный настил обезьяны.
+     */
+    _buildDens() {
+      const mat2 = new MeshStandardMaterial({
+        vertexColors: true,
+        roughness: 0.95,
+        flatShading: true
+      });
+      const byKind = /* @__PURE__ */ new Map();
+      for (const d of this.dens) {
+        if (!byKind.has(d.kind)) byKind.set(d.kind, []);
+        byKind.get(d.kind).push(d);
+      }
+      const geos = {
+        boar: () => {
+          const parts = [];
+          addPart(parts, new IcosahedronGeometry(1.5, 1), 5981232, 0, 0.12, 0, 0, 0, 0);
+          addPart(parts, new CylinderGeometry(0.55, 0.7, 0.9, 7, 1), 2760984, 0, 0.35, -1.1, Math.PI / 2.1, 0, 0);
+          for (let i = 0; i < 5; i++) {
+            const a = i / 5 * Math.PI * 2;
+            addPart(
+              parts,
+              new CylinderGeometry(0.04, 0.06, 1.1, 4, 1),
+              7031856,
+              Math.cos(a) * 1.1,
+              0.5,
+              Math.sin(a) * 1.1,
+              1.1,
+              -a,
+              0
+            );
+          }
+          return mergeGeometries(parts, false);
+        },
+        crab: () => {
+          const parts = [];
+          addPart(parts, new IcosahedronGeometry(1.1, 1), 14272411, 0, 0.05, 0, 0, 0, 0);
+          for (let i = 0; i < 4; i++) {
+            const a = i / 4 * Math.PI * 2 + 0.4;
+            addPart(
+              parts,
+              new CylinderGeometry(0.16, 0.2, 0.5, 6, 1),
+              3813156,
+              Math.cos(a) * 0.5,
+              0.32,
+              Math.sin(a) * 0.5
+            );
+          }
+          for (let i = 0; i < 6; i++) {
+            const a = rng0(i);
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.12, 0),
+              15787727,
+              Math.cos(a) * 1.2,
+              0.12,
+              Math.sin(a) * 1.2
+            );
+          }
+          return mergeGeometries(parts, false);
+        },
+        gull: () => {
+          const parts = [];
+          addPart(parts, new CylinderGeometry(1, 0.8, 0.22, 9, 1), 9075285, 0, 0.11, 0);
+          for (let i = 0; i < 12; i++) {
+            const a = i / 12 * Math.PI * 2;
+            addPart(
+              parts,
+              new CylinderGeometry(0.03, 0.05, 0.9, 4, 1),
+              7298883,
+              Math.cos(a) * 0.75,
+              0.22,
+              Math.sin(a) * 0.75,
+              0.5,
+              -a,
+              0
+            );
+          }
+          for (let i = 0; i < 3; i++) {
+            const a = i / 3 * Math.PI * 2;
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.18, 0),
+              15920344,
+              Math.cos(a) * 0.25,
+              0.28,
+              Math.sin(a) * 0.25
+            );
+          }
+          return mergeGeometries(parts, false);
+        },
+        snake: () => {
+          const parts = [];
+          addPart(parts, new IcosahedronGeometry(1.2, 1), 8222056, 0, 0.05, 0, 0, 0, 0);
+          addPart(parts, new CylinderGeometry(0.3, 0.42, 0.7, 7, 1), 2827808, 0.2, 0.3, 0.3, 0.4, 0, 0);
+          for (let i = 0; i < 4; i++) {
+            const a = i / 4 * Math.PI * 2;
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.3, 0),
+              9340793,
+              Math.cos(a) * 1.1,
+              0.2,
+              Math.sin(a) * 1.1
+            );
+          }
+          return mergeGeometries(parts, false);
+        },
+        monkey: () => {
+          const parts = [];
+          addPart(parts, new CylinderGeometry(1.5, 1.6, 0.2, 8, 1), 6966575, 0, 0.1, 0);
+          for (let i = 0; i < 7; i++) {
+            const a = i / 7 * Math.PI * 2;
+            addPart(
+              parts,
+              new CylinderGeometry(0.05, 0.08, 1.4, 4, 1),
+              8215608,
+              Math.cos(a) * 1,
+              0.3,
+              Math.sin(a) * 1,
+              1.35,
+              -a,
+              0
+            );
+          }
+          for (let i = 0; i < 5; i++) {
+            const a = i / 5 * Math.PI * 2;
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.34, 1),
+              7314502,
+              Math.cos(a) * 0.9,
+              0.28,
+              Math.sin(a) * 0.9
+            );
+          }
+          return mergeGeometries(parts, false);
+        },
+        turtle: () => {
+          const parts = [];
+          addPart(parts, new CylinderGeometry(1, 1.25, 0.3, 9, 1), 14206876, 0, 0.1, 0);
+          addPart(parts, new CylinderGeometry(0.4, 0.5, 0.45, 7, 1), 3813670, -0.3, 0.28, 0.2, 0.35, 0, 0);
+          for (let i = 0; i < 5; i++) {
+            const a = rng0(i + 2);
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.1, 0),
+              15853778,
+              Math.cos(a) * 1.05,
+              0.16,
+              Math.sin(a) * 1.05
+            );
+          }
+          return mergeGeometries(parts, false);
+        }
+      };
+      this.denMeshes = [];
+      for (const [kind, list] of byKind) {
+        const geo = geos[kind] ? geos[kind]() : null;
+        if (!geo) continue;
+        const mesh2 = new InstancedMesh(geo, mat2, list.length);
+        mesh2.castShadow = true;
+        mesh2.frustumCulled = false;
+        const dummy = new Object3D();
+        list.forEach((d, i) => {
+          dummy.position.set(d.x, d.y - 0.12, d.z);
+          dummy.rotation.set(0, this.rng() * Math.PI * 2, 0);
+          dummy.scale.setScalar(0.85 + this.rng() * 0.35);
+          dummy.updateMatrix();
+          mesh2.setMatrixAt(i, dummy.matrix);
+        });
+        mesh2.instanceMatrix.needsUpdate = true;
+        this.scene.add(mesh2);
+        this.denMeshes.push(mesh2);
+      }
+    }
     _buildVegetation() {
       const rng = this.rng;
       const palms = [];
@@ -31441,122 +32076,133 @@ void main() {
       const moistureAt = (x, z) => fbm(x * 9e-3 + 3, z * 9e-3 - 8, 3, this.seed + 31);
       const forestAt = (x, z) => fbm(x * 0.012 - 17, z * 0.012 + 6, 3, this.seed + 44);
       const nextScale = () => 0.8 + rng() * 0.55;
-      const pushOne = (arr, x, z, h, extra) => arr.push({ x, z, h, s: 0.8 + rng() * 0.55, rot: rng() * Math.PI * 2, ...extra });
-      const freeSpot = (x, z, r) => this.isFree(x, z, r);
-      for (let i = 0; i < 1400; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = (0.28 + Math.sqrt(rng()) * 0.42) * SIZE * 0.5;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
-        const h = this.heightAt(x, z);
-        const s = nextScale();
-        if (h > 1 && h < 3.6 && this.slopeAt(x, z) < 0.5 && freeSpot(x, z, 0.55 * s)) {
-          pushOne(palms, x, z, h, { s });
-          this.colliders.push({ x, z, r: 0.55 * s, height: 8, kind: "palm" });
+      this._planDens();
+      const nearDen = (x, z, pad = 0) => {
+        for (const d of this.dens) if (Math.hypot(x - d.x, z - d.z) < d.radius + pad) return d;
+        return null;
+      };
+      this._flatSpots = [];
+      this._flatStats = { ask: 0, deny: 0 };
+      const requestFlat = (x, z, r) => {
+        this._flatStats.ask++;
+        for (const sp of this._flatSpots) {
+          if (Math.hypot(x - sp.x, z - sp.z) < r + sp.r + 0.45) {
+            this._flatStats.deny++;
+            return null;
+          }
         }
-      }
-      for (let i = 0; i < 4e3; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = Math.sqrt(rng()) * SIZE * 0.36;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
-        const h = this.heightAt(x, z);
-        if (h < 1.8 || h > 16) continue;
-        if (this.slopeAt(x, z) > 0.8) continue;
-        const f = forestAt(x, z);
-        if (f < 0.42) continue;
-        if (rng() > 0.55 + f * 0.4) continue;
-        const s = nextScale();
-        if (!freeSpot(x, z, 0.55 * s)) continue;
-        pushOne(trees, x, z, h, { s });
-        this.colliders.push({ x, z, r: 0.55 * s, height: 6.5, kind: "tree" });
-        if (trees.length >= 900) break;
-      }
-      for (let i = 0; i < 2600; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = Math.sqrt(rng()) * SIZE * 0.38;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
-        const h = this.heightAt(x, z);
-        if (h < 1.3 || h > 14) continue;
-        if (this.slopeAt(x, z) > 0.7) continue;
-        if (moistureAt(x, z) < 0.42) continue;
-        const s = nextScale();
-        if (!freeSpot(x, z, 0.95 * s)) continue;
-        pushOne(bushes, x, z, h, { s, berries: rng() < 0.35 });
-        if (this.colliders.length < 4e3) this.colliders.push({ x, z, r: 0.95 * s, height: 1.1, kind: "bush", soft: true });
-        if (bushes.length >= 700) break;
-      }
-      for (let i = 0; i < 2600; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = Math.sqrt(rng()) * SIZE * 0.34;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
-        const h = this.heightAt(x, z);
-        if (h < 7.5 || h > 22) continue;
-        if (this.slopeAt(x, z) > 0.75) continue;
-        const s = 0.75 + rng() * 0.45;
-        if (!freeSpot(x, z, 0.45 * s)) continue;
-        pushOne(pines, x, z, h, { s });
-        this.colliders.push({ x, z, r: 0.45 * s, height: 9, kind: "tree" });
-        if (pines.length >= 340) break;
-      }
-      for (let i = 0; i < 3200; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = (0.2 + Math.sqrt(rng()) * 0.42) * SIZE * 0.5;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
-        const h = this.heightAt(x, z);
-        if (h < 0.55 || h > 1.9) continue;
-        if (this.slopeAt(x, z) > 0.45) continue;
-        const s = 0.85 + rng() * 0.4;
-        if (!freeSpot(x, z, 0.5 * s)) continue;
-        pushOne(mangroves, x, z, h, { s });
-        this.colliders.push({ x, z, r: 0.5 * s, height: 4, kind: "tree" });
-        if (mangroves.length >= 170) break;
-      }
-      for (let i = 0; i < 2600; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = Math.sqrt(rng()) * SIZE * 0.36;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
-        const h = this.heightAt(x, z);
-        if (h < 2.2 || h > 15) continue;
-        if (moistureAt(x, z) > 0.44) continue;
-        if (this.slopeAt(x, z) > 0.85) continue;
-        const s = 0.8 + rng() * 0.5;
-        if (!freeSpot(x, z, 0.42 * s)) continue;
-        pushOne(deads, x, z, h, { s });
-        this.colliders.push({ x, z, r: 0.42 * s, height: 6, kind: "tree" });
-        if (deads.length >= 130) break;
-      }
-      for (let i = 0; i < 4e3; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = Math.sqrt(rng()) * SIZE * 0.4;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
+        const y = this.heightAt(x, z);
+        this._flatSpots.push({ x, z, r, y, y0: y, tag: "veg" });
+        return y;
+      };
+      const freeSpot = (x, z, r) => this.isFree(x, z, r) && !nearDen(x, z, r + 1);
+      const place = (arr, x, z, { s = nextScale(), solid = 0.32, height = 6, kind = "tree", soft = false, pad = 0, extra = {} } = {}) => {
+        const h = requestFlat(x, z, Math.max(solid * s + 0.55, pad || STEP * 1.25));
+        if (h === null) return null;
+        const it = { x, z, h, s, rot: rng() * Math.PI * 2, ...extra };
+        arr.push(it);
+        const col = { x, z, r: solid * s, height, kind };
+        if (soft) col.soft = true;
+        this.colliders.push(col);
+        it.collider = col;
+        return it;
+      };
+      const scatter = (tries, fn) => {
+        for (let i = 0; i < tries; i++) {
+          const x = (rng() - 0.5) * SIZE * 0.94;
+          const z = (rng() - 0.5) * SIZE * 0.94;
+          fn(x, z);
+        }
+      };
+      scatter(14e3, (x, z) => {
+        if (rocks.length >= 240) return;
         const h = this.heightAt(x, z);
         const slope = this.slopeAt(x, z);
-        if (h < 0.6 || h > 26) continue;
-        if (slope < 0.25 && rng() > 0.12) continue;
-        if (rng() > 0.3) continue;
+        if (h < 0.6 || h > 26) return;
+        if (slope < 0.25 && rng() > 0.2) return;
+        if (rng() > 0.45) return;
         const s = 0.45 + rng() * 1.2;
         const ore = s > 0.9 && rng() < 0.035;
-        if (!freeSpot(x, z, s * 1)) continue;
-        pushOne(rocks, x, z, h, { s, ore, kind: ore ? "ore" : "stone" });
-        this.colliders.push({ x, z, r: s * 1, height: s * 1.1, kind: "rock" });
-        if (rocks.length >= 210) break;
-      }
-      for (let i = 0; i < 9e3; i++) {
-        const a = rng() * Math.PI * 2;
-        const r = Math.sqrt(rng()) * SIZE * 0.4;
-        const x = Math.cos(a) * r;
-        const z = Math.sin(a) * r;
+        if (!freeSpot(x, z, 0.7 * s)) return;
+        place(rocks, x, z, {
+          s,
+          solid: 0.62,
+          height: s * 0.95,
+          kind: "rock",
+          pad: Math.max(1.55, 0.62 * s + 0.5),
+          extra: { ore, kind: ore ? "ore" : "stone" }
+        });
+      });
+      scatter(4200, (x, z) => {
+        if (palms.length >= 190) return;
         const h = this.heightAt(x, z);
-        if (h < 1.4 || h > 15) continue;
-        if (this.slopeAt(x, z) > 0.85) continue;
+        if (h < 1 || h > 3.6) return;
+        const s = nextScale();
+        if (!freeSpot(x, z, 0.4 * s)) return;
+        place(palms, x, z, { s, solid: 0.3, height: 8, kind: "palm" });
+      });
+      scatter(9e3, (x, z) => {
+        if (trees.length >= 900) return;
+        const h = this.heightAt(x, z);
+        if (h < 1.8 || h > 16) return;
+        const f = forestAt(x, z);
+        if (f < 0.42) return;
+        if (rng() > 0.62 + f * 0.4) return;
+        const s = nextScale();
+        if (!freeSpot(x, z, 0.42 * s)) return;
+        place(trees, x, z, { s, solid: 0.34, height: 6.5, kind: "tree" });
+      });
+      scatter(7e3, (x, z) => {
+        if (bushes.length >= 700) return;
+        const h = this.heightAt(x, z);
+        if (h < 1.3 || h > 14) return;
+        if (moistureAt(x, z) < 0.42) return;
+        const s = nextScale();
+        if (!freeSpot(x, z, 0.55 * s)) return;
+        place(bushes, x, z, {
+          s,
+          solid: 0.42,
+          height: 1.05,
+          kind: "bush",
+          soft: true,
+          extra: { berries: rng() < 0.35, soft: true }
+        });
+      });
+      scatter(6e3, (x, z) => {
+        if (pines.length >= 340) return;
+        const h = this.heightAt(x, z);
+        if (h < 5.5 || h > 22) return;
+        const s = 0.75 + rng() * 0.45;
+        if (!freeSpot(x, z, 0.34 * s)) return;
+        place(pines, x, z, { s, solid: 0.32, height: 9, kind: "tree" });
+      });
+      scatter(6e3, (x, z) => {
+        if (mangroves.length >= 120) return;
+        const h = this.heightAt(x, z);
+        if (h < 0.45 || h > 2.4) return;
+        const s = 0.85 + rng() * 0.4;
+        if (!freeSpot(x, z, 0.4 * s)) return;
+        place(mangroves, x, z, { s, solid: 0.3, height: 4, kind: "tree" });
+      });
+      scatter(6e3, (x, z) => {
+        if (deads.length >= 130) return;
+        const h = this.heightAt(x, z);
+        if (h < 2.2 || h > 15) return;
+        if (moistureAt(x, z) > 0.44) return;
+        const s = 0.8 + rng() * 0.5;
+        if (!freeSpot(x, z, 0.34 * s)) return;
+        place(deads, x, z, { s, solid: 0.32, height: 6, kind: "tree" });
+      });
+      scatter(16e3, (x, z) => {
+        if (tufts.length >= 2600) return;
+        const h = this.heightAt(x, z);
+        if (h < 1.4 || h > 15) return;
+        if (this.slopeAt(x, z) > 0.85) return;
         tufts.push({ x, z, h, s: 0.6 + rng() * 0.9, rot: rng() * Math.PI * 2 });
-        if (tufts.length >= 2600) break;
+      });
+      this._applyFlatSpots();
+      for (const list of [palms, trees, pines, mangroves, deads, bushes, rocks]) {
+        for (const it of list) it.h = this.heightAt(it.x, it.z);
       }
       const barkMat = this.textures ? createPlantMaterial(this.textures.bark, { sway: 5e-3, name: "bark", repeat: [2, 3] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
       const leafMat = this.textures ? createPlantMaterial(this.textures.leaf, { sway: 0.013, name: "leaf", repeat: [2, 2] }) : new MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
@@ -31588,7 +32234,14 @@ void main() {
         moss: mossMat,
         ore: oreMat
       };
-      const buildInstances = (variants, list, { castShadow = true, variantOf = null, solidR = 0 } = {}) => {
+      const buildInstances = (variants, list, {
+        castShadow = true,
+        variantOf = null,
+        solidR = 0,
+        cullFar = 340,
+        name = "veg"
+      } = {}) => {
+        var _a;
         const meshes = [];
         if (!list.length) return meshes;
         const groups = variants.length;
@@ -31603,58 +32256,89 @@ void main() {
             vbox = vbox ? vbox.clone().union(geo.boundingBox) : geo.boundingBox.clone();
           }
           const height = vbox ? vbox.max.y - vbox.min.y : 0;
-          const hullTop = height > 3 ? vbox.min.y + 1.7 : vbox.max.y;
+          const hullTop = height > 3 ? vbox.min.y + 1.35 : vbox.max.y;
+          const shellTop = vbox ? vbox.max.y : hullTop;
           const hullLocal = hullFromGeometry(Object.values(variant), {
-            pad: 0.03,
-            belowY: hullTop
+            pad: 0.02,
+            belowY: hullTop,
+            maxRadius: solidR ? solidR * 1.12 : void 0
           });
           list.forEach((it, i) => {
             const want = variantOf ? variantOf(it, i) : i % groups;
             if (want === v) items.push(it);
           });
           if (!items.length) continue;
-          for (const [layer, geo] of Object.entries(variant)) {
-            if (!geo) continue;
-            const mat2 = layerMaterials[layer] || leafMat;
-            const mesh2 = new InstancedMesh(geo, mat2, items.length);
-            mesh2.castShadow = castShadow;
-            mesh2.receiveShadow = false;
-            mesh2.frustumCulled = false;
-            items.forEach((it, k) => {
-              var _a;
-              const s = (_a = it.s) != null ? _a : 1;
-              dummy.position.set(it.x, it.h - 0.15, it.z);
-              dummy.rotation.set(0, it.rot, 0);
-              dummy.scale.set(s, s, s);
-              dummy.updateMatrix();
-              mesh2.setMatrixAt(k, dummy.matrix);
+          const buckets = /* @__PURE__ */ new Map();
+          for (const it of items) {
+            const ck = `${Math.floor(it.x / CHUNK)}|${Math.floor(it.z / CHUNK)}`;
+            let b = buckets.get(ck);
+            if (!b) buckets.set(ck, b = []);
+            b.push(it);
+          }
+          for (const bucket of buckets.values()) {
+            for (const [layer, geo] of Object.entries(variant)) {
+              if (!geo) continue;
+              const mat2 = layerMaterials[layer] || leafMat;
+              const mesh2 = new InstancedMesh(geo, mat2, bucket.length);
+              mesh2.castShadow = castShadow;
+              mesh2.receiveShadow = false;
+              mesh2.frustumCulled = false;
+              mesh2.name = `${name}:${layer}`;
+              bucket.forEach((it, k) => {
+                var _a2;
+                const s = (_a2 = it.s) != null ? _a2 : 1;
+                dummy.position.set(it.x, it.h - 0.15, it.z);
+                dummy.rotation.set(0, it.rot, 0);
+                dummy.scale.set(s, s, s);
+                dummy.updateMatrix();
+                mesh2.setMatrixAt(k, dummy.matrix);
+                if (!it.bbox && vbox) {
+                  it.bbox = {
+                    w: (vbox.max.x - vbox.min.x) * s,
+                    h: (vbox.max.y - vbox.min.y) * s,
+                    d: (vbox.max.z - vbox.min.z) * s,
+                    minY: vbox.min.y * s
+                  };
+                }
+                if (!it.bboxSolid) {
+                  it.bboxSolid = solidR && vbox ? {
+                    w: solidR * 2 * s,
+                    h: (vbox.max.y - vbox.min.y) * s,
+                    d: solidR * 2 * s,
+                    minY: vbox.min.y * s
+                  } : it.bbox;
+                }
+                if (!it.hullLocal && hullLocal) it.hullLocal = hullLocal;
+                if (!it.hullY && vbox) it.hullY = { min: vbox.min.y, max: shellTop };
+                it.parts = it.parts || [];
+                it.parts.push({ mesh: mesh2, idx: k, baseScale: s, layer });
+                it.mesh = mesh2;
+                it.instIdx = k;
+              });
               mesh2.instanceMatrix.needsUpdate = true;
-              if (!it.bbox && vbox) {
-                it.bbox = {
-                  w: (vbox.max.x - vbox.min.x) * s,
-                  h: (vbox.max.y - vbox.min.y) * s,
-                  d: (vbox.max.z - vbox.min.z) * s,
-                  minY: vbox.min.y * s
-                };
+              mesh2.count = bucket.length;
+              this.scene.add(mesh2);
+              meshes.push(mesh2);
+              let cx = 0;
+              let cz = 0;
+              let maxS = 1;
+              for (const it of bucket) {
+                cx += it.x;
+                cz += it.z;
+                maxS = Math.max(maxS, (_a = it.s) != null ? _a : 1);
               }
-              if (!it.bboxSolid) {
-                it.bboxSolid = solidR && vbox ? {
-                  w: solidR * 2 * s,
-                  h: (vbox.max.y - vbox.min.y) * s,
-                  d: solidR * 2 * s,
-                  minY: vbox.min.y * s
-                } : it.bbox;
-              }
-              if (!it.hullLocal && hullLocal) it.hullLocal = hullLocal;
-              if (!it.hullY && vbox) it.hullY = { min: vbox.min.y, max: Math.min(vbox.max.y, hullTop) };
-              it.parts = it.parts || [];
-              it.parts.push({ mesh: mesh2, idx: k, baseScale: s, layer });
-              it.mesh = mesh2;
-              it.instIdx = k;
-            });
-            mesh2.count = items.length;
-            this.scene.add(mesh2);
-            meshes.push(mesh2);
+              cx /= bucket.length;
+              cz /= bucket.length;
+              const radius = CHUNK * 0.75 + maxS * 8;
+              this.chunkMeshes.push({
+                mesh: mesh2,
+                x: cx,
+                z: cz,
+                far: cullFar,
+                center: new Vector3(cx, (vbox ? (vbox.min.y + vbox.max.y) * 0.5 : 4) + 2, cz),
+                radius
+              });
+            }
           }
           if (variant.fruit) items.forEach((it) => {
             it.berries = true;
@@ -31665,17 +32349,12 @@ void main() {
         }
         return meshes;
       };
-      const palmVariants = [makePalmParts(rng), makePalmParts(rng), makePalmParts(rng)];
-      const treeVariants = [makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng), makeTreeParts(rng)];
-      const pineVariants = [makePineParts(rng), makePineParts(rng), makePineParts(rng)];
-      const mangroveVariants = [makeMangroveParts(rng), makeMangroveParts(rng), makeMangroveParts(rng)];
-      const deadVariants = [makeDeadTreeParts(rng), makeDeadTreeParts(rng), makeDeadTreeParts(rng)];
-      const bushVariants = [
-        makeBushParts(rng, false),
-        makeBushParts(rng, true),
-        makeBushParts(rng, false),
-        makeBushParts(rng, true)
-      ];
+      const palmVariants = [makePalmParts(rng), makePalmParts(rng)];
+      const treeVariants = [makeTreeParts(rng), makeTreeParts(rng)];
+      const pineVariants = [makePineParts(rng), makePineParts(rng)];
+      const mangroveVariants = [makeMangroveParts(rng), makeMangroveParts(rng)];
+      const deadVariants = [makeDeadTreeParts(rng)];
+      const bushVariants = [makeBushParts(rng, false), makeBushParts(rng, true)];
       const rockVariants = [
         makeRockParts(rng, "boulder"),
         makeRockParts(rng, "slab"),
@@ -31712,14 +32391,16 @@ void main() {
       linkColliders(deads);
       linkColliders(bushes);
       linkColliders(rocks);
-      this.palms = buildInstances(palmVariants, palms, { solidR: 0.55 });
-      this.trees = buildInstances(treeVariants, trees, { solidR: 0.55 });
-      this.pines = buildInstances(pineVariants, pines, { solidR: 0.45 });
-      this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.5 });
-      this.deads = buildInstances(deadVariants, deads, { solidR: 0.42 });
-      this.bushes = buildInstances(bushVariants, bushes, { solidR: 0.95 });
+      this.palms = buildInstances(palmVariants, palms, { solidR: 0.3, cullFar: 360, name: "palm" });
+      this.trees = buildInstances(treeVariants, trees, { solidR: 0.34, cullFar: 360, name: "tree" });
+      this.pines = buildInstances(pineVariants, pines, { solidR: 0.32, cullFar: 380, name: "pine" });
+      this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.3, cullFar: 340, name: "mangrove" });
+      this.deads = buildInstances(deadVariants, deads, { solidR: 0.32, cullFar: 340, name: "dead" });
+      this.bushes = buildInstances(bushVariants, bushes, { solidR: 0.42, cullFar: 220, name: "bush" });
       this.rocks = buildInstances(rockVariants, rocks, {
-        solidR: 1,
+        solidR: 0.7,
+        cullFar: 260,
+        name: "rock",
         variantOf: (it, i) => it.ore ? 2 : i % 2 === 0 ? 0 : 1
       });
       const blades = [];
@@ -31730,9 +32411,10 @@ void main() {
         blades.push(colorize2(blade, i % 2 ? 8828246 : 7314245));
       }
       const tuftGeo = mergeGeometries(blades, false);
-      this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false });
+      this.tufts = buildInstances([{ leaf: tuftGeo }], tufts, { castShadow: false, cullFar: 95, name: "tuft" });
       this.tuftItems = tufts;
       for (const mesh2 of this.tufts) mesh2.material = grassMat;
+      this._buildDens();
       this._buildShells();
     }
     /**
@@ -32545,7 +33227,8 @@ void main() {
         }
       }
       const target = y !== null ? y : count ? sum / count : this.heightAt(x, z);
-      const outer = radius + STEP * 1.3;
+      const inner = radius + STEP * 0.62;
+      const outer = inner + STEP * 1.1;
       for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
         for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
           if (this.cutCells && this.cutCells.has(ix * 1024 + iz)) continue;
@@ -32553,12 +33236,14 @@ void main() {
           const nz = -half + iz * STEP;
           const d = Math.hypot(nx - x, nz - z);
           if (d > outer) continue;
-          const t = d <= radius ? 1 : 1 - smoothstep2(radius, outer, d);
+          const t = d <= inner ? 1 : 1 - smoothstep2(inner, outer, d);
           const i = iz * GRID + ix;
           this.heights[i] = this.heights[i] * (1 - t) + target * t;
+          if (t >= 1) this.flatCore.add(i);
           if (this.baseHeights) this.baseHeights[i] = this.heights[i];
         }
       }
+      this._quantizeSlopes();
       this._applyHeights();
       return target;
     }
@@ -32582,9 +33267,14 @@ void main() {
         this.depthTexture.needsUpdate = true;
       }
     }
-    resolveCollisions(pos, radius, velocity = null) {
+    /**
+     * Столкновения со стволами, валунами и постройками.
+     * feetY — низ героя: низкие валуны (ниже колена) переступаем, а не упираемся.
+     */
+    resolveCollisions(pos, radius, velocity = null, feetY = -Infinity, stepUp = 0.55) {
       for (const c of this.colliders) {
         if (c.disabled || c.soft) continue;
+        if (c.height && c.height < stepUp && feetY > -Infinity) continue;
         const dx = pos.x - c.x;
         const dz = pos.z - c.z;
         const min = c.r + radius;
@@ -32605,6 +33295,35 @@ void main() {
           }
         }
       }
+    }
+    /**
+     * Отсечение растительности по чанкам: невидимые (за камерой, вне пирамиды
+     * видимости или слишком далёкие) чанки не рисуются вовсе. Дальние плавно
+     * уходят в туман, поэтому «моргания» на границе не видно.
+     */
+    updateChunks(camera) {
+      if (!camera || !this.chunkMeshes.length) return;
+      this._frustum = this._frustum || new Frustum();
+      this._proj = this._proj || new Matrix4();
+      this._sphere = this._sphere || new Sphere();
+      this._proj.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+      this._frustum.setFromProjectionMatrix(this._proj);
+      const cp = camera.position;
+      let visible = 0;
+      for (const c of this.chunkMeshes) {
+        const dx = c.x - cp.x;
+        const dz = c.z - cp.z;
+        const d2 = dx * dx + dz * dz;
+        let vis = d2 < c.far * c.far;
+        if (vis) {
+          this._sphere.center.copy(c.center);
+          this._sphere.radius = c.radius;
+          vis = this._frustum.intersectsSphere(this._sphere);
+        }
+        c.mesh.visible = vis;
+        if (vis) visible++;
+      }
+      this.chunkStats = { total: this.chunkMeshes.length, visible };
     }
     update(dt, camera, sunDir, nightFactor, fogColor) {
       this.time += dt;
@@ -33725,8 +34444,8 @@ void main() {
       else this.velocity.x *= 0.2;
       if (tryMove(this.position.x, nz)) this.position.z = nz;
       else this.velocity.z *= 0.2;
-      world.resolveCollisions(this.position, P.radius, this.velocity);
-      (_a = world.shells) == null ? void 0 : _a.resolve(this.position, P.radius, this.velocity, this.position.y, 0.35);
+      world.resolveCollisions(this.position, P.radius, this.velocity, this.position.y, 0.55);
+      (_a = world.shells) == null ? void 0 : _a.resolve(this.position, P.radius, this.velocity, this.position.y, 0.55);
       const ground = world.heightAt(this.position.x, this.position.z);
       const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
       if (this.fly) {
@@ -35470,9 +36189,36 @@ void main() {
       }
       return { x: 20, z: 20, h: world.heightAt(20, 20) };
     }
+    /**
+     * Место рядом с домом зверя: вокруг дома нет ни деревьев, ни камней,
+     * поэтому зверь не рождается внутри модели и не «застревает» с первого кадра.
+     */
+    _denSpot(type, def) {
+      const dens = (this.world.dens || []).filter((d) => d.kind === type);
+      if (!dens.length) return null;
+      const busy = (d) => this.list.filter(
+        (m) => m.alive && m.den === d
+      ).length;
+      const order = dens.slice().sort((a, b) => busy(a) - busy(b));
+      for (const d of order.slice(0, 4)) {
+        for (let i = 0; i < 48; i++) {
+          const a = this.rng() * Math.PI * 2;
+          const r = Math.sqrt(this.rng()) * d.radius * 0.55;
+          const x = d.x + Math.cos(a) * r;
+          const z = d.z + Math.sin(a) * r;
+          const h = this.world.heightAt(x, z);
+          if (def.swim) {
+            if (h > -0.9 || h < -7) continue;
+          } else if (h < 0.45) continue;
+          if (this._blocked(x, z, (def.radius || 0.5) + 0.05, true)) continue;
+          return { x, z, h, den: d };
+        }
+      }
+      return null;
+    }
     spawn(type) {
       const def = TYPES[type];
-      const spot = this._spot(def.biomes, null, 0, def);
+      const spot = this._denSpot(type, def) || this._spot(def.biomes, null, 0, def);
       const built = def.model();
       const box2 = new Box3().setFromObject(built.group);
       const size = new Vector3();
@@ -35503,6 +36249,7 @@ void main() {
         x: spot.x,
         z: spot.z,
         y: spot.h,
+        den: spot.den || null,
         home: { x: spot.x, z: spot.z },
         hp: def.hp,
         maxHp: def.hp,
@@ -35565,7 +36312,8 @@ void main() {
       return -1;
     }
     _respawn(mob) {
-      const spot = this._spot(mob.def.biomes, null, 0, mob.def);
+      const spot = this._denSpot(mob.type, mob.def) || this._spot(mob.def.biomes, null, 0, mob.def);
+      if (spot.den) mob.den = spot.den;
       mob.x = spot.x;
       mob.z = spot.z;
       mob.y = spot.h;
@@ -36047,6 +36795,13 @@ void main() {
           break;
         case "patrol":
           speed = def.speed;
+          if (mob.den) {
+            const dHome = Math.hypot(mob.x - mob.den.x, mob.z - mob.den.z);
+            if (dHome > mob.den.radius * 0.9) {
+              aimX = mob.den.x;
+              aimZ = mob.den.z;
+            }
+          }
           break;
         case "graze":
           speed = def.speed * 0.35;
@@ -37099,8 +37854,8 @@ void main() {
       slopeAt(x, z) {
         return mine.active !== null ? 0 : world.slopeAt(x, z);
       },
-      resolveCollisions(pos, radius, velocity) {
-        if (mine.active === null) return world.resolveCollisions(pos, radius, velocity);
+      resolveCollisions(pos, radius, velocity, feetY, stepUp) {
+        if (mine.active === null) return world.resolveCollisions(pos, radius, velocity, feetY, stepUp);
         const step = radius * 0.9;
         const tests = [[1, 0], [-1, 0], [0, 1], [0, -1]];
         for (const [dx, dz] of tests) {
@@ -37967,7 +38722,8 @@ void main() {
           for (let i = 0; i < 3; i++) w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
           const first = w.pitAt(spot.x, spot.z);
           if (!first) return { ok: false, expect: "\u043F\u0435\u0440\u0432\u0430\u044F \u044F\u043C\u0430", fact: "\u043D\u0435 \u0432\u044B\u043A\u043E\u043F\u0430\u043B\u0430\u0441\u044C" };
-          const second = { x: spot.x + (first.rect.x1 - first.rect.x0) + 0.6, z: spot.z };
+          const stepW = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+          const second = { x: first.rect.x1 + stepW * 0.5, z: spot.z };
           const res = w.dig(second.x, second.z, { radius: 1.6, depth: 0.45, mine: 99 });
           const pit = w.pitAt(second.x, second.z);
           const same = pit && w.pitAt(spot.x, spot.z) === pit;
@@ -38043,12 +38799,16 @@ void main() {
           if (!tree) return { ok: false, expect: "\u0434\u0435\u0440\u0435\u0432\u043E \u0441 \u043E\u0431\u0432\u043E\u0434\u043A\u043E\u0439", fact: "\u043D\u0435 \u043D\u0430\u0448\u043B\u043E\u0441\u044C" };
           const pos = { x: tree.x + 5, z: tree.z };
           const vel = { x: -6, z: 0 };
+          let insideFrames = 0;
+          let closest = Infinity;
           for (let i = 0; i < 200; i++) {
             pos.x += vel.x * 0.016;
             w.shells.resolve(pos, 0.35, vel, w.heightAt(pos.x, pos.z), 0.35);
+            if (w.shells.contains(pos.x, pos.z, w.heightAt(pos.x, pos.z))) insideFrames++;
+            closest = Math.min(closest, Math.hypot(pos.x - tree.x, pos.z - tree.z));
           }
-          const gap = pos.x - tree.x;
-          const stopped = gap > 0.3;
+          const stopped = insideFrames === 0;
+          const gap = closest;
           const prisms = w.shells.stats.prisms;
           const before = tree.collider.disabled;
           tree.collider.disabled = true;
@@ -38059,7 +38819,7 @@ void main() {
           return {
             ok: stopped && passes && prisms > 200,
             expect: "\u0443 \u043A\u0430\u0436\u0434\u043E\u0439 \u043C\u043E\u0434\u0435\u043B\u0438 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0430\u044F \u043E\u0431\u0432\u043E\u0434\u043A\u0430, \u0436\u0438\u0432\u043E\u0439 \u0445\u0438\u0442\u0431\u043E\u043A\u0441 \u0441\u043A\u0432\u043E\u0437\u044C \u043D\u0435\u0451 \u043D\u0435 \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442",
-            fact: `\u043E\u0431\u0432\u043E\u0434\u043E\u043A ${prisms} \xB7 \u0433\u0435\u0440\u043E\u0439 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u043B\u0441\u044F \u0432 ${fmt(gap)} \u043C \u043E\u0442 \u0441\u0442\u0432\u043E\u043B\u0430 \xB7 \u0441\u043A\u0432\u043E\u0437\u044C \u0441\u043F\u0438\u043B\u0435\u043D\u043D\u043E\u0435 \u0434\u0435\u0440\u0435\u0432\u043E \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442: ${passes ? "\u0434\u0430" : "\u043D\u0435\u0442"}`
+            fact: `\u043E\u0431\u0432\u043E\u0434\u043E\u043A ${prisms} \xB7 \u0432\u043D\u0443\u0442\u0440\u044C \u043E\u0431\u0432\u043E\u0434\u043A\u0438 \u043D\u0435 \u043F\u043E\u043F\u0430\u043B (\u043A\u0430\u0434\u0440\u043E\u0432 \u0432\u043D\u0443\u0442\u0440\u0438: ${insideFrames}) \xB7 \u0431\u043B\u0438\u0436\u0435 ${fmt(gap)} \u043C \u043A \u043E\u0441\u0438 \xB7 \u0441\u043A\u0432\u043E\u0437\u044C \u0441\u043F\u0438\u043B\u0435\u043D\u043D\u043E\u0435 \u0434\u0435\u0440\u0435\u0432\u043E \u043F\u0440\u043E\u0445\u043E\u0434\u0438\u0442: ${passes ? "\u0434\u0430" : "\u043D\u0435\u0442"}`
           };
         } },
         { name: "\u041D\u043E\u0432\u044B\u0435 \u043F\u043E\u0440\u043E\u0434\u044B \u0434\u0435\u0440\u0435\u0432\u044C\u0435\u0432", walk: null, run: (g) => {
@@ -38540,7 +39300,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-28 12:42" : "dev";
+  var BUILD = true ? "2026-10-28 17:50" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -39231,6 +39991,8 @@ void main() {
       this.scene.add(this.mineLight);
       this.projectiles = [];
       this.chips = [];
+      this.boat = null;
+      this.sailing = false;
       this.recipes = RECIPES;
       this.hitboxes = new HitboxSystem(this.scene, this.player);
       this.bot = null;
@@ -39451,6 +40213,10 @@ void main() {
       this.player.facing = this.player.yaw + Math.PI;
       this.player.applyCamera(this.camera, world, 1);
       this.spawnPoint = { x: best.x, z: best.z };
+      if (!this.boat) {
+        this.buildBoat();
+        this.placeBoatNearShore();
+      }
       console.log(`[LAST SHORE] \u0432\u044B\u0441\u0430\u0434\u043A\u0430: ${best.x.toFixed(1)}, ${best.z.toFixed(1)} \xB7 \u043C\u043E\u0440\u0435 \u0432 ${best.seaDist | 0} \u043C \xB7 \u043F\u043B\u044F\u0436 ${best.sand}/12`);
     }
     /** Светляки: ночью над травой — маленькие тёплые точки, живые и даром */
@@ -40636,8 +41402,186 @@ void main() {
       return true;
     }
     /** E — действие по прицелу: подобрать, попить, войти в шахту, открыть станок */
+    // ------------------------------------------------------------
+    //  Лодка и вода
+    // ------------------------------------------------------------
+    /** Высота волны в точке — по ней качается лодка */
+    waveAt(x, z, t = this.world.time) {
+      return Math.sin(x * 0.32 + t * 1.15) * 0.14 + Math.sin(z * 0.24 - t * 0.85) * 0.09;
+    }
+    buildBoat() {
+      const built = makeBoat();
+      built.group.visible = false;
+      this.scene.add(built.group);
+      this.boat = {
+        group: built.group,
+        parts: built.parts,
+        x: 0,
+        z: 0,
+        y: 0,
+        heading: 0,
+        speed: 0,
+        wave: 0,
+        placed: false
+      };
+    }
+    /** Поставить лодку на воду у берега рядом с местом высадки */
+    placeBoatNearShore() {
+      const w = this.world;
+      const p = this.player.position;
+      let best = null;
+      for (let r = 8; r <= 70 && !best; r += 2) {
+        for (let i = 0; i < 28 && !best; i++) {
+          const a = i / 28 * Math.PI * 2;
+          const x = p.x + Math.cos(a) * r;
+          const z = p.z + Math.sin(a) * r;
+          const h = w.heightAt(x, z);
+          if (h > -1.4 || h < -5) continue;
+          let shore = false;
+          for (let j = 0; j < 8; j++) {
+            const aa = j / 8 * Math.PI * 2;
+            if (w.heightAt(x + Math.cos(aa) * 4.5, z + Math.sin(aa) * 4.5) > -0.15) shore = true;
+          }
+          if (shore) best = { x, z };
+        }
+      }
+      if (!best) {
+        for (let r = 10; r <= 120 && !best; r += 4) {
+          for (let i = 0; i < 20 && !best; i++) {
+            const a = i / 20 * Math.PI * 2;
+            const x = p.x + Math.cos(a) * r;
+            const z = p.z + Math.sin(a) * r;
+            if (w.heightAt(x, z) < -1.6) best = { x, z };
+          }
+        }
+      }
+      const b = this.boat;
+      if (!b) return null;
+      if (!best) best = { x: p.x, z: p.z };
+      b.x = best.x;
+      b.z = best.z;
+      let deepA = 0;
+      let deepH = Infinity;
+      for (let i = 0; i < 24; i++) {
+        const a = i / 24 * Math.PI * 2;
+        const hh = w.heightAt(best.x - Math.sin(a) * 10, best.z - Math.cos(a) * 10);
+        if (hh < deepH) {
+          deepH = hh;
+          deepA = a;
+        }
+      }
+      b.heading = deepA;
+      b.y = this.waveAt(b.x, b.z);
+      b.placed = true;
+      b.group.visible = true;
+      b.group.position.set(b.x, b.y - 0.1, b.z);
+      b.group.rotation.y = b.heading;
+      return b;
+    }
+    /** Физика воды: волны, качка, сопротивление; на сушу лодка не выходит */
+    updateBoat(dt) {
+      const b = this.boat;
+      if (!b || !b.placed) return;
+      const t = this.world.time;
+      if (this.sailing) {
+        const inp = this.input;
+        const thrust = (inp.forward ? 1 : 0) - (inp.back ? 1 : 0);
+        const turn = (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
+        const maxSpeed = inp.sprint ? 10.5 : 6.2;
+        b.speed += (thrust * maxSpeed - b.speed) * Math.min(1, dt * 1.4);
+        b.speed *= Math.max(0, 1 - dt * (thrust ? 0.25 : 0.9));
+        b.heading += turn * dt * (0.85 + Math.min(1, Math.abs(b.speed) / 6) * 0.75);
+        const dirX = -Math.sin(b.heading);
+        const dirZ = -Math.cos(b.heading);
+        const nx = b.x + dirX * b.speed * dt;
+        const nz = b.z + dirZ * b.speed * dt;
+        const ahead = this.world.heightAt(nx, nz);
+        if (ahead < -0.6) {
+          b.x = nx;
+          b.z = nz;
+        } else {
+          b.speed *= -0.25;
+        }
+        const lim = CONFIG.world.size * 0.47;
+        b.x = Math.max(-lim, Math.min(lim, b.x));
+        b.z = Math.max(-lim, Math.min(lim, b.z));
+      } else {
+        b.speed *= Math.max(0, 1 - dt * 1.6);
+      }
+      b.wave = this.waveAt(b.x, b.z, t);
+      b.group.position.set(b.x, CONFIG.world.seaLevel + b.wave - 0.12, b.z);
+      b.group.rotation.y = b.heading + Math.PI / 2;
+      b.group.rotation.x = Math.sin(t * 1.35 + b.x * 0.2) * 0.04 - Math.min(0.09, Math.abs(b.speed) * 0.012);
+      b.group.rotation.z = Math.sin(t * 1.05 + b.z * 0.25) * 0.05;
+      if (b.parts.sail) {
+        b.parts.sail.rotation.y = Math.sin(t * 1.7) * 0.12 + (this.sailing ? -0.18 : 0);
+        b.parts.sail.scale.x = 0.85 + Math.min(0.3, Math.max(0, b.speed) * 0.03);
+      }
+      if (b.parts.oar) b.parts.oar.rotation.x = this.sailing ? Math.sin(t * 3.4) * 0.14 : 0;
+      if (this.sailing) {
+        const p = this.player;
+        p.position.set(b.x, CONFIG.world.seaLevel + b.wave + 0.34, b.z);
+        p.velocity.set(0, 0, 0);
+        p.facing = b.heading;
+        p.grounded = true;
+        p.model.position.copy(p.position);
+        p.model.rotation.y = b.heading;
+      }
+    }
+    /** Сесть в лодку / выйти на берег */
+    toggleSailing() {
+      var _a, _b, _c, _d, _e2, _f;
+      const b = this.boat;
+      if (!b || !b.placed) return false;
+      if (!this.sailing) {
+        const d = Math.hypot(this.player.position.x - b.x, this.player.position.z - b.z);
+        if (d > 3.2) {
+          this.ui.toast("\u041B\u043E\u0434\u043A\u0430 \u0434\u0430\u043B\u0435\u043A\u043E \u2014 \u043F\u043E\u0434\u043E\u0439\u0434\u0438 \u043A \u043D\u0435\u0439 \u0431\u043B\u0438\u0436\u0435", true);
+          return false;
+        }
+        this.sailing = true;
+        if (this.player.fly) {
+          this.creative = false;
+          this.player.fly = false;
+          (_b = (_a = this.ui).setCreative) == null ? void 0 : _b.call(_a, false);
+        }
+        this.player.model.visible = this.player.viewMode !== "first";
+        (_d = (_c = this.audio).uiClick) == null ? void 0 : _d.call(_c);
+        this.ui.toast("\u0422\u044B \u0432 \u043B\u043E\u0434\u043A\u0435: W/S \u2014 \u0445\u043E\u0434, A/D \u2014 \u043F\u043E\u0432\u043E\u0440\u043E\u0442, Shift \u2014 \u0431\u044B\u0441\u0442\u0440\u0435\u0435, E \u2014 \u0432\u044B\u0439\u0442\u0438");
+        return true;
+      }
+      let exit = null;
+      for (let r = 1.5; r <= 12 && !exit; r += 1.2) {
+        for (let i = 0; i < 16 && !exit; i++) {
+          const a = i / 16 * Math.PI * 2;
+          const x = b.x + Math.cos(a) * r;
+          const z = b.z + Math.sin(a) * r;
+          const h = this.world.heightAt(x, z);
+          if (h > -0.45 && h < 3.5) exit = { x, z, h };
+        }
+      }
+      if (!exit) {
+        this.ui.toast("\u041A\u0440\u0443\u0433\u043E\u043C \u0433\u043B\u0443\u0431\u043E\u043A\u043E \u2014 \u0438\u0449\u0438 \u0431\u0435\u0440\u0435\u0433", true);
+        return false;
+      }
+      this.sailing = false;
+      b.speed = 0;
+      this.player.setPosition(exit.x, exit.z, this.world);
+      this.player.model.visible = this.player.viewMode !== "first";
+      (_f = (_e2 = this.audio).pickup) == null ? void 0 : _f.call(_e2);
+      this.ui.toast("\u0422\u044B \u0441\u043E\u0448\u0451\u043B \u043D\u0430 \u0431\u0435\u0440\u0435\u0433. \u041B\u043E\u0434\u043A\u0430 \u0436\u0434\u0451\u0442 \u0443 \u0432\u043E\u0434\u044B.");
+      return true;
+    }
     interact() {
       if (!this.running || this.paused || this.dead) return;
+      const boat = this.boat;
+      if (boat && boat.placed) {
+        const dBoat = Math.hypot(this.player.position.x - boat.x, this.player.position.z - boat.z);
+        if (this.sailing || dBoat < 3.2) {
+          this.toggleSailing();
+          return;
+        }
+      }
       const t = this.aim && this.aim.target;
       if (!t) {
         this.ui.toast(this.underground ? "\u041D\u0430\u0432\u0435\u0434\u0438 \u043F\u0440\u0438\u0446\u0435\u043B \u043D\u0430 \u0441\u0442\u0435\u043D\u0443 \u0438\u043B\u0438 \u043B\u0435\u0441\u0442\u043D\u0438\u0446\u0443" : "\u041D\u0430\u0432\u0435\u0434\u0438 \u043F\u0440\u0438\u0446\u0435\u043B \u043D\u0430 \u043F\u0440\u0435\u0434\u043C\u0435\u0442", true);
@@ -41087,7 +42031,13 @@ void main() {
     update(dt) {
       var _a, _b;
       const state = this.state;
-      this.player.update(dt, this.input, this.mineWorld);
+      if (this.sailing) {
+        const idle = { forward: false, back: false, left: false, right: false, sprint: false, jump: false, jumpHeld: false };
+        this.player.update(dt, idle, this.mineWorld);
+      } else {
+        this.player.update(dt, this.input, this.mineWorld);
+      }
+      this.updateBoat(dt);
       this.input.jump = false;
       if (!this.underground) {
         this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
@@ -41116,6 +42066,7 @@ void main() {
         this.scene.fog.far = 26;
       }
       this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
+      this.world.updateChunks(this.camera);
       if (this.hitboxes.debug) this.hitboxes.updateDebug(this.player);
       this.updateFireflies(dt, skyInfo.night);
       this.thoughtTimer -= dt;

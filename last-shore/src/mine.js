@@ -836,8 +836,8 @@ export function createMineWorld(mine, world) {
     slopeAt(x, z) {
       return mine.active !== null ? 0 : world.slopeAt(x, z);
     },
-    resolveCollisions(pos, radius, velocity) {
-      if (mine.active === null) return world.resolveCollisions(pos, radius, velocity);
+    resolveCollisions(pos, radius, velocity, feetY, stepUp) {
+      if (mine.active === null) return world.resolveCollisions(pos, radius, velocity, feetY, stepUp);
       // стены шахты: если клетка занята — выталкиваем героя назад
       const step = radius * 0.9;
       const tests = [[1, 0], [-1, 0], [0, 1], [0, -1]];

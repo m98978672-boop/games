@@ -23,6 +23,7 @@ import { HitboxSystem } from './hitboxes.js';
 import { InspectorBot } from './bot.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 import { createTextures } from './textures.js';
+import { makeBoat } from './models.js';
 
 const SAVE_KEY = 'lastshore.save.v1';
 
@@ -151,6 +152,10 @@ class Game {
 
     this.projectiles = [];
     this.chips = [];            // щепки, крошка и ягоды — короткие частицы
+
+    // ---- лодка: плавает по волнам, на ней можно уйти к другим островам ----
+    this.boat = null;
+    this.sailing = false;
 
     // ---- хитбоксы: у каждой модели своя невидимая коробка ----
     // Ничего не прячем и не «догружаем»: модели всегда на месте,
@@ -392,6 +397,10 @@ class Game {
     this.player.facing = this.player.yaw + Math.PI;
     this.player.applyCamera(this.camera, world, 1);
     this.spawnPoint = { x: best.x, z: best.z };
+    if (!this.boat) {
+      this.buildBoat();
+      this.placeBoatNearShore();
+    }
     console.log(`[LAST SHORE] высадка: ${best.x.toFixed(1)}, ${best.z.toFixed(1)} · море в ${best.seaDist | 0} м · пляж ${best.sand}/12`);
   }
 
@@ -1574,8 +1583,196 @@ class Game {
   }
 
   /** E — действие по прицелу: подобрать, попить, войти в шахту, открыть станок */
+  // ------------------------------------------------------------
+  //  Лодка и вода
+  // ------------------------------------------------------------
+
+  /** Высота волны в точке — по ней качается лодка */
+  waveAt(x, z, t = this.world.time) {
+    return Math.sin(x * 0.32 + t * 1.15) * 0.14 + Math.sin(z * 0.24 - t * 0.85) * 0.09;
+  }
+
+  buildBoat() {
+    const built = makeBoat();
+    built.group.visible = false;
+    this.scene.add(built.group);
+    this.boat = {
+      group: built.group,
+      parts: built.parts,
+      x: 0, z: 0, y: 0, heading: 0, speed: 0, wave: 0,
+      placed: false,
+    };
+  }
+
+  /** Поставить лодку на воду у берега рядом с местом высадки */
+  placeBoatNearShore() {
+    const w = this.world;
+    const p = this.player.position;
+    let best = null;
+    for (let r = 8; r <= 70 && !best; r += 2) {
+      for (let i = 0; i < 28 && !best; i++) {
+        const a = (i / 28) * Math.PI * 2;
+        const x = p.x + Math.cos(a) * r;
+        const z = p.z + Math.sin(a) * r;
+        const h = w.heightAt(x, z);
+        if (h > -1.4 || h < -5) continue;         // нужна вода от метра глубиной
+        let shore = false;                        // и берег неподалёку
+        for (let j = 0; j < 8; j++) {
+          const aa = (j / 8) * Math.PI * 2;
+          if (w.heightAt(x + Math.cos(aa) * 4.5, z + Math.sin(aa) * 4.5) > -0.15) shore = true;
+        }
+        if (shore) best = { x, z };
+      }
+    }
+    if (!best) {
+      for (let r = 10; r <= 120 && !best; r += 4) {
+        for (let i = 0; i < 20 && !best; i++) {
+          const a = (i / 20) * Math.PI * 2;
+          const x = p.x + Math.cos(a) * r;
+          const z = p.z + Math.sin(a) * r;
+          if (w.heightAt(x, z) < -1.6) best = { x, z };
+        }
+      }
+    }
+    const b = this.boat;
+    if (!b) return null;
+    if (!best) best = { x: p.x, z: p.z };
+    b.x = best.x;
+    b.z = best.z;
+    // Нос — в открытое море: ищем самое глубокое направление вокруг лодки,
+    // чтобы первое же движение вперёд уводило от берега, а не в мель.
+    let deepA = 0;
+    let deepH = Infinity;
+    for (let i = 0; i < 24; i++) {
+      const a = (i / 24) * Math.PI * 2;
+      const hh = w.heightAt(best.x - Math.sin(a) * 10, best.z - Math.cos(a) * 10);
+      if (hh < deepH) { deepH = hh; deepA = a; }
+    }
+    b.heading = deepA;
+    b.y = this.waveAt(b.x, b.z);
+    b.placed = true;
+    b.group.visible = true;
+    b.group.position.set(b.x, b.y - 0.1, b.z);
+    b.group.rotation.y = b.heading;
+    return b;
+  }
+
+  /** Физика воды: волны, качка, сопротивление; на сушу лодка не выходит */
+  updateBoat(dt) {
+    const b = this.boat;
+    if (!b || !b.placed) return;
+    const t = this.world.time;
+    if (this.sailing) {
+      const inp = this.input;
+      const thrust = (inp.forward ? 1 : 0) - (inp.back ? 1 : 0);
+      const turn = (inp.left ? 1 : 0) - (inp.right ? 1 : 0);
+      const maxSpeed = inp.sprint ? 10.5 : 6.2;
+      b.speed += (thrust * maxSpeed - b.speed) * Math.min(1, dt * 1.4);
+      // вода тормозит: без вёсел лодка постепенно встаёт
+      b.speed *= Math.max(0, 1 - dt * (thrust ? 0.25 : 0.9));
+      b.heading += turn * dt * (0.85 + Math.min(1, Math.abs(b.speed) / 6) * 0.75);
+
+      const dirX = -Math.sin(b.heading);
+      const dirZ = -Math.cos(b.heading);
+      const nx = b.x + dirX * b.speed * dt;
+      const nz = b.z + dirZ * b.speed * dt;
+      const ahead = this.world.heightAt(nx, nz);
+      if (ahead < -0.6) {
+        b.x = nx;
+        b.z = nz;
+      } else {
+        // мель: нос упирается, лодка отходит
+        b.speed *= -0.25;
+      }
+      // лодка не заплывает за край карты
+      const lim = CONFIG.world.size * 0.47;
+      b.x = Math.max(-lim, Math.min(lim, b.x));
+      b.z = Math.max(-lim, Math.min(lim, b.z));
+    } else {
+      b.speed *= Math.max(0, 1 - dt * 1.6);
+    }
+
+    // --- качка на волне ---
+    b.wave = this.waveAt(b.x, b.z, t);
+    b.group.position.set(b.x, CONFIG.world.seaLevel + b.wave - 0.12, b.z);
+    b.group.rotation.y = b.heading + Math.PI / 2;
+    b.group.rotation.x = Math.sin(t * 1.35 + b.x * 0.2) * 0.04 - Math.min(0.09, Math.abs(b.speed) * 0.012);
+    b.group.rotation.z = Math.sin(t * 1.05 + b.z * 0.25) * 0.05;
+    if (b.parts.sail) {
+      b.parts.sail.rotation.y = Math.sin(t * 1.7) * 0.12 + (this.sailing ? -0.18 : 0);
+      b.parts.sail.scale.x = 0.85 + Math.min(0.3, Math.max(0, b.speed) * 0.03);
+    }
+    if (b.parts.oar) b.parts.oar.rotation.x = this.sailing ? Math.sin(t * 3.4) * 0.14 : 0;
+
+    // герой стоит на палубе
+    if (this.sailing) {
+      const p = this.player;
+      p.position.set(b.x, CONFIG.world.seaLevel + b.wave + 0.34, b.z);
+      p.velocity.set(0, 0, 0);
+      p.facing = b.heading;
+      p.grounded = true;
+      p.model.position.copy(p.position);
+      p.model.rotation.y = b.heading;
+    }
+  }
+
+  /** Сесть в лодку / выйти на берег */
+  toggleSailing() {
+    const b = this.boat;
+    if (!b || !b.placed) return false;
+    if (!this.sailing) {
+      const d = Math.hypot(this.player.position.x - b.x, this.player.position.z - b.z);
+      if (d > 3.2) {
+        this.ui.toast('Лодка далеко — подойди к ней ближе', true);
+        return false;
+      }
+      this.sailing = true;
+      if (this.player.fly) {
+        this.creative = false;
+        this.player.fly = false;
+        this.ui.setCreative?.(false);
+      }
+      this.player.model.visible = this.player.viewMode !== 'first';
+      this.audio.uiClick?.();
+      this.ui.toast('Ты в лодке: W/S — ход, A/D — поворот, Shift — быстрее, E — выйти');
+      return true;
+    }
+
+    // выход: нужен берег рядом
+    let exit = null;
+    for (let r = 1.5; r <= 12 && !exit; r += 1.2) {
+      for (let i = 0; i < 16 && !exit; i++) {
+        const a = (i / 16) * Math.PI * 2;
+        const x = b.x + Math.cos(a) * r;
+        const z = b.z + Math.sin(a) * r;
+        const h = this.world.heightAt(x, z);
+        if (h > -0.45 && h < 3.5) exit = { x, z, h };
+      }
+    }
+    if (!exit) {
+      this.ui.toast('Кругом глубоко — ищи берег', true);
+      return false;
+    }
+    this.sailing = false;
+    b.speed = 0;
+    this.player.setPosition(exit.x, exit.z, this.world);
+    this.player.model.visible = this.player.viewMode !== 'first';
+    this.audio.pickup?.();
+    this.ui.toast('Ты сошёл на берег. Лодка ждёт у воды.');
+    return true;
+  }
+
   interact() {
     if (!this.running || this.paused || this.dead) return;
+    // лодка: рядом — садимся, на лодке — выходим на берег
+    const boat = this.boat;
+    if (boat && boat.placed) {
+      const dBoat = Math.hypot(this.player.position.x - boat.x, this.player.position.z - boat.z);
+      if (this.sailing || dBoat < 3.2) {
+        this.toggleSailing();
+        return;
+      }
+    }
     const t = this.aim && this.aim.target;
     if (!t) {
       this.ui.toast(this.underground ? 'Наведи прицел на стену или лестницу' : 'Наведи прицел на предмет', true);
@@ -2064,7 +2261,14 @@ class Game {
 
     // --- игрок ---
     // под землёй физика другая: клетки шахты вместо рельефа острова
-    this.player.update(dt, this.input, this.mineWorld);
+    if (this.sailing) {
+      // на лодке физика воды: герой стоит на палубе, идёт волна и качка
+      const idle = { forward: false, back: false, left: false, right: false, sprint: false, jump: false, jumpHeld: false };
+      this.player.update(dt, idle, this.mineWorld);
+    } else {
+      this.player.update(dt, this.input, this.mineWorld);
+    }
+    this.updateBoat(dt);
     // сбрасываем только импульс прыжка: «пробел зажат» (input.jumpHeld) живёт до keyup
     this.input.jump = false;
 
@@ -2102,6 +2306,7 @@ class Game {
       this.scene.fog.far = 26;
     }
     this.world.update(dt, this.camera, skyInfo.sunDir, skyInfo.night, skyInfo.fogColor);
+    this.world.updateChunks(this.camera);
 
     if (this.hitboxes.debug) this.hitboxes.updateDebug(this.player);
 
