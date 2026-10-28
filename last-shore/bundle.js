@@ -30904,9 +30904,13 @@ void main() {
       group.add(leg);
       legs.push(leg);
     });
-    const tail = mesh(new ConeGeometry(0.06, 0.2, 4, 1), skin);
-    tail.position.set(-0.5, 0.14, 0);
-    tail.rotation.z = Math.PI / 2.4;
+    const tail = new Group();
+    tail.position.set(-0.5, 0.16, 0);
+    tail.rotation.z = Math.PI / 2 + 0.18;
+    const tailTip = mesh(new ConeGeometry(0.055, 0.22, 5, 1), skin);
+    tailTip.rotation.z = -Math.PI / 2;
+    tailTip.position.x = -0.09;
+    tail.add(tailTip);
     group.add(tail);
     return { group, parts: { body, head, legs, tail } };
   }
@@ -33726,10 +33730,17 @@ void main() {
       const ground = world.heightAt(this.position.x, this.position.z);
       const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
       if (this.fly) {
-        const up = (input.jump ? 1 : 0) - (input.sprint ? 1 : 0);
+        const held = input.jumpHeld === void 0 ? !!input.jump : !!input.jumpHeld;
+        const up = (held ? 1 : 0) - (input.sprint ? 1 : 0);
         const targetVy = up * P.flySpeed;
-        this.velocity.y += (targetVy - this.velocity.y) * clamp2(dt * (up ? 9 : 12), 0, 1);
+        const k = up > 0 ? 7 : up < 0 ? 10 : 14;
+        this.velocity.y += (targetVy - this.velocity.y) * clamp2(dt * k, 0, 1);
         this.position.y += this.velocity.y * dt;
+        const ceilY = (underground ? ground : 0) + 140;
+        if (this.position.y > ceilY) {
+          this.position.y = ceilY;
+          if (this.velocity.y > 0) this.velocity.y = 0;
+        }
         const minY = underground ? floor : Math.max(ground + 0.25, CONFIG.world.seaLevel - 0.55);
         if (this.position.y < minY) {
           this.position.y = minY;
@@ -33738,6 +33749,7 @@ void main() {
         this.grounded = false;
         this.wading = 0;
         this.swimming = false;
+        this.flyT = (this.flyT || 0) + dt;
       } else if (input.jump && this.grounded) {
         this.velocity.y = P.jumpSpeed;
         this.grounded = false;
@@ -33817,7 +33829,7 @@ void main() {
       this.armR.rotation.x = armRSwing;
       this.elbowR.rotation.x = elbowRSwing;
       if (this.fly) {
-        const t = performance.now() * 2e-3;
+        const t = (this.flyT || 0) * 2.6;
         const f = clamp2(dt * 7, 0, 1);
         this.legL.rotation.x += (-0.38 + Math.sin(t) * 0.05 - this.legL.rotation.x) * f;
         this.legR.rotation.x += (-0.52 + Math.sin(t * 1.2) * 0.05 - this.legR.rotation.x) * f;
@@ -35375,6 +35387,9 @@ void main() {
       biomes: "land"
     }
   };
+  for (const [key2, def] of Object.entries(TYPES)) {
+    if (!def.type) def.type = key2;
+  }
   var SOUND_BY_STATE = {
     // спокойные звуки: кабан похрюкивает, змея шипит, краб щёлкает, чайка кричит
     idle: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull", monkey: "monkey", fish: "bubble", turtle: "grunt" },
@@ -35414,21 +35429,44 @@ void main() {
     _spot(kind, near = null, minDist = 0, def = null) {
       const world = this.world;
       const rng = this.rng;
-      for (let attempt = 0; attempt < 400; attempt++) {
+      const bodyR = (def && def.hitbox ? Math.hypot(def.hitbox.w, def.hitbox.d) * 0.5 : 0.8 * 0.5) + 0.05;
+      const fits = (x, z) => {
+        const h = world.heightAt(x, z);
+        if (world.slopeAt(x, z) > 0.6) return null;
+        if (kind === "beach" && (h < 0.6 || h > 2.4)) return null;
+        if (kind === "land" && (h < 1.6 || h > 14)) return null;
+        if (kind === "water" && (h > -0.9 || h < -7)) return null;
+        if (world.probeAt && world.probeAt(x, z).layer === "void") return null;
+        if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) return null;
+        if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) return null;
+        if (this._blocked(x, z, bodyR, true)) return null;
+        if (world.isFree && !world.isFree(x, z, bodyR, 0.05)) return null;
+        const hh = [
+          world.heightAt(x + bodyR, z),
+          world.heightAt(x - bodyR, z),
+          world.heightAt(x, z + bodyR),
+          world.heightAt(x, z - bodyR)
+        ];
+        if (Math.max(...hh.map((v) => Math.abs(v - h))) > 0.45) return null;
+        return h;
+      };
+      for (let attempt = 0; attempt < 1200; attempt++) {
         const a = rng() * Math.PI * 2;
         const r = Math.sqrt(rng()) * (kind === "beach" ? 120 : 95);
         const x = Math.cos(a) * r;
         const z = Math.sin(a) * r;
-        const h = world.heightAt(x, z);
-        if (world.slopeAt(x, z) > 0.6) continue;
-        if (kind === "beach" && (h < 0.6 || h > 2.4)) continue;
-        if (kind === "land" && (h < 1.6 || h > 14)) continue;
-        if (kind === "water" && (h > -0.9 || h < -7)) continue;
-        if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) continue;
-        if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) continue;
-        const bodyR = (def && def.hitbox ? Math.max(def.hitbox.w, def.hitbox.d) : 0.8) * 0.5;
-        if (this._blocked(x, z, bodyR + 0.05)) continue;
-        return { x, z, h };
+        const h = fits(x, z);
+        if (h !== null) return { x, z, h };
+      }
+      for (let ring = 0; ring < 24; ring++) {
+        const rad = 8 + ring * 4.5;
+        for (let i = 0; i < 16; i++) {
+          const a = i / 16 * Math.PI * 2 + ring * 0.4;
+          const x = Math.cos(a) * rad;
+          const z = Math.sin(a) * rad;
+          const h = fits(x, z);
+          if (h !== null) return { x, z, h };
+        }
       }
       return { x: 20, z: 20, h: world.heightAt(20, 20) };
     }
@@ -35490,10 +35528,44 @@ void main() {
       };
       this.group.add(mob.group);
       this.list.push(mob);
+      this._unstick(mob);
       return mob;
     }
+    /**
+     * Отодвинуть зверя на свободное место по спирали.
+     * Возвращает сдвиг в метрах (0 — место и так свободно, −1 — не нашлось).
+     */
+    _unstick(mob) {
+      const r = Math.hypot(mob.hitboxSize.w, mob.hitboxSize.d) * 0.5 + 0.05;
+      const swim = !!mob.def.swim;
+      const clear = (x, z) => {
+        const h = this.world.heightAt(x, z);
+        if (swim ? h > -0.9 || h < -7 : h < 0.45) return false;
+        if (this._blocked(x, z, r, true)) return false;
+        if (this.world.isFree && !this.world.isFree(x, z, r, 0.05)) return false;
+        return true;
+      };
+      if (clear(mob.x, mob.z)) return 0;
+      for (let ring = 1; ring <= 30; ring++) {
+        const rad = ring * 0.5;
+        for (let i = 0; i < 16; i++) {
+          const a = i / 16 * Math.PI * 2 + ring * 0.4;
+          const x = mob.x + Math.cos(a) * rad;
+          const z = mob.z + Math.sin(a) * rad;
+          if (!clear(x, z)) continue;
+          mob.x = x;
+          mob.z = z;
+          mob.y = this.world.heightAt(x, z);
+          mob.home = { x, z };
+          mob.targetX = x;
+          mob.targetZ = z;
+          return rad;
+        }
+      }
+      return -1;
+    }
     _respawn(mob) {
-      const spot = this._spot(mob.def.biomes);
+      const spot = this._spot(mob.def.biomes, null, 0, mob.def);
       mob.x = spot.x;
       mob.z = spot.z;
       mob.y = spot.h;
@@ -35506,6 +35578,7 @@ void main() {
       mob.alerted = false;
       mob.group.visible = true;
       mob.group.rotation.set(0, 0, 0);
+      this._unstick(mob);
       mob.group.traverse((o) => {
         if (o.isMesh && o.material) {
           o.material.transparent = false;
@@ -35834,8 +35907,14 @@ void main() {
       const r = this.rng() * mob.def.territory * 0.7;
       const tx = mob.home.x + Math.cos(a) * r;
       const tz = mob.home.z + Math.sin(a) * r;
-      mob.x += clamp2(tx - mob.x, -1, 1) * dt * 0.6;
-      mob.z += clamp2(tz - mob.z, -1, 1) * dt * 0.6;
+      const nx = mob.x + clamp2(tx - mob.x, -1, 1) * dt * 0.6;
+      const nz = mob.z + clamp2(tz - mob.z, -1, 1) * dt * 0.6;
+      if (!this._blocked(nx, nz, mob.def.radius * 1.1)) {
+        mob.x = nx;
+        mob.z = nz;
+      } else {
+        mob.think = 0.5 + this.rng();
+      }
     }
     _updateDead(mob, dt) {
       mob.deadTimer += dt;
@@ -36021,14 +36100,19 @@ void main() {
       while (diff < -Math.PI) diff += Math.PI * 2;
       mob.facing += diff * clamp2(dt * 7, 0, 1);
     }
-    _blocked(x, z, r) {
-      if (this.world.shells && this.world.shells.blocked(x, z, r * 0.8, this.world.heightAt(x, z))) return true;
+    /**
+     * Занято ли место. strict — «не родиться внутри модели»: тогда в проверку
+     * идут и кусты (для игрока они мягкие), и мелкие валуны, и полный радиус тела.
+     */
+    _blocked(x, z, r, strict = false) {
+      const pad = strict ? 0 : r * 0.2;
+      if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
       for (const c of this.world.colliders) {
-        if (c.disabled || c.fire || c.soft) continue;
-        if (c.r < 0.3) continue;
+        if (c.disabled || c.fire) continue;
+        if (c.r < 0.3 && !strict) continue;
         const dx = x - c.x;
         const dz = z - c.z;
-        const min = c.r + r * 0.8;
+        const min = c.r + r + pad;
         if (dx * dx + dz * dz < min * min) return true;
       }
       return false;
@@ -36093,7 +36177,7 @@ void main() {
      * чайка машет крыльями и планирует, змея идёт волной и высовывает язык.
      */
     _animate(mob, dt) {
-      var _a, _b, _c, _d;
+      var _a, _b, _c, _d, _e2, _f;
       const p = mob.parts;
       const def = mob.def;
       const walk = Math.min(1, mob.speedNow / 2);
@@ -36128,16 +36212,17 @@ void main() {
           });
         }
       }
-      if (p.tail && def.type !== "gull") {
+      if (p.tail && def.type !== "gull" && def.type !== "turtle") {
+        const baseZ = (_b = p.tail.userData.baseZ) != null ? _b : p.tail.userData.baseZ = p.tail.rotation.z;
         const wag = 0.35 + walk * 0.3 + (scared ? 0.4 : 0);
-        p.tail.rotation.z = 0.5 + Math.sin(t * (1.2 + walk * 2)) * 0.22;
+        p.tail.rotation.z = baseZ + Math.sin(t * (1.2 + walk * 2)) * 0.22;
         p.tail.rotation.y = Math.sin(t * (0.9 + walk * 1.6)) * wag;
       }
       if (p.tail && def.type === "gull") {
         p.tail.rotation.y = Math.sin(t * 1.4) * 0.25;
       }
       if (p.head) {
-        const base = (_b = p.head.userData.baseY) != null ? _b : p.head.userData.baseY = p.head.position.y;
+        const base = (_c = p.head.userData.baseY) != null ? _c : p.head.userData.baseY = p.head.position.y;
         const grazeDrop = graze ? -0.26 : 0;
         const lunge = state === "attack" ? 0.14 : 0;
         const bob = Math.sin(t * 2.2) * 0.02 * walk;
@@ -36164,7 +36249,7 @@ void main() {
         p.eyes.position.y = Math.sin(mob.animTime * 1.8) * 0.012;
       }
       if (p.wings) {
-        const flying = def.flying && mob.y + 0.2 > ((_c = mob.flyY) != null ? _c : 0);
+        const flying = def.flying && mob.y + 0.2 > ((_d = mob.flyY) != null ? _d : 0);
         const rate = 3 + walk * 4.5;
         const amp = def.flying ? 0.25 + walk * 0.6 : 0.1;
         p.wings.forEach((wing, i) => {
@@ -36212,7 +36297,7 @@ void main() {
         });
       }
       if (def.type === "turtle") {
-        (_d = p.legs) == null ? void 0 : _d.forEach((leg, i) => {
+        (_e2 = p.legs) == null ? void 0 : _e2.forEach((leg, i) => {
           const ph = t * 1.1 + (i % 2 ? Math.PI : 0);
           leg.rotation.x = Math.sin(ph) * 0.32 * (0.25 + walk);
           leg.position.y = 0.14 + Math.max(0, Math.sin(ph)) * 0.03 * walk;
@@ -36222,6 +36307,11 @@ void main() {
           p.head.rotation.y = state === "idle" ? Math.sin(mob.animTime * 0.5) * 0.4 : 0;
         }
         if (p.body) p.body.rotation.z = Math.sin(t * 1.1) * 0.05 * walk;
+        if (p.tail) {
+          const baseZ = (_f = p.tail.userData.baseZ) != null ? _f : p.tail.userData.baseZ = p.tail.rotation.z;
+          p.tail.rotation.z = baseZ + Math.sin(mob.animTime * 1.3) * 0.05;
+          p.tail.rotation.y = Math.sin(mob.animTime * 1.1 + 0.6) * (0.08 + walk * 0.16);
+        }
       }
       if (def.type === "fish") {
         const wiggle = 0.25 + walk * 0.55;
@@ -38450,7 +38540,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-27 15:24" : "dev";
+  var BUILD = true ? "2026-10-28 12:42" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -39180,7 +39270,7 @@ void main() {
       this.rainIntensity = 0;
       this.weatherSunMul = 1;
       this.weatherFogMul = 1;
-      this.input = { forward: false, back: false, left: false, right: false, sprint: false, jump: false };
+      this.input = { forward: false, back: false, left: false, right: false, sprint: false, jump: false, jumpHeld: false };
       this.nearest = null;
       this.running = false;
       this.paused = false;
@@ -39581,7 +39671,9 @@ void main() {
           this.input.sprint = true;
           break;
         case "Space":
+          this.jumpRepeat = e.repeat;
           this.input.jump = true;
+          this.input.jumpHeld = true;
           e.preventDefault();
           break;
         case "KeyE":
@@ -39734,6 +39826,11 @@ void main() {
         case "ShiftLeft":
         case "ShiftRight":
           this.input.sprint = false;
+          this.input.altHeld = false;
+          break;
+        case "Space":
+          this.input.jumpHeld = false;
+          this.input.jump = false;
           break;
       }
     }
@@ -39802,6 +39899,8 @@ void main() {
       var _a, _b;
       this.creative = !this.creative;
       this.player.fly = this.creative;
+      this.player.velocity.y = 0;
+      this.player.flyT = 0;
       this.ui.setCreative(this.creative);
       (_b = (_a = this.audio).uiClick) == null ? void 0 : _b.call(_a);
       if (this.creative) {

@@ -1032,9 +1032,15 @@ export function makeTurtle() {
     legs.push(leg);
   });
 
-  const tail = mesh(new THREE.ConeGeometry(0.06, 0.2, 4, 1), skin);
-  tail.position.set(-0.5, 0.14, 0);
-  tail.rotation.z = Math.PI / 2.4;
+  // хвост торчит назад и вниз: базовый наклон запоминаем, чтобы анимация
+  // качала его вокруг этого угла, а не сбрасывала в горизонталь
+  const tail = new THREE.Group();
+  tail.position.set(-0.5, 0.16, 0);
+  tail.rotation.z = Math.PI / 2 + 0.18;
+  const tailTip = mesh(new THREE.ConeGeometry(0.055, 0.22, 5, 1), skin);
+  tailTip.rotation.z = -Math.PI / 2;      // кончик смотрит назад, вдоль -X
+  tailTip.position.x = -0.09;
+  tail.add(tailTip);
   group.add(tail);
 
   return { group, parts: { body, head, legs, tail } };

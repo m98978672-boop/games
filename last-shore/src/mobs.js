@@ -110,6 +110,12 @@ const TYPES = {
   },
 };
 
+// у каждого вида должен быть свой type: на него завязаны анимации (краб, чайка,
+// черепаха, рыба) — без него все ветки молчали и звери двигались «общей» походкой
+for (const [key, def] of Object.entries(TYPES)) {
+  if (!def.type) def.type = key;
+}
+
 const SOUND_BY_STATE = {
   // спокойные звуки: кабан похрюкивает, змея шипит, краб щёлкает, чайка кричит
   idle: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey', fish: 'bubble', turtle: 'grunt' },
@@ -153,24 +159,52 @@ export class Mobs {
   _spot(kind, near = null, minDist = 0, def = null) {
     const world = this.world;
     const rng = this.rng;
-    for (let attempt = 0; attempt < 400; attempt++) {
+    // радиус «габарита» зверя: половина диагонали модели, модель крутится как угодно
+    const bodyR = (def && def.hitbox
+      ? Math.hypot(def.hitbox.w, def.hitbox.d) * 0.5
+      : 0.8 * 0.5) + 0.05;
+
+    const fits = (x, z) => {
+      const h = world.heightAt(x, z);
+      if (world.slopeAt(x, z) > 0.6) return null;
+      if (kind === 'beach' && (h < 0.6 || h > 2.4)) return null;
+      if (kind === 'land' && (h < 1.6 || h > 14)) return null;
+      // рыба живёт только там, где действительно глубоко
+      if (kind === 'water' && (h > -0.9 || h < -7)) return null;
+      // не над выкопанной пустотой: зверь повис бы в воздухе над ямой
+      if (world.probeAt && world.probeAt(x, z).layer === 'void') return null;
+      if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) return null;
+      // не появляться вплотную к другому зверю
+      if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) return null;
+      // и не рождаться внутри чужой модели: кусты, валуны, стволы — всё занято
+      if (this._blocked(x, z, bodyR, true)) return null;
+      if (world.isFree && !world.isFree(x, z, bodyR, 0.05)) return null;
+      // земля под зверем должна быть ровной: перепад по габариту не больше 0.45 м
+      const hh = [world.heightAt(x + bodyR, z), world.heightAt(x - bodyR, z),
+        world.heightAt(x, z + bodyR), world.heightAt(x, z - bodyR)];
+      if (Math.max(...hh.map((v) => Math.abs(v - h))) > 0.45) return null;
+      return h;
+    };
+
+    for (let attempt = 0; attempt < 1200; attempt++) {
       const a = rng() * Math.PI * 2;
       const r = Math.sqrt(rng()) * (kind === 'beach' ? 120 : 95);
       const x = Math.cos(a) * r;
       const z = Math.sin(a) * r;
-      const h = world.heightAt(x, z);
-      if (world.slopeAt(x, z) > 0.6) continue;
-      if (kind === 'beach' && (h < 0.6 || h > 2.4)) continue;
-      if (kind === 'land' && (h < 1.6 || h > 14)) continue;
-      // рыба живёт только там, где действительно глубоко
-      if (kind === 'water' && (h > -0.9 || h < -7)) continue;
-      if (near && minDist > 0 && Math.hypot(x - near.x, z - near.z) < minDist) continue;
-      // не появляться вплотную к другому зверю
-      if (this.list.some((m) => m.alive && Math.hypot(m.x - x, m.z - z) < 4)) continue;
-      // и не рождаться внутри чужого хитбокса: минимум 5 см зазора
-      const bodyR = (def && def.hitbox ? Math.max(def.hitbox.w, def.hitbox.d) : 0.8) * 0.5;
-      if (this._blocked(x, z, bodyR + 0.05)) continue;
-      return { x, z, h };
+      const h = fits(x, z);
+      if (h !== null) return { x, z, h };
+    }
+
+    // запасной путь: сетка по всему острову — хоть где-то да свободно
+    for (let ring = 0; ring < 24; ring++) {
+      const rad = 8 + ring * 4.5;
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + ring * 0.4;
+        const x = Math.cos(a) * rad;
+        const z = Math.sin(a) * rad;
+        const h = fits(x, z);
+        if (h !== null) return { x, z, h };
+      }
     }
     return { x: 20, z: 20, h: world.heightAt(20, 20) };
   }
@@ -237,11 +271,48 @@ export class Mobs {
     };
     this.group.add(mob.group);
     this.list.push(mob);
+    // страховка: габарит модели может быть больше прикидки def.hitbox —
+    // отодвигаем зверя от ствола/валуна, если он всё же задевает модель
+    this._unstick(mob);
     return mob;
   }
 
+  /**
+   * Отодвинуть зверя на свободное место по спирали.
+   * Возвращает сдвиг в метрах (0 — место и так свободно, −1 — не нашлось).
+   */
+  _unstick(mob) {
+    const r = Math.hypot(mob.hitboxSize.w, mob.hitboxSize.d) * 0.5 + 0.05;
+    const swim = !!mob.def.swim;
+    const clear = (x, z) => {
+      const h = this.world.heightAt(x, z);
+      if (swim ? (h > -0.9 || h < -7) : h < 0.45) return false;
+      if (this._blocked(x, z, r, true)) return false;
+      if (this.world.isFree && !this.world.isFree(x, z, r, 0.05)) return false;
+      return true;
+    };
+    if (clear(mob.x, mob.z)) return 0;
+    for (let ring = 1; ring <= 30; ring++) {
+      const rad = ring * 0.5;
+      for (let i = 0; i < 16; i++) {
+        const a = (i / 16) * Math.PI * 2 + ring * 0.4;
+        const x = mob.x + Math.cos(a) * rad;
+        const z = mob.z + Math.sin(a) * rad;
+        if (!clear(x, z)) continue;
+        mob.x = x;
+        mob.z = z;
+        mob.y = this.world.heightAt(x, z);
+        mob.home = { x, z };
+        mob.targetX = x;
+        mob.targetZ = z;
+        return rad;
+      }
+    }
+    return -1;
+  }
+
   _respawn(mob) {
-    const spot = this._spot(mob.def.biomes);
+    const spot = this._spot(mob.def.biomes, null, 0, mob.def);
     mob.x = spot.x;
     mob.z = spot.z;
     mob.y = spot.h;
@@ -254,6 +325,7 @@ export class Mobs {
     mob.alerted = false;
     mob.group.visible = true;
     mob.group.rotation.set(0, 0, 0);
+    this._unstick(mob);
     mob.group.traverse((o) => {
       if (o.isMesh && o.material) {
         o.material.transparent = false;
@@ -636,8 +708,15 @@ export class Mobs {
     const r = this.rng() * mob.def.territory * 0.7;
     const tx = mob.home.x + Math.cos(a) * r;
     const tz = mob.home.z + Math.sin(a) * r;
-    mob.x += clamp(tx - mob.x, -1, 1) * dt * 0.6;
-    mob.z += clamp(tz - mob.z, -1, 1) * dt * 0.6;
+    const nx = mob.x + clamp(tx - mob.x, -1, 1) * dt * 0.6;
+    const nz = mob.z + clamp(tz - mob.z, -1, 1) * dt * 0.6;
+    // шаг только по свободному месту: иначе далёкий зверь «залезает» в дерево
+    if (!this._blocked(nx, nz, mob.def.radius * 1.1)) {
+      mob.x = nx;
+      mob.z = nz;
+    } else {
+      mob.think = 0.5 + this.rng();
+    }
   }
 
   _updateDead(mob, dt) {
@@ -856,15 +935,21 @@ export class Mobs {
     mob.facing += diff * clamp(dt * 7, 0, 1);
   }
 
-  _blocked(x, z, r) {
+  /**
+   * Занято ли место. strict — «не родиться внутри модели»: тогда в проверку
+   * идут и кусты (для игрока они мягкие), и мелкие валуны, и полный радиус тела.
+   */
+  _blocked(x, z, r, strict = false) {
+    const pad = strict ? 0 : r * 0.2;   // при спавне зазор 5 см, в движении — можно вплотную
     // обводки моделей: зверь тоже не проходит сквозь оболочку
-    if (this.world.shells && this.world.shells.blocked(x, z, r * 0.8, this.world.heightAt(x, z))) return true;
+    if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
     for (const c of this.world.colliders) {
-      if (c.disabled || c.fire || c.soft) continue;
-      if (c.r < 0.3) continue;
+      if (c.disabled || c.fire) continue;
+      // кусты зверю тоже препятствие (для игрока они мягкие, для зверя — нет)
+      if (c.r < 0.3 && !strict) continue;
       const dx = x - c.x;
       const dz = z - c.z;
-      const min = c.r + r * 0.8;
+      const min = c.r + r + pad;
       if (dx * dx + dz * dz < min * min) return true;
     }
     return false;
@@ -986,9 +1071,11 @@ export class Mobs {
     }
 
     // --- хвост ---
-    if (p.tail && def.type !== 'gull') {
+    // у черепахи свой, спокойный хвост (ниже), у чайки — веер на поворотах
+    if (p.tail && def.type !== 'gull' && def.type !== 'turtle') {
+      const baseZ = p.tail.userData.baseZ ?? (p.tail.userData.baseZ = p.tail.rotation.z);
       const wag = 0.35 + walk * 0.3 + (scared ? 0.4 : 0);
-      p.tail.rotation.z = 0.5 + Math.sin(t * (1.2 + walk * 2)) * 0.22;
+      p.tail.rotation.z = baseZ + Math.sin(t * (1.2 + walk * 2)) * 0.22;
       p.tail.rotation.y = Math.sin(t * (0.9 + walk * 1.6)) * wag;
     }
     if (p.tail && def.type === 'gull') {
@@ -1101,6 +1188,12 @@ export class Mobs {
       }
       // панцирь чуть покачивается при ходьбе
       if (p.body) p.body.rotation.z = Math.sin(t * 1.1) * 0.05 * walk;
+      // хвост виляет совсем немного и не выламывается из своего угла
+      if (p.tail) {
+        const baseZ = p.tail.userData.baseZ ?? (p.tail.userData.baseZ = p.tail.rotation.z);
+        p.tail.rotation.z = baseZ + Math.sin(mob.animTime * 1.3) * 0.05;
+        p.tail.rotation.y = Math.sin(mob.animTime * 1.1 + 0.6) * (0.08 + walk * 0.16);
+      }
     }
 
     // --- рыба: тело виляет, хвост работает как весло ---
