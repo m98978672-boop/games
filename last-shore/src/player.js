@@ -491,11 +491,22 @@ export class Player {
     const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
 
     if (this.fly) {
-      // креатив: настоящий полёт — плавный разгон, зависание, земля не липнет
-      const up = (input.jump ? 1 : 0) - (input.sprint ? 1 : 0);
+      // креатив: настоящий полёт — пробел поднимает, Shift опускает, отпустил — висим.
+      // «Зажатие» берём из jumpHeld: input.jump — одиночный импульс и в кадре сбрасывается.
+      const held = input.jumpHeld === undefined ? !!input.jump : !!input.jumpHeld;
+      const up = (held ? 1 : 0) - (input.sprint ? 1 : 0);
       const targetVy = up * P.flySpeed;
-      this.velocity.y += (targetVy - this.velocity.y) * clamp(dt * (up ? 9 : 12), 0, 1);
+      // разгон вверх мягкий, вниз — чуть быстрее, остановка — с торможением
+      const k = up > 0 ? 7 : (up < 0 ? 10 : 14);
+      this.velocity.y += (targetVy - this.velocity.y) * clamp(dt * k, 0, 1);
       this.position.y += this.velocity.y * dt;
+
+      // потолок: высоко, но не в космос
+      const ceilY = (underground ? ground : 0) + 140;
+      if (this.position.y > ceilY) {
+        this.position.y = ceilY;
+        if (this.velocity.y > 0) this.velocity.y = 0;
+      }
       // не проваливаемся в рельеф и не ныряем под воду глубже колена
       const minY = underground ? floor : Math.max(ground + 0.25, CONFIG.world.seaLevel - 0.55);
       if (this.position.y < minY) {
@@ -505,6 +516,7 @@ export class Player {
       this.grounded = false;
       this.wading = 0;
       this.swimming = false;
+      this.flyT = (this.flyT || 0) + dt;
     } else if (input.jump && this.grounded) {
       this.velocity.y = P.jumpSpeed;
       this.grounded = false;
@@ -609,7 +621,7 @@ export class Player {
 
     if (this.fly) {
       // поза полёта: ноги поджаты, руки разведены, лёгкое покачивание
-      const t = performance.now() * 0.002;
+      const t = (this.flyT || 0) * 2.6;
       const f = clamp(dt * 7, 0, 1);
       this.legL.rotation.x += (-0.38 + Math.sin(t) * 0.05 - this.legL.rotation.x) * f;
       this.legR.rotation.x += (-0.52 + Math.sin(t * 1.2) * 0.05 - this.legR.rotation.x) * f;

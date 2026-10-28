@@ -196,7 +196,7 @@ class Game {
     this.weatherSunMul = 1;
     this.weatherFogMul = 1;
 
-    this.input = { forward: false, back: false, left: false, right: false, sprint: false, jump: false };
+    this.input = { forward: false, back: false, left: false, right: false, sprint: false, jump: false, jumpHeld: false };
     this.nearest = null;
 
     this.running = false;
@@ -616,7 +616,13 @@ class Game {
       case 'KeyA': case 'ArrowLeft': this.input.left = true; break;
       case 'KeyD': case 'ArrowRight': this.input.right = true; break;
       case 'ShiftLeft': case 'ShiftRight': this.input.sprint = true; break;
-      case 'Space': this.input.jump = true; e.preventDefault(); break;
+      case 'Space':
+        // jump — одиночный импульс прыжка, jumpHeld — «клавиша зажата» для полёта
+        this.jumpRepeat = e.repeat;
+        this.input.jump = true;
+        this.input.jumpHeld = true;
+        e.preventDefault();
+        break;
       case 'KeyE': this.interact(); break;
       case 'KeyF':
         if (this.creativeArmed) {
@@ -744,7 +750,8 @@ class Game {
       case 'KeyS': case 'ArrowDown': this.input.back = false; break;
       case 'KeyA': case 'ArrowLeft': this.input.left = false; break;
       case 'KeyD': case 'ArrowRight': this.input.right = false; break;
-      case 'ShiftLeft': case 'ShiftRight': this.input.sprint = false; break;
+      case 'ShiftLeft': case 'ShiftRight': this.input.sprint = false; this.input.altHeld = false; break;
+      case 'Space': this.input.jumpHeld = false; this.input.jump = false; break;
     }
   }
 
@@ -821,6 +828,9 @@ class Game {
   toggleCreative() {
     this.creative = !this.creative;
     this.player.fly = this.creative;
+    // при выходе из полёта не тащим вниз остаток вертикальной скорости
+    this.player.velocity.y = 0;
+    this.player.flyT = 0;
     this.ui.setCreative(this.creative);
     this.audio.uiClick?.();
 
@@ -2055,6 +2065,7 @@ class Game {
     // --- игрок ---
     // под землёй физика другая: клетки шахты вместо рельефа острова
     this.player.update(dt, this.input, this.mineWorld);
+    // сбрасываем только импульс прыжка: «пробел зажат» (input.jumpHeld) живёт до keyup
     this.input.jump = false;
 
     // сквозь зверей не пройти: расталкиваем игрока и зверя

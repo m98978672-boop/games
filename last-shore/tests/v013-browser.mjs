@@ -141,10 +141,53 @@ const fly = await page.evaluate(() => {
   const up = p.position.y - y0;
   p.update(0.25, { sprint: true }, g.world);
   const down = p.position.y - y0;
-  g.toggleCreative();
+  if (g.creative) g.toggleCreative();
   return { up: +up.toFixed(2), down: +down.toFixed(2) };
 });
 console.log('полёт: вверх', fly.up, 'м · вниз', fly.down, 'м · работает:', fly.up > 0.3 && fly.down < fly.up);
+
+// --- полёт настоящими клавишами: зажали пробел — поднялись, отпустили — висим.
+// Игровой цикл на этой странице может стоять (нет захвата курсора), поэтому кадры
+// прокручиваем вручную — важно, что клавиши идут через настоящий обработчик.
+const heldFly = await page.evaluate(() => {
+  const g = window.__game;
+  // бот-инспектор после теста F8 продолжает рулить героем — гасим его
+  g.bot?.stop?.();
+  g.bot = null;
+  // после теста копания герой остался в шахте — поднимаемся на поверхность
+  if (g.underground) g.exitMine();
+  // включаем именно полёт, независимо от того, что осталось от прошлых проверок
+  if (!g.creative) g.toggleCreative();
+  g.creative = true;
+  g.player.fly = true;
+  const p = g.player;
+  p.position.set(0, 14, 0);
+  p.velocity.set(0, 0, 0);
+  const fire = (code, type) => window.dispatchEvent(new KeyboardEvent(type, { code, bubbles: true }));
+  const run = (n) => { for (let i = 0; i < n; i++) g.update(1 / 30); };
+  run(3);
+  const y0 = p.position.y;
+  fire('Space', 'keydown');
+  run(45);
+  const up = p.position.y - y0;
+  fire('Space', 'keyup');
+  run(15);
+  const yHover = p.position.y;
+  run(30);
+  const hover = Math.abs(p.position.y - yHover);
+  fire('ShiftLeft', 'keydown');
+  run(45);
+  const down = p.position.y - yHover;
+  fire('ShiftLeft', 'keyup');
+  run(15);
+  g.toggleCreative();
+  return { up: +up.toFixed(2), down: +down.toFixed(2), hover: +hover.toFixed(2),
+    dbg: { fly: p.fly, y0: +y0.toFixed(2), y1: +p.position.y.toFixed(2),
+      held: g.input.jumpHeld, und: !!g.underground, alive: p.alive, dead: g.dead } };
+});
+console.log('полёт зажатием клавиш: вверх', heldFly.up, 'м · вниз', heldFly.down,
+  'м · зависание', heldFly.hover, 'м · работает:',
+  heldFly.up > 4 && heldFly.down < -4 && heldFly.hover < 0.4);
 
 console.log(errors.length ? 'ОШИБКИ:\n' + errors.slice(0, 8).join('\n') : 'ошибок нет');
 await browser.close();
