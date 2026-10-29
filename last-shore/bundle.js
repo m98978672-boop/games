@@ -7331,11 +7331,11 @@
           object.boundingBox = this.boundingBox.toJSON();
         }
       }
-      function serialize(library, element) {
-        if (library[element.uuid] === void 0) {
-          library[element.uuid] = element.toJSON(meta);
+      function serialize(library, element2) {
+        if (library[element2.uuid] === void 0) {
+          library[element2.uuid] = element2.toJSON(meta);
         }
-        return element.uuid;
+        return element2.uuid;
       }
       if (this.isScene) {
         if (this.background) {
@@ -36544,9 +36544,9 @@ void main() {
       this.el.invList.classList.toggle("hidden", craft);
       this.el.inventoryCraftList.classList.toggle("hidden", !craft);
       for (const [id, active] of [["inventory-tab-bag", !craft], ["inventory-tab-craft", craft]]) {
-        const button = $(id);
-        button.classList.toggle("tab-active", active);
-        button.setAttribute("aria-selected", String(active));
+        const button2 = $(id);
+        button2.classList.toggle("tab-active", active);
+        button2.setAttribute("aria-selected", String(active));
       }
     }
     toggleBag(force) {
@@ -40677,7 +40677,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-29 19:19" : "dev";
+  var BUILD = true ? "2026-10-29 19:34" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -41777,7 +41777,7 @@ void main() {
       info.textContent = save ? `${tr("\u0414\u0435\u043D\u044C", "Day")} ${save.day || 1} \xB7 ${new Date(save.savedAt || 0).toLocaleString()}` : tr("\u041F\u0443\u0441\u0442\u043E", "Empty");
       const buttons = document.createElement("div");
       buttons.className = "btn-row";
-      const button = (label, action, disabled = false) => {
+      const button2 = (label, action, disabled = false) => {
         const b = document.createElement("button");
         b.type = "button";
         b.className = "btn-ghost";
@@ -41786,7 +41786,7 @@ void main() {
         b.addEventListener("click", action);
         buttons.appendChild(b);
       };
-      button(tr("\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C", "Save"), () => {
+      button2(tr("\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C", "Save"), () => {
         try {
           const game = window.__game;
           if ((game == null ? void 0 : game.running) && !game.save()) throw new Error("save");
@@ -41803,7 +41803,7 @@ void main() {
           status2("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C: \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430.", "Could not save: check browser storage.");
         }
       });
-      button(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C", "Load"), () => {
+      button2(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C", "Load"), () => {
         var _a, _b, _c;
         try {
           const selected = localStorage.getItem(slotKey(n));
@@ -41829,7 +41829,7 @@ void main() {
           status2("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not load slot.");
         }
       }, !save);
-      button(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C", "Delete"), () => {
+      button2(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C", "Delete"), () => {
         if (!window.confirm(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435?", "Delete this save?"))) return;
         try {
           localStorage.removeItem(slotKey(n));
@@ -41944,6 +41944,73 @@ void main() {
       }
     } catch {
     }
+  }
+
+  // src/fullscreen.js
+  var optedOut = false;
+  var wasFullscreen = false;
+  var pending = false;
+  var button = null;
+  function element() {
+    return document.fullscreenElement || document.webkitFullscreenElement || null;
+  }
+  function requestMethod() {
+    const root = document.documentElement;
+    return root.requestFullscreen || root.webkitRequestFullscreen;
+  }
+  function updateButton() {
+    if (!button) return;
+    const active = !!element();
+    if (wasFullscreen && !active) optedOut = true;
+    wasFullscreen = active;
+    button.classList.toggle("hidden", typeof requestMethod() !== "function");
+    const en = document.documentElement.lang === "en";
+    const label = active ? en ? "Exit fullscreen" : "\u0412\u044B\u0439\u0442\u0438 \u0438\u0437 \u043F\u043E\u043B\u043D\u043E\u0433\u043E \u044D\u043A\u0440\u0430\u043D\u0430" : en ? "Enter fullscreen" : "\u041D\u0430 \u0432\u0435\u0441\u044C \u044D\u043A\u0440\u0430\u043D";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.setAttribute("aria-pressed", String(active));
+    button.innerHTML = active ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4v5H4 M15 4v5h5 M9 20v-5H4 M15 20v-5h5"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5"/></svg>';
+  }
+  async function enter() {
+    const request = requestMethod();
+    if (!request || element() || pending) return;
+    pending = true;
+    try {
+      await request.call(document.documentElement);
+    } catch {
+    } finally {
+      pending = false;
+      updateButton();
+    }
+  }
+  function autoFullscreen() {
+    if (optedOut || navigator.userActivation && !navigator.userActivation.isActive) return;
+    void enter();
+  }
+  function initFullscreen() {
+    button = document.getElementById("fullscreen-toggle");
+    if (!button) return;
+    document.addEventListener("fullscreenchange", updateButton);
+    document.addEventListener("webkitfullscreenchange", updateButton);
+    button.addEventListener("click", async () => {
+      if (element()) {
+        const exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (!exit) return;
+        try {
+          await exit.call(document);
+        } catch {
+        }
+        updateButton();
+      } else {
+        optedOut = false;
+        await enter();
+      }
+    });
+    document.addEventListener("click", (e) => {
+      var _a, _b;
+      if ((_b = (_a = e.target) == null ? void 0 : _a.closest) == null ? void 0 : _b.call(_a, "#btn-room-connect, #peer-answer, #peer-apply")) autoFullscreen();
+    }, true);
+    updateButton();
   }
 
   // src/main.js
@@ -44763,6 +44830,7 @@ void main() {
   }
   function scheduleBoot(continueSave) {
     if (booting) return;
+    autoFullscreen();
     booting = true;
     const btn = document.getElementById("btn-start");
     if (btn) {
@@ -44779,6 +44847,7 @@ void main() {
     var _a, _b, _c;
     if (menuReady) return;
     menuReady = true;
+    initFullscreen();
     initSettingsAndSaves(scheduleBoot);
     const roomClient = new RoomClient();
     window.__roomClient = roomClient;

@@ -30,6 +30,7 @@ import { RoomClient } from './network.js';
 import { initPhoneRooms } from './peer-network.js';
 import { getSettings } from './settings.js';
 import { initSettingsAndSaves } from './menu.js';
+import { autoFullscreen, initFullscreen } from './fullscreen.js';
 
 const SAVE_KEY = 'lastshore.save.v1';
 
@@ -3009,6 +3010,7 @@ function boot(continueSave = false) {
 /** Клик -> пауза на 40 мс (чтобы кнопка успела перерисоваться) -> сборка мира */
 function scheduleBoot(continueSave) {
   if (booting) return;
+  autoFullscreen();
   booting = true;
   const btn = document.getElementById('btn-start');
   if (btn) { btn.disabled = true; btn.textContent = 'Строим остров…'; }
@@ -3023,6 +3025,7 @@ function initMenu() {
   if (menuReady) return;
   menuReady = true;
 
+  initFullscreen();
   initSettingsAndSaves(scheduleBoot);
   const roomClient = new RoomClient();
   window.__roomClient = roomClient;
