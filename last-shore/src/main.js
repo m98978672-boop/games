@@ -27,6 +27,7 @@ import { makeBoat } from './models.js';
 import { detectDevice } from './device.js';
 import { bindTouch } from './touch.js';
 import { RoomClient } from './network.js';
+import { initPhoneRooms } from './peer-network.js';
 import { getSettings } from './settings.js';
 import { initSettingsAndSaves } from './menu.js';
 
@@ -488,6 +489,22 @@ class Game {
   bindEvents() {
     window.addEventListener('resize', () => this.onResize());
 
+    document.getElementById('inventory-tab-bag').addEventListener('click', () => this.ui.inventoryTab('bag'));
+    document.getElementById('inventory-tab-craft').addEventListener('click', () => {
+      this.ui.inventoryTab('craft');
+      this.ui._lastCraftSig = '';
+      this.ui.renderCraft(RECIPES, this.state.inventory, (id) => this.craft(id));
+    });
+    document.getElementById('inventory-station').addEventListener('click', () => {
+      const p = this.player.position;
+      const station = this.stations.find(st => st.type === 'bench' && Math.hypot(st.x - p.x, st.z - p.z) <= 3.2 && Math.abs(st.y - p.y) < 2.5);
+      if (station) this.openStation(station);
+      else this.ui.toast('Подойди к установленному верстаку', true);
+    });
+    for (const id of ['inventory-close', 'craft-close', 'workshop-close']) {
+      document.getElementById(id).addEventListener('click', () => { this.ui.closePanels(); this.relock(); });
+    }
+
     this.ui.bindHotbar(
       (index) => this.selectSlot(index),
       () => this.useSelected()
@@ -497,6 +514,7 @@ class Game {
     window.addEventListener('keyup', (e) => this.onKeyUp(e));
 
     this.canvas.addEventListener('mousedown', (e) => {
+      if (this.device.touch) return; // синтетический клик касания не должен бить
       if (!this.running || this.paused) return;
       if (this.ui.isPanelOpen()) return;     // панель открыта — клики по ней, а не по миру
       // F9: курсор был отпущен — первый клик только возвращает обзор, без удара
@@ -830,6 +848,8 @@ class Game {
   pause() {
     if (!this.running || this.dead) return;
     this.paused = true;
+    this.holdingAttack = false;
+    for (const key of ['forward', 'back', 'left', 'right', 'sprint', 'jumpHeld']) this.input[key] = false;
     // на паузе курсор всегда обычный: иначе после «Продолжить» обзор не вернётся
     this.cursorFree = false;
     this.ui.setCursorFree?.(false);
@@ -2345,24 +2365,14 @@ class Game {
     const skyInfo = this.sky.update(dt, this.player.position);
     this.sky.sun.intensity *= this.weatherSunMul;
     this.sky.hemi.intensity *= (0.8 + this.weatherSunMul * 0.25);
-    // Утренняя и вечерняя дымка с 27 м; днём (12–17) постепенно исчезает.
-    // На слабом профиле дополнительная дымка выключена.
-    if (!this.device.low) {
-      const h = this.sky.hour;
-      const fadeIn = Math.max(0, Math.min(1, (h - 11) / 1));
-      const fadeOut = Math.max(0, Math.min(1, (18 - h) / 1));
-      const clear = this.sky.day % 3 === 0 ? 0 : Math.min(fadeIn, fadeOut);
-      this.scene.fog.near = THREE.MathUtils.lerp(27, this.scene.fog.near, clear);
-      this.scene.fog.far = THREE.MathUtils.lerp(170, this.scene.fog.far, clear);
-    }
-    this.scene.fog.far /= this.weatherFogMul;
-    this.scene.fog.near /= this.weatherFogMul;
-    if (this.device.low) {
-      // На слабом профиле атмосферную дымку не рисуем; подводный/шахтный туман отдельно ниже.
+    // Туман начинается в 20 м и постепенно сгущается к дальнему плану.
+    // Слабым устройствам и принудительному низкому профилю оставляем облегчённый вид.
+    if (this.device.weak || this.settings.quality === 'low') {
       this.scene.fog.near = 1400;
       this.scene.fog.far = 1500;
     } else {
-      this.scene.fog.near = Math.max(27, this.scene.fog.near);
+      this.scene.fog.near = 20;
+      this.scene.fog.far = Math.max(70, 150 / this.weatherFogMul);
     }
     this.sky.skyUniforms.uTop.value.multiplyScalar(0.75 + this.weatherSunMul * 0.3);
     this.sky.skyUniforms.uBottom.value.multiplyScalar(0.8 + this.weatherSunMul * 0.2);
@@ -2736,6 +2746,7 @@ class Game {
    */
   togglePanel(kind) {
     const wasOpen = this.ui.isPanelOpen();
+    this.holdingAttack = false;
 
     if (wasOpen) {
       this.ui.closePanels();
@@ -2753,6 +2764,7 @@ class Game {
       this.ui.toggleCraft(true, RECIPES, this.state.inventory, (id) => this.craft(id));
     } else {
       this.ui.toggleBag(true);
+      this.ui.inventoryTab('bag');
       this.ui.renderBag(this.state.inventory, this.state.hotbar);
     }
     this.audio.uiClick();
@@ -2970,6 +2982,16 @@ function boot(continueSave = false) {
       console.log(`[LAST SHORE] мир собран за ${Math.round(performance.now() - t0)} мс`);
     }
     window.__game.start(continueSave);
+    // Гость появляется рядом, а не внутри хозяина (карта и стартовая точка одинаковые).
+    if (!continueSave && window.__roomClient?.role === 'guest') {
+      const game = window.__game, p = game.player.position;
+      for (let i = 0; i < 16; i++) {
+        const angle = i * Math.PI / 8, x = p.x + Math.cos(angle) * 3, z = p.z + Math.sin(angle) * 3;
+        if (game.world.heightAt(x, z) > 0.3 && game.world.isFree(x, z, 0.8)) {
+          game.player.setPosition(x, z, game.world); break;
+        }
+      }
+    }
     setBootStatus('движок готов · день ' + window.__game.sky.day);
   } catch (err) {
     if (!err || !err.handled) showFatal(err, 'создание мира');
@@ -3006,8 +3028,10 @@ function initMenu() {
   window.__roomClient = roomClient;
   roomClient.onJoin = () => scheduleBoot(false);
   document.getElementById('btn-rooms')?.addEventListener('click', () => document.getElementById('rooms-panel').classList.toggle('hidden'));
-  document.getElementById('btn-room-connect')?.addEventListener('click', () => roomClient.connect(false));
-  document.getElementById('btn-room-list')?.addEventListener('click', () => roomClient.connect(true));
+  const activateServer = () => { if (window.__roomClient !== roomClient) window.__roomClient?.close(); window.__roomClient = roomClient; };
+  initPhoneRooms({ activate: peer => { if (window.__roomClient !== peer) window.__roomClient?.close(); window.__roomClient = peer; }, onJoin: () => scheduleBoot(false) });
+  document.getElementById('btn-room-connect')?.addEventListener('click', () => { activateServer(); roomClient.connect(false); });
+  document.getElementById('btn-room-list')?.addEventListener('click', () => { activateServer(); roomClient.connect(true); });
   const continueBtn = document.getElementById('btn-continue');
   const reloadBtn = document.getElementById('btn-reload');
   if (reloadBtn) reloadBtn.addEventListener('click', () => window.location.reload());

@@ -22013,10 +22013,10 @@
     }
   }
   function getShaderErrors(gl, shader, type) {
-    const status2 = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+    const status3 = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
     const shaderInfoLog = gl.getShaderInfoLog(shader) || "";
     const errors = shaderInfoLog.trim();
-    if (status2 && errors === "") return "";
+    if (status3 && errors === "") return "";
     const errorMatches = /ERROR: 0:(\d+)/.exec(errors);
     if (errorMatches) {
       const errorLine = parseInt(errorMatches[1]);
@@ -36221,6 +36221,7 @@ void main() {
         invHotbar: $("inv-hotbar"),
         craft: $("crafting"),
         craftList: $("craft-list"),
+        inventoryCraftList: $("inventory-craft-list"),
         workshop: $("workshop"),
         wsTitle: $("ws-title"),
         wsBody: $("ws-body"),
@@ -36511,10 +36512,10 @@ void main() {
     // ------------------------------------------------------------
     renderCraft(recipes, inv, onCraft) {
       if (inv) this.inv = inv;
-      const sig = recipes.map((r) => Object.entries(r.need).map(([k, v]) => (this.inv[k] || 0) >= v ? 1 : 0).join("")).join("");
+      const sig = recipes.map((r) => Object.entries(r.need).map(([k]) => this.inv[k] || 0).join(",")).join("|");
       if (sig === this._lastCraftSig) return;
       this._lastCraftSig = sig;
-      this.el.craftList.innerHTML = recipes.map((r) => {
+      const markup = recipes.map((r) => {
         const can = Object.entries(r.need).every(([k, v]) => (this.inv[k] || 0) >= v);
         const cost = Object.entries(r.need).map(([k, v]) => {
           const has = (this.inv[k] || 0) >= v;
@@ -36530,9 +36531,23 @@ void main() {
           <button class="craft-btn" data-craft="${r.id}" ${can ? "" : "disabled"}>${can ? "\u0421\u0434\u0435\u043B\u0430\u0442\u044C" : "\u2014"}</button>
         </li>`;
       }).join("");
-      this.el.craftList.querySelectorAll("[data-craft]").forEach((btn) => {
-        btn.addEventListener("click", () => onCraft(btn.dataset.craft));
-      });
+      for (const list of [this.el.craftList, this.el.inventoryCraftList]) {
+        if (!list) continue;
+        list.innerHTML = markup;
+        list.querySelectorAll("[data-craft]").forEach((btn) => {
+          btn.addEventListener("click", () => onCraft(btn.dataset.craft));
+        });
+      }
+    }
+    inventoryTab(tab) {
+      const craft = tab === "craft";
+      this.el.invList.classList.toggle("hidden", craft);
+      this.el.inventoryCraftList.classList.toggle("hidden", !craft);
+      for (const [id, active] of [["inventory-tab-bag", !craft], ["inventory-tab-craft", craft]]) {
+        const button = $(id);
+        button.classList.toggle("tab-active", active);
+        button.setAttribute("aria-selected", String(active));
+      }
     }
     toggleBag(force) {
       const show = force !== void 0 ? force : this.el.inv.classList.contains("hidden");
@@ -40662,7 +40677,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-29 19:05" : "dev";
+  var BUILD = true ? "2026-10-29 19:19" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -41261,7 +41276,8 @@ void main() {
     const stick = document.getElementById("touch-stick");
     const knob = document.getElementById("touch-knob");
     let stickId = null;
-    const release = () => {
+    const release = (e) => {
+      if (e && e.pointerId !== stickId) return;
       stickId = null;
       for (const key2 of ["forward", "back", "left", "right"]) game.input[key2] = false;
       knob.style.transform = "";
@@ -41278,6 +41294,7 @@ void main() {
       game.input.right = x > 0.22;
     };
     stick.addEventListener("pointerdown", (e) => {
+      if (stickId !== null) return;
       e.preventDefault();
       stickId = e.pointerId;
       stick.setPointerCapture(e.pointerId);
@@ -41288,12 +41305,14 @@ void main() {
     });
     stick.addEventListener("pointerup", release);
     stick.addEventListener("pointercancel", release);
+    stick.addEventListener("lostpointercapture", release);
     for (const btn of root.querySelectorAll("[data-action]")) {
       const action = btn.dataset.action;
       btn.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         btn.setPointerCapture(e.pointerId);
-        if (!game.running || game.paused) return;
+        if (!game.running || game.paused || game.dead) return;
+        if (game.ui.isPanelOpen() && action !== "bag") return;
         game.audio.resume();
         if (action === "sprint") game.input.sprint = true;
         else if (action === "jump") {
@@ -41317,6 +41336,7 @@ void main() {
       };
       btn.addEventListener("pointerup", up);
       btn.addEventListener("pointercancel", up);
+      btn.addEventListener("lostpointercapture", up);
     }
     let look = null;
     game.canvas.addEventListener("pointerdown", (e) => {
@@ -41364,27 +41384,27 @@ void main() {
       this.room = null;
     }
     connect(listOnly = false) {
-      const status2 = document.getElementById("room-status");
+      const status3 = document.getElementById("room-status");
       let url;
       try {
         url = serverAddress();
       } catch (e) {
-        status2.textContent = e.message;
+        status3.textContent = e.message;
         return;
       }
       this.close();
-      status2.textContent = "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0443\u2026";
+      status3.textContent = "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0443\u2026";
       let ws;
       try {
         ws = new WebSocket(url);
       } catch {
-        status2.textContent = "\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u0430\u0434\u0440\u0435\u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.";
+        status3.textContent = "\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u0430\u0434\u0440\u0435\u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.";
         return;
       }
       this.ws = ws;
       let timeout = setTimeout(() => {
         if (ws.readyState !== WebSocket.OPEN) {
-          status2.textContent = "\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B.";
+          status3.textContent = "\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B.";
           ws.close();
         }
       }, 8e3);
@@ -41414,22 +41434,22 @@ void main() {
             });
             list.appendChild(b);
           }
-          status2.textContent = ((_a = msg.rooms) == null ? void 0 : _a.length) ? "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u043C\u043D\u0430\u0442\u0443 \u0438\u043B\u0438 \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u043A\u043E\u0434." : "\u041A\u043E\u043C\u043D\u0430\u0442 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442 \u2014 \u0441\u043E\u0437\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0432\u0443\u044E.";
+          status3.textContent = ((_a = msg.rooms) == null ? void 0 : _a.length) ? "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u043C\u043D\u0430\u0442\u0443 \u0438\u043B\u0438 \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u043A\u043E\u0434." : "\u041A\u043E\u043C\u043D\u0430\u0442 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442 \u2014 \u0441\u043E\u0437\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0432\u0443\u044E.";
           ws.close();
         } else if (msg.type === "error") {
-          status2.textContent = msg.message;
+          status3.textContent = msg.message;
           ws.close();
         } else if (msg.type === "joined") {
           this.room = msg.room;
           this.id = msg.id;
           for (const p of msg.players || []) this.receiveState(p);
-          status2.textContent = `\u041A\u043E\u043C\u043D\u0430\u0442\u0430 ${msg.room}: \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043E. \u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043C \u043E\u0441\u0442\u0440\u043E\u0432\u2026`;
+          status3.textContent = `\u041A\u043E\u043C\u043D\u0430\u0442\u0430 ${msg.room}: \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043E. \u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043C \u043E\u0441\u0442\u0440\u043E\u0432\u2026`;
           (_b = this.onJoin) == null ? void 0 : _b.call(this);
         } else if (msg.type === "state") this.receiveState(msg);
         else if (msg.type === "left") this.remove(msg.id);
       };
       ws.onerror = () => {
-        status2.textContent = "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0430\u0434\u0440\u0435\u0441 \u0438 \u0437\u0430\u043F\u0443\u0441\u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u043A\u043E\u043C\u043D\u0430\u0442.";
+        status3.textContent = "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0430\u0434\u0440\u0435\u0441 \u0438 \u0437\u0430\u043F\u0443\u0441\u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u043A\u043E\u043C\u043D\u0430\u0442.";
       };
       ws.onclose = () => {
         var _a;
@@ -41440,7 +41460,7 @@ void main() {
           this.room = null;
           for (const id of [...this.remote.keys()]) this.remove(id);
           if ((_a = window.__game) == null ? void 0 : _a.running) window.__game.ui.toast("\u0421\u0432\u044F\u0437\u044C \u0441 \u043A\u043E\u043C\u043D\u0430\u0442\u043E\u0439 \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u0430", true);
-          status2.textContent = "\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u043E.";
+          status3.textContent = "\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u043E.";
         }
       };
     }
@@ -41493,6 +41513,202 @@ void main() {
     }
   };
 
+  // src/peer-network.js
+  var ICE = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+  var MAX_CODE = 32e3;
+  var $2 = (id) => document.getElementById(id);
+  var status = (message) => {
+    $2("peer-status").textContent = message;
+  };
+  function decodeCode(text, expected) {
+    const code = text.trim().replace(/\s/g, "");
+    if (!code || code.length > MAX_CODE) throw new Error("\u0412\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u043F\u043E\u043B\u043D\u044B\u0439 \u043A\u043E\u0434.");
+    let data;
+    try {
+      data = JSON.parse(atob(code));
+    } catch {
+      throw new Error("\u041A\u043E\u0434 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0451\u043D \u0438\u043B\u0438 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D \u043D\u0435 \u043F\u043E\u043B\u043D\u043E\u0441\u0442\u044C\u044E.");
+    }
+    if (data.type !== expected || typeof data.sdp !== "string" || !data.sdp.startsWith("v=0")) {
+      throw new Error(expected === "offer" ? "\u041D\u0443\u0436\u043D\u043E \u0432\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0435\u043D\u0438\u0435 \u0445\u043E\u0437\u044F\u0438\u043D\u0430 \u043A\u043E\u043C\u043D\u0430\u0442\u044B." : "\u041D\u0443\u0436\u043D\u043E \u0432\u0441\u0442\u0430\u0432\u0438\u0442\u044C \u043E\u0442\u0432\u0435\u0442 \u0434\u0440\u0443\u0433\u0430.");
+    }
+    return { type: data.type, sdp: data.sdp };
+  }
+  function encodeCode(description) {
+    return btoa(JSON.stringify({ type: description.type, sdp: description.sdp }));
+  }
+  function waitForIce(pc) {
+    if (pc.iceGatheringState === "complete") return Promise.resolve();
+    return new Promise((resolve) => {
+      let timer;
+      const finish = () => {
+        clearTimeout(timer);
+        pc.removeEventListener("icegatheringstatechange", change);
+        resolve();
+      };
+      const change = () => {
+        if (pc.iceGatheringState === "complete" || pc.signalingState === "closed") finish();
+      };
+      pc.addEventListener("icegatheringstatechange", change);
+      timer = setTimeout(finish, 8e3);
+    });
+  }
+  var PeerRoom = class extends RoomClient {
+    constructor() {
+      super();
+      this.pc = null;
+      this.channel = null;
+      this.role = null;
+    }
+    createPeer(role) {
+      this.close();
+      if (typeof RTCPeerConnection === "undefined") throw new Error("\u042D\u0442\u043E\u0442 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043D\u0435 \u043F\u043E\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442 WebRTC.");
+      this.role = role;
+      const pc = new RTCPeerConnection(ICE);
+      this.pc = pc;
+      pc.ondatachannel = (e) => {
+        if (this.pc === pc && role === "guest") this.bindChannel(e.channel, pc);
+      };
+      pc.onconnectionstatechange = () => {
+        if (this.pc !== pc) return;
+        if (pc.connectionState === "failed") {
+          status("\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u043D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C. \u041F\u043E\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u043E\u0434\u043D\u0443 \u0441\u0435\u0442\u044C Wi\u2011Fi \u0438\u043B\u0438 \u0441\u0435\u0440\u0432\u0435\u0440 \u043A\u043E\u043C\u043D\u0430\u0442.");
+          this.close();
+        }
+      };
+      if (role === "host") this.bindChannel(pc.createDataChannel("lastshore"), pc);
+      return pc;
+    }
+    bindChannel(channel, pc) {
+      this.channel = channel;
+      channel.onopen = () => {
+        var _a;
+        if (this.pc !== pc || this.channel !== channel) return;
+        this.room = "\u041F\u0440\u044F\u043C\u0430\u044F \u043A\u043E\u043C\u043D\u0430\u0442\u0430";
+        this.ws = {
+          readyState: 1,
+          send: (raw) => {
+            if (channel.readyState !== "open") return;
+            const data = JSON.parse(raw);
+            data.name = ($2("server-name").value.trim() || "\u0414\u0440\u0443\u0433").slice(0, 20);
+            channel.send(JSON.stringify(data));
+          },
+          close: () => channel.close()
+        };
+        status("\u0418\u0433\u0440\u043E\u043A \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0451\u043D. \u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043C \u043E\u0441\u0442\u0440\u043E\u0432\u2026");
+        (_a = this.onJoin) == null ? void 0 : _a.call(this);
+      };
+      channel.onmessage = (event) => {
+        if (typeof event.data !== "string" || event.data.length > 2e3) return;
+        let data;
+        try {
+          data = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        if (data.type !== "state") return;
+        this.receiveState({
+          id: "peer",
+          x: data.x,
+          y: data.y,
+          z: data.z,
+          yaw: data.yaw,
+          name: typeof data.name === "string" ? data.name.slice(0, 20) : "\u0414\u0440\u0443\u0433"
+        });
+      };
+      channel.onclose = () => {
+        var _a;
+        if (this.pc !== pc || !this.room) return;
+        this.close();
+        status("\u0421\u0432\u044F\u0437\u044C \u0441 \u0438\u0433\u0440\u043E\u043A\u043E\u043C \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u0430.");
+        if ((_a = window.__game) == null ? void 0 : _a.running) window.__game.ui.toast("\u0421\u0432\u044F\u0437\u044C \u0441 \u0438\u0433\u0440\u043E\u043A\u043E\u043C \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u0430", true);
+      };
+    }
+    async offer() {
+      const pc = this.createPeer("host");
+      await pc.setLocalDescription(await pc.createOffer());
+      await waitForIce(pc);
+      if (this.pc !== pc || !pc.localDescription) throw new Error("\u0421\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043A\u043E\u043C\u043D\u0430\u0442\u044B \u043E\u0442\u043C\u0435\u043D\u0435\u043D\u043E.");
+      return encodeCode(pc.localDescription);
+    }
+    async answer(code) {
+      const offer = decodeCode(code, "offer");
+      const pc = this.createPeer("guest");
+      await pc.setRemoteDescription(offer);
+      await pc.setLocalDescription(await pc.createAnswer());
+      await waitForIce(pc);
+      if (this.pc !== pc || !pc.localDescription) throw new Error("\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u043E\u0442\u043C\u0435\u043D\u0435\u043D\u043E.");
+      return encodeCode(pc.localDescription);
+    }
+    async accept(code) {
+      if (!this.pc || this.role !== "host" || this.pc.signalingState !== "have-local-offer") {
+        throw new Error("\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043E\u0437\u0434\u0430\u0439\u0442\u0435 \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0435\u043D\u0438\u0435 \u043D\u0430 \u044D\u0442\u043E\u043C \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435.");
+      }
+      await this.pc.setRemoteDescription(decodeCode(code, "answer"));
+    }
+    close() {
+      super.close();
+      const pc = this.pc;
+      this.pc = null;
+      if (this.channel) {
+        this.channel.close();
+        this.channel = null;
+      }
+      if (pc) pc.close();
+      this.role = null;
+    }
+  };
+  function initPhoneRooms({ activate, onJoin }) {
+    const peer = new PeerRoom();
+    peer.onJoin = onJoin;
+    const buttons = ["peer-host", "peer-answer", "peer-apply"].map($2);
+    const run = async (working, action) => {
+      buttons.forEach((b) => {
+        b.disabled = true;
+      });
+      status(working);
+      try {
+        await action();
+      } catch (e) {
+        status(e.message || "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0437\u0434\u0430\u0442\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435.");
+      } finally {
+        buttons.forEach((b) => {
+          b.disabled = false;
+        });
+      }
+    };
+    $2("peer-host").addEventListener("click", () => run("\u0421\u043E\u0437\u0434\u0430\u0451\u043C \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0435\u043D\u0438\u0435, \u043F\u043E\u0434\u043E\u0436\u0434\u0438\u0442\u0435\u2026", async () => {
+      activate(peer);
+      $2("peer-out").value = await peer.offer();
+      status("\u041E\u0442\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0441\u0432\u043E\u0439 \u043A\u043E\u0434 \u0434\u0440\u0443\u0433\u0443. \u0417\u0430\u0442\u0435\u043C \u0432\u0441\u0442\u0430\u0432\u044C\u0442\u0435 \u0435\u0433\u043E \u043E\u0442\u0432\u0435\u0442 \u0438 \u043D\u0430\u0436\u043C\u0438\u0442\u0435 \xAB\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C \u043E\u0442\u0432\u0435\u0442\xBB.");
+    }));
+    $2("peer-answer").addEventListener("click", () => run("\u0421\u043E\u0437\u0434\u0430\u0451\u043C \u043E\u0442\u0432\u0435\u0442, \u043F\u043E\u0434\u043E\u0436\u0434\u0438\u0442\u0435\u2026", async () => {
+      activate(peer);
+      $2("peer-out").value = await peer.answer($2("peer-in").value);
+      status("\u041E\u0442\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0441\u0432\u043E\u0439 \u043A\u043E\u0434 \u0445\u043E\u0437\u044F\u0438\u043D\u0443 \u043A\u043E\u043C\u043D\u0430\u0442\u044B \u0438 \u0436\u0434\u0438\u0442\u0435 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u044F.");
+    }));
+    $2("peer-apply").addEventListener("click", () => run("\u0421\u043E\u0435\u0434\u0438\u043D\u044F\u0435\u043C\u0441\u044F\u2026", async () => {
+      await peer.accept($2("peer-in").value);
+      status("\u041E\u0436\u0438\u0434\u0430\u0435\u043C \u043F\u0440\u044F\u043C\u043E\u0435 \u0441\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435. \u042D\u0442\u043E \u043C\u043E\u0436\u0435\u0442 \u0437\u0430\u043D\u044F\u0442\u044C \u043D\u0435\u0441\u043A\u043E\u043B\u044C\u043A\u043E \u0441\u0435\u043A\u0443\u043D\u0434.");
+    }));
+    $2("peer-copy").addEventListener("click", async () => {
+      const field = $2("peer-out");
+      if (!field.value) {
+        status("\u0421\u043D\u0430\u0447\u0430\u043B\u0430 \u0441\u043E\u0437\u0434\u0430\u0439\u0442\u0435 \u043F\u0440\u0438\u0433\u043B\u0430\u0448\u0435\u043D\u0438\u0435 \u0438\u043B\u0438 \u043E\u0442\u0432\u0435\u0442.");
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(field.value);
+        status("\u041A\u043E\u0434 \u0441\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D. \u041E\u0442\u043F\u0440\u0430\u0432\u044C\u0442\u0435 \u0435\u0433\u043E \u0434\u0440\u0443\u0433\u0443.");
+      } catch {
+        field.focus();
+        field.select();
+        status("\u0412\u044B\u0434\u0435\u043B\u0438\u0442\u0435 \u0438 \u0441\u043A\u043E\u043F\u0438\u0440\u0443\u0439\u0442\u0435 \u043A\u043E\u0434 \u0438\u0437 \u043F\u043E\u043B\u044F.");
+      }
+    });
+    return peer;
+  }
+
   // src/settings.js
   var KEY = "lastshore.settings.v1";
   var defaults = { quality: "auto", touch: "auto", volume: 0.55, language: "ru" };
@@ -41539,7 +41755,7 @@ void main() {
     });
     renderSlots();
   }
-  function status(id, ru, en) {
+  function status2(id, ru, en) {
     get(id).textContent = tr(ru, en);
   }
   function renderSlots() {
@@ -41576,15 +41792,15 @@ void main() {
           if ((game == null ? void 0 : game.running) && !game.save()) throw new Error("save");
           const raw2 = localStorage.getItem(AUTO);
           if (!validSave(raw2)) {
-            status("save-status", "\u041D\u0435\u0442 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0438\u0433\u0440\u044B \u0438\u043B\u0438 \u0430\u0432\u0442\u043E\u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", "No current game or autosave.");
+            status2("save-status", "\u041D\u0435\u0442 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0438\u0433\u0440\u044B \u0438\u043B\u0438 \u0430\u0432\u0442\u043E\u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", "No current game or autosave.");
             return;
           }
           if (save && !window.confirm(tr("\u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u044D\u0442\u043E\u0442 \u0441\u043B\u043E\u0442?", "Overwrite this slot?"))) return;
           localStorage.setItem(slotKey(n), raw2);
           renderSlots();
-          status("save-status", "\u0418\u0433\u0440\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0430 \u0432 \u0441\u043B\u043E\u0442.", "Game saved to slot.");
+          status2("save-status", "\u0418\u0433\u0440\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0430 \u0432 \u0441\u043B\u043E\u0442.", "Game saved to slot.");
         } catch {
-          status("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C: \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430.", "Could not save: check browser storage.");
+          status2("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C: \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430.", "Could not save: check browser storage.");
         }
       });
       button(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C", "Load"), () => {
@@ -41610,7 +41826,7 @@ void main() {
             (_c = window.__scheduleGame) == null ? void 0 : _c.call(window, true);
           }
         } catch {
-          status("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not load slot.");
+          status2("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not load slot.");
         }
       }, !save);
       button(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C", "Delete"), () => {
@@ -41619,7 +41835,7 @@ void main() {
           localStorage.removeItem(slotKey(n));
           renderSlots();
         } catch {
-          status("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not delete slot.");
+          status2("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not delete slot.");
         }
       }, !save);
       row.append(title, info, buttons);
@@ -41668,13 +41884,13 @@ void main() {
       try {
         saveSettings(s);
       } catch {
-        status("settings-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438.", "Could not save settings.");
+        status2("settings-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438.", "Could not save settings.");
         return;
       }
       if ((_a = window.__game) == null ? void 0 : _a.audio.master) window.__game.audio.master.gain.value = s.volume;
       translate();
       renderServers();
-      status("settings-status", "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B.", "Settings saved.");
+      status2("settings-status", "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B.", "Settings saved.");
     };
     for (const id of ["setting-quality", "setting-touch", "setting-volume", "setting-language"]) get(id).addEventListener(id === "setting-volume" ? "input" : "change", apply);
     for (const id of ["btn-settings", "btn-pause-settings"]) get(id).addEventListener("click", () => get("settings-screen").classList.remove("hidden"));
@@ -41706,9 +41922,9 @@ void main() {
         localStorage.setItem(SERVER_KEY, JSON.stringify(a));
         renderServers();
         get("server-saved").value = url.href;
-        status("room-status", "\u0410\u0434\u0440\u0435\u0441 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D \u043D\u0430 \u044D\u0442\u043E\u043C \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435.", "Server saved on this device.");
+        status2("room-status", "\u0410\u0434\u0440\u0435\u0441 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D \u043D\u0430 \u044D\u0442\u043E\u043C \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435.", "Server saved on this device.");
       } catch {
-        status("room-status", "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0430\u0434\u0440\u0435\u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u0441 http://, https://, ws:// \u0438\u043B\u0438 wss://.", "Enter an http://, https://, ws:// or wss:// server address.");
+        status2("room-status", "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0430\u0434\u0440\u0435\u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u0441 http://, https://, ws:// \u0438\u043B\u0438 wss://.", "Enter an http://, https://, ws:// or wss:// server address.");
       }
     });
     get("btn-server-remove").addEventListener("click", () => {
@@ -41716,7 +41932,7 @@ void main() {
         localStorage.setItem(SERVER_KEY, JSON.stringify(serverList().filter((url) => url !== get("server-saved").value)));
         renderServers();
       } catch {
-        status("room-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0430\u0434\u0440\u0435\u0441.", "Could not remove address.");
+        status2("room-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0430\u0434\u0440\u0435\u0441.", "Could not remove address.");
       }
     });
     translate();
@@ -42142,6 +42358,24 @@ void main() {
     // ------------------------------------------------------------
     bindEvents() {
       window.addEventListener("resize", () => this.onResize());
+      document.getElementById("inventory-tab-bag").addEventListener("click", () => this.ui.inventoryTab("bag"));
+      document.getElementById("inventory-tab-craft").addEventListener("click", () => {
+        this.ui.inventoryTab("craft");
+        this.ui._lastCraftSig = "";
+        this.ui.renderCraft(RECIPES, this.state.inventory, (id) => this.craft(id));
+      });
+      document.getElementById("inventory-station").addEventListener("click", () => {
+        const p = this.player.position;
+        const station = this.stations.find((st) => st.type === "bench" && Math.hypot(st.x - p.x, st.z - p.z) <= 3.2 && Math.abs(st.y - p.y) < 2.5);
+        if (station) this.openStation(station);
+        else this.ui.toast("\u041F\u043E\u0434\u043E\u0439\u0434\u0438 \u043A \u0443\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043D\u043E\u043C\u0443 \u0432\u0435\u0440\u0441\u0442\u0430\u043A\u0443", true);
+      });
+      for (const id of ["inventory-close", "craft-close", "workshop-close"]) {
+        document.getElementById(id).addEventListener("click", () => {
+          this.ui.closePanels();
+          this.relock();
+        });
+      }
       this.ui.bindHotbar(
         (index) => this.selectSlot(index),
         () => this.useSelected()
@@ -42149,6 +42383,7 @@ void main() {
       window.addEventListener("keydown", (e) => this.onKeyDown(e));
       window.addEventListener("keyup", (e) => this.onKeyUp(e));
       this.canvas.addEventListener("mousedown", (e) => {
+        if (this.device.touch) return;
         if (!this.running || this.paused) return;
         if (this.ui.isPanelOpen()) return;
         if (this.cursorFree) {
@@ -42503,6 +42738,8 @@ void main() {
       var _a, _b;
       if (!this.running || this.dead) return;
       this.paused = true;
+      this.holdingAttack = false;
+      for (const key2 of ["forward", "back", "left", "right", "sprint", "jumpHeld"]) this.input[key2] = false;
       this.cursorFree = false;
       (_b = (_a = this.ui).setCursorFree) == null ? void 0 : _b.call(_a, false);
       this.save();
@@ -43943,21 +44180,12 @@ void main() {
       const skyInfo = this.sky.update(dt, this.player.position);
       this.sky.sun.intensity *= this.weatherSunMul;
       this.sky.hemi.intensity *= 0.8 + this.weatherSunMul * 0.25;
-      if (!this.device.low) {
-        const h = this.sky.hour;
-        const fadeIn = Math.max(0, Math.min(1, (h - 11) / 1));
-        const fadeOut = Math.max(0, Math.min(1, (18 - h) / 1));
-        const clear = this.sky.day % 3 === 0 ? 0 : Math.min(fadeIn, fadeOut);
-        this.scene.fog.near = MathUtils.lerp(27, this.scene.fog.near, clear);
-        this.scene.fog.far = MathUtils.lerp(170, this.scene.fog.far, clear);
-      }
-      this.scene.fog.far /= this.weatherFogMul;
-      this.scene.fog.near /= this.weatherFogMul;
-      if (this.device.low) {
+      if (this.device.weak || this.settings.quality === "low") {
         this.scene.fog.near = 1400;
         this.scene.fog.far = 1500;
       } else {
-        this.scene.fog.near = Math.max(27, this.scene.fog.near);
+        this.scene.fog.near = 20;
+        this.scene.fog.far = Math.max(70, 150 / this.weatherFogMul);
       }
       this.sky.skyUniforms.uTop.value.multiplyScalar(0.75 + this.weatherSunMul * 0.3);
       this.sky.skyUniforms.uBottom.value.multiplyScalar(0.8 + this.weatherSunMul * 0.2);
@@ -44302,6 +44530,7 @@ void main() {
      */
     togglePanel(kind) {
       const wasOpen = this.ui.isPanelOpen();
+      this.holdingAttack = false;
       if (wasOpen) {
         this.ui.closePanels();
         this.relock();
@@ -44316,6 +44545,7 @@ void main() {
         this.ui.toggleCraft(true, RECIPES, this.state.inventory, (id) => this.craft(id));
       } else {
         this.ui.toggleBag(true);
+        this.ui.inventoryTab("bag");
         this.ui.renderBag(this.state.inventory, this.state.hotbar);
       }
       this.audio.uiClick();
@@ -44494,6 +44724,7 @@ void main() {
     }
   }
   function boot(continueSave = false) {
+    var _a;
     if (booting) return;
     booting = true;
     try {
@@ -44504,6 +44735,16 @@ void main() {
         console.log(`[LAST SHORE] \u043C\u0438\u0440 \u0441\u043E\u0431\u0440\u0430\u043D \u0437\u0430 ${Math.round(performance.now() - t0)} \u043C\u0441`);
       }
       window.__game.start(continueSave);
+      if (!continueSave && ((_a = window.__roomClient) == null ? void 0 : _a.role) === "guest") {
+        const game = window.__game, p = game.player.position;
+        for (let i = 0; i < 16; i++) {
+          const angle = i * Math.PI / 8, x = p.x + Math.cos(angle) * 3, z = p.z + Math.sin(angle) * 3;
+          if (game.world.heightAt(x, z) > 0.3 && game.world.isFree(x, z, 0.8)) {
+            game.player.setPosition(x, z, game.world);
+            break;
+          }
+        }
+      }
       setBootStatus("\u0434\u0432\u0438\u0436\u043E\u043A \u0433\u043E\u0442\u043E\u0432 \xB7 \u0434\u0435\u043D\u044C " + window.__game.sky.day);
     } catch (err) {
       if (!err || !err.handled) showFatal(err, "\u0441\u043E\u0437\u0434\u0430\u043D\u0438\u0435 \u043C\u0438\u0440\u0430");
@@ -44543,8 +44784,24 @@ void main() {
     window.__roomClient = roomClient;
     roomClient.onJoin = () => scheduleBoot(false);
     (_a = document.getElementById("btn-rooms")) == null ? void 0 : _a.addEventListener("click", () => document.getElementById("rooms-panel").classList.toggle("hidden"));
-    (_b = document.getElementById("btn-room-connect")) == null ? void 0 : _b.addEventListener("click", () => roomClient.connect(false));
-    (_c = document.getElementById("btn-room-list")) == null ? void 0 : _c.addEventListener("click", () => roomClient.connect(true));
+    const activateServer = () => {
+      var _a2;
+      if (window.__roomClient !== roomClient) (_a2 = window.__roomClient) == null ? void 0 : _a2.close();
+      window.__roomClient = roomClient;
+    };
+    initPhoneRooms({ activate: (peer) => {
+      var _a2;
+      if (window.__roomClient !== peer) (_a2 = window.__roomClient) == null ? void 0 : _a2.close();
+      window.__roomClient = peer;
+    }, onJoin: () => scheduleBoot(false) });
+    (_b = document.getElementById("btn-room-connect")) == null ? void 0 : _b.addEventListener("click", () => {
+      activateServer();
+      roomClient.connect(false);
+    });
+    (_c = document.getElementById("btn-room-list")) == null ? void 0 : _c.addEventListener("click", () => {
+      activateServer();
+      roomClient.connect(true);
+    });
     const continueBtn = document.getElementById("btn-continue");
     const reloadBtn = document.getElementById("btn-reload");
     if (reloadBtn) reloadBtn.addEventListener("click", () => window.location.reload());

@@ -66,11 +66,12 @@
       <div id="touch-stick" class="touch-stick" aria-label="Движение"><i id="touch-knob"></i></div>
       <div class="touch-actions">
         <button data-action="pause" aria-label="Пауза">Ⅱ</button><button data-action="view">Вид</button>
-        <button data-action="bag">Сумка</button><button data-action="craft">Крафт</button>
+        <button data-action="bag" aria-label="Инвентарь">Сумка</button>
         <button data-action="place">Пост.</button><button data-action="use">Прим.</button>
-        <button data-action="sprint">Бег / ↓</button><button data-action="jump">Прыжок / ↑</button>
-        <button data-action="interact">E</button><button data-action="attack">Удар</button>
+        <button data-action="sprint" aria-label="Бег или нырнуть">Бег / ↓</button><button data-action="jump" aria-label="Прыжок или всплыть">↑</button>
+        <button data-action="interact" aria-label="Взаимодействовать">E</button>
       </div>
+      <button class="touch-fire" data-action="attack" aria-label="Бить или стрелять"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="12"/><path d="M24 3v13 M24 32v13 M3 24h13 M32 24h13"/></svg></button>
     </div>
     <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар/копать по прицелу · E — действие · G — копать вглубь / спуск по ходу · X — выход из шахты · F2→F — креатив · F3→Ж — обводки моделей · F8 — бот-инспектор · F9 — курсор · C — крафт · I — сумка · F — поставить</div>
   </div>
@@ -81,16 +82,24 @@
       <h2>Сумка</h2>
       <span class="panel-sub">перетащи предмет в слот внизу</span>
     </div>
+    <div class="inventory-tabs">
+      <button type="button" id="inventory-tab-bag" class="tab-active" aria-selected="true">Инвентарь</button>
+      <button type="button" id="inventory-tab-craft" aria-selected="false">Крафт</button>
+      <button type="button" id="inventory-station">Верстак</button>
+      <button type="button" id="inventory-close" aria-label="Закрыть инвентарь">✕</button>
+    </div>
     <ul id="inv-list" data-drop="bag"></ul>
+    <ul id="inventory-craft-list" class="hidden"></ul>
     <div class="inv-hotbar-title">Быстрый доступ <span>клик по предмету — в свободный слот</span></div>
     <div class="inv-hotbar" id="inv-hotbar"></div>
-    <p class="panel-note">Перетаскивай мышью · на слот можно бросить обратно в сумку, чтобы убрать · I или Esc — закрыть</p>
+    <p class="panel-note">Нажми на предмет, чтобы положить его в свободный слот, или перетащи в нужный · I или Esc — закрыть</p>
   </div>
 
   <!-- ======================= Крафт ======================= -->
   <div id="crafting" class="panel panel-right hidden">
     <h2>Крафт</h2>
     <ul id="craft-list"></ul>
+    <button id="craft-close" class="panel-close" type="button">Закрыть ✕</button>
     <p class="panel-note">C или Esc — закрыть</p>
   </div>
 
@@ -98,6 +107,7 @@
   <div id="workshop" class="panel panel-right hidden">
     <h2 id="ws-title">Верстак</h2>
     <div id="ws-body"></div>
+    <button id="workshop-close" class="panel-close" type="button">Закрыть ✕</button>
     <p class="panel-note">Esc — закрыть</p>
   </div>
 
@@ -155,6 +165,16 @@
         <button id="btn-rooms" class="btn-ghost" type="button" data-en="Servers and rooms">Серверы и комнаты</button>
         <div id="rooms-panel" class="rooms-panel hidden">
           <p>Экспериментальные комнаты: видны другие игроки. Мир, ресурсы и сохранения пока не синхронизируются.</p>
+          <details class="phone-room">
+            <summary>Создать комнату с телефона — без установки сервера</summary>
+            <p>Прямое соединение двух игроков: хозяин создаёт приглашение и отправляет его другу. Друг вставляет приглашение, создаёт ответ и отправляет его хозяину. Хозяин вставляет ответ и подключает. Оба телефона должны оставаться на этой странице до подключения.</p>
+            <p>Работает через WebRTC; общая сеть помогает. Через интернет может не соединиться из-за ограничений сети. Используется публичный STUN-сервер Google для поиска сетевого адреса. Видны только позиции игроков, мир не общий.</p>
+            <div class="btn-row"><button id="peer-host" type="button">1. Создать приглашение</button><button id="peer-answer" type="button">2. Создать ответ</button></div>
+            <label>Полученный код <textarea id="peer-in" rows="3" placeholder="Вставьте приглашение или ответ"></textarea></label>
+            <div class="btn-row"><button id="peer-apply" type="button">3. Подключить ответ</button><button id="peer-copy" class="btn-ghost" type="button">Копировать свой код</button></div>
+            <label>Ваш код для отправки <textarea id="peer-out" rows="3" readonly placeholder="Здесь появится код"></textarea></label>
+            <p id="peer-status" role="status"></p>
+          </details>
           <label>Адрес сервера <input id="server-url" placeholder="Текущий сайт" autocomplete="url"></label>
           <label><span data-en="Saved servers">Сохранённые серверы</span> <select id="server-saved"><option value="">—</option></select></label>
           <div class="btn-row"><button id="btn-server-add" class="btn-ghost" type="button" data-en="Add address">Добавить адрес</button><button id="btn-server-remove" class="btn-ghost" type="button" data-en="Remove address">Удалить адрес</button></div>

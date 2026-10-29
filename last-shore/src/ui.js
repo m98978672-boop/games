@@ -36,6 +36,7 @@ export class UI {
       invHotbar: $('inv-hotbar'),
       craft: $('crafting'),
       craftList: $('craft-list'),
+      inventoryCraftList: $('inventory-craft-list'),
       workshop: $('workshop'),
       wsTitle: $('ws-title'),
       wsBody: $('ws-body'),
@@ -366,11 +367,11 @@ export class UI {
 
   renderCraft(recipes, inv, onCraft) {
     if (inv) this.inv = inv;
-    const sig = recipes.map((r) => Object.entries(r.need).map(([k, v]) => ((this.inv[k] || 0) >= v ? 1 : 0)).join('')).join('');
+    const sig = recipes.map((r) => Object.entries(r.need).map(([k]) => this.inv[k] || 0).join(',')).join('|');
     if (sig === this._lastCraftSig) return;
     this._lastCraftSig = sig;
 
-    this.el.craftList.innerHTML = recipes
+    const markup = recipes
       .map((r) => {
         const can = Object.entries(r.need).every(([k, v]) => (this.inv[k] || 0) >= v);
         const cost = Object.entries(r.need)
@@ -391,9 +392,24 @@ export class UI {
       })
       .join('');
 
-    this.el.craftList.querySelectorAll('[data-craft]').forEach((btn) => {
-      btn.addEventListener('click', () => onCraft(btn.dataset.craft));
-    });
+    for (const list of [this.el.craftList, this.el.inventoryCraftList]) {
+      if (!list) continue;
+      list.innerHTML = markup;
+      list.querySelectorAll('[data-craft]').forEach((btn) => {
+        btn.addEventListener('click', () => onCraft(btn.dataset.craft));
+      });
+    }
+  }
+
+  inventoryTab(tab) {
+    const craft = tab === 'craft';
+    this.el.invList.classList.toggle('hidden', craft);
+    this.el.inventoryCraftList.classList.toggle('hidden', !craft);
+    for (const [id, active] of [['inventory-tab-bag', !craft], ['inventory-tab-craft', craft]]) {
+      const button = $(id);
+      button.classList.toggle('tab-active', active);
+      button.setAttribute('aria-selected', String(active));
+    }
   }
 
   toggleBag(force) {
