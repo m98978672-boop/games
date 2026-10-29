@@ -42,6 +42,10 @@ export class Player {
     this.grounded = true;
     this.swimming = false;
     this.wading = 0;
+    this.underwater = false;   // глаза под водой: включается подводный вид
+    this.air = CONFIG.player.airMax;
+    this.diveT = 0;            // сколько секунд герой держится под водой
+    this.swimPhase = 0;        // фаза гребков
     this.bobPhase = 0;
     this.landShake = 0;
     this.fly = false;          // режим креатива: полёт
@@ -445,16 +449,20 @@ export class Player {
     const groundHere = world.heightAt(this.position.x, this.position.z);
     this.wading = underground ? 0 : clamp(-groundHere / 1.1, 0, 1);
     const inWater = !underground && groundHere < 0.05;
+    // глубоко — уже не идём по дну, а плывём
+    const deepWater = !underground && !this.fly && groundHere < -CONFIG.player.maxDepth;
+    this.diveHeld = !!(input.sprint && deepWater);
 
     let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
     // в полёте Shift уходит на спуск, поэтому горизонт всегда «беговой»
     if (this.fly) speed = P.flyHorizontal;
     if (inWater) speed = THREE.MathUtils.lerp(speed, P.wadeSpeed, this.wading);
+    if (deepWater) speed = this.diveHeld ? P.swimSpeed : P.swimFast;
 
     const targetVX = wx * speed * (moving ? 1 : 0);
     const targetVZ = wz * speed * (moving ? 1 : 0);
 
-    const accel = P.accel * (inWater ? 0.55 : 1);
+    const accel = P.accel * (deepWater ? 0.32 : inWater ? 0.55 : 1);
     this.velocity.x += (targetVX - this.velocity.x) * clamp(accel * dt, 0, 1);
     this.velocity.z += (targetVZ - this.velocity.z) * clamp(accel * dt, 0, 1);
 
@@ -466,7 +474,8 @@ export class Player {
       if (underground) return true;        // стены шахты отсекает resolveCollisions
       if (Math.abs(x) > CONFIG.world.size * 0.75 || Math.abs(z) > CONFIG.world.size * 0.75) return false;
       const h = world.heightAt(x, z);
-      if (h < -P.maxDepth) return false;   // слишком глубоко
+      // глубокую воду больше не считаем стеной: герой в неё заплывает
+      if (h < -P.maxDepth && this.fly) return false;
       // стенку выкопанной ямы не перелезть: подъём больше 0.55 м не пускает.
       // Спуск и прыжок вниз при этом свободны — в яму герой падает сам.
       if (!this.fly) {
@@ -488,6 +497,48 @@ export class Player {
 
     // --- вертикаль: прилипание к рельефу + прыжок ---
     const ground = world.heightAt(this.position.x, this.position.z);
+    const sea = CONFIG.world.seaLevel;
+    const depth = sea - ground;
+    const swimNow = !underground && !this.fly && depth > P.maxDepth * 0.85;
+    this.swimming = swimNow;
+    // Shift — вниз, Пробел — вверх; отпустил — вода сама выталкивает к поверхности
+    const heldJump = input.jumpHeld === undefined ? !!input.jump : !!input.jumpHeld;
+    this.diveHeld = !!(input.sprint && swimNow);
+    this.deepWater = swimNow;
+
+    if (swimNow) {
+      const floatY = sea - P.floatLine;
+      let targetVy = 0;
+      if (this.diveHeld) targetVy = -P.diveSpeed;
+      else if (heldJump) targetVy = P.diveSpeed;
+      else {
+        // мягкая плавучесть: тянет к линии у поверхности
+        targetVy = clamp((floatY - this.position.y) * 2.4, -P.diveSpeed, P.diveSpeed);
+      }
+      this.velocity.y += (targetVy - this.velocity.y) * clamp(dt * 6, 0, 1);
+      this.position.y += this.velocity.y * dt;
+      // дно и поверхность — жёсткие границы
+      const bed = ground + 0.32;
+      const crest = sea + 0.05;
+      if (this.position.y < bed) { this.position.y = bed; if (this.velocity.y < 0) this.velocity.y = 0; }
+      if (this.position.y > crest) { this.position.y = crest; if (this.velocity.y > 0) this.velocity.y = 0; }
+      this.grounded = false;
+      this.swimPhase += dt * (2.6 + Math.hypot(this.velocity.x, this.velocity.z) * 1.5);
+      // запас воздуха: под водой уходит, на поверхности возвращается
+      const eyeY = this.position.y + P.eye;
+      this.underwater = eyeY < sea - 0.04;
+      if (this.underwater) {
+        this.diveT += dt;
+        this.air = Math.max(0, this.air - P.airDrain * dt);
+      } else {
+        this.diveT = 0;
+        this.air = Math.min(P.airMax, this.air + P.airRefill * dt);
+      }
+    } else {
+      this.underwater = false;
+      this.air = Math.min(P.airMax, this.air + P.airRefill * dt);
+    }
+
     const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
 
     if (this.fly) {
@@ -524,6 +575,8 @@ export class Player {
 
     if (this.fly) {
       // ничего: вертикаль уже посчитана выше
+    } else if (swimNow) {
+      // вертикаль пловца посчитана выше — гравитации в воде нет
     } else if (!this.grounded) {
       this.velocity.y += P.gravity * dt;
       this.position.y += this.velocity.y * dt;
@@ -539,7 +592,7 @@ export class Player {
       if (floor - this.position.y < -0.6) this.grounded = false;
     }
 
-    this.swimming = !this.fly && !underground && ground < -0.6;
+    if (!swimNow) this.swimming = false;
 
     // --- модель: поворот в сторону движения и анимация ---
     const hspeed = Math.hypot(this.velocity.x, this.velocity.z);
@@ -633,7 +686,27 @@ export class Player {
       this.armR.rotation.z += (0.6 - this.armR.rotation.z) * f;
     }
 
-    const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0) + leanExtra;
+    if (this.swimming) {
+      // поза пловца: наклон вперёд, руки гребут по очереди, ноги работают
+      const t = this.swimPhase;
+      const f = clamp(dt * 6, 0, 1);
+      const strokeL = Math.sin(t) * 0.9 - 0.25;
+      const strokeR = Math.sin(t + Math.PI) * 0.9 - 0.25;
+      this.armL.rotation.x += (strokeL - this.armL.rotation.x) * f;
+      this.armR.rotation.x += (strokeR - this.armR.rotation.x) * f;
+      // в глубокой воде руки гребут шире — это читается как плавание
+      this.armL.rotation.z += ((0.35 + Math.sin(t) * 0.25) - this.armL.rotation.z) * f;
+      this.armR.rotation.z += ((-0.35 - Math.sin(t + Math.PI) * 0.25) - this.armR.rotation.z) * f;
+      const kick = Math.sin(t * 2.4) * 0.42;
+      this.legL.rotation.x += (kick - this.legL.rotation.x) * f;
+      this.legR.rotation.x += (-kick - this.legR.rotation.x) * f;
+      this.kneeL.rotation.x += (0.22 + Math.abs(kick) * 0.5 - this.kneeL.rotation.x) * f;
+      this.kneeR.rotation.x += (0.22 + Math.abs(kick) * 0.5 - this.kneeR.rotation.x) * f;
+    }
+
+    const targetLean = this.swimming
+      ? 0.62 + Math.min(0.22, Math.hypot(this.velocity.x, this.velocity.z) * 0.04)
+      : speedRatio * 0.2 + leanExtra;
     this.lean += (targetLean - this.lean) * clamp(dt * 10, 0, 1);
     this.torsoGroup.rotation.x = this.lean;
     this.torsoGroup.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
@@ -693,7 +766,7 @@ export class Player {
     if (hit > 0) this.hitShake = Math.max(0, hit - dt * 0.9);
 
     if (this.viewMode === 'first') {
-      const eyeY = this.position.y + 1.62 + (this.swimming ? -0.25 : 0);
+      const eyeY = this.position.y + 1.62 + (this.swimming ? -0.32 : 0);
       const target = new THREE.Vector3(this.position.x, eyeY, this.position.z);
       camera.position.copy(target);
       camera.rotation.set(0, 0, 0);
@@ -739,9 +812,23 @@ export class Player {
     const desired = target.clone().addScaledVector(fwd, -finalHoriz);
     desired.y += finalVert;
 
-    const h = world.heightAt(desired.x, desired.z);
-    if (desired.y < h + 0.7) desired.y = h + 0.7;
-    if (desired.y < CONFIG.world.seaLevel + 0.5) desired.y = CONFIG.world.seaLevel + 0.5;
+    const sea = CONFIG.world.seaLevel;
+    // под водой камера уходит под поверхность вместе с героем — иначе весь
+    // подводный вид остаётся за кадром
+    if (this.underwater) {
+      // камера ближе к спине: в мутной воде далёкий план ничего не показывает
+      const pull = target.clone().addScaledVector(fwd, -finalHoriz * 0.55);
+      desired.copy(pull);
+      // камера идёт за спиной пловца, а не висит у самой поверхности
+      desired.y = this.position.y + 0.72 + finalVert * 0.45;
+      const hh = world.heightAt(desired.x, desired.z);
+      if (desired.y < hh + 0.32) desired.y = hh + 0.32;
+      if (desired.y > sea - 0.55) desired.y = sea - 0.55;
+    } else {
+      const h = world.heightAt(desired.x, desired.z);
+      if (desired.y < h + 0.7) desired.y = h + 0.7;
+      if (desired.y < sea + 0.5) desired.y = sea + 0.5;
+    }
 
     camera.position.lerp(desired, clamp(dt * 14, 0, 1));
     if (hit > 0) {

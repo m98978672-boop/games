@@ -135,38 +135,130 @@ function merge(parts) {
 }
 
 /**
+ * Гладкий ствол: одна непрерывная труба по кривой.
+ * Раньше ствол собирался из пяти отдельных цилиндров — на стыках были
+ * видны изломы и «ступеньки». Здесь кольца идут вдоль кривой и соединяются
+ * в общую поверхность: силуэт плавный, без швов.
+ *
+ * spine(t) -> Vector3, radius(t) -> число.
+ */
+function spineTube(parts, spine, radius, {
+  samples = 12, sides = 9, hexA = COLORS.trunk, hexB = 0x6a4c30,
+  flare = 0, wobble = 0.06, rng = Math.random,
+} = {}) {
+  const rings = [];
+  for (let i = 0; i <= samples; i++) {
+    const t = i / samples;
+    const c = spine(t);
+    // касательная по соседним точкам — кольцо всегда поперёк ствола
+    const t0 = Math.max(0, t - 0.02);
+    const t1 = Math.min(1, t + 0.02);
+    const a = spine(t0);
+    const b = spine(t1);
+    const tangent = b.clone().sub(a);
+    if (tangent.lengthSq() < 1e-8) tangent.set(0, 1, 0);
+    tangent.normalize();
+    const q = new THREE.Quaternion().setFromUnitVectors(UP, tangent);
+    let r = radius(t);
+    // комель: у самой земли ствол раздаётся вширь
+    if (flare > 0) r *= 1 + flare * Math.pow(1 - t, 2.2);
+    rings.push({ c, q, r });
+  }
+
+  const pos = [];
+  const col = [];
+  const dir = new THREE.Vector3();
+  const v = new THREE.Vector3();
+  const ring = (ring, i) => {
+    const out = [];
+    for (let k = 0; k < sides; k++) {
+      const a = (k / sides) * Math.PI * 2;
+      // лёгкая неровность коры: ствол не выглядит точёным
+      const wob = 1 + Math.sin(a * 3 + i * 1.7) * wobble * 0.5 + (rng() - 0.5) * wobble;
+      dir.set(Math.cos(a), 0, Math.sin(a)).applyQuaternion(ring.q);
+      v.copy(ring.c).addScaledVector(dir, ring.r * wob);
+      out.push({ x: v.x, y: v.y, z: v.z });
+    }
+    return out;
+  };
+
+  const prev = ring(rings[0], 0);
+  const cur = { points: prev };
+  const loose = [];
+  loose.push(prev);
+  for (let i = 1; i <= samples; i++) loose.push(ring(rings[i], i));
+
+  const push = (p, hex) => {
+    const c = new THREE.Color(hex);
+    pos.push(p.x, p.y, p.z);
+    col.push(c.r, c.g, c.b);
+  };
+  for (let i = 0; i < samples; i++) {
+    const A = loose[i];
+    const B = loose[i + 1];
+    // кольца коры чередуют оттенок — читается как годовые кольца
+    const hex = Math.floor(i / 2) % 2 ? hexA : hexB;
+    const hex2 = Math.floor((i + 1) / 2) % 2 ? hexA : hexB;
+    for (let k = 0; k < sides; k++) {
+      const k2 = (k + 1) % sides;
+      push(A[k], hex); push(B[k], hex2); push(B[k2], hex2);
+      push(A[k], hex); push(B[k2], hex2); push(A[k2], hex);
+    }
+  }
+  // нижняя крышка и верхний срез — чтобы не было дыр
+  const bottom = loose[0];
+  const top = loose[samples];
+  const cB = rings[0].c;
+  const cT = rings[samples].c;
+  for (let k = 0; k < sides; k++) {
+    const k2 = (k + 1) % sides;
+    push({ x: cB.x, y: cB.y, z: cB.z }, hexA); push(bottom[k2], hexB); push(bottom[k], hexA);
+    push({ x: cT.x, y: cT.y, z: cT.z }, hexA); push(top[k], hexB); push(top[k2], hexA);
+  }
+
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  // плоский uv: у остальных деталей модели он есть, а merge требует единый набор
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array((pos.length / 3) * 2), 2));
+  geo.computeVertexNormals();
+  parts.push(geo);
+  return geo;
+}
+
+/** Ветка — та же гладкая труба, только покороче и тоньше */
+function branchTube(parts, from, to, r0, r1, hex, { sides = 6, bend = 0.35, rng = Math.random } = {}) {
+  const dir = to.clone().sub(from);
+  const side = new THREE.Vector3(-dir.z, 0, dir.x);
+  if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+  side.normalize();
+  const mid = from.clone().add(to).multiplyScalar(0.5)
+    .addScaledVector(side, dir.length() * bend * (0.5 - rng() * 0.4))
+    .add(new THREE.Vector3(0, dir.length() * 0.06, 0));
+  const curve = new THREE.QuadraticBezierCurve3(from, mid, to);
+  return spineTube(parts, (t) => curve.getPoint(t), (t) => r0 + (r1 - r0) * t,
+    { samples: 5, sides, hexA: hex, hexB: hex, wobble: 0.05, rng });
+}
+
+/**
  * Ступенчатый ствол: несколько сужающихся колен с лёгким изгибом.
  * Возвращает осевую линию spine(t) — по ней крепятся ветки и крона,
  * иначе они «висят в воздухе» рядом с изогнутым стволом.
  */
 function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, sides = 8) {
-  const segments = 5;
-  const centers = [{ x: 0, y: 0, z: 0 }];
-  let x = 0;
-  let z = 0;
-  let y = 0;
-  const segH = height / segments;
-  for (let i = 0; i < segments; i++) {
-    const t = i / segments;
-    const r0 = baseR + (topR - baseR) * t;
-    const r1 = baseR + (topR - baseR) * (t + 1 / segments);
-    const geo = new THREE.CylinderGeometry(r1, r0 * 1.06, segH * 1.04, sides, 1);
-    const twist = bend * (i / segments);
-    x += Math.sin(twist) * segH * 0.55;
-    z += Math.cos(twist * 0.7) * segH * 0.12;
-    part(parts, geo, i % 2 ? hexA : hexB, x, y + segH / 2, z);
-    y += segH;
-    centers.push({ x, y, z });
-  }
-  const spine = (t) => {
-    const k = clamp01(t) * (centers.length - 1);
-    const i = Math.min(centers.length - 2, Math.floor(k));
-    const f = k - i;
-    const a = centers[i];
-    const b = centers[i + 1];
-    return new THREE.Vector3(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, a.z + (b.z - a.z) * f);
-  };
-  return { x, y, z, spine, segments, centers, baseR, topR };
+  // ось ствола — плавная кривая: изгиб накапливается, а не «коленом»
+  const leanX = (rng() - 0.5) * 0.9;
+  const leanZ = (rng() - 0.5) * 0.5;
+  const spine = (t) => new THREE.Vector3(
+    leanX * Math.pow(t, 1.7) + Math.sin(t * Math.PI * bend * 2) * 0.12,
+    height * t,
+    leanZ * Math.pow(t, 1.7) + Math.cos(t * Math.PI * bend * 2) * 0.06
+  );
+  spineTube(parts, spine, (t) => baseR + (topR - baseR) * t, {
+    samples: 16, sides, hexA, hexB, flare: 1.1, wobble: 0.05, rng,
+  });
+  const top = spine(1);
+  return { x: top.x, y: top.y, z: top.z, spine, segments: 16, centers: [{ x: 0, y: 0, z: 0 }, { x: top.x, y: top.y, z: top.z }], baseR, topR };
 }
 
 // ---------- растения ----------
@@ -193,23 +285,11 @@ export function makePalmParts(rng) {
     leanZ * Math.pow(t, bend + 0.6)
   );
 
-  const segments = 10;
-  for (let i = 0; i < segments; i++) {
-    const t0 = i / segments;
-    const t1 = (i + 1) / segments;
-    const a = spine(t0);
-    const b = spine(t1);
-    const mid = a.clone().add(b).multiplyScalar(0.5);
-    const len = a.distanceTo(b) * 1.06;
-    const r0 = baseR + (topR - baseR) * t0;
-    const r1 = baseR + (topR - baseR) * t1;
-
-    let geo = new THREE.CylinderGeometry(r1, r0, len, 9, 1);
-    geo.applyQuaternion(alignQuat(a, b));
-    geo.translate(mid.x, mid.y, mid.z);
-    geo = flat(geo);
-    bark.push(colorize(geo, i % 2 ? COLORS.trunk : 0x6d4f33));
-  }
+  // ствол — одна гладкая труба по кривой (раньше был набор колен)
+  spineTube(bark, spine, (t) => baseR + (topR - baseR) * t, {
+    samples: 20, sides: 10, hexA: COLORS.trunk, hexB: 0x6d4f33,
+    flare: 1.2, wobble: 0.05, rng,
+  });
 
   // кольца от старых черешков — по той же кривой, с наклоном вдоль ствола
   const rings = 9;
@@ -310,26 +390,11 @@ export function makeTreeParts(rng) {
     leanZ * t * t
   );
 
-  // ствол — сегментами по кривой
-  const segments = 8;
-  for (let i = 0; i < segments; i++) {
-    const t0 = i / segments;
-    const t1 = (i + 1) / segments;
-    const a = spine(t0);
-    const b = spine(t1);
-    const mid = a.clone().add(b).multiplyScalar(0.5);
-    const len = a.distanceTo(b) * 1.08;
-    // у корней ствол заметно толще — «модельный» силуэт
-    const flare = i === 0 ? 1.45 : 1;
-    const r0 = (baseR + (topR - baseR) * t0) * flare;
-    const r1 = baseR + (topR - baseR) * t1;
-
-    let geo = new THREE.CylinderGeometry(r1, r0, len, 9, 1);
-    geo.applyQuaternion(alignQuat(a, b));
-    geo.translate(mid.x, mid.y, mid.z);
-    geo = flat(geo);
-    bark.push(colorize(geo, i % 2 ? COLORS.trunk : 0x6a4c30));
-  }
+  // ствол — одна непрерывная труба по кривой: без изломов на стыках
+  spineTube(bark, spine, (t) => baseR + (topR - baseR) * t, {
+    samples: 18, sides: 10, hexA: COLORS.trunk, hexB: 0x6a4c30,
+    flare: 1.35, wobble: 0.07, rng,
+  });
 
   // корни-подпорки: треугольные «крылья» у основания
   const rootCount = 4 + Math.floor(rng() * 2);
@@ -351,23 +416,13 @@ export function makeTreeParts(rng) {
     const dir = new THREE.Vector3(Math.cos(a), 0.55 + rng() * 0.45, Math.sin(a)).normalize();
     const end = origin.clone().addScaledVector(dir, bl);
 
-    let branch = new THREE.CylinderGeometry(0.06, 0.14, bl, 6, 1);
-    branch.applyQuaternion(alignQuat(origin, end));
-    branch.translate(
-      (origin.x + end.x) / 2, (origin.y + end.y) / 2, (origin.z + end.z) / 2
-    );
-    branch = flat(branch);
-    bark.push(colorize(branch, 0x6a4c30));
+    branchTube(bark, origin, end, 0.14, 0.06, 0x6a4c30, { sides: 7, bend: 0.4, rng });
 
     // отводок
     const a2 = a + (rng() - 0.5) * 1.4;
     const dir2 = new THREE.Vector3(Math.cos(a2), 0.8, Math.sin(a2)).normalize();
     const end2 = end.clone().addScaledVector(dir2, bl * 0.55);
-    let twig = new THREE.CylinderGeometry(0.035, 0.07, bl * 0.6, 5, 1);
-    twig.applyQuaternion(alignQuat(end, end2));
-    twig.translate((end.x + end2.x) / 2, (end.y + end2.y) / 2, (end.z + end2.z) / 2);
-    twig = flat(twig);
-    bark.push(colorize(twig, 0x74533a));
+    branchTube(bark, end, end2, 0.07, 0.035, 0x74533a, { sides: 5, bend: 0.45, rng });
 
     // листва на конце ветки — пучок
     for (let k = 0; k < 2; k++) {

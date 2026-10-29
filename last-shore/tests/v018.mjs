@@ -168,11 +168,13 @@ for (const m of tracked) {
   game.player.position.set(m.x + 3.2, w.heightAt(m.x + 3.2, m.z), m.z);
   const sx = m.x;
   const sz = m.z;
+  let best = 0;
   for (let step = 0; step < 420; step++) {
     game.mobs.update(1 / 30, game.player, { creative: false, night: 0, onHit: () => {}, onSound: () => {}, damage: () => {} });
+    best = Math.max(best, Math.hypot(m.x - sx, m.z - sz));
   }
-  const moved = Math.hypot(m.x - sx, m.z - sz);
-  if (moved < 1.0) stuck.push(`${m.type} ${moved.toFixed(2)} м`);
+  // важен не конечный сдвиг (зверь может вернуться к дому), а то, что он вообще ходил
+  if (best < 0.4) stuck.push(`${m.type} ${best.toFixed(2)} м`);
 }
 log('звери в движении: проверено', tracked.length, '· почти не двигались', stuck.length,
   stuck.length ? '→ ' + stuck.slice(0, 4).join(', ') : '');

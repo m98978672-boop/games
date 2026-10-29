@@ -4,6 +4,7 @@
 // ============================================================
 
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeRng } from './noise.js';
 
 const REACH = 3.4;
@@ -41,6 +42,27 @@ export class Resources {
     this.campfires = [];
     this.springs = [];
     this.time = 0;
+
+    // --- свет костров: ровно два источника, созданных заранее ---
+    // Добавление нового PointLight в сцену заставляет three.js перекомпилировать
+    // шейдеры ВСЕХ материалов (число огней меняет код шейдера) — из-за этого
+    // постановка костра «подвешивала» игру. Теперь огни живут в пуле с нулевой
+    // яркостью: поставили костёр — забрали свободный, разобрали — вернули.
+    this.fireLights = [];
+    for (let i = 0; i < 2; i++) {
+      const light = new THREE.PointLight(0xffa64d, 0, 16, 2);
+      light.visible = true;
+      light.castShadow = false;      // тени у точечного света — 6 проходов рендера
+      light.position.set(0, -50, 0);
+      scene.add(light);
+      this.fireLights.push({ light, busy: false });
+    }
+    this._fireGeo = null;
+    this._fireMat = null;
+    this._flameGeo = null;
+    this._coreGeo = null;
+    this._flameMat = null;
+    this._coreMat = null;
 
     this._buildNodes();
     this._buildSprings();
@@ -251,50 +273,98 @@ export class Resources {
     const group = new THREE.Group();
     group.position.set(x, y, z);
 
-    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x7d786f, roughness: 0.95, flatShading: true });
-    for (let i = 0; i < 8; i++) {
-      const a = (i / 8) * Math.PI * 2;
-      const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(0.19 + Math.random() * 0.07, 0), stoneMat);
-      rock.position.set(Math.cos(a) * 0.72, 0.1, Math.sin(a) * 0.72);
-      rock.castShadow = true;
-      group.add(rock);
+    // --- геометрия и материалы костра — один раз на всю игру ---
+    if (!this._fireGeo) {
+      const parts = [];
+      const tint = (geo, hex, px, py, pz, rot) => {
+        const g = geo.index ? geo.toNonIndexed() : geo;
+        if (rot) g.rotateZ(rot);
+        g.translate(px, py, pz);
+        const c = new THREE.Color(hex);
+        const n = g.attributes.position.count;
+        const arr = new Float32Array(n * 3);
+        for (let i = 0; i < n; i++) { arr[i * 3] = c.r; arr[i * 3 + 1] = c.g; arr[i * 3 + 2] = c.b; }
+        g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+        if (!g.attributes.uv) g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(n * 2), 2));
+        parts.push(g);
+      };
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const r = 0.19 + (i % 3) * 0.025;
+        tint(new THREE.IcosahedronGeometry(r, 0), i % 2 ? 0x7d786f : 0x6d6a63,
+          Math.cos(a) * 0.72, 0.1, Math.sin(a) * 0.72);
+      }
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI;
+        const g = new THREE.CylinderGeometry(0.08, 0.1, 1.15, 5);
+        g.rotateZ(Math.PI / 2);
+        g.rotateY(a);
+        g.translate(0, 0.14, 0);
+        tint(g, i % 2 ? 0x6d5232 : 0x5e462a, 0, 0, 0);
+      }
+      this._fireGeo = mergeGeometries(parts, false);
+      this._fireMat = new THREE.MeshStandardMaterial({
+        vertexColors: true, roughness: 0.95, flatShading: true, name: 'campfire',
+      });
+      this._flameGeo = new THREE.ConeGeometry(0.42, 1.15, 6);
+      this._coreGeo = new THREE.ConeGeometry(0.2, 0.7, 5);
+      this._flameMat = new THREE.MeshBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.92 });
+      this._coreMat = new THREE.MeshBasicMaterial({ color: 0xffe9a8 });
     }
 
-    const logMat = new THREE.MeshStandardMaterial({ color: 0x6d5232, roughness: 1 });
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI;
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 1.15, 5), logMat);
-      log.rotation.set(0, a, Math.PI / 2);   // лежат крест-накрест
-      log.position.y = 0.14;
-      log.castShadow = true;
-      group.add(log);
-    }
+    const hearth = new THREE.Mesh(this._fireGeo, this._fireMat);
+    hearth.castShadow = true;
+    hearth.receiveShadow = true;
+    group.add(hearth);
 
-    const flameMat = new THREE.MeshBasicMaterial({ color: 0xffb347, transparent: true, opacity: 0.92 });
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1.15, 6), flameMat);
+    const flame = new THREE.Mesh(this._flameGeo, this._flameMat);
     flame.position.y = 0.72;
     group.add(flame);
 
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0xffe9a8 });
-    const core = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7, 5), coreMat);
+    const core = new THREE.Mesh(this._coreGeo, this._coreMat);
     core.position.y = 0.52;
     group.add(core);
 
-    const light = new THREE.PointLight(0xffa64d, 2.6, 16, 2);
-    light.position.y = 1.1;
-    group.add(light);
+    // свет берём из пула: ничего не добавляем в сцену и не пересобираем шейдеры
+    let slot = this.fireLights.find((l) => !l.busy);
+    if (!slot) slot = this.fireLights[this.fireLights.reduce(
+      (best, l, i) => (Math.hypot(l.light.position.x - x, l.light.position.z - z) <
+        Math.hypot(this.fireLights[best].light.position.x - x, this.fireLights[best].light.position.z - z) ? i : best), 0)];
+    slot.busy = true;
+    slot.fire = null;
+    const light = slot.light;
+    light.position.set(x, y + 1.1, z);
+    light.intensity = 2.4;
 
     this.scene.add(group);
     world.colliders.push({ x, z, r: 0.85, fire: true });
 
     const fire = {
-      x, z, y, group, flame, core, light,
+      x, z, y, group, flame, core, light, slot,
       fuel: 60,        // секунд горения при полной загрузке
       maxFuel: 180,
       label: 'Костёр',
     };
+    slot.fire = fire;
     this.campfires.push(fire);
     return fire;
+  }
+
+  /** Убрать костёр: свет возвращается в пул, шейдеры не пересобираются */
+  removeCampfire(fire) {
+    const i = this.campfires.indexOf(fire);
+    if (i < 0) return false;
+    this.campfires.splice(i, 1);
+    if (fire.slot) {
+      fire.slot.busy = false;
+      fire.slot.fire = null;
+      fire.slot.light.intensity = 0;
+      fire.slot.light.position.set(0, -50, 0);
+    }
+    if (fire.group.parent) fire.group.parent.remove(fire.group);
+    const c = this.world.colliders.find((c) => c.fire && Math.abs(c.x - fire.x) < 0.01 && Math.abs(c.z - fire.z) < 0.01);
+    if (c) c.disabled = true;
+    return true;
   }
 
   addFuel(fire, seconds) {

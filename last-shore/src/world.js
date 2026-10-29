@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CONFIG, COLORS } from './config.js';
 import { createTerrainMaterial, createPlantMaterial, createStoneMaterial } from './terrain.js';
-import { ShellField, hullFromGeometry } from './shells.js';
+import { ShellField, hullFromGeometry, hullsFromGeometry } from './shells.js';
 import { fbm, ridged, makeRng, clamp, smoothstep } from './noise.js';
 import {
   makePalmParts, makeTreeParts, makeBushParts, makeRockParts, makePickupGeometries,
@@ -141,6 +141,51 @@ function addPart(parts, geo, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) {
   geo.translate(x, y, z);
   parts.push(geo);
   return geo;
+}
+
+/**
+ * Жердь между двумя точками: цилиндр разворачивается по направлению отрезка.
+ * Без этого наклонные балки «висят в воздухе» и дом выглядит недоделанным.
+ */
+function addRod(parts, from, to, r0, r1, hex, sides = 5) {
+  const a = new THREE.Vector3(...from);
+  const b = new THREE.Vector3(...to);
+  const dir = b.clone().sub(a);
+  const len = dir.length();
+  if (len < 1e-4) return null;
+  const geo = new THREE.CylinderGeometry(r0, r1, len, sides, 1);
+  geo.translate(0, len * 0.5, 0);
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir.clone().normalize());
+  geo.applyQuaternion(q);
+  return addPart(parts, geo, hex, a.x, a.y, a.z);
+}
+
+/**
+ * Дальняя версия кроны: вместо сотен треугольников листвы — три-четыре
+ * низкополигональных «облака» по габаритам настоящей кроны. На расстоянии
+ * силуэт читается так же, а вершин в разы меньше (LOD-тир).
+ */
+function makeCrownProxy(leafGeo, { blobs = 3, detail = 0 } = {}) {
+  if (!leafGeo) return null;
+  if (!leafGeo.boundingBox) leafGeo.computeBoundingBox();
+  const b = leafGeo.boundingBox;
+  const size = new THREE.Vector3();
+  b.getSize(size);
+  const center = new THREE.Vector3();
+  b.getCenter(center);
+  const parts = [];
+  const r = Math.max(0.55, Math.max(size.x, size.z) * 0.34);
+  const tint = [COLORS.jungle || 0x5f8a45, 0x6d9a52, 0x7da95e];
+  for (let i = 0; i < blobs; i++) {
+    const a = (i / blobs) * Math.PI * 2;
+    const d = i === 0 ? 0 : r * 0.72;
+    const geo = new THREE.IcosahedronGeometry(r * (i === 0 ? 1.06 : 0.82), detail);
+    addPart(parts, geo, tint[i % tint.length],
+      center.x + Math.cos(a) * d,
+      center.y + (i === 0 ? 0 : (i % 2 ? 0.22 : -0.14)) * size.y * 0.5,
+      center.z + Math.sin(a) * d);
+  }
+  return mergeGeometries(parts, false);
 }
 
 // ---------- мир ----------
@@ -531,6 +576,7 @@ export class World {
       uNight: { value: 0 },
       uDepth: { value: depthTex },
       uSize: { value: SIZE },
+      uUnder: { value: 0 },
     };
 
     const mat = new THREE.ShaderMaterial({
@@ -570,6 +616,7 @@ export class World {
         uniform float uNight;
         uniform float uTime;
         uniform float uSize;
+        uniform float uUnder;
         uniform sampler2D uDepth;
 
         varying vec3 vWorldPos;
@@ -603,6 +650,38 @@ export class World {
           float hx = sin((vWorldPos.x + e) * 0.115 + uTime * 1.15) * 0.15 - sin(vWorldPos.x * 0.115 + uTime * 1.15) * 0.15;
           float hz = sin((vWorldPos.z + e) * 0.165 - uTime * 0.9) * 0.11 - sin(vWorldPos.z * 0.165 - uTime * 0.9) * 0.11;
           vec3 n = normalize(vec3(-hx * 2.2, e * 0.9, -hz * 2.2));
+
+          // взгляд из-под воды: поверхность видна снизу как светящийся потолок
+          if (uUnder > 0.5) {
+            // луч «глаз → точка поверхности»: под водой смотрит вверх
+            vec3 eyeDir = normalize(vWorldPos - cameraPosition);
+            float upness = clamp(eyeDir.y, 0.0, 1.0);
+            // «окно Снелла»: прямо над головой видно небо, по краям — зеркало воды
+            float window = smoothstep(0.62, 0.94, upness);
+            vec3 deepTint = uDeep * 1.5 + vec3(0.02, 0.06, 0.09);
+            vec3 skyTint = vec3(0.42, 0.72, 0.82) * (1.0 - uNight * 0.7);
+            // окно Снелла «дышит» рябью и слегка впитало цвет глубины —
+            // иначе снизу видно плоское белое пятно вместо воды
+            float ripple = vnoise(vWorldPos.xz * 0.85 + vec2(uTime * 0.35, uTime * 0.22));
+            float ripple2 = vnoise(vWorldPos.xz * 2.1 - vec2(uTime * 0.55, uTime * 0.31));
+            skyTint *= 0.62 + ripple * 0.55 + ripple2 * 0.3;
+            skyTint = mix(skyTint, uDeep * 1.35, 0.28);
+            // солнечные «зайчики» сквозь волны — сетка света на потолке
+            float caustic = pow(ripple * ripple2, 1.6) * 3.2 * window;
+            skyTint += vec3(0.5, 0.86, 0.92) * caustic * (1.0 - uNight * 0.85);
+            vec3 colU = mix(deepTint, skyTint, window);
+            // блики на внутренней стороне волн
+            vec3 nn = normalize(vec3(-n.x, abs(n.y), -n.z));
+            float sparkle = pow(max(dot(reflect(-normalize(uSunDir), vec3(n.x, -n.y, n.z)), eyeDir), 0.0), 34.0);
+            colU += uSunColor * sparkle * 1.1 * (1.0 - uNight * 0.85);
+            float dist = length(cameraPosition - vWorldPos);
+            colU = mix(colU, uDeep * 1.1 + vec3(0.0, 0.05, 0.07), clamp((dist - 5.0) / 34.0, 0.0, 0.9));
+            float alphaU = mix(0.62, 0.97, 1.0 - window);
+            gl_FragColor = vec4(colU, alphaU);
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+            return;
+          }
 
           float fres = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0);
           float diff = max(dot(reflect(-normalize(uSunDir), n), viewDir), 0.0);
@@ -757,102 +836,222 @@ export class World {
       if (!byKind.has(d.kind)) byKind.set(d.kind, []);
       byKind.get(d.kind).push(d);
     }
-    const geos = {
+    const R = (i) => (Math.sin(i * 12.9898) * 43758.5453) % 1;
+
+    /**
+     * Дома строятся «как в природе», у каждого вида своё:
+     * кабан — навес из веток над вытоптанной ямой-купальней,
+     * краб — нора в песчаном бугре с ходами,
+     * чайка — гнездо из травы на камне,
+     * змея — нора под плоским камнем,
+     * обезьяна — шалаш-настил из веток,
+     * черепаха — песчаная лежанка с кладкой яиц.
+     * Ориентир: вход всегда смотрит наружу поляны (в сторону от центра дома).
+     */
+    const builders = {
       boar: () => {
         const parts = [];
-        addPart(parts, new THREE.IcosahedronGeometry(1.5, 1), 0x5b4430, 0, 0.12, 0, 0, 0, 0);
-        addPart(parts, new THREE.CylinderGeometry(0.55, 0.7, 0.9, 7, 1), 0x2a2118, 0, 0.35, -1.1, Math.PI / 2.1, 0, 0);
-        for (let i = 0; i < 5; i++) {
-          const a = (i / 5) * Math.PI * 2;
-          addPart(parts, new THREE.CylinderGeometry(0.04, 0.06, 1.1, 4, 1), 0x6b4c30,
-            Math.cos(a) * 1.1, 0.5, Math.sin(a) * 1.1, 1.1, -a, 0);
+        // вытоптанная купальня: впадина с грязевым валиком по краю
+        addPart(parts, new THREE.CylinderGeometry(1.25, 1.45, 0.36, 11, 1), 0x4a3a28, 0, 0.02, 0);
+        addPart(parts, new THREE.CylinderGeometry(0.95, 1.05, 0.16, 10, 1), 0x2f2418, 0, 0.16, 0);
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          addPart(parts, new THREE.IcosahedronGeometry(0.16 + Math.abs(R(i)) * 0.1, 0), 0x5a4630,
+            Math.cos(a) * 1.42, 0.1, Math.sin(a) * 1.42, R(i + 1), R(i + 2), 0);
+        }
+        // навес-шалаш: два столба, перекладина, жерди с перекладины на землю
+        const postZ = 1.35;
+        for (const sx of [-1, 1]) addRod(parts, [sx * 1.05, 0, postZ], [sx * 1.02, 1.55, postZ], 0.09, 0.13, 0x6b4c30, 5);
+        addRod(parts, [-1.25, 1.52, postZ], [1.25, 1.52, postZ], 0.09, 0.09, 0x6b4c30, 5);
+        // жерди ложатся на перекладину и уходят к земле позади героя
+        for (let i = 0; i < 6; i++) {
+          const x = -1.0 + i * 0.4;
+          addRod(parts, [x, 1.5, postZ - 0.05], [x * 1.25, 0.1, -0.75], 0.05, 0.075, 0x7a5a37, 4);
+        }
+        // покров из листвы на жердях
+        for (let i = 0; i < 7; i++) {
+          const x = -0.9 + i * 0.3;
+          addPart(parts, new THREE.IcosahedronGeometry(0.32 + Math.abs(R(i + 7)) * 0.16, 0), 0x5d7f3a,
+            x, 1.02 + Math.abs(R(i)) * 0.28, 0.55 + Math.abs(R(i + 4)) * 0.4, R(i), R(i + 2), 0);
+        }
+        // подстилка под навесом
+        addPart(parts, new THREE.CylinderGeometry(1.0, 1.15, 0.12, 9, 1), 0x7d6644, 0, 0.08, 0.55);
+        for (let i = 0; i < 9; i++) {
+          const a = i * 2.3;
+          addPart(parts, new THREE.IcosahedronGeometry(0.1 + Math.abs(R(i)) * 0.07, 0), 0x8a7245,
+            Math.cos(a) * (0.75 + Math.abs(R(i + 3)) * 0.35), 0.16, 0.55 + Math.sin(a) * 0.55);
+        }
+        // следы клыков на стволе-«точилке» сбоку
+        addRod(parts, [1.9, 0, -0.3], [1.95, 1.7, -0.4], 0.11, 0.15, 0x7a5a37, 5);
+        for (let i = 0; i < 4; i++) {
+          addPart(parts, new THREE.BoxGeometry(0.06, 0.03, 0.18), 0xd8cba6, 1.79, 0.55 + i * 0.22, -0.32 - i * 0.02, 0, 0.3, 0);
         }
         return mergeGeometries(parts, false);
       },
       crab: () => {
         const parts = [];
-        addPart(parts, new THREE.IcosahedronGeometry(1.1, 1), 0xd9c79b, 0, 0.05, 0, 0, 0, 0);
-        for (let i = 0; i < 4; i++) {
-          const a = (i / 4) * Math.PI * 2 + 0.4;
-          addPart(parts, new THREE.CylinderGeometry(0.16, 0.2, 0.5, 6, 1), 0x3a2f24,
-            Math.cos(a) * 0.5, 0.32, Math.sin(a) * 0.5);
+        // песчаный бугор, наметённый клешнями: широкое основание и валик по краю
+        addPart(parts, new THREE.CylinderGeometry(1.35, 1.8, 0.44, 13, 1), 0xdccba2, 0, 0.12, 0);
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * Math.PI * 2 + 0.3;
+          addPart(parts, new THREE.IcosahedronGeometry(0.24 + Math.abs(R(i + 11)) * 0.12, 0), 0xe6d7b0,
+            Math.cos(a) * 1.55, 0.2, Math.sin(a) * 1.55, R(i), a, 0);
         }
+        // вход-кратер сверху и боковой ход наружу — видно, что это нора
+        addPart(parts, new THREE.ConeGeometry(0.78, 0.5, 11, 1), 0x2a2419, 0.12, 0.5, 0.1, Math.PI, 0, 0);
+        addPart(parts, new THREE.CylinderGeometry(0.62, 0.7, 0.1, 11, 1), 0xcbb996, 0.12, 0.34, 0.1);
+        addPart(parts, new THREE.CylinderGeometry(0.3, 0.36, 0.5, 9, 1), 0x241f16, 0.9, 0.16, 0.12, Math.PI / 2.2, 0, 0);
+        addPart(parts, new THREE.TorusGeometry(0.33, 0.06, 4, 9), 0xc9b78d, 1.12, 0.16, 0.12, 0, 0, Math.PI / 2.2);
+        // второй выход — маленькая дыра с другой стороны
+        addPart(parts, new THREE.CylinderGeometry(0.17, 0.22, 0.3, 8, 1), 0x1b1710, -1.02, 0.18, -0.42, -1.3, 0.2, 0);
+        // выброшенный песок, ракушки и панцирь-«дверь»
+        for (let i = 0; i < 10; i++) {
+          const a = i * 1.7;
+          addPart(parts, new THREE.IcosahedronGeometry(0.09 + Math.abs(R(i)) * 0.08, 0), 0xefe6cd,
+            Math.cos(a) * (1.25 + Math.abs(R(i + 2)) * 0.55), 0.09, Math.sin(a) * (1.25 + Math.abs(R(i + 4)) * 0.55));
+        }
+        addPart(parts, new THREE.SphereGeometry(0.16, 7, 5, 0, Math.PI * 2, 0, Math.PI * 0.55), 0xe8dcc4, 1.15, 0.12, -0.5, 0.4, 0, 0.3);
+        // следы клешней на песке
         for (let i = 0; i < 6; i++) {
-          const a = rng0(i);
-          addPart(parts, new THREE.IcosahedronGeometry(0.12, 0), 0xf0e6cf,
-            Math.cos(a) * 1.2, 0.12, Math.sin(a) * 1.2);
+          addPart(parts, new THREE.BoxGeometry(0.05, 0.02, 0.22), 0xbcab85, 1.4 + i * 0.22, 0.05, 0.55 + Math.sin(i) * 0.3, 0, i * 0.6, 0);
         }
         return mergeGeometries(parts, false);
       },
       gull: () => {
         const parts = [];
-        addPart(parts, new THREE.CylinderGeometry(1.0, 0.8, 0.22, 9, 1), 0x8a7a55, 0, 0.11, 0);
-        for (let i = 0; i < 12; i++) {
-          const a = (i / 12) * Math.PI * 2;
-          addPart(parts, new THREE.CylinderGeometry(0.03, 0.05, 0.9, 4, 1), 0x6f5f43,
-            Math.cos(a) * 0.75, 0.22, Math.sin(a) * 0.75, 0.5, -a, 0);
+        // скальный выступ — гнездо на нём недоступно хищникам
+        addPart(parts, new THREE.IcosahedronGeometry(1.2, 1), 0x8b8578, 0, 0.32, 0, 0, 0, 0);
+        addPart(parts, new THREE.IcosahedronGeometry(0.7, 0), 0x9a9486, 0.9, 0.5, 0.55, 0, 0.4, 0.2);
+        addPart(parts, new THREE.IcosahedronGeometry(0.55, 0), 0x7f7a6e, -0.85, 0.28, -0.5);
+        // плоская вершина, на которой лежит гнездо
+        addPart(parts, new THREE.CylinderGeometry(0.82, 0.92, 0.16, 9, 1), 0xa39c8c, 0, 1.28, 0);
+        // чаша гнезда: витой валик из сухой травы
+        for (let i = 0; i < 16; i++) {
+          const a = (i / 16) * Math.PI * 2;
+          addPart(parts, new THREE.CylinderGeometry(0.045, 0.055, 0.62, 4, 1), i % 2 ? 0x9c8a5c : 0x8a7748,
+            Math.cos(a) * 0.55, 1.44, Math.sin(a) * 0.55, 1.2, -a, 0.5);
         }
+        addPart(parts, new THREE.CylinderGeometry(0.5, 0.44, 0.1, 10, 1), 0x6d5c38, 0, 1.4, 0);
+        // яйца в чаше — их видно сверху
         for (let i = 0; i < 3; i++) {
-          const a = (i / 3) * Math.PI * 2;
-          addPart(parts, new THREE.IcosahedronGeometry(0.18, 0), 0xf2ecd8,
-            Math.cos(a) * 0.25, 0.28, Math.sin(a) * 0.25);
+          const a = (i / 3) * Math.PI * 2 + 0.5;
+          addPart(parts, new THREE.SphereGeometry(0.14, 8, 6), 0xf4efdd,
+            Math.cos(a) * 0.24, 1.52, Math.sin(a) * 0.24, 0.2, 0, 0);
+        }
+        addPart(parts, new THREE.SphereGeometry(0.15, 8, 6), 0xefe8d2, 0.03, 1.53, -0.05, 0.1, 0, 0);
+        // пух и перья по краю
+        for (let i = 0; i < 7; i++) {
+          const a = i * 1.1;
+          addPart(parts, new THREE.ConeGeometry(0.05, 0.18, 3, 1), 0xf2ecdb,
+            Math.cos(a) * 0.75, 1.36, Math.sin(a) * 0.75, 1.4, a, 0.4);
         }
         return mergeGeometries(parts, false);
       },
       snake: () => {
         const parts = [];
-        addPart(parts, new THREE.IcosahedronGeometry(1.2, 1), 0x7d7568, 0, 0.05, 0, 0, 0, 0);
-        addPart(parts, new THREE.CylinderGeometry(0.3, 0.42, 0.7, 7, 1), 0x2b2620, 0.2, 0.3, 0.3, 0.4, 0, 0);
-        for (let i = 0; i < 4; i++) {
-          const a = (i / 4) * Math.PI * 2;
-          addPart(parts, new THREE.IcosahedronGeometry(0.3, 0), 0x8e8779,
-            Math.cos(a) * 1.1, 0.2, Math.sin(a) * 1.1);
+        // плоский камень-крыша, под которым держится тепло
+        addPart(parts, new THREE.CylinderGeometry(1.05, 1.2, 0.3, 7, 1), 0x7d7568, 0, 0.55, 0, 0.07, 0.6, 0.05);
+        addPart(parts, new THREE.CylinderGeometry(0.7, 0.8, 0.12, 7, 1), 0x8b8376, 0.1, 0.72, 0.05, 0.05, 0.2, 0);
+        // опорные валуны по бокам — под камнем остаётся полость
+        addPart(parts, new THREE.IcosahedronGeometry(0.5, 0), 0x6f6a5e, 1.0, 0.26, -0.4, 0.2, 0.3, 0);
+        addPart(parts, new THREE.IcosahedronGeometry(0.42, 0), 0x6f6a5e, -0.95, 0.22, 0.35, 0, 0.4, 0);
+        // сам ход: тёмный наклонный тоннель, виден снаружи
+        addPart(parts, new THREE.CylinderGeometry(0.36, 0.26, 0.95, 9, 1), 0x221d17, 0.55, 0.22, 0.55, -1.35, 0.5, 0.3);
+        addPart(parts, new THREE.TorusGeometry(0.33, 0.06, 4, 9), 0x5d574c, 0.82, 0.28, 0.82, 0.75, 0.5, 0);
+        // выползки: змеиный след на песке
+        for (let i = 0; i < 9; i++) {
+          const t = i / 8;
+          addPart(parts, new THREE.BoxGeometry(0.1, 0.015, 0.16), 0x9a8f76,
+            1.5 + Math.sin(t * 5) * 0.35, 0.03, 1.1 + t * 1.5, 0, Math.sin(t * 5) * 0.5, 0);
+        }
+        // сухие стебли у входа
+        for (let i = 0; i < 7; i++) {
+          const a = R(i) * Math.PI * 2;
+          addPart(parts, new THREE.CylinderGeometry(0.015, 0.03, 0.55, 3, 1), 0x9b8b52,
+            Math.cos(a) * (1.15 + Math.abs(R(i + 2)) * 0.45), 0.16, Math.sin(a) * (1.15 + Math.abs(R(i + 4)) * 0.45), 0.5, -a, 0.2);
         }
         return mergeGeometries(parts, false);
       },
       monkey: () => {
         const parts = [];
-        addPart(parts, new THREE.CylinderGeometry(1.5, 1.6, 0.2, 8, 1), 0x6a4d2f, 0, 0.1, 0);
+        // настил-помост из жердей, приподнятый над землёй
+        addPart(parts, new THREE.CylinderGeometry(1.3, 1.4, 0.16, 10, 1), 0x6a4d2f, 0, 0.14, 0);
         for (let i = 0; i < 7; i++) {
-          const a = (i / 7) * Math.PI * 2;
-          addPart(parts, new THREE.CylinderGeometry(0.05, 0.08, 1.4, 4, 1), 0x7d5c38,
-            Math.cos(a) * 1.0, 0.3, Math.sin(a) * 1.0, 1.35, -a, 0);
+          addPart(parts, new THREE.CylinderGeometry(0.06, 0.06, 2.5, 5, 1), i % 2 ? 0x74542f : 0x5f452a,
+            0, 0.22, -1.15 + i * 0.38, 0, 0, Math.PI / 2);
         }
-        for (let i = 0; i < 5; i++) {
-          const a = (i / 5) * Math.PI * 2;
-          addPart(parts, new THREE.IcosahedronGeometry(0.34, 1), 0x6f9c46,
-            Math.cos(a) * 0.9, 0.28, Math.sin(a) * 0.9);
+        // каркас шалаша: жерди сходятся наверху
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2;
+          addRod(parts, [Math.cos(a) * 1.15, 0.2, Math.sin(a) * 1.15],
+            [Math.cos(a) * 0.18, 2.05, Math.sin(a) * 0.18], 0.07, 0.05, 0x7d5c38, 4);
         }
+        addPart(parts, new THREE.CylinderGeometry(0.14, 0.1, 0.34, 6, 1), 0x6a4d2f, 0, 2.12, 0);
+        // покрытие из листвы: шалаш не «скелет», а укрытие
+        for (let i = 0; i < 16; i++) {
+          const a = (i / 16) * Math.PI * 2 + 0.2;
+          const t = 0.35 + (i % 3) * 0.2;
+          addPart(parts, new THREE.IcosahedronGeometry(0.36 + Math.abs(R(i)) * 0.16, 0), i % 2 ? 0x5d8a3c : 0x6f9c46,
+            Math.cos(a) * (1.15 - t * 0.9), 0.55 + t * 1.5, Math.sin(a) * (1.15 - t * 0.9), R(i), a, 0);
+        }
+        // вход: проём в настиле и тёмная нора, уходящая под шалаш
+        addPart(parts, new THREE.CylinderGeometry(0.46, 0.34, 0.7, 10, 1), 0x241d14, 0, 0.35, 1.02, -1.25, 0, 0);
+        addPart(parts, new THREE.TorusGeometry(0.44, 0.07, 4, 10), 0x7d5c38, 0, 0.52, 1.22, 0.9, 0, 0);
+        for (const sx of [-1, 1]) addRod(parts, [sx * 0.62, 0.4, 1.3], [sx * 0.5, 1.05, 1.12], 0.06, 0.05, 0x74542f, 4);
+        for (let i = 0; i < 6; i++) {
+          const a = i * 1.4;
+          addPart(parts, new THREE.IcosahedronGeometry(0.28, 1), 0x6f9c46,
+            Math.cos(a) * (1.25 + Math.abs(R(i)) * 0.35), 0.3, Math.sin(a) * (1.25 + Math.abs(R(i + 3)) * 0.35));
+        }
+        // ветка-«стол» с недоеденным плодом
+        addRod(parts, [1.35, 0.1, -0.9], [1.7, 1.1, -1.05], 0.06, 0.04, 0x7d5c38, 4);
+        addPart(parts, new THREE.SphereGeometry(0.14, 7, 6), 0xc9a24a, 1.68, 1.16, -1.05);
         return mergeGeometries(parts, false);
       },
       turtle: () => {
         const parts = [];
-        addPart(parts, new THREE.CylinderGeometry(1.0, 1.25, 0.3, 9, 1), 0xd8c79c, 0, 0.1, 0);
-        addPart(parts, new THREE.CylinderGeometry(0.4, 0.5, 0.45, 7, 1), 0x3a3126, -0.3, 0.28, 0.2, 0.35, 0, 0);
+        // песчаная лежанка — впадина с валиком
+        addPart(parts, new THREE.CylinderGeometry(1.35, 1.15, 0.22, 11, 1), 0xd8c79c, 0, 0.1, 0);
+        addPart(parts, new THREE.TorusGeometry(1.3, 0.16, 5, 12), 0xcdb98d, 0, 0.16, 0, Math.PI / 2, 0, 0);
+        // кладка яиц
         for (let i = 0; i < 5; i++) {
-          const a = rng0(i + 2);
-          addPart(parts, new THREE.IcosahedronGeometry(0.1, 0), 0xf1e8d2,
-            Math.cos(a) * 1.05, 0.16, Math.sin(a) * 1.05);
+          const a = (i / 5) * Math.PI * 2;
+          addPart(parts, new THREE.SphereGeometry(0.11, 6, 5), 0xf1e8d2,
+            Math.cos(a) * 0.34, 0.22, Math.sin(a) * 0.34, 0, 0, 0);
+        }
+        // редкие травинки по краю
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * Math.PI * 2 + 0.3;
+          addPart(parts, new THREE.ConeGeometry(0.05, 0.34, 3, 1), 0x86b556,
+            Math.cos(a) * 1.45, 0.2, Math.sin(a) * 1.45);
         }
         return mergeGeometries(parts, false);
       },
     };
     this.denMeshes = [];
     for (const [kind, list] of byKind) {
-      const geo = geos[kind] ? geos[kind]() : null;
+      const geo = builders[kind] ? builders[kind]() : null;
       if (!geo) continue;
       const mesh = new THREE.InstancedMesh(geo, mat, list.length);
       mesh.castShadow = true;
       mesh.frustumCulled = false;
       const dummy = new THREE.Object3D();
       list.forEach((d, i) => {
+        // вход смотрит от центра поляны наружу — зверю есть куда выйти
+        if (d.entrance === undefined) {
+          d.entrance = Math.atan2(d.x, d.z) + Math.PI * 0.5;
+          d.entrance = (this.rng() - 0.5) * 0.6 + d.entrance;
+        }
         dummy.position.set(d.x, d.y - 0.12, d.z);
-        dummy.rotation.set(0, this.rng() * Math.PI * 2, 0);
+        dummy.rotation.set(0, d.entrance, 0);
         dummy.scale.setScalar(0.85 + this.rng() * 0.35);
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
       });
       mesh.instanceMatrix.needsUpdate = true;
+      // «дом» статичен: не пересчитываем его матрицу каждый кадр
+      mesh.matrixAutoUpdate = false;
+      mesh.updateMatrix();
       this.scene.add(mesh);
       this.denMeshes.push(mesh);
     }
@@ -1085,7 +1284,7 @@ export class World {
      * растворяются в тумане, поэтому переход незаметен.
      */
     const buildInstances = (variants, list, {
-      castShadow = true, variantOf = null, solidR = 0, cullFar = 340, name = 'veg',
+      castShadow = true, variantOf = null, solidR = 0, cullFar = 340, name = 'veg', lod = null,
     } = {}) => {
       const meshes = [];
       if (!list.length) return meshes;
@@ -1112,11 +1311,18 @@ export class World {
         // идёт на всю высоту модели: иначе на склоне можно «перешагнуть» ствол
         const hullTop = height > 3 ? vbox.min.y + 1.35 : vbox.max.y;
         const shellTop = vbox ? vbox.max.y : hullTop;
-        const hullLocal = hullFromGeometry(Object.values(variant), {
+        // Обводка по поясам: низ — по корням/комелю, выше — по стволу.
+        // Крона и листья в обводку не входят, поэтому под деревом можно пройти,
+        // а ствол держит ровно по своему силуэту.
+        const treeLike = height > 2.4;
+        const hullParts = hullsFromGeometry(Object.values(variant), {
           pad: 0.02,
-          belowY: hullTop,
-          maxRadius: solidR ? solidR * 1.12 : undefined,
+          top: treeLike ? vbox.min.y + Math.min(height * 0.92, 7.5) : vbox.max.y,
+          bands: treeLike ? 3 : 1,
+          basePad: treeLike ? 0.22 : 0,
+          maxRadius: solidR ? solidR * 1.1 : undefined,
         });
+        const hullLocal = hullParts.length ? hullParts[0].poly : null;
 
         list.forEach((it, i) => {
           const want = variantOf ? variantOf(it, i) : i % groups;
@@ -1133,10 +1339,16 @@ export class World {
           b.push(it);
         }
 
+        // LOD: дальняя версия кроны (только у деревьев, там листва тяжёлая)
+        const farGeo = (lod && variant.leaf) ? makeCrownProxy(variant.leaf, lod) : null;
+
         for (const bucket of buckets.values()) {
+          const farMeshes = [];
           for (const [layer, geo] of Object.entries(variant)) {
             if (!geo) continue;
             const mat = layerMaterials[layer] || leafMat;
+            // для листвы готовим дешёвый дубль: вблизи — полная крона, вдали — прокси
+            const useFar = farGeo && layer === 'leaf';
             const mesh = new THREE.InstancedMesh(geo, mat, bucket.length);
             mesh.castShadow = castShadow;
             mesh.receiveShadow = false;
@@ -1171,6 +1383,7 @@ export class World {
                   : it.bbox;
               }
               if (!it.hullLocal && hullLocal) it.hullLocal = hullLocal;
+              if (!it.hulls && hullParts.length) it.hulls = hullParts;
               if (!it.hullY && vbox) it.hullY = { min: vbox.min.y, max: shellTop };
               it.parts = it.parts || [];
               it.parts.push({ mesh, idx: k, baseScale: s, layer });
@@ -1179,8 +1392,28 @@ export class World {
             });
             mesh.instanceMatrix.needsUpdate = true;
             mesh.count = bucket.length;
+            // кусок растительности не двигается: матрицу считаем один раз
+            mesh.matrixAutoUpdate = false;
+            mesh.updateMatrix();
             this.scene.add(mesh);
             meshes.push(mesh);
+
+            // дальний дубль: та же матрица инстансов, дешёвая геометрия
+            let farMesh = null;
+            if (useFar) {
+              farMesh = new THREE.InstancedMesh(farGeo, mat, bucket.length);
+              farMesh.castShadow = false;
+              farMesh.receiveShadow = false;
+              farMesh.frustumCulled = false;
+              farMesh.name = `${name}:${layer}:far`;
+              farMesh.instanceMatrix = mesh.instanceMatrix;
+              farMesh.count = bucket.length;
+              farMesh.matrixAutoUpdate = false;
+              farMesh.updateMatrix();
+              farMesh.visible = false;
+              this.scene.add(farMesh);
+              farMeshes.push(farMesh);
+            }
 
             // границы чанка — по ним считается видимость
             let cx = 0;
@@ -1191,7 +1424,8 @@ export class World {
             cz /= bucket.length;
             const radius = CHUNK * 0.75 + maxS * 8;
             this.chunkMeshes.push({
-              mesh, x: cx, z: cz, far: cullFar,
+              mesh, farMesh, x: cx, z: cz, far: cullFar,
+              lodDist: lod ? (lod.dist || 120) : Infinity,
               center: new THREE.Vector3(cx, (vbox ? (vbox.min.y + vbox.max.y) * 0.5 : 4) + 2, cz),
               radius,
             });
@@ -1250,10 +1484,10 @@ export class World {
     linkColliders(bushes);
     linkColliders(rocks);
 
-    this.palms = buildInstances(palmVariants, palms, { solidR: 0.3, cullFar: 360, name: 'palm' });
-    this.trees = buildInstances(treeVariants, trees, { solidR: 0.34, cullFar: 360, name: 'tree' });
-    this.pines = buildInstances(pineVariants, pines, { solidR: 0.32, cullFar: 380, name: 'pine' });
-    this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.3, cullFar: 340, name: 'mangrove' });
+    this.palms = buildInstances(palmVariants, palms, { solidR: 0.3, cullFar: 360, name: 'palm', lod: { dist: 130, blobs: 3 } });
+    this.trees = buildInstances(treeVariants, trees, { solidR: 0.34, cullFar: 360, name: 'tree', lod: { dist: 120, blobs: 4 } });
+    this.pines = buildInstances(pineVariants, pines, { solidR: 0.32, cullFar: 380, name: 'pine', lod: { dist: 140, blobs: 3 } });
+    this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.3, cullFar: 340, name: 'mangrove', lod: { dist: 120, blobs: 3 } });
     this.deads = buildInstances(deadVariants, deads, { solidR: 0.32, cullFar: 340, name: 'dead' });
     this.bushes = buildInstances(bushVariants, bushes, { solidR: 0.42, cullFar: 220, name: 'bush' });
     // валуны чередуются, а рудный вариант достаётся только рудным камням
@@ -1297,21 +1531,29 @@ export class World {
     for (const [kind, list] of lists) {
       if (!list) continue;
       for (const it of list) {
-        if (!it.hullLocal || !it.hullY) continue;
+        if (!it.hullY) continue;
         const s = it.s ?? 1;
         const rot = it.rot || 0;
         const cos = Math.cos(rot);
         const sin = Math.sin(rot);
         const baseY = it.h - 0.15;
-        const poly = it.hullLocal.map((p) => ({
-          x: it.x + (p.x * cos + p.z * sin) * s,
-          z: it.z + (-p.x * sin + p.z * cos) * s,
-        }));
-        const shell = this.shells.add(kind, poly,
-          baseY + it.hullY.min * s,
-          baseY + it.hullY.max * s,
-          { enabled: () => !it.collider || !it.collider.disabled });
-        it.shell = shell;
+        const parts = it.hulls && it.hulls.length
+          ? it.hulls
+          : (it.hullLocal ? [{ poly: it.hullLocal, minY: it.hullY.min, maxY: it.hullY.max }] : []);
+        if (!parts.length) continue;
+        it.shells = [];
+        for (const hp of parts) {
+          const poly = hp.poly.map((p) => ({
+            x: it.x + (p.x * cos + p.z * sin) * s,
+            z: it.z + (-p.x * sin + p.z * cos) * s,
+          }));
+          const shell = this.shells.add(kind, poly,
+            baseY + hp.minY * s,
+            baseY + hp.maxY * s,
+            { enabled: () => !it.collider || !it.collider.disabled });
+          it.shells.push(shell);
+        }
+        it.shell = it.shells[0];
       }
     }
     this.stats.shells = this.shells.stats.prisms;
@@ -1334,6 +1576,9 @@ export class World {
     };
 
     this.pickupGeos = makePickupGeometries();
+    // все предметы одного вида рисуются одним InstancedMesh: 190 отдельных
+    // мешей — это 190 draw call'ов на ровном месте
+    this.pickupInstances = {};
 
     const kinds = [
       { kind: 'wood', name: 'Палка', geo: 'wood', mat: 'wood' },
@@ -1363,19 +1608,57 @@ export class World {
     }
   }
 
+  /** Инстанс-меш для вида предмета (создаётся при первом предмете такого вида) */
+  _pickupBatch(kind) {
+    if (this.pickupInstances[kind]) return this.pickupInstances[kind];
+    const info = this.kindInfo[kind];
+    const cap = 96;
+    const mesh = new THREE.InstancedMesh(this.pickupGeos[info.geo], this.pickupMats[info.mat], cap);
+    mesh.castShadow = true;
+    mesh.frustumCulled = false;
+    mesh.count = 0;
+    mesh.matrixAutoUpdate = false;
+    mesh.updateMatrix();
+    mesh.name = 'pickups-' + kind;
+    this.pickupGroup.add(mesh);
+    const batch = { mesh, cap, items: [] };
+    this.pickupInstances[kind] = batch;
+    return batch;
+  }
+
+  /** Переложить положения предметов в инстанс-матрицы */
+  _refreshPickupBatch(kind) {
+    const batch = this.pickupInstances[kind];
+    if (!batch) return;
+    const n = Math.min(batch.items.length, batch.cap);
+    for (let i = 0; i < n; i++) {
+      batch.items[i].mesh.updateMatrix();
+      batch.mesh.setMatrixAt(i, batch.items[i].mesh.matrix);
+    }
+    batch.mesh.count = n;
+    batch.mesh.instanceMatrix.needsUpdate = true;
+  }
+
   /** Положить предмет на землю (используется и для стартового набора) */
   addPickup(kind, x, z, scale = 1) {
     const info = this.kindInfo[kind];
     if (!info) return null;
+    const batch = this._pickupBatch(kind);
+    if (batch.items.length >= batch.cap) return null;
     const h = this.heightAt(x, z);
-    const mesh = new THREE.Mesh(this.pickupGeos[info.geo], this.pickupMats[info.mat]);
-    mesh.castShadow = true;
+    // «меш» предмета — обычный Object3D: у него те же position/rotation,
+    // а рисуется он инстансом вместе с остальными предметами вида
+    const mesh = new THREE.Object3D();
     mesh.scale.setScalar(scale);
     mesh.position.set(x, h + 0.22, z);
     mesh.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.4);
-    this.pickupGroup.add(mesh);
+    mesh.updateMatrix();
+    mesh.parent = batch.mesh;
+    batch.items.push({ mesh });
     const item = { mesh, kind, name: info.name, baseY: h + 0.22 };
     this.pickups.push(item);
+    batch.items[batch.items.length - 1].item = item;
+    this._refreshPickupBatch(kind);
     return item;
   }
 
@@ -1454,7 +1737,13 @@ export class World {
   }
 
   removePickup(p) {
-    this.pickupGroup.remove(p.mesh);
+    p.mesh.parent = null;
+    const batch = this.pickupInstances[p.kind];
+    if (batch) {
+      const j = batch.items.findIndex((b) => b.item === p);
+      if (j >= 0) batch.items.splice(j, 1);
+      this._refreshPickupBatch(p.kind);
+    }
     const i = this.pickups.indexOf(p);
     if (i >= 0) this.pickups.splice(i, 1);
   }
@@ -2259,6 +2548,12 @@ export class World {
         vis = this._frustum.intersectsSphere(this._sphere);
       }
       c.mesh.visible = vis;
+      if (c.farMesh) {
+        // вблизи — полная крона, вдали — лёгкий прокси
+        const near = d2 < c.lodDist * c.lodDist;
+        c.mesh.visible = vis && near;
+        c.farMesh.visible = vis && !near;
+      }
       if (vis) visible++;
     }
     this.chunkStats = { total: this.chunkMeshes.length, visible };
@@ -2274,11 +2569,16 @@ export class World {
     this.waterUniforms.uNight.value = nightFactor;
     if (sunDir) this.waterUniforms.uSunDir.value.copy(sunDir);
     if (fogColor) this.waterUniforms.uFog.value.copy(fogColor);
+    if (camera && this.waterUniforms) {
+      // смотрим ли мы из-под воды: по высоте камеры относительно поверхности
+      this.waterUniforms.uUnder.value = camera.position.y < CONFIG.world.seaLevel - 0.05 ? 1 : 0;
+    }
 
     // лёгкое вращение предметов на земле — их проще заметить
     for (let i = 0; i < this.pickups.length; i++) {
-      const p = this.pickups[i];
-      p.mesh.rotation.y += dt * 0.35;
+      this.pickups[i].mesh.rotation.y += dt * 0.35;
     }
+    // и сразу в инстанс-матрицы (их всего пять — по одной на вид предмета)
+    for (const kind in this.pickupInstances) this._refreshPickupBatch(kind);
   }
 }

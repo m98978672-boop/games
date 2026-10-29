@@ -91,6 +91,8 @@ html, body {
 .bar-hunger i { background: var(--hunger); }
 .bar-warmth i { background: var(--warmth); }
 .bar-stamina i { background: var(--stamina); }
+.bar-air i { background: linear-gradient(90deg, #6fc8e8, #a9e6f7); }
+.bar-air.critical i { background: linear-gradient(90deg, #e8935a, #f2c07a); }
 .bar.critical .bar-track i { animation: pulse 0.9s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: 0.45; } }
 
@@ -121,12 +123,6 @@ html, body {
   gap: 1px;
   cursor: pointer;
   transition: transform 0.12s, border-color 0.2s, background 0.2s;
-}
-
-@media (max-width: 900px) {
-  .slot { width: 54px; height: 54px; border-radius: 10px; }
-  .slot-icon, .slot-icon svg { width: 20px; height: 20px; }
-  .slot-name { display: none; }
 }
 
 .slot:hover { transform: translateY(-3px); border-color: rgba(232, 180, 90, 0.5); }
@@ -703,4 +699,37 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
   border-color: rgba(255, 206, 120, 0.7);
   color: #fff1d2;
   letter-spacing: 1.2px;
+}
+
+/* запас воздуха под водой: шкала появляется только в воде */
+.bar-air .bar-track i { background: linear-gradient(90deg, #7fd7ff, #cdf3ff); }
+.bar-air.critical .bar-track i { background: linear-gradient(90deg, #ff8a6b, #ffd2a8); }
+
+/* --- адаптив: правила идут последними, иначе их перебивают размеры слотов --- */
+@media (max-width: 1200px) {
+  .needs { width: 190px; }
+  .slot { width: 58px; height: 58px; }
+}
+
+@media (max-width: 1040px) {
+  .slot { width: 46px; height: 46px; border-radius: 10px; }
+  .slot-icon, .slot-icon svg { width: 18px; height: 18px; }
+  .slot-name { display: none; }
+}
+
+/* на узком экране панель потребностей уходит наверх: хотбар из десяти
+   слотов иначе наезжает на неё и перекрывает цифры */
+@media (max-width: 900px) {
+  .slot { width: 42px; height: 42px; border-radius: 10px; }
+  .slot-icon, .slot-icon svg { width: 17px; height: 17px; }
+  .hotbar { gap: 5px; }
+  .needs {
+    top: 62px;
+    bottom: auto;
+    left: 12px;
+    width: 158px;
+    padding: 9px 10px;
+    gap: 5px;
+  }
+  .bar-label, .bar-value { font-size: 10px; }
 }

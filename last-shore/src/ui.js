@@ -60,6 +60,7 @@ export class UI {
       hunger: { fill: $('bar-hunger'), value: $('val-hunger'), node: document.querySelector('.bar-hunger') },
       warmth: { fill: $('bar-warmth'), value: $('val-warmth'), node: document.querySelector('.bar-warmth') },
       stamina: { fill: $('bar-stamina'), value: $('val-stamina'), node: document.querySelector('.bar-stamina') },
+      air: { fill: $('bar-air'), value: $('val-air'), node: document.querySelector('.bar-air') },
     };
 
     this._lastPrompt = null;
@@ -174,6 +175,18 @@ export class UI {
       b.value.textContent = Math.round(v);
       b.node.classList.toggle('critical', v < 20);
     }
+  }
+
+  /** Воздух: показываем шкалу только когда она нужна — герой в воде */
+  setAir(value, visible) {
+    const b = this.bars.air;
+    if (!b) return;
+    if (b.node) b.node.classList.toggle('hidden', !visible);
+    if (!visible) return;
+    const v = Math.max(0, Math.min(100, value));
+    b.fill.style.width = v.toFixed(1) + '%';
+    b.value.textContent = Math.round(v);
+    b.node.classList.toggle('critical', v < 25);
   }
 
   setTop({ day, clock, weather, fps }) {

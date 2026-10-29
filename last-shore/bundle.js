@@ -14202,6 +14202,373 @@
       return this;
     }
   };
+  var Curve = class {
+    /**
+     * Constructs a new curve.
+     */
+    constructor() {
+      this.type = "Curve";
+      this.arcLengthDivisions = 200;
+      this.needsUpdate = false;
+      this.cacheArcLengths = null;
+    }
+    /**
+     * This method returns a vector in 2D or 3D space (depending on the curve definition)
+     * for the given interpolation factor.
+     *
+     * @abstract
+     * @param {number} t - A interpolation factor representing a position on the curve. Must be in the range `[0,1]`.
+     * @param {(Vector2|Vector3)} [optionalTarget] - The optional target vector the result is written to.
+     * @return {(Vector2|Vector3)} The position on the curve. It can be a 2D or 3D vector depending on the curve definition.
+     */
+    getPoint() {
+      warn("Curve: .getPoint() not implemented.");
+    }
+    /**
+     * This method returns a vector in 2D or 3D space (depending on the curve definition)
+     * for the given interpolation factor. Unlike {@link Curve#getPoint}, this method honors the length
+     * of the curve which equidistant samples.
+     *
+     * @param {number} u - A interpolation factor representing a position on the curve. Must be in the range `[0,1]`.
+     * @param {(Vector2|Vector3)} [optionalTarget] - The optional target vector the result is written to.
+     * @return {(Vector2|Vector3)} The position on the curve. It can be a 2D or 3D vector depending on the curve definition.
+     */
+    getPointAt(u, optionalTarget) {
+      const t = this.getUtoTmapping(u);
+      return this.getPoint(t, optionalTarget);
+    }
+    /**
+     * This method samples the curve via {@link Curve#getPoint} and returns an array of points representing
+     * the curve shape.
+     *
+     * @param {number} [divisions=5] - The number of divisions.
+     * @return {Array<(Vector2|Vector3)>} An array holding the sampled curve values. The number of points is `divisions + 1`.
+     */
+    getPoints(divisions = 5) {
+      const points = [];
+      for (let d = 0; d <= divisions; d++) {
+        points.push(this.getPoint(d / divisions));
+      }
+      return points;
+    }
+    // Get sequence of points using getPointAt( u )
+    /**
+     * This method samples the curve via {@link Curve#getPointAt} and returns an array of points representing
+     * the curve shape. Unlike {@link Curve#getPoints}, this method returns equi-spaced points across the entire
+     * curve.
+     *
+     * @param {number} [divisions=5] - The number of divisions.
+     * @return {Array<(Vector2|Vector3)>} An array holding the sampled curve values. The number of points is `divisions + 1`.
+     */
+    getSpacedPoints(divisions = 5) {
+      const points = [];
+      for (let d = 0; d <= divisions; d++) {
+        points.push(this.getPointAt(d / divisions));
+      }
+      return points;
+    }
+    /**
+     * Returns the total arc length of the curve.
+     *
+     * @return {number} The length of the curve.
+     */
+    getLength() {
+      const lengths = this.getLengths();
+      return lengths[lengths.length - 1];
+    }
+    /**
+     * Returns an array of cumulative segment lengths of the curve.
+     *
+     * @param {number} [divisions=this.arcLengthDivisions] - The number of divisions.
+     * @return {Array<number>} An array holding the cumulative segment lengths.
+     */
+    getLengths(divisions = this.arcLengthDivisions) {
+      if (this.cacheArcLengths && this.cacheArcLengths.length === divisions + 1 && !this.needsUpdate) {
+        return this.cacheArcLengths;
+      }
+      this.needsUpdate = false;
+      const cache = [];
+      let current, last = this.getPoint(0);
+      let sum = 0;
+      cache.push(0);
+      for (let p = 1; p <= divisions; p++) {
+        current = this.getPoint(p / divisions);
+        sum += current.distanceTo(last);
+        cache.push(sum);
+        last = current;
+      }
+      this.cacheArcLengths = cache;
+      return cache;
+    }
+    /**
+     * Update the cumulative segment distance cache. The method must be called
+     * every time curve parameters are changed. If an updated curve is part of a
+     * composed curve like {@link CurvePath}, this method must be called on the
+     * composed curve, too.
+     */
+    updateArcLengths() {
+      this.needsUpdate = true;
+      this.getLengths();
+    }
+    /**
+     * Given an interpolation factor in the range `[0,1]`, this method returns an updated
+     * interpolation factor in the same range that can be ued to sample equidistant points
+     * from a curve.
+     *
+     * @param {number} u - The interpolation factor.
+     * @param {?number} distance - An optional distance on the curve.
+     * @return {number} The updated interpolation factor.
+     */
+    getUtoTmapping(u, distance = null) {
+      const arcLengths = this.getLengths();
+      let i = 0;
+      const il = arcLengths.length;
+      let targetArcLength;
+      if (distance) {
+        targetArcLength = distance;
+      } else {
+        targetArcLength = u * arcLengths[il - 1];
+      }
+      let low = 0, high = il - 1, comparison;
+      while (low <= high) {
+        i = Math.floor(low + (high - low) / 2);
+        comparison = arcLengths[i] - targetArcLength;
+        if (comparison < 0) {
+          low = i + 1;
+        } else if (comparison > 0) {
+          high = i - 1;
+        } else {
+          high = i;
+          break;
+        }
+      }
+      i = high;
+      if (arcLengths[i] === targetArcLength) {
+        return i / (il - 1);
+      }
+      const lengthBefore = arcLengths[i];
+      const lengthAfter = arcLengths[i + 1];
+      const segmentLength = lengthAfter - lengthBefore;
+      const segmentFraction = (targetArcLength - lengthBefore) / segmentLength;
+      const t = (i + segmentFraction) / (il - 1);
+      return t;
+    }
+    /**
+     * Returns a unit vector tangent for the given interpolation factor.
+     * If the derived curve does not implement its tangent derivation,
+     * two points a small delta apart will be used to find its gradient
+     * which seems to give a reasonable approximation.
+     *
+     * @param {number} t - The interpolation factor.
+     * @param {(Vector2|Vector3)} [optionalTarget] - The optional target vector the result is written to.
+     * @return {(Vector2|Vector3)} The tangent vector.
+     */
+    getTangent(t, optionalTarget) {
+      const delta = 1e-4;
+      let t1 = t - delta;
+      let t2 = t + delta;
+      if (t1 < 0) t1 = 0;
+      if (t2 > 1) t2 = 1;
+      const pt1 = this.getPoint(t1);
+      const pt2 = this.getPoint(t2);
+      const tangent = optionalTarget || (pt1.isVector2 ? new Vector2() : new Vector3());
+      tangent.copy(pt2).sub(pt1).normalize();
+      return tangent;
+    }
+    /**
+     * Same as {@link Curve#getTangent} but with equidistant samples.
+     *
+     * @param {number} u - The interpolation factor.
+     * @param {(Vector2|Vector3)} [optionalTarget] - The optional target vector the result is written to.
+     * @return {(Vector2|Vector3)} The tangent vector.
+     * @see {@link Curve#getPointAt}
+     */
+    getTangentAt(u, optionalTarget) {
+      const t = this.getUtoTmapping(u);
+      return this.getTangent(t, optionalTarget);
+    }
+    /**
+     * Generates the Frenet Frames. Requires a curve definition in 3D space. Used
+     * in geometries like {@link TubeGeometry} or {@link ExtrudeGeometry}.
+     *
+     * @param {number} segments - The number of segments.
+     * @param {boolean} [closed=false] - Whether the curve is closed or not.
+     * @return {{tangents: Array<Vector3>, normals: Array<Vector3>, binormals: Array<Vector3>}} The Frenet Frames.
+     */
+    computeFrenetFrames(segments, closed = false) {
+      const normal = new Vector3();
+      const tangents = [];
+      const normals = [];
+      const binormals = [];
+      const vec = new Vector3();
+      const mat2 = new Matrix4();
+      for (let i = 0; i <= segments; i++) {
+        const u = i / segments;
+        tangents[i] = this.getTangentAt(u, new Vector3());
+      }
+      normals[0] = new Vector3();
+      binormals[0] = new Vector3();
+      let min = Number.MAX_VALUE;
+      const tx = Math.abs(tangents[0].x);
+      const ty = Math.abs(tangents[0].y);
+      const tz = Math.abs(tangents[0].z);
+      if (tx <= min) {
+        min = tx;
+        normal.set(1, 0, 0);
+      }
+      if (ty <= min) {
+        min = ty;
+        normal.set(0, 1, 0);
+      }
+      if (tz <= min) {
+        normal.set(0, 0, 1);
+      }
+      vec.crossVectors(tangents[0], normal).normalize();
+      normals[0].crossVectors(tangents[0], vec);
+      binormals[0].crossVectors(tangents[0], normals[0]);
+      for (let i = 1; i <= segments; i++) {
+        normals[i] = normals[i - 1].clone();
+        binormals[i] = binormals[i - 1].clone();
+        vec.crossVectors(tangents[i - 1], tangents[i]);
+        if (vec.length() > Number.EPSILON) {
+          vec.normalize();
+          const theta = Math.acos(clamp(tangents[i - 1].dot(tangents[i]), -1, 1));
+          normals[i].applyMatrix4(mat2.makeRotationAxis(vec, theta));
+        }
+        binormals[i].crossVectors(tangents[i], normals[i]);
+      }
+      if (closed === true) {
+        let theta = Math.acos(clamp(normals[0].dot(normals[segments]), -1, 1));
+        theta /= segments;
+        if (tangents[0].dot(vec.crossVectors(normals[0], normals[segments])) > 0) {
+          theta = -theta;
+        }
+        for (let i = 1; i <= segments; i++) {
+          normals[i].applyMatrix4(mat2.makeRotationAxis(tangents[i], theta * i));
+          binormals[i].crossVectors(tangents[i], normals[i]);
+        }
+      }
+      return {
+        tangents,
+        normals,
+        binormals
+      };
+    }
+    /**
+     * Returns a new curve with copied values from this instance.
+     *
+     * @return {Curve} A clone of this instance.
+     */
+    clone() {
+      return new this.constructor().copy(this);
+    }
+    /**
+     * Copies the values of the given curve to this instance.
+     *
+     * @param {Curve} source - The curve to copy.
+     * @return {Curve} A reference to this curve.
+     */
+    copy(source) {
+      this.arcLengthDivisions = source.arcLengthDivisions;
+      return this;
+    }
+    /**
+     * Serializes the curve into JSON.
+     *
+     * @return {Object} A JSON object representing the serialized curve.
+     * @see {@link ObjectLoader#parse}
+     */
+    toJSON() {
+      const data = {
+        metadata: {
+          version: 4.7,
+          type: "Curve",
+          generator: "Curve.toJSON"
+        }
+      };
+      data.arcLengthDivisions = this.arcLengthDivisions;
+      data.type = this.type;
+      return data;
+    }
+    /**
+     * Deserializes the curve from the given JSON.
+     *
+     * @param {Object} json - The JSON holding the serialized curve.
+     * @return {Curve} A reference to this curve.
+     */
+    fromJSON(json) {
+      this.arcLengthDivisions = json.arcLengthDivisions;
+      return this;
+    }
+  };
+  function QuadraticBezierP0(t, p) {
+    const k = 1 - t;
+    return k * k * p;
+  }
+  function QuadraticBezierP1(t, p) {
+    return 2 * (1 - t) * t * p;
+  }
+  function QuadraticBezierP2(t, p) {
+    return t * t * p;
+  }
+  function QuadraticBezier(t, p0, p1, p2) {
+    return QuadraticBezierP0(t, p0) + QuadraticBezierP1(t, p1) + QuadraticBezierP2(t, p2);
+  }
+  var QuadraticBezierCurve3 = class extends Curve {
+    /**
+     * Constructs a new Quadratic Bezier curve.
+     *
+     * @param {Vector3} [v0] - The start point.
+     * @param {Vector3} [v1] - The control point.
+     * @param {Vector3} [v2] - The end point.
+     */
+    constructor(v0 = new Vector3(), v1 = new Vector3(), v2 = new Vector3()) {
+      super();
+      this.isQuadraticBezierCurve3 = true;
+      this.type = "QuadraticBezierCurve3";
+      this.v0 = v0;
+      this.v1 = v1;
+      this.v2 = v2;
+    }
+    /**
+     * Returns a point on the curve.
+     *
+     * @param {number} t - A interpolation factor representing a position on the curve. Must be in the range `[0,1]`.
+     * @param {Vector3} [optionalTarget] - The optional target vector the result is written to.
+     * @return {Vector3} The position on the curve.
+     */
+    getPoint(t, optionalTarget = new Vector3()) {
+      const point = optionalTarget;
+      const v0 = this.v0, v1 = this.v1, v2 = this.v2;
+      point.set(
+        QuadraticBezier(t, v0.x, v1.x, v2.x),
+        QuadraticBezier(t, v0.y, v1.y, v2.y),
+        QuadraticBezier(t, v0.z, v1.z, v2.z)
+      );
+      return point;
+    }
+    copy(source) {
+      super.copy(source);
+      this.v0.copy(source.v0);
+      this.v1.copy(source.v1);
+      this.v2.copy(source.v2);
+      return this;
+    }
+    toJSON() {
+      const data = super.toJSON();
+      data.v0 = this.v0.toArray();
+      data.v1 = this.v1.toArray();
+      data.v2 = this.v2.toArray();
+      return data;
+    }
+    fromJSON(json) {
+      super.fromJSON(json);
+      this.v0.fromArray(json.v0);
+      this.v1.fromArray(json.v1);
+      this.v2.fromArray(json.v2);
+      return this;
+    }
+  };
   var IcosahedronGeometry = class _IcosahedronGeometry extends PolyhedronGeometry {
     /**
      * Constructs a new icosahedron geometry.
@@ -29220,7 +29587,21 @@ void main() {
       flyHorizontal: 9.5,
       // креатив: скорость по горизонту
       maxDepth: 1.15,
-      // глубже — не пройти (пока нет плавания)
+      // глубже этого герой уже не идёт по дну, а плывёт
+      swimSpeed: 3.1,
+      // гребок по поверхности
+      swimFast: 4.6,
+      // гребок с разгоном
+      diveSpeed: 3.4,
+      // погружение и всплытие
+      floatLine: 1.02,
+      // на сколько тело уходит под воду, когда герой держится на поверхности
+      airMax: 100,
+      // запас воздуха, секунд хватает примерно на 25
+      airDrain: 4.2,
+      // воздух уходит под водой
+      airRefill: 26,
+      // и возвращается на поверхности
       radius: 0.42,
       height: 1.8,
       eye: 1.55,
@@ -29655,38 +30036,71 @@ void main() {
     upper.pop();
     return lower.concat(upper);
   }
-  function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity, maxRadius = void 0 } = {}) {
-    const pts = [];
-    const limit = maxRadius === void 0 ? null : Math.max(0.12, maxRadius);
-    for (const geo of geometries) {
-      if (!geo) continue;
+  function hullsFromGeometry(geometries, {
+    pad = 0.02,
+    top = Infinity,
+    // выше этого — не обводим (крона, листья)
+    bands = 2,
+    // на сколько поясов резать
+    basePad = 0.16,
+    // первый пояс шире: там корни и комель
+    maxRadius = void 0
+  } = {}) {
+    const solid = geometries.filter(Boolean);
+    if (!solid.length) return [];
+    let minY = Infinity;
+    let maxY = -Infinity;
+    for (const geo of solid) {
       const pos = geo.attributes && geo.attributes.position;
       if (!pos) continue;
-      const step = Math.max(1, Math.floor(pos.count / 900));
-      for (let i = 0; i < pos.count; i += step) {
-        if (pos.getY(i) > belowY) continue;
-        let px = pos.getX(i);
-        let pz = pos.getZ(i);
-        if (limit !== null) {
-          const d = Math.hypot(px, pz);
-          if (d > limit) {
-            px = px / d * limit;
-            pz = pz / d * limit;
-          }
-        }
-        pts.push({ x: px, z: pz });
+      for (let i = 0; i < pos.count; i++) {
+        const y = pos.getY(i);
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
       }
     }
-    const hull = convexHull2D(pts);
-    if (hull.length < 3) return null;
-    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
-    const cz = hull.reduce((s, p) => s + p.z, 0) / hull.length;
-    return hull.map((p) => {
-      const dx = p.x - cx;
-      const dz = p.z - cz;
-      const len = Math.hypot(dx, dz) || 1;
-      return { x: p.x + dx / len * pad, z: p.z + dz / len * pad };
-    });
+    if (!Number.isFinite(minY)) return [];
+    const shellTop = Math.min(maxY, top);
+    if (shellTop - minY < 0.15) return [];
+    const out = [];
+    const span = shellTop - minY;
+    for (let b = 0; b < bands; b++) {
+      const y0 = minY + span * b / bands;
+      const y1 = b === bands - 1 ? shellTop : minY + span * (b + 1) / bands;
+      const cap = maxRadius === void 0 ? void 0 : maxRadius * (b === 0 ? 1 + basePad : 1 - b * 0.12);
+      const pts = [];
+      for (const geo of solid) {
+        const pos = geo.attributes && geo.attributes.position;
+        if (!pos) continue;
+        const step = Math.max(1, Math.floor(pos.count / 700));
+        for (let i = 0; i < pos.count; i += step) {
+          const y = pos.getY(i);
+          if (y < y0 - 0.02 || y > y1 + 0.02) continue;
+          let px = pos.getX(i);
+          let pz = pos.getZ(i);
+          if (cap !== void 0) {
+            const d = Math.hypot(px, pz);
+            if (d > cap) {
+              px = px / d * cap;
+              pz = pz / d * cap;
+            }
+          }
+          pts.push({ x: px, z: pz });
+        }
+      }
+      const hull = convexHull2D(pts);
+      if (hull.length < 3) continue;
+      const cx = hull.reduce((acc, p) => acc + p.x, 0) / hull.length;
+      const cz = hull.reduce((acc, p) => acc + p.z, 0) / hull.length;
+      const poly = hull.map((p) => {
+        const dx = p.x - cx;
+        const dz = p.z - cz;
+        const len = Math.hypot(dx, dz) || 1;
+        return { x: p.x + dx / len * pad, z: p.z + dz / len * pad };
+      });
+      out.push({ poly, minY: y0, maxY: y1 + 0.02 });
+    }
+    return out;
   }
   var CELL = 8;
   var key = (cx, cz) => cx * 1e5 + cz;
@@ -30012,7 +30426,6 @@ void main() {
   }
 
   // src/models.js
-  var clamp01 = (v) => v < 0 ? 0 : v > 1 ? 1 : v;
   function colorize(geo, hex2) {
     const c = new Color(hex2);
     const n = geo.attributes.position.count;
@@ -30099,34 +30512,125 @@ void main() {
     if (!parts.length) return null;
     return mergeGeometries(parts, false);
   }
-  function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, sides = 8) {
-    const segments = 5;
-    const centers = [{ x: 0, y: 0, z: 0 }];
-    let x = 0;
-    let z = 0;
-    let y = 0;
-    const segH = height / segments;
-    for (let i = 0; i < segments; i++) {
-      const t = i / segments;
-      const r0 = baseR + (topR - baseR) * t;
-      const r1 = baseR + (topR - baseR) * (t + 1 / segments);
-      const geo = new CylinderGeometry(r1, r0 * 1.06, segH * 1.04, sides, 1);
-      const twist = bend * (i / segments);
-      x += Math.sin(twist) * segH * 0.55;
-      z += Math.cos(twist * 0.7) * segH * 0.12;
-      part(parts, geo, i % 2 ? hexA : hexB, x, y + segH / 2, z);
-      y += segH;
-      centers.push({ x, y, z });
+  function spineTube(parts, spine, radius, {
+    samples = 12,
+    sides = 9,
+    hexA = COLORS.trunk,
+    hexB = 6966320,
+    flare = 0,
+    wobble = 0.06,
+    rng = Math.random
+  } = {}) {
+    const rings = [];
+    for (let i = 0; i <= samples; i++) {
+      const t = i / samples;
+      const c = spine(t);
+      const t0 = Math.max(0, t - 0.02);
+      const t1 = Math.min(1, t + 0.02);
+      const a = spine(t0);
+      const b = spine(t1);
+      const tangent = b.clone().sub(a);
+      if (tangent.lengthSq() < 1e-8) tangent.set(0, 1, 0);
+      tangent.normalize();
+      const q = new Quaternion().setFromUnitVectors(UP, tangent);
+      let r = radius(t);
+      if (flare > 0) r *= 1 + flare * Math.pow(1 - t, 2.2);
+      rings.push({ c, q, r });
     }
-    const spine = (t) => {
-      const k = clamp01(t) * (centers.length - 1);
-      const i = Math.min(centers.length - 2, Math.floor(k));
-      const f = k - i;
-      const a = centers[i];
-      const b = centers[i + 1];
-      return new Vector3(a.x + (b.x - a.x) * f, a.y + (b.y - a.y) * f, a.z + (b.z - a.z) * f);
+    const pos = [];
+    const col = [];
+    const dir = new Vector3();
+    const v = new Vector3();
+    const ring = (ring2, i) => {
+      const out = [];
+      for (let k = 0; k < sides; k++) {
+        const a = k / sides * Math.PI * 2;
+        const wob = 1 + Math.sin(a * 3 + i * 1.7) * wobble * 0.5 + (rng() - 0.5) * wobble;
+        dir.set(Math.cos(a), 0, Math.sin(a)).applyQuaternion(ring2.q);
+        v.copy(ring2.c).addScaledVector(dir, ring2.r * wob);
+        out.push({ x: v.x, y: v.y, z: v.z });
+      }
+      return out;
     };
-    return { x, y, z, spine, segments, centers, baseR, topR };
+    const prev = ring(rings[0], 0);
+    const cur = { points: prev };
+    const loose = [];
+    loose.push(prev);
+    for (let i = 1; i <= samples; i++) loose.push(ring(rings[i], i));
+    const push = (p, hex2) => {
+      const c = new Color(hex2);
+      pos.push(p.x, p.y, p.z);
+      col.push(c.r, c.g, c.b);
+    };
+    for (let i = 0; i < samples; i++) {
+      const A = loose[i];
+      const B = loose[i + 1];
+      const hex2 = Math.floor(i / 2) % 2 ? hexA : hexB;
+      const hex22 = Math.floor((i + 1) / 2) % 2 ? hexA : hexB;
+      for (let k = 0; k < sides; k++) {
+        const k2 = (k + 1) % sides;
+        push(A[k], hex2);
+        push(B[k], hex22);
+        push(B[k2], hex22);
+        push(A[k], hex2);
+        push(B[k2], hex22);
+        push(A[k2], hex2);
+      }
+    }
+    const bottom = loose[0];
+    const top = loose[samples];
+    const cB = rings[0].c;
+    const cT = rings[samples].c;
+    for (let k = 0; k < sides; k++) {
+      const k2 = (k + 1) % sides;
+      push({ x: cB.x, y: cB.y, z: cB.z }, hexA);
+      push(bottom[k2], hexB);
+      push(bottom[k], hexA);
+      push({ x: cT.x, y: cT.y, z: cT.z }, hexA);
+      push(top[k], hexB);
+      push(top[k2], hexA);
+    }
+    const geo = new BufferGeometry();
+    geo.setAttribute("position", new Float32BufferAttribute(pos, 3));
+    geo.setAttribute("color", new Float32BufferAttribute(col, 3));
+    geo.setAttribute("uv", new Float32BufferAttribute(new Float32Array(pos.length / 3 * 2), 2));
+    geo.computeVertexNormals();
+    parts.push(geo);
+    return geo;
+  }
+  function branchTube(parts, from, to, r0, r1, hex2, { sides = 6, bend = 0.35, rng = Math.random } = {}) {
+    const dir = to.clone().sub(from);
+    const side = new Vector3(-dir.z, 0, dir.x);
+    if (side.lengthSq() < 1e-6) side.set(1, 0, 0);
+    side.normalize();
+    const mid = from.clone().add(to).multiplyScalar(0.5).addScaledVector(side, dir.length() * bend * (0.5 - rng() * 0.4)).add(new Vector3(0, dir.length() * 0.06, 0));
+    const curve = new QuadraticBezierCurve3(from, mid, to);
+    return spineTube(
+      parts,
+      (t) => curve.getPoint(t),
+      (t) => r0 + (r1 - r0) * t,
+      { samples: 5, sides, hexA: hex2, hexB: hex2, wobble: 0.05, rng }
+    );
+  }
+  function trunkPart(parts, rng, height, baseR, topR, hexA, hexB, bend = 0.3, sides = 8) {
+    const leanX = (rng() - 0.5) * 0.9;
+    const leanZ = (rng() - 0.5) * 0.5;
+    const spine = (t) => new Vector3(
+      leanX * Math.pow(t, 1.7) + Math.sin(t * Math.PI * bend * 2) * 0.12,
+      height * t,
+      leanZ * Math.pow(t, 1.7) + Math.cos(t * Math.PI * bend * 2) * 0.06
+    );
+    spineTube(parts, spine, (t) => baseR + (topR - baseR) * t, {
+      samples: 16,
+      sides,
+      hexA,
+      hexB,
+      flare: 1.1,
+      wobble: 0.05,
+      rng
+    });
+    const top = spine(1);
+    return { x: top.x, y: top.y, z: top.z, spine, segments: 16, centers: [{ x: 0, y: 0, z: 0 }, { x: top.x, y: top.y, z: top.z }], baseR, topR };
   }
   function makePalmParts(rng) {
     const bark = [];
@@ -30142,22 +30646,15 @@ void main() {
       h * t,
       leanZ * Math.pow(t, bend + 0.6)
     );
-    const segments = 10;
-    for (let i = 0; i < segments; i++) {
-      const t0 = i / segments;
-      const t1 = (i + 1) / segments;
-      const a = spine(t0);
-      const b = spine(t1);
-      const mid = a.clone().add(b).multiplyScalar(0.5);
-      const len = a.distanceTo(b) * 1.06;
-      const r0 = baseR + (topR - baseR) * t0;
-      const r1 = baseR + (topR - baseR) * t1;
-      let geo = new CylinderGeometry(r1, r0, len, 9, 1);
-      geo.applyQuaternion(alignQuat(a, b));
-      geo.translate(mid.x, mid.y, mid.z);
-      geo = flat(geo);
-      bark.push(colorize(geo, i % 2 ? COLORS.trunk : 7163699));
-    }
+    spineTube(bark, spine, (t) => baseR + (topR - baseR) * t, {
+      samples: 20,
+      sides: 10,
+      hexA: COLORS.trunk,
+      hexB: 7163699,
+      flare: 1.2,
+      wobble: 0.05,
+      rng
+    });
     const rings = 9;
     for (let i = 1; i <= rings; i++) {
       const t = i / (rings + 1);
@@ -30236,23 +30733,15 @@ void main() {
       h * t,
       leanZ * t * t
     );
-    const segments = 8;
-    for (let i = 0; i < segments; i++) {
-      const t0 = i / segments;
-      const t1 = (i + 1) / segments;
-      const a = spine(t0);
-      const b = spine(t1);
-      const mid = a.clone().add(b).multiplyScalar(0.5);
-      const len = a.distanceTo(b) * 1.08;
-      const flare = i === 0 ? 1.45 : 1;
-      const r0 = (baseR + (topR - baseR) * t0) * flare;
-      const r1 = baseR + (topR - baseR) * t1;
-      let geo = new CylinderGeometry(r1, r0, len, 9, 1);
-      geo.applyQuaternion(alignQuat(a, b));
-      geo.translate(mid.x, mid.y, mid.z);
-      geo = flat(geo);
-      bark.push(colorize(geo, i % 2 ? COLORS.trunk : 6966320));
-    }
+    spineTube(bark, spine, (t) => baseR + (topR - baseR) * t, {
+      samples: 18,
+      sides: 10,
+      hexA: COLORS.trunk,
+      hexB: 6966320,
+      flare: 1.35,
+      wobble: 0.07,
+      rng
+    });
     const rootCount = 4 + Math.floor(rng() * 2);
     for (let i = 0; i < rootCount; i++) {
       const a = i / rootCount * Math.PI * 2 + rng() * 0.4;
@@ -30277,23 +30766,11 @@ void main() {
       const bl = 1.3 + rng() * 1.1;
       const dir = new Vector3(Math.cos(a), 0.55 + rng() * 0.45, Math.sin(a)).normalize();
       const end = origin.clone().addScaledVector(dir, bl);
-      let branch = new CylinderGeometry(0.06, 0.14, bl, 6, 1);
-      branch.applyQuaternion(alignQuat(origin, end));
-      branch.translate(
-        (origin.x + end.x) / 2,
-        (origin.y + end.y) / 2,
-        (origin.z + end.z) / 2
-      );
-      branch = flat(branch);
-      bark.push(colorize(branch, 6966320));
+      branchTube(bark, origin, end, 0.14, 0.06, 6966320, { sides: 7, bend: 0.4, rng });
       const a2 = a + (rng() - 0.5) * 1.4;
       const dir2 = new Vector3(Math.cos(a2), 0.8, Math.sin(a2)).normalize();
       const end2 = end.clone().addScaledVector(dir2, bl * 0.55);
-      let twig = new CylinderGeometry(0.035, 0.07, bl * 0.6, 5, 1);
-      twig.applyQuaternion(alignQuat(end, end2));
-      twig.translate((end.x + end2.x) / 2, (end.y + end2.y) / 2, (end.z + end2.z) / 2);
-      twig = flat(twig);
-      bark.push(colorize(twig, 7623482));
+      branchTube(bark, end, end2, 0.07, 0.035, 7623482, { sides: 5, bend: 0.45, rng });
       for (let k = 0; k < 2; k++) {
         const r = 0.75 + rng() * 0.6;
         const jitter = new Vector3(
@@ -31253,7 +31730,6 @@ void main() {
   var STONE_THICK = STRATA.reduce((sum, st) => sum + st.thick, 0);
   var VOID_COLOR = 2827315;
   var MAX_PIT_CELLS = 8;
-  var rng0 = (i) => i * 2.399963 % (Math.PI * 2);
   var CHUNK = 90;
   var ISLETS = [
     { x: -122, z: -84, rad: 46, h: 8.5 },
@@ -31333,6 +31809,44 @@ void main() {
     geo.translate(x, y, z);
     parts.push(geo);
     return geo;
+  }
+  function addRod(parts, from, to, r0, r1, hex2, sides = 5) {
+    const a = new Vector3(...from);
+    const b = new Vector3(...to);
+    const dir = b.clone().sub(a);
+    const len = dir.length();
+    if (len < 1e-4) return null;
+    const geo = new CylinderGeometry(r0, r1, len, sides, 1);
+    geo.translate(0, len * 0.5, 0);
+    const q = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), dir.clone().normalize());
+    geo.applyQuaternion(q);
+    return addPart(parts, geo, hex2, a.x, a.y, a.z);
+  }
+  function makeCrownProxy(leafGeo, { blobs = 3, detail = 0 } = {}) {
+    if (!leafGeo) return null;
+    if (!leafGeo.boundingBox) leafGeo.computeBoundingBox();
+    const b = leafGeo.boundingBox;
+    const size = new Vector3();
+    b.getSize(size);
+    const center = new Vector3();
+    b.getCenter(center);
+    const parts = [];
+    const r = Math.max(0.55, Math.max(size.x, size.z) * 0.34);
+    const tint = [COLORS.jungle || 6261317, 7182930, 8235358];
+    for (let i = 0; i < blobs; i++) {
+      const a = i / blobs * Math.PI * 2;
+      const d = i === 0 ? 0 : r * 0.72;
+      const geo = new IcosahedronGeometry(r * (i === 0 ? 1.06 : 0.82), detail);
+      addPart(
+        parts,
+        geo,
+        tint[i % tint.length],
+        center.x + Math.cos(a) * d,
+        center.y + (i === 0 ? 0 : i % 2 ? 0.22 : -0.14) * size.y * 0.5,
+        center.z + Math.sin(a) * d
+      );
+    }
+    return mergeGeometries(parts, false);
   }
   var World = class {
     constructor(scene, seed = CONFIG.world.seed, textures = null) {
@@ -31674,7 +32188,8 @@ void main() {
         uFog: { value: new Color(10470358) },
         uNight: { value: 0 },
         uDepth: { value: depthTex },
-        uSize: { value: SIZE }
+        uSize: { value: SIZE },
+        uUnder: { value: 0 }
       };
       const mat2 = new ShaderMaterial({
         uniforms: this.waterUniforms,
@@ -31718,6 +32233,7 @@ void main() {
         uniform float uNight;
         uniform float uTime;
         uniform float uSize;
+        uniform float uUnder;
         uniform sampler2D uDepth;
 
         varying vec3 vWorldPos;
@@ -31751,6 +32267,38 @@ void main() {
           float hx = sin((vWorldPos.x + e) * 0.115 + uTime * 1.15) * 0.15 - sin(vWorldPos.x * 0.115 + uTime * 1.15) * 0.15;
           float hz = sin((vWorldPos.z + e) * 0.165 - uTime * 0.9) * 0.11 - sin(vWorldPos.z * 0.165 - uTime * 0.9) * 0.11;
           vec3 n = normalize(vec3(-hx * 2.2, e * 0.9, -hz * 2.2));
+
+          // \u0432\u0437\u0433\u043B\u044F\u0434 \u0438\u0437-\u043F\u043E\u0434 \u0432\u043E\u0434\u044B: \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u044C \u0432\u0438\u0434\u043D\u0430 \u0441\u043D\u0438\u0437\u0443 \u043A\u0430\u043A \u0441\u0432\u0435\u0442\u044F\u0449\u0438\u0439\u0441\u044F \u043F\u043E\u0442\u043E\u043B\u043E\u043A
+          if (uUnder > 0.5) {
+            // \u043B\u0443\u0447 \xAB\u0433\u043B\u0430\u0437 \u2192 \u0442\u043E\u0447\u043A\u0430 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u0438\xBB: \u043F\u043E\u0434 \u0432\u043E\u0434\u043E\u0439 \u0441\u043C\u043E\u0442\u0440\u0438\u0442 \u0432\u0432\u0435\u0440\u0445
+            vec3 eyeDir = normalize(vWorldPos - cameraPosition);
+            float upness = clamp(eyeDir.y, 0.0, 1.0);
+            // \xAB\u043E\u043A\u043D\u043E \u0421\u043D\u0435\u043B\u043B\u0430\xBB: \u043F\u0440\u044F\u043C\u043E \u043D\u0430\u0434 \u0433\u043E\u043B\u043E\u0432\u043E\u0439 \u0432\u0438\u0434\u043D\u043E \u043D\u0435\u0431\u043E, \u043F\u043E \u043A\u0440\u0430\u044F\u043C \u2014 \u0437\u0435\u0440\u043A\u0430\u043B\u043E \u0432\u043E\u0434\u044B
+            float window = smoothstep(0.62, 0.94, upness);
+            vec3 deepTint = uDeep * 1.5 + vec3(0.02, 0.06, 0.09);
+            vec3 skyTint = vec3(0.42, 0.72, 0.82) * (1.0 - uNight * 0.7);
+            // \u043E\u043A\u043D\u043E \u0421\u043D\u0435\u043B\u043B\u0430 \xAB\u0434\u044B\u0448\u0438\u0442\xBB \u0440\u044F\u0431\u044C\u044E \u0438 \u0441\u043B\u0435\u0433\u043A\u0430 \u0432\u043F\u0438\u0442\u0430\u043B\u043E \u0446\u0432\u0435\u0442 \u0433\u043B\u0443\u0431\u0438\u043D\u044B \u2014
+            // \u0438\u043D\u0430\u0447\u0435 \u0441\u043D\u0438\u0437\u0443 \u0432\u0438\u0434\u043D\u043E \u043F\u043B\u043E\u0441\u043A\u043E\u0435 \u0431\u0435\u043B\u043E\u0435 \u043F\u044F\u0442\u043D\u043E \u0432\u043C\u0435\u0441\u0442\u043E \u0432\u043E\u0434\u044B
+            float ripple = vnoise(vWorldPos.xz * 0.85 + vec2(uTime * 0.35, uTime * 0.22));
+            float ripple2 = vnoise(vWorldPos.xz * 2.1 - vec2(uTime * 0.55, uTime * 0.31));
+            skyTint *= 0.62 + ripple * 0.55 + ripple2 * 0.3;
+            skyTint = mix(skyTint, uDeep * 1.35, 0.28);
+            // \u0441\u043E\u043B\u043D\u0435\u0447\u043D\u044B\u0435 \xAB\u0437\u0430\u0439\u0447\u0438\u043A\u0438\xBB \u0441\u043A\u0432\u043E\u0437\u044C \u0432\u043E\u043B\u043D\u044B \u2014 \u0441\u0435\u0442\u043A\u0430 \u0441\u0432\u0435\u0442\u0430 \u043D\u0430 \u043F\u043E\u0442\u043E\u043B\u043A\u0435
+            float caustic = pow(ripple * ripple2, 1.6) * 3.2 * window;
+            skyTint += vec3(0.5, 0.86, 0.92) * caustic * (1.0 - uNight * 0.85);
+            vec3 colU = mix(deepTint, skyTint, window);
+            // \u0431\u043B\u0438\u043A\u0438 \u043D\u0430 \u0432\u043D\u0443\u0442\u0440\u0435\u043D\u043D\u0435\u0439 \u0441\u0442\u043E\u0440\u043E\u043D\u0435 \u0432\u043E\u043B\u043D
+            vec3 nn = normalize(vec3(-n.x, abs(n.y), -n.z));
+            float sparkle = pow(max(dot(reflect(-normalize(uSunDir), vec3(n.x, -n.y, n.z)), eyeDir), 0.0), 34.0);
+            colU += uSunColor * sparkle * 1.1 * (1.0 - uNight * 0.85);
+            float dist = length(cameraPosition - vWorldPos);
+            colU = mix(colU, uDeep * 1.1 + vec3(0.0, 0.05, 0.07), clamp((dist - 5.0) / 34.0, 0.0, 0.9));
+            float alphaU = mix(0.62, 0.97, 1.0 - window);
+            gl_FragColor = vec4(colU, alphaU);
+            #include <tonemapping_fragment>
+            #include <colorspace_fragment>
+            return;
+          }
 
           float fres = pow(1.0 - max(dot(n, viewDir), 0.0), 3.0);
           float diff = max(dot(reflect(-normalize(uSunDir), n), viewDir), 0.0);
@@ -31900,144 +32448,283 @@ void main() {
         if (!byKind.has(d.kind)) byKind.set(d.kind, []);
         byKind.get(d.kind).push(d);
       }
-      const geos = {
+      const R = (i) => Math.sin(i * 12.9898) * 43758.5453 % 1;
+      const builders = {
         boar: () => {
           const parts = [];
-          addPart(parts, new IcosahedronGeometry(1.5, 1), 5981232, 0, 0.12, 0, 0, 0, 0);
-          addPart(parts, new CylinderGeometry(0.55, 0.7, 0.9, 7, 1), 2760984, 0, 0.35, -1.1, Math.PI / 2.1, 0, 0);
-          for (let i = 0; i < 5; i++) {
-            const a = i / 5 * Math.PI * 2;
+          addPart(parts, new CylinderGeometry(1.25, 1.45, 0.36, 11, 1), 4864552, 0, 0.02, 0);
+          addPart(parts, new CylinderGeometry(0.95, 1.05, 0.16, 10, 1), 3089432, 0, 0.16, 0);
+          for (let i = 0; i < 12; i++) {
+            const a = i / 12 * Math.PI * 2;
             addPart(
               parts,
-              new CylinderGeometry(0.04, 0.06, 1.1, 4, 1),
-              7031856,
-              Math.cos(a) * 1.1,
-              0.5,
-              Math.sin(a) * 1.1,
-              1.1,
-              -a,
+              new IcosahedronGeometry(0.16 + Math.abs(R(i)) * 0.1, 0),
+              5916208,
+              Math.cos(a) * 1.42,
+              0.1,
+              Math.sin(a) * 1.42,
+              R(i + 1),
+              R(i + 2),
               0
             );
+          }
+          const postZ = 1.35;
+          for (const sx of [-1, 1]) addRod(parts, [sx * 1.05, 0, postZ], [sx * 1.02, 1.55, postZ], 0.09, 0.13, 7031856, 5);
+          addRod(parts, [-1.25, 1.52, postZ], [1.25, 1.52, postZ], 0.09, 0.09, 7031856, 5);
+          for (let i = 0; i < 6; i++) {
+            const x = -1 + i * 0.4;
+            addRod(parts, [x, 1.5, postZ - 0.05], [x * 1.25, 0.1, -0.75], 0.05, 0.075, 8018487, 4);
+          }
+          for (let i = 0; i < 7; i++) {
+            const x = -0.9 + i * 0.3;
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.32 + Math.abs(R(i + 7)) * 0.16, 0),
+              6127418,
+              x,
+              1.02 + Math.abs(R(i)) * 0.28,
+              0.55 + Math.abs(R(i + 4)) * 0.4,
+              R(i),
+              R(i + 2),
+              0
+            );
+          }
+          addPart(parts, new CylinderGeometry(1, 1.15, 0.12, 9, 1), 8218180, 0, 0.08, 0.55);
+          for (let i = 0; i < 9; i++) {
+            const a = i * 2.3;
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.1 + Math.abs(R(i)) * 0.07, 0),
+              9073221,
+              Math.cos(a) * (0.75 + Math.abs(R(i + 3)) * 0.35),
+              0.16,
+              0.55 + Math.sin(a) * 0.55
+            );
+          }
+          addRod(parts, [1.9, 0, -0.3], [1.95, 1.7, -0.4], 0.11, 0.15, 8018487, 5);
+          for (let i = 0; i < 4; i++) {
+            addPart(parts, new BoxGeometry(0.06, 0.03, 0.18), 14207910, 1.79, 0.55 + i * 0.22, -0.32 - i * 0.02, 0, 0.3, 0);
           }
           return mergeGeometries(parts, false);
         },
         crab: () => {
           const parts = [];
-          addPart(parts, new IcosahedronGeometry(1.1, 1), 14272411, 0, 0.05, 0, 0, 0, 0);
-          for (let i = 0; i < 4; i++) {
-            const a = i / 4 * Math.PI * 2 + 0.4;
+          addPart(parts, new CylinderGeometry(1.35, 1.8, 0.44, 13, 1), 14470050, 0, 0.12, 0);
+          for (let i = 0; i < 10; i++) {
+            const a = i / 10 * Math.PI * 2 + 0.3;
             addPart(
               parts,
-              new CylinderGeometry(0.16, 0.2, 0.5, 6, 1),
-              3813156,
-              Math.cos(a) * 0.5,
-              0.32,
-              Math.sin(a) * 0.5
+              new IcosahedronGeometry(0.24 + Math.abs(R(i + 11)) * 0.12, 0),
+              15128496,
+              Math.cos(a) * 1.55,
+              0.2,
+              Math.sin(a) * 1.55,
+              R(i),
+              a,
+              0
             );
           }
-          for (let i = 0; i < 6; i++) {
-            const a = rng0(i);
+          addPart(parts, new ConeGeometry(0.78, 0.5, 11, 1), 2761753, 0.12, 0.5, 0.1, Math.PI, 0, 0);
+          addPart(parts, new CylinderGeometry(0.62, 0.7, 0.1, 11, 1), 13351318, 0.12, 0.34, 0.1);
+          addPart(parts, new CylinderGeometry(0.3, 0.36, 0.5, 9, 1), 2367254, 0.9, 0.16, 0.12, Math.PI / 2.2, 0, 0);
+          addPart(parts, new TorusGeometry(0.33, 0.06, 4, 9), 13219725, 1.12, 0.16, 0.12, 0, 0, Math.PI / 2.2);
+          addPart(parts, new CylinderGeometry(0.17, 0.22, 0.3, 8, 1), 1775376, -1.02, 0.18, -0.42, -1.3, 0.2, 0);
+          for (let i = 0; i < 10; i++) {
+            const a = i * 1.7;
             addPart(
               parts,
-              new IcosahedronGeometry(0.12, 0),
-              15787727,
-              Math.cos(a) * 1.2,
-              0.12,
-              Math.sin(a) * 1.2
+              new IcosahedronGeometry(0.09 + Math.abs(R(i)) * 0.08, 0),
+              15722189,
+              Math.cos(a) * (1.25 + Math.abs(R(i + 2)) * 0.55),
+              0.09,
+              Math.sin(a) * (1.25 + Math.abs(R(i + 4)) * 0.55)
             );
+          }
+          addPart(parts, new SphereGeometry(0.16, 7, 5, 0, Math.PI * 2, 0, Math.PI * 0.55), 15260868, 1.15, 0.12, -0.5, 0.4, 0, 0.3);
+          for (let i = 0; i < 6; i++) {
+            addPart(parts, new BoxGeometry(0.05, 0.02, 0.22), 12364677, 1.4 + i * 0.22, 0.05, 0.55 + Math.sin(i) * 0.3, 0, i * 0.6, 0);
           }
           return mergeGeometries(parts, false);
         },
         gull: () => {
           const parts = [];
-          addPart(parts, new CylinderGeometry(1, 0.8, 0.22, 9, 1), 9075285, 0, 0.11, 0);
-          for (let i = 0; i < 12; i++) {
-            const a = i / 12 * Math.PI * 2;
+          addPart(parts, new IcosahedronGeometry(1.2, 1), 9143672, 0, 0.32, 0, 0, 0, 0);
+          addPart(parts, new IcosahedronGeometry(0.7, 0), 10130566, 0.9, 0.5, 0.55, 0, 0.4, 0.2);
+          addPart(parts, new IcosahedronGeometry(0.55, 0), 8354414, -0.85, 0.28, -0.5);
+          addPart(parts, new CylinderGeometry(0.82, 0.92, 0.16, 9, 1), 10722444, 0, 1.28, 0);
+          for (let i = 0; i < 16; i++) {
+            const a = i / 16 * Math.PI * 2;
             addPart(
               parts,
-              new CylinderGeometry(0.03, 0.05, 0.9, 4, 1),
-              7298883,
-              Math.cos(a) * 0.75,
-              0.22,
-              Math.sin(a) * 0.75,
-              0.5,
+              new CylinderGeometry(0.045, 0.055, 0.62, 4, 1),
+              i % 2 ? 10259036 : 9074504,
+              Math.cos(a) * 0.55,
+              1.44,
+              Math.sin(a) * 0.55,
+              1.2,
               -a,
+              0.5
+            );
+          }
+          addPart(parts, new CylinderGeometry(0.5, 0.44, 0.1, 10, 1), 7167032, 0, 1.4, 0);
+          for (let i = 0; i < 3; i++) {
+            const a = i / 3 * Math.PI * 2 + 0.5;
+            addPart(
+              parts,
+              new SphereGeometry(0.14, 8, 6),
+              16052189,
+              Math.cos(a) * 0.24,
+              1.52,
+              Math.sin(a) * 0.24,
+              0.2,
+              0,
               0
             );
           }
-          for (let i = 0; i < 3; i++) {
-            const a = i / 3 * Math.PI * 2;
+          addPart(parts, new SphereGeometry(0.15, 8, 6), 15722706, 0.03, 1.53, -0.05, 0.1, 0, 0);
+          for (let i = 0; i < 7; i++) {
+            const a = i * 1.1;
             addPart(
               parts,
-              new IcosahedronGeometry(0.18, 0),
-              15920344,
-              Math.cos(a) * 0.25,
-              0.28,
-              Math.sin(a) * 0.25
+              new ConeGeometry(0.05, 0.18, 3, 1),
+              15920347,
+              Math.cos(a) * 0.75,
+              1.36,
+              Math.sin(a) * 0.75,
+              1.4,
+              a,
+              0.4
             );
           }
           return mergeGeometries(parts, false);
         },
         snake: () => {
           const parts = [];
-          addPart(parts, new IcosahedronGeometry(1.2, 1), 8222056, 0, 0.05, 0, 0, 0, 0);
-          addPart(parts, new CylinderGeometry(0.3, 0.42, 0.7, 7, 1), 2827808, 0.2, 0.3, 0.3, 0.4, 0, 0);
-          for (let i = 0; i < 4; i++) {
-            const a = i / 4 * Math.PI * 2;
+          addPart(parts, new CylinderGeometry(1.05, 1.2, 0.3, 7, 1), 8222056, 0, 0.55, 0, 0.07, 0.6, 0.05);
+          addPart(parts, new CylinderGeometry(0.7, 0.8, 0.12, 7, 1), 9143158, 0.1, 0.72, 0.05, 0.05, 0.2, 0);
+          addPart(parts, new IcosahedronGeometry(0.5, 0), 7301726, 1, 0.26, -0.4, 0.2, 0.3, 0);
+          addPart(parts, new IcosahedronGeometry(0.42, 0), 7301726, -0.95, 0.22, 0.35, 0, 0.4, 0);
+          addPart(parts, new CylinderGeometry(0.36, 0.26, 0.95, 9, 1), 2235671, 0.55, 0.22, 0.55, -1.35, 0.5, 0.3);
+          addPart(parts, new TorusGeometry(0.33, 0.06, 4, 9), 6117196, 0.82, 0.28, 0.82, 0.75, 0.5, 0);
+          for (let i = 0; i < 9; i++) {
+            const t = i / 8;
             addPart(
               parts,
-              new IcosahedronGeometry(0.3, 0),
-              9340793,
-              Math.cos(a) * 1.1,
-              0.2,
-              Math.sin(a) * 1.1
+              new BoxGeometry(0.1, 0.015, 0.16),
+              10129270,
+              1.5 + Math.sin(t * 5) * 0.35,
+              0.03,
+              1.1 + t * 1.5,
+              0,
+              Math.sin(t * 5) * 0.5,
+              0
+            );
+          }
+          for (let i = 0; i < 7; i++) {
+            const a = R(i) * Math.PI * 2;
+            addPart(
+              parts,
+              new CylinderGeometry(0.015, 0.03, 0.55, 3, 1),
+              10193746,
+              Math.cos(a) * (1.15 + Math.abs(R(i + 2)) * 0.45),
+              0.16,
+              Math.sin(a) * (1.15 + Math.abs(R(i + 4)) * 0.45),
+              0.5,
+              -a,
+              0.2
             );
           }
           return mergeGeometries(parts, false);
         },
         monkey: () => {
           const parts = [];
-          addPart(parts, new CylinderGeometry(1.5, 1.6, 0.2, 8, 1), 6966575, 0, 0.1, 0);
+          addPart(parts, new CylinderGeometry(1.3, 1.4, 0.16, 10, 1), 6966575, 0, 0.14, 0);
           for (let i = 0; i < 7; i++) {
-            const a = i / 7 * Math.PI * 2;
             addPart(
               parts,
-              new CylinderGeometry(0.05, 0.08, 1.4, 4, 1),
+              new CylinderGeometry(0.06, 0.06, 2.5, 5, 1),
+              i % 2 ? 7623727 : 6243626,
+              0,
+              0.22,
+              -1.15 + i * 0.38,
+              0,
+              0,
+              Math.PI / 2
+            );
+          }
+          for (let i = 0; i < 8; i++) {
+            const a = i / 8 * Math.PI * 2;
+            addRod(
+              parts,
+              [Math.cos(a) * 1.15, 0.2, Math.sin(a) * 1.15],
+              [Math.cos(a) * 0.18, 2.05, Math.sin(a) * 0.18],
+              0.07,
+              0.05,
               8215608,
-              Math.cos(a) * 1,
-              0.3,
-              Math.sin(a) * 1,
-              1.35,
-              -a,
+              4
+            );
+          }
+          addPart(parts, new CylinderGeometry(0.14, 0.1, 0.34, 6, 1), 6966575, 0, 2.12, 0);
+          for (let i = 0; i < 16; i++) {
+            const a = i / 16 * Math.PI * 2 + 0.2;
+            const t = 0.35 + i % 3 * 0.2;
+            addPart(
+              parts,
+              new IcosahedronGeometry(0.36 + Math.abs(R(i)) * 0.16, 0),
+              i % 2 ? 6130236 : 7314502,
+              Math.cos(a) * (1.15 - t * 0.9),
+              0.55 + t * 1.5,
+              Math.sin(a) * (1.15 - t * 0.9),
+              R(i),
+              a,
               0
             );
           }
-          for (let i = 0; i < 5; i++) {
-            const a = i / 5 * Math.PI * 2;
+          addPart(parts, new CylinderGeometry(0.46, 0.34, 0.7, 10, 1), 2366740, 0, 0.35, 1.02, -1.25, 0, 0);
+          addPart(parts, new TorusGeometry(0.44, 0.07, 4, 10), 8215608, 0, 0.52, 1.22, 0.9, 0, 0);
+          for (const sx of [-1, 1]) addRod(parts, [sx * 0.62, 0.4, 1.3], [sx * 0.5, 1.05, 1.12], 0.06, 0.05, 7623727, 4);
+          for (let i = 0; i < 6; i++) {
+            const a = i * 1.4;
             addPart(
               parts,
-              new IcosahedronGeometry(0.34, 1),
+              new IcosahedronGeometry(0.28, 1),
               7314502,
-              Math.cos(a) * 0.9,
-              0.28,
-              Math.sin(a) * 0.9
+              Math.cos(a) * (1.25 + Math.abs(R(i)) * 0.35),
+              0.3,
+              Math.sin(a) * (1.25 + Math.abs(R(i + 3)) * 0.35)
             );
           }
+          addRod(parts, [1.35, 0.1, -0.9], [1.7, 1.1, -1.05], 0.06, 0.04, 8215608, 4);
+          addPart(parts, new SphereGeometry(0.14, 7, 6), 13214282, 1.68, 1.16, -1.05);
           return mergeGeometries(parts, false);
         },
         turtle: () => {
           const parts = [];
-          addPart(parts, new CylinderGeometry(1, 1.25, 0.3, 9, 1), 14206876, 0, 0.1, 0);
-          addPart(parts, new CylinderGeometry(0.4, 0.5, 0.45, 7, 1), 3813670, -0.3, 0.28, 0.2, 0.35, 0, 0);
+          addPart(parts, new CylinderGeometry(1.35, 1.15, 0.22, 11, 1), 14206876, 0, 0.1, 0);
+          addPart(parts, new TorusGeometry(1.3, 0.16, 5, 12), 13482381, 0, 0.16, 0, Math.PI / 2, 0, 0);
           for (let i = 0; i < 5; i++) {
-            const a = rng0(i + 2);
+            const a = i / 5 * Math.PI * 2;
             addPart(
               parts,
-              new IcosahedronGeometry(0.1, 0),
+              new SphereGeometry(0.11, 6, 5),
               15853778,
-              Math.cos(a) * 1.05,
-              0.16,
-              Math.sin(a) * 1.05
+              Math.cos(a) * 0.34,
+              0.22,
+              Math.sin(a) * 0.34,
+              0,
+              0,
+              0
+            );
+          }
+          for (let i = 0; i < 8; i++) {
+            const a = i / 8 * Math.PI * 2 + 0.3;
+            addPart(
+              parts,
+              new ConeGeometry(0.05, 0.34, 3, 1),
+              8828246,
+              Math.cos(a) * 1.45,
+              0.2,
+              Math.sin(a) * 1.45
             );
           }
           return mergeGeometries(parts, false);
@@ -32045,20 +32732,26 @@ void main() {
       };
       this.denMeshes = [];
       for (const [kind, list] of byKind) {
-        const geo = geos[kind] ? geos[kind]() : null;
+        const geo = builders[kind] ? builders[kind]() : null;
         if (!geo) continue;
         const mesh2 = new InstancedMesh(geo, mat2, list.length);
         mesh2.castShadow = true;
         mesh2.frustumCulled = false;
         const dummy = new Object3D();
         list.forEach((d, i) => {
+          if (d.entrance === void 0) {
+            d.entrance = Math.atan2(d.x, d.z) + Math.PI * 0.5;
+            d.entrance = (this.rng() - 0.5) * 0.6 + d.entrance;
+          }
           dummy.position.set(d.x, d.y - 0.12, d.z);
-          dummy.rotation.set(0, this.rng() * Math.PI * 2, 0);
+          dummy.rotation.set(0, d.entrance, 0);
           dummy.scale.setScalar(0.85 + this.rng() * 0.35);
           dummy.updateMatrix();
           mesh2.setMatrixAt(i, dummy.matrix);
         });
         mesh2.instanceMatrix.needsUpdate = true;
+        mesh2.matrixAutoUpdate = false;
+        mesh2.updateMatrix();
         this.scene.add(mesh2);
         this.denMeshes.push(mesh2);
       }
@@ -32239,7 +32932,8 @@ void main() {
         variantOf = null,
         solidR = 0,
         cullFar = 340,
-        name = "veg"
+        name = "veg",
+        lod = null
       } = {}) => {
         var _a;
         const meshes = [];
@@ -32258,11 +32952,15 @@ void main() {
           const height = vbox ? vbox.max.y - vbox.min.y : 0;
           const hullTop = height > 3 ? vbox.min.y + 1.35 : vbox.max.y;
           const shellTop = vbox ? vbox.max.y : hullTop;
-          const hullLocal = hullFromGeometry(Object.values(variant), {
+          const treeLike = height > 2.4;
+          const hullParts = hullsFromGeometry(Object.values(variant), {
             pad: 0.02,
-            belowY: hullTop,
-            maxRadius: solidR ? solidR * 1.12 : void 0
+            top: treeLike ? vbox.min.y + Math.min(height * 0.92, 7.5) : vbox.max.y,
+            bands: treeLike ? 3 : 1,
+            basePad: treeLike ? 0.22 : 0,
+            maxRadius: solidR ? solidR * 1.1 : void 0
           });
+          const hullLocal = hullParts.length ? hullParts[0].poly : null;
           list.forEach((it, i) => {
             const want = variantOf ? variantOf(it, i) : i % groups;
             if (want === v) items.push(it);
@@ -32275,10 +32973,13 @@ void main() {
             if (!b) buckets.set(ck, b = []);
             b.push(it);
           }
+          const farGeo = lod && variant.leaf ? makeCrownProxy(variant.leaf, lod) : null;
           for (const bucket of buckets.values()) {
+            const farMeshes = [];
             for (const [layer, geo] of Object.entries(variant)) {
               if (!geo) continue;
               const mat2 = layerMaterials[layer] || leafMat;
+              const useFar = farGeo && layer === "leaf";
               const mesh2 = new InstancedMesh(geo, mat2, bucket.length);
               mesh2.castShadow = castShadow;
               mesh2.receiveShadow = false;
@@ -32309,6 +33010,7 @@ void main() {
                   } : it.bbox;
                 }
                 if (!it.hullLocal && hullLocal) it.hullLocal = hullLocal;
+                if (!it.hulls && hullParts.length) it.hulls = hullParts;
                 if (!it.hullY && vbox) it.hullY = { min: vbox.min.y, max: shellTop };
                 it.parts = it.parts || [];
                 it.parts.push({ mesh: mesh2, idx: k, baseScale: s, layer });
@@ -32317,8 +33019,25 @@ void main() {
               });
               mesh2.instanceMatrix.needsUpdate = true;
               mesh2.count = bucket.length;
+              mesh2.matrixAutoUpdate = false;
+              mesh2.updateMatrix();
               this.scene.add(mesh2);
               meshes.push(mesh2);
+              let farMesh = null;
+              if (useFar) {
+                farMesh = new InstancedMesh(farGeo, mat2, bucket.length);
+                farMesh.castShadow = false;
+                farMesh.receiveShadow = false;
+                farMesh.frustumCulled = false;
+                farMesh.name = `${name}:${layer}:far`;
+                farMesh.instanceMatrix = mesh2.instanceMatrix;
+                farMesh.count = bucket.length;
+                farMesh.matrixAutoUpdate = false;
+                farMesh.updateMatrix();
+                farMesh.visible = false;
+                this.scene.add(farMesh);
+                farMeshes.push(farMesh);
+              }
               let cx = 0;
               let cz = 0;
               let maxS = 1;
@@ -32332,9 +33051,11 @@ void main() {
               const radius = CHUNK * 0.75 + maxS * 8;
               this.chunkMeshes.push({
                 mesh: mesh2,
+                farMesh,
                 x: cx,
                 z: cz,
                 far: cullFar,
+                lodDist: lod ? lod.dist || 120 : Infinity,
                 center: new Vector3(cx, (vbox ? (vbox.min.y + vbox.max.y) * 0.5 : 4) + 2, cz),
                 radius
               });
@@ -32391,10 +33112,10 @@ void main() {
       linkColliders(deads);
       linkColliders(bushes);
       linkColliders(rocks);
-      this.palms = buildInstances(palmVariants, palms, { solidR: 0.3, cullFar: 360, name: "palm" });
-      this.trees = buildInstances(treeVariants, trees, { solidR: 0.34, cullFar: 360, name: "tree" });
-      this.pines = buildInstances(pineVariants, pines, { solidR: 0.32, cullFar: 380, name: "pine" });
-      this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.3, cullFar: 340, name: "mangrove" });
+      this.palms = buildInstances(palmVariants, palms, { solidR: 0.3, cullFar: 360, name: "palm", lod: { dist: 130, blobs: 3 } });
+      this.trees = buildInstances(treeVariants, trees, { solidR: 0.34, cullFar: 360, name: "tree", lod: { dist: 120, blobs: 4 } });
+      this.pines = buildInstances(pineVariants, pines, { solidR: 0.32, cullFar: 380, name: "pine", lod: { dist: 140, blobs: 3 } });
+      this.mangroves = buildInstances(mangroveVariants, mangroves, { solidR: 0.3, cullFar: 340, name: "mangrove", lod: { dist: 120, blobs: 3 } });
       this.deads = buildInstances(deadVariants, deads, { solidR: 0.32, cullFar: 340, name: "dead" });
       this.bushes = buildInstances(bushVariants, bushes, { solidR: 0.42, cullFar: 220, name: "bush" });
       this.rocks = buildInstances(rockVariants, rocks, {
@@ -32436,24 +33157,30 @@ void main() {
       for (const [kind, list] of lists) {
         if (!list) continue;
         for (const it of list) {
-          if (!it.hullLocal || !it.hullY) continue;
+          if (!it.hullY) continue;
           const s = (_a = it.s) != null ? _a : 1;
           const rot = it.rot || 0;
           const cos = Math.cos(rot);
           const sin = Math.sin(rot);
           const baseY = it.h - 0.15;
-          const poly = it.hullLocal.map((p) => ({
-            x: it.x + (p.x * cos + p.z * sin) * s,
-            z: it.z + (-p.x * sin + p.z * cos) * s
-          }));
-          const shell = this.shells.add(
-            kind,
-            poly,
-            baseY + it.hullY.min * s,
-            baseY + it.hullY.max * s,
-            { enabled: () => !it.collider || !it.collider.disabled }
-          );
-          it.shell = shell;
+          const parts = it.hulls && it.hulls.length ? it.hulls : it.hullLocal ? [{ poly: it.hullLocal, minY: it.hullY.min, maxY: it.hullY.max }] : [];
+          if (!parts.length) continue;
+          it.shells = [];
+          for (const hp of parts) {
+            const poly = hp.poly.map((p) => ({
+              x: it.x + (p.x * cos + p.z * sin) * s,
+              z: it.z + (-p.x * sin + p.z * cos) * s
+            }));
+            const shell = this.shells.add(
+              kind,
+              poly,
+              baseY + hp.minY * s,
+              baseY + hp.maxY * s,
+              { enabled: () => !it.collider || !it.collider.disabled }
+            );
+            it.shells.push(shell);
+          }
+          it.shell = it.shells[0];
         }
       }
       this.stats.shells = this.shells.stats.prisms;
@@ -32473,6 +33200,7 @@ void main() {
         berry: new MeshStandardMaterial({ color: 12137290, roughness: 0.6 })
       };
       this.pickupGeos = makePickupGeometries();
+      this.pickupInstances = {};
       const kinds = [
         { kind: "wood", name: "\u041F\u0430\u043B\u043A\u0430", geo: "wood", mat: "wood" },
         { kind: "stone", name: "\u041A\u0430\u043C\u0435\u043D\u044C", geo: "stone", mat: "stone" },
@@ -32497,19 +33225,53 @@ void main() {
         this.addPickup(t.kind, x, z, 0.85 + rng() * 0.35);
       }
     }
+    /** Инстанс-меш для вида предмета (создаётся при первом предмете такого вида) */
+    _pickupBatch(kind) {
+      if (this.pickupInstances[kind]) return this.pickupInstances[kind];
+      const info = this.kindInfo[kind];
+      const cap = 96;
+      const mesh2 = new InstancedMesh(this.pickupGeos[info.geo], this.pickupMats[info.mat], cap);
+      mesh2.castShadow = true;
+      mesh2.frustumCulled = false;
+      mesh2.count = 0;
+      mesh2.matrixAutoUpdate = false;
+      mesh2.updateMatrix();
+      mesh2.name = "pickups-" + kind;
+      this.pickupGroup.add(mesh2);
+      const batch = { mesh: mesh2, cap, items: [] };
+      this.pickupInstances[kind] = batch;
+      return batch;
+    }
+    /** Переложить положения предметов в инстанс-матрицы */
+    _refreshPickupBatch(kind) {
+      const batch = this.pickupInstances[kind];
+      if (!batch) return;
+      const n = Math.min(batch.items.length, batch.cap);
+      for (let i = 0; i < n; i++) {
+        batch.items[i].mesh.updateMatrix();
+        batch.mesh.setMatrixAt(i, batch.items[i].mesh.matrix);
+      }
+      batch.mesh.count = n;
+      batch.mesh.instanceMatrix.needsUpdate = true;
+    }
     /** Положить предмет на землю (используется и для стартового набора) */
     addPickup(kind, x, z, scale = 1) {
       const info = this.kindInfo[kind];
       if (!info) return null;
+      const batch = this._pickupBatch(kind);
+      if (batch.items.length >= batch.cap) return null;
       const h = this.heightAt(x, z);
-      const mesh2 = new Mesh(this.pickupGeos[info.geo], this.pickupMats[info.mat]);
-      mesh2.castShadow = true;
+      const mesh2 = new Object3D();
       mesh2.scale.setScalar(scale);
       mesh2.position.set(x, h + 0.22, z);
       mesh2.rotation.set((Math.random() - 0.5) * 0.4, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.4);
-      this.pickupGroup.add(mesh2);
+      mesh2.updateMatrix();
+      mesh2.parent = batch.mesh;
+      batch.items.push({ mesh: mesh2 });
       const item = { mesh: mesh2, kind, name: info.name, baseY: h + 0.22 };
       this.pickups.push(item);
+      batch.items[batch.items.length - 1].item = item;
+      this._refreshPickupBatch(kind);
       return item;
     }
     /**
@@ -32584,7 +33346,13 @@ void main() {
       return best;
     }
     removePickup(p) {
-      this.pickupGroup.remove(p.mesh);
+      p.mesh.parent = null;
+      const batch = this.pickupInstances[p.kind];
+      if (batch) {
+        const j = batch.items.findIndex((b) => b.item === p);
+        if (j >= 0) batch.items.splice(j, 1);
+        this._refreshPickupBatch(p.kind);
+      }
       const i = this.pickups.indexOf(p);
       if (i >= 0) this.pickups.splice(i, 1);
     }
@@ -33321,6 +34089,11 @@ void main() {
           vis = this._frustum.intersectsSphere(this._sphere);
         }
         c.mesh.visible = vis;
+        if (c.farMesh) {
+          const near = d2 < c.lodDist * c.lodDist;
+          c.mesh.visible = vis && near;
+          c.farMesh.visible = vis && !near;
+        }
         if (vis) visible++;
       }
       this.chunkStats = { total: this.chunkMeshes.length, visible };
@@ -33335,10 +34108,13 @@ void main() {
       this.waterUniforms.uNight.value = nightFactor;
       if (sunDir) this.waterUniforms.uSunDir.value.copy(sunDir);
       if (fogColor) this.waterUniforms.uFog.value.copy(fogColor);
-      for (let i = 0; i < this.pickups.length; i++) {
-        const p = this.pickups[i];
-        p.mesh.rotation.y += dt * 0.35;
+      if (camera && this.waterUniforms) {
+        this.waterUniforms.uUnder.value = camera.position.y < CONFIG.world.seaLevel - 0.05 ? 1 : 0;
       }
+      for (let i = 0; i < this.pickups.length; i++) {
+        this.pickups[i].mesh.rotation.y += dt * 0.35;
+      }
+      for (const kind in this.pickupInstances) this._refreshPickupBatch(kind);
     }
   };
 
@@ -34083,6 +34859,10 @@ void main() {
       this.grounded = true;
       this.swimming = false;
       this.wading = 0;
+      this.underwater = false;
+      this.air = CONFIG.player.airMax;
+      this.diveT = 0;
+      this.swimPhase = 0;
       this.bobPhase = 0;
       this.landShake = 0;
       this.fly = false;
@@ -34418,12 +35198,15 @@ void main() {
       const groundHere = world.heightAt(this.position.x, this.position.z);
       this.wading = underground ? 0 : clamp2(-groundHere / 1.1, 0, 1);
       const inWater = !underground && groundHere < 0.05;
+      const deepWater = !underground && !this.fly && groundHere < -CONFIG.player.maxDepth;
+      this.diveHeld = !!(input.sprint && deepWater);
       let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
       if (this.fly) speed = P.flyHorizontal;
       if (inWater) speed = MathUtils.lerp(speed, P.wadeSpeed, this.wading);
+      if (deepWater) speed = this.diveHeld ? P.swimSpeed : P.swimFast;
       const targetVX = wx * speed * (moving ? 1 : 0);
       const targetVZ = wz * speed * (moving ? 1 : 0);
-      const accel = P.accel * (inWater ? 0.55 : 1);
+      const accel = P.accel * (deepWater ? 0.32 : inWater ? 0.55 : 1);
       this.velocity.x += (targetVX - this.velocity.x) * clamp2(accel * dt, 0, 1);
       this.velocity.z += (targetVZ - this.velocity.z) * clamp2(accel * dt, 0, 1);
       const nx = this.position.x + this.velocity.x * dt;
@@ -34432,7 +35215,7 @@ void main() {
         if (underground) return true;
         if (Math.abs(x) > CONFIG.world.size * 0.75 || Math.abs(z) > CONFIG.world.size * 0.75) return false;
         const h = world.heightAt(x, z);
-        if (h < -P.maxDepth) return false;
+        if (h < -P.maxDepth && this.fly) return false;
         if (!this.fly) {
           const rise = h - world.heightAt(this.position.x, this.position.z);
           if (rise > 0.55) return false;
@@ -34447,6 +35230,48 @@ void main() {
       world.resolveCollisions(this.position, P.radius, this.velocity, this.position.y, 0.55);
       (_a = world.shells) == null ? void 0 : _a.resolve(this.position, P.radius, this.velocity, this.position.y, 0.55);
       const ground = world.heightAt(this.position.x, this.position.z);
+      const sea = CONFIG.world.seaLevel;
+      const depth = sea - ground;
+      const swimNow = !underground && !this.fly && depth > P.maxDepth * 0.85;
+      this.swimming = swimNow;
+      const heldJump = input.jumpHeld === void 0 ? !!input.jump : !!input.jumpHeld;
+      this.diveHeld = !!(input.sprint && swimNow);
+      this.deepWater = swimNow;
+      if (swimNow) {
+        const floatY = sea - P.floatLine;
+        let targetVy = 0;
+        if (this.diveHeld) targetVy = -P.diveSpeed;
+        else if (heldJump) targetVy = P.diveSpeed;
+        else {
+          targetVy = clamp2((floatY - this.position.y) * 2.4, -P.diveSpeed, P.diveSpeed);
+        }
+        this.velocity.y += (targetVy - this.velocity.y) * clamp2(dt * 6, 0, 1);
+        this.position.y += this.velocity.y * dt;
+        const bed = ground + 0.32;
+        const crest = sea + 0.05;
+        if (this.position.y < bed) {
+          this.position.y = bed;
+          if (this.velocity.y < 0) this.velocity.y = 0;
+        }
+        if (this.position.y > crest) {
+          this.position.y = crest;
+          if (this.velocity.y > 0) this.velocity.y = 0;
+        }
+        this.grounded = false;
+        this.swimPhase += dt * (2.6 + Math.hypot(this.velocity.x, this.velocity.z) * 1.5);
+        const eyeY = this.position.y + P.eye;
+        this.underwater = eyeY < sea - 0.04;
+        if (this.underwater) {
+          this.diveT += dt;
+          this.air = Math.max(0, this.air - P.airDrain * dt);
+        } else {
+          this.diveT = 0;
+          this.air = Math.min(P.airMax, this.air + P.airRefill * dt);
+        }
+      } else {
+        this.underwater = false;
+        this.air = Math.min(P.airMax, this.air + P.airRefill * dt);
+      }
       const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
       if (this.fly) {
         const held = input.jumpHeld === void 0 ? !!input.jump : !!input.jumpHeld;
@@ -34474,6 +35299,7 @@ void main() {
         this.grounded = false;
       }
       if (this.fly) {
+      } else if (swimNow) {
       } else if (!this.grounded) {
         this.velocity.y += P.gravity * dt;
         this.position.y += this.velocity.y * dt;
@@ -34487,7 +35313,7 @@ void main() {
         this.position.y += (floor - this.position.y) * clamp2(dt * 16, 0, 1);
         if (floor - this.position.y < -0.6) this.grounded = false;
       }
-      this.swimming = !this.fly && !underground && ground < -0.6;
+      if (!swimNow) this.swimming = false;
       const hspeed = Math.hypot(this.velocity.x, this.velocity.z);
       if (hspeed > 0.15) {
         const target = Math.atan2(this.velocity.x, this.velocity.z);
@@ -34559,7 +35385,22 @@ void main() {
         this.armL.rotation.z += (-0.6 - this.armL.rotation.z) * f;
         this.armR.rotation.z += (0.6 - this.armR.rotation.z) * f;
       }
-      const targetLean = speedRatio * 0.2 + (this.swimming ? 0.12 : 0) + leanExtra;
+      if (this.swimming) {
+        const t = this.swimPhase;
+        const f = clamp2(dt * 6, 0, 1);
+        const strokeL = Math.sin(t) * 0.9 - 0.25;
+        const strokeR = Math.sin(t + Math.PI) * 0.9 - 0.25;
+        this.armL.rotation.x += (strokeL - this.armL.rotation.x) * f;
+        this.armR.rotation.x += (strokeR - this.armR.rotation.x) * f;
+        this.armL.rotation.z += (0.35 + Math.sin(t) * 0.25 - this.armL.rotation.z) * f;
+        this.armR.rotation.z += (-0.35 - Math.sin(t + Math.PI) * 0.25 - this.armR.rotation.z) * f;
+        const kick = Math.sin(t * 2.4) * 0.42;
+        this.legL.rotation.x += (kick - this.legL.rotation.x) * f;
+        this.legR.rotation.x += (-kick - this.legR.rotation.x) * f;
+        this.kneeL.rotation.x += (0.22 + Math.abs(kick) * 0.5 - this.kneeL.rotation.x) * f;
+        this.kneeR.rotation.x += (0.22 + Math.abs(kick) * 0.5 - this.kneeR.rotation.x) * f;
+      }
+      const targetLean = this.swimming ? 0.62 + Math.min(0.22, Math.hypot(this.velocity.x, this.velocity.z) * 0.04) : speedRatio * 0.2 + leanExtra;
       this.lean += (targetLean - this.lean) * clamp2(dt * 10, 0, 1);
       this.torsoGroup.rotation.x = this.lean;
       this.torsoGroup.rotation.z = Math.sin(this.walkPhase) * 0.03 * speedRatio;
@@ -34611,7 +35452,7 @@ void main() {
       const hit = this.hitShake;
       if (hit > 0) this.hitShake = Math.max(0, hit - dt * 0.9);
       if (this.viewMode === "first") {
-        const eyeY = this.position.y + 1.62 + (this.swimming ? -0.25 : 0);
+        const eyeY = this.position.y + 1.62 + (this.swimming ? -0.32 : 0);
         const target2 = new Vector3(this.position.x, eyeY, this.position.z);
         camera.position.copy(target2);
         camera.rotation.set(0, 0, 0);
@@ -34654,9 +35495,19 @@ void main() {
       const finalVert = Math.sin(this.pitch) * cameraDist;
       const desired = target.clone().addScaledVector(fwd, -finalHoriz);
       desired.y += finalVert;
-      const h = world.heightAt(desired.x, desired.z);
-      if (desired.y < h + 0.7) desired.y = h + 0.7;
-      if (desired.y < CONFIG.world.seaLevel + 0.5) desired.y = CONFIG.world.seaLevel + 0.5;
+      const sea = CONFIG.world.seaLevel;
+      if (this.underwater) {
+        const pull = target.clone().addScaledVector(fwd, -finalHoriz * 0.55);
+        desired.copy(pull);
+        desired.y = this.position.y + 0.72 + finalVert * 0.45;
+        const hh = world.heightAt(desired.x, desired.z);
+        if (desired.y < hh + 0.32) desired.y = hh + 0.32;
+        if (desired.y > sea - 0.55) desired.y = sea - 0.55;
+      } else {
+        const h = world.heightAt(desired.x, desired.z);
+        if (desired.y < h + 0.7) desired.y = h + 0.7;
+        if (desired.y < sea + 0.5) desired.y = sea + 0.5;
+      }
       camera.position.lerp(desired, clamp2(dt * 14, 0, 1));
       if (hit > 0) {
         camera.position.y += Math.sin(performance.now() * 0.06) * hit * 0.03;
@@ -35077,7 +35928,8 @@ void main() {
         thirst: { fill: $("bar-thirst"), value: $("val-thirst"), node: document.querySelector(".bar-thirst") },
         hunger: { fill: $("bar-hunger"), value: $("val-hunger"), node: document.querySelector(".bar-hunger") },
         warmth: { fill: $("bar-warmth"), value: $("val-warmth"), node: document.querySelector(".bar-warmth") },
-        stamina: { fill: $("bar-stamina"), value: $("val-stamina"), node: document.querySelector(".bar-stamina") }
+        stamina: { fill: $("bar-stamina"), value: $("val-stamina"), node: document.querySelector(".bar-stamina") },
+        air: { fill: $("bar-air"), value: $("val-air"), node: document.querySelector(".bar-air") }
       };
       this._lastPrompt = null;
       this._lastBagSig = "";
@@ -35177,6 +36029,17 @@ void main() {
         b.value.textContent = Math.round(v);
         b.node.classList.toggle("critical", v < 20);
       }
+    }
+    /** Воздух: показываем шкалу только когда она нужна — герой в воде */
+    setAir(value, visible) {
+      const b = this.bars.air;
+      if (!b) return;
+      if (b.node) b.node.classList.toggle("hidden", !visible);
+      if (!visible) return;
+      const v = Math.max(0, Math.min(100, value));
+      b.fill.style.width = v.toFixed(1) + "%";
+      b.value.textContent = Math.round(v);
+      b.node.classList.toggle("critical", v < 25);
     }
     setTop({ day, clock, weather, fps }) {
       if (day !== void 0) this.el.day.textContent = day;
@@ -35672,6 +36535,21 @@ void main() {
       this.campfires = [];
       this.springs = [];
       this.time = 0;
+      this.fireLights = [];
+      for (let i = 0; i < 2; i++) {
+        const light = new PointLight(16754253, 0, 16, 2);
+        light.visible = true;
+        light.castShadow = false;
+        light.position.set(0, -50, 0);
+        scene.add(light);
+        this.fireLights.push({ light, busy: false });
+      }
+      this._fireGeo = null;
+      this._fireMat = null;
+      this._flameGeo = null;
+      this._coreGeo = null;
+      this._flameMat = null;
+      this._coreMat = null;
       this._buildNodes();
       this._buildSprings();
     }
@@ -35848,34 +36726,75 @@ void main() {
       const y = world.heightAt(x, z);
       const group = new Group();
       group.position.set(x, y, z);
-      const stoneMat = new MeshStandardMaterial({ color: 8222831, roughness: 0.95, flatShading: true });
-      for (let i = 0; i < 8; i++) {
-        const a = i / 8 * Math.PI * 2;
-        const rock = new Mesh(new IcosahedronGeometry(0.19 + Math.random() * 0.07, 0), stoneMat);
-        rock.position.set(Math.cos(a) * 0.72, 0.1, Math.sin(a) * 0.72);
-        rock.castShadow = true;
-        group.add(rock);
+      if (!this._fireGeo) {
+        const parts = [];
+        const tint = (geo, hex2, px, py, pz, rot) => {
+          const g = geo.index ? geo.toNonIndexed() : geo;
+          if (rot) g.rotateZ(rot);
+          g.translate(px, py, pz);
+          const c = new Color(hex2);
+          const n = g.attributes.position.count;
+          const arr = new Float32Array(n * 3);
+          for (let i = 0; i < n; i++) {
+            arr[i * 3] = c.r;
+            arr[i * 3 + 1] = c.g;
+            arr[i * 3 + 2] = c.b;
+          }
+          g.setAttribute("color", new BufferAttribute(arr, 3));
+          if (!g.attributes.uv) g.setAttribute("uv", new BufferAttribute(new Float32Array(n * 2), 2));
+          parts.push(g);
+        };
+        for (let i = 0; i < 8; i++) {
+          const a = i / 8 * Math.PI * 2;
+          const r = 0.19 + i % 3 * 0.025;
+          tint(
+            new IcosahedronGeometry(r, 0),
+            i % 2 ? 8222831 : 7170659,
+            Math.cos(a) * 0.72,
+            0.1,
+            Math.sin(a) * 0.72
+          );
+        }
+        for (let i = 0; i < 4; i++) {
+          const a = i / 4 * Math.PI;
+          const g = new CylinderGeometry(0.08, 0.1, 1.15, 5);
+          g.rotateZ(Math.PI / 2);
+          g.rotateY(a);
+          g.translate(0, 0.14, 0);
+          tint(g, i % 2 ? 7164466 : 6178346, 0, 0, 0);
+        }
+        this._fireGeo = mergeGeometries(parts, false);
+        this._fireMat = new MeshStandardMaterial({
+          vertexColors: true,
+          roughness: 0.95,
+          flatShading: true,
+          name: "campfire"
+        });
+        this._flameGeo = new ConeGeometry(0.42, 1.15, 6);
+        this._coreGeo = new ConeGeometry(0.2, 0.7, 5);
+        this._flameMat = new MeshBasicMaterial({ color: 16757575, transparent: true, opacity: 0.92 });
+        this._coreMat = new MeshBasicMaterial({ color: 16771496 });
       }
-      const logMat = new MeshStandardMaterial({ color: 7164466, roughness: 1 });
-      for (let i = 0; i < 4; i++) {
-        const a = i / 4 * Math.PI;
-        const log2 = new Mesh(new CylinderGeometry(0.08, 0.1, 1.15, 5), logMat);
-        log2.rotation.set(0, a, Math.PI / 2);
-        log2.position.y = 0.14;
-        log2.castShadow = true;
-        group.add(log2);
-      }
-      const flameMat = new MeshBasicMaterial({ color: 16757575, transparent: true, opacity: 0.92 });
-      const flame = new Mesh(new ConeGeometry(0.42, 1.15, 6), flameMat);
+      const hearth = new Mesh(this._fireGeo, this._fireMat);
+      hearth.castShadow = true;
+      hearth.receiveShadow = true;
+      group.add(hearth);
+      const flame = new Mesh(this._flameGeo, this._flameMat);
       flame.position.y = 0.72;
       group.add(flame);
-      const coreMat = new MeshBasicMaterial({ color: 16771496 });
-      const core = new Mesh(new ConeGeometry(0.2, 0.7, 5), coreMat);
+      const core = new Mesh(this._coreGeo, this._coreMat);
       core.position.y = 0.52;
       group.add(core);
-      const light = new PointLight(16754253, 2.6, 16, 2);
-      light.position.y = 1.1;
-      group.add(light);
+      let slot = this.fireLights.find((l) => !l.busy);
+      if (!slot) slot = this.fireLights[this.fireLights.reduce(
+        (best, l, i) => Math.hypot(l.light.position.x - x, l.light.position.z - z) < Math.hypot(this.fireLights[best].light.position.x - x, this.fireLights[best].light.position.z - z) ? i : best,
+        0
+      )];
+      slot.busy = true;
+      slot.fire = null;
+      const light = slot.light;
+      light.position.set(x, y + 1.1, z);
+      light.intensity = 2.4;
       this.scene.add(group);
       world.colliders.push({ x, z, r: 0.85, fire: true });
       const fire = {
@@ -35886,13 +36805,31 @@ void main() {
         flame,
         core,
         light,
+        slot,
         fuel: 60,
         // секунд горения при полной загрузке
         maxFuel: 180,
         label: "\u041A\u043E\u0441\u0442\u0451\u0440"
       };
+      slot.fire = fire;
       this.campfires.push(fire);
       return fire;
+    }
+    /** Убрать костёр: свет возвращается в пул, шейдеры не пересобираются */
+    removeCampfire(fire) {
+      const i = this.campfires.indexOf(fire);
+      if (i < 0) return false;
+      this.campfires.splice(i, 1);
+      if (fire.slot) {
+        fire.slot.busy = false;
+        fire.slot.fire = null;
+        fire.slot.light.intensity = 0;
+        fire.slot.light.position.set(0, -50, 0);
+      }
+      if (fire.group.parent) fire.group.parent.remove(fire.group);
+      const c = this.world.colliders.find((c2) => c2.fire && Math.abs(c2.x - fire.x) < 0.01 && Math.abs(c2.z - fire.z) < 0.01);
+      if (c) c.disabled = true;
+      return true;
     }
     addFuel(fire, seconds) {
       fire.fuel = Math.min(fire.maxFuel, fire.fuel + seconds);
@@ -36269,13 +37206,16 @@ void main() {
         alerted: false,
         targetX: spot.x,
         targetZ: spot.z,
+        stuckTime: 0,
         speedNow: 0,
         lastSeen: 0,
         restTimer: 0
       };
       this.group.add(mob.group);
       this.list.push(mob);
+      mob.stuckTime = 0;
       this._unstick(mob);
+      this._pickPatrolPoint(mob);
       return mob;
     }
     /**
@@ -36293,10 +37233,10 @@ void main() {
         return true;
       };
       if (clear(mob.x, mob.z)) return 0;
-      for (let ring = 1; ring <= 30; ring++) {
+      for (let ring = 1; ring <= 80; ring++) {
         const rad = ring * 0.5;
-        for (let i = 0; i < 16; i++) {
-          const a = i / 16 * Math.PI * 2 + ring * 0.4;
+        for (let i = 0; i < 24; i++) {
+          const a = i / 24 * Math.PI * 2 + ring * 0.4;
           const x = mob.x + Math.cos(a) * rad;
           const z = mob.z + Math.sin(a) * rad;
           if (!clear(x, z)) continue;
@@ -36557,16 +37497,34 @@ void main() {
     }
     _pickPatrolPoint(mob) {
       const t = mob.def.territory;
-      for (let i = 0; i < 8; i++) {
+      const swim = !!mob.def.swim;
+      const r = mob.def.radius || 0.45;
+      const hHere = this.world.heightAt(mob.x, mob.z);
+      const ok = (x, z) => {
+        const h = this.world.heightAt(x, z);
+        if (swim) {
+          if (h > -0.9 || h < -7) return false;
+        } else if (h < -0.12 && h < hHere - 0.05) return false;
+        return !this._blocked(x, z, r * 1.1);
+      };
+      for (let i = 0; i < 14; i++) {
         const a = this.rng() * Math.PI * 2;
-        const r = this.rng() * t * 0.8;
-        const x = mob.home.x + Math.cos(a) * r;
-        const z = mob.home.z + Math.sin(a) * r;
-        if (this.world.heightAt(x, z) > 0.45) {
-          mob.targetX = x;
-          mob.targetZ = z;
-          return;
-        }
+        const rad = 0.6 + this.rng() * t * 0.8;
+        const x = mob.home.x + Math.cos(a) * rad;
+        const z = mob.home.z + Math.sin(a) * rad;
+        if (!ok(x, z)) continue;
+        mob.targetX = x;
+        mob.targetZ = z;
+        return;
+      }
+      for (let i = 0; i < 8; i++) {
+        const a = i / 8 * Math.PI * 2 + this.rng();
+        const x = mob.x + Math.cos(a) * 1.2;
+        const z = mob.z + Math.sin(a) * 1.2;
+        if (!ok(x, z)) continue;
+        mob.targetX = x;
+        mob.targetZ = z;
+        return;
       }
       mob.targetX = mob.home.x;
       mob.targetZ = mob.home.z;
@@ -36818,35 +37776,60 @@ void main() {
       if (speed <= 0) return;
       let ax = aimX - mob.x;
       let az = aimZ - mob.z;
-      const len = Math.hypot(ax, az);
-      if (len < 0.05) return;
+      let len = Math.hypot(ax, az);
+      if (len < 0.3) {
+        this._pickPatrolPoint(mob);
+        aimX = mob.targetX;
+        aimZ = mob.targetZ;
+        ax = aimX - mob.x;
+        az = aimZ - mob.z;
+        len = Math.hypot(ax, az);
+        if (len < 0.3) return;
+      }
       ax /= len;
       az /= len;
       const step = speed * dt;
       const nx = mob.x + ax * step;
       const nz = mob.z + az * step;
-      if (def.swim) {
-        if (this.world.heightAt(nx, nz) > -0.5) {
-          mob.targetX = mob.home.x;
-          mob.targetZ = mob.home.z;
-          if (mob.state === "chase") this.setState(mob, "patrol");
-          return;
-        }
-      } else if (this.world.heightAt(nx, nz) < 0.45) {
+      const hCur = this.world.heightAt(mob.x, mob.z);
+      const tooDeep = (h) => def.swim ? h > -0.5 : h < -0.15 && h < hCur - 0.05;
+      if (tooDeep(this.world.heightAt(nx, nz))) {
         mob.targetX = mob.home.x;
         mob.targetZ = mob.home.z;
         if (mob.state === "chase") this.setState(mob, "patrol");
         return;
       }
-      if (!this._blocked(nx, nz, def.radius)) {
-        mob.x = nx;
-        mob.z = nz;
+      const dirs = [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8];
+      let moved = false;
+      for (const turn of dirs) {
+        const ca = Math.cos(turn);
+        const sa = Math.sin(turn);
+        const dx = ax * ca - az * sa;
+        const dz = ax * sa + az * ca;
+        const tx = mob.x + dx * step;
+        const tz = mob.z + dz * step;
+        if (this._blocked(tx, tz, def.radius)) continue;
+        const h = this.world.heightAt(tx, tz);
+        if (tooDeep(h)) continue;
+        mob.x = tx;
+        mob.z = tz;
+        moved = true;
+        break;
+      }
+      if (moved) {
+        mob.stuckTime = 0;
       } else {
-        const sideX = mob.x - az * step;
-        const sideZ = mob.z + ax * step;
-        if (!this._blocked(sideX, sideZ, def.radius)) {
-          mob.x = sideX;
-          mob.z = sideZ;
+        mob.stuckTime = (mob.stuckTime || 0) + dt;
+        if (mob.stuckTime > 1.4) {
+          mob.stuckTime = 0;
+          if (mob.state === "chase" || mob.state === "attack") {
+            mob.state = "patrol";
+            this.setState(mob, "patrol");
+          } else {
+            mob.facing += Math.PI * (0.5 + this.rng());
+            this._pickPatrolPoint(mob);
+            this.setState(mob, "patrol");
+          }
         }
       }
       const want = Math.atan2(ax, az);
@@ -39300,7 +40283,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-28 17:50" : "dev";
+  var BUILD = true ? "2026-10-29 14:28" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -39908,6 +40891,7 @@ void main() {
   };
   var Game = class {
     constructor() {
+      var _a, _b;
       this.canvas = document.getElementById("scene");
       this.ui = new UI(ITEMS, HOTBAR_SIZE, BAG_ORDER);
       this.ui.onAssign = (id, slot) => this.assignHotbar(id, slot);
@@ -39991,8 +40975,15 @@ void main() {
       this.scene.add(this.mineLight);
       this.projectiles = [];
       this.chips = [];
+      try {
+        this.player.position.set(((_a = this.spawn) == null ? void 0 : _a.x) || 0, this.world.heightAt(0, 0), ((_b = this.spawn) == null ? void 0 : _b.z) || 0);
+        this.player.applyCamera(this.camera, this.world, 1);
+        this.renderer.compile(this.scene, this.camera);
+      } catch (e) {
+      }
       this.boat = null;
       this.sailing = false;
+      this.shadowDirty = true;
       this.recipes = RECIPES;
       this.hitboxes = new HitboxSystem(this.scene, this.player);
       this.bot = null;
@@ -40618,6 +41609,7 @@ void main() {
       if (continueSave) this.loadGame();
       this.ui.hideScreens();
       this.ui.setBars(this.readBars());
+      this.ui.setAir(this.player.air, false);
       this.ui.renderBag(this.state.inventory, this.state.hotbar);
       this.refreshHotbar();
       this.player.setEquipped(this.equippedId());
@@ -41297,7 +42289,8 @@ void main() {
         thirst: this.state.thirst,
         hunger: this.state.hunger,
         warmth: this.state.warmth,
-        stamina: this.player.stamina
+        stamina: this.player.stamina,
+        air: this.player.air
       };
     }
     // ------------------------------------------------------------
@@ -42058,6 +43051,19 @@ void main() {
       this.rain.update(dt, this.player.position);
       this.audio.setNight(skyInfo.night);
       this.audio.updateMusic(dt, skyInfo.night);
+      if (this.player && this.player.underwater) {
+        const d = Math.max(0, CONFIG.world.seaLevel - (this.player.position.y + 1.6));
+        const murk = Math.min(1, 0.35 + d * 0.16);
+        this.sky.sun.intensity *= 1 - murk * 0.72;
+        this.sky.hemi.intensity *= 1 - murk * 0.5;
+        this.sky.ambient.intensity *= 1 - murk * 0.45;
+        this.scene.fog.color.setRGB(0.05 + 0.02 * (1 - murk), 0.22 - 0.06 * murk, 0.3 - 0.04 * murk);
+        this.scene.fog.near = 0.35;
+        this.scene.fog.far = Math.max(7, 30 - d * 3.8);
+        this.world.waterUniforms.uFog.value.copy(this.scene.fog.color);
+      } else if (this.player && this.player.swimming) {
+        this.scene.fog.color.lerp(new Color(3112854), 0.35);
+      }
       if (this.underground) {
         this.sky.sun.intensity *= 0.06;
         this.sky.hemi.intensity *= 0.14;
@@ -42167,6 +43173,11 @@ void main() {
         dmg += CONFIG.needs.coldDrain * 0.5;
         cause = cause || "\u043F\u0435\u0440\u0435\u043E\u0445\u043B\u0430\u0436\u0434\u0435\u043D\u0438\u0435";
       }
+      if (this.player.air <= 0.01 && this.player.underwater) {
+        dmg += CONFIG.needs.healthDrain * 1.6;
+        cause = cause || "\u043D\u0435\u0445\u0432\u0430\u0442\u043A\u0430 \u0432\u043E\u0437\u0434\u0443\u0445\u0430";
+      }
+      this.ui.setAir(this.player.air, this.player.swimming || this.player.underwater || this.player.air < CONFIG.player.airMax - 0.5);
       if (dmg > 0) {
         state.health -= dmg * dt;
       } else if (state.thirst > 45 && state.hunger > 45) {
@@ -42461,6 +43472,15 @@ void main() {
       if (dt > 0.1) dt = 0.1;
       if (this.running && !this.paused && !this.dead) this.update(dt);
       else if (this.paused || this.dead) this.world.update(dt * 0.2, this.camera);
+      try {
+        if (this.renderer.shadowMap.enabled) {
+          this.renderer.shadowMap.autoUpdate = false;
+          const need = this.frameIndex % 2 === 0 || this.shadowDirty;
+          this.renderer.shadowMap.needsUpdate = need;
+          this.shadowDirty = false;
+        }
+      } catch (e) {
+      }
       try {
         this.renderer.render(this.scene, this.camera);
       } catch (err) {
