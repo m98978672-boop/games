@@ -1238,6 +1238,51 @@ export function makeSnake() {
   return { group, parts: { segments, head, tongue } };
 }
 
+/** Небольшие островные животные: отдельные лапы и хвост для анимации. */
+function makeSmallAnimal(lizard) {
+  const group = new THREE.Group();
+  const skin = mat(lizard ? 0x668a42 : 0xa98862);
+  const pale = mat(lizard ? 0xb1be76 : 0xe2d0b2);
+  const dark = mat(0x1c1a16);
+  const body = mesh(new THREE.IcosahedronGeometry(0.25, 1), skin);
+  body.scale.set(lizard ? 1.45 : 1.2, lizard ? 0.55 : 0.9, 0.8);
+  body.position.y = lizard ? 0.24 : 0.38;
+  group.add(body);
+  const head = new THREE.Group();
+  head.position.set(0.3, lizard ? 0.26 : 0.48, 0);
+  const face = mesh(new THREE.IcosahedronGeometry(lizard ? 0.13 : 0.18, 1), skin);
+  face.scale.x = lizard ? 1.5 : 1;
+  head.add(face);
+  for (const side of [-1, 1]) {
+    const eye = mesh(new THREE.SphereGeometry(0.025, 6, 4), dark);
+    eye.position.set(0.1, 0.06, 0.105 * side);
+    head.add(eye);
+    if (!lizard) {
+      const ear = mesh(new THREE.IcosahedronGeometry(0.09, 0), pale);
+      ear.scale.set(0.55, 2.7, 0.55);
+      ear.position.set(-0.04, 0.24, side * 0.09);
+      ear.rotation.z = side * 0.12;
+      head.add(ear);
+    }
+  }
+  group.add(head);
+  const legs = [];
+  for (const x of [-0.19, 0.18]) for (const side of [-1, 1]) {
+    const leg = new THREE.Group();
+    leg.position.set(x, lizard ? 0.18 : 0.26, side * 0.16);
+    const foot = mesh(new THREE.CapsuleGeometry(0.045, lizard ? 0.1 : 0.17, 3, 5), skin);
+    foot.position.y = -0.1;
+    leg.add(foot); group.add(leg); legs.push(leg);
+  }
+  const tail = mesh(lizard ? new THREE.ConeGeometry(0.10, 0.65, 6) : new THREE.IcosahedronGeometry(0.09, 1), pale);
+  tail.position.set(lizard ? -0.54 : -0.31, lizard ? 0.25 : 0.38, 0);
+  if (lizard) tail.rotation.z = -Math.PI / 2;
+  group.add(tail);
+  return { group, parts: { body, head, legs, tail } };
+}
+export function makeRabbit() { return makeSmallAnimal(false); }
+export function makeLizard() { return makeSmallAnimal(true); }
+
 /**
  * Лодка: долблёная пирога с бортами, кормовым веслом и мачтой с парусом.
  * Собрана из отдельных мешей, чтобы парус качался на ветру, а корпус — на волне.
@@ -1300,7 +1345,7 @@ export function makeBoat() {
     quad(A[0], A[1], B[1], B[0], 0xa06a3c, 0x8a5a34);
     // борт левый / правый
     quad(A[1], A[2], B[2], B[1], outer, 0x7d5230);
-    quad(A[4], A[5], B[5], B[4], outer, 0x7d5230);
+    quad(A[3], A[4], B[4], B[3], outer, 0x7d5230);
     // внутренняя сторона борта
     quad(A[2], A[3], B[3], B[2], bottomCol, 0x6a4426);
     // полка правая
@@ -1332,6 +1377,16 @@ export function makeBoat() {
   const trimParts = [];
   for (const [z, y] of [[-0.55, 0.4], [0.45, 0.38]]) {
     piece(trimParts, new THREE.BoxGeometry(1.15, 0.09, 0.3), 0x8b6039, [0, y, z]);
+  }
+  // Доски днища, рёбра и привальный брус: корпус читается изнутри.
+  for (const x of [-0.28, 0, 0.28]) {
+    piece(trimParts, new THREE.BoxGeometry(0.24, 0.035, 2.65), x === 0 ? 0x916540 : 0x805734, [x, 0.09, 0.05]);
+  }
+  for (const z of [-1.1, -0.2, 0.7, 1.35]) {
+    piece(trimParts, new THREE.BoxGeometry(0.95, 0.05, 0.055), 0x614025, [0, 0.14, z]);
+  }
+  for (const side of [-1, 1]) {
+    piece(trimParts, new THREE.BoxGeometry(0.07, 0.08, 2.55), 0xa77445, [side * 0.59, 0.57, 0]);
   }
   // киль-полоз снизу: лодка не «режет» воду пузом
   piece(trimParts, new THREE.BoxGeometry(0.12, 0.1, 3.3), 0x5c3b22, [0, -0.05, 0]);

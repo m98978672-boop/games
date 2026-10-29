@@ -62,6 +62,16 @@
 
     <div class="prompt hidden" id="prompt"></div>
     <div class="toasts" id="toasts"></div>
+    <div id="touch-controls" class="touch-controls">
+      <div id="touch-stick" class="touch-stick" aria-label="Движение"><i id="touch-knob"></i></div>
+      <div class="touch-actions">
+        <button data-action="pause" aria-label="Пауза">Ⅱ</button><button data-action="view">Вид</button>
+        <button data-action="bag">Сумка</button><button data-action="craft">Крафт</button>
+        <button data-action="place">Пост.</button><button data-action="use">Прим.</button>
+        <button data-action="sprint">Бег / ↓</button><button data-action="jump">Прыжок / ↑</button>
+        <button data-action="interact">E</button><button data-action="attack">Удар</button>
+      </div>
+    </div>
     <div class="hint" id="hint">WASD — идти · Shift — бежать · V — вид · ЛКМ — удар/копать по прицелу · E — действие · G — копать вглубь / спуск по ходу · X — выход из шахты · F2→F — креатив · F3→Ж — обводки моделей · F8 — бот-инспектор · F9 — курсор · C — крафт · I — сумка · F — поставить</div>
   </div>
 
@@ -103,16 +113,20 @@
 
   <!-- ======================= Стартовый экран ======================= -->
   <div id="start" class="overlay">
-    <div class="overlay-inner">
+    <div class="overlay-inner menu-inner">
+      <div class="menu-eyebrow" data-en="SURVIVAL · OPEN WORLD">ВЫЖИВАНИЕ · ОТКРЫТЫЙ МИР</div>
       <h1>LAST SHORE<span class="sub">Последний берег</span></h1>
       <p class="tagline">Ты очнулся на пустом берегу. Корабль разбит, связи нет, карты нет.<br>
         Найди воду и еду, сделай нож и топор, разведи огонь — и решай, как отсюда выбраться.<br>
         <span class="tagline-dim">Сейчас в игре: остров, сутки и ночь, копание слоя земли лопатой и руками (песок осыпается, вода заливает), шахта, которая растёт вглубь, креатив (F2 → F), ранения по частям тела, верстак с ковкой и заточкой.</span></p>
 
+      <details class="menu-help"><summary data-en="Controls and tips">Управление и подсказки</summary>
       <div class="controls-grid">
         <div><b>W A S D</b><span>идти</span></div>
-        <div><b>Shift</b><span>бежать</span></div>
+        <div><b>Shift</b><span>бег / нырнуть</span></div>
+        <div><b>Пробел</b><span>прыжок / всплыть</span></div>
         <div><b>V</b><span>вид 1 / 3 лицо</span></div>
+        <div><b>M</b><span>музыка вкл / выкл</span></div>
         <div><b>ПКМ</b><span>съесть / применить</span></div>
         <div><b>Колесо</b><span>выбор слота</span></div>
         <div><b>ЛКМ</b><span>удар / добыча</span></div>
@@ -121,7 +135,7 @@
         <div><b>C</b><span>крафт</span></div>
         <div><b>I</b><span>сумка</span></div>
         <div><b>F</b><span>костёр / верстак</span></div>
-        <div><b>E</b><span>шахта, станки</span></div>
+        <div><b>E</b><span>лодка, шахта, станки</span></div>
         <div><b>R</b><span>вниз по лестнице</span></div>
         <div><b>G</b><span>копать вглубь</span></div>
         <div><b>X</b><span>выход из шахты</span></div>
@@ -130,9 +144,26 @@
         <div><b>F9</b><span>отпустить/захватить курсор</span></div>
       </div>
 
-      <div class="btn-row">
-        <button id="btn-start">Начать</button>
-        <button id="btn-continue" class="btn-ghost hidden">Продолжить</button>
+      </details>
+      <div class="btn-row menu-buttons">
+        <button id="btn-start" data-en="New game">Новая игра</button>
+        <button id="btn-continue" class="btn-ghost hidden" data-en="Continue">Продолжить</button>
+        <button id="btn-saves" class="btn-ghost" data-en="Saved games">Сохранения</button>
+        <button id="btn-settings" class="btn-ghost" data-en="Settings">Настройки</button>
+      </div>
+      <div class="menu-network">
+        <button id="btn-rooms" class="btn-ghost" type="button" data-en="Servers and rooms">Серверы и комнаты</button>
+        <div id="rooms-panel" class="rooms-panel hidden">
+          <p>Экспериментальные комнаты: видны другие игроки. Мир, ресурсы и сохранения пока не синхронизируются.</p>
+          <label>Адрес сервера <input id="server-url" placeholder="Текущий сайт" autocomplete="url"></label>
+          <label><span data-en="Saved servers">Сохранённые серверы</span> <select id="server-saved"><option value="">—</option></select></label>
+          <div class="btn-row"><button id="btn-server-add" class="btn-ghost" type="button" data-en="Add address">Добавить адрес</button><button id="btn-server-remove" class="btn-ghost" type="button" data-en="Remove address">Удалить адрес</button></div>
+          <label>Имя <input id="server-name" maxlength="20" value="Выживший"></label>
+          <label>Код комнаты <input id="room-code" maxlength="24" value="island" autocomplete="off"></label>
+          <div class="btn-row"><button id="btn-room-connect" type="button">Войти / создать</button><button id="btn-room-list" class="btn-ghost" type="button">Обновить список</button></div>
+          <div id="room-list"></div><p id="room-status" role="status"></p>
+          <p>Для Wi‑Fi или точки доступа: подключитесь к одной сети, запустите сервер Node.js на одном устройстве и введите его сетевой адрес на остальных. Интернет требует доступного сервера с HTTPS/WSS. Прямой Bluetooth в браузере не поддерживается; возможна Bluetooth-раздача сети, если устройства её поддерживают.</p>
+        </div>
       </div>
       <p class="small">Быстрый доступ внизу пуст: открой сумку (I) и перетащи туда предметы мышью.</p>
       <p class="small">3D на Three.js · без внешних ассетов · прогресс сохраняется в браузере</p>
@@ -145,9 +176,12 @@
   <!-- ======================= Пауза ======================= -->
   <div id="pause" class="overlay hidden">
     <div class="overlay-inner">
-      <h1>Пауза</h1>
-      <p class="tagline">Остров подождёт.</p>
-      <button id="btn-resume">Продолжить</button>
+      <h1 data-en="Paused">Пауза</h1>
+      <p class="tagline" data-en="The island can wait.">Остров подождёт.</p>
+      <div class="btn-row"><button id="btn-resume" data-en="Resume">Продолжить</button>
+        <button id="btn-pause-saves" class="btn-ghost" data-en="Saved games">Сохранения</button>
+        <button id="btn-pause-settings" class="btn-ghost" data-en="Settings">Настройки</button>
+        <button id="btn-main-menu" class="btn-ghost" data-en="Main menu">В меню</button></div>
       <p class="small" id="pause-stats"></p>
     </div>
   </div>
@@ -158,6 +192,28 @@
       <h1 class="dead">Ты не выжил</h1>
       <p class="tagline" id="death-text"></p>
       <button id="btn-restart">Ещё раз</button>
+    </div>
+  </div>
+
+  <div id="settings-screen" class="overlay hidden modal-overlay">
+    <div class="overlay-inner modal-inner">
+      <h2 data-en="Settings">Настройки</h2>
+      <label><span data-en="Graphics">Графика</span><select id="setting-quality"><option value="auto" data-en="Automatic">Автоматически</option><option value="low" data-en="Low">Облегчённая</option><option value="high" data-en="High">Высокая</option></select></label>
+      <label><span data-en="Touch controls">Сенсорное управление</span><select id="setting-touch"><option value="auto" data-en="Automatic">Автоматически</option><option value="on" data-en="On">Включено</option><option value="off" data-en="Off">Выключено</option></select></label>
+      <label><span data-en="Sound volume">Громкость звука</span><input id="setting-volume" type="range" min="0" max="100" step="5"></label>
+      <label><span data-en="Menu language">Язык меню</span><select id="setting-language"><option value="ru">Русский</option><option value="en">English</option></select></label>
+      <p class="small" data-en="Graphics and controls take effect after returning to the menu. Gameplay text is not fully translated yet.">Графика и управление применяются после возвращения в меню. Игровые тексты пока переведены не полностью.</p>
+      <p id="settings-status" class="small" role="status"></p>
+      <button id="btn-settings-close" class="btn-ghost" data-en="Close">Закрыть</button>
+    </div>
+  </div>
+  <div id="saves-screen" class="overlay hidden modal-overlay">
+    <div class="overlay-inner modal-inner">
+      <h2 data-en="Saved games">Сохранения</h2>
+      <p class="small" data-en="Three local slots in this browser. Saving copies the current game or autosave.">Три слота в этом браузере. Сохранение копирует текущую игру или автосохранение.</p>
+      <div id="save-slots"></div>
+      <p id="save-status" class="small" role="status"></p>
+      <button id="btn-saves-close" class="btn-ghost" data-en="Close">Закрыть</button>
     </div>
   </div>
 

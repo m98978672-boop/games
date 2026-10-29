@@ -733,3 +733,52 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
   }
   .bar-label, .bar-value { font-size: 10px; }
 }
+
+/* Главное меню: обложка острова, ясные основные действия. */
+#start { background: linear-gradient(90deg, rgba(7,19,20,.97), rgba(8,21,22,.86) 49%, rgba(7,16,18,.42)), url('./assets/menu.jpg') center/cover no-repeat; backdrop-filter: none; justify-content: flex-start; }
+#start .menu-inner { width: min(720px, 100%); max-width: none; padding: 48px clamp(24px, 6vw, 88px); margin: auto 0; text-align: left; }
+.menu-eyebrow { font-size: 11px; color: #a8d6ca; letter-spacing: 3px; font-weight: bold; margin-bottom: 18px; }
+#start h1 { font-size: clamp(42px, 7vw, 72px); line-height: 1; letter-spacing: 5px; }
+#start h1 .sub { font-size: 12px; margin-top: 12px; }
+#start .tagline { max-width: 530px; color: #e4ece4; }
+#start .tagline-dim { display: none; }
+#start .menu-buttons { justify-content: flex-start; margin-top: 22px; }
+#start .menu-buttons button { letter-spacing: 1.5px; padding: 15px 28px; }
+.menu-help { margin: 15px 0; color: #d7e1da; font-size: 13px; }
+.menu-help summary { cursor: pointer; color: #ecd4a1; padding: 8px 0; }
+.menu-help .controls-grid { margin: 10px 0; text-align: center; }
+.menu-network { margin-top: 14px; }
+.menu-network > button { padding: 12px 22px; letter-spacing: 1px; }
+.rooms-panel { margin-top: 12px; background: rgba(7,15,16,.88); border: 1px solid rgba(185,220,199,.2); border-radius: 12px; padding: 16px; color: #d3ddd5; font-size: 12px; line-height: 1.5; }
+.rooms-panel p { margin: 5px 0 12px; }
+.rooms-panel label { display: block; margin: 8px 0; }
+.rooms-panel input { display: block; width: 100%; padding: 10px; margin-top: 4px; color: white; background: #142526; border: 1px solid #42615c; border-radius: 6px; font: inherit; user-select: text; }
+.rooms-panel .btn-row { justify-content: flex-start; }
+.rooms-panel button { font-size: 11px; letter-spacing: 1px; padding: 10px 14px; }
+#room-list { display:flex; gap:6px; flex-wrap:wrap; margin-top: 9px; }
+#room-status { color: #edc883; }
+.touch-controls { display:none; }
+.touch-device #scene { touch-action: none; }
+.touch-device #hud .touch-controls { display: block; position: absolute; inset: 0; pointer-events: none; }
+.touch-stick { pointer-events: auto; touch-action: none; position: absolute; left: 20px; bottom: 85px; width: 108px; height: 108px; border-radius: 50%; border: 1px solid #dbe9c990; background: #12272788; display: grid; place-items: center; }
+.touch-stick i { width: 42px; height: 42px; border-radius: 50%; background: #d8e3c899; }
+.touch-actions { position: absolute; right: 10px; bottom: 85px; display: grid; grid-template-columns: repeat(2, 64px); gap: 5px; pointer-events: auto; }
+.touch-actions button { touch-action:none; padding: 0; min-height: 36px; border-radius: 9px; background: #152e2bdd; border: 1px solid #bbd0b970; color: #fff; font-size: 10px; letter-spacing: 0; box-shadow: none; }
+.touch-device .hint { display:none; }
+.touch-device .needs { top: 40px; bottom: auto; width: 135px; padding: 7px; gap: 2px; }
+.touch-device .bar-label, .touch-device .bar-value { font-size: 9px; }
+.touch-device .topbar { top: 5px; left: 5px; gap: 3px; }
+.touch-device .chip { padding: 4px 6px; font-size: 10px; }
+@media (max-width: 700px) { #start .menu-inner { padding: 30px 22px; } #start .tagline { font-size: 13px; } #start .controls-grid { grid-template-columns: repeat(3,1fr); } .touch-device .slot { width: min(8.5vw,42px); height: 42px; } .touch-device .hotbar { bottom: 4px; gap: 2px; } .touch-device .slot-name { display:none; } .touch-device .slot-icon, .touch-device .slot-icon svg { width: 20px; height:20px; } .touch-device .prompt { bottom: 52px; font-size: 11px; padding: 5px; } }
+/* Настройки и слоты доступны и из меню, и с паузы. */
+.modal-overlay { z-index: 30; background: rgba(3,12,14,.88); }
+.modal-inner { width: min(560px, 94vw); max-width: 560px; padding: 28px; border: 1px solid #4c6c62; border-radius: 18px; background: #102321; text-align: left; }
+.modal-inner h2 { color: #f3d18c; margin-bottom: 18px; letter-spacing: 2px; }
+.modal-inner label { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; margin: 13px 0; font-size: 14px; }
+.modal-inner select, .rooms-panel select { width: 100%; color: #eef7ef; background: #1a3330; border: 1px solid #58746b; border-radius: 8px; padding: 10px; font: inherit; }
+.modal-inner input[type=range] { width: 100%; accent-color: #e8b45a; }
+.modal-inner button { padding: 10px 15px; letter-spacing: 1px; font-size: 12px; }
+.save-slot { border: 1px solid #38544c; padding: 12px; border-radius: 10px; margin-top: 10px; }
+.save-slot strong, .save-slot span { display: block; margin-bottom: 8px; }
+.save-slot span { color: #b4c7b9; font-size: 12px; }
+.save-slot .btn-row { justify-content: flex-start; gap: 6px; }

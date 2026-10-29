@@ -577,6 +577,8 @@ export class World {
       uDepth: { value: depthTex },
       uSize: { value: SIZE },
       uUnder: { value: 0 },
+      uBoat: { value: new THREE.Vector4(0, 0, 0, 0) },
+      uBoatVisible: { value: 0 },
     };
 
     const mat = new THREE.ShaderMaterial({
@@ -617,6 +619,8 @@ export class World {
         uniform float uTime;
         uniform float uSize;
         uniform float uUnder;
+        uniform vec4 uBoat; // x, z, cos(angle), sin(angle)
+        uniform float uBoatVisible;
         uniform sampler2D uDepth;
 
         varying vec3 vWorldPos;
@@ -635,6 +639,12 @@ export class World {
         }
 
         void main() {
+          // Не рисовать поверхность внутри корпуса, иначе вода перекрывает днище.
+          vec2 delta = vWorldPos.xz - uBoat.xy;
+          vec2 boatLocal = vec2(delta.x * uBoat.z - delta.y * uBoat.w,
+                                delta.x * uBoat.w + delta.y * uBoat.z);
+          float boatWidth = 0.54 * (1.0 - 0.48 * smoothstep(0.65, 1.85, abs(boatLocal.y)));
+          if (uBoatVisible > 0.5 && uUnder < 0.5 && abs(boatLocal.y) < 1.72 && abs(boatLocal.x) < boatWidth) discard;
           vec2 huv = (vWorldPos.xz / uSize) + 0.5;
           float encoded = texture2D(uDepth, clamp(huv, 0.001, 0.999)).r;
           float ground = encoded * 44.0 - 16.0;   // обратно в метры
@@ -652,7 +662,7 @@ export class World {
           vec3 n = normalize(vec3(-hx * 2.2, e * 0.9, -hz * 2.2));
 
           // взгляд из-под воды: поверхность видна снизу как светящийся потолок
-          if (uUnder > 0.5) {
+          if (!gl_FrontFacing) {
             // луч «глаз → точка поверхности»: под водой смотрит вверх
             vec3 eyeDir = normalize(vWorldPos - cameraPosition);
             float upness = clamp(eyeDir.y, 0.0, 1.0);
@@ -676,7 +686,7 @@ export class World {
             colU += uSunColor * sparkle * 1.1 * (1.0 - uNight * 0.85);
             float dist = length(cameraPosition - vWorldPos);
             colU = mix(colU, uDeep * 1.1 + vec3(0.0, 0.05, 0.07), clamp((dist - 5.0) / 34.0, 0.0, 0.9));
-            float alphaU = mix(0.62, 0.97, 1.0 - window);
+            float alphaU = 1.0;
             gl_FragColor = vec4(colU, alphaU);
             #include <tonemapping_fragment>
             #include <colorspace_fragment>
@@ -726,7 +736,7 @@ export class World {
   }
 
   /**
-   * Дома зверей. У каждого вида своя поляна: вокруг логовища не растёт
+   * Дома зверей. У каждого вида своё место: у логовища не растёт
    * ни дерево, ни куст, ни камень — зверю есть где встать, и он не
    * рождается внутри модели.
    */
@@ -848,6 +858,11 @@ export class World {
      * черепаха — песчаная лежанка с кладкой яиц.
      * Ориентир: вход всегда смотрит наружу поляны (в сторону от центра дома).
      */
+    let denParts = [];
+    const finishDen = (parts) => {
+      denParts = parts;
+      return mergeGeometries(parts, false);
+    };
     const builders = {
       boar: () => {
         const parts = [];
@@ -886,7 +901,7 @@ export class World {
         for (let i = 0; i < 4; i++) {
           addPart(parts, new THREE.BoxGeometry(0.06, 0.03, 0.18), 0xd8cba6, 1.79, 0.55 + i * 0.22, -0.32 - i * 0.02, 0, 0.3, 0);
         }
-        return mergeGeometries(parts, false);
+        return finishDen(parts);
       },
       crab: () => {
         const parts = [];
@@ -915,7 +930,7 @@ export class World {
         for (let i = 0; i < 6; i++) {
           addPart(parts, new THREE.BoxGeometry(0.05, 0.02, 0.22), 0xbcab85, 1.4 + i * 0.22, 0.05, 0.55 + Math.sin(i) * 0.3, 0, i * 0.6, 0);
         }
-        return mergeGeometries(parts, false);
+        return finishDen(parts);
       },
       gull: () => {
         const parts = [];
@@ -945,7 +960,7 @@ export class World {
           addPart(parts, new THREE.ConeGeometry(0.05, 0.18, 3, 1), 0xf2ecdb,
             Math.cos(a) * 0.75, 1.36, Math.sin(a) * 0.75, 1.4, a, 0.4);
         }
-        return mergeGeometries(parts, false);
+        return finishDen(parts);
       },
       snake: () => {
         const parts = [];
@@ -970,7 +985,7 @@ export class World {
           addPart(parts, new THREE.CylinderGeometry(0.015, 0.03, 0.55, 3, 1), 0x9b8b52,
             Math.cos(a) * (1.15 + Math.abs(R(i + 2)) * 0.45), 0.16, Math.sin(a) * (1.15 + Math.abs(R(i + 4)) * 0.45), 0.5, -a, 0.2);
         }
-        return mergeGeometries(parts, false);
+        return finishDen(parts);
       },
       monkey: () => {
         const parts = [];
@@ -1006,7 +1021,7 @@ export class World {
         // ветка-«стол» с недоеденным плодом
         addRod(parts, [1.35, 0.1, -0.9], [1.7, 1.1, -1.05], 0.06, 0.04, 0x7d5c38, 4);
         addPart(parts, new THREE.SphereGeometry(0.14, 7, 6), 0xc9a24a, 1.68, 1.16, -1.05);
-        return mergeGeometries(parts, false);
+        return finishDen(parts);
       },
       turtle: () => {
         const parts = [];
@@ -1025,14 +1040,39 @@ export class World {
           addPart(parts, new THREE.ConeGeometry(0.05, 0.34, 3, 1), 0x86b556,
             Math.cos(a) * 1.45, 0.2, Math.sin(a) * 1.45);
         }
-        return mergeGeometries(parts, false);
+        return finishDen(parts);
       },
     };
     this.denMeshes = [];
     for (const [kind, list] of byKind) {
       const geo = builders[kind] ? builders[kind]() : null;
       if (!geo) continue;
-      const mesh = new THREE.InstancedMesh(geo, mat, list.length);
+      // Камуфляж соответствует биому; вход (+Z) остаётся открытым.
+      const cover = [geo];
+      for (let j = 0; j < 9; j++) {
+        const a = Math.PI * 0.25 + j * Math.PI * 1.5 / 8;
+        const x = Math.cos(a) * 1.65, z = -Math.sin(a) * 1.65;
+        if (kind === 'boar' || kind === 'monkey' || kind === 'snake') {
+          addPart(cover, new THREE.IcosahedronGeometry(0.32 + (j % 3) * 0.1, 0),
+            j % 2 ? 0x547a3b : 0x6a8b49, x, 0.35, z);
+          addPart(cover, new THREE.ConeGeometry(0.15, 0.55, 4), 0x789751, x * 1.12, 0.22, z * 1.12);
+        } else {
+          addPart(cover, new THREE.IcosahedronGeometry(0.16 + (j % 3) * 0.07, 0),
+            kind === 'gull' ? 0x8d887a : 0xcbb995, x, 0.08, z);
+          addPart(cover, new THREE.ConeGeometry(0.035, 0.32, 3), 0x9d9a64, x * 1.08, 0.15, z * 1.08);
+        }
+      }
+      const coveredGeo = mergeGeometries(cover, false);
+      // Отдельная оболочка каждой твёрдой детали, а не круг вокруг жилища.
+      const sectors = [];
+      for (const g of denParts) {
+        g.computeBoundingBox();
+        const box = g.boundingBox;
+        if (!box || box.max.y < 0.25 || box.max.y - box.min.y < 0.12) continue;
+        const poly = hullFromGeometry([g], { pad: 0.015 });
+        if (poly) sectors.push({ poly, minY: box.min.y, maxY: box.max.y });
+      }
+      const mesh = new THREE.InstancedMesh(coveredGeo, mat, list.length);
       mesh.castShadow = true;
       mesh.frustumCulled = false;
       const dummy = new THREE.Object3D();
@@ -1047,6 +1087,21 @@ export class World {
         dummy.scale.setScalar(0.85 + this.rng() * 0.35);
         dummy.updateMatrix();
         mesh.setMatrixAt(i, dummy.matrix);
+        // Детали укрытия участвуют в столкновениях независимо от высоты.
+        const sizes = { boar: [1.15, 1.6], monkey: [1.12, 2.0], gull: [0.95, 1.5], snake: [0.9, 0.8], crab: [1.1, 0.45], turtle: [1.1, 0.32] };
+        const [r, height] = sizes[kind];
+        // Круг используется только при подборе места спавна, не для движения.
+        this.colliders.push({ x: d.x, z: d.z, r: r * dummy.scale.x, height: height * dummy.scale.x, kind: 'den', den: d, soft: true });
+        d.shells = [];
+        const cos = Math.cos(d.entrance), sin = Math.sin(d.entrance), scale = dummy.scale.x;
+        for (const sector of sectors) {
+          const poly = sector.poly.map(p => ({
+            x: d.x + (p.x * cos + p.z * sin) * scale,
+            z: d.z + (-p.x * sin + p.z * cos) * scale,
+          }));
+          d.shells.push(this.shells.add('den', poly, d.y - 0.12 + sector.minY * scale,
+            d.y - 0.12 + sector.maxY * scale));
+        }
       });
       mesh.instanceMatrix.needsUpdate = true;
       // «дом» статичен: не пересчитываем его матрицу каждый кадр
@@ -1073,17 +1128,18 @@ export class World {
 
     const nextScale = () => 0.8 + rng() * 0.55;
 
-    // --- дома зверей: поляны без единой модели ---
+    // --- логовища: свободное ядро, растительность вокруг ---
     this._planDens();
     const nearDen = (x, z, pad = 0) => {
-      for (const d of this.dens) if (Math.hypot(x - d.x, z - d.z) < d.radius + pad) return d;
+      for (const d of this.dens) if (Math.hypot(x - d.x, z - d.z) < Math.min(d.radius, 3.2) + pad) return d;
       return null;
     };
 
     // --- ровная земля под каждой моделью ---
     // Заявки копятся и применяются одним проходом: иначе на каждый куст
     // пришлось бы пересчитывать все 40 тысяч вершин рельефа.
-    this._flatSpots = [];
+    // Сохраняем площадки логовищ, запланированные до растительности.
+    this._flatSpots = this._flatSpots || [];
     // Площадки не пересекаются: иначе одна заявка «перетирает» другую и
     // под моделью снова получается склон. Нет места — нет модели.
     this._flatStats = { ask: 0, deny: 0 };
@@ -1097,7 +1153,7 @@ export class World {
       return y;
     };
 
-    // зазор между моделями и свободная от домов земля
+    // зазор между моделями и свободное ядро у логовища
     const freeSpot = (x, z, r) => this.isFree(x, z, r) && !nearDen(x, z, r + 1.0);
 
     /**
@@ -1227,6 +1283,7 @@ export class World {
 
     // все заявки на ровную землю — одним проходом
     this._applyFlatSpots();
+    for (const d of this.dens) d.y = this.heightAt(d.x, d.z);
     // после выравнивания каждая модель садится точно на свою землю
     for (const list of [palms, trees, pines, mangroves, deads, bushes, rocks]) {
       for (const it of list) it.h = this.heightAt(it.x, it.z);
@@ -1510,7 +1567,7 @@ export class World {
     // у травы свой материал (сильнее качается)
     for (const mesh of this.tufts) mesh.material = grassMat;
 
-    // --- дома зверей на полянах ---
+    // --- дома зверей, замаскированные окружением ---
     this._buildDens();
 
     // --- обводки: у каждой модели своя треугольная оболочка по силуэту ---
@@ -2505,10 +2562,10 @@ export class World {
       const dz = pos.z - c.z;
       const min = c.r + radius;
       const d2 = dx * dx + dz * dz;
-      if (d2 < min * min && d2 > 1e-6) {
+      if (d2 < min * min) {
         const d = Math.sqrt(d2);
-        const nx = dx / d;
-        const nz = dz / d;
+        const nx = d > 1e-6 ? dx / d : 1;
+        const nz = d > 1e-6 ? dz / d : 0;
         const push = min - d;
         pos.x += nx * push;
         pos.z += nz * push;
@@ -2571,7 +2628,12 @@ export class World {
     if (fogColor) this.waterUniforms.uFog.value.copy(fogColor);
     if (camera && this.waterUniforms) {
       // смотрим ли мы из-под воды: по высоте камеры относительно поверхности
-      this.waterUniforms.uUnder.value = camera.position.y < CONFIG.world.seaLevel - 0.05 ? 1 : 0;
+      const x = camera.position.x, z = camera.position.z, t = this.time;
+      const wave = Math.sin(x * 0.115 + t * 1.15) * 0.15
+        + Math.sin(z * 0.165 - t * 0.9) * 0.11
+        + Math.sin((x + z) * 0.055 + t * 0.6) * 0.22
+        + Math.sin(Math.hypot(x, z) * 0.22 - t * 1.4) * 0.07;
+      this.waterUniforms.uUnder.value = camera.position.y < CONFIG.world.seaLevel + wave ? 1 : 0;
     }
 
     // лёгкое вращение предметов на земле — их проще заметить

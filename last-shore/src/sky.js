@@ -143,7 +143,7 @@ export class Sky {
     this.cloudMaterials = [];
     scene.add(this.clouds);
     const cloudGeo = new THREE.PlaneGeometry(180, 110);
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < 15; i++) {
       const mat = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         map: textures ? textures.cloud : null,
@@ -151,10 +151,11 @@ export class Sky {
         opacity: 0.5,
         depthWrite: false,
         fog: false,
+        side: THREE.DoubleSide,
       });
       this.cloudMaterials.push(mat);
       const mesh = new THREE.Mesh(cloudGeo, mat);
-      const angle = (i / 9) * Math.PI * 2 + Math.random();
+      const angle = (i / 15) * Math.PI * 2 + Math.random();
       const radius = 260 + Math.random() * 260;
       mesh.position.set(Math.cos(angle) * radius, 95 + Math.random() * 60, Math.sin(angle) * radius);
       mesh.rotation.x = -Math.PI / 2;

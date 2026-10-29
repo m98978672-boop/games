@@ -9,6 +9,7 @@ export class Audio {
   constructor() {
     this.ctx = null;
     this.enabled = true;
+    this.musicEnabled = true;
     this.ready = false;
     this.stepTimer = 0;
     this.birdTimer = 3;
@@ -102,7 +103,7 @@ export class Audio {
 
     // --- тихий музыкальный фон: медленные аккорды ---
     this.musicGain = this.ctx.createGain();
-    this.musicGain.gain.value = 0.05;
+    this.musicGain.gain.value = 0.14;
     this.musicGain.connect(this.master);
     this.chordStep = 0;
     this.musicTimer = 0;
@@ -110,18 +111,24 @@ export class Audio {
     this.ready = true;
   }
 
+  toggleMusic() {
+    this.musicEnabled = !this.musicEnabled;
+    if (this.musicGain) this.musicGain.gain.setTargetAtTime(this.musicEnabled ? 0.14 : 0, this.ctx.currentTime, 0.1);
+    return this.musicEnabled;
+  }
+
   /** Медленная «музыка»: три ноты, меняющиеся раз в несколько секунд */
   updateMusic(dt, night) {
     if (!this.ready) return;
     this.musicTimer -= dt;
     if (this.musicTimer > 0) return;
-    this.musicTimer = 7 + Math.random() * 5;
+    this.musicTimer = 6.5;
 
-    const roots = night ? [110, 98, 87, 123] : [147, 165, 131, 175];
+    const roots = night > 0.5 ? [110, 98, 87, 123] : [147, 165, 131, 175];
     const root = roots[this.chordStep % roots.length];
     this.chordStep++;
     const now = this.ctx.currentTime;
-    [1, 1.5, 2.0].forEach((mul, i) => {
+    [1, night > 0.5 ? 1.2 : 1.25, 1.5, 2.0].forEach((mul, i) => {
       const osc = this.ctx.createOscillator();
       osc.type = i === 0 ? 'sine' : 'triangle';
       osc.frequency.value = root * mul;
@@ -132,6 +139,19 @@ export class Audio {
       osc.connect(g).connect(this.musicGain);
       osc.start(now);
       osc.stop(now + 7);
+    });
+    // Отдельные мягкие ноты поверх аккорда: редкая мелодия, а не только гул.
+    [2, 2.5, 3, 2.5].forEach((mul, i) => {
+      const t = now + 0.8 + i * 1.15;
+      const osc = this.ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.value = root * mul;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.045, t + 0.12);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+      osc.connect(g).connect(this.musicGain);
+      osc.start(t); osc.stop(t + 1.6);
     });
   }
 

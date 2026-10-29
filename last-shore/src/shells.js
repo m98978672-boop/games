@@ -241,7 +241,7 @@ export class ShellField {
     const top = feetY + height;
     for (const p of this.near(pos.x, pos.z, radius + 1.2)) {
       if (p.enabled && !p.enabled()) continue;
-      if (p.maxY < feetY + stepUp) continue;      // обводка ниже шага — переступаем
+      if (p.maxY < feetY + (p.kind === 'den' ? 0 : stepUp)) continue;      // обводка ниже шага — переступаем
       if (p.minY > top) continue;                 // герой целиком выше обводки
       const hit = this._pushOut(p, pos, radius);
       if (!hit) continue;
@@ -276,7 +276,8 @@ export class ShellField {
   blocked(x, z, radius, y = 0) {
     for (const p of this.near(x, z, radius + 1.2)) {
       if (p.enabled && !p.enabled()) continue;
-      if (p.maxY < y + 0.35) continue;
+      if (p.maxY < y + (p.kind === 'den' ? 0 : 0.35)) continue;
+      if (p.minY > y + 1.85) continue;
       if (this._inside(p.poly, x, z)) return true;
       const d = this._edgeDistance(p.poly, x, z);
       if (d < radius) return true;
@@ -320,6 +321,8 @@ export class ShellField {
     let best = Infinity;
     let nx = 0;
     let nz = 0;
+    let edgeX = 0;
+    let edgeZ = 0;
     for (let i = 0; i < p.poly.length; i++) {
       const a = p.poly[i];
       const b = p.poly[(i + 1) % p.poly.length];
@@ -330,7 +333,7 @@ export class ShellField {
       const px = a.x + dx * t;
       const pz = a.z + dz * t;
       const d = Math.hypot(pos.x - px, pos.z - pz);
-      if (d < best) { best = d; nx = px; nz = pz; }
+      if (d < best) { best = d; nx = px; nz = pz; edgeX = dx; edgeZ = dz; }
     }
     if (!inside && best >= radius) return null;
 
@@ -339,13 +342,13 @@ export class ShellField {
     let dz = pos.z - nz;
     let len = Math.hypot(dx, dz);
     if (len < 1e-4) {
-      // центр точно на ребре: берём нормаль ребра
-      dx = pos.x - (p.minX + p.maxX) / 2;
-      dz = pos.z - (p.minZ + p.maxZ) / 2;
-      len = Math.hypot(dx, dz) || 1;
+      // В точке на ребре направление — наружная нормаль CCW-контура.
+      const edgeLen = Math.hypot(edgeX, edgeZ) || 1;
+      return { x: edgeZ / edgeLen * radius, z: -edgeX / edgeLen * radius };
     }
     const push = inside ? best + radius : radius - best;
-    return { x: (dx / len) * push, z: (dz / len) * push };
+    const sign = inside ? -1 : 1;
+    return { x: sign * (dx / len) * push, z: sign * (dz / len) * push };
   }
 
   // --- отладка: F3 → Ж ---------------------------------------

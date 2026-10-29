@@ -7,10 +7,11 @@
   "scripts": {
     "build": "node tools/build.mjs",
     "test:build": "node tools/build-test.mjs",
-    "serve": "python3 -m http.server 8080 --bind 0.0.0.0"
+    "serve": "node tools/server.mjs"
   },
   "dependencies": {
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "ws": "^8.22.0"
   },
   "devDependencies": {
     "@sparticuz/chromium": "^153.0.0",

@@ -830,6 +830,7 @@ export function createMineWorld(mine, world) {
   const adapter = {
     get underground() { return mine.active !== null; },
     get colliders() { return mine.active !== null ? [] : world.colliders; },
+    get shells() { return mine.active !== null ? null : world.shells; },
     heightAt(x, z) {
       return mine.active !== null ? mine.floorAt(x, z) : world.heightAt(x, z);
     },

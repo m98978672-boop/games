@@ -24,6 +24,11 @@ import { InspectorBot } from './bot.js';
 import { BUILD, probeWebGL, collectDiag, wantsSafeMode } from './diag.js';
 import { createTextures } from './textures.js';
 import { makeBoat } from './models.js';
+import { detectDevice } from './device.js';
+import { bindTouch } from './touch.js';
+import { RoomClient } from './network.js';
+import { getSettings } from './settings.js';
+import { initSettingsAndSaves } from './menu.js';
 
 const SAVE_KEY = 'lastshore.save.v1';
 
@@ -61,8 +66,13 @@ class Game {
     this.audio = new Audio();
 
     // Пытаемся создать контекст по трём ступеням: от красивого к «хоть как-нибудь»
+    this.device = detectDevice();
+    this.settings = getSettings();
+    if (this.settings.touch !== 'auto') this.device.touch = this.settings.touch === 'on';
     const safe = wantsSafeMode();
-    this.quality = safe ? 2 : 0;
+    this.quality = safe || this.settings.quality === 'low' || (this.settings.quality === 'auto' && this.device.low) ? 2 : 0;
+    this.device.low = this.quality >= 2 || this.device.weak;
+    document.body.classList.toggle('touch-device', this.device.touch);
     const attempts = [
       { antialias: true, powerPreference: 'high-performance', shadows: true, label: 'высокое' },
       { antialias: false, powerPreference: 'default', shadows: true, label: 'обычное' },
@@ -130,9 +140,10 @@ class Game {
     const maxAniso = this.renderer.capabilities ? this.renderer.capabilities.getMaxAnisotropy() : 4;
     this.textures = createTextures(Math.min(8, maxAniso || 4));
     this.world = new World(this.scene, CONFIG.world.seed, this.textures);
+    if (this.device.low) this.reduceViewDistance();
     this.sky = new Sky(this.scene, this.renderer, this.textures);
     this.player = new Player(this.scene);
-    this.rain = new Rain(this.scene);
+    this.rain = new Rain(this.scene, this.device.low ? 400 : 1800);
     this.resources = new Resources(this.scene, this.world);
     this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
 
@@ -235,6 +246,7 @@ class Game {
     this.spawnPlayer();
     this.buildHighlight();
     this.bindEvents();
+    if (this.device.touch) bindTouch(this);
 
     this.refreshHotbar();
     this.ui.renderBag(this.state.inventory, this.state.hotbar);
@@ -741,6 +753,7 @@ class Game {
         break;
       }
       case 'KeyV': this.toggleView(); break;
+      case 'KeyM': this.ui.toast(this.audio.toggleMusic() ? 'Музыка включена' : 'Музыка выключена'); break;
       case 'F1': e.preventDefault(); this.showDiag(); break;
       case 'KeyC': {
         e.preventDefault();
@@ -786,6 +799,7 @@ class Game {
   start(continueSave = false) {
     try {
       this.audio.init();
+      if (this.audio.master) this.audio.master.gain.value = this.settings.volume;
       this.audio.resume();
     } catch (err) {
       console.warn('audio disabled:', err);
@@ -804,7 +818,7 @@ class Game {
     this.dead = false;
     this.startedAt = performance.now();
     this.lastTime = performance.now();
-    this.tryLock();
+    if (!this.device.touch) this.tryLock();
     this.audio.uiClick();
     if (!continueSave) {
       setTimeout(() => {
@@ -832,7 +846,7 @@ class Game {
     this.paused = false;
     this.ui.hideScreens();
     this.lastTime = performance.now();
-    this.tryLock();
+    if (!this.device.touch) this.tryLock();
     this.audio.resume();
   }
 
@@ -1396,6 +1410,10 @@ class Game {
 
   /** Что показать в прицеле словами */
   aimPromptHtml() {
+    if (!this.underground && this.boat?.placed && (this.sailing ||
+        Math.hypot(this.player.position.x - this.boat.x, this.player.position.z - this.boat.z) < 4.0)) {
+      return this.sailing ? '<b>E</b> — выйти из лодки' : '<b>E</b> — сесть в лодку';
+    }
     const aim = this.aim;
     if (!aim || !aim.target) {
       return this.underground
@@ -1600,7 +1618,10 @@ class Game {
 
   /** Высота волны в точке — по ней качается лодка */
   waveAt(x, z, t = this.world.time) {
-    return Math.sin(x * 0.32 + t * 1.15) * 0.14 + Math.sin(z * 0.24 - t * 0.85) * 0.09;
+    return Math.sin(x * 0.115 + t * 1.15) * 0.15
+      + Math.sin(z * 0.165 - t * 0.9) * 0.11
+      + Math.sin((x + z) * 0.055 + t * 0.6) * 0.22
+      + Math.sin(Math.hypot(x, z) * 0.22 - t * 1.4) * 0.07;
   }
 
   buildBoat() {
@@ -1696,7 +1717,7 @@ class Game {
         b.speed *= -0.25;
       }
       // лодка не заплывает за край карты
-      const lim = CONFIG.world.size * 0.47;
+      const lim = CONFIG.world.size * 0.72;
       b.x = Math.max(-lim, Math.min(lim, b.x));
       b.z = Math.max(-lim, Math.min(lim, b.z));
     } else {
@@ -1706,7 +1727,7 @@ class Game {
     // --- качка на волне ---
     b.wave = this.waveAt(b.x, b.z, t);
     b.group.position.set(b.x, CONFIG.world.seaLevel + b.wave - 0.12, b.z);
-    b.group.rotation.y = b.heading + Math.PI / 2;
+    b.group.rotation.y = b.heading;
     b.group.rotation.x = Math.sin(t * 1.35 + b.x * 0.2) * 0.04 - Math.min(0.09, Math.abs(b.speed) * 0.012);
     b.group.rotation.z = Math.sin(t * 1.05 + b.z * 0.25) * 0.05;
     if (b.parts.sail) {
@@ -1715,6 +1736,13 @@ class Game {
     }
     if (b.parts.oar) b.parts.oar.rotation.x = this.sailing ? Math.sin(t * 3.4) * 0.14 : 0;
 
+    const water = this.world.waterUniforms;
+    if (water && water.uBoat) {
+      const angle = b.group.rotation.y;
+      water.uBoat.value.set(b.x, b.z, Math.cos(angle), Math.sin(angle));
+      water.uBoatVisible.value = 1;
+    }
+
     // герой стоит на палубе
     if (this.sailing) {
       const p = this.player;
@@ -1722,6 +1750,10 @@ class Game {
       p.velocity.set(0, 0, 0);
       p.facing = b.heading;
       p.grounded = true;
+      p.swimming = false;
+      p.underwater = false;
+      p.wading = 0;
+      p.air = Math.min(CONFIG.player.airMax, p.air + CONFIG.player.airRefill * dt);
       p.model.position.copy(p.position);
       p.model.rotation.y = b.heading;
     }
@@ -1733,7 +1765,7 @@ class Game {
     if (!b || !b.placed) return false;
     if (!this.sailing) {
       const d = Math.hypot(this.player.position.x - b.x, this.player.position.z - b.z);
-      if (d > 3.2) {
+      if (d > 4.0) {
         this.ui.toast('Лодка далеко — подойди к ней ближе', true);
         return false;
       }
@@ -1749,27 +1781,36 @@ class Game {
       return true;
     }
 
-    // выход: нужен берег рядом
+    // Ищем ближайший берег; в открытом море можно сойти в воду.
     let exit = null;
-    for (let r = 1.5; r <= 12 && !exit; r += 1.2) {
+    for (let r = 2.4; r <= 5 && !exit; r += 1.2) {
       for (let i = 0; i < 16 && !exit; i++) {
         const a = (i / 16) * Math.PI * 2;
         const x = b.x + Math.cos(a) * r;
         const z = b.z + Math.sin(a) * r;
         const h = this.world.heightAt(x, z);
-        if (h > -0.45 && h < 3.5) exit = { x, z, h };
+        if (h > -0.45 && h < 3.5 && this.world.isFree(x, z, CONFIG.player.radius) &&
+            !this.world.shells?.blocked(x, z, CONFIG.player.radius, h)) exit = { x, z, h };
       }
     }
     if (!exit) {
-      this.ui.toast('Кругом глубоко — ищи берег', true);
-      return false;
+      const x = b.x + Math.cos(b.heading) * 2.2;
+      const z = b.z - Math.sin(b.heading) * 2.2;
+      exit = { x, z, h: this.world.heightAt(x, z), water: true };
     }
     this.sailing = false;
     b.speed = 0;
     this.player.setPosition(exit.x, exit.z, this.world);
+    if (exit.water) {
+      this.player.position.y = CONFIG.world.seaLevel - CONFIG.player.floatLine;
+      this.player.model.position.copy(this.player.position);
+      this.player.velocity.set(0, 0, 0);
+      this.player.swimming = true;
+      this.player.underwater = false;
+    }
     this.player.model.visible = this.player.viewMode !== 'first';
     this.audio.pickup?.();
-    this.ui.toast('Ты сошёл на берег. Лодка ждёт у воды.');
+    this.ui.toast(exit.water ? 'Ты сошёл в воду. E — вернуться в лодку.' : 'Ты сошёл на берег. Лодка ждёт у воды.');
     return true;
   }
 
@@ -1779,7 +1820,7 @@ class Game {
     const boat = this.boat;
     if (boat && boat.placed) {
       const dBoat = Math.hypot(this.player.position.x - boat.x, this.player.position.z - boat.z);
-      if (this.sailing || dBoat < 3.2) {
+      if (!this.underground && (this.sailing || dBoat < 4.0)) {
         this.toggleSailing();
         return;
       }
@@ -2280,6 +2321,7 @@ class Game {
       this.player.update(dt, this.input, this.mineWorld);
     }
     this.updateBoat(dt);
+    window.__roomClient?.update(this, dt);
     // сбрасываем только импульс прыжка: «пробел зажат» (input.jumpHeld) живёт до keyup
     this.input.jump = false;
 
@@ -2289,6 +2331,12 @@ class Game {
     }
     // ни одна часть тела не влезает в чужую модель: разводим хитбоксы
     this.hitboxes.resolvePlayer(this.player, this.mineWorld, { mobs: this.mobs });
+    // Другой зверь или станок мог вытолкнуть героя в сектор модели.
+    if (!this.underground && !this.sailing) {
+      this.world.shells.resolve(this.player.position, CONFIG.player.radius, this.player.velocity, this.player.position.y, 0.55);
+      this.player.model.position.x = this.player.position.x;
+      this.player.model.position.z = this.player.position.z;
+    }
     this.player.applyCamera(this.camera, this.mineWorld, dt);
     this.computeAim();
 
@@ -2297,8 +2345,25 @@ class Game {
     const skyInfo = this.sky.update(dt, this.player.position);
     this.sky.sun.intensity *= this.weatherSunMul;
     this.sky.hemi.intensity *= (0.8 + this.weatherSunMul * 0.25);
+    // Утренняя и вечерняя дымка с 27 м; днём (12–17) постепенно исчезает.
+    // На слабом профиле дополнительная дымка выключена.
+    if (!this.device.low) {
+      const h = this.sky.hour;
+      const fadeIn = Math.max(0, Math.min(1, (h - 11) / 1));
+      const fadeOut = Math.max(0, Math.min(1, (18 - h) / 1));
+      const clear = this.sky.day % 3 === 0 ? 0 : Math.min(fadeIn, fadeOut);
+      this.scene.fog.near = THREE.MathUtils.lerp(27, this.scene.fog.near, clear);
+      this.scene.fog.far = THREE.MathUtils.lerp(170, this.scene.fog.far, clear);
+    }
     this.scene.fog.far /= this.weatherFogMul;
     this.scene.fog.near /= this.weatherFogMul;
+    if (this.device.low) {
+      // На слабом профиле атмосферную дымку не рисуем; подводный/шахтный туман отдельно ниже.
+      this.scene.fog.near = 1400;
+      this.scene.fog.far = 1500;
+    } else {
+      this.scene.fog.near = Math.max(27, this.scene.fog.near);
+    }
     this.sky.skyUniforms.uTop.value.multiplyScalar(0.75 + this.weatherSunMul * 0.3);
     this.sky.skyUniforms.uBottom.value.multiplyScalar(0.8 + this.weatherSunMul * 0.2);
 
@@ -2309,8 +2374,8 @@ class Game {
     this.audio.updateMusic(dt, skyInfo.night);
 
     // под водой: свет гаснет с глубиной, дальний план тонет в сине-зелёной мгле
-    if (this.player && this.player.underwater) {
-      const d = Math.max(0, CONFIG.world.seaLevel - (this.player.position.y + 1.6));
+    if (!this.underground && this.camera.position.y < CONFIG.world.seaLevel + this.waveAt(this.camera.position.x, this.camera.position.z)) {
+      const d = Math.max(0, CONFIG.world.seaLevel - this.camera.position.y);
       const murk = Math.min(1, 0.35 + d * 0.16);
       this.sky.sun.intensity *= 1 - murk * 0.72;
       this.sky.hemi.intensity *= 1 - murk * 0.5;
@@ -2461,13 +2526,13 @@ class Game {
 
     // --- звук шагов ---
     const hspeed = Math.hypot(this.player.velocity.x, this.player.velocity.z);
-    if (hspeed > 0.6 && this.player.grounded) {
+    if (hspeed > 0.6 && (this.player.grounded || this.player.swimming) && !this.sailing) {
       this.audio.stepTimer -= dt;
       if (this.audio.stepTimer <= 0) {
         const h = this.world.heightAt(this.player.position.x, this.player.position.z);
-        const surface = h < 0.05 ? 'water' : h < 1.6 ? 'sand' : 'grass';
+        const surface = this.player.swimming || h < 0.05 ? 'water' : this.world.layerAt(this.player.position.x, this.player.position.z) === 'stone' ? 'rock' : h < 1.6 ? 'sand' : 'grass';
         this.audio.step(surface, hspeed > 5.5);
-        this.audio.stepTimer = hspeed > 5.5 ? 0.31 : 0.46;
+        this.audio.stepTimer = this.player.swimming ? 0.7 : hspeed > 5.5 ? 0.31 : 0.46;
       }
     } else {
       this.audio.stepTimer = 0;
@@ -2528,7 +2593,7 @@ class Game {
   // ------------------------------------------------------------
 
   save() {
-    if (!this.running || this.dead) return;
+    if (!this.running || this.dead) return false;
     try {
       const data = {
         v: 1,
@@ -2546,16 +2611,25 @@ class Game {
         selected: this.selected,
         view: this.view,
         campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
+        nodes: this.resources.nodes.flatMap((n, i) => (!n.alive || n.hp < n.maxHp || (n.type === 'bush' && n.berries !== !!n.item.berries)) ? [{
+          i, hp: n.hp, alive: n.alive, berries: n.berries,
+          respawn: Math.max(0, n.respawnAt - this.resources.time),
+          berryWait: Math.max(0, n.berryAt - this.resources.time),
+        }] : []),
+        pickups: this.world.pickups.map(p => ({ kind: p.kind, x: p.mesh.position.x, z: p.mesh.position.z, scale: p.mesh.scale.x })),
         stations: this.stations.map((st) => ({ type: st.type, x: st.x, z: st.z })),
         forged: this.forged,
         wounds: this.wounds.map((w) => ({ part: w.part, severity: w.severity })),
         collected: this.state.collected,
         weather: this.weather,
+        boat: this.boat?.placed ? { x: this.boat.x, z: this.boat.z, heading: this.boat.heading, sailing: this.sailing } : null,
+        playerY: this.player.position.y,
         savedAt: Date.now(),
       };
       localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+      return true;
     } catch (err) {
-      /* приватный режим или нет места — молча продолжаем */
+      return false;
     }
   }
 
@@ -2583,6 +2657,12 @@ class Game {
     this.weather = data.weather && WEATHERS[data.weather] ? data.weather : 'clear';
     const [x, z] = data.pos || [4, 40];
     this.player.setPosition(x, z, this.world);
+    if (Number.isFinite(data.playerY) && data.playerY >= this.world.heightAt(x, z) && data.playerY < 140) this.player.position.y = data.playerY;
+    if (data.boat && this.boat && [data.boat.x, data.boat.z, data.boat.heading].every(Number.isFinite) && Math.abs(data.boat.x) < 270 && Math.abs(data.boat.z) < 270) {
+      this.boat.x = data.boat.x; this.boat.z = data.boat.z; this.boat.heading = data.boat.heading;
+      this.sailing = data.boat.sailing === true;
+      this.updateBoat(0);
+    }
     this.player.yaw = data.yaw ?? this.player.yaw;
     this.player.facing = data.facing ?? this.player.facing;
     const [health, thirst, hunger, warmth] = data.need || [100, 78, 72, 100];
@@ -2603,6 +2683,28 @@ class Game {
       }
     }
     this.ui.setWounds(this.wounds);
+
+    // Убираем добытые ресурсы и возвращаем оставшиеся предметы на прежние места.
+    if (Array.isArray(data.nodes)) for (const saved of data.nodes.slice(0, this.resources.nodes.length)) {
+      if (!Number.isInteger(saved.i) || saved.i < 0 || saved.i >= this.resources.nodes.length) continue;
+      const node = this.resources.nodes[saved.i];
+      node.hp = Number.isFinite(saved.hp) ? Math.max(0, Math.min(node.maxHp, saved.hp)) : node.maxHp;
+      node.alive = saved.alive !== false;
+      node.respawnAt = this.resources.time + Math.max(0, Math.min(600, Number(saved.respawn) || 0));
+      node.berries = !!saved.berries;
+      node.berryAt = this.resources.time + Math.max(0, Math.min(600, Number(saved.berryWait) || 0));
+      this.world.setNodeVisible(node.item, node.alive);
+      if (node.item.collider) node.item.collider.disabled = !node.alive;
+      if (node.type === 'bush' && node.alive) this.world.setLayerVisible(node.item, 'fruit', node.berries);
+    }
+    if (Array.isArray(data.pickups) && data.pickups.length <= 500) {
+      for (const pickup of [...this.world.pickups]) this.world.removePickup(pickup);
+      for (const pickup of data.pickups) {
+        if (!this.world.kindInfo[pickup.kind] || ![pickup.x, pickup.z, pickup.scale].every(Number.isFinite)) continue;
+        if (Math.abs(pickup.x) > 270 || Math.abs(pickup.z) > 270) continue;
+        this.world.addPickup(pickup.kind, pickup.x, pickup.z, Math.max(0.1, Math.min(3, pickup.scale)));
+      }
+    }
 
     for (const f of data.campfires || []) {
       const fire = this.resources.addCampfire(f.x, f.z);
@@ -2661,7 +2763,7 @@ class Game {
     if (!this.running || this.paused || this.dead) return;
     this.cursorFree = false;
     this.ui.setCursorFree?.(false);
-    this.tryLock(true);
+    if (!this.device.touch) this.tryLock(true);
   }
 
   /** F9: отпустить курсор для кликов по интерфейсу и вернуть его обратно */
@@ -2747,6 +2849,13 @@ class Game {
     }
   }
 
+  reduceViewDistance() {
+    for (const chunk of this.world.chunkMeshes) {
+      chunk.far = Math.min(chunk.far, 210);
+      if (chunk.lodDist) chunk.lodDist = Math.min(chunk.lodDist, 75);
+    }
+  }
+
   degradeQuality() {
     if (this.quality >= 2) return;
     this.quality += 1;
@@ -2757,6 +2866,8 @@ class Game {
     } else {
       this.renderer.shadowMap.enabled = false;
       this.sky.sun.castShadow = false;
+      this.device.low = true;
+      this.reduceViewDistance();
       this.renderer.setPixelRatio(1);
       this.ui.toast('Тени выключены — так быстрее');
     }
@@ -2890,6 +3001,13 @@ function initMenu() {
   if (menuReady) return;
   menuReady = true;
 
+  initSettingsAndSaves(scheduleBoot);
+  const roomClient = new RoomClient();
+  window.__roomClient = roomClient;
+  roomClient.onJoin = () => scheduleBoot(false);
+  document.getElementById('btn-rooms')?.addEventListener('click', () => document.getElementById('rooms-panel').classList.toggle('hidden'));
+  document.getElementById('btn-room-connect')?.addEventListener('click', () => roomClient.connect(false));
+  document.getElementById('btn-room-list')?.addEventListener('click', () => roomClient.connect(true));
   const continueBtn = document.getElementById('btn-continue');
   const reloadBtn = document.getElementById('btn-reload');
   if (reloadBtn) reloadBtn.addEventListener('click', () => window.location.reload());
@@ -2947,6 +3065,7 @@ function initMenu() {
   // запасной путь: Enter или пробел на стартовом экране
   window.addEventListener('keydown', (e) => {
     if (window.__game && window.__game.running) return;
+    if (e.target && /^(INPUT|TEXTAREA|BUTTON)$/.test(e.target.tagName)) return;
     if (e.code === 'Enter' || e.code === 'NumpadEnter' || e.code === 'Space') {
       e.preventDefault();
       scheduleBoot(false);

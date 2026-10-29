@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { makeRng, clamp } from './noise.js';
-import { makeBoar, makeCrab, makeGull, makeSnake, makeMonkey, makeTurtle, makeFish } from './models.js';
+import { makeBoar, makeCrab, makeGull, makeSnake, makeMonkey, makeTurtle, makeFish, makeRabbit, makeLizard } from './models.js';
 import { CONFIG } from './config.js';
 
 const TYPES = {
@@ -95,6 +95,24 @@ const TYPES = {
     drops: [{ id: 'rawMeat', min: 1, max: 1 }],
     count: 18, biomes: 'water',
   },
+  rabbit: {
+    model: makeRabbit, hp: 8, radius: 0.32,
+    hitbox: { w: 0.8, h: 0.8, d: 0.5 },
+    speed: 1.3, chaseSpeed: 4.2, detect: 9, hearMul: 1.5,
+    attackRange: 0, damage: 0, biteCooldown: 2, fleeBelow: 1,
+    territory: 13, temperament: 'skittish', label: 'Кролик',
+    drops: [{ id: 'rawMeat', min: 1, max: 1 }, { id: 'hide', min: 0, max: 1 }],
+    count: 5, biomes: 'land',
+  },
+  lizard: {
+    model: makeLizard, hp: 5, radius: 0.26,
+    hitbox: { w: 1.1, h: 0.4, d: 0.45 },
+    speed: 0.85, chaseSpeed: 3.4, detect: 7, hearMul: 1.4,
+    attackRange: 0, damage: 0, biteCooldown: 2, fleeBelow: 1,
+    territory: 9, temperament: 'skittish', label: 'Ящерица',
+    drops: [{ id: 'rawMeat', min: 0, max: 1 }],
+    count: 5, biomes: 'land',
+  },
   snake: {
     model: makeSnake, hp: 8,
     radius: 0.34,
@@ -118,7 +136,7 @@ for (const [key, def] of Object.entries(TYPES)) {
 
 const SOUND_BY_STATE = {
   // спокойные звуки: кабан похрюкивает, змея шипит, краб щёлкает, чайка кричит
-  idle: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey', fish: 'bubble', turtle: 'grunt' },
+  idle: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey', fish: 'bubble', turtle: 'grunt', rabbit: 'rustle', lizard: 'rustle' },
   alert: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey', fish: 'bubble' },
   attack: { boar: 'grunt', snake: 'hiss' },
   hurt: { boar: 'grunt', snake: 'hiss', crab: 'crab', gull: 'gull', monkey: 'monkey' },
@@ -475,9 +493,16 @@ export class Mobs {
         }
       }
       // зверь тоже сдвигается — чтобы не «вдавливать» его в игрока
-      mob.x -= nx * push * 0.25;
-      mob.z -= nz * push * 0.25;
+      const mx = mob.x - nx * push * 0.25;
+      const mz = mob.z - nz * push * 0.25;
+      if (!this._blocked(mx, mz, this._collisionRadius(mob))) { mob.x = mx; mob.z = mz; }
     }
+  }
+
+  // Радиус охватывает реальные габариты модели, а не только её туловище.
+  _collisionRadius(mob) {
+    const hb = mob.hitboxSize;
+    return hb ? Math.max(mob.def.radius, Math.hypot(hb.w, hb.d) * 0.5) : mob.def.radius;
   }
 
   /** Звери не слипаются: расталкиваем их между собой (два прохода — стабильнее) */
@@ -497,7 +522,7 @@ export class Mobs {
         if (a.def.flying !== b.def.flying) continue;
         const dx = a.x - b.x;
         const dz = a.z - b.z;
-        const min = a.def.radius + b.def.radius + 0.15;
+        const min = this._collisionRadius(a) + this._collisionRadius(b) + 0.05;
         const d2 = dx * dx + dz * dz;
         if (d2 >= min * min) continue;
 
@@ -515,10 +540,9 @@ export class Mobs {
           nz = dz / d;
         }
         const push = (min - d) * 0.5;
-        a.x += nx * push;
-        a.z += nz * push;
-        b.x -= nx * push;
-        b.z -= nz * push;
+        const ar = this._collisionRadius(a), br = this._collisionRadius(b);
+        if (!this._blocked(a.x + nx * push, a.z + nz * push, ar)) { a.x += nx * push; a.z += nz * push; }
+        if (!this._blocked(b.x - nx * push, b.z - nz * push, br)) { b.x -= nx * push; b.z -= nz * push; }
       }
     }
   }
@@ -765,7 +789,7 @@ export class Mobs {
     const nx = mob.x + clamp(tx - mob.x, -1, 1) * dt * 0.6;
     const nz = mob.z + clamp(tz - mob.z, -1, 1) * dt * 0.6;
     // шаг только по свободному месту: иначе далёкий зверь «залезает» в дерево
-    if (!this._blocked(nx, nz, mob.def.radius * 1.1)) {
+    if (!this._blocked(nx, nz, this._collisionRadius(mob))) {
       mob.x = nx;
       mob.z = nz;
     } else {
@@ -994,7 +1018,7 @@ export class Mobs {
       const dz = ax * sa + az * ca;
       const tx = mob.x + dx * step;
       const tz = mob.z + dz * step;
-      if (this._blocked(tx, tz, def.radius)) continue;
+      if (this._blocked(tx, tz, this._collisionRadius(mob))) continue;
       const h = this.world.heightAt(tx, tz);
       if (tooDeep(h)) continue;
       mob.x = tx;
@@ -1037,7 +1061,7 @@ export class Mobs {
     // обводки моделей: зверь тоже не проходит сквозь оболочку
     if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
     for (const c of this.world.colliders) {
-      if (c.disabled || c.fire) continue;
+      if (c.disabled || c.fire || c.kind === 'den') continue;
       // кусты зверю тоже препятствие (для игрока они мягкие, для зверя — нет)
       if (c.r < 0.3 && !strict) continue;
       const dx = x - c.x;
@@ -1161,6 +1185,13 @@ export class Mobs {
           leg.rotation.x = Math.sin(ph) * amp * (0.25 + walk);
         });
       }
+    }
+
+    if (def.type === 'rabbit' && p.body) {
+      p.body.position.y += Math.max(0, Math.sin(t * 2.4)) * 0.16 * walk;
+    }
+    if (def.type === 'lizard' && p.body) {
+      p.body.rotation.y = Math.sin(t * 3) * 0.18 * walk;
     }
 
     // --- хвост ---
