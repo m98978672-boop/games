@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import { JSDOM } from 'jsdom';
+const dom = new JSDOM('<!doctype html><html lang="ru"><body><button id="fullscreen-toggle" class="hidden"></button></body></html>', { url: 'https://example.org/' });
+globalThis.window = dom.window; globalThis.document = dom.window.document;
+Object.defineProperty(globalThis, 'navigator', { value: dom.window.navigator, configurable: true });
+let active = null, requests = 0, exits = 0;
+Object.defineProperty(document, 'fullscreenElement', { get: () => active });
+document.documentElement.requestFullscreen = async () => { requests++; active = document.documentElement; document.dispatchEvent(new window.Event('fullscreenchange')); };
+document.exitFullscreen = async () => { exits++; active = null; document.dispatchEvent(new window.Event('fullscreenchange')); };
+const { initFullscreen, autoFullscreen } = await import('../src/fullscreen.js');
+initFullscreen();
+const button = document.getElementById('fullscreen-toggle');
+assert.equal(button.classList.contains('hidden'), false);
+autoFullscreen(); await Promise.resolve();
+assert.equal(requests, 1); assert.ok(active); assert.equal(button.title, 'Выйти из полного экрана');
+button.click(); await Promise.resolve();
+assert.equal(exits, 1); assert.equal(active, null); assert.equal(button.title, 'На весь экран');
+autoFullscreen(); await Promise.resolve();
+assert.equal(requests, 1, 'после ручного выхода экран не включается повторно сам');
+button.click(); await Promise.resolve();
+assert.equal(requests, 2); assert.ok(active);
+// Выход по системной кнопке тоже должен учитываться.
+active = null; document.dispatchEvent(new window.Event('fullscreenchange'));
+autoFullscreen(); await Promise.resolve();
+assert.equal(requests, 2);
+console.log('FULLSCREEN OK');

@@ -811,3 +811,12 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .prompt { padding: 7px 13px; font-size: 13px; }
 .touch-device .inv-card, .touch-device .mini-slot { touch-action: none; }
 .touch-fire svg { display: block; width: 38px; height: 38px; margin: auto; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; }
+/* Небольшой переключатель полного экрана доступен и на телефоне, и на ПК. */
+.fullscreen-toggle {
+  position: absolute; top: max(5px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right));
+  width: 34px; height: 34px; padding: 7px; border: 1px solid #bbd0b970;
+  border-radius: 8px; background: #152e2bdd; color: white; box-shadow: none;
+  pointer-events: auto; touch-action: manipulation;
+}
+.fullscreen-toggle svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.fullscreen-toggle:hover, .fullscreen-toggle:focus-visible { background: #355449; outline: 2px solid #f0d39a; outline-offset: 2px; }
