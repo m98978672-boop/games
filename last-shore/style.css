@@ -782,3 +782,32 @@ button.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
 .save-slot strong, .save-slot span { display: block; margin-bottom: 8px; }
 .save-slot span { color: #b4c7b9; font-size: 12px; }
 .save-slot .btn-row { justify-content: flex-start; gap: 6px; }
+/* Сенсорный HUD: стик слева, крупная кнопка удара под правым пальцем. */
+.touch-device .touch-actions { top: 44px; bottom: auto; right: 8px; grid-template-columns: repeat(2, 50px); gap: 4px; }
+.touch-device .touch-actions button { min-height: 38px; border-radius: 11px; font-size: 11px; }
+.touch-device .touch-fire { position: absolute; right: 20px; bottom: 84px; width: 74px; height: 74px; border-radius: 50%; border: 2px solid #f2dfb4b8; background: #713f24aa; color: #fff; font-size: 34px; line-height: 1; padding: 0; box-shadow: 0 2px 12px #0008; touch-action: none; pointer-events: auto; }
+.touch-device .touch-fire:active { background: #bd6c38cc; transform: scale(.95); }
+.touch-device .touch-stick { bottom: 84px; }
+.toasts { max-width: min(255px, 65vw); gap: 4px; }
+.toast { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+.touch-device .toasts { left: 8px; bottom: 200px; max-width: min(200px, 50vw); }
+.inventory-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.inventory-tabs button, .panel-close { padding: 8px 12px; font-size: 11px; letter-spacing: 0; border-radius: 7px; box-shadow: none; }
+.inventory-tabs button { background: #33453c; color: #d4e1d3; }
+.inventory-tabs button.tab-active { background: #e3b967; color: #1b2018; }
+.inventory-tabs #inventory-close { margin-left: auto; }
+#inventory-craft-list { list-style: none; display: flex; flex-direction: column; gap: 7px; max-height: min(35vh, 232px); overflow-y: auto; margin-bottom: 10px; }
+.rooms-panel textarea { display: block; width: 100%; padding: 10px; margin-top: 4px; color: white; background: #142526; border: 1px solid #42615c; border-radius: 6px; font: inherit; user-select: text; resize: vertical; overflow-wrap: anywhere; }
+.phone-room { margin: 12px 0; padding: 12px; border: 1px solid #547e71; border-radius: 10px; }
+.phone-room summary { cursor: pointer; color: #f0d39a; font-weight: bold; }
+#peer-status { color: #edc883; }
+@media (max-width: 700px) {
+  .touch-device .panel.panel-inv { bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(94vw, 566px); max-height: 84dvh; overflow-y: auto; padding: 12px; }
+  .touch-device #inv-list { grid-template-columns: repeat(4, 1fr); max-height: 28dvh; }
+  .touch-device .inv-hotbar { gap: 2px; }
+  .touch-device .mini-slot { flex: 1; min-width: 0; }
+  .touch-device .panel-right { top: 50%; right: 3vw; width: 94vw; max-height: 80dvh; transform: translateY(-50%); }
+}
+.prompt { padding: 7px 13px; font-size: 13px; }
+.touch-device .inv-card, .touch-device .mini-slot { touch-action: none; }
+.touch-fire svg { display: block; width: 38px; height: 38px; margin: auto; fill: none; stroke: currentColor; stroke-width: 2.3; stroke-linecap: round; }

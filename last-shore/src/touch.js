@@ -5,7 +5,8 @@ export function bindTouch(game) {
   const stick = document.getElementById('touch-stick');
   const knob = document.getElementById('touch-knob');
   let stickId = null;
-  const release = () => {
+  const release = (e) => {
+    if (e && e.pointerId !== stickId) return;
     stickId = null;
     for (const key of ['forward', 'back', 'left', 'right']) game.input[key] = false;
     knob.style.transform = '';
@@ -19,14 +20,15 @@ export function bindTouch(game) {
     game.input.forward = y < -0.22; game.input.back = y > 0.22;
     game.input.left = x < -0.22; game.input.right = x > 0.22;
   };
-  stick.addEventListener('pointerdown', e => { e.preventDefault(); stickId = e.pointerId; stick.setPointerCapture(e.pointerId); move(e); });
+  stick.addEventListener('pointerdown', e => { if (stickId !== null) return; e.preventDefault(); stickId = e.pointerId; stick.setPointerCapture(e.pointerId); move(e); });
   stick.addEventListener('pointermove', e => { if (e.pointerId === stickId) move(e); });
-  stick.addEventListener('pointerup', release); stick.addEventListener('pointercancel', release);
+  stick.addEventListener('pointerup', release); stick.addEventListener('pointercancel', release); stick.addEventListener('lostpointercapture', release);
   for (const btn of root.querySelectorAll('[data-action]')) {
     const action = btn.dataset.action;
     btn.addEventListener('pointerdown', e => {
       e.preventDefault(); btn.setPointerCapture(e.pointerId);
-      if (!game.running || game.paused) return;
+      if (!game.running || game.paused || game.dead) return;
+      if (game.ui.isPanelOpen() && action !== 'bag') return;
       game.audio.resume();
       if (action === 'sprint') game.input.sprint = true;
       else if (action === 'jump') { game.input.jump = true; game.input.jumpHeld = true; }
@@ -44,7 +46,7 @@ export function bindTouch(game) {
       if (action === 'jump') game.input.jumpHeld = false;
       if (action === 'attack') game.holdingAttack = false;
     };
-    btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up);
+    btn.addEventListener('pointerup', up); btn.addEventListener('pointercancel', up); btn.addEventListener('lostpointercapture', up);
   }
   let look = null;
   game.canvas.addEventListener('pointerdown', e => {
