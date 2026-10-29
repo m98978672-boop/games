@@ -377,11 +377,14 @@ export class ShellField {
     }
     const lineGeo = new THREE.BufferGeometry();
     lineGeo.setAttribute('position', new THREE.Float32BufferAttribute(verts, 3));
+    // depthTest включён: иначе обводки всех деревьев острова светятся сквозь
+    // лес и сквозь друг друга — получается «частокол проводов», а не силуэты
     const lineMat = new THREE.LineBasicMaterial({
       color: 0x7dffb0,
       transparent: true,
-      opacity: 0.6,
-      depthTest: false,
+      opacity: 0.55,
+      depthTest: true,
+      depthWrite: false,
     });
     this.lines = new THREE.LineSegments(lineGeo, lineMat);
     this.lines.frustumCulled = false;
@@ -392,8 +395,9 @@ export class ShellField {
     const triMat = new THREE.MeshBasicMaterial({
       color: 0x39a86a,
       transparent: true,
-      opacity: 0.1,
+      opacity: 0.12,
       side: THREE.DoubleSide,
+      depthTest: true,
       depthWrite: false,
     });
     this.triangles = new THREE.Mesh(triGeo, triMat);
