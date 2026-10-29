@@ -153,9 +153,18 @@ class Game {
     this.projectiles = [];
     this.chips = [];            // щепки, крошка и ягоды — короткие частицы
 
+    // ---- прогрев шейдеров: компилируем всё заранее, чтобы первый кадр и
+    // первая постановка костра/постройки не «подвешивали» игру ----
+    try {
+      this.player.position.set(this.spawn?.x || 0, this.world.heightAt(0, 0), this.spawn?.z || 0);
+      this.player.applyCamera(this.camera, this.world, 1);
+      this.renderer.compile(this.scene, this.camera);
+    } catch (e) { /* прогрев не критичен */ }
+
     // ---- лодка: плавает по волнам, на ней можно уйти к другим островам ----
     this.boat = null;
     this.sailing = false;
+    this.shadowDirty = true;   // карту теней пересобрать на первом кадре
 
     // ---- хитбоксы: у каждой модели своя невидимая коробка ----
     // Ничего не прячем и не «догружаем»: модели всегда на месте,
@@ -786,6 +795,7 @@ class Game {
 
     this.ui.hideScreens();
     this.ui.setBars(this.readBars());
+    this.ui.setAir(this.player.air, false);
     this.ui.renderBag(this.state.inventory, this.state.hotbar);
     this.refreshHotbar();
     this.player.setEquipped(this.equippedId());
@@ -1466,6 +1476,7 @@ class Game {
       hunger: this.state.hunger,
       warmth: this.state.warmth,
       stamina: this.player.stamina,
+      air: this.player.air,
     };
   }
 
@@ -2297,6 +2308,24 @@ class Game {
     this.audio.setNight(skyInfo.night);
     this.audio.updateMusic(dt, skyInfo.night);
 
+    // под водой: свет гаснет с глубиной, дальний план тонет в сине-зелёной мгле
+    if (this.player && this.player.underwater) {
+      const d = Math.max(0, CONFIG.world.seaLevel - (this.player.position.y + 1.6));
+      const murk = Math.min(1, 0.35 + d * 0.16);
+      this.sky.sun.intensity *= 1 - murk * 0.72;
+      this.sky.hemi.intensity *= 1 - murk * 0.5;
+      // без этого герой и дно под водой остаются «солнечно-яркими»
+      this.sky.ambient.intensity *= 1 - murk * 0.45;
+      this.scene.fog.color.setRGB(0.05 + 0.02 * (1 - murk), 0.22 - 0.06 * murk, 0.3 - 0.04 * murk);
+      this.scene.fog.near = 0.35;
+      this.scene.fog.far = Math.max(7, 30 - d * 3.8);
+      // поверхность воды снизу светится тем же цветом, что и мгла
+      this.world.waterUniforms.uFog.value.copy(this.scene.fog.color);
+    } else if (this.player && this.player.swimming) {
+      // у самой поверхности вода чуть подсвечена снизу
+      this.scene.fog.color.lerp(new THREE.Color(0x2f7f96), 0.35);
+    }
+
     // под землёй солнце не достаёт: остаётся только фонарь в руке
     if (this.underground) {
       this.sky.sun.intensity *= 0.06;
@@ -2416,6 +2445,12 @@ class Game {
     if (state.thirst <= 0) { dmg += CONFIG.needs.healthDrain * 0.8; cause = 'обезвоживание'; }
     if (state.hunger <= 0) { dmg += CONFIG.needs.healthDrain * 0.6; cause = cause || 'истощение'; }
     if (state.warmth < 12) { dmg += CONFIG.needs.coldDrain * 0.5; cause = cause || 'переохлаждение'; }
+    // кончился воздух под водой — здоровье тает, пока герой не всплывёт
+    if (this.player.air <= 0.01 && this.player.underwater) {
+      dmg += CONFIG.needs.healthDrain * 1.6;
+      cause = cause || 'нехватка воздуха';
+    }
+    this.ui.setAir(this.player.air, this.player.swimming || this.player.underwater || this.player.air < CONFIG.player.airMax - 0.5);
 
     if (dmg > 0) {
       state.health -= dmg * dt;
@@ -2740,6 +2775,18 @@ class Game {
 
     if (this.running && !this.paused && !this.dead) this.update(dt);
     else if (this.paused || this.dead) this.world.update(dt * 0.2, this.camera);
+
+    // --- тени: обновляем карту не каждый кадр ---
+    // Солнце идёт медленно, а тени пересчитываются дорого: двух кадров из трёх
+    // хватает, разницы не видно, а кадровое время падает заметно.
+    try {
+      if (this.renderer.shadowMap.enabled) {
+        this.renderer.shadowMap.autoUpdate = false;
+        const need = (this.frameIndex % 2 === 0) || this.shadowDirty;
+        this.renderer.shadowMap.needsUpdate = need;
+        this.shadowDirty = false;
+      }
+    } catch (e) { /* старые драйверы — не критично */ }
 
     try {
       this.renderer.render(this.scene, this.camera);

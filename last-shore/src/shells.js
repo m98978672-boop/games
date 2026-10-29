@@ -82,6 +82,82 @@ export function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity, ma
   });
 }
 
+/**
+ * Обводка по частям модели, а не одна общая.
+ *
+ * У дерева «твёрдое» — это ствол и корни, у валуна — камень, у куста —
+ * сердцевина. Если снимать одну оболочку со всей модели, она либо шире
+ * силуэта (невидимая стена), либо режет углы. Поэтому модель режется на
+ * горизонтальные пояса, и у каждого пояса своя призма с своим радиусом:
+ * низ — по корням, выше — по стволу, крона в обводку не попадает вовсе.
+ *
+ * Возвращает [{ poly, minY, maxY }]. Пустой массив — обводить нечего.
+ */
+export function hullsFromGeometry(geometries, {
+  pad = 0.02,
+  top = Infinity,          // выше этого — не обводим (крона, листья)
+  bands = 2,               // на сколько поясов резать
+  basePad = 0.16,          // первый пояс шире: там корни и комель
+  maxRadius = undefined,
+} = {}) {
+  const solid = geometries.filter(Boolean);
+  if (!solid.length) return [];
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const geo of solid) {
+    const pos = geo.attributes && geo.attributes.position;
+    if (!pos) continue;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+  if (!Number.isFinite(minY)) return [];
+  const shellTop = Math.min(maxY, top);
+  if (shellTop - minY < 0.15) return [];
+
+  const out = [];
+  const span = shellTop - minY;
+  for (let b = 0; b < bands; b++) {
+    const y0 = minY + (span * b) / bands;
+    const y1 = b === bands - 1 ? shellTop : minY + (span * (b + 1)) / bands;
+    // радиус сужается с высотой: у корней шире, у верхушки — уже
+    const cap = maxRadius === undefined
+      ? undefined
+      : maxRadius * (b === 0 ? 1 + basePad : 1 - b * 0.12);
+    const pts = [];
+    for (const geo of solid) {
+      const pos = geo.attributes && geo.attributes.position;
+      if (!pos) continue;
+      const step = Math.max(1, Math.floor(pos.count / 700));
+      for (let i = 0; i < pos.count; i += step) {
+        const y = pos.getY(i);
+        if (y < y0 - 0.02 || y > y1 + 0.02) continue;
+        let px = pos.getX(i);
+        let pz = pos.getZ(i);
+        if (cap !== undefined) {
+          const d = Math.hypot(px, pz);
+          if (d > cap) { px = (px / d) * cap; pz = (pz / d) * cap; }
+        }
+        pts.push({ x: px, z: pz });
+      }
+    }
+    const hull = convexHull2D(pts);
+    if (hull.length < 3) continue;
+    const cx = hull.reduce((acc, p) => acc + p.x, 0) / hull.length;
+    const cz = hull.reduce((acc, p) => acc + p.z, 0) / hull.length;
+    const poly = hull.map((p) => {
+      const dx = p.x - cx;
+      const dz = p.z - cz;
+      const len = Math.hypot(dx, dz) || 1;
+      return { x: p.x + (dx / len) * pad, z: p.z + (dz / len) * pad };
+    });
+    out.push({ poly, minY: y0, maxY: y1 + 0.02 });
+  }
+  return out;
+}
+
 const CELL = 8;
 const key = (cx, cz) => cx * 100000 + cz;
 

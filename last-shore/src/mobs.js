@@ -294,15 +294,19 @@ export class Mobs {
       alerted: false,
       targetX: spot.x,
       targetZ: spot.z,
+      stuckTime: 0,
       speedNow: 0,
       lastSeen: 0,
       restTimer: 0,
     };
     this.group.add(mob.group);
     this.list.push(mob);
+    mob.stuckTime = 0;
     // страховка: габарит модели может быть больше прикидки def.hitbox —
     // отодвигаем зверя от ствола/валуна, если он всё же задевает модель
     this._unstick(mob);
+    // со спавна зверь не стоит столбом: сразу выбираем свободную точку пути
+    this._pickPatrolPoint(mob);
     return mob;
   }
 
@@ -321,10 +325,10 @@ export class Mobs {
       return true;
     };
     if (clear(mob.x, mob.z)) return 0;
-    for (let ring = 1; ring <= 30; ring++) {
+    for (let ring = 1; ring <= 80; ring++) {
       const rad = ring * 0.5;
-      for (let i = 0; i < 16; i++) {
-        const a = (i / 16) * Math.PI * 2 + ring * 0.4;
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2 + ring * 0.4;
         const x = mob.x + Math.cos(a) * rad;
         const z = mob.z + Math.sin(a) * rad;
         if (!clear(x, z)) continue;
@@ -613,16 +617,36 @@ export class Mobs {
 
   _pickPatrolPoint(mob) {
     const t = mob.def.territory;
-    for (let i = 0; i < 8; i++) {
+    const swim = !!mob.def.swim;
+    const r = mob.def.radius || 0.45;
+    // цель патруля обязана быть проходимой: иначе зверь идёт в ствол,
+    // упирается и стоит на месте всё время, пока не сменится состояние
+    const hHere = this.world.heightAt(mob.x, mob.z);
+    const ok = (x, z) => {
+      const h = this.world.heightAt(x, z);
+      if (swim) { if (h > -0.9 || h < -7) return false; }
+      else if (h < -0.12 && h < hHere - 0.05) return false;   // глубже, чем стоит, — нельзя
+      return !this._blocked(x, z, r * 1.1);
+    };
+    for (let i = 0; i < 14; i++) {
       const a = this.rng() * Math.PI * 2;
-      const r = this.rng() * t * 0.8;
-      const x = mob.home.x + Math.cos(a) * r;
-      const z = mob.home.z + Math.sin(a) * r;
-      if (this.world.heightAt(x, z) > 0.45) {
-        mob.targetX = x;
-        mob.targetZ = z;
-        return;
-      }
+      const rad = 0.6 + this.rng() * t * 0.8;
+      const x = mob.home.x + Math.cos(a) * rad;
+      const z = mob.home.z + Math.sin(a) * rad;
+      if (!ok(x, z)) continue;
+      mob.targetX = x;
+      mob.targetZ = z;
+      return;
+    }
+    // вокруг дома всё занято — цель чуть в стороне от себя, лишь бы идти
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2 + this.rng();
+      const x = mob.x + Math.cos(a) * 1.2;
+      const z = mob.z + Math.sin(a) * 1.2;
+      if (!ok(x, z)) continue;
+      mob.targetX = x;
+      mob.targetZ = z;
+      return;
     }
     mob.targetX = mob.home.x;
     mob.targetZ = mob.home.z;
@@ -929,8 +953,18 @@ export class Mobs {
 
     let ax = aimX - mob.x;
     let az = aimZ - mob.z;
-    const len = Math.hypot(ax, az);
-    if (len < 0.05) return;
+    let len = Math.hypot(ax, az);
+    // цель «в себе» (так бывает сразу после спавна и после пастьбы) —
+    // берём ближайшую свободную точку, иначе зверь просто стоит
+    if (len < 0.3) {
+      this._pickPatrolPoint(mob);
+      aimX = mob.targetX;
+      aimZ = mob.targetZ;
+      ax = aimX - mob.x;
+      az = aimZ - mob.z;
+      len = Math.hypot(ax, az);
+      if (len < 0.3) return;
+    }
     ax /= len;
     az /= len;
 
@@ -938,31 +972,52 @@ export class Mobs {
     const nx = mob.x + ax * step;
     const nz = mob.z + az * step;
 
-    // в воду не лезем, а рыба — наоборот, из воды не выходит
-    if (def.swim) {
-      if (this.world.heightAt(nx, nz) > -0.5) {
-        mob.targetX = mob.home.x;
-        mob.targetZ = mob.home.z;
-        if (mob.state === 'chase') this.setState(mob, 'patrol');
-        return;
-      }
-    } else if (this.world.heightAt(nx, nz) < 0.45) {
+    // в воду не лезем, а рыба — наоборот, из воды не выходит.
+    // Сухопутный зверь всегда может шагнуть на мель и выбраться из воды,
+    // но не глубже, чем стоит: иначе он намертво прилипает к кромке.
+    const hCur = this.world.heightAt(mob.x, mob.z);
+    const tooDeep = (h) => (def.swim ? h > -0.5 : (h < -0.15 && h < hCur - 0.05));
+    if (tooDeep(this.world.heightAt(nx, nz))) {
       mob.targetX = mob.home.x;
       mob.targetZ = mob.home.z;
       if (mob.state === 'chase') this.setState(mob, 'patrol');
       return;
     }
-    // не проходим сквозь стволы и валуны
-    if (!this._blocked(nx, nz, def.radius)) {
-      mob.x = nx;
-      mob.z = nz;
+    // не проходим сквозь стволы и валуны: пробуем веер направлений —
+    // прямо, вбок и наискось, — чтобы зверь обходил ствол, а не упирался в него
+    const dirs = [0, 0.6, -0.6, 1.2, -1.2, 1.8, -1.8];
+    let moved = false;
+    for (const turn of dirs) {
+      const ca = Math.cos(turn);
+      const sa = Math.sin(turn);
+      const dx = ax * ca - az * sa;
+      const dz = ax * sa + az * ca;
+      const tx = mob.x + dx * step;
+      const tz = mob.z + dz * step;
+      if (this._blocked(tx, tz, def.radius)) continue;
+      const h = this.world.heightAt(tx, tz);
+      if (tooDeep(h)) continue;
+      mob.x = tx;
+      mob.z = tz;
+      moved = true;
+      break;
+    }
+    // детектор застревания: зверь хочет идти, но стоит на месте
+    if (moved) {
+      mob.stuckTime = 0;
     } else {
-      // обходим препятствие вбок
-      const sideX = mob.x - az * step;
-      const sideZ = mob.z + ax * step;
-      if (!this._blocked(sideX, sideZ, def.radius)) {
-        mob.x = sideX;
-        mob.z = sideZ;
+      mob.stuckTime = (mob.stuckTime || 0) + dt;
+      if (mob.stuckTime > 1.4) {
+        mob.stuckTime = 0;
+        // разворачиваемся и ищем другую цель; в бою — просто обходим игрока
+        if (mob.state === 'chase' || mob.state === 'attack') {
+          mob.state = 'patrol';
+          this.setState(mob, 'patrol');
+        } else {
+          mob.facing += Math.PI * (0.5 + this.rng());
+          this._pickPatrolPoint(mob);
+          this.setState(mob, 'patrol');
+        }
       }
     }
 
