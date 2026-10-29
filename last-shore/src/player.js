@@ -450,13 +450,13 @@ export class Player {
     this.wading = underground ? 0 : clamp(-groundHere / 1.1, 0, 1);
     const inWater = !underground && groundHere < 0.05;
     // глубоко — уже не идём по дну, а плывём
-    const deepWater = !underground && !this.fly && groundHere < -CONFIG.player.maxDepth;
+    const deepWater = !underground && !this.fly && groundHere < CONFIG.world.seaLevel - CONFIG.player.maxDepth * 0.85;
     this.diveHeld = !!(input.sprint && deepWater);
 
     let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
     // в полёте Shift уходит на спуск, поэтому горизонт всегда «беговой»
     if (this.fly) speed = P.flyHorizontal;
-    if (inWater) speed = THREE.MathUtils.lerp(speed, P.wadeSpeed, this.wading);
+    if (inWater && !this.fly) speed = THREE.MathUtils.lerp(speed, P.wadeSpeed, this.wading);
     if (deepWater) speed = this.diveHeld ? P.swimSpeed : P.swimFast;
 
     const targetVX = wx * speed * (moving ? 1 : 0);
@@ -475,14 +475,13 @@ export class Player {
       if (Math.abs(x) > CONFIG.world.size * 0.75 || Math.abs(z) > CONFIG.world.size * 0.75) return false;
       const h = world.heightAt(x, z);
       // глубокую воду больше не считаем стеной: герой в неё заплывает
-      if (h < -P.maxDepth && this.fly) return false;
       // стенку выкопанной ямы не перелезть: подъём больше 0.55 м не пускает.
       // Спуск и прыжок вниз при этом свободны — в яму герой падает сам.
       if (!this.fly) {
         const rise = h - world.heightAt(this.position.x, this.position.z);
         if (rise > 0.55) return false;
       }
-      if (world.slopeAt(x, z) > 2.4) return false; // почти скала
+      if (h >= -P.maxDepth * 0.85 && world.slopeAt(x, z) > 2.4) return false; // почти скала
       return true;
     };
 
@@ -716,7 +715,7 @@ export class Player {
     (this.landDip = Math.max(0, this.landDip - dt * 3));
     const bobY = Math.abs(Math.sin(this.walkPhase)) * 0.05 * speedRatio;
     this.model.position.copy(this.position);
-    if (inWater) this.model.position.y -= this.wading * 0.55;
+    if (inWater && !this.swimming) this.model.position.y -= this.wading * 0.25;
     this.model.position.y += bobY - this.landDip * 0.14 - dipExtra;
     this.actionT = actionT;
     this.model.rotation.y = this.facing;

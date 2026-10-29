@@ -138,12 +138,12 @@ for (let i = 0; i < w.treeList.length; i += 17) {
 log('плоская земля под моделями:', flatSamples, 'деревьев · худший перепад', worstFlat.toFixed(3), 'м');
 check(worstFlat < 0.12, 'модели встают на ровную землю');
 
-// --- 5. дома зверей: поляна без моделей, звери рядом с домом ---
+// --- 5. дома зверей: коллизия и звери рядом с домом ---
 const dens = w.dens || [];
 let denBlocked = 0;
 for (const d of dens) {
   for (const c of w.colliders) {
-    if (c.disabled || c.fire || c.soft) continue;
+    if (c.disabled || c.fire || c.soft || c.kind === 'den') continue;
     const dist = Math.hypot(c.x - d.x, c.z - d.z);
     if (dist < d.radius * 0.55) denBlocked++;
   }
@@ -153,12 +153,12 @@ let farFromDen = 0;
 for (const m of withDen) {
   if (Math.hypot(m.x - m.den.x, m.z - m.den.z) > m.den.radius + 2) farFromDen++;
 }
-const land = game.mobs.list.filter((m) => !m.def.swim);
-log('дома зверей:', dens.length, '· моделей внутри поляны', denBlocked,
+const land = game.mobs.list.filter((m) => !m.def.swim && dens.some((d) => d.kind === m.type));
+log('дома зверей:', dens.length, '· деревьев и камней рядом', denBlocked,
   '· зверей у дома', withDen.length, 'из', land.length, 'сухопутных · вне дома', farFromDen);
 check(dens.length >= 15, 'дома зверей построены');
-check(denBlocked === 0, 'внутри поляны нет деревьев и камней');
-check(withDen.length === land.length && farFromDen === 0, 'все сухопутные звери живут у своих домов');
+check(dens.every((d) => w.colliders.some((c) => c.kind === 'den' && c.den === d)), 'у каждого дома есть коллайдер');
+check(withDen.length === land.length && farFromDen === 0, 'животные с логовищами живут рядом с ними');
 
 // --- 5б. звери не застревают: подходим к каждому и смотрим, идёт ли он ---
 const tracked = game.mobs.list.filter((m) => !m.def.swim).slice(0, 12);

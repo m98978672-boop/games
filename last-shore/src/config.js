@@ -24,14 +24,14 @@ export const CONFIG = {
   player: {
     walkSpeed: 4.4,
     sprintSpeed: 8.0,
-    wadeSpeed: 2.2,
+    wadeSpeed: 3.5,
     accel: 14,
     jumpSpeed: 6.2,
     gravity: -22,
     flySpeed: 7.5,        // креатив: вертикальная скорость полёта
     flyHorizontal: 9.5,   // креатив: скорость по горизонту
     maxDepth: 1.15,     // глубже этого герой уже не идёт по дну, а плывёт
-    swimSpeed: 3.1,     // гребок по поверхности
+    swimSpeed: 4.1,     // гребок по поверхности
     swimFast: 4.6,      // гребок с разгоном
     diveSpeed: 3.4,     // погружение и всплытие
     floatLine: 1.02,    // на сколько тело уходит под воду, когда герой держится на поверхности

@@ -151,6 +151,15 @@ export function createTerrainMaterial(textures) {
          // выгоревшая на солнце трава — тёплый оттенок пятнами
          diffuseColor.rgb *= mix(vec3(1.0), vec3(1.07, 1.0, 0.86), smoothstep(0.55, 0.85, macro3) * w.x);
 
+         // Разные поверхности: вкрапления ракушек на пляже и листовая
+         // подстилка / мелкий гравий на земле, а не только смена оттенка.
+         float shellGrain = smoothstep(0.68, 0.83, texture2D(uRock, uvA * 6.2 + 0.37).r);
+         float leafLitter = smoothstep(0.58, 0.76, texture2D(uDirt, uvA * 1.7 + 0.23).g);
+         float stoneGrain = smoothstep(0.60, 0.77, texture2D(uRock, uvA * 2.8 - 0.16).r);
+         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.3 + vec3(0.04), shellGrain * w.y * 0.5);
+         diffuseColor.rgb *= mix(vec3(1.0), vec3(0.67, 0.58, 0.42), leafLitter * w.w * 0.5);
+         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.65, stoneGrain * w.z * 0.35);
+
          // мокрый песок у воды темнее и холоднее
          float wet = 1.0 - smoothstep(0.25, 1.1, vWPos.y);
          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.62, 0.66, 0.7), wet);
@@ -161,7 +170,7 @@ export function createTerrainMaterial(textures) {
   };
 
   // пересобирать шейдер при смене материала не нужно, но кэш ключей обязателен
-  material.customProgramCacheKey = () => 'lastshore-terrain-v5';
+  material.customProgramCacheKey = () => 'lastshore-terrain-v6';
   return material;
 }
 

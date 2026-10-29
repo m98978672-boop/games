@@ -13685,6 +13685,126 @@
       return new _BoxGeometry(data.width, data.height, data.depth, data.widthSegments, data.heightSegments, data.depthSegments);
     }
   };
+  var CapsuleGeometry = class _CapsuleGeometry extends BufferGeometry {
+    /**
+     * Constructs a new capsule geometry.
+     *
+     * @param {number} [radius=1] - Radius of the capsule.
+     * @param {number} [height=1] - Height of the middle section.
+     * @param {number} [capSegments=4] - Number of curve segments used to build each cap.
+     * @param {number} [radialSegments=8] - Number of segmented faces around the circumference of the capsule. Must be an integer >= 3.
+     * @param {number} [heightSegments=1] - Number of rows of faces along the height of the middle section. Must be an integer >= 1.
+     */
+    constructor(radius = 1, height = 1, capSegments = 4, radialSegments = 8, heightSegments = 1) {
+      super();
+      this.type = "CapsuleGeometry";
+      this.parameters = {
+        radius,
+        height,
+        capSegments,
+        radialSegments,
+        heightSegments
+      };
+      height = Math.max(0, height);
+      capSegments = Math.max(1, Math.floor(capSegments));
+      radialSegments = Math.max(3, Math.floor(radialSegments));
+      heightSegments = Math.max(1, Math.floor(heightSegments));
+      const indices = [];
+      const vertices = [];
+      const normals = [];
+      const uvs = [];
+      const halfHeight = height / 2;
+      const capArcLength = Math.PI / 2 * radius;
+      const cylinderPartLength = height;
+      const totalArcLength = 2 * capArcLength + cylinderPartLength;
+      const numVerticalSegments = capSegments * 2 + heightSegments;
+      const verticesPerRow = radialSegments + 1;
+      const normal = new Vector3();
+      const vertex2 = new Vector3();
+      for (let iy = 0; iy <= numVerticalSegments; iy++) {
+        let currentArcLength = 0;
+        let profileY = 0;
+        let profileRadius = 0;
+        let normalYComponent = 0;
+        if (iy <= capSegments) {
+          const segmentProgress = iy / capSegments;
+          const angle = segmentProgress * Math.PI / 2;
+          profileY = -halfHeight - radius * Math.cos(angle);
+          profileRadius = radius * Math.sin(angle);
+          normalYComponent = -radius * Math.cos(angle);
+          currentArcLength = segmentProgress * capArcLength;
+        } else if (iy <= capSegments + heightSegments) {
+          const segmentProgress = (iy - capSegments) / heightSegments;
+          profileY = -halfHeight + segmentProgress * height;
+          profileRadius = radius;
+          normalYComponent = 0;
+          currentArcLength = capArcLength + segmentProgress * cylinderPartLength;
+        } else {
+          const segmentProgress = (iy - capSegments - heightSegments) / capSegments;
+          const angle = segmentProgress * Math.PI / 2;
+          profileY = halfHeight + radius * Math.sin(angle);
+          profileRadius = radius * Math.cos(angle);
+          normalYComponent = radius * Math.sin(angle);
+          currentArcLength = capArcLength + cylinderPartLength + segmentProgress * capArcLength;
+        }
+        const v = Math.max(0, Math.min(1, currentArcLength / totalArcLength));
+        let uOffset = 0;
+        if (iy === 0) {
+          uOffset = 0.5 / radialSegments;
+        } else if (iy === numVerticalSegments) {
+          uOffset = -0.5 / radialSegments;
+        }
+        for (let ix = 0; ix <= radialSegments; ix++) {
+          const u = ix / radialSegments;
+          const theta = u * Math.PI * 2;
+          const sinTheta = Math.sin(theta);
+          const cosTheta = Math.cos(theta);
+          vertex2.x = -profileRadius * cosTheta;
+          vertex2.y = profileY;
+          vertex2.z = profileRadius * sinTheta;
+          vertices.push(vertex2.x, vertex2.y, vertex2.z);
+          normal.set(
+            -profileRadius * cosTheta,
+            normalYComponent,
+            profileRadius * sinTheta
+          );
+          normal.normalize();
+          normals.push(normal.x, normal.y, normal.z);
+          uvs.push(u + uOffset, v);
+        }
+        if (iy > 0) {
+          const prevIndexRow = (iy - 1) * verticesPerRow;
+          for (let ix = 0; ix < radialSegments; ix++) {
+            const i1 = prevIndexRow + ix;
+            const i2 = prevIndexRow + ix + 1;
+            const i3 = iy * verticesPerRow + ix;
+            const i4 = iy * verticesPerRow + ix + 1;
+            indices.push(i1, i2, i3);
+            indices.push(i2, i4, i3);
+          }
+        }
+      }
+      this.setIndex(indices);
+      this.setAttribute("position", new Float32BufferAttribute(vertices, 3));
+      this.setAttribute("normal", new Float32BufferAttribute(normals, 3));
+      this.setAttribute("uv", new Float32BufferAttribute(uvs, 2));
+    }
+    copy(source) {
+      super.copy(source);
+      this.parameters = Object.assign({}, source.parameters);
+      return this;
+    }
+    /**
+     * Factory method for creating an instance of this class from the given
+     * JSON object.
+     *
+     * @param {Object} data - A JSON object representing the serialized geometry.
+     * @return {CapsuleGeometry} A new instance.
+     */
+    static fromJSON(data) {
+      return new _CapsuleGeometry(data.radius, data.height, data.capSegments, data.radialSegments, data.heightSegments);
+    }
+  };
   var CircleGeometry = class _CircleGeometry extends BufferGeometry {
     /**
      * Constructs a new circle geometry.
@@ -18167,7 +18287,7 @@
       }
       attribute.onUploadCallback();
     }
-    function get(attribute) {
+    function get2(attribute) {
       if (attribute.isInterleavedBufferAttribute) attribute = attribute.data;
       return buffers.get(attribute);
     }
@@ -18205,7 +18325,7 @@
       }
     }
     return {
-      get,
+      get: get2,
       remove,
       update
     };
@@ -20546,7 +20666,7 @@
     let cubeMaps = /* @__PURE__ */ new WeakMap();
     let pmremMaps = /* @__PURE__ */ new WeakMap();
     let pmremGenerator = null;
-    function get(texture, usePMREM = false) {
+    function get2(texture, usePMREM = false) {
       if (texture === null || texture === void 0) return null;
       if (usePMREM) {
         return getPMREM(texture);
@@ -20654,7 +20774,7 @@
       }
     }
     return {
-      get,
+      get: get2,
       dispose
     };
   }
@@ -20713,7 +20833,7 @@
       }
       info.memory.geometries--;
     }
-    function get(object, geometry) {
+    function get2(object, geometry) {
       if (geometries[geometry.id] === true) return geometry;
       geometry.addEventListener("dispose", onGeometryDispose);
       geometries[geometry.id] = true;
@@ -20774,7 +20894,7 @@
       return wireframeAttributes.get(geometry);
     }
     return {
-      get,
+      get: get2,
       update,
       getWireframeAttribute
     };
@@ -21893,10 +22013,10 @@
     }
   }
   function getShaderErrors(gl, shader, type) {
-    const status = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+    const status2 = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
     const shaderInfoLog = gl.getShaderInfoLog(shader) || "";
     const errors = shaderInfoLog.trim();
-    if (status && errors === "") return "";
+    if (status2 && errors === "") return "";
     const errorMatches = /ERROR: 0:(\d+)/.exec(errors);
     if (errorMatches) {
       const errorLine = parseInt(errorMatches[1]);
@@ -23016,7 +23136,7 @@
     function has(object) {
       return properties.has(object);
     }
-    function get(object) {
+    function get2(object) {
       let map = properties.get(object);
       if (map === void 0) {
         map = {};
@@ -23035,7 +23155,7 @@
     }
     return {
       has,
-      get,
+      get: get2,
       remove,
       update,
       dispose
@@ -23164,7 +23284,7 @@
   }
   function WebGLRenderLists() {
     let lists = /* @__PURE__ */ new WeakMap();
-    function get(scene, renderCallDepth) {
+    function get2(scene, renderCallDepth) {
       const listArray = lists.get(scene);
       let list;
       if (listArray === void 0) {
@@ -23184,7 +23304,7 @@
       lists = /* @__PURE__ */ new WeakMap();
     }
     return {
-      get,
+      get: get2,
       dispose
     };
   }
@@ -23651,7 +23771,7 @@
   }
   function WebGLRenderStates(extensions) {
     let renderStates = /* @__PURE__ */ new WeakMap();
-    function get(scene, renderCallDepth = 0) {
+    function get2(scene, renderCallDepth = 0) {
       const renderStateArray = renderStates.get(scene);
       let renderState;
       if (renderStateArray === void 0) {
@@ -23671,7 +23791,7 @@
       renderStates = /* @__PURE__ */ new WeakMap();
     }
     return {
-      get,
+      get: get2,
       dispose
     };
   }
@@ -29578,7 +29698,7 @@ void main() {
     player: {
       walkSpeed: 4.4,
       sprintSpeed: 8,
-      wadeSpeed: 2.2,
+      wadeSpeed: 3.5,
       accel: 14,
       jumpSpeed: 6.2,
       gravity: -22,
@@ -29588,7 +29708,7 @@ void main() {
       // креатив: скорость по горизонту
       maxDepth: 1.15,
       // глубже этого герой уже не идёт по дну, а плывёт
-      swimSpeed: 3.1,
+      swimSpeed: 4.1,
       // гребок по поверхности
       swimFast: 4.6,
       // гребок с разгоном
@@ -29949,6 +30069,15 @@ void main() {
          // \u0432\u044B\u0433\u043E\u0440\u0435\u0432\u0448\u0430\u044F \u043D\u0430 \u0441\u043E\u043B\u043D\u0446\u0435 \u0442\u0440\u0430\u0432\u0430 \u2014 \u0442\u0451\u043F\u043B\u044B\u0439 \u043E\u0442\u0442\u0435\u043D\u043E\u043A \u043F\u044F\u0442\u043D\u0430\u043C\u0438
          diffuseColor.rgb *= mix(vec3(1.0), vec3(1.07, 1.0, 0.86), smoothstep(0.55, 0.85, macro3) * w.x);
 
+         // \u0420\u0430\u0437\u043D\u044B\u0435 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u0438: \u0432\u043A\u0440\u0430\u043F\u043B\u0435\u043D\u0438\u044F \u0440\u0430\u043A\u0443\u0448\u0435\u043A \u043D\u0430 \u043F\u043B\u044F\u0436\u0435 \u0438 \u043B\u0438\u0441\u0442\u043E\u0432\u0430\u044F
+         // \u043F\u043E\u0434\u0441\u0442\u0438\u043B\u043A\u0430 / \u043C\u0435\u043B\u043A\u0438\u0439 \u0433\u0440\u0430\u0432\u0438\u0439 \u043D\u0430 \u0437\u0435\u043C\u043B\u0435, \u0430 \u043D\u0435 \u0442\u043E\u043B\u044C\u043A\u043E \u0441\u043C\u0435\u043D\u0430 \u043E\u0442\u0442\u0435\u043D\u043A\u0430.
+         float shellGrain = smoothstep(0.68, 0.83, texture2D(uRock, uvA * 6.2 + 0.37).r);
+         float leafLitter = smoothstep(0.58, 0.76, texture2D(uDirt, uvA * 1.7 + 0.23).g);
+         float stoneGrain = smoothstep(0.60, 0.77, texture2D(uRock, uvA * 2.8 - 0.16).r);
+         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 1.3 + vec3(0.04), shellGrain * w.y * 0.5);
+         diffuseColor.rgb *= mix(vec3(1.0), vec3(0.67, 0.58, 0.42), leafLitter * w.w * 0.5);
+         diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * 0.65, stoneGrain * w.z * 0.35);
+
          // \u043C\u043E\u043A\u0440\u044B\u0439 \u043F\u0435\u0441\u043E\u043A \u0443 \u0432\u043E\u0434\u044B \u0442\u0435\u043C\u043D\u0435\u0435 \u0438 \u0445\u043E\u043B\u043E\u0434\u043D\u0435\u0435
          float wet = 1.0 - smoothstep(0.25, 1.1, vWPos.y);
          diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.62, 0.66, 0.7), wet);
@@ -29956,7 +30085,7 @@ void main() {
       );
       material2.userData.shader = shader;
     };
-    material2.customProgramCacheKey = () => "lastshore-terrain-v5";
+    material2.customProgramCacheKey = () => "lastshore-terrain-v6";
     return material2;
   }
   function withRepeat(map, repeat) {
@@ -30035,6 +30164,39 @@ void main() {
     lower.pop();
     upper.pop();
     return lower.concat(upper);
+  }
+  function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity, maxRadius = void 0 } = {}) {
+    const pts = [];
+    const limit = maxRadius === void 0 ? null : Math.max(0.12, maxRadius);
+    for (const geo of geometries) {
+      if (!geo) continue;
+      const pos = geo.attributes && geo.attributes.position;
+      if (!pos) continue;
+      const step = Math.max(1, Math.floor(pos.count / 900));
+      for (let i = 0; i < pos.count; i += step) {
+        if (pos.getY(i) > belowY) continue;
+        let px = pos.getX(i);
+        let pz = pos.getZ(i);
+        if (limit !== null) {
+          const d = Math.hypot(px, pz);
+          if (d > limit) {
+            px = px / d * limit;
+            pz = pz / d * limit;
+          }
+        }
+        pts.push({ x: px, z: pz });
+      }
+    }
+    const hull = convexHull2D(pts);
+    if (hull.length < 3) return null;
+    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
+    const cz = hull.reduce((s, p) => s + p.z, 0) / hull.length;
+    return hull.map((p) => {
+      const dx = p.x - cx;
+      const dz = p.z - cz;
+      const len = Math.hypot(dx, dz) || 1;
+      return { x: p.x + dx / len * pad, z: p.z + dz / len * pad };
+    });
   }
   function hullsFromGeometry(geometries, {
     pad = 0.02,
@@ -30179,7 +30341,7 @@ void main() {
       const top = feetY + height;
       for (const p of this.near(pos.x, pos.z, radius + 1.2)) {
         if (p.enabled && !p.enabled()) continue;
-        if (p.maxY < feetY + stepUp) continue;
+        if (p.maxY < feetY + (p.kind === "den" ? 0 : stepUp)) continue;
         if (p.minY > top) continue;
         const hit = this._pushOut(p, pos, radius);
         if (!hit) continue;
@@ -30212,7 +30374,8 @@ void main() {
     blocked(x, z, radius, y = 0) {
       for (const p of this.near(x, z, radius + 1.2)) {
         if (p.enabled && !p.enabled()) continue;
-        if (p.maxY < y + 0.35) continue;
+        if (p.maxY < y + (p.kind === "den" ? 0 : 0.35)) continue;
+        if (p.minY > y + 1.85) continue;
         if (this._inside(p.poly, x, z)) return true;
         const d = this._edgeDistance(p.poly, x, z);
         if (d < radius) return true;
@@ -30254,6 +30417,8 @@ void main() {
       let best = Infinity;
       let nx = 0;
       let nz = 0;
+      let edgeX = 0;
+      let edgeZ = 0;
       for (let i = 0; i < p.poly.length; i++) {
         const a = p.poly[i];
         const b = p.poly[(i + 1) % p.poly.length];
@@ -30268,6 +30433,8 @@ void main() {
           best = d;
           nx = px;
           nz = pz;
+          edgeX = dx2;
+          edgeZ = dz2;
         }
       }
       if (!inside && best >= radius) return null;
@@ -30275,12 +30442,12 @@ void main() {
       let dz = pos.z - nz;
       let len = Math.hypot(dx, dz);
       if (len < 1e-4) {
-        dx = pos.x - (p.minX + p.maxX) / 2;
-        dz = pos.z - (p.minZ + p.maxZ) / 2;
-        len = Math.hypot(dx, dz) || 1;
+        const edgeLen = Math.hypot(edgeX, edgeZ) || 1;
+        return { x: edgeZ / edgeLen * radius, z: -edgeX / edgeLen * radius };
       }
       const push = inside ? best + radius : radius - best;
-      return { x: dx / len * push, z: dz / len * push };
+      const sign = inside ? -1 : 1;
+      return { x: sign * (dx / len) * push, z: sign * (dz / len) * push };
     }
     // --- отладка: F3 → Ж ---------------------------------------
     /** Собрать каркас обводок: рёбра призм, как треугольники на просвет */
@@ -31546,6 +31713,55 @@ void main() {
     group.add(head);
     return { group, parts: { segments, head, tongue } };
   }
+  function makeSmallAnimal(lizard) {
+    const group = new Group();
+    const skin = mat(lizard ? 6720066 : 11110498);
+    const pale = mat(lizard ? 11648630 : 14864562);
+    const dark = mat(1841686);
+    const body = mesh(new IcosahedronGeometry(0.25, 1), skin);
+    body.scale.set(lizard ? 1.45 : 1.2, lizard ? 0.55 : 0.9, 0.8);
+    body.position.y = lizard ? 0.24 : 0.38;
+    group.add(body);
+    const head = new Group();
+    head.position.set(0.3, lizard ? 0.26 : 0.48, 0);
+    const face = mesh(new IcosahedronGeometry(lizard ? 0.13 : 0.18, 1), skin);
+    face.scale.x = lizard ? 1.5 : 1;
+    head.add(face);
+    for (const side of [-1, 1]) {
+      const eye = mesh(new SphereGeometry(0.025, 6, 4), dark);
+      eye.position.set(0.1, 0.06, 0.105 * side);
+      head.add(eye);
+      if (!lizard) {
+        const ear = mesh(new IcosahedronGeometry(0.09, 0), pale);
+        ear.scale.set(0.55, 2.7, 0.55);
+        ear.position.set(-0.04, 0.24, side * 0.09);
+        ear.rotation.z = side * 0.12;
+        head.add(ear);
+      }
+    }
+    group.add(head);
+    const legs = [];
+    for (const x of [-0.19, 0.18]) for (const side of [-1, 1]) {
+      const leg = new Group();
+      leg.position.set(x, lizard ? 0.18 : 0.26, side * 0.16);
+      const foot = mesh(new CapsuleGeometry(0.045, lizard ? 0.1 : 0.17, 3, 5), skin);
+      foot.position.y = -0.1;
+      leg.add(foot);
+      group.add(leg);
+      legs.push(leg);
+    }
+    const tail = mesh(lizard ? new ConeGeometry(0.1, 0.65, 6) : new IcosahedronGeometry(0.09, 1), pale);
+    tail.position.set(lizard ? -0.54 : -0.31, lizard ? 0.25 : 0.38, 0);
+    if (lizard) tail.rotation.z = -Math.PI / 2;
+    group.add(tail);
+    return { group, parts: { body, head, legs, tail } };
+  }
+  function makeRabbit() {
+    return makeSmallAnimal(false);
+  }
+  function makeLizard() {
+    return makeSmallAnimal(true);
+  }
   function makeBoat() {
     const hullMat = new MeshStandardMaterial({
       color: 16777215,
@@ -31609,7 +31825,7 @@ void main() {
       const B = rings[i + 1];
       quad(A[0], A[1], B[1], B[0], 10512956, 9067060);
       quad(A[1], A[2], B[2], B[1], outer, 8213040);
-      quad(A[4], A[5], B[5], B[4], outer, 8213040);
+      quad(A[3], A[4], B[4], B[3], outer, 8213040);
       quad(A[2], A[3], B[3], B[2], bottomCol, 6964262);
       quad(A[5], A[4], B[4], B[5], 10512956, 9067060);
     }
@@ -31638,6 +31854,15 @@ void main() {
     const trimParts = [];
     for (const [z, y] of [[-0.55, 0.4], [0.45, 0.38]]) {
       piece(trimParts, new BoxGeometry(1.15, 0.09, 0.3), 9134137, [0, y, z]);
+    }
+    for (const x of [-0.28, 0, 0.28]) {
+      piece(trimParts, new BoxGeometry(0.24, 0.035, 2.65), x === 0 ? 9528640 : 8410932, [x, 0.09, 0.05]);
+    }
+    for (const z of [-1.1, -0.2, 0.7, 1.35]) {
+      piece(trimParts, new BoxGeometry(0.95, 0.05, 0.055), 6373413, [0, 0.14, z]);
+    }
+    for (const side of [-1, 1]) {
+      piece(trimParts, new BoxGeometry(0.07, 0.08, 2.55), 10974277, [side * 0.59, 0.57, 0]);
     }
     piece(trimParts, new BoxGeometry(0.12, 0.1, 3.3), 6044450, [0, -0.05, 0]);
     piece(trimParts, new BoxGeometry(0.07, 0.5, 0.34), 6241570, [0, 0.18, 1.98], [0.18, 0, 0]);
@@ -32191,7 +32416,9 @@ void main() {
         uNight: { value: 0 },
         uDepth: { value: depthTex },
         uSize: { value: SIZE },
-        uUnder: { value: 0 }
+        uUnder: { value: 0 },
+        uBoat: { value: new Vector4(0, 0, 0, 0) },
+        uBoatVisible: { value: 0 }
       };
       const mat2 = new ShaderMaterial({
         uniforms: this.waterUniforms,
@@ -32236,6 +32463,8 @@ void main() {
         uniform float uTime;
         uniform float uSize;
         uniform float uUnder;
+        uniform vec4 uBoat; // x, z, cos(angle), sin(angle)
+        uniform float uBoatVisible;
         uniform sampler2D uDepth;
 
         varying vec3 vWorldPos;
@@ -32254,6 +32483,12 @@ void main() {
         }
 
         void main() {
+          // \u041D\u0435 \u0440\u0438\u0441\u043E\u0432\u0430\u0442\u044C \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u044C \u0432\u043D\u0443\u0442\u0440\u0438 \u043A\u043E\u0440\u043F\u0443\u0441\u0430, \u0438\u043D\u0430\u0447\u0435 \u0432\u043E\u0434\u0430 \u043F\u0435\u0440\u0435\u043A\u0440\u044B\u0432\u0430\u0435\u0442 \u0434\u043D\u0438\u0449\u0435.
+          vec2 delta = vWorldPos.xz - uBoat.xy;
+          vec2 boatLocal = vec2(delta.x * uBoat.z - delta.y * uBoat.w,
+                                delta.x * uBoat.w + delta.y * uBoat.z);
+          float boatWidth = 0.54 * (1.0 - 0.48 * smoothstep(0.65, 1.85, abs(boatLocal.y)));
+          if (uBoatVisible > 0.5 && uUnder < 0.5 && abs(boatLocal.y) < 1.72 && abs(boatLocal.x) < boatWidth) discard;
           vec2 huv = (vWorldPos.xz / uSize) + 0.5;
           float encoded = texture2D(uDepth, clamp(huv, 0.001, 0.999)).r;
           float ground = encoded * 44.0 - 16.0;   // \u043E\u0431\u0440\u0430\u0442\u043D\u043E \u0432 \u043C\u0435\u0442\u0440\u044B
@@ -32271,7 +32506,7 @@ void main() {
           vec3 n = normalize(vec3(-hx * 2.2, e * 0.9, -hz * 2.2));
 
           // \u0432\u0437\u0433\u043B\u044F\u0434 \u0438\u0437-\u043F\u043E\u0434 \u0432\u043E\u0434\u044B: \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u044C \u0432\u0438\u0434\u043D\u0430 \u0441\u043D\u0438\u0437\u0443 \u043A\u0430\u043A \u0441\u0432\u0435\u0442\u044F\u0449\u0438\u0439\u0441\u044F \u043F\u043E\u0442\u043E\u043B\u043E\u043A
-          if (uUnder > 0.5) {
+          if (!gl_FrontFacing) {
             // \u043B\u0443\u0447 \xAB\u0433\u043B\u0430\u0437 \u2192 \u0442\u043E\u0447\u043A\u0430 \u043F\u043E\u0432\u0435\u0440\u0445\u043D\u043E\u0441\u0442\u0438\xBB: \u043F\u043E\u0434 \u0432\u043E\u0434\u043E\u0439 \u0441\u043C\u043E\u0442\u0440\u0438\u0442 \u0432\u0432\u0435\u0440\u0445
             vec3 eyeDir = normalize(vWorldPos - cameraPosition);
             float upness = clamp(eyeDir.y, 0.0, 1.0);
@@ -32295,7 +32530,7 @@ void main() {
             colU += uSunColor * sparkle * 1.1 * (1.0 - uNight * 0.85);
             float dist = length(cameraPosition - vWorldPos);
             colU = mix(colU, uDeep * 1.1 + vec3(0.0, 0.05, 0.07), clamp((dist - 5.0) / 34.0, 0.0, 0.9));
-            float alphaU = mix(0.62, 0.97, 1.0 - window);
+            float alphaU = 1.0;
             gl_FragColor = vec4(colU, alphaU);
             #include <tonemapping_fragment>
             #include <colorspace_fragment>
@@ -32344,7 +32579,7 @@ void main() {
       this.scene.add(this.water);
     }
     /**
-     * Дома зверей. У каждого вида своя поляна: вокруг логовища не растёт
+     * Дома зверей. У каждого вида своё место: у логовища не растёт
      * ни дерево, ни куст, ни камень — зверю есть где встать, и он не
      * рождается внутри модели.
      */
@@ -32451,6 +32686,11 @@ void main() {
         byKind.get(d.kind).push(d);
       }
       const R = (i) => Math.sin(i * 12.9898) * 43758.5453 % 1;
+      let denParts = [];
+      const finishDen = (parts) => {
+        denParts = parts;
+        return mergeGeometries(parts, false);
+      };
       const builders = {
         boar: () => {
           const parts = [];
@@ -32507,7 +32747,7 @@ void main() {
           for (let i = 0; i < 4; i++) {
             addPart(parts, new BoxGeometry(0.06, 0.03, 0.18), 14207910, 1.79, 0.55 + i * 0.22, -0.32 - i * 0.02, 0, 0.3, 0);
           }
-          return mergeGeometries(parts, false);
+          return finishDen(parts);
         },
         crab: () => {
           const parts = [];
@@ -32546,7 +32786,7 @@ void main() {
           for (let i = 0; i < 6; i++) {
             addPart(parts, new BoxGeometry(0.05, 0.02, 0.22), 12364677, 1.4 + i * 0.22, 0.05, 0.55 + Math.sin(i) * 0.3, 0, i * 0.6, 0);
           }
-          return mergeGeometries(parts, false);
+          return finishDen(parts);
         },
         gull: () => {
           const parts = [];
@@ -32598,7 +32838,7 @@ void main() {
               0.4
             );
           }
-          return mergeGeometries(parts, false);
+          return finishDen(parts);
         },
         snake: () => {
           const parts = [];
@@ -32636,7 +32876,7 @@ void main() {
               0.2
             );
           }
-          return mergeGeometries(parts, false);
+          return finishDen(parts);
         },
         monkey: () => {
           const parts = [];
@@ -32698,7 +32938,7 @@ void main() {
           }
           addRod(parts, [1.35, 0.1, -0.9], [1.7, 1.1, -1.05], 0.06, 0.04, 8215608, 4);
           addPart(parts, new SphereGeometry(0.14, 7, 6), 13214282, 1.68, 1.16, -1.05);
-          return mergeGeometries(parts, false);
+          return finishDen(parts);
         },
         turtle: () => {
           const parts = [];
@@ -32729,14 +32969,49 @@ void main() {
               Math.sin(a) * 1.45
             );
           }
-          return mergeGeometries(parts, false);
+          return finishDen(parts);
         }
       };
       this.denMeshes = [];
       for (const [kind, list] of byKind) {
         const geo = builders[kind] ? builders[kind]() : null;
         if (!geo) continue;
-        const mesh2 = new InstancedMesh(geo, mat2, list.length);
+        const cover = [geo];
+        for (let j = 0; j < 9; j++) {
+          const a = Math.PI * 0.25 + j * Math.PI * 1.5 / 8;
+          const x = Math.cos(a) * 1.65, z = -Math.sin(a) * 1.65;
+          if (kind === "boar" || kind === "monkey" || kind === "snake") {
+            addPart(
+              cover,
+              new IcosahedronGeometry(0.32 + j % 3 * 0.1, 0),
+              j % 2 ? 5536315 : 6982473,
+              x,
+              0.35,
+              z
+            );
+            addPart(cover, new ConeGeometry(0.15, 0.55, 4), 7903057, x * 1.12, 0.22, z * 1.12);
+          } else {
+            addPart(
+              cover,
+              new IcosahedronGeometry(0.16 + j % 3 * 0.07, 0),
+              kind === "gull" ? 9275514 : 13351317,
+              x,
+              0.08,
+              z
+            );
+            addPart(cover, new ConeGeometry(0.035, 0.32, 3), 10328676, x * 1.08, 0.15, z * 1.08);
+          }
+        }
+        const coveredGeo = mergeGeometries(cover, false);
+        const sectors = [];
+        for (const g of denParts) {
+          g.computeBoundingBox();
+          const box2 = g.boundingBox;
+          if (!box2 || box2.max.y < 0.25 || box2.max.y - box2.min.y < 0.12) continue;
+          const poly = hullFromGeometry([g], { pad: 0.015 });
+          if (poly) sectors.push({ poly, minY: box2.min.y, maxY: box2.max.y });
+        }
+        const mesh2 = new InstancedMesh(coveredGeo, mat2, list.length);
         mesh2.castShadow = true;
         mesh2.frustumCulled = false;
         const dummy = new Object3D();
@@ -32750,6 +33025,23 @@ void main() {
           dummy.scale.setScalar(0.85 + this.rng() * 0.35);
           dummy.updateMatrix();
           mesh2.setMatrixAt(i, dummy.matrix);
+          const sizes = { boar: [1.15, 1.6], monkey: [1.12, 2], gull: [0.95, 1.5], snake: [0.9, 0.8], crab: [1.1, 0.45], turtle: [1.1, 0.32] };
+          const [r, height] = sizes[kind];
+          this.colliders.push({ x: d.x, z: d.z, r: r * dummy.scale.x, height: height * dummy.scale.x, kind: "den", den: d, soft: true });
+          d.shells = [];
+          const cos = Math.cos(d.entrance), sin = Math.sin(d.entrance), scale = dummy.scale.x;
+          for (const sector of sectors) {
+            const poly = sector.poly.map((p) => ({
+              x: d.x + (p.x * cos + p.z * sin) * scale,
+              z: d.z + (-p.x * sin + p.z * cos) * scale
+            }));
+            d.shells.push(this.shells.add(
+              "den",
+              poly,
+              d.y - 0.12 + sector.minY * scale,
+              d.y - 0.12 + sector.maxY * scale
+            ));
+          }
         });
         mesh2.instanceMatrix.needsUpdate = true;
         mesh2.matrixAutoUpdate = false;
@@ -32773,10 +33065,10 @@ void main() {
       const nextScale = () => 0.8 + rng() * 0.55;
       this._planDens();
       const nearDen = (x, z, pad = 0) => {
-        for (const d of this.dens) if (Math.hypot(x - d.x, z - d.z) < d.radius + pad) return d;
+        for (const d of this.dens) if (Math.hypot(x - d.x, z - d.z) < Math.min(d.radius, 3.2) + pad) return d;
         return null;
       };
-      this._flatSpots = [];
+      this._flatSpots = this._flatSpots || [];
       this._flatStats = { ask: 0, deny: 0 };
       const requestFlat = (x, z, r) => {
         this._flatStats.ask++;
@@ -32896,6 +33188,7 @@ void main() {
         tufts.push({ x, z, h, s: 0.6 + rng() * 0.9, rot: rng() * Math.PI * 2 });
       });
       this._applyFlatSpots();
+      for (const d of this.dens) d.y = this.heightAt(d.x, d.z);
       for (const list of [palms, trees, pines, mangroves, deads, bushes, rocks]) {
         for (const it of list) it.h = this.heightAt(it.x, it.z);
       }
@@ -34049,10 +34342,10 @@ void main() {
         const dz = pos.z - c.z;
         const min = c.r + radius;
         const d2 = dx * dx + dz * dz;
-        if (d2 < min * min && d2 > 1e-6) {
+        if (d2 < min * min) {
           const d = Math.sqrt(d2);
-          const nx = dx / d;
-          const nz = dz / d;
+          const nx = d > 1e-6 ? dx / d : 1;
+          const nz = d > 1e-6 ? dz / d : 0;
           const push = min - d;
           pos.x += nx * push;
           pos.z += nz * push;
@@ -34111,7 +34404,9 @@ void main() {
       if (sunDir) this.waterUniforms.uSunDir.value.copy(sunDir);
       if (fogColor) this.waterUniforms.uFog.value.copy(fogColor);
       if (camera && this.waterUniforms) {
-        this.waterUniforms.uUnder.value = camera.position.y < CONFIG.world.seaLevel - 0.05 ? 1 : 0;
+        const x = camera.position.x, z = camera.position.z, t = this.time;
+        const wave = Math.sin(x * 0.115 + t * 1.15) * 0.15 + Math.sin(z * 0.165 - t * 0.9) * 0.11 + Math.sin((x + z) * 0.055 + t * 0.6) * 0.22 + Math.sin(Math.hypot(x, z) * 0.22 - t * 1.4) * 0.07;
+        this.waterUniforms.uUnder.value = camera.position.y < CONFIG.world.seaLevel + wave ? 1 : 0;
       }
       for (let i = 0; i < this.pickups.length; i++) {
         this.pickups[i].mesh.rotation.y += dt * 0.35;
@@ -34246,18 +34541,19 @@ void main() {
       this.cloudMaterials = [];
       scene.add(this.clouds);
       const cloudGeo = new PlaneGeometry(180, 110);
-      for (let i = 0; i < 9; i++) {
+      for (let i = 0; i < 15; i++) {
         const mat2 = new MeshBasicMaterial({
           color: 16777215,
           map: textures ? textures.cloud : null,
           transparent: true,
           opacity: 0.5,
           depthWrite: false,
-          fog: false
+          fog: false,
+          side: DoubleSide
         });
         this.cloudMaterials.push(mat2);
         const mesh2 = new Mesh(cloudGeo, mat2);
-        const angle = i / 9 * Math.PI * 2 + Math.random();
+        const angle = i / 15 * Math.PI * 2 + Math.random();
         const radius = 260 + Math.random() * 260;
         mesh2.position.set(Math.cos(angle) * radius, 95 + Math.random() * 60, Math.sin(angle) * radius);
         mesh2.rotation.x = -Math.PI / 2;
@@ -35200,11 +35496,11 @@ void main() {
       const groundHere = world.heightAt(this.position.x, this.position.z);
       this.wading = underground ? 0 : clamp2(-groundHere / 1.1, 0, 1);
       const inWater = !underground && groundHere < 0.05;
-      const deepWater = !underground && !this.fly && groundHere < -CONFIG.player.maxDepth;
+      const deepWater = !underground && !this.fly && groundHere < CONFIG.world.seaLevel - CONFIG.player.maxDepth * 0.85;
       this.diveHeld = !!(input.sprint && deepWater);
       let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
       if (this.fly) speed = P.flyHorizontal;
-      if (inWater) speed = MathUtils.lerp(speed, P.wadeSpeed, this.wading);
+      if (inWater && !this.fly) speed = MathUtils.lerp(speed, P.wadeSpeed, this.wading);
       if (deepWater) speed = this.diveHeld ? P.swimSpeed : P.swimFast;
       const targetVX = wx * speed * (moving ? 1 : 0);
       const targetVZ = wz * speed * (moving ? 1 : 0);
@@ -35217,12 +35513,11 @@ void main() {
         if (underground) return true;
         if (Math.abs(x) > CONFIG.world.size * 0.75 || Math.abs(z) > CONFIG.world.size * 0.75) return false;
         const h = world.heightAt(x, z);
-        if (h < -P.maxDepth && this.fly) return false;
         if (!this.fly) {
           const rise = h - world.heightAt(this.position.x, this.position.z);
           if (rise > 0.55) return false;
         }
-        if (world.slopeAt(x, z) > 2.4) return false;
+        if (h >= -P.maxDepth * 0.85 && world.slopeAt(x, z) > 2.4) return false;
         return true;
       };
       if (tryMove(nx, this.position.z)) this.position.x = nx;
@@ -35410,7 +35705,7 @@ void main() {
       this.landDip = Math.max(0, this.landDip - dt * 3);
       const bobY = Math.abs(Math.sin(this.walkPhase)) * 0.05 * speedRatio;
       this.model.position.copy(this.position);
-      if (inWater) this.model.position.y -= this.wading * 0.55;
+      if (inWater && !this.swimming) this.model.position.y -= this.wading * 0.25;
       this.model.position.y += bobY - this.landDip * 0.14 - dipExtra;
       this.actionT = actionT;
       this.model.rotation.y = this.facing;
@@ -35524,6 +35819,7 @@ void main() {
     constructor() {
       this.ctx = null;
       this.enabled = true;
+      this.musicEnabled = true;
       this.ready = false;
       this.stepTimer = 0;
       this.birdTimer = 3;
@@ -35601,23 +35897,28 @@ void main() {
       crickets.connect(cricketFilter).connect(this.cricketsGain).connect(this.master);
       crickets.start();
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.value = 0.05;
+      this.musicGain.gain.value = 0.14;
       this.musicGain.connect(this.master);
       this.chordStep = 0;
       this.musicTimer = 0;
       this.ready = true;
+    }
+    toggleMusic() {
+      this.musicEnabled = !this.musicEnabled;
+      if (this.musicGain) this.musicGain.gain.setTargetAtTime(this.musicEnabled ? 0.14 : 0, this.ctx.currentTime, 0.1);
+      return this.musicEnabled;
     }
     /** Медленная «музыка»: три ноты, меняющиеся раз в несколько секунд */
     updateMusic(dt, night) {
       if (!this.ready) return;
       this.musicTimer -= dt;
       if (this.musicTimer > 0) return;
-      this.musicTimer = 7 + Math.random() * 5;
-      const roots = night ? [110, 98, 87, 123] : [147, 165, 131, 175];
+      this.musicTimer = 6.5;
+      const roots = night > 0.5 ? [110, 98, 87, 123] : [147, 165, 131, 175];
       const root = roots[this.chordStep % roots.length];
       this.chordStep++;
       const now = this.ctx.currentTime;
-      [1, 1.5, 2].forEach((mul, i) => {
+      [1, night > 0.5 ? 1.2 : 1.25, 1.5, 2].forEach((mul, i) => {
         const osc = this.ctx.createOscillator();
         osc.type = i === 0 ? "sine" : "triangle";
         osc.frequency.value = root * mul;
@@ -35628,6 +35929,19 @@ void main() {
         osc.connect(g).connect(this.musicGain);
         osc.start(now);
         osc.stop(now + 7);
+      });
+      [2, 2.5, 3, 2.5].forEach((mul, i) => {
+        const t = now + 0.8 + i * 1.15;
+        const osc = this.ctx.createOscillator();
+        osc.type = "sine";
+        osc.frequency.value = root * mul;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(1e-4, t);
+        g.gain.exponentialRampToValueAtTime(0.045, t + 0.12);
+        g.gain.exponentialRampToValueAtTime(1e-4, t + 1.5);
+        osc.connect(g).connect(this.musicGain);
+        osc.start(t);
+        osc.stop(t + 1.6);
       });
     }
     /** Птицы днём, сверчки ночью, треск огня рядом */
@@ -37024,6 +37338,46 @@ void main() {
       count: 18,
       biomes: "water"
     },
+    rabbit: {
+      model: makeRabbit,
+      hp: 8,
+      radius: 0.32,
+      hitbox: { w: 0.8, h: 0.8, d: 0.5 },
+      speed: 1.3,
+      chaseSpeed: 4.2,
+      detect: 9,
+      hearMul: 1.5,
+      attackRange: 0,
+      damage: 0,
+      biteCooldown: 2,
+      fleeBelow: 1,
+      territory: 13,
+      temperament: "skittish",
+      label: "\u041A\u0440\u043E\u043B\u0438\u043A",
+      drops: [{ id: "rawMeat", min: 1, max: 1 }, { id: "hide", min: 0, max: 1 }],
+      count: 5,
+      biomes: "land"
+    },
+    lizard: {
+      model: makeLizard,
+      hp: 5,
+      radius: 0.26,
+      hitbox: { w: 1.1, h: 0.4, d: 0.45 },
+      speed: 0.85,
+      chaseSpeed: 3.4,
+      detect: 7,
+      hearMul: 1.4,
+      attackRange: 0,
+      damage: 0,
+      biteCooldown: 2,
+      fleeBelow: 1,
+      territory: 9,
+      temperament: "skittish",
+      label: "\u042F\u0449\u0435\u0440\u0438\u0446\u0430",
+      drops: [{ id: "rawMeat", min: 0, max: 1 }],
+      count: 5,
+      biomes: "land"
+    },
     snake: {
       model: makeSnake,
       hp: 8,
@@ -37050,7 +37404,7 @@ void main() {
   }
   var SOUND_BY_STATE = {
     // спокойные звуки: кабан похрюкивает, змея шипит, краб щёлкает, чайка кричит
-    idle: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull", monkey: "monkey", fish: "bubble", turtle: "grunt" },
+    idle: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull", monkey: "monkey", fish: "bubble", turtle: "grunt", rabbit: "rustle", lizard: "rustle" },
     alert: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull", monkey: "monkey", fish: "bubble" },
     attack: { boar: "grunt", snake: "hiss" },
     hurt: { boar: "grunt", snake: "hiss", crab: "crab", gull: "gull", monkey: "monkey" },
@@ -37373,9 +37727,18 @@ void main() {
             velocity.z -= nz * into;
           }
         }
-        mob.x -= nx * push * 0.25;
-        mob.z -= nz * push * 0.25;
+        const mx = mob.x - nx * push * 0.25;
+        const mz = mob.z - nz * push * 0.25;
+        if (!this._blocked(mx, mz, this._collisionRadius(mob))) {
+          mob.x = mx;
+          mob.z = mz;
+        }
       }
+    }
+    // Радиус охватывает реальные габариты модели, а не только её туловище.
+    _collisionRadius(mob) {
+      const hb = mob.hitboxSize;
+      return hb ? Math.max(mob.def.radius, Math.hypot(hb.w, hb.d) * 0.5) : mob.def.radius;
     }
     /** Звери не слипаются: расталкиваем их между собой (два прохода — стабильнее) */
     _separate() {
@@ -37393,7 +37756,7 @@ void main() {
           if (a.def.flying !== b.def.flying) continue;
           const dx = a.x - b.x;
           const dz = a.z - b.z;
-          const min = a.def.radius + b.def.radius + 0.15;
+          const min = this._collisionRadius(a) + this._collisionRadius(b) + 0.05;
           const d2 = dx * dx + dz * dz;
           if (d2 >= min * min) continue;
           let d = Math.sqrt(d2);
@@ -37409,10 +37772,15 @@ void main() {
             nz = dz / d;
           }
           const push = (min - d) * 0.5;
-          a.x += nx * push;
-          a.z += nz * push;
-          b.x -= nx * push;
-          b.z -= nz * push;
+          const ar = this._collisionRadius(a), br = this._collisionRadius(b);
+          if (!this._blocked(a.x + nx * push, a.z + nz * push, ar)) {
+            a.x += nx * push;
+            a.z += nz * push;
+          }
+          if (!this._blocked(b.x - nx * push, b.z - nz * push, br)) {
+            b.x -= nx * push;
+            b.z -= nz * push;
+          }
         }
       }
     }
@@ -37617,7 +37985,7 @@ void main() {
       const tz = mob.home.z + Math.sin(a) * r;
       const nx = mob.x + clamp2(tx - mob.x, -1, 1) * dt * 0.6;
       const nz = mob.z + clamp2(tz - mob.z, -1, 1) * dt * 0.6;
-      if (!this._blocked(nx, nz, mob.def.radius * 1.1)) {
+      if (!this._blocked(nx, nz, this._collisionRadius(mob))) {
         mob.x = nx;
         mob.z = nz;
       } else {
@@ -37810,7 +38178,7 @@ void main() {
         const dz = ax * sa + az * ca;
         const tx = mob.x + dx * step;
         const tz = mob.z + dz * step;
-        if (this._blocked(tx, tz, def.radius)) continue;
+        if (this._blocked(tx, tz, this._collisionRadius(mob))) continue;
         const h = this.world.heightAt(tx, tz);
         if (tooDeep(h)) continue;
         mob.x = tx;
@@ -37848,7 +38216,7 @@ void main() {
       const pad = strict ? 0 : r * 0.2;
       if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
       for (const c of this.world.colliders) {
-        if (c.disabled || c.fire) continue;
+        if (c.disabled || c.fire || c.kind === "den") continue;
         if (c.r < 0.3 && !strict) continue;
         const dx = x - c.x;
         const dz = z - c.z;
@@ -37951,6 +38319,12 @@ void main() {
             leg.rotation.x = Math.sin(ph) * amp * (0.25 + walk);
           });
         }
+      }
+      if (def.type === "rabbit" && p.body) {
+        p.body.position.y += Math.max(0, Math.sin(t * 2.4)) * 0.16 * walk;
+      }
+      if (def.type === "lizard" && p.body) {
+        p.body.rotation.y = Math.sin(t * 3) * 0.18 * walk;
       }
       if (p.tail && def.type !== "gull" && def.type !== "turtle") {
         const baseZ = (_b = p.tail.userData.baseZ) != null ? _b : p.tail.userData.baseZ = p.tail.rotation.z;
@@ -38832,6 +39206,9 @@ void main() {
       },
       get colliders() {
         return mine.active !== null ? [] : world.colliders;
+      },
+      get shells() {
+        return mine.active !== null ? null : world.shells;
       },
       heightAt(x, z) {
         return mine.active !== null ? mine.floorAt(x, z) : world.heightAt(x, z);
@@ -39857,10 +40234,10 @@ void main() {
         } },
         { name: "\u041D\u043E\u0432\u044B\u0435 \u0437\u0432\u0435\u0440\u0438 \u0438 \u0440\u044B\u0431\u044B", walk: null, run: (g) => {
           const list = g.mobs.list;
-          const get = (t) => list.filter((m) => m.alive && m.type === t);
-          const monkeys = get("monkey");
-          const turtles = get("turtle");
-          const fishes = get("fish");
+          const get2 = (t) => list.filter((m) => m.alive && m.type === t);
+          const monkeys = get2("monkey");
+          const turtles = get2("turtle");
+          const fishes = get2("fish");
           const w = g.world;
           const inWater = fishes.length > 0 && fishes.every((f) => w.heightAt(f.x, f.z) < -0.5);
           const probe = (mob, pick) => {
@@ -40285,7 +40662,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-29 17:51" : "dev";
+  var BUILD = true ? "2026-10-29 19:05" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -40870,6 +41247,489 @@ void main() {
     };
   }
 
+  // src/device.js
+  function detectDevice(nav = navigator, win = window) {
+    const touch = (nav.maxTouchPoints || 0) > 0 && (/Android|iPhone|iPad|iPod|Mobile/i.test(nav.userAgent || "") || win.matchMedia && win.matchMedia("(pointer: coarse)").matches);
+    const weak = nav.deviceMemory > 0 && nav.deviceMemory <= 4 || nav.hardwareConcurrency > 0 && nav.hardwareConcurrency <= 4;
+    return { touch: !!touch, weak: !!weak, low: !!(touch || weak) };
+  }
+
+  // src/touch.js
+  function bindTouch(game) {
+    const root = document.getElementById("touch-controls");
+    if (!root) return;
+    const stick = document.getElementById("touch-stick");
+    const knob = document.getElementById("touch-knob");
+    let stickId = null;
+    const release = () => {
+      stickId = null;
+      for (const key2 of ["forward", "back", "left", "right"]) game.input[key2] = false;
+      knob.style.transform = "";
+    };
+    const move = (e) => {
+      const rect = stick.getBoundingClientRect();
+      const x = (e.clientX - rect.left - rect.width / 2) / (rect.width * 0.4);
+      const y = (e.clientY - rect.top - rect.height / 2) / (rect.height * 0.4);
+      const len = Math.max(1, Math.hypot(x, y));
+      knob.style.transform = `translate(${x / len * 30}px, ${y / len * 30}px)`;
+      game.input.forward = y < -0.22;
+      game.input.back = y > 0.22;
+      game.input.left = x < -0.22;
+      game.input.right = x > 0.22;
+    };
+    stick.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      stickId = e.pointerId;
+      stick.setPointerCapture(e.pointerId);
+      move(e);
+    });
+    stick.addEventListener("pointermove", (e) => {
+      if (e.pointerId === stickId) move(e);
+    });
+    stick.addEventListener("pointerup", release);
+    stick.addEventListener("pointercancel", release);
+    for (const btn of root.querySelectorAll("[data-action]")) {
+      const action = btn.dataset.action;
+      btn.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        btn.setPointerCapture(e.pointerId);
+        if (!game.running || game.paused) return;
+        game.audio.resume();
+        if (action === "sprint") game.input.sprint = true;
+        else if (action === "jump") {
+          game.input.jump = true;
+          game.input.jumpHeld = true;
+        } else if (action === "attack") {
+          game.holdingAttack = true;
+          game.attack();
+        } else if (action === "interact") game.interact();
+        else if (action === "craft") game.togglePanel("craft");
+        else if (action === "bag") game.togglePanel("bag");
+        else if (action === "place") game.placeSelected();
+        else if (action === "use") game.useSelected();
+        else if (action === "view") game.toggleView();
+        else if (action === "pause") game.pause();
+      });
+      const up = () => {
+        if (action === "sprint") game.input.sprint = false;
+        if (action === "jump") game.input.jumpHeld = false;
+        if (action === "attack") game.holdingAttack = false;
+      };
+      btn.addEventListener("pointerup", up);
+      btn.addEventListener("pointercancel", up);
+    }
+    let look = null;
+    game.canvas.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "touch" || !game.running || game.paused || game.ui.isPanelOpen()) return;
+      e.preventDefault();
+      look = { id: e.pointerId, x: e.clientX, y: e.clientY };
+      game.canvas.setPointerCapture(e.pointerId);
+    });
+    game.canvas.addEventListener("pointermove", (e) => {
+      if (!look || look.id !== e.pointerId) return;
+      game.player.look((e.clientX - look.x) * 1.5, (e.clientY - look.y) * 1.5);
+      look.x = e.clientX;
+      look.y = e.clientY;
+    });
+    const endLook = (e) => {
+      if ((look == null ? void 0 : look.id) === e.pointerId) look = null;
+    };
+    game.canvas.addEventListener("pointerup", endLook);
+    game.canvas.addEventListener("pointercancel", endLook);
+    window.addEventListener("blur", () => {
+      release();
+      game.input.sprint = false;
+      game.input.jumpHeld = false;
+      game.holdingAttack = false;
+    });
+  }
+
+  // src/network.js
+  function serverAddress() {
+    const raw = document.getElementById("server-url").value.trim();
+    const url = new URL(raw || ".", location.href);
+    if (!["http:", "https:", "ws:", "wss:"].includes(url.protocol)) throw new Error("\u0410\u0434\u0440\u0435\u0441 \u0434\u043E\u043B\u0436\u0435\u043D \u043D\u0430\u0447\u0438\u043D\u0430\u0442\u044C\u0441\u044F \u0441 http(s):// \u0438\u043B\u0438 ws(s)://");
+    url.protocol = url.protocol === "https:" || url.protocol === "wss:" ? "wss:" : "ws:";
+    if (!url.pathname.endsWith("/rooms")) url.pathname = url.pathname.replace(/\/$/, "") + "/rooms";
+    url.search = "";
+    url.hash = "";
+    if (location.protocol === "https:" && url.protocol !== "wss:") throw new Error("\u0414\u043B\u044F HTTPS \u043D\u0443\u0436\u0435\u043D \u0437\u0430\u0449\u0438\u0449\u0451\u043D\u043D\u044B\u0439 \u0430\u0434\u0440\u0435\u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u0430 (https:// \u0438\u043B\u0438 wss://)");
+    return url.href;
+  }
+  var RoomClient = class {
+    constructor() {
+      this.ws = null;
+      this.remote = /* @__PURE__ */ new Map();
+      this.timer = 0;
+      this.room = null;
+    }
+    connect(listOnly = false) {
+      const status2 = document.getElementById("room-status");
+      let url;
+      try {
+        url = serverAddress();
+      } catch (e) {
+        status2.textContent = e.message;
+        return;
+      }
+      this.close();
+      status2.textContent = "\u041F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0435 \u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0443\u2026";
+      let ws;
+      try {
+        ws = new WebSocket(url);
+      } catch {
+        status2.textContent = "\u041D\u0435\u0432\u0435\u0440\u043D\u044B\u0439 \u0430\u0434\u0440\u0435\u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u0430.";
+        return;
+      }
+      this.ws = ws;
+      let timeout = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          status2.textContent = "\u0421\u0435\u0440\u0432\u0435\u0440 \u043D\u0435 \u043E\u0442\u0432\u0435\u0442\u0438\u043B.";
+          ws.close();
+        }
+      }, 8e3);
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        if (listOnly) ws.send(JSON.stringify({ type: "list" }));
+        else ws.send(JSON.stringify({ type: "join", room: document.getElementById("room-code").value, name: document.getElementById("server-name").value }));
+      };
+      ws.onmessage = (e) => {
+        var _a, _b;
+        let msg;
+        try {
+          msg = JSON.parse(e.data);
+        } catch {
+          return;
+        }
+        if (msg.type === "rooms") {
+          const list = document.getElementById("room-list");
+          list.replaceChildren();
+          for (const r of msg.rooms || []) {
+            const b = document.createElement("button");
+            b.className = "btn-ghost";
+            b.type = "button";
+            b.textContent = `${r.code} \xB7 ${r.count}/${r.max}`;
+            b.addEventListener("click", () => {
+              document.getElementById("room-code").value = r.code;
+            });
+            list.appendChild(b);
+          }
+          status2.textContent = ((_a = msg.rooms) == null ? void 0 : _a.length) ? "\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u043A\u043E\u043C\u043D\u0430\u0442\u0443 \u0438\u043B\u0438 \u0432\u0432\u0435\u0434\u0438\u0442\u0435 \u0441\u0432\u043E\u0439 \u043A\u043E\u0434." : "\u041A\u043E\u043C\u043D\u0430\u0442 \u043F\u043E\u043A\u0430 \u043D\u0435\u0442 \u2014 \u0441\u043E\u0437\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0432\u0443\u044E.";
+          ws.close();
+        } else if (msg.type === "error") {
+          status2.textContent = msg.message;
+          ws.close();
+        } else if (msg.type === "joined") {
+          this.room = msg.room;
+          this.id = msg.id;
+          for (const p of msg.players || []) this.receiveState(p);
+          status2.textContent = `\u041A\u043E\u043C\u043D\u0430\u0442\u0430 ${msg.room}: \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043E. \u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043C \u043E\u0441\u0442\u0440\u043E\u0432\u2026`;
+          (_b = this.onJoin) == null ? void 0 : _b.call(this);
+        } else if (msg.type === "state") this.receiveState(msg);
+        else if (msg.type === "left") this.remove(msg.id);
+      };
+      ws.onerror = () => {
+        status2.textContent = "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F. \u041F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0430\u0434\u0440\u0435\u0441 \u0438 \u0437\u0430\u043F\u0443\u0441\u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u043A\u043E\u043C\u043D\u0430\u0442.";
+      };
+      ws.onclose = () => {
+        var _a;
+        clearTimeout(timeout);
+        if (this.ws !== ws) return;
+        this.ws = null;
+        if (this.room) {
+          this.room = null;
+          for (const id of [...this.remote.keys()]) this.remove(id);
+          if ((_a = window.__game) == null ? void 0 : _a.running) window.__game.ui.toast("\u0421\u0432\u044F\u0437\u044C \u0441 \u043A\u043E\u043C\u043D\u0430\u0442\u043E\u0439 \u043F\u043E\u0442\u0435\u0440\u044F\u043D\u0430", true);
+          status2.textContent = "\u0421\u043E\u0435\u0434\u0438\u043D\u0435\u043D\u0438\u0435 \u0437\u0430\u043A\u0440\u044B\u0442\u043E.";
+        }
+      };
+    }
+    receiveState(p) {
+      if (!p.id || ![p.x, p.y, p.z, p.yaw].every(Number.isFinite)) return;
+      const entry = this.remote.get(p.id) || { avatar: null };
+      Object.assign(entry, { x: p.x, y: p.y, z: p.z, yaw: p.yaw, name: p.name });
+      this.remote.set(p.id, entry);
+    }
+    remove(id) {
+      const entry = this.remote.get(id);
+      if (entry == null ? void 0 : entry.avatar) {
+        entry.avatar.scene.remove(entry.avatar.model);
+        entry.avatar.model.traverse((o) => {
+          if (o.geometry) o.geometry.dispose();
+          if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => m.dispose());
+        });
+      }
+      this.remote.delete(id);
+    }
+    close() {
+      if (this.ws) {
+        const ws = this.ws;
+        this.ws = null;
+        ws.close();
+      }
+      for (const id of [...this.remote.keys()]) this.remove(id);
+      this.room = null;
+    }
+    update(game, dt) {
+      if (!this.room || !this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+      this.timer -= dt;
+      if (this.timer <= 0) {
+        this.timer = 0.1;
+        const p = game.player;
+        this.ws.send(JSON.stringify({ type: "state", x: p.position.x, y: p.position.y, z: p.position.z, yaw: p.facing }));
+      }
+      for (const entry of this.remote.values()) {
+        if (!entry.avatar) {
+          entry.avatar = new Player(game.scene);
+          entry.avatar.model.position.set(entry.x, entry.y, entry.z);
+        }
+        const model = entry.avatar.model;
+        const k = Math.min(1, dt * 10);
+        model.position.x += (entry.x - model.position.x) * k;
+        model.position.y += (entry.y - model.position.y) * k;
+        model.position.z += (entry.z - model.position.z) * k;
+        model.rotation.y = entry.yaw;
+      }
+    }
+  };
+
+  // src/settings.js
+  var KEY = "lastshore.settings.v1";
+  var defaults = { quality: "auto", touch: "auto", volume: 0.55, language: "ru" };
+  function getSettings() {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || "{}");
+      return {
+        quality: ["auto", "high", "low"].includes(s.quality) ? s.quality : defaults.quality,
+        touch: ["auto", "on", "off"].includes(s.touch) ? s.touch : defaults.touch,
+        volume: typeof s.volume === "number" && Number.isFinite(s.volume) ? Math.max(0, Math.min(1, s.volume)) : defaults.volume,
+        language: ["ru", "en"].includes(s.language) ? s.language : defaults.language
+      };
+    } catch {
+      return { ...defaults };
+    }
+  }
+  function saveSettings(s) {
+    localStorage.setItem(KEY, JSON.stringify(s));
+  }
+
+  // src/menu.js
+  var AUTO = "lastshore.save.v1";
+  var slotKey = (n) => `lastshore.slot.${n}.v1`;
+  var SERVER_KEY = "lastshore.servers.v1";
+  var get = (id) => document.getElementById(id);
+  function tr(ru, en) {
+    return getSettings().language === "en" ? en : ru;
+  }
+  function validSave(raw) {
+    if (!raw || raw.length > 2e6) return false;
+    try {
+      const s = JSON.parse(raw);
+      return !!s && s.v === 1 && Array.isArray(s.pos) && s.pos.length === 2 && s.pos.every(Number.isFinite) && Math.abs(s.pos[0]) <= 300 && Math.abs(s.pos[1]) <= 300 && (!s.need || Array.isArray(s.need) && s.need.length === 4 && s.need.every(Number.isFinite)) && (!s.inv || typeof s.inv === "object" && !Array.isArray(s.inv));
+    } catch {
+      return false;
+    }
+  }
+  function translate() {
+    const en = getSettings().language === "en";
+    document.documentElement.lang = en ? "en" : "ru";
+    document.querySelectorAll("[data-en]").forEach((el) => {
+      if (el.dataset.ru === void 0) el.dataset.ru = el.textContent;
+      el.textContent = en ? el.dataset.en : el.dataset.ru;
+    });
+    renderSlots();
+  }
+  function status(id, ru, en) {
+    get(id).textContent = tr(ru, en);
+  }
+  function renderSlots() {
+    const root = get("save-slots");
+    if (!root) return;
+    root.replaceChildren();
+    for (let n = 1; n <= 3; n++) {
+      let raw = null;
+      try {
+        raw = localStorage.getItem(slotKey(n));
+      } catch {
+      }
+      const save = validSave(raw) ? JSON.parse(raw) : null;
+      const row = document.createElement("div");
+      row.className = "save-slot";
+      const title = document.createElement("strong");
+      title.textContent = `${tr("\u0421\u043B\u043E\u0442", "Slot")} ${n}`;
+      const info = document.createElement("span");
+      info.textContent = save ? `${tr("\u0414\u0435\u043D\u044C", "Day")} ${save.day || 1} \xB7 ${new Date(save.savedAt || 0).toLocaleString()}` : tr("\u041F\u0443\u0441\u0442\u043E", "Empty");
+      const buttons = document.createElement("div");
+      buttons.className = "btn-row";
+      const button = (label, action, disabled = false) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "btn-ghost";
+        b.textContent = label;
+        b.disabled = disabled;
+        b.addEventListener("click", action);
+        buttons.appendChild(b);
+      };
+      button(tr("\u0421\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C", "Save"), () => {
+        try {
+          const game = window.__game;
+          if ((game == null ? void 0 : game.running) && !game.save()) throw new Error("save");
+          const raw2 = localStorage.getItem(AUTO);
+          if (!validSave(raw2)) {
+            status("save-status", "\u041D\u0435\u0442 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0438\u0433\u0440\u044B \u0438\u043B\u0438 \u0430\u0432\u0442\u043E\u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u044F.", "No current game or autosave.");
+            return;
+          }
+          if (save && !window.confirm(tr("\u041F\u0435\u0440\u0435\u0437\u0430\u043F\u0438\u0441\u0430\u0442\u044C \u044D\u0442\u043E\u0442 \u0441\u043B\u043E\u0442?", "Overwrite this slot?"))) return;
+          localStorage.setItem(slotKey(n), raw2);
+          renderSlots();
+          status("save-status", "\u0418\u0433\u0440\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0430 \u0432 \u0441\u043B\u043E\u0442.", "Game saved to slot.");
+        } catch {
+          status("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C: \u043F\u0440\u043E\u0432\u0435\u0440\u044C\u0442\u0435 \u0434\u043E\u0441\u0442\u0443\u043F \u043A \u0445\u0440\u0430\u043D\u0438\u043B\u0438\u0449\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430.", "Could not save: check browser storage.");
+        }
+      });
+      button(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C", "Load"), () => {
+        var _a, _b, _c;
+        try {
+          const selected = localStorage.getItem(slotKey(n));
+          if (!validSave(selected)) throw new Error("invalid");
+          if ((_a = window.__game) == null ? void 0 : _a.running) {
+            if (!window.confirm(tr("\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442 \u0438 \u0432\u044B\u0439\u0442\u0438 \u0438\u0437 \u0442\u0435\u043A\u0443\u0449\u0435\u0439 \u0438\u0433\u0440\u044B?", "Load this slot and leave the current game?"))) return;
+            sessionStorage.setItem("lastshore.loadPending", "1");
+            try {
+              localStorage.setItem(AUTO, selected);
+            } catch (err) {
+              sessionStorage.removeItem("lastshore.loadPending");
+              throw err;
+            }
+            window.__game.running = false;
+            (_b = window.__roomClient) == null ? void 0 : _b.close();
+            window.location.reload();
+          } else {
+            localStorage.setItem(AUTO, selected);
+            get("saves-screen").classList.add("hidden");
+            (_c = window.__scheduleGame) == null ? void 0 : _c.call(window, true);
+          }
+        } catch {
+          status("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not load slot.");
+        }
+      }, !save);
+      button(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C", "Delete"), () => {
+        if (!window.confirm(tr("\u0423\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0438\u0435?", "Delete this save?"))) return;
+        try {
+          localStorage.removeItem(slotKey(n));
+          renderSlots();
+        } catch {
+          status("save-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0441\u043B\u043E\u0442.", "Could not delete slot.");
+        }
+      }, !save);
+      row.append(title, info, buttons);
+      root.appendChild(row);
+    }
+  }
+  function serverList() {
+    try {
+      const a = JSON.parse(localStorage.getItem(SERVER_KEY) || "[]");
+      return Array.isArray(a) ? a.filter((x) => typeof x === "string").slice(0, 12) : [];
+    } catch {
+      return [];
+    }
+  }
+  function renderServers() {
+    const select = get("server-saved");
+    const selected = select.value;
+    select.replaceChildren();
+    const blank = document.createElement("option");
+    blank.value = "";
+    blank.textContent = tr("\u0412\u044B\u0431\u0435\u0440\u0438\u0442\u0435 \u0441\u0435\u0440\u0432\u0435\u0440", "Choose a server");
+    select.appendChild(blank);
+    for (const url of serverList()) {
+      const o = document.createElement("option");
+      o.value = url;
+      o.textContent = url;
+      select.appendChild(o);
+    }
+    if (serverList().includes(selected)) select.value = selected;
+  }
+  function initSettingsAndSaves(scheduleBoot2) {
+    window.__scheduleGame = scheduleBoot2;
+    const current = getSettings();
+    get("setting-quality").value = current.quality;
+    get("setting-touch").value = current.touch;
+    get("setting-volume").value = Math.round(current.volume * 100);
+    get("setting-language").value = current.language;
+    const apply = () => {
+      var _a;
+      const s = {
+        quality: get("setting-quality").value,
+        touch: get("setting-touch").value,
+        volume: Number(get("setting-volume").value) / 100,
+        language: get("setting-language").value
+      };
+      try {
+        saveSettings(s);
+      } catch {
+        status("settings-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u043D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438.", "Could not save settings.");
+        return;
+      }
+      if ((_a = window.__game) == null ? void 0 : _a.audio.master) window.__game.audio.master.gain.value = s.volume;
+      translate();
+      renderServers();
+      status("settings-status", "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u044B.", "Settings saved.");
+    };
+    for (const id of ["setting-quality", "setting-touch", "setting-volume", "setting-language"]) get(id).addEventListener(id === "setting-volume" ? "input" : "change", apply);
+    for (const id of ["btn-settings", "btn-pause-settings"]) get(id).addEventListener("click", () => get("settings-screen").classList.remove("hidden"));
+    get("btn-settings-close").addEventListener("click", () => get("settings-screen").classList.add("hidden"));
+    for (const id of ["btn-saves", "btn-pause-saves"]) get(id).addEventListener("click", () => {
+      renderSlots();
+      get("save-status").textContent = "";
+      get("saves-screen").classList.remove("hidden");
+    });
+    get("btn-saves-close").addEventListener("click", () => get("saves-screen").classList.add("hidden"));
+    get("btn-main-menu").addEventListener("click", () => {
+      var _a, _b;
+      if (((_a = window.__game) == null ? void 0 : _a.running) && !window.__game.save()) {
+        window.__game.ui.toast(tr("\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0441\u043E\u0445\u0440\u0430\u043D\u0438\u0442\u044C \u0438\u0433\u0440\u0443.", "Could not save game."), true);
+        return;
+      }
+      (_b = window.__roomClient) == null ? void 0 : _b.close();
+      window.location.reload();
+    });
+    get("server-saved").addEventListener("change", (e) => {
+      if (e.target.value) get("server-url").value = e.target.value;
+    });
+    get("btn-server-add").addEventListener("click", () => {
+      const value = get("server-url").value.trim();
+      try {
+        const url = new URL(value);
+        if (!["http:", "https:", "ws:", "wss:"].includes(url.protocol) || url.username || url.password) throw new Error();
+        const a = [.../* @__PURE__ */ new Set([...serverList(), url.href])].slice(-12);
+        localStorage.setItem(SERVER_KEY, JSON.stringify(a));
+        renderServers();
+        get("server-saved").value = url.href;
+        status("room-status", "\u0410\u0434\u0440\u0435\u0441 \u0441\u043E\u0445\u0440\u0430\u043D\u0451\u043D \u043D\u0430 \u044D\u0442\u043E\u043C \u0443\u0441\u0442\u0440\u043E\u0439\u0441\u0442\u0432\u0435.", "Server saved on this device.");
+      } catch {
+        status("room-status", "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0430\u0434\u0440\u0435\u0441 \u0441\u0435\u0440\u0432\u0435\u0440\u0430 \u0441 http://, https://, ws:// \u0438\u043B\u0438 wss://.", "Enter an http://, https://, ws:// or wss:// server address.");
+      }
+    });
+    get("btn-server-remove").addEventListener("click", () => {
+      try {
+        localStorage.setItem(SERVER_KEY, JSON.stringify(serverList().filter((url) => url !== get("server-saved").value)));
+        renderServers();
+      } catch {
+        status("room-status", "\u041D\u0435 \u0443\u0434\u0430\u043B\u043E\u0441\u044C \u0443\u0434\u0430\u043B\u0438\u0442\u044C \u0430\u0434\u0440\u0435\u0441.", "Could not remove address.");
+      }
+    });
+    translate();
+    renderServers();
+    try {
+      if (sessionStorage.getItem("lastshore.loadPending") === "1") {
+        sessionStorage.removeItem("lastshore.loadPending");
+        scheduleBoot2(true);
+      }
+    } catch {
+    }
+  }
+
   // src/main.js
   var SAVE_KEY = "lastshore.save.v1";
   function emptyInventory() {
@@ -40900,8 +41760,13 @@ void main() {
       this.ui.onClear = (slot) => this.clearHotbar(slot);
       this.ui.onClickItem = (id) => this.assignHotbarFirst(id);
       this.audio = new Audio2();
+      this.device = detectDevice();
+      this.settings = getSettings();
+      if (this.settings.touch !== "auto") this.device.touch = this.settings.touch === "on";
       const safe = wantsSafeMode();
-      this.quality = safe ? 2 : 0;
+      this.quality = safe || this.settings.quality === "low" || this.settings.quality === "auto" && this.device.low ? 2 : 0;
+      this.device.low = this.quality >= 2 || this.device.weak;
+      document.body.classList.toggle("touch-device", this.device.touch);
       const attempts = [
         { antialias: true, powerPreference: "high-performance", shadows: true, label: "\u0432\u044B\u0441\u043E\u043A\u043E\u0435" },
         { antialias: false, powerPreference: "default", shadows: true, label: "\u043E\u0431\u044B\u0447\u043D\u043E\u0435" },
@@ -40960,9 +41825,10 @@ void main() {
       const maxAniso = this.renderer.capabilities ? this.renderer.capabilities.getMaxAnisotropy() : 4;
       this.textures = createTextures(Math.min(8, maxAniso || 4));
       this.world = new World(this.scene, CONFIG.world.seed, this.textures);
+      if (this.device.low) this.reduceViewDistance();
       this.sky = new Sky(this.scene, this.renderer, this.textures);
       this.player = new Player(this.scene);
-      this.rain = new Rain(this.scene);
+      this.rain = new Rain(this.scene, this.device.low ? 400 : 1800);
       this.resources = new Resources(this.scene, this.world);
       this.mobs = new Mobs(this.scene, this.world, CONFIG.world.seed);
       this.mine = new Mine(this.scene, this.world, CONFIG.world.seed);
@@ -41047,6 +41913,7 @@ void main() {
       this.spawnPlayer();
       this.buildHighlight();
       this.bindEvents();
+      if (this.device.touch) bindTouch(this);
       this.refreshHotbar();
       this.ui.renderBag(this.state.inventory, this.state.hotbar);
       this.renderer.setAnimationLoop(() => this.frame());
@@ -41532,6 +42399,9 @@ void main() {
         case "KeyV":
           this.toggleView();
           break;
+        case "KeyM":
+          this.ui.toast(this.audio.toggleMusic() ? "\u041C\u0443\u0437\u044B\u043A\u0430 \u0432\u043A\u043B\u044E\u0447\u0435\u043D\u0430" : "\u041C\u0443\u0437\u044B\u043A\u0430 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u0430");
+          break;
         case "F1":
           e.preventDefault();
           this.showDiag();
@@ -41604,6 +42474,7 @@ void main() {
     start(continueSave = false) {
       try {
         this.audio.init();
+        if (this.audio.master) this.audio.master.gain.value = this.settings.volume;
         this.audio.resume();
       } catch (err) {
         console.warn("audio disabled:", err);
@@ -41620,7 +42491,7 @@ void main() {
       this.dead = false;
       this.startedAt = performance.now();
       this.lastTime = performance.now();
-      this.tryLock();
+      if (!this.device.touch) this.tryLock();
       this.audio.uiClick();
       if (!continueSave) {
         setTimeout(() => {
@@ -41646,7 +42517,7 @@ void main() {
       this.paused = false;
       this.ui.hideScreens();
       this.lastTime = performance.now();
-      this.tryLock();
+      if (!this.device.touch) this.tryLock();
       this.audio.resume();
     }
     nodeDef(node) {
@@ -42209,6 +43080,10 @@ void main() {
     }
     /** Что показать в прицеле словами */
     aimPromptHtml() {
+      var _a;
+      if (!this.underground && ((_a = this.boat) == null ? void 0 : _a.placed) && (this.sailing || Math.hypot(this.player.position.x - this.boat.x, this.player.position.z - this.boat.z) < 4)) {
+        return this.sailing ? "<b>E</b> \u2014 \u0432\u044B\u0439\u0442\u0438 \u0438\u0437 \u043B\u043E\u0434\u043A\u0438" : "<b>E</b> \u2014 \u0441\u0435\u0441\u0442\u044C \u0432 \u043B\u043E\u0434\u043A\u0443";
+      }
       const aim = this.aim;
       if (!aim || !aim.target) {
         return this.underground ? '<span class="prompt-dim">\u041F\u0440\u0438\u0446\u0435\u043B\u044C\u0441\u044F \u0432 \u0441\u0442\u0435\u043D\u0443 \u0438 \u0431\u0435\u0439 \u043A\u0438\u0440\u043A\u043E\u0439</span>' : null;
@@ -42402,7 +43277,7 @@ void main() {
     // ------------------------------------------------------------
     /** Высота волны в точке — по ней качается лодка */
     waveAt(x, z, t = this.world.time) {
-      return Math.sin(x * 0.32 + t * 1.15) * 0.14 + Math.sin(z * 0.24 - t * 0.85) * 0.09;
+      return Math.sin(x * 0.115 + t * 1.15) * 0.15 + Math.sin(z * 0.165 - t * 0.9) * 0.11 + Math.sin((x + z) * 0.055 + t * 0.6) * 0.22 + Math.sin(Math.hypot(x, z) * 0.22 - t * 1.4) * 0.07;
     }
     buildBoat() {
       const built = makeBoat();
@@ -42497,7 +43372,7 @@ void main() {
         } else {
           b.speed *= -0.25;
         }
-        const lim = CONFIG.world.size * 0.47;
+        const lim = CONFIG.world.size * 0.72;
         b.x = Math.max(-lim, Math.min(lim, b.x));
         b.z = Math.max(-lim, Math.min(lim, b.z));
       } else {
@@ -42505,7 +43380,7 @@ void main() {
       }
       b.wave = this.waveAt(b.x, b.z, t);
       b.group.position.set(b.x, CONFIG.world.seaLevel + b.wave - 0.12, b.z);
-      b.group.rotation.y = b.heading + Math.PI / 2;
+      b.group.rotation.y = b.heading;
       b.group.rotation.x = Math.sin(t * 1.35 + b.x * 0.2) * 0.04 - Math.min(0.09, Math.abs(b.speed) * 0.012);
       b.group.rotation.z = Math.sin(t * 1.05 + b.z * 0.25) * 0.05;
       if (b.parts.sail) {
@@ -42513,24 +43388,34 @@ void main() {
         b.parts.sail.scale.x = 0.85 + Math.min(0.3, Math.max(0, b.speed) * 0.03);
       }
       if (b.parts.oar) b.parts.oar.rotation.x = this.sailing ? Math.sin(t * 3.4) * 0.14 : 0;
+      const water = this.world.waterUniforms;
+      if (water && water.uBoat) {
+        const angle = b.group.rotation.y;
+        water.uBoat.value.set(b.x, b.z, Math.cos(angle), Math.sin(angle));
+        water.uBoatVisible.value = 1;
+      }
       if (this.sailing) {
         const p = this.player;
         p.position.set(b.x, CONFIG.world.seaLevel + b.wave + 0.34, b.z);
         p.velocity.set(0, 0, 0);
         p.facing = b.heading;
         p.grounded = true;
+        p.swimming = false;
+        p.underwater = false;
+        p.wading = 0;
+        p.air = Math.min(CONFIG.player.airMax, p.air + CONFIG.player.airRefill * dt);
         p.model.position.copy(p.position);
         p.model.rotation.y = b.heading;
       }
     }
     /** Сесть в лодку / выйти на берег */
     toggleSailing() {
-      var _a, _b, _c, _d, _e2, _f;
+      var _a, _b, _c, _d, _e2, _f, _g;
       const b = this.boat;
       if (!b || !b.placed) return false;
       if (!this.sailing) {
         const d = Math.hypot(this.player.position.x - b.x, this.player.position.z - b.z);
-        if (d > 3.2) {
+        if (d > 4) {
           this.ui.toast("\u041B\u043E\u0434\u043A\u0430 \u0434\u0430\u043B\u0435\u043A\u043E \u2014 \u043F\u043E\u0434\u043E\u0439\u0434\u0438 \u043A \u043D\u0435\u0439 \u0431\u043B\u0438\u0436\u0435", true);
           return false;
         }
@@ -42546,25 +43431,33 @@ void main() {
         return true;
       }
       let exit = null;
-      for (let r = 1.5; r <= 12 && !exit; r += 1.2) {
+      for (let r = 2.4; r <= 5 && !exit; r += 1.2) {
         for (let i = 0; i < 16 && !exit; i++) {
           const a = i / 16 * Math.PI * 2;
           const x = b.x + Math.cos(a) * r;
           const z = b.z + Math.sin(a) * r;
           const h = this.world.heightAt(x, z);
-          if (h > -0.45 && h < 3.5) exit = { x, z, h };
+          if (h > -0.45 && h < 3.5 && this.world.isFree(x, z, CONFIG.player.radius) && !((_e2 = this.world.shells) == null ? void 0 : _e2.blocked(x, z, CONFIG.player.radius, h))) exit = { x, z, h };
         }
       }
       if (!exit) {
-        this.ui.toast("\u041A\u0440\u0443\u0433\u043E\u043C \u0433\u043B\u0443\u0431\u043E\u043A\u043E \u2014 \u0438\u0449\u0438 \u0431\u0435\u0440\u0435\u0433", true);
-        return false;
+        const x = b.x + Math.cos(b.heading) * 2.2;
+        const z = b.z - Math.sin(b.heading) * 2.2;
+        exit = { x, z, h: this.world.heightAt(x, z), water: true };
       }
       this.sailing = false;
       b.speed = 0;
       this.player.setPosition(exit.x, exit.z, this.world);
+      if (exit.water) {
+        this.player.position.y = CONFIG.world.seaLevel - CONFIG.player.floatLine;
+        this.player.model.position.copy(this.player.position);
+        this.player.velocity.set(0, 0, 0);
+        this.player.swimming = true;
+        this.player.underwater = false;
+      }
       this.player.model.visible = this.player.viewMode !== "first";
-      (_f = (_e2 = this.audio).pickup) == null ? void 0 : _f.call(_e2);
-      this.ui.toast("\u0422\u044B \u0441\u043E\u0448\u0451\u043B \u043D\u0430 \u0431\u0435\u0440\u0435\u0433. \u041B\u043E\u0434\u043A\u0430 \u0436\u0434\u0451\u0442 \u0443 \u0432\u043E\u0434\u044B.");
+      (_g = (_f = this.audio).pickup) == null ? void 0 : _g.call(_f);
+      this.ui.toast(exit.water ? "\u0422\u044B \u0441\u043E\u0448\u0451\u043B \u0432 \u0432\u043E\u0434\u0443. E \u2014 \u0432\u0435\u0440\u043D\u0443\u0442\u044C\u0441\u044F \u0432 \u043B\u043E\u0434\u043A\u0443." : "\u0422\u044B \u0441\u043E\u0448\u0451\u043B \u043D\u0430 \u0431\u0435\u0440\u0435\u0433. \u041B\u043E\u0434\u043A\u0430 \u0436\u0434\u0451\u0442 \u0443 \u0432\u043E\u0434\u044B.");
       return true;
     }
     interact() {
@@ -42572,7 +43465,7 @@ void main() {
       const boat = this.boat;
       if (boat && boat.placed) {
         const dBoat = Math.hypot(this.player.position.x - boat.x, this.player.position.z - boat.z);
-        if (this.sailing || dBoat < 3.2) {
+        if (!this.underground && (this.sailing || dBoat < 4)) {
           this.toggleSailing();
           return;
         }
@@ -43024,7 +43917,7 @@ void main() {
     //  Обновление
     // ------------------------------------------------------------
     update(dt) {
-      var _a, _b;
+      var _a, _b, _c;
       const state = this.state;
       if (this.sailing) {
         const idle = { forward: false, back: false, left: false, right: false, sprint: false, jump: false, jumpHeld: false };
@@ -43033,19 +43926,39 @@ void main() {
         this.player.update(dt, this.input, this.mineWorld);
       }
       this.updateBoat(dt);
+      (_a = window.__roomClient) == null ? void 0 : _a.update(this, dt);
       this.input.jump = false;
       if (!this.underground) {
         this.mobs.resolvePlayer(this.player.position, this.player.velocity, CONFIG.player.radius);
       }
       this.hitboxes.resolvePlayer(this.player, this.mineWorld, { mobs: this.mobs });
+      if (!this.underground && !this.sailing) {
+        this.world.shells.resolve(this.player.position, CONFIG.player.radius, this.player.velocity, this.player.position.y, 0.55);
+        this.player.model.position.x = this.player.position.x;
+        this.player.model.position.z = this.player.position.z;
+      }
       this.player.applyCamera(this.camera, this.mineWorld, dt);
       this.computeAim();
       this.updateWeather(dt);
       const skyInfo = this.sky.update(dt, this.player.position);
       this.sky.sun.intensity *= this.weatherSunMul;
       this.sky.hemi.intensity *= 0.8 + this.weatherSunMul * 0.25;
+      if (!this.device.low) {
+        const h = this.sky.hour;
+        const fadeIn = Math.max(0, Math.min(1, (h - 11) / 1));
+        const fadeOut = Math.max(0, Math.min(1, (18 - h) / 1));
+        const clear = this.sky.day % 3 === 0 ? 0 : Math.min(fadeIn, fadeOut);
+        this.scene.fog.near = MathUtils.lerp(27, this.scene.fog.near, clear);
+        this.scene.fog.far = MathUtils.lerp(170, this.scene.fog.far, clear);
+      }
       this.scene.fog.far /= this.weatherFogMul;
       this.scene.fog.near /= this.weatherFogMul;
+      if (this.device.low) {
+        this.scene.fog.near = 1400;
+        this.scene.fog.far = 1500;
+      } else {
+        this.scene.fog.near = Math.max(27, this.scene.fog.near);
+      }
       this.sky.skyUniforms.uTop.value.multiplyScalar(0.75 + this.weatherSunMul * 0.3);
       this.sky.skyUniforms.uBottom.value.multiplyScalar(0.8 + this.weatherSunMul * 0.2);
       this.sky.cloudiness = this.weather === "clear" ? 0.55 : this.weather === "cloudy" ? 1 : 1.5;
@@ -43053,8 +43966,8 @@ void main() {
       this.rain.update(dt, this.player.position);
       this.audio.setNight(skyInfo.night);
       this.audio.updateMusic(dt, skyInfo.night);
-      if (this.player && this.player.underwater) {
-        const d = Math.max(0, CONFIG.world.seaLevel - (this.player.position.y + 1.6));
+      if (!this.underground && this.camera.position.y < CONFIG.world.seaLevel + this.waveAt(this.camera.position.x, this.camera.position.z)) {
+        const d = Math.max(0, CONFIG.world.seaLevel - this.camera.position.y);
         const murk = Math.min(1, 0.35 + d * 0.16);
         this.sky.sun.intensity *= 1 - murk * 0.72;
         this.sky.hemi.intensity *= 1 - murk * 0.5;
@@ -43117,7 +44030,7 @@ void main() {
         this.mineLight.visible = false;
       }
       for (const st of this.stations) {
-        const wheel = (_b = (_a = st.group) == null ? void 0 : _a.userData) == null ? void 0 : _b.wheel;
+        const wheel = (_c = (_b = st.group) == null ? void 0 : _b.userData) == null ? void 0 : _c.wheel;
         if (wheel) wheel.rotation.x += dt * 0.4;
       }
       this.resources.update(dt);
@@ -43187,13 +44100,13 @@ void main() {
       }
       state.health = Math.max(0, Math.min(100, state.health));
       const hspeed = Math.hypot(this.player.velocity.x, this.player.velocity.z);
-      if (hspeed > 0.6 && this.player.grounded) {
+      if (hspeed > 0.6 && (this.player.grounded || this.player.swimming) && !this.sailing) {
         this.audio.stepTimer -= dt;
         if (this.audio.stepTimer <= 0) {
           const h = this.world.heightAt(this.player.position.x, this.player.position.z);
-          const surface = h < 0.05 ? "water" : h < 1.6 ? "sand" : "grass";
+          const surface = this.player.swimming || h < 0.05 ? "water" : this.world.layerAt(this.player.position.x, this.player.position.z) === "stone" ? "rock" : h < 1.6 ? "sand" : "grass";
           this.audio.step(surface, hspeed > 5.5);
-          this.audio.stepTimer = hspeed > 5.5 ? 0.31 : 0.46;
+          this.audio.stepTimer = this.player.swimming ? 0.7 : hspeed > 5.5 ? 0.31 : 0.46;
         }
       } else {
         this.audio.stepTimer = 0;
@@ -43242,7 +44155,8 @@ void main() {
     //  Сохранения (localStorage)
     // ------------------------------------------------------------
     save() {
-      if (!this.running || this.dead) return;
+      var _a;
+      if (!this.running || this.dead) return false;
       try {
         const data = {
           v: 1,
@@ -43258,15 +44172,28 @@ void main() {
           selected: this.selected,
           view: this.view,
           campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
+          nodes: this.resources.nodes.flatMap((n, i) => !n.alive || n.hp < n.maxHp || n.type === "bush" && n.berries !== !!n.item.berries ? [{
+            i,
+            hp: n.hp,
+            alive: n.alive,
+            berries: n.berries,
+            respawn: Math.max(0, n.respawnAt - this.resources.time),
+            berryWait: Math.max(0, n.berryAt - this.resources.time)
+          }] : []),
+          pickups: this.world.pickups.map((p) => ({ kind: p.kind, x: p.mesh.position.x, z: p.mesh.position.z, scale: p.mesh.scale.x })),
           stations: this.stations.map((st) => ({ type: st.type, x: st.x, z: st.z })),
           forged: this.forged,
           wounds: this.wounds.map((w) => ({ part: w.part, severity: w.severity })),
           collected: this.state.collected,
           weather: this.weather,
+          boat: ((_a = this.boat) == null ? void 0 : _a.placed) ? { x: this.boat.x, z: this.boat.z, heading: this.boat.heading, sailing: this.sailing } : null,
+          playerY: this.player.position.y,
           savedAt: Date.now()
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        return true;
       } catch (err) {
+        return false;
       }
     }
     loadSave() {
@@ -43291,6 +44218,14 @@ void main() {
       this.weather = data.weather && WEATHERS[data.weather] ? data.weather : "clear";
       const [x, z] = data.pos || [4, 40];
       this.player.setPosition(x, z, this.world);
+      if (Number.isFinite(data.playerY) && data.playerY >= this.world.heightAt(x, z) && data.playerY < 140) this.player.position.y = data.playerY;
+      if (data.boat && this.boat && [data.boat.x, data.boat.z, data.boat.heading].every(Number.isFinite) && Math.abs(data.boat.x) < 270 && Math.abs(data.boat.z) < 270) {
+        this.boat.x = data.boat.x;
+        this.boat.z = data.boat.z;
+        this.boat.heading = data.boat.heading;
+        this.sailing = data.boat.sailing === true;
+        this.updateBoat(0);
+      }
       this.player.yaw = (_b = data.yaw) != null ? _b : this.player.yaw;
       this.player.facing = (_c = data.facing) != null ? _c : this.player.facing;
       const [health, thirst, hunger, warmth] = data.need || [100, 78, 72, 100];
@@ -43311,6 +44246,26 @@ void main() {
         }
       }
       this.ui.setWounds(this.wounds);
+      if (Array.isArray(data.nodes)) for (const saved of data.nodes.slice(0, this.resources.nodes.length)) {
+        if (!Number.isInteger(saved.i) || saved.i < 0 || saved.i >= this.resources.nodes.length) continue;
+        const node = this.resources.nodes[saved.i];
+        node.hp = Number.isFinite(saved.hp) ? Math.max(0, Math.min(node.maxHp, saved.hp)) : node.maxHp;
+        node.alive = saved.alive !== false;
+        node.respawnAt = this.resources.time + Math.max(0, Math.min(600, Number(saved.respawn) || 0));
+        node.berries = !!saved.berries;
+        node.berryAt = this.resources.time + Math.max(0, Math.min(600, Number(saved.berryWait) || 0));
+        this.world.setNodeVisible(node.item, node.alive);
+        if (node.item.collider) node.item.collider.disabled = !node.alive;
+        if (node.type === "bush" && node.alive) this.world.setLayerVisible(node.item, "fruit", node.berries);
+      }
+      if (Array.isArray(data.pickups) && data.pickups.length <= 500) {
+        for (const pickup of [...this.world.pickups]) this.world.removePickup(pickup);
+        for (const pickup of data.pickups) {
+          if (!this.world.kindInfo[pickup.kind] || ![pickup.x, pickup.z, pickup.scale].every(Number.isFinite)) continue;
+          if (Math.abs(pickup.x) > 270 || Math.abs(pickup.z) > 270) continue;
+          this.world.addPickup(pickup.kind, pickup.x, pickup.z, Math.max(0.1, Math.min(3, pickup.scale)));
+        }
+      }
       for (const f of data.campfires || []) {
         const fire = this.resources.addCampfire(f.x, f.z);
         fire.fuel = Math.max(0, Math.min(fire.maxFuel, f.fuel || 0));
@@ -43371,7 +44326,7 @@ void main() {
       if (!this.running || this.paused || this.dead) return;
       this.cursorFree = false;
       (_b = (_a = this.ui).setCursorFree) == null ? void 0 : _b.call(_a, false);
-      this.tryLock(true);
+      if (!this.device.touch) this.tryLock(true);
     }
     /** F9: отпустить курсор для кликов по интерфейсу и вернуть его обратно */
     toggleCursor() {
@@ -43449,6 +44404,12 @@ void main() {
         this.slowTimer = Math.max(0, this.slowTimer - 0.5);
       }
     }
+    reduceViewDistance() {
+      for (const chunk of this.world.chunkMeshes) {
+        chunk.far = Math.min(chunk.far, 210);
+        if (chunk.lodDist) chunk.lodDist = Math.min(chunk.lodDist, 75);
+      }
+    }
     degradeQuality() {
       if (this.quality >= 2) return;
       this.quality += 1;
@@ -43459,6 +44420,8 @@ void main() {
       } else {
         this.renderer.shadowMap.enabled = false;
         this.sky.sun.castShadow = false;
+        this.device.low = true;
+        this.reduceViewDistance();
         this.renderer.setPixelRatio(1);
         this.ui.toast("\u0422\u0435\u043D\u0438 \u0432\u044B\u043A\u043B\u044E\u0447\u0435\u043D\u044B \u2014 \u0442\u0430\u043A \u0431\u044B\u0441\u0442\u0440\u0435\u0435");
       }
@@ -43572,19 +44535,27 @@ void main() {
     }, 40);
   }
   function initMenu() {
+    var _a, _b, _c;
     if (menuReady) return;
     menuReady = true;
+    initSettingsAndSaves(scheduleBoot);
+    const roomClient = new RoomClient();
+    window.__roomClient = roomClient;
+    roomClient.onJoin = () => scheduleBoot(false);
+    (_a = document.getElementById("btn-rooms")) == null ? void 0 : _a.addEventListener("click", () => document.getElementById("rooms-panel").classList.toggle("hidden"));
+    (_b = document.getElementById("btn-room-connect")) == null ? void 0 : _b.addEventListener("click", () => roomClient.connect(false));
+    (_c = document.getElementById("btn-room-list")) == null ? void 0 : _c.addEventListener("click", () => roomClient.connect(true));
     const continueBtn = document.getElementById("btn-continue");
     const reloadBtn = document.getElementById("btn-reload");
     if (reloadBtn) reloadBtn.addEventListener("click", () => window.location.reload());
     const diagBtn = document.getElementById("btn-diag");
     if (diagBtn) {
       diagBtn.addEventListener("click", () => {
-        var _a;
+        var _a2;
         const diag = document.getElementById("diag");
         const text = document.getElementById("diag-text");
         if (!diag || !text) return;
-        text.textContent = collectDiag({ "\u0418\u0433\u0440\u0430 \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u0430": ((_a = window.__game) == null ? void 0 : _a.running) ? "\u0434\u0430" : "\u043D\u0435\u0442" });
+        text.textContent = collectDiag({ "\u0418\u0433\u0440\u0430 \u0437\u0430\u043F\u0443\u0449\u0435\u043D\u0430": ((_a2 = window.__game) == null ? void 0 : _a2.running) ? "\u0434\u0430" : "\u043D\u0435\u0442" });
         diag.classList.remove("hidden");
       });
     }
@@ -43601,15 +44572,15 @@ void main() {
     const diagClose = document.getElementById("btn-diag-close");
     if (diagClose) {
       diagClose.addEventListener("click", () => {
-        var _a;
-        return (_a = document.getElementById("diag")) == null ? void 0 : _a.classList.add("hidden");
+        var _a2;
+        return (_a2 = document.getElementById("diag")) == null ? void 0 : _a2.classList.add("hidden");
       });
     }
     const diagCopy = document.getElementById("btn-diag-copy");
     if (diagCopy) {
       diagCopy.addEventListener("click", async () => {
-        var _a;
-        const text = ((_a = document.getElementById("diag-text")) == null ? void 0 : _a.textContent) || "";
+        var _a2;
+        const text = ((_a2 = document.getElementById("diag-text")) == null ? void 0 : _a2.textContent) || "";
         try {
           await navigator.clipboard.writeText(text);
           diagCopy.textContent = "\u0421\u043A\u043E\u043F\u0438\u0440\u043E\u0432\u0430\u043D\u043E";
@@ -43643,6 +44614,7 @@ void main() {
     });
     window.addEventListener("keydown", (e) => {
       if (window.__game && window.__game.running) return;
+      if (e.target && /^(INPUT|TEXTAREA|BUTTON)$/.test(e.target.tagName)) return;
       if (e.code === "Enter" || e.code === "NumpadEnter" || e.code === "Space") {
         e.preventDefault();
         scheduleBoot(false);
