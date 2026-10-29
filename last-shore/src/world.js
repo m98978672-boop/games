@@ -1315,10 +1315,12 @@ export class World {
         // Крона и листья в обводку не входят, поэтому под деревом можно пройти,
         // а ствол держит ровно по своему силуэту.
         const treeLike = height > 2.4;
+        // ствол заканчивается примерно на половине высоты — выше начинается
+        // крона, и обводка не должна лезть в листву «трубой до неба»
         const hullParts = hullsFromGeometry(Object.values(variant), {
           pad: 0.02,
-          top: treeLike ? vbox.min.y + Math.min(height * 0.92, 7.5) : vbox.max.y,
-          bands: treeLike ? 3 : 1,
+          top: treeLike ? vbox.min.y + Math.min(height * 0.58, 5.4) : vbox.max.y,
+          bands: treeLike ? 2 : 1,
           basePad: treeLike ? 0.22 : 0,
           maxRadius: solidR ? solidR * 1.1 : undefined,
         });

@@ -30310,8 +30310,9 @@ void main() {
       const lineMat = new LineBasicMaterial({
         color: 8257456,
         transparent: true,
-        opacity: 0.6,
-        depthTest: false
+        opacity: 0.55,
+        depthTest: true,
+        depthWrite: false
       });
       this.lines = new LineSegments(lineGeo, lineMat);
       this.lines.frustumCulled = false;
@@ -30321,8 +30322,9 @@ void main() {
       const triMat = new MeshBasicMaterial({
         color: 3778666,
         transparent: true,
-        opacity: 0.1,
+        opacity: 0.12,
         side: DoubleSide,
+        depthTest: true,
         depthWrite: false
       });
       this.triangles = new Mesh(triGeo, triMat);
@@ -32955,8 +32957,8 @@ void main() {
           const treeLike = height > 2.4;
           const hullParts = hullsFromGeometry(Object.values(variant), {
             pad: 0.02,
-            top: treeLike ? vbox.min.y + Math.min(height * 0.92, 7.5) : vbox.max.y,
-            bands: treeLike ? 3 : 1,
+            top: treeLike ? vbox.min.y + Math.min(height * 0.58, 5.4) : vbox.max.y,
+            bands: treeLike ? 2 : 1,
             basePad: treeLike ? 0.22 : 0,
             maxRadius: solidR ? solidR * 1.1 : void 0
           });
@@ -40283,7 +40285,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-29 14:28" : "dev";
+  var BUILD = true ? "2026-10-29 17:51" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
