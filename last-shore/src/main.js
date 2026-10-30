@@ -955,24 +955,19 @@ class Game {
       return;
     }
 
-    if (power < 2 && probe.layer !== 'stone' && Math.random() < 0.45) {
-      // руками: первый удар только рыхлит
-      this.spawnChips(point.x, point.y + 0.15, point.z, {
-        count: 4, color: probe.layer === 'sand' ? 0xdfcb95 : 0x7d6544, size: 0.05, spread: 1.1, up: 1.2,
-      });
+    // Одна метровая клетка на удар: несколько последовательных попаданий
+    // накапливают урон, не выдавая добычу до реального разрушения.
+    w.playerPos = this.player.position;
+    const res = w.strikeGround(point.x, point.z, { power, mine: minePower, creative: this.creative });
+    if (!res) return;
+    if (res.pending) {
       this.audio.rustle?.();
-      this.ui.toast('Разрыхлил землю — ещё удар', true);
+      this.spawnChips(point.x, point.y + 0.12, point.z, {
+        count: 3, color: probe.rock?.dust || (probe.layer === 'sand' ? 0xdfcb95 : 0x7d6544), size: 0.04, spread: 0.7, up: 0.9,
+      });
+      this.ui.toast(`Порода повреждена: ${res.remaining.toFixed(1)}/${res.max.toFixed(1)}`);
       return;
     }
-
-    // ступени в яме разворачиваются туда, где стоит герой
-    w.playerPos = this.player.position;
-    const res = w.dig(point.x, point.z, {
-      radius: power > 2 ? 2.0 : 1.45,
-      depth: this.creative ? 0.7 : 0.45,
-      mine: minePower,
-    });
-    if (!res) return;
     if (res.hard) {
       this.ui.toast('Камень не поддаётся — нужна кирка', true);
       this.audio.stoneCrack?.();
@@ -1035,7 +1030,7 @@ class Game {
     else if (Math.random() < 0.35) this.addItem('stone', 1);
 
     if (res.flooded) {
-      this.ui.toast('На пляже яма дошла до морской воды — дно заливает. В глубине острова воды нет');
+      this.ui.toast('На пляже достигнута морская вода — яма постепенно наполняется');
       this.audio.drink?.();
     } else if (res.sandFill > 0.05) {
       this.ui.toast('Песок осыпался в яму — края поплыли');
@@ -1487,10 +1482,13 @@ class Game {
         const fast = this.creative || (tool && tool.dig);
         const probe = this.world.probeAt(t.point.x, t.point.z);
         if (probe.layer === 'stone' && probe.rock) {
-          return `<b>ЛКМ</b> — копать ${probe.rock.name.toLowerCase()} · <span class="prompt-warn">HP ${Math.ceil(probe.hp)}/${probe.maxHp}</span>`;
+          const damage = this.world.groundDamageAt(t.point.x, t.point.z, probe);
+          return `<b>ЛКМ</b> — копать ${probe.rock.name.toLowerCase()} · <span class="prompt-warn">HP ${Math.ceil(probe.hp)}/${probe.maxHp}</span> · блок ${damage.remaining.toFixed(1)}/${damage.max.toFixed(1)}`;
         }
-        const name = layer === 'sand' ? 'песок' : layer === 'stone' ? 'камень' : 'земля';
-        return `<b>ЛКМ</b> — копать ${name} ${fast ? '' : '· <span class="prompt-warn">руками медленно</span>'}`;
+        const name = probe.layer === 'sand' ? 'песок' : probe.layer === 'stone' ? 'камень' : 'земля';
+        const damage = this.world.groundDamageAt(t.point.x, t.point.z, probe);
+        const health = damage ? ` · HP ${damage.remaining.toFixed(1)}/${damage.max.toFixed(1)}` : '';
+        return `<b>ЛКМ</b> — копать ${name}${health} ${fast ? '' : '· <span class="prompt-warn">руками медленно</span>'}`;
       }
       case 'pickup':
         return `<b>E</b> — подобрать ${t.pickup.name.toLowerCase()}`;
@@ -2409,6 +2407,7 @@ class Game {
     this.sky.cloudiness = this.weather === 'clear' ? 0.55 : this.weather === 'cloudy' ? 1.0 : 1.5;
     this.rain.setIntensity(this.rainIntensity);
     this.rain.update(dt, this.player.position);
+    this.world.updatePitPhysics(dt, this.rainIntensity);
     this.audio.setNight(skyInfo.night);
     this.audio.updateMusic(dt, skyInfo.night);
 
