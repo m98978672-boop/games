@@ -12560,13 +12560,13 @@
     }
   };
   function checkIntersection$1(object, material2, raycaster, ray, pA, pB, pC, point) {
-    let intersect;
+    let intersect2;
     if (material2.side === BackSide) {
-      intersect = ray.intersectTriangle(pC, pB, pA, true, point);
+      intersect2 = ray.intersectTriangle(pC, pB, pA, true, point);
     } else {
-      intersect = ray.intersectTriangle(pA, pB, pC, material2.side === FrontSide, point);
+      intersect2 = ray.intersectTriangle(pA, pB, pC, material2.side === FrontSide, point);
     }
-    if (intersect === null) return null;
+    if (intersect2 === null) return null;
     _intersectionPointWorld.copy(point);
     _intersectionPointWorld.applyMatrix4(object.matrixWorld);
     const distance = raycaster.ray.origin.distanceTo(_intersectionPointWorld);
@@ -12797,10 +12797,10 @@
         _mesh$1.matrixWorld = _instanceWorldMatrix;
         _mesh$1.raycast(raycaster, _instanceIntersects);
         for (let i = 0, l = _instanceIntersects.length; i < l; i++) {
-          const intersect = _instanceIntersects[i];
-          intersect.instanceId = instanceId;
-          intersect.object = this;
-          intersects.push(intersect);
+          const intersect2 = _instanceIntersects[i];
+          intersect2.instanceId = instanceId;
+          intersect2.object = this;
+          intersects.push(intersect2);
         }
         _instanceIntersects.length = 0;
       }
@@ -13185,32 +13185,32 @@
         for (let i = start, l = end - 1; i < l; i += step2) {
           const a = index.getX(i);
           const b = index.getX(i + 1);
-          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b, i);
-          if (intersect) {
-            intersects.push(intersect);
+          const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b, i);
+          if (intersect2) {
+            intersects.push(intersect2);
           }
         }
         if (this.isLineLoop) {
           const a = index.getX(end - 1);
           const b = index.getX(start);
-          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b, end - 1);
-          if (intersect) {
-            intersects.push(intersect);
+          const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b, end - 1);
+          if (intersect2) {
+            intersects.push(intersect2);
           }
         }
       } else {
         const start = Math.max(0, drawRange.start);
         const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
         for (let i = start, l = end - 1; i < l; i += step2) {
-          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, i, i + 1, i);
-          if (intersect) {
-            intersects.push(intersect);
+          const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, i, i + 1, i);
+          if (intersect2) {
+            intersects.push(intersect2);
           }
         }
         if (this.isLineLoop) {
-          const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, end - 1, start, end - 1);
-          if (intersect) {
-            intersects.push(intersect);
+          const intersect2 = checkIntersection(this, raycaster, _ray$1, localThresholdSq, end - 1, start, end - 1);
+          if (intersect2) {
+            intersects.push(intersect2);
           }
         }
       }
@@ -17981,6 +17981,149 @@
     ]
   ];
   var _controlInterpolantsResultBuffer = new Float32Array(1);
+  var _matrix = /* @__PURE__ */ new Matrix4();
+  var Raycaster = class {
+    /**
+     * Constructs a new raycaster.
+     *
+     * @param {Vector3} origin - The origin vector where the ray casts from.
+     * @param {Vector3} direction - The (normalized) direction vector that gives direction to the ray.
+     * @param {number} [near=0] - All results returned are further away than near. Near can't be negative.
+     * @param {number} [far=Infinity] - All results returned are closer than far. Far can't be lower than near.
+     */
+    constructor(origin, direction, near = 0, far = Infinity) {
+      this.ray = new Ray(origin, direction);
+      this.near = near;
+      this.far = far;
+      this.camera = null;
+      this.layers = new Layers();
+      this.params = {
+        Mesh: {},
+        Line: { threshold: 1 },
+        LOD: {},
+        Points: { threshold: 1 },
+        Sprite: {}
+      };
+    }
+    /**
+     * Updates the ray with a new origin and direction by copying the values from the arguments.
+     *
+     * @param {Vector3} origin - The origin vector where the ray casts from.
+     * @param {Vector3} direction - The (normalized) direction vector that gives direction to the ray.
+     */
+    set(origin, direction) {
+      this.ray.set(origin, direction);
+    }
+    /**
+     * Uses the given coordinates and camera to compute a new origin and direction for the internal ray.
+     *
+     * @param {Vector2} coords - 2D coordinates of the mouse, in normalized device coordinates (NDC).
+     * X and Y components should be between `-1` and `1`.
+     * @param {Camera} camera - The camera from which the ray should originate.
+     */
+    setFromCamera(coords, camera) {
+      if (camera.isPerspectiveCamera) {
+        this.ray.origin.setFromMatrixPosition(camera.matrixWorld);
+        this.ray.direction.set(coords.x, coords.y, 0.5).unproject(camera).sub(this.ray.origin).normalize();
+        this.camera = camera;
+      } else if (camera.isOrthographicCamera) {
+        this.ray.origin.set(coords.x, coords.y, camera.projectionMatrix.elements[14]).unproject(camera);
+        this.ray.direction.set(0, 0, -1).transformDirection(camera.matrixWorld);
+        this.camera = camera;
+      } else {
+        error("Raycaster: Unsupported camera type: " + camera.type);
+      }
+    }
+    /**
+     * Uses the given WebXR controller to compute a new origin and direction for the internal ray.
+     *
+     * @param {WebXRController} controller - The controller to copy the position and direction from.
+     * @return {Raycaster} A reference to this raycaster.
+     */
+    setFromXRController(controller) {
+      _matrix.identity().extractRotation(controller.matrixWorld);
+      this.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+      this.ray.direction.set(0, 0, -1).applyMatrix4(_matrix);
+      return this;
+    }
+    /**
+     * The intersection point of a raycaster intersection test.
+     * @typedef {Object} Raycaster~Intersection
+     * @property {number} distance - The distance from the ray's origin to the intersection point.
+     * @property {number} distanceToRay -  Some 3D objects e.g. {@link Points} provide the distance of the
+     * intersection to the nearest point on the ray. For other objects it will be `undefined`.
+     * @property {Vector3} point - The intersection point, in world coordinates.
+     * @property {Object} face - The face that has been intersected.
+     * @property {number} faceIndex - The face index.
+     * @property {Object3D} object - The 3D object that has been intersected.
+     * @property {Vector2} uv - U,V coordinates at point of intersection.
+     * @property {Vector2} uv1 - Second set of U,V coordinates at point of intersection.
+     * @property {Vector3} normal - Interpolated normal vector at point of intersection.
+     * @property {number} instanceId - The index number of the instance where the ray
+     * intersects the {@link InstancedMesh}.
+     */
+    /**
+     * Checks all intersection between the ray and the object with or without the
+     * descendants. Intersections are returned sorted by distance, closest first.
+     *
+     * `Raycaster` delegates to the `raycast()` method of the passed 3D object, when
+     * evaluating whether the ray intersects the object or not. This allows meshes to respond
+     * differently to ray casting than lines or points.
+     *
+     * Note that for meshes, faces must be pointed towards the origin of the ray in order
+     * to be detected; intersections of the ray passing through the back of a face will not
+     * be detected. To raycast against both faces of an object, you'll want to set  {@link Material#side}
+     * to `THREE.DoubleSide`.
+     *
+     * Note that a ray hitting a triangle mesh exactly along an edge shared by two faces may be
+     * reported by both faces, resulting in two coincident intersections (identical point and
+     * distance) in the returned array.
+     *
+     * @param {Object3D} object - The 3D object to check for intersection with the ray.
+     * @param {boolean} [recursive=true] - If set to `true`, it also checks all descendants.
+     * Otherwise it only checks intersection with the object.
+     * @param {Array<Raycaster~Intersection>} [intersects=[]] The target array that holds the result of the method.
+     * @return {Array<Raycaster~Intersection>} An array holding the intersection points.
+     */
+    intersectObject(object, recursive = true, intersects = []) {
+      intersect(object, this, intersects, recursive);
+      intersects.sort(ascSort);
+      return intersects;
+    }
+    /**
+     * Checks all intersection between the ray and the objects with or without
+     * the descendants. Intersections are returned sorted by distance, closest first.
+     *
+     * @param {Array<Object3D>} objects - The 3D objects to check for intersection with the ray.
+     * @param {boolean} [recursive=true] - If set to `true`, it also checks all descendants.
+     * Otherwise it only checks intersection with the object.
+     * @param {Array<Raycaster~Intersection>} [intersects=[]] The target array that holds the result of the method.
+     * @return {Array<Raycaster~Intersection>} An array holding the intersection points.
+     */
+    intersectObjects(objects, recursive = true, intersects = []) {
+      for (let i = 0, l = objects.length; i < l; i++) {
+        intersect(objects[i], this, intersects, recursive);
+      }
+      intersects.sort(ascSort);
+      return intersects;
+    }
+  };
+  function ascSort(a, b) {
+    return a.distance - b.distance;
+  }
+  function intersect(object, raycaster, intersects, recursive) {
+    let propagate = true;
+    if (object.layers.test(raycaster.layers)) {
+      const result = object.raycast(raycaster, intersects);
+      if (result === false) propagate = false;
+    }
+    if (propagate === true && recursive === true) {
+      const children = object.children;
+      for (let i = 0, l = children.length; i < l; i++) {
+        intersect(children[i], raycaster, intersects, true);
+      }
+    }
+  }
   var _Matrix2 = class _Matrix2 {
     /**
      * Constructs a new 2x2 matrix. The arguments are supposed to be
@@ -29681,7 +29824,7 @@ void main() {
       size: 360,
       // размер острова (м) по стороне
       segments: 200,
-      // плотность сетки рельефа
+      // прежняя сетка поверхности; выемки уточняются отдельно
       seaLevel: 0,
       seed: 1337
     },
@@ -30165,39 +30308,6 @@ void main() {
     upper.pop();
     return lower.concat(upper);
   }
-  function hullFromGeometry(geometries, { pad = 0.02, belowY = Infinity, maxRadius = void 0 } = {}) {
-    const pts = [];
-    const limit = maxRadius === void 0 ? null : Math.max(0.12, maxRadius);
-    for (const geo of geometries) {
-      if (!geo) continue;
-      const pos = geo.attributes && geo.attributes.position;
-      if (!pos) continue;
-      const step2 = Math.max(1, Math.floor(pos.count / 900));
-      for (let i = 0; i < pos.count; i += step2) {
-        if (pos.getY(i) > belowY) continue;
-        let px = pos.getX(i);
-        let pz = pos.getZ(i);
-        if (limit !== null) {
-          const d = Math.hypot(px, pz);
-          if (d > limit) {
-            px = px / d * limit;
-            pz = pz / d * limit;
-          }
-        }
-        pts.push({ x: px, z: pz });
-      }
-    }
-    const hull = convexHull2D(pts);
-    if (hull.length < 3) return null;
-    const cx = hull.reduce((s, p) => s + p.x, 0) / hull.length;
-    const cz = hull.reduce((s, p) => s + p.z, 0) / hull.length;
-    return hull.map((p) => {
-      const dx = p.x - cx;
-      const dz = p.z - cz;
-      const len = Math.hypot(dx, dz) || 1;
-      return { x: p.x + dx / len * pad, z: p.z + dz / len * pad };
-    });
-  }
   function hullsFromGeometry(geometries, {
     pad = 0.02,
     top = Infinity,
@@ -30278,6 +30388,7 @@ void main() {
       this.group.visible = false;
       if (scene) scene.add(this.group);
       this._searchBuf = [];
+      this._searchStamp = 0;
       this._triangles = null;
       this.stats = { prisms: 0, triangles: 0 };
     }
@@ -30316,14 +30427,14 @@ void main() {
     near(x, z, radius) {
       const out = this._searchBuf;
       out.length = 0;
-      const seen = /* @__PURE__ */ new Set();
+      const stamp = ++this._searchStamp;
       for (let cx = Math.floor((x - radius) / CELL); cx <= Math.floor((x + radius) / CELL); cx++) {
         for (let cz = Math.floor((z - radius) / CELL); cz <= Math.floor((z + radius) / CELL); cz++) {
           const bucket = this.grid.get(key(cx, cz));
           if (!bucket) continue;
           for (const p of bucket) {
-            if (seen.has(p)) continue;
-            seen.add(p);
+            if (p._searchStamp === stamp) continue;
+            p._searchStamp = stamp;
             out.push(p);
           }
         }
@@ -30341,8 +30452,10 @@ void main() {
       const top = feetY + height;
       for (const p of this.near(pos.x, pos.z, radius + 1.2)) {
         if (p.enabled && !p.enabled()) continue;
-        if (p.maxY < feetY + (p.kind === "den" ? 0 : stepUp)) continue;
+        const precise = p.kind === "den" || p.kind === "tree" || p.kind === "palm" || p.kind === "rock";
+        if (p.maxY < feetY + (precise ? 0 : stepUp)) continue;
         if (p.minY > top) continue;
+        if (pos.x + radius < p.minX || pos.x - radius > p.maxX || pos.z + radius < p.minZ || pos.z - radius > p.maxZ) continue;
         const hit = this._pushOut(p, pos, radius);
         if (!hit) continue;
         pos.x += hit.x;
@@ -30366,6 +30479,7 @@ void main() {
       for (const p of this.near(x, z, 0.5)) {
         if (p.enabled && !p.enabled()) continue;
         if (y !== null && (y > p.maxY || y + 1.85 < p.minY)) continue;
+        if (x < p.minX || x > p.maxX || z < p.minZ || z > p.maxZ) continue;
         if (this._inside(p.poly, x, z)) return true;
       }
       return false;
@@ -30374,8 +30488,10 @@ void main() {
     blocked(x, z, radius, y = 0) {
       for (const p of this.near(x, z, radius + 1.2)) {
         if (p.enabled && !p.enabled()) continue;
-        if (p.maxY < y + (p.kind === "den" ? 0 : 0.35)) continue;
+        const precise = p.kind === "den" || p.kind === "tree" || p.kind === "palm" || p.kind === "rock";
+        if (p.maxY < y + (precise ? 0 : 0.35)) continue;
         if (p.minY > y + 1.85) continue;
+        if (x + radius < p.minX || x - radius > p.maxX || z + radius < p.minZ || z - radius > p.maxZ) continue;
         if (this._inside(p.poly, x, z)) return true;
         const d = this._edgeDistance(p.poly, x, z);
         if (d < radius) return true;
@@ -30536,6 +30652,170 @@ void main() {
       return true;
     }
   };
+
+  // src/mesh-sections.js
+  function meshSections(geometries, { bandHeight = 0.45 } = {}) {
+    var _a;
+    const result = [];
+    for (const geometry of geometries) {
+      const pos = (_a = geometry == null ? void 0 : geometry.attributes) == null ? void 0 : _a.position;
+      if (!pos) continue;
+      const idx = geometry.index;
+      const count = idx ? idx.count : pos.count;
+      if (count % 3 !== 0) continue;
+      const vertexIds = /* @__PURE__ */ new Map(), vertices = [], parent = [], triangles = [];
+      const vertex2 = (n) => {
+        const x = pos.getX(n), y = pos.getY(n), z = pos.getZ(n);
+        const key2 = `${Math.round(x * 1e5)},${Math.round(y * 1e5)},${Math.round(z * 1e5)}`;
+        let id = vertexIds.get(key2);
+        if (id === void 0) {
+          id = vertices.length;
+          vertexIds.set(key2, id);
+          vertices.push({ x, y, z });
+          parent.push(id);
+        }
+        return id;
+      };
+      const find = (i) => {
+        while (parent[i] !== i) {
+          parent[i] = parent[parent[i]];
+          i = parent[i];
+        }
+        return i;
+      };
+      for (let n = 0; n < count; n += 3) {
+        const a = vertex2(idx ? idx.getX(n) : n), b = vertex2(idx ? idx.getX(n + 1) : n + 1), c = vertex2(idx ? idx.getX(n + 2) : n + 2);
+        parent[find(b)] = find(a);
+        parent[find(c)] = find(a);
+        triangles.push([a, b, c]);
+      }
+      const groups = /* @__PURE__ */ new Map();
+      for (const tri of triangles) {
+        const root = find(tri[0]);
+        let group = groups.get(root);
+        if (!group) groups.set(root, group = { triangles: [], minY: Infinity, maxY: -Infinity });
+        group.triangles.push(tri);
+        for (const id of tri) {
+          const y = vertices[id].y;
+          group.minY = Math.min(group.minY, y);
+          group.maxY = Math.max(group.maxY, y);
+        }
+      }
+      const clip = (poly, bound, above) => {
+        const out = [];
+        for (let i = 0; i < poly.length; i++) {
+          const a = poly[i], b = poly[(i + 1) % poly.length];
+          const ai = above ? a.y >= bound : a.y <= bound;
+          const bi = above ? b.y >= bound : b.y <= bound;
+          if (ai) out.push(a);
+          if (ai !== bi) {
+            const t = (bound - a.y) / (b.y - a.y);
+            out.push({ x: a.x + (b.x - a.x) * t, y: bound, z: a.z + (b.z - a.z) * t });
+          }
+        }
+        return out;
+      };
+      for (const group of groups.values()) {
+        const span = group.maxY - group.minY;
+        if (span < 0.025) continue;
+        const bands = Math.max(1, Math.ceil(span / bandHeight));
+        for (let i = 0; i < bands; i++) {
+          const minY = group.minY + span * i / bands, maxY = group.minY + span * (i + 1) / bands;
+          const points = [];
+          for (const tri of group.triangles) {
+            const [a, b, c] = tri.map((id) => vertices[id]);
+            if (Math.max(a.y, b.y, c.y) < minY || Math.min(a.y, b.y, c.y) > maxY) continue;
+            const poly2 = clip(clip([a, b, c], minY, true), maxY, false);
+            for (const p of poly2) points.push({ x: p.x, z: p.z });
+          }
+          const poly = convexHull2D(points);
+          if (poly.length >= 3) result.push({ poly, minY, maxY });
+        }
+      }
+    }
+    return result;
+  }
+
+  // src/terrain-cut.js
+  function cutTerrain(geometry, baseIndex, gridSize, step2, size, rectangles) {
+    const baseCount = gridSize * gridSize;
+    const attributes = Object.entries(geometry.attributes).filter(([, a]) => !a.isInterleavedBufferAttribute);
+    const arrays = attributes.map(([, a]) => Array.from(a.array.slice(0, baseCount * a.itemSize)));
+    const positionIndex = attributes.findIndex(([name]) => name === "position");
+    const position = arrays[positionIndex];
+    const getVertex = (index) => attributes.map(([, attr], a) => arrays[a].slice(index * attr.itemSize, (index + 1) * attr.itemSize));
+    const mix = (a, b, t) => a.map((part2, k) => part2.map((v, i) => v + (b[k][i] - v) * t));
+    const split = (poly, axis, value, keepGreater) => {
+      const inside = [], outside = [];
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i], b = poly[(i + 1) % poly.length];
+        const av = a[positionIndex][axis], bv = b[positionIndex][axis];
+        const ai = keepGreater ? av >= value : av <= value;
+        const bi = keepGreater ? bv >= value : bv <= value;
+        (ai ? inside : outside).push(a);
+        if (ai !== bi) {
+          const v = mix(a, b, (value - av) / (bv - av));
+          inside.push(v);
+          outside.push(v);
+        }
+      }
+      return [inside, outside];
+    };
+    const subtract = (poly, r) => {
+      let inside = poly;
+      const remaining = [];
+      for (const [axis, value, greater] of [[0, r.x0, true], [0, r.x1, false], [2, r.z0, true], [2, r.z1, false]]) {
+        if (inside.length < 3) break;
+        const [next, outside] = split(inside, axis, value, greater);
+        if (outside.length >= 3) remaining.push(outside);
+        inside = next;
+      }
+      return remaining;
+    };
+    const buckets = /* @__PURE__ */ new Map();
+    const key2 = (x, z) => x * 1024 + z;
+    for (const r of rectangles) {
+      const minX = Math.max(0, Math.floor((r.x0 + size / 2) / step2));
+      const maxX = Math.min(gridSize - 2, Math.floor((r.x1 + size / 2 - 1e-8) / step2));
+      const minZ = Math.max(0, Math.floor((r.z0 + size / 2) / step2));
+      const maxZ = Math.min(gridSize - 2, Math.floor((r.z1 + size / 2 - 1e-8) / step2));
+      for (let x = minX; x <= maxX; x++) for (let z = minZ; z <= maxZ; z++) {
+        const k = key2(x, z);
+        let bucket = buckets.get(k);
+        if (!bucket) buckets.set(k, bucket = []);
+        bucket.push(r);
+      }
+    }
+    const out = [];
+    for (let q = 0; q < baseIndex.length; q += 6) {
+      const v = baseIndex[q], ix = v % gridSize, iz = (v - ix) / gridSize;
+      const candidates = buckets.get(key2(ix, iz));
+      if (!candidates) {
+        for (let j = 0; j < 6; j++) out.push(baseIndex[q + j]);
+        continue;
+      }
+      for (let j = 0; j < 6; j += 3) {
+        let polygons = [[getVertex(baseIndex[q + j]), getVertex(baseIndex[q + j + 1]), getVertex(baseIndex[q + j + 2])]];
+        for (const r of candidates) polygons = polygons.flatMap((poly) => subtract(poly, r));
+        for (const poly of polygons) {
+          const first = arrays[positionIndex].length / 3;
+          for (const vert of poly) for (let a = 0; a < attributes.length; a++) arrays[a].push(...vert[a]);
+          for (let k = 1; k + 1 < poly.length; k++) {
+            const a = poly[0][positionIndex], b = poly[k][positionIndex], c = poly[k + 1][positionIndex];
+            if (Math.abs((b[0] - a[0]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[0] - a[0])) > 1e-9) out.push(first, first + k, first + k + 1);
+          }
+        }
+      }
+    }
+    for (let i = 0; i < attributes.length; i++) {
+      const [name, old] = attributes[i];
+      geometry.setAttribute(name, new BufferAttribute(new old.array.constructor(arrays[i]), old.itemSize, old.normalized));
+    }
+    geometry.setIndex(out);
+    geometry.computeVertexNormals();
+    geometry.computeBoundingSphere();
+    return out.length;
+  }
 
   // src/noise.js
   function hash2(ix, iz, seed) {
@@ -31970,7 +32250,7 @@ void main() {
     { x: 8, z: -146, rad: 30, h: 4.2 },
     { x: -160, z: 22, rad: 27, h: 3.6 }
   ];
-  var DIG_CELL = 1.4;
+  var DIG_CELL = 1;
   var SAND_ZONES = [
     new Color(15721400),
     // светлый, выгоревший песок
@@ -32655,7 +32935,7 @@ void main() {
         if (n) sp.y = sum / n;
         for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
           for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
-            if (this.cutCells && this.cutCells.has(ix * 1024 + iz)) continue;
+            if (this._terrainCellCut(ix, iz)) continue;
             if (this.flatCore.has(iz * GRID + ix)) continue;
             const nx = -half + ix * STEP;
             const nz = -half + iz * STEP;
@@ -33012,8 +33292,7 @@ void main() {
           g.computeBoundingBox();
           const box2 = g.boundingBox;
           if (!box2 || box2.max.y < 0.25 || box2.max.y - box2.min.y < 0.12) continue;
-          const poly = hullFromGeometry([g], { pad: 0.015 });
-          if (poly) sectors.push({ poly, minY: box2.min.y, maxY: box2.max.y });
+          sectors.push(...meshSections([g]));
         }
         const mesh2 = new InstancedMesh(coveredGeo, mat2, list.length);
         mesh2.castShadow = true;
@@ -33248,15 +33527,12 @@ void main() {
             if (!geo.boundingBox) geo.computeBoundingBox();
             vbox = vbox ? vbox.clone().union(geo.boundingBox) : geo.boundingBox.clone();
           }
-          const height = vbox ? vbox.max.y - vbox.min.y : 0;
-          const hullTop = height > 3 ? vbox.min.y + 1.35 : vbox.max.y;
-          const shellTop = vbox ? vbox.max.y : hullTop;
-          const treeLike = height > 2.4;
-          const hullParts = hullsFromGeometry(Object.values(variant), {
+          const solid = name === "rock" ? [variant.rock] : name === "bush" ? [] : [variant.bark];
+          const shellTop = vbox ? vbox.max.y : 0;
+          const hullParts = solid.some(Boolean) ? meshSections(solid) : hullsFromGeometry(Object.values(variant), {
             pad: 0.02,
-            top: treeLike ? vbox.min.y + Math.min(height * 0.58, 5.4) : vbox.max.y,
-            bands: treeLike ? 2 : 1,
-            basePad: treeLike ? 0.22 : 0,
+            top: vbox == null ? void 0 : vbox.max.y,
+            bands: 1,
             maxRadius: solidR ? solidR * 1.1 : void 0
           });
           const hullLocal = hullParts.length ? hullParts[0].poly : null;
@@ -33447,9 +33723,6 @@ void main() {
       const lists = [
         ["palm", this.palmList],
         ["tree", this.treeList],
-        ["tree", this.pineList],
-        ["tree", this.mangroveList],
-        ["tree", this.deadList],
         ["bush", this.bushList],
         ["rock", this.rockList]
       ];
@@ -33480,6 +33753,7 @@ void main() {
             it.shells.push(shell);
           }
           it.shell = it.shells[0];
+          if (it.collider && it.shell && kind !== "bush") it.collider.meshShell = true;
         }
       }
       this.stats.shells = this.shells.stats.prisms;
@@ -33794,7 +34068,7 @@ void main() {
       if (pit) {
         const cx = (pit.rect.x0 + pit.rect.x1) / 2;
         const cz = (pit.rect.z0 + pit.rect.z1) / 2;
-        this._clearTufts(cx, cz, pit.rect.cells * STEP * 0.85 + 0.55);
+        this._clearTufts(cx, cz, pit.rect.cells * DIG_CELL * 0.85 + 0.55);
       }
       const after = this.heightAt(x, z);
       const next = this.probeAt(x, z);
@@ -33842,22 +34116,22 @@ void main() {
     _cellKey(ix, iz) {
       return ix * 1024 + iz;
     }
-    /** Прямоугольник ямы — ровно по клеткам сетки рельефа (1..4 клетки) */
+    /** Прямоугольник выемки — по метровым клеткам (1..4 на сторону). */
     _pitRect(x, z, radius) {
       const half = SIZE / 2;
-      const cells = clamp2(Math.round(radius * 2 / STEP), 1, 4);
-      const ix0 = clamp2(Math.round((x + half) / STEP - cells / 2), 1, GRID - 1 - cells);
-      const iz0 = clamp2(Math.round((z + half) / STEP - cells / 2), 1, GRID - 1 - cells);
+      const cells = clamp2(Math.round(radius * 2 / DIG_CELL), 1, 4);
+      const ix0 = clamp2(Math.round((x + half) / DIG_CELL - cells / 2), 1, SIZE / DIG_CELL - cells - 1);
+      const iz0 = clamp2(Math.round((z + half) / DIG_CELL - cells / 2), 1, SIZE / DIG_CELL - cells - 1);
       return {
         cells,
         ix0,
         iz0,
         ix1: ix0 + cells,
         iz1: iz0 + cells,
-        x0: -half + ix0 * STEP,
-        x1: -half + (ix0 + cells) * STEP,
-        z0: -half + iz0 * STEP,
-        z1: -half + (iz0 + cells) * STEP
+        x0: -half + ix0 * DIG_CELL,
+        x1: -half + (ix0 + cells) * DIG_CELL,
+        z0: -half + iz0 * DIG_CELL,
+        z1: -half + (iz0 + cells) * DIG_CELL
       };
     }
     /**
@@ -33868,9 +34142,9 @@ void main() {
       const pits = this.cutPits;
       if (!pits || pits.size === 0) return null;
       const half = SIZE / 2;
-      const ix = Math.floor((x + half) / STEP);
-      const iz = Math.floor((z + half) / STEP);
-      if (ix < 0 || iz < 0 || ix >= GRID || iz >= GRID) return null;
+      const ix = Math.floor((x + half) / DIG_CELL);
+      const iz = Math.floor((z + half) / DIG_CELL);
+      if (ix < 0 || iz < 0 || ix >= SIZE / DIG_CELL || iz >= SIZE / DIG_CELL) return null;
       const pit = pits.get(ix * 1024 + iz);
       if (!pit) return null;
       let t;
@@ -33885,32 +34159,27 @@ void main() {
     /** Яма, в которой лежит точка (или null) */
     pitAt(x, z) {
       const half = SIZE / 2;
-      const ix = Math.floor((x + half) / STEP);
-      const iz = Math.floor((z + half) / STEP);
+      const ix = Math.floor((x + half) / DIG_CELL);
+      const iz = Math.floor((z + half) / DIG_CELL);
       return this.cutPits.get(ix * 1024 + iz) || null;
     }
     /** Пересобрать индекс рельефа без клеток ям — это и есть настоящая дыра */
     _rebuildTerrainIndex() {
       const geo = this.terrain && this.terrain.geometry;
-      const base = this.terrainIndexBase;
-      if (!geo || !base) return 0;
-      if (!this.cutCells || this.cutCells.size === 0) {
-        geo.setIndex(new BufferAttribute(base.slice(), 1));
-        geo.computeBoundingSphere();
-        return 0;
+      if (!geo || !this.terrainIndexBase) return 0;
+      const rects = Array.from(this.pits.values(), (pit) => pit.rect).filter(Boolean);
+      return cutTerrain(geo, this.terrainIndexBase, GRID, STEP, SIZE, rects);
+    }
+    // Не изменять грубые узлы рельефа, пересекающие уже вырезанные блоки.
+    _terrainCellCut(ix, iz) {
+      var _a;
+      if (!((_a = this.cutCells) == null ? void 0 : _a.size)) return false;
+      const x0 = Math.floor(ix * STEP / DIG_CELL), x1 = Math.ceil((ix + 1) * STEP / DIG_CELL);
+      const z0 = Math.floor(iz * STEP / DIG_CELL), z1 = Math.ceil((iz + 1) * STEP / DIG_CELL);
+      for (let x = x0; x < x1; x++) for (let z = z0; z < z1; z++) {
+        if (this.cutCells.has(x * 1024 + z)) return true;
       }
-      const out = [];
-      for (let q = 0; q < base.length; q += 6) {
-        const v = base[q];
-        const ix = v % GRID;
-        const iz = (v - ix) / GRID;
-        if (this.cutCells.has(ix * 1024 + iz)) continue;
-        out.push(base[q], base[q + 1], base[q + 2], base[q + 3], base[q + 4], base[q + 5]);
-      }
-      const arr = base.constructor.from(out);
-      geo.setIndex(new BufferAttribute(arr, 1));
-      geo.computeBoundingSphere();
-      return out.length;
+      return false;
     }
     /** Убрать яму: её клетки возвращаются рельефу */
     _dropPit(pit) {
@@ -33961,10 +34230,10 @@ void main() {
         iz0: r.iz0,
         iz1: r.iz1,
         cells: Math.max(r.ix1 - r.ix0, r.iz1 - r.iz0),
-        x0: -half + r.ix0 * STEP,
-        x1: -half + r.ix1 * STEP,
-        z0: -half + r.iz0 * STEP,
-        z1: -half + r.iz1 * STEP
+        x0: -half + r.ix0 * DIG_CELL,
+        x1: -half + r.ix1 * DIG_CELL,
+        z0: -half + r.iz0 * DIG_CELL,
+        z1: -half + r.iz1 * DIG_CELL
       };
     }
     /** Касаются ли ямы друг друга (общая стенка или нахлёст клеток) */
@@ -34028,7 +34297,7 @@ void main() {
       if (pit) absorbed.delete(pit);
       let changed = false;
       for (const o of absorbed) if (this._dropPit(o)) changed = true;
-      const out = Math.max(0.8, rect.cells * STEP * 0.55);
+      const out = Math.max(0.8, rect.cells * DIG_CELL * 0.55);
       const cands = [
         { side: "n", x: cx, z: rect.z0 - out, wx: cx, wz: rect.z0 },
         { side: "s", x: cx, z: rect.z1 + out, wx: cx, wz: rect.z1 },
@@ -34199,10 +34468,10 @@ void main() {
       const izN = rect.iz1 - rect.iz0;
       for (let cz = 0; cz < izN; cz++) {
         for (let cx = 0; cx < ixN; cx++) {
-          const w02 = rect.x0 + cx * STEP;
-          const w12 = w02 + STEP;
-          const d0 = rect.z0 + cz * STEP;
-          const d1 = d0 + STEP;
+          const w02 = rect.x0 + cx * DIG_CELL;
+          const w12 = w02 + DIG_CELL;
+          const d0 = rect.z0 + cz * DIG_CELL;
+          const d1 = d0 + DIG_CELL;
           const sides = [];
           if (cz === 0) sides.push({ ax: w02, az: d0, bx: w12, bz: d0 });
           if (cx === ixN - 1) sides.push({ ax: w12, az: d0, bx: w12, bz: d1 });
@@ -34304,7 +34573,7 @@ void main() {
       const outer = inner + STEP * 1.1;
       for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
         for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
-          if (this.cutCells && this.cutCells.has(ix * 1024 + iz)) continue;
+          if (this._terrainCellCut(ix, iz)) continue;
           const nx = -half + ix * STEP;
           const nz = -half + iz * STEP;
           const d = Math.hypot(nx - x, nz - z);
@@ -34325,12 +34594,15 @@ void main() {
       const geo = this.terrain && this.terrain.geometry;
       if (!geo) return;
       const pos = geo.attributes.position;
-      for (let i = 0; i < pos.count; i++) {
+      for (let i = 0; i < GRID * GRID; i++) {
         pos.setY(i, this._gridHeightAt(pos.getX(i), pos.getZ(i)));
       }
       pos.needsUpdate = true;
-      geo.computeVertexNormals();
-      geo.computeBoundingSphere();
+      if (this.cutCells.size) this._rebuildTerrainIndex();
+      else {
+        geo.computeVertexNormals();
+        geo.computeBoundingSphere();
+      }
       if (this.depthTexture) {
         const data = this.depthTexture.image.data;
         for (let i = 0; i < this.heights.length; i++) {
@@ -34346,7 +34618,7 @@ void main() {
      */
     resolveCollisions(pos, radius, velocity = null, feetY = -Infinity, stepUp = 0.55) {
       for (const c of this.colliders) {
-        if (c.disabled || c.soft) continue;
+        if (c.disabled || c.soft || c.meshShell) continue;
         if (c.height && c.height < stepUp && feetY > -Infinity) continue;
         const dx = pos.x - c.x;
         const dz = pos.z - c.z;
@@ -38442,7 +38714,7 @@ void main() {
       if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
       const radius = r + pad;
       for (const c of this._colliderCandidates(x - radius, z - radius, x + radius, z + radius)) {
-        if (c.disabled || c.fire || c.kind === "den") continue;
+        if (c.disabled || c.fire || c.kind === "den" || c.meshShell) continue;
         if (c.r < 0.3 && !strict) continue;
         const dx = x - c.x;
         const dz = z - c.z;
@@ -39794,7 +40066,7 @@ void main() {
           }
         }
         for (const c of this._colliderNear(world, pos.x, pos.z, 4)) {
-          if (c.disabled || c.soft) continue;
+          if (c.disabled || c.soft || c.meshShell) continue;
           if (!Number.isFinite(c.x) || !Number.isFinite(c.z) || !Number.isFinite(c.r)) continue;
           const groundY = world.heightAt(c.x, c.z);
           const top = groundY + (c.height || 1.2);
@@ -39871,6 +40143,7 @@ void main() {
         }
         if (!moved) break;
       }
+      if (world == null ? void 0 : world.shells) fixed += world.shells.resolve(pos, CONFIG.player.radius, velocity, pos.y, 0.55);
       this.lastPushes = fixed;
       return fixed;
     }
@@ -40278,14 +40551,17 @@ void main() {
           if (!pit) return { ok: false, expect: "\u0432\u044B\u043A\u043E\u043F\u0430\u043D\u043D\u0430\u044F \u044F\u043C\u0430", fact: "\u044F\u043C \u043D\u0435\u0442" };
           const sunk = before - w.heightAt(spot.x, spot.z);
           const walls = pit.walls.geometry.attributes.position.count;
-          const step2 = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+          const step2 = 1;
           const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1].every((v) => Math.abs((v + 180) / step2 - Math.round((v + 180) / step2)) < 1e-6);
+          w.terrain.updateMatrixWorld(true);
+          const ray = new Raycaster(new Vector3(spot.x, 500, spot.z), new Vector3(0, -1, 0));
+          const groundCut = ray.intersectObject(w.terrain).length === 0;
           const g0 = w.heightAt(pit.rect.x0 + (pit.rect.x1 - pit.rect.x0) / 2, pit.rect.z0 + (pit.rect.z1 - pit.rect.z0) / 2);
           const dugIn = Math.abs(g0 - before) > 0.05;
           return {
-            ok: cutTris >= 2 && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
+            ok: groundCut && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
             expect: "\u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u0438 \u0437\u0435\u043C\u043B\u0438 \u0432\u044B\u0440\u0435\u0437\u0430\u043D\u044B \u043F\u043E \u0441\u0435\u0442\u043A\u0435, \u0432\u043D\u0443\u0442\u0440\u0438 \u0434\u043D\u043E, \u0441\u0442\u0435\u043D\u043A\u0438 \u0438 \u0441\u0442\u0443\u043F\u0435\u043D\u0438",
-            fact: `\u0432\u044B\u0440\u0435\u0437\u0430\u043D\u043E ${cutTris} \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 \xB7 \u043A\u043B\u0435\u0442\u043E\u043A ${pit.rect.ix1 - pit.rect.ix0}\xD7${pit.rect.iz1 - pit.rect.iz0} \xB7 \u043A\u0440\u0430\u0439 \u043F\u043E \u0441\u0435\u0442\u043A\u0435: ${onGrid ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 \u0434\u043D\u043E \u043D\u0430 ${fmt(sunk)} \u043C \u043D\u0438\u0436\u0435 \u0434\u0451\u0440\u043D\u0430 \xB7 \u0441\u0442\u0435\u043D\u043A\u0438 ${walls} \u0432\u0435\u0440\u0448\u0438\u043D \xB7 \u0441\u0442\u0443\u043F\u0435\u043D\u0435\u0439 ${pit.steps}`
+            fact: `\u0434\u044B\u0440\u0430 \u0432 \u043C\u0435\u0448\u0435: ${groundCut ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435 \u0447\u0438\u0441\u043B\u0430 \u0442\u0440\u0435\u0443\u0433\u043E\u043B\u044C\u043D\u0438\u043A\u043E\u0432 ${-cutTris} \xB7 \u043A\u043B\u0435\u0442\u043E\u043A ${pit.rect.ix1 - pit.rect.ix0}\xD7${pit.rect.iz1 - pit.rect.iz0} \xB7 \u043A\u0440\u0430\u0439 \u043F\u043E \u0441\u0435\u0442\u043A\u0435: ${onGrid ? "\u0434\u0430" : "\u043D\u0435\u0442"} \xB7 \u0434\u043D\u043E \u043D\u0430 ${fmt(sunk)} \u043C \u043D\u0438\u0436\u0435 \u0434\u0451\u0440\u043D\u0430 \xB7 \u0441\u0442\u0435\u043D\u043A\u0438 ${walls} \u0432\u0435\u0440\u0448\u0438\u043D \xB7 \u0441\u0442\u0443\u043F\u0435\u043D\u0435\u0439 ${pit.steps}`
           };
         } },
         { name: "\u041E\u0431\u0432\u0430\u043B: \u0441\u043E\u0441\u0435\u0434\u043D\u0438\u0435 \u044F\u043C\u044B \u0431\u0435\u0437 \u043F\u0435\u0440\u0435\u0433\u043E\u0440\u043E\u0434\u043A\u0438", walk: null, run: (g) => {
@@ -40319,7 +40595,7 @@ void main() {
           for (let i = 0; i < 3; i++) w.dig(spot.x, spot.z, { radius: 1.6, depth: 0.45, mine: 99 });
           const first = w.pitAt(spot.x, spot.z);
           if (!first) return { ok: false, expect: "\u043F\u0435\u0440\u0432\u0430\u044F \u044F\u043C\u0430", fact: "\u043D\u0435 \u0432\u044B\u043A\u043E\u043F\u0430\u043B\u0430\u0441\u044C" };
-          const stepW = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+          const stepW = 1;
           const second = { x: first.rect.x1 + stepW * 0.5, z: spot.z };
           const res = w.dig(second.x, second.z, { radius: 1.6, depth: 0.45, mine: 99 });
           const pit = w.pitAt(second.x, second.z);
@@ -40897,7 +41173,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 13:49" : "dev";
+  var BUILD = true ? "2026-10-30 17:31" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -44557,7 +44833,6 @@ void main() {
       }
       this.hitboxes.resolvePlayer(this.player, this.mineWorld, { mobs: this.mobs });
       if (!this.underground && !this.sailing) {
-        this.world.shells.resolve(this.player.position, CONFIG.player.radius, this.player.velocity, this.player.position.y, 0.55);
         this.player.model.position.x = this.player.position.x;
         this.player.model.position.z = this.player.position.z;
       }

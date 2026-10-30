@@ -14,6 +14,7 @@
 // ============================================================
 
 import * as THREE from 'three';
+import { CONFIG } from './config.js';
 
 /** Части тела героя: смещения в локальных осях (x — влево, z — вперёд) */
 export const PLAYER_PARTS = [
@@ -344,7 +345,7 @@ export class HitboxSystem {
 
       // 2) стволы, валуны и прочие цилиндры мира (только соседние ячейки)
       for (const c of this._colliderNear(world, pos.x, pos.z, 4)) {
-        if (c.disabled || c.soft) continue;
+        if (c.disabled || c.soft || c.meshShell) continue;
         if (!Number.isFinite(c.x) || !Number.isFinite(c.z) || !Number.isFinite(c.r)) continue;
         const groundY = world.heightAt(c.x, c.z);
         const top = groundY + (c.height || 1.2);
@@ -412,6 +413,9 @@ export class HitboxSystem {
 
       if (!moved) break;
     }
+    // У мира с точными секторами круговые заменители больше не толкают.
+    // Разрешаем их здесь также для самостоятельных вызовов resolvePlayer.
+    if (world?.shells) fixed += world.shells.resolve(pos, CONFIG.player.radius, velocity, pos.y, 0.55);
     this.lastPushes = fixed;
     return fixed;
   }

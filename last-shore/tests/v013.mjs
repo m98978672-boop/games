@@ -71,7 +71,10 @@ const triBase = w.terrainIndexBase ? w.terrainIndexBase.length / 3 : 0;
 const idxNow = w.terrain.geometry.index;
 const cutTris = triBase - (idxNow ? idxNow.count / 3 : 0);
 const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1]
-  .every((v) => Math.abs((v + 180) / gridStep - Math.round((v + 180) / gridStep)) < 1e-6);
+  .every((v) => Math.abs(v - Math.round(v)) < 1e-6);
+w.terrain.updateMatrixWorld(true);
+const holeRay = new THREE.Raycaster(new THREE.Vector3(dry.x, 500, dry.z), new THREE.Vector3(0, -1, 0));
+const terrainHole = holeRay.intersectObject(w.terrain).length === 0;
 // высоты узлов рельефа не тронуты: яма не «насаливается» поверх земли
 const gix = Math.round((dry.x + 180) / gridStep);
 const giz = Math.round((dry.z + 180) / gridStep);
@@ -105,7 +108,7 @@ const exitGap = Math.abs(w.baseHeightAt(pit.rect.x0 - 0.6, pit.rect.z0 - 0.6) - 
 const wallsVerts = pit.walls.geometry.attributes.position.count;
 const hasColors = pit.walls.geometry.attributes.color.count === wallsVerts;
 const cutCellsN = w.cutCells.size;
-console.log('яма-дыра: вырезано треугольников рельефа', cutTris,
+console.log('яма-дыра: дыра в меше', terrainHole, '· изменение числа треугольников', -cutTris,
   '· клеток', (pit.rect.ix1 - pit.rect.ix0) + '×' + (pit.rect.iz1 - pit.rect.iz0), '(' + cutCellsN + ' клеток сетки)',
   '· край по сетке:', onGrid, '· высоты узлов не тронуты:', heightsUntouched);
 console.log('  дно на', sunk.toFixed(2), 'м ниже дёрна · стенки', wallsVerts, 'вершин · слои видны:', hasColors,

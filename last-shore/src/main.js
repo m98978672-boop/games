@@ -2382,7 +2382,7 @@ class Game {
     this.hitboxes.resolvePlayer(this.player, this.mineWorld, { mobs: this.mobs });
     // Другой зверь или станок мог вытолкнуть героя в сектор модели.
     if (!this.underground && !this.sailing) {
-      this.world.shells.resolve(this.player.position, CONFIG.player.radius, this.player.velocity, this.player.position.y, 0.55);
+      // Оболочки уже разрешены внутри hitboxes.resolvePlayer.
       this.player.model.position.x = this.player.position.x;
       this.player.model.position.z = this.player.position.z;
     }
