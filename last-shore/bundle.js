@@ -1681,10 +1681,10 @@
      * @param {number} step - The angular step in radians.
      * @return {Quaternion} A reference to this quaternion.
      */
-    rotateTowards(q, step) {
+    rotateTowards(q, step2) {
       const angle = this.angleTo(q);
       if (angle === 0) return this;
-      const t = Math.min(1, step / angle);
+      const t = Math.min(1, step2 / angle);
       this.slerp(q, t);
       return this;
     }
@@ -13175,14 +13175,14 @@
       _ray$1.copy(raycaster.ray).applyMatrix4(_inverseMatrix$1);
       const localThreshold = threshold / ((this.scale.x + this.scale.y + this.scale.z) / 3);
       const localThresholdSq = localThreshold * localThreshold;
-      const step = this.isLineSegments ? 2 : 1;
+      const step2 = this.isLineSegments ? 2 : 1;
       const index = geometry.index;
       const attributes = geometry.attributes;
       const positionAttribute = attributes.position;
       if (index !== null) {
         const start = Math.max(0, drawRange.start);
         const end = Math.min(index.count, drawRange.start + drawRange.count);
-        for (let i = start, l = end - 1; i < l; i += step) {
+        for (let i = start, l = end - 1; i < l; i += step2) {
           const a = index.getX(i);
           const b = index.getX(i + 1);
           const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, a, b, i);
@@ -13201,7 +13201,7 @@
       } else {
         const start = Math.max(0, drawRange.start);
         const end = Math.min(positionAttribute.count, drawRange.start + drawRange.count);
-        for (let i = start, l = end - 1; i < l; i += step) {
+        for (let i = start, l = end - 1; i < l; i += step2) {
           const intersect = checkIntersection(this, raycaster, _ray$1, localThresholdSq, i, i + 1, i);
           if (intersect) {
             intersects.push(intersect);
@@ -30172,8 +30172,8 @@ void main() {
       if (!geo) continue;
       const pos = geo.attributes && geo.attributes.position;
       if (!pos) continue;
-      const step = Math.max(1, Math.floor(pos.count / 900));
-      for (let i = 0; i < pos.count; i += step) {
+      const step2 = Math.max(1, Math.floor(pos.count / 900));
+      for (let i = 0; i < pos.count; i += step2) {
         if (pos.getY(i) > belowY) continue;
         let px = pos.getX(i);
         let pz = pos.getZ(i);
@@ -30234,8 +30234,8 @@ void main() {
       for (const geo of solid) {
         const pos = geo.attributes && geo.attributes.position;
         if (!pos) continue;
-        const step = Math.max(1, Math.floor(pos.count / 700));
-        for (let i = 0; i < pos.count; i += step) {
+        const step2 = Math.max(1, Math.floor(pos.count / 700));
+        for (let i = 0; i < pos.count; i += step2) {
           const y = pos.getY(i);
           if (y < y0 - 0.02 || y > y1 + 0.02) continue;
           let px = pos.getX(i);
@@ -35780,9 +35780,9 @@ void main() {
       const horiz = Math.cos(this.pitch) * dist;
       const vert = Math.sin(this.pitch) * dist;
       let cameraDist = dist;
-      for (let step = 0.6; step <= dist; step += 0.6) {
-        const cx = target.x - fwd.x * Math.cos(this.pitch) * step;
-        const cz = target.z - fwd.z * Math.cos(this.pitch) * step;
+      for (let step2 = 0.6; step2 <= dist; step2 += 0.6) {
+        const cx = target.x - fwd.x * Math.cos(this.pitch) * step2;
+        const cz = target.z - fwd.z * Math.cos(this.pitch) * step2;
         let blocked = false;
         for (const c of world.colliders) {
           if (c.disabled) continue;
@@ -35794,7 +35794,7 @@ void main() {
           }
         }
         if (blocked) {
-          cameraDist = Math.max(1.6, step - 0.8);
+          cameraDist = Math.max(1.6, step2 - 0.8);
           break;
         }
       }
@@ -36830,6 +36830,114 @@ void main() {
     }
   };
 
+  // ../pereplet-prototype/clock.mjs
+  var FixedClock = class {
+    constructor({ step: step2 = 1 / 30, maxSteps = 4 } = {}) {
+      if (!Number.isFinite(step2) || step2 <= 0 || step2 > 1 || !Number.isSafeInteger(maxSteps) || maxSteps < 1) throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0435 \u043F\u0430\u0440\u0430\u043C\u0435\u0442\u0440\u044B \u0447\u0430\u0441\u043E\u0432");
+      this.step = step2;
+      this.maxSteps = maxSteps;
+      this.accumulator = 0;
+      this.tick = 0;
+      this._advancing = false;
+    }
+    advance(dt, simulate) {
+      if (!Number.isFinite(dt) || dt < 0 || !Number.isFinite(this.accumulator + dt) || typeof simulate !== "function") throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 \u0448\u0430\u0433 \u0447\u0430\u0441\u043E\u0432");
+      if (this._advancing) throw new Error("\u0412\u043B\u043E\u0436\u0435\u043D\u043D\u044B\u0439 \u0432\u044B\u0437\u043E\u0432 \u0447\u0430\u0441\u043E\u0432");
+      this.accumulator += dt;
+      let steps = 0;
+      this._advancing = true;
+      try {
+        while (this.accumulator + this.step * 1e-9 >= this.step && steps < this.maxSteps) {
+          simulate(this.step, this.tick);
+          this.accumulator = Math.max(0, this.accumulator - this.step);
+          this.tick++;
+          steps++;
+        }
+      } finally {
+        this._advancing = false;
+      }
+      return { steps, remaining: this.accumulator, tick: this.tick };
+    }
+  };
+
+  // ../pereplet-prototype/core.mjs
+  function validNumber(n) {
+    return typeof n === "number" && Number.isFinite(n);
+  }
+  function copyEntity(e) {
+    if (!Number.isSafeInteger(e.id) || e.id < 0 || !validNumber(e.x) || !validNumber(e.z) || !validNumber(e.hp)) throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 \u043E\u0431\u044A\u0435\u043A\u0442");
+    return { id: e.id, x: e.x, z: e.z, hp: e.hp };
+  }
+  function createWorld(entities) {
+    if (!Array.isArray(entities)) throw new Error("\u041D\u0443\u0436\u0435\u043D \u0441\u043F\u0438\u0441\u043E\u043A \u043E\u0431\u044A\u0435\u043A\u0442\u043E\u0432");
+    const result = entities.map(copyEntity).sort((a, b) => a.id - b.id);
+    if (result.some((e, i) => i && result[i - 1].id === e.id)) throw new Error("\u041F\u043E\u0432\u0442\u043E\u0440\u043D\u044B\u0439 ID");
+    return { tick: 0, entities: result };
+  }
+  function step(world, rules, dt = 1 / 30) {
+    if (!validNumber(dt) || dt <= 0 || dt > 1) throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 \u0448\u0430\u0433");
+    if (!world || !Number.isSafeInteger(world.tick) || world.tick < 0 || !Array.isArray(rules)) throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 \u043C\u0438\u0440 \u0438\u043B\u0438 \u043F\u0440\u0430\u0432\u0438\u043B\u0430");
+    const base = createWorld(world.entities);
+    const snapshot = Object.freeze({ tick: world.tick, entities: Object.freeze(base.entities.map((e) => Object.freeze(e))) });
+    const operations = [];
+    for (const rule of rules) {
+      if (typeof rule !== "function") throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u043E\u0435 \u043F\u0440\u0430\u0432\u0438\u043B\u043E");
+      const proposed = rule(snapshot, dt);
+      if (!Array.isArray(proposed)) throw new Error("\u041F\u0440\u0430\u0432\u0438\u043B\u043E \u043E\u0431\u044F\u0437\u0430\u043D\u043E \u0432\u0435\u0440\u043D\u0443\u0442\u044C \u0441\u043F\u0438\u0441\u043E\u043A \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439");
+      operations.push(...proposed);
+    }
+    const next = new Map(base.entities.map((e) => [e.id, { ...e }]));
+    const written = /* @__PURE__ */ new Set();
+    for (const op of operations) {
+      if (!op || !Number.isSafeInteger(op.id) || !["x", "z", "hp"].includes(op.field) || !validNumber(op.value) || !next.has(op.id)) throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u043E\u0435 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0435");
+      const key2 = `${op.id}:${op.field}`;
+      if (written.has(key2)) throw new Error("\u041A\u043E\u043D\u0444\u043B\u0438\u043A\u0442 \u0438\u0437\u043C\u0435\u043D\u0435\u043D\u0438\u0439");
+      written.add(key2);
+      next.get(op.id)[op.field] = op.value;
+    }
+    return { tick: world.tick + 1, entities: [...next.values()] };
+  }
+
+  // ../pereplet-prototype/scheduler.mjs
+  function planRules(tasks) {
+    if (!Array.isArray(tasks)) throw new Error("\u041D\u0443\u0436\u0435\u043D \u0441\u043F\u0438\u0441\u043E\u043A \u0437\u0430\u0434\u0430\u0447");
+    const byId = /* @__PURE__ */ new Map();
+    for (const task of tasks) {
+      if (!task || typeof task.id !== "string" || !task.id || byId.has(task.id) || typeof task.run !== "function" || !Array.isArray(task.after || [])) throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u0430\u044F \u0438\u043B\u0438 \u043F\u043E\u0432\u0442\u043E\u0440\u043D\u0430\u044F \u0437\u0430\u0434\u0430\u0447\u0430");
+      byId.set(task.id, task);
+    }
+    const dependencies = /* @__PURE__ */ new Map();
+    for (const task of tasks) {
+      const deps = new Set(task.after || []);
+      if ([...deps].some((id) => !byId.has(id))) throw new Error("\u041D\u0435\u0438\u0437\u0432\u0435\u0441\u0442\u043D\u0430\u044F \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0441\u0442\u044C");
+      dependencies.set(task.id, deps);
+    }
+    const pending2 = new Set(byId.keys());
+    const result = [];
+    while (pending2.size) {
+      const ready = [...pending2].filter((id) => [...dependencies.get(id)].every((dep) => !pending2.has(dep))).sort();
+      if (!ready.length) throw new Error("\u0426\u0438\u043A\u043B \u0437\u0430\u0432\u0438\u0441\u0438\u043C\u043E\u0441\u0442\u0435\u0439");
+      for (const id of ready) {
+        pending2.delete(id);
+        result.push(byId.get(id).run);
+      }
+    }
+    return result;
+  }
+
+  // ../pereplet-prototype/fire.mjs
+  var fireRules = planRules([{
+    id: "consume-fuel",
+    run: (snapshot, seconds) => snapshot.entities.filter((fire) => fire.hp > 0).map((fire) => ({ id: fire.id, field: "hp", value: Math.max(0, fire.hp - seconds) }))
+  }]);
+  function burnFuel(fires, dt, tick = 0) {
+    if (!Array.isArray(fires)) throw new Error("\u041D\u0435\u043A\u043E\u0440\u0440\u0435\u043A\u0442\u043D\u044B\u0439 \u0441\u043F\u0438\u0441\u043E\u043A \u043A\u043E\u0441\u0442\u0440\u043E\u0432");
+    const world = createWorld(fires.map((f, id) => ({ id, x: f.x, z: f.z, hp: f.fuel })));
+    world.tick = tick;
+    const result = step(world, fireRules, dt);
+    return result.entities.map((fire) => fire.hp);
+  }
+
   // src/nodes.js
   var REACH = 3.4;
   var SURFACE_ROCKS = Object.freeze([
@@ -36882,6 +36990,7 @@ void main() {
       this.campfires = [];
       this.springs = [];
       this.time = 0;
+      this.perepletClock = new FixedClock({ step: 1 / 30, maxSteps: 4 });
       this.fireLights = [];
       for (let i = 0; i < 2; i++) {
         const light = new PointLight(16754253, 0, 16, 2);
@@ -37201,7 +37310,13 @@ void main() {
       return { warmth: best, fire: near };
     }
     update(dt) {
+      this.perepletClock.advance(dt, (step2, tick) => this._simulateResources(step2, tick));
+      this._animateResources();
+    }
+    _simulateResources(dt, tick) {
+      const fuel = this.campfires.length ? burnFuel(this.campfires, dt, tick) : [];
       this.time += dt;
+      for (let i = 0; i < fuel.length; i++) this.campfires[i].fuel = fuel[i];
       for (const node of this.nodes) {
         if (node.alive || this.time < node.respawnAt) continue;
         node.alive = true;
@@ -37218,16 +37333,18 @@ void main() {
         node.berries = true;
         this.world.setLayerVisible(node.item, "fruit", true);
       }
+    }
+    _animateResources() {
+      const visualTime = this.time + Math.min(this.perepletClock.accumulator, this.perepletClock.step);
       for (const spring of this.springs) {
         if (!spring.water) continue;
-        const t = this.time;
+        const t = visualTime;
         spring.water.rotation.z = Math.sin(t * 0.6 + spring.x) * 0.02;
         spring.water.scale.setScalar(1 + Math.sin(t * 1.3 + spring.z) * 0.012);
       }
       for (const fire of this.campfires) {
         if (fire.fuel > 0) {
-          fire.fuel = Math.max(0, fire.fuel - dt);
-          const t = this.time * 9 + fire.x;
+          const t = visualTime * 9 + fire.x;
           const flicker = 0.82 + Math.sin(t) * 0.1 + Math.sin(t * 2.7) * 0.06;
           fire.flame.scale.set(1, flicker, 1);
           fire.core.scale.set(0.9 + Math.sin(t * 1.7) * 0.08, flicker * 1.05, 0.9);
@@ -38192,9 +38309,9 @@ void main() {
       }
       ax /= len;
       az /= len;
-      const step = speed * dt;
-      const nx = mob.x + ax * step;
-      const nz = mob.z + az * step;
+      const step2 = speed * dt;
+      const nx = mob.x + ax * step2;
+      const nz = mob.z + az * step2;
       const hCur = this.world.heightAt(mob.x, mob.z);
       const tooDeep = (h) => def.swim ? h > -0.5 : h < -0.15 && h < hCur - 0.05;
       if (tooDeep(this.world.heightAt(nx, nz))) {
@@ -38210,8 +38327,8 @@ void main() {
         const sa = Math.sin(turn);
         const dx = ax * ca - az * sa;
         const dz = ax * sa + az * ca;
-        const tx = mob.x + dx * step;
-        const tz = mob.z + dz * step;
+        const tx = mob.x + dx * step2;
+        const tz = mob.z + dz * step2;
         if (this._blocked(tx, tz, this._collisionRadius(mob))) continue;
         const h = this.world.heightAt(tx, tz);
         if (tooDeep(h)) continue;
@@ -39260,26 +39377,26 @@ void main() {
       },
       resolveCollisions(pos, radius, velocity, feetY, stepUp) {
         if (mine.active === null) return world.resolveCollisions(pos, radius, velocity, feetY, stepUp);
-        const step = radius * 0.9;
+        const step2 = radius * 0.9;
         const tests = [[1, 0], [-1, 0], [0, 1], [0, -1]];
         for (const [dx, dz] of tests) {
-          const nx = pos.x + dx * step;
-          const nz = pos.z + dz * step;
+          const nx = pos.x + dx * step2;
+          const nz = pos.z + dz * step2;
           if (mine.isOpen(nx, nz)) continue;
           if (dx > 0) {
-            pos.x = Math.min(pos.x, nx - step);
+            pos.x = Math.min(pos.x, nx - step2);
             velocity.x = Math.min(velocity.x, 0);
           }
           if (dx < 0) {
-            pos.x = Math.max(pos.x, nx + step);
+            pos.x = Math.max(pos.x, nx + step2);
             velocity.x = Math.max(velocity.x, 0);
           }
           if (dz > 0) {
-            pos.z = Math.min(pos.z, nz - step);
+            pos.z = Math.min(pos.z, nz - step2);
             velocity.z = Math.min(velocity.z, 0);
           }
           if (dz < 0) {
-            pos.z = Math.max(pos.z, nz + step);
+            pos.z = Math.max(pos.z, nz + step2);
             velocity.z = Math.max(velocity.z, 0);
           }
         }
@@ -39731,11 +39848,11 @@ void main() {
         consider(entry, boxOf(b.x, b.y, b.z, b.w, b.h, b.d, b.yaw || 0));
       }
       const seen = /* @__PURE__ */ new Set();
-      const step = this.gridCell * 0.9;
-      for (let d = 0; d <= maxDist + step; d += step) {
+      const step2 = this.gridCell * 0.9;
+      for (let d = 0; d <= maxDist + step2; d += step2) {
         const px = origin.x + dir.x * d;
         const pz = origin.z + dir.z * d;
-        for (const entry of this.staticNear(px, pz, step)) {
+        for (const entry of this.staticNear(px, pz, step2)) {
           if (seen.has(entry.id)) continue;
           seen.add(entry.id);
           consider(entry, entry.box);
@@ -40085,8 +40202,8 @@ void main() {
           if (!pit) return { ok: false, expect: "\u0432\u044B\u043A\u043E\u043F\u0430\u043D\u043D\u0430\u044F \u044F\u043C\u0430", fact: "\u044F\u043C \u043D\u0435\u0442" };
           const sunk = before - w.heightAt(spot.x, spot.z);
           const walls = pit.walls.geometry.attributes.position.count;
-          const step = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
-          const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1].every((v) => Math.abs((v + 180) / step - Math.round((v + 180) / step)) < 1e-6);
+          const step2 = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+          const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1].every((v) => Math.abs((v + 180) / step2 - Math.round((v + 180) / step2)) < 1e-6);
           const g0 = w.heightAt(pit.rect.x0 + (pit.rect.x1 - pit.rect.x0) / 2, pit.rect.z0 + (pit.rect.z1 - pit.rect.z0) / 2);
           const dugIn = Math.abs(g0 - before) > 0.05;
           return {
@@ -40704,7 +40821,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 12:38" : "dev";
+  var BUILD = true ? "2026-10-30 12:47" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -40961,9 +41078,9 @@ void main() {
       let y = startY;
       for (let s = 0; s < segs; s++) {
         angle += (rng() - 0.5) * 1.1;
-        const step = 6 + rng() * 16;
-        x += Math.cos(angle) * step;
-        y += Math.sin(angle) * step;
+        const step2 = 6 + rng() * 16;
+        x += Math.cos(angle) * step2;
+        y += Math.sin(angle) * step2;
         pts.push([x, y]);
       }
       for (const dx of [-size, 0, size]) {
@@ -42515,8 +42632,8 @@ void main() {
           CONFIG.player.cameraDistance = Math.max(2.2, Math.min(12, dist));
           return;
         }
-        const step = e.deltaY > 0 ? 1 : -1;
-        const next = (this.selected + step + HOTBAR_SIZE) % HOTBAR_SIZE;
+        const step2 = e.deltaY > 0 ? 1 : -1;
+        const next = (this.selected + step2 + HOTBAR_SIZE) % HOTBAR_SIZE;
         this.selectSlot(next);
       }, { passive: true });
       document.addEventListener("pointerlockchange", () => {

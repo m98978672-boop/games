@@ -6,6 +6,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeRng } from './noise.js';
+import { FixedClock } from '../../pereplet-prototype/clock.mjs';
+import { burnFuel } from '../../pereplet-prototype/fire.mjs';
 
 const REACH = 3.4;
 
@@ -50,6 +52,8 @@ export class Resources {
     this.campfires = [];
     this.springs = [];
     this.time = 0;
+    // «Переплёт» пока управляет только фиксированным шагом ресурсов и костров.
+    this.perepletClock = new FixedClock({ step: 1 / 30, maxSteps: 4 });
 
     // --- свет костров: ровно два источника, созданных заранее ---
     // Добавление нового PointLight в сцену заставляет three.js перекомпилировать
@@ -397,7 +401,15 @@ export class Resources {
   }
 
   update(dt) {
+    this.perepletClock.advance(dt, (step, tick) => this._simulateResources(step, tick));
+    this._animateResources();
+  }
+
+  _simulateResources(dt, tick) {
+    // Сначала рассчитываем все изменения топлива, затем применяем их вместе.
+    const fuel = this.campfires.length ? burnFuel(this.campfires, dt, tick) : [];
     this.time += dt;
+    for (let i = 0; i < fuel.length; i++) this.campfires[i].fuel = fuel[i];
 
     // восстановление узлов
     for (const node of this.nodes) {
@@ -418,11 +430,15 @@ export class Resources {
       node.berries = true;
       this.world.setLayerVisible(node.item, 'fruit', true);
     }
+  }
 
+  _animateResources() {
+    // Между фиксированными шагами сглаживаем визуальные эффекты.
+    const visualTime = this.time + Math.min(this.perepletClock.accumulator, this.perepletClock.step);
     // рябь на родниках
     for (const spring of this.springs) {
       if (!spring.water) continue;
-      const t = this.time;
+      const t = visualTime;
       spring.water.rotation.z = Math.sin(t * 0.6 + spring.x) * 0.02;
       spring.water.scale.setScalar(1 + Math.sin(t * 1.3 + spring.z) * 0.012);
     }
@@ -430,8 +446,7 @@ export class Resources {
     // костры
     for (const fire of this.campfires) {
       if (fire.fuel > 0) {
-        fire.fuel = Math.max(0, fire.fuel - dt);
-        const t = this.time * 9 + fire.x;
+        const t = visualTime * 9 + fire.x;
         const flicker = 0.82 + Math.sin(t) * 0.1 + Math.sin(t * 2.7) * 0.06;
         fire.flame.scale.set(1, flicker, 1);
         fire.core.scale.set(0.9 + Math.sin(t * 1.7) * 0.08, flicker * 1.05, 0.9);
