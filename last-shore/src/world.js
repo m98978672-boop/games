@@ -9,6 +9,7 @@ import { createTerrainMaterial, createPlantMaterial, createStoneMaterial } from 
 import { ShellField, hullsFromGeometry } from './shells.js';
 import { meshSections } from './mesh-sections.js';
 import { cutTerrain } from './terrain-cut.js';
+import { advancePitWater } from './ground-physics.js';
 import { fbm, ridged, makeRng, clamp, smoothstep } from './noise.js';
 import {
   makePalmParts, makeTreeParts, makeBushParts, makeRockParts, makePickupGeometries,
@@ -202,6 +203,8 @@ export class World {
     this.heights = new Float32Array(GRID * GRID);
     this.colliders = [];        // { x, z, r }
     this.digStore = new Map();  // выкопанные лунки: ключ клетки -> глубина
+    this.digDamage = new Map(); // частичный урон по текущему слою клетки
+    this.pitPhysicsAccumulator = 0;
     this.digEvents = 0;
     this.surfaceStore = new Map();  // чем была клетка до копания: песок/земля/камень
     this.pits = new Map();          // выкопанные ямы: дно, стенки, ступени
@@ -1907,6 +1910,33 @@ export class World {
     };
   }
 
+  /** Прочность текущего снимаемого фрагмента отдельной метровой клетки. */
+  groundDamageAt(x, z, probe = this.probeAt(x, z)) {
+    if (probe.layer === 'void') return null;
+    const id = probe.rock?.id || probe.layer;
+    const max = probe.rock ? Math.max(5, probe.rock.hp * 0.5) : probe.layer === 'sand' ? 4.5 : 6;
+    const saved = this.digDamage.get(this._digKey(x, z));
+    const damage = saved && saved.id === id && Math.abs(saved.depth - probe.dug) < 1e-6 ? saved.damage : 0;
+    return { id, max, remaining: Math.max(0, max - damage) };
+  }
+
+  /** Каждый удар уменьшает прочность; выемка возникает только после разрушения. */
+  strikeGround(x, z, { power = 1, mine = 0, creative = false } = {}) {
+    const probe = this.probeAt(x, z);
+    if (probe.layer === 'void') return { void: true, pending: false };
+    if (probe.layer === 'stone' && mine < probe.needMine) return { hard: true, pending: false, rockName: probe.rockName, needMine: probe.needMine };
+    const status = this.groundDamageAt(x, z, probe);
+    const amount = creative ? status.max : probe.layer === 'stone' ? Math.max(0, mine) : Math.max(0, power);
+    const remaining = Math.max(0, status.remaining - amount);
+    const key = this._digKey(x, z);
+    if (remaining > 0) {
+      this.digDamage.set(key, { id: status.id, depth: probe.dug, damage: status.max - remaining });
+      return { pending: true, remaining, max: status.max, layer: probe.layer, rock: probe.rock };
+    }
+    this.digDamage.delete(key);
+    return { ...this.dig(x, z, { radius: 0.5, depth: creative ? 0.7 : 0.35, mine }), pending: false };
+  }
+
   /**
    * Снять один слой земли в радиусе. Возвращает
    * { layer, dug, flooded, sandFill, stone } или { hard: true } для камня без кирки.
@@ -1944,9 +1974,11 @@ export class World {
     const floorY = Math.max(-5, topY - (newDug + 0.25));
 
     // песок не держит стенку: часть осыпается обратно в яму
-    const sandFill = probe.layer === 'sand' ? Math.min(0.2, stepDepth * 0.15) : 0;
+    const wetness = this.pitAt(x, z)?.wetness || 0;
+    const sandFill = probe.layer === 'sand' ? Math.min(0.2, stepDepth * (0.15 + wetness * 0.08)) : 0;
 
     this.digStore.set(key, newDug);
+    this.digDamage.delete(key);
     this.digEvents++;
     // --- вырезаем яму из рельефа ровно по клеткам сетки ---
     //     высоты узлов не трогаем: край дыры совпадает с линиями сетки,
@@ -2093,6 +2125,10 @@ export class World {
     if (pit.group) {
       this.pitGroup.remove(pit.group);
       if (pit.walls && pit.walls.geometry) pit.walls.geometry.dispose();
+      if (pit.waterMesh) { pit.waterMesh.geometry.dispose(); pit.waterMesh.material.dispose(); }
+      if (pit.debris) for (const chunk of pit.debris.children) chunk.geometry.dispose();
+      if (pit.mat) pit.mat.dispose();
+      if (pit.lumpMat) pit.lumpMat.dispose();
     }
     this.pits.delete(pit.key);
     return changed;
@@ -2203,6 +2239,9 @@ export class World {
     if (pit) absorbed.delete(pit);
 
     let changed = false;
+    // Сохраняем приближённый объём воды и сырость при слиянии ям.
+    const waterFromOthers = [...absorbed].reduce((n, o) => n + (o.waterDepth || 0) * (o.rect.x1 - o.rect.x0) * (o.rect.z1 - o.rect.z0), 0);
+    const wetFromOthers = [...absorbed].reduce((n, o) => Math.max(n, o.wetness || 0), 0);
     for (const o of absorbed) if (this._dropPit(o)) changed = true;
 
     // ступени выводят к игроку, если он рядом, иначе — туда, где земля ниже
@@ -2259,8 +2298,15 @@ export class World {
         debris.add(new THREE.Mesh(new THREE.BoxGeometry(size, size * 0.72, size * 0.9), lumpMat));
       }
       group.add(debris);
+      const waterMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshStandardMaterial({
+        color: 0x408ca0, transparent: true, opacity: 0.68, roughness: 0.22,
+        metalness: 0.05, depthWrite: false, side: THREE.DoubleSide,
+      }));
+      waterMesh.rotation.x = -Math.PI / 2;
+      waterMesh.visible = false;
+      group.add(waterMesh);
       this.pitGroup.add(group);
-      pit = { key, group, walls, debris, mat: wallMat, lumpMat, sig: '', cells: new Set() };
+      pit = { key, group, walls, debris, waterMesh, waterDepth: 0, wetness: 0, debrisMotion: [], mat: wallMat, lumpMat, sig: '', cells: new Set() };
       this.pits.set(key, pit);
     } else if (pit.key !== key) {
       this.pits.delete(pit.key);
@@ -2288,6 +2334,10 @@ export class World {
       rect, floorY: floor, exitY, steps, stepH, runPerStep, stairRun, side: pick.side, surface,
       x0: rect.x0, x1: rect.x1, z0: rect.z0, z1: rect.z1,
     });
+    if (waterFromOthers) pit.waterDepth += waterFromOthers / ((rect.x1 - rect.x0) * (rect.z1 - rect.z0));
+    pit.wetness = Math.max(pit.wetness || 0, wetFromOthers);
+    pit.waterMesh.scale.set(rect.x1 - rect.x0, rect.z1 - rect.z0, 1);
+    pit.waterMesh.position.set(cx, floor + (pit.waterDepth || 0), cz);
     if (changed) this._rebuildTerrainIndex();
 
     const sig = `${rect.ix0},${rect.iz0},${rect.ix1},${rect.iz1}|${floor.toFixed(3)}|${pick.side}|${steps}|${surface}`;
@@ -2307,9 +2357,48 @@ export class World {
       chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.07, pz);
       chunks[i].rotation.y = a * 2.1;
     }
+    pit.debrisMotion = [];
+    if (collapsed > 0) {
+      // Небольшие физические обломки падают внутрь, затем остаются лежать.
+      pit.debrisMotion = chunks.map((chunk, i) => {
+        const angle = i * Math.PI * 2 / chunks.length;
+        chunk.position.set(cx + Math.cos(angle) * (rect.x1 - rect.x0) * 0.32,
+          exitY + 0.12 + i * 0.03, cz + Math.sin(angle) * (rect.z1 - rect.z0) * 0.32);
+        return { mesh: chunk, vx: -Math.cos(angle) * 0.45, vy: 0.4 + i * 0.08, vz: -Math.sin(angle) * 0.45, active: true };
+      });
+    }
     pit.group.position.set(0, 0, 0);
     pit.group.visible = true;
     return pit;
+  }
+
+  /** Локальная приближённая физика только для существующих ям, с шагом 0,2 с. */
+  updatePitPhysics(dt, rain = 0) {
+    if (!this.pits.size || !Number.isFinite(dt) || dt <= 0) return;
+    this.pitPhysicsAccumulator += dt;
+    const step = 0.2;
+    while (this.pitPhysicsAccumulator + 1e-9 >= step) {
+      this.pitPhysicsAccumulator -= step;
+      for (const pit of this.pits.values()) {
+        advancePitWater(pit, step, rain, CONFIG.world.seaLevel);
+        const rect = pit.rect;
+        pit.waterMesh.visible = pit.waterDepth > 0.015;
+        pit.waterMesh.position.y = pit.floorY + pit.waterDepth;
+        const wet = pit.wetness;
+        pit.mat.color.setRGB(1 - wet * 0.17, 1 - wet * 0.15, 1 - wet * 0.1);
+        for (const piece of pit.debrisMotion || []) {
+          if (!piece.active) continue;
+          const p = piece.mesh.position;
+          piece.vy -= 9.8 * step;
+          p.x = clamp(p.x + piece.vx * step, rect.x0 + 0.08, rect.x1 - 0.08);
+          p.z = clamp(p.z + piece.vz * step, rect.z0 + 0.08, rect.z1 - 0.08);
+          p.y += piece.vy * step;
+          const ground = this.pitFloorAt(p.x, p.z) ?? pit.floorY;
+          if (p.y <= ground + 0.08) { p.y = ground + 0.08; piece.active = false; }
+          else piece.mesh.rotation.y += step * 1.3;
+        }
+      }
+    }
   }
 
   /**

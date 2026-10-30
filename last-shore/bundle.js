@@ -30817,6 +30817,24 @@ void main() {
     return out.length;
   }
 
+  // src/ground-physics.js
+  function advancePitWater(pit, dt, rain, seaLevel = 0) {
+    if (!Number.isFinite(dt) || dt <= 0) return;
+    const rainfall = Math.max(0, Math.min(1, rain || 0));
+    const maxDepth = Math.max(0, pit.exitY - pit.floorY - 0.06);
+    let depth = Math.max(0, Math.min(maxDepth, pit.waterDepth || 0));
+    const seaSource = pit.surface === "sand" && pit.floorY < seaLevel - 0.05;
+    const seaTarget = seaSource ? Math.max(0, Math.min(maxDepth, seaLevel - pit.floorY)) : 0;
+    if (seaSource && depth < seaTarget) depth = Math.min(seaTarget, depth + dt * 0.18);
+    depth += dt * (rainfall * 0.025 - 25e-4);
+    if (seaSource && depth < seaTarget) depth = Math.min(seaTarget, depth + dt * 25e-4);
+    pit.waterDepth = Math.max(0, Math.min(maxDepth, depth));
+    const targetWet = Math.max(rainfall * 0.7, pit.waterDepth > 0.01 ? 0.9 : 0, seaSource ? 0.6 : 0);
+    const rate = targetWet > (pit.wetness || 0) ? 0.1 : 0.012;
+    pit.wetness = Math.max(0, Math.min(1, (pit.wetness || 0) + (targetWet - (pit.wetness || 0)) * Math.min(1, rate * dt)));
+    pit.seaSource = seaSource;
+  }
+
   // src/noise.js
   function hash2(ix, iz, seed) {
     let h = Math.imul(ix, 374761393) + Math.imul(iz, 668265263) + Math.imul(seed, 1274126177);
@@ -32369,6 +32387,8 @@ void main() {
       this.heights = new Float32Array(GRID * GRID);
       this.colliders = [];
       this.digStore = /* @__PURE__ */ new Map();
+      this.digDamage = /* @__PURE__ */ new Map();
+      this.pitPhysicsAccumulator = 0;
       this.digEvents = 0;
       this.surfaceStore = /* @__PURE__ */ new Map();
       this.pits = /* @__PURE__ */ new Map();
@@ -34027,12 +34047,39 @@ void main() {
         bottom: this.heightAt(x, z)
       };
     }
+    /** Прочность текущего снимаемого фрагмента отдельной метровой клетки. */
+    groundDamageAt(x, z, probe = this.probeAt(x, z)) {
+      var _a;
+      if (probe.layer === "void") return null;
+      const id = ((_a = probe.rock) == null ? void 0 : _a.id) || probe.layer;
+      const max = probe.rock ? Math.max(5, probe.rock.hp * 0.5) : probe.layer === "sand" ? 4.5 : 6;
+      const saved = this.digDamage.get(this._digKey(x, z));
+      const damage = saved && saved.id === id && Math.abs(saved.depth - probe.dug) < 1e-6 ? saved.damage : 0;
+      return { id, max, remaining: Math.max(0, max - damage) };
+    }
+    /** Каждый удар уменьшает прочность; выемка возникает только после разрушения. */
+    strikeGround(x, z, { power = 1, mine = 0, creative = false } = {}) {
+      const probe = this.probeAt(x, z);
+      if (probe.layer === "void") return { void: true, pending: false };
+      if (probe.layer === "stone" && mine < probe.needMine) return { hard: true, pending: false, rockName: probe.rockName, needMine: probe.needMine };
+      const status3 = this.groundDamageAt(x, z, probe);
+      const amount = creative ? status3.max : probe.layer === "stone" ? Math.max(0, mine) : Math.max(0, power);
+      const remaining = Math.max(0, status3.remaining - amount);
+      const key2 = this._digKey(x, z);
+      if (remaining > 0) {
+        this.digDamage.set(key2, { id: status3.id, depth: probe.dug, damage: status3.max - remaining });
+        return { pending: true, remaining, max: status3.max, layer: probe.layer, rock: probe.rock };
+      }
+      this.digDamage.delete(key2);
+      return { ...this.dig(x, z, { radius: 0.5, depth: creative ? 0.7 : 0.35, mine }), pending: false };
+    }
     /**
      * Снять один слой земли в радиусе. Возвращает
      * { layer, dug, flooded, sandFill, stone } или { hard: true } для камня без кирки.
      * mine — сила кирки: без неё каменный слой не берётся.
      */
     dig(x, z, { radius = 2, depth = 0.45, mine = 0 } = {}) {
+      var _a;
       if (!this.terrain) return null;
       const key2 = this._digKey(x, z);
       const probe = this.probeAt(x, z);
@@ -34061,8 +34108,10 @@ void main() {
       const newDug = already + stepDepth;
       const topY = this.surfaceOf(x, z).h0;
       const floorY = Math.max(-5, topY - (newDug + 0.25));
-      const sandFill = probe.layer === "sand" ? Math.min(0.2, stepDepth * 0.15) : 0;
+      const wetness = ((_a = this.pitAt(x, z)) == null ? void 0 : _a.wetness) || 0;
+      const sandFill = probe.layer === "sand" ? Math.min(0.2, stepDepth * (0.15 + wetness * 0.08)) : 0;
       this.digStore.set(key2, newDug);
+      this.digDamage.delete(key2);
       this.digEvents++;
       const pit = this._carvePit(x, z, radius, floorY + sandFill, probe.surface);
       if (pit) {
@@ -34195,6 +34244,13 @@ void main() {
       if (pit.group) {
         this.pitGroup.remove(pit.group);
         if (pit.walls && pit.walls.geometry) pit.walls.geometry.dispose();
+        if (pit.waterMesh) {
+          pit.waterMesh.geometry.dispose();
+          pit.waterMesh.material.dispose();
+        }
+        if (pit.debris) for (const chunk of pit.debris.children) chunk.geometry.dispose();
+        if (pit.mat) pit.mat.dispose();
+        if (pit.lumpMat) pit.lumpMat.dispose();
       }
       this.pits.delete(pit.key);
       return changed;
@@ -34296,6 +34352,8 @@ void main() {
       }
       if (pit) absorbed.delete(pit);
       let changed = false;
+      const waterFromOthers = [...absorbed].reduce((n, o) => n + (o.waterDepth || 0) * (o.rect.x1 - o.rect.x0) * (o.rect.z1 - o.rect.z0), 0);
+      const wetFromOthers = [...absorbed].reduce((n, o) => Math.max(n, o.wetness || 0), 0);
       for (const o of absorbed) if (this._dropPit(o)) changed = true;
       const out = Math.max(0.8, rect.cells * DIG_CELL * 0.55);
       const cands = [
@@ -34343,8 +34401,20 @@ void main() {
           debris.add(new Mesh(new BoxGeometry(size, size * 0.72, size * 0.9), lumpMat));
         }
         group.add(debris);
+        const waterMesh = new Mesh(new PlaneGeometry(1, 1), new MeshStandardMaterial({
+          color: 4230304,
+          transparent: true,
+          opacity: 0.68,
+          roughness: 0.22,
+          metalness: 0.05,
+          depthWrite: false,
+          side: DoubleSide
+        }));
+        waterMesh.rotation.x = -Math.PI / 2;
+        waterMesh.visible = false;
+        group.add(waterMesh);
         this.pitGroup.add(group);
-        pit = { key: key2, group, walls, debris, mat: wallMat, lumpMat, sig: "", cells: /* @__PURE__ */ new Set() };
+        pit = { key: key2, group, walls, debris, waterMesh, waterDepth: 0, wetness: 0, debrisMotion: [], mat: wallMat, lumpMat, sig: "", cells: /* @__PURE__ */ new Set() };
         this.pits.set(key2, pit);
       } else if (pit.key !== key2) {
         this.pits.delete(pit.key);
@@ -34381,6 +34451,10 @@ void main() {
         z0: rect.z0,
         z1: rect.z1
       });
+      if (waterFromOthers) pit.waterDepth += waterFromOthers / ((rect.x1 - rect.x0) * (rect.z1 - rect.z0));
+      pit.wetness = Math.max(pit.wetness || 0, wetFromOthers);
+      pit.waterMesh.scale.set(rect.x1 - rect.x0, rect.z1 - rect.z0, 1);
+      pit.waterMesh.position.set(cx, floor + (pit.waterDepth || 0), cz);
       if (changed) this._rebuildTerrainIndex();
       const sig = `${rect.ix0},${rect.iz0},${rect.ix1},${rect.iz1}|${floor.toFixed(3)}|${pick.side}|${steps}|${surface}`;
       if (pit.sig !== sig) {
@@ -34397,9 +34471,52 @@ void main() {
         chunks[i].position.set(px, this.baseHeightAt(px, pz) + 0.07, pz);
         chunks[i].rotation.y = a * 2.1;
       }
+      pit.debrisMotion = [];
+      if (collapsed > 0) {
+        pit.debrisMotion = chunks.map((chunk, i) => {
+          const angle = i * Math.PI * 2 / chunks.length;
+          chunk.position.set(
+            cx + Math.cos(angle) * (rect.x1 - rect.x0) * 0.32,
+            exitY + 0.12 + i * 0.03,
+            cz + Math.sin(angle) * (rect.z1 - rect.z0) * 0.32
+          );
+          return { mesh: chunk, vx: -Math.cos(angle) * 0.45, vy: 0.4 + i * 0.08, vz: -Math.sin(angle) * 0.45, active: true };
+        });
+      }
       pit.group.position.set(0, 0, 0);
       pit.group.visible = true;
       return pit;
+    }
+    /** Локальная приближённая физика только для существующих ям, с шагом 0,2 с. */
+    updatePitPhysics(dt, rain = 0) {
+      var _a;
+      if (!this.pits.size || !Number.isFinite(dt) || dt <= 0) return;
+      this.pitPhysicsAccumulator += dt;
+      const step2 = 0.2;
+      while (this.pitPhysicsAccumulator + 1e-9 >= step2) {
+        this.pitPhysicsAccumulator -= step2;
+        for (const pit of this.pits.values()) {
+          advancePitWater(pit, step2, rain, CONFIG.world.seaLevel);
+          const rect = pit.rect;
+          pit.waterMesh.visible = pit.waterDepth > 0.015;
+          pit.waterMesh.position.y = pit.floorY + pit.waterDepth;
+          const wet = pit.wetness;
+          pit.mat.color.setRGB(1 - wet * 0.17, 1 - wet * 0.15, 1 - wet * 0.1);
+          for (const piece2 of pit.debrisMotion || []) {
+            if (!piece2.active) continue;
+            const p = piece2.mesh.position;
+            piece2.vy -= 9.8 * step2;
+            p.x = clamp2(p.x + piece2.vx * step2, rect.x0 + 0.08, rect.x1 - 0.08);
+            p.z = clamp2(p.z + piece2.vz * step2, rect.z0 + 0.08, rect.z1 - 0.08);
+            p.y += piece2.vy * step2;
+            const ground = (_a = this.pitFloorAt(p.x, p.z)) != null ? _a : pit.floorY;
+            if (p.y <= ground + 0.08) {
+              p.y = ground + 0.08;
+              piece2.active = false;
+            } else piece2.mesh.rotation.y += step2 * 1.3;
+          }
+        }
+      }
     }
     /**
      * Дно, стенки и ступени выкопанной ямы.
@@ -41173,7 +41290,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 17:31" : "dev";
+  var BUILD = true ? "2026-10-30 17:39" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -43444,7 +43561,7 @@ void main() {
     }
     /** Снять слой земли под прицелом: земля → песок → камень → пустота шахты */
     digGroundAt(point) {
-      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4, _n, _o, _p, _q2, _r, _s2, _t, _u;
+      var _a, _b, _c, _d, _e2, _f, _g, _h, _i, _j, _k, _l, _m4, _n, _o, _p, _q2, _r, _s2, _t, _u, _v2;
       const w = this.world;
       const probe = w.probeAt(point.x, point.z);
       const power = this.digPower();
@@ -43467,33 +43584,29 @@ void main() {
         });
         return;
       }
-      if (power < 2 && probe.layer !== "stone" && Math.random() < 0.45) {
-        this.spawnChips(point.x, point.y + 0.15, point.z, {
-          count: 4,
-          color: probe.layer === "sand" ? 14666645 : 8217924,
-          size: 0.05,
-          spread: 1.1,
-          up: 1.2
-        });
+      w.playerPos = this.player.position;
+      const res = w.strikeGround(point.x, point.z, { power, mine: minePower, creative: this.creative });
+      if (!res) return;
+      if (res.pending) {
         (_f = (_e2 = this.audio).rustle) == null ? void 0 : _f.call(_e2);
-        this.ui.toast("\u0420\u0430\u0437\u0440\u044B\u0445\u043B\u0438\u043B \u0437\u0435\u043C\u043B\u044E \u2014 \u0435\u0449\u0451 \u0443\u0434\u0430\u0440", true);
+        this.spawnChips(point.x, point.y + 0.12, point.z, {
+          count: 3,
+          color: ((_g = probe.rock) == null ? void 0 : _g.dust) || (probe.layer === "sand" ? 14666645 : 8217924),
+          size: 0.04,
+          spread: 0.7,
+          up: 0.9
+        });
+        this.ui.toast(`\u041F\u043E\u0440\u043E\u0434\u0430 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0435\u043D\u0430: ${res.remaining.toFixed(1)}/${res.max.toFixed(1)}`);
         return;
       }
-      w.playerPos = this.player.position;
-      const res = w.dig(point.x, point.z, {
-        radius: power > 2 ? 2 : 1.45,
-        depth: this.creative ? 0.7 : 0.45,
-        mine: minePower
-      });
-      if (!res) return;
       if (res.hard) {
         this.ui.toast("\u041A\u0430\u043C\u0435\u043D\u044C \u043D\u0435 \u043F\u043E\u0434\u0434\u0430\u0451\u0442\u0441\u044F \u2014 \u043D\u0443\u0436\u043D\u0430 \u043A\u0438\u0440\u043A\u0430", true);
-        (_h = (_g = this.audio).stoneCrack) == null ? void 0 : _h.call(_g);
+        (_i = (_h = this.audio).stoneCrack) == null ? void 0 : _i.call(_h);
         return;
       }
       this.player.shake(0.07);
       if (res.collapse) {
-        (_j = (_i = this.audio).collapse) == null ? void 0 : _j.call(_i);
+        (_k = (_j = this.audio).collapse) == null ? void 0 : _k.call(_j);
         this.player.shake(0.18);
         this.spawnChips(point.x, point.y + 0.1, point.z, {
           count: 22,
@@ -43513,8 +43626,8 @@ void main() {
       }
       if (res.stone) {
         const rock = res.rock || { name: "\u041A\u0430\u043C\u0435\u043D\u044C", id: "granite", dust: 9407104, hard: 1 };
-        (_l = (_k = this.audio).stoneCrack) == null ? void 0 : _l.call(_k);
-        (_n = (_m4 = this.audio).oreHit) == null ? void 0 : _n.call(_m4);
+        (_m4 = (_l = this.audio).stoneCrack) == null ? void 0 : _m4.call(_l);
+        (_o = (_n = this.audio).oreHit) == null ? void 0 : _o.call(_n);
         this.spawnChips(point.x, point.y + 0.2, point.z, {
           count: 10,
           color: rock.dust,
@@ -43539,20 +43652,20 @@ void main() {
         }
         if (res.void) {
           this.ui.toast("\u041A\u0430\u043C\u0435\u043D\u043D\u044B\u0439 \u0441\u043B\u043E\u0439 \u043F\u0440\u043E\u0431\u0438\u0442: \u0432\u043D\u0438\u0437\u0443 \u043F\u0443\u0441\u0442\u043E\u0442\u0430 \u0448\u0430\u0445\u0442\u044B. \u041D\u0430\u0436\u043C\u0438 G, \u0447\u0442\u043E\u0431\u044B \u0441\u043F\u0443\u0441\u0442\u0438\u0442\u044C\u0441\u044F");
-          (_p = (_o = this.audio).stoneBreak) == null ? void 0 : _p.call(_o);
+          (_q2 = (_p = this.audio).stoneBreak) == null ? void 0 : _q2.call(_p);
         } else {
-          this.ui.toast(`${rock.name} (\u043F\u0440\u043E\u0447\u043D\u043E\u0441\u0442\u044C ${rock.hard.toFixed(1)}): \u0441\u043D\u044F\u0442\u043E ${((_q2 = res.step) != null ? _q2 : res.depth).toFixed(2)} \u043C \xB7 \u0434\u043E \u043F\u0443\u0441\u0442\u043E\u0442\u044B ${res.stoneLeft.toFixed(1)} \u043C`);
+          this.ui.toast(`${rock.name} (\u043F\u0440\u043E\u0447\u043D\u043E\u0441\u0442\u044C ${rock.hard.toFixed(1)}): \u0441\u043D\u044F\u0442\u043E ${((_r = res.step) != null ? _r : res.depth).toFixed(2)} \u043C \xB7 \u0434\u043E \u043F\u0443\u0441\u0442\u043E\u0442\u044B ${res.stoneLeft.toFixed(1)} \u043C`);
         }
         return;
       }
-      (_s2 = (_r = this.audio).rustle) == null ? void 0 : _s2.call(_r);
+      (_t = (_s2 = this.audio).rustle) == null ? void 0 : _t.call(_s2);
       const color = res.layer === "sand" ? 14666645 : 7297596;
       this.spawnChips(point.x, point.y + 0.2, point.z, { count: 9, color, size: 0.06, spread: 1.6, up: 1.8 });
       if (res.layer === "sand") this.addItem("sand", 1);
       else if (Math.random() < 0.35) this.addItem("stone", 1);
       if (res.flooded) {
-        this.ui.toast("\u041D\u0430 \u043F\u043B\u044F\u0436\u0435 \u044F\u043C\u0430 \u0434\u043E\u0448\u043B\u0430 \u0434\u043E \u043C\u043E\u0440\u0441\u043A\u043E\u0439 \u0432\u043E\u0434\u044B \u2014 \u0434\u043D\u043E \u0437\u0430\u043B\u0438\u0432\u0430\u0435\u0442. \u0412 \u0433\u043B\u0443\u0431\u0438\u043D\u0435 \u043E\u0441\u0442\u0440\u043E\u0432\u0430 \u0432\u043E\u0434\u044B \u043D\u0435\u0442");
-        (_u = (_t = this.audio).drink) == null ? void 0 : _u.call(_t);
+        this.ui.toast("\u041D\u0430 \u043F\u043B\u044F\u0436\u0435 \u0434\u043E\u0441\u0442\u0438\u0433\u043D\u0443\u0442\u0430 \u043C\u043E\u0440\u0441\u043A\u0430\u044F \u0432\u043E\u0434\u0430 \u2014 \u044F\u043C\u0430 \u043F\u043E\u0441\u0442\u0435\u043F\u0435\u043D\u043D\u043E \u043D\u0430\u043F\u043E\u043B\u043D\u044F\u0435\u0442\u0441\u044F");
+        (_v2 = (_u = this.audio).drink) == null ? void 0 : _v2.call(_u);
       } else if (res.sandFill > 0.05) {
         this.ui.toast("\u041F\u0435\u0441\u043E\u043A \u043E\u0441\u044B\u043F\u0430\u043B\u0441\u044F \u0432 \u044F\u043C\u0443 \u2014 \u043A\u0440\u0430\u044F \u043F\u043E\u043F\u043B\u044B\u043B\u0438");
       } else {
@@ -44004,10 +44117,13 @@ void main() {
           const fast = this.creative || tool && tool.dig;
           const probe = this.world.probeAt(t.point.x, t.point.z);
           if (probe.layer === "stone" && probe.rock) {
-            return `<b>\u041B\u041A\u041C</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C ${probe.rock.name.toLowerCase()} \xB7 <span class="prompt-warn">HP ${Math.ceil(probe.hp)}/${probe.maxHp}</span>`;
+            const damage2 = this.world.groundDamageAt(t.point.x, t.point.z, probe);
+            return `<b>\u041B\u041A\u041C</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C ${probe.rock.name.toLowerCase()} \xB7 <span class="prompt-warn">HP ${Math.ceil(probe.hp)}/${probe.maxHp}</span> \xB7 \u0431\u043B\u043E\u043A ${damage2.remaining.toFixed(1)}/${damage2.max.toFixed(1)}`;
           }
-          const name = layer === "sand" ? "\u043F\u0435\u0441\u043E\u043A" : layer === "stone" ? "\u043A\u0430\u043C\u0435\u043D\u044C" : "\u0437\u0435\u043C\u043B\u044F";
-          return `<b>\u041B\u041A\u041C</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C ${name} ${fast ? "" : '\xB7 <span class="prompt-warn">\u0440\u0443\u043A\u0430\u043C\u0438 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E</span>'}`;
+          const name = probe.layer === "sand" ? "\u043F\u0435\u0441\u043E\u043A" : probe.layer === "stone" ? "\u043A\u0430\u043C\u0435\u043D\u044C" : "\u0437\u0435\u043C\u043B\u044F";
+          const damage = this.world.groundDamageAt(t.point.x, t.point.z, probe);
+          const health = damage ? ` \xB7 HP ${damage.remaining.toFixed(1)}/${damage.max.toFixed(1)}` : "";
+          return `<b>\u041B\u041A\u041C</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C ${name}${health} ${fast ? "" : '\xB7 <span class="prompt-warn">\u0440\u0443\u043A\u0430\u043C\u0438 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E</span>'}`;
         }
         case "pickup":
           return `<b>E</b> \u2014 \u043F\u043E\u0434\u043E\u0431\u0440\u0430\u0442\u044C ${t.pickup.name.toLowerCase()}`;
@@ -44854,6 +44970,7 @@ void main() {
       this.sky.cloudiness = this.weather === "clear" ? 0.55 : this.weather === "cloudy" ? 1 : 1.5;
       this.rain.setIntensity(this.rainIntensity);
       this.rain.update(dt, this.player.position);
+      this.world.updatePitPhysics(dt, this.rainIntensity);
       this.audio.setNight(skyInfo.night);
       this.audio.updateMusic(dt, skyInfo.night);
       if (!this.underground && this.camera.position.y < CONFIG.world.seaLevel + this.waveAt(this.camera.position.x, this.camera.position.z)) {
