@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Folder OS — Эмулятор ОС на папках и файлах</title>
+<title>Folder OS - Эмулятор ОС на папках и файлах</title>
 <style>
   :root{
-    --bg:#1a1a2e;
+    --bg:#161b22;
     --panel:#e8e8e8;
     --title:#d4af37;
     --border:#666;
@@ -15,6 +15,7 @@
     --muted:#555;
     --green:#0f0;
     --red:#c00;
+    --amber:#ffb347;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body,#desktop{width:100%;height:100%;overflow:hidden;background:var(--bg);}
@@ -24,8 +25,8 @@
   }
   #desktop{
     position:relative;background:
-      radial-gradient(circle at 20% 30%, #2a2a4e 0%, transparent 40%),
-      radial-gradient(circle at 80% 70%, #16162b 0%, transparent 40%),
+      radial-gradient(circle at 20% 30%, #2a3b5c 0%, transparent 40%),
+      radial-gradient(circle at 80% 70%, #161b22 0%, transparent 40%),
       var(--bg);
   }
 
@@ -33,7 +34,7 @@
   .window{
     position:absolute;background:var(--panel);border:2px solid var(--border);
     border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.35);
-    display:flex;flex-direction:column;min-width:250px;min-height:170px;
+    display:flex;flex-direction:column;min-width:260px;min-height:180px;
     z-index:20;user-select:none;outline:none;
   }
   .window.hidden{display:none;}
@@ -149,25 +150,25 @@
 
   /* ---------- F3 Inspector ---------- */
   #inspector{
-    position:fixed;inset:0;background:rgba(10,10,16,.92);z-index:500;display:none;
+    position:fixed;inset:0;background:rgba(10,12,18,.94);z-index:500;display:none;
     flex-direction:column;color:#e8e8e8;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
     font-size:12px;line-height:1.4;
   }
   #inspector.visible{display:flex;}
   #inspector .ins-header{
     display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
-    border-bottom:1px solid #333;background:#16162b;font-weight:700;letter-spacing:2px;
+    border-bottom:1px solid #333;background:#161b22;font-weight:700;letter-spacing:2px;
     text-transform:uppercase;font-size:11px;
   }
   #inspector .ins-close{color:#888;cursor:pointer;font-size:16px;}
   #inspector .ins-close:hover{color:#fff;}
   #inspector .ins-body{flex:1;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;}
   @media (max-width:900px){ #inspector .ins-body{grid-template-columns:1fr;} }
-  .ins-panel{border:1px solid #333;border-radius:6px;background:#0f0f1a;display:flex;flex-direction:column;}
-  .ins-panel h3{padding:8px 12px;border-bottom:1px solid #222;background:#1a1a2e;font-size:11px;
+  .ins-panel{border:1px solid #333;border-radius:6px;background:#0f111a;display:flex;flex-direction:column;}
+  .ins-panel h3{padding:8px 12px;border-bottom:1px solid #222;background:#1a1f2e;font-size:11px;
     text-transform:uppercase;letter-spacing:1px;color:#d4af37;margin:0;}
   .ins-panel .ins-content{padding:10px 12px;overflow:auto;color:#c8c8c8;}
-  .ins-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1a1a2e;
+  .ins-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1a1f2e;
     font-size:11.5px;}
   .ins-row:last-child{border-bottom:none;}
   .ins-key{color:#8be08b;}
@@ -176,11 +177,11 @@
   .ins-tree{font-size:11px;color:#b0b0b0;}
   .ins-tree .dir{color:#d4af37;font-weight:700;margin-left:6px;}
   .ins-tree .file{color:#a0c4ff;margin-left:6px;}
-  .ins-hint{padding:8px 16px;border-top:1px solid #333;background:#16162b;font-size:10.5px;
-    color:#666;text-align:center;letter-spacing:.5px;}
-  .core-bar{height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden;margin-top:4px;
+  .core-bar{height:6px;background:#1a1f2e;border-radius:3px;overflow:hidden;margin-top:4px;
     width:100%;}
   .core-fill{height:100%;background:linear-gradient(90deg,#d4af37,#e8b45a);transition:width .3s;}
+  .ins-hint{padding:8px 16px;border-top:1px solid #333;background:#161b22;font-size:10.5px;
+    color:#666;text-align:center;letter-spacing:.5px;}
 
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-thumb{background:#888;border-radius:5px;}
@@ -207,7 +208,7 @@
 
 <div id="inspector">
   <div class="ins-header">
-    <div>🔍 Folder OS — внутреннее устройство ОС</div>
+    <div>🔍 Folder OS - устройство ОС (папки, файлы, ядра, ОЗУ)</div>
     <div class="ins-close" onclick="toggleInspector()">✕</div>
   </div>
   <div class="ins-body">
@@ -216,70 +217,110 @@
       <div class="ins-content ins-tree" id="ins-vfs"></div>
     </div>
     <div class="ins-panel">
-      <h3>🖥️ Процессор / ядра</h3>
+      <h3>🖥️ Процессор - ядра (папки coreN)</h3>
       <div class="ins-content" id="ins-cpu"></div>
     </div>
     <div class="ins-panel">
-      <h3>⚙️ Ядро / модули</h3>
+      <h3>⚙️ Ядро /proc и /sys/kernel</h3>
       <div class="ins-content" id="ins-kernel"></div>
     </div>
     <div class="ins-panel">
-      <h3>⚡ Процессы</h3>
+      <h3>💾 ОЗУ /ram (временное)</h3>
+      <div class="ins-content" id="ins-ram"></div>
+    </div>
+    <div class="ins-panel">
+      <h3>⚡ Процессы /proc/PID</h3>
       <div class="ins-content" id="ins-proc"></div>
     </div>
   </div>
-  <div class="ins-hint">Нажмите <b>F3</b> чтобы показать / скрыть инспектор · Всё в этой ОС — папки и файлы</div>
+  <div class="ins-hint">Нажмите <b>F3</b> показать/скрыть инспектор · Всё в этой ОС - папки и файлы</div>
 </div>
 
 <script>
-/* ===================== VIRTUAL FILE SYSTEM ===================== */
-const STORAGE='folderos_v1';
+/* ===================== VIRTUAL FILE SYSTEM (настоящие папки и файлы) ===================== */
+const STORAGE='folderos_v2';
 const ROOT='/';
 
 const defaultFS={
   nodes:{
-    '/':{type:'dir',name:'',path:'/',children:['bin','boot','dev','etc','home','sys','tmp','usr'],mtime:Date.now()},
-    '/bin':{type:'dir',name:'bin',path:'/bin',children:['ls','cd','pwd','cat','echo','mkdir','touch','rm','cp','mv','ps','exec','help','clear','uname','sysinfo'],mtime:Date.now()},
-    '/bin/ls':{type:'file',name:'ls',path:'/bin/ls',content:'# list directory\nusage: ls [path]',mtime:Date.now()},
-    '/bin/help':{type:'file',name:'help',path:'/bin/help',content:'Commands: ls cd pwd cat echo mkdir touch rm cp mv ps exec help clear uname sysinfo',mtime:Date.now()},
+    '/':{type:'dir',name:'',path:'/',children:['bin','boot','dev','etc','home','proc','ram','sys','tmp','usr'],mtime:Date.now()},
+    '/bin':{type:'dir',name:'bin',path:'/bin',children:['ls','cd','pwd','cat','echo','mkdir','touch','rm','cp','mv','ps','exec','kill','help','clear','uname','sysinfo','ram','proc'],mtime:Date.now()},
+    '/bin/ls':{type:'file',name:'ls',path:'/bin/ls',content:'# ls - список папки\nusage: ls [path]',mtime:Date.now()},
+    '/bin/help':{type:'file',name:'help',path:'/bin/help',content:'Commands: ls cd pwd cat echo mkdir touch rm cp mv ps exec kill help clear uname sysinfo ram proc',mtime:Date.now()},
+    '/bin/cat':{type:'file',name:'cat',path:'/bin/cat',content:'# cat - вывести файл\nusage: cat <path>',mtime:Date.now()},
+    '/bin/echo':{type:'file',name:'echo',path:'/bin/echo',content:'# echo - напечатать текст\nusage: echo <text> [> file]',mtime:Date.now()},
+    '/bin/mkdir':{type:'file',name:'mkdir',path:'/bin/mkdir',content:'# mkdir - создать папку\nusage: mkdir <path>',mtime:Date.now()},
+    '/bin/touch':{type:'file',name:'touch',path:'/bin/touch',content:'# touch - создать/обновить файл\nusage: touch <path>',mtime:Date.now()},
+    '/bin/rm':{type:'file',name:'rm',path:'/bin/rm',content:'# rm - удалить\nusage: rm [-r] <path>',mtime:Date.now()},
+    '/bin/cp':{type:'file',name:'cp',path:'/bin/cp',content:'# cp - скопировать\nusage: cp <src> <dst>',mtime:Date.now()},
+    '/bin/mv':{type:'file',name:'mv',path:'/bin/mv',content:'# mv - переместить/переименовать\nusage: mv <src> <dst>',mtime:Date.now()},
+    '/bin/ps':{type:'file',name:'ps',path:'/bin/ps',content:'# ps - процессы',mtime:Date.now()},
+    '/bin/exec':{type:'file',name:'exec',path:'/bin/exec',content:'# exec - запустить приложение\nusage: exec <app>',mtime:Date.now()},
+    '/bin/kill':{type:'file',name:'kill',path:'/bin/kill',content:'# kill - завершить процесс\nusage: kill <pid>',mtime:Date.now()},
+    '/bin/clear':{type:'file',name:'clear',path:'/bin/clear',content:'# clear - очистить терминал',mtime:Date.now()},
+    '/bin/uname':{type:'file',name:'uname',path:'/bin/uname',content:'# uname - информация',mtime:Date.now()},
+    '/bin/sysinfo':{type:'file',name:'sysinfo',path:'/bin/sysinfo',content:'# sysinfo - информация о системе',mtime:Date.now()},
+    '/bin/ram':{type:'file',name:'ram',path:'/bin/ram',content:'# ram - состояние ОЗУ',mtime:Date.now()},
+    '/bin/proc':{type:'file',name:'proc',path:'/bin/proc',content:'# proc - процессы',mtime:Date.now()},
     '/boot':{type:'dir',name:'boot',path:'/boot',children:['loader.bin'],mtime:Date.now()},
-    '/boot/loader.bin':{type:'file',name:'loader.bin',path:'/boot/loader.bin',content:'[BOOT LOADER v1.0] Folder OS kernel loader\nMounting /sys/kernel ... OK\nMounting /sys/cpu ... OK',mtime:Date.now()},
+    '/boot/loader.bin':{type:'file',name:'loader.bin',path:'/boot/loader.bin',content:'[BOOT LOADER v2.0]\nMounting /sys/kernel ... OK\nMounting /sys/cpu ... OK\nMounting /ram ... OK\nMounting /proc ... OK\nFolder OS ready.',mtime:Date.now()},
     '/dev':{type:'dir',name:'dev',path:'/dev',children:['null','zero','tty','console'],mtime:Date.now()},
     '/dev/null':{type:'file',name:'null',path:'/dev/null',content:'',mtime:Date.now()},
     '/dev/console':{type:'file',name:'console',path:'/dev/console',content:'system console',mtime:Date.now()},
     '/etc':{type:'dir',name:'etc',path:'/etc',children:['hostname','version','apps.conf'],mtime:Date.now()},
     '/etc/hostname':{type:'file',name:'hostname',path:'/etc/hostname',content:'folder-os',mtime:Date.now()},
-    '/etc/version':{type:'file',name:'version',path:'/etc/version',content:'Folder OS 1.0.0 (folder-based)',mtime:Date.now()},
+    '/etc/version':{type:'file',name:'version',path:'/etc/version',content:'Folder OS 2.0.0 (folder/kernel-based)',mtime:Date.now()},
     '/etc/apps.conf':{type:'file',name:'apps.conf',path:'/etc/apps.conf',content:'filemanager\nterminal\neditor\nsettings\nabout',mtime:Date.now()},
     '/home':{type:'dir',name:'home',path:'/home',children:['user'],mtime:Date.now()},
     '/home/user':{type:'dir',name:'user',path:'/home/user',children:['documents','downloads','readme.txt'],mtime:Date.now()},
     '/home/user/documents':{type:'dir',name:'documents',path:'/home/user/documents',children:[],mtime:Date.now()},
     '/home/user/downloads':{type:'dir',name:'downloads',path:'/home/user/downloads',children:[],mtime:Date.now()},
-    '/home/user/readme.txt':{type:'file',name:'readme.txt',path:'/home/user/readme.txt',content:'Добро пожаловать в Folder OS!\n\nЭто ОС, в которой ядра — это папки, процессоры — это папки, а всё работает на папках и файлах.\n\nПопробуйте:\n  cat /sys/kernel/vfs.js\n  cat /sys/cpu/core0/load\n  ls /\n  ls /sys\n  help\n',mtime:Date.now()},
+    '/home/user/readme.txt':{type:'file',name:'readme.txt',path:'/home/user/readme.txt',content:'Добро пожаловать в Folder OS 2.0!\n\nАрхитектура:\n  /sys/kernel  - активное ядро (читает файлы, принимает решения)\n  /sys/cpu/coreN  - ядра процессора (папки с inbox/out/status)\n  /ram  - оперативная память (временная, очищается при ребуте)\n  /proc/PID  - папка процесса с файлами состояния\n\nПопробуйте:\n  cat /sys/kernel/scheduler/state\n  cat /sys/cpu/core0/status\n  ls /ram\n  ls /proc\n  help\n',mtime:Date.now()},
+    '/proc':{type:'dir',name:'proc',path:'/proc',children:[],mtime:Date.now()},
+    '/ram':{type:'dir',name:'ram',path:'/ram',children:[],mtime:Date.now()},
     '/sys':{type:'dir',name:'sys',path:'/sys',children:['kernel','cpu'],mtime:Date.now()},
-    '/sys/kernel':{type:'dir',name:'kernel',path:'/sys/kernel',children:['vfs.js','scheduler.js','modules.list'],mtime:Date.now()},
-    '/sys/kernel/vfs.js':{type:'file',name:'vfs.js',path:'/sys/kernel/vfs.js',content:'// Module: VFS (Virtual File System)\n// Everything is folders and files.\n// This file lives INSIDE the kernel folder.\nfunction vfs(){ return "vfs module loaded from /sys/kernel/vfs.js"; }',mtime:Date.now()},
-    '/sys/kernel/scheduler.js':{type:'file',name:'scheduler.js',path:'/sys/kernel/scheduler.js',content:'// Module: Scheduler\n// Distributes processes across CPU core folders (/sys/cpu/coreN).\nfunction schedule(pid,core){ return "process "+pid+" -> core "+core; }',mtime:Date.now()},
-    '/sys/kernel/modules.list':{type:'file',name:'modules.list',path:'/sys/kernel/modules.list',content:'vfs.js\nscheduler.js',mtime:Date.now()},
+    '/sys/kernel':{type:'dir',name:'kernel',path:'/sys/kernel',children:['scheduler','vfs','modules'],mtime:Date.now()},
+    '/sys/kernel/scheduler':{type:'dir',name:'scheduler',path:'/sys/kernel/scheduler',children:['state','policy','quantum'],mtime:Date.now()},
+    '/sys/kernel/scheduler/state':{type:'file',name:'state',path:'/sys/kernel/scheduler/state',content:'idle',mtime:Date.now()},
+    '/sys/kernel/scheduler/policy':{type:'file',name:'policy',path:'/sys/kernel/scheduler/policy',content:'round-robin',mtime:Date.now()},
+    '/sys/kernel/scheduler/quantum':{type:'file',name:'quantum',path:'/sys/kernel/scheduler/quantum',content:'100',mtime:Date.now()},
+    '/sys/kernel/vfs':{type:'dir',name:'vfs',path:'/sys/kernel/vfs',children:['mounts','open'],mtime:Date.now()},
+    '/sys/kernel/vfs/mounts':{type:'file',name:'mounts',path:'/sys/kernel/vfs/mounts',content:'root /\nproc /proc\nram /ram\nsys /sys',mtime:Date.now()},
+    '/sys/kernel/vfs/open':{type:'file',name:'open',path:'/sys/kernel/vfs/open',content:'0',mtime:Date.now()},
+    '/sys/kernel/modules':{type:'dir',name:'modules',path:'/sys/kernel/modules',children:['vfs.js','scheduler.js'],mtime:Date.now()},
+    '/sys/kernel/modules/vfs.js':{type:'file',name:'vfs.js',path:'/sys/kernel/modules/vfs.js',content:'// Module: VFS\n// Управляет файловыми операциями.\nfunction vfs(){ return "vfs module active"; }',mtime:Date.now()},
+    '/sys/kernel/modules/scheduler.js':{type:'file',name:'scheduler.js',path:'/sys/kernel/modules/scheduler.js',content:'// Module: Scheduler\n// Читает /proc/*/state, распределяет по ядрам /sys/cpu/coreN.',mtime:Date.now()},
     '/sys/cpu':{type:'dir',name:'cpu',path:'/sys/cpu',children:['core0','core1','core2','core3'],mtime:Date.now()},
-    '/sys/cpu/core0':{type:'dir',name:'core0',path:'/sys/cpu/core0',children:['load','current'],mtime:Date.now()},
+    '/sys/cpu/core0':{type:'dir',name:'core0',path:'/sys/cpu/core0',children:['inbox','out','status','load','current'],mtime:Date.now()},
+    '/sys/cpu/core0/inbox':{type:'dir',name:'inbox',path:'/sys/cpu/core0/inbox',children:[],mtime:Date.now()},
+    '/sys/cpu/core0/out':{type:'dir',name:'out',path:'/sys/cpu/core0/out',children:[],mtime:Date.now()},
+    '/sys/cpu/core0/status':{type:'file',name:'status',path:'/sys/cpu/core0/status',content:'idle',mtime:Date.now()},
     '/sys/cpu/core0/load':{type:'file',name:'load',path:'/sys/cpu/core0/load',content:'0%',mtime:Date.now()},
-    '/sys/cpu/core0/current':{type:'file',name:'current',path:'/sys/cpu/core0/current',content:'idle',mtime:Date.now()},
-    '/sys/cpu/core1':{type:'dir',name:'core1',path:'/sys/cpu/core1',children:['load','current'],mtime:Date.now()},
+    '/sys/cpu/core0/current':{type:'file',name:'current',path:'/sys/cpu/core0/current',content:'-',mtime:Date.now()},
+    '/sys/cpu/core1':{type:'dir',name:'core1',path:'/sys/cpu/core1',children:['inbox','out','status','load','current'],mtime:Date.now()},
+    '/sys/cpu/core1/inbox':{type:'dir',name:'inbox',path:'/sys/cpu/core1/inbox',children:[],mtime:Date.now()},
+    '/sys/cpu/core1/out':{type:'dir',name:'out',path:'/sys/cpu/core1/out',children:[],mtime:Date.now()},
+    '/sys/cpu/core1/status':{type:'file',name:'status',path:'/sys/cpu/core1/status',content:'idle',mtime:Date.now()},
     '/sys/cpu/core1/load':{type:'file',name:'load',path:'/sys/cpu/core1/load',content:'0%',mtime:Date.now()},
-    '/sys/cpu/core1/current':{type:'file',name:'current',path:'/sys/cpu/core1/current',content:'idle',mtime:Date.now()},
-    '/sys/cpu/core2':{type:'dir',name:'core2',path:'/sys/cpu/core2',children:['load','current'],mtime:Date.now()},
+    '/sys/cpu/core1/current':{type:'file',name:'current',path:'/sys/cpu/core1/current',content:'-',mtime:Date.now()},
+    '/sys/cpu/core2':{type:'dir',name:'core2',path:'/sys/cpu/core2',children:['inbox','out','status','load','current'],mtime:Date.now()},
+    '/sys/cpu/core2/inbox':{type:'dir',name:'inbox',path:'/sys/cpu/core2/inbox',children:[],mtime:Date.now()},
+    '/sys/cpu/core2/out':{type:'dir',name:'out',path:'/sys/cpu/core2/out',children:[],mtime:Date.now()},
+    '/sys/cpu/core2/status':{type:'file',name:'status',path:'/sys/cpu/core2/status',content:'idle',mtime:Date.now()},
     '/sys/cpu/core2/load':{type:'file',name:'load',path:'/sys/cpu/core2/load',content:'0%',mtime:Date.now()},
-    '/sys/cpu/core2/current':{type:'file',name:'current',path:'/sys/cpu/core2/current',content:'idle',mtime:Date.now()},
-    '/sys/cpu/core3':{type:'dir',name:'core3',path:'/sys/cpu/core3',children:['load','current'],mtime:Date.now()},
+    '/sys/cpu/core2/current':{type:'file',name:'current',path:'/sys/cpu/core2/current',content:'-',mtime:Date.now()},
+    '/sys/cpu/core3':{type:'dir',name:'core3',path:'/sys/cpu/core3',children:['inbox','out','status','load','current'],mtime:Date.now()},
+    '/sys/cpu/core3/inbox':{type:'dir',name:'inbox',path:'/sys/cpu/core3/inbox',children:[],mtime:Date.now()},
+    '/sys/cpu/core3/out':{type:'dir',name:'out',path:'/sys/cpu/core3/out',children:[],mtime:Date.now()},
+    '/sys/cpu/core3/status':{type:'file',name:'status',path:'/sys/cpu/core3/status',content:'idle',mtime:Date.now()},
     '/sys/cpu/core3/load':{type:'file',name:'load',path:'/sys/cpu/core3/load',content:'0%',mtime:Date.now()},
-    '/sys/cpu/core3/current':{type:'file',name:'current',path:'/sys/cpu/core3/current',content:'idle',mtime:Date.now()},
+    '/sys/cpu/core3/current':{type:'file',name:'current',path:'/sys/cpu/core3/current',content:'-',mtime:Date.now()},
     '/tmp':{type:'dir',name:'tmp',path:'/tmp',children:[],mtime:Date.now()},
     '/usr':{type:'dir',name:'usr',path:'/usr',children:['apps'],mtime:Date.now()},
     '/usr/apps':{type:'dir',name:'apps',path:'/usr/apps',children:['filemanager.app','terminal.app','editor.app','settings.app','about.app'],mtime:Date.now()},
-    '/usr/apps/filemanager.app':{type:'file',name:'filemanager.app',path:'/usr/apps/filemanager.app',content:'app: filemanager\nicon: 💾\ndesc: Файловый менеджер — навигация по папкам и файлам',mtime:Date.now()},
-    '/usr/apps/terminal.app':{type:'file',name:'terminal.app',path:'/usr/apps/terminal.app',content:'app: terminal\nicon: 🖥️\ndesc: Терминал — команды для работы с папками и файлами',mtime:Date.now()},
-    '/usr/apps/editor.app':{type:'file',name:'editor.app',path:'/usr/apps/editor.app',content:'app: editor\nicon: 📝\ndesc: Текстовый редактор — редактирование файлов',mtime:Date.now()},
+    '/usr/apps/filemanager.app':{type:'file',name:'filemanager.app',path:'/usr/apps/filemanager.app',content:'app: filemanager\nicon: 💾\ndesc: Файловый менеджер - навигация по папкам и файлам',mtime:Date.now()},
+    '/usr/apps/terminal.app':{type:'file',name:'terminal.app',path:'/usr/apps/terminal.app',content:'app: terminal\nicon: 🖥️\ndesc: Терминал - команды для работы с папками и файлами',mtime:Date.now()},
+    '/usr/apps/editor.app':{type:'file',name:'editor.app',path:'/usr/apps/editor.app',content:'app: editor\nicon: 📝\ndesc: Текстовый редактор - редактирование файлов',mtime:Date.now()},
     '/usr/apps/settings.app':{type:'file',name:'settings.app',path:'/usr/apps/settings.app',content:'app: settings\nicon: ⚙️\ndesc: Настройки системы',mtime:Date.now()},
     '/usr/apps/about.app':{type:'file',name:'about.app',path:'/usr/apps/about.app',content:'app: about\nicon: ℹ️\ndesc: О системе Folder OS',mtime:Date.now()}
   },
@@ -288,7 +329,7 @@ const defaultFS={
 
 class VFS{
   constructor(){
-    this.nodes={}; this.cwd='/home/user'; this.load();
+    this.nodes={}; this.cwd='/home/user'; this.openCount=0; this.load();
   }
   load(){
     try{
@@ -296,22 +337,30 @@ class VFS{
       if(raw){const d=JSON.parse(raw);this.nodes=d.nodes||{};if(d.cwd)this.cwd=d.cwd;}
       else this.reset();
     }catch(e){this.reset();}
-    this.ensureCPU();
+    this.ensureStructure();
   }
-  reset(){ this.nodes=JSON.parse(JSON.stringify(defaultFS.nodes)); this.cwd=defaultFS.cwd; this.ensureCPU(); this.dirty(); }
-  ensureCPU(){
+  reset(){ this.nodes=JSON.parse(JSON.stringify(defaultFS.nodes)); this.cwd=defaultFS.cwd; this.ensureStructure(); this.save(); }
+  ensureStructure(){
+    // Гарантируем наличие ключевых папок и файлов после загрузки/сброса
+    const ensureDir=(p,name,children=[])=>{
+      if(!this.nodes[p]) this.nodes[p]={type:'dir',name:name||'',path:p,children:[...children],mtime:Date.now()};
+      else { if(!this.nodes[p].children) this.nodes[p].children=[]; children.forEach(c=>{if(!this.nodes[p].children.includes(c))this.nodes[p].children.push(c);}); }
+    };
+    const ensureFile=(p,name,content='')=>{
+      if(!this.nodes[p]) this.nodes[p]={type:'file',name:name,path:p,content:content,mtime:Date.now()};
+    };
+    ensureDir('/proc','proc',[]);
+    ensureDir('/ram','ram',[]);
     for(let i=0;i<4;i++){
-      const p='/sys/cpu/core'+i;
-      if(!this.nodes[p]) this.nodes[p]={type:'dir',name:'core'+i,path:p,children:['load','current'],mtime:Date.now()};
-      const c=this.nodes[p];
-      if(!c.children)c.children=['load','current'];
-      if(!this.nodes[p+'/load']) this.nodes[p+'/load']={type:'file',name:'load',path:p+'/load',content:'0%',mtime:Date.now()};
-      if(!this.nodes[p+'/current']) this.nodes[p+'/current']={type:'file',name:'current',path:p+'/current',content:'idle',mtime:Date.now()};
+      const c='/sys/cpu/core'+i;
+      ensureDir(c,'core'+i,['inbox','out','status','load','current']);
+      ensureDir(c+'/inbox','inbox',[]);
+      ensureDir(c+'/out','out',[]);
+      ensureFile(c+'/status','status','idle');
+      ensureFile(c+'/load','load','0%');
+      ensureFile(c+'/current','current','-');
     }
-    if(!this.nodes['/sys/cpu']) this.nodes['/sys/cpu']={type:'dir',name:'cpu',path:'/sys/cpu',children:['core0','core1','core2','core3'],mtime:Date.now()};
-    if(!this.nodes['/sys/kernel']) this.nodes['/sys/kernel']={type:'dir',name:'kernel',path:'/sys/kernel',children:['vfs.js','scheduler.js','modules.list'],mtime:Date.now()};
   }
-  dirty(){ this.save(); }
   save(){ try{localStorage.setItem(STORAGE,JSON.stringify({nodes:this.nodes,cwd:this.cwd}));}catch(e){} }
   resolve(p){
     if(p===undefined||p===null)return this.cwd;
@@ -328,7 +377,7 @@ class VFS{
     return (n.children||[]).map(c=>this.nodes[this.join(n.path,c)]).filter(Boolean);
   }
   join(a,b){ return (a==='/'?a:a+'/')+b; }
-  mkdir(p,recursive=false){
+  mkdir(p){
     p=this.resolve(p);
     const parts=splitPath(p);
     let cur='';
@@ -343,9 +392,9 @@ class VFS{
         if(parent&&this.nodes[parent]){ if(!this.nodes[parent].children) this.nodes[parent].children=[]; if(!this.nodes[parent].children.includes(part))this.nodes[parent].children.push(part); this.nodes[parent].mtime=Date.now(); }
       }
     }
-    this.dirty(); return p;
+    this.save(); return p;
   }
-  write(p,content,persist=true){
+  write(p,content){
     p=this.resolve(p);
     const par=parentPath(p);
     if(par&&this.nodes[par]&&this.nodes[par].type==='dir'){
@@ -353,13 +402,19 @@ class VFS{
       if(!this.nodes[par].children.includes(name))this.nodes[par].children.push(name);
     }
     this.nodes[p]={type:'file',name:p.split('/').pop(),path:p,content:content===undefined?'':String(content),mtime:Date.now()};
-    if(persist)this.dirty(); return p;
+    this.openCount=(this.openCount||0)+1;
+    const openFile=this.nodes['/sys/kernel/vfs/open'];
+    if(openFile) openFile.content=String(this.openCount);
+    this.save(); return p;
   }
   read(p){
     p=this.resolve(p);
     const n=this.nodes[p];
     if(!n)throw new Error('No such file: '+p);
     if(n.type!=='file')throw new Error('Not a file: '+p);
+    this.openCount=(this.openCount||0)+1;
+    const openFile=this.nodes['/sys/kernel/vfs/open'];
+    if(openFile) openFile.content=String(this.openCount);
     return n.content;
   }
   remove(p,recursive=false){
@@ -380,7 +435,7 @@ class VFS{
     }else{
       const par=parentPath(p); if(par&&this.nodes[par]){const i=this.nodes[par].children.indexOf(n.name);if(i>=0)this.nodes[par].children.splice(i,1);} delete this.nodes[p];
     }
-    this.dirty();
+    this.save();
   }
   cp(src,dst){
     src=this.resolve(src); dst=this.resolve(dst);
@@ -397,7 +452,7 @@ class VFS{
       const par=parentPath(dst); if(par&&this.nodes[par]){const name=dst.split('/').pop();if(!this.nodes[par].children.includes(name))this.nodes[par].children.push(name);}
       this.nodes[dst]={type:'file',name:dst.split('/').pop(),path:dst,content:n.content,mtime:Date.now()};
     }
-    this.dirty();
+    this.save();
   }
   mv(src,dst){
     src=this.resolve(src); dst=this.resolve(dst);
@@ -405,7 +460,16 @@ class VFS{
     const par=parentPath(dst); if(par&&this.nodes[par]){if(!this.nodes[par].children)this.nodes[par].children=[];const name=dst.split('/').pop();if(!this.nodes[par].children.includes(name))this.nodes[par].children.push(name);const spar=parentPath(src);if(spar&&this.nodes[spar]){const i=this.nodes[spar].children.indexOf(n.name);if(i>=0)this.nodes[spar].children.splice(i,1);}}
     n.path=dst; n.name=dst.split('/').pop(); n.mtime=Date.now(); this.nodes[dst]=n; delete this.nodes[src];
     if(n.type==='dir'&&n.children)for(const ch of n.children){const cn=this.nodes[this.join(dst,ch)];if(cn)cn.path=this.join(dst,ch);}
-    this.dirty();
+    this.save();
+  }
+  clearRAM(){
+    // Очищаем оперативную память /ram (кроме самой папки)
+    const ram=this.nodes['/ram'];
+    if(ram&&ram.children){
+      ram.children.forEach(c=>{ const p=this.join('/ram',c); this.remove(p,true); });
+      ram.children=[];
+    }
+    this.save();
   }
 }
 
@@ -413,52 +477,181 @@ function splitPath(p){ return p.replace(/^\/+/,'').split('/').filter(Boolean); }
 function parentPath(p){ const pp=p.replace(/\/+$/,''); const i=pp.lastIndexOf('/'); return i<=0?'/':pp.slice(0,i); }
 function norm(p){ let parts=[]; for(const seg of p.split('/')){ if(seg===''||seg==='.')continue; if(seg==='..'){parts.pop();}else parts.push(seg);} return '/'+parts.join('/'); }
 
-/* ===================== SCHEDULER / CPU ===================== */
-/* Планировщик теперь держит загрузку ядер в памяти и пишет в VFS-файлы только при запросе
-   (или редко), чтобы не спамить localStorage каждые 800 мс. */
-class Scheduler{
-  constructor(vfs){ this.vfs=vfs; this.processes=[]; this.nextPid=1; this.cores=4; this.tick=0; this.interval=null; }
-  start(){
-    if(this.interval)return;
-    this.interval=setInterval(()=>this.step(),600);
-  }
-  stop(){ if(this.interval){clearInterval(this.interval);this.interval=null;} }
+/* ===================== ЯДРО (активная папка /sys/kernel) ===================== */
+/* Ядро читает файлы из /proc и /sys, принимает решения, пишет команды в папки ядер /sys/cpu/coreN/inbox */
+class Kernel{
+  constructor(vfs){ this.vfs=vfs; this.tick=0; this.nextPid=1; }
+  // Запуск программы: создаём процесс в /proc/PID, копируем код в /ram/PID (ОЗУ), кладем задачу в inbox ядра
   spawn(name,app){
     const pid=this.nextPid++;
-    const proc={pid,name,app,state:'ready',cpu:0,started:Date.now(),ticks:0,core:null};
-    this.processes.push(proc);
-    this.step();
-    // отражаем в VFS-файл (чтение через cat / терминал)
-    this.vfs.write('/sys/cpu/core0/current','pid '+pid+' '+name,false);
-    return proc;
+    const procDir='/proc/'+pid;
+    this.vfs.mkdir(procDir);
+    this.vfs.write(procDir+'/state','ready');
+    this.vfs.write(procDir+'/cmd',name);
+    this.vfs.write(procDir+'/app',app||'');
+    this.vfs.write(procDir+'/cpu','0%');
+    this.vfs.write(procDir+'/mem','0 KB');
+    this.vfs.write(procDir+'/pc','0'); // program counter
+    // Копируем код приложения в ОЗУ (оперативная память, временная)
+    const appFile=this.vfs.nodes['/usr/apps/'+app+'.app']||this.vfs.nodes['/bin/'+app];
+    if(appFile){ this.vfs.write('/ram/'+pid+'/code',appFile.content); }
+    else { this.vfs.write('/ram/'+pid+'/code','# program: '+name+'\n'); }
+    this.vfs.write('/ram/'+pid+'/state','loaded');
+    this.vfs.write('/ram/'+pid+'/pc','0');
+    this.tick++;
+    // Пишем в состояние планировщика (активное ядро принимает решение)
+    this.vfs.write('/sys/kernel/scheduler/state','running');
+    this.vfs.write('/sys/kernel/vfs/open',String((this.vfs.nodes['/sys/kernel/vfs/open']?parseInt(this.vfs.nodes['/sys/kernel/vfs/open'].content):0)+1));
+    return {pid,name,app};
   }
   kill(pid){
-    const i=this.processes.findIndex(x=>x.pid===pid);
-    if(i>=0){ this.processes.splice(i,1); this.step(); return true;} return false;
+    const p='/proc/'+pid;
+    if(!this.vfs.exists(p))return false;
+    this.vfs.remove(p,true);
+    this.vfs.remove('/ram/'+pid,true);
+    return true;
   }
-  step(){
+  // Планировщик читает /proc/*/state и распределяет задачи по ядрам /sys/cpu/coreN/inbox
+  schedule(){
     this.tick++;
+    const procs=[];
+    const procDir=this.vfs.nodes['/proc'];
+    if(procDir&&procDir.children){
+      procDir.children.forEach(pidName=>{
+        const pd='/proc/'+pidName;
+        const node=this.vfs.nodes[pd];
+        if(!node)return;
+        const state=this.vfs.nodes[pd+'/state']?this.vfs.nodes[pd+'/state'].content:'unknown';
+        const cmd=this.vfs.nodes[pd+'/cmd']?this.vfs.nodes[pd+'/cmd'].content:'';
+        const cpu=this.vfs.nodes[pd+'/cpu']?this.vfs.nodes[pd+'/cpu'].content:'0%';
+        procs.push({pid:pidName,state,cmd,cpu,path:pd});
+      });
+    }
+    // Обновляем состояние планировщика в папке ядра
+    this.vfs.write('/sys/kernel/scheduler/state',procs.length?'running':'idle');
+    this.vfs.write('/sys/kernel/scheduler/quantum','100');
+
+    // Распределяем готовые процессы по ядрам (round-robin)
     let coreIdx=0;
-    for(const p of this.processes){
+    const loads=[0,0,0,0];
+    const currents=['-','-','-','-'];
+    procs.forEach(p=>{
       if(p.state==='ready'||p.state==='running'){
-        p.state='running'; p.core='core'+coreIdx; p.ticks++;
-        p.cpu=Math.min(99,Math.round((p.ticks/ (this.tick||1))*100));
-        coreIdx=(coreIdx+1)%this.cores;
-      }else{ p.core=null; p.cpu=0; }
-    }
-    // пишем в файлы ядер не чаще, чем нужно для отображения (без лишних dirty-сохранений)
-    for(let i=0;i<this.cores;i++){
+        const core='core'+coreIdx;
+        const inbox='/sys/cpu/'+core+'/inbox';
+        const job='/sys/cpu/'+core+'/inbox/job-'+p.pid;
+        // Создаём задачу (папку с файлами информации) в inbox ядра
+        this.vfs.mkdir(job);
+        this.vfs.write(job+'/pid',p.pid);
+        this.vfs.write(job+'/cmd',p.cmd);
+        this.vfs.write(job+'/app',this.vfs.nodes[p.path+'/app']?this.vfs.nodes[p.path+'/app'].content:'');
+        this.vfs.write(job+'/code',this.vfs.nodes['/ram/'+p.pid+'/code']?this.vfs.nodes['/ram/'+p.pid+'/code'].content:'');
+        // Обновляем состояние процесса
+        this.vfs.write(p.path+'/state','running');
+        this.vfs.write(p.path+'/core',core);
+        // Ядро отдаёт команду: процесс выполняется на этом ядре
+        loads[coreIdx]+=25;
+        currents[coreIdx]='pid '+p.pid+' '+p.cmd;
+        coreIdx=(coreIdx+1)%4;
+      }
+    });
+    // Пишем результаты в папки ядер (файлы status/load/current)
+    for(let i=0;i<4;i++){
       const core='core'+i;
-      const run=this.processes.filter(x=>x.core===core && x.state==='running');
-      const load=run.length? Math.round(run.reduce((a,b)=>a+b.cpu,0)/run.length)+'%':'0%';
-      const cur=run.length? 'pid '+run[0].pid+' '+run[0].name:'idle';
-      this.vfs.write('/sys/cpu/'+core+'/load',load,false);
-      this.vfs.write('/sys/cpu/'+core+'/current',cur,false);
+      const has=loads[i]>0;
+      this.vfs.write('/sys/cpu/'+core+'/status',has?'busy':'idle');
+      this.vfs.write('/sys/cpu/'+core+'/load',has?loads[i]+'%':'0%');
+      this.vfs.write('/sys/cpu/'+core+'/current',currents[i]);
+      // Ядро "обработало" задачи - переносим из inbox в out (результаты)
+      const inbox=this.vfs.nodes['/sys/cpu/'+core+'/inbox'];
+      const out=this.vfs.nodes['/sys/cpu/'+core+'/out'];
+      if(inbox&&inbox.children){
+        inbox.children.forEach(jobName=>{
+          const jobPath='/sys/cpu/'+core+'/inbox/'+jobName;
+          const jobNode=this.vfs.nodes[jobPath];
+          if(!jobNode)return;
+          // Результат выполнения
+          const resPath='/sys/cpu/'+core+'/out/result-'+jobNode.children?jobNode.children.join(','):'';
+          this.vfs.write(jobPath+'/result','executed on '+core+' at tick '+this.tick);
+          // Переносим задачу в out (завершена)
+          if(out&&!out.children.includes(jobName))out.children.push(jobName);
+        });
+        inbox.children=[];
+      }
     }
-    // periodic persist: сохраняем диск только каждые ~30 секунд (50 тиков)
-    if(this.tick%50===0)this.vfs.dirty();
+    return procs;
   }
-  get(){ return this.processes.slice(); }
+  getProcesses(){
+    const procs=[];
+    const procDir=this.vfs.nodes['/proc'];
+    if(procDir&&procDir.children){
+      procDir.children.forEach(pidName=>{
+        const pd='/proc/'+pidName;
+        const state=this.vfs.nodes[pd+'/state']?this.vfs.nodes[pd+'/state'].content:'unknown';
+        const cmd=this.vfs.nodes[pd+'/cmd']?this.vfs.nodes[pd+'/cmd'].content:'';
+        const cpu=this.vfs.nodes[pd+'/cpu']?this.vfs.nodes[pd+'/cpu'].content:'0%';
+        const core=this.vfs.nodes[pd+'/core']?this.vfs.nodes[pd+'/core'].content:'-';
+        procs.push({pid:pidName,state,cmd,cpu,core});
+      });
+    }
+    return procs;
+  }
+}
+
+/* ===================== CPU ЯДРА (папки coreN с inbox/out) ===================== */
+/* Каждое ядро - папка. В inbox кладутся job-папки с файлами информации. Ядро их обрабатывает и пишет в out. */
+class CPUCore{
+  constructor(index,vfs){ this.index=index; this.vfs=vfs; this.path='/sys/cpu/core'+index; }
+  pathOf(p){ return this.path+'/'+p; }
+  read(p){ return this.vfs.read(this.pathOf(p)); }
+  write(p,c){ return this.vfs.write(this.pathOf(p),c); }
+  process(){
+    const inboxPath=this.path+'/inbox';
+    const outPath=this.path+'/out';
+    const inbox=this.vfs.nodes[inboxPath];
+    const out=this.vfs.nodes[outPath];
+    if(!inbox||!inbox.children||!inbox.children.length){ this.write('status','idle'); this.write('current','-'); return []; }
+    this.write('status','busy');
+    const results=[];
+    inbox.children.forEach(jobName=>{
+      const jobPath='/sys/cpu/core'+this.index+'/inbox/'+jobName;
+      const job=this.vfs.nodes[jobPath];
+      if(!job)return;
+      const pid=job.children.includes('pid')?this.vfs.read(jobPath+'/pid'):'?';
+      const cmd=job.children.includes('cmd')?this.vfs.read(jobPath+'/cmd'):'';
+      const app=job.children.includes('app')?this.vfs.read(jobPath+'/app'):'';
+      // Ядро обрабатывает информацию из файлов job-папки
+      let output='[core'+this.index+'] executed pid='+pid+' cmd="'+cmd+'" app="'+app+'"\n';
+      output+='  read from /ram/'+pid+'/code\n';
+      output+='  program counter advanced\n';
+      output+='  result written to out folder\n';
+      // Результат в out (папка ядра отдаёт команду/результат)
+      this.write(outPath+'/result-'+jobName,output);
+      results.push({pid,cmd,app,output});
+      this.vfs.write(jobPath+'/result','executed on core'+this.index);
+    });
+    // После обработки inbox очищен, задачи перенесены в out
+    if(out&&!out.children.includes('_processed')){ /* placeholder */ }
+    this.write('load','25%');
+    this.write('current','processed '+inbox.children.length+' job(s)');
+    return results;
+  }
+}
+
+/* ===================== ОЗУ /ram (временное хранилище) ===================== */
+class RAM{
+  constructor(vfs){ this.vfs=vfs; }
+  status(){
+    const ram=this.vfs.nodes['/ram'];
+    if(!ram)return {files:0,size:0};
+    let size=0; let files=0;
+    ram.children.forEach(f=>{
+      const p='/ram/'+f;
+      const n=this.vfs.nodes[p];
+      if(n&&n.type==='file'){ files++; size+=n.content.length; }
+    });
+    return {files,size};
+  }
 }
 
 /* ===================== WINDOW MANAGER ===================== */
@@ -537,7 +730,7 @@ function makeResizable(el){
   el.appendChild(res);
   let active=false, sx,sy, w,h;
   res.addEventListener('mousedown',(e)=>{ e.preventDefault(); active=true; sx=e.clientX; sy=e.clientY; w=el.offsetWidth; h=el.offsetHeight; });
-  window.addEventListener('mousemove',(e)=>{ if(!active)return; el.style.width=Math.max(260,w+e.clientX-sx)+'px'; el.style.height=Math.max(170,h+e.clientY-sy)+'px'; });
+  window.addEventListener('mousemove',(e)=>{ if(!active)return; el.style.width=Math.max(260,w+e.clientX-sx)+'px'; el.style.height=Math.max(180,h+e.clientY-sy)+'px'; });
   window.addEventListener('mouseup',()=>{ active=false; });
 }
 function escapeHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -562,12 +755,12 @@ class Taskbar{
 
 /* ===================== CORE ===================== */
 const vfs=new VFS();
-const sched=new Scheduler(vfs);
+const kernel=new Kernel(vfs);
+const ram=new RAM(vfs);
+const cores=[new CPUCore(0,vfs),new CPUCore(1,vfs),new CPUCore(2,vfs),new CPUCore(3,vfs)];
 const wm=new WM();
 const taskbar=new Taskbar();
-sched.start();
 
-const ICONS={'💾':'💾','🖥️':'🖥️','📝':'📝','⚙️':'⚙️','ℹ️':'ℹ️'};
 const APPS=[
   {id:'filemanager',title:'Диск C',icon:'💾'},
   {id:'terminal',title:'Терминал',icon:'🖥️'},
@@ -594,31 +787,49 @@ function refreshInspector(){
   // VFS tree
   const vfsEl=document.getElementById('ins-vfs');
   vfsEl.innerHTML=renderVfsTree('/');
-  // CPU
+  // CPU cores
   const cpuEl=document.getElementById('ins-cpu');
   let html='';
-  for(let i=0;i<sched.cores;i++){
+  for(let i=0;i<4;i++){
     const load=vfs.read('/sys/cpu/core'+i+'/load');
-    const cur=vfs.read('/sys/cpu/core'+i+'/current');
+    const status=vfs.read('/sys/cpu/core'+i+'/status');
+    const current=vfs.read('/sys/cpu/core'+i+'/current');
     const pct=parseInt(load)||0;
     html+=`<div class="ins-row"><span class="ins-key">core${i}</span><span class="ins-val">${load}</span></div>
+    <div class="ins-row" style="margin-left:6px"><span class="ins-key">статус</span><span class="ins-val">${status==='busy'?'<span class="ins-val warn">'+status+'</span>':status}</span></div>
     <div class="core-bar"><div class="core-fill" style="width:${pct}%"></div></div>
-    <div class="ins-row" style="margin-left:6px"><span class="ins-key">текущий</span><span class="ins-val">${escapeHtml(cur)}</span></div>`;
+    <div class="ins-row" style="margin-left:6px"><span class="ins-key">текущее</span><span class="ins-val">${escapeHtml(current)}</span></div>`;
   }
   cpuEl.innerHTML=html;
-  // Kernel
+  // Kernel /proc & /sys/kernel
   const kerEl=document.getElementById('ins-kernel');
-  const mods=vfs.list('/sys/kernel')||[];
-  html='';
-  mods.forEach(m=>{ html+=`<div class="ins-row"><span class="ins-key">📄 ${escapeHtml(m.name)}</span><span class="ins-val ok">в папке /sys/kernel</span></div>`; });
-  kerEl.innerHTML=html||'<div class="ins-row"><span class="ins-val err">модули не найдены</span></div>';
+  const schedState=vfs.read('/sys/kernel/scheduler/state');
+  const schedPolicy=vfs.read('/sys/kernel/scheduler/policy');
+  const schedQuantum=vfs.read('/sys/kernel/scheduler/quantum');
+  const vfsOpen=vfs.read('/sys/kernel/vfs/open');
+  const procs=kernel.getProcesses();
+  html=`
+  <div class="ins-row"><span class="ins-key">состояние планировщика</span><span class="ins-val">${escapeHtml(schedState)}</span></div>
+  <div class="ins-row"><span class="ins-key">политика</span><span class="ins-val">${escapeHtml(schedPolicy)}</span></div>
+  <div class="ins-row"><span class="ins-key">квант</span><span class="ins-val">${escapeHtml(schedQuantum)}</span></div>
+  <div class="ins-row"><span class="ins-key">открыто файлов (VFS)</span><span class="ins-val">${escapeHtml(vfsOpen)}</span></div>
+  <div class="ins-row"><span class="ins-key">процессов</span><span class="ins-val">${procs.length}</span></div>
+  <div class="ins-row"><span class="ins-key">следующий PID</span><span class="ins-val">${kernel.nextPid}</span></div>`;
+  kerEl.innerHTML=html;
+  // RAM
+  const ramEl=document.getElementById('ins-ram');
+  const rst=ram.status();
+  html=`
+  <div class="ins-row"><span class="ins-key">файлов в ОЗУ</span><span class="ins-val">${rst.files}</span></div>
+  <div class="ins-row"><span class="ins-key">размер (байт)</span><span class="ins-val">${rst.size}</span></div>
+  <div class="ins-row"><span class="ins-key">путь</span><span class="ins-val">/ram (временное, очищается при ребуте)</span></div>`;
+  ramEl.innerHTML=html;
   // Processes
   const procEl=document.getElementById('ins-proc');
-  const procs=sched.get();
   html='';
   if(procs.length){
-    procs.forEach(p=>{ html+=`<div class="ins-row"><span class="ins-key">PID ${p.pid}</span><span class="ins-val">${escapeHtml(p.name)}</span></div><div class="ins-row" style="margin-left:14px"><span class="ins-key">ядро</span><span class="ins-val">${p.core||'—'}</span><span class="ins-key">CPU</span><span class="ins-val">${p.cpu||0}%</span></div>`; });
-  }else{ html='<div class="ins-row"><span class="ins-val">нет запущенных процессов</span></div>'; }
+    procs.forEach(p=>{ html+=`<div class="ins-row"><span class="ins-key">PID ${p.pid}</span><span class="ins-val">${escapeHtml(p.cmd)}</span></div><div class="ins-row" style="margin-left:14px"><span class="ins-key">состояние</span><span class="ins-val">${p.state}</span><span class="ins-key">ядро</span><span class="ins-val">${p.core}</span><span class="ins-key">CPU</span><span class="ins-val">${p.cpu}</span></div>`; });
+  }else{ html='<div class="ins-row"><span class="ins-val">нет процессов</span></div>'; }
   procEl.innerHTML=html;
   requestAnimationFrame(refreshInspector);
 }
@@ -628,7 +839,7 @@ function renderVfsTree(path,depth=0){
   const pad='  '.repeat(depth);
   let html=`<div class="ins-row" style="padding-left:${depth*14}px"><span class="ins-${n.type}">${pad}${n.type==='dir'?'📁 ':'📄 '}${escapeHtml(n.name||'root')}</span></div>`;
   if(n.type==='dir'&&n.children){
-    n.children.forEach(c=>{ html+=renderVfsTree(vfs.join(path,c),depth+1); });
+    n.children.slice().sort().forEach(c=>{ html+=renderVfsTree(vfs.join(path,c),depth+1); });
   }
   return html;
 }
@@ -657,7 +868,10 @@ document.addEventListener('keydown',(e)=>{
   });
   const sep=document.createElement('div'); sep.style.cssText='height:1px;background:#bbb;margin:6px 0;'; m.appendChild(sep);
   const shut=document.createElement('div'); shut.className='start-item'; shut.textContent='Перезагрузить ОС'; shut.style.color='#c00';
-  shut.onclick=()=>{ location.reload(); }; m.appendChild(shut);
+  shut.onclick=()=>{ kernel.tick=0; kernel.nextPid=1; vfs.clearRAM(); // ОЗУ очищается
+    vfs.nodes['/proc'].children=[]; vfs.save();
+    for(let i=0;i<4;i++){ vfs.write('/sys/cpu/core'+i+'/status','idle'); vfs.write('/sys/cpu/core'+i+'/load','0%'); vfs.write('/sys/cpu/core'+i+'/current','-'); }
+    location.reload(); }; m.appendChild(shut);
 })();
 function toggleMenu(force){ const m=document.getElementById('start-menu'); const show=force!==undefined?force:m.style.display!=='flex'; m.style.display=show?'flex':'none'; }
 document.getElementById('start-btn').onclick=(e)=>{ e.stopPropagation(); toggleMenu(); };
@@ -717,7 +931,7 @@ function openTerminal(win){
   const out=c.querySelector('#term-out'); const inp=c.querySelector('#term-in');
   function line(html){ const d=document.createElement('div'); d.className='cmd-line'; d.innerHTML=html; out.appendChild(d); out.scrollTop=out.scrollHeight; return d; }
   function promptLine(){ return '<span class="prompt">'+escapeHtml(vfs.cwd)+'</span><span class="cmd">$</span> '; }
-  line('<span class="ok">Folder OS Terminal v1.0</span><br>Всё здесь — папки и файлы. Введите <b>help</b>. Нажмите <b>F3</b> для инспектора ОС.<br>');
+  line('<span class="ok">Folder OS Terminal v2.0</span><br>Всё здесь - папки и файлы. Ядро /sys/kernel управляет ядрами /sys/cpu/coreN. ОЗУ - /ram (временное). Нажмите <b>F3</b> для инспектора.<br>');
   line(promptLine()+'<span class="cmd" id="term-cur"></span>');
   const curLine=document.getElementById('term-cur');
   let buf='';
@@ -738,9 +952,9 @@ function openTerminal(win){
     const parts=cmd.split(/\s+/); const c0=parts[0]; const args=parts.slice(1);
     try{
       switch(c0){
-        case 'help': line('Доступные команды:'); line('  ls [путь]   — содержимое папки'); line('  cd [путь]   — сменить текущую папку'); line('  pwd         — показать текущий путь'); line('  cat <файл>  — вывести файл'); line('  echo <текст> [> файл]'); line('  mkdir <папка>'); line('  touch <файл>'); line('  rm <путь>   (-r для папки)'); line('  cp <ист> <назнач>'); line('  mv <ист> <назнач>'); line('  ps          — процессы (ядер-папки)'); line('  exec <приложение>'); line('  clear       — очистить экран'); line('  uname       — информация'); line('  sysinfo     — ядро и процессор'); line('  f3          — показать инспектор ОС'); break;
+        case 'help': line('Доступные команды:'); line('  ls [путь]   - содержимое папки'); line('  cd [путь]   - сменить текущую папку'); line('  pwd         - показать текущий путь'); line('  cat <файл>  - вывести файл'); line('  echo <текст> [> файл]'); line('  mkdir <папка>'); line('  touch <файл>'); line('  rm <путь>   (-r для папки)'); line('  cp <ист> <назнач>'); line('  mv <ист> <назнач>'); line('  ps          - процессы (папки /proc/PID)'); line('  exec <приложение>'); line('  kill <pid>  - завершить процесс'); line('  clear       - очистить экран'); line('  uname       - информация'); line('  sysinfo     - ядро и процессор'); line('  ram         - состояние ОЗУ /ram'); line('  proc        - список процессов'); line('  f3          - инспектор ОС'); break;
         case 'ls':{ const target=args[0]||'.'; const nodes=vfs.list(target); if(nodes===null) line('<span class="err">Ошибка: не папка или не существует: '+escapeHtml(target)+'</span>'); else { line('Содержимое '+escapeHtml(target)+':'); nodes.forEach(n=>line('  '+(n.type==='dir'?'📁 ':'📄 ')+escapeHtml(n.name))); } } break;
-        case 'cd':{ const target=args[0]||'/home/user'; const np=vfs.resolve(target); const node=vfs.nodes[np]; if(!node) line('<span class="err">Ошибка: не существует: '+escapeHtml(target)+'</span>'); else if(node.type!=='dir') line('<span class="err">Ошибка: не папка</span>'); else { vfs.cwd=np; vfs.dirty(); } } break;
+        case 'cd':{ const target=args[0]||'/home/user'; const np=vfs.resolve(target); const node=vfs.nodes[np]; if(!node) line('<span class="err">Ошибка: не существует: '+escapeHtml(target)+'</span>'); else if(node.type!=='dir') line('<span class="err">Ошибка: не папка</span>'); else { vfs.cwd=np; vfs.save(); } } break;
         case 'pwd': line(vfs.cwd); break;
         case 'cat':{ if(!args[0]) line('<span class="err">usage: cat <файл></span>'); else { try{ line(escapeHtml(vfs.read(args[0]))); }catch(e){ line('<span class="err">'+escapeHtml(e.message)+'</span>'); } } } break;
         case 'echo':{ const gt=cmd.indexOf('>'); if(gt>=0){ const text=cmd.slice(5,gt).trim(); const file=cmd.slice(gt+1).trim(); vfs.write(file,text); line('<span class="ok">записано в '+escapeHtml(file)+'</span>'); } else { line(cmd.slice(5).trim()); } } break;
@@ -749,11 +963,14 @@ function openTerminal(win){
         case 'rm':{ if(!args[0]) line('<span class="err">usage: rm [-r] <путь></span>'); else { try{ vfs.remove(args[0],args.includes('-r')); line('<span class="ok">удалено</span>'); }catch(e){ line('<span class="err">'+escapeHtml(e.message)+'</span>'); } } } break;
         case 'cp':{ if(args.length<2) line('<span class="err">usage: cp <ист> <назнач></span>'); else { try{ vfs.cp(args[0],args[1]); line('<span class="ok">скопировано</span>'); }catch(e){ line('<span class="err">'+escapeHtml(e.message)+'</span>'); } } } break;
         case 'mv':{ if(args.length<2) line('<span class="err">usage: mv <ист> <назнач></span>'); else { try{ vfs.mv(args[0],args[1]); line('<span class="ok">перемещено</span>'); }catch(e){ line('<span class="err">'+escapeHtml(e.message)+'</span>'); } } } break;
-        case 'ps':{ line('PID  Состояние   Ядро     CPU    Приложение'); sched.get().forEach(p=>{ line('  '+p.pid+'    '+(p.state)+'      '+(p.core||'—')+'    '+(p.cpu||0)+'%    '+escapeHtml(p.name)); }); if(!sched.get().length) line('  (нет процессов)'); } break;
+        case 'ps':{ line('PID  Состояние   Ядро     CPU    Приложение'); kernel.getProcesses().forEach(p=>{ line('  '+p.pid+'    '+(p.state)+'      '+(p.core)+'    '+(p.cpu)+'    '+escapeHtml(p.cmd)); }); if(!kernel.getProcesses().length) line('  (нет процессов)'); } break;
         case 'exec':{ if(!args[0]) line('<span class="err">usage: exec <приложение></span>'); else { openApp(args[0]); } } break;
+        case 'kill':{ if(!args[0]) line('<span class="err">usage: kill <pid></span>'); else { try{ if(kernel.kill(args[0])) line('<span class="ok">процесс '+args[0]+' завершён</span>'); else line('<span class="err">процесс не найден</span>'); }catch(e){ line('<span class="err">'+escapeHtml(e.message)+'</span>'); } } } break;
         case 'clear': out.innerHTML=''; break;
-        case 'uname': line('Folder OS 1.0.0 (folder-based), linux-like'); break;
-        case 'sysinfo':{ line('Ядро: /sys/kernel (папка с модулями)'); line('Процессор: /sys/cpu (папки core0..core3)'); line('Пользователь: /home/user'); line('Рабочая папка: '+vfs.cwd); } break;
+        case 'uname': line('Folder OS 2.0.0 (folder/kernel-based), linux-like'); break;
+        case 'sysinfo':{ line('Ядро: /sys/kernel (активная папка, читает файлы, принимает решения)'); line('Процессор: /sys/cpu (ядер-папки core0..3 с inbox/out/status)'); line('ОЗУ: /ram (временное хранилище, очищается при ребуте)'); line('Процессы: /proc/PID (папки с файлами состояния)'); line('Рабочая папка: '+vfs.cwd); } break;
+        case 'ram':{ const rst=ram.status(); line('ОЗУ /ram: файлов='+rst.files+', байт='+rst.size+'. Временное - очищается при перезагрузке.'); } break;
+        case 'proc':{ const ps=kernel.getProcesses(); line('Процессы (/proc/PID):'); ps.forEach(p=>line('  PID '+p.pid+' state='+p.state+' core='+p.core+' cmd='+escapeHtml(p.cmd))); if(!ps.length) line('  (нет)'); } break;
         case 'f3': toggleInspector(); break;
         default: line('<span class="err">Команда не найдена: '+escapeHtml(c0)+' (введите help)</span>');
       }
@@ -800,20 +1017,21 @@ function openSettings(){
     '<div class="card">'+
     '<h3>Система</h3>'+
     '<span class="lbl">Имя компьютера</span><input id="st-host" value="folder-os"/>'+
-    '<span class="lbl">Версия</span><input id="st-ver" value="1.0.0" readonly/>'+
+    '<span class="lbl">Версия</span><input id="st-ver" value="2.0.0" readonly/>'+
     '<button class="btn-sm primary" id="st-apply">Применить</button>'+
     '<div id="st-msg" class="ok-msg">Готово</div>'+
     '</div>'+
     '<div class="card">'+
-    '<h3>Диск (localStorage)</h3>'+
-    '<span class="lbl">Текущий диск</span><span style="font-family:monospace;">folderos_v1</span>'+
+    '<h3>Диск и ОЗУ</h3>'+
+    '<span class="lbl">Диск (localStorage)</span><span style="font-family:monospace;">folderos_v2</span>'+
+    '<span class="lbl">ОЗУ (/ram)</span><span style="font-family:monospace;">временное, очищается при ребуте</span>'+
     '<button class="btn-sm" id="st-reset" style="color:#c00;">Сбросить ОС к заводским</button>'+
     '<div id="st-res-msg" class="ok-msg" style="color:#c00;"></div>'+
     '</div>'+
     '</div>');
   win.content.querySelector('#st-apply').onclick=()=>{
     vfs.write('/etc/hostname',win.content.querySelector('#st-host').value);
-    vfs.dirty(); document.getElementById('st-msg').style.display='block'; setTimeout(()=>document.getElementById('st-msg').style.display='none',1500);
+    vfs.save(); document.getElementById('st-msg').style.display='block'; setTimeout(()=>document.getElementById('st-msg').style.display='none',1500);
   };
   win.content.querySelector('#st-reset').onclick=()=>{ if(confirm('Сбросить все файлы и настройки?')){ vfs.reset(); location.reload(); } };
   return win;
@@ -825,14 +1043,15 @@ function openAbout(){
   if(existing){ wm.focus(existing); return existing; }
   return wm.create({app:'about'},'О системе','ℹ️',
     '<div class="app about" style="padding:24px;">'+
-    '<h2>📁 Folder OS</h2>'+
-    '<p><b>Версия:</b> 1.0.0</p>'+
-    '<p><b>Принцип:</b> вместо ядра — папка <span class="mono">/sys/kernel</span>, вместо процессора — папка <span class="mono">/sys/cpu</span>. Всё работает на папках и файлах.</p>'+
-    '<p><b>Ядро:</b> модули в папке <span class="mono">/sys/kernel/</span> (vfs.js, scheduler.js).</p>'+
-    '<p><b>Процессор:</b> ядра <span class="mono">core0..core3</span> — папки с файлами <span class="mono">load</span> и <span class="mono">current</span>.</p>'+
-    '<p><b>Диск:</b> <span class="mono">localStorage</span> (сохраняется при перезагрузке).</p>'+
-    '<p><b>Команды:</b> ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, ps, exec, help, clear, uname, sysinfo.</p>'+
-    '<p><b>F3:</b> инспектор внутреннего устройства ОС (дерево ФС, ядра, модули, процессы).</p>'+
+    '<h2>📁 Folder OS 2.0</h2>'+
+    '<p><b>Версия:</b> 2.0.0</p>'+
+    '<p><b>Принцип:</b> вместо монолитного ядра - активная папка <span class="mono">/sys/kernel</span>, которая читает файлы из /proc и /sys, принимает решения и отдаёт команды ядрам.</p>'+
+    '<p><b>Ядро:</b> <span class="mono">/sys/kernel/</span> - scheduler (распределяет процессы), vfs (файловые операции), modules.</p>'+
+    '<p><b>Процессор:</b> <span class="mono">/sys/cpu/core0..3</span> - ядра-папки с <span class="mono">inbox</span> (задачи), <span class="mono">out</span> (результаты), <span class="mono">status/load/current</span>.</p>'+
+    '<p><b>ОЗУ:</b> <span class="mono">/ram</span> - временное хранилище для кода процессов, очищается при перезагрузке.</p>'+
+    '<p><b>Процессы:</b> <span class="mono">/proc/PID</span> - папка каждого процесса с файлами <span class="mono">state</span>, <span class="mono">cmd</span>, <span class="mono">cpu</span>, <span class="mono">pc</span>.</p>'+
+    '<p><b>Команды:</b> ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, ps, exec, kill, clear, uname, sysinfo, ram, proc.</p>'+
+    '<p><b>F3:</b> инспектор внутреннего устройства ОС.</p>'+
     '<p style="margin-top:14px;font-size:12px;color:#666;">Создано для эмуляции ОС исключительно из папок и файлов.</p>'+
     '</div>');
 }
@@ -846,11 +1065,22 @@ function openApp(id){
   if(id==='filemanager'){ const win=wm.create({app:'filemanager'},a.title,a.icon,'',openFileManager); return; }
   if(id==='terminal'){ const win=wm.create({app:'terminal'},a.title,a.icon,'',openTerminal); return; }
   if(id==='editor'){ openEditor({app:'editor'},'/home/user/readme.txt'); return; }
-  const proc=sched.spawn(a.title,id);
-  wm.create({app:id},a.title,a.icon,'<div class="app" style="padding:24px;color:#666;"><h2>'+escapeHtml(a.title)+'</h2><p>Процесс PID <b>'+proc.pid+'</b> запущен на ядре <b>'+(proc.core||'—')+'</b>.</p><p>Это приложение существует как файл <span style="font-family:monospace">/usr/apps/'+id+'.app</span> и процесс в ядре-папке <span style="font-family:monospace">/sys/cpu/</span>.</p></div>');
+  // Запуск через ядро: ядро создаёт процесс в /proc, копирует код в /ram, ставит задачу в inbox ядра
+  const proc=kernel.spawn(a.title,id);
+  // Планировщик ядра распределяет по ядрам
+  kernel.schedule();
+  // Ядра обрабатывают входящие задачи
+  cores.forEach(core=>core.process());
+  wm.create({app:id},a.title,a.icon,'<div class="app" style="padding:24px;color:#666;"><h2>'+escapeHtml(a.title)+'</h2><p>Ядро создало процесс <b>PID '+proc.pid+'</b> в папке <span style="font-family:monospace">/proc/'+proc.pid+'</span>.</p><p>Код приложения скопирован в ОЗУ <span style="font-family:monospace">/ram/'+proc.pid+'/code</span> (временное).</p><p>Задача помещена в inbox ядра и обработана - это работа «на папках и файлах».</p></div>');
 }
 
-/* init: open filemanager and terminal by default */
+/* Основной цикл ядра: планировщик читает файлы /proc, ядра обрабатывают inbox */
+setInterval(()=>{
+  kernel.schedule();
+  cores.forEach(core=>core.process());
+},700);
+
+/* init: открываем файловый менеджер и терминал по умолчанию */
 setTimeout(()=>{
   openApp('filemanager');
   setTimeout(()=>openApp('terminal'),150);
