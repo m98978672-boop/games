@@ -462,7 +462,8 @@ class WM{
     }else{
       win.orig={left:win.el.style.left,top:win.el.style.top,width:win.el.style.width,height:win.el.style.height};
       win.el.classList.add('fullscreen');
-      win.el.style.zIndex=9998;
+      win.el.style.left='0';win.el.style.top='0';win.el.style.width='100vw';win.el.style.height='100vh';
+      win.el.style.zIndex=9999;
     }
     this.focus(win);
   }
