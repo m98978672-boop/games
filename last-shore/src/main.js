@@ -301,6 +301,7 @@ class Game {
   /** У каждого зверя — своя коробка, отдельная от остальных */
   registerMobHitboxes() {
     for (const mob of this.mobs.list) {
+      if (this.hitboxIds.mobs.has(mob)) continue;
       const hb = mob.hitboxSize || mob.def.hitbox;
       const c = mob.hitboxCenter || { x: 0, y: hb.h / 2, z: 0 };
       const id = this.hitboxes.register('mob', () => {
@@ -736,7 +737,7 @@ class Game {
           this.player.applyCamera(this.camera, this.mineWorld, 1);
           this.audio.stoneBreak?.();
           this.spawnChips(spot.x, spot.y + 0.6, spot.z, { count: 16, color: 0x9a958c, size: 0.08, spread: 2.4, up: 2.4 });
-          this.ui.toast(`Новый слой: −${Math.abs(this.mine.level.y) | 0} м. Жил здесь больше.`);
+          this.ui.toast(this.mine.level.hell ? `Адская прослойка: −${Math.abs(this.mine.level.y) | 0} м. Берегись лавы!` : `Слой: −${Math.abs(this.mine.level.y) | 0} м.`);
           this.save();
         }
         break;
@@ -2412,8 +2413,10 @@ class Game {
     this.audio.updateMusic(dt, skyInfo.night);
 
     // под водой: свет гаснет с глубиной, дальний план тонет в сине-зелёной мгле
-    if (!this.underground && this.camera.position.y < CONFIG.world.seaLevel + this.waveAt(this.camera.position.x, this.camera.position.z)) {
-      const d = Math.max(0, CONFIG.world.seaLevel - this.camera.position.y);
+    const cameraWater = this.world.waterLevelAt(this.camera.position.x, this.camera.position.z);
+    const cameraWave = this.world.pitAt(this.camera.position.x, this.camera.position.z) ? 0 : this.waveAt(this.camera.position.x, this.camera.position.z);
+    if (!this.underground && cameraWater !== null && this.camera.position.y < cameraWater + cameraWave && this.world.heightAt(this.camera.position.x, this.camera.position.z) < cameraWater) {
+      const d = Math.max(0, cameraWater - this.camera.position.y);
       const murk = Math.min(1, 0.35 + d * 0.16);
       this.sky.sun.intensity *= 1 - murk * 0.72;
       this.sky.hemi.intensity *= 1 - murk * 0.5;
@@ -2433,7 +2436,7 @@ class Game {
     if (this.underground) {
       this.sky.sun.intensity *= 0.06;
       this.sky.hemi.intensity *= 0.14;
-      this.scene.fog.color.setHex(0x0b0d10);
+      this.scene.fog.color.setHex(this.mine.level?.hell ? 0x31100d : 0x0b0d10);
       this.scene.fog.near = 2;
       this.scene.fog.far = 26;
     }
@@ -2491,17 +2494,21 @@ class Game {
     }
 
     // --- ресурсы и костры ---
-    this.resources.update(dt);
+    this.resources.update(dt, this.rainIntensity);
+    const envSurface = this.underground ? 'stone' : this.world.layerAt(this.player.position.x, this.player.position.z);
+    this.player.updateEnvironment(dt, this.underground ? 0 : this.rainIntensity, envSurface, !this.underground && (this.player.swimming || this.player.wading > 0.1));
 
     // --- звери (ничего не прячем: все модели прогружены) ---
     if (this.frameIndex % 30 === 0) this.syncPickupHitboxes();
     this.mobs.update(dt, this.player, {
       audio: this.audio,
+      resources: this.resources,
       night: skyInfo.night,
       listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
       onHit: (dmg, cause, mob) => this.takeDamage(dmg, cause, mob),
       onDrop: (items) => { for (const [id, n] of Object.entries(items)) this.addItem(id, n); },
     });
+    if (this.hitboxIds.mobs.size !== this.mobs.list.length) this.registerMobHitboxes();
     this.updateProjectiles(dt);
     this.updateChips(dt);
     this.attackCooldown = Math.max(0, this.attackCooldown - dt);
@@ -2545,7 +2552,8 @@ class Game {
     // --- здоровье ---
     let cause = null;
     let dmg = 0;
-    if (state.thirst <= 0) { dmg += CONFIG.needs.healthDrain * 0.8; cause = 'обезвоживание'; }
+    if (!this.creative && !this.underground && this.resources.fireHazard(this.player.position)) { dmg += 5; cause = 'огонь'; }
+    if (state.thirst <= 0) { dmg += CONFIG.needs.healthDrain * 0.8; cause = cause || 'обезвоживание'; }
     if (state.hunger <= 0) { dmg += CONFIG.needs.healthDrain * 0.6; cause = cause || 'истощение'; }
     if (state.warmth < 12) { dmg += CONFIG.needs.coldDrain * 0.5; cause = cause || 'переохлаждение'; }
     // кончился воздух под водой — здоровье тает, пока герой не всплывёт

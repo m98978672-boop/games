@@ -1738,14 +1738,15 @@ export class World {
   }
 
   /** Погасить или вернуть объект растительности (срубленное дерево, добытый камень) */
-  setNodeVisible(item, visible) {
+  setNodeVisible(item, visible, growth = 1) {
     if (!item || !item.parts || !item.parts.length) return;
     const dummy = this._dummy || (this._dummy = new THREE.Object3D());
+    item.growth = growth;
     for (const part of item.parts) {
       const target = part.baseScale ?? 1;
       dummy.position.set(item.x, item.h - 0.15, item.z);
       dummy.rotation.set(0, item.rot || 0, 0);
-      dummy.scale.setScalar(visible ? target : 0.0001);
+      dummy.scale.setScalar(visible ? target * growth : 0.0001);
       dummy.updateMatrix();
       part.mesh.setMatrixAt(part.idx, dummy.matrix);
       part.mesh.instanceMatrix.needsUpdate = true;
@@ -1761,7 +1762,7 @@ export class World {
       const target = part.baseScale ?? 1;
       dummy.position.set(item.x, item.h - 0.15, item.z);
       dummy.rotation.set(0, item.rot || 0, 0);
-      dummy.scale.setScalar(visible ? target : 0.0001);
+      dummy.scale.setScalar(visible ? target * (item.growth ?? 1) : 0.0001);
       dummy.updateMatrix();
       part.mesh.setMatrixAt(part.idx, dummy.matrix);
       part.mesh.instanceMatrix.needsUpdate = true;
@@ -2092,6 +2093,13 @@ export class World {
     return this.cutPits.get(ix * 1024 + iz) || null;
   }
 
+  /** Локальная поверхность воды в яме или уровень моря вне неё. */
+  waterLevelAt(x, z) {
+    const pit = this.pitAt(x, z);
+    if (!pit) return CONFIG.world.seaLevel;
+    return pit.waterDepth > 0.015 ? pit.floorY + pit.waterDepth : null;
+  }
+
   /** Пересобрать индекс рельефа без клеток ям — это и есть настоящая дыра */
   _rebuildTerrainIndex() {
     const geo = this.terrain && this.terrain.geometry;
@@ -2358,18 +2366,23 @@ export class World {
       chunks[i].rotation.y = a * 2.1;
     }
     pit.debrisMotion = [];
-    if (collapsed > 0) {
-      // Небольшие физические обломки падают внутрь, затем остаются лежать.
-      pit.debrisMotion = chunks.map((chunk, i) => {
-        const angle = i * Math.PI * 2 / chunks.length;
-        chunk.position.set(cx + Math.cos(angle) * (rect.x1 - rect.x0) * 0.32,
-          exitY + 0.12 + i * 0.03, cz + Math.sin(angle) * (rect.z1 - rect.z0) * 0.32);
-        return { mesh: chunk, vx: -Math.cos(angle) * 0.45, vy: 0.4 + i * 0.08, vz: -Math.sin(angle) * 0.45, active: true };
-      });
-    }
+    if (collapsed > 0) this._slumpPit(pit);
     pit.group.position.set(0, 0, 0);
     pit.group.visible = true;
     return pit;
+  }
+
+  /** Небольшое осыпание: комья падают с края, не создавая новых клеток. */
+  _slumpPit(pit) {
+    const rect = pit.rect;
+    const cx = (rect.x0 + rect.x1) * 0.5, cz = (rect.z0 + rect.z1) * 0.5;
+    const chunks = pit.debris.children;
+    pit.debrisMotion = chunks.map((chunk, i) => {
+      const angle = i * Math.PI * 2 / chunks.length;
+      chunk.position.set(cx + Math.cos(angle) * (rect.x1 - rect.x0) * 0.32,
+        pit.exitY + 0.12 + i * 0.03, cz + Math.sin(angle) * (rect.z1 - rect.z0) * 0.32);
+      return { mesh: chunk, vx: -Math.cos(angle) * 0.45, vy: 0.4 + i * 0.08, vz: -Math.sin(angle) * 0.45, active: true };
+    });
   }
 
   /** Локальная приближённая физика только для существующих ям, с шагом 0,2 с. */
@@ -2385,6 +2398,14 @@ export class World {
         pit.waterMesh.visible = pit.waterDepth > 0.015;
         pit.waterMesh.position.y = pit.floorY + pit.waterDepth;
         const wet = pit.wetness;
+        // Размокший песок иногда осыпается даже без нового удара.
+        if (pit.surface === 'sand' && wet > 0.7 && pit.exitY - pit.floorY > 0.8) {
+          pit.slumpTimer = (pit.slumpTimer || 0) + step;
+          if (pit.slumpTimer >= 45 && !pit.debrisMotion.some(piece => piece.active)) {
+            pit.slumpTimer = 0;
+            this._slumpPit(pit);
+          }
+        } else pit.slumpTimer = 0;
         pit.mat.color.setRGB(1 - wet * 0.17, 1 - wet * 0.15, 1 - wet * 0.1);
         for (const piece of pit.debrisMotion || []) {
           if (!piece.active) continue;

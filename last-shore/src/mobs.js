@@ -151,6 +151,7 @@ export class Mobs {
     this.rng = makeRng(seed + 4242);
     this.list = [];
     this.time = 0;
+    this.ecologyTimer = 0;
     this.group = new THREE.Group();
     this.group.name = 'mobs';
     scene.add(this.group);
@@ -256,9 +257,9 @@ export class Mobs {
     return null;
   }
 
-  spawn(type) {
+  spawn(type, birthSpot = null) {
     const def = TYPES[type];
-    const spot = this._denSpot(type, def) || this._spot(def.biomes, null, 0, def);
+    const spot = birthSpot || this._denSpot(type, def) || this._spot(def.biomes, null, 0, def);
     const built = def.model();
 
     // хитбокс строим по фактическим габаритам модели: коробка всегда
@@ -363,8 +364,8 @@ export class Mobs {
     return -1;
   }
 
-  _respawn(mob) {
-    const spot = this._denSpot(mob.type, mob.def) || this._spot(mob.def.biomes, null, 0, mob.def);
+  _respawn(mob, birthSpot = null) {
+    const spot = birthSpot || this._denSpot(mob.type, mob.def) || this._spot(mob.def.biomes, null, 0, mob.def);
     if (spot.den) mob.den = spot.den;
     mob.x = spot.x;
     mob.z = spot.z;
@@ -496,7 +497,7 @@ export class Mobs {
       // зверь тоже сдвигается — чтобы не «вдавливать» его в игрока
       const mx = mob.x - nx * push * 0.25;
       const mz = mob.z - nz * push * 0.25;
-      if (!this._blocked(mx, mz, this._collisionRadius(mob))) { mob.x = mx; mob.z = mz; }
+      if (this._canMoveWater(mob, mx, mz) && !this._blocked(mx, mz, this._collisionRadius(mob))) { mob.x = mx; mob.z = mz; }
     }
   }
 
@@ -508,11 +509,12 @@ export class Mobs {
 
   /** Звери не слипаются: расталкиваем их между собой (два прохода — стабильнее) */
   _separate() {
-    this._separateOnce();
-    this._separateOnce();
+    const radii = this.list.map(m => m.alive ? this._collisionRadius(m) : 0);
+    this._separateOnce(radii);
+    this._separateOnce(radii);
   }
 
-  _separateOnce() {
+  _separateOnce(radii = this.list.map(m => m.alive ? this._collisionRadius(m) : 0)) {
     const list = this.list;
     for (let i = 0; i < list.length; i++) {
       const a = list[i];
@@ -523,7 +525,8 @@ export class Mobs {
         if (a.def.flying !== b.def.flying) continue;
         const dx = a.x - b.x;
         const dz = a.z - b.z;
-        const min = this._collisionRadius(a) + this._collisionRadius(b) + 0.05;
+        const min = radii[i] + radii[j] + 0.05;
+        if (Math.abs(dx) >= min || Math.abs(dz) >= min) continue;
         const d2 = dx * dx + dz * dz;
         if (d2 >= min * min) continue;
 
@@ -541,9 +544,9 @@ export class Mobs {
           nz = dz / d;
         }
         const push = (min - d) * 0.5;
-        const ar = this._collisionRadius(a), br = this._collisionRadius(b);
-        if (!this._blocked(a.x + nx * push, a.z + nz * push, ar)) { a.x += nx * push; a.z += nz * push; }
-        if (!this._blocked(b.x - nx * push, b.z - nz * push, br)) { b.x -= nx * push; b.z -= nz * push; }
+        const ar = radii[i], br = radii[j];
+        if (this._canMoveWater(a, a.x + nx * push, a.z + nz * push) && !this._blocked(a.x + nx * push, a.z + nz * push, ar)) { a.x += nx * push; a.z += nz * push; }
+        if (this._canMoveWater(b, b.x - nx * push, b.z - nz * push) && !this._blocked(b.x - nx * push, b.z - nz * push, br)) { b.x -= nx * push; b.z -= nz * push; }
       }
     }
   }
@@ -656,11 +659,10 @@ export class Mobs {
     const r = mob.def.radius || 0.45;
     // цель патруля обязана быть проходимой: иначе зверь идёт в ствол,
     // упирается и стоит на месте всё время, пока не сменится состояние
-    const hHere = this.world.heightAt(mob.x, mob.z);
     const ok = (x, z) => {
       const h = this.world.heightAt(x, z);
       if (swim) { if (h > -0.9 || h < -7) return false; }
-      else if (h < -0.12 && h < hHere - 0.05) return false;   // глубже, чем стоит, — нельзя
+      else if (!this._canMoveWater(mob, x, z)) return false;
       return !this._blocked(x, z, r * 1.1);
     };
     for (let i = 0; i < 14; i++) {
@@ -727,7 +729,7 @@ export class Mobs {
         // далеко — не считаем поведение каждый кадр, но модель остаётся в мире
         mob.dormant = true;
         if (!mob.group.visible) mob.group.visible = true;
-        this._dormantStep(mob, dt);
+        if (this._dormantStep(mob, dt)) this._place(mob, dt);
         continue;
       }
       mob.dormant = false;
@@ -787,6 +789,90 @@ export class Mobs {
     }
 
     this._separate();
+    this.ecologyTimer += dt;
+    while (this.ecologyTimer >= 10) {
+      this.ecologyTimer -= 10;
+      this._ecologyStep(ctx.resources);
+    }
+  }
+
+  /** Высота воды относительно пола: море и локально затопленные ямы. */
+  _waterDepth(x, z) {
+    const ground = this.world.heightAt(x, z);
+    const pit = this.world.pitAt?.(x, z);
+    const surface = pit && pit.waterDepth > 0 ? pit.floorY + pit.waterDepth : -Infinity;
+    const sea = !pit || pit.seaSource ? CONFIG.world.seaLevel : -Infinity;
+    return Math.max(0, sea - ground, surface - ground);
+  }
+
+  _canMoveWater(mob, x, z) {
+    if (mob.def.flying) return true;
+    const next = this._waterDepth(x, z), current = this._waterDepth(mob.x, mob.z);
+    if (mob.def.swim) return next >= 0.5;
+    // Вышедший на сушу зверь не входит в глубокую воду; оказавшийся в ней
+    // может идти только к берегу. Это не модель плавания и не телепортация.
+    return next <= 0.15 || (current > 0.15 && next < current - 0.001);
+  }
+
+  /** Редкий ограниченный цикл: хищничество, ягоды, парное размножение. */
+  _ecologyStep(resources) {
+    const living = this.list.filter(m => m.alive);
+    for (const m of living) {
+      if (!m.def.swim && !m.def.flying && this._waterDepth(m.x, m.z) > 0.15) {
+        // Вытесненный в затопленную яму зверь пытается выбраться к мелководью.
+        for (let i = 0; i < 8; i++) {
+          const angle = i * Math.PI / 4, x = m.x + Math.cos(angle), z = m.z + Math.sin(angle);
+          if (this._canMoveWater(m, x, z) && !this._blocked(x, z, this._collisionRadius(m))) {
+            m.x = x; m.z = z; this._place(m, 0); break;
+          }
+        }
+        if (this._waterDepth(m.x, m.z) > 0.15) {
+          m.hp -= 3; if (m.hp <= 0) { this.kill(m); continue; }
+        }
+      }
+      if (resources?.fireHazard({x:m.x, z:m.z})) {
+        m.hp -= 5; if (m.hp <= 0) { this.kill(m); continue; }
+      }
+      if (m.youngAt !== undefined) {
+        const age = Math.min(1, (this.time - m.youngAt) / 100);
+        m.group.scale.setScalar(0.62 + age * 0.38);
+        if (age >= 1) delete m.youngAt;
+      }
+      if (m.type === 'snake') {
+        const prey = living.find(p => p.alive && (p.type === 'rabbit' || p.type === 'lizard') && (p.x-m.x)**2 + (p.z-m.z)**2 < 2.2**2);
+        if (prey) { prey.hp -= 3; if (prey.hp <= 0) this.kill(prey); }
+      }
+      if (resources && (m.type === 'monkey' || m.type === 'boar')) {
+        const food = resources.nodes.find(n => n.type === 'bush' && n.alive && n.berries && (n.x-m.x)**2 + (n.z-m.z)**2 < 2.5**2);
+        if (food && resources.canPickBerries(food)) resources.pickBerries(food);
+      }
+    }
+    for (const [type, def] of Object.entries(TYPES)) {
+      const adults = living.filter(m => m.alive && m.type === type && m.youngAt === undefined && (m.breedAt || 0) <= this.time);
+      if (adults.length < 2 || living.filter(m => m.alive && m.type === type).length >= Math.ceil(def.count * 1.3)) continue;
+      let parents = null;
+      for (let i = 0; i < adults.length && !parents; i++) for (let j = i + 1; j < adults.length; j++) {
+        if ((adults[i].x-adults[j].x)**2 + (adults[i].z-adults[j].z)**2 <= 30**2) { parents = [adults[i], adults[j]]; break; }
+      }
+      if (!parents) continue;
+      const a = parents[0]; let spot = null;
+      for (let i = 0; i < 16; i++) {
+        const angle = this.rng() * Math.PI * 2, r = 3 + this.rng() * 4;
+        const x = a.x + Math.cos(angle)*r, z = a.z + Math.sin(angle)*r;
+        const h = this.world.heightAt(x,z);
+        if (!this._canMoveWater(a,x,z) || this.world.slopeAt(x,z) > 0.6 || this._blocked(x,z,(def.radius || 0.5)+0.1,true)) continue;
+        if (living.some(m => m.alive && (m.x-x)**2+(m.z-z)**2 < 4)) continue;
+        spot = {x,z,h,den:a.den}; break;
+      }
+      if (!spot) continue;
+      const slot = this.list.find(m => !m.alive && m.type === type && m.deadTimer > 2.6 && this.time >= m.respawnAt);
+      if (!slot && this.list.filter(m => m.type === type).length >= Math.ceil(def.count * 1.3)) continue;
+      const baby = slot ? (this._respawn(slot, spot), slot) : this.spawn(type, spot);
+      baby.youngAt = this.time; baby.group.scale.setScalar(0.62); this._place(baby, 0);
+      baby.breedAt = this.time + 160;
+      parents[0].breedAt = parents[1].breedAt = this.time + 160;
+      living.push(baby);
+    }
   }
 
   _dormantStep(mob, dt) {
@@ -800,9 +886,10 @@ export class Mobs {
     const nx = mob.x + clamp(tx - mob.x, -1, 1) * dt * 0.6;
     const nz = mob.z + clamp(tz - mob.z, -1, 1) * dt * 0.6;
     // шаг только по свободному месту: иначе далёкий зверь «залезает» в дерево
-    if (!this._blocked(nx, nz, this._collisionRadius(mob))) {
+    if (this._canMoveWater(mob, nx, nz) && !this._blocked(nx, nz, this._collisionRadius(mob))) {
       mob.x = nx;
       mob.z = nz;
+      return true;
     } else {
       mob.think = 0.5 + this.rng();
     }
@@ -821,7 +908,7 @@ export class Mobs {
       });
       if (mob.deadTimer > 2.6) mob.group.visible = false;
     }
-    if (this.time > mob.respawnAt) this._respawn(mob);
+    // Новое животное появляется только в ходе размножения, а не из таймера смерти.
   }
 
   /** Принятие решения: чистый автомат, без магии чисел по месту */
@@ -1010,9 +1097,7 @@ export class Mobs {
     // в воду не лезем, а рыба — наоборот, из воды не выходит.
     // Сухопутный зверь всегда может шагнуть на мель и выбраться из воды,
     // но не глубже, чем стоит: иначе он намертво прилипает к кромке.
-    const hCur = this.world.heightAt(mob.x, mob.z);
-    const tooDeep = (h) => (def.swim ? h > -0.5 : (h < -0.15 && h < hCur - 0.05));
-    if (tooDeep(this.world.heightAt(nx, nz))) {
+    if (!this._canMoveWater(mob, nx, nz)) {
       mob.targetX = mob.home.x;
       mob.targetZ = mob.home.z;
       if (mob.state === 'chase') this.setState(mob, 'patrol');
@@ -1030,8 +1115,7 @@ export class Mobs {
       const tx = mob.x + dx * step;
       const tz = mob.z + dz * step;
       if (this._blocked(tx, tz, this._collisionRadius(mob))) continue;
-      const h = this.world.heightAt(tx, tz);
-      if (tooDeep(h)) continue;
+      if (!this._canMoveWater(mob, tx, tz)) continue;
       mob.x = tx;
       mob.z = tz;
       moved = true;

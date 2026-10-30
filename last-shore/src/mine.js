@@ -167,13 +167,13 @@ export class Mine {
         if (!cell || !cell.open) continue;
         const x = this._worldX(cx);
         const z = this._worldZ(cz);
-        const tone = 0xffffff - Math.floor(rng() * 5) * 0x050505;
+        const tone = (level.hell ? 0x8b514b : 0xffffff) - Math.floor(rng() * 5) * 0x050505;
         if (cell.type === 'lava') {
           lavas.push(box(CELL, 0.3, CELL, x, y - 0.16, z, 0xff8a3a));
         } else {
           floors.push(box(CELL, 0.36, CELL, x, y - 0.2, z, tone));
         }
-        ceilings.push(box(CELL, 0.4, CELL, x, y + WALL_H, z, 0x8f8a80 - Math.floor(rng() * 3) * 0x040404));
+        ceilings.push(box(CELL, 0.4, CELL, x, y + WALL_H, z, (level.hell ? 0x704039 : 0x8f8a80) - Math.floor(rng() * 3) * 0x040404));
       }
     }
 
@@ -215,7 +215,7 @@ export class Mine {
     // --- стены: InstancedMesh, по одному блоку на жилу ---
     const veinList = [...level.veins.values()];
     const wallGeo = new THREE.BoxGeometry(CELL, WALL_H, CELL);
-    const wallMesh = new THREE.InstancedMesh(wallGeo, flatMat({ color: level.deep ? 0x9a8f84 : 0xb3ab9c }), Math.max(1, veinList.length));
+    const wallMesh = new THREE.InstancedMesh(wallGeo, flatMat({ color: level.hell ? 0x6d3a35 : level.deep ? 0x9a8f84 : 0xb3ab9c }), Math.max(1, veinList.length));
     wallMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     wallMesh.frustumCulled = false;
     wallMesh.receiveShadow = true;
@@ -494,6 +494,7 @@ export class Mine {
   digDown() {
     const cur = this.level;
     if (!cur) return null;
+    if (this.hasDeeper()) return this.switchLevel(1);
     if (this.levels.length >= 7) return null;
 
     const y = cur.y - 16;
@@ -510,12 +511,15 @@ export class Mine {
     for (let i = 0; i < 30; i++) {
       open(start.cx + i, start.cz);
       open(start.cx, start.cz - i);
+      open(start.cx + i, start.cz + 1);
+      open(start.cx - 1, start.cz - i);
       if (i % 6 === 0) open(start.cx + i, start.cz - 1);
     }
 
     const level = {
       index: this.levels.length,
       deep: true,
+      hell: true,
       y,
       grid,
       veins: new Map(),
@@ -547,11 +551,12 @@ export class Mine {
 
     // лава в новых залах
     let lava = 0;
-    for (let cz = 2; cz < W - 2 && lava < 24; cz++) {
-      for (let cx = 2; cx < W - 2 && lava < 24; cx++) {
+    for (let cz = 2; cz < W - 2 && lava < 60; cz++) {
+      for (let cx = 2; cx < W - 2 && lava < 60; cx++) {
         const cell = grid[this._cellKey(cx, cz)];
         if (!cell || !cell.open) continue;
-        if (this.rng() < 0.2) { cell.type = 'lava'; lava++; }
+        if (Math.abs(cx - start.cx) <= 2 && Math.abs(cz - start.cz) <= 2) continue;
+        if (this.rng() < 0.42) { cell.type = 'lava'; lava++; }
       }
     }
 
@@ -756,7 +761,7 @@ export class Mine {
     }
     const lvl = this.level;
     if (!lvl) return;
-    if (lvl.lavaMat) lvl.lavaMat.emissiveIntensity = 1.3 + Math.sin(this.time * 2.1) * 0.4;
+    if (lvl.lavaGroup) for (const mesh of lvl.lavaGroup.children) mesh.material.emissiveIntensity = 1.3 + Math.sin(this.time * 2.1) * 0.4;
     if (lvl.light) lvl.light.intensity = (lvl.deep ? 1.6 : 1.0) * (0.9 + Math.sin(this.time * 3.1) * 0.08);
     if (lvl.gemMesh && lvl.gemMesh.material) {
       lvl.gemMesh.material.emissiveIntensity = 0.9 + Math.sin(this.time * 1.7) * 0.25;
