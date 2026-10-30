@@ -37360,6 +37360,55 @@ void main() {
     }
   };
 
+  // src/collider-index.js
+  var ColliderIndex = class {
+    constructor(colliders, cellSize = 8) {
+      this.colliders = colliders;
+      this.cellSize = cellSize;
+      this.cells = /* @__PURE__ */ new Map();
+      this.count = 0;
+    }
+    sync(colliders) {
+      if (colliders !== this.colliders || colliders.length < this.count) {
+        this.colliders = colliders;
+        this.cells.clear();
+        this.count = 0;
+      }
+      const cell = this.cellSize;
+      while (this.count < colliders.length) {
+        const c = colliders[this.count++];
+        if (!Number.isFinite(c.x) || !Number.isFinite(c.z) || !Number.isFinite(c.r)) continue;
+        const r = Math.abs(c.r);
+        const minX = Math.floor((c.x - r) / cell), maxX = Math.floor((c.x + r) / cell);
+        const minZ = Math.floor((c.z - r) / cell), maxZ = Math.floor((c.z + r) / cell);
+        for (let x = minX; x <= maxX; x++) for (let z = minZ; z <= maxZ; z++) {
+          const key2 = `${x},${z}`;
+          let bucket = this.cells.get(key2);
+          if (!bucket) this.cells.set(key2, bucket = []);
+          bucket.push(c);
+        }
+      }
+    }
+    query(colliders, minX, minZ, maxX, maxZ) {
+      this.sync(colliders);
+      const cell = this.cellSize;
+      const out = [], seen = /* @__PURE__ */ new Set();
+      for (let x = Math.floor(minX / cell); x <= Math.floor(maxX / cell); x++) {
+        for (let z = Math.floor(minZ / cell); z <= Math.floor(maxZ / cell); z++) {
+          const bucket = this.cells.get(`${x},${z}`);
+          if (!bucket) continue;
+          for (const c of bucket) {
+            if (!seen.has(c)) {
+              seen.add(c);
+              out.push(c);
+            }
+          }
+        }
+      }
+      return out;
+    }
+  };
+
   // src/mobs.js
   var TYPES = {
     boar: {
@@ -37938,13 +37987,24 @@ void main() {
     // ------------------------------------------------------------
     //  Восприятие
     // ------------------------------------------------------------
+    // Индекс лишь отбирает кандидатов: точные проверки столкновений остаются прежними.
+    _colliderCandidates(minX, minZ, maxX, maxZ) {
+      if (!this._colliderIndex) this._colliderIndex = new ColliderIndex(this.world.colliders);
+      return this._colliderIndex.query(this.world.colliders, minX, minZ, maxX, maxZ);
+    }
     /** Линия видимости: строго по прямой между зверем и игроком не должно быть стволов/камней */
     _hasLineOfSight(mob, target) {
       var _a;
       const camHeight = (_a = target.eyeY) != null ? _a : 1.4;
       const from = { x: mob.x, y: this.world.heightAt(mob.x, mob.z) + 0.7, z: mob.z };
       const to = { x: target.x, y: camHeight, z: target.z };
-      for (const c of this.world.colliders) {
+      const candidates = this._colliderCandidates(
+        Math.min(from.x, to.x),
+        Math.min(from.z, to.z),
+        Math.max(from.x, to.x),
+        Math.max(from.z, to.z)
+      );
+      for (const c of candidates) {
         if (c.disabled) continue;
         if (c.r < 0.3) continue;
         if (this._segmentHitsCircle(from, to, c, c.r * 0.85)) return false;
@@ -38366,7 +38426,8 @@ void main() {
     _blocked(x, z, r, strict = false) {
       const pad = strict ? 0 : r * 0.2;
       if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
-      for (const c of this.world.colliders) {
+      const radius = r + pad;
+      for (const c of this._colliderCandidates(x - radius, z - radius, x + radius, z + radius)) {
         if (c.disabled || c.fire || c.kind === "den") continue;
         if (c.r < 0.3 && !strict) continue;
         const dx = x - c.x;
@@ -40821,7 +40882,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 12:47" : "dev";
+  var BUILD = true ? "2026-10-30 13:25" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
