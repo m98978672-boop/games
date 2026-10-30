@@ -6,7 +6,9 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CONFIG, COLORS } from './config.js';
 import { createTerrainMaterial, createPlantMaterial, createStoneMaterial } from './terrain.js';
-import { ShellField, hullFromGeometry, hullsFromGeometry } from './shells.js';
+import { ShellField, hullsFromGeometry } from './shells.js';
+import { meshSections } from './mesh-sections.js';
+import { cutTerrain } from './terrain-cut.js';
 import { fbm, ridged, makeRng, clamp, smoothstep } from './noise.js';
 import {
   makePalmParts, makeTreeParts, makeBushParts, makeRockParts, makePickupGeometries,
@@ -14,7 +16,7 @@ import {
 } from './models.js';
 
 const SIZE = CONFIG.world.size;
-const GRID = CONFIG.world.segments + 1; // 201 точка на сторону
+const GRID = CONFIG.world.segments + 1;
 const STEP = SIZE / (GRID - 1);
 
 // Толщина слоёв под ногами: сначала земля/песок, под ней — камень (тот самый
@@ -44,7 +46,7 @@ const STRATA = [
 ];
 const STONE_THICK = STRATA.reduce((sum, st) => sum + st.thick, 0);
 const VOID_COLOR = 0x2b2433;
-// Предел роста одной ямы после обвалов: 8 клеток в сторону (14.4 м)
+// Предел роста одной ямы после обвалов: 8 метровых клеток в сторону
 const MAX_PIT_CELLS = 8;
 const rng0 = (i) => (i * 2.399963) % (Math.PI * 2);
 
@@ -61,7 +63,7 @@ const ISLETS = [
   { x: 8, z: -146, rad: 30, h: 4.2 },
   { x: -160, z: 22, rad: 27, h: 3.6 },
 ];
-const DIG_CELL = 1.4;
+const DIG_CELL = 1; // размеры блока добычи — 1 м × 1 м
 
 // Почва под ногами: у каждой полосы свой цвет — от светлого песка
 // до красной глины, суглинка, гравия и лесной подстилки
@@ -810,7 +812,7 @@ export class World {
       if (n) sp.y = sum / n;
       for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
         for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
-          if (this.cutCells && this.cutCells.has(ix * 1024 + iz)) continue;
+          if (this._terrainCellCut(ix, iz)) continue;
           // чужое ядро (уже ровная земля под соседней моделью) не трогаем
           if (this.flatCore.has(iz * GRID + ix)) continue;
           const nx = -half + ix * STEP;
@@ -1069,8 +1071,9 @@ export class World {
         g.computeBoundingBox();
         const box = g.boundingBox;
         if (!box || box.max.y < 0.25 || box.max.y - box.min.y < 0.12) continue;
-        const poly = hullFromGeometry([g], { pad: 0.015 });
-        if (poly) sectors.push({ poly, minY: box.min.y, maxY: box.max.y });
+        // Каждая деталь сохраняет форму в нескольких поясах, без обрезки
+        // граней на границах пояса.
+        sectors.push(...meshSections([g]));
       }
       const mesh = new THREE.InstancedMesh(coveredGeo, mat, list.length);
       mesh.castShadow = true;
@@ -1359,28 +1362,17 @@ export class World {
           if (!geo.boundingBox) geo.computeBoundingBox();
           vbox = vbox ? vbox.clone().union(geo.boundingBox) : geo.boundingBox.clone();
         }
-        // обводка варианта: выпуклая оболочка силуэта в плане (локальные оси).
-        // Обводим только ствол/основание и не шире «твёрдой» части модели:
-        // иначе между деревьями нельзя пробежать, а маленький камень
-        // превращается в невидимую стену.
-        const height = vbox ? vbox.max.y - vbox.min.y : 0;
-        // контур обводки — по основанию (ствол, корни, валун), но сама призма
-        // идёт на всю высоту модели: иначе на склоне можно «перешагнуть» ствол
-        const hullTop = height > 3 ? vbox.min.y + 1.35 : vbox.max.y;
-        const shellTop = vbox ? vbox.max.y : hullTop;
-        // Обводка по поясам: низ — по корням/комелю, выше — по стволу.
-        // Крона и листья в обводку не входят, поэтому под деревом можно пройти,
-        // а ствол держит ровно по своему силуэту.
-        const treeLike = height > 2.4;
-        // ствол заканчивается примерно на половине высоты — выше начинается
-        // крона, и обводка не должна лезть в листву «трубой до неба»
-        const hullParts = hullsFromGeometry(Object.values(variant), {
-          pad: 0.02,
-          top: treeLike ? vbox.min.y + Math.min(height * 0.58, 5.4) : vbox.max.y,
-          bands: treeLike ? 2 : 1,
-          basePad: treeLike ? 0.22 : 0,
-          maxRadius: solidR ? solidR * 1.1 : undefined,
-        });
+        // Твёрдые детали дерева и валуна: отдельные компоненты меша,
+        // порезанные по высоте с учётом пересечения самих треугольников.
+        // Листва остаётся мягкой, как и раньше; текстура не задаёт объём.
+        const solid = name === 'rock' ? [variant.rock] : name === 'bush' ? [] : [variant.bark];
+        const shellTop = vbox ? vbox.max.y : 0;
+        const hullParts = solid.some(Boolean)
+          ? meshSections(solid)
+          : hullsFromGeometry(Object.values(variant), {
+              pad: 0.02, top: vbox?.max.y, bands: 1,
+              maxRadius: solidR ? solidR * 1.1 : undefined,
+            });
         const hullLocal = hullParts.length ? hullParts[0].poly : null;
 
         list.forEach((it, i) => {
@@ -1584,7 +1576,6 @@ export class World {
   _buildShells() {
     const lists = [
       ['palm', this.palmList], ['tree', this.treeList],
-      ['tree', this.pineList], ['tree', this.mangroveList], ['tree', this.deadList],
       ['bush', this.bushList], ['rock', this.rockList],
     ];
     for (const [kind, list] of lists) {
@@ -1613,6 +1604,7 @@ export class World {
           it.shells.push(shell);
         }
         it.shell = it.shells[0];
+        if (it.collider && it.shell && kind !== 'bush') it.collider.meshShell = true;
       }
     }
     this.stats.shells = this.shells.stats.prisms;
@@ -1963,7 +1955,7 @@ export class World {
     if (pit) {
       const cx = (pit.rect.x0 + pit.rect.x1) / 2;
       const cz = (pit.rect.z0 + pit.rect.z1) / 2;
-      this._clearTufts(cx, cz, pit.rect.cells * STEP * 0.85 + 0.55);
+      this._clearTufts(cx, cz, pit.rect.cells * DIG_CELL * 0.85 + 0.55);
     }
 
     const after = this.heightAt(x, z);
@@ -2016,24 +2008,24 @@ export class World {
     return ix * 1024 + iz;
   }
 
-  /** Прямоугольник ямы — ровно по клеткам сетки рельефа (1..4 клетки) */
+  /** Прямоугольник выемки — по метровым клеткам (1..4 на сторону). */
   _pitRect(x, z, radius) {
     const half = SIZE / 2;
-    const cells = clamp(Math.round((radius * 2) / STEP), 1, 4);
-    // клетка = квадрат сетки, в котором лежит точка: край дыры идёт по узлам
+    const cells = clamp(Math.round((radius * 2) / DIG_CELL), 1, 4);
+    // клетка = квадрат 1 м²; поверхность локально разрезается по её краям
     // яма стоит вокруг точки копания, чтобы под лопатой был отвесный спуск
-    const ix0 = clamp(Math.round((x + half) / STEP - cells / 2), 1, GRID - 1 - cells);
-    const iz0 = clamp(Math.round((z + half) / STEP - cells / 2), 1, GRID - 1 - cells);
+    const ix0 = clamp(Math.round((x + half) / DIG_CELL - cells / 2), 1, SIZE / DIG_CELL - cells - 1);
+    const iz0 = clamp(Math.round((z + half) / DIG_CELL - cells / 2), 1, SIZE / DIG_CELL - cells - 1);
     return {
       cells,
       ix0,
       iz0,
       ix1: ix0 + cells,
       iz1: iz0 + cells,
-      x0: -half + ix0 * STEP,
-      x1: -half + (ix0 + cells) * STEP,
-      z0: -half + iz0 * STEP,
-      z1: -half + (iz0 + cells) * STEP,
+      x0: -half + ix0 * DIG_CELL,
+      x1: -half + (ix0 + cells) * DIG_CELL,
+      z0: -half + iz0 * DIG_CELL,
+      z1: -half + (iz0 + cells) * DIG_CELL,
     };
   }
 
@@ -2045,9 +2037,9 @@ export class World {
     const pits = this.cutPits;
     if (!pits || pits.size === 0) return null;
     const half = SIZE / 2;
-    const ix = Math.floor((x + half) / STEP);
-    const iz = Math.floor((z + half) / STEP);
-    if (ix < 0 || iz < 0 || ix >= GRID || iz >= GRID) return null;
+    const ix = Math.floor((x + half) / DIG_CELL);
+    const iz = Math.floor((z + half) / DIG_CELL);
+    if (ix < 0 || iz < 0 || ix >= SIZE / DIG_CELL || iz >= SIZE / DIG_CELL) return null;
     const pit = pits.get(ix * 1024 + iz);
     if (!pit) return null;
     let t;
@@ -2063,33 +2055,28 @@ export class World {
   /** Яма, в которой лежит точка (или null) */
   pitAt(x, z) {
     const half = SIZE / 2;
-    const ix = Math.floor((x + half) / STEP);
-    const iz = Math.floor((z + half) / STEP);
+    const ix = Math.floor((x + half) / DIG_CELL);
+    const iz = Math.floor((z + half) / DIG_CELL);
     return this.cutPits.get(ix * 1024 + iz) || null;
   }
 
   /** Пересобрать индекс рельефа без клеток ям — это и есть настоящая дыра */
   _rebuildTerrainIndex() {
     const geo = this.terrain && this.terrain.geometry;
-    const base = this.terrainIndexBase;
-    if (!geo || !base) return 0;
-    if (!this.cutCells || this.cutCells.size === 0) {
-      geo.setIndex(new THREE.BufferAttribute(base.slice(), 1));
-      geo.computeBoundingSphere();
-      return 0;
+    if (!geo || !this.terrainIndexBase) return 0;
+    const rects = Array.from(this.pits.values(), (pit) => pit.rect).filter(Boolean);
+    return cutTerrain(geo, this.terrainIndexBase, GRID, STEP, SIZE, rects);
+  }
+
+  // Не изменять грубые узлы рельефа, пересекающие уже вырезанные блоки.
+  _terrainCellCut(ix, iz) {
+    if (!this.cutCells?.size) return false;
+    const x0 = Math.floor(ix * STEP / DIG_CELL), x1 = Math.ceil((ix + 1) * STEP / DIG_CELL);
+    const z0 = Math.floor(iz * STEP / DIG_CELL), z1 = Math.ceil((iz + 1) * STEP / DIG_CELL);
+    for (let x = x0; x < x1; x++) for (let z = z0; z < z1; z++) {
+      if (this.cutCells.has(x * 1024 + z)) return true;
     }
-    const out = [];
-    for (let q = 0; q < base.length; q += 6) {
-      const v = base[q];
-      const ix = v % GRID;
-      const iz = (v - ix) / GRID;
-      if (this.cutCells.has(ix * 1024 + iz)) continue;
-      out.push(base[q], base[q + 1], base[q + 2], base[q + 3], base[q + 4], base[q + 5]);
-    }
-    const arr = base.constructor.from(out);
-    geo.setIndex(new THREE.BufferAttribute(arr, 1));
-    geo.computeBoundingSphere();
-    return out.length;
+    return false;
   }
 
   /** Убрать яму: её клетки возвращаются рельефу */
@@ -2143,10 +2130,10 @@ export class World {
       iz0: r.iz0,
       iz1: r.iz1,
       cells: Math.max(r.ix1 - r.ix0, r.iz1 - r.iz0),
-      x0: -half + r.ix0 * STEP,
-      x1: -half + r.ix1 * STEP,
-      z0: -half + r.iz0 * STEP,
-      z1: -half + r.iz1 * STEP,
+      x0: -half + r.ix0 * DIG_CELL,
+      x1: -half + r.ix1 * DIG_CELL,
+      z0: -half + r.iz0 * DIG_CELL,
+      z1: -half + r.iz1 * DIG_CELL,
     };
   }
 
@@ -2219,7 +2206,7 @@ export class World {
     for (const o of absorbed) if (this._dropPit(o)) changed = true;
 
     // ступени выводят к игроку, если он рядом, иначе — туда, где земля ниже
-    const out = Math.max(0.8, rect.cells * STEP * 0.55);
+    const out = Math.max(0.8, rect.cells * DIG_CELL * 0.55);
     const cands = [
       { side: 'n', x: cx, z: rect.z0 - out, wx: cx, wz: rect.z0 },
       { side: 's', x: cx, z: rect.z1 + out, wx: cx, wz: rect.z1 },
@@ -2400,10 +2387,10 @@ export class World {
     const izN = rect.iz1 - rect.iz0;
     for (let cz = 0; cz < izN; cz++) {
       for (let cx = 0; cx < ixN; cx++) {
-        const w0 = rect.x0 + cx * STEP;
-        const w1 = w0 + STEP;
-        const d0 = rect.z0 + cz * STEP;
-        const d1 = d0 + STEP;
+        const w0 = rect.x0 + cx * DIG_CELL;
+        const w1 = w0 + DIG_CELL;
+        const d0 = rect.z0 + cz * DIG_CELL;
+        const d1 = d0 + DIG_CELL;
         // только внешний контур ямы: внутри клеток стенок нет,
         // иначе в большой дыре получились бы перегородки
         const sides = [];
@@ -2517,7 +2504,7 @@ export class World {
     for (let iz = Math.max(1, cz - reach); iz <= Math.min(GRID - 2, cz + reach); iz++) {
       for (let ix = Math.max(1, cx - reach); ix <= Math.min(GRID - 2, cx + reach); ix++) {
         // клетки выкопанных ям не трогаем: иначе дыра «зарастёт» обратно
-        if (this.cutCells && this.cutCells.has(ix * 1024 + iz)) continue;
+        if (this._terrainCellCut(ix, iz)) continue;
         const nx = -half + ix * STEP;
         const nz = -half + iz * STEP;
         const d = Math.hypot(nx - x, nz - z);
@@ -2541,12 +2528,14 @@ export class World {
     const geo = this.terrain && this.terrain.geometry;
     if (!geo) return;
     const pos = geo.attributes.position;
-    for (let i = 0; i < pos.count; i++) {
+    for (let i = 0; i < GRID * GRID; i++) {
       pos.setY(i, this._gridHeightAt(pos.getX(i), pos.getZ(i)));
     }
     pos.needsUpdate = true;
-    geo.computeVertexNormals();
-    geo.computeBoundingSphere();
+    // После изменения узлов заново интерполируем только рассечённые грани:
+    // край ямы продолжает совпадать с треугольниками поверхности.
+    if (this.cutCells.size) this._rebuildTerrainIndex();
+    else { geo.computeVertexNormals(); geo.computeBoundingSphere(); }
 
     if (this.depthTexture) {
       const data = this.depthTexture.image.data;
@@ -2564,7 +2553,7 @@ export class World {
    */
   resolveCollisions(pos, radius, velocity = null, feetY = -Infinity, stepUp = 0.55) {
     for (const c of this.colliders) {
-      if (c.disabled || c.soft) continue;
+      if (c.disabled || c.soft || c.meshShell) continue;
       // низкий предмет под ногами — переступаем
       if (c.height && c.height < stepUp && feetY > -Infinity) continue;
       const dx = pos.x - c.x;

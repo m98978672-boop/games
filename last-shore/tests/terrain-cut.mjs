@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import {cutTerrain} from '../src/terrain-cut.js';
+const geo = new THREE.PlaneGeometry(9,9,5,5);geo.rotateX(-Math.PI/2);
+const base=geo.index.array.slice();
+const area=()=>{let n=0;const p=geo.attributes.position,idx=geo.index;for(let i=0;i<idx.count;i+=3){const a=idx.getX(i),b=idx.getX(i+1),c=idx.getX(i+2);n+=Math.abs((p.getX(b)-p.getX(a))*(p.getZ(c)-p.getZ(a))-(p.getZ(b)-p.getZ(a))*(p.getX(c)-p.getX(a)))/2;}return n;};
+assert.ok(Math.abs(area()-81)<1e-5);
+cutTerrain(geo,base,6,1.8,9,[{x0:0,x1:1,z0:0,z1:1}]);assert.ok(Math.abs(area()-80)<1e-5,`area ${area()}`);
+cutTerrain(geo,base,6,1.8,9,[{x0:0,x1:1,z0:0,z1:1},{x0:-2,x1:-1,z0:1,z1:2}]);assert.ok(Math.abs(area()-79)<1e-5,`area ${area()}`);
+cutTerrain(geo,base,6,1.8,9,[]);assert.ok(Math.abs(area()-81)<1e-5);
+console.log('TERRAIN CUT: exact 1 m², multiple holes, restoration and original surface OK');

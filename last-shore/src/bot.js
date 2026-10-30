@@ -306,16 +306,21 @@ export class InspectorBot {
         if (!pit) return { ok: false, expect: 'выкопанная яма', fact: 'ям нет' };
         const sunk = before - w.heightAt(spot.x, spot.z);
         const walls = pit.walls.geometry.attributes.position.count;
-        const step = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+        const step = 1; // размер добываемой клетки, а не шаг исходного рельефа
         const onGrid = [pit.rect.x0, pit.rect.x1, pit.rect.z0, pit.rect.z1]
           .every((v) => Math.abs((v + 180) / step - Math.round((v + 180) / step)) < 1e-6);
+        // Проверяем настоящую дыру лучом. Число треугольников может вырасти:
+        // крупные треугольники по краю рассекаются на несколько мелких.
+        w.terrain.updateMatrixWorld(true);
+        const ray = new THREE.Raycaster(new THREE.Vector3(spot.x, 500, spot.z), new THREE.Vector3(0, -1, 0));
+        const groundCut = ray.intersectObject(w.terrain).length === 0;
         // в яму спускаешься, а по ступеням вылезаешь: стенка не перелезается
         const g0 = w.heightAt(pit.rect.x0 + (pit.rect.x1 - pit.rect.x0) / 2, pit.rect.z0 + (pit.rect.z1 - pit.rect.z0) / 2);
         const dugIn = Math.abs(g0 - before) > 0.05;
         return {
-          ok: cutTris >= 2 && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
+          ok: groundCut && sunk > 0.4 && walls > 0 && onGrid && dugIn && pit.steps >= 2,
           expect: 'треугольники земли вырезаны по сетке, внутри дно, стенки и ступени',
-          fact: `вырезано ${cutTris} треугольников · клеток ${pit.rect.ix1 - pit.rect.ix0}×${pit.rect.iz1 - pit.rect.iz0} · край по сетке: ${onGrid ? 'да' : 'нет'} · дно на ${fmt(sunk)} м ниже дёрна · стенки ${walls} вершин · ступеней ${pit.steps}`,
+          fact: `дыра в меше: ${groundCut ? 'да' : 'нет'} · изменение числа треугольников ${-cutTris} · клеток ${pit.rect.ix1 - pit.rect.ix0}×${pit.rect.iz1 - pit.rect.iz0} · край по сетке: ${onGrid ? 'да' : 'нет'} · дно на ${fmt(sunk)} м ниже дёрна · стенки ${walls} вершин · ступеней ${pit.steps}`,
         };
       } },
 
@@ -344,7 +349,7 @@ export class InspectorBot {
         const first = w.pitAt(spot.x, spot.z);
         if (!first) return { ok: false, expect: 'первая яма', fact: 'не выкопалась' };
         // вторая яма ставится точно вплотную к краю первой (в соседний узел сетки)
-        const stepW = 360 / (Math.round(Math.sqrt(w.heights.length)) - 1);
+        const stepW = 1;
         const second = { x: first.rect.x1 + stepW * 0.5, z: spot.z };
         const res = w.dig(second.x, second.z, { radius: 1.6, depth: 0.45, mine: 99 });
         const pit = w.pitAt(second.x, second.z);

@@ -173,6 +173,7 @@ export class ShellField {
     this.group.visible = false;
     if (scene) scene.add(this.group);
     this._searchBuf = [];
+    this._searchStamp = 0;
     this._triangles = null;
     this.stats = { prisms: 0, triangles: 0 };
   }
@@ -215,14 +216,14 @@ export class ShellField {
   near(x, z, radius) {
     const out = this._searchBuf;
     out.length = 0;
-    const seen = new Set();
+    const stamp = ++this._searchStamp;
     for (let cx = Math.floor((x - radius) / CELL); cx <= Math.floor((x + radius) / CELL); cx++) {
       for (let cz = Math.floor((z - radius) / CELL); cz <= Math.floor((z + radius) / CELL); cz++) {
         const bucket = this.grid.get(key(cx, cz));
         if (!bucket) continue;
         for (const p of bucket) {
-          if (seen.has(p)) continue;
-          seen.add(p);
+          if (p._searchStamp === stamp) continue;
+          p._searchStamp = stamp;
           out.push(p);
         }
       }
@@ -241,8 +242,10 @@ export class ShellField {
     const top = feetY + height;
     for (const p of this.near(pos.x, pos.z, radius + 1.2)) {
       if (p.enabled && !p.enabled()) continue;
-      if (p.maxY < feetY + (p.kind === 'den' ? 0 : stepUp)) continue;      // обводка ниже шага — переступаем
+      const precise = p.kind === 'den' || p.kind === 'tree' || p.kind === 'palm' || p.kind === 'rock';
+      if (p.maxY < feetY + (precise ? 0 : stepUp)) continue;      // обводка ниже шага — переступаем
       if (p.minY > top) continue;                 // герой целиком выше обводки
+      if (pos.x + radius < p.minX || pos.x - radius > p.maxX || pos.z + radius < p.minZ || pos.z - radius > p.maxZ) continue;
       const hit = this._pushOut(p, pos, radius);
       if (!hit) continue;
       pos.x += hit.x;
@@ -267,6 +270,7 @@ export class ShellField {
     for (const p of this.near(x, z, 0.5)) {
       if (p.enabled && !p.enabled()) continue;
       if (y !== null && (y > p.maxY || y + 1.85 < p.minY)) continue;
+      if (x < p.minX || x > p.maxX || z < p.minZ || z > p.maxZ) continue;
       if (this._inside(p.poly, x, z)) return true;
     }
     return false;
@@ -276,8 +280,10 @@ export class ShellField {
   blocked(x, z, radius, y = 0) {
     for (const p of this.near(x, z, radius + 1.2)) {
       if (p.enabled && !p.enabled()) continue;
-      if (p.maxY < y + (p.kind === 'den' ? 0 : 0.35)) continue;
+      const precise = p.kind === 'den' || p.kind === 'tree' || p.kind === 'palm' || p.kind === 'rock';
+      if (p.maxY < y + (precise ? 0 : 0.35)) continue;
       if (p.minY > y + 1.85) continue;
+      if (x + radius < p.minX || x - radius > p.maxX || z + radius < p.minZ || z - radius > p.maxZ) continue;
       if (this._inside(p.poly, x, z)) return true;
       const d = this._edgeDistance(p.poly, x, z);
       if (d < radius) return true;

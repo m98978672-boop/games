@@ -1073,7 +1073,7 @@ export class Mobs {
     if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
     const radius = r + pad;
     for (const c of this._colliderCandidates(x - radius, z - radius, x + radius, z + radius)) {
-      if (c.disabled || c.fire || c.kind === 'den') continue;
+      if (c.disabled || c.fire || c.kind === 'den' || c.meshShell) continue;
       // кусты зверю тоже препятствие (для игрока они мягкие, для зверя — нет)
       if (c.r < 0.3 && !strict) continue;
       const dx = x - c.x;
