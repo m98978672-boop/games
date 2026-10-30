@@ -15,5 +15,9 @@ try {
   g.mine.enter(0,null);g.mine.digDown();const spot=g.mine.digDown();g.underground=true;g.mineLight.visible=true;g.player.setPosition(spot.x,spot.z,g.mineWorld);g.player.position.y=g.mine.floorAt(spot.x,spot.z);g.update(.05);g.renderer.render(g.scene,g.camera);
   const cell=g.mine.level.grid.findIndex(c=>c?.type==='lava');return {burning,flame,wet,hell:g.mine.level.hell,y:g.mine.level.y,lava:cell>=0,safe:!g.mine.inLava(spot.x,spot.z),alive:g.running};
  });
- assert.deepEqual(result,{burning:true,flame:true,wet:true,hell:true,y:-64,lava:true,safe:true,alive:true});assert.deepEqual(errors,[]);console.log('BROWSER: mobile fire, wet materials and hell layer rendered without errors',result);
+ assert.deepEqual(result,{burning:true,flame:true,wet:true,hell:true,y:-64,lava:true,safe:true,alive:true});
+ await page.evaluate(()=>{const g=window.__game;g.mine.enter(0,null);g.creative=true;g.underground=true;g.player.setPosition(g.mine._worldX(g.mine.level.start.cx),g.mine._worldZ(g.mine.level.start.cz),g.mineWorld);});
+ await page.tap('[data-action="mine-down"]');assert.equal(await page.evaluate(()=>window.__game.mine.active),1);
+ await page.tap('[data-action="mine-down"]');assert.equal(await page.evaluate(()=>window.__game.mine.active),2);
+ assert.deepEqual(errors,[]);console.log('BROWSER: mobile fire, wet materials and hell layer rendered without errors',result);
 } finally {await browser.close();}

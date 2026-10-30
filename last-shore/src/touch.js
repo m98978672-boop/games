@@ -34,6 +34,7 @@ export function bindTouch(game) {
       else if (action === 'jump') { game.input.jump = true; game.input.jumpHeld = true; }
       else if (action === 'attack') { game.holdingAttack = true; game.attack(); }
       else if (action === 'interact') game.interact();
+      else if (action === 'mine-down') game.onKeyDown({ code: 'KeyG', repeat: false });
       else if (action === 'craft') game.togglePanel('craft');
       else if (action === 'bag') game.togglePanel('bag');
       else if (action === 'place') game.placeSelected();
