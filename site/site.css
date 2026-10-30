@@ -202,6 +202,7 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
 .card-lastshore .features li::before { background: var(--ls); }
 .card-frontline .features li::before { background: var(--fl); }
+.card-folderos .features li::before { background: var(--accent); }
 
 .card-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
 
