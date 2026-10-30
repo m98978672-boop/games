@@ -37380,6 +37380,73 @@ void main() {
     return result.entities.map((fire) => fire.hp);
   }
 
+  // src/tree-cut.js
+  function notchTreeGeometry(source, angle, progress) {
+    const attrs = Object.entries(source.attributes).filter(([, a]) => !a.isInterleavedBufferAttribute);
+    const posIndex = attrs.findIndex(([name]) => name === "position");
+    if (posIndex < 0) return source.clone();
+    const pos = attrs[posIndex][1], c = Math.cos(angle), s = Math.sin(angle);
+    let radius = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      if (y > 0.45 && y < 1.4 && x * x + z * z < 2.25) radius = Math.max(radius, x * c + z * s);
+    }
+    radius = Math.max(0.18, Math.min(0.9, radius || 0.3));
+    const depth = Math.max(0.05, Math.min(0.95, progress));
+    const back = radius * (0.94 - 1.8 * depth);
+    const half = radius * (0.55 + 0.6 * depth);
+    const low = 0.65 - depth * 0.12, high = 0.95 + depth * 0.25;
+    const planes = [
+      [(v) => v[0] * c + v[2] * s - back],
+      [(v) => radius * 2.4 - (v[0] * c + v[2] * s)],
+      [(v) => -v[0] * s + v[2] * c + half],
+      [(v) => half - (-v[0] * s + v[2] * c)],
+      [(v) => v[1] - low],
+      [(v) => high - v[1]]
+    ];
+    const arrays = attrs.map(() => []);
+    const vertex2 = (index) => attrs.map(([, a]) => Array.from({ length: a.itemSize }, (_, i) => a.array[index * a.itemSize + i]));
+    const mix = (a, b, t) => a.map((part2, k) => part2.map((v, i) => v + (b[k][i] - v) * t));
+    const split = (poly, distance) => {
+      const inside = [], outside = [];
+      for (let i = 0; i < poly.length; i++) {
+        const a = poly[i], b = poly[(i + 1) % poly.length];
+        const da = distance(a[posIndex]), db = distance(b[posIndex]);
+        const ai = da >= 0, bi = db >= 0;
+        (ai ? inside : outside).push(a);
+        if (ai !== bi) {
+          const v = mix(a, b, da / (da - db));
+          inside.push(v);
+          outside.push(v);
+        }
+      }
+      return [inside, outside];
+    };
+    const count = source.index ? source.index.count : pos.count;
+    for (let i = 0; i < count; i += 3) {
+      const ids = [0, 1, 2].map((j) => source.index ? source.index.getX(i + j) : i + j);
+      let inside = ids.map(vertex2);
+      const out = [];
+      for (const [distance] of planes) {
+        if (inside.length < 3) break;
+        const [next, outside] = split(inside, distance);
+        inside = next;
+        if (outside.length >= 3) out.push(outside);
+      }
+      for (const poly of out) for (let j = 1; j + 1 < poly.length; j++) {
+        for (const v of [poly[0], poly[j], poly[j + 1]]) for (let k = 0; k < attrs.length; k++) arrays[k].push(...v[k]);
+      }
+    }
+    const result = new BufferGeometry();
+    for (let i = 0; i < attrs.length; i++) {
+      const [name, old] = attrs[i];
+      result.setAttribute(name, new BufferAttribute(new old.array.constructor(arrays[i]), old.itemSize, old.normalized));
+    }
+    result.computeBoundingSphere();
+    result.userData.notch = { radius, back, half, low, high, angle, progress: depth };
+    return result;
+  }
+
   // src/nodes.js
   var REACH = 3.4;
   var SURFACE_ROCKS = Object.freeze([
@@ -37435,6 +37502,10 @@ void main() {
       this.environmentTimer = 0;
       this.seedTimer = 0;
       this.burning = /* @__PURE__ */ new Set();
+      this.cutTrees = /* @__PURE__ */ new Map();
+      this.cutAxis = new Vector3();
+      this.cutFaceGeo = new PlaneGeometry(1, 1);
+      this.cutFaceMat = new MeshStandardMaterial({ color: 13212258, roughness: 0.95, side: DoubleSide });
       this.burnGeo = new ConeGeometry(0.36, 1.1, 6);
       this.burnMat = new MeshBasicMaterial({ color: 16739606, transparent: true, opacity: 0.85 });
       this.perepletClock = new FixedClock({ step: 1 / 30, maxSteps: 4 });
@@ -37582,17 +37653,33 @@ void main() {
      * Удар по узлу. tool — данные инструмента из items.js (или рука).
      * Возвращает { hit, depleted, drops: {id: n}, need }
      */
-    strike(node, tool) {
+    strike(node, tool, hitter = null) {
+      var _a, _b;
       const def = NODE_DEFS[node.type];
       const power = tool && tool[def.tool] ? tool[def.tool] : 0.35;
-      const damage = 1 + power * 2.4;
+      const isTree = node.type === "tree" || node.type === "palm";
+      const damage = isTree ? power >= 90 ? node.maxHp : 0.6 + Math.min(power, 6) * 0.35 : 1 + power * 2.4;
       node.hp -= damage;
       const result = { hit: true, depleted: false, drops: {}, need: def.need, power };
+      if (node.type === "tree" || node.type === "palm") {
+        if (!Number.isFinite(node.cutAngle)) {
+          const dx = ((_a = hitter == null ? void 0 : hitter.x) != null ? _a : node.x + 1) - node.x;
+          const dz = ((_b = hitter == null ? void 0 : hitter.z) != null ? _b : node.z) - node.z;
+          const rot = node.item.rot || 0;
+          node.cutAngle = Math.atan2(Math.sin(rot) * dx + Math.cos(rot) * dz, Math.cos(rot) * dx - Math.sin(rot) * dz);
+        }
+        this._showCutTree(node, Math.min(0.95, Math.max(0.05, 1 - Math.max(0, node.hp) / node.maxHp)));
+      }
       if (node.hp <= 0) {
         node.alive = false;
         node.respawnAt = this.time + def.respawn;
         node.hp = node.maxHp;
         this.world.setNodeVisible(node.item, false);
+        const cut = this.cutTrees.get(node);
+        if (cut) {
+          cut.falling = true;
+          cut.fallTime = 0;
+        }
         result.depleted = true;
         for (const drop of def.drop) {
           let amount = drop.min + Math.floor(this.rng() * (drop.max - drop.min + 1));
@@ -37764,6 +37851,61 @@ void main() {
       }
       this.perepletClock.advance(dt, (step2, tick) => this._simulateResources(step2, tick));
       this._animateResources();
+      this._updateCutTrees(dt);
+    }
+    /** Создаём индивидуальный меш только для повреждённых деревьев. */
+    _showCutTree(node, progress) {
+      let cut = this.cutTrees.get(node);
+      if (!cut) {
+        const item = node.item;
+        const root = new Group();
+        root.position.set(node.x, node.y - 0.15, node.z);
+        root.rotation.y = item.rot || 0;
+        root.scale.setScalar((item.s || 1) * (item.growth || 1));
+        const pivot = new Group();
+        root.add(pivot);
+        let bark = null;
+        for (const part2 of item.parts || []) {
+          const mesh2 = new Mesh(part2.mesh.geometry, part2.mesh.material);
+          mesh2.castShadow = part2.mesh.castShadow;
+          mesh2.receiveShadow = part2.mesh.receiveShadow;
+          pivot.add(mesh2);
+          if (part2.layer === "bark") bark = mesh2;
+        }
+        if (!bark) return;
+        const face = new Mesh(this.cutFaceGeo, this.cutFaceMat);
+        pivot.add(face);
+        this.scene.add(root);
+        cut = { root, pivot, bark, base: bark.geometry, face, progress: 0, falling: false, fallTime: 0 };
+        this.cutTrees.set(node, cut);
+        delete node.growthAt;
+        this.world.setNodeVisible(item, false);
+      }
+      if (cut.bark.geometry !== cut.base) cut.bark.geometry.dispose();
+      const geometry = notchTreeGeometry(cut.base, node.cutAngle || 0, progress);
+      cut.bark.geometry = geometry;
+      const { back, half, low, high, angle } = geometry.userData.notch;
+      cut.face.position.set(Math.cos(angle) * (back - 5e-3), (low + high) / 2, Math.sin(angle) * (back - 5e-3));
+      cut.face.rotation.y = Math.PI / 2 - angle;
+      cut.face.scale.set(half * 2, high - low, 1);
+      cut.progress = progress;
+    }
+    _updateCutTrees(dt) {
+      for (const [node, cut] of this.cutTrees) {
+        if (cut.falling) cut.fallTime += dt;
+        const t = Math.min(1, cut.fallTime / 2.2);
+        const tilt = cut.falling ? Math.min(Math.PI * 0.49, 0.08 * cut.progress + t * t * Math.PI * 0.49) : cut.progress * 0.08;
+        const a = node.cutAngle || 0;
+        cut.pivot.quaternion.setFromAxisAngle(this.cutAxis.set(Math.sin(a), 0, -Math.cos(a)), tilt);
+        if (cut.falling && cut.fallTime > 9) this._removeCutTree(node);
+      }
+    }
+    _removeCutTree(node) {
+      const cut = this.cutTrees.get(node);
+      if (!cut) return;
+      this.scene.remove(cut.root);
+      if (cut.bark.geometry !== cut.base) cut.bark.geometry.dispose();
+      this.cutTrees.delete(node);
     }
     _simulateResources(dt, tick) {
       const fuel = this.campfires.length ? burnFuel(this.campfires, dt, tick) : [];
@@ -37771,6 +37913,8 @@ void main() {
       for (let i = 0; i < fuel.length; i++) this.campfires[i].fuel = fuel[i];
       for (const node of this.nodes) {
         if (node.alive || this.time < node.respawnAt) continue;
+        this._removeCutTree(node);
+        node.cutAngle = void 0;
         node.alive = true;
         node.hp = node.maxHp;
         if (node.type !== "rock") node.growthAt = this.time;
@@ -38347,6 +38491,9 @@ void main() {
       mob.stateTime = 0;
       mob.deadTimer = 0;
       mob.alerted = false;
+      mob.wildTarget = null;
+      mob.wildThreat = null;
+      mob.wildWindup = null;
       mob.group.visible = true;
       mob.group.rotation.set(0, 0, 0);
       this._unstick(mob);
@@ -38402,6 +38549,9 @@ void main() {
       const best = mob;
       best.hp -= damage;
       best.lastSeen = this.time;
+      best.wildTarget = null;
+      best.wildThreat = null;
+      best.wildWindup = null;
       if (best.hp <= 0) {
         this.kill(best);
         return { mob: best, killed: true };
@@ -38419,6 +38569,9 @@ void main() {
       mob.deadTimer = 0;
       mob.respawnAt = this.time + 45 + this.rng() * 45;
       mob.state = "dead";
+      mob.wildTarget = null;
+      mob.wildThreat = null;
+      mob.wildWindup = null;
       if (mob.hitbox) mob.hitbox.visible = false;
     }
     // ------------------------------------------------------------
@@ -38665,9 +38818,14 @@ void main() {
         const def = mob.def;
         mob.distToPlayer = dist;
         mob.biteTimer = Math.max(0, mob.biteTimer - dt);
+        mob.hurtTime = Math.max(0, (mob.hurtTime || 0) - dt);
         mob.think -= dt;
         mob.stateTime += dt;
-        if (dist > 70) {
+        if ((mob.type === "snake" || mob.type === "boar") && this.time >= (mob.huntAt || 0)) {
+          mob.huntAt = this.time + 2 + this.rng();
+          this._findWildTarget(mob);
+        }
+        if (dist > 70 && !mob.wildTarget && !mob.wildThreat) {
           mob.dormant = true;
           if (!mob.group.visible) mob.group.visible = true;
           if (this._dormantStep(mob, dt)) this._place(mob, dt);
@@ -38681,14 +38839,15 @@ void main() {
           eyeY: player.position.y + 1.5
         });
         if (seesPlayer) mob.lastSeen = this.time;
-        if (mob.state !== "sleep" || seesPlayer) this._think(mob, { px, pz, dist, seesPlayer, dt });
-        if (mob.wantsSound) {
-          this._sound(ctx, mob.wantsSound, mob, 1);
-          mob.wantsSound = null;
-        }
-        this._move(mob, dt, { px, pz, dist });
-        if (mob.state === "attack" && def.damage > 0) {
-          if (!mob.didHit && mob.stateTime > 0.18) {
+        const wild = !(seesPlayer && dist < 4) && this._wildCombat(mob, dt, ctx);
+        if (!wild) {
+          if (mob.state !== "sleep" || seesPlayer) this._think(mob, { px, pz, dist, seesPlayer, dt });
+          if (mob.wantsSound) {
+            this._sound(ctx, mob.wantsSound, mob, 1);
+            mob.wantsSound = null;
+          }
+          this._move(mob, dt, { px, pz, dist });
+          if (mob.state === "attack" && def.damage > 0 && !mob.didHit && mob.stateTime > 0.18) {
             const reach = def.attackRange + 0.6;
             if (dist < reach && mob.biteTimer <= 0) {
               mob.biteTimer = def.biteCooldown;
@@ -38719,6 +38878,83 @@ void main() {
         this.ecologyTimer -= 10;
         this._ecologyStep(ctx.resources);
       }
+    }
+    /** Хищник выбирает ближайшую подходящую добычу, а не любую модель. */
+    _findWildTarget(mob) {
+      var _a;
+      if ((_a = mob.wildTarget) == null ? void 0 : _a.alive) return;
+      const prey = mob.type === "snake" ? ["rabbit", "lizard", "crab"] : mob.type === "boar" ? ["snake"] : [];
+      let best = null, bestD = 9 * 9;
+      for (const other of this.list) {
+        if (!other.alive || !prey.includes(other.type) || other === mob) continue;
+        const d = (other.x - mob.x) ** 2 + (other.z - mob.z) ** 2;
+        if (d < bestD) {
+          best = other;
+          bestD = d;
+        }
+      }
+      if (best) {
+        mob.wildTarget = best;
+        best.wildThreat = mob;
+      }
+    }
+    /** Видимая погоня, замах, удар и возможность убежать или ответить. */
+    _wildCombat(mob, dt, ctx) {
+      if (mob.wildTarget && (!mob.wildTarget.alive || Math.hypot(mob.x - mob.wildTarget.x, mob.z - mob.wildTarget.z) > 18)) {
+        mob.wildTarget = null;
+        mob.wildWindup = null;
+      }
+      if (mob.wildThreat && (!mob.wildThreat.alive || Math.hypot(mob.x - mob.wildThreat.x, mob.z - mob.wildThreat.z) > 15)) mob.wildThreat = null;
+      if (!mob.wildTarget && mob.wildThreat) {
+        const threat = mob.wildThreat;
+        this.setState(mob, "flee");
+        this._move(mob, dt, { px: threat.x, pz: threat.z, dist: Math.hypot(mob.x - threat.x, mob.z - threat.z) });
+        return true;
+      }
+      const target = mob.wildTarget;
+      if (!target) {
+        mob.wildWindup = null;
+        return false;
+      }
+      const dist = Math.hypot(target.x - mob.x, target.z - mob.z);
+      const reach = this._collisionRadius(mob) + this._collisionRadius(target) + 0.35;
+      target.wildThreat = mob;
+      if (dist > reach && (mob.wildWindup == null || dist > reach + 0.9)) {
+        mob.wildWindup = null;
+        this.setState(mob, "chase");
+        this._move(mob, dt, { px: target.x, pz: target.z, dist });
+      } else {
+        this.setState(mob, "attack");
+        if (dist > reach - 0.1) this._move(mob, dt, { px: target.x, pz: target.z, dist });
+        else mob.speedNow = 0;
+        mob.facing = Math.atan2(target.x - mob.x, target.z - mob.z);
+        if (mob.wildWindup == null && mob.biteTimer <= 0) {
+          mob.wildWindup = 0;
+          mob.wildDidHit = false;
+        }
+        if (mob.wildWindup != null) {
+          mob.wildWindup += dt;
+          if (!mob.wildDidHit && mob.wildWindup >= 0.25) {
+            mob.wildDidHit = true;
+            if (target.alive && Math.hypot(target.x - mob.x, target.z - mob.z) <= reach + 0.75 && this._hasLineOfSight(mob, { x: target.x, z: target.z, eyeY: this.world.heightAt(target.x, target.z) + 0.7 })) {
+              target.hp -= Math.max(2, mob.def.damage * 0.55);
+              target.hurtTime = 0.4;
+              target.hurtSide = target.x >= mob.x ? 1 : -1;
+              target.wildThreat = mob;
+              if (target.hp <= 0) {
+                this.kill(target);
+                mob.wildTarget = null;
+              } else if (target.def.damage > 0) target.wildTarget = mob;
+              this._sound(ctx, "attack", mob, 0.8);
+            }
+          }
+          if (mob.wildWindup >= 0.65) {
+            mob.wildWindup = null;
+            mob.biteTimer = mob.def.biteCooldown;
+          }
+        }
+      }
+      return true;
     }
     /** Высота воды относительно пола: море и локально затопленные ямы. */
     _waterDepth(x, z) {
@@ -38768,13 +39004,6 @@ void main() {
           const age = Math.min(1, (this.time - m.youngAt) / 100);
           m.group.scale.setScalar(0.62 + age * 0.38);
           if (age >= 1) delete m.youngAt;
-        }
-        if (m.type === "snake") {
-          const prey = living.find((p) => p.alive && (p.type === "rabbit" || p.type === "lizard") && (p.x - m.x) ** 2 + (p.z - m.z) ** 2 < 2.2 ** 2);
-          if (prey) {
-            prey.hp -= 3;
-            if (prey.hp <= 0) this.kill(prey);
-          }
         }
         if (resources && (m.type === "monkey" || m.type === "boar")) {
           const food = resources.nodes.find((n) => n.type === "bush" && n.alive && n.berries && (n.x - m.x) ** 2 + (n.z - m.z) ** 2 < 2.5 ** 2);
@@ -39122,7 +39351,7 @@ void main() {
      * чайка машет крыльями и планирует, змея идёт волной и высовывает язык.
      */
     _animate(mob, dt) {
-      var _a, _b, _c, _d, _e2, _f;
+      var _a, _b, _c, _d, _e2, _f, _g, _h;
       const p = mob.parts;
       const def = mob.def;
       const walk = Math.min(1, mob.speedNow / 2);
@@ -39280,9 +39509,23 @@ void main() {
           });
         }
       }
+      if (p.head && def.type !== "snake") {
+        const baseX = (_g = p.head.userData.wildBaseX) != null ? _g : p.head.userData.wildBaseX = p.head.position.x;
+        const phase = mob.wildWindup;
+        const lunge = phase == null ? 0 : Math.sin(Math.min(1, phase / 0.65) * Math.PI);
+        p.head.position.x = baseX + lunge * 0.24;
+        const baseZ = (_h = p.head.userData.wildBaseZ) != null ? _h : p.head.userData.wildBaseZ = p.head.rotation.z;
+        p.head.rotation.z = baseZ - lunge * 0.24;
+      }
+      if (def.type === "snake" && p.head && mob.wildWindup != null) {
+        p.head.position.x += Math.sin(Math.min(1, mob.wildWindup / 0.65) * Math.PI) * 0.35;
+      }
+      if (p.body && mob.wildWindup != null) p.body.rotation.z -= Math.sin(Math.min(1, mob.wildWindup / 0.65) * Math.PI) * 0.12;
       if (mob.group) {
         const targetLean = sleeping ? 0.12 : 0;
         mob.group.rotation.x = (mob.group.rotation.x || 0) * 0.9 + targetLean * 0.1;
+        const hurt = Math.max(0, Math.min(1, (mob.hurtTime || 0) / 0.4));
+        mob.group.rotation.z = Math.sin(hurt * Math.PI) * (mob.hurtSide || 1) * 0.22;
       }
     }
   };
@@ -41517,7 +41760,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 17:57" : "dev";
+  var BUILD = true ? "2026-10-30 18:25" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -44852,7 +45095,7 @@ void main() {
           return;
         }
         const tool = this.creative ? { chop: 99, mine: 99, weapon: 99 } : this.equippedTool();
-        const res = this.resources.strike(node, tool);
+        const res = this.resources.strike(node, tool, this.player.position);
         const actionDef = this.nodeDef(node);
         const power = tool && tool[(_t = actionDef.tool) != null ? _t : "chop"] !== void 0 ? tool[(_u = actionDef.tool) != null ? _u : "chop"] : 0.35;
         if (res.need && (!tool || power < 1)) this.ui.toast(`\u041D\u0443\u0436\u0435\u043D ${res.need}: \u0442\u0430\u043A \u043F\u043E\u0447\u0442\u0438 \u043D\u0435 \u0432\u044B\u0445\u043E\u0434\u0438\u0442`, true);
@@ -45426,6 +45669,7 @@ void main() {
             hp: n.hp,
             alive: n.alive,
             berries: n.berries,
+            cutAngle: Number.isFinite(n.cutAngle) ? n.cutAngle : null,
             respawn: Math.max(0, n.respawnAt - this.resources.time),
             berryWait: Math.max(0, n.berryAt - this.resources.time)
           }] : []),
@@ -45496,6 +45740,10 @@ void main() {
       }
       this.ui.setWounds(this.wounds);
       this.ui.setEyeDamage(this.wounds);
+      for (const n of [...this.resources.cutTrees.keys()]) {
+        this.resources._removeCutTree(n);
+        this.world.setNodeVisible(n.item, n.alive);
+      }
       if (Array.isArray(data.nodes)) for (const saved of data.nodes.slice(0, this.resources.nodes.length)) {
         if (!Number.isInteger(saved.i) || saved.i < 0 || saved.i >= this.resources.nodes.length) continue;
         const node = this.resources.nodes[saved.i];
@@ -45505,6 +45753,10 @@ void main() {
         node.berries = !!saved.berries;
         node.berryAt = this.resources.time + Math.max(0, Math.min(600, Number(saved.berryWait) || 0));
         this.world.setNodeVisible(node.item, node.alive);
+        if (node.alive && node.hp < node.maxHp && (node.type === "tree" || node.type === "palm")) {
+          node.cutAngle = Number.isFinite(saved.cutAngle) ? saved.cutAngle : 0;
+          this.resources._showCutTree(node, Math.max(0.05, 1 - node.hp / node.maxHp));
+        }
         if (node.item.collider) node.item.collider.disabled = !node.alive;
         if (node.type === "bush" && node.alive) this.world.setLayerVisible(node.item, "fruit", node.berries);
       }

@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { makeRng } from './noise.js';
 import { FixedClock } from '../../pereplet-prototype/clock.mjs';
 import { burnFuel } from '../../pereplet-prototype/fire.mjs';
+import { notchTreeGeometry } from './tree-cut.js';
 
 const REACH = 3.4;
 
@@ -55,6 +56,10 @@ export class Resources {
     this.environmentTimer = 0;
     this.seedTimer = 0;
     this.burning = new Set();
+    this.cutTrees = new Map();
+    this.cutAxis = new THREE.Vector3();
+    this.cutFaceGeo = new THREE.PlaneGeometry(1, 1);
+    this.cutFaceMat = new THREE.MeshStandardMaterial({ color: 0xc99a62, roughness: 0.95, side: THREE.DoubleSide });
     this.burnGeo = new THREE.ConeGeometry(0.36, 1.1, 6);
     this.burnMat = new THREE.MeshBasicMaterial({ color: 0xff6d16, transparent: true, opacity: 0.85 });
     // «Переплёт» пока управляет только фиксированным шагом ресурсов и костров.
@@ -232,19 +237,31 @@ export class Resources {
    * Удар по узлу. tool — данные инструмента из items.js (или рука).
    * Возвращает { hit, depleted, drops: {id: n}, need }
    */
-  strike(node, tool) {
+  strike(node, tool, hitter = null) {
     const def = NODE_DEFS[node.type];
     const power = tool && tool[def.tool] ? tool[def.tool] : 0.35;
-    const damage = 1 + power * 2.4;
+    const isTree = node.type === 'tree' || node.type === 'palm';
+    const damage = isTree ? (power >= 90 ? node.maxHp : 0.6 + Math.min(power, 6) * 0.35) : 1 + power * 2.4;
     node.hp -= damage;
 
     const result = { hit: true, depleted: false, drops: {}, need: def.need, power };
+    if (node.type === 'tree' || node.type === 'palm') {
+      if (!Number.isFinite(node.cutAngle)) {
+        const dx = (hitter?.x ?? node.x + 1) - node.x;
+        const dz = (hitter?.z ?? node.z) - node.z;
+        const rot = node.item.rot || 0;
+        node.cutAngle = Math.atan2(Math.sin(rot) * dx + Math.cos(rot) * dz, Math.cos(rot) * dx - Math.sin(rot) * dz);
+      }
+      this._showCutTree(node, Math.min(0.95, Math.max(0.05, 1 - Math.max(0, node.hp) / node.maxHp)));
+    }
 
     if (node.hp <= 0) {
       node.alive = false;
       node.respawnAt = this.time + def.respawn;
       node.hp = node.maxHp;
       this.world.setNodeVisible(node.item, false);
+      const cut = this.cutTrees.get(node);
+      if (cut) { cut.falling = true; cut.fallTime = 0; }
       result.depleted = true;
 
       for (const drop of def.drop) {
@@ -413,6 +430,62 @@ export class Resources {
     }
     this.perepletClock.advance(dt, (step, tick) => this._simulateResources(step, tick));
     this._animateResources();
+    this._updateCutTrees(dt);
+  }
+
+  /** Создаём индивидуальный меш только для повреждённых деревьев. */
+  _showCutTree(node, progress) {
+    let cut = this.cutTrees.get(node);
+    if (!cut) {
+      const item = node.item;
+      const root = new THREE.Group();
+      root.position.set(node.x, node.y - 0.15, node.z);
+      root.rotation.y = item.rot || 0;
+      root.scale.setScalar((item.s || 1) * (item.growth || 1));
+      const pivot = new THREE.Group(); root.add(pivot);
+      let bark = null;
+      for (const part of item.parts || []) {
+        const mesh = new THREE.Mesh(part.mesh.geometry, part.mesh.material);
+        mesh.castShadow = part.mesh.castShadow;
+        mesh.receiveShadow = part.mesh.receiveShadow;
+        pivot.add(mesh);
+        if (part.layer === 'bark') bark = mesh;
+      }
+      if (!bark) return;
+      const face = new THREE.Mesh(this.cutFaceGeo, this.cutFaceMat);
+      pivot.add(face); this.scene.add(root);
+      cut = { root, pivot, bark, base: bark.geometry, face, progress: 0, falling: false, fallTime: 0 };
+      this.cutTrees.set(node, cut);
+      delete node.growthAt;
+      this.world.setNodeVisible(item, false);
+    }
+    if (cut.bark.geometry !== cut.base) cut.bark.geometry.dispose();
+    const geometry = notchTreeGeometry(cut.base, node.cutAngle || 0, progress);
+    cut.bark.geometry = geometry;
+    const { back, half, low, high, angle } = geometry.userData.notch;
+    cut.face.position.set(Math.cos(angle) * (back - 0.005), (low + high) / 2, Math.sin(angle) * (back - 0.005));
+    cut.face.rotation.y = Math.PI / 2 - angle;
+    cut.face.scale.set(half * 2, high - low, 1);
+    cut.progress = progress;
+  }
+
+  _updateCutTrees(dt) {
+    for (const [node, cut] of this.cutTrees) {
+      if (cut.falling) cut.fallTime += dt;
+      const t = Math.min(1, cut.fallTime / 2.2);
+      const tilt = cut.falling ? Math.min(Math.PI * 0.49, 0.08 * cut.progress + t * t * Math.PI * 0.49) : cut.progress * 0.08;
+      const a = node.cutAngle || 0;
+      cut.pivot.quaternion.setFromAxisAngle(this.cutAxis.set(Math.sin(a), 0, -Math.cos(a)), tilt);
+      if (cut.falling && cut.fallTime > 9) this._removeCutTree(node);
+    }
+  }
+
+  _removeCutTree(node) {
+    const cut = this.cutTrees.get(node);
+    if (!cut) return;
+    this.scene.remove(cut.root);
+    if (cut.bark.geometry !== cut.base) cut.bark.geometry.dispose();
+    this.cutTrees.delete(node);
   }
 
   _simulateResources(dt, tick) {
@@ -424,6 +497,8 @@ export class Resources {
     // восстановление узлов
     for (const node of this.nodes) {
       if (node.alive || this.time < node.respawnAt) continue;
+      this._removeCutTree(node);
+      node.cutAngle = undefined;
       node.alive = true;
       node.hp = node.maxHp;
       if (node.type !== 'rock') node.growthAt = this.time;
