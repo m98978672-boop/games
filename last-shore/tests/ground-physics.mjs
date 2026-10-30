@@ -25,7 +25,9 @@ const adjacent={x:x+1,z};for(let i=0;i<6;i++)r=w.strikeGround(adjacent.x,adjacen
 w.updatePitPhysics(0.2,1);assert.notEqual(merged.debrisMotion[0].mesh.position.y,y);
 for(let i=0;i<30;i++)w.updatePitPhysics(0.2,1);assert.ok(merged.debrisMotion.every(v=>!v.active));
 for(let i=0;i<3;i++)w.dig(x,z,{radius:.5,depth:.45,mine:99});
-for(let i=0;i<100;i++)w.updatePitPhysics(0.2,1);assert.ok(merged.waterMesh.visible);assert.ok(merged.wetness>0.1);assert.equal(w.probeAt(x,z).layer,'stone');const hard=w.strikeGround(x,z,{power:100,mine:0});assert.ok(hard.hard);const status=w.groundDamageAt(x,z);const hit=w.strikeGround(x,z,{power:100,mine:2});assert.ok(hit.pending);assert.ok(w.groundDamageAt(x,z).remaining<status.remaining);
+for(let i=0;i<100;i++)w.updatePitPhysics(0.2,1);assert.ok(merged.waterMesh.visible);assert.ok(merged.wetness>0.1);
+// Wet sandy walls periodically shed falling debris without claiming volumetric collapse.
+const surface=merged.surface, floor=merged.floorY;merged.floorY=merged.exitY-1.2;merged.surface='sand';merged.wetness=.95;merged.slumpTimer=44.9;w.updatePitPhysics(.2,1);assert.ok(merged.debrisMotion.some(v=>v.active));merged.surface=surface;merged.floorY=floor;assert.equal(w.probeAt(x,z).layer,'stone');const hard=w.strikeGround(x,z,{power:100,mine:0});assert.ok(hard.hard);const status=w.groundDamageAt(x,z);const hit=w.strikeGround(x,z,{power:100,mine:2});assert.ok(hit.pending);assert.ok(w.groundDamageAt(x,z).remaining<status.remaining);
 // One game frame while paused must not advance the dedicated pit simulation.
 const depth=merged.waterDepth;game.pause();game.frame();assert.equal(merged.waterDepth,depth);
 console.log('GROUND: cumulative 1m hits, rock tools, collapse debris, rainfall, sea fill, drying and pause OK');process.exit(0);

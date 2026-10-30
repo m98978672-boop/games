@@ -54,6 +54,20 @@ export class Player {
     this.buildModel();
   }
 
+  /** Модель постепенно намокает и подсыхает, пыль зависит от поверхности. */
+  updateEnvironment(dt, rain = 0, surface = 'soil', inWater = false) {
+    const targetWet = inWater ? 1 : Math.max(0, Math.min(1, rain));
+    this.environmentWet += (targetWet - this.environmentWet) * Math.min(1, dt * (targetWet > this.environmentWet ? 0.18 : 0.035));
+    const targetDust = !inWater && rain < 0.2 && (surface === 'sand' || surface === 'stone') ? 1 : 0;
+    this.environmentDust += (targetDust - this.environmentDust) * Math.min(1, dt * 0.04);
+    for (const { mat, color, roughness } of this.environmentMaterials) {
+      const wet = this.environmentWet, dust = this.environmentDust;
+      mat.color.copy(color).multiplyScalar(1 - wet * 0.22);
+      mat.color.r = Math.min(1, mat.color.r + dust * 0.035);
+      mat.roughness = Math.max(0.35, roughness - wet * 0.22);
+    }
+  }
+
   buildModel() {
     const g = new THREE.Group();
     const skinMat = new THREE.MeshStandardMaterial({ color: COLORS.skin, roughness: 0.75, flatShading: true });
@@ -61,6 +75,9 @@ export class Player {
     const pantsMat = new THREE.MeshStandardMaterial({ color: COLORS.pants, roughness: 0.9, flatShading: true });
     const packMat = new THREE.MeshStandardMaterial({ color: 0x6b5235, roughness: 0.95, flatShading: true });
     const bootMat = new THREE.MeshStandardMaterial({ color: 0x3a2c20, roughness: 1, flatShading: true });
+    this.environmentMaterials = [shirtMat, pantsMat, packMat, bootMat].map(mat => ({ mat, color: mat.color.clone(), roughness: mat.roughness }));
+    this.environmentWet = 0;
+    this.environmentDust = 0;
     const clothMat = new THREE.MeshStandardMaterial({ color: 0x9a8663, roughness: 1, flatShading: true });
 
     const box = (w, h, d, mat) => {
@@ -447,10 +464,12 @@ export class Player {
     // под землёй воды нет: там своя физика — клетки, стены и лава
     const underground = !!world.underground;
     const groundHere = world.heightAt(this.position.x, this.position.z);
-    this.wading = underground ? 0 : clamp(-groundHere / 1.1, 0, 1);
-    const inWater = !underground && groundHere < 0.05;
+    const waterHere = underground ? null : (world.waterLevelAt ? world.waterLevelAt(this.position.x, this.position.z) : CONFIG.world.seaLevel);
+    const depthHere = waterHere === null ? 0 : Math.max(0, waterHere - groundHere);
+    this.wading = clamp(depthHere / 1.1, 0, 1);
+    const inWater = !underground && depthHere > 0.01;
     // глубоко — уже не идём по дну, а плывём
-    const deepWater = !underground && !this.fly && groundHere < CONFIG.world.seaLevel - CONFIG.player.maxDepth * 0.85;
+    const deepWater = !underground && !this.fly && depthHere > CONFIG.player.maxDepth * 0.85;
     this.diveHeld = !!(input.sprint && deepWater);
 
     let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
@@ -496,7 +515,8 @@ export class Player {
 
     // --- вертикаль: прилипание к рельефу + прыжок ---
     const ground = world.heightAt(this.position.x, this.position.z);
-    const sea = CONFIG.world.seaLevel;
+    const level = underground ? null : (world.waterLevelAt ? world.waterLevelAt(this.position.x, this.position.z) : CONFIG.world.seaLevel);
+    const sea = level === null ? -Infinity : level;
     const depth = sea - ground;
     const swimNow = !underground && !this.fly && depth > P.maxDepth * 0.85;
     this.swimming = swimNow;
@@ -538,7 +558,7 @@ export class Player {
       this.air = Math.min(P.airMax, this.air + P.airRefill * dt);
     }
 
-    const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
+    const floor = underground ? ground : Math.max(ground, sea - 0.9);
 
     if (this.fly) {
       // креатив: настоящий полёт — пробел поднимает, Shift опускает, отпустил — висим.
@@ -558,7 +578,7 @@ export class Player {
         if (this.velocity.y > 0) this.velocity.y = 0;
       }
       // не проваливаемся в рельеф и не ныряем под воду глубже колена
-      const minY = underground ? floor : Math.max(ground + 0.25, CONFIG.world.seaLevel - 0.55);
+      const minY = underground ? floor : Math.max(ground + 0.25, sea - 0.55);
       if (this.position.y < minY) {
         this.position.y = minY;
         if (this.velocity.y < 0) this.velocity.y = 0;
@@ -811,7 +831,8 @@ export class Player {
     const desired = target.clone().addScaledVector(fwd, -finalHoriz);
     desired.y += finalVert;
 
-    const sea = CONFIG.world.seaLevel;
+    const waterLevel = world.waterLevelAt ? world.waterLevelAt(this.position.x, this.position.z) : CONFIG.world.seaLevel;
+    const sea = waterLevel === null ? -Infinity : waterLevel;
     // под водой камера уходит под поверхность вместе с героем — иначе весь
     // подводный вид остаётся за кадром
     if (this.underwater) {

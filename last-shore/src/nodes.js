@@ -52,6 +52,11 @@ export class Resources {
     this.campfires = [];
     this.springs = [];
     this.time = 0;
+    this.environmentTimer = 0;
+    this.seedTimer = 0;
+    this.burning = new Set();
+    this.burnGeo = new THREE.ConeGeometry(0.36, 1.1, 6);
+    this.burnMat = new THREE.MeshBasicMaterial({ color: 0xff6d16, transparent: true, opacity: 0.85 });
     // «Переплёт» пока управляет только фиксированным шагом ресурсов и костров.
     this.perepletClock = new FixedClock({ step: 1 / 30, maxSteps: 4 });
 
@@ -400,7 +405,12 @@ export class Resources {
     return { warmth: best, fire: near };
   }
 
-  update(dt) {
+  update(dt, rain = 0) {
+    this.environmentTimer += dt;
+    while (this.environmentTimer >= 1) {
+      this.environmentTimer -= 1;
+      this._environmentStep(rain);
+    }
     this.perepletClock.advance(dt, (step, tick) => this._simulateResources(step, tick));
     this._animateResources();
   }
@@ -416,7 +426,8 @@ export class Resources {
       if (node.alive || this.time < node.respawnAt) continue;
       node.alive = true;
       node.hp = node.maxHp;
-      this.world.setNodeVisible(node.item, true);
+      if (node.type !== 'rock') node.growthAt = this.time;
+      this.world.setNodeVisible(node.item, true, node.type === 'rock' ? 1 : 0.55);
       const collider = this.world.colliders.find(
         (c) => Math.abs(c.x - node.x) < 0.01 && Math.abs(c.z - node.z) < 0.01
       );
@@ -430,6 +441,70 @@ export class Resources {
       node.berries = true;
       this.world.setLayerVisible(node.item, 'fruit', true);
     }
+  }
+
+  /** Игровое приближение: сухая растительность нагревается от костра или огня. */
+  _environmentStep(rain) {
+    rain = Math.max(0, Math.min(1, Number(rain) || 0));
+    // Живые растения ускоряют заселение освободившихся мест того же вида.
+    // Базовое восстановление старых сохранений остаётся совместимым.
+    this.seedTimer++;
+    if (this.seedTimer >= 10) {
+      this.seedTimer = 0;
+      for (const node of this.nodes) {
+        if (node.alive || node.type === 'rock' || node.respawnAt <= this.time) continue;
+        const parent = this.nodes.find(other => other.alive && other.type === node.type &&
+          (other.x-node.x)**2 + (other.z-node.z)**2 < 14**2);
+        if (parent) node.respawnAt = Math.max(this.time, node.respawnAt - 10);
+      }
+    }
+    const burning = [...this.burning];
+    for (const node of burning) {
+      if (!node.alive || (rain > 0.7 && (node.burnTime || 0) > 4)) {
+        this._extinguish(node);
+        continue;
+      }
+      node.burnTime = (node.burnTime || 0) + 1;
+      node.hp -= 0.45 * (1 - rain * 0.5);
+      if (node.hp <= 0) { this._extinguish(node); this.strike(node, { chop: 99 }); }
+    }
+    for (const node of this.nodes) {
+      if (!node.alive || node.type === 'rock') continue;
+      if (node.growthAt !== undefined) {
+        const growth = Math.min(1, 0.55 + (this.time - node.growthAt) / 100 * 0.45);
+        this.world.setNodeVisible(node.item, true, growth);
+        if (node.type === 'bush' && !node.berries) this.world.setLayerVisible(node.item, 'fruit', false);
+        if (growth >= 1) delete node.growthAt;
+      }
+      if (this.burning.has(node)) continue;
+      let near = false;
+      for (const fire of this.campfires) {
+        if (fire.fuel > 0 && (fire.x-node.x)**2 + (fire.z-node.z)**2 < 2.4**2) { near = true; break; }
+      }
+      if (!near) for (const fireNode of burning) {
+        if (fireNode.alive && this.burning.has(fireNode) && (fireNode.x-node.x)**2 + (fireNode.z-node.z)**2 < 2.8**2) { near = true; break; }
+      }
+      node.heat = Math.max(0, (node.heat || 0) + (near ? 1 - rain : -0.4));
+      if (node.heat >= 8 && this.burning.size < 12) {
+        node.heat = 0; node.burnTime = 0;
+        const flame = new THREE.Mesh(this.burnGeo, this.burnMat);
+        flame.position.set(node.x, node.y + 0.8, node.z);
+        this.scene.add(flame); node.burnMesh = flame;
+        this.burning.add(node);
+      }
+    }
+  }
+
+  _extinguish(node) {
+    this.burning.delete(node);
+    if (node.burnMesh) { this.scene.remove(node.burnMesh); node.burnMesh = null; }
+    node.heat = 0; node.burnTime = 0;
+  }
+
+  fireHazard(pos) {
+    for (const f of this.campfires) if (f.fuel > 0 && (f.x-pos.x)**2 + (f.z-pos.z)**2 < 1.7**2) return true;
+    for (const n of this.burning) if ((n.x-pos.x)**2 + (n.z-pos.z)**2 < 1.6**2) return true;
+    return false;
   }
 
   _animateResources() {

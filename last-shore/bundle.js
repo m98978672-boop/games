@@ -33888,15 +33888,16 @@ void main() {
       });
     }
     /** Погасить или вернуть объект растительности (срубленное дерево, добытый камень) */
-    setNodeVisible(item, visible) {
+    setNodeVisible(item, visible, growth = 1) {
       var _a;
       if (!item || !item.parts || !item.parts.length) return;
       const dummy = this._dummy || (this._dummy = new Object3D());
+      item.growth = growth;
       for (const part2 of item.parts) {
         const target = (_a = part2.baseScale) != null ? _a : 1;
         dummy.position.set(item.x, item.h - 0.15, item.z);
         dummy.rotation.set(0, item.rot || 0, 0);
-        dummy.scale.setScalar(visible ? target : 1e-4);
+        dummy.scale.setScalar(visible ? target * growth : 1e-4);
         dummy.updateMatrix();
         part2.mesh.setMatrixAt(part2.idx, dummy.matrix);
         part2.mesh.instanceMatrix.needsUpdate = true;
@@ -33904,7 +33905,7 @@ void main() {
     }
     /** Спрятать/показать один слой модели (например, ягоды на кусте) */
     setLayerVisible(item, layer, visible) {
-      var _a;
+      var _a, _b;
       if (!item || !item.parts) return;
       const dummy = this._dummy || (this._dummy = new Object3D());
       for (const part2 of item.parts) {
@@ -33912,7 +33913,7 @@ void main() {
         const target = (_a = part2.baseScale) != null ? _a : 1;
         dummy.position.set(item.x, item.h - 0.15, item.z);
         dummy.rotation.set(0, item.rot || 0, 0);
-        dummy.scale.setScalar(visible ? target : 1e-4);
+        dummy.scale.setScalar(visible ? target * ((_b = item.growth) != null ? _b : 1) : 1e-4);
         dummy.updateMatrix();
         part2.mesh.setMatrixAt(part2.idx, dummy.matrix);
         part2.mesh.instanceMatrix.needsUpdate = true;
@@ -34212,6 +34213,12 @@ void main() {
       const iz = Math.floor((z + half) / DIG_CELL);
       return this.cutPits.get(ix * 1024 + iz) || null;
     }
+    /** Локальная поверхность воды в яме или уровень моря вне неё. */
+    waterLevelAt(x, z) {
+      const pit = this.pitAt(x, z);
+      if (!pit) return CONFIG.world.seaLevel;
+      return pit.waterDepth > 0.015 ? pit.floorY + pit.waterDepth : null;
+    }
     /** Пересобрать индекс рельефа без клеток ям — это и есть настоящая дыра */
     _rebuildTerrainIndex() {
       const geo = this.terrain && this.terrain.geometry;
@@ -34472,20 +34479,25 @@ void main() {
         chunks[i].rotation.y = a * 2.1;
       }
       pit.debrisMotion = [];
-      if (collapsed > 0) {
-        pit.debrisMotion = chunks.map((chunk, i) => {
-          const angle = i * Math.PI * 2 / chunks.length;
-          chunk.position.set(
-            cx + Math.cos(angle) * (rect.x1 - rect.x0) * 0.32,
-            exitY + 0.12 + i * 0.03,
-            cz + Math.sin(angle) * (rect.z1 - rect.z0) * 0.32
-          );
-          return { mesh: chunk, vx: -Math.cos(angle) * 0.45, vy: 0.4 + i * 0.08, vz: -Math.sin(angle) * 0.45, active: true };
-        });
-      }
+      if (collapsed > 0) this._slumpPit(pit);
       pit.group.position.set(0, 0, 0);
       pit.group.visible = true;
       return pit;
+    }
+    /** Небольшое осыпание: комья падают с края, не создавая новых клеток. */
+    _slumpPit(pit) {
+      const rect = pit.rect;
+      const cx = (rect.x0 + rect.x1) * 0.5, cz = (rect.z0 + rect.z1) * 0.5;
+      const chunks = pit.debris.children;
+      pit.debrisMotion = chunks.map((chunk, i) => {
+        const angle = i * Math.PI * 2 / chunks.length;
+        chunk.position.set(
+          cx + Math.cos(angle) * (rect.x1 - rect.x0) * 0.32,
+          pit.exitY + 0.12 + i * 0.03,
+          cz + Math.sin(angle) * (rect.z1 - rect.z0) * 0.32
+        );
+        return { mesh: chunk, vx: -Math.cos(angle) * 0.45, vy: 0.4 + i * 0.08, vz: -Math.sin(angle) * 0.45, active: true };
+      });
     }
     /** Локальная приближённая физика только для существующих ям, с шагом 0,2 с. */
     updatePitPhysics(dt, rain = 0) {
@@ -34501,6 +34513,13 @@ void main() {
           pit.waterMesh.visible = pit.waterDepth > 0.015;
           pit.waterMesh.position.y = pit.floorY + pit.waterDepth;
           const wet = pit.wetness;
+          if (pit.surface === "sand" && wet > 0.7 && pit.exitY - pit.floorY > 0.8) {
+            pit.slumpTimer = (pit.slumpTimer || 0) + step2;
+            if (pit.slumpTimer >= 45 && !pit.debrisMotion.some((piece2) => piece2.active)) {
+              pit.slumpTimer = 0;
+              this._slumpPit(pit);
+            }
+          } else pit.slumpTimer = 0;
           pit.mat.color.setRGB(1 - wet * 0.17, 1 - wet * 0.15, 1 - wet * 0.1);
           for (const piece2 of pit.debrisMotion || []) {
             if (!piece2.active) continue;
@@ -35570,6 +35589,19 @@ void main() {
       this.speedMul = 1;
       this.buildModel();
     }
+    /** Модель постепенно намокает и подсыхает, пыль зависит от поверхности. */
+    updateEnvironment(dt, rain = 0, surface = "soil", inWater = false) {
+      const targetWet = inWater ? 1 : Math.max(0, Math.min(1, rain));
+      this.environmentWet += (targetWet - this.environmentWet) * Math.min(1, dt * (targetWet > this.environmentWet ? 0.18 : 0.035));
+      const targetDust = !inWater && rain < 0.2 && (surface === "sand" || surface === "stone") ? 1 : 0;
+      this.environmentDust += (targetDust - this.environmentDust) * Math.min(1, dt * 0.04);
+      for (const { mat: mat2, color, roughness } of this.environmentMaterials) {
+        const wet = this.environmentWet, dust = this.environmentDust;
+        mat2.color.copy(color).multiplyScalar(1 - wet * 0.22);
+        mat2.color.r = Math.min(1, mat2.color.r + dust * 0.035);
+        mat2.roughness = Math.max(0.35, roughness - wet * 0.22);
+      }
+    }
     buildModel() {
       const g = new Group();
       const skinMat = new MeshStandardMaterial({ color: COLORS.skin, roughness: 0.75, flatShading: true });
@@ -35577,6 +35609,9 @@ void main() {
       const pantsMat = new MeshStandardMaterial({ color: COLORS.pants, roughness: 0.9, flatShading: true });
       const packMat = new MeshStandardMaterial({ color: 7033397, roughness: 0.95, flatShading: true });
       const bootMat = new MeshStandardMaterial({ color: 3812384, roughness: 1, flatShading: true });
+      this.environmentMaterials = [shirtMat, pantsMat, packMat, bootMat].map((mat2) => ({ mat: mat2, color: mat2.color.clone(), roughness: mat2.roughness }));
+      this.environmentWet = 0;
+      this.environmentDust = 0;
       const clothMat = new MeshStandardMaterial({ color: 10126947, roughness: 1, flatShading: true });
       const box2 = (w, h, d, mat2) => {
         const mesh2 = new Mesh(new BoxGeometry(w, h, d), mat2);
@@ -35897,9 +35932,11 @@ void main() {
       else this.stamina = Math.min(100, this.stamina + (moving ? CONFIG.needs.staminaRegen : CONFIG.needs.staminaRegenRest) * dt);
       const underground = !!world.underground;
       const groundHere = world.heightAt(this.position.x, this.position.z);
-      this.wading = underground ? 0 : clamp2(-groundHere / 1.1, 0, 1);
-      const inWater = !underground && groundHere < 0.05;
-      const deepWater = !underground && !this.fly && groundHere < CONFIG.world.seaLevel - CONFIG.player.maxDepth * 0.85;
+      const waterHere = underground ? null : world.waterLevelAt ? world.waterLevelAt(this.position.x, this.position.z) : CONFIG.world.seaLevel;
+      const depthHere = waterHere === null ? 0 : Math.max(0, waterHere - groundHere);
+      this.wading = clamp2(depthHere / 1.1, 0, 1);
+      const inWater = !underground && depthHere > 0.01;
+      const deepWater = !underground && !this.fly && depthHere > CONFIG.player.maxDepth * 0.85;
       this.diveHeld = !!(input.sprint && deepWater);
       let speed = (sprinting ? P.sprintSpeed : P.walkSpeed) * (this.speedMul || 1);
       if (this.fly) speed = P.flyHorizontal;
@@ -35930,7 +35967,8 @@ void main() {
       world.resolveCollisions(this.position, P.radius, this.velocity, this.position.y, 0.55);
       (_a = world.shells) == null ? void 0 : _a.resolve(this.position, P.radius, this.velocity, this.position.y, 0.55);
       const ground = world.heightAt(this.position.x, this.position.z);
-      const sea = CONFIG.world.seaLevel;
+      const level = underground ? null : world.waterLevelAt ? world.waterLevelAt(this.position.x, this.position.z) : CONFIG.world.seaLevel;
+      const sea = level === null ? -Infinity : level;
       const depth = sea - ground;
       const swimNow = !underground && !this.fly && depth > P.maxDepth * 0.85;
       this.swimming = swimNow;
@@ -35972,7 +36010,7 @@ void main() {
         this.underwater = false;
         this.air = Math.min(P.airMax, this.air + P.airRefill * dt);
       }
-      const floor = underground ? ground : Math.max(ground, CONFIG.world.seaLevel - 0.9);
+      const floor = underground ? ground : Math.max(ground, sea - 0.9);
       if (this.fly) {
         const held = input.jumpHeld === void 0 ? !!input.jump : !!input.jumpHeld;
         const up = (held ? 1 : 0) - (input.sprint ? 1 : 0);
@@ -35985,7 +36023,7 @@ void main() {
           this.position.y = ceilY;
           if (this.velocity.y > 0) this.velocity.y = 0;
         }
-        const minY = underground ? floor : Math.max(ground + 0.25, CONFIG.world.seaLevel - 0.55);
+        const minY = underground ? floor : Math.max(ground + 0.25, sea - 0.55);
         if (this.position.y < minY) {
           this.position.y = minY;
           if (this.velocity.y < 0) this.velocity.y = 0;
@@ -36195,7 +36233,8 @@ void main() {
       const finalVert = Math.sin(this.pitch) * cameraDist;
       const desired = target.clone().addScaledVector(fwd, -finalHoriz);
       desired.y += finalVert;
-      const sea = CONFIG.world.seaLevel;
+      const waterLevel = world.waterLevelAt ? world.waterLevelAt(this.position.x, this.position.z) : CONFIG.world.seaLevel;
+      const sea = waterLevel === null ? -Infinity : waterLevel;
       if (this.underwater) {
         const pull = target.clone().addScaledVector(fwd, -finalHoriz * 0.55);
         desired.copy(pull);
@@ -37393,6 +37432,11 @@ void main() {
       this.campfires = [];
       this.springs = [];
       this.time = 0;
+      this.environmentTimer = 0;
+      this.seedTimer = 0;
+      this.burning = /* @__PURE__ */ new Set();
+      this.burnGeo = new ConeGeometry(0.36, 1.1, 6);
+      this.burnMat = new MeshBasicMaterial({ color: 16739606, transparent: true, opacity: 0.85 });
       this.perepletClock = new FixedClock({ step: 1 / 30, maxSteps: 4 });
       this.fireLights = [];
       for (let i = 0; i < 2; i++) {
@@ -37712,7 +37756,12 @@ void main() {
       }
       return { warmth: best, fire: near };
     }
-    update(dt) {
+    update(dt, rain = 0) {
+      this.environmentTimer += dt;
+      while (this.environmentTimer >= 1) {
+        this.environmentTimer -= 1;
+        this._environmentStep(rain);
+      }
       this.perepletClock.advance(dt, (step2, tick) => this._simulateResources(step2, tick));
       this._animateResources();
     }
@@ -37724,7 +37773,8 @@ void main() {
         if (node.alive || this.time < node.respawnAt) continue;
         node.alive = true;
         node.hp = node.maxHp;
-        this.world.setNodeVisible(node.item, true);
+        if (node.type !== "rock") node.growthAt = this.time;
+        this.world.setNodeVisible(node.item, true, node.type === "rock" ? 1 : 0.55);
         const collider = this.world.colliders.find(
           (c) => Math.abs(c.x - node.x) < 0.01 && Math.abs(c.z - node.z) < 0.01
         );
@@ -37736,6 +37786,79 @@ void main() {
         node.berries = true;
         this.world.setLayerVisible(node.item, "fruit", true);
       }
+    }
+    /** Игровое приближение: сухая растительность нагревается от костра или огня. */
+    _environmentStep(rain) {
+      rain = Math.max(0, Math.min(1, Number(rain) || 0));
+      this.seedTimer++;
+      if (this.seedTimer >= 10) {
+        this.seedTimer = 0;
+        for (const node of this.nodes) {
+          if (node.alive || node.type === "rock" || node.respawnAt <= this.time) continue;
+          const parent = this.nodes.find((other) => other.alive && other.type === node.type && (other.x - node.x) ** 2 + (other.z - node.z) ** 2 < 14 ** 2);
+          if (parent) node.respawnAt = Math.max(this.time, node.respawnAt - 10);
+        }
+      }
+      const burning = [...this.burning];
+      for (const node of burning) {
+        if (!node.alive || rain > 0.7 && (node.burnTime || 0) > 4) {
+          this._extinguish(node);
+          continue;
+        }
+        node.burnTime = (node.burnTime || 0) + 1;
+        node.hp -= 0.45 * (1 - rain * 0.5);
+        if (node.hp <= 0) {
+          this._extinguish(node);
+          this.strike(node, { chop: 99 });
+        }
+      }
+      for (const node of this.nodes) {
+        if (!node.alive || node.type === "rock") continue;
+        if (node.growthAt !== void 0) {
+          const growth = Math.min(1, 0.55 + (this.time - node.growthAt) / 100 * 0.45);
+          this.world.setNodeVisible(node.item, true, growth);
+          if (node.type === "bush" && !node.berries) this.world.setLayerVisible(node.item, "fruit", false);
+          if (growth >= 1) delete node.growthAt;
+        }
+        if (this.burning.has(node)) continue;
+        let near = false;
+        for (const fire of this.campfires) {
+          if (fire.fuel > 0 && (fire.x - node.x) ** 2 + (fire.z - node.z) ** 2 < 2.4 ** 2) {
+            near = true;
+            break;
+          }
+        }
+        if (!near) for (const fireNode of burning) {
+          if (fireNode.alive && this.burning.has(fireNode) && (fireNode.x - node.x) ** 2 + (fireNode.z - node.z) ** 2 < 2.8 ** 2) {
+            near = true;
+            break;
+          }
+        }
+        node.heat = Math.max(0, (node.heat || 0) + (near ? 1 - rain : -0.4));
+        if (node.heat >= 8 && this.burning.size < 12) {
+          node.heat = 0;
+          node.burnTime = 0;
+          const flame = new Mesh(this.burnGeo, this.burnMat);
+          flame.position.set(node.x, node.y + 0.8, node.z);
+          this.scene.add(flame);
+          node.burnMesh = flame;
+          this.burning.add(node);
+        }
+      }
+    }
+    _extinguish(node) {
+      this.burning.delete(node);
+      if (node.burnMesh) {
+        this.scene.remove(node.burnMesh);
+        node.burnMesh = null;
+      }
+      node.heat = 0;
+      node.burnTime = 0;
+    }
+    fireHazard(pos) {
+      for (const f of this.campfires) if (f.fuel > 0 && (f.x - pos.x) ** 2 + (f.z - pos.z) ** 2 < 1.7 ** 2) return true;
+      for (const n of this.burning) if ((n.x - pos.x) ** 2 + (n.z - pos.z) ** 2 < 1.6 ** 2) return true;
+      return false;
     }
     _animateResources() {
       const visualTime = this.time + Math.min(this.perepletClock.accumulator, this.perepletClock.step);
@@ -38020,6 +38143,7 @@ void main() {
       this.rng = makeRng(seed + 4242);
       this.list = [];
       this.time = 0;
+      this.ecologyTimer = 0;
       this.group = new Group();
       this.group.name = "mobs";
       scene.add(this.group);
@@ -38112,9 +38236,9 @@ void main() {
       }
       return null;
     }
-    spawn(type) {
+    spawn(type, birthSpot = null) {
       const def = TYPES[type];
-      const spot = this._denSpot(type, def) || this._spot(def.biomes, null, 0, def);
+      const spot = birthSpot || this._denSpot(type, def) || this._spot(def.biomes, null, 0, def);
       const built = def.model();
       const box2 = new Box3().setFromObject(built.group);
       const size = new Vector3();
@@ -38210,8 +38334,8 @@ void main() {
       }
       return -1;
     }
-    _respawn(mob) {
-      const spot = this._denSpot(mob.type, mob.def) || this._spot(mob.def.biomes, null, 0, mob.def);
+    _respawn(mob, birthSpot = null) {
+      const spot = birthSpot || this._denSpot(mob.type, mob.def) || this._spot(mob.def.biomes, null, 0, mob.def);
       if (spot.den) mob.den = spot.den;
       mob.x = spot.x;
       mob.z = spot.z;
@@ -38332,7 +38456,7 @@ void main() {
         }
         const mx = mob.x - nx * push * 0.25;
         const mz = mob.z - nz * push * 0.25;
-        if (!this._blocked(mx, mz, this._collisionRadius(mob))) {
+        if (this._canMoveWater(mob, mx, mz) && !this._blocked(mx, mz, this._collisionRadius(mob))) {
           mob.x = mx;
           mob.z = mz;
         }
@@ -38345,10 +38469,11 @@ void main() {
     }
     /** Звери не слипаются: расталкиваем их между собой (два прохода — стабильнее) */
     _separate() {
-      this._separateOnce();
-      this._separateOnce();
+      const radii = this.list.map((m) => m.alive ? this._collisionRadius(m) : 0);
+      this._separateOnce(radii);
+      this._separateOnce(radii);
     }
-    _separateOnce() {
+    _separateOnce(radii = this.list.map((m) => m.alive ? this._collisionRadius(m) : 0)) {
       const list = this.list;
       for (let i = 0; i < list.length; i++) {
         const a = list[i];
@@ -38359,7 +38484,8 @@ void main() {
           if (a.def.flying !== b.def.flying) continue;
           const dx = a.x - b.x;
           const dz = a.z - b.z;
-          const min = this._collisionRadius(a) + this._collisionRadius(b) + 0.05;
+          const min = radii[i] + radii[j] + 0.05;
+          if (Math.abs(dx) >= min || Math.abs(dz) >= min) continue;
           const d2 = dx * dx + dz * dz;
           if (d2 >= min * min) continue;
           let d = Math.sqrt(d2);
@@ -38375,12 +38501,12 @@ void main() {
             nz = dz / d;
           }
           const push = (min - d) * 0.5;
-          const ar = this._collisionRadius(a), br = this._collisionRadius(b);
-          if (!this._blocked(a.x + nx * push, a.z + nz * push, ar)) {
+          const ar = radii[i], br = radii[j];
+          if (this._canMoveWater(a, a.x + nx * push, a.z + nz * push) && !this._blocked(a.x + nx * push, a.z + nz * push, ar)) {
             a.x += nx * push;
             a.z += nz * push;
           }
-          if (!this._blocked(b.x - nx * push, b.z - nz * push, br)) {
+          if (this._canMoveWater(b, b.x - nx * push, b.z - nz * push) && !this._blocked(b.x - nx * push, b.z - nz * push, br)) {
             b.x -= nx * push;
             b.z -= nz * push;
           }
@@ -38483,12 +38609,11 @@ void main() {
       const t = mob.def.territory;
       const swim = !!mob.def.swim;
       const r = mob.def.radius || 0.45;
-      const hHere = this.world.heightAt(mob.x, mob.z);
       const ok = (x, z) => {
         const h = this.world.heightAt(x, z);
         if (swim) {
           if (h > -0.9 || h < -7) return false;
-        } else if (h < -0.12 && h < hHere - 0.05) return false;
+        } else if (!this._canMoveWater(mob, x, z)) return false;
         return !this._blocked(x, z, r * 1.1);
       };
       for (let i = 0; i < 14; i++) {
@@ -38545,7 +38670,7 @@ void main() {
         if (dist > 70) {
           mob.dormant = true;
           if (!mob.group.visible) mob.group.visible = true;
-          this._dormantStep(mob, dt);
+          if (this._dormantStep(mob, dt)) this._place(mob, dt);
           continue;
         }
         mob.dormant = false;
@@ -38589,6 +38714,106 @@ void main() {
         if (mob.group.visible) this._animate(mob, dt);
       }
       this._separate();
+      this.ecologyTimer += dt;
+      while (this.ecologyTimer >= 10) {
+        this.ecologyTimer -= 10;
+        this._ecologyStep(ctx.resources);
+      }
+    }
+    /** Высота воды относительно пола: море и локально затопленные ямы. */
+    _waterDepth(x, z) {
+      var _a, _b;
+      const ground = this.world.heightAt(x, z);
+      const pit = (_b = (_a = this.world).pitAt) == null ? void 0 : _b.call(_a, x, z);
+      const surface = pit && pit.waterDepth > 0 ? pit.floorY + pit.waterDepth : -Infinity;
+      const sea = !pit || pit.seaSource ? CONFIG.world.seaLevel : -Infinity;
+      return Math.max(0, sea - ground, surface - ground);
+    }
+    _canMoveWater(mob, x, z) {
+      if (mob.def.flying) return true;
+      const next = this._waterDepth(x, z), current = this._waterDepth(mob.x, mob.z);
+      if (mob.def.swim) return next >= 0.5;
+      return next <= 0.15 || current > 0.15 && next < current - 1e-3;
+    }
+    /** Редкий ограниченный цикл: хищничество, ягоды, парное размножение. */
+    _ecologyStep(resources) {
+      const living = this.list.filter((m) => m.alive);
+      for (const m of living) {
+        if (!m.def.swim && !m.def.flying && this._waterDepth(m.x, m.z) > 0.15) {
+          for (let i = 0; i < 8; i++) {
+            const angle = i * Math.PI / 4, x = m.x + Math.cos(angle), z = m.z + Math.sin(angle);
+            if (this._canMoveWater(m, x, z) && !this._blocked(x, z, this._collisionRadius(m))) {
+              m.x = x;
+              m.z = z;
+              this._place(m, 0);
+              break;
+            }
+          }
+          if (this._waterDepth(m.x, m.z) > 0.15) {
+            m.hp -= 3;
+            if (m.hp <= 0) {
+              this.kill(m);
+              continue;
+            }
+          }
+        }
+        if (resources == null ? void 0 : resources.fireHazard({ x: m.x, z: m.z })) {
+          m.hp -= 5;
+          if (m.hp <= 0) {
+            this.kill(m);
+            continue;
+          }
+        }
+        if (m.youngAt !== void 0) {
+          const age = Math.min(1, (this.time - m.youngAt) / 100);
+          m.group.scale.setScalar(0.62 + age * 0.38);
+          if (age >= 1) delete m.youngAt;
+        }
+        if (m.type === "snake") {
+          const prey = living.find((p) => p.alive && (p.type === "rabbit" || p.type === "lizard") && (p.x - m.x) ** 2 + (p.z - m.z) ** 2 < 2.2 ** 2);
+          if (prey) {
+            prey.hp -= 3;
+            if (prey.hp <= 0) this.kill(prey);
+          }
+        }
+        if (resources && (m.type === "monkey" || m.type === "boar")) {
+          const food = resources.nodes.find((n) => n.type === "bush" && n.alive && n.berries && (n.x - m.x) ** 2 + (n.z - m.z) ** 2 < 2.5 ** 2);
+          if (food && resources.canPickBerries(food)) resources.pickBerries(food);
+        }
+      }
+      for (const [type, def] of Object.entries(TYPES)) {
+        const adults = living.filter((m) => m.alive && m.type === type && m.youngAt === void 0 && (m.breedAt || 0) <= this.time);
+        if (adults.length < 2 || living.filter((m) => m.alive && m.type === type).length >= Math.ceil(def.count * 1.3)) continue;
+        let parents = null;
+        for (let i = 0; i < adults.length && !parents; i++) for (let j = i + 1; j < adults.length; j++) {
+          if ((adults[i].x - adults[j].x) ** 2 + (adults[i].z - adults[j].z) ** 2 <= 30 ** 2) {
+            parents = [adults[i], adults[j]];
+            break;
+          }
+        }
+        if (!parents) continue;
+        const a = parents[0];
+        let spot = null;
+        for (let i = 0; i < 16; i++) {
+          const angle = this.rng() * Math.PI * 2, r = 3 + this.rng() * 4;
+          const x = a.x + Math.cos(angle) * r, z = a.z + Math.sin(angle) * r;
+          const h = this.world.heightAt(x, z);
+          if (!this._canMoveWater(a, x, z) || this.world.slopeAt(x, z) > 0.6 || this._blocked(x, z, (def.radius || 0.5) + 0.1, true)) continue;
+          if (living.some((m) => m.alive && (m.x - x) ** 2 + (m.z - z) ** 2 < 4)) continue;
+          spot = { x, z, h, den: a.den };
+          break;
+        }
+        if (!spot) continue;
+        const slot = this.list.find((m) => !m.alive && m.type === type && m.deadTimer > 2.6 && this.time >= m.respawnAt);
+        if (!slot && this.list.filter((m) => m.type === type).length >= Math.ceil(def.count * 1.3)) continue;
+        const baby = slot ? (this._respawn(slot, spot), slot) : this.spawn(type, spot);
+        baby.youngAt = this.time;
+        baby.group.scale.setScalar(0.62);
+        this._place(baby, 0);
+        baby.breedAt = this.time + 160;
+        parents[0].breedAt = parents[1].breedAt = this.time + 160;
+        living.push(baby);
+      }
     }
     _dormantStep(mob, dt) {
       if (mob.think > 0) return;
@@ -38599,9 +38824,10 @@ void main() {
       const tz = mob.home.z + Math.sin(a) * r;
       const nx = mob.x + clamp2(tx - mob.x, -1, 1) * dt * 0.6;
       const nz = mob.z + clamp2(tz - mob.z, -1, 1) * dt * 0.6;
-      if (!this._blocked(nx, nz, this._collisionRadius(mob))) {
+      if (this._canMoveWater(mob, nx, nz) && !this._blocked(nx, nz, this._collisionRadius(mob))) {
         mob.x = nx;
         mob.z = nz;
+        return true;
       } else {
         mob.think = 0.5 + this.rng();
       }
@@ -38619,7 +38845,6 @@ void main() {
         });
         if (mob.deadTimer > 2.6) mob.group.visible = false;
       }
-      if (this.time > mob.respawnAt) this._respawn(mob);
     }
     /** Принятие решения: чистый автомат, без магии чисел по месту */
     _think(mob, { px, pz, dist, seesPlayer }) {
@@ -38775,9 +39000,7 @@ void main() {
       const step2 = speed * dt;
       const nx = mob.x + ax * step2;
       const nz = mob.z + az * step2;
-      const hCur = this.world.heightAt(mob.x, mob.z);
-      const tooDeep = (h) => def.swim ? h > -0.5 : h < -0.15 && h < hCur - 0.05;
-      if (tooDeep(this.world.heightAt(nx, nz))) {
+      if (!this._canMoveWater(mob, nx, nz)) {
         mob.targetX = mob.home.x;
         mob.targetZ = mob.home.z;
         if (mob.state === "chase") this.setState(mob, "patrol");
@@ -38793,8 +39016,7 @@ void main() {
         const tx = mob.x + dx * step2;
         const tz = mob.z + dz * step2;
         if (this._blocked(tx, tz, this._collisionRadius(mob))) continue;
-        const h = this.world.heightAt(tx, tz);
-        if (tooDeep(h)) continue;
+        if (!this._canMoveWater(mob, tx, tz)) continue;
         mob.x = tx;
         mob.z = tz;
         moved = true;
@@ -39210,13 +39432,13 @@ void main() {
           if (!cell || !cell.open) continue;
           const x = this._worldX(cx);
           const z = this._worldZ(cz);
-          const tone = 16777215 - Math.floor(rng() * 5) * 328965;
+          const tone = (level.hell ? 9130315 : 16777215) - Math.floor(rng() * 5) * 328965;
           if (cell.type === "lava") {
             lavas.push(box2(CELL2, 0.3, CELL2, x, y - 0.16, z, 16747066));
           } else {
             floors.push(box2(CELL2, 0.36, CELL2, x, y - 0.2, z, tone));
           }
-          ceilings.push(box2(CELL2, 0.4, CELL2, x, y + WALL_H, z, 9407104 - Math.floor(rng() * 3) * 263172));
+          ceilings.push(box2(CELL2, 0.4, CELL2, x, y + WALL_H, z, (level.hell ? 7356473 : 9407104) - Math.floor(rng() * 3) * 263172));
         }
       }
       const flatMat = (opts) => new MeshStandardMaterial({ roughness: 0.96, metalness: 0.02, flatShading: true, ...opts });
@@ -39257,7 +39479,7 @@ void main() {
       level.lavaMat = lavaMat;
       const veinList = [...level.veins.values()];
       const wallGeo = new BoxGeometry(CELL2, WALL_H, CELL2);
-      const wallMesh = new InstancedMesh(wallGeo, flatMat({ color: level.deep ? 10129284 : 11774876 }), Math.max(1, veinList.length));
+      const wallMesh = new InstancedMesh(wallGeo, flatMat({ color: level.hell ? 7158325 : level.deep ? 10129284 : 11774876 }), Math.max(1, veinList.length));
       wallMesh.instanceMatrix.setUsage(DynamicDrawUsage);
       wallMesh.frustumCulled = false;
       wallMesh.receiveShadow = true;
@@ -39523,6 +39745,7 @@ void main() {
     digDown() {
       const cur = this.level;
       if (!cur) return null;
+      if (this.hasDeeper()) return this.switchLevel(1);
       if (this.levels.length >= 7) return null;
       const y = cur.y - 16;
       const start = { cx: cur.start.cx, cz: cur.start.cz };
@@ -39536,11 +39759,14 @@ void main() {
       for (let i = 0; i < 30; i++) {
         open(start.cx + i, start.cz);
         open(start.cx, start.cz - i);
+        open(start.cx + i, start.cz + 1);
+        open(start.cx - 1, start.cz - i);
         if (i % 6 === 0) open(start.cx + i, start.cz - 1);
       }
       const level = {
         index: this.levels.length,
         deep: true,
+        hell: true,
         y,
         grid,
         veins: /* @__PURE__ */ new Map(),
@@ -39568,11 +39794,12 @@ void main() {
         }
       }
       let lava = 0;
-      for (let cz = 2; cz < W - 2 && lava < 24; cz++) {
-        for (let cx = 2; cx < W - 2 && lava < 24; cx++) {
+      for (let cz = 2; cz < W - 2 && lava < 60; cz++) {
+        for (let cx = 2; cx < W - 2 && lava < 60; cx++) {
           const cell = grid[this._cellKey(cx, cz)];
           if (!cell || !cell.open) continue;
-          if (this.rng() < 0.2) {
+          if (Math.abs(cx - start.cx) <= 2 && Math.abs(cz - start.cz) <= 2) continue;
+          if (this.rng() < 0.42) {
             cell.type = "lava";
             lava++;
           }
@@ -39756,7 +39983,7 @@ void main() {
       }
       const lvl = this.level;
       if (!lvl) return;
-      if (lvl.lavaMat) lvl.lavaMat.emissiveIntensity = 1.3 + Math.sin(this.time * 2.1) * 0.4;
+      if (lvl.lavaGroup) for (const mesh2 of lvl.lavaGroup.children) mesh2.material.emissiveIntensity = 1.3 + Math.sin(this.time * 2.1) * 0.4;
       if (lvl.light) lvl.light.intensity = (lvl.deep ? 1.6 : 1) * (0.9 + Math.sin(this.time * 3.1) * 0.08);
       if (lvl.gemMesh && lvl.gemMesh.material) {
         lvl.gemMesh.material.emissiveIntensity = 0.9 + Math.sin(this.time * 1.7) * 0.25;
@@ -41290,7 +41517,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 17:39" : "dev";
+  var BUILD = true ? "2026-10-30 17:56" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -42924,6 +43151,7 @@ void main() {
     /** У каждого зверя — своя коробка, отдельная от остальных */
     registerMobHitboxes() {
       for (const mob of this.mobs.list) {
+        if (this.hitboxIds.mobs.has(mob)) continue;
         const hb = mob.hitboxSize || mob.def.hitbox;
         const c = mob.hitboxCenter || { x: 0, y: hb.h / 2, z: 0 };
         const id = this.hitboxes.register("mob", () => {
@@ -43350,7 +43578,7 @@ void main() {
             this.player.applyCamera(this.camera, this.mineWorld, 1);
             (_d = (_c = this.audio).stoneBreak) == null ? void 0 : _d.call(_c);
             this.spawnChips(spot.x, spot.y + 0.6, spot.z, { count: 16, color: 10130828, size: 0.08, spread: 2.4, up: 2.4 });
-            this.ui.toast(`\u041D\u043E\u0432\u044B\u0439 \u0441\u043B\u043E\u0439: \u2212${Math.abs(this.mine.level.y) | 0} \u043C. \u0416\u0438\u043B \u0437\u0434\u0435\u0441\u044C \u0431\u043E\u043B\u044C\u0448\u0435.`);
+            this.ui.toast(this.mine.level.hell ? `\u0410\u0434\u0441\u043A\u0430\u044F \u043F\u0440\u043E\u0441\u043B\u043E\u0439\u043A\u0430: \u2212${Math.abs(this.mine.level.y) | 0} \u043C. \u0411\u0435\u0440\u0435\u0433\u0438\u0441\u044C \u043B\u0430\u0432\u044B!` : `\u0421\u043B\u043E\u0439: \u2212${Math.abs(this.mine.level.y) | 0} \u043C.`);
             this.save();
           }
           break;
@@ -44933,7 +45161,7 @@ void main() {
     //  Обновление
     // ------------------------------------------------------------
     update(dt) {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       const state = this.state;
       if (this.sailing) {
         const idle = { forward: false, back: false, left: false, right: false, sprint: false, jump: false, jumpHeld: false };
@@ -44973,8 +45201,10 @@ void main() {
       this.world.updatePitPhysics(dt, this.rainIntensity);
       this.audio.setNight(skyInfo.night);
       this.audio.updateMusic(dt, skyInfo.night);
-      if (!this.underground && this.camera.position.y < CONFIG.world.seaLevel + this.waveAt(this.camera.position.x, this.camera.position.z)) {
-        const d = Math.max(0, CONFIG.world.seaLevel - this.camera.position.y);
+      const cameraWater = this.world.waterLevelAt(this.camera.position.x, this.camera.position.z);
+      const cameraWave = this.world.pitAt(this.camera.position.x, this.camera.position.z) ? 0 : this.waveAt(this.camera.position.x, this.camera.position.z);
+      if (!this.underground && cameraWater !== null && this.camera.position.y < cameraWater + cameraWave && this.world.heightAt(this.camera.position.x, this.camera.position.z) < cameraWater) {
+        const d = Math.max(0, cameraWater - this.camera.position.y);
         const murk = Math.min(1, 0.35 + d * 0.16);
         this.sky.sun.intensity *= 1 - murk * 0.72;
         this.sky.hemi.intensity *= 1 - murk * 0.5;
@@ -44989,7 +45219,7 @@ void main() {
       if (this.underground) {
         this.sky.sun.intensity *= 0.06;
         this.sky.hemi.intensity *= 0.14;
-        this.scene.fog.color.setHex(724240);
+        this.scene.fog.color.setHex(((_b = this.mine.level) == null ? void 0 : _b.hell) ? 3215373 : 724240);
         this.scene.fog.near = 2;
         this.scene.fog.far = 26;
       }
@@ -45037,13 +45267,16 @@ void main() {
         this.mineLight.visible = false;
       }
       for (const st of this.stations) {
-        const wheel = (_c = (_b = st.group) == null ? void 0 : _b.userData) == null ? void 0 : _c.wheel;
+        const wheel = (_d = (_c = st.group) == null ? void 0 : _c.userData) == null ? void 0 : _d.wheel;
         if (wheel) wheel.rotation.x += dt * 0.4;
       }
-      this.resources.update(dt);
+      this.resources.update(dt, this.rainIntensity);
+      const envSurface = this.underground ? "stone" : this.world.layerAt(this.player.position.x, this.player.position.z);
+      this.player.updateEnvironment(dt, this.underground ? 0 : this.rainIntensity, envSurface, !this.underground && (this.player.swimming || this.player.wading > 0.1));
       if (this.frameIndex % 30 === 0) this.syncPickupHitboxes();
       this.mobs.update(dt, this.player, {
         audio: this.audio,
+        resources: this.resources,
         night: skyInfo.night,
         listener: { x: this.player.position.x, z: this.player.position.z, yaw: this.player.yaw },
         onHit: (dmg2, cause2, mob) => this.takeDamage(dmg2, cause2, mob),
@@ -45051,6 +45284,7 @@ void main() {
           for (const [id, n] of Object.entries(items)) this.addItem(id, n);
         }
       });
+      if (this.hitboxIds.mobs.size !== this.mobs.list.length) this.registerMobHitboxes();
       this.updateProjectiles(dt);
       this.updateChips(dt);
       this.attackCooldown = Math.max(0, this.attackCooldown - dt);
@@ -45083,9 +45317,13 @@ void main() {
       state.warmth = Math.max(0, Math.min(100, state.warmth + Math.sign(dw) * Math.min(Math.abs(dw), dt * 3.4)));
       let cause = null;
       let dmg = 0;
+      if (!this.creative && !this.underground && this.resources.fireHazard(this.player.position)) {
+        dmg += 5;
+        cause = "\u043E\u0433\u043E\u043D\u044C";
+      }
       if (state.thirst <= 0) {
         dmg += CONFIG.needs.healthDrain * 0.8;
-        cause = "\u043E\u0431\u0435\u0437\u0432\u043E\u0436\u0438\u0432\u0430\u043D\u0438\u0435";
+        cause = cause || "\u043E\u0431\u0435\u0437\u0432\u043E\u0436\u0438\u0432\u0430\u043D\u0438\u0435";
       }
       if (state.hunger <= 0) {
         dmg += CONFIG.needs.healthDrain * 0.6;
