@@ -1446,7 +1446,8 @@ class Game {
       case 'minewall': {
         const type = t.probe.type;
         const names = { stone: 'порода', ore: 'железная жила', crystal: 'кристальная жила', obsidian: 'обсидиановая жила' };
-        return `<b>ЛКМ</b> — ${names[type] || 'порода'}${type === 'stone' ? '' : ' <span class="prompt-warn">ценная</span>'}`;
+        const health = `${Math.max(0, t.probe.hp).toFixed(1)}/${t.probe.maxHp.toFixed(1)}`;
+        return `<b>ЛКМ</b> — ${names[type] || 'порода'} · <span class="prompt-warn">HP ${health}</span>`;
       }
       case 'ladder':
         return '<b>E</b> — на слой выше · <b>R</b> — вниз · <b>G</b> — копать глубже · <b>X</b> — выход';
@@ -1458,7 +1459,9 @@ class Game {
         const node = t.node;
         const def = this.nodeDef(node);
         if (node.type === 'bush' && this.resources.canPickBerries(node)) return '<b>E</b> или <b>ЛКМ</b> — собрать ягоды';
-        return `<b>ЛКМ</b> — ${def.label.toLowerCase()}${def.need ? ` (нужен ${def.need})` : ''}`;
+        const name = node.type === 'rock' ? node.label : def.label;
+        const health = node.type === 'rock' ? ` · <span class="prompt-warn">HP ${Math.ceil(Math.max(0, node.hp))}/${node.maxHp}</span>` : '';
+        return `<b>ЛКМ</b> — ${name.toLowerCase()}${def.need ? ` (нужен ${def.need})` : ''}${health}`;
       }
       case 'campfire': {
         const pct = Math.round((t.fire.fuel / t.fire.maxFuel) * 100);
@@ -1474,6 +1477,10 @@ class Game {
         const layer = this.world.layerAt(t.point.x, t.point.z);
         const tool = this.equippedTool();
         const fast = this.creative || (tool && tool.dig);
+        const probe = this.world.probeAt(t.point.x, t.point.z);
+        if (probe.layer === 'stone' && probe.rock) {
+          return `<b>ЛКМ</b> — копать ${probe.rock.name.toLowerCase()} · <span class="prompt-warn">HP ${Math.ceil(probe.hp)}/${probe.maxHp}</span>`;
+        }
         const name = layer === 'sand' ? 'песок' : layer === 'stone' ? 'камень' : 'земля';
         return `<b>ЛКМ</b> — копать ${name} ${fast ? '' : '· <span class="prompt-warn">руками медленно</span>'}`;
       }

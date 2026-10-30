@@ -27,7 +27,7 @@ const VEIN_DROPS = {
   obsidian: { obsidian: [1, 2], crystal: [0, 1] },
 };
 
-const VEIN_HP = { stone: 2.6, ore: 3.4, crystal: 3.4, obsidian: 4.2 };
+export const VEIN_HP = Object.freeze({ stone: 2.6, ore: 3.4, crystal: 3.8, obsidian: 4.2 });
 
 export class Mine {
   constructor(scene, world, seed = 1) {
@@ -100,7 +100,7 @@ export class Mine {
 
     const level = {
       index, deep, y: LEVEL_DEPTH[index], grid,
-      veins: new Map(), start: { cx: startX, cz: startZ }, meshes: [],
+      veins: new Map(), wallHP: new Map(), start: { cx: startX, cz: startZ }, meshes: [],
     };
 
     // найти жилы: закрытые клетки, прилегающие к коридору
@@ -519,6 +519,7 @@ export class Mine {
       y,
       grid,
       veins: new Map(),
+      wallHP: new Map(),
       start,
       meshes: [],
     };
@@ -646,7 +647,8 @@ export class Mine {
       if (!c.cell || !c.cell.open) {
         const key = this._cellKey(c.cx, c.cz);
         const vein = lvl.veins.get(key) || null;
-        return { cx: c.cx, cz: c.cz, type: vein ? vein.type : 'stone', dist: d, key };
+        const type = vein ? vein.type : 'stone';
+        return { cx: c.cx, cz: c.cz, type, dist: d, key, hp: vein ? vein.hp : (lvl.wallHP.get(key) ?? VEIN_HP.stone), maxHp: VEIN_HP[type] };
       }
     }
     return null;
@@ -676,8 +678,8 @@ export class Mine {
 
     const type = hit.vein ? hit.vein.type : 'stone';
     const damage = 1 + power * 2.2;
-    const hp = (hit.vein ? hit.vein.hp : 2.4) - damage;
-    const result = { type, broken: false, drops: {}, hp: Math.max(0, hp), cx: hit.cx, cz: hit.cz };
+    const hp = (hit.vein ? hit.vein.hp : (lvl.wallHP.get(hit.key) ?? VEIN_HP.stone)) - damage;
+    const result = { type, broken: false, drops: {}, hp: Math.max(0, hp), maxHp: VEIN_HP[type], cx: hit.cx, cz: hit.cz };
 
     if (hp <= 0) {
       lvl.grid[hit.key] = { open: true, type: 'air' };
@@ -689,11 +691,14 @@ export class Mine {
         }
         lvl.veins.delete(hit.key);
       }
+      lvl.wallHP.delete(hit.key);
       result.broken = true;
       result.hp = 0;
       this._openCell(lvl, hit.cx, hit.cz, hit.key);
     } else if (hit.vein) {
       hit.vein.hp = hp;
+    } else {
+      lvl.wallHP.set(hit.key, hp);
     }
     return result;
   }

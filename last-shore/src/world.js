@@ -26,19 +26,19 @@ const SOIL_THICK = 1.35;
 // Сумма thick = 2.4 м — это и есть каменный слой до пустоты шахты.
 const STRATA = [
   {
-    id: 'sandstone', name: 'Песчаник', thick: 0.6, hard: 1.2, mine: 1.5,
+    id: 'sandstone', name: 'Песчаник', thick: 0.6, hard: 1.2, hp: 12, mine: 1.5,
     top: 0xa78b5c, deep: 0x8f7449, dust: 0xc0a97c,
   },
   {
-    id: 'granite', name: 'Гранит', thick: 0.7, hard: 2.0, mine: 2.0,
+    id: 'granite', name: 'Гранит', thick: 0.7, hard: 2.0, hp: 20, mine: 2.0,
     top: 0x928f88, deep: 0x77746d, dust: 0x8f8a80,
   },
   {
-    id: 'basalt', name: 'Базальт', thick: 0.65, hard: 3.0, mine: 2.4,
+    id: 'basalt', name: 'Базальт', thick: 0.65, hard: 3.0, hp: 30, mine: 2.4,
     top: 0x6b665f, deep: 0x504c45, dust: 0x5f5a54,
   },
   {
-    id: 'obsidian', name: 'Обсидиан', thick: 0.45, hard: 4.6, mine: 2.8,
+    id: 'obsidian', name: 'Обсидиан', thick: 0.45, hard: 4.6, hp: 46, mine: 2.8,
     top: 0x4b3f52, deep: 0x342b3d, dust: 0x4a3d52,
   },
 ];
@@ -1894,6 +1894,11 @@ export class World {
     else layer = 'stone';
     if (dug >= cap - 0.001) layer = 'void';
     const rock = layer === 'stone' ? this.rockAt(dug, surface) : null;
+    // HP слоя пропорционально оставшейся толщине: повреждение уже хранится в dug.
+    const stoneDepth = surface === 'stone' ? dug : Math.max(0, dug - SOIL_THICK);
+    const rockIndex = rock ? STRATA.indexOf(rock) : -1;
+    const layerStart = rockIndex >= 0 ? STRATA.slice(0, rockIndex).reduce((sum, s) => sum + s.thick, 0) : 0;
+    const remaining = rock ? clamp(1 - (stoneDepth - layerStart) / rock.thick, 0, 1) : 0;
     return {
       surface,
       layer,
@@ -1902,6 +1907,8 @@ export class World {
       rock,
       rockName: rock ? rock.name : null,
       hardness: rock ? rock.hard : 1,
+      hp: rock ? rock.hp * remaining : null,
+      maxHp: rock ? rock.hp : null,
       needMine: rock ? rock.mine : 0,
       stone: surface === 'stone' ? dug : Math.max(0, dug - SOIL_THICK),
       bottom: this.heightAt(x, z),
@@ -1936,7 +1943,7 @@ export class World {
     const isStone = probe.layer === 'stone';
     const hard = isStone && rock ? rock.hard : 1;
     const stepDepth = isStone
-      ? Math.max(0.05, depth * (mine >= 40 ? 2 : 1) / hard)
+      ? Math.max(0.05, depth * (mine >= 40 ? 2 : 1) * 10 / (rock ? rock.hp : hard * 10))
       : depth;
 
     const before = this.heightAt(x, z);
