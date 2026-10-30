@@ -25,7 +25,7 @@ mobs._ecologyStep();assert.ok(dead.alive);assert.equal(dead.youngAt,100);assert.
 mobs.time=210;mobs._ecologyStep();assert.equal(dead.youngAt,undefined);assert.equal(dead.group.scale.x,1);
 // Predator attacks appropriate prey only within reach.
 const snake=oldList.find(m=>m.type==='snake');mobs.list=[snake,dead];snake.alive=true;snake.x=0;snake.z=0;dead.x=1;dead.z=0;dead.hp=2;dead.alive=true;
-mobs._ecologyStep();assert.equal(dead.alive,false);
+snake.wildTarget=null;snake.biteTimer=0;const oldSight=mobs._hasLineOfSight;mobs._hasLineOfSight=()=>true;mobs._findWildTarget(snake);assert.equal(snake.wildTarget,dead);mobs._wildCombat(snake,0.1,{});assert.equal(dead.alive,true);mobs._wildCombat(snake,0.2,{});assert.equal(dead.alive,false);mobs._hasLineOfSight=oldSight;
 mobs.list=oldList;mobs._blocked=oldBlock;w.heightAt=heights;w.pitAt=pitAt;w.isFree=oldFree;w.slopeAt=oldSlope;
 // Nearby plants seed depleted fixed slots faster and grow visibly.
 const plants=res.nodes.filter(n=>n.type==='bush');const n=plants[0],parent=plants[1];const oldN={...n},oldP={...parent};parent.x=n.x+1;parent.z=n.z;parent.alive=true;n.alive=false;n.respawnAt=res.time+100;res.seedTimer=9;res._environmentStep(0);assert.ok(n.respawnAt<=res.time+90);

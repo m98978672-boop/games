@@ -377,6 +377,7 @@ export class Mobs {
     mob.stateTime = 0;
     mob.deadTimer = 0;
     mob.alerted = false;
+    mob.wildTarget = null; mob.wildThreat = null; mob.wildWindup = null;
     mob.group.visible = true;
     mob.group.rotation.set(0, 0, 0);
     this._unstick(mob);
@@ -437,6 +438,7 @@ export class Mobs {
     best.hp -= damage;
     // зверь замечает обидчика даже со спины
     best.lastSeen = this.time;
+    best.wildTarget = null; best.wildThreat = null; best.wildWindup = null;
     if (best.hp <= 0) {
       this.kill(best);
       return { mob: best, killed: true };
@@ -455,6 +457,7 @@ export class Mobs {
     mob.deadTimer = 0;
     mob.respawnAt = this.time + 45 + this.rng() * 45;
     mob.state = 'dead';
+    mob.wildTarget = null; mob.wildThreat = null; mob.wildWindup = null;
     if (mob.hitbox) mob.hitbox.visible = false;
   }
 
@@ -721,11 +724,16 @@ export class Mobs {
       mob.distToPlayer = dist;
 
       mob.biteTimer = Math.max(0, mob.biteTimer - dt);
+      mob.hurtTime = Math.max(0, (mob.hurtTime || 0) - dt);
       mob.think -= dt;
       mob.stateTime += dt;
 
-      // --- очень далёких зверей не считаем каждый кадр ---
-      if (dist > 70) {
+      if ((mob.type === 'snake' || mob.type === 'boar') && this.time >= (mob.huntAt || 0)) {
+        mob.huntAt = this.time + 2 + this.rng();
+        this._findWildTarget(mob);
+      }
+      // --- очень далёких зверей не считаем каждый кадр, кроме активной схватки ---
+      if (dist > 70 && !mob.wildTarget && !mob.wildThreat) {
         // далеко — не считаем поведение каждый кадр, но модель остаётся в мире
         mob.dormant = true;
         if (!mob.group.visible) mob.group.visible = true;
@@ -742,19 +750,16 @@ export class Mobs {
       });
       if (seesPlayer) mob.lastSeen = this.time;
 
-      if (mob.state !== 'sleep' || seesPlayer) this._think(mob, { px, pz, dist, seesPlayer, dt });
-
-      if (mob.wantsSound) {
-        this._sound(ctx, mob.wantsSound, mob, 1);
-        mob.wantsSound = null;
-      }
-
-      // --- движение ---
-      this._move(mob, dt, { px, pz, dist });
-
-      // --- атака ---
-      if (mob.state === 'attack' && def.damage > 0) {
-        if (!mob.didHit && mob.stateTime > 0.18) {
+      // Нападение на игрока не смешивается с атакой на другого зверя.
+      const wild = !(seesPlayer && dist < 4) && this._wildCombat(mob, dt, ctx);
+      if (!wild) {
+        if (mob.state !== 'sleep' || seesPlayer) this._think(mob, { px, pz, dist, seesPlayer, dt });
+        if (mob.wantsSound) {
+          this._sound(ctx, mob.wantsSound, mob, 1);
+          mob.wantsSound = null;
+        }
+        this._move(mob, dt, { px, pz, dist });
+        if (mob.state === 'attack' && def.damage > 0 && !mob.didHit && mob.stateTime > 0.18) {
           const reach = def.attackRange + 0.6;
           if (dist < reach && mob.biteTimer <= 0) {
             mob.biteTimer = def.biteCooldown;
@@ -794,6 +799,67 @@ export class Mobs {
       this.ecologyTimer -= 10;
       this._ecologyStep(ctx.resources);
     }
+  }
+
+  /** Хищник выбирает ближайшую подходящую добычу, а не любую модель. */
+  _findWildTarget(mob) {
+    if (mob.wildTarget?.alive) return;
+    const prey = mob.type === 'snake' ? ['rabbit', 'lizard', 'crab'] : mob.type === 'boar' ? ['snake'] : [];
+    let best = null, bestD = 9 * 9;
+    for (const other of this.list) {
+      if (!other.alive || !prey.includes(other.type) || other === mob) continue;
+      const d = (other.x-mob.x)**2 + (other.z-mob.z)**2;
+      if (d < bestD) { best = other; bestD = d; }
+    }
+    if (best) { mob.wildTarget = best; best.wildThreat = mob; }
+  }
+
+  /** Видимая погоня, замах, удар и возможность убежать или ответить. */
+  _wildCombat(mob, dt, ctx) {
+    if (mob.wildTarget && (!mob.wildTarget.alive || Math.hypot(mob.x-mob.wildTarget.x,mob.z-mob.wildTarget.z) > 18)) {
+      mob.wildTarget = null; mob.wildWindup = null;
+    }
+    if (mob.wildThreat && (!mob.wildThreat.alive || Math.hypot(mob.x-mob.wildThreat.x,mob.z-mob.wildThreat.z) > 15)) mob.wildThreat = null;
+    if (!mob.wildTarget && mob.wildThreat) {
+      const threat = mob.wildThreat;
+      this.setState(mob, 'flee');
+      this._move(mob, dt, {px:threat.x,pz:threat.z,dist:Math.hypot(mob.x-threat.x,mob.z-threat.z)});
+      return true;
+    }
+    const target = mob.wildTarget;
+    if (!target) { mob.wildWindup = null; return false; }
+    const dist = Math.hypot(target.x-mob.x,target.z-mob.z);
+    const reach = this._collisionRadius(mob) + this._collisionRadius(target) + 0.35;
+    target.wildThreat = mob;
+    if (dist > reach && (mob.wildWindup == null || dist > reach + 0.9)) {
+      mob.wildWindup = null;
+      this.setState(mob, 'chase');
+      this._move(mob, dt, {px:target.x,pz:target.z,dist});
+    } else {
+      this.setState(mob, 'attack');
+      if (dist > reach - 0.1) this._move(mob, dt, {px:target.x,pz:target.z,dist});
+      else mob.speedNow = 0;
+      mob.facing = Math.atan2(target.x-mob.x,target.z-mob.z);
+      if (mob.wildWindup == null && mob.biteTimer <= 0) { mob.wildWindup = 0; mob.wildDidHit = false; }
+      if (mob.wildWindup != null) {
+        mob.wildWindup += dt;
+        if (!mob.wildDidHit && mob.wildWindup >= 0.25) {
+          mob.wildDidHit = true;
+          if (target.alive && Math.hypot(target.x-mob.x,target.z-mob.z) <= reach + 0.75 &&
+              this._hasLineOfSight(mob, {x: target.x, z: target.z, eyeY: this.world.heightAt(target.x, target.z) + 0.7})) {
+            target.hp -= Math.max(2, mob.def.damage * 0.55);
+            target.hurtTime = 0.4;
+            target.hurtSide = target.x >= mob.x ? 1 : -1;
+            target.wildThreat = mob;
+            if (target.hp <= 0) { this.kill(target); mob.wildTarget = null; }
+            else if (target.def.damage > 0) target.wildTarget = mob;
+            this._sound(ctx, 'attack', mob, 0.8);
+          }
+        }
+        if (mob.wildWindup >= 0.65) { mob.wildWindup = null; mob.biteTimer = mob.def.biteCooldown; }
+      }
+    }
+    return true;
   }
 
   /** Высота воды относительно пола: море и локально затопленные ямы. */
@@ -837,10 +903,6 @@ export class Mobs {
         const age = Math.min(1, (this.time - m.youngAt) / 100);
         m.group.scale.setScalar(0.62 + age * 0.38);
         if (age >= 1) delete m.youngAt;
-      }
-      if (m.type === 'snake') {
-        const prey = living.find(p => p.alive && (p.type === 'rabbit' || p.type === 'lizard') && (p.x-m.x)**2 + (p.z-m.z)**2 < 2.2**2);
-        if (prey) { prey.hp -= 3; if (prey.hp <= 0) this.kill(prey); }
       }
       if (resources && (m.type === 'monkey' || m.type === 'boar')) {
         const food = resources.nodes.find(n => n.type === 'bush' && n.alive && n.berries && (n.x-m.x)**2 + (n.z-m.z)**2 < 2.5**2);
@@ -1434,10 +1496,26 @@ export class Mobs {
       }
     }
 
+    // Выразительный замах и выпад во время атаки другого зверя.
+    if (p.head && def.type !== 'snake') {
+      const baseX = p.head.userData.wildBaseX ?? (p.head.userData.wildBaseX = p.head.position.x);
+      const phase = mob.wildWindup;
+      const lunge = phase == null ? 0 : Math.sin(Math.min(1, phase / 0.65) * Math.PI);
+      p.head.position.x = baseX + lunge * 0.24;
+      const baseZ = p.head.userData.wildBaseZ ?? (p.head.userData.wildBaseZ = p.head.rotation.z);
+      p.head.rotation.z = baseZ - lunge * 0.24;
+    }
+    if (def.type === 'snake' && p.head && mob.wildWindup != null) {
+      p.head.position.x += Math.sin(Math.min(1, mob.wildWindup / 0.65) * Math.PI) * 0.35;
+    }
+    if (p.body && mob.wildWindup != null) p.body.rotation.z -= Math.sin(Math.min(1, mob.wildWindup / 0.65) * Math.PI) * 0.12;
+
     // --- сон: зверь ложится и не дёргается ---
     if (mob.group) {
       const targetLean = sleeping ? 0.12 : 0;
       mob.group.rotation.x = (mob.group.rotation.x || 0) * 0.9 + targetLean * 0.1;
+      const hurt = Math.max(0, Math.min(1, (mob.hurtTime || 0) / 0.4));
+      mob.group.rotation.z = Math.sin(hurt * Math.PI) * (mob.hurtSide || 1) * 0.22;
     }
   }
 }

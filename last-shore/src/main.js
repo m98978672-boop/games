@@ -2025,7 +2025,7 @@ class Game {
         return;
       }
       const tool = this.creative ? { chop: 99, mine: 99, weapon: 99 } : this.equippedTool();
-      const res = this.resources.strike(node, tool);
+      const res = this.resources.strike(node, tool, this.player.position);
       const actionDef = this.nodeDef(node);
       const power = tool && tool[actionDef.tool ?? 'chop'] !== undefined ? tool[actionDef.tool ?? 'chop'] : 0.35;
       if (res.need && (!tool || power < 1)) this.ui.toast(`Нужен ${res.need}: так почти не выходит`, true);
@@ -2663,6 +2663,7 @@ class Game {
         campfires: this.resources.campfires.map((f) => ({ x: f.x, z: f.z, fuel: Math.round(f.fuel) })),
         nodes: this.resources.nodes.flatMap((n, i) => (!n.alive || n.hp < n.maxHp || (n.type === 'bush' && n.berries !== !!n.item.berries)) ? [{
           i, hp: n.hp, alive: n.alive, berries: n.berries,
+          cutAngle: Number.isFinite(n.cutAngle) ? n.cutAngle : null,
           respawn: Math.max(0, n.respawnAt - this.resources.time),
           berryWait: Math.max(0, n.berryAt - this.resources.time),
         }] : []),
@@ -2735,6 +2736,11 @@ class Game {
     this.ui.setWounds(this.wounds);
     this.ui.setEyeDamage(this.wounds);
 
+    // Убираем старые индивидуальные меши до восстановления сохранённых зарубок.
+    for (const n of [...this.resources.cutTrees.keys()]) {
+      this.resources._removeCutTree(n);
+      this.world.setNodeVisible(n.item, n.alive);
+    }
     // Убираем добытые ресурсы и возвращаем оставшиеся предметы на прежние места.
     if (Array.isArray(data.nodes)) for (const saved of data.nodes.slice(0, this.resources.nodes.length)) {
       if (!Number.isInteger(saved.i) || saved.i < 0 || saved.i >= this.resources.nodes.length) continue;
@@ -2745,6 +2751,10 @@ class Game {
       node.berries = !!saved.berries;
       node.berryAt = this.resources.time + Math.max(0, Math.min(600, Number(saved.berryWait) || 0));
       this.world.setNodeVisible(node.item, node.alive);
+      if (node.alive && node.hp < node.maxHp && (node.type === 'tree' || node.type === 'palm')) {
+        node.cutAngle = Number.isFinite(saved.cutAngle) ? saved.cutAngle : 0;
+        this.resources._showCutTree(node, Math.max(0.05, 1 - node.hp / node.maxHp));
+      }
       if (node.item.collider) node.item.collider.disabled = !node.alive;
       if (node.type === 'bush' && node.alive) this.world.setLayerVisible(node.item, 'fruit', node.berries);
     }
