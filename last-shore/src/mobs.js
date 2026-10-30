@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { makeRng, clamp } from './noise.js';
 import { makeBoar, makeCrab, makeGull, makeSnake, makeMonkey, makeTurtle, makeFish, makeRabbit, makeLizard } from './models.js';
 import { CONFIG } from './config.js';
+import { ColliderIndex } from './collider-index.js';
 
 const TYPES = {
   boar: {
@@ -551,12 +552,22 @@ export class Mobs {
   //  Восприятие
   // ------------------------------------------------------------
 
+  // Индекс лишь отбирает кандидатов: точные проверки столкновений остаются прежними.
+  _colliderCandidates(minX, minZ, maxX, maxZ) {
+    if (!this._colliderIndex) this._colliderIndex = new ColliderIndex(this.world.colliders);
+    return this._colliderIndex.query(this.world.colliders, minX, minZ, maxX, maxZ);
+  }
+
   /** Линия видимости: строго по прямой между зверем и игроком не должно быть стволов/камней */
   _hasLineOfSight(mob, target) {
     const camHeight = target.eyeY ?? 1.4;
     const from = { x: mob.x, y: this.world.heightAt(mob.x, mob.z) + 0.7, z: mob.z };
     const to = { x: target.x, y: camHeight, z: target.z };
-    for (const c of this.world.colliders) {
+    const candidates = this._colliderCandidates(
+      Math.min(from.x, to.x), Math.min(from.z, to.z),
+      Math.max(from.x, to.x), Math.max(from.z, to.z),
+    );
+    for (const c of candidates) {
       if (c.disabled) continue;
       if (c.r < 0.3) continue;
       if (this._segmentHitsCircle(from, to, c, c.r * 0.85)) return false;
@@ -1060,7 +1071,8 @@ export class Mobs {
     const pad = strict ? 0 : r * 0.2;   // при спавне зазор 5 см, в движении — можно вплотную
     // обводки моделей: зверь тоже не проходит сквозь оболочку
     if (this.world.shells && this.world.shells.blocked(x, z, r + pad, this.world.heightAt(x, z))) return true;
-    for (const c of this.world.colliders) {
+    const radius = r + pad;
+    for (const c of this._colliderCandidates(x - radius, z - radius, x + radius, z + radius)) {
       if (c.disabled || c.fire || c.kind === 'den') continue;
       // кусты зверю тоже препятствие (для игрока они мягкие, для зверя — нет)
       if (c.r < 0.3 && !strict) continue;
