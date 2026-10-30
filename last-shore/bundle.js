@@ -34678,6 +34678,7 @@ void main() {
     cookedMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#a25c34"/><path d="M9 12l6 4" stroke="#7a3f22" stroke-width="1.4"/>'),
     hide: svg('<path d="M5 8q3-3 7-3t7 3q2 4-1 6 2 4-2 6-4 1-8-1-4-2-2-6-3-2-1-5z" fill="#a9784a"/><path d="M9 11q3 2 6 0" stroke="#7a5230" stroke-width="1.2" fill="none"/>'),
     feather: svg('<path d="M6 18q6-2 9-8 2-4 1-7-4 0-7 2-5 4-3 13z" fill="#e8ecef"/><path d="M7 17q4-5 8-8" stroke="#b6bcc2" stroke-width="1.1" fill="none"/>'),
+    eyeWash: svg('<path d="M8 3h8v3l2 3v10a2 2 0 01-2 2H8a2 2 0 01-2-2V9l2-3z" fill="#a8d7dd"/><path d="M12 10c2 2 3 3 3 4a3 3 0 01-6 0c0-1 1-2 3-4z" fill="#468fa9"/><path d="M8 6h8" stroke="#eef7ef" stroke-width="2"/>'),
     bandage: svg('<rect x="3" y="9" width="18" height="7" rx="3" fill="#e8e2d4" transform="rotate(-12 12 12)"/><path d="M9 10v5M15 9v5" stroke="#c9a07a" stroke-width="1.2"/>'),
     bow: svg('<path d="M6 3q12 9 0 18" stroke="#8a6a42" stroke-width="2.2" fill="none"/><path d="M6 3v18" stroke="#d8cfbc" stroke-width="1"/>'),
     arrows: svg('<path d="M4 20L18 5" stroke="#8a6a42" stroke-width="1.6"/><path d="M18 3l3 2-2 2z" fill="#c8ccd2"/><path d="M5 17l-2 3 3-1z" fill="#e8ecef"/>'),
@@ -34706,6 +34707,7 @@ void main() {
     cookedWater: { id: "cookedWater", name: "\u041A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430", icon: ICONS.cookedWater, kind: "food", hotbar: true, action: "\u0412\u044B\u043F\u0438\u0442\u044C" },
     hide: { id: "hide", name: "\u0428\u043A\u0443\u0440\u0430", icon: ICONS.hide, kind: "resource" },
     feather: { id: "feather", name: "\u041F\u0435\u0440\u043E", icon: ICONS.feather, kind: "resource" },
+    eyeWash: { id: "eyeWash", name: "\u041F\u043E\u0432\u044F\u0437\u043A\u0430 \u0434\u043B\u044F \u0433\u043B\u0430\u0437", icon: ICONS.eyeWash, kind: "food", hotbar: true, action: "\u0412\u044B\u043B\u0435\u0447\u0438\u0442\u044C \u0433\u043B\u0430\u0437\u0430" },
     bandage: { id: "bandage", name: "\u0411\u0438\u043D\u0442", icon: ICONS.bandage, kind: "food", hotbar: true, action: "\u041F\u0435\u0440\u0435\u0432\u044F\u0437\u0430\u0442\u044C" },
     driedMeat: { id: "driedMeat", name: "\u0412\u044F\u043B\u0435\u043D\u043E\u0435 \u043C\u044F\u0441\u043E", icon: ICONS.driedMeat, kind: "food", hotbar: true, action: "\u0421\u044A\u0435\u0441\u0442\u044C" },
     brew: { id: "brew", name: "\u042F\u0433\u043E\u0434\u043D\u044B\u0439 \u043E\u0442\u0432\u0430\u0440", icon: ICONS.brew, kind: "food", hotbar: true, action: "\u0412\u044B\u043F\u0438\u0442\u044C" },
@@ -34750,6 +34752,7 @@ void main() {
     "cookedWater",
     "brew",
     "bandage",
+    "eyeWash",
     "knife",
     "spear",
     "axe",
@@ -34775,6 +34778,7 @@ void main() {
     { id: "torch", name: "\u0424\u0430\u043A\u0435\u043B", need: { wood: 1, fiber: 2 }, gives: { torch: 1 }, note: "\u0421\u0432\u0435\u0442\u0438\u0442 \u043D\u043E\u0447\u044C\u044E, \u0434\u0435\u0440\u0436\u0438\u0442\u0441\u044F \u0432 \u0440\u0443\u043A\u0435" },
     { id: "campfireKit", name: "\u041A\u043E\u0441\u0442\u0440\u043E\u0432\u043E\u0435 \u043C\u0435\u0441\u0442\u043E", need: { wood: 3, stone: 5 }, gives: { campfireKit: 1 }, note: "\u0421\u0442\u0430\u0432\u0438\u0442\u0441\u044F \u043D\u0430 \u0437\u0435\u043C\u043B\u044E \u043A\u043B\u0430\u0432\u0438\u0448\u0435\u0439 F" },
     // --- вторая волна: охота, лечение, готовка ---
+    { id: "eyeWash", name: "\u041F\u043E\u0432\u044F\u0437\u043A\u0430 \u0434\u043B\u044F \u0433\u043B\u0430\u0437", need: { fiber: 2, cookedWater: 1 }, gives: { eyeWash: 1 }, note: "\u0412\u044B\u043B\u0435\u0447\u0438\u0432\u0430\u0435\u0442 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0451\u043D\u043D\u044B\u0435 \u0433\u043B\u0430\u0437\u0430; \u043A\u0438\u043F\u044F\u0447\u0451\u043D\u0430\u044F \u0432\u043E\u0434\u0430 \u0438 \u0432\u043E\u043B\u043E\u043A\u043D\u043E" },
     { id: "bandage", name: "\u0411\u0438\u043D\u0442", need: { fiber: 2, hide: 1 }, gives: { bandage: 1 }, note: "+30 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F, \u043D\u0435 \u0442\u0440\u0430\u0442\u0438\u0442 \u0435\u0434\u0443" },
     { id: "arrows", name: "\u0421\u0442\u0440\u0435\u043B\u044B \xD73", need: { wood: 1, flint: 1, feather: 1 }, gives: { arrows: 3 }, note: "\u0411\u043E\u0435\u043F\u0440\u0438\u043F\u0430\u0441 \u0434\u043B\u044F \u043B\u0443\u043A\u0430" },
     { id: "bow", name: "\u041B\u0443\u043A", need: { wood: 3, rope: 2, hide: 1 }, gives: { bow: 1 }, note: "\u0411\u044C\u0451\u0442 \u0437\u0432\u0435\u0440\u044F \u043D\u0430 \u0440\u0430\u0441\u0441\u0442\u043E\u044F\u043D\u0438\u0438" },
@@ -36247,6 +36251,8 @@ void main() {
         creative: $("hud-creative"),
         cursor: $("hud-cursor"),
         wounds: $("hud-wounds"),
+        eyeLeft: $("eye-damage-left"),
+        eyeRight: $("eye-damage-right"),
         botReport: $("bot-report"),
         botList: $("bot-list")
       };
@@ -36383,6 +36389,14 @@ void main() {
     /** F9: подсказка, что курсор отпущен */
     setCursorFree(on) {
       if (this.el.cursor) this.el.cursor.classList.toggle("hidden", !on);
+    }
+    setEyeDamage(list) {
+      for (const [part2, node] of [["eyeL", this.el.eyeLeft], ["eyeR", this.el.eyeRight]]) {
+        if (!node) continue;
+        const wound = list.find((w) => w.part === part2);
+        const value = wound ? String(Math.round(Math.max(0, Math.min(1, wound.severity)) * 100) / 100) : "0";
+        if (node.style.opacity !== value) node.style.opacity = value;
+      }
     }
     setWounds(list) {
       if (!this.el.wounds) return;
@@ -39737,6 +39751,7 @@ void main() {
       for (let iter = 0; iter < iterations; iter++) {
         const yaw = player.facing || 0;
         const parts = this.playerParts(pos, yaw, 0);
+        const partBoxes = parts.map((part2) => boxOf(part2.x, part2.y - part2.h / 2, part2.z, part2.w, part2.h, part2.d, yaw));
         let moved = false;
         const boxes = this.boxes(pos.x, pos.z, 7);
         for (const b of extraBoxes) boxes.push(b);
@@ -39745,9 +39760,10 @@ void main() {
           let best = 0;
           let bx = 0;
           let bz = 0;
-          for (const part2 of parts) {
+          for (let i = 0; i < parts.length; i++) {
+            const part2 = parts[i];
             if (!Number.isFinite(part2.x) || !Number.isFinite(part2.z)) continue;
-            const pb = boxOf(part2.x, part2.y - part2.h / 2, part2.z, part2.w, part2.h, part2.d, yaw);
+            const pb = partBoxes[i];
             if (!overlap3(pb, b)) continue;
             const overlapX = Math.min(pb.maxX, b.maxX) - Math.max(pb.minX, b.minX);
             const overlapZ = Math.min(pb.maxZ, b.maxZ) - Math.max(pb.minZ, b.minZ);
@@ -39828,8 +39844,7 @@ void main() {
             let best = 0;
             let bx = 0;
             let bz = 0;
-            for (const part2 of parts) {
-              const pb = boxOf(part2.x, part2.y - part2.h / 2, part2.z, part2.w, part2.h, part2.d, yaw);
+            for (const pb of partBoxes) {
               if (!overlap3(pb, mb)) continue;
               const overlapX = Math.min(pb.maxX, mb.maxX) - Math.max(pb.minX, mb.minX);
               const overlapZ = Math.min(pb.maxZ, mb.maxZ) - Math.max(pb.minZ, mb.minZ);
@@ -40882,7 +40897,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-30 13:25" : "dev";
+  var BUILD = true ? "2026-10-30 13:49" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -41093,6 +41108,72 @@ void main() {
     }
     ctx.globalAlpha = 1;
   }
+  function surfaceMarks(ctx, size, rng, kind, count) {
+    for (let i = 0; i < count; i++) {
+      const x = rng() * size, y = rng() * size;
+      const angle = rng() * Math.PI * 2;
+      const scale = 0.65 + rng() * 0.7;
+      for (const dx of [-size, 0, size]) for (const dy of [-size, 0, size]) {
+        ctx.save();
+        ctx.translate(x + dx, y + dy);
+        ctx.rotate(angle);
+        ctx.scale(scale, scale);
+        ctx.lineCap = "round";
+        if (kind === "shell") {
+          ctx.globalAlpha = 0.45;
+          ctx.fillStyle = i % 2 ? "#f7e9c8" : "#cdb993";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.3, 2.1, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#a79275";
+          ctx.lineWidth = 0.45;
+          ctx.beginPath();
+          ctx.moveTo(-2, 0);
+          ctx.lineTo(2, 0);
+          ctx.moveTo(0, -1.2);
+          ctx.lineTo(0, 1.2);
+          ctx.stroke();
+        } else if (kind === "leaf") {
+          ctx.globalAlpha = 0.24;
+          ctx.strokeStyle = i % 2 ? "#c2da8a" : "#274c24";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(-8, 0);
+          ctx.quadraticCurveTo(0, -2, 8, 0);
+          for (let k = -4; k <= 4; k += 4) {
+            ctx.moveTo(k, 0);
+            ctx.lineTo(k + 3, -4);
+            ctx.moveTo(k, 0);
+            ctx.lineTo(k + 3, 4);
+          }
+          ctx.stroke();
+        } else if (kind === "bark") {
+          ctx.globalAlpha = 0.24;
+          ctx.strokeStyle = "#412a19";
+          ctx.lineWidth = 1.1;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3, 7, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.strokeStyle = "#d1a979";
+          ctx.globalAlpha = 0.16;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 5, 10, 0, 0, Math.PI * 2);
+          ctx.stroke();
+        } else if (kind === "stone") {
+          ctx.globalAlpha = 0.28;
+          ctx.strokeStyle = i % 2 ? "#e2d7c0" : "#4d514d";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-7, 1);
+          ctx.lineTo(-2, -1);
+          ctx.lineTo(3, 0);
+          ctx.lineTo(8, -3);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+  }
   function stripes(ctx, size, rng, color, count, alpha = 0.18) {
     ctx.strokeStyle = color;
     ctx.lineCap = "round";
@@ -41244,6 +41325,7 @@ void main() {
       }
     }
     speckle(ctx, size, 1600, rng, ["#f2e4bf", "#a98f5f", "#7d6844"], [0.3, 1.1], [0.1, 0.3]);
+    surfaceMarks(ctx, size, rng, "shell", 70);
     speckle(ctx, size, 90, rng, ["#8b8377", "#6f6a61"], [1, 2.4], [0.25, 0.5]);
     return canvas;
   }
@@ -41273,6 +41355,7 @@ void main() {
         }
       }
     }
+    surfaceMarks(ctx, size, rng, "stone", 100);
     speckle(ctx, size, 320, rng, ["#b6ae9f", "#6b665d"], [0.4, 1.1], [0.06, 0.16]);
     return canvas;
   }
@@ -41323,6 +41406,7 @@ void main() {
       }
     }
     ctx.globalAlpha = 1;
+    surfaceMarks(ctx, size, rng, "bark", 36);
     speckle(ctx, size, 260, rng, ["#33241a", "#8a6644"], [0.5, 1.4], [0.08, 0.2]);
     return canvas;
   }
@@ -41333,6 +41417,7 @@ void main() {
     paintNoise(ctx, fbmNoise(size, 3, 83, 5), size, 3103787, 6922314);
     strokes(ctx, size, 260, rng, "#8fc46a", 1, [6, 18], 0.22);
     strokes(ctx, size, 200, rng, "#203f1e", 1, [5, 14], 0.25);
+    surfaceMarks(ctx, size, rng, "leaf", 190);
     speckle(ctx, size, 400, rng, ["#a8d17c", "#254a22"], [0.6, 2], [0.1, 0.26]);
     return canvas;
   }
@@ -41417,6 +41502,7 @@ void main() {
       "cloth",
       "skin",
       "rockDetail",
+      "grassDetail",
       "cloud",
       "dot"
     ];
@@ -43049,6 +43135,7 @@ void main() {
         }
         this.wounds = [];
         this.ui.setWounds([]);
+        this.ui.setEyeDamage([]);
         this.state.health = 100;
         this.state.thirst = 100;
         this.state.hunger = 100;
@@ -43203,6 +43290,7 @@ void main() {
     //  Ранения по частям тела
     // ------------------------------------------------------------
     woundPartLabel(part2) {
+      if (part2 === "eyeL" || part2 === "eyeR") return { label: part2 === "eyeL" ? "\u041B\u0435\u0432\u044B\u0439 \u0433\u043B\u0430\u0437" : "\u041F\u0440\u0430\u0432\u044B\u0439 \u0433\u043B\u0430\u0437", icon: "\u{1F441}\uFE0F" };
       if (part2.startsWith("head") || part2 === "neck") return { label: "\u0413\u043E\u043B\u043E\u0432\u0430", icon: "\u{1F9E0}" };
       if (part2 === "chest" || part2 === "belly" || part2 === "hip") return { label: "\u0422\u043E\u0440\u0441", icon: "\u{1FA79}" };
       if (part2.startsWith("arm") || part2.startsWith("forearm") || part2.startsWith("hand") || part2.startsWith("shoulder")) {
@@ -43233,12 +43321,16 @@ void main() {
       const existing = this.wounds.find((w) => w.part === part2);
       if (existing) {
         existing.severity = Math.min(1, existing.severity + severity * 0.6);
+        if (part2 === "eyeL" || part2 === "eyeR") this.ui.setEyeDamage(this.wounds);
         return existing;
       }
       const info = this.woundPartLabel(part2);
       const wound = { part: part2, severity, label: info.label, icon: info.icon, time: 0 };
       this.wounds.push(wound);
-      if (part2.startsWith("thigh") || part2.startsWith("shin")) {
+      if (part2 === "eyeL" || part2 === "eyeR") {
+        this.ui.setEyeDamage(this.wounds);
+        this.ui.toast("\u041F\u043E\u0432\u0440\u0435\u0436\u0434\u0451\u043D \u0433\u043B\u0430\u0437: \u0441\u0434\u0435\u043B\u0430\u0439 \u043F\u043E\u0432\u044F\u0437\u043A\u0443 \u0434\u043B\u044F \u0433\u043B\u0430\u0437 \u0438\u0437 \u0432\u043E\u043B\u043E\u043A\u043D\u0430 \u0438 \u043A\u0438\u043F\u044F\u0447\u0451\u043D\u043E\u0439 \u0432\u043E\u0434\u044B", true);
+      } else if (part2.startsWith("thigh") || part2.startsWith("shin")) {
         this.player.speedMul = 0.72;
         this.ui.toast("\u0420\u0430\u043D\u0435\u043D\u0430 \u043D\u043E\u0433\u0430: \u0438\u0434\u0451\u0448\u044C \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u0435\u0435", true);
       } else if (part2.startsWith("arm") || part2.startsWith("forearm") || part2.startsWith("hand")) {
@@ -43258,6 +43350,7 @@ void main() {
       const w = this.wounds.shift();
       if (w.part.startsWith("thigh") || w.part.startsWith("shin")) this.player.speedMul = 1;
       if (w.part.startsWith("arm") || w.part.startsWith("forearm") || w.part.startsWith("hand")) this.armPenalty = 1;
+      this.ui.setEyeDamage(this.wounds);
       this.ui.toast(`\u041F\u0435\u0440\u0435\u0432\u044F\u0437\u0430\u043D\u043E: ${w.label.toLowerCase()}`);
       return true;
     }
@@ -43267,6 +43360,7 @@ void main() {
         if (this.wounds.length) {
           this.wounds = [];
           this.ui.setWounds([]);
+          this.ui.setEyeDamage([]);
         }
         return;
       }
@@ -43280,7 +43374,8 @@ void main() {
       if (!this.wounds.some((w) => w.part.startsWith("thigh") || w.part.startsWith("shin"))) this.player.speedMul = 1;
       if (!this.wounds.some((w) => w.part.startsWith("arm") || w.part.startsWith("forearm") || w.part.startsWith("hand"))) this.armPenalty = 1;
       if (bleed > 0) this.state.health = Math.max(0, this.state.health - bleed * dt);
-      this.ui.setWounds(this.wounds.map((w) => ({ part: w.part, label: w.label, severity: w.severity, icon: w.icon })));
+      this.ui.setWounds(this.wounds);
+      this.ui.setEyeDamage(this.wounds);
     }
     // ------------------------------------------------------------
     //  Подземелье
@@ -44369,7 +44464,7 @@ void main() {
       else if (this.equippedId() !== id) this.selectSlot(this.selected);
     }
     consume(kind) {
-      var _a, _b;
+      var _a, _b, _c, _d;
       if (!this.running || this.paused || this.dead) return;
       const inv = this.state.inventory;
       if ((inv[kind] || 0) <= 0) {
@@ -44386,6 +44481,19 @@ void main() {
         brew: { thirst: 30, hunger: 8, health: 14, text: "\u041E\u0442\u0432\u0430\u0440: +30 \u0436\u0430\u0436\u0434\u044B \u0438 +14 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F" },
         bandage: { health: 30, text: "\u041F\u0435\u0440\u0435\u0432\u044F\u0437\u0430\u043B \u0440\u0430\u043D\u044B: +30 \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F" }
       };
+      if (kind === "eyeWash") {
+        if (!this.wounds.some((w) => w.part === "eyeL" || w.part === "eyeR")) {
+          this.ui.toast("\u0413\u043B\u0430\u0437\u0430 \u043D\u0435 \u043F\u043E\u0432\u0440\u0435\u0436\u0434\u0435\u043D\u044B \u2014 \u043F\u043E\u0432\u044F\u0437\u043A\u0430 \u0441\u043E\u0445\u0440\u0430\u043D\u0435\u043D\u0430");
+          return;
+        }
+        this.takeItem(kind, 1);
+        this.wounds = this.wounds.filter((w) => w.part !== "eyeL" && w.part !== "eyeR");
+        this.ui.setEyeDamage(this.wounds);
+        this.ui.setWounds(this.wounds);
+        (_b = (_a = this.audio).heal) == null ? void 0 : _b.call(_a);
+        this.ui.toast("\u041F\u043E\u0432\u044F\u0437\u043A\u0430 \u043F\u043E\u043C\u043E\u0433\u043B\u0430: \u0433\u043B\u0430\u0437\u0430 \u0432\u044B\u043B\u0435\u0447\u0435\u043D\u044B");
+        return;
+      }
       const ef = effects[kind];
       if (!ef) return;
       this.takeItem(kind, 1);
@@ -44393,7 +44501,7 @@ void main() {
       this.state.hunger = Math.max(0, Math.min(100, this.state.hunger + (ef.hunger || 0)));
       if (ef.health) {
         this.state.health = Math.max(1, Math.min(100, this.state.health + ef.health));
-        (_b = (_a = this.audio).heal) == null ? void 0 : _b.call(_a);
+        (_d = (_c = this.audio).heal) == null ? void 0 : _d.call(_c);
       }
       if (kind === "bandage") this.healWound();
       if (kind === "rawMeat" && Math.random() < 0.45) {
@@ -44642,6 +44750,9 @@ void main() {
       if (source || cause.includes("\u043A\u043B\u044B\u043A") || cause.includes("\u0437\u043C\u0435\u0438") || cause.includes("\u0437\u0432\u0435\u0440")) {
         const part2 = this.pickWoundPart(source);
         this.addWound(part2, Math.min(1, 0.35 + amount / 40));
+        if (Math.random() < 0.12) {
+          this.addWound(Math.random() < 0.5 ? "eyeL" : "eyeR", Math.min(0.9, 0.35 + amount / 50));
+        }
       }
       this.ui.toast(`\u2212${Math.round(amount)} \u0437\u0434\u043E\u0440\u043E\u0432\u044C\u044F: ${cause}`, true);
       if (this.state.health <= 0) this.die(cause);
@@ -44753,6 +44864,7 @@ void main() {
         }
       }
       this.ui.setWounds(this.wounds);
+      this.ui.setEyeDamage(this.wounds);
       if (Array.isArray(data.nodes)) for (const saved of data.nodes.slice(0, this.resources.nodes.length)) {
         if (!Number.isInteger(saved.i) || saved.i < 0 || saved.i >= this.resources.nodes.length) continue;
         const node = this.resources.nodes[saved.i];

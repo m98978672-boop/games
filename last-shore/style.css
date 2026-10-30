@@ -33,6 +33,12 @@ html, body {
 
 .hidden { display: none !important; }
 
+/* Травма влияет только на вид мира, HUD и управление остаются читаемыми. */
+#eye-damage { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+#eye-damage > div { position: absolute; inset: 0; opacity: 0; transition: opacity .35s; }
+#eye-damage-left { background: radial-gradient(ellipse at 75% 50%, transparent 22%, rgba(57, 13, 13, .38) 75%, rgba(20, 4, 5, .72) 100%); }
+#eye-damage-right { background: radial-gradient(ellipse at 25% 50%, transparent 22%, rgba(57, 13, 13, .38) 75%, rgba(20, 4, 5, .72) 100%); }
+
 /* ---------------------------- HUD ---------------------------- */
 
 #hud { position: absolute; inset: 0; pointer-events: none; }

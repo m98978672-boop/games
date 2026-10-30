@@ -139,6 +139,47 @@ function strokes(ctx, size, count, rng, color, width = 1, lenRange = [4, 14], al
   ctx.globalAlpha = 1;
 }
 
+// Маленькие узнаваемые детали с переносом через границы плитки.
+// Рисуются только при создании карт и не добавляют работы в каждом кадре.
+function surfaceMarks(ctx, size, rng, kind, count) {
+  for (let i = 0; i < count; i++) {
+    const x = rng() * size, y = rng() * size;
+    const angle = rng() * Math.PI * 2;
+    const scale = 0.65 + rng() * 0.7;
+    for (const dx of [-size, 0, size]) for (const dy of [-size, 0, size]) {
+      ctx.save();
+      ctx.translate(x + dx, y + dy);
+      ctx.rotate(angle);
+      ctx.scale(scale, scale);
+      ctx.lineCap = 'round';
+      if (kind === 'shell') {
+        ctx.globalAlpha = 0.45;
+        ctx.fillStyle = i % 2 ? '#f7e9c8' : '#cdb993';
+        ctx.beginPath(); ctx.ellipse(0, 0, 3.3, 2.1, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#a79275'; ctx.lineWidth = 0.45;
+        ctx.beginPath(); ctx.moveTo(-2, 0); ctx.lineTo(2, 0); ctx.moveTo(0, -1.2); ctx.lineTo(0, 1.2); ctx.stroke();
+      } else if (kind === 'leaf') {
+        ctx.globalAlpha = 0.24;
+        ctx.strokeStyle = i % 2 ? '#c2da8a' : '#274c24'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(-8, 0); ctx.quadraticCurveTo(0, -2, 8, 0);
+        for (let k = -4; k <= 4; k += 4) {
+          ctx.moveTo(k, 0); ctx.lineTo(k + 3, -4); ctx.moveTo(k, 0); ctx.lineTo(k + 3, 4);
+        }
+        ctx.stroke();
+      } else if (kind === 'bark') {
+        ctx.globalAlpha = 0.24; ctx.strokeStyle = '#412a19'; ctx.lineWidth = 1.1;
+        ctx.beginPath(); ctx.ellipse(0, 0, 3, 7, 0, 0, Math.PI * 2); ctx.stroke();
+        ctx.strokeStyle = '#d1a979'; ctx.globalAlpha = 0.16;
+        ctx.beginPath(); ctx.ellipse(0, 0, 5, 10, 0, 0, Math.PI * 2); ctx.stroke();
+      } else if (kind === 'stone') {
+        ctx.globalAlpha = 0.28; ctx.strokeStyle = i % 2 ? '#e2d7c0' : '#4d514d'; ctx.lineWidth = 0.7;
+        ctx.beginPath(); ctx.moveTo(-7, 1); ctx.lineTo(-2, -1); ctx.lineTo(3, 0); ctx.lineTo(8, -3); ctx.stroke();
+      }
+      ctx.restore();
+    }
+  }
+}
+
 function stripes(ctx, size, rng, color, count, alpha = 0.18) {
   ctx.strokeStyle = color;
   ctx.lineCap = 'round';
@@ -324,6 +365,7 @@ function sandCanvas(size = SIZE) {
   }
 
   speckle(ctx, size, 1600, rng, ['#f2e4bf', '#a98f5f', '#7d6844'], [0.3, 1.1], [0.1, 0.3]);
+  surfaceMarks(ctx, size, rng, 'shell', 70);
   // редкие камешки
   speckle(ctx, size, 90, rng, ['#8b8377', '#6f6a61'], [1, 2.4], [0.25, 0.5]);
   return canvas;
@@ -362,6 +404,7 @@ function rockCanvas(size = SIZE) {
     }
   }
 
+  surfaceMarks(ctx, size, rng, 'stone', 100);
   // мелкая крошка — редко и бледно
   speckle(ctx, size, 320, rng, ['#b6ae9f', '#6b665d'], [0.4, 1.1], [0.06, 0.16]);
   return canvas;
@@ -418,6 +461,7 @@ function barkCanvas(size = SIZE) {
   }
   ctx.globalAlpha = 1;
 
+  surfaceMarks(ctx, size, rng, 'bark', 36);
   speckle(ctx, size, 260, rng, ['#33241a', '#8a6644'], [0.5, 1.4], [0.08, 0.2]);
   return canvas;
 }
@@ -429,6 +473,7 @@ function leafCanvas(size = SIZE) {
   paintNoise(ctx, fbmNoise(size, 3, 83, 5), size, 0x2f5c2b, 0x69a04a);
   strokes(ctx, size, 260, rng, '#8fc46a', 1, [6, 18], 0.22);
   strokes(ctx, size, 200, rng, '#203f1e', 1, [5, 14], 0.25);
+  surfaceMarks(ctx, size, rng, 'leaf', 190);
   speckle(ctx, size, 400, rng, ['#a8d17c', '#254a22'], [0.6, 2], [0.1, 0.26]);
   return canvas;
 }
@@ -510,7 +555,7 @@ function softDotCanvas(size = 64) {
 function fallbackTextures() {
   const keys = [
     'grass', 'sand', 'rock', 'dirt', 'bark', 'leaf',
-    'wood', 'cloth', 'skin', 'rockDetail', 'cloud', 'dot',
+    'wood', 'cloth', 'skin', 'rockDetail', 'grassDetail', 'cloud', 'dot',
   ];
   const out = {};
   const data = new Uint8Array([235, 235, 235, 255]);

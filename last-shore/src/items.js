@@ -32,6 +32,7 @@ const ICONS = {
   cookedMeat: svg('<path d="M6 15a5 5 0 0110-2 4 4 0 01-2 7 5 5 0 01-8-5z" fill="#a25c34"/><path d="M9 12l6 4" stroke="#7a3f22" stroke-width="1.4"/>'),
   hide: svg('<path d="M5 8q3-3 7-3t7 3q2 4-1 6 2 4-2 6-4 1-8-1-4-2-2-6-3-2-1-5z" fill="#a9784a"/><path d="M9 11q3 2 6 0" stroke="#7a5230" stroke-width="1.2" fill="none"/>'),
   feather: svg('<path d="M6 18q6-2 9-8 2-4 1-7-4 0-7 2-5 4-3 13z" fill="#e8ecef"/><path d="M7 17q4-5 8-8" stroke="#b6bcc2" stroke-width="1.1" fill="none"/>'),
+  eyeWash: svg('<path d="M8 3h8v3l2 3v10a2 2 0 01-2 2H8a2 2 0 01-2-2V9l2-3z" fill="#a8d7dd"/><path d="M12 10c2 2 3 3 3 4a3 3 0 01-6 0c0-1 1-2 3-4z" fill="#468fa9"/><path d="M8 6h8" stroke="#eef7ef" stroke-width="2"/>'),
   bandage: svg('<rect x="3" y="9" width="18" height="7" rx="3" fill="#e8e2d4" transform="rotate(-12 12 12)"/><path d="M9 10v5M15 9v5" stroke="#c9a07a" stroke-width="1.2"/>'),
   bow: svg('<path d="M6 3q12 9 0 18" stroke="#8a6a42" stroke-width="2.2" fill="none"/><path d="M6 3v18" stroke="#d8cfbc" stroke-width="1"/>'),
   arrows: svg('<path d="M4 20L18 5" stroke="#8a6a42" stroke-width="1.6"/><path d="M18 3l3 2-2 2z" fill="#c8ccd2"/><path d="M5 17l-2 3 3-1z" fill="#e8ecef"/>'),
@@ -62,6 +63,7 @@ export const ITEMS = {
 
   hide: { id: 'hide', name: 'Шкура', icon: ICONS.hide, kind: 'resource' },
   feather: { id: 'feather', name: 'Перо', icon: ICONS.feather, kind: 'resource' },
+  eyeWash: { id: 'eyeWash', name: 'Повязка для глаз', icon: ICONS.eyeWash, kind: 'food', hotbar: true, action: 'Вылечить глаза' },
   bandage: { id: 'bandage', name: 'Бинт', icon: ICONS.bandage, kind: 'food', hotbar: true, action: 'Перевязать' },
   driedMeat: { id: 'driedMeat', name: 'Вяленое мясо', icon: ICONS.driedMeat, kind: 'food', hotbar: true, action: 'Съесть' },
   brew: { id: 'brew', name: 'Ягодный отвар', icon: ICONS.brew, kind: 'food', hotbar: true, action: 'Выпить' },
@@ -96,7 +98,7 @@ export const HOTBAR_SIZE = 10;
 /** Порядок сумки */
 export const BAG_ORDER = [
   'wood', 'stone', 'sand', 'flint', 'ironOre', 'iron', 'crystal', 'obsidian', 'fiber', 'rope', 'hide', 'feather', 'arrows',
-  'coconut', 'berries', 'rawMeat', 'cookedMeat', 'driedMeat', 'cookedWater', 'brew', 'bandage',
+  'coconut', 'berries', 'rawMeat', 'cookedMeat', 'driedMeat', 'cookedWater', 'brew', 'bandage', 'eyeWash',
   'knife', 'spear', 'axe', 'pickaxe', 'shovel', 'bow', 'torch', 'campfireKit', 'workbench', 'grindstone',
 ];
 
@@ -120,6 +122,7 @@ export const RECIPES = [
   { id: 'campfireKit', name: 'Костровое место', need: { wood: 3, stone: 5 }, gives: { campfireKit: 1 }, note: 'Ставится на землю клавишей F' },
 
   // --- вторая волна: охота, лечение, готовка ---
+  { id: 'eyeWash', name: 'Повязка для глаз', need: { fiber: 2, cookedWater: 1 }, gives: { eyeWash: 1 }, note: 'Вылечивает повреждённые глаза; кипячёная вода и волокно' },
   { id: 'bandage', name: 'Бинт', need: { fiber: 2, hide: 1 }, gives: { bandage: 1 }, note: '+30 здоровья, не тратит еду' },
   { id: 'arrows', name: 'Стрелы ×3', need: { wood: 1, flint: 1, feather: 1 }, gives: { arrows: 3 }, note: 'Боеприпас для лука' },
   { id: 'bow', name: 'Лук', need: { wood: 3, rope: 2, hide: 1 }, gives: { bow: 1 }, note: 'Бьёт зверя на расстоянии' },

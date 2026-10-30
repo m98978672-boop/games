@@ -298,6 +298,9 @@ export class HitboxSystem {
     for (let iter = 0; iter < iterations; iter++) {
       const yaw = player.facing || 0;
       const parts = this.playerParts(pos, yaw, 0);
+      // Части в пределах итерации неподвижны, даже если pos выталкивается.
+      // Считаем их коробки один раз, а не для каждой модели и зверя.
+      const partBoxes = parts.map((part) => boxOf(part.x, part.y - part.h / 2, part.z, part.w, part.h, part.d, yaw));
       let moved = false;
 
       // 1) коробки зарегистрированных моделей (станки, звери, костры…)
@@ -308,9 +311,10 @@ export class HitboxSystem {
         let best = 0;
         let bx = 0;
         let bz = 0;
-        for (const part of parts) {
+        for (let i = 0; i < parts.length; i++) {
+          const part = parts[i];
           if (!Number.isFinite(part.x) || !Number.isFinite(part.z)) continue;
-          const pb = boxOf(part.x, part.y - part.h / 2, part.z, part.w, part.h, part.d, yaw);
+          const pb = partBoxes[i];
           if (!overlap3(pb, b)) continue;
           const overlapX = Math.min(pb.maxX, b.maxX) - Math.max(pb.minX, b.minX);
           const overlapZ = Math.min(pb.maxZ, b.maxZ) - Math.max(pb.minZ, b.minZ);
@@ -383,8 +387,7 @@ export class HitboxSystem {
           let best = 0;
           let bx = 0;
           let bz = 0;
-          for (const part of parts) {
-            const pb = boxOf(part.x, part.y - part.h / 2, part.z, part.w, part.h, part.d, yaw);
+          for (const pb of partBoxes) {
             if (!overlap3(pb, mb)) continue;
             const overlapX = Math.min(pb.maxX, mb.maxX) - Math.max(pb.minX, mb.minX);
             const overlapZ = Math.min(pb.maxZ, mb.maxZ) - Math.max(pb.minZ, mb.minZ);

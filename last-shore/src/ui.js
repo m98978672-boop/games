@@ -52,6 +52,8 @@ export class UI {
       creative: $('hud-creative'),
       cursor: $('hud-cursor'),
       wounds: $('hud-wounds'),
+      eyeLeft: $('eye-damage-left'),
+      eyeRight: $('eye-damage-right'),
       botReport: $('bot-report'),
       botList: $('bot-list'),
     };
@@ -207,6 +209,15 @@ export class UI {
   /** F9: подсказка, что курсор отпущен */
   setCursorFree(on) {
     if (this.el.cursor) this.el.cursor.classList.toggle('hidden', !on);
+  }
+
+  setEyeDamage(list) {
+    for (const [part, node] of [['eyeL', this.el.eyeLeft], ['eyeR', this.el.eyeRight]]) {
+      if (!node) continue;
+      const wound = list.find((w) => w.part === part);
+      const value = wound ? String(Math.round(Math.max(0, Math.min(1, wound.severity)) * 100) / 100) : '0';
+      if (node.style.opacity !== value) node.style.opacity = value;
+    }
   }
 
   setWounds(list) {

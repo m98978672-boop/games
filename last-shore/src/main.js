@@ -895,6 +895,7 @@ class Game {
       }
       this.wounds = [];
       this.ui.setWounds([]);
+      this.ui.setEyeDamage([]);
       this.state.health = 100;
       this.state.thirst = 100;
       this.state.hunger = 100;
@@ -1053,6 +1054,7 @@ class Game {
   // ------------------------------------------------------------
 
   woundPartLabel(part) {
+    if (part === 'eyeL' || part === 'eyeR') return { label: part === 'eyeL' ? 'Левый глаз' : 'Правый глаз', icon: '👁️' };
     if (part.startsWith('head') || part === 'neck') return { label: 'Голова', icon: '🧠' };
     if (part === 'chest' || part === 'belly' || part === 'hip') return { label: 'Торс', icon: '🩹' };
     if (part.startsWith('arm') || part.startsWith('forearm') || part.startsWith('hand') || part.startsWith('shoulder')) {
@@ -1083,13 +1085,17 @@ class Game {
     const existing = this.wounds.find((w) => w.part === part);
     if (existing) {
       existing.severity = Math.min(1, existing.severity + severity * 0.6);
+      if (part === 'eyeL' || part === 'eyeR') this.ui.setEyeDamage(this.wounds);
       return existing;
     }
     const info = this.woundPartLabel(part);
     const wound = { part, severity, label: info.label, icon: info.icon, time: 0 };
     this.wounds.push(wound);
     // последствия: рука слабее бьёт, нога медленнее, голова мутная
-    if (part.startsWith('thigh') || part.startsWith('shin')) {
+    if (part === 'eyeL' || part === 'eyeR') {
+      this.ui.setEyeDamage(this.wounds);
+      this.ui.toast('Повреждён глаз: сделай повязку для глаз из волокна и кипячёной воды', true);
+    } else if (part.startsWith('thigh') || part.startsWith('shin')) {
       this.player.speedMul = 0.72;
       this.ui.toast('Ранена нога: идёшь медленнее', true);
     } else if (part.startsWith('arm') || part.startsWith('forearm') || part.startsWith('hand')) {
@@ -1110,6 +1116,7 @@ class Game {
     const w = this.wounds.shift();
     if (w.part.startsWith('thigh') || w.part.startsWith('shin')) this.player.speedMul = 1;
     if (w.part.startsWith('arm') || w.part.startsWith('forearm') || w.part.startsWith('hand')) this.armPenalty = 1;
+    this.ui.setEyeDamage(this.wounds);
     this.ui.toast(`Перевязано: ${w.label.toLowerCase()}`);
     return true;
   }
@@ -1117,7 +1124,7 @@ class Game {
   /** Раны заживают и понемногу кровят */
   updateWounds(dt) {
     if (this.creative) {
-      if (this.wounds.length) { this.wounds = []; this.ui.setWounds([]); }
+      if (this.wounds.length) { this.wounds = []; this.ui.setWounds([]); this.ui.setEyeDamage([]); }
       return;
     }
     let bleed = 0;
@@ -1130,7 +1137,8 @@ class Game {
     if (!this.wounds.some((w) => w.part.startsWith('thigh') || w.part.startsWith('shin'))) this.player.speedMul = 1;
     if (!this.wounds.some((w) => w.part.startsWith('arm') || w.part.startsWith('forearm') || w.part.startsWith('hand'))) this.armPenalty = 1;
     if (bleed > 0) this.state.health = Math.max(0, this.state.health - bleed * dt);
-    this.ui.setWounds(this.wounds.map((w) => ({ part: w.part, label: w.label, severity: w.severity, icon: w.icon })));
+    this.ui.setWounds(this.wounds);
+    this.ui.setEyeDamage(this.wounds);
   }
 
   // ------------------------------------------------------------
@@ -2286,6 +2294,19 @@ class Game {
       brew: { thirst: 30, hunger: 8, health: 14, text: 'Отвар: +30 жажды и +14 здоровья' },
       bandage: { health: 30, text: 'Перевязал раны: +30 здоровья' },
     };
+    if (kind === 'eyeWash') {
+      if (!this.wounds.some((w) => w.part === 'eyeL' || w.part === 'eyeR')) {
+        this.ui.toast('Глаза не повреждены — повязка сохранена');
+        return;
+      }
+      this.takeItem(kind, 1);
+      this.wounds = this.wounds.filter((w) => w.part !== 'eyeL' && w.part !== 'eyeR');
+      this.ui.setEyeDamage(this.wounds);
+      this.ui.setWounds(this.wounds);
+      this.audio.heal?.();
+      this.ui.toast('Повязка помогла: глаза вылечены');
+      return;
+    }
     const ef = effects[kind];
     if (!ef) return;
 
@@ -2589,6 +2610,10 @@ class Game {
     if (source || cause.includes('клык') || cause.includes('змеи') || cause.includes('звер')) {
       const part = this.pickWoundPart(source);
       this.addWound(part, Math.min(1, 0.35 + amount / 40));
+      // Нечастое осложнение удара зверя, независимо от урона по телу.
+      if (Math.random() < 0.12) {
+        this.addWound(Math.random() < 0.5 ? 'eyeL' : 'eyeR', Math.min(0.9, 0.35 + amount / 50));
+      }
     }
 
     this.ui.toast(`−${Math.round(amount)} здоровья: ${cause}`, true);
@@ -2701,6 +2726,7 @@ class Game {
       }
     }
     this.ui.setWounds(this.wounds);
+    this.ui.setEyeDamage(this.wounds);
 
     // Убираем добытые ресурсы и возвращаем оставшиеся предметы на прежние места.
     if (Array.isArray(data.nodes)) for (const saved of data.nodes.slice(0, this.resources.nodes.length)) {
