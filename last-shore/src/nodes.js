@@ -9,6 +9,14 @@ import { makeRng } from './noise.js';
 
 const REACH = 3.4;
 
+// Породы назначаются детерминированно без изменения генерации или вида острова.
+export const SURFACE_ROCKS = Object.freeze([
+  { id: 'sandstone', name: 'Песчаник', hp: 10 },
+  { id: 'granite', name: 'Гранит', hp: 14 },
+  { id: 'basalt', name: 'Базальт', hp: 18 },
+]);
+export const SURFACE_ORE = Object.freeze({ id: 'ore', name: 'Рудный камень', hp: 16 });
+
 const NODE_DEFS = {
   tree: {
     label: 'Дерево', hp: 10, respawn: 260,
@@ -73,18 +81,21 @@ export class Resources {
       list.forEach((item, i) => {
         if (i % every !== 0) return;
         const def = NODE_DEFS[type];
-        const ore = type === 'rock' && item.kind === 'ore';
+        const ore = type === 'rock' && (item.kind === 'ore' || item.ore);
+        const rock = type === 'rock' ? (ore ? SURFACE_ORE : SURFACE_ROCKS[i % SURFACE_ROCKS.length]) : null;
+        const maxHp = rock ? rock.hp : def.hp;
         this.nodes.push({
           type,
           item,
           x: item.x,
           z: item.z,
           y: item.h,
-          hp: def.hp,
-          maxHp: def.hp,
+          hp: maxHp,
+          maxHp,
+          rockType: rock?.id || null,
           alive: true,
           respawnAt: 0,
-          label: ore ? 'Рудный камень' : def.label,
+          label: rock ? rock.name : def.label,
           ore,
           // у куста с ягодами ягоды можно собрать руками
           berries: type === 'bush' ? !!item.berries : false,
@@ -223,7 +234,7 @@ export class Resources {
     if (node.hp <= 0) {
       node.alive = false;
       node.respawnAt = this.time + def.respawn;
-      node.hp = def.hp;
+      node.hp = node.maxHp;
       this.world.setNodeVisible(node.item, false);
       result.depleted = true;
 

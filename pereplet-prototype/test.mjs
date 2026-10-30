@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import { createWorld, step } from './core.mjs';
+const start = createWorld([{id:2,x:1,z:2,hp:12},{id:1,x:0,z:0,hp:10}]);
+const move = w => [{id: 1,field:'x',value:w.entities[0].x + 1}];
+const hit = w => [{id: 2,field:'hp',value:w.entities[1].hp - 3}];
+const next = step(start,[move,hit]);
+assert.deepEqual(next.entities, [{id:1,x:1,z:0,hp:10},{id:2,x:1,z:2,hp:9}]);
+assert.equal(start.entities[0].x, 0);
+assert.deepEqual(step(start,[move,hit]), next);
+assert.throws(() => step(start,[move,move]), /Конфликт/);
+assert.throws(() => step(start,[() => [{id:99,field:'hp',value:1}]]), /Некорректное/);
+assert.throws(() => step(start,[w => { w.entities[0].x = 3; return []; }]), TypeError);
+console.log('ПРОТОТИП ПЕРЕПЛЁТ OK');

@@ -31918,6 +31918,7 @@ void main() {
       name: "\u041F\u0435\u0441\u0447\u0430\u043D\u0438\u043A",
       thick: 0.6,
       hard: 1.2,
+      hp: 12,
       mine: 1.5,
       top: 10980188,
       deep: 9401417,
@@ -31928,6 +31929,7 @@ void main() {
       name: "\u0413\u0440\u0430\u043D\u0438\u0442",
       thick: 0.7,
       hard: 2,
+      hp: 20,
       mine: 2,
       top: 9605e3,
       deep: 7828589,
@@ -31938,6 +31940,7 @@ void main() {
       name: "\u0411\u0430\u0437\u0430\u043B\u044C\u0442",
       thick: 0.65,
       hard: 3,
+      hp: 30,
       mine: 2.4,
       top: 7038559,
       deep: 5262405,
@@ -31948,6 +31951,7 @@ void main() {
       name: "\u041E\u0431\u0441\u0438\u0434\u0438\u0430\u043D",
       thick: 0.45,
       hard: 4.6,
+      hp: 46,
       mine: 2.8,
       top: 4931410,
       deep: 3418941,
@@ -33730,6 +33734,10 @@ void main() {
       else layer = "stone";
       if (dug >= cap - 1e-3) layer = "void";
       const rock = layer === "stone" ? this.rockAt(dug, surface) : null;
+      const stoneDepth = surface === "stone" ? dug : Math.max(0, dug - SOIL_THICK);
+      const rockIndex = rock ? STRATA.indexOf(rock) : -1;
+      const layerStart = rockIndex >= 0 ? STRATA.slice(0, rockIndex).reduce((sum, s) => sum + s.thick, 0) : 0;
+      const remaining = rock ? clamp2(1 - (stoneDepth - layerStart) / rock.thick, 0, 1) : 0;
       return {
         surface,
         layer,
@@ -33738,6 +33746,8 @@ void main() {
         rock,
         rockName: rock ? rock.name : null,
         hardness: rock ? rock.hard : 1,
+        hp: rock ? rock.hp * remaining : null,
+        maxHp: rock ? rock.hp : null,
         needMine: rock ? rock.mine : 0,
         stone: surface === "stone" ? dug : Math.max(0, dug - SOIL_THICK),
         bottom: this.heightAt(x, z)
@@ -33772,7 +33782,7 @@ void main() {
       }
       const isStone = probe.layer === "stone";
       const hard = isStone && rock ? rock.hard : 1;
-      const stepDepth = isStone ? Math.max(0.05, depth * (mine >= 40 ? 2 : 1) / hard) : depth;
+      const stepDepth = isStone ? Math.max(0.05, depth * (mine >= 40 ? 2 : 1) * 10 / (rock ? rock.hp : hard * 10)) : depth;
       const before = this.heightAt(x, z);
       const newDug = already + stepDepth;
       const topY = this.surfaceOf(x, z).h0;
@@ -36822,6 +36832,12 @@ void main() {
 
   // src/nodes.js
   var REACH = 3.4;
+  var SURFACE_ROCKS = Object.freeze([
+    { id: "sandstone", name: "\u041F\u0435\u0441\u0447\u0430\u043D\u0438\u043A", hp: 10 },
+    { id: "granite", name: "\u0413\u0440\u0430\u043D\u0438\u0442", hp: 14 },
+    { id: "basalt", name: "\u0411\u0430\u0437\u0430\u043B\u044C\u0442", hp: 18 }
+  ]);
+  var SURFACE_ORE = Object.freeze({ id: "ore", name: "\u0420\u0443\u0434\u043D\u044B\u0439 \u043A\u0430\u043C\u0435\u043D\u044C", hp: 16 });
   var NODE_DEFS = {
     tree: {
       label: "\u0414\u0435\u0440\u0435\u0432\u043E",
@@ -36889,18 +36905,21 @@ void main() {
         list.forEach((item, i) => {
           if (i % every !== 0) return;
           const def = NODE_DEFS[type];
-          const ore = type === "rock" && item.kind === "ore";
+          const ore = type === "rock" && (item.kind === "ore" || item.ore);
+          const rock = type === "rock" ? ore ? SURFACE_ORE : SURFACE_ROCKS[i % SURFACE_ROCKS.length] : null;
+          const maxHp = rock ? rock.hp : def.hp;
           this.nodes.push({
             type,
             item,
             x: item.x,
             z: item.z,
             y: item.h,
-            hp: def.hp,
-            maxHp: def.hp,
+            hp: maxHp,
+            maxHp,
+            rockType: (rock == null ? void 0 : rock.id) || null,
             alive: true,
             respawnAt: 0,
-            label: ore ? "\u0420\u0443\u0434\u043D\u044B\u0439 \u043A\u0430\u043C\u0435\u043D\u044C" : def.label,
+            label: rock ? rock.name : def.label,
             ore,
             // у куста с ягодами ягоды можно собрать руками
             berries: type === "bush" ? !!item.berries : false,
@@ -37016,7 +37035,7 @@ void main() {
       if (node.hp <= 0) {
         node.alive = false;
         node.respawnAt = this.time + def.respawn;
-        node.hp = def.hp;
+        node.hp = node.maxHp;
         this.world.setNodeVisible(node.item, false);
         result.depleted = true;
         for (const drop of def.drop) {
@@ -38477,7 +38496,7 @@ void main() {
     crystal: { crystal: [1, 2], ironOre: [0, 1] },
     obsidian: { obsidian: [1, 2], crystal: [0, 1] }
   };
-  var VEIN_HP = { stone: 2.6, ore: 3.4, crystal: 3.4, obsidian: 4.2 };
+  var VEIN_HP = Object.freeze({ stone: 2.6, ore: 3.4, crystal: 3.8, obsidian: 4.2 });
   var Mine = class {
     constructor(scene, world, seed = 1) {
       this.scene = scene;
@@ -38544,6 +38563,7 @@ void main() {
         y: LEVEL_DEPTH[index],
         grid,
         veins: /* @__PURE__ */ new Map(),
+        wallHP: /* @__PURE__ */ new Map(),
         start: { cx: startX, cz: startZ },
         meshes: []
       };
@@ -38943,6 +38963,7 @@ void main() {
         y,
         grid,
         veins: /* @__PURE__ */ new Map(),
+        wallHP: /* @__PURE__ */ new Map(),
         start,
         meshes: []
       };
@@ -39044,6 +39065,7 @@ void main() {
     // ------------------------------------------------------------
     /** Что под прицелом: клетка стены и тип жилы (без урона) */
     probe(origin, dirX, dirZ, reach = 3.4) {
+      var _a;
       const lvl = this.level;
       if (!lvl) return null;
       const len = Math.hypot(dirX, dirZ) || 1;
@@ -39057,7 +39079,8 @@ void main() {
         if (!c.cell || !c.cell.open) {
           const key2 = this._cellKey(c.cx, c.cz);
           const vein = lvl.veins.get(key2) || null;
-          return { cx: c.cx, cz: c.cz, type: vein ? vein.type : "stone", dist: d, key: key2 };
+          const type = vein ? vein.type : "stone";
+          return { cx: c.cx, cz: c.cz, type, dist: d, key: key2, hp: vein ? vein.hp : (_a = lvl.wallHP.get(key2)) != null ? _a : VEIN_HP.stone, maxHp: VEIN_HP[type] };
         }
       }
       return null;
@@ -39067,6 +39090,7 @@ void main() {
      * Возвращает { type, broken, drops, hp } или null.
      */
     strike(origin, dirX, dirZ, power, reach = 2.8) {
+      var _a;
       const lvl = this.level;
       if (!lvl) return null;
       let hit = null;
@@ -39084,8 +39108,8 @@ void main() {
       if (!hit) return null;
       const type = hit.vein ? hit.vein.type : "stone";
       const damage = 1 + power * 2.2;
-      const hp = (hit.vein ? hit.vein.hp : 2.4) - damage;
-      const result = { type, broken: false, drops: {}, hp: Math.max(0, hp), cx: hit.cx, cz: hit.cz };
+      const hp = (hit.vein ? hit.vein.hp : (_a = lvl.wallHP.get(hit.key)) != null ? _a : VEIN_HP.stone) - damage;
+      const result = { type, broken: false, drops: {}, hp: Math.max(0, hp), maxHp: VEIN_HP[type], cx: hit.cx, cz: hit.cz };
       if (hp <= 0) {
         lvl.grid[hit.key] = { open: true, type: "air" };
         if (hit.vein) {
@@ -39096,11 +39120,14 @@ void main() {
           }
           lvl.veins.delete(hit.key);
         }
+        lvl.wallHP.delete(hit.key);
         result.broken = true;
         result.hp = 0;
         this._openCell(lvl, hit.cx, hit.cz, hit.key);
       } else if (hit.vein) {
         hit.vein.hp = hp;
+      } else {
+        lvl.wallHP.set(hit.key, hp);
       }
       return result;
     }
@@ -40677,7 +40704,7 @@ void main() {
   };
 
   // src/diag.js
-  var BUILD = true ? "2026-10-29 19:34" : "dev";
+  var BUILD = true ? "2026-10-30 12:38" : "dev";
   var probeResult = null;
   function probeWebGL() {
     if (probeResult) return probeResult;
@@ -43397,7 +43424,8 @@ void main() {
         case "minewall": {
           const type = t.probe.type;
           const names = { stone: "\u043F\u043E\u0440\u043E\u0434\u0430", ore: "\u0436\u0435\u043B\u0435\u0437\u043D\u0430\u044F \u0436\u0438\u043B\u0430", crystal: "\u043A\u0440\u0438\u0441\u0442\u0430\u043B\u044C\u043D\u0430\u044F \u0436\u0438\u043B\u0430", obsidian: "\u043E\u0431\u0441\u0438\u0434\u0438\u0430\u043D\u043E\u0432\u0430\u044F \u0436\u0438\u043B\u0430" };
-          return `<b>\u041B\u041A\u041C</b> \u2014 ${names[type] || "\u043F\u043E\u0440\u043E\u0434\u0430"}${type === "stone" ? "" : ' <span class="prompt-warn">\u0446\u0435\u043D\u043D\u0430\u044F</span>'}`;
+          const health = `${Math.max(0, t.probe.hp).toFixed(1)}/${t.probe.maxHp.toFixed(1)}`;
+          return `<b>\u041B\u041A\u041C</b> \u2014 ${names[type] || "\u043F\u043E\u0440\u043E\u0434\u0430"} \xB7 <span class="prompt-warn">HP ${health}</span>`;
         }
         case "ladder":
           return "<b>E</b> \u2014 \u043D\u0430 \u0441\u043B\u043E\u0439 \u0432\u044B\u0448\u0435 \xB7 <b>R</b> \u2014 \u0432\u043D\u0438\u0437 \xB7 <b>G</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C \u0433\u043B\u0443\u0431\u0436\u0435 \xB7 <b>X</b> \u2014 \u0432\u044B\u0445\u043E\u0434";
@@ -43409,7 +43437,9 @@ void main() {
           const node = t.node;
           const def = this.nodeDef(node);
           if (node.type === "bush" && this.resources.canPickBerries(node)) return "<b>E</b> \u0438\u043B\u0438 <b>\u041B\u041A\u041C</b> \u2014 \u0441\u043E\u0431\u0440\u0430\u0442\u044C \u044F\u0433\u043E\u0434\u044B";
-          return `<b>\u041B\u041A\u041C</b> \u2014 ${def.label.toLowerCase()}${def.need ? ` (\u043D\u0443\u0436\u0435\u043D ${def.need})` : ""}`;
+          const name = node.type === "rock" ? node.label : def.label;
+          const health = node.type === "rock" ? ` \xB7 <span class="prompt-warn">HP ${Math.ceil(Math.max(0, node.hp))}/${node.maxHp}</span>` : "";
+          return `<b>\u041B\u041A\u041C</b> \u2014 ${name.toLowerCase()}${def.need ? ` (\u043D\u0443\u0436\u0435\u043D ${def.need})` : ""}${health}`;
         }
         case "campfire": {
           const pct = Math.round(t.fire.fuel / t.fire.maxFuel * 100);
@@ -43423,6 +43453,10 @@ void main() {
           const layer = this.world.layerAt(t.point.x, t.point.z);
           const tool = this.equippedTool();
           const fast = this.creative || tool && tool.dig;
+          const probe = this.world.probeAt(t.point.x, t.point.z);
+          if (probe.layer === "stone" && probe.rock) {
+            return `<b>\u041B\u041A\u041C</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C ${probe.rock.name.toLowerCase()} \xB7 <span class="prompt-warn">HP ${Math.ceil(probe.hp)}/${probe.maxHp}</span>`;
+          }
           const name = layer === "sand" ? "\u043F\u0435\u0441\u043E\u043A" : layer === "stone" ? "\u043A\u0430\u043C\u0435\u043D\u044C" : "\u0437\u0435\u043C\u043B\u044F";
           return `<b>\u041B\u041A\u041C</b> \u2014 \u043A\u043E\u043F\u0430\u0442\u044C ${name} ${fast ? "" : '\xB7 <span class="prompt-warn">\u0440\u0443\u043A\u0430\u043C\u0438 \u043C\u0435\u0434\u043B\u0435\u043D\u043D\u043E</span>'}`;
         }
