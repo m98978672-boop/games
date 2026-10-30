@@ -13,6 +13,8 @@
     --accent:#4a90e2;
     --text:#222;
     --muted:#555;
+    --green:#0f0;
+    --red:#c00;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body,#desktop{width:100%;height:100%;overflow:hidden;background:var(--bg);}
@@ -50,7 +52,7 @@
     justify-content:center;user-select:none;transition:background .1s;
   }
   .btn:hover{background:#e0e0e0;}.btn:active{background:#ccc;}
-  .btn.close{color:#c00;border-color:#c00;}.btn.close:hover{background:#f4cccc;}
+  .btn.close{color:var(--red);border-color:var(--red);}.btn.close:hover{background:#f4cccc;}
   .content{flex:1;overflow:auto;position:relative;background:#fff;}
 
   /* ---------- Taskbar ---------- */
@@ -72,7 +74,7 @@
     transition:all .15s;max-width:150px;
   }
   .taskbar-app:hover{background:#5a5a5a;}.taskbar-app.active{background:var(--accent);border-color:#357abd;}
-  .taskbar-app .dot{display:inline-block;width:6px;height:6px;background:#0f0;border-radius:50%;
+  .taskbar-app .dot{display:inline-block;width:6px;height:6px;background:var(--green);border-radius:50%;
     margin-right:5px;opacity:0;transition:opacity .2s;} 
   .taskbar-app.active .dot{opacity:1;}
   #clock{margin-left:auto;font-family:monospace;font-size:13px;padding-right:6px;min-width:60px;text-align:right;}
@@ -145,6 +147,41 @@
     pointer-events:none;opacity:0;transition:opacity .3s,transform .3s;transform:translateY(-10px);}
   #notify.show{opacity:1;transform:translateY(0);}
 
+  /* ---------- F3 Inspector ---------- */
+  #inspector{
+    position:fixed;inset:0;background:rgba(10,10,16,.92);z-index:500;display:none;
+    flex-direction:column;color:#e8e8e8;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+    font-size:12px;line-height:1.4;
+  }
+  #inspector.visible{display:flex;}
+  #inspector .ins-header{
+    display:flex;align-items:center;justify-content:space-between;padding:10px 16px;
+    border-bottom:1px solid #333;background:#16162b;font-weight:700;letter-spacing:2px;
+    text-transform:uppercase;font-size:11px;
+  }
+  #inspector .ins-close{color:#888;cursor:pointer;font-size:16px;}
+  #inspector .ins-close:hover{color:#fff;}
+  #inspector .ins-body{flex:1;overflow:auto;display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px;}
+  @media (max-width:900px){ #inspector .ins-body{grid-template-columns:1fr;} }
+  .ins-panel{border:1px solid #333;border-radius:6px;background:#0f0f1a;display:flex;flex-direction:column;}
+  .ins-panel h3{padding:8px 12px;border-bottom:1px solid #222;background:#1a1a2e;font-size:11px;
+    text-transform:uppercase;letter-spacing:1px;color:#d4af37;margin:0;}
+  .ins-panel .ins-content{padding:10px 12px;overflow:auto;color:#c8c8c8;}
+  .ins-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1a1a2e;
+    font-size:11.5px;}
+  .ins-row:last-child{border-bottom:none;}
+  .ins-key{color:#8be08b;}
+  .ins-val{color:#a0c4ff;overflow-wrap:break-word;}
+  .ins-val.warn{color:#ffb347;} .ins-val.err{color:#ff8a8a;} .ins-val.ok{color:#8be08b;}
+  .ins-tree{font-size:11px;color:#b0b0b0;}
+  .ins-tree .dir{color:#d4af37;font-weight:700;margin-left:6px;}
+  .ins-tree .file{color:#a0c4ff;margin-left:6px;}
+  .ins-hint{padding:8px 16px;border-top:1px solid #333;background:#16162b;font-size:10.5px;
+    color:#666;text-align:center;letter-spacing:.5px;}
+  .core-bar{height:6px;background:#1a1a2e;border-radius:3px;overflow:hidden;margin-top:4px;
+    width:100%;}
+  .core-fill{height:100%;background:linear-gradient(90deg,#d4af37,#e8b45a);transition:width .3s;}
+
   ::-webkit-scrollbar{width:10px;height:10px;}
   ::-webkit-scrollbar-thumb{background:#888;border-radius:5px;}
   ::-webkit-scrollbar-thumb:hover{background:#666;}
@@ -167,6 +204,32 @@
 </div>
 
 <div id="notify"></div>
+
+<div id="inspector">
+  <div class="ins-header">
+    <div>🔍 Folder OS — внутреннее устройство ОС</div>
+    <div class="ins-close" onclick="toggleInspector()">✕</div>
+  </div>
+  <div class="ins-body">
+    <div class="ins-panel">
+      <h3>📁 Виртуальная ФС (дерево)</h3>
+      <div class="ins-content ins-tree" id="ins-vfs"></div>
+    </div>
+    <div class="ins-panel">
+      <h3>🖥️ Процессор / ядра</h3>
+      <div class="ins-content" id="ins-cpu"></div>
+    </div>
+    <div class="ins-panel">
+      <h3>⚙️ Ядро / модули</h3>
+      <div class="ins-content" id="ins-kernel"></div>
+    </div>
+    <div class="ins-panel">
+      <h3>⚡ Процессы</h3>
+      <div class="ins-content" id="ins-proc"></div>
+    </div>
+  </div>
+  <div class="ins-hint">Нажмите <b>F3</b> чтобы показать / скрыть инспектор · Всё в этой ОС — папки и файлы</div>
+</div>
 
 <script>
 /* ===================== VIRTUAL FILE SYSTEM ===================== */
@@ -282,7 +345,7 @@ class VFS{
     }
     this.dirty(); return p;
   }
-  write(p,content){
+  write(p,content,persist=true){
     p=this.resolve(p);
     const par=parentPath(p);
     if(par&&this.nodes[par]&&this.nodes[par].type==='dir'){
@@ -290,7 +353,7 @@ class VFS{
       if(!this.nodes[par].children.includes(name))this.nodes[par].children.push(name);
     }
     this.nodes[p]={type:'file',name:p.split('/').pop(),path:p,content:content===undefined?'':String(content),mtime:Date.now()};
-    this.dirty(); return p;
+    if(persist)this.dirty(); return p;
   }
   read(p){
     p=this.resolve(p);
@@ -351,19 +414,22 @@ function parentPath(p){ const pp=p.replace(/\/+$/,''); const i=pp.lastIndexOf('/
 function norm(p){ let parts=[]; for(const seg of p.split('/')){ if(seg===''||seg==='.')continue; if(seg==='..'){parts.pop();}else parts.push(seg);} return '/'+parts.join('/'); }
 
 /* ===================== SCHEDULER / CPU ===================== */
+/* Планировщик теперь держит загрузку ядер в памяти и пишет в VFS-файлы только при запросе
+   (или редко), чтобы не спамить localStorage каждые 800 мс. */
 class Scheduler{
   constructor(vfs){ this.vfs=vfs; this.processes=[]; this.nextPid=1; this.cores=4; this.tick=0; this.interval=null; }
   start(){
     if(this.interval)return;
-    this.interval=setInterval(()=>this.step(),800);
+    this.interval=setInterval(()=>this.step(),600);
   }
   stop(){ if(this.interval){clearInterval(this.interval);this.interval=null;} }
   spawn(name,app){
     const pid=this.nextPid++;
     const proc={pid,name,app,state:'ready',cpu:0,started:Date.now(),ticks:0,core:null};
     this.processes.push(proc);
-    this.vfs.write('/sys/cpu/core0/current','pid '+pid+' '+name);
     this.step();
+    // отражаем в VFS-файл (чтение через cat / терминал)
+    this.vfs.write('/sys/cpu/core0/current','pid '+pid+' '+name,false);
     return proc;
   }
   kill(pid){
@@ -372,7 +438,6 @@ class Scheduler{
   }
   step(){
     this.tick++;
-    // assign ready processes to cores round robin, mark running
     let coreIdx=0;
     for(const p of this.processes){
       if(p.state==='ready'||p.state==='running'){
@@ -381,13 +446,17 @@ class Scheduler{
         coreIdx=(coreIdx+1)%this.cores;
       }else{ p.core=null; p.cpu=0; }
     }
-    // write to cpu folders
+    // пишем в файлы ядер не чаще, чем нужно для отображения (без лишних dirty-сохранений)
     for(let i=0;i<this.cores;i++){
       const core='core'+i;
       const run=this.processes.filter(x=>x.core===core && x.state==='running');
-      this.vfs.write('/sys/cpu/'+core+'/load',run.length? Math.round(run.reduce((a,b)=>a+b.cpu,0)/run.length)+'%':'0%');
-      this.vfs.write('/sys/cpu/'+core+'/current',run.length? 'pid '+run[0].pid+' '+run[0].name:'idle');
+      const load=run.length? Math.round(run.reduce((a,b)=>a+b.cpu,0)/run.length)+'%':'0%';
+      const cur=run.length? 'pid '+run[0].pid+' '+run[0].name:'idle';
+      this.vfs.write('/sys/cpu/'+core+'/load',load,false);
+      this.vfs.write('/sys/cpu/'+core+'/current',cur,false);
     }
+    // periodic persist: сохраняем диск только каждые ~30 секунд (50 тиков)
+    if(this.tick%50===0)this.vfs.dirty();
   }
   get(){ return this.processes.slice(); }
 }
@@ -463,7 +532,6 @@ function makeDraggable(el,handle){
 }
 function winFocus(el){ const w=wm.wins.find(x=>x.el===el); if(w)wm.focus(w); }
 function makeResizable(el){
-  const content=el.querySelector('.content');
   const res=document.createElement('div');
   res.style.cssText='position:absolute;right:0;bottom:0;width:12px;height:12px;cursor:se-resize;z-index:2;';
   el.appendChild(res);
@@ -487,7 +555,6 @@ class Taskbar{
   }
   remove(win){ if(win.tb)win.tb.remove(); }
   sync(){
-    this.els=[];
     Array.from(document.getElementById('taskbar-apps').children).forEach(c=>c.remove());
     wm.wins.forEach(w=>{ const b=document.createElement('div'); b.className='taskbar-app'+(wm.focused===w?' active':''); b.innerHTML='<span class="dot"></span>'+escapeHtml(w.title); b.onclick=()=>wm.focus(w); document.getElementById('taskbar-apps').appendChild(b); w.tb=b; });
   }
@@ -514,7 +581,64 @@ function notify(msg){ const n=document.getElementById('notify'); n.textContent=m
 function clock(){ const d=new Date(); document.getElementById('clock').textContent=d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); }
 setInterval(clock,1000); clock();
 
-// desktop icons
+/* ===================== F3 INSPECTOR ===================== */
+const inspector=document.getElementById('inspector');
+let inspectorVisible=false;
+function toggleInspector(){
+  inspectorVisible=!inspectorVisible;
+  inspector.classList.toggle('visible',inspectorVisible);
+  if(inspectorVisible)refreshInspector();
+}
+function refreshInspector(){
+  if(!inspectorVisible)return;
+  // VFS tree
+  const vfsEl=document.getElementById('ins-vfs');
+  vfsEl.innerHTML=renderVfsTree('/');
+  // CPU
+  const cpuEl=document.getElementById('ins-cpu');
+  let html='';
+  for(let i=0;i<sched.cores;i++){
+    const load=vfs.read('/sys/cpu/core'+i+'/load');
+    const cur=vfs.read('/sys/cpu/core'+i+'/current');
+    const pct=parseInt(load)||0;
+    html+=`<div class="ins-row"><span class="ins-key">core${i}</span><span class="ins-val">${load}</span></div>
+    <div class="core-bar"><div class="core-fill" style="width:${pct}%"></div></div>
+    <div class="ins-row" style="margin-left:6px"><span class="ins-key">текущий</span><span class="ins-val">${escapeHtml(cur)}</span></div>`;
+  }
+  cpuEl.innerHTML=html;
+  // Kernel
+  const kerEl=document.getElementById('ins-kernel');
+  const mods=vfs.list('/sys/kernel')||[];
+  html='';
+  mods.forEach(m=>{ html+=`<div class="ins-row"><span class="ins-key">📄 ${escapeHtml(m.name)}</span><span class="ins-val ok">в папке /sys/kernel</span></div>`; });
+  kerEl.innerHTML=html||'<div class="ins-row"><span class="ins-val err">модули не найдены</span></div>';
+  // Processes
+  const procEl=document.getElementById('ins-proc');
+  const procs=sched.get();
+  html='';
+  if(procs.length){
+    procs.forEach(p=>{ html+=`<div class="ins-row"><span class="ins-key">PID ${p.pid}</span><span class="ins-val">${escapeHtml(p.name)}</span></div><div class="ins-row" style="margin-left:14px"><span class="ins-key">ядро</span><span class="ins-val">${p.core||'—'}</span><span class="ins-key">CPU</span><span class="ins-val">${p.cpu||0}%</span></div>`; });
+  }else{ html='<div class="ins-row"><span class="ins-val">нет запущенных процессов</span></div>'; }
+  procEl.innerHTML=html;
+  requestAnimationFrame(refreshInspector);
+}
+function renderVfsTree(path,depth=0){
+  const n=vfs.nodes[path];
+  if(!n)return '';
+  const pad='  '.repeat(depth);
+  let html=`<div class="ins-row" style="padding-left:${depth*14}px"><span class="ins-${n.type}">${pad}${n.type==='dir'?'📁 ':'📄 '}${escapeHtml(n.name||'root')}</span></div>`;
+  if(n.type==='dir'&&n.children){
+    n.children.forEach(c=>{ html+=renderVfsTree(vfs.join(path,c),depth+1); });
+  }
+  return html;
+}
+
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='F3'){ e.preventDefault(); toggleInspector(); }
+  if(e.key==='Escape'&&inspectorVisible){ toggleInspector(); }
+});
+
+/* desktop icons */
 (function renderIcons(){
   const box=document.getElementById('desktop-icons'); box.innerHTML='';
   APPS.forEach(a=>{ const d=document.createElement('div'); d.className='d-icon';
@@ -523,7 +647,7 @@ setInterval(clock,1000); clock();
   });
 })();
 
-// start menu
+/* start menu */
 (function buildMenu(){
   const m=document.getElementById('start-menu');
   m.innerHTML='<h3>Folder OS</h3>';
@@ -568,7 +692,7 @@ function openFileManager(win){
       r.onclick=()=>{ cur=up; render(); }; listEl.appendChild(r); }
     (nodes||[]).forEach(n=>{ const r=document.createElement('div'); r.className='fm-row';
       r.innerHTML='<div class="ic">'+(n.type==='dir'?'📁':'📄')+'</div><div class="name">'+escapeHtml(n.name)+'</div><div class="meta">'+(n.type==='dir'?'папка':'файл')+'</div>';
-      r.ondblclick=()=>{ if(n.type==='dir'){ cur=vfs.join(cur,n.name); render(); } else { openEditor(win.app? 'standalone':null, n.path); } };
+      r.ondblclick=()=>{ if(n.type==='dir'){ cur=vfs.join(cur,n.name); render(); } else { openEditor(null, n.path); } };
       r.onclick=(e)=>{ e.stopPropagation(); listEl.querySelectorAll('.fm-row').forEach(x=>x.classList.remove('selected')); r.classList.add('selected'); };
       listEl.appendChild(r);
     });
@@ -577,7 +701,6 @@ function openFileManager(win){
   c.querySelector('#fm-touch').onclick=()=>{ const name=prompt('Имя файла:'); if(name){ try{ vfs.write(vfs.join(cur,name),''); render(); notify('Файл создан'); }catch(e){ alert(e.message); } } };
   c.querySelector('#fm-refresh').onclick=render;
   c.querySelector('#fm-up').onclick=()=>{ const up=parentPath(cur); if(up!==cur){ cur=up; render(); } };
-  c.onwheel=(e)=>{ if(e.ctrlKey){ e.preventDefault(); } };
   render();
   return {destroy:()=>{}};
 }
@@ -594,7 +717,7 @@ function openTerminal(win){
   const out=c.querySelector('#term-out'); const inp=c.querySelector('#term-in');
   function line(html){ const d=document.createElement('div'); d.className='cmd-line'; d.innerHTML=html; out.appendChild(d); out.scrollTop=out.scrollHeight; return d; }
   function promptLine(){ return '<span class="prompt">'+escapeHtml(vfs.cwd)+'</span><span class="cmd">$</span> '; }
-  line('<span class="ok">Folder OS Terminal v1.0</span><br>Всё здесь — папки и файлы. Введите <b>help</b>.<br>');
+  line('<span class="ok">Folder OS Terminal v1.0</span><br>Всё здесь — папки и файлы. Введите <b>help</b>. Нажмите <b>F3</b> для инспектора ОС.<br>');
   line(promptLine()+'<span class="cmd" id="term-cur"></span>');
   const curLine=document.getElementById('term-cur');
   let buf='';
@@ -615,7 +738,7 @@ function openTerminal(win){
     const parts=cmd.split(/\s+/); const c0=parts[0]; const args=parts.slice(1);
     try{
       switch(c0){
-        case 'help': line('Доступные команды:'); line('  ls [путь]   — содержимое папки'); line('  cd [путь]   — сменить текущую папку'); line('  pwd         — показать текущий путь'); line('  cat <файл>  — вывести файл'); line('  echo <текст> [> файл]'); line('  mkdir <папка>'); line('  touch <файл>'); line('  rm <путь>   (-r для папки)'); line('  cp <ист> <назнач>'); line('  mv <ист> <назнач>'); line('  ps          — процессы (ядер-папки)'); line('  exec <приложение>'); line('  clear       — очистить экран'); line('  uname       — информация'); line('  sysinfo     — ядро и процессор'); break;
+        case 'help': line('Доступные команды:'); line('  ls [путь]   — содержимое папки'); line('  cd [путь]   — сменить текущую папку'); line('  pwd         — показать текущий путь'); line('  cat <файл>  — вывести файл'); line('  echo <текст> [> файл]'); line('  mkdir <папка>'); line('  touch <файл>'); line('  rm <путь>   (-r для папки)'); line('  cp <ист> <назнач>'); line('  mv <ист> <назнач>'); line('  ps          — процессы (ядер-папки)'); line('  exec <приложение>'); line('  clear       — очистить экран'); line('  uname       — информация'); line('  sysinfo     — ядро и процессор'); line('  f3          — показать инспектор ОС'); break;
         case 'ls':{ const target=args[0]||'.'; const nodes=vfs.list(target); if(nodes===null) line('<span class="err">Ошибка: не папка или не существует: '+escapeHtml(target)+'</span>'); else { line('Содержимое '+escapeHtml(target)+':'); nodes.forEach(n=>line('  '+(n.type==='dir'?'📁 ':'📄 ')+escapeHtml(n.name))); } } break;
         case 'cd':{ const target=args[0]||'/home/user'; const np=vfs.resolve(target); const node=vfs.nodes[np]; if(!node) line('<span class="err">Ошибка: не существует: '+escapeHtml(target)+'</span>'); else if(node.type!=='dir') line('<span class="err">Ошибка: не папка</span>'); else { vfs.cwd=np; vfs.dirty(); } } break;
         case 'pwd': line(vfs.cwd); break;
@@ -631,6 +754,7 @@ function openTerminal(win){
         case 'clear': out.innerHTML=''; break;
         case 'uname': line('Folder OS 1.0.0 (folder-based), linux-like'); break;
         case 'sysinfo':{ line('Ядро: /sys/kernel (папка с модулями)'); line('Процессор: /sys/cpu (папки core0..core3)'); line('Пользователь: /home/user'); line('Рабочая папка: '+vfs.cwd); } break;
+        case 'f3': toggleInspector(); break;
         default: line('<span class="err">Команда не найдена: '+escapeHtml(c0)+' (введите help)</span>');
       }
     }catch(e){ line('<span class="err">'+escapeHtml(e.message)+'</span>'); }
@@ -661,7 +785,7 @@ function openEditor(winApp,path){
   let dirty=false;
   area.addEventListener('input',()=>{ dirty=true; status.textContent='Есть несохранённые изменения'; });
   win.content.querySelector('#ed-save').onclick=()=>{ try{ vfs.write(editorPath,area.value); dirty=false; status.textContent='Сохранено в '+escapeHtml(editorPath); notify('Файл сохранён'); }catch(e){ alert(e.message); } };
-  win.content.querySelector('#ed-new').onclick=()=>{ const name=prompt('Имя файла (например /home/user/notes.txt):'); if(name){ try{ vfs.write(name,''); openEditor(winApp,name); }catch(e){ alert(e.message); } } };
+  win.content.querySelector('#ed-new').onclick=()=>{ const name=prompt('Имя файла (например /home/user/notes.txt):'); if(name){ try{ vfs.write(name,''); openEditor(null,name); }catch(e){ alert(e.message); } } };
   win.onUnmount=()=>{ editorWin=null; };
   editorWin=win;
   return win;
@@ -708,6 +832,7 @@ function openAbout(){
     '<p><b>Процессор:</b> ядра <span class="mono">core0..core3</span> — папки с файлами <span class="mono">load</span> и <span class="mono">current</span>.</p>'+
     '<p><b>Диск:</b> <span class="mono">localStorage</span> (сохраняется при перезагрузке).</p>'+
     '<p><b>Команды:</b> ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, ps, exec, help, clear, uname, sysinfo.</p>'+
+    '<p><b>F3:</b> инспектор внутреннего устройства ОС (дерево ФС, ядра, модули, процессы).</p>'+
     '<p style="margin-top:14px;font-size:12px;color:#666;">Создано для эмуляции ОС исключительно из папок и файлов.</p>'+
     '</div>');
 }
@@ -716,8 +841,6 @@ function openAbout(){
 function openApp(id){
   const a=APPS.find(x=>x.id===id);
   if(!a){ notify('Приложение не найдено: '+id); return; }
-  const already=wm.wins.find(w=>w.app===id && (id!=='editor' || true));
-  // editor and settings handled separately for singleton
   if(id==='settings'){ openSettings(); return; }
   if(id==='about'){ openAbout(); return; }
   if(id==='filemanager'){ const win=wm.create({app:'filemanager'},a.title,a.icon,'',openFileManager); return; }
