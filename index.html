@@ -82,6 +82,28 @@
         </div>
       </div>
     </article>
+
+    <article class="card card-folderos">
+      <div class="card-art">
+        <img src="site/assets/folder-os.png" alt="Folder OS: эмуляция операционной системы из папок и файлов" loading="lazy" width="1440" height="810">
+        <span class="badge badge-new">v1.0.0 · эмуляция ОС на папках и файлах</span>
+      </div>
+      <div class="card-body">
+        <h2>FOLDER OS<span>ОС из папок и файлов</span></h2>
+        <p class="desc">Эмуляция операционной системы, где вместо ядра — папка <code>/sys/kernel</code>, вместо процессора — папки <code>/sys/cpu/core0..3</code>, а всё работает на файлах. Файловый менеджер, терминал, текстовый редактор, настройки. Сохраняется в браузере и восстанавливается после перезагрузки.</p>
+        <ul class="features">
+          <li>Ядро <code>/sys/kernel</code> — папка с модулями vfs.js и scheduler.js</li>
+          <li>Процессор <code>/sys/cpu</code> — ядра-папки с файлами load и current</li>
+          <li>Терминал: ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, ps, exec, help, sysinfo</li>
+          <li>Файловый менеджер и текстовый редактор в окнах</li>
+          <li>Диск — localStorage: всё остаётся после перезагрузки страницы</li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="folder-os/index.html">Играть</a>
+          <a class="btn" href="folder-os/PLAN.md">План игры</a>
+        </div>
+      </div>
+    </article>
   </section>
 
   <section class="panel">
