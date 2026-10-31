@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#101717">
+  <meta name="description" content="Дальнобой: браузерный симулятор грузоперевозок с трафиком, обслуживанием грузовика и процедурными заказами.">
+  <title>Дальнобой — симулятор грузоперевозок</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <a class="brand" href="../index.html" aria-label="На главную">← <span>GAMES</span></a>
+      <div class="title"><span class="eyebrow">СИМУЛЯТОР ДАЛЬНИХ ПЕРЕВОЗОК</span><h1>ДАЛЬНОБОЙ</h1></div>
+      <div class="top-actions"><span class="save-indicator" id="save-indicator">● ПРОГРЕСС СОХРАНЁН</span><button class="icon-btn" id="help-btn" aria-label="Управление">?</button></div>
+    </header>
+
+    <section class="game-layout">
+      <div class="drive-column">
+        <section class="viewport panel">
+          <div class="scene-top"><span id="weather-label">ПЕРЕМЕННАЯ ОБЛАЧНОСТЬ</span><span id="clock-label">08:20</span></div>
+          <canvas id="road" aria-label="Вид дороги из кабины грузовика"></canvas>
+          <div class="touch-controls" aria-label="Сенсорное управление"><div class="touch-group"><button data-touch="a" aria-label="Руль влево">◀</button><button data-touch="d" aria-label="Руль вправо">▶</button></div><div class="touch-group pedals"><button data-touch="s" aria-label="Тормоз">ТОРМОЗ</button><button data-touch="w" aria-label="Газ">ГАЗ</button></div></div>
+          <div class="scene-bottom"><div><span class="small-label">МАРШРУТ</span><strong id="route-label">Гараж · ожидает рейс</strong></div><div class="next-sign" id="next-sign">ДИСПЕТЧЕРСКАЯ<br><b>ВЫБЕРИ ЗАКАЗ</b></div></div>
+          <div class="event-toast" id="event-toast" aria-live="polite"></div>
+          <div class="pause-cover hidden" id="pause-cover"><b>ПАУЗА</b><span>Нажми Esc, чтобы продолжить</span></div>
+        </section>
+
+        <section class="dash panel">
+          <div class="speed-block"><span class="small-label">СКОРОСТЬ</span><div><strong id="speed">0</strong><span>км/ч</span></div><div class="gear-line">ПЕРЕДАЧА <b id="gear">N</b><span id="cruise-label">КРУИЗ ВЫКЛ.</span></div></div>
+          <div class="dash-metrics">
+            <div class="metric"><span>ТОПЛИВО</span><div class="meter"><i id="fuel-bar"></i></div><b id="fuel-value">420 л</b></div>
+            <div class="metric"><span>МОТОРНОЕ МАСЛО</span><div class="meter oil"><i id="oil-bar"></i></div><b id="oil-value">100%</b></div>
+            <div class="metric"><span>ОХЛАЖДАЮЩАЯ ЖИДКОСТЬ</span><div class="meter temp"><i id="temp-bar"></i></div><b id="temp-value">82 °C</b></div>
+            <div class="metric"><span>СОСТОЯНИЕ ТЯГАЧА</span><div class="meter damage"><i id="damage-bar"></i></div><b id="damage-value">100%</b></div>
+          </div>
+          <div class="odometer"><span>ПРОБЕГ <b id="odometer">0 км</b></span><span>УСТАЛОСТЬ <b id="fatigue">0%</b></span><span>БАЛАНС <b id="money">24 000 ₽</b></span></div>
+        </section>
+
+        <div class="control-hint"><span>W / ↑ газ</span><span>S / ↓ тормоз</span><span>A D / ← → руль</span><span>Пробел — ручник</span><span>C — круиз</span><span>Esc — пауза</span></div>
+      </div>
+
+      <aside class="side-column">
+        <section class="panel route-panel">
+          <div class="section-head"><div><span class="eyebrow">БОРТОВОЙ КОМПЬЮТЕР</span><h2>Рейс</h2></div><span class="status-pill" id="job-status">В ГАРАЖЕ</span></div>
+          <div class="route-cities"><div><span>ОТКУДА</span><b id="from-city">—</b></div><i></i><div><span>КУДА</span><b id="to-city">—</b></div></div>
+          <div class="route-progress"><div class="progress-track"><i id="route-progress-bar"></i></div><div><span id="remaining">Выбери груз, чтобы выехать</span><b id="distance-label">—</b></div></div>
+          <div class="cargo-line"><span>ГРУЗ</span><b id="cargo-label">Нет активного заказа</b></div>
+          <div class="cargo-line"><span>СРОК</span><b id="deadline-label">—</b></div>
+          <div class="route-actions"><button class="button primary" id="jobs-btn">ВЫБРАТЬ ЗАКАЗ <span>↗</span></button><button class="button" id="rest-btn">ОТДОХНУТЬ <span>8 ч</span></button></div>
+        </section>
+
+        <section class="panel service-panel">
+          <div class="section-head"><div><span class="eyebrow">ТЕХНИЧЕСКИЙ УГОЛОК</span><h2>Обслуживание</h2></div><span class="wrench">⌁</span></div>
+          <p>Следи за жидкостями и состоянием тягача. Перегрев и износ повышают риск поломки.</p>
+          <div class="service-buttons"><button class="service-btn" data-service="oil"><span>Заменить масло</span><b>− 1 200 ₽</b></button><button class="service-btn" data-service="coolant"><span>Охлаждающая жидкость</span><b>− 850 ₽</b></button><button class="service-btn" data-service="repair"><span>Ремонт тягача</span><b id="repair-cost">от 0 ₽</b></button><button class="service-btn" data-service="fuel"><span>Заправить бак</span><b id="fuel-cost">от 0 ₽</b></button></div>
+          <div class="service-foot"><span id="truck-name">Тягач «Север-6» · 6×4</span><button id="garage-btn">ГАРАЖ ↗</button></div>
+        </section>
+
+        <section class="panel traffic-panel"><div class="traffic-icon">◉</div><div><b>Дорога живёт</b><p>Поток легковых, фур и автобусов. Держи дистанцию, следи за поворотами и погодой.</p></div></section>
+      </aside>
+    </section>
+    <footer>ВЫМЫШЛЕННЫЙ АВТОПАРК · ТЯГАЧ ИГРЫ — ОРИГИНАЛЬНЫЙ ДИЗАЙН, НЕ КОПИЯ МОДЕЛИ ПРОИЗВОДИТЕЛЯ <span>v0.1 · браузерный прототип</span></footer>
+  </main>
+
+  <div class="modal-backdrop hidden" id="modal-backdrop">
+    <section class="modal panel" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button class="modal-close" id="modal-close" aria-label="Закрыть">×</button>
+      <span class="eyebrow" id="modal-eyebrow">ДИСПЕТЧЕРСКАЯ</span><h2 id="modal-title">Доступные заказы</h2><p class="modal-sub" id="modal-sub">Выбери груз, оцени расстояние и сроки.</p>
+      <div id="modal-content"></div>
+    </section>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
