@@ -1,375 +1,111 @@
 // ============================================================================
-//  КАСКАД: Живая Вода — конфигурация долины 768×768 м, объёмной стройки,
-//  гидродинамики, энергорынка, 5 растущих городов и сценариев карт
+//  КАСКАД: Живая Вода v0.3 — Научная конфигурация бассейна (0.8 км / 5×5 км / 10×10 км),
+//  гидрологии, приплотинных и деривационных ГЭС/ГАЭС, 32 типов зданий,
+//  8 растущих городов и 12 источников дохода (по материалам гидроэнергетики и СНиП)
 // ============================================================================
 
+export const MAP_SCALES = {
+  compact: {
+    id: 'compact',
+    name: 'Ущелье 0.8 × 0.8 км',
+    shortLabel: '0.8 × 0.8 км',
+    areaKm2: 0.59,
+    size: 768,
+    horizScale: 1.0,
+    elevScale: 1.0,
+    flowScale: 1.0,
+    powerScale: 1.0,
+    snowLineY: 58.0,
+    minZoom: 22,
+    maxZoom: 720,
+    defaultDist: 235,
+    brushSizes: [6, 9.5, 16, 25],
+    desc: 'Детальный инженерный створ 1:1 для точной проработки узлов ГЭС и каналов.',
+  },
+  km5: {
+    id: 'km5',
+    name: 'Бассейн 5 × 5 км',
+    shortLabel: '5 × 5 км (25 км²)',
+    areaKm2: 25.0,
+    size: 5000,
+    horizScale: 5000 / 768,
+    elevScale: 2.35,
+    flowScale: 6.2,
+    powerScale: 6.5,
+    snowLineY: 122.0,
+    minZoom: 48,
+    maxZoom: 4600,
+    defaultDist: 1180,
+    brushSizes: [36, 62, 104, 165],
+    desc: 'Региональный речной бассейн 25 км² со снежными пиками, судоходством и 8 городами.',
+  },
+  km10: {
+    id: 'km10',
+    name: 'Мега-каскад 10 × 10 км',
+    shortLabel: '10 × 10 км (100 км²)',
+    areaKm2: 100.0,
+    size: 10000,
+    horizScale: 10000 / 768,
+    elevScale: 3.35,
+    flowScale: 13.5,
+    powerScale: 15.0,
+    snowLineY: 176.0,
+    minZoom: 75,
+    maxZoom: 9200,
+    defaultDist: 2250,
+    brushSizes: [72, 124, 208, 330],
+    desc: 'Гигантский сибирский каскад 100 км² масштаба Ангары и Енисея с ледниками и мега-ГЭС.',
+  },
+};
+
 export const WORLD = {
-  size: 768,            // увеличенная долина 768 × 768 м (+78% площади!)
-  gravity: 9.81,        // ускорение свободного падения, м/с²
-  waterDensity: 1000,   // плотность воды, кг/м³
+  scaleId: 'km5',
+  size: 5000,
+  horizScale: 5000 / 768,
+  elevScale: 2.35,
+  flowScale: 6.2,
+  powerScale: 6.5,
+  snowLineY: 122.0,
+  minZoom: 48,
+  maxZoom: 4600,
+  defaultDist: 1180,
+  brushSizes: [36, 62, 104, 165],
+  gravity: 9.81,        // ускорение свободного падения g, м/с²
+  waterDensity: 1000,   // плотность пресной воды ρ, кг/м³
   dayLengthSec: 185,    // полные игровые сутки = ~3 минуты реального времени (×1)
 };
 
-// Параметры сложной объёмной стройки и инженерной геологии
+// Параметры сложной объёмной стройки и инженерной геологии (СП 58.13330)
 export const CONSTRUCTION = {
-  pourRateM3PerSec: 460,        // скорость бетонирования бригадами и кранами, м³/с (×1)
-  cofferdamInstantRatio: 0.62,  // шпунтовая опалубка сразу держит 62% проектной высоты
-  rockAggregateDiscount: 0.38,  // скидка 38% на бетон при наличии собственного щебня из выемки скалы
-  highDamHeadThreshold: 10.5,   // свыше 10.5 м напора без цементации начинается фильтрация под подошвой
-  maxUnreinforcedHead: 17.5,    // предельный безопасный напор без 3D-контрфорсов
-  substationCost: 6800,         // стоимость узловой 3D-подстанции ОРУ 110 кВ
-  baseGridLossNoSub: 0.16,      // потери в длинных сетях без узловой ОРУ 110 кВ (16%)
-  gridLossWithSub: 0.03,        // потери с узловой подстанцией ОРУ 110 кВ (3%)
+  pourRateM3PerSec: 480,
+  cofferdamInstantRatio: 0.62,
+  rockAggregateDiscount: 0.38,
+  highDamHeadThreshold: 10.5,
+  maxUnreinforcedHead: 17.5,
+  substationCost: 6800,
+  navLockCost: 11500,
+  fishEcoCost: 7200,
+  baseGridLossNoSub: 0.16,
+  gridLossWithSub: 0.03,
   damHeightTiers: [
-    { id: 'low', label: 'Ярус +6м', addHeight: 6.2 },
-    { id: 'mid', label: 'Ярус +11м', addHeight: 11.2 },
-    { id: 'high', label: 'Ярус +17м', addHeight: 17.0 },
+    { id: 'low', label: 'Ярус +6м', baseAddHeight: 6.2, addHeight: 14.5 },
+    { id: 'mid', label: 'Ярус +11м', baseAddHeight: 11.2, addHeight: 26.3 },
+    { id: 'high', label: 'Ярус +17м', baseAddHeight: 17.0, addHeight: 40.0 },
   ],
 };
 
-// Сценарии карт для экрана предзагрузки перед игрой
-export const VALLEY_PRESETS = {
-  bystritsa: {
-    id: 'bystritsa',
-    name: 'Долина «Большая Быстрица»',
-    badge: 'Рекомендуется · Обучение',
-    areaLabel: '768 × 768 м · 3 реки · 5 городов',
-    headLabel: 'Перепад высот: 36 м',
-    mainInflowQ: 158,
-    creekInflowQ: 52,
-    westCreekQ: 34,
-    desc: 'Гранитная теснина «Ворота Грома», два горных притока, широкое деривационное плато у излучины «Подкова» и орошаемая Агродолина.',
-    landmarks: [
-      { label: '▲ Створ «Ворота Грома»', x: 12, z: -158, dist: 132 },
-      { label: '◆ Деривационное плато', x: -18, z: -12, dist: 175 },
-      { label: '◉ Орошение Агродолины', x: 168, z: 98, dist: 145 },
-      { label: '≈ Нижний плёс и Посад', x: -24, z: 235, dist: 185 },
-    ],
-  },
-  rapids: {
-    id: 'rapids',
-    name: 'Каскад «Северные Пороги»',
-    badge: 'Высокий напор · Скалы',
-    areaLabel: '768 × 768 м · Двойной каньон',
-    headLabel: 'Перепад высот: 46 м',
-    mainInflowQ: 172,
-    creekInflowQ: 64,
-    westCreekQ: 42,
-    desc: 'Крутая ступенчатая горная долина с двумя узкими ущельями подряд. Идеальна для многоступенчатого каскада ГЭС Фрэнсиса и Пелтона с контрфорсами.',
-    landmarks: [
-      { label: '▲ Верхний каньон', x: -18, z: -248, dist: 135 },
-      { label: '▲ Нижние Пороги', x: 22, z: -98, dist: 140 },
-      { label: '◆ Обводная полка', x: -26, z: 32, dist: 170 },
-      { label: '◉ Терраса Агродолины', x: 168, z: 98, dist: 150 },
-    ],
-  },
-  delta: {
-    id: 'delta',
-    name: 'Пойма «Зеркальная Дельта»',
-    badge: 'Каналы и паводки',
-    areaLabel: '768 × 768 м · Широкое русло',
-    headLabel: 'Перепад высот: 28 м',
-    mainInflowQ: 195,
-    creekInflowQ: 58,
-    westCreekQ: 48,
-    desc: 'Мощная полноводная река в широкой пойме с мягкими грунтами. Требует длинных дамб, цементации основания, бетонных каналов и защиты городов от половодья.',
-    landmarks: [
-      { label: '▲ Главный гидроузел', x: 8, z: -152, dist: 155 },
-      { label: '◆ Трасса спрямления', x: -16, z: -6, dist: 185 },
-      { label: '◉ Бассейн Агродолины', x: 168, z: 98, dist: 150 },
-      { label: '≈ Широкая дельта', x: -12, z: 255, dist: 195 },
-    ],
-  },
-};
-
-// Профили качества (адаптированы под увеличенную карту 768×768 м)
-export const QUALITY_PROFILES = {
-  low: {
-    id: 'low',
-    label: 'Лёгкое',
-    grid: 168,
-    maxPixelRatio: 1.15,
-    shadows: false,
-    shadowEvery: 0,
-    maxParticles: 1300,
-    treeCount: 720,
-    rockCount: 240,
-    substepsCap: 6,
-  },
-  medium: {
-    id: 'medium',
-    label: 'Обычное',
-    grid: 208,
-    maxPixelRatio: 1.6,
-    shadows: true,
-    shadowEvery: 3,
-    maxParticles: 2800,
-    treeCount: 1350,
-    rockCount: 420,
-    substepsCap: 8,
-  },
-  high: {
-    id: 'high',
-    label: 'Высокое',
-    grid: 248,
-    maxPixelRatio: 2.0,
-    shadows: true,
-    shadowEvery: 2,
-    maxParticles: 4800,
-    treeCount: 2100,
-    rockCount: 620,
-    substepsCap: 10,
-  },
-};
-
-// Гидрологические режимы погоды
-export const WEATHER_MODES = {
-  low_water: {
-    id: 'low_water',
-    label: 'Летняя межень',
-    icon: '☀',
-    inflowMult: 0.74,
-    rainRate: 0.0,
-    sunIntensity: 1.16,
-    fogDensity: 0.00040,
-    next: { low_water: 0.25, normal: 0.55, rain: 0.20 },
-  },
-  normal: {
-    id: 'normal',
-    label: 'Нормальный сток',
-    icon: '◈',
-    inflowMult: 1.0,
-    rainRate: 0.0,
-    sunIntensity: 1.05,
-    fogDensity: 0.00050,
-    next: { low_water: 0.22, normal: 0.43, rain: 0.27, flood: 0.08 },
-  },
-  rain: {
-    id: 'rain',
-    label: 'Дождевой паводок',
-    icon: '☂',
-    inflowMult: 1.52,
-    rainRate: 0.00015,
-    sunIntensity: 0.60,
-    fogDensity: 0.00082,
-    next: { normal: 0.45, rain: 0.30, flood: 0.25 },
-  },
-  flood: {
-    id: 'flood',
-    label: 'Весеннее половодье',
-    icon: '◈',
-    inflowMult: 2.25,
-    rainRate: 0.00032,
-    sunIntensity: 0.44,
-    fogDensity: 0.00106,
-    next: { rain: 0.55, normal: 0.45 },
-  },
-};
-
-// 12 инженерных инструментов объёмного строительства и гидротехники
-export const TOOLS = [
-  {
-    id: 'inspect',
-    key: '1',
-    name: 'Гидропост / Инспекция',
-    short: 'Осмотр',
-    costLabel: 'бесплатно',
-    desc: 'Замер глубины, числа Фруда, геологии пород, стадии бетонирования и настройка турбин/затворов.',
-  },
-  {
-    id: 'canal_dig',
-    key: '2',
-    name: 'Экскаватор канала',
-    short: 'Копать канал',
-    costPerM3Soil: 3.4,
-    costPerM3Rock: 14.5,
-    costLabel: '3.4 ₽/м³ + щебень',
-    desc: 'Копка каналов и котлованов (даёт грунт и гранитный щебень со скидкой 38% на бетон!). Зажмите Shift для ровного уклона.',
-  },
-  {
-    id: 'canal_liner',
-    key: '3',
-    name: 'Ж/Б лоток и борта канала',
-    short: 'Ж/Б лоток',
-    costPerCell: 58,
-    costLabel: '58 ₽/секция',
-    desc: 'Укладка объёмных железобетонных плит и парапетов канала (n = 0.012): поток в 2.5× быстрее и нулевой размыв!',
-  },
-  {
-    id: 'earth_dam',
-    key: '4',
-    name: 'Временная насыпная дамба',
-    short: 'Перемычка',
-    costPerM3: 5.2,
-    costLabel: '5.2 ₽/м³ (-70% отвал)',
-    desc: 'Быстрая строительная перемычка из грунта для осушения котлована плотины или защиты берегов. Размывается при переливе!',
-  },
-  {
-    id: 'concrete_dam',
-    key: '5',
-    name: 'Объёмная бетонная плотина',
-    short: '3D Плотина',
-    costPerM3: 22.0,
-    costLabel: '22 ₽/м³ (3 этапа)',
-    desc: 'Возводится в 3 стадии с башенными кранами: шпунт → армокаркас и опалубка → 3D-монолит с парапетом! Выберите высоту яруса внизу.',
-  },
-  {
-    id: 'foundation',
-    key: '6',
-    name: 'Скальный фундамент и Контрфорс',
-    short: 'Контрфорс',
-    costPerCell: 135,
-    costLabel: '135 ₽/блок',
-    desc: 'Цементация основания до скалы и монтаж объёмных 3D-контрфорсов плотины: убирает фильтрацию под подошвой и держит сверхнапор!',
-  },
-  {
-    id: 'spillway',
-    key: '7',
-    name: 'Водосброс с сегментным затвором',
-    short: 'Водосброс',
-    costFlat: 4400,
-    costLabel: '4 400 ₽',
-    desc: 'Бетонный водослив с подъёмным стальным затвором и носком-трамплином: безопасно сбрасывает паводок эффектной 3D-струёй.',
-  },
-  {
-    id: 'turbine_kaplan',
-    key: '8',
-    name: 'Гидроузел Каплана (русловой)',
-    short: 'Каплан 7 МВт',
-    turbineType: 'kaplan',
-    costFlat: 9500,
-    costLabel: '9 500 ₽',
-    desc: 'Водоприёмник с сороудерживающей решёткой, водовод и машинный зал для малых и средних напоров (2.5–16 м).',
-  },
-  {
-    id: 'turbine_francis',
-    key: '9',
-    name: 'Гидроузел Фрэнсиса (напорный)',
-    short: 'Фрэнсис 19 МВт',
-    turbineType: 'francis',
-    costFlat: 23500,
-    costLabel: '23 500 ₽',
-    desc: 'Мощный гидроагрегат со стальным напорным трубопроводом для средних и высоких плотин с контрфорсами (8–38 м, КПД 93.5%).',
-  },
-  {
-    id: 'turbine_pelton',
-    key: '0',
-    name: 'Гидроузел Пелтона (ковшовый)',
-    short: 'Пелтон 30 МВт',
-    turbineType: 'pelton',
-    costFlat: 32000,
-    costLabel: '32 000 ₽',
-    desc: 'Высоконапорная деривационная ГЭС (13–52 м) с длинным напорным водоводом для глубоких каньонов и крутых сбросов с канала.',
-  },
-  {
-    id: 'powerline',
-    key: 'P',
-    name: 'Подстанция ОРУ 110 кВ и ЛЭП',
-    short: 'ОРУ / ЛЭП',
-    costPerMeter: 13,
-    costLabel: '6 800 ₽ ОРУ / ЛЭП',
-    desc: 'Клик по городу — тянет ажурные опоры ЛЭП 110 кВ. Клик на берегу у ГЭС — строит 3D-подстанцию ОРУ 110 кВ (снижает потери с 16% до 3%)!',
-  },
-  {
-    id: 'demolish',
-    key: 'X',
-    name: 'Демонтаж / Гидромолот',
-    short: 'Снос',
-    costFlat: 250,
-    costLabel: '250 ₽',
-    desc: 'Демонтировать гидроагрегат, затвор, подстанцию или разобрать секцию бетонной плотины.',
-  },
-];
-
-// Инженерные характеристики турбин (честная формула P = rho * g * Q * H_net * eta)
-export const TURBINE_SPECS = {
-  kaplan: {
-    id: 'kaplan',
-    name: 'Каплана ПЛ-7',
-    ratedMW: 7.0,
-    minHead: 2.2,
-    optHead: 8.2,
-    maxHead: 21.0,
-    headSigma: 12.0,
-    maxArea: 5.1,
-    peakEta: 0.915,
-    frictionK: 0.00017,
-    upkeepPerSec: 10,
-    cost: 9500,
-    color: 0x3b82f6,
-  },
-  francis: {
-    id: 'francis',
-    name: 'Фрэнсиса РО-19',
-    ratedMW: 19.0,
-    minHead: 5.0,
-    optHead: 16.5,
-    maxHead: 44.0,
-    headSigma: 16.0,
-    maxArea: 6.5,
-    peakEta: 0.938,
-    frictionK: 0.00011,
-    upkeepPerSec: 23,
-    cost: 23500,
-    color: 0xf59e0b,
-  },
-  pelton: {
-    id: 'pelton',
-    name: 'Пелтона К-30',
-    ratedMW: 30.0,
-    minHead: 9.0,
-    optHead: 25.5,
-    maxHead: 62.0,
-    headSigma: 21.0,
-    maxArea: 5.5,
-    peakEta: 0.928,
-    frictionK: 0.00009,
-    upkeepPerSec: 31,
-    cost: 32000,
-    color: 0x10b981,
-  },
-};
-
-export const ECONOMY = {
-  startingCash: 56000,
-  baseRatePerMWSec: 345,
-  irrigationBonusPerSec: 110,
-  overSupplyExportFactor: 0.40,
-  loanChunk: 25000,
-  loanInterestPerSec: 0.00042,
-  maxLoan: 150000,
-};
-
-export function spotTariffMultiplier(hour) {
-  const h = ((hour % 24) + 24) % 24;
-  if (h >= 0 && h < 6) return 0.58;
-  if (h >= 6 && h < 10.5) return 1.62;
-  if (h >= 10.5 && h < 17) return 1.05;
-  if (h >= 17 && h < 22) return 2.35;
-  return 0.82;
-}
-
-export function spotPeriodLabel(hour) {
-  const h = ((hour % 24) + 24) % 24;
-  if (h >= 0 && h < 6) return { label: 'Ночной минимум (копите воду)', cls: 'offpeak' };
-  if (h >= 6 && h < 10.5) return { label: 'Утренний пик ×1.62', cls: 'peak' };
-  if (h >= 10.5 && h < 17) return { label: 'Дневной полупик ×1.05', cls: 'mid' };
-  if (h >= 17 && h < 22) return { label: 'Вечерний СУПЕР-ПИК ×2.35', cls: 'superpeak' };
-  return { label: 'Спад нагрузки ×0.82', cls: 'offpeak' };
-}
-
-// 5 саморазвивающихся городов в расширенной долине 768×768 м ([-384..+384])
-export const CITY_DEFS = [
+// Базовые канонические координаты 8 городов и промкластеров (в системе ±384, масштабируются под 0.8 / 5 / 10 км!)
+const BASE_CITY_DEFS = [
   {
     id: 'posad',
     name: 'Речной Посад',
-    subtitle: 'Деревообработка и южная пристань',
-    x: -158,
-    z: 224,
-    plateauRadius: 58,
-    baseElevation: 17.5,
-    startPop: 440,
-    baseDemandMW: 0.36,
+    subtitle: 'Лесопереработка и приречная слобода',
+    baseX: -158,
+    baseZ: 224,
+    baseRadius: 52,
+    baseElev: 17.5,
+    startPop: 640,
+    baseDemandMW: 0.38,
     demandPerBuilding: 0.075,
     tariffBonus: 1.0,
     connectedAtStart: true,
@@ -379,17 +115,17 @@ export const CITY_DEFS = [
   {
     id: 'agro',
     name: 'Агродолина',
-    subtitle: 'Зерновые террасы, теплицы и оросительный узел',
-    x: 222,
-    z: 112,
-    plateauRadius: 64,
-    baseElevation: 18.2,
-    startPop: 590,
-    baseDemandMW: 0.48,
+    subtitle: 'Орошаемые поля, элеваторы и теплицы',
+    baseX: 222,
+    baseZ: 112,
+    baseRadius: 58,
+    baseElev: 18.2,
+    startPop: 820,
+    baseDemandMW: 0.52,
     demandPerBuilding: 0.085,
-    tariffBonus: 1.10,
+    tariffBonus: 1.12,
     needsIrrigation: true,
-    irrigationTarget: { x: 168, z: 98, radius: 38 },
+    baseIrrTarget: { x: 168, z: 98, radius: 38 },
     connectedAtStart: false,
     accent: 0x34d399,
     archetype: 'agro',
@@ -397,29 +133,29 @@ export const CITY_DEFS = [
   {
     id: 'sever',
     name: 'Североборск',
-    subtitle: 'Горная метеостанция и лесопильный узел',
-    x: -214,
-    z: -218,
-    plateauRadius: 54,
-    baseElevation: 35.0,
-    startPop: 510,
-    baseDemandMW: 0.44,
+    subtitle: 'Гидрометеоцентр Росгидромета и ВЭС',
+    baseX: -214,
+    baseZ: -218,
+    baseRadius: 48,
+    baseElev: 35.0,
+    startPop: 590,
+    baseDemandMW: 0.45,
     demandPerBuilding: 0.09,
-    tariffBonus: 1.14,
+    tariffBonus: 1.15,
     connectedAtStart: false,
     accent: 0x2dd4bf,
-    archetype: 'town',
+    archetype: 'science',
   },
   {
     id: 'kamen',
     name: 'Каменногорск',
-    subtitle: 'Горнорудный комбинат и электрометаллургия',
-    x: 208,
-    z: -182,
-    plateauRadius: 60,
-    baseElevation: 34.0,
-    startPop: 920,
-    baseDemandMW: 0.88,
+    subtitle: 'Горно-обогатительный и машиностроительный узел',
+    baseX: 208,
+    baseZ: -182,
+    baseRadius: 54,
+    baseElev: 34.0,
+    startPop: 1120,
+    baseDemandMW: 0.92,
     demandPerBuilding: 0.145,
     tariffBonus: 1.24,
     connectedAtStart: false,
@@ -429,77 +165,672 @@ export const CITY_DEFS = [
   {
     id: 'svetlograd',
     name: 'Светлоград',
-    subtitle: 'Столица долины, технопарк и высотный центр',
-    x: -218,
-    z: -18,
-    plateauRadius: 74,
-    baseElevation: 24.8,
-    startPop: 1720,
-    baseDemandMW: 1.30,
-    demandPerBuilding: 0.185,
-    tariffBonus: 1.20,
+    subtitle: 'Мегаполис долины, небоскрёбы и Горводоканал',
+    baseX: -222,
+    baseZ: -16,
+    baseRadius: 66,
+    baseElev: 24.8,
+    startPop: 2150,
+    baseDemandMW: 1.38,
+    demandPerBuilding: 0.19,
+    tariffBonus: 1.22,
     connectedAtStart: false,
     accent: 0xa78bfa,
     archetype: 'metropolis',
   },
+  {
+    id: 'alumingrad',
+    name: 'Алюминград',
+    subtitle: 'Энергоёмкий алюминиевый электролизный завод',
+    baseX: 246,
+    baseZ: -38,
+    baseRadius: 52,
+    baseElev: 26.2,
+    startPop: 1340,
+    baseDemandMW: 1.65,
+    demandPerBuilding: 0.22,
+    tariffBonus: 1.38,
+    specialContract: 'smelter',
+    connectedAtStart: false,
+    accent: 0xf97316,
+    archetype: 'smelter',
+  },
+  {
+    id: 'kremniy',
+    name: 'Кремниевый Плёс',
+    subtitle: 'Гиперскейл ЦОД ИИ и квантовый кампус',
+    baseX: -124,
+    baseZ: -112,
+    baseRadius: 44,
+    baseElev: 29.4,
+    startPop: 780,
+    baseDemandMW: 1.25,
+    demandPerBuilding: 0.20,
+    tariffBonus: 1.44,
+    specialContract: 'datacenter',
+    connectedAtStart: false,
+    accent: 0x38bdf8,
+    archetype: 'datacenter',
+  },
+  {
+    id: 'ustport',
+    name: 'Усть-Порт',
+    subtitle: 'Речное пароходство, судоверфь и марина',
+    baseX: 118,
+    baseZ: 274,
+    baseRadius: 54,
+    baseElev: 12.6,
+    startPop: 980,
+    baseDemandMW: 0.68,
+    demandPerBuilding: 0.11,
+    tariffBonus: 1.18,
+    specialContract: 'port',
+    connectedAtStart: false,
+    accent: 0x06b6d4,
+    archetype: 'port',
+  },
 ];
 
-// Государственные гранты Минэнерго
+export const CITY_DEFS = [];
+
+// 32 разнообразных архитектурных типа зданий и промсооружений (от коттеджей до градирен и ЦОД!)
+export const BUILDING_ARCHETYPES = [
+  { id: 0,  name: 'Деревянный коттедж',        cat: 'res',  shape: 'gable', hMin: 4.5,  hMax: 7.0,  w: 6.2,  d: 6.8,  style: 0 },
+  { id: 1,  name: 'Кирпичный дуплекс',         cat: 'res',  shape: 'gable', hMin: 6.0,  hMax: 8.8,  w: 7.5,  d: 8.2,  style: 1 },
+  { id: 2,  name: 'Альпийское шале',           cat: 'res',  shape: 'gable', hMin: 5.5,  hMax: 8.2,  w: 7.8,  d: 7.4,  style: 2 },
+  { id: 3,  name: 'Таунхаус с террасой',       cat: 'res',  shape: 'flat',  hMin: 7.5,  hMax: 10.5, w: 11.0, d: 7.0,  style: 3 },
+  { id: 4,  name: 'Классическая 5-этажка',     cat: 'mid',  shape: 'gable', hMin: 14.0, hMax: 17.5, w: 15.0, d: 9.2,  style: 4 },
+  { id: 5,  name: 'Панельный 9-этажный дом',   cat: 'mid',  shape: 'flat',  hMin: 24.0, hMax: 29.0, w: 17.5, d: 10.2, style: 5 },
+  { id: 6,  name: 'Монолитный ЖК 16 этажей',   cat: 'high', shape: 'step',  hMin: 38.0, hMax: 48.0, w: 13.5, d: 13.5, style: 6 },
+  { id: 7,  name: 'Стеклянная бизнес-башня',   cat: 'high', shape: 'tower', hMin: 52.0, hMax: 72.0, w: 14.5, d: 14.5, style: 7 },
+  { id: 8,  name: 'Небоскрёб со шпилем',       cat: 'high', shape: 'spire', hMin: 68.0, hMax: 96.0, w: 15.5, d: 15.5, style: 8 },
+  { id: 9,  name: 'Общеобразовательная школа', cat: 'civ',  shape: 'flat',  hMin: 11.5, hMax: 14.5, w: 18.0, d: 12.5, style: 9 },
+  { id: 10, name: 'Клиническая больница',      cat: 'civ',  shape: 'step',  hMin: 18.0, hMax: 24.0, w: 17.0, d: 13.0, style: 10 },
+  { id: 11, name: 'Городская ратуша с башней', cat: 'civ',  shape: 'spire', hMin: 22.0, hMax: 30.0, w: 14.0, d: 12.0, style: 11 },
+  { id: 12, name: 'Арочный тепличный блок',    cat: 'agro', shape: 'arch',  hMin: 4.2,  hMax: 5.8,  w: 16.5, d: 9.5,  style: 12 },
+  { id: 13, name: 'Зерновой элеватор (силос)', cat: 'agro', shape: 'cyl',   hMin: 18.0, hMax: 26.0, w: 9.5,  d: 9.5,  style: 13 },
+  { id: 14, name: 'Агроферма и амбар',         cat: 'agro', shape: 'gable', hMin: 6.8,  hMax: 9.2,  w: 14.5, d: 9.8,  style: 14 },
+  { id: 15, name: 'Лесопильный комбинат',      cat: 'ind',  shape: 'gable', hMin: 7.5,  hMax: 10.5, w: 16.0, d: 11.0, style: 15 },
+  { id: 16, name: 'Машиностроительный цех',    cat: 'ind',  shape: 'flat',  hMin: 10.5, hMax: 14.5, w: 19.0, d: 13.5, style: 16 },
+  { id: 17, name: 'Корпус электролиза Al',     cat: 'smlt', shape: 'flat',  hMin: 11.5, hMax: 15.0, w: 24.0, d: 11.5, style: 17 },
+  { id: 18, name: 'Литейно-прокатный цех',     cat: 'smlt', shape: 'step',  hMin: 15.0, hMax: 21.0, w: 18.5, d: 14.0, style: 18 },
+  { id: 19, name: 'Гиперболоидная градирня',   cat: 'ind',  shape: 'cool',  hMin: 24.0, hMax: 34.0, w: 13.5, d: 13.5, style: 19 },
+  { id: 20, name: 'Модуль ЦОД ИИ (Серверная)', cat: 'dc',   shape: 'flat',  hMin: 10.0, hMax: 13.5, w: 20.0, d: 14.0, style: 20 },
+  { id: 21, name: 'Квантовый лаб-корпус',      cat: 'dc',   shape: 'tower', hMin: 24.0, hMax: 36.0, w: 13.0, d: 13.0, style: 21 },
+  { id: 22, name: 'Портовый терминал-склад',   cat: 'port', shape: 'arch',  hMin: 8.5,  hMax: 11.5, w: 21.0, d: 11.5, style: 22 },
+  { id: 23, name: 'Курортный гранд-отель',     cat: 'port', shape: 'step',  hMin: 22.0, hMax: 34.0, w: 16.0, d: 11.5, style: 23 },
+  { id: 24, name: 'Павильон яхт-клуба',        cat: 'port', shape: 'gable', hMin: 6.5,  hMax: 9.0,  w: 12.0, d: 10.0, style: 24 },
+  { id: 25, name: 'Станция Горводоканала',     cat: 'util', shape: 'cyl',   hMin: 8.5,  hMax: 12.0, w: 12.5, d: 12.5, style: 25 },
+  { id: 26, name: 'Насосная станция орошения', cat: 'agro', shape: 'flat',  hMin: 6.0,  hMax: 8.5,  w: 10.5, d: 9.0,  style: 26 },
+  { id: 27, name: 'Научный центр Росгидромета',cat: 'sci',  shape: 'spire', hMin: 14.0, hMax: 20.0, w: 11.5, d: 11.5, style: 27 },
+  { id: 28, name: 'Торгово-выставочный холл',  cat: 'mid',  shape: 'arch',  hMin: 10.0, hMax: 14.0, w: 18.5, d: 15.0, style: 28 },
+  { id: 29, name: 'Логистический хаб',         cat: 'ind',  shape: 'flat',  hMin: 9.0,  hMax: 12.0, w: 22.0, d: 13.0, style: 29 },
+  { id: 30, name: 'Спасательное депо МЧС',     cat: 'civ',  shape: 'flat',  hMin: 8.5,  hMax: 11.5, w: 13.5, d: 11.0, style: 30 },
+  { id: 31, name: 'Навигационный маяк мыса',   cat: 'port', shape: 'spire', hMin: 20.0, hMax: 28.0, w: 6.8,  d: 6.8,  style: 31 },
+];
+
+// Базовые сценарии рельефа долины (масштабируются под 0.8 км / 5×5 км / 10×10 км)
+export const VALLEY_PRESETS = {
+  bystritsa: {
+    id: 'bystritsa',
+    name: 'Бассейн «Большая Быстрица»',
+    badge: 'Рекомендуется · Полный цикл',
+    areaLabel: '3 реки · 8 городов · Ледники',
+    headLabel: 'Каскадный каньон + пойма',
+    baseMainQ: 162,
+    baseCreekQ: 54,
+    baseWestQ: 36,
+    mainInflowQ: 162,
+    creekInflowQ: 54,
+    westCreekQ: 36,
+    desc: 'Гранитная теснина «Ворота Грома», снежные вершины питания рек, деривационное плато «Подкова», Алюминиевый завод, ЦОД ИИ и судоходное устье.',
+    baseLandmarks: [
+      { label: '▲ Створ «Ворота Грома»', x: 12, z: -158, dist: 142 },
+      { label: '◆ Деривационное плато', x: -18, z: -12, dist: 185 },
+      { label: '◉ Орошение Агродолины', x: 168, z: 98, dist: 155 },
+      { label: '⚓ Усть-Порт и Дельта', x: 48, z: 278, dist: 195 },
+    ],
+    landmarks: [],
+  },
+  rapids: {
+    id: 'rapids',
+    name: 'Каскад «Северные Пороги»',
+    badge: 'Сверхнапор · ГАЭС и Фрэнсис',
+    areaLabel: 'Двойной каньон · Снежные хребты',
+    headLabel: 'Максимальный напор',
+    baseMainQ: 176,
+    baseCreekQ: 66,
+    baseWestQ: 44,
+    mainInflowQ: 176,
+    creekInflowQ: 66,
+    westCreekQ: 44,
+    desc: 'Два глубоких скальных ущелья подряд с высоким перепадом высот и обильным ледниковым таянием днём. Идеальна для каскада ГЭС и ГАЭС.',
+    baseLandmarks: [
+      { label: '▲ Верхний каньон №1', x: -18, z: -248, dist: 145 },
+      { label: '▲ Нижние Пороги №2', x: 22, z: -98, dist: 148 },
+      { label: '◆ Промзона Алюминграда', x: 246, z: -38, dist: 175 },
+      { label: '◉ Терраса Агродолины', x: 168, z: 98, dist: 155 },
+    ],
+    landmarks: [],
+  },
+  delta: {
+    id: 'delta',
+    name: 'Пойма «Великая Дельта»',
+    badge: 'Судоходство, шлюзы и паводки',
+    areaLabel: 'Широкая река · Мягкие грунты',
+    headLabel: 'Большой расход Q и флот',
+    baseMainQ: 205,
+    baseCreekQ: 62,
+    baseWestQ: 50,
+    mainInflowQ: 205,
+    creekInflowQ: 62,
+    westCreekQ: 50,
+    desc: 'Могучая судоходная река в широкой пойме: интенсивное испарение с зеркала, фильтрация под плотинами, караваны барж, порты и рыбхозы.',
+    baseLandmarks: [
+      { label: '▲ Главный створ и Шлюз', x: 8, z: -152, dist: 162 },
+      { label: '◆ Трасса спрямления', x: -16, z: -6, dist: 190 },
+      { label: '◉ Поля Агродолины', x: 168, z: 98, dist: 155 },
+      { label: '⚓ Широкая дельта', x: -12, z: 268, dist: 205 },
+    ],
+    landmarks: [],
+  },
+};
+
+// Профили качества с высокой оптимизацией под 5×5 км и 10×10 км
+export const QUALITY_PROFILES = {
+  low: {
+    id: 'low',
+    label: 'Быстрое',
+    grid: 168,
+    maxPixelRatio: 1.15,
+    shadows: false,
+    shadowEvery: 0,
+    maxParticles: 1400,
+    treeCount: 950,
+    rockCount: 320,
+    substepsCap: 6,
+  },
+  medium: {
+    id: 'medium',
+    label: 'Сбалансир.',
+    grid: 208,
+    maxPixelRatio: 1.6,
+    shadows: true,
+    shadowEvery: 3,
+    maxParticles: 3000,
+    treeCount: 1950,
+    rockCount: 560,
+    substepsCap: 8,
+  },
+  high: {
+    id: 'high',
+    label: 'Ультра',
+    grid: 248,
+    maxPixelRatio: 2.0,
+    shadows: true,
+    shadowEvery: 2,
+    maxParticles: 5200,
+    treeCount: 3100,
+    rockCount: 840,
+    substepsCap: 10,
+  },
+};
+
+// Гидрологические режимы погоды (с температурой воздуха, влажностью и ветром для расчёта испарения и таяния ледников!)
+export const WEATHER_MODES = {
+  low_water: {
+    id: 'low_water',
+    label: 'Жаркая межень',
+    icon: '☀',
+    inflowMult: 0.76,
+    rainRate: 0.0,
+    rainMmPerHour: 0.0,
+    baseTempC: 25.5,
+    relHumidity: 0.36,
+    windSpeedMs: 3.4,
+    sunIntensity: 1.18,
+    fogDensity: 0.00038,
+    next: { low_water: 0.25, normal: 0.55, rain: 0.20 },
+  },
+  normal: {
+    id: 'normal',
+    label: 'Нормальный сток',
+    icon: '◈',
+    inflowMult: 1.0,
+    rainRate: 0.0,
+    rainMmPerHour: 0.0,
+    baseTempC: 17.5,
+    relHumidity: 0.56,
+    windSpeedMs: 4.6,
+    sunIntensity: 1.05,
+    fogDensity: 0.00048,
+    next: { low_water: 0.22, normal: 0.43, rain: 0.27, flood: 0.08 },
+  },
+  rain: {
+    id: 'rain',
+    label: 'Циклон и ливень',
+    icon: '≈',
+    inflowMult: 1.48,
+    rainRate: 0.00016,
+    rainMmPerHour: 14.5,
+    baseTempC: 12.0,
+    relHumidity: 0.88,
+    windSpeedMs: 7.8,
+    sunIntensity: 0.58,
+    fogDensity: 0.00076,
+    next: { normal: 0.45, rain: 0.30, flood: 0.25 },
+  },
+  flood: {
+    id: 'flood',
+    label: 'Весеннее половодье',
+    icon: '◈',
+    inflowMult: 2.22,
+    rainRate: 0.00032,
+    rainMmPerHour: 29.0,
+    baseTempC: 15.0,
+    relHumidity: 0.82,
+    windSpeedMs: 10.5,
+    sunIntensity: 0.46,
+    fogDensity: 0.00095,
+    next: { rain: 0.55, normal: 0.45 },
+  },
+};
+
+// 14 инженерных инструментов строительства, навигации и гидроэнергетики
+export const TOOLS = [
+  {
+    id: 'inspect',
+    key: '1',
+    name: 'Гидропост / Инспекция ГЭС',
+    short: 'Осмотр',
+    costLabel: 'бесплатно',
+    desc: 'Замер глубины, числа Фруда, фильтрации, КПД турбин, включение ночной закачки ГАЭС и управление затворами.',
+  },
+  {
+    id: 'canal_dig',
+    key: '2',
+    name: 'Экскаватор деривационного канала',
+    short: 'Копать канал',
+    costPerM3Soil: 3.4,
+    costPerM3Rock: 14.5,
+    costLabel: 'грунт + щебень',
+    desc: 'Прокладка судоходных, деривационных и оросительных каналов (даёт щебень на экспорт и скидку -38% на бетон!). Shift — ровный уклон.',
+  },
+  {
+    id: 'canal_liner',
+    key: '3',
+    name: 'Ж/Б облицовка и парапеты канала',
+    short: 'Ж/Б лоток',
+    costPerCell: 58,
+    costLabel: '58 ₽/секция',
+    desc: 'Укладка гидротехнического бетона В40 (n = 0.012): нулевая инфильтрация в грунт и разгон потока в 2.5 раза!',
+  },
+  {
+    id: 'earth_dam',
+    key: '4',
+    name: 'Грунтовая плотина / Перемычка',
+    short: 'Перемычка',
+    costPerM3: 5.2,
+    costLabel: '-70% из отвала',
+    desc: 'Насыпная дамба из суглинка и камня для отжима реки или обвалования берегов. При переливе через гребень размывается!',
+  },
+  {
+    id: 'concrete_dam',
+    key: '5',
+    name: 'Гравитационная 3D-плотина',
+    short: '3D Плотина',
+    costPerM3: 22.0,
+    costLabel: '3 этапа + краны',
+    desc: 'Возводится поэтапно башенными кранами: шпунт → армокаркас → монолит! При переполнении через гребень идёт 3D-перелив воды.',
+  },
+  {
+    id: 'foundation',
+    key: '6',
+    name: 'Цементационная завеса и Контрфорсы',
+    short: 'Контрфорс',
+    costPerCell: 135,
+    costLabel: '135 ₽/блок',
+    desc: 'Глубинная цементация скалы и наклонные 3D-контрфорсы: останавливает фильтрацию Дарси под плотиной и держит высокий напор.',
+  },
+  {
+    id: 'spillway',
+    key: '7',
+    name: 'Эксплуатационный водосброс',
+    short: 'Водосброс',
+    costFlat: 4400,
+    costLabel: '4 400 ₽',
+    desc: 'Сегментный затвор с 3D-водосливным лотком и носком-трамплином: управляемый пропуск паводка с анимированной пеленой воды.',
+  },
+  {
+    id: 'turbine_kaplan',
+    key: '8',
+    name: 'Русловая ГЭС Каплана (ПЛ)',
+    short: 'ГЭС Каплан',
+    turbineType: 'kaplan',
+    costFlat: 9500,
+    costLabel: '9 500 ₽',
+    desc: 'Поворотно-лопастная турбина для малых и средних напоров. Машинный зал строго у подножия плотины в нижнем бьефе!',
+  },
+  {
+    id: 'turbine_francis',
+    key: '9',
+    name: 'Приплотинная ГЭС Фрэнсиса (РО)',
+    short: 'ГЭС Фрэнсис',
+    turbineType: 'francis',
+    costFlat: 23500,
+    costLabel: '23 500 ₽',
+    desc: 'Радиально-осевой агрегат (КПД 94%) со стальными напорными водоводами, аванкамерой и остеклённым машзалом в нижнем бьефе.',
+  },
+  {
+    id: 'turbine_pelton',
+    key: '0',
+    name: 'Высоконапорная ГЭС / ГАЭС',
+    short: 'ГЭС / ГАЭС',
+    turbineType: 'pelton',
+    costFlat: 32000,
+    costLabel: '32 000 ₽ · ГАЭС',
+    desc: 'Высоконапорный агрегат с режимом обратимой ГАЭС: ночью по дешёвому тарифу закачивает воду обратно в водохранилище!',
+  },
+  {
+    id: 'nav_lock',
+    key: 'L',
+    name: 'Судоходный шлюз и грузовой причал',
+    short: 'Шлюз / Флот',
+    costFlat: 11500,
+    costLabel: '11 500 ₽ (+пошлины)',
+    desc: 'Камера шлюзования с воротами: пропускает сухогрузы, танкеры и теплоходы через гидроузел и приносит стабильные фрахтовые сборы!',
+  },
+  {
+    id: 'fish_eco',
+    key: 'F',
+    name: 'Рыбхоз, рыбоход и яхт-марина',
+    short: 'Рыбхоз / Эко',
+    costFlat: 7200,
+    costLabel: '7 200 ₽ (+туризм)',
+    desc: 'Понтонные форелевые садки и туристическая пристань на водохранилище: доход от аквакультуры и эко-туризма в чистой воде!',
+  },
+  {
+    id: 'powerline',
+    key: 'P',
+    name: 'ОРУ 110/220 кВ и ЛЭП к городам',
+    short: 'ОРУ / ЛЭП',
+    costPerMeter: 13,
+    costLabel: '6 800 ₽ ОРУ / ЛЭП',
+    desc: 'Клик по городу — тянет магистральную ЛЭП. Клик на сухом берегу у ГЭС — строит 3D-подстанцию ОРУ (снижает потери с 16% до 3%)!',
+  },
+  {
+    id: 'demolish',
+    key: 'X',
+    name: 'Демонтаж сооружения',
+    short: 'Снос',
+    costFlat: 250,
+    costLabel: '250 ₽',
+    desc: 'Демонтировать гидроагрегат, водосброс, шлюз, рыбхоз, подстанцию или разобрать секцию плотины.',
+  },
+];
+
+// Базовые инженерные характеристики турбин (масштабируются под 0.8 км / 5 км / 10 км!)
+const BASE_TURBINE_SPECS = {
+  kaplan: {
+    id: 'kaplan',
+    baseName: 'Каплана ПЛ',
+    baseRatedMW: 8.0,
+    baseMinHead: 2.0,
+    baseOptHead: 8.0,
+    baseMaxHead: 22.0,
+    baseHeadSigma: 12.5,
+    baseMaxArea: 5.4,
+    peakEta: 0.92,
+    frictionK: 0.00015,
+    upkeepPerSec: 10,
+    cost: 9500,
+    reversible: false,
+    color: 0x3b82f6,
+  },
+  francis: {
+    id: 'francis',
+    baseName: 'Фрэнсиса РО',
+    baseRatedMW: 22.0,
+    baseMinHead: 4.8,
+    baseOptHead: 16.0,
+    baseMaxHead: 46.0,
+    baseHeadSigma: 16.5,
+    baseMaxArea: 6.8,
+    peakEta: 0.94,
+    frictionK: 0.00010,
+    upkeepPerSec: 22,
+    cost: 23500,
+    reversible: true,
+    color: 0xf59e0b,
+  },
+  pelton: {
+    id: 'pelton',
+    baseName: 'ГАЭС / Пелтон',
+    baseRatedMW: 36.0,
+    baseMinHead: 8.0,
+    baseOptHead: 24.5,
+    baseMaxHead: 66.0,
+    baseHeadSigma: 22.0,
+    baseMaxArea: 6.0,
+    peakEta: 0.93,
+    frictionK: 0.00008,
+    upkeepPerSec: 30,
+    cost: 32000,
+    reversible: true,
+    color: 0x10b981,
+  },
+};
+
+export const TURBINE_SPECS = {
+  kaplan: {},
+  francis: {},
+  pelton: {},
+};
+
+export const ECONOMY = {
+  startingCash: 68000,
+  baseRatePerMWSec: 345,
+  industrialPPAMultiplier: 1.28,
+  capacityPaymentPerMWSec: 18,
+  pumpedNightBuyFactor: 0.34,
+  navLockTollPerSec: 95,
+  municipalWaterPerKPopSec: 11.5,
+  irrigationBonusPerSec: 135,
+  fishFarmIncomePerSec: 88,
+  ecoTourismPerMarinaSec: 46,
+  aggregateSellPricePerM3: 10.5,
+  carbonCreditPerMWSec: 22,
+  floodProtectionBonusSec: 95,
+  overSupplyExportFactor: 0.42,
+  loanChunk: 30000,
+  loanInterestPerSec: 0.00040,
+  maxLoan: 180000,
+};
+
+export function spotTariffMultiplier(hour) {
+  const h = ((hour % 24) + 24) % 24;
+  if (h >= 0 && h < 6) return 0.56;
+  if (h >= 6 && h < 10.5) return 1.65;
+  if (h >= 10.5 && h < 17) return 1.06;
+  if (h >= 17 && h < 22) return 2.38;
+  return 0.80;
+}
+
+export function spotPeriodLabel(hour) {
+  const h = ((hour % 24) + 24) % 24;
+  if (h >= 0 && h < 6) return { label: 'Ночь ×0.56 (закачка ГАЭС)', cls: 'offpeak' };
+  if (h >= 6 && h < 10.5) return { label: 'Утренний пик ×1.65', cls: 'peak' };
+  if (h >= 10.5 && h < 17) return { label: 'Дневной полупик ×1.06', cls: 'mid' };
+  if (h >= 17 && h < 22) return { label: 'Вечерний СУПЕР-ПИК ×2.38', cls: 'superpeak' };
+  return { label: 'Спад нагрузки ×0.80', cls: 'offpeak' };
+}
+
+/**
+ * Применяет выбранный масштаб бассейна (0.8×0.8 км, 5×5 км или 10×10 км)
+ * ко всем физическим, геодезическим и экономическим таблицам!
+ */
+export function applyMapScale(scaleId = 'km5') {
+  const sc = MAP_SCALES[scaleId] || MAP_SCALES.km5;
+  WORLD.scaleId = sc.id;
+  WORLD.size = sc.size;
+  WORLD.horizScale = sc.horizScale;
+  WORLD.elevScale = sc.elevScale;
+  WORLD.flowScale = sc.flowScale;
+  WORLD.powerScale = sc.powerScale;
+  WORLD.snowLineY = sc.snowLineY;
+  WORLD.minZoom = sc.minZoom;
+  WORLD.maxZoom = sc.maxZoom;
+  WORLD.defaultDist = sc.defaultDist;
+  WORLD.brushSizes = sc.brushSizes.slice();
+
+  // Масштабируем ярусы высоты плотины и пороги напора пропорционально вертикальному масштабу гор
+  const eS = sc.elevScale;
+  CONSTRUCTION.highDamHeadThreshold = +(10.5 * eS).toFixed(1);
+  CONSTRUCTION.maxUnreinforcedHead = +(17.5 * eS).toFixed(1);
+  for (const tier of CONSTRUCTION.damHeightTiers) {
+    tier.addHeight = +(tier.baseAddHeight * eS).toFixed(1);
+    tier.label = `Ярус +${Math.round(tier.addHeight)}м`;
+  }
+
+  // Масштабируем ориентиры и расходы 3 сценариев долины
+  for (const p of Object.values(VALLEY_PRESETS)) {
+    p.mainInflowQ = Math.round(p.baseMainQ * sc.flowScale);
+    p.creekInflowQ = Math.round(p.baseCreekQ * sc.flowScale);
+    p.westCreekQ = Math.round(p.baseWestQ * sc.flowScale);
+    p.areaLabel = `${sc.shortLabel} · 3 реки · 8 городов`;
+    p.headLabel = `Сток рек: ~${p.mainInflowQ + p.creekInflowQ + p.westCreekQ} м³/с`;
+    p.landmarks = p.baseLandmarks.map((lm) => ({
+      label: lm.label,
+      x: +(lm.x * sc.horizScale).toFixed(1),
+      z: +(lm.z * sc.horizScale).toFixed(1),
+      dist: Math.round(lm.dist * Math.pow(sc.horizScale, 0.78)),
+    }));
+  }
+
+  // Масштабируем характеристики турбин под класс гидроузла (малая ГЭС / региональная ГЭС / мега-ГЭС)
+  for (const [key, b] of Object.entries(BASE_TURBINE_SPECS)) {
+    const rated = Math.round(b.baseRatedMW * sc.powerScale);
+    const tObj = TURBINE_SPECS[key];
+    tObj.id = b.id;
+    tObj.name = `${b.baseName}-${rated}`;
+    tObj.ratedMW = rated;
+    tObj.minHead = +(b.baseMinHead * eS).toFixed(1);
+    tObj.optHead = +(b.baseOptHead * eS).toFixed(1);
+    tObj.maxHead = +(b.baseMaxHead * eS).toFixed(1);
+    tObj.headSigma = +(b.baseHeadSigma * eS).toFixed(1);
+    // Сечение водоводов масштабируется под расход реки, чтобы формула P = ρ·g·Q·H·η давала реальные МВт!
+    tObj.maxArea = +(b.baseMaxArea * (sc.flowScale / Math.sqrt(eS))).toFixed(2);
+    tObj.peakEta = b.peakEta;
+    tObj.frictionK = b.frictionK / (sc.flowScale * sc.flowScale) * eS;
+    tObj.upkeepPerSec = b.upkeepPerSec;
+    tObj.cost = b.cost;
+    tObj.reversible = b.reversible;
+    tObj.color = b.color;
+  }
+
+  // Обновляем подписи слотов турбин в хотбаре
+  for (const tool of TOOLS) {
+    if (tool.turbineType && TURBINE_SPECS[tool.turbineType]) {
+      const sp = TURBINE_SPECS[tool.turbineType];
+      if (tool.turbineType === 'kaplan') tool.short = `Каплан ${sp.ratedMW}МВт`;
+      else if (tool.turbineType === 'francis') tool.short = `Фрэнсис ${sp.ratedMW}МВт`;
+      else tool.short = `ГАЭС ${sp.ratedMW}МВт`;
+    }
+  }
+
+  // Пересчитываем координаты и спрос 8 городов бассейна
+  CITY_DEFS.length = 0;
+  for (const bc of BASE_CITY_DEFS) {
+    const cityObj = {
+      id: bc.id,
+      name: bc.name,
+      subtitle: bc.subtitle,
+      x: +(bc.baseX * sc.horizScale).toFixed(1),
+      z: +(bc.baseZ * sc.horizScale).toFixed(1),
+      plateauRadius: +(bc.baseRadius * sc.horizScale).toFixed(1),
+      baseElevation: +(bc.baseElev * eS).toFixed(2),
+      startPop: Math.round(bc.startPop * Math.sqrt(sc.horizScale)),
+      baseDemandMW: +(bc.baseDemandMW * sc.powerScale).toFixed(2),
+      demandPerBuilding: +(bc.demandPerBuilding * sc.powerScale).toFixed(3),
+      tariffBonus: bc.tariffBonus,
+      needsIrrigation: !!bc.needsIrrigation,
+      specialContract: bc.specialContract || null,
+      connectedAtStart: bc.connectedAtStart,
+      accent: bc.accent,
+      archetype: bc.archetype,
+    };
+    if (bc.baseIrrTarget) {
+      cityObj.irrigationTarget = {
+        x: +(bc.baseIrrTarget.x * sc.horizScale).toFixed(1),
+        z: +(bc.baseIrrTarget.z * sc.horizScale).toFixed(1),
+        radius: +(bc.baseIrrTarget.radius * sc.horizScale).toFixed(1),
+      };
+    }
+    CITY_DEFS.push(cityObj);
+  }
+
+  return sc;
+}
+
+// Инициализируем масштаб по умолчанию (5 × 5 км — 25 км²!)
+applyMapScale('km5');
+
+// Государственные гранты Минэнерго и Минприроды (адаптируются под масштаб мощности WORLD.powerScale)
 export const MILESTONES = [
   {
     id: 'first_watt',
-    title: 'Первый ток в сети!',
-    desc: 'Завершите заливку плотины, запустите гидроагрегат и выдайте 0.5 МВт мощности.',
-    reward: 11000,
-    check: (st) => st.totalMW >= 0.5,
+    title: 'Первый промышленный ток ГЭС!',
+    desc: 'Постройте плотину, запустите приплотинную ГЭС в нижнем бьефе и выдайте мощность в сеть.',
+    reward: 12000,
+    check: (st) => st.totalMW >= 0.45 * WORLD.powerScale,
   },
   {
     id: 'reinforced_dam',
-    title: 'Надёжный гидроузел и ОРУ 110 кВ',
-    desc: 'Укрепите плотину минимум 6 блоками контрфорсов/цементации или постройте подстанцию ОРУ 110 кВ.',
-    reward: 13000,
+    title: 'Инженерная защита и ОРУ',
+    desc: 'Укрепите плотину минимум 6 блоками контрфорсов/цементации или постройте подстанцию ОРУ.',
+    reward: 14000,
     check: (st) => st.reinforcedCells >= 6 || st.substations >= 1,
   },
   {
     id: 'custom_canal',
-    title: 'Собственный деривационный канал',
-    desc: 'Прокопайте не менее 550 м³ породы под деривационный, обводной или оросительный канал.',
-    reward: 14000,
-    check: (st) => st.excavatedM3 >= 550,
+    title: 'Собственная водная артерия',
+    desc: 'Прокопайте экскаватором деривационный, судоходный или оросительный канал.',
+    reward: 15000,
+    check: (st) => st.excavatedNormM3 >= 500,
+  },
+  {
+    id: 'nav_or_fish',
+    title: 'Комплексный гидроузел: Флот и Биоресурсы',
+    desc: 'Постройте судоходный шлюз [L] для пропуска кораблей или рыбхоз/марину [F] на водохранилище.',
+    reward: 19000,
+    check: (st) => st.navLocks >= 1 || st.fishFarms >= 1,
   },
   {
     id: 'irrigation_done',
     title: 'Живительная влага Агродолины',
-    desc: 'Подведите воду собственным каналом к оросительному бассейну Агродолины.',
-    reward: 18000,
+    desc: 'Подведите воду собственным каналом к оросительному кольцу Агродолины.',
+    reward: 22000,
     check: (st) => st.agroIrrigated === true,
   },
   {
-    id: 'power_10mw',
-    title: 'Промышленный каскад (10 МВт)',
-    desc: 'Достигните суммарной генерации 10 МВт на ваших гидроагрегатах.',
-    reward: 25000,
-    check: (st) => st.totalMW >= 10.0,
+    id: 'industrial_giants',
+    title: 'Контракт с Алюминградом и ЦОД ИИ',
+    desc: 'Подключите к энергокольцу минимум 5 городов и выдайте промышленную мощность.',
+    reward: 32000,
+    check: (st) => st.connectedCities >= 5 && st.totalMW >= 6.0 * WORLD.powerScale,
   },
   {
     id: 'all_cities_grid',
-    title: 'Единое энергокольцо 5 городов',
-    desc: 'Подключите линиями ЛЭП все 5 городов долины и выдайте от 5 МВт.',
-    reward: 32000,
-    check: (st) => st.connectedCities >= 5 && st.totalMW >= 5.0,
+    title: 'Единая энергосистема всех 8 городов',
+    desc: 'Объедините ЛЭП все 8 городов и промкластеров бассейна!',
+    reward: 46000,
+    check: (st) => st.connectedCities >= 8 && st.totalMW >= 10.0 * WORLD.powerScale,
   },
   {
-    id: 'growing_valley',
-    title: 'Мегаполисы живой воды',
-    desc: 'Развейте саморастущие города долины до совокупного населения 10 000 жителей.',
-    reward: 44000,
-    check: (st) => st.totalPopulation >= 10000,
-  },
-  {
-    id: 'cascade_30mw',
-    title: 'Флагман гидроэнергетики (30 МВт)',
-    desc: 'Выведите каскад ГЭС на пиковую мощность 30 МВт!',
-    reward: 68000,
-    check: (st) => st.totalMW >= 30.0,
+    id: 'megacascade_master',
+    title: 'Флагман национальной гидроэнергетики',
+    desc: 'Выведите каскад ГЭС/ГАЭС на проектную пиковую мощность!',
+    reward: 75000,
+    check: (st) => st.totalMW >= 26.0 * WORLD.powerScale,
   },
 ];

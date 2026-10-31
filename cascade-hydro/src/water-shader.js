@@ -1,10 +1,9 @@
 // ============================================================================
-//  ФОТОРЕАЛИСТИЧНЫЕ ШЕЙДЕРЫ ДОЛИНЫ, ВОДЫ И ГОРОДОВ «REAL-LIFE PBR OPTICS v2»
-//  - Трипланарная текстура слоистого гранита, мха, луговых трав и речной гальки
-//  - Микрорельеф нормалей (dFdx/dFdy bump-mapping) на скалах, гальке и бетоне!
-//  - Опалубочный бетон плотин с рустами, стяжками и влажной ватерлинией водорослей
-//  - Преломление Снеллиуса + двойная каустика Вороного + закон Бугера — Ламберта
-//  - Фасады растущих городов с карнизами, пилястрами, витринами и ночными окнами
+//  ФОТОРЕАЛИСТИЧНЫЕ ШЕЙДЕРЫ БАССЕЙНА, ЖИВОЙ ВОДЫ, ПЕРЕЛИВОВ И 32 ТИПОВ ЗДАНИЙ v0.3
+//  - Альпийские ледники/снежники с таянием, бегущие тени облаков, страты пород и dFdx/dFdy рельеф
+//  - 3-октавная гидрооптика воды (рябь + ветровая зыбь бьефа + каустика Вороного + Бугер—Ламберт)
+//  - Анимированный шейдер 3D-перелива воды через гребень плотин и лотки водосбросов!
+//  - Архитектурный мега-атлас (64 паттерна × 432 оттенка) для 32 типов зданий и заводов
 // ============================================================================
 
 import * as THREE from 'three';
@@ -12,7 +11,7 @@ import { createWaterDetailTexture } from './textures.js';
 
 export { createWaterDetailTexture };
 
-/** Материал рельефа долины с трипланарными скалами, микрорельефом, лугами, галькой и опалубочным бетоном */
+/** 1. Материал рельефа долины (0.8 / 5 / 10 км) со снежниками, тенями облаков, стратами скал и бетоном */
 export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
   const uniforms = {
     uTime: { value: 0 },
@@ -20,8 +19,12 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
     uSunColor: { value: new THREE.Color(0xfff4dc) },
     uSkyColor: { value: new THREE.Color(0x6da8e8) },
     uFogColor: { value: new THREE.Color(0xa8cae8) },
-    uFogDensity: { value: 0.00050 },
+    uFogDensity: { value: 0.00012 },
     uShowContours: { value: 0.0 },
+    uSnowLine: { value: 122.0 },
+    uMeltOffset: { value: 0.0 },
+    uElevScale: { value: 2.35 },
+    uHorizScale: { value: 6.51 },
     uDetailTex: { value: detailTex },
     uConcreteTex: { value: concreteMap || detailTex },
     uHasConcreteTex: { value: concreteMap ? 1.0 : 0.0 },
@@ -52,6 +55,10 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
       uniform vec3 uFogColor;
       uniform float uFogDensity;
       uniform float uShowContours;
+      uniform float uSnowLine;
+      uniform float uMeltOffset;
+      uniform float uElevScale;
+      uniform float uHorizScale;
       uniform sampler2D uDetailTex;
       uniform sampler2D uConcreteTex;
       uniform float uHasConcreteTex;
@@ -66,7 +73,6 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
         return fract(p.x * p.y);
       }
 
-      // Плавный билинейный шум без пиксельных квадратов!
       float vnoise(vec2 p) {
         vec2 i = floor(p);
         vec2 f = fract(p);
@@ -95,119 +101,142 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
         float subDepth = max(0.0, vMeta.w);
 
         float camDist = length(cameraPosition - vWorldPos);
-        float detailFade = 1.0 - smoothstep(140.0, 480.0, camDist);
+        float invScale = 1.0 / max(1.0, pow(uHorizScale, 0.55));
+        vec2 uvMacro = vWorldPos.xz * (0.024 * invScale);
+        vec2 uvMid   = vWorldPos.xz * (0.14 * invScale);
+        vec2 uvFine  = vWorldPos.xz * (0.72 * invScale);
 
-        // --- 1. Многослойный процедурный микрорельеф для трав, гальки и трещин гранита ---
-        float macroPatch = fbm3(vWorldPos.xz * 0.032);
-        float medDetail = fbm3(vWorldPos.xz * 0.28);
-        float pebbleField = vnoise(vWorldPos.xz * 2.35) * 0.65 + vnoise(vWorldPos.xz * 5.2) * 0.35;
+        float nMacro = fbm3(uvMacro);
+        float nMid   = fbm3(uvMid);
+        float nFine  = vnoise(uvFine);
 
-        // Трипланарные геологические пласты и трещины на крутых утёсах каньона!
-        float cliffStrata = sin(vWorldPos.y * 1.65 + fbm3(vWorldPos.xz * 0.09) * 3.8) * 0.5 + 0.5;
-        float cliffCracks = vnoise(vec2(vWorldPos.x + vWorldPos.z, vWorldPos.y * 1.9) * 0.85);
-        float rockMask = clamp(smoothstep(0.30, 0.58, slope) + (1.0 - smoothstep(0.20, 0.85, soil)) * 0.76, 0.0, 1.0);
+        // --- 1. Слоистые породы (розовый гранит, серый гнейс, базальт, кварцевые жилы, лишайник) ---
+        vec3 triW = pow(abs(Ngeom), vec3(4.0));
+        triW /= max(0.001, triW.x + triW.y + triW.z);
 
-        // Собираем скалярное поле высоты микрорельефа для честного экранного bump-mapping
-        float microHeight = mix(medDetail * 0.45 + pebbleField * wetness * 0.45, cliffStrata * 0.65 + cliffCracks * 0.55, rockMask);
+        float strataY = vWorldPos.y * (0.52 / max(1.0, uElevScale * 0.7)) + nMacro * 3.8;
+        float strata = sin(strataY * 3.1) * 0.5 + 0.5;
+        float strataSharp = smoothstep(0.22, 0.78, strata);
+        float triGrain = fbm3(vWorldPos.zy * 0.28 * invScale) * triW.x
+                       + fbm3(vWorldPos.xz * 0.28 * invScale) * triW.y
+                       + fbm3(vWorldPos.xy * 0.28 * invScale) * triW.z;
+        float fissure = smoothstep(0.70, 0.90, abs(triGrain * 2.0 - 1.0));
 
-        // --- 2. Богатые природные биомы долины ---
-        vec3 valleyGrass = mix(vec3(0.21, 0.45, 0.17), vec3(0.32, 0.56, 0.22), macroPatch);
-        // Цветущие луговые пятна клевера/разнотравья на солнечных полянах
-        float wildflower = smoothstep(0.66, 0.82, fbm3(vWorldPos.xz * 0.14 + 12.0)) * (1.0 - slope * 2.0);
-        valleyGrass = mix(valleyGrass, vec3(0.46, 0.58, 0.24), wildflower * 0.55);
+        vec3 graniteWarm = vec3(0.49, 0.44, 0.40);
+        vec3 gneissCool  = vec3(0.30, 0.33, 0.38);
+        vec3 basaltDark  = vec3(0.20, 0.22, 0.26);
+        vec3 rockCol = mix(gneissCool, graniteWarm, strataSharp);
+        rockCol = mix(rockCol, basaltDark, smoothstep(0.62, 0.92, nMacro) * 0.45);
+        rockCol *= (0.80 + 0.38 * triGrain);
+        rockCol *= (1.0 - fissure * 0.36);
 
-        vec3 alpineMoss = mix(vec3(0.33, 0.46, 0.23), vec3(0.47, 0.52, 0.29), medDetail);
-        float altMix = smoothstep(23.0, 48.0, vWorldPos.y);
-        vec3 grassCol = mix(valleyGrass, alpineMoss, altMix) * (0.86 + medDetail * 0.28);
+        float lichenMask = smoothstep(0.58, 0.80, nMid) * (1.0 - smoothstep(0.30, 0.62, slope));
+        rockCol = mix(rockCol, vec3(0.40, 0.49, 0.31), lichenMask * 0.52);
 
-        // Суглинок, свежий срез грунта в откосах канала и речной галечник
-        vec3 richLoam = mix(vec3(0.45, 0.33, 0.21), vec3(0.58, 0.44, 0.29), medDetail);
-        float bareSoil = clamp(smoothstep(0.24, 0.52, slope) + (1.0 - smoothstep(0.38, 1.45, soil)) * 0.55, 0.0, 1.0);
-        vec3 groundCol = mix(grassCol, richLoam, bareSoil * 0.76);
+        // --- 2. Пойменные луга, клевер, агро-поля, песчаные косы и донная галька ---
+        vec3 lushGrass   = vec3(0.20, 0.43, 0.17);
+        vec3 cloverGrass = vec3(0.29, 0.51, 0.21);
+        vec3 alpineHerb  = vec3(0.43, 0.47, 0.24);
+        vec3 goldenCrop  = vec3(0.56, 0.50, 0.23);
 
-        vec3 cobbleCol = mix(vec3(0.49, 0.46, 0.39), vec3(0.67, 0.62, 0.52), pebbleField);
-        float shoreBlend = clamp(wetness * 0.78 + smoothstep(0.01, 0.28, subDepth) * 0.60, 0.0, 0.92);
-        groundCol = mix(groundCol, cobbleCol, shoreBlend);
+        float altNorm = vWorldPos.y / max(1.0, uElevScale);
+        float meadowAlt = smoothstep(14.0, 44.0, altNorm);
+        vec3 grassCol = mix(lushGrass, cloverGrass, smoothstep(0.32, 0.70, nMacro));
+        grassCol = mix(grassCol, alpineHerb, meadowAlt * 0.68);
 
-        // Слоистый серый и тёплый кварцевый гранит ущелий со мхом на полках
-        vec3 darkGranite = vec3(0.34, 0.35, 0.37);
-        vec3 warmQuartz = vec3(0.55, 0.52, 0.48);
-        vec3 graniteCol = mix(darkGranite, warmQuartz, cliffStrata * 0.65 + cliffCracks * 0.35);
-        float ledgeMoss = (1.0 - smoothstep(0.18, 0.44, slope)) * rockMask * smoothstep(0.45, 0.75, medDetail);
-        graniteCol = mix(graniteCol, vec3(0.29, 0.42, 0.22), ledgeMoss * 0.65);
+        // Возделанные полосы сельхозполей на восточных террасах Агродолины
+        float agroZone = smoothstep(60.0 * uHorizScale, 150.0 * uHorizScale, vWorldPos.x)
+                       * (1.0 - smoothstep(140.0 * uHorizScale, 280.0 * uHorizScale, abs(vWorldPos.z - 80.0 * uHorizScale)))
+                       * (1.0 - smoothstep(0.08, 0.22, slope));
+        float cropStripe = step(0.5, fract((vWorldPos.x + vWorldPos.z * 0.4) * 0.045 * invScale));
+        grassCol = mix(grassCol, mix(cloverGrass * 1.08, goldenCrop, cropStripe), agroZone * 0.62);
+        grassCol += (nFine - 0.5) * 0.06;
 
-        vec3 col = mix(groundCol, graniteCol, rockMask);
+        vec3 clayLoam = mix(vec3(0.43, 0.32, 0.21), vec3(0.55, 0.43, 0.29), nMid);
+        float cobblePattern = smoothstep(0.34, 0.74, vnoise(vWorldPos.xz * 2.2 * invScale));
+        vec3 riverGravel = mix(vec3(0.39, 0.37, 0.33), vec3(0.59, 0.55, 0.48), cobblePattern);
+        vec3 sandyShoal  = vec3(0.66, 0.60, 0.46);
 
-        // Снежные шапки и фирн в высокогорье с искристым тоном
-        float snowLine = 54.0 + macroPatch * 6.0;
-        float snowMask = smoothstep(snowLine, snowLine + 10.0, vWorldPos.y) * (1.0 - smoothstep(0.44, 0.74, slope));
-        vec3 snowCol = mix(vec3(0.88, 0.93, 0.98), vec3(0.97, 0.99, 1.0), medDetail);
-        col = mix(col, snowCol, snowMask);
+        float rockMask = clamp(smoothstep(0.33, 0.57, slope) + (1.0 - smoothstep(0.30, 1.35, soil)), 0.0, 1.0);
+        float bareCutMask = clamp(smoothstep(0.18, 0.40, slope) * (1.0 - rockMask), 0.0, 1.0);
+        float gravelMask = clamp(smoothstep(0.15, 0.72, wetness) * (1.0 - smoothstep(0.42, 0.70, slope)), 0.0, 1.0);
+        float shoalMask  = clamp((1.0 - smoothstep(0.0, 2.2, altNorm - 11.0)) * (1.0 - slope * 3.0) * wetness, 0.0, 0.65);
 
-        // --- 3. Архитектурный бетон плотин и облицованных каналов ---
-        if (concrete > 0.05) {
-          float concMask = clamp(concrete * 2.4, 0.0, 1.0);
-          vec3 triW = pow(abs(Ngeom), vec3(4.0));
-          triW /= max(0.001, triW.x + triW.y + triW.z);
+        vec3 naturalCol = mix(grassCol, clayLoam, bareCutMask * 0.78);
+        naturalCol = mix(naturalCol, riverGravel, gravelMask * 0.85);
+        naturalCol = mix(naturalCol, sandyShoal, shoalMask);
+        naturalCol = mix(naturalCol, rockCol, rockMask);
 
-          vec3 texXZ = texture2D(uConcreteTex, vWorldPos.xz * 0.11).rgb;
-          vec3 texXY = texture2D(uConcreteTex, vWorldPos.xy * 0.11).rgb;
-          vec3 texZY = texture2D(uConcreteTex, vWorldPos.zy * 0.11).rgb;
-          vec3 triConc = texXZ * triW.y + texXY * triW.z + texZY * triW.x;
+        // --- 3. Альпийские снежники и голубоватый глетчерный фирн на вершинах (тают днём!) ---
+        float dynSnowLine = uSnowLine + uMeltOffset + (nMacro - 0.5) * 18.0 * max(1.0, uElevScale * 0.6);
+        float snowMask = smoothstep(dynSnowLine - 8.0, dynSnowLine + 14.0, vWorldPos.y)
+                       * (1.0 - smoothstep(0.52, 0.82, slope));
+        vec3 snowPure = mix(vec3(0.84, 0.91, 0.98), vec3(0.97, 0.98, 1.0), nMid);
+        naturalCol = mix(naturalCol, snowPure, snowMask);
 
-          float seamX = step(0.955, fract(vWorldPos.x * 0.25));
-          float seamZ = step(0.955, fract(vWorldPos.z * 0.25));
-          float seamY = step(0.935, fract(vWorldPos.y * 0.33));
-          float joints = clamp(seamX + seamZ + seamY * 0.65, 0.0, 1.0);
-
-          vec3 baseConc = uHasConcreteTex > 0.5 ? (triConc * 1.06) : vec3(0.71, 0.73, 0.75);
-          vec3 concCol = baseConc - joints * 0.12;
-          // Тёмно-изумрудная полоса водорослей/влаги у ватерлинии бетона
-          concCol = mix(concCol, vec3(0.28, 0.35, 0.30), wetness * (1.0 - clamp(subDepth * 0.5, 0.0, 1.0)) * 0.38);
-
-          col = mix(col, concCol, concMask);
-          microHeight = mix(microHeight, (triConc.r - joints * 0.35) * 0.7, concMask);
+        // --- 4. Гидротехнический бетон плотин и облицованных каналов ---
+        float concMask = smoothstep(0.05, 0.34, concrete);
+        vec3 concSample = vec3(0.68, 0.71, 0.75);
+        if (uHasConcreteTex > 0.5 && concMask > 0.01) {
+          vec3 cx = texture2D(uConcreteTex, vWorldPos.zy * 0.11).rgb;
+          vec3 cy = texture2D(uConcreteTex, vWorldPos.xz * 0.11).rgb;
+          vec3 cz = texture2D(uConcreteTex, vWorldPos.xy * 0.11).rgb;
+          concSample = cx * triW.x + cy * triW.y + cz * triW.z;
         }
+        float algaeZone = wetness * (1.0 - smoothstep(1.2, 4.5, subDepth)) * concMask;
+        concSample = mix(concSample, vec3(0.24, 0.35, 0.24), algaeZone * 0.46);
 
-        // Физическое потемнение пористых пород от капиллярной влаги
-        col *= mix(1.0, 0.63, wetness);
+        vec3 col = mix(naturalCol, concSample, concMask);
+        float wetDarken = mix(1.0, 0.58, wetness * (1.0 - concMask * 0.32) * (1.0 - snowMask));
+        col *= wetDarken;
 
-        // --- 4. Аналитическое возмущение нормали (Bump Mapping без дополнительных текстур!) ---
+        // --- 5. Экранный микрорельеф нормалей (dFdx/dFdy) ---
+        float bumpFade = 1.0 - smoothstep(120.0 * uHorizScale, 420.0 * uHorizScale, camDist);
+        float microHeight = mix(nFine * 0.42 + nMid * 0.58, triGrain * 0.72 + strataSharp * 0.28, rockMask);
+        microHeight = mix(microHeight, cobblePattern, gravelMask * 0.65);
+
         vec3 dPosX = dFdx(vWorldPos);
         vec3 dPosY = dFdy(vWorldPos);
-        float dHx = dFdx(microHeight) * detailFade;
-        float dHy = dFdy(microHeight) * detailFade;
+        float dHx = dFdx(microHeight) * bumpFade;
+        float dHy = dFdy(microHeight) * bumpFade;
+
         vec3 r1 = cross(dPosY, Ngeom);
         vec3 r2 = cross(Ngeom, dPosX);
         float det = dot(dPosX, r1);
         vec3 surfGrad = sign(det) * (dHx * r1 + dHy * r2);
-        float bumpStrength = mix(0.32, 0.62, rockMask);
+        float bumpStrength = mix(0.28, 0.58, rockMask);
         vec3 N = normalize(abs(det) > 1e-7 ? (abs(det) * Ngeom - bumpStrength * surfGrad) : Ngeom);
 
-        // --- 5. Реалистичное освещение (Солнце + полусфера неба + тёплый отсвет земли + мокрый блик) ---
-        float NdotL = max(0.0, dot(N, uSunDir));
+        // --- 6. Освещение + бегущие тени кучевых облаков по долине ---
+        vec2 cloudUv = vWorldPos.xz * (0.0018 / max(1.0, uHorizScale * 0.35)) + vec2(uTime * 0.0065, uTime * 0.0038);
+        float cloudNoise = fbm3(cloudUv);
+        float cloudShadow = 1.0 - smoothstep(0.54, 0.78, cloudNoise) * 0.28;
+
+        float NdotL = max(0.0, dot(N, uSunDir)) * cloudShadow;
         float hemi = 0.5 + 0.5 * N.y;
         float cavityAO = mix(0.84, 1.06, clamp(microHeight, 0.0, 1.0));
         vec3 bounceLight = vec3(0.24, 0.21, 0.16) * (1.0 - N.y) * 0.24;
-        vec3 lighting = (uSunColor * (NdotL * 0.95) + uSkyColor * (0.28 + 0.30 * hemi) + bounceLight) * cavityAO;
+        vec3 lighting = (uSunColor * (NdotL * 0.96) + uSkyColor * (0.29 + 0.30 * hemi) + bounceLight) * cavityAO;
 
         vec3 V = normalize(cameraPosition - vWorldPos);
         vec3 H = normalize(uSunDir + V);
-        float wetSpec = pow(max(0.0, dot(N, H)), 56.0) * wetness * 0.42;
+        float wetSpec = pow(max(0.0, dot(N, H)), 56.0) * (wetness * 0.44 + snowMask * 0.30) * cloudShadow;
         vec3 litCol = col * lighting + uSunColor * wetSpec;
 
-        // Геодезические изолинии высот (каждые 2 м и жирные каждые 10 м)
+        // Адаптивные геодезические изолинии высот (масштабируются под 0.8 / 5 / 10 км!)
         if (uShowContours > 0.5) {
-          float minor = abs(fract(vWorldPos.y * 0.5) - 0.5);
-          float major = abs(fract(vWorldPos.y * 0.1) - 0.5);
+          float minorStep = 2.0 * uElevScale;
+          float majorStep = 10.0 * uElevScale;
+          float minor = abs(fract(vWorldPos.y / minorStep) - 0.5);
+          float major = abs(fract(vWorldPos.y / majorStep) - 0.5);
           float lineMinor = 1.0 - smoothstep(0.014, 0.044, minor);
           float lineMajor = 1.0 - smoothstep(0.011, 0.032, major);
           litCol = mix(litCol, vec3(0.95, 0.86, 0.42), lineMinor * 0.32);
           litCol = mix(litCol, vec3(1.0, 0.97, 0.74), lineMajor * 0.72);
         }
 
-        float fogF = 1.0 - exp(-pow(camDist * uFogDensity, 1.65));
-        litCol = mix(litCol, uFogColor, clamp(fogF, 0.0, 0.84));
+        float fogF = 1.0 - exp(-pow(camDist * uFogDensity, 1.62));
+        litCol = mix(litCol, uFogColor, clamp(fogF, 0.0, 0.82));
 
         gl_FragColor = vec4(litCol, 1.0);
       }
@@ -215,7 +244,7 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
   });
 }
 
-/** Фотореалистичный шейдер воды с каустикой Вороного, преломлением Снеллиуса и пеной */
+/** 2. Улучшенный шейдер живой воды (6-гармониковая рябь + зыбь водохранилища + каустика Вороного + Френель Шлика) */
 export function createRealisticWaterMaterial(detailTex) {
   const uniforms = {
     uTime: { value: 0 },
@@ -224,7 +253,9 @@ export function createRealisticWaterMaterial(detailTex) {
     uSkyZenith: { value: new THREE.Color(0x2864ad) },
     uSkyHorizon: { value: new THREE.Color(0xa6cde8) },
     uFogColor: { value: new THREE.Color(0xa8cae8) },
-    uFogDensity: { value: 0.00050 },
+    uFogDensity: { value: 0.00012 },
+    uHorizScale: { value: 6.51 },
+    uElevScale: { value: 2.35 },
     uDetailTex: { value: detailTex },
   };
 
@@ -259,6 +290,8 @@ export function createRealisticWaterMaterial(detailTex) {
       uniform vec3 uSkyHorizon;
       uniform vec3 uFogColor;
       uniform float uFogDensity;
+      uniform float uHorizScale;
+      uniform float uElevScale;
       uniform sampler2D uDetailTex;
 
       varying vec3 vWorldPos;
@@ -296,108 +329,193 @@ export function createRealisticWaterMaterial(detailTex) {
 
         vec3 V = normalize(cameraPosition - vWorldPos);
         float dist = length(cameraPosition - vWorldPos);
+        float uvScale = 1.0 / max(1.0, pow(uHorizScale, 0.62));
+        float optDepth = depth / max(1.0, pow(uElevScale, 0.68));
 
-        // --- 1. Двухфазная адвекция волновых нормалей вдоль вектора течения (u, v) ---
+        // --- 1. 3-октавная адвекция волн: крупная ветровая зыбь бьефа + речная струя + микро-рябь ---
         vec2 flowDir = speed > 0.02 ? (vel / speed) : vec2(0.0, 1.0);
-        vec2 flowStep = vel * 0.050;
-        float cycle = 1.18;
+        vec2 flowStep = vel * (0.048 * uvScale);
+        float cycle = 1.24;
         float p0 = fract(uTime / cycle);
         float p1 = fract(uTime / cycle + 0.5);
         float blend = abs(2.0 * p0 - 1.0);
 
-        vec2 baseUv = vWorldPos.xz * 0.078;
+        vec2 swellUv = vWorldPos.xz * (0.026 * uvScale) + vec2(uTime * 0.014, -uTime * 0.011);
+        vec4 swellSample = texture2D(uDetailTex, swellUv);
+
+        vec2 baseUv = vWorldPos.xz * (0.084 * uvScale);
         vec4 s0 = texture2D(uDetailTex, baseUv - flowStep * (p0 * cycle));
         vec4 s1 = texture2D(uDetailTex, baseUv - flowStep * (p1 * cycle) + vec2(0.37, 0.61));
         vec4 waveSample = mix(s0, s1, blend);
 
-        vec2 fineUv = vWorldPos.xz * 0.23 + vec2(vort * 0.075, -vort * 0.075);
-        vec4 f0 = texture2D(uDetailTex, fineUv - flowStep * (p0 * cycle * 1.65));
-        vec4 f1 = texture2D(uDetailTex, fineUv - flowStep * (p1 * cycle * 1.65) + vec2(0.53, 0.19));
+        vec2 fineUv = vWorldPos.xz * (0.26 * uvScale) + vec2(vort * 0.08, -vort * 0.08);
+        vec4 f0 = texture2D(uDetailTex, fineUv - flowStep * (p0 * cycle * 1.7));
+        vec4 f1 = texture2D(uDetailTex, fineUv - flowStep * (p1 * cycle * 1.7) + vec2(0.53, 0.19));
         vec4 fineSample = mix(f0, f1, blend);
 
         float froude = speed / sqrt(9.81 * max(0.08, depth));
-        float chopAmp = (0.18 + clamp(speed * 0.050 + froude * 0.13, 0.0, 0.48)) * (1.0 - smoothstep(190.0, 560.0, dist) * 0.65);
+        float distFade = 1.0 - smoothstep(260.0 * uHorizScale, 920.0 * uHorizScale, dist) * 0.62;
+        float chopAmp = (0.21 + clamp(speed * 0.048 + froude * 0.14, 0.0, 0.52)) * distFade;
 
-        vec2 dN = ((waveSample.xy * 2.0 - 1.0) * 0.68 + (fineSample.xy * 2.0 - 1.0) * 0.40) * chopAmp;
+        vec2 dN = (
+          (swellSample.xy * 2.0 - 1.0) * 0.38 +
+          (waveSample.xy * 2.0 - 1.0) * 0.62 +
+          (fineSample.xy * 2.0 - 1.0) * 0.42
+        ) * chopAmp;
         vec3 N = normalize(vec3(vMacroNormal.x + dN.x, vMacroNormal.y, vMacroNormal.z + dN.y));
 
-        // --- 2. Преломление подводного галечника и плит по закону Снеллиуса + каустика Вороного ---
+        // --- 2. Преломление подводного русла по закону Снеллиуса (n = 1.333) + двойная каустика Вороного ---
         float daySun = max(0.14, clamp(uSunDir.y + 0.18, 0.0, 1.0));
-        vec2 refrXZ = vWorldPos.xz - N.xz * min(depth, 4.0) * 0.54;
+        vec2 refrXZ = vWorldPos.xz - N.xz * min(optDepth, 4.2) * (0.58 / max(0.25, uvScale));
 
-        float cobbleA = vnoise(refrXZ * 2.6);
-        float cobbleB = vnoise(refrXZ * 6.4);
-        vec3 gravelBed = mix(vec3(0.41, 0.38, 0.31), vec3(0.61, 0.56, 0.46), cobbleA * 0.65 + cobbleB * 0.35);
+        float cobbleA = vnoise(refrXZ * 2.4 * uvScale);
+        float cobbleB = vnoise(refrXZ * 6.2 * uvScale);
+        vec3 gravelBed = mix(vec3(0.40, 0.37, 0.30), vec3(0.62, 0.57, 0.47), cobbleA * 0.65 + cobbleB * 0.35);
 
-        float slabJoint = clamp(step(0.95, fract(refrXZ.x * 0.25)) + step(0.95, fract(refrXZ.y * 0.25)), 0.0, 1.0);
-        vec3 concBed = vec3(0.56, 0.60, 0.63) - slabJoint * 0.14 + (cobbleB - 0.5) * 0.08;
+        float slabJoint = clamp(step(0.95, fract(refrXZ.x * 0.24 * uvScale)) + step(0.95, fract(refrXZ.y * 0.24 * uvScale)), 0.0, 1.0);
+        vec3 concBed = vec3(0.56, 0.60, 0.64) - slabJoint * 0.14 + (cobbleB - 0.5) * 0.08;
         vec3 bedAlbedo = mix(gravelBed, concBed, isConcreteBed);
 
-        vec2 cUv1 = refrXZ * 0.095 + vec2(uTime * 0.036, uTime * 0.025);
-        vec2 cUv2 = refrXZ * 0.135 - vec2(uTime * 0.029, -uTime * 0.032);
-        float caust = (texture2D(uDetailTex, cUv1).b + texture2D(uDetailTex, cUv2).b) * 0.82 * exp(-depth * 0.29) * daySun;
-        vec3 sunlitBed = bedAlbedo * (0.36 + 0.86 * daySun) + uSunColor * caust * 0.52;
+        vec2 cUv1 = refrXZ * (0.095 * uvScale) + vec2(uTime * 0.036, uTime * 0.025);
+        vec2 cUv2 = refrXZ * (0.145 * uvScale) - vec2(uTime * 0.029, -uTime * 0.032);
+        float caust = (texture2D(uDetailTex, cUv1).b + texture2D(uDetailTex, cUv2).b) * 0.88 * exp(-optDepth * 0.27) * daySun;
+        vec3 sunlitBed = bedAlbedo * (0.36 + 0.86 * daySun) + uSunColor * caust * 0.58;
 
-        // --- 3. Закон Бугера — Ламберта — Бера (кристальная отмель -> бирюза -> глубокий сапфир бьефа) ---
-        float viewCos = max(0.30, abs(dot(N, V)));
-        float opticalPath = depth / viewCos;
+        // --- 3. Закон Бугера — Ламберта — Бера (кристальная отмель -> бирюза горной реки -> сапфир водохранилища) ---
+        float viewCos = max(0.28, abs(dot(N, V)));
+        float opticalPath = optDepth / viewCos;
 
-        vec3 sigmaPure = vec3(0.44, 0.092, 0.064);
+        vec3 sigmaPure = vec3(0.42, 0.088, 0.058);
         vec3 transmittance = exp(-sigmaPure * opticalPath);
 
-        vec3 pureScatter = mix(vec3(0.035, 0.34, 0.37), vec3(0.015, 0.12, 0.23), smoothstep(1.4, 12.5, depth)) * (0.28 + 0.84 * daySun);
-        vec3 mudScatter = vec3(0.50, 0.37, 0.21) * (0.30 + 0.75 * daySun);
-        float mudMask = clamp(sediment * 0.72, 0.0, 0.88);
+        vec3 shallowTurquoise = vec3(0.032, 0.38, 0.42);
+        vec3 deepSapphire     = vec3(0.012, 0.11, 0.24);
+        vec3 pureScatter = mix(shallowTurquoise, deepSapphire, smoothstep(1.2, 13.5, optDepth)) * (0.30 + 0.85 * daySun);
+        vec3 mudScatter = vec3(0.49, 0.36, 0.21) * (0.30 + 0.75 * daySun);
+        float mudMask = clamp(sediment * 0.70, 0.0, 0.88);
         vec3 inScatter = mix(pureScatter, mudScatter, mudMask);
 
         vec3 effTrans = transmittance * (1.0 - mudMask * 0.88);
         vec3 underwaterRadiance = sunlitBed * effTrans + inScatter * (1.0 - effTrans);
 
-        // Подповерхностное бирюзовое свечение гребней волн на солнце
-        float sss = pow(clamp(dot(V, -uSunDir + N * 0.6), 0.0, 1.0), 3.0) * (1.0 - mudMask * 0.75);
-        underwaterRadiance += vec3(0.05, 0.33, 0.30) * sss * max(0.0, uSunDir.y);
+        // Подповерхностное изумрудное свечение гребней волн на солнце (SSS)
+        float sss = pow(clamp(dot(V, -uSunDir + N * 0.65), 0.0, 1.0), 3.0) * (1.0 - mudMask * 0.75);
+        underwaterRadiance += vec3(0.05, 0.36, 0.33) * sss * max(0.0, uSunDir.y);
 
-        // --- 4. Отражения Френеля и солнечные искры ---
+        // --- 4. Точный закон Френеля Шлика (R0 = 0.0204 для пресной воды n = 1.333) и двойной блик Солнца ---
         float NdotV = max(0.0, dot(N, V));
-        float fresnel = clamp(0.024 + 0.88 * pow(1.0 - NdotV, 4.6), 0.024, 0.87);
+        float fresnel = clamp(0.0204 + 0.92 * pow(1.0 - NdotV, 4.8), 0.0204, 0.89);
 
         vec3 R = reflect(-V, N);
         float skyGrad = clamp(R.y * 0.5 + 0.5, 0.0, 1.0);
-        float canyonReflect = 1.0 - smoothstep(0.0, 0.20, R.y) * 0.26;
-        vec3 skyRefl = mix(uSkyHorizon, uSkyZenith, pow(skyGrad, 0.74)) * canyonReflect;
+        float canyonReflect = 1.0 - smoothstep(0.0, 0.22, R.y) * 0.24;
+        vec3 skyRefl = mix(uSkyHorizon, uSkyZenith, pow(skyGrad, 0.72)) * canyonReflect;
 
         vec3 H = normalize(uSunDir + V);
-        float specCore = pow(max(0.0, dot(N, H)), 420.0) * 2.8;
-        float specSparkle = pow(max(0.0, dot(N, H)), 58.0) * 0.30;
-        vec3 sunSpec = uSunColor * (specCore + specSparkle) * smoothstep(-0.02, 0.12, uSunDir.y);
+        float specCore = pow(max(0.0, dot(N, H)), 480.0) * 3.1;
+        float specGlitter = pow(max(0.0, dot(N, H)), 64.0) * 0.34;
+        vec3 sunSpec = uSunColor * (specCore + specGlitter) * smoothstep(-0.02, 0.12, uSunDir.y);
 
-        // --- 5. Кружевная пена бурунов и водосбросов ---
+        // --- 5. Анизотропная кружевная пена порогов, водобойных колодцев и мениска берега ---
         vec2 orthoDir = vec2(-flowDir.y, flowDir.x);
-        vec2 anisoUv = vec2(dot(vWorldPos.xz, flowDir) * 0.072 - uTime * (0.26 + speed * 0.044),
-                            dot(vWorldPos.xz, orthoDir) * 0.19);
+        vec2 anisoUv = vec2(
+          dot(vWorldPos.xz, flowDir) * (0.075 * uvScale) - uTime * (0.28 + speed * 0.048 * uvScale),
+          dot(vWorldPos.xz, orthoDir) * (0.19 * uvScale)
+        );
         float lacePattern = texture2D(uDetailTex, anisoUv).a * 0.64
-                          + texture2D(uDetailTex, anisoUv * 2.15 + vec2(0.31, -uTime * 0.08)).a * 0.36;
+                          + texture2D(uDetailTex, anisoUv * 2.2 + vec2(0.31, -uTime * 0.09)).a * 0.36;
 
-        float shoreMeniscus = (1.0 - smoothstep(0.015, 0.18, depth)) * clamp(speed * 0.25, 0.10, 0.70);
-        float totalFoamDrive = clamp(foamVal * 1.20 + shoreMeniscus + clamp(froude - 1.08, 0.0, 0.68) * 0.60, 0.0, 1.0);
-        float foamMask = smoothstep(0.36 - totalFoamDrive * 0.30, 0.75 - totalFoamDrive * 0.22, lacePattern * totalFoamDrive * 1.52);
-        vec3 foamColor = vec3(0.96, 0.98, 1.0) * (0.36 + 0.68 * daySun);
+        float shoreMeniscus = (1.0 - smoothstep(0.015, 0.22, optDepth)) * clamp(speed * 0.25, 0.12, 0.72);
+        float totalFoamDrive = clamp(foamVal * 1.25 + shoreMeniscus + clamp(froude - 1.05, 0.0, 0.72) * 0.62, 0.0, 1.0);
+        float foamMask = smoothstep(0.35 - totalFoamDrive * 0.30, 0.74 - totalFoamDrive * 0.22, lacePattern * totalFoamDrive * 1.56);
+        vec3 foamColor = vec3(0.96, 0.985, 1.0) * (0.38 + 0.66 * daySun);
 
-        vec3 surfaceCol = mix(underwaterRadiance, skyRefl, fresnel) + sunSpec * (1.0 - foamMask * 0.7);
+        vec3 surfaceCol = mix(underwaterRadiance, skyRefl, fresnel) + sunSpec * (1.0 - foamMask * 0.72);
         vec3 finalCol = mix(surfaceCol, foamColor, foamMask);
 
-        float distFog = 1.0 - exp(-pow(dist * uFogDensity, 1.65));
-        finalCol = mix(finalCol, uFogColor, clamp(distFog, 0.0, 0.84));
+        float distFog = 1.0 - exp(-pow(dist * uFogDensity, 1.62));
+        finalCol = mix(finalCol, uFogColor, clamp(distFog, 0.0, 0.82));
 
-        float edgeAlpha = smoothstep(0.010, 0.075, depth);
+        float edgeAlpha = smoothstep(0.010, 0.070, optDepth);
         gl_FragColor = vec4(finalCol, edgeAlpha);
       }
     `,
   });
 }
 
-/** Архитектурный шейдер растущих городских зданий с рустовкой, цоколем, карнизом и окнами */
-export function createCityFacadeMaterial(roofTex = null) {
+/**
+ * 3. Шейдер 3D-анимации перелива воды через гребень плотин и лотки водосбросов!
+ * Рисует изогнутые параболические ленты падающей воды с быстрым течением и аэрацией в белую пену.
+ */
+export function createOverflowWaterMaterial(overflowTex) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: {
+      uTime: { value: 0 },
+      uSunFactor: { value: 1.0 },
+      uOverflowTex: { value: overflowTex },
+      uFogColor: { value: new THREE.Color(0xa8cae8) },
+      uFogDensity: { value: 0.00012 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+
+      void main() {
+        vUv = uv;
+        #ifdef USE_INSTANCING
+          vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+        #else
+          vec4 wp = modelMatrix * vec4(position, 1.0);
+        #endif
+        vWorldPos = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform float uSunFactor;
+      uniform sampler2D uOverflowTex;
+      uniform vec3 uFogColor;
+      uniform float uFogDensity;
+
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+
+      void main() {
+        // Вода разгоняется под действием гравитации g при падении сверху вниз (vUv.y: 0 -> 1)
+        vec2 uvFast = vec2(vUv.x * 1.4, vUv.y * 1.6 - uTime * 2.85);
+        vec2 uvFine = vec2(vUv.x * 2.7 + 0.33, vUv.y * 2.4 - uTime * 4.10);
+
+        vec4 s1 = texture2D(uOverflowTex, uvFast);
+        vec4 s2 = texture2D(uOverflowTex, uvFine);
+
+        // На гребне (vUv.y ~ 0) вода изумрудно-голубая, к основанию аэрируется в кипящую белую пену!
+        float aeration = smoothstep(0.08, 0.88, vUv.y);
+        vec3 crestAqua = vec3(0.16, 0.62, 0.76);
+        vec3 whiteFoam = vec3(0.95, 0.985, 1.0);
+        vec3 col = mix(crestAqua, whiteFoam, clamp(aeration * 0.68 + (s1.r * 0.5 + s2.r * 0.5) * 0.45, 0.0, 1.0));
+        col *= (0.42 + 0.64 * uSunFactor);
+
+        // Мягкие края струи слева/справа и плавный вход в нижний бьеф
+        float sideFade = smoothstep(0.0, 0.14, vUv.x) * (1.0 - smoothstep(0.86, 1.0, vUv.x));
+        float tipFade = smoothstep(0.0, 0.08, vUv.y) * (1.0 - smoothstep(0.90, 1.0, vUv.y));
+        float alpha = clamp((s1.a * 0.58 + s2.a * 0.48) * sideFade * tipFade * 1.18, 0.0, 0.94);
+
+        float dist = length(cameraPosition - vWorldPos);
+        float fogF = 1.0 - exp(-pow(dist * uFogDensity, 1.62));
+        col = mix(col, uFogColor, clamp(fogF, 0.0, 0.82));
+
+        gl_FragColor = vec4(col, alpha);
+      }
+    `,
+  });
+}
+
+/** 4. Архитектурный шейдер 32 типов зданий и промкорпусов с Мега-Атласом 64 текстур × 432 оттенков */
+export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
   return new THREE.ShaderMaterial({
     uniforms: {
       uSunDir: { value: new THREE.Vector3(0.5, 0.7, 0.4).normalize() },
@@ -405,21 +523,26 @@ export function createCityFacadeMaterial(roofTex = null) {
       uSkyColor: { value: new THREE.Color(0x7fb3e8) },
       uNightFactor: { value: 0.0 },
       uFogColor: { value: new THREE.Color(0xa8cae8) },
-      uFogDensity: { value: 0.00050 },
+      uFogDensity: { value: 0.00012 },
       uRoofTex: { value: roofTex },
       uHasRoofTex: { value: roofTex ? 1.0 : 0.0 },
+      uFacadeAtlas: { value: facadeAtlas || roofTex },
+      uHasAtlas: { value: facadeAtlas ? 1.0 : 0.0 },
     },
     vertexShader: /* glsl */ `
       attribute float aPowered;
+      attribute float aStyleId;
       varying vec3 vWorldPos;
       varying vec3 vLocalPos;
       varying vec3 vNormalW;
       varying vec3 vColor;
       varying float vPowered;
+      varying float vStyleId;
 
       void main() {
         vLocalPos = position;
         vPowered = aPowered;
+        vStyleId = aStyleId;
         #ifdef USE_INSTANCING_COLOR
           vColor = instanceColor;
         #else
@@ -440,12 +563,15 @@ export function createCityFacadeMaterial(roofTex = null) {
       uniform float uFogDensity;
       uniform sampler2D uRoofTex;
       uniform float uHasRoofTex;
+      uniform sampler2D uFacadeAtlas;
+      uniform float uHasAtlas;
 
       varying vec3 vWorldPos;
       varying vec3 vLocalPos;
       varying vec3 vNormalW;
       varying vec3 vColor;
       varying float vPowered;
+      varying float vStyleId;
 
       float hash21(vec2 p) {
         p = fract(p * vec2(127.1, 311.7));
@@ -458,27 +584,36 @@ export function createCityFacadeMaterial(roofTex = null) {
         float NdotL = max(0.0, dot(N, uSunDir));
         vec3 baseAlbedo = vColor;
 
-        // Плоская кровля высоток с гравийной крошкой и бортиком парапета
+        // Выборка тайла из 8×8 Мега-атласа фасадов по индексу стиля здания (64 фактуры!)
+        if (uHasAtlas > 0.5 && N.y <= 0.55) {
+          float tileIdx = mod(floor(vStyleId + 0.5), 64.0);
+          vec2 tileOrigin = vec2(mod(tileIdx, 8.0), floor(tileIdx / 8.0)) / 8.0;
+          float uWall = abs(N.x) > 0.5 ? vWorldPos.z : vWorldPos.x;
+          vec2 localTileUv = fract(vec2(uWall * 0.14, vWorldPos.y * 0.14)) * (0.84 / 8.0) + (0.08 / 8.0);
+          vec3 atlasTex = texture2D(uFacadeAtlas, tileOrigin + localTileUv).rgb;
+          baseAlbedo = mix(baseAlbedo, baseAlbedo * (0.62 + 0.72 * atlasTex), 0.65);
+        }
+
         if (N.y > 0.55) {
           float roofEdge = max(abs(vLocalPos.x), abs(vLocalPos.z));
           float parapet = smoothstep(0.41, 0.46, roofEdge);
           vec3 roofGrain = uHasRoofTex > 0.5 ? texture2D(uRoofTex, vWorldPos.xz * 0.25).rgb : vec3(0.55);
-          baseAlbedo = mix(roofGrain * 0.72, vColor * 0.88, parapet);
+          baseAlbedo = mix(roofGrain * mix(vec3(0.68), vColor, 0.42), vColor * 0.88, parapet);
         } else {
-          // Каменный цоколь первого этажа, угловые пилястры и межэтажные пояса
           float plinth = 1.0 - smoothstep(0.05, 0.11, vLocalPos.y);
           float cornice = smoothstep(0.93, 0.96, vLocalPos.y);
           float cornerTrim = smoothstep(0.42, 0.47, max(abs(vLocalPos.x), abs(vLocalPos.z)));
-          float floorBand = step(0.91, fract(vWorldPos.y * 0.36));
+          float floorBand = step(0.91, fract(vWorldPos.y * 0.34));
           baseAlbedo *= (1.0 - plinth * 0.24 - floorBand * 0.08 + cornice * 0.12 + cornerTrim * 0.08);
         }
 
         vec3 litWall = baseAlbedo * (uSunColor * NdotL * 0.88 + uSkyColor * (0.30 + 0.26 * max(0.0, N.y)));
 
-        // Детализированные окна с переплётами рам, дневным отражением неба и ночным светом
-        if (abs(N.y) < 0.45) {
+        // Детализированные окна с переплётами (кроме глухих силосов/градирен style 13, 19)
+        bool hasWindows = abs(vStyleId - 13.0) > 0.4 && abs(vStyleId - 19.0) > 0.4;
+        if (hasWindows && abs(N.y) < 0.45) {
           float uCoord = abs(N.x) > 0.5 ? vWorldPos.z : vWorldPos.x;
-          vec2 winGrid = vec2(uCoord * 0.54, vWorldPos.y * 0.36);
+          vec2 winGrid = vec2(uCoord * 0.52, vWorldPos.y * 0.34);
           vec2 cell = floor(winGrid);
           vec2 f = fract(winGrid);
 
@@ -487,26 +622,28 @@ export function createCityFacadeMaterial(roofTex = null) {
           inWin *= (1.0 - smoothstep(0.43, 0.47, max(abs(vLocalPos.x), abs(vLocalPos.z))));
 
           if (inWin > 0.5) {
-            // Тёмный оконный переплёт / рама по контуру и импост по центру
             float frame = 1.0 - (step(0.23, f.x) * step(f.x, 0.77) * step(0.27, f.y) * step(f.y, 0.75));
             float mullion = 1.0 - smoothstep(0.0, 0.035, abs(f.x - 0.5));
             float frameMask = clamp(frame + mullion * 0.65, 0.0, 1.0);
 
-            float rnd = hash21(cell);
+            float rnd = hash21(cell + vStyleId * 3.1);
             float tintRnd = hash21(cell + 19.7);
-            vec3 dayGlass = mix(vec3(0.14, 0.24, 0.35), uSkyColor * 0.92, 0.38 + f.y * 0.28);
+            vec3 dayGlass = mix(vec3(0.13, 0.24, 0.36), uSkyColor * 0.94, 0.40 + f.y * 0.28);
 
-            float onProb = vPowered > 0.5 ? 0.78 : 0.07;
+            float onProb = vPowered > 0.5 ? 0.78 : 0.06;
             float windowLit = step(1.0 - onProb, rnd) * uNightFactor;
-            vec3 warmLamp = mix(vec3(1.0, 0.81, 0.44), vec3(0.72, 0.91, 1.0), step(0.76, tintRnd));
-            vec3 paneCol = mix(dayGlass, warmLamp * (vPowered > 0.5 ? 1.38 : 0.42), windowLit);
+            // Для ЦОД ИИ (style 20,21) — бирюзовые серверные стойки, для остальных — тёплые лампы!
+            vec3 nightHue = (abs(vStyleId - 20.0) < 1.2)
+              ? vec3(0.25, 0.92, 1.0)
+              : mix(vec3(1.0, 0.81, 0.44), vec3(0.72, 0.91, 1.0), step(0.76, tintRnd));
+            vec3 paneCol = mix(dayGlass, nightHue * (vPowered > 0.5 ? 1.40 : 0.42), windowLit);
             litWall = mix(paneCol, vec3(0.16, 0.19, 0.23), frameMask * 0.75);
           }
         }
 
         float dist = length(cameraPosition - vWorldPos);
-        float fogF = 1.0 - exp(-pow(dist * uFogDensity, 1.65));
-        litWall = mix(litWall, uFogColor, clamp(fogF, 0.0, 0.84));
+        float fogF = 1.0 - exp(-pow(dist * uFogDensity, 1.62));
+        litWall = mix(litWall, uFogColor, clamp(fogF, 0.0, 0.82));
 
         gl_FragColor = vec4(litWall, 1.0);
       }

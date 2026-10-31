@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { WORLD } from './config.js';
 
 export class SprayAndRainSystem {
-  constructor(scene, maxParticles = 2400) {
+  constructor(scene, maxParticles = 2800) {
     this.max = maxParticles;
     this.head = 0;
 
@@ -15,7 +15,7 @@ export class SprayAndRainSystem {
     this.life = new Float32Array(this.max);
     this.maxLife = new Float32Array(this.max);
     this.sizes = new Float32Array(this.max);
-    this.kinds = new Uint8Array(this.max); // 0 = мертва, 1 = 3D струя, 2 = водяной туман
+    this.kinds = new Uint8Array(this.max);
 
     const geo = new THREE.BufferGeometry();
     this.posAttr = new THREE.BufferAttribute(this.positions, 3);
@@ -35,7 +35,7 @@ export class SprayAndRainSystem {
       blending: THREE.NormalBlending,
       uniforms: {
         uLight: { value: 1.0 },
-        uPixelRatio: { value: Math.min(window.devicePixelRatio || 1, 2) },
+        uPixelRatio: { value: Math.min(typeof window !== 'undefined' ? (window.devicePixelRatio || 1) : 1, 2) },
       },
       vertexShader: /* glsl */ `
         attribute float aSize;
@@ -52,7 +52,7 @@ export class SprayAndRainSystem {
           }
           vec4 mv = modelViewMatrix * vec4(position, 1.0);
           gl_Position = projectionMatrix * mv;
-          gl_PointSize = clamp((aSize * 210.0 * uPixelRatio) / max(1.0, -mv.z), 1.5, 44.0);
+          gl_PointSize = clamp((aSize * 225.0 * uPixelRatio) / max(1.0, -mv.z), 1.5, 48.0);
         }
       `,
       fragmentShader: /* glsl */ `
@@ -64,7 +64,7 @@ export class SprayAndRainSystem {
           float r2 = dot(p, p);
           if (r2 > 1.0) discard;
           float soft = pow(1.0 - r2, 1.6);
-          vec3 col = vec3(0.92, 0.96, 1.0) * (0.45 + 0.55 * uLight);
+          vec3 col = vec3(0.93, 0.97, 1.0) * (0.45 + 0.55 * uLight);
           gl_FragColor = vec4(col, vAlpha * soft);
         }
       `,
@@ -75,15 +75,14 @@ export class SprayAndRainSystem {
     this.points.matrixAutoUpdate = false;
     scene.add(this.points);
 
-    // Ливень вокруг камеры (один LineSegments буфер, без пересборки)
-    const rainCount = 360;
+    const rainCount = 380;
     this.rainCount = rainCount;
     const rainPos = new Float32Array(rainCount * 6);
     this.rainSeeds = new Float32Array(rainCount * 3);
     for (let i = 0; i < rainCount; i++) {
-      this.rainSeeds[i * 3] = (Math.random() - 0.5) * 180;
-      this.rainSeeds[i * 3 + 1] = Math.random() * 70;
-      this.rainSeeds[i * 3 + 2] = (Math.random() - 0.5) * 180;
+      this.rainSeeds[i * 3] = (Math.random() - 0.5) * 210;
+      this.rainSeeds[i * 3 + 1] = Math.random() * 80;
+      this.rainSeeds[i * 3 + 2] = (Math.random() - 0.5) * 210;
     }
     const rainGeo = new THREE.BufferGeometry();
     this.rainAttr = new THREE.BufferAttribute(rainPos, 3);
@@ -92,7 +91,7 @@ export class SprayAndRainSystem {
     this.rainMat = new THREE.LineBasicMaterial({
       color: 0xcfe4ff,
       transparent: true,
-      opacity: 0.35,
+      opacity: 0.36,
       depthWrite: false,
     });
     this.rainLines = new THREE.LineSegments(rainGeo, this.rainMat);
@@ -118,17 +117,18 @@ export class SprayAndRainSystem {
   }
 
   spawnDigSplash(wx, wy, wz, count = 12) {
+    const pScale = Math.pow(WORLD.horizScale, 0.55);
     for (let k = 0; k < count; k++) {
       const ang = Math.random() * Math.PI * 2;
-      const spd = 1.5 + Math.random() * 4.0;
+      const spd = (1.5 + Math.random() * 4.0) * pScale * 0.65;
       this.spawn(
-        wx + (Math.random() - 0.5) * 3,
-        wy + 0.5,
-        wz + (Math.random() - 0.5) * 3,
+        wx + (Math.random() - 0.5) * 3 * pScale,
+        wy + 0.5 * WORLD.elevScale,
+        wz + (Math.random() - 0.5) * 3 * pScale,
         Math.cos(ang) * spd,
-        2.5 + Math.random() * 4.5,
+        (2.5 + Math.random() * 4.5) * Math.sqrt(WORLD.elevScale),
         Math.sin(ang) * spd,
-        1.1 + Math.random() * 0.8,
+        (1.1 + Math.random() * 0.8) * pScale,
         0.55 + Math.random() * 0.35,
         1,
       );
@@ -137,43 +137,41 @@ export class SprayAndRainSystem {
 
   update(dt, hydro, camTarget, sunLightFactor = 1.0, rainIntensity = 0) {
     this.points.material.uniforms.uLight.value = sunLightFactor;
+    const pScale = Math.pow(WORLD.horizScale, 0.52);
 
-    // 1. Рождаем 3D-струи из активных водосбросов и диффузоров турбин
     const emitters = hydro.jetEmitters;
     for (let e = 0; e < emitters.length; e++) {
       const em = emitters[e];
-      const count = em.kind === 'spillway' ? Math.ceil(5 * em.intensity) : Math.ceil(3 * em.intensity);
+      const count = em.kind === 'spillway' ? Math.ceil(4 * em.intensity) : Math.ceil(3 * em.intensity);
       for (let k = 0; k < count; k++) {
-        const spread = em.kind === 'spillway' ? 2.4 : 3.2;
+        const spread = (em.kind === 'spillway' ? 2.4 : 3.2) * pScale;
         this.spawn(
           em.wx + (Math.random() - 0.5) * spread,
-          em.wy + Math.random() * 0.6,
+          em.wy + Math.random() * 0.6 * pScale,
           em.wz + (Math.random() - 0.5) * spread,
-          em.vx * (0.85 + Math.random() * 0.3) + (Math.random() - 0.5) * 1.4,
+          em.vx * (0.85 + Math.random() * 0.3) + (Math.random() - 0.5) * 1.4 * pScale,
           em.vy + (Math.random() - 0.3) * 1.6,
-          em.vz * (0.85 + Math.random() * 0.3) + (Math.random() - 0.5) * 1.4,
-          em.kind === 'spillway' ? (1.6 + Math.random() * 1.5) : (1.3 + Math.random() * 1.1),
+          em.vz * (0.85 + Math.random() * 0.3) + (Math.random() - 0.5) * 1.4 * pScale,
+          (em.kind === 'spillway' ? (1.6 + Math.random() * 1.5) : (1.3 + Math.random() * 1.1)) * pScale,
           0.95 + Math.random() * 0.55,
           1,
         );
       }
-      // Облако водяного тумана у подножия струи
       if (Math.random() < 0.65) {
         this.spawn(
-          em.wx + em.vx * 0.5 + (Math.random() - 0.5) * 5.0,
+          em.wx + em.vx * 0.5 + (Math.random() - 0.5) * 5.0 * pScale,
           em.wy - 0.5,
-          em.wz + em.vz * 0.5 + (Math.random() - 0.5) * 5.0,
-          (Math.random() - 0.5) * 1.2,
-          1.4 + Math.random() * 1.8,
-          (Math.random() - 0.5) * 1.2,
-          3.4 + Math.random() * 2.6,
+          em.wz + em.vz * 0.5 + (Math.random() - 0.5) * 5.0 * pScale,
+          (Math.random() - 0.5) * 1.2 * pScale,
+          (1.4 + Math.random() * 1.8) * Math.sqrt(WORLD.elevScale),
+          (Math.random() - 0.5) * 1.2 * pScale,
+          (3.4 + Math.random() * 2.6) * pScale,
           1.5 + Math.random() * 0.9,
           2,
         );
       }
     }
 
-    // 2. Интегрируем 3D-баллистику и падение струй обратно в реку!
     const alphas = this.alphaAttr.array;
     let anyAlive = false;
     for (let i = 0; i < this.max; i++) {
@@ -192,16 +190,14 @@ export class SprayAndRainSystem {
       anyAlive = true;
       const i3 = i * 3;
       if (kind === 1) {
-        // Баллистическая 3D-струя воды: гравитация + сопротивление воздуха
         this.velocities[i3] *= (1.0 - dt * 0.35);
         this.velocities[i3 + 1] -= WORLD.gravity * dt * 0.92;
         this.velocities[i3 + 2] *= (1.0 - dt * 0.35);
       } else {
-        // Водяная пыль (туман): мягко клубится вверх и расширяется
         this.velocities[i3] *= (1.0 - dt * 1.2);
         this.velocities[i3 + 1] = Math.max(0.3, this.velocities[i3 + 1] - dt * 0.9);
         this.velocities[i3 + 2] *= (1.0 - dt * 1.2);
-        this.sizes[i] += dt * 1.4;
+        this.sizes[i] += dt * 1.4 * pScale;
       }
 
       const nx = this.positions[i3] + this.velocities[i3] * dt;
@@ -212,7 +208,6 @@ export class SprayAndRainSystem {
       this.positions[i3 + 1] = ny;
       this.positions[i3 + 2] = nz;
 
-      // При ударе 3D-струи о поверхность нижней реки — гасим частицу и взбиваем пену на воде!
       if (kind === 1 && Math.abs(nx) < WORLD.size * 0.49 && Math.abs(nz) < WORLD.size * 0.49) {
         const gPos = hydro.worldToGrid(nx, nz);
         const cell = gPos.gz * hydro.grid + gPos.gx;
@@ -235,26 +230,27 @@ export class SprayAndRainSystem {
       this.alphaAttr.needsUpdate = true;
     }
 
-    // 3. Обновляем дождь в паводок
     if (rainIntensity > 0.05) {
       this.rainLines.visible = true;
       this.rainMat.opacity = Math.min(0.45, rainIntensity * 0.35);
       const rp = this.rainAttr.array;
-      const fall = (performance.now() * 0.065) % 70;
+      const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const rSpan = Math.pow(WORLD.horizScale, 0.55);
+      const fall = (now * 0.065) % (70 * rSpan);
       for (let i = 0; i < this.rainCount; i++) {
         const s3 = i * 3;
-        const x = camTarget.x + this.rainSeeds[s3];
-        let y = this.rainSeeds[s3 + 1] - fall;
-        if (y < 0) y += 70;
-        y += camTarget.y * 0.3 + 6;
-        const z = camTarget.z + this.rainSeeds[s3 + 2];
+        const x = camTarget.x + this.rainSeeds[s3] * rSpan;
+        let y = this.rainSeeds[s3 + 1] * rSpan - fall;
+        if (y < 0) y += 70 * rSpan;
+        y += camTarget.y * 0.3 + 6 * rSpan;
+        const z = camTarget.z + this.rainSeeds[s3 + 2] * rSpan;
         const i6 = i * 6;
         rp[i6] = x;
         rp[i6 + 1] = y;
         rp[i6 + 2] = z;
-        rp[i6 + 3] = x + 0.6;
-        rp[i6 + 4] = y - 3.6;
-        rp[i6 + 5] = z + 0.4;
+        rp[i6 + 3] = x + 0.6 * rSpan;
+        rp[i6 + 4] = y - 3.8 * rSpan;
+        rp[i6 + 5] = z + 0.4 * rSpan;
       }
       this.rainAttr.needsUpdate = true;
     } else {
