@@ -10,7 +10,7 @@
 
 import * as THREE from 'three';
 import { WORLD } from './config.js';
-import { clamp, makeRng } from './noise.js';
+import { clamp, lerp, makeRng } from './noise.js';
 import {
   createValleyTerrainMaterial,
   createRealisticWaterMaterial,
@@ -21,6 +21,7 @@ import {
 } from './water-shader.js';
 import { buildAllProceduralTextures, pickCatalogShade } from './textures.js';
 import { LivingWorldSystem } from './living-world.js';
+import { RoadAndBridgeRenderer, createOpenScaffoldCageGeometry } from './roads-and-cities.js';
 
 const _mat4 = new THREE.Matrix4();
 const _pos = new THREE.Vector3();
@@ -181,6 +182,16 @@ export class WorldView {
     this._buildCityInstancedPools();
     this._rebuildCityDisks();
 
+    // 3b. Междугородние трассы A*, железобетонные мосты на быках и строящиеся городские улицы!
+    this.roadRenderer = new RoadAndBridgeRenderer(
+      this.scene,
+      this.hydro,
+      this.economy,
+      this.textures,
+      !!this.profile.shadows,
+    );
+    this.roadRenderer.syncGeometry();
+
     // 4. Объёмная 3D-стройка: монолитные блоки плотин, контрфорсы, опалубка, борта каналов и башенные краны!
     this._buildVolumetricConstructionPools();
 
@@ -271,6 +282,9 @@ export class WorldView {
       this.irrBeacon.userData.baseScale = bScale;
     }
 
+    if (this.roadRenderer) {
+      this.roadRenderer.syncGeometry();
+    }
     if (this.livingWorld) {
       this.livingWorld.rebuildWorldActors();
     }
@@ -655,22 +669,30 @@ export class WorldView {
     bodyGeo.translate(0, 0.5, 0);
     this.cityPoweredArr = new Float32Array(maxB);
     this.cityStyleArr = new Float32Array(maxB);
+    this.cityBuildProgArr = new Float32Array(maxB).fill(1.0);
     this.cityPoweredAttr = new THREE.InstancedBufferAttribute(this.cityPoweredArr, 1);
     this.cityPoweredAttr.setUsage(THREE.DynamicDrawUsage);
     this.cityStyleAttr = new THREE.InstancedBufferAttribute(this.cityStyleArr, 1);
     this.cityStyleAttr.setUsage(THREE.DynamicDrawUsage);
+    this.cityBuildProgAttr = new THREE.InstancedBufferAttribute(this.cityBuildProgArr, 1);
+    this.cityBuildProgAttr.setUsage(THREE.DynamicDrawUsage);
     bodyGeo.setAttribute('aPowered', this.cityPoweredAttr);
     bodyGeo.setAttribute('aStyleId', this.cityStyleAttr);
+    bodyGeo.setAttribute('aBuildProg', this.cityBuildProgAttr);
 
     // Цилиндрический пул для элеваторов, гиперболоидных градирен и маяков (silo)
     const siloGeo = new THREE.CylinderGeometry(0.42, 0.52, 1.0, 12);
     siloGeo.translate(0, 0.5, 0);
     this.siloPoweredArr = new Float32Array(maxB);
     this.siloStyleArr = new Float32Array(maxB);
+    this.siloBuildProgArr = new Float32Array(maxB).fill(1.0);
     this.siloPoweredAttr = new THREE.InstancedBufferAttribute(this.siloPoweredArr, 1);
     this.siloStyleAttr = new THREE.InstancedBufferAttribute(this.siloStyleArr, 1);
+    this.siloBuildProgAttr = new THREE.InstancedBufferAttribute(this.siloBuildProgArr, 1);
+    this.siloBuildProgAttr.setUsage(THREE.DynamicDrawUsage);
     siloGeo.setAttribute('aPowered', this.siloPoweredAttr);
     siloGeo.setAttribute('aStyleId', this.siloStyleAttr);
+    siloGeo.setAttribute('aBuildProg', this.siloBuildProgAttr);
 
     // Скатные крыши и сферические купола общественных зданий / обсерваторий
     const roofGeo = new THREE.ConeGeometry(0.76, 0.44, 4);
@@ -696,7 +718,45 @@ export class WorldView {
     this.cityRoofs.frustumCulled = false;
     this.cityDomes.frustumCulled = false;
 
-    this.scene.add(this.cityBodies, this.citySilos, this.cityRoofs, this.cityDomes);
+    // Инженерные элементы РЕАЛЬНОЙ СТРОЙКИ ГОРОДОВ: фундаментные плиты, сквозные леса и городские башенные краны!
+    const foundGeo = new THREE.BoxGeometry(1.16, 1.0, 1.16);
+    foundGeo.translate(0, 0.5, 0);
+    const foundMat = new THREE.MeshLambertMaterial({ color: 0x94a3b8, map: this.textures.concreteMap });
+    this.cityFoundations = new THREE.InstancedMesh(foundGeo, foundMat, maxB);
+    this.cityFoundations.count = 0;
+    this.cityFoundations.frustumCulled = false;
+
+    const scaffGeo = createOpenScaffoldCageGeometry();
+    const scaffMat = new THREE.MeshLambertMaterial({ color: 0xd97706 });
+    this.cityScaffolds = new THREE.InstancedMesh(scaffGeo, scaffMat, 120);
+    this.cityScaffolds.count = 0;
+    this.cityScaffolds.frustumCulled = false;
+
+    const maxCityCranes = 40;
+    const cMastGeo = new THREE.BoxGeometry(0.85, 1.0, 0.85);
+    cMastGeo.translate(0, 0.5, 0);
+    const cYellowMat = new THREE.MeshLambertMaterial({ color: 0xf59e0b, map: this.textures.steel });
+    this.cityCraneMasts = new THREE.InstancedMesh(cMastGeo, cYellowMat, maxCityCranes);
+    this.cityCraneMasts.count = 0;
+    this.cityCraneMasts.frustumCulled = false;
+
+    const cJibGeo = new THREE.BoxGeometry(15.5, 0.72, 0.82);
+    cJibGeo.translate(3.4, 0, 0);
+    this.cityCraneJibs = new THREE.InstancedMesh(cJibGeo, cYellowMat, maxCityCranes);
+    this.cityCraneJibs.count = 0;
+    this.cityCraneJibs.frustumCulled = false;
+    this.activeCityCraneSites = [];
+
+    this.scene.add(
+      this.cityFoundations,
+      this.cityBodies,
+      this.citySilos,
+      this.cityRoofs,
+      this.cityDomes,
+      this.cityScaffolds,
+      this.cityCraneMasts,
+      this.cityCraneJibs,
+    );
   }
 
   _rebuildCityDisks() {
@@ -944,6 +1004,25 @@ export class WorldView {
       } else {
         crane.visible = false;
       }
+    }
+
+    // Живое вращение стрел городских башенных кранов над возводимыми кварталами 8 городов!
+    if (this.cityCraneJibs && this.activeCityCraneSites && this.activeCityCraneSites.length > 0) {
+      const nCranes = this.activeCityCraneSites.length;
+      for (let k = 0; k < nCranes; k++) {
+        const cs = this.activeCityCraneSites[k];
+        const slewYaw = cs.baseYaw + Math.sin(timeSec * 0.72 + cs.seed) * 1.35;
+        _pos.set(cs.x, cs.topY, cs.z);
+        _euler.set(0, slewYaw, 0);
+        _quat.setFromEuler(_euler);
+        _scale.setScalar(cs.scale);
+        _mat4.compose(_pos, _quat, _scale);
+        this.cityCraneJibs.setMatrixAt(k, _mat4);
+      }
+      this.cityCraneJibs.count = nCranes;
+      this.cityCraneJibs.instanceMatrix.needsUpdate = true;
+    } else if (this.cityCraneJibs) {
+      this.cityCraneJibs.count = 0;
     }
   }
 
@@ -1279,27 +1358,53 @@ export class WorldView {
     this.updateOverflowWater3D(timeSec);
   }
 
-  /** Отрисовка всех 32 типов зданий с 64 фасадными стилями и 432 оттенками */
+  /** Отрисовка всех 32 типов зданий + РЕАЛЬНАЯ ПОЭТАПНАЯ 3D-СТРОЙКА (фундамент, леса, этажи, башенные краны!) */
   syncCityInstances() {
     const buildings = this.economy.allBuildings;
     const cityMap = new Map();
     for (const c of this.economy.cities) cityMap.set(c.id, c);
 
     const maxCap = this.cityBodies.instanceMatrix.count;
+    const maxScaff = this.cityScaffolds.instanceMatrix.count;
+    const maxCityCranes = this.cityCraneMasts.instanceMatrix.count;
+    const cScale = Math.pow(WORLD.horizScale, 0.52);
+    const foundH = 0.62 * Math.pow(WORLD.elevScale, 0.68);
+
     let boxIdx = 0;
     let siloIdx = 0;
     let roofIdx = 0;
     let domeIdx = 0;
+    let foundIdx = 0;
+    let scaffIdx = 0;
+    let craneIdx = 0;
+    this.activeCityCraneSites.length = 0;
 
     for (let i = 0; i < buildings.length && i < maxCap; i++) {
       const b = buildings[i];
       const city = cityMap.get(b.cityId);
       const powered = city && city.connected && city.powerRatio >= 0.45 ? 1.0 : 0.0;
-      const animH = b.sy * Math.max(0.08, b.anim);
+      const prog = clamp(b.anim ?? 1.0, 0.0, 1.0);
 
-      _pos.set(b.wx, b.wy - 0.25, b.wz);
+      // 1. Бетонная фундаментная плита (заливается первой на этапе 0..16%)
+      const foundScale = clamp(prog / 0.16, 0.25, 1.0);
+      _pos.set(b.wx, b.wy - 0.35, b.wz);
       _euler.set(0, b.yaw, 0);
       _quat.setFromEuler(_euler);
+      _scale.set(b.sx * foundScale, foundH, b.sz * foundScale);
+      _mat4.compose(_pos, _quat, _scale);
+      this.cityFoundations.setMatrixAt(foundIdx++, _mat4);
+
+      // 2. Поэтажный подъём монолитного каркаса здания (с плавной ступенчатостью этажей!)
+      let riseFrac = 0.05;
+      if (prog > 0.10) {
+        const rawRise = clamp((prog - 0.10) / 0.82, 0.0, 1.0);
+        const floors = Math.max(2.0, Math.round(b.sy / (3.2 * Math.pow(WORLD.elevScale, 0.65))));
+        const stepped = Math.floor(rawRise * floors) / floors;
+        riseFrac = Math.max(0.06, lerp(stepped, rawRise, 0.62));
+      }
+      const animH = b.sy * (prog >= 0.96 ? 1.0 : riseFrac);
+
+      _pos.set(b.wx, b.wy - 0.22, b.wz);
       _color.setRGB(b.shadeR || 0.72, b.shadeG || 0.74, b.shadeB || 0.78);
 
       if (b.roofType === 'silo') {
@@ -1309,6 +1414,7 @@ export class WorldView {
         this.citySilos.setColorAt(siloIdx, _color);
         this.siloPoweredArr[siloIdx] = powered;
         this.siloStyleArr[siloIdx] = b.styleId || 13;
+        this.siloBuildProgArr[siloIdx] = prog;
         siloIdx++;
       } else {
         _scale.set(b.sx, animH, b.sz);
@@ -1317,49 +1423,102 @@ export class WorldView {
         this.cityBodies.setColorAt(boxIdx, _color);
         this.cityPoweredArr[boxIdx] = powered;
         this.cityStyleArr[boxIdx] = b.styleId || 0;
+        this.cityBuildProgArr[boxIdx] = prog;
         boxIdx++;
 
-        if (b.roofType === 'gable' && roofIdx < maxCap) {
-          _pos.set(b.wx, b.wy - 0.25 + animH, b.wz);
-          _scale.set(b.sx * 1.08, 1.8 * Math.pow(WORLD.elevScale, 0.7) + animH * 0.16, b.sz * 1.08);
+        // Монтаж скатной крыши и купола выполняется на завершающей стадии (prog >= 0.80)
+        if (prog >= 0.80) {
+          const roofAppear = clamp((prog - 0.80) / 0.18, 0.05, 1.0);
+          if (b.roofType === 'gable' && roofIdx < maxCap) {
+            _pos.set(b.wx, b.wy - 0.22 + animH, b.wz);
+            _scale.set(
+              b.sx * 1.08,
+              (1.8 * Math.pow(WORLD.elevScale, 0.7) + animH * 0.16) * roofAppear,
+              b.sz * 1.08,
+            );
+            _mat4.compose(_pos, _quat, _scale);
+            _color.setRGB(b.roofR || 0.68, b.roofG || 0.34, b.roofB || 0.26);
+            this.cityRoofs.setMatrixAt(roofIdx, _mat4);
+            this.cityRoofs.setColorAt(roofIdx, _color);
+            roofIdx++;
+          } else if (b.roofType === 'dome' && domeIdx < maxCap) {
+            _pos.set(b.wx, b.wy - 0.22 + animH, b.wz);
+            const domeR = Math.min(b.sx, b.sz) * 0.78 * roofAppear;
+            _scale.set(domeR, domeR * 0.75, domeR);
+            _mat4.compose(_pos, _quat, _scale);
+            this.cityDomes.setMatrixAt(domeIdx++, _mat4);
+          }
+        }
+      }
+
+      // 3. Сквозные стальные строительные леса и башенный кран у активно возводимых зданий!
+      if (prog >= 0.05 && prog < 0.92) {
+        if (scaffIdx < maxScaff) {
+          const dismantle = prog > 0.82 ? (1.0 - (prog - 0.82) / 0.10) : 1.0;
+          const scaffH = Math.max(2.2 * WORLD.elevScale, animH * 1.08) * dismantle;
+          _pos.set(b.wx, b.wy - 0.22, b.wz);
+          _euler.set(0, b.yaw, 0);
+          _quat.setFromEuler(_euler);
+          _scale.set(b.sx * 1.12, scaffH, b.sz * 1.12);
           _mat4.compose(_pos, _quat, _scale);
-          _color.setRGB(b.roofR || 0.68, b.roofG || 0.34, b.roofB || 0.26);
-          this.cityRoofs.setMatrixAt(roofIdx, _mat4);
-          this.cityRoofs.setColorAt(roofIdx, _color);
-          roofIdx++;
-        } else if (b.roofType === 'dome' && domeIdx < maxCap) {
-          _pos.set(b.wx, b.wy - 0.25 + animH, b.wz);
-          const domeR = Math.min(b.sx, b.sz) * 0.78;
-          _scale.set(domeR, domeR * 0.75, domeR);
+          this.cityScaffolds.setMatrixAt(scaffIdx++, _mat4);
+        }
+
+        if (craneIdx < maxCityCranes) {
+          const craneOffX = Math.cos(b.yaw) * (b.sx * 0.68 + 2.4 * cScale);
+          const craneOffZ = -Math.sin(b.yaw) * (b.sz * 0.68 + 2.4 * cScale);
+          const cx = b.wx + craneOffX;
+          const cz = b.wz + craneOffZ;
+          const mastH = Math.max(b.sy * 0.85, animH) + 7.5 * Math.pow(WORLD.elevScale, 0.72);
+          _pos.set(cx, b.wy - 0.2, cz);
+          _euler.set(0, b.yaw, 0);
+          _quat.setFromEuler(_euler);
+          _scale.set(cScale, mastH, cScale);
           _mat4.compose(_pos, _quat, _scale);
-          this.cityDomes.setMatrixAt(domeIdx++, _mat4);
+          this.cityCraneMasts.setMatrixAt(craneIdx, _mat4);
+
+          this.activeCityCraneSites.push({
+            x: cx,
+            topY: b.wy - 0.2 + mastH,
+            z: cz,
+            baseYaw: b.yaw + Math.PI,
+            scale: cScale * 0.92,
+            seed: i * 1.37,
+          });
+          craneIdx++;
         }
       }
     }
 
+    this.cityFoundations.count = foundIdx;
     this.cityBodies.count = boxIdx;
     this.citySilos.count = siloIdx;
     this.cityRoofs.count = roofIdx;
     this.cityDomes.count = domeIdx;
+    this.cityScaffolds.count = scaffIdx;
+    this.cityCraneMasts.count = craneIdx;
 
+    this.cityFoundations.instanceMatrix.needsUpdate = true;
     this.cityBodies.instanceMatrix.needsUpdate = true;
     this.cityPoweredAttr.needsUpdate = true;
     this.cityStyleAttr.needsUpdate = true;
+    this.cityBuildProgAttr.needsUpdate = true;
     if (this.cityBodies.instanceColor) this.cityBodies.instanceColor.needsUpdate = true;
 
-    if (siloIdx > 0) {
-      this.citySilos.instanceMatrix.needsUpdate = true;
-      this.siloPoweredAttr.needsUpdate = true;
-      this.siloStyleAttr.needsUpdate = true;
-      if (this.citySilos.instanceColor) this.citySilos.instanceColor.needsUpdate = true;
+    this.citySilos.instanceMatrix.needsUpdate = true;
+    this.siloPoweredAttr.needsUpdate = true;
+    this.siloStyleAttr.needsUpdate = true;
+    this.siloBuildProgAttr.needsUpdate = true;
+    if (siloIdx > 0 && this.citySilos.instanceColor) {
+      this.citySilos.instanceColor.needsUpdate = true;
     }
-    if (roofIdx > 0) {
-      this.cityRoofs.instanceMatrix.needsUpdate = true;
-      if (this.cityRoofs.instanceColor) this.cityRoofs.instanceColor.needsUpdate = true;
+    this.cityRoofs.instanceMatrix.needsUpdate = true;
+    if (roofIdx > 0 && this.cityRoofs.instanceColor) {
+      this.cityRoofs.instanceColor.needsUpdate = true;
     }
-    if (domeIdx > 0) {
-      this.cityDomes.instanceMatrix.needsUpdate = true;
-    }
+    this.cityDomes.instanceMatrix.needsUpdate = true;
+    this.cityScaffolds.instanceMatrix.needsUpdate = true;
+    this.cityCraneMasts.instanceMatrix.needsUpdate = true;
   }
 
   /** Синхронизирует канонические 3D-комплексы ГЭС/ГАЭС, водосбросы с 3D-струёй, шлюзы, рыбхозы и ОРУ */
@@ -2036,6 +2195,19 @@ export class WorldView {
       this.cityBodyMat.uniforms.uNightFactor.value = clamp(1.0 - (sunY + 0.05) / 0.28, 0.0, 1.0);
       this.cityBodyMat.uniforms.uFogColor.value.copy(this.fogColor);
       this.cityBodyMat.uniforms.uFogDensity.value = scaledFogDensity;
+    }
+
+    if (this.roadRenderer) {
+      const nightFactor = clamp(1.0 - (sunY + 0.05) / 0.28, 0.0, 1.0);
+      this.roadRenderer.updateCrewAnimations(
+        this.hydro.simTime || 0,
+        lightDirForShaders,
+        this.cityBodyMat ? this.cityBodyMat.uniforms.uSunColor.value : sunCol,
+        this.cityBodyMat ? this.cityBodyMat.uniforms.uSkyColor.value : this.skyColorZenith,
+        this.fogColor,
+        scaledFogDensity,
+        nightFactor,
+      );
     }
 
     // Обновляем живой мир долины (корабли, яхты, поезда, машины, ВЭС, СЭС, градирни, птиц, рыб и облака!)

@@ -270,6 +270,7 @@ export class LivingWorldSystem {
     this._time = 0;
 
     this.cityCars = [];
+    this.highwayCars = [];
     this.windTurbines = [];
     this.solarTrackers = [];
     this.steamPuffs = [];
@@ -281,8 +282,8 @@ export class LivingWorldSystem {
   }
 
   _buildInstancedBatches() {
-    // 1. Аккуратный внутриквартальный транспорт ТОЛЬКО внутри ровных площадей городов (никаких поездок по горам!)
-    this.maxVehicles = 32;
+    // 1. Городской транспорт + междугородние авто/самосвалы СТРОГО по построенным трассам и мостам!
+    this.maxVehicles = 96;
     const vehGeo = new THREE.BoxGeometry(1, 1, 1);
     const vehMat = new THREE.MeshStandardMaterial({ roughness: 0.45, metalness: 0.30 });
     this.vehicleIM = new THREE.InstancedMesh(vehGeo, vehMat, this.maxVehicles);
@@ -399,9 +400,9 @@ export class LivingWorldSystem {
     const rivers = getScaledValleyRivers(this.hydro.presetId);
     const mainSpine = rivers.main;
 
-    // 1. Небольшой внутригородской транспорт СТРОГО по внутренним кольцевым бульварам самих городов!
+    // 1. Внутригородской транспорт по кольцевым бульварам самих городов
     this.cityCars = [];
-    for (let i = 0; i < this.maxVehicles; i++) {
+    for (let i = 0; i < 28; i++) {
       const city = CITY_DEFS[i % CITY_DEFS.length];
       if (!city) continue;
       const ringRadius = city.plateauRadius * (0.34 + (i % 2) * 0.20);
@@ -417,6 +418,29 @@ export class LivingWorldSystem {
         sz: 3.10 * propScale,
         color: new THREE.Color(shade.r, shade.g, shade.b),
       });
+    }
+
+    // 1b. Междугородний транспорт и дорожные самосвалы СТРОГО по уже построенному полотну трасс и мостов!
+    this.highwayCars = [];
+    const routes = (this.economy.roadNetwork && this.economy.roadNetwork.routes) || [];
+    for (let rIdx = 0; rIdx < routes.length; rIdx++) {
+      for (let slot = 0; slot < 5; slot++) {
+        const isTruck = slot === 0 || slot === 3;
+        const shade = pickCatalogShade('fleet_machinery', rIdx * 11 + slot * 5 + 3);
+        this.highwayCars.push({
+          routeIdx: rIdx,
+          segPos: slot * 0.2,
+          dir: slot % 2 === 0 ? 1 : -1,
+          speedSegPerSec: (0.85 + rng() * 0.45) * (isTruck ? 0.82 : 1.08),
+          isTruck,
+          sx: (isTruck ? 1.95 : 1.55) * propScale,
+          sy: (isTruck ? 1.65 : 1.12) * propScale,
+          sz: (isTruck ? 4.30 : 3.20) * propScale,
+          color: isTruck && slot === 0
+            ? new THREE.Color(0xf59e0b)
+            : new THREE.Color(shade.r, shade.g, shade.b),
+        });
+      }
     }
 
     // 2. Ветропарк ВЭС на высоких продуваемых гребнях долины
@@ -578,6 +602,71 @@ export class LivingWorldSystem {
         this.headlightIM.setMatrixAt(lightOut++, this._dummy.matrix);
       }
     }
+
+    // 1b. Движение по реально построенным участкам междугородних дорог и железобетонных мостов!
+    const routes = (this.economy.roadNetwork && this.economy.roadNetwork.routes) || [];
+    const laneOffsetBase = 1.45 * Math.pow(hs, 0.56);
+    for (let i = 0; i < this.highwayCars.length && vehOut < this.maxVehicles; i++) {
+      const hc = this.highwayCars[i];
+      const route = routes[hc.routeIdx];
+      if (!route || !route.points || route.points.length < 4) continue;
+
+      // На недостроенной трассе ходят только строительные самосвалы (от города до катка), а после 100% — весь поток!
+      const maxSeg = route.completed ? (route.points.length - 1.001) : (route.builtSeg - 0.5);
+      if (maxSeg < 2.5) continue;
+      if (!route.completed && !hc.isTruck) continue;
+
+      hc.segPos += hc.dir * hc.speedSegPerSec * dt;
+      if (hc.segPos >= maxSeg) {
+        hc.segPos = maxSeg;
+        hc.dir = -1;
+      } else if (hc.segPos <= 0.2) {
+        hc.segPos = 0.2;
+        hc.dir = 1;
+      }
+
+      const idx0 = clamp(Math.floor(hc.segPos), 0, route.points.length - 2);
+      const frac = hc.segPos - idx0;
+      const p0 = route.points[idx0];
+      const p1 = route.points[idx0 + 1];
+
+      const laneSign = hc.dir > 0 ? 1 : -1;
+      const wx = p0.wx + (p1.wx - p0.wx) * frac + p0.nx * laneOffsetBase * laneSign;
+      const wz = p0.wz + (p1.wz - p0.wz) * frac + p0.nz * laneOffsetBase * laneSign;
+      const deckY = p0.deckY + (p1.deckY - p0.deckY) * frac + (p0.isBridge || p1.isBridge ? 0.22 * WORLD.elevScale : 0);
+
+      // Если низинный участок дороги затоплен новым водохранилищем игрока — разворачиваемся перед водой!
+      const samp = this.hydro.sampleAtWorld(wx, wz);
+      if (!p0.isBridge && !p1.isBridge && samp.depth > 0.12 && samp.surface > deckY + 0.25) {
+        hc.dir = -hc.dir;
+        continue;
+      }
+
+      const yaw = hc.dir > 0 ? p0.yaw : (p0.yaw + Math.PI);
+      const pitch = hc.dir > 0 ? -p0.pitch : p0.pitch;
+      const carY = deckY + hc.sy * 0.52;
+
+      this._dummy.position.set(wx, carY, wz);
+      this._dummy.rotation.set(pitch, yaw, 0);
+      this._dummy.scale.set(hc.sx, hc.sy, hc.sz);
+      this._dummy.updateMatrix();
+      this.vehicleIM.setMatrixAt(vehOut, this._dummy.matrix);
+      this.vehicleIM.setColorAt(vehOut, hc.color);
+      vehOut++;
+
+      if (isNight && lightOut < this.maxVehicles) {
+        this._dummy.position.set(
+          wx + Math.sin(yaw) * hc.sz * 0.54,
+          carY,
+          wz + Math.cos(yaw) * hc.sz * 0.54,
+        );
+        this._dummy.rotation.set(pitch, yaw, 0);
+        this._dummy.scale.set(hc.sx * 0.8, hc.sy * 0.35, 0.35 * propScale);
+        this._dummy.updateMatrix();
+        this.headlightIM.setMatrixAt(lightOut++, this._dummy.matrix);
+      }
+    }
+
     this.vehicleIM.count = vehOut;
     this.headlightIM.count = lightOut;
     this.vehicleIM.instanceMatrix.needsUpdate = true;

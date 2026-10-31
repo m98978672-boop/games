@@ -270,6 +270,10 @@ export function createRealisticWaterMaterial(detailTex) {
     depthWrite: true,
     side: THREE.FrontSide,
     vertexShader: /* glsl */ `
+      uniform float uTime;
+      uniform float uHorizScale;
+      uniform float uElevScale;
+
       attribute vec4 aHydro1;
       attribute vec4 aHydro2;
 
@@ -277,13 +281,50 @@ export function createRealisticWaterMaterial(detailTex) {
       varying vec3 vMacroNormal;
       varying vec4 vHydro1;
       varying vec4 vHydro2;
+      varying float vWaveCrest;
 
       void main() {
         vHydro1 = aHydro1;
         vHydro2 = aHydro2;
         vec4 worldPos = modelMatrix * vec4(position, 1.0);
+
+        float depth = aHydro1.x;
+        vec2 vel = aHydro1.yz;
+        float speed = length(vel);
+        float vort = aHydro2.y;
+
+        // 3D-геометрическое движение волн Герстнера + стоячие буруны горных перекатов (с мягким демпфированием у кромки берега!)
+        float optDepth = depth / max(1.0, pow(uElevScale, 0.58));
+        float shoreDamp = smoothstep(0.05, 0.55, optDepth) * step(0.05, aHydro2.w);
+        float wScale = 1.0 / max(1.0, pow(uHorizScale, 0.56));
+
+        vec2 p = worldPos.xz * wScale;
+        float w1 = sin(dot(p, vec2(0.115, 0.082)) - uTime * 2.05);
+        float w2 = sin(dot(p, vec2(-0.086, 0.128)) - uTime * 1.62 + 1.4);
+
+        vec2 flowDir = speed > 0.03 ? (vel / speed) : vec2(0.0, 1.0);
+        vec2 crossDir = vec2(-flowDir.y, flowDir.x);
+        float along = dot(p, flowDir);
+        float across = dot(p, crossDir);
+        float riffle = sin(along * 0.29 - uTime * (2.9 + min(speed, 12.0) * 0.52))
+                     * cos(across * 0.21 + uTime * 1.15 + vort * 0.35);
+
+        float waveAmp = (0.045 + clamp(speed * 0.022, 0.0, 0.20)) * pow(uElevScale, 0.55) * shoreDamp;
+        float dy = (w1 * 0.42 + w2 * 0.33 + riffle * (0.25 + clamp(speed * 0.08, 0.0, 0.55))) * waveAmp;
+
+        worldPos.y += dy;
+        worldPos.xz += flowDir * (riffle * waveAmp * 0.22);
+
+        vWaveCrest = clamp((w1 * 0.4 + w2 * 0.35 + riffle * 0.5) * 0.5 + 0.5, 0.0, 1.0) * shoreDamp;
         vWorldPos = worldPos.xyz;
-        vMacroNormal = normalize(mat3(modelMatrix) * normal);
+
+        vec3 baseMacroN = normalize(mat3(modelMatrix) * normal);
+        vec3 waveTilt = vec3(
+          -(w1 * 0.032 - w2 * 0.024 + riffle * flowDir.x * 0.045) * shoreDamp,
+          0.0,
+          -(w1 * 0.024 + w2 * 0.032 + riffle * flowDir.y * 0.045) * shoreDamp
+        );
+        vMacroNormal = normalize(baseMacroN + waveTilt);
         gl_Position = projectionMatrix * viewMatrix * worldPos;
       }
     `,
@@ -297,12 +338,14 @@ export function createRealisticWaterMaterial(detailTex) {
       uniform float uFogDensity;
       uniform float uHorizScale;
       uniform float uElevScale;
+      uniform float uMapHalf;
       uniform sampler2D uDetailTex;
 
       varying vec3 vWorldPos;
       varying vec3 vMacroNormal;
       varying vec4 vHydro1;
       varying vec4 vHydro2;
+      varying float vWaveCrest;
 
       float hash21(vec2 p) {
         p = fract(p * vec2(234.51, 567.89));
@@ -345,27 +388,36 @@ export function createRealisticWaterMaterial(detailTex) {
         float p1 = fract(uTime / cycle + 0.5);
         float blend = abs(2.0 * p0 - 1.0);
 
-        vec2 swellUv = vWorldPos.xz * (0.026 * uvScale) + vec2(uTime * 0.014, -uTime * 0.011);
+        vec2 swellUv = vWorldPos.xz * (0.026 * uvScale) + vec2(uTime * 0.016, -uTime * 0.012);
         vec4 swellSample = texture2D(uDetailTex, swellUv);
+        vec2 crossSwellUv = vWorldPos.xz * (0.041 * uvScale) + vec2(-uTime * 0.013, uTime * 0.019);
+        vec4 crossSwell = texture2D(uDetailTex, crossSwellUv);
 
-        vec2 baseUv = vWorldPos.xz * (0.084 * uvScale);
+        // Вихревое закручивание Кармана вокруг устоев, камней и поворотов русла
+        float swirlAng = clamp(vort, -2.5, 2.5) * 0.22 * sin(uTime * 1.9 + vWorldPos.x * 0.02);
+        float cs = cos(swirlAng);
+        float sn = sin(swirlAng);
+        vec2 swirledXZ = vec2(vWorldPos.x * cs - vWorldPos.z * sn, vWorldPos.x * sn + vWorldPos.z * cs);
+
+        vec2 baseUv = swirledXZ * (0.086 * uvScale);
         vec4 s0 = texture2D(uDetailTex, baseUv - flowStep * (p0 * cycle));
         vec4 s1 = texture2D(uDetailTex, baseUv - flowStep * (p1 * cycle) + vec2(0.37, 0.61));
         vec4 waveSample = mix(s0, s1, blend);
 
-        vec2 fineUv = vWorldPos.xz * (0.26 * uvScale) + vec2(vort * 0.08, -vort * 0.08);
-        vec4 f0 = texture2D(uDetailTex, fineUv - flowStep * (p0 * cycle * 1.7));
-        vec4 f1 = texture2D(uDetailTex, fineUv - flowStep * (p1 * cycle * 1.7) + vec2(0.53, 0.19));
+        vec2 fineUv = swirledXZ * (0.28 * uvScale) + vec2(vort * 0.08, -vort * 0.08);
+        vec4 f0 = texture2D(uDetailTex, fineUv - flowStep * (p0 * cycle * 1.85));
+        vec4 f1 = texture2D(uDetailTex, fineUv - flowStep * (p1 * cycle * 1.85) + vec2(0.53, 0.19));
         vec4 fineSample = mix(f0, f1, blend);
 
         float froude = speed / sqrt(9.81 * max(0.08, depth));
-        float distFade = 1.0 - smoothstep(260.0 * uHorizScale, 920.0 * uHorizScale, dist) * 0.62;
-        float chopAmp = (0.21 + clamp(speed * 0.048 + froude * 0.14, 0.0, 0.52)) * distFade;
+        float distFade = 1.0 - smoothstep(280.0 * uHorizScale, 980.0 * uHorizScale, dist) * 0.58;
+        float chopAmp = (0.24 + clamp(speed * 0.058 + froude * 0.16, 0.0, 0.58)) * distFade;
 
         vec2 dN = (
-          (swellSample.xy * 2.0 - 1.0) * 0.38 +
-          (waveSample.xy * 2.0 - 1.0) * 0.62 +
-          (fineSample.xy * 2.0 - 1.0) * 0.42
+          (swellSample.xy * 2.0 - 1.0) * 0.34 +
+          (crossSwell.xy * 2.0 - 1.0) * 0.26 +
+          (waveSample.xy * 2.0 - 1.0) * 0.66 +
+          (fineSample.xy * 2.0 - 1.0) * 0.46
         ) * chopAmp;
         vec3 N = normalize(vec3(vMacroNormal.x + dN.x, vMacroNormal.y, vMacroNormal.z + dN.y));
 
@@ -403,11 +455,11 @@ export function createRealisticWaterMaterial(detailTex) {
         vec3 effTrans = transmittance * (1.0 - mudMask * 0.88);
         vec3 underwaterRadiance = sunlitBed * effTrans + inScatter * (1.0 - effTrans);
 
-        // Подповерхностное изумрудное свечение гребней волн на солнце (SSS)
-        float sss = pow(clamp(dot(V, -uSunDir + N * 0.65), 0.0, 1.0), 3.0) * (1.0 - mudMask * 0.75);
-        underwaterRadiance += vec3(0.05, 0.36, 0.33) * sss * max(0.0, uSunDir.y);
+        // Подповерхностное изумрудное свечение гребней 3D-волн на солнце (SSS)
+        float sss = (pow(clamp(dot(V, -uSunDir + N * 0.65), 0.0, 1.0), 3.0) + vWaveCrest * 0.38) * (1.0 - mudMask * 0.75);
+        underwaterRadiance += vec3(0.045, 0.38, 0.36) * sss * max(0.0, uSunDir.y);
 
-        // --- 4. Точный закон Френеля Шлика (R0 = 0.0204 для пресной воды n = 1.333) и двойной блик Солнца ---
+        // --- 4. Точный закон Френеля Шлика (R0 = 0.0204 для пресной воды n = 1.333) и алмазные искры бликов ---
         float NdotV = max(0.0, dot(N, V));
         float fresnel = clamp(0.0204 + 0.92 * pow(1.0 - NdotV, 4.8), 0.0204, 0.89);
 
@@ -417,25 +469,33 @@ export function createRealisticWaterMaterial(detailTex) {
         vec3 skyRefl = mix(uSkyHorizon, uSkyZenith, pow(skyGrad, 0.72)) * canyonReflect;
 
         vec3 H = normalize(uSunDir + V);
-        float specCore = pow(max(0.0, dot(N, H)), 480.0) * 3.1;
-        float specGlitter = pow(max(0.0, dot(N, H)), 64.0) * 0.34;
-        vec3 sunSpec = uSunColor * (specCore + specGlitter) * smoothstep(-0.02, 0.12, uSunDir.y);
+        float specCore = pow(max(0.0, dot(N, H)), 480.0) * 3.2;
+        float specGlitter = pow(max(0.0, dot(N, H)), 58.0) * 0.36;
+        float sparkle = smoothstep(0.76, 0.96, vnoise(vWorldPos.xz * (1.35 * uvScale) + vec2(uTime * 1.9, -uTime * 1.5)))
+                      * pow(max(0.0, dot(N, H)), 22.0) * 0.75 * distFade;
+        vec3 sunSpec = uSunColor * (specCore + specGlitter + sparkle) * smoothstep(-0.02, 0.12, uSunDir.y);
 
-        // --- 5. Анизотропная кружевная пена порогов, водобойных колодцев и мениска берега ---
+        // --- 5. Продольные струи живого течения, буруны порогов и дышащий прибой у берегов ---
         vec2 orthoDir = vec2(-flowDir.y, flowDir.x);
         vec2 anisoUv = vec2(
-          dot(vWorldPos.xz, flowDir) * (0.075 * uvScale) - uTime * (0.28 + speed * 0.048 * uvScale),
-          dot(vWorldPos.xz, orthoDir) * (0.19 * uvScale)
+          dot(vWorldPos.xz, flowDir) * (0.078 * uvScale) - uTime * (0.34 + speed * 0.068 * uvScale),
+          dot(vWorldPos.xz, orthoDir) * (0.21 * uvScale)
         );
-        float lacePattern = texture2D(uDetailTex, anisoUv).a * 0.64
-                          + texture2D(uDetailTex, anisoUv * 2.2 + vec2(0.31, -uTime * 0.09)).a * 0.36;
+        float lacePattern = texture2D(uDetailTex, anisoUv).a * 0.62
+                          + texture2D(uDetailTex, anisoUv * 2.35 + vec2(0.31, -uTime * 0.14)).a * 0.38;
 
-        float shoreMeniscus = (1.0 - smoothstep(0.015, 0.22, optDepth)) * clamp(speed * 0.25, 0.12, 0.72);
-        float totalFoamDrive = clamp(foamVal * 1.25 + shoreMeniscus + clamp(froude - 1.05, 0.0, 0.72) * 0.62, 0.0, 1.0);
-        float foamMask = smoothstep(0.35 - totalFoamDrive * 0.30, 0.74 - totalFoamDrive * 0.22, lacePattern * totalFoamDrive * 1.56);
+        // Тонкие бегущие нити течения вдоль русла реки и каналов
+        float currentStreak = smoothstep(0.58, 0.88, lacePattern) * clamp(speed * 0.16, 0.0, 0.42);
+        // Дышащий накат волны на отмели и галечные берега
+        float shoreLap = (0.55 + 0.45 * sin(optDepth * 24.0 - uTime * 3.2)) * (1.0 - smoothstep(0.012, 0.26, optDepth));
+        float shoreMeniscus = shoreLap * clamp(0.18 + speed * 0.24, 0.18, 0.78);
+        float whitecap = smoothstep(0.74, 0.98, vWaveCrest) * clamp(speed * 0.14 + froude * 0.25, 0.0, 0.55);
+
+        float totalFoamDrive = clamp(foamVal * 1.28 + shoreMeniscus + currentStreak + whitecap + clamp(froude - 0.98, 0.0, 0.78) * 0.65, 0.0, 1.0);
+        float foamMask = smoothstep(0.34 - totalFoamDrive * 0.29, 0.73 - totalFoamDrive * 0.22, lacePattern * totalFoamDrive * 1.62);
         vec3 foamColor = vec3(0.96, 0.985, 1.0) * (0.38 + 0.66 * daySun);
 
-        vec3 surfaceCol = mix(underwaterRadiance, skyRefl, fresnel) + sunSpec * (1.0 - foamMask * 0.72);
+        vec3 surfaceCol = mix(underwaterRadiance, skyRefl, fresnel) + sunSpec * (1.0 - foamMask * 0.70);
         vec3 finalCol = mix(surfaceCol, foamColor, foamMask);
 
         float distFog = 1.0 - exp(-pow(dist * uFogDensity, 1.62));
@@ -443,7 +503,7 @@ export function createRealisticWaterMaterial(detailTex) {
         float edgeMistW = smoothstep(0.92, 1.00, edgeRatioW) * 0.55;
         finalCol = mix(finalCol, uFogColor, clamp(max(distFog * 0.88, edgeMistW), 0.0, 0.92));
 
-        float edgeAlpha = smoothstep(0.010, 0.070, optDepth);
+        float edgeAlpha = smoothstep(0.008, 0.062, optDepth);
         gl_FragColor = vec4(finalCol, edgeAlpha);
       }
     `,
@@ -467,15 +527,21 @@ export function createOverflowWaterMaterial(overflowTex) {
       uFogDensity: { value: 0.00012 },
     },
     vertexShader: /* glsl */ `
+      uniform float uTime;
       varying vec2 vUv;
       varying vec3 vWorldPos;
 
       void main() {
         vUv = uv;
+        vec3 p = position;
+        // Живое пульсирующее колебание падающей водной пелены перелива
+        float flutter = sin(uv.x * 13.0 + uTime * 9.5) * cos(uv.y * 8.5 - uTime * 12.0) * 0.035 * uv.y;
+        p.x += flutter;
+        p.y += flutter * 0.45;
         #ifdef USE_INSTANCING
-          vec4 wp = modelMatrix * instanceMatrix * vec4(position, 1.0);
+          vec4 wp = modelMatrix * instanceMatrix * vec4(p, 1.0);
         #else
-          vec4 wp = modelMatrix * vec4(position, 1.0);
+          vec4 wp = modelMatrix * vec4(p, 1.0);
         #endif
         vWorldPos = wp.xyz;
         gl_Position = projectionMatrix * viewMatrix * wp;
@@ -539,17 +605,20 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
     vertexShader: /* glsl */ `
       attribute float aPowered;
       attribute float aStyleId;
+      attribute float aBuildProg;
       varying vec3 vWorldPos;
       varying vec3 vLocalPos;
       varying vec3 vNormalW;
       varying vec3 vColor;
       varying float vPowered;
       varying float vStyleId;
+      varying float vBuildProg;
 
       void main() {
         vLocalPos = position;
         vPowered = aPowered;
         vStyleId = aStyleId;
+        vBuildProg = aBuildProg;
         #ifdef USE_INSTANCING_COLOR
           vColor = instanceColor;
         #else
@@ -579,6 +648,7 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
       varying vec3 vColor;
       varying float vPowered;
       varying float vStyleId;
+      varying float vBuildProg;
 
       float hash21(vec2 p) {
         p = fract(p * vec2(127.1, 311.7));
@@ -616,8 +686,20 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
 
         vec3 litWall = baseAlbedo * (uSunColor * NdotL * 0.88 + uSkyColor * (0.30 + 0.26 * max(0.0, N.y)));
 
-        // Детализированные окна с переплётами (кроме глухих силосов/градирен style 13, 19)
-        bool hasWindows = abs(vStyleId - 13.0) > 0.4 && abs(vStyleId - 19.0) > 0.4;
+        // Реальная поэтапная стройка здания (vBuildProg < 0.96): монолитный каркас этажей и защитная сетка наверху!
+        float cladLine = vBuildProg < 0.96 ? clamp((vBuildProg - 0.08) / 0.86, 0.08, 1.02) : 2.0;
+        bool isRawFrame = (vBuildProg < 0.96) && (vLocalPos.y > cladLine * 0.72);
+        if (isRawFrame) {
+          float slabBand = step(0.82, fract(vWorldPos.y * 0.34));
+          float colBand = step(0.84, fract((abs(N.x) > 0.5 ? vWorldPos.z : vWorldPos.x) * 0.28));
+          vec3 rawConc = mix(vec3(0.55, 0.58, 0.61), vec3(0.72, 0.75, 0.78), max(slabBand, colBand));
+          float safetyNet = smoothstep(0.76, 0.96, vLocalPos.y) * (0.5 + 0.5 * step(0.5, fract(vWorldPos.y * 0.9)));
+          rawConc = mix(rawConc, vec3(0.95, 0.48, 0.12), safetyNet * 0.65);
+          litWall = rawConc * (uSunColor * NdotL * 0.85 + uSkyColor * 0.34);
+        }
+
+        // Детализированные окна с переплётами (только на уже остеклённых этажах, кроме глухих силосов/градирен 13, 19)
+        bool hasWindows = !isRawFrame && abs(vStyleId - 13.0) > 0.4 && abs(vStyleId - 19.0) > 0.4;
         if (hasWindows && abs(N.y) < 0.45) {
           float uCoord = abs(N.x) > 0.5 ? vWorldPos.z : vWorldPos.x;
           vec2 winGrid = vec2(uCoord * 0.52, vWorldPos.y * 0.34);
@@ -637,8 +719,9 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
             float tintRnd = hash21(cell + 19.7);
             vec3 dayGlass = mix(vec3(0.13, 0.24, 0.36), uSkyColor * 0.94, 0.40 + f.y * 0.28);
 
+            float readyLight = vBuildProg >= 0.95 ? 1.0 : 0.0;
             float onProb = vPowered > 0.5 ? 0.78 : 0.06;
-            float windowLit = step(1.0 - onProb, rnd) * uNightFactor;
+            float windowLit = step(1.0 - onProb, rnd) * uNightFactor * readyLight;
             // Для ЦОД ИИ (style 20,21) — бирюзовые серверные стойки, для остальных — тёплые лампы!
             vec3 nightHue = (abs(vStyleId - 20.0) < 1.2)
               ? vec3(0.25, 0.92, 1.0)
@@ -778,4 +861,120 @@ export function createHorizonMistMaterial() {
     `,
   });
 }
+
+/**
+ * 7. Шейдер междугородних автомагистралей, железобетонных мостов и строящегося дорожного полотна!
+ * aRoadKind: 0.0 = асфальтовая трасса с разметкой, 1.0 = бетонный пролёт моста, 2.0 = щебёночная подушка на этапе укладки, 3.0 = городская улица
+ */
+export function createHighwayRoadMaterial() {
+  return new THREE.ShaderMaterial({
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+    uniforms: {
+      uSunDir: { value: new THREE.Vector3(0.52, 0.74, 0.42).normalize() },
+      uSunColor: { value: new THREE.Color(0xfff4dc) },
+      uSkyColor: { value: new THREE.Color(0x7fb3e8) },
+      uNightFactor: { value: 0.0 },
+      uFogColor: { value: new THREE.Color(0xa8cae8) },
+      uFogDensity: { value: 0.00012 },
+    },
+    vertexShader: /* glsl */ `
+      attribute float aRoadKind;
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+      varying vec3 vNormalW;
+      varying float vRoadKind;
+
+      void main() {
+        vUv = uv;
+        vRoadKind = aRoadKind;
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        vNormalW = normalize(mat3(modelMatrix) * normal);
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uSunDir;
+      uniform vec3 uSunColor;
+      uniform vec3 uSkyColor;
+      uniform float uNightFactor;
+      uniform vec3 uFogColor;
+      uniform float uFogDensity;
+
+      varying vec2 vUv;
+      varying vec3 vWorldPos;
+      varying vec3 vNormalW;
+      varying float vRoadKind;
+
+      float hash21(vec2 p) {
+        p = fract(p * vec2(127.1, 311.7));
+        p += dot(p, p + 34.2);
+        return fract(p.x * p.y);
+      }
+
+      void main() {
+        vec3 N = normalize(vNormalW);
+        float NdotL = max(0.12, dot(N, uSunDir));
+        float grain = hash21(floor(vWorldPos.xz * 2.2)) * 0.08 - 0.04;
+
+        float across = abs(vUv.x - 0.5) * 2.0; // 0 в центре трассы -> 1 на краю обочины
+        vec3 col;
+
+        if (vRoadKind > 1.5 && vRoadKind < 2.5) {
+          // 2.0 — отсыпанная щебёночно-песчаная подушка строящегося участка трассы
+          vec3 gravelCore = vec3(0.68, 0.58, 0.42) + grain * 1.4;
+          vec3 earthEdge = vec3(0.50, 0.39, 0.25);
+          float rut = 1.0 - smoothstep(0.0, 0.14, abs(across - 0.42)) * 0.16;
+          col = mix(gravelCore * rut, earthEdge, smoothstep(0.72, 1.0, across));
+        } else {
+          // 0.0 (шоссе), 1.0 (мостовой пролёт), 3.0 (городской проспект)
+          bool isBridge = (vRoadKind > 0.5 && vRoadKind < 1.5);
+          vec3 asphalt = isBridge
+            ? (vec3(0.28, 0.31, 0.35) + grain * 0.7)
+            : (vec3(0.20, 0.22, 0.25) + grain);
+
+          // Деформационные швы моста или текстура колеи накатанного асфальта
+          if (isBridge) {
+            float joint = step(0.96, fract(vUv.y * 0.055));
+            asphalt -= joint * 0.07;
+          } else {
+            float tireTrack = smoothstep(0.0, 0.16, abs(across - 0.40));
+            asphalt *= (0.92 + 0.08 * tireTrack);
+          }
+
+          // Обочина: бетонный бордюр на мосту или аккуратная гравийная бровка на земле
+          vec3 shoulderCol = isBridge ? vec3(0.74, 0.78, 0.82) : vec3(0.56, 0.53, 0.46);
+          float shoulderMask = smoothstep(0.80, 0.86, across);
+          col = mix(asphalt, shoulderCol, shoulderMask);
+
+          // Чёткая дорожная разметка: прерывистая осевая и сплошные краевые полосы безопасности
+          float centerDash = (1.0 - smoothstep(0.0, 0.042, across)) * step(0.42, fract(vUv.y * 0.085));
+          float edgeLine = (1.0 - smoothstep(0.0, 0.032, abs(across - 0.76)));
+          vec3 paintCol = vec3(0.95, 0.96, 0.94);
+          vec3 centerCol = isBridge ? vec3(0.98, 0.84, 0.32) : paintCol;
+          col = mix(col, paintCol, edgeLine * 0.82);
+          col = mix(col, centerCol, centerDash * 0.90);
+        }
+
+        vec3 lit = col * (uSunColor * NdotL * 0.88 + uSkyColor * 0.34);
+
+        // Тёплая подсветка фонарей на мостах и городских улицах ночью
+        if (uNightFactor > 0.05 && (abs(vRoadKind - 1.0) < 0.4 || vRoadKind > 2.5)) {
+          float lampPool = pow(0.5 + 0.5 * cos(vUv.y * 0.22), 4.0) * (1.0 - across * 0.5);
+          lit += vec3(1.0, 0.82, 0.46) * lampPool * uNightFactor * 0.32;
+        }
+
+        float dist = length(cameraPosition - vWorldPos);
+        float fogF = 1.0 - exp(-pow(dist * uFogDensity, 1.62));
+        lit = mix(lit, uFogColor, clamp(fogF, 0.0, 0.88));
+
+        gl_FragColor = vec4(lit, 1.0);
+      }
+    `,
+  });
+}
+
 

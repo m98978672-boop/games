@@ -172,6 +172,52 @@ export class SprayAndRainSystem {
       }
     }
 
+    // Водяная пыль и брызги от 3D-переливов через гребень плотин (overflowEdges)
+    const ovf = hydro.overflowEdges || [];
+    if (ovf.length > 0) {
+      const sampleBudget = Math.min(ovf.length, 6);
+      for (let k = 0; k < sampleBudget; k++) {
+        const edge = ovf[Math.floor(Math.random() * ovf.length)];
+        const throwDist = Math.max(hydro.dx * 0.55, edge.dropH * 0.42);
+        const hitX = edge.wx + edge.dirX * throwDist * 0.85 + (Math.random() - 0.5) * edge.width;
+        const hitZ = edge.wz + edge.dirZ * throwDist * 0.85 + (Math.random() - 0.5) * edge.width;
+        this.spawn(
+          hitX,
+          edge.toeY + 0.5 * pScale,
+          hitZ,
+          edge.dirX * (1.8 + Math.random() * 2.5) * pScale + (Math.random() - 0.5) * 1.6 * pScale,
+          (2.2 + Math.random() * 3.4) * Math.sqrt(WORLD.elevScale),
+          edge.dirZ * (1.8 + Math.random() * 2.5) * pScale + (Math.random() - 0.5) * 1.6 * pScale,
+          (2.4 + Math.random() * 2.2) * pScale,
+          1.15 + Math.random() * 0.75,
+          2,
+        );
+      }
+    }
+
+    // Живые брызги бурных горных перекатов (Fr > 1.15) вокруг области обзора камеры
+    if (hydro.activeTileCount > 0) {
+      for (let s = 0; s < 5; s++) {
+        const rx = camTarget.x + (Math.random() - 0.5) * 260 * pScale;
+        const rz = camTarget.z + (Math.random() - 0.5) * 260 * pScale;
+        if (Math.abs(rx) >= WORLD.half * 0.96 || Math.abs(rz) >= WORLD.half * 0.96) continue;
+        const sp = hydro.sampleAtWorld(rx, rz);
+        if (sp.depth > 0.18 && (sp.froude > 1.08 || sp.foam > 0.42) && sp.speed > 2.2) {
+          this.spawn(
+            rx,
+            sp.surface + 0.15 * pScale,
+            rz,
+            sp.u * 0.35 + (Math.random() - 0.5) * 1.5 * pScale,
+            (1.6 + Math.random() * 2.6) * Math.sqrt(WORLD.elevScale),
+            sp.v * 0.35 + (Math.random() - 0.5) * 1.5 * pScale,
+            (1.1 + Math.random() * 1.2) * pScale,
+            0.55 + Math.random() * 0.45,
+            1,
+          );
+        }
+      }
+    }
+
     const alphas = this.alphaAttr.array;
     let anyAlive = false;
     for (let i = 0; i < this.max; i++) {

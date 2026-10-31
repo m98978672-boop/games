@@ -1173,10 +1173,24 @@ class CascadeHydroGame {
         extraNote = `<div class="city-note">★ Прямой промконтракт PPA ×${c.tariffBonus.toFixed(2)}</div>`;
       }
 
+      let buildNote = '';
+      if (c.currentProjectLabel) {
+        buildNote = `<div class="city-note">▲ Стройка (${c.activeBuildCount} кр.): ${c.currentProjectLabel}</div>`;
+      }
+
+      const cityRoutes = (this.economy.roadNetwork && this.economy.roadNetwork.routes)
+        ? this.economy.roadNetwork.routes.filter((r) => r.fromId === c.id || r.toId === c.id)
+        : [];
+      const doneRoutes = cityRoutes.filter((r) => r.completed).length;
+      const activeRoute = cityRoutes.find((r) => !r.completed && r.activeCrew);
+      const roadInfo = activeRoute
+        ? ` · Трасса ${Math.round(activeRoute.buildProgress * 100)}%`
+        : ` · Трасс ${doneRoutes}/${cityRoutes.length}`;
+
       card.innerHTML = `
         <div class="city-top">
           <button type="button" class="city-fly-btn" data-flycity="${c.id}" title="Плавно перелететь камерой к городу">⌖ ${c.name}</button>
-          <span class="city-badge">${c.levelName} · ${c.buildingIndices.length} зд.</span>
+          <span class="city-badge">${c.levelName} · ${c.buildingIndices.length} зд.${roadInfo}</span>
         </div>
         <div class="city-meta">
           <span>Нас.: ${c.population.toLocaleString('ru-RU')}</span>
@@ -1185,6 +1199,7 @@ class CascadeHydroGame {
         <div class="progress-track">
           <div class="progress-fill" style="width:${pct}%"></div>
         </div>
+        ${buildNote}
         ${extraNote}
         ${!c.connected ? `<div class="city-actions"><button class="connect-btn" data-connect="${c.id}">◈ Подключить ЛЭП (${lineCost.toLocaleString('ru-RU')} ₽)</button></div>` : ''}
       `;
@@ -1307,7 +1322,7 @@ class CascadeHydroGame {
       `Приток +${Math.round(wb.inTotalQ)} · Испар. -${wb.outEvapQ.toFixed(1)} м³/с`;
 
     document.getElementById('hud-pop-total').textContent =
-      `8 городов (${sum.totalBuildings} зд.) · ${sum.totalPopulation.toLocaleString('ru-RU')} жит.`;
+      `8 городов (${sum.totalBuildings} зд.) · Трасс ${sum.roadsBuiltCount}/${sum.roadsTotalCount} · ${sum.totalPopulation.toLocaleString('ru-RU')} жит.`;
     document.getElementById('hud-loan').textContent = `Долг по облигациям: ${Math.round(sum.loan).toLocaleString('ru-RU')} ₽`;
 
     const damBanner = document.getElementById('dam-health-banner');
