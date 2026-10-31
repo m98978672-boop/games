@@ -13,7 +13,9 @@ import {
   TOOLS,
   QUALITY_PROFILES,
   WEATHER_MODES,
+  STARTER_READY_HPP_SITES,
 } from '../src/config.js';
+import { AQUEDUCT_CONNECT_REWARD, evaluateCityUrbanLogic } from '../src/city-logic.js';
 import { HydroSimulation } from '../src/hydro.js';
 import { EconomyAndCities, REVENUE_STREAM_DEFS } from '../src/economy.js';
 import { buildAllProceduralTextures, TEXTURE_SHADE_CATALOG } from '../src/textures.js';
@@ -690,3 +692,126 @@ assert.ok(worldView.structMeshes.has(`ps_${pumpRes.structure.id}`), '3D-моде
 assert.ok(worldView.structMeshes.has(`wm_${windRes.structure.id}`), '3D-модель Метео-ВЭС создана и вращает ротор по ветру');
 
 console.log('✅ ВСЕ ТЕСТЫ v0.4.0 (3D-ИСТОКИ РЕК, АНТИ-ЗАСТОЙ, УДАЛЕНИЕ БЕЛОГО ОВАЛА, ТОНКАЯ СТРОЙКА, 48 ЗДАНИЙ + БСУ/НАСОСНАЯ/ВЭС, 480 ТЕКСТУР, ФИЗИКА ВЕТРА И КЛИМАТА, ОБУЧЕНИЕ 10 ШАГОВ) ПРОЙДЕНЫ!');
+
+// ============================================================================
+//  9. ПРОВЕРКА v0.5.0: ГОТОВЫЕ КОМПЛЕКСЫ ГЭС/ГАЭС, ПОДВОД КАНАЛА К ГЭС,
+//     7 АРХИТЕКТУРНЫХ 3D-МОДЕЛЕЙ ЗДАНИЙ И СИСТЕМА ЛОГИКИ 8 ГОРОДОВ!
+// ============================================================================
+console.log('9. Проверка v0.5.0: Готовая ГЭС-1, запуск водой из канала, геодезический сканер ΔH, 7 3D-моделей зданий и логика городов...');
+
+applyMapScale('km5');
+hydro.resetValley('bystritsa');
+const starterHpp = hydro.spawnStarterReadyHPP('bystritsa');
+eco.resetEconomy();
+worldView.rebuildForNewValley();
+worldView.syncHydroStructures(0);
+worldView.syncCityInstances();
+
+assert.ok(starterHpp, 'На старте карты автоматически возведена Готовая Деривационная ГЭС-1');
+assert.equal(starterHpp.isStarterReady, true, 'Стартовая ГЭС отмечена флагом isStarterReady');
+assert.equal(starterHpp.isTurnkeyComplex, true, 'Стартовая ГЭС создана как цельный гидроузел с аванкамерой и водосливом');
+assert.equal(starterHpp.powerMW, 0, 'До прокладки подводящего канала сухая стартовая ГЭС ждёт воду (0 МВт)');
+
+const starterMesh = worldView.structMeshes.get(`t_${starterHpp.id}`);
+assert.ok(starterMesh && starterMesh.userData.intakeBeacon, 'У готовой ГЭС отображается 3D-аванкамера и навигационное кольцо входа канала');
+
+// 9a. Геодезический сканер створа evaluateHppSite (разведка перепада высот ΔH и потенциала МВт)
+const hs9 = WORLD.horizScale;
+const gorgeProbe = hydro.evaluateHppSite(12 * hs9, -158 * hs9, null, 'kaplan');
+assert.ok(gorgeProbe.grossHead > 0.5 && Number.isFinite(gorgeProbe.potentialMW), `Геодезическая разведка створа считает ΔH=${gorgeProbe.grossHead.toFixed(2)} м и МВт=${gorgeProbe.potentialMW.toFixed(2)}`);
+assert.ok(typeof gorgeProbe.siteGrade === 'string' && gorgeProbe.siteGrade.length > 3, 'Сканер выдаёт инженерную оценку створа');
+
+// 9b. Главная игровая механика v0.5: прокладываем деривационный канал от верхнего плёса реки в аванкамеру Готовой ГЭС-1!
+const siteCfg9 = STARTER_READY_HPP_SITES.bystritsa;
+const intakeStartWx = siteCfg9.canalIntakeHint.baseX * hs9;
+const intakeStartWz = siteCfg9.canalIntakeHint.baseZ * hs9;
+const intakeEndWx = starterHpp.intakeWx;
+const intakeEndWz = starterHpp.intakeWz;
+const startSample = hydro.sampleAtWorld(intakeStartWx, intakeStartWz);
+const endBed = starterHpp.baseY;
+
+const segs = 18;
+for (let k = 0; k <= segs; k++) {
+  const frac = k / segs;
+  const cx = intakeStartWx + (intakeEndWx - intakeStartWx) * frac;
+  const cz = intakeStartWz + (intakeEndWz - intakeStartWz) * frac;
+  const gradeElev = (startSample.bed - 0.6 * WORLD.elevScale) * (1 - frac) + (starterHpp.intakeBedY - 0.4 * WORLD.elevScale) * frac;
+  hydro.excavateCanal(cx, cz, WORLD.brushSizes[1] * 1.25, 16.0 * WORLD.elevScale, gradeElev, 1e9, true);
+  hydro.lineCanalConcrete(cx, cz, WORLD.brushSizes[1], 1e9, true);
+}
+
+for (let s = 0; s < 75; s++) {
+  hydro.step(1 / 20, 8);
+}
+assert.ok(
+  starterHpp.flowQ > 0.1 && starterHpp.powerMW > 0.2,
+  `Вода по прорытому каналу пришла в Готовую ГЭС-1 и раскрутила турбину: Q=${starterHpp.flowQ.toFixed(2)} м³/с, P=${starterHpp.powerMW.toFixed(2)} МВт!`,
+);
+
+// Проверяем защиту от эксплойта сноса стартовой ГЭС (refund обязан быть 0 ₽)
+const demoStarter = hydro.demolishAt(starterHpp.wx, starterHpp.wz);
+assert.equal(demoStarter.refund, 0, 'Снос бесплатной стартовой ГЭС не даёт халявных денег (refund = 0 ₽)');
+
+// 9c. Установка новой Готовой ГЭС в 1 клик прямо на естественном створе реки без предварительной постройки плотины!
+const oneClickRes = hydro.placeTurbine('kaplan', 12 * hs9, -158 * hs9, null, 1e9, false);
+assert.equal(oneClickRes.ok, true, 'Готовая ГЭС Каплан возводится в 1 клик прямо на речном створе');
+assert.equal(oneClickRes.structure.isTurnkeyComplex, true, 'Построенная в 1 клик ГЭС является цельным комплексом с напорным фронтом');
+for (let s = 0; s < 35; s++) {
+  hydro.step(1 / 20, 6);
+}
+assert.ok(oneClickRes.structure.powerMW > 0.2, `Готовая ГЭС в 1 клик на реке сразу вырабатывает мощность (${oneClickRes.structure.powerMW.toFixed(2)} МВт)`);
+
+// 9d. Проверка 7 составных архитектурных 3D-моделей городских зданий и локальных UV/атрибутов шейдера
+assert.equal(worldView.cityArchPools.length, 7, 'В WorldView созданы все 7 многосоставных архитектурных 3D-пулов зданий');
+let totalRenderedArchBuildings = 0;
+let populatedPools = 0;
+for (const pool of worldView.cityArchPools) {
+  const geo = pool.mesh.geometry;
+  const pk = geo.getAttribute('aPartKind');
+  assert.ok(pk && pk.count >= 40, `Пул "${pool.key}" содержит составную 3D-геометрию (${pk.count} вершин) с атрибутом aPartKind`);
+  let minKind = 99;
+  let maxKind = -1;
+  for (let vi = 0; vi < pk.count; vi++) {
+    const v = pk.getX(vi);
+    if (v < minKind) minKind = v;
+    if (v > maxKind) maxKind = v;
+  }
+  assert.ok(minKind === 0 && maxKind >= 2, `Геометрия "${pool.key}" включает фасад (0), кровлю (2) и архитектурные детали (${maxKind})`);
+  assert.ok(geo.getAttribute('aBuildDims') && geo.getAttribute('aRoofColor'), `Пул "${pool.key}" передаёт в шейдер метрические габариты aBuildDims и цвет кровли aRoofColor`);
+  totalRenderedArchBuildings += pool.mesh.count;
+  if (pool.mesh.count > 0) populatedPools++;
+}
+assert.equal(totalRenderedArchBuildings, eco.allBuildings.length, `Все ${eco.allBuildings.length} городских зданий отрисованы через новые 3D-модели`);
+assert.ok(populatedPools >= 5, `Стартовая застройка 8 городов задействует минимум 5 разных 3D-архитектурных форм (${populatedPools}/7)`);
+
+// 9e. Проверка системы логики 8 городов: 5 потребностей, указы генплана и премия +7 500 ₽ за подвод воды!
+for (const c of eco.cities) {
+  assert.ok(c.happinessPct >= 12 && c.happinessPct <= 100, `Индекс благополучия г. ${c.name} корректен (${c.happinessPct}%)`);
+  const sumZ = c.districts.housing + c.districts.industry + c.districts.techCom + c.districts.civicUtil;
+  assert.equal(sumZ, c.buildingIndices.length, `Зонирование кварталов г. ${c.name} точно совпадает с числом зданий (${sumZ})`);
+  assert.ok(typeof c.bottleneckText === 'string' && c.bottleneckText.length > 5, `Город ${c.name} формирует осмысленную диагностику потребностей`);
+}
+
+const alumCity = eco.cities.find((c) => c.id === 'alumingrad');
+const focusRes = eco.setCityFocusMode('alumingrad', 'industry');
+assert.equal(focusRes.ok && alumCity.focusMode === 'industry', true, 'Указ генплана «Индустрия» успешно применён к Алюмграду');
+
+const sciCity = eco.cities.find((c) => c.id === 'kremniy');
+assert.equal(sciCity.aqueductRewardClaimed, false, 'Сухой технопарк Кремний-Парк изначально ждёт городской водовод');
+const cashBeforeAqueduct = eco.cash;
+// Подводим к Кремний-Парку обводнённый Ж/Б канал водовода!
+const aqG = hydro.worldToGrid(sciCity.x + sciCity.plateauRadius * 1.05, sciCity.z);
+const aqIdx = aqG.gz * hydro.grid + aqG.gx;
+hydro.linedMask[aqIdx] = 1;
+hydro.h[aqIdx] = 1.25;
+evaluateCityUrbanLogic(sciCity, eco);
+assert.equal(sciCity.canalAqueductConnected, true, 'Городская логика зафиксировала подвод воды каналом к Кремний-Парку');
+assert.equal(sciCity.aqueductRewardClaimed, true, 'Муниципальная премия за подключение водовода начислена один раз');
+assert.ok(
+  Math.abs((eco.cash - cashBeforeAqueduct) - AQUEDUCT_CONNECT_REWARD) < 1e-3,
+  `Мэрия выплатила премию +${AQUEDUCT_CONNECT_REWARD} ₽ за подвод воды к городу`,
+);
+assert.ok(sciCity.waterScore >= 85, `Обеспеченность города водой выросла до ${sciCity.waterScore}%`);
+
+console.log('✅ ВСЕ ТЕСТЫ v0.5.0 (ГОТОВАЯ ГЭС-1, ЗАПУСК КАНАЛОМ, ГЕОДЕЗИЯ ΔH, ГЭС В 1 КЛИК, 7 3D-МОДЕЛЕЙ ЗДАНИЙ, ЛОГИКА 8 ГОРОДОВ И ВОДОВОДЫ) ПРОЙДЕНЫ!');
+

@@ -23,6 +23,15 @@ import { buildAllProceduralTextures, pickCatalogShade } from './textures.js';
 import { getValleyHeadwaterSources } from './valley.js';
 import { LivingWorldSystem } from './living-world.js';
 import { RoadAndBridgeRenderer, createOpenScaffoldCageGeometry } from './roads-and-cities.js';
+import {
+  createGableHouseGeometry,
+  createMidblockUrbanGeometry,
+  createSteppedTerraceGeometry,
+  createSkyscraperTowerGeometry,
+  createArchedPavilionGeometry,
+  createSpireMonumentGeometry,
+  createIndustrialSiloClusterGeometry,
+} from './city-buildings-3d.js';
 
 const _mat4 = new THREE.Matrix4();
 const _pos = new THREE.Vector3();
@@ -766,58 +775,87 @@ export class WorldView {
     if (this.rockInstances.instanceColor) this.rockInstances.instanceColor.needsUpdate = true;
   }
 
+  _createArchPool(key, geo, maxCount) {
+    const poweredArr = new Float32Array(maxCount);
+    const styleArr = new Float32Array(maxCount);
+    const progArr = new Float32Array(maxCount).fill(1.0);
+    const dimsArr = new Float32Array(maxCount * 3).fill(10.0);
+    const roofArr = new Float32Array(maxCount * 3).fill(0.5);
+
+    const poweredAttr = new THREE.InstancedBufferAttribute(poweredArr, 1);
+    const styleAttr = new THREE.InstancedBufferAttribute(styleArr, 1);
+    const progAttr = new THREE.InstancedBufferAttribute(progArr, 1);
+    const dimsAttr = new THREE.InstancedBufferAttribute(dimsArr, 3);
+    const roofAttr = new THREE.InstancedBufferAttribute(roofArr, 3);
+
+    poweredAttr.setUsage(THREE.DynamicDrawUsage);
+    styleAttr.setUsage(THREE.DynamicDrawUsage);
+    progAttr.setUsage(THREE.DynamicDrawUsage);
+    dimsAttr.setUsage(THREE.DynamicDrawUsage);
+    roofAttr.setUsage(THREE.DynamicDrawUsage);
+
+    geo.setAttribute('aPowered', poweredAttr);
+    geo.setAttribute('aStyleId', styleAttr);
+    geo.setAttribute('aBuildProg', progAttr);
+    geo.setAttribute('aBuildDims', dimsAttr);
+    geo.setAttribute('aRoofColor', roofAttr);
+
+    const mesh = new THREE.InstancedMesh(geo, this.cityBodyMat, maxCount);
+    mesh.count = 0;
+    mesh.castShadow = !!this.profile.shadows;
+    mesh.receiveShadow = !!this.profile.shadows;
+    mesh.frustumCulled = false;
+
+    return {
+      key,
+      mesh,
+      maxCount,
+      poweredArr,
+      styleArr,
+      progArr,
+      dimsArr,
+      roofArr,
+      poweredAttr,
+      styleAttr,
+      progAttr,
+      dimsAttr,
+      roofAttr,
+      count: 0,
+    };
+  }
+
   _buildCityInstancedPools() {
     const maxB = 720;
-    const bodyGeo = new THREE.BoxGeometry(1, 1, 1);
-    bodyGeo.translate(0, 0.5, 0);
-    this.cityPoweredArr = new Float32Array(maxB);
-    this.cityStyleArr = new Float32Array(maxB);
-    this.cityBuildProgArr = new Float32Array(maxB).fill(1.0);
-    this.cityPoweredAttr = new THREE.InstancedBufferAttribute(this.cityPoweredArr, 1);
-    this.cityPoweredAttr.setUsage(THREE.DynamicDrawUsage);
-    this.cityStyleAttr = new THREE.InstancedBufferAttribute(this.cityStyleArr, 1);
-    this.cityStyleAttr.setUsage(THREE.DynamicDrawUsage);
-    this.cityBuildProgAttr = new THREE.InstancedBufferAttribute(this.cityBuildProgArr, 1);
-    this.cityBuildProgAttr.setUsage(THREE.DynamicDrawUsage);
-    bodyGeo.setAttribute('aPowered', this.cityPoweredAttr);
-    bodyGeo.setAttribute('aStyleId', this.cityStyleAttr);
-    bodyGeo.setAttribute('aBuildProg', this.cityBuildProgAttr);
-
-    // Цилиндрический пул для элеваторов, гиперболоидных градирен и маяков (silo)
-    const siloGeo = new THREE.CylinderGeometry(0.42, 0.52, 1.0, 12);
-    siloGeo.translate(0, 0.5, 0);
-    this.siloPoweredArr = new Float32Array(maxB);
-    this.siloStyleArr = new Float32Array(maxB);
-    this.siloBuildProgArr = new Float32Array(maxB).fill(1.0);
-    this.siloPoweredAttr = new THREE.InstancedBufferAttribute(this.siloPoweredArr, 1);
-    this.siloStyleAttr = new THREE.InstancedBufferAttribute(this.siloStyleArr, 1);
-    this.siloBuildProgAttr = new THREE.InstancedBufferAttribute(this.siloBuildProgArr, 1);
-    this.siloBuildProgAttr.setUsage(THREE.DynamicDrawUsage);
-    siloGeo.setAttribute('aPowered', this.siloPoweredAttr);
-    siloGeo.setAttribute('aStyleId', this.siloStyleAttr);
-    siloGeo.setAttribute('aBuildProg', this.siloBuildProgAttr);
-
-    // Скатные крыши и сферические купола общественных зданий / обсерваторий
-    const roofGeo = new THREE.ConeGeometry(0.76, 0.44, 4);
-    roofGeo.rotateY(Math.PI * 0.25);
-    roofGeo.translate(0, 0.22, 0);
-
-    const domeGeo = new THREE.SphereGeometry(0.52, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5);
-
     this.cityBodyMat = createCityFacadeMaterial(this.textures.roof, this.textures.facadeAtlas);
-    const roofMat = new THREE.MeshLambertMaterial({ color: 0xffffff, map: this.textures.roof });
-    const domeMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.28, metalness: 0.48 });
 
-    this.cityBodies = new THREE.InstancedMesh(bodyGeo, this.cityBodyMat, maxB);
-    this.citySilos = new THREE.InstancedMesh(siloGeo, this.cityBodyMat, maxB);
-    this.cityRoofs = new THREE.InstancedMesh(roofGeo, roofMat, maxB);
-    this.cityDomes = new THREE.InstancedMesh(domeGeo, domeMat, maxB);
+    // 7 многосоставных архитектурных 3D-геометрий зданий с локальными гранными UV и кровельной инженерией!
+    this.archPoolMap = {
+      gable: this._createArchPool('gable', createGableHouseGeometry(), 320),
+      box:   this._createArchPool('box',   createMidblockUrbanGeometry(), maxB),
+      step:  this._createArchPool('step',  createSteppedTerraceGeometry(), 280),
+      tower: this._createArchPool('tower', createSkyscraperTowerGeometry(), 260),
+      arch:  this._createArchPool('arch',  createArchedPavilionGeometry(), 240),
+      spire: this._createArchPool('spire', createSpireMonumentGeometry(), 200),
+      silo:  this._createArchPool('silo',  createIndustrialSiloClusterGeometry(), 280),
+    };
+    this.cityArchPools = Object.values(this.archPoolMap);
 
-    this.cityBodies.castShadow = !!this.profile.shadows;
-    this.cityBodies.receiveShadow = !!this.profile.shadows;
-    this.citySilos.castShadow = !!this.profile.shadows;
-    this.cityBodies.frustumCulled = false;
-    this.citySilos.frustumCulled = false;
+    // Именованные ссылки на пулы (включая обратную совместимость с автотестами и инспектором)
+    this.cityGableHouses = this.archPoolMap.gable.mesh;
+    this.cityBodies = this.archPoolMap.box.mesh;
+    this.cityStepTerraces = this.archPoolMap.step.mesh;
+    this.cityTowers = this.archPoolMap.tower.mesh;
+    this.cityArchHalls = this.archPoolMap.arch.mesh;
+    this.citySpireBuildings = this.archPoolMap.spire.mesh;
+    this.citySilos = this.archPoolMap.silo.mesh;
+
+    // Резервные инстансы малых крыш/куполов (оставлены с count=0 для совместимости сцен)
+    const roofGeo = new THREE.ConeGeometry(0.76, 0.44, 4);
+    const domeGeo = new THREE.SphereGeometry(0.52, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5);
+    this.cityRoofs = new THREE.InstancedMesh(roofGeo, new THREE.MeshLambertMaterial({ color: 0xffffff, map: this.textures.roof }), 16);
+    this.cityDomes = new THREE.InstancedMesh(domeGeo, new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.28, metalness: 0.48 }), 16);
+    this.cityRoofs.count = 0;
+    this.cityDomes.count = 0;
     this.cityRoofs.frustumCulled = false;
     this.cityDomes.frustumCulled = false;
 
@@ -852,7 +890,12 @@ export class WorldView {
 
     this.scene.add(
       this.cityFoundations,
+      this.cityGableHouses,
       this.cityBodies,
+      this.cityStepTerraces,
+      this.cityTowers,
+      this.cityArchHalls,
+      this.citySpireBuildings,
       this.citySilos,
       this.cityRoofs,
       this.cityDomes,
@@ -1205,7 +1248,21 @@ export class WorldView {
       new THREE.MeshBasicMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.86 }),
     );
     intakeBall.position.x = -9.5;
-    this.flowArrow.add(shaft, cone, intakeBall);
+
+    const subRingGeo = new THREE.RingGeometry(3.2, 4.1, 24);
+    subRingGeo.rotateX(-Math.PI * 0.5);
+    const upperPoolRing = new THREE.Mesh(
+      subRingGeo,
+      new THREE.MeshBasicMaterial({ color: 0x38bdf8, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthTest: false }),
+    );
+    upperPoolRing.position.x = -12.8;
+    const lowerPoolRing = new THREE.Mesh(
+      subRingGeo,
+      new THREE.MeshBasicMaterial({ color: 0x34d399, side: THREE.DoubleSide, transparent: true, opacity: 0.85, depthTest: false }),
+    );
+    lowerPoolRing.position.x = 12.8;
+
+    this.flowArrow.add(shaft, cone, intakeBall, upperPoolRing, lowerPoolRing);
     this.flowArrow.visible = false;
     this.cursorGroup.add(this.flowArrow);
 
@@ -1470,22 +1527,22 @@ export class WorldView {
     this.updateOverflowWater3D(timeSec);
   }
 
-  /** Отрисовка всех 32 типов зданий + РЕАЛЬНАЯ ПОЭТАПНАЯ 3D-СТРОЙКА (фундамент, леса, этажи, башенные краны!) */
+  /** Отрисовка всех 48 типов зданий через 7 многосоставных 3D-геометрий + поэтапная 3D-стройка с лесами и кранами */
   syncCityInstances() {
     const buildings = this.economy.allBuildings;
     const cityMap = new Map();
     for (const c of this.economy.cities) cityMap.set(c.id, c);
 
-    const maxCap = this.cityBodies.instanceMatrix.count;
+    const maxCap = this.cityFoundations.instanceMatrix.count;
     const maxScaff = this.cityScaffolds.instanceMatrix.count;
     const maxCityCranes = this.cityCraneMasts.instanceMatrix.count;
     const cScale = Math.pow(WORLD.horizScale, 0.52);
     const foundH = 0.62 * Math.pow(WORLD.elevScale, 0.68);
 
-    let boxIdx = 0;
-    let siloIdx = 0;
-    let roofIdx = 0;
-    let domeIdx = 0;
+    for (let p = 0; p < this.cityArchPools.length; p++) {
+      this.cityArchPools[p].count = 0;
+    }
+
     let foundIdx = 0;
     let scaffIdx = 0;
     let craneIdx = 0;
@@ -1506,7 +1563,7 @@ export class WorldView {
       _mat4.compose(_pos, _quat, _scale);
       this.cityFoundations.setMatrixAt(foundIdx++, _mat4);
 
-      // 2. Поэтажный подъём монолитного каркаса здания (с плавной ступенчатостью этажей!)
+      // 2. Поэтажный подъём составного 3D-корпуса здания
       let riseFrac = 0.05;
       if (prog > 0.10) {
         const rawRise = clamp((prog - 0.10) / 0.82, 0.0, 1.0);
@@ -1517,50 +1574,36 @@ export class WorldView {
       const animH = b.sy * (prog >= 0.96 ? 1.0 : riseFrac);
 
       _pos.set(b.wx, b.wy - 0.22, b.wz);
-      _color.setRGB(b.shadeR || 0.72, b.shadeG || 0.74, b.shadeB || 0.78);
+      _color.setRGB(b.shadeR || 0.78, b.shadeG || 0.80, b.shadeB || 0.84);
 
-      if (b.roofType === 'silo') {
+      const rawShape = b.shape || (b.roofType === 'silo' ? 'cyl' : (b.roofType === 'gable' ? 'gable' : 'box'));
+      const poolKey = (rawShape === 'cyl' || rawShape === 'cool' || rawShape === 'silo')
+        ? 'silo'
+        : (this.archPoolMap[rawShape] ? rawShape : 'box');
+      let pool = this.archPoolMap[poolKey];
+      if (pool.count >= pool.maxCount) {
+        pool = this.archPoolMap.box;
+      }
+
+      if (pool.count < pool.maxCount) {
+        const idx = pool.count++;
         _scale.set(b.sx, animH, b.sz);
         _mat4.compose(_pos, _quat, _scale);
-        this.citySilos.setMatrixAt(siloIdx, _mat4);
-        this.citySilos.setColorAt(siloIdx, _color);
-        this.siloPoweredArr[siloIdx] = powered;
-        this.siloStyleArr[siloIdx] = b.styleId || 13;
-        this.siloBuildProgArr[siloIdx] = prog;
-        siloIdx++;
-      } else {
-        _scale.set(b.sx, animH, b.sz);
-        _mat4.compose(_pos, _quat, _scale);
-        this.cityBodies.setMatrixAt(boxIdx, _mat4);
-        this.cityBodies.setColorAt(boxIdx, _color);
-        this.cityPoweredArr[boxIdx] = powered;
-        this.cityStyleArr[boxIdx] = b.styleId || 0;
-        this.cityBuildProgArr[boxIdx] = prog;
-        boxIdx++;
+        pool.mesh.setMatrixAt(idx, _mat4);
+        pool.mesh.setColorAt(idx, _color);
 
-        // Монтаж скатной крыши и купола выполняется на завершающей стадии (prog >= 0.80)
-        if (prog >= 0.80) {
-          const roofAppear = clamp((prog - 0.80) / 0.18, 0.05, 1.0);
-          if (b.roofType === 'gable' && roofIdx < maxCap) {
-            _pos.set(b.wx, b.wy - 0.22 + animH, b.wz);
-            _scale.set(
-              b.sx * 1.08,
-              (1.8 * Math.pow(WORLD.elevScale, 0.7) + animH * 0.16) * roofAppear,
-              b.sz * 1.08,
-            );
-            _mat4.compose(_pos, _quat, _scale);
-            _color.setRGB(b.roofR || 0.68, b.roofG || 0.34, b.roofB || 0.26);
-            this.cityRoofs.setMatrixAt(roofIdx, _mat4);
-            this.cityRoofs.setColorAt(roofIdx, _color);
-            roofIdx++;
-          } else if (b.roofType === 'dome' && domeIdx < maxCap) {
-            _pos.set(b.wx, b.wy - 0.22 + animH, b.wz);
-            const domeR = Math.min(b.sx, b.sz) * 0.78 * roofAppear;
-            _scale.set(domeR, domeR * 0.75, domeR);
-            _mat4.compose(_pos, _quat, _scale);
-            this.cityDomes.setMatrixAt(domeIdx++, _mat4);
-          }
-        }
+        pool.poweredArr[idx] = powered;
+        pool.styleArr[idx] = b.styleId || 0;
+        pool.progArr[idx] = prog;
+
+        const d3 = idx * 3;
+        pool.dimsArr[d3] = b.sx;
+        pool.dimsArr[d3 + 1] = Math.max(3.2, animH);
+        pool.dimsArr[d3 + 2] = b.sz;
+
+        pool.roofArr[d3] = b.roofR ?? 0.64;
+        pool.roofArr[d3 + 1] = b.roofG ?? 0.36;
+        pool.roofArr[d3 + 2] = b.roofB ?? 0.28;
       }
 
       // 3. Сквозные стальные строительные леса и башенный кран у активно возводимых зданий!
@@ -1603,34 +1646,28 @@ export class WorldView {
     }
 
     this.cityFoundations.count = foundIdx;
-    this.cityBodies.count = boxIdx;
-    this.citySilos.count = siloIdx;
-    this.cityRoofs.count = roofIdx;
-    this.cityDomes.count = domeIdx;
+    this.cityRoofs.count = 0;
+    this.cityDomes.count = 0;
     this.cityScaffolds.count = scaffIdx;
     this.cityCraneMasts.count = craneIdx;
 
     this.cityFoundations.instanceMatrix.needsUpdate = true;
-    this.cityBodies.instanceMatrix.needsUpdate = true;
-    this.cityPoweredAttr.needsUpdate = true;
-    this.cityStyleAttr.needsUpdate = true;
-    this.cityBuildProgAttr.needsUpdate = true;
-    if (this.cityBodies.instanceColor) this.cityBodies.instanceColor.needsUpdate = true;
-
-    this.citySilos.instanceMatrix.needsUpdate = true;
-    this.siloPoweredAttr.needsUpdate = true;
-    this.siloStyleAttr.needsUpdate = true;
-    this.siloBuildProgAttr.needsUpdate = true;
-    if (siloIdx > 0 && this.citySilos.instanceColor) {
-      this.citySilos.instanceColor.needsUpdate = true;
-    }
-    this.cityRoofs.instanceMatrix.needsUpdate = true;
-    if (roofIdx > 0 && this.cityRoofs.instanceColor) {
-      this.cityRoofs.instanceColor.needsUpdate = true;
-    }
-    this.cityDomes.instanceMatrix.needsUpdate = true;
     this.cityScaffolds.instanceMatrix.needsUpdate = true;
     this.cityCraneMasts.instanceMatrix.needsUpdate = true;
+
+    for (let p = 0; p < this.cityArchPools.length; p++) {
+      const pool = this.cityArchPools[p];
+      pool.mesh.count = pool.count;
+      pool.mesh.instanceMatrix.needsUpdate = true;
+      pool.poweredAttr.needsUpdate = true;
+      pool.styleAttr.needsUpdate = true;
+      pool.progAttr.needsUpdate = true;
+      pool.dimsAttr.needsUpdate = true;
+      pool.roofAttr.needsUpdate = true;
+      if (pool.count > 0 && pool.mesh.instanceColor) {
+        pool.mesh.instanceColor.needsUpdate = true;
+      }
+    }
   }
 
   /** Синхронизирует канонические 3D-комплексы ГЭС/ГАЭС, водосбросы с 3D-струёй, шлюзы, рыбхозы и ОРУ */
@@ -1664,6 +1701,15 @@ export class WorldView {
         } else {
           lamp.material.color.setHex(t.powerMW > 0.1 ? 0x34d399 : 0xf59e0b);
         }
+      }
+
+      const intakeBeacon = meshGroup.userData.intakeBeacon;
+      if (intakeBeacon) {
+        const hasWaterFlow = t.flowQ > 0.08 || t.powerMW > 0.05;
+        intakeBeacon.material.color.setHex(hasWaterFlow ? 0x34d399 : 0x38bdf8);
+        intakeBeacon.material.opacity = hasWaterFlow ? 0.34 : (0.55 + Math.sin(timeSec * 4.2 + t.id) * 0.28);
+        const bs = hasWaterFlow ? 0.92 : (1.0 + Math.sin(timeSec * 3.6 + t.id) * 0.08);
+        intakeBeacon.scale.set(bs, bs, 1);
       }
     }
 
@@ -1982,6 +2028,88 @@ export class WorldView {
       new THREE.MeshBasicMaterial({ color: 0xf59e0b }),
     );
     statusLamp.position.set(hallOffsetX + hallW * 0.38, hallFloorY + hallH + 1.5 * uScale, hallZ * 0.38);
+
+    // --- Д. ГОТОВАЯ КОМПЛЕКТНАЯ АРХИТЕКТУРА ГИДРОУЗЛА (боковые устои, П-образная аванкамера под канал ВБ и отводящий лоток НБ) ---
+    if (t.isTurnkeyComplex) {
+      const wingW = 5.4 * uScale;
+      const wingLenZ = 7.4 * uScale;
+      // Левый глухой бетонный устой напорного фронта (-Z)
+      const leftWing = new THREE.Mesh(
+        new THREE.BoxGeometry(wingW, damHeight * 0.96, wingLenZ),
+        concMat,
+      );
+      leftWing.position.set(-1.2 * uScale, tailBedY + damHeight * 0.48, -9.8 * uScale);
+      leftWing.castShadow = !!this.profile.shadows;
+      grp.add(leftWing);
+
+      // Правый устой со встроенным аварийным боковым водосливом (+Z)
+      const rightSpillH = damHeight * 0.78;
+      const rightWing = new THREE.Mesh(
+        new THREE.BoxGeometry(wingW, rightSpillH, wingLenZ),
+        darkConcMat,
+      );
+      rightWing.position.set(-1.2 * uScale, tailBedY + rightSpillH * 0.5, 9.8 * uScale);
+      rightWing.castShadow = !!this.profile.shadows;
+      grp.add(rightWing);
+
+      // Мостовой переход по гребню комплектного гидроузла
+      const crestRoad = new THREE.Mesh(
+        new THREE.BoxGeometry(3.2 * uScale, 0.55 * uScale, 26.8 * uScale),
+        darkConcMat,
+      );
+      crestRoad.position.set(-1.2 * uScale, damCrestY + 0.25 * uScale, 0);
+      grp.add(crestRoad);
+
+      // П-образные направляющие подпорные стенки приёмной аванкамеры ВБ (сюда подводится канал [2]!)
+      const forebayLen = 11.5 * uScale;
+      const forebayWallH = Math.max(3.8 * uScale, damHeight * 0.58);
+      const cyanBeaconMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+      for (const sideZ of [-7.4 * uScale, 7.4 * uScale]) {
+        const fWall = new THREE.Mesh(
+          new THREE.BoxGeometry(forebayLen, forebayWallH, 1.35 * uScale),
+          concMat,
+        );
+        fWall.position.set(-4.6 * uScale - forebayLen * 0.5, damCrestY - forebayWallH * 0.48, sideZ);
+        grp.add(fWall);
+
+        // Входные маячки створа подводящего канала ВБ
+        const inPost = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.42 * uScale, 0.48 * uScale, 2.2 * uScale, 8),
+          cyanBeaconMat,
+        );
+        inPost.position.set(-4.6 * uScale - forebayLen + 0.5 * uScale, damCrestY + 1.1 * uScale, sideZ);
+        grp.add(inPost);
+      }
+
+      // Пульсирующее навигационное кольцо перед входом аванкамеры ВБ (показывает, куда подвести воду каналом!)
+      const bRingGeo = new THREE.RingGeometry(3.6 * uScale, 4.9 * uScale, 28);
+      bRingGeo.rotateX(-Math.PI * 0.5);
+      const intakeBeacon = new THREE.Mesh(
+        bRingGeo,
+        new THREE.MeshBasicMaterial({
+          color: 0x38bdf8,
+          side: THREE.DoubleSide,
+          transparent: true,
+          opacity: 0.72,
+          depthWrite: false,
+        }),
+      );
+      intakeBeacon.position.set(-4.8 * uScale - forebayLen - 2.6 * uScale, Math.max(t.baseY, damCrestY - 2.6 * uScale), 0);
+      grp.add(intakeBeacon);
+      grp.userData.intakeBeacon = intakeBeacon;
+
+      // Бетонные стенки водобойного колодца и отводящего ковша в НБ (+X)
+      const tailLen = 9.5 * uScale;
+      const tailWallH = 3.2 * uScale;
+      for (const sideZ of [-6.8 * uScale, 6.8 * uScale]) {
+        const tWall = new THREE.Mesh(
+          new THREE.BoxGeometry(tailLen, tailWallH, 1.2 * uScale),
+          darkConcMat,
+        );
+        tWall.position.set(hallOffsetX + hallW * 0.5 + tailLen * 0.48, hallFloorY + tailWallH * 0.25, sideZ);
+        grp.add(tWall);
+      }
+    }
 
     grp.add(
       damPillar,
@@ -2570,6 +2698,7 @@ export class WorldView {
     this.cursorRing.scale.set(radius, radius, 1);
 
     const isUnit = (
+      toolId === 'inspect' ||
       toolId === 'spillway' ||
       toolId === 'nav_lock' ||
       toolId === 'concrete_plant' ||

@@ -8,7 +8,7 @@
 //  - Судоходные шлюзы [L], рыбхозы/эко-марины [F] и подстанции ОРУ 110/220 кВ [P]
 // ============================================================================
 
-import { WORLD, TURBINE_SPECS, CONSTRUCTION, VALLEY_PRESETS } from './config.js';
+import { WORLD, TURBINE_SPECS, CONSTRUCTION, VALLEY_PRESETS, STARTER_READY_HPP_SITES } from './config.js';
 import { clamp, lerp } from './noise.js';
 import { buildValleyTerrain, getScaledValleyRivers, getValleyHeadwaterSources } from './valley.js';
 
@@ -886,6 +886,69 @@ export class HydroSimulation {
     return { dx, dz, yaw: Math.atan2(dz, dx) };
   }
 
+  /**
+   * Геодезическая оценка выбранного места под Готовую ГЭС и деривационный канал:
+   * возвращает точки входа канала (ВБ), выхода воды (НБ), расчётный перепад ΔH и потенциал МВт!
+   */
+  evaluateHppSite(wx, wz, forcedYaw = null, typeId = 'francis') {
+    const spec = TURBINE_SPECS[typeId] || TURBINE_SPECS.francis;
+    const { gx, gz } = this.worldToGrid(wx, wz);
+    const dir = this.detectHydraulicDirection(gx, gz, forcedYaw);
+    const reach = clamp(Math.round((15.0 * WORLD.horizScale) / this.dx), 3, 5);
+    const intakeGx = clamp(Math.round(gx - dir.dx * reach), 2, this.grid - 3);
+    const intakeGz = clamp(Math.round(gz - dir.dz * reach), 2, this.grid - 3);
+    const outfallGx = clamp(Math.round(gx + dir.dx * reach), 2, this.grid - 3);
+    const outfallGz = clamp(Math.round(gz + dir.dz * reach), 2, this.grid - 3);
+
+    const iIdx = intakeGz * this.grid + intakeGx;
+    const oIdx = outfallGz * this.grid + outfallGx;
+    const cIdx = gz * this.grid + gx;
+    const intakeBed = this.zb[iIdx];
+    const intakeDepth = this.h[iIdx];
+    const outfallBed = this.zb[oIdx];
+    const outfallSurf = outfallBed + this.h[oIdx];
+    const centerBed = this.zb[cIdx];
+
+    const builtInWeirH = (typeId === 'kaplan' ? 5.2 : (typeId === 'pelton' ? 8.2 : 6.6)) * WORLD.elevScale;
+    const expectedHeadLevel = Math.max(intakeBed + intakeDepth, Math.max(centerBed, intakeBed) + builtInWeirH * 0.72);
+    const dropH = Math.max(0.5, expectedHeadLevel - Math.min(outfallBed, outfallSurf));
+    const estQ = spec.maxArea * 0.72 * Math.sqrt(2 * G * dropH);
+    const estMW = Math.min(spec.ratedMW, (RHO * G * estQ * dropH * spec.peakEta) * 1e-6);
+
+    const intakeWorld = this.gridToWorld(intakeGx, intakeGz);
+    const outfallWorld = this.gridToWorld(outfallGx, outfallGz);
+    const hasWaterNow = intakeDepth > 0.25;
+    const quality = dropH >= 12 * WORLD.elevScale
+      ? 'excellent'
+      : (dropH >= 5.5 * WORLD.elevScale ? 'good' : 'flat');
+
+    const siteGrade = quality === 'excellent'
+      ? 'отличный створ'
+      : (quality === 'good' ? 'хороший перепад' : 'пологий уклон — подведите канал сверху');
+
+    return {
+      gx,
+      gz,
+      dir,
+      reach,
+      intakeWx: intakeWorld.wx,
+      intakeWz: intakeWorld.wz,
+      intakeY: Math.max(intakeBed, intakeBed + intakeDepth),
+      outfallWx: outfallWorld.wx,
+      outfallWz: outfallWorld.wz,
+      outfallY: Math.max(outfallBed, outfallSurf),
+      upElev: Math.max(intakeBed, intakeBed + intakeDepth),
+      downElev: Math.max(outfallBed, outfallSurf),
+      dropH,
+      grossHead: dropH,
+      estMW,
+      potentialMW: estMW,
+      hasWaterNow,
+      quality,
+      siteGrade,
+    };
+  }
+
   placeSpillway(wx, wz, forcedYaw, maxBudget, creative = false) {
     const cost = 4400;
     if (!creative && maxBudget < cost) return { ok: false, reason: 'Недостаточно средств (нужно 4 400 ₽)' };
@@ -1041,45 +1104,82 @@ export class HydroSimulation {
       }
     }
 
-    // Если ставим прямо в существующую плотину — держим её гребень; если в чистую реку — аккуратный водоподъёмный порог, без «башни»!
-    const headwallCrest = existingDamCrest > baseNat + 1.5
+    // Если ставим в существующую плотину — аккуратно встраиваемся в неё (0 подъёма рельефа!).
+    // Если ставим на новом выбранном месте (уступ, склон, русло) — возводим ГОТОВЫЙ ГИДРОУЗЕЛ ГЭС «ПОД КЛЮЧ»
+    // с П-образным приёмным напорным бассейном (аванкамерой под канал), боковыми крыльями и водосливом!
+    const isTurnkeyComplex = !(existingDamCrest > baseNat + 1.5);
+    const intakeNat = this.bedrock[intakeGz * this.grid + intakeGx] + this.soil[intakeGz * this.grid + intakeGx];
+    const turnkeyWeirAdd = (typeId === 'kaplan' ? 5.4 : (typeId === 'pelton' ? 8.6 : 6.8)) * WORLD.elevScale;
+    const headwallCrest = !isTurnkeyComplex
       ? existingDamCrest
-      : baseNat + 5.8 * WORLD.elevScale;
+      : Math.max(baseNat, intakeNat) + turnkeyWeirAdd;
 
     const bodyCells = [];
-    // Укрепляем только узкую линию напорного фронта поперёк потока (1 ячейка в толщину, НЕ раздувая гору!)
+    const recordAndSetConcrete = (ci, cH) => {
+      if (!bodyCells.some((bc) => bc.i === ci)) {
+        bodyCells.push({ i: ci, prevConcrete: this.concrete[ci] });
+      }
+      this.concrete[ci] = Math.max(this.concrete[ci], cH);
+      this.targetConcrete[ci] = Math.max(this.targetConcrete[ci], this.concrete[ci]);
+      this.formworkWall[ci] = 0;
+      this.buildProgress[ci] = 1.0;
+      this.linedMask[ci] = 1;
+      this.earthDamMask[ci] = 0;
+      this.foundationMask[ci] = 1;
+    };
+
     const orthoX = -dir.dz;
     const orthoZ = dir.dx;
-    for (let s = -1; s <= 1; s++) {
+    const spanS = isTurnkeyComplex ? 2 : 1;
+
+    for (let s = -spanS; s <= spanS; s++) {
       const cx = clamp(Math.round(gx + orthoX * s), 1, this.grid - 2);
       const cz = clamp(Math.round(gz + orthoZ * s), 1, this.grid - 2);
       const i = cz * this.grid + cx;
       const nat = this.bedrock[i] + this.soil[i];
-      if (nat > headwallCrest + 2.0) continue; // не трогаем высокие береговые скалы!
-      const prevConcrete = this.concrete[i];
-      const cH = Math.max(prevConcrete, Math.max(0.6, headwallCrest - nat));
-      this.concrete[i] = cH;
-      this.targetConcrete[i] = Math.max(this.targetConcrete[i], cH);
-      this.formworkWall[i] = 0;
-      this.buildProgress[i] = 1.0;
-      this.linedMask[i] = 1;
-      this.earthDamMask[i] = 0;
-      bodyCells.push({ i, prevConcrete });
+      if (!isTurnkeyComplex && nat > headwallCrest + 2.0) continue;
+      // В готовой ГЭС крайнее крыло s === 2 имеет встроенный холостой водослив чуть ниже гребня для защиты от переполнения!
+      const localCrest = (isTurnkeyComplex && s === 2)
+        ? (headwallCrest - 1.15 * WORLD.elevScale)
+        : headwallCrest;
+      const cH = Math.max(0.6, localCrest - nat);
+      recordAndSetConcrete(i, cH);
     }
 
-    // Расчищаем аванкамеру водоприёмника (intake) и отводящий бассейн машзала (outfall), чтобы вода свободно входила и выходила!
+    // Для готовой ГЭС «под ключ» возводим боковые направляющие щёки-устои П-образной аванкамеры,
+    // чтобы подведённый игроком деривационный канал не растекался вбок, а шёл прямо в турбины!
+    if (isTurnkeyComplex) {
+      for (const side of [-2, 2]) {
+        for (let upStep = 1; upStep <= 2; upStep++) {
+          const wxCell = clamp(Math.round(gx + orthoX * side - dir.dx * upStep), 1, this.grid - 2);
+          const wzCell = clamp(Math.round(gz + orthoZ * side - dir.dz * upStep), 1, this.grid - 2);
+          const wi = wzCell * this.grid + wxCell;
+          const wNat = this.bedrock[wi] + this.soil[wi];
+          const wingCrest = headwallCrest - (upStep === 2 ? 0.6 * WORLD.elevScale : 0);
+          if (wingCrest > wNat + 0.3) {
+            recordAndSetConcrete(wi, wingCrest - wNat);
+          }
+        }
+      }
+    }
+
+    // Расчищаем аванкамеру водоприёмника (intake) и отводящий бассейн машзала (outfall), чтобы вода свободно входила из канала и выходила!
     for (let oz = -1; oz <= 1; oz++) {
       for (let ox = -1; ox <= 1; ox++) {
         const ii = (intakeGz + oz) * this.grid + (intakeGx + ox);
         const oi = (outfallGz + oz) * this.grid + (outfallGx + ox);
         if (this.concrete[ii] > 0 || this.targetConcrete[ii] > 0) {
-          bodyCells.push({ i: ii, prevConcrete: this.concrete[ii] });
+          if (!bodyCells.some((bc) => bc.i === ii)) {
+            bodyCells.push({ i: ii, prevConcrete: this.concrete[ii] });
+          }
           this.concrete[ii] = 0;
           this.targetConcrete[ii] = 0;
           this.formworkWall[ii] = 0;
         }
         if (this.concrete[oi] > 0 || this.targetConcrete[oi] > 0) {
-          bodyCells.push({ i: oi, prevConcrete: this.concrete[oi] });
+          if (!bodyCells.some((bc) => bc.i === oi)) {
+            bodyCells.push({ i: oi, prevConcrete: this.concrete[oi] });
+          }
           this.concrete[oi] = 0;
           this.targetConcrete[oi] = 0;
           this.formworkWall[oi] = 0;
@@ -1095,7 +1195,7 @@ export class HydroSimulation {
     const intakeBed = this.bedrock[intakeGz * this.grid + intakeGx] + this.soil[intakeGz * this.grid + intakeGx];
     const outfallBed = this.bedrock[outfallGz * this.grid + outfallGx] + this.soil[outfallGz * this.grid + outfallGx];
 
-    // Здание машинного зала ГЭС располагаем строго у низового подножия плотины (между осью плотины и нижним бьефом) на отметке дна реки!
+    // Здание машинного зала ГЭС располагаем строго у низового подножия плотины (между осью плотины и нижним бьефом) на отметке дна!
     const hallWx = pos.wx + dir.dx * (this.dx * (reach * 0.58));
     const hallWz = pos.wz + dir.dz * (this.dx * (reach * 0.58));
     const hallBedY = Math.min(baseNat, outfallBed);
@@ -1104,6 +1204,8 @@ export class HydroSimulation {
       id: this.nextStructId++,
       kind: 'turbine',
       type: typeId,
+      isTurnkeyComplex,
+      customTitle: null,
       spec,
       gx,
       gz,
@@ -1152,14 +1254,97 @@ export class HydroSimulation {
       Math.max(gz, intakeGz, outfallGz) + 2,
     );
     this._activateArea(
-      Math.min(gx, intakeGx, outfallGx) - 2,
-      Math.min(gz, intakeGz, outfallGz) - 2,
-      Math.max(gx, intakeGx, outfallGx) + 2,
-      Math.max(gz, intakeGz, outfallGz) + 2,
+      Math.min(gx, intakeGx, outfallGx) - 3,
+      Math.min(gz, intakeGz, outfallGz) - 3,
+      Math.max(gx, intakeGx, outfallGx) + 3,
+      Math.max(gz, intakeGz, outfallGz) + 3,
+    );
+    this.recomputeZbRange(
+      Math.min(gx, intakeGx, outfallGx) - 3,
+      Math.min(gz, intakeGz, outfallGz) - 3,
+      Math.max(gx, intakeGx, outfallGx) + 3,
+      Math.max(gz, intakeGz, outfallGz) + 3,
     );
     this.engineeredDirty = true;
 
     return { ok: true, cost: spec.cost, structure: turb };
+  }
+
+  /**
+   * Размещает на старте карты Первую Готовую Деривационную ГЭС (с сухой аванкамерой и отводящим ковшом),
+   * чтобы игрок сразу видел готовый комплекс ГЭС и искал трассу для подводящего и отводящего каналов!
+   */
+  spawnStarterReadyHPP(presetId = this.presetId) {
+    const site = STARTER_READY_HPP_SITES[presetId] || STARTER_READY_HPP_SITES.bystritsa;
+    if (!site) return null;
+    const hs = WORLD.horizScale;
+    const wx = site.baseX * hs;
+    const wz = site.baseZ * hs;
+    const existing = this.turbines.find((t) => Math.hypot(t.wx - wx, t.wz - wz) < 35 * hs);
+    if (existing) return existing;
+
+    // 1. Инженерная планировка котлована под Деривационную ГЭС:
+    //    приёмный ковш (ВБ) ставится ниже отметки воды верхнего плёса реки, а отводящий ковш (НБ) — в уровень нижнего плёса!
+    const upHint = site.canalIntakeHint || { baseX: site.baseX + 45, baseZ: site.baseZ - 45 };
+    const downHint = site.canalOutfallHint || { baseX: site.baseX - 24, baseZ: site.baseZ + 38 };
+    const sUp = this.sampleAtWorld(upHint.baseX * hs, upHint.baseZ * hs);
+    const sDown = this.sampleAtWorld(downHint.baseX * hs, downHint.baseZ * hs);
+    const targetForebayBed = Math.max(sDown.bed + 2.8 * WORLD.elevScale, sUp.surface - 3.6 * WORLD.elevScale);
+    const targetTailBed = sDown.bed + 0.35 * WORLD.elevScale;
+
+    const dirX = Math.cos(site.yaw);
+    const dirZ = Math.sin(site.yaw);
+    const padR = Math.max(this.dx * 2.2, WORLD.brushSizes[1] * 1.15);
+    for (let step = -3; step <= 4; step++) {
+      const px = wx + dirX * step * this.dx * 1.35;
+      const pz = wz + dirZ * step * this.dx * 1.35;
+      const targetElev = step <= 0 ? targetForebayBed : targetTailBed;
+      this.excavateCanal(px, pz, padR, 28.0 * WORLD.elevScale, targetElev, 1e9, true);
+    }
+
+    // 2. Возводим цельный комплекс ГЭС с П-образной аванкамерой и водосливом
+    const res = this.placeTurbine(site.type || 'kaplan', wx, wz, site.yaw, 1e9, true);
+    if (!res.ok) return null;
+    const tb = res.structure;
+    tb.isStarterReady = true;
+    tb.customTitle = site.title;
+    tb.autoDispatch = true;
+
+    // 3. Оформляем сухой бетонный входной ковш ВБ (за грунтовой перемычкой, которую пророет игрок!) и готовый отводящий лоток НБ
+    const cutR = Math.max(this.dx * 1.25, WORLD.brushSizes[0] * 1.35);
+    for (let k = 0; k <= 1; k++) {
+      const inX = tb.intakeWx - tb.dirX * cutR * (0.35 + k * 0.55);
+      const inZ = tb.intakeWz - tb.dirZ * cutR * (0.35 + k * 0.55);
+      this.excavateCanal(inX, inZ, cutR, 16.0 * WORLD.elevScale, targetForebayBed - 0.25 * WORLD.elevScale, 1e9, true);
+      this.lineCanalConcrete(inX, inZ, cutR, 1e9, true);
+    }
+    // Гарантируем, что на старте аванкамера сухая (0 МВт), пока игрок не пророет перемычку от реки!
+    for (let oz = -2; oz <= 2; oz++) {
+      for (let ox = -2; ox <= 2; ox++) {
+        const ii = clamp(tb.intakeGz + oz, 1, this.grid - 2) * this.grid + clamp(tb.intakeGx + ox, 1, this.grid - 2);
+        this.h[ii] = 0;
+        this.u[ii] = 0;
+        this.v[ii] = 0;
+      }
+    }
+
+    const downWx = downHint.baseX * hs;
+    const downWz = downHint.baseZ * hs;
+    for (let k = 0; k <= 6; k++) {
+      const f = k / 6;
+      const outX = tb.outfallWx * (1 - f) + downWx * f;
+      const outZ = tb.outfallWz * (1 - f) + downWz * f;
+      this.excavateCanal(outX, outZ, cutR, 18.0 * WORLD.elevScale, targetTailBed, 1e9, true);
+      if (k <= 2) this.lineCanalConcrete(outX, outZ, cutR, 1e9, true);
+    }
+    tb.intakeBedY = this.zb[tb.intakeGz * this.grid + tb.intakeGx];
+    tb.outfallBedY = this.zb[tb.outfallGz * this.grid + tb.outfallGx];
+    // Сбрасываем счётчик выемки от стартовой планировки, чтобы прогресс игрока начинался честно с 0 м³!
+    this.excavatedNormM3 = 0;
+    this.rockStockpileM3 = 0;
+    this.soilStockpileM3 = 0;
+
+    return tb;
   }
 
   demolishAt(wx, wz) {
@@ -1176,9 +1361,9 @@ export class HydroSimulation {
         this.formworkWall[c.i] = 0;
       }
       this.turbines.splice(tIdx, 1);
-      this.recomputeZbRange(t.gx - 3, t.gz - 3, t.gx + 3, t.gz + 3);
+      this.recomputeZbRange(t.gx - 4, t.gz - 4, t.gx + 4, t.gz + 4);
       this.engineeredDirty = true;
-      return { removed: 'turbine', refund: Math.round(t.spec.cost * 0.45) };
+      return { removed: 'turbine', refund: t.isStarterReady ? 0 : Math.round(t.spec.cost * 0.45) };
     }
 
     const sIdx = this.spillways.findIndex((s) => Math.hypot(s.gx - gx, s.gz - gz) <= 2.6);

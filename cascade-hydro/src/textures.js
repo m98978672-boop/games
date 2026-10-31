@@ -307,22 +307,32 @@ export function createBrushedSteelTexture(maxAniso = 4) {
 }
 
 /**
- * 6. Кровля (черепица/фальц) и Мега-Атлас 64 архитектурных паттернов (512×512, 8×8 ячеек)
+ * 6. Детализированная текстура городской кровли (керамическая черепица + стоячий фальц, 256×256)
  */
-export function createRoofShingleTexture(maxAniso = 4) {
-  const size = 128;
+export function createRoofShingleTexture(maxAniso = 8) {
+  const size = 256;
   const c = makeCanvas(size);
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#b8bcc4';
+  ctx.fillStyle = '#c4c8cf';
   ctx.fillRect(0, 0, size, size);
+
+  // Горизонтальные ряды черепицы с мягкой тенью нахлёста
   for (let y = 0; y < size; y += 16) {
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.35)';
-    ctx.fillRect(0, y, size, 2);
+    const rowGrad = ctx.createLinearGradient(0, y, 0, y + 16);
+    rowGrad.addColorStop(0, '#eef2f6');
+    rowGrad.addColorStop(0.72, '#bcc3cd');
+    rowGrad.addColorStop(1, '#717a88');
+    ctx.fillStyle = rowGrad;
+    ctx.fillRect(0, y, size, 16);
+
     const shift = ((y / 16) % 2) * 8;
     for (let x = 0; x < size; x += 16) {
-      const v = 166 + Math.round(hash2(x, y, 71) * 38);
-      ctx.fillStyle = `rgb(${v}, ${v}, ${v + 4})`;
-      ctx.fillRect((x + shift) % size, y + 2, 14, 13);
+      const tone = Math.round((hash2(x, y, 71) - 0.5) * 28);
+      ctx.fillStyle = tone >= 0 ? `rgba(255,255,255,${(tone / 140).toFixed(2)})` : `rgba(15,23,42,${(-tone / 130).toFixed(2)})`;
+      ctx.fillRect((x + shift) % size, y + 1, 14, 13);
+      // Фальцевое продольное ребро
+      ctx.fillStyle = 'rgba(30, 41, 59, 0.26)';
+      ctx.fillRect((x + shift) % size, y + 1, 1.5, 14);
     }
   }
   return finalizeTex(new THREE.CanvasTexture(c), maxAniso, true);
