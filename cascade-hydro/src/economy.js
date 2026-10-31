@@ -19,6 +19,13 @@ import { clamp, makeRng } from './noise.js';
 import { HydrologicalBalanceEngine } from './hydrology-science.js';
 import { pickCatalogShade } from './textures.js';
 import { RoadNetworkSimulation } from './roads-and-cities.js';
+import {
+  CITY_FOCUS_MODES,
+  initCityLogicState,
+  evaluateCityUrbanLogic,
+  chooseSmartUrbanArchetype,
+  recomputeCityDistricts,
+} from './city-logic.js';
 
 export const REVENUE_STREAM_DEFS = [
   { id: 'spotEnergy',      label: 'Спотовый рынок ОРЭМ (пики МВт·ч)',     color: '#fbbf24' },
@@ -96,6 +103,9 @@ export class EconomyAndCities {
 
     this._initCities();
     this.roadNetwork.rebuildRoutes(this.hydro, this.cities);
+    for (let i = 0; i < this.cities.length; i++) {
+      evaluateCityUrbanLogic(this.cities[i], this);
+    }
     this._applyWeatherToHydro();
   }
 
@@ -155,6 +165,7 @@ export class EconomyAndCities {
         builtStreetRings: 1,
         connectedRoadsCount: 0,
       };
+      initCityLogicState(city);
 
       // Стартовое историческое ядро (5–7 готовых зданий) + сразу 2 активные стройплощадки с кранами и лесами!
       const starterFinished = def.archetype === 'metropolis' ? 7
@@ -179,42 +190,9 @@ export class EconomyAndCities {
     this.powerLinesDirty = true;
   }
 
-  /** Подбирает один из 48 архитектурных и строительных типов зданий под специализацию города и район */
+  /** Подбирает один из 48 архитектурных и строительных типов зданий через систему городской логики */
   _chooseBuildingArchetype(city, ring, rng) {
-    const allowedByArchetype = {
-      town:       ['res', 'mid', 'civ', 'util', 'bld', 'ind'],
-      metropolis: ['res', 'mid', 'high', 'civ', 'util', 'sci', 'bld'],
-      civic:      ['res', 'mid', 'high', 'civ', 'util', 'sci'],
-      industrial: ['ind', 'bld', 'mid', 'res', 'util', 'civ'],
-      industry:   ['ind', 'bld', 'mid', 'res', 'util', 'civ'],
-      agro:       ['agro', 'res', 'util', 'bld', 'civ'],
-      science:    ['sci', 'res', 'civ', 'mid', 'util'],
-      alpine:     ['res', 'civ', 'sci', 'port'],
-      smelter:    ['smlt', 'ind', 'bld', 'util', 'mid'],
-      datacenter: ['dc', 'sci', 'high', 'mid', 'civ'],
-      tech:       ['dc', 'sci', 'high', 'mid', 'civ'],
-      port:       ['port', 'bld', 'mid', 'res', 'ind', 'civ'],
-      resort:     ['port', 'res', 'civ', 'mid'],
-    };
-    const allowedCats = allowedByArchetype[city.archetype] || ['res', 'mid', 'civ', 'bld'];
-    const pool = BUILDING_ARCHETYPES.filter((a) => allowedCats.includes(a.cat));
-    if (pool.length === 0) return BUILDING_ARCHETYPES[0];
-
-    // В центре мегаполиса и технопарка предпочитаем высотки и общественные доминанты
-    if (ring <= 2 && city.level >= 2) {
-      const corePool = pool.filter((a) => a.hMax >= 22 || a.shape === 'spire' || a.shape === 'tower' || a.cat === 'dc');
-      if (corePool.length > 0 && rng() < 0.65) {
-        return corePool[Math.floor(rng() * corePool.length)];
-      }
-    }
-    // На внешних кольцах промзон и городов чаще размещаем строительные комбинаты БСУ/ДСК/склады ЖБИ
-    if (ring >= 2 && rng() < 0.26) {
-      const bldPool = pool.filter((a) => a.cat === 'bld');
-      if (bldPool.length > 0) {
-        return bldPool[Math.floor(rng() * bldPool.length)];
-      }
-    }
-    return pool[Math.floor(rng() * pool.length)];
+    return chooseSmartUrbanArchetype(city, ring, rng, this.allBuildings);
   }
 
   _spawnBuildingInCity(city, lot, initialAnim = 0.05, rng = this._rng) {
@@ -247,6 +225,7 @@ export class EconomyAndCities {
       cityId: city.id,
       kind: arch.id,
       cat: arch.cat,
+      shape: arch.shape || 'box',
       label: arch.name,
       roofType,
       styleId: arch.style % 64, // 0..63 тайл 1024×1024 мега-атласа фасадов!
@@ -273,8 +252,21 @@ export class EconomyAndCities {
     lot.buildingIndex = bIdx;
     this.allBuildings.push(bObj);
     city.buildingIndices.push(bIdx);
+    recomputeCityDistricts(city, this.allBuildings);
     this.buildingsDirty = true;
     return bObj;
+  }
+
+  setCityFocusMode(cityId, modeId) {
+    const city = this.cities.find((c) => c.id === cityId);
+    const mode = CITY_FOCUS_MODES[modeId];
+    if (!city || !mode) return { ok: false, reason: 'Неизвестный город или режим' };
+    city.focusMode = mode.id;
+    evaluateCityUrbanLogic(city, this);
+    if (this.callbacks.onNotify) {
+      this.callbacks.onNotify(`★ Генплан г. ${city.name}: принят указ «${mode.label}»`, 'info');
+    }
+    return { ok: true, city, mode };
   }
 
   _recalcCityTier(city) {
@@ -546,9 +538,12 @@ export class EconomyAndCities {
 
     if ((tick % 10) === 0) {
       this._checkHydroCityInteractions();
+      for (let i = 0; i < this.cities.length; i++) {
+        evaluateCityUrbanLogic(this.cities[i], this);
+      }
     }
 
-    // 5. Суточная кривая энергопотребления 8 городов и распределение мощности
+    // 5. Суточная кривая энергопотребления 8 городов и распределение мощности (с учётом генплана города!)
     const h = this.hour;
     const demandCurve = (h >= 17 && h < 22.5) ? 1.32
       : ((h >= 6.5 && h < 11) ? 1.15 : (h < 6 ? 0.74 : 1.0));
@@ -558,7 +553,8 @@ export class EconomyAndCities {
     for (let i = 0; i < this.cities.length; i++) {
       const c = this.cities[i];
       const bCount = c.buildingIndices.length;
-      c.currentDemandMW = (c.baseDemandMW + bCount * c.demandPerBuilding) * demandCurve;
+      const focusCfg = CITY_FOCUS_MODES[c.focusMode] || CITY_FOCUS_MODES.balanced;
+      c.currentDemandMW = (c.baseDemandMW + bCount * c.demandPerBuilding) * demandCurve * focusCfg.demandMult;
       totalDemand += c.currentDemandMW;
       if (c.connected) connectedDemand += c.currentDemandMW;
     }
@@ -579,10 +575,10 @@ export class EconomyAndCities {
       if (!c.connected) {
         c.suppliedMW = 0;
         c.powerRatio = 0;
-        c.satisfaction = Math.max(0.35, c.satisfaction - step * 0.01);
-        // Автономная муниципальная застройка посёлков (до 18 зданий, максимум 2 крана одновременно)
+        // Автономная муниципальная застройка посёлков (до 18 зданий, ускоряется при подводе воды каналом!)
         if (!c.isFlooded && c.buildingIndices.length < 18 && (c.activeBuildCount || 0) < 2) {
-          c.growthProgress += (step / 20.0) * (1.0 + concretePlantCount * 0.25);
+          const waterBoost = c.canalAqueductConnected ? 1.45 : 1.0;
+          c.growthProgress += (step / 20.0) * (1.0 + concretePlantCount * 0.25) * waterBoost;
           if (c.growthProgress >= 1.0) {
             c.growthProgress -= 1.0;
             this._growCityOneStep(c);
@@ -597,22 +593,23 @@ export class EconomyAndCities {
       suppliedSum += giveMW;
 
       const roadTradeBonus = 1.0 + Math.min(0.24, (c.connectedRoadsCount || 0) * 0.08);
-      const isIndTech = (c.archetype === 'smelter' || c.archetype === 'tech' || c.archetype === 'datacenter' || c.archetype === 'industrial');
+      const urbanTariff = c.urbanTariffMult || 1.0;
+      const isIndTech = (c.archetype === 'smelter' || c.archetype === 'tech' || c.archetype === 'datacenter' || c.archetype === 'industrial' || c.focusMode === 'industry');
       if (isIndTech) {
-        rIndustrialPPA += giveMW * mwEconFactor * ECONOMY.baseRatePerMWSec * (0.85 + 0.45 * this.spotMultiplier) * c.tariffBonus * ECONOMY.industrialPPAMultiplier * roadTradeBonus;
+        rIndustrialPPA += giveMW * mwEconFactor * ECONOMY.baseRatePerMWSec * (0.85 + 0.45 * this.spotMultiplier) * c.tariffBonus * ECONOMY.industrialPPAMultiplier * roadTradeBonus * urbanTariff;
       } else {
-        rSpotEnergy += giveMW * mwEconFactor * ECONOMY.baseRatePerMWSec * this.spotMultiplier * c.tariffBonus * roadTradeBonus;
+        rSpotEnergy += giveMW * mwEconFactor * ECONOMY.baseRatePerMWSec * this.spotMultiplier * c.tariffBonus * roadTradeBonus * urbanTariff;
       }
 
       if ((c.powerRatio >= 0.48 || this.creative) && !c.isFlooded) {
         c.blackoutTimer = 0;
-        c.satisfaction = Math.min(1.0, c.satisfaction + step * (0.05 + pumpStationCount * 0.01));
 
         const irrMult = (c.needsIrrigation && c.irrigated) ? 1.85 : 1.0;
         const roadBonus = 1.0 + Math.min(0.42, (c.connectedRoadsCount || 0) * 0.14);
         const plantBoost = 1.0 + Math.min(0.55, concretePlantCount * 0.25);
+        const urbanMult = c.urbanGrowthMult || 1.0;
         const effPower = this.creative ? Math.max(0.88, c.powerRatio) : c.powerRatio;
-        const speedByPower = (0.50 + 1.08 * effPower) * roadBonus * plantBoost * (this.creative ? 2.2 : 1.0);
+        const speedByPower = (0.50 + 1.08 * effPower) * roadBonus * plantBoost * urbanMult * (this.creative ? 2.2 : 1.0);
         if ((c.activeBuildCount || 0) < 3) {
           c.growthProgress += (step / 10.2) * speedByPower * irrMult;
         }
@@ -622,12 +619,12 @@ export class EconomyAndCities {
           this._growCityOneStep(c);
         }
       } else {
-        c.satisfaction = Math.max(0.15, c.satisfaction - step * (c.isFlooded ? 0.08 : 0.025));
         if (genMW > 0.05 && c.powerRatio < 0.4) {
           c.blackoutTimer += step;
         }
         if (!c.isFlooded && c.buildingIndices.length < 18 && (c.activeBuildCount || 0) < 2) {
-          c.growthProgress += (step / 20.0) * (1.0 + concretePlantCount * 0.25);
+          const waterBoost = c.canalAqueductConnected ? 1.35 : 1.0;
+          c.growthProgress += (step / 20.0) * (1.0 + concretePlantCount * 0.25) * waterBoost;
           if (c.growthProgress >= 1.0) {
             c.growthProgress -= 1.0;
             this._growCityOneStep(c);
@@ -827,9 +824,12 @@ export class EconomyAndCities {
         b.sx *= 1.12;
         b.sz *= 1.12;
         b.styleId = 9; // модернизация в высотный стеклянный фасад
+        b.shape = 'tower';
+        b.cat = 'high';
         b.roofType = 'flat';
         b.anim = 0.35;
         city.population += 210;
+        recomputeCityDistricts(city, this.allBuildings);
         this.buildingsDirty = true;
         return;
       }

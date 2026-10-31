@@ -1,8 +1,9 @@
 // ============================================================================
-//  КАСКАД: ЖИВАЯ ВОДА v0.3 — Главный контроллер игры:
-//  - Масштабы бассейна 0.8×0.8 км, 5×5 км (25 км²) и 10×10 км (100 км²)
-//  - Каноническая приплотинная ГЭС/ГАЭС в нижнем бьефе и 3D-анимация перелива воды
-//  - Научный водный баланс, 12 видов дохода, 8 городов (32 типа зданий), 300 анимаций и 432 текстуры
+//  КАСКАД: ЖИВАЯ ВОДА v0.5 — Главный контроллер игры:
+//  - Готовые цельные комплексы ГЭС/ГАЭС (стартовая сухая Деривационная ГЭС-1 + в 1 клик [8/9/0])
+//  - Геймплей разведки перепада высот ΔH [1], прокладки деривационных каналов [2] и облицовки [4]
+//  - 7 многосоставных архитектурных 3D-моделей городских зданий с неискажёнными гранными UV
+//  - Система логики 8 городов (5 контуров потребностей, указы генплана, премия за водоводы)
 // ============================================================================
 
 import * as THREE from 'three';
@@ -12,11 +13,13 @@ import {
   applyMapScale,
   CONSTRUCTION,
   VALLEY_PRESETS,
+  STARTER_READY_HPP_SITES,
   QUALITY_PROFILES,
   WEATHER_MODES,
   TOOLS,
   MILESTONES,
 } from './config.js';
+import { CITY_FOCUS_MODES } from './city-logic.js';
 import { detectDevice, wantsSafeMode } from './device.js';
 import { probeWebGL, formatDiagReport } from './diag.js';
 import { clamp, lerp } from './noise.js';
@@ -218,8 +221,9 @@ class CascadeHydroGame {
     await nextFrame();
     buildValleyTerrain(g, this.hydro, this.selectedPresetId, z2, g);
     this.hydro.finalizeValleySetup(18);
+    this.hydro.spawnStarterReadyHPP(this.selectedPresetId);
 
-    this._setLoaderProgress(86, 'Запуск 8 городов (32 типа зданий), научного баланса воды и 300 анимаций…');
+    this._setLoaderProgress(86, 'Запуск Готовой ГЭС-1, системы логики 8 городов и 300 анимаций…');
     await nextFrame();
     this.economy = new EconomyAndCities(this.hydro, {
       onNotify: (msg, kind) => this.notify(msg, kind),
@@ -289,8 +293,9 @@ class CascadeHydroGame {
     await nextFrame();
     buildValleyTerrain(g, this.hydro, presetId, halfG, g);
     this.hydro.finalizeValleySetup(18);
+    this.hydro.spawnStarterReadyHPP(presetId);
 
-    this._setLoaderProgress(92, 'Размещение 8 городов, флота, поездов, ВЭС, СЭС, птиц и лесов…');
+    this._setLoaderProgress(92, 'Размещение Готовой ГЭС-1, 8 городов, флота, поездов, ВЭС и лесов…');
     await nextFrame();
     this.economy.resetEconomy();
     this.worldView.rebuildForNewValley();
@@ -319,9 +324,15 @@ class CascadeHydroGame {
     this.economy.creative = wantCreative;
     document.getElementById('btn-creative').classList.toggle('active', wantCreative);
 
-    const lm = VALLEY_PRESETS[this.selectedPresetId].landmarks[0];
-    const bed = this.hydro.sampleAtWorld(lm.x, lm.z).bed;
-    this.camCtrl.flyTo(lm.x, lm.z + 25 * WORLD.horizScale, lm.dist, bed);
+    const starterT = this.hydro.turbines.find((t) => t.isStarterReady) || this.hydro.turbines[0];
+    if (starterT) {
+      const dist = 132 * Math.pow(WORLD.horizScale, 0.68);
+      this.camCtrl.flyTo(starterT.wx, starterT.wz, dist, starterT.baseY);
+    } else {
+      const lm = VALLEY_PRESETS[this.selectedPresetId].landmarks[0];
+      const bed = this.hydro.sampleAtWorld(lm.x, lm.z).bed;
+      this.camCtrl.flyTo(lm.x, lm.z + 25 * WORLD.horizScale, lm.dist, bed);
+    }
 
     const tutChk = document.getElementById('chk-start-tutorial');
     if (tutChk && tutChk.checked) {
@@ -330,7 +341,7 @@ class CascadeHydroGame {
       this.tutorial.stop();
       const sc = MAP_SCALES[this.selectedScaleId];
       this.notify(
-        `≈ Бассейн «${VALLEY_PRESETS[this.selectedPresetId].name}» (${sc.short}) открыт! Водный баланс и 12 доходов — в панели справа.`,
+        `✦ Бассейн «${VALLEY_PRESETS[this.selectedPresetId].name}» (${sc.short}): перед вами Готовая ГЭС-1 — проройте к ней подводящий канал [2] или ставьте новые ГЭС [8/9/0]!`,
         'info',
       );
     }
@@ -371,17 +382,42 @@ class CascadeHydroGame {
     if (gorgeLm) {
       const damBtn = document.createElement('button');
       damBtn.className = 'lm-btn';
-      damBtn.textContent = '▲ К створу ГЭС';
+      damBtn.title = 'Перелететь к Готовой ГЭС-1 или действующему гидроузлу';
+      damBtn.textContent = '▲ К Готовой ГЭС';
       damBtn.addEventListener('click', () => {
         if (this.hydro.turbines.length > 0) {
-          const t = this.hydro.turbines[0];
-          this.camCtrl.flyTo(t.wx, t.wz, gorgeLm.dist, t.baseY);
+          const t = this.hydro.turbines.find((x) => x.isStarterReady) || this.hydro.turbines[0];
+          const zoom = 128 * Math.pow(WORLD.horizScale, 0.68);
+          this.camCtrl.flyTo(t.wx, t.wz, zoom, t.baseY);
         } else {
           const bed = this.hydro.sampleAtWorld(gorgeLm.x, gorgeLm.z).bed;
           this.camCtrl.flyTo(gorgeLm.x, gorgeLm.z, gorgeLm.dist, bed);
         }
       });
       bar.appendChild(damBtn);
+    }
+
+    // Быстрый перелёт по перспективным створам с высоким перепадом высот ΔH для новых ГЭС и каналов!
+    const siteCfg = STARTER_READY_HPP_SITES[this.selectedPresetId] || STARTER_READY_HPP_SITES.bystritsa;
+    if (siteCfg && siteCfg.prospectSites && siteCfg.prospectSites.length > 0) {
+      this._prospectNavIndex = 0;
+      const pBtn = document.createElement('button');
+      pBtn.className = 'lm-btn';
+      pBtn.title = 'Показать перспективные места с большим перепадом высот ΔH под новые каналы и Готовые ГЭС';
+      pBtn.textContent = '◈ Створы ΔH';
+      pBtn.addEventListener('click', () => {
+        const list = siteCfg.prospectSites;
+        const pr = list[this._prospectNavIndex % list.length];
+        this._prospectNavIndex = (this._prospectNavIndex + 1) % list.length;
+        const wx = pr.baseX * WORLD.horizScale;
+        const wz = pr.baseZ * WORLD.horizScale;
+        const bed = this.hydro.sampleAtWorld(wx, wz).bed;
+        const zoom = (pr.dist || 136) * Math.pow(WORLD.horizScale, 0.68);
+        this.camCtrl.flyTo(wx, wz, zoom, bed);
+        const site = this.hydro.evaluateHppSite(wx, wz, null, 'kaplan');
+        this.notify(`${pr.label} — перепад ΔH ${site.grossHead.toFixed(1)} м, потенциал ~${site.potentialMW.toFixed(1)} МВт!`, 'info');
+      });
+      bar.appendChild(pBtn);
     }
 
     // Быстрый перелёт к 3 природным истокам рек (ледниковые гроты и скальные ключи)
@@ -1057,6 +1093,12 @@ class CascadeHydroGame {
         this.selectedStruct = st;
         document.getElementById('struct-inspector').classList.remove('hidden');
         this._refreshInspector();
+      } else {
+        const site = this.hydro.evaluateHppSite(wx, wz, this.manualYaw, 'kaplan');
+        this.notify(
+          `⌖ Разведка створа: перепад ΔH ${site.grossHead.toFixed(1)} м (${site.siteGrade}) · Потенциал ~${site.potentialMW.toFixed(1)} МВт · ВБ ${site.upElev.toFixed(1)} м → НБ ${site.downElev.toFixed(1)} м`,
+          site.grossHead >= 6 ? 'good' : 'info',
+        );
       }
       return;
     }
@@ -1084,12 +1126,18 @@ class CascadeHydroGame {
         return;
       }
       this.economy.spend(res.cost);
+      if (res.structure.isTurnkeyComplex) {
+        this.worldView.rebuildTerrainMesh(true);
+        this.worldView.syncEngineeredVolumes();
+      }
       this.audio.playBuild();
       this.selectedStruct = res.structure;
       document.getElementById('struct-inspector').classList.remove('hidden');
       this._refreshInspector();
       this.notify(
-        `✦ Построена приплотинная ${res.structure.spec.name}: водоприёмник наверху, машзал в нижнем бьефе!`,
+        res.structure.isTurnkeyComplex
+          ? `✦ Возведён готовый комплекс ${res.structure.spec.name}: подведите воду каналом [2] в приёмную аванкамеру!`
+          : `✦ Встроена приплотинная ${res.structure.spec.name}: водоприёмник наверху, машзал в нижнем бьефе!`,
         'good',
       );
       return;
@@ -1219,6 +1267,16 @@ class CascadeHydroGame {
     const el = document.getElementById('probe-readout');
     if (!el) return;
 
+    // Для разведки створа [1] и Готовых ГЭС [8/9/0] показываем перепад высот ΔH и прогноз МВт в реальном времени!
+    if (this.activeToolId === 'inspect' || this.activeToolId.startsWith('turbine_')) {
+      const tType = this.activeToolId.startsWith('turbine_')
+        ? this.activeToolId.replace('turbine_', '')
+        : 'kaplan';
+      const site = this.hydro.evaluateHppSite(wx, wz, this.manualYaw, tType);
+      el.textContent = `Створ ГЭС: ΔH ${site.grossHead.toFixed(1)} м (${site.siteGrade}) · Потенциал ~${site.potentialMW.toFixed(1)} МВт · ВБ ${site.upElev.toFixed(1)} м → НБ ${site.downElev.toFixed(1)} м · Глуб. ${s.depth.toFixed(2)} м`;
+      return;
+    }
+
     let stageTxt = '';
     if (s.targetConcrete > s.concrete + 0.08) {
       const pct = Math.round(s.buildProgress * 100);
@@ -1248,24 +1306,19 @@ class CascadeHydroGame {
 
       const lineCost = this.economy.estimatePowerLineCost(c);
       const pct = Math.round(c.growthProgress * 100);
+      const happy = c.happinessPct ?? Math.round((c.satisfaction || 0.7) * 100);
       const supplyText = c.connected
         ? `◈ ${c.suppliedMW.toFixed(1)} / ${c.currentDemandMW.toFixed(1)} МВт`
         : `Не в сети (спрос ${c.currentDemandMW.toFixed(1)} МВт)`;
 
-      let extraNote = '';
-      if (c.isFlooded) {
-        extraNote = `<div class="city-note warn">! Кварталы подтоплены! Рост остановлен</div>`;
-      } else if (c.needsIrrigation) {
-        extraNote = c.irrigated
-          ? `<div class="city-note">◈ Канал орошения активен (рост ×1.82 + доход ирригации)</div>`
-          : `<div class="city-note warn">◈ Подведите канал к зелёному кольцу Агродолины</div>`;
-      } else if (c.archetype === 'smelter' || c.archetype === 'tech') {
-        extraNote = `<div class="city-note">★ Прямой промконтракт PPA ×${c.tariffBonus.toFixed(2)}</div>`;
-      }
+      const d = c.districts || { housing: 0, industry: 0, techCom: 0, civicUtil: 0 };
+      const waterBadge = c.canalAqueductConnected ? `Вода ${c.waterScore}% [Водовод]` : `Вода ${c.waterScore ?? 50}%`;
+      const logicDiag = c.bottleneckText || '';
 
       let buildNote = '';
       if (c.currentProjectLabel) {
-        buildNote = `<div class="city-note">▲ Стройка (${c.activeBuildCount} кр.): ${c.currentProjectLabel}</div>`;
+        const whyTxt = c.nextPlanReason ? ` — ${c.nextPlanReason}` : '';
+        buildNote = `<div class="city-note">▲ Стройка (${c.activeBuildCount} кр.): ${c.currentProjectLabel}${whyTxt}</div>`;
       }
 
       const cityRoutes = (this.economy.roadNetwork && this.economy.roadNetwork.routes)
@@ -1277,34 +1330,61 @@ class CascadeHydroGame {
         ? ` · Трасса ${Math.round(activeRoute.buildProgress * 100)}%`
         : ` · Трасс ${doneRoutes}/${cityRoutes.length}`;
 
+      const curFocus = c.focusMode || 'balanced';
+      const focusButtonsHtml = Object.values(CITY_FOCUS_MODES).map((m) => `
+        <button type="button" class="city-focus-btn${curFocus === m.id ? ' active' : ''}" data-focuscity="${c.id}" data-focusmode="${m.id}" title="${m.title}">${m.label}</button>
+      `).join('');
+
       card.innerHTML = `
         <div class="city-top">
           <button type="button" class="city-fly-btn" data-flycity="${c.id}" title="Плавно перелететь камерой к городу">⌖ ${c.name}</button>
-          <span class="city-badge">${c.levelName} · ${c.buildingIndices.length} зд.${roadInfo}</span>
+          <span class="city-badge">★ ${happy}% · ${c.levelName} · ${c.buildingIndices.length} зд.${roadInfo}</span>
         </div>
         <div class="city-meta">
           <span>Нас.: ${c.population.toLocaleString('ru-RU')}</span>
           <span>${supplyText}</span>
         </div>
+        <div class="city-logic-strip">
+          <span>Свет ${c.powerScore ?? 0}%</span>
+          <span>${waterBadge}</span>
+          <span>Трассы ${c.roadScore ?? 30}%</span>
+          <span>Среда ${c.comfortScore ?? 70}%</span>
+        </div>
+        <div class="city-districts-row">
+          Жильё: <b>${d.housing}</b> · Пром: <b>${d.industry}</b> · ИТ/Наука: <b>${d.techCom}</b> · Службы: <b>${d.civicUtil}</b>
+        </div>
         <div class="progress-track">
           <div class="progress-fill" style="width:${pct}%"></div>
         </div>
+        ${logicDiag ? `<div class="city-note${c.isFlooded || !c.connected ? ' warn' : ''}">${logicDiag}</div>` : ''}
         ${buildNote}
-        ${extraNote}
+        <div class="city-focus-bar" role="group" aria-label="Генплан города">
+          <span class="city-focus-lbl">Генплан:</span>
+          ${focusButtonsHtml}
+        </div>
         ${!c.connected ? `<div class="city-actions"><button class="connect-btn" data-connect="${c.id}">◈ Подключить ЛЭП (${lineCost.toLocaleString('ru-RU')} ₽)</button></div>` : ''}
       `;
       wrap.appendChild(card);
     }
 
     wrap.querySelectorAll('[data-flycity]').forEach((el) => {
-      el.addEventListener('click', () => {
+      el.addEventListener('pointerdown', () => {
         const idx = this.economy.cities.findIndex((x) => x.id === el.dataset.flycity);
         if (idx >= 0) this._flyToCityByIndex(idx);
       });
     });
 
+    wrap.querySelectorAll('[data-focuscity]').forEach((btn) => {
+      btn.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        this.economy.setCityFocusMode(btn.dataset.focuscity, btn.dataset.focusmode);
+        this._renderCityCards();
+        this._refreshHUD();
+      });
+    });
+
     wrap.querySelectorAll('[data-connect]').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('pointerdown', () => {
         const res = this.economy.connectCityGrid(btn.dataset.connect);
         if (!res.ok) this.notify(res.reason, 'warn');
         else this.audio.playBuild();
