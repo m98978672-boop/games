@@ -694,139 +694,162 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
         float wallMetersX = vFaceUv.x * spanHoriz;
         float wallMetersY = vLocalPos.y * vDims.y;
 
-        bool isRoofElem = (vPartKind > 1.5 && vPartKind < 2.5);
+        float archScale = clamp(max(vDims.x, vDims.z) / 14.0, 1.0, 2.85);
+        float dist = length(cameraPosition - vWorldPos);
+
         bool isPodiumElem = (vPartKind > 0.5 && vPartKind < 1.5);
-        bool isTrimElem = (vPartKind > 2.5);
-        bool isFlatTop = (abs(vLocalNorm.y) > 0.72) && !isRoofElem;
+        bool isRoofElem = (vPartKind > 1.5 && vPartKind < 2.5);
+        bool isTrimElem = (vPartKind > 2.5 && vPartKind < 3.5);
+        bool isGreenElem = (vPartKind > 3.5 && vPartKind < 4.5);
+        bool isAccentElem = (vPartKind > 4.5);
+        bool isSilo = abs(vStyleId - 13.0) < 0.4 || abs(vStyleId - 19.0) < 0.4 || abs(vStyleId - 32.0) < 0.4 || abs(vStyleId - 36.0) < 0.4;
+        bool isFlatTop = (abs(vLocalNorm.y) > 0.72) && !isRoofElem && !isGreenElem && !isAccentElem;
 
         vec3 baseAlbedo = vColor;
 
-        if (isRoofElem) {
-          // 1. Скатная черепичная, медная или сводчатая кровля с чётким рельефом!
-          vec2 rUv = vec2(vFaceUv.x * max(1.5, spanHoriz * 0.22), vFaceUv.y * max(1.2, vDims.z * 0.20));
-          vec3 shingle = uHasRoofTex > 0.5 ? texture2D(uRoofTex, rUv).rgb : vec3(0.75);
-          vec3 ecoTone = abs(vStyleId - 42.0) < 0.4 ? vec3(0.26, 0.54, 0.34) : vRoofCol;
-          baseAlbedo = ecoTone * (0.58 + 0.65 * shingle);
+        if (isGreenElem) {
+          // 1. Пышные кроны дворовых деревьев, партеры и зелёные сады на террасах!
+          float leafNoise = hash21(floor(vWorldPos.xz * 1.6 + vWorldPos.y * 1.3));
+          baseAlbedo = mix(vec3(0.16, 0.48, 0.22), vec3(0.30, 0.68, 0.31), leafNoise);
+        } else if (isAccentElem) {
+          // 2. Красно-белые заводские трубы ИЛИ стеклянные зенитные фонари / солнечные панели!
+          if (isSilo || vLocalPos.x > 0.25) {
+            float band = step(0.5, fract(vLocalPos.y * 5.0));
+            baseAlbedo = mix(vec3(0.93, 0.94, 0.96), vec3(0.86, 0.23, 0.16), band);
+          } else {
+            float cellGrid = step(0.88, max(fract(vFaceUv.x * 6.0), fract(vFaceUv.y * 4.0)));
+            baseAlbedo = mix(vec3(0.12, 0.36, 0.62), vec3(0.74, 0.84, 0.94), cellGrid * 0.65);
+          }
+        } else if (isRoofElem) {
+          // 3. Яркая выразительная черепичная, медная или сланцевая кровля (читается с любой высоты!)
+          vec2 rUv = vec2(vFaceUv.x * max(2.0, (spanHoriz / archScale) * 0.35), vFaceUv.y * 3.5);
+          vec3 shingle = uHasRoofTex > 0.5 ? texture2D(uRoofTex, rUv).rgb : vec3(0.78);
+          float rLum = dot(vRoofCol, vec3(0.3, 0.59, 0.11));
+          vec3 vividRoof = rLum < 0.26 ? mix(vRoofCol * 1.65, vec3(0.68, 0.28, 0.18), 0.55) : vRoofCol * 1.16;
+          vec3 ecoTone = abs(vStyleId - 42.0) < 0.4 ? vec3(0.24, 0.58, 0.34) : vividRoof;
+          float course = step(0.84, fract(vFaceUv.y * 9.0));
+          baseAlbedo = clamp(ecoTone, 0.12, 0.96) * (0.76 + 0.42 * shingle) * (1.0 - course * 0.12);
         } else if (isTrimElem) {
-          // 2. Карнизы, балконы, пилястры, лифтовые надстройки, печные трубы и шпили
-          float metalFactor = (vLocalPos.y > 0.98) ? 0.55 : 0.15;
-          baseAlbedo = mix(vColor * 0.88 + vec3(0.10), vec3(0.72, 0.76, 0.81), metalFactor);
-          float seam = step(0.86, fract(wallMetersX * 0.45));
-          baseAlbedo *= (1.0 - seam * 0.08);
+          // 4. Белокаменные карнизы, колонны портиков, пилястры, балконы и шпили
+          float metalFactor = (vLocalPos.y > 0.98) ? 0.45 : 0.10;
+          baseAlbedo = mix(vec3(0.91, 0.89, 0.85), vec3(0.76, 0.80, 0.86), metalFactor);
         } else if (isFlatTop) {
-          // 3. Плоские кровли с гравийной отсыпкой и контурным парапетом
-          vec3 roofGrain = uHasRoofTex > 0.5 ? texture2D(uRoofTex, vWorldPos.xz * 0.18).rgb : vec3(0.56);
-          baseAlbedo = mix(vec3(0.42, 0.45, 0.49), vColor * 0.72, 0.32) * (0.72 + 0.45 * roofGrain);
+          // 5. Плоские кровли с аккуратной светлой отсыпкой
+          vec3 roofGrain = uHasRoofTex > 0.5 ? texture2D(uRoofTex, vWorldPos.xz * 0.12).rgb : vec3(0.62);
+          baseAlbedo = mix(vec3(0.50, 0.53, 0.57), vColor * 0.82, 0.35) * (0.82 + 0.30 * roofGrain);
         } else if (isPodiumElem) {
-          // 4. Каменный рустованный цоколь / стилобат первых этажей
-          float rustJointY = step(0.84, fract(wallMetersY * 1.15));
-          float rustJointX = step(0.90, fract(wallMetersX * 0.55));
-          vec3 stoneBase = mix(vec3(0.30, 0.32, 0.36), vColor * 0.68, 0.48);
+          // 6. Гранитный рустованный цоколь / стилобат первых этажей
+          float rustJointY = step(0.82, fract((wallMetersY / archScale) * 1.15));
+          float rustJointX = step(0.88, fract((wallMetersX / archScale) * 0.55));
+          vec3 stoneBase = mix(vec3(0.36, 0.37, 0.40), vColor * 0.74, 0.42);
           baseAlbedo = stoneBase * (1.0 - max(rustJointX, rustJointY) * 0.18);
         } else {
-          // 5. Основной архитектурный фасад из 1024×1024 мега-атласа в точных локальных метрах (без растяжений при повороте!)
+          // 7. Чистая архитектурная кладка/штукатурка фасада без субпиксельного шума!
+          vec3 brightWall = clamp(vColor * 1.12 + vec3(0.04), 0.16, 0.95);
           if (uHasAtlas > 0.5) {
             float tileIdx = mod(floor(vStyleId + 0.5), 64.0);
             vec2 tileOrigin = vec2(mod(tileIdx, 8.0), floor(tileIdx / 8.0)) / 8.0;
-            vec2 localTileUv = fract(vec2(wallMetersX * 0.11, wallMetersY * 0.11)) * (0.86 / 8.0) + (0.07 / 8.0);
+            vec2 localTileUv = fract(vec2(wallMetersX, wallMetersY) / (archScale * 14.0)) * (0.80 / 8.0) + (0.10 / 8.0);
             vec3 atlasTex = texture2D(uFacadeAtlas, tileOrigin + localTileUv).rgb;
-            baseAlbedo = mix(baseAlbedo, baseAlbedo * (0.52 + 0.88 * atlasTex), 0.78);
+            float stoneGrain = dot(atlasTex, vec3(0.333));
+            brightWall *= (0.91 + 0.18 * stoneGrain);
           }
-          float floorSlab = step(0.90, fract(wallMetersY / 3.25));
-          float cornerQuoin = smoothstep(0.90, 0.97, max(vFaceUv.x, 1.0 - vFaceUv.x));
-          float aoBottom = 1.0 - (1.0 - smoothstep(0.0, 0.16, vLocalPos.y)) * 0.18;
-          baseAlbedo = baseAlbedo * aoBottom * (1.0 - floorSlab * 0.10 + cornerQuoin * 0.08);
+          float storyH = 3.35 * archScale;
+          float floorSlab = step(0.89, fract(wallMetersY / storyH));
+          float cornerQuoin = smoothstep(0.91, 0.97, max(vFaceUv.x, 1.0 - vFaceUv.x));
+          float aoBottom = 1.0 - (1.0 - smoothstep(0.0, 0.16, vLocalPos.y)) * 0.15;
+          baseAlbedo = mix(brightWall * aoBottom * (1.0 - floorSlab * 0.11), vec3(0.93, 0.91, 0.88), cornerQuoin * 0.55);
         }
 
-        // Реалистичное освещение солнцем + полусферой неба + мягкий AO
-        float hemi = 0.34 + 0.28 * max(0.0, N.y);
-        vec3 litWall = baseAlbedo * (uSunColor * NdotL * 0.92 + uSkyColor * hemi);
+        // Реалистичное освещение солнцем + полусферой неба
+        float hemi = 0.38 + 0.30 * max(0.0, N.y);
+        vec3 litWall = baseAlbedo * (uSunColor * NdotL * 0.94 + uSkyColor * hemi);
 
         // Поэтапная стройка (vBuildProg < 0.96): железобетонный каркас и оранжевая защитная сетка на верхних ярусах!
         float cladLine = vBuildProg < 0.96 ? clamp((vBuildProg - 0.08) / 0.86, 0.08, 1.02) : 2.0;
         bool isRawFrame = (vBuildProg < 0.96) && (vLocalPos.y > cladLine * 0.72);
         if (isRawFrame) {
-          float slabBand = step(0.82, fract(wallMetersY * 0.32));
-          float colBand = step(0.84, fract(wallMetersX * 0.26));
-          vec3 rawConc = mix(vec3(0.55, 0.58, 0.62), vec3(0.74, 0.77, 0.80), max(slabBand, colBand));
-          float safetyNet = smoothstep(0.76, 0.96, vLocalPos.y) * (0.5 + 0.5 * step(0.5, fract(wallMetersY * 0.9)));
-          rawConc = mix(rawConc, vec3(0.95, 0.48, 0.12), safetyNet * 0.65);
-          litWall = rawConc * (uSunColor * NdotL * 0.85 + uSkyColor * 0.34);
+          float slabBand = step(0.80, fract((wallMetersY / archScale) * 0.32));
+          float colBand = step(0.82, fract((wallMetersX / archScale) * 0.26));
+          vec3 rawConc = mix(vec3(0.58, 0.61, 0.65), vec3(0.78, 0.80, 0.83), max(slabBand, colBand));
+          float safetyNet = smoothstep(0.74, 0.96, vLocalPos.y) * (0.5 + 0.5 * step(0.5, fract((wallMetersY / archScale) * 0.9)));
+          rawConc = mix(rawConc, vec3(0.96, 0.48, 0.12), safetyNet * 0.70);
+          litWall = rawConc * (uSunColor * NdotL * 0.86 + uSkyColor * 0.36);
         }
 
-        // Витрины магазинов на первом этаже-стилобате (isPodiumElem)
-        bool isSilo = abs(vStyleId - 13.0) < 0.4 || abs(vStyleId - 19.0) < 0.4 || abs(vStyleId - 32.0) < 0.4 || abs(vStyleId - 36.0) < 0.4;
-        if (!isRawFrame && !isSilo && isPodiumElem && abs(vLocalNorm.y) < 0.35 && vDims.y > 10.5) {
-          float shopBays = max(2.0, floor(spanHoriz / 4.2));
+        // Тёплые светящиеся витрины магазинов и кафе на первом этаже (isPodiumElem)
+        if (!isRawFrame && !isSilo && isPodiumElem && abs(vLocalNorm.y) < 0.35 && vDims.y > 7.5 * archScale) {
+          float shopBays = max(2.0, floor(spanHoriz / (4.4 * archScale)));
           float sxFrac = fract(vFaceUv.x * shopBays);
           float syFrac = vFaceUv.y;
-          float inShop = step(0.12, sxFrac) * step(sxFrac, 0.88) * step(0.12, syFrac) * step(syFrac, 0.78);
+          float inShop = step(0.14, sxFrac) * step(sxFrac, 0.86) * step(0.14, syFrac) * step(syFrac, 0.80);
           float edgeGuard = step(0.08, vFaceUv.x) * step(vFaceUv.x, 0.92);
           if (inShop * edgeGuard > 0.5) {
-            float awning = smoothstep(0.68, 0.78, syFrac);
-            vec3 shopDay = mix(vec3(0.12, 0.20, 0.28), uSkyColor * 0.85, 0.35);
-            vec3 shopNight = vec3(1.0, 0.84, 0.52) * (vPowered > 0.5 ? 1.35 : 0.25);
-            vec3 shopPane = mix(shopDay, shopNight, uNightFactor * step(0.95, vBuildProg));
-            litWall = mix(shopPane, vRoofCol * 0.95, awning * 0.85);
+            float awning = smoothstep(0.66, 0.78, syFrac);
+            vec3 shopDay = mix(vec3(0.14, 0.24, 0.34), vec3(0.98, 0.82, 0.48), 0.32);
+            vec3 shopNight = vec3(1.0, 0.84, 0.50) * (vPowered > 0.5 ? 1.42 : 0.25);
+            vec3 shopPane = mix(shopDay, shopNight, max(0.28, uNightFactor) * step(0.95, vBuildProg));
+            litWall = mix(shopPane, clamp(vRoofCol * 1.25, 0.2, 0.95), awning * 0.85);
           }
         }
 
-        // Чёткие архитектурные окна с рамами, импостами, шторами и бликом неба/солнца (в локальных координатах грани!)
+        // Крупные выразительные архитектурные окна с белыми наличниками (чётко читаются на 0.8, 5 и 10 км!)
         bool isGlassTower = abs(vStyleId - 8.0) < 0.4 || abs(vStyleId - 9.0) < 0.4 || abs(vStyleId - 10.0) < 0.4 || abs(vStyleId - 43.0) < 0.4;
-        if (!isRawFrame && !isSilo && vPartKind < 0.5 && abs(vLocalNorm.y) < 0.35) {
-          float bayWidthM = isGlassTower ? 2.2 : 2.95;
-          float storyHeightM = isGlassTower ? 3.4 : 3.25;
-          float colsCount = max(2.0, floor(spanHoriz / bayWidthM));
-          float rowsCount = max(1.0, floor((vDims.y * 0.78) / storyHeightM));
+        float winLod = 1.0 - smoothstep(420.0 * archScale, 1350.0 * archScale, dist);
+        if (!isRawFrame && !isSilo && vPartKind < 0.5 && abs(vLocalNorm.y) < 0.35 && winLod > 0.04) {
+          float bayWidthM = (isGlassTower ? 2.4 : 3.25) * archScale;
+          float storyHeightM = (isGlassTower ? 3.5 : 3.35) * archScale;
+          float colsCount = clamp(floor(spanHoriz / bayWidthM + 0.35), 2.0, 12.0);
+          float rowsCount = clamp(floor((vDims.y * 0.74) / storyHeightM + 0.35), 1.0, 18.0);
 
           vec2 winGrid = vec2(vFaceUv.x * colsCount, vFaceUv.y * rowsCount);
           vec2 cell = floor(winGrid);
           vec2 wf = fract(winGrid);
 
-          float padX = isGlassTower ? 0.08 : 0.19;
-          float padY = isGlassTower ? 0.11 : 0.21;
+          float padX = isGlassTower ? 0.09 : 0.20;
+          float padY = isGlassTower ? 0.12 : 0.21;
           float inWin = step(padX, wf.x) * step(wf.x, 1.0 - padX) * step(padY, wf.y) * step(wf.y, 1.0 - padY);
-          inWin *= step(0.05, vFaceUv.x) * step(vFaceUv.x, 0.95) * step(0.05, vFaceUv.y) * step(vFaceUv.y, 0.95);
+          inWin *= step(0.06, vFaceUv.x) * step(vFaceUv.x, 0.94) * step(0.05, vFaceUv.y) * step(vFaceUv.y, 0.95);
 
           if (inWin > 0.5) {
-            float borderW = isGlassTower ? 0.035 : 0.055;
+            float borderW = isGlassTower ? 0.045 : 0.075;
             float innerPane = step(padX + borderW, wf.x) * step(wf.x, 1.0 - padX - borderW)
                             * step(padY + borderW, wf.y) * step(wf.y, 1.0 - padY - borderW);
             float frame = 1.0 - innerPane;
-            float mullionV = 1.0 - smoothstep(0.0, 0.025, abs(wf.x - 0.5));
-            float transomH = isGlassTower ? 0.0 : (1.0 - smoothstep(0.0, 0.024, abs(wf.y - 0.58)));
-            float recessShadow = 1.0 - (1.0 - smoothstep(1.0 - padY - 0.14, 1.0 - padY, wf.y)) * 0.18;
-            float frameMask = clamp(frame + max(mullionV, transomH) * 0.65, 0.0, 1.0);
+            float mullionV = 1.0 - smoothstep(0.0, 0.032, abs(wf.x - 0.5));
+            float frameMask = clamp(frame + mullionV * 0.65, 0.0, 1.0);
 
             vec3 viewVec = normalize(cameraPosition - vWorldPos);
             vec3 halfVec = normalize(uSunDir + viewVec);
-            float glassSpec = pow(max(0.0, dot(N, halfVec)), 48.0) * (1.0 - uNightFactor);
+            float glassSpec = pow(max(0.0, dot(N, halfVec)), 42.0) * (1.0 - uNightFactor);
             float fresnel = pow(1.0 - max(0.0, dot(N, viewVec)), 3.0);
 
             float rnd = hash21(cell + vStyleId * 3.7);
             float curtainRnd = hash21(cell + 41.3);
-            vec3 interiorDay = mix(vec3(0.08, 0.15, 0.24), vec3(0.24, 0.26, 0.29), step(0.62, curtainRnd) * 0.55);
-            vec3 skyRefl = mix(interiorDay, uSkyColor * 1.04, clamp(0.32 + fresnel * 0.52 + wf.y * 0.20, 0.0, 0.88));
-            vec3 dayGlass = skyRefl * recessShadow + uSunColor * glassSpec * 0.55;
+            vec3 interiorDay = mix(vec3(0.07, 0.16, 0.28), vec3(0.32, 0.28, 0.22), step(0.62, curtainRnd) * 0.55);
+            vec3 skyRefl = mix(interiorDay, uSkyColor * 1.08, clamp(0.34 + fresnel * 0.52 + wf.y * 0.18, 0.0, 0.88));
+            vec3 dayGlass = skyRefl + uSunColor * glassSpec * 0.58;
 
             float readyLight = vBuildProg >= 0.95 ? 1.0 : 0.0;
-            float onProb = vPowered > 0.5 ? 0.78 : 0.05;
-            float windowLit = step(1.0 - onProb, rnd) * uNightFactor * readyLight;
+            float onProb = vPowered > 0.5 ? 0.80 : 0.06;
+            float windowLit = step(1.0 - onProb, rnd) * max(uNightFactor, 0.16 * step(0.76, rnd)) * readyLight;
             vec3 nightHue = (abs(vStyleId - 20.0) < 1.2)
-              ? vec3(0.22, 0.90, 1.0)
-              : mix(vec3(1.0, 0.82, 0.46), vec3(0.76, 0.91, 1.0), step(0.72, curtainRnd));
-            vec3 paneCol = mix(dayGlass, nightHue * (vPowered > 0.5 ? 1.44 : 0.38), windowLit);
-            vec3 frameCol = isGlassTower ? vec3(0.20, 0.25, 0.31) : vec3(0.86, 0.87, 0.89);
-            litWall = mix(paneCol, frameCol * (0.45 + 0.55 * NdotL), frameMask * 0.82);
+              ? vec3(0.24, 0.92, 1.0)
+              : mix(vec3(1.0, 0.83, 0.46), vec3(0.78, 0.92, 1.0), step(0.72, curtainRnd));
+            vec3 paneCol = mix(dayGlass, nightHue * (vPowered > 0.5 ? 1.42 : 0.38), windowLit);
+            vec3 frameCol = isGlassTower ? vec3(0.22, 0.28, 0.35) : vec3(0.94, 0.93, 0.90);
+            vec3 fullWin = mix(paneCol, frameCol * (0.50 + 0.50 * NdotL), frameMask * 0.88);
+            litWall = mix(litWall, fullWin, winLod);
           }
         }
 
-        // Красный сигнальный огонь авиабезопасности на вершинах шпилей небоскрёбов ночью!
-        if (isTrimElem && vLocalPos.y > 1.08 && vDims.y > 28.0) {
+        // Подсветка стеклянной короны небоскрёбов и сигнальный огонь шпилей
+        if (isAccentElem && !isSilo && vLocalPos.x <= 0.25) {
+          litWall += vec3(0.35, 0.78, 1.0) * (0.22 + 0.85 * uNightFactor) * vPowered;
+        }
+        if (isTrimElem && vLocalPos.y > 1.08 && vDims.y > 24.0) {
           litWall = mix(litWall, vec3(1.0, 0.18, 0.12) * 1.6, uNightFactor * vPowered);
         }
-
-        float dist = length(cameraPosition - vWorldPos);
         float fogF = 1.0 - exp(-pow(dist * uFogDensity, 1.62));
         litWall = mix(litWall, uFogColor, clamp(fogF, 0.0, 0.82));
 
@@ -1025,33 +1048,40 @@ export function createHighwayRoadMaterial() {
           float rut = 1.0 - smoothstep(0.0, 0.14, abs(across - 0.42)) * 0.16;
           col = mix(gravelCore * rut, earthEdge, smoothstep(0.72, 1.0, across));
         } else {
-          // 0.0 (шоссе), 1.0 (мостовой пролёт), 3.0 (городской проспект)
+          // 0.0 (междугороднее шоссе), 1.0 (мостовой пролёт), 3.0 (спокойная городская улица с тротуарами БЕЗ кричащей трассовой разметки!)
           bool isBridge = (vRoadKind > 0.5 && vRoadKind < 1.5);
+          bool isCityStreet = (vRoadKind > 2.5);
           vec3 asphalt = isBridge
             ? (vec3(0.28, 0.31, 0.35) + grain * 0.7)
-            : (vec3(0.20, 0.22, 0.25) + grain);
+            : (isCityStreet ? (vec3(0.26, 0.28, 0.31) + grain * 0.5) : (vec3(0.20, 0.22, 0.25) + grain));
 
-          // Деформационные швы моста или текстура колеи накатанного асфальта
           if (isBridge) {
             float joint = step(0.96, fract(vUv.y * 0.055));
             asphalt -= joint * 0.07;
           } else {
             float tireTrack = smoothstep(0.0, 0.16, abs(across - 0.40));
-            asphalt *= (0.92 + 0.08 * tireTrack);
+            asphalt *= (0.94 + 0.06 * tireTrack);
           }
 
-          // Обочина: бетонный бордюр на мосту или аккуратная гравийная бровка на земле
-          vec3 shoulderCol = isBridge ? vec3(0.74, 0.78, 0.82) : vec3(0.56, 0.53, 0.46);
-          float shoulderMask = smoothstep(0.80, 0.86, across);
+          // Для городских улиц — светлые каменные пешеходные тротуары по краям и отсутствие шоссейных полос!
+          vec3 shoulderCol = isCityStreet
+            ? vec3(0.75, 0.74, 0.71)
+            : (isBridge ? vec3(0.74, 0.78, 0.82) : vec3(0.56, 0.53, 0.46));
+          float shoulderStart = isCityStreet ? 0.72 : 0.80;
+          float shoulderMask = smoothstep(shoulderStart, shoulderStart + 0.06, across);
           col = mix(asphalt, shoulderCol, shoulderMask);
 
-          // Чёткая дорожная разметка: прерывистая осевая и сплошные краевые полосы безопасности
-          float centerDash = (1.0 - smoothstep(0.0, 0.042, across)) * step(0.42, fract(vUv.y * 0.085));
-          float edgeLine = (1.0 - smoothstep(0.0, 0.032, abs(across - 0.76)));
-          vec3 paintCol = vec3(0.95, 0.96, 0.94);
-          vec3 centerCol = isBridge ? vec3(0.98, 0.84, 0.32) : paintCol;
-          col = mix(col, paintCol, edgeLine * 0.82);
-          col = mix(col, centerCol, centerDash * 0.90);
+          if (!isCityStreet) {
+            float centerDash = (1.0 - smoothstep(0.0, 0.042, across)) * step(0.42, fract(vUv.y * 0.085));
+            float edgeLine = (1.0 - smoothstep(0.0, 0.032, abs(across - 0.76)));
+            vec3 paintCol = vec3(0.95, 0.96, 0.94);
+            vec3 centerCol = isBridge ? vec3(0.98, 0.84, 0.32) : paintCol;
+            col = mix(col, paintCol, edgeLine * 0.82);
+            col = mix(col, centerCol, centerDash * 0.90);
+          } else {
+            float curbLine = 1.0 - smoothstep(0.0, 0.025, abs(across - 0.72));
+            col *= (1.0 - curbLine * 0.16);
+          }
         }
 
         vec3 lit = col * (uSunColor * NdotL * 0.88 + uSkyColor * 0.34);

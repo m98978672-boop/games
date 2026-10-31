@@ -1,6 +1,7 @@
-// Чёткие векторные SVG-иконки для всех 14 инженерных инструментов, обучения и загрузчика карт
+// Чёткие векторные SVG-иконки для инженерных инструментов: Целая ГЭС, каналы, разведка ΔH и снабжение городов
 export const SVG_ICONS = {
   inspect: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#38bdf8" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3M11 8v6M8 11h6"/></svg>`,
+  build_hpp: `<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#fbbf24" stroke-width="2"><path d="M2 19V6h5l5 7V9h10v10H2z" fill="rgba(56,189,248,0.18)" stroke="#38bdf8"/><path d="M13 11l-2 4h3l-1.5 4" stroke="#fde047" stroke-width="2.2"/><path d="M2 21h20" stroke="#34d399"/></svg>`,
   canal_dig: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#22d3ee" stroke-width="2"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/><path d="M2 21h20"/></svg>`,
   canal_liner: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#cbd5e1" stroke-width="2"><path d="M2 7h3l3 10h8l3-10h3"/><path d="M7 13h10"/><path d="M5 19h14" stroke="#38bdf8"/></svg>`,
   earth_dam: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#d97706" stroke-width="2"><path d="M2 19L9 7h6l7 12H2z"/><path d="M6 19l4-7h4l4 7"/></svg>`,

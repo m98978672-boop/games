@@ -1117,8 +1117,8 @@ html, body, #app {
 
 .hotbar {
   display: grid;
-  grid-template-columns: repeat(17, minmax(54px, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(13, minmax(64px, 1fr));
+  gap: 5px;
   overflow-x: auto;
   padding-bottom: 2px;
 }
@@ -1306,10 +1306,92 @@ html, body, #app {
   .side-panel { top: 104px; max-height: calc(100vh - 246px); }
 }
 
+.tool-slot.tool-slot-featured {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.28), rgba(14, 116, 144, 0.55));
+  border-color: rgba(251, 191, 36, 0.85);
+  box-shadow: 0 0 12px rgba(251, 191, 36, 0.26);
+}
+
+.tool-slot.tool-slot-featured .tool-name {
+  color: #fef08a;
+  font-weight: 800;
+}
+
+.tool-slot.tool-slot-featured.active {
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.52), rgba(2, 132, 199, 0.92));
+  border-color: #fde047;
+  box-shadow: 0 0 18px rgba(250, 204, 21, 0.55);
+}
+
+.city-markers-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 12;
+  overflow: hidden;
+}
+
+.city-world-badge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(9, 18, 32, 0.82);
+  border: 1px solid rgba(125, 211, 252, 0.42);
+  color: #f8fafc;
+  font-size: 10.5px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.city-world-badge:hover {
+  background: rgba(14, 42, 68, 0.95);
+  border-color: #fde047;
+}
+
+.city-world-badge .cwb-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.city-world-badge .cwb-title {
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.city-world-badge .cwb-meta {
+  color: #94a3b8;
+  font-size: 9.5px;
+}
+
+.city-world-badge .cwb-ind {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.city-world-badge .cwb-ind.ok { color: #34d399; }
+.city-world-badge .cwb-ind.warn { color: #fbbf24; }
+.city-world-badge .cwb-ind.muted { color: #64748b; }
+.city-world-badge .cwb-hap {
+  color: #7dd3fc;
+  font-weight: 600;
+  font-size: 9.5px;
+}
+
 @media (max-width: 960px) {
   .scale-grid, .scenario-grid { grid-template-columns: 1fr; }
   .side-panel { width: 268px; max-height: 44vh; }
   .tutorial-card { width: 300px; }
   .landmarks-bar { display: none; }
-  .hotbar { grid-template-columns: repeat(17, 66px); }
+  .hotbar { grid-template-columns: repeat(13, 68px); }
 }

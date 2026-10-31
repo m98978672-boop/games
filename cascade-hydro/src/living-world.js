@@ -400,22 +400,23 @@ export class LivingWorldSystem {
     const rivers = getScaledValleyRivers(this.hydro.presetId);
     const mainSpine = rivers.main;
 
-    // 1. Внутригородской транспорт по кольцевым бульварам самих городов
+    // 1. Внутригородской транспорт строго по прямоугольной сетке улиц внутри кварталов!
     this.cityCars = [];
     for (let i = 0; i < 28; i++) {
       const city = CITY_DEFS[i % CITY_DEFS.length];
       if (!city) continue;
-      const ringRadius = city.plateauRadius * (0.34 + (i % 2) * 0.20);
+      const streetStep = city.plateauRadius * 0.25;
+      const loopHalf = streetStep * ((i % 2 === 0) ? 0.5 : 1.5);
       const shade = pickCatalogShade('fleet_machinery', i * 3 + 7);
       this.cityCars.push({
         cx: city.x,
         cz: city.z,
-        ringR: ringRadius,
-        angle: rng() * Math.PI * 2,
-        omega: (0.22 + rng() * 0.14) * (i % 2 === 0 ? 1 : -1),
-        sx: 1.55 * propScale,
-        sy: 1.10 * propScale,
-        sz: 3.10 * propScale,
+        ringR: loopHalf,
+        angle: rng() * 4.0,
+        omega: (0.14 + rng() * 0.10) * (i % 2 === 0 ? 1 : -1),
+        sx: 1.65 * propScale,
+        sy: 1.15 * propScale,
+        sz: 3.25 * propScale,
         color: new THREE.Color(shade.r, shade.g, shade.b),
       });
     }
@@ -567,19 +568,30 @@ export class LivingWorldSystem {
     let lightOut = 0;
     for (let i = 0; i < this.cityCars.length; i++) {
       const c = this.cityCars[i];
-      c.angle = (c.angle + c.omega * dt) % (Math.PI * 2);
-      const wx = c.cx + Math.cos(c.angle) * c.ringR;
-      const wz = c.cz + Math.sin(c.angle) * c.ringR;
+      c.angle = (((c.angle + c.omega * dt) % 4.0) + 4.0) % 4.0;
+      const seg = Math.floor(c.angle);
+      const u = (c.angle - seg) * 2.0 - 1.0; // -1..+1 вдоль прямой улицы квартала
+      const L = c.ringR;
+      const dirSign = Math.sign(c.omega) || 1;
+      let dx = 0;
+      let dz = 0;
+      let tangentYaw = 0;
+      if (seg === 0) {
+        dx = u * L; dz = -L; tangentYaw = dirSign > 0 ? Math.PI * 0.5 : -Math.PI * 0.5;
+      } else if (seg === 1) {
+        dx = L; dz = u * L; tangentYaw = dirSign > 0 ? 0 : Math.PI;
+      } else if (seg === 2) {
+        dx = -u * L; dz = L; tangentYaw = dirSign > 0 ? -Math.PI * 0.5 : Math.PI * 0.5;
+      } else {
+        dx = -L; dz = -u * L; tangentYaw = dirSign > 0 ? Math.PI : 0;
+      }
+      const wx = c.cx + dx;
+      const wz = c.cz + dz;
       if (Math.abs(wx) > WORLD.half * 0.94 || Math.abs(wz) > WORLD.half * 0.94) continue;
 
       const samp = this.hydro.sampleAtWorld(wx, wz);
-      // Если точка влажная или на крутом склоне — пропускаем, никогда не выезжаем в воду или горы!
       if (samp.depth > 0.08) continue;
 
-      const tangentYaw = Math.atan2(
-        -Math.sin(c.angle) * Math.sign(c.omega),
-        Math.cos(c.angle) * Math.sign(c.omega),
-      );
       const roadY = samp.bed + c.sy * 0.52;
 
       this._dummy.position.set(wx, roadY, wz);

@@ -830,13 +830,13 @@ export class WorldView {
 
     // 7 многосоставных архитектурных 3D-геометрий зданий с локальными гранными UV и кровельной инженерией!
     this.archPoolMap = {
-      gable: this._createArchPool('gable', createGableHouseGeometry(), 320),
+      gable: this._createArchPool('gable', createGableHouseGeometry(), 460),
       box:   this._createArchPool('box',   createMidblockUrbanGeometry(), maxB),
-      step:  this._createArchPool('step',  createSteppedTerraceGeometry(), 280),
-      tower: this._createArchPool('tower', createSkyscraperTowerGeometry(), 260),
-      arch:  this._createArchPool('arch',  createArchedPavilionGeometry(), 240),
-      spire: this._createArchPool('spire', createSpireMonumentGeometry(), 200),
-      silo:  this._createArchPool('silo',  createIndustrialSiloClusterGeometry(), 280),
+      step:  this._createArchPool('step',  createSteppedTerraceGeometry(), 380),
+      tower: this._createArchPool('tower', createSkyscraperTowerGeometry(), 380),
+      arch:  this._createArchPool('arch',  createArchedPavilionGeometry(), 360),
+      spire: this._createArchPool('spire', createSpireMonumentGeometry(), 320),
+      silo:  this._createArchPool('silo',  createIndustrialSiloClusterGeometry(), 360),
     };
     this.cityArchPools = Object.values(this.archPoolMap);
 
@@ -909,21 +909,24 @@ export class WorldView {
     while (this.cityDisksGroup.children.length > 0) {
       this.cityDisksGroup.remove(this.cityDisksGroup.children[0]);
     }
+    // Аккуратная каменная ратушная площадь ТОЛЬКО в центральном сквере (0,0) каждого города —
+    // НИКАКОГО гигантского круга с дорожной разметкой под всем городом!
     for (const c of this.economy.cities) {
-      const diskGeo = new THREE.CircleGeometry(c.plateauRadius * 0.90, 44);
+      const plazaSpan = (c.streetStep || c.plateauRadius * 0.25) * 0.84;
+      const diskGeo = new THREE.PlaneGeometry(plazaSpan, plazaSpan);
       diskGeo.rotateX(-Math.PI * 0.5);
-      const diskCol = c.archetype === 'agro' ? 0xa3be8c
-        : (c.archetype === 'resort' ? 0xe5d5b7 : 0xd8dee9);
+      const diskCol = c.archetype === 'agro' ? 0xb5caa0
+        : (c.archetype === 'resort' ? 0xe8d9be : 0xdde3ec);
       const diskMat = new THREE.MeshLambertMaterial({
         color: diskCol,
         map: this.textures.urbanPlaza || this.textures.concreteMap,
         transparent: true,
-        opacity: 0.88,
+        opacity: 0.90,
         depthWrite: false,
       });
       const disk = new THREE.Mesh(diskGeo, diskMat);
       const centerBed = this.hydro.sampleAtWorld(c.x, c.z).bed;
-      disk.position.set(c.x, centerBed + 0.14 * WORLD.elevScale, c.z);
+      disk.position.set(c.x, centerBed + 0.12 * WORLD.elevScale, c.z);
       disk.renderOrder = 1;
       disk.frustumCulled = false;
       disk.matrixAutoUpdate = false;
@@ -1265,6 +1268,32 @@ export class WorldView {
     this.flowArrow.add(shaft, cone, intakeBall, upperPoolRing, lowerPoolRing);
     this.flowArrow.visible = false;
     this.cursorGroup.add(this.flowArrow);
+
+    // 3D-голограмма предпросмотра единого комплекса «ЦЕЛАЯ ГЭС» под курсором при выбранном [2]!
+    this.hppGhost = new THREE.Group();
+    this.hppGhostMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      transparent: true,
+      opacity: 0.44,
+      depthWrite: false,
+    });
+    const gDam = new THREE.Mesh(new THREE.BoxGeometry(6.8, 12.0, 30.0), this.hppGhostMat);
+    gDam.position.set(-1.2, 6.0, 0);
+    const gWingL = new THREE.Mesh(new THREE.BoxGeometry(11.0, 8.0, 1.5), this.hppGhostMat);
+    gWingL.position.set(-10.0, 4.0, -9.8);
+    const gWingR = gWingL.clone();
+    gWingR.position.z = 9.8;
+    const gHall = new THREE.Mesh(new THREE.BoxGeometry(10.6, 7.6, 19.2), this.hppGhostMat);
+    gHall.position.set(11.0, 3.8, -1.8);
+    this.hppGhost.add(gDam, gWingL, gWingR, gHall);
+    for (const pz of [-6.0, -2.0, 2.0, 6.0]) {
+      const gPipe = new THREE.Mesh(new THREE.CylinderGeometry(1.15, 1.15, 12.0, 10), this.hppGhostMat);
+      gPipe.position.set(4.5, 6.2, pz - 1.8);
+      gPipe.rotation.z = 0.92;
+      this.hppGhost.add(gPipe);
+    }
+    this.hppGhost.visible = false;
+    this.cursorGroup.add(this.hppGhost);
 
     this.scene.add(this.cursorGroup);
   }
@@ -1897,192 +1926,212 @@ export class WorldView {
     // Расстояние смещения машзала в нижний бьеф (+X вдоль потока!)
     const hallOffsetX = Math.max(8.8 * uScale, Math.hypot(t.hallWx - t.wx, t.hallWz - t.wz));
 
-    // --- А. СТАНЦИОННАЯ НАПОРНАЯ СЕКЦИЯ ПЛОТИНЫ И ВОДОПРИЁМНИК (x = 0) ---
+    const isFullHpp = t.type === 'hpp' || t.isTurnkeyComplex;
+    const spanZ = isFullHpp ? 18.6 * uScale : 12.6 * uScale;
+    const hallCenterZ = isFullHpp ? -2.2 * uScale : 0;
+
+    // --- А. СТАНЦИОННАЯ НАПОРНАЯ ПЛОТИНА И 4-СЕКЦИОННЫЙ ВОДОПРИЁМНИК ЦЕЛОЙ ГЭС (x = 0) ---
     const damPillar = new THREE.Mesh(
-      new THREE.BoxGeometry(6.8 * uScale, damHeight, 12.6 * uScale),
+      new THREE.BoxGeometry(7.2 * uScale, damHeight, spanZ),
       concMat,
     );
-    damPillar.position.set(-1.2 * uScale, tailBedY + damHeight * 0.5, 0);
+    damPillar.position.set(-1.2 * uScale, tailBedY + damHeight * 0.5, hallCenterZ);
     damPillar.castShadow = !!this.profile.shadows;
     damPillar.receiveShadow = !!this.profile.shadows;
 
-    // Бычки водоприёмника и мелкая стальная сороудерживающая решётка со стороны ВБ (-X)
     const intakeH = Math.max(4.8 * uScale, damHeight * 0.72);
     const trashRack = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6 * uScale, intakeH, 9.6 * uScale),
+      new THREE.BoxGeometry(0.65 * uScale, intakeH, spanZ * 0.84),
       new THREE.MeshLambertMaterial({ color: 0x1e293b, map: this.textures.steel }),
     );
-    trashRack.position.set(-4.7 * uScale, damCrestY - intakeH * 0.52, 0);
+    trashRack.position.set(-4.9 * uScale, damCrestY - intakeH * 0.52, hallCenterZ);
 
-    for (const pz of [-4.8, 0, 4.8]) {
+    const pierCoords = isFullHpp ? [-8.4, -4.2, 0, 4.2, 8.4] : [-4.8, 0, 4.8];
+    for (const pz of pierCoords) {
       const pier = new THREE.Mesh(
-        new THREE.BoxGeometry(2.4 * uScale, intakeH + 1.8 * uScale, 1.1 * uScale),
+        new THREE.BoxGeometry(2.6 * uScale, intakeH + 1.8 * uScale, 1.15 * uScale),
         darkConcMat,
       );
-      pier.position.set(-4.5 * uScale, damCrestY - intakeH * 0.45 + 0.6 * uScale, pz * uScale);
+      pier.position.set(-4.6 * uScale, damCrestY - intakeH * 0.45 + 0.6 * uScale, hallCenterZ + pz * uScale);
       grp.add(pier);
     }
 
     // Козловой кран водоприёмника на гребне напорного фронта
     const gantryTrolley = new THREE.Group();
-    gantryTrolley.position.set(-1.2 * uScale, damCrestY, 0);
-    const gLegL = new THREE.Mesh(new THREE.BoxGeometry(0.6 * uScale, 3.8 * uScale, 0.6 * uScale), craneYellow);
-    gLegL.position.set(-1.8 * uScale, 1.9 * uScale, 0);
+    gantryTrolley.position.set(-1.2 * uScale, damCrestY, hallCenterZ);
+    const gLegL = new THREE.Mesh(new THREE.BoxGeometry(0.65 * uScale, 4.1 * uScale, 0.65 * uScale), craneYellow);
+    gLegL.position.set(-1.9 * uScale, 2.05 * uScale, 0);
     const gLegR = gLegL.clone();
-    gLegR.position.x = 1.8 * uScale;
-    const gBridge = new THREE.Mesh(new THREE.BoxGeometry(4.6 * uScale, 0.85 * uScale, 2.2 * uScale), craneYellow);
-    gBridge.position.set(0, 3.9 * uScale, 0);
+    gLegR.position.x = 1.9 * uScale;
+    const gBridge = new THREE.Mesh(new THREE.BoxGeometry(4.8 * uScale, 0.9 * uScale, 2.4 * uScale), craneYellow);
+    gBridge.position.set(0, 4.15 * uScale, 0);
     gantryTrolley.add(gLegL, gLegR, gBridge);
 
-    // --- Б. ПАРА СТАЛЬНЫХ НАКЛОННЫХ НАПОРНЫХ ВОДОВОДОВ (PENSTOCKS) С КОЛЬЦАМИ ЖЁСТКОСТИ ---
-    const penRadius = (t.type === 'francis' ? 1.25 : (t.type === 'pelton' ? 1.05 : 1.38)) * uScale;
+    // --- Б. ЧЕТЫРЕ МОЩНЫХ СТАЛЬНЫХ НАПОРНЫХ ВОДОВОДА (PENSTOCKS) ЦЕЛОЙ ГЭС ---
+    const penRadius = (isFullHpp ? 1.28 : (t.type === 'francis' ? 1.25 : 1.15)) * uScale;
     const pStart = new THREE.Vector3(-0.5 * uScale, damCrestY - 2.2 * uScale, 0);
     const pEnd = new THREE.Vector3(hallOffsetX - 2.6 * uScale, hallFloorY + 1.8 * uScale, 0);
     const pVec = new THREE.Vector3().subVectors(pEnd, pStart);
     const pLen = Math.max(2.5, pVec.length());
     const pQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), pVec.clone().normalize());
 
-    for (const zOff of [-2.4 * uScale, 2.4 * uScale]) {
+    const penstockOffsets = isFullHpp
+      ? [-6.3 * uScale, -2.1 * uScale, 2.1 * uScale, 6.3 * uScale]
+      : [-2.4 * uScale, 2.4 * uScale];
+    for (const zOff of penstockOffsets) {
       const pipe = new THREE.Mesh(new THREE.CylinderGeometry(penRadius, penRadius, pLen, 14), steelMat);
       pipe.position.copy(pStart).addScaledVector(pVec, 0.5);
-      pipe.position.z = zOff;
+      pipe.position.z = hallCenterZ + zOff;
       pipe.quaternion.copy(pQuat);
       pipe.castShadow = !!this.profile.shadows;
       grp.add(pipe);
 
-      // Стальные бандажные кольца-компенсаторы вдоль напорного трубопровода
       for (const frac of [0.25, 0.55, 0.82]) {
         const ring = new THREE.Mesh(
           new THREE.CylinderGeometry(penRadius * 1.18, penRadius * 1.18, 0.42 * uScale, 14),
           accentMat,
         );
         ring.position.copy(pStart).addScaledVector(pVec, frac);
-        ring.position.z = zOff;
+        ring.position.z = hallCenterZ + zOff;
         ring.quaternion.copy(pQuat);
         grp.add(ring);
       }
     }
 
-    // --- В. ЗДАНИЕ МАШИННОГО ЗАЛА ГЭС В НИЖНЕМ БЬЕФЕ У ПОДОШВЫ ПЛОТИНЫ! ---
-    const hallW = 9.4 * uScale;
-    const hallH = 6.6 * uScale;
-    const hallZ = 13.2 * uScale;
+    // --- В. ГРАНДИОЗНОЕ ЗДАНИЕ МАШИННОГО ЗАЛА ЦЕЛОЙ ГЭС В НИЖНЕМ БЬЕФЕ! ---
+    const hallW = (isFullHpp ? 10.6 : 9.4) * uScale;
+    const hallH = (isFullHpp ? 7.6 : 6.6) * uScale;
+    const hallZ = (isFullHpp ? 19.2 : 13.2) * uScale;
 
-    // 1. Подводный бетонный блок спиральных камер и отсасывающих труб (уходит на 3 м ниже дна!)
-    const subH = 4.6 * uScale;
-    const subBlock = new THREE.Mesh(new THREE.BoxGeometry(hallW + 2.4 * uScale, subH, hallZ + 0.6 * uScale), darkConcMat);
-    subBlock.position.set(hallOffsetX + 0.8 * uScale, hallFloorY - subH * 0.5 + 0.6 * uScale, 0);
+    const subH = 4.8 * uScale;
+    const subBlock = new THREE.Mesh(new THREE.BoxGeometry(hallW + 2.6 * uScale, subH, hallZ + 0.8 * uScale), darkConcMat);
+    subBlock.position.set(hallOffsetX + 0.8 * uScale, hallFloorY - subH * 0.5 + 0.6 * uScale, hallCenterZ);
     subBlock.receiveShadow = !!this.profile.shadows;
 
-    // 2. Выходные окна диффузоров отсасывающих труб (Draft Tubes) в нижний бьеф (+X)
-    for (const zOff of [-2.8 * uScale, 2.8 * uScale]) {
+    for (const zOff of penstockOffsets) {
       const draftMouth = new THREE.Mesh(
-        new THREE.BoxGeometry(1.4 * uScale, 2.5 * uScale, 3.8 * uScale),
+        new THREE.BoxGeometry(1.5 * uScale, 2.6 * uScale, 3.2 * uScale),
         new THREE.MeshBasicMaterial({ color: 0x0b2239 }),
       );
-      draftMouth.position.set(hallOffsetX + hallW * 0.5 + 1.5 * uScale, hallFloorY - 0.8 * uScale, zOff);
+      draftMouth.position.set(hallOffsetX + hallW * 0.5 + 1.5 * uScale, hallFloorY - 0.8 * uScale, hallCenterZ + zOff);
       grp.add(draftMouth);
     }
 
-    // 3. Светлый архитектурный корпус машинного зала с высокими панорамными окнами и пилястрами
     const hallBody = new THREE.Mesh(new THREE.BoxGeometry(hallW, hallH, hallZ), concMat);
-    hallBody.position.set(hallOffsetX, hallFloorY + hallH * 0.5, 0);
+    hallBody.position.set(hallOffsetX, hallFloorY + hallH * 0.5, hallCenterZ);
     hallBody.castShadow = !!this.profile.shadows;
     hallBody.receiveShadow = !!this.profile.shadows;
 
-    // Светящиеся вертикальные витражи машинного зала ГЭС со стороны нижнего бьефа
-    for (let wIdx = -2; wIdx <= 2; wIdx++) {
+    const winSpan = isFullHpp ? 3 : 2;
+    for (let wIdx = -winSpan; wIdx <= winSpan; wIdx++) {
       const win = new THREE.Mesh(
-        new THREE.BoxGeometry(0.25 * uScale, hallH * 0.62, 1.45 * uScale),
+        new THREE.BoxGeometry(0.28 * uScale, hallH * 0.64, 1.55 * uScale),
         windowGlowMat,
       );
-      win.position.set(hallOffsetX + hallW * 0.5 + 0.05 * uScale, hallFloorY + hallH * 0.54, wIdx * 2.3 * uScale);
+      win.position.set(hallOffsetX + hallW * 0.5 + 0.06 * uScale, hallFloorY + hallH * 0.54, hallCenterZ + wIdx * 2.55 * uScale);
       grp.add(win);
     }
 
-    // Цветной фриз крыши по типу гидроагрегата (Каплан / Фрэнсис / обратимая ГАЭС)
     const roofCornice = new THREE.Mesh(
-      new THREE.BoxGeometry(hallW + 0.8 * uScale, 0.85 * uScale, hallZ + 0.8 * uScale),
+      new THREE.BoxGeometry(hallW + 0.9 * uScale, 0.95 * uScale, hallZ + 0.9 * uScale),
       accentMat,
     );
-    roofCornice.position.set(hallOffsetX, hallFloorY + hallH + 0.35 * uScale, 0);
+    roofCornice.position.set(hallOffsetX, hallFloorY + hallH + 0.40 * uScale, hallCenterZ);
 
-    // Вращающийся зонтичный гидрогенератор под куполом машзала
+    // Вращающийся гидрогенератор под стеклянным фонарём крыши машзала
     const rotor = new THREE.Group();
-    rotor.position.set(hallOffsetX, hallFloorY + hallH + 1.15 * uScale, 0);
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.35 * uScale, 1.35 * uScale, 1.1 * uScale, 12), steelMat);
-    const blade1 = new THREE.Mesh(new THREE.BoxGeometry(5.2 * uScale, 0.35 * uScale, 0.85 * uScale), accentMat);
+    rotor.position.set(hallOffsetX, hallFloorY + hallH + 1.25 * uScale, hallCenterZ);
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(1.5 * uScale, 1.5 * uScale, 1.15 * uScale, 12), steelMat);
+    const blade1 = new THREE.Mesh(new THREE.BoxGeometry(5.8 * uScale, 0.38 * uScale, 0.92 * uScale), accentMat);
     const blade2 = blade1.clone();
     blade2.rotation.y = Math.PI * 0.5;
     rotor.add(hub, blade1, blade2);
 
-    // --- Г. ОТКРЫТАЯ ПАЛУБА СИЛОВЫХ ТРАНСФОРМАТОРОВ 220 кВ И ПОРТАЛ ВЫДАЧИ МОЩНОСТИ ---
+    // --- Г. БЛОЧНЫЕ ТРАНСФОРМАТОРЫ 220 кВ И ПОРТАЛ ОРУ ВЫДАЧИ МОЩНОСТИ ---
     const xfmrDeckY = hallFloorY + 1.2 * uScale;
-    const xfmr = new THREE.Mesh(new THREE.BoxGeometry(2.6 * uScale, 2.8 * uScale, 3.2 * uScale), steelMat);
-    xfmr.position.set(hallOffsetX - hallW * 0.35, xfmrDeckY + 1.4 * uScale, hallZ * 0.5 + 2.0 * uScale);
-    const portalA = new THREE.Mesh(new THREE.CylinderGeometry(0.18 * uScale, 0.32 * uScale, 6.2 * uScale, 4), steelMat);
-    portalA.position.set(hallOffsetX, hallFloorY + hallH + 3.1 * uScale, hallZ * 0.38);
+    const xfmr = new THREE.Mesh(new THREE.BoxGeometry(2.8 * uScale, 3.0 * uScale, 3.8 * uScale), steelMat);
+    xfmr.position.set(hallOffsetX - hallW * 0.35, xfmrDeckY + 1.5 * uScale, hallCenterZ - hallZ * 0.5 - 2.2 * uScale);
+    const portalA = new THREE.Mesh(new THREE.CylinderGeometry(0.20 * uScale, 0.36 * uScale, 7.2 * uScale, 4), steelMat);
+    portalA.position.set(hallOffsetX, hallFloorY + hallH + 3.5 * uScale, hallCenterZ - hallZ * 0.36);
 
     const statusLamp = new THREE.Mesh(
-      new THREE.SphereGeometry(0.68 * uScale, 8, 8),
+      new THREE.SphereGeometry(0.75 * uScale, 8, 8),
       new THREE.MeshBasicMaterial({ color: 0xf59e0b }),
     );
-    statusLamp.position.set(hallOffsetX + hallW * 0.38, hallFloorY + hallH + 1.5 * uScale, hallZ * 0.38);
+    statusLamp.position.set(hallOffsetX + hallW * 0.38, hallFloorY + hallH + 1.6 * uScale, hallCenterZ + hallZ * 0.38);
 
-    // --- Д. ГОТОВАЯ КОМПЛЕКТНАЯ АРХИТЕКТУРА ГИДРОУЗЛА (боковые устои, П-образная аванкамера под канал ВБ и отводящий лоток НБ) ---
+    // --- Д. КОМПЛЕКТНАЯ АРХИТЕКТУРА ЦЕЛОЙ ГЭС (устои плотины, встроенный 2-пролётный водосброс с затворами, аванкамера ВБ и бассейн НБ) ---
     if (t.isTurnkeyComplex) {
-      const wingW = 5.4 * uScale;
-      const wingLenZ = 7.4 * uScale;
-      // Левый глухой бетонный устой напорного фронта (-Z)
+      const wingW = 6.2 * uScale;
+      // Левый мощный бетонный устой плотины (-Z)
       const leftWing = new THREE.Mesh(
-        new THREE.BoxGeometry(wingW, damHeight * 0.96, wingLenZ),
+        new THREE.BoxGeometry(wingW, damHeight * 0.98, 8.6 * uScale),
         concMat,
       );
-      leftWing.position.set(-1.2 * uScale, tailBedY + damHeight * 0.48, -9.8 * uScale);
+      leftWing.position.set(-1.2 * uScale, tailBedY + damHeight * 0.49, hallCenterZ - spanZ * 0.5 - 4.1 * uScale);
       leftWing.castShadow = !!this.profile.shadows;
       grp.add(leftWing);
 
-      // Правый устой со встроенным аварийным боковым водосливом (+Z)
-      const rightSpillH = damHeight * 0.78;
+      // Правый водосбросной блок с 2 сегментными затворами и наклонным бетонным лотком-трамплином (+Z)!
+      const spillCenterZ = hallCenterZ + spanZ * 0.5 + 5.6 * uScale;
+      const rightSpillH = damHeight * 0.76;
       const rightWing = new THREE.Mesh(
-        new THREE.BoxGeometry(wingW, rightSpillH, wingLenZ),
+        new THREE.BoxGeometry(wingW, rightSpillH, 11.2 * uScale),
         darkConcMat,
       );
-      rightWing.position.set(-1.2 * uScale, tailBedY + rightSpillH * 0.5, 9.8 * uScale);
+      rightWing.position.set(-1.2 * uScale, tailBedY + rightSpillH * 0.5, spillCenterZ);
       rightWing.castShadow = !!this.profile.shadows;
       grp.add(rightWing);
 
-      // Мостовой переход по гребню комплектного гидроузла
+      // Два синих сегментных затвора встроенного водосброса Целой ГЭС + наклонный водосливной лоток
+      const gateMat = new THREE.MeshLambertMaterial({ color: 0x0284c7, map: this.textures.steel });
+      for (const gzOff of [-2.4 * uScale, 2.4 * uScale]) {
+        const gate = new THREE.Mesh(
+          new THREE.BoxGeometry(0.9 * uScale, damHeight * 0.22, 3.8 * uScale),
+          gateMat,
+        );
+        gate.position.set(-2.2 * uScale, tailBedY + rightSpillH + damHeight * 0.11, spillCenterZ + gzOff);
+        grp.add(gate);
+      }
+      const chuteMesh = new THREE.Mesh(
+        new THREE.BoxGeometry(hallOffsetX + 4.5 * uScale, 0.9 * uScale, 9.6 * uScale),
+        concMat,
+      );
+      chuteMesh.position.set(hallOffsetX * 0.42, tailBedY + rightSpillH * 0.42, spillCenterZ);
+      chuteMesh.rotation.z = -0.34;
+      grp.add(chuteMesh);
+
+      // Автодорожный переход по всему гребню Целой ГЭС
+      const totalCrestZ = spanZ + 20.4 * uScale;
       const crestRoad = new THREE.Mesh(
-        new THREE.BoxGeometry(3.2 * uScale, 0.55 * uScale, 26.8 * uScale),
+        new THREE.BoxGeometry(3.8 * uScale, 0.65 * uScale, totalCrestZ),
         darkConcMat,
       );
-      crestRoad.position.set(-1.2 * uScale, damCrestY + 0.25 * uScale, 0);
+      crestRoad.position.set(-1.2 * uScale, damCrestY + 0.30 * uScale, 0.6 * uScale);
       grp.add(crestRoad);
 
-      // П-образные направляющие подпорные стенки приёмной аванкамеры ВБ (сюда подводится канал [2]!)
-      const forebayLen = 11.5 * uScale;
-      const forebayWallH = Math.max(3.8 * uScale, damHeight * 0.58);
+      // П-образные направляющие щёки-устои приёмной аванкамеры ВБ (сюда подводится канал [3]!)
+      const forebayLen = 12.8 * uScale;
+      const forebayWallH = Math.max(4.2 * uScale, damHeight * 0.60);
       const cyanBeaconMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
-      for (const sideZ of [-7.4 * uScale, 7.4 * uScale]) {
+      for (const sideZ of [hallCenterZ - spanZ * 0.5 - 1.2 * uScale, spillCenterZ + 4.8 * uScale]) {
         const fWall = new THREE.Mesh(
-          new THREE.BoxGeometry(forebayLen, forebayWallH, 1.35 * uScale),
+          new THREE.BoxGeometry(forebayLen, forebayWallH, 1.45 * uScale),
           concMat,
         );
-        fWall.position.set(-4.6 * uScale - forebayLen * 0.5, damCrestY - forebayWallH * 0.48, sideZ);
+        fWall.position.set(-4.8 * uScale - forebayLen * 0.5, damCrestY - forebayWallH * 0.48, sideZ);
         grp.add(fWall);
 
-        // Входные маячки створа подводящего канала ВБ
         const inPost = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.42 * uScale, 0.48 * uScale, 2.2 * uScale, 8),
+          new THREE.CylinderGeometry(0.46 * uScale, 0.54 * uScale, 2.5 * uScale, 8),
           cyanBeaconMat,
         );
-        inPost.position.set(-4.6 * uScale - forebayLen + 0.5 * uScale, damCrestY + 1.1 * uScale, sideZ);
+        inPost.position.set(-4.8 * uScale - forebayLen + 0.6 * uScale, damCrestY + 1.2 * uScale, sideZ);
         grp.add(inPost);
       }
 
-      // Пульсирующее навигационное кольцо перед входом аванкамеры ВБ (показывает, куда подвести воду каналом!)
-      const bRingGeo = new THREE.RingGeometry(3.6 * uScale, 4.9 * uScale, 28);
+      // Пульсирующее навигационное кольцо перед входом аванкамеры ВБ
+      const bRingGeo = new THREE.RingGeometry(4.2 * uScale, 5.8 * uScale, 28);
       bRingGeo.rotateX(-Math.PI * 0.5);
       const intakeBeacon = new THREE.Mesh(
         bRingGeo,
@@ -2090,20 +2139,20 @@ export class WorldView {
           color: 0x38bdf8,
           side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.72,
+          opacity: 0.74,
           depthWrite: false,
         }),
       );
-      intakeBeacon.position.set(-4.8 * uScale - forebayLen - 2.6 * uScale, Math.max(t.baseY, damCrestY - 2.6 * uScale), 0);
+      intakeBeacon.position.set(-5.0 * uScale - forebayLen - 2.8 * uScale, Math.max(t.baseY, damCrestY - 2.6 * uScale), 0);
       grp.add(intakeBeacon);
       grp.userData.intakeBeacon = intakeBeacon;
 
-      // Бетонные стенки водобойного колодца и отводящего ковша в НБ (+X)
-      const tailLen = 9.5 * uScale;
-      const tailWallH = 3.2 * uScale;
-      for (const sideZ of [-6.8 * uScale, 6.8 * uScale]) {
+      // Бетонные стенки водобойного колодца и отводящего бассейна в НБ (+X)
+      const tailLen = 10.8 * uScale;
+      const tailWallH = 3.4 * uScale;
+      for (const sideZ of [hallCenterZ - hallZ * 0.5 - 0.8 * uScale, spillCenterZ + 4.8 * uScale]) {
         const tWall = new THREE.Mesh(
-          new THREE.BoxGeometry(tailLen, tailWallH, 1.2 * uScale),
+          new THREE.BoxGeometry(tailLen, tailWallH, 1.3 * uScale),
           darkConcMat,
         );
         tWall.position.set(hallOffsetX + hallW * 0.5 + tailLen * 0.48, hallFloorY + tailWallH * 0.25, sideZ);
@@ -2697,15 +2746,27 @@ export class WorldView {
     this.cursorGroup.position.set(wx, y, wz);
     this.cursorRing.scale.set(radius, radius, 1);
 
+    const isHppBuild = toolId === 'build_hpp' || toolId.startsWith('turbine_');
     const isUnit = (
       toolId === 'inspect' ||
       toolId === 'spillway' ||
       toolId === 'nav_lock' ||
       toolId === 'concrete_plant' ||
       toolId === 'pump_station' ||
-      toolId.startsWith('turbine_')
+      isHppBuild
     );
     this.flowArrow.visible = isUnit;
+
+    if (this.hppGhost) {
+      this.hppGhost.visible = isHppBuild;
+      if (isHppBuild) {
+        const siteEval = this.hydro.evaluateHppSite(wx, wz, yawAngle, 'hpp');
+        const gScale = Math.pow(WORLD.horizScale, 0.52);
+        this.hppGhost.scale.setScalar(gScale);
+        this.hppGhost.rotation.y = -siteEval.yaw;
+        this.hppGhostMat.color.setHex(siteEval.deltaH >= 3.5 * WORLD.elevScale ? 0x34d399 : 0x38bdf8);
+      }
+    }
 
     const showGhost = toolId === 'concrete_dam' || toolId === 'earth_dam' || toolId === 'foundation';
     this.ghostVolume.visible = showGhost;

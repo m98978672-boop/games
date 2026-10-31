@@ -34,6 +34,13 @@ import { ValleyCameraController } from './camera.js';
 import { HydroAudio } from './audio.js';
 import { TutorialController } from './tutorial.js';
 import { SVG_ICONS } from './icons.js';
+import {
+  captureBaselineTerrain,
+  serializeCascadeSave,
+  applyCascadeSave,
+  readCascadeSaveMeta,
+  writeCascadeSaveToStorage,
+} from './save-system.js';
 
 const WEATHER_ORDER = ['normal', 'rain', 'flood', 'low_water'];
 const SPEED_MODES = [0, 1, 2, 5];
@@ -222,6 +229,7 @@ class CascadeHydroGame {
     buildValleyTerrain(g, this.hydro, this.selectedPresetId, z2, g);
     this.hydro.finalizeValleySetup(18);
     this.hydro.spawnStarterReadyHPP(this.selectedPresetId);
+    captureBaselineTerrain(this.hydro);
 
     this._setLoaderProgress(86, 'Запуск Готовой ГЭС-1, системы логики 8 городов и 300 анимаций…');
     await nextFrame();
@@ -258,6 +266,7 @@ class CascadeHydroGame {
       enterBtn.disabled = false;
       enterBtn.textContent = `▶ Войти в бассейн (${sc.short}) и начать строительство`;
     }
+    this._refreshSavedGameButton();
 
     this._lastTime = performance.now();
     requestAnimationFrame((t) => this._loop(t));
@@ -294,6 +303,7 @@ class CascadeHydroGame {
     buildValleyTerrain(g, this.hydro, presetId, halfG, g);
     this.hydro.finalizeValleySetup(18);
     this.hydro.spawnStarterReadyHPP(presetId);
+    captureBaselineTerrain(this.hydro);
 
     this._setLoaderProgress(92, 'Размещение Готовой ГЭС-1, 8 городов, флота, поездов, ВЭС и лесов…');
     await nextFrame();
@@ -341,12 +351,78 @@ class CascadeHydroGame {
       this.tutorial.stop();
       const sc = MAP_SCALES[this.selectedScaleId];
       this.notify(
-        `✦ Бассейн «${VALLEY_PRESETS[this.selectedPresetId].name}» (${sc.short}): перед вами Готовая ГЭС-1 — проройте к ней подводящий канал [2] или ставьте новые ГЭС [8/9/0]!`,
+        `✦ Бассейн «${VALLEY_PRESETS[this.selectedPresetId].name}» (${sc.short}): перед вами Целая ГЭС-1 — проройте к ней подводящий канал [3] или ставьте новые ГЭС [2]!`,
         'info',
       );
     }
 
     this._refreshHUD();
+  }
+
+  _refreshSavedGameButton() {
+    const loadBtn = document.getElementById('btn-load-saved');
+    if (!loadBtn) return;
+    const saved = readCascadeSaveMeta();
+    if (!saved) {
+      loadBtn.classList.add('hidden');
+      return;
+    }
+    const sc = MAP_SCALES[saved.scaleId] || MAP_SCALES.km5;
+    const pr = VALLEY_PRESETS[saved.presetId] || VALLEY_PRESETS.bystritsa;
+    const cashTxt = saved.economy && typeof saved.economy.cash === 'number'
+      ? `${Math.round(saved.economy.cash).toLocaleString('ru-RU')} ₽`
+      : '';
+    loadBtn.textContent = `▶ Продолжить сохранение (${pr.name}, ${sc.short}${cashTxt ? ` · ${cashTxt}` : ''})`;
+    loadBtn.classList.remove('hidden');
+  }
+
+  saveGameProgress(silent = false) {
+    if (!this.ready || this.isLoadingMap) return false;
+    const snap = serializeCascadeSave({
+      scaleId: this.selectedScaleId,
+      presetId: this.selectedPresetId,
+      hydro: this.hydro,
+      economy: this.economy,
+      camCtrl: this.camCtrl,
+    });
+    const ok = writeCascadeSaveToStorage(snap);
+    this._refreshSavedGameButton();
+    if (!silent) {
+      this.notify(
+        ok
+          ? `◈ Данные сохранены: ГЭС (${this.hydro.turbines.length}), каналы (${snap.terrainDiff.length} секций), казна ${Math.round(this.economy.cash).toLocaleString('ru-RU')} ₽!`
+          : 'Не удалось записать сохранение в localStorage браузера.',
+        ok ? 'good' : 'warn',
+      );
+    }
+    return ok;
+  }
+
+  async loadSavedGameAsync() {
+    const snap = readCascadeSaveMeta();
+    if (!snap || this.isLoadingMap) return;
+    const targetScale = MAP_SCALES[snap.scaleId] ? snap.scaleId : 'km5';
+    const targetPreset = VALLEY_PRESETS[snap.presetId] ? snap.presetId : 'bystritsa';
+    if (targetScale !== this.selectedScaleId) {
+      this.selectedScaleId = targetScale;
+      applyMapScale(targetScale);
+    }
+    await this.loadValleyMapAsync(targetPreset);
+    applyCascadeSave(snap, {
+      hydro: this.hydro,
+      economy: this.economy,
+      worldView: this.worldView,
+      camCtrl: this.camCtrl,
+    });
+    this.isInPreGameLoader = false;
+    const loader = document.getElementById('map-loader');
+    if (loader) loader.classList.add('hidden');
+    this.tutorial.stop();
+    this._refreshHUD();
+    this.notify(
+      `◈ Загружено сохранение: День ${this.economy.day}, ГЭС: ${this.hydro.turbines.length}, казна: ${Math.round(this.economy.cash).toLocaleString('ru-RU')} ₽!`,
+      'good',
+    );
   }
 
   openMapLoader() {
@@ -357,6 +433,7 @@ class CascadeHydroGame {
       loader.classList.remove('hidden');
       loader.classList.add('ready-preview');
     }
+    this._refreshSavedGameButton();
   }
 
   _flyToCityByIndex(idx) {
@@ -600,7 +677,7 @@ class CascadeHydroGame {
     hotbar.innerHTML = '';
     for (const tool of TOOLS) {
       const btn = document.createElement('button');
-      btn.className = `tool-slot${tool.id === this.activeToolId ? ' active' : ''}`;
+      btn.className = `tool-slot${tool.featured ? ' tool-slot-featured' : ''}${tool.id === this.activeToolId ? ' active' : ''}`;
       btn.dataset.tool = tool.id;
       btn.innerHTML = `
         <span class="tool-key">[${tool.key}]</span>
@@ -704,6 +781,22 @@ class CascadeHydroGame {
       this._onResize();
       this.notify(`Графика переключена: ${this.profile.label}`, 'info');
     });
+
+    const saveBtn = document.getElementById('btn-save-game');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        this.audio.unlock();
+        this.saveGameProgress(false);
+      });
+    }
+
+    const loadSavedBtn = document.getElementById('btn-load-saved');
+    if (loadSavedBtn) {
+      loadSavedBtn.addEventListener('click', () => {
+        this.audio.unlock();
+        this.loadSavedGameAsync();
+      });
+    }
 
     const muteBtn = document.getElementById('btn-mute');
     muteBtn.addEventListener('click', () => {
@@ -958,7 +1051,16 @@ class CascadeHydroGame {
         return;
       }
 
+      if (e.altKey) {
+        const nearCity = this._findCityAtWorld(hit.wx, hit.wz);
+        if (nearCity) {
+          this.openCityLogicModal(nearCity.id);
+          return;
+        }
+      }
+
       if (
+        this.activeToolId === 'build_hpp' ||
         this.activeToolId === 'spillway' ||
         this.activeToolId.startsWith('turbine_') ||
         this.activeToolId === 'concrete_plant' ||
@@ -1083,6 +1185,19 @@ class CascadeHydroGame {
     }
   }
 
+  _findCityAtWorld(wx, wz) {
+    let best = null;
+    let bestD = Infinity;
+    for (const c of this.economy.cities) {
+      const d = Math.hypot(wx - c.x, wz - c.z);
+      if (d <= c.plateauRadius * 0.88 && d < bestD) {
+        best = c;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
   _applySingleClickTool(wx, wz) {
     const budget = this.economy.cash;
     const creative = this.economy.creative;
@@ -1093,13 +1208,18 @@ class CascadeHydroGame {
         this.selectedStruct = st;
         document.getElementById('struct-inspector').classList.remove('hidden');
         this._refreshInspector();
-      } else {
-        const site = this.hydro.evaluateHppSite(wx, wz, this.manualYaw, 'kaplan');
-        this.notify(
-          `⌖ Разведка створа: перепад ΔH ${site.grossHead.toFixed(1)} м (${site.siteGrade}) · Потенциал ~${site.potentialMW.toFixed(1)} МВт · ВБ ${site.upElev.toFixed(1)} м → НБ ${site.downElev.toFixed(1)} м`,
-          site.grossHead >= 6 ? 'good' : 'info',
-        );
+        return;
       }
+      const nearCity = this._findCityAtWorld(wx, wz);
+      if (nearCity) {
+        this.openCityLogicModal(nearCity.id);
+        return;
+      }
+      const site = this.hydro.evaluateHppSite(wx, wz, this.manualYaw, 'hpp');
+      this.notify(
+        `⌖ Разведка створа под Целую ГЭС: перепад ΔH ${site.grossHead.toFixed(1)} м (${site.siteGrade}) · Потенциал ~${site.potentialMW.toFixed(1)} МВт · ВБ ${site.upElev.toFixed(1)} м → НБ ${site.downElev.toFixed(1)} м`,
+        site.grossHead >= 5 ? 'good' : 'info',
+      );
       return;
     }
 
@@ -1118,8 +1238,8 @@ class CascadeHydroGame {
       return;
     }
 
-    if (this.activeToolId.startsWith('turbine_')) {
-      const typeId = this.activeToolId.replace('turbine_', '');
+    if (this.activeToolId === 'build_hpp' || this.activeToolId.startsWith('turbine_')) {
+      const typeId = this.activeToolId === 'build_hpp' ? 'hpp' : this.activeToolId.replace('turbine_', '');
       const res = this.hydro.placeTurbine(typeId, wx, wz, this.manualYaw, budget, creative);
       if (!res.ok) {
         this.notify(res.reason, 'warn');
@@ -1135,9 +1255,7 @@ class CascadeHydroGame {
       document.getElementById('struct-inspector').classList.remove('hidden');
       this._refreshInspector();
       this.notify(
-        res.structure.isTurnkeyComplex
-          ? `✦ Возведён готовый комплекс ${res.structure.spec.name}: подведите воду каналом [2] в приёмную аванкамеру!`
-          : `✦ Встроена приплотинная ${res.structure.spec.name}: водоприёмник наверху, машзал в нижнем бьефе!`,
+        `✦ Построена ЦЕЛАЯ ГЭС (${res.structure.spec.name}): плотина, водосброс, 4 водовода и машзал готовы! Подведите воду каналом [3] в приёмную аванкамеру!`,
         'good',
       );
       return;
@@ -1267,13 +1385,18 @@ class CascadeHydroGame {
     const el = document.getElementById('probe-readout');
     if (!el) return;
 
-    // Для разведки створа [1] и Готовых ГЭС [8/9/0] показываем перепад высот ΔH и прогноз МВт в реальном времени!
-    if (this.activeToolId === 'inspect' || this.activeToolId.startsWith('turbine_')) {
-      const tType = this.activeToolId.startsWith('turbine_')
-        ? this.activeToolId.replace('turbine_', '')
-        : 'kaplan';
+    // Для разведки створа [1] и постройки Целой ГЭС [2] показываем перепад высот ΔH и прогноз МВт в реальном времени!
+    if (this.activeToolId === 'inspect' || this.activeToolId === 'build_hpp' || this.activeToolId.startsWith('turbine_')) {
+      const nearCity = this.activeToolId === 'inspect' ? this._findCityAtWorld(wx, wz) : null;
+      if (nearCity) {
+        el.textContent = `Город ${nearCity.name} (${nearCity.levelName}, ${(nearCity.population / 1000).toFixed(1)}k жит., ♥${nearCity.happinessPct || 75}%) — КЛИКНИТЕ для открытия Логики Города!`;
+        return;
+      }
+      const tType = (this.activeToolId === 'build_hpp' || this.activeToolId === 'inspect')
+        ? 'hpp'
+        : this.activeToolId.replace('turbine_', '');
       const site = this.hydro.evaluateHppSite(wx, wz, this.manualYaw, tType);
-      el.textContent = `Створ ГЭС: ΔH ${site.grossHead.toFixed(1)} м (${site.siteGrade}) · Потенциал ~${site.potentialMW.toFixed(1)} МВт · ВБ ${site.upElev.toFixed(1)} м → НБ ${site.downElev.toFixed(1)} м · Глуб. ${s.depth.toFixed(2)} м`;
+      el.textContent = `Створ Целой ГЭС: ΔH ${site.grossHead.toFixed(1)} м (${site.siteGrade}) · Прогноз ~${site.potentialMW.toFixed(1)} МВт · ВБ ${site.upElev.toFixed(1)} м → НБ ${site.downElev.toFixed(1)} м`;
       return;
     }
 
@@ -1699,6 +1822,13 @@ class CascadeHydroGame {
     }
 
     this.renderer.render(this.scene, this.camera);
+    this._updateCityWorldBadges();
+
+    this._autosaveAccum = (this._autosaveAccum || 0) + rawDt;
+    if (!this.isInPreGameLoader && this._autosaveAccum >= 45.0) {
+      this._autosaveAccum = 0;
+      this.saveGameProgress(true);
+    }
 
     this._uiRefreshAccum += rawDt;
     if (this._uiRefreshAccum >= 0.25) {
@@ -1720,6 +1850,82 @@ class CascadeHydroGame {
           cityBuildings: this.economy.allBuildings.length,
           shadows: this.renderer.shadowMap.enabled ? `вкл (1/${this.profile.shadowEvery} кадра)` : 'выкл',
         });
+      }
+    }
+  }
+
+  _updateCityWorldBadges() {
+    let layer = this._cityBadgeLayer;
+    if (!layer) {
+      layer = document.getElementById('city-markers-layer');
+      if (!layer) return;
+      this._cityBadgeLayer = layer;
+      this._cityBadgeEls = new Map();
+      this._projVec = new THREE.Vector3();
+    }
+    if (this.isInPreGameLoader) {
+      layer.style.display = 'none';
+      return;
+    }
+    layer.style.display = 'block';
+
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const elevLift = 26 * Math.pow(WORLD.elevScale, 0.85);
+
+    for (const c of this.economy.cities) {
+      let badge = this._cityBadgeEls.get(c.id);
+      if (!badge) {
+        const cityId = c.id;
+        badge = document.createElement('button');
+        badge.type = 'button';
+        badge.className = 'city-world-badge';
+        badge.title = 'Нажмите, чтобы открыть Систему Логики и Генплан города';
+        badge.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          this.audio.unlock();
+          const cur = this.economy.cities.find((ct) => ct.id === cityId) || c;
+          this.camCtrl.flyTo(cur.x, cur.z, Math.max(85, 130 * Math.pow(WORLD.horizScale, 0.72)));
+          this.openCityLogicModal(cur.id);
+        });
+        layer.appendChild(badge);
+        this._cityBadgeEls.set(c.id, badge);
+      }
+
+      const bedY = this.hydro.sampleAtWorld(c.x, c.z).bed;
+      this._projVec.set(c.x, bedY + elevLift, c.z).project(this.camera);
+
+      if (
+        this._projVec.z > 0.995 ||
+        this._projVec.z < -0.98 ||
+        this._projVec.x < -0.94 ||
+        this._projVec.x > 0.94 ||
+        this._projVec.y < -0.82 ||
+        this._projVec.y > 0.86
+      ) {
+        badge.style.display = 'none';
+        continue;
+      }
+
+      const sx = (this._projVec.x * 0.5 + 0.5) * w;
+      const sy = (-this._projVec.y * 0.5 + 0.5) * h;
+      badge.style.display = 'flex';
+      badge.style.transform = `translate(-50%, -100%) translate(${sx.toFixed(0)}px, ${sy.toFixed(0)}px)`;
+
+      const pwrOk = c.connected && c.powerRatio >= 0.72;
+      const wtrOk = (c.urbanNeeds && c.urbanNeeds.water >= 0.65) || c.irrigated;
+      const hap = c.happinessPct || Math.round((c.satisfaction || 0.75) * 100);
+      const stamp = `${c.name}|${c.level}|${Math.round(c.population / 100)}|${pwrOk ? 1 : 0}|${wtrOk ? 1 : 0}|${hap}`;
+      if (badge.dataset.stamp !== stamp) {
+        badge.dataset.stamp = stamp;
+        badge.innerHTML = `
+          <span class="cwb-dot" style="background:${c.accent}"></span>
+          <span class="cwb-title">${c.name}</span>
+          <span class="cwb-meta">Ур.${c.level} · ${(c.population / 1000).toFixed(1)}k</span>
+          <span class="cwb-ind ${pwrOk ? 'ok' : 'warn'}">⚡</span>
+          <span class="cwb-ind ${wtrOk ? 'ok' : 'muted'}">≈</span>
+          <span class="cwb-hap">♥${hap}%</span>
+        `;
       }
     }
   }
