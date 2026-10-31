@@ -294,6 +294,15 @@ export function buildValleyTerrain(grid, arrays, presetId = 'bystritsa', zStart 
         }
       }
 
+      // 6b. Плавный береговой спуск внешнего края карты (восток, запад, юг) к бескрайней воде и туману за картой
+      if (!inChannel) {
+        const coastRim = Math.max(Math.abs(bx), Math.max(0, bz));
+        const coastBlend = smoothstep(352, 383.2, coastRim);
+        if (coastBlend > 0.001) {
+          elev = lerp(elev, 2.75 * eS, coastBlend * 0.94);
+        }
+      }
+
       // 7. Геологическая стратиграфия: скальный массив (bedrock) и рыхлый грунт (soil)
       let soilThick = (2.7 + cfg.soilBonus + neckMask * 4.0 + cityFlatten * 1.6 - smoothstep(34 * eS, 58 * eS, elev) * 2.2) * Math.pow(eS, 0.65);
       if (inGorgeRock) {

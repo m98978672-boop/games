@@ -308,6 +308,7 @@ class CascadeHydroGame {
 
   enterValley() {
     this.isInPreGameLoader = false;
+    this.camCtrl.clearKeys();
     const loader = document.getElementById('map-loader');
     if (loader) loader.classList.add('hidden');
 
@@ -336,6 +337,7 @@ class CascadeHydroGame {
 
   openMapLoader() {
     this.isInPreGameLoader = true;
+    this.camCtrl.clearKeys();
     const loader = document.getElementById('map-loader');
     if (loader) {
       loader.classList.remove('hidden');
@@ -343,20 +345,62 @@ class CascadeHydroGame {
     }
   }
 
+  _flyToCityByIndex(idx) {
+    if (!this.economy || !this.economy.cities.length) return;
+    const len = this.economy.cities.length;
+    this._cityNavIndex = ((idx % len) + len) % len;
+    const c = this.economy.cities[this._cityNavIndex];
+    const flyZoom = 135 * Math.pow(WORLD.horizScale, 0.72);
+    this.camCtrl.flyTo(c.x, c.z, flyZoom, c.baseElevation);
+    if (this._cityNavLabelEl) {
+      this._cityNavLabelEl.textContent = `⌖ ${c.name} (${this._cityNavIndex + 1}/${len})`;
+    }
+  }
+
   _rebuildLandmarksBar() {
     const bar = document.getElementById('landmarks-bar');
     if (!bar) return;
     bar.innerHTML = '';
+    this._cityNavIndex = 0;
+
     const preset = VALLEY_PRESETS[this.selectedPresetId] || VALLEY_PRESETS.bystritsa;
-    for (const lm of preset.landmarks) {
-      const btn = document.createElement('button');
-      btn.className = 'lm-btn';
-      btn.textContent = lm.label;
-      btn.addEventListener('click', () => {
-        const bed = this.hydro.sampleAtWorld(lm.x, lm.z).bed;
-        this.camCtrl.flyTo(lm.x, lm.z, lm.dist, bed);
+    const gorgeLm = preset.landmarks[0];
+    if (gorgeLm) {
+      const damBtn = document.createElement('button');
+      damBtn.className = 'lm-btn';
+      damBtn.textContent = '▲ К створу ГЭС';
+      damBtn.addEventListener('click', () => {
+        if (this.hydro.turbines.length > 0) {
+          const t = this.hydro.turbines[0];
+          this.camCtrl.flyTo(t.wx, t.wz, gorgeLm.dist, t.baseY);
+        } else {
+          const bed = this.hydro.sampleAtWorld(gorgeLm.x, gorgeLm.z).bed;
+          this.camCtrl.flyTo(gorgeLm.x, gorgeLm.z, gorgeLm.dist, bed);
+        }
       });
-      bar.appendChild(btn);
+      bar.appendChild(damBtn);
+    }
+
+    if (this.economy && this.economy.cities.length > 0) {
+      const prevBtn = document.createElement('button');
+      prevBtn.className = 'lm-btn';
+      prevBtn.title = 'Предыдущий город';
+      prevBtn.textContent = '◀';
+      prevBtn.addEventListener('click', () => this._flyToCityByIndex((this._cityNavIndex || 0) - 1));
+
+      const cityBtn = document.createElement('button');
+      cityBtn.className = 'lm-btn';
+      cityBtn.textContent = `⌖ ${this.economy.cities[0].name} (1/${this.economy.cities.length})`;
+      cityBtn.addEventListener('click', () => this._flyToCityByIndex(this._cityNavIndex || 0));
+      this._cityNavLabelEl = cityBtn;
+
+      const nextBtn = document.createElement('button');
+      nextBtn.className = 'lm-btn';
+      nextBtn.title = 'Следующий город';
+      nextBtn.textContent = '▶';
+      nextBtn.addEventListener('click', () => this._flyToCityByIndex((this._cityNavIndex || 0) + 1));
+
+      bar.append(prevBtn, cityBtn, nextBtn);
     }
   }
 
@@ -694,7 +738,12 @@ class CascadeHydroGame {
       }
     });
 
-    // Горячие клавиши
+    // Горячие клавиши (по физическим кодам клавиш e.code — работают и в русской, и в английской раскладке!)
+    const codeToToolKey = {
+      Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5',
+      Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9', Digit0: '0',
+      KeyL: 'L', KeyF: 'F', KeyP: 'P', KeyX: 'X',
+    };
     window.addEventListener('keydown', (e) => {
       if (this.isInPreGameLoader) return;
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
@@ -704,11 +753,14 @@ class CascadeHydroGame {
         document.getElementById('diag-panel').classList.toggle('hidden', !this.showDiag);
         return;
       }
-      const keyUpper = e.key.toUpperCase();
-      for (const tool of TOOLS) {
-        if (tool.key === keyUpper) {
-          this.selectTool(tool.id);
-          return;
+      const mappedKey = codeToToolKey[e.code] || e.key.toUpperCase();
+      // Исключаем пересечение с клавишами движения камеры WASD/QE
+      if (e.code !== 'KeyW' && e.code !== 'KeyA' && e.code !== 'KeyS' && e.code !== 'KeyD' && e.code !== 'KeyQ' && e.code !== 'KeyE') {
+        for (const tool of TOOLS) {
+          if (tool.key === mappedKey) {
+            this.selectTool(tool.id);
+            return;
+          }
         }
       }
       if (e.code === 'KeyV' || e.code === 'Space') {
@@ -1123,7 +1175,7 @@ class CascadeHydroGame {
 
       card.innerHTML = `
         <div class="city-top">
-          <span class="city-name" data-flycity="${c.id}">▸ ${c.name}</span>
+          <button type="button" class="city-fly-btn" data-flycity="${c.id}" title="Плавно перелететь камерой к городу">⌖ ${c.name}</button>
           <span class="city-badge">${c.levelName} · ${c.buildingIndices.length} зд.</span>
         </div>
         <div class="city-meta">
@@ -1139,11 +1191,10 @@ class CascadeHydroGame {
       wrap.appendChild(card);
     }
 
-    const flyZoom = 135 * Math.pow(WORLD.horizScale, 0.72);
     wrap.querySelectorAll('[data-flycity]').forEach((el) => {
       el.addEventListener('click', () => {
-        const c = this.economy.cities.find((x) => x.id === el.dataset.flycity);
-        if (c) this.camCtrl.flyTo(c.x, c.z, flyZoom, c.baseElevation);
+        const idx = this.economy.cities.findIndex((x) => x.id === el.dataset.flycity);
+        if (idx >= 0) this._flyToCityByIndex(idx);
       });
     });
 
@@ -1407,7 +1458,7 @@ class CascadeHydroGame {
     }
 
     const camGround = this.hydro.sampleAtWorld(this.camCtrl.goalTarget.x, this.camCtrl.goalTarget.z).bed;
-    this.camCtrl.update(rawDt, camGround);
+    this.camCtrl.update(rawDt, camGround, (cx, cz) => this.hydro.sampleAtWorld(cx, cz).bed);
 
     const weather = WEATHER_MODES[this.economy.weatherId] || WEATHER_MODES.normal;
     const animDt = rawDt * Math.max(0, Math.min(2.5, speedMult));
@@ -1436,8 +1487,17 @@ class CascadeHydroGame {
     this.spray.update(rawDt * Math.max(1, Math.min(2, speedMult)), this.hydro, this.camCtrl.target, dayFactor, rainAmt);
 
     let totalSpillQ = this.hydro.lastCrestOverflowQ || 0;
-    for (const s of this.hydro.spillways) totalSpillQ += s.currentFlowQ;
-    this.audio.updateContinuous(this.camCtrl.distance, totalSpillQ, this.economy.totalMW);
+    let distToHydro = Infinity;
+    for (const s of this.hydro.spillways) {
+      totalSpillQ += s.currentFlowQ;
+      const d = Math.hypot(s.wx - this.camCtrl.target.x, s.wz - this.camCtrl.target.z);
+      if (d < distToHydro) distToHydro = d;
+    }
+    for (const t of this.hydro.turbines) {
+      const d = Math.hypot(t.wx - this.camCtrl.target.x, t.wz - this.camCtrl.target.z);
+      if (d < distToHydro) distToHydro = d;
+    }
+    this.audio.updateContinuous(this.camCtrl.distance, totalSpillQ, this.economy.totalMW, distToHydro);
 
     if (this.renderer.shadowMap.enabled && this.profile.shadowEvery > 0) {
       if ((this._frameCount % this.profile.shadowEvery) === 0) {

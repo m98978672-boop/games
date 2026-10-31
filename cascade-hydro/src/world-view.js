@@ -16,6 +16,8 @@ import {
   createRealisticWaterMaterial,
   createOverflowWaterMaterial,
   createCityFacadeMaterial,
+  createOuterSeaFogMaterial,
+  createHorizonMistMaterial,
 } from './water-shader.js';
 import { buildAllProceduralTextures, pickCatalogShade } from './textures.js';
 import { LivingWorldSystem } from './living-world.js';
@@ -164,9 +166,10 @@ export class WorldView {
     this.fogColor = new THREE.Color(0xa6cde8);
     this.scene.background = this.fogColor.clone();
 
-    // 1. Меш рельефа, меш воды и 3D-пелена перелива водопадов / плотин!
+    // 1. Меш рельефа, меш воды, бескрайнее внешнее море с туманом за картой и 3D-пелена перелива!
     this._buildTerrainMesh();
     this._buildWaterMesh();
+    this._buildOuterWorldSeaAndFog();
     this._buildOverflow3DPools();
 
     // 2. Текстурированные леса и гранитные валуны (с 432 оттенками флоры и пород!)
@@ -238,12 +241,15 @@ export class WorldView {
       this.skirtMesh.updateMatrix();
     }
 
-    // Обновляем масштабные юниформы в шейдерах рельефа и воды
+    // Обновляем масштабные юниформы в шейдерах рельефа, воды и внешнего моря за картой
     this.terrainMat.uniforms.uHorizScale.value = WORLD.horizScale;
     this.terrainMat.uniforms.uElevScale.value = WORLD.elevScale;
     this.terrainMat.uniforms.uSnowLine.value = WORLD.snowLineY;
+    this.terrainMat.uniforms.uMapHalf.value = half;
     this.waterMat.uniforms.uHorizScale.value = WORLD.horizScale;
     this.waterMat.uniforms.uElevScale.value = WORLD.elevScale;
+    this.waterMat.uniforms.uMapHalf.value = half;
+    this._syncOuterSeaScale();
 
     this._syncShadowFrustum();
     this.updateTerrainGeometryRect(0, 0, g - 1, g - 1);
@@ -332,6 +338,10 @@ export class WorldView {
     geo.setAttribute('aTerrainMeta', this.terrainMetaAttr);
 
     this.terrainMat = createValleyTerrainMaterial(this.detailTex, this.textures.concreteMap);
+    this.terrainMat.uniforms.uHorizScale.value = WORLD.horizScale;
+    this.terrainMat.uniforms.uElevScale.value = WORLD.elevScale;
+    this.terrainMat.uniforms.uSnowLine.value = WORLD.snowLineY;
+    this.terrainMat.uniforms.uMapHalf.value = half;
     this.terrainMesh = new THREE.Mesh(geo, this.terrainMat);
     this.terrainMesh.receiveShadow = !!this.profile.shadows;
     this.terrainMesh.castShadow = !!this.profile.shadows;
@@ -395,12 +405,62 @@ export class WorldView {
     geo.setAttribute('aHydro2', this.waterH2Attr);
 
     this.waterMat = createRealisticWaterMaterial(this.detailTex);
+    this.waterMat.uniforms.uHorizScale.value = WORLD.horizScale;
+    this.waterMat.uniforms.uElevScale.value = WORLD.elevScale;
+    this.waterMat.uniforms.uMapHalf.value = half;
     this.waterMesh = new THREE.Mesh(geo, this.waterMat);
     this.waterMesh.renderOrder = 2;
     this.waterMesh.frustumCulled = false;
     this.waterMesh.matrixAutoUpdate = false;
     this.waterMesh.updateMatrix();
     this.scene.add(this.waterMesh);
+  }
+
+  /**
+   * Бескрайняя вода и кольцо объёмного тумана ЗА ПРЕДЕЛАМИ КАРТЫ:
+   * скрывают края сетки и создают живой морской горизонт с дымкой вокруг всей долины!
+   */
+  _buildOuterWorldSeaAndFog() {
+    const seaGeo = new THREE.PlaneGeometry(1, 1, 1, 1);
+    seaGeo.rotateX(-Math.PI * 0.5);
+    this.outerSeaMat = createOuterSeaFogMaterial(this.detailTex);
+    this.outerSeaMesh = new THREE.Mesh(seaGeo, this.outerSeaMat);
+    this.outerSeaMesh.renderOrder = 1;
+    this.outerSeaMesh.frustumCulled = false;
+    this.outerSeaMesh.matrixAutoUpdate = false;
+    this.scene.add(this.outerSeaMesh);
+
+    const mistGeo = new THREE.CylinderGeometry(1, 1, 1, 48, 1, true);
+    mistGeo.translate(0, 0.5, 0);
+    this.horizonMistMat = createHorizonMistMaterial();
+    this.horizonMistMesh = new THREE.Mesh(mistGeo, this.horizonMistMat);
+    this.horizonMistMesh.renderOrder = 4;
+    this.horizonMistMesh.frustumCulled = false;
+    this.horizonMistMesh.matrixAutoUpdate = false;
+    this.scene.add(this.horizonMistMesh);
+
+    this._syncOuterSeaScale();
+  }
+
+  _syncOuterSeaScale() {
+    if (!this.outerSeaMesh) return;
+    const half = WORLD.size * 0.5;
+    const seaY = 3.2 * WORLD.elevScale;
+    const span = WORLD.size * 14.0;
+
+    this.outerSeaMesh.position.set(0, seaY, 0);
+    this.outerSeaMesh.scale.set(span, 1, span);
+    this.outerSeaMesh.updateMatrix();
+    this.outerSeaMat.uniforms.uMapHalf.value = half;
+    this.outerSeaMat.uniforms.uHorizScale.value = WORLD.horizScale;
+
+    if (this.horizonMistMesh) {
+      const mistR = WORLD.size * 2.25;
+      const mistH = Math.max(240, 340 * WORLD.elevScale);
+      this.horizonMistMesh.position.set(0, seaY - 4 * WORLD.elevScale, 0);
+      this.horizonMistMesh.scale.set(mistR, mistH, mistR);
+      this.horizonMistMesh.updateMatrix();
+    }
   }
 
   /**
@@ -1210,6 +1270,7 @@ export class WorldView {
 
     this.waterMat.uniforms.uTime.value = timeSec;
     this.terrainMat.uniforms.uTime.value = timeSec;
+    if (this.outerSeaMat) this.outerSeaMat.uniforms.uTime.value = timeSec;
     this.terrainMat.uniforms.uMeltOffset.value = this.economy.hydrology
       ? this.economy.hydrology.snowMeltVisualOffset
       : 0.0;
@@ -1953,6 +2014,19 @@ export class WorldView {
       this.overflowWaterMat.uniforms.uSunFactor.value = 0.25 + 0.75 * dayFactor;
       this.overflowWaterMat.uniforms.uFogColor.value.copy(this.fogColor);
       this.overflowWaterMat.uniforms.uFogDensity.value = scaledFogDensity;
+    }
+
+    if (this.outerSeaMat) {
+      this.outerSeaMat.uniforms.uSunDir.value.copy(lightDirForShaders);
+      this.outerSeaMat.uniforms.uSunColor.value.copy(sunCol).multiplyScalar(dayFactor);
+      this.outerSeaMat.uniforms.uSkyZenith.value.copy(this.skyColorZenith);
+      this.outerSeaMat.uniforms.uSkyHorizon.value.copy(this.skyColorHorizon);
+      this.outerSeaMat.uniforms.uFogColor.value.copy(this.fogColor);
+      this.outerSeaMat.uniforms.uFogDensity.value = scaledFogDensity;
+    }
+    if (this.horizonMistMat) {
+      this.horizonMistMat.uniforms.uFogColor.value.copy(this.fogColor);
+      this.horizonMistMat.uniforms.uOpacity.value = weather.id === 'flood' ? 0.88 : (weather.id === 'rain' ? 0.80 : 0.68);
     }
 
     if (this.cityBodyMat) {

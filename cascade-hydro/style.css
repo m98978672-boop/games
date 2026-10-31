@@ -848,14 +848,27 @@ html, body, #app {
   gap: 6px;
 }
 
-.city-name {
+.city-name, .city-fly-btn {
   font-size: 11.5px;
   font-weight: 700;
   color: #f1f5f9;
   cursor: pointer;
 }
 
-.city-name:hover { color: #38bdf8; }
+.city-fly-btn {
+  background: rgba(14, 116, 144, 0.24);
+  border: 1px solid rgba(56, 189, 248, 0.34);
+  border-radius: 6px;
+  padding: 2px 7px;
+  text-align: left;
+  transition: background 0.14s, border-color 0.14s, color 0.14s;
+}
+
+.city-name:hover, .city-fly-btn:hover {
+  color: #fff;
+  background: rgba(14, 116, 144, 0.62);
+  border-color: #38bdf8;
+}
 
 .city-badge {
   font-size: 9px;

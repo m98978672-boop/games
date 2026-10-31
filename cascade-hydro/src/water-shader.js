@@ -25,6 +25,7 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
     uMeltOffset: { value: 0.0 },
     uElevScale: { value: 2.35 },
     uHorizScale: { value: 6.51 },
+    uMapHalf: { value: 2500.0 },
     uDetailTex: { value: detailTex },
     uConcreteTex: { value: concreteMap || detailTex },
     uHasConcreteTex: { value: concreteMap ? 1.0 : 0.0 },
@@ -59,6 +60,7 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
       uniform float uMeltOffset;
       uniform float uElevScale;
       uniform float uHorizScale;
+      uniform float uMapHalf;
       uniform sampler2D uDetailTex;
       uniform sampler2D uConcreteTex;
       uniform float uHasConcreteTex;
@@ -236,7 +238,9 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
         }
 
         float fogF = 1.0 - exp(-pow(camDist * uFogDensity, 1.62));
-        litCol = mix(litCol, uFogColor, clamp(fogF, 0.0, 0.82));
+        float edgeRatio = max(abs(vWorldPos.x), abs(vWorldPos.z)) / max(100.0, uMapHalf);
+        float edgeMist = smoothstep(0.91, 1.00, edgeRatio) * 0.62;
+        litCol = mix(litCol, uFogColor, clamp(max(fogF * 0.88, edgeMist), 0.0, 0.94));
 
         gl_FragColor = vec4(litCol, 1.0);
       }
@@ -256,6 +260,7 @@ export function createRealisticWaterMaterial(detailTex) {
     uFogDensity: { value: 0.00012 },
     uHorizScale: { value: 6.51 },
     uElevScale: { value: 2.35 },
+    uMapHalf: { value: 2500.0 },
     uDetailTex: { value: detailTex },
   };
 
@@ -434,7 +439,9 @@ export function createRealisticWaterMaterial(detailTex) {
         vec3 finalCol = mix(surfaceCol, foamColor, foamMask);
 
         float distFog = 1.0 - exp(-pow(dist * uFogDensity, 1.62));
-        finalCol = mix(finalCol, uFogColor, clamp(distFog, 0.0, 0.82));
+        float edgeRatioW = max(abs(vWorldPos.x), abs(vWorldPos.z)) / max(100.0, uMapHalf);
+        float edgeMistW = smoothstep(0.92, 1.00, edgeRatioW) * 0.55;
+        finalCol = mix(finalCol, uFogColor, clamp(max(distFog * 0.88, edgeMistW), 0.0, 0.92));
 
         float edgeAlpha = smoothstep(0.010, 0.070, optDepth);
         gl_FragColor = vec4(finalCol, edgeAlpha);
@@ -650,3 +657,125 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
     `,
   });
 }
+
+/**
+ * 5. Шейдер бескрайней водной глади и густого тумана ЗА ПРЕДЕЛАМИ КАРТЫ:
+ * окружает долину со всех сторон живой водой с волнами Френеля и мягко растворяет горизонт в дымке!
+ */
+export function createOuterSeaFogMaterial(detailTex) {
+  return new THREE.ShaderMaterial({
+    transparent: false,
+    depthWrite: true,
+    side: THREE.FrontSide,
+    uniforms: {
+      uTime: { value: 0 },
+      uMapHalf: { value: 2500.0 },
+      uHorizScale: { value: 6.51 },
+      uSunDir: { value: new THREE.Vector3(0.52, 0.74, 0.42).normalize() },
+      uSunColor: { value: new THREE.Color(0xfff5e0) },
+      uSkyZenith: { value: new THREE.Color(0x2864ad) },
+      uSkyHorizon: { value: new THREE.Color(0xa6cde8) },
+      uFogColor: { value: new THREE.Color(0xa8cae8) },
+      uFogDensity: { value: 0.00012 },
+      uDetailTex: { value: detailTex },
+    },
+    vertexShader: /* glsl */ `
+      varying vec3 vWorldPos;
+      void main() {
+        vec4 wp = modelMatrix * vec4(position, 1.0);
+        vWorldPos = wp.xyz;
+        gl_Position = projectionMatrix * viewMatrix * wp;
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform float uTime;
+      uniform float uMapHalf;
+      uniform float uHorizScale;
+      uniform vec3 uSunDir;
+      uniform vec3 uSunColor;
+      uniform vec3 uSkyZenith;
+      uniform vec3 uSkyHorizon;
+      uniform vec3 uFogColor;
+      uniform float uFogDensity;
+      uniform sampler2D uDetailTex;
+
+      varying vec3 vWorldPos;
+
+      void main() {
+        float boxDist = max(abs(vWorldPos.x), abs(vWorldPos.z));
+        // Внутри самой карты работает основной 2D SWE меш — вырезаем внутренний квадрат без Z-fighting!
+        if (boxDist < uMapHalf * 0.994) discard;
+
+        float uvScale = 0.018 / max(1.0, pow(uHorizScale, 0.55));
+        vec2 uv1 = vWorldPos.xz * uvScale + vec2(uTime * 0.018, uTime * 0.012);
+        vec2 uv2 = vWorldPos.xz * (uvScale * 2.35) - vec2(uTime * 0.014, -uTime * 0.021);
+        vec4 w1 = texture2D(uDetailTex, uv1);
+        vec4 w2 = texture2D(uDetailTex, uv2);
+
+        vec2 slope = (w1.rg - 0.5) * 0.34 + (w2.rg - 0.5) * 0.22;
+        vec3 N = normalize(vec3(slope.x, 1.0, slope.y));
+        vec3 V = normalize(cameraPosition - vWorldPos);
+
+        float cosTheta = clamp(dot(N, V), 0.0, 1.0);
+        float fresnel = 0.024 + 0.976 * pow(1.0 - cosTheta, 5.0);
+
+        vec3 R = reflect(-V, N);
+        float skyMix = pow(clamp(1.0 - max(0.0, R.y), 0.0, 1.0), 2.1);
+        vec3 skyRefl = mix(uSkyZenith, uSkyHorizon, skyMix);
+
+        float dayLum = clamp(uSunDir.y * 2.2 + 0.18, 0.08, 1.0);
+        vec3 deepSea = vec3(0.025, 0.135, 0.215) * (0.35 + 0.75 * dayLum);
+        vec3 H = normalize(uSunDir + V);
+        float spec = pow(max(0.0, dot(N, H)), 180.0) * 1.45;
+
+        // Мягкая береговая пена вдоль кромки карты
+        float shoreBand = 1.0 - smoothstep(uMapHalf * 0.994, uMapHalf * 1.055, boxDist);
+        float surfLace = smoothstep(0.42, 0.78, (w1.a * 0.6 + w2.a * 0.4) + shoreBand * 0.45) * shoreBand;
+
+        vec3 seaCol = mix(deepSea, skyRefl, clamp(fresnel * 0.92, 0.0, 0.95)) + uSunColor * spec;
+        seaCol = mix(seaCol, vec3(0.92, 0.96, 1.0) * (0.35 + 0.65 * dayLum), surfLace * 0.55);
+
+        // Густой атмосферный туман вдали за картой — плавно сливает воду с небом до самого горизонта!
+        float camDist = length(cameraPosition - vWorldPos);
+        float outDist = max(0.0, boxDist - uMapHalf);
+        float radialFog = smoothstep(0.0, uMapHalf * 2.4, outDist);
+        float viewFog = 1.0 - exp(-pow(camDist * uFogDensity * 1.35, 1.55));
+        float totalFog = clamp(max(radialFog, viewFog), 0.0, 1.0);
+
+        vec3 finalCol = mix(seaCol, uFogColor, totalFog);
+        gl_FragColor = vec4(finalCol, 1.0);
+      }
+    `,
+  });
+}
+
+/** 6. Кольцо мягкого объёмного тумана вдоль горизонта вокруг бассейна */
+export function createHorizonMistMaterial() {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthWrite: false,
+    side: THREE.BackSide,
+    uniforms: {
+      uFogColor: { value: new THREE.Color(0xa8cae8) },
+      uOpacity: { value: 0.72 },
+    },
+    vertexShader: /* glsl */ `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec3 uFogColor;
+      uniform float uOpacity;
+      varying vec2 vUv;
+      void main() {
+        // Густой туман у водной поверхности (vUv.y ~ 0), плавно тающий вверх в небо (vUv.y -> 1)
+        float alpha = pow(1.0 - clamp(vUv.y, 0.0, 1.0), 2.2) * uOpacity;
+        gl_FragColor = vec4(uFogColor, alpha);
+      }
+    `,
+  });
+}
+
