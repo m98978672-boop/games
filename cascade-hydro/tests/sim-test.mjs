@@ -24,6 +24,7 @@ import {
   createCityFacadeMaterial,
   createOuterSeaFogMaterial,
   createHorizonMistMaterial,
+  createHighwayRoadMaterial,
 } from '../src/water-shader.js';
 import { WorldView } from '../src/world-view.js';
 import { ValleyCameraController } from '../src/camera.js';
@@ -154,7 +155,7 @@ assert.ok(
   'Все процедурные PBR-текстуры (включая 512×512 воду, пелену перелива и мега-атлас 64 фасадов) созданы',
 );
 
-function checkGlslBalanced(name, code) {
+function checkGlslBalanced(name, code, uniformsObj = null) {
   let braces = 0;
   let parens = 0;
   for (const ch of code) {
@@ -167,21 +168,50 @@ function checkGlslBalanced(name, code) {
   assert.equal(braces, 0, `Фигурные скобки сбалансированы в ${name}`);
   assert.equal(parens, 0, `Круглые скобки сбалансированы в ${name}`);
   assert.ok(code.includes('void main()'), `void main() присутствует в ${name}`);
+
+  // Строгая статическая проверка всех объявлений uniform / varying / attribute / локальных переменных в GLSL!
+  const noComments = code.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '');
+  const declared = new Set();
+  for (const m of noComments.matchAll(/\b(?:uniform|varying|attribute)\s+\w+\s+(\w+)/g)) {
+    declared.add(m[1]);
+  }
+  for (const m of noComments.matchAll(/\b(?:float|int|bool|vec[234]|mat[234]|sampler2D)\s+(\w+)/g)) {
+    declared.add(m[1]);
+  }
+  const uniformDecls = new Set(
+    [...noComments.matchAll(/\buniform\s+\w+\s+(\w+)\s*;/g)].map((m) => m[1]),
+  );
+  const used = new Set([...noComments.matchAll(/\b([uva][A-Z]\w*)\b/g)].map((m) => m[1]));
+  for (const sym of used) {
+    assert.ok(
+      declared.has(sym),
+      `GLSL символ "${sym}" обязан быть явно объявлен в шейдере ${name}`,
+    );
+    if (uniformsObj && uniformDecls.has(sym)) {
+      assert.ok(
+        Object.prototype.hasOwnProperty.call(uniformsObj, sym),
+        `GLSL uniform "${sym}" в ${name} обязан присутствовать в material.uniforms`,
+      );
+    }
+  }
 }
 
 const tMat = createValleyTerrainMaterial(texSet.waterDetail, texSet.concreteMap);
 const wMat = createRealisticWaterMaterial(texSet.waterDetail);
 const oMat = createOverflowWaterMaterial(texSet.overflowCascade);
 const bMat = createCityFacadeMaterial(texSet.roof, texSet.facadeAtlas);
-checkGlslBalanced('terrain.vert', tMat.vertexShader);
-checkGlslBalanced('terrain.frag', tMat.fragmentShader);
-checkGlslBalanced('water.vert', wMat.vertexShader);
-checkGlslBalanced('water.frag', wMat.fragmentShader);
-checkGlslBalanced('overflow.vert', oMat.vertexShader);
-checkGlslBalanced('overflow.frag', oMat.fragmentShader);
-checkGlslBalanced('building.vert', bMat.vertexShader);
-checkGlslBalanced('building.frag', bMat.fragmentShader);
-console.log(`   OK! Каталоги: ${TEXTURE_SHADE_CATALOG.length} текстур/оттенков, ${ANIMATION_REGISTRY.length} анимаций, 4 GLSL-пары проверены.`);
+const rMat = createHighwayRoadMaterial();
+checkGlslBalanced('terrain.vert', tMat.vertexShader, tMat.uniforms);
+checkGlslBalanced('terrain.frag', tMat.fragmentShader, tMat.uniforms);
+checkGlslBalanced('water.vert', wMat.vertexShader, wMat.uniforms);
+checkGlslBalanced('water.frag', wMat.fragmentShader, wMat.uniforms);
+checkGlslBalanced('overflow.vert', oMat.vertexShader, oMat.uniforms);
+checkGlslBalanced('overflow.frag', oMat.fragmentShader, oMat.uniforms);
+checkGlslBalanced('building.vert', bMat.vertexShader, bMat.uniforms);
+checkGlslBalanced('building.frag', bMat.fragmentShader, bMat.uniforms);
+checkGlslBalanced('road.vert', rMat.vertexShader, rMat.uniforms);
+checkGlslBalanced('road.frag', rMat.fragmentShader, rMat.uniforms);
+console.log(`   OK! Каталоги: ${TEXTURE_SHADE_CATALOG.length} текстур/оттенков, ${ANIMATION_REGISTRY.length} анимаций, 5 GLSL-пар и все uniform проверены.`);
 
 // ============================================================================
 //  2. ТЕСТ КАРТЫ 5×5 КМ (25 КМ²), КАНОНИЧЕСКОЙ ПОСАДКИ ГЭС В НИЖНЕМ БЬЕФЕ И 3D-ПЕРЕЛИВА
@@ -480,4 +510,72 @@ camCtrl.keys.clear();
 const audio = new HydroAudio();
 audio.updateContinuous(920, 1500, 120, 300);
 
-console.log('✅ ВСЕ ТЕСТЫ v0.3.1 (WASD, ПЕРЕЛЁТ ГОРОДОВ, ЧИСТЫЕ РЕКИ, МОРЕ И ТУМАН ЗА КАРТОЙ, ЗВУК, 5×5 и 10×10 КМ) ПРОЙДЕНЫ!');
+// ============================================================================
+//  7. ПРОВЕРКА v0.3.2: ЖИВАЯ ВОДА В РЕКАХ, РЕАЛЬНАЯ СТРОЙКА ГОРОДОВ И ДОРОГ/МОСТОВ МЕЖДУ НИМИ!
+// ============================================================================
+console.log('7. Проверка воды в реках, 3D-волн, реальной стройки городов и постройки трасс и мостов между городами...');
+hydro.resetValley('bystritsa');
+eco.resetEconomy();
+worldView.rebuildForNewValley();
+worldView.updateWaterAndWetness(1.25);
+worldView.animateConstructionCranes(1.25);
+
+// 7a. В речном меше реально есть видимые вершины живой воды и шейдер воды содержит все 3D-волны и uMapHalf!
+let wetVerticesCount = 0;
+const h1Arr = worldView.waterH1Attr.array;
+const h2Arr = worldView.waterH2Attr.array;
+for (let k = 0; k < hydro.count; k++) {
+  if (h1Arr[k * 4] > 0.05 && h2Arr[k * 4 + 3] > 0.5) wetVerticesCount++;
+}
+assert.ok(wetVerticesCount > 600, `Реки полноводны и передают активную глубину в меш воды (${wetVerticesCount} водных вершин)`);
+assert.ok(wMat.fragmentShader.includes('uniform float uMapHalf;'), 'uniform float uMapHalf объявлен во фрагментном шейдере речной воды');
+assert.ok(wMat.vertexShader.includes('vWaveCrest'), 'В вершинном шейдере воды работают 3D-волны Герстнера и перекаты');
+
+// 7b. Города реально строятся поэтапно: фундаменты, сквозные леса, башенные краны со стрелами!
+assert.ok(worldView.cityFoundations.count >= 40, 'Под зданиями городов залиты бетонные фундаментные плиты');
+assert.ok(worldView.cityScaffolds.count >= 8, `Активные новостройки городов окружены 3D-строительными лесами (${worldView.cityScaffolds.count})`);
+assert.ok(worldView.cityCraneMasts.count >= 8, `Над стройплощадками городов работают башенные краны (${worldView.cityCraneMasts.count})`);
+assert.ok(worldView.cityCraneJibs.count >= 8, 'Стрелы городских башенных кранов вращаются в реальном времени');
+
+// 7c. Дороги и мосты между городами проложены по рельефу A*, имеют высокие мосты над реками и реально строятся!
+const routes = eco.roadNetwork.routes;
+assert.equal(routes.length, 9, 'Спроектированы все 9 региональных трасс и мостовых переходов между 8 городами');
+
+let bridgeRoutesCount = 0;
+for (const rt of routes) {
+  if (rt.hasBridge) {
+    bridgeRoutesCount++;
+    for (const pt of rt.points) {
+      if (pt.waterDepth > 0.15) {
+        assert.ok(
+          pt.deckY > pt.waterSurf + 2.5 * WORLD.elevScale,
+          `Пролёт моста на трассе «${rt.name}» поднят высоко над водой (${pt.deckY.toFixed(1)} м > ${pt.waterSurf.toFixed(1)} м)`,
+        );
+      }
+    }
+  }
+}
+assert.ok(bridgeRoutesCount >= 3, `Через реки перекинуты инженерные мосты (${bridgeRoutesCount} мостовых трасс)`);
+
+const initialBuildingsTotal = eco.allBuildings.length;
+const initialRoadProgSum = routes.reduce((s, r) => s + r.buildProgress, 0);
+
+// Продвигаем время вперёд и проверяем реальный рост городов и укладку километров дорог и мостов!
+for (const c of eco.cities) {
+  if (!c.connected) eco.connectCityGrid(c.id);
+}
+eco.creative = true;
+for (let step = 0; step < 60; step++) {
+  eco.update(0.25);
+}
+worldView.syncCityInstances();
+worldView.updateAtmosphere(12.0, WEATHER_MODES.normal, new THREE.Vector3(0, 20, 0), 0.1);
+
+const afterRoadProgSum = routes.reduce((s, r) => s + r.buildProgress, 0);
+assert.ok(afterRoadProgSum > initialRoadProgSum + 2.0, 'Междугородние дороги и мосты реально строятся со временем');
+assert.ok(eco.roadNetwork.completedCount >= 4, `Построены и открыты для движения междугородние магистрали (${eco.roadNetwork.completedCount}/9)`);
+assert.ok(eco.allBuildings.length > initialBuildingsTotal, `Города реально построили новые здания (${initialBuildingsTotal} -> ${eco.allBuildings.length})`);
+assert.ok(worldView.roadRenderer.bridgePierIM.count > 0, `В руслах рек возведены железобетонные опоры-быки мостов (${worldView.roadRenderer.bridgePierIM.count})`);
+assert.ok(worldView.livingWorld.vehicleIM.count > worldView.livingWorld.cityCars.length, 'По построенным междугородним дорогам и мостам поехал автотранспорт!');
+
+console.log('✅ ВСЕ ТЕСТЫ v0.3.2 (ВОДА В РЕКАХ + 3D-ВОЛНЫ, РЕАЛЬНАЯ СТРОЙКА ГОРОДОВ, ТРАССЫ И МОСТЫ МЕЖДУ ГОРОДАМИ) ПРОЙДЕНЫ!');
