@@ -378,83 +378,309 @@ export function createNatureTexturePack(maxAniso = 4) {
 }
 
 /**
- * 7. Мега-Атлас из 64 процедурных текстур фасадов, кирпича, панелей, стекла и промстен (512×512)
+ * 7. Высокодетализированный Архитектурный Мега-Атлас из 64 процедурных текстур города (1024×1024, тайл 128×128)
+ *    Клинкерный кирпич, неоклассический руст и пилястры, витражные небоскрёбы, срубы шале,
+ *    профлист стройкомбинатов БСУ/ДСК, панели с лоджиями, ламели ЦОД ИИ и стальные силосы!
  */
-export function createFacadeMegaAtlas(maxAniso = 4) {
-  const size = 512;
-  const tile = 64;
+export function createFacadeMegaAtlas(maxAniso = 8) {
+  const size = 1024;
+  const tile = 128;
   const c = makeCanvas(size);
   const ctx = c.getContext('2d');
 
   const baseHues = [
-    [214, 198, 178], [192, 114, 88], [218, 224, 232], [156, 176, 198],
-    [182, 168, 152], [134, 168, 188], [226, 212, 184], [164, 172, 182],
+    [218, 202, 182], [188, 108, 82],  [222, 228, 236], [148, 174, 202],
+    [194, 176, 156], [128, 166, 192], [230, 216, 188], [162, 172, 184],
   ];
 
   for (let ty = 0; ty < 8; ty++) {
     for (let tx = 0; tx < 8; tx++) {
-      const idx = ty * 8 + tx;
       const ox = tx * tile;
       const oy = ty * tile;
       const rgb = baseHues[(tx + ty * 3) % baseHues.length];
-      const shift = Math.round((hash2(tx, ty, 19) - 0.5) * 36);
-      const r = Math.max(45, Math.min(245, rgb[0] + shift));
-      const g = Math.max(45, Math.min(245, rgb[1] + shift));
-      const b = Math.max(45, Math.min(245, rgb[2] + shift));
+      const shift = Math.round((hash2(tx, ty, 19) - 0.5) * 34);
+      const r = Math.max(48, Math.min(244, rgb[0] + shift));
+      const g = Math.max(48, Math.min(244, rgb[1] + shift));
+      const b = Math.max(48, Math.min(244, rgb[2] + shift));
 
-      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      // Базовый вертикальный градиент стены (лёгкое затенение к цоколю и карнизу)
+      const wallGrad = ctx.createLinearGradient(ox, oy, ox, oy + tile);
+      wallGrad.addColorStop(0, `rgb(${Math.min(255, r + 10)},${Math.min(255, g + 10)},${Math.min(255, b + 12)})`);
+      wallGrad.addColorStop(0.82, `rgb(${r},${g},${b})`);
+      wallGrad.addColorStop(1, `rgb(${Math.max(25, r - 26)},${Math.max(25, g - 26)},${Math.max(25, b - 24)})`);
+      ctx.fillStyle = wallGrad;
       ctx.fillRect(ox, oy, tile, tile);
 
-      // Разные конструктивные рисунки по строкам атласа: кирпич, руст, витраж, профлист, сруб, панель, ламели ЦОД, силосы
-      ctx.fillStyle = 'rgba(20, 30, 44, 0.24)';
+      // Мелкое зерно штукатурки / камня
+      for (let p = 0; p < 160; p++) {
+        const px = ox + Math.floor(hash2(p, tx + ty * 8, 53) * tile);
+        const py = oy + Math.floor(hash2(tx + ty * 8, p, 97) * tile);
+        const lum = hash2(p, py, 13) > 0.5 ? 'rgba(255,255,255,0.09)' : 'rgba(15,23,42,0.09)';
+        ctx.fillStyle = lum;
+        ctx.fillRect(px, py, 2, 2);
+      }
+
       if (ty === 0 || ty === 1) {
-        // Кирпичная и клинкерная перевязка
+        // Клинкерная и фламандская кирпичная кладка с перемычками и карнизами
+        ctx.fillStyle = 'rgba(236, 232, 224, 0.34)';
         for (let y = 0; y < tile; y += 8) {
           ctx.fillRect(ox, oy + y, tile, 1);
           const off = ((y / 8) % 2) * 8;
-          for (let x = off; x < tile; x += 16) ctx.fillRect(ox + x, oy + y, 1, 8);
+          for (let x = off; x < tile; x += 16) {
+            ctx.fillRect(ox + x, oy + y, 1, 8);
+          }
         }
+        // Тёмные кирпичи-тычки и каменные межэтажные пояса
+        for (let y = 8; y < tile; y += 16) {
+          for (let x = 4; x < tile - 8; x += 24) {
+            if (hash2(x + ox, y + oy, 41) > 0.45) {
+              ctx.fillStyle = 'rgba(68, 32, 24, 0.22)';
+              ctx.fillRect(ox + x, oy + y + 1, 12, 6);
+            }
+          }
+        }
+        ctx.fillStyle = 'rgba(241, 238, 230, 0.55)';
+        ctx.fillRect(ox, oy + 4, tile, 3);
+        ctx.fillRect(ox, oy + 64, tile, 2);
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.35)';
+        ctx.fillRect(ox, oy + tile - 10, tile, 10);
       } else if (ty === 2 || ty === 3) {
-        // Панорамное остекление бизнес-башен и ЖК
-        ctx.fillStyle = 'rgba(56, 148, 218, 0.35)';
-        for (let y = 4; y < tile; y += 12) {
-          for (let x = 4; x < tile; x += 10) ctx.fillRect(ox + x, oy + y, 7, 8);
+        // Витражное структурное остекление бизнес-центров и каскадных ЖК с импостами и лоджиями
+        const skyGrad = ctx.createLinearGradient(ox, oy, ox + tile, oy + tile);
+        skyGrad.addColorStop(0, 'rgba(38, 118, 186, 0.58)');
+        skyGrad.addColorStop(0.5, 'rgba(96, 182, 236, 0.44)');
+        skyGrad.addColorStop(1, 'rgba(24, 68, 118, 0.64)');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(ox + 2, oy + 2, tile - 4, tile - 4);
+        // Межэтажные спандрели и алюминиевые стойки
+        for (let y = 0; y < tile; y += 16) {
+          ctx.fillStyle = ty === 2 ? 'rgba(203, 213, 225, 0.72)' : 'rgba(30, 41, 59, 0.68)';
+          ctx.fillRect(ox, oy + y, tile, 3.5);
+          // Ограждения лоджий
+          if (ty === 3 && (y % 32 === 0)) {
+            ctx.fillStyle = 'rgba(248, 250, 252, 0.38)';
+            ctx.fillRect(ox + 8, oy + y + 10, tile - 16, 4);
+          }
         }
-      } else if (ty === 4) {
-        // Профлист промышленных цехов и алюминиевого завода
-        for (let x = 0; x < tile; x += 6) {
+        ctx.fillStyle = 'rgba(226, 232, 240, 0.65)';
+        for (let x = 0; x < tile; x += 16) {
           ctx.fillRect(ox + x, oy, 2, tile);
         }
+      } else if (ty === 4) {
+        // Профлист промышленных цехов, БСУ, ДСК, РМЗ и алюминиевого комбината
+        for (let x = 0; x < tile; x += 8) {
+          ctx.fillStyle = x % 16 === 0 ? 'rgba(15, 23, 42, 0.28)' : 'rgba(255, 255, 255, 0.16)';
+          ctx.fillRect(ox + x, oy, 3, tile);
+        }
+        // Ленточное верхнее остекление цеха и сигнальная полоса безопасности стройбазы
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+        ctx.fillRect(ox, oy + 18, tile, 12);
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.78)';
+        ctx.fillRect(ox, oy + tile - 16, tile, 5);
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+        for (let x = 0; x < tile; x += 16) {
+          ctx.fillRect(ox + x, oy + tile - 16, 8, 5);
+        }
       } else if (ty === 5) {
-        // Деревянный брус, шале и фахверк
-        for (let y = 0; y < tile; y += 6) {
-          ctx.fillRect(ox, oy + y, tile, 1.5);
+        // Деревянный профилированный брус, шале и фахверковые кварталы Посада
+        for (let y = 0; y < tile; y += 8) {
+          ctx.fillStyle = 'rgba(58, 32, 14, 0.34)';
+          ctx.fillRect(ox, oy + y, tile, 1.8);
+          ctx.fillStyle = 'rgba(255, 236, 205, 0.14)';
+          ctx.fillRect(ox, oy + y + 2, tile, 1.5);
+        }
+        if (tx % 2 === 1) {
+          // Диагональные раскосы фахверка
+          ctx.strokeStyle = 'rgba(62, 36, 18, 0.55)';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(ox + 4, oy + tile - 4);
+          ctx.lineTo(ox + 60, oy + 64);
+          ctx.moveTo(ox + tile - 4, oy + tile - 4);
+          ctx.lineTo(ox + 68, oy + 64);
+          ctx.stroke();
+        }
+      } else if (ty === 6) {
+        // Неоклассика, ратуши, университеты и речной вокзал: рустованный цоколь, пилястры и карниз
+        ctx.fillStyle = 'rgba(255, 252, 244, 0.52)';
+        ctx.fillRect(ox, oy + 3, tile, 5);
+        for (let x = 8; x < tile; x += 32) {
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.36)';
+          ctx.fillRect(ox + x, oy + 8, 6, tile - 28);
+          ctx.fillStyle = 'rgba(30, 41, 59, 0.18)';
+          ctx.fillRect(ox + x + 6, oy + 8, 2, tile - 28);
+        }
+        // Каменный руст нижнего яруса
+        ctx.fillStyle = 'rgba(30, 41, 59, 0.24)';
+        ctx.fillRect(ox, oy + tile - 22, tile, 22);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+        for (let y = tile - 20; y < tile; y += 6) {
+          ctx.fillRect(ox, oy + y, tile, 1);
         }
       } else {
-        // Монолитный керамогранит и вентиляционные решётки ЦОД
-        for (let y = 0; y < tile; y += 16) ctx.fillRect(ox, oy + y, tile, 2);
-        for (let x = 0; x < tile; x += 16) ctx.fillRect(ox + x, oy, 2, tile);
+        // Высокотехнологичные ламели ЦОД ИИ, силосы цемента БСУ и решётки градирен
+        for (let y = 0; y < tile; y += 16) {
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.34)';
+          ctx.fillRect(ox, oy + y, tile, 2.5);
+        }
+        for (let x = 0; x < tile; x += 16) {
+          ctx.fillStyle = 'rgba(226, 232, 240, 0.28)';
+          ctx.fillRect(ox + x, oy, 2, tile);
+        }
+        if (tx % 2 === 0) {
+          ctx.fillStyle = 'rgba(14, 165, 233, 0.32)';
+          for (let y = 6; y < tile - 8; y += 16) {
+            ctx.fillRect(ox + 6, oy + y, tile - 12, 6);
+          }
+        }
       }
-      void idx;
     }
   }
 
   return finalizeTex(new THREE.CanvasTexture(c), maxAniso, true);
 }
 
+/**
+ * 8. Процедурная текстура городских кварталов, площадей, брусчатки и бульваров (512×512)
+ */
+export function createUrbanPlazaTexture(maxAniso = 8) {
+  const size = 512;
+  const half = size * 0.5;
+  const c = makeCanvas(size);
+  const ctx = c.getContext('2d');
+
+  // Мягкая гранитно-песчаная основа городской террасы
+  ctx.fillStyle = '#55606e';
+  ctx.fillRect(0, 0, size, size);
+
+  // Квартальная сетка мощения и зелёных скверов
+  for (let y = 0; y < size; y += 32) {
+    for (let x = 0; x < size; x += 32) {
+      const h = hash2(x >> 5, y >> 5, 61);
+      if (h > 0.74) {
+        // Внутриквартальный зелёный сквер / газон
+        ctx.fillStyle = '#3f6b4b';
+        ctx.fillRect(x + 4, y + 4, 24, 24);
+        ctx.fillStyle = '#53875e';
+        ctx.fillRect(x + 7, y + 7, 18, 18);
+      } else {
+        const tone = 82 + Math.round(h * 28);
+        ctx.fillStyle = `rgb(${tone + 6},${tone + 5},${tone})`;
+        ctx.fillRect(x + 3, y + 3, 26, 26);
+      }
+    }
+  }
+
+  // Кольцевые и радиальные городские проспекты с разметкой и переходами
+  ctx.strokeStyle = '#363f4b';
+  for (const r of [72, 138, 204]) {
+    ctx.lineWidth = 13;
+    ctx.beginPath();
+    ctx.arc(half, half, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(248, 250, 252, 0.45)';
+    if (ctx.setLineDash) ctx.setLineDash([7, 7]);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.arc(half, half, r, 0, Math.PI * 2);
+    ctx.stroke();
+    if (ctx.setLineDash) ctx.setLineDash([]);
+    ctx.strokeStyle = '#363f4b';
+  }
+
+  for (let a = 0; a < 8; a++) {
+    const ang = (a * Math.PI) / 4;
+    const ex = half + Math.cos(ang) * 246;
+    const ey = half + Math.sin(ang) * 246;
+    ctx.strokeStyle = '#343d49';
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(half, half);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
+    ctx.lineWidth = 1.3;
+    if (ctx.setLineDash) ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.moveTo(half, half);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    if (ctx.setLineDash) ctx.setLineDash([]);
+  }
+
+  // Центральная парадная площадь с брусчаткой и кольцом фонтана
+  ctx.fillStyle = '#8b8378';
+  ctx.beginPath();
+  ctx.arc(half, half, 36, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#cbd5e1';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.fillStyle = '#38bdf8';
+  ctx.beginPath();
+  ctx.arc(half, half, 12, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Плавная круглая альфа-маска по внешнему краю города
+  const img = ctx.getImageData(0, 0, size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const dist = Math.hypot(x - half, y - half) / half;
+      const alpha = dist > 0.98 ? 0 : (dist > 0.78 ? (1.0 - (dist - 0.78) / 0.20) : 1.0);
+      img.data[(y * size + x) * 4 + 3] = Math.round(Math.max(0, Math.min(1, alpha)) * 238);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = maxAniso;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * 9. Кристаллическая текстура голубого глетчерного льда для 3D-гротов истоков рек (256×256)
+ */
+export function createGlacierIceTexture(maxAniso = 4) {
+  const size = 256;
+  const c = makeCanvas(size);
+  const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0, 0, 0, size);
+  grad.addColorStop(0, '#f0f9ff');
+  grad.addColorStop(0.45, '#bae6fd');
+  grad.addColorStop(1, '#38bdf8');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  // Ледниковые трещины и инеевые прожилки
+  for (let i = 0; i < 48; i++) {
+    const x0 = hash2(i, 3, 17) * size;
+    const y0 = hash2(i, 7, 29) * size;
+    ctx.strokeStyle = i % 2 === 0 ? 'rgba(12, 74, 110, 0.36)' : 'rgba(255, 255, 255, 0.65)';
+    ctx.lineWidth = 1.2 + hash2(i, 11, 43) * 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x0, y0);
+    ctx.lineTo(x0 + (hash2(i, 19, 71) - 0.5) * 70, y0 + 28 + hash2(i, 23, 89) * 54);
+    ctx.stroke();
+  }
+  return finalizeTex(new THREE.CanvasTexture(c), maxAniso, true);
+}
+
 // ============================================================================
-//  КАТАЛОГ 432 ПРОЦЕДУРНЫХ ТЕКСТУР И ОТТЕНКОВ МАТЕРИАЛОВ (GPU-ИНСТАНСИНГ)
-//  Используется зданиями 32 типов, лесами, скалами, плотинами, флотом и техникой!
+//  КАТАЛОГ 480 ПРОЦЕДУРНЫХ ТЕКСТУР И ОТТЕНКОВ МАТЕРИАЛОВ (GPU-ИНСТАНСИНГ)
+//  Используется 48 типами зданий, стройбазами, лесами, скалами, плотинами и флотом!
 // ============================================================================
 const SHADE_FAMILIES = [
-  { family: 'rock_strata',     label: 'Горные породы и страты',         count: 54, baseH: 0.07, sat: 0.12, lMin: 0.32, lMax: 0.72 },
-  { family: 'soils_pebbles',   label: 'Грунты, галька и пляжи',         count: 54, baseH: 0.09, sat: 0.28, lMin: 0.28, lMax: 0.68 },
-  { family: 'hydro_concrete',  label: 'Гидротехнические бетоны и бут',  count: 54, baseH: 0.58, sat: 0.08, lMin: 0.46, lMax: 0.84 },
-  { family: 'city_facades',    label: 'Архитектурные фасады и стекло',  count: 72, baseH: 0.11, sat: 0.24, lMin: 0.48, lMax: 0.88 },
-  { family: 'roofs_metals',    label: 'Кровли, сталь и водоводы',       count: 54, baseH: 0.03, sat: 0.34, lMin: 0.30, lMax: 0.76 },
-  { family: 'flora_agro',      label: 'Хвоя, луга и агро-культуры',     count: 54, baseH: 0.31, sat: 0.42, lMin: 0.24, lMax: 0.62 },
-  { family: 'water_optics',    label: 'Оптические оттенки воды и льда', count: 45, baseH: 0.52, sat: 0.58, lMin: 0.26, lMax: 0.82 },
-  { family: 'fleet_machinery', label: 'Речной флот, поезда и краны',    count: 45, baseH: 0.14, sat: 0.64, lMin: 0.36, lMax: 0.78 },
+  { family: 'rock_strata',     label: 'Горные породы и страты',         count: 56, baseH: 0.07, sat: 0.12, lMin: 0.32, lMax: 0.72 },
+  { family: 'soils_pebbles',   label: 'Грунты, галька и пляжи',         count: 56, baseH: 0.09, sat: 0.28, lMin: 0.28, lMax: 0.68 },
+  { family: 'hydro_concrete',  label: 'Гидротехнические бетоны и бут',  count: 60, baseH: 0.58, sat: 0.08, lMin: 0.46, lMax: 0.84 },
+  { family: 'city_facades',    label: 'Архитектурные фасады и стекло',  count: 92, baseH: 0.11, sat: 0.26, lMin: 0.46, lMax: 0.89 },
+  { family: 'roofs_metals',    label: 'Кровли, сталь и водоводы',       count: 60, baseH: 0.03, sat: 0.36, lMin: 0.28, lMax: 0.76 },
+  { family: 'flora_agro',      label: 'Хвоя, луга и агро-культуры',     count: 56, baseH: 0.31, sat: 0.42, lMin: 0.24, lMax: 0.62 },
+  { family: 'water_optics',    label: 'Оптические оттенки воды и льда', count: 48, baseH: 0.52, sat: 0.58, lMin: 0.26, lMax: 0.84 },
+  { family: 'fleet_machinery', label: 'Стройтехника, флот и краны',     count: 52, baseH: 0.14, sat: 0.66, lMin: 0.36, lMax: 0.78 },
 ];
 
 export const TEXTURE_SHADE_CATALOG = (() => {
@@ -511,6 +737,8 @@ export function buildAllProceduralTextures(renderer) {
   const steel = createBrushedSteelTexture(maxAniso);
   const roof = createRoofShingleTexture(maxAniso);
   const facadeAtlas = createFacadeMegaAtlas(maxAniso);
+  const urbanPlaza = createUrbanPlazaTexture(maxAniso);
+  const glacierIce = createGlacierIceTexture(maxAniso);
   const nature = createNatureTexturePack(maxAniso);
 
   return {
@@ -522,9 +750,11 @@ export function buildAllProceduralTextures(renderer) {
     steel,
     roof,
     facadeAtlas,
+    urbanPlaza,
+    glacierIce,
     foliage: nature.foliage,
     bark: nature.bark,
     rock: nature.rock,
-    shadeCatalogCount: TEXTURE_SHADE_CATALOG.length, // 432!
+    shadeCatalogCount: TEXTURE_SHADE_CATALOG.length, // 480!
   };
 }

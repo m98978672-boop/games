@@ -1058,7 +1058,7 @@ html, body, #app {
 
 .hotbar {
   display: grid;
-  grid-template-columns: repeat(14, minmax(60px, 1fr));
+  grid-template-columns: repeat(17, minmax(54px, 1fr));
   gap: 4px;
   overflow-x: auto;
   padding-bottom: 2px;
@@ -1252,5 +1252,5 @@ html, body, #app {
   .side-panel { width: 268px; max-height: 44vh; }
   .tutorial-card { width: 300px; }
   .landmarks-bar { display: none; }
-  .hotbar { grid-template-columns: repeat(14, 68px); }
+  .hotbar { grid-template-columns: repeat(17, 66px); }
 }

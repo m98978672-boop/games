@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>КАСКАД: Живая Вода v0.3 — Карты 5×5 и 10×10 км, ГЭС/ГАЭС, 3D-перелив, научный баланс воды и 8 городов</title>
-  <meta name="description" content="Масштабный оптимизированный 3D-симулятор гидрокаскада: карты 5×5 км и 10×10 км, каноническая ГЭС/ГАЭС в нижнем бьефе, 3D-перелив плотин, научный баланс воды, 12 видов дохода, 8 городов, 32 типа зданий, 300 анимаций и 432 текстурных пресета.">
+  <title>КАСКАД: Живая Вода v0.4 — 3D-истоки рек, тонкая стройка, БСУ, физика ветра/климата, 8 городов и трассы</title>
+  <meta name="description" content="Оптимизированный 3D-симулятор гидрокаскада v0.4: карты 0.8/5×5/10×10 км, ледниковые 3D-гроты истоков рек, тонкая послойная стройка, Бетонозавод БСУ, насосная, ВЭС, живая физика ветра и климата, 48 типов зданий, 300 анимаций и 480 текстур.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -18,8 +18,8 @@
         <div class="loader-brand">
           <span class="brand-dot"></span>
           <div>
-            <h1>КАСКАД: Живая Вода <small class="ver-pill">v0.3.2</small></h1>
-            <p>3D-симулятор ГЭС/ГАЭС, 3D-перелива воды, научной гидрологии, 12 доходов, 8 городов (32 типа зданий), 300 анимаций и 432 текстур</p>
+            <h1>КАСКАД: Живая Вода <small class="ver-pill">v0.4.0</small></h1>
+            <p>3D-гроты истоков рек, тонкая стройка, БСУ и ВЭС, живая физика ветра и климата, 8 городов (48 типов зданий), 300 анимаций и 480 текстур</p>
           </div>
         </div>
         <a class="gh-site-link" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">↗ Все игры на GitHub</a>
@@ -72,7 +72,7 @@
       <div class="loader-options">
         <label class="opt-check">
           <input type="checkbox" id="chk-start-tutorial" checked>
-          <span><strong>Пошаговое обучение инженера (8 шагов)</strong> — проведёт от геодезии, 3D-плотины и приплотинной ГЭС до шлюзов, ГАЭС и водного баланса (+46 000 ₽ премий)</span>
+          <span><strong>Обновлённая Школа Гидростроя v0.4 (10 шагов)</strong> — от 3D-истоков рек, Бетонозавода БСУ [B] и тонкой стройки до насосных [G], ВЭС [N], климата и ГАЭС (+53 000 ₽ премий)</span>
         </label>
         <div class="opt-mode-row">
           <span>Режим строительства:</span>
@@ -197,9 +197,9 @@
 
     <div class="side-tabs" id="side-tabs">
       <button class="side-tab active" data-tab="cities">Города (8)</button>
-      <button class="side-tab" data-tab="water">Вода (Баланс)</button>
+      <button class="side-tab" data-tab="water">Вода и Климат</button>
       <button class="side-tab" data-tab="revenue">Доходы (12)</button>
-      <button class="side-tab" data-tab="world">300 / 432</button>
+      <button class="side-tab" data-tab="world">300 / 480</button>
     </div>
 
     <div id="panel-body" class="panel-body">
@@ -252,14 +252,14 @@
         <button class="connect-btn" id="btn-sell-aggregate">▲ Продать партию гранитного щебня со склада</button>
       </div>
 
-      <!-- ВКЛАДКА 4: КАТАЛОГ 300 АНИМАЦИЙ И 432 ТЕКСТУР / ОТТЕНКОВ -->
+      <!-- ВКЛАДКА 4: КАТАЛОГ 300 АНИМАЦИЙ И 480 ТЕКСТУР / ОТТЕНКОВ -->
       <div id="tab-pane-world" class="tab-pane hidden">
         <div class="wb-why-box" id="world-stats-box">
-          Активно 300 анимаций (InstancedMesh + GPU) и 432 пресета текстур и оттенков.
+          Активно 300 анимаций (InstancedMesh + GPU) и 480 пресетов текстур, фасадов 1024px и оттенков.
         </div>
         <div class="wb-section-title info">▸ 11 подсистем живых анимаций (300 пресетов):</div>
         <div class="wb-table" id="anim-groups-list"></div>
-        <div class="wb-section-title good">▸ 8 семейств текстур и оттенков (432 пресета):</div>
+        <div class="wb-section-title good">▸ 10 семейств текстур, площадей и льда (480 пресетов):</div>
         <div class="wb-table" id="tex-families-list"></div>
       </div>
 
@@ -293,43 +293,45 @@
     </div>
   </section>
 
-  <!-- НИЖНЯЯ ИНЖЕНЕРНАЯ ДОК-ПАНЕЛЬ: ГИДРОПОСТ + ЯРУСЫ 3D-ПЛОТИНЫ + 14 ИНСТРУМЕНТОВ -->
+  <!-- НИЖНЯЯ ИНЖЕНЕРНАЯ ДОК-ПАНЕЛЬ: ГИДРОПОСТ + ТОНКАЯ СТРОЙКА 3D-ПЛОТИНЫ + 17 ИНСТРУМЕНТОВ -->
   <footer class="bottom-dock">
     <div class="probe-bar" id="probe-bar">
-      <span id="probe-readout">Наведите курсор на реку, каньон или створ плотины для гидрологического замера</span>
+      <span id="probe-readout">Наведите курсор на реку, ледниковый исток, каньон или створ плотины для гидрологического замера</span>
       <div class="brush-controls">
-        <span>Кисть:</span>
-        <button class="size-btn" data-size-idx="0" id="brush-btn-0">24м</button>
-        <button class="size-btn active" data-size-idx="1" id="brush-btn-1">48м</button>
-        <button class="size-btn" data-size-idx="2" id="brush-btn-2">90м</button>
+        <span title="Горячие клавиши [ и ]">Кисть:</span>
+        <button class="size-btn" data-size-idx="0" id="brush-btn-0" title="Ювелирная тонкая кисть ([)">16м</button>
+        <button class="size-btn active" data-size-idx="1" id="brush-btn-1" title="Средняя рабочая кисть">30м</button>
+        <button class="size-btn" data-size-idx="2" id="brush-btn-2" title="Широкая кисть">52м</button>
+        <button class="size-btn" data-size-idx="3" id="brush-btn-3" title="Массивная кисть (])">88м</button>
         <span class="sep-dot">·</span>
-        <span>Высота 3D:</span>
-        <button class="size-btn tier-btn" data-tier="0" id="tier-btn-0">+20м</button>
-        <button class="size-btn tier-btn active" data-tier="1" id="tier-btn-1">+36м</button>
-        <button class="size-btn tier-btn" data-tier="2" id="tier-btn-2">+55м</button>
-        <button class="size-btn" id="btn-rotate" title="Повернуть створ агрегата/водосброса/шлюза (R)">↻ [R]</button>
+        <span>Ярус 3D:</span>
+        <button class="size-btn tier-btn" data-tier="0" id="tier-btn-0" title="Точная доводка гребня">+7м</button>
+        <button class="size-btn tier-btn active" data-tier="1" id="tier-btn-1" title="Низконапорный ярус">+15м</button>
+        <button class="size-btn tier-btn" data-tier="2" id="tier-btn-2" title="Средненапорная плотина">+26м</button>
+        <button class="size-btn tier-btn" data-tier="3" id="tier-btn-3" title="Высокая плотина каньона">+38м</button>
+        <button class="size-btn" id="btn-rotate" title="Точный поворот створа на 15° (R, сброс Shift+R)">↻ 15° [R]</button>
       </div>
     </div>
 
     <div class="hotbar" id="hotbar"></div>
-    <div class="tool-hint" id="tool-hint">Выберите инструмент строительства плотины, ГЭС/ГАЭС, канала, шлюза или рыбхоза</div>
+    <div class="tool-hint" id="tool-hint">Выберите инструмент тонкого строительства плотины, БСУ [B], насосной [G], ВЭС [N], ГЭС/ГАЭС или канала</div>
   </footer>
 
-  <!-- СПРАВОЧНОЕ РУКОВОДСТВО ПО ГЭС И НАУЧНОЙ ГИДРОЛОГИИ -->
+  <!-- СПРАВОЧНОЕ РУКОВОДСТВО ПО ГЭС, ФИЗИКЕ КЛИМАТА И ТОНКОМУ СТРОИТЕЛЬСТВУ -->
   <div id="help-modal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div class="modal-head">
-        <h2>✦ Инженерное руководство «КАСКАД: Живая Вода v0.3»</h2>
+        <h2>✦ Инженерное руководство «КАСКАД: Живая Вода v0.4»</h2>
         <button class="icon-btn" id="help-close">✕</button>
       </div>
       <div class="modal-content">
-        <p><strong>Реальная физика ГЭС/ГАЭС (по энциклопедическим канонам гидроэнергетики) и полный водный баланс:</strong> теперь доступны карты <b>5×5 км (25 км²)</b> и <b>10×10 км (100 км²)</b>!</p>
+        <p><strong>Живые 3D-истоки рек, тонкая инженерия, строительная индустрия и физика ветра/климата:</strong> доступны бассейны <b>0.8×0.8</b>, <b>5×5 км (25 км²)</b> и <b>10×10 км (100 км²)</b>!</p>
         <ul>
-          <li><strong>Приплотинная компоновка ГЭС и режим ГАЭС:</strong> водоприёмник с сороудерживающей решёткой стоит в верхнем бьефе, наклонные стальные водоводы ведут вниз, а <b>машинный зал с отсасывающими трубами и трансформаторами располагается строго внизу у подножия плотины в нижнем бьефе</b>! Ночью обратимые агрегаты ГАЭС качают дешёвую воду обратно наверх для продажи в пик.</li>
-          <li><strong>3D-перелив воды и водосбросы:</strong> при переполнении водохранилища или открытии <b>[7] Водосброса</b> вы видите живые падающие 3D-ленты воды по параболе и пенный гидравлический прыжок внизу!</li>
-          <li><strong>Научная логика воды (вкладка «Вода»):</strong> учитываются сток 3 рек, дневное солнечное таяние горных ледников (модель Хокка), дождевые осадки («накапало»), родники, испарение с зеркала водохранилища по закону Дальтона — Пенмана («испарилось»), инфильтрация Хортона в сухие берега и фильтрация Дарси под плотиной.</li>
-          <li><strong>12 видов дохода и 8 городов (32 типа зданий):</strong> ОРЭМ, арбитраж ГАЭС, мощность АРЧМ 50 Гц, PPA-контракты с <b>Алюмградом</b> и <b>Технопарком ИИ</b>, <b>[L] Судоходные шлюзы</b>, Горводоканал, ирригация <b>Агродолины</b>, <b>[F] Форелевые рыбхозы</b>, яхт-туризм, продажа гранитного щебня, сертификаты CO₂ и премии МЧС за срезку паводка!</li>
-          <li><strong>Управление:</strong> <code>WASD</code> / стрелки / СКМ — полёт, <code>ПКМ</code> или <code>Q/E</code> — поворот, <code>Колесо</code> — зум до 9.2 км, <code>T</code> — обучение, <code>F3</code> — диагностика FPS.</li>
+          <li><strong>3D-гроты истоков рек и живой сток без застоя:</strong> у всех 3 рек оформлены природные истоки («Белый Ледник», «Лесной Ключ», «Скальный Исток») с ледниковыми сводами и водопадами — вода непрерывно идёт по уклону тальвега до самого моря!</li>
+          <li><strong>Тонкая и точная стройка:</strong> 4 калибра кисти (переключение <code>[</code> и <code>]</code>), 4 выверенных яруса высоты 3D-плотин без скачков, удержание уровня с <code>Shift</code> и ювелирный поворот агрегатов с шагом <b>15°</b> (<code>R</code>).</li>
+          <li><strong>Новые строительные и инженерные объекты:</strong> <b>[B] Бетонозавод БСУ</b> (ускоряет заливку плотин ×2, снижает цену бетона на 22%, ускоряет стройку городов и трасс), <b>[G] Береговая насосная</b> (доход Горводоканала и напорное орошение Агродолины) и <b>[N] Метео-ВЭС</b> (генерация МВт по кубическому закону ветра <i>P ~ v³</i>) + <b>48 типов зданий</b> и обновлённый мега-атлас городских фасадов и площадей!</li>
+          <li><strong>Тонкая физика течений, ветра и микроклимата:</strong> динамический 2D-вектор ветра с горно-долинным бризом и порывами (ветровой нагон воды, снос облаков и пара, вращение ВЭС), шероховатость Маннинга по породам, сила Кориолиса, давление гПа, точка росы и температура воды.</li>
+          <li><strong>Управление:</strong> <code>WASD</code> / стрелки / СКМ — полёт, <code>ПКМ</code> или <code>Q/E</code> — поворот камеры, <code>[ / ]</code> — размер кисти, <code>R</code> — угол 15°, <code>T</code> — Школа Гидростроя (10 шагов), <code>F3</code> — диагностика FPS.</li>
         </ul>
         <div class="gh-modal-banner">
           <div>

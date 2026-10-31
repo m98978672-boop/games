@@ -294,12 +294,21 @@ export function buildValleyTerrain(grid, arrays, presetId = 'bystritsa', zStart 
         }
       }
 
-      // 6b. Плавный береговой спуск внешнего края карты (восток, запад, юг) к бескрайней воде и туману за картой
+      // 6b. Плавный береговой спуск южного морского побережья и дельты к внешнему морю
+      // (северные и западные горные массивы истоков сохраняют скальную высоту под ледники и гроты!)
       if (!inChannel) {
-        const coastRim = Math.max(Math.abs(bx), Math.max(0, bz));
-        const coastBlend = smoothstep(352, 383.2, coastRim);
-        if (coastBlend > 0.001) {
-          elev = lerp(elev, 2.75 * eS, coastBlend * 0.94);
+        const isHeadwaterMassif = (bz < -250) || (bx < -265 && bz > 20 && bz < 128);
+        if (!isHeadwaterMassif) {
+          const southCoast = smoothstep(344, 383.2, bz);
+          const sideSeaFlank = smoothstep(140, 320, bz) * smoothstep(352, 383.2, Math.abs(bx));
+          const coastBlend = Math.max(southCoast, sideSeaFlank);
+          if (coastBlend > 0.001) {
+            elev = lerp(elev, 2.75 * eS, coastBlend * 0.94);
+          }
+        } else {
+          // Скальный амфитеатр у истоков рек (возвышение портала грота)
+          const portalLift = smoothstep(345, 382, Math.max(Math.abs(bx), -bz)) * 9.5 * eS;
+          elev += portalLift;
         }
       }
 
@@ -321,6 +330,208 @@ export function buildValleyTerrain(grid, arrays, presetId = 'bystritsa', zStart 
       hu[idx] = waterDepth * initU;
       hv[idx] = waterDepth * initV;
       wetness[idx] = waterDepth > 0.02 ? 1.0 : 0.0;
+    }
+  }
+
+  // 8. При завершении генерации карты — гидрологическая расчистка тальвегов (устранение диагональных ступенек и микро-ям застоя!)
+  if (gz1 >= grid) {
+    conditionHydrologicalDrainage(grid, arrays, presetId);
+  }
+}
+
+/**
+ * Возвращает точные мировые координаты и параметры 3 видимых природных истоков рек
+ * (ледниковые гроты, скальные водопады питания и чаши истоков), откуда рождается вода!
+ */
+export function getValleyHeadwaterSources(presetId = 'bystritsa') {
+  const cfg = VALLEY_RIVERS[presetId] || VALLEY_RIVERS.bystritsa;
+  const hS = WORLD.horizScale;
+  const eS = WORLD.elevScale;
+  const depthScale = Math.pow(eS, 0.72);
+
+  const makeSource = (poly, meta) => {
+    const p0 = poly[0];
+    const p1 = poly[1] || poly[0];
+    const dirX = p1.x - p0.x;
+    const dirZ = p1.z - p0.z;
+    const len = Math.hypot(dirX, dirZ) || 1;
+    const tx = dirX / len;
+    const tz = dirZ / len;
+    // Смещаем точку излива чуть внутрь карты (чтобы грот и водопад были отлично видны и не резались краем сетки)
+    const insetCanon = meta.insetCanon || 12.0;
+    const outX = (p0.x + tx * insetCanon) * hS;
+    const outZ = (p0.z + tz * insetCanon) * hS;
+    const portalX = (p0.x - tx * 4.5) * hS;
+    const portalZ = (p0.z - tz * 4.5) * hS;
+    const bedY = p0.bed * eS;
+    const poolSurfaceY = bedY + meta.poolDepth * depthScale;
+    const dropHeight = meta.dropBase * eS;
+    return {
+      id: meta.id,
+      name: meta.name,
+      kind: meta.kind, // 'glacier' | 'alpine_spring' | 'cliff_grotto'
+      x: portalX,
+      z: portalZ,
+      outX,
+      outZ,
+      tx,
+      tz,
+      yaw: Math.atan2(tx, tz),
+      bedY,
+      poolSurfaceY,
+      crestY: poolSurfaceY + dropHeight,
+      dropHeight,
+      width: p0.width * cfg.widthScale * hS * meta.widthFactor,
+      riverWidth: p0.width * cfg.widthScale * hS,
+      flowShare: meta.flowShare,
+    };
+  };
+
+  return [
+    makeSource(cfg.main, {
+      id: 'main_glacier',
+      name: 'Ледниковый грот «Белый Ледник» (исток р. Большая Быстрица)',
+      kind: 'glacier',
+      insetCanon: 13.5,
+      poolDepth: 2.25,
+      dropBase: 9.5,
+      widthFactor: 0.78,
+      flowShare: 1.0,
+    }),
+    makeSource(cfg.eastCreek, {
+      id: 'east_glacier',
+      name: 'Альпийский каскад «Серебряный Ключ» (исток р. Серебрянка)',
+      kind: 'alpine_spring',
+      insetCanon: 13.0,
+      poolDepth: 1.50,
+      dropBase: 8.2,
+      widthFactor: 0.82,
+      flowShare: 0.45,
+    }),
+    makeSource(cfg.westCreek, {
+      id: 'west_grotto',
+      name: 'Скальный источник «Гремучая Теснина» (исток руч. Гремучий)',
+      kind: 'cliff_grotto',
+      insetCanon: 13.0,
+      poolDepth: 1.35,
+      dropBase: 7.4,
+      widthFactor: 0.85,
+      flowShare: 0.35,
+    }),
+  ];
+}
+
+/**
+ * Монотонная 4-связная расчистка русел всех 3 рек и вскрытие бессточных микро-ям рельефа:
+ * гарантирует, что вода не запирается на диагональных ступеньках сетки и всегда идёт вниз по течению!
+ */
+export function conditionHydrologicalDrainage(grid, arrays, presetId = 'bystritsa') {
+  const cfg = VALLEY_RIVERS[presetId] || VALLEY_RIVERS.bystritsa;
+  const g = grid;
+  const dx = WORLD.size / g;
+  const half = WORLD.size * 0.5;
+  const hS = WORLD.horizScale;
+  const eS = WORLD.elevScale;
+  const depthScale = Math.pow(eS, 0.72);
+  const velScale = Math.pow(eS, 0.34);
+  const { bedrock, soil, h, hu, hv, wetness } = arrays;
+
+  const carve4ConnectedThalweg = (poly, initDepthBase, speedBase) => {
+    let prevGx = -1;
+    let prevGz = -1;
+    let runningMaxBed = Infinity;
+    const minDropPerStep = 0.012 * eS;
+
+    for (let s = 0; s < poly.length - 1; s++) {
+      const a = poly[s];
+      const b = poly[s + 1];
+      const segDx = (b.x - a.x) * hS;
+      const segDz = (b.z - a.z) * hS;
+      const segLen = Math.hypot(segDx, segDz) || 1;
+      const tx = segDx / segLen;
+      const tz = segDz / segLen;
+      const steps = Math.max(4, Math.ceil(segLen / (dx * 0.38)));
+
+      for (let k = 0; k <= steps; k++) {
+        const t = k / steps;
+        const wx = lerp(a.x, b.x, t) * hS;
+        const wz = lerp(a.z, b.z, t) * hS;
+        const gx = clamp(Math.floor((wx + half) / dx), 1, g - 2);
+        const gz = clamp(Math.floor((wz + half) / dx), 1, g - 2);
+        const targetBed = lerp(a.bed, b.bed, t) * eS;
+
+        // Если шаг по сетке диагональный, открываем промежуточную ортогональную клетку (4-связность без застоя!)
+        const visitCells = [];
+        if (prevGx >= 0 && gx !== prevGx && gz !== prevGz) {
+          const bridgeGx = gx;
+          const bridgeGz = prevGz;
+          visitCells.push([bridgeGx, bridgeGz]);
+        }
+        if (gx !== prevGx || gz !== prevGz) {
+          visitCells.push([gx, gz]);
+          prevGx = gx;
+          prevGz = gz;
+        }
+
+        for (let c = 0; c < visitCells.length; c++) {
+          const [cx, cz] = visitCells[c];
+          runningMaxBed = Math.min(runningMaxBed - minDropPerStep, targetBed + 0.12 * eS);
+          // Расчищаем сам тальвег и его ближайших соседей в русле
+          for (let oz = -1; oz <= 1; oz++) {
+            for (let ox = -1; ox <= 1; ox++) {
+              if (Math.abs(ox) + Math.abs(oz) > 1) continue;
+              const nx = clamp(cx + ox, 1, g - 2);
+              const nz = clamp(cz + oz, 1, g - 2);
+              const nIdx = nz * g + nx;
+              const sideLift = (ox === 0 && oz === 0) ? 0 : 0.24 * eS;
+              const capBed = runningMaxBed + sideLift;
+              const curBed = bedrock[nIdx] + soil[nIdx];
+              if (curBed > capBed) {
+                const delta = curBed - capBed;
+                const sCut = Math.min(soil[nIdx] * 0.75, delta);
+                soil[nIdx] -= sCut;
+                bedrock[nIdx] = Math.max(0.4, bedrock[nIdx] - (delta - sCut));
+              }
+              const newBed = bedrock[nIdx] + soil[nIdx];
+              const desiredDepth = initDepthBase * depthScale * ((ox === 0 && oz === 0) ? 1.0 : 0.78);
+              if (h[nIdx] < desiredDepth) {
+                h[nIdx] = desiredDepth;
+                const spd = speedBase * velScale;
+                hu[nIdx] = h[nIdx] * tx * spd;
+                hv[nIdx] = h[nIdx] * tz * spd;
+                wetness[nIdx] = 1.0;
+              }
+              void newBed;
+            }
+          }
+        }
+      }
+    }
+  };
+
+  // Прочищаем все 3 реки от истока до слияния/моря
+  carve4ConnectedThalweg(cfg.eastCreek, 1.38, 2.35);
+  carve4ConnectedThalweg(cfg.westCreek, 1.22, 2.15);
+  carve4ConnectedThalweg(cfg.main, 2.15, 2.30);
+
+  // Мягкое вскрытие одиночных бессточных микро-лунок на склонах (чтобы дождевая вода стекала в реки, а не стояла лужами)
+  for (let pass = 0; pass < 2; pass++) {
+    for (let gz = 2; gz < g - 2; gz++) {
+      const row = gz * g;
+      for (let gx = 2; gx < g - 2; gx++) {
+        const i = row + gx;
+        if (h[i] > 0.25) continue; // не трогаем сами русла рек
+        const zc = bedrock[i] + soil[i];
+        const zL = bedrock[i - 1] + soil[i - 1];
+        const zR = bedrock[i + 1] + soil[i + 1];
+        const zU = bedrock[i - g] + soil[i - g];
+        const zD = bedrock[i + g] + soil[i + g];
+        const minNb = Math.min(zL, zR, zU, zD);
+        if (zc < minNb - 0.02) {
+          // Поднимаем дно случайной замкнутой микро-ямки до уровня низшего соседа + микроуклон
+          soil[i] += (minNb - zc) + 0.03 * eS;
+        }
+      }
     }
   }
 }

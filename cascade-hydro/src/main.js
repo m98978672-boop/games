@@ -20,7 +20,7 @@ import {
 import { detectDevice, wantsSafeMode } from './device.js';
 import { probeWebGL, formatDiagReport } from './diag.js';
 import { clamp, lerp } from './noise.js';
-import { buildValleyTerrain } from './valley.js';
+import { buildValleyTerrain, getValleyHeadwaterSources } from './valley.js';
 import { HydroSimulation } from './hydro.js';
 import { EconomyAndCities, REVENUE_STREAM_DEFS } from './economy.js';
 import { buildAllProceduralTextures, TEXTURE_SHADE_CATALOG } from './textures.js';
@@ -117,15 +117,18 @@ class CascadeHydroGame {
     if (mRapids) mRapids.textContent = `${sc.short} · ${sc.areaKm2} · Двойной каньон ГАЭС`;
     if (mDelta) mDelta.textContent = `${sc.short} · ${sc.areaKm2} · Судоходное русло`;
 
-    // Обновляем кнопки кисти и ярусов высоты под текущий масштаб карты!
-    for (let i = 0; i < 3; i++) {
+    // Обновляем 4 прецизионные кнопки кисти и 4 яруса высоты плотины под масштаб карты!
+    for (let i = 0; i < 4; i++) {
       const bBtn = document.getElementById(`brush-btn-${i}`);
-      if (bBtn) bBtn.textContent = `${Math.round(WORLD.brushSizes[i] * 2)}м`;
+      if (bBtn && WORLD.brushSizes[i] !== undefined) {
+        bBtn.textContent = `${Math.round(WORLD.brushSizes[i] * 2)}м`;
+      }
 
       const tBtn = document.getElementById(`tier-btn-${i}`);
-      const addH = Math.round((CONSTRUCTION.damHeightTiers[i]?.addHeight || 11) * WORLD.elevScale);
+      const addH = Math.round(CONSTRUCTION.damHeightTiers[i]?.addHeight || 11);
       if (tBtn) tBtn.textContent = `+${addH}м`;
     }
+    this.brushSizeIndex = clamp(this.brushSizeIndex, 0, WORLD.brushSizes.length - 1);
     this.brushRadius = WORLD.brushSizes[this.brushSizeIndex] || WORLD.brushSizes[1];
   }
 
@@ -381,6 +384,26 @@ class CascadeHydroGame {
       bar.appendChild(damBtn);
     }
 
+    // Быстрый перелёт к 3 природным истокам рек (ледниковые гроты и скальные ключи)
+    const hwSources = getValleyHeadwaterSources(this.selectedPresetId);
+    if (hwSources.length > 0) {
+      this._hwNavIndex = 0;
+      const hwBtn = document.createElement('button');
+      hwBtn.className = 'lm-btn';
+      hwBtn.title = 'Показать откуда идёт вода: перелёт по 3 горным истокам рек';
+      hwBtn.textContent = `❄ Исток: ${hwSources[0].name}`;
+      hwBtn.addEventListener('click', () => {
+        const list = getValleyHeadwaterSources(this.selectedPresetId);
+        const src = list[this._hwNavIndex % list.length];
+        this._hwNavIndex = (this._hwNavIndex + 1) % list.length;
+        const bed = this.hydro.sampleAtWorld(src.outX, src.outZ).bed;
+        const zoom = 128 * Math.pow(WORLD.horizScale, 0.68);
+        this.camCtrl.flyTo(src.outX, src.outZ, zoom, bed);
+        hwBtn.textContent = `❄ Исток: ${src.name}`;
+      });
+      bar.appendChild(hwBtn);
+    }
+
     if (this.economy && this.economy.cities.length > 0) {
       const prevBtn = document.createElement('button');
       prevBtn.className = 'lm-btn';
@@ -586,28 +609,26 @@ class CascadeHydroGame {
       });
     }
 
-    // Ширина кисти (адаптивная под масштаб карты!)
+    // Ширина кисти (4 точных калибра под масштаб карты!)
     document.querySelectorAll('.size-btn[data-size-idx]').forEach((btn) => {
       btn.addEventListener('click', () => {
-        this.brushSizeIndex = parseInt(btn.dataset.sizeIdx, 10) || 0;
-        this.brushRadius = WORLD.brushSizes[this.brushSizeIndex];
-        document.querySelectorAll('.size-btn[data-size-idx]').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
+        this.setBrushSizeByIndex(parseInt(btn.dataset.sizeIdx, 10) || 0, false);
       });
     });
 
-    // Ярус высоты объёмной 3D-плотины
+    // Ярус высоты объёмной 3D-плотины (без повторного умножения на elevScale!)
     document.querySelectorAll('.tier-btn[data-tier]').forEach((btn) => {
       btn.addEventListener('click', () => {
         this.damTierIndex = parseInt(btn.dataset.tier, 10) || 0;
         document.querySelectorAll('.tier-btn[data-tier]').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        const addH = Math.round((CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11) * WORLD.elevScale);
-        this.notify(`▲ Выбран профиль 3D-плотины: +${addH} м к основанию`, 'info');
+        const tier = CONSTRUCTION.damHeightTiers[this.damTierIndex];
+        const addH = Math.round(tier?.addHeight || 11);
+        this.notify(`▲ Выбран профиль 3D-плотины (${tier?.label || '+' + addH + 'м'}): +${addH} м к основанию`, 'info');
       });
     });
 
-    document.getElementById('btn-rotate').addEventListener('click', () => this.rotatePlacement());
+    document.getElementById('btn-rotate').addEventListener('click', (e) => this.rotatePlacement(!!e.shiftKey));
     document.getElementById('btn-speed').addEventListener('click', () => this.cycleSpeed());
     document.getElementById('btn-open-loader').addEventListener('click', () => this.openMapLoader());
     document.getElementById('btn-contours').addEventListener('click', () => this.toggleContours());
@@ -742,7 +763,7 @@ class CascadeHydroGame {
     const codeToToolKey = {
       Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5',
       Digit6: '6', Digit7: '7', Digit8: '8', Digit9: '9', Digit0: '0',
-      KeyL: 'L', KeyF: 'F', KeyP: 'P', KeyX: 'X',
+      KeyB: 'B', KeyG: 'G', KeyN: 'N', KeyL: 'L', KeyF: 'F', KeyP: 'P', KeyX: 'X',
     };
     window.addEventListener('keydown', (e) => {
       if (this.isInPreGameLoader) return;
@@ -751,6 +772,14 @@ class CascadeHydroGame {
         e.preventDefault();
         this.showDiag = !this.showDiag;
         document.getElementById('diag-panel').classList.toggle('hidden', !this.showDiag);
+        return;
+      }
+      if (e.code === 'BracketLeft') {
+        this.setBrushSizeByIndex(this.brushSizeIndex - 1, true);
+        return;
+      }
+      if (e.code === 'BracketRight') {
+        this.setBrushSizeByIndex(this.brushSizeIndex + 1, true);
         return;
       }
       const mappedKey = codeToToolKey[e.code] || e.key.toUpperCase();
@@ -769,7 +798,7 @@ class CascadeHydroGame {
       } else if (e.code === 'KeyC') {
         this.toggleContours();
       } else if (e.code === 'KeyR') {
-        this.rotatePlacement();
+        this.rotatePlacement(!!e.shiftKey);
       } else if (e.code === 'KeyT') {
         document.getElementById('btn-tutorial').click();
       } else if (e.code === 'KeyK') {
@@ -829,14 +858,31 @@ class CascadeHydroGame {
     if (t && hint) hint.textContent = `▸ ${t.name}: ${t.desc}`;
   }
 
-  rotatePlacement() {
-    if (this.manualYaw === null) this.manualYaw = 0;
-    else this.manualYaw += Math.PI * 0.25;
-    if (this.manualYaw > Math.PI * 2) this.manualYaw = null;
+  setBrushSizeByIndex(idx, showNote = false) {
+    const maxIdx = Math.max(0, WORLD.brushSizes.length - 1);
+    this.brushSizeIndex = clamp(idx, 0, maxIdx);
+    this.brushRadius = WORLD.brushSizes[this.brushSizeIndex];
+    document.querySelectorAll('.size-btn[data-size-idx]').forEach((b) => {
+      b.classList.toggle('active', parseInt(b.dataset.sizeIdx, 10) === this.brushSizeIndex);
+    });
+    if (showNote) {
+      this.notify(`◈ Диаметр инженерной кисти: ${Math.round(this.brushRadius * 2)} м`, 'info');
+    }
+  }
+
+  rotatePlacement(resetToAuto = false) {
+    if (resetToAuto) {
+      this.manualYaw = null;
+    } else if (this.manualYaw === null) {
+      this.manualYaw = 0;
+    } else {
+      this.manualYaw += Math.PI / 12; // Ювелирный шаг 15°!
+      if (this.manualYaw >= Math.PI * 2 - 0.001) this.manualYaw = null;
+    }
     this.notify(
       this.manualYaw === null
         ? '↻ Авто-ориентация створа по уклону воды включена'
-        : `↻ Ручной угол створа: ${Math.round((this.manualYaw * 180) / Math.PI)}°`,
+        : `↻ Точный угол створа: ${Math.round((this.manualYaw * 180) / Math.PI)}° (шаг 15°, Shift+R — авто)`,
       'info',
     );
   }
@@ -879,6 +925,9 @@ class CascadeHydroGame {
       if (
         this.activeToolId === 'spillway' ||
         this.activeToolId.startsWith('turbine_') ||
+        this.activeToolId === 'concrete_plant' ||
+        this.activeToolId === 'pump_station' ||
+        this.activeToolId === 'wind_meteo' ||
         this.activeToolId === 'nav_lock' ||
         this.activeToolId === 'fish_eco' ||
         this.activeToolId === 'powerline' ||
@@ -892,14 +941,15 @@ class CascadeHydroGame {
       this.pointerDown = true;
       this.lastBrushWorld = { wx: hit.wx, wz: hit.wz };
       const s = this.hydro.sampleAtWorld(hit.wx, hit.wz);
-      const tierAdd = (CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11.2) * WORLD.elevScale;
+      // addHeight в CONSTRUCTION.damHeightTiers уже масштабирован в applyMapScale()!
+      const tierAdd = CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11.2;
 
       if (this.activeToolId === 'canal_dig') {
-        this.lockedGradeElev = e.shiftKey ? (s.bed - 1.9 * WORLD.elevScale) : null;
+        this.lockedGradeElev = e.shiftKey ? (s.bed - 1.35 * WORLD.elevScale) : null;
       } else if (this.activeToolId === 'concrete_dam') {
         this.lockedGradeElev = Math.max(s.bed, s.surface) + tierAdd;
       } else if (this.activeToolId === 'earth_dam') {
-        this.lockedGradeElev = Math.max(s.bed, s.surface) + 4.2 * WORLD.elevScale;
+        this.lockedGradeElev = Math.max(s.bed, s.surface) + 3.2 * WORLD.elevScale;
       } else {
         this.lockedGradeElev = null;
       }
@@ -925,16 +975,16 @@ class CascadeHydroGame {
       const dx = hit.wx - this.lastBrushWorld.wx;
       const dz = hit.wz - this.lastBrushWorld.wz;
       const dist = Math.hypot(dx, dz);
-      const stepLen = Math.max(this.hydro.dx * 0.55, this.brushRadius * 0.35);
+      const stepLen = Math.max(this.hydro.dx * 0.42, this.brushRadius * 0.28);
       if (dist < stepLen) return;
 
-      const steps = Math.min(20, Math.ceil(dist / stepLen));
+      const steps = Math.min(28, Math.ceil(dist / stepLen));
       for (let i = 1; i <= steps; i++) {
         const t = i / steps;
         const ix = lerp(this.lastBrushWorld.wx, hit.wx, t);
         const iz = lerp(this.lastBrushWorld.wz, hit.wz, t);
         if (this.activeToolId === 'canal_dig' && this.lockedGradeElev !== null) {
-          this.lockedGradeElev -= (dist / steps) * 0.004;
+          this.lockedGradeElev -= (dist / steps) * 0.0035;
         }
         this._applyContinuousStrokePoint(ix, iz, i);
       }
@@ -953,7 +1003,7 @@ class CascadeHydroGame {
     const creative = this.economy.creative;
 
     if (this.activeToolId === 'canal_dig') {
-      const res = this.hydro.excavateCanal(wx, wz, this.brushRadius, 1.45, this.lockedGradeElev, budget, creative);
+      const res = this.hydro.excavateCanal(wx, wz, this.brushRadius, 1.15, this.lockedGradeElev, budget, creative);
       if (res.excavatedM3 > 0) {
         this.economy.spend(res.cost);
         if (subIdx === 0) {
@@ -971,13 +1021,13 @@ class CascadeHydroGame {
         if (subIdx === 0) this.audio.playBuild();
       }
     } else if (this.activeToolId === 'earth_dam') {
-      const res = this.hydro.buildEarthDam(wx, wz, this.brushRadius, 1.85, this.lockedGradeElev, budget, creative);
+      const res = this.hydro.buildEarthDam(wx, wz, this.brushRadius, 1.35, this.lockedGradeElev, budget, creative);
       if (res.addedM3 > 0) {
         this.economy.spend(res.cost);
         if (subIdx === 0) this.audio.playDig();
       }
     } else if (this.activeToolId === 'concrete_dam') {
-      const tierAdd = (CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11.2) * WORLD.elevScale;
+      const tierAdd = CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11.2;
       const crest = this.lockedGradeElev ?? (this.hydro.sampleAtWorld(wx, wz).bed + tierAdd);
       const res = this.hydro.buildConcreteDam(wx, wz, this.brushRadius, crest, budget, creative, false);
       if (res.addedM3 > 0) {
@@ -1042,6 +1092,45 @@ class CascadeHydroGame {
         `✦ Построена приплотинная ${res.structure.spec.name}: водоприёмник наверху, машзал в нижнем бьефе!`,
         'good',
       );
+      return;
+    }
+
+    if (this.activeToolId === 'concrete_plant') {
+      const res = this.hydro.placeConcretePlant(wx, wz, this.manualYaw, budget, creative);
+      if (!res.ok) {
+        this.notify(res.reason, 'warn');
+        return;
+      }
+      this.economy.spend(res.cost);
+      this.audio.playBuild();
+      this.notify('▲ Бетонный завод БСУ введён в строй: заливка плотин ×2 быстрее, бетон -22%, ускорена стройка кварталов и трасс!', 'good');
+      this._refreshHUD();
+      return;
+    }
+
+    if (this.activeToolId === 'pump_station') {
+      const res = this.hydro.placePumpStation(wx, wz, this.manualYaw, budget, creative);
+      if (!res.ok) {
+        this.notify(res.reason, 'warn');
+        return;
+      }
+      this.economy.spend(res.cost);
+      this.audio.playBuild();
+      this.notify('≈ Береговая насосная станция запущена: рост дохода Горводоканала и напорная подача воды!', 'good');
+      this._refreshHUD();
+      return;
+    }
+
+    if (this.activeToolId === 'wind_meteo') {
+      const res = this.hydro.placeWindMeteoStation(wx, wz, budget, creative);
+      if (!res.ok) {
+        this.notify(res.reason, 'warn');
+        return;
+      }
+      this.economy.spend(res.cost);
+      this.audio.playBuild();
+      this.notify('✦ Метео-ветрокомплекс ВЭС запущен: генерация чистых МВт от реальной физики ветра (P ~ v³)!', 'good');
+      this._refreshHUD();
       return;
     }
 
@@ -1140,10 +1229,11 @@ class CascadeHydroGame {
 
     const cover = s.concrete > 0.8
       ? '3D-Монолит плотины'
-      : (s.lined ? 'Ж/Б лоток канала' : (s.earthDam ? 'Насыпь дамбы' : (s.soil < 0.75 * WORLD.elevScale ? 'Гранит' : `Грунт (влажн. ${Math.round(s.saturation * 100)}%)`)));
+      : (s.lined ? 'Ж/Б лоток (n=0.014)' : (s.earthDam ? 'Насыпь дамбы' : (s.soil < 0.75 * WORLD.elevScale ? 'Гранит (n=0.032)' : `Грунт (влажн. ${Math.round(s.saturation * 100)}%)`)));
     const regime = s.depth < 0.03 ? 'сухо' : (s.froude > 1.0 ? 'Fr>1 бурный' : 'спокойный');
+    const windStr = `Ветер ${(this.hydro.windSpeedMs || 4.8).toFixed(1)} м/с`;
 
-    el.textContent = `Дно: ${s.bed.toFixed(1)} м (${cover})${stageTxt} · Вода: ${s.depth > 0.02 ? s.surface.toFixed(1) + ' м' : '—'} · H: ${s.depth.toFixed(2)} м · V: ${s.speed.toFixed(2)} м/с (${regime})`;
+    el.textContent = `Дно: ${s.bed.toFixed(1)} м (${cover})${stageTxt} · Вода: ${s.depth > 0.02 ? s.surface.toFixed(1) + ' м' : '—'} · H: ${s.depth.toFixed(2)} м · V: ${s.speed.toFixed(2)} м/с (${regime}) · ${windStr}`;
   }
 
   _renderCityCards() {
@@ -1234,8 +1324,15 @@ class CascadeHydroGame {
 
     if (whyEl) whyEl.textContent = wb.whenWhySummary;
     if (meteoEl) {
+      const wCompass = wb.windCompass || 'ЮЗ';
+      const wSpd = (wb.windSpeedMs ?? 4.8).toFixed(1);
+      const wGust = (wb.windGustMs ?? 6.5).toFixed(1);
+      const pHpa = Math.round(wb.pressureHPa ?? 1013);
+      const tWat = (wb.waterTempC ?? 11.5).toFixed(1);
+      const dew = (wb.dewPointC ?? 8.0).toFixed(1);
+      const sunW = Math.round(wb.solarIrradianceWm2 ?? 420);
       meteoEl.textContent =
-        `Долина: ${wb.airTempC >= 0 ? '+' : ''}${wb.airTempC.toFixed(1)}°C · Ледники: ${wb.mountainTempC >= 0 ? '+' : ''}${wb.mountainTempC.toFixed(1)}°C · Влажн.: ${wb.relHumidityPct}% · Зеркало: ${wb.wetAreaHa.toFixed(1)} га`;
+        `Воздух: ${wb.airTempC >= 0 ? '+' : ''}${wb.airTempC.toFixed(1)}°C (роса ${dew}°C) · Ледники: ${wb.mountainTempC >= 0 ? '+' : ''}${wb.mountainTempC.toFixed(1)}°C · Tводы: +${tWat}°C · Ветер ${wCompass} ${wSpd} м/с (порыв ${wGust}) · ${pHpa} гПа · Инсол. ${sunW} Вт/м² · Зеркало ${wb.wetAreaHa.toFixed(1)} га`;
     }
 
     const fmtQ = (v) => `${v.toFixed(1)} м³/с`;
@@ -1304,7 +1401,8 @@ class CascadeHydroGame {
     netEl.style.color = sum.netPerSec >= 0 ? '#4ade80' : '#f87171';
 
     const pumpTxt = sum.pumpedConsumeMW > 0.1 ? ` (ГАЭС -${sum.pumpedConsumeMW.toFixed(1)})` : '';
-    document.getElementById('hud-mw').textContent = `${sum.totalMW.toFixed(1)} МВт${pumpTxt}`;
+    const windTxt = (sum.windMW || 0) > 0.05 ? ` (ВЭС +${sum.windMW.toFixed(1)})` : '';
+    document.getElementById('hud-mw').textContent = `${sum.totalMW.toFixed(1)} МВт${windTxt}${pumpTxt}`;
     document.getElementById('hud-demand').textContent =
       `Сеть: ${sum.suppliedCityMW.toFixed(1)}/${sum.connectedDemandMW.toFixed(1)} · Потери ${sum.gridLossPct}%`;
 
@@ -1315,14 +1413,14 @@ class CascadeHydroGame {
     document.getElementById('chip-tariff').className = `stat-chip stat-tariff ${sum.periodClass}`;
 
     document.getElementById('hud-weather').textContent = sum.pendingPourM3 > 5
-      ? `▲ Бетон: ${Math.round(sum.pendingPourM3 * this.hydro.volPriceNorm)} усл.м³`
-      : `${sum.weather.icon} ${sum.weather.label}`;
+      ? `▲ Бетон: ${Math.round(sum.pendingPourM3 * this.hydro.volPriceNorm)} усл.м³${sum.concretePlantsCount > 0 ? ' (БСУ ×' + (1 + Math.min(2, sum.concretePlantsCount) * 0.95).toFixed(1) + ')' : ''}`
+      : `${sum.weather.icon} ${sum.weather.label} · ${wb.windCompass || 'ЮЗ'} ${(wb.windSpeedMs || 4.8).toFixed(1)} м/с`;
 
     document.getElementById('hud-stockpile').textContent =
-      `Приток +${Math.round(wb.inTotalQ)} · Испар. -${wb.outEvapQ.toFixed(1)} м³/с`;
+      `Приток +${Math.round(wb.inTotalQ)} · Сток в море -${Math.round(wb.outMouthQ)} м³/с`;
 
     document.getElementById('hud-pop-total').textContent =
-      `8 городов (${sum.totalBuildings} зд.) · Трасс ${sum.roadsBuiltCount}/${sum.roadsTotalCount} · ${sum.totalPopulation.toLocaleString('ru-RU')} жит.`;
+      `8 городов (${sum.totalBuildings} зд., 48 тип.) · Трасс ${sum.roadsBuiltCount}/${sum.roadsTotalCount} · ${sum.totalPopulation.toLocaleString('ru-RU')} жит.`;
     document.getElementById('hud-loan').textContent = `Долг по облигациям: ${Math.round(sum.loan).toLocaleString('ru-RU')} ₽`;
 
     const damBanner = document.getElementById('dam-health-banner');
@@ -1339,7 +1437,7 @@ class CascadeHydroGame {
       damStatus.textContent = `3D-перелив активен (${ovfCount} струй) · Шлюзы: ${sum.navLocksCount} · Рыбхозы: ${sum.fishFarmsCount}`;
     } else {
       damBanner.className = 'dam-health-banner';
-      damStatus.textContent = `Плотина ${Math.round(sum.maxDamStress)}% · ОРУ: ${sum.substationsCount} · Шлюзы: ${sum.navLocksCount} · Рыбхозы: ${sum.fishFarmsCount}`;
+      damStatus.textContent = `БСУ: ${sum.concretePlantsCount || 0} · Насос.: ${sum.pumpStationsCount || 0} · ВЭС: ${sum.windMeteoCount || 0} · ОРУ: ${sum.substationsCount} · Шлюзы: ${sum.navLocksCount}`;
     }
 
     const nextMs = MILESTONES.find((m) => !this.economy.completedMilestones.has(m.id));

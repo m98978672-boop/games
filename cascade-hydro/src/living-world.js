@@ -673,10 +673,18 @@ export class LivingWorldSystem {
     if (this.vehicleIM.instanceColor) this.vehicleIM.instanceColor.needsUpdate = true;
     if (lightOut > 0) this.headlightIM.instanceMatrix.needsUpdate = true;
 
-    // 2. Вращение 3-лопастных ветрогенераторов ВЭС на горных хребтах
+    // 2. Вращение и рыскание 3-лопастных ветрогенераторов ВЭС по живому вектору ветра!
+    const liveWindSpd = this.hydro.windSpeedMs || 4.8;
+    const liveWindDirX = this.hydro.windDirX ?? 0.75;
+    const liveWindDirZ = this.hydro.windDirZ ?? 0.66;
+    const targetWindYaw = -(this.hydro.windAzimuthRad || 0);
+    const dynWindMult = clamp(liveWindSpd / 4.8, 0.35, 2.8);
+
     for (let i = 0; i < this.windTurbines.length; i++) {
       const wt = this.windTurbines[i];
-      wt.phase = (wt.phase + dt * 1.9 * wt.speedMult * windMult) % (Math.PI * 2);
+      let dYaw = ((targetWindYaw - wt.yaw + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+      wt.yaw += dYaw * Math.min(1.0, dt * 0.9);
+      wt.phase = (wt.phase + dt * 1.85 * wt.speedMult * dynWindMult) % (Math.PI * 2);
       this._dummy.position.set(
         wt.wx + Math.sin(wt.yaw) * 0.5 * propScale,
         wt.wy + wt.towerH,
@@ -702,15 +710,19 @@ export class LivingWorldSystem {
     }
     if (this.solarTrackers.length > 0) this.solarIM.instanceMatrix.needsUpdate = true;
 
-    // 4. Подъём пара градирен промзон
+    // 4. Подъём и снос пара градирен промзон строго по ветру (windDirX, windDirZ)
     for (let i = 0; i < this.steamPuffs.length; i++) {
       const p = this.steamPuffs[i];
       p.phase = (p.phase + dt * p.speed) % 1.0;
       const life = p.phase;
       const rise = life * 26 * propScale;
-      const driftX = life * 14 * propScale * windMult;
+      const driftDist = life * 16 * propScale * dynWindMult;
       const grow = p.size * (0.55 + life * 1.65) * (1.0 - life * 0.35);
-      this._dummy.position.set(p.baseX + driftX, p.baseY + rise, p.baseZ + life * 5 * propScale);
+      this._dummy.position.set(
+        p.baseX + liveWindDirX * driftDist,
+        p.baseY + rise,
+        p.baseZ + liveWindDirZ * driftDist,
+      );
       this._dummy.rotation.set(life * 2.0, life * 1.5, 0);
       this._dummy.scale.set(grow, grow * 0.82, grow);
       this._dummy.updateMatrix();
@@ -735,15 +747,20 @@ export class LivingWorldSystem {
     }
     this.birdIM.instanceMatrix.needsUpdate = true;
 
-    // 6. Плавный дрейф кучевых облаков
+    // 6. Плавный дрейф кучевых облаков по вектору ветра
     const cloudSpan = WORLD.size * 1.25;
     this.cloudMat.opacity = this.economy.weatherId === 'flood' ? 0.85 : (isNight ? 0.34 : 0.66);
     const cBright = isNight ? 0.28 : (this.economy.weatherId === 'flood' ? 0.58 : 0.98);
     this.cloudMat.color.setRGB(cBright, cBright * 1.01, cBright * 1.05);
     for (let i = 0; i < this.clouds.length; i++) {
       const cl = this.clouds[i];
-      cl.wx += dt * 4.2 * hs * cl.drift * windMult * 0.32;
+      const cStep = dt * 3.8 * hs * cl.drift * dynWindMult * 0.34;
+      cl.wx += liveWindDirX * cStep;
+      cl.wz += liveWindDirZ * cStep;
       if (cl.wx > cloudSpan * 0.5) cl.wx -= cloudSpan;
+      if (cl.wx < -cloudSpan * 0.5) cl.wx += cloudSpan;
+      if (cl.wz > cloudSpan * 0.5) cl.wz -= cloudSpan;
+      if (cl.wz < -cloudSpan * 0.5) cl.wz += cloudSpan;
       this._dummy.position.set(cl.wx, cl.wy, cl.wz);
       this._dummy.rotation.set(0, i * 0.7, 0);
       this._dummy.scale.set(cl.sx, cl.sy, cl.sz);

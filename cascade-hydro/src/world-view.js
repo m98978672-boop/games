@@ -20,6 +20,7 @@ import {
   createHorizonMistMaterial,
 } from './water-shader.js';
 import { buildAllProceduralTextures, pickCatalogShade } from './textures.js';
+import { getValleyHeadwaterSources } from './valley.js';
 import { LivingWorldSystem } from './living-world.js';
 import { RoadAndBridgeRenderer, createOpenScaffoldCageGeometry } from './roads-and-cities.js';
 
@@ -167,11 +168,15 @@ export class WorldView {
     this.fogColor = new THREE.Color(0xa6cde8);
     this.scene.background = this.fogColor.clone();
 
-    // 1. Меш рельефа, меш воды, бескрайнее внешнее море с туманом за картой и 3D-пелена перелива!
+    // 1. Меш рельефа, меш воды, бескрайнее внешнее море с туманом за картой, 3D-пелена перелива и 3D-гроты истоков рек!
     this._buildTerrainMesh();
     this._buildWaterMesh();
     this._buildOuterWorldSeaAndFog();
     this._buildOverflow3DPools();
+    this.headwatersGroup = new THREE.Group();
+    this.scene.add(this.headwatersGroup);
+    this.headwaterCascades = [];
+    this._rebuildHeadwaterSources3D();
 
     // 2. Текстурированные леса и гранитные валуны (с 432 оттенками флоры и пород!)
     this._buildNatureInstances();
@@ -266,6 +271,7 @@ export class WorldView {
     this.updateTerrainGeometryRect(0, 0, g - 1, g - 1);
     this._populateNatureInstances();
     this._rebuildCityDisks();
+    this._rebuildHeadwaterSources3D();
 
     for (const [, obj] of this.structMeshes.entries()) {
       this.structuresGroup.remove(obj);
@@ -478,39 +484,149 @@ export class WorldView {
   }
 
   /**
-   * 3D-пелена ПЕРЕЛИВА ВОДЫ через гребень плотин, перемычек и водопадов!
-   * Отрисовывает реальные падающие 3D-струи воды и пенный вал у основания!
+   * 3D-пелена ПЕРЕЛИВА ВОДЫ через гребень реальных плотин и водосбросов!
+   * Вращающийся белый цилиндр-овал plungeRollerIM полностью удалён (никаких белых овалов у берегов!).
    */
   _buildOverflow3DPools() {
     this.overflowWaterMat = createOverflowWaterMaterial(this.textures.overflowCascade);
     const nappeGeo = createCurvedOverflowNappeGeometry();
-    this.maxOverflows = 300;
+    this.maxOverflows = 260;
     this.overflowNappeIM = new THREE.InstancedMesh(nappeGeo, this.overflowWaterMat, this.maxOverflows);
     this.overflowNappeIM.count = 0;
     this.overflowNappeIM.renderOrder = 3;
     this.overflowNappeIM.frustumCulled = false;
     this.scene.add(this.overflowNappeIM);
-
-    // Кипящий пенный вал в водобойном колодце у подножия перелива!
-    const rollerGeo = new THREE.CylinderGeometry(0.65, 0.85, 1.0, 10);
-    rollerGeo.rotateX(Math.PI * 0.5);
-    this.plungeRollerMat = new THREE.MeshBasicMaterial({
-      color: 0xf4fbff,
-      map: this.textures.overflowCascade,
-      transparent: true,
-      opacity: 0.82,
-      depthWrite: false,
-    });
-    this.plungeRollerIM = new THREE.InstancedMesh(rollerGeo, this.plungeRollerMat, this.maxOverflows);
-    this.plungeRollerIM.count = 0;
-    this.plungeRollerIM.renderOrder = 4;
-    this.plungeRollerIM.frustumCulled = false;
-    this.scene.add(this.plungeRollerIM);
   }
 
-  /** Ежекадровое обновление 3D-лент переливающейся через плотины воды */
+  /**
+   * Наглядные 3D-истоки всех 3 рек (ледниковые гроты «Белый Ледник» и «Серебряный Ключ» +
+   * скальный источник «Гремучая Теснина»), откуда зримо рождается и бьёт поток каждой реки!
+   */
+  _rebuildHeadwaterSources3D() {
+    while (this.headwatersGroup.children.length > 0) {
+      this.headwatersGroup.remove(this.headwatersGroup.children[0]);
+    }
+    this.headwaterCascades = [];
+
+    const sources = getValleyHeadwaterSources(this.hydro.presetId || 'bystritsa');
+    const uScale = Math.pow(WORLD.horizScale, 0.58);
+    const rockMat = new THREE.MeshLambertMaterial({ color: 0x64748b, map: this.textures.rock });
+    const darkCavernMat = new THREE.MeshBasicMaterial({ color: 0x07192b });
+    const snowCapMat = new THREE.MeshLambertMaterial({ color: 0xf1f7ff });
+    const iceMat = new THREE.MeshStandardMaterial({
+      color: 0xdcf4ff,
+      map: this.textures.glacierIce || this.textures.concreteMap,
+      emissive: new THREE.Color(0x0ea5e9),
+      emissiveIntensity: 0.16,
+      roughness: 0.24,
+      metalness: 0.08,
+    });
+
+    for (let i = 0; i < sources.length; i++) {
+      const src = sources[i];
+      const grp = new THREE.Group();
+      const sampOut = this.hydro.sampleAtWorld(src.outX, src.outZ);
+      const basePoolY = Math.max(sampOut.bed, sampOut.surface - 0.35 * WORLD.elevScale);
+      const dropH = Math.max(5.5 * WORLD.elevScale, src.dropHeight);
+      const archW = Math.max(10.5 * uScale, src.width * 1.15);
+
+      // Ставим портал истока между кромкой карты и чашей приёмного бассейна и ориентируем вдоль русла!
+      const px = (src.x * 0.45 + src.outX * 0.55);
+      const pz = (src.z * 0.45 + src.outZ * 0.55);
+      const flowYaw = Math.atan2(src.tz, src.tx);
+      grp.position.set(px, basePoolY, pz);
+      grp.rotation.y = -flowYaw;
+
+      const isGlacial = src.kind === 'glacier' || src.kind === 'alpine_spring';
+      const mainPortalMat = isGlacial ? iceMat : rockMat;
+
+      // 1. Скальные устои горного амфитеатра по бокам грота
+      for (const side of [-1, 1]) {
+        const cliff = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(archW * 0.48, 1),
+          rockMat,
+        );
+        cliff.position.set(-archW * 0.18, dropH * 0.52, side * archW * 0.56);
+        cliff.scale.set(1.15, (dropH * 1.35) / (archW * 0.48), 0.92);
+        cliff.castShadow = !!this.profile.shadows;
+        grp.add(cliff);
+      }
+
+      // 2. Сводчатый ледниковый язык / скальная арка грота и тёмное устье подземной реки
+      const archVault = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(archW * 0.62, 1),
+        mainPortalMat,
+      );
+      archVault.position.set(-archW * 0.28, dropH * 0.96, 0);
+      archVault.scale.set(1.25, 0.72, 1.35);
+      archVault.castShadow = !!this.profile.shadows;
+      grp.add(archVault);
+
+      if (isGlacial) {
+        // Острые кристаллические сераки голубого ледника над гротом!
+        for (let s = -2; s <= 2; s++) {
+          const spire = new THREE.Mesh(
+            new THREE.ConeGeometry(archW * 0.16, dropH * (0.65 + (Math.abs(s) % 2) * 0.28), 5),
+            iceMat,
+          );
+          spire.position.set(-archW * (0.35 + Math.abs(s) * 0.06), dropH * 1.25, s * archW * 0.22);
+          spire.rotation.z = -0.18;
+          grp.add(spire);
+        }
+      } else {
+        const snowCrown = new THREE.Mesh(new THREE.DodecahedronGeometry(archW * 0.52, 1), snowCapMat);
+        snowCrown.position.set(-archW * 0.30, dropH * 1.32, 0);
+        snowCrown.scale.set(1.1, 0.38, 1.2);
+        grp.add(snowCrown);
+      }
+
+      const cavernMouth = new THREE.Mesh(
+        new THREE.CylinderGeometry(archW * 0.34, archW * 0.42, archW * 0.35, 10),
+        darkCavernMat,
+      );
+      cavernMouth.rotation.z = Math.PI * 0.5;
+      cavernMouth.position.set(-archW * 0.12, dropH * 0.62, 0);
+      grp.add(cavernMouth);
+
+      // 3. Бурный 3D-каскад воды, вырывающийся прямо из грота и питающий русло реки!
+      const cascade = new THREE.Mesh(createCurvedOverflowNappeGeometry(), this.overflowWaterMat);
+      const throwX = Math.max(archW * 0.78, dropH * 0.88);
+      cascade.position.set(-archW * 0.04, dropH * 0.68, 0);
+      cascade.scale.set(throwX, dropH * 0.72, archW * 0.68);
+      cascade.renderOrder = 3;
+      grp.add(cascade);
+
+      this.headwatersGroup.add(grp);
+      this.headwaterCascades.push({
+        cascade,
+        baseThrowX: throwX,
+        baseDropY: dropH * 0.72,
+        baseWidthZ: archW * 0.68,
+        outX: src.outX,
+        outZ: src.outZ,
+        poolY: basePoolY,
+        tx: src.tx,
+        tz: src.tz,
+        phase: i * 2.1,
+      });
+    }
+  }
+
+  /** Ежекадровое обновление 3D-лент перелива плотин и живых водопадов истоков 3 рек */
   updateOverflowWater3D(timeSec) {
     this.overflowWaterMat.uniforms.uTime.value = timeSec;
+
+    // Пульсация 3 горных истоков от погоды и таяния ледников!
+    const inflowFactor = clamp((this.hydro.inflowMult || 1.0) * 0.85 + 0.15, 0.65, 1.65);
+    for (let k = 0; k < this.headwaterCascades.length; k++) {
+      const hc = this.headwaterCascades[k];
+      const pulse = 1.0 + Math.sin(timeSec * 6.4 + hc.phase) * 0.06;
+      hc.cascade.scale.set(
+        hc.baseThrowX * pulse * Math.pow(inflowFactor, 0.35),
+        hc.baseDropY,
+        hc.baseWidthZ * Math.pow(inflowFactor, 0.25),
+      );
+    }
 
     const edges = this.hydro.overflowEdges || [];
     const n = Math.min(edges.length, this.maxOverflows);
@@ -519,31 +635,18 @@ export class WorldView {
       const pulse = 1.0 + Math.sin(timeSec * 9.5 + i * 1.3) * 0.06;
       const forwardSpan = Math.max(this.hydro.dx * 0.65, e.dropH * 0.42);
 
-      // 1. Баллистическая 3D-пелена воды от гребня до нижнего бьефа
+      // Баллистическая 3D-пелена воды от гребня плотины до нижнего бьефа
       _pos.set(e.wx, e.crestY, e.wz);
       _euler.set(0, -e.yaw, 0);
       _quat.setFromEuler(_euler);
       _scale.set(forwardSpan * pulse, e.dropH, e.width * 1.08);
       _mat4.compose(_pos, _quat, _scale);
       this.overflowNappeIM.setMatrixAt(i, _mat4);
-
-      // 2. Бурлящий пенный вал в точке падения струи внизу!
-      const hitX = e.wx + e.dirX * forwardSpan * 0.82;
-      const hitZ = e.wz + e.dirZ * forwardSpan * 0.82;
-      const rollerR = clamp(0.8 + e.headH * 0.9, 0.8, 4.5) * Math.pow(WORLD.horizScale, 0.45) * pulse;
-      _pos.set(hitX, e.toeY + rollerR * 0.25, hitZ);
-      _euler.set(0, -e.yaw, timeSec * 4.5 + i);
-      _quat.setFromEuler(_euler);
-      _scale.set(rollerR, e.width * 1.12, rollerR);
-      _mat4.compose(_pos, _quat, _scale);
-      this.plungeRollerIM.setMatrixAt(i, _mat4);
     }
 
     this.overflowNappeIM.count = n;
-    this.plungeRollerIM.count = n;
     if (n > 0) {
       this.overflowNappeIM.instanceMatrix.needsUpdate = true;
-      this.plungeRollerIM.instanceMatrix.needsUpdate = true;
     }
   }
 
@@ -764,19 +867,21 @@ export class WorldView {
       this.cityDisksGroup.remove(this.cityDisksGroup.children[0]);
     }
     for (const c of this.economy.cities) {
-      const diskGeo = new THREE.RingGeometry(4.5 * WORLD.horizScale, c.plateauRadius * 0.88, 40);
+      const diskGeo = new THREE.CircleGeometry(c.plateauRadius * 0.90, 44);
       diskGeo.rotateX(-Math.PI * 0.5);
-      const diskCol = c.archetype === 'agro' ? 0x6f7f43
-        : (c.archetype === 'resort' ? 0x8b8570 : 0x5c636c);
+      const diskCol = c.archetype === 'agro' ? 0xa3be8c
+        : (c.archetype === 'resort' ? 0xe5d5b7 : 0xd8dee9);
       const diskMat = new THREE.MeshLambertMaterial({
         color: diskCol,
-        map: this.textures.concreteMap,
+        map: this.textures.urbanPlaza || this.textures.concreteMap,
         transparent: true,
-        opacity: 0.44,
+        opacity: 0.88,
+        depthWrite: false,
       });
       const disk = new THREE.Mesh(diskGeo, diskMat);
       const centerBed = this.hydro.sampleAtWorld(c.x, c.z).bed;
-      disk.position.set(c.x, centerBed + 0.12 * WORLD.elevScale, c.z);
+      disk.position.set(c.x, centerBed + 0.14 * WORLD.elevScale, c.z);
+      disk.renderOrder = 1;
       disk.frustumCulled = false;
       disk.matrixAutoUpdate = false;
       disk.updateMatrix();
@@ -1348,13 +1453,20 @@ export class WorldView {
     this.terrainMetaAttr.needsUpdate = true;
 
     this.waterMat.uniforms.uTime.value = timeSec;
+    if (this.waterMat.uniforms.uWindVec) {
+      this.waterMat.uniforms.uWindVec.value.set(
+        this.hydro.windDirX || 0.75,
+        this.hydro.windSpeedMs || 4.8,
+        this.hydro.windDirZ || 0.66,
+      );
+    }
     this.terrainMat.uniforms.uTime.value = timeSec;
     if (this.outerSeaMat) this.outerSeaMat.uniforms.uTime.value = timeSec;
     this.terrainMat.uniforms.uMeltOffset.value = this.economy.hydrology
       ? this.economy.hydrology.snowMeltVisualOffset
       : 0.0;
 
-    // 3D-анимация перелива воды через гребни плотин!
+    // 3D-анимация перелива воды через гребни плотин и живых истоков 3 рек!
     this.updateOverflowWater3D(timeSec);
   }
 
@@ -1632,6 +1744,62 @@ export class WorldView {
         this.structMeshes.set(`u_${sub.id}`, subGroup);
         this.structuresGroup.add(subGroup);
         this.economy.powerLinesDirty = true;
+      }
+    }
+
+    // 6. Бетонные заводы БСУ и Стройбазы [B] с вращающимся миксером и конвейером
+    if (this.hydro.concretePlants) {
+      for (const cp of this.hydro.concretePlants) {
+        activeIds.add(`cp_${cp.id}`);
+        let cpGroup = this.structMeshes.get(`cp_${cp.id}`);
+        if (!cpGroup) {
+          cpGroup = this._createConcretePlantMesh(cp);
+          this.structMeshes.set(`cp_${cp.id}`, cpGroup);
+          this.structuresGroup.add(cpGroup);
+        }
+        if (cpGroup.userData.mixerDrum) {
+          cpGroup.userData.mixerDrum.rotation.x = timeSec * 2.4;
+        }
+      }
+    }
+
+    // 7. Береговые насосные станции и Водоканал [G]
+    if (this.hydro.pumpStations) {
+      for (const ps of this.hydro.pumpStations) {
+        activeIds.add(`ps_${ps.id}`);
+        let psGroup = this.structMeshes.get(`ps_${ps.id}`);
+        if (!psGroup) {
+          psGroup = this._createPumpStationMesh(ps);
+          this.structMeshes.set(`ps_${ps.id}`, psGroup);
+          this.structuresGroup.add(psGroup);
+        }
+        if (psGroup.userData.clarifierArm) {
+          psGroup.userData.clarifierArm.rotation.y = timeSec * 1.15;
+        }
+      }
+    }
+
+    // 8. Метео-ветрокомплексы ВЭС [W] (рыскание гондолы по реальному ветру и вращение от скорости ветра!)
+    if (this.hydro.windMeteoStations) {
+      const windYaw = -(this.hydro.windAzimuthRad || 0);
+      const windSpd = this.hydro.windSpeedMs || 4.8;
+      for (const wm of this.hydro.windMeteoStations) {
+        activeIds.add(`wm_${wm.id}`);
+        let wmGroup = this.structMeshes.get(`wm_${wm.id}`);
+        if (!wmGroup) {
+          wmGroup = this._createWindMeteoMesh(wm);
+          this.structMeshes.set(`wm_${wm.id}`, wmGroup);
+          this.structuresGroup.add(wmGroup);
+        }
+        if (wmGroup.userData.nacelleHead) {
+          wmGroup.userData.nacelleHead.rotation.y = windYaw;
+        }
+        if (wmGroup.userData.rotorHub) {
+          wmGroup.userData.rotorHub.rotation.z = timeSec * (0.6 + windSpd * 0.42);
+        }
+        if (wmGroup.userData.radarDish) {
+          wmGroup.userData.radarDish.rotation.y = timeSec * 1.6;
+        }
       }
     }
 
@@ -2018,6 +2186,163 @@ export class WorldView {
     return grp;
   }
 
+  /** 3D Бетонный завод БСУ и Стройбаза [B]: два силоса цемента, наклонный конвейер, башня миксера, конусы щебня и бытовка */
+  _createConcretePlantMesh(cp) {
+    const grp = new THREE.Group();
+    grp.position.set(cp.wx, cp.wy, cp.wz);
+    grp.rotation.y = -(cp.yaw || 0);
+    const uScale = Math.pow(WORLD.horizScale, 0.52);
+
+    const concMat = new THREE.MeshLambertMaterial({ color: 0xd8dee9, map: this.textures.concreteMap });
+    const siloMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0, map: this.textures.steel });
+    const orangeMat = new THREE.MeshLambertMaterial({ color: 0xf59e0b, map: this.textures.steel });
+    const blueCabinMat = new THREE.MeshLambertMaterial({ color: 0x2563eb });
+    const gravelMat = new THREE.MeshLambertMaterial({ color: 0x78716c, map: this.textures.rock });
+
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(19.0 * uScale, 0.9 * uScale, 15.0 * uScale), concMat);
+    pad.position.y = -0.3 * uScale;
+    grp.add(pad);
+
+    // Два высоких силоса цемента с сигнальными поясами
+    for (const sz of [-3.2, 1.2]) {
+      const silo = new THREE.Mesh(new THREE.CylinderGeometry(2.1 * uScale, 2.1 * uScale, 13.5 * uScale, 12), siloMat);
+      silo.position.set(-4.5 * uScale, 6.8 * uScale, sz * uScale);
+      silo.castShadow = !!this.profile.shadows;
+      const cap = new THREE.Mesh(new THREE.ConeGeometry(2.25 * uScale, 1.8 * uScale, 12), orangeMat);
+      cap.position.set(-4.5 * uScale, 14.4 * uScale, sz * uScale);
+      grp.add(silo, cap);
+    }
+
+    // Смесительная башня БСУ с вращающимся барабаном бетоносмесителя
+    const mixerTower = new THREE.Mesh(new THREE.BoxGeometry(5.6 * uScale, 8.6 * uScale, 5.2 * uScale), concMat);
+    mixerTower.position.set(2.2 * uScale, 4.3 * uScale, -1.0 * uScale);
+    mixerTower.castShadow = !!this.profile.shadows;
+    grp.add(mixerTower);
+
+    const mixerDrum = new THREE.Mesh(new THREE.CylinderGeometry(1.55 * uScale, 1.25 * uScale, 3.8 * uScale, 10), orangeMat);
+    mixerDrum.rotation.z = Math.PI * 0.5;
+    mixerDrum.position.set(2.2 * uScale, 9.6 * uScale, -1.0 * uScale);
+    grp.add(mixerDrum);
+
+    // Наклонная галерея ленточного конвейера подачи щебня
+    const conv = new THREE.Mesh(new THREE.BoxGeometry(10.8 * uScale, 1.1 * uScale, 1.4 * uScale), orangeMat);
+    conv.rotation.z = 0.46;
+    conv.position.set(5.2 * uScale, 5.2 * uScale, 3.4 * uScale);
+    grp.add(conv);
+
+    // Терриконы гранитного щебня и строительная диспетчерская бытовка
+    const heap1 = new THREE.Mesh(new THREE.ConeGeometry(3.2 * uScale, 3.0 * uScale, 9), gravelMat);
+    heap1.position.set(6.4 * uScale, 1.5 * uScale, 4.4 * uScale);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(4.8 * uScale, 2.8 * uScale, 3.0 * uScale), blueCabinMat);
+    cabin.position.set(-4.2 * uScale, 1.4 * uScale, 4.8 * uScale);
+    grp.add(heap1, cabin);
+
+    grp.userData.mixerDrum = mixerDrum;
+    return grp;
+  }
+
+  /** 3D Береговая насосная станция и Водоканал [G]: насосный павильон, круглый отстойник с фермой и стальные водоводы */
+  _createPumpStationMesh(ps) {
+    const grp = new THREE.Group();
+    grp.position.set(ps.wx, ps.wy, ps.wz);
+    grp.rotation.y = -(ps.yaw || 0);
+    const uScale = Math.pow(WORLD.horizScale, 0.52);
+
+    const concMat = new THREE.MeshLambertMaterial({ color: 0xe2e8f0, map: this.textures.concreteMap });
+    const pipeMat = new THREE.MeshLambertMaterial({ color: 0x0284c7, map: this.textures.steel });
+    const waterPoolMat = new THREE.MeshBasicMaterial({ color: 0x0ea5e9, transparent: true, opacity: 0.85 });
+
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(14.5 * uScale, 1.0 * uScale, 12.0 * uScale), concMat);
+    pad.position.y = -0.3 * uScale;
+    grp.add(pad);
+
+    const hall = new THREE.Mesh(new THREE.BoxGeometry(6.8 * uScale, 5.2 * uScale, 6.2 * uScale), concMat);
+    hall.position.set(-2.6 * uScale, 2.6 * uScale, 0);
+    hall.castShadow = !!this.profile.shadows;
+    grp.add(hall);
+
+    // Круглый резервуар-осветлитель Горводоканала с вращающейся скребковой фермой
+    const tankWall = new THREE.Mesh(new THREE.CylinderGeometry(3.6 * uScale, 3.6 * uScale, 2.6 * uScale, 16), concMat);
+    tankWall.position.set(3.6 * uScale, 1.3 * uScale, 0);
+    const tankWater = new THREE.Mesh(new THREE.CircleGeometry(3.3 * uScale, 16), waterPoolMat);
+    tankWater.rotation.x = -Math.PI * 0.5;
+    tankWater.position.set(3.6 * uScale, 2.65 * uScale, 0);
+    const clarifierArm = new THREE.Mesh(new THREE.BoxGeometry(6.4 * uScale, 0.35 * uScale, 0.55 * uScale), pipeMat);
+    clarifierArm.position.set(3.6 * uScale, 2.85 * uScale, 0);
+    grp.add(tankWall, tankWater, clarifierArm);
+
+    // Всасывающие стальные водоводы в сторону реки
+    for (const pz of [-1.6, 1.6]) {
+      const pipe = new THREE.Mesh(new THREE.CylinderGeometry(0.55 * uScale, 0.55 * uScale, 8.2 * uScale, 10), pipeMat);
+      pipe.rotation.z = Math.PI * 0.38;
+      pipe.position.set(-6.8 * uScale, 0.4 * uScale, pz * uScale);
+      grp.add(pipe);
+    }
+
+    grp.userData.clarifierArm = clarifierArm;
+    return grp;
+  }
+
+  /** 3D Метео-ветрокомплекс ВЭС [W]: башня ВЭС с поворотной гондолой по ветру + купол доплеровского метеорадара */
+  _createWindMeteoMesh(wm) {
+    const grp = new THREE.Group();
+    grp.position.set(wm.wx, wm.wy, wm.wz);
+    const uScale = Math.pow(WORLD.horizScale, 0.54);
+
+    const whiteMat = new THREE.MeshLambertMaterial({ color: 0xf8fafc, map: this.textures.steel });
+    const accentMat = new THREE.MeshLambertMaterial({ color: 0x0ea5e9 });
+    const concMat = new THREE.MeshLambertMaterial({ color: 0xcbd5e1, map: this.textures.concreteMap });
+
+    const pad = new THREE.Mesh(new THREE.BoxGeometry(11.0 * uScale, 0.9 * uScale, 9.5 * uScale), concMat);
+    pad.position.y = -0.25 * uScale;
+    grp.add(pad);
+
+    const towerH = 24.0 * uScale;
+    const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.62 * uScale, 1.35 * uScale, towerH, 10), whiteMat);
+    tower.position.set(-1.5 * uScale, towerH * 0.5, 0);
+    tower.castShadow = !!this.profile.shadows;
+    grp.add(tower);
+
+    // Поворотная гондола, разворачивающаяся навстречу реальному вектору ветра!
+    const nacelleHead = new THREE.Group();
+    nacelleHead.position.set(-1.5 * uScale, towerH, 0);
+    const nacelleBox = new THREE.Mesh(new THREE.BoxGeometry(2.1 * uScale, 1.9 * uScale, 4.4 * uScale), whiteMat);
+    nacelleHead.add(nacelleBox);
+
+    const rotorHub = new THREE.Group();
+    rotorHub.position.set(0, 0, 2.35 * uScale);
+    const nose = new THREE.Mesh(new THREE.ConeGeometry(0.85 * uScale, 1.8 * uScale, 8), accentMat);
+    nose.rotation.x = Math.PI * 0.5;
+    rotorHub.add(nose);
+
+    const bladeLen = 11.5 * uScale;
+    for (let b = 0; b < 3; b++) {
+      const bladePivot = new THREE.Group();
+      bladePivot.rotation.z = (b * Math.PI * 2) / 3;
+      const blade = new THREE.Mesh(new THREE.BoxGeometry(0.75 * uScale, bladeLen, 0.18 * uScale), whiteMat);
+      blade.position.y = bladeLen * 0.5;
+      bladePivot.add(blade);
+      rotorHub.add(bladePivot);
+    }
+    nacelleHead.add(rotorHub);
+    grp.add(nacelleHead);
+
+    // Рядом — опора и белый сферический купол доплеровского метеорадара Росгидромета
+    const radarPed = new THREE.Mesh(new THREE.CylinderGeometry(1.1 * uScale, 1.4 * uScale, 4.2 * uScale, 8), concMat);
+    radarPed.position.set(3.2 * uScale, 2.1 * uScale, 0);
+    const radarDish = new THREE.Mesh(new THREE.SphereGeometry(1.85 * uScale, 12, 10), whiteMat);
+    radarDish.position.set(3.2 * uScale, 5.2 * uScale, 0);
+    const radarBand = new THREE.Mesh(new THREE.TorusGeometry(1.86 * uScale, 0.12 * uScale, 6, 16), accentMat);
+    radarBand.rotation.x = Math.PI * 0.5;
+    radarDish.add(radarBand);
+    grp.add(radarPed, radarDish);
+
+    grp.userData.nacelleHead = nacelleHead;
+    grp.userData.rotorHub = rotorHub;
+    grp.userData.radarDish = radarDish;
+    return grp;
+  }
+
   _rebuildPowerLines() {
     const hs = WORLD.horizScale;
     const pScale = Math.pow(hs, 0.56);
@@ -2236,7 +2561,7 @@ export class WorldView {
     return { isNight: sunY < 0.06, dayFactor };
   }
 
-  updateCursor(wx, wz, radius, toolId, yawAngle, damTierAddH = 6.2, visible = true) {
+  updateCursor(wx, wz, radius, toolId, yawAngle, damTierAddH = 15.3, visible = true) {
     this.cursorGroup.visible = visible;
     if (!visible) return;
     const s = this.hydro.sampleAtWorld(wx, wz);
@@ -2244,18 +2569,28 @@ export class WorldView {
     this.cursorGroup.position.set(wx, y, wz);
     this.cursorRing.scale.set(radius, radius, 1);
 
-    const isUnit = toolId === 'spillway' || toolId === 'nav_lock' || toolId.startsWith('turbine_');
+    const isUnit = (
+      toolId === 'spillway' ||
+      toolId === 'nav_lock' ||
+      toolId === 'concrete_plant' ||
+      toolId === 'pump_station' ||
+      toolId.startsWith('turbine_')
+    );
     this.flowArrow.visible = isUnit;
 
     const showGhost = toolId === 'concrete_dam' || toolId === 'earth_dam' || toolId === 'foundation';
     this.ghostVolume.visible = showGhost;
     if (showGhost) {
-      const hPreview = (toolId === 'concrete_dam' ? damTierAddH : (toolId === 'earth_dam' ? 4.2 : 6.0)) * WORLD.elevScale;
-      this.ghostVolume.scale.set(radius, hPreview, radius);
+      // damTierAddH уже переведён в метры масштаба карты в applyMapScale!
+      const hPreview = toolId === 'concrete_dam'
+        ? damTierAddH
+        : ((toolId === 'earth_dam' ? 3.8 : 4.5) * WORLD.elevScale);
+      const effR = toolId === 'concrete_dam' ? Math.max(this.hydro.dx * 0.5, radius * 0.82) : radius;
+      this.ghostVolume.scale.set(effR, hPreview, effR);
       this.ghostVolumeMat.color.setHex(toolId === 'foundation' ? 0xf59e0b : 0xfbbf24);
     }
 
-    if (isUnit) {
+    if (isUnit || toolId === 'wind_meteo') {
       const { gx, gz } = this.hydro.worldToGrid(wx, wz);
       const dir = this.hydro.detectHydraulicDirection(gx, gz, yawAngle);
       const arrowScale = Math.pow(WORLD.horizScale, 0.55);
