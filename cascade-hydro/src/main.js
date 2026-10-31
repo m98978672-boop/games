@@ -1,10 +1,13 @@
 // ============================================================================
-//  КАСКАД: ЖИВАЯ ВОДА — Главный игровой модуль, ввод, UI и цикл оптимизаций
+//  КАСКАД: ЖИВАЯ ВОДА — Главный модуль: предзагрузка карты долины 768×768 м,
+//  пошаговое обучение, объёмная 3D-стройка с кранами и цикл симуляции
 // ============================================================================
 
 import * as THREE from 'three';
 import {
   WORLD,
+  CONSTRUCTION,
+  VALLEY_PRESETS,
   QUALITY_PROFILES,
   WEATHER_MODES,
   TOOLS,
@@ -13,16 +16,23 @@ import {
 import { detectDevice, wantsSafeMode } from './device.js';
 import { probeWebGL, formatDiagReport } from './diag.js';
 import { clamp, lerp } from './noise.js';
+import { buildValleyTerrain } from './valley.js';
 import { HydroSimulation } from './hydro.js';
 import { EconomyAndCities } from './economy.js';
+import { buildAllProceduralTextures } from './textures.js';
 import { WorldView } from './world-view.js';
 import { SprayAndRainSystem } from './spray.js';
 import { ValleyCameraController } from './camera.js';
 import { HydroAudio } from './audio.js';
+import { TutorialController } from './tutorial.js';
 import { SVG_ICONS } from './icons.js';
 
 const WEATHER_ORDER = ['normal', 'rain', 'flood', 'low_water'];
 const SPEED_MODES = [0, 1, 2, 5];
+
+function nextFrame() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
 
 class CascadeHydroGame {
   constructor() {
@@ -34,35 +44,26 @@ class CascadeHydroGame {
     const initialQualityId = safe ? 'low' : (savedQuality || this.device.recommendedQuality);
     this.profile = QUALITY_PROFILES[initialQualityId] || QUALITY_PROFILES.medium;
 
+    this.selectedPresetId = 'bystritsa';
+    this.selectedMode = 'standard'; // 'standard' | 'creative'
+    this.isInPreGameLoader = true;
+    this.isLoadingMap = true;
+    this.ready = false;
+
     this.audio = new HydroAudio();
     this._initRenderer();
 
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 1.5, 1600);
+    this.camera = new THREE.PerspectiveCamera(46, window.innerWidth / window.innerHeight, 1.8, 2400);
     this.camCtrl = new ValleyCameraController(this.camera, this.canvas);
 
-    // Инициализация ядра физики воды и экономики растущих городов
-    this.hydro = new HydroSimulation(this.profile.grid);
-    this.economy = new EconomyAndCities(this.hydro, {
-      onNotify: (msg, kind) => this.notify(msg, kind),
-      onMilestone: (m) => {
-        this.audio.playMilestone();
-        this.notify(`★ Грант Минэнерго «${m.title}»: +${m.reward.toLocaleString('ru-RU')} ₽!`, 'good');
-      },
-    });
-
-    this.worldView = new WorldView(this.scene, this.hydro, this.economy, this.profile);
-    this.spray = new SprayAndRainSystem(this.scene, this.profile.maxParticles);
-
-    // Предкомпиляция всех шейдеров (оптимизация из last-shore — ноль фризов при первой стройке!)
-    this.renderer.compile(this.scene, this.camera);
-
-    // Состояние инструментов и управления
-    this.activeToolId = 'canal_dig';
-    this.brushRadius = 8.5;
+    // Состояние инструментов и объёмной 3D-стройки
+    this.activeToolId = 'concrete_dam';
+    this.brushRadius = 9.0;
+    this.damTierIndex = 1; // +11.2 м по умолчанию
     this.manualYaw = null;
     this.showContours = false;
-    this.speedIndex = 1; // ×1
+    this.speedIndex = 1;
     this.selectedStruct = null;
 
     this.pointerDown = false;
@@ -70,7 +71,6 @@ class CascadeHydroGame {
     this.lockedGradeElev = null;
     this.hoverWorld = null;
 
-    // Счётчики FPS и диагностики F3
     this.showDiag = false;
     this.fps = 60;
     this._fpsFrames = 0;
@@ -79,15 +79,233 @@ class CascadeHydroGame {
     this._uiRefreshAccum = 0;
     this._lastTime = performance.now();
 
-    this._initUI();
-    this._bindWorldInput();
     this._onResize();
     window.addEventListener('resize', () => this._onResize());
 
-    // Приветственная подсказка
-    this.notify('≈ Добро пожаловать в долину р. Быстрица! Перегородите теснину плотиной или срежьте излучину собственным каналом!', 'info');
+    this._bindLoaderUI();
+    this._bootAsync();
+  }
 
+  _setLoaderProgress(pct, text) {
+    const bar = document.getElementById('loader-bar-fill');
+    const lbl = document.getElementById('loader-stage');
+    const pctEl = document.getElementById('loader-pct');
+    if (bar) bar.style.width = `${pct}%`;
+    if (lbl) lbl.textContent = text;
+    if (pctEl) pctEl.textContent = `${Math.round(pct)}%`;
+  }
+
+  _bindLoaderUI() {
+    const enterBtn = document.getElementById('btn-enter-valley');
+    const stdPill = document.getElementById('pill-mode-std');
+    const crePill = document.getElementById('pill-mode-cre');
+    const tutChk = document.getElementById('chk-start-tutorial');
+
+    // Если игрок уже проходил обучение раньше — оставляем галочку доступной, но по умолчанию для первого входа она включена
+    if (tutChk && this._loadSetting('tutorialDone', '') === '1') {
+      tutChk.checked = false;
+    }
+
+    document.querySelectorAll('.scenario-card').forEach((card) => {
+      card.addEventListener('click', () => {
+        if (this.isLoadingMap) return;
+        const presetId = card.dataset.preset;
+        if (!presetId || presetId === this.selectedPresetId) return;
+        document.querySelectorAll('.scenario-card').forEach((c) => c.classList.remove('active'));
+        card.classList.add('active');
+        this.loadValleyMapAsync(presetId);
+      });
+    });
+
+    const setMode = (mode) => {
+      this.selectedMode = mode;
+      stdPill.classList.toggle('active', mode === 'standard');
+      crePill.classList.toggle('active', mode === 'creative');
+    };
+    stdPill.addEventListener('click', () => setMode('standard'));
+    crePill.addEventListener('click', () => setMode('creative'));
+
+    enterBtn.addEventListener('click', () => {
+      if (this.isLoadingMap) return;
+      this.audio.unlock();
+      this.enterValley();
+    });
+  }
+
+  /** Асинхронная поэтапная предзагрузка текстур, рельефа 768×768 м, рек, городов и шейдеров */
+  async _bootAsync() {
+    const enterBtn = document.getElementById('btn-enter-valley');
+    if (enterBtn) {
+      enterBtn.disabled = true;
+      enterBtn.textContent = 'Генерация долины…';
+    }
+
+    this._setLoaderProgress(8, 'Синтез процедурных PBR-текстур гранита, бетона, опалубки и хвои…');
+    await nextFrame();
+    this.textures = buildAllProceduralTextures(this.renderer);
+
+    this._setLoaderProgress(22, 'Выделение памяти гидродинамики Сен-Венана (768 × 768 м)…');
+    await nextFrame();
+    this.hydro = new HydroSimulation(this.profile.grid, this.selectedPresetId, true);
+
+    const g = this.hydro.grid;
+    const z1 = Math.floor(g / 3);
+    const z2 = Math.floor((g * 2) / 3);
+
+    this._setLoaderProgress(38, 'Геодезическая съёмка северных хребтов и скальных ущелий (1/3)…');
+    await nextFrame();
+    buildValleyTerrain(g, this.hydro, this.selectedPresetId, 0, z1);
+
+    this._setLoaderProgress(54, 'Формирование деривационного плато и излучины «Большая Подкова» (2/3)…');
+    await nextFrame();
+    buildValleyTerrain(g, this.hydro, this.selectedPresetId, z1, z2);
+
+    this._setLoaderProgress(70, 'Наполнение рек «Быстрица», «Серебрянка» и «Гремучий» (3/3)…');
+    await nextFrame();
+    buildValleyTerrain(g, this.hydro, this.selectedPresetId, z2, g);
+    this.hydro.finalizeValleySetup(18);
+
+    this._setLoaderProgress(84, 'Возведение 5 стартовых городов, посадка лесов и пулов 3D-стройки…');
+    await nextFrame();
+    this.economy = new EconomyAndCities(this.hydro, {
+      onNotify: (msg, kind) => this.notify(msg, kind),
+      onMilestone: (m) => {
+        this.audio.playMilestone();
+        this.notify(`★ Грант Минэнерго «${m.title}»: +${m.reward.toLocaleString('ru-RU')} ₽!`, 'good');
+      },
+    });
+
+    this.worldView = new WorldView(this.scene, this.hydro, this.economy, this.profile, this.renderer, this.textures);
+    this.spray = new SprayAndRainSystem(this.scene, this.profile.maxParticles);
+    this.tutorial = new TutorialController(this);
+
+    this._setLoaderProgress(95, 'Предкомпиляция WebGL-шейдеров оптики воды, каустики и фасадов…');
+    await nextFrame();
+    this.renderer.compile(this.scene, this.camera);
+
+    this._initUI();
+    this._bindWorldInput();
+    this._rebuildLandmarksBar();
+    this.worldView.syncCityInstances();
+    this.worldView.syncEngineeredVolumes();
+
+    this._setLoaderProgress(100, `Карта «${VALLEY_PRESETS[this.selectedPresetId].name}» (768×768 м) готова к работе!`);
+    this.isLoadingMap = false;
+    this.ready = true;
+
+    const loaderBackdrop = document.getElementById('map-loader');
+    if (loaderBackdrop) loaderBackdrop.classList.add('ready-preview');
+    if (enterBtn) {
+      enterBtn.disabled = false;
+      enterBtn.textContent = '▶ Войти в долину и начать строительство';
+    }
+
+    this._lastTime = performance.now();
     requestAnimationFrame((t) => this._loop(t));
+
+    // Поддержка быстрого автостарта по параметру ?autostart=1
+    if (window.location.search.includes('autostart=1')) {
+      this.enterValley();
+    }
+  }
+
+  /** Повторная предзагрузка при смене карты долины в меню */
+  async loadValleyMapAsync(presetId) {
+    this.isLoadingMap = true;
+    this.selectedPresetId = presetId;
+    const enterBtn = document.getElementById('btn-enter-valley');
+    if (enterBtn) {
+      enterBtn.disabled = true;
+      enterBtn.textContent = 'Перестройка рельефа долины…';
+    }
+
+    this._setLoaderProgress(18, `Очистка гидроузла и подготовка карты «${VALLEY_PRESETS[presetId].name}»…`);
+    await nextFrame();
+    this.hydro.presetId = presetId;
+    this.hydro._clearArrays();
+
+    const g = this.hydro.grid;
+    const halfG = Math.floor(g / 2);
+
+    this._setLoaderProgress(48, 'Скульптурирование каньонов, террас 5 городов и русел рек (1/2)…');
+    await nextFrame();
+    buildValleyTerrain(g, this.hydro, presetId, 0, halfG);
+
+    this._setLoaderProgress(76, 'Заполнение водотоков и прогрев уравнений мелкой воды (2/2)…');
+    await nextFrame();
+    buildValleyTerrain(g, this.hydro, presetId, halfG, g);
+    this.hydro.finalizeValleySetup(18);
+
+    this._setLoaderProgress(92, 'Размещение кварталов 5 городов, хвойных массивов и валунов…');
+    await nextFrame();
+    this.economy.resetEconomy();
+    this.worldView.rebuildForNewValley();
+    this._rebuildLandmarksBar();
+    this.selectedStruct = null;
+    document.getElementById('struct-inspector').classList.add('hidden');
+    this._refreshHUD();
+
+    this._setLoaderProgress(100, `Карта «${VALLEY_PRESETS[presetId].name}» полностью загружена!`);
+    this.isLoadingMap = false;
+    if (enterBtn) {
+      enterBtn.disabled = false;
+      enterBtn.textContent = '▶ Войти в долину и начать строительство';
+    }
+  }
+
+  /** Переход с экрана предзагрузки непосредственно к управлению долиной */
+  enterValley() {
+    this.isInPreGameLoader = false;
+    const loader = document.getElementById('map-loader');
+    if (loader) loader.classList.add('hidden');
+
+    const wantCreative = this.selectedMode === 'creative';
+    this.economy.creative = wantCreative;
+    document.getElementById('btn-creative').classList.toggle('active', wantCreative);
+
+    // Плавно подлетаем к главному створу выбранной карты
+    const lm = VALLEY_PRESETS[this.selectedPresetId].landmarks[0];
+    const bed = this.hydro.sampleAtWorld(lm.x, lm.z).bed;
+    this.camCtrl.flyTo(lm.x, lm.z + 25, 165, bed);
+
+    const tutChk = document.getElementById('chk-start-tutorial');
+    if (tutChk && tutChk.checked) {
+      this.tutorial.start(0);
+    } else {
+      this.tutorial.stop();
+      this.notify(
+        `≈ Карта «${VALLEY_PRESETS[this.selectedPresetId].name}» открыта! Нажмите «Обучение» сверху (T) в любой момент.`,
+        'info',
+      );
+    }
+
+    this._refreshHUD();
+  }
+
+  openMapLoader() {
+    this.isInPreGameLoader = true;
+    const loader = document.getElementById('map-loader');
+    if (loader) {
+      loader.classList.remove('hidden');
+      loader.classList.add('ready-preview');
+    }
+  }
+
+  _rebuildLandmarksBar() {
+    const bar = document.getElementById('landmarks-bar');
+    if (!bar) return;
+    bar.innerHTML = '';
+    const preset = VALLEY_PRESETS[this.selectedPresetId] || VALLEY_PRESETS.bystritsa;
+    for (const lm of preset.landmarks) {
+      const btn = document.createElement('button');
+      btn.className = 'lm-btn';
+      btn.textContent = lm.label;
+      btn.addEventListener('click', () => {
+        const bed = this.hydro.sampleAtWorld(lm.x, lm.z).bed;
+        this.camCtrl.flyTo(lm.x, lm.z, lm.dist, bed);
+      });
+      bar.appendChild(btn);
+    }
   }
 
   _loadSetting(key, fallback) {
@@ -106,7 +324,6 @@ class CascadeHydroGame {
   }
 
   _initRenderer() {
-    // Трёхступенчатое создание WebGL-контекста (по образцу last-shore)
     const tiers = [
       { antialias: this.profile.id !== 'low', powerPreference: 'high-performance' },
       { antialias: false, powerPreference: 'default' },
@@ -142,7 +359,6 @@ class CascadeHydroGame {
     this.renderer.setPixelRatio(dpr);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
-    // Оптимизация теней из last-shore: ручное обновление карты теней раз в N кадров!
     this.renderer.shadowMap.enabled = !!this.profile.shadows;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.shadowMap.autoUpdate = false;
@@ -160,7 +376,7 @@ class CascadeHydroGame {
   }
 
   // ==========================================================================
-  //  БЫСТРЫЙ АНАЛИТИЧЕСКИЙ RAYMARCH ПО ВЫСОТАМ ДОЛИНЫ (в 300 раз быстрее BVH!)
+  //  АНАЛИТИЧЕСКИЙ RAYMARCH ПО РАСШИРЕННОЙ ДОЛИНЕ 768×768 м
   // ==========================================================================
   raycastValley(clientX, clientY) {
     const rect = this.canvas.getBoundingClientRect();
@@ -174,12 +390,11 @@ class CascadeHydroGame {
 
     if (dir.y >= -0.01) return null;
 
-    // Шагаем вдоль луча от верхней отметки (72 м) до пересечения с рельефом/водой
-    const tStart = Math.max(2.0, (orig.y - 72.0) / (-dir.y));
-    const tEnd = Math.min(1100.0, (orig.y - (-2.0)) / (-dir.y));
+    const tStart = Math.max(2.0, (orig.y - 102.0) / (-dir.y));
+    const tEnd = Math.min(1650.0, (orig.y - (-2.0)) / (-dir.y));
     if (tEnd <= tStart) return null;
 
-    const steps = 64;
+    const steps = 76;
     const dt = (tEnd - tStart) / steps;
     let prevT = tStart;
     const half = WORLD.size * 0.495;
@@ -196,9 +411,7 @@ class CascadeHydroGame {
       }
 
       const sample = this.hydro.sampleAtWorld(px, pz);
-      const surfH = sample.bed;
-      if (py <= surfH) {
-        // Уточняем дихотомией за 5 шагов до точности ~5 см!
+      if (py <= sample.bed) {
         let lo = prevT;
         let hi = t;
         for (let b = 0; b < 5; b++) {
@@ -223,10 +436,9 @@ class CascadeHydroGame {
   }
 
   // ==========================================================================
-  //  ИНТЕРФЕЙС, ХОТБАР, ИНСПЕКТОР АГРЕГАТОВ И ГОРЯЧИЕ КЛАВИШИ
+  //  ИНТЕРФЕЙС, 12 ИНСТРУМЕНТОВ, ЯРУСЫ 3D-ПЛОТИНЫ И ИНСПЕКТОР
   // ==========================================================================
   _initUI() {
-    // 1. Хотбар инструментов
     const hotbar = document.getElementById('hotbar');
     hotbar.innerHTML = '';
     for (const tool of TOOLS) {
@@ -247,7 +459,7 @@ class CascadeHydroGame {
     }
     this._updateToolHint();
 
-    // 2. Размеры кисти / ширины канала и поворот
+    // Ширина кисти
     document.querySelectorAll('.size-btn[data-size]').forEach((btn) => {
       btn.addEventListener('click', () => {
         this.brushRadius = parseFloat(btn.dataset.size);
@@ -256,11 +468,22 @@ class CascadeHydroGame {
       });
     });
 
-    document.getElementById('btn-rotate').addEventListener('click', () => this.rotatePlacement());
+    // Ярус высоты объёмной 3D-плотины (+6м / +11м / +17м)
+    document.querySelectorAll('.tier-btn[data-tier]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.damTierIndex = parseInt(btn.dataset.tier, 10) || 0;
+        document.querySelectorAll('.tier-btn[data-tier]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tier = CONSTRUCTION.damHeightTiers[this.damTierIndex];
+        this.notify(`▲ Выбран профиль 3D-плотины: ${tier.label}`, 'info');
+      });
+    });
 
-    // 3. Верхние кнопки управления
+    document.getElementById('btn-rotate').addEventListener('click', () => this.rotatePlacement());
     document.getElementById('btn-speed').addEventListener('click', () => this.cycleSpeed());
+    document.getElementById('btn-open-loader').addEventListener('click', () => this.openMapLoader());
     document.getElementById('btn-contours').addEventListener('click', () => this.toggleContours());
+
     document.getElementById('btn-weather-cycle').addEventListener('click', () => {
       const idx = (WEATHER_ORDER.indexOf(this.economy.weatherId) + 1) % WEATHER_ORDER.length;
       const next = WEATHER_ORDER[idx];
@@ -276,8 +499,8 @@ class CascadeHydroGame {
       creativeBtn.classList.toggle('active', this.economy.creative);
       this.notify(
         this.economy.creative
-          ? '🛠️ Режим «Инженерный креатив» включён: стройка и каналы без ограничений бюджета!'
-          : '💼 Возвращён экономический режим с бюджетом.',
+          ? '★ Режим «Инженерный креатив» включён: мгновенная стройка и бесконечный бюджет!'
+          : '◈ Включён инженерный режим: 3-этапное бетонирование кранами и реальный бюджет.',
         'info',
       );
       this._refreshHUD();
@@ -294,7 +517,7 @@ class CascadeHydroGame {
       this.renderer.shadowMap.enabled = !!this.profile.shadows;
       this.renderer.shadowMap.needsUpdate = true;
       this._onResize();
-      this.notify(`Графика переключена: ${this.profile.label} (полная смена сетки воды — после перезагрузки страницы)`, 'info');
+      this.notify(`Графика переключена: ${this.profile.label} (смена плотности сетки воды вступит после перезагрузки)`, 'info');
     });
 
     const muteBtn = document.getElementById('btn-mute');
@@ -303,7 +526,6 @@ class CascadeHydroGame {
       muteBtn.textContent = m ? '✕ Без звука' : '♪ Звук';
     });
 
-    // Справка
     const helpModal = document.getElementById('help-modal');
     document.getElementById('btn-help').addEventListener('click', () => helpModal.classList.toggle('hidden'));
     document.getElementById('help-close').addEventListener('click', () => helpModal.classList.add('hidden'));
@@ -312,16 +534,6 @@ class CascadeHydroGame {
       helpModal.classList.add('hidden');
     });
 
-    // Кнопки быстрого перелёта к ключевым створам
-    document.querySelectorAll('.lm-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const [x, z, dist] = btn.dataset.fly.split(',').map(Number);
-        const bed = this.hydro.sampleAtWorld(x, z).bed;
-        this.camCtrl.flyTo(x, z, dist, bed);
-      });
-    });
-
-    // Сворачивание боковой панели
     const panelBody = document.getElementById('panel-body');
     const toggleBtn = document.getElementById('btn-toggle-panel');
     toggleBtn.addEventListener('click', () => {
@@ -329,10 +541,9 @@ class CascadeHydroGame {
       toggleBtn.textContent = hidden ? '▸' : '▾';
     });
 
-    // Кредиты / Облигации
     document.getElementById('btn-loan').addEventListener('click', () => {
       const res = this.economy.takeGreenLoan();
-      if (res.ok) this.notify(`💵 Выпущены зелёные облигации ГЭС: +${res.amount.toLocaleString('ru-RU')} ₽`, 'good');
+      if (res.ok) this.notify(`+ Выпущены зелёные облигации ГЭС: +${res.amount.toLocaleString('ru-RU')} ₽`, 'good');
       else this.notify(res.reason, 'warn');
       this._refreshHUD();
     });
@@ -344,7 +555,7 @@ class CascadeHydroGame {
       this._refreshHUD();
     });
 
-    // Инспектор турбины / водосброса
+    // Инспектор агрегата / водосброса
     document.getElementById('insp-close').addEventListener('click', () => {
       this.selectedStruct = null;
       document.getElementById('struct-inspector').classList.add('hidden');
@@ -377,8 +588,18 @@ class CascadeHydroGame {
       this._refreshInspector();
     });
 
+    document.getElementById('insp-clean-btn').addEventListener('click', () => {
+      if (this.selectedStruct && this.selectedStruct.kind === 'turbine') {
+        this.selectedStruct.trashLoad = 0;
+        this.audio.playBuild();
+        this.notify('Сороудерживающая решётка водоприёмника очищена от плавника и ила!', 'good');
+        this._refreshInspector();
+      }
+    });
+
     // Горячие клавиши
     window.addEventListener('keydown', (e) => {
+      if (this.isInPreGameLoader) return;
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
       if (e.code === 'F3') {
         e.preventDefault();
@@ -400,6 +621,8 @@ class CascadeHydroGame {
         this.toggleContours();
       } else if (e.code === 'KeyR') {
         this.rotatePlacement();
+      } else if (e.code === 'KeyT') {
+        document.getElementById('btn-tutorial').click();
       } else if (e.code === 'KeyK') {
         creativeBtn.click();
       } else if (e.code === 'KeyM') {
@@ -430,7 +653,7 @@ class CascadeHydroGame {
   rotatePlacement() {
     if (this.manualYaw === null) this.manualYaw = 0;
     else this.manualYaw += Math.PI * 0.25;
-    if (this.manualYaw > Math.PI * 2) this.manualYaw = null; // возврат в авто-ориентацию по напору!
+    if (this.manualYaw > Math.PI * 2) this.manualYaw = null;
     this.notify(
       this.manualYaw === null
         ? '↻ Авто-ориентация створа по уклону воды включена'
@@ -454,10 +677,11 @@ class CascadeHydroGame {
   }
 
   // ==========================================================================
-  //  ВЗАИМОДЕЙСТВИЕ С РЕЛЬЕФОМ, КОПКА КАНАЛОВ И СТРОИТЕЛЬСТВО ГЭС
+  //  ВЗАИМОДЕЙСТВИЕ С КАРТОЙ: КАНАЛЫ, 3D-ПЛОТИНЫ, КОНТРФОРСЫ, ГЭС, ОРУ 110 кВ
   // ==========================================================================
   _bindWorldInput() {
     this.canvas.addEventListener('pointerdown', (e) => {
+      if (this.isInPreGameLoader) return;
       this.audio.unlock();
       if (e.button !== 0) return;
       if (this.camCtrl.touches.size >= 2) return;
@@ -465,8 +689,7 @@ class CascadeHydroGame {
       const hit = this.raycastValley(e.clientX, e.clientY);
       if (!hit) return;
 
-      // Если кликнули по существующему агрегату в режиме осмотра (или зажали Alt) — открываем инспектор
-      const nearStruct = this.hydro.findStructureNear(hit.wx, hit.wz, 12);
+      const nearStruct = this.hydro.findStructureNear(hit.wx, hit.wz, 13);
       if (nearStruct && (this.activeToolId === 'inspect' || e.altKey)) {
         this.selectedStruct = nearStruct;
         document.getElementById('struct-inspector').classList.remove('hidden');
@@ -474,27 +697,29 @@ class CascadeHydroGame {
         return;
       }
 
-      // Разовые кликовые инструменты (Турбины, Водосбросы, ЛЭП, Снос)
-      if (this.activeToolId === 'spillway' || this.activeToolId.startsWith('turbine_') ||
-          this.activeToolId === 'powerline' || this.activeToolId === 'demolish' ||
-          this.activeToolId === 'inspect') {
+      if (
+        this.activeToolId === 'spillway' ||
+        this.activeToolId.startsWith('turbine_') ||
+        this.activeToolId === 'powerline' ||
+        this.activeToolId === 'demolish' ||
+        this.activeToolId === 'inspect'
+      ) {
         this._applySingleClickTool(hit.wx, hit.wz);
         return;
       }
 
-      // Непрерывные трассовые инструменты (Копка канала, Облицовка, Грунтовая дамба, Бетонная плотина)
+      // Трассовые инструменты (канал, Ж/Б лоток, перемычка, 3D-плотина, фундамент/контрфорс)
       this.pointerDown = true;
       this.lastBrushWorld = { wx: hit.wx, wz: hit.wz };
       const s = this.hydro.sampleAtWorld(hit.wx, hit.wz);
+      const tierAdd = CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11.2;
 
       if (this.activeToolId === 'canal_dig') {
-        // При зажатом Shift фиксируем отметку дна в точке старта для идеального ровного канала!
-        this.lockedGradeElev = e.shiftKey ? (s.bed - 1.8) : null;
+        this.lockedGradeElev = e.shiftKey ? (s.bed - 1.9) : null;
       } else if (this.activeToolId === 'concrete_dam') {
-        // Фиксируем единую горизонтальную отметку гребня плотины вдоль всего мазка через каньон!
-        this.lockedGradeElev = Math.max(s.bed, s.surface) + 5.2;
+        this.lockedGradeElev = Math.max(s.bed, s.surface) + tierAdd;
       } else if (this.activeToolId === 'earth_dam') {
-        this.lockedGradeElev = Math.max(s.bed, s.surface) + 4.0;
+        this.lockedGradeElev = Math.max(s.bed, s.surface) + 4.2;
       } else {
         this.lockedGradeElev = null;
       }
@@ -503,13 +728,15 @@ class CascadeHydroGame {
     });
 
     window.addEventListener('pointermove', (e) => {
+      if (this.isInPreGameLoader) return;
       const hit = this.raycastValley(e.clientX, e.clientY);
       this.hoverWorld = hit;
+      const tierAdd = CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11.2;
       if (hit) {
-        this.worldView.updateCursor(hit.wx, hit.wz, this.brushRadius, this.activeToolId, this.manualYaw, true);
+        this.worldView.updateCursor(hit.wx, hit.wz, this.brushRadius, this.activeToolId, this.manualYaw, tierAdd, true);
         this._updateProbeBar(hit.wx, hit.wz);
       } else {
-        this.worldView.updateCursor(0, 0, this.brushRadius, this.activeToolId, this.manualYaw, false);
+        this.worldView.updateCursor(0, 0, this.brushRadius, this.activeToolId, this.manualYaw, tierAdd, false);
       }
 
       if (!this.pointerDown || !hit || !this.lastBrushWorld) return;
@@ -518,7 +745,7 @@ class CascadeHydroGame {
       const dx = hit.wx - this.lastBrushWorld.wx;
       const dz = hit.wz - this.lastBrushWorld.wz;
       const dist = Math.hypot(dx, dz);
-      const stepLen = Math.max(2.2, this.brushRadius * 0.35);
+      const stepLen = Math.max(2.4, this.brushRadius * 0.35);
       if (dist < stepLen) return;
 
       const steps = Math.min(20, Math.ceil(dist / stepLen));
@@ -526,7 +753,6 @@ class CascadeHydroGame {
         const t = i / steps;
         const ix = lerp(this.lastBrushWorld.wx, hit.wx, t);
         const iz = lerp(this.lastBrushWorld.wz, hit.wz, t);
-        // Для ровного канала с Shift делаем плавный гидравлический уклон 0.5% по ходу движения!
         if (this.activeToolId === 'canal_dig' && this.lockedGradeElev !== null) {
           this.lockedGradeElev -= (dist / steps) * 0.005;
         }
@@ -547,7 +773,7 @@ class CascadeHydroGame {
     const creative = this.economy.creative;
 
     if (this.activeToolId === 'canal_dig') {
-      const res = this.hydro.excavateCanal(wx, wz, this.brushRadius, 1.35, this.lockedGradeElev, budget, creative);
+      const res = this.hydro.excavateCanal(wx, wz, this.brushRadius, 1.4, this.lockedGradeElev, budget, creative);
       if (res.excavatedM3 > 0) {
         this.economy.spend(res.cost);
         if (subIdx === 0) {
@@ -565,19 +791,28 @@ class CascadeHydroGame {
         if (subIdx === 0) this.audio.playBuild();
       }
     } else if (this.activeToolId === 'earth_dam') {
-      const res = this.hydro.buildEarthDam(wx, wz, this.brushRadius, 1.8, this.lockedGradeElev, budget, creative);
+      const res = this.hydro.buildEarthDam(wx, wz, this.brushRadius, 1.85, this.lockedGradeElev, budget, creative);
       if (res.addedM3 > 0) {
         this.economy.spend(res.cost);
         if (subIdx === 0) this.audio.playDig();
       }
     } else if (this.activeToolId === 'concrete_dam') {
-      const crest = this.lockedGradeElev ?? (this.hydro.sampleAtWorld(wx, wz).bed + 5.0);
-      const res = this.hydro.buildConcreteDam(wx, wz, this.brushRadius, crest, budget, creative);
+      const tierAdd = CONSTRUCTION.damHeightTiers[this.damTierIndex]?.addHeight || 11.2;
+      const crest = this.lockedGradeElev ?? (this.hydro.sampleAtWorld(wx, wz).bed + tierAdd);
+      const res = this.hydro.buildConcreteDam(wx, wz, this.brushRadius, crest, budget, creative, false);
       if (res.addedM3 > 0) {
         this.economy.spend(res.cost);
         if (subIdx === 0) this.audio.playBuild();
-      } else if (!creative && budget < 150 && subIdx === 0) {
-        this.notify('Недостаточно бетона/средств (можно выпустить зелёные облигации справа!)', 'warn');
+      } else if (!creative && budget < 180 && subIdx === 0) {
+        this.notify('Недостаточно средств на бетонирование (можно выпустить зелёные облигации справа!)', 'warn');
+      }
+    } else if (this.activeToolId === 'foundation') {
+      const res = this.hydro.reinforceFoundation(wx, wz, this.brushRadius, budget, creative);
+      if (res.count > 0) {
+        this.economy.spend(res.cost);
+        if (subIdx === 0) this.audio.playBuild();
+      } else if (!creative && budget < 140 && subIdx === 0) {
+        this.notify('Недостаточно средств на скальную цементацию и 3D-контрфорсы!', 'warn');
       }
     }
   }
@@ -587,7 +822,7 @@ class CascadeHydroGame {
     const creative = this.economy.creative;
 
     if (this.activeToolId === 'inspect') {
-      const st = this.hydro.findStructureNear(wx, wz, 15);
+      const st = this.hydro.findStructureNear(wx, wz, 16);
       if (st) {
         this.selectedStruct = st;
         document.getElementById('struct-inspector').classList.remove('hidden');
@@ -607,7 +842,7 @@ class CascadeHydroGame {
       this.selectedStruct = res.structure;
       document.getElementById('struct-inspector').classList.remove('hidden');
       this._refreshInspector();
-      this.notify('🌊 Установлен водосброс с сегментным затвором и автозащитой от перелива!', 'good');
+      this.notify('≈ Смонтирован водосброс с подъёмным сегментным затвором и носком-трамплином!', 'good');
       return;
     }
 
@@ -623,26 +858,36 @@ class CascadeHydroGame {
       this.selectedStruct = res.structure;
       document.getElementById('struct-inspector').classList.remove('hidden');
       this._refreshInspector();
-      this.notify(`⚡ Смонтирован гидроагрегат ${res.structure.spec.name}! Копите напор верхнего бьефа.`, 'good');
+      this.notify(`✦ Построен гидроузел ${res.structure.spec.name} с водоприёмником и 3D-водоводом!`, 'good');
       return;
     }
 
     if (this.activeToolId === 'powerline') {
-      // Находим ближайший город к клику
+      // Если клик рядом с городом — подключаем ЛЭП к этому городу; иначе строим 3D-подстанцию ОРУ 110 кВ на берегу!
       let bestCity = null;
-      let bestD = 95;
+      let bestD = 92;
       for (const c of this.economy.cities) {
         const d = Math.hypot(c.x - wx, c.z - wz);
         if (d < bestD) { bestD = d; bestCity = c; }
       }
-      if (!bestCity) {
-        this.notify('Кликните ближе к городу (или нажмите «Подключить ЛЭП» в карточке города справа)', 'info');
+      if (bestCity) {
+        const res = this.economy.connectCityGrid(bestCity.id);
+        if (!res.ok) this.notify(res.reason, 'warn');
+        else this.audio.playBuild();
+        this._renderCityCards();
         return;
       }
-      const res = this.economy.connectCityGrid(bestCity.id);
-      if (!res.ok) this.notify(res.reason, 'warn');
-      else this.audio.playBuild();
-      this._renderCityCards();
+
+      const subRes = this.hydro.placeSubstation(wx, wz, budget, creative);
+      if (!subRes.ok) {
+        this.notify(subRes.reason, 'warn');
+        return;
+      }
+      this.economy.spend(subRes.cost);
+      this.economy.powerLinesDirty = true;
+      this.audio.playBuild();
+      this.notify('✦ Построена узловая 3D-подстанция ОРУ 110 кВ! Потери передачи в сети снижены с 16% до 3%!', 'good');
+      this._refreshHUD();
       return;
     }
 
@@ -651,25 +896,47 @@ class CascadeHydroGame {
       if (res.removed) {
         this.economy.earn(res.refund);
         this.audio.playDig();
-        if (this.selectedStruct && !this.hydro.turbines.includes(this.selectedStruct) && !this.hydro.spillways.includes(this.selectedStruct)) {
+        if (
+          this.selectedStruct &&
+          !this.hydro.turbines.includes(this.selectedStruct) &&
+          !this.hydro.spillways.includes(this.selectedStruct)
+        ) {
           this.selectedStruct = null;
           document.getElementById('struct-inspector').classList.add('hidden');
         }
-        this.notify(res.refund > 0 ? `Демонтаж выполнен (возврат +${res.refund.toLocaleString('ru-RU')} ₽)` : 'Участок расчищен', 'info');
+        this.notify(
+          res.refund > 0
+            ? `Демонтаж выполнен (возврат +${res.refund.toLocaleString('ru-RU')} ₽)`
+            : 'Секция расчищена',
+          'info',
+        );
       }
     }
   }
 
   // ==========================================================================
-  //  ОБНОВЛЕНИЕ HUD, КАРТОЧЕК РАСТУЩИХ ГОРОДОВ И ИНСПЕКТОРА
+  //  ОБНОВЛЕНИЕ ГИДРОПОСТА, КАРТОЧЕК 5 ГОРОДОВ И ИНСПЕКТОРА
   // ==========================================================================
   _updateProbeBar(wx, wz) {
     const s = this.hydro.sampleAtWorld(wx, wz);
     const el = document.getElementById('probe-readout');
     if (!el) return;
-    const regime = s.depth < 0.03 ? 'сухо' : (s.froude > 1.0 ? 'бурный Fr>1' : 'спокойный');
-    const cover = s.concrete > 0.2 ? 'Бетон плотины' : (s.lined ? 'Бетон канала' : (s.earthDam ? 'Насыпь дамбы' : 'Грунт/Скала'));
-    el.textContent = `Дно: ${s.bed.toFixed(1)} м (${cover}) · Вода: ${s.depth > 0.02 ? s.surface.toFixed(1) + ' м' : '—'} · Глуб.: ${s.depth.toFixed(2)} м · V: ${s.speed.toFixed(2)} м/с (${regime})`;
+
+    let stageTxt = '';
+    if (s.targetConcrete > s.concrete + 0.08) {
+      const pct = Math.round(s.buildProgress * 100);
+      const stageName = pct < 35 ? 'Шпунт/Котлован' : (pct < 75 ? 'Армокаркас и опалубка' : 'Заливка монолита');
+      stageTxt = ` · Стройка: ${stageName} (${pct}%)`;
+    } else if (s.reinforced) {
+      stageTxt = ' · [Контрфорс + Скала]';
+    }
+
+    const cover = s.concrete > 0.8
+      ? '3D-Монолит плотины'
+      : (s.lined ? 'Ж/Б лоток канала' : (s.earthDam ? 'Насыпь перемычки' : (s.soil < 0.75 ? 'Скальный гранит' : `Грунт ${s.soil.toFixed(1)}м`)));
+    const regime = s.depth < 0.03 ? 'сухо' : (s.froude > 1.0 ? 'Fr>1 бурный' : 'спокойный');
+
+    el.textContent = `Дно: ${s.bed.toFixed(1)} м (${cover})${stageTxt} · Вода: ${s.depth > 0.02 ? s.surface.toFixed(1) + ' м' : '—'} · H: ${s.depth.toFixed(2)} м · V: ${s.speed.toFixed(2)} м/с (${regime})`;
   }
 
   _renderCityCards() {
@@ -685,16 +952,16 @@ class CascadeHydroGame {
       const lineCost = this.economy.estimatePowerLineCost(c);
       const pct = Math.round(c.growthProgress * 100);
       const supplyText = c.connected
-        ? `⚡ ${c.suppliedMW.toFixed(2)} / ${c.currentDemandMW.toFixed(2)} МВт`
-        : `Не подключён (спрос ${c.currentDemandMW.toFixed(2)} МВт)`;
+        ? `◈ ${c.suppliedMW.toFixed(2)} / ${c.currentDemandMW.toFixed(2)} МВт`
+        : `Не в сети (спрос ${c.currentDemandMW.toFixed(2)} МВт)`;
 
       let extraNote = '';
       if (c.isFlooded) {
         extraNote = `<div class="city-note warn">! Кварталы подтоплены! Рост остановлен</div>`;
       } else if (c.needsIrrigation) {
         extraNote = c.irrigated
-          ? `<div class="city-note">◈ Оросительный канал активен (+95 ₽/с, рост ×1.75)</div>`
-          : `<div class="city-note warn">◈ Подведите канал к зелёному кольцу (+95 ₽/с)</div>`;
+          ? `<div class="city-note">◈ Канал орошения активен (+110 ₽/с, рост ×1.78)</div>`
+          : `<div class="city-note warn">◈ Подведите канал к зелёному кольцу (+110 ₽/с)</div>`;
       }
 
       card.innerHTML = `
@@ -706,11 +973,11 @@ class CascadeHydroGame {
           <span>Нас.: ${c.population.toLocaleString('ru-RU')}</span>
           <span>${supplyText}</span>
         </div>
-        <div class="progress-track" title="Прогресс самостоятельной застройки нового квартала">
+        <div class="progress-track" title="Прогресс самостоятельной застройки кварталов">
           <div class="progress-fill" style="width:${pct}%"></div>
         </div>
         ${extraNote}
-        ${!c.connected ? `<div class="city-actions"><button class="connect-btn" data-connect="${c.id}">⚡ Подключить ЛЭП (${lineCost.toLocaleString('ru-RU')} ₽)</button></div>` : ''}
+        ${!c.connected ? `<div class="city-actions"><button class="connect-btn" data-connect="${c.id}">◈ Подключить ЛЭП (${lineCost.toLocaleString('ru-RU')} ₽)</button></div>` : ''}
       `;
       wrap.appendChild(card);
     }
@@ -718,7 +985,7 @@ class CascadeHydroGame {
     wrap.querySelectorAll('[data-flycity]').forEach((el) => {
       el.addEventListener('click', () => {
         const c = this.economy.cities.find((x) => x.id === el.dataset.flycity);
-        if (c) this.camCtrl.flyTo(c.x, c.z, 118, c.baseElevation);
+        if (c) this.camCtrl.flyTo(c.x, c.z, 128, c.baseElevation);
       });
     });
 
@@ -734,6 +1001,7 @@ class CascadeHydroGame {
   }
 
   _refreshHUD() {
+    if (!this.economy) return;
     const sum = this.economy.getSummary();
     document.getElementById('hud-cash').textContent = this.economy.creative
       ? '∞ КРЕАТИВ'
@@ -745,21 +1013,39 @@ class CascadeHydroGame {
     netEl.style.color = sum.netPerSec >= 0 ? '#4ade80' : '#f87171';
 
     document.getElementById('hud-mw').textContent = `${sum.totalMW.toFixed(2)} МВт`;
-    document.getElementById('hud-demand').textContent = `Сеть: ${sum.suppliedCityMW.toFixed(2)} / ${sum.connectedDemandMW.toFixed(2)} МВт`;
+    document.getElementById('hud-demand').textContent =
+      `Сеть: ${sum.suppliedCityMW.toFixed(2)}/${sum.connectedDemandMW.toFixed(2)} · Потери ${sum.gridLossPct}%`;
 
     const hh = Math.floor(sum.hour);
     const mm = Math.floor((sum.hour - hh) * 60);
     document.getElementById('hud-clock').textContent = `День ${sum.day} · ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
     document.getElementById('hud-tariff').textContent = sum.periodLabel;
-    const chipTariff = document.getElementById('chip-tariff');
-    chipTariff.className = `stat-chip stat-tariff ${sum.periodClass}`;
+    document.getElementById('chip-tariff').className = `stat-chip stat-tariff ${sum.periodClass}`;
 
-    document.getElementById('hud-weather').textContent = `${sum.weather.icon} ${sum.weather.label}`;
-    document.getElementById('hud-stockpile').textContent = `Отвал грунта: ${Math.round(sum.soilStockpileM3).toLocaleString('ru-RU')} м³`;
-    document.getElementById('hud-pop-total').textContent = `Население долины: ${sum.totalPopulation.toLocaleString('ru-RU')} жит.`;
+    document.getElementById('hud-weather').textContent = sum.pendingPourM3 > 5
+      ? `▲ Бетонирование: ${Math.round(sum.pendingPourM3)} м³`
+      : `${sum.weather.icon} ${sum.weather.label}`;
+
+    document.getElementById('hud-stockpile').textContent =
+      `Грунт: ${Math.round(sum.soilStockpileM3)} · Щебень: ${Math.round(sum.rockStockpileM3)} м³`;
+
+    document.getElementById('hud-pop-total').textContent = `Население 5 городов: ${sum.totalPopulation.toLocaleString('ru-RU')} жит.`;
     document.getElementById('hud-loan').textContent = `Долг по облигациям: ${Math.round(sum.loan).toLocaleString('ru-RU')} ₽`;
 
-    // Следующий активный грант
+    // Статус объёмной стройки, контрфорсов и ОРУ 110 кВ
+    const damBanner = document.getElementById('dam-health-banner');
+    const damStatus = document.getElementById('hud-dam-status');
+    if (sum.pendingPourM3 > 5) {
+      damBanner.className = 'dam-health-banner warn';
+      damStatus.textContent = `Краны на объекте: осталось залить ${Math.round(sum.pendingPourM3)} м³ бетона`;
+    } else if (sum.seepageQ > 1.5 || sum.maxDamStress > 78) {
+      damBanner.className = 'dam-health-banner warn';
+      damStatus.textContent = `Нагрузка плотины ${Math.round(sum.maxDamStress)}% · Фильтрация! Ставьте [6] Контрфорс`;
+    } else {
+      damBanner.className = 'dam-health-banner';
+      damStatus.textContent = `Нагрузка плотины: ${Math.round(sum.maxDamStress)}% · Контрфорсы: ${this.hydro.reinforcedCellCount} · ОРУ: ${sum.substationsCount}`;
+    }
+
     const nextMs = MILESTONES.find((m) => !this.economy.completedMilestones.has(m.id));
     if (nextMs) {
       document.getElementById('ms-title').textContent = `${nextMs.title} (+${nextMs.reward.toLocaleString('ru-RU')} ₽)`;
@@ -782,24 +1068,27 @@ class CascadeHydroGame {
     const sliderLbl = document.getElementById('insp-slider-label');
     const autoChk = document.getElementById('insp-auto');
     const autoLbl = document.getElementById('insp-auto-label');
+    const cleanBtn = document.getElementById('insp-clean-btn');
 
     if (st.kind === 'turbine') {
-      title.textContent = `⚙️ ${st.spec.name} (#${st.id})`;
+      title.textContent = `⚙ ${st.spec.name} (#${st.id})`;
+      const trashPct = Math.round((st.trashLoad || 0) * 100);
       metrics.innerHTML = `
         <span>Мощность: <b>${st.powerMW.toFixed(2)} МВт</b></span>
         <span>Напор чист.: <b>${st.netHead.toFixed(1)} м</b></span>
         <span>Расход Q: <b>${st.flowQ.toFixed(1)} м³/с</b></span>
         <span>КПД η: <b>${Math.round(st.efficiency * 100)}%</b></span>
-        <span>Ресурс: <b>${Math.round(st.condition * 100)}%</b></span>
-        <span>Кавитация: <b>${st.cavitation > 0.2 ? '⚠️ есть' : 'норма'}</b></span>
+        <span>Решётка: <b>${trashPct > 4 ? `засор ${trashPct}%` : 'чистая'}</b></span>
+        <span>Кавитация: <b>${st.cavitation > 0.2 ? '▲ есть' : 'норма'}</b></span>
       `;
       const pct = Math.round(st.throttle * 100);
       slider.value = pct;
       sliderLbl.textContent = `Открытие направляющего аппарата: ${pct}%`;
       autoChk.checked = !!st.autoDispatch;
-      autoLbl.textContent = 'Авто-диспетчер по пикам энергорынка (копить ночью)';
+      autoLbl.textContent = 'Авто-диспетчер по пикам рынка + сороочистка';
+      cleanBtn.classList.toggle('hidden', trashPct <= 2);
     } else {
-      title.textContent = `🌊 Водосброс с трамплином (#${st.id})`;
+      title.textContent = `≈ Водосброс с трамплином (#${st.id})`;
       metrics.innerHTML = `
         <span>Сброс Q: <b>${st.currentFlowQ.toFixed(1)} м³/с</b></span>
         <span>Скорость струи: <b>${st.jetSpeed.toFixed(1)} м/с</b></span>
@@ -810,7 +1099,8 @@ class CascadeHydroGame {
       slider.value = pct;
       sliderLbl.textContent = `Подъём сегментного затвора: ${pct}%`;
       autoChk.checked = !!st.autoRegulate;
-      autoLbl.textContent = 'Авто-сброс паводка при переполнении верхнего бьефа';
+      autoLbl.textContent = 'Авто-сброс паводка при переполнении бьефа';
+      cleanBtn.classList.add('hidden');
     }
   }
 
@@ -830,7 +1120,7 @@ class CascadeHydroGame {
   }
 
   // ==========================================================================
-  //  ГЛАВНЫЙ ЦИКЛ СИМУЛЯЦИИ И РЕНДЕРА
+  //  ГЛАВНЫЙ ЦИКЛ СИМУЛЯЦИИ, 3D-КРАНОВ, ОБУЧЕНИЯ И РЕНДЕРА
   // ==========================================================================
   _loop(now) {
     requestAnimationFrame((t) => this._loop(t));
@@ -839,7 +1129,6 @@ class CascadeHydroGame {
     this._lastTime = now;
     this._frameCount++;
 
-    // Подсчёт реального FPS
     this._fpsFrames++;
     this._fpsAccum += rawDt;
     if (this._fpsAccum >= 0.5) {
@@ -848,7 +1137,21 @@ class CascadeHydroGame {
       this._fpsAccum = 0;
     }
 
-    // Скорость времени подшагами (как в frontline-steel-and-drones: стабильность CFL на ×2 и ×5!)
+    if (this.isInPreGameLoader) {
+      // На экране предзагрузки плавно вращаем панораму долины с живой текущей водой!
+      this.hydro.step(rawDt * 0.75, 4);
+      const gY = this.hydro.sampleAtWorld(this.camCtrl.goalTarget.x, this.camCtrl.goalTarget.z).bed;
+      this.camCtrl.updatePreviewOrbit(rawDt, gY);
+      const weather = WEATHER_MODES[this.economy.weatherId] || WEATHER_MODES.normal;
+      this.worldView.updateAtmosphere(this.economy.hour, weather);
+      this.worldView.updateWaterAndWetness(this.hydro.simTime);
+      if (this.renderer.shadowMap.enabled && (this._frameCount % 6 === 0)) {
+        this.renderer.shadowMap.needsUpdate = true;
+      }
+      this.renderer.render(this.scene, this.camera);
+      return;
+    }
+
     const speedMult = SPEED_MODES[this.speedIndex];
     if (speedMult > 0) {
       const macroPasses = speedMult <= 2 ? 1 : 2;
@@ -859,22 +1162,21 @@ class CascadeHydroGame {
       this.economy.update(rawDt * speedMult);
     }
 
-    // Камера и атмосфера суток
     const camGround = this.hydro.sampleAtWorld(this.camCtrl.goalTarget.x, this.camCtrl.goalTarget.z).bed;
     this.camCtrl.update(rawDt, camGround);
 
     const weather = WEATHER_MODES[this.economy.weatherId] || WEATHER_MODES.normal;
-    const { isNight, dayFactor } = this.worldView.updateAtmosphere(this.economy.hour, weather);
+    const { dayFactor } = this.worldView.updateAtmosphere(this.economy.hour, weather);
 
-    // Если рельеф менялся (копка канала, дамба или размыв Шильдса) — обновляем только dirty-rect!
     const dirtyRect = this.hydro.consumeTerrainDirty();
     if (dirtyRect) {
       this.worldView.updateTerrainGeometryRect(dirtyRect.x0, dirtyRect.z0, dirtyRect.x1, dirtyRect.z1);
       if (this.renderer.shadowMap.enabled) this.renderer.shadowMap.needsUpdate = true;
     }
 
-    // Обновляем водную поверхность, 3D-брызги, агрегаты и инстансы растущих городов
     this.worldView.updateWaterAndWetness(this.hydro.simTime);
+    this.worldView.syncEngineeredVolumes();
+    this.worldView.animateConstructionCranes(this.hydro.simTime);
     this.worldView.syncHydroStructures();
 
     if (this.economy.buildingsDirty || (this._frameCount % 12 === 0)) {
@@ -888,12 +1190,10 @@ class CascadeHydroGame {
     const rainAmt = this.economy.weatherId === 'flood' ? 1.0 : (this.economy.weatherId === 'rain' ? 0.6 : 0);
     this.spray.update(rawDt * Math.max(1, Math.min(2, speedMult)), this.hydro, this.camCtrl.target, dayFactor, rainAmt);
 
-    // Обновляем звук воды и турбин
     let totalSpillQ = 0;
     for (const s of this.hydro.spillways) totalSpillQ += s.currentFlowQ;
     this.audio.updateContinuous(this.camCtrl.distance, totalSpillQ, this.economy.totalMW);
 
-    // Троттлинг карты теней (как в last-shore: не каждый кадр!)
     if (this.renderer.shadowMap.enabled && this.profile.shadowEvery > 0) {
       if ((this._frameCount % this.profile.shadowEvery) === 0) {
         this.renderer.shadowMap.needsUpdate = true;
@@ -902,17 +1202,17 @@ class CascadeHydroGame {
 
     this.renderer.render(this.scene, this.camera);
 
-    // Обновляем DOM HUD экономно (4 раза в секунду — ноль лишнего layout thrashing!)
     this._uiRefreshAccum += rawDt;
     if (this._uiRefreshAccum >= 0.25) {
       this._uiRefreshAccum = 0;
+      this.tutorial.update();
       this._refreshHUD();
       if (this.showDiag) {
         const diagEl = document.getElementById('diag-panel');
         diagEl.textContent = formatDiagReport({
           fps: this.fps,
           hydroMs: this.hydro.lastStepMs,
-          grid: `${this.hydro.grid}×${this.hydro.grid}`,
+          grid: `${this.hydro.grid}×${this.hydro.grid} (${WORLD.size}×${WORLD.size}м)`,
           activeTiles: this.hydro.activeTileCount,
           totalTiles: this.hydro.totalTiles,
           substeps: this.hydro.lastSubsteps,

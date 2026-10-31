@@ -3,34 +3,102 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>КАСКАД: Живая Вода — Симулятор ГЭС, каналов и растущих городов</title>
-  <meta name="description" content="3D-игра про строительство гидроэлектростанции, прокладку собственных каналов, реалистичную гидродинамику воды и развитие городов.">
+  <title>КАСКАД: Живая Вода — 3D-симулятор ГЭС, объёмной стройки, каналов и растущих городов</title>
+  <meta name="description" content="Масштабный 3D-симулятор строительства гидроэлектростанций в долине 768×768 м: 3-этапная объёмная стройка с кранами и контрфорсами, прокладка каналов, реалистичная физика воды и 5 растущих городов.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
   <canvas id="scene"></canvas>
 
-  <!-- Верхняя диспетчерская панель ГЭС -->
+  <!-- ЭКРАН ПРЕДВАРИТЕЛЬНОЙ ЗАГРУЗКИ И ВЫБОРА КАРТЫ ДОЛИНЫ ПЕРЕД ИГРОЙ -->
+  <div id="map-loader" class="loader-backdrop">
+    <div class="loader-card">
+      <div class="loader-top">
+        <div class="loader-brand">
+          <span class="brand-dot"></span>
+          <div>
+            <h1>КАСКАД: Живая Вода</h1>
+            <p>Инженерный 3D-симулятор ГЭС, объёмной стройки, деривационных каналов и 5 растущих городов · Карта 768×768 м</p>
+          </div>
+        </div>
+        <a class="gh-site-link" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">↗ Все игры на GitHub</a>
+      </div>
+
+      <!-- Выбор сценария карты речной долины -->
+      <div class="loader-section-label">1. Выберите карту речной долины (768 × 768 м):</div>
+      <div class="scenario-grid" id="scenario-grid">
+        <button class="scenario-card active" data-preset="bystritsa">
+          <div class="scen-badge">Рекомендуется · Обучение</div>
+          <div class="scen-title">Долина «Большая Быстрица»</div>
+          <div class="scen-meta">768×768 м · 3 реки · Перепад 36 м</div>
+          <div class="scen-desc">Гранитная теснина «Ворота Грома», деривационное плато у излучины «Подкова» и орошаемая Агродолина.</div>
+        </button>
+        <button class="scenario-card" data-preset="rapids">
+          <div class="scen-badge">Высокий напор · Скалы</div>
+          <div class="scen-title">Каскад «Северные Пороги»</div>
+          <div class="scen-meta">768×768 м · Двойной каньон · 46 м</div>
+          <div class="scen-desc">Два глубоких скальных ущелья подряд для многоступенчатого каскада плотин с контрфорсами и ГЭС Пелтона.</div>
+        </button>
+        <button class="scenario-card" data-preset="delta">
+          <div class="scen-badge">Каналы и паводки</div>
+          <div class="scen-title">Пойма «Зеркальная Дельта»</div>
+          <div class="scen-meta">768×768 м · Широкое русло · 28 м</div>
+          <div class="scen-desc">Полноводная река в мягких грунтах: требует скальной цементации подошвы, длинных каналов и водосбросов.</div>
+        </button>
+      </div>
+
+      <!-- Опции режима перед стартом -->
+      <div class="loader-options">
+        <label class="opt-check">
+          <input type="checkbox" id="chk-start-tutorial" checked>
+          <span><strong>Пошаговое обучение инженера (8 шагов)</strong> — проведёт от геодезии и 3-этапной плотины с кранами до собственного канала и ОРУ 110 кВ (+46 000 ₽ премий)</span>
+        </label>
+        <div class="opt-mode-row">
+          <span>Режим строительства:</span>
+          <button class="mode-pill active" data-mode="standard" id="pill-mode-std">Инженерный (3 этапа + бюджет)</button>
+          <button class="mode-pill" data-mode="creative" id="pill-mode-cre">Песочница-креатив (∞ бюджет)</button>
+        </div>
+      </div>
+
+      <!-- Реальная шкала генерации рельефа, текстур, рек и предкомпиляции шейдеров -->
+      <div class="loader-progress-wrap">
+        <div class="loader-status-row">
+          <span id="loader-stage">Подготовка геодезической сетки долины…</span>
+          <strong id="loader-pct">0%</strong>
+        </div>
+        <div class="loader-bar-track">
+          <div class="loader-bar-fill" id="loader-bar-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="loader-actions">
+        <a class="gh-btn gh-btn-sec" href="../index.html">← На витрину игр</a>
+        <button class="enter-valley-btn" id="btn-enter-valley" disabled>Загрузка карты долины…</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ВЕРХНЯЯ ДИСПЕТЧЕРСКАЯ ПАНЕЛЬ ГЭС -->
   <header class="topbar">
     <div class="brand-chip" title="КАСКАД: Живая Вода">
       <a class="back-link" href="../index.html" title="Локальная витрина игр">← Витрина</a>
       <span class="brand-dot"></span>
       <strong>КАСКАД</strong>
-      <small>Живая Вода</small>
-      <a class="gh-site-link" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener" title="Открыть сайт на GitHub Pages — там много браузерных игр!">↗ Сайт GitHub (все игры)</a>
+      <small>768×768</small>
+      <a class="gh-site-link" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener" title="Открыть сайт на GitHub Pages — там много браузерных игр!">↗ GitHub Игры</a>
     </div>
 
     <div class="stat-chip stat-cash">
       <span class="stat-label">Казна</span>
-      <span class="stat-value" id="hud-cash">48 000 ₽</span>
+      <span class="stat-value" id="hud-cash">56 000 ₽</span>
       <span class="stat-sub" id="hud-net">+0 ₽/с</span>
     </div>
 
     <div class="stat-chip stat-power">
       <span class="stat-label">Генерация ГЭС</span>
       <span class="stat-value" id="hud-mw">0.00 МВт</span>
-      <span class="stat-sub" id="hud-demand">Спрос: 0.85 МВт</span>
+      <span class="stat-sub" id="hud-demand">Сеть: 0.00 МВт · Потери 6%</span>
     </div>
 
     <div class="stat-chip stat-tariff" id="chip-tariff">
@@ -40,47 +108,78 @@
     </div>
 
     <div class="stat-chip stat-hydro">
-      <span class="stat-label">Гидрология</span>
+      <span class="stat-label">Стройка и Склады</span>
       <span class="stat-value" id="hud-weather">◈ Нормальный сток</span>
-      <span class="stat-sub" id="hud-stockpile">Отвал грунта: 0 м³</span>
+      <span class="stat-sub" id="hud-stockpile">Грунт: 0 · Щебень: 0 м³</span>
     </div>
 
     <div class="top-controls">
-      <button class="ctrl-btn" id="btn-speed" title="Скорость симуляции (клавиша V или Пробел)">▶ ×1</button>
-      <button class="ctrl-btn" id="btn-contours" title="Геодезические изолинии высот для прокладки каналов (C)">≡ Высоты</button>
-      <button class="ctrl-btn" id="btn-weather-cycle" title="Сменить погоду / проверить паводок">☂ Погода</button>
+      <button class="ctrl-btn" id="btn-speed" title="Скорость симуляции (V или Пробел)">▶ ×1</button>
+      <button class="ctrl-btn" id="btn-tutorial" title="Открыть пошаговое обучение инженера (T)">
+        <svg class="btn-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2L1.5 5.3 8 8.6l5.2-2.64V10.5h1.3V5.3L8 2zm-4.2 5.4v3.1c0 1.3 1.9 2.4 4.2 2.4s4.2-1.1 4.2-2.4V7.4L8 9.6 3.8 7.4z" fill="currentColor"/></svg>
+        Обучение
+      </button>
+      <button class="ctrl-btn" id="btn-open-loader" title="Выбрать и загрузить другую карту долины">
+        <svg class="btn-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.4L5.8 2l4.4 1.6L14.5 2v10.6L10.2 14 5.8 12.4 1.5 14V3.4zm4.8.1v7.6l3.4 1.2V4.7L6.3 3.5z" fill="currentColor"/></svg>
+        Карта
+      </button>
+      <button class="ctrl-btn" id="btn-contours" title="Геодезические изолинии высот (C)">≡ Высоты</button>
+      <button class="ctrl-btn" id="btn-weather-cycle" title="Сменить погоду / проверить паводок">≈ Погода</button>
       <button class="ctrl-btn" id="btn-creative" title="Инженерная песочница без лимита бюджета (K)">★ Креатив</button>
-      <button class="ctrl-btn" id="btn-quality" title="Профиль графики и сетки воды">⚙ Качество</button>
+      <button class="ctrl-btn" id="btn-quality" title="Профиль графики и сетки воды">⚙ Графика</button>
       <button class="ctrl-btn" id="btn-mute" title="Звук реки и турбин (M)">♪ Звук</button>
       <button class="ctrl-btn" id="btn-help" title="Инженерная памятка (H)">? Справка</button>
     </div>
   </header>
 
-  <!-- Быстрые ориентиры долины -->
-  <nav class="landmarks-bar" aria-label="Ключевые створы долины">
-    <button class="lm-btn" data-fly="10,-124,115">▲ Створ «Ворота Грома»</button>
-    <button class="lm-btn" data-fly="-12,-5,155">◆ Полка под свой канал</button>
-    <button class="lm-btn" data-fly="118,52,125">◉ Канал в Агродолину</button>
-    <button class="lm-btn" data-fly="-14,175,165">≈ Нижний плёс и Посад</button>
-  </nav>
+  <!-- Быстрые ориентиры выбранной долины (заполняются динамически под карту) -->
+  <nav class="landmarks-bar" id="landmarks-bar" aria-label="Ключевые створы долины"></nav>
 
-  <!-- Уведомления и гранты -->
+  <!-- КАРТОЧКА ПОШАГОВОГО ОБУЧЕНИЯ ГЛАВНОГО ИНЖЕНЕРА -->
+  <section id="tutorial-card" class="tutorial-card hidden" aria-live="polite">
+    <div class="tut-head">
+      <span class="tut-badge" id="tut-step-badge">ОБУЧЕНИЕ · ШАГ 1 ИЗ 8</span>
+      <button class="icon-btn" id="tut-close" title="Скрыть обучение (можно вернуть кнопкой Обучение)">✕</button>
+    </div>
+    <h3 class="tut-title" id="tut-title">Разведка ущелья</h3>
+    <div class="tut-body" id="tut-body"></div>
+    <div class="tut-prog-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="tut-prog-fill" style="width: 0%"></div>
+      </div>
+      <div class="tut-prog-meta">
+        <span id="tut-prog-text">—</span>
+        <strong id="tut-reward">+2 000 ₽</strong>
+      </div>
+    </div>
+    <div class="tut-actions">
+      <button class="tut-btn tut-primary" id="tut-btn-fly">⌖ Показать место</button>
+      <button class="tut-btn" id="tut-btn-equip">Выбрать инструмент</button>
+      <button class="tut-btn tut-ghost" id="tut-btn-skip">Пропустить ▸</button>
+    </div>
+  </section>
+
+  <!-- Всплывающие уведомления по центру сверху -->
   <div id="toast-stack" class="toast-stack"></div>
 
-  <!-- Диагностика F3 (по образцу last-shore) -->
+  <!-- Диагностика F3 -->
   <pre id="diag-panel" class="diag-panel hidden"></pre>
 
-  <!-- Правая панель: Саморастущие города, ЛЭП и Гранты -->
+  <!-- ПРАВАЯ ПАНЕЛЬ: 5 САМОРАСТУЩИХ ГОРОДОВ, ОРУ 110 кВ И ГРАНТЫ -->
   <aside class="side-panel" id="side-panel">
     <div class="panel-header">
       <div>
-        <h2>◆ Города и Энергосеть</h2>
-        <p id="hud-pop-total">Население долины: 3 520 жит.</p>
+        <h2>◆ 5 Городов и Энергокольцо</h2>
+        <p id="hud-pop-total">Население долины: 4 180 жит.</p>
       </div>
       <button class="icon-btn" id="btn-toggle-panel" title="Свернуть/развернуть панель">▾</button>
     </div>
 
     <div id="panel-body" class="panel-body">
+      <div id="dam-health-banner" class="dam-health-banner">
+        <span id="hud-dam-status">Стройплощадка: монолит в норме · ОРУ: 0</span>
+      </div>
+
       <div id="cities-list" class="cities-list"></div>
 
       <div class="milestone-box" id="milestone-box">
@@ -100,7 +199,7 @@
     </div>
   </aside>
 
-  <!-- Инспектор выбранной турбины или водосброса -->
+  <!-- ИНСПЕКТОР ГИДРОАГРЕГАТА ИЛИ ВОДОСБРОСА -->
   <section id="struct-inspector" class="inspector-card hidden">
     <div class="insp-header">
       <strong id="insp-title">Гидроагрегат</strong>
@@ -116,46 +215,52 @@
         <input type="checkbox" id="insp-auto">
         <span id="insp-auto-label">Авто-режим</span>
       </label>
+      <button class="size-btn hidden" id="insp-clean-btn">Промыть сороудерживающую решётку</button>
     </div>
   </section>
 
-  <!-- Нижняя панель: живой гидропост под курсором + хотбар инструментов -->
+  <!-- НИЖНЯЯ ИНЖЕНЕРНАЯ ДОК-ПАНЕЛЬ: ГИДРОПОСТ + ЯРУСЫ 3D-ПЛОТИНЫ + 12 ИНСТРУМЕНТОВ -->
   <footer class="bottom-dock">
     <div class="probe-bar" id="probe-bar">
-      <span id="probe-readout">Наведите курсор на реку или склон для геодезического замера</span>
+      <span id="probe-readout">Наведите курсор на реку, ущелье или стройплощадку для замера</span>
       <div class="brush-controls">
-        <span>Ширина:</span>
-        <button class="size-btn" data-size="5">Узкая 10м</button>
-        <button class="size-btn active" data-size="8.5">Средняя 17м</button>
-        <button class="size-btn" data-size="13">Широкая 26м</button>
-        <button class="size-btn" id="btn-rotate" title="Повернуть створ агрегата/водосброса (клавиша R)">↻ Поворот [R]</button>
+        <span>Кисть:</span>
+        <button class="size-btn" data-size="5.5">11м</button>
+        <button class="size-btn active" data-size="9">18м</button>
+        <button class="size-btn" data-size="14">28м</button>
+        <span class="sep-dot">·</span>
+        <span>Высота 3D:</span>
+        <button class="size-btn tier-btn" data-tier="0">+6м</button>
+        <button class="size-btn tier-btn active" data-tier="1">+11м</button>
+        <button class="size-btn tier-btn" data-tier="2">+17м</button>
+        <button class="size-btn" id="btn-rotate" title="Повернуть створ агрегата/водосброса (R)">↻ [R]</button>
       </div>
     </div>
 
     <div class="hotbar" id="hotbar"></div>
-    <div class="tool-hint" id="tool-hint">Выберите инструмент строительства или прокладки канала</div>
+    <div class="tool-hint" id="tool-hint">Выберите инструмент объёмного строительства или прокладки канала</div>
   </footer>
 
-  <!-- Краткая инженерная памятка (открывается по ? или при первом входе компактно) -->
+  <!-- СПРАВОЧНОЕ РУКОВОДСТВО -->
   <div id="help-modal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div class="modal-head">
-        <h2>⚡ Инженерное руководство «КАСКАД: Живая Вода»</h2>
+        <h2>✦ Инженерное руководство «КАСКАД: Живая Вода»</h2>
         <button class="icon-btn" id="help-close">✕</button>
       </div>
       <div class="modal-content">
-        <p><strong>Реальная физика воды:</strong> вода течёт по уравнениям мелкой воды Сен-Венана с сохранением импульса, водоворотами Кармана, размывом грунта, мутностью от копки и законом Бугера — Ламберта.</p>
+        <p><strong>Обновлённая долина 768×768 м и объёмная 3D-стройка:</strong> вода течёт по уравнениям Сен-Венана с преломлением Снеллиуса и каустикой Вороного, а плотины возводятся в 3 этапа с башенными кранами, арматурой и контрфорсами.</p>
         <ul>
-          <li><strong>Быстрый старт №1 (Плотина в каньоне):</strong> нажмите «🏔️ Створ Ворота Грома», выберите <b>[5] Бетонная плотина</b>, перегородите узкое ущелье, затем поставьте прямо в плотину <b>[7] ГЭС Каплана</b> или <b>[8] ГЭС Фрэнсиса</b> и <b>[6] Водосброс</b>!</li>
-          <li><strong>Быстрый старт №2 (Собственный деривационный канал):</strong> выберите <b>[2] Экскаватор канала</b>, зажмите <b>Shift</b> (фиксация ровного уклона дна!) и прорежьте прямую трассу через перешеек излучины «Подкова», облицуйте <b>[3] Бетоном</b> и поставьте на сбросе <b>[9] ГЭС Пелтона</b>!</li>
-          <li><strong>Орошение и рост городов:</strong> прокопайте небольшой канал от восточной излучины реки к зелёному кольцу у <b>Агродолины</b> — город ускорит рост в 1.75 раза и начнёт платить за воду! Обеспеченные энергией города <b>сами строят дома, заводы и небоскрёбы</b>, зажигая окна по ночам.</li>
-          <li><strong>Осторожно с грунтовыми дамбами:</strong> <b>[4] Грунтовая перемычка</b> очень дешёвая (особенно из вынутого при копке грунта!), но если паводок перельётся через её гребень — поток реально размоет и прорвёт дамбу! Ставьте <b>[6] Водосброс</b>.</li>
-          <li><strong>Управление камерой:</strong> <code>WASD</code> / стрелки / средняя кнопка — полёт по долине, <code>ПКМ</code> или <code>Q/E</code> — поворот камеры, <code>Колесо</code> — зум, <code>Shift + ЛКМ</code> — ровное дно канала / гребень плотины, <code>F3</code> — диагностика FPS и оптимизаций.</li>
+          <li><strong>Трёхэтапная 3D-плотина и контрфорсы:</strong> выберите <b>[5] 3D Плотина</b> и ярус высоты (<code>+6м / +11м / +17м</code>). Сначала встаёт шпунт и опалубка с армокаркасом, затем башенные краны заливают монолит! Для плотин выше 10 м используйте <b>[6] Контрфорс / Цементация</b>, чтобы убрать фильтрацию воды под подошвой.</li>
+          <li><strong>Синергия каналов и щебня:</strong> при копке <b>[2] Экскаватором</b> скальной породы вы получаете <b>гранитный щебень</b> (скидка <b>-38%</b> на бетон плотин и <b>[3] Ж/Б лотков канала</b>!), а вынутый грунт удешевляет <b>[4] Перемычки</b> на 70%. Зажмите <code>Shift</code> для идеально ровного уклона канала!</li>
+          <li><strong>3D-водоводы и Подстанция ОРУ 110 кВ:</strong> агрегаты <b>[8–0] Каплана / Фрэнсиса / Пелтона</b> строятся с водоприёмником, решёткой, стальным напорным трубопроводом и козловым краном. Постройте рядом на сухом берегу <b>[P] Подстанцию ОРУ 110 кВ</b> — потери в ЛЭП упадут с 16% до 3%!</li>
+          <li><strong>5 саморастущих городов:</strong> подайте энергию городам и воду каналом в <b>Агродолину</b> — города сами застроят кварталы коттеджами, заводами и небоскрёбами!</li>
+          <li><strong>Управление:</strong> <code>WASD</code> / стрелки / СКМ — полёт, <code>ПКМ</code> или <code>Q/E</code> — поворот, <code>Колесо</code> — зум до 650 м, <code>T</code> — обучение, <code>F3</code> — диагностика FPS.</li>
         </ul>
         <div class="gh-modal-banner">
           <div>
             <strong>Больше браузерных игр на сайте GitHub:</strong><br>
-            <span>LAST SHORE (3D-выживание), Линия Фронта: Сталь и Дроны, Folder OS и другие проекты без установки.</span>
+            <span>LAST SHORE, Линия Фронта: Сталь и Дроны, Folder OS и другие игры коллекции.</span>
           </div>
           <div class="gh-modal-links">
             <a class="gh-btn" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">Сайт игр GitHub Pages ↗</a>
@@ -167,7 +272,7 @@
     </div>
   </div>
 
-  <!-- Заглушка, если WebGL отключён в браузере -->
+  <!-- Заглушка WebGL -->
   <div id="nogl-modal" class="modal-backdrop hidden">
     <div class="modal-card">
       <h2>Не удалось запустить WebGL</h2>
