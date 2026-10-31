@@ -1,0 +1,1427 @@
+{
+  "project": "КАСКАД: Живая Вода (CASCADE: Living Water)",
+  "version": "0.6.1",
+  "liveUrls": {
+    "showcase": "https://m98978672-boop.github.io/games/",
+    "gameDirect": "https://m98978672-boop.github.io/games/cascade-hydro/",
+    "repository": "https://github.com/m98978672-boop/games"
+  },
+  "engineSummary": {
+    "hydroGrid": "208x208 Well-Balanced 2D SWE (Kurganov-Petrova + active 8x8 tile bitmask)",
+    "stepTimeMsOn10x10Km": "~1.4-2.1 ms",
+    "proceduralTextureVariants": 480,
+    "livingWorldAnimations": 300,
+    "buildingArchetypesCount": 48,
+    "architectural3DPools": [
+      "gable",
+      "box",
+      "step",
+      "tower",
+      "arch",
+      "spire",
+      "silo"
+    ],
+    "shaderPartKinds": {
+      "0": "Основной фасад с антиалиасным LOD окон (winLod)",
+      "1": "Рустованный гранитный цоколь и тёплые витрины 1-го этажа",
+      "2": "Яркая скатная черепичная / медная / сланцевая / сводчатая кровля",
+      "3": "Белокаменные карнизы, колонны портиков, пилястры, балконы и шпили",
+      "4": "Кроны садовых деревьев во дворах и зелёные террасы",
+      "5": "Стеклянные зенитные фонари / солнечные панели / полосатые трубы заводов"
+    },
+    "saveSystemKey": "cascade.save.v06"
+  },
+  "mapScales": {
+    "compact": {
+      "id": "compact",
+      "name": "Ущелье 0.8 × 0.8 км",
+      "shortLabel": "0.8 × 0.8 км",
+      "areaKm2": 0.59,
+      "size": 768,
+      "horizScale": 1,
+      "elevScale": 1,
+      "flowScale": 1,
+      "powerScale": 1,
+      "snowLineY": 58,
+      "minZoom": 20,
+      "maxZoom": 720,
+      "defaultDist": 235,
+      "brushSizes": [
+        3.5,
+        6.5,
+        11,
+        18
+      ],
+      "desc": "Детальный инженерный створ 1:1 с ювелирной кистью от 3.5 м для тонкой проработки узлов ГЭС и каналов."
+    },
+    "km5": {
+      "id": "km5",
+      "name": "Бассейн 5 × 5 км",
+      "shortLabel": "5 × 5 км (25 км²)",
+      "areaKm2": 25,
+      "size": 5000,
+      "horizScale": 6.510416666666667,
+      "elevScale": 2.35,
+      "flowScale": 6.2,
+      "powerScale": 6.5,
+      "snowLineY": 122,
+      "minZoom": 42,
+      "maxZoom": 4600,
+      "defaultDist": 1180,
+      "brushSizes": [
+        16,
+        30,
+        52,
+        88
+      ],
+      "desc": "Региональный бассейн 25 км²: ледниковые истоки 3 рек, тонкая стройка от 16 м, стройбазы, трассы и 8 городов."
+    },
+    "km10": {
+      "id": "km10",
+      "name": "Мега-каскад 10 × 10 км",
+      "shortLabel": "10 × 10 км (100 км²)",
+      "areaKm2": 100,
+      "size": 10000,
+      "horizScale": 13.020833333333334,
+      "elevScale": 3.35,
+      "flowScale": 13.5,
+      "powerScale": 15,
+      "snowLineY": 176,
+      "minZoom": 68,
+      "maxZoom": 9200,
+      "defaultDist": 2250,
+      "brushSizes": [
+        32,
+        58,
+        98,
+        165
+      ],
+      "desc": "Сибирский каскад 100 км² масштаба Ангары и Енисея: гроты ледников, ветропарки, прецизионная стройка и мега-ГЭС."
+    }
+  },
+  "valleyPresets": {
+    "bystritsa": {
+      "id": "bystritsa",
+      "name": "Бассейн «Большая Быстрица»",
+      "badge": "Рекомендуется · Полный цикл",
+      "areaLabel": "5 × 5 км (25 км²) · 3 реки · 8 городов",
+      "headLabel": "Сток рек: ~1562 м³/с",
+      "baseMainQ": 162,
+      "baseCreekQ": 54,
+      "baseWestQ": 36,
+      "mainInflowQ": 1004,
+      "creekInflowQ": 335,
+      "westCreekQ": 223,
+      "desc": "Гранитная теснина «Ворота Грома», ледниковые гроты истоков 3 рек, деривационное плато «Подкова», Алюминиевый завод, ЦОД ИИ и судоходное устье.",
+      "baseLandmarks": [
+        {
+          "label": "❄ Ледниковый исток",
+          "x": -58,
+          "z": -342,
+          "dist": 148
+        },
+        {
+          "label": "▲ Створ «Ворота Грома»",
+          "x": 12,
+          "z": -158,
+          "dist": 142
+        },
+        {
+          "label": "◆ Деривационное плато",
+          "x": -18,
+          "z": -12,
+          "dist": 185
+        },
+        {
+          "label": "◉ Орошение Агродолины",
+          "x": 168,
+          "z": 98,
+          "dist": 155
+        },
+        {
+          "label": "⚓ Усть-Порт и Дельта",
+          "x": 48,
+          "z": 278,
+          "dist": 195
+        }
+      ],
+      "landmarks": [
+        {
+          "label": "❄ Ледниковый исток",
+          "x": -377.6,
+          "z": -2226.6,
+          "dist": 638
+        },
+        {
+          "label": "▲ Створ «Ворота Грома»",
+          "x": 78.1,
+          "z": -1028.6,
+          "dist": 612
+        },
+        {
+          "label": "◆ Деривационное плато",
+          "x": -117.2,
+          "z": -78.1,
+          "dist": 798
+        },
+        {
+          "label": "◉ Орошение Агродолины",
+          "x": 1093.8,
+          "z": 638,
+          "dist": 668
+        },
+        {
+          "label": "⚓ Усть-Порт и Дельта",
+          "x": 312.5,
+          "z": 1809.9,
+          "dist": 841
+        }
+      ]
+    },
+    "rapids": {
+      "id": "rapids",
+      "name": "Каскад «Северные Пороги»",
+      "badge": "Сверхнапор · ГАЭС и Фрэнсис",
+      "areaLabel": "5 × 5 км (25 км²) · 3 реки · 8 городов",
+      "headLabel": "Сток рек: ~1773 м³/с",
+      "baseMainQ": 176,
+      "baseCreekQ": 66,
+      "baseWestQ": 44,
+      "mainInflowQ": 1091,
+      "creekInflowQ": 409,
+      "westCreekQ": 273,
+      "desc": "Два глубоких скальных ущелья подряд с высоким перепадом высот, гротами ледников и горно-долинным ветром. Идеальна для каскада ГЭС и ГАЭС.",
+      "baseLandmarks": [
+        {
+          "label": "❄ Ледниковый исток",
+          "x": -42,
+          "z": -342,
+          "dist": 148
+        },
+        {
+          "label": "▲ Верхний каньон №1",
+          "x": -18,
+          "z": -248,
+          "dist": 145
+        },
+        {
+          "label": "▲ Нижние Пороги №2",
+          "x": 22,
+          "z": -98,
+          "dist": 148
+        },
+        {
+          "label": "◆ Промзона Алюминграда",
+          "x": 246,
+          "z": -38,
+          "dist": 175
+        },
+        {
+          "label": "◉ Терраса Агродолины",
+          "x": 168,
+          "z": 98,
+          "dist": 155
+        }
+      ],
+      "landmarks": [
+        {
+          "label": "❄ Ледниковый исток",
+          "x": -273.4,
+          "z": -2226.6,
+          "dist": 638
+        },
+        {
+          "label": "▲ Верхний каньон №1",
+          "x": -117.2,
+          "z": -1614.6,
+          "dist": 625
+        },
+        {
+          "label": "▲ Нижние Пороги №2",
+          "x": 143.2,
+          "z": -638,
+          "dist": 638
+        },
+        {
+          "label": "◆ Промзона Алюминграда",
+          "x": 1601.6,
+          "z": -247.4,
+          "dist": 754
+        },
+        {
+          "label": "◉ Терраса Агродолины",
+          "x": 1093.8,
+          "z": 638,
+          "dist": 668
+        }
+      ]
+    },
+    "delta": {
+      "id": "delta",
+      "name": "Пойма «Великая Дельта»",
+      "badge": "Судоходство, шлюзы и паводки",
+      "areaLabel": "5 × 5 км (25 км²) · 3 реки · 8 городов",
+      "headLabel": "Сток рек: ~1965 м³/с",
+      "baseMainQ": 205,
+      "baseCreekQ": 62,
+      "baseWestQ": 50,
+      "mainInflowQ": 1271,
+      "creekInflowQ": 384,
+      "westCreekQ": 310,
+      "desc": "Могучая судоходная река в широкой пойме: ледниковое и ключевое питание, ветровой нагон, караваны барж, порты и рыбхозы.",
+      "baseLandmarks": [
+        {
+          "label": "❄ Исток Большой Реки",
+          "x": -32,
+          "z": -342,
+          "dist": 155
+        },
+        {
+          "label": "▲ Главный створ и Шлюз",
+          "x": 8,
+          "z": -152,
+          "dist": 162
+        },
+        {
+          "label": "◆ Трасса спрямления",
+          "x": -16,
+          "z": -6,
+          "dist": 190
+        },
+        {
+          "label": "◉ Поля Агродолины",
+          "x": 168,
+          "z": 98,
+          "dist": 155
+        },
+        {
+          "label": "⚓ Широкая дельта",
+          "x": -12,
+          "z": 268,
+          "dist": 205
+        }
+      ],
+      "landmarks": [
+        {
+          "label": "❄ Исток Большой Реки",
+          "x": -208.3,
+          "z": -2226.6,
+          "dist": 668
+        },
+        {
+          "label": "▲ Главный створ и Шлюз",
+          "x": 52.1,
+          "z": -989.6,
+          "dist": 698
+        },
+        {
+          "label": "◆ Трасса спрямления",
+          "x": -104.2,
+          "z": -39.1,
+          "dist": 819
+        },
+        {
+          "label": "◉ Поля Агродолины",
+          "x": 1093.8,
+          "z": 638,
+          "dist": 668
+        },
+        {
+          "label": "⚓ Широкая дельта",
+          "x": -78.1,
+          "z": 1744.8,
+          "dist": 884
+        }
+      ]
+    }
+  },
+  "starterReadyHppSites": {
+    "bystritsa": {
+      "title": "Готовая Целая ГЭС-1 «Подкова»",
+      "type": "hpp",
+      "baseX": 88,
+      "baseZ": 76,
+      "yaw": 2.28385715965375,
+      "canalIntakeHint": {
+        "baseX": 122,
+        "baseZ": 38
+      },
+      "canalOutfallHint": {
+        "baseX": 58,
+        "baseZ": 112
+      },
+      "prospectSites": [
+        {
+          "label": "⚡ Готовая Целая ГЭС-1 «Подкова»",
+          "baseX": 88,
+          "baseZ": 76,
+          "dist": 138
+        },
+        {
+          "label": "⌖ Створ №2 «Ворота Грома»",
+          "baseX": 12,
+          "baseZ": -158,
+          "dist": 140
+        },
+        {
+          "label": "⌖ Уступ №3 «Восточный каскад»",
+          "baseX": 74,
+          "baseZ": -272,
+          "dist": 138
+        },
+        {
+          "label": "⌖ Уступ №4 «Гремучий порог»",
+          "baseX": -198,
+          "baseZ": 112,
+          "dist": 138
+        }
+      ]
+    },
+    "rapids": {
+      "title": "Готовая Целая ГЭС-1 «Крутояр»",
+      "type": "hpp",
+      "baseX": 70,
+      "baseZ": 80,
+      "yaw": 2.2813346424815784,
+      "canalIntakeHint": {
+        "baseX": 118,
+        "baseZ": 44
+      },
+      "canalOutfallHint": {
+        "baseX": 44,
+        "baseZ": 130
+      },
+      "prospectSites": [
+        {
+          "label": "⚡ Готовая Целая ГЭС-1 «Крутояр»",
+          "baseX": 70,
+          "baseZ": 80,
+          "dist": 138
+        },
+        {
+          "label": "⌖ Верхний каньон",
+          "baseX": -18,
+          "baseZ": -248,
+          "dist": 140
+        },
+        {
+          "label": "⌖ Нижние Пороги",
+          "baseX": 22,
+          "baseZ": -98,
+          "dist": 140
+        }
+      ]
+    },
+    "delta": {
+      "title": "Готовая Целая ГЭС-1 «Плёсовая»",
+      "type": "hpp",
+      "baseX": 60,
+      "baseZ": 92,
+      "yaw": 2.3447007434773144,
+      "canalIntakeHint": {
+        "baseX": 114,
+        "baseZ": 48
+      },
+      "canalOutfallHint": {
+        "baseX": 28,
+        "baseZ": 136
+      },
+      "prospectSites": [
+        {
+          "label": "⚡ Готовая Целая ГЭС-1 «Плёсовая»",
+          "baseX": 60,
+          "baseZ": 92,
+          "dist": 142
+        },
+        {
+          "label": "⌖ Главный плёсовый створ",
+          "baseX": 8,
+          "baseZ": -152,
+          "dist": 145
+        },
+        {
+          "label": "⌖ Западный перепад",
+          "baseX": -205,
+          "baseZ": 142,
+          "dist": 140
+        }
+      ]
+    }
+  },
+  "hppSpecsAt5x5Km": {
+    "hpp": {
+      "id": "hpp",
+      "name": "Целая ГЭС-169",
+      "ratedMW": 169,
+      "minHead": 3.5,
+      "optHead": 34.1,
+      "maxHead": 199.8,
+      "headSigma": 98.7,
+      "maxArea": 38.02,
+      "peakEta": 0.94,
+      "frictionK": 0.000004890738813735693,
+      "upkeepPerSec": 18,
+      "cost": 16500,
+      "reversible": true,
+      "color": 959977
+    },
+    "kaplan": {
+      "id": "kaplan",
+      "name": "Каплана ПЛ-52",
+      "ratedMW": 52,
+      "minHead": 4.7,
+      "optHead": 18.8,
+      "maxHead": 51.7,
+      "headSigma": 29.4,
+      "maxArea": 21.84,
+      "peakEta": 0.92,
+      "frictionK": 0.000009170135275754422,
+      "upkeepPerSec": 10,
+      "cost": 9500,
+      "reversible": false,
+      "color": 3900150
+    },
+    "francis": {
+      "id": "francis",
+      "name": "Фрэнсиса РО-143",
+      "ratedMW": 143,
+      "minHead": 11.3,
+      "optHead": 37.6,
+      "maxHead": 108.1,
+      "headSigma": 38.8,
+      "maxArea": 27.5,
+      "peakEta": 0.94,
+      "frictionK": 0.000006113423517169614,
+      "upkeepPerSec": 22,
+      "cost": 23500,
+      "reversible": true,
+      "color": 16096779
+    },
+    "pelton": {
+      "id": "pelton",
+      "name": "ГАЭС / Пелтон-234",
+      "ratedMW": 234,
+      "minHead": 18.8,
+      "optHead": 57.6,
+      "maxHead": 155.1,
+      "headSigma": 51.7,
+      "maxArea": 24.27,
+      "peakEta": 0.93,
+      "frictionK": 0.000004890738813735693,
+      "upkeepPerSec": 30,
+      "cost": 32000,
+      "reversible": true,
+      "color": 1096065
+    }
+  },
+  "tools": [
+    {
+      "id": "inspect",
+      "key": "1",
+      "name": "Разведка перепада ΔH, осмотр ГЭС и городов",
+      "short": "Разведка ΔH",
+      "costLabel": "створы + города",
+      "desc": "Ищите места с перепадом высот ΔH под ГЭС и каналы! Клик по ГЭС или по любому ГОРОДУ в 3D открывает панель управления!"
+    },
+    {
+      "id": "build_hpp",
+      "key": "2",
+      "featured": true,
+      "turbineType": "hpp",
+      "name": "Гидроэлектростанция (Целый готовый комплекс ГЭС)",
+      "short": "Целая ГЭС",
+      "costFlat": 16500,
+      "costLabel": "16 500 ₽ · до 169 МВт",
+      "desc": "ЕДИНАЯ ГОТОВАЯ ПОСТРОЙКА ЦЕЛОЙ ГЭС в 1 клик (бетонная плотина + приёмная аванкамера + водосброс + 4 водовода + машзал + ОРУ)! Поставьте на перепад высот и подведите воду каналом!"
+    },
+    {
+      "id": "canal_dig",
+      "key": "3",
+      "name": "Экскаватор подводящего и городского канала",
+      "short": "Копать канал",
+      "costPerM3Soil": 2.1,
+      "costPerM3Rock": 9.8,
+      "costLabel": "подвод воды",
+      "desc": "Главная задача инженера: прорывайте подводящие и отводящие каналы к Целой ГЭС и водоводы в города (Shift — ровный уклон дна)!"
+    },
+    {
+      "id": "canal_liner",
+      "key": "4",
+      "name": "Бетонное русло и борта канала",
+      "short": "Ж/Б канал",
+      "costPerCell": 46,
+      "costLabel": "46 ₽/секция",
+      "desc": "Облицовка прорытого канала гладким гидробетоном (n = 0.014): разгон потока в 2.3 раза и защита от потерь воды в грунт!"
+    },
+    {
+      "id": "earth_dam",
+      "key": "5",
+      "name": "Направляющая дамба / Перемычка",
+      "short": "Запруда",
+      "costPerM3": 4.2,
+      "costLabel": "поворот реки",
+      "desc": "Насыпная дамба для перенаправления речного течения в ваш подводящий канал к ГЭС или защиты низин от паводка!"
+    },
+    {
+      "id": "concrete_dam",
+      "key": "6",
+      "name": "Бетонная подпорная плотина водохранилища",
+      "short": "Подпор бьефа",
+      "costPerM3": 21,
+      "costLabel": "подъём воды",
+      "desc": "Бетонная стенка для дополнительного подъёма уровня верхнего озера перед водозабором канала или ГЭС."
+    },
+    {
+      "id": "powerline",
+      "key": "7",
+      "name": "ЛЭП в города и Подстанция ОРУ 220 кВ",
+      "short": "ЛЭП в город",
+      "costPerMeter": 13,
+      "costLabel": "сеть городов",
+      "desc": "Клик по городу — подключает его к энергии вашей ГЭС! Клик у ГЭС — ставит подстанцию ОРУ 220 кВ (снижает потери сети до 3%)."
+    },
+    {
+      "id": "pump_station",
+      "key": "8",
+      "name": "Городской водоканал и Насосная станция",
+      "short": "Водоканал",
+      "costFlat": 6400,
+      "costLabel": "6 400 ₽ (+вода)",
+      "desc": "Подаёт чистую воду из реки или канала в города и Агродолину: даёт премию мэрии +7 500 ₽ и ускоряет рост города!"
+    },
+    {
+      "id": "concrete_plant",
+      "key": "9",
+      "name": "Бетонный комбинат и Городская стройбаза",
+      "short": "Стройбаза",
+      "costFlat": 8200,
+      "costLabel": "8 200 ₽ (×2 рост)",
+      "desc": "Снабжает города и дорожные бригады бетоном и ЖБИ: вдвое ускоряет строительство городских кварталов и междугородних трасс!"
+    },
+    {
+      "id": "nav_lock",
+      "key": "0",
+      "name": "Судоходный шлюз и грузовой причал",
+      "short": "Шлюз / Флот",
+      "costFlat": 11500,
+      "costLabel": "11 500 ₽ (+флот)",
+      "desc": "Камера шлюзования с воротами: пропускает грузовой флот по каналам и рекам, усиливая торговлю портовых городов!"
+    },
+    {
+      "id": "fish_eco",
+      "key": "F",
+      "name": "Рыбхоз и Эко-марина отдыха",
+      "short": "Рыбхоз / Эко",
+      "costFlat": 7200,
+      "costLabel": "7 200 ₽ (+эко)",
+      "desc": "Повышает экологический комфорт соседних городов и приносит доход от форелевых садков и водного туризма!"
+    },
+    {
+      "id": "wind_meteo",
+      "key": "N",
+      "name": "Горный метео-ветрокомплекс ВЭС",
+      "short": "ВЭС / Метео",
+      "costFlat": 9800,
+      "costLabel": "9 800 ₽ (ветер)",
+      "desc": "Дополнительная ветровая генерация на высоких хребтах (P ~ v³) и метеорадар долины."
+    },
+    {
+      "id": "demolish",
+      "key": "X",
+      "name": "Демонтаж и расчистка",
+      "short": "Снос",
+      "costFlat": 250,
+      "costLabel": "250 ₽",
+      "desc": "Снести постройку или расчистить бетонную секцию."
+    }
+  ],
+  "economyConfig": {
+    "startingCash": 68000,
+    "baseRatePerMWSec": 345,
+    "industrialPPAMultiplier": 1.28,
+    "capacityPaymentPerMWSec": 18,
+    "pumpedNightBuyFactor": 0.34,
+    "navLockTollPerSec": 95,
+    "municipalWaterPerKPopSec": 11.5,
+    "irrigationBonusPerSec": 135,
+    "fishFarmIncomePerSec": 88,
+    "ecoTourismPerMarinaSec": 46,
+    "aggregateSellPricePerM3": 10.5,
+    "carbonCreditPerMWSec": 22,
+    "floodProtectionBonusSec": 95,
+    "overSupplyExportFactor": 0.42,
+    "loanChunk": 30000,
+    "loanInterestPerSec": 0.0004,
+    "maxLoan": 180000,
+    "aqueductConnectReward": 7500
+  },
+  "revenueStreams": [
+    {
+      "id": "spotEnergy",
+      "label": "Спотовый рынок ОРЭМ (пики МВт·ч)",
+      "color": "#fbbf24"
+    },
+    {
+      "id": "industrialPPA",
+      "label": "Прямые контракты (Алюминий + ЦОД ИИ)",
+      "color": "#38bdf8"
+    },
+    {
+      "id": "capacityMarket",
+      "label": "Маневренная мощность АРЧМ (50 Гц)",
+      "color": "#a78bfa"
+    },
+    {
+      "id": "gaesArbitrage",
+      "label": "Ценовой арбитраж ГАЭС (ночь → пик)",
+      "color": "#2dd4bf"
+    },
+    {
+      "id": "navigationLocks",
+      "label": "Судоходные шлюзы и речной флот",
+      "color": "#60a5fa"
+    },
+    {
+      "id": "waterSupply",
+      "label": "Горводоканал и техводоснабжение",
+      "color": "#34d399"
+    },
+    {
+      "id": "agroIrrigation",
+      "label": "Агро-ирригация полей и теплиц",
+      "color": "#84cc16"
+    },
+    {
+      "id": "aquaculture",
+      "label": "Форелевые рыбхозы и аквакультура",
+      "color": "#fb923c"
+    },
+    {
+      "id": "ecoTourism",
+      "label": "Яхт-марины и круизный эко-туризм",
+      "color": "#f472b6"
+    },
+    {
+      "id": "aggregateSales",
+      "label": "Экспорт гранитного щебня с выемок",
+      "color": "#cbd5e1"
+    },
+    {
+      "id": "carbonCredits",
+      "label": "Зелёные углеродные сертификаты CO₂",
+      "color": "#4ade80"
+    },
+    {
+      "id": "floodControl",
+      "label": "Премия МЧС за срезку паводков",
+      "color": "#f87171"
+    }
+  ],
+  "cityFocusModes": {
+    "balanced": {
+      "id": "balanced",
+      "label": "Баланс",
+      "title": "Сбалансированный генплан: гармоничный рост жилья, служб и экономики",
+      "demandMult": 1,
+      "tariffMult": 1,
+      "growthMult": 1
+    },
+    "industry": {
+      "id": "industry",
+      "label": "Индустрия",
+      "title": "Промышленный упор: больше заводов и стройбаз БСУ/ДСК (+18% доход контрактов и стройки трасс, +14% спрос МВт)",
+      "demandMult": 1.14,
+      "tariffMult": 1.18,
+      "growthMult": 1.08
+    },
+    "science": {
+      "id": "science",
+      "label": "Наука и Эко",
+      "title": "Наукоград и эко-среда: кампусы, парковые террасы и экономия энергии (-10% спрос МВт, +15% благополучие и туризм)",
+      "demandMult": 0.9,
+      "tariffMult": 1.12,
+      "growthMult": 1.05
+    }
+  },
+  "citiesAt5x5Km": [
+    {
+      "id": "posad",
+      "name": "Речной Посад",
+      "subtitle": "Лесопереработка и приречная слобода",
+      "x": -1028.6,
+      "z": 1458.3,
+      "plateauRadius": 338.5,
+      "baseElevation": 41.13,
+      "startPop": 1633,
+      "baseDemandMW": 2.47,
+      "demandPerBuilding": 0.487,
+      "tariffBonus": 1,
+      "needsIrrigation": false,
+      "specialContract": null,
+      "connectedAtStart": true,
+      "accent": 6333946,
+      "archetype": "town"
+    },
+    {
+      "id": "agro",
+      "name": "Агродолина",
+      "subtitle": "Орошаемые поля, элеваторы и теплицы",
+      "x": 1445.3,
+      "z": 729.2,
+      "plateauRadius": 377.6,
+      "baseElevation": 42.77,
+      "startPop": 2092,
+      "baseDemandMW": 3.38,
+      "demandPerBuilding": 0.552,
+      "tariffBonus": 1.12,
+      "needsIrrigation": true,
+      "specialContract": null,
+      "connectedAtStart": false,
+      "accent": 3462041,
+      "archetype": "agro",
+      "irrigationTarget": {
+        "x": 1093.8,
+        "z": 638,
+        "radius": 247.4
+      }
+    },
+    {
+      "id": "sever",
+      "name": "Североборск",
+      "subtitle": "Гидрометеоцентр Росгидромета и ВЭС",
+      "x": -1393.2,
+      "z": -1419.3,
+      "plateauRadius": 312.5,
+      "baseElevation": 82.25,
+      "startPop": 1505,
+      "baseDemandMW": 2.93,
+      "demandPerBuilding": 0.585,
+      "tariffBonus": 1.15,
+      "needsIrrigation": false,
+      "specialContract": null,
+      "connectedAtStart": false,
+      "accent": 3003583,
+      "archetype": "science"
+    },
+    {
+      "id": "kamen",
+      "name": "Каменногорск",
+      "subtitle": "Горно-обогатительный и машиностроительный узел",
+      "x": 1354.2,
+      "z": -1184.9,
+      "plateauRadius": 351.6,
+      "baseElevation": 79.9,
+      "startPop": 2858,
+      "baseDemandMW": 5.98,
+      "demandPerBuilding": 0.942,
+      "tariffBonus": 1.24,
+      "needsIrrigation": false,
+      "specialContract": null,
+      "connectedAtStart": false,
+      "accent": 16498468,
+      "archetype": "industrial"
+    },
+    {
+      "id": "svetlograd",
+      "name": "Светлоград",
+      "subtitle": "Мегаполис долины, небоскрёбы и Горводоканал",
+      "x": -1445.3,
+      "z": -104.2,
+      "plateauRadius": 429.7,
+      "baseElevation": 58.28,
+      "startPop": 5486,
+      "baseDemandMW": 8.97,
+      "demandPerBuilding": 1.235,
+      "tariffBonus": 1.22,
+      "needsIrrigation": false,
+      "specialContract": null,
+      "connectedAtStart": false,
+      "accent": 10980346,
+      "archetype": "metropolis"
+    },
+    {
+      "id": "alumingrad",
+      "name": "Алюминград",
+      "subtitle": "Энергоёмкий алюминиевый электролизный завод",
+      "x": 1601.6,
+      "z": -247.4,
+      "plateauRadius": 338.5,
+      "baseElevation": 61.57,
+      "startPop": 3419,
+      "baseDemandMW": 10.72,
+      "demandPerBuilding": 1.43,
+      "tariffBonus": 1.38,
+      "needsIrrigation": false,
+      "specialContract": "smelter",
+      "connectedAtStart": false,
+      "accent": 16347926,
+      "archetype": "smelter"
+    },
+    {
+      "id": "kremniy",
+      "name": "Кремниевый Плёс",
+      "subtitle": "Гиперскейл ЦОД ИИ и квантовый кампус",
+      "x": -807.3,
+      "z": -729.2,
+      "plateauRadius": 286.5,
+      "baseElevation": 69.09,
+      "startPop": 1990,
+      "baseDemandMW": 8.13,
+      "demandPerBuilding": 1.3,
+      "tariffBonus": 1.44,
+      "needsIrrigation": false,
+      "specialContract": "datacenter",
+      "connectedAtStart": false,
+      "accent": 3718648,
+      "archetype": "datacenter"
+    },
+    {
+      "id": "ustport",
+      "name": "Усть-Порт",
+      "subtitle": "Речное пароходство, судоверфь и марина",
+      "x": 768.2,
+      "z": 1783.9,
+      "plateauRadius": 351.6,
+      "baseElevation": 29.61,
+      "startPop": 2501,
+      "baseDemandMW": 4.42,
+      "demandPerBuilding": 0.715,
+      "tariffBonus": 1.18,
+      "needsIrrigation": false,
+      "specialContract": "port",
+      "connectedAtStart": false,
+      "accent": 440020,
+      "archetype": "port"
+    }
+  ],
+  "buildingArchetypes": [
+    {
+      "id": 0,
+      "name": "Деревянный коттедж",
+      "cat": "res",
+      "shape": "gable",
+      "hMin": 4.5,
+      "hMax": 7,
+      "w": 6.2,
+      "d": 6.8,
+      "style": 0
+    },
+    {
+      "id": 1,
+      "name": "Кирпичный дуплекс",
+      "cat": "res",
+      "shape": "gable",
+      "hMin": 6,
+      "hMax": 8.8,
+      "w": 7.5,
+      "d": 8.2,
+      "style": 1
+    },
+    {
+      "id": 2,
+      "name": "Альпийское шале",
+      "cat": "res",
+      "shape": "gable",
+      "hMin": 5.5,
+      "hMax": 8.2,
+      "w": 7.8,
+      "d": 7.4,
+      "style": 2
+    },
+    {
+      "id": 3,
+      "name": "Таунхаус с террасой",
+      "cat": "res",
+      "shape": "flat",
+      "hMin": 7.5,
+      "hMax": 10.5,
+      "w": 11,
+      "d": 7,
+      "style": 3
+    },
+    {
+      "id": 4,
+      "name": "Классическая 5-этажка",
+      "cat": "mid",
+      "shape": "gable",
+      "hMin": 14,
+      "hMax": 17.5,
+      "w": 15,
+      "d": 9.2,
+      "style": 4
+    },
+    {
+      "id": 5,
+      "name": "Панельный 9-этажный дом",
+      "cat": "mid",
+      "shape": "flat",
+      "hMin": 24,
+      "hMax": 29,
+      "w": 17.5,
+      "d": 10.2,
+      "style": 5
+    },
+    {
+      "id": 6,
+      "name": "Монолитный ЖК 16 этажей",
+      "cat": "high",
+      "shape": "step",
+      "hMin": 38,
+      "hMax": 48,
+      "w": 13.5,
+      "d": 13.5,
+      "style": 6
+    },
+    {
+      "id": 7,
+      "name": "Стеклянная бизнес-башня",
+      "cat": "high",
+      "shape": "tower",
+      "hMin": 52,
+      "hMax": 72,
+      "w": 14.5,
+      "d": 14.5,
+      "style": 7
+    },
+    {
+      "id": 8,
+      "name": "Небоскрёб со шпилем",
+      "cat": "high",
+      "shape": "spire",
+      "hMin": 68,
+      "hMax": 96,
+      "w": 15.5,
+      "d": 15.5,
+      "style": 8
+    },
+    {
+      "id": 9,
+      "name": "Общеобразовательная школа",
+      "cat": "civ",
+      "shape": "flat",
+      "hMin": 11.5,
+      "hMax": 14.5,
+      "w": 18,
+      "d": 12.5,
+      "style": 9
+    },
+    {
+      "id": 10,
+      "name": "Клиническая больница",
+      "cat": "civ",
+      "shape": "step",
+      "hMin": 18,
+      "hMax": 24,
+      "w": 17,
+      "d": 13,
+      "style": 10
+    },
+    {
+      "id": 11,
+      "name": "Городская ратуша с башней",
+      "cat": "civ",
+      "shape": "spire",
+      "hMin": 22,
+      "hMax": 30,
+      "w": 14,
+      "d": 12,
+      "style": 11
+    },
+    {
+      "id": 12,
+      "name": "Арочный тепличный блок",
+      "cat": "agro",
+      "shape": "arch",
+      "hMin": 4.2,
+      "hMax": 5.8,
+      "w": 16.5,
+      "d": 9.5,
+      "style": 12
+    },
+    {
+      "id": 13,
+      "name": "Зерновой элеватор (силос)",
+      "cat": "agro",
+      "shape": "cyl",
+      "hMin": 18,
+      "hMax": 26,
+      "w": 9.5,
+      "d": 9.5,
+      "style": 13
+    },
+    {
+      "id": 14,
+      "name": "Агроферма и амбар",
+      "cat": "agro",
+      "shape": "gable",
+      "hMin": 6.8,
+      "hMax": 9.2,
+      "w": 14.5,
+      "d": 9.8,
+      "style": 14
+    },
+    {
+      "id": 15,
+      "name": "Лесопильный комбинат",
+      "cat": "ind",
+      "shape": "gable",
+      "hMin": 7.5,
+      "hMax": 10.5,
+      "w": 16,
+      "d": 11,
+      "style": 15
+    },
+    {
+      "id": 16,
+      "name": "Машиностроительный цех",
+      "cat": "ind",
+      "shape": "flat",
+      "hMin": 10.5,
+      "hMax": 14.5,
+      "w": 19,
+      "d": 13.5,
+      "style": 16
+    },
+    {
+      "id": 17,
+      "name": "Корпус электролиза Al",
+      "cat": "smlt",
+      "shape": "flat",
+      "hMin": 11.5,
+      "hMax": 15,
+      "w": 24,
+      "d": 11.5,
+      "style": 17
+    },
+    {
+      "id": 18,
+      "name": "Литейно-прокатный цех",
+      "cat": "smlt",
+      "shape": "step",
+      "hMin": 15,
+      "hMax": 21,
+      "w": 18.5,
+      "d": 14,
+      "style": 18
+    },
+    {
+      "id": 19,
+      "name": "Гиперболоидная градирня",
+      "cat": "ind",
+      "shape": "cool",
+      "hMin": 24,
+      "hMax": 34,
+      "w": 13.5,
+      "d": 13.5,
+      "style": 19
+    },
+    {
+      "id": 20,
+      "name": "Модуль ЦОД ИИ (Серверная)",
+      "cat": "dc",
+      "shape": "flat",
+      "hMin": 10,
+      "hMax": 13.5,
+      "w": 20,
+      "d": 14,
+      "style": 20
+    },
+    {
+      "id": 21,
+      "name": "Квантовый лаб-корпус",
+      "cat": "dc",
+      "shape": "tower",
+      "hMin": 24,
+      "hMax": 36,
+      "w": 13,
+      "d": 13,
+      "style": 21
+    },
+    {
+      "id": 22,
+      "name": "Портовый терминал-склад",
+      "cat": "port",
+      "shape": "arch",
+      "hMin": 8.5,
+      "hMax": 11.5,
+      "w": 21,
+      "d": 11.5,
+      "style": 22
+    },
+    {
+      "id": 23,
+      "name": "Курортный гранд-отель",
+      "cat": "port",
+      "shape": "step",
+      "hMin": 22,
+      "hMax": 34,
+      "w": 16,
+      "d": 11.5,
+      "style": 23
+    },
+    {
+      "id": 24,
+      "name": "Павильон яхт-клуба",
+      "cat": "port",
+      "shape": "gable",
+      "hMin": 6.5,
+      "hMax": 9,
+      "w": 12,
+      "d": 10,
+      "style": 24
+    },
+    {
+      "id": 25,
+      "name": "Станция Горводоканала",
+      "cat": "util",
+      "shape": "cyl",
+      "hMin": 8.5,
+      "hMax": 12,
+      "w": 12.5,
+      "d": 12.5,
+      "style": 25
+    },
+    {
+      "id": 26,
+      "name": "Насосная станция орошения",
+      "cat": "agro",
+      "shape": "flat",
+      "hMin": 6,
+      "hMax": 8.5,
+      "w": 10.5,
+      "d": 9,
+      "style": 26
+    },
+    {
+      "id": 27,
+      "name": "Научный центр Росгидромета",
+      "cat": "sci",
+      "shape": "spire",
+      "hMin": 14,
+      "hMax": 20,
+      "w": 11.5,
+      "d": 11.5,
+      "style": 27
+    },
+    {
+      "id": 28,
+      "name": "Торгово-выставочный холл",
+      "cat": "mid",
+      "shape": "arch",
+      "hMin": 10,
+      "hMax": 14,
+      "w": 18.5,
+      "d": 15,
+      "style": 28
+    },
+    {
+      "id": 29,
+      "name": "Логистический хаб",
+      "cat": "ind",
+      "shape": "flat",
+      "hMin": 9,
+      "hMax": 12,
+      "w": 22,
+      "d": 13,
+      "style": 29
+    },
+    {
+      "id": 30,
+      "name": "Спасательное депо МЧС",
+      "cat": "civ",
+      "shape": "flat",
+      "hMin": 8.5,
+      "hMax": 11.5,
+      "w": 13.5,
+      "d": 11,
+      "style": 30
+    },
+    {
+      "id": 31,
+      "name": "Навигационный маяк мыса",
+      "cat": "port",
+      "shape": "spire",
+      "hMin": 20,
+      "hMax": 28,
+      "w": 6.8,
+      "d": 6.8,
+      "style": 31
+    },
+    {
+      "id": 32,
+      "name": "Бетоносмесительный узел БСУ",
+      "cat": "bld",
+      "shape": "cyl",
+      "hMin": 15,
+      "hMax": 22,
+      "w": 11,
+      "d": 11,
+      "style": 32
+    },
+    {
+      "id": 33,
+      "name": "Домостроительный комбинат ДСК",
+      "cat": "bld",
+      "shape": "flat",
+      "hMin": 12,
+      "hMax": 16.5,
+      "w": 22.5,
+      "d": 14,
+      "style": 33
+    },
+    {
+      "id": 34,
+      "name": "Склад стройматериалов и ЖБИ",
+      "cat": "bld",
+      "shape": "arch",
+      "hMin": 7.5,
+      "hMax": 10.5,
+      "w": 19.5,
+      "d": 12,
+      "style": 34
+    },
+    {
+      "id": 35,
+      "name": "Краново-монтажное управление",
+      "cat": "bld",
+      "shape": "step",
+      "hMin": 9.5,
+      "hMax": 13.5,
+      "w": 15,
+      "d": 11.5,
+      "style": 35
+    },
+    {
+      "id": 36,
+      "name": "Асфальтобетонный завод АБЗ",
+      "cat": "bld",
+      "shape": "cyl",
+      "hMin": 13.5,
+      "hMax": 18.5,
+      "w": 10.5,
+      "d": 10.5,
+      "style": 36
+    },
+    {
+      "id": 37,
+      "name": "Институт «Гидропроект»",
+      "cat": "sci",
+      "shape": "tower",
+      "hMin": 22,
+      "hMax": 32,
+      "w": 13.5,
+      "d": 12.5,
+      "style": 37
+    },
+    {
+      "id": 38,
+      "name": "Дворец культуры строителей",
+      "cat": "civ",
+      "shape": "step",
+      "hMin": 13.5,
+      "hMax": 18.5,
+      "w": 17.5,
+      "d": 14,
+      "style": 38
+    },
+    {
+      "id": 39,
+      "name": "Водонапорная башня",
+      "cat": "util",
+      "shape": "spire",
+      "hMin": 19,
+      "hMax": 26,
+      "w": 7.8,
+      "d": 7.8,
+      "style": 39
+    },
+    {
+      "id": 40,
+      "name": "Завод гидротурбин и статоров",
+      "cat": "ind",
+      "shape": "flat",
+      "hMin": 13,
+      "hMax": 17.5,
+      "w": 23,
+      "d": 14.5,
+      "style": 40
+    },
+    {
+      "id": 41,
+      "name": "Кирпичный квартал «Старый посад»",
+      "cat": "mid",
+      "shape": "gable",
+      "hMin": 15.5,
+      "hMax": 20.5,
+      "w": 16,
+      "d": 10.5,
+      "style": 41
+    },
+    {
+      "id": 42,
+      "name": "Эко-квартал с террасами",
+      "cat": "mid",
+      "shape": "step",
+      "hMin": 19,
+      "hMax": 27,
+      "w": 15.5,
+      "d": 12.5,
+      "style": 42
+    },
+    {
+      "id": 43,
+      "name": "Каскадный жилой небоскрёб",
+      "cat": "high",
+      "shape": "tower",
+      "hMin": 56,
+      "hMax": 84,
+      "w": 15,
+      "d": 14,
+      "style": 43
+    },
+    {
+      "id": 44,
+      "name": "Речной вокзал с ротондой",
+      "cat": "port",
+      "shape": "step",
+      "hMin": 12.5,
+      "hMax": 17,
+      "w": 18,
+      "d": 12,
+      "style": 44
+    },
+    {
+      "id": 45,
+      "name": "Крытый спорткомплекс-арена",
+      "cat": "civ",
+      "shape": "arch",
+      "hMin": 12,
+      "hMax": 16.5,
+      "w": 21,
+      "d": 16.5,
+      "style": 45
+    },
+    {
+      "id": 46,
+      "name": "Университет гидроэнергетики",
+      "cat": "sci",
+      "shape": "spire",
+      "hMin": 20,
+      "hMax": 28.5,
+      "w": 17,
+      "d": 13,
+      "style": 46
+    },
+    {
+      "id": 47,
+      "name": "Ремонтно-механическая база РМЗ",
+      "cat": "bld",
+      "shape": "gable",
+      "hMin": 8.5,
+      "hMax": 11.8,
+      "w": 17.5,
+      "d": 11.5,
+      "style": 47
+    }
+  ]
+}

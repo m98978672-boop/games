@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>КАСКАД: Живая Вода v0.6 — Единая постройка «Целая ГЭС», поиск створов, каналы, квартальная 3D-архитектура и логика городов</title>
   <meta name="description" content="Оптимизированный 3D-симулятор гидрокаскада v0.6: единая постройка целой ГЭС без лишних турбин, разведка перепада высот ΔH и прокладка каналов, чистые прямоугольные городские кварталы с яркими 3D-зданиями и живая логика 8 городов.">
-  <link rel="stylesheet" href="style.css?v=0.6.0-202610312156">
+  <link rel="stylesheet" href="style.css?v=0.6.1-202610312205">
 </head>
 <body>
 <div id="app">
@@ -19,7 +19,7 @@
         <div class="loader-brand">
           <span class="brand-dot"></span>
           <div>
-            <h1>КАСКАД: Живая Вода <small class="ver-pill">v0.6.0</small></h1>
+            <h1>КАСКАД: Живая Вода <small class="ver-pill">v0.6.1</small></h1>
             <p>Единая постройка «Целая ГЭС» [2], прокладка каналов [3], живые городские кварталы без лишней разметки и система логики 8 городов</p>
           </div>
         </div>
@@ -95,6 +95,7 @@
 
       <div class="loader-actions">
         <a class="gh-btn gh-btn-sec" href="../index.html">← На витрину игр</a>
+        <button class="gh-btn hidden" id="btn-load-saved" type="button">▶ Продолжить сохранение</button>
         <button class="enter-valley-btn" id="btn-enter-valley" disabled>Загрузка карты долины…</button>
       </div>
     </div>
@@ -147,6 +148,7 @@
       <button class="ctrl-btn" id="btn-contours" title="Геодезические изолинии высот (C)">≡ Высоты</button>
       <button class="ctrl-btn" id="btn-weather-cycle" title="Сменить погоду / проверить паводок">≈ Погода</button>
       <button class="ctrl-btn" id="btn-creative" title="Инженерная песочница без лимита бюджета (K)">★ Креатив</button>
+      <button class="ctrl-btn" id="btn-save-game" title="Сохранить данные каскада, каналы, ГЭС и города в браузере">◈ Сохранить</button>
       <button class="ctrl-btn" id="btn-quality" title="Профиль графики и сетки воды">⚙ Графика</button>
       <button class="ctrl-btn" id="btn-mute" title="Звук реки и турбин (M)">♪ Звук</button>
       <button class="ctrl-btn" id="btn-help" title="Инженерная памятка по гидрологии и ГЭС (H)">? Справка</button>
@@ -357,6 +359,6 @@
   </div>
 </div>
 
-<script src="bundle.js?v=0.6.0-202610312156"></script>
+<script src="bundle.js?v=0.6.1-202610312205"></script>
 </body>
 </html>

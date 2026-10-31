@@ -34,6 +34,13 @@ import { ValleyCameraController } from './camera.js';
 import { HydroAudio } from './audio.js';
 import { TutorialController } from './tutorial.js';
 import { SVG_ICONS } from './icons.js';
+import {
+  captureBaselineTerrain,
+  serializeCascadeSave,
+  applyCascadeSave,
+  readCascadeSaveMeta,
+  writeCascadeSaveToStorage,
+} from './save-system.js';
 
 const WEATHER_ORDER = ['normal', 'rain', 'flood', 'low_water'];
 const SPEED_MODES = [0, 1, 2, 5];
@@ -222,6 +229,7 @@ class CascadeHydroGame {
     buildValleyTerrain(g, this.hydro, this.selectedPresetId, z2, g);
     this.hydro.finalizeValleySetup(18);
     this.hydro.spawnStarterReadyHPP(this.selectedPresetId);
+    captureBaselineTerrain(this.hydro);
 
     this._setLoaderProgress(86, 'Запуск Готовой ГЭС-1, системы логики 8 городов и 300 анимаций…');
     await nextFrame();
@@ -258,6 +266,7 @@ class CascadeHydroGame {
       enterBtn.disabled = false;
       enterBtn.textContent = `▶ Войти в бассейн (${sc.short}) и начать строительство`;
     }
+    this._refreshSavedGameButton();
 
     this._lastTime = performance.now();
     requestAnimationFrame((t) => this._loop(t));
@@ -294,6 +303,7 @@ class CascadeHydroGame {
     buildValleyTerrain(g, this.hydro, presetId, halfG, g);
     this.hydro.finalizeValleySetup(18);
     this.hydro.spawnStarterReadyHPP(presetId);
+    captureBaselineTerrain(this.hydro);
 
     this._setLoaderProgress(92, 'Размещение Готовой ГЭС-1, 8 городов, флота, поездов, ВЭС и лесов…');
     await nextFrame();
@@ -341,12 +351,78 @@ class CascadeHydroGame {
       this.tutorial.stop();
       const sc = MAP_SCALES[this.selectedScaleId];
       this.notify(
-        `✦ Бассейн «${VALLEY_PRESETS[this.selectedPresetId].name}» (${sc.short}): перед вами Готовая ГЭС-1 — проройте к ней подводящий канал [2] или ставьте новые ГЭС [8/9/0]!`,
+        `✦ Бассейн «${VALLEY_PRESETS[this.selectedPresetId].name}» (${sc.short}): перед вами Целая ГЭС-1 — проройте к ней подводящий канал [3] или ставьте новые ГЭС [2]!`,
         'info',
       );
     }
 
     this._refreshHUD();
+  }
+
+  _refreshSavedGameButton() {
+    const loadBtn = document.getElementById('btn-load-saved');
+    if (!loadBtn) return;
+    const saved = readCascadeSaveMeta();
+    if (!saved) {
+      loadBtn.classList.add('hidden');
+      return;
+    }
+    const sc = MAP_SCALES[saved.scaleId] || MAP_SCALES.km5;
+    const pr = VALLEY_PRESETS[saved.presetId] || VALLEY_PRESETS.bystritsa;
+    const cashTxt = saved.economy && typeof saved.economy.cash === 'number'
+      ? `${Math.round(saved.economy.cash).toLocaleString('ru-RU')} ₽`
+      : '';
+    loadBtn.textContent = `▶ Продолжить сохранение (${pr.name}, ${sc.short}${cashTxt ? ` · ${cashTxt}` : ''})`;
+    loadBtn.classList.remove('hidden');
+  }
+
+  saveGameProgress(silent = false) {
+    if (!this.ready || this.isLoadingMap) return false;
+    const snap = serializeCascadeSave({
+      scaleId: this.selectedScaleId,
+      presetId: this.selectedPresetId,
+      hydro: this.hydro,
+      economy: this.economy,
+      camCtrl: this.camCtrl,
+    });
+    const ok = writeCascadeSaveToStorage(snap);
+    this._refreshSavedGameButton();
+    if (!silent) {
+      this.notify(
+        ok
+          ? `◈ Данные сохранены: ГЭС (${this.hydro.turbines.length}), каналы (${snap.terrainDiff.length} секций), казна ${Math.round(this.economy.cash).toLocaleString('ru-RU')} ₽!`
+          : 'Не удалось записать сохранение в localStorage браузера.',
+        ok ? 'good' : 'warn',
+      );
+    }
+    return ok;
+  }
+
+  async loadSavedGameAsync() {
+    const snap = readCascadeSaveMeta();
+    if (!snap || this.isLoadingMap) return;
+    const targetScale = MAP_SCALES[snap.scaleId] ? snap.scaleId : 'km5';
+    const targetPreset = VALLEY_PRESETS[snap.presetId] ? snap.presetId : 'bystritsa';
+    if (targetScale !== this.selectedScaleId) {
+      this.selectedScaleId = targetScale;
+      applyMapScale(targetScale);
+    }
+    await this.loadValleyMapAsync(targetPreset);
+    applyCascadeSave(snap, {
+      hydro: this.hydro,
+      economy: this.economy,
+      worldView: this.worldView,
+      camCtrl: this.camCtrl,
+    });
+    this.isInPreGameLoader = false;
+    const loader = document.getElementById('map-loader');
+    if (loader) loader.classList.add('hidden');
+    this.tutorial.stop();
+    this._refreshHUD();
+    this.notify(
+      `◈ Загружено сохранение: День ${this.economy.day}, ГЭС: ${this.hydro.turbines.length}, казна: ${Math.round(this.economy.cash).toLocaleString('ru-RU')} ₽!`,
+      'good',
+    );
   }
 
   openMapLoader() {
@@ -357,6 +433,7 @@ class CascadeHydroGame {
       loader.classList.remove('hidden');
       loader.classList.add('ready-preview');
     }
+    this._refreshSavedGameButton();
   }
 
   _flyToCityByIndex(idx) {
@@ -704,6 +781,22 @@ class CascadeHydroGame {
       this._onResize();
       this.notify(`Графика переключена: ${this.profile.label}`, 'info');
     });
+
+    const saveBtn = document.getElementById('btn-save-game');
+    if (saveBtn) {
+      saveBtn.addEventListener('click', () => {
+        this.audio.unlock();
+        this.saveGameProgress(false);
+      });
+    }
+
+    const loadSavedBtn = document.getElementById('btn-load-saved');
+    if (loadSavedBtn) {
+      loadSavedBtn.addEventListener('click', () => {
+        this.audio.unlock();
+        this.loadSavedGameAsync();
+      });
+    }
 
     const muteBtn = document.getElementById('btn-mute');
     muteBtn.addEventListener('click', () => {
@@ -1730,6 +1823,12 @@ class CascadeHydroGame {
 
     this.renderer.render(this.scene, this.camera);
     this._updateCityWorldBadges();
+
+    this._autosaveAccum = (this._autosaveAccum || 0) + rawDt;
+    if (!this.isInPreGameLoader && this._autosaveAccum >= 45.0) {
+      this._autosaveAccum = 0;
+      this.saveGameProgress(true);
+    }
 
     this._uiRefreshAccum += rawDt;
     if (this._uiRefreshAccum >= 0.25) {
