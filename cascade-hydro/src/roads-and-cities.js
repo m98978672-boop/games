@@ -519,14 +519,30 @@ export class RoadNetworkSimulation {
       const cB = cityById.get(r.toId);
       const connBonus = ((cA && cA.connected) ? 0.55 : 0) + ((cB && cB.connected) ? 0.55 : 0);
       const bridgeFactor = r.hasBridge ? 0.84 : 1.0;
+      const plantCount = (economy.hydro && economy.hydro.concretePlants) ? economy.hydro.concretePlants.length : 0;
+      const plantBoost = 1.0 + Math.min(0.95, plantCount * 0.45);
 
-      // В креативе строится стремительно, в обычной игре — плавно и наглядно на глазах игрока!
-      const baseRate = economy.creative ? 0.24 : 0.022;
-      const progDelta = baseRate * (1.0 + connBonus) * mwBoost * bridgeFactor * dt;
+      // В креативе строится стремительно, в обычной игре — плавно и ускоряется Бетонозаводом БСУ [B]!
+      const baseRate = economy.creative ? 0.26 : 0.023;
+      const progDelta = baseRate * (1.0 + connBonus) * mwBoost * bridgeFactor * plantBoost * dt;
 
       r.buildProgress = Math.min(1.0, r.buildProgress + progDelta);
       const newSeg = Math.floor(r.buildProgress * Math.max(0, r.points.length - 1));
       if (newSeg !== r.builtSeg) {
+        // Если игрок прорыл новый канал или поднял бьеф на участке впереди катка — автоматически поднимаем эстакаду моста!
+        if (economy.hydro && newSeg < r.points.length) {
+          for (let k = Math.max(0, r.builtSeg); k <= Math.min(r.points.length - 1, newSeg + 2); k++) {
+            const pt = r.points[k];
+            const s = economy.hydro.sampleAtWorld(pt.wx, pt.wz);
+            if (s.depth > 0.25) {
+              pt.isBridge = true;
+              pt.waterDepth = s.depth;
+              pt.waterSurf = s.surface;
+              pt.deckY = Math.max(pt.deckY, s.surface + 3.6 * WORLD.elevScale);
+              r.hasBridge = true;
+            }
+          }
+        }
         r.builtSeg = newSeg;
         this.meshDirty = true;
       }

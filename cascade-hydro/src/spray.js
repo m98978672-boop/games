@@ -4,6 +4,7 @@
 
 import * as THREE from 'three';
 import { WORLD } from './config.js';
+import { clamp } from './noise.js';
 
 export class SprayAndRainSystem {
   constructor(scene, maxParticles = 2800) {
@@ -195,12 +196,32 @@ export class SprayAndRainSystem {
       }
     }
 
+    // Водяная пыль и брызги в чашах 3 горных истоков рек (ледниковые гроты и скальные ключи!)
+    const hSources = hydro.headwaterSources || [];
+    for (let sIdx = 0; sIdx < hSources.length; sIdx++) {
+      if (Math.random() > 0.68) continue;
+      const hs = hSources[sIdx];
+      const sp = hydro.sampleAtWorld(hs.outX, hs.outZ);
+      this.spawn(
+        hs.outX + (Math.random() - 0.5) * hs.width * 0.75,
+        Math.max(sp.bed, sp.surface) + 0.6 * pScale,
+        hs.outZ + (Math.random() - 0.5) * hs.width * 0.75,
+        hs.tx * (2.2 + Math.random() * 2.5) * pScale + (Math.random() - 0.5) * 1.4 * pScale,
+        (2.0 + Math.random() * 2.8) * Math.sqrt(WORLD.elevScale),
+        hs.tz * (2.2 + Math.random() * 2.5) * pScale + (Math.random() - 0.5) * 1.4 * pScale,
+        (2.6 + Math.random() * 2.2) * pScale,
+        1.15 + Math.random() * 0.75,
+        2,
+      );
+    }
+
     // Живые брызги бурных горных перекатов (Fr > 1.15) вокруг области обзора камеры
+    const worldHalf = WORLD.size * 0.5;
     if (hydro.activeTileCount > 0) {
       for (let s = 0; s < 5; s++) {
         const rx = camTarget.x + (Math.random() - 0.5) * 260 * pScale;
         const rz = camTarget.z + (Math.random() - 0.5) * 260 * pScale;
-        if (Math.abs(rx) >= WORLD.half * 0.96 || Math.abs(rz) >= WORLD.half * 0.96) continue;
+        if (Math.abs(rx) >= worldHalf * 0.96 || Math.abs(rz) >= worldHalf * 0.96) continue;
         const sp = hydro.sampleAtWorld(rx, rz);
         if (sp.depth > 0.18 && (sp.froude > 1.08 || sp.foam > 0.42) && sp.speed > 2.2) {
           this.spawn(
@@ -218,6 +239,8 @@ export class SprayAndRainSystem {
       }
     }
 
+    const windVx = (hydro.windDirX || 0) * (hydro.windSpeedMs || 4.5);
+    const windVz = (hydro.windDirZ || 0) * (hydro.windSpeedMs || 4.5);
     const alphas = this.alphaAttr.array;
     let anyAlive = false;
     for (let i = 0; i < this.max; i++) {
@@ -236,13 +259,14 @@ export class SprayAndRainSystem {
       anyAlive = true;
       const i3 = i * 3;
       if (kind === 1) {
-        this.velocities[i3] *= (1.0 - dt * 0.35);
+        this.velocities[i3] += (windVx * 0.12 - this.velocities[i3] * 0.35) * dt;
         this.velocities[i3 + 1] -= WORLD.gravity * dt * 0.92;
-        this.velocities[i3 + 2] *= (1.0 - dt * 0.35);
+        this.velocities[i3 + 2] += (windVz * 0.12 - this.velocities[i3 + 2] * 0.35) * dt;
       } else {
-        this.velocities[i3] *= (1.0 - dt * 1.2);
+        // Туман и водяная пыль сносятся по реальному азимуту ветра!
+        this.velocities[i3] += (windVx * 0.45 - this.velocities[i3] * 1.1) * dt;
         this.velocities[i3 + 1] = Math.max(0.3, this.velocities[i3 + 1] - dt * 0.9);
-        this.velocities[i3 + 2] *= (1.0 - dt * 1.2);
+        this.velocities[i3 + 2] += (windVz * 0.45 - this.velocities[i3 + 2] * 1.1) * dt;
         this.sizes[i] += dt * 1.4 * pScale;
       }
 
@@ -283,6 +307,8 @@ export class SprayAndRainSystem {
       const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
       const rSpan = Math.pow(WORLD.horizScale, 0.55);
       const fall = (now * 0.065) % (70 * rSpan);
+      const slantX = clamp(windVx * 0.16, -2.6, 2.6) * rSpan;
+      const slantZ = clamp(windVz * 0.16, -2.6, 2.6) * rSpan;
       for (let i = 0; i < this.rainCount; i++) {
         const s3 = i * 3;
         const x = camTarget.x + this.rainSeeds[s3] * rSpan;
@@ -294,9 +320,9 @@ export class SprayAndRainSystem {
         rp[i6] = x;
         rp[i6 + 1] = y;
         rp[i6 + 2] = z;
-        rp[i6 + 3] = x + 0.6 * rSpan;
+        rp[i6 + 3] = x + slantX;
         rp[i6 + 4] = y - 3.8 * rSpan;
-        rp[i6 + 5] = z + 0.4 * rSpan;
+        rp[i6 + 5] = z + slantZ;
       }
       this.rainAttr.needsUpdate = true;
     } else {

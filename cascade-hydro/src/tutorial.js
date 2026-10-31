@@ -1,10 +1,11 @@
 // ============================================================================
-//  ИНТЕРАКТИВНОЕ ПОШАГОВОЕ ОБУЧЕНИЕ «ШКОЛА ГЛАВНОГО ГИДРОСТРОИТЕЛЯ» (8 шагов)
-//  Адаптировано под любые масштабы карт (0.8×0.8 км, 5×5 км и 10×10 км)
+//  ИНТЕРАКТИВНОЕ ПОШАГОВОЕ ОБУЧЕНИЕ «ШКОЛА ГЛАВНОГО ГИДРОСТРОИТЕЛЯ v0.4» (10 шагов)
+//  Охватывает 3D-истоки рек из ледниковых гротов, тонкую стройку, Бетонозавод БСУ [B],
+//  Насосную станцию [G], Метео-ВЭС [W], физику ветра/климата, рост городов и трасс!
 // ============================================================================
 
 import { WORLD } from './config.js';
-import { getScaledValleyRivers } from './valley.js';
+import { getScaledValleyRivers, getValleyHeadwaterSources } from './valley.js';
 import { clamp } from './noise.js';
 
 export class TutorialController {
@@ -13,6 +14,7 @@ export class TutorialController {
     this.active = false;
     this.completed = false;
     this.stepIndex = 0;
+    this.visitedHeadwater = false;
     this.visitedGorge = false;
 
     this.cardEl = document.getElementById('tutorial-card');
@@ -33,57 +35,102 @@ export class TutorialController {
     return { x: g.x, z: g.z };
   }
 
+  _getHeadwaterCoords() {
+    const preset = this.game.hydro.presetId || 'bystritsa';
+    const sources = getValleyHeadwaterSources(preset);
+    const s0 = sources[0] || { outX: -58 * WORLD.horizScale, outZ: -342 * WORLD.horizScale };
+    return { x: s0.outX, z: s0.outZ };
+  }
+
   _getSteps() {
     const gorge = this._getGorgeCoords();
+    const headwater = this._getHeadwaterCoords();
     const hs = WORLD.horizScale;
     const zoomScale = Math.pow(hs, 0.68);
     const ps = WORLD.powerScale;
 
     return [
       {
+        id: 'headwaters_recon',
+        title: 'Ледниковые гроты: откуда идёт вода',
+        toolId: 'inspect',
+        reward: 2000,
+        target: { x: headwater.x, z: headwater.z, dist: 132 * zoomScale },
+        body: 'Нажмите <b>«⌖ Показать место»</b> (или переместитесь на <code>WASD</code>), чтобы увидеть <b>3D-грот «Белый Ледник»</b> — природный исток главной реки! Днём солнце и тёплый долинный бриз усиливают таяние ледников, а вода без застоя бежит к морю.',
+        progress: () => {
+          const d = Math.hypot(this.game.camCtrl.target.x - headwater.x, this.game.camCtrl.target.z - headwater.z);
+          if (d < 135 * hs) this.visitedHeadwater = true;
+          return {
+            ratio: this.visitedHeadwater ? 1.0 : 0.25,
+            label: this.visitedHeadwater
+              ? 'Исток реки изучен!'
+              : 'Нажмите «⌖ Показать место», чтобы осмотреть ледниковый исток',
+            done: this.visitedHeadwater,
+          };
+        },
+      },
+      {
         id: 'recon',
-        title: 'Разведка ущелья и геодезия',
+        title: 'Геодезия каньона и тонкая кисть',
         toolId: 'inspect',
         reward: 2000,
         target: { x: gorge.x, z: gorge.z, dist: 128 * zoomScale },
-        body: 'Перелетите к скальному ущелью кнопкой <b>«⌖ Показать место»</b> (или клавишами <code>WASD</code> + колесо мыши) и включите изолинии высот <b>[≡ Высоты]</b> (<code>C</code>), чтобы увидеть каменные щёки каньона.',
+        body: 'Перелетите к скальному створу кнопкой <b>«⌖ Показать место»</b> и включите геодезические изолинии <b>[≡ Высоты]</b> (<code>C</code>). Клавишами <code>[</code> и <code>]</code> можно переключать <b>4 точных размера кисти</b>!',
         progress: () => {
           const d = Math.hypot(this.game.camCtrl.target.x - gorge.x, this.game.camCtrl.target.z - gorge.z);
-          if (d < 98 * hs) this.visitedGorge = true;
+          if (d < 105 * hs) this.visitedGorge = true;
           const p = (this.visitedGorge ? 0.6 : 0) + (this.game.showContours ? 0.4 : 0);
           return {
             ratio: clamp(p, 0, 1),
             label: this.visitedGorge
-              ? (this.game.showContours ? 'Створ изучен!' : 'Включите изолинии [C] или нажмите «Далее»')
-              : 'Наведите камеру на ущелье «Ворота Грома»',
+              ? (this.game.showContours ? 'Створ плотины изучен!' : 'Нажмите [C] («≡ Высоты») или «Взять инструмент»')
+              : 'Наведите камеру на створ ущелья',
             done: this.visitedGorge && this.game.showContours,
           };
         },
       },
       {
+        id: 'concrete_plant_site',
+        title: 'Бетонный завод БСУ и Стройбаза [B]',
+        toolId: 'concrete_plant',
+        reward: 4000,
+        target: { x: gorge.x + 34 * hs, z: gorge.z + 10 * hs, dist: 132 * zoomScale },
+        body: 'Новинка строительной индустрии: выберите <b>[B] Бетонозавод</b> и разместите его на сухом берегу у ущелья! Он <b>удвоит скорость заливки 3D-плотин</b>, снизит расход бюджета на бетон на <b>22%</b> и ускорит стройку кварталов и трасс.',
+        progress: () => {
+          const plants = this.game.hydro.concretePlants ? this.game.hydro.concretePlants.length : 0;
+          const damStarted = this.game.hydro.damCellCount >= 4;
+          const done = plants >= 1 || damStarted;
+          return {
+            ratio: done ? 1.0 : 0.15,
+            label: plants >= 1 ? 'Бетонный завод БСУ запущен!' : 'Постройте [B] Бетонозавод на сухом берегу у створа',
+            done,
+          };
+        },
+      },
+      {
         id: 'volumetric_dam',
-        title: 'Объёмная 3D-плотина и перелив',
+        title: 'Тонкая послойная стройка 3D-плотины [5]',
         toolId: 'concrete_dam',
-        reward: 5000,
-        target: { x: gorge.x, z: gorge.z, dist: 124 * zoomScale },
-        body: 'Выберите <b>[5] 3D Плотина</b>, укажите ярус высоты и протяните ЛКМ от левой скалы ущелья к правой. При наполнении водохранилища вы увидите живой 3D-перелив воды через гребень!',
+        reward: 5500,
+        target: { x: gorge.x, z: gorge.z, dist: 122 * zoomScale },
+        body: 'Выберите <b>[5] 3D Плотина</b>, подберите тонкую или среднюю кисть и один из <b>4 точных ярусов высоты</b> (от ювелирной подсыпки гребня до высокой плотины). Протяните плотину от левой щеки каньона к правой!',
         progress: () => {
           const cells = this.game.hydro.damCellCount;
           const ratio = clamp(cells / 6, 0, 1);
           return {
             ratio,
-            label: `Возведено объёмных секций плотины: ${Math.min(cells, 6)} / 6`,
+            label: `Возведено секций 3D-плотины: ${Math.min(cells, 6)} / 6`,
             done: cells >= 6,
           };
         },
       },
       {
         id: 'buttress_spillway',
-        title: 'Контрфорсы и 3D-водосброс',
+        title: 'Цементация Дарси [6] и 3D-водосброс [7]',
         toolId: 'foundation',
         reward: 4500,
         target: { x: gorge.x, z: gorge.z + 8 * hs, dist: 122 * zoomScale },
-        body: 'Высокий напор вызывает фильтрацию Дарси под основанием! Укрепите плотину инструментом <b>[6] Контрфорс</b> и врежьте сбоку <b>[7] Водосброс</b> с 3D-лотком и носком-трамплином.',
+        body: 'Накопленный верхний бьеф создаёт напор и фильтрацию Дарси! Укрепите основание инструментом <b>[6] Контрфорс</b> и установите <b>[7] Водосброс</b> с сегментным затвором и носком-трамплином.',
         progress: () => {
           const r = this.game.hydro.reinforcedCellCount;
           const sw = this.game.hydro.spillways.length;
@@ -97,11 +144,11 @@ export class TutorialController {
       },
       {
         id: 'turbine_launch',
-        title: 'Приплотинная ГЭС в нижнем бьефе',
+        title: 'Приплотинная ГЭС в нижнем бьефе [8/9/0]',
         toolId: 'turbine_kaplan',
         reward: 6500,
         target: { x: gorge.x, z: gorge.z, dist: 118 * zoomScale },
-        body: 'Выберите <b>[8] Каплан</b>, <b>[9] Фрэнсис</b> или <b>[0] ГАЭС</b> и кликните по плотине: водоприёмник встанет в верхнем бьефе, стальные водоводы пойдут вниз, а машзал аккуратно разместится у подножия в нижнем бьефе!',
+        body: 'Выберите <b>[8] Каплан</b>, <b>[9] Фрэнсис</b> или <b>[0] ГАЭС</b> (<code>R</code> — точный поворот с шагом 15°) и кликните по плотине: машзал встанет строго у подножия в нижнем бьефе без подъёма рельефа!',
         progress: () => {
           const hasT = this.game.hydro.turbines.length > 0;
           const goalMW = +(0.35 * ps).toFixed(1);
@@ -109,18 +156,18 @@ export class TutorialController {
           const ratio = clamp((hasT ? 0.45 : 0) + Math.min(0.55, (mw / Math.max(0.1, goalMW)) * 0.55), 0, 1);
           return {
             ratio,
-            label: hasT ? `Выработка ГЭС: ${mw.toFixed(1)} / ${goalMW} МВт` : 'Установите гидроагрегат в створ плотины',
+            label: hasT ? `Выработка энергоузла: ${mw.toFixed(1)} / ${goalMW} МВт` : 'Установите гидроагрегат в створ плотины',
             done: hasT && mw >= goalMW,
           };
         },
       },
       {
         id: 'substation_grid',
-        title: 'ОРУ 220 кВ, шлюзы и 8 городов',
+        title: 'ОРУ 220 кВ [P], стройка городов и трасс',
         toolId: 'powerline',
         reward: 5500,
-        target: { x: gorge.x + 36 * hs, z: gorge.z + 16 * hs, dist: 145 * zoomScale },
-        body: 'Выберите <b>[P] ОРУ / ЛЭП</b> и кликните на сухом берегу рядом с ГЭС, чтобы возвести <b>3D-подстанцию ОРУ</b> (снижает потери с 16% до 3%), затем подключите ещё один город справа (например Алюмград или Технопарк ИИ)!',
+        target: { x: gorge.x + 36 * hs, z: gorge.z + 18 * hs, dist: 145 * zoomScale },
+        body: 'Выберите <b>[P] ОРУ / ЛЭП</b>: кликните на сухом берегу у ГЭС для постройки <b>подстанции ОРУ</b> (снижает потери с 16% до 3%) и подключите соседний город — краны начнут возводить <b>48 типов зданий</b> и междугородние трассы!',
         progress: () => {
           const subs = this.game.hydro.substations.length;
           const conn = this.game.economy.cities.filter((c) => c.connected).length;
@@ -133,46 +180,50 @@ export class TutorialController {
         },
       },
       {
-        id: 'custom_canal',
-        title: 'Свой канал, шлюз [L] или рыбхоз [F]',
-        toolId: 'canal_dig',
+        id: 'pump_wind_canal',
+        title: 'Насосная [G], Метео-ВЭС [N] или Канал [2]',
+        toolId: 'pump_station',
         reward: 6500,
-        target: { x: 146 * hs, z: 72 * hs, dist: 140 * zoomScale },
-        body: 'Выберите <b>[2] Канал</b> (с <code>Shift</code> для ровного дна!) и проройте русло к зелёному кольцу Агродолины — либо постройте <b>[L] Шлюз</b> / <b>[F] Рыбхоз</b> для новых источников дохода!',
+        target: { x: 142 * hs, z: 68 * hs, dist: 142 * zoomScale },
+        body: 'Расширьте инженерный комплекс: постройте у воды <b>[G] Насосную станцию</b> (доход Горводоканала и подача воды в Агродолину!), на холме <b>[N] Метео-ВЭС</b> (генерация МВт от живого ветра!) или проройте тонкий <b>[2] Канал</b> (<code>Shift</code> — ровный уклон)!',
         progress: () => {
+          const pumps = this.game.hydro.pumpStations ? this.game.hydro.pumpStations.length : 0;
+          const winds = this.game.hydro.windMeteoStations ? this.game.hydro.windMeteoStations.length : 0;
+          const extras = pumps + winds + this.game.hydro.navLocks.length + this.game.hydro.fishFarms.length;
           const cut = this.game.hydro.excavatedNormM3;
-          const extras = this.game.hydro.navLocks.length + this.game.hydro.fishFarms.length;
-          const ratio = extras > 0 ? 1.0 : clamp(cut / 220, 0, 1);
+          const ratio = extras > 0 ? 1.0 : clamp(cut / 180, 0, 1);
           return {
             ratio,
-            label: extras > 0 ? 'Построен шлюз / рыбхоз!' : `Прогресс земляных работ канала: ${Math.round(ratio * 100)}%`,
-            done: extras > 0 || cut >= 220,
+            label: extras > 0
+              ? 'Инженерный объект введён в строй!'
+              : `Постройте [G] Насосную / [N] ВЭС или проройте канал (${Math.round(ratio * 100)}%)`,
+            done: extras > 0 || cut >= 180,
           };
         },
       },
       {
         id: 'spot_dispatch',
-        title: 'Энергорынок, ГАЭС и водный баланс',
+        title: 'Физика ветра, климат и режим ГАЭС',
         toolId: 'inspect',
-        reward: 4000,
-        target: { x: gorge.x, z: gorge.z, dist: 115 * zoomScale },
-        body: 'Изучите вкладку <b>«Вода и 12 доходов»</b> справа, а затем выберите <b>[1] Осмотр</b>, кликните по машзалу ГЭС и включите <b>«Авто-диспетчер»</b> или <b>«Ночную закачку ГАЭС»</b>!',
+        reward: 4500,
+        target: { x: gorge.x, z: gorge.z, dist: 118 * zoomScale },
+        body: 'Откройте справа вкладку <b>«Вода и 12 доходов»</b>, чтобы видеть азимут и порывы ветра, давление, температуру воды и баланс рек, затем выберите <b>[1] Осмотр</b>, кликните по ГЭС и включите <b>«Авто-диспетчер»</b> или <b>«ГАЭС»</b>!',
         progress: () => {
           const anyAuto = this.game.hydro.turbines.some((t) => t.autoDispatch || t.pumpedStorage);
           return {
-            ratio: anyAuto ? 1 : 0.2,
-            label: anyAuto ? 'Интеллектуальный режим ГЭС/ГАЭС активен!' : 'Откройте инспектор ГЭС и включите Авто-диспетчер / ГАЭС',
+            ratio: anyAuto ? 1 : 0.25,
+            label: anyAuto ? 'Интеллектуальный режим ГЭС/ГАЭС активен!' : 'Включите Авто-диспетчер / ГАЭС в инспекторе ГЭС [1]',
             done: anyAuto,
           };
         },
       },
       {
         id: 'master_diploma',
-        title: 'Повелитель речного бассейна!',
+        title: 'Диплом Главного Гидростроителя!',
         toolId: 'turbine_francis',
         reward: 12000,
         target: { x: 168 * hs, z: 98 * hs, dist: 165 * zoomScale },
-        body: `Финальный экзамен: доведите выработку каскада до <b>${(1.4 * ps).toFixed(0)} МВт</b> ИЛИ подайте воду каналом в оросительный бассейн <b>Агродолины</b>!`,
+        body: `Финальная цель: выведите суммарную мощность энергосистемы (ГЭС + ВЭС) на <b>${(1.4 * ps).toFixed(0)} МВт</b> ИЛИ подайте воду в <b>Агродолину</b> (каналом <b>[2]</b> либо береговой насосной <b>[G]</b>)!`,
         progress: () => {
           const goalMW = 1.4 * ps;
           const mw = this.game.economy.totalMW;
@@ -180,7 +231,7 @@ export class TutorialController {
           const ratio = irr ? 1.0 : clamp(mw / goalMW, 0, 1);
           return {
             ratio,
-            label: irr ? 'Орошение Агродолины запущено!' : `Мощность ГЭС: ${mw.toFixed(1)} / ${goalMW.toFixed(0)} МВт`,
+            label: irr ? 'Агродолина обеспечена водой!' : `Мощность каскада: ${mw.toFixed(1)} / ${goalMW.toFixed(0)} МВт`,
             done: irr || mw >= goalMW,
           };
         },
@@ -201,6 +252,7 @@ export class TutorialController {
         if (!step) return;
         const bed = this.game.hydro.sampleAtWorld(step.target.x, step.target.z).bed;
         this.game.camCtrl.flyTo(step.target.x, step.target.z, step.target.dist, bed);
+        if (step.id === 'headwaters_recon') this.visitedHeadwater = true;
         if (step.id === 'recon') this.visitedGorge = true;
       });
     }
@@ -209,6 +261,11 @@ export class TutorialController {
       equipBtn.addEventListener('click', () => {
         const step = this._getSteps()[this.stepIndex];
         if (!step) return;
+        if (step.id === 'headwaters_recon') {
+          const bed = this.game.hydro.sampleAtWorld(step.target.x, step.target.z).bed;
+          this.game.camCtrl.flyTo(step.target.x, step.target.z, step.target.dist, bed);
+          this.visitedHeadwater = true;
+        }
         if (step.id === 'recon' && !this.game.showContours) {
           this.game.toggleContours();
         }
@@ -273,7 +330,7 @@ export class TutorialController {
       return;
     }
 
-    this.stepBadgeEl.textContent = `ОБУЧЕНИЕ · ШАГ ${this.stepIndex + 1} ИЗ ${steps.length}`;
+    this.stepBadgeEl.textContent = `ШКОЛА ГИДРОСТРОЯ v0.4 · ШАГ ${this.stepIndex + 1} ИЗ ${steps.length}`;
     this.titleEl.textContent = step.title;
     this.bodyEl.innerHTML = step.body;
     this.rewardEl.textContent = `Премия: +${step.reward.toLocaleString('ru-RU')} ₽`;
@@ -287,7 +344,7 @@ export class TutorialController {
     this.game.worldView.setTutorialTarget(step.target.x, step.target.z, true);
     if (flyHint && this.stepIndex === 0) {
       const bed = this.game.hydro.sampleAtWorld(step.target.x, step.target.z).bed;
-      this.game.camCtrl.flyTo(step.target.x, step.target.z, step.target.dist * 1.12, bed);
+      this.game.camCtrl.flyTo(step.target.x, step.target.z, step.target.dist * 1.08, bed);
     }
 
     this.update();
@@ -318,7 +375,7 @@ export class TutorialController {
     if (this.cardEl) this.cardEl.classList.add('hidden');
     const topTutBtn = document.getElementById('btn-tutorial');
     if (topTutBtn) topTutBtn.classList.remove('active');
-    this.game.notify('★ Поздравляем! Вы окончили Школу Главного Гидростроителя и освоили весь каскад!', 'good');
+    this.game.notify('★ Поздравляем! Вы окончили Школу Главного Гидростроителя v0.4 и освоили весь каскад!', 'good');
     try {
       localStorage.setItem('cascade.tutorialDone', '1');
     } catch { /* ignore */ }

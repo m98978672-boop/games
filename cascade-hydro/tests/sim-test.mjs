@@ -7,6 +7,7 @@ import {
   WORLD,
   MAP_SCALES,
   applyMapScale,
+  CONSTRUCTION,
   CITY_DEFS,
   BUILDING_ARCHETYPES,
   TOOLS,
@@ -17,6 +18,7 @@ import { HydroSimulation } from '../src/hydro.js';
 import { EconomyAndCities, REVENUE_STREAM_DEFS } from '../src/economy.js';
 import { buildAllProceduralTextures, TEXTURE_SHADE_CATALOG } from '../src/textures.js';
 import { ANIMATION_REGISTRY } from '../src/living-world.js';
+import { SprayAndRainSystem } from '../src/spray.js';
 import {
   createValleyTerrainMaterial,
   createRealisticWaterMaterial,
@@ -66,15 +68,25 @@ assert.equal(tofuRiskCount, 0, 'Ни одного опасного эмодзи 
 console.log(`   OK! Проверено ${htmlIds.size} DOM ID и ${filesToScan.length} исходников (tofu risk = 0).`);
 
 // ============================================================================
-//  1. ПРОВЕРКА КАТАЛОГОВ (432 ТЕКСТУРЫ, 300 АНИМАЦИЙ, 32 ЗДАНИЯ, 12 ДОХОДОВ, 14 СЛОТОВ)
+//  1. ПРОВЕРКА КАТАЛОГОВ (480 ТЕКСТУР, 300 АНИМАЦИЙ, 48 ЗДАНИЙ, 12 ДОХОДОВ, 17 СЛОТОВ)
 // ============================================================================
-console.log('1. Проверка каталогов текстур (432), анимаций (300), зданий (32), доходов (12) и GLSL...');
-assert.ok(TEXTURE_SHADE_CATALOG.length >= 400, `В каталоге >= 400 текстур и оттенков (${TEXTURE_SHADE_CATALOG.length})`);
-assert.ok(ANIMATION_REGISTRY.length >= 250, `В реестре >= 250 анимаций (${ANIMATION_REGISTRY.length})`);
-assert.equal(BUILDING_ARCHETYPES.length, 32, '32 архитектурных типа зданий');
+console.log('1. Проверка каталогов текстур (480), анимаций (300), зданий (48), доходов (12), 17 инструментов и GLSL...');
+assert.equal(TEXTURE_SHADE_CATALOG.length, 480, `В каталоге ровно 480 текстур и оттенков (${TEXTURE_SHADE_CATALOG.length})`);
+assert.ok(ANIMATION_REGISTRY.length >= 300, `В реестре >= 300 анимаций (${ANIMATION_REGISTRY.length})`);
+assert.equal(BUILDING_ARCHETYPES.length, 48, '48 архитектурных и строительных типов зданий');
+assert.ok(
+  BUILDING_ARCHETYPES.filter((a) => a.cat === 'bld').length >= 6,
+  'В городах присутствуют 6 профильных стройкомбинатов (БСУ, ДСК, ЖБИ, Краново-монтажное, АБЗ, РМЗ) + 10 новых объектов (всего 48)',
+);
 assert.equal(CITY_DEFS.length, 8, '8 саморазвивающихся городов и промзон');
 assert.equal(REVENUE_STREAM_DEFS.length, 12, '12 независимых источников дохода');
-assert.equal(TOOLS.length, 14, '14 инженерных инструментов');
+assert.equal(TOOLS.length, 17, '17 инженерных и строительных инструментов');
+for (const tool of TOOLS) {
+  assert.ok(
+    !['W', 'A', 'S', 'D', 'Q', 'E'].includes(tool.key),
+    `Хоткей инструмента ${tool.id} ([${tool.key}]) не конфликтует с управлением камерой WASD/QE`,
+  );
+}
 
 const elemStore = new Map();
 globalThis.document = {
@@ -104,7 +116,9 @@ globalThis.document = {
             ellipse() {},
             fill() {},
             stroke() {},
+            setLineDash() {},
             createLinearGradient() { return { addColorStop() {} }; },
+            createRadialGradient() { return { addColorStop() {} }; },
             getImageData(_x, _y, iw, ih) { return { data: new Uint8ClampedArray(iw * ih * 4), width: iw, height: ih }; },
             createImageData(iw, ih) { return { data: new Uint8ClampedArray(iw * ih * 4), width: iw, height: ih }; },
             putImageData() {},
@@ -151,8 +165,8 @@ globalThis.document = {
 
 const texSet = buildAllProceduralTextures(null);
 assert.ok(
-  texSet.waterDetail && texSet.overflowCascade && texSet.facadeAtlas && texSet.concreteMap && texSet.steel && texSet.roof,
-  'Все процедурные PBR-текстуры (включая 512×512 воду, пелену перелива и мега-атлас 64 фасадов) созданы',
+  texSet.waterDetail && texSet.overflowCascade && texSet.facadeAtlas && texSet.concreteMap && texSet.steel && texSet.roof && texSet.urbanPlaza && texSet.glacierIce,
+  'Все процедурные PBR-текстуры (включая 1024×1024 мега-атлас фасадов, 512×512 городские площади и 256×256 ледниковый лёд) созданы',
 );
 
 function checkGlslBalanced(name, code, uniformsObj = null) {
@@ -372,9 +386,9 @@ assert.equal(aggSale.ok, true, 'Оптовая отгрузка баржи ще�
 console.log(`   OK! Научный баланс: приток +${wb.inTotalQ.toFixed(1)} м³/с, испарение -${wb.outEvapQ.toFixed(2)} м³/с, активных потоков выручки: ${activeStreams.length + 1}/12.`);
 
 // ============================================================================
-//  4. ПРОВЕРКА ПОШАГОВОГО ОБУЧЕНИЯ НА МАСШТАБЕ 5×5 КМ
+//  4. ПРОВЕРКА ПОШАГОВОГО ОБУЧЕНИЯ v0.4 (10 ШАГОВ) НА МАСШТАБЕ 5×5 КМ
 // ============================================================================
-console.log('4. Проверка всех 8 шагов обучения «Школа Гидростроителя» на масштабе 5×5 км...');
+console.log('4. Проверка всех 10 шагов обучения «Школа Гидростроителя v0.4» на масштабе 5×5 км...');
 const fakeGame = {
   selectedPresetId: 'bystritsa',
   showContours: true,
@@ -391,8 +405,9 @@ const fakeGame = {
 };
 
 const tut = new TutorialController(fakeGame);
+assert.equal(tut._getSteps().length, 10, 'Обучение обновлено до 10 подробных инженерных шагов');
 tut.start(0);
-for (let guard = 0; guard < 16 && tut.active; guard++) {
+for (let guard = 0; guard < 20 && tut.active; guard++) {
   const curStep = tut._getSteps()[tut.stepIndex];
   if (curStep && curStep.target) {
     fakeGame.camCtrl.target.set(curStep.target.x, 20, curStep.target.z);
@@ -403,7 +418,7 @@ const remStep = tut._getSteps()[tut.stepIndex];
 assert.equal(
   tut.completed,
   true,
-  `Все 8 шагов интерактивного обучения успешно пройдены на карте 5×5 км (остановилось на шаге ${tut.stepIndex}: ${remStep ? remStep.id + ' -> ' + JSON.stringify(remStep.progress()) : 'none'})`,
+  `Все 10 шагов интерактивного обучения успешно пройдены на карте 5×5 км (остановилось на шаге ${tut.stepIndex}: ${remStep ? remStep.id + ' -> ' + JSON.stringify(remStep.progress()) : 'none'})`,
 );
 
 // ============================================================================
@@ -579,3 +594,99 @@ assert.ok(worldView.roadRenderer.bridgePierIM.count > 0, `В руслах рек
 assert.ok(worldView.livingWorld.vehicleIM.count > worldView.livingWorld.cityCars.length, 'По построенным междугородним дорогам и мостам поехал автотранспорт!');
 
 console.log('✅ ВСЕ ТЕСТЫ v0.3.2 (ВОДА В РЕКАХ + 3D-ВОЛНЫ, РЕАЛЬНАЯ СТРОЙКА ГОРОДОВ, ТРАССЫ И МОСТЫ МЕЖДУ ГОРОДАМИ) ПРОЙДЕНЫ!');
+
+// ============================================================================
+//  8. ПРОВЕРКА v0.4.0: 3D-ИСТОКИ РЕК, ОТСУТСТВИЕ БЕЛОГО ОВАЛА И ЗАСТОЯ, ТОНКАЯ СТРОЙКА, БСУ/НАСОСНАЯ/ВЭС И ФИЗИКА ВЕТРА/КЛИМАТА!
+// ============================================================================
+console.log('8. Проверка v0.4.0: 3D-истоки рек, анти-застой, удаление белого овала, тонкая стройка, БСУ/Насосная/ВЭС и физика ветра...');
+applyMapScale('km5');
+hydro.resetValley('bystritsa');
+eco.resetEconomy();
+worldView.rebuildForNewValley();
+
+// 8a. Белый вращающийся овал у берега полностью убран, и на естественных берегах рек НЕТ ложных overflowEdges!
+assert.equal(worldView.plungeRollerIM, undefined, 'Вращающийся белый цилиндр-овал plungeRollerIM полностью удалён');
+for (let step = 0; step < 30; step++) {
+  hydro.step(1 / 25, 6);
+}
+assert.equal(hydro.overflowEdges.length, 0, 'На естественных берегах рек (без плотин) нет ложных срабатываний перелива');
+
+// 8b. Все 3 реки имеют живые 3D-истоки (ледниковые гроты и скальные ключи), откуда реально течёт вода!
+assert.equal(hydro.headwaterSources.length, 3, 'Инициализированы все 3 природных истока рек');
+assert.equal(worldView.headwatersGroup.children.length, 3, 'В 3D-сцене построены 3 ледниковых грота и водопада истоков');
+for (const src of hydro.headwaterSources) {
+  const sp = hydro.sampleAtWorld(src.outX, src.outZ);
+  assert.ok(sp.depth > 0.15 && sp.speed > 0.12, `Из истока «${src.name}» активно идёт живой поток (H=${sp.depth.toFixed(2)} м, V=${sp.speed.toFixed(2)} м/с)`);
+}
+
+// 8c. Вода не застаивается: естественный сток уходит в море, а мелкая лужа на склоне быстро дренируется!
+assert.ok(hydro.lastMouthOutflowQ > 10, `Реки свободно дренируются в открытое море без застоя (сток в море ${hydro.lastMouthOutflowQ.toFixed(1)} м³/с)`);
+const testPuddleG = hydro.worldToGrid(110 * WORLD.horizScale, 35 * WORLD.horizScale);
+const puddleIdx = testPuddleG.gz * hydro.grid + testPuddleG.gx;
+const beforePuddleH = hydro.h[puddleIdx];
+hydro.h[puddleIdx] = beforePuddleH + 0.18;
+for (let step = 0; step < 45; step++) {
+  hydro.step(1 / 20, 6);
+}
+assert.ok(hydro.h[puddleIdx] < beforePuddleH + 0.14, 'Мелкая застойная плёнка на рельефе дренируется вниз по уклону и не стоит вечно');
+
+// 8d. Тонкая стройка: 4 калибра кисти, 4 выверенных яруса плотины БЕЗ двойного умножения на elevScale!
+assert.equal(WORLD.brushSizes.length, 4, 'Доступны 4 точных калибра строительной кисти');
+assert.equal(CONSTRUCTION.damHeightTiers.length, 4, 'Доступны 4 точных яруса высоты 3D-плотины');
+assert.ok(
+  CONSTRUCTION.damHeightTiers[0].addHeight > 5 && CONSTRUCTION.damHeightTiers[0].addHeight < 10,
+  `Младший ярус плотины на 5×5 км составляет аккуратные ~7 м (${CONSTRUCTION.damHeightTiers[0].addHeight.toFixed(1)} м), без двойного умножения elevScale`,
+);
+assert.ok(
+  CONSTRUCTION.damHeightTiers[3].addHeight > 32 && CONSTRUCTION.damHeightTiers[3].addHeight < 44,
+  `Старший ярус плотины на 5×5 км выверен (~38 м: ${CONSTRUCTION.damHeightTiers[3].addHeight.toFixed(1)} м)`,
+);
+
+// 8e. Новые строительные и инженерные сооружения: [B] Бетонозавод БСУ, [G] Насосная станция, [N] Метео-ВЭС!
+const hs5 = WORLD.horizScale;
+const plantRes = hydro.placeConcretePlant(54 * hs5, -148 * hs5, 0, 1e9, false);
+assert.equal(plantRes.ok, true, '[B] Бетонный завод БСУ построен на сухом берегу у створа');
+assert.equal(hydro.concretePlants.length, 1, 'Бетонный завод зарегистрирован в симуляции');
+
+// Проверяем скидку 22% и ускорение бетонирования плотины от БСУ
+const damResWithPlant = hydro.buildConcreteDam(12 * hs5, -158 * hs5, WORLD.brushSizes[0], 30 * WORLD.elevScale, 1e9, false, false);
+assert.ok(damResWithPlant.addedM3 > 0, 'Тонкая кисть заливает аккуратную секцию 3D-плотины в инженерном режиме');
+
+// Насосная станция [G] рядом с водой и у кольца Агродолины
+const agroDef = CITY_DEFS.find((c) => c.id === 'agro');
+const agroG = hydro.worldToGrid(agroDef.irrigationTarget.x - 16 * hs5, agroDef.irrigationTarget.z);
+hydro.h[agroG.gz * hydro.grid + agroG.gx] = Math.max(hydro.h[agroG.gz * hydro.grid + agroG.gx], 0.9);
+const pumpRes = hydro.placePumpStation(agroDef.irrigationTarget.x - 16 * hs5, agroDef.irrigationTarget.z, 0, 1e9, false);
+assert.equal(pumpRes.ok, true, '[G] Береговая насосная станция успешно построена у воды');
+
+// Метео-ВЭС [N] на возвышенном сухом холме
+const windRes = hydro.placeWindMeteoStation(-140 * hs5, -90 * hs5, 1e9, false);
+assert.equal(windRes.ok, true, '[N] Метео-ветрокомплекс ВЭС успешно построен на сухом склоне');
+
+// 8f. Тонкая физика ветра, микроклимата, брызг истоков и анимаций 3D-зданий!
+const spraySys = new SprayAndRainSystem(scene, 600);
+for (let step = 0; step < 30; step++) {
+  hydro.step(1 / 20, 6);
+  eco.update(0.25);
+  spraySys.update(0.05, hydro, new THREE.Vector3(12 * hs5, 25, -158 * hs5), 0.9, 0.4);
+}
+worldView.syncHydroStructures(hydro.simTime);
+worldView.updateWaterAndWetness(hydro.simTime);
+worldView.updateAtmosphere(14.0, WEATHER_MODES.normal, new THREE.Vector3(0, 20, 0), 0.1);
+
+assert.ok(hydro.windSpeedMs > 1.0 && hydro.windGustMs >= hydro.windSpeedMs, `Живой вектор ветра и порывы рассчитываются (${hydro.windSpeedMs.toFixed(2)} / ${hydro.windGustMs.toFixed(2)} м/с)`);
+const dirNorm = Math.hypot(hydro.windDirX, hydro.windDirZ);
+assert.ok(Math.abs(dirNorm - 1.0) < 0.02, `Единичный вектор направления ветра нормирован (${dirNorm.toFixed(4)})`);
+assert.ok(hydro.totalWindPowerMW > 0.05, `Метео-ВЭС вырабатывает электроэнергию от живого ветра (${hydro.totalWindPowerMW.toFixed(2)} МВт)`);
+assert.equal(eco.agroIrrigated, true, 'Насосная станция [G] обеспечила напорное орошение Агродолины');
+
+const wb8 = eco.getSummary().waterReport;
+assert.ok(wb8.pressureHPa > 970 && wb8.pressureHPa < 1045, `Барометрическое давление рассчитывается физично (${wb8.pressureHPa} гПа)`);
+assert.ok(wb8.waterTempC > 2 && wb8.waterTempC < 28, `Термический баланс воды активен (Tводы = +${wb8.waterTempC}°C)`);
+assert.ok(typeof wb8.windCompass === 'string' && wb8.windCompass.length >= 1, `Румб ветра определён (${wb8.windCompass})`);
+
+assert.ok(worldView.structMeshes.has(`cp_${plantRes.structure.id}`), '3D-модель Бетонного завода БСУ создана и анимируется');
+assert.ok(worldView.structMeshes.has(`ps_${pumpRes.structure.id}`), '3D-модель Береговой насосной станции создана и анимируется');
+assert.ok(worldView.structMeshes.has(`wm_${windRes.structure.id}`), '3D-модель Метео-ВЭС создана и вращает ротор по ветру');
+
+console.log('✅ ВСЕ ТЕСТЫ v0.4.0 (3D-ИСТОКИ РЕК, АНТИ-ЗАСТОЙ, УДАЛЕНИЕ БЕЛОГО ОВАЛА, ТОНКАЯ СТРОЙКА, 48 ЗДАНИЙ + БСУ/НАСОСНАЯ/ВЭС, 480 ТЕКСТУР, ФИЗИКА ВЕТРА И КЛИМАТА, ОБУЧЕНИЕ 10 ШАГОВ) ПРОЙДЕНЫ!');

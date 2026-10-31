@@ -248,7 +248,7 @@ export function createValleyTerrainMaterial(detailTex, concreteMap = null) {
   });
 }
 
-/** 2. Улучшенный шейдер живой воды (6-гармониковая рябь + зыбь водохранилища + каустика Вороного + Френель Шлика) */
+/** 2. Улучшенный шейдер живой воды (ветровые волны Герстнера по азимуту ветра + речные струи + каустика + Френель) */
 export function createRealisticWaterMaterial(detailTex) {
   const uniforms = {
     uTime: { value: 0 },
@@ -261,6 +261,7 @@ export function createRealisticWaterMaterial(detailTex) {
     uHorizScale: { value: 6.51 },
     uElevScale: { value: 2.35 },
     uMapHalf: { value: 2500.0 },
+    uWindVec: { value: new THREE.Vector3(0.75, 4.8, 0.66) }, // x=windDirX, y=windSpeedMs, z=windDirZ
     uDetailTex: { value: detailTex },
   };
 
@@ -273,6 +274,7 @@ export function createRealisticWaterMaterial(detailTex) {
       uniform float uTime;
       uniform float uHorizScale;
       uniform float uElevScale;
+      uniform vec3 uWindVec;
 
       attribute vec4 aHydro1;
       attribute vec4 aHydro2;
@@ -293,36 +295,41 @@ export function createRealisticWaterMaterial(detailTex) {
         float speed = length(vel);
         float vort = aHydro2.y;
 
-        // 3D-геометрическое движение волн Герстнера + стоячие буруны горных перекатов (с мягким демпфированием у кромки берега!)
+        // 3D-геометрическое движение волн Герстнера с реальным направлением и силой ветра uWindVec!
         float optDepth = depth / max(1.0, pow(uElevScale, 0.58));
         float shoreDamp = smoothstep(0.05, 0.55, optDepth) * step(0.05, aHydro2.w);
         float wScale = 1.0 / max(1.0, pow(uHorizScale, 0.56));
 
-        vec2 p = worldPos.xz * wScale;
-        float w1 = sin(dot(p, vec2(0.115, 0.082)) - uTime * 2.05);
-        float w2 = sin(dot(p, vec2(-0.086, 0.128)) - uTime * 1.62 + 1.4);
+        vec2 windDir = normalize(length(uWindVec.xz) > 0.01 ? uWindVec.xz : vec2(0.75, 0.66));
+        vec2 windOrtho = vec2(-windDir.y, windDir.x);
+        float windSpd = clamp(uWindVec.y, 0.5, 16.0);
+        float windFactor = clamp(windSpd / 5.5, 0.35, 2.35);
 
-        vec2 flowDir = speed > 0.03 ? (vel / speed) : vec2(0.0, 1.0);
+        vec2 p = worldPos.xz * wScale;
+        float w1 = sin(dot(p, windDir * 0.145 + windOrtho * 0.032) - uTime * (1.55 + windSpd * 0.16));
+        float w2 = sin(dot(p, windDir * 0.095 - windOrtho * 0.088) - uTime * (1.28 + windSpd * 0.11) + 1.4);
+
+        vec2 flowDir = speed > 0.03 ? (vel / speed) : windDir;
         vec2 crossDir = vec2(-flowDir.y, flowDir.x);
         float along = dot(p, flowDir);
         float across = dot(p, crossDir);
         float riffle = sin(along * 0.29 - uTime * (2.9 + min(speed, 12.0) * 0.52))
                      * cos(across * 0.21 + uTime * 1.15 + vort * 0.35);
 
-        float waveAmp = (0.045 + clamp(speed * 0.022, 0.0, 0.20)) * pow(uElevScale, 0.55) * shoreDamp;
-        float dy = (w1 * 0.42 + w2 * 0.33 + riffle * (0.25 + clamp(speed * 0.08, 0.0, 0.55))) * waveAmp;
+        float waveAmp = (0.038 * windFactor + clamp(speed * 0.022, 0.0, 0.20)) * pow(uElevScale, 0.55) * shoreDamp;
+        float dy = (w1 * 0.44 + w2 * 0.31 + riffle * (0.25 + clamp(speed * 0.08, 0.0, 0.55))) * waveAmp;
 
         worldPos.y += dy;
-        worldPos.xz += flowDir * (riffle * waveAmp * 0.22);
+        worldPos.xz += flowDir * (riffle * waveAmp * 0.20) + windDir * (w1 * waveAmp * 0.14);
 
-        vWaveCrest = clamp((w1 * 0.4 + w2 * 0.35 + riffle * 0.5) * 0.5 + 0.5, 0.0, 1.0) * shoreDamp;
+        vWaveCrest = clamp((w1 * 0.42 + w2 * 0.34 + riffle * 0.48) * 0.5 + 0.5, 0.0, 1.0) * shoreDamp;
         vWorldPos = worldPos.xyz;
 
         vec3 baseMacroN = normalize(mat3(modelMatrix) * normal);
         vec3 waveTilt = vec3(
-          -(w1 * 0.032 - w2 * 0.024 + riffle * flowDir.x * 0.045) * shoreDamp,
+          -(w1 * windDir.x * 0.036 + w2 * windOrtho.x * 0.022 + riffle * flowDir.x * 0.045) * shoreDamp,
           0.0,
-          -(w1 * 0.024 + w2 * 0.032 + riffle * flowDir.y * 0.045) * shoreDamp
+          -(w1 * windDir.y * 0.036 + w2 * windOrtho.y * 0.022 + riffle * flowDir.y * 0.045) * shoreDamp
         );
         vMacroNormal = normalize(baseMacroN + waveTilt);
         gl_Position = projectionMatrix * viewMatrix * worldPos;
@@ -339,6 +346,7 @@ export function createRealisticWaterMaterial(detailTex) {
       uniform float uHorizScale;
       uniform float uElevScale;
       uniform float uMapHalf;
+      uniform vec3 uWindVec;
       uniform sampler2D uDetailTex;
 
       varying vec3 vWorldPos;
@@ -388,9 +396,11 @@ export function createRealisticWaterMaterial(detailTex) {
         float p1 = fract(uTime / cycle + 0.5);
         float blend = abs(2.0 * p0 - 1.0);
 
-        vec2 swellUv = vWorldPos.xz * (0.026 * uvScale) + vec2(uTime * 0.016, -uTime * 0.012);
+        vec2 windDirF = normalize(length(uWindVec.xz) > 0.01 ? uWindVec.xz : vec2(0.75, 0.66));
+        float windSpdF = clamp(uWindVec.y, 0.5, 16.0);
+        vec2 swellUv = vWorldPos.xz * (0.026 * uvScale) - windDirF * (uTime * (0.012 + windSpdF * 0.0022));
         vec4 swellSample = texture2D(uDetailTex, swellUv);
-        vec2 crossSwellUv = vWorldPos.xz * (0.041 * uvScale) + vec2(-uTime * 0.013, uTime * 0.019);
+        vec2 crossSwellUv = vWorldPos.xz * (0.041 * uvScale) + vec2(-windDirF.y, windDirF.x) * (uTime * 0.014);
         vec4 crossSwell = texture2D(uDetailTex, crossSwellUv);
 
         // Вихревое закручивание Кармана вокруг устоев, камней и поворотов русла
@@ -661,30 +671,34 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
         float NdotL = max(0.0, dot(N, uSunDir));
         vec3 baseAlbedo = vColor;
 
-        // Выборка тайла из 8×8 Мега-атласа фасадов по индексу стиля здания (64 фактуры!)
+        // Выборка тайла из 8×8 Мега-атласа фасадов 1024×1024 по индексу стиля здания (64 фактуры!)
         if (uHasAtlas > 0.5 && N.y <= 0.55) {
           float tileIdx = mod(floor(vStyleId + 0.5), 64.0);
           vec2 tileOrigin = vec2(mod(tileIdx, 8.0), floor(tileIdx / 8.0)) / 8.0;
           float uWall = abs(N.x) > 0.5 ? vWorldPos.z : vWorldPos.x;
-          vec2 localTileUv = fract(vec2(uWall * 0.14, vWorldPos.y * 0.14)) * (0.84 / 8.0) + (0.08 / 8.0);
+          vec2 localTileUv = fract(vec2(uWall * 0.135, vWorldPos.y * 0.135)) * (0.86 / 8.0) + (0.07 / 8.0);
           vec3 atlasTex = texture2D(uFacadeAtlas, tileOrigin + localTileUv).rgb;
-          baseAlbedo = mix(baseAlbedo, baseAlbedo * (0.62 + 0.72 * atlasTex), 0.65);
+          baseAlbedo = mix(baseAlbedo, baseAlbedo * (0.54 + 0.86 * atlasTex), 0.74);
         }
 
         if (N.y > 0.55) {
           float roofEdge = max(abs(vLocalPos.x), abs(vLocalPos.z));
           float parapet = smoothstep(0.41, 0.46, roofEdge);
           vec3 roofGrain = uHasRoofTex > 0.5 ? texture2D(uRoofTex, vWorldPos.xz * 0.25).rgb : vec3(0.55);
-          baseAlbedo = mix(roofGrain * mix(vec3(0.68), vColor, 0.42), vColor * 0.88, parapet);
+          // Эко-квартал с зелёными террасами на кровле (style 42)
+          vec3 roofTone = abs(vStyleId - 42.0) < 0.4
+            ? vec3(0.28, 0.52, 0.34)
+            : mix(vec3(0.66), vColor, 0.44);
+          baseAlbedo = mix(roofGrain * roofTone, vColor * 0.88, parapet);
         } else {
           float plinth = 1.0 - smoothstep(0.05, 0.11, vLocalPos.y);
           float cornice = smoothstep(0.93, 0.96, vLocalPos.y);
           float cornerTrim = smoothstep(0.42, 0.47, max(abs(vLocalPos.x), abs(vLocalPos.z)));
           float floorBand = step(0.91, fract(vWorldPos.y * 0.34));
-          baseAlbedo *= (1.0 - plinth * 0.24 - floorBand * 0.08 + cornice * 0.12 + cornerTrim * 0.08);
+          baseAlbedo *= (1.0 - plinth * 0.26 - floorBand * 0.09 + cornice * 0.14 + cornerTrim * 0.09);
         }
 
-        vec3 litWall = baseAlbedo * (uSunColor * NdotL * 0.88 + uSkyColor * (0.30 + 0.26 * max(0.0, N.y)));
+        vec3 litWall = baseAlbedo * (uSunColor * NdotL * 0.90 + uSkyColor * (0.30 + 0.26 * max(0.0, N.y)));
 
         // Реальная поэтапная стройка здания (vBuildProg < 0.96): монолитный каркас этажей и защитная сетка наверху!
         float cladLine = vBuildProg < 0.96 ? clamp((vBuildProg - 0.08) / 0.86, 0.08, 1.02) : 2.0;
@@ -698,36 +712,42 @@ export function createCityFacadeMaterial(roofTex = null, facadeAtlas = null) {
           litWall = rawConc * (uSunColor * NdotL * 0.85 + uSkyColor * 0.34);
         }
 
-        // Детализированные окна с переплётами (только на уже остеклённых этажах, кроме глухих силосов/градирен 13, 19)
-        bool hasWindows = !isRawFrame && abs(vStyleId - 13.0) > 0.4 && abs(vStyleId - 19.0) > 0.4;
+        // Детализированные окна с переплётами, подоконниками и солнечным бликом (кроме силосов БСУ/АБЗ/градирен 13, 19, 32, 36)
+        bool isSilo = abs(vStyleId - 13.0) < 0.4 || abs(vStyleId - 19.0) < 0.4 || abs(vStyleId - 32.0) < 0.4 || abs(vStyleId - 36.0) < 0.4;
+        bool hasWindows = !isRawFrame && !isSilo;
         if (hasWindows && abs(N.y) < 0.45) {
           float uCoord = abs(N.x) > 0.5 ? vWorldPos.z : vWorldPos.x;
           vec2 winGrid = vec2(uCoord * 0.52, vWorldPos.y * 0.34);
           vec2 cell = floor(winGrid);
           vec2 f = fract(winGrid);
 
-          float inWin = step(0.18, f.x) * step(f.x, 0.82) * step(0.22, f.y) * step(f.y, 0.80);
+          float inWin = step(0.17, f.x) * step(f.x, 0.83) * step(0.21, f.y) * step(f.y, 0.81);
           inWin *= step(0.09, vLocalPos.y) * step(vLocalPos.y, 0.93);
           inWin *= (1.0 - smoothstep(0.43, 0.47, max(abs(vLocalPos.x), abs(vLocalPos.z))));
 
           if (inWin > 0.5) {
-            float frame = 1.0 - (step(0.23, f.x) * step(f.x, 0.77) * step(0.27, f.y) * step(f.y, 0.75));
-            float mullion = 1.0 - smoothstep(0.0, 0.035, abs(f.x - 0.5));
-            float frameMask = clamp(frame + mullion * 0.65, 0.0, 1.0);
+            float frame = 1.0 - (step(0.22, f.x) * step(f.x, 0.78) * step(0.26, f.y) * step(f.y, 0.76));
+            float mullion = 1.0 - smoothstep(0.0, 0.032, abs(f.x - 0.5));
+            float sillShadow = 1.0 - smoothstep(0.70, 0.77, f.y);
+            float frameMask = clamp(frame + mullion * 0.62, 0.0, 1.0);
+
+            vec3 Vw = normalize(cameraPosition - vWorldPos);
+            vec3 Hw = normalize(uSunDir + Vw);
+            float glassSpec = pow(max(0.0, dot(N, Hw)), 42.0) * (1.0 - uNightFactor);
 
             float rnd = hash21(cell + vStyleId * 3.1);
             float tintRnd = hash21(cell + 19.7);
-            vec3 dayGlass = mix(vec3(0.13, 0.24, 0.36), uSkyColor * 0.94, 0.40 + f.y * 0.28);
+            vec3 dayGlass = mix(vec3(0.11, 0.22, 0.35), uSkyColor * 0.98, 0.38 + f.y * 0.32) * (0.86 + 0.14 * sillShadow)
+                          + uSunColor * glassSpec * 0.48;
 
             float readyLight = vBuildProg >= 0.95 ? 1.0 : 0.0;
             float onProb = vPowered > 0.5 ? 0.78 : 0.06;
             float windowLit = step(1.0 - onProb, rnd) * uNightFactor * readyLight;
-            // Для ЦОД ИИ (style 20,21) — бирюзовые серверные стойки, для остальных — тёплые лампы!
             vec3 nightHue = (abs(vStyleId - 20.0) < 1.2)
               ? vec3(0.25, 0.92, 1.0)
               : mix(vec3(1.0, 0.81, 0.44), vec3(0.72, 0.91, 1.0), step(0.76, tintRnd));
-            vec3 paneCol = mix(dayGlass, nightHue * (vPowered > 0.5 ? 1.40 : 0.42), windowLit);
-            litWall = mix(paneCol, vec3(0.16, 0.19, 0.23), frameMask * 0.75);
+            vec3 paneCol = mix(dayGlass, nightHue * (vPowered > 0.5 ? 1.42 : 0.42), windowLit);
+            litWall = mix(paneCol, vec3(0.15, 0.18, 0.22), frameMask * 0.78);
           }
         }
 
