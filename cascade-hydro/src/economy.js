@@ -118,34 +118,60 @@ export class EconomyAndCities {
       const def = CITY_DEFS[cIdx];
       const rng = makeRng(1000 + cIdx * 777);
 
-      const lots = [];
-      for (let ring = 1; ring <= 6; ring++) {
-        const countInRing = ring * 6 + 4;
-        const baseR = (8.5 + (ring - 1) * 8.4) * lotScale;
-        for (let k = 0; k < countInRing; k++) {
-          if (lots.length >= 78) break;
-          const ang = (k / countInRing) * Math.PI * 2 + ring * 0.43 + (rng() - 0.5) * 0.16;
-          const r = baseR + (rng() - 0.5) * 2.2 * lotScale;
-          if (r > def.plateauRadius * 0.92) continue;
-          const lx = def.x + Math.cos(ang) * r;
-          const lz = def.z + Math.sin(ang) * r;
-          if (Math.abs(lx) > WORLD.half * 0.94 || Math.abs(lz) > WORLD.half * 0.94) continue;
-          const sample = this.hydro.sampleAtWorld(lx, lz);
-          if (sample.depth > 0.25) continue;
-          lots.push({
-            wx: lx,
-            wz: lz,
-            wy: sample.bed,
-            yaw: Math.round((ang + Math.PI * 0.5) / (Math.PI * 0.5)) * (Math.PI * 0.5) + (rng() - 0.5) * 0.12,
-            ring,
-            occupied: false,
-            buildingIndex: -1,
-          });
+      // Ортогональная квартальная планировка города: улицы идут строго по линиям (±0.5, ±1.5, ±2.5) * streetStep,
+      // а здания располагаются СТРОГО внутри кварталов и смотрят фасадами на улицы (0 пересечений с дорогами!).
+      const streetStep = def.plateauRadius * 0.25;
+      const candidateLots = [];
+      for (let bx = -2; bx <= 2; bx++) {
+        for (let bz = -2; bz <= 2; bz++) {
+          const blockCx = def.x + bx * streetStep;
+          const blockCz = def.z + bz * streetStep;
+          const distCenter = Math.hypot(bx, bz);
+          if (distCenter > 2.65) continue;
+
+          // Центральный квартал (0,0): парадная ратуша/доминанта в центре сквера + 3 угловых корпуса
+          const subOffsets = (bx === 0 && bz === 0)
+            ? [[0, 0, 0], [-0.26, 0.26, 0], [0.26, 0.26, Math.PI * 0.5], [0.26, -0.26, Math.PI]]
+            : [
+                [-0.24, -0.24, Math.PI],
+                [ 0.24, -0.24, Math.PI * 0.5],
+                [-0.24,  0.24, -Math.PI * 0.5],
+                [ 0.24,  0.24, 0],
+              ];
+
+          for (let sIdx = 0; sIdx < subOffsets.length; sIdx++) {
+            const [ox, oz, baseYaw] = subOffsets[sIdx];
+            const jitterX = (bx === 0 && bz === 0 && sIdx === 0) ? 0 : (rng() - 0.5) * 0.04 * streetStep;
+            const jitterZ = (bx === 0 && bz === 0 && sIdx === 0) ? 0 : (rng() - 0.5) * 0.04 * streetStep;
+            const lx = blockCx + ox * streetStep + jitterX;
+            const lz = blockCz + oz * streetStep + jitterZ;
+            const rFromCity = Math.hypot(lx - def.x, lz - def.z);
+            if (rFromCity > def.plateauRadius * 0.88) continue;
+            if (Math.abs(lx) > WORLD.half * 0.94 || Math.abs(lz) > WORLD.half * 0.94) continue;
+            const sample = this.hydro.sampleAtWorld(lx, lz);
+            if (sample.depth > 0.22) continue;
+
+            const ring = Math.max(1, Math.min(6, Math.floor(distCenter * 1.65) + 1));
+            candidateLots.push({
+              wx: lx,
+              wz: lz,
+              wy: sample.bed,
+              yaw: baseYaw,
+              ring,
+              distSort: rFromCity + rng() * 0.08 * streetStep,
+              occupied: false,
+              buildingIndex: -1,
+            });
+          }
         }
       }
 
+      candidateLots.sort((a, b) => a.distSort - b.distSort);
+      const lots = candidateLots.slice(0, 78);
+
       const city = {
         ...def,
+        streetStep,
         connected: !!def.connectedAtStart,
         population: def.startPop,
         level: 1,
@@ -167,9 +193,9 @@ export class EconomyAndCities {
       };
       initCityLogicState(city);
 
-      // Стартовое историческое ядро (5–7 готовых зданий) + сразу 2 активные стройплощадки с кранами и лесами!
-      const starterFinished = def.archetype === 'metropolis' ? 7
-        : (def.archetype === 'industrial' || def.archetype === 'smelter' ? 6 : 5);
+      // Полноценная стартовая застройка каждого города (12–16 выразительных зданий в кварталах) + 2 активные стройки с кранами!
+      const starterFinished = def.archetype === 'metropolis' ? 16
+        : (def.archetype === 'industrial' || def.archetype === 'smelter' || def.archetype === 'datacenter' || def.archetype === 'port' ? 14 : 12);
       for (let b = 0; b < starterFinished && b < lots.length; b++) {
         this._spawnBuildingInCity(city, lots[b], 1.0, rng);
       }
@@ -198,15 +224,26 @@ export class EconomyAndCities {
   _spawnBuildingInCity(city, lot, initialAnim = 0.05, rng = this._rng) {
     lot.occupied = true;
     const arch = this._chooseBuildingArchetype(city, lot.ring, rng);
-    const bScale = Math.pow(WORLD.horizScale, 0.56);
-    const hScale = Math.pow(WORLD.elevScale, 0.68);
+    const bScale = Math.pow(WORLD.horizScale, 0.74) * 1.16;
+    const hScale = Math.pow(WORLD.elevScale, 0.86) * 1.22;
 
-    const sx = (arch.w * (0.86 + rng() * 0.28)) * bScale;
-    const sz = (arch.d * (0.86 + rng() * 0.28)) * bScale;
+    const maxParcelSpan = (city.streetStep || city.plateauRadius * 0.25) * 0.40;
+    const sx = Math.min(maxParcelSpan, (arch.w * (0.90 + rng() * 0.22)) * bScale);
+    const sz = Math.min(maxParcelSpan, (arch.d * (0.90 + rng() * 0.22)) * bScale);
     const sy = (arch.hMin + rng() * (arch.hMax - arch.hMin)) * hScale;
 
     const shade = pickCatalogShade('city_facades', Math.floor(rng() * 1000) + this.allBuildings.length * 7);
-    const roofShade = pickCatalogShade('roofs_metals', Math.floor(rng() * 1000) + this.allBuildings.length * 13);
+    // Выразительная архитектурная палитра кровель (терракотовая черепица, патинированная медь, кобальтовый сланец, охра)
+    const VIVID_ROOFS = [
+      [0.76, 0.29, 0.18], // классическая терракотовая черепица
+      [0.20, 0.54, 0.44], // патинированная медь
+      [0.24, 0.36, 0.56], // благородный синий сланец
+      [0.68, 0.42, 0.20], // тёплая охристо-бронзовая кровля
+      [0.58, 0.22, 0.24], // вишнёвый клинкер
+      [0.28, 0.48, 0.32], // изумрудная фальцевая кровля
+    ];
+    const vr = VIVID_ROOFS[(this.allBuildings.length + Math.floor(rng() * 6)) % VIVID_ROOFS.length];
+    const roofShade = { r: vr[0], g: vr[1], b: vr[2] };
 
     const roofType = (arch.shape === 'cyl' || arch.shape === 'cool')
       ? 'silo'

@@ -82,7 +82,9 @@ assert.ok(
 );
 assert.equal(CITY_DEFS.length, 8, '8 саморазвивающихся городов и промзон');
 assert.equal(REVENUE_STREAM_DEFS.length, 12, '12 независимых источников дохода');
-assert.equal(TOOLS.length, 17, '17 инженерных и строительных инструментов');
+assert.equal(TOOLS.length, 13, '13 сфокусированных инструментов с единой постройкой «Целая ГЭС» (без лишних отдельных турбин)');
+assert.equal(TOOLS[1].id, 'build_hpp', 'На главном слоте [2] стоит отдельная постройка «Целая ГЭС»');
+assert.equal(TOOLS.filter((t) => t.id.startsWith('turbine_')).length, 0, 'Из панели убраны разрозненные отдельные турбины');
 for (const tool of TOOLS) {
   assert.ok(
     !['W', 'A', 'S', 'D', 'Q', 'E'].includes(tool.key),
@@ -752,14 +754,14 @@ assert.ok(
 const demoStarter = hydro.demolishAt(starterHpp.wx, starterHpp.wz);
 assert.equal(demoStarter.refund, 0, 'Снос бесплатной стартовой ГЭС не даёт халявных денег (refund = 0 ₽)');
 
-// 9c. Установка новой Готовой ГЭС в 1 клик прямо на естественном створе реки без предварительной постройки плотины!
-const oneClickRes = hydro.placeTurbine('kaplan', 12 * hs9, -158 * hs9, null, 1e9, false);
-assert.equal(oneClickRes.ok, true, 'Готовая ГЭС Каплан возводится в 1 клик прямо на речном створе');
-assert.equal(oneClickRes.structure.isTurnkeyComplex, true, 'Построенная в 1 клик ГЭС является цельным комплексом с напорным фронтом');
+// 9c. Установка новой Целой ГЭС ('hpp') в 1 клик прямо на естественном створе реки без предварительной постройки плотины!
+const oneClickRes = hydro.placeTurbine('hpp', 12 * hs9, -158 * hs9, null, 1e9, false);
+assert.equal(oneClickRes.ok, true, 'Отдельная постройка «Целая ГЭС» возводится в 1 клик прямо на речном створе');
+assert.equal(oneClickRes.structure.isTurnkeyComplex, true, 'Построенная в 1 клик Целая ГЭС является полным гидроузлом с плотиной, водосбросом и машзалом');
 for (let s = 0; s < 35; s++) {
   hydro.step(1 / 20, 6);
 }
-assert.ok(oneClickRes.structure.powerMW > 0.2, `Готовая ГЭС в 1 клик на реке сразу вырабатывает мощность (${oneClickRes.structure.powerMW.toFixed(2)} МВт)`);
+assert.ok(oneClickRes.structure.powerMW > 0.2, `Целая ГЭС в 1 клик на реке сразу вырабатывает мощность (${oneClickRes.structure.powerMW.toFixed(2)} МВт)`);
 
 // 9d. Проверка 7 составных архитектурных 3D-моделей городских зданий и локальных UV/атрибутов шейдера
 assert.equal(worldView.cityArchPools.length, 7, 'В WorldView созданы все 7 многосоставных архитектурных 3D-пулов зданий');
@@ -813,5 +815,37 @@ assert.ok(
 );
 assert.ok(sciCity.waterScore >= 85, `Обеспеченность города водой выросла до ${sciCity.waterScore}%`);
 
-console.log('✅ ВСЕ ТЕСТЫ v0.5.0 (ГОТОВАЯ ГЭС-1, ЗАПУСК КАНАЛОМ, ГЕОДЕЗИЯ ΔH, ГЭС В 1 КЛИК, 7 3D-МОДЕЛЕЙ ЗДАНИЙ, ЛОГИКА 8 ГОРОДОВ И ВОДОВОДЫ) ПРОЙДЕНЫ!');
+// --- 10. Тесты v0.6.0: отсутствие дорожной разметки под домами, прямоугольные кварталы, Целая ГЭС и cache-busting ---
+assert.equal(TOOLS.find((t) => t.id === 'build_hpp').short, 'Целая ГЭС', 'applyMapScale сохраняет чёткое название «Целая ГЭС» без перезаписи на отдельные турбины');
+assert.equal(worldView.cityDisksGroup.children.length, 8, 'Под каждым городом только компактный центральный сквер без гигантского круга разметки');
+for (let ci = 0; ci < eco.cities.length; ci++) {
+  const c = eco.cities[ci];
+  assert.ok(c.buildingIndices.length >= 14, `Город ${c.name} сразу выглядит насыщенным (${c.buildingIndices.length} зданий в кварталах)`);
+  const diskMesh = worldView.cityDisksGroup.children[ci];
+  assert.equal(diskMesh.geometry.type, 'PlaneGeometry', 'Вместо гигантского круга используется аккуратная прямоугольная центральная площадь');
+  const stStep = c.streetStep;
+  for (const bIdx of c.buildingIndices) {
+    const b = eco.allBuildings[bIdx];
+    const relX = Math.abs(b.wx - c.x) / stStep;
+    const relZ = Math.abs(b.wz - c.z) / stStep;
+    for (const sLine of [0.5, 1.5]) {
+      assert.ok(
+        Math.abs(relX - sLine) > 0.14 && Math.abs(relZ - sLine) > 0.14,
+        `Здание #${bIdx} в г. ${c.name} стоит внутри квартала и не пересекает осевую линию улицы (${relX.toFixed(2)}, ${relZ.toFixed(2)})`,
+      );
+    }
+  }
+}
+
+worldView.updateCursor(12 * hs9, -158 * hs9, WORLD.brushSizes[1], 'build_hpp', null, 15.0, true);
+assert.equal(worldView.hppGhost.visible, true, 'При выборе [2] Целая ГЭС под курсором отображается 3D-голограмма всего комплекса ГЭС');
+
+const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+assert.ok(
+  /bundle\.js\?v=0\.6\.0-\d+/.test(indexHtml) && /style\.css\?v=0\.6\.0-\d+/.test(indexHtml),
+  'В index.html прописаны анти-кэш параметры ?v=0.6.0-... для bundle.js и style.css',
+);
+
+console.log('✅ ВСЕ ТЕСТЫ v0.6.0 (ЦЕЛАЯ ГЭС БЕЗ ЛИШНИХ ТУРБИН, ЧИСТЫЕ ПРЯМОУГОЛЬНЫЕ КВАРТАЛЫ ГОРОДОВ БЕЗ РАЗМЕТКИ ПОД ДОМАМИ, ЯРКИЕ 3D-ЗДАНИЯ И CACHE-BUSTING) ПРОЙДЕНЫ!');
+
 

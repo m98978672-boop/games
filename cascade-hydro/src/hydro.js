@@ -890,8 +890,8 @@ export class HydroSimulation {
    * Геодезическая оценка выбранного места под Готовую ГЭС и деривационный канал:
    * возвращает точки входа канала (ВБ), выхода воды (НБ), расчётный перепад ΔH и потенциал МВт!
    */
-  evaluateHppSite(wx, wz, forcedYaw = null, typeId = 'francis') {
-    const spec = TURBINE_SPECS[typeId] || TURBINE_SPECS.francis;
+  evaluateHppSite(wx, wz, forcedYaw = null, typeId = 'hpp') {
+    const spec = TURBINE_SPECS[typeId] || TURBINE_SPECS.hpp || TURBINE_SPECS.francis;
     const { gx, gz } = this.worldToGrid(wx, wz);
     const dir = this.detectHydraulicDirection(gx, gz, forcedYaw);
     const reach = clamp(Math.round((15.0 * WORLD.horizScale) / this.dx), 3, 5);
@@ -1109,7 +1109,7 @@ export class HydroSimulation {
     // с П-образным приёмным напорным бассейном (аванкамерой под канал), боковыми крыльями и водосливом!
     const isTurnkeyComplex = !(existingDamCrest > baseNat + 1.5);
     const intakeNat = this.bedrock[intakeGz * this.grid + intakeGx] + this.soil[intakeGz * this.grid + intakeGx];
-    const turnkeyWeirAdd = (typeId === 'kaplan' ? 5.4 : (typeId === 'pelton' ? 8.6 : 6.8)) * WORLD.elevScale;
+    const turnkeyWeirAdd = (typeId === 'hpp' ? 7.6 : (typeId === 'kaplan' ? 5.4 : (typeId === 'pelton' ? 8.6 : 6.8))) * WORLD.elevScale;
     const headwallCrest = !isTurnkeyComplex
       ? existingDamCrest
       : Math.max(baseNat, intakeNat) + turnkeyWeirAdd;
@@ -1130,7 +1130,7 @@ export class HydroSimulation {
 
     const orthoX = -dir.dz;
     const orthoZ = dir.dx;
-    const spanS = isTurnkeyComplex ? 2 : 1;
+    const spanS = isTurnkeyComplex ? (typeId === 'hpp' ? 3 : 2) : 1;
 
     for (let s = -spanS; s <= spanS; s++) {
       const cx = clamp(Math.round(gx + orthoX * s), 1, this.grid - 2);
@@ -1138,18 +1138,17 @@ export class HydroSimulation {
       const i = cz * this.grid + cx;
       const nat = this.bedrock[i] + this.soil[i];
       if (!isTurnkeyComplex && nat > headwallCrest + 2.0) continue;
-      // В готовой ГЭС крайнее крыло s === 2 имеет встроенный холостой водослив чуть ниже гребня для защиты от переполнения!
-      const localCrest = (isTurnkeyComplex && s === 2)
-        ? (headwallCrest - 1.15 * WORLD.elevScale)
+      // Встроенный водосливной пролёт на правом крыле Целой ГЭС (защита от перелива при паводке)
+      const localCrest = (isTurnkeyComplex && s >= spanS - 1 && s > 0)
+        ? (headwallCrest - 1.25 * WORLD.elevScale)
         : headwallCrest;
       const cH = Math.max(0.6, localCrest - nat);
       recordAndSetConcrete(i, cH);
     }
 
-    // Для готовой ГЭС «под ключ» возводим боковые направляющие щёки-устои П-образной аванкамеры,
-    // чтобы подведённый игроком деривационный канал не растекался вбок, а шёл прямо в турбины!
+    // Для готовой Целой ГЭС возводим боковые направляющие щёки-устои П-образной аванкамеры под канал ВБ!
     if (isTurnkeyComplex) {
-      for (const side of [-2, 2]) {
+      for (const side of [-spanS, spanS]) {
         for (let upStep = 1; upStep <= 2; upStep++) {
           const wxCell = clamp(Math.round(gx + orthoX * side - dir.dx * upStep), 1, this.grid - 2);
           const wzCell = clamp(Math.round(gz + orthoZ * side - dir.dz * upStep), 1, this.grid - 2);
@@ -1247,23 +1246,17 @@ export class HydroSimulation {
     };
 
     this.turbines.push(turb);
-    this.recomputeZbRange(
-      Math.min(gx, intakeGx, outfallGx) - 2,
-      Math.min(gz, intakeGz, outfallGz) - 2,
-      Math.max(gx, intakeGx, outfallGx) + 2,
-      Math.max(gz, intakeGz, outfallGz) + 2,
-    );
     this._activateArea(
-      Math.min(gx, intakeGx, outfallGx) - 3,
-      Math.min(gz, intakeGz, outfallGz) - 3,
-      Math.max(gx, intakeGx, outfallGx) + 3,
-      Math.max(gz, intakeGz, outfallGz) + 3,
+      Math.min(gx, intakeGx, outfallGx) - 4,
+      Math.min(gz, intakeGz, outfallGz) - 4,
+      Math.max(gx, intakeGx, outfallGx) + 4,
+      Math.max(gz, intakeGz, outfallGx) + 4,
     );
     this.recomputeZbRange(
-      Math.min(gx, intakeGx, outfallGx) - 3,
-      Math.min(gz, intakeGz, outfallGz) - 3,
-      Math.max(gx, intakeGx, outfallGx) + 3,
-      Math.max(gz, intakeGz, outfallGz) + 3,
+      Math.min(gx, intakeGx, outfallGx) - 4,
+      Math.min(gz, intakeGz, outfallGz) - 4,
+      Math.max(gx, intakeGx, outfallGx) + 4,
+      Math.max(gz, intakeGz, outfallGz) + 4,
     );
     this.engineeredDirty = true;
 
@@ -1303,7 +1296,7 @@ export class HydroSimulation {
     }
 
     // 2. Возводим цельный комплекс ГЭС с П-образной аванкамерой и водосливом
-    const res = this.placeTurbine(site.type || 'kaplan', wx, wz, site.yaw, 1e9, true);
+    const res = this.placeTurbine(site.type || 'hpp', wx, wz, site.yaw, 1e9, true);
     if (!res.ok) return null;
     const tb = res.structure;
     tb.isStarterReady = true;

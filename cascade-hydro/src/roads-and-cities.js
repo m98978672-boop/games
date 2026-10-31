@@ -736,31 +736,32 @@ export class RoadAndBridgeRenderer {
     let railIdx = 0;
     const d = this._dummy;
 
-    // 1. Внутригородские кольцевые проспекты и радиальные улицы (растут вместе с кварталами города!)
+    // 1. Прямоугольная квартальная уличная сеть внутри каждого города — СТРОГО между кварталами (0 дорог под домами!)
     for (const c of this.economy.cities) {
-      const ringsCount = clamp(c.builtStreetRings || 1, 1, 6);
-      const centerY = this.hydro.sampleAtWorld(c.x, c.z).bed + 0.22 * es;
-      const ringSegs = 24;
+      const streetStep = c.streetStep || c.plateauRadius * 0.25;
+      const hasOuterGrid = (c.buildingIndices && c.buildingIndices.length >= 18) || (c.level >= 2);
+      const offsets = hasOuterGrid ? [-1.5, -0.5, 0.5, 1.5] : [-0.5, 0.5];
+      const halfSpan = (hasOuterGrid ? 1.88 : 1.16) * streetStep;
+      const segSteps = 8;
 
-      for (let r = 1; r <= ringsCount; r++) {
-        const ringR = (6.2 + (r - 1) * 8.4) * hs;
-        if (ringR > c.plateauRadius * 0.84) break;
+      // Широтные улицы вдоль оси X (нормаль поперечника по Z: nx=0, nz=1)
+      for (const off of offsets) {
+        const szLine = c.z + off * streetStep;
         let arc = 0;
-        for (let s = 0; s < ringSegs; s++) {
-          const a0 = (s / ringSegs) * Math.PI * 2;
-          const a1 = ((s + 1) / ringSegs) * Math.PI * 2;
-          const ax = c.x + Math.cos(a0) * ringR;
-          const az = c.z + Math.sin(a0) * ringR;
-          const bx = c.x + Math.cos(a1) * ringR;
-          const bz = c.z + Math.sin(a1) * ringR;
-          const ay = Math.max(centerY, this.hydro.sampleAtWorld(ax, az).bed + 0.22 * es);
-          const by = Math.max(centerY, this.hydro.sampleAtWorld(bx, bz).bed + 0.22 * es);
-          const segLen = Math.hypot(bx - ax, bz - az);
+        for (let s = 0; s < segSteps; s++) {
+          const ax = c.x + lerp(-halfSpan, halfSpan, s / segSteps);
+          const bx = c.x + lerp(-halfSpan, halfSpan, (s + 1) / segSteps);
+          const sA = this.hydro.sampleAtWorld(ax, szLine);
+          const sB = this.hydro.sampleAtWorld(bx, szLine);
+          if (sA.depth > 0.14 || sB.depth > 0.14) continue;
+          const ay = sA.bed + 0.16 * es;
+          const by = sB.bed + 0.16 * es;
+          const segLen = Math.abs(bx - ax);
           vCursor = this._appendQuad(
             vCursor,
-            ax, ay, az, Math.cos(a0), Math.sin(a0),
-            bx, by, bz, Math.cos(a1), Math.sin(a1),
-            cityHalfW * 0.85,
+            ax, ay, szLine, 0, 1,
+            bx, by, szLine, 0, 1,
+            cityHalfW * 0.88,
             arc / Math.max(1, wScale),
             (arc + segLen) / Math.max(1, wScale),
             3.0,
@@ -769,35 +770,29 @@ export class RoadAndBridgeRenderer {
         }
       }
 
-      // 4 радиальных бульвара внутри застроенных колец города
-      const maxRadialR = Math.min(c.plateauRadius * 0.72, (6.2 + (ringsCount - 0.3) * 8.4) * hs);
-      for (let av = 0; av < 4; av++) {
-        const ang = av * Math.PI * 0.5 + 0.32;
-        const ca = Math.cos(ang);
-        const sa = Math.sin(ang);
-        const nx = -sa;
-        const nz = ca;
-        const rStart = 4.2 * hs;
-        if (maxRadialR <= rStart + 2) continue;
-        const steps = 4;
-        for (let st = 0; st < steps; st++) {
-          const r0 = lerp(rStart, maxRadialR, st / steps);
-          const r1 = lerp(rStart, maxRadialR, (st + 1) / steps);
-          const ax = c.x + ca * r0;
-          const az = c.z + sa * r0;
-          const bx = c.x + ca * r1;
-          const bz = c.z + sa * r1;
-          const ay = Math.max(centerY, this.hydro.sampleAtWorld(ax, az).bed + 0.23 * es);
-          const by = Math.max(centerY, this.hydro.sampleAtWorld(bx, bz).bed + 0.23 * es);
+      // Меридиональные улицы вдоль оси Z (нормаль поперечника по X: nx=1, nz=0)
+      for (const off of offsets) {
+        const sxLine = c.x + off * streetStep;
+        let arc = 0;
+        for (let s = 0; s < segSteps; s++) {
+          const az = c.z + lerp(-halfSpan, halfSpan, s / segSteps);
+          const bz = c.z + lerp(-halfSpan, halfSpan, (s + 1) / segSteps);
+          const sA = this.hydro.sampleAtWorld(sxLine, az);
+          const sB = this.hydro.sampleAtWorld(sxLine, bz);
+          if (sA.depth > 0.14 || sB.depth > 0.14) continue;
+          const ay = sA.bed + 0.17 * es;
+          const by = sB.bed + 0.17 * es;
+          const segLen = Math.abs(bz - az);
           vCursor = this._appendQuad(
             vCursor,
-            ax, ay, az, nx, nz,
-            bx, by, bz, nx, nz,
-            cityHalfW,
-            r0 / Math.max(1, wScale),
-            r1 / Math.max(1, wScale),
+            sxLine, ay, az, 1, 0,
+            sxLine, by, bz, 1, 0,
+            cityHalfW * 0.88,
+            arc / Math.max(1, wScale),
+            (arc + segLen) / Math.max(1, wScale),
             3.0,
           );
+          arc += segLen;
         }
       }
     }

@@ -58,18 +58,18 @@ export class TutorialController {
     return [
       {
         id: 'starter_hpp_inspect',
-        title: 'Готовая ГЭС-1: изучите приёмный ковш',
+        title: 'Готовая Целая ГЭС-1: изучите приёмный ковш',
         toolId: 'inspect',
         reward: 2500,
         target: { x: starter.x, z: starter.z, dist: 126 * zoomScale },
-        body: 'Нажмите <b>«⌖ Показать место»</b>! На перешейке излучины уже возведена <b>Готовая Деривационная ГЭС-1</b> с П-образной аванкамерой (пульсирующее голубое кольцо входа), водоводами и машзалом. Ваша задача — <b>находить перепады высот и подводить к ГЭС воду каналами!</b>',
+        body: 'Нажмите <b>«⌖ Показать место»</b>! На перешейке излучины уже возведена <b>Готовая Целая ГЭС-1</b> с П-образной аванкамерой (пульсирующее голубое кольцо входа), водосбросом, 4 водоводами и машзалом. Ваша задача — <b>искать перепады высот и подводить к ГЭС воду каналами!</b>',
         progress: () => {
           const d = Math.hypot(this.game.camCtrl.target.x - starter.x, this.game.camCtrl.target.z - starter.z);
           if (d < 130 * hs) this.visitedStarterHpp = true;
           return {
             ratio: this.visitedStarterHpp ? 1.0 : 0.25,
             label: this.visitedStarterHpp
-              ? 'Готовая ГЭС-1 и её приёмный ковш осмотрены!'
+              ? 'Целая ГЭС-1 и её приёмный ковш осмотрены!'
               : 'Нажмите «⌖ Показать место», чтобы перелететь к Готовой ГЭС-1',
             done: this.visitedStarterHpp,
           };
@@ -77,11 +77,11 @@ export class TutorialController {
       },
       {
         id: 'canal_to_starter_hpp',
-        title: 'Подведите воду каналом [2] в Готовую ГЭС!',
+        title: 'Подведите воду каналом [3] в Целую ГЭС!',
         toolId: 'canal_dig',
         reward: 5000,
         target: { x: starter.x, z: starter.z - 28 * hs, dist: 142 * zoomScale },
-        body: 'Выберите <b>[2] Прорыть канал</b> (<code>Shift</code> держит ровную отметку дна!) и соедините <b>верхний плёс реки</b> с голубым входом аванкамеры Готовой ГЭС-1, а отводящий ковш — с нижним руслом. Как только вода пойдёт через турбину, ГЭС сразу начнёт давать МВт!',
+        body: 'Выберите <b>[3] Копать канал</b> (<code>Shift</code> держит ровную отметку дна!) и соедините <b>верхний плёс реки</b> с голубым входом аванкамеры Целой ГЭС-1, а отводящий ковш — с нижним руслом. Как только вода пойдёт через ГЭС, она сразу начнёт выдавать МВт!',
         progress: () => {
           const starterT = this.game.hydro.turbines.find((t) => t.isStarterReady) || this.game.hydro.turbines[0];
           const spinning = starterT && (starterT.powerMW > 0.05 || starterT.flowQ > 0.12);
@@ -90,7 +90,7 @@ export class TutorialController {
           return {
             ratio,
             label: spinning
-              ? `Готовая ГЭС запущена водой канала (${starterT.powerMW.toFixed(2)} МВт)!`
+              ? `Целая ГЭС запущена водой канала (${starterT.powerMW.toFixed(2)} МВт)!`
               : `Выемка подводящего канала: ${Math.round(cut)} / 110 м³ (соедините реку с входом ГЭС)`,
             done: !!(spinning || cut >= 120),
           };
@@ -98,11 +98,11 @@ export class TutorialController {
       },
       {
         id: 'canal_lining_speed',
-        title: 'Бетонная облицовка канала [3] и запруда [4]',
+        title: 'Бетонный канал [4] и запруда [5]',
         toolId: 'canal_liner',
         reward: 3500,
         target: { x: starter.x, z: starter.z - 18 * hs, dist: 132 * zoomScale },
-        body: 'Укрепите русло вашего канала инструментом <b>[3] Ж/Б лоток</b> (гладкий бетон <code>n = 0.014</code> разгоняет поток в 2.3 раза и убирает фильтрацию!) либо направьте реку запрудой <b>[4]</b> / плотиной <b>[5]</b>.',
+        body: 'Укрепите русло вашего канала инструментом <b>[4] Ж/Б канал</b> (гладкий бетон <code>n = 0.014</code> разгоняет поток в 2.3 раза и убирает фильтрацию!) либо направьте реку запрудой <b>[5]</b> / плотиной <b>[6]</b>.',
         progress: () => {
           let lined = 0;
           const lm = this.game.hydro.linedMask;
@@ -118,11 +118,11 @@ export class TutorialController {
       },
       {
         id: 'geodesic_site_hunt',
-        title: 'Поиск нового места: Разведка створа ΔH [1]',
+        title: 'Поиск нового места: Разведка перепада ΔH [1]',
         toolId: 'inspect',
         reward: 3500,
         target: { x: prospect.x, z: prospect.z, dist: 136 * zoomScale },
-        body: 'Нажмите <b>«⌖ Показать место»</b> и включите изолинии высот <b>[≡ Высоты]</b> (<code>C</code>). Водите инструментом <b>[1] Разведка створа</b> по порогам и перешейкам: стрелка курсора и пробник покажут <b>перепад высот ΔH (м)</b> и прогноз мощности МВт!',
+        body: 'Нажмите <b>«⌖ Показать место»</b> и включите изолинии высот <b>[≡ Высоты]</b> (<code>C</code>). Водите инструментом <b>[1] Разведка ΔH</b> по порогам и перешейкам: стрелка курсора и пробник покажут <b>перепад высот ΔH (м)</b> и прогноз мощности Целой ГЭС!',
         progress: () => {
           const d = Math.hypot(this.game.camCtrl.target.x - prospect.x, this.game.camCtrl.target.z - prospect.z);
           if (d < 120 * hs) this.visitedProspect = true;
@@ -138,11 +138,11 @@ export class TutorialController {
       },
       {
         id: 'turnkey_hpp_place',
-        title: 'Готовая ГЭС в 1 клик на новом створе [8/9/0]',
-        toolId: 'turbine_kaplan',
+        title: 'Постройка Целой ГЭС в 1 клик [2]!',
+        toolId: 'build_hpp',
         reward: 6500,
         target: { x: prospect.x, z: prospect.z, dist: 124 * zoomScale },
-        body: 'Выберите <b>[8] Готовая ГЭС Каплан</b>, <b>[9] Фрэнсис</b> или <b>[0] ГАЭС</b> и кликните прямо на порог реки или крутой склон под новый канал! Цельный гидроузел со встроенным напорным фронтом, аванкамерой и водосливом встанет в 1 клик.',
+        body: 'Выберите главную кнопку <b>[2] Целая ГЭС</b> и кликните прямо на порог реки или крутой склон под новый канал! Никаких отдельных турбин — полный 3D-комплекс ГЭС (плотина, водосброс, 4 водовода, машзал и ОРУ) встанет в 1 клик.',
         progress: () => {
           const count = this.game.hydro.turbines.length;
           const goalMW = +(0.35 * ps).toFixed(1);
@@ -151,19 +151,19 @@ export class TutorialController {
           return {
             ratio: done ? 1.0 : 0.3,
             label: count >= 2
-              ? `В каскаде работают ${count} готовых гидроузла (${mw.toFixed(1)} МВт)!`
-              : 'Поставьте вторую Готовую ГЭС [8/9/0] на выгодном перепаде высот',
+              ? `В каскаде работают ${count} Целых ГЭС (${mw.toFixed(1)} МВт)!`
+              : 'Поставьте вторую Целую ГЭС [2] на выгодном перепаде высот',
             done,
           };
         },
       },
       {
         id: 'substation_grid',
-        title: 'ОРУ 220 кВ [P] и выдача мощности в города',
+        title: 'ЛЭП в города и ОРУ 220 кВ [7]',
         toolId: 'powerline',
         reward: 5500,
         target: { x: starter.x + 32 * hs, z: starter.z + 18 * hs, dist: 148 * zoomScale },
-        body: 'Выберите <b>[P] ОРУ / ЛЭП</b>: поставьте на сухом берегу у ГЭС <b>подстанцию ОРУ</b> (снижает потери сети с 16% до 3%) и подключите ближайший город — краны начнут возводить выразительные <b>3D-здания 7 архитектурных типов</b>!',
+        body: 'Выберите <b>[7] ЛЭП в город</b>: кликните по городу для подачи энергии от ГЭС, а на сухом берегу у ГЭС поставьте <b>подстанцию ОРУ</b> (снижает потери сети до 3%)!',
         progress: () => {
           const subs = this.game.hydro.substations.length;
           const conn = this.game.economy.cities.filter((c) => c.connected).length;
@@ -177,11 +177,11 @@ export class TutorialController {
       },
       {
         id: 'city_logic_decree',
-        title: 'Система логики городов и Указ мэрии',
+        title: 'Система логики городов: кликните по городу!',
         toolId: 'inspect',
         reward: 4500,
         target: { x: -138 * hs, z: -48 * hs, dist: 145 * zoomScale },
-        body: 'Откройте справа вкладку <b>«Города (8)»</b>! У каждого города есть <b>5 контуров жизни</b> (свет, вода, трассы, баланс жилья/работы, комфорт) и диагностика узкого места. Выберите для любого города указ генплана: <b>«Индустрия»</b> или <b>«Наука и Эко»</b>!',
+        body: 'Кликните прямо по <b>плашке над городом в 3D</b> (или откройте вкладку <b>«Города (8)»</b> справа)! Изучите 5 контуров жизни города и выберите указ мэрии: <b>«Индустрия»</b> или <b>«Наука и Эко»</b>!',
         progress: () => {
           const customDecree = this.game.economy.cities.some((c) => c.focusMode && c.focusMode !== 'balanced');
           const conn = this.game.economy.cities.filter((c) => c.connected).length;
@@ -189,18 +189,18 @@ export class TutorialController {
             ratio: (customDecree || conn >= 3) ? 1.0 : 0.35,
             label: customDecree
               ? 'Генплан города переключён! Город перестраивает кварталы под ваш указ.'
-              : 'Переключите указ развития любого города во вкладке «Города (8)» справа',
+              : 'Кликните по любому городу и переключите указ развития',
             done: customDecree || conn >= 3,
           };
         },
       },
       {
         id: 'municipal_water_canal',
-        title: 'Водовод в город: Канал [2] или Насосная [G]',
+        title: 'Водовод в город: Канал [3] или Водоканал [8]',
         toolId: 'pump_station',
         reward: 6500,
         target: { x: 142 * hs, z: 68 * hs, dist: 145 * zoomScale },
-        body: 'Города платят <b>+7 500 ₽ муниципальной премии</b> и растут на <b>24% быстрее</b>, когда вы подводите к ним свежую воду! Прокопайте водоводный <b>[2] Канал</b> к городу/Агродолине или поставьте у реки <b>[G] Насосную станцию</b>.',
+        body: 'Города платят <b>+7 500 ₽ муниципальной премии</b> и растут на <b>24% быстрее</b>, когда вы подводите к ним свежую воду! Прокопайте <b>[3] Канал</b> к городу/Агродолине или поставьте у реки <b>[8] Водоканал</b>.',
         progress: () => {
           const pumps = this.game.hydro.pumpStations ? this.game.hydro.pumpStations.length : 0;
           const wateredCity = this.game.economy.cities.some((c) => c.canalAqueductConnected);
@@ -210,25 +210,25 @@ export class TutorialController {
             ratio: done ? 1.0 : 0.25,
             label: done
               ? 'Городской водовод подключён! Благополучие жителей растёт.'
-              : 'Подведите канал [2] к городу или постройте [G] Насосную станцию',
+              : 'Подведите канал [3] к городу или постройте [8] Водоканал',
             done,
           };
         },
       },
       {
         id: 'concrete_wind_locks',
-        title: 'Стройиндустрия БСУ [B], ВЭС [N] и Шлюзы [L]',
+        title: 'Стройбаза городов [9], Шлюзы [0] и ВЭС [N]',
         toolId: 'concrete_plant',
         reward: 5000,
         target: { x: starter.x + 28 * hs, z: starter.z + 24 * hs, dist: 138 * zoomScale },
-        body: 'Ускорьте экономику долины: <b>[B] Бетонозавод</b> ускоряет прокладку межгородских трасс и мостов, <b>[N] Метео-ВЭС</b> даёт ветровую энергию на хребтах, а <b>[L] Шлюз</b> и <b>[F] Рыбхоз</b> открывают речной транзит и эко-доходы!',
+        body: 'Ускорьте рост городов и трасс: <b>[9] Стройбаза БСУ</b> вдвое ускоряет строительство городских кварталов и дорог, <b>[0] Шлюз</b> и <b>[F] Рыбхоз</b> развивают речной флот и экологию, а <b>[N] ВЭС</b> даёт энергию ветра!',
         progress: () => {
           const plants = this.game.hydro.concretePlants ? this.game.hydro.concretePlants.length : 0;
           const winds = this.game.hydro.windMeteoStations ? this.game.hydro.windMeteoStations.length : 0;
           const extras = plants + winds + this.game.hydro.navLocks.length + this.game.hydro.fishFarms.length;
           return {
             ratio: extras > 0 ? 1.0 : 0.2,
-            label: extras > 0 ? 'Инфраструктура долины развёрнута!' : 'Постройте [B] Бетонозавод, [N] ВЭС, [L] Шлюз или [F] Рыбхоз',
+            label: extras > 0 ? 'Инфраструктура долины развёрнута!' : 'Постройте [9] Стройбазу, [0] Шлюз, [F] Рыбхоз или [N] ВЭС',
             done: extras > 0,
           };
         },
@@ -236,10 +236,10 @@ export class TutorialController {
       {
         id: 'master_diploma',
         title: 'Диплом Главного Гидроинженера Каскада!',
-        toolId: 'turbine_francis',
+        toolId: 'build_hpp',
         reward: 12000,
         target: { x: 168 * hs, z: 98 * hs, dist: 165 * zoomScale },
-        body: `Финальная цель: выведите суммарную мощность ваших готовых ГЭС, деривационных каналов и ВЭС на <b>${(1.4 * ps).toFixed(0)} МВт</b> ИЛИ обеспечьте водой <b>Агродолину</b>!`,
+        body: `Финальная цель: выведите суммарную мощность ваших Целых ГЭС, каналов и ВЭС на <b>${(1.4 * ps).toFixed(0)} МВт</b> ИЛИ обеспечьте водой <b>Агродолину</b>!`,
         progress: () => {
           const goalMW = 1.4 * ps;
           const mw = this.game.economy.totalMW;
