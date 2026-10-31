@@ -20,7 +20,7 @@
       <div class="drive-column">
         <section class="viewport panel">
           <div class="scene-top"><span id="weather-label">ПЕРЕМЕННАЯ ОБЛАЧНОСТЬ</span><span id="clock-label">08:20</span></div>
-          <canvas id="road" aria-label="Вид дороги из кабины грузовика"></canvas>
+          <canvas id="scene3d" aria-label="Трёхмерный вид дороги и грузовика"></canvas>
           <div class="touch-controls" aria-label="Сенсорное управление"><div class="touch-group"><button data-touch="a" aria-label="Руль влево">◀</button><button data-touch="d" aria-label="Руль вправо">▶</button></div><div class="touch-group pedals"><button data-touch="s" aria-label="Тормоз">ТОРМОЗ</button><button data-touch="w" aria-label="Газ">ГАЗ</button></div></div>
           <div class="scene-bottom"><div><span class="small-label">МАРШРУТ</span><strong id="route-label">Гараж · ожидает рейс</strong></div><div class="next-sign" id="next-sign">ДИСПЕТЧЕРСКАЯ<br><b>ВЫБЕРИ ЗАКАЗ</b></div></div>
           <div class="event-toast" id="event-toast" aria-live="polite"></div>
@@ -71,6 +71,6 @@
       <div id="modal-content"></div>
     </section>
   </div>
-  <script src="game.js"></script>
+  <script type="module" src="game3d.bundle.js"></script>
 </body>
 </html>

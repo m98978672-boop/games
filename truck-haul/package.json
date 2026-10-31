@@ -1,0 +1,1 @@
+{"name":"dalnoboy-3d","private":true,"type":"module","scripts":{"build":"esbuild src/main.js --bundle --minify --format=esm --outfile=game3d.bundle.js"},"dependencies":{"three":"^0.186.0"},"devDependencies":{"esbuild":"^0.25.0"}}
