@@ -1,5 +1,5 @@
 // ============================================================================
-//  ЭКОНОМИКА ГЭС, ЭНЕРГОРЫНОК И САМОРАЗВИВАЮЩИЕСЯ ГОРОДА
+//  ЭКОНОМИКА ГЭС, ПОТЕРИ ОРУ 110 кВ, ЭНЕРГОРЫНОК И 5 САМОРАСТУЩИХ ГОРОДОВ
 //  Работает на фиксированном шаге FixedClock (ядро «Переплёт» 30 Гц)
 // ============================================================================
 
@@ -7,6 +7,7 @@ import { FixedClock } from '../../pereplet-prototype/clock.mjs';
 import {
   WORLD,
   ECONOMY,
+  CONSTRUCTION,
   CITY_DEFS,
   MILESTONES,
   WEATHER_MODES,
@@ -20,22 +21,25 @@ export class EconomyAndCities {
     this.hydro = hydro;
     this.callbacks = callbacks;
 
-    // Фиксированный шаг 1/30 с из ядра «Переплёт» (не теряет накопленное время)
     this.clock = new FixedClock({ step: 1 / 30, maxSteps: 6 });
+    this._rng = makeRng(987654);
 
+    this.resetEconomy();
+  }
+
+  resetEconomy() {
     this.cash = ECONOMY.startingCash;
     this.loan = 0;
     this.creative = false;
 
-    // Время суток: старт в 08:00 утра (утренний пик тарифа — отличный старт!)
     this.day = 1;
     this.hour = 8.0;
     this.weatherId = 'normal';
-    this.weatherTimer = 52;
-    this._rng = makeRng(987654);
+    this.weatherTimer = 54;
 
-    // Сводные показатели энергосистемы
     this.totalMW = 0;
+    this.netDeliveredMW = 0;
+    this.gridLossPct = 0;
     this.connectedDemandMW = 0;
     this.totalCityDemandMW = 0;
     this.suppliedCityMW = 0;
@@ -47,13 +51,12 @@ export class EconomyAndCities {
     this.totalEarned = 0;
     this.totalMWhGenerated = 0;
     this.agroIrrigated = false;
+    this._seepageWarnCooldown = 0;
 
-    // Выполненные гранты
     this.completedMilestones = new Set();
 
-    // Города и их здания
     this.cities = [];
-    this.allBuildings = []; // плоский список для InstancedMesh рендерера
+    this.allBuildings = [];
     this.buildingsDirty = true;
     this.powerLinesDirty = true;
 
@@ -69,15 +72,14 @@ export class EconomyAndCities {
       const def = CITY_DEFS[cIdx];
       const rng = makeRng(1000 + cIdx * 777);
 
-      // Генерируем до 58 строительных участков по квартальной сетке + кольцам
       const lots = [];
       for (let ring = 1; ring <= 5; ring++) {
-        const countInRing = ring * 6 + 2;
-        const baseR = 8.5 + (ring - 1) * 8.6;
+        const countInRing = ring * 6 + 3;
+        const baseR = 9.0 + (ring - 1) * 9.2;
         for (let k = 0; k < countInRing; k++) {
-          if (lots.length >= 58) break;
+          if (lots.length >= 62) break;
           const ang = (k / countInRing) * Math.PI * 2 + ring * 0.43 + (rng() - 0.5) * 0.16;
-          const r = baseR + (rng() - 0.5) * 2.2;
+          const r = baseR + (rng() - 0.5) * 2.4;
           if (r > def.plateauRadius * 0.92) continue;
           const lx = def.x + Math.cos(ang) * r;
           const lz = def.z + Math.sin(ang) * r;
@@ -100,11 +102,11 @@ export class EconomyAndCities {
         population: def.startPop,
         level: 1,
         levelName: 'Посёлок',
-        satisfaction: 0.75,
-        powerRatio: def.connectedAtStart ? 0 : 0,
+        satisfaction: 0.76,
+        powerRatio: 0,
         currentDemandMW: def.baseDemandMW,
         suppliedMW: 0,
-        growthProgress: 0.15,
+        growthProgress: 0.16,
         isFlooded: false,
         irrigated: false,
         lots,
@@ -112,8 +114,7 @@ export class EconomyAndCities {
         blackoutTimer: 0,
       };
 
-      // Стартовая застройка центра города
-      const initialBuildings = cIdx === 3 ? 13 : (cIdx === 2 ? 10 : 8);
+      const initialBuildings = def.archetype === 'metropolis' ? 14 : (def.archetype === 'industrial' ? 11 : 8);
       for (let b = 0; b < initialBuildings && b < lots.length; b++) {
         this._spawnBuildingInCity(city, lots[b], 1.0, rng);
       }
@@ -126,15 +127,9 @@ export class EconomyAndCities {
   }
 
   _chooseBuildingKind(city, ring, tierBoost, rng) {
-    if (city.archetype === 'agro' && ring >= 3 && rng() < 0.52) {
-      return 'greenhouse';
-    }
-    if (city.archetype === 'industrial' && ring >= 2 && rng() < 0.42) {
-      return 'factory';
-    }
-    if (city.archetype === 'metropolis' && ring <= 2 && city.level >= 3 && rng() < 0.65) {
-      return 'skyscraper';
-    }
+    if (city.archetype === 'agro' && ring >= 3 && rng() < 0.52) return 'greenhouse';
+    if (city.archetype === 'industrial' && ring >= 2 && rng() < 0.44) return 'factory';
+    if (city.archetype === 'metropolis' && ring <= 2 && city.level >= 3 && rng() < 0.65) return 'skyscraper';
     const score = (4 - Math.min(3, ring)) + tierBoost + rng() * 1.4;
     if (score >= 4.4) return 'skyscraper';
     if (score >= 2.9) return 'apartment';
@@ -147,31 +142,31 @@ export class EconomyAndCities {
     lot.occupied = true;
     const kind = this._chooseBuildingKind(city, lot.ring, city.level * 0.55, rng);
 
-    let sx = 4.2, sy = 3.6, sz = 4.2;
+    let sx = 4.4, sy = 3.8, sz = 4.4;
     if (kind === 'cottage') {
-      sx = 3.8 + rng() * 1.2;
-      sy = 2.8 + rng() * 1.1;
-      sz = 3.8 + rng() * 1.2;
+      sx = 4.0 + rng() * 1.3;
+      sy = 3.0 + rng() * 1.2;
+      sz = 4.0 + rng() * 1.3;
     } else if (kind === 'townhouse') {
-      sx = 4.8 + rng() * 1.5;
-      sy = 5.4 + rng() * 2.2;
-      sz = 4.4 + rng() * 1.2;
+      sx = 5.0 + rng() * 1.6;
+      sy = 5.6 + rng() * 2.4;
+      sz = 4.6 + rng() * 1.3;
     } else if (kind === 'apartment') {
-      sx = 5.6 + rng() * 1.8;
-      sy = 10.5 + rng() * 6.5;
-      sz = 5.2 + rng() * 1.6;
+      sx = 5.8 + rng() * 2.0;
+      sy = 11.0 + rng() * 7.0;
+      sz = 5.4 + rng() * 1.7;
     } else if (kind === 'factory') {
-      sx = 7.4 + rng() * 2.2;
-      sy = 5.8 + rng() * 2.4;
-      sz = 6.2 + rng() * 2.0;
+      sx = 7.8 + rng() * 2.4;
+      sy = 6.0 + rng() * 2.5;
+      sz = 6.5 + rng() * 2.2;
     } else if (kind === 'greenhouse') {
-      sx = 6.8 + rng() * 2.0;
-      sy = 2.6 + rng() * 0.8;
-      sz = 4.8 + rng() * 1.4;
+      sx = 7.2 + rng() * 2.2;
+      sy = 2.8 + rng() * 0.9;
+      sz = 5.0 + rng() * 1.5;
     } else if (kind === 'skyscraper') {
-      sx = 6.4 + rng() * 1.8;
-      sy = 18.0 + rng() * 13.0;
-      sz = 6.4 + rng() * 1.8;
+      sx = 6.6 + rng() * 2.0;
+      sy = 19.0 + rng() * 14.0;
+      sz = 6.6 + rng() * 2.0;
     }
 
     const sample = this.hydro.sampleAtWorld(lot.wx, lot.wz);
@@ -188,7 +183,7 @@ export class EconomyAndCities {
       sy,
       sz,
       tier: city.level,
-      anim: initialAnim, // 0..1 плавный рост из фундамента
+      anim: initialAnim,
       lit: 1.0,
       tint: rng(),
     };
@@ -219,7 +214,6 @@ export class EconomyAndCities {
     }
   }
 
-  /** Подключение города линией ЛЭП 110 кВ */
   connectCityGrid(cityId) {
     const city = this.cities.find((c) => c.id === cityId);
     if (!city) return { ok: false, reason: 'Город не найден' };
@@ -227,25 +221,28 @@ export class EconomyAndCities {
 
     const cost = this.estimatePowerLineCost(city);
     if (!this.creative && this.cash < cost) {
-      return { ok: false, reason: `Нужно ${cost.toLocaleString('ru-RU')} ₽ на строительство ЛЭП` };
+      return { ok: false, reason: `Нужно ${cost.toLocaleString('ru-RU')} ₽ на строительство ЛЭП 110 кВ` };
     }
     if (!this.creative) this.cash -= cost;
     city.connected = true;
     this.powerLinesDirty = true;
     if (this.callbacks.onNotify) {
-      this.callbacks.onNotify(`⚡ ЛЭП 110 кВ подключена к г. ${city.name}! Спрос сети вырос.`, 'good');
+      this.callbacks.onNotify(`✦ Магистраль ЛЭП 110 кВ подключена к г. ${city.name}!`, 'good');
     }
     return { ok: true, cost, city };
   }
 
   estimatePowerLineCost(city) {
-    // Считаем расстояние от ближайшей турбины или центра створа (10, -110)
-    let bestDist = Math.hypot(city.x - 10, city.z - (-110));
+    let bestDist = Math.hypot(city.x - 12, city.z - (-152));
+    for (const sub of this.hydro.substations) {
+      const d = Math.hypot(city.x - sub.wx, city.z - sub.wz);
+      if (d < bestDist) bestDist = d;
+    }
     for (const t of this.hydro.turbines) {
       const d = Math.hypot(city.x - t.wx, city.z - t.wz);
       if (d < bestDist) bestDist = d;
     }
-    return Math.max(1800, Math.round(bestDist * 14));
+    return Math.max(1900, Math.round(bestDist * 13));
   }
 
   canAfford(amount) {
@@ -296,11 +293,9 @@ export class EconomyAndCities {
     this.hydro.rainRate = w.rainRate;
   }
 
-  /** Продвижение экономики и роста городов через FixedClock («Переплёт») */
   update(dt) {
     this.clock.advance(dt, (step, tick) => this._simulateFixedStep(step, tick));
 
-    // Плавная анимация достройки новых зданий между фиксированными шагами
     let animChanged = false;
     for (let i = 0; i < this.allBuildings.length; i++) {
       const b = this.allBuildings[i];
@@ -313,7 +308,6 @@ export class EconomyAndCities {
   }
 
   _simulateFixedStep(step, tick) {
-    // 1. Суточные часы и смена погоды
     const hoursPerSec = 24.0 / WORLD.dayLengthSec;
     this.hour += step * hoursPerSec;
     if (this.hour >= 24.0) {
@@ -321,9 +315,11 @@ export class EconomyAndCities {
       this.day += 1;
     }
 
+    if (this._seepageWarnCooldown > 0) this._seepageWarnCooldown -= step;
+
     this.weatherTimer -= step;
     if (this.weatherTimer <= 0) {
-      this.weatherTimer = 38 + this._rng() * 32;
+      this.weatherTimer = 40 + this._rng() * 34;
       const cur = WEATHER_MODES[this.weatherId] || WEATHER_MODES.normal;
       const roll = this._rng();
       let acc = 0;
@@ -346,23 +342,19 @@ export class EconomyAndCities {
       }
     }
 
-    // 2. Авто-диспетчеризация турбин по суточному тарифу (если включена на агрегате)
     this.spotMultiplier = spotTariffMultiplier(this.hour);
     for (let i = 0; i < this.hydro.turbines.length; i++) {
       const t = this.hydro.turbines[i];
       if (t.autoDispatch) {
-        // Ночью прижимаем затворы и копим водохранилище, в пик открываем на 100%!
         const targetThrottle = this.spotMultiplier >= 1.5 ? 1.0
-          : (this.spotMultiplier < 0.7 ? 0.32 : 0.72);
+          : (this.spotMultiplier < 0.7 ? 0.32 : 0.74);
         t.throttle += (targetThrottle - t.throttle) * clamp(step * 1.8, 0, 1);
       }
-      // Медленный износ при сильной кавитации
       if (t.cavitation > 0.25) {
         t.condition = Math.max(0.45, t.condition - t.cavitation * 0.0012 * step);
       }
     }
 
-    // 3. Суммарная выработка ГЭС и эксплуатационные расходы
     let genMW = 0;
     let upkeep = 0;
     for (let i = 0; i < this.hydro.turbines.length; i++) {
@@ -370,15 +362,34 @@ export class EconomyAndCities {
       genMW += t.powerMW;
       upkeep += t.spec.upkeepPerSec;
     }
+    upkeep += this.hydro.substations.length * 4;
     this.totalMW = genMW;
     this.totalMWhGenerated += (genMW * step) / 3600;
 
-    // 4. Проверка орошения Агродолины и подтопления городов (раз в 10 тиков = 3 раза/сек)
+    // Учёт потерь в длинных ЛЭП долины 768×768 м: с подстанцией ОРУ 110 кВ потери падают с 16% до 3%!
+    const hasSubstation = this.hydro.substations.length > 0;
+    const lossFraction = hasSubstation
+      ? CONSTRUCTION.gridLossWithSub
+      : (genMW > 3.0 ? CONSTRUCTION.baseGridLossNoSub : 0.06);
+    this.gridLossPct = Math.round(lossFraction * 100);
+    const deliveredMW = genMW * (1.0 - lossFraction);
+    this.netDeliveredMW = deliveredMW;
+
+    // Инженерное предупреждение о фильтрации под высокой нецементированной плотиной
+    if (this.hydro.totalSeepageQ > 2.2 && this._seepageWarnCooldown <= 0) {
+      this._seepageWarnCooldown = 36;
+      if (this.callbacks.onNotify) {
+        this.callbacks.onNotify(
+          '▲ Обнаружена фильтрация воды под подошвой плотины! Укрепите створ инструментом [6] Контрфорс / Цементация.',
+          'warn',
+        );
+      }
+    }
+
     if ((tick % 10) === 0) {
       this._checkHydroCityInteractions();
     }
 
-    // 5. Суточный профиль спроса городов и распределение энергии
     const h = this.hour;
     const demandCurve = (h >= 17 && h < 22.5) ? 1.32
       : ((h >= 6.5 && h < 11) ? 1.14 : (h < 6 ? 0.74 : 1.0));
@@ -395,8 +406,7 @@ export class EconomyAndCities {
     this.totalCityDemandMW = totalDemand;
     this.connectedDemandMW = connectedDemand;
 
-    // Распределяем выработку между подключёнными городами в порядке приоритета (чтобы малые города росли сразу, а не падали все вместе!)
-    let remainingMW = genMW;
+    let remainingMW = deliveredMW;
     let suppliedSum = 0;
     let salesRevenuePerSec = 0;
 
@@ -415,16 +425,14 @@ export class EconomyAndCities {
       c.powerRatio = c.currentDemandMW > 1e-4 ? clamp(giveMW / c.currentDemandMW, 0, 1) : 1;
       suppliedSum += giveMW;
 
-      // Доход от продажи энергии городу с учётом суточного спот-тарифа и бонуса города
       salesRevenuePerSec += c.suppliedMW * ECONOMY.baseRatePerMWSec * this.spotMultiplier * c.tariffBonus;
 
-      // Рост города! При обеспеченности энергией >= 55% и без затопления город активно строит новые кварталы:
       if (c.powerRatio >= 0.55 && !c.isFlooded) {
         c.blackoutTimer = 0;
         c.satisfaction = Math.min(1.0, c.satisfaction + step * 0.05);
 
-        const irrMult = (c.needsIrrigation && c.irrigated) ? 1.75 : 1.0;
-        const speedByPower = 0.35 + 0.95 * c.powerRatio;
+        const irrMult = (c.needsIrrigation && c.irrigated) ? 1.78 : 1.0;
+        const speedByPower = 0.36 + 0.96 * c.powerRatio;
         c.growthProgress += (step / 14.0) * speedByPower * irrMult;
 
         if (c.growthProgress >= 1.0) {
@@ -439,15 +447,13 @@ export class EconomyAndCities {
       }
     }
 
-    // Излишки мощности (или вся генерация при наличии хотя бы одного подключения к сети) экспортируются в межрегиональную сеть
-    const surplusMW = Math.max(0, genMW - suppliedSum);
+    const surplusMW = Math.max(0, deliveredMW - suppliedSum);
     const hasGridLink = this.cities.some((c) => c.connected);
     this.exportedMW = hasGridLink ? surplusMW : 0;
     if (this.exportedMW > 0) {
       salesRevenuePerSec += this.exportedMW * ECONOMY.baseRatePerMWSec * this.spotMultiplier * ECONOMY.overSupplyExportFactor;
     }
 
-    // Доход от водоканала при орошении Агродолины
     if (this.agroIrrigated) {
       salesRevenuePerSec += ECONOMY.irrigationBonusPerSec;
     }
@@ -465,7 +471,6 @@ export class EconomyAndCities {
       this.cash = Math.max(0, this.cash + deltaCash);
     }
 
-    // 6. Проверка государственных грантов и вех раз в 15 тиков
     if ((tick % 15) === 0) {
       this._checkMilestones();
     }
@@ -475,14 +480,13 @@ export class EconomyAndCities {
     for (let i = 0; i < this.cities.length; i++) {
       const c = this.cities[i];
 
-      // Проверяем подтопление центра и кварталов
       let wetLots = 0;
       const checkStep = Math.max(1, Math.floor(c.lots.length / 8));
       let checked = 0;
       for (let k = 0; k < c.lots.length; k += checkStep) {
         const s = this.hydro.sampleAtWorld(c.lots[k].wx, c.lots[k].wz);
         checked++;
-        if (s.depth > 0.42) wetLots++;
+        if (s.depth > 0.44) wetLots++;
       }
       const wasFlooded = c.isFlooded;
       c.isFlooded = checked > 0 && (wetLots / checked) >= 0.25;
@@ -490,11 +494,10 @@ export class EconomyAndCities {
         this.callbacks.onNotify(`! Внимание! Подтоплены улицы г. ${c.name}! Откройте водосброс или насыпьте дамбу!`, 'danger');
       }
 
-      // Проверяем приход воды по оросительному каналу в Агродолину
       if (c.needsIrrigation && c.irrigationTarget) {
         const t = c.irrigationTarget;
         let wetIrr = false;
-        const offsets = [[0, 0], [-10, -6], [10, 6], [-8, 8], [8, -8]];
+        const offsets = [[0, 0], [-12, -8], [12, 8], [-10, 10], [10, -10]];
         for (let o = 0; o < offsets.length; o++) {
           const s = this.hydro.sampleAtWorld(t.x + offsets[o][0], t.z + offsets[o][1]);
           if (s.depth > 0.16) {
@@ -517,12 +520,11 @@ export class EconomyAndCities {
   }
 
   _growCityOneStep(city) {
-    // Сначала ищем свободный участок под новую застройку
     const freeLot = city.lots.find((l) => !l.occupied);
     if (freeLot) {
       const newB = this._spawnBuildingInCity(city, freeLot, 0.05, this._rng);
       const popGain = newB.kind === 'skyscraper' ? 260
-        : (newB.kind === 'apartment' ? 150 : (newB.kind === 'factory' ? 110 : 70));
+        : (newB.kind === 'apartment' ? 150 : (newB.kind === 'factory' ? 115 : 72));
       city.population += popGain;
       const prevLevel = city.level;
       this._recalcCityTier(city);
@@ -535,7 +537,6 @@ export class EconomyAndCities {
       return;
     }
 
-    // Если все участки заняты — реконструируем старое малоэтажное здание в высотку/башню!
     for (let k = 0; k < city.buildingIndices.length; k++) {
       const b = this.allBuildings[city.buildingIndices[k]];
       if (b.kind === 'cottage' || b.kind === 'townhouse') {
@@ -568,6 +569,8 @@ export class EconomyAndCities {
       agroIrrigated: this.agroIrrigated,
       connectedCities: connectedCount,
       totalPopulation: totalPop,
+      reinforcedCells: this.hydro.reinforcedCellCount,
+      substations: this.hydro.substations.length,
     };
 
     for (let i = 0; i < MILESTONES.length; i++) {
@@ -596,6 +599,8 @@ export class EconomyAndCities {
       periodLabel: period.label,
       periodClass: period.cls,
       totalMW: this.totalMW,
+      netDeliveredMW: this.netDeliveredMW,
+      gridLossPct: this.gridLossPct,
       connectedDemandMW: this.connectedDemandMW,
       totalCityDemandMW: this.totalCityDemandMW,
       suppliedCityMW: this.suppliedCityMW,
@@ -605,7 +610,12 @@ export class EconomyAndCities {
       netPerSec: this.netPerSec,
       totalPopulation: totalPop,
       soilStockpileM3: this.hydro.soilStockpileM3,
+      rockStockpileM3: this.hydro.rockStockpileM3,
+      pendingPourM3: this.hydro.pendingPourVolumeM3,
+      maxDamStress: this.hydro.maxDamStress,
+      seepageQ: this.hydro.totalSeepageQ,
       agroIrrigated: this.agroIrrigated,
+      substationsCount: this.hydro.substations.length,
     };
   }
 }
