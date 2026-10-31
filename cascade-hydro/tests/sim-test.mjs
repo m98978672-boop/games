@@ -16,6 +16,11 @@ import {
   STARTER_READY_HPP_SITES,
 } from '../src/config.js';
 import { AQUEDUCT_CONNECT_REWARD, evaluateCityUrbanLogic } from '../src/city-logic.js';
+import {
+  captureBaselineTerrain,
+  serializeCascadeSave,
+  applyCascadeSave,
+} from '../src/save-system.js';
 import { HydroSimulation } from '../src/hydro.js';
 import { EconomyAndCities, REVENUE_STREAM_DEFS } from '../src/economy.js';
 import { buildAllProceduralTextures, TEXTURE_SHADE_CATALOG } from '../src/textures.js';
@@ -842,10 +847,45 @@ assert.equal(worldView.hppGhost.visible, true, 'При выборе [2] Цела
 
 const indexHtml = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 assert.ok(
-  /bundle\.js\?v=0\.6\.0-\d+/.test(indexHtml) && /style\.css\?v=0\.6\.0-\d+/.test(indexHtml),
-  'В index.html прописаны анти-кэш параметры ?v=0.6.0-... для bundle.js и style.css',
+  /bundle\.js\?v=0\.6\.\d+-\d+/.test(indexHtml) && /style\.css\?v=0\.6\.\d+-\d+/.test(indexHtml),
+  'В index.html прописаны анти-кэш параметры ?v=0.6.x-... для bundle.js и style.css',
 );
 
-console.log('✅ ВСЕ ТЕСТЫ v0.6.0 (ЦЕЛАЯ ГЭС БЕЗ ЛИШНИХ ТУРБИН, ЧИСТЫЕ ПРЯМОУГОЛЬНЫЕ КВАРТАЛЫ ГОРОДОВ БЕЗ РАЗМЕТКИ ПОД ДОМАМИ, ЯРКИЕ 3D-ЗДАНИЯ И CACHE-BUSTING) ПРОЙДЕНЫ!');
+// --- 11. Тесты v0.6.1: база инженерных знаний, JSON-данные и сохранение/загрузка прогресса игрока ---
+const kbText = fs.readFileSync(new URL('../KNOWLEDGE_BASE.md', import.meta.url), 'utf8');
+const refData = JSON.parse(fs.readFileSync(new URL('../data/game-knowledge-data.json', import.meta.url), 'utf8'));
+assert.ok(kbText.includes('https://m98978672-boop.github.io/games/cascade-hydro/'), 'В KNOWLEDGE_BASE.md сохранена прямая ссылка на обновлённую игру');
+assert.equal(refData.tools.length, 13, 'В game-knowledge-data.json сохранены все 13 инструментов');
+assert.equal(refData.buildingArchetypes.length, 48, 'В game-knowledge-data.json сохранены все 48 архетипов зданий');
+assert.equal(refData.revenueStreams.length, 12, 'В game-knowledge-data.json сохранены все 12 источников дохода');
+
+eco.cash = 123456;
+eco.day = 4;
+const snap = serializeCascadeSave({
+  scaleId: 'km5',
+  presetId: 'bystritsa',
+  hydro,
+  economy: eco,
+});
+assert.ok(snap.terrainDiff.length > 10, `Сохранение зафиксировало ${snap.terrainDiff.length} изменённых ячеек каналов и плотин`);
+assert.ok(snap.structures.turbines.length >= 1, 'Сохранение зафиксировало построенную игроком Целую ГЭС');
+
+const freshHydro = new HydroSimulation(208, 'bystritsa');
+freshHydro.spawnStarterReadyHPP('bystritsa');
+captureBaselineTerrain(freshHydro);
+const freshEco = new EconomyAndCities(freshHydro);
+const loadRes = applyCascadeSave(snap, { hydro: freshHydro, economy: freshEco });
+assert.equal(loadRes.ok, true, 'Слепок сохранения успешно применён к новой долине');
+assert.equal(freshEco.cash, 123456, 'Казна игрока восстановлена точно (123 456 ₽)');
+assert.equal(freshEco.day, 4, 'Игровой день восстановлен точно (День 4)');
+assert.equal(freshHydro.turbines.length, hydro.turbines.length, 'Количество Целых ГЭС в каскаде полностью восстановлено');
+assert.equal(
+  freshEco.cities.find((c) => c.id === 'alumingrad').focusMode,
+  'industry',
+  'Указ генплана города восстановлен из сохранения',
+);
+
+console.log('✅ ВСЕ ТЕСТЫ v0.6.1 (ЦЕЛАЯ ГЭС, ПРЯМОУГОЛЬНЫЕ КВАРТАЛЫ БЕЗ РАЗМЕТКИ ПОД ДОМАМИ, БАЗА ЗНАНИЙ, JSON-ДАННЫЕ И СОХРАНЕНИЕ ПРОГРЕССА) ПРОЙДЕНЫ!');
+
 
 
