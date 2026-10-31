@@ -25,9 +25,11 @@
   <div class="hero-inner">
     <p class="kicker">браузерные игры · без установки</p>
     <h1>Games</h1>
-    <p class="lede">Две игры, которые открываются по ссылке: 3D-выживание на необитаемом острове
-      и стратегия современной войны в реальном времени.</p>
+    <p class="lede">Браузерные игры, которые открываются сразу по ссылке: 3D-симулятор ГЭС с живой физикой воды,
+      3D-выживание на острове и стратегия современной войны.</p>
     <a class="cta" href="#games">Выбрать игру</a>
+    <a class="cta" href="../cascade-hydro/index.html" style="margin-left:10px;background:linear-gradient(180deg,#5eead4,#0284c7);color:#06131f;">Играть в КАСКАД (ГЭС)</a>
+    <a class="cta" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener" style="margin-left:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(242,236,223,0.28);color:#f2ecdf;">Сайт на GitHub Pages ↗</a>
   </div>
 </header>
 
@@ -83,6 +85,30 @@
       </div>
     </article>
 
+    <article class="card card-cascade">
+      <div class="card-art">
+        <img src="assets/cascade-hydro.jpg" alt="КАСКАД: Живая Вода — плотина ГЭС, изумрудная река, собственный канал и растущий город" loading="lazy" width="1440" height="810">
+        <span class="badge badge-new">v0.1.0 · реалистичная физика воды SWE, свои каналы, ГЭС и саморастущие города</span>
+      </div>
+      <div class="card-body">
+        <h2>КАСКАД<span>Живая Вода</span></h2>
+        <p class="desc">3D-симулятор строительства гидроэлектростанции и экономики энергорынка. Полноводная горная река по уравнениям мелкой воды Сен-Венана, прокладка собственных деривационных и оросительных каналов, турбины Каплана, Фрэнсиса и Пелтона, прорыв грунтовых дамб и четыре города, которые сами растут и зажигают окна по ночам.</p>
+        <ul class="features">
+          <li>Физика «Real-Life Hydro»: инерция потока, вихри Кармана и прыжки</li>
+          <li>Оптика воды: преломление Снеллиуса, каустика и закон Бугера — Ламберта</li>
+          <li>Собственные каналы: копка с фиксацией уклона (Shift) и бетонное русло</li>
+          <li>Реальная формула мощности ГЭС P = ρ·g·Q·H·η и 3D-струи водосбросов</li>
+          <li>Суточный спот-рынок (пик ×2.35), гранты и зелёные облигации</li>
+          <li>4 саморастущих города: строят дома, заводы и высотки от вашей энергии</li>
+          <li>Оптимизация: ядро FixedClock («Переплёт») и вся сцена за 13 draw calls</li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="../cascade-hydro/index.html">Играть</a>
+          <a class="btn" href="../cascade-hydro/PLAN.md">План игры</a>
+        </div>
+      </div>
+    </article>
+
     <article class="card card-folderos">
       <div class="card-art">
         <img src="assets/folder-os.png" alt="Folder OS: эмуляция операционной системы из папок и файлов" loading="lazy" width="1440" height="810">
@@ -125,7 +151,7 @@
       </div>
       <div class="tile">
         <b>Технологии</b>
-        <p>LAST SHORE — Three.js + WebGL. Линия Фронта — Canvas 2D. Обе собраны в один файл, без CDN.</p>
+        <p>КАСКАД и LAST SHORE — Three.js + WebGL (автономные бандлы без CDN). Линия Фронта — Canvas 2D.</p>
       </div>
     </div>
   </section>
@@ -133,6 +159,10 @@
   <section class="panel panel-notes">
     <h2>Что дальше</h2>
     <div class="roadmap">
+      <div class="road">
+        <span class="tag ch">КАСКАД: ЖИВАЯ ВОДА</span>
+        <p>Гидроаккумулирующие станции (ГАЭС) с ночной закачкой в верхний бассейн, судоходные шлюзы и многоступенчатый каскад плотин.</p>
+      </div>
       <div class="road">
         <span class="tag ls">LAST SHORE</span>
         <p>Этап 3: живность и бой — кабаны, змеи, ночные волки; бинты, готовка мяса, кипячение воды.
@@ -147,8 +177,10 @@
 </main>
 
 <footer>
-  <p>Сделано в браузере, для браузера. Исходники и планы — в репозитории
-    <a href="https://github.com/m98978672-boop/games">m98978672-boop/games</a>.</p>
+  <p>Онлайн-витрина со всеми играми на GitHub Pages:
+    <a href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">m98978672-boop.github.io/games</a>
+    · Исходники и планы в репозитории:
+    <a href="https://github.com/m98978672-boop/games" target="_blank" rel="noopener">github.com/m98978672-boop/games</a>.</p>
 </footer>
 
 <script>

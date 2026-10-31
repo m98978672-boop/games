@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>КАСКАД: Живая Вода — Симулятор ГЭС, каналов и растущих городов</title>
+  <meta name="description" content="3D-игра про строительство гидроэлектростанции, прокладку собственных каналов, реалистичную гидродинамику воды и развитие городов.">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="scene"></canvas>
+
+  <!-- Верхняя диспетчерская панель ГЭС -->
+  <header class="topbar">
+    <div class="brand-chip" title="КАСКАД: Живая Вода">
+      <a class="back-link" href="../index.html" title="Локальная витрина игр">← Витрина</a>
+      <span class="brand-dot"></span>
+      <strong>КАСКАД</strong>
+      <small>Живая Вода</small>
+      <a class="gh-site-link" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener" title="Открыть сайт на GitHub Pages — там много браузерных игр!">↗ Сайт GitHub (все игры)</a>
+    </div>
+
+    <div class="stat-chip stat-cash">
+      <span class="stat-label">Казна</span>
+      <span class="stat-value" id="hud-cash">48 000 ₽</span>
+      <span class="stat-sub" id="hud-net">+0 ₽/с</span>
+    </div>
+
+    <div class="stat-chip stat-power">
+      <span class="stat-label">Генерация ГЭС</span>
+      <span class="stat-value" id="hud-mw">0.00 МВт</span>
+      <span class="stat-sub" id="hud-demand">Спрос: 0.85 МВт</span>
+    </div>
+
+    <div class="stat-chip stat-tariff" id="chip-tariff">
+      <span class="stat-label">Энергорынок</span>
+      <span class="stat-value" id="hud-clock">День 1 · 08:00</span>
+      <span class="stat-sub" id="hud-tariff">Утренний пик ×1.62</span>
+    </div>
+
+    <div class="stat-chip stat-hydro">
+      <span class="stat-label">Гидрология</span>
+      <span class="stat-value" id="hud-weather">◈ Нормальный сток</span>
+      <span class="stat-sub" id="hud-stockpile">Отвал грунта: 0 м³</span>
+    </div>
+
+    <div class="top-controls">
+      <button class="ctrl-btn" id="btn-speed" title="Скорость симуляции (клавиша V или Пробел)">▶ ×1</button>
+      <button class="ctrl-btn" id="btn-contours" title="Геодезические изолинии высот для прокладки каналов (C)">≡ Высоты</button>
+      <button class="ctrl-btn" id="btn-weather-cycle" title="Сменить погоду / проверить паводок">☂ Погода</button>
+      <button class="ctrl-btn" id="btn-creative" title="Инженерная песочница без лимита бюджета (K)">★ Креатив</button>
+      <button class="ctrl-btn" id="btn-quality" title="Профиль графики и сетки воды">⚙ Качество</button>
+      <button class="ctrl-btn" id="btn-mute" title="Звук реки и турбин (M)">♪ Звук</button>
+      <button class="ctrl-btn" id="btn-help" title="Инженерная памятка (H)">? Справка</button>
+    </div>
+  </header>
+
+  <!-- Быстрые ориентиры долины -->
+  <nav class="landmarks-bar" aria-label="Ключевые створы долины">
+    <button class="lm-btn" data-fly="10,-124,115">▲ Створ «Ворота Грома»</button>
+    <button class="lm-btn" data-fly="-12,-5,155">◆ Полка под свой канал</button>
+    <button class="lm-btn" data-fly="118,52,125">◉ Канал в Агродолину</button>
+    <button class="lm-btn" data-fly="-14,175,165">≈ Нижний плёс и Посад</button>
+  </nav>
+
+  <!-- Уведомления и гранты -->
+  <div id="toast-stack" class="toast-stack"></div>
+
+  <!-- Диагностика F3 (по образцу last-shore) -->
+  <pre id="diag-panel" class="diag-panel hidden"></pre>
+
+  <!-- Правая панель: Саморастущие города, ЛЭП и Гранты -->
+  <aside class="side-panel" id="side-panel">
+    <div class="panel-header">
+      <div>
+        <h2>◆ Города и Энергосеть</h2>
+        <p id="hud-pop-total">Население долины: 3 520 жит.</p>
+      </div>
+      <button class="icon-btn" id="btn-toggle-panel" title="Свернуть/развернуть панель">▾</button>
+    </div>
+
+    <div id="panel-body" class="panel-body">
+      <div id="cities-list" class="cities-list"></div>
+
+      <div class="milestone-box" id="milestone-box">
+        <div class="ms-head">★ Текущий грант Минэнерго</div>
+        <div class="ms-title" id="ms-title">—</div>
+        <div class="ms-desc" id="ms-desc">—</div>
+      </div>
+
+      <div class="finance-row">
+        <button class="fin-btn" id="btn-loan">+ Облигации 25 000 ₽</button>
+        <button class="fin-btn fin-secondary" id="btn-repay">Погасить долг</button>
+      </div>
+      <div class="loan-note" id="hud-loan">Долг по облигациям: 0 ₽</div>
+      <a class="gh-panel-btn" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">
+        ★ Другие игры на сайте GitHub ↗
+      </a>
+    </div>
+  </aside>
+
+  <!-- Инспектор выбранной турбины или водосброса -->
+  <section id="struct-inspector" class="inspector-card hidden">
+    <div class="insp-header">
+      <strong id="insp-title">Гидроагрегат</strong>
+      <button class="icon-btn" id="insp-close">✕</button>
+    </div>
+    <div class="insp-metrics" id="insp-metrics"></div>
+    <div class="insp-controls">
+      <label class="slider-row">
+        <span id="insp-slider-label">Открытие затвора: 100%</span>
+        <input type="range" id="insp-slider" min="0" max="100" value="100">
+      </label>
+      <label class="check-row">
+        <input type="checkbox" id="insp-auto">
+        <span id="insp-auto-label">Авто-режим</span>
+      </label>
+    </div>
+  </section>
+
+  <!-- Нижняя панель: живой гидропост под курсором + хотбар инструментов -->
+  <footer class="bottom-dock">
+    <div class="probe-bar" id="probe-bar">
+      <span id="probe-readout">Наведите курсор на реку или склон для геодезического замера</span>
+      <div class="brush-controls">
+        <span>Ширина:</span>
+        <button class="size-btn" data-size="5">Узкая 10м</button>
+        <button class="size-btn active" data-size="8.5">Средняя 17м</button>
+        <button class="size-btn" data-size="13">Широкая 26м</button>
+        <button class="size-btn" id="btn-rotate" title="Повернуть створ агрегата/водосброса (клавиша R)">↻ Поворот [R]</button>
+      </div>
+    </div>
+
+    <div class="hotbar" id="hotbar"></div>
+    <div class="tool-hint" id="tool-hint">Выберите инструмент строительства или прокладки канала</div>
+  </footer>
+
+  <!-- Краткая инженерная памятка (открывается по ? или при первом входе компактно) -->
+  <div id="help-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2>⚡ Инженерное руководство «КАСКАД: Живая Вода»</h2>
+        <button class="icon-btn" id="help-close">✕</button>
+      </div>
+      <div class="modal-content">
+        <p><strong>Реальная физика воды:</strong> вода течёт по уравнениям мелкой воды Сен-Венана с сохранением импульса, водоворотами Кармана, размывом грунта, мутностью от копки и законом Бугера — Ламберта.</p>
+        <ul>
+          <li><strong>Быстрый старт №1 (Плотина в каньоне):</strong> нажмите «🏔️ Створ Ворота Грома», выберите <b>[5] Бетонная плотина</b>, перегородите узкое ущелье, затем поставьте прямо в плотину <b>[7] ГЭС Каплана</b> или <b>[8] ГЭС Фрэнсиса</b> и <b>[6] Водосброс</b>!</li>
+          <li><strong>Быстрый старт №2 (Собственный деривационный канал):</strong> выберите <b>[2] Экскаватор канала</b>, зажмите <b>Shift</b> (фиксация ровного уклона дна!) и прорежьте прямую трассу через перешеек излучины «Подкова», облицуйте <b>[3] Бетоном</b> и поставьте на сбросе <b>[9] ГЭС Пелтона</b>!</li>
+          <li><strong>Орошение и рост городов:</strong> прокопайте небольшой канал от восточной излучины реки к зелёному кольцу у <b>Агродолины</b> — город ускорит рост в 1.75 раза и начнёт платить за воду! Обеспеченные энергией города <b>сами строят дома, заводы и небоскрёбы</b>, зажигая окна по ночам.</li>
+          <li><strong>Осторожно с грунтовыми дамбами:</strong> <b>[4] Грунтовая перемычка</b> очень дешёвая (особенно из вынутого при копке грунта!), но если паводок перельётся через её гребень — поток реально размоет и прорвёт дамбу! Ставьте <b>[6] Водосброс</b>.</li>
+          <li><strong>Управление камерой:</strong> <code>WASD</code> / стрелки / средняя кнопка — полёт по долине, <code>ПКМ</code> или <code>Q/E</code> — поворот камеры, <code>Колесо</code> — зум, <code>Shift + ЛКМ</code> — ровное дно канала / гребень плотины, <code>F3</code> — диагностика FPS и оптимизаций.</li>
+        </ul>
+        <div class="gh-modal-banner">
+          <div>
+            <strong>Больше браузерных игр на сайте GitHub:</strong><br>
+            <span>LAST SHORE (3D-выживание), Линия Фронта: Сталь и Дроны, Folder OS и другие проекты без установки.</span>
+          </div>
+          <div class="gh-modal-links">
+            <a class="gh-btn" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">Сайт игр GitHub Pages ↗</a>
+            <a class="gh-btn gh-btn-sec" href="https://github.com/m98978672-boop/games" target="_blank" rel="noopener">Репозиторий GitHub ↗</a>
+          </div>
+        </div>
+        <button class="primary-btn" id="help-start-btn">Понятно, за работу!</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Заглушка, если WebGL отключён в браузере -->
+  <div id="nogl-modal" class="modal-backdrop hidden">
+    <div class="modal-card">
+      <h2>Не удалось запустить WebGL</h2>
+      <p id="nogl-reason">Включите аппаратное ускорение в настройках браузера.</p>
+    </div>
+  </div>
+</div>
+
+<script src="bundle.js"></script>
+</body>
+</html>
