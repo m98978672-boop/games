@@ -3,48 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <title>КАСКАД: Живая Вода — 3D-симулятор ГЭС, объёмной стройки, каналов и растущих городов</title>
-  <meta name="description" content="Масштабный 3D-симулятор строительства гидроэлектростанций в долине 768×768 м: 3-этапная объёмная стройка с кранами и контрфорсами, прокладка каналов, реалистичная физика воды и 5 растущих городов.">
+  <title>КАСКАД: Живая Вода v0.3 — Карты 5×5 и 10×10 км, ГЭС/ГАЭС, 3D-перелив, научный баланс воды и 8 городов</title>
+  <meta name="description" content="Масштабный оптимизированный 3D-симулятор гидрокаскада: карты 5×5 км и 10×10 км, каноническая ГЭС/ГАЭС в нижнем бьефе, 3D-перелив плотин, научный баланс воды, 12 видов дохода, 8 городов, 32 типа зданий, 300 анимаций и 432 текстурных пресета.">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
   <canvas id="scene"></canvas>
 
-  <!-- ЭКРАН ПРЕДВАРИТЕЛЬНОЙ ЗАГРУЗКИ И ВЫБОРА КАРТЫ ДОЛИНЫ ПЕРЕД ИГРОЙ -->
+  <!-- ЭКРАН ПРЕДВАРИТЕЛЬНОЙ ЗАГРУЗКИ, ВЫБОРА МАСШТАБА (0.8 / 5×5 / 10×10 КМ) И ДОЛИНЫ -->
   <div id="map-loader" class="loader-backdrop">
     <div class="loader-card">
       <div class="loader-top">
         <div class="loader-brand">
           <span class="brand-dot"></span>
           <div>
-            <h1>КАСКАД: Живая Вода</h1>
-            <p>Инженерный 3D-симулятор ГЭС, объёмной стройки, деривационных каналов и 5 растущих городов · Карта 768×768 м</p>
+            <h1>КАСКАД: Живая Вода <small class="ver-pill">v0.3</small></h1>
+            <p>3D-симулятор ГЭС/ГАЭС, 3D-перелива воды, научной гидрологии, 12 доходов, 8 городов (32 типа зданий), 300 анимаций и 432 текстур</p>
           </div>
         </div>
         <a class="gh-site-link" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">↗ Все игры на GitHub</a>
       </div>
 
-      <!-- Выбор сценария карты речной долины -->
-      <div class="loader-section-label">1. Выберите карту речной долины (768 × 768 м):</div>
+      <!-- Шаг 1: Выбор масштаба бассейна (0.8×0.8 км, 5×5 км, 10×10 км) -->
+      <div class="loader-section-label">1. Выберите масштаб речного бассейна:</div>
+      <div class="scale-grid" id="scale-grid">
+        <button class="scale-card" data-scale="compact">
+          <div class="scale-size">0.8 × 0.8 км</div>
+          <div class="scale-sub">0.6 км² · Камерный каньон</div>
+          <div class="scale-note">Плотный полигон для быстрых экспериментов с каналами и струями.</div>
+        </button>
+        <button class="scale-card active" data-scale="km5">
+          <div class="scale-size">5 × 5 км</div>
+          <div class="scale-sub">25 км² · Региональный каскад ★</div>
+          <div class="scale-note">Широкое водохранилище, снежные пики, судоходство, 8 городов и ГАЭС.</div>
+        </button>
+        <button class="scale-card" data-scale="km10">
+          <div class="scale-size">10 × 10 км</div>
+          <div class="scale-sub">100 км² · Континентальный бассейн</div>
+          <div class="scale-note">Грандиозный масштаб великих сибирских и альпийских гидроузлов на 60 FPS!</div>
+        </button>
+      </div>
+
+      <!-- Шаг 2: Выбор рельефа речной долины -->
+      <div class="loader-section-label">2. Выберите топографию долины:</div>
       <div class="scenario-grid" id="scenario-grid">
         <button class="scenario-card active" data-preset="bystritsa">
           <div class="scen-badge">Рекомендуется · Обучение</div>
           <div class="scen-title">Долина «Большая Быстрица»</div>
-          <div class="scen-meta">768×768 м · 3 реки · Перепад 36 м</div>
-          <div class="scen-desc">Гранитная теснина «Ворота Грома», деривационное плато у излучины «Подкова» и орошаемая Агродолина.</div>
+          <div class="scen-meta" id="scen-meta-bystritsa">5×5 км · 3 реки · Ледники и каньон</div>
+          <div class="scen-desc">Гранитная теснина «Ворота Грома», деривационное плато «Подкова», Алюмград, ЦОД ИИ и Агродолина.</div>
         </button>
         <button class="scenario-card" data-preset="rapids">
-          <div class="scen-badge">Высокий напор · Скалы</div>
+          <div class="scen-badge">Высокий напор · ГАЭС</div>
           <div class="scen-title">Каскад «Северные Пороги»</div>
-          <div class="scen-meta">768×768 м · Двойной каньон · 46 м</div>
-          <div class="scen-desc">Два глубоких скальных ущелья подряд для многоступенчатого каскада плотин с контрфорсами и ГЭС Пелтона.</div>
+          <div class="scen-meta" id="scen-meta-rapids">5×5 км · Двойной каньон · Крутой уклон</div>
+          <div class="scen-desc">Два глубоких скальных ущелья подряд для ступенчатого каскада плотин с контрфорсами и ГАЭС.</div>
         </button>
         <button class="scenario-card" data-preset="delta">
-          <div class="scen-badge">Каналы и паводки</div>
+          <div class="scen-badge">Шлюзы, флот и рыбхозы</div>
           <div class="scen-title">Пойма «Зеркальная Дельта»</div>
-          <div class="scen-meta">768×768 м · Широкое русло · 28 м</div>
-          <div class="scen-desc">Полноводная река в мягких грунтах: требует скальной цементации подошвы, длинных каналов и водосбросов.</div>
+          <div class="scen-meta" id="scen-meta-delta">5×5 км · Широкий плёс · Судоходство</div>
+          <div class="scen-desc">Полноводная судоходная артерия: идеальна для шлюзов, яхт-марин, рыбхозов и длинных каналов.</div>
         </button>
       </div>
 
@@ -52,7 +72,7 @@
       <div class="loader-options">
         <label class="opt-check">
           <input type="checkbox" id="chk-start-tutorial" checked>
-          <span><strong>Пошаговое обучение инженера (8 шагов)</strong> — проведёт от геодезии и 3-этапной плотины с кранами до собственного канала и ОРУ 110 кВ (+46 000 ₽ премий)</span>
+          <span><strong>Пошаговое обучение инженера (8 шагов)</strong> — проведёт от геодезии, 3D-плотины и приплотинной ГЭС до шлюзов, ГАЭС и водного баланса (+46 000 ₽ премий)</span>
         </label>
         <div class="opt-mode-row">
           <span>Режим строительства:</span>
@@ -61,10 +81,10 @@
         </div>
       </div>
 
-      <!-- Реальная шкала генерации рельефа, текстур, рек и предкомпиляции шейдеров -->
+      <!-- Шкала генерации рельефа, 432 текстур, рек и шейдеров -->
       <div class="loader-progress-wrap">
         <div class="loader-status-row">
-          <span id="loader-stage">Подготовка геодезической сетки долины…</span>
+          <span id="loader-stage">Подготовка геодезической сетки бассейна…</span>
           <strong id="loader-pct">0%</strong>
         </div>
         <div class="loader-bar-track">
@@ -79,38 +99,38 @@
     </div>
   </div>
 
-  <!-- ВЕРХНЯЯ ДИСПЕТЧЕРСКАЯ ПАНЕЛЬ ГЭС -->
+  <!-- ВЕРХНЯЯ ДИСПЕТЧЕРСКАЯ ПАНЕЛЬ ГЭС/ГАЭС -->
   <header class="topbar">
-    <div class="brand-chip" title="КАСКАД: Живая Вода">
+    <div class="brand-chip" title="КАСКАД: Живая Вода v0.3">
       <a class="back-link" href="../index.html" title="Локальная витрина игр">← Витрина</a>
       <span class="brand-dot"></span>
       <strong>КАСКАД</strong>
-      <small>768×768</small>
+      <small id="hud-scale-badge">5×5 км</small>
       <a class="gh-site-link" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener" title="Открыть сайт на GitHub Pages — там много браузерных игр!">↗ GitHub Игры</a>
     </div>
 
     <div class="stat-chip stat-cash">
-      <span class="stat-label">Казна</span>
-      <span class="stat-value" id="hud-cash">56 000 ₽</span>
+      <span class="stat-label">Казна и 12 доходов</span>
+      <span class="stat-value" id="hud-cash">68 000 ₽</span>
       <span class="stat-sub" id="hud-net">+0 ₽/с</span>
     </div>
 
     <div class="stat-chip stat-power">
-      <span class="stat-label">Генерация ГЭС</span>
-      <span class="stat-value" id="hud-mw">0.00 МВт</span>
-      <span class="stat-sub" id="hud-demand">Сеть: 0.00 МВт · Потери 6%</span>
+      <span class="stat-label">Генерация ГЭС / ГАЭС</span>
+      <span class="stat-value" id="hud-mw">0.0 МВт</span>
+      <span class="stat-sub" id="hud-demand">Сеть: 0.0 МВт · Потери 6%</span>
     </div>
 
     <div class="stat-chip stat-tariff" id="chip-tariff">
-      <span class="stat-label">Энергорынок</span>
-      <span class="stat-value" id="hud-clock">День 1 · 08:00</span>
+      <span class="stat-label">Энергорынок ОРЭМ</span>
+      <span class="stat-value" id="hud-clock">День 1 · 08:30</span>
       <span class="stat-sub" id="hud-tariff">Утренний пик ×1.62</span>
     </div>
 
     <div class="stat-chip stat-hydro">
-      <span class="stat-label">Стройка и Склады</span>
+      <span class="stat-label">Водный баланс и склады</span>
       <span class="stat-value" id="hud-weather">◈ Нормальный сток</span>
-      <span class="stat-sub" id="hud-stockpile">Грунт: 0 · Щебень: 0 м³</span>
+      <span class="stat-sub" id="hud-stockpile">Приток: 0 · Испар.: 0 м³/с</span>
     </div>
 
     <div class="top-controls">
@@ -119,7 +139,7 @@
         <svg class="btn-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2L1.5 5.3 8 8.6l5.2-2.64V10.5h1.3V5.3L8 2zm-4.2 5.4v3.1c0 1.3 1.9 2.4 4.2 2.4s4.2-1.1 4.2-2.4V7.4L8 9.6 3.8 7.4z" fill="currentColor"/></svg>
         Обучение
       </button>
-      <button class="ctrl-btn" id="btn-open-loader" title="Выбрать и загрузить другую карту долины">
+      <button class="ctrl-btn" id="btn-open-loader" title="Выбрать масштаб (0.8 / 5×5 / 10×10 км) или другую долину">
         <svg class="btn-svg" viewBox="0 0 16 16" aria-hidden="true"><path d="M1.5 3.4L5.8 2l4.4 1.6L14.5 2v10.6L10.2 14 5.8 12.4 1.5 14V3.4zm4.8.1v7.6l3.4 1.2V4.7L6.3 3.5z" fill="currentColor"/></svg>
         Карта
       </button>
@@ -128,18 +148,18 @@
       <button class="ctrl-btn" id="btn-creative" title="Инженерная песочница без лимита бюджета (K)">★ Креатив</button>
       <button class="ctrl-btn" id="btn-quality" title="Профиль графики и сетки воды">⚙ Графика</button>
       <button class="ctrl-btn" id="btn-mute" title="Звук реки и турбин (M)">♪ Звук</button>
-      <button class="ctrl-btn" id="btn-help" title="Инженерная памятка (H)">? Справка</button>
+      <button class="ctrl-btn" id="btn-help" title="Инженерная памятка по гидрологии и ГЭС (H)">? Справка</button>
     </div>
   </header>
 
-  <!-- Быстрые ориентиры выбранной долины (заполняются динамически под карту) -->
+  <!-- Быстрые ориентиры выбранной долины -->
   <nav class="landmarks-bar" id="landmarks-bar" aria-label="Ключевые створы долины"></nav>
 
   <!-- КАРТОЧКА ПОШАГОВОГО ОБУЧЕНИЯ ГЛАВНОГО ИНЖЕНЕРА -->
   <section id="tutorial-card" class="tutorial-card hidden" aria-live="polite">
     <div class="tut-head">
       <span class="tut-badge" id="tut-step-badge">ОБУЧЕНИЕ · ШАГ 1 ИЗ 8</span>
-      <button class="icon-btn" id="tut-close" title="Скрыть обучение (можно вернуть кнопкой Обучение)">✕</button>
+      <button class="icon-btn" id="tut-close" title="Скрыть обучение">✕</button>
     </div>
     <h3 class="tut-title" id="tut-title">Разведка ущелья</h3>
     <div class="tut-body" id="tut-body"></div>
@@ -159,47 +179,97 @@
     </div>
   </section>
 
-  <!-- Всплывающие уведомления по центру сверху -->
+  <!-- Всплывающие уведомления -->
   <div id="toast-stack" class="toast-stack"></div>
 
   <!-- Диагностика F3 -->
   <pre id="diag-panel" class="diag-panel hidden"></pre>
 
-  <!-- ПРАВАЯ ПАНЕЛЬ: 5 САМОРАСТУЩИХ ГОРОДОВ, ОРУ 110 кВ И ГРАНТЫ -->
+  <!-- ПРАВАЯ МНОГОВКЛАДОЧНАЯ ПАНЕЛЬ: 8 ГОРОДОВ · НАУЧНЫЙ БАЛАНС ВОДЫ · 12 ДОХОДОВ · МИР 300/432 -->
   <aside class="side-panel" id="side-panel">
     <div class="panel-header">
       <div>
-        <h2>◆ 5 Городов и Энергокольцо</h2>
-        <p id="hud-pop-total">Население долины: 4 180 жит.</p>
+        <h2>◆ Диспетчерская Каскада</h2>
+        <p id="hud-pop-total">8 городов · 10 380 жит.</p>
       </div>
       <button class="icon-btn" id="btn-toggle-panel" title="Свернуть/развернуть панель">▾</button>
     </div>
 
+    <div class="side-tabs" id="side-tabs">
+      <button class="side-tab active" data-tab="cities">Города (8)</button>
+      <button class="side-tab" data-tab="water">Вода (Баланс)</button>
+      <button class="side-tab" data-tab="revenue">Доходы (12)</button>
+      <button class="side-tab" data-tab="world">300 / 432</button>
+    </div>
+
     <div id="panel-body" class="panel-body">
       <div id="dam-health-banner" class="dam-health-banner">
-        <span id="hud-dam-status">Стройплощадка: монолит в норме · ОРУ: 0</span>
+        <span id="hud-dam-status">Стройплощадка в норме · ОРУ: 0</span>
       </div>
 
-      <div id="cities-list" class="cities-list"></div>
+      <!-- ВКЛАДКА 1: 8 ГОРОДОВ, ГРАНТЫ И ОБЛИГАЦИИ -->
+      <div id="tab-pane-cities" class="tab-pane">
+        <div id="cities-list" class="cities-list"></div>
 
-      <div class="milestone-box" id="milestone-box">
-        <div class="ms-head">★ Текущий грант Минэнерго</div>
-        <div class="ms-title" id="ms-title">—</div>
-        <div class="ms-desc" id="ms-desc">—</div>
+        <div class="milestone-box" id="milestone-box">
+          <div class="ms-head">★ Текущий грант Минэнерго</div>
+          <div class="ms-title" id="ms-title">—</div>
+          <div class="ms-desc" id="ms-desc">—</div>
+        </div>
+
+        <div class="finance-row">
+          <button class="fin-btn" id="btn-loan">+ Облигации 30 000 ₽</button>
+          <button class="fin-btn fin-secondary" id="btn-repay">Погасить долг</button>
+        </div>
+        <div class="loan-note" id="hud-loan">Долг по облигациям: 0 ₽</div>
       </div>
 
-      <div class="finance-row">
-        <button class="fin-btn" id="btn-loan">+ Облигации 25 000 ₽</button>
-        <button class="fin-btn fin-secondary" id="btn-repay">Погасить долг</button>
+      <!-- ВКЛАДКА 2: ПОЛНАЯ НАУЧНАЯ ЛОГИКА ВОДЫ (ОТКУДА, КУДА, КОГДА, ЗАЧЕМ И ПОЧЕМУ) -->
+      <div id="tab-pane-water" class="tab-pane hidden">
+        <div class="wb-why-box" id="wb-why-note">
+          Дневной прогрев: солнце растапливает ледники хребта, одновременно усиливая испарение с зеркала бьефа.
+        </div>
+        <div class="wb-meteo-strip" id="wb-meteo-strip">
+          Воздух +18°C · Горы +6°C · Влажн. 55% · Зеркало 0 га
+        </div>
+
+        <div class="wb-section-title good">▾ ПРИШЛО И НАКАПАЛО (Откуда в бассейне вода):</div>
+        <div class="wb-table" id="wb-in-table"></div>
+
+        <div class="wb-section-title warn">▴ УШЛО, ИСПАРИЛОСЬ И ВПИТАЛОСЬ (Куда уходит):</div>
+        <div class="wb-table" id="wb-out-table"></div>
+
+        <div class="wb-section-title info">◈ ОБОРОТ ГИДРОУЗЛА (Верхний → Нижний бьеф):</div>
+        <div class="wb-table" id="wb-node-table"></div>
       </div>
-      <div class="loan-note" id="hud-loan">Долг по облигациям: 0 ₽</div>
+
+      <!-- ВКЛАДКА 3: 12 РАЗНООБРАЗНЫХ ИСТОЧНИКОВ ЗАРАБОТКА -->
+      <div id="tab-pane-revenue" class="tab-pane hidden">
+        <div class="rev-summary-note" id="rev-summary-note">
+          Активны 12 экономических контуров гидроузла (ОРЭМ, ГАЭС, PPA, шлюзы, рыбхозы, щебень, CO₂).
+        </div>
+        <div class="wb-table" id="revenue-streams-list"></div>
+        <button class="connect-btn" id="btn-sell-aggregate">▲ Продать партию гранитного щебня со склада</button>
+      </div>
+
+      <!-- ВКЛАДКА 4: КАТАЛОГ 300 АНИМАЦИЙ И 432 ТЕКСТУР / ОТТЕНКОВ -->
+      <div id="tab-pane-world" class="tab-pane hidden">
+        <div class="wb-why-box" id="world-stats-box">
+          Активно 300 анимаций (InstancedMesh + GPU) и 432 пресета текстур и оттенков.
+        </div>
+        <div class="wb-section-title info">▸ 11 подсистем живых анимаций (300 пресетов):</div>
+        <div class="wb-table" id="anim-groups-list"></div>
+        <div class="wb-section-title good">▸ 8 семейств текстур и оттенков (432 пресета):</div>
+        <div class="wb-table" id="tex-families-list"></div>
+      </div>
+
       <a class="gh-panel-btn" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">
         ★ Другие игры на сайте GitHub ↗
       </a>
     </div>
   </aside>
 
-  <!-- ИНСПЕКТОР ГИДРОАГРЕГАТА ИЛИ ВОДОСБРОСА -->
+  <!-- ИНСПЕКТОР ГИДРОАГРЕГАТА ГЭС / ГАЭС ИЛИ ВОДОСБРОСА -->
   <section id="struct-inspector" class="inspector-card hidden">
     <div class="insp-header">
       <strong id="insp-title">Гидроагрегат</strong>
@@ -208,54 +278,58 @@
     <div class="insp-metrics" id="insp-metrics"></div>
     <div class="insp-controls">
       <label class="slider-row">
-        <span id="insp-slider-label">Открытие затвора: 100%</span>
+        <span id="insp-slider-label">Открытие направляющего аппарата: 100%</span>
         <input type="range" id="insp-slider" min="0" max="100" value="100">
       </label>
       <label class="check-row">
         <input type="checkbox" id="insp-auto">
-        <span id="insp-auto-label">Авто-режим</span>
+        <span id="insp-auto-label">Авто-диспетчер по пикам ОРЭМ</span>
+      </label>
+      <label class="check-row" id="insp-gaes-row">
+        <input type="checkbox" id="insp-gaes">
+        <span>Ночной насосный режим ГАЭС (00:00–06:00 закачка в ВБ)</span>
       </label>
       <button class="size-btn hidden" id="insp-clean-btn">Промыть сороудерживающую решётку</button>
     </div>
   </section>
 
-  <!-- НИЖНЯЯ ИНЖЕНЕРНАЯ ДОК-ПАНЕЛЬ: ГИДРОПОСТ + ЯРУСЫ 3D-ПЛОТИНЫ + 12 ИНСТРУМЕНТОВ -->
+  <!-- НИЖНЯЯ ИНЖЕНЕРНАЯ ДОК-ПАНЕЛЬ: ГИДРОПОСТ + ЯРУСЫ 3D-ПЛОТИНЫ + 14 ИНСТРУМЕНТОВ -->
   <footer class="bottom-dock">
     <div class="probe-bar" id="probe-bar">
-      <span id="probe-readout">Наведите курсор на реку, ущелье или стройплощадку для замера</span>
+      <span id="probe-readout">Наведите курсор на реку, каньон или створ плотины для гидрологического замера</span>
       <div class="brush-controls">
         <span>Кисть:</span>
-        <button class="size-btn" data-size="5.5">11м</button>
-        <button class="size-btn active" data-size="9">18м</button>
-        <button class="size-btn" data-size="14">28м</button>
+        <button class="size-btn" data-size-idx="0" id="brush-btn-0">24м</button>
+        <button class="size-btn active" data-size-idx="1" id="brush-btn-1">48м</button>
+        <button class="size-btn" data-size-idx="2" id="brush-btn-2">90м</button>
         <span class="sep-dot">·</span>
         <span>Высота 3D:</span>
-        <button class="size-btn tier-btn" data-tier="0">+6м</button>
-        <button class="size-btn tier-btn active" data-tier="1">+11м</button>
-        <button class="size-btn tier-btn" data-tier="2">+17м</button>
-        <button class="size-btn" id="btn-rotate" title="Повернуть створ агрегата/водосброса (R)">↻ [R]</button>
+        <button class="size-btn tier-btn" data-tier="0" id="tier-btn-0">+20м</button>
+        <button class="size-btn tier-btn active" data-tier="1" id="tier-btn-1">+36м</button>
+        <button class="size-btn tier-btn" data-tier="2" id="tier-btn-2">+55м</button>
+        <button class="size-btn" id="btn-rotate" title="Повернуть створ агрегата/водосброса/шлюза (R)">↻ [R]</button>
       </div>
     </div>
 
     <div class="hotbar" id="hotbar"></div>
-    <div class="tool-hint" id="tool-hint">Выберите инструмент объёмного строительства или прокладки канала</div>
+    <div class="tool-hint" id="tool-hint">Выберите инструмент строительства плотины, ГЭС/ГАЭС, канала, шлюза или рыбхоза</div>
   </footer>
 
-  <!-- СПРАВОЧНОЕ РУКОВОДСТВО -->
+  <!-- СПРАВОЧНОЕ РУКОВОДСТВО ПО ГЭС И НАУЧНОЙ ГИДРОЛОГИИ -->
   <div id="help-modal" class="modal-backdrop hidden">
     <div class="modal-card">
       <div class="modal-head">
-        <h2>✦ Инженерное руководство «КАСКАД: Живая Вода»</h2>
+        <h2>✦ Инженерное руководство «КАСКАД: Живая Вода v0.3»</h2>
         <button class="icon-btn" id="help-close">✕</button>
       </div>
       <div class="modal-content">
-        <p><strong>Обновлённая долина 768×768 м и объёмная 3D-стройка:</strong> вода течёт по уравнениям Сен-Венана с преломлением Снеллиуса и каустикой Вороного, а плотины возводятся в 3 этапа с башенными кранами, арматурой и контрфорсами.</p>
+        <p><strong>Реальная физика ГЭС/ГАЭС (по энциклопедическим канонам гидроэнергетики) и полный водный баланс:</strong> теперь доступны карты <b>5×5 км (25 км²)</b> и <b>10×10 км (100 км²)</b>!</p>
         <ul>
-          <li><strong>Трёхэтапная 3D-плотина и контрфорсы:</strong> выберите <b>[5] 3D Плотина</b> и ярус высоты (<code>+6м / +11м / +17м</code>). Сначала встаёт шпунт и опалубка с армокаркасом, затем башенные краны заливают монолит! Для плотин выше 10 м используйте <b>[6] Контрфорс / Цементация</b>, чтобы убрать фильтрацию воды под подошвой.</li>
-          <li><strong>Синергия каналов и щебня:</strong> при копке <b>[2] Экскаватором</b> скальной породы вы получаете <b>гранитный щебень</b> (скидка <b>-38%</b> на бетон плотин и <b>[3] Ж/Б лотков канала</b>!), а вынутый грунт удешевляет <b>[4] Перемычки</b> на 70%. Зажмите <code>Shift</code> для идеально ровного уклона канала!</li>
-          <li><strong>3D-водоводы и Подстанция ОРУ 110 кВ:</strong> агрегаты <b>[8–0] Каплана / Фрэнсиса / Пелтона</b> строятся с водоприёмником, решёткой, стальным напорным трубопроводом и козловым краном. Постройте рядом на сухом берегу <b>[P] Подстанцию ОРУ 110 кВ</b> — потери в ЛЭП упадут с 16% до 3%!</li>
-          <li><strong>5 саморастущих городов:</strong> подайте энергию городам и воду каналом в <b>Агродолину</b> — города сами застроят кварталы коттеджами, заводами и небоскрёбами!</li>
-          <li><strong>Управление:</strong> <code>WASD</code> / стрелки / СКМ — полёт, <code>ПКМ</code> или <code>Q/E</code> — поворот, <code>Колесо</code> — зум до 650 м, <code>T</code> — обучение, <code>F3</code> — диагностика FPS.</li>
+          <li><strong>Приплотинная компоновка ГЭС и режим ГАЭС:</strong> водоприёмник с сороудерживающей решёткой стоит в верхнем бьефе, наклонные стальные водоводы ведут вниз, а <b>машинный зал с отсасывающими трубами и трансформаторами располагается строго внизу у подножия плотины в нижнем бьефе</b>! Ночью обратимые агрегаты ГАЭС качают дешёвую воду обратно наверх для продажи в пик.</li>
+          <li><strong>3D-перелив воды и водосбросы:</strong> при переполнении водохранилища или открытии <b>[7] Водосброса</b> вы видите живые падающие 3D-ленты воды по параболе и пенный гидравлический прыжок внизу!</li>
+          <li><strong>Научная логика воды (вкладка «Вода»):</strong> учитываются сток 3 рек, дневное солнечное таяние горных ледников (модель Хокка), дождевые осадки («накапало»), родники, испарение с зеркала водохранилища по закону Дальтона — Пенмана («испарилось»), инфильтрация Хортона в сухие берега и фильтрация Дарси под плотиной.</li>
+          <li><strong>12 видов дохода и 8 городов (32 типа зданий):</strong> ОРЭМ, арбитраж ГАЭС, мощность АРЧМ 50 Гц, PPA-контракты с <b>Алюмградом</b> и <b>Технопарком ИИ</b>, <b>[L] Судоходные шлюзы</b>, Горводоканал, ирригация <b>Агродолины</b>, <b>[F] Форелевые рыбхозы</b>, яхт-туризм, продажа гранитного щебня, сертификаты CO₂ и премии МЧС за срезку паводка!</li>
+          <li><strong>Управление:</strong> <code>WASD</code> / стрелки / СКМ — полёт, <code>ПКМ</code> или <code>Q/E</code> — поворот, <code>Колесо</code> — зум до 9.2 км, <code>T</code> — обучение, <code>F3</code> — диагностика FPS.</li>
         </ul>
         <div class="gh-modal-banner">
           <div>

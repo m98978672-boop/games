@@ -1,21 +1,21 @@
 // ============================================================================
-//  ЯДРО ФИЗИКИ ВОДЫ И ОБЪЁМНОЙ СТРОЙКИ «REAL-LIFE HYDRO v2»
+//  ЯДРО ФИЗИКИ ВОДЫ, НАУЧНОЙ ГИДРОЛОГИИ И СТРОЙКИ «REAL-LIFE HYDRO v0.3»
+//  - Масштабируемая сетка для карт 0.8×0.8 км, 5×5 км (25 км²) и 10×10 км (100 км²)
 //  - 2.5D Audusse Well-Balanced SWE + вихри Кармана + размыв Шильдса
-//  - 3-этапное объёмное бетонирование (шпунт -> армокаркас/опалубка -> 3D-монолит)
-//  - Геология основания, фильтрация под подошвой, цементация и 3D-контрфорсы
-//  - Баланс земляных и скальных масс (отвал грунта + щебень со скидкой 38% на бетон)
-//  - Напорные водоводы турбин ГЭС, сегментные затворы и подстанции ОРУ 110 кВ
+//  - Реальный водный баланс: таяние ледников, осадки, испарение с зеркала, инфильтрация Хортона, фильтрация Дарси
+//  - Приплотинная компоновка ГЭС (машзал строго в нижнем бьефе у подножия без задирания земли!) + режим ГАЭС
+//  - Детектор перелива воды через гребень плотин (overflowEdges) для 3D-анимации водопадных лент
+//  - Судоходные шлюзы [L], рыбхозы/эко-марины [F] и подстанции ОРУ 110/220 кВ [P]
 // ============================================================================
 
 import { WORLD, TURBINE_SPECS, CONSTRUCTION, VALLEY_PRESETS } from './config.js';
 import { clamp, lerp } from './noise.js';
-import { buildValleyTerrain, VALLEY_RIVERS } from './valley.js';
+import { buildValleyTerrain, getScaledValleyRivers } from './valley.js';
 
 const G = WORLD.gravity;
 const RHO = WORLD.waterDensity;
 const EPS_H = 0.014;
 const EPS_H4 = EPS_H * EPS_H * EPS_H * EPS_H;
-const MAX_SPEED = 26.0;
 const TILE = 8;
 
 export class HydroSimulation {
@@ -26,20 +26,21 @@ export class HydroSimulation {
     this.dx = WORLD.size / grid;
     this.cellArea = this.dx * this.dx;
 
-    // Слои рельефа, опалубки и инженерных конструкций
+    // Слои рельефа, опалубки, насыщения грунта водой и инженерных конструкций
     this.bedrock = new Float32Array(this.count);
     this.soil = new Float32Array(this.count);
-    this.concrete = new Float32Array(this.count);       // набранный монолитный бетон
-    this.targetConcrete = new Float32Array(this.count); // проектная высота бетонирования
-    this.formworkWall = new Float32Array(this.count);   // временный шпунт/опалубка на время заливки
-    this.buildProgress = new Float32Array(this.count);  // 0..1 прогресс стройки секции
+    this.soilSaturation = new Float32Array(this.count); // 0..1 влагонасыщение грунта (для инфильтрации Хортона!)
+    this.concrete = new Float32Array(this.count);
+    this.targetConcrete = new Float32Array(this.count);
+    this.formworkWall = new Float32Array(this.count);
+    this.buildProgress = new Float32Array(this.count);
     this.gateWall = new Float32Array(this.count);
     this.zb = new Float32Array(this.count);
 
-    this.linedMask = new Uint8Array(this.count);        // 1 = Ж/Б лоток и борта канала
-    this.earthDamMask = new Uint8Array(this.count);     // 1 = насыпная перемычка
-    this.foundationMask = new Uint8Array(this.count);   // 1 = скальная цементация + 3D-контрфорс
-    this.buttressYaw = new Float32Array(this.count);    // угол разворота контрфорса
+    this.linedMask = new Uint8Array(this.count);
+    this.earthDamMask = new Uint8Array(this.count);
+    this.foundationMask = new Uint8Array(this.count);
+    this.buttressYaw = new Float32Array(this.count);
 
     // Консервативные переменные мелкой воды Сен-Венана
     this.h = new Float32Array(this.count);
@@ -65,6 +66,7 @@ export class HydroSimulation {
     this.tileWet = new Uint8Array(this.totalTiles);
     this.activeTiles = new Int32Array(this.totalTiles);
     this.activeTileCount = 0;
+    this.wetCellCount = 0;
 
     // Грязный прямоугольник рельефа + флаг обновления 3D-инстансов стройки
     this.terrainDirty = true;
@@ -74,29 +76,49 @@ export class HydroSimulation {
     this.dirtyMaxZ = grid - 1;
     this.engineeredDirty = true;
 
-    // Активные ячейки стройплощадки (чтобы не обходить всю сетку каждый кадр!)
     this.activeBuildCells = [];
     this.activeBuildSet = new Uint8Array(this.count);
-    this.activeBuildSites = []; // координаты центров для 3D башенных кранов
+    this.activeBuildSites = [];
 
-    // Сооружения гидроузла и ОРУ
+    // Сооружения гидроузла, навигации, экологии и ОРУ
     this.turbines = [];
     this.spillways = [];
     this.substations = [];
+    this.navLocks = [];
+    this.fishFarms = [];
     this.nextStructId = 1;
+
+    // 3D-переливы через гребень плотин и порогов (для рендера водопадных лент!)
+    this.overflowEdges = [];
 
     // Склады материалов и инженерная телеметрия
     this.soilStockpileM3 = 0;
     this.rockStockpileM3 = 0;
     this.totalExcavatedM3 = 0;
+    this.excavatedNormM3 = 0;
     this.damCellCount = 0;
     this.reinforcedCellCount = 0;
     this.maxDamStress = 0;
     this.totalSeepageQ = 0;
     this.pendingPourVolumeM3 = 0;
 
+    // Гидрологические потоки для научного водного баланса
     this.inflowMult = 1.0;
     this.rainRate = 0.0;
+    this.currentEvapRateMps = 0.0;
+    this.currentSnowmeltBonusQ = 0.0;
+    this.currentWithdrawQ = 0.0;
+    this.isOffPeakNight = false;
+
+    this.lastRiverInflowQ = 0;
+    this.lastRainAddedQ = 0;
+    this.lastInfiltrationQ = 0;
+    this.lastMouthOutflowQ = 0;
+    this.lastCrestOverflowQ = 0;
+    this.lastPumpedUpQ = 0;
+    this.lastPumpedConsumeMW = 0;
+    this.meanReservoirTurbidity = 0.05;
+
     this.lastSubsteps = 0;
     this.lastStepMs = 0;
     this.totalWaterVolumeM3 = 0;
@@ -105,14 +127,26 @@ export class HydroSimulation {
 
     this.jetEmitters = [];
 
+    this._syncScaleGeometry();
     if (!skipInitialBuild) {
       this.resetValley(presetId);
     }
   }
 
+  _syncScaleGeometry() {
+    this.dx = WORLD.size / this.grid;
+    this.cellArea = this.dx * this.dx;
+    // Коэффициент приведения объёмных цен к эталонной ячейке (чтобы на 5×5 и 10×10 км цены были сбалансированы!)
+    const refCellArea = (768 / this.grid) * (768 / this.grid);
+    this.volPriceNorm = refCellArea / (this.cellArea * WORLD.elevScale);
+    this.maxFlowSpeed = 26.0 * Math.sqrt(WORLD.elevScale);
+  }
+
   _clearArrays() {
+    this._syncScaleGeometry();
     this.bedrock.fill(0);
     this.soil.fill(0);
+    this.soilSaturation.fill(0.25);
     this.concrete.fill(0);
     this.targetConcrete.fill(0);
     this.formworkWall.fill(0);
@@ -135,14 +169,21 @@ export class HydroSimulation {
     this.turbines = [];
     this.spillways = [];
     this.substations = [];
+    this.navLocks = [];
+    this.fishFarms = [];
+    this.overflowEdges = [];
     this.soilStockpileM3 = 0;
     this.rockStockpileM3 = 0;
     this.totalExcavatedM3 = 0;
+    this.excavatedNormM3 = 0;
     this.damCellCount = 0;
     this.reinforcedCellCount = 0;
     this.maxDamStress = 0;
     this.totalSeepageQ = 0;
     this.pendingPourVolumeM3 = 0;
+    this.lastCrestOverflowQ = 0;
+    this.lastPumpedUpQ = 0;
+    this.lastPumpedConsumeMW = 0;
     this.engineeredDirty = true;
   }
 
@@ -153,14 +194,18 @@ export class HydroSimulation {
     this.finalizeValleySetup(18);
   }
 
-  /** Завершает предзагрузку рельефа после чанковой генерации */
   finalizeValleySetup(warmupSteps = 18) {
+    for (let i = 0; i < this.count; i++) {
+      this.soilSaturation[i] = this.h[i] > 0.02 ? 1.0 : 0.28;
+    }
     this.recomputeZbRange(0, 0, this.grid - 1, this.grid - 1);
     this._rebuildVelocitiesAll();
     this._rebuildActiveTiles();
+    const warmDt = Math.min(0.055, (0.35 * this.dx) / (14.0 * Math.sqrt(WORLD.elevScale)));
     for (let i = 0; i < warmupSteps; i++) {
-      this._substep(0.045);
+      this._substep(warmDt);
     }
+    this._detectCrestOverflows();
     this.engineeredDirty = true;
   }
 
@@ -241,6 +286,7 @@ export class HydroSimulation {
       bed,
       bedrock: this.bedrock[i],
       soil: this.soil[i],
+      saturation: this.soilSaturation[i],
       concrete: this.concrete[i],
       targetConcrete: this.targetConcrete[i],
       buildProgress: this.buildProgress[i],
@@ -260,13 +306,13 @@ export class HydroSimulation {
   }
 
   // ==========================================================================
-  //  ИНСТРУМЕНТЫ КАНАЛОВ, ОБЪЁМНЫХ 3D-ПЛОТИН, ФУНДАМЕНТА, ГЭС И ОРУ 110 кВ
+  //  ИНСТРУМЕНТЫ КАНАЛОВ, 3D-ПЛОТИН, ФУНДАМЕНТА, ПРИПЛОТИННЫХ ГЭС/ГАЭС, ШЛЮЗОВ И РЫБХОЗОВ
   // ==========================================================================
 
-  /** Экскавация канала / котлована: пополняет и отвал грунта, и склад гранитного щебня! */
   excavateCanal(wx, wz, radiusMeters, digStep, targetFloor, maxBudget, creative = false) {
     const { gx: cx, gz: cz } = this.worldToGrid(wx, wz);
     const rCells = Math.max(1, Math.ceil(radiusMeters / this.dx));
+    const scaledDig = digStep * WORLD.elevScale;
     let totalCost = 0;
     let soilCutM3 = 0;
     let rockCutM3 = 0;
@@ -289,20 +335,20 @@ export class HydroSimulation {
         if (profile <= 0.02) continue;
 
         const currentTop = this.bedrock[i] + this.soil[i];
-        let desiredCut = digStep * profile;
+        let desiredCut = scaledDig * profile;
         if (Number.isFinite(targetFloor)) {
-          const bankSlopeOffset = edgeT > 0.56 ? (edgeT - 0.56) * 4.2 : 0;
+          const bankSlopeOffset = edgeT > 0.56 ? (edgeT - 0.56) * 4.2 * WORLD.elevScale : 0;
           const goalElev = targetFloor + bankSlopeOffset;
           if (currentTop <= goalElev) continue;
-          desiredCut = Math.min(digStep * 1.85, currentTop - goalElev);
+          desiredCut = Math.min(scaledDig * 1.85, currentTop - goalElev);
         }
         if (desiredCut <= 0.01) continue;
 
         const cutSoil = Math.min(this.soil[i], desiredCut);
         const remCut = Math.max(0, desiredCut - cutSoil);
-        const cutRock = Math.min(Math.max(0, this.bedrock[i] - 1.2), remCut * 0.58);
+        const cutRock = Math.min(Math.max(0, this.bedrock[i] - 1.2), remCut * 0.62);
 
-        const cellCost = (cutSoil * 3.4 + cutRock * 14.5) * this.cellArea * 0.21;
+        const cellCost = (cutSoil * 3.4 + cutRock * 14.5) * this.cellArea * this.volPriceNorm * 0.21;
         if (!creative && totalCost + cellCost > maxBudget) continue;
 
         this.soil[i] -= cutSoil;
@@ -310,7 +356,7 @@ export class HydroSimulation {
         this.earthDamMask[i] = 0;
 
         if (this.h[i] > 0.05 || cutSoil > 0.05) {
-          this.sediment[i] = Math.min(1.4, this.sediment[i] + 0.55);
+          this.sediment[i] = Math.min(1.4, this.sediment[i] + 0.50);
         }
 
         totalCost += cellCost;
@@ -321,8 +367,10 @@ export class HydroSimulation {
 
     if (soilCutM3 > 0 || rockCutM3 > 0) {
       this.soilStockpileM3 += soilCutM3;
-      this.rockStockpileM3 += rockCutM3 * 1.15; // дроблёный гранитный щебень для бетона!
-      this.totalExcavatedM3 += soilCutM3 + rockCutM3;
+      this.rockStockpileM3 += rockCutM3 * 1.15;
+      const tot = soilCutM3 + rockCutM3;
+      this.totalExcavatedM3 += tot;
+      this.excavatedNormM3 += tot * this.volPriceNorm;
       this.recomputeZbRange(x0, z0, x1, z1);
       this._activateArea(x0, z0, x1, z1);
     }
@@ -330,12 +378,12 @@ export class HydroSimulation {
     return { cost: totalCost, excavatedM3: soilCutM3 + rockCutM3, rockM3: rockCutM3 };
   }
 
-  /** Укладка железобетонного лотка и 3D-бортов канала (использует щебень из отвала!) */
   lineCanalConcrete(wx, wz, radiusMeters, maxBudget, creative = false) {
     const { gx: cx, gz: cz } = this.worldToGrid(wx, wz);
     const rCells = Math.max(1, Math.ceil(radiusMeters / this.dx));
     let cost = 0;
     let count = 0;
+    const rockNeed = 3.5 / this.volPriceNorm;
 
     const x0 = clamp(cx - rCells, 1, this.grid - 2);
     const x1 = clamp(cx + rCells, 1, this.grid - 2);
@@ -348,12 +396,13 @@ export class HydroSimulation {
         const i = gz * this.grid + gx;
         if (this.linedMask[i] === 1) continue;
 
-        const useRock = Math.min(this.rockStockpileM3, 3.5);
-        const unitCost = useRock > 1.0 ? 58 * (1.0 - CONSTRUCTION.rockAggregateDiscount) : 58;
+        const useRock = Math.min(this.rockStockpileM3, rockNeed);
+        const unitCost = useRock > rockNeed * 0.3 ? 58 * (1.0 - CONSTRUCTION.rockAggregateDiscount) : 58;
         if (!creative && cost + unitCost > maxBudget) break;
 
         this.rockStockpileM3 = Math.max(0, this.rockStockpileM3 - useRock);
         this.linedMask[i] = 1;
+        this.soilSaturation[i] = 1.0; // бетонная облицовка убирает инфильтрацию!
         this.earthDamMask[i] = 0;
         cost += unitCost;
         count++;
@@ -366,10 +415,10 @@ export class HydroSimulation {
     return { cost, count };
   }
 
-  /** Временная насыпная грунтовая перемычка / дамба */
   buildEarthDam(wx, wz, radiusMeters, raiseStep, targetCrest, maxBudget, creative = false) {
     const { gx: cx, gz: cz } = this.worldToGrid(wx, wz);
     const rCells = Math.max(1, Math.ceil(radiusMeters / this.dx));
+    const scaledRaise = raiseStep * WORLD.elevScale;
     let totalCost = 0;
     let addedM3 = 0;
 
@@ -386,19 +435,19 @@ export class HydroSimulation {
         if (this.concrete[i] > 0.2 || this.targetConcrete[i] > 0.2) continue;
 
         const profile = Math.cos((dist / (radiusMeters || 1)) * Math.PI * 0.46);
-        let addH = raiseStep * profile;
+        let addH = scaledRaise * profile;
         if (Number.isFinite(targetCrest)) {
           const cur = this.zb[i];
-          const goal = targetCrest - (dist / (radiusMeters || 1)) * 1.4;
+          const goal = targetCrest - (dist / (radiusMeters || 1)) * 1.4 * WORLD.elevScale;
           if (cur >= goal) continue;
-          addH = Math.min(raiseStep * 1.75, goal - cur);
+          addH = Math.min(scaledRaise * 1.75, goal - cur);
         }
         if (addH <= 0.02) continue;
 
         const vol = addH * this.cellArea;
         const fromStock = Math.min(this.soilStockpileM3, vol);
         const bought = vol - fromStock;
-        const cellCost = (fromStock * 1.4 + bought * 5.2) * 0.22;
+        const cellCost = (fromStock * 1.4 + bought * 5.2) * this.volPriceNorm * 0.22;
         if (!creative && totalCost + cellCost > maxBudget) continue;
 
         this.soilStockpileM3 = Math.max(0, this.soilStockpileM3 - fromStock);
@@ -417,17 +466,13 @@ export class HydroSimulation {
     return { cost: totalCost, addedM3 };
   }
 
-  /**
-   * Возведение объёмной 3D бетонной плотины!
-   * В обычном режиме запускает 3-этапное строительство (шпунт -> арматура/опалубка -> бетон с кранами).
-   * В креативе или при instant=true возводит монолит мгновенно.
-   */
   buildConcreteDam(wx, wz, radiusMeters, targetCrest, maxBudget, creative = false, instant = false) {
     const { gx: cx, gz: cz } = this.worldToGrid(wx, wz);
-    const rCells = Math.max(1, Math.ceil(radiusMeters / this.dx));
+    const rCells = Math.max(1, Math.ceil((radiusMeters * 0.85) / this.dx));
     let totalCost = 0;
     let addedM3 = 0;
     const isInstant = creative || instant;
+    const stepCap = 5.6 * WORLD.elevScale;
 
     const x0 = clamp(cx - rCells, 1, this.grid - 2);
     const x1 = clamp(cx + rCells, 1, this.grid - 2);
@@ -437,24 +482,26 @@ export class HydroSimulation {
     for (let gz = z0; gz <= z1; gz++) {
       for (let gx = x0; gx <= x1; gx++) {
         const dist = Math.hypot(gx - cx, gz - cz) * this.dx;
-        if (dist > radiusMeters) continue;
+        if (dist > radiusMeters * 0.85) continue;
         const i = gz * this.grid + gx;
         if (this.gateWall[i] > 0.05) continue;
 
-        const edgeRatio = dist / (radiusMeters || 1);
-        const crestHere = edgeRatio < 0.64 ? targetCrest : targetCrest - (edgeRatio - 0.64) * 3.4;
+        const base = this.bedrock[i] + this.soil[i];
         const plannedTop = Math.max(this.concrete[i], this.targetConcrete[i]);
-        const curZ = this.bedrock[i] + this.soil[i] + plannedTop;
-        if (curZ >= crestHere) continue;
+        const curPlannedElev = base + plannedTop;
 
-        const addC = Math.min(7.5, crestHere - curZ);
+        let addC = 3.2 * WORLD.elevScale;
+        if (Number.isFinite(targetCrest)) {
+          if (curPlannedElev >= targetCrest) continue;
+          addC = Math.min(stepCap, targetCrest - curPlannedElev);
+        }
+        if (addC <= 0.03) continue;
+
         const vol = addC * this.cellArea;
-
-        // Используем гранитный щебень из выемки каналов со скидкой 38% + надбавка за укладку в глубокую воду без перемычки
         const fromRock = Math.min(this.rockStockpileM3, vol * 0.55);
         const rockDiscount = vol > 0 ? (fromRock / (vol * 0.55)) * CONSTRUCTION.rockAggregateDiscount : 0;
-        const underwaterPenalty = this.h[i] > 2.2 ? 1.28 : 1.0;
-        const cellCost = vol * 22.0 * 0.155 * (1.0 - rockDiscount) * underwaterPenalty;
+        const underwaterPenalty = this.h[i] > 2.2 * WORLD.elevScale ? 1.25 : 1.0;
+        const cellCost = vol * this.volPriceNorm * 22.0 * 0.155 * (1.0 - rockDiscount) * underwaterPenalty;
 
         if (!creative && totalCost + cellCost > maxBudget) continue;
         this.rockStockpileM3 = Math.max(0, this.rockStockpileM3 - fromRock);
@@ -470,7 +517,6 @@ export class HydroSimulation {
           this.formworkWall[i] = 0;
           this.buildProgress[i] = 1.0;
         } else {
-          // Сразу ставим шпунтовую стенку/опалубку, чтобы отжать реку, а бетон заливают краны!
           this.formworkWall[i] = Math.max(
             this.formworkWall[i],
             this.concrete[i] + addC * CONSTRUCTION.cofferdamInstantRatio,
@@ -512,15 +558,12 @@ export class HydroSimulation {
     return { cost: totalCost, addedM3 };
   }
 
-  /**
-   * Скальная цементация основания и монтаж объёмных 3D-контрфорсов плотины!
-   * Убирает фильтрацию под подошвой на мягких грунтах и кратно повышает прочность створа.
-   */
   reinforceFoundation(wx, wz, radiusMeters, maxBudget, creative = false) {
     const { gx: cx, gz: cz } = this.worldToGrid(wx, wz);
     const rCells = Math.max(1, Math.ceil((radiusMeters * 0.85) / this.dx));
     let cost = 0;
     let count = 0;
+    const rockNeed = 5.0 / this.volPriceNorm;
 
     const x0 = clamp(cx - rCells, 1, this.grid - 2);
     const x1 = clamp(cx + rCells, 1, this.grid - 2);
@@ -535,18 +578,16 @@ export class HydroSimulation {
         const i = gz * this.grid + gx;
         if (this.foundationMask[i] === 1) continue;
 
-        const useRock = Math.min(this.rockStockpileM3, 5.0);
-        const unitCost = useRock > 1.5 ? 135 * (1.0 - CONSTRUCTION.rockAggregateDiscount) : 135;
+        const useRock = Math.min(this.rockStockpileM3, rockNeed);
+        const unitCost = useRock > rockNeed * 0.3 ? 135 * (1.0 - CONSTRUCTION.rockAggregateDiscount) : 135;
         if (!creative && cost + unitCost > maxBudget) break;
 
         this.rockStockpileM3 = Math.max(0, this.rockStockpileM3 - useRock);
 
-        // Цементация: преобразуем рыхлый грунт основания в монолитную скальную плиту!
-        const consolidate = this.soil[i] * 0.82;
+        const consolidate = this.soil[i] * 0.85;
         this.soil[i] -= consolidate;
         this.bedrock[i] += consolidate;
         if (this.concrete[i] < 0.8 && this.targetConcrete[i] < 0.8) {
-          // Создаём железобетонную подушку ростверка даже до основной плотины
           this.concrete[i] = 0.85;
           this.targetConcrete[i] = 0.85;
           this.buildProgress[i] = 1.0;
@@ -568,37 +609,29 @@ export class HydroSimulation {
     return { cost, count };
   }
 
-  /** Строительство узловой 3D-подстанции ОРУ 110 кВ (снижает потери передачи в 5 раз!) */
   placeSubstation(wx, wz, maxBudget, creative = false) {
     const cost = CONSTRUCTION.substationCost;
     if (!creative && maxBudget < cost) {
       return { ok: false, reason: `Недостаточно средств на ОРУ 110 кВ (нужно ${cost.toLocaleString('ru-RU')} ₽)` };
     }
     const s = this.sampleAtWorld(wx, wz);
-    if (s.depth > 0.35) {
-      return { ok: false, reason: 'Подстанцию ОРУ 110 кВ нужно строить на сухом берегу выше воды!' };
+    if (s.depth > 0.35 * WORLD.elevScale) {
+      return { ok: false, reason: 'Подстанцию ОРУ нужно строить на сухом берегу выше воды!' };
     }
     for (const sub of this.substations) {
-      if (Math.hypot(sub.wx - wx, sub.wz - wz) < 28) {
-        return { ok: false, reason: 'Рядом уже работает подстанция ОРУ 110 кВ' };
+      if (Math.hypot(sub.wx - wx, sub.wz - wz) < 28 * WORLD.horizScale) {
+        return { ok: false, reason: 'Рядом уже работает подстанция ОРУ' };
       }
     }
 
-    // Выравниваем бетонную площадку под порталы и трансформаторы ОРУ
     const { gx, gz } = this.worldToGrid(wx, wz);
-    const padElev = s.bed + 0.6;
-    for (let oz = -1; oz <= 1; oz++) {
-      for (let ox = -1; ox <= 1; ox++) {
-        const cx = clamp(gx + ox, 1, this.grid - 2);
-        const cz = clamp(gz + oz, 1, this.grid - 2);
-        const i = cz * this.grid + cx;
-        const nat = this.bedrock[i] + this.soil[i];
-        this.concrete[i] = Math.max(this.concrete[i], Math.max(0.4, padElev - nat));
-        this.targetConcrete[i] = Math.max(this.targetConcrete[i], this.concrete[i]);
-        this.linedMask[i] = 1;
-      }
-    }
-    this.recomputeZbRange(gx - 2, gz - 2, gx + 2, gz + 2);
+    const padElev = s.bed + 0.5;
+    const i = gz * this.grid + gx;
+    const nat = this.bedrock[i] + this.soil[i];
+    this.concrete[i] = Math.max(this.concrete[i], Math.max(0.3, padElev - nat));
+    this.targetConcrete[i] = Math.max(this.targetConcrete[i], this.concrete[i]);
+    this.linedMask[i] = 1;
+    this.recomputeZbRange(gx - 1, gz - 1, gx + 1, gz + 1);
 
     const sub = {
       id: this.nextStructId++,
@@ -614,6 +647,72 @@ export class HydroSimulation {
     return { ok: true, cost, structure: sub };
   }
 
+  /** Строительство судоходного шлюза и грузового причала [L] */
+  placeNavigationLock(wx, wz, forcedYaw, maxBudget, creative = false) {
+    const cost = CONSTRUCTION.navLockCost;
+    if (!creative && maxBudget < cost) {
+      return { ok: false, reason: `Недостаточно средств на судоходный шлюз (нужно ${cost.toLocaleString('ru-RU')} ₽)` };
+    }
+    const { gx, gz } = this.worldToGrid(wx, wz);
+    if (gx < 4 || gx > this.grid - 5 || gz < 4 || gz > this.grid - 5) {
+      return { ok: false, reason: 'Слишком близко к краю карты' };
+    }
+    for (const lk of this.navLocks) {
+      if (Math.hypot(lk.gx - gx, lk.gz - gz) < 4) {
+        return { ok: false, reason: 'Рядом уже построен судоходный шлюз' };
+      }
+    }
+    const dir = this.detectHydraulicDirection(gx, gz, forcedYaw);
+    const s = this.sampleAtWorld(wx, wz);
+    const lock = {
+      id: this.nextStructId++,
+      kind: 'nav_lock',
+      gx,
+      gz,
+      wx,
+      wz,
+      wy: Math.max(s.bed, s.surface),
+      baseY: s.bedrock + s.soil,
+      yaw: dir.yaw,
+      dirX: dir.dx,
+      dirZ: dir.dz,
+      cyclePhase: 0,
+      shipsPassed: 0,
+    };
+    this.navLocks.push(lock);
+    this.engineeredDirty = true;
+    return { ok: true, cost, structure: lock };
+  }
+
+  /** Строительство рыбоводного комплекса (форелевые садки) и яхт-марины [F] */
+  placeFishEcoFarm(wx, wz, maxBudget, creative = false) {
+    const cost = CONSTRUCTION.fishEcoCost;
+    if (!creative && maxBudget < cost) {
+      return { ok: false, reason: `Недостаточно средств на рыбхоз/марину (нужно ${cost.toLocaleString('ru-RU')} ₽)` };
+    }
+    const s = this.sampleAtWorld(wx, wz);
+    if (s.depth < 0.35) {
+      return { ok: false, reason: 'Рыбхоз и яхт-марину нужно размещать на воде (в реке или водохранилище)!' };
+    }
+    for (const ff of this.fishFarms) {
+      if (Math.hypot(ff.wx - wx, ff.wz - wz) < 26 * WORLD.horizScale) {
+        return { ok: false, reason: 'Здесь уже стоят садки рыбхоза' };
+      }
+    }
+    const farm = {
+      id: this.nextStructId++,
+      kind: 'fish_farm',
+      gx: s.gx,
+      gz: s.gz,
+      wx,
+      wz,
+      wy: s.surface,
+    };
+    this.fishFarms.push(farm);
+    this.engineeredDirty = true;
+    return { ok: true, cost, structure: farm };
+  }
+
   detectHydraulicDirection(gx, gz, forcedYaw = null) {
     if (typeof forcedYaw === 'number') {
       return { dx: Math.cos(forcedYaw), dz: Math.sin(forcedYaw), yaw: forcedYaw };
@@ -627,7 +726,7 @@ export class HydroSimulation {
         const nx = clamp(gx + ox, 0, this.grid - 1);
         const nz = clamp(gz + oz, 0, this.grid - 1);
         const ni = nz * this.grid + nx;
-        const head = (this.bedrock[ni] + this.soil[ni]) + this.h[ni] * 1.85;
+        const head = (this.bedrock[ni] + this.soil[ni]) + this.h[ni] * 2.1;
         const w = 1.0 / (ox * ox + oz * oz);
         gradX -= ox * head * w;
         gradZ -= oz * head * w;
@@ -651,18 +750,18 @@ export class HydroSimulation {
     }
 
     for (const t of this.turbines) {
-      if (Math.hypot(t.gx - gx, t.gz - gz) < 3.5) {
+      if (Math.hypot(t.gx - gx, t.gz - gz) < 3.0) {
         return { ok: false, reason: 'Место занято гидроагрегатом' };
       }
     }
     for (const s of this.spillways) {
-      if (Math.hypot(s.gx - gx, s.gz - gz) < 3.0) {
+      if (Math.hypot(s.gx - gx, s.gz - gz) < 2.8) {
         return { ok: false, reason: 'Рядом уже установлен водосброс' };
       }
     }
 
     const dir = this.detectHydraulicDirection(gx, gz, forcedYaw);
-    let maxNeighborCrest = 0;
+    let maxDamCrest = 0;
     let minNaturalBed = Infinity;
     const cells = [];
 
@@ -675,52 +774,61 @@ export class HydroSimulation {
         minNaturalBed = Math.min(minNaturalBed, this.bedrock[i] + this.soil[i]);
       }
     }
-    for (let oz = -3; oz <= 3; oz++) {
-      for (let ox = -3; ox <= 3; ox++) {
+    // Смотрим только реальный бетон соседней плотины, а не высокие скалы каньона!
+    for (let oz = -2; oz <= 2; oz++) {
+      for (let ox = -2; ox <= 2; ox++) {
         const i = clamp(gz + oz, 0, this.grid - 1) * this.grid + clamp(gx + ox, 0, this.grid - 1);
-        const top = this.bedrock[i] + this.soil[i] + Math.max(this.concrete[i], this.targetConcrete[i]);
-        maxNeighborCrest = Math.max(maxNeighborCrest, top);
+        const cTop = Math.max(this.concrete[i], this.targetConcrete[i]);
+        if (cTop > 1.0) {
+          maxDamCrest = Math.max(maxDamCrest, this.bedrock[i] + this.soil[i] + cTop);
+        }
       }
     }
 
-    const sillElev = Math.max(minNaturalBed + 1.5, maxNeighborCrest - 7.8);
-    const gateMaxHeight = Math.max(6.8, maxNeighborCrest - sillElev + 2.2);
+    const defaultCrest = minNaturalBed + 8.5 * WORLD.elevScale;
+    const crestElev = maxDamCrest > minNaturalBed + 3.0 ? maxDamCrest : defaultCrest;
+    const sillElev = minNaturalBed + Math.max(1.2 * WORLD.elevScale, (crestElev - minNaturalBed) * 0.36);
+    const gateWallMax = Math.max(3.5 * WORLD.elevScale, crestElev - sillElev);
 
     for (const i of cells) {
       const nat = this.bedrock[i] + this.soil[i];
-      const cVal = Math.max(0.5, sillElev - nat);
-      this.concrete[i] = cVal;
-      this.targetConcrete[i] = cVal;
+      this.concrete[i] = Math.max(0.5, sillElev - nat);
+      this.targetConcrete[i] = this.concrete[i];
       this.formworkWall[i] = 0;
       this.buildProgress[i] = 1.0;
       this.linedMask[i] = 1;
       this.earthDamMask[i] = 0;
     }
 
-    const worldPos = this.gridToWorld(gx, gz);
+    const pos = this.gridToWorld(gx, gz);
+    const downGx = clamp(Math.round(gx + dir.dx * 3), 1, this.grid - 2);
+    const downGz = clamp(Math.round(gz + dir.dz * 3), 1, this.grid - 2);
+    const downBedY = this.bedrock[downGz * this.grid + downGx] + this.soil[downGz * this.grid + downGx];
+
     const sw = {
       id: this.nextStructId++,
       kind: 'spillway',
       gx,
       gz,
-      wx: worldPos.wx,
-      wz: worldPos.wz,
+      wx: pos.wx,
+      wz: pos.wz,
       dirX: dir.dx,
       dirZ: dir.dz,
       yaw: dir.yaw,
       sillElev,
-      wallHeight: gateMaxHeight,
+      crestElev,
+      downBedY,
+      wallHeight: gateWallMax,
       openRatio: 0.35,
       autoRegulate: true,
-      targetHeadElev: sillElev + gateMaxHeight * 0.82,
-      cells,
+      targetHeadElev: crestElev - 1.2 * WORLD.elevScale,
       currentFlowQ: 0,
       jetSpeed: 0,
+      cells,
     };
 
     this.spillways.push(sw);
     this._syncSpillwayGateCells(sw);
-    this.recomputeZbRange(gx - 2, gz - 2, gx + 2, gz + 2);
     this._activateArea(gx - 3, gz - 3, gx + 3, gz + 3);
     this.engineeredDirty = true;
     return { ok: true, cost, structure: sw };
@@ -736,6 +844,13 @@ export class HydroSimulation {
     this.markTerrainDirty(sw.gx - 2, sw.gz - 2, sw.gx + 2, sw.gz + 2);
   }
 
+  /**
+   * ИСПРАВЛЕННАЯ КЛАССИЧЕСКАЯ ПРИПЛОТИННАЯ / РУСЛОВАЯ КОМПОНОВКА ГЭС (по Википедии «Гидроэлектростанция»):
+   * - НИКОГДА не задирает рельеф под машинным залом до высоты соседних скал каньона!
+   * - Напорный водоприёмник стоит со стороны водохранилища (верхний бьеф),
+   * - Машинный зал ГЭС располагается ВНИЗУ у подножия плотины в нижнем бьефе (hallBaseY = outfallBedY)!
+   * - Наклонные стальные водоводы соединяют верхний бьеф со спиральной камерой машзала!
+   */
   placeTurbine(typeId, wx, wz, forcedYaw, maxBudget, creative = false) {
     const spec = TURBINE_SPECS[typeId];
     if (!spec) return { ok: false, reason: 'Неизвестный тип турбины' };
@@ -744,59 +859,70 @@ export class HydroSimulation {
     }
 
     const { gx, gz } = this.worldToGrid(wx, wz);
-    if (gx < 6 || gx > this.grid - 7 || gz < 6 || gz > this.grid - 7) {
-      return { ok: false, reason: 'Слишком близко к границе долины' };
+    if (gx < 5 || gx > this.grid - 6 || gz < 5 || gz > this.grid - 6) {
+      return { ok: false, reason: 'Слишком близко к границе бассейна' };
     }
 
     for (const t of this.turbines) {
-      if (Math.hypot(t.gx - gx, t.gz - gz) < 3.6) {
-        return { ok: false, reason: 'Здесь уже стоит гидроагрегат' };
+      if (Math.hypot(t.gx - gx, t.gz - gz) < 3.0) {
+        return { ok: false, reason: 'Здесь уже установлен гидроагрегат' };
       }
     }
     for (const s of this.spillways) {
-      if (Math.hypot(s.gx - gx, s.gz - gz) < 3.2) {
+      if (Math.hypot(s.gx - gx, s.gz - gz) < 2.8) {
         return { ok: false, reason: 'Место занято водосбросом' };
       }
     }
 
     const dir = this.detectHydraulicDirection(gx, gz, forcedYaw);
-    const reach = Math.max(4, Math.ceil(16.0 / this.dx));
+    // Шаг водозабора и отводящего канала в ячейках сетки (корректно работает и на 0.8 км, и на 10 км!)
+    const reach = clamp(Math.round((15.0 * WORLD.horizScale) / this.dx), 3, 5);
     const intakeGx = clamp(Math.round(gx - dir.dx * reach), 2, this.grid - 3);
     const intakeGz = clamp(Math.round(gz - dir.dz * reach), 2, this.grid - 3);
     const outfallGx = clamp(Math.round(gx + dir.dx * reach), 2, this.grid - 3);
     const outfallGz = clamp(Math.round(gz + dir.dz * reach), 2, this.grid - 3);
 
-    let neighborDamTop = 0;
-    for (let oz = -3; oz <= 3; oz++) {
-      for (let ox = -3; ox <= 3; ox++) {
-        const ni = clamp(gz + oz, 0, this.grid - 1) * this.grid + clamp(gx + ox, 0, this.grid - 1);
-        const top = this.bedrock[ni] + this.soil[ni] + Math.max(this.concrete[ni], this.targetConcrete[ni]);
-        neighborDamTop = Math.max(neighborDamTop, top);
-      }
-    }
+    // Ищем высоту ТОЛЬКО реально построенной бетонной плотины в радиусе 2 ячеек (игнорируем скалы каньона!)
     const centerIdx = gz * this.grid + gx;
     const baseNat = this.bedrock[centerIdx] + this.soil[centerIdx];
-    const blockCrest = Math.max(baseNat + 11.5, neighborDamTop);
-
-    const bodyCells = [];
-    for (let oz = -1; oz <= 1; oz++) {
-      for (let ox = -1; ox <= 1; ox++) {
-        const cx = gx + ox;
-        const cz = gz + oz;
-        const i = cz * this.grid + cx;
-        const nat = this.bedrock[i] + this.soil[i];
-        const prevConcrete = this.concrete[i];
-        const cH = Math.max(prevConcrete, blockCrest - nat);
-        this.concrete[i] = cH;
-        this.targetConcrete[i] = Math.max(this.targetConcrete[i], cH);
-        this.formworkWall[i] = 0;
-        this.buildProgress[i] = 1.0;
-        this.linedMask[i] = 1;
-        this.earthDamMask[i] = 0;
-        bodyCells.push({ i, prevConcrete });
+    let existingDamCrest = 0;
+    for (let oz = -2; oz <= 2; oz++) {
+      for (let ox = -2; ox <= 2; ox++) {
+        const ni = clamp(gz + oz, 0, this.grid - 1) * this.grid + clamp(gx + ox, 0, this.grid - 1);
+        const cH = Math.max(this.concrete[ni], this.targetConcrete[ni]);
+        if (cH > 1.2) {
+          existingDamCrest = Math.max(existingDamCrest, this.bedrock[ni] + this.soil[ni] + cH);
+        }
       }
     }
 
+    // Если ставим прямо в существующую плотину — держим её гребень; если в чистую реку — аккуратный водоподъёмный порог, без «башни»!
+    const headwallCrest = existingDamCrest > baseNat + 1.5
+      ? existingDamCrest
+      : baseNat + 5.8 * WORLD.elevScale;
+
+    const bodyCells = [];
+    // Укрепляем только узкую линию напорного фронта поперёк потока (1 ячейка в толщину, НЕ раздувая гору!)
+    const orthoX = -dir.dz;
+    const orthoZ = dir.dx;
+    for (let s = -1; s <= 1; s++) {
+      const cx = clamp(Math.round(gx + orthoX * s), 1, this.grid - 2);
+      const cz = clamp(Math.round(gz + orthoZ * s), 1, this.grid - 2);
+      const i = cz * this.grid + cx;
+      const nat = this.bedrock[i] + this.soil[i];
+      if (nat > headwallCrest + 2.0) continue; // не трогаем высокие береговые скалы!
+      const prevConcrete = this.concrete[i];
+      const cH = Math.max(prevConcrete, Math.max(0.6, headwallCrest - nat));
+      this.concrete[i] = cH;
+      this.targetConcrete[i] = Math.max(this.targetConcrete[i], cH);
+      this.formworkWall[i] = 0;
+      this.buildProgress[i] = 1.0;
+      this.linedMask[i] = 1;
+      this.earthDamMask[i] = 0;
+      bodyCells.push({ i, prevConcrete });
+    }
+
+    // Расчищаем аванкамеру водоприёмника (intake) и отводящий бассейн машзала (outfall), чтобы вода свободно входила и выходила!
     for (let oz = -1; oz <= 1; oz++) {
       for (let ox = -1; ox <= 1; ox++) {
         const ii = (intakeGz + oz) * this.grid + (intakeGx + ox);
@@ -824,6 +950,11 @@ export class HydroSimulation {
     const intakeBed = this.bedrock[intakeGz * this.grid + intakeGx] + this.soil[intakeGz * this.grid + intakeGx];
     const outfallBed = this.bedrock[outfallGz * this.grid + outfallGx] + this.soil[outfallGz * this.grid + outfallGx];
 
+    // Здание машинного зала ГЭС располагаем строго у низового подножия плотины (между осью плотины и нижним бьефом) на отметке дна реки!
+    const hallWx = pos.wx + dir.dx * (this.dx * (reach * 0.58));
+    const hallWz = pos.wz + dir.dz * (this.dx * (reach * 0.58));
+    const hallBedY = Math.min(baseNat, outfallBed);
+
     const turb = {
       id: this.nextStructId++,
       kind: 'turbine',
@@ -833,7 +964,10 @@ export class HydroSimulation {
       gz,
       wx: pos.wx,
       wz: pos.wz,
-      crestY: blockCrest,
+      hallWx,
+      hallWz,
+      hallBaseY: hallBedY,
+      crestY: headwallCrest,
       baseY: baseNat,
       dirX: dir.dx,
       dirZ: dir.dz,
@@ -851,13 +985,16 @@ export class HydroSimulation {
       bodyCells,
       throttle: 1.0,
       autoDispatch: false,
+      pumpedStorage: typeId === 'pelton', // режим обратимой ГАЭС включён по умолчанию на агрегатах [0]!
+      isPumpingNow: false,
+      pumpConsumeMW: 0,
       grossHead: 0,
       netHead: 0,
       flowQ: 0,
       efficiency: 0,
       powerMW: 0,
       cavitation: 0,
-      trashLoad: 0,      // засорение сороудерживающей решётки плавником/илом (0..0.35)
+      trashLoad: 0,
       condition: 1.0,
       rotorPhase: 0,
     };
@@ -883,7 +1020,9 @@ export class HydroSimulation {
   demolishAt(wx, wz) {
     const { gx, gz } = this.worldToGrid(wx, wz);
 
-    const tIdx = this.turbines.findIndex((t) => Math.hypot(t.gx - gx, t.gz - gz) <= 2.5);
+    const tIdx = this.turbines.findIndex(
+      (t) => Math.hypot(t.gx - gx, t.gz - gz) <= 2.6 || Math.hypot(t.hallWx - wx, t.hallWz - wz) <= 2.2 * this.dx,
+    );
     if (tIdx >= 0) {
       const t = this.turbines[tIdx];
       for (const c of t.bodyCells) {
@@ -892,12 +1031,12 @@ export class HydroSimulation {
         this.formworkWall[c.i] = 0;
       }
       this.turbines.splice(tIdx, 1);
-      this.recomputeZbRange(t.gx - 2, t.gz - 2, t.gx + 2, t.gz + 2);
+      this.recomputeZbRange(t.gx - 3, t.gz - 3, t.gx + 3, t.gz + 3);
       this.engineeredDirty = true;
       return { removed: 'turbine', refund: Math.round(t.spec.cost * 0.45) };
     }
 
-    const sIdx = this.spillways.findIndex((s) => Math.hypot(s.gx - gx, s.gz - gz) <= 2.5);
+    const sIdx = this.spillways.findIndex((s) => Math.hypot(s.gx - gx, s.gz - gz) <= 2.6);
     if (sIdx >= 0) {
       const s = this.spillways[sIdx];
       for (const i of s.cells) {
@@ -912,7 +1051,21 @@ export class HydroSimulation {
       return { removed: 'spillway', refund: 1900 };
     }
 
-    const subIdx = this.substations.findIndex((sub) => Math.hypot(sub.wx - wx, sub.wz - wz) <= 14);
+    const lkIdx = this.navLocks.findIndex((l) => Math.hypot(l.gx - gx, l.gz - gz) <= 2.8);
+    if (lkIdx >= 0) {
+      this.navLocks.splice(lkIdx, 1);
+      this.engineeredDirty = true;
+      return { removed: 'nav_lock', refund: Math.round(CONSTRUCTION.navLockCost * 0.45) };
+    }
+
+    const ffIdx = this.fishFarms.findIndex((f) => Math.hypot(f.gx - gx, f.gz - gz) <= 2.8);
+    if (ffIdx >= 0) {
+      this.fishFarms.splice(ffIdx, 1);
+      this.engineeredDirty = true;
+      return { removed: 'fish_farm', refund: Math.round(CONSTRUCTION.fishEcoCost * 0.45) };
+    }
+
+    const subIdx = this.substations.findIndex((sub) => Math.hypot(sub.gx - gx, sub.gz - gz) <= 2.8);
     if (subIdx >= 0) {
       this.substations.splice(subIdx, 1);
       this.engineeredDirty = true;
@@ -927,7 +1080,7 @@ export class HydroSimulation {
         const i = cz * this.grid + cx;
         if (this.concrete[i] > 0 || this.targetConcrete[i] > 0 || this.foundationMask[i]) {
           removedConcrete += Math.max(this.concrete[i], this.targetConcrete[i]) + 1;
-          this.concrete[i] = Math.max(0, this.concrete[i] - 5.0);
+          this.concrete[i] = Math.max(0, this.concrete[i] - 5.0 * WORLD.elevScale);
           this.targetConcrete[i] = this.concrete[i];
           this.formworkWall[i] = 0;
           this.buildProgress[i] = 1.0;
@@ -947,11 +1100,12 @@ export class HydroSimulation {
     return { removed: null, refund: 0 };
   }
 
-  findStructureNear(wx, wz, maxDist = 15) {
+  findStructureNear(wx, wz, maxDist = null) {
+    const reachDist = maxDist !== null ? maxDist : Math.max(16, this.dx * 3.2);
     let best = null;
-    let bestD = maxDist;
+    let bestD = reachDist;
     for (const t of this.turbines) {
-      const d = Math.hypot(t.wx - wx, t.wz - wz);
+      const d = Math.min(Math.hypot(t.wx - wx, t.wz - wz), Math.hypot(t.hallWx - wx, t.hallWz - wz));
       if (d < bestD) { bestD = d; best = t; }
     }
     for (const s of this.spillways) {
@@ -962,7 +1116,7 @@ export class HydroSimulation {
   }
 
   // ==========================================================================
-  //  ШАГ СИМУЛЯЦИИ + ПОЭТАПНАЯ ЗАЛИВКА БЕТОНА + КОНТРОЛЬ ПРОЧНОСТИ И ФИЛЬТРАЦИИ
+  //  ШАГ СИМУЛЯЦИИ, 3D-ДЕТЕКТОР ПЕРЕЛИВА И НАУЧНЫЕ ИСТОЧНИКИ / СТОКИ ВОДЫ
   // ==========================================================================
 
   step(frameDt, maxSubsteps = 8) {
@@ -971,14 +1125,13 @@ export class HydroSimulation {
 
     const totalDt = clamp(frameDt, 0.001, 0.16);
 
-    // 0. Продвигаем 3-этапное объёмное бетонирование плотин строительными бригадами и кранами
     if (this.activeBuildCells.length > 0) {
       this._stepConstructionQueue(totalDt);
     }
 
     this._rebuildActiveTiles();
 
-    let maxWaveSpeed = 6.5;
+    let maxWaveSpeed = 6.5 * Math.sqrt(WORLD.elevScale);
     const g = this.grid;
     for (let ti = 0; ti < this.activeTileCount; ti++) {
       const tileIdx = this.activeTiles[ti];
@@ -1003,18 +1156,131 @@ export class HydroSimulation {
     const substeps = clamp(Math.ceil(totalDt / cflDt), 1, maxSubsteps);
     const subDt = Math.min(totalDt / substeps, cflDt);
 
+    this._accumMouthVol = 0;
+    this._accumRainVol = 0;
+    this._accumInflowVol = 0;
+    this._accumPumpVol = 0;
+    this._accumPumpMW = 0;
+
     for (let s = 0; s < substeps; s++) {
       this._substep(subDt);
     }
 
-    this._stepSecondaryTransportAndErosion(subDt * substeps);
+    const elapsedSim = Math.max(1e-4, subDt * substeps);
+    this.lastMouthOutflowQ = this._accumMouthVol / elapsedSim;
+    this.lastRainAddedQ = this._accumRainVol / elapsedSim;
+    this.lastRiverInflowQ = this._accumInflowVol / elapsedSim;
+    this.lastPumpedUpQ = this._accumPumpVol / elapsedSim;
+    this.lastPumpedConsumeMW = this._accumPumpMW / substeps;
+
+    this._stepSecondaryTransportAndErosion(elapsedSim);
+    if ((this._erosionTick % 2) === 0) {
+      this._detectCrestOverflows();
+    }
 
     this.lastSubsteps = substeps;
     const t1 = typeof performance !== 'undefined' ? performance.now() : Date.now();
     this.lastStepMs = t1 - t0;
   }
 
-  /** Поэтапное бетонирование активных секций плотины + расчёт точек для 3D башенных кранов */
+  /**
+   * Находит все кромки плотин и крутых уступов, через которые сейчас ПЕРЕЛИВАЕТСЯ вода!
+   * Заполняет this.overflowEdges для рендера сплошных падающих 3D-лент воды и брызг!
+   */
+  _detectCrestOverflows() {
+    const g = this.grid;
+    const edges = [];
+    const dropThresh = 1.65 * WORLD.elevScale;
+    let totalOverflowQ = 0;
+
+    for (let ti = 0; ti < this.activeTileCount; ti++) {
+      const tileIdx = this.activeTiles[ti];
+      const x0 = Math.max(2, (tileIdx % this.tilesN) * TILE);
+      const z0 = Math.max(2, Math.floor(tileIdx / this.tilesN) * TILE);
+      const x1 = Math.min(g - 2, (tileIdx % this.tilesN) * TILE + TILE);
+      const z1 = Math.min(g - 2, Math.floor(tileIdx / this.tilesN) * TILE + TILE);
+
+      for (let gz = z0; gz < z1; gz++) {
+        const row = gz * g;
+        for (let gx = x0; gx < x1; gx++) {
+          const i = row + gx;
+          const depth = this.h[i];
+          if (depth < 0.08) continue;
+
+          const isEngineered = this.concrete[i] > 1.2 || this.formworkWall[i] > 1.2 || this.earthDamMask[i] === 1;
+          if (!isEngineered && depth < 0.35) continue;
+
+          const crestY = this.zb[i];
+          const surfY = crestY + depth;
+
+          // Ищем соседнюю ячейку с резким сбросом высоты вниз (низовая грань плотины / водопада!)
+          let bestDrop = 0;
+          let bestDirX = 0;
+          let bestDirZ = 0;
+          let bestToeY = crestY;
+
+          const checkNb = (ni, dxN, dzN) => {
+            const nbSurf = this.zb[ni] + this.h[ni];
+            const bedDrop = crestY - this.zb[ni];
+            const surfDrop = surfY - nbSurf;
+            if (bedDrop > dropThresh && surfDrop > dropThresh * 0.75 && bedDrop > bestDrop) {
+              bestDrop = bedDrop;
+              bestDirX = dxN;
+              bestDirZ = dzN;
+              bestToeY = nbSurf;
+            }
+          };
+
+          checkNb(i + g, 0, 1);
+          checkNb(i - g, 0, -1);
+          checkNb(i + 1, 1, 0);
+          checkNb(i - 1, -1, 0);
+
+          if (bestDrop > dropThresh) {
+            // Формула водослива с широким порогом Полени: Q = m * b * sqrt(2g) * H^(3/2)
+            const qWeir = 0.385 * this.dx * Math.sqrt(2 * G) * Math.pow(depth, 1.5);
+            totalOverflowQ += qWeir;
+
+            const nIdx = (gz + bestDirZ) * g + (gx + bestDirX);
+            this.foam[nIdx] = Math.min(1.0, this.foam[nIdx] + 0.65);
+
+            if (edges.length < 280) {
+              const wp = this.gridToWorld(gx, gz);
+              edges.push({
+                wx: wp.wx + bestDirX * this.dx * 0.42,
+                wz: wp.wz + bestDirZ * this.dx * 0.42,
+                crestY: surfY - 0.1,
+                toeY: bestToeY,
+                dropH: Math.max(1.8, surfY - bestToeY),
+                dirX: bestDirX,
+                dirZ: bestDirZ,
+                yaw: Math.atan2(bestDirZ, bestDirX),
+                width: this.dx * 1.12,
+                headH: depth,
+              });
+
+              if (edges.length % 3 === 0) {
+                this.jetEmitters.push({
+                  wx: wp.wx + bestDirX * this.dx * 0.6,
+                  wy: crestY + depth * 0.3,
+                  wz: wp.wz + bestDirZ * this.dx * 0.6,
+                  vx: bestDirX * (2.6 + Math.sqrt(G * depth) * 0.9),
+                  vy: 0.4,
+                  vz: bestDirZ * (2.6 + Math.sqrt(G * depth) * 0.9),
+                  intensity: clamp(depth / 1.5, 0.25, 1.4),
+                  kind: 'spillway',
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+
+    this.overflowEdges = edges;
+    this.lastCrestOverflowQ = totalOverflowQ;
+  }
+
   _stepConstructionQueue(dt) {
     const g = this.grid;
     const n = this.activeBuildCells.length;
@@ -1024,8 +1290,11 @@ export class HydroSimulation {
       return;
     }
 
-    // Распределяем производительность бетонного завода между активными секциями (с гарантированным минимумом)
-    const dhPerCell = Math.max(0.85 * dt, (CONSTRUCTION.pourRateM3PerSec * dt) / (Math.min(n, 28) * this.cellArea));
+    const scaledPourM3s = (CONSTRUCTION.pourRateM3PerSec / this.volPriceNorm);
+    const dhPerCell = Math.max(
+      0.95 * WORLD.elevScale * dt,
+      (scaledPourM3s * dt) / (Math.min(n, 28) * this.cellArea),
+    );
     let minX = g, minZ = g, maxX = -1, maxZ = -1;
     let remainingVol = 0;
     const nextList = [];
@@ -1046,10 +1315,8 @@ export class HydroSimulation {
 
       const gx = i % g;
       const gz = (i / g) | 0;
-
-      // Если бурный паводок переливается через ещё сырую опалубку (<45%), укладка идёт медленнее
       const overtopSpeed = this.h[i] > 0.6 ? Math.hypot(this.u[i], this.v[i]) : 0;
-      const floodSlowdown = overtopSpeed > 3.5 ? 0.42 : 1.0;
+      const floodSlowdown = overtopSpeed > 3.5 * Math.sqrt(WORLD.elevScale) ? 0.45 : 1.0;
 
       cur = Math.min(target, cur + dhPerCell * floodSlowdown);
       this.concrete[i] = cur;
@@ -1112,6 +1379,8 @@ export class HydroSimulation {
     this.tileWet.fill(0);
 
     let volSum = 0;
+    let wetCount = 0;
+    let sedWeighted = 0;
     for (let tz = 0; tz < tn; tz++) {
       const z0 = tz * TILE;
       const z1 = Math.min(g, z0 + TILE);
@@ -1122,10 +1391,15 @@ export class HydroSimulation {
         for (let gz = z0; gz < z1; gz++) {
           const row = gz * g;
           for (let gx = x0; gx < x1; gx++) {
-            const d = this.h[row + gx];
-            if (d > 0.0015) {
+            const idx = row + gx;
+            const d = this.h[idx];
+            if (d > 0.002) {
               hasWater = true;
               volSum += d;
+              if (d > 0.05) {
+                wetCount++;
+                sedWeighted += this.sediment[idx];
+              }
             }
           }
         }
@@ -1143,7 +1417,6 @@ export class HydroSimulation {
       }
     }
 
-    // Истоки 3 рек и площадки гидроагрегатов всегда активны
     this._activateArea(0, 0, g - 1, 6);
     this._activateArea(0, Math.floor(g * 0.55), 6, Math.floor(g * 0.72));
     for (let k = 0; k < this.turbines.length; k++) {
@@ -1163,6 +1436,8 @@ export class HydroSimulation {
       }
     }
     this.activeTileCount = count;
+    this.wetCellCount = wetCount;
+    this.meanReservoirTurbidity = wetCount > 0 ? sedWeighted / wetCount : 0.04;
     this.totalWaterVolumeM3 = volSum * this.cellArea;
   }
 
@@ -1170,6 +1445,7 @@ export class HydroSimulation {
     this.simTime += dt;
     const g = this.grid;
     const invDx = 1.0 / this.dx;
+    const maxSpd = this.maxFlowSpeed;
     const { h, hu, hv, zb, u, v, dH, dHU, dHV } = this;
 
     this._applyRiverBoundariesAndRain(dt);
@@ -1237,12 +1513,19 @@ export class HydroSimulation {
                 const fqx = 0.5 * (qxL * uL + pL + qxR * uR + pR - a * (qxR - qxL));
                 const fqz = 0.5 * (qxL * vL + qxR * vR - a * (qzR - qzL));
 
-                dH[i] -= fh;
-                dH[r] += fh;
-                dHU[i] -= (fqx - pL);
-                dHU[r] += (fqx - pR);
-                dHV[i] -= fqz;
-                dHV[r] += fqz;
+                const sL = 0.5 * G * (hL * hL - hLs * hLs);
+                const sR = 0.5 * G * (hR * hR - hRs * hRs);
+
+                if (gx >= 1) {
+                  dH[i] -= fh * invDx;
+                  dHU[i] -= (fqx - sL) * invDx;
+                  dHV[i] -= fqz * invDx;
+                }
+                if (gx + 1 < g - 1) {
+                  dH[r] += fh * invDx;
+                  dHU[r] += (fqx - sR) * invDx;
+                  dHV[r] += fqz * invDx;
+                }
               }
             }
           }
@@ -1250,42 +1533,49 @@ export class HydroSimulation {
           // Грань Z
           {
             const b = i + g;
-            const hL = h[i];
-            const hR = h[b];
-            if (hL > 1e-5 || hR > 1e-5) {
-              const zbL = zb[i];
-              const zbR = zb[b];
-              const zbStar = zbL > zbR ? zbL : zbR;
-              const hLs = Math.max(0, zbL + hL - zbStar);
-              const hRs = Math.max(0, zbR + hR - zbStar);
+            const hT = h[i];
+            const hB = h[b];
+            if (hT > 1e-5 || hB > 1e-5) {
+              const zbT = zb[i];
+              const zbB = zb[b];
+              const zbStar = zbT > zbB ? zbT : zbB;
+              const hTs = Math.max(0, zbT + hT - zbStar);
+              const hBs = Math.max(0, zbB + hB - zbStar);
 
-              if (hLs > 1e-6 || hRs > 1e-6) {
-                const uL = u[i];
-                const vL = v[i];
-                const uR = u[b];
-                const vR = v[b];
-                const qxL = hLs * uL;
-                const qzL = hLs * vL;
-                const qxR = hRs * uR;
-                const qzR = hRs * vR;
+              if (hTs > 1e-6 || hBs > 1e-6) {
+                const uT = u[i];
+                const vT = v[i];
+                const uB = u[b];
+                const vB = v[b];
+                const qxT = hTs * uT;
+                const qzT = hTs * vT;
+                const qxB = hBs * uB;
+                const qzB = hBs * vB;
 
-                const aL = Math.abs(vL) + Math.sqrt(G * hLs);
-                const aR = Math.abs(vR) + Math.sqrt(G * hRs);
-                const a = aL > aR ? aL : aR;
+                const aT = Math.abs(vT) + Math.sqrt(G * hTs);
+                const aB = Math.abs(vB) + Math.sqrt(G * hBs);
+                const a = aT > aB ? aT : aB;
 
-                const pL = 0.5 * G * hLs * hLs;
-                const pR = 0.5 * G * hRs * hRs;
+                const pT = 0.5 * G * hTs * hTs;
+                const pB = 0.5 * G * hBs * hBs;
 
-                const fh = 0.5 * (qzL + qzR - a * (hRs - hLs));
-                const fqx = 0.5 * (qzL * uL + qzR * uR - a * (qxR - qxL));
-                const fqz = 0.5 * (qzL * vL + pL + qzR * vR + pR - a * (qzR - qzL));
+                const gh = 0.5 * (qzT + qzB - a * (hBs - hTs));
+                const gqx = 0.5 * (qxT * vT + qxB * vB - a * (qxB - qxT));
+                const gqz = 0.5 * (qzT * vT + pT + qzB * vB + pB - a * (qzB - qzT));
 
-                dH[i] -= fh;
-                dH[b] += fh;
-                dHU[i] -= fqx;
-                dHU[b] += fqx;
-                dHV[i] -= (fqz - pL);
-                dHV[b] += (fqz - pR);
+                const sT = 0.5 * G * (hT * hT - hTs * hTs);
+                const sB = 0.5 * G * (hB * hB - hBs * hBs);
+
+                if (gz >= 1) {
+                  dH[i] -= gh * invDx;
+                  dHU[i] -= gqx * invDx;
+                  dHV[i] -= (gqz - sT) * invDx;
+                }
+                if (gz + 1 < g - 1) {
+                  dH[b] += gh * invDx;
+                  dHU[b] += gqx * invDx;
+                  dHV[b] += (gqz - sB) * invDx;
+                }
               }
             }
           }
@@ -1293,7 +1583,7 @@ export class HydroSimulation {
       }
     }
 
-    const scale = dt * invDx;
+    // Интегрируем глубину и импульс с неявным трением Маннинга
     for (let ti = 0; ti < this.activeTileCount; ti++) {
       const tileIdx = this.activeTiles[ti];
       const x0 = Math.max(1, (tileIdx % this.tilesN) * TILE);
@@ -1305,8 +1595,8 @@ export class HydroSimulation {
         const row = gz * g;
         for (let gx = x0; gx < x1; gx++) {
           const i = row + gx;
-          let nh = h[i] + scale * dH[i];
-          if (nh <= 1e-5) {
+          let nh = h[i] + dt * dH[i];
+          if (nh <= 1e-4) {
             h[i] = 0;
             hu[i] = 0;
             hv[i] = 0;
@@ -1315,28 +1605,29 @@ export class HydroSimulation {
             continue;
           }
 
-          let nqx = hu[i] + scale * dHU[i];
-          let nqz = hv[i] + scale * dHV[i];
+          let nqx = hu[i] + dt * dHU[i];
+          let nqz = hv[i] + dt * dHV[i];
 
           const h2 = nh * nh;
           const h4 = h2 * h2;
-          const invDenom = Math.SQRT2 * nh / Math.sqrt(h4 + (h4 > EPS_H4 ? h4 : EPS_H4));
-          let ux = nqx * invDenom;
-          let vz = nqz * invDenom;
+          const denom = Math.sqrt(h4 + (EPS_H4 > h4 ? EPS_H4 : h4));
+          const factor = (Math.SQRT2 * nh) / denom;
+          let ux = nqx * factor;
+          let vz = nqz * factor;
 
-          const manning = this.linedMask[i] ? 0.012 : (this.soil[i] < 0.6 ? 0.026 : 0.036);
-          const speed = Math.hypot(ux, vz);
-          if (speed > 1e-4) {
-            const hEff = nh > 0.045 ? nh : 0.045;
-            const drag = dt * G * manning * manning * speed / Math.pow(hEff, 1.3333333);
-            const damp = 1.0 / (1.0 + drag);
+          const spd = Math.hypot(ux, vz);
+          if (spd > 1e-4) {
+            const manningN = this.linedMask[i] ? 0.012 : (this.soil[i] < 0.5 ? 0.029 : 0.036);
+            const cf = G * manningN * manningN / Math.pow(Math.max(0.08, nh), 1.3333);
+            const damp = 1.0 / (1.0 + dt * cf * spd);
             ux *= damp;
             vz *= damp;
 
-            if (speed * damp > MAX_SPEED) {
-              const cap = MAX_SPEED / (speed * damp);
-              ux *= cap;
-              vz *= cap;
+            const curSpd = spd * damp;
+            if (curSpd > maxSpd) {
+              const s = maxSpd / curSpd;
+              ux *= s;
+              vz *= s;
             }
           }
 
@@ -1355,50 +1646,62 @@ export class HydroSimulation {
   _applyRiverBoundariesAndRain(dt) {
     const g = this.grid;
     const preset = VALLEY_PRESETS[this.presetId] || VALLEY_PRESETS.bystritsa;
-    const rivers = VALLEY_RIVERS[this.presetId] || VALLEY_RIVERS.bystritsa;
+    const rivers = getScaledValleyRivers(this.presetId);
+    const stepOff = this.dx * 1.6;
 
-    // 1. Главный горный исток «Быстрица»
+    // 1. Главный горный исток + 70% ледникового/родникового питания
     const pMain = rivers.main[0];
-    const mCenter = this.worldToGrid(pMain.x, pMain.z + 6);
-    this._injectSpring(mCenter.gx, mCenter.gz, 2, preset.mainInflowQ * this.inflowMult, 0.42, 0.91, dt);
+    const mCenter = this.worldToGrid(pMain.x, pMain.z + stepOff);
+    const qMain = preset.mainInflowQ * this.inflowMult + this.currentSnowmeltBonusQ * 0.70;
+    this._injectSpring(mCenter.gx, mCenter.gz, 2, qMain, 0.42, 0.91, dt);
 
-    // 2. Восточный ледниковый приток «Серебрянка»
+    // 2. Восточный ледниковый приток «Серебрянка» + 30% талой воды ледников
     const pEast = rivers.eastCreek[0];
-    const eCenter = this.worldToGrid(pEast.x, pEast.z + 6);
-    this._injectSpring(eCenter.gx, eCenter.gz, 2, preset.creekInflowQ * this.inflowMult, -0.68, 0.73, dt);
+    const eCenter = this.worldToGrid(pEast.x, pEast.z + stepOff);
+    const qEast = preset.creekInflowQ * this.inflowMult + this.currentSnowmeltBonusQ * 0.30;
+    this._injectSpring(eCenter.gx, eCenter.gz, 2, qEast, -0.68, 0.73, dt);
 
     // 3. Западный горный ручей «Гремучий»
     const pWest = rivers.westCreek[0];
-    const wCenter = this.worldToGrid(pWest.x + 6, pWest.z);
-    this._injectSpring(wCenter.gx, wCenter.gz, 2, preset.westCreekQ * this.inflowMult, 0.92, 0.38, dt);
+    const wCenter = this.worldToGrid(pWest.x + stepOff, pWest.z);
+    const qWest = preset.westCreekQ * this.inflowMult;
+    this._injectSpring(wCenter.gx, wCenter.gz, 2, qWest, 0.92, 0.38, dt);
 
-    // Атмосферные осадки
+    this._accumInflowVol += (preset.mainInflowQ + preset.creekInflowQ + preset.westCreekQ) * this.inflowMult * dt;
+
+    // 4. Атмосферные осадки («накапало» на зеркало и склоны водосбора)
     if (this.rainRate > 0) {
-      const addRain = this.rainRate * dt;
+      const addRain = this.rainRate * WORLD.elevScale * dt;
       const phase = ((this.simTime * 60) | 0) & 3;
       const ox = phase & 1;
       const oz = (phase >> 1) & 1;
+      let rainCells = 0;
       for (let gz = 2 + oz; gz < g - 2; gz += 2) {
         const row = gz * g;
         for (let gx = 2 + ox; gx < g - 2; gx += 2) {
           this.h[row + gx] += addRain * 4.0;
+          rainCells++;
         }
       }
+      this._accumRainVol += rainCells * (addRain * 4.0) * this.cellArea;
     }
 
-    // Южное устье: неотражающий речной сток
+    // 5. Южное устье: неотражающий речной сток в море с точным учётом ушедшего объёма!
     const rowOut = (g - 2) * g;
     const rowEdge = (g - 1) * g;
+    const refMouthLevel = 6.15 * WORLD.elevScale;
+    let mouthOutVol = 0;
     for (let gx = 1; gx < g - 1; gx++) {
       const i = rowOut + gx;
       const bed = this.zb[i];
       if (this.h[i] > 0.01) {
-        const normalDepth = Math.max(0, 6.15 - bed);
+        const normalDepth = Math.max(0, refMouthLevel - bed);
         if (this.h[i] > normalDepth) {
           const excess = this.h[i] - normalDepth;
           const outSpeed = Math.max(this.v[i], Math.sqrt(G * this.h[i]) * 0.72);
           const drain = Math.min(excess, (outSpeed * this.h[i] * dt) / this.dx);
           this.h[i] = Math.max(normalDepth, this.h[i] - drain);
+          mouthOutVol += drain * this.cellArea;
           this.v[i] = Math.max(this.v[i], outSpeed * 0.65);
           this.hv[i] = this.h[i] * this.v[i];
         }
@@ -1407,6 +1710,7 @@ export class HydroSimulation {
       this.hu[rowEdge + gx] = 0;
       this.hv[rowEdge + gx] = 0;
     }
+    this._accumMouthVol += mouthOutVol;
 
     for (let k = 0; k < g; k++) {
       this.hu[k * g + 1] = Math.max(0, this.hu[k * g + 1]);
@@ -1424,7 +1728,7 @@ export class HydroSimulation {
     }
     if (!count) return;
     const dhPerCell = (dischargeM3s * dt) / (count * this.cellArea);
-    const initSpeed = 2.5;
+    const initSpeed = 2.5 * Math.pow(WORLD.elevScale, 0.35);
     for (let oz = -radiusCells; oz <= radiusCells; oz++) {
       for (let ox = -radiusCells; ox <= radiusCells; ox++) {
         if (ox * ox + oz * oz > radiusCells * radiusCells + 1) continue;
@@ -1443,6 +1747,7 @@ export class HydroSimulation {
 
   _stepTurbinesAndSpillways(dt) {
     const g = this.grid;
+    const maxSpd = this.maxFlowSpeed;
 
     // А. Регулируемые водосбросы
     for (let sIdx = 0; sIdx < this.spillways.length; sIdx++) {
@@ -1453,7 +1758,7 @@ export class HydroSimulation {
       const upSurf = this.zb[upI] + this.h[upI];
 
       if (sw.autoRegulate) {
-        const diff = upSurf - sw.targetHeadElev;
+        const diff = (upSurf - sw.targetHeadElev) / WORLD.elevScale;
         const desiredOpen = clamp(0.08 + diff * 0.28, 0.0, 1.0);
         if (Math.abs(desiredOpen - sw.openRatio) > 0.015) {
           sw.openRatio = lerp(sw.openRatio, desiredOpen, clamp(dt * 2.5, 0, 1));
@@ -1462,39 +1767,41 @@ export class HydroSimulation {
       }
 
       let qSum = 0;
-      let maxSpd = 0;
+      let maxVel = 0;
       for (let k = 0; k < sw.cells.length; k++) {
         const ci = sw.cells[k];
         const depth = this.h[ci];
         if (depth > 0.03) {
           const along = Math.max(0, this.u[ci] * sw.dirX + this.v[ci] * sw.dirZ);
           qSum += depth * along * (this.dx / 3.0);
-          if (along > maxSpd) maxSpd = along;
-          this.foam[ci] = Math.min(1.0, this.foam[ci] + 0.35);
+          if (along > maxVel) maxVel = along;
+          this.foam[ci] = Math.min(1.0, this.foam[ci] + 0.42);
         }
       }
       sw.currentFlowQ = qSum;
-      sw.jetSpeed = maxSpd;
+      sw.jetSpeed = maxVel;
 
-      if (qSum > 1.2 && sw.openRatio > 0.05) {
+      if (qSum > 1.2 * WORLD.flowScale * 0.2 && sw.openRatio > 0.04) {
         const crestI = sw.gz * g + sw.gx;
         this.jetEmitters.push({
-          wx: sw.wx + sw.dirX * 3.5,
-          wy: this.zb[crestI] + Math.max(0.3, this.h[crestI] * 0.6),
-          wz: sw.wz + sw.dirZ * 3.5,
-          vx: sw.dirX * Math.max(4.8, maxSpd * 1.25),
-          vy: 1.4 + maxSpd * 0.14,
-          vz: sw.dirZ * Math.max(4.8, maxSpd * 1.25),
-          intensity: clamp(qSum / 35.0, 0.15, 1.8),
+          wx: sw.wx + sw.dirX * this.dx * 1.1,
+          wy: this.zb[crestI] + Math.max(0.4, this.h[crestI] * 0.6),
+          wz: sw.wz + sw.dirZ * this.dx * 1.1,
+          vx: sw.dirX * Math.max(5.2, maxVel * 1.25),
+          vy: 1.5 + maxVel * 0.14,
+          vz: sw.dirZ * Math.max(5.2, maxVel * 1.25),
+          intensity: clamp(qSum / (35.0 * WORLD.flowScale), 0.25, 1.9),
           kind: 'spillway',
         });
       }
     }
 
-    // Б. Напорные гидроагрегаты ГЭС с водоводами и сороудерживающими решётками
+    // Б. Приплотинные и деривационные гидроагрегаты ГЭС + обратимый режим ГАЭС (ночная закачка!)
     for (let tIdx = 0; tIdx < this.turbines.length; tIdx++) {
       const t = this.turbines[tIdx];
       const spec = t.spec;
+      t.isPumpingNow = false;
+      t.pumpConsumeMW = 0;
 
       let upSurfSum = 0;
       let upWetCount = 0;
@@ -1515,16 +1822,58 @@ export class HydroSimulation {
 
       let downSurfSum = 0;
       let downCount = 0;
+      let downAvailVol = 0;
       for (let oz = -1; oz <= 1; oz++) {
         for (let ox = -1; ox <= 1; ox++) {
           const i = (t.outfallGz + oz) * g + (t.outfallGx + ox);
           downSurfSum += this.zb[i] + this.h[i];
           downCount++;
+          if (this.h[i] > 0.25) downAvailVol += (this.h[i] - 0.20) * this.cellArea;
         }
       }
 
+      const zUp = upWetCount > 0 ? (upSurfSum / upWetCount) : t.intakeBedY;
+      const zDown = downSurfSum / (downCount || 1);
+      const grossHead = Math.max(0, zUp - zDown);
+      t.grossHead = grossHead;
+
+      // РЕЖИМ ГАЭС (Гидроаккумулирующая электростанция): ночью (00:00–05:50) при включённом pumpedStorage
+      // обратимая насос-турбина качает воду ИЗ нижнего бьефа НАВЕРХ в водохранилище!
+      if (t.pumpedStorage && spec.reversible && this.isOffPeakNight && downAvailVol > 2.0 * this.cellArea && grossHead < spec.maxHead * 0.92) {
+        const pumpLift = Math.max(3.0 * WORLD.elevScale, grossHead);
+        const pumpQ = Math.min(spec.maxArea * 2.1 * Math.sqrt(G * WORLD.elevScale), (downAvailVol * 0.25) / dt);
+        const pumpMW = (RHO * G * pumpQ * pumpLift / 0.84) * 1e-6; // КПД насосного режима 84%
+        const volPump = pumpQ * dt;
+        let takenDown = 0;
+        for (let oz = -1; oz <= 1; oz++) {
+          for (let ox = -1; ox <= 1; ox++) {
+            const oi = (t.outfallGz + oz) * g + (t.outfallGx + ox);
+            if (this.h[oi] > 0.25) {
+              const take = Math.min(this.h[oi] - 0.20, (volPump / 9.0) / this.cellArea);
+              this.h[oi] -= take;
+              takenDown += take * this.cellArea;
+            }
+          }
+        }
+        const addUp = takenDown / (9.0 * this.cellArea);
+        for (let oz = -1; oz <= 1; oz++) {
+          for (let ox = -1; ox <= 1; ox++) {
+            const ii = (t.intakeGz + oz) * g + (t.intakeGx + ox);
+            this.h[ii] += addUp;
+          }
+        }
+        t.isPumpingNow = true;
+        t.pumpConsumeMW = pumpMW;
+        t.flowQ = -pumpQ;
+        t.powerMW = 0;
+        t.efficiency = 0.84;
+        t.rotorPhase = (t.rotorPhase - dt * 5.2) % (Math.PI * 2);
+        this._accumPumpVol += takenDown;
+        this._accumPumpMW += pumpMW;
+        continue;
+      }
+
       if (upWetCount === 0 || availVol <= 0.05 || t.throttle <= 0.005) {
-        t.grossHead = 0;
         t.netHead = 0;
         t.flowQ = 0;
         t.efficiency = 0;
@@ -1533,18 +1882,12 @@ export class HydroSimulation {
         continue;
       }
 
-      // Плавное накопление плавника/ила на решётке водоприёмника при мутном паводке
       const avgSed = intakeSed / upWetCount;
       if (t.autoDispatch) {
-        t.trashLoad = Math.max(0, t.trashLoad - dt * 0.02); // автоматическая сороочистная машина!
+        t.trashLoad = Math.max(0, t.trashLoad - dt * 0.02);
       } else if (avgSed > 0.25) {
         t.trashLoad = Math.min(0.28, t.trashLoad + (avgSed - 0.25) * 0.004 * dt);
       }
-
-      const zUp = upSurfSum / upWetCount;
-      const zDown = downSurfSum / (downCount || 1);
-      const grossHead = Math.max(0, zUp - zDown);
-      t.grossHead = grossHead;
 
       if (grossHead < spec.minHead * 0.45) {
         t.netHead = grossHead;
@@ -1561,7 +1904,7 @@ export class HydroSimulation {
       const maxMassSafeQ = (availVol * 0.42) / dt;
       const Q = Math.min(orificeQ, maxMassSafeQ);
 
-      const headLoss = spec.frictionK * Q * Q + t.trashLoad * 1.4;
+      const headLoss = spec.frictionK * Q * Q + t.trashLoad * 1.4 * WORLD.elevScale;
       const netHead = Math.max(0, grossHead - headLoss);
 
       const headDiff = (netHead - spec.optHead) / spec.headSigma;
@@ -1570,8 +1913,8 @@ export class HydroSimulation {
       const conditionFactor = 0.65 + 0.35 * t.condition;
       const eta = clamp(spec.peakEta * headFactor * partLoadFactor * conditionFactor, 0.18, spec.peakEta);
 
-      const cavRisk = netHead > spec.maxHead ? (netHead - spec.maxHead) / 15.0
-        : (netHead < spec.minHead ? (spec.minHead - netHead) / 6.0 : 0);
+      const cavRisk = netHead > spec.maxHead ? (netHead - spec.maxHead) / (15.0 * WORLD.elevScale)
+        : (netHead < spec.minHead ? (spec.minHead - netHead) / (6.0 * WORLD.elevScale) : 0);
       t.cavitation = clamp(cavRisk, 0, 1);
 
       const rawMW = (RHO * G * Q * netHead * eta) * 1e-6;
@@ -1581,7 +1924,7 @@ export class HydroSimulation {
       t.flowQ = Q;
       t.efficiency = eta;
       t.powerMW = powerMW;
-      t.rotorPhase = (t.rotorPhase + dt * (2.5 + powerMW * 1.35)) % (Math.PI * 2);
+      t.rotorPhase = (t.rotorPhase + dt * (2.6 + (powerMW / WORLD.powerScale) * 1.35)) % (Math.PI * 2);
 
       const volMoved = Q * dt;
       let removedSoFar = 0;
@@ -1601,7 +1944,7 @@ export class HydroSimulation {
       }
 
       const dhOut = removedSoFar / (9.0 * this.cellArea);
-      const exitSpeed = clamp(2.2 + Math.sqrt(2 * G * Math.max(0.5, netHead)) * 0.22, 2.0, 9.5);
+      const exitSpeed = clamp(2.2 + Math.sqrt(2 * G * Math.max(0.5, netHead)) * 0.22, 2.0, maxSpd * 0.45);
       for (let oz = -1; oz <= 1; oz++) {
         for (let ox = -1; ox <= 1; ox++) {
           const oi = (t.outfallGz + oz) * g + (t.outfallGx + ox);
@@ -1610,16 +1953,16 @@ export class HydroSimulation {
           this.hv[oi] += dhOut * t.dirZ * exitSpeed;
           const nh = this.h[oi];
           if (nh > 1e-4) {
-            this.u[oi] = clamp(this.hu[oi] / nh, -MAX_SPEED, MAX_SPEED);
-            this.v[oi] = clamp(this.hv[oi] / nh, -MAX_SPEED, MAX_SPEED);
+            this.u[oi] = clamp(this.hu[oi] / nh, -maxSpd, maxSpd);
+            this.v[oi] = clamp(this.hv[oi] / nh, -maxSpd, maxSpd);
             this.hu[oi] = nh * this.u[oi];
             this.hv[oi] = nh * this.v[oi];
           }
-          this.foam[oi] = Math.min(1.0, this.foam[oi] + 0.42);
+          this.foam[oi] = Math.min(1.0, this.foam[oi] + 0.45);
         }
       }
 
-      if (Q > 2.5) {
+      if (Q > 2.5 * WORLD.flowScale * 0.25) {
         const oiCenter = t.outfallGz * g + t.outfallGx;
         this.jetEmitters.push({
           wx: t.outfallWx,
@@ -1628,7 +1971,7 @@ export class HydroSimulation {
           vx: t.dirX * exitSpeed * 0.75,
           vy: 1.15,
           vz: t.dirZ * exitSpeed * 0.75,
-          intensity: clamp(powerMW / 8.0, 0.2, 1.35),
+          intensity: clamp((powerMW / WORLD.powerScale) / 8.0, 0.2, 1.35),
           kind: 'tailrace',
         });
       }
@@ -1638,6 +1981,7 @@ export class HydroSimulation {
   _applyVorticityConfinement(dt) {
     const g = this.grid;
     const inv2Dx = 0.5 / this.dx;
+    const maxSpd = this.maxFlowSpeed;
     const { h, u, v, hu, hv, vort } = this;
 
     for (let ti = 0; ti < this.activeTileCount; ti++) {
@@ -1686,8 +2030,8 @@ export class HydroSimulation {
 
           const du = epsVC * nz * w;
           const dv = -epsVC * nx * w;
-          u[i] = clamp(u[i] + du, -MAX_SPEED, MAX_SPEED);
-          v[i] = clamp(v[i] + dv, -MAX_SPEED, MAX_SPEED);
+          u[i] = clamp(u[i] + du, -maxSpd, maxSpd);
+          v[i] = clamp(v[i] + dv, -maxSpd, maxSpd);
           hu[i] = depth * u[i];
           hv[i] = depth * v[i];
         }
@@ -1698,7 +2042,7 @@ export class HydroSimulation {
   _stepSecondaryTransportAndErosion(dt) {
     const g = this.grid;
     const invDx = 1.0 / this.dx;
-    const { h, u, v, foam, foamNext, sediment, sedNext, wetness } = this;
+    const { h, hu, hv, u, v, foam, foamNext, sediment, sedNext, wetness, soilSaturation } = this;
 
     this._erosionTick++;
     const doBedMorph = (this._erosionTick % 3) === 0;
@@ -1706,6 +2050,10 @@ export class HydroSimulation {
     let morphMinX = g, morphMinZ = g, morphMaxX = -1, morphMaxZ = -1;
     let maxStress = 0;
     let seepSum = 0;
+    let infiltVolStep = 0;
+
+    const evapDh = this.currentEvapRateMps * dt;
+    const safeHeadReinforced = 38.0 * WORLD.elevScale;
 
     for (let ti = 0; ti < this.activeTileCount; ti++) {
       const tileIdx = this.activeTiles[ti];
@@ -1718,19 +2066,39 @@ export class HydroSimulation {
         const row = gz * g;
         for (let gx = x0; gx < x1; gx++) {
           const i = row + gx;
-          const depth = h[i];
+          let depth = h[i];
 
-          // Проверка фильтрации под подошвой и нагрузки на высокую плотину без контрфорсов
-          if (doSeepageCheck && this.concrete[i] > 5.0 && gz > 2 && gz < g - 3 && gx > 2 && gx < g - 3) {
+          // 1. Испарение с открытого зеркала + инфильтрация Хортона в сухой необлицованный грунт!
+          if (depth > 0.02) {
+            let lossDh = evapDh;
+            if (this.linedMask[i] === 0 && this.concrete[i] < 0.1 && soilSaturation[i] < 0.995) {
+              const dryCap = 1.0 - soilSaturation[i];
+              const infDh = Math.min(depth * 0.12, dryCap * 0.00085 * dt);
+              lossDh += infDh;
+              infiltVolStep += infDh * this.cellArea;
+              soilSaturation[i] = Math.min(1.0, soilSaturation[i] + dt * 0.045);
+            }
+            if (lossDh > 0 && depth > lossDh + 0.005) {
+              depth -= lossDh;
+              h[i] = depth;
+              hu[i] = depth * u[i];
+              hv[i] = depth * v[i];
+            }
+          } else if (soilSaturation[i] > 0.25) {
+            // На суше влага постепенно просыхает на солнце и ветру
+            soilSaturation[i] = Math.max(0.25, soilSaturation[i] - dt * 0.006);
+          }
+
+          // 2. Контроль напряжений и подземной фильтрации Дарси под высокой плотиной
+          if (doSeepageCheck && this.concrete[i] > 4.5 * WORLD.elevScale && gz > 2 && gz < g - 3 && gx > 2 && gx < g - 3) {
             const upH = Math.max(h[i - g * 2], h[i - 2], h[i + 2], h[i + g * 2]);
-            if (upH > 2.5) {
-              const safeLimit = this.foundationMask[i] ? 36.0 : CONSTRUCTION.maxUnreinforcedHead;
+            if (upH > 2.5 * WORLD.elevScale) {
+              const safeLimit = this.foundationMask[i] ? safeHeadReinforced : CONSTRUCTION.maxUnreinforcedHead;
               const stress = clamp((upH / safeLimit) * 100, 0, 125);
               if (stress > maxStress) maxStress = stress;
 
-              // Подземная фильтрация на рыхлом нецементированном грунте при напоре > 10.5 м
-              if (!this.foundationMask[i] && this.soil[i] > 1.2 && upH > CONSTRUCTION.highDamHeadThreshold) {
-                const seepRate = (upH - CONSTRUCTION.highDamHeadThreshold) * 0.08 * (this.soil[i] / 3.0);
+              if (!this.foundationMask[i] && this.soil[i] > 1.0 * WORLD.elevScale && upH > CONSTRUCTION.highDamHeadThreshold) {
+                const seepRate = ((upH - CONSTRUCTION.highDamHeadThreshold) / WORLD.elevScale) * 0.09 * WORLD.flowScale;
                 seepSum += seepRate;
               }
             }
@@ -1768,15 +2136,15 @@ export class HydroSimulation {
           const froude = speed / Math.sqrt(G * Math.max(0.08, depth));
 
           const div = ((u[i + 1] - u[i - 1]) + (v[i + g] - v[i - g])) * 0.5 * invDx;
-          const jumpGen = (froude > 0.95 && div < -0.12) ? Math.min(0.65, (-div) * 0.45 * dt * 8.0) : 0;
-          const rapidGen = speed > 3.6 ? (speed - 3.6) * 0.085 * dt : 0;
+          const jumpGen = (froude > 0.95 && div < -0.08) ? Math.min(0.65, (-div) * 0.55 * dt * 8.0) : 0;
+          const rapidGen = speed > 3.6 * Math.pow(WORLD.elevScale, 0.35) ? (speed - 3.6) * 0.085 * dt : 0;
 
-          foamNext[i] = clamp(advFoam * Math.exp(-dt * 0.72) + jumpGen + rapidGen, 0, 1.0);
+          foamNext[i] = clamp(advFoam * Math.exp(-dt * 0.70) + jumpGen + rapidGen, 0, 1.0);
 
           let sed = advSed * Math.exp(-dt * 0.16);
           if (this.linedMask[i] === 0 && this.concrete[i] < 0.05 && this.soil[i] > 0.02) {
             const isEarthDam = this.earthDamMask[i] === 1;
-            const critSpeed = isEarthDam ? 1.85 : 3.9;
+            const critSpeed = (isEarthDam ? 1.85 : 4.0) * Math.pow(WORLD.elevScale, 0.35);
             if (speed > critSpeed) {
               const excess = speed - critSpeed;
               sed = Math.min(1.5, sed + excess * (isEarthDam ? 0.45 : 0.14) * dt);
@@ -1800,6 +2168,7 @@ export class HydroSimulation {
       }
     }
 
+    this.lastInfiltrationQ = lerp(this.lastInfiltrationQ, infiltVolStep / Math.max(1e-4, dt), 0.3);
     if (doSeepageCheck) {
       this.maxDamStress = lerp(this.maxDamStress, maxStress, 0.35);
       this.totalSeepageQ = lerp(this.totalSeepageQ, seepSum, 0.35);

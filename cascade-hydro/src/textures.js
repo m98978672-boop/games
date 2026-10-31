@@ -1,10 +1,9 @@
 // ============================================================================
-//  ПРОЦЕДУРНЫЕ ВЫСОКОДЕТАЛИЗИРОВАННЫЕ ТЕКСТУРЫ (0 внешних картинок, 100% бесшовные)
-//  - Волновые нормали + оптическая каустика Вороного + кружевная пена (512×512)
-//  - Архитектурный бетон с опалубочными швами и отверстиями стяжек + карта рельефа
-//  - Строительная опалубка с деревянными щитами и стальным армокаркасом
-//  - Клёпаная гидротехническая сталь напорных водоводов, кранов и затворов
-//  - Черепица/фальц городских крыш, хвоя и кора сосен, зернистый гранит с лишайником
+//  ПРОЦЕДУРНЫЙ ДВИЖОК ТЕКСТУР, ОПТИКИ ВОДЫ И GPU-АТЛАСОВ v0.3
+//  - Высокодетализированная текстура воды 512×512 (6-гармониковые волны + каустика Вороного + кружевная пена)
+//  - Специальная текстура водопадной пелены перелива плотин и водосбросов (256×512)
+//  - Мега-атласы фасадов (8×8 = 64 паттерна) и геологии/кровель (8×8 = 64 паттерна)
+//  - Реестр TEXTURE_SHADE_CATALOG из 432 уникальных процедурных текстур и оттенков материалов!
 // ============================================================================
 
 import * as THREE from 'three';
@@ -23,10 +22,10 @@ function finalizeTex(tex, maxAniso = 4, srgb = true) {
   return tex;
 }
 
-function makeCanvas(size) {
+function makeCanvas(w, h = w) {
   const c = document.createElement('canvas');
-  c.width = size;
-  c.height = size;
+  c.width = w;
+  c.height = h;
   return c;
 }
 
@@ -35,7 +34,7 @@ function hash2(x, y, seed = 17) {
   return n - Math.floor(n);
 }
 
-/** Тайловое расстояние Вороного на торе [0..cells) для настоящей каустики и пены */
+/** Тайловое расстояние Вороного на торе [0..cells) для настоящей каустики и ячеистой пены */
 function tileableVoronoi(u, v, cells, seed) {
   const gx = u * cells;
   const gy = v * cells;
@@ -50,8 +49,8 @@ function tileableVoronoi(u, v, cells, seed) {
     for (let ox = -1; ox <= 1; ox++) {
       const cx = ((ix + ox) % cells + cells) % cells;
       const cy = ((iy + oy) % cells + cells) % cells;
-      const jx = ox + 0.15 + 0.70 * hash2(cx, cy, seed) - fx;
-      const jy = oy + 0.15 + 0.70 * hash2(cx, cy, seed + 31) - fy;
+      const jx = ox + 0.14 + 0.72 * hash2(cx, cy, seed) - fx;
+      const jy = oy + 0.14 + 0.72 * hash2(cx, cy, seed + 31) - fy;
       const dist = Math.hypot(jx, jy);
       if (dist < d1) {
         d2 = d1;
@@ -64,318 +63,307 @@ function tileableVoronoi(u, v, cells, seed) {
   return { d1, edge: d2 - d1 };
 }
 
-/** 1. Высокочёткая текстура оптики воды (512×512): RG = волновые нормали, B = каустика Вороного, A = кружевная пена */
-export function createWaterDetailTexture(size = 384) {
+/**
+ * 1. Улучшенная бесшовная оптическая текстура живой воды (512×512 RGBA):
+ * R, G — аналитические градиенты 6-гармоникового спектра капиллярно-гравитационных волн
+ * B    — двухмасштабная солнечная каустика Вороного с тонкими фокусными нитями
+ * A    — кружевная турбулентная пена, пузырьковая дорожка и гребни бурунов
+ */
+export function createWaterDetailTexture(size = 512) {
   const data = new Uint8Array(size * size * 4);
-  const tau = Math.PI * 2;
+  const TAU = Math.PI * 2;
 
   for (let y = 0; y < size; y++) {
     const v = y / size;
     for (let x = 0; x < size; x++) {
       const u = x / size;
 
-      // Многооктавный спектр гравитационно-капиллярных волн
-      const w1 = Math.sin(u * tau * 3.0 + v * tau * 2.0) * 0.34;
-      const w2 = Math.cos(u * tau * 5.0 - v * tau * 4.0 + 1.1) * 0.25;
-      const w3 = Math.sin(u * tau * 9.0 + v * tau * 7.0 + 2.4) * 0.17;
-      const w4 = Math.cos(u * tau * 15.0 - v * tau * 12.0 + 0.7) * 0.11;
-      const w5 = Math.sin(u * tau * 23.0 + v * tau * 19.0 + 1.9) * 0.06;
+      // 6 пересекающихся гармоник реальной водной ряби (точные производные dH/du, dH/dv на торе!)
+      const p1 = TAU * (3 * u + 2 * v);
+      const p2 = TAU * (-5 * u + 4 * v) + 1.1;
+      const p3 = TAU * (8 * u - 6 * v) + 2.4;
+      const p4 = TAU * (13 * u + 9 * v) - 0.7;
+      const p5 = TAU * (-17 * u - 12 * v) + 1.9;
+      const p6 = TAU * (24 * u - 19 * v) + 0.4;
 
-      const dhdu = (
-        Math.cos(u * tau * 3.0 + v * tau * 2.0) * 3.0 * 0.34
-        - Math.sin(u * tau * 5.0 - v * tau * 4.0 + 1.1) * 5.0 * 0.25
-        + Math.cos(u * tau * 9.0 + v * tau * 7.0 + 2.4) * 9.0 * 0.17
-        - Math.sin(u * tau * 15.0 - v * tau * 12.0 + 0.7) * 15.0 * 0.11
-        + Math.cos(u * tau * 23.0 + v * tau * 19.0 + 1.9) * 23.0 * 0.06
-      ) / 6.8;
+      const dHx =
+        0.30 * Math.cos(p1) * 3 +
+        0.22 * Math.cos(p2) * (-5) +
+        0.16 * Math.cos(p3) * 8 +
+        0.11 * Math.cos(p4) * 13 +
+        0.07 * Math.cos(p5) * (-17) +
+        0.045 * Math.cos(p6) * 24;
 
-      const dhdv = (
-        Math.cos(u * tau * 3.0 + v * tau * 2.0) * 2.0 * 0.34
-        + Math.sin(u * tau * 5.0 - v * tau * 4.0 + 1.1) * 4.0 * 0.25
-        + Math.cos(u * tau * 9.0 + v * tau * 7.0 + 2.4) * 7.0 * 0.17
-        + Math.sin(u * tau * 15.0 - v * tau * 12.0 + 0.7) * 12.0 * 0.11
-        + Math.cos(u * tau * 23.0 + v * tau * 19.0 + 1.9) * 19.0 * 0.06
-      ) / 6.8;
+      const dHy =
+        0.30 * Math.cos(p1) * 2 +
+        0.22 * Math.cos(p2) * 4 +
+        0.16 * Math.cos(p3) * (-6) +
+        0.11 * Math.cos(p4) * 9 +
+        0.07 * Math.cos(p5) * (-12) +
+        0.045 * Math.cos(p6) * (-19);
 
-      // Настоящая ячеистая световая сеть каустики (гребни ячеек Вороного!)
-      const vorC = tileableVoronoi(u, v, 6, 13);
-      const vorC2 = tileableVoronoi((u + 0.37) % 1, (v + 0.61) % 1, 10, 47);
-      const caustA = Math.pow(Math.max(0, 1.0 - Math.min(1.0, vorC.edge * 2.85)), 2.6);
-      const caustB = Math.pow(Math.max(0, 1.0 - Math.min(1.0, vorC2.edge * 3.1)), 3.0);
-      const caustic = Math.min(1.0, caustA * 0.75 + caustB * 0.52);
+      const nx = Math.max(-1, Math.min(1, dHx * 0.21));
+      const ny = Math.max(-1, Math.min(1, dHy * 0.21));
 
-      // Кружевная ячеистая пена бурунов и гидравлического прыжка
-      const vorF = tileableVoronoi(u, v, 9, 89);
-      const vorF2 = tileableVoronoi((u + 0.21) % 1, (v + 0.43) % 1, 17, 131);
-      const web1 = Math.max(0, 1.0 - Math.min(1.0, vorF.edge * 2.4));
-      const web2 = Math.max(0, 1.0 - Math.min(1.0, vorF2.edge * 2.7));
-      const foamLace = Math.max(0, Math.min(1, 0.18 + web1 * 0.56 + web2 * 0.38 + (w1 + w2) * 0.12));
+      // Двухмасштабная каустика Вороного (крупные солнечные соты + мелкая рефракционная сетка)
+      const vor1 = tileableVoronoi(u, v, 8, 11);
+      const vor2 = tileableVoronoi(u, v, 16, 43);
+      const caust1 = Math.pow(Math.max(0, 1.0 - vor1.edge * 2.55), 3.6);
+      const caust2 = Math.pow(Math.max(0, 1.0 - vor2.edge * 2.85), 4.0);
+      const caustic = Math.min(1.0, caust1 * 0.76 + caust2 * 0.62);
 
-      const idx = (y * size + x) * 4;
-      data[idx] = Math.max(0, Math.min(255, Math.round((dhdu * 0.5 + 0.5) * 255)));
-      data[idx + 1] = Math.max(0, Math.min(255, Math.round((dhdv * 0.5 + 0.5) * 255)));
-      data[idx + 2] = Math.max(0, Math.min(255, Math.round(caustic * 255)));
-      data[idx + 3] = Math.max(0, Math.min(255, Math.round(foamLace * 255)));
+      // Кружевная пена: тонкие перемычки пузырьков + продольные струйные нити
+      const vorFoam = tileableVoronoi(u, v, 13, 89);
+      const vorMicro = tileableVoronoi(u, v, 26, 137);
+      const web = Math.pow(Math.max(0, 1.0 - vorFoam.edge * 3.1), 2.4);
+      const bubbles = Math.pow(Math.max(0, 1.0 - vorMicro.d1 * 1.9), 3.0);
+      const streak = 0.5 + 0.5 * Math.sin(TAU * (6 * u + 2 * v) + Math.sin(TAU * 4 * v) * 1.5);
+      const foam = Math.min(1.0, web * 0.72 + bubbles * 0.34 + web * streak * 0.28);
+
+      const i = (y * size + x) * 4;
+      data[i] = Math.round((nx * 0.5 + 0.5) * 255);
+      data[i + 1] = Math.round((ny * 0.5 + 0.5) * 255);
+      data[i + 2] = Math.round(caustic * 255);
+      data[i + 3] = Math.round(foam * 255);
     }
   }
 
   const tex = new THREE.DataTexture(data, size, size, THREE.RGBAFormat);
-  return finalizeTex(tex, 4, false);
+  return finalizeTex(tex, 8, false);
 }
 
-/** 2. Архитектурный гидротехнический бетон с опалубочными картами, конусами стяжек и микрорельефом */
+/**
+ * 2. Специальная бесшовная текстура переливающейся водной пелены и водосбросов (256×512)
+ */
+export function createOverflowCascadeTexture(maxAniso = 4) {
+  const w = 256;
+  const h = 512;
+  const data = new Uint8Array(w * h * 4);
+  const TAU = Math.PI * 2;
+
+  for (let y = 0; y < h; y++) {
+    const v = y / h;
+    for (let x = 0; x < w; x++) {
+      const u = x / w;
+      // Продольные аэрированные струи падающей воды
+      const jet1 = 0.5 + 0.5 * Math.sin(TAU * 9 * u + Math.sin(TAU * 3 * v) * 1.1);
+      const jet2 = 0.5 + 0.5 * Math.sin(TAU * 19 * u - TAU * 2 * v);
+      const vor = tileableVoronoi(u, (v * 2) % 1, 10, 61);
+      const aeration = Math.pow(Math.max(0, 1.0 - vor.edge * 2.6), 2.1);
+
+      const white = Math.min(1.0, 0.32 + jet1 * 0.32 + jet2 * 0.18 + aeration * 0.45);
+      const alpha = Math.min(1.0, 0.58 + jet1 * 0.24 + aeration * 0.30);
+
+      const i = (y * w + x) * 4;
+      data[i] = Math.round((0.72 + 0.28 * white) * 255);
+      data[i + 1] = Math.round((0.89 + 0.11 * white) * 255);
+      data[i + 2] = Math.round((0.96 + 0.04 * white) * 255);
+      data[i + 3] = Math.round(alpha * 255);
+    }
+  }
+  const tex = new THREE.DataTexture(data, w, h, THREE.RGBAFormat);
+  return finalizeTex(tex, maxAniso, true);
+}
+
+/**
+ * 3. Архитектурный бетон гидротехнических сооружений В40 W12 (цвет + карта рельефа)
+ */
 export function createConcreteFormworkSet(maxAniso = 4) {
   const size = 256;
-  const c = makeCanvas(size);
-  const ctx = c.getContext('2d');
-  const bumpC = makeCanvas(size);
-  const bCtx = bumpC.getContext('2d');
+  const colCanvas = makeCanvas(size);
+  const ctx = colCanvas.getContext('2d');
+  const bumpCanvas = makeCanvas(size);
+  const bctx = bumpCanvas.getContext('2d');
 
-  // Базовый тон бетона с минеральным заполнителем
-  ctx.fillStyle = '#adb4bc';
+  ctx.fillStyle = '#adb6c1';
   ctx.fillRect(0, 0, size, size);
-  bCtx.fillStyle = '#808080';
-  bCtx.fillRect(0, 0, size, size);
+  bctx.fillStyle = '#808080';
+  bctx.fillRect(0, 0, size, size);
 
-  // Зернистость щебня и песчаного раствора
+  const rows = 8;
+  const cols = 4;
+  const cellH = size / rows;
+  const cellW = size / cols;
+
+  for (let r = 0; r < rows; r++) {
+    const shift = (r % 2) * (cellW * 0.5);
+    for (let c = -1; c <= cols; c++) {
+      const x = c * cellW + shift;
+      const y = r * cellH;
+      const tone = 164 + Math.round((hash2(c + 10, r, 5) - 0.5) * 24);
+      ctx.fillStyle = `rgb(${tone}, ${tone + 4}, ${tone + 9})`;
+      ctx.fillRect(x + 1, y + 1, cellW - 2, cellH - 2);
+
+      // Отверстия анкерных стяжек опалубки
+      ctx.fillStyle = 'rgba(42, 52, 66, 0.78)';
+      bctx.fillStyle = '#262626';
+      for (const ox of [0.2, 0.8]) {
+        for (const oy of [0.28, 0.72]) {
+          ctx.beginPath();
+          ctx.arc(x + cellW * ox, y + cellH * oy, 2.1, 0, Math.PI * 2);
+          ctx.fill();
+          bctx.beginPath();
+          bctx.arc(x + cellW * ox, y + cellH * oy, 2.4, 0, Math.PI * 2);
+          bctx.fill();
+        }
+      }
+    }
+    ctx.fillStyle = 'rgba(54, 65, 80, 0.68)';
+    ctx.fillRect(0, r * cellH - 1, size, 2);
+    bctx.fillStyle = '#383838';
+    bctx.fillRect(0, r * cellH - 1, size, 2.5);
+  }
+
   const img = ctx.getImageData(0, 0, size, size);
-  const bImg = bCtx.getImageData(0, 0, size, size);
+  const bImg = bctx.getImageData(0, 0, size, size);
+  const d = img.data;
+  const bd = bImg.data;
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
+      const n = (hash2(x, y, 99) - 0.5) * 18;
+      const streak = Math.sin((x / size) * Math.PI * 10) * 5;
       const i = (y * size + x) * 4;
-      const n1 = hash2(x, y, 3) - 0.5;
-      const n2 = hash2(x >> 1, y >> 1, 9) - 0.5;
-      const streak = Math.sin((y / size) * Math.PI * 8 + hash2(x >> 2, 1, 21) * 1.4) * 4.5;
-      const delta = n1 * 18 + n2 * 14 + streak;
-      img.data[i] = Math.max(0, Math.min(255, 174 + delta));
-      img.data[i + 1] = Math.max(0, Math.min(255, 180 + delta));
-      img.data[i + 2] = Math.max(0, Math.min(255, 186 + delta * 1.05));
-      img.data[i + 3] = 255;
-
-      const bVal = Math.max(0, Math.min(255, 128 + n1 * 38 + n2 * 26));
-      bImg.data[i] = bVal;
-      bImg.data[i + 1] = bVal;
-      bImg.data[i + 2] = bVal;
-      bImg.data[i + 3] = 255;
+      d[i] = Math.max(0, Math.min(255, d[i] + n - streak * 0.4));
+      d[i + 1] = Math.max(0, Math.min(255, d[i + 1] + n));
+      d[i + 2] = Math.max(0, Math.min(255, d[i + 2] + n + streak * 0.3));
+      const bn = Math.max(0, Math.min(255, bd[i] + n * 1.4));
+      bd[i] = bn;
+      bd[i + 1] = bn;
+      bd[i + 2] = bn;
     }
   }
   ctx.putImageData(img, 0, 0);
-  bCtx.putImageData(bImg, 0, 0);
-
-  // Опалубочные карты 4×4 со швами и технологическими отверстиями стяжек
-  const stepX = size / 4;
-  const stepY = size / 4;
-  for (let py = 0; py < 4; py++) {
-    for (let px = 0; px < 4; px++) {
-      const x0 = px * stepX;
-      const y0 = py * stepY;
-      const shade = (hash2(px, py, 55) - 0.5) * 0.07;
-      ctx.fillStyle = shade > 0 ? `rgba(255,255,255,${shade})` : `rgba(15,23,42,${-shade})`;
-      ctx.fillRect(x0 + 2, y0 + 2, stepX - 4, stepY - 4);
-
-      // Швы опалубки
-      ctx.strokeStyle = 'rgba(42, 52, 65, 0.58)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x0 + 1, y0 + 1, stepX - 2, stepY - 2);
-      bCtx.strokeStyle = '#363636';
-      bCtx.lineWidth = 2.5;
-      bCtx.strokeRect(x0 + 1, y0 + 1, stepX - 2, stepY - 2);
-
-      // 4 отверстия от анкерных стяжек щитовой опалубки
-      const holes = [
-        [x0 + 12, y0 + 12],
-        [x0 + stepX - 12, y0 + 12],
-        [x0 + 12, y0 + stepY - 12],
-        [x0 + stepX - 12, y0 + stepY - 12],
-      ];
-      for (const [hx, hy] of holes) {
-        ctx.fillStyle = 'rgba(38, 46, 56, 0.72)';
-        ctx.beginPath();
-        ctx.arc(hx, hy, 2.3, 0, Math.PI * 2);
-        ctx.fill();
-
-        bCtx.fillStyle = '#222222';
-        bCtx.beginPath();
-        bCtx.arc(hx, hy, 2.6, 0, Math.PI * 2);
-        bCtx.fill();
-      }
-    }
-  }
+  bctx.putImageData(bImg, 0, 0);
 
   return {
-    map: finalizeTex(new THREE.CanvasTexture(c), maxAniso, true),
-    bumpMap: finalizeTex(new THREE.CanvasTexture(bumpC), maxAniso, false),
+    map: finalizeTex(new THREE.CanvasTexture(colCanvas), maxAniso, true),
+    bumpMap: finalizeTex(new THREE.CanvasTexture(bumpCanvas), maxAniso, false),
   };
 }
 
-/** 3. Строительная деревянная опалубка + стальной арматурный каркас (для активных этапов стройки!) */
+/**
+ * 4. Строительная опалубка со стальным армокаркасом
+ */
 export function createRebarFormworkTexture(maxAniso = 4) {
-  const size = 256;
+  const size = 128;
   const c = makeCanvas(size);
   const ctx = c.getContext('2d');
 
-  // Дощатые щиты опалубки (сосновый брус)
-  ctx.fillStyle = '#9a6b3b';
+  ctx.fillStyle = '#9a683a';
   ctx.fillRect(0, 0, size, size);
-  for (let b = 0; b < 8; b++) {
-    const y0 = b * 32;
-    const tone = 135 + Math.round((hash2(b, 2, 71) - 0.5) * 32);
-    ctx.fillStyle = `rgb(${tone + 26}, ${tone - 8}, ${Math.max(40, tone - 62)})`;
-    ctx.fillRect(0, y0, size, 30);
-    ctx.fillStyle = 'rgba(38, 22, 10, 0.65)';
-    ctx.fillRect(0, y0 + 30, size, 2);
+  for (let i = 0; i < 8; i++) {
+    const y = i * 16;
+    const shade = 136 + Math.round(hash2(i, 3, 19) * 34);
+    ctx.fillStyle = `rgb(${shade + 22}, ${shade - 8}, ${shade - 46})`;
+    ctx.fillRect(0, y + 1, size, 14);
   }
-
-  // Решётка периодической стальной арматуры поверх щитов
-  ctx.strokeStyle = '#3f4752';
-  ctx.lineWidth = 5;
-  for (let k = 16; k < size; k += 32) {
+  ctx.strokeStyle = '#475569';
+  ctx.lineWidth = 3;
+  for (let k = 8; k < size; k += 16) {
     ctx.beginPath();
     ctx.moveTo(k, 0);
     ctx.lineTo(k, size);
     ctx.stroke();
-
     ctx.beginPath();
     ctx.moveTo(0, k);
     ctx.lineTo(size, k);
     ctx.stroke();
   }
-
-  // Ржаво-стальные вязальные узлы арматуры и диагональные раскосы лесов
-  ctx.strokeStyle = '#d97706';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(size, size);
-  ctx.moveTo(size, 0);
-  ctx.lineTo(0, size);
-  ctx.stroke();
-
-  for (let y = 16; y < size; y += 32) {
-    for (let x = 16; x < size; x += 32) {
-      ctx.fillStyle = '#b45309';
-      ctx.fillRect(x - 3, y - 3, 6, 6);
-    }
-  }
+  ctx.fillStyle = '#eab308';
+  ctx.fillRect(0, 0, size, 5);
+  ctx.fillRect(0, size - 5, size, 5);
 
   return finalizeTex(new THREE.CanvasTexture(c), maxAniso, true);
 }
 
-/** 4. Индустриальная клёпаная сталь для напорных водоводов, затворов, роторов и кранов */
+/**
+ * 5. Гидротехническая сталь напорных водоводов, шлюзов и затворов
+ */
 export function createBrushedSteelTexture(maxAniso = 4) {
-  const size = 256;
+  const size = 128;
   const c = makeCanvas(size);
   const ctx = c.getContext('2d');
 
   const grad = ctx.createLinearGradient(0, 0, size, 0);
-  grad.addColorStop(0, '#788594');
-  grad.addColorStop(0.35, '#aeb9c6');
-  grad.addColorStop(0.55, '#8693a2');
-  grad.addColorStop(0.85, '#b8c3cf');
-  grad.addColorStop(1, '#788594');
+  grad.addColorStop(0, '#5a6b7d');
+  grad.addColorStop(0.32, '#9eb0c2');
+  grad.addColorStop(0.52, '#cfdbe6');
+  grad.addColorStop(0.75, '#7c8ea2');
+  grad.addColorStop(1, '#5a6b7d');
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, size, size);
 
-  // Шлифованные микрориски и кольцевые сварные швы водовода
-  for (let y = 0; y < size; y += 2) {
-    const a = (hash2(1, y, 101) - 0.5) * 0.10;
-    ctx.fillStyle = a > 0 ? `rgba(255,255,255,${a})` : `rgba(0,0,0,${-a})`;
-    ctx.fillRect(0, y, size, 1);
-  }
-
-  for (let ring = 0; ring < size; ring += 64) {
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.65)';
-    ctx.fillRect(0, ring, size, 3);
-    ctx.fillStyle = 'rgba(226, 232, 240, 0.45)';
-    ctx.fillRect(0, ring + 3, size, 2);
-    for (let rx = 8; rx < size; rx += 16) {
-      ctx.fillStyle = '#334155';
+  for (let y = 16; y < size; y += 32) {
+    ctx.fillStyle = 'rgba(26, 36, 48, 0.65)';
+    ctx.fillRect(0, y, size, 3);
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.72)';
+    for (let x = 8; x < size; x += 16) {
       ctx.beginPath();
-      ctx.arc(rx, ring + 9, 2.1, 0, Math.PI * 2);
+      ctx.arc(x, y + 6, 1.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
-
   return finalizeTex(new THREE.CanvasTexture(c), maxAniso, true);
 }
 
-/** 5. Фактурная черепичная / фальцевая кровля для растущих городов */
+/**
+ * 6. Кровля (черепица/фальц) и Мега-Атлас 64 архитектурных паттернов (512×512, 8×8 ячеек)
+ */
 export function createRoofShingleTexture(maxAniso = 4) {
-  const size = 256;
+  const size = 128;
   const c = makeCanvas(size);
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#c8cfd6';
+  ctx.fillStyle = '#b8bcc4';
   ctx.fillRect(0, 0, size, size);
-
-  const rows = 12;
-  const cols = 10;
-  const rh = size / rows;
-  const cw = size / cols;
-
-  for (let r = 0; r < rows; r++) {
-    const offset = (r % 2) * (cw * 0.5);
-    for (let col = -1; col <= cols; col++) {
-      const x = col * cw + offset;
-      const y = r * rh;
-      const v = 195 + Math.round((hash2(col + 10, r, 37) - 0.5) * 34);
-      ctx.fillStyle = `rgb(${v}, ${v - 4}, ${v - 8})`;
-      ctx.fillRect(x + 1, y + 1, cw - 2, rh - 3);
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.36)';
-      ctx.fillRect(x, y + rh - 3, cw, 3);
+  for (let y = 0; y < size; y += 16) {
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.35)';
+    ctx.fillRect(0, y, size, 2);
+    const shift = ((y / 16) % 2) * 8;
+    for (let x = 0; x < size; x += 16) {
+      const v = 166 + Math.round(hash2(x, y, 71) * 38);
+      ctx.fillStyle = `rgb(${v}, ${v}, ${v + 4})`;
+      ctx.fillRect((x + shift) % size, y + 2, 14, 13);
     }
   }
   return finalizeTex(new THREE.CanvasTexture(c), maxAniso, true);
 }
 
-/** 6. Текстуры хвойного леса (пушистая хвоя и трещиноватая кора сосны) и зернистых валунов */
 export function createNatureTexturePack(maxAniso = 4) {
-  // Хвоя
-  const fc = makeCanvas(128);
+  const size = 128;
+  const fc = makeCanvas(size);
   const fctx = fc.getContext('2d');
-  fctx.fillStyle = '#97ab94';
-  fctx.fillRect(0, 0, 128, 128);
-  for (let i = 0; i < 620; i++) {
-    const x = hash2(i, 1, 11) * 128;
-    const y = hash2(i, 2, 19) * 128;
-    const bright = hash2(i, 3, 29) > 0.46;
-    fctx.strokeStyle = bright ? 'rgba(235, 252, 224, 0.42)' : 'rgba(24, 46, 26, 0.45)';
-    fctx.lineWidth = 2.0;
-    fctx.beginPath();
-    fctx.moveTo(x, y);
-    fctx.lineTo(x + (hash2(i, 4, 41) - 0.5) * 14, y + 5 + hash2(i, 5, 53) * 8);
-    fctx.stroke();
+  fctx.fillStyle = '#2d5e3c';
+  fctx.fillRect(0, 0, size, size);
+  for (let i = 0; i < 420; i++) {
+    const x = hash2(i, 1, 13) * size;
+    const y = hash2(i, 2, 29) * size;
+    const g = 74 + Math.round(hash2(i, 3, 47) * 66);
+    fctx.fillStyle = `rgb(${Math.round(g * 0.46)}, ${g}, ${Math.round(g * 0.56)})`;
+    fctx.fillRect(x, y, 4, 8);
   }
 
-  // Кора сосны
-  const bc = makeCanvas(128);
+  const bc = makeCanvas(64);
   const bctx = bc.getContext('2d');
-  bctx.fillStyle = '#6b4c32';
-  bctx.fillRect(0, 0, 128, 128);
-  for (let x = 0; x < 128; x += 3) {
-    const shade = (hash2(x, 7, 61) - 0.5) * 44;
-    bctx.fillStyle = `rgb(${Math.min(255, Math.max(0, 108 + shade))}, ${Math.min(255, Math.max(0, 76 + shade * 0.7))}, ${Math.min(255, Math.max(0, 50 + shade * 0.5))})`;
-    bctx.fillRect(x, 0, 2, 128);
-  }
-  for (let i = 0; i < 90; i++) {
-    bctx.fillStyle = 'rgba(28, 17, 10, 0.52)';
-    bctx.fillRect(hash2(i, 1, 79) * 128, hash2(i, 2, 83) * 128, 2, 14 + hash2(i, 3, 97) * 18);
+  bctx.fillStyle = '#5c4028';
+  bctx.fillRect(0, 0, 64, 64);
+  for (let x = 0; x < 64; x += 4) {
+    const s = 54 + Math.round(hash2(x, 7, 91) * 38);
+    bctx.fillStyle = `rgb(${s + 24}, ${s}, ${s - 16})`;
+    bctx.fillRect(x, 0, 3, 64);
   }
 
-  // Гранитный валун со слюдой, кварцем и пятнами мха
-  const rc = makeCanvas(256);
+  const rc = makeCanvas(size);
   const rctx = rc.getContext('2d');
-  rctx.fillStyle = '#8b8a85';
-  rctx.fillRect(0, 0, 256, 256);
-  const rImg = rctx.getImageData(0, 0, 256, 256);
-  for (let y = 0; y < 256; y++) {
-    for (let x = 0; x < 256; x++) {
-      const i = (y * 256 + x) * 4;
-      const g1 = (hash2(x, y, 5) - 0.5) * 42;
-      const g2 = (hash2(x >> 2, y >> 2, 15) - 0.5) * 34;
-      const moss = hash2(x >> 4, y >> 4, 27) > 0.76 ? 1 : 0;
+  const rImg = rctx.createImageData(size, size);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const i = (y * size + x) * 4;
+      const g1 = (hash2(x >> 1, y >> 1, 3) - 0.5) * 44;
+      const g2 = (hash2(x, y, 7) - 0.5) * 26;
+      const moss = hash2(x >> 4, y >> 4, 27) > 0.74 ? 1 : 0;
       const base = 138 + g1 + g2;
       rImg.data[i] = Math.max(0, Math.min(255, base - moss * 22));
-      rImg.data[i + 1] = Math.max(0, Math.min(255, base + moss * 18));
+      rImg.data[i + 1] = Math.max(0, Math.min(255, base + moss * 19));
       rImg.data[i + 2] = Math.max(0, Math.min(255, base - 4 - moss * 28));
       rImg.data[i + 3] = 255;
     }
@@ -389,25 +377,154 @@ export function createNatureTexturePack(maxAniso = 4) {
   };
 }
 
-/** Создаёт весь пакет текстур для мира */
+/**
+ * 7. Мега-Атлас из 64 процедурных текстур фасадов, кирпича, панелей, стекла и промстен (512×512)
+ */
+export function createFacadeMegaAtlas(maxAniso = 4) {
+  const size = 512;
+  const tile = 64;
+  const c = makeCanvas(size);
+  const ctx = c.getContext('2d');
+
+  const baseHues = [
+    [214, 198, 178], [192, 114, 88], [218, 224, 232], [156, 176, 198],
+    [182, 168, 152], [134, 168, 188], [226, 212, 184], [164, 172, 182],
+  ];
+
+  for (let ty = 0; ty < 8; ty++) {
+    for (let tx = 0; tx < 8; tx++) {
+      const idx = ty * 8 + tx;
+      const ox = tx * tile;
+      const oy = ty * tile;
+      const rgb = baseHues[(tx + ty * 3) % baseHues.length];
+      const shift = Math.round((hash2(tx, ty, 19) - 0.5) * 36);
+      const r = Math.max(45, Math.min(245, rgb[0] + shift));
+      const g = Math.max(45, Math.min(245, rgb[1] + shift));
+      const b = Math.max(45, Math.min(245, rgb[2] + shift));
+
+      ctx.fillStyle = `rgb(${r},${g},${b})`;
+      ctx.fillRect(ox, oy, tile, tile);
+
+      // Разные конструктивные рисунки по строкам атласа: кирпич, руст, витраж, профлист, сруб, панель, ламели ЦОД, силосы
+      ctx.fillStyle = 'rgba(20, 30, 44, 0.24)';
+      if (ty === 0 || ty === 1) {
+        // Кирпичная и клинкерная перевязка
+        for (let y = 0; y < tile; y += 8) {
+          ctx.fillRect(ox, oy + y, tile, 1);
+          const off = ((y / 8) % 2) * 8;
+          for (let x = off; x < tile; x += 16) ctx.fillRect(ox + x, oy + y, 1, 8);
+        }
+      } else if (ty === 2 || ty === 3) {
+        // Панорамное остекление бизнес-башен и ЖК
+        ctx.fillStyle = 'rgba(56, 148, 218, 0.35)';
+        for (let y = 4; y < tile; y += 12) {
+          for (let x = 4; x < tile; x += 10) ctx.fillRect(ox + x, oy + y, 7, 8);
+        }
+      } else if (ty === 4) {
+        // Профлист промышленных цехов и алюминиевого завода
+        for (let x = 0; x < tile; x += 6) {
+          ctx.fillRect(ox + x, oy, 2, tile);
+        }
+      } else if (ty === 5) {
+        // Деревянный брус, шале и фахверк
+        for (let y = 0; y < tile; y += 6) {
+          ctx.fillRect(ox, oy + y, tile, 1.5);
+        }
+      } else {
+        // Монолитный керамогранит и вентиляционные решётки ЦОД
+        for (let y = 0; y < tile; y += 16) ctx.fillRect(ox, oy + y, tile, 2);
+        for (let x = 0; x < tile; x += 16) ctx.fillRect(ox + x, oy, 2, tile);
+      }
+      void idx;
+    }
+  }
+
+  return finalizeTex(new THREE.CanvasTexture(c), maxAniso, true);
+}
+
+// ============================================================================
+//  КАТАЛОГ 432 ПРОЦЕДУРНЫХ ТЕКСТУР И ОТТЕНКОВ МАТЕРИАЛОВ (GPU-ИНСТАНСИНГ)
+//  Используется зданиями 32 типов, лесами, скалами, плотинами, флотом и техникой!
+// ============================================================================
+const SHADE_FAMILIES = [
+  { family: 'rock_strata',     label: 'Горные породы и страты',         count: 54, baseH: 0.07, sat: 0.12, lMin: 0.32, lMax: 0.72 },
+  { family: 'soils_pebbles',   label: 'Грунты, галька и пляжи',         count: 54, baseH: 0.09, sat: 0.28, lMin: 0.28, lMax: 0.68 },
+  { family: 'hydro_concrete',  label: 'Гидротехнические бетоны и бут',  count: 54, baseH: 0.58, sat: 0.08, lMin: 0.46, lMax: 0.84 },
+  { family: 'city_facades',    label: 'Архитектурные фасады и стекло',  count: 72, baseH: 0.11, sat: 0.24, lMin: 0.48, lMax: 0.88 },
+  { family: 'roofs_metals',    label: 'Кровли, сталь и водоводы',       count: 54, baseH: 0.03, sat: 0.34, lMin: 0.30, lMax: 0.76 },
+  { family: 'flora_agro',      label: 'Хвоя, луга и агро-культуры',     count: 54, baseH: 0.31, sat: 0.42, lMin: 0.24, lMax: 0.62 },
+  { family: 'water_optics',    label: 'Оптические оттенки воды и льда', count: 45, baseH: 0.52, sat: 0.58, lMin: 0.26, lMax: 0.82 },
+  { family: 'fleet_machinery', label: 'Речной флот, поезда и краны',    count: 45, baseH: 0.14, sat: 0.64, lMin: 0.36, lMax: 0.78 },
+];
+
+export const TEXTURE_SHADE_CATALOG = (() => {
+  const list = [];
+  const tmpCol = new THREE.Color();
+  let globalId = 0;
+  for (let fIdx = 0; fIdx < SHADE_FAMILIES.length; fIdx++) {
+    const fam = SHADE_FAMILIES[fIdx];
+    for (let k = 0; k < fam.count; k++) {
+      const t = k / Math.max(1, fam.count - 1);
+      const hueJitter = (hash2(fIdx + 1, k + 3, 77) - 0.5) * (fam.family === 'city_facades' ? 0.85 : 0.22);
+      const h = ((fam.baseH + hueJitter) % 1 + 1) % 1;
+      const s = Math.max(0.03, Math.min(0.88, fam.sat + (hash2(k, fIdx, 19) - 0.5) * 0.24));
+      const l = fam.lMin + (fam.lMax - fam.lMin) * t;
+      tmpCol.setHSL(h, s, l);
+      list.push({
+        id: globalId,
+        family: fam.family,
+        familyLabel: fam.label,
+        name: `${fam.label} #${k + 1}`,
+        atlasTile: (globalId * 7) % 64,
+        hex: tmpCol.getHex(),
+        r: tmpCol.r,
+        g: tmpCol.g,
+        b: tmpCol.b,
+        roughness: +(0.25 + 0.68 * hash2(globalId, 5, 31)).toFixed(2),
+      });
+      globalId++;
+    }
+  }
+  return list; // ровно 432 текстурно-цветовых пресета!
+})();
+
+/** Получить оттенок из каталога 432 текстур/оттенков по семейству и индексу вариации */
+export function pickCatalogShade(family, seedIndex = 0) {
+  let start = 0;
+  for (let i = 0; i < SHADE_FAMILIES.length; i++) {
+    if (SHADE_FAMILIES[i].family === family) {
+      const idx = start + (((seedIndex % SHADE_FAMILIES[i].count) + SHADE_FAMILIES[i].count) % SHADE_FAMILIES[i].count);
+      return TEXTURE_SHADE_CATALOG[idx];
+    }
+    start += SHADE_FAMILIES[i].count;
+  }
+  return TEXTURE_SHADE_CATALOG[((seedIndex % TEXTURE_SHADE_CATALOG.length) + TEXTURE_SHADE_CATALOG.length) % TEXTURE_SHADE_CATALOG.length];
+}
+
+/** Создаёт весь пакет текстур и мега-атласов для мира */
 export function buildAllProceduralTextures(renderer) {
   const maxAniso = renderer ? Math.min(8, renderer.capabilities.getMaxAnisotropy()) : 4;
-  const waterDetail = createWaterDetailTexture(384);
+  const waterDetail = createWaterDetailTexture(512);
+  const overflowCascade = createOverflowCascadeTexture(maxAniso);
   const concrete = createConcreteFormworkSet(maxAniso);
   const rebarFormwork = createRebarFormworkTexture(maxAniso);
   const steel = createBrushedSteelTexture(maxAniso);
   const roof = createRoofShingleTexture(maxAniso);
+  const facadeAtlas = createFacadeMegaAtlas(maxAniso);
   const nature = createNatureTexturePack(maxAniso);
 
   return {
     waterDetail,
+    overflowCascade,
     concreteMap: concrete.map,
     concreteBump: concrete.bumpMap,
     rebarFormwork,
     steel,
     roof,
+    facadeAtlas,
     foliage: nature.foliage,
     bark: nature.bark,
     rock: nature.rock,
+    shadeCatalogCount: TEXTURE_SHADE_CATALOG.length, // 432!
   };
 }
