@@ -559,86 +559,35 @@ export function createUrbanPlazaTexture(maxAniso = 8) {
   const c = makeCanvas(size);
   const ctx = c.getContext('2d');
 
-  // Мягкая гранитно-песчаная основа городской террасы
-  ctx.fillStyle = '#55606e';
+  // Спокойная гранитная брусчатка городской центральной площади (БЕЗ колец и БЕЗ дорожной разметки!)
+  ctx.fillStyle = '#6c737c';
   ctx.fillRect(0, 0, size, size);
 
-  // Квартальная сетка мощения и зелёных скверов
   for (let y = 0; y < size; y += 32) {
     for (let x = 0; x < size; x += 32) {
       const h = hash2(x >> 5, y >> 5, 61);
-      if (h > 0.74) {
-        // Внутриквартальный зелёный сквер / газон
-        ctx.fillStyle = '#3f6b4b';
-        ctx.fillRect(x + 4, y + 4, 24, 24);
-        ctx.fillStyle = '#53875e';
+      if (h > 0.72) {
+        ctx.fillStyle = '#3f6f4c';
+        ctx.fillRect(x + 3, y + 3, 26, 26);
+        ctx.fillStyle = '#538a60';
         ctx.fillRect(x + 7, y + 7, 18, 18);
       } else {
-        const tone = 82 + Math.round(h * 28);
-        ctx.fillStyle = `rgb(${tone + 6},${tone + 5},${tone})`;
-        ctx.fillRect(x + 3, y + 3, 26, 26);
+        const tone = 102 + Math.round(h * 26);
+        ctx.fillStyle = `rgb(${tone + 6},${tone + 4},${tone})`;
+        ctx.fillRect(x + 2, y + 2, 28, 28);
       }
     }
   }
 
-  // Кольцевые и радиальные городские проспекты с разметкой и переходами
-  ctx.strokeStyle = '#363f4b';
-  for (const r of [72, 138, 204]) {
-    ctx.lineWidth = 13;
-    ctx.beginPath();
-    ctx.arc(half, half, r, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(248, 250, 252, 0.45)';
-    if (ctx.setLineDash) ctx.setLineDash([7, 7]);
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.arc(half, half, r, 0, Math.PI * 2);
-    ctx.stroke();
-    if (ctx.setLineDash) ctx.setLineDash([]);
-    ctx.strokeStyle = '#363f4b';
-  }
-
-  for (let a = 0; a < 8; a++) {
-    const ang = (a * Math.PI) / 4;
-    const ex = half + Math.cos(ang) * 246;
-    const ey = half + Math.sin(ang) * 246;
-    ctx.strokeStyle = '#343d49';
-    ctx.lineWidth = 12;
-    ctx.beginPath();
-    ctx.moveTo(half, half);
-    ctx.lineTo(ex, ey);
-    ctx.stroke();
-
-    ctx.strokeStyle = 'rgba(251, 191, 36, 0.5)';
-    ctx.lineWidth = 1.3;
-    if (ctx.setLineDash) ctx.setLineDash([8, 6]);
-    ctx.beginPath();
-    ctx.moveTo(half, half);
-    ctx.lineTo(ex, ey);
-    ctx.stroke();
-    if (ctx.setLineDash) ctx.setLineDash([]);
-  }
-
-  // Центральная парадная площадь с брусчаткой и кольцом фонтана
-  ctx.fillStyle = '#8b8378';
-  ctx.beginPath();
-  ctx.arc(half, half, 36, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = '#cbd5e1';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.fillStyle = '#38bdf8';
-  ctx.beginPath();
-  ctx.arc(half, half, 12, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Плавная круглая альфа-маска по внешнему краю города
+  // Мягкая прямоугольная альфа-маска по краям сквера
   const img = ctx.getImageData(0, 0, size, size);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      const dist = Math.hypot(x - half, y - half) / half;
-      const alpha = dist > 0.98 ? 0 : (dist > 0.78 ? (1.0 - (dist - 0.78) / 0.20) : 1.0);
-      img.data[(y * size + x) * 4 + 3] = Math.round(Math.max(0, Math.min(1, alpha)) * 238);
+      const dx = Math.abs(x - half) / half;
+      const dy = Math.abs(y - half) / half;
+      const boxDist = Math.max(dx, dy);
+      const alpha = boxDist > 0.96 ? 0 : (boxDist > 0.80 ? (1.0 - (boxDist - 0.80) / 0.16) : 1.0);
+      img.data[(y * size + x) * 4 + 3] = Math.round(Math.max(0, Math.min(1, alpha)) * 225);
     }
   }
   ctx.putImageData(img, 0, 0);
