@@ -22,8 +22,12 @@ import {
   createRealisticWaterMaterial,
   createOverflowWaterMaterial,
   createCityFacadeMaterial,
+  createOuterSeaFogMaterial,
+  createHorizonMistMaterial,
 } from '../src/water-shader.js';
 import { WorldView } from '../src/world-view.js';
+import { ValleyCameraController } from '../src/camera.js';
+import { HydroAudio } from '../src/audio.js';
 import { TutorialController } from '../src/tutorial.js';
 
 // ============================================================================
@@ -398,4 +402,82 @@ applyMapScale('compact');
 assert.equal(WORLD.size, 768, 'Масштаб compact = 768×768 м сохранён');
 applyMapScale('km5');
 
-console.log('✅ ВСЕ ТЕСТЫ v0.3.0 (5×5 и 10×10 КМ, ГЭС В НБ + ГАЭС, 3D-ПЕРЕЛИВ, ВОДНЫЙ БАЛАНС, 12 ДОХОДОВ, 8 ГОРОДОВ/32 ЗДАНИЯ, 300 АНИМАЦИЙ, 432 ТЕКСТУРЫ) ПРОЙДЕНЫ!');
+// ============================================================================
+//  6. ПРОВЕРКА ИСПРАВЛЕНИЙ v0.3.1: WASD, ПЕРЕЛЁТ ГОРОДОВ, ЧИСТЫЕ РЕКИ, МОРЕ И ТУМАН ЗА КАРТОЙ, ЗВУК
+// ============================================================================
+console.log('6. Проверка управления WASD, дугового перелёта между городами, чистых рек, внешнего моря/тумана и звука...');
+
+const seaMat = createOuterSeaFogMaterial(texSet.waterDetail);
+const mistMat = createHorizonMistMaterial();
+checkGlslBalanced('outerSea.vert', seaMat.vertexShader);
+checkGlslBalanced('outerSea.frag', seaMat.fragmentShader);
+checkGlslBalanced('horizonMist.vert', mistMat.vertexShader);
+checkGlslBalanced('horizonMist.frag', mistMat.fragmentShader);
+
+assert.ok(worldView.outerSeaMesh && worldView.horizonMistMesh, 'За пределами карты созданы бескрайнее внешнее море и кольцо объёмного тумана');
+worldView.rebuildForNewValley();
+assert.equal(worldView.outerSeaMesh.scale.x, WORLD.size * 14, 'Внешнее море охватывает пространство в 14 раз шире карты');
+
+// Проверяем отсутствие лишнего движения по рекам и бездорожью между городами
+assert.equal(worldView.livingWorld.shipHullIM, undefined, 'Лишнее движение кораблей по горным рекам убрано');
+for (const car of worldView.livingWorld.cityCars) {
+  const homeCity = CITY_DEFS.find((c) => Math.hypot(c.x - car.cx, c.z - car.cz) < 1);
+  assert.ok(homeCity && car.ringR < homeCity.plateauRadius * 0.65, 'Внутригородской транспорт остаётся строго внутри террасы своего города');
+}
+
+// Проверяем точную противоположность направлений WASD (W vs S, A vs D) и перелёт flyTo!
+globalThis.window = {
+  addEventListener() {},
+};
+globalThis.document.addEventListener = () => {};
+const dummyDom = { addEventListener() {} };
+const testCam = new THREE.PerspectiveCamera(46, 16 / 9, 4.5, 20000);
+const camCtrl = new ValleyCameraController(testCam, dummyDom);
+
+const baseGoal = camCtrl.goalTarget.clone();
+camCtrl.keys.add('KeyD');
+camCtrl.update(0.1, 20, () => 20);
+const deltaD = camCtrl.goalTarget.clone().sub(baseGoal);
+camCtrl.keys.clear();
+
+const afterD = camCtrl.goalTarget.clone();
+camCtrl.keys.add('KeyA');
+camCtrl.update(0.1, 20, () => 20);
+const deltaA = camCtrl.goalTarget.clone().sub(afterD);
+camCtrl.keys.clear();
+
+const dotAD = (deltaD.x * deltaA.x + deltaD.z * deltaA.z) / (Math.hypot(deltaD.x, deltaD.z) * Math.hypot(deltaA.x, deltaA.z));
+assert.ok(dotAD < -0.999, `Клавиши A и D двигают камеру строго в противоположные стороны по XZ (dot = ${dotAD.toFixed(4)})`);
+
+const beforeW = camCtrl.goalTarget.clone();
+camCtrl.keys.add('KeyW');
+camCtrl.update(0.1, 20, () => 20);
+const deltaW = camCtrl.goalTarget.clone().sub(beforeW);
+camCtrl.keys.clear();
+
+const afterW = camCtrl.goalTarget.clone();
+camCtrl.keys.add('KeyS');
+camCtrl.update(0.1, 20, () => 20);
+const deltaS = camCtrl.goalTarget.clone().sub(afterW);
+camCtrl.keys.clear();
+
+const dotWS = (deltaW.x * deltaS.x + deltaW.z * deltaS.z) / (Math.hypot(deltaW.x, deltaW.z) * Math.hypot(deltaS.x, deltaS.z));
+assert.ok(dotWS < -0.999, `Клавиши W и S двигают камеру строго вперёд и назад по XZ (dot = ${dotWS.toFixed(4)})`);
+
+// Проверяем плавный дуговой перелёт flyTo и защиту камеры от провала под гору
+camCtrl.flyTo(1200, 950, 900, 45);
+assert.ok(camCtrl._flight !== null, 'Запущен плавный дуговой перелёт между городами');
+camCtrl.update(0.35, 45, () => 280); // высокий хребет 280 м прямо под камерой!
+assert.ok(testCam.position.y > 285, 'Камера автоматически поднимается над горным хребтом и не проваливается под землю');
+
+// Нажатие WASD мгновенно прерывает авто-перелёт и отдаёт управление игроку
+camCtrl.keys.add('KeyW');
+camCtrl.update(0.05, 45, () => 45);
+assert.equal(camCtrl._flight, null, 'Нажатие WASD мгновенно отменяет авто-перелёт');
+camCtrl.keys.clear();
+
+// Проверяем безопасность аудиосистемы
+const audio = new HydroAudio();
+audio.updateContinuous(920, 1500, 120, 300);
+
+console.log('✅ ВСЕ ТЕСТЫ v0.3.1 (WASD, ПЕРЕЛЁТ ГОРОДОВ, ЧИСТЫЕ РЕКИ, МОРЕ И ТУМАН ЗА КАРТОЙ, ЗВУК, 5×5 и 10×10 КМ) ПРОЙДЕНЫ!');
