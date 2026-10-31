@@ -1,0 +1,17 @@
+{
+  "name": "cascade-hydro",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "КАСКАД: Живая Вода — 3D-симулятор строительства ГЭС, каналов, реалистичной гидродинамики и растущих городов",
+  "scripts": {
+    "build": "node tools/build.mjs",
+    "test": "node tests/sim-test.mjs"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}
