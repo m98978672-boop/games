@@ -40,6 +40,9 @@ export class TruckSim {
     this.handbrake = true;
     this.trailerYaw = 0;
     this.trailerYawOffset = 0;
+    this.trailerSway = 0;
+    this.trailerRoll = 0;
+    this.bounce = 0;
     this.wheelSpin = 0;
     this.slip = 0;
     this.pitch = 0;
@@ -221,7 +224,8 @@ export class TruckSim {
     const rawYaw = (this.speed * Math.tan(this.steer)) / wheelbase;
     // Знак: положительный steer (D) уводит тягач вправо по экрану (-x мира).
     const yawFromSteer = -yawLimit * Math.tanh(rawYaw / yawLimit);
-    const assist = 0.45;
+    // Помощь в поворотах можно выключить в настройках.
+    const assist = input.assist === false ? 0 : 0.45;
     const drift = (road.curv || 0) * this.speed * (1 - assist);
     this.yawRel += (yawFromSteer - drift) * dt;
     this.yawRel *= 1 / (1 + dt * 3.4); // шины гасят рыскание
@@ -239,15 +243,40 @@ export class TruckSim {
     } else {
       this.slip = 0;
       // Автовозврат к удобной полосе при слабом рулении (помощь новичкам).
-      if (Math.abs(steerInput) < 0.06 && Math.abs(this.lat) > 1.5) {
+      if (input.assist !== false && Math.abs(steerInput) < 0.06 && Math.abs(this.lat) > 1.5) {
         this.lat -= Math.sign(this.lat) * 0.34 * dt;
       }
     }
     this.lat = clamp(this.lat, -7.5, 7.5);
 
-    // Прицеп: рыскание следует за тягачом с запаздыванием.
-    const trailerYawTarget = this.yawRel * 0.55;
-    this.trailerYawOffset += (trailerYawTarget - this.trailerYawOffset) * Math.min(1, dt * 2.4);
+    // --- Полуприцеп: кинематика сцепки (модель Рауса).
+    // Седельно-сцепное устройство стоит позади задней оси тягача, оси прицепа — ещё
+    // дальше; из-за этого прицеп «срезает» поворот и складывается при заднем ходе.
+    const hitchOffset = 1.15; // м: задняя ось → седло
+    const trailerBase = 8.9; // м: седло → оси прицепа
+    const phi = this.trailerYawOffset; // угол складывания (ψ − θ)
+    // φ' = ψ'(1 + a/L·cosφ) − (v/L)·sinφ
+    const phiDot = this.yawRel * (1 + (hitchOffset / trailerBase) * Math.cos(phi)) - (this.speed / trailerBase) * Math.sin(phi);
+    const prevPhi = this.trailerYawOffset;
+    this.trailerYawOffset += phiDot * dt;
+    // Раскачка: свободная степень свободы гасится трением, но на скорости подхватывает.
+    const swayKick = (this.trailerYawOffset - prevPhi) / Math.max(dt, 1e-4);
+    this.trailerSway += (swayKick - this.trailerSway * (2.6 + Math.abs(this.speed) * 0.12)) * dt;
+    this.trailerSway = clamp(this.trailerSway, -0.9, 0.9);
+    this.trailerYawOffset += this.trailerSway * dt * 0.35;
+    // Предел складывания: дальше сцепка не пускает, скорость гасится.
+    const maxArt = 1.32;
+    if (Math.abs(this.trailerYawOffset) > maxArt) {
+      this.trailerYawOffset = clamp(this.trailerYawOffset, -maxArt, maxArt);
+      this.trailerSway *= 0.4;
+      this.speed *= 1 - 0.9 * dt;
+      this.jackknife = Math.min(1, this.jackknife + dt * 2.2);
+    } else {
+      this.jackknife = Math.max(0, this.jackknife - dt * 1.6);
+    }
+    // Крен прицепа в повороте и подрагивание на неровностях.
+    const trailerLat = this.speed * this.yawRel;
+    this.trailerRoll = lerp(this.trailerRoll, clamp(-trailerLat * 0.014 - this.trailerSway * 0.05, -0.09, 0.09), Math.min(1, dt * 5));
     this.trailerYaw = this.yawRel + this.trailerYawOffset;
 
     // Температура, износ и расход.
@@ -269,7 +298,13 @@ export class TruckSim {
       this.tires = Math.max(0, this.tires - Math.abs(this.speed) * dt * 0.000009);
     }
 
-    this.pitch = lerp(this.pitch, clamp(-Math.asin(clamp(grade, -1, 1)), -0.3, 0.3), Math.min(1, dt * 3));
+    const longAccel = (this.speed - (this.prevSpeed ?? this.speed)) / Math.max(dt, 1e-4);
+    this.prevSpeed = this.speed;
+    const dive = clamp(longAccel * 0.0038, -0.035, 0.035);
+    this.pitch = lerp(this.pitch, clamp(-Math.asin(clamp(grade, -1, 1)), -0.3, 0.3) - dive, Math.min(1, dt * 6));
+    // Мелкая тряска кузова: тем сильнее, чем грубее покрытие и выше скорость.
+    const rough = (road.roughness ?? 0) + clamp(Math.abs(this.speed) / 30, 0, 1) * 0.35;
+    this.bounce = Math.sin(performance.now() * 0.011 + this.speed * 0.7) * 0.004 * rough;
     this.roll = lerp(this.roll, clamp(-this.yawRel * this.speed * 0.012, -0.06, 0.06), Math.min(1, dt * 4));
     if (this.impact > 0) this.impact = Math.max(0, this.impact - dt * 1.5);
 

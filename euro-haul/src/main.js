@@ -44,7 +44,7 @@ class Game {
     this.job = null;
     this.phase = null;
     this.clock = { day: 1, minutes: 8 * 60 };
-    this.input = { keys: new Set(), touch: {} };
+    this.input = { keys: new Set(), touch: {}, touchSteer: 0 };
     this.cameraMode = CAMERA_MODES.includes(this.settings.camera) ? this.settings.camera : 'interior';
     this.cameraUserSet = CAMERA_MODES.includes(this.settings.camera);
     this.collisionCooldown = 0;
@@ -468,6 +468,9 @@ class Game {
     if (this.truck) this.truck.handbrake = this.key('Space');
     if (this.key('KeyA', 'ArrowLeft') || t.KeyA) raw -= 1;
     if (this.key('KeyD', 'ArrowRight') || t.KeyD) raw += 1;
+    // Сенсорный руль-рейка даёт аналоговый сигнал: он мягче кнопок.
+    const touchSteer = clamp(this.input.touchSteer || 0, -1, 1);
+    if (Math.abs(touchSteer) > 0.02) raw = clamp(raw + touchSteer, -1, 1);
     const pad = this.pollGamepad();
     if (pad) {
       if (Math.abs(pad.steer) > 0) raw = clamp(raw + pad.steer, -1, 1);
@@ -481,7 +484,9 @@ class Game {
     const prev = this.steerAxis || 0;
     let target = clamp(raw, -1, 1);
     // Мягкая кривая: половина хода руля = примерно 0.42 усилия (для геймпада).
-    target = Math.sign(target) * Math.pow(Math.abs(target), 1.35);
+    const sensitivity = clamp(Number(this.settings.steerSensitivity) || 1, 0.5, 1.6);
+    target = Math.sign(target) * Math.pow(Math.abs(target), 1.35) * sensitivity;
+    target = clamp(target, -1, 1);
     let rate;
     if (target === 0) rate = 5.2;
     else if (prev * target < 0) rate = 7.4;
@@ -489,7 +494,7 @@ class Game {
     const maxStep = rate * dt;
     this.steerAxis = prev + clamp(target - prev, -maxStep, maxStep);
     if (Math.abs(this.steerAxis) < 0.004) this.steerAxis = 0;
-    return { throttle, brake, steer: this.steerAxis };
+    return { throttle, brake, steer: this.steerAxis, assist: this.settings.steerAssist !== false };
   }
 
   // ---------------------------------------------------------------- Меню и профили
@@ -1081,10 +1086,13 @@ class Game {
   updateTruckTransform(dt) {
     const p = this.route.pointAt(this.truck.s);
     const pos = this.route.worldPos(this.truck.s, this.truck.lat);
-    const pitch = this.truck.pitch;
-    const roll = this.truck.roll + (this.truck.slip ? Math.sin(performance.now() * 0.02) * 0.01 * this.truck.slip : 0);
+    const pitch = this.truck.pitch + (this.truck.bounce || 0);
+    const roll =
+      this.truck.roll +
+      (this.truck.slip ? Math.sin(performance.now() * 0.02) * 0.01 * this.truck.slip : 0) +
+      (this.truck.jackknife ? Math.sin(performance.now() * 0.03) * 0.006 * this.truck.jackknife : 0);
     this.truckView.setPosition(pos.x, pos.y, pos.z, p.hdg + this.truck.yawRel, pitch, roll);
-    this.truckView.setTrailerAngle(this.truck.trailerYawOffset);
+    this.truckView.setTrailerAngle(this.truck.trailerYawOffset, this.truck.trailerRoll);
     this.truckView.update(
       {
         speedKmh: Math.abs(this.truck.speed) * 3.6,

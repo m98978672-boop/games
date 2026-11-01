@@ -15,6 +15,8 @@ export const DEFAULT_SETTINGS = {
   showFps: false,
   invertY: false,
   timeScale: 3,
+  steerSensitivity: 1,
+  steerAssist: true,
 };
 
 export function createProfile(name = 'Водитель', truckId = 'auriga-3') {

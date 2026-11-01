@@ -324,8 +324,8 @@ export class RoadWorld {
 
     // --- Обочина и рельеф.
     // Вдоль трассы lat должен возрастать: иначе грани смотрят вниз и отсекаются.
-    const latsRight = [-470, -320, -210, -140, -88, -52, -30, -16, -9, -5.2];
-    const latsLeft = [14.2, 18, 26, 40, 62, 95, 145, 210, 320, 470];
+    const latsRight = [-470, -390, -320, -262, -210, -172, -140, -112, -88, -68, -52, -40, -30, -22, -16, -12, -9, -7, -5.2];
+    const latsLeft = [14.2, 16, 18, 22, 26, 32, 40, 51, 62, 78, 95, 118, 145, 176, 210, 260, 320, 390, 470];
     if (!this.fieldMats) {
       const field = (base) => {
         const mat = base.clone();
@@ -337,19 +337,22 @@ export class RoadWorld {
     }
     // Поля: клетки 120×90 м с разными оттенками — пейзаж перестаёт быть «одним газоном».
     const fieldColor = (ss, la) => {
-      const cell = hash2(Math.floor(ss / 120), Math.floor(la / 90) + 7);
-      const lush = [0.6, 1.0, 0.52];
-      const dry = [1.0, 0.93, 0.5];
-      const olive = [0.86, 0.9, 0.44];
-      const dark = [0.44, 0.78, 0.4];
+      const cell = hash2(Math.floor(ss / 78), Math.floor(la / 56) + 7);
+      const lush = [0.44, 0.9, 0.38];
+      const dry = [1.18, 1.02, 0.54];
+      const olive = [0.86, 0.92, 0.4];
+      const dark = [0.33, 0.66, 0.3];
+      const plough = [0.86, 0.72, 0.5];
+      const straw = [1.24, 1.1, 0.62];
       let c;
-      if (cell < 0.34) c = lush;
-      else if (cell < 0.56) c = dry;
-      else if (cell < 0.76) c = olive;
-      else if (cell < 0.9) c = dark;
-      else c = [1.0, 1.0, 0.82];
+      if (cell < 0.26) c = lush;
+      else if (cell < 0.44) c = dry;
+      else if (cell < 0.62) c = olive;
+      else if (cell < 0.78) c = dark;
+      else if (cell < 0.9) c = plough;
+      else c = straw;
       // сглаживание внутри клетки, чтобы границы не были линейкой
-      const k = 0.9 + hash2(Math.floor(ss / 60), Math.floor(la / 45) + 3) * 0.2;
+      const k = 0.92 + hash2(Math.floor(ss / 34), Math.floor(la / 26) + 3) * 0.18;
       return [c[0] * k, c[1] * k, c[2] * k];
     };
     add(
@@ -393,7 +396,11 @@ export class RoadWorld {
     }
 
     // --- Деревья и кусты вдоль трассы: хвойные, лиственные и подлесок.
-    const treeCount = 210;
+    // Деревья растут рощами: так обочины выглядят как настоящий ландшафт,
+    // а не как ряд одинаковых моделей.
+    // Деревья покрывают весь видимый участок: число рощ зависит от длины окна.
+    const span = Math.max(1, s1 - s0);
+    const treeCount = (Math.ceil(span / 70) + 1) * 6;
     const trunkGeo = new THREE.CylinderGeometry(0.16, 0.32, 3.0, 7);
     // Ель из трёх ярусов — читается как хвоя, а не как «конус на палке».
     const pineGeo = new THREE.ConeGeometry(1.55, 3.0, 9);
@@ -421,23 +428,27 @@ export class RoadWorld {
     const baseIndex = Math.floor(s0 / spacing);
     for (let i = 0; i < treeCount; i++) {
       const idx = baseIndex + i;
-      const ss = idx * spacing + hash2(idx, 3) * 6;
+      // 6 деревьев на рощу: рощи идут вдоль трассы с шагом ~70 м.
+      const grove = Math.floor(i / 6);
+      const inGrove = i % 6;
+      const ss = s0 + grove * 70 + hash2(grove, 3) * 34 + hash2(idx, 5) * 14;
       if (ss < s0 - 40 || ss > s1 + 40) continue;
-      const side = hash2(idx, 7) > 0.5 ? 1 : -1;
-      const dist = 13 + hash2(idx, 11) * 130;
+      const side = hash2(grove, 7) > 0.5 ? 1 : -1;
+      const ring = 11 + hash2(grove, 11) * 30;
+      const dist = ring + inGrove * 3.4 + hash2(idx, 13) * 14 + (hash2(idx, 15) > 0.82 ? 60 : 0);
       const lat = -side * dist;
       const p = route.pointAt(ss);
       const y = p.y + terrainOffset(ss, lat) + 1.5;
-      const scale = 0.75 + hash2(idx, 13) * 1.3;
+      const scale = 0.8 + hash2(idx, 16) * 1.15;
       const rot = hash2(idx, 17) * 6.28;
       dummy.position.set(p.x + Math.cos(p.hdg) * lat, y, p.z - Math.sin(p.hdg) * lat);
       dummy.rotation.set(0, rot, 0);
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
       trunks.setMatrixAt(placed, dummy.matrix);
-      const baseHue = 0.235 + hash2(idx, 23) * 0.085;
-      const baseSat = 0.38 + hash2(idx, 29) * 0.24;
-      const baseLit = 0.245 + hash2(idx, 31) * 0.09;
+      const baseHue = 0.23 + hash2(idx, 23) * 0.09;
+      const baseSat = 0.16 + hash2(idx, 29) * 0.18;
+      const baseLit = 0.6 + hash2(idx, 31) * 0.22;
       const broadleaf = hash2(idx, 41) > 0.55;
       if (!broadleaf) {
         dummy.position.y = y + 2.0 * scale;
@@ -509,9 +520,51 @@ export class RoadWorld {
     }
     this.group.add(trunks, pines, pineMids, pineTops, leavesA, leavesM, leavesB);
 
+    // Придорожная трава: пучки вдоль обочины — оживляют кромку асфальта.
+    {
+      const tuftTex = textures.grassTuft();
+      const mat = new THREE.MeshStandardMaterial({
+        map: tuftTex,
+        transparent: true,
+        alphaTest: 0.35,
+        side: THREE.DoubleSide,
+        roughness: 1,
+        metalness: 0,
+        depthWrite: true,
+      });
+      const geo = new THREE.PlaneGeometry(0.62, 0.5);
+      geo.translate(0, 0.25, 0);
+      const count = Math.max(240, Math.round(span / 2.4));
+      const tufts = new THREE.InstancedMesh(geo, mat, count);
+      const td = new THREE.Object3D();
+      let ti = 0;
+      const stepT = Math.max(1.6, span / count);
+      const baseT = Math.floor(s0 / stepT);
+      for (let i = 0; i < count && ti < count; i++) {
+        const idx = baseT + i;
+        const ss = s0 + i * stepT + hash2(idx, 131) * stepT * 0.8;
+        if (ss < s0 || ss > s1) continue;
+        const side = hash2(idx, 137) > 0.5 ? 1 : -1;
+        const lat = -side * (5.2 + hash2(idx, 139) * 6.4 + (hash2(idx, 141) > 0.86 ? 5.5 : 0));
+        const p = route.pointAt(ss);
+        const y = p.y + terrainOffset(ss, lat) + 0.02;
+        const sc = 0.7 + hash2(idx, 149) * 0.9;
+        td.position.set(p.x + Math.cos(p.hdg) * lat, y, p.z - Math.sin(p.hdg) * lat);
+        td.rotation.set(0, hash2(idx, 151) * 6.28, 0);
+        td.scale.set(sc, sc * (0.8 + hash2(idx, 157) * 0.6), sc);
+        td.updateMatrix();
+        tufts.setMatrixAt(ti++, td.matrix);
+      }
+      tufts.count = ti;
+      tufts.instanceMatrix.needsUpdate = true;
+      tufts.receiveShadow = false;
+      tufts.castShadow = false;
+      this.group.add(tufts);
+    }
+
     // Кусты у обочины.
-    const bushGeo = new THREE.IcosahedronGeometry(0.62, 0);
-    const bushCount = 190;
+    const bushGeo = new THREE.IcosahedronGeometry(0.62, 1);
+    const bushCount = 340;
     const bushes = new THREE.InstancedMesh(bushGeo, m.leaves[1], bushCount);
     bushes.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(bushCount * 3), 3);
     let bi = 0;
@@ -525,10 +578,10 @@ export class RoadWorld {
       const scale = 0.55 + hash2(idx, 79) * 0.9;
       dummy.position.set(p.x + Math.cos(p.hdg) * lat, p.y + terrainOffset(ss, lat) + 0.35 * scale, p.z - Math.sin(p.hdg) * lat);
       dummy.rotation.set(0, hash2(idx, 83) * 6.28, 0);
-      dummy.scale.set(scale * 1.3, scale * 0.9, scale * 1.3);
+      dummy.scale.set(scale * 1.5, scale * 0.75, scale * 1.5);
       dummy.updateMatrix();
       bushes.setMatrixAt(bi, dummy.matrix);
-      color.setHSL(0.25 + hash2(idx, 89) * 0.07, 0.32 + hash2(idx, 97) * 0.2, 0.26 + hash2(idx, 101) * 0.1);
+      color.setHSL(0.24 + hash2(idx, 89) * 0.08, 0.2 + hash2(idx, 97) * 0.2, 0.55 + hash2(idx, 101) * 0.22);
       bushes.setColorAt(bi, color);
       bi++;
     }
@@ -845,9 +898,9 @@ export class RoadWorld {
       // Дальний силуэт города.
       if ((CITY_BY_ID.get(mark.id)?.size || 1) >= 2) {
         for (const side of [-1, 1]) {
-          const sk = new THREE.Mesh(new THREE.PlaneGeometry(900, 120), m.skyline);
+          const sk = new THREE.Mesh(new THREE.PlaneGeometry(1100, 92), m.skyline);
           const sp = route.pointAt(mark.s + side * 420);
-          sk.position.set(sp.x + Math.cos(sp.hdg) * side * 260, sp.y + 46, sp.z - Math.sin(sp.hdg) * side * 260);
+          sk.position.set(sp.x + Math.cos(sp.hdg) * side * 520, sp.y + 30, sp.z - Math.sin(sp.hdg) * side * 520);
           sk.rotation.y = sp.hdg + Math.PI / 2;
           this.group.add(sk);
         }
