@@ -37,6 +37,29 @@
 
 <main>
   <section id="games" class="games">
+    <article class="card card-base">
+      <div class="card-art">
+        <img src="game-base/cover.svg" alt="БАЗА — каркас всех игр: золотые светлячки на тёмном ночном фоне" loading="lazy" width="1440" height="810">
+        <span class="badge badge-new">шаблон · единый дизайн · база для новых игр</span>
+      </div>
+      <div class="card-body">
+        <h2>БАЗА<span>каркас, на основе которого делаются все игры</span></h2>
+        <p class="desc">Самая простая игра коллекции и главный шаблон репозитория: мини-игра «Светлячки»
+          (кликай по светлячкам, собирай комбо, ставь рекорд за 60 секунд). Весь общий дизайн всех игр
+          вынесен в единый файл <code>shared/theme.css</code>, а HUD-скелет и структура кода — в эту папку.</p>
+        <ul class="features">
+          <li>Единый дизайн всех игр: <code>shared/theme.css</code> — тёмная тема, золотой акцент, стеклянные панели, один HUD</li>
+          <li>Одинаковый скелет: topbar со статистикой, боковая панель, чипы-подсказки, тосты, модалки, пауза, автосохранение</li>
+          <li><code>game-base/TEMPLATE.md</code> — пошаговая инструкция, как ИИ создаёт новую игру на базе БАЗЫ за 8 шагов</li>
+          <li>Проверки: <code>node game-base/tests/smoke.mjs</code> и <code>node game-base/tests/logic.mjs</code></li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="game-base/index.html">Играть</a>
+          <a class="btn" href="game-base/TEMPLATE.md">Как создать игру</a>
+          <a class="btn" href="shared/README.md">Дизайн-система</a>
+        </div>
+      </div>
+    </article>
     <article class="card card-road">
       <div class="card-art">
         <img src="road-tycoon/cover.svg" alt="ТРАССА — закат над трассой, АЗС, кафе и машины" loading="lazy" width="1440" height="810">

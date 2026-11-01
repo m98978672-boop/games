@@ -202,6 +202,11 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
   opacity: 0.7;
 }
 
+/* БАЗА — шаблон/каркас: золотой акцент по умолчанию */
+.card-base .features li::before { background: var(--accent); }
+.card-base:hover { border-color: rgba(232, 180, 90, 0.5); }
+.card-base .badge-new { color: #ffd98a; border-color: rgba(232, 180, 90, 0.5); }
+
 .card-lastshore .features li::before { background: var(--ls); }
 .card-frontline .features li::before { background: var(--fl); }
 .card-cascade .features li::before { background: var(--ch); }

@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 810" width="1440" height="810" role="img" aria-label="БАЗА — каркас всех игр: золотые светлячки на тёмном ночном фоне">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e1311"/>
+      <stop offset="0.55" stop-color="#0b0d0c"/>
+      <stop offset="1" stop-color="#070908"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#ffd98a" stop-opacity="0.85"/>
+      <stop offset="0.35" stop-color="#e8b45a" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#e8b45a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="title" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff3d6"/>
+      <stop offset="1" stop-color="#e0a94f"/>
+    </linearGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <rect width="1440" height="810" fill="url(#sky)"/>
+
+  <!-- звёзды -->
+  <g fill="#dfe9ff">
+    <circle cx="90" cy="80" r="1.4" opacity=".5"/><circle cx="240" cy="150" r="1" opacity=".35"/>
+    <circle cx="420" cy="70" r="1.6" opacity=".45"/><circle cx="610" cy="130" r="1" opacity=".3"/>
+    <circle cx="760" cy="60" r="1.3" opacity=".5"/><circle cx="980" cy="110" r="1" opacity=".35"/>
+    <circle cx="1180" cy="70" r="1.5" opacity=".5"/><circle cx="1330" cy="160" r="1" opacity=".3"/>
+    <circle cx="150" cy="300" r="1" opacity=".25"/><circle cx="1310" cy="330" r="1.2" opacity=".3"/>
+    <circle cx="520" cy="240" r="1" opacity=".28"/><circle cx="880" cy="260" r="1.1" opacity=".3"/>
+  </g>
+
+  <!-- светлячки: свечение + ядро -->
+  <g>
+    <circle cx="330" cy="430" r="86" fill="url(#glow)"/><circle cx="330" cy="430" r="17" fill="#ffedc4"/>
+    <circle cx="1120" cy="300" r="64" fill="url(#glow)"/><circle cx="1120" cy="300" r="12" fill="#ffe3a1"/>
+    <circle cx="880" cy="560" r="52" fill="url(#glow)"/><circle cx="880" cy="560" r="10" fill="#ffd98a"/>
+    <circle cx="520" cy="620" r="40" fill="url(#glow)"/><circle cx="520" cy="620" r="8" fill="#ffd98a"/>
+    <circle cx="1250" cy="600" r="46" fill="url(#glow)"/><circle cx="1250" cy="600" r="9" fill="#ffe3a1"/>
+    <circle cx="180" cy="640" r="34" fill="url(#glow)"/><circle cx="180" cy="640" r="7" fill="#e8b45a"/>
+    <circle cx="700" cy="330" r="30" fill="url(#glow)"/><circle cx="700" cy="330" r="6" fill="#ffedc4"/>
+  </g>
+
+  <!-- заголовок -->
+  <text x="72" y="200" font-family="'Trebuchet MS','Segoe UI',system-ui,sans-serif" font-size="118" font-weight="700" letter-spacing="14" fill="url(#title)">БАЗА</text>
+  <text x="76" y="248" font-family="'Segoe UI',system-ui,sans-serif" font-size="24" letter-spacing="6" fill="#a9a294">КАРКАС ВСЕХ ИГР · ЛОВИ СВЕТЛЯЧКОВ</text>
+
+  <!-- рамка-шаблон -->
+  <rect x="56" y="268" width="330" height="52" rx="10" fill="none" stroke="#e8b45a" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="7 6"/>
+  <text x="76" y="301" font-family="'Segoe UI',system-ui,sans-serif" font-size="19" letter-spacing="3" fill="#ffd98a">единый дизайн · shared/theme.css</text>
+
+  <!-- полоса-«HUD» внизу как намёк на общий интерфейс -->
+  <g opacity=".9">
+    <rect x="0" y="740" width="1440" height="70" fill="#0a0c0b" opacity=".85"/>
+    <rect x="0" y="740" width="1440" height="1" fill="#f2ecdf" opacity=".12"/>
+    <rect x="24" y="756" width="34" height="34" rx="9" fill="#e8b45a"/>
+    <text x="33" y="781" font-family="'Segoe UI',system-ui,sans-serif" font-size="20" font-weight="800" fill="#241a06">Б</text>
+    <text x="70" y="772" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#6f6a5f">ОЧКИ</text>
+    <text x="70" y="790" font-family="'Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700" fill="#ffd98a">1 250</text>
+    <text x="170" y="772" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#6f6a5f">РЕКОРД</text>
+    <text x="170" y="790" font-family="'Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700" fill="#f2ecdf">3 480</text>
+    <text x="290" y="772" font-family="'Segoe UI',system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#6f6a5f">КОМБО</text>
+    <text x="290" y="790" font-family="'Segoe UI',system-ui,sans-serif" font-size="15" font-weight="700" fill="#f2ecdf">×6</text>
+    <circle cx="1380" cy="773" r="12" fill="none" stroke="#f2ecdf" stroke-opacity=".3" stroke-width="1.5"/>
+    <circle cx="1350" cy="773" r="12" fill="none" stroke="#f2ecdf" stroke-opacity=".3" stroke-width="1.5"/>
+    <circle cx="1320" cy="773" r="12" fill="none" stroke="#e8b45a" stroke-width="1.5"/>
+  </g>
+</svg>
