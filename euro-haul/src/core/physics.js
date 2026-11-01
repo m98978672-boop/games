@@ -129,12 +129,13 @@ export class TruckSim {
     this.brake = clamp(input.brake, 0, 1);
     this.limitSpeed = Math.min(this.maxSpeedLimit, road.speedLimit || 80);
 
-    // Руль: плавное нарастание и возврат к центру.
+    // Руль: угол зависит от скорости, но отклик остаётся линейным в начале хода.
     const steerInput = clamp(input.steer, -1, 1);
-    const maxAngle = lerp(0.5, 0.085, clamp(Math.abs(this.speed) / 26, 0, 1));
+    const maxAngle = lerp(0.55, 0.1, clamp(Math.abs(this.speed) / 24, 0, 1));
     const target = steerInput * maxAngle;
-    const rate = steerInput === 0 ? 2.4 : 1.7;
-    this.steer += clamp(target - this.steer, -rate * dt, rate * dt);
+    // Первый порядок, ~70 мс: руль «тяжелеет», но не запаздывает как раньше.
+    const follow = 1 - Math.exp(-dt * 19);
+    this.steer += (target - this.steer) * follow;
 
     if (this.gearTimer > 0) this.gearTimer = Math.max(0, this.gearTimer - dt);
     if (this.lastShift > 0) this.lastShift = Math.max(0, this.lastShift - dt);
@@ -215,11 +216,15 @@ export class TruckSim {
     const fatigueFactor = 1 - clamp((this.fatigue || 0) / 100, 0, 1) * 0.25;
     const maxLatAccel = 3.1 * grip * fatigueFactor;
     const yawLimit = Math.abs(this.speed) > 1 ? maxLatAccel / Math.abs(this.speed) : 2;
-    const yawFromSteer = clamp((this.speed * Math.tan(this.steer)) / wheelbase, -yawLimit, yawLimit);
+    // Мягкое насыщение вместо жёсткого clamp: малые углы руля дают малую скорость
+    // поворота (как в жизни), но за предел сцепления машина не выходит.
+    const rawYaw = (this.speed * Math.tan(this.steer)) / wheelbase;
+    // Знак: положительный steer (D) уводит тягач вправо по экрану (-x мира).
+    const yawFromSteer = -yawLimit * Math.tanh(rawYaw / yawLimit);
     const assist = 0.45;
     const drift = (road.curv || 0) * this.speed * (1 - assist);
     this.yawRel += (yawFromSteer - drift) * dt;
-    this.yawRel *= 1 / (1 + dt * 2.2); // шины гасят рыскание
+    this.yawRel *= 1 / (1 + dt * 3.4); // шины гасят рыскание
     this.yawRel = clamp(this.yawRel, -0.55, 0.55);
 
     this.lat += this.yawRel * this.speed * dt;
@@ -234,8 +239,8 @@ export class TruckSim {
     } else {
       this.slip = 0;
       // Автовозврат к удобной полосе при слабом рулении (помощь новичкам).
-      if (Math.abs(steerInput) < 0.05 && Math.abs(this.lat) > 1.9) {
-        this.lat -= Math.sign(this.lat) * 0.35 * dt;
+      if (Math.abs(steerInput) < 0.06 && Math.abs(this.lat) > 1.5) {
+        this.lat -= Math.sign(this.lat) * 0.34 * dt;
       }
     }
     this.lat = clamp(this.lat, -7.5, 7.5);

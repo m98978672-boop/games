@@ -6,35 +6,73 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#0a0f12">
+  <meta name="theme-color" content="#070c10">
   <meta name="description" content="ЕВРОТРАК — браузерный 3D-симулятор европейских грузоперевозок: 152 города, 28 стран, трафик, погода, экономика и карьера. Работает на ПК, планшете и телефоне, без установки.">
   <title>ЕВРОТРАК — симулятор грузоперевозок по Европе</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1216'/%3E%3Cpath d='M6 20h12v6H6z' fill='%23e9e5d8'/%3E%3Cpath d='M18 12h5l3 4v10h-8z' fill='%2348b39a'/%3E%3Ccircle cx='10' cy='26' r='2.4' fill='%23111'/%3E%3Ccircle cx='23' cy='26' r='2.4' fill='%23111'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-euro" viewBox="0 0 24 24"><path d="M4 6h12M4 12h9M4 18h12M16 6c2.4 0 4 1.6 4 3.6S18.4 13 16 13h-2" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 7.4V12l3.2 2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-weather" viewBox="0 0 24 24"><circle cx="9" cy="9" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 2.6v1.6M9 13.8v1.6M3.8 9H2.2M15.8 9h1.6M5.3 5.3 4.2 4.2M12.8 12.8l1.1 1.1M5.3 12.7 4.2 13.8M12.8 5.2l1.1-1.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M7.5 18.4h8.2a2.7 2.7 0 0 0 0-5.4 3.6 3.6 0 0 0-6.9-.9 2.6 2.6 0 0 0-1.3 6.3Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+  <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M3.6 17a9 9 0 1 1 16.8 0" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><path d="M12 13.6 16.4 9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="14.4" r="1.7" fill="currentColor"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M6 3.4v17.2M6 4.6h11.4l-2 3.9 2 3.9H6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="7" y="5" width="3.4" height="14" rx="1.2" fill="currentColor"/><rect x="13.6" y="5" width="3.4" height="14" rx="1.2" fill="currentColor"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M12 3.2 20 7v10l-8 3.8L4 17V7l8-3.8Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M4 7l8 3.8L20 7M12 10.8v10" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2.6 7.4h9.2v8.2H2.6zM11.8 10h3.6l3.2 3.1v2.5h-6.8z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.4" cy="17.4" r="1.7" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="16.2" cy="17.4" r="1.7" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
+  <symbol id="i-shop" viewBox="0 0 24 24"><path d="M4 9.4 5.6 4h12.8L20 9.4M4 9.4h16v10H4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.4 19.4v-5.2h5.2v5.2" fill="none" stroke="currentColor" stroke-width="1.7"/></symbol>
+  <symbol id="i-people" viewBox="0 0 24 24"><circle cx="9" cy="8.4" r="3.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.4 19.2c0-3.1 2.5-5.4 5.6-5.4s5.6 2.3 5.6 5.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16 5.6a3 3 0 0 1 0 5.8M17.4 14.2c2 .6 3.4 2.4 3.4 4.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3.6 6.2v14L9 18l6 2 5.4-2.2v-14L15 6 9 4Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 4v14M15 6v14" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19.6h16" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><rect x="5.6" y="11" width="3.4" height="6.4" rx="1" fill="currentColor"/><rect x="10.6" y="6.6" width="3.4" height="10.8" rx="1" fill="currentColor"/><rect x="15.6" y="9" width="3.4" height="8.4" rx="1" fill="currentColor"/></symbol>
+  <symbol id="i-cog" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.1" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+</svg>
+
 <div id="app">
   <canvas id="scene" aria-label="Трёхмерный вид дороги"></canvas>
 
   <!-- ============ HUD ============ -->
   <div id="hud" class="hidden">
-    <div class="hud-top">
-      <div class="hud-left">
-        <div class="chip chip-money"><span id="hud-money">9 200 €</span></div>
-        <div class="chip chip-level"><span id="hud-level">1</span><div class="xp-bar"><i id="hud-xp"></i></div></div>
-        <div class="chip chip-clock"><span id="hud-clock">08:00</span><small id="hud-day">День 1</small></div>
-        <div class="chip chip-weather"><span id="hud-weather">Ясно</span><small id="hud-temp">17°</small></div>
+    <header class="hud-top">
+      <div class="status-rail">
+        <div class="driver-chip">
+          <span class="driver-avatar" id="hud-avatar">1</span>
+          <span class="driver-meta">
+            <b id="hud-money">9 200 €</b>
+            <span class="driver-xp"><i id="hud-xp"></i></span>
+          </span>
+        </div>
+        <div class="rail-item">
+          <svg class="ico"><use href="#i-clock"/></svg>
+          <span><b id="hud-clock">08:00</b><small id="hud-day">День 1</small></span>
+        </div>
+        <div class="rail-item rail-weather">
+          <svg class="ico"><use href="#i-weather"/></svg>
+          <span><b id="hud-weather">Ясно</b><small id="hud-temp">17°</small></span>
+        </div>
       </div>
-      <div class="hud-right">
-        <div class="speed-limit" id="speed-limit">80</div>
-        <button class="hud-btn" id="btn-fullscreen" title="Полный экран">⛶</button>
-        <button class="hud-btn" id="btn-pause" title="Пауза">II</button>
+
+      <div class="hud-top-right">
+        <div class="limit-sign" id="speed-limit" title="Ограничение скорости">80</div>
+        <button class="hud-btn" id="btn-fullscreen" title="Полный экран" aria-label="Полный экран"><svg class="ico"><use href="#i-expand"/></svg></button>
+        <button class="hud-btn" id="btn-pause" title="Пауза" aria-label="Пауза"><svg class="ico"><use href="#i-pause"/></svg></button>
       </div>
+    </header>
+
+    <div class="indicators" aria-hidden="true">
+      <span id="ind-left" class="ind">◀</span>
+      <span id="ind-right" class="ind">▶</span>
     </div>
 
-    <div class="route-advisor" id="route-advisor">
-      <div class="ra-header"><span id="ra-phase">РЕЙС</span><b id="ra-eta">—</b></div>
-      <div class="ra-dest"><span id="ra-from">—</span><i>→</i><span id="ra-to">—</span></div>
+    <aside class="route-advisor" id="route-advisor">
+      <div class="ra-head">
+        <span class="ra-phase" id="ra-phase">РЕЙС</span>
+        <b class="ra-eta" id="ra-eta">—</b>
+      </div>
+      <div class="ra-route"><span id="ra-from">—</span><i>→</i><span id="ra-to">—</span></div>
       <div class="ra-progress"><i id="ra-progress"></i></div>
       <div class="ra-stats">
         <div><small>ОСТАЛОСЬ</small><b id="ra-left">—</b></div>
@@ -42,55 +80,68 @@
         <div><small>ГРУЗ</small><b id="ra-cargo">—</b></div>
       </div>
       <div class="ra-action" id="ra-action"></div>
+    </aside>
+
+    <div class="map-dock">
+      <canvas id="minimap" width="256" height="256" aria-label="Мини-карта"></canvas>
+      <span class="map-compass" aria-hidden="true">С</span>
+      <span class="map-scale" aria-hidden="true">2 км</span>
     </div>
 
-    <canvas id="minimap" width="230" height="230" aria-label="Мини-карта"></canvas>
-
-    <div class="dashboard">
-      <div class="dash-speed">
-        <div class="speed-value"><b id="dash-speed">0</b><span>км/ч</span></div>
-        <div class="gear"><small>ПЕРЕДАЧА</small><b id="dash-gear">N</b><span id="dash-mode">АВТО</span></div>
+    <section class="dashboard" aria-label="Приборы">
+      <div class="cluster">
+        <svg class="speed-ring" viewBox="0 0 120 120" aria-hidden="true">
+          <circle class="ring-track" cx="60" cy="60" r="52"/>
+          <circle class="ring-fill" id="speed-ring" cx="60" cy="60" r="52"/>
+        </svg>
+        <div class="cluster-center">
+          <b id="dash-speed">0</b>
+          <small>км/ч</small>
+        </div>
       </div>
-      <div class="dash-gauges">
-        <div class="gauge"><small>ОБОРОТЫ</small><div class="bar"><i id="bar-rpm"></i></div><b id="val-rpm">700</b></div>
+      <div class="gear-box">
+        <small>ПЕРЕДАЧА</small>
+        <b id="dash-gear">N</b>
+        <span id="dash-mode">АВТО</span>
+      </div>
+      <div class="gauges">
+        <div class="gauge"><small>ОБОРОТЫ</small><div class="bar rpm"><i id="bar-rpm"></i></div><b id="val-rpm">700</b></div>
         <div class="gauge"><small>ТОПЛИВО</small><div class="bar fuel"><i id="bar-fuel"></i></div><b id="val-fuel">420 л</b></div>
         <div class="gauge"><small>ОЖ</small><div class="bar temp"><i id="bar-temp"></i></div><b id="val-temp">82°C</b></div>
         <div class="gauge"><small>СОСТОЯНИЕ</small><div class="bar cond"><i id="bar-cond"></i></div><b id="val-cond">88%</b></div>
         <div class="gauge"><small>УСТАЛОСТЬ</small><div class="bar fatigue"><i id="bar-fatigue"></i></div><b id="val-fatigue">0%</b></div>
       </div>
-    </div>
+    </section>
 
-    <div class="hint" id="hint">W — газ · S — тормоз · A/D — руль · Esc — пауза</div>
+    <div class="cruise-indicator hidden" id="cruise-indicator"><svg class="ico"><use href="#i-gauge"/></svg>КРУИЗ <b id="cruise-speed">0</b></div>
+
+    <div class="hint" id="hint">W — газ · S — тормоз · A/D — руль · V — камера · Esc — пауза</div>
     <div class="toast-stack" id="toast-stack"></div>
 
-    <div class="indicators">
-      <span id="ind-left" class="ind">◀</span>
-      <span id="ind-right" class="ind">▶</span>
-    </div>
     <div class="windshield" id="windshield" aria-hidden="true"></div>
     <div class="fatigue-vignette" id="fatigue-vignette" aria-hidden="true"></div>
+    <div class="damage-flash" id="damage-flash" aria-hidden="true"></div>
+
     <div class="rotate-hint" id="rotate-hint">
       <div class="rotate-icon">📱</div>
       <b>Поверните телефон горизонтально</b>
       <span>Так дорога и приборы будут крупнее</span>
+      <button class="btn btn-sm" id="rotate-dismiss">Играть так</button>
     </div>
 
     <div class="work-overlay hidden" id="work-overlay">
-      <b id="work-title">Погрузка…</b>
+      <span class="work-label" id="work-title">Погрузка…</span>
       <div class="work-bar"><i id="work-bar"></i></div>
     </div>
 
-    <div class="cruise-indicator hidden" id="cruise-indicator">КРУИЗ <b id="cruise-speed">0</b> км/ч</div>
-    <div class="damage-flash" id="damage-flash"></div>
-
     <div class="touch">
       <div class="touch-steer">
-        <button data-touch="left">◀</button>
-        <button data-touch="right">▶</button>
+        <button data-touch="left" aria-label="Влево">◀</button>
+        <button data-touch="right" aria-label="Вправо">▶</button>
       </div>
       <div class="touch-pedals">
-        <button data-touch="brake">ТОРМОЗ</button>
-        <button data-touch="gas">ГАЗ</button>
+        <button data-touch="brake" class="pedal brake">ТОРМОЗ</button>
+        <button data-touch="gas" class="pedal gas">ГАЗ</button>
       </div>
       <div class="touch-aux">
         <button data-act="interact" title="Взаимодействие">E</button>
@@ -104,22 +155,35 @@
   <!-- ============ Главное меню ============ -->
   <div id="screen-menu" class="screen">
     <div class="menu-bg"></div>
-    <div class="menu-inner">
-      <div class="logo">
-        <span class="logo-eyebrow">СИМУЛЯТОР ЕВРОПЕЙСКИХ ГРУЗОПЕРЕВОЗОК</span>
+    <div class="menu-grid">
+      <div class="menu-hero">
+        <span class="logo-mark">
+          <svg class="ico"><use href="#i-truck"/></svg>
+          СИМУЛЯТОР ГРУЗОПЕРЕВОЗОК
+        </span>
         <h1>ЕВРО<span>ТРАК</span></h1>
-        <p>152 города · 28 стран · 30 видов груза · 12-ступенчатая КПП</p>
+        <p class="menu-lead">Европа от Лиссабона до Хельсинки: 152 города, 28 стран, живые трассы, погода и экономика рейса.</p>
+        <ul class="menu-facts">
+          <li><b>152</b><span>города</span></li>
+          <li><b>28</b><span>стран</span></li>
+          <li><b>30</b><span>видов груза</span></li>
+          <li><b>12</b><span>передач</span></li>
+        </ul>
       </div>
-      <div class="menu-buttons" id="menu-buttons">
-        <button class="btn btn-primary" id="btn-continue">Продолжить карьеру</button>
-        <button class="btn" id="btn-new">Новая карьера</button>
-        <button class="btn" id="btn-profiles">Профили</button>
-        <button class="btn" id="btn-settings">Настройки</button>
-        <button class="btn btn-ghost" id="btn-about">Об игре и управлении</button>
-      </div>
-      <div class="menu-foot">
-        <span>Версия 1.0 · ПК · планшет · телефон · работает офлайн в браузере</span>
-        <span id="menu-save-info">Сохранений пока нет</span>
+      <div class="menu-panel">
+        <div class="menu-buttons" id="menu-buttons">
+          <button class="btn btn-primary btn-lg" id="btn-continue">Продолжить карьеру</button>
+          <button class="btn btn-lg" id="btn-new">Новая карьера</button>
+          <div class="menu-row">
+            <button class="btn" id="btn-profiles">Профили</button>
+            <button class="btn" id="btn-settings">Настройки</button>
+          </div>
+          <button class="btn btn-ghost" id="btn-about">Об игре и управлении</button>
+        </div>
+        <div class="menu-foot">
+          <span>Версия 1.0 · ПК · планшет · телефон</span>
+          <span id="menu-save-info">Сохранений пока нет</span>
+        </div>
       </div>
     </div>
   </div>
@@ -128,13 +192,13 @@
   <div id="screen-garage" class="screen hidden">
     <div class="garage-bg"></div>
     <header class="garage-top">
-      <div class="brand"><span>ЕВРО</span>ТРАК</div>
+      <div class="brand"><svg class="ico"><use href="#i-truck"/></svg><span>ЕВРО</span>ТРАК</div>
       <div class="garage-profile">
         <div class="gp-name"><b id="g-name">Водитель</b><small id="g-company">Auriga Logistics</small></div>
         <div class="gp-level"><span>УР. <b id="g-level">1</b></span><div class="xp-bar"><i id="g-xp"></i></div></div>
         <div class="gp-money" id="g-money">9 200 €</div>
       </div>
-      <button class="hud-btn" id="g-menu" title="Главное меню">≡</button>
+      <button class="hud-btn" id="g-menu" title="Главное меню" aria-label="Меню"><svg class="ico"><use href="#i-menu"/></svg></button>
     </header>
 
     <div class="garage-body">
@@ -143,23 +207,21 @@
           <small>ВЫ НАХОДИТЕСЬ</small>
           <b id="g-city">Берлин</b>
           <span id="g-country">Германия</span>
-          <div class="loc-time">🕒 <span id="g-clock">08:00</span> · День <span id="g-day">1</span></div>
+          <div class="loc-time"><svg class="ico"><use href="#i-clock"/></svg><span id="g-clock">08:00</span> · День <span id="g-day">1</span></div>
         </div>
         <nav class="garage-nav">
-          <button data-nav="jobs" class="active">📦 Рынок грузов</button>
-          <button data-nav="garage">🚚 Мой тягач</button>
-          <button data-nav="dealer">🏢 Автосалон</button>
-          <button data-nav="drivers">👥 Водители и гаражи</button>
-          <button data-nav="map">🗺 Карта Европы</button>
-          <button data-nav="stats">📊 Статистика</button>
-          <button data-nav="settings">⚙ Настройки</button>
+          <button data-nav="jobs" class="active"><svg class="ico"><use href="#i-box"/></svg>Рынок грузов</button>
+          <button data-nav="garage"><svg class="ico"><use href="#i-truck"/></svg>Мой тягач</button>
+          <button data-nav="dealer"><svg class="ico"><use href="#i-shop"/></svg>Автосалон</button>
+          <button data-nav="drivers"><svg class="ico"><use href="#i-people"/></svg>Водители и гаражи</button>
+          <button data-nav="map"><svg class="ico"><use href="#i-map"/></svg>Карта Европы</button>
+          <button data-nav="stats"><svg class="ico"><use href="#i-chart"/></svg>Статистика</button>
+          <button data-nav="settings"><svg class="ico"><use href="#i-cog"/></svg>Настройки</button>
         </nav>
         <div class="garage-active" id="garage-active"></div>
       </aside>
 
-      <main class="garage-main" id="garage-main">
-        <!-- содержимое рендерится в ui.js -->
-      </main>
+      <main class="garage-main" id="garage-main"></main>
     </div>
   </div>
 

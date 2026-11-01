@@ -1,0 +1,27 @@
+import { JSDOM } from 'jsdom';
+const dom = new JSDOM('<!doctype html><html><body></body></html>', { pretendToBeVisual: true });
+global.window = dom.window; global.document = dom.window.document;
+import { createRequire } from 'node:module';
+const require2 = createRequire(import.meta.url);
+const { createCanvas } = require2('/tmp/node_modules/@napi-rs/canvas');
+import fs from 'node:fs';
+dom.window.HTMLCanvasElement.prototype.getContext = function () {
+  if (!this.__c) this.__c = createCanvas(this.width || 300, this.height || 150);
+  return this.__c.getContext('2d');
+};
+Object.defineProperty(dom.window.HTMLCanvasElement.prototype, 'width', { get(){return this.__w||300;}, set(v){ this.__w=v; if(this.__c) this.__c.width=v; } });
+Object.defineProperty(dom.window.HTMLCanvasElement.prototype, 'height', { get(){return this.__h||150;}, set(v){ this.__h=v; if(this.__c) this.__c.height=v; } });
+const THREE = await import('three');
+const { TruckView } = await import('../src/world/truck3d.js');
+const tv = new TruckView(new THREE.Scene(), 0x2f7fa8);
+tv.drawDash({ speedKmh: 78, rpm: 1450, gear: 8, fuel: 320, temp: 84, clock: 560, odometer: 128450, cruise: 80 });
+tv.drawNav({ title: 'ДОСТАВКА', distance: '182 км', eta: 'ETA 11:40' });
+fs.writeFileSync('tests/_dash.png', tv.dashCanvas.__c.toBuffer('image/png'));
+fs.writeFileSync('tests/_nav.png', tv.navCanvas.__c.toBuffer('image/png'));
+tv.root.updateMatrixWorld(true);
+const v = new THREE.Vector3();
+tv.dashScreen.getWorldPosition(v);
+console.log('dashScreen world', v.toArray().map(n=>n.toFixed(2)), 'material', tv.dashScreen.material.type, 'map?', !!tv.dashScreen.material.map);
+const n = new THREE.Vector3(0,0,1).applyQuaternion(tv.dashScreen.getWorldQuaternion(new THREE.Quaternion()));
+console.log('normal', n.toArray().map(x=>x.toFixed(2)));
+process.exit(0);
