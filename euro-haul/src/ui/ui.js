@@ -46,6 +46,10 @@ export class UI {
     $('btn-about').addEventListener('click', () => this.showAbout());
     $('btn-pause').addEventListener('click', () => this.game.togglePause());
     $('btn-fullscreen').addEventListener('click', () => this.game.toggleFullscreen());
+    $('rotate-dismiss')?.addEventListener('click', () => {
+      this.rotateDismissed = true;
+      document.body.classList.remove('must-rotate');
+    });
     $('g-menu').addEventListener('click', () => this.game.togglePause());
     $('modal-close').addEventListener('click', () => this.closeModal());
 
@@ -289,8 +293,10 @@ export class UI {
     if (!p) return;
     $('hud-money').textContent = fmtMoney(p.money);
     const lvl = levelForXp(p.xp || 0);
-    $('hud-level').textContent = lvl.level;
-    $('hud-xp').style.width = `${clamp((lvl.current / lvl.need) * 100, 0, 100)}%`;
+    const avatar = $('hud-avatar');
+    if (avatar) avatar.textContent = lvl.level;
+    const xp = $('hud-xp');
+    if (xp) xp.style.width = `${clamp((lvl.current / lvl.need) * 100, 0, 100)}%`;
     $('hud-clock').textContent = fmtTime(this.game.clock.minutes);
     $('hud-day').textContent = 'День ' + this.game.clock.day;
     $('hud-weather').textContent = state.weatherName || '—';
@@ -309,9 +315,20 @@ export class UI {
     $('val-cond').textContent = Math.round(state.condition) + '%';
     $('bar-fatigue').style.width = `${clamp(state.fatigue, 0, 100)}%`;
     $('val-fatigue').textContent = Math.round(state.fatigue) + '%';
-    $('speed-limit').textContent = Math.round(state.speedLimit);
-    $('speed-limit').style.borderColor = state.speedLimit <= 50 ? '#f2b544' : '#c8362c';
-    $('speed-limit').style.color = '#1b1b18';
+    const limitEl = $('speed-limit');
+    limitEl.textContent = Math.round(state.speedLimit);
+    limitEl.style.borderColor = state.speedLimit <= 50 ? 'var(--amber-2)' : '#c4372c';
+    limitEl.style.color = '#14181a';
+
+    // Спидометр-кольцо: 270° шкалы от нуля до 125 км/ч.
+    const ring = $('speed-ring');
+    if (ring) {
+      const ratio = clamp(state.speedKmh / 125, 0, 1);
+      ring.style.strokeDasharray = `${(245 * ratio).toFixed(1)} 327`;
+      const over = state.speedKmh > state.speedLimit + 5;
+      ring.style.stroke = over ? 'var(--red)' : state.speedKmh > state.speedLimit - 4 ? 'var(--amber)' : 'var(--teal)';
+      ring.style.filter = `drop-shadow(0 0 6px ${over ? 'rgba(236,91,78,.6)' : 'rgba(73,200,174,.5)'})`;
+    }
 
     const cruise = $('cruise-indicator');
     if (state.cruise) {
@@ -319,9 +336,7 @@ export class UI {
       $('cruise-speed').textContent = Math.round(state.cruise);
     } else cruise.classList.add('hidden');
 
-    if (state.speedKmh > state.speedLimit + 8) {
-      $('speed-limit').classList.add('over-speed');
-    } else $('speed-limit').classList.remove('over-speed');
+    limitEl.classList.toggle('over-speed', state.speedKmh > state.speedLimit + 5);
 
     // Маршрут.
     if (this.game.route && this.game.job) {
@@ -355,6 +370,12 @@ export class UI {
     if (state.fps && this.game.settings.showFps) {
       $('hud-weather').textContent += ` · ${Math.round(state.fps)} FPS`;
     }
+    // Подсказка о повороте экрана: только телефон в портретной ориентации.
+    if (!this.rotateDismissed && this.game.device === 'phone' && window.innerHeight > window.innerWidth) {
+      document.body.classList.add('must-rotate');
+    } else {
+      document.body.classList.remove('must-rotate');
+    }
     this.drawMinimap(state);
   }
 
@@ -364,89 +385,141 @@ export class UI {
     const ctx = canvas.getContext('2d');
     const w = canvas.width;
     const h = canvas.height;
+    const cx = w / 2;
+    const cy = h / 2;
+    const R = w / 2 - 3;
     ctx.clearRect(0, 0, w, h);
     ctx.save();
     ctx.beginPath();
-    ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
+    ctx.arc(cx, cy, R, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = '#0a1216';
+
+    // фон с лёгким градиентом и сеткой
+    const bg = ctx.createRadialGradient(cx, cy, 10, cx, cy, R);
+    bg.addColorStop(0, '#0f1d23');
+    bg.addColorStop(1, '#060d11');
+    ctx.fillStyle = bg;
     ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(120, 165, 175, 0.07)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < w; i += 32) {
+      ctx.beginPath();
+      ctx.moveTo(i, 0);
+      ctx.lineTo(i, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, i);
+      ctx.lineTo(w, i);
+      ctx.stroke();
+    }
+
     const route = this.game.route;
     const player = this.game.truck;
     if (!route || !player) {
       ctx.restore();
       return;
     }
-    const scale = 0.13; // метров в пиксель
+    const scale = 0.05; // пикселей на метр: в круг попадает ~2,5 км
     const p = route.pointAt(player.s);
-    const toScreen = (x, z) => [w / 2 + (x - p.x) * scale, h / 2 - (z - p.z) * scale];
-    // дорога
-    ctx.strokeStyle = 'rgba(140, 190, 200, 0.32)';
-    ctx.lineWidth = 3;
+    const toScreen = (x, z) => [cx + (x - p.x) * scale, cy - (z - p.z) * scale];
+
+    // сама дорога
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = 'rgba(130, 180, 195, 0.22)';
+    ctx.lineWidth = 9;
     ctx.beginPath();
-    for (let i = 0; i < route.samples.length; i += 6) {
+    let started = false;
+    for (let i = 0; i < route.samples.length; i += 3) {
       const sm = route.samples[i];
-      if (Math.abs(sm.s - player.s) > 2600) continue;
+      if (Math.abs(sm.s - player.s) > 4200) continue;
       const [sx, sy] = toScreen(sm.x, sm.z);
-      if (i === 0) ctx.moveTo(sx, sy);
-      else ctx.lineTo(sx, sy);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(78, 201, 176, 0.85)';
-    ctx.lineWidth = 2.4;
-    ctx.beginPath();
-    let first = true;
-    for (let i = 0; i < route.samples.length; i += 5) {
-      const sm = route.samples[i];
-      if (sm.s < player.s - 500 || sm.s > player.s + 2800) continue;
-      const [sx, sy] = toScreen(sm.x, sm.z);
-      if (first) {
+      if (!started) {
         ctx.moveTo(sx, sy);
-        first = false;
+        started = true;
       } else ctx.lineTo(sx, sy);
     }
     ctx.stroke();
 
-    // цели
+    // пройденный и оставшийся участок маршрута
+    for (const [from, to, color, width] of [
+      [player.s - 1200, player.s, 'rgba(150, 175, 180, 0.5)', 3],
+      [player.s, player.s + 2600, 'rgba(73, 200, 174, 0.95)', 3.5],
+    ]) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      let first = true;
+      for (let ss = from; ss <= to; ss += 12) {
+        const pp = route.pointAt(ss);
+        const [sx, sy] = toScreen(pp.x, pp.z);
+        if (first) {
+          ctx.moveTo(sx, sy);
+          first = false;
+        } else ctx.lineTo(sx, sy);
+      }
+      ctx.stroke();
+    }
+
+    // метки: цель рейса, АЗС, стоянки
     const marks = [];
     if (this.game.job) {
-      marks.push({ s: this.game.targetS(), color: '#f2b544', label: this.game.phase === 'pickup' ? 'ГРУЗ' : 'ФИНИШ' });
+      marks.push({ s: this.game.targetS(), color: '#f5b83d', label: this.game.phase === 'pickup' ? 'ГРУЗ' : 'ФИНИШ', big: true });
     }
-    for (const st of route.stations) {
-      if (Math.abs(st.s - player.s) < 2400) marks.push({ s: st.s, color: '#6fb6e8', label: 'АЗС' });
-    }
+    for (const st of route.stations) if (Math.abs(st.s - player.s) < 4000) marks.push({ s: st.s, color: '#6db8ea', label: 'АЗС' });
     for (const m of marks) {
       const pp = route.pointAt(m.s);
       const [mx, my] = toScreen(pp.x, pp.z);
+      const dx = mx - cx;
+      const dy = my - cy;
+      const dist = Math.hypot(dx, dy);
+      const edge = dist > R - 14;
+      const px = edge ? cx + (dx / dist) * (R - 14) : mx;
+      const py = edge ? cy + (dy / dist) * (R - 14) : my;
       ctx.fillStyle = m.color;
       ctx.beginPath();
-      ctx.arc(mx, my, 4.5, 0, Math.PI * 2);
+      ctx.arc(px, py, m.big ? 5 : 3.4, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = 'rgba(230,240,240,.85)';
-      ctx.font = 'bold 8px system-ui';
-      ctx.textAlign = 'center';
-      ctx.fillText(m.label, mx, my - 7);
+      if (m.big) {
+        ctx.strokeStyle = m.color;
+        ctx.globalAlpha = 0.35;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(px, py, 10, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      if (!edge) {
+        ctx.fillStyle = 'rgba(226, 240, 243, 0.85)';
+        ctx.font = 'bold 11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(m.label, px, py - 10);
+      }
     }
 
-    // игрок
+    // игрок в центре
     const hdg = p.hdg + (player.yawRel || 0);
     ctx.save();
-    ctx.translate(w / 2, h / 2);
-    ctx.rotate(-hdg + Math.PI);
-    ctx.fillStyle = '#f2b544';
+    ctx.translate(cx, cy);
+    ctx.rotate(-hdg);
+    ctx.fillStyle = '#f5b83d';
+    ctx.shadowColor = 'rgba(245, 184, 61, 0.7)';
+    ctx.shadowBlur = 10;
     ctx.beginPath();
-    ctx.moveTo(0, -9);
-    ctx.lineTo(6.5, 7);
-    ctx.lineTo(0, 4);
-    ctx.lineTo(-6.5, 7);
+    ctx.moveTo(0, -12);
+    ctx.lineTo(8, 9);
+    ctx.lineTo(0, 4.5);
+    ctx.lineTo(-8, 9);
     ctx.closePath();
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = 'rgba(150, 180, 190, 0.25)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(w / 2, h / 2, w / 2 - 2, 0, Math.PI * 2);
-    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // затемнение к краю
+    const vig = ctx.createRadialGradient(cx, cy, R * 0.62, cx, cy, R);
+    vig.addColorStop(0, 'rgba(4, 8, 11, 0)');
+    vig.addColorStop(1, 'rgba(4, 8, 11, 0.85)');
+    ctx.fillStyle = vig;
+    ctx.fillRect(0, 0, w, h);
     ctx.restore();
   }
 

@@ -21,7 +21,7 @@ export function terrainOffset(s, lat) {
 }
 
 function stripGeometry(route, s0, s1, lats, opts = {}) {
-  const { step = STEP, yOffset = 0, yFn = null, uvScale = 24 } = opts;
+  const { step = STEP, yOffset = 0, yFn = null, tile = 8 } = opts;
   const rows = Math.max(2, Math.ceil((s1 - s0) / step));
   const cols = lats.length;
   const pos = [];
@@ -36,7 +36,8 @@ function stripGeometry(route, s0, s1, lats, opts = {}) {
       const lat = lats[c];
       const extra = yFn ? yFn(s, lat) : 0;
       pos.push(p.x + nx * lat, p.y + yOffset + extra, p.z + nz * lat);
-      uv.push(c / Math.max(1, cols - 1), s / uvScale);
+      // UV в метрах: текстура тайлится одинаково по ширине и длине.
+      uv.push(lat / tile, s / tile);
     }
   }
   for (let r = 0; r < rows; r++) {
@@ -230,10 +231,10 @@ export class RoadWorld {
     };
 
     // --- Асфальт: своя проезжая часть, встречная, обочины, разделитель.
-    add(stripGeometry(route, s0, s1, [-3.7, 3.7]), m.asphalt);
-    add(stripGeometry(route, s0, s1, [-12.7, -5.3]), m.asphalt);
-    add(stripGeometry(route, s0, s1, [3.7, 5.2]), m.asphalt);
-    add(stripGeometry(route, s0, s1, [-14.2, -12.7]), m.asphalt);
+    add(stripGeometry(route, s0, s1, [-3.7, 3.7], { tile: 7 }), m.asphalt);
+    add(stripGeometry(route, s0, s1, [-12.7, -5.3], { tile: 7 }), m.asphalt);
+    add(stripGeometry(route, s0, s1, [3.7, 5.2], { tile: 7 }), m.asphalt);
+    add(stripGeometry(route, s0, s1, [-14.2, -12.7], { tile: 7 }), m.asphalt);
     add(stripGeometry(route, s0, s1, [-5.3, -3.7], { yOffset: 0.14 }), m.concrete);
 
     // --- Разметка.
@@ -256,19 +257,62 @@ export class RoadWorld {
 
     // --- Отбойники (правая обочина и разделитель).
     const railMat = this.railMat;
-    add(verticalStrip(route, s0, s1, 5.35, 0.28, 0.82), railMat);
-    add(verticalStrip(route, s0, s1, -4.45, 0.22, 0.92), railMat);
-    add(verticalStrip(route, s0, s1, -14.35, 0.28, 0.82), railMat);
+    // Отбойник: профиль из двух горизонтальных полос + стойки.
+    add(verticalStrip(route, s0, s1, 5.35, 0.34, 0.62), railMat);
+    add(verticalStrip(route, s0, s1, 5.35, 0.68, 0.9), railMat);
+    add(verticalStrip(route, s0, s1, -4.45, 0.3, 0.58), railMat);
+    add(verticalStrip(route, s0, s1, -4.45, 0.66, 0.9), railMat);
+    add(verticalStrip(route, s0, s1, -14.35, 0.34, 0.62), railMat);
+    add(verticalStrip(route, s0, s1, -14.35, 0.68, 0.9), railMat);
+    const postGeo = new THREE.BoxGeometry(0.1, 1.0, 0.12);
+    const postCount = Math.ceil((s1 - s0) / 4);
+    const posts = new THREE.InstancedMesh(postGeo, m.darkMetal, Math.max(1, postCount));
+    const pd = new THREE.Object3D();
+    let pi = 0;
+    for (let ps = Math.floor(s0 / 4) * 4; ps < s1 && pi < postCount; ps += 4) {
+      const pp = route.pointAt(ps);
+      for (const lat of [5.35, -4.45, -14.35]) {
+        if (pi >= postCount) break;
+        pd.position.set(pp.x + Math.cos(pp.hdg) * (lat + (lat > 0 ? 0.06 : -0.06)), pp.y + 0.42, pp.z - Math.sin(pp.hdg) * (lat + (lat > 0 ? 0.06 : -0.06)));
+        pd.rotation.set(0, pp.hdg, 0);
+        pd.updateMatrix();
+        posts.setMatrixAt(pi++, pd.matrix);
+      }
+    }
+    posts.count = pi;
+    posts.instanceMatrix.needsUpdate = true;
+    this.group.add(posts);
+
+    // Столбики со светоотражателем по обочине.
+    const markerGeo = new THREE.BoxGeometry(0.12, 0.9, 0.12);
+    const markerMat = new THREE.MeshStandardMaterial({ color: 0xe8e6dc, roughness: 0.7, emissive: 0x333333 });
+    const markerCount = Math.ceil((s1 - s0) / 26) * 2 + 2;
+    const markers = new THREE.InstancedMesh(markerGeo, markerMat, markerCount);
+    let mi = 0;
+    for (let ms = Math.floor(s0 / 26) * 26; ms < s1 && mi < markerCount; ms += 26) {
+      const pp = route.pointAt(ms);
+      for (const lat of [5.9, -14.9]) {
+        if (mi >= markerCount) break;
+        pd.position.set(pp.x + Math.cos(pp.hdg) * lat, pp.y + 0.45, pp.z - Math.sin(pp.hdg) * lat);
+        pd.rotation.set(0, pp.hdg, 0);
+        pd.updateMatrix();
+        markers.setMatrixAt(mi++, pd.matrix);
+      }
+    }
+    markers.count = mi;
+    markers.instanceMatrix.needsUpdate = true;
+    this.group.add(markers);
 
     // --- Обочина и рельеф.
     const latsRight = [5.2, 9, 16, 30, 52, 88, 140, 210, 320, 470];
-    const latsLeft = [-14.2, -18, -26, -40, -62, -95, -145, -210, -320, -470];
+    // Слева lat убывает — разворачиваем порядок, иначе грани смотрят вниз и отсекаются.
+    const latsLeft = [-470, -320, -210, -145, -95, -62, -40, -26, -18, -14.2];
     add(
-      stripGeometry(route, s0, s1, latsRight, { yFn: (ss, la) => terrainOffset(ss, la) - 0.06, uvScale: 30 }),
+      stripGeometry(route, s0, s1, latsRight, { yFn: (ss, la) => terrainOffset(ss, la) - 0.06, tile: 9 }),
       m.grass
     );
     add(
-      stripGeometry(route, s0, s1, latsLeft, { yFn: (ss, la) => terrainOffset(ss, la) - 0.06, uvScale: 30 }),
+      stripGeometry(route, s0, s1, latsLeft, { yFn: (ss, la) => terrainOffset(ss, la) - 0.06, tile: 9 }),
       m.grassDark
     );
 
@@ -565,7 +609,7 @@ export class RoadWorld {
       const r = rng(mark.s * 31 + 7);
       const count = Math.round(around / 46);
       const wallGeo = new THREE.BoxGeometry(1, 1, 1);
-      const walls = new THREE.InstancedMesh(wallGeo, m.windows, count);
+      const walls = new THREE.InstancedMesh(wallGeo, m.building, count);
       const roofs = new THREE.InstancedMesh(wallGeo, m.roofLight, count);
       const dummy = new THREE.Object3D();
       const color = new THREE.Color();

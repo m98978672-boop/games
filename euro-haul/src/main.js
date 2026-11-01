@@ -854,7 +854,9 @@ class Game {
     this.updateFatigue(dt);
 
     // Позиция и камера.
-    this.updateCamera(dt);
+    // При смене режима камеру ставим сразу, иначе она «летит» через полкарты.
+    this.updateCamera(dt, this.cameraMode !== this.lastCameraMode);
+    this.lastCameraMode = this.cameraMode;
 
     // Звук.
     this.audio.update({
@@ -987,12 +989,12 @@ class Game {
     if (mode === 'interior' || mode === 'hood') {
       this.truckView.setInteriorVisible(mode === 'interior');
       root.updateMatrixWorld(true);
-      const offset = mode === 'interior' ? new THREE.Vector3(-0.45, 2.42, 0.95) : new THREE.Vector3(0, 3.35, 3.5);
+      const offset = mode === 'interior' ? new THREE.Vector3(-0.55, 2.5, 1.35) : new THREE.Vector3(0, 4.02, 2.55);
       this.tmpVec.copy(offset);
       root.localToWorld(this.tmpVec);
       this.camera.position.copy(this.tmpVec);
       const euler = new THREE.Euler(
-        (mode === 'interior' ? -0.05 : -0.03) + root.rotation.x,
+        (mode === 'interior' ? -0.05 : -0.1) + root.rotation.x,
         root.rotation.y + Math.PI + (mode === 'interior' ? this.truck.steer * 0.4 : 0),
         root.rotation.z * 0.6 + shake,
         'YXZ'
@@ -1837,6 +1839,8 @@ class Game {
 
 const game = new Game();
 window.__game = game;
+// Отладочный доступ к three для оффлайн-скриншотов и диагностики.
+window.__THREE = THREE;
 window.__eurotrakSave = () => {
   game.syncProfileFromTruck();
   game.saveNow();
