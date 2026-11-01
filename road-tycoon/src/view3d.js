@@ -23,6 +23,7 @@
   let vw = 1, vh = 1;
   let ppkNow = PX_PER_KM;
   let roadSig = null, facSig = null, citySig = -1, cityBuilt = false;
+  let roadFarMul = 1, roadFarPrev = 0;   // насколько расширить полотно на дальнем плане
   const samples = new Map();       // roadId -> {pts, half, name}
   const facilityMeshes = new Map(); // facId -> Object3D
   const vehicleSlots = new Map();   // instanced meshes
@@ -517,6 +518,22 @@
         }
       }
       // подложка города и центральная площадь
+      // ореол и кольцевая — город читается даже с обзора всей карты
+      const halo = new THREE.Mesh(
+        new THREE.CircleGeometry(half * 1.75, 40),
+        new THREE.MeshBasicMaterial({ color: '#ffe0a3', transparent: true, opacity: 0.13 })
+      );
+      halo.rotation.x = -Math.PI / 2;
+      halo.position.set(city.x, 0.021, city.y);
+      cityGroup.add(halo);
+      const ringRoad = new THREE.Mesh(
+        new THREE.RingGeometry(half * 1.16, half * 1.24, 48),
+        new THREE.MeshStandardMaterial({ color: '#5c6470', roughness: 1 })
+      );
+      ringRoad.rotation.x = -Math.PI / 2;
+      ringRoad.position.set(city.x, 0.03, city.y);
+      cityGroup.add(ringRoad);
+
       const padGeo = new THREE.CircleGeometry(half * 1.28, 40);
       padGeo.rotateX(-Math.PI / 2);
       const pad = new THREE.Mesh(padGeo, new THREE.MeshStandardMaterial({
@@ -529,6 +546,21 @@
       const px = city.x + Math.cos(parkAngle) * half * 0.55;
       const pz = city.y + Math.sin(parkAngle) * half * 0.55;
       propGroup.add(quad(px, pz, cell * 2.2, cell * 1.8, 0.045, '#3f6b3a'));
+      // ориентир: ратуша/башня в центре — видно с высоты
+      if (ci % 2 === 0) {
+        const tower = new THREE.Mesh(
+          new THREE.BoxGeometry(cell * 1.1, 14 + (ci % 3) * 4, cell * 1.1),
+          new THREE.MeshStandardMaterial({ color: '#e3d9c6', roughness: 0.8 })
+        );
+        tower.position.set(city.x, 7 + (ci % 3) * 2, city.y);
+        cityGroup.add(tower);
+        const spire = new THREE.Mesh(
+          new THREE.ConeGeometry(cell * 0.75, 8, 4),
+          new THREE.MeshStandardMaterial({ color: '#b05a41', roughness: 0.9 })
+        );
+        spire.position.set(city.x, 18 + (ci % 3) * 4, city.y);
+        cityGroup.add(spire);
+      }
     }
 
     // улицы одним мешем
@@ -578,8 +610,16 @@
       cityGroup.add(im);
 
       // крыша-парапет
-      const roofMat = new THREE.MeshStandardMaterial({ color: '#6f6558', roughness: 1 });
+      const ROOF_COLORS = [
+        ['#b05a41', '#a04e38', '#c47a5d', '#8f6a52'],   // жилые: терракота
+        ['#7d8790', '#6b7680', '#98a2a8'],              // склады/магазины: сланец
+        ['#5f7488', '#71889c', '#4f6377'],              // высотки: холодный металл
+        ['#8a7a5f', '#9c8c6f', '#776a53'],              // хозпостройки
+      ];
+      const rc = ROOF_COLORS[ti % ROOF_COLORS.length];
+      const roofMat = new THREE.MeshStandardMaterial({ color: rc[ti % rc.length], roughness: 1 });
       const roofIm = new THREE.InstancedMesh(box, roofMat, list.length);
+      let roofColors = null;
       for (let i = 0; i < list.length; i++) {
         const b = list[i];
         dummy.position.set(b.x, b.h + 0.14, b.z);
@@ -587,7 +627,11 @@
         dummy.scale.set(b.w * 1.05, 0.16, b.d * 1.05);
         dummy.updateMatrix();
         roofIm.setMatrixAt(i, dummy.matrix);
+        if (!roofColors) roofColors = new THREE.Color();
+        roofColors.set(rc[i % rc.length]);
+        if (roofIm.setColorAt) roofIm.setColorAt(i, roofColors);
       }
+      if (roofIm.instanceColor) roofIm.instanceColor.needsUpdate = true;
       roofIm.instanceMatrix.needsUpdate = true;
       roofIm.frustumCulled = false;
       cityGroup.add(roofIm);
@@ -738,6 +782,8 @@
 
   /* -------------------------------------------------------------- дороги */
 
+  function isRailFar(q) { return !!(C.roadTypes[q] && C.roadTypes[q].rail); }
+
   function roadSamples(road) {
     const c = U.curve(road);
     const n = 56;
@@ -805,7 +851,7 @@
       const builtFrac = U.clamp(road.builtKm / Math.max(road.totalKm, 0.001), 0, 1);
       const use = Math.max(2, Math.round(total * builtFrac));
       const q = road.quality;
-      const width = ROAD_W[q];
+      const width = ROAD_W[q] * roadFarMul;
       const seg = pts.slice(0, use);
       // ровная лента: поднимаем только на мостах
       const isRail = !!C.roadTypes[q].rail;
@@ -1371,6 +1417,14 @@
     }
     updateVehicles(s);
     updateMarkers(app);
+    // дальний план: дорога не тоньше ~2.4 экранных пикселя
+    const target = U.clamp(2.4 / Math.max(0.05, ppkNow * 0.74), 1, 9);
+    roadFarMul = target;
+    if (!roadFarPrev || Math.abs(target / roadFarPrev) > 1.22) {
+      roadFarPrev = target;
+      rebuildRoads(s);
+    }
+
     updateFloats(s, dt);
     // флажки у объектов: 500 анимаций из контент-пака
     if (TR.Content) {
