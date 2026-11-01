@@ -451,6 +451,9 @@
     if (road.quality < (def.minQuality || 0)) {
       return { ok: false, error: `Нужно покрытие «${C.roadTypes[def.minQuality].name}»` };
     }
+    if (C.roadTypes[road.quality] && C.roadTypes[road.quality].rail) {
+      return { ok: false, error: 'У железной дороги объектов нет — только поезда' };
+    }
     const list = Sim.facilitiesOnRoad(s, road.id);
     if (def.edgeWide) {
       if (list.some((f) => f.type === typeKey)) return { ok: false, error: 'На этом участке уже есть' };
@@ -625,7 +628,9 @@
     const path = Sim.findPath(s, from, to);
     if (!path || !path.length) return;
     const r = Math.random();
-    const kind = r < 0.66 ? 'car' : r < 0.86 ? 'truck' : r < 0.94 ? 'ev' : 'bus';
+    let kind = r < 0.66 ? 'car' : r < 0.86 ? 'truck' : r < 0.94 ? 'ev' : 'bus';
+    const firstRoad = Sim.roadById(s, path[0].roadId);
+    if (firstRoad && C.roadTypes[firstRoad.quality] && C.roadTypes[firstRoad.quality].rail) kind = 'train';
     const colorSet = KIND_COLORS[kind];
     const v = {
       id: Math.random().toString(36).slice(2, 9),
@@ -661,6 +666,12 @@
   function onEnterRoad(s, v, road) {
     if (!road) return;
     road.trafficToday++;
+    const rt = C.roadTypes[road.quality];
+    if (rt && rt.rail) {
+      const amount = Math.round(C.tollPrice * 1.8 * (1 + 0.15 * s.level) * (0.9 + Math.random() * 0.2));
+      addIncome(s, amount, null);
+      if (Math.random() < 0.25) s.effects.push({ kind: 'money', x: v.x, y: v.y, amount, life: 1.6 });
+    }
     const facs = Sim.facilitiesOnRoad(s, road.id);
     for (const f of facs) {
       if (!f.ready || !f.type) continue;

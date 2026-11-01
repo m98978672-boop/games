@@ -71,6 +71,7 @@
 <div id="save-indicator">● автосохранение</div>
 
 <aside class="panel tools" aria-label="Инструменты строительства">
+  <button id="panel-handle" class="panel-handle" aria-label="Свернуть панель"><span></span></button>
   <div class="tabs" id="tool-tabs" role="tablist">
     <button data-tab="road" class="on" role="tab">🛣️ Дороги</button>
     <button data-tab="service" role="tab">⛽ Сервис</button>
@@ -90,6 +91,14 @@
 <div id="pause-flag" class="pause-flag">ПАУЗА · пробел</div>
 <div id="daily" class="daily hidden"></div>
 <div id="toasts" class="toasts" aria-live="polite"></div>
+<nav id="dock" class="dock" aria-label="Быстрые действия">
+  <button data-dock="road" class="on"><b>🛣</b><span>Дороги</span></button>
+  <button data-dock="service"><b>🏪</b><span>Сервис</span></button>
+  <button data-dock="city"><b>🌳</b><span>Уют</span></button>
+  <button data-dock="company"><b>🏢</b><span>Компания</span></button>
+  <button data-dock="bank"><b>₽</b><span>Банк</span></button>
+</nav>
+
 <div id="modal-root" class="modal-root"></div>
 
 <noscript><p style="color:#fff;padding:24px">Для игры нужен JavaScript.</p></noscript>
@@ -100,7 +109,8 @@
 <script src="src/sim.js"></script>
 <script src="vendor/three.min.js"></script>
 <script src="src/render.js"></script>
-<script src="src/view3d.js"></script>
+<script src="src/content.js"></script>
+  <script src="src/view3d.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>

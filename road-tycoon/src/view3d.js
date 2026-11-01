@@ -13,7 +13,7 @@
   const MAX_DPR = 1.5;
   const PITCH = 0.98;              // наклон камеры, рад от горизонта
   const FOV = 46;
-  const ROAD_W = [0.62, 0.74, 0.92, 1.10];   // км, по типу покрытия
+  const ROAD_W = [0.62, 0.74, 0.92, 1.10, 1.05];   // км, по типу покрытия (+ ж/д)
   const BRIDGE_Y = 0.60;
 
   let canvas, renderer, scene, camera, world;
@@ -498,6 +498,9 @@
           const cz = city.y + j * cell + cell / 2;
           const distC = Math.hypot(cx - city.x, cz - city.y);
           if (distC > half * 0.98) continue;
+          // на воде не строим: город обходит реки и озёра
+          if (Wd.riverDist(world, cx, cz) < 3.4) continue;
+          if (Wd.lakeFactor(world, cx, cz) > 0.02) continue;
           const density = 0.78 - (distC / half) * 0.5;
           if (rand() > density) continue;
           const type = (rand() < 0.16 ? 2 : rand() < 0.5 ? 0 : rand() < 0.75 ? 1 : 3);
@@ -534,6 +537,9 @@
     for (const s of streetPts) {
       const len = Math.hypot(s.x2 - s.x, s.z2 - s.z);
       if (len < 0.05) continue;
+      // улицы не ныряют в воду — через реку идёт дорога-мост, а не улица
+      if (Wd.riverDist(world, (s.x + s.x2) / 2, (s.z + s.z2) / 2) < 3.2) continue;
+      if (Wd.lakeFactor(world, (s.x + s.x2) / 2, (s.z + s.z2) / 2) > 0.02) continue;
       const g = ribbon([{ x: s.x, z: s.z }, { x: s.x2, z: s.z2 }], 0.6, { y: 0.1, vScale: 1 });
       geos.push(g);
     }
@@ -740,11 +746,52 @@
       const t = i / n;
       const p = U.curvePoint(c, t);
       const river = Wd.riverDist(world, p.x, p.y);
-      const lake = Wd.lakeFactor(world, p.x, p.y) > 0.15;
-      const bridge = river < 2.6 || lake;
+      const lake = Wd.lakeFactor(world, p.x, p.y) > 0.02;
+      const bridge = river < 3.2 || lake;
       pts.push({ x: p.x, z: p.y, t, bridge, y: bridge ? BRIDGE_Y : 0.03 });
     }
     return pts;
+  }
+
+  const railMat = new THREE.MeshStandardMaterial({ color: '#c9ced4', roughness: 0.35, metalness: 0.8 });
+  const sleeperMat = new THREE.MeshStandardMaterial({ color: '#4a3a2a', roughness: 1 });
+  let sleeperGeo = null;
+
+  function addRails(seg, width) {
+    if (!sleeperGeo) sleeperGeo = new THREE.BoxGeometry(1, 1, 1);
+    for (const side of [-1, 1]) {
+      const pts = [];
+      for (let i = 0; i < seg.length; i++) {
+        const p = seg[i];
+        const a = seg[Math.max(0, i - 1)], b = seg[Math.min(seg.length - 1, i + 1)];
+        let tx = b.x - a.x, tz = b.z - a.z;
+        const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
+        const off = side * width * 0.22;
+        pts.push({ x: p.x - tz * off, z: p.z + tx * off, y: (p.y || 0.03) + 0.012 });
+      }
+      const g = ribbon(pts, 0.07, { vScale: 1 });
+      roadGroup.add(new THREE.Mesh(g, railMat));
+    }
+    // шпалы
+    const step = Math.max(1, Math.floor(seg.length / 40));
+    const count = Math.ceil(seg.length / step);
+    const im = new THREE.InstancedMesh(sleeperGeo, sleeperMat, count);
+    const dummy = new THREE.Object3D();
+    let k = 0;
+    for (let i = 0; i < seg.length; i += step) {
+      const p = seg[i];
+      const a = seg[Math.max(0, i - 1)], b = seg[Math.min(seg.length - 1, i + 1)];
+      let tx = b.x - a.x, tz = b.z - a.z;
+      const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
+      dummy.position.set(p.x, (p.y || 0.03) + 0.008, p.z);
+      dummy.rotation.set(0, Math.atan2(tx, tz), 0);
+      dummy.scale.set(width * 0.9, 0.02, 0.12);
+      dummy.updateMatrix();
+      im.setMatrixAt(k++, dummy.matrix);
+    }
+    im.count = k;
+    im.frustumCulled = false;
+    roadGroup.add(im);
   }
 
   function rebuildRoads(state) {
@@ -761,6 +808,7 @@
       const width = ROAD_W[q];
       const seg = pts.slice(0, use);
       // ровная лента: поднимаем только на мостах
+      const isRail = !!C.roadTypes[q].rail;
       const g = ribbon(seg, width, { vScale: 0.35 });
       const under = ribbon(seg, width + 0.28, { vScale: 0.35 });
       // подложка чуть ниже полотна, иначе z-fighting и «пунктирная» дорога
@@ -769,12 +817,14 @@
       underPos.needsUpdate = true;
       roadGroup.add(new THREE.Mesh(under, new THREE.MeshStandardMaterial({ color: '#26271f', roughness: 1 })));
       const mat = new THREE.MeshStandardMaterial({
-        map: roadTexture(road.building ? 1 : q), roughness: 0.9, metalness: 0.02,
-        color: road.building ? '#b9b0a0' : '#ffffff',
+        map: isRail ? TR.Content.texture(100 + (road.id % 50)) : roadTexture(road.building ? 1 : q),
+        roughness: 0.9, metalness: isRail ? 0.35 : 0.02,
+        color: road.building ? '#b9b0a0' : (isRail ? '#6b6258' : '#ffffff'),
       });
       const mesh = new THREE.Mesh(g, mat);
       mesh.receiveShadow = false;
       roadGroup.add(mesh);
+      if (isRail) addRails(seg, width);
 
       // бортики
       const edgeMat = new THREE.MeshStandardMaterial({ color: q >= 2 ? '#e6e2d2' : '#3a352c', roughness: 1 });
@@ -892,35 +942,71 @@
 
   function facilityMesh(f, road) {
     const def = C.facilityByKey[f.type];
-    const pos = facilityPos(f, road);
+    const curve = U.curve(road);
+    const p = U.curvePoint(curve, f.t);
+    const ang = U.curveAngle(curve, f.t);
+    const side = f.side === -1 ? -1 : 1;
+    const halfW = (ROAD_W[road.quality] || 0.7) / 2;
+
     const g = new THREE.Group();
-    const col = new THREE.Color(def.color || '#d8cfc0');
-    const body = new THREE.Mesh(
-      new THREE.BoxGeometry(0.34, 0.18, 0.26),
-      new THREE.MeshStandardMaterial({ color: col, roughness: 0.8 })
-    );
-    body.position.y = 0.09;
-    g.add(body);
-    const roof = new THREE.Mesh(
-      new THREE.BoxGeometry(0.4, 0.05, 0.32),
-      new THREE.MeshStandardMaterial({ color: '#f2eee0', roughness: 0.7, emissive: new THREE.Color('#000000') })
-    );
-    roof.position.y = 0.2;
-    g.add(roof);
-    // вывеска
+    g.position.set(p.x, 0.03, p.y);
+    g.rotation.y = -ang + (side < 0 ? Math.PI : 0);
+
+    const flat = (w, d, x, z, color, y) => {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), new THREE.MeshStandardMaterial({ color, roughness: 1 }));
+      m.rotation.x = -Math.PI / 2;
+      m.position.set(x, y === undefined ? 0.02 : y, z);
+      return m;
+    };
+
+    // заезд с дороги на площадку
+    const drive = flat(0.62, Math.max(0.6, 1.15 - halfW), 0, (halfW + 1.15) / 2, '#4b4741', 0.028);
+    g.add(drive);
+
+    // парковка с разметкой
+    const apron = flat(1.75, 1.05, 0, 1.75, '#4a4f57', 0.024);
+    g.add(apron);
+    const lineMat = new THREE.MeshBasicMaterial({ color: '#d8d4c6' });
+    for (let i = -1; i <= 1; i++) {
+      const line = new THREE.Mesh(new THREE.PlaneGeometry(0.05, 0.55), lineMat);
+      line.rotation.x = -Math.PI / 2;
+      line.position.set(i * 0.5, 0.03, 1.55);
+      g.add(line);
+    }
+
+    // сама постройка — одна из 500 процедурных моделей
+    const modelIndex = (f.id * 37 + (def.cat === 'service' ? 40 : 0)) % TR.Content.MODEL_COUNT;
+    const kindIndex = { fuel: 4, cafe: 3, motel: 5, shop: 6, service: 7, trees: 9, busstop: 9, square: 9 }[def.cat] ?? null;
+    const idx = def.key === 'fuel' ? 4 : def.key === 'cafe' ? 3 : def.key === 'hotel' || def.key === 'motel' ? 5
+      : def.key === 'shop' ? 6 : def.key === 'service' ? 7 : modelIndex;
+    const building = TR.Content.build(idx, 0.2);
+    building.position.set(0, 0.02, 2.75);
+    building.rotation.y = (f.id % 3) * 0.12;
+    g.add(building);
+
+    // вывеска на стойке у заезда
     const sign = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.5, 0.25),
+      new THREE.PlaneGeometry(0.9, 0.45),
       new THREE.MeshBasicMaterial({ map: signTexture(facilityLabel(def), '#12181d', '#ffd166'), transparent: true })
     );
-    sign.position.set(0, 0.46, 0);
-    sign.rotation.y = 0;
+    sign.position.set(0.95, 0.62, 1.25);
+    sign.rotation.y = -0.5;
     g.add(sign);
-    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.3, 4), new THREE.MeshStandardMaterial({ color: '#7d7a70' }));
-    pole.position.set(0, 0.3, 0);
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.6, 4), new THREE.MeshStandardMaterial({ color: '#7d7a70' }));
+    pole.position.set(0.95, 0.3, 1.25);
     g.add(pole);
-    g.position.set(pos.x, 0.03, pos.y);
+
+    // флажок/маячок — оживляет объект одной из 500 анимаций
+    const flag = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.18), new THREE.MeshStandardMaterial({
+      color: def.color || '#e0b25a', side: THREE.DoubleSide, roughness: 0.8,
+    }));
+    flag.position.set(-0.95, 0.62, 1.15);
+    flag.userData.anim = TR.Content.animDef(f.id * 11 + 3);
+    flag.userData.animBase = { y: flag.position.y, ry: 0, sx: 1 };
+    g.add(flag);
+
     g.userData.def = def;
-    g.userData.sway = Math.random() * 6;
+    g.userData.flag = flag;
     return g;
   }
 
@@ -978,6 +1064,24 @@
 
   function vehicleGeometry(kind) {
     const dark = '#20262c', glass = '#9fc6d8', lamp = '#ffe6a8';
+    if (kind === 'train') {
+      const boxes = [
+        // локомотив
+        { x: 0, y: 0.075, z: 0.2, w: 0.07, h: 0.1, d: 0.16, color: '#a33c30' },
+        { x: 0, y: 0.15, z: 0.2, w: 0.062, h: 0.05, d: 0.14, color: '#2f3944' },
+        { x: 0, y: 0.06, z: 0.29, w: 0.05, h: 0.03, d: 0.012, color: lamp },
+      ];
+      // вагоны
+      for (let i = 0; i < 2; i++) {
+        const z = -0.06 - i * 0.24;
+        boxes.push({ x: 0, y: 0.08, z, w: 0.066, h: 0.085, d: 0.2, color: '#d9d5c8' });
+        boxes.push({ x: 0, y: 0.125, z, w: 0.06, h: 0.02, d: 0.19, color: '#6b7c8c' });
+        for (let w = 0; w < 4; w++) {
+          boxes.push({ x: 0, y: 0.085, z: z - 0.07 + w * 0.05, w: 0.07, h: 0.03, d: 0.022, color: glass });
+        }
+      }
+      return mergedBoxes(boxes);
+    }
     if (kind === 'truck') {
       return mergedBoxes([
         { x: 0, y: 0.055, z: -0.05, w: 0.055, h: 0.075, d: 0.2, color: '#e9e5d8' },
@@ -1013,7 +1117,7 @@
 
   function ensureVehicleMeshes() {
     if (vehicleSlots.size) return;
-    const kinds = ['car', 'truck', 'bus', 'ev'];
+    const kinds = ['car', 'truck', 'bus', 'ev', 'train'];
     for (const k of kinds) {
       const geo = vehicleGeometry(k);
       const mat = new THREE.MeshStandardMaterial({
@@ -1046,7 +1150,7 @@
       const ang = U.curveAngle(curve, tw);
       const dir = step.dir === 1 ? 1 : -1;
       const side = dir > 0 ? 1 : -1;             // правостороннее движение
-      const off = side * (smp.half || 0.31) * 0.48;
+      const off = v.kind === 'train' ? 0 : side * (smp.half || 0.31) * 0.48;
       // высота: линейно между точками моста/полотна
       const nPts = smp.pts.length - 1;
       const fi = U.clamp(tw, 0, 1) * nPts;
@@ -1056,7 +1160,7 @@
       const yA = (smp.pts[i0] && smp.pts[i0].y) || 0.03;
       const yB = (smp.pts[i1] && smp.pts[i1].y) || yA;
       const py = yA + (yB - yA) * fr;
-      const slot = vehicleSlots.get(v.kind === 'truck' || v.kind === 'bus' || v.kind === 'ev' ? v.kind : 'car');
+      const slot = vehicleSlots.get(v.kind === 'train' ? 'train' : (v.kind === 'truck' || v.kind === 'bus' || v.kind === 'ev' ? v.kind : 'car'));
       if (!slot || slot.n >= 400) continue;
       laneDummy.position.set(cur.x - Math.sin(ang) * off, py + 0.02, cur.y + Math.cos(ang) * off);
       laneDummy.rotation.set(0, Math.atan2(Math.cos(ang) * dir, Math.sin(ang) * dir), 0);
@@ -1268,6 +1372,18 @@
     updateVehicles(s);
     updateMarkers(app);
     updateFloats(s, dt);
+    // флажки у объектов: 500 анимаций из контент-пака
+    if (TR.Content) {
+      for (const m of facilityMeshes.values()) {
+        const flag = m.userData.flag;
+        if (flag && flag.userData.anim) {
+          try {
+            flag.userData.base = flag.userData.animBase;
+            TR.Content.animate(flag, flag.userData.anim, clock.t);
+          } catch (e) { flag.userData.anim = null; }
+        }
+      }
+    }
     // шевеление воды
     if (TEX.water) TEX.water.offset.y = (clock.t * 0.015) % 1;
     renderer.render(scene, camera);
