@@ -1151,3 +1151,58 @@ html[data-device="mobile"] .zoom-pad { bottom: 300px; }
   .bottom-bar { bottom: 62px; }
   .zoom-pad { bottom: 300px; }
 }
+
+/* ---- телефон: карта во весь экран, меню по кнопке ---- */
+.fab { display: none; }
+.sheet-close { display: none; }
+
+@media (max-width: 1040px) { .fab { display: flex; } }
+
+html[data-device="mobile"] .fab,
+html[data-device="mobile"] .sheet-close {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  position: fixed; left: 12px; bottom: 14px; z-index: 34;
+  min-width: 56px; height: 56px; padding: 0 14px; border-radius: 28px;
+  background: linear-gradient(180deg, #ffd166, #e0a13c); color: #241a06;
+  border: 0; font-size: 13px; font-weight: 800; letter-spacing: 0.02em;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+}
+html[data-device="mobile"] .fab span { font-size: 10px; }
+html[data-device="mobile"] .sheet-close {
+  left: auto; right: 12px; bottom: auto; top: 96px; min-width: 44px; height: 44px; padding: 0;
+  border-radius: 22px; background: rgba(20, 24, 30, 0.92); color: #e7edf2; font-size: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.16); display: none;
+}
+html[data-device="mobile"] body.sheet-open .sheet-close { display: none; }
+
+/* по умолчанию на телефоне карта чистая: панелей и дока нет */
+html[data-device="mobile"] .panel.tools { display: none; }
+html[data-device="mobile"] .panel.side { display: none; }
+html[data-device="mobile"] body.side-open .panel.side { display: flex; }
+html[data-device="mobile"] .dock { display: none; }
+html[data-device="mobile"] .bottom-bar { display: none; }
+html[data-device="mobile"] .panel-handle { display: none; }
+
+html[data-device="mobile"] body.sheet-open .panel.tools {
+  display: flex; left: 6px; right: 6px; bottom: 8px; max-height: 58vh; z-index: 33;
+  border-radius: 16px 16px 10px 10px;
+}
+html[data-device="mobile"] body.sheet-open .sheet-close { display: flex; }
+html[data-device="mobile"] body.sheet-open .fab { background: rgba(20, 24, 30, 0.94); color: #e7edf2; }
+
+@media (max-width: 1040px) {
+  .panel.tools { display: none; }
+  .dock { display: none; }
+  .bottom-bar { display: none; }
+  .panel-handle { display: none; }
+  body.sheet-open .panel.tools {
+    display: flex; left: 6px; right: 6px; bottom: 8px; max-height: 58vh; z-index: 33;
+    border-radius: 16px 16px 10px 10px;
+  }
+  .sheet-close { display: flex; align-items: center; justify-content: center; position: fixed;
+    right: 12px; top: 96px; width: 44px; height: 44px; border-radius: 22px; z-index: 34;
+    background: rgba(20, 24, 30, 0.92); color: #e7edf2; border: 1px solid rgba(255,255,255,0.16); }
+  body:not(.sheet-open) .sheet-close { display: none; }
+  .panel.side { display: none; }
+  body.side-open .panel.side { display: flex; }
+}
