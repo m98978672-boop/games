@@ -9,7 +9,7 @@
   const app = (TR.App = {
     state: null,
     world: null,
-    camera: { x: 54, y: 50, zoom: 1 },
+    camera: { x: 188, y: 580, zoom: 2.4 },
     tool: 'select',
     buildQuality: 1,
     roadFrom: null,
@@ -27,10 +27,11 @@
 
   let canvas = null;
   let down = null;
-  const MAX_ZOOM = 9;
+  const MAX_ZOOM = 6;
   const pointers = new Map();
   let pinch = null;
   let spaceHeld = false;
+  const keys = new Set();
 
   /* ------------------------------------------------------------ запуск */
 
@@ -51,6 +52,7 @@
     const seed = saved ? saved.seed : (Date.now() % 1000000) + 7;
     app.state = saved || Sim.newGame(seed);
     app.world = TR.World.build(app.state.seed);
+    Sim.setWorld(app.world);
 
     // стартовая камера
     const screenWide = window.innerWidth > 1200;
@@ -58,15 +60,21 @@
     app.camera.x = 52;
     app.camera.y = 50;
     if (window.innerWidth < 820) {
-      app.camera.zoom = 0.85;
-      app.camera.x = 46;
-      app.camera.y = 46;
+      app.camera.zoom = 1.6;
+      app.camera.x = app.state.roads.length ? (C.cities[app.state.roads[0].a].x + C.cities[app.state.roads[0].b].x) / 2 : C.worldW / 2;
+      app.camera.y = app.state.roads.length ? (C.cities[app.state.roads[0].a].y + C.cities[app.state.roads[0].b].y) / 2 : C.worldH / 2;
     }
 
     Render.init(canvas, app.world);
     TR.UI.init(app);
     bindInput();
     initDevice();
+    const zi = document.getElementById('btn-zoom-in');
+    const zo = document.getElementById('btn-zoom-out');
+    const zf = document.getElementById('btn-zoom-fit');
+    if (zi) zi.addEventListener('click', () => zoomBy(1.35));
+    if (zo) zo.addEventListener('click', () => zoomBy(1 / 1.35));
+    if (zf) zf.addEventListener('click', fitMap);
     resize();
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', () => {
@@ -92,6 +100,20 @@
   function step(dt) {
     const s = app.state;
     if (!app.paused) Sim.tick(s, dt * app.speed);
+
+    // панорамирование клавиатурой: WASD и стрелки
+    let px = 0, py = 0;
+    if (keys.has('ArrowLeft') || keys.has('KeyA')) px -= 1;
+    if (keys.has('ArrowRight') || keys.has('KeyD')) px += 1;
+    if (keys.has('ArrowUp') || keys.has('KeyW')) py -= 1;
+    if (keys.has('ArrowDown')) py += 1;
+    if (px || py) {
+      const ppk = Render.ppk(app.camera.zoom);
+      const speedKm = 700 / ppk;
+      app.camera.x += px * speedKm * dt;
+      app.camera.y += py * speedKm * dt;
+      clampCamera();
+    }
 
     // звуки и уведомления из симуляции
     while (s.sfx.length) TR.Audio.play(s.sfx.shift());
@@ -178,8 +200,14 @@
 
   function minZoom() {
     const fit = Math.min(window.innerWidth / (C.worldW * 9), (window.innerHeight - 120) / (C.worldH * 9));
-    return U.clamp(Math.min(0.9, fit), 0.42, 0.9);
+    return U.clamp(Math.min(1.1, fit), 0.05, 1.1);
   }
+
+  function zoomBy(factor) {
+    app.camera.zoom = U.clamp(app.camera.zoom * factor, minZoom(), MAX_ZOOM);
+    clampCamera();
+  }
+  app.zoomBy = zoomBy;
 
   function clampCamera() {
     const ppk = Render.ppk(app.camera.zoom);
@@ -212,7 +240,18 @@
     });
 
     window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', (e) => { if (e.code === 'Space') spaceHeld = false; });
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'Space') spaceHeld = false;
+      keys.delete(e.code);
+    });
+    canvas.addEventListener('dblclick', (e) => {
+      const p = screenPoint(e);
+      const w = Render.toWorld(app, p.x, p.y);
+      app.camera.zoom = U.clamp(app.camera.zoom * 1.8, minZoom(), MAX_ZOOM);
+      app.camera.x = w.x;
+      app.camera.y = w.y;
+      clampCamera();
+    });
   }
 
   function screenPoint(e) {
@@ -321,7 +360,15 @@
     } else if (e.key === 'Escape') {
       if (TR.UI.closeModal()) return;
       cancelTool();
-    } else if (e.key === '1') setSpeed(1);
+    } else if (e.code.startsWith('Arrow') || e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyD') {
+      keys.add(e.code);
+      if (e.code.startsWith('Arrow')) e.preventDefault();
+      return;
+    } else if (e.key === '+' || e.key === '=') zoomBy(1.25);
+    else if (e.key === '-' || e.key === '_') zoomBy(1 / 1.25);
+    else if (e.code === 'KeyQ') zoomBy(1 / 1.25);
+    else if (e.code === 'KeyE') zoomBy(1.25);
+    else if (e.key === '1') setSpeed(1);
     else if (e.key === '2') setSpeed(2);
     else if (e.key === '3') setSpeed(4);
     else if (e.key === '0') togglePause();
@@ -564,6 +611,7 @@
     const seed = (Date.now() % 900000) + 11;
     app.state = Sim.newGame(seed);
     app.world = TR.World.build(seed);
+    Sim.setWorld(app.world);
     Render.buildTerrain(app.world);
     app.selection = null;
     app.tool = 'select';

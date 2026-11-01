@@ -4,19 +4,19 @@
   const TR = (window.TR = window.TR || {});
 
   const CFG = (TR.CONFIG = {
-    version: 2,
+    version: 3,
     saveKey: 'trassa-road-empire-v1',
 
     /* Размер карты в километрах */
-    worldW: 100,
-    worldH: 100,
+    worldW: 1000,
+    worldH: 1000,
 
     /* Экономика и время */
     startMoney: 140000,
     hoursPerSecond: 0.24,      // игровых часов за реальную секунду на скорости 1x
-    trafficTimeMul: 0.22,      // насколько «медленно» относительно часов едут машины (стилизация)
+    trafficTimeMul: 1.6,       // машин быстрее «игровых часов»: карта стала в 10 раз больше
     dayStartHour: 8,
-    maxVehicles: 300,
+    maxVehicles: 700,
     tollPrice: 32,
     taxRate: 0.05,
     loanRate: 0.012,           // в день
@@ -29,25 +29,25 @@
     roadTypes: [
       {
         key: 'dirt', name: 'Грунтовка', short: 'ГРУНТ',
-        speed: 38, cost: 700, upgrade: 0.85, upkeep: 0.25, wear: 0.7,
+        speed: 38, cost: 70, upgrade: 0.85, upkeep: 0.025, wear: 0.07,
         color: '#8a6a45', edge: '#6b5133', width: 0.85, dash: true,
         unlock: 1, desc: 'Пыльно и медленно, зато почти бесплатно. С неё начинают все.',
       },
       {
         key: 'gravel', name: 'Гравий', short: 'ГРАВИЙ',
-        speed: 58, cost: 1500, upgrade: 0.85, upkeep: 0.7, wear: 1.8,
+        speed: 58, cost: 150, upgrade: 0.85, upkeep: 0.07, wear: 0.18,
         color: '#a49b8c', edge: '#7d766a', width: 1.0, dash: true,
         unlock: 1, desc: 'Твёрдое покрытие: больше трафика, меньше жалоб водителей.',
       },
       {
         key: 'asphalt', name: 'Асфальт', short: 'АСФАЛЬТ',
-        speed: 88, cost: 2800, upgrade: 0.85, upkeep: 1.5, wear: 4.2,
+        speed: 88, cost: 280, upgrade: 0.85, upkeep: 0.15, wear: 0.42,
         color: '#3c414a', edge: '#23262c', width: 1.25, dash: false,
         unlock: 2, desc: 'Стандарт трассы. Держит поток и открывает платные участки.',
       },
       {
         key: 'highway', name: 'Автобан', short: 'АВТОБАН',
-        speed: 115, cost: 4200, upgrade: 0.85, upkeep: 2.6, wear: 5.4,
+        speed: 115, cost: 420, upgrade: 0.85, upkeep: 0.26, wear: 0.54,
         color: '#2a2f37', edge: '#191c21', width: 1.5, dash: false,
         unlock: 4, desc: 'Четыре полосы, разделитель, большие скорости и большой поток.',
       },
@@ -154,17 +154,45 @@
 
     /* Города */
     cities: [
-      { name: 'Заречье', x: 18.8, y: 58, pop: 42000, start: true },
-      { name: 'Сосновка', x: 38.8, y: 34, pop: 28000, start: true },
-      { name: 'Белогорск', x: 62.5, y: 26, pop: 36000 },
-      { name: 'Каменка', x: 48.8, y: 74, pop: 22000 },
-      { name: 'Ольхово', x: 80, y: 62, pop: 31000 },
-      { name: 'Мельниково', x: 27.5, y: 18, pop: 18000 },
-      { name: 'Солнечный', x: 67.5, y: 86, pop: 24000 },
-      { name: 'Верхний Лог', x: 88.8, y: 36, pop: 20000 },
-      { name: 'Крутояр', x: 10, y: 30, pop: 16000 },
-      { name: 'Приморск', x: 93.8, y: 88, pop: 26000 },
+      { name: 'Заречье', x: 188, y: 580, pop: 42000, start: true },
+      { name: 'Сосновка', x: 388, y: 340, pop: 28000, start: true },
+      { name: 'Белогорск', x: 625, y: 260, pop: 36000 },
+      { name: 'Каменка', x: 488, y: 740, pop: 22000 },
+      { name: 'Ольхово', x: 800, y: 620, pop: 31000 },
+      { name: 'Мельниково', x: 275, y: 180, pop: 18000 },
+      { name: 'Солнечный', x: 675, y: 860, pop: 24000 },
+      { name: 'Верхний Лог', x: 888, y: 360, pop: 20000 },
+      { name: 'Крутояр', x: 100, y: 300, pop: 16000 },
+      { name: 'Приморск', x: 938, y: 880, pop: 26000 },
     ],
+
+    /* Рост городов, упадок и гибель */
+    cityGrowth: {
+      maxPop: 420000,
+      gainRate: 0.01,      // прирост в день при высоком довольстве
+      lossRate: 0.005,     // убыль в день при низком
+      goodSat: 1.0,        // выше — город растёт
+      badSat: 0.9,         // ниже — город чахнет
+      ruinSat: 0.86,       // ниже этого — копится тревога
+      ruinDays: 8,         // столько дней тревоги — и город может погибнуть
+      ruinChance: 0.07,    // шанс гибели за день тревоги
+      recoverChance: 0.05, // шанс, что выживший город восстановится
+    },
+
+    /* Посёлки: появляются сами, растут и могут стать городом */
+    villages: {
+      chance: 0.1,         // 10 % на игровой день
+      startPop: 900,
+      growth: 0.03,        // в день при дороге рядом
+      decay: 0.01,         // в день без дороги
+      cityAt: 7000,        // с этого населения — уже город
+      max: 26,
+      minDistCity: 55,
+      minDistVillage: 45,
+      names: ['Берёзки', 'Пески', 'Ключи', 'Дубки', 'Заимка', 'Ясное', 'Овражки', 'Лужки', 'Сосёнки',
+        'Родники', 'Поляна', 'Тихая', 'Ветрянка', 'Малиновка', 'Черёмушки', 'Горки', 'Лесная',
+        'Каменный Брод', 'Заводь', 'Первомайка', 'Кузнечики', 'Стрелка', 'Заря', 'Вершина'],
+    },
 
     /* Готовая (стартовая) дорожная сеть */
     startRoads: [
@@ -220,8 +248,8 @@
       },
       {
         id: 'asphalt20', title: 'Твёрдое покрытие', reward: 45000, xp: 220,
-        desc: 'Уложите асфальт хотя бы на 20 км.',
-        check: (s) => s.roads.reduce((sum, r) => sum + (r.open && r.quality >= 2 ? r.totalKm : 0), 0) >= 20,
+        desc: 'Уложите асфальт хотя бы на 200 км.',
+        check: (s) => s.roads.reduce((sum, r) => sum + (r.open && r.quality >= 2 ? r.totalKm : 0), 0) >= 200,
       },
       {
         id: 'five_cities', title: 'Пять городов', reward: 80000, xp: 320,
