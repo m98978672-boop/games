@@ -66,6 +66,11 @@
       app.camera.y = app.state.roads.length ? (C.cities[app.state.roads[0].a].y + C.cities[app.state.roads[0].b].y) / 2 : C.worldH / 2;
     }
 
+    if (canvas) {
+      canvas.style.touchAction = 'none';
+      canvas.style.userSelect = 'none';
+      canvas.style.webkitUserSelect = 'none';
+    }
     Render.init(canvas, app.world);
     TR.UI.init(app);
     bindInput();
@@ -244,23 +249,21 @@
     const ppk = Render.ppk(app.camera.zoom);
     const vw = window.innerWidth, vh = window.innerHeight;
     const halfW = vw / 2 / ppk, halfH = vh / 2 / ppk;
-    // панели интерфейса закрывают края экрана — разрешаем прокрутку под них,
-    // чтобы любой город можно было вывести в видимую область
+    // Свободная панорама: карту всегда можно утащить в любую сторону.
+    // Ограничение только одно — не отпустить карту дальше половины экрана за край.
     const padL = vw > 1040 ? 300 / ppk : 0;
     const padR = vw > 1040 ? 336 / ppk : 0;
-    const padT = 70 / ppk, padB = 110 / ppk;
-    // «свободный ход»: карту можно утащить за край почти на пол-экрана,
-    // чтобы центральное положение никогда не было тупиком
-    const overX = halfW * 0.5, overY = halfH * 0.5;
-    let minX = halfW - padL - overX, maxX = C.worldW - halfW + padR + overX;
-    let minY = halfH - padT - overY, maxY = C.worldH - halfH + padB + overY;
-    // если карта целиком помещается на экране — двигаем её вообще без ограничений по краям
-    if (halfW * 2 >= C.worldW) { minX = -halfW; maxX = C.worldW + halfW; }
-    if (halfH * 2 >= C.worldH) { minY = -halfH; maxY = C.worldH + halfH; }
-    if (minX > maxX) { minX = -halfW; maxX = C.worldW + halfW; }
-    if (minY > maxY) { minY = -halfH; maxY = C.worldH + halfH; }
-    app.camera.x = U.clamp(app.camera.x, minX, maxX);
-    app.camera.y = U.clamp(app.camera.y, minY, maxY);
+    const overX = halfW * 0.75, overY = halfH * 0.75;
+    const minX = -overX - padL;
+    const maxX = C.worldW + overX + padR;
+    const minY = -overY;
+    const maxY = C.worldH + overY;
+    if (isFinite(minX) && isFinite(maxX) && maxX > minX) {
+      app.camera.x = U.clamp(app.camera.x, minX, maxX);
+    }
+    if (isFinite(minY) && isFinite(maxY) && maxY > minY) {
+      app.camera.y = U.clamp(app.camera.y, minY, maxY);
+    }
   }
 
   /* ------------------------------------------------------------- ввод */
@@ -322,6 +325,8 @@
   function onPointerMove(e) {
     const p = screenPoint(e);
     app.mouse = p;
+    // на тач-экранах тянем карту сразу и не даём браузеру перехватить жест
+    if (e.pointerType === 'touch' && (down || pinch)) { try { e.preventDefault(); } catch (err) { /* пассивный слушатель */ } }
 
     if (pointers.has(e.pointerId)) pointers.set(e.pointerId, p);
 
@@ -348,7 +353,7 @@
 
     if (down) {
       const dx = p.x - down.startX, dy = p.y - down.startY;
-      if (!down.moved && Math.hypot(dx, dy) > 4) down.moved = true;
+      if (!down.moved && Math.hypot(dx, dy) > 2) down.moved = true;
       if (down.moved) {
         const ppk = Render.ppk(app.camera.zoom);
         const ddx = (p.x - down.x) / ppk, ddy = (p.y - down.y) / ppk;
