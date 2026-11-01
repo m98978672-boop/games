@@ -1,27 +1,23 @@
+@import url("../shared/theme.css");
 /* =========================================================================
-   ЕВРОТРАК — оформление интерфейса
-   Тёмное «стекло», янтарный акцент,tabular-nums для приборов.
+   ЕВРОТРАК — оформление интерфейса поверх единой темы всех игр
+   (shared/theme.css): общие --ink, --line, --radius, --font, --green/--red/--blue
+   приходят из темы. Ниже — своё: оттенок фона, «стекло», янтарный акцент.
    ========================================================================= */
 :root {
   --bg: #060b0f;
-  --ink: #e9f0f3;
-  --muted: #8ba0a8;
-  --muted-2: #63757d;
-  --line: rgba(132, 165, 176, 0.16);
-  --line-strong: rgba(150, 185, 196, 0.3);
   --glass: rgba(12, 20, 25, 0.82);
   --glass-2: rgba(19, 29, 35, 0.9);
   --amber: #f5b83d;
   --amber-2: #d99320;
   --teal: #49c8ae;
-  --green: #6ed69a;
-  --red: #ec5b4e;
-  --blue: #6db8ea;
-  --radius: 16px;
+  --accent: var(--amber);
+  --accent-2: var(--amber-2);
   --radius-sm: 10px;
   --shadow-1: 0 10px 30px rgba(0, 0, 0, 0.45);
   --shadow-2: 0 26px 70px rgba(0, 0, 0, 0.6);
-  --font: 'Inter', 'SF Pro Display', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --muted: var(--ink-dim);
+  --muted-2: var(--ink-faint);
   font-synthesis: none;
   color-scheme: dark;
 }

@@ -15,6 +15,12 @@
 Если игру нужно сделать автономной (скопировать одну папку без репозитория) —
 скопируйте `theme.css` рядом с `index.html` игры и подключите `./theme.css`.
 
+**Подключены к общей теме:** `road-tycoon`, `euro-haul`, `truck-haul`,
+`cascade-hydro`, `last-shore`, `frontline-steel-and-drones` (style.css и inline-стиль play.html),
+`game-base`. У каждой игры поверх темы остаются свой оттенок фона и акцент
+(`--bg`, `--accent`), а общие токены (`--panel`, `--line`, `--ink`, `--radius`, шрифт,
+компоненты HUD) — единые. `folder-os` нарочно не подключается: это пародия на светлую ОС.
+
 - [`theme.css`](./theme.css) — дизайн-токены (`:root`) и общие компоненты HUD.
 - Базовая игра-шаблон, демонстрирующая этот дизайн: [`../game-base/`](../game-base/).
 - Пошаговая инструкция «как создать новую игру»: [`../game-base/TEMPLATE.md`](../game-base/TEMPLATE.md).
