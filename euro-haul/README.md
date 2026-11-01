@@ -12,6 +12,9 @@
 ▶ **Играть:** [`index.html`](./index.html) ·
 [на сайте](https://m98978672-boop.github.io/games/euro-haul/)
 
+> Разработчику: состояние работы, найденные баги и план восстановления после
+> отката — в [`docs/DEV-NOTES.md`](./docs/DEV-NOTES.md).
+
 ---
 
 ## Что внутри
