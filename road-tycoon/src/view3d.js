@@ -13,8 +13,8 @@
   const MAX_DPR = 1.5;
   const PITCH = 0.98;              // наклон камеры, рад от горизонта
   const FOV = 46;
-  const ROAD_W = [0.34, 0.40, 0.50, 0.60];   // км, по типу покрытия
-  const BRIDGE_Y = 0.30;
+  const ROAD_W = [0.62, 0.74, 0.92, 1.10];   // км, по типу покрытия
+  const BRIDGE_Y = 0.60;
 
   let canvas, renderer, scene, camera, world;
   let sunLight, hemiLight, ambient;
@@ -22,7 +22,7 @@
   let raycaster, groundPlane;
   let vw = 1, vh = 1;
   let ppkNow = PX_PER_KM;
-  let roadSig = null, facSig = null, cityBuilt = false;
+  let roadSig = null, facSig = null, citySig = -1, cityBuilt = false;
   const samples = new Map();       // roadId -> {pts, half, name}
   const facilityMeshes = new Map(); // facId -> Object3D
   const vehicleSlots = new Map();   // instanced meshes
@@ -107,22 +107,22 @@
   function grassTexture() {
     if (TEX.grass) return TEX.grass;
     const { c, x } = canvas2d(512, 512);
-    noiseFill(x, 512, 512, '#5c8a49', 0.07, 0.5);
+    noiseFill(x, 512, 512, '#d8dccb', 0.07, 0.5);
     for (let i = 0; i < 9000; i++) {
-      const g = 80 + Math.random() * 55;
-      x.fillStyle = 'rgba(' + Math.round(g * 0.62) + ',' + Math.round(g) + ',' + Math.round(g * 0.5) + ',0.34)';
+      const g = 170 + Math.random() * 65;
+      x.fillStyle = 'rgba(' + Math.round(g * 0.92) + ',' + Math.round(g) + ',' + Math.round(g * 0.82) + ',0.22)';
       x.fillRect(Math.random() * 512, Math.random() * 512, 1.4, 2.4);
     }
     // редкие травинки-кустики, чтобы не было видно повторов
     for (let i = 0; i < 420; i++) {
-      x.strokeStyle = 'rgba(' + (60 + Math.random() * 40) + ',' + (110 + Math.random() * 50) + ',60,0.28)';
+      x.strokeStyle = 'rgba(' + (150 + Math.random() * 50) + ',' + (175 + Math.random() * 45) + ',130,0.25)';
       x.beginPath();
       const px = Math.random() * 512, py = Math.random() * 512;
       x.moveTo(px, py);
       x.lineTo(px + (Math.random() - 0.5) * 4, py - 3 - Math.random() * 4);
       x.stroke();
     }
-    TEX.grass = texture(c, 44, 44);
+    TEX.grass = texture(c, 190, 190);
     return TEX.grass;
   }
 
@@ -235,16 +235,16 @@
 
   /* ---------------------------------------------------------- высоты мира */
 
-  function cityRadius(city) { return 2.3 + city.pop / 13000; }
+  function cityRadius(city) { return 9 + Math.min(city.pop, 420000) / 3500; }
 
   function baseHeight(x, z) {
     let h = 0;
     for (const hill of world.hills) {
       const d = Math.hypot(x - hill.x, z - hill.y);
-      if (d < hill.r) h += hill.h * 0.22 * Math.pow(1 - d / hill.r, 2);
+      if (d < hill.r) h += hill.h * 0.5 * Math.pow(1 - d / hill.r, 2);
     }
-    const n = world.noise(x * 0.06, z * 0.06);
-    h += (n - 0.5) * 0.05;
+    const n = world.noise(x * 0.006, z * 0.006);
+    h += (n - 0.5) * 0.7;
     return h;
   }
 
@@ -254,10 +254,10 @@
     for (let i = 0; i < cities.length; i++) {
       const d = Math.hypot(x - cities[i].x, z - cities[i].y);
       const r = cityRadius(cities[i]);
-      if (d < r + 1.6) m = Math.min(m, U.clamp((d - r) / 1.6, 0, 1));
+      if (d < r + 3.5) m = Math.min(m, U.clamp((d - r) / 3.5, 0, 1));
     }
-    if (Wd.riverDist(world, x, z) < 2.4) m = Math.min(m, U.clamp((Wd.riverDist(world, x, z) - 0.9) / 1.5, 0, 1));
-    if (Wd.lakeFactor(world, x, z) > 0) m = Math.min(m, 0.05);
+    if (Wd.riverDist(world, x, z) < 5.5) m = Math.min(m, U.clamp((Wd.riverDist(world, x, z) - 2.2) / 3.3, 0, 1));
+    if (Wd.lakeFactor(world, x, z) > 0) m = 0;
     if (state) {
       for (const road of state.roads) {
         if (!road.open && !road.building) continue;
@@ -270,7 +270,7 @@
         let t = ((x - ax) * dx + (z - az) * dz) / l2;
         t = U.clamp(t, 0, 1);
         const d = Math.hypot(x - (ax + dx * t), z - (az + dz * t));
-        if (d < 2.2) m = Math.min(m, U.clamp((d - 0.55) / 1.6, 0, 1));
+        if (d < 4.5) m = Math.min(m, U.clamp((d - 1.2) / 3.4, 0, 1));
       }
     }
     return m;
@@ -296,7 +296,7 @@
     scene.background = new THREE.Color('#0b1016');
     scene.fog = new THREE.Fog(new THREE.Color('#0b1016'), 120, 400);
 
-    camera = new THREE.PerspectiveCamera(FOV, 1, 0.4, 1400);
+    camera = new THREE.PerspectiveCamera(FOV, 1, 0.8, 8000);
 
     hemiLight = new THREE.HemisphereLight(0xcfe4ff, 0x3d5238, 1.15);
     scene.add(hemiLight);
@@ -335,7 +335,7 @@
 
   function syncCamera(app) {
     const cam = app.camera;
-    const zoom = U.clamp(cam.zoom || 1, 0.3, 14);
+    const zoom = U.clamp(cam.zoom || 1, 0.03, 14);
     const fov = (camera.fov * Math.PI) / 180;
     const d = (1 / (PX_PER_KM * zoom)) * Math.sin(PITCH) * vh / (2 * Math.tan(fov / 2));
     const h = d * Math.sin(PITCH);
@@ -378,7 +378,7 @@
 
   function buildTerrainMesh(state) {
     if (terrainMesh) { scene.remove(terrainMesh); terrainMesh.geometry.dispose(); terrainMesh = null; }
-    const N = 110;
+    const N = 220;
     const pos = [], uv = [], idx = [], col = [];
     const cMeadow = new THREE.Color('#69a052'), cForest = new THREE.Color('#3f7040');
     const cField = new THREE.Color('#a8b455'), cHill = new THREE.Color('#8a9a55');
@@ -394,8 +394,8 @@
         if (b === 'forest') c = cForest;
         else if (b === 'field') c = cField;
         else if (b === 'hill') c = cHill;
-        if (Wd.riverDist(world, x, z) < 1.1 || Wd.lakeFactor(world, x, z) > 0.5) c = cSand;
-        const l = 0.9 + world.noise(x * 0.2, z * 0.2) * 0.22;
+        if (Wd.riverDist(world, x, z) < 2.6 || Wd.lakeFactor(world, x, z) > 0.5) c = cSand;
+        const l = 0.9 + world.noise(x * 0.02, z * 0.02) * 0.22;
         col.push(c.r * l, c.g * l, c.b * l);
       }
     }
@@ -438,11 +438,11 @@
         }
       }
       smooth.push(pts[pts.length - 1]);
-      const g = ribbon(smooth, (t) => 0.78 + Math.sin(t * 9) * 0.12, { y: 0.06, vScale: 2.4 });
+      const g = ribbon(smooth, (t) => 1.7 + Math.sin(t * 9) * 0.28, { y: 0.2, vScale: 6 });
       const m = new THREE.Mesh(g, waterMat);
       waterGroup.add(m);
       // берега
-      const bank = ribbon(smooth, 1.75, { y: 0.032, vScale: 2.4 });
+      const bank = ribbon(smooth, 3.8, { y: 0.11, vScale: 6 });
       const bm = new THREE.Mesh(bank, new THREE.MeshStandardMaterial({ color: '#94a468', roughness: 1 }));
       waterGroup.add(bm);
     }
@@ -452,11 +452,11 @@
       const m = new THREE.Mesh(g, waterMat);
       m.scale.set(lake.rx, 1, lake.ry);
       m.rotation.y = lake.rot;
-      m.position.set(lake.x, 0.04, lake.y);
+      m.position.set(lake.x, 0.14, lake.y);
       waterGroup.add(m);
       const ring = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#c8b98a', roughness: 1 }));
       ring.scale.set(lake.rx * 1.14, 1, lake.ry * 1.16);
-      ring.position.set(lake.x, 0.022, lake.y);
+      ring.position.set(lake.x, 0.07, lake.y);
       ring.rotation.y = lake.rot;
       waterGroup.add(ring);
     }
@@ -471,7 +471,7 @@
     { w: 0.6, d: 0.48, h: [0.1, 0.22], tint: ['#b9a894', '#c7b6a1', '#ad9d8b', '#9c8f7d'] },
   ];
 
-  function buildCities() {
+  function buildCities(state) {
     cityGroup.clear();
     const rand = U.mulberry32(world.seed * 97 + 5);
     const lists = [[], [], [], []];
@@ -479,8 +479,8 @@
     for (let ci = 0; ci < C.cities.length; ci++) {
       const city = C.cities[ci];
       const Rc = cityRadius(city);
-      const cell = 0.62;
-      const n = Math.max(3, Math.round(Rc / cell));
+      const cell = 1.55;
+      const n = Math.max(3, Math.min(18, Math.round(Rc / cell)));
       const half = n * cell;
       // сетка улиц
       for (let i = -n; i <= n; i++) {
@@ -502,10 +502,10 @@
           if (rand() > density) continue;
           const type = (rand() < 0.16 ? 2 : rand() < 0.5 ? 0 : rand() < 0.75 ? 1 : 3);
           const t = BUILD_TYPES[type];
-          const w = t.w * (1.15 + rand() * 0.5);
-          const d = t.d * (1.15 + rand() * 0.5);
+          const w = t.w * 1.8 * (1.15 + rand() * 0.5);
+          const d = t.d * 1.8 * (1.15 + rand() * 0.5);
           const centerBias = 1 - distC / half;
-          const h = U.lerp(t.h[0], t.h[1], Math.pow(rand(), 1.4)) * (0.9 + centerBias * 1.15);
+          const h = U.lerp(t.h[0], t.h[1], Math.pow(rand(), 1.4)) * (0.9 + centerBias * 1.15) * 1.8;
           lists[type].push({
             x: cx + (rand() - 0.5) * 0.1, z: cz + (rand() - 0.5) * 0.1,
             w, d, h, rot: Math.round(rand() * 3) * (Math.PI / 2),
@@ -521,7 +521,7 @@
       }));
       pad.position.set(city.x, 0.026, city.y);
       cityGroup.add(pad);
-      propGroup.add(quad(city.x, city.y, cell * 1.7, cell * 1.7, 0.06, '#cfc7b4'));
+      propGroup.add(quad(city.x, city.y, cell * 1.1, cell * 1.1, 0.06, '#a9a291'));
       const parkAngle = rand() * Math.PI * 2;
       const px = city.x + Math.cos(parkAngle) * half * 0.55;
       const pz = city.y + Math.sin(parkAngle) * half * 0.55;
@@ -529,12 +529,12 @@
     }
 
     // улицы одним мешем
-    const streetMat = new THREE.MeshStandardMaterial({ color: '#3c4046', roughness: 0.95 });
+    const streetMat = new THREE.MeshStandardMaterial({ color: '#4b5058', roughness: 0.95 });
     const geos = [];
     for (const s of streetPts) {
       const len = Math.hypot(s.x2 - s.x, s.z2 - s.z);
       if (len < 0.05) continue;
-      const g = ribbon([{ x: s.x, z: s.z }, { x: s.x2, z: s.z2 }], 0.22, { y: 0.05, vScale: 1 });
+      const g = ribbon([{ x: s.x, z: s.z }, { x: s.x2, z: s.z2 }], 0.6, { y: 0.1, vScale: 1 });
       geos.push(g);
     }
     for (const g of geos) {
@@ -576,9 +576,9 @@
       const roofIm = new THREE.InstancedMesh(box, roofMat, list.length);
       for (let i = 0; i < list.length; i++) {
         const b = list[i];
-        dummy.position.set(b.x, b.h + 0.075, b.z);
+        dummy.position.set(b.x, b.h + 0.14, b.z);
         dummy.rotation.set(0, b.rot, 0);
-        dummy.scale.set(b.w * 1.05, 0.06, b.d * 1.05);
+        dummy.scale.set(b.w * 1.05, 0.16, b.d * 1.05);
         dummy.updateMatrix();
         roofIm.setMatrixAt(i, dummy.matrix);
       }
@@ -588,8 +588,8 @@
     }
 
     // деревья в парках и вдоль улиц
-    const trunkGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.12, 5);
-    const crownGeo = new THREE.IcosahedronGeometry(0.1, 0);
+    const trunkGeo = new THREE.CylinderGeometry(0.035, 0.055, 0.22, 5);
+    const crownGeo = new THREE.IcosahedronGeometry(0.17, 0);
     const trunkMat = new THREE.MeshStandardMaterial({ color: '#5b4630', roughness: 1 });
     const crownMat = new THREE.MeshStandardMaterial({ color: '#4d7a42', roughness: 1 });
     const treeCount = 46 * C.cities.length;
@@ -602,12 +602,12 @@
         const a = rand() * Math.PI * 2, r = Rc * (0.15 + rand() * 0.95);
         const x = city.x + Math.cos(a) * r, z = city.y + Math.sin(a) * r;
         const s = 0.8 + rand() * 0.9;
-        dummy.position.set(x, 0.09 * s, z);
+        dummy.position.set(x, terrainHeight(x, z, state) + 0.2 * s, z);
         dummy.rotation.set(0, rand() * 6, 0);
         dummy.scale.set(s, s, s);
         dummy.updateMatrix();
         trunks.setMatrixAt(k, dummy.matrix);
-        dummy.position.y = 0.2 * s;
+        dummy.position.y = terrainHeight(x, z, state) + 0.5 * s;
         dummy.scale.set(s * 1.6, s * 1.9, s * 1.6);
         dummy.updateMatrix();
         crowns.setMatrixAt(k, dummy.matrix);
@@ -623,26 +623,49 @@
       const spr = new THREE.Sprite(new THREE.SpriteMaterial({
         map: labelTexture(city.name, U.num(city.pop) + ' чел.'), transparent: true, depthTest: false,
       }));
-      spr.position.set(city.x, 3.6, city.y);
+      spr.position.set(city.x, 11, city.y);
       spr.renderOrder = 5;
       spr.userData.isLabel = true;
       cityGroup.add(spr);
     }
-    buildForests(rand);
+    buildForests(rand, state);
+    buildVillages(state, rand);
     cityBuilt = true;
   }
 
-  function buildForests(rand) {
+  function nearRoad(state, x, z, margin) {
+    if (!state || !state.roads) return false;
+    for (const road of state.roads) {
+      if (!road.open && !road.building) continue;
+      if (road.builtKm <= 0.2) continue;
+      const c = U.curve(road);
+      const ax = c.ax, az = c.ay, bx = c.bx, bz = c.by;
+      const dx = bx - ax, dz = bz - az;
+      const l2 = dx * dx + dz * dz || 1;
+      let t = ((x - ax) * dx + (z - az) * dz) / l2;
+      t = U.clamp(t, 0, 1);
+      if (Math.hypot(x - (ax + dx * t), z - (az + dz * t)) < margin) return true;
+    }
+    return false;
+  }
+
+  function buildForests(rand, state) {
     const trees = [];
     for (const f of world.forests) {
-      const count = Math.max(6, Math.round(f.r * f.r * 1.5));
+      const count = Math.max(6, Math.round(f.r * f.r * 0.05));
       for (let i = 0; i < count; i++) {
         const a = rand() * Math.PI * 2, r = Math.sqrt(rand()) * f.r;
-        trees.push({ x: f.x + Math.cos(a) * r, z: f.y + Math.sin(a) * r, s: 0.7 + rand() * 0.9 });
+        const tx = f.x + Math.cos(a) * r, tz = f.y + Math.sin(a) * r;
+        // не сажаем деревья на дорогу, в воду и у городов
+        if (Wd.riverDist(world, tx, tz) < 3.2) continue;
+        if (Wd.lakeFactor(world, tx, tz) > 0.05) continue;
+        if (nearRoad(state, tx, tz, 4.5)) continue;
+        if (C.cities.some((c) => U.dist(c.x, c.y, tx, tz) < cityRadius(c) * 0.9)) continue;
+        trees.push({ x: tx, z: tz, s: 0.7 + rand() * 0.9 });
       }
     }
-    const trunkGeo = new THREE.CylinderGeometry(0.035, 0.05, 0.2, 4);
-    const crownGeo = new THREE.ConeGeometry(0.16, 0.42, 6);
+    const trunkGeo = new THREE.CylinderGeometry(0.08, 0.12, 0.55, 4);
+    const crownGeo = new THREE.ConeGeometry(0.4, 1.05, 6);
     const trunkMat = new THREE.MeshStandardMaterial({ color: '#4a3826', roughness: 1 });
     const crownMat = new THREE.MeshStandardMaterial({ color: '#335c31', roughness: 1 });
     const tm = new THREE.InstancedMesh(trunkGeo, trunkMat, trees.length);
@@ -650,18 +673,61 @@
     const dummy = new THREE.Object3D();
     for (let i = 0; i < trees.length; i++) {
       const t = trees[i];
-      dummy.position.set(t.x, 0.1 * t.s, t.z);
+      const gy = terrainHeight(t.x, t.z, state);
+      dummy.position.set(t.x, gy + 0.28 * t.s, t.z);
       dummy.rotation.set(0, 0, 0);
       dummy.scale.set(t.s, t.s, t.s);
       dummy.updateMatrix();
       tm.setMatrixAt(i, dummy.matrix);
-      dummy.position.y = 0.36 * t.s;
+      dummy.position.y = gy + 0.95 * t.s;
       dummy.updateMatrix();
       cm.setMatrixAt(i, dummy.matrix);
     }
     tm.frustumCulled = false; cm.frustumCulled = false;
     propGroup.add(tm, cm);
     // поля и луга уже окрашены вершинными цветами террейна
+  }
+
+  function buildVillages(state, rand) {
+    if (!state || !state.villages || !state.villages.length) return;
+    const list = state.villages.filter((v) => !v.promoted);
+    if (!list.length) return;
+    const n = Math.min(10, 3 + Math.floor(Math.random() * 6));
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    const walls = new THREE.InstancedMesh(box, new THREE.MeshStandardMaterial({ color: '#cfc0a4', roughness: 0.95 }), list.length * n);
+    const roofs = new THREE.InstancedMesh(new THREE.ConeGeometry(0.8, 0.55, 4), new THREE.MeshStandardMaterial({ color: '#8a4b3a', roughness: 1 }), list.length * n);
+    const dummy = new THREE.Object3D();
+    let k = 0;
+    for (const v of list) {
+      const scl = 1 + Math.min(1.4, v.pop / 9000);
+      for (let i = 0; i < n; i++) {
+        const a = rand() * Math.PI * 2;
+        const r = (1.5 + rand() * 6) * scl;
+        const hx = v.x + Math.cos(a) * r, hz = v.y + Math.sin(a) * r;
+        const gy = terrainHeight(hx, hz, state);
+        const w = 0.9 + rand() * 1.1, hgt = 0.5 + rand() * 0.7;
+        dummy.position.set(hx, gy + hgt / 2, hz);
+        dummy.rotation.set(0, rand() * 3, 0);
+        dummy.scale.set(w, hgt, w * (0.8 + rand() * 0.5));
+        dummy.updateMatrix();
+        walls.setMatrixAt(k, dummy.matrix);
+        dummy.position.set(hx, gy + hgt + 0.22, hz);
+        dummy.scale.set(w * 0.82, 1, w * 0.82);
+        dummy.updateMatrix();
+        roofs.setMatrixAt(k, dummy.matrix);
+        k++;
+      }
+      const spr = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: labelTexture(v.name, U.num(Math.round(v.pop)) + ' чел.'), transparent: true, depthTest: false, opacity: 0.85,
+      }));
+      spr.position.set(v.x, 6, v.y);
+      spr.scale.set(6, 3, 1);
+      spr.renderOrder = 5;
+      cityGroup.add(spr);
+    }
+    walls.count = k; roofs.count = k;
+    walls.frustumCulled = false; roofs.frustumCulled = false;
+    cityGroup.add(walls, roofs);
   }
 
   /* -------------------------------------------------------------- дороги */
@@ -675,7 +741,7 @@
       const p = U.curvePoint(c, t);
       const river = Wd.riverDist(world, p.x, p.y);
       const lake = Wd.lakeFactor(world, p.x, p.y) > 0.15;
-      const bridge = river < 1.05 || lake;
+      const bridge = river < 2.6 || lake;
       pts.push({ x: p.x, z: p.y, t, bridge, y: bridge ? BRIDGE_Y : 0.03 });
     }
     return pts;
@@ -695,8 +761,8 @@
       const width = ROAD_W[q];
       const seg = pts.slice(0, use);
       // ровная лента: поднимаем только на мостах
-      const g = ribbon(seg, width, { vScale: 1.4 });
-      const under = ribbon(seg, width + 0.16, { vScale: 1.4 });
+      const g = ribbon(seg, width, { vScale: 0.35 });
+      const under = ribbon(seg, width + 0.28, { vScale: 0.35 });
       // подложка чуть ниже полотна, иначе z-fighting и «пунктирная» дорога
       const underPos = under.attributes.position;
       for (let i = 0; i < underPos.count; i++) underPos.setY(i, underPos.getY(i) - 0.02);
@@ -711,7 +777,7 @@
       roadGroup.add(mesh);
 
       // бортики
-      const edgeMat = new THREE.MeshStandardMaterial({ color: q >= 2 ? '#d8d4c6' : '#6b6152', roughness: 1 });
+      const edgeMat = new THREE.MeshStandardMaterial({ color: q >= 2 ? '#e6e2d2' : '#3a352c', roughness: 1 });
       for (const s of [-1, 1]) {
         const off = (s * width) / 2;
         const edge = [];
@@ -971,27 +1037,30 @@
       if (!step) continue;
       const smp = samples.get(step.roadId);
       if (!smp || smp.pts.length < 2) continue;
-      // ищем ближайшую точку осевой и ставим машину строго в полосу
-      let best = 0, bestD = Infinity;
-      for (let i = 0; i < smp.pts.length; i++) {
-        const p = smp.pts[i];
-        const d = (p.x - v.x) * (p.x - v.x) + (p.z - v.y) * (p.z - v.y);
-        if (d < bestD) { bestD = d; best = i; }
-      }
-      const p0 = smp.pts[Math.max(0, best - 1)];
-      const p1 = smp.pts[Math.min(smp.pts.length - 1, best + 1)];
-      const cur = smp.pts[best];
-      let tx = p1.x - p0.x, tz = p1.z - p0.z;
-      const l = Math.hypot(tx, tz) || 1;
-      tx /= l; tz /= l;
+      // точная позиция по кривой дороги (а не по редким точкам выборки) — машины едут плавно
+      const road = TR.Sim.roadById(state, step.roadId);
+      if (!road) continue;
+      const curve = U.curve(road);
+      const tw = step.dir === 1 ? v.t : 1 - v.t;
+      const cur = U.curvePoint(curve, tw);
+      const ang = U.curveAngle(curve, tw);
       const dir = step.dir === 1 ? 1 : -1;
       const side = dir > 0 ? 1 : -1;             // правостороннее движение
-      const off = side * smp.half * 0.48;
+      const off = side * (smp.half || 0.31) * 0.48;
+      // высота: линейно между точками моста/полотна
+      const nPts = smp.pts.length - 1;
+      const fi = U.clamp(tw, 0, 1) * nPts;
+      const i0 = Math.max(0, Math.min(nPts, Math.floor(fi)));
+      const i1 = Math.min(nPts, i0 + 1);
+      const fr = fi - i0;
+      const yA = (smp.pts[i0] && smp.pts[i0].y) || 0.03;
+      const yB = (smp.pts[i1] && smp.pts[i1].y) || yA;
+      const py = yA + (yB - yA) * fr;
       const slot = vehicleSlots.get(v.kind === 'truck' || v.kind === 'bus' || v.kind === 'ev' ? v.kind : 'car');
       if (!slot || slot.n >= 400) continue;
-      laneDummy.position.set(cur.x - tz * off, (cur.y || 0.03) + 0.005, cur.z + tx * off);
-      laneDummy.rotation.set(0, Math.atan2(tx * dir, tz * dir), 0);
-      laneDummy.scale.setScalar(v.kind === 'truck' || v.kind === 'bus' ? 1.35 : 1.15);
+      laneDummy.position.set(cur.x - Math.sin(ang) * off, py + 0.02, cur.y + Math.cos(ang) * off);
+      laneDummy.rotation.set(0, Math.atan2(Math.cos(ang) * dir, Math.sin(ang) * dir), 0);
+      laneDummy.scale.setScalar(v.kind === "truck" || v.kind === "bus" ? 3.2 : 2.5);
       laneDummy.updateMatrix();
       slot.mesh.setMatrixAt(slot.n, laneDummy.matrix);
       const c = new THREE.Color(v.color || '#d8d6ce');
@@ -1165,12 +1234,13 @@
     facilityMeshes.clear();
     buildTerrainMesh(state);
     buildWater();
-    buildCities();
+    buildCities(state);
     rebuildRoads(state || { roads: [] });
     if (state) rebuildFacilities(state);
     cityBuilt = true;
     roadSig = state ? state.graphVersion : null;
     facSig = state ? state.facVersion : null;
+    citySig = state ? state.cityVersion : -1;
   }
   R.buildTerrain = function (w) {
     if (w) world = w;
@@ -1184,6 +1254,7 @@
     syncCamera(app);
     if (!cityBuilt || roadSig === null) buildWorld(s);
     else if (roadSig !== s.graphVersion) buildWorld(s);
+    else if (citySig !== s.cityVersion) { buildCities(s); citySig = s.cityVersion; }
     if (facSig !== s.facVersion) {
       rebuildFacilities(s);
       facSig = s.facVersion;

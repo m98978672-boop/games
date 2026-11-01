@@ -15,7 +15,20 @@
 
   /* ---------------------------------------------------------------- база */
 
+  const BASE_CITIES = C.cities.map((c) => Object.assign({}, c));
+  let simWorld = null;
+
+  Sim.setWorld = function (w) { simWorld = w; };
+  Sim.getWorld = function () { return simWorld; };
+
+  Sim.resetCities = function () {
+    C.cities.length = 0;
+    BASE_CITIES.forEach((c) => C.cities.push(Object.assign({}, c)));
+  };
+
   Sim.newGame = function (seed) {
+    Sim.resetCities();
+    if (!simWorld) simWorld = TR.World.build(seed || 1);
     const s = {
       v: C.version,
       seed: seed || 1,
@@ -26,7 +39,10 @@
       level: 1,
       won: false,
       winShown: false,
-      cities: C.cities.map((c, i) => ({ id: i, pop: c.pop, sat: 1, acc: 0 })),
+      cities: C.cities.map((c, i) => ({ id: i, pop: c.pop, sat: 1, acc: 0, ruined: false, alarm: 0 })),
+      villages: [],
+      cityVersion: 1,
+      villageAcc: 0,
       roads: [],
       facilities: [],
       vehicles: [],
@@ -47,6 +63,7 @@
       nextEventDay: 1.4,
       crisis: null,
       nextCrisisDay: 7 + Math.random() * 3,
+      nextVillageDay: 1,
       rushHour: 0,
       tutorial: { step: 0, done: false },
       settings: { sound: true },
@@ -222,7 +239,7 @@
   Sim.buildRate = function (s) {
     const crew = s.upgrades.crew;
     const fleet = s.upgrades.fleet;
-    return (30 + crew * 14) * (1 + fleet * 0.2) * Sim.effectMul(s, 'build');
+    return (300 + crew * 140) * (1 + fleet * 0.2) * Sim.effectMul(s, 'build');
   };
   Sim.maxProjects = (s) => 1 + s.upgrades.fleet;
   Sim.crewFactor = (s) => 0.4 + s.upgrades.crew * 0.2;
@@ -334,8 +351,8 @@
   Sim.roadQuote = function (s, world, a, b, quality) {
     if (a === b) return { ok: false, error: 'Выберите другой город' };
     const len = U.dist(C.cities[a].x, C.cities[a].y, C.cities[b].x, C.cities[b].y);
-    if (len < 8) return { ok: false, error: 'Слишком короткий участок (минимум 8 км)' };
-    if (len > 78) return { ok: false, error: 'Слишком далеко (максимум 78 км)' };
+    if (len < 60) return { ok: false, error: 'Слишком короткий участок (минимум 60 км)' };
+    if (len > 780) return { ok: false, error: 'Слишком далеко (максимум 780 км)' };
     const dup = s.roads.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a));
     if (dup) return { ok: false, error: 'Дорога между городами уже есть', existing: dup };
     const factor = TR.World.roadFactor(world, a, b);
@@ -440,7 +457,7 @@
       return { ok: true, def };
     }
     if (t < 0.04 || t > 0.96) return { ok: false, error: 'Слишком близко к городу' };
-    const minGap = 3.2; // км между объектами
+    const minGap = 32; // км между объектами
     for (const f of list) {
       if (Math.abs(f.t - t) * road.totalKm < minGap) {
         return { ok: false, error: 'Слишком близко к другому объекту' };
@@ -448,8 +465,8 @@
     }
     if (def.cat === 'city') {
       const p = U.curvePoint(U.curve(road), t);
-      const near = C.cities.some((c) => U.dist(c.x, c.y, p.x, p.y) < 24);
-      if (!near) return { ok: false, error: 'Благоустройство — только у городов (до 24 км)' };
+      const near = C.cities.some((c) => U.dist(c.x, c.y, p.x, p.y) < 45);
+      if (!near) return { ok: false, error: 'Благоустройство — только у городов (до 45 км)' };
     }
     if (s.money < def.cost) return { ok: false, error: 'Не хватает денег: нужно ' + U.money(def.cost) };
     return { ok: true, def, road };
@@ -806,11 +823,12 @@
         const p = U.curvePoint(U.curve(road), f.t);
         const d = U.dist(c.x, c.y, p.x, p.y);
         const def = C.facilityByKey[f.type];
-        if (def.cat === 'city' && d < 26) beauty += def.beauty * (1 + 0.3 * (f.level - 1));
-        if (def.cat === 'service' && d < 16) services += 0.025;
+        if (def.cat === 'city' && d < 70) beauty += def.beauty * (1 + 0.3 * (f.level - 1));
+        if (def.cat === 'service' && d < 45) services += 0.025;
       }
       let sat = 0.95 + Math.min(0.55, beauty) + Math.min(0.15, services);
       sat *= Sim.effectMul(s, 'comfort');
+      if (s.crisis) sat *= 0.78;   // кризис бьёт по настроению горожан
       city.sat = U.clamp(sat, 0.6, 1.8);
       // города понемногу растут, если о них заботятся
       if (city.sat > 1.05) {
@@ -843,7 +861,7 @@
       for (let a = 0; a < C.cities.length; a++) {
         for (let b = a + 1; b < C.cities.length; b++) {
           const d = U.dist(C.cities[a].x, C.cities[a].y, C.cities[b].x, C.cities[b].y);
-          if (d < 10 || d > 70) continue;
+          if (d < 100 || d > 700) continue;
           if (s.roads.some((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a))) continue;
           pairs.push({ a, b, d });
         }
@@ -1065,6 +1083,9 @@
     }
     if (!s.crisis && s.time >= (s.nextCrisisDay || 7)) Sim.startCrisis(s);
 
+    // города растут, чахнут и могут погибнуть; рождаются посёлки
+    Sim.growSettlements(s, dDays);
+
     // стройка
     const projects = s.roads.filter((r) => r.building).length + s.facilities.filter((f) => !f.ready).length;
     if (projects > 0) {
@@ -1171,12 +1192,134 @@
     copy.floats = [];
     copy.sfx = [];
     copy.dailyReport = null;
+    // посёлки и выросшие города должны переживать перезагрузку
+    copy.villages = (s.villages || []).map((v) => Object.assign({}, v));
+    copy.cityList = C.cities.map((c) => ({ name: c.name, x: c.x, y: c.y, pop: c.pop }));
     return copy;
+  };
+
+
+  /* ------------------------------------------------- рост, гибель, посёлки */
+
+  function roadNear(s, x, y, radius) {
+    for (const road of s.roads) {
+      if (!road.open || road.building) continue;
+      const c = U.curve(road);
+      const dx = c.bx - c.ax, dz = c.by - c.ay;
+      const l2 = dx * dx + dz * dz || 1;
+      let t = ((x - c.ax) * dx + (y - c.ay) * dz) / l2;
+      t = U.clamp(t, 0, 1);
+      if (U.dist(x, y, c.ax + dx * t, c.ay + dz * t) < radius) return road;
+    }
+    return null;
+  }
+
+  function promoteVillage(s, v) {
+    const idx = C.cities.length;
+    C.cities.push({ name: v.name, x: v.x, y: v.y, pop: Math.round(v.pop) });
+    s.cities.push({ id: idx, pop: v.pop, sat: 1, acc: 0, ruined: false, alarm: 0 });
+    v.promoted = true;
+    v.cityIndex = idx;
+    Sim.invalidatePaths(s);      // в графе появился новый узел
+    s.cityVersion = (s.cityVersion || 0) + 1;
+    Sim.addNews(s, 'good', `Посёлок ${v.name} вырос в город: ${U.num(Math.round(v.pop))} жителей. Теперь к нему можно вести трассу.`);
+    Sim.notice(s, 'good', `${v.name} стал городом — можно строить дорогу.`);
+    s.sfx.push('good');
+  }
+
+  function spawnVillage(s) {
+    const V = C.villages;
+    const w = simWorld;
+    for (let tries = 0; tries < 160; tries++) {
+      const x = 60 + Math.random() * (C.worldW - 120);
+      const y = 60 + Math.random() * (C.worldH - 120);
+      if (w) {
+        if (TR.World.riverDist(w, x, y) < 8) continue;
+        if (TR.World.lakeFactor(w, x, y) > 0.02) continue;
+      }
+      if (C.cities.some((c) => U.dist(c.x, c.y, x, y) < V.minDistCity)) continue;
+      if (s.villages.some((v) => U.dist(v.x, v.y, x, y) < V.minDistVillage)) continue;
+      const used = new Set(s.villages.map((v) => v.name));
+      const names = V.names.filter((n) => !used.has(n));
+      const name = names.length ? names[Math.floor(Math.random() * names.length)] : 'Посёлок ' + (s.villages.length + 1);
+      const village = { id: s.villages.length + 1, name, x, y, pop: V.startPop * (0.7 + Math.random() * 0.8), born: s.time, promoted: false };
+      s.villages.push(village);
+      s.cityVersion = (s.cityVersion || 0) + 1;
+      Sim.addNews(s, 'good', `У трассы появился посёлок ${name}: ${U.num(Math.round(village.pop))} жителей. Если рядом пройдёт дорога, он вырастет в город.`);
+      Sim.notice(s, 'info', `Новый посёлок: ${name}.`);
+      return village;
+    }
+    return null;
+  }
+
+  Sim.spawnVillage = spawnVillage;
+  Sim.promoteVillage = promoteVillage;
+
+  Sim.growSettlements = function (s, dDays) {
+    const G = C.cityGrowth;
+    if (!s.villages) s.villages = [];
+    let dirty = false;
+    for (let i = 0; i < C.cities.length; i++) {
+      const c = C.cities[i], st = s.cities[i];
+      if (!st) continue;
+      if (st.ruined) {
+        const road = s.roads.find((r) => r.open && (r.a === i || r.b === i));
+        if (road && Math.random() < G.recoverChance * dDays) {
+          st.ruined = false; st.pop = 2200; st.sat = 1.1; st.alarm = 0;
+          c.pop = 2200;
+          dirty = true;
+          Sim.addNews(s, 'good', `Город ${c.name} оживает: сюда снова пришли люди.`);
+          Sim.notice(s, 'good', `${c.name} снова живёт.`);
+        }
+        continue;
+      }
+      const sat = st.sat || 1;
+      if (sat > G.goodSat) st.pop *= 1 + G.gainRate * dDays * Math.min(2.2, 0.5 + (sat - G.goodSat) / 0.25);
+      else if (sat < G.badSat) st.pop *= 1 - G.lossRate * dDays;
+      st.pop = U.clamp(st.pop, 900, G.maxPop);
+      const crisisBad = s.crisis ? 1.7 : 1;
+      if (sat < G.ruinSat) st.alarm = (st.alarm || 0) + dDays * crisisBad;
+      else st.alarm = Math.max(0, (st.alarm || 0) - dDays * 0.9);
+      if (st.alarm > G.ruinDays && Math.random() < G.ruinChance * dDays * crisisBad) {
+        st.ruined = true; st.pop = 40; st.alarm = 0; st.ruinDay = s.time;
+        dirty = true;
+        Sim.addNews(s, 'bad', `Город ${c.name} опустел: люди уехали из-за кризиса. Дороги к нему теперь ведут в пустоту.`);
+        Sim.notice(s, 'bad', `${c.name} уничтожен кризисом!`);
+        s.sfx.push('bad');
+      }
+      c.pop = Math.round(st.pop);
+      if (!st.shownPop || st.pop > st.shownPop * 1.2 || st.pop < st.shownPop * 0.8) {
+        st.shownPop = st.pop; dirty = true;
+      }
+    }
+
+    const V = C.villages;
+    for (const v of s.villages) {
+      if (v.promoted) continue;
+      const near = roadNear(s, v.x, v.y, 14);
+      v.pop *= 1 + (near ? V.growth : -V.decay) * dDays;
+      v.pop = U.clamp(v.pop, 150, 40000);
+      if (v.pop >= V.cityAt) { promoteVillage(s, v); dirty = true; }
+    }
+
+    // новый посёлок — шанс 10 % за игровой день
+    s.villageAcc = (s.villageAcc || 0) + dDays;
+    if (s.villageAcc >= 1) {
+      s.villageAcc = 0;
+      const alive = s.villages.filter((v) => !v.promoted).length;
+      if (alive < V.max && Math.random() < V.chance) spawnVillage(s);
+    }
+    if (dirty) s.cityVersion = (s.cityVersion || 0) + 1;
   };
 
   Sim.deserialize = function (data) {
     if (!data || data.v !== C.version) return null;
     const s = Object.assign(Sim.newGame(data.seed), data);
+    if (data.cityList && data.cityList.length) {
+      C.cities.length = 0;
+      data.cityList.forEach((c) => C.cities.push(Object.assign({}, c)));
+    }
+    if (!s.villages) s.villages = [];
     s.vehicles = [];
     s.notices = [];
     s.floats = [];

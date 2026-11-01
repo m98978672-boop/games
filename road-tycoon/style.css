@@ -1008,6 +1008,14 @@ html[data-device="desktop"] html[data-device="mobile"] #save-indicator { display
 html[data-device="desktop"] html[data-device="mobile"] .stat.lvl { display: block !important; }
 html[data-device="desktop"] html[data-device="mobile"] .stat:nth-child(3) { display: block !important; }
 html[data-device="desktop"] html[data-device="mobile"] .stat:nth-child(4) { display: block !important; }
+.zoom-pad {
+  position: fixed; right: 14px; bottom: 132px; z-index: 24;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.zoom-pad .icon-btn { width: 38px; height: 38px; font-size: 16px; }
+html[data-device="mobile"] .zoom-pad { right: 10px; bottom: 300px; }
+@media (max-width: 1040px) { .zoom-pad { right: 10px; bottom: 300px; } }
+
 /* Раскладка «телефон» по кнопке смены устройства (работает на любом экране) */
 html[data-device="mobile"] .side-toggle { display: grid; }
 html[data-device="mobile"] .topbar { min-height: 56px; padding: 7px 10px; gap: 10px; flex-wrap: wrap; }

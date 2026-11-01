@@ -36,7 +36,7 @@ function planRoad() {
     for (let b = 0; b < C.cities.length; b++) {
       if (comp[b] === main) continue;
       const d = dist(a, b);
-      if (d < 8 || d > 78) continue;
+      if (d < 60 || d > 780) continue;
       if (!best || d < best.d) best = { a, b, d };
     }
   }

@@ -51,6 +51,45 @@ function findFreePair(s) {
   return null;
 }
 
+test('города растут и могут погибнуть от кризисов', () => {
+  const s = Sim.newGame(31);
+  const before = s.cities[0].pop;
+  for (let i = 0; i < 20 * DAY_TICKS; i++) {
+    s.cities.forEach((c) => { c.sat = 1.4; });
+    Sim.tick(s, 1);
+  }
+  ok(s.cities[0].pop > before, 'при хорошем довольстве город растёт');
+  // долгий кризис при низком довольстве убивает город
+  s.cities.forEach((c) => { c.sat = 0.7; c.alarm = 20; });
+  s.crisis = { id: 'storm', title: 'Шторм', text: '', until: s.time + 30, mods: { upkeep: 1.5 } };
+  let ruined = false;
+  for (let i = 0; i < 4000 && !ruined; i++) {
+    Sim.tick(s, 1);
+    ruined = s.cities.some((c) => c.ruined);
+  }
+  ok(ruined, 'город может опустеть из-за кризиса');
+  ok(s.cities.every((c) => isFinite(c.pop)), 'население остаётся числом');
+});
+
+test('посёлки появляются и растут у дороги до города', () => {
+  const s = Sim.newGame(32);
+  s.villages = [];
+  const v = Sim.spawnVillage(s);
+  ok(v && s.villages.length === 1, 'посёлок появляется');
+  const road = s.roads[0];
+  const c = TR.Util.curve(road);
+  v.x = (c.ax + c.bx) / 2;
+  v.y = (c.ay + c.by) / 2;
+  v.pop = C.villages.cityAt - 100;
+  v.promoted = false;
+  const citiesBefore = C.cities.length;
+  tickDays(s, 2);
+  ok(v.promoted, 'у дороги посёлок дорастает до города');
+  eq(C.cities.length, citiesBefore + 1, 'город добавился в список');
+  eq(s.cities.length, C.cities.length, 'у города есть состояние');
+  ok(s.roads.length > 0, 'сеть на месте');
+});
+
 console.log('\nТРАССА — тесты симуляции\n');
 
 test('новая игра: деньги, сеть, города, уровень', () => {
