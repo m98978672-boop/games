@@ -523,6 +523,15 @@ body.placing #map { cursor: crosshair; }
 }
 .notice-line.bad { color: #ffb0a4; background: rgba(226, 96, 79, 0.1); border-color: rgba(226, 96, 79, 0.28); }
 
+.crisis {
+  margin-top: 8px; padding: 7px 9px; border-radius: 8px;
+  background: rgba(200, 70, 60, 0.14); border: 1px solid rgba(226, 100, 84, 0.45);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.crisis b { font-size: 10px; color: #ff9d8b; letter-spacing: 0.03em; }
+.crisis span { font-size: 9px; color: #d9c3bd; line-height: 1.35; }
+.crisis i { font-size: 8.5px; color: #ffb9a8; font-style: normal; text-transform: uppercase; letter-spacing: 0.08em; }
+
 .earners { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 6px; }
 .earners-title { display: block; font-size: 8px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted-2); margin-bottom: 3px; }
 .earner { display: flex; justify-content: space-between; gap: 6px; font-size: 9.5px; padding: 1px 0; color: #b9c3c8; }
@@ -927,6 +936,161 @@ body.placing #map { cursor: crosshair; }
   .panel.tools { bottom: 52px; max-height: 46vh; }
   .modal { max-height: 96vh; }
 }
+
+/* Раскладка «компьютер» по кнопке: возвращаем базовые значения, даже если экран узкий */
+/* верхняя панель на телефоне: кнопки переносятся, лишние убраны (они есть в боковой панели) */
+html[data-device="mobile"] .top-actions { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; max-width: 100%; }
+html[data-device="mobile"] #btn-save, html[data-device="mobile"] #btn-report { display: none; }
+html[data-device="desktop"] #btn-save, html[data-device="desktop"] #btn-report { display: grid !important; }
+@media (max-width: 1040px) {
+  .top-actions { flex-wrap: wrap; justify-content: flex-end; row-gap: 6px; max-width: 100%; }
+  #btn-save, #btn-report { display: none; }
+}
+html[data-device="desktop"] body { min-width: 0; }
+html[data-device="desktop"] .side-toggle { display: none !important; }
+html[data-device="desktop"] .topbar { min-height: 62px !important; padding: 8px 14px !important; gap: 14px !important; }
+html[data-device="desktop"] .brand-text b { font-size: 16px !important; letter-spacing: 0.16em !important; }
+html[data-device="desktop"] .brand-text i { display: block !important; }
+html[data-device="desktop"] .top-stats { flex: 1 !important; }
+html[data-device="desktop"] .top-stats::-webkit-scrollbar { display: block !important; }
+html[data-device="desktop"] .stat { padding: 2px 9px !important; }
+html[data-device="desktop"] .stat > span { font-size: 8.5px !important; }
+html[data-device="desktop"] .stat b { font-size: 14px !important; }
+html[data-device="desktop"] .stat.money b { font-size: 17px !important; }
+html[data-device="desktop"] .speed-badge { display: block !important; }
+html[data-device="desktop"] .icon-btn { width: 33px !important; height: 33px !important; font-size: 14px !important; }
+html[data-device="desktop"] .speed-group button { width: 34px !important; height: 33px !important; font-size: 11.5px !important; }
+html[data-device="desktop"] .panel.side { display: flex !important; right: 14px !important; width: 300px !important; max-height: calc(100vh - 190px) !important; }
+html[data-device="desktop"] body.side-open .panel.side { display: block !important; }
+html[data-device="desktop"] .panel.tools { bottom: 104px !important; left: 14px !important; width: 278px !important; padding: 9px !important; }
+html[data-device="desktop"] .road-list { display: flex !important; gap: 5px !important; }
+html[data-device="desktop"] .road-card { padding: 7px 9px !important; gap: 9px !important; }
+html[data-device="desktop"] .road-swatch { width: 22px !important; height: 22px !important; }
+html[data-device="desktop"] .road-name { font-size: 12px !important; }
+html[data-device="desktop"] .road-meta { font-size: 9.5px !important; }
+html[data-device="desktop"] .road-arrow { display: block !important; }
+html[data-device="desktop"] .lock { font-size: 8.5px !important; padding: 2px 5px !important; }
+html[data-device="desktop"] .obj-grid { grid-template-columns: 1fr 1fr !important; }
+html[data-device="desktop"] .obj-name { font-size: 10.5px !important; }
+html[data-device="desktop"] .company-stats { grid-template-columns: 1fr 1fr !important; }
+html[data-device="desktop"] .tabs { grid-template-columns: 1fr 1fr !important; top: -9px !important; padding: 4px 0 7px !important; }
+html[data-device="desktop"] .tabs button { font-size: 10.5px !important; padding: 7px 4px !important; }
+html[data-device="desktop"] .bottom-bar { left: 290px !important; right: 326px !important; bottom: 12px !important; }
+html[data-device="desktop"] .news { display: block !important; }
+html[data-device="desktop"] .toasts { left: 290px !important; bottom: 186px !important; max-width: 340px !important; z-index: 30 !important; }
+html[data-device="desktop"] .toasts .toast:not(:last-child) { display: block !important; }
+html[data-device="desktop"] .toast { padding: 7px 10px !important; font-size: 10.5px !important; gap: 7px !important; }
+html[data-device="desktop"] .daily-foot { display: block !important; }
+html[data-device="desktop"] #save-indicator { display: block !important; }
+html[data-device="desktop"] .modal.wide { width: 740px !important; }
+html[data-device="desktop"] .help-grid { grid-template-columns: 1fr 1fr !important; gap: 18px !important; }
+html[data-device="desktop"] .intro-steps { grid-template-columns: repeat(3, 1fr) !important; }
+html[data-device="desktop"] .stat.lvl { display: block !important; }
+html[data-device="desktop"] .brand .logo { width: 36px !important; height: 36px !important; font-size: 19px !important; }
+html[data-device="desktop"] .stat:nth-child(3) { display: block !important; }
+html[data-device="desktop"] .stat:nth-child(4) { display: block !important; }
+html[data-device="desktop"] .modal { padding: 20px !important; }
+html[data-device="desktop"] .modal h1 { font-size: 34px !important; }
+html[data-device="desktop"] .hero-sub { font-size: 12px !important !important; }
+html[data-device="desktop"] .wide-grid { grid-template-columns: repeat(3, 1fr) !important; }
+html[data-device="desktop"] html[data-device="mobile"] .side-toggle { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .brand-text i { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .top-stats::-webkit-scrollbar { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .speed-badge { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .panel.side { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] body.side-open .panel.side { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .road-list { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .road-arrow { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .news { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .toasts .toast:not(:last-child) { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .daily-foot { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] #save-indicator { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .stat.lvl { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .stat:nth-child(3) { display: block !important; }
+html[data-device="desktop"] html[data-device="mobile"] .stat:nth-child(4) { display: block !important; }
+/* Раскладка «телефон» по кнопке смены устройства (работает на любом экране) */
+html[data-device="mobile"] .side-toggle { display: grid; }
+html[data-device="mobile"] .topbar { min-height: 56px; padding: 7px 10px; gap: 10px; flex-wrap: wrap; }
+html[data-device="mobile"] .brand-text b { font-size: 14px; }
+html[data-device="mobile"] .brand-text i { display: none; }
+html[data-device="mobile"] .top-stats { order: 3; width: 100%; flex: 1 1 100%; padding-bottom: 2px; overflow-x: auto; scrollbar-width: none; }
+html[data-device="mobile"] .top-stats::-webkit-scrollbar { display: none; }
+html[data-device="mobile"] .stat { padding: 1px 10px; }
+html[data-device="mobile"] .stat > span { font-size: 8px; }
+html[data-device="mobile"] .stat b { font-size: 12.5px; }
+html[data-device="mobile"] .stat.money b { font-size: 15px; }
+html[data-device="mobile"] .top-actions { margin-left: auto; }
+html[data-device="mobile"] .speed-badge { display: none; }
+html[data-device="mobile"] .icon-btn { width: 30px; height: 30px; font-size: 12.5px; }
+html[data-device="mobile"] .speed-group button { width: 30px; height: 30px; font-size: 10.5px; }
+html[data-device="mobile"] .panel.side {
+    display: none;
+    top: 184px;
+    bottom: 62px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: none;
+    z-index: 28;
+  }
+html[data-device="mobile"] body.side-open .panel.side { display: flex; }
+html[data-device="mobile"] .panel.tools {
+    top: auto;
+    bottom: 56px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: 37vh;
+    padding: 7px;
+  }
+html[data-device="mobile"] .road-list { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+html[data-device="mobile"] .road-card { padding: 6px; gap: 6px; }
+html[data-device="mobile"] .road-swatch { width: 16px; height: 16px; }
+html[data-device="mobile"] .road-name { font-size: 10.5px; }
+html[data-device="mobile"] .road-meta { font-size: 8.5px; }
+html[data-device="mobile"] .road-arrow { display: none; }
+html[data-device="mobile"] .lock { font-size: 7.5px; padding: 1px 3px; }
+html[data-device="mobile"] .obj-grid { grid-template-columns: repeat(3, 1fr); }
+html[data-device="mobile"] .obj-name { font-size: 9.5px; }
+html[data-device="mobile"] .company-stats { grid-template-columns: 1fr 1fr; }
+html[data-device="mobile"] .tabs {
+    grid-template-columns: repeat(4, 1fr);
+    top: -7px;
+    padding: 3px 0 6px;
+  }
+html[data-device="mobile"] .tabs button { font-size: 9.5px; padding: 6px 2px; }
+html[data-device="mobile"] .bottom-bar { left: 8px; right: 8px; bottom: 8px; }
+html[data-device="mobile"] .news { display: none; }
+html[data-device="mobile"] .hint { font-size: 10px; padding: 6px 9px; }
+html[data-device="mobile"] .toasts { left: 8px; right: 8px; top: 132px; bottom: auto; max-width: none; max-height: 46px; overflow: hidden; z-index: 34; }
+html[data-device="mobile"] .toasts .toast:not(:last-child) { display: none; }
+html[data-device="mobile"] .toast { padding: 5px 8px; font-size: 10px; gap: 5px; }
+html[data-device="mobile"] .daily { top: auto; bottom: calc(37vh + 66px); left: 8px; right: 8px; transform: none; width: auto; z-index: 26; }
+html[data-device="mobile"] .daily-foot { display: none; }
+html[data-device="mobile"] #save-indicator { display: none; }
+html[data-device="mobile"] .modal.wide { width: 100%; }
+html[data-device="mobile"] .help-grid { grid-template-columns: 1fr; gap: 4px; }
+html[data-device="mobile"] .intro-steps { grid-template-columns: 1fr; }
+html[data-device="mobile"] .stat.lvl { display: none; }
+html[data-device="mobile"] .brand .logo { width: 30px; height: 30px; font-size: 16px; }
+html[data-device="mobile"] .brand-text b { font-size: 13px; letter-spacing: 0.1em; }
+html[data-device="mobile"] .stat:nth-child(3), html[data-device="mobile"] .stat:nth-child(4) { display: none; }
+html[data-device="mobile"] .modal { padding: 15px; }
+html[data-device="mobile"] .modal h1 { font-size: 25px; }
+html[data-device="mobile"] .hero-sub { font-size: 11px !important; }
+html[data-device="mobile"] .panel.side { top: 184px; }
+html[data-device="mobile"] .obj-grid { grid-template-columns: repeat(3, 1fr); }
+html[data-device="mobile"] .panel.side { top: 184px; }
+html[data-device="mobile"] .wide-grid { grid-template-columns: 1fr 1fr; }
+html[data-device="mobile"] .day, html[data-device="mobile"] #hud-day { font-size: 11.5px; }
+html[data-device="mobile"] .icon-btn { width: 36px; height: 36px; font-size: 14px; }
+html[data-device="mobile"] .speed-group button { width: 38px; height: 36px; font-size: 11.5px; }
+html[data-device="mobile"] .tabs button { font-size: 11px; padding: 9px 2px; }
+html[data-device="mobile"] .obj-card { padding: 8px; }
+html[data-device="mobile"] .obj-name { font-size: 10px; }
+html[data-device="mobile"] .tools, html[data-device="mobile"] .panel.tools { max-height: 42vh; }
+html[data-device="mobile"] .panel.side { top: 190px; }
+html[data-device="mobile"] .toasts { top: 138px; }
 
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }

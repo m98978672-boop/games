@@ -45,6 +45,8 @@
       notices: [], floats: [], sfx: [], news: [],
       dailyReport: null,
       nextEventDay: 1.4,
+      crisis: null,
+      nextCrisisDay: 7 + Math.random() * 3,
       rushHour: 0,
       tutorial: { step: 0, done: false },
       settings: { sound: true },
@@ -234,7 +236,7 @@
       // содержание дороги + износ от проезжающих машин
       sum += (r.totalKm * rt.upkeep + (r.trafficToday || 0) * (rt.wear || 0)) * cut;
     }
-    return sum;
+    return sum * Sim.crisisMul(s, 'upkeep');
   };
   Sim.facilityUpkeep = function (s) {
     let sum = 0;
@@ -244,7 +246,7 @@
       const def = C.facilityByKey[f.type];
       sum += def.upkeep * (1 + 0.35 * (f.level - 1)) * cut;
     }
-    return sum;
+    return sum * Sim.crisisMul(s, 'upkeep');
   };
   Sim.salaries = function (s) {
     return s.upgrades.crew * 190;
@@ -262,7 +264,7 @@
       const def = C.facilityByKey[f.type];
       if (def.subsidy) sum += def.subsidy * (1 + 0.4 * (f.level - 1));
     }
-    return sum;
+    return sum * Sim.crisisMul(s, 'subsidy');
   };
 
   Sim.companyValue = function (s) {
@@ -294,6 +296,28 @@
     }
   };
 
+  Sim.crisisMul = function (s, key) {
+    if (!s.crisis || !s.crisis.mods) return 1;
+    const v = s.crisis.mods[key];
+    return typeof v === 'number' ? v : 1;
+  };
+
+  Sim.startCrisis = function (s, forceId) {
+    const c = forceId ? C.crises.find((x) => x.id === forceId) : pickWeighted(C.crises, 'weight');
+    if (!c) return null;
+    s.crisis = { id: c.id, title: c.title, text: c.text, until: s.time + c.days, mods: Object.assign({}, c.mods) };
+    s.nextCrisisDay = s.time + c.days + 6 + Math.random() * 7;
+    Sim.notice(s, 'bad', `Кризис: ${c.title}. ${c.text}`);
+    Sim.addNews(s, 'bad', `Кризис: «${c.title}». ${c.text}`);
+    s.sfx.push('bad');
+    return s.crisis;
+  };
+
+  Sim.crisisInfo = function (s) {
+    if (!s.crisis) return null;
+    return { title: s.crisis.title, text: s.crisis.text, daysLeft: Math.max(0, s.crisis.until - s.time) };
+  };
+
   Sim.effectMul = function (s, kind) {
     let mul = 1;
     for (const e of s.effects) if (e.kind === kind) mul *= e.mul;
@@ -315,7 +339,7 @@
     const dup = s.roads.find((r) => (r.a === a && r.b === b) || (r.a === b && r.b === a));
     if (dup) return { ok: false, error: 'Дорога между городами уже есть', existing: dup };
     const factor = TR.World.roadFactor(world, a, b);
-    const cost = Math.round(len * C.roadTypes[quality].cost * factor);
+    const cost = Math.round(len * C.roadTypes[quality].cost * factor * Sim.crisisMul(s, 'buildCost'));
     if (quality === 3 && s.level < 4) return { ok: false, error: 'Автобан откроется на 4 уровне' };
     if (quality === 2 && s.level < 2) return { ok: false, error: 'Асфальт откроется на 2 уровне' };
     return { ok: true, cost, len, factor };
@@ -344,11 +368,12 @@
     return { ok: true, road, cost: q.cost };
   };
 
-  Sim.upgradeCost = function (road, quality) {
+  Sim.upgradeCost = function (road, quality, s) {
     const cur = C.roadTypes[road.quality];
     const target = C.roadTypes[quality];
     if (quality <= road.quality) return 0;
-    return Math.round(road.totalKm * (target.cost - cur.cost) * target.upgrade);
+    const mult = s ? Sim.crisisMul(s, 'buildCost') : 1;
+    return Math.round(road.totalKm * (target.cost - cur.cost) * target.upgrade * mult);
   };
 
   Sim.upgradeRoad = function (s, roadId, quality) {
@@ -359,7 +384,7 @@
     if (C.roadTypes[quality].unlock > s.level) return { ok: false, error: `Откроется на ${C.roadTypes[quality].unlock} уровне` };
     const active = s.roads.filter((r) => r.building).length + s.facilities.filter((f) => !f.ready).length;
     if (active >= Sim.maxProjects(s)) return { ok: false, error: 'Все бригады заняты' };
-    const cost = Sim.upgradeCost(road, quality);
+    const cost = Sim.upgradeCost(road, quality, s);
     if (s.money < cost) return { ok: false, error: 'Не хватает денег: нужно ' + U.money(cost) };
     s.money -= cost;
     road.building = true;
@@ -679,7 +704,7 @@
     let multiplier = 1;
     multiplier *= 1 + 0.55 * (facility.level - 1);
     multiplier *= 1 + 0.1 * s.upgrades.quality;
-    multiplier *= Sim.effectMul(s, 'income');
+    multiplier *= Sim.effectMul(s, 'income') * Sim.crisisMul(s, 'income');
     if (def.nightBonus && U.isNight(s.time)) multiplier *= def.nightBonus;
     if (U.isNight(s.time) && def.want === 'food') multiplier *= 1.15;
 
@@ -969,7 +994,7 @@
     const upkeep = Sim.roadUpkeep(s) + Sim.facilityUpkeep(s);
     const salaries = Sim.salaries(s);
     const interest = Sim.interest(s);
-    const tax = s.stats.incomeToday * C.taxRate;
+    const tax = s.stats.incomeToday * C.taxRate * Sim.crisisMul(s, 'tax');
     const expense = upkeep + salaries + interest + tax;
     s.money -= expense;
     s.stats.totalExpense += expense;
@@ -1030,6 +1055,16 @@
     const prevDay = Math.floor(s.time);
     s.time += dDays;
 
+    // кризисы
+    if (s.crisis && s.time >= s.crisis.until) {
+      const t = s.crisis.title;
+      s.crisis = null;
+      Sim.notice(s, 'good', `Кризис «${t}» закончился.`);
+      Sim.addNews(s, 'good', `Кризис «${t}» закончился — экономика восстанавливается.`);
+      s.sfx.push('good');
+    }
+    if (!s.crisis && s.time >= (s.nextCrisisDay || 7)) Sim.startCrisis(s);
+
     // стройка
     const projects = s.roads.filter((r) => r.building).length + s.facilities.filter((f) => !f.ready).length;
     if (projects > 0) {
@@ -1080,7 +1115,7 @@
     if (reopened) Sim.invalidatePaths(s);
 
     // трафик
-    const trafficMul = Sim.effectMul(s, 'traffic');
+    const trafficMul = Sim.effectMul(s, 'traffic') * Sim.crisisMul(s, 'traffic');
     for (let i = 0; i < C.cities.length; i++) {
       const city = s.cities[i];
       const hasRoad = Sim.neighbors(s).get(i).length > 0;
