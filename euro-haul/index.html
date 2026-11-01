@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#0a0f12">
+  <meta name="description" content="ЕВРОТРАК — браузерный 3D-симулятор европейских грузоперевозок: 139 городов, 26 стран, трафик, погода, экономика и карьера. Без установки.">
+  <title>ЕВРОТРАК — симулятор грузоперевозок по Европе</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1216'/%3E%3Cpath d='M6 20h12v6H6z' fill='%23e9e5d8'/%3E%3Cpath d='M18 12h5l3 4v10h-8z' fill='%2348b39a'/%3E%3Ccircle cx='10' cy='26' r='2.4' fill='%23111'/%3E%3Ccircle cx='23' cy='26' r='2.4' fill='%23111'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="scene" aria-label="Трёхмерный вид дороги"></canvas>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div class="hud-top">
+      <div class="hud-left">
+        <div class="chip chip-money"><span id="hud-money">9 200 €</span></div>
+        <div class="chip chip-level"><span id="hud-level">1</span><div class="xp-bar"><i id="hud-xp"></i></div></div>
+        <div class="chip chip-clock"><span id="hud-clock">08:00</span><small id="hud-day">День 1</small></div>
+        <div class="chip chip-weather"><span id="hud-weather">Ясно</span><small id="hud-temp">17°</small></div>
+      </div>
+      <div class="hud-right">
+        <div class="speed-limit" id="speed-limit">80</div>
+        <button class="hud-btn" id="btn-pause" title="Пауза">II</button>
+      </div>
+    </div>
+
+    <div class="route-advisor" id="route-advisor">
+      <div class="ra-header"><span id="ra-phase">РЕЙС</span><b id="ra-eta">—</b></div>
+      <div class="ra-dest"><span id="ra-from">—</span><i>→</i><span id="ra-to">—</span></div>
+      <div class="ra-progress"><i id="ra-progress"></i></div>
+      <div class="ra-stats">
+        <div><small>ОСТАЛОСЬ</small><b id="ra-left">—</b></div>
+        <div><small>ДО СРОКА</small><b id="ra-deadline">—</b></div>
+        <div><small>ГРУЗ</small><b id="ra-cargo">—</b></div>
+      </div>
+      <div class="ra-action" id="ra-action"></div>
+    </div>
+
+    <canvas id="minimap" width="230" height="230" aria-label="Мини-карта"></canvas>
+
+    <div class="dashboard">
+      <div class="dash-speed">
+        <div class="speed-value"><b id="dash-speed">0</b><span>км/ч</span></div>
+        <div class="gear"><small>ПЕРЕДАЧА</small><b id="dash-gear">N</b><span id="dash-mode">АВТО</span></div>
+      </div>
+      <div class="dash-gauges">
+        <div class="gauge"><small>ОБОРОТЫ</small><div class="bar"><i id="bar-rpm"></i></div><b id="val-rpm">700</b></div>
+        <div class="gauge"><small>ТОПЛИВО</small><div class="bar fuel"><i id="bar-fuel"></i></div><b id="val-fuel">420 л</b></div>
+        <div class="gauge"><small>ОЖ</small><div class="bar temp"><i id="bar-temp"></i></div><b id="val-temp">82°C</b></div>
+        <div class="gauge"><small>СОСТОЯНИЕ</small><div class="bar cond"><i id="bar-cond"></i></div><b id="val-cond">88%</b></div>
+        <div class="gauge"><small>УСТАЛОСТЬ</small><div class="bar fatigue"><i id="bar-fatigue"></i></div><b id="val-fatigue">0%</b></div>
+      </div>
+    </div>
+
+    <div class="hint" id="hint">W — газ · S — тормоз · A/D — руль · Esc — пауза</div>
+    <div class="toast-stack" id="toast-stack"></div>
+
+    <div class="work-overlay hidden" id="work-overlay">
+      <b id="work-title">Погрузка…</b>
+      <div class="work-bar"><i id="work-bar"></i></div>
+    </div>
+
+    <div class="cruise-indicator hidden" id="cruise-indicator">КРУИЗ <b id="cruise-speed">0</b> км/ч</div>
+    <div class="damage-flash" id="damage-flash"></div>
+
+    <div class="touch">
+      <div class="touch-steer">
+        <button data-touch="left">◀</button>
+        <button data-touch="right">▶</button>
+      </div>
+      <div class="touch-pedals">
+        <button data-touch="brake">ТОРМОЗ</button>
+        <button data-touch="gas">ГАЗ</button>
+      </div>
+      <div class="touch-aux">
+        <button data-act="interact" title="Взаимодействие">E</button>
+        <button data-act="camera" title="Камера">📷</button>
+        <button data-act="touch-cruise" title="Круиз">КР</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Главное меню ============ -->
+  <div id="screen-menu" class="screen">
+    <div class="menu-bg"></div>
+    <div class="menu-inner">
+      <div class="logo">
+        <span class="logo-eyebrow">СИМУЛЯТОР ЕВРОПЕЙСКИХ ГРУЗОПЕРЕВОЗОК</span>
+        <h1>ЕВРО<span>ТРАК</span></h1>
+        <p>139 городов · 26 стран · 30 видов груза · 12-ступенчатая КПП</p>
+      </div>
+      <div class="menu-buttons" id="menu-buttons">
+        <button class="btn btn-primary" id="btn-continue">Продолжить карьеру</button>
+        <button class="btn" id="btn-new">Новая карьера</button>
+        <button class="btn" id="btn-profiles">Профили</button>
+        <button class="btn" id="btn-settings">Настройки</button>
+        <button class="btn btn-ghost" id="btn-about">Об игре и управлении</button>
+      </div>
+      <div class="menu-foot">
+        <span>Версия 1.0 · работает офлайн в браузере</span>
+        <span id="menu-save-info">Сохранений пока нет</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Гараж / хаб ============ -->
+  <div id="screen-garage" class="screen hidden">
+    <div class="garage-bg"></div>
+    <header class="garage-top">
+      <div class="brand"><span>ЕВРО</span>ТРАК</div>
+      <div class="garage-profile">
+        <div class="gp-name"><b id="g-name">Водитель</b><small id="g-company">Auriga Logistics</small></div>
+        <div class="gp-level"><span>УР. <b id="g-level">1</b></span><div class="xp-bar"><i id="g-xp"></i></div></div>
+        <div class="gp-money" id="g-money">9 200 €</div>
+      </div>
+      <button class="hud-btn" id="g-menu" title="Главное меню">≡</button>
+    </header>
+
+    <div class="garage-body">
+      <aside class="garage-side">
+        <div class="location-card">
+          <small>ВЫ НАХОДИТЕСЬ</small>
+          <b id="g-city">Берлин</b>
+          <span id="g-country">Германия</span>
+          <div class="loc-time">🕒 <span id="g-clock">08:00</span> · День <span id="g-day">1</span></div>
+        </div>
+        <nav class="garage-nav">
+          <button data-nav="jobs" class="active">📦 Рынок грузов</button>
+          <button data-nav="garage">🚚 Мой тягач</button>
+          <button data-nav="dealer">🏢 Автосалон</button>
+          <button data-nav="drivers">👥 Водители и гаражи</button>
+          <button data-nav="map">🗺 Карта Европы</button>
+          <button data-nav="stats">📊 Статистика</button>
+          <button data-nav="settings">⚙ Настройки</button>
+        </nav>
+        <div class="garage-active" id="garage-active"></div>
+      </aside>
+
+      <main class="garage-main" id="garage-main">
+        <!-- содержимое рендерится в ui.js -->
+      </main>
+    </div>
+  </div>
+
+  <!-- ============ Загрузка ============ -->
+  <div id="screen-loading" class="screen hidden">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <b id="loading-title">Строим маршрут…</b>
+      <span id="loading-sub">Прокладываем дорогу через Европу</span>
+    </div>
+  </div>
+
+  <!-- ============ Модальное окно ============ -->
+  <div id="modal-root" class="modal-root hidden">
+    <div class="modal-backdrop"></div>
+    <section class="modal" role="dialog" aria-modal="true">
+      <header class="modal-head">
+        <div><span class="eyebrow" id="modal-eyebrow">ИНФОРМАЦИЯ</span><h2 id="modal-title">Заголовок</h2></div>
+        <button class="icon-btn" id="modal-close" aria-label="Закрыть">×</button>
+      </header>
+      <div class="modal-body" id="modal-body"></div>
+      <footer class="modal-foot" id="modal-foot"></footer>
+    </section>
+  </div>
+
+  <div id="webgl-error" class="screen hidden">
+    <div class="loading-box">
+      <b>Не удалось запустить 3D</b>
+      <p>Похоже, браузер не поддерживает WebGL или он отключён. Включите аппаратное ускорение или откройте игру в другом браузере.</p>
+    </div>
+  </div>
+</div>
+<script type="module" src="game.bundle.js"></script>
+</body>
+</html>
