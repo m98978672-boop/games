@@ -5,6 +5,7 @@ import { materials, setNightIntensity, textures } from './materials.js';
 
 import { CITY_BY_ID, COUNTRIES } from '../data/cities.js';
 import { mergeStatic } from '../core/merge-static.js';
+import { buildCountryside, gableGeometry } from './countryside.js';
 
 const STEP = 12;
 // Дальность построения мира зависит от качества: на телефоне меньше объектов.
@@ -375,7 +376,7 @@ export class RoadWorld {
     // --- Дальние холмы: держат линию горизонта и дают глубину кадру.
     if (!this.hillGeo) {
       this.hillGeo = new THREE.SphereGeometry(1, 14, 9, 0, Math.PI * 2, 0, Math.PI / 2);
-      this.hillMat = new THREE.MeshStandardMaterial({ color: 0x6f8468, roughness: 1, flatShading: true });
+      this.hillMat = new THREE.MeshStandardMaterial({ color: 0x93a08a, roughness: 1, flatShading: true });
     }
     {
       const hills = new THREE.InstancedMesh(this.hillGeo, this.hillMat, 24);
@@ -383,11 +384,11 @@ export class RoadWorld {
       const hp = route.pointAt((s0 + s1) / 2);
       for (let i = 0; i < 24; i++) {
         const a = (i / 24) * Math.PI * 2 + hash2(i, 5) * 0.22;
-        const rad = 640 + hash2(i, 9) * 1150;
-        const w = 110 + hash2(i, 13) * 260;
+        const rad = 1500 + hash2(i, 9) * 1400;
+        const w = 200 + hash2(i, 13) * 420;
         hd.position.set(hp.x + Math.cos(a) * rad, hp.y - 16, hp.z + Math.sin(a) * rad);
         hd.rotation.set(0, hash2(i, 17) * 6.28, 0);
-        hd.scale.set(w, 26 + hash2(i, 19) * 46, w * 0.85);
+        hd.scale.set(w, 20 + hash2(i, 19) * 34, w * 0.85);
         hd.updateMatrix();
         hills.setMatrixAt(i, hd.matrix);
       }
@@ -483,7 +484,7 @@ export class RoadWorld {
         leavesA.setColorAt(leafN, color);
         dummy.position.set(
           p.x + Math.cos(p.hdg) * (lat + 1.0 * scale),
-          y + (3.15 + hash2(idx, 53) * 0.4) * scale,
+          y + (2.9 + hash2(idx, 53) * 0.35) * scale,
           p.z - Math.sin(p.hdg) * (lat + 1.0 * scale)
         );
         dummy.scale.setScalar(scale * 0.82);
@@ -494,7 +495,7 @@ export class RoadWorld {
         leavesM.setColorAt(leafN, color);
         dummy.position.set(
           p.x + Math.cos(p.hdg) * (lat - 0.9 * scale),
-          y + (3.55 + hash2(idx, 63) * 0.5) * scale,
+          y + (3.25 + hash2(idx, 63) * 0.4) * scale,
           p.z - Math.sin(p.hdg) * (lat - 0.9 * scale)
         );
         dummy.scale.setScalar(scale * 0.7);
@@ -620,6 +621,16 @@ export class RoadWorld {
       this.buildRest(rest);
     }
     this.buildCitiesNear(s0, s1);
+    // Деревенский пейзаж: живые изгороди по межам, перелески, фермы, заборы.
+    // Строится после трассы и до склейки — иначе каждый кустик = отдельный draw call.
+    buildCountryside({
+      route,
+      s0,
+      s1,
+      group: this.group,
+      mats: m,
+      terrainOffset,
+    });
     for (const depot of this.depots) {
       if (depot.s < s0 - 100 || depot.s > s1 + 100) continue;
       this.buildDepot(depot);
@@ -848,7 +859,7 @@ export class RoadWorld {
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
-      opacity: 0.9,
+      opacity: 0.72,
     });
     for (const mark of route.marks) {
       if (mark.s < s0 - 2000 || mark.s > s1 + 2500) continue;
@@ -860,7 +871,10 @@ export class RoadWorld {
       const walls = new THREE.InstancedMesh(wallGeo, facadeMat, count);
       const scales = new Float32Array(count * 3);
       wallGeo.setAttribute('aFacadeScale', new THREE.InstancedBufferAttribute(scales, 3));
-      const roofs = new THREE.InstancedMesh(wallGeo, m.roofLight, count);
+      // Крыши — двускатные: плоская плита над домом сразу читается как «коробка».
+      const roofGeo = gableGeometry();
+      const roofs = new THREE.InstancedMesh(roofGeo, m.roof, count);
+      roofs.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
       const dummy = new THREE.Object3D();
       const color = new THREE.Color();
       let placed = 0;
@@ -887,10 +901,11 @@ export class RoadWorld {
         scales[placed * 3] = w / 12.8;
         scales[placed * 3 + 1] = h / 15;
         scales[placed * 3 + 2] = d / 12.8;
-        dummy.position.y = y + h + 0.6;
-        dummy.scale.set(w * 1.04, 1.2, d * 1.04);
+        dummy.position.y = y + h;
+        dummy.scale.set(w * 1.12, 1.8 + w * 0.07, d * 1.08);
         dummy.updateMatrix();
         roofs.setMatrixAt(placed, dummy.matrix);
+        roofs.setColorAt(placed, color.setHSL(0.03 + r() * 0.05, 0.18 + r() * 0.2, 0.28 + r() * 0.16));
         color.setRGB(0.82 + r() * 0.18, 0.8 + r() * 0.2, 0.78 + r() * 0.2);
         walls.setColorAt(placed, color);
         placed++;

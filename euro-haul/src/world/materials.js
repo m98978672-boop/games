@@ -511,7 +511,7 @@ export function materials() {
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
-    mirror: new THREE.MeshStandardMaterial({ color: 0xb9c6cd, map: mirrorTexture(), metalness: 0.75, roughness: 0.16, envMapIntensity: 0.5 }),
+    mirror: new THREE.MeshStandardMaterial({ color: 0x7f8b93, map: mirrorTexture(), metalness: 0.68, roughness: 0.3, envMapIntensity: 0.7 }),
     lamp: new THREE.MeshStandardMaterial({ color: 0xfff2c9, emissive: 0xffd88a, emissiveIntensity: 0.8, roughness: 0.4 }),
     lampOff: new THREE.MeshStandardMaterial({ color: 0xb9b6a8, roughness: 0.6 }),
     redLight: new THREE.MeshStandardMaterial({ color: 0xd33a2c, emissive: 0x8c1408, emissiveIntensity: 0.9 }),
