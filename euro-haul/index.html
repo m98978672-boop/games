@@ -59,6 +59,12 @@
     <div class="hint" id="hint">W — газ · S — тормоз · A/D — руль · Esc — пауза</div>
     <div class="toast-stack" id="toast-stack"></div>
 
+    <div class="indicators">
+      <span id="ind-left" class="ind">◀</span>
+      <span id="ind-right" class="ind">▶</span>
+    </div>
+    <div class="windshield" id="windshield" aria-hidden="true"></div>
+
     <div class="work-overlay hidden" id="work-overlay">
       <b id="work-title">Погрузка…</b>
       <div class="work-bar"><i id="work-bar"></i></div>
@@ -175,6 +181,6 @@
     </div>
   </div>
 </div>
-<script type="module" src="game.bundle.js"></script>
+<script src="game.bundle.js" defer></script>
 </body>
 </html>

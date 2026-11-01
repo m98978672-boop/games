@@ -3,9 +3,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "esbuild src/main.js --bundle --minify --format=esm --outfile=game.bundle.js",
-    "dev": "esbuild src/main.js --bundle --format=esm --outfile=game.bundle.js --watch",
-    "test": "node tests/smoke.mjs"
+    "build": "esbuild src/main.js --bundle --minify --format=iife --outfile=game.bundle.js",
+    "dev": "esbuild src/main.js --bundle --format=iife --outfile=game.bundle.js --watch",
+    "test": "node tests/smoke.mjs",
+    "test:physics": "node tests/autopilot.mjs",
+    "preview": "node tests/render-preview.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"

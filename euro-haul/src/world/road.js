@@ -113,6 +113,38 @@ function signTexture(text, sub, color = '#1f5c3a') {
   return tex;
 }
 
+function cameraSignTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const c = canvas.getContext('2d');
+  c.fillStyle = '#f7f5ec';
+  c.beginPath();
+  c.roundRect ? c.roundRect(10, 48, 236, 160, 14) : c.rect(10, 48, 236, 160);
+  c.fill();
+  c.strokeStyle = '#c8362c';
+  c.lineWidth = 10;
+  c.beginPath();
+  c.roundRect ? c.roundRect(16, 54, 224, 148, 12) : c.rect(16, 54, 224, 148);
+  c.stroke();
+  c.fillStyle = '#2a2f33';
+  c.fillRect(44, 106, 84, 58);
+  c.beginPath();
+  c.moveTo(128, 118);
+  c.lineTo(176, 96);
+  c.lineTo(176, 174);
+  c.lineTo(128, 152);
+  c.closePath();
+  c.fill();
+  c.fillStyle = '#c8362c';
+  c.font = 'bold 30px system-ui, Arial';
+  c.textAlign = 'center';
+  c.fillText('ФОТО', 128, 210);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
 function speedSignTexture(limit) {
   const key = 'speed:' + limit;
   const canvas = document.createElement('canvas');
@@ -431,10 +463,12 @@ export class RoadWorld {
       checkpoints.push({ s: w.from - 110, limit: 30 });
       checkpoints.push({ s: w.to + 40, limit: 80 });
     }
+    if (!this.cameraSign) this.cameraSign = cameraSignTexture();
     for (const cp of checkpoints) {
       if (cp.s < s0 || cp.s > s1) continue;
       const tex = this.signTextures().speed.get(cp.limit) || this.speedTexture(cp.limit);
       addSign(cp.s, 7.0, tex, 1.7, 1.7, 3.4);
+      if (cp.limit < 80) addSign(cp.s - 220, 7.0, this.cameraSign, 2.0, 2.0, 3.6);
     }
   }
 

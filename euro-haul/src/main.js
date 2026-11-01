@@ -134,6 +134,9 @@ class Game {
 
   // ---------------------------------------------------------------- Input
   bindInput() {
+    window.addEventListener('gamepadconnected', () => {
+      this.ui.toast('Геймпад подключён: RT — газ, LT — тормоз, стик — руль', 'good', 5000);
+    });
     window.addEventListener('keydown', (e) => {
       if (e.target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
       if (this.state !== 'driving') return;
@@ -164,6 +167,12 @@ class Game {
           break;
         case 'KeyP':
           this.takeScreenshot();
+          break;
+        case 'Comma':
+          this.toggleIndicator(-1);
+          break;
+        case 'Period':
+          this.toggleIndicator(1);
           break;
         case 'KeyR':
           if (this.truck.toggleReverse()) {
@@ -205,6 +214,48 @@ class Game {
     return codes.some((c) => this.input.keys.has(c));
   }
 
+  pollGamepad() {
+    if (!navigator.getGamepads) return null;
+    const pads = navigator.getGamepads();
+    const pad = pads && (pads[0] || pads[1] || pads[2] || pads[3]);
+    if (!pad) return null;
+    const dead = 0.16;
+    const axis = Math.abs(pad.axes[0] || 0) > dead ? pad.axes[0] : 0;
+    const rt = pad.buttons[7]?.value || 0;
+    const lt = pad.buttons[6]?.value || 0;
+    return { steer: axis, throttle: rt, brake: lt, buttons: pad.buttons };
+  }
+
+  padButton(index) {
+    const pad = this.pollGamepad();
+    return pad ? !!pad.buttons[index]?.pressed : false;
+  }
+
+  handlePadButtons() {
+    const prev = this.padPrev || {};
+    const check = (idx, name, action) => {
+      const now = this.padButton(idx);
+      if (now && !prev[name]) action();
+      prev[name] = now;
+    };
+    check(3, 'camera', () => this.cycleCamera());
+    check(2, 'interact', () => this.interact());
+    check(9, 'pause', () => this.togglePause());
+    check(0, 'cruise', () => this.toggleCruise());
+    check(1, 'lights', () => this.toggleLights());
+    check(12, 'up', () => { if (!this.truck.autoGearbox) { this.truck.shiftUp(); this.audio.shift(); } });
+    check(13, 'down', () => { if (!this.truck.autoGearbox) { this.truck.shiftDown(); this.audio.shift(); } });
+    this.padPrev = prev;
+  }
+
+  toggleIndicator(dir) {
+    if (!this.truck) return;
+    this.indicator = this.indicator === dir ? 0 : dir;
+    this.indicatorTimer = 0;
+    this.blinkPhase = 0;
+    if (this.indicator) this.ui.toast(dir < 0 ? 'Левый поворотник' : 'Правый поворотник', 'info', 1200);
+  }
+
   controls() {
     const t = this.input.touch;
     let throttle = 0;
@@ -215,6 +266,12 @@ class Game {
     if (this.truck) this.truck.handbrake = this.key('Space');
     if (this.key('KeyA', 'ArrowLeft') || t.KeyA) steer -= 1;
     if (this.key('KeyD', 'ArrowRight') || t.KeyD) steer += 1;
+    const pad = this.pollGamepad();
+    if (pad) {
+      if (Math.abs(pad.steer) > 0) steer = clamp(steer + pad.steer, -1, 1);
+      if (pad.throttle > 0.05) throttle = Math.max(throttle, pad.throttle);
+      if (pad.brake > 0.05) brake = Math.max(brake, pad.brake);
+    }
     return { throttle, brake, steer };
   }
 
@@ -649,6 +706,8 @@ class Game {
     this.road.weatherWetness = env.wet;
     this.road.update(this.truck.s, dt);
 
+    this.handlePadButtons();
+    this.updateIndicators(dt);
     const controls = this.controls();
     if (this.work) {
       controls.throttle = 0;
@@ -727,6 +786,19 @@ class Game {
     this.profile.stats.distance += moved / 1000;
     if (env.night > 0.5) this.nightDistance += moved;
     this.profile.stats.topSpeed = Math.max(this.profile.stats.topSpeed || 0, this.truck.speed * 3.6);
+
+    // Поворотники и капли на стекле.
+    const leftEl = $('ind-left');
+    const rightEl = $('ind-right');
+    const blinkOn = this.indicator && Math.floor(this.blinkPhase / 0.31) % 2 === 0;
+    if (leftEl) leftEl.className = 'ind' + (blinkOn && this.indicator < 0 ? ' on-left' : '');
+    if (rightEl) rightEl.className = 'ind' + (blinkOn && this.indicator > 0 ? ' on-right' : '');
+    const shield = $('windshield');
+    if (shield) {
+      const interior = this.cameraMode === 'interior' || this.cameraMode === 'hood';
+      const rain = env.rain || 0;
+      shield.className = 'windshield' + (interior && rain > 0.55 ? ' heavy' : interior && rain > 0.08 ? ' wet' : '');
+    }
 
     // HUD.
     this.lastHudUpdate += dt;
@@ -844,6 +916,21 @@ class Game {
     this.camera.fov = lerp(this.camera.fov, targetFov, 0.08);
     this.camera.updateProjectionMatrix();
     void root;
+  }
+
+  updateIndicators(dt) {
+    if (!this.truck) return;
+    this.indicatorTimer = (this.indicatorTimer || 0) + dt;
+    if (this.indicator && this.indicatorTimer > 18) this.indicator = 0; // автозатухание
+    this.blinkPhase = (this.blinkPhase || 0) + dt;
+    if (this.indicator && this.blinkPhase > 0.62) {
+      this.blinkPhase = 0;
+      this.audio.indicator();
+    }
+    // Автоотключение после завершения манёвра.
+    if (this.indicator && this.truck.speed > 6 && this.indicatorTimer > 6 && Math.abs(this.truck.steer) < 0.02) {
+      this.indicator = 0;
+    }
   }
 
   cycleCamera() {
