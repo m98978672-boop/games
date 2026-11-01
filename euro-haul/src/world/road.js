@@ -563,8 +563,8 @@ export class RoadWorld {
     }
 
     // Кусты у обочины.
-    const bushGeo = new THREE.IcosahedronGeometry(0.62, 0);
-    const bushCount = 190;
+    const bushGeo = new THREE.IcosahedronGeometry(0.62, 1);
+    const bushCount = 340;
     const bushes = new THREE.InstancedMesh(bushGeo, m.leaves[1], bushCount);
     bushes.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(bushCount * 3), 3);
     let bi = 0;
@@ -578,10 +578,10 @@ export class RoadWorld {
       const scale = 0.55 + hash2(idx, 79) * 0.9;
       dummy.position.set(p.x + Math.cos(p.hdg) * lat, p.y + terrainOffset(ss, lat) + 0.35 * scale, p.z - Math.sin(p.hdg) * lat);
       dummy.rotation.set(0, hash2(idx, 83) * 6.28, 0);
-      dummy.scale.set(scale * 1.3, scale * 0.9, scale * 1.3);
+      dummy.scale.set(scale * 1.5, scale * 0.75, scale * 1.5);
       dummy.updateMatrix();
       bushes.setMatrixAt(bi, dummy.matrix);
-      color.setHSL(0.25 + hash2(idx, 89) * 0.07, 0.32 + hash2(idx, 97) * 0.2, 0.26 + hash2(idx, 101) * 0.1);
+      color.setHSL(0.24 + hash2(idx, 89) * 0.08, 0.2 + hash2(idx, 97) * 0.2, 0.55 + hash2(idx, 101) * 0.22);
       bushes.setColorAt(bi, color);
       bi++;
     }
@@ -898,9 +898,9 @@ export class RoadWorld {
       // Дальний силуэт города.
       if ((CITY_BY_ID.get(mark.id)?.size || 1) >= 2) {
         for (const side of [-1, 1]) {
-          const sk = new THREE.Mesh(new THREE.PlaneGeometry(900, 120), m.skyline);
+          const sk = new THREE.Mesh(new THREE.PlaneGeometry(1100, 92), m.skyline);
           const sp = route.pointAt(mark.s + side * 420);
-          sk.position.set(sp.x + Math.cos(sp.hdg) * side * 260, sp.y + 46, sp.z - Math.sin(sp.hdg) * side * 260);
+          sk.position.set(sp.x + Math.cos(sp.hdg) * side * 520, sp.y + 30, sp.z - Math.sin(sp.hdg) * side * 520);
           sk.rotation.y = sp.hdg + Math.PI / 2;
           this.group.add(sk);
         }
