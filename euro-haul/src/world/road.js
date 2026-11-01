@@ -993,7 +993,9 @@ export class RoadWorld {
       if (mark.s < s0 - 2000 || mark.s > s1 + 2500) continue;
       const around = Math.min(1500, Math.max(500, 420 * (CITY_BY_ID.get(mark.id)?.size || 1)));
       const r = rng(mark.s * 31 + 7);
-      const count = Math.round(around / 46);
+      const citySize = CITY_BY_ID.get(mark.id)?.size || 1;
+      const count = Math.round(around / 26);
+      const clusters = Math.max(3, Math.round(count / 5));
       const wallGeo = new THREE.BoxGeometry(1, 1, 1);
       const facadeMat = m.facades[Math.abs(Math.round(mark.s)) % m.facades.length];
       const walls = new THREE.InstancedMesh(wallGeo, facadeMat, count);
@@ -1003,40 +1005,65 @@ export class RoadWorld {
       const roofGeo = gableGeometry();
       const roofs = new THREE.InstancedMesh(roofGeo, m.roof, count);
       roofs.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+      // Площадка под кварталом: без неё дома «стоят в траве» посреди поля.
+      const pads = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1), m.concrete, clusters);
       const dummy = new THREE.Object3D();
+      dummy.rotation.order = 'YXZ';
       const color = new THREE.Color();
       let placed = 0;
-      for (let i = 0; i < count; i++) {
-        const ds = (r() - 0.35) * around;
-        const ss = mark.s + ds;
-        if (ss < 0 || ss > route.length) continue;
+      let padCount = 0;
+      // Кварталы: 3–7 домов вдоль короткой улицы, повёрнутой почти параллельно трассе.
+      for (let c = 0; c < clusters && placed < count; c++) {
+        const ss = mark.s + (r() - 0.42) * around;
+        if (ss < 40 || ss > route.length - 40) continue;
         const side = r() > 0.5 ? 1 : -1;
-        const lat = -side * (44 + r() * 190);
+        const lat0 = -side * (56 + r() * 130);
         const p = route.pointAt(ss);
-        const sizeFactor = CITY_BY_ID.get(mark.id)?.size || 1;
-        const w = 8 + r() * 16;
-        // Города — не небоскрёбы у трассы: 2–6 этажей, изредка башня.
-        const tall = r() > 0.9 ? 2.4 : 1;
-        const h = (6.5 + r() * (9 + sizeFactor * 4)) * tall;
-        const d = 8 + r() * 16;
-        const y = p.y + terrainOffset(ss, lat);
-        dummy.position.set(p.x + Math.cos(p.hdg) * lat, y + h / 2, p.z - Math.sin(p.hdg) * lat);
-        dummy.rotation.set(0, p.hdg + (r() - 0.5) * 0.4, 0);
-        dummy.scale.set(w, h, d);
+        const fx = Math.sin(p.hdg);
+        const fz = Math.cos(p.hdg);
+        const lx = Math.cos(p.hdg);
+        const lz = -Math.sin(p.hdg);
+        const yaw = p.hdg + (r() - 0.5) * 0.22;
+        const padW = 44 + r() * 30;
+        const padD = 30 + r() * 18;
+        const baseY = p.y + terrainOffset(ss, lat0);
+        dummy.position.set(p.x + lx * lat0, baseY + 0.06, p.z + lz * lat0);
+        dummy.rotation.set(-Math.PI / 2, yaw, 0);
+        dummy.scale.set(padW, padD, 1);
         dummy.updateMatrix();
-        walls.setMatrixAt(placed, dummy.matrix);
-        // Одно окно ≈ 3.2 м, этаж ≈ 3 м → масштаб UV по габаритам дома.
-        scales[placed * 3] = w / 12.8;
-        scales[placed * 3 + 1] = h / 15;
-        scales[placed * 3 + 2] = d / 12.8;
-        dummy.position.y = y + h;
-        dummy.scale.set(w * 1.12, 1.8 + w * 0.07, d * 1.08);
-        dummy.updateMatrix();
-        roofs.setMatrixAt(placed, dummy.matrix);
-        roofs.setColorAt(placed, color.setHSL(0.03 + r() * 0.05, 0.18 + r() * 0.2, 0.28 + r() * 0.16));
-        color.setRGB(0.82 + r() * 0.18, 0.8 + r() * 0.2, 0.78 + r() * 0.2);
-        walls.setColorAt(placed, color);
-        placed++;
+        pads.setMatrixAt(padCount++, dummy.matrix);
+
+        const n = Math.min(count - placed, 3 + Math.floor(r() * 5));
+        for (let i = 0; i < n; i++) {
+          const along = (i - (n - 1) / 2) * (11 + r() * 5);
+          const off = (r() - 0.5) * padD * 0.62;
+          const lat = lat0 + off;
+          const bx = p.x + lx * lat + fx * along;
+          const bz = p.z + lz * lat + fz * along;
+          const by = p.y + terrainOffset(ss, lat);
+          const w = 8 + r() * 12;
+          const d = 8 + r() * 12;
+          // Небоскрёбы — редкость: 2–6 этажей, изредка башня.
+          const tall = r() > 0.9 ? 2.2 : 1;
+          const h = (7 + r() * (9 + citySize * 4)) * tall;
+          dummy.position.set(bx, by + h / 2, bz);
+          dummy.rotation.set(0, yaw + (r() - 0.5) * 0.12, 0);
+          dummy.scale.set(w, h, d);
+          dummy.updateMatrix();
+          walls.setMatrixAt(placed, dummy.matrix);
+          // Одно окно ≈ 3.2 м, этаж ≈ 3 м → масштаб UV по габаритам дома.
+          scales[placed * 3] = w / 12.8;
+          scales[placed * 3 + 1] = h / 15;
+          scales[placed * 3 + 2] = d / 12.8;
+          dummy.position.y = by + h;
+          dummy.scale.set(w * 1.1, 1.6 + w * 0.06, d * 1.06);
+          dummy.updateMatrix();
+          roofs.setMatrixAt(placed, dummy.matrix);
+          roofs.setColorAt(placed, color.setHSL(0.03 + r() * 0.05, 0.18 + r() * 0.2, 0.28 + r() * 0.16));
+          color.setRGB(0.82 + r() * 0.18, 0.8 + r() * 0.2, 0.78 + r() * 0.2);
+          walls.setColorAt(placed, color);
+          placed++;
+        }
       }
       // Дальний силуэт города.
       if ((CITY_BY_ID.get(mark.id)?.size || 1) >= 2) {
@@ -1050,11 +1077,14 @@ export class RoadWorld {
       }
       walls.count = placed;
       roofs.count = placed;
+      pads.count = padCount;
       walls.instanceMatrix.needsUpdate = true;
       roofs.instanceMatrix.needsUpdate = true;
+      pads.instanceMatrix.needsUpdate = true;
       if (walls.instanceColor) walls.instanceColor.needsUpdate = true;
       wallGeo.attributes.aFacadeScale.needsUpdate = true;
       this.group.add(walls, roofs);
+      if (padCount) this.group.add(pads);
     }
     // Склейка статичных мешей трассы: вместо сотен draw call — десятки.
     mergeStatic(this.group);
