@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { UI } from './ui/ui.js';
 import { RoadWorld } from './world/road.js';
-import { TruckView } from './world/truck3d.js';
+import { TruckView, EYE } from './world/truck3d.js';
 import { Traffic } from './world/traffic.js';
 import { SkySystem } from './world/sky.js';
 import { buildRouteGeometry, buildNetwork, networkRouteKm, speedLimitAt } from './world/roadnet.js';
@@ -151,6 +151,7 @@ class Game {
       }
     }
     if (this.sky && this.sky.setQuality) this.sky.setQuality(q);
+    if (this.road) this.applyWorldShadows();
     if (!this.cameraUserSet) this.cameraMode = this.touchEnabled() ? 'chase' : 'interior';
     if (this.traffic && this.traffic.count !== this.trafficCount()) {
       const route = this.route;
@@ -190,8 +191,10 @@ class Game {
       this.renderer.setSize(window.innerWidth, window.innerHeight, false);
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      this.renderer.toneMappingExposure = 1.05;
-      this.renderer.shadowMap.enabled = false;
+      this.renderer.toneMappingExposure = 0.98;
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      this.renderer.shadowMap.autoUpdate = true;
     } catch (err) {
       console.error(err);
       $('webgl-error').classList.remove('hidden');
@@ -201,7 +204,12 @@ class Game {
     this.camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.08, 5200);
     this.camera.position.set(0, 3, 0);
     this.sky = new SkySystem(this.scene, this.renderer);
+    this.sky.enableShadows();
+    this.buildContactShadow();
     this.truckView = new TruckView(this.scene, 0x2f7fa8);
+    this.truckView.root.traverse((o) => {
+      if (o.isMesh) o.castShadow = true;
+    });
     this.truckView.setInteriorVisible(true);
     this.road = null;
     this.traffic = null;
@@ -229,6 +237,97 @@ class Game {
     };
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
+  }
+
+  /** Мягкое затемнение под тягачом и прицепом: без него тени «висят в воздухе». */
+  buildContactShadow() {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 256;
+    const g = c.getContext('2d');
+    const grd = g.createLinearGradient(0, 0, 0, 256);
+    grd.addColorStop(0, 'rgba(0,0,0,0)');
+    grd.addColorStop(0.12, 'rgba(0,0,0,0.55)');
+    grd.addColorStop(0.5, 'rgba(0,0,0,0.62)');
+    grd.addColorStop(0.88, 'rgba(0,0,0,0.55)');
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 64, 256);
+    const grd2 = g.createLinearGradient(0, 0, 64, 0);
+    grd2.addColorStop(0, 'rgba(0,0,0,0)');
+    grd2.addColorStop(0.22, 'rgba(0,0,0,1)');
+    grd2.addColorStop(0.78, 'rgba(0,0,0,1)');
+    grd2.addColorStop(1, 'rgba(0,0,0,0)');
+    g.globalCompositeOperation = 'destination-in';
+    g.fillStyle = grd2;
+    g.fillRect(0, 0, 64, 256);
+    const tex = new THREE.CanvasTexture(c);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      transparent: true,
+      depthWrite: false,
+      opacity: 0.5,
+      color: 0x0b0f12,
+      blending: THREE.NormalBlending,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+    });
+    // Кабина и прицеп — две отдельные «капли» тени.
+    this.contactShadow = new THREE.Group();
+    const cabShadow = new THREE.Mesh(new THREE.PlaneGeometry(6.2, 12.5), mat);
+    cabShadow.rotation.x = -Math.PI / 2;
+    cabShadow.position.set(0, 0.045, 2.2);
+    const trailerShadow = new THREE.Mesh(new THREE.PlaneGeometry(4.6, 24), mat);
+    trailerShadow.rotation.x = -Math.PI / 2;
+    trailerShadow.position.set(0, 0.04, -12.6);
+    cabShadow.renderOrder = 2;
+    trailerShadow.renderOrder = 2;
+    this.contactShadow.add(cabShadow, trailerShadow);
+    this.contactShadow.visible = false;
+    this.contactShadowMat = mat;
+    this.scene.add(this.contactShadow);
+  }
+
+  /** Что отбрасывает и что принимает тень в мире дороги. */
+  applyWorldShadows() {
+    const q = this.quality || this.resolveQuality();
+    // Тени включены на всех устройствах: на низком качестве — карта 512 и узкий охват.
+    const on = true;
+    if (!this.renderer) return;
+    this.renderer.shadowMap.enabled = on;
+    if (this.sky && this.sky.sunLight) {
+      this.sky.sunLight.castShadow = on;
+      this.sky.shadowQuality(q);
+    }
+    const mark = (root, cast, receive) => {
+      if (!root) return;
+      root.traverse((o) => {
+        if (!o.isMesh) return;
+        o.castShadow = on && cast(o);
+        o.receiveShadow = on && receive(o);
+      });
+    };
+    if (this.road) {
+      this.road.shadowOn = on;
+      if (this.road.setQuality) this.road.setQuality(q);
+      this.road.applyShadowFlags();
+    }
+    mark(this.traffic?.group, () => true, () => true);
+    if (this.truckView) {
+      this.truckView.root.traverse((o) => {
+        if (!o.isMesh) return;
+        let inside = false;
+        let node = o;
+        while (node) {
+          if (node === this.truckView.interior) { inside = true; break; }
+          node = node.parent;
+        }
+        // Салон не отбрасывает тень (иначе артефакты на самом себе), но принимает:
+        // так кузов затеняет приборку и салон не «светится» на солнце.
+        o.castShadow = on && !inside;
+        o.receiveShadow = on;
+      });
+    }
   }
 
   // ---------------------------------------------------------------- Input
@@ -362,19 +461,35 @@ class Game {
     const t = this.input.touch;
     let throttle = 0;
     let brake = 0;
-    let steer = 0;
+    let raw = 0;
     if (this.key('KeyW', 'ArrowUp') || t.KeyW) throttle = 1;
     if (this.key('KeyS', 'ArrowDown') || t.KeyS) brake = 1;
+    if (this.key('Space')) throttle = 0;
     if (this.truck) this.truck.handbrake = this.key('Space');
-    if (this.key('KeyA', 'ArrowLeft') || t.KeyA) steer -= 1;
-    if (this.key('KeyD', 'ArrowRight') || t.KeyD) steer += 1;
+    if (this.key('KeyA', 'ArrowLeft') || t.KeyA) raw -= 1;
+    if (this.key('KeyD', 'ArrowRight') || t.KeyD) raw += 1;
     const pad = this.pollGamepad();
     if (pad) {
-      if (Math.abs(pad.steer) > 0) steer = clamp(steer + pad.steer, -1, 1);
+      if (Math.abs(pad.steer) > 0) raw = clamp(raw + pad.steer, -1, 1);
       if (pad.throttle > 0.05) throttle = Math.max(throttle, pad.throttle);
       if (pad.brake > 0.05) brake = Math.max(brake, pad.brake);
     }
-    return { throttle, brake, steer };
+    // Клавиатура даёт только -1/0/1. Чтобы машина не «дёргалась», ввод руля
+    // сглаживается: полный ход примерно за 0.42 с, возврат — за 0.28 с,
+    // а перекладка из стороны в сторону — быстрее (контрруль).
+    const dt = clamp(this.frameDt || 0.016, 0.001, 0.05);
+    const prev = this.steerAxis || 0;
+    let target = clamp(raw, -1, 1);
+    // Мягкая кривая: половина хода руля = примерно 0.42 усилия (для геймпада).
+    target = Math.sign(target) * Math.pow(Math.abs(target), 1.35);
+    let rate;
+    if (target === 0) rate = 5.2;
+    else if (prev * target < 0) rate = 7.4;
+    else rate = 3.3;
+    const maxStep = rate * dt;
+    this.steerAxis = prev + clamp(target - prev, -maxStep, maxStep);
+    if (Math.abs(this.steerAxis) < 0.004) this.steerAxis = 0;
+    return { throttle, brake, steer: this.steerAxis };
   }
 
   // ---------------------------------------------------------------- Меню и профили
@@ -663,7 +778,7 @@ class Game {
     this.deliveryS = clamp((lastMark?.s || route.length) - 700, 300, route.length - 60);
     this.phaseStartS = this.startS;
     this.truck.s = this.startS;
-    this.truck.lat = 1.85;
+    this.truck.lat = -1.85;
     this.playerSpeed = 0;
     if (job.playerS != null) {
       this.truck.s = clamp(job.playerS, 20, route.length - 40);
@@ -680,6 +795,7 @@ class Game {
     this.road = new RoadWorld(this.scene, route, this.depots);
     this.traffic = new Traffic(this.scene, route, this.trafficCount());
     this.traffic.reset(route);
+    this.applyWorldShadows();
 
     this.setWeather(this.pickWeather(), true);
     this.drivingDistance = 0;
@@ -721,6 +837,11 @@ class Game {
 
   // ---------------------------------------------------------------- Погода и время
   pickWeather() {
+    // Первый выезд — всегда солнечный: первое впечатление задаёт картинка.
+    if ((this.profile?.stats?.jobs || 0) < 1 && !this.weatherRolled) {
+      this.weatherRolled = true;
+      return 'clear';
+    }
     const r = Math.random();
     if (r < 0.36) return 'clear';
     if (r < 0.62) return 'cloudy';
@@ -786,6 +907,20 @@ class Game {
       this.fps = this.fpsFrames / this.fpsAccum;
       this.fpsAccum = 0;
       this.fpsFrames = 0;
+      // Автоснижение качества, если устройство не тянет (только в режиме «авто»).
+      const auto = (this.settings?.quality || 'auto') === 'auto';
+      if (auto && this.state === 'driving') {
+        this.lowFpsTime = this.fps < 26 ? (this.lowFpsTime || 0) + 0.5 : 0;
+        if (this.lowFpsTime > 4 && !this.degradedShadows && this.renderer?.shadowMap.enabled) {
+          this.degradedShadows = true;
+          this.renderer.shadowMap.enabled = false;
+          if (this.sky?.sunLight) this.sky.sunLight.castShadow = false;
+          if (this.contactShadowMat) this.contactShadowMat.opacity = Math.min(0.7, this.contactShadowMat.opacity + 0.12);
+        } else if (this.lowFpsTime > 9 && !this.degradedPixelRatio) {
+          this.degradedPixelRatio = true;
+          this.renderer.setPixelRatio(Math.max(0.65, (this.renderer.getPixelRatio() || 1) * 0.78));
+        }
+      }
     }
     if (this.state === 'driving' && !this.paused && this.truck) {
       this.updateDriving(dt);
@@ -800,6 +935,7 @@ class Game {
   }
 
   updateDriving(dt) {
+    this.frameDt = dt;
     this.advanceClock(dt);
     this.sky.setTime(this.clock.minutes);
     const env = this.sky.update(dt, this.camera, this.clock.minutes);
@@ -960,7 +1096,7 @@ class Game {
       },
       dt,
       {
-        steer: this.truck.steer / 0.5,
+        steer: this.truck.steer / 0.55,
         brake: this.truck.brake,
         rain: this.sky.weather.rain,
         trailerType: this.job?.trailer || 'curtain',
@@ -973,6 +1109,14 @@ class Game {
       eta: 'ETA ' + fmtTime(this.clock.minutes + this.etaMinutes()),
     });
     this.truckPos.set(pos.x, pos.y, pos.z);
+    if (this.sky) this.sky.focus.copy(this.truckPos);
+    if (this.contactShadow) {
+      this.contactShadow.visible = this.state === 'driving';
+      this.contactShadow.position.copy(pos);
+      this.contactShadow.rotation.y = p.hdg + this.truck.yawRel;
+      const nightDim = 0.28 + 0.5 * clamp(1 - (this.night || 0), 0, 1);
+      this.contactShadowMat.opacity = nightDim;
+    }
   }
 
   fmtDistanceShort(m) {
@@ -989,18 +1133,18 @@ class Game {
     if (mode === 'interior' || mode === 'hood') {
       this.truckView.setInteriorVisible(mode === 'interior');
       root.updateMatrixWorld(true);
-      const offset = mode === 'interior' ? new THREE.Vector3(-0.55, 2.5, 1.35) : new THREE.Vector3(0, 4.02, 2.55);
+      const offset = mode === 'interior' ? new THREE.Vector3(-EYE.x, EYE.y, EYE.z) : new THREE.Vector3(0, 4.06, 2.55);
       this.tmpVec.copy(offset);
       root.localToWorld(this.tmpVec);
       this.camera.position.copy(this.tmpVec);
       const euler = new THREE.Euler(
-        (mode === 'interior' ? -0.05 : -0.1) + root.rotation.x,
-        root.rotation.y + Math.PI + (mode === 'interior' ? this.truck.steer * 0.4 : 0),
+        (mode === 'interior' ? -0.075 : -0.12) + root.rotation.x,
+        root.rotation.y + Math.PI + (mode === 'interior' ? this.truck.steer * 0.22 : 0),
         root.rotation.z * 0.6 + shake,
         'YXZ'
       );
       this.camera.quaternion.setFromEuler(euler);
-      this.camera.fov = mode === 'interior' ? 62 : 68;
+      this.camera.fov = mode === 'interior' ? 56 : 68;
     } else {
       this.truckView.setInteriorVisible(false);
       const back = mode === 'far' ? 34 : 23;
@@ -1013,14 +1157,14 @@ class Game {
         this.truckPos.z - fwdZ * back
       );
       const look = this.camLookAt.set(this.truckPos.x + fwdX * 12, this.truckPos.y + 1.9, this.truckPos.z + fwdZ * 12);
-      const follow = instant ? 1 : clamp(dt * 4.5, 0.05, 1);
+      const follow = instant ? 1 : clamp(dt * 6.5, 0.06, 1);
       this.camera.position.lerp(target, follow);
       this.camLook.lerp(look, follow);
       this.camera.lookAt(this.camLook);
       this.camera.fov = mode === 'far' ? 58 : 66;
       this.camera.rotateZ(shake * 0.35);
     }
-    const targetFov = this.camera.fov + clamp(speed * 0.35, 0, 10);
+    const targetFov = this.camera.fov + clamp(speed * 0.16, 0, 4.5);
     this.camera.fov = lerp(this.camera.fov, targetFov, 0.08);
     this.camera.updateProjectionMatrix();
     void root;
@@ -1103,12 +1247,12 @@ class Game {
       hit.s += 6;
     }
     // Отбойник.
-    if (this.truck.lat > 4.95 || this.truck.lat < -4.0) {
+    if (this.truck.lat < -4.95 || this.truck.lat > 4.0) {
       if (this.cameraShake < 0.1) {
         this.cameraShake = 0.35;
         this.audio.blip(90, 0.2, 'sawtooth', 0.06);
       }
-      this.truck.lat = clamp(this.truck.lat, -4.0, 4.95);
+      this.truck.lat = clamp(this.truck.lat, -4.95, 4.0);
       this.truck.speed *= 1 - dt * 0.8;
       this.truck.engine = Math.max(0, this.truck.engine - dt * 0.6);
     }

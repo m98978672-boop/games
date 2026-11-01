@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { clamp, rng } from '../core/math.js';
 import { materials } from './materials.js';
+import { mergeStatic } from '../core/merge-static.js';
 
 const CAR_COLORS = [0xd8d8d2, 0x2f3a45, 0x8c2f2a, 0x2f5c8c, 0x6f7c4a, 0xb0b4b8, 0x1f2225, 0xc9a23a, 0x4a4f7a, 0x7a2f4a];
 
@@ -94,6 +95,8 @@ export class Traffic {
     for (let i = 0; i < count; i++) {
       const type = ['car', 'car', 'car', 'van', 'truck', 'bus'][Math.floor(this.rand() * 6)];
       const mesh = makeCar(this.mats, type);
+      // Кузов машины статичен — склеиваем, крутятся только колёса.
+      mergeStatic(mesh, mesh.userData.wheels);
       mesh.visible = false;
       this.group.add(mesh);
       this.vehicles.push({
@@ -129,7 +132,7 @@ export class Traffic {
     v.active = true;
     v.dir = dir;
     v.s = playerS + dist;
-    v.lat = dir > 0 ? (this.rand() > 0.75 ? -1.85 : 1.85) : this.rand() > 0.5 ? -7.15 : -10.85;
+    v.lat = dir > 0 ? (this.rand() > 0.75 ? -1.85 : 1.85) : this.rand() > 0.5 ? 7.15 : 10.85;
     v.targetLat = v.lat;
     v.speed = dir > 0 ? 19 + this.rand() * 8 : 21 + this.rand() * 7;
     if (v.type === 'truck') v.speed = 19 + this.rand() * 4;

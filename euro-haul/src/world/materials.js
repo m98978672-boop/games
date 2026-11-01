@@ -84,9 +84,9 @@ export const textures = {
   grass() {
     // Тайл 8×8 м: луг с разнотравьем.
     return canvasTexture('grass-v2', 1024, 1024, (c, w, h) => {
-      c.fillStyle = '#546b3a';
+      c.fillStyle = '#6f8b4d';
       c.fillRect(0, 0, w, h);
-      speckle(c, w, h, 50000, ['#5d7741', '#4b6134', '#65803f', '#43582e', '#6d8a48'], 3, 21);
+      speckle(c, w, h, 50000, ['#7a9954', '#628044', '#86a55c', '#587844', '#93b06a'], 3, 21);
       const r = rng(31);
       // травинки
       for (let i = 0; i < 4200; i++) {
@@ -189,6 +189,173 @@ export const textures = {
       noiseOverlay(c, w, h, 0.06, 43);
     });
   },
+  /** Карта нормалей из процедурного рельефа: даёт асфальту и бетону микрорельеф. */
+  asphaltNormal() {
+    return canvasTexture(
+      'asphalt-normal',
+      512,
+      512,
+      (c, w, h) => {
+        const r = rng(77);
+        const height = new Float32Array(w * h);
+        for (let i = 0; i < height.length; i++) height[i] = 0.5;
+        for (let k = 0; k < 900; k++) {
+          const x = Math.floor(r() * w);
+          const y = Math.floor(r() * h);
+          const rad = 1 + Math.floor(r() * 4);
+          const amp = 0.12 + r() * 0.2;
+          for (let dy = -rad; dy <= rad; dy++) {
+            for (let dx = -rad; dx <= rad; dx++) {
+              if (dx * dx + dy * dy > rad * rad) continue;
+              const px = (x + dx + w) % w;
+              const py = (y + dy + h) % h;
+              height[py * w + px] += amp * (1 - Math.sqrt(dx * dx + dy * dy) / rad);
+            }
+          }
+        }
+        const img = c.createImageData(w, h);
+        const at = (x, y) => height[((y + h) % h) * w + ((x + w) % w)];
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const dx = at(x + 1, y) - at(x - 1, y);
+            const dy = at(x, y + 1) - at(x, y - 1);
+            // нормаль в тангент-пространстве (z вверх)
+            const nx = -dx * 2.2;
+            const ny = -dy * 2.2;
+            const nz = 1;
+            const len = Math.hypot(nx, ny, nz);
+            const i = (y * w + x) * 4;
+            img.data[i] = Math.round(((nx / len) * 0.5 + 0.5) * 255);
+            img.data[i + 1] = Math.round(((ny / len) * 0.5 + 0.5) * 255);
+            img.data[i + 2] = Math.round(((nz / len) * 0.5 + 0.5) * 255);
+            img.data[i + 3] = 255;
+          }
+        }
+        c.putImageData(img, 0, 0);
+      },
+      { srgb: false }
+    );
+  },
+  /** Шероховатость: сухие пятна, заплатки и лужи (тёмное = гладко/мокро). */
+  asphaltRoughness() {
+    return canvasTexture('asphalt-rough', 512, 512, (c, w, h) => {
+      c.fillStyle = '#b9b9b9';
+      c.fillRect(0, 0, w, h);
+      const r = rng(303);
+      for (let i = 0; i < 26; i++) {
+        const x = r() * w;
+        const y = r() * h;
+        const rad = 20 + r() * 90;
+        const g = c.createRadialGradient(x, y, 0, x, y, rad);
+        g.addColorStop(0, 'rgba(70,70,70,0.55)');
+        g.addColorStop(1, 'rgba(70,70,70,0)');
+        c.fillStyle = g;
+        c.beginPath();
+        c.arc(x, y, rad, 0, Math.PI * 2);
+        c.fill();
+      }
+      speckle(c, w, h, 6000, ['#a8a8a8', '#c8c8c8', '#9a9a9a'], 2, 9);
+    }, { srgb: false });
+  },
+  gravel() {
+    return canvasTexture('gravel-v2', 512, 512, (c, w, h) => {
+      c.fillStyle = '#6d6a60';
+      c.fillRect(0, 0, w, h);
+      const r = rng(451);
+      for (let i = 0; i < 12000; i++) {
+        const x = r() * w;
+        const y = r() * h;
+        const rad = 1 + r() * 3.4;
+        const l = 70 + r() * 90;
+        c.fillStyle = `rgb(${l},${l - 4},${l - 12})`;
+        c.beginPath();
+        c.ellipse(x, y, rad, rad * (0.6 + r() * 0.7), r() * 3.14, 0, Math.PI * 2);
+        c.fill();
+      }
+      noiseOverlay(c, w, h, 0.08, 17);
+    });
+  },
+  bark() {
+    return canvasTexture('bark', 128, 256, (c, w, h) => {
+      c.fillStyle = '#4a3a2a';
+      c.fillRect(0, 0, w, h);
+      const r = rng(61);
+      for (let i = 0; i < 260; i++) {
+        c.strokeStyle = `rgba(${30 + r() * 40},${22 + r() * 30},${14 + r() * 20},0.7)`;
+        c.lineWidth = 1 + r() * 2;
+        c.beginPath();
+        const x = r() * w;
+        c.moveTo(x, 0);
+        c.bezierCurveTo(x + 6, h * 0.3, x - 6, h * 0.7, x + 2, h);
+        c.stroke();
+      }
+    });
+  },
+  /** Три варианта фасада: окна в разную ширину, разные цвета стен. */
+  facade(variant = 0) {
+    const palettes = [
+      ['#bdb6a6', '#8f8a7c', '#2f3a40'],
+      ['#c8b9a4', '#9a8d7c', '#3a3f3a'],
+      ['#a9b2b6', '#868f93', '#2b3338'],
+    ];
+    const [wall, trim, glass] = palettes[variant % 3];
+    return canvasTexture('facade-' + (variant % 3), 512, 512, (c, w, h) => {
+      c.fillStyle = wall;
+      c.fillRect(0, 0, w, h);
+      speckle(c, w, h, 9000, [wall, trim, '#d0c8b8'], 2, 5 + variant);
+      const r = rng(17 + variant * 13);
+      const cols = 4;
+      const rows = 5;
+      const cw = w / cols;
+      const ch = h / rows;
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          const wx = x * cw + cw * 0.2;
+          const wy = y * ch + ch * 0.18;
+          const ww = cw * 0.6;
+          const wh = ch * 0.54;
+          // ниша окна
+          c.fillStyle = 'rgba(0,0,0,0.22)';
+          c.fillRect(wx - 4, wy - 4, ww + 8, wh + 8);
+          const g = c.createLinearGradient(wx, wy, wx + ww, wy + wh);
+          g.addColorStop(0, '#5d747e');
+          g.addColorStop(0.45, glass);
+          g.addColorStop(1, '#22303a');
+          c.fillStyle = g;
+          c.fillRect(wx, wy, ww, wh);
+          // отблеск стекла
+          c.fillStyle = 'rgba(255,255,255,0.13)';
+          c.beginPath();
+          c.moveTo(wx, wy + wh * 0.62);
+          c.lineTo(wx + ww * 0.62, wy);
+          c.lineTo(wx + ww, wy);
+          c.lineTo(wx, wy + wh);
+          c.closePath();
+          c.fill();
+          // переплёт
+          c.fillStyle = 'rgba(232,228,216,0.82)';
+          c.fillRect(wx + ww / 2 - 2, wy, 4, wh);
+          c.fillRect(wx, wy + wh * 0.48 - 2, ww, 4);
+          // подоконник и отлив
+          c.fillStyle = 'rgba(240,236,226,0.9)';
+          c.fillRect(wx - 6, wy + wh + 4, ww + 12, 5);
+          c.fillStyle = 'rgba(0,0,0,0.16)';
+          c.fillRect(wx - 6, wy + wh + 9, ww + 12, 4);
+          if (r() > 0.72) {
+            // кондиционер под окном
+            c.fillStyle = 'rgba(210,210,204,0.9)';
+            c.fillRect(wx + ww * 0.22, wy + wh + 16, ww * 0.5, 10);
+          }
+        }
+        // межэтажный пояс
+        c.fillStyle = 'rgba(0,0,0,0.1)';
+        c.fillRect(0, (y + 1) * ch - 4, w, 4);
+        c.fillStyle = 'rgba(255,255,255,0.12)';
+        c.fillRect(0, (y + 1) * ch, w, 3);
+      }
+      noiseOverlay(c, w, h, 0.06, 23 + variant);
+    });
+  },
   skyline() {
     return canvasTexture('skyline-v2', 1024, 256, (c, w, h) => {
       c.clearRect(0, 0, w, h);
@@ -225,9 +392,19 @@ export function materials() {
   const wallTex = textures.wall();
 
   materialCache = {
-    asphalt: new THREE.MeshStandardMaterial({ color: 0xb9bec2, map: asphaltTex, roughness: 0.93, metalness: 0.04 }),
-    grass: new THREE.MeshStandardMaterial({ color: 0x9db27c, map: grassTex, roughness: 1 }),
-    grassDark: new THREE.MeshStandardMaterial({ color: 0x7f9467, map: grassTex, roughness: 1 }),
+    asphalt: new THREE.MeshStandardMaterial({
+      color: 0xb4b9bd,
+      map: asphaltTex,
+      normalMap: textures.asphaltNormal(),
+      normalScale: new THREE.Vector2(0.55, 0.55),
+      roughnessMap: textures.asphaltRoughness(),
+      roughness: 0.88,
+      metalness: 0.02,
+    }),
+    gravel: new THREE.MeshStandardMaterial({ color: 0xcfcabb, map: textures.gravel(), roughness: 0.98 }),
+    bark: new THREE.MeshStandardMaterial({ color: 0xa08a6d, map: textures.bark(), roughness: 0.95 }),
+    grass: new THREE.MeshStandardMaterial({ color: 0xe6efd4, map: grassTex, roughness: 1 }),
+    grassDark: new THREE.MeshStandardMaterial({ color: 0xc3d2a8, map: grassTex, roughness: 1 }),
     concrete: new THREE.MeshStandardMaterial({ color: 0xd0cfc7, map: concreteTex, roughness: 0.92 }),
     whiteLine: new THREE.MeshStandardMaterial({ color: 0xf4f2e8, roughness: 0.62, emissive: 0x1a1a1a }),
     yellowLine: new THREE.MeshStandardMaterial({ color: 0xf0c14a, roughness: 0.7 }),
@@ -241,6 +418,28 @@ export function materials() {
       emissiveMap: buildingTex,
       emissiveIntensity: 0,
       roughness: 0.85,
+    }),
+    facades: [0, 1, 2].map((v) => {
+      const tex = textures.facade(v);
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xffffff,
+        map: tex,
+        emissive: 0xffcf8a,
+        emissiveMap: tex,
+        emissiveIntensity: 0,
+        roughness: 0.82,
+      });
+      // Масштаб окон под размер дома: одно окно ~3.2 м, этаж ~3 м.
+      mat.onBeforeCompile = (shader) => {
+        shader.vertexShader = 'attribute vec3 aFacadeScale;\n' + shader.vertexShader;
+        shader.vertexShader = shader.vertexShader.replace(
+          '#include <uv_vertex>',
+          '#include <uv_vertex>\n#ifdef USE_MAP\n  vMapUv *= aFacadeScale.xy;\n#endif'
+        );
+      };
+      mat.customProgramCacheKey = () => 'facade-uv';
+      return mat;
     }),
     roof: new THREE.MeshStandardMaterial({ color: 0x8d6e5c, roughness: 0.95 }),
     roofLight: new THREE.MeshStandardMaterial({ color: 0xb4bbbf, roughness: 0.9 }),
@@ -278,10 +477,124 @@ export function materials() {
 
 export function setNightIntensity(mats, nightAmount) {
   mats.building.emissiveIntensity = clamp(nightAmount, 0, 1) * 0.9;
+  for (const f of mats.facades || []) f.emissiveIntensity = clamp(nightAmount, 0, 1) * 0.75;
   mats.lamp.emissiveIntensity = 0.25 + nightAmount * 2.0;
 }
 
 /** Ливрея полуприцепа: фон, логотип, полосы, грязь у низа. */
+
+/** Кормовая дверь полуприцепа: рёбра, запоры, световозвращатели, номер. */
+export function trailerRearTexture(company = 'Auriga', tone = '#4a6b7a') {
+  const key = 'trailer-rear:' + company + tone;
+  return canvasTexture(key, 512, 512, (c, w, h) => {
+    c.fillStyle = tone;
+    c.fillRect(0, 0, w, h);
+    // вертикальные рёбра жёсткости
+    for (let x = 0; x < w; x += 18) {
+      c.fillStyle = 'rgba(0,0,0,0.16)';
+      c.fillRect(x, 0, 6, h);
+      c.fillStyle = 'rgba(255,255,255,0.09)';
+      c.fillRect(x + 10, 0, 4, h);
+    }
+    // створки
+    c.strokeStyle = 'rgba(0,0,0,0.55)';
+    c.lineWidth = 6;
+    c.beginPath(); c.moveTo(w / 2, 0); c.lineTo(w / 2, h); c.stroke();
+    c.strokeStyle = 'rgba(255,255,255,0.12)';
+    c.lineWidth = 2;
+    c.beginPath(); c.moveTo(w / 2 + 5, 0); c.lineTo(w / 2 + 5, h); c.stroke();
+    // петли
+    for (const y of [0.14, 0.42, 0.7]) {
+      for (const x of [0.08, 0.9]) {
+        c.fillStyle = '#2a3034';
+        c.fillRect(x * w, y * h, 22, 54);
+        c.fillStyle = 'rgba(255,255,255,0.18)';
+        c.fillRect(x * w + 3, y * h + 4, 4, 46);
+      }
+    }
+    // запорные штанги
+    for (const x of [0.3, 0.68]) {
+      c.fillStyle = 'rgba(210,214,216,0.75)';
+      c.fillRect(x * w - 5, 40, 10, h - 120);
+      c.fillStyle = 'rgba(60,66,70,0.9)';
+      c.fillRect(x * w - 18, h * 0.52, 36, 16);
+    }
+    // грязь снизу
+    const dirt = c.createLinearGradient(0, h - 110, 0, h);
+    dirt.addColorStop(0, 'rgba(58,54,48,0)');
+    dirt.addColorStop(1, 'rgba(58,54,48,0.6)');
+    c.fillStyle = dirt;
+    c.fillRect(0, h - 110, w, 110);
+    // световозвращающая лента
+    for (let x = 0; x < w; x += 64) {
+      c.fillStyle = x % 128 === 0 ? '#f2f0e6' : '#c0392b';
+      c.fillRect(x + 4, h - 46, 56, 18);
+    }
+    // номерной знак
+    c.fillStyle = '#f4f4ee';
+    c.fillRect(w / 2 - 62, h - 116, 124, 44);
+    c.strokeStyle = '#20262a';
+    c.lineWidth = 3;
+    c.strokeRect(w / 2 - 62, h - 116, 124, 44);
+    c.fillStyle = '#1d2327';
+    c.font = 'bold 30px system-ui, Arial';
+    c.textAlign = 'center';
+    c.fillText('B·AR 4210', w / 2, h - 83);
+    // логотип перевозчика
+    c.fillStyle = 'rgba(238,240,236,0.9)';
+    c.font = 'bold 44px system-ui, Arial';
+    c.fillText(company.toUpperCase().slice(0, 14), w / 2, 90, w - 60);
+    c.fillStyle = 'rgba(238,240,236,0.5)';
+    c.font = 'bold 20px system-ui, Arial';
+    c.fillText('ЕВРОПЕЙСКИЕ ГРУЗОВЫЕ ЛИНИИ', w / 2, 122, w - 60);
+    // верхняя кромка
+    c.fillStyle = 'rgba(0,0,0,0.3)';
+    c.fillRect(0, 0, w, 12);
+  });
+}
+
+/** Борт контейнера с гофрой и ливреей. */
+export function containerTexture(company, color = '#cf5b3a') {
+  const key = 'container-tile:' + company + color;
+  return canvasTexture(key, 1024, 512, (c, w, h) => {
+    c.fillStyle = color;
+    c.fillRect(0, 0, w, h);
+    // гофра
+    for (let x = 0; x < w; x += 26) {
+      const grd = c.createLinearGradient(x, 0, x + 26, 0);
+      grd.addColorStop(0, 'rgba(0,0,0,0.22)');
+      grd.addColorStop(0.35, 'rgba(255,255,255,0.06)');
+      grd.addColorStop(0.55, 'rgba(255,255,255,0.14)');
+      grd.addColorStop(1, 'rgba(0,0,0,0.2)');
+      c.fillStyle = grd;
+      c.fillRect(x, 0, 26, h);
+    }
+    // грязь и потёртости
+    const r = rng(37);
+    for (let i = 0; i < 260; i++) {
+      c.fillStyle = `rgba(40,36,32,${0.02 + r() * 0.06})`;
+      c.fillRect(r() * w, r() * h, 2 + r() * 30, 1 + r() * 8);
+    }
+    const dirt = c.createLinearGradient(0, h - 90, 0, h);
+    dirt.addColorStop(0, 'rgba(56,52,44,0)');
+    dirt.addColorStop(1, 'rgba(56,52,44,0.5)');
+    c.fillStyle = dirt;
+    c.fillRect(0, h - 90, w, 90);
+    // логотип
+    c.fillStyle = 'rgba(245,244,238,0.92)';
+    c.font = 'bold 96px system-ui, Arial';
+    c.fillText(company.toUpperCase(), 54, h * 0.44, w - 120);
+    c.fillStyle = 'rgba(245,244,238,0.55)';
+    c.font = 'bold 30px system-ui, Arial';
+    c.fillText('МЕЖДУНАРОДНЫЕ ПЕРЕВОЗКИ', 58, h * 0.58, w - 120);
+    // угловые фитинги
+    for (const [x, y] of [[8, 8], [w - 46, 8], [8, h - 46], [w - 46, h - 46]]) {
+      c.fillStyle = 'rgba(30,34,38,0.85)';
+      c.fillRect(x, y, 38, 38);
+    }
+  });
+}
+
 export function trailerTexture(company, color = '#e8e4d9') {
   const key = 'trailer-v2:' + company + color;
   return canvasTexture(key, 1024, 512, (c, w, h) => {

@@ -4,10 +4,12 @@ import { hash2, lerp, smoothstep, rng } from '../core/math.js';
 import { materials, setNightIntensity, textures } from './materials.js';
 
 import { CITY_BY_ID, COUNTRIES } from '../data/cities.js';
+import { mergeStatic } from '../core/merge-static.js';
 
 const STEP = 12;
-const AHEAD = 2400;
-const BEHIND = 380;
+// Дальность построения мира зависит от качества: на телефоне меньше объектов.
+const AHEAD = 2200;
+const BEHIND = 320;
 
 export function terrainOffset(s, lat) {
   const d = Math.abs(lat);
@@ -21,11 +23,12 @@ export function terrainOffset(s, lat) {
 }
 
 function stripGeometry(route, s0, s1, lats, opts = {}) {
-  const { step = STEP, yOffset = 0, yFn = null, tile = 8 } = opts;
+  const { step = STEP, yOffset = 0, yFn = null, tile = 8, colorFn = null } = opts;
   const rows = Math.max(2, Math.ceil((s1 - s0) / step));
   const cols = lats.length;
   const pos = [];
   const uv = [];
+  const col = [];
   const idx = [];
   for (let r = 0; r <= rows; r++) {
     const s = s0 + ((s1 - s0) * r) / rows;
@@ -38,6 +41,7 @@ function stripGeometry(route, s0, s1, lats, opts = {}) {
       pos.push(p.x + nx * lat, p.y + yOffset + extra, p.z + nz * lat);
       // UV в метрах: текстура тайлится одинаково по ширине и длине.
       uv.push(lat / tile, s / tile);
+      if (colorFn) col.push(...colorFn(s, lat));
     }
   }
   for (let r = 0; r < rows; r++) {
@@ -52,6 +56,7 @@ function stripGeometry(route, s0, s1, lats, opts = {}) {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  if (colorFn) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   g.setIndex(idx);
   g.computeVertexNormals();
   return g;
@@ -188,6 +193,9 @@ export class RoadWorld {
     this.railMat.__keep = true;
     this.weatherWetness = 0;
     this.night = 0;
+    this.shadowOn = true;
+    this.ahead = AHEAD;
+    this.behind = BEHIND;
     this.rebuild(0);
   }
 
@@ -201,6 +209,17 @@ export class RoadWorld {
       }
     });
     this.group.clear();
+  }
+
+  /** Дальность прорисовки под устройство. */
+  setQuality(q) {
+    const ahead = q === 'low' ? 900 : q === 'medium' ? 1400 : AHEAD;
+    const behind = q === 'low' ? 160 : q === 'medium' ? 240 : BEHIND;
+    if (ahead !== this.ahead) {
+      this.ahead = ahead;
+      this.behind = behind;
+      this.lastBuild = -1e9;
+    }
   }
 
   update(s, dt) {
@@ -219,8 +238,8 @@ export class RoadWorld {
     const route = this.route;
     this.lastBuild = s;
     this.disposeChildren();
-    const s0 = Math.max(0, s - BEHIND);
-    const s1 = Math.min(route.length - 1, s + AHEAD);
+    const s0 = Math.max(0, s - this.behind);
+    const s1 = Math.min(route.length - 1, s + this.ahead);
     if (s1 - s0 < 50) return;
     const m = this.mats;
     const add = (geo, mat) => {
@@ -232,19 +251,19 @@ export class RoadWorld {
 
     // --- Асфальт: своя проезжая часть, встречная, обочины, разделитель.
     add(stripGeometry(route, s0, s1, [-3.7, 3.7], { tile: 7 }), m.asphalt);
-    add(stripGeometry(route, s0, s1, [-12.7, -5.3], { tile: 7 }), m.asphalt);
-    add(stripGeometry(route, s0, s1, [3.7, 5.2], { tile: 7 }), m.asphalt);
-    add(stripGeometry(route, s0, s1, [-14.2, -12.7], { tile: 7 }), m.asphalt);
-    add(stripGeometry(route, s0, s1, [-5.3, -3.7], { yOffset: 0.14 }), m.concrete);
+    add(stripGeometry(route, s0, s1, [5.3, 12.7], { tile: 7 }), m.asphalt);
+    add(stripGeometry(route, s0, s1, [-5.2, -3.7], { tile: 2.2 }), m.gravel);
+    add(stripGeometry(route, s0, s1, [12.7, 14.2], { tile: 2.2 }), m.gravel);
+    add(stripGeometry(route, s0, s1, [3.7, 5.3], { yOffset: 0.14 }), m.concrete);
 
     // --- Разметка.
     const lineMat = m.whiteLine;
     const lineY = 0.035;
     // сплошные краевые
-    add(stripGeometry(route, s0, s1, [3.52, 3.68], { yOffset: lineY }), lineMat);
     add(stripGeometry(route, s0, s1, [-3.68, -3.52], { yOffset: lineY }), lineMat);
-    add(stripGeometry(route, s0, s1, [-12.62, -12.46], { yOffset: lineY }), lineMat);
-    add(stripGeometry(route, s0, s1, [-5.54, -5.38], { yOffset: lineY }), lineMat);
+    add(stripGeometry(route, s0, s1, [3.52, 3.68], { yOffset: lineY }), lineMat);
+    add(stripGeometry(route, s0, s1, [12.46, 12.62], { yOffset: lineY }), lineMat);
+    add(stripGeometry(route, s0, s1, [5.38, 5.54], { yOffset: lineY }), lineMat);
     // прерывистая между полосами
     const dashStart = Math.floor(s0 / 9) * 9;
     for (let d = dashStart; d < s1; d += 9) {
@@ -252,18 +271,18 @@ export class RoadWorld {
       const b = Math.min(s1, d + 3.2);
       if (b - a < 0.4) continue;
       add(quadStrip(route, a, b, 0, 0.15, lineY), lineMat);
-      add(quadStrip(route, a, b, -9.0, 0.15, lineY), lineMat);
+      add(quadStrip(route, a, b, 9.0, 0.15, lineY), lineMat);
     }
 
     // --- Отбойники (правая обочина и разделитель).
     const railMat = this.railMat;
     // Отбойник: профиль из двух горизонтальных полос + стойки.
-    add(verticalStrip(route, s0, s1, 5.35, 0.34, 0.62), railMat);
-    add(verticalStrip(route, s0, s1, 5.35, 0.68, 0.9), railMat);
-    add(verticalStrip(route, s0, s1, -4.45, 0.3, 0.58), railMat);
-    add(verticalStrip(route, s0, s1, -4.45, 0.66, 0.9), railMat);
-    add(verticalStrip(route, s0, s1, -14.35, 0.34, 0.62), railMat);
-    add(verticalStrip(route, s0, s1, -14.35, 0.68, 0.9), railMat);
+    add(verticalStrip(route, s0, s1, -5.35, 0.34, 0.62), railMat);
+    add(verticalStrip(route, s0, s1, -5.35, 0.68, 0.9), railMat);
+    add(verticalStrip(route, s0, s1, 4.45, 0.3, 0.58), railMat);
+    add(verticalStrip(route, s0, s1, 4.45, 0.66, 0.9), railMat);
+    add(verticalStrip(route, s0, s1, 14.35, 0.34, 0.62), railMat);
+    add(verticalStrip(route, s0, s1, 14.35, 0.68, 0.9), railMat);
     const postGeo = new THREE.BoxGeometry(0.1, 1.0, 0.12);
     const postCount = Math.ceil((s1 - s0) / 4);
     const posts = new THREE.InstancedMesh(postGeo, m.darkMetal, Math.max(1, postCount));
@@ -271,7 +290,7 @@ export class RoadWorld {
     let pi = 0;
     for (let ps = Math.floor(s0 / 4) * 4; ps < s1 && pi < postCount; ps += 4) {
       const pp = route.pointAt(ps);
-      for (const lat of [5.35, -4.45, -14.35]) {
+      for (const lat of [-5.35, 4.45, 14.35]) {
         if (pi >= postCount) break;
         pd.position.set(pp.x + Math.cos(pp.hdg) * (lat + (lat > 0 ? 0.06 : -0.06)), pp.y + 0.42, pp.z - Math.sin(pp.hdg) * (lat + (lat > 0 ? 0.06 : -0.06)));
         pd.rotation.set(0, pp.hdg, 0);
@@ -291,7 +310,7 @@ export class RoadWorld {
     let mi = 0;
     for (let ms = Math.floor(s0 / 26) * 26; ms < s1 && mi < markerCount; ms += 26) {
       const pp = route.pointAt(ms);
-      for (const lat of [5.9, -14.9]) {
+      for (const lat of [-5.9, 14.9]) {
         if (mi >= markerCount) break;
         pd.position.set(pp.x + Math.cos(pp.hdg) * lat, pp.y + 0.45, pp.z - Math.sin(pp.hdg) * lat);
         pd.rotation.set(0, pp.hdg, 0);
@@ -304,72 +323,233 @@ export class RoadWorld {
     this.group.add(markers);
 
     // --- Обочина и рельеф.
-    const latsRight = [5.2, 9, 16, 30, 52, 88, 140, 210, 320, 470];
-    // Слева lat убывает — разворачиваем порядок, иначе грани смотрят вниз и отсекаются.
-    const latsLeft = [-470, -320, -210, -145, -95, -62, -40, -26, -18, -14.2];
+    // Вдоль трассы lat должен возрастать: иначе грани смотрят вниз и отсекаются.
+    const latsRight = [-470, -320, -210, -140, -88, -52, -30, -16, -9, -5.2];
+    const latsLeft = [14.2, 18, 26, 40, 62, 95, 145, 210, 320, 470];
+    if (!this.fieldMats) {
+      const field = (base) => {
+        const mat = base.clone();
+        mat.vertexColors = true;
+        mat.__keep = true;
+        return mat;
+      };
+      this.fieldMats = [field(m.grass), field(m.grassDark)];
+    }
+    // Поля: клетки 120×90 м с разными оттенками — пейзаж перестаёт быть «одним газоном».
+    const fieldColor = (ss, la) => {
+      const cell = hash2(Math.floor(ss / 120), Math.floor(la / 90) + 7);
+      const lush = [0.6, 1.0, 0.52];
+      const dry = [1.0, 0.93, 0.5];
+      const olive = [0.86, 0.9, 0.44];
+      const dark = [0.44, 0.78, 0.4];
+      let c;
+      if (cell < 0.34) c = lush;
+      else if (cell < 0.56) c = dry;
+      else if (cell < 0.76) c = olive;
+      else if (cell < 0.9) c = dark;
+      else c = [1.0, 1.0, 0.82];
+      // сглаживание внутри клетки, чтобы границы не были линейкой
+      const k = 0.9 + hash2(Math.floor(ss / 60), Math.floor(la / 45) + 3) * 0.2;
+      return [c[0] * k, c[1] * k, c[2] * k];
+    };
     add(
-      stripGeometry(route, s0, s1, latsRight, { yFn: (ss, la) => terrainOffset(ss, la) - 0.06, tile: 9 }),
-      m.grass
+      stripGeometry(route, s0, s1, latsRight, {
+        yFn: (ss, la) => terrainOffset(ss, la) - 0.06,
+        tile: 9,
+        colorFn: fieldColor,
+      }),
+      this.fieldMats[0]
     );
     add(
-      stripGeometry(route, s0, s1, latsLeft, { yFn: (ss, la) => terrainOffset(ss, la) - 0.06, tile: 9 }),
-      m.grassDark
+      stripGeometry(route, s0, s1, latsLeft, {
+        yFn: (ss, la) => terrainOffset(ss, la) - 0.06,
+        tile: 9,
+        colorFn: fieldColor,
+      }),
+      this.fieldMats[1]
     );
 
-    // --- Деревья вдоль трассы.
-    const treeCount = 150;
-    const trunkGeo = new THREE.CylinderGeometry(0.16, 0.3, 2.6, 5);
-    const crownGeo = new THREE.ConeGeometry(1.7, 4.2, 6);
-    const trunks = new THREE.InstancedMesh(trunkGeo, m.trunk, treeCount);
-    const crowns = new THREE.InstancedMesh(crownGeo, m.leaves[0], treeCount);
-    crowns.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(treeCount * 3), 3);
+    // --- Дальние холмы: держат линию горизонта и дают глубину кадру.
+    if (!this.hillGeo) {
+      this.hillGeo = new THREE.SphereGeometry(1, 14, 9, 0, Math.PI * 2, 0, Math.PI / 2);
+      this.hillMat = new THREE.MeshStandardMaterial({ color: 0x6f8468, roughness: 1, flatShading: true });
+    }
+    {
+      const hills = new THREE.InstancedMesh(this.hillGeo, this.hillMat, 24);
+      const hd = new THREE.Object3D();
+      const hp = route.pointAt((s0 + s1) / 2);
+      for (let i = 0; i < 24; i++) {
+        const a = (i / 24) * Math.PI * 2 + hash2(i, 5) * 0.22;
+        const rad = 640 + hash2(i, 9) * 1150;
+        const w = 110 + hash2(i, 13) * 260;
+        hd.position.set(hp.x + Math.cos(a) * rad, hp.y - 16, hp.z + Math.sin(a) * rad);
+        hd.rotation.set(0, hash2(i, 17) * 6.28, 0);
+        hd.scale.set(w, 26 + hash2(i, 19) * 46, w * 0.85);
+        hd.updateMatrix();
+        hills.setMatrixAt(i, hd.matrix);
+      }
+      hills.instanceMatrix.needsUpdate = true;
+      this.group.add(hills);
+    }
+
+    // --- Деревья и кусты вдоль трассы: хвойные, лиственные и подлесок.
+    const treeCount = 210;
+    const trunkGeo = new THREE.CylinderGeometry(0.16, 0.32, 3.0, 7);
+    // Ель из трёх ярусов — читается как хвоя, а не как «конус на палке».
+    const pineGeo = new THREE.ConeGeometry(1.55, 3.0, 9);
+    const pineMidGeo = new THREE.ConeGeometry(1.2, 2.6, 9);
+    const pineTopGeo = new THREE.ConeGeometry(0.8, 2.1, 9);
+    const leafGeo = new THREE.IcosahedronGeometry(1.5, 1);
+    const leafMidGeo = new THREE.IcosahedronGeometry(1.15, 1);
+    const leafTopGeo = new THREE.IcosahedronGeometry(0.95, 1);
+    const trunks = new THREE.InstancedMesh(trunkGeo, m.bark, treeCount);
+    const pines = new THREE.InstancedMesh(pineGeo, m.leaves[0], treeCount);
+    const pineMids = new THREE.InstancedMesh(pineMidGeo, m.leaves[2], treeCount);
+    const pineTops = new THREE.InstancedMesh(pineTopGeo, m.leaves[0], treeCount);
+    const leavesA = new THREE.InstancedMesh(leafGeo, m.leaves[1], treeCount);
+    const leavesM = new THREE.InstancedMesh(leafMidGeo, m.leaves[3], treeCount);
+    const leavesB = new THREE.InstancedMesh(leafTopGeo, m.leaves[1], treeCount);
+    for (const im of [pines, pineMids, pineTops, leavesA, leavesM, leavesB]) {
+      im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(treeCount * 3), 3);
+    }
     const dummy = new THREE.Object3D();
     const color = new THREE.Color();
     let placed = 0;
-    const spacing = 11;
+    let pineN = 0;
+    let leafN = 0;
+    const spacing = 9;
     const baseIndex = Math.floor(s0 / spacing);
     for (let i = 0; i < treeCount; i++) {
       const idx = baseIndex + i;
-      const ss = idx * spacing + hash2(idx, 3) * 5;
-      if (ss < s0 - 30 || ss > s1 + 30) continue;
+      const ss = idx * spacing + hash2(idx, 3) * 6;
+      if (ss < s0 - 40 || ss > s1 + 40) continue;
       const side = hash2(idx, 7) > 0.5 ? 1 : -1;
-      const dist = 12 + hash2(idx, 11) * 120;
-      const lat = side * dist;
+      const dist = 13 + hash2(idx, 11) * 130;
+      const lat = -side * dist;
       const p = route.pointAt(ss);
-      const y = p.y + terrainOffset(ss, lat) + 1.3;
-      const scale = 0.7 + hash2(idx, 13) * 1.1;
+      const y = p.y + terrainOffset(ss, lat) + 1.5;
+      const scale = 0.75 + hash2(idx, 13) * 1.3;
+      const rot = hash2(idx, 17) * 6.28;
       dummy.position.set(p.x + Math.cos(p.hdg) * lat, y, p.z - Math.sin(p.hdg) * lat);
-      dummy.rotation.set(0, hash2(idx, 17) * 6.28, 0);
+      dummy.rotation.set(0, rot, 0);
       dummy.scale.set(scale, scale, scale);
       dummy.updateMatrix();
       trunks.setMatrixAt(placed, dummy.matrix);
-      dummy.position.y = y + 2.2 * scale;
-      dummy.updateMatrix();
-      crowns.setMatrixAt(placed, dummy.matrix);
-      color.setHSL(0.25 + hash2(idx, 23) * 0.09, 0.35 + hash2(idx, 29) * 0.2, 0.3 + hash2(idx, 31) * 0.14);
-      crowns.setColorAt(placed, color);
+      const baseHue = 0.235 + hash2(idx, 23) * 0.085;
+      const baseSat = 0.38 + hash2(idx, 29) * 0.24;
+      const baseLit = 0.245 + hash2(idx, 31) * 0.09;
+      const broadleaf = hash2(idx, 41) > 0.55;
+      if (!broadleaf) {
+        dummy.position.y = y + 2.0 * scale;
+        dummy.updateMatrix();
+        pines.setMatrixAt(pineN, dummy.matrix);
+        color.setHSL(baseHue, baseSat * 0.9, baseLit - 0.03);
+        pines.setColorAt(pineN, color);
+        dummy.position.y = y + 3.5 * scale;
+        dummy.scale.set(scale * 0.94, scale * 0.92, scale * 0.94);
+        dummy.updateMatrix();
+        pineMids.setMatrixAt(pineN, dummy.matrix);
+        color.setHSL(baseHue + 0.008, baseSat, baseLit + 0.03);
+        pineMids.setColorAt(pineN, color);
+        dummy.position.y = y + 4.9 * scale;
+        dummy.scale.set(scale * 0.9, scale * 0.88, scale * 0.9);
+        dummy.updateMatrix();
+        pineTops.setMatrixAt(pineN, dummy.matrix);
+        color.setHSL(baseHue + 0.018, baseSat * 0.95, baseLit + 0.08);
+        pineTops.setColorAt(pineN, color);
+        pineN++;
+      } else {
+        dummy.position.set(
+          p.x + Math.cos(p.hdg) * lat,
+          y + 2.55 * scale,
+          p.z - Math.sin(p.hdg) * lat
+        );
+        dummy.scale.set(scale * 1.3, scale * 1.05, scale * 1.3);
+        dummy.rotation.set(hash2(idx, 43) * 0.4, rot, hash2(idx, 47) * 0.4);
+        dummy.updateMatrix();
+        leavesA.setMatrixAt(leafN, dummy.matrix);
+        color.setHSL(baseHue - 0.02, baseSat, baseLit + 0.06);
+        leavesA.setColorAt(leafN, color);
+        dummy.position.set(
+          p.x + Math.cos(p.hdg) * (lat + 1.0 * scale),
+          y + (3.15 + hash2(idx, 53) * 0.4) * scale,
+          p.z - Math.sin(p.hdg) * (lat + 1.0 * scale)
+        );
+        dummy.scale.setScalar(scale * 0.82);
+        dummy.rotation.set(hash2(idx, 59) * 0.4, rot * 1.4, hash2(idx, 61) * 0.4);
+        dummy.updateMatrix();
+        leavesM.setMatrixAt(leafN, dummy.matrix);
+        color.setHSL(baseHue + 0.006, baseSat * 0.95, baseLit + 0.1);
+        leavesM.setColorAt(leafN, color);
+        dummy.position.set(
+          p.x + Math.cos(p.hdg) * (lat - 0.9 * scale),
+          y + (3.55 + hash2(idx, 63) * 0.5) * scale,
+          p.z - Math.sin(p.hdg) * (lat - 0.9 * scale)
+        );
+        dummy.scale.setScalar(scale * 0.7);
+        dummy.rotation.set(hash2(idx, 65) * 0.5, rot * 1.7, hash2(idx, 69) * 0.5);
+        dummy.updateMatrix();
+        leavesB.setMatrixAt(leafN, dummy.matrix);
+        color.setHSL(baseHue + 0.012, baseSat * 0.9, baseLit + 0.15);
+        leavesB.setColorAt(leafN, color);
+        leafN++;
+      }
       placed++;
     }
     trunks.count = placed;
-    crowns.count = placed;
-    trunks.instanceMatrix.needsUpdate = true;
-    crowns.instanceMatrix.needsUpdate = true;
-    if (crowns.instanceColor) crowns.instanceColor.needsUpdate = true;
-    this.group.add(trunks, crowns);
+    pines.count = pineN;
+    pineMids.count = pineN;
+    pineTops.count = pineN;
+    leavesA.count = leafN;
+    leavesM.count = leafN;
+    leavesB.count = leafN;
+    for (const im of [trunks, pines, pineMids, pineTops, leavesA, leavesM, leavesB]) {
+      im.instanceMatrix.needsUpdate = true;
+      if (im.instanceColor) im.instanceColor.needsUpdate = true;
+    }
+    this.group.add(trunks, pines, pineMids, pineTops, leavesA, leavesM, leavesB);
+
+    // Кусты у обочины.
+    const bushGeo = new THREE.IcosahedronGeometry(0.62, 0);
+    const bushCount = 190;
+    const bushes = new THREE.InstancedMesh(bushGeo, m.leaves[1], bushCount);
+    bushes.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(bushCount * 3), 3);
+    let bi = 0;
+    for (let i = 0; i < bushCount; i++) {
+      const idx = baseIndex * 2 + i * 3;
+      const ss = idx * 5 + hash2(idx, 67) * 4;
+      if (ss < s0 - 20 || ss > s1 + 20) continue;
+      const side = hash2(idx, 71) > 0.45 ? 1 : -1;
+      const lat = -side * (7.4 + hash2(idx, 73) * 6);
+      const p = route.pointAt(ss);
+      const scale = 0.55 + hash2(idx, 79) * 0.9;
+      dummy.position.set(p.x + Math.cos(p.hdg) * lat, p.y + terrainOffset(ss, lat) + 0.35 * scale, p.z - Math.sin(p.hdg) * lat);
+      dummy.rotation.set(0, hash2(idx, 83) * 6.28, 0);
+      dummy.scale.set(scale * 1.3, scale * 0.9, scale * 1.3);
+      dummy.updateMatrix();
+      bushes.setMatrixAt(bi, dummy.matrix);
+      color.setHSL(0.25 + hash2(idx, 89) * 0.07, 0.32 + hash2(idx, 97) * 0.2, 0.26 + hash2(idx, 101) * 0.1);
+      bushes.setColorAt(bi, color);
+      bi++;
+    }
+    bushes.count = bi;
+    bushes.instanceMatrix.needsUpdate = true;
+    if (bushes.instanceColor) bushes.instanceColor.needsUpdate = true;
+    this.group.add(bushes);
 
     // --- Фонарные столбы.
     const lampSpacing = 115;
     const lampStart = Math.floor(s0 / lampSpacing) * lampSpacing;
     for (let ls = lampStart; ls < s1; ls += lampSpacing) {
       const p = route.pointAt(ls);
-      const lat = 6.6;
+      const lat = -6.6;
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 9, 5), m.darkMetal);
       pole.position.set(p.x + Math.cos(p.hdg) * lat, p.y + 4.5, p.z - Math.sin(p.hdg) * lat);
       const arm = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.14, 0.14), m.darkMetal);
-      arm.position.set(p.x + Math.cos(p.hdg) * (lat - 1.2), p.y + 8.9, p.z - Math.sin(p.hdg) * (lat - 1.2));
+      arm.position.set(p.x + Math.cos(p.hdg) * (lat + 1.2), p.y + 8.9, p.z - Math.sin(p.hdg) * (lat + 1.2));
       arm.rotation.y = p.hdg;
       const head = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.18, 0.34), this.night > 0.3 ? m.lamp : m.lampOff);
-      head.position.set(p.x + Math.cos(p.hdg) * (lat - 2.4), p.y + 8.8, p.z - Math.sin(p.hdg) * (lat - 2.4));
+      head.position.set(p.x + Math.cos(p.hdg) * (lat + 2.4), p.y + 8.8, p.z - Math.sin(p.hdg) * (lat + 2.4));
       head.rotation.y = p.hdg;
       this.group.add(pole, arm, head);
     }
@@ -391,6 +571,20 @@ export class RoadWorld {
       if (depot.s < s0 - 100 || depot.s > s1 + 100) continue;
       this.buildDepot(depot);
     }
+    this.applyShadowFlags();
+  }
+
+  /** Тени: дорога и трава принимают, постройки и деревья отбрасывают. */
+  applyShadowFlags() {
+    const on = this.shadowOn !== false;
+    this.group.traverse((o) => {
+      if (!o.isMesh) return;
+      const geo = o.geometry;
+      if (geo && !geo.boundingSphere) geo.computeBoundingSphere();
+      const radius = geo?.boundingSphere?.radius || 0;
+      o.receiveShadow = on;
+      o.castShadow = on && (o.isInstancedMesh || radius < 70);
+    });
   }
 
   buildDepot(depot) {
@@ -403,35 +597,35 @@ export class RoadWorld {
     const at = (lat, y) => new THREE.Vector3(p.x + nx * lat, p.y + y, p.z + nz * lat);
     // Склад ангарного типа.
     const hall = new THREE.Mesh(new THREE.BoxGeometry(26, 9, 34), m.wall);
-    hall.position.copy(at(34, 4.5));
+    hall.position.copy(at(-34, 4.5));
     hall.rotation.y = p.hdg;
     group.add(hall);
     const roof = new THREE.Mesh(new THREE.BoxGeometry(27, 0.8, 35), m.roofLight);
-    roof.position.copy(at(34, 9.2));
+    roof.position.copy(at(-34, 9.2));
     roof.rotation.y = p.hdg;
     group.add(roof);
     // Ворота.
     for (let i = -1; i <= 1; i++) {
       const gate = new THREE.Mesh(new THREE.BoxGeometry(6, 5.6, 0.4), m.darkMetal);
-      gate.position.copy(at(21.1, 2.8)).add(new THREE.Vector3(i * 8, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.hdg));
+      gate.position.copy(at(-21.1, 2.8)).add(new THREE.Vector3(i * 8, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.hdg));
       gate.rotation.y = p.hdg;
       group.add(gate);
     }
     // Площадка и разметка.
     const yard = new THREE.Mesh(new THREE.BoxGeometry(30, 0.06, 26), m.concrete);
-    yard.position.copy(at(18, 0.02));
+    yard.position.copy(at(-18, 0.02));
     yard.rotation.y = p.hdg;
     group.add(yard);
     // Указатель.
     const signTex = signTexture(depot.label, depot.sub || '', depot.color || '#1f5c3a');
     const signMat = new THREE.MeshBasicMaterial({ map: signTex, transparent: true, side: THREE.DoubleSide });
     const sign = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 3.2), signMat);
-    sign.position.copy(at(12, 6.4));
+    sign.position.copy(at(-12, 6.4));
     sign.rotation.y = p.hdg + Math.PI;
     group.add(sign);
     for (const dx of [-2.2, 2.2]) {
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 6.4, 6), m.darkMetal);
-      post.position.copy(at(12, 3.2)).add(new THREE.Vector3(dx, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.hdg));
+      post.position.copy(at(-12, 3.2)).add(new THREE.Vector3(dx, 0, 0).applyAxisAngle(new THREE.Vector3(0, 1, 0), p.hdg));
       group.add(post);
     }
     // Световой столб-маркер на обочине.
@@ -443,13 +637,13 @@ export class RoadWorld {
       side: THREE.DoubleSide,
     });
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 26, 12, 1, true), beamMat);
-    beam.position.copy(at(6.4, 13));
+    beam.position.copy(at(-6.4, 13));
     group.add(beam);
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(2.3, 2.8, 24),
       new THREE.MeshBasicMaterial({ color: depot.color === '#1f5c3a' ? 0x49d7b0 : 0xf2b544, transparent: true, opacity: 0.8, side: THREE.DoubleSide })
     );
-    ring.position.copy(at(4.6, 0.09));
+    ring.position.copy(at(-4.6, 0.09));
     ring.rotation.x = -Math.PI / 2;
     group.add(ring);
     this.group.add(group);
@@ -474,7 +668,7 @@ export class RoadWorld {
       const dist = mark.s - s0;
       if (dist > 0 && dist < s1 - s0) {
         const tex = signTexture(mark.name, COUNTRIES[mark.country]?.name || '', '#1f5c3a');
-        addSign(mark.s - 420, 7.8, tex, 5.6, 2.6, 5.2);
+        addSign(mark.s - 420, -7.8, tex, 5.6, 2.6, 5.2);
       }
     }
     // Границы стран.
@@ -609,7 +803,10 @@ export class RoadWorld {
       const r = rng(mark.s * 31 + 7);
       const count = Math.round(around / 46);
       const wallGeo = new THREE.BoxGeometry(1, 1, 1);
-      const walls = new THREE.InstancedMesh(wallGeo, m.building, count);
+      const facadeMat = m.facades[Math.abs(Math.round(mark.s)) % m.facades.length];
+      const walls = new THREE.InstancedMesh(wallGeo, facadeMat, count);
+      const scales = new Float32Array(count * 3);
+      wallGeo.setAttribute('aFacadeScale', new THREE.InstancedBufferAttribute(scales, 3));
       const roofs = new THREE.InstancedMesh(wallGeo, m.roofLight, count);
       const dummy = new THREE.Object3D();
       const color = new THREE.Color();
@@ -619,22 +816,29 @@ export class RoadWorld {
         const ss = mark.s + ds;
         if (ss < 0 || ss > route.length) continue;
         const side = r() > 0.5 ? 1 : -1;
-        const lat = side * (16 + r() * 95);
+        const lat = -side * (44 + r() * 190);
         const p = route.pointAt(ss);
-        const w = 7 + r() * 20;
-        const h = 7 + r() * (26 + (CITY_BY_ID.get(mark.id)?.size || 1) * 18);
-        const d = 7 + r() * 20;
+        const sizeFactor = CITY_BY_ID.get(mark.id)?.size || 1;
+        const w = 8 + r() * 16;
+        // Города — не небоскрёбы у трассы: 2–6 этажей, изредка башня.
+        const tall = r() > 0.9 ? 2.4 : 1;
+        const h = (6.5 + r() * (9 + sizeFactor * 4)) * tall;
+        const d = 8 + r() * 16;
         const y = p.y + terrainOffset(ss, lat);
         dummy.position.set(p.x + Math.cos(p.hdg) * lat, y + h / 2, p.z - Math.sin(p.hdg) * lat);
         dummy.rotation.set(0, p.hdg + (r() - 0.5) * 0.4, 0);
         dummy.scale.set(w, h, d);
         dummy.updateMatrix();
         walls.setMatrixAt(placed, dummy.matrix);
+        // Одно окно ≈ 3.2 м, этаж ≈ 3 м → масштаб UV по габаритам дома.
+        scales[placed * 3] = w / 12.8;
+        scales[placed * 3 + 1] = h / 15;
+        scales[placed * 3 + 2] = d / 12.8;
         dummy.position.y = y + h + 0.6;
         dummy.scale.set(w * 1.04, 1.2, d * 1.04);
         dummy.updateMatrix();
         roofs.setMatrixAt(placed, dummy.matrix);
-        color.setHSL(0.09 + r() * 0.05, 0.1 + r() * 0.2, 0.55 + r() * 0.25);
+        color.setRGB(0.82 + r() * 0.18, 0.8 + r() * 0.2, 0.78 + r() * 0.2);
         walls.setColorAt(placed, color);
         placed++;
       }
@@ -653,8 +857,11 @@ export class RoadWorld {
       walls.instanceMatrix.needsUpdate = true;
       roofs.instanceMatrix.needsUpdate = true;
       if (walls.instanceColor) walls.instanceColor.needsUpdate = true;
+      wallGeo.attributes.aFacadeScale.needsUpdate = true;
       this.group.add(walls, roofs);
     }
+    // Склейка статичных мешей трассы: вместо сотен draw call — десятки.
+    mergeStatic(this.group);
   }
 
   dispose() {
