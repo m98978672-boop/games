@@ -13,6 +13,7 @@
   --ls: #6fbf8b;
   --fl: #e88a5a;
   --ch: #38bdf8;
+  --rd: #ffb057;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -206,6 +207,18 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 .card-cascade .features li::before { background: var(--ch); }
 .card-folderos .features li::before { background: var(--accent); }
 .card-truck .features li::before { background: #d1f36a; }
+.card-road .features li::before { background: var(--rd); }
+/* ТРАССА — широкая карточка-баннер: обложка во всю ширину */
+.card-road { grid-template-columns: 1fr; }
+.card-road .card-art { min-height: 0; aspect-ratio: 1440 / 660; }
+.card-road .card-art img { object-fit: cover; object-position: center 52%; }
+.card-road .card-body { padding: 26px 30px 26px; }
+.card-road .card-body h2 { font-size: 28px; }
+.card-road .features { grid-template-columns: 1fr 1fr; gap: 5px 22px; }
+.card-road .card-actions { margin-top: 6px; }
+
+.card-road .badge-new { color: #ffcb8a; border-color: rgba(255, 176, 87, 0.45); }
+.card-road:hover { border-color: rgba(255, 176, 87, 0.4); }
 
 .card-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
 
@@ -284,6 +297,7 @@ footer {
 @media (max-width: 860px) {
   .card { grid-template-columns: 1fr; }
   .card:nth-child(even) .card-art { order: 0; }
+  .card-road .features { grid-template-columns: 1fr; }
   .card-art { min-height: 220px; }
   .hero { min-height: 66vh; }
   .hero-inner { padding: 56px 20px; }

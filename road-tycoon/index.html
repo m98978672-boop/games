@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ТРАССА — Дорожная империя: дороги и сервис между городами</title>
+<meta name="description" content="ТРАССА — браузерная экономическая игра: стройте дороги между городами, ставьте АЗС, СТО, кафе и мотели, зарабатывайте на проезжающих машинах и развивайте дорожную компанию.">
+<meta name="theme-color" content="#0c1013">
+<meta property="og:type" content="website">
+<meta property="og:title" content="ТРАССА — Дорожная империя">
+<meta property="og:description" content="Стройте трассы между городами и зарабатывайте на мелочах: кафе, заправки, шиномонтаж, мотели.">
+<meta property="og:image" content="cover.svg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c1013'/%3E%3Cpath d='M13 6h6l-1 8h-4z' fill='%23f0b840'/%3E%3Cpath d='M14.5 28h3l-1-11h-1z' fill='%23f0b840'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<canvas id="map" aria-label="Карта дорожной сети: города, трассы, объекты и машины"></canvas>
+
+<header class="topbar">
+  <a class="brand" href="../index.html" title="Все игры">
+    <span class="logo">Т</span>
+    <span class="brand-text"><b>ТРАССА</b><i>дорожная империя</i></span>
+  </a>
+
+  <div class="top-stats">
+    <div class="stat money">
+      <span>Касса</span>
+      <b id="hud-money">—</b>
+      <i id="hud-debt"></i>
+    </div>
+    <div class="stat">
+      <span>Время</span>
+      <b><span id="hud-sun">☀️</span> <span id="hud-day">День 1 · 08:00</span></b>
+    </div>
+    <div class="stat">
+      <span>Итог дня</span>
+      <b id="hud-today" class="val">+0 ₽</b>
+    </div>
+    <div class="stat lvl">
+      <span>Уровень <b id="hud-level">1</b></span>
+      <div class="xp"><i id="hud-xp"></i></div>
+      <i id="hud-xp-label" class="xp-label">0 / 400 XP</i>
+    </div>
+  </div>
+
+  <div class="top-actions">
+    <div id="speed-badge" class="speed-badge">1×</div>
+    <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)" aria-label="Пауза">⏸</button>
+    <div class="speed-group" id="speed-group" aria-label="Скорость игры">
+      <button data-speed="1" class="on" title="Обычная скорость (1)">1×</button>
+      <button data-speed="2" title="Быстро (2)">2×</button>
+      <button data-speed="4" title="Очень быстро (3)">4×</button>
+    </div>
+    <button id="btn-fit" class="icon-btn" title="Вся карта (F)" aria-label="Вся карта">⛶</button>
+    <button id="btn-side" class="icon-btn side-toggle" title="Панель компании" aria-label="Панель компании">☰</button>
+    <button id="btn-report" class="icon-btn" title="Отчёт по дням" aria-label="Отчёт">📊</button>
+    <button id="btn-bank" class="icon-btn" title="Банк" aria-label="Банк">₽</button>
+    <button id="btn-sound" class="icon-btn" title="Звук" aria-label="Звук">🔊</button>
+    <button id="btn-save" class="icon-btn" title="Сохранить (S)" aria-label="Сохранить">💾</button>
+    <button id="btn-help" class="icon-btn" title="Как играть (H)" aria-label="Помощь">?</button>
+  </div>
+</header>
+
+<div id="save-indicator">● автосохранение</div>
+
+<aside class="panel tools" aria-label="Инструменты строительства">
+  <div class="tabs" id="tool-tabs" role="tablist">
+    <button data-tab="road" class="on" role="tab">🛣️ Дороги</button>
+    <button data-tab="service" role="tab">⛽ Сервис</button>
+    <button data-tab="city" role="tab">🌳 Уют</button>
+    <button data-tab="company" role="tab">📈 Компания</button>
+  </div>
+  <div class="tool-body" id="tool-body"></div>
+</aside>
+
+<aside class="panel side" id="side" aria-label="Информация о компании и объекте"></aside>
+
+<div class="bottom-bar">
+  <div id="hint" class="chip hint"></div>
+  <div id="news" class="chip news"></div>
+</div>
+
+<div id="pause-flag" class="pause-flag">ПАУЗА · пробел</div>
+<div id="daily" class="daily hidden"></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="modal-root" class="modal-root"></div>
+
+<noscript><p style="color:#fff;padding:24px">Для игры нужен JavaScript.</p></noscript>
+
+<script src="src/config.js"></script>
+<script src="src/util.js"></script>
+<script src="src/world.js"></script>
+<script src="src/sim.js"></script>
+<script src="src/render.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>

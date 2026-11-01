@@ -35,7 +35,7 @@ sed -e 's|src="assets/|src="site/assets/|g' \
     -e 's|href="assets/|href="site/assets/|g' \
     -e 's|href="site.css"|href="site/site.css"|' \
     -e 's|href="site.webmanifest"|href="site/site.webmanifest"|' \
-    -e 's|href="../last-shore/|href="last-shore/|g' \
-    -e 's|href="../frontline-steel-and-drones/|href="frontline-steel-and-drones/|g' \
+    -e 's|href="\.\./\([a-z0-9-]*\)/|href="\1/|g' \
+    -e 's|src="\.\./\([a-z0-9-]*\)/|src="\1/|g' \
     site/index.html > index.html
 ```
