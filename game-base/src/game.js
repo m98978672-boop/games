@@ -100,7 +100,8 @@
           game.burst(f.x, f.y, s.combo >= 5);
           GB.audio.play('catch');
           GB.ui.flashCombo();
-          GB.ui.setNews(`+${pts} · комбо ×${Math.min(s.combo, c.comboMax)}`);
+          const maxed = s.combo >= c.comboMax;
+          GB.ui.setNews(maxed ? `+${pts} · МАКС комбо ×${c.comboMax}!` : `+${pts} · комбо ×${s.combo}`);
           return true;
         }
       }

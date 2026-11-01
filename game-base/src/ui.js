@@ -141,17 +141,16 @@
       const left = Math.max(0, s.timeLeftMs / 1000);
       const pct = Math.round(100 * left / c.roundSeconds);
       ui.els.side.innerHTML = `
-        <h3>Раунд · осталось ${Math.ceil(left)} с</h3>
+        <div class="side-head"><h3>Раунд · ${Math.ceil(left)} с</h3><span class="sticker">ручная сборка</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
         <div class="side-stats">
           <div><span>Поймано</span><b class="gold">${s.caught}</b></div>
-          <div><span>Улетело</span><b>${s.missed}</b></div>
+          <div><span>Сбежало</span><b>${s.missed}</b></div>
           <div><span>Комбо</span><b class="gold">×${s.combo}</b></div>
           <div><span>Рекорд</span><b>${U().fmt(s.best || 0)}</b></div>
         </div>
-        <p class="side-note">Кликай по светлячкам до того, как они погаснут.
-          Подряд — комбо растёт до ×${c.comboMax}. Промах сбрасывает комбо.</p>
-        <button class="btn btn-primary" id="btn-new-round">Новый раунд</button>`;
+        <p class="side-note">Лови подряд — комбо растёт до ×${c.comboMax}. Один промах — и всё сгорает.</p>
+        <button class="btn btn-primary" id="btn-new-round">Ещё раунд!</button>`;
       U().on(U().el('btn-new-round'), 'click', () => { GB.audio.play('click'); GB.game.restart(); });
     },
 
