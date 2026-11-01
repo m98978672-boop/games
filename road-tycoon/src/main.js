@@ -60,7 +60,18 @@
     app.camera.zoom = screenWide ? 1.02 : 0.95;
     app.camera.x = 52;
     app.camera.y = 50;
-    if (window.innerWidth < 820) {
+    // возвращаем камеру туда, где игрок оставил карту
+    let viewRestored = false;
+    try {
+      const v = JSON.parse(localStorage.getItem(VIEW_KEY) || 'null');
+      if (v && isFinite(v.zoom) && isFinite(v.x) && isFinite(v.y)) {
+        app.camera.zoom = U.clamp(v.zoom, 0.03, MAX_ZOOM);
+        app.camera.x = v.x;
+        app.camera.y = v.y;
+        viewRestored = true;
+      }
+    } catch (e) { /* приватный режим */ }
+    if (!viewRestored && window.innerWidth < 820) {
       app.camera.zoom = 1.6;
       app.camera.x = app.state.roads.length ? (C.cities[app.state.roads[0].a].x + C.cities[app.state.roads[0].b].x) / 2 : C.worldW / 2;
       app.camera.y = app.state.roads.length ? (C.cities[app.state.roads[0].a].y + C.cities[app.state.roads[0].b].y) / 2 : C.worldH / 2;
@@ -178,6 +189,8 @@
   }
 
   const DEVICE_KEY = 'trassa-device';
+  // положение камеры храним отдельно от прогресса, чтобы не менять формат сейва
+  const VIEW_KEY = 'trassa-road-empire-view-v1';
 
   function setDevice(mode) {
     document.documentElement.setAttribute('data-device', mode);
@@ -648,9 +661,19 @@
   }
   app.fitCamera = fitMap;
 
+  function saveView() {
+    try {
+      localStorage.setItem(VIEW_KEY, JSON.stringify({
+        zoom: app.camera.zoom, x: app.camera.x, y: app.camera.y,
+      }));
+    } catch (e) { /* приватный режим */ }
+  }
+  app.saveView = saveView;
+
   app.save = function (silent) {
     try {
       localStorage.setItem(C.saveKey, JSON.stringify(Sim.serializable(app.state)));
+      saveView();
       TR.UI.saveIndicator();
       if (!silent) TR.UI.toast('Прогресс сохранён в браузере', 'good');
     } catch (e) {
