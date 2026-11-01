@@ -106,14 +106,23 @@
 
   function grassTexture() {
     if (TEX.grass) return TEX.grass;
-    const { c, x } = canvas2d(256, 256);
-    noiseFill(x, 256, 256, '#5c8a49', 0.12, 0.65);
-    for (let i = 0; i < 2600; i++) {
-      const g = 70 + Math.random() * 70;
-      x.fillStyle = 'rgba(' + Math.round(g * 0.55) + ',' + Math.round(g) + ',' + Math.round(g * 0.45) + ',0.5)';
-      x.fillRect(Math.random() * 256, Math.random() * 256, 1.6, 2.6);
+    const { c, x } = canvas2d(512, 512);
+    noiseFill(x, 512, 512, '#5c8a49', 0.07, 0.5);
+    for (let i = 0; i < 9000; i++) {
+      const g = 80 + Math.random() * 55;
+      x.fillStyle = 'rgba(' + Math.round(g * 0.62) + ',' + Math.round(g) + ',' + Math.round(g * 0.5) + ',0.34)';
+      x.fillRect(Math.random() * 512, Math.random() * 512, 1.4, 2.4);
     }
-    TEX.grass = texture(c, 26, 26);
+    // редкие травинки-кустики, чтобы не было видно повторов
+    for (let i = 0; i < 420; i++) {
+      x.strokeStyle = 'rgba(' + (60 + Math.random() * 40) + ',' + (110 + Math.random() * 50) + ',60,0.28)';
+      x.beginPath();
+      const px = Math.random() * 512, py = Math.random() * 512;
+      x.moveTo(px, py);
+      x.lineTo(px + (Math.random() - 0.5) * 4, py - 3 - Math.random() * 4);
+      x.stroke();
+    }
+    TEX.grass = texture(c, 44, 44);
     return TEX.grass;
   }
 
@@ -688,6 +697,10 @@
       // ровная лента: поднимаем только на мостах
       const g = ribbon(seg, width, { vScale: 1.4 });
       const under = ribbon(seg, width + 0.16, { vScale: 1.4 });
+      // подложка чуть ниже полотна, иначе z-fighting и «пунктирная» дорога
+      const underPos = under.attributes.position;
+      for (let i = 0; i < underPos.count; i++) underPos.setY(i, underPos.getY(i) - 0.02);
+      underPos.needsUpdate = true;
       roadGroup.add(new THREE.Mesh(under, new THREE.MeshStandardMaterial({ color: '#26271f', roughness: 1 })));
       const mat = new THREE.MeshStandardMaterial({
         map: roadTexture(road.building ? 1 : q), roughness: 0.9, metalness: 0.02,
