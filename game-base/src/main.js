@@ -17,7 +17,7 @@
     GB.game.newRound();
     if (data.best) GB.game.state.best = data.best;
     GB.ui.renderSide();
-    GB.ui.setHint('Кликай по светлячкам, пока они не погасли!');
+    GB.ui.setHint('Лови светлячков кликом — они не ждут!');
     GB.ui.setNews('');
     GB.ui.updateHud();
 
@@ -25,7 +25,7 @@
     if (!data.best && !data.totalCaught) {
       setTimeout(() => GB.ui.openHelp(), 350);
     } else {
-      GB.ui.toast(`${C.title} · светлячки: лови их кликом!`, 'win', '✨');
+      GB.ui.toast('С возвращением! Лови светлячков 👋', 'win', '✨');
     }
 
     // игровой цикл

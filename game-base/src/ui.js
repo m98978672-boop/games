@@ -26,6 +26,7 @@
       // клики по полю
       U().on(GB.render.canvas, 'pointerdown', (e) => {
         GB.audio.unlock();
+        if (GB.render.mouse !== undefined) GB.render.mouse = { x: e.clientX, y: e.clientY };
         if (ui.els['modal-root'].classList.contains('open')) return;
         GB.game.click(e.clientX, e.clientY);
       });
@@ -70,7 +71,7 @@
       if (s) s.best = Math.max(s.best || 0, s.score);
       ui.persist();
       GB.audio.play('click');
-      ui.toast('Прогресс сохранён', 'good', '💾');
+      ui.toast('Записал в блокнот (localStorage)', 'good', '✎');
       ui.flashSave();
     },
 
@@ -85,7 +86,7 @@
       GB.audio.setMuted(m);
       ui.syncSoundBtn();
       ui.persist();
-      ui.toast(m ? 'Звук выключен' : 'Звук включён', '', m ? '🔇' : '🔊');
+      ui.toast(m ? 'Звук выключил' : 'Звук включил', '', m ? '🔇' : '🔊');
       if (!m) GB.audio.play('click');
     },
 
@@ -128,7 +129,16 @@
       const set = (id, val) => {
         if (ui.hudCache[id] !== val) { ui.hudCache[id] = val; ui.els[id].textContent = val; }
       };
-      set('hud-score', U().fmt(s.score));
+      const score = U().fmt(s.score);
+      if (ui.hudCache['hud-score'] !== score) {
+        ui.hudCache['hud-score'] = score;
+        const el = ui.els['hud-score'];
+        el.textContent = score;
+        // «прыгаем» при каждом изменении счёта
+        el.classList.remove('pop');
+        void el.offsetWidth;
+        el.classList.add('pop');
+      }
       set('hud-best', U().fmt(s.best || 0));
       set('hud-combo', '×' + s.combo);
       set('hud-time', String(Math.ceil(s.timeLeftMs / 1000)));
@@ -141,17 +151,16 @@
       const left = Math.max(0, s.timeLeftMs / 1000);
       const pct = Math.round(100 * left / c.roundSeconds);
       ui.els.side.innerHTML = `
-        <h3>Раунд · осталось ${Math.ceil(left)} с</h3>
+        <div class="side-head"><h3>Раунд · ${Math.ceil(left)} с</h3><span class="sticker">ручная сборка</span></div>
         <div class="bar"><i style="width:${pct}%"></i></div>
         <div class="side-stats">
           <div><span>Поймано</span><b class="gold">${s.caught}</b></div>
-          <div><span>Улетело</span><b>${s.missed}</b></div>
+          <div><span>Сбежало</span><b>${s.missed}</b></div>
           <div><span>Комбо</span><b class="gold">×${s.combo}</b></div>
           <div><span>Рекорд</span><b>${U().fmt(s.best || 0)}</b></div>
         </div>
-        <p class="side-note">Кликай по светлячкам до того, как они погаснут.
-          Подряд — комбо растёт до ×${c.comboMax}. Промах сбрасывает комбо.</p>
-        <button class="btn btn-primary" id="btn-new-round">Новый раунд</button>`;
+        <p class="side-note">Лови подряд — комбо растёт до ×${c.comboMax}. Один промах — и всё сгорает.</p>
+        <button class="btn btn-primary" id="btn-new-round">Ещё раунд!</button>`;
       U().on(U().el('btn-new-round'), 'click', () => { GB.audio.play('click'); GB.game.restart(); });
     },
 
@@ -174,14 +183,23 @@
 
     openHelp() {
       ui.openModal(`
-        <div class="modal-head"><h2>Как играть</h2><button class="icon-btn x" id="m-close">✕</button></div>
-        <h1>СВЕТЛЯЧКИ</h1>
-        <p>На тёмном поле появляются светлячки и медленно дрейфуют.
-        <b style="color:var(--accent-2)">Кликай по ним, пока они не погасли</b> — за каждого +очки.</p>
+        <div class="modal-head"><h2>Как играть <span class="sticker">инструкция</span></h2><button class="icon-btn x" id="m-close">✕</button></div>
+        <div class="modal-title-row">
+          <svg class="doodle" width="46" height="46" viewBox="0 0 64 64" aria-hidden="true">
+            <circle cx="32" cy="34" r="17" fill="rgba(255,207,125,.16)"/>
+            <ellipse cx="21" cy="24" rx="9.5" ry="4.5" fill="none" stroke="#ffcf7d" stroke-width="2.2" transform="rotate(-28 21 24)"/>
+            <ellipse cx="43" cy="24" rx="9.5" ry="4.5" fill="none" stroke="#ffcf7d" stroke-width="2.2" transform="rotate(28 43 24)"/>
+            <ellipse cx="32" cy="37" rx="6.5" ry="9.5" fill="#ffd98a"/>
+            <path d="M28 28 q-3 -6 -8 -7 M36 28 q3 -6 8 -7" fill="none" stroke="#ffcf7d" stroke-width="2.2" stroke-linecap="round"/>
+          </svg>
+          <h1 class="hand">Светлячки</h1>
+        </div>
+        <p>На тёмном поле вспыхивают светлячки и медленно дрейфуют — <b style="color:var(--accent-2)">они не любят ждать</b>.
+        Лови их кликом, пока не погасли.</p>
         <ul>
-          <li>Ловли подряд быстрее ${GB.CONFIG.comboWindowMs / 1000} с — комбо растёт (до ×${GB.CONFIG.comboMax}), очки умножаются.</li>
-          <li>Промах или упущенный светлячок сбрасывают комбо.</li>
-          <li>Раунд длится ${GB.CONFIG.roundSeconds} секунд. Рекорд хранится в браузере.</li>
+          <li>Ловишь подряд быстрее ${GB.CONFIG.comboWindowMs / 1000} с — комбо растёт до ×${GB.CONFIG.comboMax}, очки умножаются.</li>
+          <li>Промах или сбежавший светлячок сбрасывают комбо.</li>
+          <li>Раунд длится ${GB.CONFIG.roundSeconds} секунд. Рекорд лежит в браузере и не пропадёт.</li>
         </ul>
         <table class="tbl">
           <tr><td><span class="kbd">Пробел</span></td><td>пауза</td></tr>
@@ -199,22 +217,29 @@
 
     onRoundEnd(s, prevBest) {
       const rec = s.isNewRecord && s.score > 0;
+      const verdict =
+        s.score >= 400 ? 'Невероятно! Настоящий ловец светлячков!' :
+        s.score >= 250 ? 'Ого, почти идеальный улов!' :
+        s.score >= 120 ? 'Хороший результат, рука набита!' :
+        s.score >= 40 ? 'Неплохо для начала!' :
+        'В следующий раз точно получится!';
       ui.renderSide();
-      ui.setHint('Раунд окончен — нажми «Новый раунд» или R');
+      ui.setHint('Раунд окончен — «Ещё раунд!» или клавиша R');
       ui.openModal(`
-        <div class="modal-head"><h2>Раунд окончен</h2><button class="icon-btn x" id="m-close">✕</button></div>
-        <div class="end-score"><span>Твой счёт</span><b>${U().fmt(s.score)}</b></div>
+        <div class="modal-head"><h2>Время вышло</h2><button class="icon-btn x" id="m-close">✕</button></div>
+        <div class="end-score"><span class="hand">твой улов</span><b>${U().fmt(s.score)}</b></div>
         ${rec ? '<span class="new-record">★ новый рекорд! ★</span>' : ''}
-        <p class="end-best">Рекорд: <b>${U().fmt(s.best)}</b>${prevBest < s.best ? ` (было ${U().fmt(prevBest)})` : ''} · поймано ${s.caught}, улетело ${s.missed}</p>
+        <p class="end-verdict">${verdict}</p>
+        <p class="end-best">Рекорд: <b>${U().fmt(s.best)}</b>${prevBest < s.best ? ` (было ${U().fmt(prevBest)})` : ''} · поймано ${s.caught}, сбежало ${s.missed}</p>
         <div class="modal-actions">
           <button class="btn" id="m-help">Как играть</button>
-          <button class="btn btn-primary" id="m-again">Играть снова</button>
+          <button class="btn btn-primary" id="m-again">Ещё разок!</button>
         </div>
       `);
       U().on(U().el('m-close'), 'click', () => ui.closeModal());
       U().on(U().el('m-again'), 'click', () => { GB.audio.play('click'); GB.game.restart(); });
       U().on(U().el('m-help'), 'click', () => ui.openHelp());
-      ui.toast(rec ? 'Новый рекорд!' : 'Раунд окончен', rec ? 'win' : '', rec ? '★' : '🏁');
+      ui.toast(rec ? 'Новый рекорд — красавчик! ★' : 'Раунд окончен', rec ? 'win' : '', rec ? '★' : '🏁');
     },
   };
 

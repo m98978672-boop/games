@@ -28,6 +28,8 @@
         spawnInMs: 500,      // первый светлячок появится быстро
         best: (GB.save.load().best || 0),
         isNewRecord: false,
+        bannerUntil: performance.now() + 2600, // рукописный баннер в начале раунда
+        bannerText: 'Лови светлячков!',
       };
       return game.state;
     },
@@ -46,7 +48,7 @@
       game.newRound();
       GB.ui.closeModal();
       GB.ui.renderSide();
-      GB.ui.setHint('Кликай по светлячкам, пока они не погасли!');
+      GB.ui.setHint('Ну что, погнали? Лови светлячков!');
       GB.ui.setNews('');
     },
 
@@ -62,6 +64,7 @@
         r: u.rand(c.flyRMin, c.flyRMax),
         age: 0,
         ttl: u.rand(c.flyTtlMinMs, c.flyTtlMaxMs),
+        phase: u.rand(0, Math.PI * 2), // фаза покачивания
       });
     },
 
@@ -100,7 +103,8 @@
           game.burst(f.x, f.y, s.combo >= 5);
           GB.audio.play('catch');
           GB.ui.flashCombo();
-          GB.ui.setNews(`+${pts} · комбо ×${Math.min(s.combo, c.comboMax)}`);
+          const maxed = s.combo >= c.comboMax;
+          GB.ui.setNews(maxed ? `+${pts} · МАКС комбо ×${c.comboMax}!` : `+${pts} · комбо ×${s.combo}`);
           return true;
         }
       }
@@ -109,7 +113,7 @@
         s.combo = 1;
         s.comboLeftMs = 0;
         GB.audio.play('miss');
-        GB.ui.setNews('Промах — комбо сгорело');
+        GB.ui.setNews('Упс, промах — комбо сгорело…');
       } else {
         GB.audio.play('miss');
       }
@@ -166,7 +170,7 @@
           s.missed++;
           if (s.combo > 1) { s.combo = 1; s.comboLeftMs = 0; }
           GB.audio.play('expire');
-          GB.ui.setNews('Светлячок улетел…');
+          GB.ui.setNews('Светлячок сбежал…');
         }
       }
 
