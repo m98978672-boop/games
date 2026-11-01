@@ -1138,6 +1138,20 @@ class Game {
     const shake = this.cameraShake > 0 ? this.cameraShake * 0.06 * Math.sin(performance.now() * 0.05) : 0;
     this.cameraShake = Math.max(0, this.cameraShake - dt * 3);
     const speed = Math.abs(this.truck.speed);
+
+    // Курс камеры сзади сглаживается отдельно от курса машины: при рулении кадр
+    // не «облетает» тягач, а плавно доворачивает за направлением движения.
+    const yaw = root.rotation.y;
+    if (this.camYaw === undefined || instant) this.camYaw = yaw;
+    else {
+      let d = yaw - this.camYaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      // Чем быстрее едем, тем охотнее камера держится за трассой (но без рывков).
+      const rate = 1.4 + clamp(speed * 0.12, 0, 1.6);
+      this.camYaw += d * (1 - Math.exp(-dt * rate));
+    }
+
     if (mode === 'interior' || mode === 'hood') {
       this.truckView.setInteriorVisible(mode === 'interior');
       root.updateMatrixWorld(true);
@@ -1145,10 +1159,11 @@ class Game {
       this.tmpVec.copy(offset);
       root.localToWorld(this.tmpVec);
       this.camera.position.copy(this.tmpVec);
+      // Голова водителя смотрит по ходу кабины: никакого «поворота за рулём».
       const euler = new THREE.Euler(
-        (mode === 'interior' ? -0.075 : -0.12) + root.rotation.x,
-        root.rotation.y + Math.PI + (mode === 'interior' ? this.truck.steer * 0.22 : 0),
-        root.rotation.z * 0.6 + shake,
+        (mode === 'interior' ? -0.075 : -0.12) + root.rotation.x * 0.6,
+        root.rotation.y + Math.PI,
+        root.rotation.z * 0.25 + shake,
         'YXZ'
       );
       this.camera.quaternion.setFromEuler(euler);
@@ -1157,25 +1172,24 @@ class Game {
       this.truckView.setInteriorVisible(false);
       const back = mode === 'far' ? 34 : 23;
       const up = mode === 'far' ? 13 : 6.6;
-      const fwdX = Math.sin(root.rotation.y);
-      const fwdZ = Math.cos(root.rotation.y);
+      const fwdX = Math.sin(this.camYaw);
+      const fwdZ = Math.cos(this.camYaw);
       const target = this.camTarget.set(
         this.truckPos.x - fwdX * back,
         this.truckPos.y + up,
         this.truckPos.z - fwdZ * back
       );
       const look = this.camLookAt.set(this.truckPos.x + fwdX * 12, this.truckPos.y + 1.9, this.truckPos.z + fwdZ * 12);
-      const follow = instant ? 1 : clamp(dt * 6.5, 0.06, 1);
+      const follow = instant ? 1 : clamp(dt * 4.2, 0.05, 1);
       this.camera.position.lerp(target, follow);
       this.camLook.lerp(look, follow);
       this.camera.lookAt(this.camLook);
       this.camera.fov = mode === 'far' ? 58 : 66;
       this.camera.rotateZ(shake * 0.35);
     }
-    const targetFov = this.camera.fov + clamp(speed * 0.16, 0, 4.5);
-    this.camera.fov = lerp(this.camera.fov, targetFov, 0.08);
+    const targetFov = this.camera.fov + clamp(speed * 0.08, 0, 2.2);
+    this.camera.fov = lerp(this.camera.fov, targetFov, 0.06);
     this.camera.updateProjectionMatrix();
-    void root;
   }
 
   updateIndicators(dt) {
@@ -1991,6 +2005,9 @@ class Game {
 
 const game = new Game();
 window.__game = game;
+// Отладочный доступ к THREE (только с ?debug в адресе): удобно стрелять рейкастом
+// из консоли браузера, когда нужно понять, что это за артефакт в кадре.
+if (typeof location !== 'undefined' && location.search.includes('debug')) window.__THREE = THREE;
 // Отладочный доступ к three для оффлайн-скриншотов и диагностики.
 window.__THREE = THREE;
 window.__eurotrakSave = () => {

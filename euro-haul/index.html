@@ -56,16 +56,15 @@
       </div>
 
       <div class="hud-top-right">
+        <div class="indicators" aria-hidden="true">
+          <span id="ind-left" class="ind">◀</span>
+          <span id="ind-right" class="ind">▶</span>
+        </div>
         <div class="limit-sign" id="speed-limit" title="Ограничение скорости">80</div>
         <button class="hud-btn" id="btn-fullscreen" title="Полный экран" aria-label="Полный экран"><svg class="ico"><use href="#i-expand"/></svg></button>
         <button class="hud-btn" id="btn-pause" title="Пауза" aria-label="Пауза"><svg class="ico"><use href="#i-pause"/></svg></button>
       </div>
     </header>
-
-    <div class="indicators" aria-hidden="true">
-      <span id="ind-left" class="ind">◀</span>
-      <span id="ind-right" class="ind">▶</span>
-    </div>
 
     <aside class="route-advisor" id="route-advisor">
       <div class="ra-head">
@@ -140,10 +139,10 @@
         <span class="steer-label">РУЛЬ</span>
       </div>
       <div class="touch-aux">
-        <button data-act="interact" title="Погрузка / заправка">E</button>
-        <button data-act="camera" title="Камера">📷</button>
-        <button data-act="touch-cruise" title="Круиз">КР</button>
-        <button data-act="touch-lights" title="Фары">💡</button>
+        <button data-act="interact" title="Погрузка / заправка / отдых">E</button>
+        <button data-act="camera" title="Камера"><small>ВИД</small></button>
+        <button data-act="touch-cruise" title="Круиз-контроль"><small>КР</small></button>
+        <button data-act="touch-lights" title="Фары"><small>СВЕТ</small></button>
       </div>
       <div class="touch-pedals">
         <button data-touch="brake" class="pedal brake" aria-label="Тормоз"><span>ТОРМОЗ</span></button>
