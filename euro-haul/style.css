@@ -600,6 +600,26 @@ body.must-rotate .rotate-hint { display: flex; }
 
 .map-wrap { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #081014; height: clamp(380px, calc(100vh - 270px), 820px); }
 #map-canvas { display: block; width: 100%; height: 100%; }
+.map-wrap { position: relative; }
+.map-loading {
+  position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px;
+  align-items: center; justify-content: center; z-index: 3;
+  background: radial-gradient(circle at 50% 45%, #0d2230 0%, #050d13 75%);
+  color: var(--muted); font-size: 13px; letter-spacing: .02em;
+  transition: opacity .25s ease; opacity: 1;
+}
+.map-loading.hidden { opacity: 0; pointer-events: none; }
+.map-loading .spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid rgba(124, 198, 240, .18); border-top-color: #7cc6f0;
+  animation: mapSpin .9s linear infinite;
+}
+.map-loading .bar { width: 168px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.09); overflow: hidden; }
+.map-loading .bar i { display: block; height: 100%; width: 8%; background: linear-gradient(90deg, #4ec9b0, #7cc6f0); transition: width .18s linear; }
+.map-loading b { color: var(--text); font-weight: 600; font-size: 14px; }
+@keyframes mapSpin { to { transform: rotate(360deg); } }
+#map-canvas { opacity: 0; transition: opacity .3s ease; }
+#map-canvas.ready { opacity: 1; }
 .map-legend { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; font-size: 11px; color: var(--muted); }
 .map-legend span { display: flex; align-items: center; gap: 6px; }
 .map-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -643,6 +663,8 @@ body.must-rotate .rotate-hint { display: flex; }
 #screen-loading { display: grid; place-items: center; background: rgba(5, 9, 12, 0.94); }
 .loading-box { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; max-width: 430px; text-align: center; }
 .loading-box b { font-size: 17px; }
+.loading-bar { width: 240px; height: 4px; border-radius: 3px; background: rgba(255,255,255,.09); overflow: hidden; margin-top: 4px; }
+.loading-bar i { display: block; height: 100%; width: 6%; border-radius: 3px; background: linear-gradient(90deg, #4ec9b0, #7cc6f0); transition: width .25s ease; }
 .loading-box span, .loading-box p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
 .spinner { width: 42px; height: 42px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: var(--amber); animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }

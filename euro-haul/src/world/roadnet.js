@@ -172,6 +172,39 @@ function smoothPolyline(pts, iterations, strength = 0.5) {
   return pts;
 }
 
+/**
+ * Выпрямляет слишком крутые места трассы: если радиус поворота меньше
+ * minRadius, вершина смещается к середине соседей. Так «заломы» на стыках
+ * перегонов и у городов превращаются в нормальные дуги.
+ */
+function limitCurvature(pts, maxCurv, iterations = 40) {
+  if (!pts || pts.length < 3) return pts;
+  for (let it = 0; it < iterations; it++) {
+    let changed = false;
+    for (let i = 1; i < pts.length - 1; i++) {
+      const ax = pts[i].x - pts[i - 1].x;
+      const az = pts[i].z - pts[i - 1].z;
+      const bx = pts[i + 1].x - pts[i].x;
+      const bz = pts[i + 1].z - pts[i].z;
+      const la = Math.hypot(ax, az) || 1;
+      const lb = Math.hypot(bx, bz) || 1;
+      const cross = (ax * bz - az * bx) / (la * lb);
+      const dh = Math.asin(clamp(cross, -1, 1));
+      const ds = (la + lb) / 2 || 1;
+      const curv = Math.abs(dh) / ds;
+      if (curv <= maxCurv) continue;
+      const k = clamp((curv - maxCurv) / curv, 0, 0.5) * 0.55;
+      const mx = (pts[i - 1].x + pts[i + 1].x) / 2;
+      const mz = (pts[i - 1].z + pts[i + 1].z) / 2;
+      pts[i].x += (mx - pts[i].x) * k;
+      pts[i].z += (mz - pts[i].z) * k;
+      changed = true;
+    }
+    if (!changed) break;
+  }
+  return pts;
+}
+
 function elevationAt(s) {
   return (
     6.5 * Math.sin(s / 2100 + 0.7) +
@@ -212,10 +245,11 @@ export function buildRouteGeometry(cityIds, seed = 1) {
       const len = Math.hypot(dx, dz);
       const nx = -dz / len;
       const nz = dx / len;
-      const bends = clamp(Math.round(len / 1300), 2, 9);
+      // Длинные плавные кривые: 1–4 изгиба на перегон, амплитуда умеренная.
+      const bends = clamp(Math.round(len / 1700), 2, 6);
       for (let k = 1; k <= bends; k++) {
         const t = k / (bends + 1);
-        const off = (rand() - 0.5) * Math.min(len * 0.16, 1900) * (0.5 + Math.sin(t * Math.PI) * 0.8);
+        const off = (rand() - 0.5) * Math.min(len * 0.24, 1600) * (0.6 + Math.sin(t * Math.PI) * 0.7);
         control.push({
           x: city.x + dx * t + nx * off,
           z: city.z + dz * t + nz * off,
@@ -247,7 +281,7 @@ export function buildRouteGeometry(cityIds, seed = 1) {
   raw.push({ x: lastCity.x, z: lastCity.z, country: lastCity.country });
 
   smoothPolyline(raw, 4, 0.5);
-  const pts = resample(raw, 12);
+  const pts = limitCurvature(resample(raw, 12), 1 / 240, 40);
 
   // Кумулятивная длина, курс, высота, кривизна.
   let s = 0;

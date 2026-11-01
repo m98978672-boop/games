@@ -109,7 +109,7 @@ export class UI {
         if (mapRaf) cancelAnimationFrame(mapRaf);
         mapRaf = requestAnimationFrame(() => {
           mapRaf = 0;
-          this.drawFullMap();
+          this.drawFullMapLoading();
         });
       });
     }
@@ -343,10 +343,19 @@ export class UI {
     if (name !== 'driving') this.closeModal();
   }
 
-  loading(title = 'Загрузка…', sub = '') {
+  loading(title = 'Загрузка…', sub = '', pct = 6) {
     $('loading-title').textContent = title;
     $('loading-sub').textContent = sub;
+    const bar = $('loading-bar');
+    if (bar) bar.style.width = Math.max(4, Math.min(100, pct)) + '%';
     this.setScreen('loading');
+  }
+
+  /** Обновить только прогресс уже открытого экрана загрузки. */
+  loadingProgress(pct, sub) {
+    const bar = $('loading-bar');
+    if (bar) bar.style.width = Math.max(4, Math.min(100, pct)) + '%';
+    if (sub) $('loading-sub').textContent = sub;
   }
 
   // ---------- HUD ----------
@@ -619,7 +628,7 @@ export class UI {
         break;
       case 'map':
         main.innerHTML = this.mapHtml();
-        this.drawFullMap();
+        this.drawFullMapLoading();
         break;
       case 'stats':
         main.innerHTML = this.statsHtml();
@@ -879,7 +888,15 @@ export class UI {
       <div class="section-title"><div><h2>Карта Европы</h2><p class="sub">139 городов в 26 странах. Зелёным — текущий маршрут.</p></div>
       <div class="range-row"><select data-select="mapcity" style="background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:9px;font-family:inherit">${options}</select>
       <button class="btn btn-sm" data-act="free-drive-select">Свободная поездка</button></div></div>
-      <div class="map-wrap"><canvas id="map-canvas" width="1200" height="860"></canvas></div>
+      <div class="map-wrap">
+        <canvas id="map-canvas" width="1200" height="860"></canvas>
+        <div class="map-loading" id="map-loading">
+          <div class="spinner"></div>
+          <b>Готовлю карту</b>
+          <div class="bar"><i id="map-loading-bar"></i></div>
+          <span id="map-loading-text">береговая линия…</span>
+        </div>
+      </div>
       <div class="map-legend">
         <span><i style="background:#6fb6e8"></i> города</span>
         <span><i style="background:#4ec9b0"></i> текущий маршрут</span>
@@ -887,6 +904,51 @@ export class UI {
         <span><i style="background:#96b4be"></i> дороги</span>
         <span><i style="background:#2a4550"></i> суша и границы</span>
       </div>`;
+  }
+
+  /**
+   * Загрузка карты: сначала рисуем оверлей с прогрессом, затем в следующем кадре
+   * строим саму карту (она тяжёлая: тысячи точек береговой линии и границ).
+   * Иначе вкладка «замирает» на мгновение без всякой обратной связи.
+   */
+  drawFullMapLoading() {
+    const loading = $('map-loading');
+    const canvas = $('map-canvas');
+    if (!loading || !canvas) {
+      this.drawFullMap();
+      return;
+    }
+    loading.classList.remove('hidden');
+    canvas.classList.remove('ready');
+    const bar = $('map-loading-bar');
+    const text = $('map-loading-text');
+    const token = (this._mapToken = (this._mapToken || 0) + 1);
+    const steps = [
+      [8, 'береговая линия…'],
+      [34, 'границы стран…'],
+      [58, 'дороги и города…'],
+      [82, 'маршрут и подписи…'],
+      [100, 'готово'],
+    ];
+    let i = 0;
+    const tick = () => {
+      if (token !== this._mapToken) return;
+      if (i < steps.length) {
+        if (bar) bar.style.width = steps[i][0] + '%';
+        if (text) text.textContent = steps[i][1];
+        i++;
+        // даём браузеру перерисовать оверлей между шагами
+        setTimeout(tick, i === 1 ? 30 : 90);
+        return;
+      }
+      const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+      this.drawFullMap();
+      const cost = typeof performance !== 'undefined' ? performance.now() - t0 : 0;
+      if (cost > 400) console.info(`[map] отрисовка ${Math.round(cost)} мс`);
+      canvas.classList.add('ready');
+      loading.classList.add('hidden');
+    };
+    requestAnimationFrame(tick);
   }
 
   drawFullMap() {
@@ -1223,7 +1285,7 @@ export class UI {
         <div class="field-row"><label>Чувствительность руля<small>1.00 — стандарт, 0.70 — мягче (удобно на телефоне), 1.40 — резче</small></label>
           <div class="range-row"><input type="range" min="50" max="160" step="5" value="${Math.round((Number(st.steerSensitivity) || 1) * 100)}" data-input="steer">
           <span class="range-label" id="steer-value">${(Number(st.steerSensitivity) || 1).toFixed(2)}×</span></div></div>
-        <div class="field-row"><label>Помощь в поворотах<small>автоподруливание в кривых и возврат в полосу</small></label>
+        <div class="field-row"><label>Подруливание (телефон)<small>автопомощь в кривых и возврат в полосу; на ПК всегда выключено</small></label>
           <button class="btn btn-sm" data-act="toggle-setting" data-arg="steerAssist">${st.steerAssist === false ? 'Выключена' : 'Включена'}</button></div>
         <div class="field-row"><label>Сенсорное управление<small>кнопки газа, тормоза и руля на экране</small></label>
           <select data-setting="touchControls">

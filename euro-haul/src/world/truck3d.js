@@ -824,6 +824,7 @@ export class TruckView {
     const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.66, 14), darkTrim);
     column.position.set(EYE.x, 1.9, 2.26);
     column.rotation.x = Math.PI / 2 - 0.42;
+    this.wheelColumn = column;
     g.add(column);
     for (const sx of [-1, 1]) {
       box(g, 0.022, 0.022, 0.18, darkTrim, EYE.x + sx * 0.13, 1.9, 2.14, [0.22, 0, 0]);
@@ -990,8 +991,20 @@ export class TruckView {
     const spin = (Math.abs(status.speedKmh || 0) / 3.6 / WHEEL_R) * dt;
     for (const w of this.wheels) w.rotation.x -= status.speedKmh < 0 ? -spin : spin;
     // steer приходит в -1..1; вправо (steer>0) — колёса к -x, руль по часовой.
-    for (const w of this.frontWheels) w.rotation.y = -steer * 0.42;
-    if (this.wheelPivot) this.wheelPivot.rotation.z = -steer * 1.05;
+    // Колёса поворачиваются вместе с рулём (а не мгновенно), чтобы чувствовалась масса.
+    const wheelLock = Math.max(-1, Math.min(1, (this.wheelAngle || 0) / 4.4));
+    for (const w of this.frontWheels) w.rotation.y = wheelLock * 0.46;
+    // Руль: пружина с демпфером вместо мгновенного поворота. Полный ход ≈1.4 оборота,
+    // быстрая перекладка даёт лёгкий заброс, как у настоящего штурвала.
+    if (this.wheelPivot) {
+      const target = -steer * 4.4;
+      const step = Math.min(dt, 0.05);
+      const accel = (target - (this.wheelAngle || 0)) * 120 - (this.wheelVel || 0) * 16;
+      this.wheelVel = (this.wheelVel || 0) + accel * step;
+      this.wheelAngle = (this.wheelAngle || 0) + this.wheelVel * step;
+      this.wheelPivot.rotation.z = this.wheelAngle;
+      if (this.wheelColumn) this.wheelColumn.rotation.z = this.wheelAngle * 0.06;
+    }
     const wiperOn = (opts.rain || 0) > 0.15;
     if (this.wipers.length) {
       this.wiperPhase = (this.wiperPhase || 0) + dt * (wiperOn ? 4.2 : 0);
