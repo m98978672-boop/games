@@ -9,6 +9,19 @@ import { skillPrice } from '../core/save.js';
 
 const $ = (id) => document.getElementById(id);
 
+// Русские формы числительных для подписей карты: «152 города в 28 странах».
+const plural = (n, one, few, many) => {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+};
+const cityWord = (n) => plural(n, 'город', 'города', 'городов');
+const countryWord = (n) => plural(n, 'стране', 'странах', 'странах');
+const COUNTRY_TOTAL = Object.keys(COUNTRIES).length;
+
 export function truckSvg(color = '#2f7fa8', trailer = true) {
   return `<svg class="truck-svg" viewBox="0 0 260 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <ellipse cx="130" cy="101" rx="118" ry="6" fill="rgba(0,0,0,.35)"/>
@@ -885,7 +898,7 @@ export class UI {
     const p = g.profile;
     const options = CITIES.map((c) => `<option value="${c.id}">${c.name} · ${COUNTRIES[c.country]?.name || ''}</option>`).join('');
     return `
-      <div class="section-title"><div><h2>Карта Европы</h2><p class="sub">139 городов в 26 странах. Зелёным — текущий маршрут.</p></div>
+      <div class="section-title"><div><h2>Карта Европы</h2><p class="sub">${CITIES.length} ${cityWord(CITIES.length)} в ${COUNTRY_TOTAL} ${countryWord(COUNTRY_TOTAL)}. Зелёным — текущий маршрут.</p></div>
       <div class="range-row"><select data-select="mapcity" style="background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:9px;font-family:inherit">${options}</select>
       <button class="btn btn-sm" data-act="free-drive-select">Свободная поездка</button></div></div>
       <div class="map-wrap">
@@ -928,7 +941,7 @@ export class UI {
       [34, 'границы стран…'],
       [58, 'дороги и города…'],
       [82, 'маршрут и подписи…'],
-      [100, 'готово'],
+      [92, 'наношу подписи…'],
     ];
     let i = 0;
     const tick = () => {
@@ -945,6 +958,7 @@ export class UI {
       this.drawFullMap();
       const cost = typeof performance !== 'undefined' ? performance.now() - t0 : 0;
       if (cost > 400) console.info(`[map] отрисовка ${Math.round(cost)} мс`);
+      if (bar) bar.style.width = '100%';
       canvas.classList.add('ready');
       loading.classList.add('hidden');
     };
@@ -1334,7 +1348,7 @@ export class UI {
       body: `
         <p><b>ЕВРОТРАК</b> — самостоятельный браузерный симулятор грузоперевозок, вдохновлённый жанром дальнобойных симуляторов. Тягачи марки AURIGA и все грузовики вымышлены: это не копии реальных машин.</p>
         <h4>Что доступно</h4>
-        <p>139 городов в 26 странах, 30 видов груза и 6 типов прицепов, карьера с уровнем и навыками, экономика с топливом, ремонтом, штрафами и кредитом, гаражи, наёмные водители, достижения и автосохранение в браузере.</p>
+        <p>${CITIES.length} ${cityWord(CITIES.length)} в ${COUNTRY_TOTAL} ${countryWord(COUNTRY_TOTAL)}, 30 видов груза и 6 типов прицепов, карьера с уровнем и навыками, экономика с топливом, ремонтом, штрафами и кредитом, гаражи, наёмные водители, достижения и автосохранение в браузере.</p>
         <h4>Управление</h4>
         <p>W/S — газ и тормоз, A/D — руль, E — взаимодействие, C — круиз, M — режим КПП, V — камера, Esc — пауза. На телефоне — экранные кнопки.</p>
         <h4>Настройки графики</h4>
