@@ -641,8 +641,8 @@ export class TruckView {
       });
     const dashMat = M(dashSoftTex, { color: 0xb9c0c5, roughness: 0.92 });
     const dashTopMat = M(dashSoftTex, { color: 0x5d666d, roughness: 0.99 });
-    const softMat = M(fabricTex, { color: 0x9ba3a9, roughness: 0.97 });
-    const headMat = M(headTex, { color: 0xa9b0b5, roughness: 0.98 });
+    const softMat = M(fabricTex, { color: 0x878f95, roughness: 0.97 });
+    const headMat = M(headTex, { color: 0x939aa0, roughness: 0.98 });
     const carpetMat = M(carpetTex, { color: 0x8a9095, roughness: 1 });
     const seatMat = M(fabricTex, { color: 0x6e767c, roughness: 0.85 });
     const trimMat = M(null, { color: 0xa3acb1, roughness: 0.3, metalness: 0.72 });
@@ -686,19 +686,25 @@ export class TruckView {
       box(g, 0.05, 0.34, 0.05, trimMat, sx * (HW - 0.16), 2.72, 2.98);
       // Облицовка передней стойки двери: закрывает краску кузова изнутри.
       box(g, 0.12, 1.52, 0.26, softMat, sx * (HW - 0.09), 2.72, 2.9);
+      // подлокотник с мягкой накладкой и блоком кнопок
+      box(g, 0.16, 0.09, 1.1, darkTrim, sx * (HW - 0.2), CAB.sill + 0.06, 1.35);
+      box(g, 0.18, 0.05, 1.12, softMat, sx * (HW - 0.2), CAB.sill + 0.12, 1.35);
+      box(g, 0.12, 0.03, 0.3, trimMat, sx * (HW - 0.19), CAB.sill + 0.15, 1.55);
+      // ручка двери
+      box(g, 0.07, 0.05, 0.34, trimMat, sx * (HW - 0.16), CAB.sill - 0.14, 2.32);
       box(g, 0.1, 1.4, 0.12, softMat, sx * (HW - 0.05), 2.74, 2.72);
     }
     // облицовка стоек лобового стекла
     for (const sx of [-1, 1]) {
-      box(g, 0.26, wsH + 0.2, 0.3, softMat, sx * (HW - 0.13), CAB.windshieldTop - wsH / 2, CAB.windshieldZ - 0.06, [wsTilt, 0, 0]);
-      box(g, 0.1, wsH + 0.32, 0.46, softMat, sx * (HW - 0.04), CAB.windshieldTop - wsH / 2, CAB.windshieldZ - 0.16, [wsTilt, 0, 0]);
+      box(g, 0.17, wsH + 0.16, 0.22, softMat, sx * (HW - 0.1), CAB.windshieldTop - wsH / 2, CAB.windshieldZ - 0.06, [wsTilt, 0, 0]);
+      box(g, 0.08, wsH + 0.24, 0.34, softMat, sx * (HW - 0.04), CAB.windshieldTop - wsH / 2, CAB.windshieldZ - 0.16, [wsTilt, 0, 0]);
       box(g, 0.15, 0.5, 0.08, softMat, sx * (HW - 0.1), CAB.windshieldBottom - 0.24, CAB.front - 0.22, [wsTilt, 0, 0]);
     }
     // верхняя облицовка и козырьки
-    box(g, CAB.width - 0.1, 0.16, 0.24, headMat, 0, CAB.windshieldTop - 0.02, CAB.windshieldZ - 0.12, [wsTilt, 0, 0]);
+    box(g, CAB.width - 0.1, 0.12, 0.2, headMat, 0, CAB.windshieldTop - 0.02, CAB.windshieldZ - 0.12, [wsTilt, 0, 0]);
     for (const sx of [-0.54, 0.54]) {
-      box(g, 0.78, 0.025, 0.3, softMat, sx, CAB.roof - 0.24, 2.96, [0.3, 0, 0]);
-      box(g, 0.05, 0.05, 0.06, trimMat, sx + 0.41, CAB.roof - 0.22, 2.94);
+      box(g, 0.8, 0.03, 0.34, darkTrim, sx, CAB.windshieldTop + 0.11, CAB.windshieldZ - 0.2, [wsTilt + 0.08, 0, 0]);
+      box(g, 0.06, 0.05, 0.07, trimMat, sx + 0.42, CAB.windshieldTop + 0.1, CAB.windshieldZ - 0.18);
     }
     // потолочный плафон
     box(g, 0.26, 0.02, 0.12, M(null, { color: 0xfff3d8, roughness: 0.4, emissive: 0xffe9bd, emissiveIntensity: 0.9 }), 0, CAB.roof - 0.1, 2.3);
@@ -796,9 +802,9 @@ export class TruckView {
 
     // ---------------------------------------------------------------- руль
     this.wheelPivot = new THREE.Group();
-    this.wheelPivot.position.set(EYE.x, 2.0, 1.9);
-    this.wheelPivot.rotation.x = -0.42;
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.25, 0.026, 12, 44), rubberMat);
+    this.wheelPivot.position.set(EYE.x, 2.05, 1.96);
+    this.wheelPivot.rotation.x = -0.34;
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.027, 12, 44), rubberMat);
     rim.rotation.x = Math.PI / 2;
     this.wheelPivot.add(rim);
     for (const rot of [Math.PI * 0.5, Math.PI * 1.5, 0]) {
@@ -816,7 +822,7 @@ export class TruckView {
     this.wheelPivot.add(badge);
     g.add(this.wheelPivot);
     const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.66, 14), darkTrim);
-    column.position.set(EYE.x, 1.83, 2.2);
+    column.position.set(EYE.x, 1.9, 2.26);
     column.rotation.x = Math.PI / 2 - 0.42;
     g.add(column);
     for (const sx of [-1, 1]) {

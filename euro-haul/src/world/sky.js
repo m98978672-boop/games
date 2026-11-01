@@ -219,7 +219,29 @@ export class SkySystem {
     }
     const rainGeo = new THREE.BufferGeometry();
     rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-    this.rainMat = new THREE.PointsMaterial({ color: 0xbfd4e0, size: 0.16, transparent: true, opacity: 0.55, depthWrite: false });
+    // Капля — не квадрат, а тонкая вертикальная черта: так дождь читается даже вблизи.
+    const dropCanvas = document.createElement('canvas');
+    dropCanvas.width = 16;
+    dropCanvas.height = 64;
+    const dctx = dropCanvas.getContext('2d');
+    const dgrad = dctx.createLinearGradient(0, 0, 0, 64);
+    dgrad.addColorStop(0, 'rgba(210,226,236,0)');
+    dgrad.addColorStop(0.45, 'rgba(214,230,240,0.85)');
+    dgrad.addColorStop(1, 'rgba(210,226,236,0)');
+    dctx.fillStyle = dgrad;
+    dctx.fillRect(6, 0, 4, 64);
+    const dropTex = new THREE.CanvasTexture(dropCanvas);
+    dropTex.colorSpace = THREE.SRGBColorSpace;
+    this.rainMat = new THREE.PointsMaterial({
+      color: 0xcfdfe8,
+      size: 0.42,
+      map: dropTex,
+      transparent: true,
+      opacity: 0.42,
+      alphaTest: 0.02,
+      depthWrite: false,
+      sizeAttenuation: true,
+    });
     this.rain = new THREE.Points(rainGeo, this.rainMat);
     this.rain.frustumCulled = false;
     this.rain.visible = false;

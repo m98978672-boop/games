@@ -328,6 +328,24 @@ class Game {
         o.receiveShadow = on;
       });
     }
+    // Грабли: материалы, впервые скомпилированные ДО включения теней, собираются
+    // без блока shadowMap — теневой проход потом есть, а тени не рисуются вовсе.
+    // После смены состояния теней просим three перекомпилировать всё, что рисуется.
+    this.refreshShadowPrograms();
+  }
+
+  /** Пересборка шейдеров после включения/выключения теней. */
+  refreshShadowPrograms() {
+    if (!this.scene) return;
+    const bump = (mat) => {
+      if (!mat) return;
+      if (Array.isArray(mat)) mat.forEach(bump);
+      else mat.needsUpdate = true;
+    };
+    this.scene.traverse((o) => {
+      if (o.material) bump(o.material);
+      if (o.isInstancedMesh && o.customDepthMaterial) bump(o.customDepthMaterial);
+    });
   }
 
   // ---------------------------------------------------------------- Input
