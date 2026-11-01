@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 810">
+<defs>
+  <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#0d2233"/><stop offset=".42" stop-color="#3a5b73"/><stop offset=".72" stop-color="#c98d5c"/><stop offset="1" stop-color="#e9c48e"/></linearGradient>
+  <linearGradient id="road" x2="0" y2="1"><stop stop-color="#4c5459"/><stop offset="1" stop-color="#20262a"/></linearGradient>
+  <linearGradient id="cab" x2="0" y2="1"><stop stop-color="#5fb0d6"/><stop offset="1" stop-color="#26627f"/></linearGradient>
+  <linearGradient id="trailer" x2="0" y2="1"><stop stop-color="#f4f3ec"/><stop offset="1" stop-color="#b9bfba"/></linearGradient>
+  <linearGradient id="hill" x2="0" y2="1"><stop stop-color="#3d5260"/><stop offset="1" stop-color="#25343d"/></linearGradient>
+  <filter id="glow"><feGaussianBlur stdDeviation="26"/></filter>
+  <filter id="soft"><feGaussianBlur stdDeviation="4"/></filter>
+</defs>
+<rect width="1440" height="810" fill="url(#sky)"/>
+<circle cx="1080" cy="352" r="96" fill="#ffd9a0" opacity=".55" filter="url(#glow)"/>
+<circle cx="1080" cy="352" r="42" fill="#ffe7bd" opacity=".9"/>
+<path d="M0 402 132 330l118 52 96-78 128 88 112-64 150 78 130-92 104 74 132-64 138 76v104H0Z" fill="url(#hill)" opacity=".85"/>
+<path d="M0 470q190-46 366 6t328-8q168-52 350 2t396-24v106H0Z" fill="#2b3a3f"/>
+<rect y="506" width="1440" height="304" fill="#22302f"/>
+<path d="M566 500h308l466 310H132Z" fill="url(#road)"/>
+<path d="M716 512h8l-4 30h-10zm-10 66h16l-6 44h-18zm-16 96h28l-9 62h-32zm-30 118h50l-12 66h-58z" fill="#f2ddb0" opacity=".85"/>
+<path d="M150 810 566 500M1290 810 874 500" stroke="#e9e5ce" stroke-width="7" opacity=".55"/>
+<path d="M240 810 566 500M1200 810 874 500" stroke="#e9e5ce" stroke-width="5" opacity=".3"/>
+<!-- дорожные фонари -->
+<g fill="none" stroke="#1a2429" stroke-width="7" opacity=".9">
+  <path d="M330 640v-140h52"/><path d="M1120 632v-150h-56"/>
+</g>
+<circle cx="384" cy="500" r="9" fill="#ffe1a0"/><circle cx="1062" cy="482" r="9" fill="#ffe1a0"/>
+<!-- оригинальный вымышленный тягач с полуприцепом -->
+<g transform="translate(486 268) scale(0.84)">
+  <path d="M8 34h392v214H8Z" fill="url(#trailer)" stroke="#16232a" stroke-width="9"/>
+  <path d="M8 196h392v52H8Z" fill="#2b3f4a" opacity=".35"/>
+  <path d="M30 58h344" stroke="#9aa6a3" stroke-width="4" opacity=".5"/>
+  <text x="40" y="146" fill="#204c62" font-family="Arial, sans-serif" font-size="52" font-weight="800" letter-spacing="3">AURIGA</text>
+  <text x="42" y="182" fill="#5c6b70" font-family="Arial, sans-serif" font-size="20" font-weight="700" letter-spacing="6">EURO FREIGHT</text>
+  <path d="M-118 96h126v152h-146V116q0-20 20-20" fill="url(#cab)" stroke="#16232a" stroke-width="9"/>
+  <path d="M-112 116h98v52h-108z" fill="#b9dded" stroke="#16232a" stroke-width="5"/>
+  <path d="M-14 130h44v118h-44z" fill="#1f5a76" opacity=".78"/>
+  <path d="M-146 168h30v22h-30z" fill="#ffeec2"/>
+  <path d="M-140 238h-24v16h24zM-30 248h150v18H-30z" fill="#16232a"/>
+  <circle cx="-84" cy="252" r="38" fill="#11181b"/><circle cx="-84" cy="252" r="15" fill="#93a0a4"/>
+  <circle cx="286" cy="252" r="38" fill="#11181b"/><circle cx="286" cy="252" r="15" fill="#93a0a4"/>
+  <circle cx="344" cy="252" r="38" fill="#11181b"/><circle cx="344" cy="252" r="15" fill="#93a0a4"/>
+  <circle cx="390" cy="252" r="38" fill="#11181b"/><circle cx="390" cy="252" r="15" fill="#93a0a4"/>
+  <path d="M-150 120h-4v100h4z" fill="#16232a"/>
+</g>
+<rect y="620" width="1440" height="190" fill="#08100f" opacity=".86"/>
+<text x="68" y="684" fill="#4ec9b0" font-family="Arial, sans-serif" font-size="21" font-weight="700" letter-spacing="7">СИМУЛЯТОР ГРУЗОПЕРЕВОЗОК ПО ЕВРОПЕ</text>
+<text x="64" y="766" fill="#f6f3ea" font-family="Arial, sans-serif" font-size="80" font-weight="800" letter-spacing="4">ЕВРОТРАК</text>
+<text x="1372" y="756" fill="#f0e7d4" font-family="Arial, sans-serif" font-size="19" text-anchor="end" letter-spacing="3">152 ГОРОДА · 28 СТРАН</text>
+<text x="1372" y="786" fill="#8ba0a8" font-family="Arial, sans-serif" font-size="16" text-anchor="end" letter-spacing="2">БЕЗ УСТАНОВКИ · В БРАУЗЕРЕ</text>
+</svg>
