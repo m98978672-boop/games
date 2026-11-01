@@ -42,6 +42,40 @@
     $('btn-help').addEventListener('click', showHelp);
     $('btn-save').addEventListener('click', () => app.save());
     $('btn-side').addEventListener('click', () => document.body.classList.toggle('side-open'));
+
+    // телефонный док: быстрые действия под большой палец
+    const dock = $('dock');
+    if (dock) {
+      dock.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-dock]');
+        if (!btn) return;
+        const action = btn.dataset.dock;
+        if (action === 'bank') { showBank(); return; }
+        if (action === 'company') {
+          document.body.classList.toggle('side-open');
+          return;
+        }
+        const tab = $('tool-tabs').querySelector('[data-tab="' + action + '"]');
+        if (tab) tab.click();
+        document.body.classList.remove('side-open');
+        if (document.body.classList.contains('tools-collapsed')) document.body.classList.remove('tools-collapsed');
+        dock.querySelectorAll('[data-dock]').forEach((b) => b.classList.toggle('on', b === btn));
+      });
+    }
+    const handle = $('panel-handle');
+    if (handle) handle.addEventListener('click', () => document.body.classList.toggle('tools-collapsed'));
+
+    // подсветка активной вкладки в доке
+    const tabsEl = $('tool-tabs');
+    if (tabsEl) {
+      tabsEl.addEventListener('click', () => {
+        if (!dock) return;
+        const on = tabsEl.querySelector('[data-tab].on');
+        dock.querySelectorAll('[data-dock]').forEach((b) => {
+          b.classList.toggle('on', !!on && b.dataset.dock === on.dataset.tab);
+        });
+      });
+    }
     $('btn-sound').addEventListener('click', (e) => {
       const on = TR.Audio.toggle();
       e.currentTarget.classList.toggle('off', !on);
@@ -718,7 +752,7 @@
   function showHelp() {
     openModal(`
       <div class="modal-head"><h2>Как играть</h2><button class="x" data-modal="close">✕</button></div>
-      <div class="help-grid">
+      <div class="help-grid" data-content="${TR.Content ? TR.Content.stats().models + ' моделей · ' + TR.Content.stats().textures + ' текстур · ' + TR.Content.stats().animations + ' анимаций' : ''}">
         <div>
           <h3>Дороги</h3>
           <p>Выберите класс покрытия, затем два города. Дорога строится во времени: чем больше бригада, тем быстрее. Гравий и асфальт ускоряют машины — поток растёт.</p>
@@ -729,7 +763,9 @@
         </div>
         <div>
           <h3>Управление</h3>
-          <p><kbd>Перетаскивание</kbd> — карта · <kbd>колесо</kbd> — масштаб · <kbd>клик</kbd> — выбрать · <kbd>Esc</kbd> — отмена · <kbd>Пробел</kbd> — пауза · <kbd>1</kbd> / <kbd>2</kbd> / <kbd>3</kbd> — скорость · <kbd>R</kbd> — дороги · <kbd>F</kbd> — вся карта · <kbd>S</kbd> — сохранить.</p>
+          <p><kbd>WASD</kbd> / <kbd>стрелки</kbd> — карта · <kbd>колесо</kbd>, <kbd>+</kbd>/<kbd>−</kbd>, <kbd>Q</kbd>/<kbd>E</kbd> — масштаб · <kbd>двойной клик</kbd> — приблизить · <kbd>клик</kbd> — выбрать · <kbd>Esc</kbd> — отмена · <kbd>Пробел</kbd> — пауза · <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> — скорость · <kbd>R</kbd> — дороги · <kbd>F</kbd> — вся карта · <kbd>S</kbd> — сохранить.</p>
+          <h3>На телефоне</h3>
+          <p>Нижний док: Дороги · Сервис · Уют · Компания · Банк. Потяните за полоску над панелью, чтобы свернуть её и освободить карту. Кнопки <kbd>+</kbd>/<kbd>−</kbd> справа — масштаб, кнопка «ПК / ТЕЛ» — переключение раскладки.</p>
           <h3>Деньги</h3>
           <p>Каждый день списываются содержание дорог, зарплаты, налог и проценты по кредиту. Следите за отчётом: если расходы больше выручки — расширяйте поток или урезайте лишнее.</p>
           <h3>Заказы и цели</h3>
