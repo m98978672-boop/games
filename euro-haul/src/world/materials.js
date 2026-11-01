@@ -81,39 +81,90 @@ export const textures = {
       }
     });
   },
+  grassTuft() {
+    // Пучок травы: альфа-текстура для придорожных «кустиков».
+    return canvasTexture('grass-tuft', 128, 128, (c, w, h) => {
+      c.clearRect(0, 0, w, h);
+      const r = rng(77);
+      for (let i = 0; i < 46; i++) {
+        const x = w * 0.5 + (r() - 0.5) * w * 0.72;
+        const len = h * (0.35 + r() * 0.6);
+        const sway = (r() - 0.5) * 26;
+        const grad = c.createLinearGradient(x, h, x + sway, h - len);
+        const green = 70 + Math.floor(r() * 60);
+        grad.addColorStop(0, `rgba(${28 + green * 0.3 | 0}, ${green}, ${26 + green * 0.25 | 0}, 0.95)`);
+        grad.addColorStop(1, `rgba(${70 + green * 0.4 | 0}, ${green + 45}, ${40 + green * 0.2 | 0}, 0.85)`);
+        c.strokeStyle = grad;
+        c.lineWidth = 1.2 + r() * 2.2;
+        c.lineCap = 'round';
+        c.beginPath();
+        c.moveTo(x, h);
+        c.quadraticCurveTo(x + sway * 0.4, h - len * 0.55, x + sway, h - len);
+        c.stroke();
+      }
+    }, { repeat: [1, 1] });
+  },
   grass() {
-    // Тайл 8×8 м: луг с разнотравьем.
-    return canvasTexture('grass-v2', 1024, 1024, (c, w, h) => {
-      c.fillStyle = '#6f8b4d';
+    // Тайл 9×9 м: луг с пятнами клевера, проплешинами и следами покоса.
+    return canvasTexture('grass-v3', 1024, 1024, (c, w, h) => {
+      c.fillStyle = '#6d8a4a';
       c.fillRect(0, 0, w, h);
-      speckle(c, w, h, 50000, ['#7a9954', '#628044', '#86a55c', '#587844', '#93b06a'], 3, 21);
       const r = rng(31);
-      // травинки
-      for (let i = 0; i < 4200; i++) {
+      // Крупные пятна травы разной высоты — именно они читаются на расстоянии.
+      for (let i = 0; i < 70; i++) {
         const x = r() * w;
         const y = r() * h;
-        const len = 5 + r() * 13;
-        c.strokeStyle = r() > 0.5 ? 'rgba(120,150,80,0.55)' : 'rgba(60,82,40,0.6)';
+        const rad = 45 + r() * 210;
+        const grd = c.createRadialGradient(x, y, 0, x, y, rad);
+        const palette = ['93,146,72', '112,160,80', '82,116,58', '128,160,92', '104,132,66'];
+        const col = palette[Math.floor(r() * palette.length)];
+        grd.addColorStop(0, `rgba(${col},${0.2 + r() * 0.25})`);
+        grd.addColorStop(1, `rgba(${col},0)`);
+        c.fillStyle = grd;
+        c.beginPath();
+        c.arc(x, y, rad, 0, Math.PI * 2);
+        c.fill();
+      }
+      // Полосы от косилки.
+      c.save();
+      c.globalAlpha = 0.06;
+      for (let i = -h; i < w + h; i += 96) {
+        c.fillStyle = i % 192 === 0 ? '#ffffff' : '#0d1a08';
+        c.save();
+        c.translate(i, 0);
+        c.rotate(0.22);
+        c.fillRect(0, -h, 48, h * 3);
+        c.restore();
+      }
+      c.restore();
+      speckle(c, w, h, 60000, ['#7a9954', '#628044', '#86a55c', '#587844', '#93b06a'], 3, 21);
+      // травинки
+      for (let i = 0; i < 6200; i++) {
+        const x = r() * w;
+        const y = r() * h;
+        const len = 6 + r() * 16;
+        c.strokeStyle = r() > 0.5 ? 'rgba(126,158,86,0.5)' : 'rgba(58,80,38,0.55)';
         c.lineWidth = 1 + r();
         c.beginPath();
         c.moveTo(x, y);
-        c.lineTo(x + (r() - 0.5) * 6, y - len);
+        c.lineTo(x + (r() - 0.5) * 7, y - len);
         c.stroke();
       }
-      // проплешины земли
-      for (let i = 0; i < 26; i++) {
+      // проплешины земли и вытоптанные пятна
+      for (let i = 0; i < 34; i++) {
         const x = r() * w;
         const y = r() * h;
-        const rad = 12 + r() * 52;
+        const rad = 14 + r() * 64;
         const grd = c.createRadialGradient(x, y, 0, x, y, rad);
-        grd.addColorStop(0, 'rgba(96,84,54,0.55)');
+        grd.addColorStop(0, 'rgba(104,90,58,0.5)');
+        grd.addColorStop(0.6, 'rgba(96,84,54,0.22)');
         grd.addColorStop(1, 'rgba(96,84,54,0)');
         c.fillStyle = grd;
         c.beginPath();
         c.arc(x, y, rad, 0, Math.PI * 2);
         c.fill();
       }
-      noiseOverlay(c, w, h, 0.05, 13);
+      noiseOverlay(c, w, h, 0.055, 13);
     });
   },
   concrete() {
@@ -403,8 +454,8 @@ export function materials() {
     }),
     gravel: new THREE.MeshStandardMaterial({ color: 0xcfcabb, map: textures.gravel(), roughness: 0.98 }),
     bark: new THREE.MeshStandardMaterial({ color: 0xa08a6d, map: textures.bark(), roughness: 0.95 }),
-    grass: new THREE.MeshStandardMaterial({ color: 0xe6efd4, map: grassTex, roughness: 1 }),
-    grassDark: new THREE.MeshStandardMaterial({ color: 0xc3d2a8, map: grassTex, roughness: 1 }),
+    grass: new THREE.MeshStandardMaterial({ color: 0xf2f7e6, map: grassTex, roughness: 1 }),
+    grassDark: new THREE.MeshStandardMaterial({ color: 0xdfe9c8, map: grassTex, roughness: 1 }),
     concrete: new THREE.MeshStandardMaterial({ color: 0xd0cfc7, map: concreteTex, roughness: 0.92 }),
     whiteLine: new THREE.MeshStandardMaterial({ color: 0xf4f2e8, roughness: 0.62, emissive: 0x1a1a1a }),
     yellowLine: new THREE.MeshStandardMaterial({ color: 0xf0c14a, roughness: 0.7 }),
@@ -445,10 +496,10 @@ export function materials() {
     roofLight: new THREE.MeshStandardMaterial({ color: 0xb4bbbf, roughness: 0.9 }),
     trunk: new THREE.MeshStandardMaterial({ color: 0x5c4a37, roughness: 1 }),
     leaves: [
-      new THREE.MeshStandardMaterial({ color: 0x476d3b, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: 0x577f41, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: 0x3a5631, roughness: 1 }),
-      new THREE.MeshStandardMaterial({ color: 0x6b7d3a, roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: 0x7d9174, map: leafTexture(), roughness: 1, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: 0x8ba17e, map: leafTexture(), roughness: 1, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: 0x6d8169, map: leafTexture(), roughness: 1, flatShading: true }),
+      new THREE.MeshStandardMaterial({ color: 0x9aa87d, map: leafTexture(), roughness: 1, flatShading: true }),
     ],
     glass: new THREE.MeshPhysicalMaterial({
       color: 0xa9c8d2,
@@ -460,7 +511,7 @@ export function materials() {
       side: THREE.DoubleSide,
       depthWrite: false,
     }),
-    mirror: new THREE.MeshStandardMaterial({ color: 0x9fb6bf, metalness: 1, roughness: 0.08 }),
+    mirror: new THREE.MeshStandardMaterial({ color: 0xb9c6cd, map: mirrorTexture(), metalness: 0.75, roughness: 0.16, envMapIntensity: 0.5 }),
     lamp: new THREE.MeshStandardMaterial({ color: 0xfff2c9, emissive: 0xffd88a, emissiveIntensity: 0.8, roughness: 0.4 }),
     lampOff: new THREE.MeshStandardMaterial({ color: 0xb9b6a8, roughness: 0.6 }),
     redLight: new THREE.MeshStandardMaterial({ color: 0xd33a2c, emissive: 0x8c1408, emissiveIntensity: 0.9 }),
@@ -592,6 +643,126 @@ export function containerTexture(company, color = '#cf5b3a') {
       c.fillStyle = 'rgba(30,34,38,0.85)';
       c.fillRect(x, y, 38, 38);
     }
+  });
+}
+
+/** Зеркало заднего вида: в нём видно небо, горизонт и уходящее шоссе. */
+export function mirrorTexture() {
+  return canvasTexture('mirror-view', 256, 384, (c, w, h) => {
+    const sky = c.createLinearGradient(0, 0, 0, h * 0.62);
+    sky.addColorStop(0, '#9db9cf');
+    sky.addColorStop(0.7, '#cfdde6');
+    sky.addColorStop(1, '#e6eef2');
+    c.fillStyle = sky;
+    c.fillRect(0, 0, w, h * 0.62);
+    // дальняя полоса полей
+    c.fillStyle = '#7c8f6c';
+    c.fillRect(0, h * 0.56, w, h * 0.06);
+    // асфальт в перспективе
+    const road = c.createLinearGradient(0, h * 0.62, 0, h);
+    road.addColorStop(0, '#6c757a');
+    road.addColorStop(1, '#3e464b');
+    c.fillStyle = road;
+    c.fillRect(0, h * 0.62, w, h * 0.38);
+    c.fillStyle = '#7f8a90';
+    c.beginPath();
+    c.moveTo(w * 0.3, h * 0.62);
+    c.lineTo(w * 0.7, h * 0.62);
+    c.lineTo(w, h);
+    c.lineTo(0, h);
+    c.closePath();
+    c.fill();
+    // разметка
+    c.strokeStyle = 'rgba(240,240,232,0.8)';
+    c.lineWidth = 3;
+    for (let i = 0; i < 6; i++) {
+      const t = i / 6;
+      const y = h * 0.66 + t * t * h * 0.34;
+      const ww = 2 + t * 12;
+      c.beginPath();
+      c.moveTo(w * 0.5 - ww, y);
+      c.lineTo(w * 0.5 + ww, y);
+      c.stroke();
+    }
+    // отражённый блик и затемнение по краям
+    const gl = c.createLinearGradient(0, 0, w, h);
+    gl.addColorStop(0, 'rgba(255,255,255,0.18)');
+    gl.addColorStop(0.45, 'rgba(255,255,255,0.02)');
+    gl.addColorStop(1, 'rgba(255,255,255,0.12)');
+    c.fillStyle = gl;
+    c.fillRect(0, 0, w, h);
+    const vig = c.createRadialGradient(w / 2, h * 0.45, w * 0.2, w / 2, h * 0.5, w * 0.85);
+    vig.addColorStop(0, 'rgba(0,0,0,0)');
+    vig.addColorStop(1, 'rgba(8,12,14,0.42)');
+    c.fillStyle = vig;
+    c.fillRect(0, 0, w, h);
+  });
+}
+
+/** Крыша контейнера: рёбра, пыль и потёки — сверху её видно чаще всего. */
+/** Листва: мелкие пятна света и тени — кроны перестают быть однотонными. */
+export function leafTexture() {
+  return canvasTexture('leaf-v2', 256, 256, (c, w, h) => {
+    c.fillStyle = '#5d7a45';
+    c.fillRect(0, 0, w, h);
+    const r = rng(53);
+    for (let i = 0; i < 2400; i++) {
+      const x = r() * w;
+      const y = r() * h;
+      const rad = 2 + r() * 9;
+      const pal = ['#6f8f4f', '#4a6438', '#7d9a58', '#3f5730', '#88a463'];
+      c.fillStyle = pal[Math.floor(r() * pal.length)];
+      c.globalAlpha = 0.35 + r() * 0.45;
+      c.beginPath();
+      c.ellipse(x, y, rad, rad * (0.6 + r() * 0.7), r() * 3.14, 0, Math.PI * 2);
+      c.fill();
+    }
+    c.globalAlpha = 1;
+    // тени в глубине кроны
+    for (let i = 0; i < 40; i++) {
+      const x = r() * w;
+      const y = r() * h;
+      const rad = 10 + r() * 34;
+      const grd = c.createRadialGradient(x, y, 0, x, y, rad);
+      grd.addColorStop(0, 'rgba(20,32,16,0.34)');
+      grd.addColorStop(1, 'rgba(20,32,16,0)');
+      c.fillStyle = grd;
+      c.beginPath();
+      c.arc(x, y, rad, 0, Math.PI * 2);
+      c.fill();
+    }
+  });
+}
+
+export function containerRoofTexture(color = '#8f5a3e') {
+  const key = 'container-roof:' + color;
+  return canvasTexture(key, 512, 512, (c, w, h) => {
+    c.fillStyle = color;
+    c.fillRect(0, 0, w, h);
+    // продольные рёбра
+    for (let y = 0; y < h; y += 22) {
+      const grd = c.createLinearGradient(0, y, 0, y + 22);
+      grd.addColorStop(0, 'rgba(0,0,0,0.24)');
+      grd.addColorStop(0.4, 'rgba(255,255,255,0.1)');
+      grd.addColorStop(1, 'rgba(0,0,0,0.22)');
+      c.fillStyle = grd;
+      c.fillRect(0, y, w, 22);
+    }
+    const r = rng(71);
+    // пыль и разводы
+    for (let i = 0; i < 90; i++) {
+      const x = r() * w;
+      const y = r() * h;
+      const rad = 10 + r() * 60;
+      const grd = c.createRadialGradient(x, y, 0, x, y, rad);
+      grd.addColorStop(0, `rgba(${r() > 0.5 ? '150,146,132' : '60,52,44'},${0.05 + r() * 0.12})`);
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = grd;
+      c.beginPath();
+      c.arc(x, y, rad, 0, Math.PI * 2);
+      c.fill();
+    }
+    noiseOverlay(c, w, h, 0.06, 19);
   });
 }
 

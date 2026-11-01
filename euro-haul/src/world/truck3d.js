@@ -1,7 +1,7 @@
 // 3D-модель тягача AURIGA: кабина, шасси, колёса, полуприцепы и полноценный салон.
 // Всё строится из примитивов и профилей, материалы — из materials.js (общий кэш).
 import * as THREE from 'three';
-import { materials, trailerTexture, trailerRearTexture, containerTexture, canvasTexture } from './materials.js';
+import { materials, trailerTexture, trailerRearTexture, containerTexture, containerRoofTexture, canvasTexture } from './materials.js';
 import { clamp, fmtTime, rng } from '../core/math.js';
 import { mergeStatic } from '../core/merge-static.js';
 
@@ -305,11 +305,12 @@ export class TruckView {
         box(g, 0.4, 0.06, 0.5, m.darkMetal, side * (HW - 0.12), sy, sz);
       }
       // зеркала: кронштейн + корпус + стекло
-      const arm = box(g, 0.5, 0.05, 0.05, m.darkMetal, side * (HW + 0.24), 3.3, 2.98);
-      arm.rotation.z = side * -0.08;
-      box(g, 0.1, 0.74, 0.3, this.trimDark, side * (HW + 0.5), 2.92, 2.98);
-      plane(g, 0.24, 0.64, m.mirror, side * (HW + 0.44), 2.92, 2.98, [0, side > 0 ? Math.PI / 2 : -Math.PI / 2, 0]);
-      box(g, 0.08, 0.22, 0.2, this.trimDark, side * (HW + 0.46), 2.42, 2.96);
+      // Зеркала вынесены вперёд: в кабине они видны по краям стекла, а не «стеной».
+      const arm = box(g, 0.46, 0.05, 0.05, m.darkMetal, side * (HW + 0.2), 3.28, 3.24);
+      arm.rotation.z = side * -0.06;
+      box(g, 0.09, 0.6, 0.24, this.trimDark, side * (HW + 0.42), 2.88, 3.3);
+      plane(g, 0.2, 0.5, m.mirror, side * (HW + 0.37), 2.88, 3.3, [0, side > 0 ? Math.PI / 2 : -Math.PI / 2, 0]);
+      box(g, 0.07, 0.2, 0.18, this.trimDark, side * (HW + 0.4), 2.4, 3.26);
       // брызговик
       box(g, 0.5, 0.55, 0.04, this.trimDark, side * 1.02, 0.34, 1.66);
     }
@@ -393,7 +394,7 @@ export class TruckView {
     const halfW = 1.27;
 
     /** Материалы короба: борт с ливреей, верх/торцы — однотонные. */
-    const bodyMaterials = (sideTex, baseColor, roughness = 0.8) => {
+    const bodyMaterials = (sideTex, baseColor, roughness = 0.8, topTex = null) => {
       const side = new THREE.MeshStandardMaterial({ map: sideTex, roughness, metalness: 0.06 });
       side.__generated = true;
       const mirrored = sideTex.clone();
@@ -403,7 +404,12 @@ export class TruckView {
       mirrored.offset.x = 1;
       const sideL = new THREE.MeshStandardMaterial({ map: mirrored, roughness, metalness: 0.06 });
       sideL.__generated = true;
-      const top = new THREE.MeshStandardMaterial({ color: baseColor, roughness: Math.min(1, roughness + 0.12) });
+      const top = new THREE.MeshStandardMaterial({
+        color: topTex ? 0xffffff : baseColor,
+        map: topTex || null,
+        roughness: Math.min(1, roughness + 0.12),
+      });
+      if (topTex) top.__generated = true;
       const bottom = new THREE.MeshStandardMaterial({ color: 0x2a2e31, roughness: 0.95 });
       const front = new THREE.MeshStandardMaterial({ color: new THREE.Color(baseColor).multiplyScalar(0.86), roughness: roughness + 0.05 });
       const rear = new THREE.MeshStandardMaterial({ color: new THREE.Color(baseColor).multiplyScalar(0.9), roughness: roughness + 0.04 });
@@ -448,7 +454,16 @@ export class TruckView {
     } else if (type === 'container') {
       const tex = containerTexture(company, '#b8552f');
       tex.repeat.set(1, 1);
-      boxBody(bodyMaterials(tex, 0xb8552f, 0.66));
+      const roofTex = containerRoofTexture('#8a5236');
+      roofTex.repeat.set(3, 1);
+      boxBody(bodyMaterials(tex, 0xb8552f, 0.66, roofTex));
+      // верхние и нижние направляющие — контейнер перестаёт быть «коробкой»
+      for (const sx of [-1, 1]) {
+        box(g, 0.1, 0.14, L, m.darkMetal, sx * 1.25, bodyBottom + height - 0.02, zc);
+        box(g, 0.1, 0.12, L, m.darkMetal, sx * 1.25, bodyBottom + 0.04, zc);
+      }
+      box(g, 2.6, 0.12, 0.1, m.darkMetal, 0, bodyBottom + height - 0.02, nose + 0.02);
+      box(g, 2.6, 0.12, 0.1, m.darkMetal, 0, bodyBottom + height - 0.02, tail - 0.02);
       // угловые фитинги по низу и верху
       for (const sx of [-1, 1]) {
         for (const z of [nose - 0.1, tail + 0.1]) {
@@ -625,9 +640,9 @@ export class TruckView {
         side: THREE.DoubleSide,
       });
     const dashMat = M(dashSoftTex, { color: 0xb9c0c5, roughness: 0.92 });
-    const dashTopMat = M(dashSoftTex, { color: 0x4c545a, roughness: 0.99 });
-    const softMat = M(fabricTex, { color: 0x8d9499, roughness: 0.97 });
-    const headMat = M(headTex, { color: 0x9aa1a6, roughness: 0.98 });
+    const dashTopMat = M(dashSoftTex, { color: 0x5d666d, roughness: 0.99 });
+    const softMat = M(fabricTex, { color: 0x9ba3a9, roughness: 0.97 });
+    const headMat = M(headTex, { color: 0xa9b0b5, roughness: 0.98 });
     const carpetMat = M(carpetTex, { color: 0x8a9095, roughness: 1 });
     const seatMat = M(fabricTex, { color: 0x6e767c, roughness: 0.85 });
     const trimMat = M(null, { color: 0xa3acb1, roughness: 0.3, metalness: 0.72 });
@@ -637,6 +652,17 @@ export class TruckView {
 
     const HW = CAB.width / 2;
     const zMid = (CAB.front + CAB.rear) / 2;
+
+    // Свет в кабине: без него салон читается как чёрная коробка.
+    const cabinLamp = new THREE.PointLight(0xffe6c4, 4.6, 7, 2);
+    cabinLamp.position.set(0.05, 3.12, 1.55);
+    g.add(cabinLamp);
+    const dashLamp = new THREE.PointLight(0xbfd7e8, 2.1, 4, 2);
+    dashLamp.position.set(0.1, 2.22, 2.55);
+    g.add(dashLamp);
+    const rearLamp = new THREE.PointLight(0xa9c6dc, 1.5, 5, 2);
+    rearLamp.position.set(0.2, 2.6, 0.3);
+    g.add(rearLamp);
 
     // ---------------------------------------------------------------- оболочка
     box(g, CAB.width - 0.08, 0.06, 3.94, carpetMat, 0, CAB.floor + 0.02, zMid - 0.1);
@@ -658,10 +684,14 @@ export class TruckView {
       box(g, 0.08, 0.1, 1.45, softMat, sx * (HW - 0.06), 3.36, 1.9);
       box(g, 0.08, 0.1, 1.45, softMat, sx * (HW - 0.06), 2.13, 1.9);
       box(g, 0.05, 0.34, 0.05, trimMat, sx * (HW - 0.16), 2.72, 2.98);
+      // Облицовка передней стойки двери: закрывает краску кузова изнутри.
+      box(g, 0.12, 1.52, 0.26, softMat, sx * (HW - 0.09), 2.72, 2.9);
+      box(g, 0.1, 1.4, 0.12, softMat, sx * (HW - 0.05), 2.74, 2.72);
     }
     // облицовка стоек лобового стекла
     for (const sx of [-1, 1]) {
-      box(g, 0.2, wsH + 0.12, 0.1, softMat, sx * (HW - 0.07), CAB.windshieldTop - wsH / 2, CAB.windshieldZ - 0.1, [wsTilt, 0, 0]);
+      box(g, 0.26, wsH + 0.2, 0.3, softMat, sx * (HW - 0.13), CAB.windshieldTop - wsH / 2, CAB.windshieldZ - 0.06, [wsTilt, 0, 0]);
+      box(g, 0.1, wsH + 0.32, 0.46, softMat, sx * (HW - 0.04), CAB.windshieldTop - wsH / 2, CAB.windshieldZ - 0.16, [wsTilt, 0, 0]);
       box(g, 0.15, 0.5, 0.08, softMat, sx * (HW - 0.1), CAB.windshieldBottom - 0.24, CAB.front - 0.22, [wsTilt, 0, 0]);
     }
     // верхняя облицовка и козырьки
@@ -707,8 +737,11 @@ export class TruckView {
     // воздуховоды слева и справа от водителя
     for (const sx of [-1, 1]) {
       const vx = EYE.x + sx * 0.56;
-      box(g, 0.24, 0.12, 0.05, darkTrim, vx, 1.84, 2.66);
-      for (let i = 0; i < 3; i++) box(g, 0.21, 0.012, 0.02, trimMat, vx, 1.805 + i * 0.03, 2.63);
+      box(g, 0.26, 0.14, 0.05, darkTrim, vx, 1.84, 2.66);
+      for (let i = 0; i < 4; i++) {
+        box(g, 0.2, 0.014, 0.018, M(null, { color: 0x2b3238, roughness: 0.5, metalness: 0.35 }), vx, 1.795 + i * 0.028, 2.635);
+      }
+      box(g, 0.27, 0.012, 0.02, trimMat, vx, 1.905, 2.64);
     }
 
     // ---------------------------------------------------------------- экраны
@@ -745,8 +778,10 @@ export class TruckView {
     box(g, 0.44, 0.34, 0.26, dashMat, cx, 1.82, 2.92, [0.02, -0.1, 0]);
     box(g, 0.4, 0.04, 0.2, dashTopMat, cx, 1.99, 2.9, [0.02, -0.1, 0]);
     for (const sx of [-0.15, 0.15]) {
-      box(g, 0.16, 0.09, 0.04, darkTrim, cx + sx, 1.99, 2.78);
-      for (let i = 0; i < 3; i++) box(g, 0.14, 0.008, 0.02, trimMat, cx + sx, 1.965 + i * 0.024, 2.76);
+      box(g, 0.16, 0.1, 0.04, darkTrim, cx + sx, 1.99, 2.78);
+      for (let i = 0; i < 3; i++) {
+        box(g, 0.13, 0.009, 0.016, M(null, { color: 0x2b3238, roughness: 0.5, metalness: 0.35 }), cx + sx, 1.966 + i * 0.024, 2.755);
+      }
     }
     this.navCanvas = document.createElement('canvas');
     this.navCanvas.width = 384;
@@ -1151,8 +1186,10 @@ export class TruckView {
     this.root.rotation.set(pitch, hdg, roll, 'YXZ');
   }
 
-  setTrailerAngle(a) {
-    if (this.trailerGroup) this.trailerGroup.rotation.y = a;
+  setTrailerAngle(a, roll = 0) {
+    if (!this.trailerGroup) return;
+    // rotation.order по умолчанию XYZ: сначала рыскание, потом крен вокруг продольной оси.
+    this.trailerGroup.rotation.set(0, a, roll, 'YXZ');
   }
 
   dispose() {

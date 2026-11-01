@@ -1,85 +1,170 @@
 // Дорожный поток: легковые, фургоны, автобусы и грузовики в обе стороны.
 import * as THREE from 'three';
 import { clamp, rng } from '../core/math.js';
-import { materials } from './materials.js';
+import { materials, trailerTexture, trailerRearTexture } from './materials.js';
 import { mergeStatic } from '../core/merge-static.js';
 
 const CAR_COLORS = [0xd8d8d2, 0x2f3a45, 0x8c2f2a, 0x2f5c8c, 0x6f7c4a, 0xb0b4b8, 0x1f2225, 0xc9a23a, 0x4a4f7a, 0x7a2f4a];
+// Ливреи «чужих» тягачей: цвет кабины + цвет кузова + надпись на борту.
+const TRUCK_LIVERIES = [
+  { cab: 0x2f6ea8, body: '#e9e7df', name: 'NORDCARGO' },
+  { cab: 0xb03a2e, body: '#dedbd2', name: 'TRANS EUROPA' },
+  { cab: 0x2f7a52, body: '#e4e2d8', name: 'GREEN LINE' },
+  { cab: 0xd9d9d3, body: '#dcdad1', name: 'BALTIC HAUL' },
+  { cab: 0x2a3441, body: '#e6e4da', name: 'ALPINE FREIGHT' },
+];
+
+/** Местный помощник: коробка с поворотом. */
+function tb(parent, w, h, d, mat, x, y, z, rot = null) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  mesh.position.set(x, y, z);
+  if (rot) mesh.rotation.set(rot[0] || 0, rot[1] || 0, rot[2] || 0);
+  parent.add(mesh);
+  return mesh;
+}
+
+/** Колёса с покрышкой и диском; возвращает список вращаемых мешей. */
+function addWheels(g, m, spots, radius = 0.36, width = 0.26) {
+  const geo = new THREE.CylinderGeometry(radius, radius, width, 12);
+  const rimGeo = new THREE.CylinderGeometry(radius * 0.62, radius * 0.62, width + 0.02, 10);
+  const wheels = [];
+  for (const [x, z] of spots) {
+    const w = new THREE.Mesh(geo, m.tyres);
+    w.rotation.z = Math.PI / 2;
+    w.position.set(x, radius, z);
+    g.add(w);
+    const rim = new THREE.Mesh(rimGeo, m.rim);
+    rim.rotation.z = Math.PI / 2;
+    rim.position.set(x * 1.02, radius, z);
+    g.add(rim);
+    wheels.push(w);
+  }
+  return wheels;
+}
 
 function makeCar(m, type) {
   const g = new THREE.Group();
+  const livery = TRUCK_LIVERIES[Math.floor(Math.random() * TRUCK_LIVERIES.length)];
   const paint = new THREE.MeshStandardMaterial({
-    color: CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
-    metalness: 0.5,
-    roughness: 0.35,
+    color: type === 'truck' ? livery.cab : CAR_COLORS[Math.floor(Math.random() * CAR_COLORS.length)],
+    metalness: 0.45,
+    roughness: 0.34,
   });
+  const glass = m.glass;
   const dark = m.darkMetal;
+  const headMat = m.lamp.clone();
+  const tailMat = m.redLight.clone();
+  let wheels = [];
+
   if (type === 'truck') {
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2.6, 2.2), paint);
-    cab.position.set(0, 1.6, 3.2);
-    g.add(cab);
-    const boxBody = new THREE.Mesh(new THREE.BoxGeometry(2.5, 3.0, 8.6), new THREE.MeshStandardMaterial({ color: 0xe4e4dd, roughness: 0.8 }));
-    boxBody.position.set(0, 2.1, -2.4);
-    g.add(boxBody);
-    const bumper = new THREE.Mesh(new THREE.BoxGeometry(2.5, 0.5, 0.3), dark);
-    bumper.position.set(0, 0.8, 4.35);
-    g.add(bumper);
+    // Кабина-вагон: плоский перед, наклонное лобовое, спойлер на крыше.
+    tb(g, 2.44, 1.92, 2.15, paint, 0, 1.92, 2.95);
+    const ws = tb(g, 2.3, 0.95, 0.06, glass, 0, 2.55, 4.02, [-0.16, 0, 0]);
+    void ws;
+    tb(g, 2.36, 0.28, 0.18, paint, 0, 3.02, 3.98);
+    const deflector = tb(g, 2.25, 0.3, 0.95, paint, 0, 3.12, 3.35, [-0.28, 0, 0]);
+    void deflector;
+    tb(g, 2.3, 0.5, 0.12, dark, 0, 1.62, 4.06); // решётка
+    tb(g, 2.44, 0.32, 0.24, paint, 0, 1.02, 4.02); // бампер
+    for (const sx of [-1, 1]) {
+      tb(g, 0.12, 0.75, 0.92, glass, sx * 1.2, 2.42, 3.35); // боковые стёкла
+      tb(g, 0.36, 0.06, 0.06, dark, sx * 1.32, 2.86, 3.9); // кронштейн зеркала
+      tb(g, 0.1, 0.5, 0.22, dark, sx * 1.52, 2.6, 3.86); // зеркало
+      tb(g, 0.34, 0.16, 0.09, headMat, sx * 0.9, 1.12, 4.14);
+      tb(g, 0.4, 0.22, 0.06, dark, sx * 1.0, 0.62, 3.9);
+    }
+    tb(g, 2.1, 0.34, 2.4, dark, 0, 0.86, 2.4); // рама
+    // Полуприцеп: белый борт с ливреей, задние двери и юбка.
+    const sideTex = trailerTexture(livery.name, livery.body);
+    const boxMat = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.75, metalness: 0.05 });
+    const plain = new THREE.MeshStandardMaterial({ color: new THREE.Color(livery.body).multiplyScalar(0.92), roughness: 0.8 });
+    const body = new THREE.Mesh(new THREE.BoxGeometry(2.55, 2.72, 11.4), [boxMat, boxMat, plain, plain, plain, plain]);
+    body.position.set(0, 2.66, -4.2);
+    g.add(body);
+    tb(g, 2.56, 0.14, 11.4, dark, 0, 1.3, -4.2);
+    for (const sx of [-1, 1]) tb(g, 0.06, 0.55, 5.0, dark, sx * 1.24, 0.95, -6.0);
+    const rear = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 2.66), new THREE.MeshStandardMaterial({ map: trailerRearTexture(livery.name, livery.body), roughness: 0.75 }));
+    rear.position.set(0, 2.66, -9.92);
+    rear.rotation.y = Math.PI;
+    g.add(rear);
+    tb(g, 2.44, 0.12, 0.14, dark, 0, 1.02, -9.95);
+    for (const sx of [-0.92, -0.5, 0.5, 0.92]) tb(g, 0.2, 0.16, 0.07, tailMat, sx, 1.2, -9.98);
+    wheels = addWheels(g, m, [
+      [-1.02, 2.5], [1.02, 2.5],
+      [-1.02, -1.1], [1.02, -1.1],
+      [-1.02, -1.95], [1.02, -1.95],
+      [-1.02, -6.0], [1.02, -6.0],
+      [-1.02, -6.9], [1.02, -6.9],
+      [-1.02, -7.85], [1.02, -7.85],
+    ], 0.38, 0.28);
   } else if (type === 'bus') {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(2.55, 3.1, 11.5), paint);
-    body.position.set(0, 1.9, 0);
-    g.add(body);
-    const win = new THREE.Mesh(new THREE.BoxGeometry(2.57, 1.0, 9.8), m.glass);
-    win.position.set(0, 2.5, 0.2);
-    g.add(win);
+    const body = tb(g, 2.55, 2.35, 11.8, paint, 0, 1.95, 0);
+    void body;
+    // скруглённая крыша
+    const roof = new THREE.Mesh(new THREE.CylinderGeometry(1.28, 1.28, 11.8, 16, 1, false, 0, Math.PI), paint);
+    roof.rotation.z = Math.PI / 2;
+    roof.rotation.y = Math.PI / 2;
+    roof.position.set(0, 3.12, 0);
+    roof.scale.set(1, 1, 0.28);
+    g.add(roof);
+    tb(g, 2.57, 0.95, 10.4, glass, 0, 2.62, 0.1); // окна по борту
+    tb(g, 2.2, 1.3, 0.06, glass, 0, 2.5, 5.92); // лобовое
+    tb(g, 2.56, 0.5, 11.82, dark, 0, 0.92, 0); // юбка
+    tb(g, 2.0, 0.4, 0.1, headMat, 0, 1.35, 5.95);
+    for (const sx of [-0.9, 0.9]) {
+      tb(g, 0.34, 0.18, 0.08, headMat, sx, 1.1, 5.96);
+      tb(g, 0.34, 0.18, 0.08, tailMat, sx, 1.1, -5.96);
+      tb(g, 0.1, 0.06, 0.05, dark, sx * 1.36, 2.85, 5.4);
+    }
+    // дверные проёмы
+    for (const z of [3.6, -0.4]) tb(g, 2.58, 1.5, 0.08, glass, 0, 1.9, z);
+    wheels = addWheels(g, m, [
+      [-1.08, 3.6], [1.08, 3.6],
+      [-1.08, -3.4], [1.08, -3.4],
+      [-1.08, -4.5], [1.08, -4.5],
+    ], 0.46, 0.3);
   } else if (type === 'van') {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(2.1, 2.2, 5.4), paint);
-    body.position.set(0, 1.35, 0);
-    g.add(body);
-    const win = new THREE.Mesh(new THREE.BoxGeometry(2.12, 0.7, 1.6), m.glass);
-    win.position.set(0, 1.95, 1.5);
-    g.add(win);
+    tb(g, 2.12, 1.85, 5.0, paint, 0, 1.42, -0.4);
+    tb(g, 2.06, 0.72, 1.1, paint, 0, 1.06, 2.35); // капот
+    tb(g, 2.0, 0.72, 0.08, glass, 0, 1.86, 2.62, [-0.22, 0, 0]); // лобовое
+    for (const sx of [-1, 1]) {
+      tb(g, 0.1, 0.5, 1.5, glass, sx * 1.03, 1.94, 1.55);
+      tb(g, 0.14, 0.12, 0.1, dark, sx * 1.14, 1.75, 2.3);
+      tb(g, 0.28, 0.14, 0.08, headMat, sx * 0.72, 0.86, 2.9);
+      tb(g, 0.28, 0.16, 0.08, tailMat, sx * 0.8, 1.0, -2.92);
+    }
+    tb(g, 2.0, 0.22, 0.16, dark, 0, 0.62, 2.94);
+    tb(g, 2.04, 0.3, 0.14, dark, 0, 0.6, -2.94);
+    wheels = addWheels(g, m, [[-0.92, 1.7], [0.92, 1.7], [-0.92, -1.6], [0.92, -1.6]], 0.34, 0.22);
   } else {
-    const lower = new THREE.Mesh(new THREE.BoxGeometry(1.86, 0.62, 4.4), paint);
-    lower.position.set(0, 0.72, 0);
-    g.add(lower);
-    const upper = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.6, 2.3), paint);
-    upper.position.set(0, 1.25, -0.25);
-    g.add(upper);
-    const win = new THREE.Mesh(new THREE.BoxGeometry(1.74, 0.5, 2.1), m.glass);
-    win.position.set(0, 1.27, -0.25);
-    g.add(win);
-    for (const x of [-0.95, 0.95]) {
-      const mirror = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.1, 0.12), dark);
-      mirror.position.set(x, 1.18, 1.0);
-      g.add(mirror);
+    tb(g, 1.84, 0.56, 4.32, paint, 0, 0.74, 0); // низ
+    tb(g, 1.78, 0.3, 1.15, paint, 0, 1.08, 1.35); // капот
+    tb(g, 1.7, 0.66, 2.2, paint, 0, 1.16, -0.35); // салон
+    tb(g, 1.66, 0.44, 0.9, paint, 0, 1.18, -2.0); // багажник
+    tb(g, 1.66, 0.42, 2.1, glass, 0, 1.24, -0.35);
+    tb(g, 1.62, 0.62, 0.08, glass, 0, 1.2, 0.86, [-0.55, 0, 0]); // лобовое
+    tb(g, 1.6, 0.5, 0.08, glass, 0, 1.2, -1.55, [0.5, 0, 0]); // заднее
+    for (const sx of [-1, 1]) {
+      tb(g, 0.16, 0.09, 0.1, dark, sx * 0.92, 1.02, 0.9);
+      tb(g, 0.3, 0.16, 0.06, headMat, sx * 0.66, 0.82, 2.16);
+      tb(g, 0.32, 0.14, 0.06, tailMat, sx * 0.66, 0.86, -2.16);
     }
+    tb(g, 1.86, 0.2, 0.16, dark, 0, 0.55, 2.16);
+    tb(g, 1.86, 0.2, 0.16, dark, 0, 0.55, -2.16);
+    wheels = addWheels(g, m, [[-0.86, 1.32], [0.86, 1.32], [-0.86, -1.42], [0.86, -1.42]], 0.33, 0.22);
   }
-  // Колёса.
-  const wheelGeo = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 10);
-  const wheels = [];
-  const zs = type === 'bus' ? [-4, -2.6, 3.2, 4.2] : type === 'truck' ? [3.2, -1.2, -2.4] : [-1.4, 1.35];
-  for (const z of zs) {
-    for (const side of [-1, 1]) {
-      const w = new THREE.Mesh(wheelGeo, m.tyres);
-      w.rotation.z = Math.PI / 2;
-      w.position.set(side * (type === 'car' ? 0.86 : 1.0), 0.34, z);
-      g.add(w);
-      wheels.push(w);
-    }
+
+  // Габариты: подсветка номерного знака и «усы» сзади.
+  if (type !== 'car') {
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.12), new THREE.MeshStandardMaterial({ color: 0xf0f0e6, roughness: 0.5 }));
+    plate.position.set(0, 0.62, type === 'truck' ? -9.99 : type === 'bus' ? -6.0 : -2.97);
+    plate.rotation.y = Math.PI;
+    g.add(plate);
   }
-  const head = new THREE.MeshStandardMaterial({ color: 0xfff4d0, emissive: 0xffe9a8, emissiveIntensity: 1.6 });
-  const tail = new THREE.MeshStandardMaterial({ color: 0xd83a2c, emissive: 0xa8180c, emissiveIntensity: 1.2 });
-  for (const side of [-0.65, 0.65]) {
-    const hl = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.08), head);
-    hl.position.set(side, type === 'truck' ? 1.0 : 0.78, type === 'car' ? 2.2 : 4.35);
-    g.add(hl);
-    const tl = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.08), tail);
-    tl.position.set(side, type === 'truck' ? 1.0 : 0.8, type === 'car' ? -2.2 : -7.4);
-    g.add(tl);
-  }
+
   g.userData.wheels = wheels;
-  g.userData.headMat = head;
-  g.userData.tailMat = tail;
+  g.userData.headMat = headMat;
+  g.userData.tailMat = tailMat;
   return g;
 }
 

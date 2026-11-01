@@ -135,19 +135,19 @@
     </div>
 
     <div class="touch">
-      <div class="touch-steer">
-        <button data-touch="left" aria-label="Влево">◀</button>
-        <button data-touch="right" aria-label="Вправо">▶</button>
-      </div>
-      <div class="touch-pedals">
-        <button data-touch="brake" class="pedal brake">ТОРМОЗ</button>
-        <button data-touch="gas" class="pedal gas">ГАЗ</button>
+      <div class="touch-steer" id="steer-pad" aria-label="Руль">
+        <div class="steer-track"><span class="steer-knob" id="steer-knob"></span></div>
+        <span class="steer-label">РУЛЬ</span>
       </div>
       <div class="touch-aux">
-        <button data-act="interact" title="Взаимодействие">E</button>
+        <button data-act="interact" title="Погрузка / заправка">E</button>
         <button data-act="camera" title="Камера">📷</button>
         <button data-act="touch-cruise" title="Круиз">КР</button>
         <button data-act="touch-lights" title="Фары">💡</button>
+      </div>
+      <div class="touch-pedals">
+        <button data-touch="brake" class="pedal brake" aria-label="Тормоз"><span>ТОРМОЗ</span></button>
+        <button data-touch="gas" class="pedal gas" aria-label="Газ"><span>ГАЗ</span></button>
       </div>
     </div>
   </div>

@@ -264,7 +264,9 @@ async function run() {
   assert(window.document.getElementById('btn-fullscreen') !== null, 'кнопка полного экрана есть в HUD');
   assert(window.document.getElementById('rotate-hint') !== null, 'есть подсказка поворота экрана');
   const touchButtons = [...window.document.querySelectorAll('[data-touch]')].map((b) => b.dataset.touch);
-  assert(['gas', 'brake', 'left', 'right'].every((k) => touchButtons.includes(k)), 'экранные педали и руль на месте');
+  assert(['gas', 'brake'].every((k) => touchButtons.includes(k)), 'экранные педали на месте');
+  assert(window.document.getElementById('steer-pad') !== null, 'сенсорный руль на месте');
+  assert(window.document.getElementById('steer-knob') !== null, 'ползунок руля на месте');
 
   // Проверка отрисовки кадров.
   assert(g.renderer && g.renderer.calls > 10, `кадры рендерятся (${g.renderer?.calls})`);

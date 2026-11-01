@@ -1,5 +1,7 @@
 // Интерфейс: гараж, рынок грузов, автосалон, карта, настройки, HUD и уведомления.
 import { COUNTRIES, CITY_BY_ID, CITIES } from '../data/cities.js';
+import { project as geoProject } from '../world/geo.js';
+import GEO from '../data/europe-geo.json';
 import { TRUCK_MODELS, PAINT_COLORS, UPGRADES, SKILLS, levelForXp } from '../data/trucks.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { fmt, fmtMoney, fmtDuration, fmtTime, clamp, fmtDistance } from '../core/math.js';
@@ -79,6 +81,12 @@ export class UI {
         const price = this.game.currentFuelPrice || 1.7;
         $('fuel-total').textContent = fmtMoney(clamp(+el.value, 0, +el.max) * price);
       }
+      if (el.dataset.input === 'steer') {
+        const v = +el.value / 100;
+        this.game.setSetting('steerSensitivity', v);
+        const label = $('steer-value');
+        if (label) label.textContent = v.toFixed(2) + '×';
+      }
       if (el.dataset.input === 'volume') {
         this.game.setSetting('volume', +el.value / 100);
         const label = $('volume-value');
@@ -94,6 +102,17 @@ export class UI {
     });
 
     window.addEventListener('keydown', (e) => this.onKey(e));
+    if (typeof window !== 'undefined') {
+      let mapRaf = 0;
+      window.addEventListener('resize', () => {
+        if (this.navTab !== 'map' || !$('map-canvas')) return;
+        if (mapRaf) cancelAnimationFrame(mapRaf);
+        mapRaf = requestAnimationFrame(() => {
+          mapRaf = 0;
+          this.drawFullMap();
+        });
+      });
+    }
   }
 
   onKey(e) {
@@ -105,6 +124,48 @@ export class UI {
   }
 
   buildTouchZones() {
+    // Руль-рейка: аналоговое управление перетаскиванием (мышью тоже работает).
+    const pad = $('steer-pad');
+    const knob = $('steer-knob');
+    if (pad && knob) {
+      let dragging = false;
+      let pid = null;
+      const setFromEvent = (ev) => {
+        const rect = pad.getBoundingClientRect();
+        const track = knob.parentElement.getBoundingClientRect();
+        const half = track.width / 2 - 4;
+        const dx = ev.clientX - (track.left + track.width / 2);
+        const value = Math.max(-1, Math.min(1, dx / half));
+        this.game.input.touchSteer = value;
+        knob.style.transform = `translateX(${value * half}px)`;
+        pad.classList.toggle('active', Math.abs(value) > 0.08);
+        void rect;
+      };
+      const release = (ev) => {
+        if (!dragging) return;
+        dragging = false;
+        pid = null;
+        this.game.input.touchSteer = 0;
+        knob.style.transform = 'translateX(0px)';
+        pad.classList.remove('active');
+        if (ev && ev.pointerId != null && pad.hasPointerCapture?.(ev.pointerId)) pad.releasePointerCapture(ev.pointerId);
+      };
+      pad.addEventListener('pointerdown', (ev) => {
+        ev.preventDefault();
+        dragging = true;
+        pid = ev.pointerId;
+        pad.setPointerCapture?.(ev.pointerId);
+        setFromEvent(ev);
+      });
+      pad.addEventListener('pointermove', (ev) => {
+        if (dragging) setFromEvent(ev);
+      });
+      for (const type of ['pointerup', 'pointercancel', 'pointerleave', 'lostpointercapture']) {
+        pad.addEventListener(type, release);
+      }
+      void pid;
+    }
+
     document.querySelectorAll('[data-touch]').forEach((btn) => {
       const key = btn.dataset.touch;
       const map = { left: 'KeyA', right: 'KeyD', gas: 'KeyW', brake: 'KeyS' };
@@ -123,6 +184,7 @@ export class UI {
       btn.addEventListener('pointerup', up);
       btn.addEventListener('pointercancel', up);
       btn.addEventListener('pointerleave', up);
+      btn.addEventListener('contextmenu', (ev) => ev.preventDefault());
     });
   }
 
@@ -822,7 +884,8 @@ export class UI {
         <span><i style="background:#6fb6e8"></i> города</span>
         <span><i style="background:#4ec9b0"></i> текущий маршрут</span>
         <span><i style="background:#f2b544"></i> вы здесь</span>
-        <span><i style="background:#8ba0a8"></i> дороги</span>
+        <span><i style="background:#96b4be"></i> дороги</span>
+        <span><i style="background:#2a4550"></i> суша и границы</span>
       </div>`;
   }
 
@@ -831,62 +894,193 @@ export class UI {
     if (!canvas) return;
     const g = this.game;
     const ctx = canvas.getContext('2d');
-    const w = canvas.width;
-    const h = canvas.height;
+    // Канвас растягивается по панели: рисуем в CSS-пикселях с поправкой на DPR.
+    const dpr = Math.min(typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1, 2);
+    const cw = canvas.clientWidth || 1200;
+    const ch = canvas.clientHeight || 860;
+    const bw = Math.round(cw * dpr);
+    const bh = Math.round(ch * dpr);
+    if (canvas.width !== bw || canvas.height !== bh) {
+      canvas.width = bw;
+      canvas.height = bh;
+    }
+    if (ctx.setTransform) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const w = cw;
+    const h = ch;
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = '#081014';
+    const geo = GEO && GEO.land ? GEO : { land: [], holes: [], borders: [] };
+    ctx.fillStyle = '#050e14';
     ctx.fillRect(0, 0, w, h);
-    const net = g.network;
-    if (!net) return;
-    const xs = [...net.list.map((c) => c.x)];
-    const zs = [...net.list.map((c) => c.z)];
-    const minX = Math.min(...xs) - 4000;
-    const maxX = Math.max(...xs) + 4000;
-    const minZ = Math.min(...zs) - 4000;
-    const maxZ = Math.max(...zs) + 4000;
-    const scale = Math.min(w / (maxX - minX), h / (maxZ - minZ)) * 0.94;
+    const glow = ctx.createRadialGradient(w * 0.46, h * 0.4, 30, w * 0.46, h * 0.4, w * 0.82);
+    glow.addColorStop(0, '#0d2230');
+    glow.addColorStop(0.65, '#081722');
+    glow.addColorStop(1, '#050d13');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, w, h);
+
+    // --- Проекция: мир → пиксели, вписанная по настоящим границам Европы.
+    const bb = geo.bbox || [-12, 34, 34, 71];
+    const corners = [
+      geoProject(bb[1], bb[0]), geoProject(bb[1], bb[2]),
+      geoProject(bb[3], bb[0]), geoProject(bb[3], bb[2]),
+    ];
+    const minX = Math.min(...corners.map((c) => c.x));
+    const maxX = Math.max(...corners.map((c) => c.x));
+    const minZ = Math.min(...corners.map((c) => c.z));
+    const maxZ = Math.max(...corners.map((c) => c.z));
+    const pad = Math.round(w * 0.022);
+    const scale = Math.min((w - pad * 2) / (maxX - minX), (h - pad * 2) / (maxZ - minZ));
     const ox = w / 2 - ((minX + maxX) / 2) * scale;
     const oy = h / 2 + ((minZ + maxZ) / 2) * scale;
     const tx = (x) => ox + x * scale;
     const ty = (z) => oy - z * scale;
+    const toMap = (lon, lat) => {
+      const p = geoProject(lat, lon);
+      return [tx(p.x), ty(p.z)];
+    };
 
-    // сетка
-    ctx.strokeStyle = 'rgba(120,160,170,.08)';
+    // --- Суша: заливка с дырками (озёра/внутренние моря), затем береговая линия.
+    ctx.save();
+    ctx.beginPath();
+    for (const ring of geo.land) {
+      if (!ring || ring.length < 3) continue;
+      for (let i = 0; i < ring.length; i++) {
+        const [sx, sy] = toMap(ring[i][0], ring[i][1]);
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+    }
+    for (const ring of geo.holes || []) {
+      if (!ring || ring.length < 3) continue;
+      for (let i = 0; i < ring.length; i++) {
+        const [sx, sy] = toMap(ring[i][0], ring[i][1]);
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
+      }
+      ctx.closePath();
+    }
+    const landFill = ctx.createLinearGradient(0, 0, 0, h);
+    landFill.addColorStop(0, '#25414b');
+    landFill.addColorStop(0.5, '#203942');
+    landFill.addColorStop(1, '#1a2f37');
+    ctx.fillStyle = landFill;
+    ctx.fill('evenodd');
+    // мягкое свечение берега
+    ctx.shadowColor = 'rgba(96, 176, 196, 0.4)';
+    ctx.shadowBlur = 7;
+    ctx.strokeStyle = 'rgba(132, 194, 210, 0.5)';
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+    ctx.restore();
+
+    // --- Границы стран.
+    ctx.save();
+    ctx.strokeStyle = 'rgba(168, 206, 216, 0.13)';
     ctx.lineWidth = 1;
-    for (let i = 0; i < w; i += 60) {
-      ctx.beginPath();
-      ctx.moveTo(i, 0);
-      ctx.lineTo(i, h);
-      ctx.stroke();
-    }
-    for (let i = 0; i < h; i += 60) {
-      ctx.beginPath();
-      ctx.moveTo(0, i);
-      ctx.lineTo(w, i);
-      ctx.stroke();
-    }
-
-    // дороги
-    ctx.strokeStyle = 'rgba(140,170,180,.35)';
-    ctx.lineWidth = 1.5;
-    for (const [id, edges] of net.adj) {
-      const a = CITY_BY_ID.get(id);
-      if (!a) continue;
-      const pa = g.cityPos(id);
-      for (const e of edges) {
-        if (id > e.to) continue;
-        const pb = g.cityPos(e.to);
-        ctx.beginPath();
-        ctx.moveTo(tx(pa.x), ty(pa.z));
-        ctx.lineTo(tx(pb.x), ty(pb.z));
-        ctx.stroke();
+    ctx.beginPath();
+    for (const line of geo.borders || []) {
+      if (!line || line.length < 2) continue;
+      for (let i = 0; i < line.length; i++) {
+        const [sx, sy] = toMap(line[i][0], line[i][1]);
+        if (i === 0) ctx.moveTo(sx, sy);
+        else ctx.lineTo(sx, sy);
       }
     }
+    ctx.stroke();
+    ctx.restore();
 
-    // маршрут
-    if (g.route) {
-      ctx.strokeStyle = '#4ec9b0';
-      ctx.lineWidth = 3;
+    // --- Маска суши: чтобы не рисовать дороги по морю.
+    if (!this._mapMask || this._mapMask.w !== w || this._mapMask.h !== h) {
+      const mc = typeof document.createElement === 'function' ? document.createElement('canvas') : null;
+      if (mc) {
+        mc.width = w;
+        mc.height = h;
+        const mctx = mc.getContext('2d');
+        mctx.fillStyle = '#fff';
+        for (const ring of geo.land) {
+          if (!ring || ring.length < 3) continue;
+          mctx.beginPath();
+          for (let i = 0; i < ring.length; i++) {
+            const [sx, sy] = toMap(ring[i][0], ring[i][1]);
+            if (i === 0) mctx.moveTo(sx, sy);
+            else mctx.lineTo(sx, sy);
+          }
+          mctx.closePath();
+          mctx.fill();
+        }
+        this._mapMask = { w, h, data: mctx.getImageData(0, 0, w, h).data };
+      }
+    }
+    const onLand = (sx, sy) => {
+      const m = this._mapMask;
+      if (!m) return true;
+      const x = Math.round(sx);
+      const y = Math.round(sy);
+      if (x < 0 || y < 0 || x >= m.w || y >= m.h) return false;
+      return m.data[(y * m.w + x) * 4 + 3] > 8;
+    };
+
+    const net = g.network;
+    if (net) {
+      // --- Дороги: только по суше, двухслойно (тень + линия).
+      const links = [];
+      const hash01 = (v) => {
+        const x = Math.sin(v * 12.9898) * 43758.5453;
+        return x - Math.floor(x);
+      };
+      for (const [id, edges] of net.adj) {
+        for (const e of edges) {
+          if (id > e.to) continue;
+          const a = g.cityPos(id);
+          const b = g.cityPos(e.to);
+          const sa = [tx(a.x), ty(a.z)];
+          const sb = [tx(b.x), ty(b.z)];
+          const dx = sb[0] - sa[0];
+          const dy = sb[1] - sa[1];
+          const len = Math.hypot(dx, dy) || 1;
+          // Лёгкая дуга: трасса не выглядит линейкой.
+          const bend = (hash01(id.length * 31.7 + e.to.length * 17.3 + len) - 0.5) * Math.min(len * 0.22, 26);
+          const mx = (sa[0] + sb[0]) / 2 - (dy / len) * bend;
+          const my = (sa[1] + sb[1]) / 2 + (dx / len) * bend;
+          const pts = [];
+          let land = 0;
+          for (let i = 0; i <= 10; i++) {
+            const t = i / 10;
+            const px = (1 - t) * (1 - t) * sa[0] + 2 * (1 - t) * t * mx + t * t * sb[0];
+            const py = (1 - t) * (1 - t) * sa[1] + 2 * (1 - t) * t * my + t * t * sb[1];
+            pts.push([px, py]);
+            if (i % 2 === 0 && onLand(px, py)) land++;
+          }
+          if (land < 4) continue;
+          links.push(pts);
+        }
+      }
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = 'rgba(4, 13, 18, 0.8)';
+      ctx.lineWidth = 3.6;
+      ctx.beginPath();
+      for (const pts of links) {
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      }
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(164, 194, 204, 0.55)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      for (const pts of links) {
+        ctx.moveTo(pts[0][0], pts[0][1]);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      }
+      ctx.stroke();
+    }
+
+    // --- Маршрут.
+    if (g.route && g.route.samples) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(78, 201, 176, 0.25)';
+      ctx.lineWidth = 8;
       ctx.beginPath();
       g.route.samples.forEach((p, i) => {
         if (i % 4) return;
@@ -896,36 +1090,68 @@ export class UI {
         else ctx.lineTo(sx, sy);
       });
       ctx.stroke();
+      ctx.strokeStyle = '#5fe0c4';
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      ctx.restore();
     }
 
-    // города
-    for (const c of net.list) {
+    // --- Города и подписи без наложений.
+    const cityList = net ? net.list.slice() : [];
+    cityList.sort((a, b) => (b.size || 0) - (a.size || 0));
+    ctx.font = '600 11px system-ui, -apple-system, "Segoe UI", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    const boxes = [];
+    const overlaps = (r) => boxes.some((b) => !(r.x2 < b.x1 || r.x1 > b.x2 || r.y2 < b.y1 || r.y1 > b.y2));
+    for (const c of cityList) {
       const sx = tx(c.x);
       const sy = ty(c.z);
-      ctx.fillStyle = c.size === 3 ? '#6fb6e8' : c.size === 2 ? 'rgba(111,182,232,.8)' : 'rgba(111,182,232,.55)';
+      if (sx < 4 || sy < 4 || sx > w - 4 || sy > h - 4) continue;
+      const r = 1.9 + (c.size || 1) * 0.7;
+      ctx.fillStyle = c.size === 3 ? '#7cc6f0' : c.size === 2 ? 'rgba(124,198,240,.85)' : 'rgba(124,198,240,.6)';
       ctx.beginPath();
-      ctx.arc(sx, sy, 2 + c.size, 0, Math.PI * 2);
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.fill();
-      if (c.size >= 2) {
-        ctx.fillStyle = 'rgba(220,235,238,.65)';
-        ctx.font = '11px system-ui';
-        ctx.fillText(c.name, sx + 6, sy - 6);
-      }
+      if (c.size < 2) continue;
+      const label = c.name;
+      const tw = ctx.measureText(label).width;
+      const bx = sx + r + 4;
+      const by = sy;
+      const box = { x1: bx - 3, y1: by - 8, x2: bx + tw + 3, y2: by + 8 };
+      if (overlaps(box)) continue;
+      boxes.push(box);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(8, 19, 26, 0.85)';
+      ctx.strokeText(label, bx, by);
+      ctx.fillStyle = c.size === 3 ? 'rgba(232, 244, 247, 0.95)' : 'rgba(214, 231, 237, 0.78)';
+      ctx.fillText(label, bx, by);
     }
-    // маркер игрока
+
+    // --- Маркер игрока.
     if (g.profile) {
       const city = CITY_BY_ID.get(g.profile.currentCity);
       if (city) {
         const p = g.cityPos(city.id);
+        const px = tx(p.x);
+        const py = ty(p.z);
+        ctx.fillStyle = 'rgba(242, 181, 68, 0.16)';
+        ctx.beginPath();
+        ctx.arc(px, py, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(242, 181, 68, 0.55)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(px, py, 11, 0, Math.PI * 2);
+        ctx.stroke();
         ctx.fillStyle = '#f2b544';
         ctx.beginPath();
-        ctx.arc(tx(p.x), ty(p.z), 7, 0, Math.PI * 2);
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = 'rgba(242,181,68,.4)';
-        ctx.lineWidth = 3;
+        ctx.fillStyle = '#fff';
         ctx.beginPath();
-        ctx.arc(tx(p.x), ty(p.z), 14, 0, Math.PI * 2);
-        ctx.stroke();
+        ctx.arc(px - 1.4, py - 1.4, 1.6, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
   }
@@ -994,6 +1220,11 @@ export class UI {
           <select data-setting="quality">
             ${[['auto', 'Авто под устройство'], ['high', 'Высокое'], ['medium', 'Среднее'], ['low', 'Низкое']].map(([v, n]) => `<option value="${v}" ${String(st.quality) === v ? 'selected' : ''}>${n}</option>`).join('')}
           </select></div>
+        <div class="field-row"><label>Чувствительность руля<small>1.00 — стандарт, 0.70 — мягче (удобно на телефоне), 1.40 — резче</small></label>
+          <div class="range-row"><input type="range" min="50" max="160" step="5" value="${Math.round((Number(st.steerSensitivity) || 1) * 100)}" data-input="steer">
+          <span class="range-label" id="steer-value">${(Number(st.steerSensitivity) || 1).toFixed(2)}×</span></div></div>
+        <div class="field-row"><label>Помощь в поворотах<small>автоподруливание в кривых и возврат в полосу</small></label>
+          <button class="btn btn-sm" data-act="toggle-setting" data-arg="steerAssist">${st.steerAssist === false ? 'Выключена' : 'Включена'}</button></div>
         <div class="field-row"><label>Сенсорное управление<small>кнопки газа, тормоза и руля на экране</small></label>
           <select data-setting="touchControls">
             ${[['auto', 'Авто'], ['on', 'Всегда'], ['off', 'Выключено']].map(([v, n]) => `<option value="${v}" ${String(st.touchControls) === v ? 'selected' : ''}>${n}</option>`).join('')}
