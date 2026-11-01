@@ -27,6 +27,7 @@
 
   let canvas = null;
   let down = null;
+  const MAX_ZOOM = 9;
   const pointers = new Map();
   let pinch = null;
   let spaceHeld = false;
@@ -65,6 +66,7 @@
     Render.init(canvas, app.world);
     TR.UI.init(app);
     bindInput();
+    initDevice();
     resize();
     window.addEventListener('resize', resize);
     document.addEventListener('visibilitychange', () => {
@@ -104,8 +106,17 @@
       if (app.selection.kind === 'road' && !s.roads.some((r) => r.id === app.selection.id)) app.selection = null;
     }
 
-    // автозапись
+    // автосохранение: обычное — раз в 25 секунд, плюс сразу после любого изменения
+    const sig = stateSignature(s);
+    if (sig !== app._saveSig) {
+      app._saveSig = sig;
+      app._savePending = 0.6;
+    }
     app.saveTimer += dt;
+    if (app._savePending > 0) {
+      app._savePending -= dt;
+      if (app._savePending <= 0) app.save(true);
+    }
     if (app.saveTimer > 25) {
       app.saveTimer = 0;
       app.save(true);
@@ -121,9 +132,47 @@
     }
   }
 
+  function stateSignature(s) {
+    return [
+      Math.round(s.money), Math.round(s.debt), s.roads.length, s.facilities.length, s.level,
+      s.upgrades.crew, s.upgrades.fleet, s.upgrades.marketing, s.upgrades.quality, s.upgrades.maintenance,
+      s.objDone.length, s.contracts.length, s.crisis ? s.crisis.id : '-',
+    ].join('|');
+  }
+
+  const DEVICE_KEY = 'trassa-device';
+
+  function setDevice(mode) {
+    document.documentElement.setAttribute('data-device', mode);
+    const btn = document.getElementById('btn-device');
+    if (btn) {
+      btn.textContent = mode === 'mobile' ? 'ТЕЛ' : 'ПК';
+      btn.title = mode === 'mobile' ? 'Раскладка для телефона — включена' : 'Раскладка для компьютера — включена';
+    }
+    try { localStorage.setItem(DEVICE_KEY, mode); } catch (e) { /* приватный режим */ }
+    if (TR.Render && TR.Render.resize) TR.Render.resize();
+  }
+
+  function initDevice() {
+    let saved = null;
+    try { saved = localStorage.getItem(DEVICE_KEY); } catch (e) { saved = null; }
+    const mode = saved || (window.innerWidth <= 1040 ? 'mobile' : 'desktop');
+    setDevice(mode);
+    const btn = document.getElementById('btn-device');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const next = document.documentElement.getAttribute('data-device') === 'mobile' ? 'desktop' : 'mobile';
+        setDevice(next);
+        TR.UI.toast(next === 'mobile' ? 'Раскладка для телефона: большие кнопки и панели снизу' : 'Раскладка для компьютера: панели по краям', 'info');
+      });
+    }
+  }
+
+  app.setDevice = setDevice;
+
   function resize() {
     Render.resize();
-    app.camera.zoom = U.clamp(app.camera.zoom, minZoom(), 2.8);
+    app.camera.zoom = U.clamp(app.camera.zoom, minZoom(), MAX_ZOOM);
     clampCamera();
   }
 
@@ -203,7 +252,7 @@
       const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
       if (pinch.dist > 12) {
         const before = Render.toWorld(app, pinch.mid.x, pinch.mid.y);
-        app.camera.zoom = U.clamp((pinch.zoom * dist) / pinch.dist, minZoom(), 2.8);
+        app.camera.zoom = U.clamp((pinch.zoom * dist) / pinch.dist, minZoom(), MAX_ZOOM);
         const after = Render.toWorld(app, pinch.mid.x, pinch.mid.y);
         app.camera.x += before.x - after.x;
         app.camera.y += before.y - after.y;
@@ -253,7 +302,7 @@
     const p = screenPoint(e);
     const before = Render.toWorld(app, p.x, p.y);
     const factor = Math.exp(-e.deltaY * 0.0016);
-    app.camera.zoom = U.clamp(app.camera.zoom * factor, minZoom(), 2.8);
+    app.camera.zoom = U.clamp(app.camera.zoom * factor, minZoom(), MAX_ZOOM);
     const after = Render.toWorld(app, p.x, p.y);
     app.camera.x += before.x - after.x;
     app.camera.y += before.y - after.y;
@@ -288,7 +337,7 @@
   function fitMap() {
     const zx = (window.innerWidth - 60) / (C.worldW * 9);
     const zy = (window.innerHeight - 160) / (C.worldH * 9);
-    app.camera.zoom = U.clamp(Math.min(zx, zy), minZoom(), 2.8);
+    app.camera.zoom = U.clamp(Math.min(zx, zy), minZoom(), MAX_ZOOM);
     app.camera.x = C.worldW / 2;
     app.camera.y = C.worldH / 2;
     clampCamera();

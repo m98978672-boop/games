@@ -1,0 +1,13 @@
+{
+  "name": "trassa-road-empire",
+  "version": "1.1.0",
+  "private": true,
+  "description": "ТРАССА — дорожная империя: 3D-стратегия про дороги, города и сервис",
+  "scripts": {
+    "vendor": "esbuild tools/three-entry.js --bundle --minify --format=iife --outfile=vendor/three.min.js",
+    "test": "node tests/sim.test.js",
+    "balance": "node tools/balance.js 60 777"
+  },
+  "dependencies": { "three": "^0.186.1" },
+  "devDependencies": { "esbuild": "^0.25.0" }
+}

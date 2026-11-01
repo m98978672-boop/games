@@ -310,7 +310,7 @@
     let upgrades = '';
     C.roadTypes.forEach((rt, i) => {
       if (i <= road.quality) return;
-      const cost = Sim.upgradeCost(road, i);
+      const cost = Sim.upgradeCost(road, i, s);
       const locked = s.level < rt.unlock;
       upgrades += `<button class="btn small${locked ? ' locked' : ''}" data-act="upgrade-road" data-id="${road.id}" data-q="${i}"
         ${locked || road.building ? 'disabled' : ''}>${rt.name}${locked ? ' · ур. ' + rt.unlock : ' · ' + U.money(cost)}</button>`;
@@ -393,6 +393,7 @@
           <div><span>Сервисов</span><b>${s.stats.servicesToday}</b></div>
         </div>
         ${s.debt > 0 ? `<div class="notice-line">Кредит: ${U.money(s.debt)} · проценты ${U.money(Sim.interest(s))}/день</div>` : ''}
+        ${crisisBanner(s)}
         ${topEarners(s)}
         <div class="card-actions">
           <button class="btn small ghost" data-act="show-report">Отчёт по дням</button>
@@ -411,6 +412,13 @@
       rows += `<div class="earner"><span>${C.facilityByKey[f.type].emoji} ${C.facilityByKey[f.type].name}</span><b>+${U.money(f.revenueToday)}</b></div>`;
     }
     return `<div class="earners"><span class="earners-title">Заработали сегодня</span>${rows}</div>`;
+  }
+
+  function crisisBanner(s) {
+    const info = Sim.crisisInfo(s);
+    if (!info) return '';
+    const days = info.daysLeft >= 1 ? Math.ceil(info.daysLeft) : 1;
+    return `<div class="crisis"><b>⚠ ${info.title}</b><span>${info.text}</span><i>осталось ${days} ${days === 1 ? 'день' : days < 5 ? 'дня' : 'дней'}</i></div>`;
   }
 
   function objectivesCard(s) {
