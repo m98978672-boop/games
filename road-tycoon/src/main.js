@@ -32,6 +32,7 @@
   let pinch = null;
   let spaceHeld = false;
   const keys = new Set();
+  const panVel = { x: 0, y: 0 };
 
   /* ------------------------------------------------------------ запуск */
 
@@ -100,6 +101,15 @@
   function step(dt) {
     const s = app.state;
     if (!app.paused) Sim.tick(s, dt * app.speed);
+
+    // инерция после свайпа
+    if (!down && !pinch && (Math.abs(panVel.x) > 0.5 || Math.abs(panVel.y) > 0.5)) {
+      app.camera.x += panVel.x * dt;
+      app.camera.y += panVel.y * dt;
+      const damp = Math.exp(-4.2 * dt);
+      panVel.x *= damp; panVel.y *= damp;
+      clampCamera();
+    }
 
     // панорамирование клавиатурой: WASD и стрелки
     let px = 0, py = 0;
@@ -192,6 +202,27 @@
 
   app.setDevice = setDevice;
 
+  function initSheet() {
+    const menu = document.getElementById('btn-menu');
+    const close = document.getElementById('sheet-close');
+    const openSheet = (on) => document.body.classList.toggle('sheet-open', on);
+    if (menu) menu.addEventListener('click', () => openSheet(!document.body.classList.contains('sheet-open')));
+    if (close) close.addEventListener('click', () => openSheet(false));
+    // тап по карте закрывает меню, чтобы освободить экран
+    if (canvas) {
+      canvas.addEventListener('pointerdown', () => {
+        if (document.body.classList.contains('sheet-open')) openSheet(false);
+      }, true);
+    }
+    const panel = document.querySelector('.panel.tools');
+    if (panel) {
+      panel.addEventListener('click', (e) => {
+        if (e.target.closest('[data-tool], .road-card, .obj-card')) openSheet(false);
+      });
+    }
+    app.openSheet = openSheet;
+  }
+
   function resize() {
     Render.resize();
     app.camera.zoom = U.clamp(app.camera.zoom, minZoom(), MAX_ZOOM);
@@ -220,8 +251,11 @@
     const padT = 70 / ppk, padB = 110 / ppk;
     let minX = halfW - padL, maxX = C.worldW - halfW + padR;
     let minY = halfH - padT, maxY = C.worldH - halfH + padB;
-    app.camera.x = minX <= maxX ? U.clamp(app.camera.x, minX, maxX) : C.worldW / 2;
-    app.camera.y = minY <= maxY ? U.clamp(app.camera.y, minY, maxY) : C.worldH / 2;
+    // если карта уже экрана — не запираем камеру в центре, а даём двигать её по всей карте
+    if (minX > maxX) { minX = -halfW; maxX = C.worldW + halfW; }
+    if (minY > maxY) { minY = -halfH; maxY = C.worldH + halfH; }
+    app.camera.x = U.clamp(app.camera.x, minX, maxX);
+    app.camera.y = U.clamp(app.camera.y, minY, maxY);
   }
 
   /* ------------------------------------------------------------- ввод */
@@ -312,8 +346,15 @@
       if (!down.moved && Math.hypot(dx, dy) > 4) down.moved = true;
       if (down.moved) {
         const ppk = Render.ppk(app.camera.zoom);
-        app.camera.x -= (p.x - down.x) / ppk;
-        app.camera.y -= (p.y - down.y) / ppk;
+        const ddx = (p.x - down.x) / ppk, ddy = (p.y - down.y) / ppk;
+        app.camera.x -= ddx;
+        app.camera.y -= ddy;
+        // скорость для инерции (км/с)
+        const nowT = performance.now();
+        const dtMove = Math.max(8, nowT - (down.t || nowT - 16)) / 1000;
+        panVel.x = U.clamp(-ddx / dtMove, -400, 400);
+        panVel.y = U.clamp(-ddy / dtMove, -400, 400);
+        down.t = nowT;
         clampCamera();
         down.x = p.x;
         down.y = p.y;
