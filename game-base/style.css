@@ -186,7 +186,28 @@ html, body {
 }
 @keyframes recordPulse { 50% { opacity: 0.45; } }
 
+/* --- «набросок от руки»: лёгкое дрожание контуров мелких элементов --- */
+.brand .logo, .icon-btn, .btn, .chip, .toast, .sticker, .pause-flag,
+.side-stats div, .tabs button, .bar {
+  filter: url(#sketch);
+}
+
+/* --- рукописные цифры счёта и комбо --- */
+.stat.accent b, #hud-combo {
+  font-family: "Segoe Script", "Bradley Hand", "Apple Chancery", "Comic Sans MS", cursive;
+  font-weight: 700;
+}
+#hud-score { display: inline-block; font-size: 20px; color: var(--accent-2); }
+#hud-combo { display: inline-block; font-size: 17px; }
+#hud-score.pop { animation: scorePop 0.28s cubic-bezier(0.2, 1.8, 0.4, 1); }
+@keyframes scorePop { 40% { transform: scale(1.3) rotate(-2deg); } }
+
+/* --- doodle-светлячок в модалке --- */
+.doodle { flex: none; filter: drop-shadow(0 0 10px rgba(255, 207, 125, 0.45)); }
+.modal-title-row { display: flex; align-items: center; gap: 12px; }
+
 @media (max-width: 560px) {
   .panel.side { width: 210px; }
   .end-score b { font-size: 34px; }
+  #hud-score { font-size: 17px; }
 }
