@@ -150,7 +150,8 @@ export class UI {
         const dx = ev.clientX - (track.left + track.width / 2);
         const value = Math.max(-1, Math.min(1, dx / half));
         this.game.input.touchSteer = value;
-        knob.style.transform = `translateX(${value * half}px)`;
+        // Крутилка не только едет по рейке, но и поворачивается — как штурвал.
+        knob.style.transform = `translateX(${value * half}px) rotate(${value * 120}deg)`;
         pad.classList.toggle('active', Math.abs(value) > 0.08);
         void rect;
       };
@@ -159,7 +160,7 @@ export class UI {
         dragging = false;
         pid = null;
         this.game.input.touchSteer = 0;
-        knob.style.transform = 'translateX(0px)';
+        knob.style.transform = 'translateX(0px) rotate(0deg)';
         pad.classList.remove('active');
         if (ev && ev.pointerId != null && pad.hasPointerCapture?.(ev.pointerId)) pad.releasePointerCapture(ev.pointerId);
       };

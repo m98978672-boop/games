@@ -359,13 +359,18 @@ body.is-touch .touch { display: block; }
   background: linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.13), rgba(255,255,255,.06));
   border: 1px solid rgba(255,255,255,.14);
 }
+/* Крутилка = маленький штурвал: обод, три спицы, ступица. Рисуется SVG в data-URI,
+   чтобы не тащить картинки и не зависеть от эмодзи в системе. */
 .steer-knob {
-  position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
-  border-radius: 50%; background: radial-gradient(circle at 35% 30%, #dfe9ee, #8fa0a9 60%, #5d6d76);
+  position: absolute; top: 50%; left: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px;
+  border-radius: 50%;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='17' fill='%23243038'/%3E%3Ccircle cx='20' cy='20' r='13.5' fill='%23131b21'/%3E%3Cpath d='M20 20V6.5M20 20 8.5 26.5M20 20l11.5 6.5' stroke='%23202b33' stroke-width='3.4' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23202b33' stroke-width='5'/%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23cfdae0' stroke-width='2.2'/%3E%3Ccircle cx='20' cy='20' r='4.6' fill='%23e7eef1' stroke='%23202b33' stroke-width='1.8'/%3E%3C/svg%3E") center / 100% 100% no-repeat,
+    radial-gradient(circle at 35% 30%, #e9f1f4, #8fa0a9 65%, #5d6d76);
   box-shadow: 0 3px 10px rgba(0,0,0,.45), inset 0 -2px 4px rgba(0,0,0,.25);
   transition: transform .06s linear;
 }
-.touch-steer.active .steer-knob { background: radial-gradient(circle at 35% 30%, #fff, #b6c6cf 60%, #7b8b94); }
+.touch-steer.active .steer-knob { filter: brightness(1.18); box-shadow: 0 0 14px rgba(120, 220, 200, .35), 0 3px 10px rgba(0,0,0,.45); }
 .steer-label { font-size: 9px; font-weight: 800; letter-spacing: .18em; color: var(--muted); }
 
 .touch-pedals { position: absolute; right: 18px; bottom: 18px; display: flex; gap: 12px; align-items: flex-end; }
