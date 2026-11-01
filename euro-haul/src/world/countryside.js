@@ -59,7 +59,8 @@ export function buildCountryside(ctx) {
     const bodyGeo = new THREE.BoxGeometry(1.15, 1, 1);
     bodyGeo.translate(0, 0.5, 0);
     const hedgeMats = [mats.leaves[0], mats.leaves[2]];
-    const bounds = [-46, -64, -96, -138, -196, -268, 48, 70, 104, 152, 214];
+    // Ближняя полоса отодвинута от обочины: изгородь не должна нависать над трассой.
+    const bounds = [-62, -86, -118, -158, -208, -276, 64, 88, 120, 166, 224];
     const step = 5.2;
     const perBound = Math.ceil(span / step) + 4;
     const total = Math.ceil(perBound * bounds.length * 0.75);
@@ -76,19 +77,19 @@ export function buildCountryside(ctx) {
       for (let ss = start; ss < s1 + step; ss += step) {
         if (runLeft <= 0) {
           if (rnd(bi, Math.floor(ss / step)) > 0.42) continue;
-          runLeft = 12 + Math.floor(rnd(bi + 1, Math.floor(ss / step)) * 34);
+          runLeft = 8 + Math.floor(rnd(bi + 1, Math.floor(ss / step)) * 20);
         }
         runLeft--;
         if (count >= total) break;
         const p = pos(ss, lat + (rnd(ss, bi) - 0.5) * 1.2);
-        const h = 0.85 + rnd(ss * 0.7, bi + 3) * 0.95;
+        const h = 0.7 + rnd(ss * 0.7, bi + 3) * 0.85;
         dummy.position.set(p.x, p.y - 0.15, p.z);
-        dummy.rotation.set(0, p.hdg + (rnd(ss, bi + 7) - 0.5) * 0.1, 0);
+        dummy.rotation.set(0, p.hdg + (rnd(ss, bi + 7) - 0.5) * 0.22, 0);
         dummy.scale.set(0.9 + rnd(ss, bi + 9) * 0.45, h, step * 1.06);
         dummy.updateMatrix();
         bodies.setMatrixAt(count, dummy.matrix);
         const hue = 0.24 + rnd(ss, bi + 11) * 0.07;
-        color.setHSL(hue, 0.16 + rnd(ss, bi + 13) * 0.14, 0.62 + rnd(ss, bi + 17) * 0.16);
+        color.setHSL(hue, 0.13 + rnd(ss, bi + 13) * 0.11, 0.6 + rnd(ss, bi + 17) * 0.2);
         bodies.setColorAt(count, color);
         count++;
       }

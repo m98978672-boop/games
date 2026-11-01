@@ -9,6 +9,19 @@ import { skillPrice } from '../core/save.js';
 
 const $ = (id) => document.getElementById(id);
 
+// Русские формы числительных для подписей карты: «152 города в 28 странах».
+const plural = (n, one, few, many) => {
+  const a = Math.abs(n) % 100;
+  const b = a % 10;
+  if (a > 10 && a < 20) return many;
+  if (b > 1 && b < 5) return few;
+  if (b === 1) return one;
+  return many;
+};
+const cityWord = (n) => plural(n, 'город', 'города', 'городов');
+const countryWord = (n) => plural(n, 'стране', 'странах', 'странах');
+const COUNTRY_TOTAL = Object.keys(COUNTRIES).length;
+
 export function truckSvg(color = '#2f7fa8', trailer = true) {
   return `<svg class="truck-svg" viewBox="0 0 260 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <ellipse cx="130" cy="101" rx="118" ry="6" fill="rgba(0,0,0,.35)"/>
@@ -109,7 +122,7 @@ export class UI {
         if (mapRaf) cancelAnimationFrame(mapRaf);
         mapRaf = requestAnimationFrame(() => {
           mapRaf = 0;
-          this.drawFullMap();
+          this.drawFullMapLoading();
         });
       });
     }
@@ -137,7 +150,8 @@ export class UI {
         const dx = ev.clientX - (track.left + track.width / 2);
         const value = Math.max(-1, Math.min(1, dx / half));
         this.game.input.touchSteer = value;
-        knob.style.transform = `translateX(${value * half}px)`;
+        // Крутилка не только едет по рейке, но и поворачивается — как штурвал.
+        knob.style.transform = `translateX(${value * half}px) rotate(${value * 120}deg)`;
         pad.classList.toggle('active', Math.abs(value) > 0.08);
         void rect;
       };
@@ -146,7 +160,7 @@ export class UI {
         dragging = false;
         pid = null;
         this.game.input.touchSteer = 0;
-        knob.style.transform = 'translateX(0px)';
+        knob.style.transform = 'translateX(0px) rotate(0deg)';
         pad.classList.remove('active');
         if (ev && ev.pointerId != null && pad.hasPointerCapture?.(ev.pointerId)) pad.releasePointerCapture(ev.pointerId);
       };
@@ -343,10 +357,19 @@ export class UI {
     if (name !== 'driving') this.closeModal();
   }
 
-  loading(title = 'Загрузка…', sub = '') {
+  loading(title = 'Загрузка…', sub = '', pct = 6) {
     $('loading-title').textContent = title;
     $('loading-sub').textContent = sub;
+    const bar = $('loading-bar');
+    if (bar) bar.style.width = Math.max(4, Math.min(100, pct)) + '%';
     this.setScreen('loading');
+  }
+
+  /** Обновить только прогресс уже открытого экрана загрузки. */
+  loadingProgress(pct, sub) {
+    const bar = $('loading-bar');
+    if (bar) bar.style.width = Math.max(4, Math.min(100, pct)) + '%';
+    if (sub) $('loading-sub').textContent = sub;
   }
 
   // ---------- HUD ----------
@@ -619,7 +642,7 @@ export class UI {
         break;
       case 'map':
         main.innerHTML = this.mapHtml();
-        this.drawFullMap();
+        this.drawFullMapLoading();
         break;
       case 'stats':
         main.innerHTML = this.statsHtml();
@@ -876,10 +899,18 @@ export class UI {
     const p = g.profile;
     const options = CITIES.map((c) => `<option value="${c.id}">${c.name} · ${COUNTRIES[c.country]?.name || ''}</option>`).join('');
     return `
-      <div class="section-title"><div><h2>Карта Европы</h2><p class="sub">139 городов в 26 странах. Зелёным — текущий маршрут.</p></div>
+      <div class="section-title"><div><h2>Карта Европы</h2><p class="sub">${CITIES.length} ${cityWord(CITIES.length)} в ${COUNTRY_TOTAL} ${countryWord(COUNTRY_TOTAL)}. Зелёным — текущий маршрут.</p></div>
       <div class="range-row"><select data-select="mapcity" style="background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:9px;font-family:inherit">${options}</select>
       <button class="btn btn-sm" data-act="free-drive-select">Свободная поездка</button></div></div>
-      <div class="map-wrap"><canvas id="map-canvas" width="1200" height="860"></canvas></div>
+      <div class="map-wrap">
+        <canvas id="map-canvas" width="1200" height="860"></canvas>
+        <div class="map-loading" id="map-loading">
+          <div class="spinner"></div>
+          <b>Готовлю карту</b>
+          <div class="bar"><i id="map-loading-bar"></i></div>
+          <span id="map-loading-text">береговая линия…</span>
+        </div>
+      </div>
       <div class="map-legend">
         <span><i style="background:#6fb6e8"></i> города</span>
         <span><i style="background:#4ec9b0"></i> текущий маршрут</span>
@@ -887,6 +918,52 @@ export class UI {
         <span><i style="background:#96b4be"></i> дороги</span>
         <span><i style="background:#2a4550"></i> суша и границы</span>
       </div>`;
+  }
+
+  /**
+   * Загрузка карты: сначала рисуем оверлей с прогрессом, затем в следующем кадре
+   * строим саму карту (она тяжёлая: тысячи точек береговой линии и границ).
+   * Иначе вкладка «замирает» на мгновение без всякой обратной связи.
+   */
+  drawFullMapLoading() {
+    const loading = $('map-loading');
+    const canvas = $('map-canvas');
+    if (!loading || !canvas) {
+      this.drawFullMap();
+      return;
+    }
+    loading.classList.remove('hidden');
+    canvas.classList.remove('ready');
+    const bar = $('map-loading-bar');
+    const text = $('map-loading-text');
+    const token = (this._mapToken = (this._mapToken || 0) + 1);
+    const steps = [
+      [8, 'береговая линия…'],
+      [34, 'границы стран…'],
+      [58, 'дороги и города…'],
+      [82, 'маршрут и подписи…'],
+      [92, 'наношу подписи…'],
+    ];
+    let i = 0;
+    const tick = () => {
+      if (token !== this._mapToken) return;
+      if (i < steps.length) {
+        if (bar) bar.style.width = steps[i][0] + '%';
+        if (text) text.textContent = steps[i][1];
+        i++;
+        // даём браузеру перерисовать оверлей между шагами
+        setTimeout(tick, i === 1 ? 30 : 90);
+        return;
+      }
+      const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
+      this.drawFullMap();
+      const cost = typeof performance !== 'undefined' ? performance.now() - t0 : 0;
+      if (cost > 400) console.info(`[map] отрисовка ${Math.round(cost)} мс`);
+      if (bar) bar.style.width = '100%';
+      canvas.classList.add('ready');
+      loading.classList.add('hidden');
+    };
+    requestAnimationFrame(tick);
   }
 
   drawFullMap() {
@@ -1223,7 +1300,7 @@ export class UI {
         <div class="field-row"><label>Чувствительность руля<small>1.00 — стандарт, 0.70 — мягче (удобно на телефоне), 1.40 — резче</small></label>
           <div class="range-row"><input type="range" min="50" max="160" step="5" value="${Math.round((Number(st.steerSensitivity) || 1) * 100)}" data-input="steer">
           <span class="range-label" id="steer-value">${(Number(st.steerSensitivity) || 1).toFixed(2)}×</span></div></div>
-        <div class="field-row"><label>Помощь в поворотах<small>автоподруливание в кривых и возврат в полосу</small></label>
+        <div class="field-row"><label>Подруливание (телефон)<small>автопомощь в кривых и возврат в полосу; на ПК всегда выключено</small></label>
           <button class="btn btn-sm" data-act="toggle-setting" data-arg="steerAssist">${st.steerAssist === false ? 'Выключена' : 'Включена'}</button></div>
         <div class="field-row"><label>Сенсорное управление<small>кнопки газа, тормоза и руля на экране</small></label>
           <select data-setting="touchControls">
@@ -1272,7 +1349,7 @@ export class UI {
       body: `
         <p><b>ЕВРОТРАК</b> — самостоятельный браузерный симулятор грузоперевозок, вдохновлённый жанром дальнобойных симуляторов. Тягачи марки AURIGA и все грузовики вымышлены: это не копии реальных машин.</p>
         <h4>Что доступно</h4>
-        <p>139 городов в 26 странах, 30 видов груза и 6 типов прицепов, карьера с уровнем и навыками, экономика с топливом, ремонтом, штрафами и кредитом, гаражи, наёмные водители, достижения и автосохранение в браузере.</p>
+        <p>${CITIES.length} ${cityWord(CITIES.length)} в ${COUNTRY_TOTAL} ${countryWord(COUNTRY_TOTAL)}, 30 видов груза и 6 типов прицепов, карьера с уровнем и навыками, экономика с топливом, ремонтом, штрафами и кредитом, гаражи, наёмные водители, достижения и автосохранение в браузере.</p>
         <h4>Управление</h4>
         <p>W/S — газ и тормоз, A/D — руль, E — взаимодействие, C — круиз, M — режим КПП, V — камера, Esc — пауза. На телефоне — экранные кнопки.</p>
         <h4>Настройки графики</h4>

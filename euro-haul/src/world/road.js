@@ -1,6 +1,6 @@
 // Дорога вокруг игрока: асфальт, разметка, отбойники, обочина, деревья, знаки и объекты трассы.
 import * as THREE from 'three';
-import { hash2, lerp, smoothstep, rng } from '../core/math.js';
+import { clamp, hash2, lerp, smoothstep, rng } from '../core/math.js';
 import { materials, setNightIntensity, textures } from './materials.js';
 
 import { CITY_BY_ID, COUNTRIES } from '../data/cities.js';
@@ -52,6 +52,44 @@ function stripGeometry(route, s0, s1, lats, opts = {}) {
       const d = (r + 1) * cols + c;
       const e = d + 1;
       idx.push(a, d, b, b, d, e);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  if (colorFn) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+
+/**
+ * Полоса между двумя «широтами», заданными функциями от s. Нужна для сужений,
+ * расширений и съездов: ширина меняется по длине, а не остаётся постоянной.
+ * latLow < latHigh на всём участке — тогда нормали смотрят вверх.
+ */
+function lateralStrip(route, s0, s1, latLow, latHigh, opts = {}) {
+  const { step = 6, yOffset = 0.012, tile = 8, colorFn = null } = opts;
+  const rows = Math.max(2, Math.ceil((s1 - s0) / step));
+  const pos = [];
+  const uv = [];
+  const col = [];
+  const idx = [];
+  for (let r = 0; r <= rows; r++) {
+    const s = s0 + ((s1 - s0) * r) / rows;
+    const p = route.pointAt(s);
+    const nx = Math.cos(p.hdg);
+    const nz = -Math.sin(p.hdg);
+    const lo = latLow(s);
+    const hi = latHigh(s);
+    for (const lat of [lo, hi]) {
+      pos.push(p.x + nx * lat, p.y + yOffset, p.z + nz * lat);
+      uv.push(lat / tile, s / tile);
+      if (colorFn) col.push(...colorFn(s, lat));
+    }
+    if (r < rows) {
+      const a = r * 2;
+      idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
     }
   }
   const g = new THREE.BufferGeometry();
@@ -620,6 +658,11 @@ export class RoadWorld {
       if (rest.s < s0 - 80 || rest.s > s1 + 80) continue;
       this.buildRest(rest);
     }
+    // Въезды/съезды у городов: полоса торможения и отвод на городскую дорогу.
+    for (const mark of route.marks) {
+      if (mark.s < s0 - 360 || mark.s > s1 + 140) continue;
+      this.buildApproach(mark);
+    }
     this.buildCitiesNear(s0, s1);
     // Деревенский пейзаж: живые изгороди по межам, перелески, фермы, заборы.
     // Строится после трассы и до склейки — иначе каждый кустик = отдельный draw call.
@@ -848,6 +891,91 @@ export class RoadWorld {
     sign.rotation.y = p.hdg + Math.PI;
     group.add(sign);
     this.group.add(group);
+  }
+
+  /**
+   * Въезд в город: справа появляется полоса торможения (сужение до 0 в начале),
+   * пунктир отделяет её от главной дороги, а дальше уходит съезд к городу.
+   * Правая сторона трассы — это lat < 0 (см. соглашения о координатах).
+   */
+  buildApproach(mark) {
+    const route = this.route;
+    const m = this.mats;
+    const add = (geo, mat) => {
+      const mesh = new THREE.Mesh(geo, mat);
+      this.group.add(mesh);
+      return mesh;
+    };
+    const edge = -14.2;
+    const start = mark.s - 340;
+    const full = mark.s - 60;
+    const width = (s) => {
+      const t = clamp((s - start) / (full - start), 0, 1);
+      return 3.5 * smoothstep(t);
+    };
+    // Полоса торможения: правое расширение асфальта.
+    add(
+      lateralStrip(
+        route,
+        start,
+        full,
+        (s) => edge - width(s),
+        () => edge,
+        { tile: 7 }
+      ),
+      m.asphalt
+    );
+    // Пунктир между главной дорогой и полосой торможения.
+    for (let s = start + 10; s < full - 14; s += 14) {
+      if (width(s) < 1.1) continue;
+      add(quadStrip(route, s, s + 6, edge - 0.1, 0.14, 0.02), this.lineMat || m.whiteLine);
+    }
+    // Съезд: уходит вправо и вниз от трассы, ширина 5.4 м.
+    const exitStart = full - 40;
+    const exitEnd = mark.s + 120;
+    const exitCenter = (s) => {
+      const t = clamp((s - exitStart) / (exitEnd - exitStart), 0, 1);
+      return edge - 2.7 - 44 * Math.pow(t, 1.75);
+    };
+    add(
+      lateralStrip(
+        route,
+        exitStart,
+        exitEnd,
+        (s) => exitCenter(s) - 2.7,
+        (s) => exitCenter(s) + 2.7,
+        { tile: 7, yOffset: 0.022 }
+      ),
+      m.asphalt
+    );
+    // Кромка съезда: сплошная белая линия с внешней стороны.
+    add(
+      lateralStrip(
+        route,
+        exitStart,
+        exitEnd,
+        (s) => exitCenter(s) - 2.72,
+        (s) => exitCenter(s) - 2.54,
+        { yOffset: 0.03, tile: 4 }
+      ),
+      m.whiteLine
+    );
+    // Отбойник вдоль съезда — короткими секциями, повторяя изгиб.
+    for (let s = exitStart + 16; s < exitEnd - 12; s += 10) {
+      add(verticalStrip(route, s, s + 10, exitCenter(s) - 2.35, 0.28, 0.6, 5), m.metal);
+    }
+    // Гравийная обочина у съезда.
+    add(
+      lateralStrip(
+        route,
+        exitStart,
+        exitEnd,
+        (s) => exitCenter(s) - 4.6,
+        (s) => exitCenter(s) - 2.7,
+        { yOffset: 0.008, tile: 2.2 }
+      ),
+      m.gravel
+    );
   }
 
   buildCitiesNear(s0, s1) {

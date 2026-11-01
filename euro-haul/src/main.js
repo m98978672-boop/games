@@ -512,7 +512,10 @@ class Game {
     const maxStep = rate * dt;
     this.steerAxis = prev + clamp(target - prev, -maxStep, maxStep);
     if (Math.abs(this.steerAxis) < 0.004) this.steerAxis = 0;
-    return { throttle, brake, steer: this.steerAxis, assist: this.settings.steerAssist !== false };
+    // Подруливание осталось только для телефона/планшета: на ПК игрок рулит сам,
+    // и «автопомощь» в кривых только мешает (просьба: убрать подруливание на ПК).
+    const assist = this.touchEnabled() && this.settings.steerAssist !== false;
+    return { throttle, brake, steer: this.steerAxis, assist };
   }
 
   // ---------------------------------------------------------------- Меню и профили
@@ -742,23 +745,37 @@ class Game {
   }
 
   startDrive(job) {
-    this.ui.loading('Строим маршрут…', `${job.fromName} → ${job.toName}`);
+    this.ui.loading('Строим маршрут…', `${job.fromName} → ${job.toName}`, 10);
     this.state = 'loading';
+    const fail = (err) => {
+      console.error(err);
+      this.ui.toast('Не удалось построить маршрут', 'bad');
+      this.enterGarage();
+    };
+    // Загрузка в два кадра: сначала маршрут и машина, потом тяжёлая геометрия мира.
+    // Так экран с прогрессом успевает отрисоваться, а игра не «замирает» молча.
     setTimeout(() => {
       try {
-        this.setupWorld(job);
-        this.state = 'driving';
-        this.ui.setScreen('driving');
-        this.paused = false;
+        this.setupWorld(job, false);
+        this.ui.loading('Готовим трассу…', 'асфальт, съезды, разметка', 55);
+        setTimeout(() => {
+          try {
+            this.buildWorld();
+            this.ui.loadingProgress(100, 'Поехали');
+            this.state = 'driving';
+            this.ui.setScreen('driving');
+            this.paused = false;
+          } catch (err) {
+            fail(err);
+          }
+        }, 30);
       } catch (err) {
-        console.error(err);
-        this.ui.toast('Не удалось построить маршрут', 'bad');
-        this.enterGarage();
+        fail(err);
       }
     }, 60);
   }
 
-  setupWorld(job) {
+  setupWorld(job, buildNow = true) {
     this.disposeWorld();
     const seed = job.seed || 1234;
     // Путь по городам: сохраняем, чтобы рейс восстанавливался одинаково.
@@ -815,9 +832,14 @@ class Game {
       { s: this.pickupS, label: 'ПОГРУЗКА', sub: this.job.company || '', color: '#1f5c3a' },
       { s: this.deliveryS, label: 'ВЫГРУЗКА', sub: this.job.toName || '', color: '#8a5a12' },
     ];
-    this.road = new RoadWorld(this.scene, route, this.depots);
-    this.traffic = new Traffic(this.scene, route, this.trafficCount());
-    this.traffic.reset(route);
+    if (buildNow) this.buildWorld();
+  }
+
+  /** Тяжёлая часть: геометрия трассы, трафик, тени, погода. */
+  buildWorld() {
+    this.road = new RoadWorld(this.scene, this.route, this.depots);
+    this.traffic = new Traffic(this.scene, this.route, this.trafficCount());
+    this.traffic.reset(this.route);
     this.applyWorldShadows();
 
     this.setWeather(this.pickWeather(), true);
@@ -1021,10 +1043,12 @@ class Game {
     this.audio.update({
       rpm: this.truck.rpm,
       throttle: this.truck.throttle,
+      brake: this.truck.brake,
       speed: this.truck.speed,
       rain: env.rain,
       engineOn: this.truck.engineOn,
       gear: this.truck.gear,
+      load: clamp(this.truck.throttle * 0.9 + Math.abs(this.truck.speed) * 0.004, 0, 1),
     });
     this.truckView.setNight(env.night, this.lightsOn || env.night > 0.55);
     if (this.lightsOn !== this.lastLights && this.truck) {

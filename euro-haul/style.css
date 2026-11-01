@@ -359,13 +359,18 @@ body.is-touch .touch { display: block; }
   background: linear-gradient(90deg, rgba(255,255,255,.06), rgba(255,255,255,.13), rgba(255,255,255,.06));
   border: 1px solid rgba(255,255,255,.14);
 }
+/* Крутилка = маленький штурвал: обод, три спицы, ступица. Рисуется SVG в data-URI,
+   чтобы не тащить картинки и не зависеть от эмодзи в системе. */
 .steer-knob {
-  position: absolute; top: 50%; left: 50%; width: 40px; height: 40px; margin: -20px 0 0 -20px;
-  border-radius: 50%; background: radial-gradient(circle at 35% 30%, #dfe9ee, #8fa0a9 60%, #5d6d76);
+  position: absolute; top: 50%; left: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px;
+  border-radius: 50%;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='20' r='17' fill='%23243038'/%3E%3Ccircle cx='20' cy='20' r='13.5' fill='%23131b21'/%3E%3Cpath d='M20 20V6.5M20 20 8.5 26.5M20 20l11.5 6.5' stroke='%23202b33' stroke-width='3.4' stroke-linecap='round'/%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23202b33' stroke-width='5'/%3E%3Ccircle cx='20' cy='20' r='16' fill='none' stroke='%23cfdae0' stroke-width='2.2'/%3E%3Ccircle cx='20' cy='20' r='4.6' fill='%23e7eef1' stroke='%23202b33' stroke-width='1.8'/%3E%3C/svg%3E") center / 100% 100% no-repeat,
+    radial-gradient(circle at 35% 30%, #e9f1f4, #8fa0a9 65%, #5d6d76);
   box-shadow: 0 3px 10px rgba(0,0,0,.45), inset 0 -2px 4px rgba(0,0,0,.25);
   transition: transform .06s linear;
 }
-.touch-steer.active .steer-knob { background: radial-gradient(circle at 35% 30%, #fff, #b6c6cf 60%, #7b8b94); }
+.touch-steer.active .steer-knob { filter: brightness(1.18); box-shadow: 0 0 14px rgba(120, 220, 200, .35), 0 3px 10px rgba(0,0,0,.45); }
 .steer-label { font-size: 9px; font-weight: 800; letter-spacing: .18em; color: var(--muted); }
 
 .touch-pedals { position: absolute; right: 18px; bottom: 18px; display: flex; gap: 12px; align-items: flex-end; }
@@ -600,6 +605,26 @@ body.must-rotate .rotate-hint { display: flex; }
 
 .map-wrap { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #081014; height: clamp(380px, calc(100vh - 270px), 820px); }
 #map-canvas { display: block; width: 100%; height: 100%; }
+.map-wrap { position: relative; }
+.map-loading {
+  position: absolute; inset: 0; display: flex; flex-direction: column; gap: 14px;
+  align-items: center; justify-content: center; z-index: 3;
+  background: radial-gradient(circle at 50% 45%, #0d2230 0%, #050d13 75%);
+  color: var(--muted); font-size: 13px; letter-spacing: .02em;
+  transition: opacity .25s ease; opacity: 1;
+}
+.map-loading.hidden { opacity: 0; pointer-events: none; }
+.map-loading .spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 2px solid rgba(124, 198, 240, .18); border-top-color: #7cc6f0;
+  animation: mapSpin .9s linear infinite;
+}
+.map-loading .bar { width: 168px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.09); overflow: hidden; }
+.map-loading .bar i { display: block; height: 100%; width: 8%; background: linear-gradient(90deg, #4ec9b0, #7cc6f0); transition: width .18s linear; }
+.map-loading b { color: var(--text); font-weight: 600; font-size: 14px; }
+@keyframes mapSpin { to { transform: rotate(360deg); } }
+#map-canvas { opacity: 0; transition: opacity .3s ease; }
+#map-canvas.ready { opacity: 1; }
 .map-legend { display: flex; gap: 15px; flex-wrap: wrap; margin-top: 10px; font-size: 11px; color: var(--muted); }
 .map-legend span { display: flex; align-items: center; gap: 6px; }
 .map-legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
@@ -643,6 +668,8 @@ body.must-rotate .rotate-hint { display: flex; }
 #screen-loading { display: grid; place-items: center; background: rgba(5, 9, 12, 0.94); }
 .loading-box { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px; max-width: 430px; text-align: center; }
 .loading-box b { font-size: 17px; }
+.loading-bar { width: 240px; height: 4px; border-radius: 3px; background: rgba(255,255,255,.09); overflow: hidden; margin-top: 4px; }
+.loading-bar i { display: block; height: 100%; width: 6%; border-radius: 3px; background: linear-gradient(90deg, #4ec9b0, #7cc6f0); transition: width .25s ease; }
 .loading-box span, .loading-box p { margin: 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
 .spinner { width: 42px; height: 42px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.1); border-top-color: var(--amber); animation: spin 0.9s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
