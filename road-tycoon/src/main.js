@@ -249,9 +249,14 @@
     const padL = vw > 1040 ? 300 / ppk : 0;
     const padR = vw > 1040 ? 336 / ppk : 0;
     const padT = 70 / ppk, padB = 110 / ppk;
-    let minX = halfW - padL, maxX = C.worldW - halfW + padR;
-    let minY = halfH - padT, maxY = C.worldH - halfH + padB;
-    // если карта уже экрана — не запираем камеру в центре, а даём двигать её по всей карте
+    // «свободный ход»: карту можно утащить за край почти на пол-экрана,
+    // чтобы центральное положение никогда не было тупиком
+    const overX = halfW * 0.5, overY = halfH * 0.5;
+    let minX = halfW - padL - overX, maxX = C.worldW - halfW + padR + overX;
+    let minY = halfH - padT - overY, maxY = C.worldH - halfH + padB + overY;
+    // если карта целиком помещается на экране — двигаем её вообще без ограничений по краям
+    if (halfW * 2 >= C.worldW) { minX = -halfW; maxX = C.worldW + halfW; }
+    if (halfH * 2 >= C.worldH) { minY = -halfH; maxY = C.worldH + halfH; }
     if (minX > maxX) { minX = -halfW; maxX = C.worldW + halfW; }
     if (minY > maxY) { minY = -halfH; maxY = C.worldH + halfH; }
     app.camera.x = U.clamp(app.camera.x, minX, maxX);
