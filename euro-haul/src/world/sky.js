@@ -174,6 +174,16 @@ export class SkySystem {
     this.lightning = 0;
   }
 
+  /** Урезает частицы на слабых устройствах. */
+  setQuality(q) {
+    this.quality = q;
+    const rain = q === 'low' ? 1100 : q === 'medium' ? 2200 : 3200;
+    const stars = q === 'low' ? 700 : q === 'medium' ? 1100 : 1400;
+    this.rain.geometry.setDrawRange(0, rain);
+    this.stars.geometry.setDrawRange(0, stars);
+    this.cloudMat.opacity = Math.min(this.cloudMat.opacity, q === 'low' ? 0.5 : 1);
+  }
+
   setWeather(id, instant = false) {
     const w = WEATHERS[id] || WEATHERS.clear;
     if (instant) {

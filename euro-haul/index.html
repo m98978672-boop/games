@@ -2,9 +2,12 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0a0f12">
-  <meta name="description" content="ЕВРОТРАК — браузерный 3D-симулятор европейских грузоперевозок: 139 городов, 26 стран, трафик, погода, экономика и карьера. Без установки.">
+  <meta name="description" content="ЕВРОТРАК — браузерный 3D-симулятор европейских грузоперевозок: 152 города, 28 стран, трафик, погода, экономика и карьера. Работает на ПК, планшете и телефоне, без установки.">
   <title>ЕВРОТРАК — симулятор грузоперевозок по Европе</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b1216'/%3E%3Cpath d='M6 20h12v6H6z' fill='%23e9e5d8'/%3E%3Cpath d='M18 12h5l3 4v10h-8z' fill='%2348b39a'/%3E%3Ccircle cx='10' cy='26' r='2.4' fill='%23111'/%3E%3Ccircle cx='23' cy='26' r='2.4' fill='%23111'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="style.css">
@@ -24,6 +27,7 @@
       </div>
       <div class="hud-right">
         <div class="speed-limit" id="speed-limit">80</div>
+        <button class="hud-btn" id="btn-fullscreen" title="Полный экран">⛶</button>
         <button class="hud-btn" id="btn-pause" title="Пауза">II</button>
       </div>
     </div>
@@ -64,6 +68,12 @@
       <span id="ind-right" class="ind">▶</span>
     </div>
     <div class="windshield" id="windshield" aria-hidden="true"></div>
+    <div class="fatigue-vignette" id="fatigue-vignette" aria-hidden="true"></div>
+    <div class="rotate-hint" id="rotate-hint">
+      <div class="rotate-icon">📱</div>
+      <b>Поверните телефон горизонтально</b>
+      <span>Так дорога и приборы будут крупнее</span>
+    </div>
 
     <div class="work-overlay hidden" id="work-overlay">
       <b id="work-title">Погрузка…</b>
@@ -86,6 +96,7 @@
         <button data-act="interact" title="Взаимодействие">E</button>
         <button data-act="camera" title="Камера">📷</button>
         <button data-act="touch-cruise" title="Круиз">КР</button>
+        <button data-act="touch-lights" title="Фары">💡</button>
       </div>
     </div>
   </div>
@@ -97,7 +108,7 @@
       <div class="logo">
         <span class="logo-eyebrow">СИМУЛЯТОР ЕВРОПЕЙСКИХ ГРУЗОПЕРЕВОЗОК</span>
         <h1>ЕВРО<span>ТРАК</span></h1>
-        <p>139 городов · 26 стран · 30 видов груза · 12-ступенчатая КПП</p>
+        <p>152 города · 28 стран · 30 видов груза · 12-ступенчатая КПП</p>
       </div>
       <div class="menu-buttons" id="menu-buttons">
         <button class="btn btn-primary" id="btn-continue">Продолжить карьеру</button>
@@ -107,7 +118,7 @@
         <button class="btn btn-ghost" id="btn-about">Об игре и управлении</button>
       </div>
       <div class="menu-foot">
-        <span>Версия 1.0 · работает офлайн в браузере</span>
+        <span>Версия 1.0 · ПК · планшет · телефон · работает офлайн в браузере</span>
         <span id="menu-save-info">Сохранений пока нет</span>
       </div>
     </div>

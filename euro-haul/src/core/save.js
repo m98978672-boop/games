@@ -8,9 +8,10 @@ export const SAVE_VERSION = 1;
 export const DEFAULT_SETTINGS = {
   sound: true,
   volume: 0.65,
-  camera: 'interior',
+  camera: '',
   units: 'kmh',
-  quality: 'high',
+  quality: 'auto',
+  touchControls: 'auto',
   showFps: false,
   invertY: false,
   timeScale: 3,

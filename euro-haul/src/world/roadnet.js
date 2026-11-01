@@ -29,10 +29,25 @@ export function buildNetwork() {
     adj.get(b).push({ to: a, cost: km, km });
   };
 
+  // Фильтр Габриэля: выкидываем длинные рёбра, проходящие «по морю» мимо городов.
+  // Ребро A–B остаётся, если внутри окружности с диаметром AB нет других городов.
+  const gabriel = (A, B) => {
+    for (const C of list) {
+      if (C === A || C === B) continue;
+      if ((C.x - A.x) * (C.x - B.x) + (C.z - A.z) * (C.z - B.z) < 0) return false;
+    }
+    return true;
+  };
   for (const [i, j, k] of tris) {
-    addEdge(list[i].id, list[j].id, false);
-    addEdge(list[j].id, list[k].id, false);
-    addEdge(list[k].id, list[i].id, false);
+    const tri = [
+      [list[i], list[j]],
+      [list[j], list[k]],
+      [list[k], list[i]],
+    ];
+    for (const [A, B] of tri) {
+      if (!gabriel(A, B)) continue;
+      addEdge(A.id, B.id, false);
+    }
   }
 
   // Ближайшие соседи: гарантируют связность и дополнительные прямые трассы.
@@ -41,7 +56,7 @@ export function buildNetwork() {
       .filter((o) => o.id !== c.id)
       .map((o) => ({ o, d: Math.hypot(o.x - c.x, o.z - c.z) }))
       .sort((a, b) => a.d - b.d)
-      .slice(0, 3);
+      .slice(0, 2);
     for (const { o } of near) addEdge(c.id, o.id, true);
   }
 

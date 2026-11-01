@@ -235,6 +235,36 @@ async function run() {
   g.returnToMenu();
   await sleep(60);
 
+  // Поддержка разных устройств: ПК, телефон, планшет.
+  assert(g.device === 'desktop', 'устройство по умолчанию — компьютер');
+  assert(g.resolveQuality() === 'high', 'на ПК качество высокое');
+  assert(window.document.body.classList.contains('device-desktop'), 'класс устройства на body');
+  g.device = 'phone';
+  g.settings.quality = 'auto';
+  g.applyDeviceSettings();
+  assert(window.document.body.classList.contains('device-phone'), 'телефон определяется классом body');
+  assert(g.resolveQuality() === 'low', 'на телефоне автоматически низкое качество');
+  assert(g.trafficCount() === 14, 'на телефоне меньше трафика');
+  assert(window.document.body.classList.contains('is-touch'), 'на телефоне включается сенсорное управление');
+  g.device = 'tablet';
+  g.applyDeviceSettings();
+  assert(g.resolveQuality() === 'medium' && window.document.body.classList.contains('device-tablet'), 'планшет: среднее качество');
+  g.settings.touchControls = 'off';
+  g.applyDeviceSettings();
+  assert(!window.document.body.classList.contains('is-touch'), 'сенсорное управление можно отключить');
+  g.settings.touchControls = 'on';
+  g.applyDeviceSettings();
+  assert(window.document.body.classList.contains('is-touch'), 'сенсорное управление можно включить принудительно');
+  g.device = 'desktop';
+  g.settings.quality = 'auto';
+  g.settings.touchControls = 'auto';
+  g.applyDeviceSettings();
+  assert(window.document.body.classList.contains('device-desktop') && !window.document.body.classList.contains('is-touch'), 'возврат к ПК');
+  assert(window.document.getElementById('btn-fullscreen') !== null, 'кнопка полного экрана есть в HUD');
+  assert(window.document.getElementById('rotate-hint') !== null, 'есть подсказка поворота экрана');
+  const touchButtons = [...window.document.querySelectorAll('[data-touch]')].map((b) => b.dataset.touch);
+  assert(['gas', 'brake', 'left', 'right'].every((k) => touchButtons.includes(k)), 'экранные педали и руль на месте');
+
   // Проверка отрисовки кадров.
   assert(g.renderer && g.renderer.calls > 10, `кадры рендерятся (${g.renderer?.calls})`);
 
@@ -248,7 +278,7 @@ async function run() {
 }
 
 run().catch((err) => {
-  console.error('\n❌', err.message);
+  console.error("\n❌", err.stack);
   if (errors.length) console.error('Ошибки окна:', errors);
   process.exit(1);
 });

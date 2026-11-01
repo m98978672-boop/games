@@ -46,6 +46,7 @@ class Game {
     this.clock = { day: 1, minutes: 8 * 60 };
     this.input = { keys: new Set(), touch: {} };
     this.cameraMode = CAMERA_MODES.includes(this.settings.camera) ? this.settings.camera : 'interior';
+    this.cameraUserSet = CAMERA_MODES.includes(this.settings.camera);
     this.collisionCooldown = 0;
     this.cameraShake = 0;
     this.lastHudUpdate = 0;
@@ -66,11 +67,13 @@ class Game {
     this.nightDistance = 0;
     this.lightsOn = false;
     this.network = buildNetwork();
+    this.device = this.detectDevice();
     this.ui = new UI(this);
     this.audio.setVolume(this.settings.volume);
     this.audio.setEnabled(this.settings.sound);
 
     this.init3D();
+    this.applyDeviceSettings();
     this.bindInput();
     this.refreshSaveInfo();
     this.ui.setScreen('menu');
@@ -79,6 +82,98 @@ class Game {
     this.accumulator = 0;
     this.raf = this.loop.bind(this);
     requestAnimationFrame(this.raf);
+  }
+
+  // ---------------------------------------------------------------- Устройства
+  /** phone / tablet / desktop по UA, типу указателя и размеру экрана. */
+  detectDevice() {
+    const nav = typeof navigator !== 'undefined' ? navigator : {};
+    const ua = nav.userAgent || '';
+    const mm = window.matchMedia ? window.matchMedia.bind(window) : null;
+    const coarse = mm ? mm('(pointer: coarse)').matches : false;
+    const touch = 'ontouchstart' in window || (nav.maxTouchPoints || 0) > 0;
+    const phoneUa = /Android.*Mobile|iPhone|iPod|Windows Phone|Opera Mini|IEMobile/i.test(ua);
+    const tabletUa = /iPad|Tablet|PlayBook|Silk/i.test(ua) || (/Macintosh/i.test(ua) && (nav.maxTouchPoints || 0) > 1);
+    const small = Math.min(window.innerWidth || 1280, window.innerHeight || 800) < 820;
+    if (phoneUa) return 'phone';
+    if (tabletUa) return 'tablet';
+    if (coarse && touch) return small ? 'phone' : 'tablet';
+    return 'desktop';
+  }
+
+  /** Итоговое качество с учётом «авто» и типа устройства. */
+  resolveQuality() {
+    const q = this.settings.quality || 'auto';
+    if (q !== 'auto') return q;
+    if (this.device === 'phone') return 'low';
+    if (this.device === 'tablet') return 'medium';
+    return 'high';
+  }
+
+  /** Сенсорное управление включено? */
+  touchEnabled() {
+    const mode = this.settings.touchControls || 'auto';
+    if (mode === 'on') return true;
+    if (mode === 'off') return false;
+    return this.device !== 'desktop';
+  }
+
+  trafficCount() {
+    const q = this.resolveQuality();
+    if (q === 'low') return 14;
+    if (q === 'medium') return 20;
+    return 26;
+  }
+
+  /** Единая точка применения настроек под устройство. */
+  applyDeviceSettings() {
+    const body = document.body;
+    body.classList.toggle('is-touch', this.touchEnabled());
+    body.classList.remove('device-phone', 'device-tablet', 'device-desktop', 'quality-low', 'quality-medium', 'quality-high');
+    body.classList.add('device-' + this.device);
+    const q = this.resolveQuality();
+    body.classList.add('quality-' + q);
+    this.quality = q;
+    if (this.renderer) {
+      const dpr = window.devicePixelRatio || 1;
+      const phoneCap = 1.4;
+      let ratio = q === 'low' ? 0.85 : q === 'medium' ? 1.1 : Math.min(dpr, 1.75);
+      if (this.device === 'phone') ratio = Math.min(ratio, phoneCap);
+      this.renderer.setPixelRatio(Math.max(0.6, ratio));
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (w > 0 && h > 0) {
+        this.renderer.setSize(w, h, false);
+        if (this.camera) {
+          this.camera.aspect = w / h;
+          this.camera.updateProjectionMatrix();
+        }
+      }
+    }
+    if (this.sky && this.sky.setQuality) this.sky.setQuality(q);
+    if (!this.cameraUserSet) this.cameraMode = this.touchEnabled() ? 'chase' : 'interior';
+    if (this.traffic && this.traffic.count !== this.trafficCount()) {
+      const route = this.route;
+      const playerS = this.truck ? this.truck.s : 0;
+      this.traffic.dispose();
+      this.traffic = new Traffic(this.scene, route, this.trafficCount());
+      this.traffic.reset(route);
+      this.traffic.playerS = playerS;
+    }
+  }
+
+  toggleFullscreen() {
+    const el = document.documentElement;
+    const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if (!isFs && req) {
+      Promise.resolve(req.call(el)).catch(() => this.ui.toast('Полный экран недоступен на этом устройстве', 'info'));
+    } else if (isFs && exit) {
+      Promise.resolve(exit.call(document)).catch(() => {});
+    } else {
+      this.ui.toast('Полный экран недоступен на этом устройстве', 'info');
+    }
   }
 
   // ---------------------------------------------------------------- 3D
@@ -91,7 +186,7 @@ class Game {
         alpha: false,
         preserveDrawingBuffer: true,
       });
-      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75)); // уточняется в applyDeviceSettings
       this.renderer.setSize(window.innerWidth, window.innerHeight, false);
       this.renderer.outputColorSpace = THREE.SRGBColorSpace;
       this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -119,21 +214,28 @@ class Game {
     this.camPos = new THREE.Vector3(0, 0, 0);
     this.smoothCam = null;
 
-    window.addEventListener('resize', () => {
+    const onResize = () => {
+      const nextDevice = this.detectDevice();
+      if (nextDevice !== this.device) {
+        this.device = nextDevice;
+        this.applyDeviceSettings();
+      }
       if (!this.renderer) return;
       const w = window.innerWidth;
       const h = window.innerHeight;
       this.renderer.setSize(w, h, false);
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
-    });
-    if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
-      $('hud').classList.add('touch-device');
-    }
+    };
+    window.addEventListener('resize', onResize);
+    window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
   }
 
   // ---------------------------------------------------------------- Input
   bindInput() {
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden && this.state === 'driving' && !this.paused) this.togglePause();
+    });
     window.addEventListener('gamepadconnected', () => {
       this.ui.toast('Геймпад подключён: RT — газ, LT — тормоз, стик — руль', 'good', 5000);
     });
@@ -576,7 +678,7 @@ class Game {
       { s: this.deliveryS, label: 'ВЫГРУЗКА', sub: this.job.toName || '', color: '#8a5a12' },
     ];
     this.road = new RoadWorld(this.scene, route, this.depots);
-    this.traffic = new Traffic(this.scene, route, this.settings.quality === 'low' ? 14 : 26);
+    this.traffic = new Traffic(this.scene, route, this.trafficCount());
     this.traffic.reset(route);
 
     this.setWeather(this.pickWeather(), true);
@@ -708,6 +810,8 @@ class Game {
 
     this.handlePadButtons();
     this.updateIndicators(dt);
+    this.truck.wetness = env.wet;
+    this.truck.fatigue = this.profile.fatigue || 0;
     const controls = this.controls();
     if (this.work) {
       controls.throttle = 0;
@@ -793,6 +897,8 @@ class Game {
     const blinkOn = this.indicator && Math.floor(this.blinkPhase / 0.31) % 2 === 0;
     if (leftEl) leftEl.className = 'ind' + (blinkOn && this.indicator < 0 ? ' on-left' : '');
     if (rightEl) rightEl.className = 'ind' + (blinkOn && this.indicator > 0 ? ' on-right' : '');
+    const vig = $('fatigue-vignette');
+    if (vig) vig.style.opacity = String(clamp(((this.profile.fatigue || 0) - 45) / 55, 0, 0.85));
     const shield = $('windshield');
     if (shield) {
       const interior = this.cameraMode === 'interior' || this.cameraMode === 'hood';
@@ -881,7 +987,7 @@ class Game {
     if (mode === 'interior' || mode === 'hood') {
       this.truckView.setInteriorVisible(mode === 'interior');
       root.updateMatrixWorld(true);
-      const offset = mode === 'interior' ? new THREE.Vector3(-0.5, 2.45, 1.45) : new THREE.Vector3(0, 3.35, 3.5);
+      const offset = mode === 'interior' ? new THREE.Vector3(-0.45, 2.42, 0.95) : new THREE.Vector3(0, 3.35, 3.5);
       this.tmpVec.copy(offset);
       root.localToWorld(this.tmpVec);
       this.camera.position.copy(this.tmpVec);
@@ -892,7 +998,7 @@ class Game {
         'YXZ'
       );
       this.camera.quaternion.setFromEuler(euler);
-      this.camera.fov = mode === 'interior' ? 64 : 68;
+      this.camera.fov = mode === 'interior' ? 62 : 68;
     } else {
       this.truckView.setInteriorVisible(false);
       const back = mode === 'far' ? 34 : 23;
@@ -934,6 +1040,7 @@ class Game {
   }
 
   cycleCamera() {
+    this.cameraUserSet = true;
     const idx = CAMERA_MODES.indexOf(this.cameraMode);
     this.cameraMode = CAMERA_MODES[(idx + 1) % CAMERA_MODES.length];
     this.cameraMode = this.cameraMode;
@@ -1497,11 +1604,10 @@ class Game {
     saveSettings(this.settings);
     if (key === 'sound') this.audio.setEnabled(!!value);
     if (key === 'volume') this.audio.setVolume(Number(value));
-    if (key === 'quality' && this.renderer) {
-      const ratio = value === 'low' ? 0.8 : value === 'medium' ? 1.1 : Math.min(window.devicePixelRatio || 1, 1.75);
-      this.renderer.setPixelRatio(ratio);
-    }
+    if (key === 'quality' || key === 'touchControls') this.applyDeviceSettings();
+    if (this.state !== 'garage' && !$('modal-root').classList.contains('hidden')) this.ui.showSettings(true);
     if (key === 'camera') {
+      this.cameraUserSet = true;
       this.cameraMode = CAMERA_MODES.includes(value) ? value : 'interior';
     }
     this.ui.renderGarage();

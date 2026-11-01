@@ -268,49 +268,52 @@ export class TruckView {
     const g = new THREE.Group();
     this.interior = g;
     this.root.add(g);
-    const dashMat = new THREE.MeshStandardMaterial({ color: 0x252b2e, roughness: 0.9, side: THREE.DoubleSide });
-    const trimMat = new THREE.MeshStandardMaterial({ color: 0x3d474b, roughness: 0.55, metalness: 0.25, side: THREE.DoubleSide });
-    const fabricMat = new THREE.MeshStandardMaterial({ color: 0x2b3a44, roughness: 1, side: THREE.DoubleSide });
-    const seatMat = new THREE.MeshStandardMaterial({ color: 0x33424d, roughness: 1, side: THREE.DoubleSide });
+    // Внутри кабины мало света, поэтому материалам добавлено небольшое самосвечение.
+    const dashMat = new THREE.MeshStandardMaterial({ color: 0x2b3236, emissive: 0x10171a, emissiveIntensity: 0.9, roughness: 0.9, side: THREE.DoubleSide });
+    const trimMat = new THREE.MeshStandardMaterial({ color: 0x475257, emissive: 0x151f23, emissiveIntensity: 0.9, roughness: 0.55, metalness: 0.25, side: THREE.DoubleSide });
+    const fabricMat = new THREE.MeshStandardMaterial({ color: 0x35454f, emissive: 0x141d23, emissiveIntensity: 0.9, roughness: 1, side: THREE.DoubleSide });
+    const seatMat = new THREE.MeshStandardMaterial({ color: 0x3d4d57, emissive: 0x161f26, emissiveIntensity: 0.9, roughness: 1, side: THREE.DoubleSide });
+    const wheelRimMat = new THREE.MeshStandardMaterial({ color: 0x22282b, emissive: 0x0d1214, emissiveIntensity: 0.8, roughness: 0.9 });
 
-    // Панель приборов: массивная, от стекла к водителю.
-    box(g, 2.3, 0.6, 0.95, dashMat, 0, 1.85, 2.75);
-    box(g, 2.3, 0.34, 0.55, dashMat, 0, 2.15, 3.02);
-    // Козырёк приборов.
-    const cowl = box(g, 0.92, 0.26, 0.42, dashMat, -0.5, 2.3, 2.62);
-    cowl.rotation.x = 0.18;
-    // Центральная консоль с экраном навигации.
-    box(g, 0.44, 0.5, 0.4, trimMat, 0.3, 2.12, 2.7);
-    // Тоннель пола и двигатель внутри кабины.
-    box(g, 0.9, 0.55, 1.3, trimMat, 0, 1.32, 2.15);
-    // Руль.
+    // Панель приборов: верхняя полка почти на уровне глаз водителя.
+    box(g, 2.3, 0.86, 0.95, dashMat, 0, 1.87, 3.0);
+    box(g, 2.3, 0.16, 1.15, trimMat, 0, 2.34, 2.85);
+    // Козырёк над щитком.
+    const cowl = box(g, 0.94, 0.12, 0.46, dashMat, -0.45, 2.42, 2.42);
+    cowl.rotation.x = 0.24;
+    // Центральная консоль.
+    box(g, 0.44, 0.5, 0.3, trimMat, 0.34, 2.05, 2.62);
+    // Тоннель.
+    box(g, 0.9, 0.5, 1.1, trimMat, 0, 1.25, 2.1);
+
+    // Рулевое колесо.
     this.wheelPivot = new THREE.Group();
-    this.wheelPivot.position.set(-0.5, 2.02, 2.14);
+    this.wheelPivot.position.set(-0.45, 1.95, 1.9);
     this.wheelPivot.rotation.x = -0.42;
-    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.225, 0.032, 8, 22), new THREE.MeshStandardMaterial({ color: 0x1d2326, roughness: 0.9 }));
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.235, 0.033, 8, 22), wheelRimMat);
     this.wheelPivot.add(wheel);
     for (let i = 0; i < 3; i++) {
-      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.035, 0.05), trimMat);
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.035, 0.05), trimMat);
       spoke.rotation.z = (i * Math.PI) / 3;
       this.wheelPivot.add(spoke);
     }
     const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.06, 12), m.chrome);
     hub.rotation.x = Math.PI / 2;
     this.wheelPivot.add(hub);
-    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.5, 8), dashMat);
-    column.position.set(-0.5, 1.85, 2.32);
+    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.065, 0.7, 8), dashMat);
+    column.position.set(-0.45, 1.9, 2.25);
     column.rotation.x = Math.PI / 2 - 0.42;
     g.add(this.wheelPivot, column);
 
-    // Щиток приборов (канвас).
+    // Щиток приборов — канвас на передней грани панели.
     this.dashCanvas = document.createElement('canvas');
     this.dashCanvas.width = 512;
     this.dashCanvas.height = 256;
     this.dashTex = new THREE.CanvasTexture(this.dashCanvas);
     this.dashTex.colorSpace = THREE.SRGBColorSpace;
-    const dashScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.23), new THREE.MeshBasicMaterial({ map: this.dashTex }));
-    dashScreen.position.set(-0.5, 2.2, 2.4);
-    dashScreen.rotation.x = -0.22;
+    const dashScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.25), new THREE.MeshBasicMaterial({ map: this.dashTex }));
+    dashScreen.position.set(-0.45, 2.18, 2.5);
+    dashScreen.rotation.set(-0.26, Math.PI, 0);
     g.add(dashScreen);
     this.dashScreen = dashScreen;
 
@@ -321,36 +324,36 @@ export class TruckView {
     this.navTex = new THREE.CanvasTexture(this.navCanvas);
     this.navTex.colorSpace = THREE.SRGBColorSpace;
     const navScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.19), new THREE.MeshBasicMaterial({ map: this.navTex }));
-    navScreen.position.set(0.32, 2.16, 2.49);
-    navScreen.rotation.x = -0.2;
+    navScreen.position.set(0.34, 2.14, 2.45);
+    navScreen.rotation.set(-0.24, Math.PI, 0);
     g.add(navScreen);
 
-    // Боковины: стойки, двери, потолок — чтобы кабина читалась изнутри.
+    // Стойки, двери, потолок.
     for (const side of [-1, 1]) {
-      const pillar = box(g, 0.1, 1.5, 0.1, dashMat, side * 1.12, 2.95, 3.0);
-      pillar.rotation.z = side * 0.06;
-      box(g, 0.06, 2.2, 2.4, fabricMat, side * 1.14, 1.95, 1.5);
-      box(g, 0.1, 0.5, 2.2, trimMat, side * 1.1, 1.2, 1.6);
-      // подлокотник и ручка
-      box(g, 0.12, 0.1, 0.5, trimMat, side * 1.02, 1.5, 1.35);
+      const pillar = box(g, 0.1, 1.6, 0.12, dashMat, side * 1.12, 2.9, 2.85);
+      pillar.rotation.z = side * 0.05;
+      box(g, 0.07, 2.3, 2.5, fabricMat, side * 1.14, 1.9, 1.55);
+      box(g, 0.1, 0.34, 2.3, trimMat, side * 1.09, 1.16, 1.6);
+      box(g, 0.12, 0.1, 0.46, trimMat, side * 1.0, 1.45, 1.3);
+      // стеклоочиститель на стекле
     }
-    box(g, 2.3, 0.14, 2.6, fabricMat, 0, 3.52, 1.65);
-    box(g, 2.2, 0.06, 0.4, trimMat, 0, 3.44, 2.75);
+    box(g, 2.3, 0.14, 2.7, fabricMat, 0, 3.5, 1.6);
+    box(g, 2.2, 0.06, 0.42, trimMat, 0, 3.42, 2.7);
     // Спальник и задняя стенка.
-    box(g, 2.2, 0.22, 1.1, fabricMat, 0, 1.35, 0.35);
-    box(g, 2.3, 2.2, 0.1, fabricMat, 0, 2.3, -0.35);
-    // Сиденья.
-    for (const x of [-0.55, 0.55]) {
-      box(g, 0.56, 0.18, 0.62, seatMat, x, 1.5, 1.3);
-      const back = box(g, 0.5, 1.02, 0.16, seatMat, x, 1.98, 0.96);
-      back.rotation.x = 0.12;
-      box(g, 0.26, 0.2, 0.14, seatMat, x, 2.55, 0.9);
+    box(g, 2.2, 0.24, 1.0, fabricMat, 0, 1.15, 0.4);
+    box(g, 2.3, 2.2, 0.1, fabricMat, 0, 2.2, -0.4);
+    // Сиденья: подушка и спинка.
+    for (const x of [-0.5, 0.55]) {
+      box(g, 0.56, 0.16, 0.6, seatMat, x, 1.3, 1.3);
+      const back = box(g, 0.5, 1.0, 0.16, seatMat, x, 1.8, 0.99);
+      back.rotation.x = 0.14;
+      box(g, 0.24, 0.2, 0.14, seatMat, x, 2.36, 0.92);
     }
     // Рычаг КПП и ручник.
-    box(g, 0.05, 0.42, 0.05, m.darkMetal, 0.06, 1.75, 1.95);
-    box(g, 0.09, 0.09, 0.09, trimMat, 0.06, 1.98, 1.95);
-    // Солнцезащитные козырьки.
-    for (const x of [-0.55, 0.55]) box(g, 0.9, 0.16, 0.3, fabricMat, x, 3.42, 2.85);
+    box(g, 0.05, 0.42, 0.05, m.darkMetal, 0.1, 1.55, 1.95);
+    box(g, 0.09, 0.09, 0.09, trimMat, 0.1, 1.78, 1.95);
+    // Козырьки.
+    for (const x of [-0.55, 0.55]) box(g, 0.9, 0.14, 0.3, fabricMat, x, 3.4, 2.78);
     this.interiorVisible = true;
     g.visible = true;
   }

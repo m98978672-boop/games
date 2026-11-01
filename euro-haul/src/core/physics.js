@@ -48,6 +48,8 @@ export class TruckSim {
     this.lastShift = 0;
     this.impact = 0;
     this.jackknife = 0;
+    this.wetness = 0;
+    this.fatigue = 0;
     this.cruise = null;
     this.cruiseTarget = 0;
     this.engineBrake = 0;
@@ -162,13 +164,16 @@ export class TruckSim {
     const v = this.speed;
     const m = this.mass;
     const grade = road.grade || 0;
-    const grip = this.tireGrip * (0.55 + 0.45 * (this.tires / 100)) * (1 - Math.min(0.25, Math.abs(v) / 90));
+    const wetGrip = 1 - clamp(this.wetness || 0, 0, 1) * 0.26;
+    const grip =
+      this.tireGrip * (0.55 + 0.45 * (this.tires / 100)) * (1 - Math.min(0.25, Math.abs(v) / 90)) * wetGrip;
     let accel = 0;
 
     const drive = this.gearTimer > 0 ? 0 : this.wheelForce * this.throttle * grip;
     const rolling = 0.0065 * m * G * Math.sign(v || 1) * (this.brake > 0.02 ? 0 : 1);
     const aero = 0.5 * RHO * 7.4 * v * Math.abs(v);
-    const brakeForce = (this.handbrake ? 1 : this.brake) * m * G * 0.78 * (0.4 + 0.6 * (this.brakes / 100));
+    const brakeForce =
+      (this.handbrake ? 1 : this.brake) * m * G * 0.78 * (0.4 + 0.6 * (this.brakes / 100)) * (0.82 + 0.18 * wetGrip);
     const retarderForce = this.retarder * (this.brake > 0.05 ? 1 : 0) * m * G * 0.22;
     const gravity = m * G * Math.sin(grade);
     const engineBrake = (this.throttle < 0.03 && v > 2 && this.gear > 0 ? 1 : 0) * m * G * 0.055 * (this.rpm / 1500);
@@ -207,7 +212,8 @@ export class TruckSim {
     // Боковая динамика: поворот руля + инерция в повороте.
     const wheelbase = 4.1;
     // Сцепление шин ограничивает скорость поворота: тягач не может «заложить» на скорости.
-    const maxLatAccel = 3.1 * grip;
+    const fatigueFactor = 1 - clamp((this.fatigue || 0) / 100, 0, 1) * 0.25;
+    const maxLatAccel = 3.1 * grip * fatigueFactor;
     const yawLimit = Math.abs(this.speed) > 1 ? maxLatAccel / Math.abs(this.speed) : 2;
     const yawFromSteer = clamp((this.speed * Math.tan(this.steer)) / wheelbase, -yawLimit, yawLimit);
     const assist = 0.45;

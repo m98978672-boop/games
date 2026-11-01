@@ -1,7 +1,7 @@
 // Дорога вокруг игрока: асфальт, разметка, отбойники, обочина, деревья, знаки и объекты трассы.
 import * as THREE from 'three';
 import { hash2, lerp, smoothstep, rng } from '../core/math.js';
-import { materials, setNightIntensity } from './materials.js';
+import { materials, setNightIntensity, textures } from './materials.js';
 
 import { CITY_BY_ID, COUNTRIES } from '../data/cities.js';
 
@@ -222,12 +222,6 @@ export class RoadWorld {
     const s1 = Math.min(route.length - 1, s + AHEAD);
     if (s1 - s0 < 50) return;
     const m = this.mats;
-    // Дальний фон: широкая плоскость, чтобы не было пустоты за пределами полосы рельефа.
-    const p0 = route.pointAt((s0 + s1) / 2);
-    const far = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), m.grassDark);
-    far.rotation.x = -Math.PI / 2;
-    far.position.set(p0.x, p0.y - 1.4, p0.z);
-    this.group.add(far);
     const add = (geo, mat) => {
       const mesh = new THREE.Mesh(geo, mat);
       mesh.matrixAutoUpdate = false;
@@ -267,8 +261,8 @@ export class RoadWorld {
     add(verticalStrip(route, s0, s1, -14.35, 0.28, 0.82), railMat);
 
     // --- Обочина и рельеф.
-    const latsRight = [5.2, 9, 16, 30, 52, 88, 140, 210];
-    const latsLeft = [-14.2, -18, -26, -40, -62, -95, -145, -210];
+    const latsRight = [5.2, 9, 16, 30, 52, 88, 140, 210, 320, 470];
+    const latsLeft = [-14.2, -18, -26, -40, -62, -95, -145, -210, -320, -470];
     add(
       stripGeometry(route, s0, s1, latsRight, { yFn: (ss, la) => terrainOffset(ss, la) - 0.06, uvScale: 30 }),
       m.grass
@@ -557,6 +551,14 @@ export class RoadWorld {
   buildCitiesNear(s0, s1) {
     const route = this.route;
     const m = this.mats;
+    const skylineTex = textures.skyline();
+    m.skyline = m.skyline || new THREE.MeshBasicMaterial({
+      map: skylineTex,
+      transparent: true,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+      opacity: 0.9,
+    });
     for (const mark of route.marks) {
       if (mark.s < s0 - 2000 || mark.s > s1 + 2500) continue;
       const around = Math.min(1500, Math.max(500, 420 * (CITY_BY_ID.get(mark.id)?.size || 1)));
@@ -591,6 +593,16 @@ export class RoadWorld {
         color.setHSL(0.09 + r() * 0.05, 0.1 + r() * 0.2, 0.55 + r() * 0.25);
         walls.setColorAt(placed, color);
         placed++;
+      }
+      // Дальний силуэт города.
+      if ((CITY_BY_ID.get(mark.id)?.size || 1) >= 2) {
+        for (const side of [-1, 1]) {
+          const sk = new THREE.Mesh(new THREE.PlaneGeometry(900, 120), m.skyline);
+          const sp = route.pointAt(mark.s + side * 420);
+          sk.position.set(sp.x + Math.cos(sp.hdg) * side * 260, sp.y + 46, sp.z - Math.sin(sp.hdg) * side * 260);
+          sk.rotation.y = sp.hdg + Math.PI / 2;
+          this.group.add(sk);
+        }
       }
       walls.count = placed;
       roofs.count = placed;

@@ -45,6 +45,7 @@ export class UI {
     $('btn-settings').addEventListener('click', () => this.showSettings(true));
     $('btn-about').addEventListener('click', () => this.showAbout());
     $('btn-pause').addEventListener('click', () => this.game.togglePause());
+    $('btn-fullscreen').addEventListener('click', () => this.game.toggleFullscreen());
     $('g-menu').addEventListener('click', () => this.game.togglePause());
     $('modal-close').addEventListener('click', () => this.closeModal());
 
@@ -248,6 +249,12 @@ export class UI {
         break;
       case 'touch-cruise':
         g.toggleCruise();
+        break;
+      case 'touch-lights':
+        g.toggleLights();
+        break;
+      case 'fullscreen':
+        g.toggleFullscreen();
         break;
       case 'free-drive-select': {
         const v = document.querySelector('[data-select="mapcity"]')?.value;
@@ -889,6 +896,8 @@ export class UI {
   settingsHtml() {
     const g = this.game;
     const st = g.settings;
+    const devLabel =
+      g.device === 'phone' ? '📱 Телефон' : g.device === 'tablet' ? '📲 Планшет' : '🖥 Компьютер';
     return `
       <div class="section-title"><div><h2>Настройки</h2><p class="sub">Применяются сразу.</p></div></div>
       <div class="card">
@@ -899,16 +908,25 @@ export class UI {
           <span class="range-label" id="volume-value">${Math.round(st.volume * 100)}%</span></div></div>
         <div class="field-row"><label>Камера по умолчанию<small>V переключает в игре</small></label>
           <select data-setting="camera">
+            <option value="" ${!st.camera ? 'selected' : ''}>Авто (телефон — сзади, ПК — из кабины)</option>
             ${['interior', 'hood', 'chase', 'far'].map((c) => `<option value="${c}" ${st.camera === c ? 'selected' : ''}>${c === 'interior' ? 'Из кабины' : c === 'hood' ? 'С капота' : c === 'chase' ? 'Сзади' : 'Сверху сзади'}</option>`).join('')}
           </select></div>
         <div class="field-row"><label>Скорость времени</label>
           <select data-setting="timeScale">
             ${[[1, 'Обычная'], [3, 'Ускоренная ×3'], [6, 'Быстрая ×6']].map(([v, n]) => `<option value="${v}" ${String(st.timeScale) === String(v) ? 'selected' : ''}>${n}</option>`).join('')}
           </select></div>
-        <div class="field-row"><label>Качество графики</label>
+        <div class="field-row"><label>Устройство<small>определяется автоматически</small></label>
+          <b>${devLabel}</b></div>
+        <div class="field-row"><label>Качество графики<small>сейчас: ${g.resolveQuality() === 'low' ? 'низкое' : g.resolveQuality() === 'medium' ? 'среднее' : 'высокое'}</small></label>
           <select data-setting="quality">
-            ${[['high', 'Высокое'], ['medium', 'Среднее'], ['low', 'Низкое']].map(([v, n]) => `<option value="${v}" ${st.quality === v ? 'selected' : ''}>${n}</option>`).join('')}
+            ${[['auto', 'Авто под устройство'], ['high', 'Высокое'], ['medium', 'Среднее'], ['low', 'Низкое']].map(([v, n]) => `<option value="${v}" ${String(st.quality) === v ? 'selected' : ''}>${n}</option>`).join('')}
           </select></div>
+        <div class="field-row"><label>Сенсорное управление<small>кнопки газа, тормоза и руля на экране</small></label>
+          <select data-setting="touchControls">
+            ${[['auto', 'Авто'], ['on', 'Всегда'], ['off', 'Выключено']].map(([v, n]) => `<option value="${v}" ${String(st.touchControls) === v ? 'selected' : ''}>${n}</option>`).join('')}
+          </select></div>
+        <div class="field-row"><label>Полный экран</label>
+          <button class="btn btn-sm" data-act="fullscreen">⛶ Включить</button></div>
         <div class="field-row"><label>Показывать FPS</label>
           <button class="btn btn-sm" data-act="toggle-setting" data-arg="showFps">${st.showFps ? 'Вкл' : 'Выкл'}</button></div>
         <div class="field-row"><label>Сбросить настройки</label><button class="btn btn-sm" data-act="reset-settings">Сбросить</button></div>
@@ -920,6 +938,7 @@ export class UI {
         <div><b>C</b> — круиз-контроль · <b>M</b> — авто/ручная КПП · <b>L</b> — фары</div>
         <div><b>E</b> — взаимодействие (погрузка, заправка, отдых) · <b>H</b> — сигнал</div>
         <div><b>V</b> — камера · <b>P</b> — снимок экрана · <b>Esc</b> — пауза</div>
+        <div style="margin-top:8px;color:var(--muted)">На телефоне и планшете: экранные педали и руль, кнопки <b>E</b> (погрузка/заправка), 📷, «КР» и 💡. Поверните устройство горизонтально — интерфейс станет крупнее.</div>
       </div>
       <div class="section-title" style="margin-top:24px"><h3>Сохранение</h3></div>
       <div class="card">

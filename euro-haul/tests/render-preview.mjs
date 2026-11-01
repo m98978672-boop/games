@@ -97,12 +97,12 @@ shot('preview-rear', new THREE.Vector3(p.x - Math.sin(p.hdg) * 23, p.y + 6.6, p.
 
 // Вид из кабины.
 truckView.setInteriorVisible(true);
-const camPos = new THREE.Vector3(-0.5, 2.45, 1.45);
+const camPos = new THREE.Vector3(-0.45, 2.42, 0.95);
 truckView.root.updateMatrixWorld(true);
 truckView.root.localToWorld(camPos);
-const look = new THREE.Vector3(-0.45, 2.2, 30);
+const look = new THREE.Vector3(-0.42, 2.28, 30);
 truckView.root.localToWorld(look);
-shot('preview-cabin', camPos, look, 64);
+shot('preview-cabin', camPos, look, 62);
 
 console.log('SVG и PNG сохранены в tests/');
 process.exit(0);
