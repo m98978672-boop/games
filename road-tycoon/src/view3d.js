@@ -191,8 +191,30 @@
   /* ------------------------------------------------------- геометрия-ленты */
 
   // Полоса вдоль ломаной: pts = [{x,z,y?,tx?,tz?}], width в км
+  let ribbonWarned = false;
   function ribbon(pts, width, opts) {
     opts = opts || {};
+    // защита от NaN: одна «битая» точка раньше делала невидимой всю дорогу
+    const rawW = typeof width === 'function' ? width(0.5) : width;
+    if (!isFinite(rawW)) {
+      if (!ribbonWarned) { ribbonWarned = true; console.warn('ribbon: ширина NaN -> 0.8'); }
+      width = 0.8;
+    }
+    const clean = [];
+    for (const p of pts) {
+      if (isFinite(p.x) && isFinite(p.z) && (p.y === undefined || isFinite(p.y))) clean.push(p);
+    }
+    if (clean.length < 2) {
+      if (!ribbonWarned) { ribbonWarned = true; console.warn('ribbon: точек меньше двух'); }
+      const empty = new THREE.BufferGeometry();
+      empty.setAttribute('position', new THREE.Float32BufferAttribute([], 3));
+      return empty;
+    }
+    if (clean.length !== pts.length && !ribbonWarned) {
+      ribbonWarned = true;
+      console.warn('ribbon: отброшено точек', pts.length - clean.length);
+    }
+    pts = clean;
     const n = pts.length;
     const pos = [], uv = [], idx = [], norm = [];
     let dist = 0;
@@ -799,7 +821,7 @@
       const deck = smooth[i] + 0.18;
       const y = p.bridge ? Math.max(BRIDGE_Y, deck) : Math.max(0.06, deck);
       // никогда не ниже земли под собой — иначе снова окажемся под почвой
-      return { x: p.x, z: p.y, t: p.t, bridge: p.bridge, y: Math.max(y, p.ground + 0.16) };
+      return { x: p.x, z: p.z, t: p.t, bridge: p.bridge, y: Math.max(y, p.ground + 0.16) };
     });
   }
 
@@ -1379,6 +1401,62 @@
     const headMat = TR.View3D.lampHeadMat;
     if (headMat) headMat.emissiveIntensity = 0.15 + nightF * 1.4;
   }
+
+  // Диагностика рельефа/дорог (используется при отладке в браузере)
+  R.debugRoads = function (state) {
+    const out = { meshes: roadGroup.children.length, roads: state.roads.length, samples: [], ranges: [] };
+    const live = state.roads.filter((r) => (r.open || r.building) && r.builtKm > 0);
+    for (const r of live.slice(0, 2)) {
+      const pts = roadSamples(r, state);
+      const mid = pts[Math.floor(pts.length / 2)];
+      out.samples.push({
+        id: r.id, q: r.quality, n: pts.length,
+        midY: +mid.y.toFixed(2),
+        terrainNow: +terrainHeight(mid.x, mid.z, state).toFixed(2),
+        baseNow: +baseHeight(mid.x, mid.z).toFixed(2),
+      });
+    }
+    let mn = Infinity, mx = -Infinity;
+    roadGroup.traverse((o) => {
+      if (!o.isMesh || !o.geometry) return;
+      o.geometry.computeBoundingBox();
+      const bb = o.geometry.boundingBox;
+      mn = Math.min(mn, bb.min.y); mx = Math.max(mx, bb.max.y);
+    });
+    out.roadY = [mn === Infinity ? null : +mn.toFixed(2), mx === -Infinity ? null : +mx.toFixed(2)];
+    out.world = { hills: (world && world.hills ? world.hills.length : -1), noise: world && typeof world.noise };
+    const probe = state.roads[0] ? U.curvePoint(U.curve(state.roads[0]), 0.5) : { x: 300, y: 300 };
+    const probes = [0, 1, 2, 3].map((k) => {
+      const x = probe.x + k * 7, z = probe.y + k * 7;
+      const bh = baseHeight(x, z), m = flatMask(x, z, state), th = terrainHeight(x, z, state);
+      return { x: +x.toFixed(1), base: isNaN(bh) ? 'NaN' : +bh.toFixed(2), mask: isNaN(m) ? 'NaN' : +m.toFixed(2), th: isNaN(th) ? 'NaN' : +th.toFixed(2) };
+    });
+    out.probes = probes;
+    let nanPositions = 0, totalPositions = 0;
+    roadGroup.traverse((o) => {
+      if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return;
+      const arr = o.geometry.attributes.position.array;
+      totalPositions += arr.length / 3;
+      for (let i = 0; i < arr.length; i++) if (isNaN(arr[i])) nanPositions++;
+    });
+    out.nanPositions = nanPositions;
+    out.totalPositions = totalPositions;
+    out.meshInfo = [];
+    roadGroup.children.forEach((o, i) => {
+      const g = o.geometry;
+      if (!g || !g.attributes || !g.attributes.position) { out.meshInfo.push({ i, type: o.type, noGeo: true }); return; }
+      const arr = g.attributes.position.array;
+      let nan = 0;
+      for (let k = 0; k < arr.length; k++) if (isNaN(arr[k])) nan++;
+      out.meshInfo.push({
+        i, nan, verts: arr.length / 3,
+        color: o.material && o.material.color ? '#' + o.material.color.getHexString() : null,
+        y0: isNaN(arr[1]) ? 'NaN' : +arr[1].toFixed(2),
+        x0: isNaN(arr[0]) ? 'NaN' : +arr[0].toFixed(2),
+      });
+    });
+    return out;
+  };
 
   /* ---------------------------------------------------------------- кадр */
 
