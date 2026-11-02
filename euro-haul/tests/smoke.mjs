@@ -200,6 +200,11 @@ async function run() {
   assert(/ПРОКОЛ/i.test(g.breakdownMessage() || ''), 'HUD подсказывает про поломку');
   assert(g.truck.damageSpeedLimit === 45, 'на спущенном колесе ограничена скорость');
   g.truck.speed = 0;
+  g.interact();
+  assert(window.document.getElementById('modal-body').innerHTML.includes('Эвакуатор'), 'по E у обочины открывается помощь при поломке');
+  g.ui.closeModal();
+  assert(g.paused === false, 'закрытие окна поломки возвращает игру в движение');
+  g.truck.speed = 0;
   g.roadsideRepair();
   assert(g.work && g.work.title.includes('Ремонт'), 'начат ремонт у обочины');
   g.work.elapsed = g.work.duration + 0.1;
@@ -225,6 +230,9 @@ async function run() {
   // Пауза и продолжение.
   g.togglePause();
   assert(g.paused === true, 'пауза включается');
+  g.ui.closeModal();
+  assert(g.paused === false, 'закрытие меню паузы снимает паузу');
+  g.togglePause();
   g.ui.closeModal();
   g.paused = false;
 
