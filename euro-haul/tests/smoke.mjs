@@ -186,6 +186,28 @@ async function run() {
     assert(g.profile.stats.collisions > beforeCollisions, 'столкновение зафиксировано');
   }
 
+  // Руль: собран из деталей, шильд и текстуры на месте.
+  assert(g.truckView?.wheelPivot && g.truckView.wheelPivot.children.length >= 22, 'штурвал собран из деталей');
+  assert(g.truckView.badgeTexture() !== null, 'шильд на ступице нарисован');
+  assert(g.truckView.stalks?.length === 2, 'подрулевые переключатели на месте');
+
+  // Поломки: прокол → предупреждение → ремонт у обочины.
+  g.profile.truck.condition.tires = 4;
+  g.truck.tires = 4;
+  g.truck.pushEvent('blowout', { side: 1 });
+  g.handleTruckEvents();
+  assert(g.breakdown && g.breakdown.type === 'tire', 'прокол зафиксирован как поломка');
+  assert(/ПРОКОЛ/i.test(g.breakdownMessage() || ''), 'HUD подсказывает про поломку');
+  assert(g.truck.damageSpeedLimit === 45, 'на спущенном колесе ограничена скорость');
+  g.truck.speed = 0;
+  g.roadsideRepair();
+  assert(g.work && g.work.title.includes('Ремонт'), 'начат ремонт у обочины');
+  g.work.elapsed = g.work.duration + 0.1;
+  await sleep(160);
+  assert(!g.breakdown && g.truck.tires === 100, 'ремонт восстановил шины и снял поломку');
+  g.truck.repair('all');
+  assert(g.truck.gearbox === 100 && g.truck.coolant === 1, 'сервисный ремонт восстанавливает узлы');
+
   // Заправка через диалог.
   const fuelBefore = g.truck.fuel;
   g.profile.money = 5000;
@@ -262,6 +284,25 @@ async function run() {
   assert(g.phase === 'free', 'фаза свободной поездки');
   g.returnToMenu();
   await sleep(60);
+
+  // Сохранения: слоты с датой, быстрый сейв (F5) и загрузка (F9).
+  g.loadSlot(0);
+  await sleep(120);
+  assert(g.profile && g.profile.savedAt > 0, 'у слота есть время сохранения');
+  assert(/сегодня|\d{2}\.\d{2}/.test(g.fmtSavedAt(g.profile.savedAt)), 'время сохранения читается по-русски');
+  const wallet = g.profile.money;
+  g.quickSave();
+  const quick = JSON.parse(window.localStorage.getItem('eurotrak.quick.v1'));
+  assert(quick && quick.profile && quick.profile.money === wallet, 'быстрое сохранение записано (F5)');
+  g.profile.money += 7777;
+  g.quickLoad();
+  await sleep(150);
+  assert(g.profile.money === wallet, 'загрузка (F9) вернула состояние из снимка');
+  g.saveToSlot(2);
+  assert(g.saves.slots[2] && g.saves.slots[2].money === wallet, 'сохранение записывается в выбранный слот');
+  g.savesManager();
+  assert(window.document.getElementById('modal-body').innerHTML.includes('Быстрое сохранение'), 'экран сохранений показывает снимки');
+  g.ui.closeModal();
 
   // Поддержка разных устройств: ПК, телефон, планшет.
   assert(g.device === 'desktop', 'устройство по умолчанию — компьютер');

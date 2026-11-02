@@ -282,6 +282,28 @@ button { font-family: inherit; color: inherit; background: none; border: none; c
 }
 .hint b { color: rgba(232, 244, 247, 0.92); font-weight: 700; }
 
+/* Предупреждение о поломке: над приборами, по центру не мешает дороге. */
+.hud-warn {
+  position: fixed;
+  left: 50%;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 168px);
+  transform: translateX(-50%);
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(20, 26, 30, 0.82);
+  border: 1px solid rgba(226, 170, 74, 0.65);
+  color: #f0c274;
+  font: 600 12px/1.2 var(--font, system-ui, sans-serif);
+  letter-spacing: 0.04em;
+  z-index: 12;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+.hud-warn.warn-bad { border-color: rgba(236, 91, 78, 0.75); color: #ff9b8d; }
+@media (max-width: 720px) {
+  .hud-warn { bottom: calc(env(safe-area-inset-bottom, 0px) + 148px); font-size: 11px; padding: 6px 12px; }
+}
+
 /* Справка по управлению: две колонки на широком экране, одна на телефоне. */
 .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
 .help-grid h4 { margin: 0 0 6px; }
@@ -658,7 +680,9 @@ body.must-rotate .rotate-hint { display: flex; }
 .range-label { min-width: 58px; text-align: right; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .slot-list { display: flex; flex-direction: column; gap: 9px; }
-.slot { display: flex; align-items: center; gap: 14px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: 0.15s; }
+.slot { display: flex; align-items: center; gap: 14px; padding: 13px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: 0.15s; flex-wrap: wrap; }
+/* Текущий слот подсвечен: видно, куда пишется автосохранение. */
+.slot-active { border-color: rgba(73, 200, 174, 0.55); box-shadow: 0 0 0 1px rgba(73, 200, 174, 0.25) inset; }
 .slot:hover { border-color: rgba(245, 184, 61, 0.45); background: rgba(245, 184, 61, 0.06); }
 .slot-num { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: rgba(245, 184, 61, 0.14); color: var(--amber); font-weight: 850; }
 .slot-info { flex: 1; }

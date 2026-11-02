@@ -266,6 +266,12 @@ export class UI {
         g.refuel(amount);
         break;
       }
+      case 'repair-part':
+        g.repair(arg);
+        break;
+      case 'coolant':
+        g.topUpCoolant();
+        break;
       case 'repair-confirm': {
         this.closeModal();
         g.repair(arg);
@@ -295,6 +301,18 @@ export class UI {
         break;
       case 'load-slot':
         g.loadSlot(+arg);
+        break;
+      case 'overwrite-slot':
+        g.saveToSlot(+arg);
+        break;
+      case 'quick-save':
+        g.quickSave();
+        break;
+      case 'quick-load':
+        g.quickLoad();
+        break;
+      case 'saves':
+        g.savesManager();
         break;
       case 'new-slot':
         g.newCareerDialog(+arg);
@@ -427,6 +445,17 @@ export class UI {
     if ($('bar-air')) $('bar-air').style.width = `${air}%`;
     if ($('val-air')) $('val-air').textContent = Math.round(air) + '%';
     if ($('val-air')) $('val-air').style.color = air < 60 ? 'var(--amber)' : '';
+    const warnEl = $('dash-warn');
+    if (warnEl) {
+      if (state.warn) {
+        warnEl.textContent = '⚠ ' + state.warn;
+        warnEl.classList.remove('hidden');
+        warnEl.classList.toggle('warn-bad', state.warnLevel === 'bad');
+      } else {
+        warnEl.classList.add('hidden');
+      }
+    }
+
     const limitEl = $('speed-limit');
     limitEl.textContent = Math.round(mph ? state.speedLimit * 0.621371 : state.speedLimit);
     limitEl.style.borderColor = state.speedLimit <= 50 ? 'var(--amber-2)' : '#c4372c';
@@ -807,7 +836,7 @@ export class UI {
     const model = TRUCK_MODELS.find((m) => m.id === p.truck.modelId) || TRUCK_MODELS[0];
     const paint = PAINT_COLORS.find((c) => c.id === p.truck.paint) || PAINT_COLORS[1];
     const cond = p.truck.condition;
-    const avg = (cond.engine + cond.tires + cond.brakes) / 3;
+    const avg = (cond.engine + cond.tires + cond.brakes + (cond.gearbox ?? 100)) / 4;
     const fuelPct = (p.truck.fuel / model.tank) * 100;
     return `
       <div class="section-title"><div><h2>Мой тягач</h2><p class="sub">${model.name} · ${model.hp} л.с. · пробег ${fmt(p.truck.odometer)} км</p></div>
@@ -816,7 +845,9 @@ export class UI {
         <div class="truck-visual">
           ${truckSvg('#' + hexStr(paint.hex))}
           <div style="flex:1;min-width:200px">
-            <div class="field-row"><label>Состояние<small>двигатель · шины · тормоза</small></label><b>${Math.round(avg)}%</b></div>
+            <div class="field-row"><label>Состояние<small>двигатель · шины · тормоза · КПП</small></label><b>${Math.round(avg)}%</b></div>
+            <div class="field-row"><label>Антифриз<small>${Math.round(clamp((p.truck.coolant ?? 1) * 100, 0, 100))}% · перегрев убивает мотор</small></label>
+              <b style="color:${(p.truck.coolant ?? 1) < 0.4 ? 'var(--amber)' : ''}">${Math.round(clamp((p.truck.coolant ?? 1) * 100, 0, 100))}%</b></div>
             <div class="field-row"><label>Топливо</label><b>${Math.round(p.truck.fuel)} / ${model.tank} л</b></div>
             <div class="field-row"><label>Бак</label>
               <div class="bar" style="width:140px"><i style="width:${clamp(fuelPct, 0, 100)}%;background:linear-gradient(90deg,#e2a44a,#ffe08a)"></i></div>
@@ -833,6 +864,7 @@ export class UI {
             ['Двигатель', cond.engine],
             ['Шины', cond.tires],
             ['Тормоза', cond.brakes],
+            ['Коробка передач', cond.gearbox ?? 100],
           ]
             .map(
               ([n, v]) => `<div class="field-row"><label>${n}</label>
