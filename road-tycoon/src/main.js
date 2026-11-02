@@ -132,7 +132,7 @@
     if (keys.has('ArrowLeft') || keys.has('KeyA')) px -= 1;
     if (keys.has('ArrowRight') || keys.has('KeyD')) px += 1;
     if (keys.has('ArrowUp') || keys.has('KeyW')) py -= 1;
-    if (keys.has('ArrowDown')) py += 1;
+    if (keys.has('ArrowDown') || keys.has('KeyS')) py += 1;
     if (px || py) {
       const ppk = Render.ppk(app.camera.zoom);
       const speedKm = 700 / ppk;
@@ -299,6 +299,8 @@
       if (e.code === 'Space') spaceHeld = false;
       keys.delete(e.code);
     });
+    // если окно потеряло фокус — сбрасываем зажатые клавиши, иначе карта «уезжает» сама
+    window.addEventListener('blur', () => { keys.clear(); spaceHeld = false; });
     canvas.addEventListener('dblclick', (e) => {
       const p = screenPoint(e);
       const w = Render.toWorld(app, p.x, p.y);
@@ -424,7 +426,7 @@
     } else if (e.key === 'Escape') {
       if (TR.UI.closeModal()) return;
       cancelTool();
-    } else if (e.code.startsWith('Arrow') || e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyD') {
+    } else if (e.code.startsWith('Arrow') || e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyS' || e.code === 'KeyD') {
       keys.add(e.code);
       if (e.code.startsWith('Arrow')) e.preventDefault();
       return;
@@ -437,6 +439,7 @@
     else if (e.key === '3') setSpeed(4);
     else if (e.key === '0') togglePause();
     else if (e.key === 'r' || e.key === 'R') setTool('road');
+    else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); app.save(); }
     else if (e.key === 's' || e.key === 'S') app.save();
     else if (e.key === 'h' || e.key === 'H' || e.key === '?') TR.UI.showHelp();
     else if (e.key === 'f' || e.key === 'F') fitMap();
