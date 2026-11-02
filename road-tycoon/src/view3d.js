@@ -259,21 +259,9 @@
     }
     if (Wd.riverDist(world, x, z) < 5.5) m = Math.min(m, U.clamp((Wd.riverDist(world, x, z) - 2.2) / 3.3, 0, 1));
     if (Wd.lakeFactor(world, x, z) > 0) m = 0;
-    if (state) {
-      for (const road of state.roads) {
-        if (!road.open && !road.building) continue;
-        if (road.builtKm <= 0.2) continue;
-        const c = U.curve(road);
-        // грубая оценка: расстояние до отрезка A—B
-        const ax = c.ax, az = c.ay, bx = c.bx, bz = c.by;
-        const dx = bx - ax, dz = bz - az;
-        const l2 = dx * dx + dz * dz || 1;
-        let t = ((x - ax) * dx + (z - az) * dz) / l2;
-        t = U.clamp(t, 0, 1);
-        const d = Math.hypot(x - (ax + dx * t), z - (az + dz * t));
-        if (d < 4.5) m = Math.min(m, U.clamp((d - 1.2) / 3.4, 0, 1));
-      }
-    }
+    // ВАЖНО: рельеф НЕ приминается под дорогами. Иначе полотно считало высоту по примятой
+    // земле, а сетка рельефа (строится один раз) оставалась высокой — дорога уходила под землю,
+    // а машины ехали «по земле». Теперь дорога и рельеф считаются по одной поверхности.
     return m;
   }
 
@@ -379,7 +367,7 @@
 
   function buildTerrainMesh(state) {
     if (terrainMesh) { scene.remove(terrainMesh); terrainMesh.geometry.dispose(); terrainMesh = null; }
-    const N = 220;
+    const N = 260;   // мельче сетка — меньше погрешность между треугольниками и полотном
     const pos = [], uv = [], idx = [], col = [];
     const cMeadow = new THREE.Color('#69a052'), cForest = new THREE.Color('#3f7040');
     const cField = new THREE.Color('#a8b455'), cHill = new THREE.Color('#8a9a55');
@@ -808,10 +796,10 @@
       return sum / Math.max(1, k);
     });
     return raw.map((p, i) => {
-      const deck = smooth[i] + 0.07;
-      const y = p.bridge ? Math.max(BRIDGE_Y, deck) : Math.max(0.04, deck);
+      const deck = smooth[i] + 0.18;
+      const y = p.bridge ? Math.max(BRIDGE_Y, deck) : Math.max(0.06, deck);
       // никогда не ниже земли под собой — иначе снова окажемся под почвой
-      return { x: p.x, z: p.y, t: p.t, bridge: p.bridge, y: Math.max(y, p.ground + 0.05) };
+      return { x: p.x, z: p.y, t: p.t, bridge: p.bridge, y: Math.max(y, p.ground + 0.16) };
     });
   }
 
