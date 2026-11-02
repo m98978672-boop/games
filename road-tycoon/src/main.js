@@ -298,6 +298,7 @@
     window.addEventListener('keyup', (e) => {
       if (e.code === 'Space') spaceHeld = false;
       keys.delete(e.code);
+      if (/^[wasd]$/i.test(e.key || '')) keys.delete('Key' + e.key.toUpperCase());
     });
     // если окно потеряло фокус — сбрасываем зажатые клавиши, иначе карта «уезжает» сама
     window.addEventListener('blur', () => { keys.clear(); spaceHeld = false; });
@@ -426,8 +427,11 @@
     } else if (e.key === 'Escape') {
       if (TR.UI.closeModal()) return;
       cancelTool();
-    } else if (e.code.startsWith('Arrow') || e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyS' || e.code === 'KeyD') {
-      keys.add(e.code);
+    } else if (e.code.startsWith('Arrow') || e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyS' || e.code === 'KeyD'
+      || (!e.ctrlKey && !e.metaKey && /^[wasd]$/i.test(e.key))) {
+      // нормализуем букву в код клавиши — работает при любой раскладке
+      const code = /^[wasd]$/i.test(e.key) ? 'Key' + e.key.toUpperCase() : e.code;
+      keys.add(code);
       if (e.code.startsWith('Arrow')) e.preventDefault();
       return;
     } else if (e.key === '+' || e.key === '=') zoomBy(1.25);
@@ -440,7 +444,6 @@
     else if (e.key === '0') togglePause();
     else if (e.key === 'r' || e.key === 'R') setTool('road');
     else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); app.save(); }
-    else if (e.key === 's' || e.key === 'S') app.save();
     else if (e.key === 'h' || e.key === 'H' || e.key === '?') TR.UI.showHelp();
     else if (e.key === 'f' || e.key === 'F') fitMap();
   }
