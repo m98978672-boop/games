@@ -3,6 +3,7 @@ import { TRUCK_MODELS, levelForXp } from '../data/trucks.js';
 
 const KEY = 'eurotrak.saves.v1';
 const SETTINGS_KEY = 'eurotrak.settings.v1';
+const QUICK_KEY = 'eurotrak.quick.v1';
 export const SAVE_VERSION = 1;
 
 export const DEFAULT_SETTINGS = {
@@ -32,6 +33,7 @@ export function createProfile(name = 'Водитель', truckId = 'auriga-3') {
     name,
     created: Date.now(),
     lastPlayed: Date.now(),
+    savedAt: Date.now(),
     money: 9200,
     xp: 0,
     level: 1,
@@ -42,7 +44,8 @@ export function createProfile(name = 'Водитель', truckId = 'auriga-3') {
       engine: 0,
       tires: 0,
       retarder: 0,
-      condition: { engine: 88, tires: 74, brakes: 82 },
+      condition: { engine: 88, tires: 74, brakes: 82, gearbox: 79 },
+      coolant: 1,
       odometer: 21400,
       fuel: Math.round(truck.tank * 0.55),
     },
@@ -58,6 +61,9 @@ export function createProfile(name = 'Водитель', truckId = 'auriga-3') {
       late: 0,
       fuelSpent: 0,
       topSpeed: 0,
+      breakdowns: 0,
+      cancelled: 0,
+      repairs: 0,
     },
     achievements: [],
     clock: { day: 1, minutes: 8 * 60 },
@@ -76,6 +82,36 @@ export function loadSaves() {
     };
   } catch {
     return { slots: [null, null, null], lastSlot: 0 };
+  }
+}
+
+/** Быстрое сохранение: один «снимок» вне слотов, по F5 / F9. */
+export function saveQuick(snapshot) {
+  try {
+    localStorage.setItem(QUICK_KEY, JSON.stringify({ ...snapshot, at: Date.now() }));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function loadQuick() {
+  try {
+    const raw = localStorage.getItem(QUICK_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!data || !data.profile) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+export function clearQuick() {
+  try {
+    localStorage.removeItem(QUICK_KEY);
+  } catch {
+    /* приватный режим */
   }
 }
 

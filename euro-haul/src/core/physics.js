@@ -89,6 +89,71 @@ export class TruckSim {
     this.time = 0;
     this.distPhase = 0;
     this.exhaustBrake = false;
+    // --- Поломки и износ узлов.
+    this.gearbox = config.gearbox ?? this.gearbox ?? 100;
+    this.coolant = config.coolant ?? this.coolant ?? 1;
+    this.blowout = 0; // 0 — целые колёса, ±1 — сторона прокола
+    this.blowRisk = 0;
+    this.overheat = false;
+    this.overheatTimer = 0;
+    this.brakeFade = 0;
+    this.gearboxJam = 0;
+    this.gearboxWear = 0;
+    this.events = [];
+    this.hardBrakeTime = 0;
+  }
+
+  /** Очередь событий для интерфейса и звука: UI сам решает, как их показать. */
+  takeEvents() {
+    const list = this.events;
+    this.events = [];
+    return list;
+  }
+
+  pushEvent(type, extra = {}) {
+    this.events.push({ type, ...extra });
+  }
+
+  /** Ограничение скорости из-за поломки, км/ч (0 — нет ограничения). */
+  get damageSpeedLimit() {
+    if (this.blowout) return 45;
+    if (this.overheat) return 55;
+    if (this.gearboxJam > 0) return 40;
+    if (this.brakeFade > 0.35) return 70;
+    return 0;
+  }
+
+  /** Ремонт одного узла (используется сервисом и помощью на дороге). */
+  repair(kind) {
+    if (kind === 'engine') {
+      this.engine = 100;
+      this.overheat = false;
+      this.overheatTimer = 0;
+      this.temp = Math.min(this.temp, 80);
+    }
+    if (kind === 'tires') {
+      this.tires = 100;
+      this.blowout = 0;
+      this.blowRisk = 0;
+    }
+    if (kind === 'brakes') {
+      this.brakes = 100;
+      this.brakeFade = 0;
+      this.airPressure = 1;
+    }
+    if (kind === 'gearbox') {
+      this.gearbox = 100;
+      this.gearboxJam = 0;
+      this.gearboxWear = 0;
+    }
+    if (kind === 'coolant') {
+      this.coolant = 1;
+      this.overheat = false;
+      this.temp = Math.min(this.temp, 90);
+    }
+    if (kind === 'all') {
+      for (const k of ['engine', 'tires', 'brakes', 'gearbox', 'coolant']) this.repair(k);
+    }
   }
 
   get mass() {
@@ -125,7 +190,12 @@ export class TruckSim {
   /** Тяга на колёсах (Н) — с учётом турбины, передачи, потерь и износа. */
   get wheelForce() {
     if (!this.engineOn || this.gear === 0) return 0;
-    const torque = this.maxTorque * this.torqueCurve(this.rpm) * (0.68 + 0.32 * this.boost) * (0.55 + 0.45 * (this.engine / 100));
+    const health = 0.55 + 0.45 * clamp(this.engine / 100, 0, 1);
+    const gearboxFactor = 0.7 + 0.3 * clamp(this.gearbox / 100, 0, 1);
+    const heat = this.overheat ? 0.62 : 1;
+    const jam = this.gearboxJam > 0 ? 0.35 : 1;
+    const torque =
+      this.maxTorque * this.torqueCurve(this.rpm) * (0.68 + 0.32 * this.boost) * health * gearboxFactor * heat * jam;
     return (torque * this.gearRatio * this.model.finalDrive * 0.92) / WHEEL_R;
   }
 
@@ -266,9 +336,12 @@ export class TruckSim {
     const drive = Math.sign(driveWanted) * Math.min(demand, traction * 1.05) * asr;
 
     const absV = Math.abs(v);
-    const rolling = absV > 0.05 ? 0.0058 * m * G * (1 - Math.min(0.3, absV / 120)) : 0;
+    // Спущенное колесо катится тяжелее и тянет машину в свою сторону.
+    const flatDrag = this.blowout ? 0.012 * m * G : 0;
+    const rolling = (absV > 0.05 ? 0.0058 * m * G * (1 - Math.min(0.3, absV / 120)) : 0) + (absV > 0.2 ? flatDrag : 0);
     const aero = 0.5 * RHO * 7.4 * v * absV;
-    const brakeForce = this.brakeApplied * airFactor * m * G * 0.62 * (0.62 + 0.38 * (this.brakes / 100));
+    const fade = 1 - clamp(this.brakeFade, 0, 0.45);
+    const brakeForce = this.brakeApplied * airFactor * m * G * 0.62 * (0.62 + 0.38 * clamp(this.brakes / 100, 0, 1)) * fade;
     const parkBrake = this.handbrake ? m * G * 0.3 : 0;
     // Горный тормоз работает только при сброшенном газе (как заслонка в выпуске).
     const idleGas = (input.throttle || 0) < 0.08;
@@ -300,8 +373,9 @@ export class TruckSim {
     }
     if (this.speed < 0 && absV < 0.12 && drive >= 0) this.speed = 0;
 
-    const hard = this.maxSpeedLimit / 3.6;
-    if (this.speed > hard + 2) this.speed = lerp(this.speed, hard + 2, 0.25);
+    const damageLimit = this.damageSpeedLimit;
+    const hard = (damageLimit ? Math.min(this.maxSpeedLimit, damageLimit) : this.maxSpeedLimit) / 3.6;
+    if (this.speed > hard + 2) this.speed = lerp(this.speed, hard + 2, this.blowout ? 0.5 : 0.25);
     if (Math.abs(this.speed) < 0.02 && this.throttle < 0.02 && !creep) this.speed = 0;
 
     // ------------------------------------------------------- продольное движение
@@ -328,6 +402,12 @@ export class TruckSim {
 
     this.lat += this.yawRel * this.speed * dt;
     this.latAccel = -this.yawRel * this.speed;
+    // Прокол тянет в сторону повреждённого колеса — приходится подруливать.
+    if (this.blowout) {
+      const pull = this.blowout * clamp(Math.abs(this.speed) / 22, 0, 1);
+      this.yawRel += pull * 0.05 * dt;
+      this.lat += pull * 0.35 * dt;
+    }
 
     // Обочина: сброс скорости и тряска.
     const edge = 2.9;
@@ -406,10 +486,96 @@ export class TruckSim {
         this.throttle = 0;
       }
       this.odometer += Math.abs(this.speed) * dt;
-      if (this.temp > 108) this.engine = Math.max(0, this.engine - dt * 1.4);
-      if (this.brakeApplied > 0.3) this.brakes = Math.max(0, this.brakes - dt * 0.02 * this.brakeApplied);
-      this.engine = Math.max(0, this.engine - Math.abs(this.speed) * dt * 0.000012 * (1 + Math.max(0, this.temp - 95) / 20));
-      this.tires = Math.max(0, this.tires - Math.abs(this.speed) * dt * 0.000009);
+      const speedAbsNow = Math.abs(this.speed);
+      const roughNow = clamp(road.roughness ?? 0.12, 0, 1);
+
+      // --- Охлаждающая жидкость: уходит понемногу, быстрее на изношенном моторе.
+      this.coolant = clamp(this.coolant - dt * (0.0000045 + (1 - this.engine / 100) * 0.00002), 0, 1);
+      if (this.coolant < 0.35) {
+        // Течь: двигатель греется быстрее и теряет мощность.
+        this.temp += dt * (0.35 - this.coolant) * 6;
+      }
+
+      // --- Перегрев: выше 108 °C мотор начинает «сыпаться», включается защита.
+      if (this.temp > 108) {
+        this.engine = Math.max(0, this.engine - dt * (1.4 + Math.max(0, this.temp - 112) * 0.4));
+        if (!this.overheat) {
+          this.overheat = true;
+          this.overheatTimer = 0;
+          this.pushEvent('overheat');
+        }
+      } else if (this.temp < 96) {
+        this.overheat = false;
+      }
+      if (this.overheat) {
+        this.overheatTimer += dt;
+        // На ходу печку не выключить: 25 секунд перегрева стоят 1 % ресурса.
+        this.engine = Math.max(0, this.engine - dt * 0.04);
+      }
+
+      // --- Тормоза: износ от торможения, перегрев колодок даёт фейд.
+      if (this.brakeApplied > 0.3) {
+        const hardStop = this.brakeApplied * Math.max(speedAbsNow, 4);
+        this.brakes = Math.max(0, this.brakes - dt * (0.004 + hardStop * 0.0009));
+        this.hardBrakeTime += dt * this.brakeApplied;
+      } else {
+        this.hardBrakeTime = Math.max(0, this.hardBrakeTime - dt * 0.5);
+      }
+      const fadeGain = this.brakes < 45 ? (45 - this.brakes) / 100 : 0;
+      this.brakeFade = clamp(
+        this.brakeFade + dt * (this.brakeApplied * (0.05 + fadeGain * 0.8) - 0.03),
+        0,
+        0.5
+      );
+      if (this.brakes < 20 && !this.brakeWarned) {
+        this.brakeWarned = true;
+        this.pushEvent('brakes');
+      }
+      if (this.brakes > 45) this.brakeWarned = false;
+      // Изношенная пневматика травит воздух: компрессор не успевает.
+      if (this.brakes < 40) this.airPressure = clamp(this.airPressure - dt * 0.004 * (1 - this.brakes / 40), 0.3, 1);
+
+      // --- Ресурс двигателя: зависит от оборотов и температуры.
+      const rpmStress = clamp((this.rpm - 1600) / 800, 0, 1) * 0.6 + 0.4;
+      this.engine = Math.max(
+        0,
+        this.engine - speedAbsNow * dt * 0.000014 * rpmStress * (1 + Math.max(0, this.temp - 95) / 18)
+      );
+
+      // --- Шины: износ от скорости, неровностей и торможений.
+      const tireStress = 0.6 + roughNow * 2.4 + this.brakeApplied * 0.8 + (speedAbsNow > 24 ? 0.5 : 0);
+      this.tires = Math.max(0, this.tires - speedAbsNow * dt * 0.000011 * tireStress);
+
+      // --- Прокол: риск растёт с износом шин, скоростью и гравием.
+      if (!this.blowout && this.tires < 22 && speedAbsNow > 12) {
+        this.blowRisk += dt * (0.006 + ((22 - this.tires) / 22) * 0.05) * clamp(speedAbsNow / 20, 0, 1.4) * (1 + roughNow);
+        if (this.blowRisk > 1) {
+          this.blowout = Math.random() < 0.5 ? -1 : 1;
+          this.blowRisk = 0;
+          this.pushEvent('blowout', { side: this.blowout });
+        }
+      } else if (this.blowout) {
+        // На спущенном колесе резина добивается быстро.
+        this.tires = Math.max(0, this.tires - dt * 0.9);
+      }
+
+      // --- Коробка: ресурс от переключений под тягой и груза.
+      if (this.throttle > 0.55 && this.rpm > 1500) {
+        this.gearbox = clamp(this.gearbox - dt * 0.00006 * (1 + this.cargoMass / 25) * (1 + this.rpm / 2400), 0, 100);
+      }
+      if (this.gearbox < 30 && this.throttle > 0.5 && this.gearboxJam <= 0 && Math.random() < dt * 0.12 * (1 - this.gearbox / 100)) {
+        this.gearboxJam = 8;
+        this.pushEvent('gearbox');
+      }
+      if (this.gearboxJam > 0) {
+        this.gearboxJam = Math.max(0, this.gearboxJam - dt);
+        // «Выбило передачу»: тяга пропадает, обороты падают.
+        if (this.gear > 3) {
+          this.gear = 3;
+          this.gearTimer = 0.8;
+          this.gearHold = 1.2;
+        }
+      }
     }
 
     return this;
@@ -426,6 +592,13 @@ export class TruckSim {
       engine: this.engine,
       tires: this.tires,
       brakes: this.brakes,
+      gearbox: this.gearbox,
+      coolant: this.coolant,
+      blowout: this.blowout,
+      overheat: this.overheat,
+      brakeFade: this.brakeFade,
+      gearboxJam: this.gearboxJam,
+      damageLimit: this.damageSpeedLimit,
       s: this.s,
       lat: this.lat,
       odometer: this.odometer,

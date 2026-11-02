@@ -19,6 +19,8 @@ import {
   saveGame,
   loadSettings,
   saveSettings,
+  saveQuick,
+  loadQuick,
   DEFAULT_SETTINGS,
   createProfile,
   upgradeProfile,
@@ -439,6 +441,28 @@ class Game {
       this.input.keys.delete(e.code);
       if (e.code === 'KeyB') this.lookBack = false;
     });
+    // Быстрые сохранения работают и в гараже, и в рейсе.
+    window.addEventListener('keydown', (e) => {
+      if (e.target && ['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+      if (e.code === 'F5' || (e.code === 'KeyS' && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault();
+        this.quickSave();
+      } else if (e.code === 'F9') {
+        e.preventDefault();
+        this.quickLoad();
+      }
+    });
+    // Не терять прогресс при закрытии вкладки или сворачивании браузера.
+    const flush = () => {
+      if (!this.profile) return;
+      if (this.state === 'driving') this.syncProfileFromTruck();
+      this.saveNow(true);
+    };
+    window.addEventListener('pagehide', flush);
+    window.addEventListener('beforeunload', flush);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flush();
+    });
     // Осмотр из кабины мышью: тянем по сцене — голова поворачивается.
     const scene = $('scene');
     if (scene) {
@@ -562,19 +586,44 @@ class Game {
   }
 
   // ---------------------------------------------------------------- Меню и профили
+  /** «Сегодня 14:20» вместо голого таймстампа. */
+  fmtSavedAt(ts) {
+    if (!ts) return 'ещё не сохранялось';
+    const d = new Date(ts);
+    const now = new Date();
+    const sameDay = d.toDateString() === now.toDateString();
+    const time = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    if (sameDay) return `сегодня, ${time}`;
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')} ${time}`;
+  }
+
   refreshSaveInfo() {
     const filled = this.saves.slots.filter(Boolean);
+    const newest = filled.slice().sort((a, b) => (b.savedAt || 0) - (a.savedAt || 0))[0];
     $('btn-continue').disabled = filled.length === 0;
     $('menu-save-info').textContent = filled.length
-      ? `Сохранений: ${filled.length} · последнее: ${filled[0]?.name || filled[1]?.name || filled[2]?.name}`
+      ? `Сохранений: ${filled.length} · последнее: ${newest?.name || '—'} (${this.fmtSavedAt(newest?.savedAt)}) · F5/F9 — быстрые сейвы`
       : 'Сохранений пока нет — начните карьеру';
-    const slotName = this.saves.slots[this.saves.lastSlot];
+    const slotName = this.saves.slots[this.saves.lastSlot] || newest;
     $('btn-continue').textContent = slotName ? `Продолжить: ${slotName.name}` : 'Продолжить карьеру';
   }
 
   continueCareer() {
-    const idx = this.saves.slots.findIndex((s) => s && s.id === this.saves.slots[this.saves.lastSlot]?.id);
-    this.loadSlot(idx >= 0 ? idx : this.saves.slots.findIndex(Boolean));
+    const slots = this.saves.slots;
+    let idx = slots.findIndex((s) => s && slots[this.saves.lastSlot] && s.id === slots[this.saves.lastSlot].id);
+    if (idx < 0) {
+      // Самый свежий слот по времени сохранения.
+      let best = -1;
+      let bestAt = -1;
+      slots.forEach((s, i) => {
+        if (s && (s.savedAt || 0) > bestAt) {
+          best = i;
+          bestAt = s.savedAt || 0;
+        }
+      });
+      idx = best >= 0 ? best : slots.findIndex(Boolean);
+    }
+    this.loadSlot(idx);
   }
 
   loadSlot(index) {
@@ -637,32 +686,101 @@ class Game {
   }
 
   profilesDialog() {
+    this.savesManager();
+  }
+
+  /** Экран сохранений: даты, загрузка, перезапись, удаление, быстрый снимок. */
+  savesManager() {
     const slots = this.saves.slots;
-    const body = `<div class="slot-list">${slots
-      .map((s, i) => {
-        if (!s) {
-          return `<div class="slot" data-act="new-slot" data-arg="${i}">
-            <div class="slot-num">${i + 1}</div>
-            <div class="slot-info"><b>Свободный слот</b><small>Начать новую карьеру</small></div>
-            <button class="btn btn-sm">Создать</button>
-          </div>`;
-        }
-        return `<div class="slot">
+    const quick = loadQuick();
+    const row = (s, i) => {
+      if (!s) {
+        return `<div class="slot" data-act="new-slot" data-arg="${i}">
           <div class="slot-num">${i + 1}</div>
-          <div class="slot-info"><b>${s.name}</b>
-            <small>${CITY_BY_ID.get(s.currentCity)?.name || '—'} · ${s.stats?.deliveries || 0} рейсов · ${fmtMoney(s.money)}</small>
-          </div>
-          <button class="btn btn-sm btn-primary" data-act="load-slot" data-arg="${i}">Загрузить</button>
-          <button class="btn btn-sm btn-ghost" data-act="delete-slot" data-arg="${i}">Удалить</button>
+          <div class="slot-info"><b>Свободный слот</b><small>Начать новую карьеру</small></div>
+          <button class="btn btn-sm">Создать</button>
         </div>`;
-      })
-      .join('')}</div>`;
+      }
+      const active = this.profile && this.slot === i;
+      return `<div class="slot${active ? ' slot-active' : ''}">
+        <div class="slot-num">${i + 1}</div>
+        <div class="slot-info"><b>${s.name}${active ? ' · текущий' : ''}</b>
+          <small>${CITY_BY_ID.get(s.currentCity)?.name || '—'} · ${s.stats?.deliveries || 0} рейсов · ${fmtMoney(s.money)} · ${this.fmtSavedAt(s.savedAt)}</small>
+        </div>
+        <button class="btn btn-sm btn-primary" data-act="load-slot" data-arg="${i}">Загрузить</button>
+        ${active ? `<button class="btn btn-sm" data-act="overwrite-slot" data-arg="${i}">Сохранить</button>` : `<button class="btn btn-sm btn-ghost" data-act="overwrite-slot" data-arg="${i}" title="Записать текущую карьеру в этот слот">Перезаписать</button>`}
+        <button class="btn btn-sm btn-ghost" data-act="delete-slot" data-arg="${i}">Удалить</button>
+      </div>`;
+    };
+    const body = `<div class="slot-list">${slots.map(row).join('')}</div>
+      <div class="card" style="margin-top:14px">
+        <div class="field-row"><label>Быстрое сохранение<small>F5 — сохранить, F9 — загрузить</small></label>
+          <b>${quick ? this.fmtSavedAt(quick.at) : 'нет снимка'}</b></div>
+        <div class="field-row"><label>Автосохранение<small>в рейсе, при выходе и сворачивании вкладки</small></label>
+          <b>${this.profile ? this.fmtSavedAt(this.profile.savedAt) : '—'}</b></div>
+        <p style="font-size:12px;color:var(--muted)">Прогресс хранится в браузере (localStorage): три слота, быстрый снимок и автосохранение. Если очистить данные сайта — сохранения пропадут.</p>
+      </div>`;
     this.ui.openModal({
       eyebrow: 'ПРОФИЛИ',
       title: 'Сохранения',
       body,
-      actions: [{ label: 'Закрыть', act: 'close' }],
+      actions: [
+        { label: 'Быстрый сейв (F5)', act: 'quick-save' },
+        { label: 'Закрыть', primary: true, act: 'close' },
+      ],
     });
+    const foot = $('modal-foot');
+    foot.querySelector('[data-act="quick-save"]')?.addEventListener('click', () => {
+      this.quickSave();
+      this.savesManager();
+    });
+  }
+
+  /** Записать текущую карьеру в произвольный слот. */
+  saveToSlot(index) {
+    if (!this.profile) {
+      this.ui.toast('Сначала начните карьеру', 'info');
+      return;
+    }
+    if (this.state === 'driving') this.syncProfileFromTruck();
+    this.profile.savedAt = Date.now();
+    this.saves.slots[index] = JSON.parse(JSON.stringify(this.profile));
+    this.saves.lastSlot = index;
+    const ok = saveGame(this.saves.slots, this.saves.lastSlot);
+    this.slot = index;
+    this.refreshSaveInfo();
+    this.ui.toast(ok ? `Сохранено в слот ${index + 1}` : 'Не удалось сохранить', ok ? 'good' : 'bad');
+    this.savesManager();
+  }
+
+  /** Мгновенный снимок текущего состояния (F5). */
+  quickSave() {
+    if (!this.profile) {
+      this.ui.toast('Сначала начните карьеру', 'info');
+      return;
+    }
+    if (this.state === 'driving') this.syncProfileFromTruck();
+    this.saveNow(true);
+    const ok = saveQuick({ slot: this.slot, profile: this.profile });
+    this.audio.click();
+    this.ui.toast(ok ? 'Быстрое сохранение готово' : 'Не удалось сохранить (localStorage)', ok ? 'good' : 'bad', 2000);
+  }
+
+  /** Возврат к последнему быстрому сохранению (F9). */
+  quickLoad() {
+    const snap = loadQuick();
+    if (!snap || !snap.profile) {
+      this.ui.toast('Быстрых сохранений пока нет — нажмите F5', 'info', 2600);
+      return;
+    }
+    const slot = Number.isInteger(snap.slot) ? snap.slot : this.slot || 0;
+    this.saves.slots[slot] = JSON.parse(JSON.stringify(snap.profile));
+    this.saves.lastSlot = slot;
+    saveGame(this.saves.slots, this.saves.lastSlot);
+    this.paused = false;
+    this.ui.closeModal();
+    this.loadSlot(slot);
+    this.ui.toast(`Загружено быстрое сохранение (${this.fmtSavedAt(snap.at)})`, 'good', 3200);
   }
 
   deleteSlot(index) {
@@ -829,6 +947,7 @@ class Game {
     job.distance = Math.round(route.km * 10) / 10;
     this.phase = job.free ? 'free' : 'pickup';
     this.fines = 0;
+    this.breakdown = null;
     this.camerasHit.clear();
     this.work = null;
     this.parkedAtDepot = null;
@@ -849,6 +968,8 @@ class Game {
       engine: this.profile.truck.condition.engine,
       tires: this.profile.truck.condition.tires,
       brakes: this.profile.truck.condition.brakes,
+      gearbox: this.profile.truck.condition.gearbox ?? 100,
+      coolant: this.profile.truck.coolant ?? 1,
       odometer: this.profile.truck.odometer,
     });
     this.truck.engineOn = true;
@@ -867,6 +988,11 @@ class Game {
       this.truck.s = clamp(job.playerS, 20, route.length - 40);
       this.phase = job.phase || this.phase;
       this.cargoDamage = job.cargoDamage || 0;
+      if (job.breakdown) {
+        this.breakdown = { ...job.breakdown };
+        if (this.breakdown.type === 'tire') this.truck.blowout = this.breakdown.side || 1;
+        if (this.breakdown.type === 'gearbox') this.truck.gearboxJam = 10;
+      }
       if (this.phase === 'delivery') this.truck.cargoMass = job.mass || 0;
     }
     this.phaseStartS = this.phase === 'delivery' ? this.pickupS : this.startS;
@@ -1076,6 +1202,7 @@ class Game {
       iterations++;
     }
     this.currentLimit = speedLimitAt(this.route, this.truck.s);
+    this.handleTruckEvents();
     this.updateTruckTransform(dt);
     this.traffic.update(dt, this.truck.s, this.truck.lat, this.truck.speed, env.night);
     this.checkCollisions(dt);
@@ -1172,7 +1299,9 @@ class Game {
       fuel: this.truck.fuel,
       fuelPct: this.truck.fuel / this.truck.fuelCapacity,
       temp: this.truck.temp,
-      condition: Math.min(this.truck.engine, this.truck.tires * 1.15, 100),
+      condition: Math.min(this.truck.engine, this.truck.tires * 1.15, this.truck.gearbox, 100),
+      warn: this.breakdown ? this.breakdownMessage() : this.truck.overheat ? 'ПЕРЕГРЕВ · снизьте обороты' : null,
+      warnLevel: this.breakdown ? 'bad' : 'warn',
       fatigue: this.profile.fatigue || 0,
       speedLimit: this.currentLimit || 80,
       cruise: this.truck.cruise,
@@ -1357,6 +1486,138 @@ class Game {
     this.ui.toast(this.lightsOn ? 'Фары включены' : 'Фары выключены', 'info', 1400);
   }
 
+  // ---------------------------------------------------------------- Поломки
+  /** Паспорт поломки: что случилось, сколько стоит ремонт и сколько он займёт. */
+  breakdownInfo(type) {
+    switch (type) {
+      case 'tire':
+        return { title: 'Прокол колеса', part: 'tires', cost: 180, minutes: 12, text: 'Домкрат, запаска и четверть часа у обочины.' };
+      case 'brakes':
+        return { title: 'Тормоза перегреты', part: 'brakes', cost: 240, minutes: 25, text: 'Колодки «поплыли»: нужен ремонт и прокачка пневматики.' };
+      case 'overheat':
+        return { title: 'Перегрев двигателя', part: 'coolant', cost: 160, minutes: 20, text: 'Патрубок течёт, антифриз уходит. Долить и подтянуть хомуты.' };
+      case 'gearbox':
+        return { title: 'Коробка выбивает передачу', part: 'gearbox', cost: 420, minutes: 35, text: 'Сервис на дороге: замена датчика и масла в КПП.' };
+      default:
+        return { title: 'Поломка', part: 'engine', cost: 200, minutes: 20, text: '' };
+    }
+  }
+
+  breakdownMessage() {
+    if (!this.breakdown) return null;
+    const info = this.breakdownInfo(this.breakdown.type);
+    return `${info.title.toUpperCase()} · остановитесь и нажмите E`;
+  }
+
+  /** Зафиксировать поломку и предупредить игрока. */
+  setBreakdown(type, extra = {}) {
+    // Пока одна поломка не устранена, вторую не объявляем: физика уже сама
+    // ограничила машину, а игрок должен сначала доехать до ремонта.
+    if (this.breakdown) return;
+    const info = this.breakdownInfo(type);
+    this.breakdown = { type, side: extra.side || 0, at: Date.now() };
+    if (this.truck) {
+      // Поломка сразу влияет на поведение машины, а не только на интерфейс.
+      if (type === 'tire') this.truck.blowout = extra.side || this.truck.blowout || 1;
+      if (type === 'gearbox') this.truck.gearboxJam = Math.max(this.truck.gearboxJam || 0, 8);
+    }
+    this.cameraShake = Math.max(this.cameraShake || 0, 0.9);
+    this.audio.alarm();
+    this.audio.thump ? this.audio.thump(1) : null;
+    this.ui.flashDamage();
+    this.ui.toast(`${info.title}: ${info.text} Остановитесь и нажмите E`, 'bad', 7000);
+    this.profile.stats.breakdowns = (this.profile.stats.breakdowns || 0) + 1;
+    if (this.truck) this.truck.cruise = null;
+  }
+
+  clearBreakdown() {
+    this.breakdown = null;
+    if (this.job) this.job.breakdown = null;
+    if (this.truck) {
+      this.truck.blowout = 0;
+      this.truck.gearboxJam = 0;
+      this.truck.overheat = false;
+    }
+  }
+
+  handleTruckEvents() {
+    if (!this.truck) return;
+    for (const ev of this.truck.takeEvents()) {
+      // Физика сообщает «blowout», в интерфейсе это поломка шины.
+      const type = ev.type === 'blowout' ? 'tire' : ev.type;
+      if (['tire', 'brakes', 'overheat', 'gearbox'].includes(type)) {
+        this.setBreakdown(type, ev.side ? { side: ev.side } : {});
+      }
+    }
+  }
+
+  /** Помощь на дороге: починить здесь или вызвать эвакуатор. */
+  roadsideDialog() {
+    if (!this.breakdown) return;
+    const wasDriving = this.state === 'driving';
+    if (wasDriving) {
+      this.paused = true;
+      this.pausedByModal = true;
+    }
+    const info = this.breakdownInfo(this.breakdown.type);
+    const money = this.profile.money;
+    const canPay = money >= info.cost;
+    this.ui.openModal({
+      eyebrow: 'ПОЛОМКА',
+      title: info.title,
+      body: `<p>${info.text}</p>
+        <div class="field-row"><label>Ремонт на месте<small>${info.minutes} минут игрового времени</small></label><b>${fmtMoney(info.cost)}</b></div>
+        <div class="field-row"><label>Эвакуатор до сервиса<small>груз возвращён, рейс отменён</small></label><b>${fmtMoney(300)}</b></div>
+        <div class="field-row"><label>В кошельке</label><b>${fmtMoney(money)}</b></div>
+        ${canPay ? '' : '<p style="color:var(--amber)">Денег на ремонт не хватает — можно уехать на эвакуаторе (спишется всё, что есть).</p>'}`,
+      actions: [
+        { label: 'Эвакуатор', act: 'tow' },
+        { label: canPay ? 'Починить здесь' : 'Починить (в долг)', primary: true, act: 'roadside-fix' },
+      ],
+    });
+    const foot = $('modal-foot');
+    foot.querySelector('[data-act="roadside-fix"]')?.addEventListener('click', () => {
+      this.ui.closeModal();
+      this.paused = false;
+      this.roadsideRepair();
+    });
+    foot.querySelector('[data-act="tow"]')?.addEventListener('click', () => {
+      this.ui.closeModal();
+      this.towTruck();
+    });
+  }
+
+  roadsideRepair() {
+    if (!this.breakdown) return;
+    const info = this.breakdownInfo(this.breakdown.type);
+    const cost = Math.min(info.cost, Math.max(0, this.profile.money));
+    this.profile.money -= cost;
+    this.startWork('Ремонт у обочины', info.minutes, () => {
+      this.truck.repair(info.part);
+      this.clearBreakdown();
+      this.audio.cash();
+      this.ui.toast('Ремонт закончен — можно ехать', 'good', 3000);
+      this.saveNow(true);
+    });
+  }
+
+  towTruck() {
+    const fee = Math.min(300, Math.max(0, this.profile.money));
+    this.profile.money -= fee;
+    this.audio.alarm();
+    this.ui.toast('Эвакуатор доставил тягач в сервис', 'info', 4000);
+    if (this.profile.activeJob) {
+      this.profile.stats.cancelled = (this.profile.stats.cancelled || 0) + 1;
+      this.profile.activeJob = null;
+    }
+    this.breakdown = null;
+    this.job = null;
+    this.paused = false;
+    this.syncProfileFromTruck();
+    this.saveNow(true);
+    this.enterGarage('garage');
+  }
+
   // ---------------------------------------------------------------- Коллизии и события
   checkCollisions(dt) {
     if (this.collisionCooldown > 0) this.collisionCooldown -= dt;
@@ -1475,6 +1736,14 @@ class Game {
 
   interact() {
     if (this.work) return;
+    if (this.breakdown) {
+      if (Math.abs(this.truck.speed) > 1.5) {
+        this.ui.toast('Остановитесь, чтобы осмотреть машину', 'info', 2000);
+        return;
+      }
+      this.roadsideDialog();
+      return;
+    }
     const p = this.parkedAtDepot;
     if (!p) {
       if (this.phase === 'delivery' && Math.abs(this.truck.s - this.deliveryS) < 60) return;
@@ -1628,32 +1897,100 @@ class Game {
     this.saveNow();
   }
 
-  repairDialog() {
+  /** Цена ремонта узла: движок дороже всего, тормоза — расходник. */
+  repairPrice(kind) {
     const c = this.profile.truck.condition;
-    const cost = Math.round((100 - c.engine) * 42 + (100 - c.tires) * 26 + (100 - c.brakes) * 18);
-    this.ui.confirmRepair(Math.max(0, cost), 'Двигатель, шины и тормоза будут восстановлены до 100%.');
+    const rates = { engine: 42, tires: 26, brakes: 18, gearbox: 55 };
+    if (!(kind in rates)) return 0;
+    const health = kind === 'gearbox' ? (c.gearbox ?? 100) : c[kind] ?? 100;
+    return Math.round(Math.max(0, 100 - health) * rates[kind]);
   }
 
-  repair() {
+  repairAllPrice() {
+    const sum = ['engine', 'tires', 'brakes', 'gearbox'].reduce((acc, k) => acc + this.repairPrice(k), 0);
+    return Math.round(sum * 0.9);
+  }
+
+  repairDialog() {
     const c = this.profile.truck.condition;
-    const cost = Math.round((100 - c.engine) * 42 + (100 - c.tires) * 26 + (100 - c.brakes) * 18);
-    if (this.profile.money < cost) {
-      this.ui.toast('Недостаточно денег на ремонт', 'bad');
+    const names = { engine: 'Двигатель', tires: 'Шины', brakes: 'Тормоза', gearbox: 'Коробка передач' };
+    const rows = ['engine', 'tires', 'brakes', 'gearbox']
+      .map((k) => {
+        const health = k === 'gearbox' ? (c.gearbox ?? 100) : c[k] ?? 100;
+        const price = this.repairPrice(k);
+        const urgency = health < 30 ? 'style="color:var(--red)"' : health < 60 ? 'style="color:var(--amber)"' : '';
+        return `<div class="field-row"><label>${names[k]}<small ${urgency}>${Math.round(health)}% ресурса</small></label>
+          ${price > 0 ? `<button class="btn btn-sm" data-act="repair-part" data-arg="${k}">Починить · ${fmtMoney(price)}</button>` : '<span class="pill good">В норме</span>'}
+        </div>`;
+      })
+      .join('');
+    const total = this.repairAllPrice();
+    const coolant = Math.round(clamp((this.profile.truck.coolant ?? 1) * 100, 0, 100));
+    this.ui.openModal({
+      eyebrow: 'СЕРВИС',
+      title: 'Ремонт и обслуживание',
+      body: `<p>Можно чинить по одному узлу — так дешевле, если денег мало.</p>${rows}
+        <div class="field-row"><label>Антифриз<small>${coolant}% · при утечке мотор греется</small></label><b>${coolant < 95 ? 'Долить 300 €' : 'Норма'}</b></div>
+        <div class="field-row"><label>В кошельке</label><b>${fmtMoney(this.profile.money)}</b></div>
+        <div class="field-row"><label>Полное ТО<small>все узлы + антифриз, скидка 10%</small></label><b>${fmtMoney(total)}</b></div>`,
+      actions: [
+        { label: 'Отмена', act: 'close' },
+        { label: coolant < 95 ? 'Долить антифриз' : 'Проверить', act: 'coolant' },
+        { label: `Починить всё · ${fmtMoney(total)}`, primary: true, act: 'repair-confirm', arg: 'all' },
+      ],
+    });
+  }
+
+  /** Ремонт одного узла или всех сразу. */
+  repair(kind = 'all') {
+    if (!this.profile) return;
+    const c = this.profile.truck.condition;
+    const kinds = kind === 'all' ? ['engine', 'tires', 'brakes', 'gearbox'] : [kind];
+    const cost = kind === 'all' ? this.repairAllPrice() : this.repairPrice(kind);
+    if (cost > 0 && this.profile.money < cost) {
+      this.ui.toast(`Не хватает ${fmtMoney(cost - this.profile.money)}`, 'bad', 2600);
       return;
     }
     this.profile.money -= cost;
-    c.engine = 100;
-    c.tires = 100;
-    c.brakes = 100;
-    if (this.truck) {
-      this.truck.engine = 100;
-      this.truck.tires = 100;
-      this.truck.brakes = 100;
+    for (const k of kinds) {
+      if (k === 'gearbox') c.gearbox = 100;
+      else c[k] = 100;
+      if (this.truck) this.truck.repair(k);
+      // Поломку, которую чинят, снимаем сразу.
+      const part = this.breakdown ? this.breakdownInfo(this.breakdown.type).part : null;
+      if (this.breakdown && kinds.includes(part)) this.clearBreakdown();
     }
+    if (kind === 'all') {
+      this.profile.truck.coolant = 1;
+      if (this.truck) this.truck.repair('coolant');
+    }
+    this.profile.stats.repairs = (this.profile.stats.repairs || 0) + 1;
     this.audio.cash();
-    this.ui.toast('Ремонт выполнен', 'good');
+    this.ui.toast(cost > 0 ? `Ремонт выполнен · −${fmtMoney(cost)}` : 'Машина в порядке', 'good');
     this.ui.renderGarage();
     this.saveNow();
+    if (!$('modal-root').classList.contains('hidden')) this.repairDialog();
+  }
+
+  /** Долить антифриз: дешёвая операция, спасает от перегрева. */
+  topUpCoolant() {
+    const cost = 300;
+    if ((this.profile.truck.coolant ?? 1) > 0.95) {
+      this.ui.toast('Антифриз в норме', 'info');
+      return;
+    }
+    if (this.profile.money < cost) {
+      this.ui.toast('Не хватает 300 €', 'bad');
+      return;
+    }
+    this.profile.money -= cost;
+    this.profile.truck.coolant = 1;
+    if (this.truck) this.truck.repair('coolant');
+    this.audio.blip(520, 0.08, 'sine', 0.04);
+    this.ui.toast('Антифриз долит', 'good');
+    this.ui.renderGarage();
+    this.saveNow();
+    if (!$('modal-root').classList.contains('hidden')) this.repairDialog();
   }
 
   fullService() {
@@ -1936,6 +2273,7 @@ class Game {
     if (this.state !== 'driving') return;
     this.paused = !this.paused;
     if (this.paused) {
+      this.pausedByModal = true;
       this.ui.openModal({
         eyebrow: 'ПАУЗА',
         title: this.job ? `${this.job.fromName} → ${this.job.toName}` : 'Пауза',
@@ -1943,6 +2281,7 @@ class Game {
           <div class="field-row"><label>Игровое время</label><b>${fmtTime(this.clock.minutes)} · день ${this.clock.day}</b></div>
           <div class="field-row"><label>До срока</label><b>${this.job ? fmtDuration(Math.max(0, this.job.deadlineMin - this.jobElapsed())) : '—'}</b></div>
           <div class="field-row"><label>Заработано за рейс</label><b>${this.job ? fmtMoney(this.job.pay) : '—'}</b></div>
+          <div class="field-row"><label>Последнее сохранение<small>слот ${this.slot + 1} · F5 — быстрый сейв, F9 — загрузка</small></label><b>${this.fmtSavedAt(this.profile?.savedAt)}</b></div>
           <h4>Управление</h4>
           <p style="font-size:12px;line-height:1.8">W/S — газ и тормоз · A/D — руль · E — взаимодействие · C — круиз · M — режим КПП · V — камера · L — фары · H — сигнал · P — снимок · F — двигатель</p>`,
         actions: [
@@ -1950,6 +2289,9 @@ class Game {
           { label: 'Управление', act: 'pause-help' },
           { label: 'Настройки', act: 'pause-settings' },
           { label: 'Сохранить', act: 'save' },
+          { label: 'Быстрый сейв', act: 'quick-save' },
+          { label: 'Загрузить (F9)', act: 'quick-load' },
+          { label: 'Сохранения', act: 'pause-saves' },
           { label: 'Покинуть рейс', danger: true, act: 'quit-to-garage' },
         ],
       });
@@ -1972,6 +2314,13 @@ class Game {
         this.saveNow();
         this.ui.toast('Сохранено', 'good');
       });
+      foot.querySelector('[data-act="quick-save"]')?.addEventListener('click', () => this.quickSave());
+      foot.querySelector('[data-act="quick-load"]')?.addEventListener('click', () => this.quickLoad());
+      foot.querySelector('[data-act="pause-saves"]')?.addEventListener('click', () => {
+        this.syncProfileFromTruck();
+        this.saveNow(true);
+        this.savesManager();
+      });
       foot.querySelector('[data-act="quit-to-garage"]')?.addEventListener('click', () => {
         this.syncProfileFromTruck();
         this.saveNow();
@@ -1990,7 +2339,10 @@ class Game {
   /** Справка по управлению: доступна из паузы, кнопкой «?» и по F1. */
   showHelp() {
     const wasDriving = this.state === 'driving' && !this.paused;
-    if (wasDriving) this.paused = true;
+    if (wasDriving) {
+      this.paused = true;
+      this.pausedByModal = true;
+    }
     this.ui.openModal({
       eyebrow: 'УПРАВЛЕНИЕ',
       title: wasDriving ? 'Пауза · как играть' : 'Как играть',
@@ -2006,7 +2358,8 @@ class Game {
             <b>V</b> — камера · <b>B</b> — посмотреть назад<br>
             <b>мышь</b> — осмотреться в кабине<br>
             <b>L</b> — фары · <b>H</b> — сигнал · <b>, .</b> — поворотники<br>
-            <b>P</b> — снимок · <b>Esc</b> — пауза · <b>F1</b> — эта справка</p>
+            <b>P</b> — снимок · <b>Esc</b> — пауза · <b>F1</b> — эта справка<br>
+            <b>F5</b> — быстрое сохранение · <b>F9</b> — загрузка · <b>E</b> у обочины — ремонт после поломки</p>
           </div>
           <div>
             <h4>Телефон и планшет</h4>
@@ -2017,6 +2370,10 @@ class Game {
         <h4>Как быстрее всего поехать</h4>
         <p>1. Возьмите груз на «Рынке грузов». 2. Нажмите <b>E</b> у склада, чтобы загрузиться. 3. Держитесь правой полосы,
         на 80 км/ч включите круиз (<b>C</b>). 4. На АЗС <b>E</b> — заправка, в зоне отдыха <b>E</b> — сон.</p>
+        <h4>Поломки</h4>
+        <p>Узлы изнашиваются: шины лысеют от гравия и торможений, тормоза «плывут» на спусках, антифриз потихоньку уходит.
+        Если что-то отказало (прокол, перегрев, тормоза, КПП) — остановитесь и нажмите <b>E</b>: почините на месте
+        или вызовите эвакуатор. В гараже можно чинить по одному узлу — это дешевле, чем полное ТО.</p>
         <h4>Честная физика</h4>
         <p>Тягач трогается плавно (турбина раскручивается), тормозит с задержкой пневматики, в повороте уходит наружу —
         сбрасывайте скорость до знака. Прицеп срезает траекторию и складывается на заднем ходу. Наклон полотна
@@ -2088,6 +2445,12 @@ class Game {
       this.fuelPause = false;
       this.paused = false;
     }
+    // Окно ставило игру на паузу «на время диалога» — при закрытии снимаем её,
+    // иначе игра замирает без единого видимого окна.
+    if (this.pausedByModal) {
+      this.pausedByModal = false;
+      this.paused = false;
+    }
     // Настройки могли поменять — сохраняем сразу, чтобы выбор не потерялся при выходе.
     if (this.settingsDirty) {
       this.settingsDirty = false;
@@ -2117,13 +2480,16 @@ class Game {
       engine: this.truck.engine,
       tires: this.truck.tires,
       brakes: this.truck.brakes,
+      gearbox: this.truck.gearbox,
     };
+    this.profile.truck.coolant = this.truck.coolant;
     this.profile.clock = { day: this.clock.day, minutes: this.clock.minutes };
     if (this.job && this.job.id && this.job.free !== true && this.route) {
       this.job.distance = Math.round(this.route.km * 10) / 10;
       this.job.playerS = this.truck.s;
       this.job.phase = this.phase;
       this.job.cargoDamage = this.cargoDamage || 0;
+      this.job.breakdown = this.breakdown ? { ...this.breakdown } : null;
       this.profile.activeJob = { ...this.job };
     }
   }
@@ -2133,6 +2499,7 @@ class Game {
     this.profile.clock = { day: this.clock.day, minutes: this.clock.minutes };
     this.profile.level = levelForXp(this.profile.xp || 0).level;
     this.profile.lastPlayed = Date.now();
+    this.profile.savedAt = Date.now();
     this.saves.slots[this.slot] = JSON.parse(JSON.stringify(this.profile));
     this.saves.lastSlot = this.slot;
     const ok = saveGame(this.saves.slots, this.saves.lastSlot);

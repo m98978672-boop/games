@@ -601,27 +601,27 @@ export class TruckView {
     canvas.width = 256;
     canvas.height = 256;
     const c = canvas.getContext('2d');
-    c.fillStyle = '#24282c';
+    c.fillStyle = '#2f343a';
     c.fillRect(0, 0, 256, 256);
-    // зерно
-    for (let i = 0; i < 5200; i++) {
+    // Неровное зерно: тёмные и светлые крапины в несколько проходов.
+    for (let i = 0; i < 6400; i++) {
       const x = Math.random() * 256;
       const y = Math.random() * 256;
-      const v = 28 + Math.random() * 26;
-      c.fillStyle = `rgba(${v},${v + 2},${v + 4},${0.25 + Math.random() * 0.35})`;
-      c.fillRect(x, y, 1.4, 1.4);
+      const v = 34 + Math.random() * 40;
+      c.fillStyle = `rgba(${v},${v + 3},${v + 6},${0.22 + Math.random() * 0.4})`;
+      c.fillRect(x, y, 1.3 + Math.random(), 1.3 + Math.random());
     }
-    // строчка по кромке полотна
-    c.strokeStyle = '#b9c3c8';
+    // Шов по кромке полотна.
+    c.strokeStyle = 'rgba(206, 214, 219, 0.9)';
     c.lineWidth = 2;
-    c.setLineDash([6, 5]);
+    c.setLineDash([7, 5]);
     c.beginPath();
-    c.moveTo(0, 18);
-    c.lineTo(256, 18);
+    c.moveTo(0, 20);
+    c.lineTo(256, 20);
     c.stroke();
     c.beginPath();
-    c.moveTo(0, 238);
-    c.lineTo(256, 238);
+    c.moveTo(0, 236);
+    c.lineTo(256, 236);
     c.stroke();
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = THREE.RepeatWrapping;
@@ -630,6 +630,74 @@ export class TruckView {
     tex.colorSpace = THREE.SRGBColorSpace;
     this._leatherTex = tex;
     return tex;
+  }
+
+  /** Рельеф кожи для bumpMap: то же зерно в градациях серого (без цвета). */
+  leatherBumpTexture() {
+    if (this._leatherBump) return this._leatherBump;
+    this._leatherBump = canvasTexture(
+      'wheel-leather-bump',
+      256,
+      256,
+      (c, w, h) => {
+        c.fillStyle = '#808080';
+        c.fillRect(0, 0, w, h);
+        for (let i = 0; i < 9000; i++) {
+          const v = 96 + Math.floor(Math.random() * 64);
+          c.fillStyle = `rgb(${v},${v},${v})`;
+          c.fillRect(Math.random() * w, Math.random() * h, 1.6, 1.6);
+        }
+        // Мелкие поры и «морщины».
+        c.strokeStyle = 'rgba(64,64,64,0.5)';
+        c.lineWidth = 1;
+        for (let i = 0; i < 120; i++) {
+          const x = Math.random() * w;
+          const y = Math.random() * h;
+          c.beginPath();
+          c.moveTo(x, y);
+          c.lineTo(x + 3 + Math.random() * 6, y + (Math.random() - 0.5) * 4);
+          c.stroke();
+        }
+      },
+      { srgb: false, repeat: [3, 1] }
+    );
+    return this._leatherBump;
+  }
+
+  /** Шильд на ступице: тёмный диск, хромовое кольцо, буква A и надпись AURIGA. */
+  badgeTexture() {
+    return canvasTexture('wheel-badge', 256, 256, (c, w, h) => {
+      const bg = c.createRadialGradient(w * 0.38, h * 0.32, 10, w * 0.5, h * 0.52, w * 0.62);
+      bg.addColorStop(0, '#4b565e');
+      bg.addColorStop(0.55, '#232b31');
+      bg.addColorStop(1, '#0d1215');
+      c.fillStyle = bg;
+      c.beginPath();
+      c.arc(w / 2, h / 2, w * 0.5, 0, Math.PI * 2);
+      c.fill();
+      c.strokeStyle = '#cfd8dd';
+      c.lineWidth = 9;
+      c.beginPath();
+      c.arc(w / 2, h / 2, w * 0.44, 0, Math.PI * 2);
+      c.stroke();
+      // Буква «A» как эмблема.
+      c.fillStyle = '#e9eff3';
+      c.beginPath();
+      c.moveTo(w / 2, h * 0.2);
+      c.lineTo(w * 0.63, h * 0.56);
+      c.lineTo(w * 0.55, h * 0.56);
+      c.lineTo(w / 2, h * 0.4);
+      c.lineTo(w * 0.45, h * 0.56);
+      c.lineTo(w * 0.37, h * 0.56);
+      c.closePath();
+      c.fill();
+      // Поперечина.
+      c.fillRect(w * 0.44, h * 0.48, w * 0.12, h * 0.03);
+      c.font = 'bold 26px system-ui, Arial';
+      c.textAlign = 'center';
+      c.fillStyle = '#cdd7dc';
+      c.fillText('AURIGA', w / 2, h * 0.75);
+    });
   }
 
   // ------------------------------------------------------------------ салон
@@ -839,109 +907,194 @@ export class TruckView {
     for (let i = 0; i < 4; i++) box(g, 0.055, 0.022, 0.03, trimMat, cx - 0.11 + i * 0.073, 1.72, 2.68);
 
     // ---------------------------------------------------------------- руль
-    // Настоящий штурвал тягача: кожаный обод с прострочкой, три спицы,
-    // кнопочные блоки на горизонтальных спицах, хром-кольцо, ступица с шильдом
-    // и два подрулевых переключателя (поворотники и дворники).
+    // Штурвал тягача крупным планом: кожаный обод с двойной прострочкой,
+    // хром-кант по кромкам, наплыв снизу, утолщения под большие пальцы,
+    // спицы с кнопочными блоками и колесом прокрутки, ступица с шильдом.
+    // Плоскость обода — XY, лицо штурвала смотрит на водителя (в −z), поэтому
+    // все детали крепятся с отрицательной стороны: иначе игрок видел изнанку.
     this.wheelPivot = new THREE.Group();
     this.wheelPivot.position.set(EYE.x, 2.05, 1.96);
-    this.wheelPivot.rotation.x = -0.34;
-    const leather = M(this.leatherTexture(), { color: 0x2a2e33, roughness: 0.78, metalness: 0.04 });
-    const stitchMat = M(null, { color: 0xc9d2d6, roughness: 0.75 });
-    const chrome = M(null, { color: 0xb9c3c9, roughness: 0.22, metalness: 0.9 });
-    const wheelBlack = M(null, { color: 0x171b1f, roughness: 0.5, metalness: 0.25 });
+    this.wheelPivot.rotation.x = -0.42;
+    const FACE = -1;
+    const leather = M(this.leatherTexture(), { color: 0xdfe4e8, roughness: 0.66, metalness: 0.04 });
+    leather.bumpMap = this.leatherBumpTexture();
+    leather.bumpScale = 0.9;
+    const stitchMat = M(null, { color: 0xd6d0bd, roughness: 0.6 });
+    const chrome = M(null, { color: 0xc7d0d6, roughness: 0.16, metalness: 0.95 });
+    const matteChrome = M(null, { color: 0x9aa4ab, roughness: 0.36, metalness: 0.88 });
+    const wheelBlack = M(null, { color: 0x15191d, roughness: 0.5, metalness: 0.22 });
+    const buttonMat = M(null, { color: 0x2b3238, roughness: 0.42, metalness: 0.32 });
+    const RIM_R = 0.268;
 
-    // Обод: чуть сплющенный тор (у реальных рулей сечение не круглое).
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.0285, 18, 80), leather);
-    rim.rotation.x = Math.PI / 2;
-    rim.scale.z = 0.86;
+    // Обод: сечение сплющено (у настоящих рулей оно не круглое).
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(RIM_R, 0.030, 14, 88), leather);
+    rim.scale.z = 0.92;
     this.wheelPivot.add(rim);
-    // Нижняя часть обода толще — за неё держат руку.
-    const rimThick = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.032, 14, 40, Math.PI * 0.5), leather);
-    rimThick.rotation.x = Math.PI / 2;
-    rimThick.rotation.z = Math.PI * 0.75;
+    // Наплыв снизу: за него держат руку при маневре.
+    const rimThick = new THREE.Mesh(new THREE.TorusGeometry(RIM_R, 0.034, 12, 36, Math.PI * 0.55), leather);
+    rimThick.rotation.z = 3.85;
     this.wheelPivot.add(rimThick);
-
-    // Хром-кольцо и строчка по внутренней кромке: читаются как «дорогой» салон.
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.238, 0.0045, 8, 72), chrome);
-    ring.rotation.x = Math.PI / 2;
-    this.wheelPivot.add(ring);
-    for (let i = 0; i < 44; i++) {
-      const a = (i / 44) * Math.PI * 2;
-      const dash = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.004, 0.005), stitchMat);
-      dash.position.set(Math.cos(a) * 0.246, Math.sin(a) * 0.246, 0.019);
-      dash.rotation.z = a;
-      this.wheelPivot.add(dash);
-    }
-
-    // Спицы: две горизонтальные с кнопками и одна нижняя.
+    // Утолщения под большие пальцы на «10 и 2 часа» — продолговатые, вдоль обода.
     for (const side of [-1, 1]) {
-      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.032, 0.036), wheelBlack);
-      spoke.position.set(side * 0.135, 0, 0.004);
-      spoke.rotation.z = side * 0.06;
-      this.wheelPivot.add(spoke);
-      // кнопочный блок
-      const pod = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.056, 0.03), M(null, { color: 0x23282d, roughness: 0.45, metalness: 0.3 }));
-      pod.position.set(side * 0.152, 0.004, 0.026);
-      pod.rotation.z = side * 0.06;
-      this.wheelPivot.add(pod);
+      const grip = new THREE.Mesh(new THREE.SphereGeometry(0.036, 12, 10), leather);
+      grip.position.set(side * 0.152, 0.221, 0.002);
+      grip.rotation.z = Math.atan2(0.221, side * 0.152) - Math.PI / 2;
+      grip.scale.set(1.5, 0.82, 0.86);
+      this.wheelPivot.add(grip);
+    }
+    // Хром-кант по внутренней и внешней кромке обода.
+    for (const [r, tube] of [[0.2395, 0.0038], [0.2965, 0.0026]]) {
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(r, tube, 8, 84), chrome);
+      ring.position.z = FACE * 0.004;
+      this.wheelPivot.add(ring);
+    }
+    // Двойная прострочка: два ряда стежков одним инстанс-мешем.
+    {
+      const geo = new THREE.BoxGeometry(0.011, 0.0035, 0.0055);
+      const count = 112;
+      const stitches = new THREE.InstancedMesh(geo, stitchMat, count);
+      const d = new THREE.Object3D();
       for (let row = 0; row < 2; row++) {
-        for (let col = 0; col < 3; col++) {
-          const btn = new THREE.Mesh(
-            new THREE.BoxGeometry(0.022, 0.014, 0.008),
-            M(null, { color: row ? 0x3b444b : 0x59646c, roughness: 0.5, metalness: 0.35 })
-          );
-          btn.position.set(side * 0.152 - 0.028 + col * 0.028, 0.016 - row * 0.024, 0.043);
-          btn.rotation.z = side * 0.06;
-          this.wheelPivot.add(btn);
+        const radius = row ? 0.2885 : 0.2475;
+        for (let i = 0; i < 56; i++) {
+          const a = (i / 56) * Math.PI * 2;
+          d.position.set(Math.cos(a) * radius, Math.sin(a) * radius, FACE * (row ? 0.016 : 0.02));
+          d.rotation.set(0, 0, a);
+          d.updateMatrix();
+          stitches.setMatrixAt(row * 56 + i, d.matrix);
         }
       }
+      stitches.instanceMatrix.needsUpdate = true;
+      this.wheelPivot.add(stitches);
     }
-    const bottomSpoke = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.03), wheelBlack);
-    bottomSpoke.position.set(0, -0.13, 0.002);
+    // Метка «прямо» сверху — как на настоящих штурвалах.
+    const topMark = new THREE.Mesh(new THREE.BoxGeometry(0.026, 0.0075, 0.012), M(null, { color: 0xd9cfa9, roughness: 0.5 }));
+    topMark.position.set(0, RIM_R + 0.003, FACE * 0.02);
+    this.wheelPivot.add(topMark);
+
+    // Спицы: сужаются к ободу, сверху хром-накладка.
+    for (const side of [-1, 1]) {
+      const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.031, 0.19, 8), wheelBlack);
+      spoke.rotation.z = Math.PI / 2;
+      spoke.position.set(side * 0.135, -0.002, FACE * 0.004);
+      this.wheelPivot.add(spoke);
+      const spokeTrim = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.005, 0.012), matteChrome);
+      spokeTrim.position.set(side * 0.14, 0.019, FACE * 0.014);
+      this.wheelPivot.add(spokeTrim);
+      // Кнопочный блок: скруглённая подушка, шесть клавиш и колесо прокрутки.
+      const pod = new THREE.Mesh(new THREE.CapsuleGeometry(0.023, 0.058, 4, 10), buttonMat);
+      pod.rotation.z = Math.PI / 2;
+      pod.scale.set(1, 1, 0.6);
+      pod.position.set(side * 0.148, 0.002, FACE * 0.028);
+      this.wheelPivot.add(pod);
+      const scroll = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.011, 0.008, 12), matteChrome);
+      scroll.rotation.x = Math.PI / 2;
+      scroll.position.set(side * 0.148, 0.027, FACE * 0.044);
+      this.wheelPivot.add(scroll);
+    }
+    // Клавиши: один инстанс-меш, цвет у каждой свой (тёмные и подсвеченные).
+    {
+      const geo = new THREE.BoxGeometry(0.019, 0.011, 0.006);
+      const btnBase = M(null, { color: 0xffffff, roughness: 0.45, metalness: 0.3 });
+      const btns = new THREE.InstancedMesh(geo, btnBase, 12);
+      const d = new THREE.Object3D();
+      const col = new THREE.Color();
+      let n = 0;
+      for (const side of [-1, 1]) {
+        for (let row = 0; row < 2; row++) {
+          for (let c2 = 0; c2 < 3; c2++) {
+            d.position.set(side * 0.148 + (c2 - 1) * 0.021, 0.013 - row * 0.021, FACE * 0.045);
+            d.updateMatrix();
+            btns.setMatrixAt(n, d.matrix);
+            const lit = row === 0 && c2 === 0;
+            col.setHex(lit ? 0x86d9c0 : row ? 0x3a424a : 0x525d66);
+            btns.setColorAt(n, col);
+            n++;
+          }
+        }
+      }
+      btns.instanceMatrix.needsUpdate = true;
+      if (btns.instanceColor) btns.instanceColor.needsUpdate = true;
+      this.wheelPivot.add(btns);
+    }
+    // Нижняя спица.
+    const bottomSpoke = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.026, 0.19, 6), wheelBlack);
+    bottomSpoke.position.set(0, -0.14, FACE * 0.003);
     this.wheelPivot.add(bottomSpoke);
 
-    // Ступица и сигнал: клаксон — большая накладка по центру.
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, 0.05, 24), wheelBlack);
+    // Ступица: корпус, хром-кольцо, сигнал, шильд и три «винта».
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.082, 0.094, 0.052, 28), wheelBlack);
     hub.rotation.x = Math.PI / 2;
+    hub.position.z = FACE * 0.012;
     this.wheelPivot.add(hub);
-    const hornPad = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.066, 0.028, 24), M(null, { color: 0x20262b, roughness: 0.6 }));
+    const hubRing = new THREE.Mesh(new THREE.TorusGeometry(0.084, 0.005, 8, 40), chrome);
+    hubRing.position.z = FACE * 0.038;
+    this.wheelPivot.add(hubRing);
+    const hornPad = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.068, 0.03, 28), M(null, { color: 0x1f252a, roughness: 0.62 }));
     hornPad.rotation.x = Math.PI / 2;
-    hornPad.position.z = 0.032;
+    hornPad.position.z = FACE * 0.042;
     this.wheelPivot.add(hornPad);
-    const badge = new THREE.Mesh(new THREE.CircleGeometry(0.026, 20), chrome);
-    badge.position.z = 0.048;
+    // Шильд смотрит на водителя: разворачиваем на 180°, иначе буквы зеркальны.
+    const badge = new THREE.Mesh(new THREE.CircleGeometry(0.032, 28), M(this.badgeTexture(), { roughness: 0.3, metalness: 0.6 }));
+    badge.position.z = FACE * 0.058;
+    badge.rotation.y = Math.PI;
     this.wheelPivot.add(badge);
-    const badgeRing = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.003, 6, 24), M(null, { color: 0x8f9aa1, roughness: 0.4, metalness: 0.7 }));
-    badgeRing.position.z = 0.048;
-    this.wheelPivot.add(badgeRing);
+    for (let i = 0; i < 3; i++) {
+      const a = i * ((Math.PI * 2) / 3) + 0.4;
+      const screw = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.004, 8), matteChrome);
+      screw.rotation.x = Math.PI / 2;
+      screw.position.set(Math.cos(a) * 0.073, Math.sin(a) * 0.073, FACE * 0.038);
+      this.wheelPivot.add(screw);
+    }
     g.add(this.wheelPivot);
 
-    // Колонка руля и облицовка.
-    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.66, 16), wheelBlack);
+    // Колонка руля: конус, хром-кольцо у штурвала и облицовка.
+    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.68, 18), wheelBlack);
     column.position.set(EYE.x, 1.9, 2.26);
     column.rotation.x = Math.PI / 2 - 0.42;
     this.wheelColumn = column;
     g.add(column);
-    const columnShroud = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.11, 0.26), trimMat);
-    columnShroud.position.set(EYE.x, 1.95, 2.3);
-    columnShroud.rotation.x = -0.42;
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.008, 8, 28), matteChrome);
+    collar.position.set(EYE.x, 2.0, 2.06);
+    collar.rotation.x = -0.34;
+    g.add(collar);
+    const columnShroud = new THREE.Mesh(new THREE.CylinderGeometry(0.105, 0.128, 0.26, 20), trimMat);
+    columnShroud.rotation.x = Math.PI / 2 - 0.42;
+    columnShroud.scale.set(1, 1, 0.82);
+    columnShroud.position.set(EYE.x, 1.94, 2.3);
     g.add(columnShroud);
 
     // Подрулевые переключатели: поворотники (слева) и дворники (справа).
     this.stalks = [];
     for (const side of [-1, 1]) {
       const stalk = new THREE.Group();
-      stalk.position.set(EYE.x + side * 0.115, 1.97, 2.24);
-      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.16, 8), wheelBlack);
+      stalk.position.set(EYE.x + side * 0.115, 1.97, 2.22);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.013, 0.17, 8), wheelBlack);
       arm.rotation.z = Math.PI / 2;
       arm.rotation.y = side * 0.15;
       arm.position.x = side * 0.06;
       stalk.add(arm);
-      const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.014, 0.03, 10), M(null, { color: 0x2b3136, roughness: 0.5 }));
+      const stalkCollar = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.028, 10), matteChrome);
+      stalkCollar.rotation.z = Math.PI / 2;
+      stalkCollar.position.x = side * 0.02;
+      stalk.add(stalkCollar);
+      const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.013, 0.034, 12), M(null, { color: 0x2b3136, roughness: 0.45 }));
       tip.rotation.z = Math.PI / 2;
-      tip.position.x = side * 0.135;
+      tip.position.x = side * 0.148;
       stalk.add(tip);
-      stalk.rotation.x = 0;
+      // Цветная метка на торце: поворотник — янтарный, дворники — синий.
+      const mark = new THREE.Mesh(
+        new THREE.CircleGeometry(0.012, 10),
+        M(null, {
+          color: side < 0 ? 0xe0b45a : 0x7fa6d8,
+          roughness: 0.5,
+          emissive: side < 0 ? 0x3a2a0a : 0x0a1a2a,
+          emissiveIntensity: 1,
+        })
+      );
+      mark.rotation.y = (side * Math.PI) / 2;
+      mark.position.x = side * 0.166;
+      stalk.add(mark);
       g.add(stalk);
       this.stalks.push(stalk);
     }

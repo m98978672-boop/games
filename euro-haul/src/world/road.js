@@ -12,6 +12,18 @@ const STEP = 12;
 const AHEAD = 2200;
 const BEHIND = 320;
 
+// Поперечный профиль трассы (метры от оси, «+» — встречное направление):
+//   наша полоса −3.7…3.7, обочина −5.2…−3.7, разделитель 3.7…5.3,
+//   встречная полоса 5.3…12.7, её обочина 12.7…14.2.
+// Между 5.2 и 12.7 ничего не ставим: раньше там стояли кусты, трава и даже знаки —
+// игрок видел растительность посреди встречных полос.
+export const EDGE_LEFT = -6.0; // кромка нашей обочины
+export const EDGE_RIGHT = 14.8; // кромка обочины встречного направления
+/** Смещение вбок для придорожного объекта: side>0 — сторона встречного потока. */
+export function roadsideLat(side, spread) {
+  return side > 0 ? EDGE_RIGHT + spread : EDGE_LEFT - spread;
+}
+
 export function terrainOffset(s, lat) {
   const d = Math.abs(lat);
   const k = smoothstep((d - 5.5) / 34);
@@ -530,7 +542,8 @@ export class RoadWorld {
       const side = hash2(grove, 7) > 0.5 ? 1 : -1;
       const ring = 11 + hash2(grove, 11) * 30;
       const dist = ring + inGrove * 3.4 + hash2(idx, 13) * 14 + (hash2(idx, 15) > 0.82 ? 60 : 0);
-      const lat = -side * dist;
+      // dist ≥ 11 м: на встречной стороне дерево начинается сразу за обочиной.
+      const lat = roadsideLat(-side, dist);
       const p = route.pointAt(ss);
       const y = p.y + terrainOffset(ss, lat) + 1.5;
       const scale = 0.8 + hash2(idx, 16) * 1.15;
@@ -639,7 +652,8 @@ export class RoadWorld {
         const ss = s0 + i * stepT + hash2(idx, 131) * stepT * 0.8;
         if (ss < s0 || ss > s1) continue;
         const side = hash2(idx, 137) > 0.5 ? 1 : -1;
-        const lat = -side * (5.2 + hash2(idx, 139) * 6.4 + (hash2(idx, 141) > 0.86 ? 5.5 : 0));
+        const spread = 0.2 + hash2(idx, 139) * 6.4 + (hash2(idx, 141) > 0.86 ? 5.5 : 0);
+        const lat = roadsideLat(-side, spread);
         const p = route.pointAt(ss);
         const y = p.y + terrainOffset(ss, lat) + 0.02;
         const sc = 0.7 + hash2(idx, 149) * 0.9;
@@ -667,7 +681,7 @@ export class RoadWorld {
       const ss = idx * 5 + hash2(idx, 67) * 4;
       if (ss < s0 - 20 || ss > s1 + 20) continue;
       const side = hash2(idx, 71) > 0.45 ? 1 : -1;
-      const lat = -side * (7.4 + hash2(idx, 73) * 6);
+      const lat = roadsideLat(-side, 1.6 + hash2(idx, 73) * 6);
       const p = route.pointAt(ss);
       const scale = 0.55 + hash2(idx, 79) * 0.9;
       dummy.position.set(p.x + Math.cos(p.hdg) * lat, p.y + terrainOffset(ss, lat) + 0.35 * scale, p.z - Math.sin(p.hdg) * lat);
@@ -843,7 +857,7 @@ export class RoadWorld {
       if (c && prevCountry && c !== prevCountry && sm.s > s0) {
         const meta = COUNTRIES[c];
         const tex = signTexture('ГРАНИЦА', (meta?.flag || '') + ' ' + (meta?.name || c), '#1c3f6e');
-        addSign(sm.s, 8.6, tex, 4.6, 2.3, 4.4);
+        addSign(sm.s, EDGE_LEFT - 1.6, tex, 4.6, 2.3, 4.4);
       }
       prevCountry = c || prevCountry;
     }
@@ -867,16 +881,20 @@ export class RoadWorld {
       if (this.chevronsUntil && p.s < this.chevronsUntil) continue;
       this.chevronsUntil = p.s + 190;
       const tex = chevronTexture(p.curv > 0 ? 1 : -1);
-      const outer = -Math.sign(p.curv) * 9.7;
-      for (let j = 0; j < 3; j++) addSign(p.s + j * 9, outer, tex, 3.4, 1.7, 1.9);
+      const texOpposite = chevronTexture(p.curv > 0 ? -1 : 1);
+      for (let j = 0; j < 3; j++) {
+        // Наш поток видит щиты слева на обочине, встречный — на своей стороне.
+        addSign(p.s + j * 9, EDGE_LEFT - 0.9, tex, 3.4, 1.7, 1.9);
+        addSign(p.s + j * 9, EDGE_RIGHT + 0.9, texOpposite, 3.4, 1.7, 1.9);
+      }
     }
 
     if (!this.cameraSign) this.cameraSign = cameraSignTexture();
     for (const cp of checkpoints) {
       if (cp.s < s0 || cp.s > s1) continue;
       const tex = this.signTextures().speed.get(cp.limit) || this.speedTexture(cp.limit);
-      addSign(cp.s, 7.0, tex, 1.7, 1.7, 3.4);
-      if (cp.limit < 80) addSign(cp.s - 220, 7.0, this.cameraSign, 2.0, 2.0, 3.6);
+      addSign(cp.s, EDGE_LEFT - 1.1, tex, 1.7, 1.7, 3.4);
+      if (cp.limit < 80) addSign(cp.s - 220, EDGE_LEFT - 1.1, this.cameraSign, 2.0, 2.0, 3.6);
     }
   }
 
