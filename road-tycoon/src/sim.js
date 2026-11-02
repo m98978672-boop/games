@@ -86,6 +86,7 @@
 
   Sim.invalidatePaths = function (s) {
     s.graphVersion++;
+    s._nbCache = null;
     pathCache.clear();
     neighborsCache = null;
     neighborsVer = -1;
@@ -664,6 +665,12 @@
     return ids[ids.length - 1];
   }
 
+  // Граф соседства пересобирается только при изменении дорог
+  function neighborMap(s) {
+    if (!s._nbCache) s._nbCache = Sim.neighbors(s);
+    return s._nbCache;
+  }
+
   function spawnVehicle(s) {
     if (s.vehicles.length >= C.maxVehicles) return;
     const nb = Sim.neighbors(s);
@@ -895,9 +902,19 @@
       sat *= Sim.effectMul(s, 'comfort');
       if (s.crisis) sat *= 0.78;   // кризис бьёт по настроению горожан
       city.sat = U.clamp(sat, 0.6, 1.8);
-      // города понемногу растут, если о них заботятся
-      if (city.sat > 1.05) {
-        city.pop = Math.min(150000, city.pop * 1.0008);
+      // Transport Fever: город растёт только если он реально соединён дорогой с другими
+      const nb = neighborMap(s);
+      const links = nb.get(s.cities.indexOf(city)) || [];
+      city.linked = links.length > 0;
+      city.links = links.length;
+      if (!city.linked) {
+        // без сообщения город хиреет и теряет жителей
+        city.sat = U.clamp(city.sat * 0.94, 0.6, 1.8);
+        city.pop = Math.max(4000, city.pop * (1 - 0.0006 * (1 + (city.links ? 0 : 1))));
+      } else if (city.sat > 1.05) {
+        // чем больше связей, тем быстрее рост
+        const boost = 1 + Math.min(0.8, links.length * 0.12);
+        city.pop = Math.min(150000, city.pop * (1 + 0.0008 * boost));
       }
     }
   }
