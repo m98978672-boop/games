@@ -291,6 +291,26 @@
     return baseHeight(x, z) * flatMask(x, z, state);
   }
 
+  const TERRAIN_N = 260;   // столько же сегментов, сколько у сетки рельефа
+
+  // Высота РОВНО той поверхности, которую видно на экране: билинейно по вершинам
+  // и с учётом реальной диагонали треугольников (a,c,b)+(b,c,d).
+  function meshHeight(x, z, state) {
+    const N = TERRAIN_N;
+    const gx = U.clamp((x / C.worldW) * N, 0, N - 1e-6);
+    const gz = U.clamp((z / C.worldH) * N, 0, N - 1e-6);
+    const i = Math.floor(gx), j = Math.floor(gz);
+    const u = gx - i, v = gz - j;
+    const x0 = (i / N) * C.worldW, x1 = ((i + 1) / N) * C.worldW;
+    const z0 = (j / N) * C.worldH, z1 = ((j + 1) / N) * C.worldH;
+    const ha = terrainHeight(x0, z0, state);
+    const hb = terrainHeight(x1, z0, state);
+    const hc = terrainHeight(x0, z1, state);
+    const hd = terrainHeight(x1, z1, state);
+    if (u + v <= 1) return ha + (hb - ha) * u + (hc - ha) * v;
+    return hd + (hc - hd) * (1 - u) + (hb - hd) * (1 - v);
+  }
+
   /* ------------------------------------------------------------- сцена */
 
   R.init = function (cv, w) {
@@ -389,7 +409,7 @@
 
   function buildTerrainMesh(state) {
     if (terrainMesh) { scene.remove(terrainMesh); terrainMesh.geometry.dispose(); terrainMesh = null; }
-    const N = 260;   // мельче сетка — меньше погрешность между треугольниками и полотном
+    const N = TERRAIN_N;
     const pos = [], uv = [], idx = [], col = [];
     const cMeadow = new THREE.Color('#69a052'), cForest = new THREE.Color('#3f7040');
     const cField = new THREE.Color('#a8b455'), cHill = new THREE.Color('#8a9a55');
@@ -424,6 +444,7 @@
     g.computeVertexNormals();
     const mat = new THREE.MeshStandardMaterial({
       map: grassTexture(), vertexColors: true, roughness: 1, metalness: 0,
+      polygonOffset: true, polygonOffsetFactor: 3, polygonOffsetUnits: 6,
     });
     terrainMesh = new THREE.Mesh(g, mat);
     terrainMesh.renderOrder = -1;
@@ -805,7 +826,7 @@
       const lake = Wd.lakeFactor(world, p.x, p.y) > 0.02;
       const bridge = river < 3.2 || lake;
       // полотно идёт ПО РЕЛЬЕФУ: иначе холм протыкает дорогу и она «уходит в почву»
-      const ground = terrainHeight(p.x, p.y, state);
+      const ground = meshHeight(p.x, p.y, state);
       raw.push({ x: p.x, z: p.y, t, bridge, ground });
     }
     // сглаживаем профиль, чтобы лента не дёргалась на каждой неровности
@@ -818,10 +839,10 @@
       return sum / Math.max(1, k);
     });
     return raw.map((p, i) => {
-      const deck = smooth[i] + 0.18;
-      const y = p.bridge ? Math.max(BRIDGE_Y, deck) : Math.max(0.06, deck);
-      // никогда не ниже земли под собой — иначе снова окажемся под почвой
-      return { x: p.x, z: p.z, t: p.t, bridge: p.bridge, y: Math.max(y, p.ground + 0.16) };
+      const deck = smooth[i] + 0.09;
+      const y = p.bridge ? Math.max(BRIDGE_Y, deck) : Math.max(0.05, deck);
+      // жёсткая страховка: полотно всегда выше той поверхности, что нарисована под ним
+      return { x: p.x, z: p.z, t: p.t, bridge: p.bridge, y: Math.max(y, p.ground + 0.07) };
     });
   }
 
@@ -1439,6 +1460,17 @@
       totalPositions += arr.length / 3;
       for (let i = 0; i < arr.length; i++) if (isNaN(arr[i])) nanPositions++;
     });
+    // худшее «полотно ниже земли» по всем дорогам
+    let worst = 0, worstRoad = null;
+    for (const r of state.roads) {
+      if (!(r.open || r.building) || r.builtKm <= 0) continue;
+      for (const p of roadSamples(r, state)) {
+        const d = p.ground - p.y;
+        if (d > worst) { worst = d; worstRoad = r.id; }
+      }
+    }
+    out.worstSink = +worst.toFixed(3);
+    out.worstRoad = worstRoad;
     out.nanPositions = nanPositions;
     out.totalPositions = totalPositions;
     out.meshInfo = [];
