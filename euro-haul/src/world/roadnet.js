@@ -314,6 +314,34 @@ export function buildRouteGeometry(cityIds, seed = 1) {
     }
   }
 
+  // Вираж (superelevation): полотно наклоняется в поворот, как на настоящей
+  // магистрали. Наклон считаем из равновесия на расчётной скорости 90 км/ч,
+  // ограничиваем 5.5 % и сглаживаем, чтобы на входе в поворот не было ступеньки.
+  // Знак: curv > 0 — поворот влево, значит правая (внешняя) кромка выше.
+  const DESIGN_SPEED = 25; // м/с
+  for (const p of samples) {
+    const demand = Math.abs(p.curv) * DESIGN_SPEED * DESIGN_SPEED;
+    const slope = Math.min(0.055, demand / 9.81);
+    p.bank = -Math.sign(p.curv) * slope;
+  }
+  for (let it = 0; it < 14; it++) {
+    const copy = samples.map((p) => p.bank);
+    for (let i = 1; i < samples.length - 1; i++) {
+      samples[i].bank = (copy[i - 1] + copy[i] * 2 + copy[i + 1]) / 4;
+    }
+  }
+
+  // Шероховатость покрытия: асфальт, местами бетонные плиты со стыками и
+  // заплатки. Нужна подвеске (тряска) и звуку (стук колёс, гул).
+  for (const p of samples) {
+    const slow = Math.sin(p.s * 0.00037) * 0.5 + 0.5;
+    const fast = Math.sin(p.s * 0.0011 + 2.1) * 0.5 + 0.5;
+    let rough = 0.06 + slow * 0.1 + fast * 0.12;
+    const phase = (p.s % 9000) / 9000;
+    if (phase > 0.62 && phase < 0.74) rough = 0.5 + fast * 0.2; // бетонка
+    p.rough = rough;
+  }
+
   // Позиции городов на маршруте.
   for (const id of cityIds) {
     const city = CITY_POS.get(id);
@@ -387,6 +415,8 @@ export function buildRouteGeometry(cityIds, seed = 1) {
       y: lerp(a.y, b.y, t),
       hdg: a.hdg + dh * t,
       curv: lerp(a.curv, b.curv, t),
+      bank: lerp(a.bank || 0, b.bank || 0, t),
+      rough: lerp(a.rough || 0.12, b.rough || 0.12, t),
       country: a.country,
     };
   };
@@ -413,7 +443,16 @@ export function buildRouteGeometry(cityIds, seed = 1) {
       const p = pointAt(dist);
       const nx = Math.cos(p.hdg);
       const nz = -Math.sin(p.hdg);
-      return { x: p.x + nx * lat, y: p.y, z: p.z + nz * lat, hdg: p.hdg, curv: p.curv };
+      // Высота с учётом виража: на кромке полотна разница до 0.1 м, но колеса
+      // должны стоять на асфальте, а не висеть над ним.
+      return {
+        x: p.x + nx * lat,
+        y: p.y + lat * Math.tan(p.bank || 0),
+        z: p.z + nz * lat,
+        hdg: p.hdg,
+        curv: p.curv,
+        bank: p.bank || 0,
+      };
     },
   };
   return route;
@@ -425,11 +464,21 @@ export function buildRoute(fromId, toId, seed = 1) {
   return buildRouteGeometry(path, seed);
 }
 
+/**
+ * Ограничение скорости: город 50, работы 30, на трассе — по кривизне.
+ * Кривая с малым радиусом физически не проходится на 80, поэтому знак и HUD
+ * показывают ту скорость, с которой дорога реально «держит».
+ */
 export function speedLimitAt(route, s) {
   const zone = route.zones.find((z) => s > z.from && s < z.to);
   if (zone) return 50;
   if (route.works.some((w) => s > w.from - 120 && s < w.to + 60)) return 30;
-  return 80;
+  const p = route.pointAt(s);
+  const curv = Math.abs(p.curv || 0);
+  if (curv < 1 / 900) return 80;
+  // Боковое сцепление шин ~0.32 g плюс помощь виража.
+  const hold = Math.sqrt((9.81 * (0.32 + Math.abs(p.bank || 0))) / curv);
+  return Math.max(60, Math.min(80, Math.floor((hold * 3.6) / 10) * 10));
 }
 
 export function cityAtProgress(route, s) {

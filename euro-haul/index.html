@@ -62,6 +62,7 @@
         </div>
         <div class="limit-sign" id="speed-limit" title="Ограничение скорости">80</div>
         <button class="hud-btn" id="btn-fullscreen" title="Полный экран" aria-label="Полный экран"><svg class="ico"><use href="#i-expand"/></svg></button>
+        <button class="hud-btn" id="btn-help" title="Управление (F1)" aria-label="Управление">?</button>
         <button class="hud-btn" id="btn-pause" title="Пауза" aria-label="Пауза"><svg class="ico"><use href="#i-pause"/></svg></button>
       </div>
     </header>
@@ -95,7 +96,7 @@
         </svg>
         <div class="cluster-center">
           <b id="dash-speed">0</b>
-          <small>км/ч</small>
+          <small id="dash-unit">км/ч</small>
         </div>
       </div>
       <div class="gear-box">
@@ -109,12 +110,13 @@
         <div class="gauge"><small>ОЖ</small><div class="bar temp"><i id="bar-temp"></i></div><b id="val-temp">82°C</b></div>
         <div class="gauge"><small>СОСТОЯНИЕ</small><div class="bar cond"><i id="bar-cond"></i></div><b id="val-cond">88%</b></div>
         <div class="gauge"><small>УСТАЛОСТЬ</small><div class="bar fatigue"><i id="bar-fatigue"></i></div><b id="val-fatigue">0%</b></div>
+        <div class="gauge"><small>ВОЗДУХ</small><div class="bar air"><i id="bar-air"></i></div><b id="val-air">100%</b></div>
       </div>
     </section>
 
     <div class="cruise-indicator hidden" id="cruise-indicator"><svg class="ico"><use href="#i-gauge"/></svg>КРУИЗ <b id="cruise-speed">0</b></div>
 
-    <div class="hint" id="hint">W — газ · S — тормоз · A/D — руль · V — камера · Esc — пауза</div>
+    <div class="hint" id="hint"><b>F1</b> — все клавиши · <b>W/S</b> — газ и тормоз · <b>A/D</b> — руль · <b>V</b> — камера</div>
     <div class="toast-stack" id="toast-stack"></div>
 
     <div class="windshield" id="windshield" aria-hidden="true"></div>
@@ -143,6 +145,8 @@
         <button data-act="camera" title="Камера"><small>ВИД</small></button>
         <button data-act="touch-cruise" title="Круиз-контроль"><small>КР</small></button>
         <button data-act="touch-lights" title="Фары"><small>СВЕТ</small></button>
+        <button data-act="touch-reverse" title="Задний ход"><small>R</small></button>
+        <button data-act="touch-retarder" title="Горный тормоз"><small>ТОРМ</small></button>
       </div>
       <div class="touch-pedals">
         <button data-touch="brake" class="pedal brake" aria-label="Тормоз"><span>ТОРМОЗ</span></button>

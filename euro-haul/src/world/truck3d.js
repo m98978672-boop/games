@@ -594,6 +594,44 @@ export class TruckView {
     return tex;
   }
 
+  /** Кожа руля: мелкое зерно и строчка. Без картинок — рисуем на канвасе. */
+  leatherTexture() {
+    if (this._leatherTex) return this._leatherTex;
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 256;
+    const c = canvas.getContext('2d');
+    c.fillStyle = '#24282c';
+    c.fillRect(0, 0, 256, 256);
+    // зерно
+    for (let i = 0; i < 5200; i++) {
+      const x = Math.random() * 256;
+      const y = Math.random() * 256;
+      const v = 28 + Math.random() * 26;
+      c.fillStyle = `rgba(${v},${v + 2},${v + 4},${0.25 + Math.random() * 0.35})`;
+      c.fillRect(x, y, 1.4, 1.4);
+    }
+    // строчка по кромке полотна
+    c.strokeStyle = '#b9c3c8';
+    c.lineWidth = 2;
+    c.setLineDash([6, 5]);
+    c.beginPath();
+    c.moveTo(0, 18);
+    c.lineTo(256, 18);
+    c.stroke();
+    c.beginPath();
+    c.moveTo(0, 238);
+    c.lineTo(256, 238);
+    c.stroke();
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(3, 1);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this._leatherTex = tex;
+    return tex;
+  }
+
   // ------------------------------------------------------------------ салон
   buildInterior() {
     const m = this.mats;
@@ -801,36 +839,117 @@ export class TruckView {
     for (let i = 0; i < 4; i++) box(g, 0.055, 0.022, 0.03, trimMat, cx - 0.11 + i * 0.073, 1.72, 2.68);
 
     // ---------------------------------------------------------------- руль
+    // Настоящий штурвал тягача: кожаный обод с прострочкой, три спицы,
+    // кнопочные блоки на горизонтальных спицах, хром-кольцо, ступица с шильдом
+    // и два подрулевых переключателя (поворотники и дворники).
     this.wheelPivot = new THREE.Group();
     this.wheelPivot.position.set(EYE.x, 2.05, 1.96);
     this.wheelPivot.rotation.x = -0.34;
-    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.027, 12, 44), rubberMat);
+    const leather = M(this.leatherTexture(), { color: 0x2a2e33, roughness: 0.78, metalness: 0.04 });
+    const stitchMat = M(null, { color: 0xc9d2d6, roughness: 0.75 });
+    const chrome = M(null, { color: 0xb9c3c9, roughness: 0.22, metalness: 0.9 });
+    const wheelBlack = M(null, { color: 0x171b1f, roughness: 0.5, metalness: 0.25 });
+
+    // Обод: чуть сплющенный тор (у реальных рулей сечение не круглое).
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.0285, 18, 80), leather);
     rim.rotation.x = Math.PI / 2;
+    rim.scale.z = 0.86;
     this.wheelPivot.add(rim);
-    for (const rot of [Math.PI * 0.5, Math.PI * 1.5, 0]) {
-      const w = rot === 0 ? 0.4 : 0.24;
-      const spoke = new THREE.Mesh(new THREE.BoxGeometry(w, 0.022, 0.03), darkTrim);
-      spoke.position.set(Math.cos(rot) * 0.1, Math.sin(rot) * 0.1, 0);
-      spoke.rotation.z = rot;
-      this.wheelPivot.add(spoke);
+    // Нижняя часть обода толще — за неё держат руку.
+    const rimThick = new THREE.Mesh(new THREE.TorusGeometry(0.265, 0.032, 14, 40, Math.PI * 0.5), leather);
+    rimThick.rotation.x = Math.PI / 2;
+    rimThick.rotation.z = Math.PI * 0.75;
+    this.wheelPivot.add(rimThick);
+
+    // Хром-кольцо и строчка по внутренней кромке: читаются как «дорогой» салон.
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.238, 0.0045, 8, 72), chrome);
+    ring.rotation.x = Math.PI / 2;
+    this.wheelPivot.add(ring);
+    for (let i = 0; i < 44; i++) {
+      const a = (i / 44) * Math.PI * 2;
+      const dash = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.004, 0.005), stitchMat);
+      dash.position.set(Math.cos(a) * 0.246, Math.sin(a) * 0.246, 0.019);
+      dash.rotation.z = a;
+      this.wheelPivot.add(dash);
     }
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.085, 0.055, 20), darkTrim);
+
+    // Спицы: две горизонтальные с кнопками и одна нижняя.
+    for (const side of [-1, 1]) {
+      const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.032, 0.036), wheelBlack);
+      spoke.position.set(side * 0.135, 0, 0.004);
+      spoke.rotation.z = side * 0.06;
+      this.wheelPivot.add(spoke);
+      // кнопочный блок
+      const pod = new THREE.Mesh(new THREE.BoxGeometry(0.105, 0.056, 0.03), M(null, { color: 0x23282d, roughness: 0.45, metalness: 0.3 }));
+      pod.position.set(side * 0.152, 0.004, 0.026);
+      pod.rotation.z = side * 0.06;
+      this.wheelPivot.add(pod);
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 3; col++) {
+          const btn = new THREE.Mesh(
+            new THREE.BoxGeometry(0.022, 0.014, 0.008),
+            M(null, { color: row ? 0x3b444b : 0x59646c, roughness: 0.5, metalness: 0.35 })
+          );
+          btn.position.set(side * 0.152 - 0.028 + col * 0.028, 0.016 - row * 0.024, 0.043);
+          btn.rotation.z = side * 0.06;
+          this.wheelPivot.add(btn);
+        }
+      }
+    }
+    const bottomSpoke = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.2, 0.03), wheelBlack);
+    bottomSpoke.position.set(0, -0.13, 0.002);
+    this.wheelPivot.add(bottomSpoke);
+
+    // Ступица и сигнал: клаксон — большая накладка по центру.
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.095, 0.05, 24), wheelBlack);
     hub.rotation.x = Math.PI / 2;
     this.wheelPivot.add(hub);
-    const badge = new THREE.Mesh(new THREE.CircleGeometry(0.028, 18), trimMat);
-    badge.position.z = 0.03;
+    const hornPad = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.066, 0.028, 24), M(null, { color: 0x20262b, roughness: 0.6 }));
+    hornPad.rotation.x = Math.PI / 2;
+    hornPad.position.z = 0.032;
+    this.wheelPivot.add(hornPad);
+    const badge = new THREE.Mesh(new THREE.CircleGeometry(0.026, 20), chrome);
+    badge.position.z = 0.048;
     this.wheelPivot.add(badge);
+    const badgeRing = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.003, 6, 24), M(null, { color: 0x8f9aa1, roughness: 0.4, metalness: 0.7 }));
+    badgeRing.position.z = 0.048;
+    this.wheelPivot.add(badgeRing);
     g.add(this.wheelPivot);
-    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.66, 14), darkTrim);
+
+    // Колонка руля и облицовка.
+    const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.08, 0.66, 16), wheelBlack);
     column.position.set(EYE.x, 1.9, 2.26);
     column.rotation.x = Math.PI / 2 - 0.42;
     this.wheelColumn = column;
     g.add(column);
-    for (const sx of [-1, 1]) {
-      box(g, 0.022, 0.022, 0.18, darkTrim, EYE.x + sx * 0.13, 1.9, 2.14, [0.22, 0, 0]);
-      box(g, 0.05, 0.03, 0.06, trimMat, EYE.x + sx * 0.13, 1.88, 2.05);
-    }
+    const columnShroud = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.11, 0.26), trimMat);
+    columnShroud.position.set(EYE.x, 1.95, 2.3);
+    columnShroud.rotation.x = -0.42;
+    g.add(columnShroud);
 
+    // Подрулевые переключатели: поворотники (слева) и дворники (справа).
+    this.stalks = [];
+    for (const side of [-1, 1]) {
+      const stalk = new THREE.Group();
+      stalk.position.set(EYE.x + side * 0.115, 1.97, 2.24);
+      const arm = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.013, 0.16, 8), wheelBlack);
+      arm.rotation.z = Math.PI / 2;
+      arm.rotation.y = side * 0.15;
+      arm.position.x = side * 0.06;
+      stalk.add(arm);
+      const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.014, 0.03, 10), M(null, { color: 0x2b3136, roughness: 0.5 }));
+      tip.rotation.z = Math.PI / 2;
+      tip.position.x = side * 0.135;
+      stalk.add(tip);
+      stalk.rotation.x = 0;
+      g.add(stalk);
+      this.stalks.push(stalk);
+    }
+    this.indicatorStalk = 0;
+    this.stalkTick = 0;
+
+    // Салонный «шум» руля: на холостых штурвал мелко подрагивает.
+    this.wheelVibe = 0;
     // ---------------------------------------------------------------- сиденья
     const seat = (x, z) => {
       box(g, 0.56, 0.16, 0.62, seatMat, x, 1.58, z);
@@ -942,7 +1061,7 @@ export class TruckView {
     this.interiorVisible = true;
     g.visible = true;
     // Салон статичен, кроме руля и экранов: склеиваем обшивку по материалам.
-    mergeStatic(g, [this.wheelPivot]);
+    mergeStatic(g, [this.wheelPivot, ...(this.stalks || [])]);
     this.applyShadowFlags(this.shadowOn !== false);
   }
 
@@ -978,6 +1097,11 @@ export class TruckView {
     mat.emissiveIntensity = on ? 2.6 : 0.15;
   }
 
+  /** Рычаг поворотников в кабине встаёт в положение вместе с реле. */
+  setIndicatorStalk(dir) {
+    this.indicatorDir = dir || 0;
+  }
+
   setBrakeLights(on) {
     for (const mesh of this.brakeLights) mesh.material.emissiveIntensity = on ? 2.4 : 0.7;
   }
@@ -997,13 +1121,29 @@ export class TruckView {
     // Руль: пружина с демпфером вместо мгновенного поворота. Полный ход ≈1.4 оборота,
     // быстрая перекладка даёт лёгкий заброс, как у настоящего штурвала.
     if (this.wheelPivot) {
-      const target = -steer * 4.4;
+      const target = -steer * 4.6;
       const step = Math.min(dt, 0.05);
-      const accel = (target - (this.wheelAngle || 0)) * 120 - (this.wheelVel || 0) * 16;
+      const accel = (target - (this.wheelAngle || 0)) * 118 - (this.wheelVel || 0) * 15;
       this.wheelVel = (this.wheelVel || 0) + accel * step;
       this.wheelAngle = (this.wheelAngle || 0) + this.wheelVel * step;
       this.wheelPivot.rotation.z = this.wheelAngle;
+      // Живая деталь: на холостых штурвал мелко дрожит от мотора, на оборотах
+      // вибрация звонче. Амплитуда в миллиметрах — её видно, но она не мешает.
+      const vib = clamp((status.rpm || 700) / 700, 0.8, 2.2);
+      const t = performance.now() * 0.001;
+      this.wheelPivot.position.y = 2.05 + Math.sin(t * 47) * 0.0018 * vib;
+      this.wheelPivot.position.x = EYE.x + Math.cos(t * 63) * 0.001 * vib;
       if (this.wheelColumn) this.wheelColumn.rotation.z = this.wheelAngle * 0.06;
+    }
+    // Подрулевые переключатели: поворотник щёлкает вниз и держится, пока мигает;
+    // правый опускается, когда идёт дождь и работают дворники.
+    if (this.stalks && this.stalks.length) {
+      const target = this.indicatorDir ? (this.indicatorDir > 0 ? 0.18 : -0.18) : 0;
+      const left = this.stalks[0];
+      left.rotation.z += (target - left.rotation.z) * Math.min(1, dt * 14);
+      const right = this.stalks[1];
+      const wTarget = (opts.rain || 0) > 0.15 ? 0.12 : 0;
+      right.rotation.z += (wTarget - right.rotation.z) * Math.min(1, dt * 8);
     }
     const wiperOn = (opts.rain || 0) > 0.15;
     if (this.wipers.length) {

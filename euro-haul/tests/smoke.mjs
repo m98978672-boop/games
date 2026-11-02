@@ -206,6 +206,33 @@ async function run() {
   g.ui.closeModal();
   g.paused = false;
 
+  // Справка по управлению.
+  g.togglePause();
+  assert(g.paused === true, 'пауза перед справкой');
+  g.ui.closeModal();
+  g.showHelp();
+  const modalBody = window.document.getElementById('modal-body').innerHTML;
+  assert(/\(F1\)|F1/.test(modalBody) && modalBody.includes('Телефон'), 'справка описывает клавиши и телефон');
+  assert(window.document.querySelector('[data-act="resume"]') !== null, 'в справке есть кнопка продолжения');
+  window.document.querySelector('[data-act="resume"]').click();
+  assert(window.document.getElementById('modal-root').classList.contains('hidden'), 'справка закрывается');
+  g.ui.closeModal();
+  g.paused = false;
+
+  // Горный тормоз и подсказки HUD.
+  g.truck.retarder = 1;
+  g.toggleRetarder();
+  assert(g.truck.exhaustBrake === true, 'горный тормоз включается');
+  g.toggleRetarder();
+  assert(g.truck.exhaustBrake !== true, 'горный тормоз выключается');
+  assert(window.document.getElementById('bar-air') !== null, 'в приборах есть давление воздуха');
+
+  // Раздельная громкость слоёв.
+  g.setSetting('mixEngine', 0.4);
+  assert(g.settings.mixEngine === 0.4, 'громкость мотора сохраняется в настройках');
+  g.audio.setMix({ engine: 0.4, ambience: 0.7 });
+  assert(g.audio.mix.engine === 0.4 && g.audio.mix.ambience === 0.7, 'микшер принимает слои');
+
   // Погода меняется без ошибок.
   g.setWeather('storm', true);
   await sleep(300);

@@ -23,6 +23,15 @@ export function terrainOffset(s, lat) {
   return k * (h + rise);
 }
 
+/** Высота полотна от виража: внешняя кромка поворота выше внутренней. */
+function bankOffset(p, lat) {
+  const bank = p.bank || 0;
+  if (!bank) return 0;
+  // За кромкой проезжей части наклон плавно сходит на нет (обочина, откос).
+  const taper = clamp(1 - Math.max(0, Math.abs(lat) - 14.2) / 6, 0, 1);
+  return lat * Math.tan(bank) * taper;
+}
+
 function stripGeometry(route, s0, s1, lats, opts = {}) {
   const { step = STEP, yOffset = 0, yFn = null, tile = 8, colorFn = null } = opts;
   const rows = Math.max(2, Math.ceil((s1 - s0) / step));
@@ -39,7 +48,7 @@ function stripGeometry(route, s0, s1, lats, opts = {}) {
     for (let c = 0; c < cols; c++) {
       const lat = lats[c];
       const extra = yFn ? yFn(s, lat) : 0;
-      pos.push(p.x + nx * lat, p.y + yOffset + extra, p.z + nz * lat);
+      pos.push(p.x + nx * lat, p.y + yOffset + extra + bankOffset(p, lat), p.z + nz * lat);
       // UV в метрах: текстура тайлится одинаково по ширине и длине.
       uv.push(lat / tile, s / tile);
       if (colorFn) col.push(...colorFn(s, lat));
@@ -83,7 +92,7 @@ function lateralStrip(route, s0, s1, latLow, latHigh, opts = {}) {
     const lo = latLow(s);
     const hi = latHigh(s);
     for (const lat of [lo, hi]) {
-      pos.push(p.x + nx * lat, p.y + yOffset, p.z + nz * lat);
+      pos.push(p.x + nx * lat, p.y + yOffset + bankOffset(p, lat), p.z + nz * lat);
       uv.push(lat / tile, s / tile);
       if (colorFn) col.push(...colorFn(s, lat));
     }
@@ -110,8 +119,9 @@ function verticalStrip(route, s0, s1, lat, y0, y1, step = STEP) {
     const p = route.pointAt(s);
     const nx = Math.cos(p.hdg);
     const nz = -Math.sin(p.hdg);
-    pos.push(p.x + nx * lat, p.y + y0, p.z + nz * lat);
-    pos.push(p.x + nx * lat, p.y + y1, p.z + nz * lat);
+    const b = bankOffset(p, lat);
+    pos.push(p.x + nx * lat, p.y + y0 + b, p.z + nz * lat);
+    pos.push(p.x + nx * lat, p.y + y1 + b, p.z + nz * lat);
   }
   for (let r = 0; r < rows; r++) {
     const a = r * 2;
@@ -154,6 +164,51 @@ function signTexture(text, sub, color = '#1f5c3a') {
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.userData.key = key;
+  SIGN_CACHE.set(key, tex);
+  return tex;
+}
+
+/**
+ * Щит-шеврон на внешней стороне поворота: белая панель с красными стрелками.
+ * Настоящие магистрали обозначают так опасные закругления — без них поворот
+ * «не читается» до последнего момента.
+ */
+function chevronTexture(dir = 1) {
+  const key = 'chevron:' + dir;
+  if (SIGN_CACHE.has(key)) return SIGN_CACHE.get(key);
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 128;
+  const c = canvas.getContext('2d');
+  c.fillStyle = '#f4f1e6';
+  c.fillRect(0, 0, 256, 128);
+  c.strokeStyle = '#b9b4a4';
+  c.lineWidth = 6;
+  c.strokeRect(3, 3, 250, 122);
+  c.fillStyle = '#c8362c';
+  for (let i = 0; i < 3; i++) {
+    const x = 22 + i * 78;
+    c.beginPath();
+    if (dir > 0) {
+      c.moveTo(x, 20);
+      c.lineTo(x + 44, 64);
+      c.lineTo(x, 108);
+      c.lineTo(x + 20, 108);
+      c.lineTo(x + 64, 64);
+      c.lineTo(x + 20, 20);
+    } else {
+      c.moveTo(x + 64, 20);
+      c.lineTo(x + 20, 64);
+      c.lineTo(x + 64, 108);
+      c.lineTo(x + 44, 108);
+      c.lineTo(x, 64);
+      c.lineTo(x + 44, 20);
+    }
+    c.closePath();
+    c.fill();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
   SIGN_CACHE.set(key, tex);
   return tex;
 }
@@ -762,13 +817,14 @@ export class RoadWorld {
       const p = route.pointAt(s);
       const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, transparent: true });
       const panel = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
-      panel.position.set(p.x + Math.cos(p.hdg) * lat, p.y + y, p.z - Math.sin(p.hdg) * lat);
+      const ground = p.y + bankOffset(p, lat);
+      panel.position.set(p.x + Math.cos(p.hdg) * lat, ground + y, p.z - Math.sin(p.hdg) * lat);
       panel.rotation.y = p.hdg + Math.PI;
       const postGeo = new THREE.CylinderGeometry(0.09, 0.09, y, 5);
       const post1 = new THREE.Mesh(postGeo, this.mats.darkMetal);
-      post1.position.set(panel.position.x - Math.cos(p.hdg) * (w * 0.35), p.y + y / 2, panel.position.z + Math.sin(p.hdg) * (w * 0.35));
+      post1.position.set(panel.position.x - Math.cos(p.hdg) * (w * 0.35), ground + y / 2, panel.position.z + Math.sin(p.hdg) * (w * 0.35));
       const post2 = post1.clone();
-      post2.position.set(panel.position.x + Math.cos(p.hdg) * (w * 0.35), p.y + y / 2, panel.position.z - Math.sin(p.hdg) * (w * 0.35));
+      post2.position.set(panel.position.x + Math.cos(p.hdg) * (w * 0.35), ground + y / 2, panel.position.z - Math.sin(p.hdg) * (w * 0.35));
       this.group.add(panel, post1, post2);
     };
     for (const mark of route.marks) {
@@ -802,6 +858,19 @@ export class RoadWorld {
       checkpoints.push({ s: w.from - 110, limit: 30 });
       checkpoints.push({ s: w.to + 40, limit: 80 });
     }
+    // Шевроны на закруглениях: три щита на внешней стороне через каждые 9 м.
+    for (let i = 3; i < route.samples.length - 3; i += 2) {
+      const p = route.samples[i];
+      if (p.s < s0 - 120 || p.s > s1 + 120) continue;
+      const k = Math.abs(p.curv || 0);
+      if (k < 1 / 900) continue;
+      if (this.chevronsUntil && p.s < this.chevronsUntil) continue;
+      this.chevronsUntil = p.s + 190;
+      const tex = chevronTexture(p.curv > 0 ? 1 : -1);
+      const outer = -Math.sign(p.curv) * 9.7;
+      for (let j = 0; j < 3; j++) addSign(p.s + j * 9, outer, tex, 3.4, 1.7, 1.9);
+    }
+
     if (!this.cameraSign) this.cameraSign = cameraSignTexture();
     for (const cp of checkpoints) {
       if (cp.s < s0 || cp.s > s1) continue;

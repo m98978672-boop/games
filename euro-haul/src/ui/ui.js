@@ -60,6 +60,7 @@ export class UI {
     $('btn-settings').addEventListener('click', () => this.showSettings(true));
     $('btn-about').addEventListener('click', () => this.showAbout());
     $('btn-pause').addEventListener('click', () => this.game.togglePause());
+    $('btn-help')?.addEventListener('click', () => this.game.showHelp());
     $('btn-fullscreen').addEventListener('click', () => this.game.toggleFullscreen());
     $('rotate-dismiss')?.addEventListener('click', () => {
       this.rotateDismissed = true;
@@ -99,6 +100,12 @@ export class UI {
         this.game.setSetting('steerSensitivity', v);
         const label = $('steer-value');
         if (label) label.textContent = v.toFixed(2) + '×';
+      }
+      if (el.dataset.input === 'mixEngine' || el.dataset.input === 'mixAmbience') {
+        const v = +el.value / 100;
+        this.game.setSetting(el.dataset.input, v);
+        const label = $(el.dataset.input === 'mixEngine' ? 'mix-engine-value' : 'mix-ambience-value');
+        if (label) label.textContent = el.value + '%';
       }
       if (el.dataset.input === 'volume') {
         this.game.setSetting('volume', +el.value / 100);
@@ -333,6 +340,19 @@ export class UI {
       case 'touch-lights':
         g.toggleLights();
         break;
+      case 'touch-reverse':
+        if (g.truck?.toggleReverse()) {
+          g.audio.shift();
+          g.ui.toast(g.truck.gear === -1 ? 'Задний ход' : 'Нейтраль', 'info', 1400);
+        }
+        break;
+      case 'touch-retarder':
+        g.toggleRetarder();
+        break;
+      case 'help-driving':
+        this.closeModal();
+        g.showHelp();
+        break;
       case 'fullscreen':
         g.toggleFullscreen();
         break;
@@ -387,7 +407,10 @@ export class UI {
     $('hud-weather').textContent = state.weatherName || '—';
     $('hud-temp').textContent = Math.round(state.airTemp ?? 17) + '°';
 
-    $('dash-speed').textContent = Math.round(state.speedKmh);
+    const mph = this.game.settings.units === 'mph';
+    $('dash-speed').textContent = Math.round(mph ? state.speedKmh * 0.621371 : state.speedKmh);
+    const unitEl = $('dash-unit');
+    if (unitEl) unitEl.textContent = mph ? 'миль/ч' : 'км/ч';
     $('dash-gear').textContent = state.gear === -1 ? 'R' : state.gear === 0 ? 'N' : state.gear;
     $('dash-mode').textContent = state.autoGearbox ? 'АВТО' : 'РУЧН.';
     $('bar-rpm').style.width = `${clamp((state.rpm / 2400) * 100, 0, 100)}%`;
@@ -400,8 +423,12 @@ export class UI {
     $('val-cond').textContent = Math.round(state.condition) + '%';
     $('bar-fatigue').style.width = `${clamp(state.fatigue, 0, 100)}%`;
     $('val-fatigue').textContent = Math.round(state.fatigue) + '%';
+    const air = clamp((state.air ?? 1) * 100, 0, 100);
+    if ($('bar-air')) $('bar-air').style.width = `${air}%`;
+    if ($('val-air')) $('val-air').textContent = Math.round(air) + '%';
+    if ($('val-air')) $('val-air').style.color = air < 60 ? 'var(--amber)' : '';
     const limitEl = $('speed-limit');
-    limitEl.textContent = Math.round(state.speedLimit);
+    limitEl.textContent = Math.round(mph ? state.speedLimit * 0.621371 : state.speedLimit);
     limitEl.style.borderColor = state.speedLimit <= 50 ? 'var(--amber-2)' : '#c4372c';
     limitEl.style.color = '#14181a';
 
@@ -455,6 +482,7 @@ export class UI {
     if (state.fps && this.game.settings.showFps) {
       $('hud-weather').textContent += ` · ${Math.round(state.fps)} FPS`;
     }
+    this.updateHint(state);
     // Подсказка о повороте экрана: только телефон в портретной ориентации.
     if (!this.rotateDismissed && this.game.device === 'phone' && window.innerHeight > window.innerWidth) {
       document.body.classList.add('must-rotate');
@@ -462,6 +490,43 @@ export class UI {
       document.body.classList.remove('must-rotate');
     }
     this.drawMinimap(state);
+  }
+
+  /**
+   * Нижняя подсказка: подсказывает то, что сейчас уместно, и не висит вечно.
+   * Новичку — база, опытному — контекст (круиз, фары, погрузка). Через минуту
+   * без действий гаснет, чтобы не мешать картинке.
+   */
+  updateHint(state) {
+    const el = $('hint');
+    if (!el) return;
+    if (this.game.settings.hints === false) {
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    const g = this.game;
+    const tips = [];
+    if (g.interaction) tips.push(`<b>E</b> — ${g.phase === 'pickup' ? 'погрузка' : 'выгрузка'}`);
+    if (g.parkedAtDepot) tips.push(`<b>E</b> — ${g.parkedAtDepot.label.toLowerCase()}`);
+    if ((g.night || 0) > 0.55 && !g.lightsOn) tips.push('<b>L</b> — включить фары');
+    if ((state.rain || 0) > 0.15) tips.push('дворники работают сами');
+    if (g.truck?.cruise != null) tips.push('<b>C</b> — снять круиз');
+    if (Math.abs(state.speedKmh) < 1.5) {
+      tips.push('<b>R</b> — задний ход', '<b>F</b> — двигатель', '<b>Space</b> — ручник');
+    } else {
+      tips.push('<b>C</b> — круиз', '<b>B</b> — посмотреть назад');
+    }
+    tips.push('<b>V</b> — камера', '<b>F1</b> — все клавиши');
+    this.hintTimer = (this.hintTimer || 0) + 1;
+    const idx = Math.floor(this.hintTimer / 260) % tips.length;
+    const line = tips[idx];
+    if (el.dataset.line !== line) {
+      el.dataset.line = line;
+      el.innerHTML = line;
+    }
+    // Через 90 секунд рейса подсказка бледнеет: игрок уже освоился.
+    el.classList.toggle('hint-fade', (g.drivingDistance || 0) > 1500);
   }
 
   drawMinimap(state) {
@@ -1282,6 +1347,12 @@ export class UI {
         <div class="field-row"><label>Громкость</label>
           <div class="range-row"><input type="range" min="0" max="100" value="${Math.round(st.volume * 100)}" data-input="volume">
           <span class="range-label" id="volume-value">${Math.round(st.volume * 100)}%</span></div></div>
+        <div class="field-row"><label>Громкость мотора<small>дизель, выхлоп, турбина</small></label>
+          <div class="range-row"><input type="range" min="0" max="100" value="${Math.round((Number(st.mixEngine ?? 0.9)) * 100)}" data-input="mixEngine">
+          <span class="range-label" id="mix-engine-value">${Math.round((Number(st.mixEngine ?? 0.9)) * 100)}%</span></div></div>
+        <div class="field-row"><label>Громкость окружения<small>шины, ветер, дождь</small></label>
+          <div class="range-row"><input type="range" min="0" max="100" value="${Math.round((Number(st.mixAmbience ?? 0.75)) * 100)}" data-input="mixAmbience">
+          <span class="range-label" id="mix-ambience-value">${Math.round((Number(st.mixAmbience ?? 0.75)) * 100)}%</span></div></div>
         <div class="field-row"><label>Камера по умолчанию<small>V переключает в игре</small></label>
           <select data-setting="camera">
             <option value="" ${!st.camera ? 'selected' : ''}>Авто (телефон — сзади, ПК — из кабины)</option>
@@ -1308,6 +1379,16 @@ export class UI {
           </select></div>
         <div class="field-row"><label>Полный экран</label>
           <button class="btn btn-sm" data-act="fullscreen">⛶ Включить</button></div>
+        <div class="field-row"><label>Подсказки внизу<small>контекстные советы по управлению</small></label>
+          <button class="btn btn-sm" data-act="toggle-setting" data-arg="hints">${st.hints === false ? 'Скрыты' : 'Показаны'}</button></div>
+        <div class="field-row"><label>Тряска камеры<small>удары, обочина, неровности</small></label>
+          <button class="btn btn-sm" data-act="toggle-setting" data-arg="cameraShake">${st.cameraShake === false ? 'Выключена' : 'Включена'}</button></div>
+        <div class="field-row"><label>Звук как в кабине<small>тише ветер и шины, ближе мотор</small></label>
+          <button class="btn btn-sm" data-act="toggle-setting" data-arg="cabinAudio">${st.cabinAudio === false ? 'Выключен' : 'Включён'}</button></div>
+        <div class="field-row"><label>Единицы скорости</label>
+          <select data-setting="units">
+            ${[['kmh', 'км/ч'], ['mph', 'мили/ч']].map(([v, n]) => `<option value="${v}" ${String(st.units) === v ? 'selected' : ''}>${n}</option>`).join('')}
+          </select></div>
         <div class="field-row"><label>Показывать FPS</label>
           <button class="btn btn-sm" data-act="toggle-setting" data-arg="showFps">${st.showFps ? 'Вкл' : 'Выкл'}</button></div>
         <div class="field-row"><label>Сбросить настройки</label><button class="btn btn-sm" data-act="reset-settings">Сбросить</button></div>
@@ -1318,7 +1399,8 @@ export class UI {
         <div><b>Пробел</b> — ручник · <b>Shift / Ctrl</b> — выше/ниже передача (в ручном режиме)</div>
         <div><b>C</b> — круиз-контроль · <b>M</b> — авто/ручная КПП · <b>L</b> — фары</div>
         <div><b>E</b> — взаимодействие (погрузка, заправка, отдых) · <b>H</b> — сигнал</div>
-        <div><b>V</b> — камера · <b>P</b> — снимок экрана · <b>Esc</b> — пауза</div>
+        <div><b>V</b> — камера · <b>B</b> — посмотреть назад · <b>P</b> — снимок · <b>Esc</b> — пауза</div>
+        <div><b>F1</b> — эта справка · <b>мышь</b> — осмотреться в кабине</div>
         <div style="margin-top:8px;color:var(--muted)">На телефоне и планшете: экранные педали и руль, кнопки <b>E</b> (погрузка/заправка), 📷, «КР» и 💡. Поверните устройство горизонтально — интерфейс станет крупнее.</div>
       </div>
       <div class="section-title" style="margin-top:24px"><h3>Сохранение</h3></div>

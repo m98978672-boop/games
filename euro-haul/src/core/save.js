@@ -17,6 +17,11 @@ export const DEFAULT_SETTINGS = {
   timeScale: 3,
   steerSensitivity: 1,
   steerAssist: true,
+  hints: true,
+  cameraShake: true,
+  cabinAudio: true,
+  mixEngine: 0.9,
+  mixAmbience: 0.75,
 };
 
 export function createProfile(name = 'Водитель', truckId = 'auriga-3') {
