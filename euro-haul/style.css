@@ -277,6 +277,21 @@ button { font-family: inherit; color: inherit; background: none; border: none; c
 }
 .cruise-indicator b { font-size: 14px; font-variant-numeric: tabular-nums; }
 
+.hud-btn.help, #btn-help {
+  font-size: 15px; font-weight: 800; font-family: inherit; color: var(--ink);
+}
+.hint b { color: rgba(232, 244, 247, 0.92); font-weight: 700; }
+
+/* Справка по управлению: две колонки на широком экране, одна на телефоне. */
+.help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.help-grid h4 { margin: 0 0 6px; }
+@media (max-width: 640px) {
+  .help-grid { grid-template-columns: 1fr; gap: 10px; }
+}
+/* Воздух тормозной системы: свой цвет, чтобы отличать от топлива. */
+.bar.air i { background: linear-gradient(90deg, #7fa6d8, #cfe0f4); }
+.hint.hint-fade { opacity: 0.35; }
+
 .hint {
   position: absolute; bottom: 18px; right: 18px;
   max-width: 40vw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

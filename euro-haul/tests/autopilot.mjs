@@ -7,13 +7,16 @@ import { TRUCK_MODELS } from '../src/data/trucks.js';
 import { clamp } from '../src/core/math.js';
 
 const route = buildRoute('berlin', 'rome', 42);
+const started = Date.now();
 console.log(`маршрут ${route.km.toFixed(1)} км через ${route.marks.map((m) => m.name).join(' → ')}`);
 
 function drive({ cargo = 18, target = 78, label = '' } = {}) {
-  const sim = new TruckSim({ model: TRUCK_MODELS[2], cargoMass: cargo });
+  const sim = new TruckSim({ model: TRUCK_MODELS[2], cargoMass: cargo, lat: 1.85 });
   sim.engineOn = true;
   sim.handbrake = false;
   sim.fuel = 400;
+  // Ноль на трассе — ось правой полосы; lat отсчитывается влево, поэтому
+  // при lat = 1.85 машина идёт ровно по центру своей полосы.
   const dt = 1 / 60;
   let t = 0;
   let maxLat = 0;
@@ -24,13 +27,14 @@ function drive({ cargo = 18, target = 78, label = '' } = {}) {
     const p = route.pointAt(sim.s);
     const limit = speedLimitAt(route, sim.s);
     const desired = Math.min(target, limit);
-    // Автопилот: держим центр правой полосы, руль по ошибке курса и смещения.
-    const laneError = 1.85 - sim.lat;
-    const headingError = -sim.yawRel * 6;
-    const steer = clamp(laneError * 0.35 + headingError, -1, 1);
+    // Автопилот: держим центр полосы. Знак: положительный ход руля уводит
+    // машину вправо (lat уменьшается), поэтому коррекция = (lat − цель).
+    const laneError = sim.lat - 1.85;
+    const steer = clamp(laneError * 0.35 + sim.yawRel * 6, -1, 1);
     const tooFast = sim.speed * 3.6 > desired;
     const throttle = tooFast ? 0 : clamp((desired - sim.speed * 3.6) / 12, 0, 1);
-    const brake = sim.speed * 3.6 > desired + 6 ? 0.55 : 0;
+    // Пневматика догоняет педаль: на сбросе даём больше, чем на разгоне.
+    const brake = sim.speed * 3.6 > desired + 5 ? 0.6 : 0;
     sim.step(dt, { throttle, brake, steer }, { curv: p.curv, grade: 0, speedLimit: limit });
     t += dt;
     maxLat = Math.max(maxLat, Math.abs(sim.lat));

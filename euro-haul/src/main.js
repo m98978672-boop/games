@@ -71,6 +71,7 @@ class Game {
     this.ui = new UI(this);
     this.audio.setVolume(this.settings.volume);
     this.audio.setEnabled(this.settings.sound);
+    this.audio.setMix({ engine: this.settings.mixEngine, ambience: this.settings.mixAmbience });
 
     this.init3D();
     this.applyDeviceSettings();
@@ -387,6 +388,17 @@ class Game {
         case 'KeyP':
           this.takeScreenshot();
           break;
+        case 'F1':
+        case 'Slash':
+          e.preventDefault();
+          this.showHelp();
+          break;
+        case 'KeyB':
+          this.lookBack = true;
+          break;
+        case 'KeyX':
+          this.toggleRetarder();
+          break;
         case 'Comma':
           this.toggleIndicator(-1);
           break;
@@ -401,7 +413,8 @@ class Game {
           break;
         case 'KeyF':
           this.truck.toggleEngine();
-          this.audio.blip(180, 0.25, 'sawtooth', 0.05);
+          if (this.truck.engineOn) this.audio.engineStart();
+          else this.audio.engineStop();
           break;
         case 'ShiftLeft':
         case 'PageUp':
@@ -422,7 +435,36 @@ class Game {
       }
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
     });
-    window.addEventListener('keyup', (e) => this.input.keys.delete(e.code));
+    window.addEventListener('keyup', (e) => {
+      this.input.keys.delete(e.code);
+      if (e.code === 'KeyB') this.lookBack = false;
+    });
+    // Осмотр из кабины мышью: тянем по сцене — голова поворачивается.
+    const scene = $('scene');
+    if (scene) {
+      let dragging = false;
+      let lastX = 0;
+      let lastY = 0;
+      scene.addEventListener('pointerdown', (e) => {
+        if (this.state !== 'driving' || (e.pointerType && e.pointerType !== 'mouse')) return;
+        dragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      });
+      window.addEventListener('pointermove', (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        lastX = e.clientX;
+        lastY = e.clientY;
+        this.lookYaw = clamp((this.lookYaw || 0) - dx * 0.004, -1.2, 1.2);
+        this.lookPitch = clamp((this.lookPitch || 0) - dy * 0.003, -0.32, 0.32);
+      });
+      window.addEventListener('pointerup', () => {
+        dragging = false;
+      });
+    }
+
     window.addEventListener('blur', () => {
       this.input.keys.clear();
       for (const k of Object.keys(this.input.touch)) this.input.touch[k] = false;
@@ -472,6 +514,7 @@ class Game {
     this.indicator = this.indicator === dir ? 0 : dir;
     this.indicatorTimer = 0;
     this.blinkPhase = 0;
+    if (this.truckView?.setIndicatorStalk) this.truckView.setIndicatorStalk(this.indicator);
     if (this.indicator) this.ui.toast(dir < 0 ? 'Левый поворотник' : 'Правый поворотник', 'info', 1200);
   }
 
@@ -1022,7 +1065,13 @@ class Game {
       const p1 = this.route.pointAt(this.truck.s + 2);
       const grade = (p1.y - p0.y) / 2;
       const limit = speedLimitAt(this.route, this.truck.s);
-      this.truck.step(step, controls, { curv: p0.curv, grade, speedLimit: limit });
+      this.truck.step(step, controls, {
+        curv: p0.curv,
+        grade,
+        speedLimit: limit,
+        bank: p0.bank || 0,
+        roughness: p0.rough ?? 0.12,
+      });
       this.accumulator -= step;
       iterations++;
     }
@@ -1040,6 +1089,8 @@ class Game {
     this.lastCameraMode = this.cameraMode;
 
     // Звук.
+    const roadPoint = this.route.pointAt(this.truck.s);
+    this.audio.setCabin(this.cameraMode === 'interior' && this.settings.cabinAudio !== false);
     this.audio.update({
       rpm: this.truck.rpm,
       throttle: this.truck.throttle,
@@ -1048,7 +1099,11 @@ class Game {
       rain: env.rain,
       engineOn: this.truck.engineOn,
       gear: this.truck.gear,
-      load: clamp(this.truck.throttle * 0.9 + Math.abs(this.truck.speed) * 0.004, 0, 1),
+      load: clamp(this.truck.engineLoad ?? this.truck.throttle * 0.9 + Math.abs(this.truck.speed) * 0.004, 0, 1),
+      retarder: this.truck.retarder ? (this.retarderOn ? 1 : this.truck.brake > 0.05 ? 0.6 : 0) : 0,
+      roughness: roadPoint.rough ?? 0.12,
+      slip: this.truck.wheelSpin || 0,
+      lateral: this.truck.latAccel || 0,
     });
     this.truckView.setNight(env.night, this.lightsOn || env.night > 0.55);
     if (this.lightsOn !== this.lastLights && this.truck) {
@@ -1103,6 +1158,9 @@ class Game {
       this.lastSave = 0;
       this.syncProfileFromTruck();
       this.saveNow(true);
+      this.autosaves = (this.autosaves || 0) + 1;
+      // Тихое подтверждение: раз в несколько автосохранений, чтобы не мешать.
+      if (this.autosaves % 3 === 1) this.ui.toast('Прогресс сохранён', 'info', 1400);
     }
   }
 
@@ -1118,6 +1176,9 @@ class Game {
       fatigue: this.profile.fatigue || 0,
       speedLimit: this.currentLimit || 80,
       cruise: this.truck.cruise,
+      air: this.truck.airPressure,
+      rain: this.sky?.weather?.rain ?? 0,
+      night: this.night || 0,
       autoGearbox: this.truck.autoGearbox,
       weatherName: env.weatherName,
       airTemp: this.airTemp(),
@@ -1177,8 +1238,12 @@ class Game {
     if (!this.truck) return;
     const mode = this.cameraMode;
     const root = this.truckView.root;
-    const shake = this.cameraShake > 0 ? this.cameraShake * 0.06 * Math.sin(performance.now() * 0.05) : 0;
+    const shakeOn = this.settings.cameraShake !== false;
+    const shake = shakeOn && this.cameraShake > 0 ? this.cameraShake * 0.06 * Math.sin(performance.now() * 0.05) : 0;
     this.cameraShake = Math.max(0, this.cameraShake - dt * 3);
+    // Мышью голова поворачивается в кабине; отпустили — плавно возвращается.
+    this.lookYaw = (this.lookYaw || 0) * (1 - Math.min(1, dt * 1.6));
+    this.lookPitch = (this.lookPitch || 0) * (1 - Math.min(1, dt * 1.6));
     const speed = Math.abs(this.truck.speed);
 
     // Курс камеры сзади сглаживается отдельно от курса машины: при рулении кадр
@@ -1203,8 +1268,8 @@ class Game {
       this.camera.position.copy(this.tmpVec);
       // Голова водителя смотрит по ходу кабины: никакого «поворота за рулём».
       const euler = new THREE.Euler(
-        (mode === 'interior' ? -0.075 : -0.12) + root.rotation.x * 0.6,
-        root.rotation.y + Math.PI,
+        (mode === 'interior' ? -0.075 : -0.12) + root.rotation.x * 0.6 + (this.lookPitch || 0),
+        root.rotation.y + Math.PI + (this.lookYaw || 0),
         root.rotation.z * 0.25 + shake,
         'YXZ'
       );
@@ -1214,8 +1279,10 @@ class Game {
       this.truckView.setInteriorVisible(false);
       const back = mode === 'far' ? 34 : 23;
       const up = mode === 'far' ? 13 : 6.6;
-      const fwdX = Math.sin(this.camYaw);
-      const fwdZ = Math.cos(this.camYaw);
+      // «Посмотреть назад»: камера уезжает вперёд и смотрит на прицеп.
+      const lookYaw = this.lookBack ? this.camYaw + Math.PI : this.camYaw;
+      const fwdX = Math.sin(lookYaw);
+      const fwdZ = Math.cos(lookYaw);
       const target = this.camTarget.set(
         this.truckPos.x - fwdX * back,
         this.truckPos.y + up,
@@ -1814,6 +1881,10 @@ class Game {
     saveSettings(this.settings);
     if (key === 'sound') this.audio.setEnabled(!!value);
     if (key === 'volume') this.audio.setVolume(Number(value));
+    if (key === 'mixEngine' || key === 'mixAmbience') {
+      this.audio.setMix({ engine: this.settings.mixEngine, ambience: this.settings.mixAmbience });
+    }
+    this.settingsDirty = true;
     if (key === 'quality' || key === 'touchControls') this.applyDeviceSettings();
     if (this.state !== 'garage' && !$('modal-root').classList.contains('hidden')) this.ui.showSettings(true);
     if (key === 'camera') {
@@ -1829,6 +1900,7 @@ class Game {
     saveSettings(this.settings);
     this.audio.setEnabled(this.settings.sound);
     this.audio.setVolume(this.settings.volume);
+    this.audio.setMix({ engine: this.settings.mixEngine, ambience: this.settings.mixAmbience });
     this.ui.renderGarage();
     this.ui.toast('Настройки сброшены', 'info');
   }
@@ -1875,6 +1947,8 @@ class Game {
           <p style="font-size:12px;line-height:1.8">W/S — газ и тормоз · A/D — руль · E — взаимодействие · C — круиз · M — режим КПП · V — камера · L — фары · H — сигнал · P — снимок · F — двигатель</p>`,
         actions: [
           { label: 'Продолжить', primary: true, act: 'resume' },
+          { label: 'Управление', act: 'pause-help' },
+          { label: 'Настройки', act: 'pause-settings' },
           { label: 'Сохранить', act: 'save' },
           { label: 'Покинуть рейс', danger: true, act: 'quit-to-garage' },
         ],
@@ -1883,6 +1957,15 @@ class Game {
       foot.querySelector('[data-act="resume"]')?.addEventListener('click', () => {
         this.paused = false;
         this.ui.closeModal();
+      });
+      foot.querySelector('[data-act="pause-help"]')?.addEventListener('click', () => {
+        this.ui.closeModal();
+        this.showHelp();
+      });
+      foot.querySelector('[data-act="pause-settings"]')?.addEventListener('click', () => {
+        this.ui.closeModal();
+        this.paused = false;
+        this.ui.showSettings(true);
       });
       foot.querySelector('[data-act="save"]')?.addEventListener('click', () => {
         this.syncProfileFromTruck();
@@ -1902,6 +1985,69 @@ class Game {
     }
     this.syncProfileFromTruck();
     this.saveNow(true);
+  }
+
+  /** Справка по управлению: доступна из паузы, кнопкой «?» и по F1. */
+  showHelp() {
+    const wasDriving = this.state === 'driving' && !this.paused;
+    if (wasDriving) this.paused = true;
+    this.ui.openModal({
+      eyebrow: 'УПРАВЛЕНИЕ',
+      title: wasDriving ? 'Пауза · как играть' : 'Как играть',
+      body: `
+        <div class="help-grid">
+          <div>
+            <h4>Компьютер</h4>
+            <p><b>W / ↑</b> — газ · <b>S / ↓</b> — тормоз<br>
+            <b>A D / ← →</b> — руль · <b>Пробел</b> — ручник<br>
+            <b>C</b> — круиз · <b>X</b> — горный тормоз<br>
+            <b>R</b> — задний ход · <b>F</b> — двигатель<br>
+            <b>M</b> — авто/ручная КПП · <b>Shift / Ctrl</b> — передачи<br>
+            <b>V</b> — камера · <b>B</b> — посмотреть назад<br>
+            <b>мышь</b> — осмотреться в кабине<br>
+            <b>L</b> — фары · <b>H</b> — сигнал · <b>, .</b> — поворотники<br>
+            <b>P</b> — снимок · <b>Esc</b> — пауза · <b>F1</b> — эта справка</p>
+          </div>
+          <div>
+            <h4>Телефон и планшет</h4>
+            <p>Руль — рейка слева, газ и тормоз — справа, кнопки <b>E</b>, <b>ВИД</b>, <b>КР</b>, <b>СВЕТ</b> — над педалями.
+            Держите устройство горизонтально. Подруливание в кривых включается в настройках и работает только на телефоне.</p>
+          </div>
+        </div>
+        <h4>Как быстрее всего поехать</h4>
+        <p>1. Возьмите груз на «Рынке грузов». 2. Нажмите <b>E</b> у склада, чтобы загрузиться. 3. Держитесь правой полосы,
+        на 80 км/ч включите круиз (<b>C</b>). 4. На АЗС <b>E</b> — заправка, в зоне отдыха <b>E</b> — сон.</p>
+        <h4>Честная физика</h4>
+        <p>Тягач трогается плавно (турбина раскручивается), тормозит с задержкой пневматики, в повороте уходит наружу —
+        сбрасывайте скорость до знака. Прицеп срезает траекторию и складывается на заднем ходу. Наклон полотна
+        в повороте (вираж) помогает держать траекторию — как на настоящей магистрали.</p>`,
+      actions: [
+        { label: wasDriving ? 'Продолжить' : 'Понятно', primary: true, act: 'resume' },
+        { label: 'Настройки', act: 'help-settings' },
+      ],
+    });
+    const foot = $('modal-foot');
+    foot.querySelector('[data-act="resume"]')?.addEventListener('click', () => {
+      if (wasDriving) this.paused = false;
+      this.ui.closeModal();
+    });
+    foot.querySelector('[data-act="help-settings"]')?.addEventListener('click', () => {
+      this.ui.closeModal();
+      this.ui.showSettings(true);
+    });
+  }
+
+  /** Горный тормоз (заслонка в выпуске): держит машину на спуске без перегрева. */
+  toggleRetarder() {
+    if (!this.truck) return;
+    if (!this.truck.retarder) {
+      this.ui.toast('Горный тормоз не установлен — купите апгрейд в гараже', 'info', 3200);
+      return;
+    }
+    this.retarderOn = !this.retarderOn;
+    this.truck.exhaustBrake = this.retarderOn;
+    this.audio.blip(this.retarderOn ? 320 : 240, 0.09, 'triangle', 0.04);
+    this.ui.toast(this.retarderOn ? 'Горный тормоз включён' : 'Горный тормоз выключен', 'info', 1500);
   }
 
   offerFuelHelp() {
@@ -1941,6 +2087,11 @@ class Game {
     if (this.fuelPause) {
       this.fuelPause = false;
       this.paused = false;
+    }
+    // Настройки могли поменять — сохраняем сразу, чтобы выбор не потерялся при выходе.
+    if (this.settingsDirty) {
+      this.settingsDirty = false;
+      if (this.profile) this.saveNow(true);
     }
   }
 
