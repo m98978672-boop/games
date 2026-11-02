@@ -784,19 +784,35 @@
 
   function isRailFar(q) { return !!(C.roadTypes[q] && C.roadTypes[q].rail); }
 
-  function roadSamples(road) {
+  function roadSamples(road, state) {
     const c = U.curve(road);
-    const n = 56;
-    const pts = [];
+    const n = Math.max(56, Math.min(180, Math.round(road.totalKm * 1.2)));
+    const raw = [];
     for (let i = 0; i <= n; i++) {
       const t = i / n;
       const p = U.curvePoint(c, t);
       const river = Wd.riverDist(world, p.x, p.y);
       const lake = Wd.lakeFactor(world, p.x, p.y) > 0.02;
       const bridge = river < 3.2 || lake;
-      pts.push({ x: p.x, z: p.y, t, bridge, y: bridge ? BRIDGE_Y : 0.03 });
+      // полотно идёт ПО РЕЛЬЕФУ: иначе холм протыкает дорогу и она «уходит в почву»
+      const ground = terrainHeight(p.x, p.y, state);
+      raw.push({ x: p.x, z: p.y, t, bridge, ground });
     }
-    return pts;
+    // сглаживаем профиль, чтобы лента не дёргалась на каждой неровности
+    const smooth = raw.map((p, i) => {
+      let sum = 0, k = 0;
+      for (let j = i - 3; j <= i + 3; j++) {
+        if (j < 0 || j >= raw.length) continue;
+        sum += raw[j].ground; k++;
+      }
+      return sum / Math.max(1, k);
+    });
+    return raw.map((p, i) => {
+      const deck = smooth[i] + 0.07;
+      const y = p.bridge ? Math.max(BRIDGE_Y, deck) : Math.max(0.04, deck);
+      // никогда не ниже земли под собой — иначе снова окажемся под почвой
+      return { x: p.x, z: p.y, t: p.t, bridge: p.bridge, y: Math.max(y, p.ground + 0.05) };
+    });
   }
 
   const railMat = new THREE.MeshStandardMaterial({ color: '#c9ced4', roughness: 0.35, metalness: 0.8 });
@@ -846,7 +862,7 @@
     for (const road of state.roads) {
       if (!road.open && !road.building) continue;
       if (road.builtKm <= 0) continue;
-      const pts = roadSamples(road);
+      const pts = roadSamples(road, state);
       const total = pts.length;
       const builtFrac = U.clamp(road.builtKm / Math.max(road.totalKm, 0.001), 0, 1);
       const use = Math.max(2, Math.round(total * builtFrac));

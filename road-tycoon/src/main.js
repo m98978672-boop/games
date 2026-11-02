@@ -298,6 +298,7 @@
     window.addEventListener('keyup', (e) => {
       if (e.code === 'Space') spaceHeld = false;
       keys.delete(e.code);
+      if (/^[wasd]$/i.test(e.key || '')) keys.delete('Key' + e.key.toUpperCase());
     });
     // если окно потеряло фокус — сбрасываем зажатые клавиши, иначе карта «уезжает» сама
     window.addEventListener('blur', () => { keys.clear(); spaceHeld = false; });
@@ -426,8 +427,11 @@
     } else if (e.key === 'Escape') {
       if (TR.UI.closeModal()) return;
       cancelTool();
-    } else if (e.code.startsWith('Arrow') || e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyS' || e.code === 'KeyD') {
-      keys.add(e.code);
+    } else if (e.code.startsWith('Arrow') || e.code === 'KeyW' || e.code === 'KeyA' || e.code === 'KeyS' || e.code === 'KeyD'
+      || (!e.ctrlKey && !e.metaKey && /^[wasd]$/i.test(e.key))) {
+      // нормализуем букву в код клавиши — работает при любой раскладке
+      const code = /^[wasd]$/i.test(e.key) ? 'Key' + e.key.toUpperCase() : e.code;
+      keys.add(code);
       if (e.code.startsWith('Arrow')) e.preventDefault();
       return;
     } else if (e.key === '+' || e.key === '=') zoomBy(1.25);
@@ -440,7 +444,6 @@
     else if (e.key === '0') togglePause();
     else if (e.key === 'r' || e.key === 'R') setTool('road');
     else if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) { e.preventDefault(); app.save(); }
-    else if (e.key === 's' || e.key === 'S') app.save();
     else if (e.key === 'h' || e.key === 'H' || e.key === '?') TR.UI.showHelp();
     else if (e.key === 'f' || e.key === 'F') fitMap();
   }
@@ -503,6 +506,7 @@
     if (opts && opts.quality) app.buildQuality = opts.quality;
     app.tool = tool;
     app.roadFrom = null;
+    app.roadWay = [];
     app.roadPreview = null;
     app.placePreview = null;
     app.selection = null;
@@ -514,6 +518,13 @@
   app.cancelTool = cancelTool;
   function cancelTool() {
     if (app.roadFrom != null) {
+      // Esc убирает последнюю точку поворота, а когда их нет — отменяет трассу
+      if (app.roadWay && app.roadWay.length) {
+        app.roadWay.pop();
+        updateRoadPreview();
+        TR.UI.setHint(`Трасса: точек поворота ${app.roadWay.length}. Клик по земле — поворот, по городу — построить.`);
+        return;
+      }
       app.roadFrom = null;
       app.roadPreview = null;
       TR.UI.setHint();
@@ -577,13 +588,30 @@
         return;
       }
       app.roadFrom = city;
+      app.roadWay = [];
       app.roadPreview = null;
-      TR.UI.setHint(`Трасса из ${C.cities[city].name}: выберите второй город · класс ${C.roadTypes[app.buildQuality].name}`);
+      TR.UI.setHint(`Трасса из ${C.cities[city].name}: клик по земле — поворот, по городу — построить · класс ${C.roadTypes[app.buildQuality].name}`);
       TR.UI.refresh();
       return;
     }
     if (city == null) {
-      TR.UI.toast('Нужно нажать на город, к которому ведём дорогу', 'info');
+      // свободная трассировка: каждая точка на земле — поворот трассы
+      const w = app.hover && app.hover.world;
+      const A0 = C.cities[app.roadFrom];
+      const last = app.roadWay.length ? app.roadWay[app.roadWay.length - 1] : { x: A0.x, y: A0.y };
+      if (!w) return;
+      if (U.dist(last.x, last.y, w.x, w.y) < 3) {
+        TR.UI.toast('Слишком близко к предыдущей точке', 'info');
+        return;
+      }
+      if (app.roadWay.length >= 60) {
+        TR.UI.toast('Максимум 60 точек поворота — ведите город', 'bad');
+        return;
+      }
+      app.roadWay.push({ x: w.x, y: w.y });
+      app.roadPreview = null;
+      updateRoadPreview();
+      TR.UI.setHint(`Точек поворота: ${app.roadWay.length}. Ещё клик по земле — новый поворот, по городу — построить. Esc — убрать точку.`);
       return;
     }
     if (city === app.roadFrom) {
@@ -591,7 +619,12 @@
       TR.UI.setHint();
       return;
     }
-    const res = Sim.buildRoad(app.state, app.world, app.roadFrom, city, app.buildQuality);
+    const A = C.cities[app.roadFrom], B = C.cities[city];
+    const usePts = app.roadWay && app.roadWay.length > 0;
+    const pts = usePts ? [{ x: A.x, y: A.y }, ...app.roadWay, { x: B.x, y: B.y }] : null;
+    const res = usePts
+      ? Sim.buildRoadPts(app.state, app.world, app.roadFrom, city, pts, app.buildQuality)
+      : Sim.buildRoad(app.state, app.world, app.roadFrom, city, app.buildQuality);
     if (!res.ok) {
       TR.UI.toast(res.error, 'bad');
       TR.Audio.play('error');
@@ -600,6 +633,7 @@
     app.selection = { kind: 'road', id: res.road.id };
     if (window.innerWidth <= 1040) document.body.classList.add('side-open');
     app.roadFrom = null;
+    app.roadWay = [];
     app.roadPreview = null;
     TR.UI.refresh();
     TR.UI.setHint();
@@ -608,8 +642,25 @@
   function updateRoadPreview() {
     if (app.tool !== 'road' || app.roadFrom == null) { app.roadPreview = null; return; }
     const target = app.hover.city;
-    if (target == null || target === app.roadFrom) { app.roadPreview = null; return; }
-    app.roadPreview = Sim.roadQuote(app.state, app.world, app.roadFrom, target, app.buildQuality);
+    const A = C.cities[app.roadFrom];
+    const way = app.roadWay || [];
+    if (target == null || target === app.roadFrom) {
+      // пока город не выбран — считаем длину до курсора через все повороты
+      const w = app.hover && app.hover.world;
+      if (w && way.length) {
+        const pts = [{ x: A.x, y: A.y }, ...way, { x: w.x, y: w.y }];
+        app.roadPreview = Sim.roadQuotePts(app.state, app.world, app.roadFrom, app.roadFrom, pts, app.buildQuality);
+      } else {
+        app.roadPreview = null;
+      }
+      return;
+    }
+    if (way.length) {
+      const pts = [{ x: A.x, y: A.y }, ...way, { x: C.cities[target].x, y: C.cities[target].y }];
+      app.roadPreview = Sim.roadQuotePts(app.state, app.world, app.roadFrom, target, pts, app.buildQuality);
+    } else {
+      app.roadPreview = Sim.roadQuote(app.state, app.world, app.roadFrom, target, app.buildQuality);
+    }
   }
 
   function updatePlacePreview() {
