@@ -80,9 +80,29 @@
 
   /* Геометрия дороги: квадратичная кривая, смещённая от прямой */
   const curveCache = new Map();
+  // Произвольная трасса: дорога может быть ломаной из любых точек (повороты, объезды, кольца)
+  U.polyCurve = function (pts) {
+    const xs = [], ys = [], cum = [0];
+    let len = 0;
+    for (let i = 0; i < pts.length; i++) {
+      xs.push(pts[i].x); ys.push(pts[i].y);
+      if (i) {
+        len += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+        cum.push(len);
+      }
+    }
+    return { poly: true, xs, ys, cum, len: len || 1 };
+  };
+
   U.curve = function (road) {
-    const key = road.id + ':' + road.a + ':' + road.b + ':' + road.totalKm;
+    const key = road.id + ':' + road.a + ':' + road.b + ':' + road.totalKm +
+      (road.pts ? ':' + road.pts.length + ':' + Math.round(road.pts[0].x * 10) + ':' + Math.round(road.pts[road.pts.length - 1].y * 10) : '');
     if (curveCache.has(key)) return curveCache.get(key);
+    if (road.pts && road.pts.length >= 2) {
+      const pc = U.polyCurve(road.pts);
+      curveCache.set(key, pc);
+      return pc;
+    }
     const A = TR.CONFIG.cities[road.a], B = TR.CONFIG.cities[road.b];
     const dx = B.x - A.x, dy = B.y - A.y;
     const len = Math.hypot(dx, dy) || 1;
@@ -97,6 +117,17 @@
   U.clearCurveCache = () => curveCache.clear();
 
   U.curvePoint = function (c, t) {
+    if (c.poly) {
+      const d = U.clamp(t, 0, 1) * c.len;
+      let i = 1;
+      while (i < c.cum.length - 1 && c.cum[i] < d) i++;
+      const seg = Math.max(1e-9, c.cum[i] - c.cum[i - 1]);
+      const f = U.clamp((d - c.cum[i - 1]) / seg, 0, 1);
+      return {
+        x: c.xs[i - 1] + (c.xs[i] - c.xs[i - 1]) * f,
+        y: c.ys[i - 1] + (c.ys[i] - c.ys[i - 1]) * f,
+      };
+    }
     const it = 1 - t;
     return {
       x: it * it * c.ax + 2 * it * t * c.cx + t * t * c.bx,
@@ -104,6 +135,12 @@
     };
   };
   U.curveAngle = function (c, t) {
+    if (c.poly) {
+      const d = U.clamp(t, 0, 1) * c.len;
+      let i = 1;
+      while (i < c.cum.length - 1 && c.cum[i] < d) i++;
+      return Math.atan2(c.ys[i] - c.ys[i - 1], c.xs[i] - c.xs[i - 1]);
+    }
     const dx = 2 * (1 - t) * (c.cx - c.ax) + 2 * t * (c.bx - c.cx);
     const dy = 2 * (1 - t) * (c.cy - c.ay) + 2 * t * (c.by - c.cy);
     return Math.atan2(dy, dx);

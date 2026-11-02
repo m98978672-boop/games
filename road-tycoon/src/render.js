@@ -1153,6 +1153,10 @@
       const end = target ? R.toScreen(app, target.x, target.y) : { x: mouse.x, y: mouse.y };
       ctx.beginPath();
       ctx.moveTo(sp.x, sp.y);
+      for (const wp of (app.roadWay || [])) {
+        const s0 = R.toScreen(app, wp.x, wp.y);
+        ctx.lineTo(s0.x, s0.y);
+      }
       ctx.lineTo(end.x, end.y);
       ctx.stroke();
       ctx.restore();

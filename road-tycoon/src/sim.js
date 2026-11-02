@@ -362,6 +362,60 @@
     return { ok: true, cost, len, factor };
   };
 
+  // Длина произвольной ломаной (км)
+  Sim.polyLength = function (pts) {
+    let len = 0;
+    for (let i = 1; i < pts.length; i++) len += U.dist(pts[i - 1].x, pts[i - 1].y, pts[i].x, pts[i].y);
+    return len;
+  };
+
+  // Оценка произвольной трассы: игрок сам ведёт дорогу через любые точки
+  Sim.roadQuotePts = function (s, world, a, b, pts, quality) {
+    if (!pts || pts.length < 2) return { ok: false, error: 'Трасса слишком короткая' };
+    const len = Sim.polyLength(pts);
+    if (len < 6) return { ok: false, error: 'Трасса слишком короткая (минимум 6 км)' };
+    if (len > 1600) return { ok: false, error: 'Слишком длинная трасса (максимум 1600 км)' };
+    let sum = 0;
+    for (let i = 1; i < pts.length; i++) {
+      const steps = 6;
+      for (let k = 0; k < steps; k++) {
+        const t = k / steps;
+        sum += TR.World.terrainFactor(world, U.lerp(pts[i - 1].x, pts[i].x, t), U.lerp(pts[i - 1].y, pts[i].y, t));
+      }
+    }
+    const factor = sum / Math.max(1, (pts.length - 1) * 6);
+    const cost = Math.round(len * C.roadTypes[quality].cost * factor * Sim.crisisMul(s, 'buildCost'));
+    if (quality === 3 && s.level < 4) return { ok: false, error: 'Автобан откроется на 4 уровне' };
+    if (quality === 2 && s.level < 2) return { ok: false, error: 'Асфальт откроется на 2 уровне' };
+    const dup = s.roads.find((r) => !r.building && ((r.a === a && r.b === b) || (r.a === b && r.b === a)));
+    return { ok: true, cost, len, factor, dup };
+  };
+
+  Sim.buildRoadPts = function (s, world, a, b, pts, quality) {
+    const q = Sim.roadQuotePts(s, world, a, b, pts, quality);
+    if (!q.ok) return q;
+    if (s.money < q.cost) return { ok: false, error: 'Не хватает денег: нужно ' + U.money(q.cost) };
+    const active = s.roads.filter((r) => r.building).length + s.facilities.filter((f) => !f.ready).length;
+    if (active >= Sim.maxProjects(s)) {
+      return { ok: false, error: 'Все бригады заняты. Улучшите «Спецтехнику» для параллельных строек.' };
+    }
+    s.money -= q.cost;
+    const road = {
+      id: s.nextRoadId++, a, b, quality, target: quality,
+      open: false, building: true, totalKm: q.len, builtKm: 0,
+      pts: pts.map((p) => ({ x: p.x, y: p.y })),
+      byPlayer: true, toll: false, blockedUntil: 0, trafficToday: 0, level: 1,
+    };
+    s.roads.push(road);
+    U.clearCurveCache();
+    Sim.invalidatePaths(s);
+    Sim.addXp(s, 70 + Math.round(q.len * 3));
+    Sim.notice(s, 'info', `Начата стройка: ${C.cities[a].name} — ${C.cities[b].name}, ${U.km(q.len)}.`);
+    Sim.addNews(s, 'build', `Начата трасса ${C.cities[a].name} — ${C.cities[b].name} (${C.roadTypes[quality].name}).`);
+    s.sfx.push('build');
+    return { ok: true, road, cost: q.cost };
+  };
+
   Sim.buildRoad = function (s, world, a, b, quality) {
     const q = Sim.roadQuote(s, world, a, b, quality);
     if (!q.ok) return q;
