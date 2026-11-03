@@ -240,7 +240,8 @@
   Sim.buildRate = function (s) {
     const crew = s.upgrades.crew;
     const fleet = s.upgrades.fleet;
-    return (300 + crew * 140) * (1 + fleet * 0.2) * Sim.effectMul(s, 'build');
+    // стройка не должна длиться полчаса: дорога на 500 км — это ~1.5 минуты на 1×
+    return (4000 + crew * 900) * (1 + fleet * 0.15) * Sim.effectMul(s, 'build');
   };
   Sim.maxProjects = (s) => 1 + s.upgrades.fleet;
   Sim.crewFactor = (s) => 0.4 + s.upgrades.crew * 0.2;

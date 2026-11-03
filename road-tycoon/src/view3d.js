@@ -22,7 +22,7 @@
   let raycaster, groundPlane;
   let vw = 1, vh = 1;
   let ppkNow = PX_PER_KM;
-  let roadSig = null, facSig = null, citySig = -1, cityBuilt = false;
+  let roadSig = null, facSig = null, citySig = -1, cityBuilt = false, lastBuildSig = -1;
   let roadFarMul = 1, roadFarPrev = 0;   // насколько расширить полотно на дальнем плане
   const samples = new Map();       // roadId -> {pts, half, name}
   const facilityMeshes = new Map(); // facId -> Object3D
@@ -503,6 +503,52 @@
     { w: 0.6, d: 0.48, h: [0.1, 0.22], tint: ['#b9a894', '#c7b6a1', '#ad9d8b', '#9c8f7d'] },
   ];
 
+  // Ориентир города: ратуша, собор с куполом, ТВ-башня или стадион.
+  // Разные силуэты — города перестают быть близнецами.
+  function landmark(kind, city, cell) {
+    const stone = new THREE.MeshStandardMaterial({ color: '#e6dcc8', roughness: 0.75 });
+    const dark = new THREE.MeshStandardMaterial({ color: '#5b5147', roughness: 0.9 });
+    if (kind === 0) {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(cell * 1.2, 15, cell * 1.2), stone);
+      body.position.set(city.x, 7.5, city.y);
+      const roof = new THREE.Mesh(new THREE.ConeGeometry(cell * 0.95, 9, 4),
+        new THREE.MeshStandardMaterial({ color: '#b05a41', roughness: 0.9 }));
+      roof.position.set(city.x, 19.5, city.y);
+      roof.rotation.y = Math.PI / 4;
+      cityGroup.add(body, roof);
+    } else if (kind === 1) {
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(cell * 1.15, cell * 1.3, 7, 14), stone);
+      base.position.set(city.x, 3.5, city.y);
+      const dome = new THREE.Mesh(new THREE.SphereGeometry(cell * 1.18, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: '#7ea9c9', roughness: 0.35, metalness: 0.55 }));
+      dome.position.set(city.x, 7, city.y);
+      const cross = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 3, 6),
+        new THREE.MeshStandardMaterial({ color: '#d8c07a', roughness: 0.4, metalness: 0.7 }));
+      cross.position.set(city.x, 7 + cell * 1.18 + 1.4, city.y);
+      cityGroup.add(base, dome, cross);
+    } else if (kind === 2) {
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.55, 34, 8), stone);
+      mast.position.set(city.x, 17, city.y);
+      const ball = new THREE.Mesh(new THREE.SphereGeometry(cell * 0.85, 14, 10),
+        new THREE.MeshStandardMaterial({ color: '#e08a5a', roughness: 0.5 }));
+      ball.position.set(city.x, 19, city.y);
+      const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.1, 8, 5), dark);
+      tip.position.set(city.x, 38, city.y);
+      cityGroup.add(mast, ball, tip);
+    } else {
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(cell * 2.0, cell * 1.7, 3.4, 22, 1, true),
+        new THREE.MeshStandardMaterial({ color: '#d7d3c6', roughness: 0.9, side: THREE.DoubleSide }));
+      bowl.position.set(city.x, 1.7, city.y);
+      const field = new THREE.Mesh(new THREE.CircleGeometry(cell * 1.7, 22),
+        new THREE.MeshStandardMaterial({ color: '#3f7a37', roughness: 1 }));
+      field.rotation.x = -Math.PI / 2;
+      field.position.set(city.x, 0.09, city.y);
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.16, 16, 6), dark);
+      mast.position.set(city.x + cell * 1.9, 8, city.y);
+      cityGroup.add(bowl, field, mast);
+    }
+  }
+
   function buildCities(state) {
     cityGroup.clear();
     const rand = U.mulberry32(world.seed * 97 + 5);
@@ -577,21 +623,27 @@
       const px = city.x + Math.cos(parkAngle) * half * 0.55;
       const pz = city.y + Math.sin(parkAngle) * half * 0.55;
       propGroup.add(quad(px, pz, cell * 2.2, cell * 1.8, 0.045, '#3f6b3a'));
-      // ориентир: ратуша/башня в центре — видно с высоты
-      if (ci % 2 === 0) {
-        const tower = new THREE.Mesh(
-          new THREE.BoxGeometry(cell * 1.1, 14 + (ci % 3) * 4, cell * 1.1),
-          new THREE.MeshStandardMaterial({ color: '#e3d9c6', roughness: 0.8 })
+      // парк: деревья и дорожки — город перестаёт быть «серой сеткой»
+      propGroup.add(quad(px, pz, cell * 1.1, cell * 1.8, 0.05, '#b8ad8e'));
+      for (let t = 0; t < 8; t++) {
+        const ang = rand() * Math.PI * 2, rr = 0.25 + rand() * 0.95;
+        const tx0 = px + Math.cos(ang) * cell * rr;
+        const tz0 = pz + Math.sin(ang) * cell * rr;
+        if (Wd.riverDist(world, tx0, tz0) < 3.2 || Wd.lakeFactor(world, tx0, tz0) > 0.02) continue;
+        const th = 1.1 + rand() * 1.1;
+        const crown = new THREE.Mesh(
+          new THREE.ConeGeometry(0.34 + rand() * 0.2, th, 5),
+          new THREE.MeshStandardMaterial({ color: t % 3 === 0 ? '#4b8a3c' : '#39702f', roughness: 1 })
         );
-        tower.position.set(city.x, 7 + (ci % 3) * 2, city.y);
-        cityGroup.add(tower);
-        const spire = new THREE.Mesh(
-          new THREE.ConeGeometry(cell * 0.75, 8, 4),
-          new THREE.MeshStandardMaterial({ color: '#b05a41', roughness: 0.9 })
-        );
-        spire.position.set(city.x, 18 + (ci % 3) * 4, city.y);
-        cityGroup.add(spire);
+        crown.position.set(tx0, th / 2 + 0.06, tz0);
+        cityGroup.add(crown);
       }
+      // ещё одна площадь-сквер в другом секторе
+      const sqAng = parkAngle + Math.PI * (0.6 + rand() * 0.6);
+      propGroup.add(quad(city.x + Math.cos(sqAng) * half * 0.5, city.y + Math.sin(sqAng) * half * 0.5,
+        cell * 1.3, cell * 1.3, 0.05, '#b3a98c'));
+      // ориентир: ратуша/башня в центре — видно с высоты
+      landmark(ci % 4, city, cell);
     }
 
     // улицы одним мешем
@@ -892,10 +944,10 @@
     samples.clear();
     for (const road of state.roads) {
       if (!road.open && !road.building) continue;
-      if (road.builtKm <= 0) continue;
       const pts = roadSamples(road, state);
       const total = pts.length;
-      const builtFrac = U.clamp(road.builtKm / Math.max(road.totalKm, 0.001), 0, 1);
+      const builtFrac = road.building ? U.clamp(road.builtKm / Math.max(road.totalKm, 0.001), 0, 1) : 1;
+      // у строящейся дороги виден уже готовый кусок (минимум два сэмпла), а не пустота
       const use = Math.max(2, Math.round(total * builtFrac));
       const q = road.quality;
       const width = ROAD_W[q] * roadFarMul;
@@ -912,7 +964,7 @@
       const mat = new THREE.MeshStandardMaterial({
         map: isRail ? TR.Content.texture(100 + (road.id % 50)) : roadTexture(road.building ? 1 : q),
         roughness: 0.9, metalness: isRail ? 0.35 : 0.02,
-        color: road.building ? '#b9b0a0' : (isRail ? '#6b6258' : '#ffffff'),
+        color: road.building ? '#d9bd86' : (isRail ? '#6b6258' : '#ffffff'),
       });
       const mesh = new THREE.Mesh(g, mat);
       mesh.receiveShadow = false;
@@ -1519,6 +1571,13 @@
     if (!cityBuilt || roadSig === null) buildWorld(s);
     else if (roadSig !== s.graphVersion) buildWorld(s);
     else if (citySig !== s.cityVersion) { buildCities(s); citySig = s.cityVersion; }
+    // прогресс стройки меняется каждый тик — полотно должно «расти» на глазах
+    let buildSig = 0;
+    for (const r of s.roads) if (r.building) buildSig += 1 + Math.floor(r.builtKm * 2);
+    if (buildSig !== lastBuildSig) {
+      lastBuildSig = buildSig;
+      rebuildRoads(s);
+    }
     if (facSig !== s.facVersion) {
       rebuildFacilities(s);
       facSig = s.facVersion;
