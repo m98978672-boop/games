@@ -455,13 +455,20 @@
 
   function buildWater() {
     waterGroup.clear();
+    // вода: низкая шероховатость + металличность даёт блики неба, как у настоящей поверхности
     const waterMat = new THREE.MeshStandardMaterial({
-      map: waterTexture(), color: '#9fd4e6', emissive: new THREE.Color('#12384a'), emissiveIntensity: 0.4,
-      roughness: 0.18, metalness: 0.2, transparent: true, opacity: 0.97,
+      map: waterTexture(), color: '#7cc9e4', emissive: new THREE.Color('#0b2c3c'), emissiveIntensity: 0.3,
+      roughness: 0.05, metalness: 0.5, transparent: true, opacity: 0.93,
     });
+    const shallowMat = new THREE.MeshStandardMaterial({
+      color: '#b6e3ee', transparent: true, opacity: 0.6, roughness: 0.15, metalness: 0.2,
+    });
+    const sandMat = new THREE.MeshStandardMaterial({ color: '#cbbd93', roughness: 1 });
+    const reedMat = new THREE.MeshStandardMaterial({ color: '#6f8c41', roughness: 1 });
+    const reedGeo = new THREE.ConeGeometry(0.12, 0.55, 4);
+
     for (const river of world.rivers) {
       const pts = river.map((p) => ({ x: p.x, z: p.y }));
-      // сглаживание: добавим промежуточные точки
       const smooth = [];
       for (let i = 0; i < pts.length - 1; i++) {
         for (let k = 0; k < 6; k++) {
@@ -470,27 +477,64 @@
         }
       }
       smooth.push(pts[pts.length - 1]);
-      const g = ribbon(smooth, (t) => 1.7 + Math.sin(t * 9) * 0.28, { y: 0.2, vScale: 6 });
-      const m = new THREE.Mesh(g, waterMat);
-      waterGroup.add(m);
-      // берега
-      const bank = ribbon(smooth, 3.8, { y: 0.11, vScale: 6 });
-      const bm = new THREE.Mesh(bank, new THREE.MeshStandardMaterial({ color: '#94a468', roughness: 1 }));
-      waterGroup.add(bm);
+      const wAt = (t) => 1.9 + Math.sin(t * 7.5) * 0.35 + Math.sin(t * 21) * 0.12;
+
+      // песчаная отмель (самая широкая, лежит ниже всех)
+      waterGroup.add(new THREE.Mesh(ribbon(smooth, (t) => wAt(t) + 2.3, { y: 0.06, vScale: 6 }), sandMat));
+      // мелководье
+      waterGroup.add(new THREE.Mesh(ribbon(smooth, (t) => wAt(t) + 0.9, { y: 0.12, vScale: 6 }), shallowMat));
+      // само русло
+      waterGroup.add(new THREE.Mesh(ribbon(smooth, wAt, { y: 0.16, vScale: 6 }), waterMat));
+
+      // камыш по берегам — река сразу читается как живая
+      const randR = U.mulberry32(Math.round(smooth[0].x * 13 + smooth[0].z * 7) + 11);
+      for (let i = 6; i < smooth.length - 6; i += 5) {
+        const a = smooth[i - 1], b = smooth[i + 1];
+        let tx = b.x - a.x, tz = b.z - a.z;
+        const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
+        const nx = -tz, nz = tx;
+        for (const side of [-1, 1]) {
+          if (randR() > 0.55) continue;
+          const off = (wAt(i / smooth.length) / 2 + 1.5 + randR() * 0.8) * side;
+          const reed = new THREE.Mesh(reedGeo, reedMat);
+          reed.position.set(smooth[i].x + nx * off, 0.32, smooth[i].z + nz * off);
+          reed.scale.y = 0.7 + randR() * 0.9;
+          waterGroup.add(reed);
+        }
+      }
     }
+
     for (const lake of world.lakes) {
-      const g = new THREE.CircleGeometry(1, 40);
-      g.rotateX(-Math.PI / 2);
-      const m = new THREE.Mesh(g, waterMat);
+      const disc = new THREE.CircleGeometry(1, 48);
+      disc.rotateX(-Math.PI / 2);
+      // отмель
+      const sand = new THREE.Mesh(disc, sandMat);
+      sand.scale.set(lake.rx * 1.16, 1, lake.ry * 1.18);
+      sand.rotation.y = lake.rot;
+      sand.position.set(lake.x, 0.05, lake.y);
+      waterGroup.add(sand);
+      // мелководье
+      const sh = new THREE.Mesh(disc, shallowMat);
+      sh.scale.set(lake.rx * 1.06, 1, lake.ry * 1.06);
+      sh.rotation.y = lake.rot;
+      sh.position.set(lake.x, 0.11, lake.y);
+      waterGroup.add(sh);
+      // вода
+      const m = new THREE.Mesh(disc, waterMat);
       m.scale.set(lake.rx, 1, lake.ry);
       m.rotation.y = lake.rot;
-      m.position.set(lake.x, 0.14, lake.y);
+      m.position.set(lake.x, 0.15, lake.y);
       waterGroup.add(m);
-      const ring = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ color: '#c8b98a', roughness: 1 }));
-      ring.scale.set(lake.rx * 1.14, 1, lake.ry * 1.16);
-      ring.position.set(lake.x, 0.07, lake.y);
-      ring.rotation.y = lake.rot;
-      waterGroup.add(ring);
+      // камыш по кромке
+      const randL = U.mulberry32(Math.round(lake.x * 17 + lake.y * 5) + 3);
+      for (let i = 0; i < 26; i++) {
+        const ang = randL() * Math.PI * 2;
+        const rr = 0.98 + randL() * 0.16;
+        const reed = new THREE.Mesh(reedGeo, reedMat);
+        reed.position.set(lake.x + Math.cos(ang) * lake.rx * rr, 0.32, lake.y + Math.sin(ang) * lake.ry * rr);
+        reed.scale.y = 0.7 + randL() * 0.9;
+        waterGroup.add(reed);
+      }
     }
   }
 
@@ -501,6 +545,10 @@
     { w: 0.5, d: 0.36, h: [0.12, 0.3], tint: ['#c9bda8', '#b9ae9a', '#d6c8ae', '#a8563f', '#8f9aa5'] },
     { w: 0.26, d: 0.26, h: [0.4, 1.15], tint: ['#c3ccd4', '#b7c3cc', '#cfd6da', '#9fb6c9', '#dfe6ea'] },
     { w: 0.6, d: 0.48, h: [0.1, 0.22], tint: ['#b9a894', '#c7b6a1', '#ad9d8b', '#9c8f7d'] },
+    // промзона: цеха (широкие, низкие, металл с ржавчиной)
+    { w: 0.86, d: 0.6, h: [0.16, 0.3], tint: ['#9aa3a8', '#8a949a', '#a7b0b4', '#b08a6e'] },
+    // склады и ангары
+    { w: 0.72, d: 0.56, h: [0.12, 0.2], tint: ['#a9b0b5', '#c2c8cc', '#8f979c', '#b7bfc4'] },
   ];
 
   // Ориентир города: ратуша, собор с куполом, ТВ-башня или стадион.
@@ -552,11 +600,17 @@
   function buildCities(state) {
     cityGroup.clear();
     const rand = U.mulberry32(world.seed * 97 + 5);
-    const lists = [[], [], [], []];
+    const lists = [[], [], [], [], [], []];
     const streetPts = [];
     for (let ci = 0; ci < C.cities.length; ci++) {
       const city = C.cities[ci];
-      const Rc = cityRadius(city);
+      // размер города фиксирован (по исходному населению из конфига):
+      // рост идёт застройкой свободных кварталов, а не расширением пятна
+      const basePop = city.pop || 20000;
+      const Rc = 9 + Math.min(basePop, 420000) / 3500;
+      const live = (state && state.cities && state.cities[ci]) ? state.cities[ci] : null;
+      const pop = live ? live.pop : basePop;
+      const popNorm = U.clamp(pop / 150000, 0, 1);
       const cell = 1.55;
       const n = Math.max(3, Math.min(18, Math.round(Rc / cell)));
       const half = n * cell;
@@ -579,9 +633,16 @@
           // на воде не строим: город обходит реки и озёра
           if (Wd.riverDist(world, cx, cz) < 3.4) continue;
           if (Wd.lakeFactor(world, cx, cz) > 0.02) continue;
-          const density = 0.78 - (distC / half) * 0.5;
+          // плотность застройки = население: больше жителей -> больше кварталов занято
+          const ring = distC / half;                 // 0 центр … 1 окраина
+          const density = (0.20 + 0.74 * popNorm) * (1 - ring * 0.4);
           if (rand() > density) continue;
-          const type = (rand() < 0.16 ? 2 : rand() < 0.5 ? 0 : rand() < 0.75 ? 1 : 3);
+          // районы как в Transport Fever: центр — коммерция, средина — жильё, окраина — промзона
+          const roll = rand();
+          let type;
+          if (ring < 0.34) type = roll < 0.5 ? 2 : (roll < 0.82 ? 0 : 3);
+          else if (ring < 0.72) type = roll < 0.48 ? 0 : (roll < 0.8 ? 1 : (roll < 0.93 ? 2 : 3));
+          else type = roll < 0.4 ? 4 : (roll < 0.68 ? 5 : (roll < 0.88 ? 3 : 1));
           const t = BUILD_TYPES[type];
           const w = t.w * 1.8 * (1.15 + rand() * 0.5);
           const d = t.d * 1.8 * (1.15 + rand() * 0.5);
@@ -698,6 +759,8 @@
         ['#7d8790', '#6b7680', '#98a2a8'],              // склады/магазины: сланец
         ['#5f7488', '#71889c', '#4f6377'],              // высотки: холодный металл
         ['#8a7a5f', '#9c8c6f', '#776a53'],              // хозпостройки
+        ['#7d848a', '#6e767c', '#8b9298'],              // цеха
+        ['#9aa2a7', '#889196', '#a7aeb2'],              // склады
       ];
       const rc = ROOF_COLORS[ti % ROOF_COLORS.length];
       const roofMat = new THREE.MeshStandardMaterial({ color: rc[ti % rc.length], roughness: 1 });
@@ -1128,6 +1191,57 @@
     building.position.set(0, 0.02, 2.75);
     building.rotation.y = (f.id % 3) * 0.12;
     g.add(building);
+
+    // Детали по типу бизнеса: навесы, колонки, трубы, силосы, ворота.
+    // Без них все объекты выглядели одинаковыми коробками.
+    const bx = (w, h, d, x, y, z, color, rough) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d),
+        new THREE.MeshStandardMaterial({ color, roughness: rough === undefined ? 0.9 : rough, metalness: 0.12 }));
+      m.position.set(x, y, z);
+      return m;
+    };
+    const cyl = (r, h, x, y, z, color) => {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 10),
+        new THREE.MeshStandardMaterial({ color, roughness: 0.7, metalness: 0.35 }));
+      m.position.set(x, y, z);
+      return m;
+    };
+    if (def.key === 'fuel') {
+      g.add(bx(2.3, 0.09, 1.6, 0, 1.15, 2.7, '#eee9dc'));           // навес
+      for (const sx of [-1.0, 1.0]) g.add(bx(0.07, 1.15, 0.07, sx, 0.57, 2.7, '#cfd3d6', 0.5));
+      for (const px of [-0.55, 0.55]) {
+        g.add(bx(0.16, 0.55, 0.16, px, 0.3, 2.7, '#d64b3f', 0.5));   // колонки
+        g.add(bx(0.05, 0.3, 0.05, px + 0.14, 0.62, 2.7, '#3a3f45'));
+      }
+    } else if (def.key === 'cafe') {
+      g.add(bx(1.5, 0.05, 0.9, 0, 0.06, 3.6, '#a9784f'));            // терраса
+      for (const zx of [-0.5, 0.5]) {
+        g.add(cyl(0.05, 0.9, zx, 0.45, 3.9, '#7d5a38'));
+        g.add(cyl(0.5, 0.06, zx, 0.95, 3.9, '#d9734a'));             // зонтики
+      }
+    } else if (def.key === 'shop') {
+      g.add(bx(1.7, 0.05, 0.55, 0, 0.9, 2.05, '#cfe0ea'));           // козырёк
+      g.add(bx(0.05, 0.9, 0.05, -0.78, 0.45, 2.05, '#8d949a'));
+      g.add(bx(0.05, 0.9, 0.05, 0.78, 0.45, 2.05, '#8d949a'));
+    } else if (def.key === 'workshop') {
+      g.add(cyl(0.13, 2.0, -0.75, 1.0, 3.2, '#8a8f93'));             // дымовая труба
+      g.add(bx(0.9, 0.7, 0.5, 0.45, 0.35, 3.3, '#b98d5b'));          // ящики у цеха
+      g.add(bx(0.05, 0.55, 0.05, -0.75, 2.2, 3.2, '#c9502f'));       // огонёк на трубе
+    } else if (def.key === 'silo') {
+      for (const sx of [-0.55, 0, 0.55]) {
+        g.add(cyl(0.28, 1.5, sx, 0.75, 3.3, '#c9c2ac'));             // силосы
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.35, 10),
+          new THREE.MeshStandardMaterial({ color: '#9aa0a4', roughness: 0.6 }));
+        cap.position.set(sx, 1.68, 3.3);
+        g.add(cap);
+      }
+    } else if (def.key === 'warehouse') {
+      g.add(bx(1.6, 0.4, 0.06, 0, 0.2, 2.05, '#7f8a92'));            // ворота
+      for (const sx of [-0.5, 0.5]) g.add(bx(0.5, 0.02, 0.02, sx, 0.35, 2.02, '#d8dde0'));
+      g.add(bx(0.25, 0.25, 0.25, 1.0, 0.13, 3.4, '#b08b5a'));        // паллеты
+    } else if (def.key === 'motel' || def.key === 'camp') {
+      for (let i = -1; i <= 1; i++) g.add(bx(0.6, 0.05, 0.4, i * 0.7, 0.9 + (i + 1) * 0.05, 2.3, '#c9a86a'));
+    }
 
     // вывеска на стойке у заезда
     const sign = new THREE.Mesh(
