@@ -1141,8 +1141,21 @@
     const ppk = R.ppk(app.camera.zoom);
     const mouse = app.mouse;
 
+    // Прогресс стройки прямо на карте: видно, где идёт дорога и сколько готово
+    if (s && s.roads) {
+      for (const rd of s.roads) {
+        if (!rd.building || rd.builtKm <= 0) continue;
+        const crd = U.curve(rd);
+        const frac = U.clamp(rd.builtKm / Math.max(rd.totalKm, 0.001), 0, 1);
+        const pp = U.curvePoint(crd, Math.min(1, frac));
+        const sp2 = R.toScreen(app, pp.x, pp.y);
+        const label = `Строится ${Math.round(frac * 100)}% · ${Math.round(rd.builtKm)} / ${Math.round(rd.totalKm)} км`;
+        drawChip(ctx, sp2.x, sp2.y - 16, label, 'rgba(64,50,18,0.94)', '#ffe6ad', 12);
+      }
+    }
+
     if (app.tool === 'road' && app.roadFrom != null && mouse) {
-      const a = C.cities[app.roadFrom];
+      const a = app.junction || C.cities[app.roadFrom];
       const sp = R.toScreen(app, a.x, a.y);
       const q = app.roadPreview;
       ctx.save();
