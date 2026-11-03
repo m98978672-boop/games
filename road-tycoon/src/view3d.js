@@ -475,6 +475,13 @@
     const reedMat = new THREE.MeshStandardMaterial({ color: '#6f8c41', roughness: 1 });
     const reedGeo = new THREE.ConeGeometry(0.12, 0.55, 4);
 
+    const midWaterMat = new THREE.MeshStandardMaterial({
+      color: '#3f93a8', roughness: 0.16, metalness: 0.25, transparent: true, opacity: 0.92,
+    });
+    const deepWaterMat = new THREE.MeshStandardMaterial({
+      color: '#1d5670', roughness: 0.12, metalness: 0.3, transparent: true, opacity: 0.95,
+    });
+
     for (const river of world.rivers) {
       const pts = river.map((p) => ({ x: p.x, z: p.y }));
       const smooth = [];
@@ -527,12 +534,23 @@
       sea.rotation.x = -Math.PI / 2;
       sea.position.set(C.worldW / 2, 0.09, coastZ + 120);
       waterGroup.add(sea);
-      // пена у кромки
-      const foam = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.4, 2.2),
-        new THREE.MeshBasicMaterial({ color: '#eaf6fb', transparent: true, opacity: 0.55 }));
-      foam.rotation.x = -Math.PI / 2;
-      foam.position.set(C.worldW / 2, 0.1, coastZ + 6);
-      waterGroup.add(foam);
+      // пена у кромки и три полосы прибоя — море перестаёт быть плоской плёнкой
+      for (let k = 0; k < 4; k++) {
+        const foam = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.4, 1.6 - k * 0.25),
+          new THREE.MeshBasicMaterial({ color: '#eaf6fb', transparent: true, opacity: 0.5 - k * 0.1 }));
+        foam.rotation.x = -Math.PI / 2;
+        foam.position.set(C.worldW / 2, 0.1, coastZ + 5 + k * 7);
+        waterGroup.add(foam);
+      }
+      // цветовая глубина: светлая полоса у берега, тёмная вдали
+      const band1 = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.5, 26), midWaterMat);
+      band1.rotation.x = -Math.PI / 2;
+      band1.position.set(C.worldW / 2, 0.095, coastZ + 40);
+      waterGroup.add(band1);
+      const band2 = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.5, 150), deepWaterMat);
+      band2.rotation.x = -Math.PI / 2;
+      band2.position.set(C.worldW / 2, 0.098, coastZ + 140);
+      waterGroup.add(band2);
     }
 
     for (const lake of world.lakes) {
@@ -559,6 +577,17 @@
         reed.position.set(lake.x + rx, 0.25, lake.y + rz);
         waterGroup.add(reed);
       }
+      // глубина: тёмное ядро и бирюзовая кромка — водоём читается как настоящий
+      const mid2 = new THREE.Mesh(disc, midWaterMat);
+      mid2.scale.set(lake.rx * 0.86, 1, lake.ry * 0.86);
+      mid2.rotation.y = lake.rot;
+      mid2.position.set(lake.x, 0.13, lake.y);
+      waterGroup.add(mid2);
+      const deep = new THREE.Mesh(disc, deepWaterMat);
+      deep.scale.set(lake.rx * 0.55, 1, lake.ry * 0.55);
+      deep.rotation.y = lake.rot;
+      deep.position.set(lake.x, 0.135, lake.y);
+      waterGroup.add(deep);
       // вода
       const m = new THREE.Mesh(disc, waterMat);
       m.scale.set(lake.rx, 1, lake.ry);
@@ -1204,7 +1233,7 @@
     return n.split(' ').slice(0, 2).join(' ').slice(0, 13);
   }
 
-  function facilityMesh(f, road) {
+  function facilityMesh(f, road, state) {
     const def = C.facilityByKey[f.type];
     const curve = U.curve(road);
     const p = U.curvePoint(curve, f.t);
@@ -1213,7 +1242,9 @@
     const halfW = (ROAD_W[road.quality] || 0.7) / 2;
 
     const g = new THREE.Group();
-    g.position.set(p.x, 0.03, p.y);
+    // объект всегда стоит на поверхности земли, а не «в почве»
+    const gy = state ? meshHeight(p.x, p.y, state) : 0;
+    g.position.set(p.x, Math.max(0.03, gy + 0.02), p.y);
     g.rotation.y = -ang + (side < 0 ? Math.PI : 0);
 
     const flat = (w, d, x, z, color, y) => {
@@ -1415,7 +1446,7 @@
     for (const f of state.facilities) {
       const road = TR.Sim.roadById(state, f.roadId);
       if (!road || (!road.open && !road.building)) continue;
-      const m = facilityMesh(f, road);
+      const m = facilityMesh(f, road, state);
       m.userData.fac = f;
       facilityMeshes.set(f.id, m);
       facilityGroup.add(m);

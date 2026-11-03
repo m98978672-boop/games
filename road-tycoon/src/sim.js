@@ -497,7 +497,7 @@
     return facIndexCache.get(roadId) || [];
   };
 
-  Sim.canPlace = function (s, typeKey, roadId, t) {
+  Sim.canPlace = function (s, typeKey, roadId, t, side) {
     const def = C.facilityByKey[typeKey];
     if (!def) return { ok: false, error: 'Неизвестный объект' };
     if (def.unlock > s.level) return { ok: false, error: `Откроется на ${def.unlock} уровне` };
@@ -516,10 +516,15 @@
       return { ok: true, def };
     }
     if (t < 0.04 || t > 0.96) return { ok: false, error: 'Слишком близко к городу' };
-    const minGap = 32; // км между объектами
+    // Объекты можно ставить плотно — из них складываются «улицы» вдоль трассы.
+    // Запрещено только наложение на тот же стороне и в той же точке.
+    const mySide = side === -1 ? -1 : 1;
+    const minGap = def.cat === 'industry' ? 5 : 4;
     for (const f of list) {
-      if (Math.abs(f.t - t) * road.totalKm < minGap) {
-        return { ok: false, error: 'Слишком близко к другому объекту' };
+      const sameSide = (f.side === -1 ? -1 : 1) === mySide;
+      const dKm = Math.abs(f.t - t) * road.totalKm;
+      if (dKm < (sameSide ? minGap : minGap * 0.45) && f.type !== 'toll') {
+        return { ok: false, error: 'Слишком близко к другому объекту — сдвиньте или поставьте с другой стороны' };
       }
     }
     if (def.cat === 'city') {
@@ -532,7 +537,7 @@
   };
 
   Sim.placeFacility = function (s, typeKey, roadId, t, side) {
-    const chk = Sim.canPlace(s, typeKey, roadId, t);
+    const chk = Sim.canPlace(s, typeKey, roadId, t, side);
     if (!chk.ok) return chk;
     const def = chk.def;
     s.money -= def.cost;
