@@ -697,7 +697,7 @@
     const v = {
       id: Math.random().toString(36).slice(2, 9),
       kind, color: colorSet[Math.floor(Math.random() * colorSet.length)],
-      path, edgeIdx: 0, t: 0, dir: path[0].dir,
+      path, edgeIdx: 0, t: 0, dir: path[0].dir, speedMul: 0.88 + Math.random() * 0.26,
       want: pickWants(kind), stops: 2,
       pause: 0, x: 0, y: 0, angle: 0, lane: 0.22 + Math.random() * 0.34,
       from, to, hit: {},
@@ -822,6 +822,15 @@
 
   function updateVehicles(s, dt, dHours) {
     const step = dHours * C.trafficTimeMul;
+    // «боты» на дороге: держим дистанцию и не проезжаем друг через друга
+    const occupancy = new Map();
+    for (const v of s.vehicles) {
+      const st = v.path && v.path[v.edgeIdx];
+      if (!st) continue;
+      let arr = occupancy.get(st.roadId);
+      if (!arr) occupancy.set(st.roadId, (arr = []));
+      arr.push({ dir: st.dir, p: st.dir === 1 ? v.t : 1 - v.t, v });
+    }
     for (let i = s.vehicles.length - 1; i >= 0; i--) {
       const v = s.vehicles[i];
       if (v.pause > 0) {
@@ -832,7 +841,7 @@
       let road = Sim.roadById(s, v.path[v.edgeIdx].roadId);
       if (!road) { s.vehicles.splice(i, 1); continue; }
       const speed = Sim.roadSpeed(road, s) / C.roadTypes[0].speed;
-      budget *= speed;
+      budget *= speed * (v.speedMul || 1);
 
       let alive = true;
       let guard = 0;
@@ -841,9 +850,23 @@
         if (!road) { alive = false; break; }
         const len = Math.max(2, road.totalKm);
         const remaining = (1 - v.t) * len;
+        // дистанция до машины впереди в том же направлении
+        let free = remaining;
+        const mates = occupancy.get(road.id);
+        if (mates && mates.length > 1) {
+          const curDir = v.path[v.edgeIdx].dir;
+          const myP = curDir === 1 ? v.t : 1 - v.t;
+          const gap = Math.max(0.7, (v.len || 1) * 0.9);
+          for (const m of mates) {
+            if (m.v === v || m.dir !== curDir) continue;
+            const ahead = (m.p - myP) * len;
+            if (ahead > 0.05 && ahead < free) free = Math.max(0, ahead - gap);
+          }
+        }
+        if (free <= 0.05) break;
         const facs = Sim.facilitiesOnRoad(s, road.id);
         const prevT = v.t;
-        if (budget < remaining) {
+        if (budget < Math.min(remaining, free + 0.001)) {
           v.t += budget / len;
           budget = 0;
           checkPass(s, v, road, facs, prevT, v.t);

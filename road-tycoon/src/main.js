@@ -381,7 +381,9 @@
         if (way.length < 120 && U.dist(last.x, last.y, w.x, w.y) > step) {
           way.push({ x: w.x, y: w.y });
           updateRoadPreview();
-          TR.UI.setHint(`Трасса: ${way.length} точек · клик по городу — построить · Esc — убрать точку`);
+          const q = app.roadPreview;
+          const info = q && q.ok ? `${U.km(q.len)} · ${U.money(q.cost)}` : (q && q.error) || '';
+          TR.UI.setHint(`Трасса: ${way.length} точек · ${info} · клик по городу — построить · Esc — убрать точку`);
         }
         down.x = p.x;
         down.y = p.y;
@@ -418,6 +420,14 @@
       handleClick(p);
     }
     if (pointers.size === 0) down = null;
+  }
+
+  // «Новая игра» в шапке
+  const btnRestart = document.getElementById('btn-restart');
+  if (btnRestart) {
+    btnRestart.addEventListener('click', () => {
+      if (confirm('Начать новую игру? Текущий прогресс будет удалён.')) app.reset();
+    });
   }
 
   function onWheel(e) {
@@ -524,6 +534,7 @@
     app.tool = tool;
     app.roadFrom = null;
     app.roadWay = [];
+    app.junction = null;
     app.roadPreview = null;
     app.placePreview = null;
     app.selection = null;
@@ -600,11 +611,28 @@
   function handleRoadClick() {
     const city = app.hover.city;
     if (app.roadFrom == null) {
+      if (city == null && app.hover.road && app.hover.road.open) {
+        // ответвление от существующей дороги: не нужно заново указывать её города
+        const road = app.hover.road;
+        const w = app.hover.world || { x: C.cities[road.a].x, y: C.cities[road.a].y };
+        const pr = U.roadProjection(road, w.x, w.y);
+        const owner = pr && pr.t > 0.5 ? road.b : road.a;
+        const c = U.curve(road);
+        const jp = U.curvePoint(c, pr ? pr.t : 0.5);
+        app.roadFrom = owner;
+        app.junction = { roadId: road.id, x: jp.x, y: jp.y };
+        app.roadWay = [];
+        app.roadPreview = null;
+        TR.UI.setHint(`Ответвление от трассы: ведите линию к нужному городу · класс ${C.roadTypes[app.buildQuality].name}`);
+        TR.UI.refresh();
+        return;
+      }
       if (city == null) {
-        TR.UI.toast('Выберите город на карте — отсюда начнётся трасса', 'info');
+        TR.UI.toast('Нажмите город — или существующую дорогу, чтобы сделать ответвление', 'info');
         return;
       }
       app.roadFrom = city;
+      app.junction = null;
       app.roadWay = [];
       app.roadPreview = null;
       TR.UI.setHint(`Трасса из ${C.cities[city].name}: клик по земле — поворот, по городу — построить · класс ${C.roadTypes[app.buildQuality].name}`);
@@ -614,7 +642,7 @@
     if (city == null) {
       // свободная трассировка: каждая точка на земле — поворот трассы
       const w = app.hover && app.hover.world;
-      const A0 = C.cities[app.roadFrom];
+      const A0 = app.junction || C.cities[app.roadFrom];
       const last = app.roadWay.length ? app.roadWay[app.roadWay.length - 1] : { x: A0.x, y: A0.y };
       if (!w) return;
       if (U.dist(last.x, last.y, w.x, w.y) < 3) {
@@ -636,9 +664,9 @@
       TR.UI.setHint();
       return;
     }
-    const A = C.cities[app.roadFrom], B = C.cities[city];
-    const usePts = app.roadWay && app.roadWay.length > 0;
-    const pts = usePts ? [{ x: A.x, y: A.y }, ...app.roadWay, { x: B.x, y: B.y }] : null;
+    const A = app.junction || C.cities[app.roadFrom], B = C.cities[city];
+    const usePts = (app.roadWay && app.roadWay.length > 0) || !!app.junction;
+    const pts = usePts ? [{ x: A.x, y: A.y }, ...(app.roadWay || []), { x: B.x, y: B.y }] : null;
     const res = usePts
       ? Sim.buildRoadPts(app.state, app.world, app.roadFrom, city, pts, app.buildQuality)
       : Sim.buildRoad(app.state, app.world, app.roadFrom, city, app.buildQuality);
@@ -651,6 +679,7 @@
     if (window.innerWidth <= 1040) document.body.classList.add('side-open');
     app.roadFrom = null;
     app.roadWay = [];
+    app.junction = null;
     app.roadPreview = null;
     TR.UI.refresh();
     TR.UI.setHint();
@@ -659,7 +688,7 @@
   function updateRoadPreview() {
     if (app.tool !== 'road' || app.roadFrom == null) { app.roadPreview = null; return; }
     const target = app.hover.city;
-    const A = C.cities[app.roadFrom];
+    const A = app.junction || C.cities[app.roadFrom];
     const way = app.roadWay || [];
     if (target == null || target === app.roadFrom) {
       // пока город не выбран — считаем длину до курсора через все повороты
@@ -672,11 +701,17 @@
       }
       return;
     }
-    if (way.length) {
+    if (way.length || app.junction) {
       const pts = [{ x: A.x, y: A.y }, ...way, { x: C.cities[target].x, y: C.cities[target].y }];
       app.roadPreview = Sim.roadQuotePts(app.state, app.world, app.roadFrom, target, pts, app.buildQuality);
     } else {
       app.roadPreview = Sim.roadQuote(app.state, app.world, app.roadFrom, target, app.buildQuality);
+    }
+    const q = app.roadPreview;
+    if (q) {
+      TR.UI.setHint(q.ok
+        ? `${app.junction ? 'Ответвление' : 'Трасса'}: ${U.km(q.len)} · ${U.money(q.cost)} · клик — построить`
+        : `Нельзя построить: ${q.error}`);
     }
   }
 
