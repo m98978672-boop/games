@@ -370,6 +370,23 @@
     if (down) {
       const dx = p.x - down.startX, dy = p.y - down.startY;
       if (!down.moved && Math.hypot(dx, dy) > 2) down.moved = true;
+      // тянем трассу: каждый сдвиг добавляет точку — не нужно кликать по каждой
+      if (down.moved && app.tool === 'road' && app.roadFrom != null && !pinch) {
+        const w = Render.toWorld(app, p.x, p.y);
+        const A0 = C.cities[app.roadFrom];
+        const way = app.roadWay || (app.roadWay = []);
+        const last = way.length ? way[way.length - 1] : { x: A0.x, y: A0.y };
+        const ppk = Render.ppk(app.camera.zoom);
+        const step = Math.max(1.2, 22 / Math.max(0.2, ppk));
+        if (way.length < 120 && U.dist(last.x, last.y, w.x, w.y) > step) {
+          way.push({ x: w.x, y: w.y });
+          updateRoadPreview();
+          TR.UI.setHint(`Трасса: ${way.length} точек · клик по городу — построить · Esc — убрать точку`);
+        }
+        down.x = p.x;
+        down.y = p.y;
+        return;
+      }
       if (down.moved) {
         const ppk = Render.ppk(app.camera.zoom);
         const ddx = (p.x - down.x) / ppk, ddy = (p.y - down.y) / ppk;
