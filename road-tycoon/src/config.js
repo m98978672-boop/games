@@ -149,6 +149,21 @@
         desc: 'Фонари на участке: машины чаще останавливаются и ночью, и в дождь.',
       },
       {
+        key: 'workshop', name: 'Производственный цех', emoji: '🏭', cat: 'industry',
+        cost: 68000, buildDays: 0.5, upkeep: 520, income: 300, want: 'repair', unlock: 2, color: '#c98a4a',
+        desc: 'Цех выпускает запчасти и берёт заказы у проезжающих: чем больше трафик, тем выше выработка.',
+      },
+      {
+        key: 'silo', name: 'Элеватор', emoji: '🌾', cat: 'industry',
+        cost: 54000, buildDays: 0.45, upkeep: 430, income: 240, want: 'food', unlock: 2, color: '#b8a05a',
+        desc: 'Принимает зерно от фермеров и отгружает его дальше по трассе.',
+      },
+      {
+        key: 'warehouse', name: 'Логистический склад', emoji: '📦', cat: 'industry',
+        cost: 78000, buildDays: 0.55, upkeep: 660, income: 380, want: 'fuel', unlock: 3, color: '#8fa2b0',
+        desc: 'Склад-хаб: переваливает грузы и приносит доход с каждого проезжающего грузовика.',
+      },
+      {
         key: 'square', name: 'Сквер у города', emoji: '🌷', cat: 'city',
         cost: 16000, buildDays: 0.28, upkeep: 70, income: 0, beauty: 0.16,
         subsidy: 60, capacity: 999999, minQuality: 0, unlock: 3, color: '#d87fa8',
@@ -156,7 +171,7 @@
       },
     ],
 
-    facilityCatNames: { service: 'Придорожный сервис', city: 'Благоустройство' },
+    facilityCatNames: { service: 'Придорожный сервис', city: 'Благоустройство', industry: 'Производственные цеха' },
 
     /* Города */
     cities: [
