@@ -148,8 +148,10 @@ test('объект: только у готовой дороги, деньги с
   ok(res.ok, res.error);
   near(s.money, moneyBefore - C.facilityByKey.cafe.cost, 1, 'списана цена кафе');
   ok(!res.facility.ready, 'объект строится');
+  const same = Sim.placeFacility(s, 'cafe', road.id, 0.5);
+  ok(!same.ok, 'нельзя ставить два объекта в одну точку');
   const near1 = Sim.placeFacility(s, 'cafe', road.id, 0.52);
-  ok(!near1.ok, 'слишком близко к другому объекту');
+  ok(near1.ok, 'рядом можно ставить — вдоль трассы образуется улица объектов');
   tickDays(s, 2);
   ok(res.facility.ready, 'объект открыт');
 });

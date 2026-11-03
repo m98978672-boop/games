@@ -298,6 +298,7 @@
     window.addEventListener('keyup', (e) => {
       if (e.code === 'Space') spaceHeld = false;
       keys.delete(e.code);
+      if (e.key === 'Shift') app.shiftDown = false;
       if (/^[wasd]$/i.test(e.key || '')) keys.delete('Key' + e.key.toUpperCase());
     });
     // если окно потеряло фокус — сбрасываем зажатые клавиши, иначе карта «уезжает» сама
@@ -445,6 +446,7 @@
   }
 
   function onKeyDown(e) {
+    if (e.key === 'Shift') app.shiftDown = true;
     const tag = (e.target && e.target.tagName) || '';
     if (tag === 'INPUT' || tag === 'TEXTAREA') return;
     if (e.code === 'Space') {
@@ -747,6 +749,20 @@
       return;
     }
     app.selection = { kind: 'facility', id: res.facility.id };
+    // Shift + клик: строим целую «улицу производства» — ряд объектов вдоль трассы
+    const def = C.facilityByKey[key];
+    if (def && def.cat === 'industry' && (app.shiftDown || app.chainBuild)) {
+      const road = Sim.roadById(app.state, preview.roadId);
+      const stepKm = 9;
+      let made = 0;
+      for (let k = 1; k <= 2 && road; k++) {
+        const t2 = preview.t + (k * stepKm) / Math.max(1, road.totalKm);
+        if (t2 > 0.96) break;
+        const r2 = Sim.placeFacility(app.state, key, preview.roadId, t2, preview.side);
+        if (r2.ok) made++;
+      }
+      if (made) TR.UI.toast(`Промзона: построено ещё ${made} объекта — улица производства готова`, 'good');
+    }
     if (window.innerWidth <= 1040) document.body.classList.add('side-open');
     TR.UI.refresh();
     updatePlacePreview();
