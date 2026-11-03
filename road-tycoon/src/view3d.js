@@ -268,6 +268,12 @@
     }
     const n = world.noise(x * 0.006, z * 0.006);
     h += (n - 0.5) * 0.7;
+    // Морской берег на юге карты: рельеф плавно уходит под воду
+    const coast = C.worldH - 58;
+    if (z > coast) {
+      const k = U.clamp((z - coast) / 22, 0, 1);
+      h = h * (1 - k) - 1.4 * k;
+    }
     return h;
   }
 
@@ -426,6 +432,8 @@
         else if (b === 'field') c = cField;
         else if (b === 'hill') c = cHill;
         if (Wd.riverDist(world, x, z) < 2.6 || Wd.lakeFactor(world, x, z) > 0.5) c = cSand;
+        if (z > C.worldH - 62) c = cSand;                      // пляж у моря
+        else if (z > C.worldH - 78) c = cField;                // прибрежные дюны
         const l = 0.9 + world.noise(x * 0.02, z * 0.02) * 0.22;
         col.push(c.r * l, c.g * l, c.b * l);
       }
@@ -504,6 +512,29 @@
       }
     }
 
+    // Море на юге карты: пляж, полоса прибоя и вода до самого края
+    {
+      const coastZ = C.worldH - 58;
+      const beach = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.4, 26), sandMat.clone());
+      beach.rotation.x = -Math.PI / 2;
+      beach.position.set(C.worldW / 2, 0.055, coastZ - 2);
+      waterGroup.add(beach);
+      const shore = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.4, 34), shallowMat);
+      shore.rotation.x = -Math.PI / 2;
+      shore.position.set(C.worldW / 2, 0.075, coastZ + 18);
+      waterGroup.add(shore);
+      const sea = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.6, 220), waterMat.clone());
+      sea.rotation.x = -Math.PI / 2;
+      sea.position.set(C.worldW / 2, 0.09, coastZ + 120);
+      waterGroup.add(sea);
+      // пена у кромки
+      const foam = new THREE.Mesh(new THREE.PlaneGeometry(C.worldW * 1.4, 2.2),
+        new THREE.MeshBasicMaterial({ color: '#eaf6fb', transparent: true, opacity: 0.55 }));
+      foam.rotation.x = -Math.PI / 2;
+      foam.position.set(C.worldW / 2, 0.1, coastZ + 6);
+      waterGroup.add(foam);
+    }
+
     for (const lake of world.lakes) {
       const disc = new THREE.CircleGeometry(1, 48);
       disc.rotateX(-Math.PI / 2);
@@ -519,6 +550,15 @@
       sh.rotation.y = lake.rot;
       sh.position.set(lake.x, 0.11, lake.y);
       waterGroup.add(sh);
+      // камыш по кромке — озеро выглядит живым
+      for (let k = 0; k < 16; k++) {
+        const a = (k / 16) * Math.PI * 2 + 0.2;
+        const rx = Math.cos(a) * lake.rx * 1.12, rz = Math.sin(a) * lake.ry * 1.14;
+        const reed = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.5, 4),
+          new THREE.MeshStandardMaterial({ color: k % 3 ? '#5f7f43' : '#7d9454', roughness: 1 }));
+        reed.position.set(lake.x + rx, 0.25, lake.y + rz);
+        waterGroup.add(reed);
+      }
       // вода
       const m = new THREE.Mesh(disc, waterMat);
       m.scale.set(lake.rx, 1, lake.ry);
@@ -653,6 +693,22 @@
             w, d, h, rot: Math.round(rand() * 3) * (Math.PI / 2),
             color: t.tint[Math.floor(rand() * t.tint.length)],
           });
+          // дымовые трубы у цехов промзоны — город читается с высоты
+          if ((type === 4 || type === 5) && rand() < 0.14) {
+            const chh = 1.5 + rand() * 1.7;
+            const chm = new THREE.Mesh(
+              new THREE.CylinderGeometry(0.15, 0.2, chh, 7),
+              new THREE.MeshStandardMaterial({ color: '#cbc5b6', roughness: 0.95 })
+            );
+            chm.position.set(cx + w * 0.28, h + chh / 2, cz - d * 0.22);
+            cityGroup.add(chm);
+            const smoke = new THREE.Mesh(
+              new THREE.SphereGeometry(0.24, 7, 5),
+              new THREE.MeshBasicMaterial({ color: '#e9e7e1', transparent: true, opacity: 0.3 })
+            );
+            smoke.position.set(cx + w * 0.28, h + chh + 0.16, cz - d * 0.22);
+            cityGroup.add(smoke);
+          }
         }
       }
       // подложка города и центральная площадь
@@ -1241,6 +1297,90 @@
       g.add(bx(0.25, 0.25, 0.25, 1.0, 0.13, 3.4, '#b08b5a'));        // паллеты
     } else if (def.key === 'motel' || def.key === 'camp') {
       for (let i = -1; i <= 1; i++) g.add(bx(0.6, 0.05, 0.4, i * 0.7, 0.9 + (i + 1) * 0.05, 2.3, '#c9a86a'));
+    }
+
+    // --- детализация моделей: у каждого бизнеса свой силуэт ---
+    const glass = new THREE.MeshStandardMaterial({ color: '#9fc3d8', roughness: 0.25, metalness: 0.5 });
+    if (def.key === 'fuel') {
+      // пилон-стела с ценами (как у настоящих АЗС)
+      g.add(bx(0.06, 1.9, 0.06, -1.45, 0.95, 1.9, '#8d949a'));
+      const pylon = bx(0.62, 0.75, 0.09, -1.45, 2.05, 1.9, '#f4f1e6', 0.6);
+      g.add(pylon);
+      g.add(bx(0.5, 0.12, 0.1, -1.45, 2.28, 1.9, '#d64b3f', 0.5));
+      g.add(bx(0.5, 0.1, 0.1, -1.45, 2.05, 1.9, '#3f6fa8', 0.5));
+      // магазин при АЗС и мусорные баки
+      g.add(bx(0.7, 0.42, 0.5, 1.1, 0.21, 3.5, '#e8e2d2'));
+      g.add(bx(0.7, 0.08, 0.56, 1.1, 0.46, 3.5, '#c9502f'));
+      for (const mx of [-1.3, -1.05]) g.add(cyl(0.11, 0.28, mx, 0.14, 3.55, '#2f6b3f'));
+      // бордюры площадки
+      for (const zz of [1.2, 2.3]) g.add(bx(2.1, 0.06, 0.06, 0, 0.03, zz, '#cfc9b8'));
+    } else if (def.key === 'cafe') {
+      g.add(bx(1.15, 0.5, 0.08, 0, 0.4, 2.02, '#8a5f3c'));      // панорамное окно
+      g.add(bx(1.3, 0.08, 0.28, 0, 0.82, 1.98, '#d9734a'));     // маркиза
+      g.add(cyl(0.09, 0.55, 0.95, 0.28, 1.75, '#6a6f74'));      // вытяжка
+      for (const tx of [-0.55, 0.15]) {                          // столики
+        g.add(cyl(0.035, 0.32, tx, 0.16, 3.55, '#5a5f63'));
+        g.add(cyl(0.16, 0.04, tx, 0.33, 3.55, '#e9e2d2'));
+      }
+    } else if (def.key === 'hotel' || def.key === 'motel') {
+      for (let fy = 0; fy < 3; fy++) {
+        for (let wx = -1; wx <= 1; wx++) {
+          g.add(bx(0.22, 0.16, 0.05, wx * 0.36, 0.35 + fy * 0.28, 2.02, '#3a4a55', 0.4));
+        }
+        g.add(bx(1.25, 0.03, 0.14, 0, 0.26 + fy * 0.28, 1.94, '#cfc6b2'));
+      }
+      g.add(bx(0.9, 0.07, 0.4, 0, 0.98, 1.9, '#e9e2d2'));        // козырёк входа
+      const pool = flat(0.9, 0.5, 1.05, 3.4, '#4fa8c8', 0.045);
+      g.add(pool);
+      g.add(cyl(0.05, 0.7, -1.2, 0.35, 2.0, '#b9b2a2'));          // флагшток
+    } else if (def.key === 'shop') {
+      g.add(bx(1.4, 0.45, 0.06, 0, 0.35, 2.04, '#f0e6c8'));       // витрина
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.4),
+        new THREE.MeshBasicMaterial({ color: '#ffe9a8' }));
+      glow.position.set(0, 0.35, 2.08);
+      g.add(glow);
+      for (const tx of [-1.15, -0.95]) g.add(bx(0.16, 0.14, 0.22, tx, 0.07, 2.6, '#c9c3b4')); // тележки
+    } else if (def.key === 'workshop') {
+      // пилообразная крыша цеха + ворота + труба с дымом
+      for (let k = 0; k < 3; k++) {
+        const plank = bx(0.62, 0.05, 0.75, -0.7 + k * 0.7, 0.72, 3.0, '#9aa3a8');
+        plank.rotation.z = 0.5;
+        g.add(plank);
+      }
+      g.add(bx(1.0, 0.5, 0.06, 0, 0.25, 2.02, '#8f979c'));        // рольставни
+      for (let k = 0; k < 4; k++) g.add(bx(0.96, 0.03, 0.02, 0, 0.08 + k * 0.11, 2.0, '#c8ccd0'));
+      for (const tx of [1.05, 1.05]) g.add(cyl(0.09, 0.7, tx, 0.35, 3.55, '#a7adb2'));
+      const puff = new THREE.Mesh(new THREE.SphereGeometry(0.34, 8, 6),
+        new THREE.MeshBasicMaterial({ color: '#eceae4', transparent: true, opacity: 0.28 }));
+      puff.position.set(-0.75, 2.3, 3.2);
+      g.add(puff);
+    } else if (def.key === 'warehouse') {
+      for (let k = 0; k < 3; k++) g.add(bx(0.42, 0.42, 0.05, -0.55 + k * 0.55, 0.21, 2.02, '#8b949b'));
+      g.add(bx(1.75, 0.06, 0.5, 0, 0.62, 1.95, '#b6bcc1'));       // навес над доками
+      g.add(bx(0.3, 0.22, 0.42, 1.15, 0.11, 3.3, '#d8b64a'));     // погрузчик
+      for (const pz of [3.0, 3.35]) g.add(bx(0.5, 0.3, 0.3, -1.05, 0.15, pz, '#c9a06a'));
+    } else if (def.key === 'silo') {
+      const belt = bx(0.9, 0.16, 0.2, 0.2, 1.1, 3.05, '#b6bcc1');
+      belt.rotation.z = -0.35;
+      g.add(belt);
+      g.add(bx(0.5, 0.9, 0.5, -1.1, 0.45, 3.2, '#c9c2ac'));       // нория
+    } else if (def.key === 'charge') {
+      for (const sx of [-0.45, 0.45]) {
+        g.add(bx(0.16, 0.75, 0.14, sx, 0.37, 2.7, '#e8eef2', 0.5));
+        g.add(bx(0.1, 0.16, 0.02, sx, 0.6, 2.62, '#3ec27a', 0.4));  // индикатор
+      }
+      g.add(bx(2.2, 0.05, 1.5, 0, 1.16, 2.7, '#31506b'));           // панель на навесе
+      for (let k = 0; k < 4; k++) g.add(bx(0.44, 0.02, 0.66, -0.66 + k * 0.44, 1.2, 2.7, '#5b8fc4'));
+    } else if (def.key === 'wash') {
+      for (const sx of [-0.65, 0.65]) g.add(bx(0.1, 1.05, 0.1, sx, 0.52, 2.6, '#9fb0bd'));
+      g.add(bx(1.5, 0.1, 0.12, 0, 1.03, 2.6, '#9fb0bd'));
+      for (const sx of [-0.58, 0.58]) g.add(cyl(0.1, 0.8, sx, 0.4, 2.6, '#7fa8c9'));
+      g.add(flat(1.2, 0.6, 0, 2.75, '#3f6a80', 0.05));
+    } else if (def.key === 'repair' || def.key === 'tire') {
+      g.add(bx(0.9, 0.12, 0.4, 0, 0.3, 2.35, '#d8b64a'));         // подъёмник
+      for (const sx of [-0.7, 0.7]) g.add(bx(0.08, 0.3, 0.4, sx, 0.15, 2.35, '#8b949b'));
+      for (let k = 0; k < 3; k++) g.add(cyl(0.17, 0.1, 1.15, 0.06 + k * 0.1, 3.35, '#2c2f33')); // покрышки
+      g.add(bx(0.7, 0.5, 0.3, -1.05, 0.25, 3.35, '#a4553c'));      // верстак
     }
 
     // вывеска на стойке у заезда
