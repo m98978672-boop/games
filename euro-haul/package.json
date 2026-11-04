@@ -7,7 +7,9 @@
     "dev": "esbuild src/main.js --bundle --format=iife --outfile=game.bundle.js --watch",
     "test": "node tests/smoke.mjs",
     "test:physics": "node tests/autopilot.mjs",
-    "preview": "node tests/render-preview.mjs"
+    "preview": "node tests/render-preview.mjs",
+    "assets": "node tools/fetch-assets.mjs",
+    "test:assets": "node tests/_assets.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"

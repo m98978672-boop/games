@@ -367,10 +367,6 @@ export class UI {
       case 'touch-retarder':
         g.toggleRetarder();
         break;
-      case 'help-driving':
-        this.closeModal();
-        g.showHelp();
-        break;
       case 'fullscreen':
         g.toggleFullscreen();
         break;
@@ -1396,10 +1392,12 @@ export class UI {
           </select></div>
         <div class="field-row"><label>Устройство<small>определяется автоматически</small></label>
           <b>${devLabel}</b></div>
-        <div class="field-row"><label>Качество графики<small>сейчас: ${g.resolveQuality() === 'low' ? 'низкое' : g.resolveQuality() === 'medium' ? 'среднее' : 'высокое'}</small></label>
+        <div class="field-row"><label>Качество графики<small>сейчас: ${g.resolveQuality() === 'low' ? 'низкое' : g.resolveQuality() === 'medium' ? 'среднее' : 'высокое'} · тени ${g.qualityCfg?.shadowSize ?? '—'} px · HDR ${g.qualityCfg?.envPresets ?? '—'} · растительность ${Math.round((g.qualityCfg?.treeDensity ?? 1) * 100)} %</small></label>
           <select data-setting="quality">
             ${[['auto', 'Авто под устройство'], ['high', 'Высокое'], ['medium', 'Среднее'], ['low', 'Низкое']].map(([v, n]) => `<option value="${v}" ${String(st.quality) === v ? 'selected' : ''}>${n}</option>`).join('')}
           </select></div>
+        <div class="field-row"><label>Реальные HDR-среды<small>освещение и отражения Poly Haven (CC0)</small></label>
+          <b>${g.sky?.hdrEnabled ? `включены · ${g.sky.hdrTargets.size} среды` : g.assets?.ready ? 'загружаются' : 'нет файлов — процедурное небо'}</b></div>
         <div class="field-row"><label>Чувствительность руля<small>1.00 — стандарт, 0.70 — мягче (удобно на телефоне), 1.40 — резче</small></label>
           <div class="range-row"><input type="range" min="50" max="160" step="5" value="${Math.round((Number(st.steerSensitivity) || 1) * 100)}" data-input="steer">
           <span class="range-label" id="steer-value">${(Number(st.steerSensitivity) || 1).toFixed(2)}×</span></div></div>
@@ -1466,8 +1464,12 @@ export class UI {
         <p>${CITIES.length} ${cityWord(CITIES.length)} в ${COUNTRY_TOTAL} ${countryWord(COUNTRY_TOTAL)}, 30 видов груза и 6 типов прицепов, карьера с уровнем и навыками, экономика с топливом, ремонтом, штрафами и кредитом, гаражи, наёмные водители, достижения и автосохранение в браузере.</p>
         <h4>Управление</h4>
         <p>W/S — газ и тормоз, A/D — руль, E — взаимодействие, C — круиз, M — режим КПП, V — камера, Esc — пауза. На телефоне — экранные кнопки.</p>
-        <h4>Настройки графики</h4>
-        <p>Игра рассчитана на слабые устройства: низкая детализация и меньшее разрешение включаются в настройках браузера или уменьшением окна.</p>`,
+        <h4>Графика и ассеты</h4>
+        <p>Кузов, кабина и мир строятся процедурно по реальным габаритам и чертежам, а свет и отражения берутся из
+        фотографических HDR-панорам <b>Poly Haven</b> (лицензия CC0). Ничего из чужих игр не используется:
+        все сторонние ассеты — только CC0, список с контрольными суммами лежит в <code>assets/manifest.json</code>.</p>
+        <p>Три профиля качества (низкий / средний / высокий) меняют разрешение кадра, размер теней, число HDR-сред,
+        плотность растительности и частиц. Сейчас: <b>${g.resolveQuality() === 'low' ? 'низкий' : g.resolveQuality() === 'medium' ? 'средний' : 'высокий'}</b>.</p>`,
       actions: [{ label: 'Понятно', primary: true, act: 'close' }],
     });
   }

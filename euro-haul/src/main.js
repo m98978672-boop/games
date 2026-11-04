@@ -9,6 +9,8 @@ import { buildRouteGeometry, buildNetwork, networkRouteKm, speedLimitAt } from '
 import { CITY_BY_ID, COUNTRIES } from './data/cities.js';
 import { TRUCK_MODELS, PAINT_COLORS, UPGRADES, levelForXp, SKILLS } from './data/trucks.js';
 import { TruckSim } from './core/physics.js';
+import { AssetLibrary } from './core/assets.js';
+import { qualityProfile } from './core/quality.js';
 import { AudioSystem } from './core/audio.js';
 import { makeOffers } from './core/jobs.js';
 import { payoutFor, jobXp } from './core/jobs.js';
@@ -70,6 +72,12 @@ class Game {
     this.lightsOn = false;
     this.network = buildNetwork();
     this.device = this.detectDevice();
+    // Реальные ассеты (HDR-среды CC0). Манифест читаем сразу: если файлов нет,
+    // библиотека тихо переключается на процедурные материалы.
+    this.assets = new AssetLibrary();
+    this.assets.loadManifest().catch(() => {});
+    this.quality = this.resolveQuality();
+    this.qualityCfg = qualityProfile(this.quality);
     this.ui = new UI(this);
     this.audio.setVolume(this.settings.volume);
     this.audio.setEnabled(this.settings.sound);
@@ -137,10 +145,13 @@ class Game {
     const q = this.resolveQuality();
     body.classList.add('quality-' + q);
     this.quality = q;
+    this.qualityCfg = qualityProfile(q);
     if (this.renderer) {
       const dpr = window.devicePixelRatio || 1;
       const phoneCap = 1.4;
-      let ratio = q === 'low' ? 0.85 : q === 'medium' ? 1.1 : Math.min(dpr, 1.75);
+      const cfg = this.qualityCfg || qualityProfile(q);
+      let ratio = Math.min(dpr, cfg.maxPixelRatio);
+      if (q === 'low') ratio = Math.min(ratio, 0.85);
       if (this.device === 'phone') ratio = Math.min(ratio, phoneCap);
       this.renderer.setPixelRatio(Math.max(0.6, ratio));
       const w = window.innerWidth;
@@ -154,6 +165,10 @@ class Game {
       }
     }
     if (this.sky && this.sky.setQuality) this.sky.setQuality(q);
+    // Профиль вырос — догружаем HDR-среды, которые срезали на слабом устройстве.
+    if (this.sky && this.assets && this.sky.hdrEnabled && this.renderer) {
+      this.sky.loadHdrEnvironment(this.renderer, this.scene, this.assets, q).catch(() => {});
+    }
     if (this.road) this.applyWorldShadows();
     if (!this.cameraUserSet) this.cameraMode = this.touchEnabled() ? 'chase' : 'interior';
     if (this.traffic && this.traffic.count !== this.trafficCount()) {
@@ -208,6 +223,15 @@ class Game {
     this.camera.position.set(0, 3, 0);
     this.sky = new SkySystem(this.scene, this.renderer);
     this.sky.enableShadows();
+    // Фотометрическое окружение: 3–5 панорам Poly Haven (CC0) дают честные
+    // отражения краске, хрому и мокрому асфальту. Грузим в фоне, чтобы не
+    // задерживать первый кадр; при отсутствии файлов остаётся процедурное небо.
+    if (this.assets) {
+      this.assets
+        .loadManifest()
+        .then(() => this.sky.loadHdrEnvironment(this.renderer, this.scene, this.assets, this.quality))
+        .catch(() => {});
+    }
     this.buildContactShadow();
     this.truckView = new TruckView(this.scene, 0x2f7fa8);
     this.truckView.root.traverse((o) => {

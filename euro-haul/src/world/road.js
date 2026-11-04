@@ -5,6 +5,7 @@ import { materials, setNightIntensity, textures } from './materials.js';
 
 import { CITY_BY_ID, COUNTRIES } from '../data/cities.js';
 import { mergeStatic } from '../core/merge-static.js';
+import { densityFor, qualityProfile } from '../core/quality.js';
 import { buildCountryside, gableGeometry } from './countryside.js';
 
 const STEP = 12;
@@ -319,8 +320,10 @@ export class RoadWorld {
 
   /** Дальность прорисовки под устройство. */
   setQuality(q) {
-    const ahead = q === 'low' ? 900 : q === 'medium' ? 1400 : AHEAD;
-    const behind = q === 'low' ? 160 : q === 'medium' ? 240 : BEHIND;
+    this.quality = q;
+    this.qualityCfg = qualityProfile(q);
+    const ahead = this.qualityCfg.worldAhead;
+    const behind = this.qualityCfg.worldBehind;
     if (ahead !== this.ahead) {
       this.ahead = ahead;
       this.behind = behind;
@@ -506,7 +509,8 @@ export class RoadWorld {
     // а не как ряд одинаковых моделей.
     // Деревья покрывают весь видимый участок: число рощ зависит от длины окна.
     const span = Math.max(1, s1 - s0);
-    const treeCount = (Math.ceil(span / 70) + 1) * 6;
+    // Плотность рощ зависит от качества: на телефоне лес реже, но не исчезает.
+    const treeCount = densityFor(this.quality, 'treeDensity', (Math.ceil(span / 70) + 1) * 6);
     const trunkGeo = new THREE.CylinderGeometry(0.16, 0.32, 3.0, 7);
     // Ель из трёх ярусов — читается как хвоя, а не как «конус на палке».
     const pineGeo = new THREE.ConeGeometry(1.55, 3.0, 9);
@@ -641,7 +645,7 @@ export class RoadWorld {
       });
       const geo = new THREE.PlaneGeometry(0.62, 0.5);
       geo.translate(0, 0.25, 0);
-      const count = Math.max(240, Math.round(span / 2.4));
+      const count = densityFor(this.quality, 'grassDensity', Math.max(240, Math.round(span / 2.4)));
       const tufts = new THREE.InstancedMesh(geo, mat, count);
       const td = new THREE.Object3D();
       let ti = 0;
@@ -672,7 +676,7 @@ export class RoadWorld {
 
     // Кусты у обочины.
     const bushGeo = new THREE.IcosahedronGeometry(0.62, 1);
-    const bushCount = 340;
+    const bushCount = densityFor(this.quality, 'bushDensity', 340);
     const bushes = new THREE.InstancedMesh(bushGeo, m.leaves[1], bushCount);
     bushes.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(bushCount * 3), 3);
     let bi = 0;

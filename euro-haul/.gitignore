@@ -2,3 +2,4 @@ node_modules/
 tests/game.test.bundle.js
 tests/*.png
 tests/*.svg
+.cache/
