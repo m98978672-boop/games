@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "env": {
+    "sky.exr": {
+      "file": "env/sky.exr",
+      "title": "Ясный день",
+      "format": "exr",
+      "bytes": 107757,
+      "sha256": "a72412700b91a49080a582420476d2ab9a1e8fd181031f4ae7ec5e2596addc2a",
+      "license": "CC0-1.0",
+      "credit": "Poly Haven (polyhaven.com) через @pmndrs/assets",
+      "weather": [
+        "clear",
+        "cloudy"
+      ],
+      "time": [
+        0.42,
+        0.58
+      ]
+    },
+    "dawn.exr": {
+      "file": "env/dawn.exr",
+      "title": "Рассвет",
+      "format": "exr",
+      "bytes": 182198,
+      "sha256": "02529d0a04dbc6e761adb9b4f6bcb07b0ef3931b218b394ee6be68b1fe39ce79",
+      "license": "CC0-1.0",
+      "credit": "Poly Haven (polyhaven.com) через @pmndrs/assets",
+      "weather": [
+        "clear",
+        "cloudy",
+        "overcast"
+      ],
+      "time": [
+        0.2,
+        0.33
+      ]
+    },
+    "sunset.exr": {
+      "file": "env/sunset.exr",
+      "title": "Закат",
+      "format": "exr",
+      "bytes": 148357,
+      "sha256": "d09a4d7581f5454f13c3da3c323a231d00a34e60200de7654a895d2d41a7ceb7",
+      "license": "CC0-1.0",
+      "credit": "Poly Haven (polyhaven.com) через @pmndrs/assets",
+      "weather": [
+        "clear",
+        "cloudy"
+      ],
+      "time": [
+        0.67,
+        0.82
+      ]
+    },
+    "night.exr": {
+      "file": "env/night.exr",
+      "title": "Ночь",
+      "format": "exr",
+      "bytes": 154431,
+      "sha256": "9509f1b917dbb4c98d63b92e9fd12fb79e3376d17ec3186e2de39543e32ce5ff",
+      "license": "CC0-1.0",
+      "credit": "Poly Haven (polyhaven.com) через @pmndrs/assets",
+      "weather": [
+        "clear",
+        "overcast",
+        "rain"
+      ],
+      "time": [
+        0.85,
+        1
+      ]
+    },
+    "overcast.exr": {
+      "file": "env/overcast.exr",
+      "title": "Пасмурно",
+      "format": "exr",
+      "bytes": 157842,
+      "sha256": "00e78fd8fe0ac81f73eb3682b1a4e2e1b909148f1b06d1e52e771d4fec3d02a1",
+      "license": "CC0-1.0",
+      "credit": "Poly Haven (polyhaven.com) через @pmndrs/assets",
+      "weather": [
+        "overcast",
+        "rain",
+        "storm",
+        "fog"
+      ],
+      "time": [
+        0,
+        1
+      ]
+    }
+  },
+  "textures": {},
+  "models": {},
+  "sources": {
+    "@pmndrs/assets": {
+      "version": "1.7.0",
+      "url": "https://registry.npmjs.org/@pmndrs/assets/-/assets-1.7.0.tgz",
+      "note": "HDR-панорамы Poly Haven (CC0), упакованы как base64 data-URI"
+    }
+  },
+  "generated": "2026-11-04T18:12:01.124Z"
+}

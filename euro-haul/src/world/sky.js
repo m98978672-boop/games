@@ -1,6 +1,7 @@
 // Небо, солнце, луна, звёзды, облака, дождь и туман. Полные сутки за игровое время.
 import * as THREE from 'three';
 import { clamp, lerp, rng, smoothstep } from '../core/math.js';
+import { qualityProfile } from '../core/quality.js';
 
 const COL = {
   topDay: new THREE.Color(0x2f6fbf),
@@ -317,6 +318,12 @@ export class SkySystem {
     this.envAccum = 5;
     this.envSunY = -9;
     this.pmrem = null;
+    // Реальные HDR-среды (CC0, Poly Haven): имя → PMREM-таргет.
+    this.hdrTargets = new Map();
+    this.hdrPreset = null;
+    this.hdrEnabled = false;
+    this.hdrIntensity = 1;
+    this.envIntensityTarget = 1;
   }
 
   /** Включает солнце как источник теней. */
@@ -400,14 +407,97 @@ export class SkySystem {
     }
   }
 
+  /**
+   * Реальные HDR-среды вместо нарисованного градиента. Пять панорам Poly Haven
+   * (CC0) дают физически честные отражения: краска, хром, стекло и мокрый асфальт
+   * перестают выглядеть «пластиком».
+   */
+  async loadHdrEnvironment(renderer, scene, assets, level = 'high') {
+    if (!renderer || !assets) return false;
+    // Качество можно поднять на ходу: тогда догружаем недостающие панорамы.
+    const rank = { low: 1, medium: 2, high: 3 };
+    if (this.hdrEnabled && (rank[level] || 2) <= (rank[this.hdrLevel] || 0)) return false;
+    if (this.hdrEnabled) {
+      for (const rt of this.hdrTargets.values()) rt.dispose();
+      this.hdrTargets.clear();
+      this.hdrEnabled = false;
+    }
+    const order = ['sky', 'sunset', 'night', 'overcast', 'dawn'];
+    const limit = level === 'low' ? 3 : level === 'medium' ? 4 : 5;
+    const names = order.filter((n) => assets.hasEnv(n)).slice(0, limit);
+    if (!names.length) return false;
+    this.pmrem = this.pmrem || new THREE.PMREMGenerator(renderer);
+    this.pmrem.compileEquirectangularShader?.();
+    for (const name of names) {
+      const tex = await assets.loadEnv(name);
+      if (!tex) continue;
+      try {
+        const rt = this.pmrem.fromEquirectangular(tex);
+        rt.texture.mapping = THREE.CubeReflectionMapping;
+        this.hdrTargets.set(name, rt);
+      } catch (err) {
+        console.warn('PMREM не собрался для', name, err.message);
+      }
+      tex.dispose();
+    }
+    if (!this.hdrTargets.size) return false;
+    this.hdrEnabled = true;
+    this.hdrLevel = level;
+    this.scene = scene;
+    this.hdrPreset = null;
+    this.applyHdrPreset(this.presetFor(this.minutes || 600, this.weather?.id || 'clear', this.night || 0), true);
+    return true;
+  }
+
+  /** Какую панораму показывать: время суток + погода. */
+  presetFor(minutes, weatherId, night) {
+    const wet = ['overcast', 'rain', 'storm', 'fog'].includes(weatherId);
+    if (night > 0.62) return 'night';
+    if (wet && this.hdrTargets.has('overcast')) return 'overcast';
+    const m = ((minutes % 1440) + 1440) % 1440;
+    if (m < 8 * 60) return this.hdrTargets.has('dawn') ? 'dawn' : 'sky';
+    if (m > 16.5 * 60) return this.hdrTargets.has('sunset') ? 'sunset' : 'sky';
+    return this.hdrTargets.has('sky') ? 'sky' : this.hdrTargets.keys().next().value;
+  }
+
+  /** Поставить среду в сцену (или плавно к ней подойти). */
+  applyHdrPreset(name, instant = false) {
+    if (!this.hdrEnabled || !this.scene) return;
+    const rt = this.hdrTargets.get(name);
+    if (!rt) return;
+    if (this.hdrPreset === name && !instant) return;
+    this.hdrPreset = name;
+    this.scene.environment = rt.texture;
+    // Ночью и в дождь отражений меньше: среда не должна «светить» из-под днища.
+    const base = { sky: 0.92, sunset: 0.8, dawn: 0.72, overcast: 0.6, night: 0.38 }[name] ?? 0.8;
+    this.envIntensityTarget = base;
+    if (instant) this.envIntensityTarget = base;
+  }
+
+  /** Экспозиция камеры под время суток: ночью глаз адаптируется. */
+  exposureFor(night, weatherId) {
+    const wet = ['overcast', 'rain', 'storm', 'fog'].includes(weatherId);
+    return 0.94 + night * 0.55 + (wet ? 0.06 : 0);
+  }
+
   /** Урезает частицы на слабых устройствах. */
   setQuality(q) {
     this.quality = q;
-    const rain = q === 'low' ? 1100 : q === 'medium' ? 2200 : 3200;
-    const stars = q === 'low' ? 700 : q === 'medium' ? 1100 : 1400;
+    const cfg = qualityProfile(q);
+    const rain = Math.round(3200 * cfg.particles);
     this.rain.geometry.setDrawRange(0, rain);
-    this.stars.geometry.setDrawRange(0, stars);
+    this.stars.geometry.setDrawRange(0, cfg.stars);
     this.cloudMat.opacity = Math.min(this.cloudMat.opacity, q === 'low' ? 0.5 : 1);
+    // Слабые устройства не тянут пять HDR-сред — держим только нужные.
+    if (this.hdrEnabled) {
+      const keep = ['sky', 'night', 'overcast'];
+      for (const name of [...this.hdrTargets.keys()]) {
+        if (!keep.includes(name) && q === 'low') {
+          this.hdrTargets.get(name)?.dispose();
+          this.hdrTargets.delete(name);
+        }
+      }
+    }
   }
 
   setWeather(id, instant = false) {
@@ -548,12 +638,25 @@ export class SkySystem {
       this.hemi.intensity += this.lightning * 1.5;
     }
 
-    // Окружение (отражения) пересобираем не чаще раза в 1.2 с и только при заметной смене света.
-    this.envAccum += dt;
-    if (this.envAccum > 1.2 && this.renderer && Math.abs(elev - this.envSunY) > 0.035) {
-      this.envAccum = 5;
-      this.envSunY = elev;
-      this.applyEnvironment(this.renderer, this.scene);
+    if (this.hdrEnabled) {
+      // Реальная панорама под текущее время и погоду; интенсивность подмешиваем плавно.
+      const want = this.presetFor(minutes, t >= 1 ? w2.id : w.id, night);
+      if (want !== this.hdrPreset) this.applyHdrPreset(want);
+      const drift = 1 - Math.min(1, dt * 0.9);
+      this.hdrIntensity = lerp(this.hdrIntensity || 1, this.envIntensityTarget, 1 - drift);
+      if ('environmentIntensity' in this.scene) this.scene.environmentIntensity = this.hdrIntensity;
+      if (this.renderer) {
+        const targetExposure = this.exposureFor(night, t >= 1 ? w2.id : w.id);
+        this.renderer.toneMappingExposure = lerp(this.renderer.toneMappingExposure, targetExposure, 1 - Math.min(1, dt * 1.5));
+      }
+    } else {
+      // Процедурный запас: отражения пересобираем не чаще раза в 1.2 с.
+      this.envAccum += dt;
+      if (this.envAccum > 1.2 && this.renderer && Math.abs(elev - this.envSunY) > 0.035) {
+        this.envAccum = 5;
+        this.envSunY = elev;
+        this.applyEnvironment(this.renderer, this.scene);
+      }
     }
 
     const nightLights = clamp(night * 1.6 + rainAmt * 0.35 + (1 - day) * 0.4, 0, 1);

@@ -11,7 +11,7 @@ const bundle = path.join(root, 'tests', 'game.test.bundle.js');
 console.log('· сборка тестового бандла…');
 execFileSync(
   path.join(root, 'node_modules', '.bin', 'esbuild'),
-  ['src/main.js', '--bundle', '--format=iife', '--alias:three=./tests/three-stub.js', '--outfile=tests/game.test.bundle.js'],
+  ['src/main.js', '--bundle', '--format=iife', '--alias:three=./tests/three-stub.js', '--alias:three/examples/jsm/loaders/EXRLoader.js=./tests/exr-stub.js', '--outfile=tests/game.test.bundle.js'],
   { cwd: root, stdio: 'inherit' }
 );
 
