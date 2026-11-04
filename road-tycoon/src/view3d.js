@@ -22,7 +22,7 @@
   let raycaster, groundPlane;
   let vw = 1, vh = 1;
   let ppkNow = PX_PER_KM;
-  let roadSig = null, facSig = null, citySig = -1, cityBuilt = false, lastBuildSig = -1;
+  let roadSig = null, facSig = null, citySig = -1, cityBuilt = false, lastBuildSig = -1, earthSig = 0;
   let roadFarMul = 1, roadFarPrev = 0;   // насколько расширить полотно на дальнем плане
   const samples = new Map();       // roadId -> {pts, half, name}
   const facilityMeshes = new Map(); // facId -> Object3D
@@ -298,7 +298,18 @@
   }
 
   function terrainHeight(x, z, state) {
-    return baseHeight(x, z) * flatMask(x, z, state);
+    let h = baseHeight(x, z) * flatMask(x, z, state);
+    // Земляные работы игрока: насыпи и выемки меняют рельеф
+    if (state && state.earth && state.earth.length) {
+      for (const e of state.earth) {
+        const d = Math.hypot(x - e.x, z - e.y);
+        if (d < e.r) {
+          const k = 1 - d / e.r;
+          h += e.dh * (k * k * (3 - 2 * k));
+        }
+      }
+    }
+    return h;
   }
 
   const TERRAIN_N = 260;   // столько же сегментов, сколько у сетки рельефа
@@ -424,6 +435,10 @@
     const cMeadow = new THREE.Color('#69a052'), cForest = new THREE.Color('#3f7040');
     const cField = new THREE.Color('#a8b455'), cHill = new THREE.Color('#8a9a55');
     const cSand = new THREE.Color('#b9a878');
+    const cTaiga = new THREE.Color('#2f5a3c');      // тайга — тёмная хвоя
+    const cFlood = new THREE.Color('#7fb264');      // пойма — сочные заливные луга
+    const cBog = new THREE.Color('#6c7a4e');        // болото — оливковое
+    const cSteppe = new THREE.Color('#b8b862');     // степь — сухая трава
     for (let j = 0; j <= N; j++) {
       for (let i = 0; i <= N; i++) {
         const x = (i / N) * C.worldW, z = (j / N) * C.worldH;
@@ -433,8 +448,12 @@
         const b = Wd.biome(world, x, z);
         let c = cMeadow;
         if (b === 'forest') c = cForest;
+        else if (b === 'taiga') c = cTaiga;
         else if (b === 'field') c = cField;
         else if (b === 'hill') c = cHill;
+        else if (b === 'floodplain') c = cFlood;
+        else if (b === 'bog') c = cBog;
+        else if (b === 'steppe') c = cSteppe;
         if (Wd.riverDist(world, x, z) < 2.6 || Wd.lakeFactor(world, x, z) > 0.5) c = cSand;
         if (z > C.worldH - 62) c = cSand;                      // пляж у моря
         else if (z > C.worldH - 78) c = cField;                // прибрежные дюны
@@ -1866,6 +1885,12 @@
     if (buildSig !== lastBuildSig) {
       lastBuildSig = buildSig;
       rebuildRoads(s);
+    }
+    if ((s.earth ? s.earth.length : 0) !== earthSig) {
+      earthSig = s.earth ? s.earth.length : 0;
+      buildTerrainMesh(s);
+      rebuildRoads(s);
+      if (s.facilities) rebuildFacilities(s);
     }
     if (facSig !== s.facVersion) {
       rebuildFacilities(s);

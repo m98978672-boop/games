@@ -581,8 +581,11 @@
     const app = S.app;
     if (app.paused) return 'Пауза · <kbd>Пробел</kbd> — продолжить';
     if (app.tool === 'road') {
-      if (app.roadFrom != null) return `Ведём трассу из <b>${C.cities[app.roadFrom].name}</b> · клик по городу — построить · <kbd>Esc</kbd> — отмена`;
-      return `Дороги: выберите класс слева, затем город на карте · ${C.roadTypes[app.buildQuality].name}`;
+      if (app.roadFrom != null) {
+        const name = app.junction && app.junction.free ? 'свободной точки' : `<b>${C.cities[app.roadFrom].name}</b>`;
+        return `Ведём трассу из ${name} · <kbd>ЛКМ</kbd> по городу или дороге — построить · <kbd>Enter</kbd> — поставить точку в курсоре · <kbd>Esc</kbd> — убрать`;
+      }
+      return `Дороги: <kbd>ЛКМ</kbd> по городу, дороге или земле — начать трассу · <kbd>Enter</kbd> — старт в курсоре · <kbd>Shift</kbd> — ряд объектов · <kbd>T</kbd>/<kbd>G</kbd> — насыпь/выемка · класс: ${C.roadTypes[app.buildQuality].name}`;
     }
     if (app.tool.startsWith('fac:')) {
       const def = C.facilityByKey[app.tool.slice(4)];

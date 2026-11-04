@@ -1,5 +1,5 @@
 /* ============================================================
-   Games — витрина двух игр. Тёмная тема, тёплый акцент.
+   Games — витрина браузерных игр и концептов. Тёмная тема, тёплый акцент.
    ============================================================ */
 
 :root {
@@ -211,6 +211,9 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 .card-frontline .features li::before { background: var(--fl); }
 .card-cascade .features li::before { background: var(--ch); }
 .card-folderos .features li::before { background: var(--accent); }
+.card-cloudplay .features li::before { background: #b7f36b; }
+.card-cloudplay .badge-new { color: #b7f36b; border-color: rgba(183, 243, 107, 0.42); }
+.card-cloudplay:hover { border-color: rgba(183, 243, 107, 0.38); }
 .card-truck .features li::before { background: #d1f36a; }
 .card-road .features li::before { background: var(--rd); }
 /* ТРАССА — широкая карточка-баннер: обложка во всю ширину */
