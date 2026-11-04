@@ -1,0 +1,30 @@
+const fs = require('fs');
+const vm = require('vm');
+const assert = require('assert');
+const elements = new Map();
+const context2d = new Proxy({}, {get: () => () => {}});
+function element(id) {
+  if (!elements.has(id)) elements.set(id, {id, style:{}, dataset:{}, classList:{add(){},remove(){},toggle(){}}, textContent:'', innerHTML:'', addEventListener(){}, getBoundingClientRect(){return {width:800,height:440}}, getContext(){return context2d}});
+  return elements.get(id);
+}
+const storage = {};
+let frame;
+const document = {getElementById:element, querySelector:s => element(s), querySelectorAll:()=>[], addEventListener(){}, hidden:false};
+const sandbox = {document, navigator:{}, performance:{now:()=>0}, devicePixelRatio:1, requestAnimationFrame:f=>{frame=f}, localStorage:{setItem:(k,v)=>storage[k]=v,getItem:k=>storage[k]||null}, window:{addEventListener(){}}, setTimeout:()=>0, clearTimeout(){}, Math, console};
+vm.runInNewContext(fs.readFileSync(require('path').join(__dirname,'../game.js'),'utf8'), sandbox);
+assert.match(element('orderContent').innerHTML, /НОВЫЙ ЗАКАЗ/);
+element('accept').onclick();
+assert.match(element('orderContent').innerHTML, /НАПРАВЛЯЙТЕСЬ/);
+element('auto').onclick();
+for(let t=100;t<185000;t+=100) frame(t);
+assert.match(element('orderContent').innerHTML, /ПАССАЖИР ЖДЁТ/);
+element('continueOrder').onclick();
+assert.match(element('orderContent').innerHTML, /ПАССАЖИР В МАШИНЕ/);
+for(let t=185000;t<370000;t+=100) frame(t);
+assert.match(element('orderContent').innerHTML, /ВЫ ПРИБЫЛИ/);
+element('continueOrder').onclick();
+const saved=JSON.parse(storage.nightTaxiSave);
+assert.equal(saved.trips,1);
+assert.equal(saved.money,3030);
+assert.equal(saved.stage,'offer');
+console.log('Smoke: заказ, посадка, поездка, оплата и сохранение — OK');
