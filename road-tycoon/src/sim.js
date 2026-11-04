@@ -423,6 +423,24 @@
     return { ok: true, road, cost: q.cost };
   };
 
+  /* Земляные работы: насыпь (up=true) или выемка под площадку */
+  Sim.earthCost = (up) => (up ? 48000 : 32000);
+  Sim.raiseGround = function (s, x, y, up) {
+    const cost = Sim.earthCost(up);
+    if (s.money < cost) return { ok: false, error: 'Не хватает денег: нужно ' + U.money(cost) };
+    if (!s.earth) s.earth = [];
+    // не даём ставить насыпь на воду
+    if (simWorld && TR.World.lakeRR(simWorld, x, y) < 1.1) {
+      return { ok: false, error: 'Здесь вода — нужна суша' };
+    }
+    s.money -= cost;
+    const dh = up ? 0.16 : -0.16;
+    s.earth.push({ x, y, r: 2.2, dh });
+    if (s.earth.length > 60) s.earth.shift();
+    Sim.notice(s, 'info', up ? 'Насыпь отсыпана — площадка поднята' : 'Грунт срезан — площадка опущена');
+    return { ok: true, cost };
+  };
+
   Sim.buildRoad = function (s, world, a, b, quality) {
     const q0 = Sim.roadQuote(s, world, a, b, quality);
     if (!q0.ok) return q0;

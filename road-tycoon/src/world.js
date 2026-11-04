@@ -203,11 +203,21 @@
   };
 
   W.biome = function (world, x, y) {
-    if (W.riverDist(world, x, y) < 4) return 'river';
-    if (W.lakeFactor(world, x, y) > 0.55) return 'lake';
-    if (world.forests.some((f) => U.dist(f.x, f.y, x, y) < f.r * 0.85)) return 'forest';
+    if (W.riverDist(world, x, y) < 3) return 'river';
+    if (W.lakeRR(world, x, y) < 1.0) return 'lake';
+    // Пойма: широкая заливная полоса вдоль рек — свои травы, старицы, ивняк
+    const rd = W.riverDist(world, x, y);
+    if (rd < 16 && world.noise(x * 0.02, y * 0.02) > 0.33) return 'floodplain';
+    // Болото: низкие места у воды на севере карты
+    if (rd < 26 && y < C.worldH * 0.45 && world.noise(x * 0.013 + 40, y * 0.013) > 0.62) return 'bog';
+    if (world.hills.some((h) => U.dist(h.x, h.y, x, y) < h.r * 0.62)) return 'hill';
+    if (world.forests.some((f) => U.dist(f.x, f.y, x, y) < f.r * 0.85)) {
+      // тайга на севере, смешанный лес в средней полосе
+      return y < C.worldH * 0.42 ? 'taiga' : 'forest';
+    }
     if (world.fields.some((f) => Math.hypot((x - f.x) / f.w, (y - f.y) / f.h) < 0.8)) return 'field';
-    if (world.hills.some((h) => U.dist(h.x, h.y, x, y) < h.r * 0.7)) return 'hill';
+    // степь на юге — сухая трава
+    if (y > C.worldH * 0.62 && world.noise(x * 0.008 + 90, y * 0.008) > 0.42) return 'steppe';
     return 'meadow';
   };
 })();
