@@ -1,0 +1,50 @@
+import {JSDOM} from 'jsdom';
+import {build} from 'esbuild';
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync('src/main.js','utf8').replace("new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'})",'new window.TestRenderer()').replace('loadCityAssets(scene,cityLandmarks);','/* assets tested separately */');
+const bundle=await build({stdin:{contents:source,resolveDir:process.cwd()+'/src',sourcefile:'main.js'},bundle:true,write:false,format:'iife',platform:'browser'});
+const html=fs.readFileSync('index.html','utf8').replace('<script src="game.bundle.js"></script>','');
+const dom=new JSDOM(html,{url:'https://example.test/night-taxi/',runScripts:'outside-only'});
+const w=dom.window;w.PointerEvent=class extends w.MouseEvent{constructor(type,options={}){super(type,options);this.pointerId=options.pointerId??1;this.pointerType=options.pointerType??'touch'}};let nextFrame;w.requestAnimationFrame=f=>{nextFrame=f};w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({}, {get:(target,key)=>target[key]||(()=>{}),set:(target,key,value)=>(target[key]=value,true)});
+w.HTMLElement.prototype.getBoundingClientRect=()=>({width:1000,height:600,left:0,top:0,right:1000,bottom:600});
+w.TestRenderer=class{constructor(){this.domElement=w.document.createElement('canvas');w.testRenderer=this}setPixelRatio(){}setSize(){}render(scene,camera){this.camera=camera;this.scene=scene}};
+w.eval(bundle.outputFiles[0].text);nextFrame(w.performance.now()+20);
+assert.ok(Math.abs(w.testRenderer.camera.position.y-1.72)<.01,'initial camera is in cabin');
+const d=w.document,click=id=>d.getElementById(id).click(),visible=id=>!d.getElementById(id).classList.contains('hidden');
+assert.equal(visible('tabletOverlay'),false);
+// Drag the cabin view vertically and horizontally; double-click recentres it.
+const canvas=w.testRenderer.domElement;const before=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());
+canvas.dispatchEvent(new w.PointerEvent('pointerdown',{pointerId:55,clientX:200,clientY:200}));canvas.dispatchEvent(new w.PointerEvent('pointermove',{pointerId:55,clientX:260,clientY:240}));nextFrame(w.performance.now()+30);
+const after=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(Math.abs(after.x-before.x)>.1&&Math.abs(after.y-before.y)>.1,'camera follows drag on both axes');
+canvas.dispatchEvent(new w.PointerEvent('pointerup',{pointerId:55}));canvas.dispatchEvent(new w.MouseEvent('dblclick'));nextFrame(w.performance.now()+35);const centred=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(centred.distanceTo(before)<.01,'double click recentres view');
+click('doorBtn');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'true');
+const gasDoor=d.querySelector('[data-key="gas"]');gasDoor.dispatchEvent(new w.PointerEvent('pointerdown',{pointerId:56,bubbles:true,cancelable:true}));let stepTime=w.performance.now()+80;for(let i=0;i<12;i++){stepTime+=50;nextFrame(stepTime)}assert.equal(Number(d.getElementById('speed').textContent),0,'open door prevents driving');click('doorBtn');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'false');
+click('tabletBtn');assert.equal(visible('tabletOverlay'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);assert.equal(d.getElementById('tabletBtn').getAttribute('aria-expanded'),'true');
+click('accept');assert.match(d.getElementById('orderContent').textContent,/ЗА ПАССАЖИРОМ/);click('closeTablet');assert.equal(visible('tabletOverlay'),false);assert.match(d.getElementById('pauseBtn').textContent,/ПАУЗА/);
+click('pauseBtn');click('tabletBtn');click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'previous pause preserved');
+click('pauseBtn');click('tabletBtn');w.dispatchEvent(new w.Event('blur'));click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'focus loss remains paused');
+click('tabletBtn');click('settingsBtn');assert.equal(visible('modal'),true);w.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(visible('modal'),false);w.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(visible('tabletOverlay'),false);
+click('cameraBtn');nextFrame(w.performance.now()+40);assert.ok(Math.abs(w.testRenderer.camera.position.y-5.5)<.01,'camera button switches to third-person');assert.ok(w.testRenderer.scene.children.some(o=>o.type==='Group'&&o.children.length===2&&o.children[0].visible),'3D exterior model is visible');assert.match(d.getElementById('cameraLabel').textContent,/СНАРУЖИ/);
+// On-screen buttons work with a mouse or touch-style pointer and release on pause.
+click('pauseBtn');
+const gas=d.querySelector('[data-key="gas"]'),left=d.querySelector('[data-key="left"]');
+gas.dispatchEvent(new w.PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerId:1}));
+left.dispatchEvent(new w.PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerId:2}));
+const context=new w.MouseEvent('contextmenu',{bubbles:true,cancelable:true});gas.dispatchEvent(context);assert.ok(context.defaultPrevented,'long press menu blocked');
+assert.ok(gas.classList.contains('is-active'));assert.ok(left.classList.contains('is-active'));
+let time=w.performance.now()+100;for(let i=0;i<20;i++){time+=50;nextFrame(time)}
+assert.ok(Number(d.getElementById('speed').textContent)>0,'gas accelerates using on-screen pointer');
+left.dispatchEvent(new w.PointerEvent('pointerup',{bubbles:true,pointerId:2}));assert.ok(gas.classList.contains('is-active'),'releasing steering keeps gas held');assert.ok(!left.classList.contains('is-active'));left.dispatchEvent(new w.PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerId:3}));
+click('pauseBtn');assert.ok(!gas.classList.contains('is-active'));assert.ok(!left.classList.contains('is-active'));
+click('pauseBtn');for(let i=0;i<8;i++){time+=50;nextFrame(time)}
+assert.equal(Number(d.getElementById('speed').textContent),0,'pause clears held controls');
+const lost=new w.Event('webglcontextlost',{cancelable:true});w.testRenderer.domElement.dispatchEvent(lost);assert.ok(lost.defaultPrevented);assert.equal(visible('renderError'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);w.testRenderer.domElement.dispatchEvent(new w.Event('webglcontextrestored'));assert.equal(visible('renderError'),false);
+click('helpBtn');assert.equal(visible('drivingHelp'),true);click('closeHelp');assert.equal(visible('drivingHelp'),false);
+console.log('Планшет, экранные педали, пауза, заказ и камеры: OK');dom.window.close();
+const broken=new JSDOM(html,{url:'https://example.test/night-taxi/',runScripts:'outside-only'});
+broken.window.TestRenderer=class{constructor(){throw new Error('no WebGL')}};
+assert.throws(()=>broken.window.eval(bundle.outputFiles[0].text),/WebGL недоступен/);
+assert.ok(!broken.window.document.getElementById('renderError').classList.contains('hidden'),'WebGL errors are shown, not disguised as 3D');
+broken.window.close();
+console.log('Сообщение при недоступном WebGL: OK');

@@ -9,7 +9,8 @@
     "test:physics": "node tests/autopilot.mjs",
     "preview": "node tests/render-preview.mjs",
     "assets": "node tools/fetch-assets.mjs",
-    "test:assets": "node tests/_assets.mjs"
+    "test:assets": "node tests/_assets.mjs",
+    "test:junction": "node tests/_junction.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"

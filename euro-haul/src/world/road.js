@@ -186,6 +186,58 @@ function signTexture(text, sub, color = '#1f5c3a') {
  * Настоящие магистрали обозначают так опасные закругления — без них поворот
  * «не читается» до последнего момента.
  */
+/**
+ * Щит развилки: зелёное полотно магистрали, название «СЪЕЗД» и до двух
+ * направлений со стрелками и расстоянием — как на настоящих указателях.
+ */
+function junctionTexture(options = [], title = 'СЪЕЗД') {
+  const key = 'junction:' + title + options.map((o) => o.name + o.km).join('|');
+  if (SIGN_CACHE.has(key)) return SIGN_CACHE.get(key);
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 320;
+  const c = canvas.getContext('2d');
+  c.fillStyle = '#18543a';
+  c.fillRect(0, 0, 512, 320);
+  c.strokeStyle = '#eef2e8';
+  c.lineWidth = 8;
+  c.strokeRect(12, 12, 488, 296);
+  c.fillStyle = '#ffffff';
+  c.textAlign = 'left';
+  c.font = 'bold 34px system-ui, Arial';
+  c.fillText(title, 34, 62);
+  c.strokeStyle = 'rgba(238,242,232,0.5)';
+  c.lineWidth = 3;
+  c.beginPath();
+  c.moveTo(34, 78);
+  c.lineTo(478, 78);
+  c.stroke();
+  const rows = options.slice(0, 2);
+  rows.forEach((o, i) => {
+    const y = 138 + i * 84;
+    // Стрелка вправо-вверх — направление съезда.
+    c.strokeStyle = '#ffffff';
+    c.lineWidth = 7;
+    c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(40, y + 18);
+    c.lineTo(86, y - 8);
+    c.lineTo(40, y - 34);
+    c.stroke();
+    c.fillStyle = '#ffffff';
+    c.font = 'bold 44px system-ui, Arial';
+    c.fillText(String(o.name || '').slice(0, 14), 112, y + 6);
+    c.font = 'bold 30px system-ui, Arial';
+    c.fillStyle = '#cfe3d6';
+    c.fillText(`${o.km} км`, 112, y + 44);
+  });
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.userData.key = key;
+  SIGN_CACHE.set(key, tex);
+  return tex;
+}
+
 function chevronTexture(dir = 1) {
   const key = 'chevron:' + dir;
   if (SIGN_CACHE.has(key)) return SIGN_CACHE.get(key);
@@ -721,6 +773,7 @@ export class RoadWorld {
 
     // --- Знаки и указатели.
     this.buildSigns(s0, s1);
+    this.buildJunctionSigns(s0, s1);
 
     // --- Заправки и стоянки.
     for (const st of route.stations) {
@@ -1067,6 +1120,56 @@ export class RoadWorld {
       ),
       m.gravel
     );
+  }
+
+  /**
+   * Указатели развилок: перед каждым городом на маршруте стоит щит с двумя
+   * направлениями (куда можно свернуть) и стрелкой съезда. Сама рампы строится
+   * в buildApproach, здесь только навигация — чтобы игрок видел выбор заранее.
+   */
+  buildJunctionSigns(s0, s1) {
+    const route = this.route;
+    if (!route.junctions?.length) return;
+    const m = this.mats;
+    for (const j of route.junctions) {
+      if (j.s < s0 - 200 || j.s > s1 + 400) continue;
+      // Щит за 200 м до развилки, на правой обочине.
+      const sSign = j.s - 200;
+      if (sSign < s0 - 200) continue;
+      const p = route.pointAt(sSign);
+      const lat = EDGE_LEFT - 2.6;
+      const tex = junctionTexture(j.options, j.cityName ? 'СЪЕЗД' : 'РАЗВИЛКА');
+      const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.62, transparent: true });
+      const panel = new THREE.Mesh(new THREE.PlaneGeometry(6.2, 3.6), mat);
+      const ground = p.y + bankOffset(p, lat);
+      panel.position.set(p.x + Math.cos(p.hdg) * lat, ground + 6.2, p.z - Math.sin(p.hdg) * lat);
+      panel.rotation.y = p.hdg + Math.PI;
+      this.group.add(panel);
+      for (const dx of [-2.2, 2.2]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 6.2, 6), m.darkMetal);
+        post.position.set(
+          panel.position.x + Math.cos(p.hdg) * dx,
+          ground + 3.1,
+          panel.position.z - Math.sin(p.hdg) * dx
+        );
+        this.group.add(post);
+      }
+      // Стрелка съезда на самой рампе: три жёлтых щита-шеврона.
+      const arrowTex = chevronTexture(1);
+      for (let k = 0; k < 3; k++) {
+        const ss = j.s - 120 + k * 16;
+        const pp = route.pointAt(ss);
+        const latA = EDGE_LEFT - 2.2 - k * 1.4;
+        const arrow = new THREE.Mesh(
+          new THREE.PlaneGeometry(1.5, 1.5),
+          new THREE.MeshStandardMaterial({ map: arrowTex, roughness: 0.7, transparent: true })
+        );
+        const gy = pp.y + bankOffset(pp, latA);
+        arrow.position.set(pp.x + Math.cos(pp.hdg) * latA, gy + 1.5, pp.z - Math.sin(pp.hdg) * latA);
+        arrow.rotation.y = pp.hdg + Math.PI;
+        this.group.add(arrow);
+      }
+    }
   }
 
   buildCitiesNear(s0, s1) {

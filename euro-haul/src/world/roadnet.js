@@ -392,6 +392,46 @@ export function buildRouteGeometry(cityIds, seed = 1) {
     }
   }
 
+  // ------------------------------------------------------------------ перекрёстки
+  // Дорога — не «коридор до пункта назначения», а часть сети: в каждом городе на
+  // маршруте есть развилка, где можно свернуть на другую трассу. Для каждой такой
+  // точки собираем варианты (соседние города, кроме тех, откуда приехали и куда
+  // едем) — их показывает HUD, и по E маршрут перестраивается на новый.
+  const junctions = [];
+  {
+    const { adj } = buildNetwork();
+    for (let i = 0; i < cityIds.length; i++) {
+      const id = cityIds[i];
+      const mark = marks.find((m) => m.id === id);
+      if (!mark) continue;
+      const nextId = cityIds[i + 1] || null;
+      const prevId = cityIds[i - 1] || null;
+      const options = (adj.get(id) || [])
+        .filter((e) => e.to !== nextId && e.to !== prevId)
+        .map((e) => {
+          const city = CITY_BY_ID.get(e.to);
+          return {
+            to: e.to,
+            name: city?.name || e.to,
+            country: city?.country || null,
+            km: Math.round(e.km || 0),
+          };
+        })
+        .sort((a, b) => a.km - b.km)
+        .slice(0, 2);
+      if (!options.length) continue;
+      junctions.push({
+        s: mark.s,
+        cityId: id,
+        cityName: mark.name,
+        // Съезд визуально начинается за 90 м до города и уходит вправо.
+        from: Math.max(0, mark.s - 90),
+        options,
+        last: i === cityIds.length - 1,
+      });
+    }
+  }
+
   // Дорожные работы — редкие участки с ограничением 30.
   const works = [];
   for (let k = 0; k < Math.max(1, Math.floor(total / 16000)); k++) {
@@ -425,6 +465,7 @@ export function buildRouteGeometry(cityIds, seed = 1) {
     cityIds,
     samples,
     marks,
+    junctions,
     zones,
     stations,
     rests,
@@ -479,6 +520,21 @@ export function speedLimitAt(route, s) {
   // Боковое сцепление шин ~0.32 g плюс помощь виража.
   const hold = Math.sqrt((9.81 * (0.32 + Math.abs(p.bank || 0))) / curv);
   return Math.max(60, Math.min(80, Math.floor((hold * 3.6) / 10) * 10));
+}
+
+/**
+ * Развилка впереди: ближайший город маршрута, где есть альтернативная дорога.
+ * Возвращает и «сколько осталось до съезда», чтобы HUD подсказал заранее.
+ */
+export function junctionAhead(route, s, range = 420) {
+  if (!route?.junctions?.length) return null;
+  let best = null;
+  for (const j of route.junctions) {
+    const d = j.s - s;
+    if (d < -60 || d > range) continue;
+    if (!best || Math.abs(d) < Math.abs(best.distance)) best = { junction: j, distance: d };
+  }
+  return best;
 }
 
 export function cityAtProgress(route, s) {

@@ -3,9 +3,10 @@ import * as THREE from 'three';
 import { UI } from './ui/ui.js';
 import { RoadWorld } from './world/road.js';
 import { TruckView, EYE } from './world/truck3d.js';
+import { RainGlass } from './world/rain-glass.js';
 import { Traffic } from './world/traffic.js';
 import { SkySystem } from './world/sky.js';
-import { buildRouteGeometry, buildNetwork, networkRouteKm, speedLimitAt } from './world/roadnet.js';
+import { buildRouteGeometry, buildNetwork, junctionAhead, networkRouteKm, speedLimitAt } from './world/roadnet.js';
 import { CITY_BY_ID, COUNTRIES } from './data/cities.js';
 import { TRUCK_MODELS, PAINT_COLORS, UPGRADES, levelForXp, SKILLS } from './data/trucks.js';
 import { TruckSim } from './core/physics.js';
@@ -219,6 +220,8 @@ class Game {
       return;
     }
     this.scene = new THREE.Scene();
+    // Капли на стекле: свой 2D-канвас поверх кадра, живёт только в кабине.
+    this.rainGlass = new RainGlass($('rain-glass'));
     this.camera = new THREE.PerspectiveCamera(68, window.innerWidth / window.innerHeight, 0.08, 5200);
     this.camera.position.set(0, 3, 0);
     this.sky = new SkySystem(this.scene, this.renderer);
@@ -261,6 +264,7 @@ class Game {
       this.renderer.setSize(w, h, false);
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
+      this.rainGlass?.resize(w, h, window.devicePixelRatio || 1);
     };
     window.addEventListener('resize', onResize);
     window.addEventListener('orientationchange', () => setTimeout(onResize, 120));
@@ -406,7 +410,12 @@ class Game {
           this.toggleLights();
           break;
         case 'KeyE':
-          this.interact();
+          this.interactOrExit();
+          break;
+        case 'Digit1':
+        case 'Digit3':
+          // 1 и 3 — быстрый выбор направления на развилке (2 занята обзором).
+          this.takeJunction(e.code === 'Digit1' ? 0 : 1);
           break;
         case 'KeyH':
           this.audio.honk();
@@ -487,29 +496,68 @@ class Game {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') flush();
     });
-    // Осмотр из кабины мышью: тянем по сцене — голова поворачивается.
+    // Осмотр из кабины мышью и пальцем: тянем по сцене — голова поворачивается.
+    // Диапазон — почти «через плечо» (±150°), по вертикали — вверх до солнца и
+    // вниз до приборки. Отпустили — через секунду голова плавно смотрит вперёд.
     const scene = $('scene');
     if (scene) {
       let dragging = false;
       let lastX = 0;
       let lastY = 0;
+      const canLook = () => this.state === 'driving' && (this.cameraMode === 'interior' || this.cameraMode === 'hood');
       scene.addEventListener('pointerdown', (e) => {
-        if (this.state !== 'driving' || (e.pointerType && e.pointerType !== 'mouse')) return;
+        if (!canLook()) return;
+        if (e.button !== undefined && e.button > 0) return;
         dragging = true;
         lastX = e.clientX;
         lastY = e.clientY;
+        this.looking = true;
+        try {
+          scene.setPointerCapture?.(e.pointerId);
+        } catch {
+          /* необязательно */
+        }
       });
-      window.addEventListener('pointermove', (e) => {
+      const move = (e) => {
         if (!dragging) return;
         const dx = e.clientX - lastX;
         const dy = e.clientY - lastY;
         lastX = e.clientX;
         lastY = e.clientY;
-        this.lookYaw = clamp((this.lookYaw || 0) - dx * 0.004, -1.2, 1.2);
-        this.lookPitch = clamp((this.lookPitch || 0) - dy * 0.003, -0.32, 0.32);
-      });
-      window.addEventListener('pointerup', () => {
+        // Тяга масштабируется от вертикального FOV: на телефоне палец проходит
+        // меньше пикселей, но обзор должен поворачиваться на тот же угол.
+        const k = 0.0042 * ((this.camera?.fov || 56) / 56);
+        this.lookYaw = clamp((this.lookYaw || 0) - dx * k, -2.62, 2.62);
+        this.lookPitch = clamp((this.lookPitch || 0) - dy * k * 0.8, -0.5, 0.62);
+        this.lookHold = performance.now();
+      };
+      window.addEventListener('pointermove', move);
+      const release = () => {
+        if (!dragging) return;
         dragging = false;
+        this.looking = false;
+        this.lookHold = performance.now();
+      };
+      window.addEventListener('pointerup', release);
+      window.addEventListener('pointercancel', release);
+      // Колесо мыши в кабине — приблизить взгляд (как бинокль), не меняя вид.
+      scene.addEventListener(
+        'wheel',
+        (e) => {
+          if (!canLook()) return;
+          e.preventDefault();
+          this.lookZoom = clamp((this.lookZoom || 1) + (e.deltaY > 0 ? 0.06 : -0.06), 0.7, 1.5);
+        },
+        { passive: false }
+      );
+    }
+
+    const jcard = $('junction-card');
+    if (jcard) {
+      jcard.addEventListener('click', (e) => {
+        const btn = e.target.closest ? e.target.closest('.jc-opt') : null;
+        if (!btn) return;
+        this.takeJunction(Number(btn.dataset.arg) || 0);
       });
     }
 
@@ -923,10 +971,51 @@ class Game {
     this.startDrive(this.profile.activeJob);
   }
 
+  /** Неустойка за срыв контракта: доля оплаты плюс сбор за возврат груза. */
+  cancelFee(job) {
+    if (!job || job.free) return 0;
+    const raw = Math.round((job.pay || 0) * 0.18 + 250);
+    return Math.min(Math.max(0, this.profile.money), Math.max(0, raw));
+  }
+
+  confirmCancelJob() {
+    const job = this.profile.activeJob || this.job;
+    if (!job) {
+      this.ui.toast('Нет активного рейса', 'info');
+      return;
+    }
+    const fee = this.cancelFee(job);
+    const driven = Math.max(0, this.route && this.truck ? this.truck.s / 1000 : 0);
+    this.ui.openModal({
+      eyebrow: 'ОТМЕНА РЕЙСА',
+      title: `${job.fromName} → ${job.toName}`,
+      body: `<p>Контракт будет расторгнут, груз вернётся на склад заказчика. Это не бесплатно и
+        учитывается в статистике.</p>
+        <div class="field-row"><label>Неустойка за срыв<small>18 % оплаты + сбор за возврат груза</small></label><b style="color:var(--red)">− ${fmtMoney(fee)}</b></div>
+        <div class="field-row"><label>Пройдено по маршруту</label><b>${driven.toFixed(1).replace('.', ',')} км</b></div>
+        <div class="field-row"><label>Оплата по контракту</label><b>${fmtMoney(job.pay || 0)}</b></div>
+        <div class="field-row"><label>В кошельке</label><b>${fmtMoney(this.profile.money)}</b></div>`,
+      actions: [
+        { label: 'Остаться в рейсе', primary: true, act: 'close' },
+        { label: 'Отменить рейс', danger: true, act: 'cancel-job-confirm' },
+      ],
+    });
+  }
+
   abandonJob() {
+    const job = this.profile?.activeJob || this.job;
+    const fee = job ? this.cancelFee(job) : 0;
+    if (job) {
+      this.profile.money = Math.max(0, this.profile.money - fee);
+      this.profile.stats.cancelled = (this.profile.stats.cancelled || 0) + 1;
+      this.profile.stats.fines = (this.profile.stats.fines || 0) + fee;
+    }
     this.profile.activeJob = null;
-    this.enterGarage();
-    this.ui.toast('Рейс отменён', 'info');
+    this.ui.closeModal();
+    this.enterGarage('jobs');
+    this.ui.toast(fee > 0 ? `Рейс отменён · неустойка ${fmtMoney(fee)}` : 'Рейс отменён', 'bad', 4200);
+    this.audio.alarm();
+    this.saveNow(true);
   }
 
   startDrive(job) {
@@ -976,6 +1065,8 @@ class Game {
     this.work = null;
     this.parkedAtDepot = null;
     this.interaction = null;
+    this.junction = null;
+    this.junctionKey = null;
 
     const paint = PAINT_COLORS.find((c) => c.id === this.profile.truck.paint) || PAINT_COLORS[1];
     this.truckView.setPaint(paint.hex);
@@ -1039,6 +1130,175 @@ class Game {
     this.drivingDistance = 0;
     this.nightDistance = 0;
     this.ui.toast('Двигатель работает. W — газ, E — погрузка, V — камера', 'info', 5000);
+    this.updateCamera(0.016, true);
+  }
+
+  /**
+   * Развилка впереди: карточка с двумя направлениями появляется за 900 м,
+   * кнопкой (или E) в пределах 320 м маршрут перестраивается по сети дорог.
+   */
+  updateJunction() {
+    const card = $('junction-card');
+    if (!card) return;
+    let near = this.route && this.truck ? junctionAhead(this.route, this.truck.s, 900) : null;
+    // В городе выгрузки сворачивать некуда — там груз сдают, а не катаются.
+    if (near && !this.job?.free && near.junction.cityId === this.route.to) near = null;
+    // Конец трассы: асфальт кончается, а сеть дорог — нет. В свободной поездке
+    // последний город маршрута предлагает продолжить на соседнюю магистраль.
+    if (!near && this.route?.junctions?.length && this.truck && this.job?.free && this.truck.s > this.route.length - 320) {
+      const last = this.route.junctions[this.route.junctions.length - 1];
+      if (last?.options?.length) near = { junction: last, distance: Math.max(0, last.s - this.truck.s), end: true };
+    }
+    this.junction = near;
+    const show = !!near && this.state === 'driving' && !this.paused;
+    card.classList.toggle('hidden', !show);
+    if (!show) {
+      this.junctionKey = null;
+      return;
+    }
+    const j = near.junction;
+    const dist = near.distance;
+    const ready = near.end || (dist <= 320 && dist > -60);
+    card.classList.toggle('ready', ready);
+    const distEl = $('jc-dist');
+    if (distEl) distEl.textContent = near.end ? 'дорога кончается' : dist > 30 ? `через ${this.fmtDistanceShort(dist)}` : 'сейчас';
+    const key = j.cityId + '|' + j.options.map((o) => o.to).join(',');
+    if (key !== this.junctionKey) {
+      this.junctionKey = key;
+      const cityEl = $('jc-city');
+      if (cityEl) cityEl.textContent = j.cityName;
+      const opts = $('jc-options');
+      if (opts) {
+        opts.innerHTML = j.options
+          .map(
+            (o, i) => `<button class="jc-opt" data-arg="${i}">
+            <span>${o.name}</span><span class="jc-km">${o.km} км</span><kbd>${i === 0 ? 'E' : '3'}</kbd>
+          </button>`
+          )
+          .join('');
+      }
+    }
+  }
+
+  /** E: сначала дела рейса (погрузка/заправка), иначе — съезд. */
+  interactOrExit() {
+    if (this.parkedAtDepot || this.work) {
+      this.interact();
+      return;
+    }
+    const near = this.junction;
+    if (near && near.distance <= 320 && near.distance >= -60) {
+      this.takeJunction(0);
+      return;
+    }
+    this.interact();
+  }
+
+  /**
+   * Съезд на соседнюю трассу: маршрут перестраивается по сети дорог через
+   * выбранный город и дальше к прежней цели рейса. Скорость на съезде —
+   * как на настоящей рампе: быстро свернуть не даст.
+   */
+  takeJunction(index = 0) {
+    const near = this.junction;
+    if (!near || !this.truck || this.state !== 'driving' || this.paused) return;
+    const j = near.junction;
+    const opt = j.options[index];
+    if (!opt) return;
+    if (!near.end && (near.distance > 320 || near.distance < -60)) {
+      this.ui.toast(`До съезда ещё ${this.fmtDistanceShort(Math.max(0, near.distance))}`, 'info', 2000);
+      return;
+    }
+    if (Math.abs(this.truck.speed) * 3.6 > 42) {
+      this.audio.alarm();
+      this.ui.toast('Слишком быстро: сбросьте до 40 км/ч перед съездом', 'bad', 2800);
+      return;
+    }
+    const goal = this.route.to;
+    const atGoal = near.end || j.cityId === goal;
+    let path = this.pathFor(j.cityId, opt.to);
+    if (!atGoal && opt.to !== goal) path = path.concat(this.pathFor(opt.to, goal).slice(1));
+    const clean = [];
+    for (const id of path) if (clean[clean.length - 1] !== id) clean.push(id);
+    if (clean.length < 2) {
+      this.ui.toast('Отсюда нет дороги в этом направлении', 'bad', 2600);
+      return;
+    }
+    const oldKm = this.route.km;
+    this.junction = null;
+    this.junctionKey = null;
+    this.state = 'loading';
+    this.ui.loading(`Съезд на ${opt.name}`, `${j.cityName} → ${opt.name} · перестраиваем маршрут`, 45);
+    setTimeout(() => {
+      try {
+        const route = buildRouteGeometry(clean, this.job?.seed || 1234);
+        this.applyRoute(route, 140);
+        this.state = 'driving';
+        this.ui.setScreen('driving');
+        this.paused = false;
+        if (this.job) {
+          this.job.detours = (this.job.detours || 0) + 1;
+          this.job.extraKm = Math.round(((this.job.extraKm || 0) + (route.km - oldKm)) * 10) / 10;
+          // Продолжение с конца трассы меняет цель свободной поездки.
+          if (atGoal && this.job.free) {
+            this.job.to = route.to;
+            this.job.toName = opt.name;
+          }
+        }
+        const delta = Math.round((route.km - oldKm) * 10) / 10;
+        this.ui.toast(
+          `Съезд на ${opt.name} · маршрут ${delta >= 0 ? '+' : '−'}${Math.abs(delta).toFixed(1).replace('.', ',')} км`,
+          'good',
+          4200
+        );
+        this.saveNow(true);
+      } catch (err) {
+        console.error(err);
+        this.state = 'driving';
+        this.ui.setScreen('driving');
+        this.ui.toast('Не удалось перестроить маршрут', 'bad', 3000);
+      }
+    }, 40);
+  }
+
+  /** Пересадка мира на новый маршрут: трасса, трафик, цели рейса. */
+  applyRoute(route, entryS = 140) {
+    if (this.road) {
+      this.road.dispose();
+      this.road = null;
+    }
+    if (this.traffic) {
+      this.traffic.dispose();
+      this.traffic = null;
+    }
+    this.route = route;
+    const job = this.job;
+    if (job) {
+      job.routeCities = route.cityIds;
+      job.distance = Math.round(route.km * 10) / 10;
+    }
+    const firstMark = route.marks[0];
+    const lastMark = route.marks[route.marks.length - 1];
+    this.startS = 40;
+    if (this.phase === 'pickup') this.pickupS = clamp(firstMark.s + 1100, 200, route.length - 200);
+    this.deliveryS = clamp((lastMark?.s || route.length) - 700, 300, route.length - 60);
+    if (this.phase === 'delivery') this.pickupS = this.startS;
+    this.phaseStartS = this.phase === 'pickup' ? this.startS : this.pickupS;
+    this.depots = [
+      { s: this.pickupS, label: 'ПОГРУЗКА', sub: job?.company || '', color: '#1f5c3a' },
+      { s: this.deliveryS, label: 'ВЫГРУЗКА', sub: job?.toName || '', color: '#8a5a12' },
+    ];
+    this.truck.s = clamp(firstMark.s + entryS, 20, route.length - 40);
+    this.truck.lat = -1.85;
+    this.work = null;
+    this.interaction = null;
+    this.parkedAtDepot = null;
+    this.camerasHit.clear();
+    this.road = new RoadWorld(this.scene, this.route, this.depots);
+    this.traffic = new Traffic(this.scene, this.route, this.trafficCount());
+    this.traffic.reset(this.route);
+    this.applyWorldShadows();
+    this.ui.showWork('', 0, false);
     this.updateCamera(0.016, true);
   }
 
@@ -1231,6 +1491,7 @@ class Game {
     this.traffic.update(dt, this.truck.s, this.truck.lat, this.truck.speed, env.night);
     this.checkCollisions(dt);
     this.checkTriggers(dt);
+    this.updateJunction();
     this.checkCameras();
     this.updateFatigue(dt);
 
@@ -1291,10 +1552,44 @@ class Game {
     const vig = $('fatigue-vignette');
     if (vig) vig.style.opacity = String(clamp(((this.profile.fatigue || 0) - 45) / 55, 0, 0.85));
     const shield = $('windshield');
+    const interior = this.cameraMode === 'interior';
+    const rain = env.rain || 0;
     if (shield) {
-      const interior = this.cameraMode === 'interior' || this.cameraMode === 'hood';
-      const rain = env.rain || 0;
       shield.className = 'windshield' + (interior && rain > 0.55 ? ' heavy' : interior && rain > 0.08 ? ' wet' : '');
+    }
+    // Капли на стекле: рисуем только из кабины и только когда есть дождь/морось.
+    if (this.rainGlass) {
+      const show = interior && (rain > 0.04 || this.rainGlass.wetness > 0.02);
+      const canvas = $('rain-glass');
+      if (canvas) canvas.classList.toggle('on', show);
+      if (show) {
+        if (this.rainGlass.w !== canvas?.width) {
+          this.rainGlass.resize(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1);
+        }
+        this.rainGlass.update(dt, {
+          rain,
+          speed: Math.abs(this.truck.speed),
+          wiper: this.truckView?.wiperPhase || 0,
+          inside: true,
+        });
+        // Дворник стирает капли в своём секторе.
+        const wiperPhase = this.truckView?.wiperPhase || 0;
+        if (wiperPhase !== this.lastWiperPhase) {
+          if (this.truckView.wipers.length) {
+            this.rainGlass.applyWiper(Math.sin(wiperPhase) * 0.72, -1);
+            this.rainGlass.applyWiper(Math.sin(wiperPhase) * 0.72, 1);
+          }
+          this.lastWiperPhase = wiperPhase;
+          // Скрип резины — на каждом проходе дворников (каждые ~0.75 с в дождь).
+          const stroke = Math.floor(wiperPhase / Math.PI);
+          if (stroke !== this.lastWiperStroke) {
+            this.lastWiperStroke = stroke;
+            this.audio.wiper(clamp(rain, 0.2, 1));
+          }
+        }
+      } else if (this.rainGlass.wetness > 0) {
+        this.rainGlass.wetness = Math.max(0, this.rainGlass.wetness - dt * 0.5);
+      }
     }
 
     // HUD.
@@ -1387,6 +1682,43 @@ class Game {
     return m >= 1000 ? (m / 1000).toFixed(1).replace('.', ',') + ' км' : Math.round(m) + ' м';
   }
 
+  /**
+   * Голова водителя. Мышь, палец и клавиши (Numpad или J/K/I/O) задают цель,
+   * камера догоняет её со сглаживанием ~60 мс. Отпустили управление — через
+   * секунду голова сама возвращается к дороге (в настройках отключается).
+   */
+  updateLook(dt, instant = false) {
+    const keys = this.input.keys;
+    const left = keys.has('Numpad4') || keys.has('KeyJ');
+    const right = keys.has('Numpad6') || keys.has('KeyK');
+    const up = keys.has('Numpad8') || keys.has('KeyI');
+    const down = keys.has('Numpad2') || keys.has('KeyO');
+    const held = left || right || up || down;
+    if (held) {
+      const step = 1.7 * dt;
+      if (left) this.lookYaw = clamp((this.lookYaw || 0) + step, -2.62, 2.62);
+      if (right) this.lookYaw = clamp((this.lookYaw || 0) - step, -2.62, 2.62);
+      if (up) this.lookPitch = clamp((this.lookPitch || 0) + step * 0.7, -0.5, 0.62);
+      if (down) this.lookPitch = clamp((this.lookPitch || 0) - step * 0.7, -0.5, 0.62);
+      this.lookHold = performance.now();
+    }
+    const interior = this.cameraMode === 'interior' || this.cameraMode === 'hood';
+    if (this.lookBack && interior) {
+      this.lookYaw = Math.PI;
+      this.lookPitch = 0;
+      this.lookHold = performance.now();
+    }
+    const idle = performance.now() - (this.lookHold || 0);
+    if (this.settings.lookAutoCenter !== false && !held && !this.lookBack && !this.looking && idle > 900) {
+      const k = 1 - Math.exp(-dt * 3.4);
+      this.lookYaw = (this.lookYaw || 0) * (1 - k);
+      this.lookPitch = (this.lookPitch || 0) * (1 - k);
+    }
+    const ease = instant ? 1 : 1 - Math.exp(-dt * 16);
+    this.lookSmoothYaw = instant ? this.lookYaw || 0 : lerp(this.lookSmoothYaw || 0, this.lookYaw || 0, ease);
+    this.lookSmoothPitch = instant ? this.lookPitch || 0 : lerp(this.lookSmoothPitch || 0, this.lookPitch || 0, ease);
+  }
+
   updateCamera(dt, instant = false) {
     if (!this.truck) return;
     const mode = this.cameraMode;
@@ -1394,9 +1726,10 @@ class Game {
     const shakeOn = this.settings.cameraShake !== false;
     const shake = shakeOn && this.cameraShake > 0 ? this.cameraShake * 0.06 * Math.sin(performance.now() * 0.05) : 0;
     this.cameraShake = Math.max(0, this.cameraShake - dt * 3);
-    // Мышью голова поворачивается в кабине; отпустили — плавно возвращается.
-    this.lookYaw = (this.lookYaw || 0) * (1 - Math.min(1, dt * 1.6));
-    this.lookPitch = (this.lookPitch || 0) * (1 - Math.min(1, dt * 1.6));
+    // Голова водителя: цель от мыши/пальца/клавиш, сглаженный поворот.
+    this.updateLook(dt, instant);
+    const lookYaw = this.lookSmoothYaw || 0;
+    const lookPitch = this.lookSmoothPitch || 0;
     const speed = Math.abs(this.truck.speed);
 
     // Курс камеры сзади сглаживается отдельно от курса машины: при рулении кадр
@@ -1416,18 +1749,26 @@ class Game {
       this.truckView.setInteriorVisible(mode === 'interior');
       root.updateMatrixWorld(true);
       const offset = mode === 'interior' ? new THREE.Vector3(-EYE.x, EYE.y, EYE.z) : new THREE.Vector3(0, 4.06, 2.55);
+      // Живая голова: при повороте она чуть смещается вбок и отходит от стекла —
+      // без этого кадр «проворачивается» как штатив, а не как человек.
+      if (mode === 'interior') {
+        offset.x -= Math.sin(lookYaw) * 0.1;
+        offset.z -= (1 - Math.cos(lookYaw)) * 0.14;
+        offset.y += Math.sin(lookPitch) * 0.05;
+      }
       this.tmpVec.copy(offset);
       root.localToWorld(this.tmpVec);
       this.camera.position.copy(this.tmpVec);
       // Голова водителя смотрит по ходу кабины: никакого «поворота за рулём».
       const euler = new THREE.Euler(
-        (mode === 'interior' ? -0.075 : -0.12) + root.rotation.x * 0.6 + (this.lookPitch || 0),
-        root.rotation.y + Math.PI + (this.lookYaw || 0),
-        root.rotation.z * 0.25 + shake,
+        (mode === 'interior' ? -0.075 : -0.12) + root.rotation.x * 0.6 + lookPitch,
+        root.rotation.y + Math.PI + lookYaw,
+        root.rotation.z * 0.25 + shake + Math.sin(lookYaw) * 0.02,
         'YXZ'
       );
       this.camera.quaternion.setFromEuler(euler);
-      this.camera.fov = mode === 'interior' ? 56 : 68;
+      const zoom = mode === 'interior' ? this.lookZoom || 1 : 1;
+      this.camera.fov = (mode === 'interior' ? 56 : 68) / zoom;
     } else {
       this.truckView.setInteriorVisible(false);
       const back = mode === 'far' ? 34 : 23;
@@ -1474,6 +1815,12 @@ class Game {
     const idx = CAMERA_MODES.indexOf(this.cameraMode);
     this.cameraMode = CAMERA_MODES[(idx + 1) % CAMERA_MODES.length];
     this.cameraMode = this.cameraMode;
+    // Сменили вид — голова снова смотрит вперёд, приближение сброшено.
+    this.lookYaw = 0;
+    this.lookPitch = 0;
+    this.lookZoom = 1;
+    this.lookSmoothYaw = 0;
+    this.lookSmoothPitch = 0;
     if (this.cameraMode !== 'interior' && this.cameraMode !== 'hood') {
       this.camLook.set(this.truckPos.x, this.truckPos.y + 1.8, this.truckPos.z);
     }
@@ -2316,7 +2663,8 @@ class Game {
           { label: 'Быстрый сейв', act: 'quick-save' },
           { label: 'Загрузить (F9)', act: 'quick-load' },
           { label: 'Сохранения', act: 'pause-saves' },
-          { label: 'Покинуть рейс', danger: true, act: 'quit-to-garage' },
+          { label: 'В гараж (рейс сохранится)', act: 'quit-to-garage' },
+          { label: 'Отменить рейс', danger: true, act: 'cancel-job' },
         ],
       });
       const foot = $('modal-foot');
@@ -2380,7 +2728,9 @@ class Game {
             <b>R</b> — задний ход · <b>F</b> — двигатель<br>
             <b>M</b> — авто/ручная КПП · <b>Shift / Ctrl</b> — передачи<br>
             <b>V</b> — камера · <b>B</b> — посмотреть назад<br>
-            <b>мышь</b> — осмотреться в кабине<br>
+            <b>мышь / палец</b> — осмотреться в кабине (±150°, вверх-вниз)<br>
+            <b>колесо</b> — приблизить взгляд · <b>Numpad / J K I O</b> — обзор без мыши<br>
+            <b>E</b> на развилке — свернуть на другую трассу · <b>1 / 3</b> — выбор направления<br>
             <b>L</b> — фары · <b>H</b> — сигнал · <b>, .</b> — поворотники<br>
             <b>P</b> — снимок · <b>Esc</b> — пауза · <b>F1</b> — эта справка<br>
             <b>F5</b> — быстрое сохранение · <b>F9</b> — загрузка · <b>E</b> у обочины — ремонт после поломки</p>
@@ -2398,6 +2748,11 @@ class Game {
         <p>Узлы изнашиваются: шины лысеют от гравия и торможений, тормоза «плывут» на спусках, антифриз потихоньку уходит.
         Если что-то отказало (прокол, перегрев, тормоза, КПП) — остановитесь и нажмите <b>E</b>: почините на месте
         или вызовите эвакуатор. В гараже можно чинить по одному узлу — это дешевле, чем полное ТО.</p>
+        <h4>Дороги и съезды</h4>
+        <p>Трасса — часть живой сети: в каждом городе по маршруту есть развилка на соседние магистрали.
+        За 900 м до неё слева появляется карточка «Съезд» с направлениями и расстоянием. Сбросьте скорость
+        до 40 км/ч и нажмите <b>E</b> (или кнопку) — маршрут перестроится через выбранный город и дальше к цели.
+        Отменить рейс можно в паузе: за срыв контракта списывается неустойка.</p>
         <h4>Честная физика</h4>
         <p>Тягач трогается плавно (турбина раскручивается), тормозит с задержкой пневматики, в повороте уходит наружу —
         сбрасывайте скорость до знака. Прицеп срезает траекторию и складывается на заднем ходу. Наклон полотна
@@ -2572,6 +2927,7 @@ class Game {
   }
 
   disposeWorld() {
+    this.rainGlass?.clear();
     if (this.road) {
       this.road.dispose();
       this.road = null;

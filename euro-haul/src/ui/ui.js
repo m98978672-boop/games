@@ -223,6 +223,12 @@ export class UI {
       case 'abandon-job':
         g.abandonJob();
         break;
+      case 'cancel-job':
+        g.confirmCancelJob();
+        break;
+      case 'cancel-job-confirm':
+        g.abandonJob();
+        break;
       case 'service': {
         if (arg === 'fuel') g.refuelDialog();
         else if (arg === 'repair') g.repairDialog();
@@ -758,7 +764,10 @@ export class UI {
           <div><small>ОСТАЛОСЬ</small><b>${fmtDistance(job.distance * 1000)}</b></div>
           <div><small>ОПЛАТА</small><b style="color:var(--green)">${fmtMoney(job.pay)}</b></div>
         </div>
-        <button class="btn btn-primary btn-sm" data-act="continue-job">Продолжить рейс</button>
+        <div class="card-actions">
+          <button class="btn btn-primary btn-sm" data-act="continue-job">Продолжить рейс</button>
+          <button class="btn btn-sm" data-act="cancel-job">Отменить рейс</button>
+        </div>
       </div>`;
     } else {
       box.innerHTML = '';
@@ -1430,7 +1439,8 @@ export class UI {
         <div><b>C</b> — круиз-контроль · <b>M</b> — авто/ручная КПП · <b>L</b> — фары</div>
         <div><b>E</b> — взаимодействие (погрузка, заправка, отдых) · <b>H</b> — сигнал</div>
         <div><b>V</b> — камера · <b>B</b> — посмотреть назад · <b>P</b> — снимок · <b>Esc</b> — пауза</div>
-        <div><b>F1</b> — эта справка · <b>мышь</b> — осмотреться в кабине</div>
+        <div><b>F1</b> — эта справка · <b>мышь</b> — осмотреться в кабине, колесо — приблизить</div>
+        <div><b>E</b> на развилке — свернуть на другую трассу · <b>1 / 3</b> — выбор направления · отмена рейса — в паузе</div>
         <div style="margin-top:8px;color:var(--muted)">На телефоне и планшете: экранные педали и руль, кнопки <b>E</b> (погрузка/заправка), 📷, «КР» и 💡. Поверните устройство горизонтально — интерфейс станет крупнее.</div>
       </div>
       <div class="section-title" style="margin-top:24px"><h3>Сохранение</h3></div>

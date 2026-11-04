@@ -253,9 +253,19 @@ export class TruckSim {
     // Чем быстрее едем, тем меньше максимальный угол колёс — иначе на 80 км/ч
     // любое касание руля выкидывает с трассы. Отклик — первый порядок ~50 мс.
     const steerInput = clamp(input.steer, -1, 1);
-    const maxAngle = lerp(0.6, 0.085, clamp(Math.abs(v) / 25, 0, 1));
+    // Полный замок руля: на месте ~48°, на 90 км/ч — 5°. Кривая не линейная:
+    // до 20 км/ч руль почти не теряет ход, дальше резко «тяжелеет» — так водитель
+    // может развернуться у склада, но не вылететь с трассы на скорости.
+    const spd = Math.abs(v);
+    const lockHi = 0.84;
+    const lockLo = 0.09;
+    const taper = clamp(spd / 22, 0, 1);
+    const maxAngle = lerp(lockHi, lockLo, Math.pow(taper, 0.72));
     const target = steerInput * maxAngle;
-    this.steer += (target - this.steer) * (1 - Math.exp(-dt * 17));
+    // Отклик: на малой скорости руль идёт за руками почти сразу, на скорости — плавнее.
+    const steerRate = lerp(26, 12, taper);
+    this.steer += (target - this.steer) * (1 - Math.exp(-dt * steerRate));
+    this.steerNorm = maxAngle > 0.001 ? this.steer / maxAngle : 0;
 
     if (this.gearTimer > 0) this.gearTimer = Math.max(0, this.gearTimer - dt);
     if (this.lastShift > 0) this.lastShift = Math.max(0, this.lastShift - dt);
@@ -391,7 +401,10 @@ export class TruckSim {
     // Недостаточная поворачиваемость: с ростом скорости тот же руль даёт меньший
     // реальный радиус (передние шины уходят в снос).
     const understeer = 1 + 0.0026 * speedAbs * speedAbs;
-    const rawYaw = (this.speed * Math.tan(this.steer / understeer)) / WHEELBASE;
+    // На малой скорости геометрия важнее «сцепления»: тягач с полным замком
+    // разворачивается вокруг задней оси, и ограничение yaw не должно мешать.
+    const lowSpeedTurn = speedAbs < 6 ? 1 + (6 - speedAbs) * 0.28 : 1;
+    const rawYaw = (this.speed * Math.tan(this.steer / understeer) * lowSpeedTurn) / WHEELBASE;
     const yawFromSteer = -yawLimit * Math.tanh(rawYaw / yawLimit);
     // Автопомощь в кривых — только если игрок её включил (на ПК по умолчанию нет).
     const assist = input.assist === false ? 0 : 0.45;
@@ -423,7 +436,10 @@ export class TruckSim {
         this.lat -= Math.sign(this.lat) * 0.34 * dt;
       }
     }
-    this.lat = clamp(this.lat, -7.5, 7.5);
+    // Коридор: по умолчанию ±7.5 м, но на съезде/площадке (road.wide) — шире,
+    // иначе машину «магнитом» тянет обратно на трассу.
+    const corridor = road.wide ? 13.5 : 7.5;
+    this.lat = clamp(this.lat, -corridor, corridor);
 
     // ------------------------------------------------------------------ прицеп
     const phi = this.trailerYawOffset;
@@ -609,6 +625,8 @@ export class TruckSim {
       air: this.airPressure,
       latAccel: this.latAccel,
       slip: this.wheelSpin,
+      steerDeg: Math.round((this.steer * 180) / Math.PI),
+      steerNorm: this.steerNorm || 0,
     };
   }
 }
