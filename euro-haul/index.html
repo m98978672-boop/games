@@ -82,6 +82,16 @@
       <div class="ra-action" id="ra-action"></div>
     </aside>
 
+    <aside class="junction-card hidden" id="junction-card" aria-live="polite">
+      <div class="jc-head">
+        <span class="jc-tag">СЪЕЗД</span>
+        <b class="jc-dist" id="jc-dist">—</b>
+      </div>
+      <div class="jc-city" id="jc-city">—</div>
+      <div class="jc-options" id="jc-options"></div>
+      <div class="jc-foot"><b>E</b> — свернуть · <b>1</b>/<b>3</b> — выбор направления</div>
+    </aside>
+
     <div class="map-dock">
       <canvas id="minimap" width="256" height="256" aria-label="Мини-карта"></canvas>
       <span class="map-compass" aria-hidden="true">С</span>
@@ -121,6 +131,7 @@
     <div class="hint" id="hint"><b>F1</b> — все клавиши · <b>W/S</b> — газ и тормоз · <b>A/D</b> — руль · <b>V</b> — камера</div>
     <div class="toast-stack" id="toast-stack"></div>
 
+    <canvas class="rain-glass" id="rain-glass" aria-hidden="true"></canvas>
     <div class="windshield" id="windshield" aria-hidden="true"></div>
     <div class="fatigue-vignette" id="fatigue-vignette" aria-hidden="true"></div>
     <div class="damage-flash" id="damage-flash" aria-hidden="true"></div>
