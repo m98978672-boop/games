@@ -163,3 +163,61 @@ test('authenticated library request only calls Steam Web API server-side and ret
   assert.equal(body.games[0].playtimeMinutes, 240);
   assert.equal(body.games[1].name, '<script>Game One</script>');
 });
+
+test('PWA shell metadata, update worker, and install icons are served with correct types', async (t) => {
+  const app = createServer(createHandler({
+    env: {
+      PORT: '4174',
+      PUBLIC_ORIGIN: 'http://localhost:4174',
+      SESSION_SECRET: secret,
+      NODE_ENV: 'development',
+    },
+  }));
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve, reject) => app.close((error) => error ? reject(error) : resolve())));
+  const base = `http://127.0.0.1:${app.address().port}/cloud-play/`;
+
+  const manifestResponse = await fetch(`${base}manifest.webmanifest`);
+  assert.equal(manifestResponse.status, 200);
+  assert.match(manifestResponse.headers.get('content-type'), /^application\/manifest\+json/);
+  assert.equal(manifestResponse.headers.get('cache-control'), 'no-cache');
+  const manifest = await manifestResponse.json();
+  assert.equal(manifest.name, 'PLAYBRIDGE');
+  assert.equal(manifest.start_url, './');
+  assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192' && icon.purpose === 'any'));
+  assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512' && icon.purpose === 'maskable'));
+
+  const workerResponse = await fetch(`${base}sw.js`);
+  assert.equal(workerResponse.status, 200);
+  assert.match(workerResponse.headers.get('content-type'), /^text\/javascript/);
+  assert.equal(workerResponse.headers.get('cache-control'), 'no-cache');
+  const worker = await workerResponse.text();
+  assert.match(worker, /registration\.scope/);
+  assert.match(worker, /self\.skipWaiting\(\)/);
+  assert.match(worker, /playbridge-shell-0\.3\.0/);
+  assert.match(worker, /url\.pathname\.includes\('\/api\/'\) \|\| url\.pathname\.includes\('\/auth\/'\)/);
+  assert.match(worker, /fresh\.ok && !url\.search/);
+
+  const appJsResponse = await fetch(`${base}app.js`);
+  assert.equal(appJsResponse.status, 200);
+  const appJs = await appJsResponse.text();
+  assert.match(appJs, /navigator\.serviceWorker\.register/);
+  assert.match(appJs, /registration\.update\(\)/);
+  assert.match(appJs, /window\.location\.reload\(\)/);
+
+  for (const [file, expectedSize] of [['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) {
+    const iconResponse = await fetch(`${base}icons/${file}`);
+    assert.equal(iconResponse.status, 200);
+    assert.match(iconResponse.headers.get('content-type'), /^image\/png/);
+    assert.equal(iconResponse.headers.get('cache-control'), 'no-cache');
+    const icon = Buffer.from(await iconResponse.arrayBuffer());
+    assert.equal(icon.subarray(0, 8).toString('hex'), '89504e470d0a1a0a');
+    assert.equal(icon.readUInt32BE(16), expectedSize);
+    assert.equal(icon.readUInt32BE(20), expectedSize);
+  }
+
+  const pageResponse = await fetch(base);
+  const page = await pageResponse.text();
+  assert.match(page, /rel="manifest" href="manifest\.webmanifest"/);
+  assert.match(page, /id="installAppButton"/);
+});

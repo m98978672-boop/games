@@ -50,7 +50,7 @@
   <text x="85" y="393" fill="#afbfbd" font-family="Arial,sans-serif" font-size="17">в одной библиотеке. Интерактивный концепт.</text>
   <rect x="83" y="463" width="192" height="45" rx="9" fill="#b7f36b"/>
   <text x="106" y="492" fill="#11200d" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="1">ОТКРЫТЬ ПРОТОТИП ↗</text>
-  <text x="85" y="577" fill="#687e82" font-family="monospace" font-size="11" letter-spacing="2">OPENID + STEAM API · CLOUD NEEDS A PROVIDER</text>
+  <text x="85" y="577" fill="#687e82" font-family="monospace" font-size="11" letter-spacing="2">OPENID + STEAM API · CLOUD NEEDS A REAL HOST</text>
   <circle cx="984" cy="405" r="5" fill="#d0ff8a"/>
   <circle cx="698" cy="335" r="5" fill="#b7f36b"/>
   <circle cx="1361" cy="505" r="5" fill="#78dfff"/>

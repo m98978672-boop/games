@@ -5,7 +5,13 @@
 ▶️ **Сайт:** https://m98978672-boop.github.io/games/
 (витрина в корне — `index.html` + `site/`, игры лежат в своих подпапках)
 
-☁️ **[PLAYBRIDGE — Steam OpenID и библиотека](./cloud-play/)**: добавлено серверное ядро Node.js для безопасного Steam OpenID, запроса видимой библиотеки через Steam Web API и передачи установки официальному Steam-клиенту. Фиктивные игры и сессии удалены. GitHub Pages сам по себе не запускает backend; облачная игра остаётся отключённой до выбора GPU-провайдера и правовой схемы. Инструкция запуска: [`cloud-play/README.md`](./cloud-play/README.md).
+☁️ **[PLAYBRIDGE — Steam OpenID, библиотека и устанавливаемая PWA](./cloud-play/)**: серверное ядро Steam OpenID/Steam Web API, PWA-иконка и автоматическое обновление интерфейса. GitHub Pages остаётся статическим хостингом: для входа нужен отдельно запущенный backend. Собственный GPU-компьютер может быть будущим хостом; удалённый видеопоток пока не реализован и запуск отключён. Инструкция: [`cloud-play/README.md`](./cloud-play/README.md).
+
+👩‍💻 **[Авторам и разработчикам](./developers/index.html)**: предложи идею или опубликуй браузерную игру через fork + Pull Request. Принятые игры автоматически появляются в каталоге сообщества; прямой загрузки и мгновенной публикации без проверки нет. См. [`CONTRIBUTING.md`](./CONTRIBUTING.md).
+
+🐞 **Нашёл ошибку?** Создай публичный баг-репорт через [GitHub Issue Form](https://github.com/m98978672-boop/games/issues/new?template=bug-report.yml). Не прикладывай личные данные и секреты.
+
+🔔 **Уведомления о заявках:** см. [`docs/notifications.md`](./docs/notifications.md). GitHub может присылать письма о новых Issues и Pull Requests; таблица пока не синхронизируется с ними автоматически.
 
 ---
 
@@ -20,8 +26,8 @@
   первой строкой своего `style.css` и переопределяет только свой акцент.
 - 🧩 **Один и тот же скелет кода:** `game-base/` = `index.html` + `src/{config,util,save,audio,game,render,ui,main}.js`.
   Новая игра меняет в основном `config.js`, `game.js`, `render.js`, тексты и обложку.
-- 📋 **Инструкция для ИИ:** [`game-base/TEMPLATE.md`](./game-base/TEMPLATE.md) — 8 шагов от копирования
-  `game-base/` до карточки новой игры в витрине (`index.html`, `site/index.html`, `README.md`).
+- 📋 **Инструкция для ИИ:** [`game-base/TEMPLATE.md`](./game-base/TEMPLATE.md) — 9 шагов от копирования
+  `game-base/` до публикации через запись в каталоге сообщества (`site/community-games.json`).
 - ✅ Проверки шаблона: `node game-base/tests/smoke.mjs` · `node game-base/tests/logic.mjs`.
 
 ▶️ **Играть в шаблон-игру:** [`game-base/index.html`](./game-base/index.html) · [дизайн-система](./shared/README.md) · [план](./game-base/PLAN.md)

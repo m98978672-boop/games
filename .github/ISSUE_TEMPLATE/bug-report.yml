@@ -1,0 +1,73 @@
+name: Сообщить об ошибке
+description: Опиши баг в игре или на сайте, чтобы его можно было проверить
+title: "[Баг] "
+assignees: [m98978672-boop]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за подробный отчёт. Не добавляй пароли, личные адреса, токены и другие секреты.
+        Issue публичный: скриншоты и описания смогут увидеть все.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Где обнаружена проблема?
+      options:
+        - Главная страница / каталог
+        - PLAYBRIDGE
+        - БАЗА
+        - ТРАССА
+        - ЕВРОТРАК
+        - КАСКАД
+        - LAST SHORE
+        - Линия Фронта
+        - Игра сообщества
+        - Другое
+    validations:
+      required: true
+  - type: input
+    id: page
+    attributes:
+      label: Ссылка на страницу (если есть)
+      placeholder: https://m98978672-boop.github.io/games/...
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить ошибку?
+      description: Перечисли действия по порядку и укажи, что именно происходит.
+      placeholder: |
+        1. Открыл игру...
+        2. Нажал...
+        3. Увидел...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Что ожидалось и что получилось?
+      placeholder: "Ожидалось: ... Фактически: ..."
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Устройство, система и браузер (необязательно)
+      placeholder: Например, Android 15, Firefox 132
+    validations:
+      required: false
+  - type: input
+    id: evidence
+    attributes:
+      label: Ссылка на скриншот или видео (необязательно)
+      description: Не загружай приватные данные; публичные вложения видны всем.
+    validations:
+      required: false
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Перед отправкой
+      options:
+        - label: Я понимаю, что обращение будет публичным, и не включил(а) в него личные данные или секреты.
+          required: true
