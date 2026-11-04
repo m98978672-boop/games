@@ -1,0 +1,1 @@
+{"name":"night-taxi","private":true,"type":"module","scripts":{"build":"esbuild src/main.js --bundle --minify --outfile=game.bundle.js","test":"node tests/logic.mjs"},"dependencies":{"three":"^0.186.0"},"devDependencies":{"esbuild":"^0.25.0"}}
