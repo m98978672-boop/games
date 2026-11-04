@@ -1,0 +1,4 @@
+{$PLAYBRIDGE_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy playbridge:4174
+}

@@ -4,13 +4,13 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Games — браузерные игры и PLAYBRIDGE</title>
-<meta name="description" content="Коллекция браузерных игр и прототип PLAYBRIDGE: единая библиотека, локальная установка и концепт облачного запуска игр.">
+<meta name="description" content="Коллекция браузерных игр и PLAYBRIDGE — серверное ядро Steam OpenID и библиотеки; облачный запуск требует отдельного GPU-провайдера.">
 <meta name="theme-color" content="#0b0d0c">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Games — игры и PLAYBRIDGE">
-<meta property="og:description" content="Браузерные игры, а также PLAYBRIDGE — концепт единой библиотеки с локальной установкой и облачной игрой.">
+<meta property="og:description" content="Браузерные игры и PLAYBRIDGE — Steam OpenID, библиотека через Steam API, официальный Steam-клиент. Облачный провайдер пока не подключён.">
 <meta property="og:image" content="assets/last-shore.jpg">
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111312'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23e8b45a' stroke-width='2.2'/%3E%3Cpath d='M16 7v18M7 16h18' stroke='%23e8b45a' stroke-width='1.6'/%3E%3C/svg%3E">
@@ -28,7 +28,7 @@
     <p class="lede">Браузерные игры, которые открываются сразу по ссылке: экономическая стратегия про строительство дорог,
       симулятор грузоперевозок по Европе, 3D-симулятор ГЭС с живой физикой воды, 3D-выживание на острове и стратегия современной войны.</p>
     <a class="cta" href="#games">Выбрать игру</a>
-    <a class="cta" href="../cloud-play/index.html" style="margin-left:10px;background:linear-gradient(180deg,#d0ff8a,#89cf4a);color:#14210c;">☁ PLAYBRIDGE — прототип</a>
+    <a class="cta" href="../cloud-play/index.html" style="margin-left:10px;background:linear-gradient(180deg,#d0ff8a,#89cf4a);color:#14210c;">☁ PLAYBRIDGE</a>
     <a class="cta" href="../road-tycoon/index.html" style="margin-left:10px;background:linear-gradient(180deg,#ffcf7a,#e09a3c);color:#2a1a05;">🛣 ТРАССА</a>
     <a class="cta" href="../euro-haul/index.html" style="margin-left:10px;background:linear-gradient(180deg,#6fe0c6,#2f9f88);color:#04201a;">🚛 ЕВРОТРАК</a>
     <a class="cta" href="../cascade-hydro/index.html" style="margin-left:10px;background:linear-gradient(180deg,#5eead4,#0284c7);color:#06131f;">Играть в КАСКАД (ГЭС)</a>
@@ -64,20 +64,20 @@
     <article class="card card-cloudplay">
       <div class="card-art">
         <img src="../cloud-play/cover.svg" alt="PLAYBRIDGE — схема установки игры на ПК и облачного видеопотока" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">концепт · единая библиотека · два режима</span>
+        <span class="badge badge-new">Steam OpenID · Steam Web API · backend нужен отдельно</span>
       </div>
       <div class="card-body">
-        <h2>PLAYBRIDGE<span>Концепт установки игр и облачного запуска</span></h2>
-        <p class="desc">Одна библиотека и два способа играть: установить игру на свой компьютер или запустить её на удалённом GPU и получить видеопоток. Макет показывает будущий интерфейс и путь пользователя, но не подключается к Steam и не запускает игры.</p>
+        <h2>PLAYBRIDGE<span>Steam-вход и библиотека · cloud gaming в плане</span></h2>
+        <p class="desc">Вместо вымышленных игр — серверная авторизация через Steam OpenID и запрос видимой библиотеки через Steam Web API. Установка передаётся официальному Steam-клиенту; облачный запуск не включён, пока нет согласованного GPU-провайдера.</p>
         <ul class="features">
-          <li>Установка: встроенная передача Steam по локальной сети или официальный Steam CDN</li>
-          <li>Сторонний кэш игровых файлов возможен только с разрешением Valve и правообладателей</li>
-          <li>Облачный режим: удалённый GPU, видеопоток и управление через сеть</li>
-          <li>Демо-интерфейс: Steam, загрузки и облачная сессия пока не подключены</li>
+          <li>Настоящий SteamID после проверки OpenID-ответа на backend; пароль сервис не получает</li>
+          <li>Список игр и время запуска только из Steam API, если настройки приватности это разрешают</li>
+          <li>Кнопка установки открывает Steam; локальную передачу LAN выполняет сам клиент Steam</li>
+          <li>GitHub Pages статический: для входа нужен Node backend и HTTPS-домен</li>
         </ul>
         <div class="card-actions">
-          <a class="btn btn-primary" href="../cloud-play/index.html">Открыть прототип</a>
-          <a class="btn" href="../cloud-play/README.md">Как устроен концепт</a>
+          <a class="btn btn-primary" href="../cloud-play/index.html">Открыть PLAYBRIDGE</a>
+          <a class="btn" href="../cloud-play/README.md">Запуск и план реализации</a>
         </div>
       </div>
     </article>
