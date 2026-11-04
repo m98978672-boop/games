@@ -2,7 +2,7 @@ import {JSDOM} from 'jsdom';
 import {build} from 'esbuild';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
-const source=fs.readFileSync('src/main.js','utf8').replace("new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'})",'new window.TestRenderer()');
+const source=fs.readFileSync('src/main.js','utf8').replace("new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'})",'new window.TestRenderer()').replace('loadCityAssets(scene,cityLandmarks);','/* assets tested separately */');
 const bundle=await build({stdin:{contents:source,resolveDir:process.cwd()+'/src',sourcefile:'main.js'},bundle:true,write:false,format:'iife',platform:'browser'});
 const html=fs.readFileSync('index.html','utf8').replace('<script src="game.bundle.js"></script>','');
 const dom=new JSDOM(html,{url:'https://example.test/night-taxi/',runScripts:'outside-only'});
@@ -12,7 +12,15 @@ w.TestRenderer=class{constructor(){this.domElement=w.document.createElement('can
 w.eval(bundle.outputFiles[0].text);nextFrame(w.performance.now()+20);
 assert.ok(Math.abs(w.testRenderer.camera.position.y-1.72)<.01,'initial camera is in cabin');
 const d=w.document,click=id=>d.getElementById(id).click(),visible=id=>!d.getElementById(id).classList.contains('hidden');
-assert.equal(visible('tabletOverlay'),false);click('tabletBtn');assert.equal(visible('tabletOverlay'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);assert.equal(d.getElementById('tabletBtn').getAttribute('aria-expanded'),'true');
+assert.equal(visible('tabletOverlay'),false);
+// Drag the cabin view vertically and horizontally; double-click recentres it.
+const canvas=w.testRenderer.domElement;const before=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());
+canvas.dispatchEvent(new w.PointerEvent('pointerdown',{pointerId:55,clientX:200,clientY:200}));canvas.dispatchEvent(new w.PointerEvent('pointermove',{pointerId:55,clientX:260,clientY:240}));nextFrame(w.performance.now()+30);
+const after=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(Math.abs(after.x-before.x)>.1&&Math.abs(after.y-before.y)>.1,'camera follows drag on both axes');
+canvas.dispatchEvent(new w.PointerEvent('pointerup',{pointerId:55}));canvas.dispatchEvent(new w.MouseEvent('dblclick'));nextFrame(w.performance.now()+35);const centred=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(centred.distanceTo(before)<.01,'double click recentres view');
+click('doorBtn');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'true');
+const gasDoor=d.querySelector('[data-key="gas"]');gasDoor.dispatchEvent(new w.PointerEvent('pointerdown',{pointerId:56,bubbles:true,cancelable:true}));let stepTime=w.performance.now()+80;for(let i=0;i<12;i++){stepTime+=50;nextFrame(stepTime)}assert.equal(Number(d.getElementById('speed').textContent),0,'open door prevents driving');click('doorBtn');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'false');
+click('tabletBtn');assert.equal(visible('tabletOverlay'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);assert.equal(d.getElementById('tabletBtn').getAttribute('aria-expanded'),'true');
 click('accept');assert.match(d.getElementById('orderContent').textContent,/ЗА ПАССАЖИРОМ/);click('closeTablet');assert.equal(visible('tabletOverlay'),false);assert.match(d.getElementById('pauseBtn').textContent,/ПАУЗА/);
 click('pauseBtn');click('tabletBtn');click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'previous pause preserved');
 click('pauseBtn');click('tabletBtn');w.dispatchEvent(new w.Event('blur'));click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'focus loss remains paused');

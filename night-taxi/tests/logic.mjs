@@ -15,6 +15,7 @@ for(let i=0;i<3;i++){
  animateTaxi(model,10,1,1,.1,2,true);
  assert.ok(model.steering.rotation.z<0);assert.ok(model.wheels[0].tire.rotation.x>0);
  assert.ok(model.frontPivots[0].rotation.y<0);
+ animateTaxi(model,0,0,1,.1,2,true,true);assert.ok(model.exteriorDoor.rotation.y<0);assert.equal(model.exteriorDoor.rotation.y,model.interiorDoor.rotation.y);
 }
 console.log('Модели, приборы и анимация автомобиля: OK');
 const {createTrafficGeometry}=await import('../src/traffic-model.js');
