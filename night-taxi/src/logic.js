@@ -8,8 +8,9 @@ export function stepCar(car,input,dt){
  car.speed=clamp(car.speed+(acceleration-(input.gas?0:braking))*dt,0,car.maxSpeed);
  if(input.brake||input.handbrake)car.speed=Math.max(0,car.speed-braking*dt);
  const steer=(input.right?1:0)-(input.left?1:0);
- car.heading+=steer*dt*clamp(car.speed/8,0,1)*(input.handbrake?1.8:0.8);
- car.x+=Math.sin(car.heading)*car.speed*dt;car.z+=Math.cos(car.heading)*car.speed*dt;
+ const direction=car.gear===-1?-1:1;
+ car.heading-=steer*direction*dt*clamp(car.speed/8,0,1)*(input.handbrake?1.4:0.65);
+ car.x+=Math.sin(car.heading)*car.speed*direction*dt;car.z+=Math.cos(car.heading)*car.speed*direction*dt;
  if(!onRoad(car.x,car.z)){car.x=old.x;car.z=old.z;const impact=car.speed;car.speed=0;return impact;}
  return 0;
 }
