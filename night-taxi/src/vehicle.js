@@ -15,10 +15,14 @@ export function createTaxi(color=0xc0a346, variant=0) {
   // Exterior shell, separate panels, glazing, grille, handles, mirrors and taxi sign.
   box(exterior,2,.65,length,paint,0,.87,0); box(exterior,1.95,.24,1.25,paint,0,1.3,length/2-.65);
   box(exterior,1.95,.23,.75,paint,0,1.29,-length/2+.4);
-  box(exterior,1.75,.72,2.2,glass,0,1.63,-.24);box(exterior,1.87,.14,2.35,paint,0,roofHeight,-.25);
+  // Tapered glazing gives each car a recognisable roofline rather than a solid box.
+  const canopyBottom=1.28, canopyTop=roofHeight-.05, rearZ=van?-1.75:-1.4, frontZ=1.15;
+  const shape=new THREE.BufferGeometry();const v=[-.88,canopyBottom,rearZ,.88,canopyBottom,rearZ,-.88,canopyBottom,frontZ,.88,canopyBottom,frontZ,-.76,canopyTop,rearZ+.20,.76,canopyTop,rearZ+.20,-.76,canopyTop,frontZ-.45,.76,canopyTop,frontZ-.45];
+  shape.setAttribute('position',new THREE.Float32BufferAttribute(v,3));shape.setIndex([0,2,1,1,2,3,4,5,6,5,7,6,0,1,4,1,5,4,2,6,3,3,6,7,0,4,2,2,4,6,1,3,5,3,7,5]);shape.computeVertexNormals();exterior.add(new THREE.Mesh(shape,glass));
+  box(exterior,1.58,.10,van?2.45:1.85,paint,0,roofHeight,(rearZ+frontZ)/2-.05);
   for(const side of [-1,1]){
-    box(exterior,.1,.78,2.3,paint,side*.91,1.6,-.22);box(exterior,.09,.08,2.2,chrome,side*1.02,1.12,0);
-    box(exterior,.08,.1,.32,chrome,side*1.04,1.23,-.45);box(exterior,.08,.1,.32,chrome,side*1.04,1.23,.48);
+    box(exterior,.08,.62,.08,paint,side*.87,1.6,-.18);box(exterior,.04,.44,.04,chrome,side*.88,1.53,.76);box(exterior,.04,.4,.04,chrome,side*.88,1.53,-1.14);box(exterior,.09,.08,2.2,chrome,side*1.02,1.12,0);
+    box(exterior,.025,.52,.025,trim,side*1.005,.95,-.25);box(exterior,.025,.52,.025,trim,side*1.005,.95,.72);box(exterior,.08,.1,.32,chrome,side*1.04,1.23,-.45);box(exterior,.08,.1,.32,chrome,side*1.04,1.23,.48);
     box(exterior,.25,.2,.34,trim,side*1.11,1.57,.7);
     box(exterior,.58,.25,.08,headlight,side*.68,1.02,length/2+.02);box(exterior,.58,.22,.08,rear,side*.68,1.01,-length/2-.02);
   }
@@ -27,7 +31,7 @@ export function createTaxi(color=0xc0a346, variant=0) {
   box(exterior,.65,.16,.07,headlight,0,.72,-length/2-.11);box(exterior,.78,.24,.38,headlight,0,roofHeight+.18,-.18);
   for(let i=0;i<5;i++)box(exterior,.1,.1,.02,trim,(i-2)*.14,roofHeight+.18,.02);
   const wheels=[], frontPivots=[];
-  for(const side of [-1,1])for(const z of [-length*.32,length*.32]){let pivot=new THREE.Group();pivot.position.set(side*1,.47,z);exterior.add(pivot);const tire=cylinder(pivot,.43,.43,.28,rubber,0,0,0,Math.PI/2);const hub=cylinder(pivot,.23,.23,.30,chrome,0,0,0,Math.PI/2);wheels.push({tire,hub});if(z>0)frontPivots.push(pivot)}
+  for(const side of [-1,1])for(const z of [-length*.32,length*.32]){let pivot=new THREE.Group();pivot.position.set(side*1,.47,z);exterior.add(pivot);const tire=cylinder(pivot,.43,.43,.28,rubber,0,0,0,Math.PI/2);const hub=cylinder(pivot,.23,.23,.30,chrome,0,0,0,Math.PI/2);cylinder(pivot,.10,.10,.32,trim,0,0,0,Math.PI/2);wheels.push({tire,hub});if(z>0)frontPivots.push(pivot)}
   // Visible only in first person: detailed but lightweight dashboard and cabin framing.
   box(cabin,2.0,.22,.58,dash,0,1.28,.95);box(cabin,1.9,.18,.25,trim,0,1.42,1.18);
   // Bonnet and windscreen frame stay visible in the cabin view.
@@ -54,7 +58,7 @@ export function createTaxi(color=0xc0a346, variant=0) {
 }
 export function animateTaxi(model, speed, steering, gear, dt, elapsed, movingEffects=true) {
   model.steering.rotation.z=-steering*.7;
-  for(const pivot of model.frontPivots)pivot.rotation.y=steering*.35;
+  for(const pivot of model.frontPivots)pivot.rotation.y=-steering*.35;
   for(const wheel of model.wheels){wheel.tire.rotation.x+=speed*gear*dt/0.43;wheel.hub.rotation.x=wheel.tire.rotation.x}
   model.gauges[0].rotation.z=-Math.min(speed/20,1)*2.2+.9;
   model.gauges[1].rotation.z=-Math.min(speed/20,1)*1.5+.7;

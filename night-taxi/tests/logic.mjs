@@ -14,6 +14,10 @@ for(let i=0;i<3;i++){
  assert.equal(model.cabin.visible,false);assert.equal(model.exterior.visible,true);
  animateTaxi(model,10,1,1,.1,2,true);
  assert.ok(model.steering.rotation.z<0);assert.ok(model.wheels[0].tire.rotation.x>0);
- assert.ok(model.frontPivots[0].rotation.y>0);
+ assert.ok(model.frontPivots[0].rotation.y<0);
 }
 console.log('Модели, приборы и анимация автомобиля: OK');
+const {createTrafficGeometry}=await import('../src/traffic-model.js');
+const traffic=createTrafficGeometry('#6a767c');
+assert.ok(traffic.getAttribute('position').count>100);assert.equal(traffic.getAttribute('position').count,traffic.getAttribute('color').count);
+console.log('Объединённая модель транспорта из подхода «Трассы»: OK');

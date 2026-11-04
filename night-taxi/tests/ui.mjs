@@ -18,4 +18,16 @@ click('pauseBtn');click('tabletBtn');click('closeTablet');assert.match(d.getElem
 click('pauseBtn');click('tabletBtn');w.dispatchEvent(new w.Event('blur'));click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'focus loss remains paused');
 click('tabletBtn');click('settingsBtn');assert.equal(visible('modal'),true);w.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(visible('modal'),false);w.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(visible('tabletOverlay'),false);
 click('cameraBtn');nextFrame(w.performance.now()+40);assert.ok(w.testRenderer.camera.position.y>10,'camera button switches to parking view');
-console.log('Планшет, пауза, потеря фокуса, заказ и камеры: OK');dom.window.close();
+// On-screen buttons work with a mouse or touch-style pointer and release on pause.
+click('pauseBtn');
+const gas=d.querySelector('[data-key="gas"]'),left=d.querySelector('[data-key="left"]');
+gas.dispatchEvent(new w.Event('pointerdown',{bubbles:true,cancelable:true}));
+left.dispatchEvent(new w.Event('pointerdown',{bubbles:true,cancelable:true}));
+assert.ok(gas.classList.contains('is-active'));assert.ok(left.classList.contains('is-active'));
+let time=w.performance.now()+100;for(let i=0;i<20;i++){time+=50;nextFrame(time)}
+assert.ok(Number(d.getElementById('speed').textContent)>0,'gas accelerates using on-screen pointer');
+click('pauseBtn');assert.ok(!gas.classList.contains('is-active'));assert.ok(!left.classList.contains('is-active'));
+click('pauseBtn');for(let i=0;i<8;i++){time+=50;nextFrame(time)}
+assert.equal(Number(d.getElementById('speed').textContent),0,'pause clears held controls');
+click('helpBtn');assert.equal(visible('drivingHelp'),true);click('closeHelp');assert.equal(visible('drivingHelp'),false);
+console.log('Планшет, экранные педали, пауза, заказ и камеры: OK');dom.window.close();
