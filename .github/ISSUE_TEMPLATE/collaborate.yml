@@ -1,0 +1,38 @@
+name: Предложить помощь
+description: Предложи тестирование, локализацию, доступность, дизайн или код
+title: "[Помощь] "
+assignees: [m98978672-boop]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо! Оплата за помощь заранее не обещана; обсуди условия до начала работы. Участие добровольное.
+        Не публикуй личную почту, телефон, пароли, токены или другие секреты.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Чем ты хотел(а) бы помочь?
+      options:
+        - Тестирование игр
+        - Разработка игры или сайта
+        - Дизайн и доступность
+        - Перевод и документация
+        - Идеи и обратная связь
+        - Другое
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: Что именно ты готов(а) сделать?
+      description: Можно указать навыки, пример работ и удобный следующий шаг.
+      placeholder: Расскажи о своём опыте и интересе
+    validations:
+      required: true
+  - type: input
+    id: public-profile
+    attributes:
+      label: Публичный профиль или портфолио (необязательно)
+      placeholder: https://github.com/your-name
+    validations:
+      required: false

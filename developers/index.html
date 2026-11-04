@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0a0c0b">
+  <meta name="description" content="Опубликуй браузерную игру в независимом каталоге Games или предложи помощь проекту.">
+  <title>Разработчикам — Games</title>
+  <link rel="icon" href="../site/assets/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="../index.html" aria-label="Games — на главную">
+      <span class="brand-icon" aria-hidden="true">G</span>
+      <span><strong>GAMES</strong><small>НЕЗАВИСИМАЯ ВИТРИНА</small></span>
+    </a>
+    <nav aria-label="Главная навигация">
+      <a href="../index.html#games">Каталог</a>
+      <a href="../game-base/TEMPLATE.md">Шаблон игры</a>
+      <a href="https://github.com/m98978672-boop/games" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> ОТКРЫТО ДЛЯ АВТОРОВ И РАЗРАБОТЧИКОВ</p>
+        <h1>Покажи свою игру<br><em>новым игрокам.</em></h1>
+        <p class="hero-lede">Добавь самостоятельную браузерную игру в общий каталог. Авторство остаётся за создателем; публикация проходит через прозрачную проверку, а после принятого Pull Request карточка появляется на сайте.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://github.com/m98978672-boop/games/fork" target="_blank" rel="noopener noreferrer">Опубликовать игру <span aria-hidden="true">↗</span></a>
+          <a class="button button-secondary" href="https://github.com/m98978672-boop/games/issues/new?template=game-submission.yml" target="_blank" rel="noopener noreferrer">Сначала предложить</a>
+          <button class="button button-secondary share-button" id="share-invite" type="button">Поделиться страницей</button>
+        </div>
+        <p class="quiet-note" id="share-status" role="status" aria-live="polite">Можно отправить ссылку другим авторам игр.</p>
+        <p class="quiet-note">Нужен обычный GitHub-аккаунт. Прямой анонимной загрузки файлов на сервер нет.</p>
+      </div>
+      <aside class="hero-card" aria-label="Этапы публикации">
+        <div class="hero-card-top"><span class="signal-dot"></span> ПУБЛИКАЦИЯ ПОСЛЕ ПРОВЕРКИ</div>
+        <div class="hero-card-number">01 <span>FORK</span></div>
+        <div class="hero-card-line"></div>
+        <div class="hero-card-number">02 <span>PULL REQUEST</span></div>
+        <div class="hero-card-line"></div>
+        <div class="hero-card-number">03 <span>ИГРА В КАТАЛОГЕ</span></div>
+        <p>Не нужен платный хостинг: каталог и игры публикуются как статические файлы GitHub Pages.</p>
+      </aside>
+    </section>
+
+    <section class="section" aria-labelledby="steps-title">
+      <div class="section-heading">
+        <p class="eyebrow">ПРОСТОЙ ПУТЬ</p>
+        <h2 id="steps-title">Как добавить игру</h2>
+        <p>Витрина работает статически, поэтому публикация идёт через GitHub — это сохраняет исходники, историю автора и возможность проверить изменения.</p>
+      </div>
+      <div class="step-grid">
+        <article class="step-card">
+          <span class="step-index">01</span>
+          <h3>Подготовь папку игры</h3>
+          <p>Добавь в корень репозитория папку <code>&lt;slug&gt;/</code> с игрой, обложкой, коротким README и явным указанием прав на код и материалы. На сайте она откроется по адресу `/games/<slug>/`. За основу можно взять шаблон «БАЗА».</p>
+          <a href="../game-base/TEMPLATE.md">Открыть инструкцию ↗</a>
+        </article>
+        <article class="step-card">
+          <span class="step-index">02</span>
+          <h3>Добавь одну запись в каталог</h3>
+          <p>В <code>site/community-games.json</code> укажи название, описание, обложку, ссылку на игру и несколько особенностей. Карточка автоматически появится в корневой и исходной витрине.</p>
+          <a href="https://github.com/m98978672-boop/games/blob/main/site/community-games.json" target="_blank" rel="noopener noreferrer">Формат каталога ↗</a>
+        </article>
+        <article class="step-card">
+          <span class="step-index">03</span>
+          <h3>Открой Pull Request</h3>
+          <p>Запусти проверки, создай ветку в своём fork и открой PR. После проверки ссылок, безопасности и лицензий автор репозитория может принять изменения.</p>
+          <a href="https://github.com/m98978672-boop/games/fork" target="_blank" rel="noopener noreferrer">Создать fork ↗</a>
+        </article>
+      </div>
+    </section>
+
+    <section class="section two-column" aria-label="Условия участия и требования">
+      <article class="info-panel">
+        <p class="eyebrow">ПРО АВТОРСТВО</p>
+        <h2>Твоя игра — твоя работа</h2>
+        <p>Добавление игры не передаёт авторские права владельцу витрины. Укажи автора и лицензию/разрешение на размещение. В репозитории нет общей лицензии, поэтому не считай чужой код или ассеты автоматически свободными для повторного использования.</p>
+        <p>Оплата за помощь заранее не обещана: обсуди условия до начала работы и не начинай её в ожидании оплаты. Публиковать свою игру можно без вступления в команду.</p>
+      </article>
+      <article class="info-panel checklist-panel">
+        <p class="eyebrow">ПЕРЕД ОТПРАВКОЙ</p>
+        <h2>Чек-лист качества</h2>
+        <ul>
+          <li>Игра открывается на телефоне и компьютере без скачиваемого установщика.</li>
+          <li>Код, музыка, изображения и шрифты созданы тобой или разрешены для публикации.</li>
+          <li>В игре нет секретных ключей, скрытой телеметрии и обязательных сторонних CDN.</li>
+          <li>В README есть управление, требования и способ связаться с автором через публичный профиль.</li>
+          <li>Каталог содержит только проверенные локальные ссылки на эту папку игры.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="join-panel" aria-labelledby="join-title">
+      <div>
+        <p class="eyebrow">ИДЕЯ, ТЕСТИРОВАНИЕ ИЛИ КОД</p>
+        <h2 id="join-title">Не готова целая игра? Тоже приходи.</h2>
+        <p>Предложи идею, сообщи о баге или напиши, чем хочешь помочь. Не публикуй в открытом issue личные адреса, пароли или другие секреты.</p>
+      </div>
+      <div class="join-actions">
+        <a class="button button-primary" href="https://github.com/m98978672-boop/games/issues/new?template=game-submission.yml" target="_blank" rel="noopener noreferrer">Предложить игру</a>
+        <a class="button button-secondary" href="https://github.com/m98978672-boop/games/issues/new?template=collaborate.yml" target="_blank" rel="noopener noreferrer">Предложить помощь</a>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <a href="../index.html">← Вернуться в каталог</a>
+    <span>Games · независимая витрина браузерных игр</span>
+  </footer>
+  <script src="share.js" defer></script>
+</body>
+</html>

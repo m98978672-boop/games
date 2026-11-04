@@ -1,0 +1,63 @@
+name: Validate site and game submissions
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate community catalog and local files
+        run: node site/tests/community-catalog.mjs
+      - name: Test game template structure
+        run: node game-base/tests/smoke.mjs
+      - name: Test game template logic
+        run: node game-base/tests/logic.mjs
+      - name: Test PLAYBRIDGE backend
+        run: npm test --prefix cloud-play
+
+  malware-scan:
+    name: Scan changed files with ClamAV
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install ClamAV and refresh signatures
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes clamav clamav-freshclam
+          sudo systemctl stop clamav-freshclam || true
+          sudo freshclam
+      - name: Scan files changed by this pull request or push
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$BASE_SHA" =~ ^0+$ ]]; then
+            mapfile -d '' changed_files < <(git ls-tree -r --name-only -z "$HEAD_SHA")
+          else
+            mapfile -d '' changed_files < <(git diff --name-only --diff-filter=ACMR -z "$BASE_SHA...$HEAD_SHA")
+          fi
+          if ((${#changed_files[@]} == 0)); then
+            echo "No added or modified files to scan."
+            exit 0
+          fi
+          printf 'Scanning %s changed files with ClamAV.\n' "${#changed_files[@]}"
+          sudo clamscan --infected --no-summary "${changed_files[@]}"

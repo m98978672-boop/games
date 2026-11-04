@@ -1,0 +1,56 @@
+name: Предложить игру
+description: Расскажи о браузерной игре или приложи готовый Pull Request
+title: "[Игра] "
+assignees: [m98978672-boop]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за предложение! Не публикуй здесь личные данные, пароли или токены.
+        Для готовой игры удобнее сразу открыть Pull Request и добавить запись в `site/community-games.json`.
+  - type: input
+    id: game-name
+    attributes:
+      label: Название игры
+      placeholder: Например, «Маленькая орбита»
+    validations:
+      required: true
+  - type: input
+    id: game-link
+    attributes:
+      label: Ссылка на игру или демо (если есть)
+      description: Не вставляй ссылки на файлы с секретами или приватные материалы.
+      placeholder: https://example.com/game/
+    validations:
+      required: false
+  - type: textarea
+    id: pitch
+    attributes:
+      label: Что делает игрок и чем игра интересна?
+      description: Жанр, особенности и целевая аудитория.
+      placeholder: Короткое описание игры
+    validations:
+      required: true
+  - type: textarea
+    id: contribution
+    attributes:
+      label: Что ты предлагаешь?
+      description: Готовый Pull Request, помощь с разработкой, тестирование или только идея?
+      placeholder: Опиши следующий шаг
+    validations:
+      required: true
+  - type: input
+    id: public-profile
+    attributes:
+      label: Публичный профиль или имя автора (необязательно)
+      description: Не указывай личную почту или телефон; GitHub автоматически показывает автора Issue.
+      placeholder: https://github.com/your-name
+    validations:
+      required: false
+  - type: checkboxes
+    id: rights
+    attributes:
+      label: Права на материалы
+      options:
+        - label: Я владею правами на предложенные материалы либо смогу подтвердить разрешение и лицензию для их размещения.
+          required: true

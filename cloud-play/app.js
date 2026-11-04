@@ -5,6 +5,8 @@ const elements = {
   sidebarStatus: $('#sidebarStatus'),
   sidebarStatusTitle: $('#sidebarStatusTitle'),
   sidebarStatusText: $('#sidebarStatusText'),
+  updateStatus: $('#updateStatus'),
+  installAppButton: $('#installAppButton'),
   serverBadge: $('#serverBadge'),
   serviceNotice: $('#serviceNotice'),
   noticeIcon: $('#noticeIcon'),
@@ -31,9 +33,55 @@ const elements = {
 
 const PAGE_SIZE = 48;
 let backendStatus = null;
+let deferredInstallPrompt = null;
 let games = [];
 let activeFilter = 'all';
 let visibleLimit = PAGE_SIZE;
+const UPDATE_RESUME_KEY = 'playbridge:update-resume:v1';
+
+function consumeUpdateResumeState() {
+  try {
+    const raw = window.sessionStorage.getItem(UPDATE_RESUME_KEY);
+    if (!raw) return null;
+    window.sessionStorage.removeItem(UPDATE_RESUME_KEY);
+    const saved = JSON.parse(raw);
+    if (!saved || saved.version !== 1) return null;
+    return {
+      search: typeof saved.search === 'string' ? saved.search.slice(0, 200) : '',
+      filter: saved.filter === 'played' ? 'played' : 'all',
+      visibleLimit: Number.isSafeInteger(saved.visibleLimit) ? Math.max(PAGE_SIZE, Math.min(saved.visibleLimit, 10_000)) : PAGE_SIZE,
+      scrollY: Number.isFinite(saved.scrollY) ? Math.max(0, saved.scrollY) : 0,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const updateResumeState = consumeUpdateResumeState();
+if (updateResumeState) {
+  elements.gameSearch.value = updateResumeState.search;
+  activeFilter = updateResumeState.filter;
+  visibleLimit = updateResumeState.visibleLimit;
+  elements.filterButtons.forEach((button) => {
+    const active = button.dataset.filter === activeFilter;
+    button.classList.toggle('is-active', active);
+    button.setAttribute('aria-pressed', String(active));
+  });
+}
+
+function saveUpdateResumeState() {
+  try {
+    window.sessionStorage.setItem(UPDATE_RESUME_KEY, JSON.stringify({
+      version: 1,
+      search: elements.gameSearch.value,
+      filter: activeFilter,
+      visibleLimit,
+      scrollY: window.scrollY,
+    }));
+  } catch {
+    // Updates still apply if the browser has disabled session storage.
+  }
+}
 
 class ApiError extends Error {
   constructor(code, message, status = 0) {
@@ -41,6 +89,120 @@ class ApiError extends Error {
     this.name = 'ApiError';
     this.code = code;
     this.status = status;
+  }
+}
+
+function setUpdateStatus(state, message) {
+  if (!elements.updateStatus) return;
+  elements.updateStatus.dataset.state = state;
+  elements.updateStatus.textContent = message;
+}
+
+function setupAppInstall() {
+  const button = elements.installAppButton;
+  if (!button) return;
+  const displayMode = window.matchMedia?.('(display-mode: standalone)');
+  const isInstalled = Boolean(displayMode?.matches || window.navigator.standalone === true);
+  if (isInstalled) return;
+
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    button.hidden = false;
+  });
+  button.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    const promptEvent = deferredInstallPrompt;
+    deferredInstallPrompt = null;
+    try {
+      await promptEvent.prompt();
+      await promptEvent.userChoice;
+      button.hidden = true;
+    } catch {
+      button.hidden = true;
+    }
+  });
+  window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    button.hidden = true;
+  });
+}
+
+async function setupAppUpdates() {
+  if (!window.isSecureContext || !('serviceWorker' in navigator)) {
+    setUpdateStatus('unsupported', 'PWA НЕДОСТУПНА');
+    return;
+  }
+
+  let pageWasControlled = Boolean(navigator.serviceWorker.controller);
+  let reloadingForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    const wasAlreadyControlled = pageWasControlled;
+    pageWasControlled = true;
+    if (wasAlreadyControlled && !reloadingForUpdate) {
+      reloadingForUpdate = true;
+      setUpdateStatus('updating', 'ПРИМЕНЯЮ ОБНОВЛЕНИЕ');
+      saveUpdateResumeState();
+      window.location.reload();
+    }
+  });
+
+  try {
+    const appScope = new URL('./', document.baseURI);
+    const registration = await navigator.serviceWorker.register(new URL('sw.js', appScope), {
+      scope: appScope.pathname,
+      updateViaCache: 'none',
+    });
+    const observedWorkers = new WeakSet();
+    const observeWorker = (worker) => {
+      if (!worker || observedWorkers.has(worker)) return;
+      observedWorkers.add(worker);
+      setUpdateStatus('updating', 'УСТАНАВЛИВАЮ ОБНОВЛЕНИЕ');
+      const applyWorkerState = () => {
+        if (worker.state === 'installed') {
+          if (navigator.serviceWorker.controller) {
+            setUpdateStatus('updating', 'ПРИМЕНЯЮ ОБНОВЛЕНИЕ');
+            worker.postMessage({ type: 'SKIP_WAITING' });
+          } else {
+            setUpdateStatus('ready', 'АВТООБНОВЛЕНИЕ ВКЛЮЧЕНО');
+          }
+        }
+      };
+      worker.addEventListener('statechange', applyWorkerState);
+      applyWorkerState();
+    };
+    registration.addEventListener('updatefound', () => observeWorker(registration.installing));
+    observeWorker(registration.installing);
+
+    let currentCheck = null;
+    const checkForUpdates = () => {
+      if (currentCheck) return currentCheck;
+      currentCheck = (async () => {
+        try {
+          await registration.update();
+          if (registration.waiting) {
+            setUpdateStatus('updating', 'НАЙДЕНО ОБНОВЛЕНИЕ');
+            registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } else if (registration.installing) {
+            observeWorker(registration.installing);
+          } else {
+            setUpdateStatus('ready', 'АВТООБНОВЛЕНИЕ ВКЛЮЧЕНО');
+          }
+        } catch {
+          setUpdateStatus('error', 'НЕ УДАЛОСЬ ПРОВЕРИТЬ ОБНОВЛЕНИЯ');
+        }
+      })().finally(() => { currentCheck = null; });
+      return currentCheck;
+    };
+
+    await checkForUpdates();
+    window.addEventListener('focus', () => { void checkForUpdates(); });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') void checkForUpdates();
+    });
+    window.setInterval(() => { void checkForUpdates(); }, 60 * 60 * 1000);
+  } catch {
+    setUpdateStatus('error', 'PWA ОБНОВЛЕНИЕ НЕДОСТУПНО');
   }
 }
 
@@ -110,8 +272,8 @@ function setBackendUnavailable(error) {
 
 function updateCloudStatus(status) {
   elements.cloudState.dataset.state = 'offline';
-  $('strong', elements.cloudState).textContent = 'Провайдер не подключён';
-  $('small', elements.cloudState).textContent = status?.cloud?.provider ? 'Провайдер ожидает проверки' : 'Нужны GPU-провайдер и договор';
+  $('strong', elements.cloudState).textContent = 'GPU-хост не подключён';
+  $('small', elements.cloudState).textContent = 'Нужны безопасное сопряжение и реальный видеопоток';
   elements.cloudButton.disabled = true;
   elements.cloudButton.textContent = 'Облачный запуск недоступен';
 }
@@ -312,6 +474,10 @@ async function boot() {
   } catch (error) {
     setBackendUnavailable(error);
   }
+
+  if (updateResumeState) {
+    window.requestAnimationFrame(() => window.scrollTo(0, updateResumeState.scrollY));
+  }
 }
 
 elements.connectButton.addEventListener('click', () => {
@@ -365,4 +531,6 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+setupAppInstall();
+void setupAppUpdates();
 boot();

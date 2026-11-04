@@ -18,6 +18,12 @@ const STATIC_FILES = new Map([
   ['index.html', ['index.html', 'text/html; charset=utf-8']],
   ['styles.css', ['styles.css', 'text/css; charset=utf-8']],
   ['app.js', ['app.js', 'text/javascript; charset=utf-8']],
+  ['manifest.webmanifest', ['manifest.webmanifest', 'application/manifest+json; charset=utf-8']],
+  ['sw.js', ['sw.js', 'text/javascript; charset=utf-8']],
+  ['icons/icon.svg', ['icons/icon.svg', 'image/svg+xml']],
+  ['icons/icon-192.png', ['icons/icon-192.png', 'image/png']],
+  ['icons/icon-512.png', ['icons/icon-512.png', 'image/png']],
+  ['icons/icon-maskable-512.png', ['icons/icon-maskable-512.png', 'image/png']],
   ['cover.svg', ['cover.svg', 'image/svg+xml']],
   ['README.md', ['README.md', 'text/markdown; charset=utf-8']],
 ]);
@@ -279,7 +285,9 @@ function serveStatic(response, pathname, method) {
   readFile(path.join(HERE, filename)).then((content) => {
     response.writeHead(200, {
       'content-type': contentType,
-      'cache-control': filename === 'index.html' ? 'no-cache' : 'public, max-age=300',
+      'cache-control': ['index.html', 'styles.css', 'app.js', 'manifest.webmanifest', 'sw.js'].includes(filename) || filename.startsWith('icons/')
+        ? 'no-cache'
+        : 'public, max-age=300',
       'content-length': content.length,
     });
     response.end(method === 'HEAD' ? undefined : content);
@@ -313,7 +321,7 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
         cloud: {
           ready: false,
           provider: null,
-          reason: 'No licensed GPU streaming provider is configured.',
+          reason: 'No self-hosted host agent or licensed GPU streaming provider is configured.',
         },
       });
     }
@@ -392,6 +400,6 @@ if (launchedDirectly) {
     console.log(`Open http://localhost:${config.port}/cloud-play/`);
     console.log(`Steam OpenID: ${config.loginReady ? 'configured' : 'disabled — set SESSION_SECRET and PUBLIC_ORIGIN'}`);
     console.log(`Steam library API: ${config.libraryReady ? 'configured' : 'disabled — set STEAM_WEB_API_KEY'}`);
-    console.log('Cloud gaming: disabled — no licensed provider configured');
+    console.log('Cloud gaming: disabled — no self-hosted host agent or licensed provider configured');
   });
 }

@@ -4,8 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#090d12">
+  <meta name="application-name" content="PLAYBRIDGE">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="PLAYBRIDGE">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="PLAYBRIDGE: практическое ядро для подключения Steam, просмотра доступной библиотеки и запуска установок через официальный клиент.">
   <title>PLAYBRIDGE — Steam library bridge</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
@@ -31,18 +38,20 @@
         <span class="status-orb"></span>
         <span class="sidebar-status-copy"><strong id="sidebarStatusTitle">ПРОВЕРКА СЕРВЕРА</strong><small id="sidebarStatusText">Проверяю API…</small></span>
       </div>
-      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.2 <span class="sidebar-bottom-right">RU</span></div>
+      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.3 <span class="sidebar-bottom-right">RU</span></div>
     </aside>
 
     <main class="main-content" id="top">
       <header class="topbar" id="overview">
         <div class="breadcrumb"><span>PLAYBRIDGE</span><b>/</b><strong>РАБОЧЕЕ ЯДРО</strong></div>
         <div class="topbar-right">
+          <span class="update-pill" id="updateStatus" data-state="checking" role="status" aria-live="polite" title="Проверка обновлений при запуске и возврате в приложение">ПРОВЕРКА ОБНОВЛЕНИЙ</span>
           <span class="status-pill" id="serverBadge"><i></i> ПРОВЕРКА API</span>
           <div class="profile-chip">
             <span class="avatar" id="profileAvatar">?</span>
             <span class="profile-copy"><strong id="profileTitle">Не подключено</strong><small id="profileSub">Вход через Steam OpenID</small></span>
           </div>
+          <button class="button button-small button-outline" id="installAppButton" type="button" aria-label="Установить PLAYBRIDGE" title="Установить PLAYBRIDGE на устройство" hidden><span aria-hidden="true">⇩</span><span class="install-label">Установить</span></button>
           <button class="button button-small button-outline" id="connectButton" type="button" disabled>Проверяю сервер…</button>
           <button class="button button-small button-outline" id="logoutButton" type="button" hidden>Выйти</button>
         </div>
@@ -52,7 +61,7 @@
         <div class="hero-copy">
           <div class="eyebrow"><span class="eyebrow-dot"></span> БЕЗ ФЕЙКОВЫХ БИБЛИОТЕК И СЕССИЙ</div>
           <h1 id="hero-title">Одна библиотека.<br><span>Реальные источники.</span></h1>
-          <p>Подключение Steam проходит через OpenID, список игр запрашивается у Steam API, а установка передаётся официальному клиенту. Облачный режим появится только после подключения разрешённой GPU-платформы.</p>
+          <p>Подключение Steam проходит через OpenID, список игр запрашивается у Steam API, а установка передаётся официальному клиенту. Облачный режим появится после подключения проверенного GPU-хоста — собственного или арендованного.</p>
           <div class="hero-actions">
             <a class="button button-primary" href="#library">Открыть библиотеку <span aria-hidden="true">↓</span></a>
             <a class="button button-quiet" href="README.md">План реализации <span aria-hidden="true">↗</span></a>
@@ -65,9 +74,9 @@
           <div class="visual-center"><span class="center-mark">PB</span><span class="center-caption">CLIENT<br>ROUTER</span></div>
           <div class="route-line route-line-one"></div><div class="route-line route-line-two"></div>
           <div class="route-node node-local"><span class="node-icon">▣</span><span><b>STEAM CLIENT</b><small>официальная установка</small></span><i></i></div>
-          <div class="route-node node-cloud"><span class="node-icon">⌁</span><span><b>GPU-ПРОВАЙДЕР</b><small>пока не подключён</small></span><i></i></div>
+          <div class="route-node node-cloud"><span class="node-icon">⌁</span><span><b>GPU-ХОСТ</b><small>свой или арендованный</small></span><i></i></div>
           <div class="visual-label label-lan">LAN TRANSFER / STEAM CDN</div>
-          <div class="visual-label label-stream">ТОЛЬКО ПО ДОГОВОРУ</div>
+          <div class="visual-label label-stream">СОБСТВЕННЫЙ ХОСТ ИЛИ ПРОВАЙДЕР</div>
           <div class="visual-chip"><span class="chip-pulse"></span> ЗАГРУЗКУ ВЫПОЛНЯЕТ <b>STEAM CLIENT</b></div>
         </div>
       </section>
@@ -93,10 +102,10 @@
           <article class="mode-card mode-cloud" id="cloud">
             <div class="mode-card-top"><span class="mode-number">02</span><span class="mode-tag">УДАЛЁННЫЙ GPU + ВИДЕОПОТОК</span><span class="mode-icon">⌁</span></div>
             <h3>Облачная игра</h3>
-            <p>Это отдельный GPU-хост с официальным Steam-клиентом и WebRTC-потоком. Включать кнопку запуска можно только после выбора провайдера, проверки прав на конкретные игры и настройки изолированных сессий.</p>
-            <div class="cloud-state" id="cloudState"><span class="cloud-state-dot"></span><span><strong>Провайдер не подключён</strong><small>GPU-сессии не запускаются</small></span></div>
+            <p>Нужен доступный GPU-хост — свой компьютер или арендованный сервер — с официальным Steam-клиентом и реальным видеопотоком. Подключение, безопасное сопряжение и запуск проверенных игр ещё не реализованы.</p>
+            <div class="cloud-state" id="cloudState"><span class="cloud-state-dot"></span><span><strong>GPU-хост не подключён</strong><small>стриминг ещё не реализован</small></span></div>
             <button class="button button-mode button-disabled" id="cloudButton" type="button" disabled>Облачный запуск недоступен</button>
-            <a class="mode-footnote mode-link" href="README.md#облачный-запуск">Что нужно для подключения провайдера ↗</a>
+            <a class="mode-footnote mode-link" href="README.md#собственный-gpu-компьютер-как-хост">Как подключить собственный GPU-хост ↗</a>
           </article>
         </div>
       </section>
@@ -121,7 +130,7 @@
       <section class="section-block trust-section" id="trust">
         <div class="trust-card">
           <div class="trust-icon">◇</div>
-          <div class="trust-copy"><div class="eyebrow">БЕЗОПАСНОСТЬ И ПРАВА</div><h2>Пароль Steam не проходит через PLAYBRIDGE</h2><p>OpenID подтверждает SteamID; Web API показывает только доступные сведения. Для cloud gaming нужна отдельная договорённость с платформой и правообладателями. Сторонние копии Steam-файлов не храним.</p></div>
+          <div class="trust-copy"><div class="eyebrow">БЕЗОПАСНОСТЬ И ПРАВА</div><h2>Пароль Steam не проходит через PLAYBRIDGE</h2><p>OpenID подтверждает SteamID; Web API показывает только доступные сведения. Для удалённого запуска нужно соблюдать условия Steam и лицензии на игры; дополнительные договорённости могут потребоваться для публичного сервиса. Сторонние копии Steam-файлов не храним.</p></div>
           <a class="button button-outline" href="README.md#безопасность-и-правовые-ограничения">Технические детали</a>
         </div>
       </section>
