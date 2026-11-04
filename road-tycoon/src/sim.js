@@ -372,8 +372,10 @@
   };
 
   // Оценка произвольной трассы: игрок сам ведёт дорогу через любые точки
-  Sim.roadQuotePts = function (s, world, a, b, pts, quality) {
-    if (!pts || pts.length < 2) return { ok: false, error: 'Трасса слишком короткая' };
+  Sim.roadQuotePts = function (s, world, a, b, pts0, quality) {
+    if (!pts0 || pts0.length < 2) return { ok: false, error: 'Трасса слишком короткая' };
+    // мост через озеро не строим: трасса обходит водоём по суше
+    const pts = TR.World.routeAroundLakes(world, pts0);
     const len = Sim.polyLength(pts);
     if (len < 6) return { ok: false, error: 'Трасса слишком короткая (минимум 6 км)' };
     if (len > 1600) return { ok: false, error: 'Слишком длинная трасса (максимум 1600 км)' };
@@ -393,8 +395,11 @@
     return { ok: true, cost, len, factor, dup };
   };
 
-  Sim.buildRoadPts = function (s, world, a, b, pts, quality) {
-    const q = Sim.roadQuotePts(s, world, a, b, pts, quality);
+  Sim.buildRoadPts = function (s, world, a, b, pts0, quality, preQuote) {
+    const pts = TR.World.routeAroundLakes(world, pts0);
+    const q = preQuote
+      ? { ok: true, cost: preQuote.cost, len: Sim.polyLength(pts), factor: preQuote.factor || 1 }
+      : Sim.roadQuotePts(s, world, a, b, pts, quality);
     if (!q.ok) return q;
     if (s.money < q.cost) return { ok: false, error: 'Не хватает денег: нужно ' + U.money(q.cost) };
     const active = s.roads.filter((r) => r.building).length + s.facilities.filter((f) => !f.ready).length;
@@ -419,6 +424,16 @@
   };
 
   Sim.buildRoad = function (s, world, a, b, quality) {
+    const q0 = Sim.roadQuote(s, world, a, b, quality);
+    if (!q0.ok) return q0;
+    // обычная «город-город» трасса тоже обходит озёра по суше
+    const draft = U.curve({ id: s.nextRoadId, a, b, totalKm: q0.len });
+    const pts = [];
+    for (let i = 0; i <= 16; i++) pts.push(U.curvePoint(draft, i / 16));
+    return Sim.buildRoadPts(s, world, a, b, pts, quality, q0);
+  };
+
+  Sim.buildRoadOld = function (s, world, a, b, quality) {
     const q = Sim.roadQuote(s, world, a, b, quality);
     if (!q.ok) return q;
     if (s.money < q.cost) return { ok: false, error: 'Не хватает денег: нужно ' + U.money(q.cost) };

@@ -11,10 +11,15 @@
     [[1030, 200], [900, 240], [800, 300], [720, 440], [760, 580], [740, 740]],
   ];
 
+  // Озёра по размеру сопоставимы с городами (город — 18–40 км поперёк),
+  // а не втрое больше: раньше озёра были 60+ км и закрывали полкарты.
   const LAKES = [
-    { x: 720, y: 160, rx: 64, ry: 55, rot: -0.3 },
-    { x: 160, y: 900, rx: 52, ry: 42, rot: 0.2 },
-    { x: 520, y: 460, rx: 36, ry: 32, rot: 0.5 },
+    { x: 722, y: 158, rx: 17, ry: 14, rot: -0.3 },
+    { x: 158, y: 898, rx: 12, ry: 10, rot: 0.2 },
+    { x: 520, y: 462, rx: 8.5, ry: 7.5, rot: 0.5 },
+    { x: 302, y: 332, rx: 6.5, ry: 5.5, rot: 0.9 },
+    { x: 858, y: 642, rx: 10.5, ry: 8.5, rot: -0.6 },
+    { x: 620, y: 880, rx: 9, ry: 7, rot: 0.15 },
   ];
 
   function distToPolyline(px, py, pts) {
@@ -85,6 +90,16 @@
     return d;
   };
 
+  // rr = 1 на берегу, <1 в воде, >1 на суше (эллиптическое расстояние до озера)
+  W.lakeRR = function (world, x, y) {
+    let best = Infinity;
+    for (const l of world.lakes || []) {
+      const rr = Math.hypot((x - l.x) / l.rx, (y - l.y) / l.ry);
+      if (rr < best) best = rr;
+    }
+    return best;
+  };
+
   W.lakeFactor = function (world, x, y) {
     let f = 0;
     for (const l of world.lakes) {
@@ -94,6 +109,57 @@
     }
     return f;
   };
+
+  /* Обход озёр: если отрезок трассы заходит в озеро — ведём его по берегу.
+     Возвращает новый список точек (вход-выход + дуга по кромке с запасом 18 %). */
+  W.routeAroundLakes = function (world, pts) {
+    if (!pts || pts.length < 2 || !world.lakes || !world.lakes.length) return pts ? pts.slice() : [];
+    let out = [pts[0]];
+    for (let i = 1; i < pts.length; i++) {
+      const seg = avoidLakesInSegment(world, out[out.length - 1], pts[i]);
+      for (const p of seg) out.push(p);
+    }
+    return out;
+  };
+
+  function avoidLakesInSegment(world, a, b) {
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    if (len < 1) return [{ x: b.x, y: b.y }];
+    const steps = Math.max(6, Math.ceil(len));
+    // ищем первое озеро, в которое заходит отрезок
+    let hit = null;
+    for (const l of world.lakes) {
+      let first = -1, last = -1;
+      for (let k = 0; k <= steps; k++) {
+        const t = k / steps;
+        const x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t;
+        const rr = Math.hypot((x - l.x) / l.rx, (y - l.y) / l.ry);
+        if (rr < 1.02) { if (first < 0) first = t; last = t; }
+      }
+      if (first >= 0 && (!hit || first < hit.first)) hit = { l, first, last };
+    }
+    if (!hit) return [{ x: b.x, y: b.y }];
+    const l = hit.l;
+    const p1 = { x: a.x + (b.x - a.x) * hit.first, y: a.y + (b.y - a.y) * hit.first };
+    const p2 = { x: a.x + (b.x - a.x) * hit.last, y: a.y + (b.y - a.y) * hit.last };
+    let a1 = Math.atan2((p1.y - l.y) / l.ry, (p1.x - l.x) / l.rx);
+    let a2 = Math.atan2((p2.y - l.y) / l.ry, (p2.x - l.x) / l.rx);
+    let d = a2 - a1;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    const arc = Math.max(6, Math.ceil(Math.abs(d) * 7));
+    const k2 = 1.18;   // запас от воды
+    const detour = [];
+    for (let k = 0; k <= arc; k++) {
+      const ang = a1 + (d * k) / arc;
+      const px = l.x + Math.cos(ang) * l.rx * k2;
+      const py = l.y + Math.sin(ang) * l.ry * k2;
+      detour.push({ x: px, y: py });
+    }
+    // то, что осталось до конца отрезка после выхода с озера
+    detour.push({ x: b.x, y: b.y });
+    return detour;
+  }
 
   /* Во сколько раз дороже прокладывать дорогу в этой точке */
   W.terrainFactor = function (world, x, y) {
