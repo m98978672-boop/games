@@ -453,6 +453,11 @@
       e.preventDefault();
       spaceHeld = true;
       togglePause();
+    } else if (e.key === 'Enter') {
+      // Enter — старт/финиш стройки в точке курсора
+      e.preventDefault();
+      if (app.tool !== 'road') setTool('road');
+      if (app.mouse) { updateHover(app.mouse.x, app.mouse.y); handleClick(app.mouse); }
     } else if (e.key === 'Escape') {
       if (TR.UI.closeModal()) return;
       cancelTool();
@@ -630,7 +635,21 @@
         return;
       }
       if (city == null) {
-        TR.UI.toast('Нажмите город — или существующую дорогу, чтобы сделать ответвление', 'info');
+        // Свободный старт: трассу можно начать с любой точки карты —
+        // с земли, от дороги или от города. Владелец — ближайший город.
+        const w = app.hover && app.hover.world;
+        if (!w) return;
+        let owner = 0, bestD = Infinity;
+        for (let i = 0; i < C.cities.length; i++) {
+          const d = U.dist(C.cities[i].x, C.cities[i].y, w.x, w.y);
+          if (d < bestD) { bestD = d; owner = i; }
+        }
+        app.roadFrom = owner;
+        app.junction = { x: w.x, y: w.y, free: true };
+        app.roadWay = [];
+        app.roadPreview = null;
+        TR.UI.setHint(`Старт стройки: ${Math.round(bestD)} км от ${C.cities[owner].name}. Ведите трассу к городу или к другой дороге`);
+        TR.UI.refresh();
         return;
       }
       app.roadFrom = city;
@@ -661,7 +680,25 @@
       TR.UI.setHint(`Точек поворота: ${app.roadWay.length}. Ещё клик по земле — новый поворот, по городу — построить. Esc — убрать точку.`);
       return;
     }
-    if (city === app.roadFrom) {
+    if (city == null && app.hover.road && !app.junction) {
+      // финиш на существующей дороге: примыкание
+      const troad = app.hover.road;
+      const w = app.hover.world;
+      const pr = U.roadProjection(troad, w.x, w.y);
+      const owner = pr && pr.t > 0.5 ? troad.b : troad.a;
+      const c = U.curve(troad);
+      const jp = U.curvePoint(c, pr ? pr.t : 0.5);
+      const A = app.junction || C.cities[app.roadFrom];
+      const pts = [{ x: A.x, y: A.y }, ...(app.roadWay || []), { x: jp.x, y: jp.y }];
+      const res2 = Sim.buildRoadPts(app.state, app.world, app.roadFrom, owner, pts, app.buildQuality);
+      if (!res2.ok) { TR.UI.toast(res2.error, 'bad'); return; }
+      app.selection = { kind: 'road', id: res2.road.id };
+      app.roadFrom = null; app.roadWay = []; app.junction = null; app.roadPreview = null;
+      TR.UI.refresh(); TR.UI.setHint();
+      TR.UI.toast('Примыкание к существующей дороге построено', 'good');
+      return;
+    }
+    if (city === app.roadFrom && !app.junction) {
       app.roadFrom = null;
       TR.UI.setHint();
       return;
