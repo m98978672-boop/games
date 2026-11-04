@@ -21,7 +21,14 @@ function save(){try{localStorage.setItem('nightTaxi3D',JSON.stringify(s))}catch{
 function buzz(){if(s.haptics&&navigator.vibrate)navigator.vibrate(30)}
 let toastTimer;function toast(t){$('toast').textContent=t;$('toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('toast').classList.remove('show'),3000)}
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x101d26);scene.fog=new THREE.Fog(0x101d26,130,500);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.3));renderer.setSize(800,440);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;renderer.domElement.id='worldCanvas';$('scene').prepend(renderer.domElement);
+let renderer;
+try { renderer=new THREE.WebGLRenderer({antialias:false,powerPreference:'high-performance'}); }
+catch(error){
+  $('renderError').classList.remove('hidden');
+  document.querySelector('.touch-controls').classList.add('hidden');
+  throw new Error('WebGL недоступен: '+error.message);
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.3));renderer.setSize(800,440);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.2;renderer.domElement.id='worldCanvas';$('scene').prepend(renderer.domElement);
 const camera=new THREE.PerspectiveCamera(60,1,.1,700);scene.add(new THREE.HemisphereLight(0x96b9c9,0x242018,1.8));const moon=new THREE.DirectionalLight(0x728eaa,1.2);moon.position.set(80,120,30);scene.add(moon);
 const mat=(color,extra={})=>new THREE.MeshStandardMaterial({color,roughness:.8,...extra});
 const roadMat=mat(0x1b2d34,{roughness:.45,metalness:.15}), groundMat=mat(0x263332), white=mat(0x9c9c83,{emissive:0x38352b}), yellow=mat(0xe1bb68,{emissive:0x5b3d0c}), concrete=mat(0x4c5557), glass=mat(0x324851,{emissive:0x13232a}), dark=mat(0x10191b), windowMat=mat(0xd4aa69,{emissive:0x735021});
@@ -55,7 +62,7 @@ const traffic=[];for(let i=0;i<10;i++){const t=new THREE.Mesh(trafficGeometries[
 const passenger=new THREE.Group();scene.add(passenger);const coat=mat(0x554a53), skin=mat(0xb88a6a);box(.55,.9,.32,coat,0,1.1,0,passenger);box(.35,.4,.32,skin,0,1.75,0,passenger);for(let side of [-1,1]){box(.16,.8,.16,dark,side*.16,.4,0,passenger);box(.16,.75,.16,coat,side*.4,1.15,0,passenger)}
 const car={x:s.x,z:s.z,heading:s.heading,speed:0,gear:1,maxSpeed:cars[s.car].top};let keys={},last=performance.now(),saveTimer=0,uiTimer=0,collisionCooldown=0,lowWarn=false,look=0,steering=0,elapsed=0;
 function currentJob(){return jobs[s.order%jobs.length]}function target(){return s.stage==='pickup'||s.stage==='board'?currentJob().pickup:s.stage==='ride'||s.stage==='finish'?currentJob().drop:null}
-function clearControls(){keys={};document.querySelectorAll('[data-key]').forEach(button=>button.classList.remove('is-active'))}
+function clearControls(){keys={};heldPointers.clear();document.querySelectorAll('[data-key]').forEach(button=>button.classList.remove('is-active'))}
 function setPaused(value){s.paused=value;if(value){car.speed=0;clearControls()}save();updateUI(true)}
 let lastOrderHTML='';
 function updateUI(force=false){const j=currentJob(),t=target(),dist=t?Math.round(distance(car,t)):0;$('money').innerHTML=Math.round(s.money).toLocaleString('ru-RU')+' <small>₽</small>';$('rating').textContent=s.rating.toFixed(1);$('trips').textContent=String(s.trips).padStart(2,'0');$('fuelText').textContent=Math.round(s.fuel)+'%';$('fuelBar').style.width=s.fuel+'%';$('condition').textContent=Math.round(s.condition)+'%';$('speed').textContent=Math.round(car.speed*3.6);$('clock').textContent=String(Math.floor(s.clock/60)%24).padStart(2,'0')+':'+String(Math.floor(s.clock%60)).padStart(2,'0');$('carName').textContent=cars[s.car].name;$('gearBtn').innerHTML=(car.gear===-1?'R':'D')+' <span>'+(car.gear===-1?'НАЗАД':'ВПЕРЁД')+'</span>'; $('shiftNumber').textContent=String(s.shift).padStart(2,'0');document.querySelector('.shift strong').innerHTML=String(s.shift).padStart(2,'0')+' <i>/</i> 08';$('district').textContent=districts[clamp(Math.floor((car.x+400)/200)+Math.floor((car.z+400)/400)*4,0,7)];$('pauseBtn').innerHTML=(s.paused?'▶':'Ⅱ')+' <span>'+(s.paused?'ПРОДОЛЖИТЬ':'ПАУЗА')+'</span>';document.querySelector('.touch-controls').classList.toggle('left-handed',s.leftHanded);
@@ -83,7 +90,7 @@ $('pauseBtn').onclick=()=>{setPaused(!s.paused);toast(s.paused?'Смена на 
 $('settingsBtn').onclick=()=>{modal('Настройки',`<label class="setting">Качество <select id="quality"><option>Эконом</option><option>Среднее</option><option>Высокое</option></select></label><label class="setting">Авто-газ <input type="checkbox" id="autoSetting" ${s.auto?'checked':''}></label><label class="setting">Левша <input type="checkbox" id="leftSetting" ${s.leftHanded?'checked':''}></label><label class="setting">Вибрация <input type="checkbox" id="hapticSetting" ${s.haptics?'checked':''}></label><label class="setting">Уменьшение движения <input type="checkbox" id="motionSetting" ${s.reduceMotion?'checked':''}></label><p>W / ↑ — газ, S / ↓ — тормоз, A / D — руль, пробел — ручник, R — переключение вперёд / назад на остановке. Планшет — кнопка на экране или T, закрыть — Escape. Переключайте камеры кнопкой на экране. Цель отмечена золотым маяком.</p><button class="secondary" id="journal">ЖУРНАЛ И СМЕНА</button>`);$('quality').value=s.quality;for(const [id,key] of [['quality','quality'],['autoSetting','auto'],['leftSetting','leftHanded'],['hapticSetting','haptics'],['motionSetting','reduceMotion']])$(id).onchange=e=>{s[key]=e.target.type==='checkbox'?e.target.checked:e.target.value;save();updateUI(true)};$('journal').onclick=showJournal};
 function showJournal(){modal('Журнал смены',`<p>Смена ${s.shift} · поездок: ${s.shiftTrips} · заработано: ${s.shiftIncome} ₽</p>${s.journal.length?s.journal.map(x=>'<div class="journal-entry">✦ &nbsp; '+x+'</div>').join(''):'<p>Историй пока нет.</p>'}<button class="primary" id="endShift">ЗАКОНЧИТЬ СМЕНУ · 350 ₽</button>`);$('endShift').onclick=()=>{if(s.stage!=='offer')return toast('Сначала завершите заказ');if(s.money<350)return toast('Недостаточно денег');s.money-=350;s.shift++;s.shiftTrips=0;s.shiftIncome=0;save();updateUI(true);$('modal').classList.add('hidden');toast('Счета оплачены')}}
 $('garageBtn').onclick=()=>{if(s.stage!=='offer')return toast('Гараж доступен между заказами');modal('Гараж',`<p>${cars[s.car].name} · топливо ${Math.round(s.fuel)}% · состояние ${Math.round(s.condition)}%</p><button class="primary" id="refuel">ЗАПРАВИТЬ · 300 ₽</button><button class="secondary" id="repair">РЕМОНТ · 400 ₽</button><div class="garage-cars">${cars.map((c,i)=>`<div class="garage-car"><div><strong>${c.name}</strong><small>До ${Math.round(c.top*3.6)} км/ч · расход ×${c.consumption}</small></div><button class="secondary" data-car="${i}">${s.car===i?'ВЫБРАНА':s.owned.includes(i)?'ВЫБРАТЬ':c.price+' ₽'}</button></div>`).join('')}</div>`);$('refuel').onclick=()=>{if(s.money<300)return toast('Недостаточно средств');if(s.fuel>=99)return toast('Бак полный');s.money-=300;s.fuel=100;lowWarn=false;save();updateUI(true);$('modal').classList.add('hidden');toast('Бак заправлен')};$('repair').onclick=()=>{if(s.money<400)return toast('Недостаточно средств');if(s.condition>=99)return toast('Ремонт не требуется');s.money-=400;s.condition=100;save();updateUI(true);$('modal').classList.add('hidden');toast('Машина отремонтирована')};document.querySelectorAll('[data-car]').forEach(b=>b.onclick=()=>{let i=+b.dataset.car;if(!s.owned.includes(i)){if(s.money<cars[i].price)return toast('Недостаточно средств');s.money-=cars[i].price;s.owned.push(i)}s.car=i;changeVehicle(i);save();updateUI(true);$('modal').classList.add('hidden');toast('Выбрана '+cars[i].name)})};
-$('sound').onclick=()=>toast('Звук пока не добавлен');function toggleGear(){if(car.speed>.5)return toast('Остановитесь перед переключением передачи');car.gear=car.gear===1?-1:1;save();updateUI(true);toast(car.gear===-1?'Включён задний ход':'Включена передняя передача')} $('gearBtn').onclick=toggleGear;$('cameraBtn').onclick=()=>{s.camera=(s.camera+1)%3;look=0;save();toast(['Камера: сзади','Камера: из салона','Камера: парковка'][s.camera])};
+$('sound').onclick=()=>toast('Звук пока не добавлен');function toggleGear(){if(car.speed>.5)return toast('Остановитесь перед переключением передачи');car.gear=car.gear===1?-1:1;save();updateUI(true);toast(car.gear===-1?'Включён задний ход':'Включена передняя передача')} $('gearBtn').onclick=toggleGear;$('cameraBtn').onclick=()=>{s.camera=({1:0,0:2,2:1})[s.camera];$('cameraLabel').textContent=['ВИД: СНАРУЖИ','ВИД: САЛОН','ВИД: СВЕРХУ'][s.camera];look=0;save();toast(['Камера: снаружи','Камера: из салона','Камера: сверху'][s.camera])};
 window.addEventListener('keydown',e=>{
  const key=e.key.toLowerCase();
  if(tabletOpen){if(key==='escape'){e.preventDefault();if(!$('modal').classList.contains('hidden'))$('modal').classList.add('hidden');else closeTablet()}return}
@@ -93,7 +100,30 @@ window.addEventListener('keydown',e=>{
 });window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
 window.addEventListener('blur',()=>{keys={};resumeAfterTablet=false;setPaused(true)});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){keys={};resumeAfterTablet=false;setPaused(true)}});
-document.querySelectorAll('[data-key]').forEach(btn=>{let k=btn.dataset.key;btn.addEventListener('pointerdown',e=>{e.preventDefault();if(s.paused||tabletOpen)return;keys[k]=true;btn.classList.add('is-active');if(k==='gas')hideHelp();if(btn.setPointerCapture)btn.setPointerCapture(e.pointerId)});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>btn.addEventListener(ev,()=>{keys[k]=false;btn.classList.remove('is-active')}))});
+// Each pointer has its own held control, so steering and gas can be held together.
+const heldPointers=new Map();
+const controlButtons=[...document.querySelectorAll('[data-key]')];
+function syncHeldControls(){
+  for(const btn of controlButtons){const k=btn.dataset.key;const active=[...heldPointers.values()].some(value=>value===k);keys[k]=active;btn.classList.toggle('is-active',active)}
+}
+function holdControl(id,btn){if(s.paused||tabletOpen)return;heldPointers.set(id,btn.dataset.key);syncHeldControls();if(btn.dataset.key==='gas')hideHelp()}
+function releaseControl(id){heldPointers.delete(id);syncHeldControls()}
+for(const btn of controlButtons){
+  for(const type of ['contextmenu','selectstart','dragstart'])btn.addEventListener(type,e=>e.preventDefault());
+  if(window.PointerEvent){
+    btn.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;e.preventDefault();holdControl(e.pointerId,btn);try{btn.setPointerCapture(e.pointerId)}catch{}});
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])btn.addEventListener(type,e=>releaseControl(e.pointerId));
+  }else{
+    // Older touch browsers without Pointer Events: touch identifiers remain independent.
+    btn.addEventListener('touchstart',e=>{e.preventDefault();for(const t of e.changedTouches)holdControl('touch:'+t.identifier,btn)},{passive:false});
+    for(const type of ['touchend','touchcancel'])btn.addEventListener(type,e=>{e.preventDefault();for(const t of e.changedTouches)releaseControl('touch:'+t.identifier)},{passive:false});
+    btn.addEventListener('mousedown',e=>{if(e.button!==0)return;e.preventDefault();holdControl('mouse',btn)});
+  }
+}
+window.addEventListener('mouseup',()=>releaseControl('mouse'));
+renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+renderer.domElement.addEventListener('webglcontextlost',e=>{e.preventDefault();setPaused(true);$('renderError').classList.remove('hidden')});
+renderer.domElement.addEventListener('webglcontextrestored',()=>{$('renderError').classList.add('hidden');toast('3D восстановлен. Нажмите «Продолжить»')});
 let pointerX=null;renderer.domElement.addEventListener('pointerdown',e=>{pointerX=e.clientX;renderer.domElement.setPointerCapture(e.pointerId)});renderer.domElement.addEventListener('pointermove',e=>{if(pointerX!==null){look=clamp(look+(e.clientX-pointerX)*.006,-1.5,1.5);pointerX=e.clientX}});renderer.domElement.addEventListener('pointerup',()=>pointerX=null);renderer.domElement.addEventListener('pointercancel',()=>pointerX=null);
 function resize(){let r=$('scene').getBoundingClientRect(),pixel=s.quality==='Эконом'?.7:s.quality==='Высокое'?Math.min(devicePixelRatio,1.5):1;renderer.setPixelRatio(pixel);renderer.setSize(Math.max(1,r.width),Math.max(1,r.height),false);camera.aspect=r.width/Math.max(1,r.height);camera.updateProjectionMatrix()}
 let lastWidth=0,lastHeight=0,lastQuality='';
