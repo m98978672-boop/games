@@ -1,0 +1,31 @@
+services:
+  playbridge:
+    build: .
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 4174
+      PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in .env}
+      SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
+      STEAM_WEB_API_KEY: ${STEAM_WEB_API_KEY:?Set STEAM_WEB_API_KEY in .env}
+    expose:
+      - "4174"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - playbridge
+    environment:
+      PLAYBRIDGE_DOMAIN: ${PLAYBRIDGE_DOMAIN:?Set PLAYBRIDGE_DOMAIN in .env}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
