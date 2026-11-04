@@ -286,7 +286,7 @@
     canvas.addEventListener('pointermove', onPointerMove);
     canvas.addEventListener('pointerup', onPointerUp);
     canvas.addEventListener('pointercancel', onPointerUp);
-    canvas.addEventListener('pointerleave', () => { if (!down) { app.mouse = null; app.hover.facility = null; app.hover.city = null; app.hover.road = null; } });
+    canvas.addEventListener('pointerleave', () => { if (!down) { app.lastMouse = app.mouse || app.lastMouse; app.mouse = null; app.hover.facility = null; app.hover.city = null; app.hover.road = null; } });
     canvas.addEventListener('wheel', onWheel, { passive: false });
     canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
@@ -431,6 +431,17 @@
     });
   }
 
+  // Земляные работы: T — насыпь, G — выемка (в точке курсора)
+  function earthWork(up) {
+    const pt = app.mouse || app.lastMouse ||
+      { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight / 2) };
+    const w = Render.toWorld(app, pt.x, pt.y);
+    const res = Sim.raiseGround(app.state, w.x, w.y, up);
+    if (!res.ok) { TR.UI.toast(res.error, 'bad'); TR.Audio.play('error'); return; }
+    TR.UI.toast(up ? `Насыпь отсыпана · ${U.money(res.cost)}` : `Грунт срезан · ${U.money(res.cost)}`, 'good');
+    TR.UI.refresh();
+  }
+
   function onWheel(e) {
     e.preventDefault();
     const p = screenPoint(e);
@@ -454,10 +465,20 @@
       spaceHeld = true;
       togglePause();
     } else if (e.key === 'Enter') {
-      // Enter — старт/финиш стройки в точке курсора
+      // Enter — старт/финиш стройки в точке курсора (или в центре экрана)
       e.preventDefault();
       if (app.tool !== 'road') setTool('road');
-      if (app.mouse) { updateHover(app.mouse.x, app.mouse.y); handleClick(app.mouse); }
+      const pt = app.mouse || app.lastMouse ||
+        { x: Math.round(window.innerWidth / 2), y: Math.round(window.innerHeight / 2) };
+      app.mouse = pt;
+      updateHover(pt.x, pt.y);
+      handleClick(pt);
+    } else if (e.code === 'KeyT') {
+      // насыпь под площадку
+      earthWork(true);
+    } else if (e.code === 'KeyG') {
+      // выемка грунта
+      earthWork(false);
     } else if (e.key === 'Escape') {
       if (TR.UI.closeModal()) return;
       cancelTool();
