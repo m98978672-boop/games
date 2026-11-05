@@ -19,13 +19,15 @@
     drink:    { label: 'пьёт чай', minutes: 12, location: 'kitchen', effects: { hunger: 0.8, mood: 0.25, energy: 0.2 } },
     work:     { label: 'работает', minutes: 95, location: 'desk', effects: { money: 1.5, energy: -0.3, mood: -0.08, hunger: -0.09 } },
     help:     { label: 'помогает по дому', minutes: 30, location: null, effects: { mood: 0.75, hygiene: -0.12, energy: -0.22, money: 0.3 } },
-    wash:     { label: 'принимает душ', minutes: 18, location: 'bath', effects: { hygiene: 3.4, mood: 0.25, energy: -0.06 } },
+    wash:     { label: 'купается', minutes: 22, location: 'bath', effects: { hygiene: 3.2, mood: 0.3, energy: -0.05, bladder: -0.05 } },
+    toilet:   { label: 'в санузле', minutes: 14, location: 'toilet', effects: { bladder: 7, hygiene: 0.45, mood: 0.22 } },
     exercise: { label: 'делает зарядку', minutes: 35, location: 'living', effects: { fitness: 1.5, energy: -0.35, hygiene: -0.35, mood: 0.3 } },
-    dress:    { label: 'переодевается', minutes: 6, location: null, effects: { mood: 0.35 } },
+    dress:    { label: 'переодевается', minutes: 9, location: null, effects: { mood: 0.35 } },
+    talk:     { label: 'разговаривает', minutes: 14, location: null, effects: { mood: 0.6, energy: 0.05 } },
     wait:     { label: 'отдыхает', minutes: 20, location: null, effects: { energy: 0.25, mood: 0.14 } },
     buy:      { label: 'ходит за покупками', minutes: 35, location: 'street', effects: { mood: 0.3, energy: -0.2 } },
   };
-  const DECAY = { hunger: -0.045, energy: -0.03, hygiene: -0.04, mood: -0.028, fitness: -0.018 };
+  const DECAY = { hunger: -0.045, energy: -0.03, hygiene: -0.04, mood: -0.028, fitness: -0.018, bladder: -0.055 };
 
   /* --- стартовое состояние -------------------------------------------------- */
   function freshState() {
@@ -33,7 +35,7 @@
       version: 1,
       day: 1, minutes: 8 * 60, hour: 8,
       speed: 1, paused: false, autonomy: true,
-      needs: { energy: 78, hunger: 74, mood: 72, hygiene: 80, health: 92, fitness: 64, money: 120 },
+      needs: { energy: 78, hunger: 74, mood: 72, hygiene: 80, health: 92, fitness: 64, money: 120, bladder: 84 },
       location: 'living', x: 0.52, targetX: 0.52,
       outfit: {
         head: null,
@@ -47,8 +49,9 @@
       owned: ['dress', 'pajama', 'sport', 'tshirt', 'jeans', 'sneakers', 'slippers', 'hoodie', 'jacket', 'headband'],
       action: null,
       goals: [],
+      dressing: null,
       log: [
-        { day: 1, minutes: 480, who: 'nika', text: 'Привет! Я Ника. Я умею сама решать, что делать, но слушаюсь твоих команд. Напиши, например: «надень красное платье и помаши рукой».' },
+        { day: 1, minutes: 480, who: 'nika', text: 'Привет! Я Ника. Живу в своей минималистичной квартире, сама решаю, что делать, но слушаюсь твоих команд. Попробуй: «переоденься в синее платье, прими ванну и поговори со мной».' },
       ],
       memory: [],
       events: [],
@@ -77,20 +80,33 @@
 
   /* --- анимации для действий ------------------------------------------------ */
   function actionAnimations(intent) {
-    switch (intent) {
-      case 'sleep': return [{ part: 'face', id: 'sleepy' }, { part: 'eyes', id: 'sleepy-eyes' }, { part: 'head', id: 'look-down' }];
-      case 'eat': return [{ part: 'armR', id: 'hold-cup' }, { part: 'head', id: 'nod' }, { part: 'face', id: 'smile' }];
-      case 'drink': return [{ part: 'armR', id: 'hold-cup' }, { part: 'face', id: 'smile' }];
-      case 'work': return [{ part: 'torso', id: 'lean-forward' }, { part: 'face', id: 'focus' }, { part: 'head', id: 'look-down' }];
-      case 'help': return [{ part: 'armL', id: 'reach' }, { part: 'armR', id: 'swing-out' }, { part: 'torso', id: 'lean-forward' }];
-      case 'wash': return [{ part: 'armL', id: 'circle' }, { part: 'armR', id: 'circle' }, { part: 'face', id: 'smile' }];
-      case 'exercise': return [{ part: 'legL', id: 'squat' }, { part: 'legR', id: 'squat' }, { part: 'torso', id: 'stretch' }];
-      case 'dress': return [{ part: 'skirt', id: 'settle' }, { part: 'armL', id: 'raise' }, { part: 'armR', id: 'raise' }, { part: 'torso', id: 'twist-left' }];
-      case 'go': return [{ part: 'legL', id: 'step' }, { part: 'legR', id: 'step' }, { part: 'skirt', id: 'sway' }, { part: 'armL', id: 'swing-out' }, { part: 'armR', id: 'swing-out' }];
-      case 'wait': return [{ part: 'torso', id: 'sway' }, { part: 'hair', id: 'sway' }];
-      case 'buy': return [{ part: 'armR', id: 'hand-on-hip' }, { part: 'skirt', id: 'sway' }];
-      default: return [];
+    /* сначала — цельная бытовая сцена из библиотеки routine (зацикленная),
+       затем короткие вступительные клипы той же сцены и усиления по частям тела */
+    const out = [];
+    const scenes = anim.ROUTINES[intent] || [];
+    if (scenes.length) {
+      out.push({ part: 'routine', id: scenes[0], loop: true, weight: 1.02, tag: 'scene' });
+      scenes.slice(1, 4).forEach(function (id, i) {
+        out.push({ part: 'routine', id: id, loop: false, weight: 0.88, tag: 'scene' + i });
+      });
     }
+    const extra = {
+      sleep: [{ part: 'face', id: 'sleepy' }, { part: 'eyes', id: 'sleepy-eyes' }, { part: 'skin', id: 'sleep-skin' }],
+      eat: [{ part: 'armR', id: 'hold-cup' }, { part: 'head', id: 'nod' }, { part: 'lips', id: 'sip' }],
+      drink: [{ part: 'armR', id: 'hold-cup' }, { part: 'lips', id: 'sip' }],
+      work: [{ part: 'fingers', id: 'piano' }, { part: 'face', id: 'focus' }, { part: 'brows', id: 'think-brow' }],
+      help: [{ part: 'armL', id: 'reach' }, { part: 'armR', id: 'swing-out' }, { part: 'torso', id: 'lean-forward' }],
+      wash: [{ part: 'skin', id: 'after-bath' }, { part: 'lips', id: 'smile' }, { part: 'hair', id: 'ripple' }],
+      toilet: [{ part: 'feet', id: 'rest' }, { part: 'head', id: 'look-down' }],
+      exercise: [{ part: 'legL', id: 'squat' }, { part: 'legR', id: 'squat' }, { part: 'torso', id: 'stretch' }],
+      dress: [{ part: 'skirt', id: 'settle' }, { part: 'fingers', id: 'gentle' }, { part: 'torso', id: 'twist-left' }],
+      talk: [{ part: 'lips', id: 'talk' }, { part: 'brows', id: 'soft' }, { part: 'neck', id: 'nod' }],
+      go: [{ part: 'legL', id: 'step' }, { part: 'legR', id: 'step' }, { part: 'feet', id: 'step' }, { part: 'skirt', id: 'sway' }, { part: 'armL', id: 'swing-out' }, { part: 'armR', id: 'swing-out' }],
+      wait: [{ part: 'torso', id: 'sway' }, { part: 'hair', id: 'sway' }],
+      buy: [{ part: 'armR', id: 'hand-on-hip' }, { part: 'skirt', id: 'sway' }],
+    }[intent] || [];
+    extra.forEach(function (a) { out.push({ part: a.part, id: a.id, loop: true, weight: 0.7, tag: 'action' }); });
+    return out;
   }
 
   /* --- гардероб ------------------------------------------------------------- */
@@ -128,6 +144,7 @@
     const hour = state.hour;
     let target = null;
     if (intent === 'sleep') target = 'pajama';
+    else if (intent === 'wash' || intent === 'toilet') target = 'pajama';
     else if (intent === 'exercise') target = 'sport';
     else if (intent === 'work') target = 'blouse';
     else if (intent === 'buy' || intent === 'go') target = 'dress';
@@ -178,8 +195,11 @@
       playedAt: -1,
     };
     state.lastAuto = goal.auto ? intent : state.lastAuto;
+    if (intent !== 'dress' || !state.dressing) state.dressing = null;
     const anims = actionAnimations(intent);
-    anims.forEach(function (a) { play(state, a.part, a.id, { loop: true, weight: 0.95, tag: 'action' }); });
+    anims.forEach(function (a) {
+      play(state, a.part, a.id, { loop: !!a.loop, weight: a.weight || 0.95, tag: a.tag || 'action' });
+    });
     emit(state, { type: 'action', intent: intent, label: cfg.label });
     if (goal.auto) say(state, 'Решила сама: ' + cfg.label + ' — ' + (goal.reason || 'так будет лучше'), 'nika', 'ai');
     else if (goal.raw) say(state, 'Приняла команду: «' + goal.raw + '» → ' + cfg.label + '.', 'nika');
@@ -192,10 +212,12 @@
     emit(state, { type: 'clearAction', intent: a.intent });
     const done = { sleep: 'Выспалась, сил прибавилось!', eat: 'Вкусно, спасибо!', drink: 'Тепло и хорошо.',
       work: 'Смена закончена, деньги на счету.', help: 'Всё прибрала, чем ещё помочь?',
-      wash: 'Свежая и довольная.', exercise: 'Размялась, тело благодарит.',
-      dress: 'Готово, наряд обновлён.', wait: 'Немного отдохнула.', buy: 'Вернулась с покупкой.',
+      wash: 'Искупалась, кожа сияет, волосы распушились.', toilet: 'Вернулась, теперь комфортно.',
+      exercise: 'Размялась, тело благодарит.', talk: 'Было приятно поболтать.',
+      dress: 'Готово, наряд обновлён — платье село идеально.', wait: 'Немного отдохнула.', buy: 'Вернулась с покупкой.',
       go: 'Пришла.' };
     if (done[a.intent] && (a.auto || a.intent !== 'go')) say(state, done[a.intent], 'nika', a.auto ? 'ai' : '');
+    if (a.intent === 'dress') state.dressing = null;
     state.action = null;
     beginNext(state);
   }
@@ -242,7 +264,10 @@
       if (Math.floor(a.total - a.remaining) % 22 < dtMin) {
         /* периодически освежаем анимацию действия, чтобы движение не застывало */
         const anims = actionAnimations(a.intent);
-        if (anims.length) play(state, anims[0].part, anims[0].id, { loop: true, weight: 0.95, tag: 'action' });
+        if (anims.length) {
+          const first = anims[0];
+          play(state, first.part, first.id, { loop: !!first.loop, weight: first.weight || 0.95, tag: first.tag || 'action' });
+        }
       }
       if (a.remaining <= 0) finishAction(state);
     }
@@ -291,13 +316,14 @@
     const n = state.needs;
     return 'День ' + state.day + ', ' + clock(state) + '. Энергия ' + Math.round(n.energy) + '%, сытость ' +
       Math.round(n.hunger) + '%, настроение ' + Math.round(n.mood) + '%, гигиена ' + Math.round(n.hygiene) +
-      '%, форма ' + Math.round(n.fitness) + '%, денег ' + Math.round(n.money) + ' ₽. Сейчас я ' +
+      '%, форма ' + Math.round(n.fitness) + '%, комфорт ' + Math.round(n.bladder === undefined ? 100 : n.bladder) +
+      '%, денег ' + Math.round(n.money) + ' ₽. Сейчас я ' +
       (state.action ? state.action.label : 'ничего не делаю') + ', в «' + (data.findLocation(state.location) || { name: 'дом' }).name + '».';
   }
   function replyTalk(state) {
     const lines = [
-      'Знаешь, я правда чувствую время: утром тянет потянуться, вечером — притихнуть у окна.',
-      'Сегодня ' + (state.hour < 12 ? 'утро пахнет чаем' : state.hour < 18 ? 'день полон дел' : 'вечер тихий и тёплый') + '.',
+      'Знаешь, я правда чувствую время: утром тянет потянуться у большого окна, вечером — притихнуть на диване.',
+      'Сегодня ' + (state.hour < 12 ? 'утро пахнет чаем на кухне' : state.hour < 18 ? 'день полон дел за ноутбуком' : 'вечер тихий и тёплый, горит торшер') + '.',
       'Мне нравится, когда ты мной управляешь: каждое движение я собираю из десятков маленьких кадров.',
       'Я веду дневник: уже ' + state.commands + ' команд и ' + state.animationsPlayed + ' показанных движений.',
       'Если дашь мне свободу, я сама составлю расписание: еда, работа, сон, зарядка.',
@@ -318,18 +344,29 @@
       case 'dress': {
         const item = s.item || data.findItem('dress');
         const color = s.color;
+        const before = JSON.parse(JSON.stringify(state.outfit));
+        const oldColor = (before.dress || before.top || before.outer || {}).color || '#c9c1d6';
         wear(state, item, color);
-        play(state, 'skirt', 'settle', { replace: true });
-        play(state, 'torso', 'twist-right');
-        play(state, 'face', 'smile');
-        reply = 'Надела ' + item.name + (color ? ' в ' + color.name + ' цвете' : '') + '. Сама поправила подол — ' + outfitText(state) + '.';
+        const after = JSON.parse(JSON.stringify(state.outfit));
+        const newColor = (after.dress || after.top || after.outer || {}).color || item.color;
+        state.dressing = { from: before, to: after, oldColor: oldColor, newColor: newColor, item: item.name };
+        play(state, 'routine', 'dress-change', { loop: true, tag: 'scene', weight: 1 });
+        play(state, 'routine', 'dress-up', { tag: 'scene0' });
+        play(state, 'fingers', 'gentle', { replace: true });
+        reply = 'Переодеваюсь в ' + item.name + (color ? ' в ' + color.name + ' цвете' : '') +
+          ': ширма, руки вверх, ткань меняет цвет прямо на мне. Сейчас: ' + outfitText(state) + '.';
         enqueue(state, { intent: 'dress', raw: parsed.raw, payload: { type: 'dress', item: item, color: color } });
         break;
       }
       case 'undress': {
+        const before = JSON.parse(JSON.stringify(state.outfit));
         remove(state, s.item);
+        state.dressing = { from: before, to: JSON.parse(JSON.stringify(state.outfit)),
+          oldColor: (before.dress || before.top || before.outer || {}).color || '#c9c1d6',
+          newColor: '#c9c1d6', item: 'лёгкую домашнюю одежду' };
+        play(state, 'routine', 'dress-change', { loop: true, tag: 'scene', weight: 1 });
         play(state, 'armL', 'lower'); play(state, 'armR', 'lower');
-        reply = 'Сняла ' + (s.item ? s.item.name : 'лишнюю одежду') + '. Теперь на мне: ' + outfitText(state) + '.';
+        reply = 'Снимаю ' + (s.item ? s.item.name : 'лишнюю одежду') + ' за ширмой. Теперь на мне: ' + outfitText(state) + '.';
         enqueue(state, { intent: 'dress', raw: parsed.raw, payload: { type: 'undress', item: s.item } });
         break;
       }
@@ -355,9 +392,15 @@
           play(state, 'torso', 'stretch'); play(state, 'head', 'yawn');
         } else reply = 'Я и так не сплю.';
         break;
-      case 'eat': case 'drink': case 'work': case 'help': case 'wash': case 'exercise':
+      case 'eat': case 'drink': case 'work': case 'help': case 'wash': case 'exercise': case 'toilet':
         enqueue(state, { intent: intent, raw: parsed.raw, slots: s });
-        reply = 'Начинаю: ' + ACTIONS[intent].label + (s.minutes ? ' на ' + s.minutes + ' мин' : '') + '. Потребности, одежда и анимации подключаются сами.';
+        const sceneLabels = {
+          wash: 'Принимаю ванну: пена, пар, руки трут волосы, кожа потом сияет.',
+          toilet: 'Иду в санузел: шаги, дверь «занято», присела — всё деликатно, за матовой ширмой.',
+          work: 'Сажусь за ноутбук: пальцы печатают, брови в раздумье, на экране карточки задач.',
+          sleep: 'Режим сна: ложусь, одеяло дышит, Zzz плывут над подушкой.',
+        };
+        reply = sceneLabels[intent] || ('Начинаю: ' + ACTIONS[intent].label + (s.minutes ? ' на ' + s.minutes + ' мин' : '') + '. Потребности, одежда и анимации подключаются сами.');
         break;
       case 'wait':
         state.goals = [];
@@ -374,9 +417,9 @@
       }
       case 'animations': {
         const c = anim.counts();
-        reply = 'Всего ' + anim.total() + ' клипов: голова ' + c.head + ', мимика ' + c.face + ', глаза ' + c.eyes +
-          ', волосы ' + c.hair + ', корпус ' + c.torso + ', руки ' + c.armL + '+' + c.armR + ', кисти ' + c.handL + '+' + c.handR +
-          ', ноги ' + c.legL + '+' + c.legR + ', одежда ' + c.skirt + '. Открыла галерею — можно включить любую.';
+        reply = 'Всего ' + anim.total() + ' клипов на ' + anim.PARTS.length + ' частей тела: ' +
+          anim.PARTS.map(function (p) { return p.label + ' ' + c[p.id]; }).join(', ') +
+          '. Есть отдельные бытовые сцены: переодевание, купание, сон, работа, разговор, туалет. Открыла галерею.';
         emit(state, { type: 'tab', tab: 'animations' });
         break;
       }
@@ -401,11 +444,17 @@
         break;
       }
       case 'teach': {
-        const taught = ai.teach(parsed.raw);
-        if (taught) {
-          state.learned += 1;
-          reply = 'Запомнила: «' + taught.phrase + '» = ' + taught.label + '. Модель дообучилась прямо в браузере, без интернета.';
-        } else reply = 'Напиши так: «запомни: крутись как волчок = станцуй» — и я выучу эту фразу.';
+        if (parsed.raw.indexOf('\n') !== -1) {
+          const res = ai.learnFromText(parsed.raw);
+          state.learned += res.added;
+          reply = 'Разобрала текст: выучила ' + res.added + ' новых фраз и переобучила нейросеть прямо в браузере. Всего выучено: ' + ai.info().learned + '.';
+        } else {
+          const taught = ai.teach(parsed.raw);
+          if (taught) {
+            state.learned += 1;
+            reply = 'Запомнила: «' + taught.phrase + '» = ' + taught.label + '. Модель дообучилась локально, без интернета.';
+          } else reply = 'Напиши так: «запомни: крутись как волчок = станцуй» — или открой вкладку «Обучение» и вставь список фраз.';
+        }
         break;
       }
       case 'autonomy_on':
@@ -426,7 +475,9 @@
         break;
       case 'talk':
         reply = replyTalk(state);
-        play(state, 'face', 'smile'); play(state, 'head', 'bob');
+        play(state, 'routine', 'talk-hello', { tag: 'scene0' });
+        play(state, 'face', 'smile');
+        enqueue(state, { intent: 'talk', raw: parsed.raw });
         break;
       default:
         reply = 'Не совсем поняла, но попробую догадаться. Напиши «помощь» или «покажи анимации».';
@@ -480,8 +531,9 @@
     state.memory = Array.isArray(saved.memory) ? saved.memory.slice(-60) : [];
     state.needs = Object.assign(fresh.needs, saved.needs || {});
     state.outfit = Object.assign(fresh.outfit, saved.outfit || {});
-    state.action = null; state.goals = [];
+    state.action = null; state.goals = []; state.dressing = null;
     state.hour = Math.floor(state.minutes / 60);
+    if (!('bladder' in state.needs)) state.needs.bladder = fresh.needs.bladder;
     if (Array.isArray(saved.aiExamples)) ai.restore(saved.aiExamples);
     return state;
   }
@@ -491,6 +543,7 @@
     freshState: freshState, tick: tick, command: command, apply: apply,
     enqueue: enqueue, playClip: playClip, say: say, emit: emit,
     clock: clock, outfitText: outfitText, wear: wear, remove: remove,
-    gestureAnimation: gestureAnimation, serialize: serialize, deserialize: deserialize,
+    gestureAnimation: gestureAnimation, actionAnimations: actionAnimations,
+    serialize: serialize, deserialize: deserialize,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

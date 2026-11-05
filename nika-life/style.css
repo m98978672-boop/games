@@ -105,6 +105,10 @@ body { background: #0d1116; }
 .ai-info b { color: var(--accent-2); }
 .memory { display: flex; flex-direction: column; gap: 3px; max-height: 130px; overflow-y: auto; font-size: 9.5px; color: var(--ink-faint); }
 .memory div { border-left: 2px solid var(--line-strong); padding-left: 6px; }
+.learn-last { font-size: 10.5px; color: var(--accent-2); background: rgba(231,143,166,.10); border: 1px solid rgba(231,143,166,.28); border-radius: 8px; padding: 7px 9px; line-height: 1.45; }
+.learn-text { width: 100%; background: #0f151a; color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 8px; font: 11px/1.5 var(--font); resize: vertical; outline: none; }
+.learn-text:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(231,143,166,.16); }
+code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--accent-2); font-size: 10px; }
 
 /* ---------- модалка помощи ---------- */
 .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }

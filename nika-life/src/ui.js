@@ -8,13 +8,14 @@
   const $ = function (id) { return document.getElementById(id); };
 
   const QUICK = [
-    'Привет!', 'Надень красное платье', 'Помаши рукой', 'Покажи все анимации',
-    'Иди на кухню и поешь', 'Поработай', 'Помоги мне', 'Иди спать',
-    'Сделай зарядку', 'Как дела?', 'Живи сама', 'Сама выбери наряд',
+    'Привет!', 'Переоденься в синее платье', 'Помаши рукой', 'Покажи все анимации',
+    'Прими ванну', 'Иди спать', 'Поработай', 'Поговори со мной',
+    'Сходи в туалет', 'Помоги мне', 'Как дела?', 'Живи сама',
+    'Сама выбери наряд', 'Запомни: крутись волчком = станцуй',
   ];
   const NEED_LABELS = {
     energy: 'Энергия', hunger: 'Сытость', mood: 'Настроение',
-    hygiene: 'Гигиена', fitness: 'Форма', health: 'Здоровье', money: 'Деньги',
+    hygiene: 'Гигиена', fitness: 'Форма', health: 'Здоровье', bladder: 'Комфорт', money: 'Деньги',
   };
   const SLIDERS = [
     ['headTilt', 'Наклон головы', -30, 30, 1], ['headNod', 'Кивок головы', -25, 25, 1],
@@ -25,6 +26,11 @@
     ['hipR', 'Бедро прав.', -50, 70, 1], ['kneeR', 'Колено прав.', 0, 100, 1],
     ['skirtSway', 'Подол', -35, 35, 1], ['smile', 'Улыбка', -1, 1, 0.05],
     ['blink', 'Моргание', 0, 1, 0.05], ['hairSway', 'Волосы', -25, 25, 1],
+    ['hairGloss', 'Блеск волос', 0, 1, 0.05], ['lash', 'Ресницы', 0, 1, 0.05],
+    ['browArch', 'Изгиб бровей', -1, 1, 0.05], ['lipPout', 'Губки', 0, 1, 0.05],
+    ['freckle', 'Веснушки', 0, 1, 0.05], ['skinGlow', 'Сияние кожи', 0, 1, 0.05],
+    ['neckTilt', 'Наклон шеи', -15, 15, 1], ['fingerSpreadR', 'Пальцы правой', 0, 1, 0.05],
+    ['footPointR', 'Носочек правой', -1, 1, 0.05],
   ];
 
   function createUI(app) {
@@ -92,7 +98,7 @@
 
     /* ---------- вкладки ---------- */
     function setTab(tab) {
-      const map = { animations: 'tab-animations', wardrobe: 'tab-wardrobe', body: 'tab-body-tab', life: 'tab-life' };
+      const map = { animations: 'tab-animations', wardrobe: 'tab-wardrobe', body: 'tab-body-tab', life: 'tab-life', learn: 'tab-learn' };
       Object.keys(map).forEach(function (key) {
         const node = $(map[key]);
         if (node) node.classList.toggle('hidden', key !== tab);
@@ -257,6 +263,53 @@
       });
     }
 
+    /* ---------- обучение ИИ ---------- */
+    function initLearning() {
+      const sel = $('learn-intent');
+      ai.INTENTS.forEach(function (i) {
+        const o = document.createElement('option'); o.value = i.id; o.textContent = i.label; sel.append(o);
+      });
+      $('btn-feedback').addEventListener('click', function () {
+        const phrase = app.state.lastCommand;
+        if (!phrase) { toast('Сначала напиши Нике команду', 'bad'); return; }
+        app.feedback(phrase, sel.value);
+      });
+      $('btn-learn').addEventListener('click', function () {
+        const v = $('learn-text').value.trim();
+        if (!v) { toast('Вставь текст или список фраз', 'bad'); return; }
+        app.learnText(v);
+        $('learn-text').value = '';
+      });
+      $('btn-export').addEventListener('click', function () {
+        const text = app.exportKnowledge();
+        try {
+          const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+          const a = document.createElement('a');
+          a.href = url; a.download = 'nika-knowledge.json'; a.click();
+          setTimeout(function () { URL.revokeObjectURL(url); }, 2000);
+          toast('База знаний выгружена в файл', 'good');
+        } catch (e) { toast('Экспорт недоступен — скопируй текст из консоли'); console.log(text); }
+      });
+    }
+    function renderLearn() {
+      const info = ai.info();
+      $('learn-counter').textContent = 'Выучено: ' + info.learned + ' · база: ' + info.trainedOn +
+        ' фраз · намерений: ' + info.intents + ' · сеть: ' + info.network;
+      $('learn-last').textContent = app.state.lastCommand
+        ? '«' + app.state.lastCommand + '»' : 'Напиши Нике команду — и здесь можно будет исправить её значение.';
+      const list = $('learn-list'); list.replaceChildren();
+      ai.learnedExamples().slice(-8).reverse().forEach(function (ex) {
+        const d = document.createElement('div');
+        d.textContent = '«' + ex.text + '» → ' + (ai.INTENT_BY_ID[ex.label] ? ai.INTENT_BY_ID[ex.label].label : ex.label);
+        list.append(d);
+      });
+      if (!list.children.length) {
+        const d = document.createElement('div');
+        d.textContent = 'Пока нет новых фраз. Вставь текст выше или исправь последнюю команду.';
+        list.append(d);
+      }
+    }
+
     /* ---------- HUD / тосты / автосохранение ---------- */
     function refresh(force) {
       const now = performance.now();
@@ -280,6 +333,7 @@
       const mini = ai.info();
       $('ai-mini').textContent = '🧠 ' + mini.model + ' · фраз: ' + mini.trainedOn + ' · ' + mini.llm + ' · без облака, 0 ₽';
       renderLife();
+      renderLearn();
       renderWardrobe();
     }
     function toast(text, kind) {
@@ -304,13 +358,14 @@
       modalRoot.innerHTML =
         '<div class="modal-backdrop"><div class="modal wide">' +
         '<div class="modal-head"><h2>НИКА: ЖИВАЯ · как играть</h2><button class="icon-btn x" id="help-close">✕</button></div>' +
-        '<p>Ты пишешь команды на русском — девушка Ника их понимает, одевается, передвигается, ест, спит, работает, помогает, ухаживает за собой и управляет своим телом. Если включена автономия, она живёт сама: сама составляет расписание и сама выбирает наряд.</p>' +
+        '<p>Ты пишешь команды на русском — Ника живёт в своей минималистичной квартире-студии: прихожая, кухня, гостиная, рабочий стол, спальня, ванная и санузел. Она переодевается за ширмой, купается в пене, спит под одеялом, печатает за ноутбуком, разговаривает в пузыре и ходит в санузел. Если включена автономия, она живёт сама: составляет расписание и сама выбирает наряд.</p>' +
         '<div class="help-grid"><div>' +
         '<h3>Примеры команд</h3><div class="cmd-list">' +
         '<code>надень синее платье и помаши рукой</code><br>' +
         '<code>иди на кухню, поешь, потом поработай</code><br>' +
         '<code>иди спать</code> · <code>помоги мне с уборкой</code><br>' +
-        '<code>сделай зарядку</code> · <code>прими душ</code><br>' +
+        '<code>прими ванну</code> · <code>сходи в туалет</code><br>' +
+        '<code>поговори со мной</code> · <code>переоденься в синее платье</code><br>' +
         '<code>покажи все анимации</code> · <code>подними левую руку</code><br>' +
         '<code>станцуй</code> · <code>покажи анимацию «Зевнуть»</code><br>' +
         '<code>запомни: крутись волчком = станцуй</code><br>' +
@@ -321,8 +376,8 @@
         '</div></div><div>' +
         '<h3>Тело: ' + anim.total() + ' анимаций</h3><div class="cmd-list">' +
         anim.PARTS.map(function (p) { return p.label + ' — <b>' + c[p.id] + '</b>'; }).join('<br>') +
-        '</div><h3>Какой здесь ИИ</h3><p>Внутри — <b>обучаемая нейросетевая модель</b> (softmax-классификатор намерений + tf-idf), слотовый парсер русского языка и планировщик с функцией полезности. Модель обучается прямо в браузере при запуске и <b>дообучается</b> на команде «запомни». Веса сохраняются в localStorage. Если браузер даёт встроенную локальную LLM (Chrome Built-in AI), она подключается для свободных фраз — тоже бесплатно и без сети.</p>' +
-        '<p><b>Честно:</b> это не облачный ChatGPT/GPT и не генеративная модель. Облачных запросов, ключей API и платных сервисов нет вообще: игра работает офлайн и с <code>file://</code>.</p>' +
+        '</div><h3>Какой здесь ИИ</h3><p>Внутри — <b>обучаемая нейросетевая модель</b> (softmax-классификатор намерений + tf-idf), слотовый парсер русского языка и планировщик с функцией полезности. Модель обучается прямо в браузере при запуске и <b>дообучается</b> на твоих фразах: команда «запомни», исправление последней команды и вкладка «Обучение ИИ». Туда можно вставить список фраз, включая текст, который ты скопировал из интернета, — Ника разберёт его локально. Веса сохраняются в localStorage. Если браузер даёт встроенную локальную LLM (Chrome Built-in AI), она подключается для свободных фраз — тоже бесплатно и без сети.</p>' +
+        '<p><b>Честно:</b> это не облачный ChatGPT/GPT и не генеративная модель. Игра сама <b>не делает сетевых запросов</b>: текст из интернета вставляешь ты, обучение идёт в браузере. Нет ключей API, телеметрии и платных сервисов: всё работает офлайн и с <code>file://</code>.</p>' +
         '</div></div><div class="modal-actions"><button class="btn btn-primary" id="help-play">Понятно, играть</button></div>' +
         '</div></div>';
       modalRoot.classList.add('open');
@@ -364,6 +419,7 @@
       else if (['1', '2', '4'].indexOf(e.key) !== -1) app.setSpeed(parseInt(e.key, 10));
     });
 
+    initLearning();
     rebuildChat();
     refresh(true);
 

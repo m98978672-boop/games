@@ -66,9 +66,15 @@
       'помоги мне', 'помоги с уборкой', 'помоги убраться', 'помоги готовить', 'приберись', 'вымой посуду',
       'подсоби мне', 'помоги с делами', 'нужна твоя помощь', 'помоги дома', 'сделай одолжение', 'вымой пол',
     ] },
-    { id: 'wash', label: 'Гигиена', examples: [
+    { id: 'wash', label: 'Купание / гигиена', examples: [
       'прими душ', 'умойся', 'помой руки', 'почисти зубы', 'искупайся', 'сходи в душ', 'приведи себя в порядок',
-      'иди мыться', 'помойся', 'протри лицо',
+      'иди мыться', 'помойся', 'протри лицо', 'прими ванну', 'искупайся в ванне', 'покупайся',
+      'полежи в ванне', 'сходи помыться', 'набери пену', 'вымойся',
+    ] },
+    { id: 'toilet', label: 'Сходить в туалет', examples: [
+      'сходи в туалет', 'иди в туалет', 'мне нужно в туалет', 'сходи в санузел', 'нужно в уборную',
+      'пошла в туалет', 'сходи по нужде', 'туалет', 'посети санузел', 'иди в уборную',
+      'сходи в туалетную комнату', 'ей нужно в туалет',
     ] },
     { id: 'exercise', label: 'Спорт / зарядка', examples: [
       'сделай зарядку', 'потренируйся', 'побегай', 'займись спортом', 'сделай приседания', 'разомнись',
@@ -438,9 +444,12 @@
     if (llmHint && llmHint.intent) { intent = llmHint.intent; source = 'встроенная LLM браузера'; }
     const slots = extractSlots(text);
     /* эвристические уточнения: жесты и одежда всегда имеют приоритет */
-    const teaching = /запомн|научись|выучи|это значит|добавь правило|переобучись/.test(normalize(text));
+    const normText = normalize(text);
+    const teaching = /запомн|научись|выучи|это значит|добавь правило|переобучись/.test(normText);
     if (!llmHint && !teaching) {
-      if (slots.item && /наден|оден|переоден|обу|накин|смени/.test(normalize(text))) intent = 'dress';
+      if (/туалет|санузел|уборн|по нужде|унитаз/.test(normText)) intent = 'toilet';
+      if (/прими ванну|искуп|купай|покупайся|пене|полотенц|вымойся|душ/.test(normText)) intent = 'wash';
+      if (slots.item && /наден|оден|переоден|обу|накин|смени/.test(normText)) intent = 'dress';
       if (/сними|разуй|снять/.test(normalize(text)) && slots.item) intent = 'undress';
       if (slots.gesture && ranking[0].id !== 'sleep' && ranking[0].id !== 'work') {
         if (/помаш|кивн|подмигн|улыбн|прыгн|поклон|станцуй|покрутись|зевн|оглян|потянись|подними рук|сядь|присяд|кулак|хлопни|щелкни|носочк/.test(normalize(text))) intent = 'animate';
@@ -501,17 +510,69 @@
     addExample(phrase, target);
     return { phrase: phrase, intent: target, label: INTENT_BY_ID[target].label };
   }
+  /* --- ОБУЧЕНИЕ ПО ФРАЗАМ ИГРОКА И ПО ТЕКСТУ (в т.ч. вставленному из интернета) ---
+     Ника не делает скрытых сетевых запросов: игрок сам вставляет текст/ссылки
+     в поле обучения, а модель дообучается локально, в браузере.               */
+  function learnExample(phrase, intentId) {
+    phrase = String(phrase || '').trim();
+    if (!phrase || !INTENT_BY_ID[intentId]) return false;
+    extraExamples.push({ text: phrase, label: intentId, source: 'feedback' });
+    train(extraExamples.slice(-16), 32, 0.42);
+    buildKeywordModel(baseExamples.concat(extraExamples));
+    return true;
+  }
+  function learnFromText(text) {
+    const lines = String(text || '').split(/\r?\n/);
+    let added = 0, skipped = 0;
+    const learned = [];
+    lines.forEach(function (raw) {
+      const line = raw.trim();
+      if (!line || line.length > 240) { skipped++; return; }
+      let phrase = line, tail = '';
+      const m = line.split(/\s*(?:=|->|→|:)\s*/);
+      if (m.length >= 2) { phrase = m[0].trim(); tail = normalize(m.slice(1).join(' ')); }
+      let target = INTENT_BY_ID[tail] ? tail : null;
+      if (!target && tail) {
+        const syn = { одеться:'dress', надень:'dress', переоденься:'dress', спать:'sleep', поесть:'eat',
+          работать:'work', помочь:'help', купаться:'wash', искупаться:'wash', ванна:'wash',
+          туалет:'toilet', санузел:'toilet', говорить:'talk', разговор:'talk', анимация:'animate',
+          двигайся:'go', иди:'go', статус:'status', жди:'wait', отдых:'wait' };
+        Object.keys(syn).forEach(function (k) { if (tail.indexOf(k) !== -1) target = syn[k]; });
+      }
+      if (!target) {
+        /* строка без разметки: модель сама размечает её и учится на своей гипотезе */
+        const guess = predict(phrase)[0];
+        target = guess.id;
+      }
+      if (!phrase || !INTENT_BY_ID[target]) { skipped++; return; }
+      extraExamples.push({ text: phrase, label: target, source: 'text' });
+      learned.push({ phrase: phrase, intent: target });
+      added++;
+    });
+    if (added) {
+      train(extraExamples.slice(-Math.min(120, added * 2)), 26, 0.36);
+      buildKeywordModel(baseExamples.concat(extraExamples));
+    }
+    return { added: added, skipped: skipped, learned: learned, total: extraExamples.length };
+  }
+  function feedback(text, correctIntent) {
+    /* исправление последней команды: «нет, я имел в виду ...» */
+    return learnExample(text, correctIntent);
+  }
+  function learnedExamples() { return extraExamples.slice(); }
   function restore(saved) {
     if (!Array.isArray(saved)) return;
-    saved.slice(-40).forEach(function (ex) {
-      if (ex && typeof ex.text === 'string' && INTENT_BY_ID[ex.label]) extraExamples.push({ text: ex.text, label: ex.label });
+    saved.slice(-200).forEach(function (ex) {
+      if (ex && typeof ex.text === 'string' && INTENT_BY_ID[ex.label]) {
+        extraExamples.push({ text: ex.text, label: ex.label, source: ex.source || 'saved' });
+      }
     });
     if (extraExamples.length) {
-      train(extraExamples, 20, 0.3);
+      train(extraExamples.slice(-120), 18, 0.3);
       buildKeywordModel(baseExamples.concat(extraExamples));
     }
   }
-  function serialize() { return extraExamples.slice(-40); }
+  function serialize() { return extraExamples.slice(-200); }
 
   /* --- планировщик автономной жизни (utility AI) --------------------------- */
   function decide(state) {
@@ -523,9 +584,11 @@
       { intent: 'sleep',  score: (100 - n.energy) * 1.15 + (night ? 52 : -35) + (n.energy > 82 ? -60 : 0) },
       { intent: 'eat',    score: (100 - n.hunger) * 1.1 + (hour > 11 && hour < 15 ? 12 : 0) },
       { intent: 'wash',   score: (100 - n.hygiene) * 0.72 + (hour > 7 && hour < 10 ? 10 : 0) },
+      { intent: 'toilet', score: (100 - (n.bladder === undefined ? 100 : n.bladder)) * 1.25 + 4 },
       { intent: 'work',   score: (120 - n.money) * 0.38 + (!night && hour >= 9 && hour <= 19 ? 34 : -60) - (n.energy < 35 ? 55 : 0) },
       { intent: 'help',   score: (100 - n.mood) * 0.35 + 8 },
       { intent: 'exercise', score: (100 - n.fitness) * 0.4 + (hour >= 7 && hour <= 10 ? 12 : -10) },
+      { intent: 'talk',   score: 6 + (n.mood > 75 ? 6 : 0) },
       { intent: 'animate', score: 9 + (n.mood > 70 ? 7 : 0) },
       { intent: 'wait',   score: 12 },
     ];
@@ -543,8 +606,10 @@
     const reasons = {
       sleep: 'энергия всего ' + Math.round(n.energy) + '%, пора спать',
       eat: 'голод ' + Math.round(100 - n.hunger) + '%, надо поесть',
-      wash: 'хочется освежиться и привести себя в порядок',
+      wash: 'хочется принять ванну и привести себя в порядок',
+      toilet: 'пора сходить в санузел, так комфортнее',
       work: 'нужно заработать денег, сейчас рабочее время',
+      talk: 'хочется немного поболтать',
       help: 'настроение не очень — помогу по дому, станет легче',
       exercise: 'тело просит движения, сделаю зарядку',
       animate: 'разомнусь и покажу новое движение',
@@ -564,15 +629,19 @@
     findItem: findItem, findColor: findColor, findLocation: findLocation,
     findPart: findPart, findClip: findClip, findMinutes: findMinutes, resolveGesture: resolveGesture,
     decide: decide, teach: teach, addExample: addExample, restore: restore, serialize: serialize,
+    learnExample: learnExample, learnFromText: learnFromText, feedback: feedback,
+    learnedExamples: learnedExamples, baseExamples: baseExamples,
     llmAvailable: llmAvailable, llmParse: llmParse,
     info: function () {
       return {
-        model: 'softmax-классификатор + tf-idf (обучается локально)',
+        model: 'обучаемая нейросеть (softmax) + tf-idf, дообучение на фразах игрока',
         trainedOn: baseExamples.length + extraExamples.length,
+        learned: extraExamples.length,
         parameters: LABELS.length,
         intents: LABELS.length,
         llm: llmAvailable() ? 'встроенная локальная модель браузера доступна' : 'встроенная LLM не найдена — работает локальная модель',
         cloud: 'нет', cost: '0 ₽', network: 'не используется',
+        internet: 'обучение на вставленном тексте, без скрытых запросов',
       };
     },
   };

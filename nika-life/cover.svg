@@ -29,16 +29,16 @@
     <text x="92" y="310" fill="#ffd0dc" font-size="112" font-weight="800" letter-spacing="6">НИКА:</text>
     <text x="92" y="420" fill="#f2ecdf" font-size="112" font-weight="800" letter-spacing="6">ЖИВАЯ</text>
     <text x="96" y="488" fill="#a9a294" font-size="25">Девушка, которой управляет локальный ИИ</text>
-    <text x="96" y="532" fill="#a9a294" font-size="25">одевается · двигается · работает · спит · помогает</text>
+    <text x="96" y="532" fill="#a9a294" font-size="25">квартира-студия · ванна · сон · работа · разговор · санузел</text>
     <g transform="translate(96,584)">
       <rect width="228" height="52" rx="26" fill="url(#gold)"/>
-      <text x="114" y="34" text-anchor="middle" fill="#2a1420" font-size="21" font-weight="800">132 АНИМАЦИИ</text>
+      <text x="114" y="34" text-anchor="middle" fill="#2a1420" font-size="21" font-weight="800">223 АНИМАЦИИ</text>
       <rect x="244" width="216" height="52" rx="26" fill="rgba(231,143,166,.14)" stroke="#e78fa6" stroke-opacity=".6"/>
-      <text x="352" y="34" text-anchor="middle" fill="#ffd0dc" font-size="21" font-weight="700">12 ЧАСТЕЙ ТЕЛА</text>
+      <text x="352" y="34" text-anchor="middle" fill="#ffd0dc" font-size="21" font-weight="700">20 ЧАСТЕЙ ТЕЛА</text>
       <rect x="476" width="220" height="52" rx="26" fill="rgba(155,140,240,.14)" stroke="#9b8cf0" stroke-opacity=".6"/>
       <text x="586" y="34" text-anchor="middle" fill="#c9c0ff" font-size="21" font-weight="700">ИИ БЕЗ ОБЛАКА</text>
     </g>
-    <text x="96" y="706" fill="#6f6a5f" font-size="19">min 10 анимаций на руку · ногу · голову · лицо · глаза · волосы · корпус · кисти · одежду</text>
+    <text x="96" y="706" fill="#6f6a5f" font-size="19">min 10 клипов на каждую часть · брови · губы · уши · шея · пальцы · стопы · кожа · волосы · бытовые сцены</text>
   </g>
   <!-- девушка: векторный набросок -->
   <g transform="translate(1065,405)">
