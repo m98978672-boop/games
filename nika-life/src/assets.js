@@ -43,13 +43,23 @@
   function hsl(h, s, l, a) {
     return 'hsla(' + Math.round(h) + ',' + Math.round(s) + '%,' + Math.round(l) + '%,' + (a === undefined ? 1 : a) + ')';
   }
+  /* Гармоничная палитра: у каждой группы свой узкий диапазон оттенков.
+     Раньше случайный hue давал неоновые пятна на коже и волосах.
+     Теперь все 400 вариантов остаются разными, но сочетаются между собой. */
+  const HUES = [28, 16, 82, 348, 346, 350, 208, 272, 214, 32,
+                28, 18, 28, 28, 28, 28, 28, 205, 214, 16];
+  const SATS = [30, 40, 34, 46, 48, 24, 24, 26, 32, 20,
+                30, 40, 30, 30, 30, 30, 30, 24, 32, 40];
+  const LIGHTS = [74, 34, 50, 58, 72, 80, 72, 68, 48, 70,
+                  70, 36, 70, 70, 70, 70, 70, 68, 48, 36];
   function recipe(groupIndex, i) {
     const seed = groupIndex * 97 + i * 13 + 7;
+    const hue = (HUES[groupIndex] + ((i * 7) % 19) - 9 + 360) % 360;
     return {
-      hue: (seed * 37) % 360,
-      hue2: (seed * 37 + 34 + (i % 5) * 11) % 360,
-      sat: 20 + (seed * 7) % 48,
-      light: 40 + (seed * 11) % 36,
+      hue: hue,
+      hue2: (hue + 8 + (i % 5) * 4) % 360,
+      sat: SATS[groupIndex] + ((i * 3) % 12) - 6,
+      light: LIGHTS[groupIndex] + ((i * 5) % 14) - 7,
       contrast: 0.18 + ((seed * 3) % 58) / 100,
       pattern: PATTERNS[i % PATTERNS.length],
       density: 2 + (i % 6),
