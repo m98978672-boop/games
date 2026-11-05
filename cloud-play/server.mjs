@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -10,8 +10,16 @@ export const STEAM_IDENTIFIER_SELECT = 'http://specs.openid.net/auth/2.0/identif
 const STEAM_API_GAMES = 'https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/';
 const STATE_COOKIE = 'pb_openid_state';
 const SESSION_COOKIE = 'pb_session';
+const DROPBOX_STATE_COOKIE = 'pb_dropbox_state';
+const DROPBOX_TOKEN_COOKIE = 'pb_dropbox';
+const DROPBOX_AUTHORIZE_ENDPOINT = 'https://www.dropbox.com/oauth2/authorize';
+const DROPBOX_TOKEN_ENDPOINT = 'https://api.dropboxapi.com/oauth2/token';
+const DROPBOX_UPLOAD_ENDPOINT = 'https://content.dropboxapi.com/2/files/upload';
+const DROPBOX_DOWNLOAD_ENDPOINT = 'https://content.dropboxapi.com/2/files/download';
 const SESSION_TTL_SECONDS = 12 * 60 * 60;
 const STATE_TTL_SECONDS = 10 * 60;
+const DROPBOX_TOKEN_TTL_SECONDS = 180 * 24 * 60 * 60;
+const MAX_DROPBOX_BODY_BYTES = 4 * 1024 * 1024;
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const STATIC_FILES = new Map([
   ['', ['index.html', 'text/html; charset=utf-8']],
@@ -47,6 +55,11 @@ function configFrom(env = process.env) {
   const secureOrigin = publicOrigin.startsWith('https://');
   const loginReady = sessionSecret.length >= 32 && Boolean(publicOrigin) && (!production || secureOrigin);
   const steamApiKey = typeof env.STEAM_WEB_API_KEY === 'string' ? env.STEAM_WEB_API_KEY.trim() : '';
+  const dropboxAppKey = typeof env.DROPBOX_APP_KEY === 'string' ? env.DROPBOX_APP_KEY.trim() : '';
+  const dropboxAppSecret = typeof env.DROPBOX_APP_SECRET === 'string' ? env.DROPBOX_APP_SECRET.trim() : '';
+  const dropboxTokenSecret = typeof env.DROPBOX_TOKEN_SECRET === 'string' ? env.DROPBOX_TOKEN_SECRET : '';
+  const dropboxReady = Boolean(loginReady && dropboxAppKey && dropboxAppSecret && dropboxTokenSecret.length >= 32
+    && publicOrigin && (!production || secureOrigin));
   return {
     port: Number.isFinite(port) && port > 0 && port <= 65535 ? port : 4174,
     publicOrigin,
@@ -55,6 +68,10 @@ function configFrom(env = process.env) {
     loginReady,
     libraryReady: steamApiKey.length > 0,
     steamApiKey,
+    dropboxAppKey,
+    dropboxAppSecret,
+    dropboxTokenSecret,
+    dropboxReady,
   };
 }
 
@@ -84,6 +101,47 @@ export function verifySignedToken(token, secret, purpose, now = Date.now()) {
   try {
     const value = JSON.parse(Buffer.from(parts[0], 'base64url').toString('utf8'));
     if (!value || typeof value !== 'object' || !Number.isFinite(value.exp) || value.exp <= Math.floor(now / 1000)) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}
+
+export function encryptDropboxRefreshToken(value, secret) {
+  if (!secret || secret.length < 32) throw new Error('A Dropbox token-encryption secret of at least 32 characters is required.');
+  if (!value || !/^\d{17}$/.test(value.steamId || '') || typeof value.refreshToken !== 'string'
+    || value.refreshToken.length < 16 || value.refreshToken.length > 2048) {
+    throw new Error('A valid SteamID and Dropbox refresh token are required.');
+  }
+  const iv = randomBytes(12);
+  const key = createHash('sha256').update(secret).digest();
+  const cipher = createCipheriv('aes-256-gcm', key, iv);
+  cipher.setAAD(Buffer.from('playbridge-dropbox-token-v1'));
+  const plaintext = Buffer.from(JSON.stringify({
+    steamId: value.steamId,
+    refreshToken: value.refreshToken,
+    exp: Number.isFinite(value.exp) ? value.exp : Date.now() + DROPBOX_TOKEN_TTL_SECONDS * 1000,
+  }));
+  const encrypted = Buffer.concat([cipher.update(plaintext), cipher.final()]);
+  return [iv, cipher.getAuthTag(), encrypted].map((part) => part.toString('base64url')).join('.');
+}
+
+export function decryptDropboxRefreshToken(encoded, secret, now = Date.now()) {
+  if (!encoded || !secret || secret.length < 32) return null;
+  const parts = String(encoded).split('.');
+  if (parts.length !== 3) return null;
+  try {
+    const [iv, tag, encrypted] = parts.map((part) => Buffer.from(part, 'base64url'));
+    if (iv.length !== 12 || tag.length !== 16 || encrypted.length < 1) return null;
+    const key = createHash('sha256').update(secret).digest();
+    const decipher = createDecipheriv('aes-256-gcm', key, iv);
+    decipher.setAAD(Buffer.from('playbridge-dropbox-token-v1'));
+    decipher.setAuthTag(tag);
+    const plaintext = Buffer.concat([decipher.update(encrypted), decipher.final()]).toString('utf8');
+    const value = JSON.parse(plaintext);
+    if (!value || !/^\d{17}$/.test(value.steamId || '')
+      || typeof value.refreshToken !== 'string' || value.refreshToken.length < 16
+      || !Number.isFinite(value.exp) || value.exp <= now) return null;
     return value;
   } catch {
     return null;
@@ -202,7 +260,7 @@ function securityHeaders(response) {
   response.setHeader('x-frame-options', 'DENY');
   response.setHeader('referrer-policy', 'no-referrer');
   response.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  response.setHeader('content-security-policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+  response.setHeader('content-security-policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
 }
 
 function sessionFor(request, config) {
@@ -211,6 +269,36 @@ function sessionFor(request, config) {
   const value = verifySignedToken(token, config.sessionSecret, 'session');
   if (!value || !/^\d{17}$/.test(value.steamId || '')) return null;
   return { steamId: value.steamId, exp: value.exp };
+}
+
+function dropboxSessionFor(request, session, config) {
+  if (!config.dropboxReady || !session) return null;
+  const encrypted = readCookies(request).get(DROPBOX_TOKEN_COOKIE);
+  const token = decryptDropboxRefreshToken(encrypted, config.dropboxTokenSecret);
+  return token && token.steamId === session.steamId ? token : null;
+}
+
+async function readJsonBody(request, maxBytes = MAX_DROPBOX_BODY_BYTES) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    size += buffer.length;
+    if (size > maxBytes) {
+      const error = new Error('request_too_large');
+      error.statusCode = 413;
+      throw error;
+    }
+    chunks.push(buffer);
+  }
+  if (size === 0) return null;
+  try {
+    return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+  } catch {
+    const error = new Error('invalid_json');
+    error.statusCode = 400;
+    throw error;
+  }
 }
 
 function createSteamLoginUrl(returnTo) {
@@ -273,6 +361,197 @@ async function serveGames(request, response, config, fetchImpl) {
   }
 }
 
+function secureRequestOrigin(request, config) {
+  return !config.publicOrigin || request.headers.origin === config.publicOrigin;
+}
+
+function safeDropboxReturnPath(raw) {
+  if (typeof raw !== 'string') return '/cloud-play/';
+  try {
+    const url = new URL(raw, 'https://playbridge.invalid');
+    if (url.origin !== 'https://playbridge.invalid' || !url.pathname.startsWith('/cloud-play/')) return '/cloud-play/';
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return '/cloud-play/';
+  }
+}
+
+function addDropboxResult(pathname, key, value) {
+  const safePath = safeDropboxReturnPath(pathname);
+  const url = new URL(safePath, 'https://playbridge.invalid');
+  url.searchParams.set(key, value);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+function normalizeSnapshotGames(games) {
+  if (!Array.isArray(games) || games.length > 10_000) return null;
+  const normalized = [];
+  const seenIds = new Set();
+  for (const item of games) {
+    const appId = Number(item?.appId);
+    const name = typeof item?.name === 'string' ? item.name.trim() : '';
+    const playtimeMinutes = Number(item?.playtimeMinutes ?? 0);
+    if (!Number.isSafeInteger(appId) || appId <= 0 || !name || !Number.isFinite(playtimeMinutes) || playtimeMinutes < 0) return null;
+    if (seenIds.has(appId)) continue;
+    seenIds.add(appId);
+    normalized.push({
+      appId,
+      name: name.slice(0, 200),
+      playtimeMinutes: Math.min(1_000_000_000, Math.floor(playtimeMinutes)),
+      iconHash: typeof item?.iconHash === 'string' && /^[a-f0-9]{40}$/i.test(item.iconHash) ? item.iconHash : null,
+    });
+  }
+  return normalized;
+}
+
+function createDropboxSnapshot(input, steamId) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const games = normalizeSnapshotGames(input.games);
+  if (!games) return null;
+  const totalCount = Number(input.totalCount);
+  return {
+    schemaVersion: 1,
+    provider: 'playbridge-steam-library',
+    steamId,
+    updatedAt: new Date().toISOString(),
+    totalCount: Number.isSafeInteger(totalCount) && totalCount >= games.length ? Math.min(totalCount, 100_000) : games.length,
+    games,
+  };
+}
+
+function validateDropboxSnapshot(input, steamId) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+    || input.schemaVersion !== 1 || input.provider !== 'playbridge-steam-library' || input.steamId !== steamId
+    || typeof input.updatedAt !== 'string' || !Number.isFinite(Date.parse(input.updatedAt))) return null;
+  const games = normalizeSnapshotGames(input.games);
+  if (!games) return null;
+  const totalCount = Number(input.totalCount);
+  return {
+    schemaVersion: 1,
+    provider: 'playbridge-steam-library',
+    steamId,
+    updatedAt: input.updatedAt,
+    totalCount: Number.isSafeInteger(totalCount) && totalCount >= games.length ? Math.min(totalCount, 100_000) : games.length,
+    games,
+  };
+}
+
+async function getDropboxAccessToken(refreshToken, config, fetchImpl) {
+  const form = new URLSearchParams({ grant_type: 'refresh_token', refresh_token: refreshToken });
+  const basicAuth = Buffer.from(`${config.dropboxAppKey}:${config.dropboxAppSecret}`).toString('base64');
+  const response = await fetchImpl(DROPBOX_TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { authorization: `Basic ${basicAuth}`, 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: form.toString(),
+    signal: AbortSignal.timeout(10_000),
+    redirect: 'error',
+  });
+  if (!response.ok) {
+    const error = new Error('dropbox_refresh_failed');
+    error.upstreamStatus = response.status;
+    throw error;
+  }
+  const payload = await response.json();
+  if (typeof payload?.access_token !== 'string' || payload.access_token.length < 16) throw new Error('dropbox_refresh_failed');
+  return payload.access_token;
+}
+
+async function authorizeDropboxCode(code, redirectUri, config, fetchImpl) {
+  const form = new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: redirectUri });
+  const basicAuth = Buffer.from(`${config.dropboxAppKey}:${config.dropboxAppSecret}`).toString('base64');
+  const response = await fetchImpl(DROPBOX_TOKEN_ENDPOINT, {
+    method: 'POST',
+    headers: { authorization: `Basic ${basicAuth}`, 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: form.toString(),
+    signal: AbortSignal.timeout(10_000),
+    redirect: 'error',
+  });
+  if (!response.ok) throw new Error('dropbox_authorization_failed');
+  const payload = await response.json();
+  if (typeof payload?.refresh_token !== 'string' || payload.refresh_token.length < 16) throw new Error('dropbox_offline_access_missing');
+  return payload.refresh_token;
+}
+
+function dropboxSnapshotPath(steamId) {
+  return `/library-${steamId}.json`;
+}
+
+async function uploadDropboxSnapshot(snapshot, accessToken, fetchImpl) {
+  const response = await fetchImpl(DROPBOX_UPLOAD_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      'content-type': 'application/octet-stream',
+      'dropbox-api-arg': JSON.stringify({ path: dropboxSnapshotPath(snapshot.steamId), mode: 'overwrite', autorename: false, mute: true }),
+    },
+    body: JSON.stringify(snapshot),
+    signal: AbortSignal.timeout(15_000),
+    redirect: 'error',
+  });
+  if (!response.ok) throw new Error('dropbox_upload_failed');
+  return response.json();
+}
+
+async function readDropboxJsonResponse(response) {
+  const contentLength = Number(response.headers?.get?.('content-length'));
+  if (Number.isFinite(contentLength) && contentLength > MAX_DROPBOX_BODY_BYTES) {
+    const error = new Error('dropbox_snapshot_too_large');
+    error.upstreamStatus = 413;
+    throw error;
+  }
+
+  if (!response.body?.getReader) {
+    if (typeof response.text !== 'function') return response.json();
+    const text = await response.text();
+    if (Buffer.byteLength(text) > MAX_DROPBOX_BODY_BYTES) {
+      const error = new Error('dropbox_snapshot_too_large');
+      error.upstreamStatus = 413;
+      throw error;
+    }
+    return JSON.parse(text);
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let size = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = Buffer.from(value);
+      size += chunk.length;
+      if (size > MAX_DROPBOX_BODY_BYTES) {
+        await reader.cancel();
+        const error = new Error('dropbox_snapshot_too_large');
+        error.upstreamStatus = 413;
+        throw error;
+      }
+      chunks.push(chunk);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return JSON.parse(Buffer.concat(chunks).toString('utf8'));
+}
+
+async function downloadDropboxSnapshot(accessToken, steamId, fetchImpl) {
+  const response = await fetchImpl(DROPBOX_DOWNLOAD_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      authorization: `Bearer ${accessToken}`,
+      'dropbox-api-arg': JSON.stringify({ path: dropboxSnapshotPath(steamId) }),
+    },
+    signal: AbortSignal.timeout(15_000),
+    redirect: 'error',
+  });
+  if (!response.ok) {
+    const error = new Error('dropbox_download_failed');
+    error.upstreamStatus = response.status;
+    throw error;
+  }
+  return readDropboxJsonResponse(response);
+}
+
 function serveStatic(response, pathname, method) {
   const prefix = '/cloud-play/';
   if (pathname === '/' || pathname === '/cloud-play') return sendRedirect(response, prefix, 302);
@@ -323,6 +602,12 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
           provider: null,
           reason: 'No self-hosted host agent or licensed GPU streaming provider is configured.',
         },
+        cloudStorage: {
+          provider: 'dropbox',
+          enabled: config.dropboxReady,
+          content: 'Steam library metadata snapshot only; no game files or save files.',
+          reason: config.dropboxReady ? null : 'Dropbox OAuth is not configured on the server.',
+        },
       });
     }
 
@@ -335,14 +620,176 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
 
     if (pathname === '/api/games' && request.method === 'GET') return serveGames(request, response, config, fetchImpl);
 
+    if (pathname === '/api/dropbox/status' && request.method === 'GET') {
+      const session = sessionFor(request, config);
+      return sendJson(response, 200, {
+        enabled: config.dropboxReady,
+        connected: Boolean(dropboxSessionFor(request, session, config)),
+        provider: 'dropbox',
+        destination: 'Dropbox App Folder/library-<SteamID>.json',
+      });
+    }
+
+    if (pathname === '/api/dropbox/disconnect') {
+      if (request.method !== 'POST') return sendError(response, 405, 'method_not_allowed', 'Используй POST.');
+      if (!secureRequestOrigin(request, config)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом сервиса.');
+      return sendJson(response, 200, { ok: true, connected: false }, {
+        'set-cookie': [
+          clearCookieHeader(DROPBOX_TOKEN_COOKIE, config.secureCookie),
+          clearCookieHeader(DROPBOX_STATE_COOKIE, config.secureCookie),
+        ],
+      });
+    }
+
+    if (pathname === '/api/dropbox/snapshot' && request.method === 'POST') {
+      if (!secureRequestOrigin(request, config)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом сервиса.');
+      if (!config.dropboxReady) return sendError(response, 503, 'dropbox_not_configured', 'Настрой Dropbox OAuth на сервере.');
+      const session = sessionFor(request, config);
+      if (!session) return sendError(response, 401, 'steam_login_required', 'Войди через Steam перед резервным копированием библиотеки.');
+      const dropboxToken = dropboxSessionFor(request, session, config);
+      if (!dropboxToken) return sendError(response, 409, 'dropbox_not_linked', 'Сначала подключи Dropbox к этому Steam-аккаунту.');
+      if (!/^application\/json(?:;|$)/i.test(request.headers['content-type'] || '')) {
+        return sendError(response, 415, 'json_required', 'Ожидается JSON-снимок библиотеки.');
+      }
+
+      let input;
+      try {
+        input = await readJsonBody(request);
+      } catch (error) {
+        const status = error.statusCode || 400;
+        return sendError(response, status, status === 413 ? 'snapshot_too_large' : 'invalid_json', status === 413 ? 'Снимок слишком велик.' : 'Не удалось прочитать JSON-снимок.');
+      }
+      const snapshot = createDropboxSnapshot(input, session.steamId);
+      if (!snapshot) return sendError(response, 400, 'invalid_snapshot', 'Снимок должен содержать корректный список игр Steam.');
+
+      let accessToken;
+      try {
+        accessToken = await getDropboxAccessToken(dropboxToken.refreshToken, config, fetchImpl);
+      } catch (error) {
+        if (error.upstreamStatus === 400 || error.upstreamStatus === 401) {
+          return sendError(response, 401, 'dropbox_reconnect_required', 'Dropbox-токен отозван или истёк. Подключи Dropbox заново.', {
+            'set-cookie': clearCookieHeader(DROPBOX_TOKEN_COOKIE, config.secureCookie),
+          });
+        }
+        return sendError(response, 502, 'dropbox_unavailable', 'Не удалось получить доступ к Dropbox. Попробуй позже.');
+      }
+
+      try {
+        await uploadDropboxSnapshot(snapshot, accessToken, fetchImpl);
+        return sendJson(response, 200, {
+          ok: true,
+          updatedAt: snapshot.updatedAt,
+          gameCount: snapshot.games.length,
+          totalCount: snapshot.totalCount,
+          destination: `Dropbox App Folder${dropboxSnapshotPath(session.steamId)}`,
+        });
+      } catch {
+        return sendError(response, 502, 'dropbox_upload_failed', 'Dropbox не принял снимок. Проверь разрешения Dropbox App и попробуй позже.');
+      }
+    }
+
+    if (pathname === '/api/dropbox/snapshot' && request.method === 'GET') {
+      if (!config.dropboxReady) return sendError(response, 503, 'dropbox_not_configured', 'Настрой Dropbox OAuth на сервере.');
+      const session = sessionFor(request, config);
+      if (!session) return sendError(response, 401, 'steam_login_required', 'Войди через Steam перед восстановлением снимка.');
+      const dropboxToken = dropboxSessionFor(request, session, config);
+      if (!dropboxToken) return sendError(response, 409, 'dropbox_not_linked', 'Сначала подключи Dropbox к этому Steam-аккаунту.');
+
+      let accessToken;
+      try {
+        accessToken = await getDropboxAccessToken(dropboxToken.refreshToken, config, fetchImpl);
+      } catch (error) {
+        if (error.upstreamStatus === 400 || error.upstreamStatus === 401) {
+          return sendError(response, 401, 'dropbox_reconnect_required', 'Dropbox-токен отозван или истёк. Подключи Dropbox заново.', {
+            'set-cookie': clearCookieHeader(DROPBOX_TOKEN_COOKIE, config.secureCookie),
+          });
+        }
+        return sendError(response, 502, 'dropbox_unavailable', 'Не удалось получить доступ к Dropbox. Попробуй позже.');
+      }
+
+      try {
+        const stored = await downloadDropboxSnapshot(accessToken, session.steamId, fetchImpl);
+        if (stored?.steamId !== session.steamId) return sendError(response, 409, 'dropbox_snapshot_account_mismatch', 'Этот Dropbox-снимок привязан к другому Steam-аккаунту.');
+        const snapshot = validateDropboxSnapshot(stored, session.steamId);
+        if (!snapshot) return sendError(response, 502, 'dropbox_snapshot_invalid', 'Файл снимка в Dropbox имеет неизвестный или повреждённый формат.');
+        return sendJson(response, 200, { snapshot });
+      } catch (error) {
+        if (error.upstreamStatus === 409) return sendError(response, 404, 'dropbox_snapshot_missing', 'В Dropbox пока нет сохранённого снимка библиотеки.');
+        return sendError(response, 502, 'dropbox_download_failed', 'Не удалось скачать снимок из Dropbox. Проверь разрешения и попробуй позже.');
+      }
+    }
+
     if (pathname === '/api/logout') {
       if (request.method !== 'POST') return sendError(response, 405, 'method_not_allowed', 'Используй POST.');
       const requestOrigin = request.headers.origin;
       if (requestOrigin && config.publicOrigin && requestOrigin !== config.publicOrigin) {
         return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом сервиса.');
       }
-      response.setHeader('set-cookie', clearCookieHeader(SESSION_COOKIE, config.secureCookie));
+      response.setHeader('set-cookie', [
+        clearCookieHeader(SESSION_COOKIE, config.secureCookie),
+        clearCookieHeader(DROPBOX_TOKEN_COOKIE, config.secureCookie),
+        clearCookieHeader(DROPBOX_STATE_COOKIE, config.secureCookie),
+      ]);
       return sendJson(response, 200, { ok: true });
+    }
+
+    if (pathname === '/auth/dropbox/start' && request.method === 'GET') {
+      if (!config.dropboxReady) return sendError(response, 503, 'dropbox_not_configured', 'Настрой DROPBOX_APP_KEY, DROPBOX_APP_SECRET и DROPBOX_TOKEN_SECRET на сервере.');
+      const session = sessionFor(request, config);
+      if (!session) return sendError(response, 401, 'steam_login_required', 'Сначала войди через Steam.');
+
+      const state = randomBytes(32).toString('base64url');
+      const stateToken = createSignedToken({
+        state,
+        steamId: session.steamId,
+        returnTo: safeDropboxReturnPath(requestUrl.searchParams.get('return_to')),
+        exp: Math.floor(Date.now() / 1000) + STATE_TTL_SECONDS,
+      }, config.sessionSecret, 'dropbox-state');
+      const redirectUri = new URL('/auth/dropbox/callback', config.publicOrigin).toString();
+      const authorizeUrl = new URL(DROPBOX_AUTHORIZE_ENDPOINT);
+      authorizeUrl.searchParams.set('client_id', config.dropboxAppKey);
+      authorizeUrl.searchParams.set('response_type', 'code');
+      authorizeUrl.searchParams.set('redirect_uri', redirectUri);
+      authorizeUrl.searchParams.set('state', state);
+      authorizeUrl.searchParams.set('token_access_type', 'offline');
+      authorizeUrl.searchParams.set('include_granted_scopes', 'user');
+      authorizeUrl.searchParams.set('scope', 'files.content.read files.content.write');
+      response.setHeader('set-cookie', cookieHeader(DROPBOX_STATE_COOKIE, stateToken, { secure: config.secureCookie, maxAge: STATE_TTL_SECONDS }));
+      return sendRedirect(response, authorizeUrl.toString(), 302);
+    }
+
+    if (pathname === '/auth/dropbox/callback' && request.method === 'GET') {
+      const clearState = clearCookieHeader(DROPBOX_STATE_COOKIE, config.secureCookie);
+      if (!config.dropboxReady) return sendRedirect(response, addDropboxResult('/cloud-play/', 'dropbox_error', 'not_configured'), 303, { 'set-cookie': clearState });
+      const state = requestUrl.searchParams.get('state') || '';
+      const stateToken = readCookies(request).get(DROPBOX_STATE_COOKIE);
+      const statePayload = verifySignedToken(stateToken, config.sessionSecret, 'dropbox-state');
+      const session = sessionFor(request, config);
+      if (!state || !statePayload || statePayload.state !== state || !session || statePayload.steamId !== session.steamId) {
+        return sendRedirect(response, addDropboxResult(statePayload?.returnTo || '/cloud-play/', 'dropbox_error', 'invalid_state'), 303, { 'set-cookie': clearState });
+      }
+      const returnTo = statePayload.returnTo || '/cloud-play/';
+      if (requestUrl.searchParams.has('error')) {
+        return sendRedirect(response, addDropboxResult(returnTo, 'dropbox_error', 'denied'), 303, { 'set-cookie': clearState });
+      }
+      const code = requestUrl.searchParams.get('code') || '';
+      if (!code || code.length > 4096) {
+        return sendRedirect(response, addDropboxResult(returnTo, 'dropbox_error', 'authorization_failed'), 303, { 'set-cookie': clearState });
+      }
+
+      try {
+        const redirectUri = new URL('/auth/dropbox/callback', config.publicOrigin).toString();
+        const refreshToken = await authorizeDropboxCode(code, redirectUri, config, fetchImpl);
+        const encrypted = encryptDropboxRefreshToken({ steamId: session.steamId, refreshToken }, config.dropboxTokenSecret);
+        return sendRedirect(response, addDropboxResult(returnTo, 'dropbox', 'connected'), 303, {
+          'set-cookie': [
+            cookieHeader(DROPBOX_TOKEN_COOKIE, encrypted, { secure: config.secureCookie, maxAge: DROPBOX_TOKEN_TTL_SECONDS }),
+            clearState,
+          ],
+        });
+      } catch {
+        return sendRedirect(response, addDropboxResult(returnTo, 'dropbox_error', 'authorization_failed'), 303, { 'set-cookie': clearState });
+      }
     }
 
     if (pathname === '/auth/steam/start' && request.method === 'GET') {
@@ -397,9 +844,10 @@ if (launchedDirectly) {
   const server = createServer(createHandler());
   server.listen(config.port, '0.0.0.0', () => {
     console.log(`PLAYBRIDGE listening on 0.0.0.0:${config.port}`);
-    console.log(`Open http://localhost:${config.port}/cloud-play/`);
+    console.log(`Open ${config.publicOrigin || `http://localhost:${config.port}`}/cloud-play/`);
     console.log(`Steam OpenID: ${config.loginReady ? 'configured' : 'disabled — set SESSION_SECRET and PUBLIC_ORIGIN'}`);
     console.log(`Steam library API: ${config.libraryReady ? 'configured' : 'disabled — set STEAM_WEB_API_KEY'}`);
+    console.log(`Dropbox library backup: ${config.dropboxReady ? 'configured' : 'disabled — set Dropbox app credentials and DROPBOX_TOKEN_SECRET'}`);
     console.log('Cloud gaming: disabled — no self-hosted host agent or licensed provider configured');
   });
 }

@@ -14,6 +14,13 @@ const elements = {
   noticeText: $('#noticeText'),
   connectButton: $('#connectButton'),
   logoutButton: $('#logoutButton'),
+  dropboxPanel: $('#dropboxPanel'),
+  dropboxText: $('#dropboxText'),
+  connectDropboxButton: $('#connectDropboxButton'),
+  saveDropboxButton: $('#saveDropboxButton'),
+  loadDropboxButton: $('#loadDropboxButton'),
+  disconnectDropboxButton: $('#disconnectDropboxButton'),
+  refreshGamesButton: $('#refreshGamesButton'),
   profileAvatar: $('#profileAvatar'),
   profileTitle: $('#profileTitle'),
   profileSub: $('#profileSub'),
@@ -35,9 +42,89 @@ const PAGE_SIZE = 48;
 let backendStatus = null;
 let deferredInstallPrompt = null;
 let games = [];
+let steamGames = [];
+let steamTotalCount = 0;
+let hasSteamLibrary = false;
+let activeLibrarySource = 'steam';
+let currentSession = { authenticated: false };
+let dropboxStatus = { enabled: false, connected: false };
+let dropboxFeedback = null;
+let dropboxActionInProgress = false;
+let gameLoadInProgress = false;
 let activeFilter = 'all';
 let visibleLimit = PAGE_SIZE;
 const UPDATE_RESUME_KEY = 'playbridge:update-resume:v1';
+const GITHUB_MANIFEST_URL = 'https://api.github.com/repos/m98978672-boop/games/contents/cloud-play/manifest.webmanifest?ref=main';
+const GITHUB_VERSION_CACHE_KEY = 'playbridge:github-version:v1';
+const GITHUB_VERSION_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function parseAppVersion(version) {
+  if (typeof version !== 'string') return null;
+  const match = version.trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
+  const parts = match.slice(1).map(Number);
+  return parts.every(Number.isSafeInteger) ? parts : null;
+}
+
+function compareAppVersions(left, right) {
+  const a = parseAppVersion(left);
+  const b = parseAppVersion(right);
+  if (!a || !b) return null;
+  for (let index = 0; index < 3; index += 1) {
+    if (a[index] !== b[index]) return a[index] > b[index] ? 1 : -1;
+  }
+  return 0;
+}
+
+function readCachedGithubVersion() {
+  try {
+    const cache = JSON.parse(window.localStorage.getItem(GITHUB_VERSION_CACHE_KEY) || 'null');
+    if (parseAppVersion(cache?.version) && Number.isFinite(cache.checkedAt)) return cache;
+  } catch {
+    // GitHub checks still work when local storage is disabled.
+  }
+  return null;
+}
+
+async function getGithubAppVersion(force = false) {
+  const cached = readCachedGithubVersion();
+  if (!force && cached && Date.now() - cached.checkedAt < GITHUB_VERSION_CACHE_TTL_MS) return cached.version;
+
+  const response = await fetch(GITHUB_MANIFEST_URL, {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'omit',
+    cache: 'no-store',
+    headers: { Accept: 'application/vnd.github.raw+json' },
+    signal: AbortSignal.timeout(10_000),
+    redirect: 'error',
+  });
+  if (!response.ok) {
+    throw new Error(response.status === 403
+      ? 'GitHub API rate limit or access error.'
+      : `GitHub API returned ${response.status}.`);
+  }
+  const manifest = await response.json();
+  if (!parseAppVersion(manifest?.version)) throw new Error('GitHub manifest has no valid version.');
+  try {
+    window.localStorage.setItem(GITHUB_VERSION_CACHE_KEY, JSON.stringify({ version: manifest.version, checkedAt: Date.now() }));
+  } catch {
+    // The next scheduled check can fetch GitHub again.
+  }
+  return manifest.version;
+}
+
+async function getInstalledAppVersion(appScope) {
+  const response = await fetch(new URL('manifest.webmanifest', appScope), {
+    credentials: 'same-origin',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error('Could not read the installed app manifest.');
+  const manifest = await response.json();
+  if (!parseAppVersion(manifest?.version)) throw new Error('Installed app manifest has no valid version.');
+  return manifest.version;
+}
 
 function consumeUpdateResumeState() {
   try {
@@ -96,6 +183,20 @@ function setUpdateStatus(state, message) {
   if (!elements.updateStatus) return;
   elements.updateStatus.dataset.state = state;
   elements.updateStatus.textContent = message;
+  elements.updateStatus.disabled = ['checking', 'updating', 'unsupported'].includes(state);
+  elements.updateStatus.setAttribute('aria-busy', String(state === 'checking' || state === 'updating'));
+  elements.updateStatus.setAttribute('aria-label', state === 'ready'
+    ? 'Проверить обновления PLAYBRIDGE: приложение актуально'
+    : `${message}. Статус обновлений PLAYBRIDGE`);
+  elements.updateStatus.title = state === 'ready'
+    ? 'Приложение актуально. Нажми, чтобы проверить GitHub и обновления сейчас.'
+    : state === 'available'
+      ? 'GitHub сообщает о новой версии. Нажми, чтобы повторить проверку и применить её после публикации сайта.'
+      : state === 'ahead'
+        ? 'Установленная версия новее версии в ветке main GitHub.'
+        : state === 'error'
+          ? 'Проверка не удалась. Нажми, чтобы повторить.'
+          : message;
 }
 
 function setupAppInstall() {
@@ -166,6 +267,10 @@ async function setupAppUpdates() {
           } else {
             setUpdateStatus('ready', 'АВТООБНОВЛЕНИЕ ВКЛЮЧЕНО');
           }
+        } else if (worker.state === 'redundant') {
+          setUpdateStatus('error', 'НЕ УДАЛОСЬ УСТАНОВИТЬ ОБНОВЛЕНИЕ');
+        } else if (worker.state === 'activated' && !reloadingForUpdate) {
+          setUpdateStatus('ready', 'АВТООБНОВЛЕНИЕ ВКЛЮЧЕНО');
         }
       };
       worker.addEventListener('statechange', applyWorkerState);
@@ -175,32 +280,72 @@ async function setupAppUpdates() {
     observeWorker(registration.installing);
 
     let currentCheck = null;
-    const checkForUpdates = () => {
+    const checkForUpdates = (manual = false) => {
       if (currentCheck) return currentCheck;
+      setUpdateStatus('checking', manual ? 'ПРОВЕРЯЮ GITHUB' : 'ПРОВЕРКА ВЕРСИИ GITHUB');
       currentCheck = (async () => {
+        let githubVersion = null;
+        let installedVersion = null;
+        let githubError = false;
+        try {
+          githubVersion = await getGithubAppVersion(manual);
+        } catch {
+          githubError = true;
+        }
+        try {
+          installedVersion = await getInstalledAppVersion(appScope);
+        } catch {
+          // Service-worker updates can still proceed even if the manifest is unavailable.
+        }
+        const comparison = githubVersion && installedVersion
+          ? compareAppVersions(githubVersion, installedVersion)
+          : null;
+        if (comparison === 1) setUpdateStatus('available', `GITHUB v${githubVersion} · ИЩУ ОБНОВЛЕНИЕ`);
+
         try {
           await registration.update();
           if (registration.waiting) {
-            setUpdateStatus('updating', 'НАЙДЕНО ОБНОВЛЕНИЕ');
+            setUpdateStatus('updating', 'НАЙДЕНО ОБНОВЛЕНИЕ · ПРИМЕНЯЮ');
             registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-          } else if (registration.installing) {
+            return;
+          }
+          if (registration.installing) {
+            setUpdateStatus('updating', 'УСТАНАВЛИВАЮ ОБНОВЛЕНИЕ');
             observeWorker(registration.installing);
+            return;
+          }
+          if (comparison === 1) {
+            setUpdateStatus('available', `GITHUB v${githubVersion} · САЙТ ЕЩЁ НЕ ОБНОВЛЁН`);
+          } else if (githubError) {
+            setUpdateStatus('error', 'GITHUB НЕДОСТУПЕН · ПОВТОРИТЬ');
+          } else if (comparison === -1) {
+            setUpdateStatus('ahead', `УСТАНОВЛЕНА v${installedVersion} · MAIN v${githubVersion}`);
+          } else if (githubVersion && installedVersion) {
+            setUpdateStatus('ready', `GITHUB v${githubVersion} · АКТУАЛЬНО`);
           } else {
             setUpdateStatus('ready', 'АВТООБНОВЛЕНИЕ ВКЛЮЧЕНО');
           }
         } catch {
-          setUpdateStatus('error', 'НЕ УДАЛОСЬ ПРОВЕРИТЬ ОБНОВЛЕНИЯ');
+          if (comparison === 1) {
+            setUpdateStatus('available', `GITHUB v${githubVersion} · НЕТ СВЯЗИ С САЙТОМ`);
+          } else if (githubError) {
+            setUpdateStatus('error', 'GITHUB НЕДОСТУПЕН · ПОВТОРИТЬ');
+          } else {
+            setUpdateStatus('error', 'НЕ УДАЛОСЬ ПРОВЕРИТЬ ОБНОВЛЕНИЕ');
+          }
         }
       })().finally(() => { currentCheck = null; });
       return currentCheck;
     };
 
+    elements.updateStatus.addEventListener('click', () => { void checkForUpdates(true); });
     await checkForUpdates();
     window.addEventListener('focus', () => { void checkForUpdates(); });
+    window.addEventListener('online', () => { void checkForUpdates(); });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') void checkForUpdates();
     });
-    window.setInterval(() => { void checkForUpdates(); }, 60 * 60 * 1000);
+    window.setInterval(() => { void checkForUpdates(); }, 15 * 60 * 1000);
   } catch {
     setUpdateStatus('error', 'PWA ОБНОВЛЕНИЕ НЕДОСТУПНО');
   }
@@ -266,8 +411,11 @@ function setBackendUnavailable(error) {
   elements.librarySource.textContent = 'BACKEND OFFLINE';
   elements.gameSearch.disabled = true;
   elements.filterButtons.forEach((button) => { button.disabled = true; });
+  elements.refreshGamesButton.disabled = true;
   setLibraryState('offline', 'Подключение к библиотеке недоступно', 'Запусти локальный backend командой из README или разверни его за HTTPS reverse proxy. Демо-игры больше не подставляются.');
   updateCloudStatus(null);
+  dropboxFeedback = null;
+  updateDropboxPanel({ enabled: false, connected: false });
 }
 
 function updateCloudStatus(status) {
@@ -303,6 +451,8 @@ function applyBackendStatus(status) {
 }
 
 function updateProfile(session) {
+  currentSession = session || { authenticated: false };
+  elements.refreshGamesButton.disabled = !currentSession.authenticated || !backendStatus?.steam?.libraryReady;
   if (session?.authenticated) {
     const shortId = session.steamId;
     elements.profileAvatar.textContent = 'S';
@@ -319,6 +469,45 @@ function updateProfile(session) {
   }
 }
 
+function updateDropboxPanel(status, feedback = undefined) {
+  if (status) dropboxStatus = { enabled: Boolean(status.enabled), connected: Boolean(status.connected) };
+  if (feedback !== undefined) dropboxFeedback = feedback;
+  if (!elements.dropboxPanel) return;
+  const authenticated = Boolean(currentSession?.authenticated);
+  const connected = dropboxStatus.enabled && dropboxStatus.connected && authenticated;
+
+  elements.connectDropboxButton.hidden = connected;
+  elements.connectDropboxButton.disabled = !dropboxStatus.enabled || !authenticated || dropboxActionInProgress;
+  elements.connectDropboxButton.textContent = authenticated ? 'Подключить Dropbox' : 'Сначала войти в Steam';
+  elements.saveDropboxButton.hidden = !connected;
+  elements.saveDropboxButton.disabled = !hasSteamLibrary || gameLoadInProgress || dropboxActionInProgress;
+  elements.loadDropboxButton.hidden = !connected;
+  elements.loadDropboxButton.disabled = gameLoadInProgress || dropboxActionInProgress;
+  elements.disconnectDropboxButton.hidden = !connected;
+  elements.disconnectDropboxButton.disabled = dropboxActionInProgress;
+
+  if (dropboxFeedback) {
+    elements.dropboxPanel.dataset.state = dropboxFeedback.state || 'ready';
+    elements.dropboxText.textContent = dropboxFeedback.message;
+  } else if (!dropboxStatus.enabled) {
+    elements.dropboxPanel.dataset.state = 'offline';
+    elements.dropboxText.textContent = 'Dropbox пока не настроен на backend. Нужны Dropbox App credentials и секрет шифрования; эти данные должны храниться только в окружении сервера.';
+  } else if (!authenticated) {
+    elements.dropboxPanel.dataset.state = 'idle';
+    elements.dropboxText.textContent = 'Сначала войди через Steam. Dropbox будет привязан к подтверждённому SteamID; пароль Steam PLAYBRIDGE не получает.';
+  } else if (connected) {
+    elements.dropboxPanel.dataset.state = 'ready';
+    elements.dropboxText.textContent = 'Dropbox подключён. Можно сохранить актуальный список Steam или показать ранее сохранённый снимок.';
+  } else {
+    elements.dropboxPanel.dataset.state = 'idle';
+    elements.dropboxText.textContent = 'Подключи Dropbox для резервной копии в закрытой App Folder. Запуск игр и Steam-сейвы здесь не хранятся.';
+  }
+}
+
+function setDropboxFeedback(message, state = 'ready') {
+  updateDropboxPanel(null, { message, state });
+}
+
 function createGameCard(game) {
   const appId = Number(game.appId);
   const card = document.createElement('article');
@@ -330,7 +519,7 @@ function createGameCard(game) {
   cover.setAttribute('aria-label', `Карточка игры ${game.name}`);
   const kicker = document.createElement('span');
   kicker.className = 'cover-kicker';
-  kicker.textContent = 'STEAM LIBRARY';
+  kicker.textContent = activeLibrarySource === 'dropbox' ? 'DROPBOX SNAPSHOT' : 'STEAM LIBRARY';
   const mark = document.createElement('span');
   mark.className = 'cover-mark';
   mark.textContent = `APP ${appId}`;
@@ -357,7 +546,7 @@ function createGameCard(game) {
   title.textContent = game.name;
   const subtitle = document.createElement('p');
   subtitle.className = 'game-subtitle';
-  subtitle.textContent = 'Получено от Steam Web API';
+  subtitle.textContent = activeLibrarySource === 'dropbox' ? 'Восстановлено из резервной копии' : 'Получено от Steam Web API';
 
   const statusRow = document.createElement('div');
   statusRow.className = 'game-status-row';
@@ -404,39 +593,60 @@ function renderGames() {
   elements.loadMoreButton.textContent = `Показать ещё (${filtered.length - displayed.length})`;
   elements.libraryState.hidden = filtered.length > 0;
   if (filtered.length === 0) {
-    const title = games.length === 0 ? 'Steam API вернул пустой список' : 'По запросу игр не найдено';
-    const message = games.length === 0
-      ? 'Это может означать пустую библиотеку или закрытые настройки «Сведения об играх». Сделай их публичными и обнови список.'
+    const emptyLibrary = games.length === 0;
+    const title = emptyLibrary
+      ? (activeLibrarySource === 'dropbox' ? 'В снимке Dropbox нет игр' : 'Steam API вернул пустой список')
+      : 'По запросу игр не найдено';
+    const message = emptyLibrary
+      ? (activeLibrarySource === 'dropbox'
+        ? 'Снимок хранится в Dropbox, но в нём нет игр. Обнови библиотеку Steam и сохрани новый снимок.'
+        : 'Это может означать пустую библиотеку или закрытые настройки «Сведения об играх». Сделай их публичными и обнови список.')
       : 'Измени запрос или переключи фильтр библиотеки.';
     setLibraryState('empty', title, message);
   }
 }
 
 async function loadGames() {
+  if (!currentSession?.authenticated) return false;
+  gameLoadInProgress = true;
+  elements.refreshGamesButton.disabled = true;
+  elements.refreshGamesButton.textContent = 'Загружаю…';
+  elements.profileSub.textContent = 'SteamID подтверждён · загружаю библиотеку';
+  setNotice('checking', 'Steam-вход подтверждён — загружаю библиотеку', 'Сессия проверена на backend. Запрашиваю актуальный список у Steam Web API.');
+  elements.saveDropboxButton.disabled = true;
   elements.gameSearch.disabled = false;
   elements.filterButtons.forEach((button) => { button.disabled = false; });
+  elements.gameGrid.hidden = true;
   elements.libraryState.hidden = false;
   elements.libraryState.dataset.state = 'loading';
   $('strong', elements.libraryState).textContent = 'Запрашиваю библиотеку у Steam';
-  $('p', elements.libraryState).textContent = 'Игры и время запуска читаются из Steam Web API.';
+  $('p', elements.libraryState).textContent = 'Steam-вход подтверждён. Загружаю список, который API разрешает этому приложению видеть.';
   elements.librarySourceWrap.dataset.state = 'pending';
   elements.librarySource.textContent = 'STEAM API';
 
+  let loaded = false;
   try {
     const result = await api('/api/games');
     games = Array.isArray(result.games) ? result.games : [];
-    const count = Number.isFinite(result.totalCount) ? result.totalCount : games.length;
-    elements.gameCount.textContent = String(count);
-    elements.navGameCount.textContent = String(count).padStart(2, '0');
+    steamGames = [...games];
+    hasSteamLibrary = true;
+    steamTotalCount = Number.isFinite(result.totalCount) ? result.totalCount : games.length;
+    activeLibrarySource = 'steam';
+    elements.gameCount.textContent = String(steamTotalCount);
+    elements.navGameCount.textContent = String(steamTotalCount).padStart(2, '0');
     elements.librarySub.textContent = result.notice || 'Показаны игры, которые Steam API разрешил этому приложению увидеть.';
     elements.librarySourceWrap.dataset.state = 'ready';
     elements.librarySource.textContent = 'STEAM WEB API';
+    elements.profileSub.textContent = 'Steam OpenID · библиотека обновлена';
     renderGames();
+    setNotice('online', 'Библиотека Steam загружена', `Steam API передал ${steamTotalCount} записей. Нажми «Обновить из Steam», чтобы проверить список ещё раз.`);
+    loaded = true;
   } catch (error) {
     elements.gameCount.textContent = '—';
     elements.navGameCount.textContent = '—';
     elements.librarySourceWrap.dataset.state = 'offline';
     elements.librarySource.textContent = 'API ERROR';
+    elements.profileSub.textContent = 'SteamID подтверждён · API недоступен';
     if (error.code === 'steam_web_api_key_missing') {
       setLibraryState('error', 'Не задан Steam Web API key', 'Добавь STEAM_WEB_API_KEY на сервере и перезапусти его. Не вставляй ключ на эту страницу.');
     } else if (error.code === 'games_not_public') {
@@ -444,13 +654,126 @@ async function loadGames() {
     } else {
       setLibraryState('error', 'Не удалось получить библиотеку', error.message);
     }
+    setNotice('offline', 'Не удалось обновить библиотеку Steam', error.message);
+  } finally {
+    gameLoadInProgress = false;
+    elements.refreshGamesButton.disabled = !currentSession?.authenticated || !backendStatus?.steam?.libraryReady;
+    elements.refreshGamesButton.textContent = '↻ Обновить из Steam';
+    updateDropboxPanel(null);
+  }
+  return loaded;
+}
+
+function dropboxErrorMessage(error) {
+  if (error.code === 'dropbox_snapshot_missing') return 'В Dropbox пока нет снимка. Сначала сохрани свежую библиотеку Steam.';
+  if (error.code === 'dropbox_not_linked') return 'Сначала подключи Dropbox к этому Steam-аккаунту.';
+  if (error.code === 'dropbox_reconnect_required') return 'Dropbox-токен больше не работает. Подключи Dropbox заново.';
+  if (error.code === 'dropbox_not_configured') return 'Dropbox OAuth ещё не настроен на сервере.';
+  if (error.code === 'dropbox_snapshot_account_mismatch') return 'Снимок привязан к другому Steam-аккаунту и не будет показан.';
+  return error.message || 'Операция с Dropbox не выполнена.';
+}
+
+async function refreshDropboxStatus(feedback = undefined) {
+  try {
+    const status = await api('/api/dropbox/status');
+    updateDropboxPanel(status, feedback);
+  } catch (error) {
+    updateDropboxPanel({ enabled: false, connected: false }, {
+      state: 'error',
+      message: `Не удалось проверить Dropbox: ${error.message}`,
+    });
+  }
+}
+
+async function saveDropboxSnapshot() {
+  if (!hasSteamLibrary || !currentSession?.authenticated || dropboxActionInProgress) return;
+  dropboxActionInProgress = true;
+  elements.saveDropboxButton.disabled = true;
+  setDropboxFeedback('Сохраняю снимок библиотеки в Dropbox App Folder…', 'checking');
+  try {
+    const result = await api('/api/dropbox/snapshot', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ games: steamGames, totalCount: steamTotalCount }),
+    });
+    setDropboxFeedback(`Снимок сохранён: ${result.gameCount} игр, обновлено ${new Date(result.updatedAt).toLocaleString('ru-RU')}. Файл закрыт внутри Dropbox App Folder.`, 'ready');
+  } catch (error) {
+    if (error.code === 'dropbox_reconnect_required') await refreshDropboxStatus();
+    setDropboxFeedback(dropboxErrorMessage(error), 'error');
+  } finally {
+    dropboxActionInProgress = false;
+    updateDropboxPanel(null);
+  }
+}
+
+async function showDropboxSnapshot() {
+  if (dropboxActionInProgress) return;
+  dropboxActionInProgress = true;
+  elements.loadDropboxButton.disabled = true;
+  setDropboxFeedback('Загружаю сохранённый снимок из Dropbox…', 'checking');
+  try {
+    const result = await api('/api/dropbox/snapshot');
+    const snapshot = result.snapshot;
+    games = snapshot.games;
+    activeLibrarySource = 'dropbox';
+    visibleLimit = PAGE_SIZE;
+    elements.gameCount.textContent = String(snapshot.totalCount);
+    elements.navGameCount.textContent = String(snapshot.totalCount).padStart(2, '0');
+    elements.librarySub.textContent = `Снимок Dropbox от ${new Date(snapshot.updatedAt).toLocaleString('ru-RU')}. Это просмотр резервной копии; данные Steam не изменяются.`;
+    elements.librarySourceWrap.dataset.state = 'ready';
+    elements.librarySource.textContent = 'DROPBOX SNAPSHOT';
+    elements.gameSearch.disabled = false;
+    elements.filterButtons.forEach((button) => { button.disabled = false; });
+    renderGames();
+    setDropboxFeedback(`Показан снимок от ${new Date(snapshot.updatedAt).toLocaleString('ru-RU')}. Для возврата к свежим данным нажми «Обновить из Steam».`, 'ready');
+    document.querySelector('#library')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (error) {
+    if (error.code === 'dropbox_reconnect_required') await refreshDropboxStatus();
+    setDropboxFeedback(dropboxErrorMessage(error), 'error');
+  } finally {
+    dropboxActionInProgress = false;
+    updateDropboxPanel(null);
+  }
+}
+
+async function disconnectDropbox() {
+  if (dropboxActionInProgress) return;
+  dropboxActionInProgress = true;
+  elements.disconnectDropboxButton.disabled = true;
+  setDropboxFeedback('Отключаю Dropbox от этого браузера…', 'checking');
+  try {
+    await api('/api/dropbox/disconnect', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    await refreshDropboxStatus({ state: 'idle', message: 'Локальная связь Dropbox удалена. Файл снимка в Dropbox не удалён.' });
+  } catch (error) {
+    setDropboxFeedback(error.message, 'error');
+  } finally {
+    dropboxActionInProgress = false;
+    updateDropboxPanel(null);
   }
 }
 
 async function boot() {
   const params = new URLSearchParams(window.location.search);
+  let callbackFeedback;
   if (params.has('auth_error')) {
     setNotice('offline', 'Steam не подтвердил вход', 'Авторизация не завершилась. Проверь callback URL и вернись к настройке backend.');
+  }
+  if (params.get('dropbox') === 'connected') {
+    callbackFeedback = { state: 'ready', message: 'Dropbox подключён к этому Steam-аккаунту. Теперь можно сохранить резервную копию списка игр.' };
+  } else if (params.has('dropbox_error')) {
+    const messages = {
+      denied: 'Подключение Dropbox отменено. Аккаунт не связан с PLAYBRIDGE.',
+      invalid_state: 'Не удалось проверить запрос Dropbox. Начни подключение заново.',
+      authorization_failed: 'Dropbox не завершил авторизацию. Проверь App key, callback URL и разрешения приложения.',
+      not_configured: 'Dropbox OAuth ещё не настроен на backend.',
+    };
+    callbackFeedback = { state: 'error', message: messages[params.get('dropbox_error')] || 'Dropbox не удалось подключить.' };
+  }
+  if (params.has('auth_error') || params.has('dropbox') || params.has('dropbox_error')) {
     window.history.replaceState({}, '', window.location.pathname + window.location.hash);
   }
 
@@ -461,7 +784,7 @@ async function boot() {
     updateProfile(session);
     if (session.authenticated) {
       elements.librarySource.textContent = 'STEAM API';
-      await loadGames();
+      await Promise.all([loadGames(), refreshDropboxStatus(callbackFeedback)]);
     } else {
       elements.gameCount.textContent = '—';
       elements.navGameCount.textContent = '—';
@@ -470,6 +793,7 @@ async function boot() {
         : 'Сначала настрой сервер и Steam Web API key; никакие демо-игры не подставляются.';
       elements.librarySource.textContent = 'ОЖИДАЕТ ВХОД';
       setLibraryState('idle', 'Библиотека не загружена', 'Нажми «Войти через Steam» после настройки backend. При закрытых настройках игр Steam может вернуть пустой список.');
+      await refreshDropboxStatus(callbackFeedback);
     }
   } catch (error) {
     setBackendUnavailable(error);
@@ -485,6 +809,18 @@ elements.connectButton.addEventListener('click', () => {
     window.location.assign('/auth/steam/start');
   }
 });
+
+elements.connectDropboxButton.addEventListener('click', () => {
+  if (!elements.connectDropboxButton.disabled && currentSession?.authenticated && dropboxStatus.enabled) {
+    const returnTo = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+    window.location.assign(`/auth/dropbox/start?return_to=${encodeURIComponent(returnTo)}`);
+  }
+});
+
+elements.saveDropboxButton.addEventListener('click', () => { void saveDropboxSnapshot(); });
+elements.loadDropboxButton.addEventListener('click', () => { void showDropboxSnapshot(); });
+elements.disconnectDropboxButton.addEventListener('click', () => { void disconnectDropbox(); });
+elements.refreshGamesButton.addEventListener('click', () => { void loadGames(); });
 
 elements.logoutButton.addEventListener('click', async () => {
   elements.logoutButton.disabled = true;

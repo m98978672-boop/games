@@ -4,6 +4,8 @@ import { createServer } from 'node:http';
 import {
   createHandler,
   createSignedToken,
+  decryptDropboxRefreshToken,
+  encryptDropboxRefreshToken,
   extractSteamId,
   STEAM_OPENID_ENDPOINT,
   STEAM_OPENID_NAMESPACE,
@@ -21,6 +23,21 @@ test('signed tokens reject changes, wrong purpose and expired sessions', () => {
   assert.equal(verifySignedToken(token, secret, 'openid-state', now), null);
   assert.equal(verifySignedToken(`${token}x`, secret, 'session', now), null);
   assert.equal(verifySignedToken(createSignedToken({ steamId, exp: 1 }, secret, 'session'), secret, 'session', now), null);
+});
+
+test('Dropbox refresh tokens are encrypted, Steam-account-bound, and expire', () => {
+  const tokenSecret = 'test-dropbox-token-secret-with-more-than-32-characters';
+  const refreshToken = 'dropbox-refresh-token-that-is-never-plain-in-cookie';
+  const now = 1_800_000_000_000;
+  const encrypted = encryptDropboxRefreshToken({ steamId, refreshToken, exp: now + 60_000 }, tokenSecret);
+  assert.equal(encrypted.includes(refreshToken), false);
+  assert.deepEqual(decryptDropboxRefreshToken(encrypted, tokenSecret, now), { steamId, refreshToken, exp: now + 60_000 });
+  assert.equal(decryptDropboxRefreshToken(encrypted, `${tokenSecret}-wrong`, now), null);
+  assert.equal(decryptDropboxRefreshToken(encrypted, tokenSecret, now + 60_001), null);
+  const [iv, tag, cipherText] = encrypted.split('.');
+  const tampered = `${iv}.${tag}.${cipherText[0] === 'A' ? 'B' : 'A'}${cipherText.slice(1)}`;
+  assert.equal(decryptDropboxRefreshToken(tampered, tokenSecret, now), null);
+  assert.throws(() => encryptDropboxRefreshToken({ steamId: '1234', refreshToken }, tokenSecret));
 });
 
 test('SteamID is extracted only from canonical Steam OpenID URLs', () => {
@@ -103,10 +120,13 @@ test('HTTP app exposes real readiness, redirects to Steam and rejects anonymous 
   assert.equal(statusResponse.status, 200);
   const status = await statusResponse.json();
   assert.equal(status.backend, 'online');
+  assert.match(statusResponse.headers.get('content-security-policy'), /connect-src 'self' https:\/\/api\.github\.com/);
   assert.equal(status.steam.loginReady, true);
   assert.equal(status.steam.libraryReady, false);
   assert.equal(status.installation.automaticDepotDownload, false);
   assert.equal(status.cloud.ready, false);
+  assert.equal(status.cloudStorage.provider, 'dropbox');
+  assert.equal(status.cloudStorage.enabled, false);
 
   const sessionResponse = await fetch(`${base}/api/session`);
   assert.deepEqual(await sessionResponse.json(), { authenticated: false, steamId: null });
@@ -164,6 +184,160 @@ test('authenticated library request only calls Steam Web API server-side and ret
   assert.equal(body.games[1].name, '<script>Game One</script>');
 });
 
+test('Dropbox OAuth binds to the signed Steam session and saves/loads a sanitized snapshot', async (t) => {
+  const tokenSecret = 'test-dropbox-token-secret-with-more-than-32-characters';
+  const appKey = 'dropbox-test-app-key';
+  const appSecret = 'dropbox-test-app-secret';
+  const refreshToken = 'dropbox-refresh-token-for-test-only-123456';
+  const sessionToken = createSignedToken({ steamId, exp: Math.floor(Date.now() / 1000) + 3600 }, secret, 'session');
+  let uploadedSnapshot;
+  const upstreamRequests = [];
+  const jsonResponse = (payload, status = 200) => ({ ok: status >= 200 && status < 300, status, json: async () => payload });
+  const fetchDropbox = async (input, options = {}) => {
+    const url = new URL(String(input));
+    upstreamRequests.push({ url, options });
+    if (url.hostname === 'api.dropboxapi.com' && url.pathname === '/oauth2/token') {
+      assert.equal(options.headers.authorization, `Basic ${Buffer.from(`${appKey}:${appSecret}`).toString('base64')}`);
+      const form = new URLSearchParams(options.body);
+      if (form.get('grant_type') === 'authorization_code') {
+        assert.equal(form.get('code'), 'test-authorization-code');
+        assert.equal(form.get('redirect_uri'), 'https://playbridge.example/auth/dropbox/callback');
+        return jsonResponse({ refresh_token: refreshToken });
+      }
+      assert.equal(form.get('grant_type'), 'refresh_token');
+      assert.equal(form.get('refresh_token'), refreshToken);
+      return jsonResponse({ access_token: 'dropbox-access-token-long-enough' });
+    }
+    if (url.hostname === 'content.dropboxapi.com' && url.pathname === '/2/files/upload') {
+      assert.equal(options.headers.authorization, 'Bearer dropbox-access-token-long-enough');
+      assert.deepEqual(JSON.parse(options.headers['dropbox-api-arg']), {
+        path: `/library-${steamId}.json`, mode: 'overwrite', autorename: false, mute: true,
+      });
+      uploadedSnapshot = JSON.parse(options.body);
+      return jsonResponse({ name: `library-${steamId}.json` });
+    }
+    if (url.hostname === 'content.dropboxapi.com' && url.pathname === '/2/files/download') {
+      assert.equal(options.headers.authorization, 'Bearer dropbox-access-token-long-enough');
+      assert.deepEqual(JSON.parse(options.headers['dropbox-api-arg']), { path: `/library-${steamId}.json` });
+      return jsonResponse(uploadedSnapshot);
+    }
+    throw new Error(`Unexpected Dropbox endpoint: ${url}`);
+  };
+
+  const app = createServer(createHandler({
+    env: {
+      PORT: '4174',
+      PUBLIC_ORIGIN: 'https://playbridge.example',
+      SESSION_SECRET: secret,
+      DROPBOX_APP_KEY: appKey,
+      DROPBOX_APP_SECRET: appSecret,
+      DROPBOX_TOKEN_SECRET: tokenSecret,
+      NODE_ENV: 'production',
+    },
+    fetchImpl: fetchDropbox,
+  }));
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise((resolve, reject) => app.close((error) => error ? reject(error) : resolve())));
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const steamCookie = `pb_session=${encodeURIComponent(sessionToken)}`;
+
+  const statusResponse = await fetch(`${base}/api/dropbox/status`, { headers: { cookie: steamCookie } });
+  assert.deepEqual(await statusResponse.json(), {
+    enabled: true,
+    connected: false,
+    provider: 'dropbox',
+    destination: 'Dropbox App Folder/library-<SteamID>.json',
+  });
+
+  const start = await fetch(`${base}/auth/dropbox/start?return_to=%2Fcloud-play%2F%23library`, {
+    headers: { cookie: steamCookie },
+    redirect: 'manual',
+  });
+  assert.equal(start.status, 302);
+  const authorizeUrl = new URL(start.headers.get('location'));
+  assert.equal(authorizeUrl.hostname, 'www.dropbox.com');
+  assert.equal(authorizeUrl.searchParams.get('client_id'), appKey);
+  assert.equal(authorizeUrl.searchParams.get('response_type'), 'code');
+  assert.equal(authorizeUrl.searchParams.get('token_access_type'), 'offline');
+  assert.equal(authorizeUrl.searchParams.get('scope'), 'files.content.read files.content.write');
+  assert.equal(authorizeUrl.searchParams.get('redirect_uri'), 'https://playbridge.example/auth/dropbox/callback');
+  const stateCookieHeader = start.headers.getSetCookie().find((cookie) => cookie.startsWith('pb_dropbox_state='));
+  assert.ok(stateCookieHeader);
+  assert.match(stateCookieHeader, /HttpOnly/);
+  assert.match(stateCookieHeader, /Secure/);
+  const stateCookiePair = stateCookieHeader.split(';', 1)[0];
+
+  const callback = await fetch(`${base}/auth/dropbox/callback?state=${encodeURIComponent(authorizeUrl.searchParams.get('state'))}&code=test-authorization-code`, {
+    headers: { cookie: `${steamCookie}; ${stateCookiePair}` },
+    redirect: 'manual',
+  });
+  assert.equal(callback.status, 303);
+  assert.equal(callback.headers.get('location'), '/cloud-play/?dropbox=connected#library');
+  const callbackCookies = callback.headers.getSetCookie();
+  const tokenCookieHeader = callbackCookies.find((cookie) => cookie.startsWith('pb_dropbox='));
+  assert.ok(tokenCookieHeader);
+  assert.match(tokenCookieHeader, /HttpOnly/);
+  assert.match(tokenCookieHeader, /Secure/);
+  const tokenCookiePair = tokenCookieHeader.split(';', 1)[0];
+  const encryptedToken = decodeURIComponent(tokenCookiePair.slice('pb_dropbox='.length));
+  assert.deepEqual(decryptDropboxRefreshToken(encryptedToken, tokenSecret).refreshToken, refreshToken);
+  const linkedCookies = `${steamCookie}; ${tokenCookiePair}`;
+
+  const connectedStatus = await fetch(`${base}/api/dropbox/status`, { headers: { cookie: linkedCookies } });
+  assert.equal((await connectedStatus.json()).connected, true);
+  const otherSession = createSignedToken({ steamId: '76561198000000001', exp: Math.floor(Date.now() / 1000) + 3600 }, secret, 'session');
+  const crossAccountStatus = await fetch(`${base}/api/dropbox/status`, {
+    headers: { cookie: `pb_session=${encodeURIComponent(otherSession)}; ${tokenCookiePair}` },
+  });
+  assert.equal((await crossAccountStatus.json()).connected, false);
+
+  const snapshotInput = {
+    totalCount: 2,
+    games: [
+      { appId: 10, name: 'Example Game', playtimeMinutes: 120, iconHash: 'a'.repeat(40), ignored: 'not stored' },
+      { appId: 11, name: 'Another Game', playtimeMinutes: 0, iconHash: null },
+    ],
+  };
+  const rejectedOrigin = await fetch(`${base}/api/dropbox/snapshot`, {
+    method: 'POST',
+    headers: { cookie: linkedCookies, origin: 'https://attacker.example', 'content-type': 'application/json' },
+    body: JSON.stringify(snapshotInput),
+  });
+  assert.equal(rejectedOrigin.status, 403);
+  assert.equal(uploadedSnapshot, undefined);
+
+  const saved = await fetch(`${base}/api/dropbox/snapshot`, {
+    method: 'POST',
+    headers: { cookie: linkedCookies, origin: 'https://playbridge.example', 'content-type': 'application/json' },
+    body: JSON.stringify(snapshotInput),
+  });
+  assert.equal(saved.status, 200);
+  const savedBody = await saved.json();
+  assert.equal(savedBody.gameCount, 2);
+  assert.equal(savedBody.destination, `Dropbox App Folder/library-${steamId}.json`);
+  assert.deepEqual(uploadedSnapshot.games[0], {
+    appId: 10, name: 'Example Game', playtimeMinutes: 120, iconHash: 'a'.repeat(40),
+  });
+  assert.equal(uploadedSnapshot.steamId, steamId);
+  assert.equal(JSON.stringify(uploadedSnapshot).includes(refreshToken), false);
+
+  const restored = await fetch(`${base}/api/dropbox/snapshot`, { headers: { cookie: linkedCookies } });
+  assert.equal(restored.status, 200);
+  const restoredBody = await restored.json();
+  assert.equal(restoredBody.snapshot.steamId, steamId);
+  assert.equal(restoredBody.snapshot.games.length, 2);
+  assert.ok(upstreamRequests.some(({ url }) => url.pathname === '/2/files/upload'));
+  assert.ok(upstreamRequests.some(({ url }) => url.pathname === '/2/files/download'));
+
+  const logout = await fetch(`${base}/api/logout`, {
+    method: 'POST',
+    headers: { cookie: linkedCookies, origin: 'https://playbridge.example', 'content-type': 'application/json' },
+    body: '{}',
+  });
+  assert.equal(logout.status, 200);
+  assert.ok(logout.headers.getSetCookie().some((cookie) => cookie.startsWith('pb_dropbox=') && cookie.includes('Max-Age=0')));
+});
+
 test('PWA shell metadata, update worker, and install icons are served with correct types', async (t) => {
   const app = createServer(createHandler({
     env: {
@@ -194,7 +368,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   const worker = await workerResponse.text();
   assert.match(worker, /registration\.scope/);
   assert.match(worker, /self\.skipWaiting\(\)/);
-  assert.match(worker, /playbridge-shell-0\.3\.0/);
+  assert.match(worker, /playbridge-shell-0\.4\.0/);
   assert.match(worker, /url\.pathname\.includes\('\/api\/'\) \|\| url\.pathname\.includes\('\/auth\/'\)/);
   assert.match(worker, /fresh\.ok && !url\.search/);
 
@@ -204,6 +378,26 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(appJs, /navigator\.serviceWorker\.register/);
   assert.match(appJs, /registration\.update\(\)/);
   assert.match(appJs, /window\.location\.reload\(\)/);
+  assert.match(appJs, /await api\('\/api\/session'\)/);
+  assert.match(appJs, /loadGames\(\)/);
+  assert.match(appJs, /api\('\/api\/dropbox\/snapshot'/);
+  assert.match(appJs, /updateStatus\.addEventListener\('click'/);
+  assert.match(appJs, /15 \* 60 \* 1000/);
+  assert.match(appJs, /window\.addEventListener\('online'/);
+  assert.match(appJs, /api\.github\.com\/repos\/m98978672-boop\/games\/contents\/cloud-play\/manifest\.webmanifest\?ref=main/);
+  assert.match(appJs, /compareAppVersions\(githubVersion, installedVersion\)/);
+  assert.match(appJs, /GITHUB_VERSION_CACHE_TTL_MS = 15 \* 60 \* 1000/);
+  assert.match(appJs, /credentials: 'omit'/);
+  assert.doesNotMatch(appJs, /raw\.githubusercontent\.com/);
+  const versionHelpers = appJs.match(/function parseAppVersion\(version\) \{[\s\S]*?\n\}\n\nfunction compareAppVersions\(left, right\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(versionHelpers, 'version parsing and comparison helpers should be present');
+  const loadVersionHelpers = new Function(`${versionHelpers}; return { parseAppVersion, compareAppVersions };`);
+  const { parseAppVersion, compareAppVersions } = loadVersionHelpers();
+  assert.deepEqual(parseAppVersion('1.2.3'), [1, 2, 3]);
+  assert.equal(compareAppVersions('0.4.0', '0.3.9'), 1);
+  assert.equal(compareAppVersions('0.3.9', '0.4.0'), -1);
+  assert.equal(compareAppVersions('0.4.0', '0.4.0'), 0);
+  assert.equal(compareAppVersions('invalid', '0.4.0'), null);
 
   for (const [file, expectedSize] of [['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) {
     const iconResponse = await fetch(`${base}icons/${file}`);
@@ -220,4 +414,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   const page = await pageResponse.text();
   assert.match(page, /rel="manifest" href="manifest\.webmanifest"/);
   assert.match(page, /id="installAppButton"/);
+  assert.match(page, /id="dropboxPanel"/);
+  assert.match(page, /id="refreshGamesButton"/);
+  assert.match(page, /id="saveDropboxButton"/);
 });

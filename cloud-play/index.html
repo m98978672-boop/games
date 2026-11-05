@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="PLAYBRIDGE">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="PLAYBRIDGE: практическое ядро для подключения Steam, просмотра доступной библиотеки и запуска установок через официальный клиент.">
+  <meta name="description" content="PLAYBRIDGE: Steam OpenID, доступная библиотека, официальные установки и резервная копия списка игр в Dropbox.">
   <title>PLAYBRIDGE — Steam library bridge</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -38,14 +38,14 @@
         <span class="status-orb"></span>
         <span class="sidebar-status-copy"><strong id="sidebarStatusTitle">ПРОВЕРКА СЕРВЕРА</strong><small id="sidebarStatusText">Проверяю API…</small></span>
       </div>
-      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.3 <span class="sidebar-bottom-right">RU</span></div>
+      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.4 <span class="sidebar-bottom-right">RU</span></div>
     </aside>
 
     <main class="main-content" id="top">
       <header class="topbar" id="overview">
         <div class="breadcrumb"><span>PLAYBRIDGE</span><b>/</b><strong>РАБОЧЕЕ ЯДРО</strong></div>
         <div class="topbar-right">
-          <span class="update-pill" id="updateStatus" data-state="checking" role="status" aria-live="polite" title="Проверка обновлений при запуске и возврате в приложение">ПРОВЕРКА ОБНОВЛЕНИЙ</span>
+          <button class="update-pill" id="updateStatus" type="button" data-state="checking" aria-live="polite" aria-label="Проверить обновления PLAYBRIDGE" title="PLAYBRIDGE автоматически проверяет обновления; нажми для немедленной проверки" disabled>ПРОВЕРКА ОБНОВЛЕНИЙ</button>
           <span class="status-pill" id="serverBadge"><i></i> ПРОВЕРКА API</span>
           <div class="profile-chip">
             <span class="avatar" id="profileAvatar">?</span>
@@ -115,12 +115,32 @@
           <div><div class="eyebrow">ТОЛЬКО ДАННЫЕ STEAM API</div><h2>Моя библиотека <span class="library-count" id="gameCount">—</span></h2><p id="librarySub">Список появится после входа через Steam OpenID и успешного ответа Steam API.</p></div>
           <label class="search-box"><span aria-hidden="true">⌕</span><input id="gameSearch" type="search" placeholder="Поиск по своей библиотеке" autocomplete="off" aria-label="Поиск по библиотеке" disabled><kbd>/</kbd></label>
         </div>
+        <div class="backup-panel" id="dropboxPanel" data-state="checking">
+          <div class="backup-info">
+            <span class="backup-icon" aria-hidden="true">↥</span>
+            <div>
+              <div class="eyebrow">ОБЛАЧНАЯ КОПИЯ · DROPBOX</div>
+              <h3>Резервная копия библиотеки</h3>
+              <p id="dropboxText" role="status" aria-live="polite">Проверяю подключение Dropbox…</p>
+              <small>Сохраняются только метаданные библиотеки: SteamID, AppID, названия, время игры, хеши иконок и дата снимка. Не игровые файлы, не игровые сохранения и не видеопоток.</small>
+            </div>
+          </div>
+          <div class="backup-actions">
+            <button class="button button-outline" id="connectDropboxButton" type="button" disabled>Подключить Dropbox</button>
+            <button class="button button-outline" id="saveDropboxButton" type="button" disabled hidden>Сохранить снимок Steam</button>
+            <button class="button button-outline" id="loadDropboxButton" type="button" disabled hidden>Показать снимок</button>
+            <button class="button button-quiet" id="disconnectDropboxButton" type="button" disabled hidden>Отключить</button>
+          </div>
+        </div>
         <div class="library-toolbar">
           <div class="filter-tabs" role="group" aria-label="Фильтр библиотеки">
             <button class="filter-tab is-active" type="button" data-filter="all" aria-pressed="true" disabled>Все игры</button>
             <button class="filter-tab" type="button" data-filter="played" aria-pressed="false" disabled>С временем игры</button>
           </div>
-          <span class="library-source"><span class="source-dot" id="librarySourceDot"></span><span id="librarySource">ОЖИДАЕТ ВХОД</span></span>
+          <div class="library-tools">
+            <button class="button button-quiet refresh-games" id="refreshGamesButton" type="button" disabled>↻ Обновить из Steam</button>
+            <span class="library-source"><span class="source-dot" id="librarySourceDot"></span><span id="librarySource">ОЖИДАЕТ ВХОД</span></span>
+          </div>
         </div>
         <div class="library-state" id="libraryState" role="status" aria-live="polite"><strong>Библиотека не загружена</strong><p>Войди через Steam в блоке сверху. Приватные сведения Steam API не выдаёт.</p></div>
         <div class="game-grid" id="gameGrid" aria-live="polite"></div>
