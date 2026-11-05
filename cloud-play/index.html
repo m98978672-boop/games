@@ -2,13 +2,13 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#090d12">
   <meta name="application-name" content="PLAYBRIDGE">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="PLAYBRIDGE">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="PLAYBRIDGE: Steam OpenID, доступная библиотека, официальные установки и резервная копия списка игр в Dropbox.">
+  <meta name="description" content="PLAYBRIDGE: адаптивная Steam-библиотека для ПК, телефона и планшета с официальным входом и установкой через Steam.">
   <title>PLAYBRIDGE — Steam library bridge</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -27,18 +27,20 @@
       </a>
       <div class="sidebar-label">РАЗДЕЛЫ</div>
       <nav class="side-nav" aria-label="Навигация">
-        <a class="nav-link is-active" href="#overview" data-nav="overview"><span class="nav-icon">◈</span><span>Обзор</span></a>
-        <a class="nav-link" href="#library" data-nav="library"><span class="nav-icon">▦</span><span>Библиотека</span><span class="nav-count" id="navGameCount">—</span></a>
-        <a class="nav-link" href="#install" data-nav="install"><span class="nav-icon">⇩</span><span>Установка через Steam</span></a>
-        <a class="nav-link" href="#cloud" data-nav="cloud"><span class="nav-icon">⌁</span><span>Облачная игра</span></a>
-        <a class="nav-link" href="#trust" data-nav="trust"><span class="nav-icon">◇</span><span>Безопасность</span></a>
+        <a class="nav-link is-active" href="#overview" data-nav="overview" data-mobile-label="Обзор" aria-label="Обзор" aria-current="location"><span class="nav-icon" aria-hidden="true">◈</span><span>Обзор</span></a>
+        <a class="nav-link" href="#library" data-nav="library" data-mobile-label="Игры" aria-label="Библиотека"><span class="nav-icon" aria-hidden="true">▦</span><span>Библиотека</span><span class="nav-count" id="navGameCount">—</span></a>
+        <a class="nav-link" href="#install" data-nav="install" data-mobile-label="Steam" aria-label="Установка через Steam"><span class="nav-icon" aria-hidden="true">⇩</span><span>Установка через Steam</span></a>
+        <a class="nav-link" href="#cloud" data-nav="cloud" data-mobile-label="Облако" aria-label="Облачная игра"><span class="nav-icon" aria-hidden="true">⌁</span><span>Облачная игра</span></a>
+        <a class="nav-link" href="#remote" data-nav="remote" data-mobile-label="Пульт" aria-label="Пульт и трансляции"><span class="nav-icon" aria-hidden="true">▤</span><span>Пульт</span></a>
+        <a class="nav-link" href="#trust" data-nav="trust" data-mobile-label="Защита" aria-label="Безопасность"><span class="nav-icon" aria-hidden="true">◇</span><span>Безопасность</span></a>
+        <a class="nav-link" href="#help" data-nav="help" data-mobile-label="Помощь" aria-label="Помощь и вопросы"><span class="nav-icon" aria-hidden="true">?</span><span>Помощь</span></a>
       </nav>
       <div class="sidebar-spacer"></div>
       <div class="sidebar-status" id="sidebarStatus" data-state="checking">
         <span class="status-orb"></span>
         <span class="sidebar-status-copy"><strong id="sidebarStatusTitle">ПРОВЕРКА СЕРВЕРА</strong><small id="sidebarStatusText">Проверяю API…</small></span>
       </div>
-      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.4 <span class="sidebar-bottom-right">RU</span></div>
+      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.7 <span class="sidebar-bottom-right">RU</span></div>
     </aside>
 
     <main class="main-content" id="top">
@@ -52,6 +54,7 @@
             <span class="profile-copy"><strong id="profileTitle">Не подключено</strong><small id="profileSub">Вход через Steam OpenID</small></span>
           </div>
           <button class="button button-small button-outline" id="installAppButton" type="button" aria-label="Установить PLAYBRIDGE" title="Установить PLAYBRIDGE на устройство" hidden><span aria-hidden="true">⇩</span><span class="install-label">Установить</span></button>
+          <button class="button button-small button-outline" id="localSettingsButton" type="button" hidden>Настроить API</button>
           <button class="button button-small button-outline" id="connectButton" type="button" disabled>Проверяю сервер…</button>
           <button class="button button-small button-outline" id="logoutButton" type="button" hidden>Выйти</button>
         </div>
@@ -155,12 +158,161 @@
         </div>
       </section>
 
+      <section class="section-block remote-section" id="remote" aria-labelledby="remote-title">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">ТЕЛЕФОН → КОМПЬЮТЕР</div>
+            <h2 id="remote-title">Пульт и трансляции</h2>
+            <p>Один код связывает телефон с этим компьютером. Компьютер показывает запрос и подтверждает каждое подключение, а доступ отключается одной кнопкой.</p>
+          </div>
+          <span class="section-caption">КОД · ПОДТВЕРЖДЕНИЕ · СЕССИЯ</span>
+        </div>
+
+        <div class="remote-grid">
+          <article class="remote-card remote-host" id="remoteHostCard" hidden>
+            <div class="remote-card-head">
+              <span class="remote-icon" aria-hidden="true">▣</span>
+              <div><div class="eyebrow">ЭТОТ КОМПЬЮТЕР</div><h3>Разрешить телефон</h3></div>
+              <span class="remote-pill" id="remoteHostPill" data-state="off">ВЫКЛЮЧЕНО</span>
+            </div>
+            <p class="remote-copy" id="remoteHostCopy">Включи доступ — на этом экране появятся код и адрес для телефона. Пока доступ выключен, сеть компьютера не используется.</p>
+            <div class="pair-code-box" id="remoteCodeBox" hidden>
+              <span class="pair-code-label">КОД ДЛЯ ТЕЛЕФОНА</span>
+              <strong class="pair-code" id="remoteCode">000000</strong>
+              <small id="remoteCodeTimer">Код действует две минуты</small>
+            </div>
+            <div class="remote-urls" id="remoteUrls" hidden></div>
+            <div class="remote-actions">
+              <button class="button button-primary" id="remoteToggleButton" type="button">Включить доступ с телефона</button>
+              <button class="button button-quiet" id="remoteNewCodeButton" type="button" hidden>Новый код</button>
+            </div>
+            <div class="remote-list" id="remoteRequests" hidden>
+              <div class="remote-list-title">ЗАПРОСЫ НА ПОДКЛЮЧЕНИЕ</div>
+              <div id="remoteRequestItems"></div>
+            </div>
+            <div class="remote-list" id="remoteSessions" hidden>
+              <div class="remote-list-title">АКТИВНЫЕ УСТРОЙСТВА</div>
+              <div id="remoteSessionItems"></div>
+            </div>
+            <p class="remote-hint">Код одноразовый: после подтверждения он перестаёт действовать. Сессия живёт 30 минут и завершается кнопкой «Выключить доступ».</p>
+          </article>
+
+          <article class="remote-card remote-guest" id="remoteGuestCard">
+            <div class="remote-card-head">
+              <span class="remote-icon" aria-hidden="true">▯</span>
+              <div><div class="eyebrow">ТЕЛЕФОН ИЛИ ПЛАНШЕТ</div><h3>Подключиться к своему ПК</h3></div>
+              <span class="remote-pill" id="remoteGuestPill" data-state="off">НЕ ПОДКЛЮЧЕНО</span>
+            </div>
+            <form class="pair-form" id="pairForm" novalidate>
+              <label class="pair-field">
+                <span>Код с компьютера</span>
+                <input id="pairCodeInput" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" aria-label="Шестизначный код с компьютера">
+              </label>
+              <button class="button button-primary" id="pairButton" type="submit">Подключиться</button>
+            </form>
+            <p class="remote-status" id="pairStatus" role="status" aria-live="polite">Открой PLAYBRIDGE на компьютере, включи доступ и введи код, который появится на его экране.</p>
+
+            <div class="remote-viewer" id="remoteViewer" hidden>
+              <div class="remote-stage" id="remoteStage" role="img" aria-label="Экран компьютера">
+                <img id="remoteScreen" alt="Экран компьютера" decoding="async">
+                <span class="remote-stage-badge" id="remoteStageBadge">ЖДУ КАДР</span>
+              </div>
+              <div class="remote-pad" role="group" aria-label="Управление компьютером">
+                <button class="pad-key pad-up" type="button" data-remote-key="up" aria-label="Вверх">▲</button>
+                <button class="pad-key pad-left" type="button" data-remote-key="left" aria-label="Влево">◀</button>
+                <button class="pad-key pad-ok" type="button" data-remote-key="ok" aria-label="Ввод">OK</button>
+                <button class="pad-key pad-right" type="button" data-remote-key="right" aria-label="Вправо">▶</button>
+                <button class="pad-key pad-down" type="button" data-remote-key="down" aria-label="Вниз">▼</button>
+                <button class="pad-key pad-back" type="button" data-remote-key="back" aria-label="Назад">ESC</button>
+                <button class="pad-key pad-tab" type="button" data-remote-key="tab" aria-label="Переключить">TAB</button>
+                <button class="pad-key pad-space" type="button" data-remote-key="space" aria-label="Пробел">␣</button>
+              </div>
+              <div class="remote-actions">
+                <button class="button button-outline" id="remoteBigPictureButton" type="button">Steam Big Picture</button>
+                <button class="button button-quiet" id="remoteLeaveButton" type="button">Отключиться</button>
+              </div>
+              <p class="remote-hint">Кадры приходят примерно раз в секунду. Клавиши работают, когда на компьютере в фокусе окно игры или Steam; касание по экрану — это клик мышью.</p>
+            </div>
+          </article>
+        </div>
+
+        <article class="broadcast-card">
+          <div class="broadcast-head">
+            <span class="remote-icon" aria-hidden="true">◉</span>
+            <div><div class="eyebrow">ЧУЖИЕ ТРАНСЛЯЦИИ</div><h3>Смотреть с телефона и ПК</h3></div>
+          </div>
+          <p>PLAYBRIDGE не хранит и не перехватывает чужие стримы. Официальные площадки открываются в браузере, а доступность трансляции определяет её автор.</p>
+          <div class="broadcast-links">
+            <a class="button button-outline" href="https://steamcommunity.com/?subsection=broadcasts" target="_blank" rel="noopener noreferrer">Steam Broadcast ↗</a>
+            <a class="button button-outline" href="https://www.twitch.tv/directory/category/steam" target="_blank" rel="noopener noreferrer">Twitch · Steam ↗</a>
+            <a class="button button-quiet" href="https://store.steampowered.com/remoteplay" target="_blank" rel="noopener noreferrer">Steam Remote Play ↗</a>
+          </div>
+        </article>
+      </section>
+
+      <section class="section-block help-section" id="help" aria-labelledby="help-title">
+        <div class="section-heading">
+          <div><div class="eyebrow">ПК · ТЕЛЕФОН · ПЛАНШЕТ</div><h2 id="help-title">PLAYBRIDGE на разных устройствах</h2><p>Интерфейс подстраивается под экран; вход и библиотека зависят от доступного backend.</p></div>
+          <span class="section-caption">ЧАСТЫЕ ВОПРОСЫ</span>
+        </div>
+        <div class="device-grid">
+          <article class="device-card">
+            <span class="device-card-icon" aria-hidden="true">▣</span>
+            <div><div class="eyebrow">БОЛЬШОЙ ЭКРАН</div><h3>ПК и ноутбук</h3><p>Windows portable-пакет запускает backend на этом компьютере. В разделе «Пульт» можно включить доступ с телефона по коду: backend остаётся локальным, но на время сессии открывает отдельный порт в домашней сети.</p></div>
+          </article>
+          <article class="device-card device-card-mobile">
+            <span class="device-card-icon" aria-hidden="true">▯</span>
+            <div><div class="eyebrow">СЕНСОРНЫЙ ЭКРАН</div><h3>Телефон и планшет</h3><p>Подключись по коду с компьютера и управляй им из раздела «Пульт»: экран, стрелки, ввод, Esc и запуск Steam Big Picture. GitHub Pages остаётся статическим интерфейсом — для управления нужен запущенный ПК.</p></div>
+          </article>
+        </div>
+        <div class="faq-list" aria-label="Вопросы и ответы о разных устройствах">
+          <details class="faq-item">
+            <summary>Как телефон подключается к компьютеру?</summary>
+            <p>На компьютере открой раздел «Пульт» и включи доступ — появится шестизначный код и адрес вида http://192.168.…:4175/cloud-play/. Открой этот адрес на телефоне в той же Wi-Fi сети, введи код и подтверди запрос на компьютере. Код одноразовый и действует две минуты.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Безопасно ли оставлять такой доступ включённым?</summary>
+            <p>Доступ выключен по умолчанию и открывается только по твоему нажатию. Пока он включён, слушается отдельный порт в локальной сети, а подключиться можно лишь после подтверждения на экране компьютера. Кнопка «Выключить доступ» закрывает порт и завершает все сессии; сессия также истекает через 30 минут.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Синхронизируются ли ключ Steam API и настройки?</summary>
+            <p>Нет. Не копируй ключ или файл настроек на телефон. В portable-версии ключ хранится на ПК и используется только локальным backend; для нескольких устройств нужен общий HTTPS backend. Список игр запрашивается у Steam, а Dropbox хранит только отдельный снимок метаданных, если он настроен.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Можно ли запускать или стримить игры с телефона?</summary>
+            <p>PLAYBRIDGE показывает экран компьютера отдельными кадрами примерно раз в секунду и отправляет разрешённые клавиши — этого хватает для меню, библиотеки и Steam Big Picture, но не для плавной игры. Для полноценного видеопотока используй Steam Remote Play или Steam Link; из раздела «Пульт» открывается их официальная страница.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Как добавить PLAYBRIDGE на главный экран телефона?</summary>
+            <p>На Android открой сайт в Chrome и выбери «Установить приложение» или «Добавить на главный экран». На iPhone/iPad открой сайт в Safari, нажми «Поделиться» → «На экран “Домой”». Для установки PWA нужен HTTPS (или localhost при локальном тесте); авторизация всё равно требует доступного backend.</p>
+          </details>
+        </div>
+      </section>
+
       <footer class="page-footer">
         <span><strong>PLAYBRIDGE</strong> · интеграция с официальным клиентом Steam</span>
         <span>Независимый проект; не связан с Valve. Cloud gaming пока не настроен.</span>
       </footer>
     </main>
   </div>
+  <dialog class="local-settings-dialog" id="localSettingsDialog" aria-labelledby="localSettingsTitle">
+    <form id="localSettingsForm">
+      <button class="dialog-close" id="closeLocalSettingsButton" type="button" aria-label="Закрыть">×</button>
+      <div class="eyebrow">ЛОКАЛЬНАЯ НАСТРОЙКА</div>
+      <h2 id="localSettingsTitle">Подключить библиотеку Steam</h2>
+      <p>Ключ нужен только для чтения списка игр. Он хранится на этом компьютере в папке профиля пользователя и не отправляется на GitHub или в Steam OpenID.</p>
+      <label class="settings-label" for="steamApiKeyInput">Steam Web API key</label>
+      <input id="steamApiKeyInput" name="steamApiKey" type="password" inputmode="text" autocomplete="off" spellcheck="false" maxlength="32" placeholder="32 символа" aria-describedby="steamApiKeyHelp">
+      <small id="steamApiKeyHelp">Получить ключ можно на <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer">официальной странице Steam</a>. Не вставляй его в чат. Пустое поле оставит сохранённый ключ без изменений.</small>
+      <label class="auto-login-option" for="autoLoginCheckbox"><input id="autoLoginCheckbox" type="checkbox"> Автоматически открывать Steam, если сессия истекла</label>
+      <p class="local-settings-feedback" id="localSettingsFeedback" role="status" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button class="button button-outline" id="clearSteamApiKeyButton" type="button" hidden>Удалить ключ</button>
+        <button class="button button-outline" id="closeLocalSettingsFooter" type="button">Отмена</button>
+        <button class="button button-primary" id="saveLocalSettingsButton" type="submit">Сохранить на этом компьютере</button>
+      </div>
+    </form>
+  </dialog>
   <noscript><div class="noscript">Для подключения к backend и загрузки библиотеки нужен включённый JavaScript.</div></noscript>
 </body>
 </html>
