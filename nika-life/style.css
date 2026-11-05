@@ -19,42 +19,67 @@ body { background: #0d1116; }
 
 .accent-ink-text { color: var(--accent-2); }
 
-/* ---------- чат ---------- */
-.chat-panel { display: flex; flex-direction: column; gap: 8px; width: 310px; max-height: calc(100vh - 160px); }
-.chat-panel h3 { margin-bottom: 2px; flex: none; }
+/* ---------- чат: крупный, сворачиваемый, не мешает смотреть -------------- */
+.chat-panel {
+  display: flex; flex-direction: column; gap: 9px;
+  width: var(--chat-w, 380px); max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 150px);
+}
+.chat-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex: none; }
+.chat-head h3 { margin: 0; font-size: 13px; }
+.icon-btn.small { width: 28px; height: 28px; font-size: 13px; flex: none; }
+.chat-tools { display: flex; gap: 8px; flex: none; font-size: 9.5px; color: var(--ink-faint); }
+.chat-tools label { flex: 1; display: flex; align-items: center; gap: 5px; }
+.chat-tools input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent); height: 14px; }
 .chat-log {
-  flex: 1 1 auto; min-height: 130px; max-height: min(46vh, 380px); overflow-y: auto;
-  display: flex; flex-direction: column; gap: 6px; padding-right: 4px;
+  flex: 1 1 auto; min-height: 190px; max-height: min(54vh, 540px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px; padding: 4px 6px 4px 2px;
   scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent;
 }
-.msg { padding: 7px 9px; border-radius: 10px; font-size: 11.5px; line-height: 1.45; border: 1px solid var(--line); background: rgba(255,255,255,.035); }
-.msg.player { align-self: flex-end; background: rgba(231,143,166,.16); border-color: rgba(231,143,166,.35); max-width: 88%; }
-.msg.nika { align-self: flex-start; max-width: 94%; border-left: 2px solid var(--accent); }
+.msg {
+  padding: 10px 12px; border-radius: 12px; font-size: var(--chat-fs, 15px); line-height: 1.55;
+  border: 1px solid var(--line); background: rgba(255,255,255,.04);
+}
+.msg.player { align-self: flex-end; background: rgba(231,143,166,.18); border-color: rgba(231,143,166,.38); max-width: 90%; }
+.msg.nika { align-self: flex-start; max-width: 96%; border-left: 3px solid var(--accent); }
 .msg.ai { border-left-color: var(--violet); }
 .msg.llm { border-left-color: var(--blue); }
-.msg .who { display: block; font-size: 8.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 2px; }
-.msg .time { color: var(--ink-faint); font-size: 9px; margin-left: 6px; }
-.chat-form { display: flex; gap: 6px; flex: none; }
+.msg .who { display: block; font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 3px; }
+.msg .time { color: var(--ink-faint); font-size: 10px; margin-left: 6px; }
+.chat-form { display: flex; gap: 7px; flex: none; }
 .chat-form input {
   flex: 1; min-width: 0; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
-  background: #0f151a; color: var(--ink); padding: 9px 10px; font: 12px var(--font); outline: none;
+  background: #0f151a; color: var(--ink); padding: 11px 12px; font-size: var(--chat-fs, 15px); font-family: var(--font); outline: none;
 }
 .chat-form input:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(231,143,166,.16); }
-.send-btn { width: 38px; flex: none; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-sm); font-size: 14px; font-weight: 800; }
+.send-btn { width: 44px; flex: none; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: var(--radius-sm); font-size: 16px; font-weight: 800; }
 .send-btn:hover { background: var(--accent-2); }
-.quick { display: flex; flex-wrap: wrap; gap: 5px; flex: none; }
+.quick { display: flex; flex-wrap: wrap; gap: 6px; flex: none; }
 .quick button {
   border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-dim);
-  border-radius: 999px; padding: 4px 9px; font-size: 10px; cursor: pointer;
+  border-radius: 999px; padding: 6px 11px; font-size: 11px; cursor: pointer;
 }
 .quick button:hover { border-color: var(--accent); color: var(--accent-2); }
-.switch { display: flex; align-items: center; gap: 7px; font-size: 10.5px; color: var(--ink-dim); cursor: pointer; flex: none; }
-.switch input { accent-color: var(--accent); }
-.ai-mini { font-size: 9.5px; color: var(--ink-faint); line-height: 1.45; border-top: 1px solid var(--line); padding-top: 6px; flex: none; }
+.switch { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--ink-dim); cursor: pointer; flex: none; }
+.switch input { accent-color: var(--accent); width: 15px; height: 15px; }
+.ai-mini { font-size: 10.5px; color: var(--ink-faint); line-height: 1.5; border-top: 1px solid var(--line); padding-top: 7px; flex: none; }
+.chat-restore {
+  display: none; position: fixed; right: 12px; top: 76px; z-index: 20;
+  align-items: center; gap: 8px; border: 1px solid var(--accent); background: rgba(16,20,26,.92);
+  color: var(--accent-2); border-radius: 999px; padding: 9px 14px; font-size: 12px; font-weight: 700; cursor: pointer;
+}
+body.chat-collapsed .chat-panel { display: none; }
+body.chat-collapsed .chat-restore { display: flex; }
+/* режим просмотра: только Ника и квартира */
+body.watch-mode .panel, body.watch-mode .bottom-bar,
+body.watch-mode #save-indicator, body.watch-mode .top-stats { display: none !important; }
+body.watch-mode .topbar { background: linear-gradient(180deg, rgba(12,16,20,.75), rgba(12,16,20,0)); }
+body.watch-mode .chat-restore { display: none !important; }
 
 /* ---------- левая панель ---------- */
-.tools-panel { width: 288px; max-height: calc(100vh - 160px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
-.tabs button { flex: 1 1 44%; font-size: 10.5px; padding: 6px 4px; }
+.tools-panel { width: 322px; max-height: calc(100vh - 150px); overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.tabs { flex-wrap: wrap; gap: 4px; }
+.tabs button { flex: 1 1 30%; font-size: 10px; padding: 7px 4px; }
 .tab-body.hidden { display: none; }
 .counter { font-size: 11px; color: var(--accent-2); font-weight: 700; margin-bottom: 8px; line-height: 1.45; }
 .field-label { display: block; font-size: 9px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); margin: 9px 0 5px; }
@@ -110,6 +135,33 @@ body { background: #0d1116; }
 .learn-text:focus { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(231,143,166,.16); }
 code { background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; color: var(--accent-2); font-size: 10px; }
 
+/* ---------- v1.2: ассеты, характер, точки, интернет, камера -------------- */
+.underwear-card { margin: 9px 0; border: 1px solid rgba(231,143,166,.28); background: rgba(231,143,166,.07); border-radius: 10px; padding: 9px 11px; font-size: 11px; }
+.underwear-card b { display: block; color: var(--accent-2); margin-bottom: 3px; }
+.underwear-card span { color: var(--ink); }
+.underwear-card .fine { margin-top: 5px; }
+.asset-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 7px 0; }
+.asset-grid button { position: relative; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 7px; padding: 0; cursor: pointer; overflow: hidden; }
+.asset-grid button.on { outline: 2px solid var(--accent-2); outline-offset: 1px; }
+.asset-grid button i { position: absolute; inset: auto 0 0 0; display: block; font-size: 8px; font-style: normal; color: #fff; background: rgba(0,0,0,.55); text-align: center; }
+.psy-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.psy-card { border: 1px solid var(--line); border-radius: 9px; padding: 8px 9px; background: rgba(255,255,255,.025); }
+.psy-card .top { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink); font-weight: 700; }
+.psy-card .top b { color: var(--accent-2); font-variant-numeric: tabular-nums; }
+.psy-card .desc { font-size: 10px; color: var(--ink-faint); margin-top: 3px; line-height: 1.45; }
+.psy-card .bar { margin-top: 6px; height: 5px; }
+.mini-field { flex: 1; display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--ink-faint); }
+.mini-field input { flex: 1; min-width: 0; accent-color: var(--accent); }
+.wide-range { width: 100%; accent-color: var(--accent); }
+.net-warning { border: 1px solid rgba(155,140,240,.35); background: rgba(155,140,240,.08); border-radius: 10px; padding: 9px 11px; margin-bottom: 9px; font-size: 10.5px; line-height: 1.55; color: var(--ink-dim); }
+.net-warning b { color: var(--accent-2); }
+.net-warning p { margin: 5px 0 0; }
+.net-status { margin: 8px 0; font-size: 10.5px; line-height: 1.5; color: var(--accent-2); border-left: 2px solid var(--accent); padding-left: 7px; }
+.camera-bar { display: flex; gap: 4px; flex: none; }
+.cam-btn { min-width: 30px; height: 28px; border: 1px solid var(--line-strong); background: rgba(16,20,26,.85); color: var(--ink-dim); border-radius: 7px; font-size: 13px; cursor: pointer; }
+.cam-btn:hover { border-color: var(--accent); color: var(--accent-2); }
+.cam-btn.on { border-color: var(--accent); color: var(--accent-2); background: rgba(231,143,166,.16); }
+
 /* ---------- модалка помощи ---------- */
 .help-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .help-grid h3 { margin-top: 0; }
@@ -129,11 +181,17 @@ code { background: var(--panel-2); border: 1px solid var(--line); border-radius:
   }
   body[data-mobile-panel="chat"] .tools-panel { display: none; }
   body[data-mobile-panel="tools"] .chat-panel { display: none; }
-  .chat-log { max-height: 26vh; }
+  .chat-log { max-height: 30vh; min-height: 110px; }
   .clip-list { max-height: 26vh; }
-  .bottom-bar { padding: 6px 8px; }
+  .chat-panel { width: auto !important; max-width: none; }
+  .chat-tools { display: none; }
+  .chat-restore { display: none !important; }
+  .bottom-bar { padding: 6px 8px; flex-wrap: wrap; gap: 5px; }
   .chip.news { display: none; }
-  .chip.hint { font-size: 10px; }
+  .chip.hint { font-size: 10px; flex: 1 1 100%; }
+  .camera-bar { flex: 1 1 100%; justify-content: center; }
+  .asset-grid { grid-template-columns: repeat(6, 1fr); }
+  .help-grid { grid-template-columns: 1fr; }
   .help-grid { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -6,7 +6,8 @@
 (function (root) {
   'use strict';
   const NIKA = (root.NIKA = root.NIKA || {});
-  const ai = NIKA.ai, data = NIKA.data, anim = NIKA.anim;
+  const ai = NIKA.ai, data = NIKA.data, anim = NIKA.anim, assets = NIKA.assets;
+  const skills = NIKA.skills, mesh = NIKA.mesh, net = NIKA.net;
 
   const SAVE_KEY = 'nika-life-save-v1';
   const MINUTES_PER_SECOND = 1; // 1 реальная секунда = 1 игровая минута на скорости 1×
@@ -22,12 +23,29 @@
     wash:     { label: 'купается', minutes: 22, location: 'bath', effects: { hygiene: 3.2, mood: 0.3, energy: -0.05, bladder: -0.05 } },
     toilet:   { label: 'в санузле', minutes: 14, location: 'toilet', effects: { bladder: 7, hygiene: 0.45, mood: 0.22 } },
     exercise: { label: 'делает зарядку', minutes: 35, location: 'living', effects: { fitness: 1.5, energy: -0.35, hygiene: -0.35, mood: 0.3 } },
-    dress:    { label: 'переодевается', minutes: 9, location: null, effects: { mood: 0.35 } },
+    dress:    { label: 'переодевается', minutes: 18, location: 'wardrobe', effects: { mood: 0.35 } },
     talk:     { label: 'разговаривает', minutes: 14, location: null, effects: { mood: 0.6, energy: 0.05 } },
     wait:     { label: 'отдыхает', minutes: 20, location: null, effects: { energy: 0.25, mood: 0.14 } },
     buy:      { label: 'ходит за покупками', minutes: 35, location: 'street', effects: { mood: 0.3, energy: -0.2 } },
   };
   const DECAY = { hunger: -0.045, energy: -0.03, hygiene: -0.04, mood: -0.028, fitness: -0.018, bladder: -0.055 };
+
+  /* --- ХАРАКТЕР: настоящие психологические комплексы -----------------------
+     Это не декоративные цифры: они влияют на поведение при переодевании,
+     на реплики, на выбор наряда и на реакцию на комплименты.                 */
+  const COMPLEXES = [
+    { id: 'modesty',    key: 'modesty',       label: 'Стесняется раздеваться',  desc: 'Просит не смотреть, уходит за ширму, прикрывается.' },
+    { id: 'body',       key: 'bodyImage',     label: 'Не уверена в фигуре',     desc: 'Сомневается в наряде, сравнивает себя с прежней.' },
+    { id: 'approval',   key: 'approval',      label: 'Ждёт одобрения',         desc: 'После переодевания спрашивает «ну как?».' },
+    { id: 'perfection', key: 'perfectionism', label: 'Перфекционизм',          desc: 'Подолгу поправляет подол и смотрится в зеркало.' },
+    { id: 'shyness',    key: 'shyness',       label: 'Застенчивость',          desc: 'Отводит взгляд, тише разговаривает, краснеет.' },
+    { id: 'trust',      key: 'trust',         label: 'Недоверие к зрителю',    desc: 'Постепенно оттаивает от добрых слов и «я не смотрю».' },
+  ];
+  const DRESS_PHASES = anim.DRESS_SEQUENCE;
+  const PSY_DEFAULT = {
+    confidence: 54, selfEsteem: 52, modesty: 74, shyness: 61,
+    trust: 38, bodyImage: 47, perfectionism: 58, approval: 63,
+  };
 
   /* --- стартовое состояние -------------------------------------------------- */
   function freshState() {
@@ -38,6 +56,7 @@
       needs: { energy: 78, hunger: 74, mood: 72, hygiene: 80, health: 92, fitness: 64, money: 120, bladder: 84 },
       location: 'living', x: 0.52, targetX: 0.52,
       outfit: {
+        underwear: { id: 'slip', color: '#e9e1d6' },
         head: null,
         top: { id: 'tshirt', color: '#ece7dc' },
         bottom: { id: 'jeans', color: '#3f5680' },
@@ -46,12 +65,21 @@
         shoes: { id: 'sneakers', color: '#ece7dc' },
         accessory: null,
       },
-      owned: ['dress', 'pajama', 'sport', 'tshirt', 'jeans', 'sneakers', 'slippers', 'hoodie', 'jacket', 'headband'],
+      owned: ['dress', 'pajama', 'sport', 'tshirt', 'jeans', 'sneakers', 'slippers', 'hoodie', 'jacket', 'headband',
+        'slip', 'cotton_set', 'thermal'],
       action: null,
       goals: [],
       dressing: null,
+      look: assets.defaultLook(),
+      psy: Object.assign({}, PSY_DEFAULT),
+      complexesLog: [],
+      cameraX: 0.32, zoom: 1,
+      settings: { privacy: true, cameraFollow: true, reducedMotion: false, uiScale: 1, gamepad: true,
+        showPoints: false, warmth: 22, chatFont: 15, chatWidth: 380, chatCollapsed: false,
+        watchMode: false, internetOptIn: false },
+      webStats: null, skillLog: [],
       log: [
-        { day: 1, minutes: 480, who: 'nika', text: 'Привет! Я Ника. Живу в своей минималистичной квартире, сама решаю, что делать, но слушаюсь твоих команд. Попробуй: «переоденься в синее платье, прими ванну и поговори со мной».' },
+        { day: 1, minutes: 480, who: 'nika', text: 'Привет! Я Ника. Квартира большая — тринадцать зон, камера едет за мной, а управлять можно мышью, пальцем, клавиатурой и геймпадом. Попробуй: «переоденься в синее платье» — я сниму старое, схожу в гардеробную и надену новое. И не смущай меня, ладно?' },
       ],
       memory: [],
       events: [],
@@ -77,6 +105,97 @@
   }
   function toast(state, text, kind) { emit(state, { type: 'toast', text: text, kind: kind || '' }); }
   function play(state, part, id, opts) { emit(state, Object.assign({ type: 'play', part: part, id: id }, opts || {})); }
+
+  /* --- характер и комплексы ------------------------------------------------- */
+  function psy(state) { return state.psy || (state.psy = Object.assign({}, PSY_DEFAULT)); }
+  function psyValue(state, key) { return clamp(psy(state)[key] === undefined ? 50 : psy(state)[key], 0, 100); }
+  function psyUpdate(state, delta) {
+    const p = psy(state);
+    Object.keys(delta).forEach(function (k) { p[k] = clamp((p[k] === undefined ? 50 : p[k]) + delta[k], 0, 100); });
+  }
+  function psyEvent(state, type) {
+    const deltas = {
+      compliment: { confidence: 6, selfEsteem: 4, bodyImage: 3, trust: 2, shyness: -2, modesty: -1 },
+      reassure:   { trust: 5, shyness: -4, confidence: 2, modesty: -1, bodyImage: 1 },
+      undress:    { trust: -1, shyness: 1 },
+      dressed:    { confidence: 2, bodyImage: 1, approval: 1 },
+      teased:     { confidence: -5, selfEsteem: -4, shyness: 3 },
+    };
+    if (deltas[type]) psyUpdate(state, deltas[type]);
+    state.complexesLog = (state.complexesLog || []).concat([{ day: state.day, minutes: Math.floor(state.minutes), type: type }]).slice(-24);
+  }
+  /* профиль поведения, который читает риг */
+  function psyProfile(state) {
+    const s = state.settings || {};
+    const modesty = psyValue(state, 'modesty'), shyness = psyValue(state, 'shyness');
+    const trust = psyValue(state, 'trust'), perfection = psyValue(state, 'perfectionism');
+    return {
+      screen: s.privacy !== false && modesty > 42,
+      turnAway: modesty > 68 && trust < 70,
+      blush: clamp((shyness + modesty - 60) / 120, 0, 1),
+      gazeDown: shyness > 55,
+      hemAdjust: perfection / 100,
+      mirrorCheck: perfection > 55,
+      hesitate: psyValue(state, 'bodyImage') < 50,
+      seekApproval: psyValue(state, 'approval') > 55,
+      modesty: modesty, trust: trust,
+    };
+  }
+  function psySummary(state) {
+    return COMPLEXES.map(function (c) {
+      const raw = psyValue(state, c.key);
+      const weight = c.id === 'trust' ? (100 - raw) / 100 : raw / 100;
+      return { id: c.id, label: c.label, desc: c.desc, value: Math.round(raw), weight: Math.round(weight * 100) / 100 };
+    });
+  }
+
+  /* --- трёхфазное переодевание ---------------------------------------------- */
+  function phaseFor(progress) {
+    for (let i = 0; i < DRESS_PHASES.length; i++) {
+      const p = DRESS_PHASES[i];
+      if (progress >= p.from && progress < p.to) return p;
+    }
+    return DRESS_PHASES[DRESS_PHASES.length - 1];
+  }
+  function phaseLine(state, phase) {
+    const pr = psyProfile(state);
+    if (phase.id === 'remove') {
+      if (pr.screen) return 'Сначала снимаю старое… отвернись, пожалуйста, я стесняюсь.';
+      return 'Снимаю старую одежду — стала легче.';
+    }
+    if (phase.id === 'search') {
+      if (pr.hesitate) return 'Открыла шкаф… никак не решу, что мне идёт. Может, вот это?';
+      return 'Иду к шкафу, перебираю плечики, выбираю ткань.';
+    }
+    if (pr.mirrorCheck) return 'Надеваю новое, расправляю подол… ещё раз гляну в зеркало.';
+    if (pr.seekApproval) return 'Готово! Ну как, смотрится? Мне правда идёт?';
+    return 'Натягиваю новую вещь, застёгиваю и расправляю ткань.';
+  }
+  function applyDressPhase(state, phase) {
+    if (!state.dressing || state.dressing.phase === phase.id) return;
+    state.dressing.phase = phase.id;
+    emit(state, { type: 'clearTag', prefix: 'dress-' });
+    play(state, 'routine', phase.scene, { tag: 'dress-' + phase.id, loop: true, weight: 1 });
+    phase.clips.forEach(function (c) {
+      play(state, c.part, c.id, { tag: 'dress-' + phase.id, weight: 0.9, loop: false });
+    });
+    say(state, phaseLine(state, phase), 'nika', 'ai');
+    emit(state, { type: 'toast', text: '✦ ' + phase.label, kind: 'ok' });
+  }
+
+  /* --- камера большой квартиры ---------------------------------------------- */
+  function clampCamera(state) {
+    state.zoom = clamp(state.zoom || 1, 0.75, 1.8);
+    state.cameraX = clamp(state.cameraX || 0, 0.06, 0.94);
+  }
+  function moveToZone(state, direction) {
+    const list = data.LOCATIONS.slice().sort(function (a, b) { return a.x - b.x; });
+    let idx = 0, best = Infinity;
+    list.forEach(function (l, i) { const d = Math.abs(l.x - state.x); if (d < best) { best = d; idx = i; } });
+    const next = list[clamp(idx + direction, 0, list.length - 1)];
+    if (next) { state.cameraX = next.x; enqueue(state, { intent: 'go', targetLocation: next.id }); }
+    return next;
+  }
 
   /* --- анимации для действий ------------------------------------------------ */
   function actionAnimations(intent) {
@@ -163,7 +282,13 @@
 
   /* --- очередь целей -------------------------------------------------------- */
   function enqueue(state, goal) {
-    state.goals.push(goal);
+    /* команды игрока идут вперёд автономных целей, но сохраняют свой порядок */
+    if (goal.auto) state.goals.push(goal);
+    else {
+      let i = 0;
+      while (i < state.goals.length && !state.goals[i].auto) i++;
+      state.goals.splice(i, 0, goal);
+    }
     if (state.goals.length > 12) state.goals.shift();
     if (!state.action) beginNext(state);
   }
@@ -195,7 +320,23 @@
       playedAt: -1,
     };
     state.lastAuto = goal.auto ? intent : state.lastAuto;
-    if (intent !== 'dress' || !state.dressing) state.dressing = null;
+    /* бытовой навык: шаги из встроенной базы или выученные с публичного сайта */
+    const skill = skills.forIntent(intent);
+    if (skill) {
+      state.action.steps = skill.steps.slice(0, 10);
+      state.action.skillSource = skill.source;
+      state.skillLog = (state.skillLog || []).concat([{ day: state.day, intent: intent, steps: skill.steps.length, source: skill.source }]).slice(-20);
+      if (skill.source.indexOf('сайт') !== -1 && !goal.auto) {
+        say(state, 'Делаю по шагам из загруженного сайта: ' + skill.steps.slice(0, 3).join(' → ') + '…', 'nika', 'ai');
+      }
+    }
+    emit(state, { type: 'motor', program: mesh.programFor(goal.raw || cfg.label) });
+    if (intent === 'dress') {
+      if (state.dressing) state.dressing.pending = false;
+      psyEvent(state, 'undress');
+    } else if (!(state.dressing && state.dressing.pending)) {
+      state.dressing = null;
+    }
     const anims = actionAnimations(intent);
     anims.forEach(function (a) {
       play(state, a.part, a.id, { loop: !!a.loop, weight: a.weight || 0.95, tag: a.tag || 'action' });
@@ -217,7 +358,10 @@
       dress: 'Готово, наряд обновлён — платье село идеально.', wait: 'Немного отдохнула.', buy: 'Вернулась с покупкой.',
       go: 'Пришла.' };
     if (done[a.intent] && (a.auto || a.intent !== 'go')) say(state, done[a.intent], 'nika', a.auto ? 'ai' : '');
-    if (a.intent === 'dress') state.dressing = null;
+    if (a.intent === 'dress') {
+      psyEvent(state, 'dressed');
+      state.dressing = null;
+    }
     state.action = null;
     beginNext(state);
   }
@@ -244,6 +388,11 @@
     state.minutes += dtMin;
     while (state.minutes >= 1440) { state.minutes -= 1440; state.day += 1; say(state, 'Новый день ' + state.day + '. Доброе утро!', 'nika', 'ai'); }
     state.hour = Math.floor(state.minutes / 60);
+    /* камера мягко следует за Никой по большой квартире */
+    if ((state.settings || {}).cameraFollow !== false) {
+      state.cameraX = (state.cameraX || 0) + (state.x - (state.cameraX || 0)) * Math.min(1, dtSeconds * 3.2);
+    }
+    clampCamera(state);
 
     Object.keys(DECAY).forEach(function (k) {
       let factor = 1;
@@ -256,6 +405,11 @@
       const eff = cfg.effects || {};
       Object.keys(eff).forEach(function (k) { need(state.needs, k, eff[k] * dtMin); });
       a.remaining -= dtMin;
+      if (a.intent === 'dress' && state.dressing) {
+        const prog = clamp(1 - a.remaining / a.total, 0, 1);
+        state.dressing.progress = prog;
+        applyDressPhase(state, phaseFor(prog));
+      }
       if (a.targetX !== null && a.targetX !== undefined) {
         const dx = a.targetX - state.x;
         state.x += Math.sign(dx) * Math.min(Math.abs(dx), dtSeconds * 0.28);
@@ -349,12 +503,15 @@
         wear(state, item, color);
         const after = JSON.parse(JSON.stringify(state.outfit));
         const newColor = (after.dress || after.top || after.outer || {}).color || item.color;
-        state.dressing = { from: before, to: after, oldColor: oldColor, newColor: newColor, item: item.name };
+        state.dressing = { from: before, to: after, oldColor: oldColor, newColor: newColor,
+          item: item.name, phase: null, progress: 0, pending: true };
         play(state, 'routine', 'dress-change', { loop: true, tag: 'scene', weight: 1 });
-        play(state, 'routine', 'dress-up', { tag: 'scene0' });
         play(state, 'fingers', 'gentle', { replace: true });
-        reply = 'Переодеваюсь в ' + item.name + (color ? ' в ' + color.name + ' цвете' : '') +
-          ': ширма, руки вверх, ткань меняет цвет прямо на мне. Сейчас: ' + outfitText(state) + '.';
+        const oldItem = data.findItem((before.dress || before.top || before.outer || {}).id);
+        reply = 'Переодевание в три шага: сниму ' + (oldItem ? oldItem.name : 'старую одежду') +
+          ', схожу в гардеробную и выберу ' + item.name + (color ? ' в ' + color.name + ' цвете' : '') +
+          ', потом надену и поправлю подол. ' + (psyProfile(state).screen ? 'Я за ширмой, не подглядывай.' : 'Можно смотреть.');
+
         enqueue(state, { intent: 'dress', raw: parsed.raw, payload: { type: 'dress', item: item, color: color } });
         break;
       }
@@ -363,7 +520,8 @@
         remove(state, s.item);
         state.dressing = { from: before, to: JSON.parse(JSON.stringify(state.outfit)),
           oldColor: (before.dress || before.top || before.outer || {}).color || '#c9c1d6',
-          newColor: '#c9c1d6', item: 'лёгкую домашнюю одежду' };
+          newColor: '#c9c1d6', item: 'лёгкую домашнюю одежду',
+          phase: null, progress: 0, pending: true };
         play(state, 'routine', 'dress-change', { loop: true, tag: 'scene', weight: 1 });
         play(state, 'armL', 'lower'); play(state, 'armR', 'lower');
         reply = 'Снимаю ' + (s.item ? s.item.name : 'лишнюю одежду') + ' за ширмой. Теперь на мне: ' + outfitText(state) + '.';
@@ -479,6 +637,76 @@
         play(state, 'face', 'smile');
         enqueue(state, { intent: 'talk', raw: parsed.raw });
         break;
+      case 'compliment': {
+        psyEvent(state, 'compliment');
+        need(state.needs, 'mood', 6);
+        play(state, 'emotions', 'emotions-01', { replace: true });
+        play(state, 'skin', 'blush', { replace: true });
+        reply = 'Ой… спасибо. ' + (psyValue(state, 'bodyImage') > 60
+          ? 'Я и правда начинаю себе нравиться в этом наряде.'
+          : 'Мне всё ещё неловко, но от этих слов теплее. Я покраснела.');
+        break;
+      }
+      case 'reassure': {
+        psyEvent(state, 'reassure');
+        need(state.needs, 'mood', 4);
+        play(state, 'emotions', 'emotions-10', { replace: true });
+        play(state, 'lips', 'smile', { replace: true });
+        reply = 'Хорошо… ' + (psyValue(state, 'trust') > 55
+          ? 'Кажется, я правда могу расслабиться рядом с тобой.'
+          : 'Я всё ещё немного ёжусь, но спасибо, что не давишь.');
+        break;
+      }
+      case 'psy': {
+        const strongest = psySummary(state).slice().sort(function (a, b) { return b.weight - a.weight; })[0];
+        reply = 'Если честно: ' + strongest.label.toLowerCase() + '. ' + strongest.desc +
+          ' Уверенность ' + Math.round(psyValue(state, 'confidence')) + '%, доверие ' +
+          Math.round(psyValue(state, 'trust')) + '%. Открой вкладку «Характер» — там всё видно.';
+        emit(state, { type: 'tab', tab: 'psy' });
+        break;
+      }
+      case 'web': {
+        const ni = net.info();
+        reply = 'Сама я в интернет не хожу: включи «разрешить интернет-обучение» во вкладке «Интернет», укажи адрес публичного сайта и нажми «Загрузить». ' +
+          'Запрос будет ровно один, без ключей и телеметрии; текст разберу локально. Сейчас запросов: ' + ni.requests + '.';
+        emit(state, { type: 'tab', tab: 'net' });
+        break;
+      }
+      case 'mesh': {
+        const mi = mesh.info();
+        reply = 'На теле ' + mi.points + ' управляемых точек в ' + mi.regions + ' областях и ' + mi.programs +
+          ' встроенных моторных программ (ходьба, купание, переодевание, дыхание…). Выучено новых связей: ' + mi.learned +
+          '. Открой вкладку «Тело · точки» — там можно двигать любую точку и доучивать движения текстом.';
+        emit(state, { type: 'tab', tab: 'mesh' });
+        break;
+      }
+      case 'warmth': {
+        const m = parsed.raw.match(/\d{2}/);
+        const value = m ? clamp(parseInt(m[0], 10), data.HEAT.min, data.HEAT.max)
+          : /жарко|теплее|согрей|подними/.test(parsed.raw) ? Math.min(30, (state.settings.warmth || 22) + 2)
+          : Math.max(16, (state.settings.warmth || 22) - 2);
+        state.settings.warmth = value;
+        reply = 'Поставила ' + value + ' °C. ' + (value < 19 ? 'Прохладно — кутаюсь и двигаюсь, чтобы согреться.'
+          : value > 27 ? 'Жарковато — дышу чаще, щёки теплее.' : 'Комфортно, держу осанку и ровное дыхание.');
+        play(state, 'bust', value > 27 ? 'bust-02' : 'bust-16', { replace: true });
+        emit(state, { type: 'tab', tab: 'mesh' });
+        break;
+      }
+      case 'underwear': {
+        const item = s.item && s.item.slot === 'underwear' ? s.item : null;
+        if (item) {
+          if (state.owned.indexOf(item.id) === -1) state.owned.push(item.id);
+          wear(state, item, s.color);
+          reply = 'Сменила нижний слой за ширмой: ' + item.name + '. Сверху всё как прежде — ' + outfitText(state) + '.';
+        } else {
+          const u = state.outfit.underwear;
+          const ui = u ? data.findItem(u.id) : null;
+          reply = 'Под верхней одеждой у меня ' + (ui ? ui.name : 'домашняя комбинация') +
+            ' — скромный нижний слой. Он виден только когда я переодеваюсь за ширмой; откровенной анатомии в игре нет.';
+        }
+        emit(state, { type: 'tab', tab: 'wardrobe' });
+        break;
+      }
       default:
         reply = 'Не совсем поняла, но попробую догадаться. Напиши «помощь» или «покажи анимации».';
     }
@@ -517,6 +745,9 @@
     const copy = {};
     Object.keys(state).forEach(function (k) { if (k !== 'events') copy[k] = state[k]; });
     copy.aiExamples = ai.serialize();
+    copy.meshState = mesh.serialize();
+    copy.skillsState = skills.serialize();
+    copy.netState = net.info();
     return copy;
   }
   function deserialize(raw) {
@@ -532,9 +763,23 @@
     state.needs = Object.assign(fresh.needs, saved.needs || {});
     state.outfit = Object.assign(fresh.outfit, saved.outfit || {});
     state.action = null; state.goals = []; state.dressing = null;
+    state.psy = Object.assign({}, PSY_DEFAULT, saved.psy || {});
+    state.look = Object.assign(assets.defaultLook(), saved.look || {});
+    state.settings = Object.assign({}, fresh.settings, saved.settings || {});
+    state.complexesLog = Array.isArray(saved.complexesLog) ? saved.complexesLog.slice(-24) : [];
+    state.cameraX = Number.isFinite(saved.cameraX) ? saved.cameraX : state.x;
+    state.zoom = Number.isFinite(saved.zoom) ? saved.zoom : 1;
     state.hour = Math.floor(state.minutes / 60);
     if (!('bladder' in state.needs)) state.needs.bladder = fresh.needs.bladder;
+    clampCamera(state);
     if (Array.isArray(saved.aiExamples)) ai.restore(saved.aiExamples);
+    mesh.restore(saved.meshState);
+    skills.restore(saved.skillsState);
+    state.webStats = saved.netState || null;
+    state.skillLog = Array.isArray(saved.skillLog) ? saved.skillLog.slice(-20) : [];
+    state.settings.internetOptIn = !!(saved.netState && saved.netState.optIn);
+    net.setOptIn(state.settings.internetOptIn);
+    if (!state.outfit.underwear) state.outfit.underwear = { id: 'slip', color: '#e9e1d6' };
     return state;
   }
 
@@ -544,6 +789,16 @@
     enqueue: enqueue, playClip: playClip, say: say, emit: emit,
     clock: clock, outfitText: outfitText, wear: wear, remove: remove,
     gestureAnimation: gestureAnimation, actionAnimations: actionAnimations,
+    COMPLEXES: COMPLEXES, psyProfile: psyProfile, psySummary: psySummary,
+    psyEvent: psyEvent, psyUpdate: psyUpdate, phaseFor: phaseFor,
+    clampCamera: clampCamera, moveToZone: moveToZone,
+    webLearn: function (url) { return net.learn(url); },
+    learnPasted: function (text) { return net.learnPasted(text); },
+    setInternetOptIn: function (v) { return net.setOptIn(v); },
+    netInfo: function () { return net.info(); },
+    meshInfo: function () { return mesh.info(); },
+    skillsInfo: function () { return skills.info(); },
+    skillList: function () { return skills.list(); },
     serialize: serialize, deserialize: deserialize,
   };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
