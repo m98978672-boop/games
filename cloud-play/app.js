@@ -54,6 +54,77 @@ let gameLoadInProgress = false;
 let activeFilter = 'all';
 let visibleLimit = PAGE_SIZE;
 const UPDATE_RESUME_KEY = 'playbridge:update-resume:v1';
+const GITHUB_MANIFEST_URL = 'https://api.github.com/repos/m98978672-boop/games/contents/cloud-play/manifest.webmanifest?ref=main';
+const GITHUB_VERSION_CACHE_KEY = 'playbridge:github-version:v1';
+const GITHUB_VERSION_CACHE_TTL_MS = 15 * 60 * 1000;
+
+function parseAppVersion(version) {
+  if (typeof version !== 'string') return null;
+  const match = version.trim().match(/^(\d+)\.(\d+)\.(\d+)$/);
+  if (!match) return null;
+  const parts = match.slice(1).map(Number);
+  return parts.every(Number.isSafeInteger) ? parts : null;
+}
+
+function compareAppVersions(left, right) {
+  const a = parseAppVersion(left);
+  const b = parseAppVersion(right);
+  if (!a || !b) return null;
+  for (let index = 0; index < 3; index += 1) {
+    if (a[index] !== b[index]) return a[index] > b[index] ? 1 : -1;
+  }
+  return 0;
+}
+
+function readCachedGithubVersion() {
+  try {
+    const cache = JSON.parse(window.localStorage.getItem(GITHUB_VERSION_CACHE_KEY) || 'null');
+    if (parseAppVersion(cache?.version) && Number.isFinite(cache.checkedAt)) return cache;
+  } catch {
+    // GitHub checks still work when local storage is disabled.
+  }
+  return null;
+}
+
+async function getGithubAppVersion(force = false) {
+  const cached = readCachedGithubVersion();
+  if (!force && cached && Date.now() - cached.checkedAt < GITHUB_VERSION_CACHE_TTL_MS) return cached.version;
+
+  const response = await fetch(GITHUB_MANIFEST_URL, {
+    method: 'GET',
+    mode: 'cors',
+    credentials: 'omit',
+    cache: 'no-store',
+    headers: { Accept: 'application/vnd.github.raw+json' },
+    signal: AbortSignal.timeout(10_000),
+    redirect: 'error',
+  });
+  if (!response.ok) {
+    throw new Error(response.status === 403
+      ? 'GitHub API rate limit or access error.'
+      : `GitHub API returned ${response.status}.`);
+  }
+  const manifest = await response.json();
+  if (!parseAppVersion(manifest?.version)) throw new Error('GitHub manifest has no valid version.');
+  try {
+    window.localStorage.setItem(GITHUB_VERSION_CACHE_KEY, JSON.stringify({ version: manifest.version, checkedAt: Date.now() }));
+  } catch {
+    // The next scheduled check can fetch GitHub again.
+  }
+  return manifest.version;
+}
+
+async function getInstalledAppVersion(appScope) {
+  const response = await fetch(new URL('manifest.webmanifest', appScope), {
+    credentials: 'same-origin',
+    cache: 'no-store',
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!response.ok) throw new Error('Could not read the installed app manifest.');
+  const manifest = await response.json();
+  if (!parseAppVersion(manifest?.version)) throw new Error('Installed app manifest has no valid version.');
+  return manifest.version;
+}
 
 function consumeUpdateResumeState() {
   try {
@@ -118,10 +189,14 @@ function setUpdateStatus(state, message) {
     ? 'Проверить обновления PLAYBRIDGE: приложение актуально'
     : `${message}. Статус обновлений PLAYBRIDGE`);
   elements.updateStatus.title = state === 'ready'
-    ? 'Приложение актуально. Нажми, чтобы проверить обновления сейчас.'
-    : state === 'error'
-      ? 'Проверка не удалась. Нажми, чтобы повторить.'
-      : message;
+    ? 'Приложение актуально. Нажми, чтобы проверить GitHub и обновления сейчас.'
+    : state === 'available'
+      ? 'GitHub сообщает о новой версии. Нажми, чтобы повторить проверку и применить её после публикации сайта.'
+      : state === 'ahead'
+        ? 'Установленная версия новее версии в ветке main GitHub.'
+        : state === 'error'
+          ? 'Проверка не удалась. Нажми, чтобы повторить.'
+          : message;
 }
 
 function setupAppInstall() {
@@ -207,20 +282,57 @@ async function setupAppUpdates() {
     let currentCheck = null;
     const checkForUpdates = (manual = false) => {
       if (currentCheck) return currentCheck;
-      setUpdateStatus('checking', manual ? 'ПРОВЕРЯЮ ОБНОВЛЕНИЯ' : 'ПРОВЕРКА ОБНОВЛЕНИЙ');
+      setUpdateStatus('checking', manual ? 'ПРОВЕРЯЮ GITHUB' : 'ПРОВЕРКА ВЕРСИИ GITHUB');
       currentCheck = (async () => {
+        let githubVersion = null;
+        let installedVersion = null;
+        let githubError = false;
+        try {
+          githubVersion = await getGithubAppVersion(manual);
+        } catch {
+          githubError = true;
+        }
+        try {
+          installedVersion = await getInstalledAppVersion(appScope);
+        } catch {
+          // Service-worker updates can still proceed even if the manifest is unavailable.
+        }
+        const comparison = githubVersion && installedVersion
+          ? compareAppVersions(githubVersion, installedVersion)
+          : null;
+        if (comparison === 1) setUpdateStatus('available', `GITHUB v${githubVersion} · ИЩУ ОБНОВЛЕНИЕ`);
+
         try {
           await registration.update();
           if (registration.waiting) {
-            setUpdateStatus('updating', 'НАЙДЕНО ОБНОВЛЕНИЕ');
+            setUpdateStatus('updating', 'НАЙДЕНО ОБНОВЛЕНИЕ · ПРИМЕНЯЮ');
             registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-          } else if (registration.installing) {
+            return;
+          }
+          if (registration.installing) {
+            setUpdateStatus('updating', 'УСТАНАВЛИВАЮ ОБНОВЛЕНИЕ');
             observeWorker(registration.installing);
+            return;
+          }
+          if (comparison === 1) {
+            setUpdateStatus('available', `GITHUB v${githubVersion} · САЙТ ЕЩЁ НЕ ОБНОВЛЁН`);
+          } else if (githubError) {
+            setUpdateStatus('error', 'GITHUB НЕДОСТУПЕН · ПОВТОРИТЬ');
+          } else if (comparison === -1) {
+            setUpdateStatus('ahead', `УСТАНОВЛЕНА v${installedVersion} · MAIN v${githubVersion}`);
+          } else if (githubVersion && installedVersion) {
+            setUpdateStatus('ready', `GITHUB v${githubVersion} · АКТУАЛЬНО`);
           } else {
             setUpdateStatus('ready', 'АВТООБНОВЛЕНИЕ ВКЛЮЧЕНО');
           }
         } catch {
-          setUpdateStatus('error', 'НЕ УДАЛОСЬ ПРОВЕРИТЬ ОБНОВЛЕНИЯ');
+          if (comparison === 1) {
+            setUpdateStatus('available', `GITHUB v${githubVersion} · НЕТ СВЯЗИ С САЙТОМ`);
+          } else if (githubError) {
+            setUpdateStatus('error', 'GITHUB НЕДОСТУПЕН · ПОВТОРИТЬ');
+          } else {
+            setUpdateStatus('error', 'НЕ УДАЛОСЬ ПРОВЕРИТЬ ОБНОВЛЕНИЕ');
+          }
         }
       })().finally(() => { currentCheck = null; });
       return currentCheck;

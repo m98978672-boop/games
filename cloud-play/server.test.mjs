@@ -120,6 +120,7 @@ test('HTTP app exposes real readiness, redirects to Steam and rejects anonymous 
   assert.equal(statusResponse.status, 200);
   const status = await statusResponse.json();
   assert.equal(status.backend, 'online');
+  assert.match(statusResponse.headers.get('content-security-policy'), /connect-src 'self' https:\/\/api\.github\.com/);
   assert.equal(status.steam.loginReady, true);
   assert.equal(status.steam.libraryReady, false);
   assert.equal(status.installation.automaticDepotDownload, false);
@@ -383,6 +384,20 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(appJs, /updateStatus\.addEventListener\('click'/);
   assert.match(appJs, /15 \* 60 \* 1000/);
   assert.match(appJs, /window\.addEventListener\('online'/);
+  assert.match(appJs, /api\.github\.com\/repos\/m98978672-boop\/games\/contents\/cloud-play\/manifest\.webmanifest\?ref=main/);
+  assert.match(appJs, /compareAppVersions\(githubVersion, installedVersion\)/);
+  assert.match(appJs, /GITHUB_VERSION_CACHE_TTL_MS = 15 \* 60 \* 1000/);
+  assert.match(appJs, /credentials: 'omit'/);
+  assert.doesNotMatch(appJs, /raw\.githubusercontent\.com/);
+  const versionHelpers = appJs.match(/function parseAppVersion\(version\) \{[\s\S]*?\n\}\n\nfunction compareAppVersions\(left, right\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(versionHelpers, 'version parsing and comparison helpers should be present');
+  const loadVersionHelpers = new Function(`${versionHelpers}; return { parseAppVersion, compareAppVersions };`);
+  const { parseAppVersion, compareAppVersions } = loadVersionHelpers();
+  assert.deepEqual(parseAppVersion('1.2.3'), [1, 2, 3]);
+  assert.equal(compareAppVersions('0.4.0', '0.3.9'), 1);
+  assert.equal(compareAppVersions('0.3.9', '0.4.0'), -1);
+  assert.equal(compareAppVersions('0.4.0', '0.4.0'), 0);
+  assert.equal(compareAppVersions('invalid', '0.4.0'), null);
 
   for (const [file, expectedSize] of [['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) {
     const iconResponse = await fetch(`${base}icons/${file}`);

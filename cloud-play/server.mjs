@@ -260,7 +260,7 @@ function securityHeaders(response) {
   response.setHeader('x-frame-options', 'DENY');
   response.setHeader('referrer-policy', 'no-referrer');
   response.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=()');
-  response.setHeader('content-security-policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+  response.setHeader('content-security-policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://api.github.com; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
 }
 
 function sessionFor(request, config) {

@@ -68,7 +68,8 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid 
 .update-pill:hover:not(:disabled) { border-color: rgba(183,243,107,.28); background: rgba(183,243,107,.045); }
 .update-pill::before { content: ''; width: 5px; height: 5px; flex: 0 0 5px; border-radius: 50%; background: var(--orange); }
 .update-pill[data-state="ready"]::before { background: var(--green); box-shadow: 0 0 7px rgba(183,243,107,.36); }
-.update-pill[data-state="updating"]::before { background: var(--cyan); box-shadow: 0 0 7px rgba(114,223,255,.36); animation: update-pulse 1.1s ease-in-out infinite alternate; }
+.update-pill[data-state="updating"]::before, .update-pill[data-state="available"]::before { background: var(--cyan); box-shadow: 0 0 7px rgba(114,223,255,.36); animation: update-pulse 1.1s ease-in-out infinite alternate; }
+.update-pill[data-state="ahead"]::before { background: var(--green); }
 .update-pill[data-state="error"]::before, .update-pill[data-state="unsupported"]::before { background: #ff7888; }
 @keyframes update-pulse { to { opacity: .35; } }
 .status-pill { display: inline-flex; align-items: center; gap: 7px; padding: 6px 8px; color: #b7c3d0; border: 1px solid var(--line-strong); border-radius: 5px; background: rgba(255,255,255,.025); font: 8px var(--mono); letter-spacing: .06em; white-space: nowrap; }
