@@ -73,8 +73,10 @@ try {
   console.warn('ГАРАЖ 3D: WebGL недоступен, включён режим каталога.', e);
 }
 const M = createMaterials(stage.renderer);
-const cam = new ShowroomCamera(stage.camera, $('gl'));
 const device = deviceProfile();
+const cam = new ShowroomCamera(stage.camera, $('gl'), { touch: device.touch });
+// камера доступна из консоли и из тестов: window.__garageCam.orbit(0.2, 0)
+if (typeof window !== 'undefined') window.__garageCam = cam;
 // класс устройства — в <html class>, чтобы CSS знал, что перед ним:
 // телефон, планшет или десктоп (тач-цели крупнее, подсказки другие)
 document.documentElement.classList.toggle('is-touch', device.touch);
@@ -429,6 +431,62 @@ function renderViewSwitch(unit) {
   });
 }
 
+/**
+ * Навпад: кнопки вращения и зума под сценой. Удержание кнопки — плавное
+ * непрерывное движение (как зажатая мышь в 3D-редакторе), одиночный
+ * тап — один шаг. Работает мышью, пальцем и с клавиатуры (Tab + Enter).
+ */
+function installNavpad() {
+  const pad = $('navpad');
+  if (!pad) return;
+  const actions = {
+    up: () => cam.orbit(0, 0.075),
+    down: () => cam.orbit(0, -0.075),
+    left: () => cam.orbit(-0.1, 0),
+    right: () => cam.orbit(0.1, 0),
+    zin: () => cam.zoomBy(1.05),
+    zout: () => cam.zoomBy(1 / 1.05),
+    reset: () => {
+      const unit = currentUnit();
+      goView(viewsOf(unit)[0].id);
+      live('Вид сброшен');
+    },
+  };
+  pad.querySelectorAll('[data-act]').forEach((btn) => {
+    const act = actions[btn.dataset.act];
+    if (!act) return;
+    let holdTimer = null;
+    let raf = null;
+    const stop = () => {
+      if (holdTimer) { clearTimeout(holdTimer); holdTimer = null; }
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      btn.classList.remove('holding');
+    };
+    const start = (e) => {
+      e.preventDefault();
+      if (btn.dataset.act !== 'reset') haptic(5);
+      act();
+      stop();
+      btn.classList.add('holding');
+      // через 0.28 с начинаем «крутить», пока кнопку держат
+      if (btn.dataset.act !== 'reset') {
+        holdTimer = setTimeout(() => {
+          const tick = () => { act(); raf = requestAnimationFrame(tick); };
+          tick();
+        }, 280);
+      }
+    };
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointerleave', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('blur', stop);
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); }
+    });
+  });
+}
+
 function goView(viewId) {
   const unit = currentUnit();
   const view = viewsOf(unit).find((v) => v.id === viewId) || viewsOf(unit)[0];
@@ -683,8 +741,47 @@ function wireUI() {
     state.search = e.target.value;
     renderList();
   };
-  // двойной клик по сцене — в салон/наружу
-  $('gl').addEventListener('dblclick', toggleInside);
+  // ---------------------------------------------- навпад и фокус по клику
+  installNavpad();
+  // Клик по детали наводит на неё камеру. Одиночный клик ждёт 220 мс:
+  // иначе двойной клик («в салон») срабатывал бы ещё и как два фокуса.
+  const gl = $('gl');
+  const ray = new THREE.Raycaster();
+  let clickTimer = null;
+  const setDrag = (on) => gl.classList.toggle('is-dragging', on);
+  gl.addEventListener('pointerdown', () => setDrag(true));
+  window.addEventListener('pointerup', () => setDrag(false));
+  window.addEventListener('pointercancel', () => setDrag(false));
+  gl.addEventListener('dblclick', () => {
+    clearTimeout(clickTimer);
+    toggleInside();
+  });
+  gl.addEventListener('click', (e) => {
+    if (e.detail > 1) return;
+    const rect = gl.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const ny = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    clearTimeout(clickTimer);
+    clickTimer = setTimeout(() => {
+      if (!shown?.root || !cam.controls.enabled) return;
+      ray.setFromCamera(new THREE.Vector2(nx, ny), stage.camera);
+      const hit = ray.intersectObject(shown.root, true)
+        .find((h) => h.object.isMesh && h.object.visible !== false && h.object.material?.transparent !== true);
+      if (!hit) return;
+      const point = hit.point.clone();
+      cam.focusOn(point);
+      // если рядом есть «точка осмотра» — называем её
+      let near = null;
+      let best = 1.1;
+      for (const a of shown.anchors || []) {
+        const d = point.distanceTo(new THREE.Vector3(...a.pos));
+        if (d < best) { best = d; near = a.label; }
+      }
+      haptic(6);
+      live(near ? `Фокус: ${near}` : 'Фокус на детали · кнопка ⌂ вернёт вид');
+    }, 220);
+  });
   // ---------------------------------------------- тач-жесты
   // Смахивание влево/вправо листает модели, двойной тап сажает в салон,
   // щипок сбрасывает зум «по размеру модели».
@@ -718,6 +815,13 @@ function wireUI() {
     switch (e.key) {
       case 'ArrowRight': step(1); break;
       case 'ArrowLeft': step(-1); break;
+      // камера: A/D — вокруг, W/S — наклон (работает и в русской раскладке)
+      case 'a': case 'A': case 'ф': case 'Ф': cam.orbit(-0.14, 0); break;
+      case 'd': case 'D': case 'в': case 'В': cam.orbit(0.14, 0); break;
+      case 'w': case 'W': case 'ц': case 'Ц': cam.orbit(0, 0.1); break;
+      case 's': case 'S': case 'ы': case 'Ы': cam.orbit(0, -0.1); break;
+      case '+': case '=': case 'ю': cam.zoomBy(1.16); break;
+      case '-': case '_': case 'ж': cam.zoomBy(1 / 1.16); break;
       case 'r': case 'R': case 'к': case 'К': randomUnit(); break;
       case 'f': case 'F': case 'а': case 'А': fullscreen(); break;
       case 'c': case 'C': case 'с': case 'С': shot(); break;
@@ -792,10 +896,11 @@ function boot() {
   if (hint) {
     hint.innerHTML = device.touch
       ? '<span><kbd>1 палец</kbd> вращать</span><span><kbd>2 пальца</kbd> зум</span>'
-        + '<span><kbd>Свайп</kbd> модель</span><span><kbd>Двойной тап</kbd> салон</span>'
-      : '<span><kbd>ЛКМ</kbd> вращать</span><span><kbd>Колесо</kbd> зум</span>'
-        + '<span><kbd>ПКМ</kbd> сдвиг</span><span><kbd>I</kbd> салон</span>'
-        + '<span><kbd>← →</kbd> модель</span>';
+        + '<span><kbd>Тап по детали</kbd> фокус</span><span><kbd>Свайп</kbd> модель</span>'
+        + '<span><kbd>Двойной тап</kbd> салон</span>'
+      : '<span><kbd>ЛКМ</kbd> вращать</span><span><kbd>Колесо</kbd> зум к курсору</span>'
+        + '<span><kbd>Клик</kbd> фокус на детали</span><span><kbd>A D W S</kbd> камера</span>'
+        + '<span><kbd>I</kbd> салон</span><span><kbd>← →</kbd> модель</span>';
   }
   const note = document.querySelector('.foot-note');
   if (note && device.touch) note.textContent = '40 моделей · 10 / 20 / 10';

@@ -231,6 +231,71 @@ touchEv('touchend', [], [[200, 300]]);
 check('двойной тап заходит в салон', doubleTapped >= 1, `taps=${doubleTapped}`);
 uninstall();
 
+// ---- навигация камерой: навпад, орбита, зум, фокус по клику
+const navpad = D.getElementById('navpad');
+check('навпад есть в сцене', !!navpad && navpad.querySelectorAll('[data-act]').length === 7,
+  navpad ? `${navpad.querySelectorAll('[data-act]').length} кнопок` : 'нет');
+const navBtn = (act) => D.querySelector(`#navpad [data-act="${act}"]`);
+check('у кнопок навпада есть подписи', ['up', 'down', 'left', 'right', 'zin', 'zout', 'reset']
+  .every((a) => (navBtn(a)?.getAttribute('aria-label') || '').length > 3));
+
+const THREE = await import('three');
+const { ShowroomCamera } = await import('../src/lib/camera.js');
+const fakeDom = D.createElement('div');
+D.body.appendChild(fakeDom);
+const cam3 = new THREE.PerspectiveCamera(50, 1.6, 0.1, 300);
+cam3.position.set(14, 5, 14);
+const sc = new ShowroomCamera(cam3, fakeDom, { touch: false });
+sc.controls.target.set(0, 1.4, 0);
+sc.camera.lookAt(0, 1.4, 0);
+sc.camera.updateMatrixWorld(true);
+check('зум колесом идёт к курсору', sc.controls.zoomToCursor === true);
+const posBefore = cam3.position.clone();
+sc.orbit(0.35, 0);
+check('орбита кнопкой вращает камеру', cam3.position.distanceTo(posBefore) > 0.5,
+  `сдвиг ${cam3.position.distanceTo(posBefore).toFixed(2)} м`);
+const distBefore = cam3.position.distanceTo(sc.controls.target);
+sc.zoomBy(1.3);
+check('«+» приближает', cam3.position.distanceTo(sc.controls.target) < distBefore - 0.2);
+sc.zoomBy(1 / 1.3);
+sc.focusOn(new THREE.Vector3(0, 2.6, 3.4), { distance: 6 });
+check('клик по детали запускает плавный полёт', !!sc.flying
+  && Math.abs(sc.flying.toTarget.z - 3.4) < 0.01, sc.flying ? 'ok' : 'нет');
+sc.update(0.6);
+check('после полёта камера у цели', !sc.flying && sc.controls.target.distanceTo(new THREE.Vector3(0, 2.6, 3.4)) < 0.05,
+  `цель ${sc.controls.target.toArray().map((v) => v.toFixed(2)).join(',')}`);
+
+// панорамирование сдвигает и цель, и камеру
+const t0 = sc.controls.target.clone();
+sc.panBy(0.4, 0);
+check('панорамирование сдвигает точку взгляда', sc.controls.target.distanceTo(t0) > 0.05);
+
+// дальность ограничена габаритом вида: камера не улетает в пустоту
+sc.setView({ id: 'test', pos: [20, 3, 0], target: [0, 1.5, 0], fov: 34, orbit: true }, { instant: true });
+check('дальность зума ограничена видом', sc.controls.maxDistance <= 20.5 * 2.4 && sc.controls.maxDistance >= 6,
+  `maxDistance=${sc.controls.maxDistance.toFixed(1)}`);
+
+// навпад и клавиши работают на реальной сцене шоурума
+const camApp = window.__garageCam;
+check('камера шоурума доступна', !!camApp);
+if (camApp) {
+  camApp.controls.enabled = true;
+  const p0 = camApp.camera.position.clone();
+  navBtn('right')?.dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  navBtn('right')?.dispatchEvent(new window.Event('pointerup', { bubbles: true }));
+  check('кнопка «→» на навпаде поворачивает камеру', camApp.camera.position.distanceTo(p0) > 0.01,
+    `сдвиг ${camApp.camera.position.distanceTo(p0).toFixed(3)}`);
+  const d0 = camApp.camera.position.distanceTo(camApp.controls.target);
+  navBtn('zin')?.dispatchEvent(new window.Event('pointerdown', { bubbles: true }));
+  navBtn('zin')?.dispatchEvent(new window.Event('pointerup', { bubbles: true }));
+  check('кнопка «+» на навпаде приближает', camApp.camera.position.distanceTo(camApp.controls.target) < d0,
+    `${d0.toFixed(2)} → ${camApp.camera.position.distanceTo(camApp.controls.target).toFixed(2)}`);
+  const p1 = camApp.camera.position.clone();
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'd' })); await wait(40);
+  check('клавиша D поворачивает камеру', camApp.camera.position.distanceTo(p1) > 0.01);
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'a' })); await wait(40);
+}
+
 check('ошибок в рантайме нет', errs.length === 0, errs.slice(0, 3).join(' / '));
 
 const fails = ok.filter((l) => l.startsWith('FAIL'));

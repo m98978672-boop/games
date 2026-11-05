@@ -7,13 +7,20 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { damp, clamp } from './kit.js';
 
 export class ShowroomCamera {
-  constructor(camera, dom) {
+  constructor(camera, dom, opts = {}) {
     this.camera = camera;
     this.controls = new OrbitControls(camera, dom);
+    const touch = !!opts.touch;
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.075;
+    this.controls.dampingFactor = touch ? 0.12 : 0.085;
     this.controls.minDistance = 1.4;
     this.controls.maxDistance = 46;
+    // зум колесом — к курсору: так модель не «уезжает» из-под мыши,
+    // а приближается тот участок, на который смотришь
+    this.controls.zoomToCursor = true;
+    this.controls.zoomSpeed = touch ? 0.95 : 0.8;
+    this.controls.rotateSpeed = touch ? 0.6 : 0.9;
+    this.controls.panSpeed = 0.85;
     this.controls.maxPolarAngle = Math.PI * 0.495;
     this.controls.screenSpacePanning = true;
     this.controls.target.set(0, 1.4, 0);
@@ -41,6 +48,10 @@ export class ShowroomCamera {
     this.controls.maxPolarAngle = view.seat ? Math.PI * 0.96 : Math.PI * 0.495;
     this.controls.autoRotate = !!view.autoRotate && !view.seat;
     this.controls.minDistance = view.seat ? 0.35 : 1.4;
+    // дальше, чем в 2.4 раза от штатной точки вида, не отъезжаем:
+    // так камера не улетает в пустоту и модель всегда остаётся в кадре
+    const baseDist = pos.distanceTo(target);
+    this.controls.maxDistance = clamp(baseDist * 2.4, 6, 60);
     if (instant) {
       this.camera.position.copy(pos);
       this.camera.fov = view.fov || 40;
@@ -63,6 +74,65 @@ export class ShowroomCamera {
     }
   }
 
+  /** Программный поворот камеры (навпад, клавиатура): dx — вокруг оси Y,
+   *  dy — по вертикали. Работает и в салоне, где орбита вокруг головы. */
+  orbit(dx, dy) {
+    if (!this.controls.enabled) return;
+    const target = this.controls.target;
+    const offset = this.camera.position.clone().sub(target);
+    const sph = new THREE.Spherical().setFromVector3(offset);
+    sph.theta -= dx;
+    const minPolar = 0.14;
+    sph.phi = clamp(sph.phi - dy, minPolar, this.controls.maxPolarAngle - 0.02);
+    offset.setFromSpherical(sph);
+    this.camera.position.copy(target).add(offset);
+    this.camera.lookAt(target);
+    this.controls.update();
+  }
+
+  /** Программный зум: k > 1 — ближе, k < 1 — дальше. */
+  zoomBy(k) {
+    const target = this.controls.target;
+    const offset = this.camera.position.clone().sub(target);
+    const dist = clamp(offset.length() / k, this.controls.minDistance, this.controls.maxDistance);
+    offset.setLength(dist);
+    this.camera.position.copy(target).add(offset);
+    this.camera.lookAt(target);
+    this.controls.update();
+  }
+
+  /** Сдвиг точки взгляда вбок/вглубь экрана (кнопки панорамирования). */
+  panBy(dx, dy) {
+    const target = this.controls.target;
+    const right = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 0);
+    const up = new THREE.Vector3().setFromMatrixColumn(this.camera.matrix, 1);
+    const scale = this.camera.position.distanceTo(target) * 0.12;
+    const shift = right.multiplyScalar(dx * scale).add(up.multiplyScalar(dy * scale));
+    target.add(shift);
+    this.camera.position.add(shift);
+    this.camera.lookAt(target);
+    this.controls.update();
+  }
+
+  /** Плавно навести камеру на точку (клик по детали). */
+  focusOn(point, { distance = null } = {}) {
+    const from = this.camera.position.clone();
+    const dir = from.clone().sub(point).normalize();
+    const d = clamp(distance ?? from.distanceTo(point) * 0.62, 1.6, this.controls.maxDistance);
+    const pos = point.clone().add(dir.multiplyScalar(d));
+    this.flying = {
+      t: 0,
+      dur: 0.55,
+      fromPos: from,
+      fromTarget: this.controls.target.clone(),
+      fromFov: this.camera.fov,
+      toPos: pos,
+      toTarget: point.clone(),
+      toFov: this.camera.fov,
+      view: this.view,
+    };
+  }
+
   update(dt) {
     if (this.flying) {
       const f = this.flying;
@@ -78,11 +148,11 @@ export class ShowroomCamera {
       if (k >= 1) {
         this.flying = null;
         this.current = f.view;
-        if (f.view.orbit) this.controls.autoRotate = !!f.view.autoRotate;
+        if (f.view?.orbit) this.controls.autoRotate = !!f.view.autoRotate;
       }
       return;
     }
-    if (this.controls.enabled) this.controls.update();
+    if (this.controls.enabled) this.controls.update(dt);
   }
 
   /** «Заглянуть» внутрь: плавный наклон от места водителя. */

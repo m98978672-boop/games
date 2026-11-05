@@ -81,12 +81,25 @@
       <button class="round-btn" id="compare-btn-2" title="Сравнить с соседней моделью" aria-label="Сравнить">⇄</button>
     </div>
 
+    <!-- навигация камерой: как в 3D-редакторе, но кнопками, мышью и пальцем -->
+    <div class="navpad" id="navpad" role="group" aria-label="Навигация камерой">
+      <button class="navpad-btn" data-act="up" aria-label="Наклонить камеру вверх" title="Наклонить вверх (W)">↑</button>
+      <button class="navpad-btn" data-act="left" aria-label="Повернуть камеру влево" title="Повернуть влево (A)">←</button>
+      <button class="navpad-btn navpad-home" data-act="reset" aria-label="Сбросить вид" title="Сбросить вид (0)">⌂</button>
+      <button class="navpad-btn" data-act="right" aria-label="Повернуть камеру вправо" title="Повернуть вправо (D)">→</button>
+      <button class="navpad-btn" data-act="down" aria-label="Наклонить камеру вниз" title="Наклонить вниз (S)">↓</button>
+      <button class="navpad-btn navpad-zoom" data-act="zin" aria-label="Приблизить" title="Приблизить (+)">+</button>
+      <button class="navpad-btn navpad-zoom" data-act="zout" aria-label="Отдалить" title="Отдалить (−)">−</button>
+    </div>
+
     <div class="stage-hint" aria-hidden="true">
       <span><kbd>ЛКМ</kbd> вращать</span>
       <span><kbd>Колесо</kbd> зум</span>
+      <span><kbd>Клик</kbd> фокус на детали</span>
       <span><kbd>ПКМ</kbd> сдвиг</span>
       <span><kbd>I</kbd> салон</span>
       <span><kbd>← →</kbd> модель</span>
+      <span><kbd>A D W S</kbd> камера</span>
     </div>
 
     <div class="stage-live" id="stage-live" aria-live="polite"></div>

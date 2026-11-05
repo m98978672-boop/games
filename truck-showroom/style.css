@@ -892,3 +892,83 @@ body {
 /* Мобильные браузеры с подгруженной клавиатурой в поиске: не дёргаем сцену */
 .is-touch input[type="search"],
 .is-touch input[type="text"] { font-size: 16px; }
+
+/* ============================================================
+   НАВПАД — навигация камерой кнопками.
+   Тот же принцип, что в 3D-редакторе: стрелки вращают модель,
+   «+»/«−» приближают, «⌂» возвращает штатный вид. Работает мышью,
+   пальцем и с клавиатуры, удержание кнопки — плавное движение.
+   ============================================================ */
+.navpad {
+  position: absolute;
+  right: calc(16px + env(safe-area-inset-right, 0px));
+  bottom: calc(var(--dock-h) + 18px);
+  z-index: 22;
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  grid-template-rows: repeat(3, 40px);
+  gap: 6px;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.navpad-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(10, 13, 14, 0.62);
+  backdrop-filter: blur(12px);
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s, transform 0.1s;
+}
+.navpad-btn:hover { color: var(--ink); border-color: var(--line-strong); background: rgba(20, 25, 27, 0.82); }
+.navpad-btn:active { transform: scale(0.94); color: var(--accent-ink); background: var(--accent); border-color: transparent; }
+.navpad-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.navpad [data-act="up"] { grid-area: 1 / 2; }
+.navpad [data-act="left"] { grid-area: 2 / 1; }
+.navpad [data-act="reset"] { grid-area: 2 / 2; }
+.navpad [data-act="right"] { grid-area: 2 / 3; }
+.navpad [data-act="down"] { grid-area: 3 / 2; }
+.navpad [data-act="zin"] { grid-area: 1 / 3; }
+.navpad [data-act="zout"] { grid-area: 3 / 3; }
+.navpad-home { color: var(--accent-2); }
+.navpad-zoom { font-size: 18px; font-weight: 700; }
+
+/* курсор сцены: «схватил и крутишь» */
+#gl { cursor: grab; }
+#gl.is-dragging { cursor: grabbing; }
+
+@media (max-width: 900px) {
+  .navpad {
+    grid-template-columns: repeat(3, 38px);
+    grid-template-rows: repeat(3, 38px);
+    gap: 5px;
+    right: calc(10px + env(safe-area-inset-right, 0px));
+    bottom: calc(var(--dock-h) + 12px);
+  }
+  .navpad-btn { width: 38px; height: 38px; border-radius: 11px; }
+}
+
+@media (max-width: 560px) {
+  /* на телефоне навпад уходит в правый нижний угол и жмётся к краю */
+  .navpad {
+    grid-template-columns: repeat(3, 36px);
+    grid-template-rows: repeat(3, 36px);
+    gap: 4px;
+    bottom: calc(var(--dock-h) + 8px);
+  }
+  .navpad-btn { width: 36px; height: 36px; font-size: 15px; }
+  .navpad-zoom { font-size: 16px; }
+}
+
+@media (max-height: 460px) and (orientation: landscape) {
+  /* в ландшафте на телефоне навпад мешает — прячем, остаются жесты */
+  .navpad { display: none; }
+}

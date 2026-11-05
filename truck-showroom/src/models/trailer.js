@@ -15,6 +15,116 @@ function std(color, rough = 0.65, metal = 0.2) {
   return new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal });
 }
 
+// Ливрея: у каждого вымышленного бренда свой цвет полосы на борту.
+// Раньше все кузова были безлико-белыми, и прицепы выглядели как макеты.
+const LIVERY = {
+  TRAILGO: '#1b4f8a',   // шторка и фургон — глубокий синий
+  COLDFLOW: '#0f6b70',  // реф — бирюза
+  STEELRIDE: '#cf5a13', // платформа и трал — оранжевый
+  AQUATEC: '#2f7d5a',   // цистерна — зелёный
+  BULKLINE: '#7d1a2e',  // сыпучие — бордо
+  FARMHAUL: '#5c6b3b',  // скот — олива
+  TIMBERLINE: '#5a3c25',// лес — коричневый
+  PORTLINE: '#16233f',  // контейнеры — тёмно-синий
+  AUTOLINE: '#4b3c85',  // автовоз — фиолетовый
+  WATERTRAIL: '#3d8fc4',// катер — голубой
+  CLEARLINE: '#37a58c', // стекло — мятный
+};
+function liveryOf(unit, fallback = '#1b4f8a') {
+  const key = String(unit?.brand || '').split(/[\s-]/)[0].toUpperCase();
+  return LIVERY[key] || fallback;
+}
+
+// Крыло-арка над колесом: половина цилиндра, ось вдоль X, дуга в плоскости
+// Y-Z. Раньше здесь стоял сплющенный полуцилиндр с поворотом по двум осям —
+// над тележкой получались тёмные «лопухи» вместо крыльев.
+function fender(parent, x, y, z, radius, width, material) {
+  const geo = new THREE.CylinderGeometry(radius, radius, width, 16, 1, true, 0, PI);
+  const mat = material.clone();
+  mat.side = THREE.DoubleSide;
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.rotation.z = HALF;
+  mesh.position.set(x, y, z);
+  parent.add(mesh);
+  return mesh;
+}
+
+/**
+ * Задние двери фургона/шторки/рефа: два полотна, четыре штанги-запора,
+ * петли, уплотнитель и поручни. Раньше на корме была одна плоская панель,
+ * и корма всех кузовных прицепов выглядела одинаково и «мертво».
+ */
+function rearDoors(parent, { W, z, bottom, height, leafMat, liveryMat, M, leaves = 2 }) {
+  const leafW = (W - 0.14) / leaves;
+  for (let i = 0; i < leaves; i++) {
+    const x = -W / 2 + 0.07 + leafW * (i + 0.5);
+    rbox(parent, leafW - 0.02, height, 0.09, leafMat, x, bottom + height / 2, z - 0.05, 0.015);
+    // штангa-запор: труба на всю высоту полотна
+    for (const off of [-0.26, 0.26]) {
+      const rod = cyl(parent, 0.032, 0.032, height - 0.14, M.steel, x + off * (leafW / 0.9), bottom + height / 2, z - 0.12, 8);
+    }
+    // петли по внешней кромке
+    for (let k = 0; k < 3; k++) {
+      box(parent, 0.1, 0.13, 0.07, M.steel, x + (i === 0 ? -leafW / 2 + 0.06 : leafW / 2 - 0.06), bottom + 0.5 + k * (height - 1) / 2, z - 0.1);
+    }
+    // ручка
+    box(parent, 0.24, 0.05, 0.05, M.chrome, x + (i === 0 ? leafW / 2 - 0.3 : -leafW / 2 + 0.3), bottom + height * 0.45, z - 0.13);
+  }
+  // центральный уплотнитель
+  box(parent, 0.03, height - 0.05, 0.04, M.plastic, 0, bottom + height / 2, z - 0.1);
+  // цветная рамка дверей — ливрея бренда
+  box(parent, W - 0.1, 0.1, 0.05, liveryMat, 0, bottom + 0.06, z - 0.12);
+  box(parent, W - 0.1, 0.08, 0.05, liveryMat, 0, bottom + height - 0.02, z - 0.12);
+}
+
+/**
+ * Контурная маркировка: чередующиеся красные и белые блоки.
+ * Строится одной геометрией с вершинными цветами — это дешевле сотни
+ * отдельных коробок и работает без canvas-текстур (то есть и в Node-превью).
+ *   axis: 'z' — полоса вдоль борта (нормаль по X), 'x' — поперёк кормы.
+ */
+function stripeBand(parent, {
+  length, height = 0.13, x = 0, y = 0, z = 0, axis = 'z', side = 1, seg = 0.55,
+  colors = ['#b02a21', '#e8e4d8'],
+} = {}) {
+  const n = Math.max(2, Math.round(length / seg));
+  const step = length / n;
+  const positions = [];
+  const cols = [];
+  const cA = new THREE.Color(colors[0]);
+  const cB = new THREE.Color(colors[1]);
+  const h = height / 2;
+  for (let i = 0; i < n; i++) {
+    const t0 = -length / 2 + i * step;
+    const t1 = t0 + step;
+    const c = i % 2 ? cB : cA;
+    // четыре угла блока; отступ 0.014 keeps полосу над поверхностью борта
+    const quad = axis === 'z'
+      ? [
+          [x, y - h, z + t0], [x, y + h, z + t0], [x, y + h, z + t1],
+          [x, y - h, z + t0], [x, y + h, z + t1], [x, y - h, z + t1],
+        ]
+      : [
+          [x + t0, y - h, z], [x + t0, y + h, z], [x + t1, y + h, z],
+          [x + t0, y - h, z], [x + t1, y + h, z], [x + t1, y - h, z],
+        ];
+    for (const p of quad) {
+      positions.push(p[0] + (axis === 'z' ? side * 0.014 : 0), p[1], p[2] + (axis === 'x' ? side * 0.014 : 0));
+      cols.push(c.r, c.g, c.b);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  geo.computeVertexNormals();
+  const mat = new THREE.MeshStandardMaterial({
+    vertexColors: true, roughness: 0.45, metalness: 0.15, side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  parent.add(mesh);
+  return mesh;
+}
+
 export function buildTrailer(unit, M) {
   const root = group(null, `trailer:${unit.id}`);
   const wheels = [];
@@ -71,7 +181,7 @@ export function buildTrailer(unit, M) {
     anchors.push({ pos: [0, DECK - 0.4, zFront + 0.5], label: 'Сцепной шкворень' });
   }
 
-  // ------------------------------------------------ колёса + брызговики
+  // ------------------------------------------------ тележка: оси, крылья, пневмо
   const R = type === 'lowboy' ? 0.48 : type === 'boat' ? 0.32 : 0.5;
   const axleZ = [];
   if (type === 'bdouble') {
@@ -84,17 +194,13 @@ export function buildTrailer(unit, M) {
     for (let i = 0; i < axleCount; i++) axleZ.push(zRear - 0.75 - i * 1.32);
   }
   const track = type === 'boat' ? 1.02 : 0.94;
+  const dual = type !== 'boat' && type !== 'dolly';
+  const firstAxle = axleZ[0];
   for (const z of axleZ) {
     // ось
     cyl(root, 0.09, 0.09, W - 0.35, M.darkSteel, 0, R, z, 10).rotation.z = HALF;
     for (const side of [-1, 1]) {
-      if (type === 'boat' || type === 'dolly') {
-        const w = makeWheel(M, { radius: R, width: 0.26, style: 'truck', rimColor: '#d2d5d7' });
-        w.position.set(side * track, R, z);
-        if (side < 0) w.rotation.y = PI;
-        root.add(w);
-        wheels.push(w);
-      } else {
+      if (dual) {
         for (const dx of [0, 0.34]) {
           const w = makeWheel(M, { radius: R, width: 0.3, style: 'truck', rimColor: '#d2d5d7' });
           w.position.set(side * (track + dx), R, z);
@@ -102,53 +208,107 @@ export function buildTrailer(unit, M) {
           root.add(w);
           wheels.push(w);
         }
+      } else {
+        const w = makeWheel(M, { radius: R, width: 0.26, style: 'truck', rimColor: '#d2d5d7' });
+        w.position.set(side * track, R, z);
+        if (side < 0) w.rotation.y = PI;
+        root.add(w);
+        wheels.push(w);
       }
     }
-    // крыло над тележкой
-    if (type !== 'boat' && type !== 'dolly') {
+    // тормозная камера на балке оси
+    for (const side of [-1, 1]) {
+      const chamber = cyl(root, 0.085, 0.085, 0.2, M.plasticGray, side * 0.5, R + 0.04, z + 0.24, 10);
+      chamber.rotation.x = HALF;
+    }
+    // пневмоподушки между осью и рамой
+    for (const side of [-1, 1]) {
+      cyl(root, 0.12, 0.15, 0.3, M.rubberTrim, side * (W / 2 - 0.45), deckY - 0.36, z, 12);
+    }
+    // крыло-арка над колесом (раньше тут стоял сплющенный полуцилиндр,
+    // из-за которого над тележкой висели тёмные «лопухи»)
+    if (dual) {
       for (const side of [-1, 1]) {
-        const f = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.12, R + 0.12, 1.5, 18, 1, true, 0, PI), M.plastic);
-        f.material.side = THREE.DoubleSide;
-        f.rotation.z = HALF;
-        f.rotation.y = HALF;
-        f.position.set(side * (track + 0.17), R + 0.04, z);
-        f.scale.y = 1.9;
-        root.add(f);
+        fender(root, side * (track + 0.17), R, z, R + 0.13, 0.86, M.plastic);
       }
     }
   }
-  // брызговики сзади тележки
+  // брызговики за последней осью
   for (const side of [-1, 1]) {
     const lastAxle = axleZ[axleZ.length - 1];
-    box(root, 0.55, 0.5, 0.04, M.rubberTrim, side * (track + 0.17), R - 0.18, lastAxle - 0.62);
-    // боковая защита (подножка)
-    if (type !== 'boat' && type !== 'dolly' && type !== 'lowboy') box(root, 0.05, 0.12, L * 0.42, M.steel, side * (W / 2 - 0.18), 0.62, zRear - 3.4);
+    rbox(root, 0.62, 0.62, 0.03, M.rubberTrim, side * (track + 0.17), R - 0.1, lastAxle - 0.72, 0.02);
+    box(root, 0.1, 0.08, 0.06, M.steel, side * (track + 0.17), R + 0.5, lastAxle - 0.72);
   }
-
-  // ------------------------------------------------ корма (задний борт, фонари)
-  const rear = group(root, 'rear');
-  const rearY = deckY + (type === 'flatbed' || type === 'logging' || type === 'dolly' ? 0.12 : 0.2);
-  box(rear, W - 0.1, 0.16, 0.16, M.steel, 0, deckY - 0.32, zRear - 0.02);
+  // боковые подножки-защита и юбки: между опорными стойками и тележкой
+  const skirtTo = firstAxle - 1.05;
+  const skirtFrom = zFront + 1.9;
+  const skirted = ['curtain', 'van', 'reefer', 'tipper', 'livestock', 'sidetip', 'bdouble'].includes(type);
+  if (type !== 'boat' && type !== 'dolly' && type !== 'lowboy' && skirtTo - skirtFrom > 1.2) {
+    for (const side of [-1, 1]) {
+      const x = side * (W / 2 - 0.06);
+      // сама юбка: от земли почти до пола, чтобы не было «щели» под кузовом
+      box(root, 0.06, 0.74, skirtTo - skirtFrom, M.plasticGray, x, 0.82, (skirtFrom + skirtTo) / 2);
+      // рёбра жёсткости
+      for (let z = skirtFrom + 0.4; z < skirtTo - 0.3; z += 1.5) {
+        box(root, 0.09, 0.76, 0.05, M.plastic, x, 0.82, z);
+      }
+      // нижняя кромка и верхний молдинг — тёмные, чтобы юбка не «светилась»
+      box(root, 0.08, 0.05, skirtTo - skirtFrom, M.plasticGray, x, 0.47, (skirtFrom + skirtTo) / 2);
+      box(root, 0.07, 0.05, skirtTo - skirtFrom, M.plastic, x, 1.16, (skirtFrom + skirtTo) / 2);
+      // контурная красно-белая маркировка по низу борта
+      stripeBand(root, {
+        length: skirtTo - skirtFrom - 0.1, height: 0.1, y: 0.74, z: (skirtFrom + skirtTo) / 2,
+        x: side * (W / 2 - 0.015), side,
+      });
+    }
+  }
+  // воздушные баллоны и инструментальный ящик под рамой
   for (const side of [-1, 1]) {
-    box(rear, 0.22, 0.16, 0.06, M.taillight, side * (W / 2 - 0.34), deckY - 0.42, zRear - 0.05);
-    box(rear, 0.22, 0.1, 0.06, M.amber, side * (W / 2 - 0.34), deckY - 0.28, zRear - 0.05);
-    box(rear, 0.1, 0.16, 0.06, M.reverseLight, side * (W / 2 - 0.58), deckY - 0.42, zRear - 0.05);
-    // номерной знак с подсветкой
-    box(rear, 0.06, 0.04, 0.1, M.headlight, side * 0.42, deckY - 0.24, zRear - 0.06);
+    const tank = cyl(root, 0.16, 0.16, 1.1, M.steel, side * 0.62, deckY - 0.55, zFront + 2.9, 14);
+    tank.rotation.x = HALF;
+    for (const dz of [-0.4, 0.4]) box(root, 0.05, 0.06, 0.06, M.darkSteel, side * 0.62, deckY - 0.4, zFront + 2.9 + dz);
   }
+  const toolBox = rbox(root, 0.95, 0.5, 0.55, M.plasticGray, 0.75, deckY - 0.62, zFront + 2.35, 0.03);
+  box(root, 0.9, 0.04, 0.5, M.steel, 0.75, deckY - 0.36, zFront + 2.35);
+
+  // ------------------------------------------------ корма: отбойник, фонари, маркировка
+  const rear = group(root, 'rear');
+  // поперечная балка рамы
+  box(rear, W - 0.12, 0.2, 0.18, M.darkSteel, 0, deckY - 0.36, zRear - 0.04);
+  // задняя защита от подъезда снизу («отбойник»)
+  const guardY = 0.62;
+  rbox(rear, W - 0.18, 0.16, 0.14, M.steel, 0, guardY, zRear - 0.12, 0.03);
+  for (const side of [-1, 1]) {
+    const px = side * (W / 2 - 0.42);
+    box(rear, 0.12, deckY - guardY - 0.4, 0.1, M.darkSteel, px, (deckY + guardY) / 2 - 0.1, zRear - 0.14);
+    const brace = box(rear, 0.08, 0.7, 0.08, M.darkSteel, px, guardY + 0.34, zRear - 0.3);
+    brace.rotation.x = 0.55;
+  }
+  stripeBand(rear, { length: W - 0.4, height: 0.11, y: guardY, z: zRear - 0.2, axis: 'x', side: -1 });
+  // панель задних фонарей: три секции, как на настоящем прицепе
+  for (const side of [-1, 1]) {
+    const px = side * (W / 2 - 0.33);
+    box(rear, 0.36, 0.4, 0.05, M.plastic, px, deckY - 0.56, zRear - 0.07);
+    box(rear, 0.2, 0.3, 0.035, M.taillight, px - side * 0.07, deckY - 0.56, zRear - 0.04);
+    box(rear, 0.09, 0.12, 0.035, M.amber, px + side * 0.1, deckY - 0.47, zRear - 0.04);
+    box(rear, 0.09, 0.12, 0.035, M.reverseLight, px + side * 0.1, deckY - 0.63, zRear - 0.04);
+    // катафот
+    box(rear, 0.12, 0.06, 0.02, M.taillight, side * (W / 2 - 0.05), guardY + 0.12, zRear - 0.2);
+  }
+  // номерной знак и подсветка
+  box(rear, 0.56, 0.17, 0.02, M.plastic, 0, deckY - 0.62, zRear - 0.08);
   const plateTex = plateTexture('ВК 4471');
   if (plateTex) {
-    plane(rear, 0.5, 0.13, new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.6 }), 0, deckY - 0.5, zRear - 0.1);
+    plane(rear, 0.5, 0.13, new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.6 }), 0, deckY - 0.62, zRear - 0.1);
   }
-  // бампер-отбойник
-  rbox(rear, W - 0.2, 0.16, 0.16, type === 'adr' || type === 'tanker' ? M.hazard : M.steel, 0, 0.55, zRear - 0.12, 0.03);
+  box(rear, 0.16, 0.05, 0.05, M.headlight, 0, deckY - 0.5, zRear - 0.12);
   // маркерные огни по борту
   for (const side of [-1, 1]) {
     for (let z = zFront + 2.2; z < zRear - 0.6; z += 2.4) {
-      sphere(root, 0.032, M.amber, side * (W / 2 + 0.005), deckY + 0.02, z, 6);
+      box(root, 0.09, 0.06, 0.03, M.plastic, side * (W / 2 - 0.02), deckY - 0.2, z);
+      sphere(root, 0.026, M.amber, side * (W / 2 + 0.005), deckY - 0.2, z, 6);
     }
   }
-
   // ------------------------------------------------ кузов
   const body = group(root, 'body');
   const ctx = { M, unit, body, bodyMat, bodyMat2, W, H, L, halfL, zFront, zRear, deckY, R, anchors, frameMat, std };
@@ -180,14 +340,21 @@ export function buildTrailer(unit, M) {
   // бренд на борту (кроме случаев, когда борт занят)
   const brandOk = ['curtain', 'van', 'reefer', 'tipper', 'livestock'].includes(type);
   if (brandOk) {
+    // цветная плашка ливреи + белая надпись поверх: на белом кузове
+    // белый текст было не видно, и борта выглядели пустыми
+    const plateMat = std(liveryOf(unit), 0.5, 0.25);
     const tex = labelTexture(unit.brand, {
       width: 512, height: 128, bg: 'rgba(0,0,0,0)', fg: '#f7f4ea', accent: '#e8b45a',
       font: 'bold 64px Arial, sans-serif', border: false,
     });
-    if (tex) {
-      const mat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.5 });
-      for (const side of [-1, 1]) {
-        const p = plane(body, 2.4, 0.6, mat, side * (W / 2 + 0.02), deckY + 1.35, zFront + 3.0);
+    const textMat = tex
+      ? new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.5 })
+      : null;
+    for (const side of [-1, 1]) {
+      const plate = rbox(body, 0.03, 0.62, 2.7, plateMat, side * (W / 2 + 0.02), deckY + 1.42, zFront + 3.4, 0.04);
+      plate.rotation.y = 0;
+      if (textMat) {
+        const p = plane(body, 2.3, 0.5, textMat, side * (W / 2 + 0.045), deckY + 1.42, zFront + 3.4);
         p.rotation.y = side > 0 ? -HALF : HALF;
       }
     }
@@ -240,14 +407,23 @@ function curtain(c) {
   const roofMat = new THREE.MeshStandardMaterial({ color: 0xdfe3e5, map: M.tarp?.map || null, roughness: 0.94 });
   rbox(body, W + 0.04, 0.07, L - 0.2, roofMat, 0, top + 0.04, 0, 0.02);
   for (let z = zFront + 0.8; z < halfL; z += 1.5) box(body, W, 0.05, 0.05, M.steel, 0, top - 0.03, z);
-  // передняя стенка
+  // передняя стенка с угловыми стойками
   box(body, W - 0.04, H, 0.1, bodyMat2, 0, deckY + H / 2, zFront + 0.12);
-  // задние ворота с замками
-  box(body, W - 0.06, H - 0.05, 0.1, bodyMat, 0, deckY + H / 2, halfL - 0.14);
   for (const side of [-1, 1]) {
-    box(body, 0.12, H - 0.3, 0.05, M.steel, side * (W / 2 - 1.1), deckY + H / 2, halfL - 0.08);
-    box(body, 0.05, 0.5, 0.06, M.chromeDark, side * (W / 2 - 1.1), deckY + 0.75, halfL - 0.05);
+    rbox(body, 0.1, H + 0.04, 0.14, M.plasticGray, side * (W / 2 - 0.02), deckY + H / 2, zFront + 0.1, 0.02);
+    rbox(body, 0.1, H + 0.04, 0.14, M.plasticGray, side * (W / 2 - 0.02), deckY + H / 2, halfL - 0.12, 0.02);
   }
+  // цветная ливрея бренда по борту + нижний молдинг
+  const livery = std(liveryOf(unit), 0.55, 0.25);
+  for (const side of [-1, 1]) {
+    box(body, 0.012, 0.26, L - 1.4, livery, side * (W / 2 + 0.03), deckY + 0.62, 0);
+    box(body, 0.01, 0.06, L - 1.4, livery, side * (W / 2 + 0.012), deckY + 0.9, 0);
+  }
+  // задние ворота с запорами
+  rearDoors(body, {
+    W, z: halfL - 0.02, bottom: deckY + 0.02, height: H - 0.08,
+    leafMat: bodyMat, liveryMat: livery, M, leaves: 2,
+  });
   // стойки под шторой
   for (let z = zFront + 1.2; z < halfL - 0.5; z += 3.2) {
     for (const side of [-1, 1]) box(body, 0.06, H, 0.06, M.steel, side * (W / 2 - 0.06), deckY + H / 2, z);
@@ -266,14 +442,20 @@ function dryVan(c) {
   }
   // крыша с рёбрами
   for (let z = zFront + 0.5; z < zRear - 0.4; z += 0.8) box(body, W - 0.1, 0.03, 0.06, bodyMat2, 0, top + 0.05, z);
-  // задние двери
+  // цветная ливрея и молдинги по бортам
+  const livery = std(liveryOf(c.unit), 0.5, 0.3);
   for (const side of [-1, 1]) {
-    const door = rbox(body, W / 2 - 0.1, H - 0.22, 0.08, bodyMat, side * (W / 4 - 0.02), deckY + H / 2, zRear - 0.16, 0.02);
-    box(body, 0.05, 0.6, 0.05, M.chromeDark, side * (W / 4 - 0.02) - side * 0.35 + side * 0.05, deckY + 1.0, zRear - 0.1);
-    // петли
-    for (let y = deckY + 0.4; y < top - 0.2; y += 0.55) box(body, 0.08, 0.12, 0.06, M.steel, side * 0.05, y, zRear - 0.11);
+    box(body, 0.012, 0.3, L - 1.6, livery, side * (W / 2 + 0.03), deckY + 0.55, 0);
+    box(body, 0.014, 0.06, L - 1.2, M.steel, side * (W / 2 + 0.012), deckY + H * 0.62, 0);
+    // угловые стойки рамы
+    rbox(body, 0.09, H + 0.06, 0.12, M.plasticGray, side * (W / 2 - 0.02), deckY + H / 2, zFront + 0.14, 0.02);
+    rbox(body, 0.09, H + 0.06, 0.12, M.plasticGray, side * (W / 2 - 0.02), deckY + H / 2, zRear - 0.16, 0.02);
   }
-  box(body, 0.03, H - 0.2, 0.02, M.plastic, 0, deckY + H / 2, zRear - 0.1);
+  // задние двери с запорами и петлями
+  rearDoors(body, {
+    W, z: zRear - 0.03, bottom: deckY + 0.02, height: H - 0.08,
+    leafMat: bodyMat, liveryMat: livery, M, leaves: 2,
+  });
   c.anchors.push({ pos: [0, deckY + 0.5, zRear - 0.2], label: 'Двери фургона' });
 }
 
@@ -294,44 +476,79 @@ function reefer(c) {
   fan.rotation.x = HALF;
   // топливный бачок установки
   rbox(body, 0.5, 0.5, 0.35, M.plasticGray, -0.9, deckY + 0.55, zFront + 0.25, 0.04);
-  // дверные петли и уплотнитель
+  // ливрея бренда и двери с запорами
+  const livery = std(liveryOf(c.unit), 0.5, 0.3);
   for (const side of [-1, 1]) {
-    box(body, 0.06, H - 0.2, 0.05, M.chromeDark, side * (W / 2 - 0.06), deckY + H / 2, zRear - 0.06);
-    for (let y = deckY + 0.4; y < top - 0.2; y += 0.55) box(body, 0.08, 0.12, 0.06, M.steel, side * 0.05, y, zRear - 0.11);
+    box(body, 0.012, 0.34, L - 1.8, livery, side * (W / 2 + 0.03), deckY + 0.5, 0);
+    rbox(body, 0.09, H + 0.06, 0.12, M.plasticGray, side * (W / 2 - 0.02), deckY + H / 2, zFront + 0.16, 0.02);
   }
+  rearDoors(body, {
+    W, z: zRear - 0.02, bottom: deckY + 0.02, height: H - 0.08,
+    leafMat: bodyMat, liveryMat: livery, M, leaves: 2,
+  });
   c.anchors.push({ pos: [0, deckY + H - 0.6, zFront - 0.2], label: 'Холодильная установка' });
 }
 
 function flatbed(c) {
-  const { M, body, W, L, zFront, zRear, deckY, halfL } = c;
-  // стальной пол
+  const { M, body, W, L, zFront, zRear, deckY, unit } = c;
+  const livery = std(liveryOf(unit, '#cf5a13'), 0.55, 0.25);
+  // стальной пол из продольных листов
   rbox(body, W, 0.12, L - 0.2, M.steel, 0, deckY + 0.06, 0, 0.02);
-  for (let z = zFront + 0.4; z < zRear - 0.2; z += 0.6) box(body, W - 0.2, 0.02, 0.06, M.darkSteel, 0, deckY + 0.13, z);
-  // борта
-  for (const side of [-1, 1]) {
-    box(body, 0.07, 0.38, L - 0.3, M.steel, side * (W / 2), deckY + 0.3, 0);
-    box(body, 0.05, 0.06, L - 0.3, M.chromeDark, side * (W / 2), deckY + 0.5, 0);
-    for (let z = zFront + 0.4; z < zRear - 0.2; z += 1.2) box(body, 0.06, 0.34, 0.05, M.darkSteel, side * (W / 2), deckY + 0.32, z);
+  for (let i = -4; i <= 4; i++) {
+    box(body, 0.1, 0.015, L - 0.5, M.darkSteel, i * 0.26, deckY + 0.13, 0);
   }
-  box(body, W, 0.34, 0.07, M.steel, 0, deckY + 0.3, zFront + 0.25);
-  // коники (стойки) сзади и спереди
-  for (const z of [zFront + 1.0, halfL - 2.0, halfL - 0.6]) {
-    for (const side of [-1, 1]) {
-      box(body, 0.1, 1.3, 0.1, M.darkSteel, side * (W / 2 - 0.1), deckY + 0.7, z);
-      pipe(body, [side * (W / 2 - 0.1), deckY + 1.3, z], [side * 0.2, deckY + 1.34, z], 0.04, M.steel);
+  // борта-рамы: алюминиевый профиль с кониками
+  for (const side of [-1, 1]) {
+    const x = side * (W / 2 - 0.03);
+    box(body, 0.08, 0.3, L - 0.3, M.steel, x, deckY + 0.28, 0);
+    box(body, 0.1, 0.05, L - 0.3, M.chromeDark, x, deckY + 0.44, 0);
+    // карманы под коники
+    for (const z of [zFront + 1.2, -1.4, zRear - 2.3]) {
+      box(body, 0.14, 0.32, 0.16, M.darkSteel, x, deckY + 0.3, z);
+    }
+    // цветная полоса бренда по борту
+    box(body, 0.012, 0.09, L - 0.8, livery, side * (W / 2 + 0.012), deckY + 0.34, 0);
+    // маркеры по борту
+    for (let z = zFront + 1.6; z < zRear - 1.0; z += 2.6) {
+      box(body, 0.05, 0.04, 0.12, M.amber, side * (W / 2 + 0.04), deckY + 0.36, z);
     }
   }
-  // груз: стальные трубы с ремнями
-  for (let i = 0; i < 5; i++) {
-    const y = deckY + 0.32 + i * 0.16;
-    const pipeG = cyl(body, 0.13, 0.13, L - 2.6, M.steel, -0.35 + (i % 2) * 0.55, y, -0.4, 14);
-    pipeG.rotation.x = HALF;
+  // передний щит
+  box(body, W, 0.9, 0.08, M.steel, 0, deckY + 0.62, zFront + 0.22);
+  for (const side of [-1, 1]) {
+    rbox(body, 0.1, 1.0, 0.1, M.darkSteel, side * (W / 2 - 0.06), deckY + 0.66, zFront + 0.22, 0.02);
   }
-  for (const z of [zFront + 2.2, halfL - 3.0]) {
-    box(body, W - 0.3, 0.02, 0.07, M.rope, 0, deckY + 0.9, z);
-    for (const side of [-1, 1]) box(body, 0.03, 0.85, 0.03, M.rope, side * (W / 2 - 0.2), deckY + 0.55, z);
+  // коники: три пары, с наклоном наружу
+  for (const z of [zFront + 1.5, -1.4, zRear - 2.4]) {
+    for (const side of [-1, 1]) {
+      const post = rbox(body, 0.14, 1.05, 0.14, M.steel, side * (W / 2 - 0.1), deckY + 0.78, z, 0.02);
+      post.rotation.z = side * 0.05;
+      rbox(body, 0.26, 0.1, 0.26, M.darkSteel, side * (W / 2 - 0.1), deckY + 1.3, z, 0.02);
+    }
   }
-  c.anchors.push({ pos: [0, deckY + 0.9, -0.4], label: 'Груз: стальные трубы' });
+  // груз: три стальных рулона в деревянных ложементах, стянутые ремнями
+  const coilMat = std('#8a8f94', 0.42, 0.85);
+  const rustMat = std('#9c6a3c', 0.75, 0.5);
+  const spots = [-3.6, 0, 3.4];
+  spots.forEach((z, i) => {
+    const r = 0.74;
+    const coil = cyl(body, r, r, 1.35, i === 2 ? rustMat : coilMat, 0, deckY + 0.16 + r, z, 24);
+    coil.rotation.z = HALF;
+    // торцы рулона
+    for (const side of [-1, 1]) {
+      cyl(body, r * 0.55, r * 0.55, 0.04, M.darkSteel, side * 0.69, deckY + 0.16 + r, z, 20).rotation.z = HALF;
+    }
+    // деревянные подкладки
+    for (const side of [-1, 1]) {
+      box(body, 1.5, 0.1, 0.16, M.wood, 0, deckY + 0.12, z + side * 0.62);
+    }
+    // ремень через рулон
+    box(body, 0.06, r * 2 + 0.1, 0.04, M.rope, 0.3, deckY + 0.16 + r, z + 0.72);
+    box(body, 0.06, r * 2 + 0.1, 0.04, M.rope, -0.3, deckY + 0.16 + r, z + 0.72);
+  });
+  // ящик и запасное колесо под рамой
+  rbox(body, 0.8, 0.5, 0.5, M.plasticGray, 0.62, deckY - 0.55, zFront + 2.6, 0.03);
+  c.anchors.push({ pos: [0, deckY + 1.0, -3.6], label: 'Груз: рулоны стали' });
 }
 
 function lowboy(c) {
@@ -370,54 +587,83 @@ function lowboy(c) {
 }
 
 function tanker(c, adr) {
-  const { M, body, W, L, zFront, zRear, deckY, unit } = c;
-  const r = 1.02;
-  const y = deckY + r + 0.16;
-  const shellMat = adr ? std('#e8e9e4', 0.4, 0.4) : M.tank;
-  // обечайка
-  const len = L - 2.4;
-  const geo = new THREE.CylinderGeometry(r, r, len, 36, 1, false);
-  const shell = new THREE.Mesh(geo, shellMat);
+  const { M, body, W, L, deckY, unit } = c;
+  const r = 1.0;
+  const y = deckY + r + 0.18;
+  const shellMat = adr ? std('#e8e9e4', 0.4, 0.42) : M.tank;
+  const livery = std(liveryOf(unit, '#2f7d5a'), 0.5, 0.3);
+  const len = L - 2.6;
+
+  // обечайка: три секции с усиливающими кольцами
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, 40, 1, false), shellMat);
   shell.rotation.x = HALF;
   shell.position.set(0, y, -0.2);
   body.add(shell);
-  // днища-полусферы
+  // днища — эллиптические
   for (const side of [-1, 1]) {
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 16, 0, TAU, 0, HALF), shellMat);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(r, 32, 18, 0, TAU, 0, HALF), shellMat);
     cap.rotation.x = side > 0 ? -HALF : HALF;
     cap.position.set(0, y, side > 0 ? len / 2 - 0.2 : -len / 2 - 0.2);
-    cap.scale.z = 0.55;
+    cap.scale.z = 0.5;
     body.add(cap);
-  }
-  // обечайки-рёбра и кольца
-  for (let i = 0; i < 4; i++) {
-    const ring = torus(body, r + 0.01, 0.03, M.steel, 0, y, -len / 2 + 0.5 + i * (len - 1) / 3, 32);
+    // обруч по краю днища
+    const ring = torus(body, r + 0.005, 0.035, M.steel, 0, y, side > 0 ? len / 2 - 0.24 : -len / 2 + 0.24, 40);
     ring.rotation.y = 0;
   }
-  // горловины сверху
-  for (let i = 0; i < 3; i++) {
-    const hatch = cyl(body, 0.26, 0.3, 0.18, M.chromeDark, 0, y + r + 0.06, -len / 3 + i * (len / 3), 20);
-    const cover = cyl(body, 0.3, 0.3, 0.05, M.chrome, 0, y + r + 0.16, -len / 3 + i * (len / 3), 20);
-    const lever = box(body, 0.5, 0.04, 0.06, M.steel, 0, y + r + 0.2, -len / 3 + i * (len / 3));
+  // кольца жёсткости
+  for (const k of [-1.6, 0, 1.6]) {
+    torus(body, r + 0.01, 0.032, M.steel, 0, y, k, 40);
   }
-  // лестница и площадка
-  for (let i = 0; i < 5; i++) {
-    box(body, 0.5, 0.04, 0.04, M.steel, 0.6, deckY + 0.5 + i * 0.42, zRear - 0.35);
+  // цветная полоса продукта вдоль борта
+  for (const side of [-1, 1]) {
+    box(body, 0.02, 0.16, len - 0.6, livery, side * (r + 0.004), y + 0.18, -0.2);
+  }
+  // верхняя площадка-настил и ограждение
+  for (let z = -len / 2 + 0.3; z < len / 2 - 0.2; z += 0.42) {
+    box(body, 0.72, 0.03, 0.3, M.steel, 0, y + r + 0.03, z);
   }
   for (const side of [-1, 1]) {
-    pipe(body, [0.85, deckY + 0.3, zRear - 0.35], [0.85, y + r - 0.1, zRear - 0.35], 0.025, M.steel);
-    pipe(body, [0.36, deckY + 0.3, zRear - 0.35], [0.36, y + r - 0.1, zRear - 0.35], 0.025, M.steel);
+    for (const z of [-len / 2 + 0.5, 0, len / 2 - 0.5]) {
+      box(body, 0.05, 0.55, 0.05, M.darkSteel, side * 0.52, y + r + 0.3, z);
+    }
+    const rail = cyl(body, 0.028, 0.028, len - 1.2, M.steel, side * 0.52, y + r + 0.56, -0.2, 8);
+    rail.rotation.x = HALF;
   }
-  // опоры-ложементы
-  for (const z of [-len / 2 + 0.6, 0, len / 2 - 0.6]) {
-    for (const side of [-1, 1]) box(body, 0.16, 0.5, 0.5, M.darkSteel, side * 0.8, deckY + 0.25, z);
-    box(body, W - 0.4, 0.16, 0.6, M.darkSteel, 0, deckY + 0.2, z);
+  // горловины
+  for (let i = 0; i < 3; i++) {
+    const mz = -len / 3.2 + i * (len / 3.2);
+    // юбка горловины
+    cyl(body, 0.3, 0.34, 0.16, M.steel, 0, y + r + 0.1, mz, 20);
+    // горловина и крышка
+    cyl(body, 0.24, 0.26, 0.14, M.chromeDark, 0, y + r + 0.2, mz, 20);
+    cyl(body, 0.29, 0.29, 0.06, M.chrome, 0, y + r + 0.3, mz, 20);
+    // маховик-крепёж
+    const wheel = torus(body, 0.2, 0.025, M.chromeDark, 0, y + r + 0.34, mz, 16);
+    wheel.rotation.x = HALF;
+    box(body, 0.42, 0.035, 0.05, M.chrome, 0, y + r + 0.34, mz);
   }
-  // нижний налив
-  const valve = cyl(body, 0.12, 0.12, 0.4, M.chrome, 0, deckY + 0.1, 0.8, 14);
+  // лестница на корме + поручни
+  for (let i = 0; i < 5; i++) {
+    box(body, 0.42, 0.035, 0.04, M.steel, 0.52, deckY + 0.55 + i * 0.4, len / 2 + 0.02);
+  }
+  for (const x of [0.3, 0.75]) {
+    pipe(body, [x, deckY + 0.35, len / 2 + 0.02], [x, y + r - 0.05, len / 2 + 0.02], 0.024, M.steel);
+  }
+  // кормовой шкаф с арматурой и сливным патрубком
+  rbox(body, 0.9, 0.85, 0.32, M.plasticGray, -0.55, deckY + 0.5, len / 2 + 0.06, 0.03);
+  box(body, 0.78, 0.06, 0.03, M.chromeDark, -0.55, deckY + 0.78, len / 2 + 0.22);
+  const outlet = cyl(body, 0.1, 0.1, 0.3, M.chrome, -0.55, deckY + 0.05, len / 2 + 0.12, 14);
+  outlet.rotation.x = HALF;
+  // нижний налив и ящик под рамой
+  const valve = cyl(body, 0.12, 0.12, 0.34, M.chrome, 0.35, deckY + 0.02, 1.2, 14);
   valve.rotation.x = HALF;
+  rbox(body, 0.7, 0.5, 0.4, M.plasticGray, -0.7, deckY - 0.35, 1.4, 0.03);
+  // опоры-ложементы
+  for (const z of [-len / 2 + 0.7, 0, len / 2 - 0.7]) {
+    for (const side of [-1, 1]) box(body, 0.18, 0.46, 0.5, M.darkSteel, side * 0.8, deckY + 0.26, z);
+    box(body, W - 0.5, 0.14, 0.6, M.darkSteel, 0, deckY + 0.2, z);
+  }
   if (adr) {
-    // оранжевые таблички ADR
     const adrTex = labelTexture('33 1203', {
       width: 256, height: 128, bg: '#e08a1e', fg: '#1a1a1a', accent: '#1a1a1a',
       font: 'bold 54px Arial, sans-serif', border: true,
@@ -425,61 +671,94 @@ function tanker(c, adr) {
     if (adrTex) {
       const m = new THREE.MeshStandardMaterial({ map: adrTex, roughness: 0.5 });
       for (const side of [-1, 1]) {
-        const p = plane(body, 0.62, 0.3, m, side * (r + 0.02), y + 0.25, -1.5);
-        p.rotation.y = side > 0 ? -HALF : HALF;
-        const p2 = plane(body, 0.62, 0.3, m, side * (r + 0.02), y + 0.25, 1.6);
-        p2.rotation.y = side > 0 ? -HALF : HALF;
+        for (const z of [-1.5, 1.6]) {
+          const p = plane(body, 0.62, 0.3, m, side * (r + 0.02), y + 0.25, z);
+          p.rotation.y = side > 0 ? -HALF : HALF;
+        }
       }
-      const rearP = plane(body, 0.62, 0.3, m, 0, y - 0.1, len / 2 + 0.18);
     }
-    // полосы опасности
-    box(body, W - 0.2, 0.1, 0.04, M.hazard, 0, deckY + 0.42, zRear - 0.1);
+    // оранжевые полосы опасности по краю рамы
+    for (const side of [-1, 1]) {
+      box(body, 0.02, 0.1, len - 1, M.hazard, side * (r + 0.006), y - 0.55, -0.2);
+    }
   }
   c.anchors.push({ pos: [0, y + r + 0.2, -len / 3], label: 'Горловина люка' });
   c.anchors.push({ pos: [0, deckY + 0.1, 1.1], label: 'Нижний налив' });
 }
 
 function silo(c) {
-  const { M, body, W, L, zFront, zRear, deckY } = c;
-  const mat = std('#d3d7d9', 0.45, 0.35);
-  const y0 = deckY + 0.2;
-  // два конических бункера
-  for (let i = 0; i < 2; i++) {
-    const z = -L / 4 + 0.2 + i * (L / 2 - 0.4);
-    const cone = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 1.05, 2.1, 24, 1, false), mat);
-    cone.position.set(0, y0 + 1.05, z);
+  const { M, body, W, L, zFront, zRear, deckY, unit } = c;
+  const shellMat = std('#dfe3e4', 0.4, 0.35);
+  const livery = std(liveryOf(unit, '#7d1a2e'), 0.5, 0.3);
+  const y0 = deckY + 0.25;          // верх рамы
+  const bodyH = 1.85;               // цилиндрическая часть
+  const siloR = 1.06;
+  const zs = [-L / 4.4, L / 4.4];   // два бункера
+
+  for (const z of zs) {
+    // цилиндрическая часть
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(siloR, siloR, bodyH, 28, 1, false), shellMat);
+    drum.position.set(0, y0 + 0.55 + bodyH / 2, z);
+    body.add(drum);
+    // коническое днище (разгрузка самотёком)
+    const cone = new THREE.Mesh(new THREE.CylinderGeometry(siloR, 0.2, 0.72, 28, 1, false), shellMat);
+    cone.position.set(0, y0 + 0.55 - 0.36, z);
     body.add(cone);
-    const top = new THREE.Mesh(new THREE.SphereGeometry(0.92, 24, 12, 0, TAU, 0, HALF), mat);
-    top.position.set(0, y0 + 2.1, z);
-    top.scale.set(0.68, 0.5, 1.1);
-    body.add(top);
-    // верхний люк
-    cyl(body, 0.22, 0.26, 0.14, M.chromeDark, 0, y0 + 2.42, z, 16);
-    // рёбра
-    for (let k = 0; k < 3; k++) {
-      const ring = torus(body, 1.0 - k * 0.12, 0.03, M.steel, 0, y0 + 0.5 + k * 0.65, z, 24);
-      ring.rotation.y = 0;
+    // разгрузочный патрубок
+    cyl(body, 0.16, 0.16, 0.3, M.chromeDark, 0, y0 + 0.05, z, 14);
+    // купол
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(siloR, 28, 14, 0, TAU, 0, HALF), shellMat);
+    dome.position.set(0, y0 + 0.55 + bodyH, z);
+    dome.scale.set(1, 0.42, 1);
+    body.add(dome);
+    // кольца жёсткости
+    for (const dy of [0.25, 1.0, 1.7]) {
+      torus(body, siloR + 0.008, 0.028, M.steel, 0, y0 + 0.55 + dy, z, 30);
+    }
+    // горловина сверху
+    cyl(body, 0.24, 0.26, 0.16, M.chromeDark, 0, y0 + 0.55 + bodyH + 0.32, z, 18);
+    cyl(body, 0.28, 0.28, 0.05, M.chrome, 0, y0 + 0.55 + bodyH + 0.42, z, 18);
+    // цветная полоса бренда
+    torus(body, siloR + 0.004, 0.06, livery, 0, y0 + 1.25, z, 30);
+    // лестница сбоку
+    for (let i = 0; i < 4; i++) {
+      box(body, 0.34, 0.03, 0.03, M.steel, 0.42, y0 + 0.85 + i * 0.38, z + siloR + 0.06);
+    }
+    for (const dx of [0.26, 0.58]) {
+      pipe(body, [dx, y0 + 0.6, z + siloR + 0.06], [dx, y0 + 2.4, z + siloR + 0.06], 0.022, M.steel);
     }
   }
-  // рама-опоры
+  // опорная рама: продольные балки и стойки под бункерами
   for (const side of [-1, 1]) {
-    for (let z = zFront + 1.2; z < zRear; z += 2.4) {
-      box(body, 0.1, 1.8, 0.1, M.darkSteel, side * 0.95, y0 + 0.9, z);
+    box(body, 0.14, 0.22, L - 1.4, M.darkSteel, side * 0.92, y0 - 0.05, 0);
+    for (let z = zFront + 1.4; z < zRear - 1.0; z += 2.2) {
+      box(body, 0.12, 0.9, 0.12, M.darkSteel, side * 0.92, y0 - 0.55, z);
     }
   }
-  // компрессор спереди
-  rbox(body, 0.9, 0.6, 0.7, M.plasticGray, 0, deckY + 0.5, zFront + 0.8, 0.06);
-  cyl(body, 0.22, 0.22, 0.5, M.steel, 0.45, deckY + 0.55, zFront + 0.8, 16).rotation.z = HALF;
-  // трубопровод
-  pipe(body, [0.4, deckY + 0.7, zFront + 0.8], [0.4, deckY + 1.9, zFront + 1.9], 0.05, M.steel);
-  // разгрузочные шланги
+  for (const z of [-3.4, 0, 3.4]) box(body, W - 0.5, 0.14, 0.16, M.darkSteel, 0, y0 - 0.02, z);
+  // ложементы под бункерами и настил-площадка между ними
+  for (const z of zs) {
+    for (const dz of [-0.5, 0, 0.5]) {
+      box(body, W - 0.6, 0.12, 0.14, M.steel, 0, y0 + 0.16, z + dz);
+    }
+  }
+  for (let z = -1.2; z <= 1.2; z += 0.4) box(body, W - 0.9, 0.04, 0.3, M.steel, 0, y0 + 0.16, z);
+  // компрессор и трубопровод спереди
+  rbox(body, 0.92, 0.62, 0.72, M.plasticGray, 0, deckY + 0.52, zFront + 0.75, 0.05);
+  cyl(body, 0.2, 0.2, 0.46, M.steel, 0.5, deckY + 0.56, zFront + 0.75, 16).rotation.z = HALF;
+  for (let i = 0; i < 4; i++) box(body, 0.7, 0.03, 0.03, M.chromeDark, 0, deckY + 0.3 + i * 0.13, zFront + 0.42);
+  pipe(body, [0.42, deckY + 0.75, zFront + 0.8], [0.42, y0 + 1.5, zFront + 2.0], 0.05, M.steel);
+  pipe(body, [0.42, y0 + 1.5, zFront + 2.0], [0.42, y0 + 1.5, zRear - 1.0], 0.05, M.steel);
+  // шланги разгрузки на корме
   for (let i = 0; i < 2; i++) {
-    const hose = new THREE.Mesh(new THREE.TorusGeometry(0.35, 0.05, 8, 16, PI), M.rubberTrim);
-    hose.position.set(0.15, deckY + 0.35, zRear - 0.6 - i * 0.35);
+    const hose = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.05, 8, 16, PI), M.rubberTrim);
+    hose.position.set(0.2, deckY + 0.4, zRear - 0.7 - i * 0.3);
     hose.rotation.y = HALF;
     body.add(hose);
   }
-  c.anchors.push({ pos: [0, deckY + 1.2, 0], label: 'Бункер-цистерна' });
+  // ящик ЗИП под рамой
+  rbox(body, 0.8, 0.44, 0.5, M.plasticGray, -0.6, deckY - 0.32, -1.2, 0.03);
+  c.anchors.push({ pos: [0, deckY + 1.4, 0], label: 'Бункер-цистерна' });
   c.anchors.push({ pos: [0, deckY + 0.55, zFront + 0.8], label: 'Компрессор' });
 }
 
@@ -505,6 +784,11 @@ function tipper(c) {
   rod.rotation.x = -0.32;
   // тент-крышка
   const cover = rbox(body, W, 0.06, L - 0.5, M.tarp, 0, deckY + 0.2 + h + 0.04, 0, 0.02);
+  // цветная полоса бренда по борту ковша
+  const livery = std(liveryOf(c.unit, '#b04a6a'), 0.55, 0.25);
+  for (const side of [-1, 1]) {
+    box(body, 0.012, 0.26, L - 1.0, livery, side * (W / 2 + 0.006), deckY + 0.72, 0);
+  }
   // груз: щебень
   const loadMat = std('#6f6a63', 0.98, 0.02);
   for (let i = 0; i < 26; i++) {
@@ -528,13 +812,17 @@ function livestock(c) {
     box(body, 0.1, 0.1, L - 0.5, M.steel, side * (W / 2 - 0.1), deckY + h - 0.1, 0);
     box(body, 0.1, 0.1, L - 0.5, M.darkSteel, side * (W / 2 - 0.1), deckY + h * 0.5, 0);
   }
-  // стенки: вертикальные планки
+  // стенки: сплошной низ и решётка сверху
+  const livery = std(liveryOf(c.unit, '#5c6b3b'), 0.6, 0.2);
   for (const side of [-1, 1]) {
-    for (let z = zFront + 0.6; z < zRear - 0.4; z += 0.14) {
-      box(body, 0.04, h - 0.3, 0.03, bodyMat2, side * (W / 2), deckY + h / 2, z);
+    rbox(body, 0.06, 0.75, L - 0.5, livery, side * (W / 2), deckY + 0.45, 0, 0.02);
+    for (let z = zFront + 0.6; z < zRear - 0.4; z += 0.55) {
+      box(body, 0.05, h - 0.95, 0.05, M.steel, side * (W / 2), deckY + 0.95 + (h - 0.95) / 2 - 0.05, z);
     }
     // продольные поручни
-    for (const y of [0.4, 0.9, 1.4, 1.9]) box(body, 0.07, 0.05, L - 0.4, M.steel, side * (W / 2), deckY + y, 0);
+    for (const y of [1.1, 1.6, 2.1]) box(body, 0.07, 0.05, L - 0.4, M.steel, side * (W / 2), deckY + y, 0);
+    // маркеры по борту
+    for (let z = zFront + 1.4; z < zRear - 0.8; z += 2.6) box(body, 0.05, 0.04, 0.12, M.amber, side * (W / 2 + 0.01), deckY + 0.85, z);
   }
   // межъярусный пол
   box(body, W - 0.2, 0.06, L - 0.5, M.steel, 0, deckY + h * 0.5, 0);
@@ -544,7 +832,11 @@ function livestock(c) {
   // крыша и вентиляция
   rbox(body, W, 0.08, L - 0.3, bodyMat, 0, deckY + h + 0.05, 0, 0.02);
   for (let i = 0; i < 6; i++) {
-    rbox(body, 0.7, 0.18, 0.7, M.plasticGray, 0, deckY + h + 0.16, zFront + 1.4 + i * 2.0, 0.03);
+    rbox(body, 0.62, 0.12, 0.62, M.plastic, 0, deckY + h + 0.12, zFront + 1.4 + i * 2.0, 0.03);
+  }
+  // боковая зашивка крыши, чтобы «клетка» не просвечивала насквозь
+  for (const side of [-1, 1]) {
+    box(body, 0.05, 0.34, L - 0.5, M.steel, side * (W / 2), deckY + h - 0.12, 0);
   }
   // задний трап
   const ramp = rbox(body, W - 0.3, 0.08, 2.0, M.steel, 0, deckY + 0.05, zRear + 0.8, 0.02);
@@ -640,8 +932,21 @@ function containerBody(c, { color = '#275b78', reefer = false } = {}) {
     box(body, 0.05, h - 0.2, 0.08, M.steel, side * 0.55, deckY + 0.18 + h / 2, zRear - 0.75);
     for (let i = 0; i < 4; i++) box(body, 0.06, 0.3, 0.06, M.chromeDark, side * 0.55, deckY + 0.4 + i * 0.55, zRear - 0.7);
   }
+  // угловые фитинги (восемь штук) и дверная арматура
   for (const side of [-1, 1]) {
-    for (const z of [-l / 2 + 0.4, l / 2 - 0.4]) box(body, 0.16, 0.16, 0.16, M.steel, side * (w / 2 - 0.1), deckY + 0.1, z);
+    for (const z of [-l / 2 + 0.35, l / 2 - 0.35]) {
+      for (const y of [deckY + 0.2, deckY + 0.18 + h - 0.12]) {
+        box(body, 0.2, 0.16, 0.2, M.steel, side * (w / 2 - 0.08), y, z);
+      }
+    }
+  }
+  // крыша с продольными рёбрами и притвором
+  rbox(body, w + 0.04, 0.1, l, dark, 0, deckY + 0.18 + h + 0.03, 0, 0.02);
+  for (let z = -l / 2 + 0.6; z < l / 2 - 0.5; z += 0.6) box(body, 0.05, 0.04, 0.5, M.steel, 0, deckY + 0.18 + h + 0.09, z);
+  // штанги дверей на корме
+  for (const x of [-0.62, -0.2, 0.2, 0.62]) {
+    const rod = cyl(body, 0.03, 0.03, h - 0.24, M.chromeDark, x, deckY + 0.18 + h / 2, zRear - 0.75, 8);
+    box(body, 0.16, 0.05, 0.08, M.chrome, x, deckY + 1.0, zRear - 0.72);
   }
   // маркировка
   const tex = labelTexture('PORTLINE', {
@@ -656,6 +961,11 @@ function containerBody(c, { color = '#275b78', reefer = false } = {}) {
     }
   }
   if (reefer) {
+    // цветная полоса ливреи по бортам — иначе белый реф сливается с фоном
+    const livery = std('#0f6b70', 0.5, 0.3);
+    for (const side of [-1, 1]) {
+      box(body, 0.02, 0.34, l - 2.6, livery, side * (w / 2 + 0.02), deckY + 1.05, 0);
+    }
     rbox(body, w - 0.3, 1.0, 0.5, M.plasticLight, 0, deckY + 0.18 + h - 0.7, zFront + 1.0, 0.05);
     for (let i = -3; i <= 3; i++) box(body, 0.05, 0.7, 0.03, M.plasticGray, i * 0.14, deckY + 0.18 + h - 0.7, zFront + 0.73);
     const fan = cyl(body, 0.28, 0.28, 0.08, M.plastic, 0, deckY + 0.18 + h - 1.3, zFront + 1.0, 18);
@@ -749,11 +1059,19 @@ function bdouble(c) {
   for (const z of [1.0, 1.8]) {
     for (const side of [-1, 1]) box(body, 0.1, 0.4, 0.1, M.steel, side * 0.8, deckY - 0.2, z);
   }
-  // светоотражающие полосы
+  // ливрея бренда и контурная маркировка обеих секций
+  const livery = std(liveryOf(c.unit, '#1b4f8a'), 0.5, 0.3);
   for (const side of [-1, 1]) {
-    box(body, 0.02, 0.12, 6.4, M.hazard, side * (W / 2 + 0.02), deckY + 0.35, zFront + 3.8);
-    box(body, 0.02, 0.12, 5.8, M.hazard, side * (W / 2 + 0.02), deckY + 0.35, zRear - 3.6);
+    box(body, 0.012, 0.24, 6.4, livery, side * (W / 2 + 0.02), deckY + 0.62, zFront + 3.8);
+    box(body, 0.012, 0.24, 5.8, livery, side * (W / 2 + 0.02), deckY + 0.62, zRear - 3.6);
+    stripeBand(body, { length: 6.2, height: 0.1, y: 0.42, z: zFront + 3.8, x: side * (W / 2 + 0.012), side });
+    stripeBand(body, { length: 5.6, height: 0.1, y: 0.42, z: zRear - 3.6, x: side * (W / 2 + 0.012), side });
   }
+  // задние двери второй секции
+  rearDoors(body, {
+    W, z: zRear - 0.06, bottom: deckY + 0.12, height: 2.56,
+    leafMat: std('#d5d8d3', 0.7, 0.12), liveryMat: livery, M, leaves: 2,
+  });
   c.anchors.push({ pos: [0, deckY + 0.2, 0.4], label: 'Соединительная балка' });
 }
 
@@ -884,6 +1202,11 @@ function sideTip(c) {
   }
   box(tilt, W, h, 0.1, bodyMat, W / 2, h / 2, zFront + 0.2);
   box(tilt, W, h, 0.1, bodyMat, W / 2, h / 2, zRear - 0.2);
+  // полоса бренда по борту ковша
+  const livery = std(liveryOf(c.unit, '#37a58c'), 0.55, 0.25);
+  for (const side of [-1, 1]) {
+    box(tilt, 0.012, 0.24, L - 1.0, livery, W / 2 + side * (W / 2 + 0.006), h * 0.55, 0);
+  }
   // гидроцилиндры бокового опрокидывания
   for (const z of [zFront + 1.5, zRear - 1.5]) {
     const hc = cyl(body, 0.09, 0.09, 1.2, M.hazard, -W / 2 + 0.3, deckY + 0.7, z, 12);
