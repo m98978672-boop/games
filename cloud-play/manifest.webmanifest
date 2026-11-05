@@ -1,7 +1,7 @@
 {
   "id": "./",
   "name": "PLAYBRIDGE",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "short_name": "Playbridge",
   "description": "Адаптивная Steam-библиотека для ПК, телефона и планшета; официальный вход и установка через Steam.",
   "lang": "ru",

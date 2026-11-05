@@ -6,6 +6,7 @@
     "styles.css",
     "sw.js",
     "manifest.webmanifest",
+    "remote-access.mjs",
     "server.mjs",
     "package.json",
     "README.md",

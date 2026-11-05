@@ -3,6 +3,7 @@ import { createServer } from 'node:http';
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { createRemoteAccess, REMOTE_PORT } from './remote-access.mjs';
 
 export const STEAM_OPENID_ENDPOINT = 'https://steamcommunity.com/openid/login';
 export const STEAM_OPENID_NAMESPACE = 'http://specs.openid.net/auth/2.0';
@@ -12,6 +13,7 @@ const STATE_COOKIE = 'pb_openid_state';
 const SESSION_COOKIE = 'pb_session';
 const DROPBOX_STATE_COOKIE = 'pb_dropbox_state';
 const DROPBOX_TOKEN_COOKIE = 'pb_dropbox';
+const REMOTE_SESSION_COOKIE = 'pb_remote';
 const DROPBOX_AUTHORIZE_ENDPOINT = 'https://www.dropbox.com/oauth2/authorize';
 const DROPBOX_TOKEN_ENDPOINT = 'https://api.dropboxapi.com/oauth2/token';
 const DROPBOX_UPLOAD_ENDPOINT = 'https://content.dropboxapi.com/2/files/upload';
@@ -289,6 +291,37 @@ function dropboxSessionFor(request, session, config) {
   const encrypted = readCookies(request).get(DROPBOX_TOKEN_COOKIE);
   const token = decryptDropboxRefreshToken(encrypted, config.dropboxTokenSecret);
   return token && token.steamId === session.steamId ? token : null;
+}
+
+const REMOTE_ALLOWED_PATHS = new Set([
+  '/cloud-play', '/cloud-play/',
+  '/api/status',
+  '/api/remote/pair',
+  '/api/remote/pair/status',
+  '/api/remote/session',
+  '/api/remote/screen',
+  '/api/remote/input',
+  '/api/remote/launch',
+  '/api/remote/leave',
+]);
+
+function isRemotePathAllowed(pathname) {
+  return REMOTE_ALLOWED_PATHS.has(pathname) || pathname.startsWith('/cloud-play/');
+}
+
+function sameOriginRequest(request) {
+  const origin = request.headers.origin;
+  if (!origin) return true;
+  const host = request.headers.host;
+  const forwardedHost = typeof request.headers['x-forwarded-host'] === 'string' ? request.headers['x-forwarded-host'].split(',')[0].trim() : '';
+  if (!host && !forwardedHost) return false;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+    return parsed.host === host || (Boolean(forwardedHost) && parsed.host === forwardedHost);
+  } catch {
+    return false;
+  }
 }
 
 function isLoopbackRequest(request) {
@@ -615,14 +648,26 @@ function serveStatic(response, pathname, method) {
   }).catch(() => sendError(response, 500, 'static_file_error', 'Не удалось прочитать файл приложения.'));
 }
 
-export function createHandler({ env = process.env, fetchImpl = globalThis.fetch } = {}) {
+export function createHandler({ env = process.env, fetchImpl = globalThis.fetch, remoteAccess = null } = {}) {
   const config = configFrom(env);
-  return async (request, response) => {
+  let handler;
+  const requestedRemotePort = Number.parseInt(env.REMOTE_PORT || String(REMOTE_PORT), 10);
+  const remote = remoteAccess || createRemoteAccess({
+    port: Number.isSafeInteger(requestedRemotePort) && requestedRemotePort > 0 && requestedRemotePort <= 65535 ? requestedRemotePort : REMOTE_PORT,
+    getHandler: () => handler,
+  });
+
+  handler = async (request, response, context = {}) => {
+    const remoteContext = Boolean(context.remote);
     securityHeaders(response);
     const base = config.publicOrigin || `http://localhost:${config.port}`;
     let requestUrl;
     try { requestUrl = new URL(request.url, base); } catch { return sendError(response, 400, 'bad_request', 'Некорректный запрос.'); }
     const pathname = requestUrl.pathname;
+
+    if (remoteContext && !isRemotePathAllowed(pathname)) {
+      return sendError(response, 403, 'remote_path_blocked', 'Через подключение телефона этот раздел недоступен.');
+    }
 
     if (pathname === '/api/status' && request.method === 'GET') {
       return sendJson(response, 200, {
@@ -651,7 +696,210 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
           reason: config.dropboxReady ? null : 'Dropbox OAuth is not configured on the server.',
         },
         settings: { localSetupAvailable: config.localSetupMode, autoLoginEnabled: config.localAutoLogin },
+        remote: {
+          ...remote.status({ includeCode: false }),
+          managementAvailable: !remoteContext && isLoopbackRequest(request),
+        },
+        remoteContext,
       });
+    }
+
+    if (pathname.startsWith('/api/remote/')) {
+      const localManagement = !remoteContext && isLoopbackRequest(request);
+      const readSmallJson = async () => {
+        if (!String(request.headers['content-type'] || '').toLowerCase().startsWith('application/json')) return {};
+        try {
+          return (await readJsonBody(request, 4096)) || {};
+        } catch (error) {
+          const failure = new Error('Не удалось прочитать JSON.');
+          failure.status = error.statusCode === 413 ? 413 : 400;
+          failure.code = 'invalid_json';
+          throw failure;
+        }
+      };
+      const fail = (error) => sendError(
+        response,
+        error.status || 400,
+        error.code || 'remote_error',
+        error.message || 'Не удалось выполнить действие удалённого доступа.',
+      );
+
+      if (pathname === '/api/remote/status' && request.method === 'GET') {
+        if (!localManagement) return sendError(response, 403, 'local_only', 'Состояние удалённого доступа видно только на самом компьютере.');
+        return sendJson(response, 200, remote.status());
+      }
+
+      if (pathname === '/api/remote/start' && request.method === 'POST') {
+        if (!localManagement) return sendError(response, 403, 'local_only', 'Включить удалённый доступ можно только на самом компьютере.');
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        try {
+          await remote.start();
+        } catch (error) {
+          return fail(error);
+        }
+        return sendJson(response, 200, remote.status());
+      }
+
+      if (pathname === '/api/remote/stop' && request.method === 'POST') {
+        if (!localManagement) return sendError(response, 403, 'local_only', 'Выключить удалённый доступ можно только на самом компьютере.');
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        await remote.stop();
+        return sendJson(response, 200, remote.status());
+      }
+
+      if (pathname === '/api/remote/code' && request.method === 'POST') {
+        if (!localManagement) return sendError(response, 403, 'local_only', 'Новый код создаётся только на самом компьютере.');
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        if (!remote.state.enabled) return sendError(response, 409, 'remote_disabled', 'Сначала включи удалённый доступ.');
+        remote.issueCode();
+        return sendJson(response, 200, remote.status());
+      }
+
+      const approvalMatch = pathname.match(/^\/api\/remote\/requests\/([a-f0-9]{16,64})\/(approve|deny)$/);
+      if (approvalMatch) {
+        if (request.method !== 'POST') return sendError(response, 405, 'method_not_allowed', 'Используй POST.');
+        if (!localManagement) return sendError(response, 403, 'local_only', 'Подтверждение доступно только на самом компьютере.');
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        try {
+          if (approvalMatch[2] === 'approve') remote.approve(approvalMatch[1]);
+          else remote.deny(approvalMatch[1]);
+        } catch (error) {
+          return fail(error);
+        }
+        return sendJson(response, 200, remote.status());
+      }
+
+      if (pathname === '/api/remote/end' && request.method === 'POST') {
+        if (!localManagement) return sendError(response, 403, 'local_only', 'Завершить сессии можно только на самом компьютере.');
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        let input = {};
+        try {
+          input = await readSmallJson();
+        } catch (error) {
+          return fail(error);
+        }
+        if (typeof input.tokenHint === 'string' && input.tokenHint) {
+          for (const [token, entry] of remote.state.sessions) {
+            if (token.startsWith(input.tokenHint)) remote.endSession(token);
+            else if (entry.id === input.tokenHint) remote.endSession(token);
+          }
+        } else {
+          remote.endAllSessions();
+        }
+        return sendJson(response, 200, remote.status());
+      }
+
+      if (pathname === '/api/remote/pair' && request.method === 'POST') {
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        let input;
+        try {
+          input = await readSmallJson();
+        } catch (error) {
+          return fail(error);
+        }
+        try {
+          const created = remote.createRequest({
+            code: input.code,
+            device: input.device,
+            ip: request.socket?.remoteAddress || 'unknown',
+          });
+          return sendJson(response, 201, created);
+        } catch (error) {
+          return fail(error);
+        }
+      }
+
+      if (pathname === '/api/remote/pair/status' && request.method === 'GET') {
+        const id = requestUrl.searchParams.get('id') || '';
+        const pollToken = requestUrl.searchParams.get('token') || '';
+        try {
+          const current = remote.requestStatus({ id, pollToken });
+          if (current.status !== 'approved') return sendJson(response, 200, { status: current.status, device: current.device });
+          const session = remote.claimSession({ id, pollToken });
+          const maxAge = Math.max(60, Math.round((session.expiresAt - Date.now()) / 1000));
+          return sendJson(response, 200, { status: 'approved', device: session.device, expiresAt: session.expiresAt }, {
+            'set-cookie': cookieHeader(REMOTE_SESSION_COOKIE, session.token, { secure: config.secureCookie, maxAge }),
+          });
+        } catch (error) {
+          return fail(error);
+        }
+      }
+
+      if (pathname === '/api/remote/session' && request.method === 'GET') {
+        const session = remote.sessionForToken(readCookies(request).get(REMOTE_SESSION_COOKIE));
+        const capabilities = remote.status({ includeCode: false }).capabilities;
+        return sendJson(response, 200, {
+          connected: Boolean(session),
+          session: session ? {
+            device: session.device,
+            createdAt: session.createdAt,
+            expiresAt: session.expiresAt,
+            lastSeenAt: session.lastSeenAt,
+          } : null,
+          capabilities,
+        });
+      }
+
+      if (pathname === '/api/remote/screen' && request.method === 'GET') {
+        try {
+          const frame = await remote.grabScreen(readCookies(request).get(REMOTE_SESSION_COOKIE));
+          response.writeHead(200, {
+            'content-type': 'image/jpeg',
+            'cache-control': 'no-store',
+            'content-length': frame.length,
+          });
+          return response.end(frame);
+        } catch (error) {
+          return fail(error);
+        }
+      }
+
+      if (pathname === '/api/remote/input' && request.method === 'POST') {
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        let input;
+        try {
+          input = await readSmallJson();
+        } catch (error) {
+          return fail(error);
+        }
+        const token = readCookies(request).get(REMOTE_SESSION_COOKIE);
+        try {
+          if (input.action === 'click') {
+            const result = await remote.sendClick(token, input.x, input.y);
+            return sendJson(response, 200, { ok: true, ...result });
+          }
+          const result = await remote.sendKey(token, input.action);
+          return sendJson(response, 200, { ok: true, ...result });
+        } catch (error) {
+          return fail(error);
+        }
+      }
+
+      if (pathname === '/api/remote/launch' && request.method === 'POST') {
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        let input;
+        try {
+          input = await readSmallJson();
+        } catch (error) {
+          return fail(error);
+        }
+        try {
+          const result = await remote.launchSteam(readCookies(request).get(REMOTE_SESSION_COOKIE), input.target);
+          return sendJson(response, 200, { ok: true, ...result });
+        } catch (error) {
+          return fail(error);
+        }
+      }
+
+      if (pathname === '/api/remote/leave' && request.method === 'POST') {
+        if (!sameOriginRequest(request)) return sendError(response, 403, 'origin_rejected', 'Источник запроса не совпадает с адресом приложения.');
+        const result = remote.endSession(readCookies(request).get(REMOTE_SESSION_COOKIE));
+        return sendJson(response, 200, { ok: true, ...result }, {
+          'set-cookie': clearCookieHeader(REMOTE_SESSION_COOKIE, config.secureCookie),
+        });
+      }
+
+      return sendError(response, 404, 'not_found', 'Endpoint удалённого доступа не найден.');
     }
 
     if (pathname === '/api/settings/steam') {
@@ -921,12 +1169,16 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
 
     return sendError(response, 404, 'not_found', 'Endpoint не найден.');
   };
+
+  handler.remote = remote;
+  return handler;
 }
 
 const launchedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (launchedDirectly) {
   const config = configFrom();
-  const server = createServer(createHandler());
+  const handler = createHandler();
+  const server = createServer(handler);
   server.listen(config.port, config.host, () => {
     console.log(`PLAYBRIDGE listening on ${config.host}:${config.port}`);
     console.log(`Open ${config.publicOrigin || `http://localhost:${config.port}`}/cloud-play/`);
@@ -934,5 +1186,6 @@ if (launchedDirectly) {
     console.log(`Steam library API: ${config.libraryReady ? 'configured' : 'disabled — set STEAM_WEB_API_KEY'}`);
     console.log(`Dropbox library backup: ${config.dropboxReady ? 'configured' : 'disabled — set Dropbox app credentials and DROPBOX_TOKEN_SECRET'}`);
     console.log('Cloud gaming: disabled — no self-hosted host agent or licensed provider configured');
+    console.log(`Phone remote control: enable it from /cloud-play/ (separate listener on port ${process.env.REMOTE_PORT || 4175})`);
   });
 }

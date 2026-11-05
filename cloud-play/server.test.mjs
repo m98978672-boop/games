@@ -435,7 +435,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.equal(manifestResponse.headers.get('cache-control'), 'no-cache');
   const manifest = await manifestResponse.json();
   assert.equal(manifest.name, 'PLAYBRIDGE');
-  assert.equal(manifest.version, '0.6.0');
+  assert.equal(manifest.version, '0.7.0');
   assert.equal(manifest.start_url, './');
   assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192' && icon.purpose === 'any'));
   assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512' && icon.purpose === 'maskable'));
@@ -447,7 +447,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   const worker = await workerResponse.text();
   assert.match(worker, /registration\.scope/);
   assert.match(worker, /self\.skipWaiting\(\)/);
-  assert.match(worker, /playbridge-shell-0\.6\.0/);
+  assert.match(worker, /playbridge-shell-0\.7\.0/);
   assert.match(worker, /url\.pathname\.includes\('\/api\/'\) \|\| url\.pathname\.includes\('\/auth\/'\)/);
   assert.match(worker, /fresh\.ok && !url\.search/);
 
@@ -461,6 +461,10 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(styles, /@media \(max-width: 560px\)/);
   assert.match(styles, /min-height: 44px/);
   assert.match(styles, /\.faq-item summary/);
+  assert.match(styles, /\.remote-pad \{/);
+  assert.match(styles, /\.pad-key \{[^}]*min-height: 52px/);
+  assert.match(styles, /\.remote-stage \{[^}]*aspect-ratio: 16 \/ 9/);
+  assert.match(styles, /@media \(max-width: 900px\)/);
 
   const appJsResponse = await fetch(`${base}app.js`);
   assert.equal(appJsResponse.status, 200);
@@ -477,6 +481,11 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(appJs, /status\.settings\?\.autoLoginEnabled/);
   assert.match(appJs, /new IntersectionObserver/);
   assert.match(appJs, /setAttribute\('aria-current', 'location'\)/);
+  assert.match(appJs, /api\('\/api\/remote\/session'\)/);
+  assert.match(appJs, /remotePost\('\/api\/remote\/pair'/);
+  assert.match(appJs, /\/api\/remote\/screen\?ts=/);
+  assert.match(appJs, /\/api\/remote\/input/);
+  assert.match(appJs, /\/api\/remote\/launch/);
   assert.match(appJs, /updateStatus\.addEventListener\('click'/);
   assert.match(appJs, /15 \* 60 \* 1000/);
   assert.match(appJs, /window\.addEventListener\('online'/);
@@ -505,6 +514,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   const portableManifest = JSON.parse(await readFile(new URL('./portable-update-manifest.json', import.meta.url), 'utf8'));
   assert.equal(portableManifest.schema, 1);
   assert.ok(portableManifest.files.includes('server.mjs'));
+  assert.ok(portableManifest.files.includes('remote-access.mjs'));
   assert.ok(portableManifest.files.includes('app.js'));
   assert.ok(portableManifest.files.includes('START-PLAYBRIDGE-WINDOWS.bat'));
 
@@ -531,6 +541,214 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(page, /viewport-fit=cover/);
   assert.match(page, /data-nav="help"/);
   assert.match(page, /id="help-title"/);
-  assert.equal((page.match(/<details class="faq-item">/g) || []).length, 4);
-  assert.match(page, /Windows portable-версия сама по себе телефон не обслуживает/);
+  assert.equal((page.match(/<details class="faq-item">/g) || []).length, 5);
+  assert.match(page, /Как телефон подключается к компьютеру\?/);
+  assert.match(page, /id="remote-title"/);
+  assert.match(page, /id="remoteToggleButton"/);
+  assert.match(page, /id="pairCodeInput"/);
+  assert.match(page, /id="remoteScreen"/);
+  assert.equal((page.match(/data-remote-key="/g) || []).length, 8);
+  assert.match(page, /href="https:\/\/steamcommunity\.com\/\?subsection=broadcasts" target="_blank" rel="noopener noreferrer"/);
+  assert.match(page, /href="https:\/\/www\.twitch\.tv\/directory\/category\/steam"/);
+});
+
+test('remote pairing requires the desktop to approve a one-time code', async (t) => {
+  const { createRemoteAccess } = await import('./remote-access.mjs');
+  let clock = 1_800_000_000_000;
+  const calls = [];
+  const remote = createRemoteAccess({
+    now: () => clock,
+    port: 0,
+    networkInterfaces: () => ({ 'Wi-Fi': [{ address: '192.168.1.50', family: 'IPv4', internal: false }] }),
+    capture: { available: true, reason: null, grab: async () => Buffer.from('jpeg') },
+    input: {
+      available: true,
+      reason: null,
+      key: async (action) => { calls.push(action); return { action }; },
+      click: async (x, y) => ({ x, y }),
+      open: async (target) => { calls.push(target); return { target }; },
+    },
+  });
+  t.after(() => remote.stop());
+  const started = await remote.start();
+  assert.equal(started.enabled, true);
+  assert.equal(started.code.length, 6);
+  assert.deepEqual(started.urls, [`http://192.168.1.50:${started.port}/cloud-play/`]);
+  await remote.stop();
+
+  await remote.start();
+  const code = remote.status().code;
+  assert.throws(() => remote.createRequest({ code: '000000', device: 'Телефон', ip: '10.0.0.9' }), /неверный|истёк/i);
+
+  const created = remote.createRequest({ code, device: '  Телефон\n ', ip: '10.0.0.9' });
+  assert.equal(remote.requestStatus({ id: created.id, pollToken: created.pollToken }).status, 'pending');
+  assert.throws(() => remote.requestStatus({ id: created.id, pollToken: 'wrong' }), /не найден/i);
+  assert.throws(() => remote.claimSession({ id: created.id, pollToken: created.pollToken }), /не подтвердил/i);
+
+  const approved = remote.approve(created.id);
+  const session = remote.sessionForToken(approved.token);
+  assert.equal(session.device, 'Телефон');
+  assert.equal(remote.claimSession({ id: created.id, pollToken: created.pollToken }).device, 'Телефон');
+  assert.throws(() => remote.claimSession({ id: created.id, pollToken: created.pollToken }), /не найден/i);
+
+  assert.equal((await remote.grabScreen(approved.token)).toString(), 'jpeg');
+  await remote.sendKey(approved.token, 'down');
+  await remote.sendClick(approved.token, 0.5, 0.5);
+  await remote.launchSteam(approved.token, '730');
+  await remote.launchSteam(approved.token, 'bigpicture');
+  assert.deepEqual(calls, ['down', 'steam://rungameid/730', 'steam://open/bigpicture']);
+
+  await assert.rejects(remote.sendKey(approved.token, 'ctrl-alt-del'), /не разрешено/i);
+  await assert.rejects(remote.launchSteam(approved.token, 'calc.exe'), /Разрешён только/i);
+  await assert.rejects(remote.sendKey('unknown-token', 'up'), /Подключи/i);
+  await assert.rejects(remote.grabScreen('unknown-token'), /Подключи/i);
+
+  remote.endSession(approved.token);
+  assert.equal(remote.sessionForToken(approved.token), null);
+  assert.throws(() => remote.approve(created.id), /истёк|обработан/i);
+
+  clock += 3 * 60 * 1000;
+  assert.equal(remote.status().code, null);
+  const lateCode = remote.issueCode().code;
+  const expired = remote.createRequest({ code: lateCode, device: 'Поздний телефон', ip: '10.0.0.10' });
+  remote.approve(expired.id);
+  clock += 31 * 60 * 1000;
+  assert.equal(remote.status().sessions.length, 0);
+
+  const fresh = remote.issueCode();
+  for (let attempt = 0; attempt < 6; attempt += 1) {
+    assert.throws(() => remote.createRequest({ code: '111111', device: 'Спам', ip: '10.0.0.11' }));
+  }
+  assert.throws(() => remote.createRequest({ code: fresh.code, device: 'Спам', ip: '10.0.0.11' }), /Слишком много попыток/i);
+  await remote.stop();
+  assert.equal(remote.status().enabled, false);
+});
+
+test('HTTP remote endpoints pair a phone, keep local management private and gate the LAN listener', async (t) => {
+  const { createRemoteAccess } = await import('./remote-access.mjs');
+  const remote = createRemoteAccess({
+    port: 0,
+    networkInterfaces: () => ({ Ethernet: [{ address: '192.168.1.77', family: 'IPv4', internal: false }] }),
+    capture: { available: true, reason: null, grab: async () => Buffer.from('frame') },
+    input: {
+      available: true,
+      reason: null,
+      key: async (action) => ({ action }),
+      click: async () => ({ action: 'click' }),
+      open: async (target) => ({ target }),
+    },
+    getHandler: () => handlerRef,
+  });
+  let handlerRef = null;
+  const handler = createHandler({
+    env: { PORT: '4174', SESSION_SECRET: secret, PUBLIC_ORIGIN: 'http://localhost:4174' },
+    remoteAccess: remote,
+  });
+  handlerRef = handler;
+  const app = createServer(handler);
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  t.after(async () => {
+    await remote.stop();
+    await new Promise((resolve, reject) => app.close((error) => error ? reject(error) : resolve()));
+  });
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const origin = base;
+
+  const status = await (await fetch(`${base}/api/status`)).json();
+  assert.equal(status.remote.managementAvailable, true);
+  assert.equal(status.remote.enabled, false);
+  assert.equal(status.remote.code, null);
+
+  const started = await fetch(`${base}/api/remote/start`, { method: 'POST', headers: { Origin: origin } });
+  assert.equal(started.status, 200);
+  const startedBody = await started.json();
+  assert.equal(startedBody.enabled, true);
+  const code = startedBody.code;
+
+  const rejected = await fetch(`${base}/api/remote/pair`, {
+    method: 'POST',
+    headers: { Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: '999999', device: 'Телефон' }),
+  });
+  assert.equal(rejected.status, 403);
+  assert.equal((await rejected.json()).error.code, 'invalid_code');
+
+  const pairResponse = await fetch(`${base}/api/remote/pair`, {
+    method: 'POST',
+    headers: { Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, device: '  Pixel 8  ' }),
+  });
+  assert.equal(pairResponse.status, 201);
+  const pair = await pairResponse.json();
+
+  const pending = await (await fetch(`${base}/api/remote/pair/status?id=${pair.id}&token=${pair.pollToken}`)).json();
+  assert.equal(pending.status, 'pending');
+
+  const hostStatus = await (await fetch(`${base}/api/remote/status`)).json();
+  assert.equal(hostStatus.pending.length, 1);
+  assert.equal(hostStatus.pending[0].device, 'Pixel 8');
+  assert.equal(hostStatus.pending[0].pollToken, undefined);
+
+  const approveResponse = await fetch(`${base}/api/remote/requests/${pair.id}/approve`, {
+    method: 'POST',
+    headers: { Origin: origin },
+  });
+  assert.equal(approveResponse.status, 200);
+  assert.equal((await approveResponse.json()).sessions.length, 1);
+
+  const approvedResponse = await fetch(`${base}/api/remote/pair/status?id=${pair.id}&token=${pair.pollToken}`);
+  const approved = await approvedResponse.json();
+  assert.equal(approved.status, 'approved');
+  const cookie = (approvedResponse.headers.get('set-cookie') || '').split(';')[0];
+  assert.match(cookie, /^pb_remote=[a-f0-9]{64}$/);
+
+  const session = await (await fetch(`${base}/api/remote/session`, { headers: { cookie } })).json();
+  assert.equal(session.connected, true);
+  assert.deepEqual(session.capabilities, { screen: true, screenReason: null, input: true, inputReason: null });
+
+  const frame = await fetch(`${base}/api/remote/screen`, { headers: { cookie } });
+  assert.equal(frame.status, 200);
+  assert.equal(frame.headers.get('content-type'), 'image/jpeg');
+  assert.equal(await frame.text(), 'frame');
+
+  const inputResponse = await fetch(`${base}/api/remote/input`, {
+    method: 'POST',
+    headers: { cookie, Origin: origin, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'ok' }),
+  });
+  assert.equal(inputResponse.status, 200);
+  assert.deepEqual(await inputResponse.json(), { ok: true, action: 'ok' });
+
+  const crossOrigin = await fetch(`${base}/api/remote/input`, {
+    method: 'POST',
+    headers: { cookie, Origin: 'http://evil.example', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'ok' }),
+  });
+  assert.equal(crossOrigin.status, 403);
+  assert.equal((await crossOrigin.json()).error.code, 'origin_rejected');
+
+  const anonymousScreen = await fetch(`${base}/api/remote/screen`);
+  assert.equal(anonymousScreen.status, 401);
+
+  const remotePort = remote.status().port;
+  const lanBlocked = await fetch(`http://127.0.0.1:${remotePort}/api/settings/steam`);
+  assert.equal(lanBlocked.status, 403);
+  assert.equal((await lanBlocked.json()).error.code, 'remote_path_blocked');
+  const lanStatus = await fetch(`http://127.0.0.1:${remotePort}/api/status`);
+  assert.equal(lanStatus.status, 200);
+  const lanStatusBody = await lanStatus.json();
+  assert.equal(lanStatusBody.remote.managementAvailable, false);
+  assert.equal(lanStatusBody.remoteContext, true);
+  const lanShell = await fetch(`http://127.0.0.1:${remotePort}/cloud-play/`);
+  assert.equal(lanShell.status, 200);
+  assert.match(await lanShell.text(), /Пульт и трансляции/);
+
+  const leave = await fetch(`${base}/api/remote/leave`, { method: 'POST', headers: { cookie, Origin: origin } });
+  assert.equal(leave.status, 200);
+  assert.match(leave.headers.get('set-cookie'), /pb_remote=;/);
+  assert.equal((await (await fetch(`${base}/api/remote/session`, { headers: { cookie } })).json()).connected, false);
+
+  const stop = await fetch(`${base}/api/remote/stop`, { method: 'POST', headers: { Origin: origin } });
+  assert.equal(stop.status, 200);
+  assert.equal((await stop.json()).enabled, false);
 });
