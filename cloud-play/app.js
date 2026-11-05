@@ -960,9 +960,31 @@ elements.filterButtons.forEach((button) => button.addEventListener('click', () =
   renderGames();
 }));
 
-$$('[data-nav]').forEach((link) => link.addEventListener('click', () => {
-  $$('[data-nav]').forEach((candidate) => candidate.classList.toggle('is-active', candidate === link));
-}));
+const navigationLinks = $$('[data-nav]');
+function setActiveNavigation(activeLink) {
+  navigationLinks.forEach((candidate) => {
+    const active = candidate === activeLink;
+    candidate.classList.toggle('is-active', active);
+    if (active) candidate.setAttribute('aria-current', 'location');
+    else candidate.removeAttribute('aria-current');
+  });
+}
+
+navigationLinks.forEach((link) => link.addEventListener('click', () => setActiveNavigation(link)));
+if ('IntersectionObserver' in window) {
+  const navigationSections = navigationLinks
+    .map((link) => document.getElementById(link.dataset.nav))
+    .filter(Boolean);
+  const navigationObserver = new IntersectionObserver((entries) => {
+    const currentSection = entries
+      .filter((entry) => entry.isIntersecting)
+      .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+    if (!currentSection) return;
+    const currentLink = navigationLinks.find((link) => link.dataset.nav === currentSection.target.id);
+    if (currentLink) setActiveNavigation(currentLink);
+  }, { rootMargin: '-8% 0px -72% 0px', threshold: [0, 0.1, 0.25, 0.5] });
+  navigationSections.forEach((section) => navigationObserver.observe(section));
+}
 
 document.addEventListener('keydown', (event) => {
   const target = event.target;

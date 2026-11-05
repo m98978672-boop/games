@@ -1,9 +1,9 @@
 {
   "id": "./",
   "name": "PLAYBRIDGE",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "short_name": "Playbridge",
-  "description": "Steam OpenID, доступная библиотека, официальные установки и резервная копия метаданных в Dropbox.",
+  "description": "Адаптивная Steam-библиотека для ПК, телефона и планшета; официальный вход и установка через Steam.",
   "lang": "ru",
   "start_url": "./",
   "scope": "./",

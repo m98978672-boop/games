@@ -2,13 +2,13 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#090d12">
   <meta name="application-name" content="PLAYBRIDGE">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="PLAYBRIDGE">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="description" content="PLAYBRIDGE: Steam OpenID, доступная библиотека, официальные установки и резервная копия списка игр в Dropbox.">
+  <meta name="description" content="PLAYBRIDGE: адаптивная Steam-библиотека для ПК, телефона и планшета с официальным входом и установкой через Steam.">
   <title>PLAYBRIDGE — Steam library bridge</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
@@ -27,18 +27,19 @@
       </a>
       <div class="sidebar-label">РАЗДЕЛЫ</div>
       <nav class="side-nav" aria-label="Навигация">
-        <a class="nav-link is-active" href="#overview" data-nav="overview"><span class="nav-icon">◈</span><span>Обзор</span></a>
-        <a class="nav-link" href="#library" data-nav="library"><span class="nav-icon">▦</span><span>Библиотека</span><span class="nav-count" id="navGameCount">—</span></a>
-        <a class="nav-link" href="#install" data-nav="install"><span class="nav-icon">⇩</span><span>Установка через Steam</span></a>
-        <a class="nav-link" href="#cloud" data-nav="cloud"><span class="nav-icon">⌁</span><span>Облачная игра</span></a>
-        <a class="nav-link" href="#trust" data-nav="trust"><span class="nav-icon">◇</span><span>Безопасность</span></a>
+        <a class="nav-link is-active" href="#overview" data-nav="overview" data-mobile-label="Обзор" aria-label="Обзор" aria-current="location"><span class="nav-icon" aria-hidden="true">◈</span><span>Обзор</span></a>
+        <a class="nav-link" href="#library" data-nav="library" data-mobile-label="Игры" aria-label="Библиотека"><span class="nav-icon" aria-hidden="true">▦</span><span>Библиотека</span><span class="nav-count" id="navGameCount">—</span></a>
+        <a class="nav-link" href="#install" data-nav="install" data-mobile-label="Steam" aria-label="Установка через Steam"><span class="nav-icon" aria-hidden="true">⇩</span><span>Установка через Steam</span></a>
+        <a class="nav-link" href="#cloud" data-nav="cloud" data-mobile-label="Облако" aria-label="Облачная игра"><span class="nav-icon" aria-hidden="true">⌁</span><span>Облачная игра</span></a>
+        <a class="nav-link" href="#trust" data-nav="trust" data-mobile-label="Защита" aria-label="Безопасность"><span class="nav-icon" aria-hidden="true">◇</span><span>Безопасность</span></a>
+        <a class="nav-link" href="#help" data-nav="help" data-mobile-label="Помощь" aria-label="Помощь и вопросы"><span class="nav-icon" aria-hidden="true">?</span><span>Помощь</span></a>
       </nav>
       <div class="sidebar-spacer"></div>
       <div class="sidebar-status" id="sidebarStatus" data-state="checking">
         <span class="status-orb"></span>
         <span class="sidebar-status-copy"><strong id="sidebarStatusTitle">ПРОВЕРКА СЕРВЕРА</strong><small id="sidebarStatusText">Проверяю API…</small></span>
       </div>
-      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.5 <span class="sidebar-bottom-right">RU</span></div>
+      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.6 <span class="sidebar-bottom-right">RU</span></div>
     </aside>
 
     <main class="main-content" id="top">
@@ -153,6 +154,41 @@
           <div class="trust-icon">◇</div>
           <div class="trust-copy"><div class="eyebrow">БЕЗОПАСНОСТЬ И ПРАВА</div><h2>Пароль Steam не проходит через PLAYBRIDGE</h2><p>OpenID подтверждает SteamID; Web API показывает только доступные сведения. Для удалённого запуска нужно соблюдать условия Steam и лицензии на игры; дополнительные договорённости могут потребоваться для публичного сервиса. Сторонние копии Steam-файлов не храним.</p></div>
           <a class="button button-outline" href="README.md#безопасность-и-правовые-ограничения">Технические детали</a>
+        </div>
+      </section>
+
+      <section class="section-block help-section" id="help" aria-labelledby="help-title">
+        <div class="section-heading">
+          <div><div class="eyebrow">ПК · ТЕЛЕФОН · ПЛАНШЕТ</div><h2 id="help-title">PLAYBRIDGE на разных устройствах</h2><p>Интерфейс подстраивается под экран; вход и библиотека зависят от доступного backend.</p></div>
+          <span class="section-caption">ЧАСТЫЕ ВОПРОСЫ</span>
+        </div>
+        <div class="device-grid">
+          <article class="device-card">
+            <span class="device-card-icon" aria-hidden="true">▣</span>
+            <div><div class="eyebrow">БОЛЬШОЙ ЭКРАН</div><h3>ПК и ноутбук</h3><p>Для Windows можно использовать portable-пакет: он запускает backend только на этом компьютере. Для браузерного доступа с других устройств нужен отдельно настроенный HTTPS backend.</p></div>
+          </article>
+          <article class="device-card device-card-mobile">
+            <span class="device-card-icon" aria-hidden="true">▯</span>
+            <div><div class="eyebrow">СЕНСОРНЫЙ ЭКРАН</div><h3>Телефон и планшет</h3><p>Открой PLAYBRIDGE по HTTPS и при желании добавь на главный экран как PWA. GitHub Pages содержит только интерфейс, а локальный Windows backend доступен только на самом ПК.</p></div>
+          </article>
+        </div>
+        <div class="faq-list" aria-label="Вопросы и ответы о разных устройствах">
+          <details class="faq-item">
+            <summary>Можно ли войти в один Steam-аккаунт с телефона и ПК?</summary>
+            <p>Да, если оба устройства открывают один доступный backend через HTTPS. На каждом устройстве Steam OpenID подтверждается отдельно, а сессия хранится в браузере этого устройства. Windows portable-версия сама по себе телефон не обслуживает.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Синхронизируются ли ключ Steam API и настройки?</summary>
+            <p>Нет. Не копируй ключ или файл настроек на телефон. В portable-версии ключ хранится на ПК и используется только локальным backend; для нескольких устройств нужен общий HTTPS backend. Список игр запрашивается у Steam, а Dropbox хранит только отдельный снимок метаданных, если он настроен.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Можно ли запускать или стримить игры с телефона?</summary>
+            <p>Пока нет: PLAYBRIDGE показывает библиотеку и передаёт установку официальному Steam-клиенту на компьютере. Встроенный стриминг и сопряжение с хостом ещё не реализованы; Steam Link — отдельное приложение и не интегрирован в эту страницу.</p>
+          </details>
+          <details class="faq-item">
+            <summary>Как добавить PLAYBRIDGE на главный экран телефона?</summary>
+            <p>На Android открой сайт в Chrome и выбери «Установить приложение» или «Добавить на главный экран». На iPhone/iPad открой сайт в Safari, нажми «Поделиться» → «На экран “Домой”». Для установки PWA нужен HTTPS (или localhost при локальном тесте); авторизация всё равно требует доступного backend.</p>
+          </details>
         </div>
       </section>
 

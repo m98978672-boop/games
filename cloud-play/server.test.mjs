@@ -435,7 +435,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.equal(manifestResponse.headers.get('cache-control'), 'no-cache');
   const manifest = await manifestResponse.json();
   assert.equal(manifest.name, 'PLAYBRIDGE');
-  assert.equal(manifest.version, '0.5.0');
+  assert.equal(manifest.version, '0.6.0');
   assert.equal(manifest.start_url, './');
   assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192' && icon.purpose === 'any'));
   assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512' && icon.purpose === 'maskable'));
@@ -447,9 +447,20 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   const worker = await workerResponse.text();
   assert.match(worker, /registration\.scope/);
   assert.match(worker, /self\.skipWaiting\(\)/);
-  assert.match(worker, /playbridge-shell-0\.5\.0/);
+  assert.match(worker, /playbridge-shell-0\.6\.0/);
   assert.match(worker, /url\.pathname\.includes\('\/api\/'\) \|\| url\.pathname\.includes\('\/auth\/'\)/);
   assert.match(worker, /fresh\.ok && !url\.search/);
+
+  const stylesResponse = await fetch(`${base}styles.css`);
+  assert.equal(stylesResponse.status, 200);
+  const styles = await stylesResponse.text();
+  assert.match(styles, /env\(safe-area-inset-bottom\)/);
+  assert.match(styles, /position: fixed; inset: auto 0 0/);
+  assert.match(styles, /\.nav-link::after/);
+  assert.match(styles, /@media \(max-width: 680px\)/);
+  assert.match(styles, /@media \(max-width: 560px\)/);
+  assert.match(styles, /min-height: 44px/);
+  assert.match(styles, /\.faq-item summary/);
 
   const appJsResponse = await fetch(`${base}app.js`);
   assert.equal(appJsResponse.status, 200);
@@ -464,6 +475,8 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(appJs, /localSettingsDialog\.showModal\(\)/);
   assert.match(appJs, /AUTO_LOGIN_RETRY_MS = 10 \* 60 \* 1000/);
   assert.match(appJs, /status\.settings\?\.autoLoginEnabled/);
+  assert.match(appJs, /new IntersectionObserver/);
+  assert.match(appJs, /setAttribute\('aria-current', 'location'\)/);
   assert.match(appJs, /updateStatus\.addEventListener\('click'/);
   assert.match(appJs, /15 \* 60 \* 1000/);
   assert.match(appJs, /window\.addEventListener\('online'/);
@@ -515,4 +528,9 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(page, /id="saveDropboxButton"/);
   assert.match(page, /id="localSettingsDialog"/);
   assert.match(page, /id="localSettingsButton"/);
+  assert.match(page, /viewport-fit=cover/);
+  assert.match(page, /data-nav="help"/);
+  assert.match(page, /id="help-title"/);
+  assert.equal((page.match(/<details class="faq-item">/g) || []).length, 4);
+  assert.match(page, /Windows portable-версия сама по себе телефон не обслуживает/);
 });
