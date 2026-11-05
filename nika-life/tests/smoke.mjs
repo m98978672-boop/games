@@ -345,7 +345,7 @@ assert.ok(/только по явному нажатию игрока/.test(read
 const catalog = JSON.parse(read('site/community-games.json'));
 const entry = catalog.games.find((g) => g.id === 'nika-life');
 assert.ok(entry, 'игра добавлена в каталог сообщества Games');
-assert.equal(entry.version, 'v1.2');
+assert.equal(entry.version, 'v1.3');
 assert.equal(entry.cover, '../nika-life/cover.svg');
 assert.equal(entry.play, '../nika-life/index.html');
 assert.equal(entry.readme, '../nika-life/README.md');
