@@ -30,6 +30,7 @@
 
 ```bash
 node site/tests/community-catalog.mjs
+node nika-life/tests/smoke.mjs
 node game-base/tests/smoke.mjs
 node game-base/tests/logic.mjs
 cd cloud-play && npm test

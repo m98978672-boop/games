@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="810" viewBox="0 0 1440 810" role="img" aria-label="Обложка игры НИКА: ЖИВАЯ">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101821"/><stop offset="0.55" stop-color="#1b1d2b"/><stop offset="1" stop-color="#2a1d2c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="45%" r="55%">
+      <stop offset="0" stop-color="#e78fa6" stop-opacity=".30"/><stop offset="1" stop-color="#e78fa6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="dress" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f0788d"/><stop offset="1" stop-color="#b94768"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5a3c46"/><stop offset="1" stop-color="#30212b"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#ffd0dc"/><stop offset="1" stop-color="#e78fa6"/>
+    </linearGradient>
+  </defs>
+  <rect width="1440" height="810" fill="url(#bg)"/>
+  <rect width="1440" height="810" fill="url(#glow)"/>
+  <!-- сетка «скелетных» узлов -->
+  <g stroke="#e78fa6" stroke-opacity=".14" stroke-width="1">
+    <path d="M0 120H1440M0 240H1440M0 360H1440M0 480H1440M0 600H1440M0 720H1440"/>
+    <path d="M120 0V810M240 0V810M360 0V810M480 0V810M600 0V810M720 0V810M840 0V810M960 0V810M1080 0V810M1200 0V810M1320 0V810"/>
+  </g>
+  <!-- левый текст -->
+  <g font-family="Segoe UI, system-ui, sans-serif">
+    <text x="96" y="196" fill="#e78fa6" font-size="22" letter-spacing="7">БРАУЗЕРНАЯ ИГРА · ОФЛАЙН · 0 ₽</text>
+    <text x="92" y="310" fill="#ffd0dc" font-size="112" font-weight="800" letter-spacing="6">НИКА:</text>
+    <text x="92" y="420" fill="#f2ecdf" font-size="112" font-weight="800" letter-spacing="6">ЖИВАЯ</text>
+    <text x="96" y="488" fill="#a9a294" font-size="25">Девушка, которой управляет локальный ИИ</text>
+    <text x="96" y="532" fill="#a9a294" font-size="25">одевается · двигается · работает · спит · помогает</text>
+    <g transform="translate(96,584)">
+      <rect width="228" height="52" rx="26" fill="url(#gold)"/>
+      <text x="114" y="34" text-anchor="middle" fill="#2a1420" font-size="21" font-weight="800">132 АНИМАЦИИ</text>
+      <rect x="244" width="216" height="52" rx="26" fill="rgba(231,143,166,.14)" stroke="#e78fa6" stroke-opacity=".6"/>
+      <text x="352" y="34" text-anchor="middle" fill="#ffd0dc" font-size="21" font-weight="700">12 ЧАСТЕЙ ТЕЛА</text>
+      <rect x="476" width="220" height="52" rx="26" fill="rgba(155,140,240,.14)" stroke="#9b8cf0" stroke-opacity=".6"/>
+      <text x="586" y="34" text-anchor="middle" fill="#c9c0ff" font-size="21" font-weight="700">ИИ БЕЗ ОБЛАКА</text>
+    </g>
+    <text x="96" y="706" fill="#6f6a5f" font-size="19">min 10 анимаций на руку · ногу · голову · лицо · глаза · волосы · корпус · кисти · одежду</text>
+  </g>
+  <!-- девушка: векторный набросок -->
+  <g transform="translate(1065,405)">
+    <ellipse cx="0" cy="270" rx="140" ry="20" fill="#000" opacity=".28"/>
+    <!-- волосы сзади -->
+    <path d="M-74 -112 C-104 -40 -98 96 -66 138 C-28 158 32 158 66 138 C98 96 104 -40 74 -112 Z" fill="url(#hair)"/>
+    <!-- ноги -->
+    <g stroke="#2a222b" stroke-width="3">
+      <path d="M-28 84 l-12 132 -8 52" stroke="#f0c2a1" stroke-width="26" stroke-linecap="round" fill="none"/>
+      <path d="M28 84 l12 132 8 52" stroke="#f0c2a1" stroke-width="26" stroke-linecap="round" fill="none"/>
+      <path d="M-40 262 h34" stroke="#ece7dc" stroke-width="16" stroke-linecap="round"/>
+      <path d="M40 262 h34" stroke="#ece7dc" stroke-width="16" stroke-linecap="round"/>
+    </g>
+    <!-- платье -->
+    <path d="M-54 -22 L-70 118 Q0 146 70 118 L54 -22 Z" fill="url(#dress)" stroke="#8f3d58" stroke-width="3"/>
+    <path d="M-54 -22 L54 -22 L48 -118 Q0 -136 -48 -118 Z" fill="url(#dress)" stroke="#8f3d58" stroke-width="3"/>
+    <!-- руки -->
+    <g stroke="#f0c2a1" stroke-width="21" stroke-linecap="round" fill="none">
+      <path d="M-50 -106 L-104 -46 L-124 -104"/>
+      <path d="M50 -106 L112 -66 L138 -122"/>
+    </g>
+    <circle cx="-124" cy="-108" r="13" fill="#f0c2a1"/>
+    <circle cx="140" cy="-126" r="13" fill="#f0c2a1"/>
+    <!-- лицо -->
+    <ellipse cx="0" cy="-158" rx="56" ry="62" fill="#f3c9a8" stroke="#e0ac8a" stroke-width="2"/>
+    <ellipse cx="-20" cy="-166" rx="8" ry="10" fill="#fff"/>
+    <ellipse cx="20" cy="-166" rx="8" ry="10" fill="#fff"/>
+    <circle cx="-18" cy="-164" r="4.4" fill="#3b3040"/>
+    <circle cx="22" cy="-164" r="4.4" fill="#3b3040"/>
+    <path d="M-15 -130 Q0 -116 15 -130" stroke="#9b4f57" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+    <ellipse cx="-36" cy="-142" rx="9" ry="5" fill="#e77e8e" opacity=".5"/>
+    <ellipse cx="36" cy="-142" rx="9" ry="5" fill="#e77e8e" opacity=".5"/>
+    <!-- чёлка -->
+    <path d="M-56 -168 C-60 -226 -14 -238 0 -216 C22 -240 60 -222 56 -168 C40 -190 22 -190 10 -204 C-6 -184 -28 -184 -56 -168 Z" fill="url(#hair)"/>
+    <path d="M-50 -172 C-62 -110 -54 -18 -40 26 L-26 20 C-40 -20 -42 -100 -36 -176 Z" fill="url(#hair)"/>
+    <path d="M50 -172 C62 -110 54 -18 40 26 L26 20 C40 -20 42 -100 36 -176 Z" fill="url(#hair)"/>
+  </g>
+  <!-- узлы-точки анимации вокруг -->
+  <g fill="#ffd0dc">
+    <circle cx="880" cy="300" r="6"/><circle cx="900" cy="240" r="4"/><circle cx="1250" cy="250" r="6"/>
+    <circle cx="1290" cy="330" r="4"/><circle cx="870" cy="540" r="5"/><circle cx="1260" cy="600" r="5"/>
+  </g>
+  <g stroke="#ffd0dc" stroke-opacity=".35" fill="none">
+    <path d="M880 300 L900 240 L1000 210"/><path d="M1250 250 L1290 330 L1310 420"/>
+    <path d="M870 540 L930 610"/><path d="M1260 600 L1210 660"/>
+  </g>
+  <rect x="24" y="24" width="1392" height="762" rx="24" fill="none" stroke="#ffd0dc" stroke-opacity=".22" stroke-width="2"/>
+</svg>
