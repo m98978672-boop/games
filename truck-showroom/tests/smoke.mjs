@@ -187,6 +187,54 @@ for (const unit of CARS) {
   }
 }
 
+// ============================================================
+// РЕГРЕССИИ ПО ПРИЦЕПАМ
+// Кузова раньше были безликими белыми коробками, а над тележкой
+// висели тёмные «лопухи» вместо крыльев. Проверяем то, что делает
+// прицеп похожим на настоящий: контурная маркировка, задние фонари
+// с отбойником, крылья над колёсами и ливрея бренда.
+// ============================================================
+const M3 = createMaterials(null);
+for (const unit of TRAILERS) {
+  const built = buildUnit({ ...unit, category: 'trailers' }, M3);
+  built.root.updateMatrixWorld(true);
+  const W = unit.width ?? 2.55;
+  const box3 = new THREE.Box3();
+  let stripeCount = 0;
+  let stripeOutside = 0;
+  let lights = 0;
+  let fenders = 0;
+  built.root.traverse((o) => {
+    if (!o.isMesh) return;
+    const mat = o.material;
+    box3.setFromObject(o);
+    if (mat?.vertexColors) {
+      stripeCount += 1;
+      // полоса должна быть у борта, а не в середине кузова и не под землёй
+      if (Math.abs(box3.max.x) > W / 2 - 0.25 || Math.abs(box3.min.x) > W / 2 - 0.25) stripeOutside += 1;
+      ok(box3.min.y > 0.3 && box3.max.y < 2.2, `${unit.id}: маркировка на высоте борта (${box3.min.y.toFixed(2)}…${box3.max.y.toFixed(2)} м)`);
+    }
+    if (mat?.emissive && mat.emissive.getHexString() !== '000000' && box3.min.z > 3) lights += 1;
+    if (o.geometry?.type === 'CylinderGeometry' && box3.max.y < 1.3 && box3.min.y > 0.2) fenders += 1;
+  });
+  ok(stripeCount > 0, `${unit.id}: есть контурная маркировка (${stripeCount} полос)`);
+  ok(stripeOutside === stripeCount, `${unit.id}: маркировка стоит на борту, а не внутри кузова`);
+  ok(lights >= 2, `${unit.id}: задние фонари на корме (${lights})`);
+  ok(fenders >= 1, `${unit.id}: над колёсами есть крылья или защита (${fenders})`);
+  if (['curtain', 'van', 'reefer', 'tipper', 'livestock'].includes(unit.type)) {
+    // цветная плашка ливреи: насыщенный цвет на борту выше пола
+    let plate = 0;
+    const hsl = {};
+    built.root.traverse((o) => {
+      if (!o.isMesh || !o.material?.color) return;
+      box3.setFromObject(o);
+      o.material.color.getHSL(hsl);
+      if (hsl.s > 0.25 && box3.min.y > 1.2 && Math.abs(box3.max.x) > W / 2 - 0.1) plate += 1;
+    });
+    ok(plate > 0, `${unit.id}: на борту есть цветная ливрея (${plate})`);
+  }
+}
+
 const avg = (arr, k) => Math.round(arr.reduce((s, x) => s + x[k], 0) / arr.length);
 console.log('\nСредняя детализация: тягачи', avg(report.trucks, 'tris'), '· прицепы', avg(report.trailers, 'tris'), '· авто', avg(report.cars, 'tris'), 'треугольников');
 const need = 40;

@@ -75,6 +75,9 @@ root.traverse((o) => {
   const opacity = mat.transparent ? (mat.opacity ?? 0.5) : 1;
   const metal = mat.metalness ?? 0;
   const rough = mat.roughness ?? 0.6;
+  // вершинные цвета (контурная маркировка прицепов, флаги и т.п.)
+  const vcol = mat.vertexColors && g.attributes.color ? g.attributes.color : null;
+  const cTmp = new THREE.Color();
   for (let i = 0; i < count; i += 3) {
     const ia = idx ? idx.getX(i) : i;
     const ib = idx ? idx.getX(i + 1) : i + 1;
@@ -84,9 +87,20 @@ root.traverse((o) => {
     tmpC.fromBufferAttribute(pos, ic).applyMatrix4(o.matrixWorld);
     // отсечение невидимых по «плохим» координатам
     nA.subVectors(tmpB, tmpA).cross(tmpC.clone().sub(tmpA)).normalize();
+    let color = base;
+    if (vcol) {
+      // средний цвет треугольника по трём вершинам
+      cTmp.setRGB(0, 0, 0);
+      for (const vi of [ia, ib, ic]) {
+        cTmp.r += vcol.getX(vi); cTmp.g += vcol.getY(vi); cTmp.b += vcol.getZ(vi);
+      }
+      color = base.clone().multiplyScalar(1).setRGB(
+        (cTmp.r / 3) * base.r, (cTmp.g / 3) * base.g, (cTmp.b / 3) * base.b,
+      );
+    }
     tris.push({
       a: tmpA.clone(), b: tmpB.clone(), c: tmpC.clone(), n: nA.clone(),
-      color: base.clone(), emissive: emissive.clone(), emissiveI, opacity, metal, rough,
+      color: color.clone(), emissive: emissive.clone(), emissiveI, opacity, metal, rough,
     });
   }
 });
