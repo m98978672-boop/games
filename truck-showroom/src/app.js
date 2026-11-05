@@ -202,6 +202,42 @@ function select(cat, id, { instant = false } = {}) {
   }
 }
 
+// ------------------------------------------------------------ выдвижные панели
+const DRAWERS = { catalog: 'panel-catalog', details: 'panel-details' };
+let openDrawer = null;
+
+function setDrawer(name) {
+  const next = openDrawer === name ? null : name;
+  openDrawer = next;
+  for (const [key, id] of Object.entries(DRAWERS)) {
+    const el = $(id);
+    if (!el) continue;
+    el.classList.toggle('open', key === next);
+    const btn = $(`${key}-toggle`);
+    if (btn) btn.setAttribute('aria-expanded', String(key === next));
+  }
+  $('backdrop')?.classList.toggle('show', !!next);
+  const lightPop = $('light-pop');
+  if (next && lightPop) {
+    lightPop.classList.add('hidden');
+    $('light-btn')?.setAttribute('aria-expanded', 'false');
+  }
+  // панель каталога при открытии ставит фокус в поиск — так удобнее искать
+  if (next === 'catalog') setTimeout(() => $('search')?.focus({ preventScroll: true }), 240);
+}
+
+function closeDrawer() {
+  if (!openDrawer) return false;
+  const name = openDrawer;
+  openDrawer = null;
+  for (const [key, id] of Object.entries(DRAWERS)) {
+    $(id)?.classList.toggle('open', false);
+    $(`${key}-toggle`)?.setAttribute('aria-expanded', 'false');
+  }
+  $('backdrop')?.classList.remove('show');
+  return !!name;
+}
+
 // ------------------------------------------------------------ список каталога
 function iconFor(unit) {
   if (unit.category === 'trucks') return '🚛';
@@ -251,6 +287,8 @@ function renderList() {
         return;
       }
       select(state.cat, u.id);
+      // на телефоне после выбора списка вьюпорт должен быть виден
+      if (window.matchMedia?.('(max-width: 900px)').matches) closeDrawer();
     };
     list.appendChild(btn);
   });
@@ -529,6 +567,17 @@ function fullscreen() {
   else document.exitFullscreen?.();
 }
 
+// верхняя и нижняя панели имеют разную высоту на разных экранах —
+// прокидываем реальные размеры в CSS, чтобы выдвижные панели не перекрывали их
+function syncLayout() {
+  const top = document.querySelector('.hud-top');
+  const bottom = document.querySelector('.hud-bottom');
+  if (!top || !bottom) return;
+  const root = document.documentElement;
+  root.style.setProperty('--hud-h', `${Math.round(top.getBoundingClientRect().height) || 54}px`);
+  root.style.setProperty('--dock-h', `${Math.round(bottom.getBoundingClientRect().height) || 64}px`);
+}
+
 function wireUI() {
   document.querySelectorAll('.cat-tab').forEach((t) => {
     t.onclick = () => setCategory(t.dataset.cat);
@@ -547,6 +596,23 @@ function wireUI() {
   $('random-btn').onclick = randomUnit;
   $('shot-btn').onclick = shot;
   $('full-btn').onclick = fullscreen;
+  $('catalog-toggle').onclick = () => setDrawer('catalog');
+  $('details-toggle').onclick = () => setDrawer('details');
+  $('catalog-close').onclick = () => closeDrawer();
+  $('details-close').onclick = () => closeDrawer();
+  $('backdrop').onclick = () => closeDrawer();
+  $('light-btn').onclick = (e) => {
+    e.stopPropagation();
+    const pop = $('light-pop');
+    const show = pop.classList.contains('hidden');
+    pop.classList.toggle('hidden', !show);
+    $('light-btn').setAttribute('aria-expanded', String(show));
+  };
+  $('light-pop').onclick = (e) => e.stopPropagation();
+  document.addEventListener('click', () => {
+    $('light-pop')?.classList.add('hidden');
+    $('light-btn')?.setAttribute('aria-expanded', 'false');
+  });
   $('help-btn').onclick = () => $('help-modal').classList.remove('hidden');
   $('help-close').onclick = () => $('help-modal').classList.add('hidden');
   $('help-modal').onclick = (e) => { if (e.target.id === 'help-modal') $('help-modal').classList.add('hidden'); };
@@ -609,7 +675,12 @@ function wireUI() {
       case 'c': case 'C': case 'с': case 'С': shot(); break;
       case 'h': case 'H': case 'р': case 'Р': $('help-modal').classList.toggle('hidden'); break;
       case 'i': case 'I': case 'ш': case 'Ш': toggleInside(); break;
-      case 'Escape': $('help-modal').classList.add('hidden'); break;
+      case 'Escape': {
+        $('help-modal').classList.add('hidden');
+        $('light-pop')?.classList.add('hidden');
+        closeDrawer();
+        break;
+      }
       case ' ': {
         e.preventDefault();
         $('orbit-btn').onclick();
@@ -654,6 +725,8 @@ function boot() {
     t.setAttribute('aria-selected', String(on));
   });
   wireUI();
+  syncLayout();
+  window.addEventListener('resize', syncLayout);
   const unit = currentUnit();
   renderList();
   renderDetails(unit);
@@ -663,7 +736,7 @@ function boot() {
   showUnit(unit, { instant: true, view: viewsOf(unit)[0] });
   loop();
   // приветственная подсказка
-  setTimeout(() => live('Мышь — вращать · I — сесть в салон'), 900);
+  setTimeout(() => live('Каталог и карточка — кнопки сверху · I — сесть в салон'), 900);
 }
 
 boot();

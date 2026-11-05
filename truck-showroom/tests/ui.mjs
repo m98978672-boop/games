@@ -30,11 +30,20 @@ window.HTMLCanvasElement.prototype.getContext = function (type) {
     getImageData: () => ({ data: new Uint8ClampedArray(4) }), putImageData: noop, drawImage: noop };
 };
 window.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+window.matchMedia = window.matchMedia || ((q) => ({ matches: false, media: q, addEventListener() {}, removeEventListener() {} }));
 console.warn = () => {};
 const errs = [];
 window.addEventListener('error', (e) => errs.push(e.message));
 window.eval(fs.readFileSync(path.join(ROOT, 'showroom.bundle.js'), 'utf8'));
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+const openCatalog = () => {
+  const panel = window.document.getElementById('panel-catalog');
+  if (!panel.classList.contains('open')) window.document.getElementById('catalog-toggle').click();
+};
+const openDetails = () => {
+  const panel = window.document.getElementById('panel-details');
+  if (!panel.classList.contains('open')) window.document.getElementById('details-toggle').click();
+};
 const $ = (id) => window.document.getElementById(id);
 const D = window.document;
 const tab = (c) => D.querySelector(`.cat-tab[data-cat="${c}"]`);
@@ -45,7 +54,7 @@ await wait(700);
 // проходим ВСЕ 40 моделей и каждую проверяем
 const state = [];
 for (const cat of ['trucks', 'trailers', 'cars']) {
-  tab(cat).click(); await wait(250);
+  tab(cat).click(); await wait(250); openCatalog(); await wait(60);
   const count = D.querySelectorAll('.unit').length;
   check(`каталог ${cat}: ${count} моделей`, count === (cat === 'trailers' ? 20 : 10));
   const n = count;
@@ -131,7 +140,33 @@ check('справка открыта', !$('help-modal').classList.contains('hidd
 $('help-close').click();
 check('справка закрыта', $('help-modal').classList.contains('hidden'));
 
+
+// ---- новая раскладка: один экран + выдвижные панели
+const catPanel = $('panel-catalog');
+const detPanel = $('panel-details');
+if (catPanel.classList.contains('open') || detPanel.classList.contains('open')) {
+  D.getElementById('backdrop').click();
+  await wait(80);
+}
+check('панели закрыты по умолчанию', !catPanel.classList.contains('open') && !detPanel.classList.contains('open'));
+$('catalog-toggle').click(); await wait(80);
+check('кнопка «Каталог» открывает панель', catPanel.classList.contains('open'));
+check('фон затемняется', D.getElementById('backdrop').classList.contains('show'));
+check('aria-expanded выставлен', $('catalog-toggle').getAttribute('aria-expanded') === 'true');
+$('backdrop').click(); await wait(80);
+check('клик по фону закрывает панель', !catPanel.classList.contains('open'));
+$('details-toggle').click(); await wait(80);
+check('кнопка «Модель» открывает карточку', detPanel.classList.contains('open'));
+window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' })); await wait(80);
+check('Esc закрывает карточку', !detPanel.classList.contains('open'));
+$('light-btn').click(); await wait(60);
+check('всплывашка «Свет» открывается', !$('light-pop').classList.contains('hidden'));
+D.querySelector('#light-pop .chip[data-preset="dark"]').click(); await wait(120);
+check('схема света переключается', D.querySelector('#light-pop .chip[data-preset="dark"]').classList.contains('active'));
+check('во вьюпорте есть чипы видов', D.querySelectorAll('#dock-views .chip').length >= 4);
+
 check('ошибок в рантайме нет', errs.length === 0, errs.slice(0, 3).join(' / '));
+
 const fails = ok.filter((l) => l.startsWith('FAIL'));
 console.log(`Интерфейс: ${ok.length - fails.length}/${ok.length} проверок пройдено.`);
 if (fails.length) {
