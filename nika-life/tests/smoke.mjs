@@ -22,7 +22,7 @@ assert.ok(N && N.anim && N.ai && N.world && N.rig && N.ui, 'все модули 
 
 /* --- 1. АНИМАЦИИ: >= 10 клипов на КАЖДУЮ часть тела ------------------------ */
 const counts = N.anim.counts();
-assert.equal(N.anim.PARTS.length, 12, '12 частей тела');
+assert.equal(N.anim.PARTS.length, 20, '20 частей тела: 12 базовых + бытовые сцены + 7 деталей красоты');
 for (const part of N.anim.PARTS) {
   const clips = N.anim.clipsFor(part.id);
   assert.ok(clips.length >= 10, `${part.label}: ожидалось >= 10 анимаций, получено ${clips.length}`);
@@ -50,8 +50,20 @@ for (const part of N.anim.PARTS) {
     }
   }
 }
-assert.ok(N.anim.total() >= 120, `всего клипов: ${N.anim.total()}`);
-assert.equal(N.anim.total(), 132, 'в этой версии ровно 132 клипа');
+assert.ok(N.anim.total() >= 200, `всего клипов: ${N.anim.total()}`);
+assert.equal(N.anim.total(), 223, 'в этой версии ровно 223 клипа');
+
+/* --- 1б. БЫТОВЫЕ СЦЕНЫ И КРАСОТА ------------------------------------------ */
+const routineIds = new Set(N.anim.clipsFor('routine').map((c) => c.id));
+for (const intent of ['dress', 'wash', 'sleep', 'work', 'talk', 'toilet']) {
+  assert.ok(Array.isArray(N.anim.ROUTINES[intent]) && N.anim.ROUTINES[intent].length >= 2,
+    `сцена ${intent}: нужны клипы`);
+  for (const id of N.anim.ROUTINES[intent]) assert.ok(routineIds.has(id), `сцена ${intent}: нет клипа ${id}`);
+}
+for (const part of ['brows', 'lips', 'ears', 'neck', 'fingers', 'feet', 'skin']) {
+  assert.ok(N.anim.PARTS.some((p) => p.id === part), `должна быть часть ${part}`);
+}
+assert.equal(typeof N.anim.Animator.prototype.clearPrefix, 'function', 'есть clearPrefix для бытовых сцен');
 
 /* --- 2. АНИМАТОР: смешивание и ручное управление --------------------------- */
 const animator = new N.anim.Animator();
@@ -81,6 +93,11 @@ const cases = [
   ['поработай', 'work'],
   ['помоги мне с уборкой', 'help'],
   ['прими душ', 'wash'],
+  ['прими ванну', 'wash'],
+  ['искупайся', 'wash'],
+  ['сходи в туалет', 'toilet'],
+  ['мне нужно в санузел', 'toilet'],
+  ['переоденься в синее платье', 'dress'],
   ['сделай зарядку', 'exercise'],
   ['помаши рукой', 'animate'],
   ['станцуй', 'animate'],
@@ -125,6 +142,22 @@ assert.equal(info.cloud, 'нет');
 assert.equal(info.cost, '0 ₽');
 assert.equal(info.network, 'не используется');
 assert.ok(info.trainedOn > 200, `корпус: ${info.trainedOn}`);
+assert.equal(info.network, 'не используется');
+
+/* обучение по фразам игрока и вставленному тексту, без сети */
+const learned = N.ai.learnFromText([
+  'кручусь волчком = станцуй',
+  'накинь что-нибудь тёплое = надень',
+  'ступай отдыхать = спать',
+  'сходи помыться в ванну = wash',
+  '',
+].join('\n'));
+assert.equal(learned.added, 4, 'все 4 размеченные фразы выучены');
+assert.equal(N.ai.parseCommand('накинь что-нибудь тёплое').intent, 'dress');
+assert.equal(N.ai.parseCommand('ступай отдыхать').intent, 'sleep');
+assert.ok(N.ai.feedback('сходи помыться в ванну', 'wash'), 'исправление последней команды');
+assert.ok(N.ai.info().learned >= 5, 'база выученных фраз растёт');
+assert.equal(typeof N.ai.learnedExamples, 'function');
 
 /* --- 4. МИР: команды, время, потребности, сохранение ------------------------ */
 let state = N.world.freshState();
@@ -160,12 +193,50 @@ assert.equal(restored.action, null, 'после загрузки действи�
 assert.ok(N.world.playClip(state, 'head', 'nod'));
 assert.equal(N.world.playClip(state, 'head', 'нет-такого'), false);
 
+/* --- 4б. НОВЫЕ СЦЕНЫ: переодевание, купание, сон, работа, разговор, санузел */
+assert.ok(N.world.ACTIONS.toilet && N.world.ACTIONS.talk && N.world.ACTIONS.wash, 'все бытовые действия есть');
+assert.ok(N.world.freshState().needs.bladder > 0, 'новая потребность «комфорт»');
+const sceneState = N.world.freshState();
+await N.world.command('переоденься в синее платье', sceneState);
+assert.ok(sceneState.dressing && sceneState.dressing.oldColor !== sceneState.dressing.newColor,
+  'переодевание запоминает старый и новый цвет ткани');
+for (const intent of ['dress', 'wash', 'sleep', 'work', 'talk', 'toilet']) {
+  const list = N.world.actionAnimations(intent);
+  assert.ok(list.some((a) => a.part === 'routine' && a.loop), `${intent}: есть зацикленная бытовая сцена`);
+}
+const toiletState = N.world.freshState();
+await N.world.command('сходи в туалет', toiletState);
+assert.ok(toiletState.goals.some((g) => g.intent === 'toilet') || (toiletState.action && toiletState.action.intent === 'toilet'),
+  'команда санузла попала в план');
+
+/* риг отрисовывается без ошибок (заглушка canvas) */
+const noop = () => {};
+const ctxStub = new Proxy({}, {
+  get(t, k) {
+    if (k === 'createLinearGradient' || k === 'createRadialGradient') return () => ({ addColorStop: noop });
+    if (k === 'measureText') return () => ({ width: 40 });
+    if (k === 'canvas') return { width: 1200, height: 700 };
+    return t[k] !== undefined ? t[k] : noop;
+  },
+  set(t, k, v) { t[k] = v; return true; },
+});
+const poseStub = N.anim.defaultPose ? N.anim.defaultPose() : {};
+N.rig.render(ctxStub, { width: 1200, height: 700 }, N.world.freshState(), poseStub, 1);
+for (const act of ['dress', 'wash', 'sleep', 'work', 'talk', 'toilet']) {
+  const st = N.world.freshState();
+  st.action = { intent: act, label: act, remaining: 5, total: 10 };
+  st.dressing = { oldColor: '#c9c1d6', newColor: '#5b86cf' };
+  N.rig.render(ctxStub, { width: 1200, height: 700 }, st, poseStub, 1);
+}
+assert.equal(typeof N.rig.mixColor, 'function', 'смена цвета ткани доступна ригу');
+
 /* --- 5. СТРУКТУРА И ОФЛАЙН -------------------------------------------------- */
 const html = read('nika-life/index.html');
 for (const file of ['data.js', 'animations.js', 'ai.js', 'world.js', 'rig.js', 'ui.js', 'main.js']) {
   assert.ok(html.includes(`src="src/${file}"`), `index.html подключает ${file}`);
 }
-for (const id of ['stage', 'chat-form', 'chat-input', 'part-select', 'clip-list', 'autonomy-toggle', 'modal-root', 'save-indicator']) {
+for (const id of ['stage', 'chat-form', 'chat-input', 'part-select', 'clip-list', 'autonomy-toggle', 'modal-root', 'save-indicator',
+  'tab-learn', 'learn-text', 'learn-intent', 'btn-feedback', 'btn-learn', 'btn-export']) {
   assert.ok(html.includes(`id="${id}"`), `есть #${id}`);
 }
 assert.ok(read('nika-life/style.css').startsWith('@import url("../shared/theme.css");'), 'общая тема подключена первой строкой');

@@ -64,7 +64,10 @@
     events.forEach(function (e) {
       switch (e.type) {
         case 'play': app.animator.play(e.part, e.id, e); break;
-        case 'clearAction': app.animator.clearTag('action'); break;
+        case 'clearAction':
+          app.animator.clearTag('action');
+          app.animator.clearPrefix('scene');
+          break;
         case 'say': ui.appendLog(e.entry); break;
         case 'toast': ui.toast(e.text, e.kind); break;
         case 'tab': ui.setTab(e.tab); break;
@@ -77,6 +80,7 @@
 
   /* --- публичные действия для UI -------------------------------------------- */
   app.command = async function (text) {
+    app.state.lastCommand = text;
     const result = await world.command(text, app.state);
     drain();
     ui.refresh(true);
@@ -118,6 +122,27 @@
     world.emit(s, { type: 'play', part: 'skirt', id: 'twirl', replace: true });
     drain();
     ui.toast('Ника выбрала: ' + item.name, 'good');
+  };
+  /* --- обучение ИИ из интерфейса ------------------------------------------- */
+  app.learnText = function (text) {
+    const res = NIKA.ai.learnFromText(text);
+    app.state.learned = NIKA.ai.info().learned;
+    ui.toast('Выучено фраз: ' + res.added, res.added ? 'good' : 'bad');
+    ui.refresh(true);
+    return res;
+  };
+  app.feedback = function (phrase, intentId) {
+    const ok = NIKA.ai.feedback(phrase, intentId);
+    if (ok) {
+      app.state.learned = NIKA.ai.info().learned;
+      world.say(app.state, 'Исправила: «' + phrase + '» теперь значит «' + NIKA.ai.INTENT_BY_ID[intentId].label + '». Спасибо, я умнее!', 'nika', 'ai');
+      ui.toast('ИИ дообучен на твоей фразе', 'good');
+      drain(); ui.refresh(true);
+    }
+    return ok;
+  };
+  app.exportKnowledge = function () {
+    return JSON.stringify({ version: 1, examples: NIKA.ai.learnedExamples() }, null, 2);
   };
   app.setSpeed = function (n) { app.state.speed = n; ui.refresh(true); };
   app.setPaused = function (v) { app.state.paused = !!v; ui.refresh(true); };

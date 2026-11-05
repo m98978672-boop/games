@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>НИКА: ЖИВАЯ — девушка с локальным ИИ и 132 анимациями</title>
-<meta name="description" content="Браузерный симулятор жизни: девушка Ника с автономным бесплатным ИИ, 10+ анимациями на каждую часть тела, гардеробом, работой, сном и командами на русском. Без интернета и ключей API.">
+<title>НИКА: ЖИВАЯ — девушка с локальным ИИ и 223 анимациями</title>
+<meta name="description" content="Браузерный симулятор жизни: Ника в минималистичной квартире, с самообучающимся ИИ по твоим фразам, 223 анимациями, переодеванием, купанием, сном, работой, разговором, гардеробом и командами на русском. Без интернета и ключей API.">
 <meta name="theme-color" content="#0b0d0c">
 <meta property="og:type" content="website">
 <meta property="og:title" content="НИКА: ЖИВАЯ">
-<meta property="og:description" content="Девушка, которой управляет локальный ИИ: одевается, двигается, работает, спит, помогает. 132 анимации, 12 частей тела.">
+<meta property="og:description" content="Девушка, которой управляет локально обучаемый ИИ: живёт в квартире-студии, переодевается, купается, работает, спит, разговаривает. 223 анимации, 20 частей тела.">
 <meta property="og:image" content="cover.svg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101618'/%3E%3Ccircle cx='16' cy='13' r='7' fill='%23f3c9a8'/%3E%3Cpath d='M9 13c0-7 14-7 14 0v7H9z' fill='%233d2b34'/%3E%3Cpath d='M7 31c1-8 5-11 9-11s8 3 9 11' fill='%23d9575f'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -66,6 +66,7 @@
     <button data-tab="wardrobe">👗 Гардероб</button>
     <button data-tab="body">🦾 Тело</button>
     <button data-tab="life">🌙 Жизнь</button>
+    <button data-tab="learn">🧠 Обучение ИИ</button>
   </div>
 
   <section class="tab-body" id="tab-animations">
@@ -105,11 +106,29 @@
     <label class="field-label">Память (последние решения)</label>
     <div id="memory" class="memory"></div>
   </section>
+
+  <section class="tab-body hidden" id="tab-learn">
+    <div class="counter" id="learn-counter"></div>
+    <p class="fine">Исправь последнюю команду — нейросеть тут же доучится. А в поле ниже вставь любой текст или список фраз (хоть скопированный из интернета): по одной на строке, можно с разметкой <code>фраза = намерение</code>. Всё обучается локально, без сети.</p>
+    <label class="field-label">Последняя команда</label>
+    <div id="learn-last" class="learn-last">—</div>
+    <label class="field-label" for="learn-intent">Правильное намерение</label>
+    <select id="learn-intent" class="select"></select>
+    <button id="btn-feedback" class="small-btn wide">✅ Запомнить исправление</button>
+    <label class="field-label" for="learn-text">Фразы для обучения (по одной на строке)</label>
+    <textarea id="learn-text" class="learn-text" rows="5" placeholder="крутись волчком = станцуй&#10;накинь что-то тёплое = надень&#10;иди отдыхать = спать"></textarea>
+    <div class="row-actions">
+      <button id="btn-learn" class="small-btn">🧠 Обучить на тексте</button>
+      <button id="btn-export" class="small-btn">⬇ Экспорт базы</button>
+    </div>
+    <label class="field-label">Выученные фразы</label>
+    <div id="learn-list" class="memory"></div>
+  </section>
 </aside>
 
 <div class="bottom-bar">
   <div id="hint" class="chip hint">Напиши команду Нике — она оденется, пойдёт, поработает, поспит или покажет любую анимацию</div>
-  <div id="news" class="chip news">132 анимации · 12 частей тела · 10+ на каждую</div>
+  <div id="news" class="chip news">223 анимации · 20 частей тела · 10+ на каждую · квартира-студия</div>
 </div>
 
 <div id="pause-flag" class="pause-flag">ПАУЗА · ПРОБЕЛ</div>

@@ -23,6 +23,14 @@
     { id: 'legL',   label: 'Левая нога',  icon: '╿' },
     { id: 'legR',   label: 'Правая нога', icon: '╿' },
     { id: 'skirt',  label: 'Одежда / подол', icon: '△' },
+    { id: 'routine', label: 'Бытовые сцены', icon: '✦' },
+    { id: 'brows',   label: 'Брови и ресницы', icon: '⌒' },
+    { id: 'lips',    label: 'Губы',           icon: '◡' },
+    { id: 'ears',    label: 'Уши и серёжки',  icon: '◖' },
+    { id: 'neck',    label: 'Шея и ключицы',  icon: '⊥' },
+    { id: 'fingers', label: 'Пальцы и ноготки', icon: '☝' },
+    { id: 'feet',    label: 'Стопы',          icon: '⌁' },
+    { id: 'skin',    label: 'Кожа и румянец', icon: '✧' },
   ];
 
   /* --- каналы позы и значения по умолчанию -------------------------------- */
@@ -40,6 +48,12 @@
     hipR: 0, kneeR: 0, ankleR: 0,
     skirtSway: 0, skirtLift: 0, hemWave: 0,
     bodyY: 0, bodyX: 0, facing: 1, squat: 0,
+    /* каналы красоты: брови/ресницы, губы, уши, шея, пальцы, стопы, кожа, волосы */
+    browArch: 0.25, lash: 0.6, lipPout: 0.3,
+    earTilt: 0, earRing: 0.6, neckTilt: 0, neckTurn: 0,
+    fingerSpreadL: 0.25, fingerSpreadR: 0.25, nailShine: 0.45,
+    footPointL: 0, footPointR: 0, toeCurl: 0,
+    freckle: 0.35, skinGlow: 0.3, hairGloss: 0.55,
   });
   const CHANNELS = Object.keys(DEFAULT_POSE);
 
@@ -242,12 +256,230 @@
     C('ruffle', 'Встряхнуть складки', 1.5, { hemWave: S(1, 4, 0.4), skirtSway: S(6, 3) }),
   ];
 
+  /* =========================================================================
+     БЫТОВЫЕ СЦЕНЫ — 20 цельных анимаций режима жизни
+     Переодевание · купание · сон · работа · разговор · туалет.
+     Каждая сцена управляет сразу несколькими суставами, поэтому это отдельная
+     часть тела в галерее (тоже >= 10 клипов, как и все остальные).
+     ========================================================================= */
+  const routine = [
+    /* --- переодевание --- */
+    C('dress-up', 'Переодевание: надеть платье через голову', 2.2, {
+      shoulderL: seq([0, 8], [0.35, 165], [0.75, 165], [1, 40]),
+      shoulderR: seq([0, 8], [0.35, 165], [0.75, 165], [1, 40]),
+      elbowL: seq([0, 6], [0.35, 105], [0.75, 105], [1, 30]),
+      elbowR: seq([0, 6], [0.35, 105], [0.75, 105], [1, 30]),
+      headNod: P(-9, 0, 0.45), skirtLift: P(13, 0, 0.5), torsoLean: P(7, 0, 0.5),
+    }),
+    C('dress-change', 'Переодевание: сменить наряд', 2.6, {
+      torsoTwist: S(13, 1.5), shoulderL: S(28, 1.5, 62), shoulderR: S(28, 1.5, 62),
+      skirtSway: S(9, 1.5), hairSway: S(6, 1.5), headTilt: S(5, 1.5),
+    }, { loop: true }),
+    C('dress-zip', 'Переодевание: застегнуть и расправить', 1.9, {
+      shoulderL: seq([0, 20], [0.4, 58], [1, 20]), shoulderR: seq([0, 20], [0.4, 58], [1, 20]),
+      elbowL: seq([0, 30], [0.4, 95], [1, 15]), elbowR: seq([0, 30], [0.4, 95], [1, 15]),
+      headNod: P(10, 0, 0.6), skirtSway: S(4, 2), smile: H(0.55),
+    }),
+    C('dress-choose', 'Переодевание: выбрать вещь в шкафу', 2.1, {
+      shoulderR: seq([0, 8], [0.35, 100], [0.8, 105], [1, 45]),
+      elbowR: R(6, 25), headTilt: H(-9), torsoLean: P(9, 0, 0.5),
+      ['pointR']: H(0.7), smile: H(0.4),
+    }),
+    /* --- купание --- */
+    C('bath-step', 'Купание: зайти в ванну', 1.8, {
+      kneeL: P(66, 0, 0.4), hipL: P(42, 0, 0.4), bodyY: P(-8, 0, 0.4),
+      shoulderL: P(45, 8, 0.4), shoulderR: P(45, 8, 0.4), hairBounce: P(5, 0, 0.5),
+    }),
+    C('bath-wash', 'Купание: намылиться', 2.4, {
+      shoulderL: S(30, 2, 70), shoulderR: S(30, 2, 70),
+      elbowL: S(28, 2, 75), elbowR: S(28, 2, 75),
+      torsoTwist: S(8, 2), headTilt: S(6, 2), smile: H(0.5), blink: P(1, 0, 0.7),
+    }, { loop: true }),
+    C('bath-rinse', 'Купание: ополоснуться', 2.0, {
+      headNod: seq([0, 0], [0.35, -14], [0.8, -14], [1, 0]),
+      shoulderL: P(120, 8, 0.45), shoulderR: P(120, 8, 0.45),
+      hairBounce: P(8, 0, 0.5), blink: P(1, 0, 0.5), mouth: P(3, 0, 0.5),
+    }),
+    C('bath-towel', 'Купание: вытереться полотенцем', 2.2, {
+      shoulderL: S(34, 2, 75), shoulderR: S(34, 2, 75, Math.PI),
+      elbowL: S(20, 2, 70), elbowR: S(20, 2, 70, Math.PI),
+      headNod: S(5, 2), smile: H(0.7), torsoLean: S(4, 2),
+    }),
+    /* --- режим сна --- */
+    C('sleep-lie', 'Сон: лечь и укрыться одеялом', 2.4, {
+      squat: seq([0, 0], [0.5, 0.72], [1, 0.72]), torsoLean: R(0, 18),
+      bodyY: R(0, 12), headNod: R(0, 12), blink: H(1), hairSway: P(7, 0, 0.55),
+    }),
+    C('sleep-breathe', 'Сон: спокойное дыхание во сне', 4.0, {
+      torsoY: S(2.4, 1), blink: H(1), headNod: S(2, 1, 10),
+      hairSway: S(1.5, 1), smile: H(0.1),
+    }, { loop: true }),
+    C('sleep-turn', 'Сон: повернуться во сне', 3.0, {
+      headTurn: S(11, 0.5), torsoTwist: S(7, 0.5), hairSway: S(6, 0.5),
+      skirtSway: S(5, 0.5), blink: H(1),
+    }),
+    C('sleep-wake', 'Сон: проснуться и потянуться', 2.6, {
+      shoulderL: P(158, 8, 0.55), shoulderR: P(158, 8, 0.55),
+      torsoY: P(-9, 0, 0.55), torsoLean: P(-9, 0, 0.55),
+      mouth: P(3, 0, 0.55), blink: seq([0, 1], [0.45, 0], [1, 0]),
+      squat: R(0.7, 0), headNod: R(12, -5),
+    }),
+    /* --- работа --- */
+    C('work-sit', 'Работа: сесть за стол', 1.7, {
+      squat: R(0, 0.5), torsoLean: R(0, 11), shoulderL: R(8, 45), shoulderR: R(8, 45),
+      elbowL: R(6, 80), elbowR: R(6, 80), headNod: R(0, 9),
+    }),
+    C('work-type', 'Работа: печатать на ноутбуке', 1.6, {
+      wristL: S(16, 6), wristR: S(16, 6, 0, Math.PI),
+      elbowL: H(78), elbowR: H(78), shoulderL: H(42), shoulderR: H(42),
+      headNod: H(9), brow: H(0.45), blink: P(1, 0, 0.8),
+    }, { loop: true }),
+    C('work-think', 'Работа: обдумать задачу', 2.8, {
+      headTilt: H(12), headNod: S(4, 1, -6), brow: H(0.5),
+      shoulderR: R(8, 48), elbowR: R(6, 100), fistR: H(0.7),
+      smile: H(-0.1), blink: P(1, 0, 0.7),
+    }),
+    /* --- разговор --- */
+    C('talk-hello', 'Разговор: поздороваться жестом', 1.8, {
+      shoulderR: seq([0, 8], [0.2, 140], [1, 140]), elbowR: S(14, 3, 20),
+      wristR: S(20, 3), smile: H(1), mouth: H(1), headNod: P(8, 0, 0.5),
+    }),
+    C('talk-story', 'Разговор: рассказывать и жестикулировать', 2.6, {
+      shoulderL: S(26, 2, 48), shoulderR: S(26, 2, 48, Math.PI),
+      elbowL: S(18, 2, 55), elbowR: S(18, 2, 55, Math.PI),
+      headNod: S(5, 2), mouth: S(1.4, 3, 1.4), smile: H(0.7), blink: P(1, 0, 0.6),
+    }, { loop: true }),
+    C('talk-listen', 'Разговор: внимательно слушать', 2.4, {
+      headTilt: H(9), headNod: S(4, 1, 4), smile: H(0.45),
+      brow: H(0.2), blink: P(1, 0, 0.55), shoulderL: H(22), shoulderR: H(22),
+    }),
+    /* --- туалет --- */
+    C('toilet-walk', 'Туалет: пройтись к санузлу', 1.4, {
+      hipL: S(22, 1), hipR: S(22, 1, 0, Math.PI),
+      kneeL: S(18, 1, 12), kneeR: S(18, 1, 12, Math.PI),
+      shoulderL: S(14, 1, 12), shoulderR: S(14, 1, 12, Math.PI),
+    }, { loop: true }),
+    C('toilet-sit', 'Туалет: присесть', 2.0, {
+      squat: R(0, 0.8), kneeL: R(0, 82), kneeR: R(0, 82),
+      torsoLean: R(0, 12), headNod: R(0, 10), blink: H(0.45),
+      shoulderL: H(30), shoulderR: H(30), elbowL: H(55), elbowR: H(55),
+    }),
+    C('toilet-stand', 'Туалет: встать и привести себя в порядок', 2.0, {
+      squat: R(0.8, 0), kneeL: R(82, 0), kneeR: R(82, 0),
+      shoulderL: R(55, 12), shoulderR: R(55, 12),
+      skirtSway: S(6, 1.5), smile: H(0.4), headNod: R(10, 0),
+    }),
+  ];
+
+  /* какие клипы включает каждое бытовое действие */
+  const ROUTINES = {
+    dress:  ['dress-change', 'dress-up', 'dress-zip', 'dress-choose'],
+    wash:   ['bath-wash', 'bath-step', 'bath-rinse', 'bath-towel'],
+    sleep:  ['sleep-breathe', 'sleep-lie', 'sleep-turn'],
+    work:   ['work-type', 'work-sit', 'work-think'],
+    talk:   ['talk-story', 'talk-hello', 'talk-listen'],
+    toilet: ['toilet-sit', 'toilet-walk', 'toilet-stand'],
+  };
+
+  /* =========================================================================
+     КРАСОТА: отдельные анимируемые части тела (по 10 клипов на каждую)
+     Брови/ресницы, губы, уши/серёжки, шея/ключицы, пальцы/ноготки,
+     стопы, кожа/румянец. Каждая управляет своими каналами позы, и риг
+     действительно отрисовывает эти детали.
+     ========================================================================= */
+  const brows = [
+    C('raise', 'Вскинуть брови', 1.3, { brow: R(0.2, 0.9), browArch: R(0.25, 0.8), lash: H(0.75) }),
+    C('furrow', 'Нахмурить брови', 1.4, { brow: R(0.2, -0.8), browArch: R(0.25, -0.35), lash: H(0.4) }),
+    C('arch-left', 'Приподнять одну бровь', 1.6, { browArch: S(0.4, 1, 0.3), brow: H(0.3), eyeWide: P(0.5, 0, 0.5) }),
+    C('wink-brow', 'Бровь при подмигивании', 1.2, { brow: P(0.7, 0.1, 0.5), blink: P(1, 0, 0.5), lash: P(1, 0.6, 0.5) }),
+    C('soft', 'Мягкие спокойные брови', 2.2, { brow: S(0.12, 1, 0.2), browArch: H(0.32), lash: S(0.12, 1, 0.6) }),
+    C('surprise', 'Брови от удивления', 1.3, { brow: P(1, 0.1, 0.4), browArch: P(0.9, 0.25, 0.4), eyeWide: P(1, 0, 0.4) }),
+    C('lash-flutter', 'Трепетание ресниц', 1.5, { lash: S(0.35, 4, 0.6), blink: S(0.4, 2, 0.3) }),
+    C('lash-long', 'Длинные ресницы', 1.5, { lash: R(0.4, 1), browArch: H(0.55), eyeWide: H(0.25) }),
+    C('think-brow', 'Брови в раздумье', 2.0, { brow: H(0.45), browArch: H(-0.2), headTilt: H(9) }),
+    C('sleep-brows', 'Расслабленные брови во сне', 2.6, { brow: H(-0.15), lash: H(0.25), blink: H(1) }),
+  ];
+  const lips = [
+    C('smile', 'Нежная улыбка', 1.6, { smile: R(0.15, 0.9), lipPout: H(0.35), mouth: H(1) }),
+    C('laugh', 'Смех', 1.5, { mouth: P(2, 0, 0.5), smile: P(1, 0.2, 0.5), lipPout: P(0.6, 0.3, 0.5) }),
+    C('pout', 'Надуть губки', 1.4, { lipPout: R(0.3, 1), smile: H(-0.2), mouth: H(0) }),
+    C('talk', 'Губы во время разговора', 2.2, { mouth: S(1.4, 3, 1.4), lipPout: S(0.2, 3, 0.4), smile: H(0.5) }, { loop: true }),
+    C('kiss', 'Воздушный поцелуй', 1.5, { lipPout: P(1, 0.3, 0.5), mouth: P(4, 0, 0.5), blink: P(1, 0, 0.5) }),
+    C('sad', 'Грустные губы', 1.8, { smile: H(-0.7), mouth: H(3), lipPout: H(0.2) }),
+    C('sip', 'Сделать глоток', 1.5, { mouth: P(4, 0, 0.4), headNod: P(-6, 0, 0.4), lipPout: H(0.5) }),
+    C('yawn', 'Зевок губ', 1.9, { mouth: P(3, 0, 0.5), lipPout: H(0.2), blink: P(1, 0, 0.5) }),
+    C('smirk', 'Хитрая улыбка', 1.7, { smile: H(0.7), lipPout: H(0.55), headTilt: H(-8) }),
+    C('rest', 'Спокойные губы', 2.0, { smile: H(0.12), lipPout: H(0.3), mouth: H(0) }),
+  ];
+  const ears = [
+    C('tilt', 'Повернуть ушко', 1.5, { earTilt: S(8, 1), headTilt: S(3, 1) }),
+    C('ring-swing', 'Серёжки качаются', 1.8, { earRing: S(0.4, 2, 0.7), hairSway: S(4, 2) }),
+    C('listen', 'Прислушаться', 1.5, { earTilt: P(10, 0, 0.4), headTurn: P(12, 0, 0.4) }),
+    C('blush-ear', 'Покрасневшее ушко', 1.6, { earTilt: H(5), blush: P(0.7, 0, 0.5) }),
+    C('hair-tuck', 'Убрать прядь за ухо', 1.8, { earTilt: P(-8, 0, 0.5), hairSway: P(8, 0, 0.5), shoulderR: P(95, 8, 0.5) }),
+    C('earring-on', 'Надеть серёжку', 1.4, { earRing: R(0, 1), earTilt: H(4) }),
+    C('earring-off', 'Снять серёжку', 1.4, { earRing: R(1, 0), earTilt: H(-4) }),
+    C('wind', 'Ветер в ушах', 2.0, { earTilt: S(6, 2), hairSway: S(9, 2) }),
+    C('sleep-ear', 'Ушки во сне', 2.4, { earTilt: H(-4), earRing: H(0.2), blink: H(1) }),
+    C('sparkle', 'Блеск серёжек', 1.8, { earRing: S(0.3, 3, 0.7), skinGlow: S(0.2, 3, 0.4) }),
+  ];
+  const neck = [
+    C('tilt-left', 'Наклонить шею влево', 1.5, { neckTilt: seq([0, 0], [0.4, 12], [1, 12]) }),
+    C('tilt-right', 'Наклонить шею вправо', 1.5, { neckTilt: seq([0, 0], [0.4, -12], [1, -12]) }),
+    C('turn', 'Повернуть шею', 1.8, { neckTurn: S(10, 1), headTurn: S(6, 1) }),
+    C('stretch', 'Вытянуть шею', 1.7, { neckTilt: H(0), torsoY: P(-6, 0, 0.5), headNod: P(-8, 0, 0.5) }),
+    C('nod', 'Кивок шеей', 1.4, { neckTilt: S(4, 2, 3), headNod: S(5, 2) }),
+    C('collarbone', 'Показать ключицы', 1.8, { neckTurn: H(6), torsoTwist: H(5), shoulderL: H(14), shoulderR: H(14) }),
+    C('shy', 'Спрятать шею', 1.7, { neckTilt: H(8), headNod: H(10), blush: P(0.6, 0, 0.5) }),
+    C('proud', 'Гордая осанка', 1.8, { neckTilt: H(-5), torsoLean: H(-3), headNod: H(-5) }),
+    C('sleep-neck', 'Шея во сне', 2.6, { neckTilt: H(9), blink: H(1) }),
+    C('dance-neck', 'Шея в танце', 2.0, { neckTilt: S(7, 2), neckTurn: S(6, 1) }),
+  ];
+  const fingers = [
+    C('spread', 'Растопырить пальцы', 1.3, { fingerSpreadL: R(0.2, 1), fingerSpreadR: R(0.2, 1) }),
+    C('curl', 'Сжать пальцы', 1.3, { fingerSpreadL: R(1, 0.1), fingerSpreadR: R(1, 0.1), fistL: R(0.2, 1), fistR: R(0.2, 1) }),
+    C('piano', 'Пальцы как на клавишах', 1.6, { fingerSpreadL: S(0.4, 4, 0.6), fingerSpreadR: S(0.4, 4, 0.6, Math.PI) }, { loop: true }),
+    C('point', 'Указательный палец', 1.4, { pointR: R(0, 1), fingerSpreadR: H(0.2), nailShine: H(0.7) }),
+    C('okay', 'Колечко из пальцев', 1.4, { fingerSpreadR: H(0.6), fistR: H(0.4), pointR: H(0.5) }),
+    C('wave', 'Пальцы при приветствии', 1.6, { fingerSpreadR: S(0.3, 3, 0.6), wristR: S(18, 3) }),
+    C('nails', 'Блеск ноготков', 1.6, { nailShine: R(0.2, 1), fingerSpreadL: H(0.7), fingerSpreadR: H(0.7) }),
+    C('snap', 'Щелчок пальцами', 1.2, { fingerSpreadR: P(1, 0.3, 0.5), fistR: P(0.9, 0.2, 0.4) }),
+    C('gentle', 'Мягкие пальцы', 1.8, { fingerSpreadL: H(0.45), fingerSpreadR: H(0.45), nailShine: H(0.5) }),
+    C('cold', 'Погреть пальцы', 1.8, { fingerSpreadL: S(0.25, 4, 0.4), fingerSpreadR: S(0.25, 4, 0.4), fistL: S(0.3, 4, 0.5), fistR: S(0.3, 4, 0.5) }),
+  ];
+  const feet = [
+    C('tiptoe', 'Встать на носочки', 1.5, { footPointL: R(0, 1), footPointR: R(0, 1), bodyY: R(0, -7) }),
+    C('step', 'Шаг стопой', 1.3, { footPointL: S(0.6, 1, 0.4), hipL: S(20, 1) }),
+    C('toe-curl', 'Сжать пальцы ног', 1.3, { toeCurl: R(0, 1) }),
+    C('heel', 'Опора на пятку', 1.4, { footPointL: H(-0.4), footPointR: H(-0.4), toeCurl: H(0.6) }),
+    C('swing', 'Покачать стопой', 1.7, { footPointL: S(0.7, 1, 0.2), ankleL: S(12, 1) }),
+    C('jump-feet', 'Стопы при прыжке', 1.1, { footPointL: P(1, 0, 0.4), footPointR: P(1, 0, 0.4), bodyY: P(-20, 0, 0.4) }),
+    C('dance-feet', 'Танцевальные стопы', 2.0, { footPointL: S(0.8, 2, 0.3), footPointR: S(0.8, 2, 0.3, Math.PI) }),
+    C('rest', 'Расслабленные стопы', 2.0, { footPointL: H(0), footPointR: H(0), toeCurl: H(0.1) }),
+    C('turn-foot', 'Повернуть стопу', 1.5, { ankleL: S(20, 1), footPointL: S(0.4, 1, 0.3) }),
+    C('sleep-feet', 'Стопы во сне', 2.6, { footPointL: H(0.15), footPointR: H(0.15), toeCurl: H(0.2), blink: H(1) }),
+  ];
+  const skin = [
+    C('blush', 'Румянец', 1.5, { blush: R(0, 0.9) }),
+    C('freckles', 'Веснушки', 1.5, { freckle: R(0.2, 1) }),
+    C('glow', 'Тёплое сияние кожи', 1.7, { skinGlow: R(0.2, 1) }),
+    C('pale', 'Побледнеть', 1.5, { skinGlow: R(0.5, 0), blush: H(0) }),
+    C('sun-kiss', 'Солнечный блик', 1.7, { skinGlow: P(1, 0.3, 0.5), freckle: P(0.8, 0.3, 0.5) }),
+    C('shy-blush', 'Смущённый румянец', 1.7, { blush: P(1, 0, 0.5), headTilt: H(9), freckle: H(0.6) }),
+    C('after-bath', 'Кожа после ванны', 2.0, { skinGlow: H(0.9), blush: H(0.35), freckle: H(0.4) }),
+    C('sleep-skin', 'Кожа во сне', 2.6, { skinGlow: H(0.35), blush: H(0.1), blink: H(1) }),
+    C('cold-skin', 'Кожа от холода', 1.6, { skinGlow: H(0.15), blush: H(0.5), torsoTwist: S(3, 7) }),
+    C('happy-glow', 'Сияние от радости', 2.0, { skinGlow: S(0.25, 2, 0.6), blush: S(0.2, 2, 0.3), smile: H(0.9) }),
+  ];
+
   const LIBRARY = {
     head: head, face: face, eyes: eyes, hair: hair, torso: torso,
     armL: armClips('L'), armR: armClips('R'),
     handL: handClips('L'), handR: handClips('R'),
     legL: legClips('L'), legR: legClips('R'),
-    skirt: skirt,
+    skirt: skirt, routine: routine,
+    brows: brows, lips: lips, ears: ears, neck: neck,
+    fingers: fingers, feet: feet, skin: skin,
   };
 
   function clipsFor(part) { return LIBRARY[part] || []; }
@@ -327,6 +559,9 @@
   Animator.prototype.clearTag = function (tag) {
     this.overrides = this.overrides.filter(function (o) { return o.tag !== tag; });
   };
+  Animator.prototype.clearPrefix = function (prefix) {
+    this.overrides = this.overrides.filter(function (o) { return !(o.tag && o.tag.indexOf(prefix) === 0); });
+  };
   Animator.prototype.playMany = function (specs) {
     const self = this;
     (specs || []).forEach(function (s) { self.play(s.part, s.id, s); });
@@ -367,7 +602,7 @@
   };
 
   NIKA.anim = {
-    PARTS: PARTS, DEFAULT_POSE: DEFAULT_POSE, CHANNELS: CHANNELS, LIBRARY: LIBRARY,
+    PARTS: PARTS, DEFAULT_POSE: DEFAULT_POSE, CHANNELS: CHANNELS, LIBRARY: LIBRARY, ROUTINES: ROUTINES,
     clipsFor: clipsFor, findClip: findClip, allClips: allClips, counts: counts, total: total,
     sampleClip: sampleClip, sampleTrack: sampleTrack, Animator: Animator,
   };
