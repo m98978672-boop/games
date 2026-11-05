@@ -374,15 +374,17 @@ export function buildCar(unit, M, opts = {}) {
   const cabW = W - 0.3;
   const eyeY = belt + 0.3;
   // у высоких кузовов (SUV, фургон, пикап) глаза водителя выше и чуть дальше от лобового
-  const eyeAbs = H - (S.sport ? 0.24 : S.micro ? 0.26 : 0.3);
+  const dashTopAbs = floorY + 0.42;
+  const eyeAbs = S.sport ? Math.min(H - 0.12, dashTopAbs + 0.24) : H - (S.micro ? 0.24 : 0.28);
   const tall = eyeAbs - (belt + 0.3);
-  const eyeZr = S.sport ? Math.min(S.roofRearZ - 0.5, S.wsTopZ + 0.62) : S.wsTopZ + (S.van ? 0.62 : S.suv ? 0.58 : 0.46);
+  // в спорткаре крыша низкая: садимся ближе к стеклу и смотрим вперёд, а не в панель
+  const eyeZr = S.sport ? S.wsTopZ + 0.34 : S.wsTopZ + (S.van ? 0.62 : S.suv ? 0.58 : 0.46);
   const views = [
     {
       id: 'driver', label: 'Место водителя', group: 'interior',
       pos: [-cabW * 0.22, belt + eyeY * 0 + 0.3 + tall, eyeZr],
-      target: [-0.06, eyeAbs - (S.sport ? 0.34 : 0.3), S.wsBase - 7],
-      fov: 68, orbit: false, seat: true,
+      target: [-0.06, eyeAbs - (S.sport ? 0.06 : 0.3), S.wsBase - 7],
+      fov: S.sport ? 62 : 68, orbit: false, seat: true,
     },
     {
       id: 'salon', label: 'Салон', group: 'interior',
@@ -441,13 +443,13 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   const dashTop = floorY + 0.42;
   rbox(g, cabW, 0.32, 0.42, dark, 0, floorY + 0.33, dashZ, 0.06);
   rbox(g, cabW - 0.05, 0.12, 0.54, mid, 0, dashTop + 0.02, dashZ + 0.08, 0.05);
-  const binnacle = rbox(g, 0.44, 0.15, 0.24, dark, -cabW * 0.27, dashTop + 0.04, dashZ - 0.14, 0.04);
+  const binnacle = rbox(g, 0.46, 0.16, 0.24, dark, -cabW * 0.27, dashTop + 0.09, dashZ - 0.08, 0.04);
   binnacle.rotation.x = -0.16;
   for (const x of [-cabW * 0.32, -cabW * 0.22]) {
-    const dial = cyl(g, 0.07, 0.07, 0.018, M.plastic, x, dashTop + 0.065, dashZ - 0.2, 18);
+    const dial = cyl(g, 0.07, 0.07, 0.018, M.plastic, x, dashTop + 0.12, dashZ - 0.02, 18);
     dial.rotation.x = HALF;
-    torus(g, 0.068, 0.005, M.chromeDark, x, dashTop + 0.065, dashZ - 0.204, 16);
-    const needle = box(g, 0.005, 0.075, 0.004, M.taillight, x, dashTop + 0.09, dashZ - 0.206);
+    torus(g, 0.068, 0.005, M.chromeDark, x, dashTop + 0.12, dashZ - 0.016, 16);
+    const needle = box(g, 0.005, 0.075, 0.004, M.taillight, x, dashTop + 0.145, dashZ - 0.014);
     needle.rotation.z = 0.7;
   }
   const scr = rbox(g, 0.3, 0.19, 0.022, M.dashScreen, 0.07, dashTop + 0.03, dashZ - 0.04, 0.02);
@@ -456,10 +458,10 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
     rbox(g, 0.12, 0.055, 0.028, M.plastic, side * 0.37, dashTop + 0.055, dashZ - 0.1, 0.02);
     for (let i = -1; i <= 1; i++) box(g, 0.009, 0.045, 0.01, M.chromeDark, side * 0.37 + i * 0.032, dashTop + 0.055, dashZ - 0.115);
   }
-  // руль
+  // руль — между водителем и торпедо (раньше стоял за панелью, у лобового)
   const sw = group(g, 'steering');
-  sw.position.set(-cabW * 0.27, dashTop + 0.08, dashZ - 0.22);
-  sw.rotation.x = -0.42;
+  sw.position.set(-cabW * 0.27, dashTop + 0.11, dashZ + 0.3);
+  sw.rotation.x = -0.38;
   torus(sw, 0.175, 0.02, M.leather, 0, 0, 0, 34);
   const hub = cyl(sw, 0.055, 0.06, 0.05, M.plastic, 0, 0, 0.02, 16);
   hub.rotation.x = HALF;
@@ -470,8 +472,8 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   }
   const em = cyl(sw, 0.025, 0.025, 0.01, M.accent(unit.accent || '#d8d5c8'), 0, 0, 0.045, 12);
   em.rotation.x = HALF;
-  const col = cyl(g, 0.032, 0.048, 0.42, M.plastic, -cabW * 0.27, dashTop - 0.0, dashZ - 0.03, 10);
-  col.rotation.x = 0.6;
+  const col = cyl(g, 0.032, 0.048, 0.44, M.plastic, -cabW * 0.27, dashTop + 0.02, dashZ + 0.11, 10);
+  col.rotation.x = 0.62;
   // селектор, подлокотник, педали
   const gear = cyl(g, 0.016, 0.02, 0.17, M.chromeDark, 0.12, floorY + 0.22, dashZ + 0.22, 8);
   gear.rotation.x = -0.28;
