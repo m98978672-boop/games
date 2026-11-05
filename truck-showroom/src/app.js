@@ -7,6 +7,7 @@ import { createMaterials, clamp, rad, lerp } from './lib/kit.js';
 import { ShowroomCamera } from './lib/camera.js';
 import { buildUnit } from './models/index.js';
 import { CATEGORIES, TRUCKS, TRAILERS, CARS, findUnit } from './data/units.js';
+import { deviceProfile, installGestures, installShake, haptic } from './lib/device.js';
 
 const $ = (id) => document.getElementById(id);
 const CAT_LISTS = { trucks: TRUCKS, trailers: TRAILERS, cars: CARS };
@@ -73,6 +74,23 @@ try {
 }
 const M = createMaterials(stage.renderer);
 const cam = new ShowroomCamera(stage.camera, $('gl'));
+const device = deviceProfile();
+// класс устройства — в <html class>, чтобы CSS знал, что перед ним:
+// телефон, планшет или десктоп (тач-цели крупнее, подсказки другие)
+document.documentElement.classList.toggle('is-touch', device.touch);
+document.documentElement.classList.toggle('is-phone', device.phone);
+document.documentElement.classList.toggle('is-tablet', device.tablet);
+document.documentElement.classList.toggle('is-desktop', device.desktop);
+document.documentElement.classList.toggle('is-coarse', device.coarse);
+document.documentElement.classList.toggle('is-portrait', device.portrait);
+const syncOrientation = () => {
+  const portrait = (window.innerHeight || 0) >= (window.innerWidth || 0);
+  document.documentElement.classList.toggle('is-portrait', portrait);
+  document.documentElement.classList.toggle('is-landscape', !portrait);
+};
+syncOrientation();
+window.addEventListener('orientationchange', () => setTimeout(syncOrientation, 120));
+window.addEventListener('resize', syncOrientation);
 const scene = stage.scene;
 
 let shown = null;
@@ -287,8 +305,10 @@ function renderList() {
         return;
       }
       select(state.cat, u.id);
-      // на телефоне после выбора списка вьюпорт должен быть виден
-      if (window.matchMedia?.('(max-width: 900px)').matches) closeDrawer();
+      // На узком экране (телефон, планшет, дробное окно) после выбора
+      // каталог закрываем — иначе сцену не видно. Ширину берём фактическую:
+      // matchMedia есть не везде и в тестах его подменяют.
+      if (window.innerWidth <= 900 || window.matchMedia?.('(max-width: 900px)').matches) closeDrawer();
     };
     list.appendChild(btn);
   });
@@ -665,6 +685,34 @@ function wireUI() {
   };
   // двойной клик по сцене — в салон/наружу
   $('gl').addEventListener('dblclick', toggleInside);
+  // ---------------------------------------------- тач-жесты
+  // Смахивание влево/вправо листает модели, двойной тап сажает в салон,
+  // щипок сбрасывает зум «по размеру модели».
+  if (device.touch) {
+    installGestures($('gl'), {
+      onSwipe: (dir) => {
+        haptic(10);
+        step(dir > 0 ? 1 : -1);
+        live(dir > 0 ? 'Следующая модель →' : '← Предыдущая модель');
+      },
+      onDoubleTap: () => {
+        haptic(12);
+        toggleInside();
+      },
+      onPinch: () => {
+        haptic(6);
+        const v = viewsOf(currentUnit()).find((x) => x.id === state.view);
+        if (v) goView(v.id);
+      },
+    });
+    // встряхнуть телефон — случайная модель
+    installShake(() => {
+      if (device.phone) {
+        haptic([14, 40, 14]);
+        randomUnit();
+      }
+    }, { threshold: 26 });
+  }
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
     switch (e.key) {
@@ -708,15 +756,49 @@ function wireUI() {
 
 // ------------------------------------------------------------ запуск
 const clock = new THREE.Clock();
+let frames = 0;
+let fpsClock = 0;
+let lowFpsStrikes = 0;
 function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(0.06, clock.getDelta());
   cam.update(dt);
   // лёгкое «дыхание» юбки подиума и огней
   stage.renderer.render(scene, stage.camera);
+
+  // раз в секунду смотрим на фактический FPS: на слабых телефонах
+  // автоматически опускаем разрешение, чтобы не было «слайд-шоу»
+  frames += 1;
+  fpsClock += dt;
+  if (fpsClock >= 1) {
+    const fps = frames / fpsClock;
+    frames = 0;
+    fpsClock = 0;
+    if (fps < 30) {
+      lowFpsStrikes += 1;
+      if (lowFpsStrikes >= 2) {
+        stage.adaptQuality?.(fps);
+        lowFpsStrikes = 0;
+      }
+    } else {
+      lowFpsStrikes = 0;
+    }
+  }
 }
 
 function boot() {
+  // Подсказки внизу сцены: на десктопе про мышь, на тач-устройстве про пальцы
+  const hint = document.querySelector('.stage-hint');
+  if (hint) {
+    hint.innerHTML = device.touch
+      ? '<span><kbd>1 палец</kbd> вращать</span><span><kbd>2 пальца</kbd> зум</span>'
+        + '<span><kbd>Свайп</kbd> модель</span><span><kbd>Двойной тап</kbd> салон</span>'
+      : '<span><kbd>ЛКМ</kbd> вращать</span><span><kbd>Колесо</kbd> зум</span>'
+        + '<span><kbd>ПКМ</kbd> сдвиг</span><span><kbd>I</kbd> салон</span>'
+        + '<span><kbd>← →</kbd> модель</span>';
+  }
+  const note = document.querySelector('.foot-note');
+  if (note && device.touch) note.textContent = '40 моделей · 10 / 20 / 10';
   stage.setPreset(state.preset);
   document.querySelectorAll('#dock-env .chip').forEach((x) => x.classList.toggle('active', x.dataset.preset === state.preset));
   document.querySelectorAll('.cat-tab').forEach((t) => {
@@ -736,7 +818,9 @@ function boot() {
   showUnit(unit, { instant: true, view: viewsOf(unit)[0] });
   loop();
   // приветственная подсказка
-  setTimeout(() => live('Каталог и карточка — кнопки сверху · I — сесть в салон'), 900);
+  setTimeout(() => live(device.touch
+    ? 'Свайп — другая модель · двойной тап — салон'
+    : 'Каталог и карточка — кнопки сверху · I — салон'), 900);
 }
 
 boot();

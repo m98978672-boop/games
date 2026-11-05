@@ -165,6 +165,72 @@ D.querySelector('#light-pop .chip[data-preset="dark"]').click(); await wait(120)
 check('схема света переключается', D.querySelector('#light-pop .chip[data-preset="dark"]').classList.contains('active'));
 check('во вьюпорте есть чипы видов', D.querySelectorAll('#dock-views .chip').length >= 4);
 
+// ---- поддержка разных устройств
+// На десктопе (в jsdom нет тача) классы устройств должны стоять корректно,
+// а подсказки — быть про мышь.
+const root = D.documentElement;
+check('десктоп распознан', root.classList.contains('is-desktop') && !root.classList.contains('is-phone'));
+check('ориентация отмечена', root.classList.contains('is-portrait') || root.classList.contains('is-landscape'));
+const hint = D.querySelector('.stage-hint');
+check('подсказки про мышь на десктопе', /ЛКМ/.test(hint?.textContent || ''), hint?.textContent?.slice(0, 40));
+
+// тач-устройство: эмулируем профиль и проверяем, что жесты работают
+const deviceMod = await import('../src/lib/device.js');
+const fakeWin = {
+  innerWidth: 390, innerHeight: 844, devicePixelRatio: 3,
+  matchMedia: (q) => ({ matches: q.includes('pointer: coarse') || q.includes('hover: none'), media: q, addEventListener() {}, removeEventListener() {} }),
+};
+const phone = deviceMod.deviceProfile(fakeWin, {
+  userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148',
+  maxTouchPoints: 5, hardwareConcurrency: 4, deviceMemory: 4,
+});
+check('телефон распознан', phone.phone && phone.touch && !phone.desktop);
+const tablet = deviceMod.deviceProfile(
+  { innerWidth: 1024, innerHeight: 768, devicePixelRatio: 2,
+    matchMedia: (q) => ({ matches: q.includes('pointer: coarse'), media: q, addEventListener() {}, removeEventListener() {} }) },
+  { userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', maxTouchPoints: 5, hardwareConcurrency: 8 },
+);
+check('планшет распознан', tablet.tablet && tablet.touch);
+const caps = deviceMod.rendererCaps(phone, 60, fakeWin);
+check('на телефоне режем пиксели и тени', caps.pixelRatio <= 1.35 && caps.shadows === false, `dpr=${caps.pixelRatio}`);
+const deskWin = { innerWidth: 1440, innerHeight: 900, devicePixelRatio: 2, matchMedia: () => ({ matches: false, addEventListener() {} }) };
+const capsHi = deviceMod.rendererCaps(
+  deviceMod.deviceProfile(deskWin, { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', maxTouchPoints: 0, hardwareConcurrency: 16, deviceMemory: 16 }),
+  60,
+  deskWin,
+);
+check('на мощном десктопе высокое качество', capsHi.pixelRatio >= 1.5 && capsHi.shadows === true, `dpr=${capsHi.pixelRatio} shadows=${capsHi.shadows}`);
+const bigWin = { innerWidth: 2560, innerHeight: 1440, devicePixelRatio: 2, matchMedia: () => ({ matches: false, addEventListener() {} }) };
+const caps4k = deviceMod.rendererCaps(
+  deviceMod.deviceProfile(bigWin, { userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)', maxTouchPoints: 0, hardwareConcurrency: 4, deviceMemory: 4 }),
+  60,
+  bigWin,
+);
+check('на слабом ПК с большим монитором качество режется', caps4k.pixelRatio <= 1.6, `dpr=${caps4k.pixelRatio}`);
+
+// жесты: свайп и двойной тап на элементе
+let swiped = 0;
+let doubleTapped = 0;
+const pad = D.createElement('div');
+D.body.appendChild(pad);
+const uninstall = deviceMod.installGestures(pad, { onSwipe: () => swiped++, onDoubleTap: () => doubleTapped++ });
+const touchEv = (type, pts, changed) => {
+  const e = new window.Event(type, { bubbles: true });
+  e.touches = pts.map(([x, y]) => ({ clientX: x, clientY: y }));
+  e.changedTouches = (changed || pts).map(([x, y]) => ({ clientX: x, clientY: y }));
+  pad.dispatchEvent(e);
+};
+touchEv('touchstart', [[200, 300]]);
+touchEv('touchmove', [[120, 302]]);
+touchEv('touchend', [], [[90, 302]]);
+check('свайп листает модель', swiped === 1, `swipes=${swiped}`);
+touchEv('touchstart', [[200, 300]]);
+touchEv('touchend', [], [[200, 300]]);
+touchEv('touchstart', [[200, 300]]);
+touchEv('touchend', [], [[200, 300]]);
+check('двойной тап заходит в салон', doubleTapped >= 1, `taps=${doubleTapped}`);
+uninstall();
+
 check('ошибок в рантайме нет', errs.length === 0, errs.slice(0, 3).join(' / '));
 
 const fails = ok.filter((l) => l.startsWith('FAIL'));

@@ -25,15 +25,21 @@ export function carShape(unit) {
   const front = -L / 2;
   const rear = L / 2;
   const ground = 0.26;
-  const belt = H * (sport ? 0.72 : van ? 0.62 : suv ? 0.66 : 0.66);
-  const hoodY = H * (suv ? 0.58 : van ? 0.46 : sport ? 0.5 : 0.56);
-  const noseY = H * (suv ? 0.5 : 0.46);
-  const deckY = H * (suv ? 0.7 : van ? 0.62 : sport ? 0.62 : 0.62);
+  // у спорткара кузов низкий (1,22 м), поэтому капот поднят выше середины:
+  // иначе арка радиусом R+0.05 прорезала капот сверху и над колесом
+  // появлялась «перемычка»-козырь
+  const belt = H * (sport ? 0.78 : van ? 0.62 : suv ? 0.66 : 0.66);
+  const hoodY = H * (suv ? 0.58 : van ? 0.46 : sport ? 0.66 : 0.56);
+  const noseY = H * (suv ? 0.5 : sport ? 0.58 : 0.46);
+  const deckY = H * (suv ? 0.7 : van ? 0.62 : sport ? 0.72 : 0.62);
   const hoodZ = front + L * (van ? 0.2 : suv ? 0.24 : 0.27);
   const wsBase = front + L * (van ? 0.3 : suv ? 0.34 : sport ? 0.3 : 0.31);
   const wsTopZ = wsBase + (H - hoodY) * (van ? 0.7 : suv ? 0.85 : 1.05);
   const roofRearZ = rear - L * (wagon ? 0.05 : van ? 0.03 : pickup ? 0.36 : suv ? 0.13 : sport ? 0.4 : 0.31);
-  const rearBaseZ = roofRearZ + (H - deckY) * (van ? 0.35 : suv ? 0.5 : sport ? 1.6 : 0.95);
+  // задняя кромка крыши должна оставаться в габарите: у фургона и универсала
+  // формула уводила её на 0.3 м ЗА корму — кузов вырастал за задний бампер
+  const rearBaseRaw = roofRearZ + (H - deckY) * (van ? 0.35 : suv ? 0.5 : sport ? 1.6 : 0.95);
+  const rearBaseZ = Math.min(rearBaseRaw, rear - 0.1);
   // у пикапа за кабиной — открытый грузовой кузов с бортами
   const bedFrom = pickup ? roofRearZ + 0.16 : null;
   const bedY = pickup ? deckY - 0.06 : null;
@@ -161,15 +167,33 @@ export function buildCar(unit, M, opts = {}) {
     ...sideNodes,
     [rear, ground],
   ];
+  const archR = R + 0.05;
+  const archCY = R + 0.02;
   shape.moveTo(outline[0][0], outline[0][1]);
-  for (let i = 1; i < outline.length; i++) shape.lineTo(outline[i][0], outline[i][1]);
-  shape.closePath();
-  // арки
-  for (const az of axleZ) {
-    const arch = new THREE.Path();
-    arch.absarc(az, R + 0.02, R + 0.05, 0, TAU, false);
-    shape.holes.push(arch);
+  // верх силуэта (нос → капот → крыша → корма)
+  for (let i = 1; i < outline.length - 1; i++) shape.lineTo(outline[i][0], outline[i][1]);
+  // низ силуэта: от кормы к носу, по пути вырезаем колёсные арки
+  shape.lineTo(outline[outline.length - 2][0], outline[outline.length - 2][1]);
+  shape.lineTo(rear, ground);
+  for (const az of [...axleZ].sort((a, b) => b - a)) {
+    shape.lineTo(az + archR, ground);
+    shape.lineTo(az + archR, archCY);
+    const steps = 16;
+    for (let i = 1; i <= steps; i++) {
+      const a = (i / steps) * PI;
+      shape.lineTo(az + Math.cos(a) * archR, archCY + Math.sin(a) * archR);
+    }
+    shape.lineTo(az - archR, archCY);
+    shape.lineTo(az - archR, ground);
   }
+  shape.lineTo(front, ground);
+  shape.closePath();
+  // ---------- арки
+  // Арки вырезаем прямо в нижней кромке контура, а не отдельными дырками:
+  // круглая дырка радиусом R+0.05 опускалась ниже днища (центр R+0.02),
+  // выходила за границу силуэта, и earcut ломал триангуляцию — поверх
+  // колеса появлялась синяя «перемычка» краски. Заодно так получается
+  // правильная форма арки с вертикальными щеками над днищем.
   // окна
   for (const h of windowHoles) {
     const hole = new THREE.Path();
@@ -252,8 +276,10 @@ export function buildCar(unit, M, opts = {}) {
     }
 
     // ---------- стёкла: лобовое и заднее (накладки по поверхности)
+    // раньше стекло было почти непрозрачным (opacity 0.62 при тёмном цвете),
+    // из салона двор выглядел чёрной стеной — теперь лёгкая тонировка
     const tintedGlass = new THREE.MeshPhysicalMaterial({
-      color: 0x243642, metalness: 0.35, roughness: 0.08, transparent: true, opacity: 0.62,
+      color: 0x9fc4d4, metalness: 0.08, roughness: 0.06, transparent: true, opacity: 0.3,
       envMapIntensity: 1.8, side: THREE.DoubleSide, depthWrite: false,
     });
     const glassQuad = (z0, y0, z1, y1, hw, lift) => {
@@ -310,7 +336,7 @@ export function buildCar(unit, M, opts = {}) {
         wheels.push(w);
         // тонкая тёмная окантовка арки
         const arch = new THREE.Mesh(new THREE.TorusGeometry(R + 0.06, 0.018, 5, 20, PI), black);
-        arch.position.set(side * (halfW + 0.004), R + 0.02, z);
+        arch.position.set(side * (halfW + 0.012), R + 0.02, z);
         // подкрылок, чтобы за колесом не было пустоты
         const well = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.055, R + 0.055, 0.2, 16, 1, true, 0, PI), M.plastic);
         well.rotation.z = HALF;
@@ -320,11 +346,16 @@ export function buildCar(unit, M, opts = {}) {
         root.add(arch);
       }
     }
-    // пороги и подштамповка
+    // пороги и подштамповка — строго между арками: раньше планки шли на всю
+    // длину базы, проходили прямо по покрышкам и «протыкали» колёса
+    const doorZ0 = axleZ[0] + R + 0.1;
+    const doorZ1 = axleZ[1] - R - 0.1;
+    const doorLen = Math.max(0.34, doorZ1 - doorZ0);
+    const doorMid = (doorZ0 + doorZ1) / 2;
     for (const side of [-1, 1]) {
-      rbox(root, 0.07, 0.1, wb * 0.78, black, side * (halfW + 0.002), ground + 0.13, 0, 0.02);
-      box(root, 0.02, 0.028, wb * 0.92, paintDark, side * (halfW + 0.013), belt - 0.26, 0);
-      box(root, 0.015, 0.018, wb * 0.9, chrome, side * (halfW + 0.013), belt - 0.2, 0);
+      rbox(root, 0.055, 0.085, doorLen, black, side * (halfW + 0.001), ground + 0.1, doorMid, 0.02);
+      box(root, 0.02, 0.026, doorLen, paintDark, side * (halfW + 0.012), belt - 0.26, doorMid);
+      box(root, 0.014, 0.016, doorLen * 0.96, chrome, side * (halfW + 0.012), belt - 0.2, doorMid);
     }
 
     // ---------- стёкла в проёмах
@@ -356,31 +387,68 @@ export function buildCar(unit, M, opts = {}) {
       box(root, 0.02, bh, pillarW, black, side * (halfW + 0.004), winBottom + bh / 2, bPillarZ);
     }
 
+    // ---------- торцы кузова
+    // Боковина — выдавленный силуэт толщиной 9 см, и между бортами торцы
+    // были открыты: спереди и сзади внутрь кузова смотрел салон. Закрываем
+    // передок и корму «фартуками» из краски по всей ширине.
+    const noseCapZ = front + 0.075;
+    const noseCapTop = S.noseY + 0.08;
+    const noseCapH = Math.max(0.2, noseCapTop - ground + 0.04);
+    rbox(root, W - 0.02, noseCapH, 0.11, paint, 0, ground + noseCapH / 2 - 0.02, noseCapZ, 0.03);
+    const tailCapH = Math.max(0.2, S.deckY - ground + 0.02);
+    rbox(root, W - 0.02, tailCapH, 0.11, paint, 0, ground + tailCapH / 2 - 0.02, rear - 0.055, 0.03);
+
     // ---------- перед: решётка, фары, бампер
-    const noseFront = front + 0.004;
-    const grilleY = (ground + S.noseY) / 2 + 0.02;
-    rbox(root, W * 0.42, Math.max(0.12, S.noseY - grilleY - 0.06), 0.08, black, 0, grilleY, noseFront - 0.02, 0.02);
-    for (let i = -3; i <= 3; i++) box(root, W * 0.38, 0.013, 0.015, chrome, 0, grilleY + i * 0.022, noseFront - 0.06);
-    const logo = cyl(root, 0.058, 0.058, 0.018, chrome, 0, grilleY, noseFront - 0.075, 20);
+    // Носовая часть невысокая (от земли до кромки капота ~0,4 м), поэтому
+    // раскладываем её в три пояса: бампер снизу, решётка в середине,
+    // фары по углам сверху. Всё стоит СНАРУЖИ торца (z < front).
+    const noseFront = front - 0.004;
+    // высоту решётки ограничиваем: у фургона нос высокий (1,05 м), и без
+    // предела получалась чёрная «пасть» на пол-носа
+    const grilleTop = S.noseY - 0.11;
+    const grilleH = Math.min(0.3, Math.max(0.12, grilleTop - ground - 0.16));
+    const grilleBottom = grilleTop - grilleH;
+    const grilleY = (grilleTop + grilleBottom) / 2;
+    // тёмная ниша решётки + хромированные ламели в ней
+    rbox(root, W * 0.4, grilleH + 0.035, 0.05, black, 0, grilleY, noseFront - 0.03, 0.018);
+    const slats = 4;
+    for (let i = 0; i < slats; i++) {
+      const t = slats === 1 ? 0.5 : i / (slats - 1);
+      box(root, W * 0.36, 0.011, 0.012, chrome, 0, grilleBottom + 0.025 + t * (grilleH - 0.05), noseFront - 0.058);
+    }
+    const logo = cyl(root, Math.min(0.052, grilleH * 0.3), Math.min(0.052, grilleH * 0.3), 0.014, chrome, 0, grilleY, noseFront - 0.06, 20);
     logo.rotation.x = HALF;
     for (const side of [-1, 1]) {
-      rbox(root, 0.34, 0.09, 0.1, M.headlight, side * halfW * 0.68, S.noseY - 0.02, front + 0.06, 0.03);
-      box(root, 0.26, 0.016, 0.02, chrome, side * halfW * 0.68, S.noseY - 0.075, front + 0.02);
-      box(root, 0.13, 0.04, 0.05, M.amber, side * halfW * 0.84, S.noseY - 0.09, front + 0.04);
-      const fog = cyl(root, 0.042, 0.042, 0.025, M.headlight, side * halfW * 0.6, ground + 0.18, front - 0.008, 10);
+      // фара — блок в углу, чуть выступает из торца
+      rbox(root, W * 0.31, 0.095, 0.055, M.headlight, side * halfW * 0.63, S.noseY - 0.055, noseFront - 0.018, 0.018);
+      box(root, 0.25, 0.012, 0.016, chrome, side * halfW * 0.63, S.noseY - 0.108, noseFront - 0.042);
+      // поворотник
+      box(root, 0.1, 0.034, 0.042, M.amber, side * halfW * 0.85, S.noseY - 0.105, noseFront - 0.02);
+      // противотуманка в бампере
+      const fog = cyl(root, 0.038, 0.038, 0.022, M.headlight, side * halfW * 0.6, ground + 0.14, noseFront - 0.03, 10);
       fog.rotation.x = HALF;
     }
-    rbox(root, W * 0.98, 0.24, 0.22, paintDark, 0, ground + 0.13, front + 0.08, 0.06);
-    rbox(root, W * 0.58, 0.1, 0.05, black, 0, ground + 0.05, front + 0.02, 0.02);
+    // бампер: единая юбка по всей ширине, снизу — чёрный сплиттер
+    rbox(root, W * 0.99, 0.2, 0.24, paintDark, 0, ground + 0.11, front - 0.1, 0.05);
+    rbox(root, W * 0.66, 0.075, 0.06, black, 0, ground + 0.03, front - 0.16, 0.02);
 
     // ---------- корма
     for (const side of [-1, 1]) {
-      rbox(root, 0.38, 0.12, 0.1, M.taillight, side * halfW * 0.66, S.deckY - 0.08, rear - 0.01, 0.02);
-      box(root, 0.18, 0.045, 0.03, M.reverseLight, side * halfW * 0.56, S.deckY - 0.17, rear + 0.01);
+      rbox(root, 0.38, 0.12, 0.08, M.taillight, side * halfW * 0.66, S.deckY - 0.08, rear + 0.03, 0.02);
+      box(root, 0.18, 0.045, 0.03, M.reverseLight, side * halfW * 0.56, S.deckY - 0.17, rear + 0.045);
     }
     const plateTex = plateTexture('О 777 АА');
-    if (plateTex) plane(root, 0.42, 0.11, new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.55 }), 0, S.deckY - 0.3, rear + 0.012);
-    rbox(root, W * 0.98, 0.22, 0.16, paintDark, 0, ground + 0.16, rear - 0.06, 0.05);
+    if (plateTex) {
+      const plateMat = new THREE.MeshStandardMaterial({ map: plateTex, roughness: 0.55 });
+      // Номер должен висеть НАД бампером (бампер занимает ground…ground+0.27),
+      // иначе он за ним прячется. Накладка объёмная: подложка + картинка
+      // лицевой стороной назад (плоскость Three.js смотрит в +Z).
+      const plateY = Math.max(ground + 0.4, S.deckY - 0.42);
+      rbox(root, 0.45, 0.13, 0.03, black, 0, plateY, rear + 0.03, 0.012);
+      const p1 = plane(root, 0.42, 0.11, plateMat, 0, plateY, rear + 0.047);
+      p1.renderOrder = 1;
+    }
+    rbox(root, W * 0.98, 0.22, 0.18, paintDark, 0, ground + 0.16, rear + 0.08, 0.05);
     if (S.sport) {
       for (const side of [-1, 1]) {
         const ex = cyl(root, 0.048, 0.048, 0.1, chrome, side * 0.3, ground + 0.08, rear - 0.02, 12);
@@ -442,13 +510,17 @@ export function buildCar(unit, M, opts = {}) {
   const eyeAbs = S.sport ? Math.min(H - 0.12, dashTopAbs + 0.24) : H - (S.micro ? 0.24 : 0.3);
   const tall = eyeAbs - (belt + 0.3);
   // в спорткаре крыша низкая: садимся ближе к стеклу и смотрим вперёд, а не в панель
-  const eyeZr = S.sport ? S.wsTopZ + 0.34 : S.wsTopZ + (S.van ? 0.66 : S.suv ? 0.62 : 0.5);
+  const eyeZr = S.wsTopZ + (S.sport ? 0.42 : S.van ? 0.62 : 0.52);
   const views = [
     {
       id: 'driver', label: 'Место водителя', group: 'interior',
       pos: [-cabW * 0.22, belt + eyeY * 0 + 0.3 + tall, eyeZr],
-      target: [-0.06, eyeAbs - (S.sport ? 0.06 : S.suv ? 0.52 : 0.4), S.wsBase - 7],
-      fov: S.sport ? 62 : 68, orbit: false, seat: true,
+      // смотрим не в горизонт, а на приборы — иначе торпедо уходит из кадра
+      // Наводим строго на блок приборов (dashTopAbs), а не «на глаз минус N»:
+      // у высоких кузовов (SUV, пикап, фургон) взгляд уходил выше панели,
+      // и приборы обрезались нижней кромкой кадра.
+      target: [-cabW * 0.27, dashTopAbs + 0.07, S.wsTopZ - 0.24],
+      fov: S.sport ? 64 : 70, orbit: false, seat: true,
     },
     {
       id: 'salon', label: 'Салон', group: 'interior',
@@ -456,8 +528,20 @@ export function buildCar(unit, M, opts = {}) {
       // а в кадре остаются торпедо, руль и центральная консоль
       // из прохода между креслами вперёд: торпедо, руль, консоль,
       // стойки и боковые окна — общий вид салона
-      pos: [0, floorY + (H - floorY) * 0.6, S.wsTopZ + 0.78],
-      target: [0, floorY + (H - floorY) * 0.32, S.wsBase - 3.4],
+      // Камеру ставим в проход МЕЖДУ передними креслами, на уровне глаз
+      // сидящего, и смотрим вниз-вперёд на торпедо. Раньше она стояла почти
+      // в спинке заднего дивана: у универсала кадр был чёрным (камера внутри
+      // подголовника), у SUV и пикапа обзор закрывали сами кресла.
+      // Высота глаз ограничена потолком (у спорткара крыша ниже — камера
+      // «пробивала» её и давала чёрный кадр). Смотрим прямо на торпедо,
+      // а не в горизонт: иначе приборы уходят из кадра.
+      // Камера — в проходе между передними креслами, чуть ниже потолка и
+      // ПОЗАДИ торпедо (dashZ + 0.2): если поставить её на высоту панели,
+      // она оказывается внутри её корпуса и кадр перекрывает серое поле.
+      pos: [0, Math.min(belt + 0.22, H - 0.22), S.wsTopZ + Math.max(0.34, (S.roofRearZ - S.wsTopZ) * 0.4)],
+      // целимся в блок приборов (dashTop + 0.07), а не в горизонт: иначе
+      // кадр заполняет капот, а торпедо уходит вниз
+      target: [0,floorY + 0.49, S.wsTopZ - 0.5],
       fov: 72, orbit: true, seat: true,
     },
     { id: 'exterior', label: 'Снаружи', group: 'exterior', pos: [6.4, 2.55, -7.0], target: [0, 0.72, 0.05], fov: 32, orbit: true, autoRotate: true },
@@ -477,10 +561,12 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   const zFront = S.wsBase + 0.02;
   const zRear = S.rearBaseZ - 0.06;
   const zMid = (zFront + zRear) / 2;
-  // глаз водителя — за верхней кромкой лобового стекла
-  const eyeZ = S.wsTopZ + 0.36;
-  const dashZ = eyeZ - 0.62;
-  const seatZ = eyeZ + 0.12;
+  // Глаз водителя ставим на 0.5 м позади верхней кромки лобового. Раньше
+  // он был всего на 0.36 м, и ПОДУШКА его же кресла оказывалась ровно перед
+  // объективом — из «места водителя» был виден только подголовник.
+  const eyeZ = S.wsTopZ + 0.5;
+  const dashZ = eyeZ - 0.72;
+  const seatZ = eyeZ + 0.34;
   const dark = M.interiorDark;
   const mid = M.interiorMid;
   const sport = S.sport;
@@ -503,33 +589,62 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   rbox(g, 0.23, 0.2, zRear - zFront - 0.2, mid, 0, floorY + 0.11, zMid - 0.1, 0.04);
   if (unit.seats > 2) rbox(g, cabW - 0.1, Math.max(0.2, belt - floorY - 0.14), 0.05, dark, 0, floorY + 0.32, zRear + 0.12, 0.02);
 
-  // моторный щит: закрывает просвет между панелью и лобовым,
-  // иначе из салона видны колёса и арки
-  rbox(g, cabW + 0.06, Math.max(0.3, belt - floorY + 0.16), 0.05, dark, 0, (floorY + belt) / 2 - 0.02, zFront - 0.04, 0.02);
+  // моторный щит: закрывает просвет между панелью и лобовым, иначе из салона
+  // видны колёса и арки. Верх щита делаем НИЖЕ панели (раньше он поднимался
+  // на 20 см над торпедо и чёрной стеной закрывал двор из лобового стекла).
+  const firewallTop = floorY + 0.44;
+  rbox(g, cabW + 0.06, firewallTop - floorY + 0.1, 0.05, dark, 0, (floorY + firewallTop) / 2 - 0.05, zFront - 0.05, 0.02);
 
-  // торпедо
+  // ---------- торпедо
+  // Водитель сидит на +Z и смотрит в −Z, поэтому лицевая плоскость панели —
+  // это сторона с МАКСИМАЛЬНЫМ z (dashZ + полтолщины). Раньше приборы стояли
+  // на dashZ − 0.02, то есть с обратной стороны панели, и водитель видел
+  // чёрную плиту без шкал.
   const dashTop = floorY + 0.42;
-  rbox(g, cabW, 0.32, 0.42, dark, 0, floorY + 0.33, dashZ, 0.06);
-  rbox(g, cabW - 0.05, 0.12, 0.54, mid, 0, dashTop + 0.02, dashZ + 0.08, 0.05);
-  const binnacle = rbox(g, 0.46, 0.16, 0.24, dark, -cabW * 0.27, dashTop + 0.09, dashZ - 0.08, 0.04);
-  binnacle.rotation.x = -0.16;
-  for (const x of [-cabW * 0.32, -cabW * 0.22]) {
-    const dial = cyl(g, 0.07, 0.07, 0.018, M.plastic, x, dashTop + 0.12, dashZ - 0.02, 18);
+  const dashFace = dashZ + 0.205;     // лицевая плоскость, к водителю
+  const dashLow = floorY + 0.06;      // низ панели, у педалей
+  const dashH = dashTop + 0.08 - dashLow;
+  const dashMidY = dashLow + dashH / 2;
+  // корпус панели с наклоном лицевой части
+  const dashBody = rbox(g, cabW, dashH + 0.03, 0.4, dark, 0, dashMidY, dashZ, 0.05);
+  dashBody.rotation.x = -0.05;
+  // Сверху панели — узкий кант ПО ВСЕЙ глубине: раньше это была короткая
+  // накладка, и с места водителя она читалась как «полка», висящая над
+  // приборами в воздухе.
+  const dashCapZ = dashZ + 0.02;
+  rbox(g, cabW - 0.02, 0.035, 0.42, M.rubberTrim, 0, dashTop + 0.06, dashCapZ, 0.016);
+  // Приборный блок: два циферблата сидят прямо на лицевой панели. Козырёк
+  // убрали совсем — на таком масштабе он превращался в «полку», которая
+  // перекрывала шкалы от водителя.
+  for (const [i, x] of [-cabW * 0.32, -cabW * 0.22].entries()) {
+    const yd = dashTop + 0.07 + (i === 0 ? 0.006 : -0.006);
+    // циферблат: тёмная колодка + светлое поле шкалы + хром-обод + стрелка
+    const dial = cyl(g, 0.075, 0.075, 0.026, M.plastic, x, yd, dashFace + 0.02, 20);
     dial.rotation.x = HALF;
-    torus(g, 0.068, 0.005, M.chromeDark, x, dashTop + 0.12, dashZ - 0.016, 16);
-    const needle = box(g, 0.005, 0.075, 0.004, M.taillight, x, dashTop + 0.145, dashZ - 0.014);
-    needle.rotation.z = 0.7;
+    const face = cyl(g, 0.062, 0.062, 0.006, M.plasticLight, x, yd, dashFace + 0.034, 18);
+    face.rotation.x = HALF;
+    torus(g, 0.068, 0.005, M.chromeDark, x, yd, dashFace + 0.035, 18);
+    const needle = box(g, 0.007, 0.05, 0.004, M.taillight, x, yd + 0.018, dashFace + 0.039);
+    needle.rotation.z = i === 0 ? 0.7 : -0.55;
+    needle.rotation.z = i === 0 ? 0.65 : -0.5;
   }
-  const scr = rbox(g, 0.3, 0.19, 0.022, M.dashScreen, 0.07, dashTop + 0.03, dashZ - 0.04, 0.02);
-  scr.rotation.x = -0.1;
+  // мультимедиа по центру панели — лицом к водителю
+  rbox(g, 0.38, 0.24, 0.02, M.plastic, 0.06, dashTop - 0.06, dashFace + 0.006, 0.02);
+  const scr = rbox(g, 0.34, 0.2, 0.024, M.dashScreen, 0.06, dashTop - 0.06, dashFace + 0.022, 0.02);
+  scr.rotation.x = -0.08;
+  // дефлекторы обдува и кнопки — по бокам от экрана
   for (const side of [-1, 1]) {
-    rbox(g, 0.12, 0.055, 0.028, M.plastic, side * 0.37, dashTop + 0.055, dashZ - 0.1, 0.02);
-    for (let i = -1; i <= 1; i++) box(g, 0.009, 0.045, 0.01, M.chromeDark, side * 0.37 + i * 0.032, dashTop + 0.055, dashZ - 0.115);
+    const x = side === -1 ? cabW * 0.4 : -cabW * 0.4;
+    rbox(g, 0.13, 0.055, 0.03, M.plastic, x, dashTop + 0.02, dashFace + 0.006, 0.015);
+    for (let i = -1; i <= 1; i++) box(g, 0.01, 0.042, 0.012, M.chromeDark, x + i * 0.034, dashTop + 0.02, dashFace + 0.02);
   }
-  // руль — между водителем и торпедо (раньше стоял за панелью, у лобового)
+  // бардачок и полка для мелочей
+  rbox(g, 0.36, 0.12, 0.02, mid, cabW * 0.26, dashTop - 0.2, dashFace + 0.004, 0.02);
+  box(g, 0.13, 0.02, 0.02, M.chrome, cabW * 0.26, dashTop - 0.16, dashFace + 0.016);
+  // руль — между водителем и панелью
   const sw = group(g, 'steering');
-  sw.position.set(-cabW * 0.27, dashTop + 0.11, dashZ + 0.3);
-  sw.rotation.x = -0.38;
+  sw.position.set(-cabW * 0.27, dashTop - 0.06, dashZ + 0.38);
+  sw.rotation.x = -0.42;
   torus(sw, 0.175, 0.02, M.leather, 0, 0, 0, 34);
   const hub = cyl(sw, 0.055, 0.06, 0.05, M.plastic, 0, 0, 0.02, 16);
   hub.rotation.x = HALF;
@@ -540,8 +655,9 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   }
   const em = cyl(sw, 0.025, 0.025, 0.01, M.accent(unit.accent || '#d8d5c8'), 0, 0, 0.045, 12);
   em.rotation.x = HALF;
-  const col = cyl(g, 0.032, 0.048, 0.44, M.plastic, -cabW * 0.27, dashTop + 0.02, dashZ + 0.11, 10);
-  col.rotation.x = 0.62;
+  // рулевая колонка — от панели к рулю
+  const col = cyl(g, 0.032, 0.048, 0.46, M.plastic, -cabW * 0.27, dashTop - 0.06, dashZ + 0.2, 10);
+  col.rotation.x = 0.6;
   // селектор, подлокотник, педали
   const gear = cyl(g, 0.016, 0.02, 0.17, M.chromeDark, 0.12, floorY + 0.22, dashZ + 0.22, 8);
   gear.rotation.x = -0.28;

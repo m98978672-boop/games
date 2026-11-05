@@ -43,7 +43,9 @@ body {
   align-items: center;
   gap: 12px;
   min-height: var(--hud-h);
-  padding: 7px 12px;
+  /* «челка», скругления и полоса жестов iPhone учитываются через env() */
+  padding: calc(7px + env(safe-area-inset-top, 0px)) calc(12px + env(safe-area-inset-right, 0px)) 7px
+    calc(12px + env(safe-area-inset-left, 0px));
   background: rgba(9, 11, 10, 0.9);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(16px);
@@ -368,7 +370,8 @@ body {
   align-items: center;
   gap: 12px;
   min-height: var(--dock-h);
-  padding: 7px 12px;
+  padding: 7px calc(12px + env(safe-area-inset-right, 0px)) calc(7px + env(safe-area-inset-bottom, 0px))
+    calc(12px + env(safe-area-inset-left, 0px));
   background: rgba(9, 11, 10, 0.9);
   border-top: 1px solid var(--line);
   backdrop-filter: blur(16px);
@@ -790,3 +793,102 @@ body {
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* ============================================================
+   РАЗНЫЕ УСТРОЙСТВА
+   Классы is-touch / is-phone / is-tablet / is-desktop / is-coarse /
+   is-portrait ставит src/lib/device.js. Здесь — только то, что
+   меняется от устройства к устройству.
+   ============================================================ */
+
+/* На тач-экранах пальцем попадать в кнопку 8 px невозможно:
+   минимальная цель — 40–44 px, как в гайдлайнах iOS/Android. */
+.is-touch .hud-btn,
+.is-touch .icon-btn,
+.is-touch .nav-arrow,
+.is-touch .round-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+.is-touch .icon-btn { width: 42px; height: 42px; font-size: 16px; }
+.is-touch .hud-btn { padding: 10px 12px; }
+.is-touch .hud-btn .ico { font-size: 17px; }
+.is-touch .round-btn { width: 44px; height: 44px; font-size: 18px; }
+.is-touch .nav-arrow { width: 46px; height: 46px; }
+.is-touch .cat-tab { min-height: 46px; }
+.is-touch .view-btn { min-height: 40px; padding: 9px 13px; }
+.is-touch .chip { min-height: 38px; padding: 9px 13px; }
+.is-touch .unit { min-height: 52px; }
+.is-touch .paint-dot { width: 34px; height: 34px; }
+.is-touch .ghost-btn { min-height: 42px; }
+
+/* на телефоне внизу ещё полоса жестов: поднимаем плавающие элементы */
+.is-phone .stage-actions { bottom: calc(var(--dock-h) + 16px + env(safe-area-inset-bottom, 0px)); }
+.is-phone .dock { bottom: calc(8px + env(safe-area-inset-bottom, 0px) * 0.4); }
+.is-phone .stage-live { bottom: calc(var(--dock-h) + 74px + env(safe-area-inset-bottom, 0px)); }
+
+/* Портретный телефон: каталог и карточка — шторки снизу на всю ширину,
+   сцена остаётся сверху и не перекрывается целиком. */
+.is-portrait.is-phone .drawer {
+  top: auto;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 66dvh;
+  border-left: none;
+  border-right: none;
+  border-radius: 16px 16px 0 0;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(calc(100% + 24px));
+}
+.is-portrait.is-phone .drawer.open { transform: none; }
+
+/* Портретный планшет: две панели ещё влезают, но уже компактные */
+.is-portrait.is-tablet .drawer {
+  top: auto;
+  bottom: calc(var(--dock-h) + 6px);
+  max-height: 62dvh;
+  width: min(420px, calc(100vw - 20px));
+}
+
+/* Ландшафт на телефоне: мало высоты — сжимаем шапку и низ */
+.is-touch.is-landscape .hud-top { padding-top: calc(4px + env(safe-area-inset-top, 0px)); padding-bottom: 4px; }
+.is-touch.is-landscape .hud-bottom { padding-top: 4px; padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px)); }
+.is-touch.is-landscape .app-title h1 { font-size: 15px; }
+.is-touch.is-landscape .dock { display: none; }
+.is-touch.is-landscape .drawer { top: calc(var(--hud-h) + 4px); bottom: calc(var(--dock-h) + 4px); max-height: none; }
+
+/* Устройства без наведения: подсветка при hover «залипает» — убираем её,
+   оставляем активные состояния. */
+.is-coarse .hud-btn:hover,
+.is-coarse .icon-btn:hover,
+.is-coarse .chip:hover,
+.is-coarse .cat-tab:hover,
+.is-coarse .nav-arrow:hover,
+.is-coarse .round-btn:hover,
+.is-coarse .unit:hover,
+.is-coarse .view-btn:hover,
+.is-coarse .ghost-btn:hover,
+.is-coarse .btn:hover {
+  background: transparent;
+  border-color: var(--line);
+  color: var(--ink-dim);
+}
+.is-coarse .unit:hover { background: transparent; }
+.is-coarse .round-btn:hover { color: var(--ink-dim); }
+
+/* Тач: подсказки-клавиши внизу сцены заменяются на жесты (см. app.js),
+   но на очень маленьком экране прячем совсем, чтобы не мешать */
+.is-phone .stage-hint { display: none; }
+
+/* Кнопки на тач-экранах не должны «залипать» с фокусом после нажатия */
+.is-touch button:focus:not(:focus-visible) { outline: none; }
+
+/* В полноэкранном режиме (PWA / standalone) убираем лишние отступы */
+@media (display-mode: standalone) {
+  .hud-top { padding-top: max(7px, env(safe-area-inset-top, 0px)); }
+}
+
+/* Мобильные браузеры с подгруженной клавиатурой в поиске: не дёргаем сцену */
+.is-touch input[type="search"],
+.is-touch input[type="text"] { font-size: 16px; }

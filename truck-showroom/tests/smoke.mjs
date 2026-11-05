@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { createMaterials } from '../src/lib/kit.js';
 import { buildUnit } from '../src/models/index.js';
 import { TRUCKS, TRAILERS, CARS, CATEGORIES, allUnits } from '../src/data/units.js';
+import { carShape } from '../src/models/car.js';
 
 let fails = 0;
 const ok = (cond, msg) => {
@@ -77,6 +78,90 @@ for (const unit of allUnits()) {
       // до 0.8 м от глаз — это детали самой кабины (руль, козырёк, зеркало), это нормально
       ok(isGlass || blocked.distance > 0.8, `${unit.id}: из салона видно улицу (первое попадание: ${blocked.object?.geometry?.type || '?'} @ ${blocked.distance.toFixed(2)} м)`);
     }
+  }
+}
+
+// ============================================================
+// РЕГРЕССИИ ПО АВТОМОБИЛЯМ
+// Каждый блок — конкретный дефект, который уже был в моделях:
+// открытые торцы кузова, вырезанная арка, торчащая ступица, корма
+// за габаритом, приборы, спрятанные за панелью.
+// ============================================================
+const M2 = createMaterials(null);
+for (const unit of CARS) {
+  const built = buildUnit({ ...unit, category: 'cars' }, M2);
+  const root = built.root;
+  root.updateMatrixWorld(true);
+  const S = carShape(unit);
+  const { front, rear, W, ground } = S;
+
+  // 1. Корма и нос не выходят за заявленный габарит кузова
+  ok(S.rearBaseZ <= rear - 0.05, `${unit.id}: задняя кромка крыши в габарите (${S.rearBaseZ.toFixed(2)} ≤ ${rear.toFixed(2)})`);
+
+  // 2. Торцы закрыты: луч из кормы/носа внутрь кузова не должен
+  //    пролетать весь салон насквозь (раньше было видно кресла снаружи)
+  // Раньше торцы были открыты (между бортами зияла дыра), и луч снаружи
+  // пролетал в салон. Теперь первое попадание — силовой элемент кузова
+  // (торцевая панель или бампер) на боку модели, а не интерьер.
+  const rc = new THREE.Raycaster();
+  const leaks = [];
+  for (const [label, origin, dir] of [
+    ['спереди', new THREE.Vector3(0, ground + 0.32, front - 0.8), new THREE.Vector3(0, 0, 1)],
+    ['сзади', new THREE.Vector3(0, ground + 0.32, rear + 0.8), new THREE.Vector3(0, 0, -1)],
+    ['сверху спереди', new THREE.Vector3(0, ground + 0.36, front - 0.8), new THREE.Vector3(0, 0.05, 1)],
+  ]) {
+    rc.set(origin, dir.clone().normalize());
+    const hit = rc.intersectObject(root, true).find((h) => h.object.isMesh && h.object.visible !== false);
+    // 0.9 м — это бампер и торцевая панель (накладки выступают до 0.3 м,
+    // плюс сам луч стартует в 0.8 м от габарита). Сквозная дыра даёт 2+ м.
+    if (!hit) leaks.push(`${label}: луч ушёл в пустоту`);
+    else if (hit.distance > 1.15) leaks.push(`${label}: ${hit.distance.toFixed(2)} м`);
+  }
+  ok(leaks.length === 0, `${unit.id}: торцы кузова закрыты${leaks.length ? ' — ' + leaks.join('; ') : ''}`);
+
+  // 3. Колёса не торчат за борт и не «протыкаются» планкой:
+  //    ступица и диск должны быть внутри покрышки
+  const wheel = built.wheels?.[0];
+  if (wheel) {
+    const bb = new THREE.Box3().setFromObject(wheel);
+    const halfW = W / 2;
+    ok(bb.max.x <= halfW + 0.02, `${unit.id}: колесо не выпирает за борт (${bb.max.x.toFixed(2)} ≤ ${halfW.toFixed(2)} + 0.02)`);
+    ok(bb.min.y >= -0.01 && bb.max.y <= 2 * (unit.wheelRadius ?? 0.33) + 0.02, `${unit.id}: колесо стоит на земле`);
+  }
+
+  // 4. Арка действительно вырезана: вертикальный луч сверху вниз через
+  //    центр колеса не должен попадать в краску кузова (раньше дырка
+  //    выходила за силуэт и триангуляция затягивала арку краской)
+  const wheelZ = (unit.wheelbase ?? S.L * 0.58) / 2;
+  const R0 = unit.wheelRadius ?? 0.33;
+  const paintColor = new THREE.Color(unit.paint || '#2f5d8a').getHexString();
+  const archRay = new THREE.Raycaster();
+  // сбоку, на высоте центра колеса, точно через арку
+  archRay.set(new THREE.Vector3(W / 2 + 1.5, R0 + 0.02, wheelZ), new THREE.Vector3(-1, 0, 0));
+  const archHits = archRay.intersectObject(root, true).filter((h) => h.object.isMesh && h.object.visible !== false);
+  const firstPaint = archHits.find((h) => h.object.material?.color?.getHexString?.() === paintColor);
+  const firstTire = archHits[0];
+  // первое попадание должно быть покрышкой/диском, а не краской борта
+  ok(firstTire && firstTire.object.material?.color?.getHexString?.() !== paintColor,
+    `${unit.id}: арка прорезана, в проёме колесо (${firstTire ? firstTire.object.geometry.type + ' #' + (firstTire.object.material?.color?.getHexString?.() ?? '?') : 'пусто'})`);
+  ok(!firstPaint || firstPaint.distance > (firstTire?.distance ?? 0),
+    `${unit.id}: краска не перекрывает колесо в арке`);
+
+  // 5. Водитель видит приборы: из точки глаз луч вниз-вперёд должен
+  //    попадать в панель, а не в пустоту или собственное кресло
+  const driverView = built.views.find((v) => v.id === 'driver');
+  if (driverView) {
+    const cam = new THREE.PerspectiveCamera(driverView.fov || 60, 1.6, 0.02, 60);
+    cam.position.set(...driverView.pos);
+    cam.lookAt(new THREE.Vector3(...driverView.target));
+    cam.updateMatrixWorld(true);
+    cam.updateProjectionMatrix();
+    const rc2 = new THREE.Raycaster();
+    rc2.setFromCamera(new THREE.Vector2(0, -0.25), cam);
+    const hit = rc2.intersectObject(root, true).find((h) => h.object.isMesh && h.object.visible !== false);
+    // панель — тёмная (интерьерные материалы), стекло прозрачное, кресло исключено
+    const isDash = hit && hit.object.material?.transparent !== true && hit.distance < 1.6;
+    ok(isDash, `${unit.id}: от водителя виден щиток приборов (${hit ? hit.object.geometry.type + ' @ ' + hit.distance.toFixed(2) + ' м' : 'пусто'})`);
   }
 }
 
