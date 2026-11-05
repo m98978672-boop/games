@@ -228,6 +228,19 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 .card-road .badge-new { color: #ffcb8a; border-color: rgba(255, 176, 87, 0.45); }
 .card-road:hover { border-color: rgba(255, 176, 87, 0.4); }
 
+
+/* ГАРАЖ 3D — шоурум техники: золотой акцент, широкая карточка-баннер */
+.card-showroom { grid-template-columns: 1fr; }
+.card-showroom .card-art { min-height: 0; aspect-ratio: 1440 / 700; }
+.card-showroom .card-art img { object-fit: cover; object-position: center 46%; }
+.card-showroom .card-body { padding: 26px 30px 26px; }
+.card-showroom .card-body h2 { font-size: 28px; }
+.card-showroom .features { grid-template-columns: 1fr 1fr; gap: 5px 22px; }
+.card-showroom .card-actions { margin-top: 6px; }
+.card-showroom .features li::before { background: var(--accent); }
+.card-showroom .badge-new { color: #ffd98a; border-color: rgba(232, 180, 90, 0.45); }
+.card-showroom:hover { border-color: rgba(232, 180, 90, 0.45); }
+
 .card-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
 
 .btn {
