@@ -1,4 +1,5 @@
 {$PLAYBRIDGE_DOMAIN} {
+  # Caddy serves HTTP/1.1, HTTP/2, and HTTP/3 when UDP 443 is reachable; compress text/API responses.
   encode zstd gzip
   reverse_proxy playbridge:4174
 }

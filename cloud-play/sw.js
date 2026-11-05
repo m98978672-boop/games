@@ -1,5 +1,5 @@
 // Bump this name when releasing a new static shell; the script itself is checked on every app launch.
-const CACHE_NAME = 'playbridge-shell-0.3.0';
+const CACHE_NAME = 'playbridge-shell-0.4.0';
 const APP_SCOPE = new URL('./', self.registration.scope);
 const SHELL_FILES = [
   './',

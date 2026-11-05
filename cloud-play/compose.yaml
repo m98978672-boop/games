@@ -8,6 +8,9 @@ services:
       PUBLIC_ORIGIN: ${PUBLIC_ORIGIN:?Set PUBLIC_ORIGIN in .env}
       SESSION_SECRET: ${SESSION_SECRET:?Set SESSION_SECRET in .env}
       STEAM_WEB_API_KEY: ${STEAM_WEB_API_KEY:?Set STEAM_WEB_API_KEY in .env}
+      DROPBOX_APP_KEY: ${DROPBOX_APP_KEY:-}
+      DROPBOX_APP_SECRET: ${DROPBOX_APP_SECRET:-}
+      DROPBOX_TOKEN_SECRET: ${DROPBOX_TOKEN_SECRET:-}
     expose:
       - "4174"
 
@@ -21,6 +24,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
