@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>НИКА: ЖИВАЯ — девушка с локальным ИИ и 223 анимациями</title>
-<meta name="description" content="Браузерный симулятор жизни: Ника в минималистичной квартире, с самообучающимся ИИ по твоим фразам, 223 анимациями, переодеванием, купанием, сном, работой, разговором, гардеробом и командами на русском. Без интернета и ключей API.">
+<title>НИКА: ЖИВАЯ — девушка с локальным ИИ, 483 анимациями и характером</title>
+<meta name="description" content="Браузерный симулятор жизни: Ника в большой квартире из 13 зон, с локально обучаемым ИИ, 483 анимациями на 33 частях тела, 400 процедурными ассетами (200 текстур + 200 моделей), 2400 точками управления телом, трёхфазным переодеванием и настоящими психологическими комплексами. Офлайн по умолчанию, обучение с публичных сайтов — только по запросу игрока, без ключей.">
 <meta name="theme-color" content="#0b0d0c">
 <meta property="og:type" content="website">
 <meta property="og:title" content="НИКА: ЖИВАЯ">
-<meta property="og:description" content="Девушка, которой управляет локально обучаемый ИИ: живёт в квартире-студии, переодевается, купается, работает, спит, разговаривает. 223 анимации, 20 частей тела.">
+<meta property="og:description" content="Девушка, которой управляет локально обучаемый ИИ: живёт в квартире из 13 зон, переодевается в три фазы, купается, работает, спит, разговаривает. 483 анимации, 400 ассетов, 2400 точек тела.">
 <meta property="og:image" content="cover.svg">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101618'/%3E%3Ccircle cx='16' cy='13' r='7' fill='%23f3c9a8'/%3E%3Cpath d='M9 13c0-7 14-7 14 0v7H9z' fill='%233d2b34'/%3E%3Cpath d='M7 31c1-8 5-11 9-11s8 3 9 11' fill='%23d9575f'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="style.css">
@@ -35,6 +35,8 @@
     <div class="speed-group" id="speed-group" title="Скорость времени">
       <button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button>
     </div>
+    <button id="btn-watch" class="icon-btn" title="Режим просмотра: убрать панели (F)">👁</button>
+    <button id="btn-chat-toggle" class="icon-btn" title="Свернуть / развернуть чат (C)">💬</button>
     <button class="icon-btn mobile-only" id="btn-mobile-chat" title="Команды">💬</button>
     <button class="icon-btn mobile-only" id="btn-mobile-tools" title="Панели">⚙</button>
     <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)">⏸</button>
@@ -46,9 +48,16 @@
 
 <div id="save-indicator">● автосохранение</div>
 
-<!-- ПРАВАЯ ПАНЕЛЬ: чат с ИИ -->
+<!-- ПРАВАЯ ПАНЕЛЬ: чат с ИИ. Крупнее, сворачивается, не мешает смотреть. -->
 <aside class="panel side chat-panel" id="chat-panel" aria-label="Команды девушке">
-  <h3>💬 Команды · <span class="accent-ink-text">ИИ в браузере</span></h3>
+  <div class="chat-head">
+    <h3>💬 Команды · <span class="accent-ink-text">ИИ в браузере</span></h3>
+    <button id="btn-chat-collapse" class="icon-btn small" title="Свернуть чат">⟨</button>
+  </div>
+  <div class="chat-tools">
+    <label>Ширина <input id="chat-width" type="range" min="300" max="560" step="10" value="380"></label>
+    <label>Шрифт <input id="chat-font" type="range" min="13" max="20" step="1" value="15"></label>
+  </div>
   <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
   <form id="chat-form" class="chat-form" autocomplete="off">
     <input id="chat-input" type="text" maxlength="240" placeholder="Напиши команду: надень платье и помаши рукой…">
@@ -58,8 +67,9 @@
   <label class="switch"><input type="checkbox" id="autonomy-toggle" checked><span>Жить самой (автономия ИИ)</span></label>
   <div class="ai-mini" id="ai-mini"></div>
 </aside>
+<button id="btn-chat-restore" class="chat-restore" title="Открыть чат">💬 <span>Команды</span></button>
 
-<!-- ЛЕВАЯ ПАНЕЛЬ: анимации / гардероб / тело / жизнь -->
+<!-- ЛЕВАЯ ПАНЕЛЬ: анимации / гардероб / тело / характер / точки / интернет -->
 <aside class="panel tools tools-panel" id="tools-panel" aria-label="Управление девушкой">
   <div class="tabs" id="tabs">
     <button data-tab="animations" class="on">🎞 Анимации</button>
@@ -67,6 +77,10 @@
     <button data-tab="body">🦾 Тело</button>
     <button data-tab="life">🌙 Жизнь</button>
     <button data-tab="learn">🧠 Обучение ИИ</button>
+    <button data-tab="assets">🎨 Ассеты</button>
+    <button data-tab="psy">💭 Характер</button>
+    <button data-tab="mesh">✥ Точки тела</button>
+    <button data-tab="net">🌐 Интернет</button>
   </div>
 
   <section class="tab-body" id="tab-animations">
@@ -84,6 +98,11 @@
   <section class="tab-body hidden" id="tab-wardrobe">
     <div class="counter" id="wardrobe-summary"></div>
     <div id="slots" class="slots"></div>
+    <div class="underwear-card" id="underwear-preview">
+      <b>Нижний слой под одеждой</b>
+      <span id="underwear-text">Домашняя комбинация</span>
+      <p class="fine">Скромный нижний слой. Виден только в момент переодевания за ширмой — откровенной анатомии в игре нет.</p>
+    </div>
     <label class="field-label">Цвет наряда</label>
     <div id="colors" class="colors"></div>
     <label class="field-label">Шкаф (нажми, чтобы надеть)</label>
@@ -93,7 +112,7 @@
 
   <section class="tab-body hidden" id="tab-body-tab">
     <div class="counter">Прямое управление суставами</div>
-    <p class="fine">Ползунки перекрывают ИИ-анимацию выбранного канала. Нажми «Сброс», чтобы вернуть управление Нике.</p>
+    <p class="fine">Ползунки перекрывают ИИ-анимацию выбранного канала. Ещё 2400 точек тела — во вкладке «Точки тела».</p>
     <div id="sliders" class="sliders"></div>
     <button id="btn-reset-pose" class="small-btn wide">↺ Сбросить тело</button>
   </section>
@@ -109,7 +128,7 @@
 
   <section class="tab-body hidden" id="tab-learn">
     <div class="counter" id="learn-counter"></div>
-    <p class="fine">Исправь последнюю команду — нейросеть тут же доучится. А в поле ниже вставь любой текст или список фраз (хоть скопированный из интернета): по одной на строке, можно с разметкой <code>фраза = намерение</code>. Всё обучается локально, без сети.</p>
+    <p class="fine">Исправь последнюю команду — нейросеть тут же доучится. А в поле ниже вставь любой текст или список фраз: по одной на строке, можно с разметкой <code>фраза = намерение</code>. Всё обучается локально. С публичных сайтов — во вкладке «Интернет».</p>
     <label class="field-label">Последняя команда</label>
     <div id="learn-last" class="learn-last">—</div>
     <label class="field-label" for="learn-intent">Правильное намерение</label>
@@ -124,11 +143,88 @@
     <label class="field-label">Выученные фразы</label>
     <div id="learn-list" class="memory"></div>
   </section>
+
+  <section class="tab-body hidden" id="tab-assets">
+    <div class="counter" id="assets-counter"></div>
+    <p class="fine">400 процедурных ассетов: 200 текстур и 200 моделей тела, 20 групп по 20 вариантов. Всё считается в браузере, без файлов и сети.</p>
+    <label class="field-label" for="asset-group">Группа</label>
+    <select id="asset-group" class="select"></select>
+    <div id="asset-grid" class="asset-grid"></div>
+    <button id="btn-random-look" class="small-btn wide">🎲 Собрать случайный образ</button>
+  </section>
+
+  <section class="tab-body hidden" id="tab-psy">
+    <div class="counter" id="psy-counter"></div>
+    <p class="fine">Настоящие психологические комплексы: влияют на ширму, реплики, выбор наряда, взгляд и реакцию на комплименты. Добрые слова и «я не смотрю» постепенно повышают доверие.</p>
+    <div id="psy-list" class="psy-list"></div>
+    <div class="row-actions">
+      <button id="btn-compliment" class="small-btn">🌸 Комплимент</button>
+      <button id="btn-reassure" class="small-btn">🤝 Подбодрить</button>
+    </div>
+    <button id="btn-space" class="small-btn wide">🚪 Дать пространство</button>
+    <label class="switch"><input type="checkbox" id="privacy-toggle" checked><span>Ширма при переодевании</span></label>
+  </section>
+
+  <section class="tab-body hidden" id="tab-mesh">
+    <div class="counter" id="mesh-counter"></div>
+    <p class="fine">Полный контроль тела: 2400 точек в 16 областях. Каждую можно сдвинуть, а встроенные моторные программы уже учат Нику ходить, дышать, купаться и переодеваться.</p>
+    <label class="switch"><input type="checkbox" id="mesh-points-toggle"><span>Показать точки на теле</span></label>
+    <label class="field-label" for="mesh-region">Область</label>
+    <select id="mesh-region" class="select"></select>
+    <label class="field-label" for="mesh-point">Точка</label>
+    <select id="mesh-point" class="select"></select>
+    <div class="row-actions">
+      <label class="mini-field">X <input id="mesh-offset-x" type="range" min="-40" max="40" step="1" value="0"></label>
+      <label class="mini-field">Y <input id="mesh-offset-y" type="range" min="-40" max="40" step="1" value="0"></label>
+    </div>
+    <div class="row-actions">
+      <button id="btn-mesh-apply" class="small-btn">↔ Сдвинуть</button>
+      <button id="btn-mesh-clear" class="small-btn">↺ Сбросить точки</button>
+    </div>
+    <label class="field-label" for="warmth-slider">Полный контроль тепла: <b id="warmth-value">22 °C</b></label>
+    <input id="warmth-slider" class="wide-range" type="range" min="16" max="30" step="1" value="22">
+    <label class="field-label" for="motor-text">Доучить движения текстом</label>
+    <textarea id="motor-text" class="learn-text" rows="3" placeholder="плавно поклониться = balance&#10;аккуратно достать чашку = reach"></textarea>
+    <button id="btn-motor-learn" class="small-btn wide">🦾 Обучить управлению телом</button>
+    <label class="field-label">Моторные программы</label>
+    <div id="mesh-programs" class="memory"></div>
+  </section>
+
+  <section class="tab-body hidden" id="tab-net">
+    <div class="counter" id="net-counter"></div>
+    <div class="net-warning">
+      <b>Честно про интернет</b>
+      <p>Игра офлайн по умолчанию и <b>сама ничего не загружает</b>. Запрос к сайту случится только когда ты включишь тумблер, укажешь адрес и нажмёшь «Загрузить». Нет своего сервера, ключей API, телеметрии и платных сервисов: 0 ₽. Скачанный текст разбирается локально — ИИ, движения и бытовые навыки дообучаются в браузере. Успех зависит от CORS публичного сайта.</p>
+    </div>
+    <label class="switch"><input type="checkbox" id="net-optin"><span>Разрешить интернет-обучение (по моему нажатию)</span></label>
+    <label class="field-label" for="net-url">Адрес публичного сайта с текстом</label>
+    <input id="net-url" class="select" type="url" list="net-sources" placeholder="Вставь адрес или выбери пример">
+    <datalist id="net-sources">
+      <option value="https://ru.wikipedia.org/w/api.php?action=query&amp;prop=extracts&amp;explaintext=1&amp;format=json&amp;origin=*&amp;titles=Гигиена"></option>
+      <option value="https://ru.wikipedia.org/w/api.php?action=query&amp;prop=extracts&amp;explaintext=1&amp;format=json&amp;origin=*&amp;titles=Сон"></option>
+      <option value="https://raw.githubusercontent.com/m98978672-boop/games/main/nika-life/README.md"></option>
+    </datalist>
+    <button id="btn-net-load" class="small-btn wide">⬇ Загрузить и обучить</button>
+    <div id="net-status" class="net-status">Запросов ещё не было.</div>
+    <label class="field-label" for="net-text">Или вставь текст сам (без сети)</label>
+    <textarea id="net-text" class="learn-text" rows="4" placeholder="купаться = набрать воду, зайти в ванну, намылиться, выйти&#10;сходить в туалет = закрыть дверцу, вымыть руки"></textarea>
+    <button id="btn-net-pasted" class="small-btn wide">🧠 Обучить на вставленном тексте</button>
+    <label class="field-label">Бытовые навыки и их источник</label>
+    <div id="net-skills" class="memory"></div>
+  </section>
 </aside>
 
 <div class="bottom-bar">
   <div id="hint" class="chip hint">Напиши команду Нике — она оденется, пойдёт, поработает, поспит или покажет любую анимацию</div>
-  <div id="news" class="chip news">223 анимации · 20 частей тела · 10+ на каждую · квартира-студия</div>
+  <div class="camera-bar" id="camera-bar">
+    <button id="btn-zone-prev" class="cam-btn" title="Предыдущая зона">‹</button>
+    <button id="btn-camera-center" class="cam-btn" title="К Нике (0)">◎</button>
+    <button id="btn-zone-next" class="cam-btn" title="Следующая зона">›</button>
+    <button id="btn-zoom-out" class="cam-btn" title="Уменьшить (−)">−</button>
+    <button id="btn-zoom-in" class="cam-btn" title="Увеличить (+)">+</button>
+    <button id="btn-follow" class="cam-btn on" title="Камера следует за Никой">◆</button>
+  </div>
+  <div id="news" class="chip news">483 анимации · 33 части тела · 400 ассетов · 13 зон</div>
 </div>
 
 <div id="pause-flag" class="pause-flag">ПАУЗА · ПРОБЕЛ</div>
@@ -139,8 +235,12 @@
 
 <!-- Обычные скрипты без сборки: работают с file:// и с GitHub Pages -->
 <script src="src/data.js"></script>
+<script src="src/assets.js"></script>
 <script src="src/animations.js"></script>
+<script src="src/mesh.js"></script>
+<script src="src/skills.js"></script>
 <script src="src/ai.js"></script>
+<script src="src/net.js"></script>
 <script src="src/world.js"></script>
 <script src="src/rig.js"></script>
 <script src="src/ui.js"></script>
