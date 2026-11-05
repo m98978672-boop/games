@@ -163,6 +163,28 @@ for (const unit of CARS) {
     const isDash = hit && hit.object.material?.transparent !== true && hit.distance < 1.6;
     ok(isDash, `${unit.id}: от водителя виден щиток приборов (${hit ? hit.object.geometry.type + ' @ ' + hit.distance.toFixed(2) + ' м' : 'пусто'})`);
   }
+
+  // 6. Вид «Салон»: камера должна стоять в салоне — между торпедо и кормой,
+  //    ниже крыши — и видеть панель. Раньше она оказывалась то внутри
+  //    спинки заднего дивана (у универсала кадр был чёрным), то внутри
+  //    самой торпедо (кадр перекрывало серое поле).
+  const salonView = built.views.find((v) => v.id === 'salon');
+  if (salonView) {
+    const [cx, cy, cz] = salonView.pos;
+    ok(cz < S.rearBaseZ - 0.15, `${unit.id}: камера «Салон» не за задним диваном (z ${cz.toFixed(2)} < ${(S.rearBaseZ - 0.15).toFixed(2)})`);
+    ok(cz > S.front + 0.6 && cy > S.ground + 0.4 && cy < S.H - 0.12,
+      `${unit.id}: камера «Салон» внутри салона (y ${cy.toFixed(2)} при H ${S.H.toFixed(2)})`);
+    const camS = new THREE.PerspectiveCamera(salonView.fov || 60, 1.6, 0.02, 60);
+    camS.position.set(...salonView.pos);
+    camS.lookAt(new THREE.Vector3(...salonView.target));
+    camS.updateMatrixWorld(true);
+    camS.updateProjectionMatrix();
+    const rcS = new THREE.Raycaster();
+    rcS.setFromCamera(new THREE.Vector2(0, -0.2), camS);
+    const hitS = rcS.intersectObject(root, true).find((h) => h.object.isMesh && h.object.visible !== false && h.object.material?.transparent !== true);
+    ok(hitS && hitS.distance < 2.2,
+      `${unit.id}: из «Салона» видна приборная панель (${hitS ? hitS.object.geometry.type + ' @ ' + hitS.distance.toFixed(2) + ' м' : 'пусто'})`);
+  }
 }
 
 const avg = (arr, k) => Math.round(arr.reduce((s, x) => s + x[k], 0) / arr.length);

@@ -146,7 +146,7 @@ truck-showroom/
 npm ci                 # three + esbuild + pngjs + jsdom
 npm run build          # пересобрать showroom.bundle.js
 npm run serve          # локальный сервер (не обязателен: работает и с file://)
-npm test               # smoke + интерфейсный тест (82 проверки)
+npm test               # smoke + интерфейсный тест (83 проверки)
 node tests/smoke.mjs   # 40 моделей, 10/20/10, салоны, геометрия
 node tests/ui.mjs      # каталог, виды, поиск, избранное, покраска — без браузера
 node tools/render.mjs --cat trucks --id atlas-vision --view driver --out preview.png
