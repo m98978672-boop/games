@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>НИКА: ЖИВАЯ — девушка с локальным ИИ и 132 анимациями</title>
+<meta name="description" content="Браузерный симулятор жизни: девушка Ника с автономным бесплатным ИИ, 10+ анимациями на каждую часть тела, гардеробом, работой, сном и командами на русском. Без интернета и ключей API.">
+<meta name="theme-color" content="#0b0d0c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="НИКА: ЖИВАЯ">
+<meta property="og:description" content="Девушка, которой управляет локальный ИИ: одевается, двигается, работает, спит, помогает. 132 анимации, 12 частей тела.">
+<meta property="og:image" content="cover.svg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23101618'/%3E%3Ccircle cx='16' cy='13' r='7' fill='%23f3c9a8'/%3E%3Cpath d='M9 13c0-7 14-7 14 0v7H9z' fill='%233d2b34'/%3E%3Cpath d='M7 31c1-8 5-11 9-11s8 3 9 11' fill='%23d9575f'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-mobile-panel="chat">
+
+<canvas id="stage" aria-label="Комната, в которой живёт Ника"></canvas>
+
+<header class="topbar">
+  <a class="brand" href="../index.html" title="Все игры Games">
+    <span class="logo">Н</span>
+    <span class="brand-text"><b>НИКА</b><i>живая · локальный ИИ</i></span>
+  </a>
+
+  <div class="top-stats">
+    <div class="stat accent"><span>день / время</span><b id="hud-clock">01 · 08:00</b></div>
+    <div class="stat"><span>энергия</span><b id="hud-energy">78%</b></div>
+    <div class="stat"><span>настроение</span><b id="hud-mood">72%</b></div>
+    <div class="stat"><span>деньги</span><b id="hud-money">120 ₽</b></div>
+    <div class="stat"><span>ИИ</span><b id="hud-ai">онлайн</b></div>
+  </div>
+
+  <div class="top-actions">
+    <div class="speed-group" id="speed-group" title="Скорость времени">
+      <button data-speed="1" class="on">1×</button><button data-speed="2">2×</button><button data-speed="4">4×</button>
+    </div>
+    <button class="icon-btn mobile-only" id="btn-mobile-chat" title="Команды">💬</button>
+    <button class="icon-btn mobile-only" id="btn-mobile-tools" title="Панели">⚙</button>
+    <button id="btn-pause" class="icon-btn" title="Пауза (Пробел)">⏸</button>
+    <button id="btn-sound" class="icon-btn" title="Звук (M)">🔊</button>
+    <button id="btn-save" class="icon-btn" title="Сохранить (S)">💾</button>
+    <button id="btn-help" class="icon-btn" title="Как играть (H)">?</button>
+  </div>
+</header>
+
+<div id="save-indicator">● автосохранение</div>
+
+<!-- ПРАВАЯ ПАНЕЛЬ: чат с ИИ -->
+<aside class="panel side chat-panel" id="chat-panel" aria-label="Команды девушке">
+  <h3>💬 Команды · <span class="accent-ink-text">ИИ в браузере</span></h3>
+  <div id="chat-log" class="chat-log" role="log" aria-live="polite"></div>
+  <form id="chat-form" class="chat-form" autocomplete="off">
+    <input id="chat-input" type="text" maxlength="240" placeholder="Напиши команду: надень платье и помаши рукой…">
+    <button type="submit" class="send-btn" aria-label="Отправить">➤</button>
+  </form>
+  <div class="quick" id="quick-commands"></div>
+  <label class="switch"><input type="checkbox" id="autonomy-toggle" checked><span>Жить самой (автономия ИИ)</span></label>
+  <div class="ai-mini" id="ai-mini"></div>
+</aside>
+
+<!-- ЛЕВАЯ ПАНЕЛЬ: анимации / гардероб / тело / жизнь -->
+<aside class="panel tools tools-panel" id="tools-panel" aria-label="Управление девушкой">
+  <div class="tabs" id="tabs">
+    <button data-tab="animations" class="on">🎞 Анимации</button>
+    <button data-tab="wardrobe">👗 Гардероб</button>
+    <button data-tab="body">🦾 Тело</button>
+    <button data-tab="life">🌙 Жизнь</button>
+  </div>
+
+  <section class="tab-body" id="tab-animations">
+    <div class="counter" id="anim-counter"></div>
+    <label class="field-label" for="part-select">Часть тела</label>
+    <select id="part-select" class="select"></select>
+    <div class="row-actions">
+      <button id="btn-demo" class="small-btn">▶ Демо всех</button>
+      <button id="btn-stop-demo" class="small-btn">⏹ Стоп</button>
+    </div>
+    <div id="clip-list" class="clip-list"></div>
+    <p class="fine" id="anim-note"></p>
+  </section>
+
+  <section class="tab-body hidden" id="tab-wardrobe">
+    <div class="counter" id="wardrobe-summary"></div>
+    <div id="slots" class="slots"></div>
+    <label class="field-label">Цвет наряда</label>
+    <div id="colors" class="colors"></div>
+    <label class="field-label">Шкаф (нажми, чтобы надеть)</label>
+    <div id="items" class="items"></div>
+    <button id="btn-random-outfit" class="small-btn wide">🎲 Сама выбери наряд</button>
+  </section>
+
+  <section class="tab-body hidden" id="tab-body-tab">
+    <div class="counter">Прямое управление суставами</div>
+    <p class="fine">Ползунки перекрывают ИИ-анимацию выбранного канала. Нажми «Сброс», чтобы вернуть управление Нике.</p>
+    <div id="sliders" class="sliders"></div>
+    <button id="btn-reset-pose" class="small-btn wide">↺ Сбросить тело</button>
+  </section>
+
+  <section class="tab-body hidden" id="tab-life">
+    <div class="counter" id="life-action"></div>
+    <div id="needs" class="needs"></div>
+    <label class="field-label">Модель ИИ</label>
+    <div id="ai-info" class="ai-info"></div>
+    <label class="field-label">Память (последние решения)</label>
+    <div id="memory" class="memory"></div>
+  </section>
+</aside>
+
+<div class="bottom-bar">
+  <div id="hint" class="chip hint">Напиши команду Нике — она оденется, пойдёт, поработает, поспит или покажет любую анимацию</div>
+  <div id="news" class="chip news">132 анимации · 12 частей тела · 10+ на каждую</div>
+</div>
+
+<div id="pause-flag" class="pause-flag">ПАУЗА · ПРОБЕЛ</div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="modal-root" class="modal-root"></div>
+
+<noscript><p style="color:#f2ecdf;padding:24px">Для игры нужен JavaScript.</p></noscript>
+
+<!-- Обычные скрипты без сборки: работают с file:// и с GitHub Pages -->
+<script src="src/data.js"></script>
+<script src="src/animations.js"></script>
+<script src="src/ai.js"></script>
+<script src="src/world.js"></script>
+<script src="src/rig.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>

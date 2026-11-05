@@ -20,6 +20,8 @@ jobs:
           node-version: 22
       - name: Validate community catalog and local files
         run: node site/tests/community-catalog.mjs
+      - name: Test NIKA animations, local AI and simulation
+        run: node nika-life/tests/smoke.mjs
       - name: Test game template structure
         run: node game-base/tests/smoke.mjs
       - name: Test game template logic
