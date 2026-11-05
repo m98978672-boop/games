@@ -18,7 +18,8 @@ export function carShape(unit) {
   const style = unit.style || 'sedan';
   const sport = style === 'coupe' || style === 'sport';
   const van = style === 'van';
-  const suv = style === 'suv' || style === 'pickup' || style === 'crossover';
+  const pickup = style === 'pickup';
+  const suv = style === 'suv' || pickup || style === 'crossover';
   const micro = style === 'micro';
   const wagon = style === 'wagon';
   const front = -L / 2;
@@ -31,9 +32,12 @@ export function carShape(unit) {
   const hoodZ = front + L * (van ? 0.2 : suv ? 0.24 : 0.27);
   const wsBase = front + L * (van ? 0.3 : suv ? 0.34 : sport ? 0.3 : 0.31);
   const wsTopZ = wsBase + (H - hoodY) * (van ? 0.7 : suv ? 0.85 : 1.05);
-  const roofRearZ = rear - L * (wagon ? 0.05 : van ? 0.03 : suv ? 0.13 : sport ? 0.4 : 0.31);
+  const roofRearZ = rear - L * (wagon ? 0.05 : van ? 0.03 : pickup ? 0.36 : suv ? 0.13 : sport ? 0.4 : 0.31);
   const rearBaseZ = roofRearZ + (H - deckY) * (van ? 0.35 : suv ? 0.5 : sport ? 1.6 : 0.95);
-  return { L, W, H, style, sport, wagon, van, suv, micro, front, rear, ground, belt, hoodY, deckY, noseY, hoodZ, wsBase, wsTopZ, roofRearZ, rearBaseZ };
+  // у пикапа за кабиной — открытый грузовой кузов с бортами
+  const bedFrom = pickup ? roofRearZ + 0.16 : null;
+  const bedY = pickup ? deckY - 0.06 : null;
+  return { L, W, H, style, sport, wagon, van, pickup, suv, micro, front, rear, ground, belt, hoodY, deckY, noseY, hoodZ, wsBase, wsTopZ, roofRearZ, rearBaseZ, bedFrom, bedY };
 }
 
 /** Опорные точки верха кузова: [z, y] от носа к корме. */
@@ -71,6 +75,37 @@ function topAt(nodes, z, fallback) {
   return fallback;
 }
 
+// ------------------------------------------------------------ грузовой кузов пикапа
+function buildPickupBed(S, { root, paint, paintDark, black, belt, halfW, M }) {
+  const { roofRearZ, rear, bedY, L, W } = S;
+  const z0 = roofRearZ + 0.12;      // стенка кабины
+  const z1 = rear - 0.06;
+  const bedLen = z1 - z0;
+  const bedZ = (z0 + z1) / 2;
+  const wallH = 0.42;
+  const wallY = bedY + wallH / 2;
+  // пол кузова
+  box(root, W - 0.16, 0.06, bedLen, M.plasticGray, 0, bedY - 0.01, bedZ);
+  // борта: два боковых и задний
+  for (const side of [-1, 1]) {
+    rbox(root, 0.09, wallH, bedLen, paint, side * (halfW - 0.06), wallY, bedZ, 0.02);
+    // кант борта
+    box(root, 0.11, 0.035, bedLen, paintDark, side * (halfW - 0.06), bedY + wallH - 0.02, bedZ);
+  }
+  rbox(root, W - 0.1, wallH, 0.09, paint, 0, wallY, z1, 0.02);
+  box(root, W - 0.08, 0.035, 0.11, paintDark, 0, bedY + wallH - 0.02, z1);
+  // задняя стенка кабины (кабина уже закончилась, но нужна визуальная опора)
+  rbox(root, W - 0.12, wallH + 0.08, 0.08, paint, 0, bedY + wallH / 2 + 0.02, z0 - 0.02, 0.02);
+  // рёбра жёсткости на полу
+  for (let i = 0; i < 6; i++) {
+    box(root, W - 0.22, 0.012, 0.035, M.steel, 0, bedY + 0.025, z0 + 0.18 + i * (bedLen - 0.3) / 5);
+  }
+  // фонари на заднем борту
+  for (const side of [-1, 1]) {
+    rbox(root, 0.26, 0.1, 0.04, M.taillight, side * (halfW - 0.28), bedY - 0.02, z1 + 0.04, 0.02);
+  }
+}
+
 // ------------------------------------------------------------ сборка
 export function buildCar(unit, M, opts = {}) {
   const simple = opts.simple === true;
@@ -103,7 +138,10 @@ export function buildCar(unit, M, opts = {}) {
   // ---------- проёмы окон
   const winBottom = belt;
   const aPillar = S.wsBase + Math.max(0.16, L * 0.035);
-  const cPillar = S.rearBaseZ - Math.max(0.14, L * 0.03);
+  // у пикапа окна заканчиваются задней стенкой кабины, а не базой кормы
+  const cPillar = S.pickup
+    ? S.roofRearZ - 0.04
+    : S.rearBaseZ - Math.max(0.14, L * 0.03);
   const bPillarZ = lerp(aPillar, cPillar, S.van ? 0.34 : 0.47);
   const pillarW = S.van || S.micro ? 0.22 : 0.09;
   const pick = (z) => Math.max(winBottom + 0.07, topAt(nodes, z, H) - 0.075);
@@ -114,9 +152,13 @@ export function buildCar(unit, M, opts = {}) {
 
   // ---------- силуэт и боковины
   const shape = new THREE.Shape();
+  // профиль борта: у пикапа он заканчивается за кабиной и идёт по низу кузова
+  const sideNodes = S.pickup
+    ? [...nodes.filter(([z]) => z <= S.roofRearZ + 0.001), [S.roofRearZ + 0.1, S.bedY + 0.02], [rear - 0.06, S.bedY + 0.02]]
+    : nodes;
   const outline = [
     [front, ground],
-    ...nodes,
+    ...sideNodes,
     [rear, ground],
   ];
   shape.moveTo(outline[0][0], outline[0][1]);
@@ -185,8 +227,29 @@ export function buildCar(unit, M, opts = {}) {
       mat.side = THREE.DoubleSide;
       root.add(new THREE.Mesh(g2, mat));
     }
-    // цельная верхняя поверхность (капот → крыша → багажник)
-    loft(nodes, paint);
+    // Верхнюю поверхность рвём на капот, крышу и корму: на месте лобового
+    // и заднего стекла остаётся проём, который закрывает прозрачная накладка.
+    // Иначе из салона вместо улицы видна «стена» из краски.
+    const zEq = (a, b) => Math.abs(a - b) < 1e-4;
+    const idxOf = (z) => nodes.findIndex(([nz]) => zEq(nz, z));
+    const iWsBase = idxOf(S.wsBase);
+    const iWsTop = idxOf(S.wsTopZ);
+    const iRoofRear = idxOf(S.roofRearZ);
+    const iRearBase = idxOf(S.rearBaseZ);
+    const capot = nodes.slice(0, iWsBase + 1);
+    const roofNodes = nodes.slice(iWsTop, iRoofRear + 1);
+    const korma = nodes.slice(iRearBase);
+    if (S.pickup) {
+      // у пикапа верх заканчивается задней стенкой кабины, дальше — грузовой кузов.
+      // внутрь бортов добавляем стенку кабины, чтобы не было просвета над кузовом
+      loft([...roofNodes, [S.roofRearZ + 0.16, S.bedY + 0.02]], paint);
+      loft(capot, paint);
+      buildPickupBed(S, { root, paint, paintDark, black, belt, halfW, M });
+    } else {
+      loft(capot, paint);
+      loft(roofNodes, paint);
+      loft(korma, paint);
+    }
 
     // ---------- стёкла: лобовое и заднее (накладки по поверхности)
     const tintedGlass = new THREE.MeshPhysicalMaterial({
@@ -216,8 +279,9 @@ export function buildCar(unit, M, opts = {}) {
     };
     // лобовое стекло (чуть выше кромки капота)
     glassQuad(S.wsBase - 0.06, S.hoodY + 0.02, S.wsTopZ - 0.03, H - 0.04, 0.9, 0.09);
-    // заднее стекло
-    glassQuad(S.roofRearZ + 0.04, H - 0.05, S.rearBaseZ + 0.02, S.deckY + 0.02, 0.88, 0.09);
+    // заднее стекло (у пикапа — почти вертикальная стенка кабины)
+    if (S.pickup) glassQuad(S.roofRearZ + 0.02, H - 0.05, S.roofRearZ + 0.12, S.deckY + 0.06, 0.86, 0.09);
+    else glassQuad(S.roofRearZ + 0.04, H - 0.05, S.rearBaseZ + 0.02, S.deckY + 0.02, 0.88, 0.09);
     // чёрные канты стёкол
     for (const [z0, y0, z1, y1, hw] of [
       [S.wsBase - 0.06, S.hoodY + 0.02, S.wsTopZ - 0.03, H - 0.04, 0.9],
@@ -375,15 +439,15 @@ export function buildCar(unit, M, opts = {}) {
   const eyeY = belt + 0.3;
   // у высоких кузовов (SUV, фургон, пикап) глаза водителя выше и чуть дальше от лобового
   const dashTopAbs = floorY + 0.42;
-  const eyeAbs = S.sport ? Math.min(H - 0.12, dashTopAbs + 0.24) : H - (S.micro ? 0.24 : 0.28);
+  const eyeAbs = S.sport ? Math.min(H - 0.12, dashTopAbs + 0.24) : H - (S.micro ? 0.24 : 0.3);
   const tall = eyeAbs - (belt + 0.3);
   // в спорткаре крыша низкая: садимся ближе к стеклу и смотрим вперёд, а не в панель
-  const eyeZr = S.sport ? S.wsTopZ + 0.34 : S.wsTopZ + (S.van ? 0.62 : S.suv ? 0.58 : 0.46);
+  const eyeZr = S.sport ? S.wsTopZ + 0.34 : S.wsTopZ + (S.van ? 0.66 : S.suv ? 0.62 : 0.5);
   const views = [
     {
       id: 'driver', label: 'Место водителя', group: 'interior',
       pos: [-cabW * 0.22, belt + eyeY * 0 + 0.3 + tall, eyeZr],
-      target: [-0.06, eyeAbs - (S.sport ? 0.06 : 0.3), S.wsBase - 7],
+      target: [-0.06, eyeAbs - (S.sport ? 0.06 : S.suv ? 0.52 : 0.4), S.wsBase - 7],
       fov: S.sport ? 62 : 68, orbit: false, seat: true,
     },
     {
@@ -438,6 +502,10 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   rbox(g, cabW - 0.08, 0.025, S.roofRearZ - S.wsTopZ + 0.1, M.interiorMid, 0, H - 0.13, (S.wsTopZ + S.roofRearZ) / 2, 0.02);
   rbox(g, 0.23, 0.2, zRear - zFront - 0.2, mid, 0, floorY + 0.11, zMid - 0.1, 0.04);
   if (unit.seats > 2) rbox(g, cabW - 0.1, Math.max(0.2, belt - floorY - 0.14), 0.05, dark, 0, floorY + 0.32, zRear + 0.12, 0.02);
+
+  // моторный щит: закрывает просвет между панелью и лобовым,
+  // иначе из салона видны колёса и арки
+  rbox(g, cabW + 0.06, Math.max(0.3, belt - floorY + 0.16), 0.05, dark, 0, (floorY + belt) / 2 - 0.02, zFront - 0.04, 0.02);
 
   // торпедо
   const dashTop = floorY + 0.42;
