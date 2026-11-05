@@ -6,21 +6,26 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { canvasTexture, HAS_DOM } from './lib/kit.js';
+import { deviceProfile, rendererCaps } from './lib/device.js';
 
 export function createStage(canvas) {
+  // Настройки под устройство: на телефоне не тянем 3x-разрешение и мягкие
+  // тени, на десктопе наоборот включаем всё.
+  const profile = deviceProfile();
+  const caps = rendererCaps(profile);
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
-    powerPreference: 'high-performance',
+    antialias: caps.antialias,
+    powerPreference: caps.powerPreference,
     alpha: false,
     preserveDrawingBuffer: false,
   });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.8));
+  renderer.setPixelRatio(caps.pixelRatio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.02;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.enabled = caps.shadows || !profile.mobile;
+  renderer.shadowMap.type = profile.mobile ? THREE.PCFShadowMap : THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#0b0d0c');
@@ -252,9 +257,24 @@ export function createStage(canvas) {
     const parent = canvas.parentElement;
     const w = Math.max(320, parent?.clientWidth || canvas.clientWidth || 900);
     const h = Math.max(240, parent?.clientHeight || canvas.clientHeight || 560);
+    // после поворота телефона devicePixelRatio и площадь меняются — пересчитываем
+    const next = rendererCaps(deviceProfile(), lastFps);
+    renderer.setPixelRatio(next.pixelRatio);
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
+    // на вертикальном экране увеличиваем угол обзора, иначе модель «тесная»
+    camera.fov = h > w ? Math.max(38, ratioFov(w / h)) : 38;
     camera.updateProjectionMatrix();
+  }
+  let lastFps = 60;
+  const ratioFov = (aspect) => Math.min(60, 38 + (1 - Math.min(1, aspect)) * 26);
+  /** Приложение сообщает фактический FPS: при просадке режем разрешение. */
+  function adaptQuality(fps) {
+    lastFps = fps;
+    if (fps < 32 && renderer.getPixelRatio() > 1) {
+      renderer.setPixelRatio(Math.max(1, renderer.getPixelRatio() - 0.2));
+      renderer.setSize(canvas.clientWidth, canvas.clientHeight, false);
+    }
   }
   if (typeof ResizeObserver !== 'undefined' && canvas.parentElement) {
     const ro = new ResizeObserver(() => resize());
@@ -263,7 +283,11 @@ export function createStage(canvas) {
   window.addEventListener('resize', resize);
   resize();
 
-  return { renderer, scene, camera, stage, lights: { hemi, key, fill, rim, rim2, spots }, setPreset, resize, get preset() { return presetName; } };
+  return {
+    renderer, scene, camera, stage, profile, adaptQuality,
+    lights: { hemi, key, fill, rim, rim2, spots }, setPreset, resize,
+    get preset() { return presetName; },
+  };
 }
 
 /** Рисует «студийную» панораму 2:1: тёмный зал, полосы софтбоксов, градиент. */
@@ -348,7 +372,9 @@ export function createFallbackStage() {
   return {
     renderer, scene, camera, lights: {},
     fallback: true,
+    profile: { mobile: false, phone: false, touch: false },
     setPreset() {},
     resize() {},
+    adaptQuality() {},
   };
 }

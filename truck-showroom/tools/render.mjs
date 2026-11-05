@@ -34,7 +34,16 @@ const built = buildUnit(unit, M);
 const root = built.root;
 root.updateMatrixWorld(true);
 
-const view = built.views.find((v) => v.id === viewId) || built.views[0];
+// --pos x,y,z --target x,y,z — произвольный ракурс для прицельного осмотра
+const customView = args.pos && args.target
+  ? {
+      id: 'custom',
+      fov: Number(args.fov || 32),
+      pos: args.pos.split(',').map(Number),
+      target: args.target.split(',').map(Number),
+    }
+  : null;
+const view = customView || built.views.find((v) => v.id === viewId) || built.views[0];
 const camera = new THREE.PerspectiveCamera(view.fov || 40, W / H, 0.05, 400);
 camera.position.set(...view.pos);
 camera.lookAt(new THREE.Vector3(...view.target));

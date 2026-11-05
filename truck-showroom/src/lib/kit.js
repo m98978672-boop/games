@@ -449,13 +449,13 @@ export function wheel(M, opts = {}) {
       hole.position.set(Math.cos(a) * rimR * 0.68, faceY, Math.sin(a) * rimR * 0.68);
       inner.add(hole);
     }
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.2, radius * 0.23, 0.09, 18), stdMetal(rimColor));
-    hub.position.y = faceY + 0.02;
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.2, radius * 0.23, 0.05, 18), stdMetal(rimColor));
+    hub.position.y = faceY - 0.006;
     inner.add(hub);
     for (let i = 0; i < 6; i++) {
       const a = (i / 6) * TAU;
-      const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.05, 6), M.chromeDark);
-      nut.position.set(Math.cos(a) * radius * 0.13, faceY + 0.05, Math.sin(a) * radius * 0.13);
+      const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.024, 6), M.chromeDark);
+      nut.position.set(Math.cos(a) * radius * 0.13, faceY + 0.018, Math.sin(a) * radius * 0.13);
       inner.add(nut);
     }
   } else {
@@ -468,18 +468,20 @@ export function wheel(M, opts = {}) {
       sp.rotation.y = -a;
       inner.add(sp);
     }
-    const hub = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.17, radius * 0.19, 0.06, 20), stdMetal(rimColor));
-    hub.position.y = faceY;
+    // ступица и колпачок утоплены в диск: раньше торчали за покрышку
+    // и на виде сбоку из арки выглядывал «пятак»
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.17, radius * 0.19, 0.032, 20), stdMetal(rimColor));
+    hub.position.y = faceY - 0.004;
     inner.add(hub);
     for (let i = 0; i < 5; i++) {
       const a = (i / 5) * TAU;
-      const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.04, 6), M.chromeDark);
-      nut.position.set(Math.cos(a) * radius * 0.11, faceY + 0.04, Math.sin(a) * radius * 0.11);
+      const nut = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.018, 6), M.chromeDark);
+      nut.position.set(Math.cos(a) * radius * 0.11, faceY + 0.012, Math.sin(a) * radius * 0.11);
       inner.add(nut);
     }
-    // центральный колпачок
-    const cap = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.085, radius * 0.085, 0.035, 16), stdMetal(0x1a1e22));
-    cap.position.y = faceY + 0.05;
+    // центральный колпачок — заподлицо с плоскостью диска
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(radius * 0.085, radius * 0.085, 0.022, 16), stdMetal(0x1a1e22));
+    cap.position.y = faceY + 0.008;
     inner.add(cap);
   }
 
