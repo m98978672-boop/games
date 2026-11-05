@@ -85,7 +85,7 @@ function cacheKey(unit) {
 function viewsOf(unit) {
   if (Array.isArray(unit.views) && unit.views.length) return unit.views;
   const key = cacheKey(unit);
-  if (!builtCache.has(key)) builtCache.set(key, buildUnit(unit, M));
+  if (!builtCache.has(key)) rememberBuilt(unit, buildUnit(unit, M));
   const built = builtCache.get(key);
   unit.views = built.views;
   unit.anchors = built.anchors;
@@ -96,6 +96,20 @@ function takeBuilt(unit) {
   const built = builtCache.get(key);
   if (built) builtCache.delete(key);
   return built;
+}
+// кэш держим маленьким: одна модель — это десятки тысяч треугольников
+const CACHE_LIMIT = 6;
+function rememberBuilt(unit, built) {
+  const key = cacheKey(unit);
+  if (builtCache.has(key)) builtCache.delete(key);
+  builtCache.set(key, built);
+  while (builtCache.size > CACHE_LIMIT) {
+    const [oldKey, oldBuilt] = builtCache.entries().next().value;
+    builtCache.delete(oldKey);
+    oldBuilt.root.traverse((o) => {
+      o.geometry?.dispose?.();
+    });
+  }
 }
 let pending = null;
 let busy = false;
@@ -434,7 +448,8 @@ function toggleCompare() {
 function buildCompare(unit, other) {
   removedCompare();
   const g = new THREE.Group();
-  const built = buildUnit({ ...other, category: unit.category }, M);
+  const compareUnit = { ...other, category: unit.category };
+  const built = takeBuilt(compareUnit) || buildUnit(compareUnit, M);
   const colorHex = colors[other.id] || other.paint;
   for (const m of built.paintMats) if (m?.color) m.color.set(colorHex);
   const offset = (unit.category === 'cars' ? 3.6 : 4.6) * (built.kind === 'car' ? 1 : 1.15);
