@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d0c">
+  <meta name="description" content="ГАРАЖ 3D — интерактивный 3D-шоурум техники: 10 тягачей, 20 типов полуприцепов и 10 автомобилей. Осмотр снаружи и изнутри, живой салон, покраска и студийные виды. Работает офлайн.">
+  <title>ГАРАЖ 3D — шоурум тягачей, прицепов и автомобилей</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="../index.html" aria-label="На главную страницу игр">← <span>GAMES</span></a>
+    <div class="title">
+      <span class="eyebrow">3D-ШОУРУМ ТЕХНИКИ · ОСМОТР СНАРУЖИ И ИЗНУТРИ</span>
+      <h1>ГАРАЖ 3D</h1>
+    </div>
+    <div class="top-stats">
+      <span class="stat"><b>10</b> тягачей</span>
+      <span class="stat"><b>20</b> прицепов</span>
+      <span class="stat"><b>10</b> авто</span>
+      <span class="stat"><b>40</b> моделей</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" id="random-btn" title="Случайная модель (R)">🎲</button>
+      <button class="icon-btn" id="shot-btn" title="Скачать скриншот (C)">📷</button>
+      <button class="icon-btn" id="full-btn" title="Полный экран (F)">⛶</button>
+      <button class="icon-btn" id="help-btn" title="Управление (H)" aria-label="Управление">?</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- каталог -->
+    <aside class="panel catalog" id="catalog">
+      <div class="catalog-head">
+        <div class="section-head">
+          <div><span class="eyebrow">КАТАЛОГ ЭКСПОНАТОВ</span><h2>Техника</h2></div>
+          <span class="status-pill" id="catalog-count">10</span>
+        </div>
+        <div class="cat-tabs" role="tablist" aria-label="Категории техники">
+          <button class="cat-tab active" data-cat="trucks" role="tab" aria-selected="true"><span>🚛</span><b>ТЯГАЧИ</b><i>10</i></button>
+          <button class="cat-tab" data-cat="trailers" role="tab" aria-selected="false"><span>📦</span><b>ПРИЦЕПЫ</b><i>20</i></button>
+          <button class="cat-tab" data-cat="cars" role="tab" aria-selected="false"><span>🚗</span><b>АВТО</b><i>10</i></button>
+        </div>
+        <label class="search">
+          <span>🔍</span>
+          <input id="search" type="search" placeholder="Поиск: цистерна, кабина, 4×4…" autocomplete="off">
+        </label>
+      </div>
+      <div class="catalog-hint" id="cat-hint">10 моделей · седельные тягачи</div>
+      <div class="unit-list" id="unit-list" role="listbox" aria-label="Модели"></div>
+      <div class="catalog-foot">
+        <button class="ghost-btn" id="fav-filter" title="Показать только избранное">★ Избранное</button>
+        <button class="ghost-btn" id="compare-btn" title="Поставить рядом соседнюю модель">⇄ Сравнить</button>
+      </div>
+    </aside>
+
+    <!-- сцена -->
+    <section class="viewport-column">
+      <div class="viewport panel" id="viewport">
+        <canvas id="gl" aria-label="Трёхмерная сцена с техникой"></canvas>
+
+        <div class="stage-top">
+          <div class="stage-title">
+            <span class="eyebrow" id="unit-kind">ТЯГАЧ</span>
+            <h2 id="unit-name">ATLAS Vision 4×2</h2>
+            <p id="unit-tagline">Магистральный трудяга с высокой кабиной</p>
+          </div>
+          <div class="stage-badges">
+            <span class="badge-soft" id="poly-badge">— полигонов</span>
+            <span class="badge-soft" id="mode-badge">СНАРУЖИ</span>
+          </div>
+        </div>
+
+        <div class="view-switch" id="view-switch" role="group" aria-label="Виды камеры"></div>
+
+        <div class="stage-actions">
+          <button class="round-btn active" id="orbit-btn" title="Автовращение (Пробел)">⟳</button>
+          <button class="round-btn" id="reset-btn" title="Сбросить камеру (0)">⌖</button>
+          <button class="round-btn" id="look-btn" title="Сесть в салон / взгляд вперёд">👁</button>
+          <button class="round-btn" id="compare-btn-2" title="Сравнить с соседней моделью">⇄</button>
+        </div>
+
+        <div class="stage-hint">
+          <span><kbd>ЛКМ</kbd> вращать</span>
+          <span><kbd>Колесо</kbd> приблизить</span>
+          <span><kbd>ПКМ</kbd> сдвинуть</span>
+          <span><kbd>1–5</kbd> виды</span>
+          <span><kbd>I</kbd> внутрь/наружу</span>
+          <span><kbd>← →</kbd> модель</span>
+        </div>
+
+        <div class="stage-live" id="stage-live" aria-live="polite"></div>
+        <div class="loader" id="loader">
+          <div class="loader-ring"></div>
+          <b>СОБИРАЕМ МОДЕЛЬ</b>
+          <span id="loader-note">геометрия, материалы, салон…</span>
+        </div>
+      </div>
+
+      <div class="dock panel">
+        <div class="dock-views" id="dock-views"></div>
+        <div class="dock-env" id="dock-env">
+          <span class="eyebrow">СВЕТ</span>
+          <button class="chip active" data-preset="studio">Студия</button>
+          <button class="chip" data-preset="dark">Ночь</button>
+          <button class="chip" data-preset="show">Выставка</button>
+          <button class="chip" data-preset="garage">Гараж</button>
+        </div>
+        <div class="dock-next">
+          <button class="nav-arrow" id="prev-btn" title="Предыдущая модель">‹</button>
+          <span id="counter">1 / 10</span>
+          <button class="nav-arrow" id="next-btn" title="Следующая модель">›</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- карточка -->
+    <aside class="panel details" id="details">
+      <div class="details-scroll">
+        <div class="section-head">
+          <div><span class="eyebrow" id="d-brand">ATLAS · 2026</span><h2 id="d-name">ATLAS Vision 4×2</h2></div>
+          <span class="status-pill" id="d-cat">ТЯГАЧ</span>
+        </div>
+        <p class="d-desc" id="d-desc">—</p>
+        <div class="tag-row" id="d-tags"></div>
+
+        <div class="d-actions">
+          <button class="btn btn-primary" id="d-inside">Сесть внутрь</button>
+          <button class="btn" id="d-outside">Выйти наружу</button>
+        </div>
+
+        <h3 class="d-h3">Характеристики</h3>
+        <div class="spec-grid" id="spec-grid"></div>
+
+        <h3 class="d-h3">Цвет кузова</h3>
+        <div class="paint-row" id="paint-row"></div>
+
+        <h3 class="d-h3">Осмотр по точкам <span class="mini" id="anchor-count">0</span></h3>
+        <div class="anchor-row" id="anchor-row"></div>
+
+        <div class="d-note">
+          <b>Все модели собраны кодом</b> из примитивов Three.js: кузов, стёкла, шасси, колёса и салон.
+          Ни одной внешней 3D-модели или картинки — шоурум работает офлайн.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="bottom-bar">
+    <a class="pill-link" href="../euro-haul/index.html">🚛 ЕВРОТРАК — рейсы по Европе</a>
+    <a class="pill-link" href="../truck-haul/index.html">🛣 ДАЛЬНОБОЙ — дороги России</a>
+    <a class="pill-link" href="../index.html">🎮 Все игры</a>
+    <span class="foot-note">Мышь, клавиатура и касания · без установки и интернета</span>
+  </footer>
+
+  <div class="modal-root hidden" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+    <div class="modal-card">
+      <div class="section-head">
+        <div><span class="eyebrow">КАК ПОЛЬЗОВАТЬСЯ ШОУРУМОМ</span><h2 id="help-title">Управление</h2></div>
+        <button class="icon-btn" id="help-close" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="help-grid">
+        <div><b>Мышь</b><span>ЛКМ — вращать вокруг машины, колесо — приблизить, ПКМ — сдвинуть сцену.</span></div>
+        <div><b>Салон</b><span>«Сесть внутрь» или <kbd>I</kbd>. Внутри зажмите ЛКМ и тяните — свободный взгляд.</span></div>
+        <div><b>Виды</b><span>Клавиши <kbd>1</kbd>–<kbd>5</kbd>: снаружи, борт, сзади, место водителя, салон.</span></div>
+        <div><b>Модели</b><span><kbd>←</kbd> <kbd>→</kbd> — предыдущий/следующий экспонат, <kbd>R</kbd> — случайный.</span></div>
+        <div><b>Камера</b><span><kbd>Пробел</kbd> — автовращение, <kbd>0</kbd> — сброс, <kbd>F</kbd> — полный экран.</span></div>
+        <div><b>Прочее</b><span><kbd>C</kbd> — скачать скриншот PNG, <kbd>H</kbd> — эта справка, <kbd>Esc</kbd> — закрыть.</span></div>
+      </div>
+      <p class="mini">Марки, модели и характеристики вымышлены — это самостоятельный шоурум, а не копия реальных брендов. Двойной клик по названию в карточке добавляет модель в избранное.</p>
+    </div>
+  </div>
+
+  <script defer src="showroom.bundle.js"></script>
+</body>
+</html>
