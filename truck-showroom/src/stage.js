@@ -324,3 +324,31 @@ function studioEnvTexture() {
     ctx.fillRect(0, h * 0.6, w, h * 0.4);
   }, { srgb: true });
 }
+
+// ------------------------------------------------------------ без WebGL
+// Минимальная «сцена-заглушка»: каталог, спецификации и виды остаются
+// рабочими, а вместо картинки показывается пояснение в интерфейсе.
+export function createFallbackStage() {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color('#0b0d0c');
+  const camera = new THREE.PerspectiveCamera(38, 1.5, 0.05, 400);
+  const domElement = HAS_DOM ? document.createElement('canvas') : null;
+  const renderer = {
+    domElement,
+    capabilities: { getMaxAnisotropy: () => 1 },
+    shadowMap: { enabled: false, type: 0 },
+    outputColorSpace: THREE.SRGBColorSpace,
+    toneMapping: THREE.ACESFilmicToneMapping,
+    toneMappingExposure: 1,
+    render() {},
+    setPixelRatio() {},
+    setSize() {},
+    dispose() {},
+  };
+  return {
+    renderer, scene, camera, lights: {},
+    fallback: true,
+    setPreset() {},
+    resize() {},
+  };
+}

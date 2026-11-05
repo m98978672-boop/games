@@ -367,22 +367,22 @@ export function buildTruck(unit, M) {
   const views = [
     {
       id: 'driver', label: 'Место водителя', group: 'interior',
-      pos: [seatX, floorY + 1.24, cabFront + 0.84],
-      target: [-0.16, floorY + 0.9, cabFront - 14],
+      pos: [seatX + 0.06, floorY + 1.3, cabFront + 1.02],
+      target: [-0.24, floorY + 0.68, cabFront - 9],
       fov: 72, orbit: false, seat: true,
     },
     {
       id: 'passenger', label: 'Место пассажира', group: 'interior',
-      pos: [0.58, floorY + 1.2, cabFront + 1.0],
-      target: [-0.35, floorY + 0.86, cabFront - 5],
+      pos: [0.6, floorY + 1.3, cabFront + 1.06],
+      target: [-0.45, floorY + 0.8, cabFront - 5],
       fov: 70, orbit: false, seat: true,
     },
   ];
   if (roofType === 'high' || roofType === 'mega' || roofType === 'sleeper') {
     views.push({
       id: 'bunk', label: 'Спальное место', group: 'interior',
-      pos: [0.32, floorY + 1.34, cabRear - 0.62],
-      target: [-0.3, floorY + 0.95, cabFront + 1.2],
+      pos: [0.3, floorY + 1.66, cabRear - 0.5],
+      target: [-0.34, floorY + 1.02, cabFront + 1.1],
       fov: 74, orbit: true, seat: true,
     });
   }
@@ -436,9 +436,10 @@ function buildTruckInterior(c) {
   const dash = rbox(g, W - 0.02, 0.46, 0.62, dark, 0, floorY + 0.55, dashZ, 0.08);
   dash.rotation.x = 0.08;
   rbox(g, W - 0.06, 0.14, 0.78, mid, 0, dashTop + 0.02, dashZ + 0.12, 0.06);
-  // козырёк приборов
-  const binnacle = rbox(g, 0.62, 0.3, 0.24, dark, -0.46, dashTop + 0.06, dashZ - 0.12, 0.05);
-  binnacle.rotation.x = -0.2;
+  // козырёк приборов: приподнят над панелью, циферблаты смотрят на водителя
+  const binZ = dashZ + 0.04;
+  const binnacle = rbox(g, 0.7, 0.28, 0.24, dark, -0.46, dashTop + 0.2, binZ, 0.05);
+  binnacle.rotation.x = -0.22;
   // центральная консоль
   rbox(g, 0.44, 0.5, 0.28, mid, 0.08, floorY + 0.62, dashZ + 0.34, 0.04);
   // экран мультимедиа
@@ -452,20 +453,20 @@ function buildTruckInterior(c) {
     const vent = rbox(g, 0.16, 0.09, 0.03, M.plastic, side * 0.78, dashTop + 0.06, dashZ - 0.02, 0.02);
     for (let i = -1; i <= 1; i++) box(g, 0.012, 0.07, 0.01, M.chromeDark, side * 0.78 + i * 0.045, dashTop + 0.06, dashZ - 0.04);
   }
-  // приборная панель: два циферблата + экран
-  for (const [x, r] of [[-0.6, 0.105], [-0.32, 0.105]]) {
-    const dial = cyl(g, r, r, 0.02, M.plastic, x, dashTop + 0.1, dashZ - 0.24, 24);
+  // приборная панель: два циферблата перед водителем
+  for (const [x, r] of [[-0.64, 0.1], [-0.34, 0.1]]) {
+    const dial = cyl(g, r, r, 0.02, M.plastic, x, dashTop + 0.2, binZ + 0.11, 24);
     dial.rotation.x = HALF;
-    const ring = torus(g, r, 0.008, M.chromeDark, x, dashTop + 0.1, dashZ - 0.25, 20);
+    const ring = torus(g, r, 0.008, M.chromeDark, x, dashTop + 0.2, binZ + 0.12, 20);
     ring.rotation.x = 0;
     // стрелка
-    const needle = box(g, 0.012, r * 1.1, 0.006, M.taillight, x, dashTop + 0.1 + r * 0.25, dashZ - 0.255);
+    const needle = box(g, 0.012, r * 1.1, 0.006, M.taillight, x, dashTop + 0.2 + r * 0.25, binZ + 0.13);
     needle.rotation.z = 0.6;
   }
   // руль
   const wheelG = group(g, 'steering');
-  wheelG.position.set(-0.48, dashTop + 0.12, dashZ - 0.34);
-  wheelG.rotation.x = -0.42;
+  wheelG.position.set(-0.48, dashTop + 0.19, dashZ + 0.26);
+  wheelG.rotation.x = -0.36;
   const rim = torus(wheelG, 0.215, 0.023, M.leather, 0, 0, 0, 40);
   rim.rotation.x = 0;
   const hub = cyl(wheelG, 0.065, 0.07, 0.07, M.plastic, 0, 0, 0.02, 20);
@@ -478,8 +479,8 @@ function buildTruckInterior(c) {
   const emblem = cyl(wheelG, 0.032, 0.032, 0.012, accent, 0, 0, 0.06, 16);
   emblem.rotation.x = HALF;
   // колонка руля
-  const col = cyl(g, 0.045, 0.06, 0.55, M.plastic, -0.48, dashTop - 0.12, dashZ - 0.2, 12);
-  col.rotation.x = 0.5;
+  const col = cyl(g, 0.045, 0.06, 0.5, M.plastic, -0.48, dashTop + 0.06, dashZ + 0.06, 12);
+  col.rotation.x = 0.62;
   // рычаг КПП / селектор
   if (style === 'euro' || style === 'futuristic') {
     const lever = cyl(g, 0.02, 0.025, 0.3, M.chromeDark, 0.42, dashTop + 0.02, dashZ + 0.12, 8);

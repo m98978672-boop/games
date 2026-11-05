@@ -386,15 +386,19 @@ export function buildCar(unit, M, opts = {}) {
     },
     {
       id: 'salon', label: 'Салон', group: 'interior',
-      pos: [cabW * 0.16, belt + 0.18, S.rearBaseZ - 0.72],
-      target: [-0.14, belt - 0.02, S.wsBase - 1.6],
-      fov: 74, orbit: true, seat: true,
+      // снимаем с заднего дивана по центру: передние кресла уходят в стороны,
+      // а в кадре остаются торпедо, руль и центральная консоль
+      // из прохода между креслами вперёд: торпедо, руль, консоль,
+      // стойки и боковые окна — общий вид салона
+      pos: [0, floorY + (H - floorY) * 0.6, S.wsTopZ + 0.78],
+      target: [0, floorY + (H - floorY) * 0.32, S.wsBase - 3.4],
+      fov: 72, orbit: true, seat: true,
     },
     { id: 'exterior', label: 'Снаружи', group: 'exterior', pos: [6.4, 2.55, -7.0], target: [0, 0.72, 0.05], fov: 32, orbit: true, autoRotate: true },
     { id: 'side', label: 'Сбоку', group: 'exterior', pos: [8.8, 1.3, 0.15], target: [0, 0.72, 0], fov: 27, orbit: true },
     { id: 'rear', label: 'Сзади', group: 'exterior', pos: [-4.7, 2.1, 6.8], target: [0, 0.75, 0.1], fov: 33, orbit: true },
   ];
-  const layout = { frontZ: front, rearEnd: rear, roofY: H, floorY, wheelRadius: R, belt, length: L, width: W };
+  const layout = { frontZ: front, rearEnd: rear, roofY: H, floorY, wheelRadius: R, belt, length: L, width: W, wsBase: S.wsBase, wsTopZ: S.wsTopZ, roofRearZ: S.roofRearZ, rearBaseZ: S.rearBaseZ };
   return { root, wheels, paintMats, views, anchors, layout, kind: 'car' };
 }
 

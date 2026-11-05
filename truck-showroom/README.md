@@ -79,16 +79,20 @@ truck-showroom/
 │   ├── lib/camera.js    плавные переходы камеры и орбита
 │   └── models/          truck.js · trailer.js · car.js
 ├── tools/               render.mjs, montage.mjs, serve.mjs
-└── tests/smoke.mjs      проверка каталога и сборки всех моделей
+└── tests/
+    ├── smoke.mjs        каталог 10/20/10, сборка всех моделей, салоны, геометрия
+    └── ui.mjs           интерфейс в jsdom: все 40 моделей, виды, поиск, покраска
 ```
 
 ### Команды
 
 ```bash
-npm ci                 # three + esbuild + pngjs
+npm ci                 # three + esbuild + pngjs + jsdom
 npm run build          # пересобрать showroom.bundle.js
 npm run serve          # локальный сервер (не обязателен: работает и с file://)
+npm test               # smoke + интерфейсный тест (63 проверки)
 node tests/smoke.mjs   # 40 моделей, 10/20/10, салоны, геометрия
+node tests/ui.mjs      # каталог, виды, поиск, избранное, покраска — без браузера
 node tools/render.mjs --cat trucks --id atlas-vision --view driver --out preview.png
 node tools/montage.mjs --list trailers --view exterior --out sheet.png
 ```
@@ -98,4 +102,6 @@ node tools/montage.mjs --list trailers --view exterior --out sheet.png
 - Внешние 3D-модели намеренно **не используются** (в песочнице нет доступа к скачиванию ассетов),
   поэтому вся техника — стилизованная процедурная геометрия, а не фотореалистичные модели.
 - Марки, модели и характеристики вымышлены; это самостоятельный шоурум, а не копия реальных брендов.
+- Если браузер не даёт WebGL, шоурум не «падает»: остаются каталог, характеристики,
+  список видов и покраска, а вместо сцены показывается пояснение, как включить 3D.
 - Салоны есть у 10 тягачей и 10 автомобилей. У прицепов салона нет по определению.

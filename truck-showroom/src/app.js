@@ -2,7 +2,7 @@
 // ГАРАЖ 3D — точка входа: каталог, сцена, камера и интерфейс.
 // ============================================================
 import * as THREE from 'three';
-import { createStage } from './stage.js';
+import { createStage, createFallbackStage } from './stage.js';
 import { createMaterials, clamp, rad, lerp } from './lib/kit.js';
 import { ShowroomCamera } from './lib/camera.js';
 import { buildUnit } from './models/index.js';
@@ -47,22 +47,56 @@ function currentUnit() {
 }
 
 // ------------------------------------------------------------ сцена
+// Если WebGL нет — не оставляем пользователя с пустой страницей:
+// каталог, спецификации, виды и покраска продолжают работать.
 let stage;
+let webglOk = true;
+// заранее проверяем контекст: так мы не пугаем консоль ошибкой three.js
+function hasWebGL() {
+  try {
+    const probe = document.createElement('canvas');
+    return !!(probe.getContext('webgl2') || probe.getContext('webgl'));
+  } catch { return false; }
+}
 try {
+  if (!hasWebGL()) throw new Error('WebGL context is not available');
   stage = createStage($('gl'));
 } catch (e) {
+  webglOk = false;
+  stage = createFallbackStage();
   const box = document.createElement('div');
   box.className = 'webgl-error';
-  box.innerHTML = '<b>Не удалось включить 3D</b><span>Браузер не дал доступ к WebGL. Включите аппаратное ускорение или откройте шоурум в другом браузере.</span>';
+  box.innerHTML = '<b>3D недоступно в этом браузере</b><span>Не удалось создать WebGL-контекст: включите аппаратное ускорение. Каталог, характеристики и список видов ниже работают и без 3D.</span>';
   $('viewport').appendChild(box);
-  $('loader').classList.add('hidden');
-  throw e;
+  $('gl').classList.add('hidden');
+  console.warn('ГАРАЖ 3D: WebGL недоступен, включён режим каталога.', e);
 }
 const M = createMaterials(stage.renderer);
 const cam = new ShowroomCamera(stage.camera, $('gl'));
 const scene = stage.scene;
 
 let shown = null;
+// views/anchors появляются только после сборки геометрии — держим их
+// на самой модели, чтобы каталог, док и хоткеи работали сразу.
+const builtCache = new Map();
+function cacheKey(unit) {
+  return `${unit.category}:${unit.id}`;
+}
+function viewsOf(unit) {
+  if (Array.isArray(unit.views) && unit.views.length) return unit.views;
+  const key = cacheKey(unit);
+  if (!builtCache.has(key)) builtCache.set(key, buildUnit(unit, M));
+  const built = builtCache.get(key);
+  unit.views = built.views;
+  unit.anchors = built.anchors;
+  return unit.views;
+}
+function takeBuilt(unit) {
+  const key = cacheKey(unit);
+  const built = builtCache.get(key);
+  if (built) builtCache.delete(key);
+  return built;
+}
 let pending = null;
 let busy = false;
 let compareGroup = null;
@@ -98,7 +132,7 @@ function showUnit(unit, { instant = false, view = null } = {}) {
   clearShown();
   // даём браузеру перерисовать оверлей, затем строим
   setTimeout(() => {
-    const built = buildUnit(unit, M);
+    const built = takeBuilt(unit) || buildUnit(unit, M);
     // уникальная краска для этой модели
     const colorHex = colors[unit.id] || unit.paint;
     for (const m of built.paintMats) {
@@ -116,11 +150,13 @@ function showUnit(unit, { instant = false, view = null } = {}) {
       }
     });
     $('poly-badge').textContent = `${Math.round(tris / 1000)}K полигонов`;
-    const v = view || unit.views.find((x) => x.id === (instant ? 'exterior' : state.view)) || unit.views[0];
+    const v = view || viewsOf(unit).find((x) => x.id === (instant ? 'exterior' : state.view)) || viewsOf(unit)[0];
     state.view = v.id;
     cam.controls.autoRotate = !!v.autoRotate && autoRotateWanted && state.view === 'exterior';
     cam.setView(v, { instant });
     renderViewSwitch(unit);
+    setActiveChips(unit);
+    $('mode-badge').textContent = modeLabel(unit, v);
     $('loader').classList.add('hidden');
     busy = false;
     renderDetails(unit);
@@ -148,7 +184,7 @@ function select(cat, id, { instant = false } = {}) {
       pending = { unit, opts: { instant } };
       return;
     }
-    showUnit(unit, { instant, view: unit.views[0] });
+    showUnit(unit, { instant, view: viewsOf(unit)[0] });
   }
 }
 
@@ -200,12 +236,12 @@ function renderList() {
         toggleInside();
         return;
       }
-      select(u.category, u.id);
+      select(state.cat, u.id);
     };
     list.appendChild(btn);
   });
   const activeEl = list.querySelector('.unit.active');
-  if (activeEl) activeEl.scrollIntoView({ block: 'nearest' });
+  if (activeEl && typeof activeEl.scrollIntoView === 'function') activeEl.scrollIntoView({ block: 'nearest' });
 }
 
 function renderDetails(unit) {
@@ -280,8 +316,8 @@ function setActiveChips(unit) {
   const wrap = $('dock-views');
   wrap.innerHTML = '';
   const groups = [
-    { title: 'СНАРУЖИ', items: unit.views.filter((v) => v.group === 'exterior') },
-    { title: 'ВНУТРИ', items: unit.views.filter((v) => v.group === 'interior') },
+    { title: 'СНАРУЖИ', items: viewsOf(unit).filter((v) => v.group === 'exterior') },
+    { title: 'ВНУТРИ', items: viewsOf(unit).filter((v) => v.group === 'interior') },
   ];
   for (const gr of groups) {
     if (!gr.items.length) continue;
@@ -300,11 +336,17 @@ function setActiveChips(unit) {
   }
 }
 
+function modeLabel(unit, view) {
+  if (!view || view.group !== 'interior') return 'СНАРУЖИ';
+  if (view.id === 'bunk') return 'СПАЛЬНИК';
+  if (unit.category === 'cars') return view.id === 'salon' ? 'ИЗ САЛОНА' : 'ЗА РУЛЁМ';
+  return view.id === 'passenger' ? 'МЕСТО ПАССАЖИРА' : 'В КАБИНЕ';
+}
 function renderViewSwitch(unit) {
   const wrap = $('view-switch');
   wrap.innerHTML = '';
   const order = ['exterior', 'side', 'rear', 'front', 'driver', 'passenger', 'salon', 'bunk'];
-  const views = [...unit.views].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+  const views = [...viewsOf(unit)].sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
   views.forEach((v) => {
     const b = document.createElement('button');
     b.className = 'view-btn' + (v.group === 'interior' ? ' interior' : '') + (v.id === state.view ? ' active' : '');
@@ -317,23 +359,33 @@ function renderViewSwitch(unit) {
 
 function goView(viewId) {
   const unit = currentUnit();
-  const view = unit.views.find((v) => v.id === viewId) || unit.views[0];
-  state.view = viewId;
+  const view = viewsOf(unit).find((v) => v.id === viewId) || viewsOf(unit)[0];
+  state.view = view.id;
   cam.controls.autoRotate = !!view.autoRotate && autoRotateWanted;
   cam.setView(view, { instant: false });
   document.querySelectorAll('.view-btn').forEach((b) => b.classList.toggle('active', b.dataset.view === viewId));
   document.querySelectorAll('#dock-views .chip').forEach((b) => b.classList.toggle('active', b.dataset.view === viewId));
-  $('mode-badge').textContent = view.group === 'interior' ? 'В САЛОНЕ' : 'СНАРУЖИ';
+  $('mode-badge').textContent = modeLabel(unit, view);
   $('orbit-btn').classList.toggle('active', !!view.autoRotate && autoRotateWanted);
   saveState();
 }
 
 function toggleInside() {
   const unit = currentUnit();
-  const inside = unit.views.some((v) => v.group === 'interior' && v.id === state.view);
-  const target = inside ? 'exterior' : (unit.views.find((v) => v.id === 'driver') ? 'driver' : 'exterior');
-  goView(target);
-  live(inside ? 'Вид снаружи' : 'Садимся в салон');
+  const views = viewsOf(unit);
+  const inside = views.some((v) => v.group === 'interior' && v.id === state.view);
+  if (inside) {
+    goView((views.find((v) => v.id === 'exterior') || views[0]).id);
+    live('Вид снаружи');
+    return;
+  }
+  const seat = views.find((v) => v.id === 'driver') || views.find((v) => v.id === 'salon') || views.find((v) => v.group === 'interior');
+  if (!seat) {
+    live('У прицепов салона нет — осмотр только снаружи');
+    return;
+  }
+  goView(seat.id);
+  live(seat.id === 'salon' ? 'Смотрим из салона' : 'Садимся в кабину');
 }
 
 function focusAnchor(a) {
@@ -442,6 +494,10 @@ function setCategory(cat) {
 }
 
 function shot() {
+  if (!webglOk) {
+    live('Скриншот недоступен без 3D');
+    return;
+  }
   // рендер «сейчас», затем сохраняем
   stage.renderer.render(scene, stage.camera);
   const a = document.createElement('a');
@@ -481,13 +537,13 @@ function wireUI() {
   $('help-modal').onclick = (e) => { if (e.target.id === 'help-modal') $('help-modal').classList.add('hidden'); };
   $('d-inside').onclick = () => {
     const unit = currentUnit();
-    const target = unit.views.find((v) => v.id === 'driver' || v.id === 'salon');
+    const target = viewsOf(unit).find((v) => v.id === 'driver' || v.id === 'salon');
     if (target) goView(target.id);
     else live('У этой модели нет салона — прицеп только снаружи');
   };
   $('d-outside').onclick = () => goView('exterior');
   $('orbit-btn').onclick = () => {
-    const view = currentUnit().views.find((v) => v.id === state.view);
+    const view = viewsOf(currentUnit()).find((v) => v.id === state.view);
     autoRotateWanted = !autoRotateWanted;
     cam.controls.autoRotate = autoRotateWanted && !!view?.autoRotate;
     $('orbit-btn').classList.toggle('active', autoRotateWanted);
@@ -495,18 +551,18 @@ function wireUI() {
   };
   $('reset-btn').onclick = () => {
     const unit = currentUnit();
-    goView(unit.views[0].id);
+    goView(viewsOf(unit)[0].id);
   };
   $('look-btn').onclick = () => {
     const unit = currentUnit();
-    const view = unit.views.find((v) => v.id === state.view);
+    const view = viewsOf(unit).find((v) => v.id === state.view);
     if (view?.seat) {
       // уже в салоне: сбрасываем направление взгляда вперёд
       goView(view.id);
       live('Взгляд вперёд — тяните мышью, чтобы осмотреться');
       return;
     }
-    const seat = unit.views.find((v) => v.id === 'driver') || unit.views.find((v) => v.group === 'interior');
+    const seat = viewsOf(unit).find((v) => v.id === 'driver') || viewsOf(unit).find((v) => v.group === 'interior');
     if (!seat) {
       live('У этой модели нет салона — осмотр только снаружи');
       return;
@@ -544,10 +600,10 @@ function wireUI() {
         $('orbit-btn').onclick();
         break;
       }
-      case '0': goView(currentUnit().views[0].id); break;
+      case '0': goView((viewsOf(currentUnit()).find((v) => v.group === 'exterior') || viewsOf(currentUnit())[0]).id); break;
       case '1': case '2': case '3': case '4': case '5': {
         const n = Number(e.key);
-        const order = currentUnit().views.slice(0, 5);
+        const order = viewsOf(currentUnit()).slice(0, 5);
         if (order[n - 1]) goView(order[n - 1].id);
         break;
       }
@@ -589,7 +645,7 @@ function boot() {
   setActiveChips(unit);
   renderViewSwitch(unit);
   $('mode-badge').textContent = 'СНАРУЖИ';
-  showUnit(unit, { instant: true, view: unit.views[0] });
+  showUnit(unit, { instant: true, view: viewsOf(unit)[0] });
   loop();
   // приветственная подсказка
   setTimeout(() => live('Мышь — вращать · I — сесть в салон'), 900);

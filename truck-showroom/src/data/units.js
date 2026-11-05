@@ -1050,6 +1050,11 @@ export const CARS = [
   },
 ];
 
+// категория нужна приложению (вид, иконка, сборка модели) — проставляем один раз
+for (const u of TRUCKS) u.category = 'trucks';
+for (const u of TRAILERS) u.category = 'trailers';
+for (const u of CARS) u.category = 'cars';
+
 export function allUnits() {
   return [
     ...TRUCKS.map((u) => ({ ...u, category: 'trucks' })),
