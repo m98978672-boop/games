@@ -1,11 +1,12 @@
 {
   "name": "playbridge-local",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "node --env-file-if-exists=.env server.mjs",
     "start": "node --env-file=.env server.mjs",
+    "start:portable": "node --use-system-ca portable-launcher.mjs",
     "test": "node --test server.test.mjs"
   },
   "engines": {

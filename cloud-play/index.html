@@ -38,7 +38,7 @@
         <span class="status-orb"></span>
         <span class="sidebar-status-copy"><strong id="sidebarStatusTitle">ПРОВЕРКА СЕРВЕРА</strong><small id="sidebarStatusText">Проверяю API…</small></span>
       </div>
-      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.4 <span class="sidebar-bottom-right">RU</span></div>
+      <div class="sidebar-bottom"><span class="tiny-led"></span> PLAYBRIDGE · 0.5 <span class="sidebar-bottom-right">RU</span></div>
     </aside>
 
     <main class="main-content" id="top">
@@ -52,6 +52,7 @@
             <span class="profile-copy"><strong id="profileTitle">Не подключено</strong><small id="profileSub">Вход через Steam OpenID</small></span>
           </div>
           <button class="button button-small button-outline" id="installAppButton" type="button" aria-label="Установить PLAYBRIDGE" title="Установить PLAYBRIDGE на устройство" hidden><span aria-hidden="true">⇩</span><span class="install-label">Установить</span></button>
+          <button class="button button-small button-outline" id="localSettingsButton" type="button" hidden>Настроить API</button>
           <button class="button button-small button-outline" id="connectButton" type="button" disabled>Проверяю сервер…</button>
           <button class="button button-small button-outline" id="logoutButton" type="button" hidden>Выйти</button>
         </div>
@@ -161,6 +162,24 @@
       </footer>
     </main>
   </div>
+  <dialog class="local-settings-dialog" id="localSettingsDialog" aria-labelledby="localSettingsTitle">
+    <form id="localSettingsForm">
+      <button class="dialog-close" id="closeLocalSettingsButton" type="button" aria-label="Закрыть">×</button>
+      <div class="eyebrow">ЛОКАЛЬНАЯ НАСТРОЙКА</div>
+      <h2 id="localSettingsTitle">Подключить библиотеку Steam</h2>
+      <p>Ключ нужен только для чтения списка игр. Он хранится на этом компьютере в папке профиля пользователя и не отправляется на GitHub или в Steam OpenID.</p>
+      <label class="settings-label" for="steamApiKeyInput">Steam Web API key</label>
+      <input id="steamApiKeyInput" name="steamApiKey" type="password" inputmode="text" autocomplete="off" spellcheck="false" maxlength="32" placeholder="32 символа" aria-describedby="steamApiKeyHelp">
+      <small id="steamApiKeyHelp">Получить ключ можно на <a href="https://steamcommunity.com/dev/apikey" target="_blank" rel="noreferrer">официальной странице Steam</a>. Не вставляй его в чат. Пустое поле оставит сохранённый ключ без изменений.</small>
+      <label class="auto-login-option" for="autoLoginCheckbox"><input id="autoLoginCheckbox" type="checkbox"> Автоматически открывать Steam, если сессия истекла</label>
+      <p class="local-settings-feedback" id="localSettingsFeedback" role="status" aria-live="polite"></p>
+      <div class="dialog-actions">
+        <button class="button button-outline" id="clearSteamApiKeyButton" type="button" hidden>Удалить ключ</button>
+        <button class="button button-outline" id="closeLocalSettingsFooter" type="button">Отмена</button>
+        <button class="button button-primary" id="saveLocalSettingsButton" type="submit">Сохранить на этом компьютере</button>
+      </div>
+    </form>
+  </dialog>
   <noscript><div class="noscript">Для подключения к backend и загрузки библиотеки нужен включённый JavaScript.</div></noscript>
 </body>
 </html>

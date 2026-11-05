@@ -1,6 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { compareVersions, gitBlobSha, parseVersion, validateRelativePath } from './portable-launcher.mjs';
 import {
   createHandler,
   createSignedToken,
@@ -15,6 +19,18 @@ import {
 
 const steamId = '76561198000000000';
 const secret = 'test-session-secret-with-at-least-32-characters';
+
+test('portable updater compares semantic versions and validates Git blob paths', () => {
+  assert.deepEqual(parseVersion('0.5.0'), [0, 5, 0]);
+  assert.equal(compareVersions('0.5.0', '0.4.9'), 1);
+  assert.equal(compareVersions('0.5.0', '0.5.0'), 0);
+  assert.equal(compareVersions('0.4.9', '0.5.0'), -1);
+  assert.equal(compareVersions('invalid', '0.5.0'), null);
+  assert.equal(gitBlobSha(Buffer.from('foo')), '19102815663d23f8b75a47e7a01965dcdc96468c');
+  assert.equal(validateRelativePath('icons/icon.svg').relativePath, 'icons/icon.svg');
+  assert.throws(() => validateRelativePath('../settings.json'));
+  assert.throws(() => validateRelativePath('.env'));
+});
 
 test('signed tokens reject changes, wrong purpose and expired sessions', () => {
   const now = 1_800_000_000_000;
@@ -127,6 +143,7 @@ test('HTTP app exposes real readiness, redirects to Steam and rejects anonymous 
   assert.equal(status.cloud.ready, false);
   assert.equal(status.cloudStorage.provider, 'dropbox');
   assert.equal(status.cloudStorage.enabled, false);
+  assert.deepEqual(status.settings, { localSetupAvailable: false, autoLoginEnabled: false });
 
   const sessionResponse = await fetch(`${base}/api/session`);
   assert.deepEqual(await sessionResponse.json(), { authenticated: false, steamId: null });
@@ -140,6 +157,67 @@ test('HTTP app exposes real readiness, redirects to Steam and rejects anonymous 
   assert.match(loginResponse.headers.get('location'), /^https:\/\/steamcommunity\.com\/openid\/login\?/);
   assert.match(loginResponse.headers.get('set-cookie'), /HttpOnly/);
   assert.match(loginResponse.headers.get('set-cookie'), /SameSite=Lax/);
+});
+
+test('portable mode configures Steam Web API only from the loopback UI and persists no key in responses', async (t) => {
+  const dataDirectory = await mkdtemp(path.join(tmpdir(), 'playbridge-local-'));
+  const settingsFile = path.join(dataDirectory, 'settings.json');
+  const app = createServer(createHandler({
+    env: {
+      PORT: '4174',
+      PUBLIC_ORIGIN: 'http://localhost:4174',
+      SESSION_SECRET: secret,
+      LOCAL_SETUP_MODE: '1',
+      PLAYBRIDGE_CONFIG_FILE: settingsFile,
+      NODE_ENV: 'development',
+    },
+    fetchImpl: async () => { throw new Error('Unexpected upstream request in this test.'); },
+  }));
+  await new Promise((resolve) => app.listen(0, '127.0.0.1', resolve));
+  t.after(async () => {
+    await new Promise((resolve, reject) => app.close((error) => error ? reject(error) : resolve()));
+    await rm(dataDirectory, { recursive: true, force: true });
+  });
+  const base = `http://127.0.0.1:${app.address().port}`;
+  const initialStatus = await (await fetch(`${base}/api/status`)).json();
+  assert.equal(initialStatus.settings.localSetupAvailable, true);
+  assert.equal(initialStatus.settings.autoLoginEnabled, true);
+  assert.equal(initialStatus.steam.libraryReady, false);
+
+  const apiKey = 'abcdef0123456789abcdef0123456789';
+  const saveResponse = await fetch(`${base}/api/settings/steam`, {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:4174', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ steamApiKey: apiKey }),
+  });
+  assert.equal(saveResponse.status, 200);
+  assert.deepEqual(await saveResponse.json(), { libraryReady: true, autoLoginEnabled: true });
+  const saved = JSON.parse(await readFile(settingsFile, 'utf8'));
+  assert.equal(saved.sessionSecret, secret);
+  assert.equal(saved.steamApiKey, apiKey);
+  assert.equal(saved.autoLoginEnabled, true);
+
+  const statusResponse = await fetch(`${base}/api/status`);
+  const status = await statusResponse.json();
+  assert.equal(status.steam.libraryReady, true);
+  assert.doesNotMatch(JSON.stringify(status), new RegExp(apiKey));
+
+  const autoLoginResponse = await fetch(`${base}/api/settings/steam`, {
+    method: 'POST',
+    headers: { Origin: 'http://localhost:4174', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ autoLoginEnabled: false }),
+  });
+  assert.deepEqual(await autoLoginResponse.json(), { libraryReady: true, autoLoginEnabled: false });
+  const autoLoginSaved = JSON.parse(await readFile(settingsFile, 'utf8'));
+  assert.equal(autoLoginSaved.steamApiKey, apiKey);
+  assert.equal(autoLoginSaved.autoLoginEnabled, false);
+
+  const rejected = await fetch(`${base}/api/settings/steam`, {
+    method: 'POST',
+    headers: { Origin: 'https://attacker.example', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ steamApiKey: '0'.repeat(32) }),
+  });
+  assert.equal(rejected.status, 403);
 });
 
 test('authenticated library request only calls Steam Web API server-side and returns sanitized game metadata', async (t) => {
@@ -357,6 +435,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.equal(manifestResponse.headers.get('cache-control'), 'no-cache');
   const manifest = await manifestResponse.json();
   assert.equal(manifest.name, 'PLAYBRIDGE');
+  assert.equal(manifest.version, '0.5.0');
   assert.equal(manifest.start_url, './');
   assert.ok(manifest.icons.some((icon) => icon.sizes === '192x192' && icon.purpose === 'any'));
   assert.ok(manifest.icons.some((icon) => icon.sizes === '512x512' && icon.purpose === 'maskable'));
@@ -368,7 +447,7 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   const worker = await workerResponse.text();
   assert.match(worker, /registration\.scope/);
   assert.match(worker, /self\.skipWaiting\(\)/);
-  assert.match(worker, /playbridge-shell-0\.4\.0/);
+  assert.match(worker, /playbridge-shell-0\.5\.0/);
   assert.match(worker, /url\.pathname\.includes\('\/api\/'\) \|\| url\.pathname\.includes\('\/auth\/'\)/);
   assert.match(worker, /fresh\.ok && !url\.search/);
 
@@ -381,6 +460,10 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(appJs, /await api\('\/api\/session'\)/);
   assert.match(appJs, /loadGames\(\)/);
   assert.match(appJs, /api\('\/api\/dropbox\/snapshot'/);
+  assert.match(appJs, /api\('\/api\/settings\/steam'/);
+  assert.match(appJs, /localSettingsDialog\.showModal\(\)/);
+  assert.match(appJs, /AUTO_LOGIN_RETRY_MS = 10 \* 60 \* 1000/);
+  assert.match(appJs, /status\.settings\?\.autoLoginEnabled/);
   assert.match(appJs, /updateStatus\.addEventListener\('click'/);
   assert.match(appJs, /15 \* 60 \* 1000/);
   assert.match(appJs, /window\.addEventListener\('online'/);
@@ -398,6 +481,19 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.equal(compareAppVersions('0.3.9', '0.4.0'), -1);
   assert.equal(compareAppVersions('0.4.0', '0.4.0'), 0);
   assert.equal(compareAppVersions('invalid', '0.4.0'), null);
+
+  const portableUpdater = await readFile(new URL('./portable-launcher.mjs', import.meta.url), 'utf8');
+  assert.match(portableUpdater, /api\.github\.com\/repos\/m98978672-boop\/games/);
+  assert.match(portableUpdater, /gitBlobSha\(bytes\) !== item\.sha/);
+  assert.match(portableUpdater, /CHECK_INTERVAL_MS = 15 \* 60 \* 1000/);
+  assert.match(portableUpdater, /SESSION_TTL_SECONDS = 30 \* 24 \* 60 \* 60/);
+  assert.match(portableUpdater, /autoLoginEnabled = typeof saved\?\.autoLoginEnabled === 'boolean' \? saved\.autoLoginEnabled : true/);
+  assert.doesNotMatch(portableUpdater, /raw\.githubusercontent\.com/);
+  const portableManifest = JSON.parse(await readFile(new URL('./portable-update-manifest.json', import.meta.url), 'utf8'));
+  assert.equal(portableManifest.schema, 1);
+  assert.ok(portableManifest.files.includes('server.mjs'));
+  assert.ok(portableManifest.files.includes('app.js'));
+  assert.ok(portableManifest.files.includes('START-PLAYBRIDGE-WINDOWS.bat'));
 
   for (const [file, expectedSize] of [['icon-192.png', 192], ['icon-512.png', 512], ['icon-maskable-512.png', 512]]) {
     const iconResponse = await fetch(`${base}icons/${file}`);
@@ -417,4 +513,6 @@ test('PWA shell metadata, update worker, and install icons are served with corre
   assert.match(page, /id="dropboxPanel"/);
   assert.match(page, /id="refreshGamesButton"/);
   assert.match(page, /id="saveDropboxButton"/);
+  assert.match(page, /id="localSettingsDialog"/);
+  assert.match(page, /id="localSettingsButton"/);
 });

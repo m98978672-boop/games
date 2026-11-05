@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -54,6 +54,14 @@ function configFrom(env = process.env) {
   const production = env.NODE_ENV === 'production';
   const secureOrigin = publicOrigin.startsWith('https://');
   const loginReady = sessionSecret.length >= 32 && Boolean(publicOrigin) && (!production || secureOrigin);
+  const requestedSessionTtl = Number.parseInt(env.SESSION_TTL_SECONDS || String(SESSION_TTL_SECONDS), 10);
+  const sessionTtlSeconds = Number.isSafeInteger(requestedSessionTtl) && requestedSessionTtl >= 5 * 60 && requestedSessionTtl <= 90 * 24 * 60 * 60
+    ? requestedSessionTtl
+    : SESSION_TTL_SECONDS;
+  const localSetupMode = env.LOCAL_SETUP_MODE === '1';
+  const localAutoLogin = localSetupMode && env.LOCAL_AUTO_LOGIN !== '0';
+  const settingsFile = typeof env.PLAYBRIDGE_CONFIG_FILE === 'string' ? env.PLAYBRIDGE_CONFIG_FILE.trim() : '';
+  const host = localSetupMode ? '127.0.0.1' : (typeof env.HOST === 'string' && env.HOST.trim() ? env.HOST.trim() : '0.0.0.0');
   const steamApiKey = typeof env.STEAM_WEB_API_KEY === 'string' ? env.STEAM_WEB_API_KEY.trim() : '';
   const dropboxAppKey = typeof env.DROPBOX_APP_KEY === 'string' ? env.DROPBOX_APP_KEY.trim() : '';
   const dropboxAppSecret = typeof env.DROPBOX_APP_SECRET === 'string' ? env.DROPBOX_APP_SECRET.trim() : '';
@@ -64,10 +72,15 @@ function configFrom(env = process.env) {
     port: Number.isFinite(port) && port > 0 && port <= 65535 ? port : 4174,
     publicOrigin,
     sessionSecret,
+    sessionTtlSeconds,
+    host,
     secureCookie: secureOrigin,
     loginReady,
     libraryReady: steamApiKey.length > 0,
     steamApiKey,
+    localSetupMode,
+    localAutoLogin,
+    settingsFile,
     dropboxAppKey,
     dropboxAppSecret,
     dropboxTokenSecret,
@@ -276,6 +289,35 @@ function dropboxSessionFor(request, session, config) {
   const encrypted = readCookies(request).get(DROPBOX_TOKEN_COOKIE);
   const token = decryptDropboxRefreshToken(encrypted, config.dropboxTokenSecret);
   return token && token.steamId === session.steamId ? token : null;
+}
+
+function isLoopbackRequest(request) {
+  const address = request.socket?.remoteAddress || '';
+  return address === '127.0.0.1' || address === '::1' || address === '::ffff:127.0.0.1';
+}
+
+function isTrustedLocalSettingsRequest(request, config) {
+  return config.localSetupMode
+    && Boolean(config.settingsFile)
+    && isLoopbackRequest(request)
+    && request.headers.origin === config.publicOrigin;
+}
+
+async function persistLocalSettings(config, steamApiKey, autoLoginEnabled) {
+  let saved = {};
+  try {
+    const parsed = JSON.parse(await readFile(config.settingsFile, 'utf8'));
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) saved = parsed;
+  } catch {
+    // First configuration write creates the per-user settings file.
+  }
+  saved.sessionSecret = config.sessionSecret;
+  saved.steamApiKey = steamApiKey;
+  saved.autoLoginEnabled = autoLoginEnabled;
+  await mkdir(path.dirname(config.settingsFile), { recursive: true });
+  const temporaryPath = `${config.settingsFile}.${process.pid}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify(saved, null, 2)}\n`, { encoding: 'utf8', mode: 0o600 });
+  await rename(temporaryPath, config.settingsFile);
 }
 
 async function readJsonBody(request, maxBytes = MAX_DROPBOX_BODY_BYTES) {
@@ -608,7 +650,50 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
           content: 'Steam library metadata snapshot only; no game files or save files.',
           reason: config.dropboxReady ? null : 'Dropbox OAuth is not configured on the server.',
         },
+        settings: { localSetupAvailable: config.localSetupMode, autoLoginEnabled: config.localAutoLogin },
       });
+    }
+
+    if (pathname === '/api/settings/steam') {
+      if (!config.localSetupMode || !isLoopbackRequest(request)) {
+        return sendError(response, 404, 'not_found', 'Endpoint не найден.');
+      }
+      if (request.method === 'GET') return sendJson(response, 200, { libraryReady: config.libraryReady });
+      if (request.method !== 'POST') return sendError(response, 405, 'method_not_allowed', 'Используй POST.');
+      if (!isTrustedLocalSettingsRequest(request, config)) {
+        return sendError(response, 403, 'origin_rejected', 'Источник настройки не совпадает с локальным приложением.');
+      }
+      if (!String(request.headers['content-type'] || '').toLowerCase().startsWith('application/json')) {
+        return sendError(response, 415, 'json_required', 'Ожидается JSON.');
+      }
+      let input;
+      try {
+        input = await readJsonBody(request, 2048);
+      } catch (error) {
+        const status = error.statusCode === 413 ? 413 : 400;
+        return sendError(response, status, 'invalid_settings', 'Не удалось прочитать настройки.');
+      }
+      const hasSteamApiKey = Boolean(input && Object.hasOwn(input, 'steamApiKey'));
+      const requestedApiKey = hasSteamApiKey && typeof input.steamApiKey === 'string'
+        ? input.steamApiKey.trim()
+        : null;
+      if (hasSteamApiKey && (requestedApiKey === null || (requestedApiKey && !/^[a-f0-9]{32}$/i.test(requestedApiKey)))) {
+        return sendError(response, 400, 'invalid_steam_api_key', 'Ключ Steam Web API должен состоять из 32 шестнадцатеричных символов.');
+      }
+      if (input && Object.hasOwn(input, 'autoLoginEnabled') && typeof input.autoLoginEnabled !== 'boolean') {
+        return sendError(response, 400, 'invalid_auto_login_setting', 'Настройка автовхода должна быть логическим значением.');
+      }
+      const steamApiKey = hasSteamApiKey ? requestedApiKey : config.steamApiKey;
+      const autoLoginEnabled = typeof input?.autoLoginEnabled === 'boolean' ? input.autoLoginEnabled : config.localAutoLogin;
+      try {
+        await persistLocalSettings(config, steamApiKey, autoLoginEnabled);
+      } catch {
+        return sendError(response, 500, 'settings_write_failed', 'Не удалось сохранить настройки в локальную папку приложения.');
+      }
+      config.steamApiKey = steamApiKey;
+      config.libraryReady = Boolean(steamApiKey);
+      config.localAutoLogin = autoLoginEnabled;
+      return sendJson(response, 200, { libraryReady: config.libraryReady, autoLoginEnabled: config.localAutoLogin });
     }
 
     if (pathname === '/api/session' && request.method === 'GET') {
@@ -821,9 +906,9 @@ export function createHandler({ env = process.env, fetchImpl = globalThis.fetch 
         return sendRedirect(response, '/cloud-play/?auth_error=assertion_failed', 303, { 'set-cookie': clearState });
       }
 
-      const sessionToken = createSignedToken({ steamId, exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS }, config.sessionSecret, 'session');
+      const sessionToken = createSignedToken({ steamId, exp: Math.floor(Date.now() / 1000) + config.sessionTtlSeconds }, config.sessionSecret, 'session');
       response.setHeader('set-cookie', [
-        cookieHeader(SESSION_COOKIE, sessionToken, { secure: config.secureCookie, maxAge: SESSION_TTL_SECONDS }),
+        cookieHeader(SESSION_COOKIE, sessionToken, { secure: config.secureCookie, maxAge: config.sessionTtlSeconds }),
         clearState,
       ]);
       return sendRedirect(response, '/cloud-play/', 303);
@@ -842,8 +927,8 @@ const launchedDirectly = process.argv[1] && path.resolve(process.argv[1]) === fi
 if (launchedDirectly) {
   const config = configFrom();
   const server = createServer(createHandler());
-  server.listen(config.port, '0.0.0.0', () => {
-    console.log(`PLAYBRIDGE listening on 0.0.0.0:${config.port}`);
+  server.listen(config.port, config.host, () => {
+    console.log(`PLAYBRIDGE listening on ${config.host}:${config.port}`);
     console.log(`Open ${config.publicOrigin || `http://localhost:${config.port}`}/cloud-play/`);
     console.log(`Steam OpenID: ${config.loginReady ? 'configured' : 'disabled — set SESSION_SECRET and PUBLIC_ORIGIN'}`);
     console.log(`Steam library API: ${config.libraryReady ? 'configured' : 'disabled — set STEAM_WEB_API_KEY'}`);

@@ -7,6 +7,16 @@ const elements = {
   sidebarStatusText: $('#sidebarStatusText'),
   updateStatus: $('#updateStatus'),
   installAppButton: $('#installAppButton'),
+  localSettingsButton: $('#localSettingsButton'),
+  localSettingsDialog: $('#localSettingsDialog'),
+  localSettingsForm: $('#localSettingsForm'),
+  steamApiKeyInput: $('#steamApiKeyInput'),
+  localSettingsFeedback: $('#localSettingsFeedback'),
+  autoLoginCheckbox: $('#autoLoginCheckbox'),
+  clearSteamApiKeyButton: $('#clearSteamApiKeyButton'),
+  saveLocalSettingsButton: $('#saveLocalSettingsButton'),
+  closeLocalSettingsButton: $('#closeLocalSettingsButton'),
+  closeLocalSettingsFooter: $('#closeLocalSettingsFooter'),
   serverBadge: $('#serverBadge'),
   serviceNotice: $('#serviceNotice'),
   noticeIcon: $('#noticeIcon'),
@@ -54,6 +64,8 @@ let gameLoadInProgress = false;
 let activeFilter = 'all';
 let visibleLimit = PAGE_SIZE;
 const UPDATE_RESUME_KEY = 'playbridge:update-resume:v1';
+const AUTO_LOGIN_ATTEMPT_KEY = 'playbridge:auto-steam-login:v1';
+const AUTO_LOGIN_RETRY_MS = 10 * 60 * 1000;
 const GITHUB_MANIFEST_URL = 'https://api.github.com/repos/m98978672-boop/games/contents/cloud-play/manifest.webmanifest?ref=main';
 const GITHUB_VERSION_CACHE_KEY = 'playbridge:github-version:v1';
 const GITHUB_VERSION_CACHE_TTL_MS = 15 * 60 * 1000;
@@ -403,6 +415,7 @@ function setBackendUnavailable(error) {
   elements.sidebarStatusText.textContent = 'Нужен Node-сервер';
   elements.connectButton.disabled = true;
   elements.connectButton.textContent = 'Вход недоступен';
+  elements.localSettingsButton.hidden = true;
   elements.profileTitle.textContent = 'Не подключено';
   elements.profileSub.textContent = 'API не найден';
   elements.logoutButton.hidden = true;
@@ -433,6 +446,11 @@ function applyBackendStatus(status) {
   elements.sidebarStatus.dataset.state = 'online';
   elements.sidebarStatusTitle.textContent = 'BACKEND ONLINE';
   elements.sidebarStatusText.textContent = status.steam?.loginReady ? 'Steam OpenID настроен' : 'Нужна настройка входа';
+  elements.localSettingsButton.hidden = !status.settings?.localSetupAvailable;
+  elements.localSettingsButton.textContent = status.steam?.libraryReady ? 'Настройки' : 'Настроить API';
+  elements.localSettingsButton.title = status.steam?.libraryReady
+    ? 'Заменить или удалить локально сохранённый Steam Web API key'
+    : 'Ввести Steam Web API key в локальное приложение';
   updateCloudStatus(status);
 
   if (!status.steam?.loginReady) {
@@ -447,6 +465,63 @@ function applyBackendStatus(status) {
     elements.connectButton.disabled = false;
     elements.connectButton.textContent = 'Войти через Steam';
     setNotice('online', 'Backend готов к подключению', 'Вход пойдёт через официальный Steam OpenID; список игр — через Steam Web API с учётом настроек приватности.');
+  }
+}
+
+function openLocalSettings() {
+  if (!backendStatus?.settings?.localSetupAvailable || !elements.localSettingsDialog?.showModal) return;
+  elements.localSettingsFeedback.textContent = backendStatus.steam?.libraryReady
+    ? 'Ключ уже сохранён локально. Введи новый для замены или нажми «Удалить ключ».'
+    : 'Ключ будет сохранён только в локальной папке данных приложения.';
+  elements.steamApiKeyInput.value = '';
+  elements.autoLoginCheckbox.checked = Boolean(backendStatus.settings?.autoLoginEnabled);
+  elements.clearSteamApiKeyButton.hidden = !backendStatus.steam?.libraryReady;
+  elements.localSettingsDialog.showModal();
+}
+
+async function saveLocalSteamApiKey(event) {
+  event.preventDefault();
+  const steamApiKey = elements.steamApiKeyInput.value.trim();
+  if (steamApiKey && !/^[a-f0-9]{32}$/i.test(steamApiKey)) {
+    elements.localSettingsFeedback.textContent = 'Ключ должен состоять ровно из 32 шестнадцатеричных символов.';
+    elements.steamApiKeyInput.focus();
+    return;
+  }
+  elements.saveLocalSettingsButton.disabled = true;
+  elements.localSettingsFeedback.textContent = 'Сохраняю ключ локально…';
+  try {
+    const settings = { autoLoginEnabled: elements.autoLoginCheckbox.checked };
+    if (steamApiKey) settings.steamApiKey = steamApiKey;
+    await api('/api/settings/steam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    elements.localSettingsDialog.close();
+    window.location.reload();
+  } catch (error) {
+    elements.localSettingsFeedback.textContent = error.message || 'Не удалось сохранить настройки.';
+  } finally {
+    elements.saveLocalSettingsButton.disabled = false;
+  }
+}
+
+async function clearLocalSteamApiKey() {
+  if (!window.confirm('Удалить сохранённый на этом компьютере ключ Steam Web API?')) return;
+  elements.clearSteamApiKeyButton.disabled = true;
+  elements.localSettingsFeedback.textContent = 'Удаляю ключ из локальной папки данных…';
+  try {
+    await api('/api/settings/steam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steamApiKey: '', autoLoginEnabled: elements.autoLoginCheckbox.checked }),
+    });
+    elements.localSettingsDialog.close();
+    window.location.reload();
+  } catch (error) {
+    elements.localSettingsFeedback.textContent = error.message || 'Не удалось удалить ключ.';
+  } finally {
+    elements.clearSteamApiKeyButton.disabled = false;
   }
 }
 
@@ -758,10 +833,8 @@ async function disconnectDropbox() {
 
 async function boot() {
   const params = new URLSearchParams(window.location.search);
+  const hadAuthError = params.has('auth_error');
   let callbackFeedback;
-  if (params.has('auth_error')) {
-    setNotice('offline', 'Steam не подтвердил вход', 'Авторизация не завершилась. Проверь callback URL и вернись к настройке backend.');
-  }
   if (params.get('dropbox') === 'connected') {
     callbackFeedback = { state: 'ready', message: 'Dropbox подключён к этому Steam-аккаунту. Теперь можно сохранить резервную копию списка игр.' };
   } else if (params.has('dropbox_error')) {
@@ -780,12 +853,28 @@ async function boot() {
   try {
     const status = await api('/api/status');
     applyBackendStatus(status);
+    if (hadAuthError) setNotice('offline', 'Steam не подтвердил вход', 'Вход не завершился. Нажми кнопку Steam, чтобы попробовать ещё раз.');
     const session = await api('/api/session');
     updateProfile(session);
     if (session.authenticated) {
+      try { window.sessionStorage.removeItem(AUTO_LOGIN_ATTEMPT_KEY); } catch {}
       elements.librarySource.textContent = 'STEAM API';
       await Promise.all([loadGames(), refreshDropboxStatus(callbackFeedback)]);
     } else {
+      if (status.settings?.localSetupAvailable && status.settings?.autoLoginEnabled && status.steam?.loginReady && !hadAuthError) {
+        let shouldStartSteamLogin = false;
+        try {
+          const lastAttempt = Number(window.sessionStorage.getItem(AUTO_LOGIN_ATTEMPT_KEY));
+          shouldStartSteamLogin = !Number.isFinite(lastAttempt) || Date.now() - lastAttempt >= AUTO_LOGIN_RETRY_MS;
+          if (shouldStartSteamLogin) window.sessionStorage.setItem(AUTO_LOGIN_ATTEMPT_KEY, String(Date.now()));
+        } catch {
+          shouldStartSteamLogin = false;
+        }
+        if (shouldStartSteamLogin) {
+          window.location.assign('/auth/steam/start');
+          return;
+        }
+      }
       elements.gameCount.textContent = '—';
       elements.navGameCount.textContent = '—';
       elements.librarySub.textContent = status.steam?.libraryReady
@@ -803,6 +892,15 @@ async function boot() {
     window.requestAnimationFrame(() => window.scrollTo(0, updateResumeState.scrollY));
   }
 }
+
+elements.localSettingsButton.addEventListener('click', openLocalSettings);
+elements.localSettingsForm.addEventListener('submit', (event) => { void saveLocalSteamApiKey(event); });
+elements.clearSteamApiKeyButton.addEventListener('click', () => { void clearLocalSteamApiKey(); });
+elements.closeLocalSettingsButton.addEventListener('click', () => elements.localSettingsDialog.close());
+elements.closeLocalSettingsFooter.addEventListener('click', () => elements.localSettingsDialog.close());
+elements.localSettingsDialog.addEventListener('click', (event) => {
+  if (event.target === elements.localSettingsDialog) elements.localSettingsDialog.close();
+});
 
 elements.connectButton.addEventListener('click', () => {
   if (!elements.connectButton.disabled && backendStatus?.steam?.loginReady) {
@@ -825,6 +923,14 @@ elements.refreshGamesButton.addEventListener('click', () => { void loadGames(); 
 elements.logoutButton.addEventListener('click', async () => {
   elements.logoutButton.disabled = true;
   try {
+    if (backendStatus?.settings?.localSetupAvailable) {
+      await api('/api/settings/steam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoLoginEnabled: false }),
+      }).catch(() => {});
+    }
+    try { window.sessionStorage.setItem(AUTO_LOGIN_ATTEMPT_KEY, String(Date.now())); } catch {}
     await api('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     window.location.reload();
   } catch (error) {

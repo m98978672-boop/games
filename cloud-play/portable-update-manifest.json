@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "files": [
+    "app.js",
+    "index.html",
+    "styles.css",
+    "sw.js",
+    "manifest.webmanifest",
+    "server.mjs",
+    "package.json",
+    "README.md",
+    "cover.svg",
+    "portable-launcher.mjs",
+    "portable-update-manifest.json",
+    "START-PLAYBRIDGE-WINDOWS.bat",
+    "icons/icon.svg",
+    "icons/icon-192.png",
+    "icons/icon-512.png",
+    "icons/icon-maskable-512.png"
+  ]
+}
