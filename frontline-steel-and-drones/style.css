@@ -1,8 +1,14 @@
+@import url("../shared/theme.css");
+/* Единая тема всех игр подключена первой строкой. Свои «военные» пластины
+   (--panel, --line, --gold…) оставлены ниже; общие имена темы маппятся на них. */
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0b0e09; --panel:#151a12; --panel2:#202719; --panel3:#2b351f; --line:#46543a;
   --text:#e9eedb; --dim:#a7b393; --blue:#4da3ff; --red:#ff5545; --gold:#e3b93e; --gold2:#ffe08a;
   --stencil:"Arial Black","Segoe UI",system-ui,Arial,sans-serif;
+  /* маппинг на общую тему (shared/theme.css) */
+  --ink:var(--text); --ink-dim:var(--dim); --ink-faint:var(--dim);
+  --accent:var(--gold); --accent-2:var(--gold2); --accent-ink:#1a1409;
 }
 body{background:
   repeating-linear-gradient(0deg,rgba(255,255,255,.014) 0 1px,transparent 1px 4px),

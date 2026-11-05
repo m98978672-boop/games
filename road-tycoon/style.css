@@ -1,20 +1,16 @@
+@import url("../shared/theme.css");
+/* Единая тема всех игр (shared/theme.css) подключена первой строкой:
+   общие --panel, --panel-2, --line, --ink, --radius, --shadow, --green/--red/--blue
+   приходят из темы. Ниже — только своё: оттенок фона, акцент и псевдонимы старых имён. */
 :root {
   --bg: #0c1013;
-  --panel: rgba(15, 20, 25, 0.94);
-  --panel-2: #12171c;
   --panel-3: #0f1419;
-  --line: #252e37;
-  --line-2: #2f3a44;
-  --text: #eae6db;
-  --muted: #94a1a9;
-  --muted-2: #6f7c84;
   --accent: #f0b840;
   --accent-2: #ffd166;
-  --green: #5fc98a;
-  --red: #e2604f;
-  --blue: #5aa9e6;
-  --shadow: 0 18px 44px rgba(0, 0, 0, 0.5);
-  --radius: 13px;
+  --text: var(--ink);
+  --muted: var(--ink-dim);
+  --muted-2: var(--ink-faint);
+  --line-2: var(--line-strong);
 }
 
 * { box-sizing: border-box; }
