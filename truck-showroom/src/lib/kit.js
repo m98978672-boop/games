@@ -603,3 +603,59 @@ export function barFrame(parent, w, h, thickness, material, x = 0, y = 0, z = 0,
   box(parent, thickness, h, depth, material, x - w / 2 + thickness / 2, y, z);
   box(parent, thickness, h, depth, material, x + w / 2 - thickness / 2, y, z);
 }
+
+/**
+ * ВЫРЕЗ В ПАНЕЛИ.
+ * Не наклейка и не картинка: у проёма есть задняя стенка, утопленная на
+ * depth, и четыре боковины — видно толщину панели. Ставится на плоскость
+ * XY и смотрит вдоль +Z, поэтому его можно повернуть на любой фасад.
+ * inner — что видно в глубине (стекло, тьма, металл).
+ */
+export function panelCutout(parent, opts = {}) {
+  const {
+    w = 0.4, h = 0.3, depth = 0.09,
+    x = 0, y = 0, z = 0, rotY = 0, rotX = 0,
+    name = 'cutout',
+    material = null, inner = null, trim = null, thickness = 0.024,
+  } = opts;
+  const g = group(parent, name);
+  g.position.set(x, y, z);
+  g.rotation.set(rotX, rotY, 0);
+  const shell = material || new THREE.MeshStandardMaterial({ color: 0x1a1f23, roughness: 0.92, metalness: 0.12 });
+  const deep = inner || new THREE.MeshStandardMaterial({ color: 0x080a0b, roughness: 1, metalness: 0 });
+  const back = box(g, w, h, 0.014, deep, 0, 0, -depth);
+  back.name = `${name}-inset`;
+  // боковины проёма: именно они дают «толщину» панели на скруглениях света
+  box(g, w + thickness, thickness, depth, shell, 0, h / 2 + thickness / 2, -depth / 2);
+  box(g, w + thickness, thickness, depth, shell, 0, -h / 2 - thickness / 2, -depth / 2);
+  box(g, thickness, h, depth, shell, -w / 2 - thickness / 2, 0, -depth / 2);
+  box(g, thickness, h, depth, shell, w / 2 + thickness / 2, 0, -depth / 2);
+  if (trim !== null) {
+    const t = trim || shell;
+    box(g, w + thickness * 2, 0.012, 0.02, t, 0, h / 2 + thickness, 0.004);
+    box(g, w + thickness * 2, 0.012, 0.02, t, 0, -h / 2 - thickness, 0.004);
+    box(g, 0.012, h + thickness * 2, 0.02, t, -w / 2 - thickness, 0, 0.004);
+    box(g, 0.012, h + thickness * 2, 0.02, t, w / 2 + thickness, 0, 0.004);
+  }
+  const info = { w, h, depth };
+  g.userData.cutout = info;
+  g.traverse((o) => { if (o.isMesh) o.userData.cutout = info; });
+  return g;
+}
+
+/** Шов двери: узкая канавка по контуру. Та же толщина панели, но без проёма. */
+export function panelSeam(parent, { w, h, x = 0, y = 0, z = 0, rotY = 0, width = 0.014, material = null }) {
+  const g = group(parent, 'door-seam');
+  g.position.set(x, y, z);
+  g.rotation.y = rotY;
+  const m = material || new THREE.MeshStandardMaterial({ color: 0x0d1012, roughness: 1 });
+  const d = 0.022;
+  box(g, w, width, d, m, 0, h / 2, 0);
+  box(g, w, width, d, m, 0, -h / 2, 0);
+  box(g, width, h, d, m, -w / 2, 0, 0);
+  box(g, width, h, d, m, w / 2, 0, 0);
+  const info = { w, h, depth: d, seam: true };
+  g.userData.cutout = info;
+  g.traverse((o) => { if (o.isMesh) o.userData.cutout = info; });
+  return g;
+}

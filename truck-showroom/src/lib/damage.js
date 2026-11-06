@@ -18,6 +18,39 @@ export const DAMAGE_TITLES = {
   crack: 'трещина',
 };
 
+// Повреждение — не только пятно: у него есть паспорт. Вид, серьёзность,
+// что именно нарушено и во что обойдётся ремонт. Всё детерминировано семенем,
+// поэтому у модели всегда одна и та же история дефектов.
+export const DAMAGE_INFO = {
+  scratch: {
+    title: 'Царапина со сколом',
+    effect: 'лакокрасочное покрытие протёрто до грунта, кромка металла открыта',
+    fix: 'зачистка, подкрас и полировка',
+    cost: 4200,
+  },
+  dent: {
+    title: 'Вмятина',
+    effect: 'геометрия панели нарушена, зазор с соседней деталью изменился',
+    fix: 'правка панели и покраска',
+    cost: 11800,
+  },
+  rust: {
+    title: 'Ржавчина',
+    effect: 'коррозия пошла под краску, началось отслоение покрытия',
+    fix: 'зачистка до металла, грунт, покраска',
+    cost: 16400,
+  },
+  crack: {
+    title: 'Трещина',
+    effect: 'панель потеряла жёсткость, крепление держится частично',
+    fix: 'замена детали в сборе',
+    cost: 21500,
+  },
+};
+
+const SEVERITY = ['лёгкое', 'среднее', 'сильное'];
+const SEVERITY_K = [1, 1.35, 1.85];
+
 const ADJ = {
   f: { 1: 'правая', '-1': 'левая' },
   m: { 1: 'правый', '-1': 'левый' },
@@ -362,15 +395,45 @@ export function damageSpecAt(unit, part, side = 0, index = 0) {
   const seed = 1 + ((h * 3 + index * 5) % DAMAGE_SEEDS);
   const p = part || DEFAULT_PART[unit.category] || DEFAULT_PART.trucks;
   const adj = side ? (ADJ[p.gender] || ADJ.m)[side] : '';
+  const where = `${adj ? `${adj} ` : ''}${p.name}`;
+  const info = DAMAGE_INFO[kind] || DAMAGE_INFO.dent;
+  const sevIndex = (seed + index) % 3;
+  const severity = SEVERITY[sevIndex];
+  const cost = Math.round((info.cost * SEVERITY_K[sevIndex]) / 100) * 100;
   return {
     kind,
     seed,
     index,
     side,
     part: p.name,
-    label: `${adj ? `${adj} ` : ''}${p.name} — ${DAMAGE_TITLES[kind]}`,
+    where,
+    kindTitle: info.title,
+    label: `${where} — ${DAMAGE_TITLES[kind]}`,
     short: DAMAGE_TITLES[kind],
+    severity,
+    effect: info.effect,
+    fix: info.fix,
+    cost,
+    // «буквальное» описание дефекта: им подписываем карточку и меню
+    text: `${info.title}: ${where} — ${severity} повреждение. Страдает: ${info.effect}. Ремонт — ${info.fix}, ≈ ${cost.toLocaleString('ru-RU')} ₽.`,
   };
+}
+
+/** Сводка по выбранным пятнам: сколько, насколько плохо и сколько стоит. */
+export function damageReport(damage, indices) {
+  const list = damage?.list || [];
+  const chosen = [...(indices || [])].filter((i) => list[i]).sort((a, b) => a - b);
+  const items = chosen.map((i) => ({ index: i, spec: list[i].spec }));
+  const cost = items.reduce((sum, it) => sum + (it.spec.cost || 0), 0);
+  const worst = items.reduce((w, it) => {
+    const k = SEVERITY.indexOf(it.spec.severity);
+    return k > SEVERITY.indexOf(w) ? it.spec.severity : w;
+  }, '—');
+  const heavy = items.filter((it) => it.spec.severity === 'сильное').length;
+  const text = items.length
+    ? `${items.length} дефект(ов) на кузове, из них сильных — ${heavy}. Ориентировочный ремонт ≈ ${cost.toLocaleString('ru-RU')} ₽.`
+    : 'Повреждений нет — кузов чистый.';
+  return { count: items.length, total: list.length, cost, worst, heavy, items, text };
 }
 
 /** Совместимость: одно повреждение по спецификации модели. */

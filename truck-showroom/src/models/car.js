@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import {
   HALF, PI, TAU, box, rbox, cyl, sphere, torus, plane, group,
   wheel as makeWheel, labelTexture, plateTexture, clamp, lerp,
-  accentLine, brandDecalMaterial,
+  accentLine, brandDecalMaterial, panelCutout, panelSeam,
 } from '../lib/kit.js';
 import { mountDamageSet } from '../lib/damage.js';
 
@@ -360,6 +360,58 @@ export function buildCar(unit, M, opts = {}) {
       rbox(root, 0.055, 0.085, doorLen, black, side * (halfW + 0.001), ground + 0.1, doorMid, 0.02);
       box(root, 0.02, 0.026, doorLen, paintDark, side * (halfW + 0.012), belt - 0.26, doorMid);
       box(root, 0.014, 0.016, doorLen * 0.96, chrome, side * (halfW + 0.012), belt - 0.2, doorMid);
+    }
+
+    // ---------- вырезы кузова: двери, лючок бака, номер, решётка
+    // Дверь отделена настоящей канавкой по контуру, а не наклейкой: полотно
+    // двери чуть выступает, вокруг видна щель. Плюс утопленные ниши — лючок
+    // бензобака, номерной знак и воздухозаборник: у них есть глубина.
+    {
+      const seamMat = new THREE.MeshStandardMaterial({ color: 0x0b0e10, roughness: 1, metalness: 0 });
+      const hingeZ = aPillar + 0.1;
+      const doorZc = (aPillar + bPillarZ) / 2;
+      const rearDoorZc = (bPillarZ + cPillar) / 2;
+      for (const side of [-1, 1]) {
+        panelSeam(root, {
+          w: Math.max(0.3, bPillarZ - aPillar - 0.16), h: Math.max(0.4, belt - ground - 0.34),
+          x: side * (halfW + 0.014), y: (belt + ground) / 2 - 0.06, z: doorZc,
+          rotY: side > 0 ? HALF : -HALF, width: 0.012, material: seamMat,
+        });
+        if (cPillar - bPillarZ > 0.3) {
+          panelSeam(root, {
+            w: Math.max(0.24, cPillar - bPillarZ - 0.14), h: Math.max(0.34, belt - ground - 0.4),
+            x: side * (halfW + 0.014), y: (belt + ground) / 2 - 0.08, z: rearDoorZc,
+            rotY: side > 0 ? HALF : -HALF, width: 0.011, material: seamMat,
+          });
+        }
+        // ручка двери — утопленная ниша под палец
+        panelCutout(root, {
+          w: 0.13, h: 0.036, depth: 0.022, x: side * (halfW + 0.002), y: belt - 0.2, z: doorZc + 0.12,
+          rotY: side > 0 ? HALF : -HALF, name: 'cutout-handle', material: paintDark,
+        });
+      }
+      // лючок бензобака на левом заднем крыле
+      panelCutout(root, {
+        w: 0.17, h: 0.17, depth: 0.03, x: -(halfW + 0.004), y: belt - 0.3, z: rear - 0.42,
+        rotY: -HALF, name: 'cutout-fuel', material: paintDark, trim: chrome,
+      });
+      // ниши номера и воздухозаборника
+      panelCutout(root, {
+        w: 0.46, h: 0.16, depth: 0.035, x: 0, y: ground + 0.42, z: rear + 0.004, rotY: PI,
+        name: 'cutout-plate', material: paintDark,
+      });
+      panelCutout(root, {
+        w: Math.min(0.62, W * 0.34), h: 0.1, depth: 0.05, x: 0, y: ground + 0.34, z: front - 0.004, rotY: PI,
+        name: 'cutout-intake', material: black, trim: paintDark,
+      });
+      // решётка радиатора: узкие щели, каждая — свой вырез.
+      // Держим их НИЖЕ линии капота (belt), иначе щели торчат над крылом.
+      for (let i = 0; i < 3; i++) {
+        panelCutout(root, {
+          w: Math.min(0.6, W * 0.32), h: 0.03, depth: 0.045, x: 0, y: belt - 0.36 + i * 0.05,
+          z: front - 0.004, rotY: PI, name: 'cutout-grille', material: black,
+        });
+      }
     }
 
     // ---------- стёкла в проёмах

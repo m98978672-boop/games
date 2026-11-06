@@ -6,15 +6,20 @@ import { createStage, createFallbackStage } from './stage.js';
 import { createMaterials, clamp, rad, lerp } from './lib/kit.js';
 import { ShowroomCamera } from './lib/camera.js';
 import { buildUnit } from './models/index.js';
-import { CATEGORIES, TRUCKS, TRAILERS, CARS, findUnit } from './data/units.js';
+import { CATEGORIES, TRUCKS, TRAILERS, CARS, BUILDINGS, findUnit } from './data/units.js';
+import { placePanel, rectOf, viewportRect, overlaps, rect } from './lib/layout.js';
+import { damageReport } from './lib/damage.js';
 import { deviceProfile, installGestures, installShake, haptic } from './lib/device.js';
 
 const $ = (id) => document.getElementById(id);
-const CAT_LISTS = { trucks: TRUCKS, trailers: TRAILERS, cars: CARS };
+const CAT_LISTS = { trucks: TRUCKS, trailers: TRAILERS, cars: CARS, buildings: BUILDINGS };
 const CAT_META = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 const PAINTS = ['#e9ecec', '#b9c0c6', '#2f5d8a', '#16233f', '#a4241d', '#7d1a2e', '#cf5a13', '#e0b528', '#1f6b45', '#37a58c', '#0f6b70', '#4b3c85', '#6d2a6b', '#7a3b2a', '#5a3c25', '#c2a878', '#2f353b', '#101214'];
 const SAVE_KEY = 'garage3d-showroom-v1';
-const VIEW_ICONS = { exterior: '🌐', side: '◧', rear: '▣', front: '◍', driver: '🧑‍✈️', passenger: '🪑', salon: '🚘', bunk: '🛏' };
+const VIEW_ICONS = {
+  exterior: '🌐', side: '◧', rear: '▣', front: '◍', driver: '🧑‍✈️', passenger: '🪑', salon: '🚘', bunk: '🛏',
+  back: '▣', left: '◧', right: '◨',
+};
 
 // Удерживаемые клавиши свободного полёта камеры (W/A/S/D + Q/E по высоте).
 const FLY_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE']);
@@ -34,6 +39,8 @@ const state = {
   search: '',
   compare: null,
   damage: false, // true, если у модели добавлено хотя бы одно пятно
+  dmgKind: 'any', // выбранный в меню тип повреждения
+  lastDmg: null, // индекс последнего добавленного пятна — для текста
 };
 
 // Пятна добавляются ПОШТУЧНО: у каждой модели свой набор индексов.
@@ -293,6 +300,9 @@ function select(cat, id, { instant = false } = {}) {
   const unit = currentUnit();
   renderList();
   renderDetails(unit);
+  renderDamageMenu();
+  renderViewMenu();
+  guardStage();
   setActiveChips(unit);
   const rootName = `${unit.category === 'trailers' ? 'trailer' : unit.category === 'cars' ? 'car' : 'truck'}:${unit.id}`;
   if (!shown || shown.root.name !== rootName) {
@@ -304,45 +314,166 @@ function select(cat, id, { instant = false } = {}) {
   }
 }
 
-// ------------------------------------------------------------ выдвижные панели
-const DRAWERS = { catalog: 'panel-catalog', details: 'panel-details' };
+// ------------------------------------------------------------ слои интерфейса
+// Правило шоурума: никакие два видимых слоя не пересекаются. Меню — плавающие:
+// встают под своей кнопкой, прижимаются к краям и уезжают, если место занято
+// навпадом, доком, шапкой или другой панелью (расчёт — в lib/layout.js).
+const POPS = {
+  catalog: { pop: 'panel-catalog', btn: 'catalog-toggle', size: { w: 424, h: 540 } },
+  view: { pop: 'menu-view', btn: 'menu-view-btn', size: { w: 340, h: 250 } },
+  damage: { pop: 'menu-damage', btn: 'menu-damage-btn', size: { w: 396, h: 470 } },
+  light: { pop: 'light-pop', btn: 'light-btn', size: { w: 320, h: 180 } },
+  more: { pop: 'menu-more', btn: 'menu-more-btn', size: { w: 340, h: 300 } },
+};
+let openPop = null;
 let openDrawer = null;
 
+// Меню нельзя держать внутри шапки: у неё backdrop-filter, а он превращает
+// position: fixed в «привязку к родителю». Переносим все меню в отдельный
+// слой поверх страницы — тогда координаты считаются от угла экрана.
+function ensurePopLayer() {
+  let layer = document.getElementById('pop-layer');
+  if (!layer) {
+    layer = document.createElement('div');
+    layer.id = 'pop-layer';
+    document.body.appendChild(layer);
+  }
+  for (const key of Object.keys(POPS)) {
+    const el = $(POPS[key].pop);
+    if (el && el.parentElement !== layer) layer.appendChild(el);
+  }
+  return layer;
+}
+
+function sizeOf(el, fallback) {
+  const box = el.getBoundingClientRect ? el.getBoundingClientRect() : {};
+  const w = el.offsetWidth || box.width || 0;
+  const h = el.offsetHeight || box.height || 0;
+  return { w: Math.round(w) || fallback.w, h: Math.round(h) || fallback.h };
+}
+
+/** Прямоугольники, на которые меню не имеет права лечь. */
+function busyRects(self) {
+  const out = [];
+  const add = (sel) => {
+    const el = document.querySelector(sel);
+    if (!el || el === self) return;
+    const r = rectOf(el);
+    if (r) out.push(r);
+  };
+  for (const sel of ['.hud-top', '.hud-bottom', '.stage-top', '.stage-actions', '#navpad', '#dock-views-wrap', '#stage-live', '#panel-details.open']) add(sel);
+  for (const key of Object.keys(POPS)) {
+    const el = $(POPS[key].pop);
+    if (!el || el === self || el.classList.contains('hidden')) continue;
+    const r = rectOf(el);
+    if (r) out.push(r);
+  }
+  return out;
+}
+
+/** Поставить открытое меню так, чтобы оно ничего не перекрывало. */
+function positionPop(name) {
+  const conf = POPS[name];
+  const el = conf && $(conf.pop);
+  if (!el || el.classList.contains('hidden')) return null;
+  const view = viewportRect();
+  const size = sizeOf(el, conf.size);
+  el.style.maxHeight = `${Math.max(160, view.h - 24)}px`;
+  const anchor = rectOf($(conf.btn)) || rect(view.w / 2 - 60, 8, 120, 36);
+  const spot = placePanel({
+    anchor, size, viewport: view, avoid: busyRects(el), margin: 10, gap: 8,
+  });
+  el.style.left = `${spot.x}px`;
+  el.style.top = `${spot.y}px`;
+  // меню не «наезжает», а ужимается: внутри появляется своя прокрутка
+  el.style.maxWidth = `${spot.w}px`;
+  el.style.maxHeight = `${spot.h}px`;
+  el.dataset.side = spot.side;
+  return spot;
+}
+
+function closePops(except = null) {
+  for (const key of Object.keys(POPS)) {
+    if (key === except) continue;
+    const el = $(POPS[key].pop);
+    if (!el || el.classList.contains('hidden')) continue;
+    el.classList.add('hidden');
+    el.classList.remove('open');
+    $(POPS[key].btn)?.setAttribute('aria-expanded', 'false');
+  }
+  if (openPop && openPop !== except) openPop = null;
+}
+
+function closePop() {
+  closePops();
+  openPop = null;
+}
+
+function openPopover(name) {
+  const conf = POPS[name];
+  if (!conf) return;
+  const el = $(conf.pop);
+  if (!el) return;
+  const wasOpen = openPop === name && !el.classList.contains('hidden');
+  closePops(name);
+  // карточка модели — тоже слой: открывая меню, убираем её, чтобы не легли друг на друга
+  setDrawer(null);
+  if (wasOpen) {
+    closePop();
+    return;
+  }
+  if (name === 'damage') renderDamageMenu();
+  if (name === 'view') renderViewMenu();
+  el.classList.remove('hidden');
+  el.classList.add('open');
+  $(conf.btn)?.setAttribute('aria-expanded', 'true');
+  openPop = name;
+  positionPop(name);
+  if (name === 'catalog') {
+    setTimeout(() => positionPop('catalog'), 40);
+    setTimeout(() => $('search')?.focus({ preventScroll: true }), 220);
+  }
+}
+
+/** Правая карточка модели — единственная «настоящая» шторка. */
 function setDrawer(name) {
-  const next = openDrawer === name ? null : name;
+  const next = name === 'details' ? 'details' : null;
   openDrawer = next;
-  for (const [key, id] of Object.entries(DRAWERS)) {
-    const el = $(id);
-    if (!el) continue;
-    el.classList.toggle('open', key === next);
-    const btn = $(`${key}-toggle`);
-    if (btn) btn.setAttribute('aria-expanded', String(key === next));
+  const el = $('panel-details');
+  el?.classList.toggle('open', next === 'details');
+  $('details-toggle')?.setAttribute('aria-expanded', String(next === 'details'));
+  $('backdrop')?.classList.toggle('show', next === 'details');
+  if (next === 'details') {
+    closePop();
+    renderDetails(currentUnit());
   }
-  $('backdrop')?.classList.toggle('show', !!next);
-  const lightPop = $('light-pop');
-  if (next && lightPop) {
-    lightPop.classList.add('hidden');
-    $('light-btn')?.setAttribute('aria-expanded', 'false');
-  }
-  // панель каталога при открытии ставит фокус в поиск — так удобнее искать
-  if (next === 'catalog') setTimeout(() => $('search')?.focus({ preventScroll: true }), 240);
 }
 
 function closeDrawer() {
   if (!openDrawer) return false;
-  const name = openDrawer;
-  openDrawer = null;
-  for (const [key, id] of Object.entries(DRAWERS)) {
-    $(id)?.classList.toggle('open', false);
-    $(`${key}-toggle`)?.setAttribute('aria-expanded', 'false');
-  }
-  $('backdrop')?.classList.remove('show');
-  return !!name;
+  setDrawer(null);
+  return true;
+}
+
+/** Если элементы сцены всё-таки сошлись (очень узкий экран) — поднимаем док. */
+function guardStage() {
+  const dock = document.querySelector('.dock');
+  const pad = $('navpad');
+  const acts = document.querySelector('.stage-actions');
+  if (!dock) return;
+  const d = rectOf(dock);
+  const blocked = !!d && (overlaps(d, rectOf(pad), 6) || overlaps(d, rectOf(acts), 6));
+  dock.classList.toggle('dock-lift', blocked);
+  document.documentElement.classList.toggle('no-room', window.innerWidth < 380);
 }
 
 // ------------------------------------------------------------ список каталога
 function iconFor(unit) {
   if (unit.category === 'trucks') return '🚛';
+  if (unit.category === 'buildings') {
+    const map = { metal: '🏭', glass: '🏢', shop: '🏬', brick: '🏛', stalin: '🏛', panel: '🏠' };
+    return map[unit.style] || '🏢';
+  }
   if (unit.category === 'cars') return unit.style === 'sport' ? '🏎' : unit.style === 'van' ? '🚐' : unit.style === 'pickup' ? '🛻' : '🚗';
   const map = {
     tanker: '🛢', adr: '☣', silo: '🏗', tipper: '🚧', livestock: '🐄', logging: '🌲',
@@ -392,7 +523,7 @@ function renderList() {
       // На узком экране (телефон, планшет, дробное окно) после выбора
       // каталог закрываем — иначе сцену не видно. Ширину берём фактическую:
       // matchMedia есть не везде и в тестах его подменяют.
-      if (window.innerWidth <= 900 || window.matchMedia?.('(max-width: 900px)').matches) closeDrawer();
+      if (window.innerWidth <= 900 || window.matchMedia?.('(max-width: 900px)').matches) closePop();
     };
     list.appendChild(btn);
   });
@@ -400,12 +531,21 @@ function renderList() {
   if (activeEl && typeof activeEl.scrollIntoView === 'function') activeEl.scrollIntoView({ block: 'nearest' });
 }
 
+function catLabel(unit) {
+  const cat = unit.category;
+  if (cat === 'trucks') return 'ТЯГАЧ';
+  if (cat === 'trailers') return 'ПРИЦЕП';
+  if (cat === 'buildings') return 'ЗДАНИЕ';
+  return 'АВТОМОБИЛЬ';
+}
+
 function renderDetails(unit) {
   $('d-brand').textContent = `${unit.brand || '—'} · 2026`;
   $('d-name').textContent = unit.name;
-  $('d-cat').textContent = unit.category === 'trucks' ? 'ТЯГАЧ' : unit.category === 'trailers' ? 'ПРИЦЕП' : 'АВТОМОБИЛЬ';
+  $('d-cat').textContent = catLabel(unit);
   $('d-desc').textContent = unit.desc || unit.tagline || '';
-  $('unit-kind').textContent = (unit.category === 'trucks' ? 'ТЯГАЧ' : unit.category === 'trailers' ? 'ПРИЦЕП' : 'АВТОМОБИЛЬ') + (unit.meta ? ` · ${unit.meta}` : '');
+  $('unit-kind').textContent = catLabel(unit) + (unit.meta ? ` · ${unit.meta}` : '');
+  if ($('dock-cat-name')) $('dock-cat-name').textContent = CAT_META[state.cat]?.short || '';
   $('unit-name').textContent = unit.name;
   $('unit-tagline').textContent = unit.tagline || '';
   const tags = $('d-tags');
@@ -448,6 +588,8 @@ function renderDetails(unit) {
     const set = damageSet();
     const total = dmg ? dmg.count || dmg.list.length : 0;
     if (countEl) countEl.textContent = `${set.size} / ${total}`;
+    if ($('damage-count-2')) $('damage-count-2').textContent = `${set.size} / ${total}`;
+    if ($('damage-menu-count')) $('damage-menu-count').textContent = `${set.size} / ${total}`;
     // мастер-кнопка: добавить/убрать все пятна этой модели
     const b = document.createElement('button');
     b.className = 'damage-btn' + (dmg && set.size ? ' on' : '');
@@ -476,6 +618,8 @@ function renderDetails(unit) {
         dmgList.appendChild(chip);
       });
     }
+    renderDamageReport();
+    renderDamageMenu();
   }
   // точки осмотра
   const anchors = $('anchor-row');
@@ -498,6 +642,145 @@ function renderDetails(unit) {
   // счётчик
   const idx = CAT_LISTS[state.cat].findIndex((u) => u.id === unit.id);
   $('counter').textContent = `${idx + 1} / ${CAT_LISTS[state.cat].length}`;
+}
+
+/**
+ * «Буквальная» часть повреждений: каждый включённый дефект описан словами —
+ * деталь, вид, серьёзность, что нарушено и во что станет ремонт.
+ */
+function renderDamageReport() {
+  const box = $('damage-report');
+  if (!box) return;
+  const dmg = shown?.damage || null;
+  const set = damageSet();
+  box.innerHTML = '';
+  if (!dmg) {
+    box.innerHTML = '<p class="mini">У зданий повреждений нет — дефекты заданы только технике.</p>';
+    return;
+  }
+  const report = damageReport(dmg, [...set]);
+  const head = document.createElement('p');
+  head.className = 'dmg-summary' + (report.count ? ' on' : '');
+  head.textContent = report.text;
+  box.appendChild(head);
+  for (const item of report.items) {
+    const row = document.createElement('div');
+    row.className = `dmg-note ${item.spec.kind}`;
+    const b = document.createElement('b');
+    b.textContent = `${item.spec.kindTitle} · ${item.spec.where}`;
+    const span = document.createElement('span');
+    span.textContent = `${item.spec.severity} · ${item.spec.effect} · ${item.spec.fix}`;
+    const cost = document.createElement('i');
+    cost.textContent = `≈ ${item.spec.cost.toLocaleString('ru-RU')} ₽`;
+    row.append(b, span, cost);
+    box.appendChild(row);
+  }
+}
+
+/**
+ * Меню повреждений: сверху тип, ниже — места. Ткнул тип — пятно встало на
+ * свободную деталь; ткнул место — включил/убрал конкретный дефект.
+ */
+function renderDamageMenu() {
+  const places = $('dmg-place-list');
+  const dmg = shown?.damage || null;
+  const set = damageSet();
+  const list = dmg?.list || [];
+  const typeRow = $('damage-type-row');
+  if (typeRow) {
+    typeRow.querySelectorAll('.dmg-type').forEach((b) => {
+      b.classList.toggle('active', b.dataset.kind === state.dmgKind);
+      b.disabled = !dmg;
+    });
+  }
+  if ($('damage-menu-count')) $('damage-menu-count').textContent = `${set.size} / ${dmg ? list.length : 0}`;
+  if ($('damage-all')) $('damage-all').disabled = !dmg;
+  if ($('damage-clear')) $('damage-clear').disabled = !dmg || set.size === 0;
+  if (!places) return;
+  places.innerHTML = '';
+  if (!dmg) {
+    places.innerHTML = '<p class="mini">У этой модели нет пятен — здания осматриваем по фасадам.</p>';
+    return;
+  }
+  list.forEach((item, i) => {
+    const kindMatch = state.dmgKind === 'any' || item.spec.kind === state.dmgKind;
+    const b = document.createElement('button');
+    b.className = `dmg-place ${item.spec.kind}` + (set.has(i) ? ' on' : '') + (kindMatch ? '' : ' dim');
+    b.dataset.index = String(i);
+    b.dataset.kind = item.spec.kind;
+    b.title = item.spec.text;
+    b.innerHTML = `<span class="dmg-kind"></span><span class="dmg-place-name">${item.spec.where}</span>`
+      + `<span class="dmg-place-tag">${item.spec.severity}</span>`;
+    b.onclick = () => {
+      toggleDamageAt(i);
+      rememberDamage(i);
+      positionPop('damage');
+    };
+    places.appendChild(b);
+  });
+  const note = $('damage-note');
+  if (note) {
+    const last = state.lastDmg != null && list[state.lastDmg];
+    note.textContent = last
+      ? list[state.lastDmg].spec.text
+      : 'Выбери тип — пятно появится на свободной детали. Потом можно ткнуть в конкретное место.';
+  }
+}
+
+function rememberDamage(index) {
+  state.lastDmg = index;
+  const note = $('damage-note');
+  const item = shown?.damage?.list?.[index];
+  if (note && item) note.textContent = item.spec.text;
+}
+
+/** Добавить одно повреждение выбранного типа. */
+function addDamageOfKind(kind) {
+  const list = shown?.damage?.list || [];
+  if (!list.length) {
+    live('У этой модели нет повреждений');
+    return;
+  }
+  const set = damageSet();
+  const free = list.map((_, i) => i).filter((i) => !set.has(i));
+  const pool = kind === 'any' ? free : free.filter((i) => list[i].spec.kind === kind);
+  if (!pool.length) {
+    const shownKind = list.map((_, i) => i).filter((i) => set.has(i) && (kind === 'any' || list[i].spec.kind === kind));
+    live(shownKind.length && kind !== 'any'
+      ? `Такое пятно уже стоит: ${list[shownKind[0]].spec.where}`
+      : 'Свободных мест не осталось');
+    return;
+  }
+  // «любое» берём не первое попавшееся, а из середины — так пятна расходились
+  // бы по разным деталям, а не липли к одной
+  const pick = kind === 'any' ? pool[Math.floor(pool.length / 2)] : pool[0];
+  set.add(pick);
+  applyDamage();
+  rememberDamage(pick);
+  renderDetails(currentUnit());
+  positionPop('damage');
+  const spec = list[pick].spec;
+  live(`${spec.kindTitle}: ${spec.where}`);
+}
+
+/** Меню ракурсов: все виды одной сеткой. */
+function renderViewMenu() {
+  const row = $('menu-view-row');
+  if (!row) return;
+  row.innerHTML = '';
+  const unit = currentUnit();
+  for (const v of viewsOf(unit)) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (v.id === state.view ? ' active' : '');
+    b.dataset.view = v.id;
+    b.textContent = `${VIEW_ICONS[v.id] || '📷'} ${v.label}`.trim();
+    b.onclick = () => {
+      goView(v.id);
+      closePop();
+    };
+    row.appendChild(b);
+  }
+  $('menu-orbit')?.classList.toggle('active', autoRotateWanted);
 }
 
 function recolor(unit, hex) {
@@ -730,6 +1013,7 @@ function randomUnit() {
     ...TRUCKS.map((u) => ['trucks', u.id]),
     ...TRAILERS.map((u) => ['trailers', u.id]),
     ...CARS.map((u) => ['cars', u.id]),
+    ...BUILDINGS.map((u) => ['buildings', u.id]),
   ];
   const [cat, id] = pools[Math.floor(Math.random() * pools.length)];
   if (cat !== state.cat) {
@@ -748,6 +1032,8 @@ function setCategory(cat) {
   if (!CAT_LISTS[cat]) return;
   state.cat = cat;
   state.id = CAT_LISTS[cat][0].id;
+  state.dmgKind = 'any';
+  state.lastDmg = null;
   document.querySelectorAll('.cat-tab').forEach((t) => {
     const on = t.dataset.cat === cat;
     t.classList.toggle('active', on);
@@ -786,9 +1072,13 @@ function syncLayout() {
   const root = document.documentElement;
   root.style.setProperty('--hud-h', `${Math.round(top.getBoundingClientRect().height) || 54}px`);
   root.style.setProperty('--dock-h', `${Math.round(bottom.getBoundingClientRect().height) || 64}px`);
+  // открытое меню переставляем: экран изменился — место под кнопкой тоже
+  if (openPop) positionPop(openPop);
+  guardStage();
 }
 
 function wireUI() {
+  ensurePopLayer();
   document.querySelectorAll('.cat-tab').forEach((t) => {
     t.onclick = () => setCategory(t.dataset.cat);
   });
@@ -806,23 +1096,64 @@ function wireUI() {
   $('random-btn').onclick = randomUnit;
   $('shot-btn').onclick = shot;
   $('full-btn').onclick = fullscreen;
-  $('catalog-toggle').onclick = () => setDrawer('catalog');
-  $('details-toggle').onclick = () => setDrawer('details');
-  $('catalog-close').onclick = () => closeDrawer();
-  $('details-close').onclick = () => closeDrawer();
-  $('backdrop').onclick = () => closeDrawer();
-  $('light-btn').onclick = (e) => {
-    e.stopPropagation();
-    const pop = $('light-pop');
-    const show = pop.classList.contains('hidden');
-    pop.classList.toggle('hidden', !show);
-    $('light-btn').setAttribute('aria-expanded', String(show));
+  // ---- меню: одно открыто за раз, каждое встаёт под своей кнопкой
+  const POP_BUTTONS = {
+    catalog: 'catalog-toggle', view: 'menu-view-btn', damage: 'menu-damage-btn',
+    light: 'light-btn', more: 'menu-more-btn',
   };
-  $('light-pop').onclick = (e) => e.stopPropagation();
-  document.addEventListener('click', () => {
-    $('light-pop')?.classList.add('hidden');
-    $('light-btn')?.setAttribute('aria-expanded', 'false');
+  for (const [name, id] of Object.entries(POP_BUTTONS)) {
+    const btn = $(id);
+    if (btn) btn.onclick = (e) => { e.stopPropagation(); openPopover(name); };
+  }
+  for (const key of Object.keys(POPS)) {
+    $(POPS[key].pop)?.addEventListener('click', (e) => e.stopPropagation());
+  }
+  document.addEventListener('click', () => closePop());
+  $('details-toggle').onclick = (e) => {
+    e.stopPropagation();
+    setDrawer(openDrawer === 'details' ? null : 'details');
+  };
+  $('catalog-close').onclick = () => closePop();
+  $('details-close').onclick = () => setDrawer(null);
+  $('backdrop').onclick = () => setDrawer(null);
+  // ---- меню повреждений
+  document.querySelectorAll('#damage-type-row .dmg-type').forEach((b) => {
+    b.onclick = () => {
+      state.dmgKind = b.dataset.kind;
+      addDamageOfKind(state.dmgKind);
+      renderDamageMenu();
+      positionPop('damage');
+    };
   });
+  $('damage-all').onclick = () => {
+    if (!shown?.damage) return live('У этой модели нет повреждений');
+    const set = damageSet();
+    shown.damage.list.forEach((_, i) => set.add(i));
+    applyDamage();
+    renderDetails(currentUnit());
+    state.lastDmg = 0;
+    positionPop('damage');
+    live('Все повреждения показаны');
+  };
+  $('damage-clear').onclick = () => {
+    damageSet().clear();
+    applyDamage();
+    renderDetails(currentUnit());
+    state.lastDmg = null;
+    positionPop('damage');
+    live('Кузов чистый');
+  };
+  // ---- меню ракурсов
+  $('menu-inside').onclick = () => {
+    const unit = currentUnit();
+    const target = viewsOf(unit).find((v) => v.id === 'driver' || v.id === 'salon');
+    if (target) goView(target.id);
+    else live('У этой модели нет салона');
+    closePop();
+  };
+  $('menu-outside').onclick = () => { goView('exterior'); closePop(); };
+  $('menu-orbit').onclick = () => { $('orbit-btn').onclick(); renderViewMenu(); };
+  $('menu-reset').onclick = () => { $('reset-btn').onclick(); closePop(); };
   $('help-btn').onclick = () => $('help-modal').classList.remove('hidden');
   $('help-close').onclick = () => $('help-modal').classList.add('hidden');
   $('help-modal').onclick = (e) => { if (e.target.id === 'help-modal') $('help-modal').classList.add('hidden'); };
@@ -865,6 +1196,7 @@ function wireUI() {
   $('damage-btn-2').onclick = toggleDamage;
   $('compare-btn').onclick = toggleCompare;
   $('compare-btn-2').onclick = toggleCompare;
+  $('compare-btn-3').onclick = () => { toggleCompare(); closePop(); };
   $('fav-filter').onclick = () => {
     state.favOnly = !state.favOnly;
     $('fav-filter').classList.toggle('on', state.favOnly);
@@ -971,7 +1303,7 @@ function wireUI() {
       case 'x': case 'X': case 'ч': case 'Ч': toggleDamage(); break;
       case 'Escape': {
         $('help-modal').classList.add('hidden');
-        $('light-pop')?.classList.add('hidden');
+        closePop();
         closeDrawer();
         break;
       }
@@ -1060,7 +1392,7 @@ function boot() {
         + '<span><kbd>I</kbd> салон</span><span><kbd>← →</kbd> модель</span>';
   }
   const note = document.querySelector('.foot-note');
-  if (note && device.touch) note.textContent = '40 моделей · 10 / 20 / 10';
+  if (note && device.touch) note.textContent = '62 модели · 10 / 20 / 10 / 22';
   stage.setPreset(state.preset);
   document.querySelectorAll('#dock-env .chip').forEach((x) => x.classList.toggle('active', x.dataset.preset === state.preset));
   document.querySelectorAll('.cat-tab').forEach((t) => {
@@ -1074,6 +1406,9 @@ function boot() {
   const unit = currentUnit();
   renderList();
   renderDetails(unit);
+  renderDamageMenu();
+  renderViewMenu();
+  guardStage();
   setActiveChips(unit);
   renderViewSwitch(unit);
   $('mode-badge').textContent = 'СНАРУЖИ';

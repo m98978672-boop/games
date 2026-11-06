@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0d0c">
-  <meta name="description" content="ГАРАЖ 3D — интерактивный 3D-шоурум техники: 10 тягачей, 20 типов полуприцепов и 10 автомобилей. Осмотр снаружи и изнутри, живой салон, покраска и студийные виды. Работает офлайн.">
-  <title>ГАРАЖ 3D — шоурум тягачей, прицепов и автомобилей</title>
-  <link rel="stylesheet" href="style.css?v=1.8.1">
+  <meta name="description" content="ГАРАЖ 3D — интерактивный 3D-шоурум: 10 тягачей, 20 полуприцепов, 10 автомобилей и 24 здания с четырьмя фасадами. Осмотр снаружи и изнутри, живой салон, покраска и повреждения. Работает офлайн.">
+  <title>ГАРАЖ 3D — шоурум тягачей, прицепов, автомобилей и зданий</title>
+  <link rel="stylesheet" href="style.css?v=1.9.0">
 </head>
 <body>
 <div class="app">
 
-  <!-- ============ верхняя панель: только кнопки ============ -->
+  <!-- ============ верхняя панель: только меню ============ -->
   <header class="hud-top">
     <a class="brand" href="../index.html" aria-label="На главную страницу игр">← <span>GAMES</span></a>
     <div class="app-title">
@@ -19,13 +19,80 @@
       <h1>ГАРАЖ 3D</h1>
     </div>
 
-    <nav class="hud-nav" aria-label="Панели и действия">
-      <button class="hud-btn" id="catalog-toggle" aria-expanded="false" aria-controls="panel-catalog">
-        <span class="ico">🗂</span><b>Каталог</b><i id="catalog-count">10</i>
-      </button>
-      <button class="hud-btn" id="details-toggle" aria-expanded="false" aria-controls="panel-details">
-        <span class="ico">ⓘ</span><b>Модель</b>
-      </button>
+    <nav class="hud-nav" aria-label="Меню шоурума">
+      <div class="hud-pop-wrap">
+        <button class="hud-btn" id="catalog-toggle" aria-expanded="false" aria-controls="panel-catalog">
+          <span class="ico">🗂</span><b>Модель</b><i id="catalog-count">10</i>
+        </button>
+        <!-- меню выбора модели: категории живут здесь, а не в нижней панели -->
+        <div class="hud-pop hud-pop-menu panel-catalog hidden" id="panel-catalog" aria-label="Каталог экспонатов">
+          <div class="pop-head">
+            <span class="eyebrow">ВЫБОР МОДЕЛИ</span>
+            <button class="icon-btn" id="catalog-close" aria-label="Закрыть меню моделей">✕</button>
+          </div>
+          <div class="cat-tabs" role="tablist" aria-label="Категории">
+            <button class="cat-tab active" data-cat="trucks" role="tab" aria-selected="true"><span>🚛</span><b>ТЯГАЧИ</b><i>10</i></button>
+            <button class="cat-tab" data-cat="trailers" role="tab" aria-selected="false"><span>📦</span><b>ПРИЦЕПЫ</b><i>20</i></button>
+            <button class="cat-tab" data-cat="cars" role="tab" aria-selected="false"><span>🚗</span><b>АВТО</b><i>10</i></button>
+            <button class="cat-tab" data-cat="buildings" role="tab" aria-selected="false"><span>🏢</span><b>ЗДАНИЯ</b><i>24</i></button>
+          </div>
+          <label class="search">
+            <span>🔍</span>
+            <input id="search" type="search" placeholder="Поиск: цистерна, склад, 4×4…" autocomplete="off">
+          </label>
+          <div class="catalog-hint" id="cat-hint">10 моделей · седельные тягачи</div>
+          <div class="unit-list" id="unit-list" role="listbox" aria-label="Модели"></div>
+          <div class="drawer-foot">
+            <button class="ghost-btn" id="fav-filter" title="Показать только избранное">★ Избранное</button>
+            <button class="ghost-btn" id="damage-btn-2" title="Показать все повреждения (X)">✷ Повреждения</button>
+            <button class="ghost-btn" id="compare-btn" title="Поставить рядом соседнюю модель">⇄ Сравнить</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-pop-wrap">
+        <button class="hud-btn" id="menu-view-btn" aria-expanded="false" aria-controls="menu-view">
+          <span class="ico">📷</span><b>Ракурсы</b>
+        </button>
+        <!-- меню ракурсов: вперёд/назад/борт/салон -->
+        <div class="hud-pop hidden" id="menu-view">
+          <span class="eyebrow">РАКУРСЫ</span>
+          <div class="pop-row pop-row-wrap" id="menu-view-row"></div>
+          <div class="pop-row">
+            <button class="chip" id="menu-inside">Внутрь</button>
+            <button class="chip" id="menu-outside">Наружу</button>
+            <button class="chip" id="menu-orbit">⟳ Вращение</button>
+            <button class="chip" id="menu-reset">⌖ Сброс</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-pop-wrap">
+        <button class="hud-btn" id="menu-damage-btn" aria-expanded="false" aria-controls="menu-damage">
+          <span class="ico">✷</span><b>Повреждения</b><i id="damage-count-2">0 / 15</i>
+        </button>
+        <!-- меню повреждений: сначала тип, потом место -->
+        <div class="hud-pop hud-pop-wide hidden" id="menu-damage">
+          <div class="pop-head">
+            <span class="eyebrow">ТИП ПОВРЕЖДЕНИЯ</span>
+            <span class="mini" id="damage-menu-count">0 / 15</span>
+          </div>
+          <div class="pop-row pop-row-wrap" id="damage-type-row">
+            <button class="chip dmg-type" data-kind="any">Любое</button>
+            <button class="chip dmg-type" data-kind="dent">Вмятина</button>
+            <button class="chip dmg-type" data-kind="scratch">Царапина</button>
+            <button class="chip dmg-type" data-kind="rust">Ржавчина</button>
+            <button class="chip dmg-type" data-kind="crack">Трещина</button>
+          </div>
+          <span class="eyebrow">МЕСТО</span>
+          <div class="dmg-place-list" id="dmg-place-list"></div>
+          <div class="pop-row">
+            <button class="chip" id="damage-all">✷ Все пятна</button>
+            <button class="chip" id="damage-clear">✕ Убрать все</button>
+          </div>
+          <p class="mini pop-note" id="damage-note">Выбери тип — пятно появится на свободной детали. Потом можно ткнуть в конкретное место.</p>
+        </div>
+      </div>
 
       <div class="hud-pop-wrap">
         <button class="hud-btn" id="light-btn" aria-expanded="false" aria-controls="light-pop">
@@ -42,18 +109,31 @@
         </div>
       </div>
 
-      <span class="hud-sep" aria-hidden="true"></span>
-
-      <button class="icon-btn" id="random-btn" title="Случайная модель (R)" aria-label="Случайная модель">🎲</button>
-      <button class="icon-btn" id="shot-btn" title="Скачать скриншот (C)" aria-label="Скриншот">📷</button>
-      <button class="icon-btn" id="full-btn" title="Полный экран (F)" aria-label="Полный экран">⛶</button>
-      <button class="icon-btn" id="help-btn" title="Управление (H)" aria-label="Управление">?</button>
+      <div class="hud-pop-wrap">
+        <button class="hud-btn hud-btn-icon" id="menu-more-btn" aria-expanded="false" aria-controls="menu-more" aria-label="Ещё">
+          <span class="ico">⋯</span>
+        </button>
+        <div class="hud-pop hidden" id="menu-more">
+          <span class="eyebrow">ЕЩЁ</span>
+          <div class="pop-row pop-row-wrap">
+            <button class="chip" id="random-btn" title="Случайная модель (R)">🎲 Случайная</button>
+            <button class="chip" id="shot-btn" title="Скриншот (C)">📷 Скриншот</button>
+            <button class="chip" id="full-btn" title="Полный экран (F)">⛶ Экран</button>
+            <button class="chip" id="compare-btn-3" title="Сравнить с соседней моделью">⇄ Сравнить</button>
+            <button class="chip" id="help-btn" title="Управление (H)">? Справка</button>
+          </div>
+          <span class="eyebrow">КАРТОЧКА</span>
+          <div class="pop-row">
+            <button class="chip" id="details-toggle" aria-expanded="false" aria-controls="panel-details">ⓘ Открыть карточку</button>
+          </div>
+        </div>
+      </div>
     </nav>
   </header>
 
   <!-- ============ главный экран: одна 3D-сцена ============ -->
   <main class="viewport" id="viewport">
-    <canvas id="gl" aria-label="Трёхмерная сцена с техникой"></canvas>
+    <canvas id="gl" aria-label="Трёхмерная сцена с техникой и зданиями"></canvas>
 
     <!-- текущая модель: подпись в углу вьюпорта -->
     <div class="stage-top">
@@ -115,12 +195,11 @@
     </div>
   </main>
 
-  <!-- ============ нижняя панель: категории и листание ============ -->
+  <!-- ============ нижняя панель: только листание и подпись ============ -->
   <footer class="hud-bottom">
-    <div class="cat-tabs" role="tablist" aria-label="Категории техники">
-      <button class="cat-tab active" data-cat="trucks" role="tab" aria-selected="true"><span>🚛</span><b>ТЯГАЧИ</b><i>10</i></button>
-      <button class="cat-tab" data-cat="trailers" role="tab" aria-selected="false"><span>📦</span><b>ПРИЦЕПЫ</b><i>20</i></button>
-      <button class="cat-tab" data-cat="cars" role="tab" aria-selected="false"><span>🚗</span><b>АВТО</b><i>10</i></button>
+    <div class="dock-cat" id="dock-cat">
+      <span class="eyebrow">КАТЕГОРИЯ</span>
+      <b id="dock-cat-name">Тягачи</b>
     </div>
 
     <div class="dock-next">
@@ -129,36 +208,12 @@
       <button class="nav-arrow" id="next-btn" title="Следующая модель" aria-label="Следующая">›</button>
     </div>
 
-    <div class="foot-note">40 моделей · 10 / 20 / 10 · <span title="Версия сборки">v1.6</span> · <a href="../index.html">все игры</a></div>
+    <div class="foot-note">64 модели · 10 / 20 / 10 / 24 · <span title="Версия сборки">v1.9</span> · <a href="../index.html">все игры</a></div>
   </footer>
 </div>
 
-<!-- ============ выдвижная панель: каталог ============ -->
+<!-- ============ затемнение под выдвижную карточку ============ -->
 <div class="drawer-backdrop" id="backdrop"></div>
-
-<aside class="drawer drawer-left" id="panel-catalog" aria-label="Каталог экспонатов">
-  <div class="drawer-head">
-    <div>
-      <span class="eyebrow">КАТАЛОГ ЭКСПОНАТОВ</span>
-      <h2>Техника</h2>
-    </div>
-    <button class="icon-btn" id="catalog-close" aria-label="Закрыть каталог">✕</button>
-  </div>
-
-  <label class="search">
-    <span>🔍</span>
-    <input id="search" type="search" placeholder="Поиск: цистерна, кабина, 4×4…" autocomplete="off">
-  </label>
-
-  <div class="catalog-hint" id="cat-hint">10 моделей · седельные тягачи</div>
-  <div class="unit-list" id="unit-list" role="listbox" aria-label="Модели"></div>
-
-  <div class="drawer-foot">
-    <button class="ghost-btn" id="fav-filter" title="Показать только избранное">★ Избранное</button>
-    <button class="ghost-btn" id="damage-btn-2" title="Показать все повреждения (X)">✷ Повреждение</button>
-    <button class="ghost-btn" id="compare-btn" title="Поставить рядом соседнюю модель">⇄ Сравнить</button>
-  </div>
-</aside>
 
 <!-- ============ выдвижная панель: карточка модели ============ -->
 <aside class="drawer drawer-right" id="panel-details" aria-label="Карточка модели">
@@ -194,12 +249,13 @@
     <h3 class="d-h3">Повреждения <span class="mini" id="damage-count">0 / 15</span></h3>
     <div class="damage-row" id="damage-row"></div>
     <div class="damage-list" id="damage-list"></div>
+    <div class="damage-report" id="damage-report"></div>
 
     <h3 class="d-h3">Осмотр по точкам <span class="mini" id="anchor-count">0</span></h3>
     <div class="anchor-row" id="anchor-row"></div>
 
     <div class="d-note">
-      <b>Все модели собраны кодом</b> из примитивов Three.js: кузов, стёкла, шасси, колёса и салон.
+      <b>Все модели собраны кодом</b> из примитивов Three.js: кузов, стёкла, вырезы, шасси, колёса, салон и фасады.
       Ни одной внешней 3D-модели или картинки — шоурум работает офлайн.
     </div>
   </div>
@@ -214,20 +270,19 @@
     </div>
     <div class="help-grid">
       <div><b>Мышь</b><span>ЛКМ — вращать вокруг машины, колесо — приблизить <i>к курсору</i>, ПКМ — сдвинуть сцену.</span></div>
-      <div><b>Клик по детали</b><span>Наводит камеру на узел и подписывает его: «Сцепной шкворень», «Горловина люка»… Двойной клик — в салон.</span></div>
-      <div><b>Навпад</b><span>Кнопки в правом нижнем углу: стрелки вращают камеру, <kbd>+</kbd>/<kbd>−</kbd> приближают, <kbd>⌂</kbd> возвращает вид. Удержание — непрерывное движение. Клавиши <kbd>+</kbd>/<kbd>−</kbd> — зум, <kbd>0</kbd> — вид снаружи.</span></div>
+      <div><b>Клик по детали</b><span>Наводит камеру на узел и подписывает его: «Сцепной шкворень», «Главный вход»… Двойной клик — в салон.</span></div>
+      <div><b>Меню «Модель»</b><span>Категории и список моделей. Категории живут здесь: техника, прицепы, авто и здания. <kbd>←</kbd> <kbd>→</kbd> листают без меню.</span></div>
+      <div><b>Меню «Ракурсы»</b><span>Все виды разом: снаружи, борт, сзади, спереди, в кабине, в салоне, спальник — и кнопки «Внутрь/Наружу».</span></div>
+      <div><b>Меню «Повреждения»</b><span>Сначала тип дефекта — вмятина, царапина, ржавчина, трещина, — пятно появляется на свободной детали. Потом можно выбрать конкретное место списком. Каждый дефект описан словами: деталь, вид, серьёзность и что с ним делать.</span></div>
+      <div><b>Навпад</b><span>Кнопки в правом нижнем углу: стрелки вращают камеру, <kbd>+</kbd>/<kbd>−</kbd> приближают, <kbd>⌂</kbd> возвращает вид. Удержание — непрерывное движение.</span></div>
       <div><b>Полёт камеры</b><span><kbd>W</kbd> — вперёд, <kbd>S</kbd> — назад, <kbd>A</kbd> — влево, <kbd>D</kbd> — вправо, <kbd>Q</kbd>/<kbd>E</kbd> — ниже/выше, <kbd>Shift</kbd> — ускорение. <kbd>Ctrl</kbd> — вернуть камеру в исходное положение вида.</span></div>
       <div><b>Сенсор</b><span>Один палец — вращать, два — зум и сдвиг, свайп — другая модель, двойной тап — в салон.</span></div>
-      <div><b>Салон</b><span>Кнопка 👁, «Сесть внутрь» или <kbd>I</kbd>. Внутри тяните — свободный взгляд.</span></div>
-      <div><b>Виды</b><span>Чипы внизу слева или <kbd>1</kbd>–<kbd>5</kbd>: снаружи, борт, сзади, водитель, салон.</span></div>
-      <div><b>Повреждения</b><span>У каждой машины 15 своих пятен: вмятина, царапина со сколом, ржавчина, трещина. В карточке каждое добавляется <i>отдельно</i> — кликом по строке, «＋ ещё одно» — случайное, <kbd>✷</kbd> или <kbd>X</kbd> — все сразу. Пятна с рельефом и нормал-картой: вмятина ловит свет, а не выглядит наклейкой.</span></div>
-      <div><b>Модели и панели</b><span><kbd>←</kbd> <kbd>→</kbd> — модель, <kbd>R</kbd> — случайная, <b>Каталог</b> и <b>Модель</b> сверху, <kbd>Esc</kbd> — закрыть.</span></div>
-      <div><b>Прочее</b><span><kbd>Пробел</kbd> — автовращение, <kbd>C</kbd> — скриншот, <kbd>F</kbd> — полный экран, <kbd>H</kbd> — эта справка.</span></div>
+      <div><b>Прочее</b><span><kbd>Пробел</kbd> — автовращение, <kbd>C</kbd> — скриншот, <kbd>F</kbd> — полный экран, <kbd>H</kbd> — эта справка, <kbd>Esc</kbd> — закрыть меню.</span></div>
     </div>
     <p class="mini">Марки, модели и характеристики вымышлены — это самостоятельный шоурум, а не копия реальных брендов. Двойной клик по названию в карточке добавляет модель в избранное.</p>
   </div>
 </div>
 
-<script defer src="showroom.bundle.js?v=1.8.1"></script>
+<script defer src="showroom.bundle.js?v=1.9.0"></script>
 </body>
 </html>
