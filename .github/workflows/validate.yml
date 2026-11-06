@@ -29,6 +29,12 @@ jobs:
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play
 
+      - name: Test ГАРАЖ 3D (модели, кадры, интерфейс, сборка)
+        working-directory: truck-showroom
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+
   malware-scan:
     name: Scan changed files with ClamAV
     runs-on: ubuntu-latest

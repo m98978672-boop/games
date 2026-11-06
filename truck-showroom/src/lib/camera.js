@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { damp, clamp } from './kit.js';
+import { fitView, canFitView } from './fit.js';
 
 export class ShowroomCamera {
   constructor(camera, dom, opts = {}) {
@@ -30,10 +31,39 @@ export class ShowroomCamera {
     this.current = null;
     this.look = new THREE.Vector3();
     this.view = null;
+    // откуда брать габариты текущей модели — задаёт приложение
+    this.boundsProvider = null;
+    this.rawView = null;
+  }
+
+  /** Приложение сообщает, у какой модели брать габариты для подгонки кадра. */
+  setBoundsProvider(fn) {
+    this.boundsProvider = typeof fn === 'function' ? fn : null;
+  }
+
+  /**
+   * Пересчитать текущий ракурс под новый размер кадра.
+   * Нужно при повороте телефона: горизонтальный угол обзора меняется,
+   * и «широкий» вид на вертикальном экране режет модель по краям.
+   */
+  refit() {
+    if (!this.rawView || !canFitView(this.rawView)) return;
+    const box = this.boundsProvider ? this.boundsProvider() : null;
+    if (!box) return;
+    const fitted = fitView(this.rawView, box, this.camera.aspect);
+    this.setView(fitted, { instant: true, raw: false });
   }
 
   /** jib: {pos, target, fov} — желаемое положение камеры. */
-  setView(view, { instant = false } = {}) {
+  setView(view, { instant = false, raw = true } = {}) {
+    // raw=false — это уже подогнанный вид (refit): исходник не перезаписываем,
+    // иначе серия поворотов экрана уводила бы камеру всё дальше и дальше
+    if (raw) this.rawView = view;
+    // на узком/вертикальном кадре отодвигаем камеру, чтобы модель влезла целиком
+    if (canFitView(view) && this.boundsProvider) {
+      const box = this.boundsProvider();
+      if (box) view = fitView(view, box, this.camera.aspect);
+    }
     this.view = view;
     const pos = new THREE.Vector3(...view.pos);
     let target = new THREE.Vector3(...view.target);

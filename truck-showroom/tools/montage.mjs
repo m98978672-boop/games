@@ -1,9 +1,10 @@
-// Собирает контактный лист из нескольких ракурсов: node tools/montage.mjs --list trucks --view exterior --out sheet.png
+// Собирает контактный лист из нескольких ракурсов:
+//   node tools/montage.mjs --list trucks|trailers|cars|buildings --view exterior --out sheet.png
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { PNG } from 'pngjs';
-import { TRUCKS, TRAILERS, CARS } from '../src/data/units.js';
+import { TRUCKS, TRAILERS, CARS, BUILDINGS } from '../src/data/units.js';
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, c, i, arr) => {
   if (c.startsWith('--')) a.push([c.slice(2), arr[i + 1] && !arr[i + 1].startsWith('--') ? arr[i + 1] : 'true']);
@@ -14,7 +15,10 @@ const view = args.view || 'exterior';
 const out = args.out || '/tmp/prev/sheet.png';
 const cell = Number(args.cell || 480);
 const cols = Number(args.cols || 3);
-const list = listName === 'trucks' ? TRUCKS : listName === 'trailers' ? TRAILERS : CARS;
+const list = listName === 'trucks' ? TRUCKS
+  : listName === 'trailers' ? TRAILERS
+    : listName === 'buildings' ? BUILDINGS
+      : CARS;
 const cat = listName;
 const dir = '/tmp/prev/cells';
 fs.mkdirSync(dir, { recursive: true });

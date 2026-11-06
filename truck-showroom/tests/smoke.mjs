@@ -6,6 +6,7 @@ import { TRUCKS, TRAILERS, CARS, BUILDINGS, CATEGORIES, allUnits } from '../src/
 import { carShape } from '../src/models/car.js';
 import { damagePixels, DAMAGE_TITLES, damageReport, damageSpecAt } from '../src/lib/damage.js';
 import { placePanel, overlaps, rect } from '../src/lib/layout.js';
+import { boundsOf, fitView, frameFill, canFitView } from '../src/lib/fit.js';
 
 let fails = 0;
 const ok = (cond, msg) => {
@@ -74,6 +75,65 @@ for (const unit of allUnits()) {
   ok(exterior.length >= 2, `${unit.id}: минимум 2 наружных ракурса (${exterior.length})`);
   ok(tris > (unit.category === 'buildings' ? 400 : 2000), `${unit.id}: геометрия собрана (${Math.round(tris)} треугольников)`);
   ok(built.views.every((v) => Array.isArray(v.pos) && v.pos.length === 3), `${unit.id}: у всех видов корректная позиция камеры`);
+
+  // ---- кадр: наружный ракурс не должен обрезать модель
+  // Регрессия: у котельной труба (H + chimney) уходила за верхнюю кромку кадра
+  // во всех пяти ракурсах — модель «котельная с трубой» показывалась без трубы.
+  {
+    const proj = new THREE.Matrix4();
+    const vtx = new THREE.Vector3();
+    let worstShare = 0;
+    let worstView = '—';
+    built.root.updateMatrixWorld(true);
+    for (const view of exterior) {
+      const cam = new THREE.PerspectiveCamera(view.fov || 40, 16 / 10, 0.05, 400);
+      cam.position.set(...view.pos);
+      cam.lookAt(new THREE.Vector3(...view.target));
+      cam.updateMatrixWorld(true);
+      cam.updateProjectionMatrix();
+      proj.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
+      let outside = 0;
+      let total = 0;
+      built.root.traverseVisible((o) => {
+        if (!o.isMesh || !o.geometry?.attributes?.position) return;
+        const pos = o.geometry.attributes.position;
+        for (let i = 0; i < pos.count; i += 4) {
+          vtx.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).applyMatrix4(proj);
+          total += 1;
+          if (!Number.isFinite(vtx.x) || !Number.isFinite(vtx.y) || vtx.z > 1) continue;
+          if (Math.max(Math.abs(vtx.x), Math.abs(vtx.y)) > 1) outside += 1;
+        }
+      });
+      const share = total ? outside / total : 0;
+      if (share > worstShare) { worstShare = share; worstView = view.id; }
+    }
+    ok(worstShare <= 0.02,
+      `${unit.id}: наружные ракурсы не обрезают модель (худший «${worstView}»: ${(worstShare * 100).toFixed(1)}%)`);
+  }
+
+  // ---- кадр на разной ширине экрана: десктоп, планшет, телефон вертикально.
+  // Ракурсы рассчитаны под 16:10; на телефоне горизонтальный угол обзора уже,
+  // поэтому камера должна отъезжать (fitView). Проверяем, что после подгонки
+  // модель целиком влезает в кадр при любом аспекте.
+  {
+    const box = boundsOf(built.root);
+    const problems = [];
+    for (const [label, aspect] of [['десктоп 16:10', 1.6], ['планшет 3:4', 0.75], ['телефон 9:16', 0.5625]]) {
+      for (const view of built.views.filter(canFitView)) {
+        const fitted = fitView(view, box, aspect);
+        const fill = frameFill(
+          box,
+          new THREE.Vector3(...fitted.pos),
+          new THREE.Vector3(...fitted.target),
+          fitted.fov || 40,
+          aspect,
+        );
+        if (!(fill <= 1)) problems.push(`${view.id} @ ${label} (${fill.toFixed(2)})`);
+      }
+    }
+    ok(problems.length === 0,
+      `${unit.id}: кадр вписывается на десктопе, планшете и телефоне${problems.length ? ' — обрезано: ' + problems.slice(0, 3).join('; ') : ''}`);
+  }
 
   // ---- здания: у каждого 4 разных фасада и свои детали на них
   if (unit.category === 'buildings') {
