@@ -113,19 +113,43 @@ const before = D.querySelector('.paint-dot.active')?.title;
 $('paint-row').querySelectorAll('.paint-dot')[4].click(); await wait(150);
 check('покраска выбирается', D.querySelector('.paint-dot.active')?.title !== before);
 
-// повреждение: кнопка в карточке, кнопка на сцене и клавиша X
+// повреждения: каждое добавляется отдельно, ✷/X — все сразу
 const dmgBtn = () => D.querySelector('#damage-row .damage-btn');
+const chips = () => [...D.querySelectorAll('#damage-list .dmg-chip')];
+const dmgCount = () => $('damage-count').textContent.trim();
 check('в карточке есть строка повреждения', !!dmgBtn(), dmgBtn()?.textContent || '');
 check('в карточке указано число повреждений', /\d+ шт\./.test(dmgBtn()?.textContent || ''), dmgBtn()?.textContent?.slice(0, 40));
 check('список осмотра не забит 15 пятнами', D.querySelectorAll('.anchor-btn').length < 12, `${D.querySelectorAll('.anchor-btn').length} кнопок`);
-dmgBtn().click(); await wait(150);
-check('повреждение включилось из карточки', dmgBtn().classList.contains('on') && $('damage-btn').classList.contains('on'));
-$('damage-btn').click(); await wait(150);
-check('повреждение выключилось кнопкой на сцене', !dmgBtn().classList.contains('on'));
-window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'x' })); await wait(150);
-check('клавиша X включает повреждение', dmgBtn().classList.contains('on'));
-window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'X' })); await wait(150);
-check('клавиша X выключает повреждение', !dmgBtn().classList.contains('on'));
+check('пятна перечислены поштучно', chips().length >= 15, `${chips().length} строк`);
+check('по умолчанию не добавлено ни одного', dmgCount() === '0 / 15', dmgCount());
+chips()[3].click(); await wait(140);
+check('клик по строке добавляет одно пятно',
+  chips()[3].classList.contains('on') && chips().filter((c) => c.classList.contains('on')).length === 1,
+  `включено ${chips().filter((c) => c.classList.contains('on')).length}`);
+check('счётчик показывает одно из пятнадцати', dmgCount() === '1 / 15', dmgCount());
+check('мастер-кнопка загорелась от одного пятна', dmgBtn().classList.contains('on'));
+chips()[7].click(); await wait(140);
+check('второе пятно добавляется поверх первого', dmgCount() === '2 / 15', dmgCount());
+chips()[3].click(); await wait(140);
+check('повторный клик убирает только это пятно',
+  dmgCount() === '1 / 15' && !chips()[3].classList.contains('on') && chips()[7].classList.contains('on'), dmgCount());
+// мастер-кнопка и ✷ работают как «все сразу»: есть хоть одно — снимают все
+dmgBtn().click(); await wait(160);
+check('кнопка в карточке снимает все пятна разом', dmgCount() === '0 / 15' && !dmgBtn().classList.contains('on'), dmgCount());
+dmgBtn().click(); await wait(160);
+check('кнопка в карточке добавляет все пятна', dmgCount() === '15 / 15' && chips().every((c) => c.classList.contains('on')), dmgCount());
+$('damage-btn').click(); await wait(160);
+check('кнопка на сцене снимает все повреждения', dmgCount() === '0 / 15');
+$('damage-btn').click(); await wait(160);
+check('кнопка на сцене включает все повреждения', dmgCount() === '15 / 15' && $('damage-btn').classList.contains('on'), dmgCount());
+window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'x' })); await wait(160);
+check('клавиша X снимает все повреждения', dmgCount() === '0 / 15', dmgCount());
+window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'X' })); await wait(160);
+check('клавиша X добавляет все повреждения', dmgCount() === '15 / 15', dmgCount());
+dmgBtn().click(); await wait(160);
+chips()[0].click(); await wait(140);
+D.querySelector('.damage-more').click(); await wait(140);
+check('кнопка «ещё одно» добавляет ровно одно пятно', dmgCount() === '2 / 15', dmgCount());
 
 // салон/снаружи на авто
 tab('cars').click(); await wait(250);

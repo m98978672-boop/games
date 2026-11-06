@@ -82,14 +82,33 @@ for (const unit of allUnits()) {
     const sigs = new Set(dmg.list.map((x) => `${x.spec.kind}:${x.spec.seed}`));
     ok(sigs.size >= 12, `${unit.id}: текстуры разные, а не одна на всё (${sigs.size} вариантов)`);
     let badPatch = 0;
+    let flatPatch = 0;
     for (const item of dmg.list) {
       const patch = item.patch;
       if (!patch.material?.map) badPatch += 1;
       if (patch.material.transparent !== true || patch.material.depthWrite !== false) badPatch += 1;
       const bb = new THREE.Box3().setFromObject(patch).getSize(new THREE.Vector3());
       if (!(Math.max(bb.x, bb.y, bb.z) > 0.1)) badPatch += 1;
+      // пятно должно быть ОБЪЁМНЫМ: сетка с рельефом и нормал-карта,
+      // иначе получается плоская наклейка, как раньше
+      const pos = patch.geometry.attributes.position;
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let i = 0; i < pos.count; i++) {
+        const z = pos.getZ(i);
+        if (z < lo) lo = z;
+        if (z > hi) hi = z;
+      }
+      const relief = hi - lo;
+      const ns = patch.material.normalScale;
+      if (!(relief > 0.002) || !(pos.count > 150)) flatPatch += 1;
+      if (!patch.material.normalMap || !ns || !(ns.y > 0.5)) flatPatch += 1;
     }
     ok(badPatch === 0, `${unit.id}: все пятна с текстурой, накладкой и не вырождены${badPatch ? ' — ' + badPatch : ''}`);
+    ok(flatPatch === 0, `${unit.id}: пятна объёмные — рельеф и нормал-карта${flatPatch ? ' — ' + flatPatch : ''}`);
+    // каждое пятно управляется отдельно: группа скрыта, меши адресуемы по индексу
+    ok(dmg.list.every((it, i) => it.patch.name === `damage-patch:${i}` && it.patch.userData.kind === it.spec.kind),
+      `${unit.id}: каждое пятно адресуется по индексу`);
     let badLabel = 0;
     for (const item of dmg.list) {
       const label = item.spec.label;
@@ -97,12 +116,46 @@ for (const unit of allUnits()) {
       const adj = label.split(' ')[0];
       if (!/^(лев|прав)/.test(adj)) continue; // деталь по центру — без прилагательного
       const part = label.split(' — ')[0].split(' ').slice(1).join(' ');
-      const agree = /(дверь|стенка|стойка|юбка|крышка|крыша|рама)/.test(part) ? /ая$/.test(adj)
+      const agree = /(дверь|стенка|стойка|юбка|крышка|крыша|рама|боковина|панель|полка|арка)/.test(part) ? /ая$/.test(adj)
         : /(крыло|колесо|седло)/.test(part) ? /ое$/.test(adj) : /ый$/.test(adj);
       if (!agree) badLabel += 1;
     }
     ok(badLabel === 0, `${unit.id}: подписи согласованы по роду${badLabel ? ' — ' + badLabel : ''}`);
     ok(built.anchors.filter((a) => /^Повреждение:/.test(a.label)).length >= 15, `${unit.id}: точки есть в списке осмотра`);
+  }
+
+  // 7b. Пятна повреждений лежат НА кузове: из центра каждого пятна луч в
+  //     кузов должен упираться в панель в паре сантиметров. Раньше половина
+  //     пятен висела в воздухе над колёсами и в проёмах арок.
+  {
+    const rcD = new THREE.Raycaster();
+    let floating = 0;
+    for (const item of (built.damage?.list || [])) {
+      const patch = item.patch;
+      const n = new THREE.Vector3(0, 0, 1).applyQuaternion(patch.getWorldQuaternion(new THREE.Quaternion())).normalize();
+      rcD.set(patch.getWorldPosition(new THREE.Vector3()), n.clone().negate());
+      const hit = rcD.intersectObject(built.root, true)
+        .find((h) => h.object.isMesh && !h.object.userData.damage && h.object.visible !== false
+          && h.object.material?.transparent !== true);
+      if (!hit || hit.distance > 0.05) floating += 1;
+    }
+    ok(floating <= 1, `${unit.id}: пятна лежат на панелях (в воздухе ${floating} из ${built.damage?.list?.length || 0})`);
+  }
+
+  // 8. Зеркала тягачей: полотно смотрит НАЗАД, на водителя. Раньше корпус
+  //    стоял поперёк и водитель видел ребро зеркала вместо дороги.
+  if (unit.category === 'trucks') {
+    const panes = [];
+    built.root.traverse((o) => {
+      if (o.isMesh && o.name === 'mirror-glass') {
+        panes.push(new THREE.Box3().setFromObject(o).getSize(new THREE.Vector3()));
+      }
+    });
+    const bad = panes.filter((b) => !(b.z < 0.05 && b.x > 0.15 && b.y > 0.1)).length;
+    // у футуристичного тягача вместо зеркал камеры — полотен нет, это норма
+    const cameras = built.anchors.some((a) => a.label === 'Камера обзора');
+    ok(bad === 0 && (panes.length >= 2 || cameras),
+      `${unit.id}: зеркала повёрнуты полотном к водителю (полотен ${panes.length}, кривых ${bad})`);
   }
 
   // из места водителя обзор не должен упираться в краску: лобовое стекло прозрачное
@@ -135,6 +188,21 @@ for (const unit of CARS) {
   root.updateMatrixWorld(true);
   const S = carShape(unit);
   const { front, rear, W, ground } = S;
+
+  // 0. Торпедо стоит на месте, а не висит в салоне: расстояние от кресла
+  //    до панели должно быть человеческим, и панель не нависает над коленом.
+  const seatD = built.anchors.find((a) => a.label === 'Сиденье водителя');
+  const dashD = built.anchors.find((a) => a.label === 'Торпедо и руль');
+  if (seatD && dashD) {
+    const gap = seatD.pos[2] - dashD.pos[2];
+    // кресло ближе к панели (было 0,92 м), но не вплотную
+    ok(gap > 0.45 && gap < 0.95, `${unit.id}: кресло стоит у панели на нормальном расстоянии (${gap.toFixed(2)} м)`);
+    // корпус панели 0,3 м: задняя кромка не должна оказаться над подушкой.
+    // У микрокара и пикапа салон короткий, там зазор в плане меньше —
+    // но кресло всё равно стоит ПОЗАДИ панели, а не под ней.
+    const clearance = seatD.pos[2] - 0.22 - (dashD.pos[2] + 0.15);
+    ok(clearance > 0.1, `${unit.id}: панель не нависает над креслом (зазор ${clearance.toFixed(2)} м)`);
+  }
 
   // 1. Корма и нос не выходят за заявленный габарит кузова
   ok(S.rearBaseZ <= rear - 0.05, `${unit.id}: задняя кромка крыши в габарите (${S.rearBaseZ.toFixed(2)} ≤ ${rear.toFixed(2)})`);
@@ -176,14 +244,24 @@ for (const unit of CARS) {
   const dashTopC = floorYc + 0.42;
   const cowlY = Math.min(dashTopC + 0.06, S.hoodY - 0.012) + 0.06;
   const rc2 = new THREE.Raycaster();
+  const opaque = (h) => h.object.visible !== false && h.object.material?.transparent !== true;
   let holes = 0;
-  for (let z = S.wsBase + 0.12; z <= S.wsTopZ - 0.15; z += 0.08) {
+  // Область «полки кузова»: от основания лобового до задней кромки панели.
+  // Раньше полка тянулась на 12 см за кромку панели и нависала над коленями —
+  // отсюда и ощущение, что торпедо выдвинуто в салон.
+  for (let z = S.wsBase + 0.06; z <= S.wsTopZ - 0.34; z += 0.08) {
     rc2.set(new THREE.Vector3(0.1, cowlY, z), new THREE.Vector3(0, -1, 0));
-    const hit = rc2.intersectObject(root, true)
-      .find((h) => h.object.visible !== false && h.object.material?.transparent !== true);
+    const hit = rc2.intersectObject(root, true).find(opaque);
     if (!hit || hit.distance > 0.3) holes += 1;
   }
   ok(holes === 0, `${unit.id}: торпедо соединено с кузовом (просветов ${holes})`);
+  // полка не должна нависать над сиденьями: над задней кромкой панели,
+  // сразу за верхом лобового, не должно быть горизонтальной поверхности
+  const upRay = new THREE.Raycaster();
+  upRay.set(new THREE.Vector3(0.1, floorYc + 0.62, S.wsTopZ - 0.12), new THREE.Vector3(0, 1, 0));
+  const upHit = upRay.intersectObject(root, true).find(opaque);
+  ok(!upHit || upHit.distance > 0.35,
+    `${unit.id}: торпедо не нависает над сиденьями (${upHit ? upHit.distance.toFixed(2) + ' м' : 'чисто'})`);
 
   let glassMaxX = 0;
   root.traverse((o) => {

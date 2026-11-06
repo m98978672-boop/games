@@ -33,8 +33,20 @@ const state = {
   autoRotate: true,
   search: '',
   compare: null,
-  damage: false,
+  damage: false, // true, если у модели добавлено хотя бы одно пятно
 };
+
+// Пятна добавляются ПОШТУЧНО: у каждой модели свой набор индексов.
+// Кнопка ✷ / X — «все сразу», клик по строке в карточке — одно пятно.
+const damageOn = new Map();
+function damageKey() {
+  return `${state.cat}:${state.id}`;
+}
+function damageSet() {
+  const key = damageKey();
+  if (!damageOn.has(key)) damageOn.set(key, new Set());
+  return damageOn.get(key);
+}
 
 let saved = {};
 try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') || {}; } catch { saved = {}; }
@@ -169,26 +181,63 @@ function clearShown() {
 
 // ---------- повреждение: пятно на кузове, у каждой модели своё
 function applyDamage() {
-  const on = !!state.damage;
-  if (shown && shown.damage && shown.damage.group) shown.damage.group.visible = on;
-  for (const id of ['damage-btn', 'damage-btn-2']) {
-    const el = $(id);
-    if (el) el.classList.toggle('on', on);
-  }
-  $('damage-btn')?.classList.toggle('active', on);
+  const list = shown?.damage?.list || [];
+  const set = damageSet();
+  // пятно видно только если его добавили; группа прячется, когда не добавлено ни одного
+  list.forEach((item, i) => {
+    item.patch.visible = set.has(i);
+  });
+  const any = set.size > 0;
+  state.damage = any;
+  if (shown?.damage?.group) shown.damage.group.visible = any;
+  for (const id of ['damage-btn', 'damage-btn-2']) $(id)?.classList.toggle('on', any);
+  $('damage-btn')?.classList.toggle('active', any);
 }
 
 function toggleDamage() {
   if (!shown || !shown.damage) {
-    live('У этой модели нет повреждения');
+    live('У этой модели нет повреждений');
     return;
   }
-  state.damage = !state.damage;
+  const set = damageSet();
+  if (set.size) {
+    set.clear();
+    live('Все повреждения убраны');
+  } else {
+    shown.damage.list.forEach((_, i) => set.add(i));
+    live(`Добавлены все повреждения: ${set.size} шт.`);
+  }
   applyDamage();
   renderDetails(currentUnit());
-  const spec = shown.damage.spec;
-  const count = shown.damage.count || 1;
-  live(state.damage ? `Повреждения: ${count} шт. · ${spec.label}` : 'Повреждения скрыты');
+}
+
+/** Добавить/убрать ОДНО повреждение по индексу. */
+function toggleDamageAt(index) {
+  if (!shown?.damage?.list?.[index]) return;
+  const set = damageSet();
+  const item = shown.damage.list[index];
+  const has = set.has(index);
+  if (has) set.delete(index);
+  else set.add(index);
+  applyDamage();
+  renderDetails(currentUnit());
+  live(has ? `Убрано: ${item.spec.label}` : `Добавлено: ${item.spec.label}`);
+}
+
+/** Добавить одно случайное ещё не добавленное повреждение (кнопка «ещё»). */
+function addRandomDamage() {
+  const list = shown?.damage?.list || [];
+  const set = damageSet();
+  const free = list.map((_, i) => i).filter((i) => !set.has(i));
+  if (!free.length) {
+    live('Все пятна уже добавлены');
+    return;
+  }
+  const pick = free[Math.floor(Math.random() * free.length)];
+  set.add(pick);
+  applyDamage();
+  renderDetails(currentUnit());
+  live(`Добавлено: ${list[pick].spec.label}`);
 }
 
 function showUnit(unit, { instant = false, view = null } = {}) {
@@ -390,18 +439,43 @@ function renderDetails(unit) {
   });
   // повреждение: подпись + кнопка показа
   const dmgRow = $('damage-row');
-  if (dmgRow) {
+  const dmgList = $('damage-list');
+  const countEl = $('damage-count');
+  if (dmgRow && dmgList) {
     dmgRow.innerHTML = '';
-    const spec = shown && shown.damage ? shown.damage.spec : null;
+    dmgList.innerHTML = '';
+    const dmg = shown && shown.damage ? shown.damage : null;
+    const set = damageSet();
+    const total = dmg ? dmg.count || dmg.list.length : 0;
+    if (countEl) countEl.textContent = `${set.size} / ${total}`;
+    // мастер-кнопка: добавить/убрать все пятна этой модели
     const b = document.createElement('button');
-    b.className = 'damage-btn' + (spec && state.damage ? ' on' : '');
-    const count = shown && shown.damage ? shown.damage.count || 1 : 0;
-    b.innerHTML = spec
-      ? `<span class="damage-dot"></span><span class="damage-text">${count} шт. · ${spec.label}</span><span class="damage-key">X</span>`
-      : '<span class="damage-text">Повреждение не задано</span>';
-    b.disabled = !spec;
+    b.className = 'damage-btn' + (dmg && set.size ? ' on' : '');
+    b.innerHTML = dmg
+      ? `<span class="damage-dot"></span><span class="damage-text">${set.size} шт. · ${total} на кузове</span><span class="damage-key">X</span>`
+      : '<span class="damage-text">Повреждения не заданы</span>';
+    b.disabled = !dmg;
     b.onclick = () => toggleDamage();
     dmgRow.appendChild(b);
+    const more = document.createElement('button');
+    more.className = 'damage-btn damage-more';
+    more.innerHTML = '<span class="damage-text">＋ ещё одно</span>';
+    more.disabled = !dmg || set.size >= total;
+    more.onclick = () => addRandomDamage();
+    dmgRow.appendChild(more);
+    // поштучно: каждое пятно отдельной строкой
+    if (dmg) {
+      dmg.list.forEach((item, i) => {
+        const chip = document.createElement('button');
+        chip.className = `dmg-chip ${item.spec.kind}` + (set.has(i) ? ' on' : '');
+        chip.dataset.index = String(i);
+        chip.dataset.kind = item.spec.kind;
+        chip.title = item.spec.label;
+        chip.innerHTML = `<span class="dmg-kind"></span><span class="dmg-name">${item.spec.label}</span>`;
+        chip.onclick = () => toggleDamageAt(i);
+        dmgList.appendChild(chip);
+      });
+    }
   }
   // точки осмотра
   const anchors = $('anchor-row');

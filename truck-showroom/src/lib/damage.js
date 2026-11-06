@@ -3,7 +3,10 @@
 // текстура (царапина со сколом, вмятина, ржавчина, трещина).
 // Текстуры рисуются в обычный Uint8Array и грузятся как DataTexture:
 // так они одинаково работают и в браузере, и в тестах без canvas.
-// Пятно — отдельная плоскость на кузове; включается кнопкой «Повреждения» (X).
+// Пятно — не наклейка: у него свой рельеф (сетка, выдавленная по полю
+// повреждения) и нормал-карта, посчитанная из того же поля. Поэтому вмятина
+// ловит свет как вмятина, царапина блестит металлом, ржавчина бугрится.
+// Каждое пятно можно добавить отдельно — они включаются поштучно (X — все).
 // ============================================================
 import * as THREE from 'three';
 import { HALF, plane, group } from './kit.js';
@@ -220,6 +223,127 @@ export function damageTexture(kind, seed = 1) {
   return texCache.get(key).tex;
 }
 
+// ------------------------------------------------------------ рельеф пятна
+// Высота пятна считается из альфа-канала той же текстуры: где рисунок плотнее,
+// там глубже. По полю высот строятся и геометрия (сетка), и нормал-карта —
+// поэтому свет читает вмятину как вмятину, а не как плоскую картинку.
+const RELIEF = {
+  dent: { bump: 0.0075, normal: 2.3, rough: 0.52, metal: 0.14, mode: 'rim' },
+  scratch: { bump: 0.0035, normal: 1.8, rough: 0.33, metal: 0.58, mode: 'rim' },
+  crack: { bump: 0.0045, normal: 2.1, rough: 0.4, metal: 0.42, mode: 'rim' },
+  rust: { bump: 0.0055, normal: 2.7, rough: 0.95, metal: 0.04, mode: 'blister' },
+};
+const BASE_LIFT = 0.002; // накладка стоит на кузове, а не парит над ним
+
+const heights = new Map();
+const normals = new Map();
+
+/** Поле высот повреждения (0..1), сглаженное по 3×3. */
+export function damageHeight(kind, seed = 1) {
+  const key = `${kind}:${seed % 97}`;
+  if (heights.has(key)) return heights.get(key);
+  const px = damagePixels(kind, seed);
+  const raw = new Float32Array(SIZE * SIZE);
+  let max = 0;
+  for (let i = 0; i < SIZE * SIZE; i++) {
+    const a = px[i * 4 + 3] / 255;
+    raw[i] = a;
+    if (a > max) max = a;
+  }
+  const norm = max > 1e-3 ? 0.95 / max : 1;
+  const h = new Float32Array(SIZE * SIZE);
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      let sum = 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const xx = Math.min(SIZE - 1, Math.max(0, x + dx));
+          const yy = Math.min(SIZE - 1, Math.max(0, y + dy));
+          sum += raw[yy * SIZE + xx];
+        }
+      }
+      h[y * SIZE + x] = Math.min(1, (sum / 9) * norm);
+    }
+  }
+  heights.set(key, h);
+  return h;
+}
+
+/** Нормал-карта, посчитанная из поля высот (DataTexture, без canvas). */
+export function damageNormalTexture(kind, seed = 1) {
+  const key = `${kind}:${seed % 97}`;
+  if (normals.has(key)) return normals.get(key);
+  const h = damageHeight(kind, seed);
+  const R = RELIEF[kind] || RELIEF.dent;
+  const strength = R.normal * 3.4;
+  const data = new Uint8Array(SIZE * SIZE * 4);
+  for (let y = 0; y < SIZE; y++) {
+    for (let x = 0; x < SIZE; x++) {
+      const l = h[y * SIZE + Math.max(0, x - 1)];
+      const r = h[y * SIZE + Math.min(SIZE - 1, x + 1)];
+      const up = h[Math.max(0, y - 1) * SIZE + x];
+      const dn = h[Math.min(SIZE - 1, y + 1) * SIZE + x];
+      const nx = (l - r) * strength;
+      const ny = (up - dn) * strength;
+      const len = Math.hypot(nx, ny, 1) || 1;
+      const i = (y * SIZE + x) * 4;
+      data[i] = Math.round((nx / len * 0.5 + 0.5) * 255);
+      data[i + 1] = Math.round((ny / len * 0.5 + 0.5) * 255);
+      data[i + 2] = Math.round((1 / len * 0.5 + 0.5) * 255);
+      data[i + 3] = 255;
+    }
+  }
+  const tex = new THREE.DataTexture(data, SIZE, SIZE, THREE.RGBAFormat);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  normals.set(key, tex);
+  return tex;
+}
+
+/** Детерминированный «шум» для бугров ржавчины. */
+function vertexNoise(i, seed) {
+  let x = Math.imul(i + 1, 2654435761) ^ Math.imul(seed + 7, 40503);
+  x = Math.imul(x ^ (x >>> 15), 2246822507);
+  x ^= x >>> 13;
+  return ((x >>> 0) % 1000) / 999;
+}
+
+/** Сетка пятна с рельефом: не плоская наклейка, а поверхность с объёмом. */
+function reliefGeometry(anchor, spec) {
+  const w = Math.max(0.12, anchor.w || 0.4);
+  const h = Math.max(0.1, anchor.h || 0.3);
+  const cols = Math.max(14, Math.min(40, Math.round(w * 46)));
+  const rows = Math.max(12, Math.min(40, Math.round(h * 46)));
+  const geo = new THREE.PlaneGeometry(w, h, cols, rows);
+  const pos = geo.attributes.position;
+  const uv = geo.attributes.uv;
+  const field = damageHeight(spec.kind, spec.seed);
+  const R = RELIEF[spec.kind] || RELIEF.dent;
+  let lo = Infinity;
+  let hi = -Infinity;
+  for (let i = 0; i < pos.count; i++) {
+    const x = Math.min(SIZE - 1, Math.max(0, Math.round(uv.getX(i) * (SIZE - 1))));
+    const y = Math.min(SIZE - 1, Math.max(0, Math.round(uv.getY(i) * (SIZE - 1))));
+    const t = field[y * SIZE + x];
+    let z;
+    if (R.mode === 'blister') {
+      // ржавчина вспучивается неровными буграми, местами язвами вниз
+      z = BASE_LIFT + R.bump * t * (0.25 + 1.1 * vertexNoise(i, spec.seed));
+    } else {
+      // вмятина/царапина: приподнятый вал по кромке рисунка
+      z = BASE_LIFT + R.bump * 4 * t * (1 - t);
+    }
+    pos.setZ(i, z);
+    if (z < lo) lo = z;
+    if (z > hi) hi = z;
+  }
+  geo.computeVertexNormals();
+  geo.userData.relief = hi - lo;
+  geo.userData.damageKind = spec.kind;
+  return geo;
+}
+
 // ------------------------------------------------------------ точки повреждения
 // У каждой машины 15 разных пятен: место задаёт модель (она знает геометрию),
 // вид и зерно текстуры выбираются детерминированно, но так, чтобы на одной
@@ -256,17 +380,20 @@ export function damageSpecFor(unit, part = null) {
 
 function damageMaterial(spec) {
   const tex = damageTexture(spec.kind, spec.seed);
+  const R = RELIEF[spec.kind] || RELIEF.dent;
   const mat = new THREE.MeshStandardMaterial({
     map: tex,
+    normalMap: damageNormalTexture(spec.kind, spec.seed),
+    normalScale: new THREE.Vector2(R.normal, R.normal),
     color: 0xffffff,
     transparent: true,
-    roughness: 0.66,
-    metalness: 0.1,
+    roughness: R.rough,
+    metalness: R.metal,
     depthWrite: false,
     side: THREE.DoubleSide,
     polygonOffset: true,
-    polygonOffsetFactor: -4,
-    polygonOffsetUnits: -4,
+    polygonOffsetFactor: -3,
+    polygonOffsetUnits: -3,
   });
   mat.userData.damageKind = spec.kind;
   return mat;
@@ -276,17 +403,129 @@ function damageMaterial(spec) {
  * Ставит на кузов сразу набор пятен (по умолчанию — все 15).
  * anchor = { part:{name,gender}, side, pos:[x,y,z], rotX?, rotY?, w, h }
  */
+/**
+ * Куда ставить пятно: лучшие точки на кузове. Пятно не должно висеть в
+ * воздухе — из анкера пускаем лучи по нормали (центр + края пятна) и
+ * прижимаем его к найденной панели. Заодно берём нормаль панели, чтобы
+ * пятно на скруглённом борту лежало по поверхности, а не торчало.
+ */
+function snapToSurface(root, a, normal, w, h) {
+  const t = Math.abs(normal.x) > 0.9 ? new THREE.Vector3(0, 1, 0) : new THREE.Vector3(1, 0, 0);
+  const u = new THREE.Vector3().crossVectors(normal, t).normalize();
+  const v = new THREE.Vector3().crossVectors(normal, u).normalize();
+  const origin = new THREE.Vector3(...a.pos);
+  const rc = new THREE.Raycaster();
+  rc.far = 2.2;
+  const opaqueMesh = (hit) => hit.object.isMesh
+    && hit.object.visible !== false
+    && !hit.object.userData.damage
+    && hit.object.material?.transparent !== true;
+  const cast = (dx, dy) => {
+    const o = origin.clone()
+      .addScaledVector(u, dx * w * 0.34)
+      .addScaledVector(v, dy * h * 0.34)
+      .addScaledVector(normal, 0.14);
+    rc.set(o, normal.clone().negate());
+    return rc.intersectObject(root, true).find(opaqueMesh) || null;
+  };
+  // 1. основной луч из центра пятна
+  let hit = cast(0, 0);
+  // 2. если центр мимо (анкер стоит чуть в стороне от панели) — ищем соседним
+  const fan = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1],
+    [2, 0], [-2, 0], [0, 2], [0, -2]];
+  if (!hit) {
+    let best = null;
+    let bestD = Infinity;
+    for (const [dx, dy] of fan) {
+      const h2 = cast(dx, dy);
+      if (!h2) continue;
+      const d = Math.abs(dx) + Math.abs(dy);
+      if (d < bestD) { best = h2; bestD = d; }
+    }
+    hit = best;
+  }
+  // 3. панель может оказаться и с другой стороны анкера (пятно «утоплено»)
+  let flipped = false;
+  if (!hit) {
+    const back = normal.clone().negate();
+    const rc2 = new THREE.Raycaster();
+    rc2.far = 1.2;
+    for (const [dx, dy] of fan) {
+      const o = origin.clone()
+        .addScaledVector(u, dx * w * 0.34)
+        .addScaledVector(v, dy * h * 0.34)
+        .addScaledVector(back, 0.05);
+      rc2.set(o, normal.clone());
+      const h3 = rc2.intersectObject(root, true).find(opaqueMesh);
+      if (h3) { hit = h3; flipped = true; break; }
+    }
+  }
+  // 4. последний шанс: ищем ближайшую поверхность по шести направлениям —
+  //    пятно всё равно должно лежать на кузове, а не висеть в воздухе
+  let dirOut = normal;
+  if (!hit) {
+    const rc3 = new THREE.Raycaster();
+    rc3.far = 3.2;
+    let best = null;
+    let bestD = Infinity;
+    let bestDir = normal;
+    for (const d of [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1],
+      [0.7, 0.7, 0], [-0.7, 0.7, 0], [0.7, -0.7, 0], [-0.7, -0.7, 0]]) {
+      const dir = new THREE.Vector3(...d).normalize();
+      const o = origin.clone().addScaledVector(dir, 0.02);
+      rc3.set(o, dir.clone().negate());
+      const h4 = rc3.intersectObject(root, true).find(opaqueMesh);
+      if (h4 && h4.distance < bestD) { best = h4; bestD = h4.distance; bestDir = dir; }
+    }
+    if (!best) return null;
+    hit = best;
+    dirOut = bestDir;
+  }
+  const point = hit.point.clone().addScaledVector(dirOut, 0.003);
+  let normalWorld = null;
+  if (hit.face && hit.object) {
+    const nm = new THREE.Matrix3().getNormalMatrix(hit.object.matrixWorld);
+    normalWorld = hit.face.normal.clone().applyMatrix3(nm).normalize();
+    if (normalWorld.dot(dirOut) < 0) normalWorld.negate();
+  }
+  return { point, dist: hit.distance, normalWorld };
+}
+
 export function mountDamageSet(root, unit, anchors) {
   const g = group(root, 'damage');
   g.visible = false;
   const list = anchors.map((a, i) => {
     const spec = damageSpecAt(unit, a.part, a.side || 0, i);
-    const patch = plane(g, a.w, a.h, damageMaterial(spec), ...a.pos);
+    const patch = new THREE.Mesh(reliefGeometry(a, spec), damageMaterial(spec));
+    patch.position.set(...a.pos);
     const rotY = a.rotY ?? (a.side ? (a.side > 0 ? HALF : -HALF) : 0);
     patch.rotation.set(a.rotX || 0, rotY, 0);
+    // прижимаем к кузову: иначе пятно висит в воздухе и читается наклейкой
+    root.updateMatrixWorld(true);
+    const nLocal = new THREE.Vector3(0, 0, 1).applyEuler(patch.rotation).normalize();
+    const nWorld = nLocal.clone().applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion())).normalize();
+    const snap = snapToSurface(root, a, nWorld, a.w || 0.4, a.h || 0.3);
+    if (snap) {
+      const local = root.worldToLocal(snap.point.clone());
+      patch.position.copy(local);
+      patch.userData.snap = snap.dist;
+      if (snap.normalWorld && snap.normalWorld.dot(nWorld) > 0.72) {
+        // лёгкий наклон по панели: на скруглённом борту пятно лежит, а не торчит
+        const nLocal2 = snap.normalWorld.clone()
+          .applyQuaternion(root.getWorldQuaternion(new THREE.Quaternion()).invert())
+          .normalize();
+        patch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), nLocal2);
+      }
+    }
+    patch.userData.anchor = a.pos.slice();
     patch.name = `damage-patch:${i}`;
     patch.userData.damage = true;
-    return { patch, spec, anchor: a };
+    patch.userData.kind = spec.kind;
+    patch.userData.label = spec.label;
+    // пятно видимо само по себе, но группа скрыта: так работает и общий
+    // тумблер, и поштучное добавление (app гасит ненужные пятна)
+    g.add(patch);
+    return { patch, spec, anchor: a, index: i };
   });
   return { group: g, list, spec: list[0]?.spec || null, count: list.length };
 }

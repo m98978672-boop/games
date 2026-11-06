@@ -372,7 +372,9 @@ export function buildTrailer(unit, M) {
   // Место пятна зависит от типа: у закрытых кузовов — борта, двери, крыша
   // и юбки, у цистерн — только рама и кормовые щиты (борт круглый),
   // у открытых платформ — настил, рама и крылья.
-  const CLOSED_SIDE = ['curtain', 'van', 'reefer', 'tipper', 'livestock', 'container', 'refcontainer', 'bdouble', 'carrier', 'sidetip'];
+  // автовоз — решётчатый, сплошных бортов у него нет: пятна на борту висели
+  // в воздухе, поэтому он идёт по «открытой» схеме (настил, рама)
+  const CLOSED_SIDE = ['curtain', 'van', 'reefer', 'tipper', 'livestock', 'container', 'refcontainer', 'bdouble', 'sidetip'];
   const ROUND_SIDE = ['tanker', 'adr', 'silo'];
   const closed = CLOSED_SIDE.includes(type);
   const round = ROUND_SIDE.includes(type);
@@ -415,8 +417,10 @@ export function buildTrailer(unit, M) {
       { part: { name: 'задний фонарь', gender: 'm' }, side: 1, rotY: 0, pos: [W / 2 - 0.33, deckY - 0.56, zRear - 0.04], w: 0.34, h: 0.3 },
       { part: { name: 'задний фонарь', gender: 'm' }, side: -1, rotY: 0, pos: [-(W / 2 - 0.33), deckY - 0.56, zRear - 0.04], w: 0.34, h: 0.3 },
       { part: { name: 'задний отбойник', gender: 'm' }, side: 1, rotY: 0, pos: [0.4, 0.64, zRear - 0.1], w: 0.5, h: 0.16 },
-      { part: { name: 'крыло', gender: 'n' }, side: -1, pos: [-(track + 0.2), R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
-      { part: { name: 'крыло', gender: 'n' }, side: 1, pos: [track + 0.2, R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
+      // рама вместо крыла: у цистерны крыло — полуцилиндр над колесом,
+      // плоское пятно на нём висело над шиной
+      { part: { name: 'рама', gender: 'f' }, side: -1, pos: [-(W / 2 - 0.02), 0.9, zFront + 6.2], w: 0.66, h: 0.3 },
+      { part: { name: 'рама', gender: 'f' }, side: 1, pos: [W / 2 - 0.02, 0.9, zFront + 6.2], w: 0.66, h: 0.3 },
     ];
   } else {
     const zDeck = [zFront + 2.2, zFront + 5.4, -0.6, zRear - 4.4, zRear - 1.8];
@@ -432,8 +436,9 @@ export function buildTrailer(unit, M) {
       { part: { name: 'передний щит', gender: 'm' }, side: 1, rotY: PI, pos: [0.5, deckY + 0.5, zFront + 0.06], w: 0.6, h: 0.5 },
       { part: { name: 'задний отбойник', gender: 'm' }, side: -1, rotY: 0, pos: [-0.4, 0.64, zRear - 0.04], w: 0.5, h: 0.16 },
       { part: { name: 'задний фонарь', gender: 'm' }, side: 1, rotY: 0, pos: [W / 2 - 0.33, deckY - 0.56, zRear - 0.04], w: 0.34, h: 0.3 },
-      { part: { name: 'крыло', gender: 'n' }, side: -1, pos: [-(track + 0.2), R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
-      { part: { name: 'крыло', gender: 'n' }, side: 1, pos: [track + 0.2, R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
+      // борт рамы вместо крыла — пятно ложится на плоскую панель
+      { part: { name: 'борт рамы', gender: 'm' }, side: -1, pos: [-(W / 2 - 0.03), 0.9, axleZ[0] - 1.4], w: 0.7, h: 0.26 },
+      { part: { name: 'борт рамы', gender: 'm' }, side: 1, pos: [W / 2 - 0.03, 0.9, axleZ[0] - 1.4], w: 0.7, h: 0.26 },
       { part: { name: 'настил платформы', gender: 'm' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.4, deckTo + 0.01, zRear - 3.0], w: 0.7, h: 0.5 },
     ];
   }

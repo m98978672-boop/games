@@ -251,12 +251,29 @@ export function buildTruck(unit, M) {
       anchors.push({ pos: [side * 1.42, winTop, cabFront + 0.24], label: 'Камера обзора' });
       continue;
     }
-    const armTop = box(cab, 0.34, 0.06, 0.06, CHROME ? M.chrome : M.plastic, side * (HALF_W + 0.16), winTop + 0.12, cabFront + 0.16);
-    const armBot = box(cab, 0.28, 0.05, 0.05, CHROME ? M.chrome : M.plastic, side * (HALF_W + 0.14), winBottom + 0.2, cabFront + 0.16);
-    const housing = rbox(cab, 0.13, 0.72, 0.24, M.plastic, side * (HALF_W + 0.36), winTop - 0.18, cabFront + 0.16, 0.04);
-    box(cab, 0.02, 0.56, 0.18, M.mirror, side * (HALF_W + 0.43), winTop - 0.18, cabFront + 0.16);
-    box(cab, 0.015, 0.16, 0.16, M.glassDark, side * (HALF_W + 0.425), winBottom + 0.06, cabFront + 0.16);
-    anchors.push({ pos: [side * (HALF_W + 0.45), winTop, cabFront + 0.16], label: 'Зеркало', side: side > 0 ? 'справа' : 'слева' });
+    // Корпус зеркала — вертикальная панель: широкая по X (поперёк борта),
+    // высокая по Y и тонкая по Z. Полотно смотрит НАЗАД, на водителя.
+    // Раньше корпус стоял «поперёк»: 0.13 по X и 0.24 по Z, а зеркальное
+    // полотно глядело в бок — водитель видел ребро зеркала, а не дорогу.
+    const mz = cabFront + 0.16;                    // плоскость зеркала вдоль борта
+    const mx = side * (HALF_W + 0.34);             // вынос от борта
+    const armX = side * (HALF_W + 0.17);
+    // кронштейны от передней стойки к корпусу
+    box(cab, 0.36, 0.075, 0.075, CHROME ? M.chrome : M.plastic, armX, winTop + 0.06, mz);
+    box(cab, 0.32, 0.07, 0.07, CHROME ? M.chrome : M.plastic, armX - side * 0.02, winTop - 0.5, mz);
+    // вертикальная стойка кронштейнов — зеркало не «парит» у борта
+    box(cab, 0.055, 0.62, 0.055, CHROME ? M.chrome : M.plastic, side * (HALF_W + 0.03), winTop - 0.22, mz);
+    // основной корпус и полотно на его задней плоскости
+    rbox(cab, 0.3, 0.5, 0.1, M.plastic, mx, winTop - 0.15, mz, 0.035);
+    const pane = box(cab, 0.26, 0.42, 0.014, M.mirror, mx, winTop - 0.15, mz + 0.052);
+    pane.name = 'mirror-glass';
+    // нижнее широкоугольное зеркало — на своём кронштейне под основным
+    const lowY = winTop - 0.56;
+    box(cab, 0.22, 0.05, 0.05, CHROME ? M.chrome : M.plastic, side * (HALF_W + 0.22), lowY + 0.16, mz);
+    rbox(cab, 0.24, 0.22, 0.09, M.plastic, mx, lowY, mz, 0.03);
+    const paneLow = box(cab, 0.2, 0.16, 0.013, M.mirror, mx, lowY, mz + 0.047);
+    paneLow.name = 'mirror-glass';
+    anchors.push({ pos: [mx + side * 0.05, winTop - 0.15, mz + 0.06], label: 'Зеркало', side: side > 0 ? 'справа' : 'слева' });
   }
 
   // ---------------------------------------------- нос: маска, решётка, свет, бампер
@@ -461,22 +478,27 @@ export function buildTruck(unit, M) {
   // 15 точек на каждой машине: двери, оба передних и оба задних крыла,
   // бампер, бак, порог, задняя стенка и крыша кабины, седло, рама, брызговик.
   const dpart = { name: 'дверь кабины', gender: 'f' };
-  const xw = HALF_W + 0.022;
+  // 6 мм от панели: пятно лежит на кузове, а не парит над ним (было 22 мм).
+  // Точки выбраны только на панелях, которые смотрят в бок/назад/вверх —
+  // на крыле-полуцилиндре плоская накладка висела бы над шиной.
+  const xw = HALF_W + 0.006;
   const dmg = mountDamageSet(root, { ...unit, category: 'trucks' }, [
     { part: dpart, side: -1, pos: [-xw, winBottom - 0.56, cabFront + 0.98], w: 0.64, h: 0.42 },
     { part: dpart, side: 1, pos: [xw, winBottom - 0.56, cabFront + 0.98], w: 0.64, h: 0.42 },
-    { part: { name: 'переднее крыло', gender: 'n' }, side: -1, pos: [-(frontTrack + 0.32), R + 0.34, frontAxle], w: 0.44, h: 0.3 },
-    { part: { name: 'переднее крыло', gender: 'n' }, side: 1, pos: [frontTrack + 0.32, R + 0.34, frontAxle], w: 0.44, h: 0.3 },
-    { part: { name: 'заднее крыло', gender: 'n' }, side: 1, pos: [1.33, R + 0.34, wheelsRear[0]], w: 0.62, h: 0.32 },
-    { part: { name: 'заднее крыло', gender: 'n' }, side: -1, pos: [-1.33, R + 0.34, wheelsRear[wheelsRear.length - 1]], w: 0.62, h: 0.32 },
-    { part: { name: 'передний бампер', gender: 'm' }, side: 1, rotY: PI, pos: [0.5, 0.62, frontZ - 0.02], w: 0.5, h: 0.26 },
-    { part: { name: 'передний бампер', gender: 'm' }, side: -1, rotY: PI, pos: [-0.5, 0.62, frontZ - 0.02], w: 0.5, h: 0.26 },
+    { part: { name: 'боковина кабины', gender: 'f' }, side: -1, pos: [-xw, winBottom - 0.42, cabRearZ - 0.62], w: 0.52, h: 0.34 },
+    { part: { name: 'боковина кабины', gender: 'f' }, side: 1, pos: [xw, winBottom - 0.42, cabRearZ - 0.62], w: 0.52, h: 0.34 },
+    { part: { name: 'передний бампер', gender: 'm' }, side: 1, rotY: PI, pos: [0.5, 0.62, frontZ + 0.01], w: 0.5, h: 0.26 },
+    { part: { name: 'передний бампер', gender: 'm' }, side: -1, rotY: PI, pos: [-0.5, 0.62, frontZ + 0.01], w: 0.5, h: 0.26 },
     { part: { name: 'порог кабины', gender: 'm' }, side: -1, pos: [-xw, floorY - 0.06, cabFront + 0.42], w: 0.5, h: 0.26 },
-    { part: { name: 'юбка бака', gender: 'f' }, side: 1, pos: [xw, floorY - 0.18, cabFront + 0.5], w: 0.46, h: 0.3 },
+    // бак — цилиндр радиусом 0.31 на x=±0.92: пятно садится на его боковину
+    { part: { name: 'боковина бака', gender: 'f' }, side: 1, pos: [0.92 + tankR + 0.004, 0.72, tankZ], w: 0.44, h: 0.28 },
+    { part: { name: 'боковина бака', gender: 'f' }, side: -1, pos: [-(0.92 + tankR + 0.004), 0.72, tankZ], w: 0.44, h: 0.28 },
     { part: { name: 'задняя стенка кабины', gender: 'f' }, side: 1, rotY: 0, pos: [0.42, floorY + 1.05, cabRearZ + 0.03], w: 0.6, h: 0.46 },
-    { part: { name: 'крыша кабины', gender: 'f' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.34, roofY + 0.03, cabRearZ - 0.95], w: 0.7, h: 0.5 },
-    { part: { name: 'седло', gender: 'n' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.2, plateY + 0.03, fifthWheelZ], w: 0.5, h: 0.4 },
-    { part: { name: 'задняя рама', gender: 'f' }, side: -1, rotY: 0, pos: [-0.36, frameY + 0.02, rearEnd - 0.02], w: 0.46, h: 0.3 },
+    { part: { name: 'крыша кабины', gender: 'f' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.34, roofY + 0.015, cabRearZ - 0.95], w: 0.7, h: 0.5 },
+    { part: { name: 'седло', gender: 'n' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.2, plateY + 0.02, fifthWheelZ], w: 0.5, h: 0.4 },
+    // лонжерон рамы стоит на x=±0.48 шириной 0.12 → наружная плоскость 0.54
+    { part: { name: 'задняя рама', gender: 'f' }, side: -1, pos: [-0.545, frameY, rearEnd - 0.55], w: 0.46, h: 0.26 },
+    { part: { name: 'задняя рама', gender: 'f' }, side: 1, pos: [0.545, frameY, rearEnd - 0.55], w: 0.46, h: 0.26 },
     { part: { name: 'задний брызговик', gender: 'm' }, side: 1, rotY: 0, pos: [0.5, 0.34, wheelsRear[wheelsRear.length - 1] + R + 0.07], w: 0.5, h: 0.4 },
   ]);
   for (const item of dmg.list) {

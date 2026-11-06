@@ -520,8 +520,10 @@ export function buildCar(unit, M, opts = {}) {
       { part: { name: 'крышка багажника', gender: 'f' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.2, S.deckY + 0.015, (S.rearBaseZ + rear) / 2], w: 0.54, h: 0.4 },
       { part: { name: 'передний бампер', gender: 'm' }, side: 1, rotY: PI, pos: [0.45, ground + 0.2, front - 0.02], w: 0.5, h: 0.24 },
       { part: { name: 'задний бампер', gender: 'm' }, side: -1, rotY: 0, pos: [-0.42, ground + 0.22, rear + 0.02], w: 0.5, h: 0.24 },
-      { part: { name: 'переднее крыло', gender: 'n' }, side: -1, pos: [-xb, belt - 0.48, axleZ[0]], w: 0.44, h: 0.26 },
-      { part: { name: 'заднее крыло', gender: 'n' }, side: 1, pos: [xb, belt - 0.46, axleZ[1]], w: 0.44, h: 0.26 },
+      // крылья — над аркой, а не над шиной: полоса кузова между аркой и
+      // поясом. Раньше пятно висело над колесом, в проёме арки.
+      { part: { name: 'переднее крыло', gender: 'n' }, side: -1, pos: [-xb, belt - 0.15, axleZ[0] + 0.04], w: 0.44, h: 0.16 },
+      { part: { name: 'заднее крыло', gender: 'n' }, side: 1, pos: [xb, belt - 0.15, axleZ[1] - 0.04], w: 0.44, h: 0.16 },
       { part: { name: 'порог', gender: 'm' }, side: -1, pos: [-xb, ground + 0.16, (axleZ[0] + axleZ[1]) / 2], w: 0.5, h: 0.22 },
       { part: { name: 'борт капота', gender: 'm' }, side: 1, pos: [xb, S.hoodY - 0.12, (front + S.wsBase) / 2], w: 0.46, h: 0.26 },
       { part: { name: 'задняя стойка', gender: 'f' }, side: -1, pos: [-xb, belt - 0.12, cPillar + 0.12], w: 0.24, h: 0.22 },
@@ -560,10 +562,10 @@ export function buildCar(unit, M, opts = {}) {
   // глаз водителя не должен оказаться внутри спинки своего же кресла:
   // у коротких салонов кресло сдвинуто вперёд, камера едет вместе с ним
   const seatZc = Math.min(
-    S.wsTopZ + 0.44 + 0.2,
-    Math.max((S.rearBaseZ - 0.06 - 0.32) - 0.54, S.wsTopZ + 0.44 - 0.3),
+    S.wsTopZ + 0.44 + 0.06,
+    Math.max((S.rearBaseZ - 0.06 - 0.32) - 0.54, S.wsTopZ + 0.44 - 0.34),
   );
-  const eyeZr = Math.min(S.wsTopZ + (S.sport ? 0.42 : S.van ? 0.62 : 0.52), seatZc + 0.08);
+  const eyeZr = Math.min(S.wsTopZ + (S.sport ? 0.42 : S.van ? 0.62 : 0.52), seatZc + 0.06);
   const views = [
     {
       id: 'driver', label: 'Место водителя', group: 'interior',
@@ -591,7 +593,7 @@ export function buildCar(unit, M, opts = {}) {
       // Камера — в проходе между передними креслами, чуть ниже потолка и
       // ПОЗАДИ торпедо (dashZ + 0.2): если поставить её на высоту панели,
       // она оказывается внутри её корпуса и кадр перекрывает серое поле.
-      pos: [0, Math.min(belt + 0.22, H - 0.22), S.wsTopZ + Math.max(0.34, (S.roofRearZ - S.wsTopZ) * 0.4)],
+      pos: [0, Math.min(belt + 0.3, H - 0.2), S.wsTopZ + Math.max(0.42, (S.roofRearZ - S.wsTopZ) * 0.44)],
       // целимся в блок приборов (dashTop + 0.07), а не в горизонт: иначе
       // кадр заполняет капот, а торпедо уходит вниз
       target: [0, floorY + 0.38, S.wsTopZ - 0.55],
@@ -619,11 +621,15 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   // Глаз водителя — на 0.44 м позади верхней кромки лобового. Раньше он был
   // на 0.5 м, панель уезжала в салон и съедала место заднему ряду.
   const eyeZ = S.wsTopZ + 0.44;
-  const dashZ = eyeZ - 0.72;
+  // Панель сдвинута вперёд к моторному щиту и стала тоньше (было −0.72 и 0.4):
+  // с места водителя она нависала над коленями и занимала пол-кадра.
+  const dashZ = eyeZ - 0.80;
   // Кресло водителя не уезжает в корму: если салон короткий (хэтч, пикап,
   // микрокар), сиденье сдвигается вперёд, чтобы заднему ряду осталось место.
   const zRearSeat = zRear - 0.32;
-  const seatZ = Math.min(eyeZ + 0.2, Math.max(zRearSeat - 0.54, eyeZ - 0.3));
+  // Кресло сдвинуто к панели: глаз водителя теперь чуть впереди центра подушки.
+  // Нижняя граница — чтобы кресло не упиралось в новую короткую панель.
+  const seatZ = Math.min(eyeZ + 0.06, Math.max(zRearSeat - 0.54, eyeZ - 0.34));
   const dark = M.interiorDark;
   const mid = M.interiorMid;
   const sport = S.sport;
@@ -658,18 +664,18 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   // на dashZ − 0.02, то есть с обратной стороны панели, и водитель видел
   // чёрную плиту без шкал.
   const dashTop = floorY + 0.42;
-  const dashFace = dashZ + 0.205;     // лицевая плоскость, к водителю
+  const dashFace = dashZ + 0.155;     // лицевая плоскость, к водителю (корпус 0.3)
   const dashLow = floorY + 0.06;      // низ панели, у педалей
   const dashH = dashTop + 0.08 - dashLow;
   const dashMidY = dashLow + dashH / 2;
   // корпус панели с наклоном лицевой части
-  const dashBody = rbox(g, cabW, dashH + 0.03, 0.4, dark, 0, dashMidY, dashZ, 0.05);
+  const dashBody = rbox(g, cabW, dashH + 0.03, 0.3, dark, 0, dashMidY, dashZ, 0.05);
   dashBody.rotation.x = -0.05;
   // Сверху панели — узкий кант ПО ВСЕЙ глубине: раньше это была короткая
   // накладка, и с места водителя она читалась как «полка», висящая над
   // приборами в воздухе.
-  const dashCapZ = dashZ + 0.02;
-  rbox(g, cabW - 0.02, 0.035, 0.36, M.rubberTrim, 0, dashTop + 0.06, dashCapZ, 0.016);
+  const dashCapZ = dashZ + 0.005;
+  rbox(g, cabW - 0.02, 0.035, 0.26, M.rubberTrim, 0, dashTop + 0.06, dashCapZ, 0.016);
   // Приборный щиток: утоплен в панель под козырёк, тёмное поле со светлыми
   // насечками и красной стрелкой — как в тягачах, чтобы салоны были в одном стиле.
   const binX = -cabW * 0.27;
@@ -722,7 +728,7 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   // кузова» от основания лобового до верхней кромки панели и закрываем
   // торцы панели щеками — теперь торпедо составляет одно целое с кузовом.
   const cowlZ0 = zFront - 0.02;
-  const cowlZ1 = dashZ + 0.17;
+  const cowlZ1 = dashZ + 0.13;
   const cowlLen = Math.max(0.24, cowlZ1 - cowlZ0);
   const cowlTopY = Math.min(dashTop + 0.06, S.hoodY - 0.012);
   rbox(g, cabW + 0.02, 0.055, cowlLen, dark, 0, cowlTopY - 0.028, (cowlZ0 + cowlZ1) / 2, 0.02);
@@ -735,7 +741,7 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
 
   // руль — между водителем и панелью
   const sw = group(g, 'steering');
-  sw.position.set(-cabW * 0.27, dashTop - 0.11, dashZ + 0.38);
+  sw.position.set(-cabW * 0.27, dashTop - 0.11, dashZ + 0.33);
   sw.rotation.x = -0.42;
   torus(sw, 0.175, 0.021, M.leather, 0, 0, 0, 36);
   // ступица-накладка и спицы «Т»-образно, как на тягачах
@@ -749,7 +755,7 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   const em = cyl(sw, 0.024, 0.024, 0.008, M.accent(unit.accent || '#d8d5c8'), 0, 0, 0.038, 14);
   em.rotation.x = HALF;
   // рулевая колонка — от панели к рулю
-  const col = cyl(g, 0.032, 0.048, 0.46, M.plastic, -cabW * 0.27, dashTop - 0.06, dashZ + 0.2, 10);
+  const col = cyl(g, 0.032, 0.048, 0.42, M.plastic, -cabW * 0.27, dashTop - 0.06, dashZ + 0.17, 10);
   col.rotation.x = 0.6;
   // селектор, подлокотник, педали
   const gear = cyl(g, 0.016, 0.02, 0.17, M.chromeDark, 0.12, floorY + 0.22, dashZ + 0.22, 8);
