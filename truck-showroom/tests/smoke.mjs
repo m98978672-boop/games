@@ -4,6 +4,7 @@ import { createMaterials } from '../src/lib/kit.js';
 import { buildUnit } from '../src/models/index.js';
 import { TRUCKS, TRAILERS, CARS, CATEGORIES, allUnits } from '../src/data/units.js';
 import { carShape } from '../src/models/car.js';
+import { damagePixels, DAMAGE_TITLES } from '../src/lib/damage.js';
 
 let fails = 0;
 const ok = (cond, msg) => {
@@ -39,6 +40,7 @@ const rayHelpers = (() => {
   };
 })();
 const firstHit = (root, view) => rayHelpers.firstHit(root, view);
+const shortLen = (a, b) => Math.min(a.length, b.length);
 const hasHiddenMesh = () => false;
 
 const M = createMaterials(null);
@@ -68,6 +70,29 @@ for (const unit of allUnits()) {
   ok(exterior.length >= 2, `${unit.id}: минимум 2 наружных ракурса (${exterior.length})`);
   ok(tris > 2000, `${unit.id}: геометрия собрана (${Math.round(tris)} треугольников)`);
   ok(built.views.every((v) => Array.isArray(v.pos) && v.pos.length === 3), `${unit.id}: у всех видов корректная позиция камеры`);
+
+  // 6. Повреждение: у каждой модели своя точка и своя текстура
+  const dmg = built.damage;
+  ok(!!(dmg && dmg.group && dmg.spec), `${unit.id}: задана точка повреждения`);
+  if (dmg && dmg.group) {
+    ok(dmg.group.visible === false, `${unit.id}: повреждение скрыто по умолчанию`);
+    const patch = dmg.group.children.find((c) => c.isMesh);
+    ok(!!patch, `${unit.id}: пятно повреждения есть в сцене`);
+    if (patch) {
+      ok(!!patch.material?.map, `${unit.id}: у пятна есть текстура (${dmg.spec.kind})`);
+      ok(patch.material.transparent === true && patch.material.depthWrite === false, `${unit.id}: пятно накладывается, а не режет кузов`);
+      const bb = new THREE.Box3().setFromObject(patch).getSize(new THREE.Vector3());
+      ok(Math.max(bb.x, bb.y, bb.z) > 0.12, `${unit.id}: пятно не вырождено (${Math.max(bb.x, bb.y, bb.z).toFixed(2)} м)`);
+    }
+    ok(!!DAMAGE_TITLES[dmg.spec.kind], `${unit.id}: вид повреждения понятен (${dmg.spec.kind})`);
+    const words = dmg.spec.label.split(' ');
+    const adj = words[0];
+    const part = dmg.spec.label.split(' — ')[0].split(' ').slice(1).join(' ');
+    const agree = /(дверь|арка|площадка)/.test(part) ? /ая$/.test(adj)
+      : /(крыло|колесо|зеркало)/.test(part) ? /ое$/.test(adj) : /ый$/.test(adj);
+    ok(agree, `${unit.id}: подпись согласована по роду — «${dmg.spec.label}»`);
+    ok(built.anchors.some((a) => /^Повреждение:/.test(a.label)), `${unit.id}: точка повреждения есть в списке осмотра`);
+  }
 
   // из места водителя обзор не должен упираться в краску: лобовое стекло прозрачное
   const seatView = built.views.find((v) => v.id === 'driver' || v.id === 'salon');
@@ -309,6 +334,23 @@ for (const unit of TRUCKS) {
       `${unit.id}: перед водителем торпедо (${hit ? hit.object.geometry.type + ' @ ' + hit.distance.toFixed(2) + ' м' : 'пусто'})`);
   }
 }
+
+// текстуры повреждений: у каждого вида рисунок непустой и разный
+const kinds = Object.keys(DAMAGE_TITLES);
+let texFails = 0;
+for (const kind of kinds) {
+  const px = damagePixels(kind, 11);
+  let filled = 0;
+  for (let i = 3; i < px.length; i += 4) if (px[i] > 8) filled += 1;
+  const share = filled / (px.length / 4);
+  ok(share > 0.02 && share < 0.95, `текстура «${DAMAGE_TITLES[kind]}»: занято ${(share * 100).toFixed(0)}% площади`);
+  if (!(share > 0.02 && share < 0.95)) texFails += 1;
+}
+const a1 = damagePixels('rust', 5);
+const a2 = damagePixels('rust', 77);
+let diff = 0;
+for (let i = 0; i < shortLen(a1, a2); i += 1) if (a1[i] !== a2[i]) diff += 1;
+ok(diff > 1000, `у одинакового вида разные зёрна (${diff} отличий)`);
 
 const avg = (arr, k) => Math.round(arr.reduce((s, x) => s + x[k], 0) / arr.length);
 console.log('\nСредняя детализация: тягачи', avg(report.trucks, 'tris'), '· прицепы', avg(report.trailers, 'tris'), '· авто', avg(report.cars, 'tris'), 'треугольников');

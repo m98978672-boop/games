@@ -31,6 +31,8 @@ const transparent = args.transparent === 'true';
 const unit = { ...findUnit(cat, id), category: cat };
 const M = createMaterials(null);
 const built = buildUnit(unit, M);
+// --damage: показать пятно повреждения (для проверки его места)
+if (args.damage === 'true' && built.damage?.group) built.damage.group.visible = true;
 const root = built.root;
 root.updateMatrixWorld(true);
 
@@ -69,10 +71,13 @@ root.traverse((o) => {
   const count = idx ? idx.count : pos.count;
   const matList = Array.isArray(o.material) ? o.material : [o.material];
   const mat = matList[0] || {};
-  const base = new THREE.Color(mat.color ? mat.color : 0xcccccc);
+  // пятно повреждения в проверочных рендерах красим в маджентовый,
+  // иначе текстура (её растеризатор не читает) сливается с кузовом
+  const isDmg = !!(mat.userData && mat.userData.damageKind);
+  const base = isDmg ? new THREE.Color(0xff2ec4) : new THREE.Color(mat.color ? mat.color : 0xcccccc);
   const emissive = new THREE.Color(mat.emissive ? mat.emissive : 0x000000);
   const emissiveI = mat.emissiveIntensity ?? 1;
-  const opacity = mat.transparent ? (mat.opacity ?? 0.5) : 1;
+  const opacity = isDmg ? 0.9 : mat.transparent ? (mat.opacity ?? 0.5) : 1;
   const metal = mat.metalness ?? 0;
   const rough = mat.roughness ?? 0.6;
   // вершинные цвета (контурная маркировка прицепов, флаги и т.п.)

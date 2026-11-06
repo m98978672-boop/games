@@ -66,6 +66,7 @@ for (const cat of ['trucks', 'trailers', 'cars']) {
     const interior = D.querySelectorAll('.view-btn.interior').length;
     const anchors = D.querySelectorAll('.anchor-btn').length;
     const specs = D.querySelectorAll('.spec').length;
+    const damage = !!D.querySelector('#damage-row .damage-btn:not([disabled])');
     // заходим в каждый вид по кругу
     let visited = 0;
     for (const v of views) {
@@ -73,7 +74,7 @@ for (const cat of ['trucks', 'trailers', 'cars']) {
       await wait(60);
       if (D.querySelector('.view-btn.active')?.dataset.view === v) visited++;
     }
-    state.push({ cat, name, views: views.length, interior, anchors, specs, visited });
+    state.push({ cat, name, views: views.length, interior, anchors, specs, visited, damage });
     if (cat !== 'trailers') check(`${cat}/${name}: есть салон`, interior >= 1, `interior=${interior}`);
     if (cat === 'trailers') check(`${cat}/${name}: только снаружи`, interior === 0, `interior=${interior}`);
     if (visited !== views.length) check(`${cat}/${name}: переключение видов`, false, `${visited}/${views.length}`);
@@ -81,6 +82,7 @@ for (const cat of ['trucks', 'trailers', 'cars']) {
 }
 check('все модели открылись без пустых карточек', state.every((s) => s.name && s.views >= 4 && s.specs >= 5));
 check('все виды переключаются', state.every((s) => s.visited === s.views));
+check('у каждой из 40 моделей есть точка повреждения', state.every((s) => s.damage), `${state.filter((s) => !s.damage).length} без повреждения`);
 
 // поиск внутри нужной категории
 tab('cars').click(); await wait(250);
@@ -110,6 +112,18 @@ check('сравнение выключилось', !$('compare-btn').classList.c
 const before = D.querySelector('.paint-dot.active')?.title;
 $('paint-row').querySelectorAll('.paint-dot')[4].click(); await wait(150);
 check('покраска выбирается', D.querySelector('.paint-dot.active')?.title !== before);
+
+// повреждение: кнопка в карточке, кнопка на сцене и клавиша X
+const dmgBtn = () => D.querySelector('#damage-row .damage-btn');
+check('в карточке есть строка повреждения', !!dmgBtn(), dmgBtn()?.textContent || '');
+dmgBtn().click(); await wait(150);
+check('повреждение включилось из карточки', dmgBtn().classList.contains('on') && $('damage-btn').classList.contains('on'));
+$('damage-btn').click(); await wait(150);
+check('повреждение выключилось кнопкой на сцене', !dmgBtn().classList.contains('on'));
+window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'x' })); await wait(150);
+check('клавиша X включает повреждение', dmgBtn().classList.contains('on'));
+window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'X' })); await wait(150);
+check('клавиша X выключает повреждение', !dmgBtn().classList.contains('on'));
 
 // салон/снаружи на авто
 tab('cars').click(); await wait(250);
