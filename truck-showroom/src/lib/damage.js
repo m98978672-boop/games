@@ -220,38 +220,41 @@ export function damageTexture(kind, seed = 1) {
   return texCache.get(key).tex;
 }
 
-// ------------------------------------------------------------ точка повреждения
+// ------------------------------------------------------------ точки повреждения
+// У каждой машины 15 разных пятен: место задаёт модель (она знает геометрию),
+// вид и зерно текстуры выбираются детерминированно, но так, чтобы на одной
+// машине встретились все четыре вида повреждений.
+export const DAMAGE_KINDS = ['scratch', 'dent', 'rust', 'crack'];
+export const DAMAGE_SEEDS = 16;
+export const DAMAGE_PER_UNIT = 15;
+
 /**
- * Спецификация повреждения: вид, сторона, подпись. Детерминированная —
- * у каждой модели своя точка, но при перезагрузке она не «прыгает».
- * part = { name, gender } — часть кузова, на которой лежит пятно.
+ * Спецификация одного повреждения. part = { name, gender },
+ * side = -1 | 1 | 0 (0 — деталь по центру, прилагательное не нужно).
  */
-export function damageSpecFor(unit, part = null) {
-  const cat = unit.category || 'trucks';
-  const h = hashOf(`${cat}:${unit.id}`);
-  const p = part || DEFAULT_PART[cat] || DEFAULT_PART.trucks;
-  const kinds = ['scratch', 'dent', 'rust'];
-  const kind = h % 13 === 0 ? 'crack' : kinds[h % kinds.length];
-  const side = h % 2 === 0 ? 1 : -1;
-  const adj = (ADJ[p.gender] || ADJ.m)[side];
+export function damageSpecAt(unit, part, side = 0, index = 0) {
+  const h = hashOf(`${unit.category || 'trucks'}:${unit.id}`);
+  const kind = DAMAGE_KINDS[(index + (h % 4)) % DAMAGE_KINDS.length];
+  const seed = 1 + ((h * 3 + index * 5) % DAMAGE_SEEDS);
+  const p = part || DEFAULT_PART[unit.category] || DEFAULT_PART.trucks;
+  const adj = side ? (ADJ[p.gender] || ADJ.m)[side] : '';
   return {
     kind,
+    seed,
+    index,
     side,
     part: p.name,
-    seed: (h % 97) + 1,
-    label: `${adj} ${p.name} — ${DAMAGE_TITLES[kind]}`,
+    label: `${adj ? `${adj} ` : ''}${p.name} — ${DAMAGE_TITLES[kind]}`,
     short: DAMAGE_TITLES[kind],
   };
 }
 
-/**
- * Ставит пятно повреждения на кузов.
- * anchor = { pos:[x,y,z], rotY?, rotX?, w, h, part:{name,gender} }.
- */
-export function mountDamage(root, unit, anchor) {
-  const spec = damageSpecFor(unit, anchor.part);
-  const g = group(root, `damage:${spec.kind}`);
-  g.visible = false;
+/** Совместимость: одно повреждение по спецификации модели. */
+export function damageSpecFor(unit, part = null) {
+  return damageSpecAt(unit, part, 0, 0);
+}
+
+function damageMaterial(spec) {
   const tex = damageTexture(spec.kind, spec.seed);
   const mat = new THREE.MeshStandardMaterial({
     map: tex,
@@ -266,10 +269,31 @@ export function mountDamage(root, unit, anchor) {
     polygonOffsetUnits: -4,
   });
   mat.userData.damageKind = spec.kind;
-  const patch = plane(g, anchor.w, anchor.h, mat, ...anchor.pos);
-  const rotY = anchor.rotY ?? (spec.side > 0 ? HALF : -HALF);
-  patch.rotation.set(anchor.rotX || 0, rotY, 0);
-  patch.name = 'damage-patch';
-  patch.userData.damage = true;
-  return { group: g, spec, patch };
+  return mat;
+}
+
+/**
+ * Ставит на кузов сразу набор пятен (по умолчанию — все 15).
+ * anchor = { part:{name,gender}, side, pos:[x,y,z], rotX?, rotY?, w, h }
+ */
+export function mountDamageSet(root, unit, anchors) {
+  const g = group(root, 'damage');
+  g.visible = false;
+  const list = anchors.map((a, i) => {
+    const spec = damageSpecAt(unit, a.part, a.side || 0, i);
+    const patch = plane(g, a.w, a.h, damageMaterial(spec), ...a.pos);
+    const rotY = a.rotY ?? (a.side ? (a.side > 0 ? HALF : -HALF) : 0);
+    patch.rotation.set(a.rotX || 0, rotY, 0);
+    patch.name = `damage-patch:${i}`;
+    patch.userData.damage = true;
+    return { patch, spec, anchor: a };
+  });
+  return { group: g, list, spec: list[0]?.spec || null, count: list.length };
+}
+
+/** Совместимость: одно пятно. */
+export function mountDamage(root, unit, anchor) {
+  const set = mountDamageSet(root, unit, [{ ...anchor, part: anchor.part }]);
+  const first = set.list[0];
+  return { group: set.group, spec: first.spec, patch: first.patch, count: 1 };
 }

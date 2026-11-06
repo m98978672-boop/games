@@ -62,7 +62,7 @@ const tmpB = new THREE.Vector3();
 const tmpC = new THREE.Vector3();
 const nA = new THREE.Vector3();
 
-root.traverse((o) => {
+root.traverseVisible((o) => {
   if (!o.isMesh || o.isInstancedMesh || !o.geometry) return;
   const g = o.geometry;
   const pos = g.attributes.position;

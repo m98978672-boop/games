@@ -9,7 +9,7 @@ import {
   HALF, PI, TAU, box, rbox, cyl, sphere, torus, plane, mesh, group, pipe,
   wheel as makeWheel, mirror, labelTexture, plateTexture, brandDecalMaterial, accentLine, clamp, rad,
 } from '../lib/kit.js';
-import { mountDamage, damageSpecFor } from '../lib/damage.js';
+import { mountDamageSet } from '../lib/damage.js';
 
 const FLOOR = 1.18; // пол кабины над землёй
 
@@ -43,14 +43,18 @@ function fender(M, mat, r, width, x, y, z, side, opts = {}) {
     ring.position.x = side * (width / 2 - 0.01);
     g.add(ring);
   }
-  // задний грязевой щиток на кронштейне
+  // задний грязевой щиток на кронштейне.
+  // Раньше щиток был повёрнут на 90°: тонкая грань смотрела назад, а широкое
+  // полотно — вбок, и за колесом торчала «лопата». Щиток должен быть широким
+  // ПОПЕРЁК колеса (ось X) и висеть позади покрышки, от кромки арки до земли.
   if (flap) {
-    const h = Math.max(0.34, r * 0.95);
-    const flapMesh = new THREE.Mesh(new THREE.BoxGeometry(0.035, h, width * 0.94), M.rubberTrim);
-    flapMesh.position.set(0, -h / 2 + 0.05, r * 0.76);
+    const h = Math.max(0.4, r * 1.05);
+    const flapMesh = new THREE.Mesh(new THREE.BoxGeometry(width * 0.92, h, 0.032), M.rubberTrim);
+    flapMesh.position.set(0, 0.02 - h / 2, r + 0.055);
     g.add(flapMesh);
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, width * 0.9), M.darkSteel);
-    bar.position.set(0, 0.05, r * 0.74);
+    // кронштейн: короткая поперечная планка под кромкой арки
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(width * 0.9, 0.045, 0.05), M.darkSteel);
+    bar.position.set(0, 0.055, r + 0.02);
     g.add(bar);
   }
   g.position.set(x, y, z);
@@ -71,7 +75,8 @@ export function buildTruck(unit, M) {
   const isBonnet = style === 'bonnet';
   const isFuturistic = style === 'futuristic';
   const isLowEntry = style === 'lowentry';
-  const cabH = unit.cabHeight ?? 3.55;
+  // кабины сидели слишком высоко: убираем по 12 см от заводской высоты
+  const cabH = (unit.cabHeight ?? 3.55) - 0.12;
   const L = unit.length ?? 6.2;
   const CHROME = unit.chrome !== false;
   const HALF_W = 1.27;
@@ -159,11 +164,13 @@ export function buildTruck(unit, M) {
   // крылья над колёсами: спереди — по ширине шины, сзади — общий кожух на
   // сдвоенные колёса (две арки перекрываются и читаются одним крылом)
   for (const side of [-1, 1]) {
-    const f = fender(M, M.plasticGray, R + 0.05, 0.58, side * frontTrack, R + 0.02, frontAxle, side);
+    const f = fender(M, M.plasticGray, R + 0.065, 0.6, side * frontTrack, R + 0.02, frontAxle, side);
     f.visible = unit.fenders !== false;
     root.add(f);
     wheelsRear.forEach((z, i) => {
-      const rf = fender(M, M.plasticGray, R + 0.06, 1.08, side * 0.92, R + 0.02, z, side, {
+      // кожух на сдвоенные колёса: ширина ровно по паре шин (раньше был
+      // 1,08 м — крыло торчало за борт на 20 см и «парило» над колесом)
+      const rf = fender(M, M.plasticGray, R + 0.075, 0.8, side * 0.92, R + 0.02, z, side, {
         flap: i === wheelsRear.length - 1,
       });
       rf.visible = unit.fenders !== false;
@@ -450,17 +457,31 @@ export function buildTruck(unit, M) {
   });
   cab.add(interior.group);
 
-  // ---------------------------------------------- повреждение
-  const dspec = damageSpecFor({ ...unit, category: 'trucks' }, { name: 'дверь кабины', gender: 'f' });
-  const dmg = mountDamage(root, { ...unit, category: 'trucks' }, {
-    pos: [dspec.side * (HALF_W + 0.024), winBottom - 0.56, cabFront + 0.98],
-    w: 0.66, h: 0.44,
-    part: { name: 'дверь кабины', gender: 'f' },
-  });
-  anchors.push({
-    pos: [dspec.side * (HALF_W + 0.06), winBottom - 0.46, cabFront + 0.98],
-    label: `Повреждение: ${dspec.label}`,
-  });
+  // ---------------------------------------------- повреждения
+  // 15 точек на каждой машине: двери, оба передних и оба задних крыла,
+  // бампер, бак, порог, задняя стенка и крыша кабины, седло, рама, брызговик.
+  const dpart = { name: 'дверь кабины', gender: 'f' };
+  const xw = HALF_W + 0.022;
+  const dmg = mountDamageSet(root, { ...unit, category: 'trucks' }, [
+    { part: dpart, side: -1, pos: [-xw, winBottom - 0.56, cabFront + 0.98], w: 0.64, h: 0.42 },
+    { part: dpart, side: 1, pos: [xw, winBottom - 0.56, cabFront + 0.98], w: 0.64, h: 0.42 },
+    { part: { name: 'переднее крыло', gender: 'n' }, side: -1, pos: [-(frontTrack + 0.32), R + 0.34, frontAxle], w: 0.44, h: 0.3 },
+    { part: { name: 'переднее крыло', gender: 'n' }, side: 1, pos: [frontTrack + 0.32, R + 0.34, frontAxle], w: 0.44, h: 0.3 },
+    { part: { name: 'заднее крыло', gender: 'n' }, side: 1, pos: [1.33, R + 0.34, wheelsRear[0]], w: 0.62, h: 0.32 },
+    { part: { name: 'заднее крыло', gender: 'n' }, side: -1, pos: [-1.33, R + 0.34, wheelsRear[wheelsRear.length - 1]], w: 0.62, h: 0.32 },
+    { part: { name: 'передний бампер', gender: 'm' }, side: 1, rotY: PI, pos: [0.5, 0.62, frontZ - 0.02], w: 0.5, h: 0.26 },
+    { part: { name: 'передний бампер', gender: 'm' }, side: -1, rotY: PI, pos: [-0.5, 0.62, frontZ - 0.02], w: 0.5, h: 0.26 },
+    { part: { name: 'порог кабины', gender: 'm' }, side: -1, pos: [-xw, floorY - 0.06, cabFront + 0.42], w: 0.5, h: 0.26 },
+    { part: { name: 'юбка бака', gender: 'f' }, side: 1, pos: [xw, floorY - 0.18, cabFront + 0.5], w: 0.46, h: 0.3 },
+    { part: { name: 'задняя стенка кабины', gender: 'f' }, side: 1, rotY: 0, pos: [0.42, floorY + 1.05, cabRearZ + 0.03], w: 0.6, h: 0.46 },
+    { part: { name: 'крыша кабины', gender: 'f' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.34, roofY + 0.03, cabRearZ - 0.95], w: 0.7, h: 0.5 },
+    { part: { name: 'седло', gender: 'n' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.2, plateY + 0.03, fifthWheelZ], w: 0.5, h: 0.4 },
+    { part: { name: 'задняя рама', gender: 'f' }, side: -1, rotY: 0, pos: [-0.36, frameY + 0.02, rearEnd - 0.02], w: 0.46, h: 0.3 },
+    { part: { name: 'задний брызговик', gender: 'm' }, side: 1, rotY: 0, pos: [0.5, 0.34, wheelsRear[wheelsRear.length - 1] + R + 0.07], w: 0.5, h: 0.4 },
+  ]);
+  for (const item of dmg.list) {
+    anchors.push({ pos: item.patch.position.clone().toArray(), label: `Повреждение: ${item.spec.label}`, damage: true });
+  }
 
   // точки камер
   const eyeY = floorY + 1.02;
@@ -501,7 +522,7 @@ export function buildTruck(unit, M) {
   });
 
   const layout = { frontZ, rearEnd, cabFront, cabRear: cabRearZ, roofY, floorY, fifthWheelZ, plateY, rearAxle1, rearAxle2, wheelRadius: R, cabWidth: cabW };
-  return { root, wheels, paintMats, views, anchors, layout, kind: 'truck', damage: { group: dmg.group, spec: dspec } };
+  return { root, wheels, paintMats, views, anchors, layout, kind: 'truck', damage: dmg };
 }
 
 // ============================================================

@@ -187,7 +187,8 @@ function toggleDamage() {
   applyDamage();
   renderDetails(currentUnit());
   const spec = shown.damage.spec;
-  live(state.damage ? `Повреждение: ${spec.label}` : 'Повреждение скрыто');
+  const count = shown.damage.count || 1;
+  live(state.damage ? `Повреждения: ${count} шт. · ${spec.label}` : 'Повреждения скрыты');
 }
 
 function showUnit(unit, { instant = false, view = null } = {}) {
@@ -394,8 +395,9 @@ function renderDetails(unit) {
     const spec = shown && shown.damage ? shown.damage.spec : null;
     const b = document.createElement('button');
     b.className = 'damage-btn' + (spec && state.damage ? ' on' : '');
+    const count = shown && shown.damage ? shown.damage.count || 1 : 0;
     b.innerHTML = spec
-      ? `<span class="damage-dot"></span><span class="damage-text">${spec.label}</span><span class="damage-key">X</span>`
+      ? `<span class="damage-dot"></span><span class="damage-text">${count} шт. · ${spec.label}</span><span class="damage-key">X</span>`
       : '<span class="damage-text">Повреждение не задано</span>';
     b.disabled = !spec;
     b.onclick = () => toggleDamage();
@@ -405,8 +407,11 @@ function renderDetails(unit) {
   const anchors = $('anchor-row');
   anchors.innerHTML = '';
   if (shown && shown.anchors) {
-    $('anchor-count').textContent = shown.anchors.length;
-    shown.anchors.forEach((a) => {
+    // пятна повреждений не выводим в список осмотра — их 15 на машину,
+    // они включаются кнопкой «Повреждение», а в списке остаются узлы
+    const listed = shown.anchors.filter((a) => !a.damage);
+    $('anchor-count').textContent = listed.length;
+    listed.forEach((a) => {
       const b = document.createElement('button');
       b.className = 'anchor-btn';
       b.textContent = a.label + (a.side ? ` (${a.side})` : '');

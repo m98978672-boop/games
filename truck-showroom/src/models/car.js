@@ -10,7 +10,7 @@ import {
   wheel as makeWheel, labelTexture, plateTexture, clamp, lerp,
   accentLine, brandDecalMaterial,
 } from '../lib/kit.js';
-import { mountDamage, damageSpecFor } from '../lib/damage.js';
+import { mountDamageSet } from '../lib/damage.js';
 
 // ------------------------------------------------------------ форма кузова
 export function carShape(unit) {
@@ -124,7 +124,6 @@ export function buildCar(unit, M, opts = {}) {
   const wW = unit.wheelWidth ?? 0.23;
   const wb = unit.wheelbase ?? L * 0.58;
   const halfW = W / 2;
-  const dspec = damageSpecFor({ ...unit, category: 'cars' }, { name: 'передняя дверь', gender: 'f' });
   const paintColor = unit.paint || '#2f5d8a';
   const accentColor = unit.accent || '#d8d5c8';
   const root = group(null, `car:${unit.id}`);
@@ -307,15 +306,16 @@ export function buildCar(unit, M, opts = {}) {
       m.renderOrder = 2;
       root.add(m);
     };
-    // лобовое стекло (чуть выше кромки капота)
-    glassQuad(S.wsBase - 0.06, S.hoodY + 0.02, S.wsTopZ - 0.03, H - 0.04, 0.9, 0.09);
+    // лобовое стекло: края на 2–4 см заходят под краску капота и крыши,
+    // поэтому по периметру не остаётся щели — раньше стекло «висило» в воздухе
+    glassQuad(S.wsBase + 0.02, S.hoodY - 0.045, S.wsTopZ + 0.015, H - 0.012, 0.965, 0.02);
     // заднее стекло (у пикапа — почти вертикальная стенка кабины)
-    if (S.pickup) glassQuad(S.roofRearZ + 0.02, H - 0.05, S.roofRearZ + 0.12, S.deckY + 0.06, 0.86, 0.09);
-    else glassQuad(S.roofRearZ + 0.04, H - 0.05, S.rearBaseZ + 0.02, S.deckY + 0.02, 0.88, 0.09);
+    if (S.pickup) glassQuad(S.roofRearZ + 0.01, H - 0.02, S.roofRearZ + 0.14, S.deckY - 0.05, 0.925, 0.02);
+    else glassQuad(S.roofRearZ + 0.015, H - 0.012, S.rearBaseZ + 0.04, S.deckY - 0.05, 0.945, 0.02);
     // чёрные канты стёкол
     for (const [z0, y0, z1, y1, hw] of [
-      [S.wsBase - 0.06, S.hoodY + 0.02, S.wsTopZ - 0.03, H - 0.04, 0.9],
-      [S.roofRearZ + 0.04, H - 0.05, S.rearBaseZ + 0.02, S.deckY + 0.02, 0.88],
+      [S.wsBase + 0.02, S.hoodY - 0.045, S.wsTopZ + 0.015, H - 0.012, 0.965],
+      [S.roofRearZ + 0.015, H - 0.012, S.rearBaseZ + 0.04, S.deckY - 0.05, 0.945],
     ]) {
       for (const sx of [-1, 1]) {
         const dzq = z1 - z0, dyq = y1 - y0;
@@ -370,11 +370,15 @@ export function buildCar(unit, M, opts = {}) {
         const steps = 8;
         for (let i = 0; i <= steps; i++) {
           const z = lerp(h.z0, h.z1, i / steps);
-          pos.push(side * (sideX - 0.035), winBottom + 0.015, z);
+          // стекло ставим почти заподлицо с наружной поверхностью борта:
+          // раньше оно было утоплено на 8 см, и из салона/снаружи читалось
+          // как отдельная «парящая» пластина в проёме
+          pos.push(side * (halfW - 0.016), winBottom + 0.006, z);
         }
         for (let i = 0; i <= steps; i++) {
           const z = lerp(h.z0, h.z1, i / steps);
-          pos.push(side * (sideX - 0.035), pick(z) - 0.012, z);
+          // верхний напуск (1 см) уходит под краску крыши — щели над стеклом нет
+          pos.push(side * (halfW - 0.016), pick(z) + 0.012, z);
         }
         const n = steps + 1;
         for (let i = 0; i < n - 1; i++) idx.push(i, i + 1, n + i, i + 1, n + i + 1, n + i);
@@ -382,7 +386,9 @@ export function buildCar(unit, M, opts = {}) {
         g3.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
         g3.setIndex(idx);
         g3.computeVertexNormals();
-        root.add(new THREE.Mesh(g3, M.glass));
+        const sideGlass = new THREE.Mesh(g3, M.glass);
+        sideGlass.name = 'side-glass';
+        root.add(sideGlass);
       }
     }
     // чёрные накладки стоек
@@ -500,14 +506,30 @@ export function buildCar(unit, M, opts = {}) {
         chromeMat: M.chrome,
       });
     }
-    // ---------- повреждение: пятно на передней двери (у каждого авто своё)
-    const dmg = mountDamage(root, { ...unit, category: 'cars' }, {
-      pos: [dspec.side * (halfW + 0.028), belt - 0.3, (aPillar + bPillarZ) / 2],
-      w: 0.58, h: 0.36,
-      part: { name: 'передняя дверь', gender: 'f' },
-    });
-    dmgOut = dmg;
-    anchors.push({ pos: [dspec.side * (halfW + 0.03), belt - 0.3, (aPillar + bPillarZ) / 2], label: `Повреждение: ${dmg.spec.label}` });
+    // ---------- повреждения: 15 точек по кузову, у каждого авто свои
+    const xb = halfW + 0.012;
+    const doorZ = (aPillar + bPillarZ) / 2;
+    const rearDoorZ = (bPillarZ + cPillar) / 2;
+    dmgOut = mountDamageSet(root, { ...unit, category: 'cars' }, [
+      { part: { name: 'передняя дверь', gender: 'f' }, side: -1, pos: [-xb, belt - 0.2, doorZ], w: 0.54, h: 0.3 },
+      { part: { name: 'передняя дверь', gender: 'f' }, side: 1, pos: [xb, belt - 0.2, doorZ], w: 0.54, h: 0.3 },
+      { part: { name: 'задняя дверь', gender: 'f' }, side: -1, pos: [-xb, belt - 0.45, rearDoorZ], w: 0.46, h: 0.28 },
+      { part: { name: 'задняя дверь', gender: 'f' }, side: 1, pos: [xb, belt - 0.45, rearDoorZ], w: 0.46, h: 0.28 },
+      { part: { name: 'капот', gender: 'm' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.3, S.hoodY + 0.015, (front + S.wsBase) / 2], w: 0.6, h: 0.44 },
+      { part: { name: 'крыша', gender: 'f' }, side: 0, rotX: -HALF, rotY: 0, pos: [-0.2, H + 0.012, S.wsTopZ + (S.roofRearZ - S.wsTopZ) * 0.42], w: 0.56, h: 0.4 },
+      { part: { name: 'крышка багажника', gender: 'f' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.2, S.deckY + 0.015, (S.rearBaseZ + rear) / 2], w: 0.54, h: 0.4 },
+      { part: { name: 'передний бампер', gender: 'm' }, side: 1, rotY: PI, pos: [0.45, ground + 0.2, front - 0.02], w: 0.5, h: 0.24 },
+      { part: { name: 'задний бампер', gender: 'm' }, side: -1, rotY: 0, pos: [-0.42, ground + 0.22, rear + 0.02], w: 0.5, h: 0.24 },
+      { part: { name: 'переднее крыло', gender: 'n' }, side: -1, pos: [-xb, belt - 0.48, axleZ[0]], w: 0.44, h: 0.26 },
+      { part: { name: 'заднее крыло', gender: 'n' }, side: 1, pos: [xb, belt - 0.46, axleZ[1]], w: 0.44, h: 0.26 },
+      { part: { name: 'порог', gender: 'm' }, side: -1, pos: [-xb, ground + 0.16, (axleZ[0] + axleZ[1]) / 2], w: 0.5, h: 0.22 },
+      { part: { name: 'борт капота', gender: 'm' }, side: 1, pos: [xb, S.hoodY - 0.12, (front + S.wsBase) / 2], w: 0.46, h: 0.26 },
+      { part: { name: 'задняя стойка', gender: 'f' }, side: -1, pos: [-xb, belt - 0.12, cPillar + 0.12], w: 0.24, h: 0.22 },
+      { part: { name: 'лючок бензобака', gender: 'm' }, side: 1, pos: [xb, belt - 0.44, cPillar + 0.34], w: 0.3, h: 0.24 },
+    ]);
+    for (const item of dmgOut.list) {
+      anchors.push({ pos: item.patch.position.clone().toArray(), label: `Повреждение: ${item.spec.label}`, damage: true });
+    }
     anchors.push({ pos: [0, H + 0.06, S.roofRearZ - 0.35], label: 'Крыша' });
     anchors.push({ pos: [sideX, belt + 0.12, bPillarZ], label: 'Дверь водителя' });
     anchors.push({ pos: [0, grilleY, front], label: 'Решётка и фары' });
@@ -535,7 +557,13 @@ export function buildCar(unit, M, opts = {}) {
   const eyeAbs = S.sport ? Math.min(H - 0.12, dashTopAbs + 0.24) : H - (S.micro ? 0.24 : 0.3);
   const tall = eyeAbs - (belt + 0.3);
   // в спорткаре крыша низкая: садимся ближе к стеклу и смотрим вперёд, а не в панель
-  const eyeZr = S.wsTopZ + (S.sport ? 0.42 : S.van ? 0.62 : 0.52);
+  // глаз водителя не должен оказаться внутри спинки своего же кресла:
+  // у коротких салонов кресло сдвинуто вперёд, камера едет вместе с ним
+  const seatZc = Math.min(
+    S.wsTopZ + 0.44 + 0.2,
+    Math.max((S.rearBaseZ - 0.06 - 0.32) - 0.54, S.wsTopZ + 0.44 - 0.3),
+  );
+  const eyeZr = Math.min(S.wsTopZ + (S.sport ? 0.42 : S.van ? 0.62 : 0.52), seatZc + 0.08);
   const views = [
     {
       id: 'driver', label: 'Место водителя', group: 'interior',
@@ -582,16 +610,20 @@ export function buildCar(unit, M, opts = {}) {
 // ============================================================
 function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, anchors, floorY }) {
   const g = group(null, 'interior');
-  const cabW = S.W - 0.3;
+  // ширина салона: раньше между торпедо и бортами оставалось по 15 см
+  // пустоты, в щели была видна улица
+  const cabW = S.W - 0.16;
   const zFront = S.wsBase + 0.02;
   const zRear = S.rearBaseZ - 0.06;
   const zMid = (zFront + zRear) / 2;
-  // Глаз водителя ставим на 0.5 м позади верхней кромки лобового. Раньше
-  // он был всего на 0.36 м, и ПОДУШКА его же кресла оказывалась ровно перед
-  // объективом — из «места водителя» был виден только подголовник.
-  const eyeZ = S.wsTopZ + 0.5;
+  // Глаз водителя — на 0.44 м позади верхней кромки лобового. Раньше он был
+  // на 0.5 м, панель уезжала в салон и съедала место заднему ряду.
+  const eyeZ = S.wsTopZ + 0.44;
   const dashZ = eyeZ - 0.72;
-  const seatZ = eyeZ + 0.34;
+  // Кресло водителя не уезжает в корму: если салон короткий (хэтч, пикап,
+  // микрокар), сиденье сдвигается вперёд, чтобы заднему ряду осталось место.
+  const zRearSeat = zRear - 0.32;
+  const seatZ = Math.min(eyeZ + 0.2, Math.max(zRearSeat - 0.54, eyeZ - 0.3));
   const dark = M.interiorDark;
   const mid = M.interiorMid;
   const sport = S.sport;
@@ -684,6 +716,23 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   box(g, 0.13, 0.02, 0.02, M.chrome, cabW * 0.26, dashTop - 0.16, dashFace + 0.016);
   // декоративная полоса-кант по всей панели — общий приём с тягачами
   box(g, cabW - 0.12, 0.012, 0.012, M.chromeDark, 0, dashTop - 0.32, dashFace + 0.012);
+  // ---------- связка торпедо с кузовом
+  // Между панелью и лобовым стеклом был сквозной просвет: из салона
+  // просвечивал капот, а снаружи в щель было видно салон. Кладём «полку
+  // кузова» от основания лобового до верхней кромки панели и закрываем
+  // торцы панели щеками — теперь торпедо составляет одно целое с кузовом.
+  const cowlZ0 = zFront - 0.02;
+  const cowlZ1 = dashZ + 0.17;
+  const cowlLen = Math.max(0.24, cowlZ1 - cowlZ0);
+  const cowlTopY = Math.min(dashTop + 0.06, S.hoodY - 0.012);
+  rbox(g, cabW + 0.02, 0.055, cowlLen, dark, 0, cowlTopY - 0.028, (cowlZ0 + cowlZ1) / 2, 0.02);
+  // поперечная балка под лобовым — продолжение щита моторного отсека
+  rbox(g, cabW + 0.04, Math.max(0.1, cowlTopY - floorY - 0.05), 0.06, dark, 0, (floorY + cowlTopY) / 2, cowlZ0 + 0.02, 0.02);
+  for (const side of [-1, 1]) {
+    rbox(g, 0.05, Math.max(0.2, cowlTopY - floorY), cowlLen + 0.12, mid,
+      side * (cabW / 2 - 0.03), (floorY + cowlTopY) / 2, (cowlZ0 + cowlZ1) / 2, 0.02);
+  }
+
   // руль — между водителем и панелью
   const sw = group(g, 'steering');
   sw.position.set(-cabW * 0.27, dashTop - 0.11, dashZ + 0.38);
@@ -745,7 +794,9 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   anchors.push({ pos: [-cabW * 0.27, floorY + 0.6, seatZ], label: 'Сиденье водителя' });
   anchors.push({ pos: [0, floorY + 0.52, dashZ], label: 'Торпедо и руль' });
   if (unit.seats > 2) {
-    const rz = zRear - 0.5;
+    // диван отодвинут в корму: раньше он наезжал на спинки передних кресел,
+    // и «задние места» были вжаты в торпедо
+    const rz = zRearSeat;
     if (unit.seats >= 5) {
       rbox(g, cabW - 0.08, 0.11, 0.46, seatMat, 0, floorY + 0.27, rz, 0.04);
       for (const sx of [-1, 1]) rbox(g, 0.08, 0.14, 0.44, seatTrim, sx * (cabW / 2 - 0.07), floorY + 0.31, rz, 0.03);

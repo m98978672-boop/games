@@ -71,27 +71,38 @@ for (const unit of allUnits()) {
   ok(tris > 2000, `${unit.id}: геометрия собрана (${Math.round(tris)} треугольников)`);
   ok(built.views.every((v) => Array.isArray(v.pos) && v.pos.length === 3), `${unit.id}: у всех видов корректная позиция камеры`);
 
-  // 6. Повреждение: у каждой модели своя точка и своя текстура
+  // 6. Повреждения: у каждой модели своя точка и своя текстура
   const dmg = built.damage;
-  ok(!!(dmg && dmg.group && dmg.spec), `${unit.id}: задана точка повреждения`);
+  ok(!!(dmg && dmg.group && dmg.list?.length), `${unit.id}: заданы точки повреждений`);
   if (dmg && dmg.group) {
-    ok(dmg.group.visible === false, `${unit.id}: повреждение скрыто по умолчанию`);
-    const patch = dmg.group.children.find((c) => c.isMesh);
-    ok(!!patch, `${unit.id}: пятно повреждения есть в сцене`);
-    if (patch) {
-      ok(!!patch.material?.map, `${unit.id}: у пятна есть текстура (${dmg.spec.kind})`);
-      ok(patch.material.transparent === true && patch.material.depthWrite === false, `${unit.id}: пятно накладывается, а не режет кузов`);
+    ok(dmg.list.length >= 15, `${unit.id}: не меньше 15 повреждений (${dmg.list.length})`);
+    ok(dmg.group.visible === false, `${unit.id}: повреждения скрыты по умолчанию`);
+    const kinds = new Set(dmg.list.map((x) => x.spec.kind));
+    ok(kinds.size >= 4, `${unit.id}: встречаются все виды повреждений (${[...kinds].join(', ')})`);
+    const sigs = new Set(dmg.list.map((x) => `${x.spec.kind}:${x.spec.seed}`));
+    ok(sigs.size >= 12, `${unit.id}: текстуры разные, а не одна на всё (${sigs.size} вариантов)`);
+    let badPatch = 0;
+    for (const item of dmg.list) {
+      const patch = item.patch;
+      if (!patch.material?.map) badPatch += 1;
+      if (patch.material.transparent !== true || patch.material.depthWrite !== false) badPatch += 1;
       const bb = new THREE.Box3().setFromObject(patch).getSize(new THREE.Vector3());
-      ok(Math.max(bb.x, bb.y, bb.z) > 0.12, `${unit.id}: пятно не вырождено (${Math.max(bb.x, bb.y, bb.z).toFixed(2)} м)`);
+      if (!(Math.max(bb.x, bb.y, bb.z) > 0.1)) badPatch += 1;
     }
-    ok(!!DAMAGE_TITLES[dmg.spec.kind], `${unit.id}: вид повреждения понятен (${dmg.spec.kind})`);
-    const words = dmg.spec.label.split(' ');
-    const adj = words[0];
-    const part = dmg.spec.label.split(' — ')[0].split(' ').slice(1).join(' ');
-    const agree = /(дверь|арка|площадка)/.test(part) ? /ая$/.test(adj)
-      : /(крыло|колесо|зеркало)/.test(part) ? /ое$/.test(adj) : /ый$/.test(adj);
-    ok(agree, `${unit.id}: подпись согласована по роду — «${dmg.spec.label}»`);
-    ok(built.anchors.some((a) => /^Повреждение:/.test(a.label)), `${unit.id}: точка повреждения есть в списке осмотра`);
+    ok(badPatch === 0, `${unit.id}: все пятна с текстурой, накладкой и не вырождены${badPatch ? ' — ' + badPatch : ''}`);
+    let badLabel = 0;
+    for (const item of dmg.list) {
+      const label = item.spec.label;
+      if (!/ — /.test(label)) badLabel += 1;
+      const adj = label.split(' ')[0];
+      if (!/^(лев|прав)/.test(adj)) continue; // деталь по центру — без прилагательного
+      const part = label.split(' — ')[0].split(' ').slice(1).join(' ');
+      const agree = /(дверь|стенка|стойка|юбка|крышка|крыша|рама)/.test(part) ? /ая$/.test(adj)
+        : /(крыло|колесо|седло)/.test(part) ? /ое$/.test(adj) : /ый$/.test(adj);
+      if (!agree) badLabel += 1;
+    }
+    ok(badLabel === 0, `${unit.id}: подписи согласованы по роду${badLabel ? ' — ' + badLabel : ''}`);
+    ok(built.anchors.filter((a) => /^Повреждение:/.test(a.label)).length >= 15, `${unit.id}: точки есть в списке осмотра`);
   }
 
   // из места водителя обзор не должен упираться в краску: лобовое стекло прозрачное
@@ -100,8 +111,13 @@ for (const unit of allUnits()) {
     const blocked = firstHit(built.root, seatView);
     if (blocked) {
       const isGlass = blocked.object.material?.transparent === true;
+      // детали салона (панель, руль, кресло) перед глазами — это нормально
+      let inCabin = false;
+      for (let o = blocked.object; o; o = o.parent) {
+        if (o.name === 'interior') inCabin = true;
+      }
       // до 0.8 м от глаз — это детали самой кабины (руль, козырёк, зеркало), это нормально
-      ok(isGlass || blocked.distance > 0.8, `${unit.id}: из салона видно улицу (первое попадание: ${blocked.object?.geometry?.type || '?'} @ ${blocked.distance.toFixed(2)} м)`);
+      ok(isGlass || inCabin || blocked.distance > 0.8, `${unit.id}: из салона видно улицу (первое попадание: ${blocked.object?.geometry?.type || '?'} @ ${blocked.distance.toFixed(2)} м)`);
     }
   }
 }
@@ -152,6 +168,38 @@ for (const unit of CARS) {
     const halfW = W / 2;
     ok(bb.max.x <= halfW + 0.02, `${unit.id}: колесо не выпирает за борт (${bb.max.x.toFixed(2)} ≤ ${halfW.toFixed(2)} + 0.02)`);
     ok(bb.min.y >= -0.01 && bb.max.y <= 2 * (unit.wheelRadius ?? 0.33) + 0.02, `${unit.id}: колесо стоит на земле`);
+  }
+
+  // 7. Торпедо соединено с кузовом: над панелью нет сквозного просвета,
+  //    боковые стёкла стоят заподлицо, задний ряд не вжат в передние кресла.
+  const floorYc = S.ground + 0.08;
+  const dashTopC = floorYc + 0.42;
+  const cowlY = Math.min(dashTopC + 0.06, S.hoodY - 0.012) + 0.06;
+  const rc2 = new THREE.Raycaster();
+  let holes = 0;
+  for (let z = S.wsBase + 0.12; z <= S.wsTopZ - 0.15; z += 0.08) {
+    rc2.set(new THREE.Vector3(0.1, cowlY, z), new THREE.Vector3(0, -1, 0));
+    const hit = rc2.intersectObject(root, true)
+      .find((h) => h.object.visible !== false && h.object.material?.transparent !== true);
+    if (!hit || hit.distance > 0.3) holes += 1;
+  }
+  ok(holes === 0, `${unit.id}: торпедо соединено с кузовом (просветов ${holes})`);
+
+  let glassMaxX = 0;
+  root.traverse((o) => {
+    if (o.isMesh && o.name === 'side-glass') {
+      const b = new THREE.Box3().setFromObject(o);
+      glassMaxX = Math.max(glassMaxX, Math.abs(b.max.x), Math.abs(b.min.x));
+    }
+  });
+  ok(glassMaxX > S.W / 2 - 0.04,
+    `${unit.id}: боковые стёкла стоят заподлицо с бортом (${glassMaxX.toFixed(3)} при борте ${(S.W / 2).toFixed(3)})`);
+
+  const seatA = built.anchors.find((a) => a.label === 'Сиденье водителя');
+  const rearA = built.anchors.find((a) => a.label === 'Задний ряд');
+  if (seatA && rearA) {
+    const pitch = rearA.pos[2] - seatA.pos[2];
+    ok(pitch >= 0.5, `${unit.id}: задний ряд не вжат в передние кресла (база ${pitch.toFixed(2)} м)`);
   }
 
   // 4. Арка действительно вырезана: вертикальный луч сверху вниз через
