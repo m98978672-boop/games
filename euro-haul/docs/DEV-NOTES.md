@@ -1062,5 +1062,7 @@ lowboy: { length: 14.6, height: 0.55, floor: 1.20 }   // гусь-шея, пло
   с пропуском фар-конусов, салона и пустого прицепа), отсутствие NaN, число колёс,
   `applyModel()` на ходу, длина всех восьми прицепов, покрытие `TRACTOR_LOOKS`;
 * `TRAILERS=1 node tests/render-flat.mjs` — PNG всех восьми прицепов в `tests/trailer-*.png`,
-  `node tests/render-flat.mjs` — пять тягачей (`tests/model-*.png`);
+  `node tests/render-flat.mjs` — пять тягачей (`tests/model-*.png`); камера бокового вида
+  стоит в 24.5 м и смотрит в середину автопоезда (`target` у вида), иначе длинный прицеп
+  уезжал за край кадра;
 * зум фрагмента PNG — `python3 tests/_crop.py` (ImageMagick в песочнице нет).
