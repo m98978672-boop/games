@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "esbuild src/main.js --bundle --minify --outfile=game.bundle.js",
-    "test": "node tests/logic.mjs && node tests/assets.mjs && node tests/ui.mjs"
+    "test": "node tests/logic.mjs && node tests/assets.mjs && node tests/features.mjs && node tests/ui.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"
