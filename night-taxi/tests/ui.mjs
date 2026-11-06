@@ -7,10 +7,16 @@ const bundle=await build({stdin:{contents:source,resolveDir:process.cwd()+'/src'
 const html=fs.readFileSync('index.html','utf8').replace('<script src="game.bundle.js"></script>','');
 const dom=new JSDOM(html,{url:'https://example.test/night-taxi/',runScripts:'outside-only'});
 const w=dom.window;w.PointerEvent=class extends w.MouseEvent{constructor(type,options={}){super(type,options);this.pointerId=options.pointerId??1;this.pointerType=options.pointerType??'touch'}};let nextFrame;w.requestAnimationFrame=f=>{nextFrame=f};w.HTMLCanvasElement.prototype.getContext=()=>new Proxy({}, {get:(target,key)=>target[key]||(()=>{}),set:(target,key,value)=>(target[key]=value,true)});
-w.HTMLElement.prototype.getBoundingClientRect=()=>({width:1000,height:600,left:0,top:0,right:1000,bottom:600});
-w.TestRenderer=class{constructor(){this.domElement=w.document.createElement('canvas');w.testRenderer=this}setPixelRatio(){}setSize(){}render(scene,camera){this.camera=camera;this.scene=scene}};
+let viewport={width:1000,height:600};w.HTMLElement.prototype.getBoundingClientRect=()=>({width:viewport.width,height:viewport.height,left:0,top:0,right:viewport.width,bottom:viewport.height});
+w.TestRenderer=class{constructor(){this.domElement=w.document.createElement('canvas');w.testRenderer=this}setPixelRatio(ratio){this.pixelRatio=ratio}setSize(width,height,updateStyle=true){this.width=width;this.height=height;if(updateStyle){this.domElement.style.width=width+'px';this.domElement.style.height=height+'px'}}render(scene,camera){this.camera=camera;this.scene=scene}};
 w.eval(bundle.outputFiles[0].text);nextFrame(w.performance.now()+20);
 assert.ok(Math.abs(w.testRenderer.camera.position.y-1.72)<.01,'initial camera is in cabin');
+assert.equal(w.testRenderer.domElement.style.width,'','renderer must not override canvas CSS width');
+assert.equal(w.testRenderer.domElement.style.height,'','renderer must not override canvas CSS height');
+assert.equal(w.testRenderer.width,1000);assert.equal(w.testRenderer.height,600);assert.ok(Math.abs(w.testRenderer.camera.aspect-1000/600)<1e-10);
+viewport={width:1568,height:778};nextFrame(w.performance.now()+25);assert.equal(w.testRenderer.width,1568);assert.equal(w.testRenderer.height,778);assert.ok(Math.abs(w.testRenderer.camera.aspect-1568/778)<1e-10);
+viewport={width:844,height:390};nextFrame(w.performance.now()+27);assert.equal(w.testRenderer.width,844);assert.equal(w.testRenderer.height,390);assert.equal(w.testRenderer.domElement.style.width,'');
+
 const d=w.document,click=id=>d.getElementById(id).click(),visible=id=>!d.getElementById(id).classList.contains('hidden');
 assert.equal(visible('tabletOverlay'),false);
 // Drag the cabin view vertically and horizontally; double-click recentres it.
