@@ -698,7 +698,51 @@ body {
 .anchor-btn:hover { color: var(--accent-2); border-color: rgba(232, 180, 90, 0.45); }
 
 /* повреждение: строка в карточке модели */
-.damage-row { display: flex; }
+.damage-row { display: flex; gap: 6px; }
+.damage-more { width: auto; flex: 0 0 auto; white-space: nowrap; }
+
+/* список повреждений: каждое добавляется отдельно */
+.damage-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 4px;
+  margin-top: 6px;
+  max-height: 214px;
+  overflow: auto;
+  padding-right: 2px;
+}
+.dmg-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 10px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.dmg-chip:hover { border-color: rgba(232, 180, 90, 0.45); color: var(--ink); }
+.dmg-chip.on { border-color: rgba(255, 128, 96, 0.55); background: rgba(255, 128, 96, 0.1); color: var(--ink); }
+.dmg-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dmg-kind {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #8d8d8d;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
+}
+.dmg-chip.on .dmg-kind { box-shadow: 0 0 7px rgba(255, 122, 82, 0.7); }
+.dmg-chip.scratch .dmg-kind { background: #b9c3cb; }
+.dmg-chip.dent .dmg-kind { background: #7f8b95; }
+.dmg-chip.rust .dmg-kind { background: #a45a26; }
+.dmg-chip.crack .dmg-kind { background: #3f4d59; }
 .damage-btn {
   display: flex;
   align-items: center;

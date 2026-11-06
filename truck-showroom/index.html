@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b0d0c">
   <meta name="description" content="ГАРАЖ 3D — интерактивный 3D-шоурум техники: 10 тягачей, 20 типов полуприцепов и 10 автомобилей. Осмотр снаружи и изнутри, живой салон, покраска и студийные виды. Работает офлайн.">
   <title>ГАРАЖ 3D — шоурум тягачей, прицепов и автомобилей</title>
-  <link rel="stylesheet" href="style.css?v=1.8.0">
+  <link rel="stylesheet" href="style.css?v=1.8.1">
 </head>
 <body>
 <div class="app">
@@ -78,7 +78,7 @@
       <button class="round-btn active" id="orbit-btn" title="Автовращение (Пробел)" aria-label="Автовращение">⟳</button>
       <button class="round-btn" id="reset-btn" title="Сбросить камеру (0)" aria-label="Сбросить камеру">⌖</button>
       <button class="round-btn" id="look-btn" title="Сесть в салон / взгляд вперёд" aria-label="В салон">👁</button>
-      <button class="round-btn" id="damage-btn" title="Показать повреждение (X)" aria-label="Повреждение">✷</button>
+      <button class="round-btn" id="damage-btn" title="Показать все повреждения (X)" aria-label="Повреждение">✷</button>
       <button class="round-btn" id="compare-btn-2" title="Сравнить с соседней моделью" aria-label="Сравнить">⇄</button>
     </div>
 
@@ -155,7 +155,7 @@
 
   <div class="drawer-foot">
     <button class="ghost-btn" id="fav-filter" title="Показать только избранное">★ Избранное</button>
-    <button class="ghost-btn" id="damage-btn-2" title="Показать или скрыть повреждение (X)">✷ Повреждение</button>
+    <button class="ghost-btn" id="damage-btn-2" title="Показать все повреждения (X)">✷ Повреждение</button>
     <button class="ghost-btn" id="compare-btn" title="Поставить рядом соседнюю модель">⇄ Сравнить</button>
   </div>
 </aside>
@@ -191,8 +191,9 @@
     <h3 class="d-h3">Цвет кузова</h3>
     <div class="paint-row" id="paint-row"></div>
 
-    <h3 class="d-h3">Повреждение</h3>
+    <h3 class="d-h3">Повреждения <span class="mini" id="damage-count">0 / 15</span></h3>
     <div class="damage-row" id="damage-row"></div>
+    <div class="damage-list" id="damage-list"></div>
 
     <h3 class="d-h3">Осмотр по точкам <span class="mini" id="anchor-count">0</span></h3>
     <div class="anchor-row" id="anchor-row"></div>
@@ -219,7 +220,7 @@
       <div><b>Сенсор</b><span>Один палец — вращать, два — зум и сдвиг, свайп — другая модель, двойной тап — в салон.</span></div>
       <div><b>Салон</b><span>Кнопка 👁, «Сесть внутрь» или <kbd>I</kbd>. Внутри тяните — свободный взгляд.</span></div>
       <div><b>Виды</b><span>Чипы внизу слева или <kbd>1</kbd>–<kbd>5</kbd>: снаружи, борт, сзади, водитель, салон.</span></div>
-      <div><b>Повреждение</b><span><kbd>X</kbd> или кнопка <kbd>✷</kbd> показывает пятно на кузове: у каждой модели своё место и своя текстура — царапина со сколом, вмятина, ржавчина или трещина. Подпись есть в карточке и в списке точек осмотра.</span></div>
+      <div><b>Повреждения</b><span>У каждой машины 15 своих пятен: вмятина, царапина со сколом, ржавчина, трещина. В карточке каждое добавляется <i>отдельно</i> — кликом по строке, «＋ ещё одно» — случайное, <kbd>✷</kbd> или <kbd>X</kbd> — все сразу. Пятна с рельефом и нормал-картой: вмятина ловит свет, а не выглядит наклейкой.</span></div>
       <div><b>Модели и панели</b><span><kbd>←</kbd> <kbd>→</kbd> — модель, <kbd>R</kbd> — случайная, <b>Каталог</b> и <b>Модель</b> сверху, <kbd>Esc</kbd> — закрыть.</span></div>
       <div><b>Прочее</b><span><kbd>Пробел</kbd> — автовращение, <kbd>C</kbd> — скриншот, <kbd>F</kbd> — полный экран, <kbd>H</kbd> — эта справка.</span></div>
     </div>
@@ -227,6 +228,6 @@
   </div>
 </div>
 
-<script defer src="showroom.bundle.js?v=1.8.0"></script>
+<script defer src="showroom.bundle.js?v=1.8.1"></script>
 </body>
 </html>

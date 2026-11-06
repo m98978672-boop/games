@@ -62,6 +62,7 @@ const tmpB = new THREE.Vector3();
 const tmpC = new THREE.Vector3();
 const nA = new THREE.Vector3();
 
+const dmgMark = args.dmgmark === 'true';
 root.traverseVisible((o) => {
   if (!o.isMesh || o.isInstancedMesh || !o.geometry) return;
   const g = o.geometry;
@@ -74,10 +75,12 @@ root.traverseVisible((o) => {
   // пятно повреждения в проверочных рендерах красим в маджентовый,
   // иначе текстура (её растеризатор не читает) сливается с кузовом
   const isDmg = !!(mat.userData && mat.userData.damageKind);
-  const base = isDmg ? new THREE.Color(0xff2ec4) : new THREE.Color(mat.color ? mat.color : 0xcccccc);
+  // --dmgmark: пятна красим маджентовым, чтобы найти их место.
+  // Без него рельеф пятна рисуется своим цветом и светом — видно объём.
+  const base = isDmg && dmgMark ? new THREE.Color(0xff2ec4) : new THREE.Color(mat.color ? mat.color : 0xcccccc);
   const emissive = new THREE.Color(mat.emissive ? mat.emissive : 0x000000);
   const emissiveI = mat.emissiveIntensity ?? 1;
-  const opacity = isDmg ? 0.9 : mat.transparent ? (mat.opacity ?? 0.5) : 1;
+  const opacity = isDmg && dmgMark ? 0.9 : mat.transparent ? (mat.opacity ?? 0.5) : 1;
   const metal = mat.metalness ?? 0;
   const rough = mat.roughness ?? 0.6;
   // вершинные цвета (контурная маркировка прицепов, флаги и т.п.)
