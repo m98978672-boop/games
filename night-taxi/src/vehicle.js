@@ -47,6 +47,23 @@ export function createTaxi(color=0xc0a346, variant=0) {
   // Keep the separate hinged door, but replace the placeholder cockpit with the showroom interior.
   for(const child of [...cabin.children]){if(child===interiorDoor)continue;cabin.remove(child);child.traverse(o=>{if(o.geometry)o.geometry.dispose()})}
   cabin.add(showroom.interior);
+  // The exterior is hidden in first person to avoid rendering opaque windows over
+  // the camera. A separate lightweight body keeps the bonnet and windscreen visible.
+  const body=new THREE.Group();body.name='cabinBody';cabin.add(body);
+  const {width:W,length:L,height:H,style}=showroom.unit;
+  const hoodY=H*(style==='van'?.46:.56)+.03;
+  const hoodStart=L*(style==='van'?.26:.23), hoodEnd=L*.49;
+  box(body,W*.94,.09,hoodEnd-hoodStart,paint,0,hoodY,(hoodStart+hoodEnd)/2);
+  box(body,W*.95,.035,.06,chrome,0,hoodY+.055,hoodEnd-.08);
+  for(const side of [-1,1]){
+    box(body,.11,.12,hoodEnd-hoodStart,paint,side*W*.46,hoodY+.035,(hoodStart+hoodEnd)/2);
+    const pillar=box(body,.10,H*.48,.12,paint,side*W*.47,H*.78,L*.15);
+    pillar.rotation.x=-.30;
+    box(body,.20,.10,.23,trim,side*(W*.52),H*.65,L*.13);
+    box(body,.17,.07,.02,chrome,side*(W*.52),H*.65,L*.13-.12);
+  }
+  box(body,W*.95,.09,.12,paint,0,H*.99,L*.09);
+  box(body,W*.90,.045,.08,trim,0,hoodY+.08,hoodStart);
   return {group,exterior,cabin,paint,steering,gauges,wiper,exteriorDoor,interiorDoor,showroom};
 }
 export function animateTaxi(model, speed, steering, gear, dt, elapsed, movingEffects=true, doorOpen=false) {

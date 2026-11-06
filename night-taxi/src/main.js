@@ -115,13 +115,22 @@ $('garageBtn').onclick=()=>{if(s.stage!=='offer')return toast('Гараж дос
 $('sound').onclick=()=>toast('Звук пока не добавлен');function toggleGear(){if(car.speed>.5)return toast('Остановитесь перед переключением передачи');car.gear=car.gear===1?-1:1;save();updateUI(true);toast(car.gear===-1?'Включён задний ход':'Включена передняя передача')} $('gearBtn').onclick=toggleGear;$('cameraBtn').onclick=()=>{s.camera=({1:0,0:2,2:1})[s.camera];$('cameraLabel').textContent=['ВИД: СНАРУЖИ','ВИД: САЛОН','ВИД: СВЕРХУ'][s.camera];look=0;lookPitch=0;save();toast(['Камера: снаружи','Камера: из салона','Камера: сверху'][s.camera])};
 function toggleDoor(){if(s.paused||tabletOpen)return;if(car.speed>.5)return toast('Остановитесь, чтобы открыть дверь');car.doorOpen=!car.doorOpen;clearControls();$('doorBtn').setAttribute('aria-pressed',String(car.doorOpen));$('doorBtn').textContent=car.doorOpen?'▣ ЗАКРЫТЬ':'▣ ДВЕРЬ';toast(car.doorOpen?'Дверь открыта · закройте перед поездкой':'Дверь закрыта')}
 $('doorBtn').onclick=toggleDoor;
+// Physical key codes keep driving controls in place across keyboard layouts.
+function drivingKey(e){const codes={KeyW:'w',KeyA:'a',KeyS:'s',KeyD:'d',KeyR:'r',KeyE:'e',KeyT:'t',KeyC:'c',KeyP:'p',Space:' '};return codes[e.code]||e.key.toLowerCase()}
 window.addEventListener('keydown',e=>{
- const key=e.key.toLowerCase();
+ const key=drivingKey(e);
  if(tabletOpen){if(key==='escape'){e.preventDefault();if(!$('modal').classList.contains('hidden'))$('modal').classList.add('hidden');else closeTablet()}return}
- if(key==='t'&&!e.repeat){e.preventDefault();openTablet();return}
- if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();
- if(key==='r'&&!e.repeat)toggleGear();if(key==='e'&&!e.repeat)toggleDoor();if(key==='w'||key==='arrowup')hideHelp();keys[key]=true;
-});window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+ if(e.target?.matches?.('input, textarea, select, [contenteditable="true"]')||e.ctrlKey||e.altKey||e.metaKey)return;
+ if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright',' ','r','e','t','c','p','escape'].includes(key))e.preventDefault();
+ if(!e.repeat){
+  if(key==='t'){openTablet();return}
+  if(key==='p'||key==='escape'){$('pauseBtn').click();return}
+  if(key==='c'){$('cameraBtn').click();return}
+  if(key==='r')toggleGear();if(key==='e')toggleDoor();
+ }
+ if(s.paused)return;
+ if(key==='w'||key==='arrowup')hideHelp();keys[key]=true;
+});window.addEventListener('keyup',e=>{keys[drivingKey(e)]=false});
 window.addEventListener('blur',()=>{keys={};resumeAfterTablet=false;setPaused(true)});
 document.addEventListener('visibilitychange',()=>{if(document.hidden){keys={};resumeAfterTablet=false;setPaused(true)}});
 // Each pointer has its own held control, so steering and gas can be held together.
