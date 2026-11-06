@@ -1091,21 +1091,26 @@ function boat(c) {
   cyl(body, 0.09, 0.09, 0.3, M.steel, 0, deckY - 0.5, zFront - 1.25, 10).rotation.x = HALF;
   // лебёдка
   rbox(body, 0.3, 0.3, 0.4, M.chromeDark, 0, deckY + 0.05, zFront + 0.9, 0.03);
-  // катер
+  // катер: корпус — эллипсоид (острый нос и корма), палуба и кокпит
   const hullMat = std('#f2f4f2', 0.25, 0.25);
   const hullDark = std('#1f3d5c', 0.4, 0.3);
-  const hull = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 0.45, 4.8, 20, 1, false, 0, TAU, 0, HALF), hullMat);
-  hull.rotation.x = HALF;
-  hull.rotation.z = HALF;
-  hull.scale.set(1.0, 0.72, 1.0);
-  hull.position.set(0, deckY + 0.5, -0.2);
+  const hull = new THREE.Mesh(new THREE.SphereGeometry(1, 30, 20), hullMat);
+  hull.scale.set(0.92, 0.62, 2.35);
+  hull.position.set(0, deckY + 0.46, -0.1);
   body.add(hull);
-  // планшир
-  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.08, 8, 24, PI), hullDark);
-  rim.rotation.x = HALF;
-  rim.position.set(0, deckY + 0.52, -0.2);
-  rim.scale.set(1.0, 1.0, 0.72);
-  body.add(rim);
+  // ватерлиния-ливрея по борту корпуса
+  const waterline = torus(body, 0.9, 0.045, std(liveryOf(c.unit, '#3d8fc4'), 0.4, 0.35), 0, deckY + 0.4, -0.1, 44);
+  waterline.rotation.x = HALF;
+  waterline.scale.set(1, 2.4, 1);
+  // палуба с бортовым планширом и кокпитом
+  rbox(body, 1.7, 0.08, 4.3, hullDark, 0, deckY + 0.7, -0.1, 0.16);
+  rbox(body, 1.28, 0.12, 2.1, M.plasticLight, 0, deckY + 0.74, 0.35, 0.1);
+  // носовой релинг
+  for (const side of [-1, 1]) {
+    pipe(body, [side * 0.72, deckY + 0.74, -2.0], [side * 0.6, deckY + 0.78, -1.2], 0.025, M.chromeDark);
+  }
+  // кормовой подвесной мотор
+  rbox(body, 0.34, 0.62, 0.3, M.darkSteel, 0, deckY + 0.5, 2.2, 0.04);
   // лобовое стекло и консоль
   const ws = rbox(body, 1.5, 0.5, 0.08, M.glassDark, 0, deckY + 1.0, -2.0, 0.03);
   ws.rotation.x = -0.35;

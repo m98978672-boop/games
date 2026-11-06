@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#0b0d0c">
   <meta name="description" content="ГАРАЖ 3D — интерактивный 3D-шоурум техники: 10 тягачей, 20 типов полуприцепов и 10 автомобилей. Осмотр снаружи и изнутри, живой салон, покраска и студийные виды. Работает офлайн.">
   <title>ГАРАЖ 3D — шоурум тягачей, прицепов и автомобилей</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=1.5.0">
 </head>
 <body>
 <div class="app">
@@ -125,7 +125,7 @@
       <button class="nav-arrow" id="next-btn" title="Следующая модель" aria-label="Следующая">›</button>
     </div>
 
-    <div class="foot-note">40 моделей · 10 / 20 / 10 · <a href="../index.html">все игры</a></div>
+    <div class="foot-note">40 моделей · 10 / 20 / 10 · <span title="Версия сборки">v1.5</span> · <a href="../index.html">все игры</a></div>
   </footer>
 </div>
 
@@ -204,17 +204,20 @@
       <button class="icon-btn" id="help-close" aria-label="Закрыть">✕</button>
     </div>
     <div class="help-grid">
-      <div><b>Мышь</b><span>ЛКМ — вращать вокруг машины, колесо — приблизить, ПКМ — сдвинуть сцену.</span></div>
-      <div><b>Салон</b><span>Кнопка 👁, «Сесть внутрь» или <kbd>I</kbd>. Внутри тяните ЛКМ — свободный взгляд.</span></div>
+      <div><b>Мышь</b><span>ЛКМ — вращать вокруг машины, колесо — приблизить <i>к курсору</i>, ПКМ — сдвинуть сцену.</span></div>
+      <div><b>Клик по детали</b><span>Наводит камеру на узел и подписывает его: «Сцепной шкворень», «Горловина люка»… Двойной клик — в салон.</span></div>
+      <div><b>Навпад</b><span>Кнопки в правом нижнем углу: стрелки вращают, <kbd>+</kbd>/<kbd>−</kbd> приближают, <kbd>⌂</kbd> возвращает вид. Удержание — непрерывное движение.</span></div>
+      <div><b>Клавиатура</b><span><kbd>A</kbd> <kbd>D</kbd> — вокруг, <kbd>W</kbd> <kbd>S</kbd> — наклон, <kbd>+</kbd>/<kbd>−</kbd> — зум, <kbd>0</kbd> — сброс.</span></div>
+      <div><b>Сенсор</b><span>Один палец — вращать, два — зум и сдвиг, свайп — другая модель, двойной тап — в салон.</span></div>
+      <div><b>Салон</b><span>Кнопка 👁, «Сесть внутрь» или <kbd>I</kbd>. Внутри тяните — свободный взгляд.</span></div>
       <div><b>Виды</b><span>Чипы внизу слева или <kbd>1</kbd>–<kbd>5</kbd>: снаружи, борт, сзади, водитель, салон.</span></div>
-      <div><b>Модели</b><span><kbd>←</kbd> <kbd>→</kbd> — предыдущая/следующая, <kbd>R</kbd> — случайная, категории — внизу.</span></div>
-      <div><b>Панели</b><span><b>Каталог</b> и <b>Модель</b> сверху открывают список и характеристики. <kbd>Esc</kbd> — закрыть.</span></div>
-      <div><b>Прочее</b><span><kbd>Пробел</kbd> — автовращение, <kbd>0</kbd> — сброс, <kbd>C</kbd> — скриншот, <kbd>F</kbd> — полный экран, <kbd>H</kbd> — справка.</span></div>
+      <div><b>Модели и панели</b><span><kbd>←</kbd> <kbd>→</kbd> — модель, <kbd>R</kbd> — случайная, <b>Каталог</b> и <b>Модель</b> сверху, <kbd>Esc</kbd> — закрыть.</span></div>
+      <div><b>Прочее</b><span><kbd>Пробел</kbd> — автовращение, <kbd>C</kbd> — скриншот, <kbd>F</kbd> — полный экран, <kbd>H</kbd> — эта справка.</span></div>
     </div>
     <p class="mini">Марки, модели и характеристики вымышлены — это самостоятельный шоурум, а не копия реальных брендов. Двойной клик по названию в карточке добавляет модель в избранное.</p>
   </div>
 </div>
 
-<script defer src="showroom.bundle.js"></script>
+<script defer src="showroom.bundle.js?v=1.5.0"></script>
 </body>
 </html>
