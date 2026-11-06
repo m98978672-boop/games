@@ -897,10 +897,10 @@ export class TruckView {
       cylinder(g, 0.13, 0.13, 2.4, m.metal, 0, 1.0, nose - 2.2, 'z', 12);
       box(g, 0.34, 0.2, 0.5, m.darkMetal, 0, 1.05, nose - 1.05);
       // груз: щебень горкой
-      const gravelMat = new THREE.MeshStandardMaterial({ color: 0x8a857b, roughness: 1, flatShading: true });
+      const gravelMat = new THREE.MeshStandardMaterial({ color: 0x9a9488, roughness: 1, flatShading: true });
       for (let i = 0; i < 7; i++) {
-        const pile = new THREE.Mesh(new THREE.ConeGeometry(0.86 - i * 0.04, 0.34, 7), gravelMat);
-        pile.position.set((i % 2 ? 0.16 : -0.14), bodyBottom + binR - 0.02, nose - 1.5 - i * 1.55);
+        const pile = new THREE.Mesh(new THREE.ConeGeometry(1.0 - i * 0.03, 0.5, 7), gravelMat);
+        pile.position.set((i % 2 ? 0.14 : -0.12), bodyBottom + binR + 0.06, nose - 1.5 - i * 1.55);
         pile.rotation.y = i;
         g.add(pile);
       }
