@@ -259,14 +259,33 @@ export function buildTruck(unit, M) {
   const wsFrontZ = cabFront + 0.06;
   rbox(cab, cabW - 0.14, wsBottom - floorY, 0.14, paint, 0, (floorY + wsBottom) / 2, wsFrontZ, 0.05);
   rbox(cab, cabW - 0.14, Math.max(0.12, roofY - wsTop), 0.2, paint, 0, (wsTop + roofY) / 2, wsFrontZ + 0.05, 0.06);
-  // лобовое стекло под наклоном
+  // лобовое стекло под наклоном — в резиновой манжете по периметру
   const wsH = Math.max(0.5, wsTop - wsBottom);
-  const ws = plane(cab, cabW - 0.26, wsH, M.glass, 0, (wsBottom + wsTop) / 2, wsFrontZ + 0.03);
-  ws.rotation.x = -0.05;
-  // боковые окна
+  const wsW = cabW - 0.26;
+  const wsGroup = new THREE.Group();
+  wsGroup.position.set(0, (wsBottom + wsTop) / 2, wsFrontZ + 0.03);
+  wsGroup.rotation.x = -0.05;
+  cab.add(wsGroup);
+  const seal = M.rubberTrim || M.rubber || M.plastic;
+  const ws = plane(wsGroup, wsW - 0.05, wsH - 0.05, M.glass, 0, 0, 0.004);
+  ws.name = 'windshield-glass';
+  box(wsGroup, wsW, 0.028, 0.026, seal, 0, wsH / 2 - 0.012, 0.008);
+  box(wsGroup, wsW, 0.028, 0.026, seal, 0, -wsH / 2 + 0.012, 0.008);
+  box(wsGroup, 0.028, wsH, 0.026, seal, -wsW / 2 + 0.012, 0, 0.008);
+  box(wsGroup, 0.028, wsH, 0.026, seal, wsW / 2 - 0.012, 0, 0.008);
+  // боковые окна: стекло меньше проёма, по краю — уплотнитель
   for (const side of [-1, 1]) {
-    const sw = plane(cab, cabDepth - 0.42, winTop - winBottom, M.glass, side * (HALF_W - 0.005), (winBottom + winTop) / 2, (cabFront + cabRearZ) / 2 - 0.02);
+    const swd = cabDepth - 0.42;
+    const swh = winTop - winBottom;
+    const swz = (cabFront + cabRearZ) / 2 - 0.02;
+    const sw = plane(cab, swd - 0.05, swh - 0.05, M.glass, side * (HALF_W - 0.012), (winBottom + winTop) / 2, swz);
     sw.rotation.y = side > 0 ? -HALF : HALF;
+    sw.name = 'side-glass';
+    const fx = side * (HALF_W - 0.004);
+    box(cab, 0.014, 0.028, swd, seal, fx, winTop - 0.012, swz);
+    box(cab, 0.014, 0.028, swd, seal, fx, winBottom + 0.012, swz);
+    box(cab, 0.014, swh, 0.03, seal, fx, (winBottom + winTop) / 2, swz - swd / 2 + 0.012);
+    box(cab, 0.014, swh, 0.03, seal, fx, (winBottom + winTop) / 2, swz + swd / 2 - 0.012);
   }
   // зеркала или камеры
   for (const side of [-1, 1]) {

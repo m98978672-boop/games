@@ -415,32 +415,61 @@ export function buildCar(unit, M, opts = {}) {
     }
 
     // ---------- стёкла в проёмах
+    // Стекло не «вставлено в дырку», а посажено на резиновый уплотнитель:
+    // по контуру проёма идёт рамка-манжета, а само стекло меньше проёма
+    // на 1,2 см и лежит в её плоскости.
+    const sealMat = M.rubber || black;
     for (const h of windowHoles) {
       for (const side of [-1, 1]) {
-        const pos = [];
-        const idx = [];
         const steps = 8;
-        for (let i = 0; i <= steps; i++) {
-          const z = lerp(h.z0, h.z1, i / steps);
-          // стекло ставим почти заподлицо с наружной поверхностью борта:
-          // раньше оно было утоплено на 8 см, и из салона/снаружи читалось
-          // как отдельная «парящая» пластина в проёме
-          pos.push(side * (halfW - 0.016), winBottom + 0.006, z);
-        }
-        for (let i = 0; i <= steps; i++) {
-          const z = lerp(h.z0, h.z1, i / steps);
-          // верхний напуск (1 см) уходит под краску крыши — щели над стеклом нет
-          pos.push(side * (halfW - 0.016), pick(z) + 0.012, z);
-        }
-        const n = steps + 1;
-        for (let i = 0; i < n - 1; i++) idx.push(i, i + 1, n + i, i + 1, n + i + 1, n + i);
-        const g3 = new THREE.BufferGeometry();
-        g3.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-        g3.setIndex(idx);
-        g3.computeVertexNormals();
-        const sideGlass = new THREE.Mesh(g3, M.glass);
+        const inset = 0.014;
+        const strip = (push) => {
+          const pos = [];
+          const idx = [];
+          for (let i = 0; i <= steps; i++) {
+            const t = i / steps;
+            const z = lerp(h.z0, h.z1, t);
+            push(pos, z, t);
+          }
+          const n = steps + 1;
+          for (let i = 0; i < n - 1; i++) idx.push(i, i + 1, n + i, i + 1, n + i + 1, n + i);
+          const g = new THREE.BufferGeometry();
+          g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+          g.setIndex(idx);
+          g.computeVertexNormals();
+          return g;
+        };
+        const xGlass = side * (halfW - 0.018);
+        const xSeal = side * (halfW - 0.01);
+        // стекло
+        const glassGeo = strip((pos, z) => {
+          pos.push(xGlass, winBottom + inset, z);
+          pos.push(xGlass, pick(z) - inset, z);
+        });
+        const sideGlass = new THREE.Mesh(glassGeo, M.glass);
         sideGlass.name = 'side-glass';
         root.add(sideGlass);
+        // манжета: нижняя полка, верхняя (по линии крыши) и торцевые
+        const lower = strip((pos, z) => {
+          pos.push(xSeal, winBottom - 0.004, z);
+          pos.push(xSeal, winBottom + inset, z);
+        });
+        const upper = strip((pos, z) => {
+          pos.push(xSeal, pick(z) - inset, z);
+          pos.push(xSeal, pick(z) + 0.01, z);
+        });
+        for (const geo of [lower, upper]) {
+          const m = new THREE.Mesh(geo, sealMat);
+          m.name = 'window-seal';
+          root.add(m);
+        }
+        // торцы проёма (передняя и задняя кромки)
+        for (const [zEdge, dir] of [[h.z0, 1], [h.z1, -1]]) {
+          const capH = Math.max(0.02, pick(zEdge) - winBottom);
+          const cap = box(root, 0.016, capH, 0.03, sealMat,
+            side * (halfW - 0.012), winBottom + capH / 2, zEdge + dir * 0.01);
+          cap.name = 'window-seal';
+        }
       }
     }
     // чёрные накладки стоек
@@ -563,8 +592,8 @@ export function buildCar(unit, M, opts = {}) {
     const doorZ = (aPillar + bPillarZ) / 2;
     const rearDoorZ = (bPillarZ + cPillar) / 2;
     dmgOut = mountDamageSet(root, { ...unit, category: 'cars' }, [
-      { part: { name: 'передняя дверь', gender: 'f' }, side: -1, pos: [-xb, belt - 0.2, doorZ], w: 0.54, h: 0.3 },
-      { part: { name: 'передняя дверь', gender: 'f' }, side: 1, pos: [xb, belt - 0.2, doorZ], w: 0.54, h: 0.3 },
+      { part: { name: 'передняя дверь', gender: 'f' }, side: -1, pos: [-xb, belt - 0.28, doorZ], w: 0.5, h: 0.28 },
+      { part: { name: 'передняя дверь', gender: 'f' }, side: 1, pos: [xb, belt - 0.28, doorZ], w: 0.5, h: 0.28 },
       { part: { name: 'задняя дверь', gender: 'f' }, side: -1, pos: [-xb, belt - 0.45, rearDoorZ], w: 0.46, h: 0.28 },
       { part: { name: 'задняя дверь', gender: 'f' }, side: 1, pos: [xb, belt - 0.45, rearDoorZ], w: 0.46, h: 0.28 },
       { part: { name: 'капот', gender: 'm' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.3, S.hoodY + 0.015, (front + S.wsBase) / 2], w: 0.6, h: 0.44 },
@@ -574,8 +603,8 @@ export function buildCar(unit, M, opts = {}) {
       { part: { name: 'задний бампер', gender: 'm' }, side: -1, rotY: 0, pos: [-0.42, ground + 0.22, rear + 0.02], w: 0.5, h: 0.24 },
       // крылья — над аркой, а не над шиной: полоса кузова между аркой и
       // поясом. Раньше пятно висело над колесом, в проёме арки.
-      { part: { name: 'переднее крыло', gender: 'n' }, side: -1, pos: [-xb, belt - 0.15, axleZ[0] + 0.04], w: 0.44, h: 0.16 },
-      { part: { name: 'заднее крыло', gender: 'n' }, side: 1, pos: [xb, belt - 0.15, axleZ[1] - 0.04], w: 0.44, h: 0.16 },
+      { part: { name: 'переднее крыло', gender: 'n' }, side: -1, pos: [-xb, belt - 0.1, axleZ[0] + 0.02], w: 0.32, h: 0.14 },
+      { part: { name: 'заднее крыло', gender: 'n' }, side: 1, pos: [xb, belt - 0.1, axleZ[1] - 0.02], w: 0.32, h: 0.14 },
       { part: { name: 'порог', gender: 'm' }, side: -1, pos: [-xb, ground + 0.16, (axleZ[0] + axleZ[1]) / 2], w: 0.5, h: 0.22 },
       { part: { name: 'борт капота', gender: 'm' }, side: 1, pos: [xb, S.hoodY - 0.12, (front + S.wsBase) / 2], w: 0.46, h: 0.26 },
       { part: { name: 'задняя стойка', gender: 'f' }, side: -1, pos: [-xb, belt - 0.12, cPillar + 0.12], w: 0.24, h: 0.22 },

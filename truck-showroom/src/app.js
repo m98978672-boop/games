@@ -170,6 +170,13 @@ const live = (text) => {
   live.t = setTimeout(() => el.classList.remove('show'), 1800);
 };
 
+/** Вмятины — часть кузова: при перекраске они меняют цвет вместе с панелью. */
+function paintDamage(built, hex) {
+  built?.root?.traverse?.((o) => {
+    if (o.userData?.damage && o.userData.takesPaint && o.material?.color) o.material.color.set(hex);
+  });
+}
+
 function clearShown() {
   if (shown) {
     scene.remove(shown.root);
@@ -259,6 +266,7 @@ function showUnit(unit, { instant = false, view = null } = {}) {
     for (const m of built.paintMats) {
       if (m && m.color) m.color.set(colorHex);
     }
+    paintDamage(built, colorHex);
     scene.add(built.root);
     shown = built;
     applyDamage();
@@ -689,7 +697,7 @@ function renderDamageMenu() {
   const typeRow = $('damage-type-row');
   if (typeRow) {
     typeRow.querySelectorAll('.dmg-type').forEach((b) => {
-      b.classList.toggle('active', b.dataset.kind === state.dmgKind);
+      b.classList.toggle('is-on', b.dataset.kind === state.dmgKind);
       b.disabled = !dmg;
     });
   }
@@ -763,7 +771,7 @@ function addDamageOfKind(kind) {
   live(`${spec.kindTitle}: ${spec.where}`);
 }
 
-/** Меню ракурсов: все виды одной сеткой. */
+/** Меню ракурсов: список видов строками — как пункты меню, а не «чипсы». */
 function renderViewMenu() {
   const row = $('menu-view-row');
   if (!row) return;
@@ -771,16 +779,18 @@ function renderViewMenu() {
   const unit = currentUnit();
   for (const v of viewsOf(unit)) {
     const b = document.createElement('button');
-    b.className = 'chip' + (v.id === state.view ? ' active' : '');
+    b.className = 'pop-item' + (v.id === state.view ? ' is-on' : '');
     b.dataset.view = v.id;
-    b.textContent = `${VIEW_ICONS[v.id] || '📷'} ${v.label}`.trim();
+    const hint = v.group === 'interior' ? 'внутри' : 'снаружи';
+    b.innerHTML = `<span class="i">${VIEW_ICONS[v.id] || '📷'}</span><span class="n">${v.label}</span><span class="h">${hint}</span>`;
     b.onclick = () => {
       goView(v.id);
       closePop();
     };
     row.appendChild(b);
   }
-  $('menu-orbit')?.classList.toggle('active', autoRotateWanted);
+  $('menu-orbit')?.classList.toggle('is-on', autoRotateWanted);
+  $('menu-inside')?.classList.toggle('is-on', false);
 }
 
 function recolor(unit, hex) {
@@ -788,6 +798,7 @@ function recolor(unit, hex) {
   saveState();
   if (shown) {
     for (const m of shown.paintMats) if (m?.color) m.color.set(hex);
+    paintDamage(shown, hex);
   }
   renderList();
   renderDetails(unit);
@@ -1082,11 +1093,11 @@ function wireUI() {
   document.querySelectorAll('.cat-tab').forEach((t) => {
     t.onclick = () => setCategory(t.dataset.cat);
   });
-  document.querySelectorAll('#dock-env .chip').forEach((b) => {
+  document.querySelectorAll('#dock-env .pop-item').forEach((b) => {
     b.onclick = () => {
       state.preset = b.dataset.preset;
       stage.setPreset(state.preset);
-      document.querySelectorAll('#dock-env .chip').forEach((x) => x.classList.toggle('active', x.dataset.preset === state.preset));
+      document.querySelectorAll('#dock-env .pop-item').forEach((x) => x.classList.toggle('is-on', x.dataset.preset === state.preset));
       saveState();
       live(`Свет: ${b.textContent}`);
     };
@@ -1394,7 +1405,7 @@ function boot() {
   const note = document.querySelector('.foot-note');
   if (note && device.touch) note.textContent = '62 модели · 10 / 20 / 10 / 22';
   stage.setPreset(state.preset);
-  document.querySelectorAll('#dock-env .chip').forEach((x) => x.classList.toggle('active', x.dataset.preset === state.preset));
+  document.querySelectorAll('#dock-env .pop-item').forEach((x) => x.classList.toggle('is-on', x.dataset.preset === state.preset));
   document.querySelectorAll('.cat-tab').forEach((t) => {
     const on = t.dataset.cat === state.cat;
     t.classList.toggle('active', on);

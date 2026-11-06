@@ -43,22 +43,52 @@ function facadeFrame(root, { axis, W, D }) {
   return { g, along, rotY };
 }
 
-/** Окно: откос, стекло, рама, подоконник. Всё почти заподлицо с фасадом,
- *  иначе рама торчит «плавником» и дом читается расчёской. */
+/** Откос проёма: четыре трапеции от наружного контура к внутреннему.
+ *  Так окно действительно «утоплено», а не наклеено на фасад. */
+function revealRing(wOut, hOut, wIn, hIn, depth) {
+  const p = [];
+  const quad = (a, b, c, d) => {
+    p.push(...a, ...b, ...c, ...a, ...c, ...d);
+  };
+  const ox = wOut / 2;
+  const oy = hOut / 2;
+  const ix = wIn / 2;
+  const iy = hIn / 2;
+  const O = depth;
+  quad([-ox, oy, O], [ox, oy, O], [ix, iy, 0], [-ix, iy, 0]); // верх
+  quad([ox, oy, O], [ox, -oy, O], [ix, -iy, 0], [ix, iy, 0]); // право
+  quad([ox, -oy, O], [-ox, -oy, O], [-ix, -iy, 0], [ix, -iy, 0]); // низ
+  quad([-ox, -oy, O], [-ox, oy, O], [-ix, iy, 0], [-ix, -iy, 0]); // лево
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));
+  g.computeVertexNormals();
+  return g;
+}
+
+/** Окно: откос с уклоном, стекло в глубине проёма, импосты заподлицо,
+ *  подоконник с капельником. */
 function windowUnit(parent, x, y, w = 1.4, h = 1.5, lit = false) {
-  // откос — тёмная ниша, утопленная в стену
-  box(parent, w + 0.14, h + 0.14, 0.06, std('#2a2e31', 0.9, 0.05), x, y, 0.012);
-  const glass = box(parent, w, h, 0.02, lit ? GLASS_LIT() : GLASS(), x, y, 0.022);
+  const jamb = std('#cdc9bb', 0.78, 0.08);
+  jamb.side = THREE.DoubleSide;
+  const reveal = new THREE.Mesh(revealRing(w + 0.2, h + 0.2, w, h, 0.072), jamb);
+  reveal.position.set(x, y, 0.006);
+  reveal.name = 'window-reveal';
+  parent.add(reveal);
+  // тёмная плоскость в глубине: сам проём
+  box(parent, w + 0.02, h + 0.02, 0.012, std('#1b2126', 0.95, 0.03), x, y, 0.01);
+  // стекло чуть впереди дна проёма
+  const glass = box(parent, w - 0.03, h - 0.03, 0.012, lit ? GLASS_LIT() : GLASS(), x, y, 0.022);
   glass.name = 'window-glass';
-  // рама: тонкие импосты по внешнему краю стекла
-  const frame = std('#d8d5c8', 0.5, 0.35);
-  box(parent, w + 0.06, 0.05, 0.028, frame, x, y + h / 2, 0.026);
-  box(parent, w + 0.06, 0.05, 0.028, frame, x, y - h / 2, 0.026);
-  box(parent, 0.05, h, 0.028, frame, x - w / 2, y, 0.026);
-  box(parent, 0.05, h, 0.028, frame, x + w / 2, y, 0.026);
-  box(parent, 0.035, h, 0.026, frame, x, y, 0.028);
-  // подоконник
-  box(parent, w + 0.2, 0.06, 0.1, std('#c9c4b6', 0.7, 0.2), x, y - h / 2 - 0.07, 0.05);
+  // импосты — тонкие, почти в плоскости стекла
+  const frame = std('#e2ded1', 0.45, 0.3);
+  box(parent, w, 0.04, 0.022, frame, x, y + h / 2 - 0.02, 0.03);
+  box(parent, w, 0.04, 0.022, frame, x, y - h / 2 + 0.02, 0.03);
+  box(parent, 0.04, h - 0.08, 0.022, frame, x - w / 2 + 0.02, y, 0.03);
+  box(parent, 0.04, h - 0.08, 0.022, frame, x + w / 2 - 0.02, y, 0.03);
+  if (w > 1.1) box(parent, 0.03, h - 0.08, 0.02, frame, x, y, 0.032);
+  // подоконник с капельником
+  box(parent, w + 0.3, 0.055, 0.14, std('#cfcabd', 0.72, 0.1), x, y - h / 2 - 0.1, 0.05);
+  box(parent, w + 0.26, 0.03, 0.05, std('#8d8a80', 0.85, 0.05), x, y - h / 2 - 0.14, 0.1);
 }
 
 /** Вход: проём, дверное полотно, козырёк, ступени.
