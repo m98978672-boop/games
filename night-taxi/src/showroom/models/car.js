@@ -592,8 +592,9 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
   // моторный щит: закрывает просвет между панелью и лобовым, иначе из салона
   // видны колёса и арки. Верх щита делаем НИЖЕ панели (раньше он поднимался
   // на 20 см над торпедо и чёрной стеной закрывал двор из лобового стекла).
-  const firewallTop = floorY + 0.44;
-  rbox(g, cabW + 0.06, firewallTop - floorY + 0.1, 0.05, dark, 0, (floorY + firewallTop) / 2 - 0.05, zFront - 0.05, 0.02);
+  // Close the gap under the real bonnet so the driver cannot see through to the front wheels.
+  const firewallTop = Math.max(floorY + 0.44, S.hoodY + 0.06);
+  rbox(g, S.W - 0.06, firewallTop - floorY + 0.1, 0.05, dark, 0, (floorY + firewallTop) / 2 - 0.05, zFront - 0.05, 0.02);
 
   // ---------- торпедо
   // Водитель сидит на +Z и смотрит в −Z, поэтому лицевая плоскость панели —

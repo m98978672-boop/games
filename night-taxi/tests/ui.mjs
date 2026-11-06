@@ -24,14 +24,13 @@ const canvas=w.testRenderer.domElement;const before=w.testRenderer.camera.getWor
 canvas.dispatchEvent(new w.PointerEvent('pointerdown',{pointerId:55,clientX:200,clientY:200}));canvas.dispatchEvent(new w.PointerEvent('pointermove',{pointerId:55,clientX:260,clientY:240}));nextFrame(w.performance.now()+30);
 const after=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(Math.abs(after.x-before.x)>.1&&Math.abs(after.y-before.y)>.05,'camera follows drag on both axes');
 canvas.dispatchEvent(new w.PointerEvent('pointerup',{pointerId:55}));canvas.dispatchEvent(new w.MouseEvent('dblclick'));nextFrame(w.performance.now()+35);const centred=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(centred.distanceTo(before)<.01,'double click recentres view');
-click('doorBtn');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'true');
-const gasDoor=d.querySelector('[data-key="gas"]');gasDoor.dispatchEvent(new w.PointerEvent('pointerdown',{pointerId:56,bubbles:true,cancelable:true}));let stepTime=w.performance.now()+80;for(let i=0;i<12;i++){stepTime+=50;nextFrame(stepTime)}assert.equal(Number(d.getElementById('speed').textContent),0,'open door prevents driving');click('doorBtn');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'false');
+click('doorBtn');assert.match(d.getElementById('toast').textContent,/дверь пока не открывается/);
 click('tabletBtn');assert.equal(visible('tabletOverlay'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);assert.equal(d.getElementById('tabletBtn').getAttribute('aria-expanded'),'true');
 click('accept');assert.match(d.getElementById('orderContent').textContent,/ЗА ПАССАЖИРОМ/);click('closeTablet');assert.equal(visible('tabletOverlay'),false);assert.match(d.getElementById('pauseBtn').textContent,/ПАУЗА/);
 click('pauseBtn');click('tabletBtn');click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'previous pause preserved');
 click('pauseBtn');click('tabletBtn');w.dispatchEvent(new w.Event('blur'));click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'focus loss remains paused');
 click('tabletBtn');click('settingsBtn');assert.equal(visible('modal'),true);w.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(visible('modal'),false);w.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape'}));assert.equal(visible('tabletOverlay'),false);
-click('cameraBtn');nextFrame(w.performance.now()+40);assert.ok(Math.abs(w.testRenderer.camera.position.y-4.0)<.01,'camera button switches to third-person');assert.ok(w.testRenderer.scene.children.some(o=>o.type==='Group'&&o.children.length===2&&o.children[0].visible),'3D exterior model is visible');assert.match(d.getElementById('cameraLabel').textContent,/СНАРУЖИ/);
+click('cameraBtn');nextFrame(w.performance.now()+40);assert.ok(Math.abs(w.testRenderer.camera.position.y-4.0)<.01,'camera button switches to third-person');assert.ok(w.testRenderer.scene.getObjectByName('interior'),'complete Garage vehicle remains in scene');assert.match(d.getElementById('cameraLabel').textContent,/СНАРУЖИ/);
 // On-screen buttons work with a mouse or touch-style pointer and release on pause.
 click('pauseBtn');
 const gas=d.querySelector('[data-key="gas"]'),left=d.querySelector('[data-key="left"]');
@@ -53,7 +52,7 @@ key('keyup','KeyW','ц');click('pauseBtn');click('pauseBtn');for(let i=0;i<8;i++
 assert.equal(Number(d.getElementById('speed').textContent),0,'releasing keys and pausing clears acceleration');
 const view=d.getElementById('cameraLabel').textContent;key('keydown','KeyC','с');assert.notEqual(d.getElementById('cameraLabel').textContent,view,'C switches camera');
 const switched=d.getElementById('cameraLabel').textContent;key('keydown','KeyC','с',{repeat:true});assert.equal(d.getElementById('cameraLabel').textContent,switched,'held shortcut does not repeat');
-key('keydown','KeyE','у');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'true');key('keydown','KeyE','у');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'false');
+key('keydown','KeyE','у');assert.match(d.getElementById('toast').textContent,/дверь пока не открывается/);
 key('keydown','KeyR','к');assert.match(d.getElementById('gearBtn').textContent,/R/);key('keydown','KeyR','к');assert.match(d.getElementById('gearBtn').textContent,/D/);
 key('keydown','Escape','Escape');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);key('keydown','Escape','Escape');assert.match(d.getElementById('pauseBtn').textContent,/ПАУЗА/);
 key('keydown','KeyT','е');assert.equal(visible('tabletOverlay'),true);key('keydown','Escape','Escape');assert.equal(visible('tabletOverlay'),false);
