@@ -37,7 +37,16 @@ function batchStatic(root){
 export function buildShowroomTaxi(color,variant){
  const unit={...units[variant]||units[0],paint:'#'+new THREE.Color(color).getHexString()};
  const built=buildCar(unit,createMaterials());
+ // Subtle illumination keeps paint visible in the night scene without realtime shadows.
+ for(const paint of built.paintMats){if(paint.emissive){paint.emissive.set(paint.color);paint.emissiveIntensity=.055}}
  const interior=built.root.getObjectByName('interior');if(interior)built.root.remove(interior);
+ const driverView=built.views.find(view=>view.id==='driver');
+ const interiorWrapper=new THREE.Group();if(interior){
+  // Raise dark material values a little so dashboard details remain visible at night.
+  const adjusted=new Set();interior.traverse(o=>{if(!o.isMesh)return;for(const m of (Array.isArray(o.material)?o.material:[o.material])){if(!m||!m.color||adjusted.has(m))continue;adjusted.add(m);const hsl={};m.color.getHSL(hsl);if(hsl.l<.16)m.color.lerp(new THREE.Color(0x8f9994),.20)}});
+  interior.rotation.y=Math.PI;interiorWrapper.add(interior);
+  const cabinLight=new THREE.PointLight(0xffdeb0,3,3.8,2);cabinLight.position.set(0,1.45,-.2);interiorWrapper.add(cabinLight);
+ }
  const wheels=[];
  for(const wheel of built.wheels){
   // The source car points along -Z; its front axle has a negative Z coordinate.
@@ -51,7 +60,8 @@ export function buildShowroomTaxi(color,variant){
  const sign=new THREE.Mesh(new THREE.BoxGeometry(.76,.23,.36),new THREE.MeshStandardMaterial({color:0xf3d68a,emissive:0xa47729,emissiveIntensity:.65}));sign.position.set(0,unit.height+.13,0);wrapper.add(sign);
  const checkerMat=new THREE.MeshBasicMaterial({color:0x252723});
  for(let i=0;i<5;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.095,.07,.01),checkerMat);square.position.set((i-2)*.13,unit.height+.13,.185);wrapper.add(square)}
- return {group:wrapper,wheels,unit};
+ for(const side of [-1,1])for(let i=0;i<7;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.018,.10,.10),checkerMat);square.position.set(side*(unit.width/2+.025),.77,(i-3)*.10);wrapper.add(square)}
+ return {group:wrapper,wheels,unit,interior:interiorWrapper,driverView,steering:interior?.getObjectByName('steering')};
 }
 
 export function animateShowroomWheels(wheels,speed,steering,gear,dt){

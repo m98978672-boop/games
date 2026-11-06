@@ -43,12 +43,15 @@ export function createTaxi(color=0xc0a346, variant=0) {
   const gauges=[];for(const x of [.29,.67]){const face=cylinder(cabin,.14,.14,.025,trim,x,1.48,.68);face.rotation.x=Math.PI/2;const ring=torus(cabin,.13,.012,accent,x,1.48,.655);for(let tick=0;tick<9;tick++){let a=(tick/8)*Math.PI*1.4-Math.PI*.2;const mark=box(cabin,.012,.027,.01,headlight,x+Math.sin(a)*.103,1.48+Math.cos(a)*.103,.634);mark.rotation.z=-a}const needle=box(cabin,.012,.095,.02,headlight,x,1.48,.62);needle.geometry.translate(0,.045,0);gauges.push(needle)}
   const wiper=box(cabin,.035,.05,1.1,trim,-.48,1.52,1.12);wiper.rotation.y=.9;
   // Replace the old simple outside shell with the detailed showroom car; retain the cockpit and animated door.
-  const showroom=buildShowroomTaxi(color,variant);exteriorDoor.position.x=showroom.unit.width/2+.025;exteriorDoor.scale.y=showroom.unit.height/1.98;exterior.add(showroom.group);
+  const showroom=buildShowroomTaxi(color,variant);exteriorDoor.position.x=showroom.unit.width/2+.025;exteriorDoor.scale.y=showroom.unit.height/1.98;interiorDoor.scale.y=showroom.unit.height/1.98;interiorDoor.position.x=showroom.unit.width/2+.025;exterior.add(showroom.group);
+  // Keep the separate hinged door, but replace the placeholder cockpit with the showroom interior.
+  for(const child of [...cabin.children]){if(child===interiorDoor)continue;cabin.remove(child);child.traverse(o=>{if(o.geometry)o.geometry.dispose()})}
+  cabin.add(showroom.interior);
   return {group,exterior,cabin,paint,steering,gauges,wiper,exteriorDoor,interiorDoor,showroom};
 }
 export function animateTaxi(model, speed, steering, gear, dt, elapsed, movingEffects=true, doorOpen=false) {
   const target=doorOpen?-1.0:0;const angle=model.exteriorDoor.rotation.y+(target-model.exteriorDoor.rotation.y)*Math.min(1,dt*5);model.exteriorDoor.rotation.y=angle;model.interiorDoor.rotation.y=angle;
-  model.steering.rotation.z=-steering*.7;
+  if(model.showroom.steering)model.showroom.steering.rotation.z=steering*.7;
   animateShowroomWheels(model.showroom.wheels,speed,steering,gear,dt);
   model.gauges[0].rotation.z=-Math.min(speed/20,1)*2.2+.9;
   model.gauges[1].rotation.z=-Math.min(speed/20,1)*1.5+.7;

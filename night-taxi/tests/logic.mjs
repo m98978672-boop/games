@@ -15,7 +15,7 @@ for(let i=0;i<3;i++){
  assert.equal(model.showroom.wheels.length,4);assert.equal(model.showroom.wheels.filter(w=>w.front).length,2);
  assert.equal(model.cabin.visible,false);assert.equal(model.exterior.visible,true);
  animateTaxi(model,10,1,1,.1,2,true);
- assert.ok(model.steering.rotation.z<0);assert.notEqual(model.showroom.wheels[0].wheel.rotation.x,0);
+ assert.ok(model.showroom.steering.rotation.z>0);assert.notEqual(model.showroom.wheels[0].wheel.rotation.x,0);
  assert.ok(model.showroom.wheels.find(w=>w.front).pivot.rotation.y>0);
  animateTaxi(model,0,0,1,.1,2,true,true);assert.ok(model.exteriorDoor.rotation.y<0);assert.equal(model.exteriorDoor.rotation.y,model.interiorDoor.rotation.y);
 }
