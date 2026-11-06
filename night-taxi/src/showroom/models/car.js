@@ -625,14 +625,29 @@ function buildCarInterior({ M, S, nodes, pick, unit, halfW, sideT, belt, H, R, a
     const face = cyl(g, 0.062, 0.062, 0.006, M.plasticLight, x, yd, dashFace + 0.034, 18);
     face.rotation.x = HALF;
     torus(g, 0.068, 0.005, M.chromeDark, x, yd, dashFace + 0.035, 18);
-    const needle = box(g, 0.007, 0.05, 0.004, M.taillight, x, yd + 0.018, dashFace + 0.039);
-    needle.rotation.z = i === 0 ? 0.7 : -0.55;
-    needle.rotation.z = i === 0 ? 0.65 : -0.5;
+    // Radial tick marks and a separate needle, kept animated by the taxi adapter.
+    for(let n=0;n<9;n++){
+      const a=-Math.PI*.72+n*Math.PI*1.44/8;
+      const mark=box(g,0.004,n%2===0?0.012:0.007,0.003,M.chromeDark,x+Math.sin(a)*.049,yd+Math.cos(a)*.049,dashFace+.039);
+      mark.rotation.z=-a;
+    }
+    const needle=group(g,'gaugeNeedle'+i);needle.position.set(x,yd,dashFace+.044);
+    box(needle,0.006,0.05,0.004,M.taillight,0,.018,0);
+    const hub=cyl(needle,.008,.008,.006,M.chrome,0,0,.004,10);hub.rotation.x=HALF;
+    needle.rotation.z=-.95;
   }
   // мультимедиа по центру панели — лицом к водителю
   rbox(g, 0.38, 0.24, 0.02, M.plastic, 0.06, dashTop - 0.06, dashFace + 0.006, 0.02);
   const scr = rbox(g, 0.34, 0.2, 0.024, M.dashScreen, 0.06, dashTop - 0.06, dashFace + 0.022, 0.02);
   scr.rotation.x = -0.08;
+  // Subtle warm trim, backlit display readout and tactile radio controls.
+  box(g,cabW-.07,.012,.012,M.accent(unit.accent || '#d8d5c8'),0,dashTop-.12,dashFace+.025);
+  box(g,.24,.009,.006,M.headlight,.06,dashTop-.035,dashFace+.039);
+  for(let n=0;n<4;n++){
+    const indicator=box(g,.035,.012,.006,n===0?M.amber:M.chromeDark,-.055+n*.075,dashTop-.09,dashFace+.04);
+  }
+  for(const x of [-.08,.20]){const knob=cyl(g,.022,.022,.018,M.chromeDark,x,dashTop-.18,dashFace+.034,12);knob.rotation.x=HALF;}
+
   // дефлекторы обдува и кнопки — по бокам от экрана
   for (const side of [-1, 1]) {
     const x = side === -1 ? cabW * 0.4 : -cabW * 0.4;
