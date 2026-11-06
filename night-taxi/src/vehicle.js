@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {buildShowroomTaxi,animateShowroomWheels} from './showroom-adapter.js';
 
 // Low-poly geometry built locally; no external asset downloads are required.
 export function createTaxi(color=0xc0a346, variant=0) {
@@ -11,27 +12,6 @@ export function createTaxi(color=0xc0a346, variant=0) {
   const box=(parent,w,h,d,m,x,y,z)=>{let o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);parent.add(o);return o};
   const cylinder=(parent,r1,r2,h,m,x,y,z,rotation=0)=>{let o=new THREE.Mesh(new THREE.CylinderGeometry(r1,r2,h,12),m);o.position.set(x,y,z);o.rotation.z=rotation;parent.add(o);return o};
   const torus=(parent,r,tube,m,x,y,z)=>{let o=new THREE.Mesh(new THREE.TorusGeometry(r,tube,8,24),m);o.position.set(x,y,z);parent.add(o);return o};
-  const van=variant===2, length=van?4.65:variant===1?4.7:4.4, roofHeight=van?2.25:1.98;
-  // Exterior shell, separate panels, glazing, grille, handles, mirrors and taxi sign.
-  box(exterior,2,.65,length,paint,0,.87,0); box(exterior,1.95,.24,1.25,paint,0,1.3,length/2-.65);
-  box(exterior,1.95,.23,.75,paint,0,1.29,-length/2+.4);
-  // Tapered glazing gives each car a recognisable roofline rather than a solid box.
-  const canopyBottom=1.28, canopyTop=roofHeight-.05, rearZ=van?-1.75:-1.4, frontZ=1.15;
-  const shape=new THREE.BufferGeometry();const v=[-.88,canopyBottom,rearZ,.88,canopyBottom,rearZ,-.88,canopyBottom,frontZ,.88,canopyBottom,frontZ,-.76,canopyTop,rearZ+.20,.76,canopyTop,rearZ+.20,-.76,canopyTop,frontZ-.45,.76,canopyTop,frontZ-.45];
-  shape.setAttribute('position',new THREE.Float32BufferAttribute(v,3));shape.setIndex([0,2,1,1,2,3,4,5,6,5,7,6,0,1,4,1,5,4,2,6,3,3,6,7,0,4,2,2,4,6,1,3,5,3,7,5]);shape.computeVertexNormals();exterior.add(new THREE.Mesh(shape,glass));
-  box(exterior,1.58,.10,van?2.45:1.85,paint,0,roofHeight,(rearZ+frontZ)/2-.05);
-  for(const side of [-1,1]){
-    box(exterior,.08,.62,.08,paint,side*.87,1.6,-.18);box(exterior,.04,.44,.04,chrome,side*.88,1.53,.76);box(exterior,.04,.4,.04,chrome,side*.88,1.53,-1.14);box(exterior,.09,.08,2.2,chrome,side*1.02,1.12,0);
-    box(exterior,.025,.52,.025,trim,side*1.005,.95,-.25);box(exterior,.025,.52,.025,trim,side*1.005,.95,.72);box(exterior,.08,.1,.32,chrome,side*1.04,1.23,-.45);box(exterior,.08,.1,.32,chrome,side*1.04,1.23,.48);
-    box(exterior,.25,.2,.34,trim,side*1.11,1.57,.7);
-    box(exterior,.58,.25,.08,headlight,side*.68,1.02,length/2+.02);box(exterior,.58,.22,.08,rear,side*.68,1.01,-length/2-.02);
-  }
-  box(exterior,1.2,.28,.08,trim,0,.85,length/2+.03);for(let i=-3;i<=3;i++)box(exterior,.025,.22,.09,chrome,i*.16,.85,length/2+.07);
-  box(exterior,2.07,.16,.13,chrome,0,.57,length/2+.03);box(exterior,2.07,.16,.13,chrome,0,.57,-length/2-.03);
-  box(exterior,.65,.16,.07,headlight,0,.72,-length/2-.11);box(exterior,.78,.24,.38,headlight,0,roofHeight+.18,-.18);
-  for(let i=0;i<5;i++)box(exterior,.1,.1,.02,trim,(i-2)*.14,roofHeight+.18,.02);
-  const wheels=[], frontPivots=[];
-  for(const side of [-1,1])for(const z of [-length*.32,length*.32]){let pivot=new THREE.Group();pivot.position.set(side*1,.47,z);exterior.add(pivot);const tire=cylinder(pivot,.43,.43,.28,rubber,0,0,0,Math.PI/2);const hub=cylinder(pivot,.23,.23,.30,chrome,0,0,0,Math.PI/2);cylinder(pivot,.10,.10,.32,trim,0,0,0,Math.PI/2);wheels.push({tire,hub});if(z>0)frontPivots.push(pivot)}
   // Hinged driver's door: separate inside/outside panels share the same pivot.
   const exteriorDoor=new THREE.Group(), interiorDoor=new THREE.Group();
   exteriorDoor.position.set(1.04,0,.78);exterior.add(exteriorDoor);
@@ -62,13 +42,14 @@ export function createTaxi(color=0xc0a346, variant=0) {
   torus(steering,.29,.035,trim,0,0,0);box(steering,.5,.045,.035,trim,0,0,0);box(steering,.05,.28,.035,trim,0,-.1,0);cylinder(steering,.085,.085,.04,accent,0,0,0,Math.PI/2);
   const gauges=[];for(const x of [.29,.67]){const face=cylinder(cabin,.14,.14,.025,trim,x,1.48,.68);face.rotation.x=Math.PI/2;const ring=torus(cabin,.13,.012,accent,x,1.48,.655);for(let tick=0;tick<9;tick++){let a=(tick/8)*Math.PI*1.4-Math.PI*.2;const mark=box(cabin,.012,.027,.01,headlight,x+Math.sin(a)*.103,1.48+Math.cos(a)*.103,.634);mark.rotation.z=-a}const needle=box(cabin,.012,.095,.02,headlight,x,1.48,.62);needle.geometry.translate(0,.045,0);gauges.push(needle)}
   const wiper=box(cabin,.035,.05,1.1,trim,-.48,1.52,1.12);wiper.rotation.y=.9;
-  return {group,exterior,cabin,paint,wheels,frontPivots,steering,gauges,wiper,exteriorDoor,interiorDoor};
+  // Replace the old simple outside shell with the detailed showroom car; retain the cockpit and animated door.
+  const showroom=buildShowroomTaxi(color,variant);exteriorDoor.position.x=showroom.unit.width/2+.025;exteriorDoor.scale.y=showroom.unit.height/1.98;exterior.add(showroom.group);
+  return {group,exterior,cabin,paint,steering,gauges,wiper,exteriorDoor,interiorDoor,showroom};
 }
 export function animateTaxi(model, speed, steering, gear, dt, elapsed, movingEffects=true, doorOpen=false) {
   const target=doorOpen?-1.0:0;const angle=model.exteriorDoor.rotation.y+(target-model.exteriorDoor.rotation.y)*Math.min(1,dt*5);model.exteriorDoor.rotation.y=angle;model.interiorDoor.rotation.y=angle;
   model.steering.rotation.z=-steering*.7;
-  for(const pivot of model.frontPivots)pivot.rotation.y=-steering*.35;
-  for(const wheel of model.wheels){wheel.tire.rotation.x+=speed*gear*dt/0.43;wheel.hub.rotation.x=wheel.tire.rotation.x}
+  animateShowroomWheels(model.showroom.wheels,speed,steering,gear,dt);
   model.gauges[0].rotation.z=-Math.min(speed/20,1)*2.2+.9;
   model.gauges[1].rotation.z=-Math.min(speed/20,1)*1.5+.7;
   model.wiper.rotation.y=movingEffects?.9+Math.sin(elapsed*1.2)*.32:.9;

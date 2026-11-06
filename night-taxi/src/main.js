@@ -4,6 +4,7 @@ import {clamp,distance,stepCar} from './logic.js';
 import {createTaxi,animateTaxi} from './vehicle.js';
 import {createTrafficGeometry} from './traffic-model.js';
 import {loadCityAssets} from './city-assets.js';
+import {districtIndex,buildingTemplate} from './city-templates.js';
 const $=id=>document.getElementById(id);
 const districts=['Центр','Спальный район','Промзона','Набережная','Вокзал','Ночной рынок','Заброшенный район','Пригород'];
 const jobs=[
@@ -40,9 +41,10 @@ for(let n=-4;n<=4;n++){box(820,.08,20,roadMat,0,.01,n*80);box(20,.08,820,roadMat
 // Pavements, crossings and facades make the procedural city easier to read from the cabin.
 for(let n=-4;n<=4;n++){for(let side of [-1,1])for(let m=-4;m<4;m++){box(58,.18,2,concrete,m*80+40,.09,n*80+side*11);box(2,.18,58,concrete,n*80+side*11,.09,m*80+40)}for(let m=-4;m<=4;m++)for(let k=-3;k<=3;k++){box(1.2,.025,4,white,n*80+k*2,.09,m*80+7);box(4,.025,1.2,white,n*80+7,.10,m*80+k*2)}}
 const cityLandmarks=[];
+const neonTeal=mat(0x3ba59d,{emissive:0x176c66,emissiveIntensity:.9}),neonRose=mat(0xd07181,{emissive:0x8b263f,emissiveIntensity:.8}),rust=mat(0x69483d),unlitWindow=mat(0x202c30);
 const buildingMats=[mat(0x465156),mat(0x57544d),mat(0x394950),mat(0x65594d)];
 for(let gx=-4;gx<4;gx++)for(let gz=-4;gz<4;gz++)for(let a=0;a<2;a++)for(let b=0;b<2;b++){
- const x=gx*80+22+a*35,z=gz*80+22+b*35,seed=Math.abs((gx*127+gz*71+a*29+b*13)%11),height=12+seed*3;
+ const x=gx*80+22+a*35,z=gz*80+22+b*35,seed=Math.abs((gx*127+gz*71+a*29+b*13)%11),template=buildingTemplate(x,z,seed),height=template.height;
  if(Math.abs(gx)<=1&&Math.abs(gz)<=1&&a===0&&b===0){
   const fallback=new THREE.Group();box(23,height,23,buildingMats[seed%4],x,height/2,z,fallback);scene.add(fallback);
   cityLandmarks.push({x,z,fallback,name:['building-a','building-c','building-f'][cityLandmarks.length%3]});continue;
@@ -50,11 +52,24 @@ for(let gx=-4;gx<4;gx++)for(let gz=-4;gz<4;gz++)for(let a=0;a<2;a++)for(let b=0;
  box(23,height,23,buildingMats[seed%4],x,height/2,z);
  box(23.5,.5,23.5,concrete,x,height+.25,z);box(4,3,.18,glass,x,1.5,z-11.6);
  box(5,.25,1.1,concrete,x,3.2,z-11.8);box(.18,3,3,glass,x-11.6,1.5,z);
- if(seed%3===0){box(2,2,2,concrete,x+5,height+1,z+5);box(7,.4,.25,yellow,x,4.4,z-11.65)}
+ if(seed%3===0)box(2,2,2,concrete,x+5,height+1,z+5);
+ // Simple repeated facade templates: landmarks without expensive per-frame updates.
+ if(template.style==='office'){box(12,.32,.25,neonTeal,x,4.5,z-11.7);for(let y=7;y<height;y+=7)box(20,.18,.18,concrete,x,y,z-11.62)}
+ else if(template.style==='residential'){for(let y=7;y<height;y+=6){box(6,.22,1.6,concrete,x+5,y,z-12.3);box(6,.12,.12,dark,x+5,y+.8,z-13)}}
+ else if(template.style==='industrial'){box(20,.75,.3,rust,x,3,z-11.7);for(let k=-7;k<=7;k+=7)box(4,5,.2,dark,x+k,2.7,z-11.65)}
+ else if(template.style==='waterfront'){box(16,.3,.25,neonTeal,x,4,z-11.7);box(6,.15,2,concrete,x,3.4,z-12.1)}
+ else if(template.style==='station'){box(14,.45,.25,yellow,x,4.5,z-11.7);box(9,.2,2,concrete,x,3.3,z-12.3)}
+ else if(template.style==='market'){box(17,.35,.25,neonRose,x,4.1,z-11.7);box(15,.18,2.5,neonTeal,x,3,z-12.4)}
+ else if(template.style==='abandoned'){box(15,.2,.25,rust,x,3.8,z-11.7);box(5,3,.2,unlitWindow,x,5.5,z-11.7)}
+ else {box(15,.4,15,buildingMats[seed%4],x,height+.55,z);box(8,.2,2,concrete,x,3,z-12)}
  for(let floor=4;floor<height-2;floor+=6)for(let k=-7;k<=7;k+=7){if((seed+floor+k)%3!==0){box(3,2,.15,windowMat,x+k,floor,z-11.6);box(.15,2,3,windowMat,x-11.6,floor,z+k)}}
 }
 // Sparse lamps and neon remain unlit geometry on mobile, avoiding expensive realtime shadows.
 for(let i=-4;i<=4;i++)for(let j=-4;j<=4;j++){let x=i*80+12,z=j*80+12;box(.5,7,.5,concrete,x,3.5,z);box(2,.5,1,yellow,x,7,z)}
+// Modular bus shelters and neon signs placed beyond the roadway.
+for(const [x,z] of [[-13,35],[13,115],[147,35],[-147,-45],[227,195],[-227,-125]]){
+ box(.25,3,.25,concrete,x,1.5,z-3);box(.25,3,.25,concrete,x,1.5,z+3);box(2.8,.2,6.4,concrete,x,3,z);box(.1,2,5.5,glass,x+1.2,1.4,z);box(2,.2,3,concrete,x,0.6,z);
+}
 // Merge static city geometry by material to keep mobile draw calls bounded.
 const staticGroups=new Map();for(const object of [...scene.children]){if(!object.isMesh)continue;object.updateMatrix();const geometry=object.geometry.clone();geometry.applyMatrix4(object.matrix);if(!staticGroups.has(object.material))staticGroups.set(object.material,[]);staticGroups.get(object.material).push(geometry);scene.remove(object);object.geometry.dispose()}
 for(const [material,geometries] of staticGroups){const merged=mergeGeometries(geometries);for(const geometry of geometries)geometry.dispose();scene.add(new THREE.Mesh(merged,material))}
@@ -72,7 +87,7 @@ function currentJob(){return jobs[s.order%jobs.length]}function target(){return 
 function clearControls(){keys={};heldPointers.clear();document.querySelectorAll('[data-key]').forEach(button=>button.classList.remove('is-active'))}
 function setPaused(value){s.paused=value;if(value){car.speed=0;clearControls()}save();updateUI(true)}
 let lastOrderHTML='';
-function updateUI(force=false){const j=currentJob(),t=target(),dist=t?Math.round(distance(car,t)):0;$('money').innerHTML=Math.round(s.money).toLocaleString('ru-RU')+' <small>₽</small>';$('rating').textContent=s.rating.toFixed(1);$('trips').textContent=String(s.trips).padStart(2,'0');$('fuelText').textContent=Math.round(s.fuel)+'%';$('fuelBar').style.width=s.fuel+'%';$('condition').textContent=Math.round(s.condition)+'%';$('speed').textContent=Math.round(car.speed*3.6);$('clock').textContent=String(Math.floor(s.clock/60)%24).padStart(2,'0')+':'+String(Math.floor(s.clock%60)).padStart(2,'0');$('carName').textContent=cars[s.car].name;$('gearBtn').innerHTML=(car.gear===-1?'R':'D')+' <span>'+(car.gear===-1?'НАЗАД':'ВПЕРЁД')+'</span>'; $('shiftNumber').textContent=String(s.shift).padStart(2,'0');document.querySelector('.shift strong').innerHTML=String(s.shift).padStart(2,'0')+' <i>/</i> 08';$('district').textContent=districts[clamp(Math.floor((car.x+400)/200)+Math.floor((car.z+400)/400)*4,0,7)];$('pauseBtn').innerHTML=(s.paused?'▶':'Ⅱ')+' <span>'+(s.paused?'ПРОДОЛЖИТЬ':'ПАУЗА')+'</span>';document.querySelector('.touch-controls').classList.toggle('left-handed',s.leftHanded);
+function updateUI(force=false){const j=currentJob(),t=target(),dist=t?Math.round(distance(car,t)):0;$('money').innerHTML=Math.round(s.money).toLocaleString('ru-RU')+' <small>₽</small>';$('rating').textContent=s.rating.toFixed(1);$('trips').textContent=String(s.trips).padStart(2,'0');$('fuelText').textContent=Math.round(s.fuel)+'%';$('fuelBar').style.width=s.fuel+'%';$('condition').textContent=Math.round(s.condition)+'%';$('speed').textContent=Math.round(car.speed*3.6);$('clock').textContent=String(Math.floor(s.clock/60)%24).padStart(2,'0')+':'+String(Math.floor(s.clock%60)).padStart(2,'0');$('carName').textContent=cars[s.car].name;$('gearBtn').innerHTML=(car.gear===-1?'R':'D')+' <span>'+(car.gear===-1?'НАЗАД':'ВПЕРЁД')+'</span>'; $('shiftNumber').textContent=String(s.shift).padStart(2,'0');document.querySelector('.shift strong').innerHTML=String(s.shift).padStart(2,'0')+' <i>/</i> 08';$('district').textContent=districts[districtIndex(car.x,car.z)];$('pauseBtn').innerHTML=(s.paused?'▶':'Ⅱ')+' <span>'+(s.paused?'ПРОДОЛЖИТЬ':'ПАУЗА')+'</span>';document.querySelector('.touch-controls').classList.toggle('left-handed',s.leftHanded);
  let html;if(s.stage==='offer')html=`<div class="order-kicker">● &nbsp; НОВЫЙ ЗАКАЗ</div><h2>${j.name}</h2><p>${j.person} ждёт вас. Принять заказ?</p><div class="order-meta"><span>⌖ &nbsp; ${j.from} → ${j.to}</span><strong>≈ ${j.pay} ₽</strong></div><div class="order-actions"><button class="primary" id="accept">ПРИНЯТЬ ЗАКАЗ →</button><button class="secondary" id="decline">ОТКЛОНИТЬ</button></div>`;
  else if(s.stage==='pickup'||s.stage==='ride')html=`<div class="order-kicker">● &nbsp; ${s.stage==='pickup'?'ЗА ПАССАЖИРОМ':'ПАССАЖИР В МАШИНЕ'}</div><h2>${s.stage==='pickup'?j.from:j.to}</h2><p>${s.stage==='pickup'?'Езжайте к золотому маяку.':j.story}</p><div class="order-meta"><span>ДО ЦЕЛИ ПО ПРЯМОЙ</span><strong id="orderDistance"></strong></div><div class="order-actions"><button class="secondary" id="auto">АВТО-ГАЗ ${s.auto?'ВКЛ':'ВЫКЛ'}</button>${s.fuel<=0?'<button class="secondary" id="emergency">КАНИСТРА · 200 ₽</button>':''}</div>`;
  else html=`<div class="order-kicker">● &nbsp; ВЫ ПРИБЫЛИ</div><h2>${s.stage==='board'?j.person:j.to}</h2><p>${s.stage==='board'?'Пассажир ждёт вас.':'Пассажир благополучно прибыл на место.'}</p><div class="order-actions"><button class="primary" id="continueOrder">${s.stage==='board'?'ПОСАДИТЬ':'ВЫСАДИТЬ · '+j.pay+' ₽'} →</button></div>`;

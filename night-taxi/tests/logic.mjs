@@ -10,11 +10,13 @@ console.log('Дороги, движение, поворот и столкнов�
 const {createTaxi,animateTaxi}=await import('../src/vehicle.js');
 for(let i=0;i<3;i++){
  const model=createTaxi(0xc0a346,i);
- assert.equal(model.wheels.length,4);assert.equal(model.frontPivots.length,2);
+ assert.equal(model.showroom.unit.style,i===2?'van':'sedan');
+ let meshes=0;model.showroom.group.traverse(o=>{if(o.isMesh)meshes++});assert.ok(meshes<110,'showroom model is batched');
+ assert.equal(model.showroom.wheels.length,4);assert.equal(model.showroom.wheels.filter(w=>w.front).length,2);
  assert.equal(model.cabin.visible,false);assert.equal(model.exterior.visible,true);
  animateTaxi(model,10,1,1,.1,2,true);
- assert.ok(model.steering.rotation.z<0);assert.ok(model.wheels[0].tire.rotation.x>0);
- assert.ok(model.frontPivots[0].rotation.y<0);
+ assert.ok(model.steering.rotation.z<0);assert.notEqual(model.showroom.wheels[0].wheel.rotation.x,0);
+ assert.ok(model.showroom.wheels.find(w=>w.front).pivot.rotation.y>0);
  animateTaxi(model,0,0,1,.1,2,true,true);assert.ok(model.exteriorDoor.rotation.y<0);assert.equal(model.exteriorDoor.rotation.y,model.interiorDoor.rotation.y);
 }
 console.log('Модели, приборы и анимация автомобиля: OK');
