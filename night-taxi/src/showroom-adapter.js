@@ -1,5 +1,5 @@
 // Adapted from this repository's truck-showroom (Гараж 3D): car.js and kit.js.
-// The detailed exterior is separate from the night-taxi cockpit and door.
+// Preserve the complete Garage car, including body, windows and interior.
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {buildCar} from './showroom/models/car.js';
@@ -16,7 +16,7 @@ function batchStatic(root){
  root.updateMatrixWorld(true);const buckets=new Map(),remove=[];
  root.traverse(obj=>{
   if(!obj.isMesh||Array.isArray(obj.material))return;
-  let ancestor=obj;while(ancestor&&ancestor!==root){if(ancestor.userData.animatedWheel)return;ancestor=ancestor.parent}
+  let ancestor=obj;while(ancestor&&ancestor!==root){if(ancestor.userData.animatedWheel||ancestor.name==='interior'||ancestor.name==='steering')return;ancestor=ancestor.parent}
   const m=obj.material,g=obj.geometry.index?obj.geometry.toNonIndexed():obj.geometry.clone();
   g.applyMatrix4(obj.matrixWorld);
   // Reflection of the left body panel needs both faces after baking its negative scale.
@@ -39,13 +39,11 @@ export function buildShowroomTaxi(color,variant){
  const built=buildCar(unit,createMaterials());
  // Subtle illumination keeps paint visible in the night scene without realtime shadows.
  for(const paint of built.paintMats){if(paint.emissive){paint.emissive.set(paint.color);paint.emissiveIntensity=.055}}
- const interior=built.root.getObjectByName('interior');if(interior)built.root.remove(interior);
+ const interior=built.root.getObjectByName('interior');
  const driverView=built.views.find(view=>view.id==='driver');
- const interiorWrapper=new THREE.Group();if(interior){
-  // Raise dark material values a little so dashboard details remain visible at night.
+ if(interior){
   const adjusted=new Set();interior.traverse(o=>{if(!o.isMesh)return;for(const m of (Array.isArray(o.material)?o.material:[o.material])){if(!m||!m.color||adjusted.has(m))continue;adjusted.add(m);const hsl={};m.color.getHSL(hsl);if(hsl.l<.16)m.color.lerp(new THREE.Color(0x8f9994),.20)}});
-  interior.rotation.y=Math.PI;interiorWrapper.add(interior);
-  const cabinLight=new THREE.PointLight(0xffdeb0,3,3.8,2);cabinLight.position.set(0,1.45,-.2);interiorWrapper.add(cabinLight);
+  const cabinLight=new THREE.PointLight(0xffdeb0,2,3.8,2);cabinLight.position.set(0,1.3,0);interior.add(cabinLight);
  }
  const wheels=[];
  for(const wheel of built.wheels){
@@ -54,6 +52,7 @@ export function buildShowroomTaxi(color,variant){
   wheel.position.set(0,0,0);built.root.remove(wheel);pivot.add(wheel);built.root.add(pivot);
   wheels.push({pivot,wheel,front:pivot.position.z<0,radius:unit.wheelRadius,side:Math.sign(pivot.position.x)});
  }
+ if(interior)batchStatic(interior);
  batchStatic(built.root);
  // Existing taxi physics uses +Z as forward; rotate the showroom vehicle in its wrapper.
  const wrapper=new THREE.Group();built.root.rotation.y=Math.PI;wrapper.add(built.root);
@@ -61,7 +60,7 @@ export function buildShowroomTaxi(color,variant){
  const checkerMat=new THREE.MeshBasicMaterial({color:0x252723});
  for(let i=0;i<5;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.095,.07,.01),checkerMat);square.position.set((i-2)*.13,unit.height+.13,.185);wrapper.add(square)}
  for(const side of [-1,1])for(let i=0;i<7;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.018,.10,.10),checkerMat);square.position.set(side*(unit.width/2+.025),.77,(i-3)*.10);wrapper.add(square)}
- return {group:wrapper,wheels,unit,interior:interiorWrapper,driverView,steering:interior?.getObjectByName('steering')};
+ return {group:wrapper,wheels,unit,interior,driverView,steering:interior?.getObjectByName('steering')};
 }
 
 export function animateShowroomWheels(wheels,speed,steering,gear,dt){
