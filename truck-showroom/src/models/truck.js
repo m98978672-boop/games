@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import {
   HALF, PI, TAU, box, rbox, cyl, sphere, torus, plane, mesh, group, pipe,
   wheel as makeWheel, mirror, labelTexture, plateTexture, brandDecalMaterial, accentLine, clamp, rad,
+  panelCutout, panelSeam,
 } from '../lib/kit.js';
 import { mountDamageSet } from '../lib/damage.js';
 
@@ -209,7 +210,32 @@ export function buildTruck(unit, M) {
     // дверная ручка
     const handle = rbox(cab, 0.05, 0.06, 0.22, CHROME ? M.chrome : M.plasticGray, side * (HALF_W + 0.02), winBottom - 0.2, cabFront + 1.05, 0.02);
     anchors.push({ pos: [side * (HALF_W + 0.05), winBottom - 0.2, cabFront + 1.05], label: 'Дверь кабины', side: side > 0 ? 'справа' : 'слева' });
+
+    // ---------- вырезы двери: шов по контуру + утопленная ручка и ступенька
+    const doorW = Math.max(0.5, cabDepth * 0.62);
+    const doorZc = (cabFront + cabRearZ) / 2 + 0.06;
+    panelSeam(cab, {
+      w: doorW, h: Math.max(0.5, winBottom - floorY - 0.04),
+      x: side * (HALF_W + 0.016), y: (floorY + winBottom) / 2 + 0.02, z: doorZc,
+      rotY: side > 0 ? HALF : -HALF, width: 0.014,
+      material: new THREE.MeshStandardMaterial({ color: 0x0b0e10, roughness: 1 }),
+    });
+    panelCutout(cab, {
+      w: 0.16, h: 0.05, depth: 0.026, x: side * (HALF_W + 0.004), y: winBottom - 0.2, z: cabFront + 1.05,
+      rotY: side > 0 ? HALF : -HALF, name: 'cutout-handle', material: M.plasticGray,
+    });
+    // ниша ящика в юбке двери — ровно над подножкой, а не в воздухе под кабиной
+    panelCutout(cab, {
+      w: 0.42, h: 0.18, depth: 0.08, x: side * (HALF_W + 0.002), y: floorY + 0.14, z: cabFront + cabDepth * 0.55,
+      rotY: side > 0 ? HALF : -HALF, name: 'cutout-toolbox', material: M.darkSteel, inner: M.frame,
+    });
   }
+
+  // люк на крыше кабины: квадратная ниша с крышкой
+  panelCutout(cab, {
+    w: 0.52, h: 0.52, depth: 0.07, x: 0.18, y: roofY + 0.004, z: cabRear - cabDepth * 0.32,
+    rotX: -HALF, name: 'cutout-roofhatch', material: paint, inner: M.frame,
+  });
 
   // задняя стенка (с окном для спальника, если кабина высокая)
   rbox(cab, cabW - 0.12, roofY - floorY - 0.04, 0.1, paint, 0, (floorY + roofY) / 2, cabRearZ - 0.02, 0.04);

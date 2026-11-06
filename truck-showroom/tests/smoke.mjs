@@ -2,9 +2,10 @@
 import * as THREE from 'three';
 import { createMaterials } from '../src/lib/kit.js';
 import { buildUnit } from '../src/models/index.js';
-import { TRUCKS, TRAILERS, CARS, CATEGORIES, allUnits } from '../src/data/units.js';
+import { TRUCKS, TRAILERS, CARS, BUILDINGS, CATEGORIES, allUnits } from '../src/data/units.js';
 import { carShape } from '../src/models/car.js';
-import { damagePixels, DAMAGE_TITLES } from '../src/lib/damage.js';
+import { damagePixels, DAMAGE_TITLES, damageReport, damageSpecAt } from '../src/lib/damage.js';
+import { placePanel, overlaps, rect } from '../src/lib/layout.js';
 
 let fails = 0;
 const ok = (cond, msg) => {
@@ -14,8 +15,11 @@ const ok = (cond, msg) => {
 ok(TRUCKS.length === 10, 'тягачей ровно 10');
 ok(TRAILERS.length === 20, 'прицепов ровно 20');
 ok(CARS.length === 10, 'автомобилей ровно 10');
-ok(new Set(allUnits().map((u) => u.category + ":" + u.id)).size === 40, 'у всех 40 моделей уникальные id');
-ok(CATEGORIES.length === 3, 'три категории');
+ok(BUILDINGS.length >= 20, `зданий не меньше 20 (${BUILDINGS.length})`);
+ok(new Set(allUnits().map((u) => u.category + ':' + u.id)).size === TRUCKS.length + TRAILERS.length + CARS.length + BUILDINGS.length,
+  `у всех ${allUnits().length} моделей уникальные id`);
+ok(CATEGORIES.length === 4 && CATEGORIES.some((c) => c.id === 'buildings'), 'четыре категории, здания — отдельная');
+ok(CATEGORIES.find((c) => c.id === 'buildings')?.count === BUILDINGS.length, 'счётчик категории зданий совпадает с каталогом');
 
 // у каждого тягача и авто есть вид из салона
 for (const u of [...TRUCKS, ...CARS]) {
@@ -44,7 +48,7 @@ const shortLen = (a, b) => Math.min(a.length, b.length);
 const hasHiddenMesh = () => false;
 
 const M = createMaterials(null);
-const report = { trucks: [], trailers: [], cars: [] };
+const report = { trucks: [], trailers: [], cars: [], buildings: [] };
 for (const unit of allUnits()) {
   let built;
   try {
@@ -64,12 +68,76 @@ for (const unit of allUnits()) {
     }
   });
   report[unit.category].push({ id: unit.id, tris: Math.round(tris), interior: interior.length, exterior: exterior.length, anchors: built.anchors.length });
-  if (unit.category !== 'trailers') {
+  if (unit.category !== 'trailers' && unit.category !== 'buildings') {
     ok(interior.length >= 1, `${unit.id}: есть вид из салона (${interior.length})`);
   }
   ok(exterior.length >= 2, `${unit.id}: минимум 2 наружных ракурса (${exterior.length})`);
-  ok(tris > 2000, `${unit.id}: геометрия собрана (${Math.round(tris)} треугольников)`);
+  ok(tris > (unit.category === 'buildings' ? 400 : 2000), `${unit.id}: геометрия собрана (${Math.round(tris)} треугольников)`);
   ok(built.views.every((v) => Array.isArray(v.pos) && v.pos.length === 3), `${unit.id}: у всех видов корректная позиция камеры`);
+
+  // ---- здания: у каждого 4 разных фасада и свои детали на них
+  if (unit.category === 'buildings') {
+    const ids = built.views.map((v) => v.id);
+    const faces = ['front', 'back', 'left', 'right'];
+    ok(faces.every((f) => ids.includes(f)), `${unit.id}: четыре фасада — перед/зад/право/лево (${ids.join(', ')})`);
+    const at = (f) => built.views.find((v) => v.id === f);
+    const distinct = faces.every((f) => {
+      const v = at(f);
+      return v && v.pos && v.target && Math.abs(v.pos[0] - v.target[0]) + Math.abs(v.pos[2] - v.target[2]) > 1;
+    });
+    ok(distinct, `${unit.id}: камеры фасадов смотрят с четырёх сторон`);
+    const groups = {};
+    built.root.traverse((o) => {
+      if (o.name && /^facade-(front|back|left|right)$/.test(o.name)) groups[o.name] = o;
+    });
+    ok(faces.every((f) => groups[`facade-${f}`]), `${unit.id}: фасады собраны отдельными группами`);
+    let glass = 0;
+    let leaves = 0;
+    const perFace = {};
+    for (const f of faces) {
+      let n = 0;
+      groups[`facade-${f}`]?.traverse((o) => {
+        if (o.isMesh && o.name === 'window-glass') n += 1;
+      });
+      perFace[f] = n;
+      glass += n;
+      groups[`facade-${f}`]?.traverse((o) => { if (o.isMesh && o.name === 'door-leaf') leaves += 1; });
+    }
+    ok(glass >= 8, `${unit.id}: окна на фасадах (${glass})`);
+    ok(leaves >= 2, `${unit.id}: двери спереди и сзади (${leaves})`);
+    const sig = (f) => {
+      const names = [];
+      groups[`facade-${f}`]?.traverse((o) => { if (o.isMesh && o.name) names.push(o.name); });
+      return names.sort().join('|');
+    };
+    const sigs = new Set(faces.map(sig));
+    const variedFaces = sigs.size;
+    ok(variedFaces >= 3, `${unit.id}: фасады не одинаковые (${sigs.size} разных из 4)`);
+    ok(built.anchors.length >= 4, `${unit.id}: точки осмотра фасадов (${built.anchors.length})`);
+    ok(built.root.children.length > 0, `${unit.id}: корпус на месте`);
+    continue;
+  }
+
+  // ---- ВЫРЕЗЫ: у проёма есть глубина и задняя стенка, а не наклейка
+  {
+    const cuts = [];
+    built.root.traverse((o) => {
+      if (o.isMesh && o.userData.cutout) cuts.push(o);
+    });
+    ok(cuts.length >= 3, `${unit.id}: в кузове есть вырезы (${cuts.length} мешей)`);
+    const insets = cuts.filter((o) => /-inset$/.test(o.name));
+    ok(insets.length >= 2, `${unit.id}: у проёмов есть задняя стенка (${insets.length})`);
+    let badDepth = 0;
+    let broken = 0;
+    for (const mesh of cuts) {
+      const info = mesh.userData.cutout;
+      if (!(info.depth >= 0.012)) badDepth += 1;
+      // задняя стенка обязана быть УТОПЛЕНА относительно плоскости панели
+      if (/-inset$/.test(mesh.name) && !(mesh.position.z <= -info.depth * 0.9)) broken += 1;
+    }
+    ok(badDepth === 0, `${unit.id}: вырезы имеют глубину${badDepth ? ' — ' + badDepth : ''}`);
+    ok(broken === 0, `${unit.id}: задняя стенка выреза утоплена, а не торчит${broken ? ' — ' + broken : ''}`);
+  }
 
   // 6. Повреждения: у каждой модели своя точка и своя текстура
   const dmg = built.damage;
@@ -489,3 +557,79 @@ if (fails) {
   process.exit(1);
 }
 console.log('\nВсе проверки пройдены.');
+
+// ============================================================
+// РАСКЛАДКА ИНТЕРФЕЙСА: ни один слой не наезжает на другой.
+// Проверяем чистую функцию, которой пользуется app.js, на трёх экранах:
+// телефон, планшет, десктоп.
+// ============================================================
+{
+  const screens = [
+    { w: 360, h: 640, name: 'телефон' },
+    { w: 768, h: 1024, name: 'планшет' },
+    { w: 1280, h: 800, name: 'десктоп' },
+  ];
+  const menuSizes = [
+    { w: 420, h: 520 }, { w: 340, h: 250 }, { w: 396, h: 470 }, { w: 320, h: 180 }, { w: 340, h: 300 },
+  ];
+  for (const screen of screens) {
+    const viewport = rect(0, 0, screen.w, screen.h);
+    // шапка, низ, навпад и док — то, на что меню права не имеет
+    const hud = [
+      rect(0, 0, screen.w, 54),
+      rect(0, screen.h - 64, screen.w, 64),
+      rect(screen.w - 190, screen.h - 230, 180, 160),
+      rect(12, screen.h - 150, Math.min(420, screen.w - 40), 60),
+    ];
+    let bad = 0;
+    let escaped = 0;
+    // по одному меню под каждой из пяти кнопок в шапке
+    const buttons = [
+      rect(120, 8, 96, 38), rect(224, 8, 96, 38), rect(328, 8, 96, 38), rect(432, 8, 96, 38), rect(screen.w - 60, 8, 40, 38),
+    ];
+    for (const btn of buttons) {
+      for (const size of menuSizes) {
+        const spot = placePanel({ anchor: btn, size, viewport, avoid: hud, margin: 8, gap: 8 });
+        const box = rect(spot.x, spot.y, spot.w, spot.h);
+        if (hud.some((a) => overlaps(box, a, 2))) bad += 1;
+        if (spot.x < 0 || spot.y < 0 || spot.x + spot.w > screen.w + 0.5 || spot.y + spot.h > screen.h + 0.5) escaped += 1;
+      }
+    }
+    ok(bad === 0, `${screen.name} ${screen.w}×${screen.h}: меню не наезжают на панели (${bad})`);
+    ok(escaped === 0, `${screen.name}: меню не вылезают за экран (${escaped})`);
+  }
+  // если место под кнопкой занято — панель уезжает, а не накладывается
+  const viewport = rect(0, 0, 800, 600);
+  const btn = rect(300, 8, 90, 34);
+  const occupied = rect(280, 50, 260, 400);
+  const spot = placePanel({ anchor: btn, size: { w: 300, h: 300 }, viewport, avoid: [occupied], margin: 8, gap: 8 });
+  const box = rect(spot.x, spot.y, spot.w, spot.h);
+  ok(!overlaps(box, occupied, 2), `занятое место объезжается (${spot.side})`);
+  ok(spot.x >= 8 && spot.y >= 8 && spot.x + spot.w <= 792 && spot.y + spot.h <= 592, 'перенесённая панель осталась на экране');
+  // два меню одновременно не могут лечь друг на друга
+  const a = placePanel({ anchor: rect(40, 8, 90, 34), size: { w: 320, h: 260 }, viewport, avoid: [], margin: 8 });
+  const b = placePanel({
+    anchor: rect(140, 8, 90, 34), size: { w: 320, h: 260 }, viewport,
+    avoid: [rect(a.x, a.y, a.w, a.h)], margin: 8,
+  });
+  ok(!overlaps(rect(a.x, a.y, a.w, a.h), rect(b.x, b.y, b.w, b.h), 2), 'второе меню не ложится на первое');
+}
+
+// ============================================================
+// ПОВРЕЖДЕНИЯ — «БУКВАЛЬНЫЕ»: у каждого дефекта есть паспорт.
+// ============================================================
+{
+  const unit = { category: 'trucks', id: 'atlas-vision' };
+  const spec = damageSpecAt(unit, { name: 'передняя дверь', gender: 'f' }, 1, 3);
+  ok(typeof spec.text === 'string' && spec.text.length > 40, 'у дефекта есть словесное описание');
+  ok(/дверь/.test(spec.text) && /Ремонт/.test(spec.text), 'описание называет деталь и ремонт');
+  ok(['лёгкое', 'среднее', 'сильное'].includes(spec.severity), `серьёзность задана (${spec.severity})`);
+  ok(spec.cost > 0 && /₽/.test(spec.text), `стоимость ремонта посчитана (${spec.cost})`);
+  const again = damageSpecAt(unit, { name: 'передняя дверь', gender: 'f' }, 1, 3);
+  ok(again.text === spec.text && again.cost === spec.cost, 'паспорт дефекта детерминирован');
+  const list = { list: [0, 1, 2].map((i) => ({ spec: damageSpecAt(unit, null, i % 2 ? 1 : -1, i) })) };
+  const report = damageReport(list, [0, 2]);
+  ok(report.count === 2 && report.cost === list.list[0].spec.cost + list.list[2].spec.cost, 'сводка складывает ремонт');
+  ok(/дефект/.test(report.text) && /₽/.test(report.text), 'сводка читается словами');
+  ok(damageReport(list, []).count === 0 && /чистый/.test(damageReport(list, []).text), 'пустой кузов описан отдельно');
+}

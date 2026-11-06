@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import {
   HALF, PI, TAU, box, rbox, cyl, sphere, torus, plane, group, pipe,
   wheel as makeWheel, mirror, labelTexture, plateTexture, clamp, rad,
-  accentLine, brandDecalMaterial,
+  accentLine, brandDecalMaterial, panelCutout,
 } from '../lib/kit.js';
 import { mountDamageSet } from '../lib/damage.js';
 import { buildCar } from './car.js';
@@ -442,6 +442,77 @@ export function buildTrailer(unit, M) {
       { part: { name: 'настил платформы', gender: 'm' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.4, deckTo + 0.01, zRear - 3.0], w: 0.7, h: 0.5 },
     ];
   }
+  // ------------------------------------------------ вырезы кузова
+  // Лючки, гнёзда стоек и вентиляция — не наклейки: у каждого проёма есть
+  // задняя стенка в глубине и боковины, поэтому читается толщина панели.
+  {
+    const frameMat = M.frame;
+    const isSideTip = type === 'sidetip';
+    if (isSideTip) {
+      // у бокового самосвала кузов опрокинут, поэтому люки ставим на раму,
+      // а не на борт: иначе ниша висит в воздухе над наклонённым ковшом
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 2; i++) {
+          panelCutout(body, {
+            w: 0.3, h: 0.16, depth: 0.07,
+            x: side * (W / 2 - 0.02), y: 0.9, z: zFront + 1.4 + i * 2.6,
+            rotY: side > 0 ? HALF : -HALF, name: 'cutout-step',
+            material: M.darkSteel, inner: frameMat,
+          });
+        }
+      }
+      panelCutout(body, {
+        w: 0.5, h: 0.34, depth: 0.08, x: 0, y: deckY + 0.5, z: zFront + 0.12,
+        rotY: PI, name: 'cutout-hatchbox', material: M.darkSteel, inner: frameMat,
+      });
+    } else if (closed) {
+      for (const side of [-1, 1]) {
+        panelCutout(body, {
+          w: 0.62, h: 0.46, depth: 0.07,
+          x: side * (W / 2 + 0.006), y: deckY + 1.32, z: -1.7,
+          rotY: side > 0 ? HALF : -HALF, name: 'cutout-sidehatch',
+          material: bodyMat2, inner: frameMat,
+        });
+        // гнездо ящика ЗИП в юбке
+        panelCutout(body, {
+          w: 0.52, h: 0.26, depth: 0.1,
+          x: side * (W / 2 + 0.002), y: 0.86, z: firstAxle - 3.8,
+          rotY: side > 0 ? HALF : -HALF, name: 'cutout-toolbox',
+          material: M.plastic, inner: frameMat,
+        });
+      }
+      // люк в крыше: через него видно внутрь кузова
+      panelCutout(body, {
+        w: 0.58, h: 0.58, depth: 0.06,
+        x: 0.3, y: deckY + H + 0.05, z: -1.2,
+        rotX: -HALF, name: 'cutout-roofhatch',
+        material: M.steel, inner: frameMat,
+      });
+    } else if (round) {
+      // у цистерн — горловина в нише и стойки лестницы
+      for (const side of [-1, 1]) {
+        panelCutout(body, {
+          w: 0.4, h: 0.4, depth: 0.05,
+          x: side * (W / 2 + 0.004), y: deckY + 0.9, z: -2.6,
+          rotY: side > 0 ? HALF : -HALF, name: 'cutout-hatchbox',
+          material: M.plasticGray, inner: frameMat,
+        });
+      }
+    } else {
+      // открытая платформа: гнёзда стоек по борту рамы
+      for (const side of [-1, 1]) {
+        for (let i = 0; i < 4; i++) {
+          panelCutout(body, {
+            w: 0.14, h: 0.12, depth: 0.06,
+            x: side * (W / 2 - 0.02), y: 0.98, z: zFront + 1.2 + i * 1.9,
+            rotY: side > 0 ? HALF : -HALF, name: 'cutout-stakepocket',
+            material: M.darkSteel, inner: frameMat,
+          });
+        }
+      }
+    }
+  }
+
   const dmg = mountDamageSet(root, { ...unit, category: 'trailers' }, danchors);
   for (const item of dmg.list) {
     anchors.push({ pos: item.patch.position.clone().toArray(), label: `Повреждение: ${item.spec.label}`, damage: true });
@@ -1291,36 +1362,69 @@ function sideTip(c) {
   const { M, body, bodyMat, bodyMat2, W, L, zFront, zRear, deckY, unit } = c;
   const h = Math.max(unit.height ?? 1.8, 1.6);
   rbox(body, W, 0.14, L - 0.3, M.darkSteel, 0, deckY + 0.2, 0, 0.02);
-  // ковш с наклоном в сторону (показан поднятым)
-  const tilt = group(body);
-  tilt.position.set(-W / 2 + 0.12, deckY + 0.2, 0);
-  tilt.rotation.z = -0.12;
+  // Ковш собран СТЕНКАМИ, а не сплошным ящиком: только так груз внутри видно
+  // и он не «лежит на крыше», как было раньше.
+  const tilt = group(body, 'sidetip-bucket');
+  tilt.position.set(-W / 2 + 0.12, deckY + 0.24, 0);
+  tilt.rotation.z = -0.42; // заметный крен в сторону — кузов реально опрокинут
   const mat = bodyMat;
-  rbox(tilt, W, h, L - 0.4, mat, W / 2, h / 2, 0, 0.03);
+  const len = L - 0.4;
+  // днище и стенки ковша
+  rbox(tilt, W, 0.12, len, mat, W / 2, 0.06, 0, 0.02);
+  rbox(tilt, 0.12, h, len, mat, 0.06, h / 2, 0, 0.03);
+  rbox(tilt, 0.12, h, len, mat, W - 0.06, h / 2, 0, 0.03);
+  rbox(tilt, W, h, 0.1, mat, W / 2, h / 2, -len / 2 + 0.05, 0.02);
+  rbox(tilt, W, h, 0.1, mat, W / 2, h / 2, len / 2 - 0.05, 0.02);
+  // верхняя кромка и рёбра жёсткости снаружи
   for (const side of [-1, 1]) {
-    box(tilt, 0.08, 0.1, L - 0.5, M.steel, W / 2 + side * (W / 2 - 0.02), h, 0);
-    for (let z = zFront + 0.8; z < zRear - 0.3; z += 1.1) box(tilt, 0.03, h - 0.15, 0.1, bodyMat2, W / 2 + side * (W / 2), h / 2, z);
+    box(tilt, 0.1, 0.12, len, M.steel, W / 2 + side * (W / 2 - 0.05), h, 0);
+    for (let z = zFront + 0.8; z < zRear - 0.3; z += 1.1) {
+      box(tilt, 0.04, h * 0.9, 0.1, bodyMat2, W / 2 + side * (W / 2), h / 2, z);
+    }
   }
-  box(tilt, W, h, 0.1, bodyMat, W / 2, h / 2, zFront + 0.2);
-  box(tilt, W, h, 0.1, bodyMat, W / 2, h / 2, zRear - 0.2);
   // полоса бренда по борту ковша
   const livery = std(liveryOf(c.unit, '#37a58c'), 0.55, 0.25);
   for (const side of [-1, 1]) {
     box(tilt, 0.012, 0.24, L - 1.0, livery, W / 2 + side * (W / 2 + 0.006), h * 0.55, 0);
   }
-  // гидроцилиндры бокового опрокидывания
+  // гидроцилиндры бокового опрокидывания — от рамы к борту ковша.
+  // Раньше это были две палки, висящие в воздухе рядом с кузовом.
   for (const z of [zFront + 1.5, zRear - 1.5]) {
-    const hc = cyl(body, 0.09, 0.09, 1.2, M.hazard, -W / 2 + 0.3, deckY + 0.7, z, 12);
-    hc.rotation.z = 0.4;
+    const a = [-W / 2 + 0.22, deckY + 0.34, z];
+    const tiltPoint = new THREE.Vector3(W * 0.3, 0.35, z - 0).applyEuler(tilt.rotation).add(tilt.position);
+    const b = [tiltPoint.x, tiltPoint.y, tiltPoint.z];
+    pipe(body, a, b, 0.075, M.hazard, 10);
+    const barrel = cyl(body, 0.1, 0.1, 0.42, M.darkSteel, a[0] + (b[0] - a[0]) * 0.28, a[1] + (b[1] - a[1]) * 0.28, z, 12);
+    barrel.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(b[0] - a[0], b[1] - a[1], 0).normalize());
   }
-  // груз
+  // ---------- груз ВНУТРИ ковша
+  // Детерминированный генератор: у модели всегда один и тот же рисунок груза.
+  // Раньше камни ставились Math.random() и висели над закрытым кузовом.
   const loadMat = std('#8a7f6a', 0.98, 0.02);
-  for (let i = 0; i < 20; i++) {
-    const s = 0.1 + Math.random() * 0.1;
-    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), loadMat);
-    rock.position.set((Math.random() - 0.2) * (W - 0.4), deckY + h + 0.1, (Math.random() - 0.5) * (L - 1));
-    rock.rotation.set(Math.random(), Math.random(), Math.random());
-    body.add(rock);
+  const loadDark = std('#6f6553', 0.99, 0.01);
+  let seed = 2166136261;
+  const key = `${unit?.id || 'sidetip'}`;
+  for (let i = 0; i < key.length; i++) seed = Math.imul(seed ^ key.charCodeAt(i), 16777619) >>> 0;
+  const rnd = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+  const innerW = W - 0.5;
+  const innerL = len - 0.5;
+  const heapBase = Math.min(h - 0.25, h * 0.62);
+  for (let i = 0; i < 26; i++) {
+    const rr = 0.11 + rnd() * 0.09;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rr, 0), i % 4 === 0 ? loadDark : loadMat);
+    // куча: ближе к центру камни выше, у стенок ниже — как настоящий отвал
+    const cx = (rnd() - 0.5) * innerW;
+    const cz = (rnd() - 0.5) * innerL;
+    const radial = Math.min(1, Math.hypot(cx / (innerW / 2), cz / (innerL / 2)));
+    const top = heapBase * (1 - radial * 0.55) + rr * 0.4;
+    rock.position.set(W / 2 + cx, Math.max(0.2, top) + rnd() * 0.08, cz);
+    rock.rotation.set(rnd() * PI, rnd() * PI, rnd() * PI);
+    rock.userData.load = true;
+    tilt.add(rock);
   }
   c.anchors.push({ pos: [0, deckY + h, 0], label: 'Боковой самосвал' });
+  c.anchors.push({ pos: [-W / 2 + 0.4, deckY + h * 0.8, 0], label: 'Груз в ковше' });
 }

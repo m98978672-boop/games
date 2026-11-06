@@ -46,7 +46,11 @@ const openDetails = () => {
 };
 const $ = (id) => window.document.getElementById(id);
 const D = window.document;
-const tab = (c) => D.querySelector(`.cat-tab[data-cat="${c}"]`);
+// категории теперь живут в меню «Модель»: чтобы переключить, открываем его
+const tab = (c) => {
+  openCatalog();
+  return D.querySelector(`.cat-tab[data-cat="${c}"]`);
+};
 const ok = [];
 const check = (name, cond, extra = '') => { ok.push(`${cond ? 'PASS' : 'FAIL'} ${name}${extra ? ' — ' + extra : ''}`); };
 await wait(700);
@@ -82,7 +86,26 @@ for (const cat of ['trucks', 'trailers', 'cars']) {
 }
 check('все модели открылись без пустых карточек', state.every((s) => s.name && s.views >= 4 && s.specs >= 5));
 check('все виды переключаются', state.every((s) => s.visited === s.views));
-check('у каждой из 40 моделей есть точка повреждения', state.every((s) => s.damage), `${state.filter((s) => !s.damage).length} без повреждения`);
+check('у каждой из 40 машин есть точка повреждения', state.every((s) => s.damage), `${state.filter((s) => !s.damage).length} без повреждения`);
+
+// ---- ЗДАНИЯ: отдельная категория, у каждого 4 фасада, повреждений нет
+tab('buildings').click(); await wait(500); openCatalog(); await wait(80);
+const bCount = D.querySelectorAll('.unit').length;
+check('каталог buildings: есть здания', bCount >= 20, `${bCount} моделей`);
+const bViews = [];
+for (let i = 0; i < Math.min(bCount, 4); i++) {
+  D.querySelectorAll('.unit')[i].click(); await wait(320);
+  const views = [...D.querySelectorAll('.view-btn')].map((b) => b.dataset.view);
+  const inner = D.querySelectorAll('.view-btn.interior').length;
+  bViews.push({ name: $('unit-name').textContent.trim(), views, inner, cat: $('d-cat').textContent.trim() });
+  check(`здание ${$('unit-name').textContent.trim()}: есть перед/зад/право/лево`,
+    ['front', 'back', 'left', 'right'].every((v) => views.includes(v)), views.join(','));
+  check(`здание ${$('unit-name').textContent.trim()}: без салона`, inner === 0);
+  check(`здание ${$('unit-name').textContent.trim()}: категория «ЗДАНИЕ»`, $('d-cat').textContent.trim() === 'ЗДАНИЕ');
+  check(`здание ${$('unit-name').textContent.trim()}: пятен нет`,
+    D.querySelector('#damage-row .damage-btn')?.disabled === true);
+}
+check('здания открылись без пустых карточек', bViews.every((b) => b.name && b.views.length >= 4));
 
 // поиск внутри нужной категории
 tab('cars').click(); await wait(250);
@@ -190,15 +213,64 @@ if (catPanel.classList.contains('open') || detPanel.classList.contains('open')) 
 }
 check('панели закрыты по умолчанию', !catPanel.classList.contains('open') && !detPanel.classList.contains('open'));
 $('catalog-toggle').click(); await wait(80);
-check('кнопка «Каталог» открывает панель', catPanel.classList.contains('open'));
-check('фон затемняется', D.getElementById('backdrop').classList.contains('show'));
+check('кнопка «Модель» открывает меню', catPanel.classList.contains('open'));
 check('aria-expanded выставлен', $('catalog-toggle').getAttribute('aria-expanded') === 'true');
-$('backdrop').click(); await wait(80);
-check('клик по фону закрывает панель', !catPanel.classList.contains('open'));
+check('категорий в нижней панели больше нет', D.querySelectorAll('.hud-bottom .cat-tab').length === 0,
+  `${D.querySelectorAll('.hud-bottom .cat-tab').length} шт.`);
+check('категории живут в меню «Модель»', D.querySelectorAll('#panel-catalog .cat-tab').length === 4,
+  `${D.querySelectorAll('#panel-catalog .cat-tab').length} шт.`);
+check('меню вынесены в отдельный слой (fixed не ломается шапкой)',
+  !!$('pop-layer') && $('panel-catalog').parentElement.id === 'pop-layer');
+check('меню получило координаты от слоя-менеджера',
+  catPanel.style.left !== '' && catPanel.style.top !== '' && Number.parseFloat(catPanel.style.left) >= 0,
+  `${catPanel.style.left} / ${catPanel.style.top}`);
+$('catalog-toggle').click(); await wait(80);
+check('повторное нажатие закрывает меню', !catPanel.classList.contains('open'));
 $('details-toggle').click(); await wait(80);
-check('кнопка «Модель» открывает карточку', detPanel.classList.contains('open'));
+check('меню «Ещё» → карточка открывается', detPanel.classList.contains('open'));
 window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' })); await wait(80);
 check('Esc закрывает карточку', !detPanel.classList.contains('open'));
+
+// ---- одно меню за раз: это и есть запрет накладывать слои друг на друга
+const openMenus = () => [...D.querySelectorAll('.hud-pop')].filter((el) => !el.classList.contains('hidden'));
+const menuButtons = ['catalog-toggle', 'menu-view-btn', 'menu-damage-btn', 'light-btn', 'menu-more-btn'];
+for (const id of menuButtons) {
+  $(id).click(); await wait(60);
+  const opened = openMenus();
+  check(`меню «${$(id).textContent.trim().slice(0, 14)}» открывается одно`, opened.length === 1, `${opened.length} открыто`);
+  const box = opened[0];
+  check(`меню «${$(id).textContent.trim().slice(0, 14)}» не налезает на шапку и низ`,
+    Number.parseFloat(box.style.top) >= 0, box.style.top);
+  $(id).click(); await wait(40);
+}
+check('все меню закрываются', openMenus().length === 0);
+
+// ---- меню повреждений: сначала тип, потом место
+$('catalog-toggle').click(); await wait(60);
+tab('trucks').click(); await wait(400);
+D.querySelectorAll('.unit')[0].click(); await wait(400);
+$('menu-damage-btn').click(); await wait(80);
+check('меню повреждений открылось', !$('menu-damage').classList.contains('hidden'));
+check('в меню есть типы повреждений', D.querySelectorAll('#damage-type-row .dmg-type').length >= 4,
+  `${D.querySelectorAll('#damage-type-row .dmg-type').length} типов`);
+check('в меню перечислены места', D.querySelectorAll('#dmg-place-list .dmg-place').length >= 15,
+  `${D.querySelectorAll('#dmg-place-list .dmg-place').length} мест`);
+check('до выбора пятен нет', $('damage-count').textContent.trim() === '0 / 15', $('damage-count').textContent.trim());
+D.querySelector('#damage-type-row .dmg-type[data-kind="dent"]').click(); await wait(160);
+check('выбор типа «вмятина» показывает пятно', $('damage-count').textContent.trim() === '1 / 15', $('damage-count').textContent.trim());
+check('место с вмятиной подсвечено', D.querySelectorAll('#dmg-place-list .dmg-place.on').length === 1,
+  `${D.querySelectorAll('#dmg-place-list .dmg-place.on').length}`);
+const noteText = $('damage-note').textContent;
+check('дефект описан словами', /Вмятина/.test(noteText) && /Ремонт/.test(noteText) && /₽/.test(noteText), noteText.slice(0, 80));
+const reportText = $('damage-report').textContent;
+check('в карточке есть «буквальный» отчёт', /дефект/.test(reportText) && /₽/.test(reportText), reportText.slice(0, 70));
+D.querySelector('#damage-type-row .dmg-type[data-kind="rust"]').click(); await wait(160);
+check('второй тип добавляет второе пятно', $('damage-count').textContent.trim() === '2 / 15', $('damage-count').textContent.trim());
+D.querySelector('#dmg-place-list .dmg-place.on').click(); await wait(140);
+check('клик по месту убирает это пятно', $('damage-count').textContent.trim() === '1 / 15', $('damage-count').textContent.trim());
+$('damage-clear').click(); await wait(140);
+check('«убрать все» чистит кузов', $('damage-count').textContent.trim() === '0 / 15', $('damage-count').textContent.trim());
+$('menu-damage-btn').click(); await wait(60);
 $('light-btn').click(); await wait(60);
 check('всплывашка «Свет» открывается', !$('light-pop').classList.contains('hidden'));
 D.querySelector('#light-pop .chip[data-preset="dark"]').click(); await wait(120);

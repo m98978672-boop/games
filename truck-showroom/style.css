@@ -9,6 +9,7 @@
   --trucks: #e8b45a;
   --trailers: #6fd0b8;
   --cars: #7fb4ff;
+  --buildings: #c9a6ff;
   --accent: var(--trucks);
   --hud-h: 54px;
   --dock-h: 64px;
@@ -143,15 +144,29 @@ body {
 
 .hud-sep { width: 1px; height: 22px; background: var(--line); margin: 0 2px; flex: 0 0 auto; }
 
-/* всплывашка «Свет» */
-.hud-pop-wrap { position: relative; }
+/* отдельный слой под меню: fixed-потомки шапки считались бы от неё */
+#pop-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+}
+#pop-layer .hud-pop { pointer-events: auto; }
+
+/* всплывающие меню: координаты считает app.js (lib/layout.js),
+   поэтому position: fixed — панель не «привязана» к кнопке намертво */
+.hud-pop-wrap { position: relative; display: inline-flex; }
 .hud-pop {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 40;
+  position: fixed;
+  left: 8px;
+  top: calc(var(--hud-h) + 8px);
+  right: auto;
+  z-index: 61;
   min-width: 216px;
+  max-width: min(420px, calc(100vw - 20px));
   padding: 12px;
+  overflow: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -868,6 +883,10 @@ body {
 }
 
 @media (max-width: 560px) {
+  /* на телефоне в шапке остаются только иконки меню: иначе она не влезает */
+  .app-title { display: none; }
+  .hud-top { gap: 6px; }
+  .hud-nav { margin-left: auto; }
   .app-title h1 { font-size: 15px; letter-spacing: 0.08em; }
   .brand { padding: 6px 9px; font-size: 10px; }
   .hud-sep { display: none; }
@@ -1064,4 +1083,101 @@ body {
 @media (max-height: 460px) and (orientation: landscape) {
   /* в ландшафте на телефоне навпад мешает — прячем, остаются жесты */
   .navpad { display: none; }
+}
+
+/* ------------------------------------------------ меню «Модель» */
+.panel-catalog { width: min(424px, calc(100vw - 20px)); gap: 8px; }
+.pop-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pop-head .mini { font-size: 10px; color: var(--ink-faint); }
+.hud-pop-wide { width: min(396px, calc(100vw - 20px)); }
+.pop-note { color: var(--ink-faint); line-height: 1.45; margin: 0; }
+.pop-row-wrap { grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); }
+.hud-btn-icon { padding: 6px 10px; }
+.hud-btn-icon b { display: none; }
+.hud-btn i { font-style: normal; font-size: 9px; letter-spacing: 0.05em; padding: 2px 5px; border-radius: 999px; background: rgba(255, 255, 255, 0.07); color: var(--ink-dim); }
+
+/* категории переехали в меню выбора модели */
+.panel-catalog .cat-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; flex: 0 0 auto; }
+.panel-catalog .cat-tab { justify-content: flex-start; padding: 7px 9px; }
+.panel-catalog .cat-tab b { font-size: 10px; }
+.panel-catalog .unit-list { flex: 1 1 auto; min-height: 120px; max-height: min(46vh, 420px); }
+
+/* ------------------------------------------------ меню повреждений */
+.dmg-place-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: min(38vh, 300px);
+  overflow: auto;
+  padding-right: 2px;
+}
+.dmg-place {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.dmg-place:hover { border-color: rgba(232, 180, 90, 0.45); color: var(--ink); }
+.dmg-place.dim { opacity: 0.45; }
+.dmg-place.on { border-color: rgba(255, 128, 96, 0.55); background: rgba(255, 128, 96, 0.12); color: var(--ink); }
+.dmg-place-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dmg-place-tag { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
+.dmg-place.on .dmg-place-tag { color: #ffb199; }
+.dmg-place.scratch .dmg-kind { background: #b9c3cb; }
+.dmg-place.dent .dmg-kind { background: #7f8b95; }
+.dmg-place.rust .dmg-kind { background: #a45a26; }
+.dmg-place.crack .dmg-kind { background: #3f4d59; }
+.chip:disabled { opacity: 0.4; cursor: default; }
+.chip.dmg-type.active { background: linear-gradient(180deg, #ff9f7e, #e8663f); }
+
+/* ------------------------------------------------ «буквальный» отчёт о дефектах */
+.damage-report { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.dmg-summary { margin: 0; font-size: 10px; line-height: 1.5; color: var(--ink-faint); }
+.dmg-summary.on { color: var(--accent-2); }
+.dmg-note {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-left: 3px solid #7f8b95;
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.dmg-note.scratch { border-left-color: #b9c3cb; }
+.dmg-note.dent { border-left-color: #7f8b95; }
+.dmg-note.rust { border-left-color: #a45a26; }
+.dmg-note.crack { border-left-color: #3f4d59; }
+.dmg-note b { grid-column: 1 / 2; font-size: 11px; color: var(--ink); font-weight: 600; }
+.dmg-note span { grid-column: 1 / 2; font-size: 10px; line-height: 1.4; color: var(--ink-faint); }
+.dmg-note i { grid-column: 2 / 3; grid-row: 1 / 2; font-style: normal; font-size: 10px; color: var(--accent-2); white-space: nowrap; }
+
+/* ------------------------------------------------ нижняя панель без категорий */
+.dock-cat { display: flex; flex-direction: column; gap: 2px; flex: 0 0 auto; min-width: 96px; }
+.dock-cat b { font-size: 12px; letter-spacing: 0.04em; }
+/* если док всё-таки сошёлся с навпадом — поднимаем его, а не накладываем */
+.dock.dock-lift { bottom: calc(14px + 118px); max-width: calc(100% - 150px); }
+.cat-tab[data-cat="buildings"] { --cat: var(--buildings); }
+
+@media (max-width: 900px) {
+  .hud-btn b { display: none; }
+  .hud-btn { padding: 6px 9px; }
+  .panel-catalog .unit-list { max-height: min(42vh, 320px); }
+  .dock-cat { display: none; }
+}
+@media (max-width: 560px) {
+  .hud-pop { max-width: calc(100vw - 16px); }
+  .hud-btn i { display: none; }
+  .foot-note { display: none; }
+  .dock-cat { display: none; }
 }
