@@ -45,6 +45,18 @@ left.dispatchEvent(new w.PointerEvent('pointerup',{bubbles:true,pointerId:2}));a
 click('pauseBtn');assert.ok(!gas.classList.contains('is-active'));assert.ok(!left.classList.contains('is-active'));
 click('pauseBtn');for(let i=0;i<8;i++){time+=50;nextFrame(time)}
 assert.equal(Number(d.getElementById('speed').textContent),0,'pause clears held controls');
+// Physical keys work even when the system keyboard layout produces Cyrillic.
+const key=(type,code,character,extra={})=>w.dispatchEvent(new w.KeyboardEvent(type,{key:character,code,bubbles:true,cancelable:true,...extra}));
+key('keydown','KeyW','ц');for(let i=0;i<20;i++){time+=50;nextFrame(time)}
+assert.ok(Number(d.getElementById('speed').textContent)>0,'physical W accelerates in Russian layout');
+key('keyup','KeyW','ц');click('pauseBtn');click('pauseBtn');for(let i=0;i<8;i++){time+=50;nextFrame(time)}
+assert.equal(Number(d.getElementById('speed').textContent),0,'releasing keys and pausing clears acceleration');
+const view=d.getElementById('cameraLabel').textContent;key('keydown','KeyC','с');assert.notEqual(d.getElementById('cameraLabel').textContent,view,'C switches camera');
+const switched=d.getElementById('cameraLabel').textContent;key('keydown','KeyC','с',{repeat:true});assert.equal(d.getElementById('cameraLabel').textContent,switched,'held shortcut does not repeat');
+key('keydown','KeyE','у');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'true');key('keydown','KeyE','у');assert.equal(d.getElementById('doorBtn').getAttribute('aria-pressed'),'false');
+key('keydown','KeyR','к');assert.match(d.getElementById('gearBtn').textContent,/R/);key('keydown','KeyR','к');assert.match(d.getElementById('gearBtn').textContent,/D/);
+key('keydown','Escape','Escape');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);key('keydown','Escape','Escape');assert.match(d.getElementById('pauseBtn').textContent,/ПАУЗА/);
+key('keydown','KeyT','е');assert.equal(visible('tabletOverlay'),true);key('keydown','Escape','Escape');assert.equal(visible('tabletOverlay'),false);
 const lost=new w.Event('webglcontextlost',{cancelable:true});w.testRenderer.domElement.dispatchEvent(lost);assert.ok(lost.defaultPrevented);assert.equal(visible('renderError'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);w.testRenderer.domElement.dispatchEvent(new w.Event('webglcontextrestored'));assert.equal(visible('renderError'),false);
 click('helpBtn');assert.equal(visible('drivingHelp'),true);click('closeHelp');assert.equal(visible('drivingHelp'),false);
 console.log('Планшет, экранные педали, пауза, заказ и камеры: OK');dom.window.close();

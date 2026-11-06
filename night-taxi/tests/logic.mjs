@@ -14,6 +14,7 @@ for(let i=0;i<3;i++){
  let meshes=0;model.showroom.group.traverse(o=>{if(o.isMesh)meshes++});assert.ok(meshes<110,'showroom model is batched');
  assert.equal(model.showroom.wheels.length,4);assert.equal(model.showroom.wheels.filter(w=>w.front).length,2);
  assert.equal(model.cabin.visible,false);assert.equal(model.exterior.visible,true);
+ const body=model.cabin.getObjectByName('cabinBody');assert.ok(body,'first-person view includes visible body');assert.ok(body.children.length>=8,'bonnet, frame and mirrors exist for each vehicle');
  animateTaxi(model,10,1,1,.1,2,true);
  assert.ok(model.showroom.steering.rotation.z>0);assert.notEqual(model.showroom.wheels[0].wheel.rotation.x,0);
  assert.ok(model.showroom.wheels.find(w=>w.front).pivot.rotation.y>0);
