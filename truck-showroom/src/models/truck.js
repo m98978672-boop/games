@@ -219,73 +219,119 @@ export function buildTruck(unit, M) {
     anchors.push({ pos: [side * (HALF_W + 0.45), winTop, cabFront + 0.16], label: 'Зеркало', side: side > 0 ? 'справа' : 'слева' });
   }
 
-  // ---------------------------------------------- решётка, фары, бампер
+  // ---------------------------------------------- нос: маска, решётка, свет, бампер
   const front = group(root, 'front');
+  const faceZ = isBonnet ? frontZ + 0.28 : cabFront - 0.1; // наружная плоскость передка
+  const grilleMat = M.chromeDark;
+  const lampY = floorY + 0.56;
+  const plaqueMat = (() => {
+    const tex = labelTexture(unit.brand, {
+      width: 512, height: 160, bg: '#14181c', fg: '#f4efe3', accent: unit.accent || '#e8b45a',
+      font: 'bold 72px Arial, sans-serif', border: false,
+    });
+    return tex ? new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.2 }) : M.chromeDark;
+  })();
+
+  /** Решётка радиатора: объёмная рамка из четырёх брусков, тёмная глубина, ламели. */
+  function grille(cx, cy, w, h, z, slats = 4) {
+    const t = 0.055;
+    box(front, w, t, 0.08, grilleMat, cx, cy + h / 2 - t / 2, z);
+    box(front, w, t, 0.08, grilleMat, cx, cy - h / 2 + t / 2, z);
+    box(front, t, h, 0.08, grilleMat, cx - w / 2 + t / 2, cy, z);
+    box(front, t, h, 0.08, grilleMat, cx + w / 2 - t / 2, cy, z);
+    box(front, w - 2 * t, h - 2 * t, 0.05, M.plastic, cx, cy, z + 0.03);
+    const span = h - 2 * t - 0.07;
+    for (let i = 0; i < slats; i++) {
+      const y = cy + span / 2 - (slats === 1 ? 0 : (i * span) / (slats - 1));
+      box(front, w - 2 * t - 0.03, 0.026, 0.03, grilleMat, cx, y, z - 0.025);
+    }
+  }
+
+  /** Фара в нише: тёмная ниша, хром-отражатель, линзы и ходовая полоса. */
+  function headlamp(x, y, z, w = 0.46, h = 0.32) {
+    // ниша в маске + тёмный корпус
+    rbox(front, w + 0.06, h + 0.06, 0.05, M.rubberTrim, x, y, z + 0.03, 0.02);
+    rbox(front, w, h, 0.04, M.plastic, x, y, z - 0.005, 0.02);
+    // горизонтальный блок: две линзы-секции, хром-обод и дневная полоса
+    rbox(front, w * 0.88, h * 0.5, 0.03, M.headlight, x, y + h * 0.06, z - 0.035, 0.01);
+    box(front, 0.018, h * 0.46, 0.02, M.chromeDark, x, y + h * 0.06, z - 0.052);
+    box(front, w * 0.9, 0.016, 0.016, M.chromeDark, x, y + h * 0.32, z - 0.05);
+    box(front, w * 0.72, 0.02, 0.018, M.headlight, x, y - h * 0.36, z - 0.042);
+    const blink = box(front, w * 0.62, 0.035, 0.02, M.amber, x, y - h * 0.44, z - 0.045);
+    blinkers.push(blink);
+  }
+
   if (isBonnet) {
     // капот
     const hood = rbox(front, 2.2, 0.95, hoodLen, paint, 0, floorY + 0.48, frontZ + 0.28 + hoodLen / 2, 0.16);
     hood.geometry.dispose?.();
     rbox(front, 2.14, 0.55, 0.9, paint, 0, floorY + 0.92, cabFront - 0.42, 0.18);
-    // решётка
-    box(front, 1.9, 0.72, 0.1, CHROME ? M.chrome : M.plasticGray, 0, floorY + 0.34, frontZ + 0.02);
-    for (let i = -3; i <= 3; i++) {
-      box(front, 1.8, 0.06, 0.05, M.chromeDark, 0, floorY + 0.34 + i * 0.11, frontZ - 0.03);
-    }
-    for (const side of [-1, 1]) {
-      rbox(front, 0.34, 0.3, 0.1, M.chrome, side * 0.86, floorY + 0.34, frontZ - 0.02, 0.04);
-    }
+    // решётка и эмблема на передке капота
+    grille(0, floorY + 0.5, 1.06, 0.52, faceZ - 0.1, 4);
+    plane(front, 0.5, 0.15, plaqueMat, 0, floorY + 0.86, faceZ - 0.12);
+    // фары по краям капота
+    for (const side of [-1, 1]) headlamp(side * 0.86, lampY, faceZ - 0.05, 0.4, 0.28);
     // выхлопные трубы
     for (const side of [-1, 1]) {
-      const stack = cyl(front, 0.075, 0.085, 2.3, M.chrome, side * 1.16, floorY + 1.35, cabFront - 0.55, 14);
-      const tip = cyl(front, 0.09, 0.075, 0.18, M.chromeDark, side * 1.16, floorY + 2.52, cabFront - 0.55, 14);
-      const shield = box(front, 0.03, 1.5, 0.28, M.chromeDark, side * 1.16, floorY + 0.75, cabFront - 0.55);
+      cyl(front, 0.075, 0.085, 2.3, M.chrome, side * 1.16, floorY + 1.35, cabFront - 0.55, 14);
+      cyl(front, 0.09, 0.075, 0.18, M.chromeDark, side * 1.16, floorY + 2.52, cabFront - 0.55, 14);
+      box(front, 0.03, 1.5, 0.28, M.chromeDark, side * 1.16, floorY + 0.75, cabFront - 0.55);
     }
   } else {
-    // гладкая передняя панель евро/футуризм/низкопольный
-    rbox(front, 2.34, isFuturistic ? 0.9 : 0.62, 0.16, isFuturistic ? M.plasticGray : M.plastic, 0, floorY + 0.42, cabFront - 0.02, 0.05);
+    // маска на всю ширину передка
+    rbox(front, 2.36, 0.78, 0.12, isFuturistic ? M.plasticGray : M.plastic, 0, floorY + 0.38, faceZ - 0.02, 0.05);
+    box(front, 2.34, 0.03, 0.04, M.chrome, 0, floorY + 0.76, faceZ - 0.09);
+    box(front, 2.34, 0.025, 0.03, M.rubberTrim, 0, floorY + 0.02, faceZ - 0.08);
     if (isFuturistic) {
-      // светящаяся полоса вместо решётки
-      const strip = box(front, 2.3, 0.1, 0.03, M.headlight, 0, floorY + 0.78, cabFront - 0.11);
-      const glow = box(front, 2.32, 0.22, 0.02, accent, 0, floorY + 0.78, cabFront - 0.12);
-      glow.material = accent;
-      // эмблема
-      const emblem = cyl(front, 0.16, 0.16, 0.04, M.chrome, 0, floorY + 0.42, cabFront - 0.12, 20);
+      // светящаяся полоса и фары-поды
+      box(front, 2.2, 0.2, 0.02, accent, 0, floorY + 0.62, faceZ - 0.1);
+      box(front, 2.16, 0.075, 0.03, M.headlight, 0, floorY + 0.62, faceZ - 0.115);
+      for (const side of [-1, 1]) {
+        rbox(front, 0.5, 0.2, 0.08, M.glassDark, side * 0.8, floorY + 0.28, faceZ - 0.08, 0.05);
+        const lamp = cyl(front, 0.06, 0.06, 0.03, M.headlight, side * 0.8, floorY + 0.28, faceZ - 0.125, 18);
+        lamp.rotation.x = HALF;
+        const blink = box(front, 0.34, 0.04, 0.02, M.amber, side * 0.8, floorY + 0.17, faceZ - 0.12);
+        blinkers.push(blink);
+      }
+      const emblem = cyl(front, 0.13, 0.13, 0.03, M.chrome, 0, floorY + 0.38, faceZ - 0.125, 20);
       emblem.rotation.x = HALF;
     } else {
-      // решётка с ламелями
-      const grilleMat = CHROME ? M.chrome : M.plasticGray;
-      box(front, 1.5, 0.4, 0.06, M.plastic, 0, floorY + 0.42, cabFront - 0.1);
-      for (let i = -2; i <= 2; i++) {
-        box(front, 1.44, 0.045, 0.03, grilleMat, 0, floorY + 0.42 + i * 0.085, cabFront - 0.14);
-      }
-      // эмблема-табличка бренда
-      const tex = labelTexture(unit.brand, {
-        width: 512, height: 160, bg: '#14181c', fg: '#f4efe3', accent: unit.accent || '#e8b45a',
-        font: 'bold 72px Arial, sans-serif', border: false,
-      });
-      if (tex) {
-        const plaque = plane(front, 0.66, 0.2, new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.2 }), 0, floorY + 0.42, cabFront - 0.155);
-      }
-      const plate = cyl(front, 0.19, 0.19, 0.03, M.chrome, 0, floorY + 0.42, cabFront - 0.15, 24);
-      plate.rotation.x = HALF;
+      // решётка по центру + крупные фары в нишах по краям
+      grille(0, floorY + 0.3, 1.26, 0.44, faceZ - 0.1, 4);
+      plane(front, 0.52, 0.16, plaqueMat, 0, floorY + 0.63, faceZ - 0.11);
+      for (const side of [-1, 1]) headlamp(side * 0.87, lampY, faceZ - 0.05);
     }
   }
-  // бампер
-  const bumperY = isLowEntry ? 0.62 : 0.62;
-  const bumperZ = frontZ + 0.06;
-  rbox(front, 2.5, 0.42, 0.34, unit.chromeBumper || CHROME ? M.chrome : M.plasticGray, 0, bumperY, bumperZ, 0.05);
-  if (!CHROME && !unit.chromeBumper) box(front, 2.3, 0.12, 0.02, M.plastic, 0, bumperY - 0.12, bumperZ - 0.18);
-  // противотуманки
+
+  // ---------------------------------------------- бампер и нижний обвес
+  const bumperZ = frontZ + 0.2; // передняя плоскость балки = frontZ
+  const beamY = 0.88; // верх балки 1.10 — прямо под полом кабины
+  const bumpMat = unit.chromeBumper ? M.chrome : paint;
+  const skirtZ = isBonnet ? frontZ + 0.3 : cabFront - 0.02;
+  // юбка от пола кабины/капота до бампера — закрывает зазор
+  rbox(front, 2.3, 0.46, 0.3, paint, 0, floorY - 0.16, skirtZ, 0.05);
+  // балка бампера
+  rbox(front, 2.46, 0.44, 0.4, bumpMat, 0, beamY, bumperZ, 0.09);
+  // передняя панель бампера: номер, хром, резиновый молдинг
+  rbox(front, 0.62, 0.22, 0.03, M.plastic, 0, beamY + 0.02, bumperZ - 0.19, 0.01);
+  plane(front, 0.52, 0.13, new THREE.MeshStandardMaterial({ map: plateTexture('А 001 ТС'), roughness: 0.5, metalness: 0.1 }), 0, beamY + 0.02, bumperZ - 0.21);
+  box(front, 2.3, 0.05, 0.02, M.chrome, 0, beamY + 0.14, bumperZ - 0.205);
+  box(front, 2.32, 0.03, 0.02, M.rubberTrim, 0, beamY - 0.05, bumperZ - 0.205);
+  // нижняя юбка-спойлер под балкой
+  rbox(front, 2.24, 0.18, 0.32, M.darkSteel, 0, beamY - 0.3, bumperZ + 0.02, 0.05);
   for (const side of [-1, 1]) {
-    const fog = cyl(front, 0.075, 0.075, 0.04, M.headlight, side * 0.85, bumperY - 0.1, bumperZ - 0.18, 14);
+    // углы, заходящие на борта
+    rbox(front, 0.32, 0.42, 0.44, bumpMat, side * 1.15, beamY, bumperZ + 0.12, 0.12);
+    // кронштейн балки к лонжерону рамы
+    box(front, 0.16, 0.3, 0.62, M.darkSteel, side * 0.44, floorY - 0.22, bumperZ + 0.36);
+    // площадка-ступенька на бампере
+    box(front, 0.4, 0.035, 0.2, M.rubberTrim, side * 0.95, beamY + 0.235, bumperZ - 0.03);
+    // противотуманка: обод и линза заподлицо с балкой
+    torus(front, 0.066, 0.014, M.rubberTrim, side * 0.88, beamY - 0.13, bumperZ - 0.19, 18);
+    const fog = cyl(front, 0.056, 0.056, 0.02, M.headlight, side * 0.88, beamY - 0.13, bumperZ - 0.19, 18);
     fog.rotation.x = HALF;
-  }
-  // фары
-  for (const side of [-1, 1]) {
-    const head = rbox(front, 0.5, 0.24, 0.08, M.headlight, side * 0.72, floorY + 0.02, cabFront - 0.12, 0.03);
-    const inner = box(front, 0.42, 0.06, 0.03, M.chrome, side * 0.72, floorY - 0.02, cabFront - 0.17);
-    const blink = box(front, 0.34, 0.06, 0.03, M.amber, side * 0.72, floorY + 0.13, cabFront - 0.17);
-    blinkers.push(blink);
+    // буксирная проушина
+    box(front, 0.06, 0.1, 0.06, M.darkSteel, side * 0.32, beamY - 0.26, bumperZ - 0.18);
   }
   // ступеньки под дверьми
   for (const side of [-1, 1]) {
@@ -367,9 +413,9 @@ export function buildTruck(unit, M) {
   const views = [
     {
       id: 'driver', label: 'Место водителя', group: 'interior',
-      pos: [seatX + 0.06, floorY + 1.3, cabFront + 1.02],
-      target: [-0.24, floorY + 0.68, cabFront - 9],
-      fov: 72, orbit: false, seat: true,
+      pos: [seatX + 0.06, floorY + 1.16, cabFront + 1.3],
+      target: [-0.24, floorY + 0.12, cabFront - 2.0],
+      fov: 74, orbit: false, seat: true,
     },
     {
       id: 'passenger', label: 'Место пассажира', group: 'interior',
@@ -431,65 +477,122 @@ function buildTruckInterior(c) {
   rbox(g, W, roofY - floorY - 0.2, 0.06, mid, 0, (floorY + roofY) / 2, cabRear - 0.16, 0.03);
 
   // --- торпедо
-  const dashZ = cabFront + 0.28;
-  const dashTop = floorY + 0.82;
-  const dash = rbox(g, W - 0.02, 0.46, 0.62, dark, 0, floorY + 0.55, dashZ, 0.08);
-  dash.rotation.x = 0.08;
-  rbox(g, W - 0.06, 0.14, 0.78, mid, 0, dashTop + 0.02, dashZ + 0.12, 0.06);
-  // козырёк приборов: приподнят над панелью, циферблаты смотрят на водителя
-  const binZ = dashZ + 0.04;
-  const binnacle = rbox(g, 0.7, 0.28, 0.24, dark, -0.46, dashTop + 0.2, binZ, 0.05);
-  binnacle.rotation.x = -0.22;
-  // центральная консоль
-  rbox(g, 0.44, 0.5, 0.28, mid, 0.08, floorY + 0.62, dashZ + 0.34, 0.04);
-  // экран мультимедиа
-  const screen = rbox(g, 0.34, 0.24, 0.03, M.dashScreen, 0.08, floorY + 0.92, dashZ + 0.2, 0.02);
-  screen.rotation.x = -0.12;
-  // кнопки и дефлекторы
-  for (let i = -1; i <= 1; i++) {
-    box(g, 0.035, 0.02, 0.02, M.chromeDark, 0.08 + i * 0.09, floorY + 0.78, dashZ + 0.34);
-  }
-  for (const side of [-1, 1]) {
-    const vent = rbox(g, 0.16, 0.09, 0.03, M.plastic, side * 0.78, dashTop + 0.06, dashZ - 0.02, 0.02);
-    for (let i = -1; i <= 1; i++) box(g, 0.012, 0.07, 0.01, M.chromeDark, side * 0.78 + i * 0.045, dashTop + 0.06, dashZ - 0.04);
-  }
-  // приборная панель: два циферблата перед водителем
-  for (const [x, r] of [[-0.64, 0.1], [-0.34, 0.1]]) {
-    const dial = cyl(g, r, r, 0.02, M.plastic, x, dashTop + 0.2, binZ + 0.11, 24);
-    dial.rotation.x = HALF;
-    const ring = torus(g, r, 0.008, M.chromeDark, x, dashTop + 0.2, binZ + 0.12, 20);
-    ring.rotation.x = 0;
-    // стрелка
-    const needle = box(g, 0.012, r * 1.1, 0.006, M.taillight, x, dashTop + 0.2 + r * 0.25, binZ + 0.13);
-    needle.rotation.z = 0.6;
-  }
-  // руль
-  const wheelG = group(g, 'steering');
-  wheelG.position.set(-0.48, dashTop + 0.19, dashZ + 0.26);
-  wheelG.rotation.x = -0.36;
-  const rim = torus(wheelG, 0.215, 0.023, M.leather, 0, 0, 0, 40);
-  rim.rotation.x = 0;
-  const hub = cyl(wheelG, 0.065, 0.07, 0.07, M.plastic, 0, 0, 0.02, 20);
-  hub.rotation.x = HALF;
-  for (let i = 0; i < 3; i++) {
-    const a = rad(90) + i * (TAU / 3);
-    const spoke = box(wheelG, 0.04, 0.2, 0.025, M.plasticGray, Math.cos(a) * 0.1, Math.sin(a) * 0.1, 0.0);
-    spoke.rotation.z = a - HALF;
-  }
-  const emblem = cyl(wheelG, 0.032, 0.032, 0.012, accent, 0, 0, 0.06, 16);
-  emblem.rotation.x = HALF;
-  // колонка руля
-  const col = cyl(g, 0.045, 0.06, 0.5, M.plastic, -0.48, dashTop + 0.06, dashZ + 0.06, 12);
-  col.rotation.x = 0.62;
-  // рычаг КПП / селектор
-  if (style === 'euro' || style === 'futuristic') {
-    const lever = cyl(g, 0.02, 0.025, 0.3, M.chromeDark, 0.42, dashTop + 0.02, dashZ + 0.12, 8);
-    lever.rotation.x = -0.5;
-    sphere(g, 0.045, M.plastic, 0.42, dashTop + 0.16, dashZ + 0.24, 10);
-  }
-  anchors.push({ pos: [-0.48, dashTop + 0.16, dashZ - 0.4], label: 'Руль и приборы' });
-  anchors.push({ pos: [0.08, floorY + 0.95, dashZ + 0.15], label: 'Мультимедиа' });
+  const dashZ = cabFront + 0.3;      // передний срез панели
+  const dashTop = floorY + 0.68;     // верхняя кромка накладки
+  const drvX = -0.48;                // ось водителя
+  const faceZ = cabFront + 0.56;     // лицевая плоскость к водителю
+  const trimMat = c.unit.luxury ? M.wood : M.chromeDark;
 
+  // 1. фронтальная перегородка под лобовым стеклом
+  rbox(g, W - 0.02, dashTop - floorY, 0.3, dark, 0, (floorY + dashTop) / 2, cabFront + 0.12, 0.04);
+  // 2. верхняя накладка (мягкий пластик) с задним бортиком
+  const pad = rbox(g, W - 0.02, 0.16, 0.52, M.plasticGray, 0, dashTop - 0.05, cabFront + 0.34, 0.12);
+  pad.rotation.x = 0.05;
+  rbox(g, W - 0.08, 0.045, 0.06, M.plasticGray, 0, dashTop + 0.05, cabFront + 0.58, 0.03);
+  // 3. лицевая панель к водителю
+  const face = rbox(g, W - 0.04, 0.66, 0.12, M.interiorMid, 0, floorY + 0.38, faceZ - 0.05, 0.03);
+  face.rotation.x = -0.06;
+  // 4. коленная панель (уходит под панель)
+  const knee = rbox(g, W - 0.08, 0.34, 0.3, M.interiorDark, 0, floorY + 0.18, cabFront + 0.4, 0.05);
+  knee.rotation.x = 0.16;
+  // 5. декоративная полоса и строчка
+  box(g, W - 0.12, 0.035, 0.03, trimMat, 0, floorY + 0.14, faceZ + 0.01);
+  box(g, W - 0.16, 0.012, 0.012, M.chromeDark, 0, floorY + 0.09, faceZ + 0.012);
+  box(g, W - 0.16, 0.01, 0.01, M.plasticGray, 0, floorY + 0.66, faceZ + 0.01);
+
+  // 6. козырёк приборов и сам щиток
+  const binX = drvX - 0.02, binY = floorY + 0.5, binZ = faceZ + 0.02;
+  const hood = rbox(g, 0.98, 0.09, 0.28, M.interiorDark, binX, binY + 0.28, binZ - 0.06, 0.05);
+  hood.rotation.x = 0.28;
+  rbox(g, 0.94, 0.5, 0.09, M.plastic, binX, binY, binZ, 0.03);
+  // циферблаты: два основных + два вспомогательных
+  function dial(x, y, r, ticks = 9) {
+    const disc = cyl(g, r, r, 0.02, M.plastic, x, y, binZ + 0.06, 24);
+    disc.rotation.x = HALF;
+    torus(g, r + 0.004, 0.008, M.chromeDark, x, y, binZ + 0.073, 22);
+    for (let i = 0; i <= ticks; i++) {
+      const a = -PI * 0.78 + (i / ticks) * PI * 1.56;
+      const t = box(g, r * 0.05, r * 0.15, 0.006, M.plasticLight, x + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8, binZ + 0.075);
+      t.rotation.z = a - HALF;
+    }
+    const needle = box(g, r * 0.045, r * 0.78, 0.006, M.taillight, x + Math.cos(-PI * 0.3) * r * 0.39, y + Math.sin(-PI * 0.3) * r * 0.39, binZ + 0.08);
+    needle.rotation.z = -PI * 0.3 - HALF;
+    const cap = cyl(g, r * 0.1, r * 0.1, 0.02, M.chromeDark, x, y, binZ + 0.082, 12);
+    cap.rotation.x = HALF;
+  }
+  dial(binX - 0.19, binY + 0.04, 0.115, 9);
+  dial(binX + 0.19, binY + 0.04, 0.105, 9);
+  dial(binX, binY - 0.18, 0.045, 6);
+  box(g, 0.13, 0.045, 0.02, M.dashScreen, binX, binY + 0.18, binZ + 0.075);
+
+  // 7. центральная консоль: экран, дефлекторы, шайбы, клавиши
+  const cX = 0.08;
+  rbox(g, 0.56, 0.64, 0.16, M.interiorDark, cX, floorY + 0.4, faceZ, 0.05);
+  rbox(g, 0.48, 0.3, 0.03, M.plastic, cX, floorY + 0.56, faceZ + 0.075, 0.02);
+  rbox(g, 0.42, 0.24, 0.02, M.dashScreen, cX, floorY + 0.56, faceZ + 0.092, 0.01);
+  box(g, 0.46, 0.012, 0.012, M.chromeDark, cX, floorY + 0.38, faceZ + 0.09);
+  // дефлекторы над экраном
+  for (const dx of [-0.13, 0.13]) {
+    rbox(g, 0.16, 0.07, 0.03, M.plastic, cX + dx, floorY + 0.72, faceZ + 0.09, 0.015);
+    for (let i = -1; i <= 1; i++) box(g, 0.012, 0.05, 0.012, M.chromeDark, cX + dx + i * 0.045, floorY + 0.72, faceZ + 0.105);
+  }
+  // шайбы климата
+  for (let i = 0; i < 3; i++) {
+    const knob = cyl(g, 0.04, 0.04, 0.03, M.plastic, cX - 0.13 + i * 0.13, floorY + 0.36, faceZ + 0.09, 18);
+    knob.rotation.x = HALF;
+    const ring = cyl(g, 0.048, 0.048, 0.012, M.chromeDark, cX - 0.13 + i * 0.13, floorY + 0.36, faceZ + 0.078, 20);
+    ring.rotation.x = HALF;
+    box(g, 0.008, 0.026, 0.008, M.plasticLight, cX - 0.13 + i * 0.13, floorY + 0.375, faceZ + 0.105);
+  }
+  // ряд клавиш
+  for (let i = 0; i < 5; i++) {
+    box(g, 0.064, 0.045, 0.02, M.plasticGray, cX - 0.15 + i * 0.075, floorY + 0.24, faceZ + 0.085);
+    box(g, 0.03, 0.008, 0.008, i === 0 ? M.taillight : i === 4 ? accent : M.amber, cX - 0.15 + i * 0.075, floorY + 0.25, faceZ + 0.097);
+  }
+  // 8. бардачок и дефлектор пассажира
+  rbox(g, 0.6, 0.24, 0.04, M.plasticGray, 0.78, floorY + 0.36, faceZ + 0.02, 0.02);
+  box(g, 0.52, 0.02, 0.02, M.plastic, 0.78, floorY + 0.45, faceZ + 0.045);
+  rbox(g, 0.14, 0.035, 0.03, M.chromeDark, 0.78, floorY + 0.37, faceZ + 0.05, 0.01);
+  rbox(g, 0.18, 0.08, 0.03, M.plastic, 1.02, floorY + 0.66, faceZ + 0.02, 0.02);
+  for (let i = -1; i <= 1; i++) box(g, 0.012, 0.055, 0.012, M.chromeDark, 1.02 + i * 0.05, floorY + 0.66, faceZ + 0.04);
+  // 9. боковой дефлектор у водителя
+  rbox(g, 0.16, 0.08, 0.03, M.plastic, -1.02, floorY + 0.68, faceZ + 0.02, 0.02);
+  for (let i = -1; i <= 1; i++) box(g, 0.012, 0.05, 0.012, M.chromeDark, -1.02 + i * 0.045, floorY + 0.68, faceZ + 0.04);
+
+  // 10. руль и колонка
+  const wheelG = group(g, 'steering');
+  wheelG.position.set(drvX, floorY + 0.7, faceZ + 0.15);
+  wheelG.rotation.x = -0.5;
+  torus(wheelG, 0.215, 0.03, M.leather, 0, 0, 0, 40);
+  const hub = rbox(wheelG, 0.17, 0.12, 0.07, M.plastic, 0, 0, 0.012, 0.035);
+  const emblem = cyl(wheelG, 0.036, 0.036, 0.014, accent, 0, 0.01, 0.05, 18);
+  emblem.rotation.x = HALF;
+  for (const a of [0, PI, -HALF]) {
+    const spoke = box(wheelG, 0.055, 0.15, 0.024, M.plasticGray, Math.cos(a) * 0.105, Math.sin(a) * 0.105, 0.004);
+    spoke.rotation.z = a - HALF;
+    const trim = box(wheelG, 0.03, 0.13, 0.008, M.chromeDark, Math.cos(a) * 0.105, Math.sin(a) * 0.105, 0.019);
+    trim.rotation.z = a - HALF;
+  }
+  // подрулевой обод-накладка на нижней спице
+  box(wheelG, 0.11, 0.02, 0.02, M.chromeDark, 0, -0.16, 0.01);
+  // кожух колонки + подрулевые переключатели
+  const col = rbox(g, 0.13, 0.12, 0.34, M.plastic, drvX, floorY + 0.54, faceZ - 0.02, 0.04);
+  col.rotation.x = 0.45;
+  for (const side of [-1, 1]) {
+    const stalk = cyl(g, 0.014, 0.014, 0.16, M.chromeDark, drvX + side * 0.16, floorY + 0.7, faceZ - 0.02, 8);
+    stalk.rotation.z = HALF;
+    sphere(g, 0.026, M.plastic, drvX + side * 0.24, floorY + 0.7, faceZ - 0.02, 10);
+  }
+  // 11. кнопка пуска и селектор передач на консоли
+  const startBtn = cyl(g, 0.028, 0.028, 0.02, accent, 0.5, floorY + 0.3, faceZ + 0.1, 16);
+  startBtn.rotation.x = HALF;
+  cyl(g, 0.036, 0.036, 0.014, M.chromeDark, 0.5, floorY + 0.3, faceZ + 0.088, 18).rotation.x = HALF;
+  if (style === 'euro') {
+    const sel = rbox(g, 0.1, 0.05, 0.14, M.plasticGray, 0.42, floorY + 0.2, faceZ + 0.16, 0.02);
+    box(g, 0.06, 0.012, 0.012, accent, 0.42, floorY + 0.225, faceZ + 0.225);
+  }
+  anchors.push({ pos: [drvX, floorY + 0.8, faceZ - 0.3], label: 'Руль и приборы' });
+  anchors.push({ pos: [cX, floorY + 0.6, faceZ + 0.1], label: 'Мультимедиа' });
   // --- сиденья
   function seat(x, z, { recline = 0.12, luxury = false } = {}) {
     const s = group(g);
@@ -567,7 +670,8 @@ function buildTruckInterior(c) {
     pedal.rotation.x = 0.5;
   }
   // полка на торпедо
-  rbox(g, 0.6, 0.03, 0.3, M.plastic, 0.55, dashTop + 0.03, dashZ - 0.12, 0.01);
+  rbox(g, 0.6, 0.025, 0.3, M.interiorMid, 0.55, dashTop + 0.03, dashZ - 0.04, 0.01);
+  box(g, 0.56, 0.008, 0.008, M.chromeDark, 0.55, dashTop + 0.045, dashZ + 0.11);
   // выдвижной ящик
   rbox(g, 0.4, 0.28, 0.4, M.interiorMid, 0.5, floorY + 0.3, cabFront + 1.7, 0.03);
 
