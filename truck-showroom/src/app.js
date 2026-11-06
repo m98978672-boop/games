@@ -33,6 +33,7 @@ const state = {
   autoRotate: true,
   search: '',
   compare: null,
+  damage: false,
 };
 
 let saved = {};
@@ -166,6 +167,29 @@ function clearShown() {
   }
 }
 
+// ---------- повреждение: пятно на кузове, у каждой модели своё
+function applyDamage() {
+  const on = !!state.damage;
+  if (shown && shown.damage && shown.damage.group) shown.damage.group.visible = on;
+  for (const id of ['damage-btn', 'damage-btn-2']) {
+    const el = $(id);
+    if (el) el.classList.toggle('on', on);
+  }
+  $('damage-btn')?.classList.toggle('active', on);
+}
+
+function toggleDamage() {
+  if (!shown || !shown.damage) {
+    live('У этой модели нет повреждения');
+    return;
+  }
+  state.damage = !state.damage;
+  applyDamage();
+  renderDetails(currentUnit());
+  const spec = shown.damage.spec;
+  live(state.damage ? `Повреждение: ${spec.label}` : 'Повреждение скрыто');
+}
+
 function showUnit(unit, { instant = false, view = null } = {}) {
   busy = true;
   $('loader').classList.remove('hidden');
@@ -180,6 +204,7 @@ function showUnit(unit, { instant = false, view = null } = {}) {
     }
     scene.add(built.root);
     shown = built;
+    applyDamage();
     // счётчик треугольников
     let tris = 0;
     built.root.traverse((o) => {
@@ -202,6 +227,7 @@ function showUnit(unit, { instant = false, view = null } = {}) {
     renderDetails(unit);
     $('compare-btn')?.classList.toggle('on', !!state.compare);
     $('compare-btn-2')?.classList.toggle('active', !!state.compare);
+    applyDamage();
     if (pending) {
       const p = pending;
       pending = null;
@@ -361,6 +387,20 @@ function renderDetails(unit) {
     b.onclick = () => recolor(unit, hex);
     row.appendChild(b);
   });
+  // повреждение: подпись + кнопка показа
+  const dmgRow = $('damage-row');
+  if (dmgRow) {
+    dmgRow.innerHTML = '';
+    const spec = shown && shown.damage ? shown.damage.spec : null;
+    const b = document.createElement('button');
+    b.className = 'damage-btn' + (spec && state.damage ? ' on' : '');
+    b.innerHTML = spec
+      ? `<span class="damage-dot"></span><span class="damage-text">${spec.label}</span><span class="damage-key">X</span>`
+      : '<span class="damage-text">Повреждение не задано</span>';
+    b.disabled = !spec;
+    b.onclick = () => toggleDamage();
+    dmgRow.appendChild(b);
+  }
   // точки осмотра
   const anchors = $('anchor-row');
   anchors.innerHTML = '';
@@ -742,6 +782,8 @@ function wireUI() {
     goView(seat.id);
     live('Свободный взгляд: тяните мышью/пальцем');
   };
+  $('damage-btn').onclick = toggleDamage;
+  $('damage-btn-2').onclick = toggleDamage;
   $('compare-btn').onclick = toggleCompare;
   $('compare-btn-2').onclick = toggleCompare;
   $('fav-filter').onclick = () => {
@@ -847,6 +889,7 @@ function wireUI() {
       case 'c': case 'C': case 'с': case 'С': shot(); break;
       case 'h': case 'H': case 'р': case 'Р': $('help-modal').classList.toggle('hidden'); break;
       case 'i': case 'I': case 'ш': case 'Ш': toggleInside(); break;
+      case 'x': case 'X': case 'ч': case 'Ч': toggleDamage(); break;
       case 'Escape': {
         $('help-modal').classList.add('hidden');
         $('light-pop')?.classList.add('hidden');

@@ -6,7 +6,9 @@ import * as THREE from 'three';
 import {
   HALF, PI, TAU, box, rbox, cyl, sphere, torus, plane, group, pipe,
   wheel as makeWheel, mirror, labelTexture, plateTexture, clamp, rad,
+  accentLine, brandDecalMaterial,
 } from '../lib/kit.js';
+import { mountDamage, damageSpecFor } from '../lib/damage.js';
 import { buildCar } from './car.js';
 
 const DECK = 1.25;
@@ -343,13 +345,7 @@ export function buildTrailer(unit, M) {
     // цветная плашка ливреи + белая надпись поверх: на белом кузове
     // белый текст было не видно, и борта выглядели пустыми
     const plateMat = std(liveryOf(unit), 0.5, 0.25);
-    const tex = labelTexture(unit.brand, {
-      width: 512, height: 128, bg: 'rgba(0,0,0,0)', fg: '#f7f4ea', accent: '#e8b45a',
-      font: 'bold 64px Arial, sans-serif', border: false,
-    });
-    const textMat = tex
-      ? new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.5 })
-      : null;
+    const textMat = brandDecalMaterial(unit, { width: 512, height: 128, font: 'bold 64px Arial, sans-serif' });
     for (const side of [-1, 1]) {
       const plate = rbox(body, 0.03, 0.62, 2.7, plateMat, side * (W / 2 + 0.02), deckY + 1.42, zFront + 3.4, 0.04);
       plate.rotation.y = 0;
@@ -357,8 +353,41 @@ export function buildTrailer(unit, M) {
         const p = plane(body, 2.3, 0.5, textMat, side * (W / 2 + 0.045), deckY + 1.42, zFront + 3.4);
         p.rotation.y = side > 0 ? -HALF : HALF;
       }
+      // фирменная линия под плашкой: акцент + хром-кант, как у тягачей и авто
+      accentLine(body, {
+        length: 3.0, height: 0.06, depth: 0.03,
+        x: side * (W / 2 + 0.03), y: deckY + 1.03, z: zFront + 3.4,
+        accentMat: plateMat, chromeMat: M.chrome,
+      });
     }
   }
+
+  // ------------------------------------------------ повреждение
+  // у каждого типа своя площадка: борт кузова, кормовой щит или настил
+  const CLOSED_SIDE = ['curtain', 'van', 'reefer', 'tipper', 'livestock', 'container', 'refcontainer', 'bdouble', 'sidetip'];
+  const ROUND_SIDE = ['tanker', 'adr', 'silo'];
+  const dpart = { name: CLOSED_SIDE.includes(type) ? 'борт кузова' : 'настил платформы', gender: 'm' };
+  const dspec = damageSpecFor({ ...unit, category: 'trailers' }, dpart);
+  let dAnchor;
+  if (CLOSED_SIDE.includes(type)) {
+    dAnchor = {
+      pos: [dspec.side * (W / 2 + 0.05), deckY + (type === 'tipper' ? 0.95 : 1.05), zFront + 1.55],
+      w: 0.86, h: 0.6, part: dpart,
+    };
+  } else if (ROUND_SIDE.includes(type)) {
+    // у цистерн/силоса борт круглый — пятно кладём на кормовой щит
+    dAnchor = { pos: [dspec.side * 0.55, deckY - 0.15, zRear - 0.12], rotY: 0, w: 0.62, h: 0.44, part: { name: 'кормовой щит', gender: 'm' } };
+  } else if (type === 'boat') {
+    dAnchor = { pos: [dspec.side * (W / 2 + 0.03), deckY - 0.5, 0.2], w: 0.5, h: 0.34, part: { name: 'борт корпуса', gender: 'm' } };
+  } else {
+    // открытая платформа: потёртость на настиле
+    dAnchor = {
+      pos: [dspec.side * 0.55, (type === 'dolly' ? DECK : deckY) + 0.02, zFront + 2.2],
+      rotX: -HALF, rotY: 0, w: 0.7, h: 0.5, part: { name: 'настил платформы', gender: 'm' },
+    };
+  }
+  const dmg = mountDamage(root, { ...unit, category: 'trailers' }, dAnchor);
+  anchors.push({ pos: [...dmg.patch.position.toArray()], label: `Повреждение: ${dmg.spec.label}` });
 
   const views = [
     {
@@ -372,7 +401,7 @@ export function buildTrailer(unit, M) {
   return {
     root, wheels, paintMats: [bodyMat, bodyMat2], views, anchors,
     layout: { frontZ: zFront, rearEnd: zRear, roofY: deckY + H, deckY, axleZ, wheelRadius: R, width: W, length: L },
-    kind: 'trailer',
+    kind: 'trailer', damage: dmg,
   };
 }
 

@@ -7,8 +7,9 @@
 import * as THREE from 'three';
 import {
   HALF, PI, TAU, box, rbox, cyl, sphere, torus, plane, mesh, group, pipe,
-  wheel as makeWheel, mirror, labelTexture, plateTexture, clamp, rad,
+  wheel as makeWheel, mirror, labelTexture, plateTexture, brandDecalMaterial, accentLine, clamp, rad,
 } from '../lib/kit.js';
+import { mountDamage, damageSpecFor } from '../lib/damage.js';
 
 const FLOOR = 1.18; // пол кабины над землёй
 
@@ -16,19 +17,42 @@ function paintFor(M, color, opts = {}) {
   return M.paint(color, opts);
 }
 
-/** Арка крыла: половина цилиндра, накрывающая колесо. */
-function fender(M, mat, r, width, x, y, z, side) {
+/** Крыло: полуцилиндрический кожух над колесом, наружный обод по кромке,
+ *  внутренний подкрылок и задний грязевой щиток с кронштейном. Один узел и
+ *  для передних колёс, и для сдвоенных задних (там кожух шире и накрывает
+ *  оба колеса). */
+function fender(M, mat, r, width, x, y, z, side, opts = {}) {
+  const { flap = true, lip = true } = opts;
   const g = new THREE.Group();
-  // аккуратная пластиковая арка-накладка над колесом
-  const arch = new THREE.Mesh(new THREE.TorusGeometry(r, Math.max(0.035, width * 0.055), 6, 24, PI), mat);
-  arch.rotation.y = side > 0 ? -HALF : HALF;
-  g.add(arch);
-  // внутренний подкрылок (тонкий полуцилиндр)
-  const shell = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.03, r - 0.03, width * 0.8, 18, 1, true, 0, PI), mat);
+  // кожух арки
+  const shellMat = mat.clone ? mat.clone() : mat;
+  shellMat.side = THREE.DoubleSide;
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(r, r, width, 26, 1, true, 0, PI), shellMat);
   shell.rotation.z = HALF;
-  shell.material = mat.clone ? mat.clone() : mat;
-  shell.material.side = THREE.DoubleSide;
   g.add(shell);
+  // внутренний подкрылок: закрывает просвет между шиной и кожухом
+  const innerMat = M.rubberTrim.clone ? M.rubberTrim.clone() : M.rubberTrim;
+  innerMat.side = THREE.DoubleSide;
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(r - 0.045, r - 0.045, width * 0.92, 22, 1, true, 0, PI), innerMat);
+  inner.rotation.z = HALF;
+  g.add(inner);
+  // наружный обод: крыло читается объёмом, а не тонкой линией
+  if (lip) {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.005, 0.028, 7, 30, PI), mat);
+    ring.rotation.y = side > 0 ? -HALF : HALF;
+    ring.position.x = side * (width / 2 - 0.01);
+    g.add(ring);
+  }
+  // задний грязевой щиток на кронштейне
+  if (flap) {
+    const h = Math.max(0.34, r * 0.95);
+    const flapMesh = new THREE.Mesh(new THREE.BoxGeometry(0.035, h, width * 0.94), M.rubberTrim);
+    flapMesh.position.set(0, -h / 2 + 0.05, r * 0.76);
+    g.add(flapMesh);
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, width * 0.9), M.darkSteel);
+    bar.position.set(0, 0.05, r * 0.74);
+    g.add(bar);
+  }
   g.position.set(x, y, z);
   return g;
 }
@@ -132,20 +156,19 @@ export function buildTruck(unit, M) {
   }
   if (!unit.thirdAxle && wheelsRear.length > 2) wheelsRear.length = 2;
 
-  // крылья над колёсами
+  // крылья над колёсами: спереди — по ширине шины, сзади — общий кожух на
+  // сдвоенные колёса (две арки перекрываются и читаются одним крылом)
   for (const side of [-1, 1]) {
-    const f = fender(M, M.plasticGray, R + 0.05, 0.5, side * frontTrack, R + 0.02, frontAxle, side);
+    const f = fender(M, M.plasticGray, R + 0.05, 0.58, side * frontTrack, R + 0.02, frontAxle, side);
     f.visible = unit.fenders !== false;
     root.add(f);
-    for (const z of wheelsRear) {
-      const rf = fender(M, M.plasticGray, R + 0.06, 1.02, side * 0.92, R + 0.02, z, side);
+    wheelsRear.forEach((z, i) => {
+      const rf = fender(M, M.plasticGray, R + 0.06, 1.08, side * 0.92, R + 0.02, z, side, {
+        flap: i === wheelsRear.length - 1,
+      });
       rf.visible = unit.fenders !== false;
       root.add(rf);
-    }
-    // брызговики
-    for (const z of [frontAxle - 0.42, wheelsRear[0] - 0.55]) {
-      box(root, 0.42, 0.5, 0.04, M.rubberTrim, side * (z < 0 ? frontTrack : 0.92), R - 0.22, z);
-    }
+    });
   }
 
   // ---------------------------------------------- кабина
@@ -164,8 +187,18 @@ export function buildTruck(unit, M) {
     rbox(cab, 0.13, winTop - winBottom, 0.17, paint, x, (winTop + winBottom) / 2, cabFront + 0.12, 0.04);
     // B-стойка
     rbox(cab, 0.13, winTop - winBottom, 0.13, M.plastic, x, (winTop + winBottom) / 2, cabRearZ - 0.12, 0.04);
-    // акцентная полоса по борту
-    box(cab, 0.02, 0.075, cabDepth * 0.82, accent, side * (HALF_W + 0.012), winBottom + 0.16, (cabFront + cabRearZ) / 2 + 0.02);
+    // акцентная полоса по борту + хром-кант: общий приём оформления
+    accentLine(cab, {
+      length: cabDepth * 0.82, height: 0.075, depth: 0.02,
+      x: side * (HALF_W + 0.012), y: winBottom + 0.16, z: (cabFront + cabRearZ) / 2 + 0.02,
+      accentMat: accent, chromeMat: M.chromeDark,
+    });
+    // фирменная надпись на двери — та же, что на решётке и на прицепах
+    const doorBadge = brandDecalMaterial(unit, { width: 512, height: 128 });
+    if (doorBadge) {
+      const p = plane(cab, 0.56, 0.14, doorBadge, side * (HALF_W + 0.022), winBottom - 0.5, cabFront + 1.28);
+      p.rotation.y = side > 0 ? HALF : -HALF;
+    }
     // дверная ручка
     const handle = rbox(cab, 0.05, 0.06, 0.22, CHROME ? M.chrome : M.plasticGray, side * (HALF_W + 0.02), winBottom - 0.2, cabFront + 1.05, 0.02);
     anchors.push({ pos: [side * (HALF_W + 0.05), winBottom - 0.2, cabFront + 1.05], label: 'Дверь кабины', side: side > 0 ? 'справа' : 'слева' });
@@ -229,7 +262,7 @@ export function buildTruck(unit, M) {
       width: 512, height: 160, bg: '#14181c', fg: '#f4efe3', accent: unit.accent || '#e8b45a',
       font: 'bold 72px Arial, sans-serif', border: false,
     });
-    return tex ? new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.2 }) : M.chromeDark;
+    return tex ? new THREE.MeshStandardMaterial({ map: tex, roughness: 0.4, metalness: 0.2, side: THREE.DoubleSide }) : M.chromeDark;
   })();
 
   /** Решётка радиатора: объёмная рамка из четырёх брусков, тёмная глубина, ламели. */
@@ -374,10 +407,20 @@ export function buildTruck(unit, M) {
     const visor = rbox(roof, cabW - 0.3, 0.1, 0.22, paint2, 0, roofY - 0.12, cabFront - 0.06, 0.03);
     visor.rotation.x = 0.2;
   }
-  // боковые юбки
+  // боковые юбки: закрывают баки между кабиной и задними колёсами,
+  // а сами колёса остаются открытыми — у них свои крылья
   if (unit.sideSkirts) {
-    for (const side of [-1, 1]) {
-      rbox(root, 0.08, 0.72, cabDepth + (rearEnd - cabRear) * 0.62, paint2, side * 1.22, 0.72, cabRear + (rearEnd - cabRear) * 0.3, 0.03);
+    // юбка идёт от кабины до первого заднего колеса и закрывает баки
+    const z0 = tankZ - tankLen / 2 - 0.06;
+    const z1 = Math.min(wheelsRear[0] - R - 0.42, tankZ + tankLen / 2 + 0.22);
+    const len = z1 - z0;
+    if (len > 0.4) {
+      for (const side of [-1, 1]) {
+        rbox(root, 0.08, 0.72, len, paint2, side * 1.22, 0.72, (z0 + z1) / 2, 0.03);
+        box(root, 0.09, 0.03, len - 0.08, M.rubberTrim, side * 1.22, 0.37, (z0 + z1) / 2);
+        box(root, 0.085, 0.022, len - 0.16, accent, side * 1.225, 0.92, (z0 + z1) / 2);
+        box(root, 0.085, 0.5, 0.03, paint2, side * 1.22, 0.72, z1 + 0.01);
+      }
     }
   }
 
@@ -406,6 +449,18 @@ export function buildTruck(unit, M) {
     style, roofType, paint, accent, anchors, isBonnet, isLowEntry,
   });
   cab.add(interior.group);
+
+  // ---------------------------------------------- повреждение
+  const dspec = damageSpecFor({ ...unit, category: 'trucks' }, { name: 'дверь кабины', gender: 'f' });
+  const dmg = mountDamage(root, { ...unit, category: 'trucks' }, {
+    pos: [dspec.side * (HALF_W + 0.024), winBottom - 0.56, cabFront + 0.98],
+    w: 0.66, h: 0.44,
+    part: { name: 'дверь кабины', gender: 'f' },
+  });
+  anchors.push({
+    pos: [dspec.side * (HALF_W + 0.06), winBottom - 0.46, cabFront + 0.98],
+    label: `Повреждение: ${dspec.label}`,
+  });
 
   // точки камер
   const eyeY = floorY + 1.02;
@@ -446,7 +501,7 @@ export function buildTruck(unit, M) {
   });
 
   const layout = { frontZ, rearEnd, cabFront, cabRear: cabRearZ, roofY, floorY, fifthWheelZ, plateY, rearAxle1, rearAxle2, wheelRadius: R, cabWidth: cabW };
-  return { root, wheels, paintMats, views, anchors, layout, kind: 'truck' };
+  return { root, wheels, paintMats, views, anchors, layout, kind: 'truck', damage: { group: dmg.group, spec: dspec } };
 }
 
 // ============================================================

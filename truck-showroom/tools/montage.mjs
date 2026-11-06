@@ -21,7 +21,8 @@ fs.mkdirSync(dir, { recursive: true });
 const files = [];
 list.forEach((u, i) => {
   const f = path.join(dir, `${cat}-${u.id}.png`);
-  execFileSync('node', ['tools/render.mjs', '--cat', cat, '--id', u.id, '--view', view, '--w', String(cell), '--h', String(Math.round(cell * 0.66)), '--out', f], { stdio: 'ignore' });
+  const extra = args.damage ? ['--damage', 'true'] : [];
+  execFileSync('node', ['tools/render.mjs', '--cat', cat, '--id', u.id, '--view', view, '--w', String(cell), '--h', String(Math.round(cell * 0.66)), '--out', f, ...extra], { stdio: 'ignore' });
   files.push({ f, name: u.name });
 });
 const cw = cell, ch = Math.round(cell * 0.66);
