@@ -343,38 +343,342 @@ function vertexNoise(i, seed) {
 }
 
 /** Сетка пятна с рельефом: не плоская наклейка, а поверхность с объёмом. */
-function reliefGeometry(anchor, spec) {
-  const w = Math.max(0.12, anchor.w || 0.4);
-  const h = Math.max(0.1, anchor.h || 0.3);
-  const cols = Math.max(14, Math.min(40, Math.round(w * 46)));
-  const rows = Math.max(12, Math.min(40, Math.round(h * 46)));
-  const geo = new THREE.PlaneGeometry(w, h, cols, rows);
-  const pos = geo.attributes.position;
-  const uv = geo.attributes.uv;
-  const field = damageHeight(spec.kind, spec.seed);
-  const R = RELIEF[spec.kind] || RELIEF.dent;
-  let lo = Infinity;
-  let hi = -Infinity;
-  for (let i = 0; i < pos.count; i++) {
-    const x = Math.min(SIZE - 1, Math.max(0, Math.round(uv.getX(i) * (SIZE - 1))));
-    const y = Math.min(SIZE - 1, Math.max(0, Math.round(uv.getY(i) * (SIZE - 1))));
-    const t = field[y * SIZE + x];
-    let z;
-    if (R.mode === 'blister') {
-      // ржавчина вспучивается неровными буграми, местами язвами вниз
-      z = BASE_LIFT + R.bump * t * (0.25 + 1.1 * vertexNoise(i, spec.seed));
-    } else {
-      // вмятина/царапина: приподнятый вал по кромке рисунка
-      z = BASE_LIFT + R.bump * 4 * t * (1 - t);
-    }
-    pos.setZ(i, z);
-    if (z < lo) lo = z;
-    if (z > hi) hi = z;
+// ============================================================
+// НАСТОЯЩИЕ 3D-ПОВРЕЖДЕНИЯ.
+// Раньше пятно было плоскостью с нарисованной картинкой: издалека похоже,
+// вблизи — наклейка. Теперь каждый дефект — своя геометрия:
+//   • вмятина — воронка с валиком по кромке и трещинами ЛКП;
+//   • царапина — узкие канавки с блеском металла и тёмным дном;
+//   • ржавчина — вспученная неровная площадка с язвами и рваной кромкой;
+//   • трещина — колотая щель с приподнятыми краями.
+// Ни одной текстуры: только вершины, нормали и материал.
+// ============================================================
+
+/** Детерминированный ГПСЧ от семени. */
+function rngFrom(seed) {
+  let s = (seed * 2654435761) >>> 0;
+  return () => {
+    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+    return s / 4294967296;
+  };
+}
+
+/** Сборщик геометрии: вершины + индексы, нормали считаются в конце. */
+class GeoBuilder {
+  constructor() {
+    this.pos = [];
+    this.idx = [];
+    this.col = [];
   }
-  geo.computeVertexNormals();
-  geo.userData.relief = hi - lo;
+
+  /** Вершина с необязательным затемнением (0..1) — им рисуем глубину воронки. */
+  v(x, y, z, shade = 1) {
+    this.pos.push(x, y, z);
+    this.col.push(shade, shade, shade);
+    return this.pos.length / 3 - 1;
+  }
+
+  tri(a, b, c) {
+    this.idx.push(a, b, c);
+  }
+
+  quad(a, b, c, d) {
+    this.tri(a, b, c);
+    this.tri(a, c, d);
+  }
+
+  build() {
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(this.pos, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(this.col, 3));
+    g.setIndex(this.idx);
+    g.computeVertexNormals();
+    return g;
+  }
+}
+
+/** Полоска по ломаной: канавка царапины или щель трещины. */
+function ribbon(gb, path, width, depth, { z = 0.0016, taper = true } = {}) {
+  const n = path.length;
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    const p = path[i];
+    const prev = path[Math.max(0, i - 1)];
+    const next = path[Math.min(n - 1, i + 1)];
+    let tx = next[0] - prev[0];
+    let ty = next[1] - prev[1];
+    const len = Math.hypot(tx, ty) || 1;
+    tx /= len;
+    ty /= len;
+    const w = width * (taper ? 0.35 + 0.65 * Math.sin((Math.PI * (i + 0.5)) / n) : 1);
+    const nx = -ty * w * 0.5;
+    const ny = tx * w * 0.5;
+    // дно канавки чуть ниже кромки — блик по краям читает глубину
+    const d = depth * (i === 0 || i === n - 1 ? 0.15 : 1);
+    const a = gb.v(p[0] - nx, p[1] - ny, z);
+    const b = gb.v(p[0] + nx, p[1] + ny, z + d);
+    rows.push([a, b]);
+  }
+  for (let i = 0; i < n - 1; i++) {
+    const [a0, b0] = rows[i];
+    const [a1, b1] = rows[i + 1];
+    gb.quad(a0, b0, b1, a1);
+  }
+}
+
+/** Вмятина: продавленная панель — дно, подъём, гребень и тёмный залом. */
+function dentGeometry(w, h, spec) {
+  const rnd = rngFrom(spec.seed + 11);
+  const gb = new GeoBuilder();
+  const W = w * 0.84;
+  const H = h * 0.84;
+  const rim = 0.0016 + rnd() * 0.0012;
+  const seg = 40;
+  const wob = [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28];
+  // радиусы сгущаются к кромке: там валик и залом
+  const rings = [];
+  for (let i = 0; i <= 9; i++) rings.push((0.6 * i) / 9);
+  for (let i = 1; i <= 6; i++) rings.push(0.6 + (0.16 * i) / 6);
+  for (let i = 1; i <= 5; i++) rings.push(0.76 + (0.12 * i) / 5);
+  for (let i = 1; i <= 4; i++) rings.push(0.88 + (0.07 * i) / 4);
+  for (let i = 1; i <= 3; i++) rings.push(0.95 + (0.05 * i) / 3);
+
+  const prof = (r, a) => {
+    const edge = 1 + 0.05 * Math.sin(a * 3 + wob[0]) + 0.03 * Math.sin(a * 5 + wob[1]);
+    const t = r / edge;
+    const top = Math.max(0, Math.sin(a)); // верх вмятины в тени
+    let z;
+    let shade;
+    if (t <= 0.62) {
+      const k = t / 0.62;
+      z = 0.0007 + 0.0013 * Math.pow(k, 1.6);
+      shade = 0.66 + 0.24 * k - 0.2 * top * (1 - k * 0.6);
+    } else if (t <= 0.86) {
+      const k = (t - 0.62) / 0.24;
+      z = 0.002 + (rim - 0.002) * k * k;
+      shade = 0.9 + 0.12 * k;
+    } else if (t <= 0.94) {
+      const k = (t - 0.86) / 0.08;
+      z = rim * (1 - k * k);
+      shade = 1.02 - 0.6 * k; // залом: тёмная линия по кромке
+    } else {
+      const k = Math.min(1, (t - 0.94) / 0.06);
+      z = 0.0011 * (1 - k) + 0.0005;
+      shade = 0.42 + 0.42 * k;
+    }
+    z += (rnd() - 0.5) * 0.0003 * (1 - Math.min(1, t));
+    return [z, shade];
+  };
+
+  const idx = [];
+  for (let j = 0; j < rings.length; j++) {
+    const r = rings[j];
+    for (let i = 0; i < seg; i++) {
+      const a = (i / seg) * Math.PI * 2;
+      const cu = Math.cos(a) * r - (j ? 0 : 0);
+      const cv = Math.sin(a) * r;
+      const [z, sh] = prof(r, a);
+      idx.push(gb.v((cu * W) / 2, (cv * H) / 2, z, sh));
+    }
+  }
+  // центр отдельной вершиной — без вырожденных треугольников
+  const center = (() => {
+    const [z, sh] = prof(0, 0);
+    return gb.v(0, 0, z, sh);
+  })();
+  for (let i = 0; i < seg; i++) {
+    const a = idx[i];
+    const b = idx[(i + 1) % seg];
+    gb.tri(center, a, b);
+  }
+  for (let j = 0; j < rings.length - 1; j++) {
+    const rowA = j * seg;
+    const rowB = (j + 1) * seg;
+    for (let i = 0; i < seg; i++) {
+      const i2 = (i + 1) % seg;
+      gb.quad(idx[rowA + i], idx[rowA + i2], idx[rowB + i2], idx[rowB + i]);
+    }
+  }
+  // трещины лака от залома — тонкие канавки
+  const cracks = 2 + Math.floor(rnd() * 2);
+  for (let c = 0; c < cracks; c++) {
+    const ang = rnd() * Math.PI * 2;
+    const len = (0.22 + rnd() * 0.22) * Math.min(w, h);
+    const path = [];
+    let x = Math.cos(ang) * W * 0.3;
+    let y = Math.sin(ang) * H * 0.3;
+    for (let i = 0; i < 6; i++) {
+      path.push([x, y]);
+      x += (Math.cos(ang) * len) / 5 + (rnd() - 0.5) * 0.008;
+      y += (Math.sin(ang) * len) / 5 + (rnd() - 0.5) * 0.008;
+    }
+    ribbon(gb, path, 0.004, 0.0011, { z: 0.0014 });
+  }
+  return gb.build();
+}
+
+/** Царапина: несколько канавок разной длины и ширины. */
+function scratchGeometry(w, h, spec) {
+  const rnd = rngFrom(spec.seed + 23);
+  const gb = new GeoBuilder();
+  const lines = 2 + Math.floor(rnd() * 3);
+  const baseAng = (rnd() - 0.5) * 1.2;
+  for (let i = 0; i < lines; i++) {
+    const ang = baseAng + (rnd() - 0.5) * 0.55;
+    const spread = (rnd() - 0.5) * h * 0.5;
+    const len = (0.55 + rnd() * 0.45) * w;
+    const width = 0.004 + rnd() * 0.006;
+    const path = [];
+    const steps = 9;
+    for (let k = 0; k <= steps; k++) {
+      const t = k / steps - 0.5;
+      path.push([
+        Math.cos(ang) * len * t + (rnd() - 0.5) * 0.004,
+        Math.sin(ang) * len * t + spread + (rnd() - 0.5) * 0.004,
+      ]);
+    }
+    ribbon(gb, path, width, 0.0022 + rnd() * 0.0015, { z: 0.0018 });
+  }
+  return gb.build();
+}
+
+/** Ржавчина: вспученная площадка с язвами и рваной кромкой. */
+function rustGeometry(w, h, spec) {
+  const rnd = rngFrom(spec.seed + 37);
+  const gb = new GeoBuilder();
+  const W = w * 0.82;
+  const H = h * 0.82;
+  const seg = 44;
+  const ph = [rnd() * 6.28, rnd() * 6.28, rnd() * 6.28];
+  const rise = 0.0018 + rnd() * 0.0022;
+  const rings = [];
+  for (let i = 0; i <= 7; i++) rings.push((0.55 * i) / 7);
+  for (let i = 1; i <= 5; i++) rings.push(0.55 + (0.24 * i) / 5);
+  for (let i = 1; i <= 4; i++) rings.push(0.79 + (0.14 * i) / 4);
+  for (let i = 1; i <= 3; i++) rings.push(0.93 + (0.07 * i) / 3);
+
+  // ржавчина ползёт неровно: кромка из трёх гармоник
+  const edgeAt = (a) => 1
+    + 0.075 * Math.sin(3 * a + ph[0])
+    + 0.055 * Math.sin(5 * a + ph[1])
+    + 0.04 * Math.sin(9 * a + ph[2])
+    + 0.028 * Math.sin(15 * a + ph[0] * 2);
+
+  const prof = (t, a) => {
+    // вспучивание краски и язвы; к центру угловой шум гаснет, иначе «звезда»
+    const blister = 0.5 + 0.5 * Math.sin(a * 5 + ph[0] * 2) * Math.cos(t * 4 + ph[1]);
+    const speck = Math.sin(a * 9 + ph[2]) * t + Math.sin(t * 17 + ph[1]) * 0.6;
+    let z = 0.0011 + rise * blister * (1 - t * t * 0.6) + 0.0007 * speck * (1 - t);
+    let shade = 0.5 + 0.42 * t + 0.09 * speck;
+    if (t > 0.9) shade *= 0.72; // тёмная кромка, где краска облупилась
+    return [Math.max(0.0004, z), Math.max(0.3, Math.min(1.08, shade))];
+  };
+
+  const idx = [];
+  for (let j = 0; j < rings.length; j++) {
+    const r = rings[j];
+    for (let i = 0; i < seg; i++) {
+      const a = (i / seg) * Math.PI * 2;
+      const rr = r * edgeAt(a);
+      const [z, sh] = prof(r, a);
+      idx.push(gb.v((Math.cos(a) * rr * W) / 2, (Math.sin(a) * rr * H) / 2, z, sh));
+    }
+  }
+  const [z0, s0] = prof(0, 0);
+  const center = gb.v(0, 0, z0, s0 * 0.9);
+  for (let i = 0; i < seg; i++) gb.tri(center, idx[i], idx[(i + 1) % seg]);
+  for (let j = 0; j < rings.length - 1; j++) {
+    const rowA = j * seg;
+    const rowB = (j + 1) * seg;
+    for (let i = 0; i < seg; i++) {
+      const i2 = (i + 1) % seg;
+      gb.quad(idx[rowA + i], idx[rowA + i2], idx[rowB + i2], idx[rowB + i]);
+    }
+  }
+  return gb.build();
+}
+
+/** Трещина: колотая щель с приподнятыми краями. */
+function crackGeometry(w, h, spec) {
+  const rnd = rngFrom(spec.seed + 53);
+  const gb = new GeoBuilder();
+  const ang = (rnd() - 0.5) * 0.9;
+  const steps = 12;
+  const len = Math.max(w, h) * 0.92;
+  const main = [];
+  let x = -Math.cos(ang) * len * 0.5;
+  let y = -Math.sin(ang) * len * 0.5;
+  for (let i = 0; i <= steps; i++) {
+    main.push([x, y]);
+    x += (Math.cos(ang) * len) / steps + (rnd() - 0.5) * 0.016;
+    y += (Math.sin(ang) * len) / steps + (rnd() - 0.5) * 0.016;
+  }
+  ribbon(gb, main, 0.008, 0.004, { z: 0.0022 });
+  // боковые ответвления
+  for (let b = 0; b < 2; b++) {
+    const at = main[3 + Math.floor(rnd() * (steps - 6))];
+    const bang = ang + (b ? 1 : -1) * (0.6 + rnd() * 0.5);
+    const branch = [[at[0], at[1]]];
+    let bx = at[0];
+    let by = at[1];
+    for (let i = 0; i < 5; i++) {
+      bx += Math.cos(bang) * 0.03 + (rnd() - 0.5) * 0.008;
+      by += Math.sin(bang) * 0.03 + (rnd() - 0.5) * 0.008;
+      branch.push([bx, by]);
+    }
+    ribbon(gb, branch, 0.0045, 0.0025, { z: 0.002 });
+  }
+  return gb.build();
+}
+
+/** Геометрия дефекта по его спецификации. */
+export function damageGeometry(anchor, spec) {
+  const w = Math.max(0.16, anchor.w || 0.4);
+  const h = Math.max(0.14, anchor.h || 0.3);
+  const geo = spec.kind === 'scratch' ? scratchGeometry(w, h, spec)
+    : spec.kind === 'rust' ? rustGeometry(w, h, spec)
+      : spec.kind === 'crack' ? crackGeometry(w, h, spec)
+        : dentGeometry(w, h, spec);
   geo.userData.damageKind = spec.kind;
   return geo;
+}
+
+/** Материал дефекта: вмятина красится в цвет панели, остальное — своё. */
+export function damageMaterial3D(spec, baseMat = null) {
+  const base = Array.isArray(baseMat) ? baseMat[0] : baseMat;
+  const panelColor = base?.color ? base.color.clone() : new THREE.Color('#8d959c');
+  let mat;
+  if (spec.kind === 'dent') {
+    // панель продавлена: тот же цвет, чуть темнее в глубине воронки
+    mat = new THREE.MeshStandardMaterial({
+      color: panelColor.clone().multiplyScalar(1.0),
+      metalness: base?.metalness ?? 0.4,
+      roughness: Math.min(1, (base?.roughness ?? 0.35) * 1.2),
+      side: THREE.DoubleSide,
+      vertexColors: true,
+      flatShading: false,
+    });
+  } else if (spec.kind === 'scratch') {
+    mat = new THREE.MeshStandardMaterial({
+      color: 0xe8eef2, metalness: 0.95, roughness: 0.24, side: THREE.DoubleSide,
+      vertexColors: true,
+    });
+  } else if (spec.kind === 'rust') {
+    mat = new THREE.MeshStandardMaterial({
+      color: 0x6b3a1a, metalness: 0.16, roughness: 0.97, side: THREE.DoubleSide,
+      vertexColors: true,
+    });
+  } else {
+    mat = new THREE.MeshStandardMaterial({
+      color: 0x0b0e10, metalness: 0.55, roughness: 0.62, side: THREE.DoubleSide,
+      vertexColors: true,
+    });
+  }
+  mat.polygonOffset = true;
+  mat.polygonOffsetFactor = -2;
+  mat.polygonOffsetUnits = -2;
+  mat.userData.damageKind = spec.kind;
+  return mat;
 }
 
 // ------------------------------------------------------------ точки повреждения
@@ -479,10 +783,22 @@ function snapToSurface(root, a, normal, w, h) {
   const origin = new THREE.Vector3(...a.pos);
   const rc = new THREE.Raycaster();
   rc.far = 2.2;
-  const opaqueMesh = (hit) => hit.object.isMesh
-    && hit.object.visible !== false
-    && !hit.object.userData.damage
-    && hit.object.material?.transparent !== true;
+  // Панель — это сам кузов. Мелкие накладки (швы дверей, ниши, шильдики)
+  // и стекло панелью не считаются: иначе вмятина красится в цвет молдинга
+  // и получается чёрное пятно вместо продавленного металла.
+  const panelMesh = (hit) => {
+    const o = hit.object;
+    if (!o.isMesh || o.visible === false || o.userData.damage) return false;
+    if (o.userData.cutout || o.userData.decal) return false;
+    if (o.material?.transparent === true) return false;
+    if (o.material?.map) return false; // наклейка/надпись, а не панель
+    // хром и зеркальные накладки панелью не считаются: на них вмятина
+    // выглядела бы белым пятном
+    const m = o.material;
+    if (m && (m.metalness ?? 0) > 0.82 && m.color && m.color.getHSL({ h: 0, s: 0, l: 0 }).l > 0.78) return false;
+    return true;
+  };
+  const opaqueMesh = panelMesh;
   const cast = (dx, dy) => {
     const o = origin.clone()
       .addScaledVector(u, dx * w * 0.34)
@@ -551,7 +867,71 @@ function snapToSurface(root, a, normal, w, h) {
     normalWorld = hit.face.normal.clone().applyMatrix3(nm).normalize();
     if (normalWorld.dot(dirOut) < 0) normalWorld.negate();
   }
-  return { point, dist: hit.distance, normalWorld };
+  return { point, dist: hit.distance, normalWorld, object: hit.object };
+}
+
+/**
+ * Прижимает пятно к рельефу панели: плоскость на скруглённом крыле торчит
+ * «флажком», поэтому отклонения поверхности снимаем сеткой 7×7 и подмешиваем
+ * в z каждой вершины.
+ */
+function conformToSurface(root, patch, w, h) {
+  const geo = patch.geometry;
+  const pos = geo.attributes.position;
+  if (!pos) return;
+  patch.updateMatrixWorld(true);
+  const m = patch.matrixWorld;
+  const origin = new THREE.Vector3().setFromMatrixPosition(m);
+  const ax = new THREE.Vector3(1, 0, 0).transformDirection(m);
+  const ay = new THREE.Vector3(0, 1, 0).transformDirection(m);
+  const an = new THREE.Vector3(0, 0, 1).transformDirection(m);
+  const N = 7;
+  const rc = new THREE.Raycaster();
+  const grid = new Array(N * N).fill(null);
+  const probe = (u, v) => {
+    const o = origin.clone().addScaledVector(ax, u * w).addScaledVector(ay, v * h);
+    rc.set(o.clone().addScaledVector(an, 0.35), an.clone().negate());
+    rc.far = 0.7;
+    const hit = rc.intersectObject(root, true).find((x) => x.object.isMesh
+      && x.object.visible !== false
+      && !x.object.userData.damage
+      && x.object.material?.transparent !== true);
+    return hit ? 0.35 - hit.distance : null;
+  };
+  for (let j = 0; j < N; j++) {
+    for (let i = 0; i < N; i++) grid[j * N + i] = probe(i / (N - 1) - 0.5, j / (N - 1) - 0.5);
+  }
+  // дырки (луч мимо панели) заполняем средним — край не должен рваться
+  const got = grid.filter((v) => v !== null);
+  const fill = got.length ? got.reduce((a, b) => a + b, 0) / got.length : 0;
+  for (let k = 0; k < grid.length; k++) if (grid[k] === null) grid[k] = fill;
+  const sample = (u, v) => {
+    const fu = Math.min(N - 1, Math.max(0, (u + 0.5) * (N - 1)));
+    const fv = Math.min(N - 1, Math.max(0, (v + 0.5) * (N - 1)));
+    const i0 = Math.floor(fu);
+    const j0 = Math.floor(fv);
+    const i1 = Math.min(N - 1, i0 + 1);
+    const j1 = Math.min(N - 1, j0 + 1);
+    const tu = fu - i0;
+    const tv = fv - j0;
+    const g00 = grid[j0 * N + i0];
+    const g10 = grid[j0 * N + i1];
+    const g01 = grid[j1 * N + i0];
+    const g11 = grid[j1 * N + i1];
+    return (g00 * (1 - tu) + g10 * tu) * (1 - tv) + (g01 * (1 - tu) + g11 * tu) * tv;
+  };
+  for (let i = 0; i < pos.count; i++) {
+    const u = pos.getX(i) / w;
+    const v = pos.getY(i) / h;
+    const r = Math.hypot(u * 2, v * 2);
+    const dev = Math.max(-0.05, Math.min(0.05, sample(u, v)));
+    // у самой кромки отклонение гасим: пятно должно сойтись с панелью
+    const fade = r > 0.94 ? 0.35 : 1 - Math.max(0, r - 0.7) * 1.4;
+    pos.setZ(i, pos.getZ(i) + dev * Math.max(0, fade));
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  geo.computeBoundingSphere();
 }
 
 export function mountDamageSet(root, unit, anchors) {
@@ -559,7 +939,13 @@ export function mountDamageSet(root, unit, anchors) {
   g.visible = false;
   const list = anchors.map((a, i) => {
     const spec = damageSpecAt(unit, a.part, a.side || 0, i);
-    const patch = new THREE.Mesh(reliefGeometry(a, spec), damageMaterial(spec));
+    // вмятина — это продавленный металл кузова, значит её цвет = цвет краски
+    const paintBase = {
+      color: new THREE.Color(unit.paint || unit.color || '#8d959c'),
+      metalness: 0.42,
+      roughness: 0.34,
+    };
+    const patch = new THREE.Mesh(damageGeometry(a, spec), damageMaterial3D(spec, paintBase));
     patch.position.set(...a.pos);
     const rotY = a.rotY ?? (a.side ? (a.side > 0 ? HALF : -HALF) : 0);
     patch.rotation.set(a.rotX || 0, rotY, 0);
@@ -572,6 +958,11 @@ export function mountDamageSet(root, unit, anchors) {
       const local = root.worldToLocal(snap.point.clone());
       patch.position.copy(local);
       patch.userData.snap = snap.dist;
+      // у вмятины металл тот же, что у панели: подкрашиваем по её цвету
+      if (snap.object?.material && spec.kind === 'dent') {
+        patch.material.dispose?.();
+        patch.material = damageMaterial3D(spec, paintBase);
+      }
       if (snap.normalWorld && snap.normalWorld.dot(nWorld) > 0.72) {
         // лёгкий наклон по панели: на скруглённом борту пятно лежит, а не торчит
         const nLocal2 = snap.normalWorld.clone()
@@ -580,11 +971,13 @@ export function mountDamageSet(root, unit, anchors) {
         patch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), nLocal2);
       }
     }
+    if (snap) conformToSurface(root, patch, a.w || 0.4, a.h || 0.3);
     patch.userData.anchor = a.pos.slice();
     patch.name = `damage-patch:${i}`;
     patch.userData.damage = true;
     patch.userData.kind = spec.kind;
     patch.userData.label = spec.label;
+    patch.userData.takesPaint = spec.kind === 'dent';
     // пятно видимо само по себе, но группа скрыта: так работает и общий
     // тумблер, и поштучное добавление (app гасит ненужные пятна)
     g.add(patch);

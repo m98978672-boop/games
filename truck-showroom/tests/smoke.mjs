@@ -153,13 +153,16 @@ for (const unit of allUnits()) {
     let flatPatch = 0;
     for (const item of dmg.list) {
       const patch = item.patch;
-      if (!patch.material?.map) badPatch += 1;
-      if (patch.material.transparent !== true || patch.material.depthWrite !== false) badPatch += 1;
+      const mat = patch.material;
+      // дефект — это ГЕОМЕТРИЯ, а не наклейка: ни картинки, ни прозрачности
+      if (mat.map) badPatch += 1;
+      if (!mat.color) badPatch += 1;
+      if (mat.transparent === true) badPatch += 1;
       const bb = new THREE.Box3().setFromObject(patch).getSize(new THREE.Vector3());
       if (!(Math.max(bb.x, bb.y, bb.z) > 0.1)) badPatch += 1;
-      // пятно должно быть ОБЪЁМНЫМ: сетка с рельефом и нормал-карта,
-      // иначе получается плоская наклейка, как раньше
+      // объём: у сетки есть и подъём, и спад относительно панели
       const pos = patch.geometry.attributes.position;
+      const nor = patch.geometry.attributes.normal;
       let lo = Infinity;
       let hi = -Infinity;
       for (let i = 0; i < pos.count; i++) {
@@ -168,12 +171,10 @@ for (const unit of allUnits()) {
         if (z > hi) hi = z;
       }
       const relief = hi - lo;
-      const ns = patch.material.normalScale;
-      if (!(relief > 0.002) || !(pos.count > 150)) flatPatch += 1;
-      if (!patch.material.normalMap || !ns || !(ns.y > 0.5)) flatPatch += 1;
+      if (!(relief > 0.0015) || pos.count < 36 || !nor) flatPatch += 1;
     }
     ok(badPatch === 0, `${unit.id}: все пятна с текстурой, накладкой и не вырождены${badPatch ? ' — ' + badPatch : ''}`);
-    ok(flatPatch === 0, `${unit.id}: пятна объёмные — рельеф и нормал-карта${flatPatch ? ' — ' + flatPatch : ''}`);
+    ok(flatPatch === 0, `${unit.id}: дефекты — объёмная геометрия с нормалями${flatPatch ? ' — ' + flatPatch : ''}`);
     // каждое пятно управляется отдельно: группа скрыта, меши адресуемы по индексу
     ok(dmg.list.every((it, i) => it.patch.name === `damage-patch:${i}` && it.patch.userData.kind === it.spec.kind),
       `${unit.id}: каждое пятно адресуется по индексу`);
@@ -427,7 +428,8 @@ for (const unit of TRAILERS) {
     if (!o.isMesh) return;
     const mat = o.material;
     box3.setFromObject(o);
-    if (mat?.vertexColors) {
+    // у повреждений тоже есть вершинные цвета — это не полоса
+    if (mat?.vertexColors && !o.userData.damage) {
       stripeCount += 1;
       // полоса должна быть у борта, а не в середине кузова и не под землёй
       if (Math.abs(box3.max.x) > W / 2 - 0.25 || Math.abs(box3.min.x) > W / 2 - 0.25) stripeOutside += 1;

@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0b0d0c">
-  <meta name="description" content="ГАРАЖ 3D — интерактивный 3D-шоурум: 10 тягачей, 20 полуприцепов, 10 автомобилей и 24 здания с четырьмя фасадами. Осмотр снаружи и изнутри, живой салон, покраска и повреждения. Работает офлайн.">
+  <meta name="description" content="ГАРАЖ 3D — интерактивный 3D-шоурум: 10 тягачей, 20 полуприцепов, 10 автомобилей и 24 здания с четырьмя фасадами. Осмотр снаружи и изнутри, живой салон, покраска и объёмные повреждения. Работает офлайн.">
   <title>ГАРАЖ 3D — шоурум тягачей, прицепов, автомобилей и зданий</title>
-  <link rel="stylesheet" href="style.css?v=1.9.0">
+  <link rel="stylesheet" href="style.css?v=2.0.0">
 </head>
 <body>
 <div class="app">
@@ -25,16 +25,16 @@
           <span class="ico">🗂</span><b>Модель</b><i id="catalog-count">10</i>
         </button>
         <!-- меню выбора модели: категории живут здесь, а не в нижней панели -->
-        <div class="hud-pop hud-pop-menu panel-catalog hidden" id="panel-catalog" aria-label="Каталог экспонатов">
+        <div class="hud-pop panel-catalog hidden" id="panel-catalog" aria-label="Каталог экспонатов">
           <div class="pop-head">
-            <span class="eyebrow">ВЫБОР МОДЕЛИ</span>
+            <span class="t">Выбор модели</span>
             <button class="icon-btn" id="catalog-close" aria-label="Закрыть меню моделей">✕</button>
           </div>
           <div class="cat-tabs" role="tablist" aria-label="Категории">
-            <button class="cat-tab active" data-cat="trucks" role="tab" aria-selected="true"><span>🚛</span><b>ТЯГАЧИ</b><i>10</i></button>
-            <button class="cat-tab" data-cat="trailers" role="tab" aria-selected="false"><span>📦</span><b>ПРИЦЕПЫ</b><i>20</i></button>
-            <button class="cat-tab" data-cat="cars" role="tab" aria-selected="false"><span>🚗</span><b>АВТО</b><i>10</i></button>
-            <button class="cat-tab" data-cat="buildings" role="tab" aria-selected="false"><span>🏢</span><b>ЗДАНИЯ</b><i>24</i></button>
+            <button class="cat-tab active" data-cat="trucks" role="tab" aria-selected="true"><span>🚛</span><b>Тягачи</b><i>10</i></button>
+            <button class="cat-tab" data-cat="trailers" role="tab" aria-selected="false"><span>📦</span><b>Прицепы</b><i>20</i></button>
+            <button class="cat-tab" data-cat="cars" role="tab" aria-selected="false"><span>🚗</span><b>Авто</b><i>10</i></button>
+            <button class="cat-tab" data-cat="buildings" role="tab" aria-selected="false"><span>🏢</span><b>Здания</b><i>24</i></button>
           </div>
           <label class="search">
             <span>🔍</span>
@@ -44,7 +44,7 @@
           <div class="unit-list" id="unit-list" role="listbox" aria-label="Модели"></div>
           <div class="drawer-foot">
             <button class="ghost-btn" id="fav-filter" title="Показать только избранное">★ Избранное</button>
-            <button class="ghost-btn" id="damage-btn-2" title="Показать все повреждения (X)">✷ Повреждения</button>
+            <button class="ghost-btn" id="damage-btn-2" title="Показать все повреждения (X)">✷ Все дефекты</button>
             <button class="ghost-btn" id="compare-btn" title="Поставить рядом соседнюю модель">⇄ Сравнить</button>
           </div>
         </div>
@@ -52,17 +52,16 @@
 
       <div class="hud-pop-wrap">
         <button class="hud-btn" id="menu-view-btn" aria-expanded="false" aria-controls="menu-view">
-          <span class="ico">📷</span><b>Ракурсы</b>
+          <span class="ico">🎥</span><b>Ракурсы</b>
         </button>
-        <!-- меню ракурсов: вперёд/назад/борт/салон -->
         <div class="hud-pop hidden" id="menu-view">
-          <span class="eyebrow">РАКУРСЫ</span>
-          <div class="pop-row pop-row-wrap" id="menu-view-row"></div>
-          <div class="pop-row">
-            <button class="chip" id="menu-inside">Внутрь</button>
-            <button class="chip" id="menu-outside">Наружу</button>
-            <button class="chip" id="menu-orbit">⟳ Вращение</button>
-            <button class="chip" id="menu-reset">⌖ Сброс</button>
+          <div class="pop-head"><span class="t">Ракурсы</span></div>
+          <div class="pop-sec" id="menu-view-row"></div>
+          <div class="pop-sec" id="menu-view-actions">
+            <button class="pop-item" id="menu-inside"><span class="i">🧑‍✈️</span><span class="n">Сесть внутрь</span><span class="h">I</span></button>
+            <button class="pop-item" id="menu-outside"><span class="i">🌐</span><span class="n">Выйти наружу</span><span class="h">0</span></button>
+            <button class="pop-item" id="menu-orbit"><span class="i">⟳</span><span class="n">Автовращение</span><span class="h">Пробел</span></button>
+            <button class="pop-item" id="menu-reset"><span class="i">⌖</span><span class="n">Сбросить камеру</span><span class="h">Ctrl</span></button>
           </div>
         </div>
       </div>
@@ -71,26 +70,30 @@
         <button class="hud-btn" id="menu-damage-btn" aria-expanded="false" aria-controls="menu-damage">
           <span class="ico">✷</span><b>Повреждения</b><i id="damage-count-2">0 / 15</i>
         </button>
-        <!-- меню повреждений: сначала тип, потом место -->
         <div class="hud-pop hud-pop-wide hidden" id="menu-damage">
           <div class="pop-head">
-            <span class="eyebrow">ТИП ПОВРЕЖДЕНИЯ</span>
+            <span class="t">Повреждения</span>
             <span class="mini" id="damage-menu-count">0 / 15</span>
           </div>
-          <div class="pop-row pop-row-wrap" id="damage-type-row">
-            <button class="chip dmg-type" data-kind="any">Любое</button>
-            <button class="chip dmg-type" data-kind="dent">Вмятина</button>
-            <button class="chip dmg-type" data-kind="scratch">Царапина</button>
-            <button class="chip dmg-type" data-kind="rust">Ржавчина</button>
-            <button class="chip dmg-type" data-kind="crack">Трещина</button>
+          <div class="pop-sec">
+            <div class="pop-sec-t">Тип дефекта</div>
+            <div class="pop-row" id="damage-type-row">
+              <button class="pop-item dmg-type" data-kind="any"><span class="i dot any"></span><span class="n">Любое</span></button>
+              <button class="pop-item dmg-type" data-kind="dent"><span class="i dot dent"></span><span class="n">Вмятина</span></button>
+              <button class="pop-item dmg-type" data-kind="scratch"><span class="i dot scratch"></span><span class="n">Царапина</span></button>
+              <button class="pop-item dmg-type" data-kind="rust"><span class="i dot rust"></span><span class="n">Ржавчина</span></button>
+              <button class="pop-item dmg-type" data-kind="crack"><span class="i dot crack"></span><span class="n">Трещина</span></button>
+            </div>
           </div>
-          <span class="eyebrow">МЕСТО</span>
-          <div class="dmg-place-list" id="dmg-place-list"></div>
-          <div class="pop-row">
-            <button class="chip" id="damage-all">✷ Все пятна</button>
-            <button class="chip" id="damage-clear">✕ Убрать все</button>
+          <div class="pop-sec">
+            <div class="pop-sec-t">Место на кузове</div>
+            <div class="dmg-place-list" id="dmg-place-list"></div>
           </div>
-          <p class="mini pop-note" id="damage-note">Выбери тип — пятно появится на свободной детали. Потом можно ткнуть в конкретное место.</p>
+          <div class="pop-sec">
+            <button class="pop-item" id="damage-all"><span class="i">✷</span><span class="n">Показать все дефекты</span><span class="h">X</span></button>
+            <button class="pop-item" id="damage-clear"><span class="i">✕</span><span class="n">Убрать все</span></button>
+          </div>
+          <p class="pop-note" id="damage-note">Выбери тип — дефект появится на свободной детали. Или ткни в конкретное место.</p>
         </div>
       </div>
 
@@ -99,12 +102,12 @@
           <span class="ico">☀</span><b>Свет</b>
         </button>
         <div class="hud-pop hidden" id="light-pop">
-          <span class="eyebrow">СХЕМА ОСВЕЩЕНИЯ</span>
-          <div class="pop-row" id="dock-env">
-            <button class="chip active" data-preset="studio">Студия</button>
-            <button class="chip" data-preset="dark">Ночь</button>
-            <button class="chip" data-preset="show">Выставка</button>
-            <button class="chip" data-preset="garage">Гараж</button>
+          <div class="pop-head"><span class="t">Схема освещения</span></div>
+          <div class="pop-sec" id="dock-env">
+            <button class="pop-item" data-preset="studio"><span class="i">☀</span><span class="n">Студия</span></button>
+            <button class="pop-item" data-preset="dark"><span class="i">☾</span><span class="n">Ночь</span></button>
+            <button class="pop-item" data-preset="show"><span class="i">✦</span><span class="n">Выставка</span></button>
+            <button class="pop-item" data-preset="garage"><span class="i">⚙</span><span class="n">Гараж</span></button>
           </div>
         </div>
       </div>
@@ -114,17 +117,16 @@
           <span class="ico">⋯</span>
         </button>
         <div class="hud-pop hidden" id="menu-more">
-          <span class="eyebrow">ЕЩЁ</span>
-          <div class="pop-row pop-row-wrap">
-            <button class="chip" id="random-btn" title="Случайная модель (R)">🎲 Случайная</button>
-            <button class="chip" id="shot-btn" title="Скриншот (C)">📷 Скриншот</button>
-            <button class="chip" id="full-btn" title="Полный экран (F)">⛶ Экран</button>
-            <button class="chip" id="compare-btn-3" title="Сравнить с соседней моделью">⇄ Сравнить</button>
-            <button class="chip" id="help-btn" title="Управление (H)">? Справка</button>
+          <div class="pop-head"><span class="t">Ещё</span></div>
+          <div class="pop-sec">
+            <button class="pop-item" id="random-btn"><span class="i">🎲</span><span class="n">Случайная модель</span><span class="h">R</span></button>
+            <button class="pop-item" id="shot-btn"><span class="i">📷</span><span class="n">Скриншот сцены</span><span class="h">C</span></button>
+            <button class="pop-item" id="full-btn"><span class="i">⛶</span><span class="n">Полный экран</span><span class="h">F</span></button>
+            <button class="pop-item" id="compare-btn-3"><span class="i">⇄</span><span class="n">Сравнить с соседней</span></button>
           </div>
-          <span class="eyebrow">КАРТОЧКА</span>
-          <div class="pop-row">
-            <button class="chip" id="details-toggle" aria-expanded="false" aria-controls="panel-details">ⓘ Открыть карточку</button>
+          <div class="pop-sec">
+            <button class="pop-item" id="help-btn"><span class="i">?</span><span class="n">Справка</span><span class="h">H</span></button>
+            <button class="pop-item" id="details-toggle" aria-expanded="false" aria-controls="panel-details"><span class="i">ⓘ</span><span class="n">Карточка модели</span><span class="h">Esc → ✕</span></button>
           </div>
         </div>
       </div>
@@ -148,18 +150,18 @@
       </div>
     </div>
 
-    <!-- виды камеры: чипы внизу слева -->
-    <div class="dock" id="dock-views-wrap">
-      <div class="dock-views" id="dock-views"></div>
-    </div>
-
-    <!-- инструменты вьюпорта: столбик справа -->
-    <div class="stage-actions">
+    <!-- инструменты камеры: полоса под бейджами справа сверху -->
+    <div class="stage-actions" id="stage-actions">
       <button class="round-btn active" id="orbit-btn" title="Автовращение (Пробел)" aria-label="Автовращение">⟳</button>
       <button class="round-btn" id="reset-btn" title="Сбросить камеру (0)" aria-label="Сбросить камеру">⌖</button>
       <button class="round-btn" id="look-btn" title="Сесть в салон / взгляд вперёд" aria-label="В салон">👁</button>
       <button class="round-btn" id="damage-btn" title="Показать все повреждения (X)" aria-label="Повреждение">✷</button>
       <button class="round-btn" id="compare-btn-2" title="Сравнить с соседней моделью" aria-label="Сравнить">⇄</button>
+    </div>
+
+    <!-- виды камеры: чипы внизу слева -->
+    <div class="dock" id="dock-views-wrap">
+      <div class="dock-views" id="dock-views"></div>
     </div>
 
     <!-- навигация камерой: как в 3D-редакторе, но кнопками, мышью и пальцем -->
@@ -208,7 +210,7 @@
       <button class="nav-arrow" id="next-btn" title="Следующая модель" aria-label="Следующая">›</button>
     </div>
 
-    <div class="foot-note">64 модели · 10 / 20 / 10 / 24 · <span title="Версия сборки">v1.9</span> · <a href="../index.html">все игры</a></div>
+    <div class="foot-note">64 модели · 10 / 20 / 10 / 24 · <span title="Версия сборки">v2.1</span> · <a href="../index.html">все игры</a></div>
   </footer>
 </div>
 
@@ -271,9 +273,9 @@
     <div class="help-grid">
       <div><b>Мышь</b><span>ЛКМ — вращать вокруг машины, колесо — приблизить <i>к курсору</i>, ПКМ — сдвинуть сцену.</span></div>
       <div><b>Клик по детали</b><span>Наводит камеру на узел и подписывает его: «Сцепной шкворень», «Главный вход»… Двойной клик — в салон.</span></div>
-      <div><b>Меню «Модель»</b><span>Категории и список моделей. Категории живут здесь: техника, прицепы, авто и здания. <kbd>←</kbd> <kbd>→</kbd> листают без меню.</span></div>
-      <div><b>Меню «Ракурсы»</b><span>Все виды разом: снаружи, борт, сзади, спереди, в кабине, в салоне, спальник — и кнопки «Внутрь/Наружу».</span></div>
-      <div><b>Меню «Повреждения»</b><span>Сначала тип дефекта — вмятина, царапина, ржавчина, трещина, — пятно появляется на свободной детали. Потом можно выбрать конкретное место списком. Каждый дефект описан словами: деталь, вид, серьёзность и что с ним делать.</span></div>
+      <div><b>Меню «Модель»</b><span>Категории и список моделей. Категории живут здесь: тягачи, прицепы, авто и здания. <kbd>←</kbd> <kbd>→</kbd> листают без меню.</span></div>
+      <div><b>Меню «Ракурсы»</b><span>Все виды списком: снаружи, борт, сзади, спереди, в кабине, в салоне, спальник — и «Внутрь / Наружу».</span></div>
+      <div><b>Меню «Повреждения»</b><span>Сначала тип дефекта — вмятина, царапина, ржавчина, трещина, — дефект появляется на свободной детали. Потом можно выбрать конкретное место. Каждый дефект описан словами: деталь, вид, серьёзность и что с ним делать.</span></div>
       <div><b>Навпад</b><span>Кнопки в правом нижнем углу: стрелки вращают камеру, <kbd>+</kbd>/<kbd>−</kbd> приближают, <kbd>⌂</kbd> возвращает вид. Удержание — непрерывное движение.</span></div>
       <div><b>Полёт камеры</b><span><kbd>W</kbd> — вперёд, <kbd>S</kbd> — назад, <kbd>A</kbd> — влево, <kbd>D</kbd> — вправо, <kbd>Q</kbd>/<kbd>E</kbd> — ниже/выше, <kbd>Shift</kbd> — ускорение. <kbd>Ctrl</kbd> — вернуть камеру в исходное положение вида.</span></div>
       <div><b>Сенсор</b><span>Один палец — вращать, два — зум и сдвиг, свайп — другая модель, двойной тап — в салон.</span></div>
@@ -283,6 +285,6 @@
   </div>
 </div>
 
-<script defer src="showroom.bundle.js?v=1.9.0"></script>
+<script defer src="showroom.bundle.js?v=2.0.0"></script>
 </body>
 </html>

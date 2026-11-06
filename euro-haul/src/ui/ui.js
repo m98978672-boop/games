@@ -3,6 +3,8 @@ import { COUNTRIES, CITY_BY_ID, CITIES } from '../data/cities.js';
 import { project as geoProject } from '../world/geo.js';
 import GEO from '../data/europe-geo.json';
 import { TRUCK_MODELS, PAINT_COLORS, UPGRADES, SKILLS, levelForXp } from '../data/trucks.js';
+import { lookFor } from '../world/truck-look.js';
+import { TRAILERS } from '../data/cargo.js';
 import { ACHIEVEMENTS } from '../data/achievements.js';
 import { fmt, fmtMoney, fmtDuration, fmtTime, clamp, fmtDistance } from '../core/math.js';
 import { skillPrice } from '../core/save.js';
@@ -22,7 +24,23 @@ const cityWord = (n) => plural(n, 'город', 'города', 'городов'
 const countryWord = (n) => plural(n, 'стране', 'странах', 'странах');
 const COUNTRY_TOTAL = Object.keys(COUNTRIES).length;
 
-export function truckSvg(color = '#2f7fa8', trailer = true) {
+/**
+ * Силуэт тягача для карточек автосалона. Рисуется по профилю внешности модели:
+ * высота спальника, обтекатель, число задних мостов и цвет бампера — так
+ * карточки разных тягачей не выглядят одной картинкой.
+ */
+export function truckSvg(color = '#2f7fa8', trailer = true, look = null) {
+  const roof = look?.roof || 'high';
+  const pod = roof === 'mega' ? 12 : roof === 'high' ? 7 : 0;
+  const deflector = look?.deflector && look.deflector !== 'none';
+  const secondAxle = (look?.rearAxles || 1) === 2;
+  const bumper = look?.bumper === 'chrome' ? '#c9d2d6' : look?.bumper === 'steel' ? '#4a5257' : color;
+  const led = !!look?.led;
+  const roofTop = 28 - pod;
+  const axles = secondAxle
+    ? `<circle cx="186" cy="88" r="11" fill="#1d2225"/><circle cx="186" cy="88" r="4.5" fill="#aab2b6"/>
+       <circle cx="164" cy="88" r="11" fill="#1d2225"/><circle cx="164" cy="88" r="4.5" fill="#aab2b6"/>`
+    : `<circle cx="180" cy="88" r="11" fill="#1d2225"/><circle cx="180" cy="88" r="4.5" fill="#aab2b6"/>`;
   return `<svg class="truck-svg" viewBox="0 0 260 110" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
     <ellipse cx="130" cy="101" rx="118" ry="6" fill="rgba(0,0,0,.35)"/>
     ${trailer ? `<rect x="6" y="30" width="118" height="52" rx="4" fill="#e7e2d4" stroke="#b9b3a4"/>
@@ -31,14 +49,17 @@ export function truckSvg(color = '#2f7fa8', trailer = true) {
     <circle cx="28" cy="88" r="10" fill="#1d2225"/><circle cx="28" cy="88" r="4" fill="#aab2b6"/>
     <circle cx="52" cy="88" r="10" fill="#1d2225"/><circle cx="52" cy="88" r="4" fill="#aab2b6"/>
     <circle cx="104" cy="88" r="10" fill="#1d2225"/><circle cx="104" cy="88" r="4" fill="#aab2b6"/>` : ''}
-    <path d="M126 32 h44 l10 10 h30 a6 6 0 0 1 6 6 v40 h-90 z" fill="${color}" stroke="rgba(0,0,0,.25)"/>
-    <path d="M172 38 l9 8 h-9 z" fill="#9fd0e0" opacity=".9"/>
-    <rect x="176" y="48" width="32" height="18" rx="2" fill="#9fd0e0" opacity=".75"/>
+    ${deflector ? `<path d="M126 ${roofTop} h58 l6 6 h-64 z" fill="${color}" opacity=".85"/>` : ''}
+    <path d="M126 ${roofTop + 4} h${roof === 'mega' ? 64 : 58} l10 8 h${roof === 'mega' ? 24 : 30} a6 6 0 0 1 6 6 v${roof === 'mega' ? 34 : 40} h-${roof === 'mega' ? 104 : 98} z" fill="${color}" stroke="rgba(0,0,0,.25)"/>
+    <path d="M${roof === 'mega' ? 178 : 172} 38 l9 8 h-9 z" fill="#9fd0e0" opacity=".9"/>
+    <rect x="${roof === 'mega' ? 182 : 176}" y="48" width="32" height="18" rx="2" fill="#9fd0e0" opacity=".75"/>
+    ${led ? `<rect x="196" y="69" width="22" height="3" rx="1" fill="#dff3ff"/>` : ''}
     <rect x="126" y="74" width="90" height="8" fill="rgba(0,0,0,.22)"/>
+    <rect x="200" y="60" width="20" height="7" rx="1" fill="${bumper}"/>
     <rect x="206" y="60" width="12" height="5" rx="1" fill="#ffe9a8"/>
     <circle cx="142" cy="88" r="11" fill="#1d2225"/><circle cx="142" cy="88" r="4.5" fill="#aab2b6"/>
-    <circle cx="198" cy="88" r="11" fill="#1d2225"/><circle cx="198" cy="88" r="4.5" fill="#aab2b6"/>
-    <circle cx="222" cy="88" r="11" fill="#1d2225"/><circle cx="222" cy="88" r="4.5" fill="#aab2b6"/>
+    ${axles}
+    <circle cx="${secondAxle ? 212 : 222}" cy="88" r="11" fill="#1d2225"/><circle cx="${secondAxle ? 212 : 222}" cy="88" r="4.5" fill="#aab2b6"/>
   </svg>`;
 }
 
@@ -378,6 +399,10 @@ export class UI {
         break;
       case 'free-drive-select': {
         const v = document.querySelector('[data-select="mapcity"]')?.value;
+        // Прицеп выбирается здесь же и запоминается в профиле: в свободной
+        // поездке можно прокатиться на любой модели, а не только на тенте.
+        const tr = document.querySelector('[data-select="maptrailer"]')?.value;
+        if (tr && g.profile?.truck) g.profile.truck.trailer = tr;
         if (v) g.freeDrive(v);
         break;
       }
@@ -932,8 +957,9 @@ export class UI {
               <div class="card-route">${model.name}</div>
               ${owned ? '<span class="pill good">Ваш</span>' : locked ? `<span class="pill bad">${model.level} ур.</span>` : model.used ? '<span class="pill warn">Б/У</span>' : ''}
             </div>
-            ${truckSvg('#' + hexStr(model.color), false)}
+            ${truckSvg('#' + hexStr(model.color), false, lookFor(model.id))}
             <p style="font-size:12px;color:var(--muted);margin:0">${model.desc}</p>
+            <p class="card-spec">${lookFor(model.id).title}</p>
             <div class="card-stats">
               <div><small>МОЩНОСТЬ</small><b>${model.hp} л.с.</b></div>
               <div><small>БАК</small><b>${model.tank} л</b></div>
@@ -1003,6 +1029,9 @@ export class UI {
     return `
       <div class="section-title"><div><h2>Карта Европы</h2><p class="sub">${CITIES.length} ${cityWord(CITIES.length)} в ${COUNTRY_TOTAL} ${countryWord(COUNTRY_TOTAL)}. Зелёным — текущий маршрут.</p></div>
       <div class="range-row"><select data-select="mapcity" style="background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:9px;font-family:inherit">${options}</select>
+      <select data-select="maptrailer" title="Прицеп для свободной поездки" style="background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:9px;font-family:inherit">
+        ${Object.entries(TRAILERS).map(([id, t]) => `<option value="${id}"${p?.truck?.trailer === id ? ' selected' : ''}>${t.short}</option>`).join('')}
+      </select>
       <button class="btn btn-sm" data-act="free-drive-select">Свободная поездка</button></div></div>
       <div class="map-wrap">
         <canvas id="map-canvas" width="1200" height="860"></canvas>
