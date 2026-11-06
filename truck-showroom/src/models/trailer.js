@@ -8,7 +8,7 @@ import {
   wheel as makeWheel, mirror, labelTexture, plateTexture, clamp, rad,
   accentLine, brandDecalMaterial,
 } from '../lib/kit.js';
-import { mountDamage, damageSpecFor } from '../lib/damage.js';
+import { mountDamageSet } from '../lib/damage.js';
 import { buildCar } from './car.js';
 
 const DECK = 1.25;
@@ -233,6 +233,12 @@ export function buildTrailer(unit, M) {
       for (const side of [-1, 1]) {
         fender(root, side * (track + 0.17), R, z, R + 0.13, 0.86, M.plastic);
       }
+    } else {
+      // одиночные колёса (роспуск, катер) тоже получают крыло — раньше
+      // у них над шинами ничего не было
+      for (const side of [-1, 1]) {
+        fender(root, side * track, R, z, R + 0.12, 0.46, M.plastic);
+      }
     }
   }
   // брызговики за последней осью
@@ -362,32 +368,79 @@ export function buildTrailer(unit, M) {
     }
   }
 
-  // ------------------------------------------------ повреждение
-  // у каждого типа своя площадка: борт кузова, кормовой щит или настил
-  const CLOSED_SIDE = ['curtain', 'van', 'reefer', 'tipper', 'livestock', 'container', 'refcontainer', 'bdouble', 'sidetip'];
+  // ------------------------------------------------ повреждения: 15 точек
+  // Место пятна зависит от типа: у закрытых кузовов — борта, двери, крыша
+  // и юбки, у цистерн — только рама и кормовые щиты (борт круглый),
+  // у открытых платформ — настил, рама и крылья.
+  const CLOSED_SIDE = ['curtain', 'van', 'reefer', 'tipper', 'livestock', 'container', 'refcontainer', 'bdouble', 'carrier', 'sidetip'];
   const ROUND_SIDE = ['tanker', 'adr', 'silo'];
-  const dpart = { name: CLOSED_SIDE.includes(type) ? 'борт кузова' : 'настил платформы', gender: 'm' };
-  const dspec = damageSpecFor({ ...unit, category: 'trailers' }, dpart);
-  let dAnchor;
-  if (CLOSED_SIDE.includes(type)) {
-    dAnchor = {
-      pos: [dspec.side * (W / 2 + 0.05), deckY + (type === 'tipper' ? 0.95 : 1.05), zFront + 1.55],
-      w: 0.86, h: 0.6, part: dpart,
-    };
-  } else if (ROUND_SIDE.includes(type)) {
-    // у цистерн/силоса борт круглый — пятно кладём на кормовой щит
-    dAnchor = { pos: [dspec.side * 0.55, deckY - 0.15, zRear - 0.12], rotY: 0, w: 0.62, h: 0.44, part: { name: 'кормовой щит', gender: 'm' } };
-  } else if (type === 'boat') {
-    dAnchor = { pos: [dspec.side * (W / 2 + 0.03), deckY - 0.5, 0.2], w: 0.5, h: 0.34, part: { name: 'борт корпуса', gender: 'm' } };
+  const closed = CLOSED_SIDE.includes(type);
+  const round = ROUND_SIDE.includes(type);
+  const bodyH = type === 'tipper' ? 0.95 : 1.05;
+  const deckTo = (type === 'dolly' ? DECK : deckY) + 0.015;
+  const xSide = W / 2 + 0.05;
+  const pant = (name, gender, side) => ({ name, gender });
+  const sideParts = ['борт кузова', 'борт кузова', 'борт кузова', 'борт кузова', 'борт кузова', 'борт кузова'];
+  let danchors;
+  if (closed) {
+    danchors = [
+      { part: { name: 'борт кузова', gender: 'm' }, side: -1, pos: [-xSide, deckY + bodyH, zFront + 2.4], w: 0.82, h: 0.58 },
+      { part: { name: 'борт кузова', gender: 'm' }, side: 1, pos: [xSide, deckY + bodyH, zFront + 2.4], w: 0.82, h: 0.58 },
+      { part: { name: 'борт кузова', gender: 'm' }, side: -1, pos: [-xSide, deckY + bodyH - 0.5, 0], w: 0.86, h: 0.5 },
+      { part: { name: 'борт кузова', gender: 'm' }, side: 1, pos: [xSide, deckY + bodyH + 0.35, 0], w: 0.86, h: 0.5 },
+      { part: { name: 'борт кузова', gender: 'm' }, side: -1, pos: [-xSide, deckY + bodyH + 0.3, zRear - 3.2], w: 0.8, h: 0.52 },
+      { part: { name: 'борт кузова', gender: 'm' }, side: 1, pos: [xSide, deckY + bodyH - 0.45, zRear - 3.2], w: 0.8, h: 0.52 },
+      { part: { name: 'задняя дверь', gender: 'f' }, side: 1, rotY: 0, pos: [0.62, deckY + 1.15, zRear + 0.04], w: 0.66, h: 0.8 },
+      { part: { name: 'передняя стенка', gender: 'f' }, side: -1, rotY: PI, pos: [-0.55, deckY + 1.2, zFront - 0.04], w: 0.66, h: 0.8 },
+      { part: { name: 'крыша', gender: 'f' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.4, deckY + H + 0.03, -0.6], w: 0.9, h: 0.7 },
+      { part: { name: 'юбка', gender: 'f' }, side: -1, pos: [-(W / 2 - 0.01), 0.84, firstAxle - 2.4], w: 0.5, h: 0.4 },
+      { part: { name: 'юбка', gender: 'f' }, side: 1, pos: [W / 2 - 0.01, 0.84, firstAxle - 2.4], w: 0.5, h: 0.4 },
+      { part: { name: 'задний отбойник', gender: 'm' }, side: 1, rotY: 0, pos: [0.5, 0.64, zRear - 0.04], w: 0.5, h: 0.16 },
+      { part: { name: 'задний фонарь', gender: 'm' }, side: -1, rotY: 0, pos: [-(W / 2 - 0.33), deckY - 0.56, zRear - 0.04], w: 0.34, h: 0.3 },
+      { part: { name: 'ящик', gender: 'm' }, side: 1, pos: [1.23, deckY - 0.6, zFront + 2.35], w: 0.44, h: 0.4 },
+      { part: { name: 'брызговик', gender: 'm' }, side: -1, rotY: 0, pos: [-(track + 0.17), 0.34, axleZ[axleZ.length - 1] - 0.72], w: 0.5, h: 0.5 },
+    ];
+  } else if (round) {
+    danchors = [
+      { part: { name: 'кормовой щит', gender: 'm' }, side: 1, rotY: 0, pos: [0.55, deckY - 0.1, zRear - 0.14], w: 0.62, h: 0.44 },
+      { part: { name: 'кормовой щит', gender: 'm' }, side: -1, rotY: 0, pos: [-0.55, deckY + 0.25, zRear - 0.14], w: 0.62, h: 0.4 },
+      { part: { name: 'передний щит', gender: 'm' }, side: 1, rotY: PI, pos: [0.5, deckY - 0.1, zFront + 0.14], w: 0.6, h: 0.4 },
+      { part: { name: 'передний щит', gender: 'm' }, side: -1, rotY: PI, pos: [-0.5, deckY + 0.25, zFront + 0.14], w: 0.6, h: 0.4 },
+      { part: { name: 'рама', gender: 'f' }, side: -1, pos: [-(W / 2 - 0.02), 0.86, zFront + 2.6], w: 0.7, h: 0.34 },
+      { part: { name: 'рама', gender: 'f' }, side: 1, pos: [W / 2 - 0.02, 0.86, zFront + 2.6], w: 0.7, h: 0.34 },
+      { part: { name: 'рама', gender: 'f' }, side: -1, pos: [-(W / 2 - 0.02), 0.86, -0.4], w: 0.7, h: 0.34 },
+      { part: { name: 'рама', gender: 'f' }, side: 1, pos: [W / 2 - 0.02, 0.86, -0.4], w: 0.7, h: 0.34 },
+      { part: { name: 'рама', gender: 'f' }, side: -1, pos: [-(W / 2 - 0.02), 0.86, zRear - 2.6], w: 0.7, h: 0.34 },
+      { part: { name: 'рама', gender: 'f' }, side: 1, pos: [W / 2 - 0.02, 0.86, zRear - 2.6], w: 0.7, h: 0.34 },
+      { part: { name: 'задний фонарь', gender: 'm' }, side: 1, rotY: 0, pos: [W / 2 - 0.33, deckY - 0.56, zRear - 0.04], w: 0.34, h: 0.3 },
+      { part: { name: 'задний фонарь', gender: 'm' }, side: -1, rotY: 0, pos: [-(W / 2 - 0.33), deckY - 0.56, zRear - 0.04], w: 0.34, h: 0.3 },
+      { part: { name: 'задний отбойник', gender: 'm' }, side: 1, rotY: 0, pos: [0.4, 0.64, zRear - 0.1], w: 0.5, h: 0.16 },
+      { part: { name: 'крыло', gender: 'n' }, side: -1, pos: [-(track + 0.2), R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
+      { part: { name: 'крыло', gender: 'n' }, side: 1, pos: [track + 0.2, R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
+    ];
   } else {
-    // открытая платформа: потёртость на настиле
-    dAnchor = {
-      pos: [dspec.side * 0.55, (type === 'dolly' ? DECK : deckY) + 0.02, zFront + 2.2],
-      rotX: -HALF, rotY: 0, w: 0.7, h: 0.5, part: { name: 'настил платформы', gender: 'm' },
-    };
+    const zDeck = [zFront + 2.2, zFront + 5.4, -0.6, zRear - 4.4, zRear - 1.8];
+    danchors = [
+      ...zDeck.map((z, i) => ({
+        part: { name: 'настил платформы', gender: 'm' }, side: 0, rotX: -HALF, rotY: 0,
+        pos: [i % 2 ? 0.5 : -0.5, deckTo + 0.01, z], w: 0.7, h: 0.5,
+      })),
+      { part: { name: 'борт рамы', gender: 'm' }, side: -1, pos: [-(W / 2 - 0.03), 0.9, zFront + 2.0], w: 0.8, h: 0.3 },
+      { part: { name: 'борт рамы', gender: 'm' }, side: 1, pos: [W / 2 - 0.03, 0.9, zFront + 2.0], w: 0.8, h: 0.3 },
+      { part: { name: 'борт рамы', gender: 'm' }, side: -1, pos: [-(W / 2 - 0.03), 0.9, zRear - 2.4], w: 0.8, h: 0.3 },
+      { part: { name: 'борт рамы', gender: 'm' }, side: 1, pos: [W / 2 - 0.03, 0.9, zRear - 2.4], w: 0.8, h: 0.3 },
+      { part: { name: 'передний щит', gender: 'm' }, side: 1, rotY: PI, pos: [0.5, deckY + 0.5, zFront + 0.06], w: 0.6, h: 0.5 },
+      { part: { name: 'задний отбойник', gender: 'm' }, side: -1, rotY: 0, pos: [-0.4, 0.64, zRear - 0.04], w: 0.5, h: 0.16 },
+      { part: { name: 'задний фонарь', gender: 'm' }, side: 1, rotY: 0, pos: [W / 2 - 0.33, deckY - 0.56, zRear - 0.04], w: 0.34, h: 0.3 },
+      { part: { name: 'крыло', gender: 'n' }, side: -1, pos: [-(track + 0.2), R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
+      { part: { name: 'крыло', gender: 'n' }, side: 1, pos: [track + 0.2, R + 0.3, axleZ[0]], w: 0.5, h: 0.3 },
+      { part: { name: 'настил платформы', gender: 'm' }, side: 0, rotX: -HALF, rotY: 0, pos: [0.4, deckTo + 0.01, zRear - 3.0], w: 0.7, h: 0.5 },
+    ];
   }
-  const dmg = mountDamage(root, { ...unit, category: 'trailers' }, dAnchor);
-  anchors.push({ pos: [...dmg.patch.position.toArray()], label: `Повреждение: ${dmg.spec.label}` });
+  const dmg = mountDamageSet(root, { ...unit, category: 'trailers' }, danchors);
+  for (const item of dmg.list) {
+    anchors.push({ pos: item.patch.position.clone().toArray(), label: `Повреждение: ${item.spec.label}`, damage: true });
+  }
 
   const views = [
     {
@@ -939,6 +992,14 @@ function dolly(c) {
     const p = cyl(body, 0.24, 0.24, 7.0, M.steel, -0.6 + i * 0.62, deckY + 0.4 + (i % 2) * 0.1, -0.4, 16);
     p.rotation.x = HALF;
   }
+  // сцепная площадка со шкворнем и задние фонари
+  rbox(body, 0.9, 0.1, 0.9, M.darkSteel, 0, deckY - 0.3, zFront + 2.6, 0.02);
+  cyl(body, 0.11, 0.13, 0.14, M.chrome, 0, deckY - 0.24, zFront + 2.6, 14);
+  for (const side of [-1, 1]) {
+    box(body, 0.2, 0.26, 0.05, M.plastic, side * 0.9, deckY - 0.34, zRear - 0.12);
+    box(body, 0.13, 0.16, 0.035, M.taillight, side * 0.9, deckY - 0.32, zRear - 0.09);
+    box(body, 0.5, 0.4, 0.03, M.rubberTrim, side * 1.0, 0.32, zRear - 0.55);
+  }
   c.anchors.push({ pos: [0, deckY + 0.8, 1.0], label: 'Коники и трубы' });
 }
 
@@ -1039,26 +1100,27 @@ function carrier(c) {
     const h = rbox(body, 0.12, 1.2, 0.12, M.hazard, side * 1.02, deckY + 0.8, zFront + 3.5, 0.02);
     h.rotation.x = -0.2;
   }
-  // автомобили: 3 внизу и 3 наверху (упрощённые модели)
+  // автомобили: по два на каждой палубе, носом вдоль прицепа.
+  // Раньше их разворачивали на 90° и они уезжали поперёк — в кадре автовоз
+  // выглядел пустым, из-за чего казался недоделанным.
   const colors = ['#2f5d8a', '#c9402f', '#e9ecec', '#e0b528', '#4f5844', '#7a8086'];
-  let i = 0;
-  for (const z of [zFront + 2.0, zFront + 5.0, zFront + 8.0]) {
-    for (let k = 0; k < 1; k++) {
-      const car = buildCar({ id: 'carrier-car', name: '', brand: '', style: 'sedan', paint: colors[i % colors.length], accent: '#d8d5c8', length: 4.4, width: 1.8, height: 1.4, wheelbase: 2.6, wheelRadius: 0.31, wheelWidth: 0.2 }, M, { simple: true, wheels: false });
-      car.root.position.set(0, deckY + 0.08, z);
-      car.root.rotation.y = PI / 2;
-      body.add(car.root);
-      const top = i < 3 ? topY + 0.08 : deckY + 0.08;
-    }
-    i++;
-  }
-  let j = 3;
-  for (const z of [zFront + 2.4, zFront + 5.6, zFront + 8.6]) {
-    const car = buildCar({ id: 'carrier-car2', name: '', brand: '', style: 'sedan', paint: colors[j % colors.length], accent: '#d8d5c8', length: 4.4, width: 1.8, height: 1.4, wheelbase: 2.6, wheelRadius: 0.31, wheelWidth: 0.2 }, M, { simple: true, wheels: false });
-    car.root.position.set(0, topY + 0.1, z);
-    car.root.rotation.y = PI / 2;
+  const carOpts = (paint) => ({ id: 'carrier-car', name: '', brand: '', style: 'sedan', paint, accent: '#d8d5c8', length: 4.5, width: 1.82, height: 1.42, wheelbase: 2.7, wheelRadius: 0.31, wheelWidth: 0.2 });
+  let ci = 0;
+  for (const z of [zFront + 2.6, zFront + 7.4]) {
+    const paint = colors[ci % colors.length];
+    const car = buildCar(carOpts(paint), M, { simple: true });
+    for (const m of car.paintMats) m.color?.set(paint);
+    car.root.position.set(0, deckY + 0.06, z);
     body.add(car.root);
-    j++;
+    ci += 1;
+  }
+  for (const z of [zFront + 3.4, zFront + 8.2]) {
+    const paint = colors[ci % colors.length];
+    const car = buildCar(carOpts(paint), M, { simple: true });
+    for (const m of car.paintMats) m.color?.set(paint);
+    car.root.position.set(0, topY + 0.06, z);
+    body.add(car.root);
+    ci += 1;
   }
   // аппарели
   for (const z of [zRear - 0.2]) {

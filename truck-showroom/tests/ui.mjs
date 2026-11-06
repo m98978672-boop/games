@@ -116,6 +116,8 @@ check('покраска выбирается', D.querySelector('.paint-dot.activ
 // повреждение: кнопка в карточке, кнопка на сцене и клавиша X
 const dmgBtn = () => D.querySelector('#damage-row .damage-btn');
 check('в карточке есть строка повреждения', !!dmgBtn(), dmgBtn()?.textContent || '');
+check('в карточке указано число повреждений', /\d+ шт\./.test(dmgBtn()?.textContent || ''), dmgBtn()?.textContent?.slice(0, 40));
+check('список осмотра не забит 15 пятнами', D.querySelectorAll('.anchor-btn').length < 12, `${D.querySelectorAll('.anchor-btn').length} кнопок`);
 dmgBtn().click(); await wait(150);
 check('повреждение включилось из карточки', dmgBtn().classList.contains('on') && $('damage-btn').classList.contains('on'));
 $('damage-btn').click(); await wait(150);
