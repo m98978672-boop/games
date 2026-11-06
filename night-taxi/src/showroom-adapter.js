@@ -6,9 +6,9 @@ import {buildCar} from './showroom/models/car.js';
 import {createMaterials} from './showroom/lib/kit.js';
 
 const units=[
- {id:'volga-taxi',brand:'TAXI',style:'sedan',length:4.78,width:1.84,height:1.48,wheelbase:2.82,wheelRadius:.33,wheelWidth:.23,accent:'#f0c96c'},
- {id:'crown-taxi',brand:'TAXI',style:'sedan',length:5.08,width:1.91,height:1.48,wheelbase:3.02,wheelRadius:.35,wheelWidth:.24,accent:'#d8d5c8'},
- {id:'rider-taxi',brand:'TAXI',style:'van',length:4.95,width:1.93,height:1.95,wheelbase:3.0,wheelRadius:.35,wheelWidth:.24,accent:'#d8d5c8'}
+ {id:'volga-taxi',brand:'TAXI',style:'sedan',length:4.78,width:1.84,height:1.48,wheelbase:2.82,wheelRadius:.33,wheelWidth:.23,seats:5,accent:'#f0c96c'},
+ {id:'crown-taxi',brand:'TAXI',style:'sedan',length:5.08,width:1.91,height:1.48,wheelbase:3.02,wheelRadius:.35,wheelWidth:.24,seats:5,accent:'#d8d5c8'},
+ {id:'rider-taxi',brand:'TAXI',style:'van',length:4.95,width:1.93,height:1.95,wheelbase:3.0,wheelRadius:.35,wheelWidth:.24,seats:7,accent:'#d8d5c8'}
 ];
 
 // Combine static meshes with matching materials while preserving the animated wheel hierarchy.
@@ -60,14 +60,14 @@ export function buildShowroomTaxi(color,variant){
  const checkerMat=new THREE.MeshBasicMaterial({color:0x252723});
  for(let i=0;i<5;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.095,.07,.01),checkerMat);square.position.set((i-2)*.13,unit.height+.13,.185);wrapper.add(square)}
  for(const side of [-1,1])for(let i=0;i<7;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.018,.10,.10),checkerMat);square.position.set(side*(unit.width/2+.025),.77,(i-3)*.10);wrapper.add(square)}
- return {group:wrapper,wheels,unit,interior,driverView,steering:interior?.getObjectByName('steering'),needles:[0,1].map(i=>interior?.getObjectByName('gaugeNeedle'+i))};
+ return {group:wrapper,wheels,unit,interior,driverView,rearSeat:built.anchors.find(a=>a.label==='Задний ряд')?.pos||[0,0,1],steering:interior?.getObjectByName('steering'),needles:[0,1].map(i=>interior?.getObjectByName('gaugeNeedle'+i))};
 }
 
 export function animateShowroomWheels(wheels,speed,steering,gear,dt){
  for(const w of wheels){
   // Garage faces -Z; the adapter rotates it 180 degrees. Wheels on the
   // opposite side are mirrored; spin the shared axle parent in the same direction.
-  const turn=.55/(1+speed*.055)*steering;
+  const turn=.68/(1+speed*.055)*steering;
   w.pivot.rotation.y=w.front?-turn*(1-w.side*steering*.08):0;
   w.spin.rotation.x-=speed*(gear===-1?-1:1)*dt/w.radius;
  }
