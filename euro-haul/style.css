@@ -660,6 +660,10 @@ body.must-rotate .rotate-hint { display: flex; }
 .card-stats b { font-size: 13px; font-weight: 750; font-variant-numeric: tabular-nums; }
 .card-pay { font-size: 21px; font-weight: 850; color: #8ce8ab; letter-spacing: -0.01em; }
 .card-pay small { display: block; font-size: 10px; font-weight: 600; color: var(--muted-2); }
+.card-spec {
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--green); margin: -4px 0 0;
+}
 .card-actions { display: flex; gap: 8px; margin-top: auto; }
 .card-actions .btn { flex: 1; }
 

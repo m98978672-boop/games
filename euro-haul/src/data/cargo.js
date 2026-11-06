@@ -6,6 +6,8 @@ export const TRAILERS = {
   flatbed: { name: 'Платформа', short: 'Платформа', length: 13.7, wheelbase: 9.3 },
   container: { name: 'Контейнеровоз', short: 'Контейнер', length: 13.6, wheelbase: 9.2 },
   log: { name: 'Лесовоз', short: 'Лесовоз', length: 14.0, wheelbase: 9.5 },
+  tipper: { name: 'Полуприцеп-самосвал', short: 'Самосвал', length: 12.4, wheelbase: 8.4 },
+  lowboy: { name: 'Низкорамный трал', short: 'Трал', length: 14.6, wheelbase: 9.6 },
 };
 
 // [название, категория, тип прицепа, масса т (min,max), ставка €/км, уровень]
@@ -40,6 +42,12 @@ export const CARGOS = [
   ['Мороженое', 'fridge', 'fridge', 8, 18, 2.0, 2],
   ['Живая рыба', 'adr', 'tank', 8, 16, 2.1, 3],
   ['Древесные гранулы', 'heavy', 'curtain', 20, 27, 1.45, 1],
+  ['Щебень', 'heavy', 'tipper', 22, 29, 1.5, 1],
+  ['Песок', 'heavy', 'tipper', 20, 27, 1.42, 1],
+  ['Зерно', 'general', 'tipper', 18, 26, 1.55, 2],
+  ['Экскаватор', 'heavy', 'lowboy', 24, 32, 2.05, 3],
+  ['Бульдозер', 'heavy', 'lowboy', 26, 34, 2.1, 4],
+  ['Строительный кран', 'heavy', 'lowboy', 22, 30, 2.0, 3],
 ];
 
 export const COMPANY_PREFIX = [
