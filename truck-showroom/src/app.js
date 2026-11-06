@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { createStage, createFallbackStage } from './stage.js';
 import { createMaterials, clamp, rad, lerp } from './lib/kit.js';
 import { ShowroomCamera } from './lib/camera.js';
+import { boundsOf } from './lib/fit.js';
 import { buildUnit } from './models/index.js';
 import { CATEGORIES, TRUCKS, TRAILERS, CARS, BUILDINGS, findUnit } from './data/units.js';
 import { placePanel, rectOf, viewportRect, overlaps, rect } from './lib/layout.js';
@@ -122,6 +123,15 @@ window.addEventListener('resize', syncOrientation);
 const scene = stage.scene;
 
 let shown = null;
+// Габариты показываемой модели: по ним камера подгоняет кадр под фактический
+// размер окна. Без этого на вертикальном телефоне модель обрезалась по краям.
+cam.setBoundsProvider(() => (shown?.root ? boundsOf(shown.root) : null));
+// поворот телефона/изменение окна: пересчитываем кадр после того, как сцена
+// обновила camera.aspect (ResizeObserver в stage.js срабатывает позже события)
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', () => setTimeout(() => cam.refit(), 60));
+  window.addEventListener('orientationchange', () => setTimeout(() => cam.refit(), 180));
+}
 // views/anchors появляются только после сборки геометрии — держим их
 // на самой модели, чтобы каталог, док и хоткеи работали сразу.
 const builtCache = new Map();

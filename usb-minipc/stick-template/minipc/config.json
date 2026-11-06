@@ -1,0 +1,8 @@
+{
+  "name": "USB Mini-PC",
+  "launch": "minipc/launch.cmd",
+  "sha256": "",
+  "autoLaunch": true,
+  "args": [],
+  "notes": "Шаблон. Рекомендуется заполнить sha256 через tools/prepare_stick.py — тогда подменённый launch.cmd не запустится."
+}

@@ -449,17 +449,22 @@ export function buildBuilding(unit, M) {
   anchors.push({ pos: [0, H + 0.8, 0], label: 'Кровля' });
   if (unit.chimney) anchors.push({ pos: [W * 0.2, H + unit.chimney * 0.7, -D * 0.1], label: 'Труба' });
 
-  // камеры: четыре фасада + общий ракурс — как просили
-  const dist = Math.max(W, D, H) * 1.9 + 6;
-  const eye = Math.min(H * 0.55, H - 1.2) + 1.6;
+  // камеры: четыре фасада + общий ракурс — как просили.
+  // Высота кадра считается по самому высокому, что есть у здания: труба котельной
+  // (H + chimney) выше крыши, и без этого она обрезалась кадром сверху.
+  const topY = H + (unit.chimney || 0);
+  const dist = Math.max(W, D, topY) * 1.9 + 6;
+  const eye = Math.min(topY * 0.55, topY - 1.2) + 1.6;
+  // центр кадра — середина видимой высоты, а не 42 % от стен
+  const midY = topY * 0.42;
   const views = [
-    { id: 'front', label: 'Перед', group: 'exterior', pos: [0, eye, D / 2 + dist * 0.85], target: [0, H * 0.42, 0], fov: 34, orbit: true },
-    { id: 'back', label: 'Зад', group: 'exterior', pos: [0, eye, -D / 2 - dist * 0.85], target: [0, H * 0.42, 0], fov: 34, orbit: true },
-    { id: 'right', label: 'Справа', group: 'exterior', pos: [W / 2 + dist * 0.85, eye, 0], target: [0, H * 0.42, 0], fov: 34, orbit: true },
-    { id: 'left', label: 'Слева', group: 'exterior', pos: [-W / 2 - dist * 0.85, eye, 0], target: [0, H * 0.42, 0], fov: 34, orbit: true },
+    { id: 'front', label: 'Перед', group: 'exterior', pos: [0, eye, D / 2 + dist * 0.85], target: [0, midY, 0], fov: 34, orbit: true },
+    { id: 'back', label: 'Зад', group: 'exterior', pos: [0, eye, -D / 2 - dist * 0.85], target: [0, midY, 0], fov: 34, orbit: true },
+    { id: 'right', label: 'Справа', group: 'exterior', pos: [W / 2 + dist * 0.85, eye, 0], target: [0, midY, 0], fov: 34, orbit: true },
+    { id: 'left', label: 'Слева', group: 'exterior', pos: [-W / 2 - dist * 0.85, eye, 0], target: [0, midY, 0], fov: 34, orbit: true },
     {
       id: 'exterior', label: 'Снаружи', group: 'exterior',
-      pos: [W * 0.9 + dist * 0.55, H * 0.85 + 2, D * 0.9 + dist * 0.55], target: [0, H * 0.38, 0], fov: 36, orbit: true, autoRotate: true,
+      pos: [W * 0.9 + dist * 0.55, topY * 0.85 + 2, D * 0.9 + dist * 0.55], target: [0, topY * 0.38, 0], fov: 36, orbit: true, autoRotate: true,
     },
   ];
 
