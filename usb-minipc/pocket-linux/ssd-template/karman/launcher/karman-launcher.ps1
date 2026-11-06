@@ -45,6 +45,8 @@ param(
     [switch] $DryRun,
     [switch] $AllowWritableData,
     [switch] $Force,
+    [ValidateSet('auto', 'qemu', 'wsl')]
+    [string] $Engine = 'auto',
     [int] $MemoryMb = 0,
     [int] $Cpus = 0
 )
@@ -364,6 +366,42 @@ function Test-Acceleration {
     return 'tcg'
 }
 
+function Resolve-Engine {
+    param($Manifest, [string] $Requested)
+
+    $preferred = if ($Requested -and $Requested -ne 'auto') {
+        $Requested
+    } else {
+        [string](Get-Prop (Get-Prop $Manifest 'engine') 'preferred' 'auto')
+    }
+
+    $wslConfig = Get-Prop (Get-Prop $Manifest 'engine') 'wsl'
+    $distro = [string](Get-Prop $wslConfig 'distro' 'Karman')
+
+    $wslAvailable = [bool](Get-Command -Name 'wsl.exe' -ErrorAction SilentlyContinue)
+    if ($preferred -eq 'wsl') {
+        if (-not $wslAvailable) {
+            throw 'выбран движок WSL, но wsl.exe не найден: нужна Windows 10 2004+/11 с включённым компонентом WSL (его устанавливает пользователь, с правами администратора)'
+        }
+        return 'wsl'
+    }
+
+    if ($preferred -eq 'auto' -and $wslAvailable) {
+        try {
+            $list = ((& wsl.exe --list --quiet 2>$null) -join "`n") -replace "`0", ''
+            if ($list -match ('(?m)^\s*' + [regex]::Escape($distro) + '\s*$')) {
+                Write-Log -Level INFO -Message ("найден готовый дистрибутив WSL «{0}» — использую WSL2 (быстрее)" -f $distro)
+                return 'wsl'
+            }
+        } catch { }
+    }
+
+    if ($preferred -eq 'auto') {
+        Write-Log -Level INFO -Message 'WSL2 не задействован — запускаю через портативный QEMU'
+    }
+    return 'qemu'
+}
+
 function Start-Session {
     param($Report, $Manifest)
 
@@ -541,6 +579,30 @@ try {
 if ($Action -eq 'menu') {
     $Action = Show-Menu
     if ($null -eq $Action) { Write-Log -Level INFO -Message 'выход без действий'; exit 0 }
+}
+
+$resolvedEngine = 'qemu'
+try {
+    $resolvedEngine = Resolve-Engine -Manifest $script:Manifest -Requested $Engine
+} catch {
+    Write-Log -Level ERROR -Message $_.Exception.Message
+    exit 4
+}
+Write-Log -Level INFO -Message ("движок: {0}" -f $resolvedEngine)
+
+if ($resolvedEngine -eq 'wsl' -and $Action -ne 'eject') {
+    $wslLauncher = Join-Path $script:LauncherDir 'karman-wsl.ps1'
+    if (-not (Test-Path -LiteralPath $wslLauncher)) {
+        Write-Log -Level ERROR -Message 'выбран движок WSL, но файл karman-wsl.ps1 рядом с лаунчером не найден'
+        exit 4
+    }
+    $childArgs = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $wslLauncher,
+                   '-Action', $Action, '-Root', $script:Root)
+    if ($DryRun) { $childArgs += '-DryRun' }
+    if ($Force) { $childArgs += '-Force' }
+    if ($RestorePoint) { $childArgs += @('-RestorePoint', $RestorePoint) }
+    & powershell.exe @childArgs
+    exit $LASTEXITCODE
 }
 
 $report = Test-Preflight -Manifest $script:Manifest

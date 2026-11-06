@@ -10,7 +10,9 @@ rem  Он ничего не устанавливает в Windows: только 
 rem  karman\launcher\karman-launcher.ps1, который проверит накопитель
 rem  и запустит Linux-среду в виртуальной машине QEMU.
 rem
-rem  Параметры (необязательно):  -Action verify|start|checkpoint|eject|restore|reset
+rem  Параметры (необязательно):
+rem    -Action verify|start|checkpoint|eject|restore|reset
+rem    -Engine auto|qemu|wsl   (auto — WSL2, если дистрибутив уже импортирован)
 rem  Права администратора не нужны. Автозапуск не настраивается.
 rem ===========================================================================
 

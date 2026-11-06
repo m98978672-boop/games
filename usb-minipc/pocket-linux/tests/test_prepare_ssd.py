@@ -38,6 +38,11 @@ def quiet_prepare(*args, **kwargs):
         return prepare_ssd.prepare(*args, **kwargs)
 
 
+def prepare_engine(ssd: str, engine: str, verify: str = "sha256", rootfs: str = "karman/system/rootfs.tar"):
+    return quiet_prepare(ssd, "Карман", "karman/system/base.qcow2", 4096, 4, "ro", verify,
+                         False, False, engine=engine, rootfs_rel=rootfs)
+
+
 class PrepareTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.mkdtemp()
@@ -188,6 +193,93 @@ class VerifyTests(unittest.TestCase):
         report = verify_ssd.check(self.ssd)
         self.assertFalse(report["ok"])
         self.assertTrue(any("файла запуска" in error for error in report["errors"]))
+
+
+
+class EngineTests(unittest.TestCase):
+    """Манифест и проверка должны учитывать выбранный движок (QEMU / WSL2)."""
+
+    def setUp(self) -> None:
+        self.tmp = tempfile.mkdtemp()
+        self.ssd = os.path.join(self.tmp, "SSD")
+        os.makedirs(self.ssd)
+
+    def tearDown(self) -> None:
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def manifest(self) -> dict:
+        with open(os.path.join(self.ssd, "karman", "manifest.json"), encoding="utf-8") as handle:
+            return json.load(handle)
+
+    def put(self, relative: str, payload: bytes = b"data") -> str:
+        path = os.path.join(self.ssd, relative)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "wb") as handle:
+            handle.write(payload)
+        return path
+
+    def test_default_engine_is_auto(self) -> None:
+        prepare_engine(self.ssd, "auto")
+        manifest = self.manifest()
+        self.assertEqual(manifest["engine"]["preferred"], "auto")
+        self.assertEqual(manifest["engine"]["wsl"]["distro"], "Karman")
+        self.assertIn("NTFS", manifest["engine"]["wsl"]["note"])
+
+    def test_engine_wsl_recorded(self) -> None:
+        prepare_engine(self.ssd, "wsl")
+        self.assertEqual(self.manifest()["engine"]["preferred"], "wsl")
+
+    def test_rootfs_hashed(self) -> None:
+        rootfs = self.put("karman/system/rootfs.tar", b"TAR" + os.urandom(512))
+        prepare_engine(self.ssd, "wsl")
+        system = self.manifest()["system"]
+        self.assertEqual(system["rootfs_size"], os.path.getsize(rootfs))
+        self.assertEqual(system["rootfs_sha256"], prepare_ssd.sha256_file(rootfs))
+
+    def test_bad_engine_rejected(self) -> None:
+        self.assertEqual(quiet_prepare(self.ssd, "A", "karman/system/base.qcow2", 4096, 4,
+                                       "ro", "sha256", False, False, engine="hyperv"), 2)
+
+    def test_wsl_mode_requires_rootfs(self) -> None:
+        prepare_engine(self.ssd, "wsl")
+        report = verify_ssd.check(self.ssd)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("rootfs" in error for error in report["errors"]), report["errors"])
+
+    def test_wsl_mode_requires_wsl_launcher(self) -> None:
+        self.put("karman/system/rootfs.tar", b"TAR" + os.urandom(512))
+        prepare_engine(self.ssd, "wsl")
+        os.remove(os.path.join(self.ssd, "karman", "launcher", "karman-launcher.ps1"))
+        report = verify_ssd.check(self.ssd)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("karman-launcher.ps1" in error for error in report["errors"]), report["errors"])
+
+    def test_wsl_mode_ok_without_qcow2(self) -> None:
+        self.put("karman/system/rootfs.tar", b"TAR" + os.urandom(512))
+        prepare_engine(self.ssd, "wsl")
+        report = verify_ssd.check(self.ssd)
+        self.assertTrue(report["ok"], report["errors"])
+        self.assertTrue(any("WSL2" in warning for warning in report["warnings"]))
+
+    def test_wsl_imported_allows_missing_rootfs(self) -> None:
+        prepare_engine(self.ssd, "wsl")
+        report = verify_ssd.check(self.ssd, wsl_imported=True)
+        self.assertTrue(report["ok"], report["errors"])
+        self.assertTrue(any("уже импортирован" in warning for warning in report["warnings"]))
+
+    def test_auto_mode_needs_at_least_one_image(self) -> None:
+        prepare_engine(self.ssd, "auto")
+        report = verify_ssd.check(self.ssd)
+        self.assertFalse(report["ok"])
+        self.assertTrue(any("ни base.qcow2, ни rootfs.tar" in error for error in report["errors"]),
+                        report["errors"])
+
+    def test_qemu_mode_only_warns_about_missing_rootfs(self) -> None:
+        self.put("karman/system/base.qcow2", b"QFI\xfb" + os.urandom(512))
+        prepare_engine(self.ssd, "qemu")
+        report = verify_ssd.check(self.ssd)
+        self.assertTrue(report["ok"], report["errors"])
+        self.assertTrue(any("rootfs" in warning for warning in report["warnings"]))
 
 
 if __name__ == "__main__":

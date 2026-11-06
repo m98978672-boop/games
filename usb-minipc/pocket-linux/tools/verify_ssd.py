@@ -40,7 +40,7 @@ def sha256_file(path: str) -> str:
     return digest.hexdigest()
 
 
-def check(target: str) -> dict:
+def check(target: str, wsl_imported: bool = False) -> dict:
     target = os.path.abspath(target)
     errors: list[str] = []
     warnings: list[str] = []
@@ -70,28 +70,61 @@ def check(target: str) -> dict:
             errors.append(f"нет файла запуска: {relative}")
 
     system = manifest.get("system") or {}
+    verify = manifest.get("verify", "sha256")
+    engine_pref = (manifest.get("engine") or {}).get("preferred") or "auto"
+    info["engine"] = engine_pref
+
     base_rel = system.get("base") or "karman/system/base.qcow2"
     base_path = os.path.join(target, base_rel)
     info["base"] = base_path
-    verify = manifest.get("verify", "sha256")
 
-    if not os.path.isfile(base_path):
-        errors.append(f"нет образа системы: {base_rel}")
-    else:
-        size = os.path.getsize(base_path)
-        info["base_size"] = size
-        expected_size = int(system.get("size") or 0)
-        expected_hash = (system.get("sha256") or "").strip().lower()
-
+    def check_blob(path: str, label: str, expected_size: int, expected_hash: str,
+                   required: bool) -> None:
+        if not os.path.isfile(path):
+            if required:
+                errors.append(f"нет {label} — без него этот движок не запустится")
+                return
+            else:
+                warnings.append(f"{label} отсутствует")
+            return
+        size = os.path.getsize(path)
+        info[label] = {"size": size}
         if verify != "none" and expected_size and size != expected_size:
-            errors.append(f"размер образа {size} байт не совпадает с манифестом ({expected_size})")
+            errors.append(f"размер {label} {size} байт не совпадает с манифестом ({expected_size})")
         if verify == "sha256" and expected_hash:
-            actual = sha256_file(base_path)
-            info["base_sha256"] = actual
+            actual = sha256_file(path)
+            info[label]["sha256"] = actual
             if actual != expected_hash:
-                errors.append(f"sha256 образа не совпадает (получен {actual[:16]}…) — образ изменён")
+                errors.append(f"sha256 {label} не совпадает (получен {actual[:16]}…) — файл изменён")
         elif verify == "sha256" and not expected_hash:
-            warnings.append("в манифесте нет sha256 образа — целостность не проверяется")
+            warnings.append(f"в манифесте нет sha256 для {label} — целостность не проверяется")
+
+    check_blob(base_path, "образа системы",
+               int(system.get("size") or 0), (system.get("sha256") or "").strip().lower(),
+               required=(engine_pref != "wsl"))
+
+    rootfs_rel = system.get("rootfs") or "karman/system/rootfs.tar"
+    rootfs_path = os.path.join(target, rootfs_rel)
+    info["rootfs"] = rootfs_path
+    rootfs_required = engine_pref == "wsl" and not wsl_imported
+    check_blob(rootfs_path, "rootfs для WSL2",
+               int(system.get("rootfs_size") or 0),
+               (system.get("rootfs_sha256") or "").strip().lower(),
+               required=rootfs_required)
+    if engine_pref == "wsl" and wsl_imported and not os.path.isfile(rootfs_path):
+        warnings.append("rootfs.tar отсутствует, но отмечено, что дистрибутив WSL уже импортирован — "
+                        "файл нужен только для первого импорта и восстановления")
+
+    if engine_pref == "wsl":
+        if not os.path.isfile(os.path.join(target, "karman", "launcher", "karman-wsl.ps1")):
+            errors.append("нет karman/launcher/karman-wsl.ps1 — движку WSL2 нечем запускаться")
+        info["wsl_distro"] = ((manifest.get("engine") or {}).get("wsl") or {}).get("distro", "Karman")
+        warnings.append("движок WSL2: нужен Windows 10 2004+/11, виртуализация и разовая установка "
+                        "компонента WSL с правами администратора; каталог дистрибутива — на NTFS")
+
+    if engine_pref == "auto":
+        if not os.path.isfile(base_path) and not os.path.isfile(rootfs_path):
+            errors.append("нет ни base.qcow2, ни rootfs.tar — запускать нечего")
 
     data_rel = (manifest.get("data") or {}).get("dir", "data")
     if not os.path.isdir(os.path.join(target, data_rel)):
@@ -125,9 +158,11 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Проверить подготовленный накопитель KARMAN")
     parser.add_argument("target", help="корень накопителя")
     parser.add_argument("--json", action="store_true", help="вывести отчёт в JSON")
+    parser.add_argument("--wsl-imported", action="store_true",
+                        help="дистрибутив WSL уже импортирован: rootfs.tar не обязателен")
     args = parser.parse_args(argv)
 
-    report = check(args.target)
+    report = check(args.target, wsl_imported=args.wsl_imported)
     if args.json:
         print(json.dumps(report, ensure_ascii=False, indent=2))
         return 0 if report["ok"] else 1
