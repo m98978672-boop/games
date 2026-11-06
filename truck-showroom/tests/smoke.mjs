@@ -235,6 +235,81 @@ for (const unit of TRAILERS) {
   }
 }
 
+// ============================================================
+// РЕГРЕССИИ ПО ТЯГАЧАМ
+// Передок раньше был плоской чёрной накладкой, а бампер висел в воздухе:
+// между полом кабины (~1.18 м) и балкой (верх 0.83 м) зиял зазор, кронштейнов
+// и юбки не было — деталь читалась «оторванной». Теперь балка посажена на
+// раму, сверху её закрывает юбка в цвет кузова, снизу — спойлер, поэтому
+// передок по центру непрерывен от спойлера до кабины.
+// ============================================================
+const M4 = createMaterials(null);
+for (const unit of TRUCKS) {
+  const built = buildUnit({ ...unit, category: 'trucks' }, M4);
+  const root = built.root;
+  root.updateMatrixWorld(true);
+  const L = unit.length ?? 6.2;
+  const frontZ = -L / 2;
+  const floorY = unit.style === 'lowentry' ? 0.85 : 1.18;
+
+  const boxes = [];
+  root.traverse((o) => {
+    if (!o.isMesh || o.visible === false) return;
+    const b = new THREE.Box3().setFromObject(o);
+    if (b.min.z < frontZ + 1.4) boxes.push(b);
+  });
+
+  // 1. По центру передка нет «парящего» зазора между бампером и кабиной
+  const gaps = [];
+  for (let y = 0.52; y < floorY; y += 0.05) {
+    const p = new THREE.Vector3(0, y, frontZ + 0.18);
+    if (!boxes.some((b) => b.containsPoint(p))) gaps.push(y.toFixed(2));
+  }
+  ok(gaps.length === 0, `${unit.id}: бампер примыкает к кузову без зазора${gaps.length ? ' — дыры на y ' + gaps.slice(0, 4).join(', ') : ''}`);
+
+  // 2. Верх балки бампера — прямо под полом кабины, а не в полуметре ниже
+  const beam = boxes
+    .filter((b) => b.max.x - b.min.x > 2.2 && b.min.z < frontZ + 0.6 && b.max.y > 0.6 && b.max.y < floorY + 0.05)
+    .sort((a, b) => (b.max.x - b.min.x) - (a.max.x - a.min.x))[0];
+  ok(beam && beam.max.y > floorY - 0.16,
+    `${unit.id}: балка бампера под полом кабины (верх ${beam ? beam.max.y.toFixed(2) : '—'} при поле ${floorY.toFixed(2)})`);
+
+  // 3. Фары утоплены в передок: их линзы не выносятся вперёд дальше 12 см
+  //    от наружной плоскости маски (раньше висели отдельными «глазами»).
+  let lamps = 0;
+  let proud = 0;
+  root.traverse((o) => {
+    if (!o.isMesh || !o.material?.emissive) return;
+    const hex = o.material.emissive.getHexString();
+    if (hex === '000000' || hex === 'ff9b2e') return; // не фонари и не поворотники
+    const b = new THREE.Box3().setFromObject(o);
+    if (b.min.z > frontZ + 1.2) return; // только нос
+    lamps += 1;
+    if (b.min.z < frontZ - 0.01) proud += 1;
+  });
+  ok(lamps >= 2, `${unit.id}: на передке есть фары (${lamps})`);
+  ok(proud === 0, `${unit.id}: фары не торчат вперёд за габарит${proud ? ' — ' + proud : ''}`);
+
+  // 4. Торпедо: из места водителя вниз-влево видна именно панель, и она
+  //    собрана из деталей (щиток, циферблаты, консоль), а не из одной плиты.
+  const seat = built.views.find((v) => v.id === 'driver');
+  let interiorMeshes = 0;
+  root.traverse((o) => {
+    if (o.isMesh && o.parent && /interior/.test(o.parent.name || '')) interiorMeshes += 1;
+  });
+  if (seat) {
+    const cam = new THREE.PerspectiveCamera(seat.fov || 74, 1.6, 0.02, 60);
+    cam.position.set(...seat.pos);
+    cam.lookAt(new THREE.Vector3(...seat.target));
+    cam.updateMatrixWorld(true);
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2(-0.3, -0.32), cam);
+    const hit = rc.intersectObject(root, true).find((h) => h.object.isMesh && h.object.visible !== false && h.object.material?.transparent !== true);
+    ok(hit && hit.distance < 1.7,
+      `${unit.id}: перед водителем торпедо (${hit ? hit.object.geometry.type + ' @ ' + hit.distance.toFixed(2) + ' м' : 'пусто'})`);
+  }
+}
+
 const avg = (arr, k) => Math.round(arr.reduce((s, x) => s + x[k], 0) / arr.length);
 console.log('\nСредняя детализация: тягачи', avg(report.trucks, 'tris'), '· прицепы', avg(report.trailers, 'tris'), '· авто', avg(report.cars, 'tris'), 'треугольников');
 const need = 40;

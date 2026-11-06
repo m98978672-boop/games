@@ -270,6 +270,24 @@ const t0 = sc.controls.target.clone();
 sc.panBy(0.4, 0);
 check('панорамирование сдвигает точку взгляда', sc.controls.target.distanceTo(t0) > 0.05);
 
+// полёт: цель орбиты летит вместе с камерой, дистанция сохраняется
+const flyFrom = cam3.position.clone();
+const flyTarget = sc.controls.target.clone();
+const flyDist = flyFrom.distanceTo(flyTarget);
+sc.fly(1, 0, 0, 2);
+const flyDir = flyFrom.clone().sub(flyTarget).normalize();
+const moved = cam3.position.clone().sub(flyFrom);
+check('полёт вперёд двигает камеру по линии взгляда',
+  moved.length() > 1.5 && Math.abs(moved.clone().normalize().dot(flyDir) + 1) < 0.05,
+  `сдвиг ${moved.length().toFixed(2)} м`);
+check('после полёта дистанция до цели сохраняется',
+  Math.abs(cam3.position.distanceTo(sc.controls.target) - flyDist) < 0.05,
+  `${flyDist.toFixed(2)} → ${cam3.position.distanceTo(sc.controls.target).toFixed(2)}`);
+const sideFrom = cam3.position.clone();
+sc.fly(0, 1, 0, 1.5);
+check('полёт вправо смещает камеру в сторону', cam3.position.distanceTo(sideFrom) > 1.2,
+  `сдвиг ${cam3.position.distanceTo(sideFrom).toFixed(2)} м`);
+
 // дальность ограничена габаритом вида: камера не улетает в пустоту
 sc.setView({ id: 'test', pos: [20, 3, 0], target: [0, 1.5, 0], fov: 34, orbit: true }, { instant: true });
 check('дальность зума ограничена видом', sc.controls.maxDistance <= 20.5 * 2.4 && sc.controls.maxDistance >= 6,
@@ -290,10 +308,26 @@ if (camApp) {
   navBtn('zin')?.dispatchEvent(new window.Event('pointerup', { bubbles: true }));
   check('кнопка «+» на навпаде приближает', camApp.camera.position.distanceTo(camApp.controls.target) < d0,
     `${d0.toFixed(2)} → ${camApp.camera.position.distanceTo(camApp.controls.target).toFixed(2)}`);
+  // свободный полёт: W/S/A/D двигают камеру, Shift ускоряет, Ctrl возвращает
+  const viewNow = camApp.view;
   const p1 = camApp.camera.position.clone();
-  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'd' })); await wait(40);
-  check('клавиша D поворачивает камеру', camApp.camera.position.distanceTo(p1) > 0.01);
-  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'a' })); await wait(40);
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'w', code: 'KeyW' }));
+  await wait(150);
+  window.dispatchEvent(new window.KeyboardEvent('keyup', { key: 'w', code: 'KeyW' }));
+  check('клавиша W летит вперёд', camApp.camera.position.distanceTo(p1) > 0.05,
+    `сдвиг ${camApp.camera.position.distanceTo(p1).toFixed(2)} м`);
+  const p2 = camApp.camera.position.clone();
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'd', code: 'KeyD' }));
+  await wait(120);
+  window.dispatchEvent(new window.KeyboardEvent('keyup', { key: 'd', code: 'KeyD' }));
+  check('клавиша D летит вправо', camApp.camera.position.distanceTo(p2) > 0.02,
+    `сдвиг ${camApp.camera.position.distanceTo(p2).toFixed(2)} м`);
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Control' }));
+  await wait(40);
+  const home = viewNow ? new THREE.Vector3(...viewNow.pos) : null;
+  check('Ctrl возвращает камеру в штатное положение',
+    !!home && camApp.camera.position.distanceTo(home) < 0.05,
+    home ? `отклонение ${camApp.camera.position.distanceTo(home).toFixed(2)} м` : 'нет вида');
 }
 
 check('ошибок в рантайме нет', errs.length === 0, errs.slice(0, 3).join(' / '));

@@ -74,6 +74,37 @@ export class ShowroomCamera {
     }
   }
 
+  /** Свободный полёт (клавиатура): fwd — вперёд/назад по линии взгляда,
+   *  side — вправо/влево, up — вверх/вниз. Цель орбиты летит вместе с камерой,
+   *  поэтому после полёта вращение продолжается вокруг новой точки. */
+  fly(fwd = 0, side = 0, up = 0, dist = 0.1) {
+    if (!fwd && !side && !up) return;
+    const dir = new THREE.Vector3();
+    this.camera.getWorldDirection(dir);
+    const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0, 1, 0)).normalize();
+    const delta = dir
+      .multiplyScalar(fwd * dist)
+      .add(right.multiplyScalar(side * dist))
+      .add(new THREE.Vector3(0, up * dist, 0));
+    const next = this.camera.position.clone().add(delta);
+    // не уходим под пол и не улетаем в пустоту
+    next.y = clamp(next.y, 0.35, 26);
+    const flat = Math.hypot(next.x, next.z);
+    if (flat > 46) {
+      const k = 46 / flat;
+      next.x *= k;
+      next.z *= k;
+    }
+    delta.copy(next).sub(this.camera.position);
+    this.camera.position.copy(next);
+    this.controls.target.add(delta);
+    if (this.camera.position.y < 1.2 && this.controls.target.y < 1.0) {
+      this.controls.target.y = 1.2;
+    }
+    this.controls.autoRotate = false;
+    this.controls.update();
+  }
+
   /** Программный поворот камеры (навпад, клавиатура): dx — вокруг оси Y,
    *  dy — по вертикали. Работает и в салоне, где орбита вокруг головы. */
   orbit(dx, dy) {

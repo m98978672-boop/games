@@ -16,6 +16,12 @@ const PAINTS = ['#e9ecec', '#b9c0c6', '#2f5d8a', '#16233f', '#a4241d', '#7d1a2e'
 const SAVE_KEY = 'garage3d-showroom-v1';
 const VIEW_ICONS = { exterior: '🌐', side: '◧', rear: '▣', front: '◍', driver: '🧑‍✈️', passenger: '🪑', salon: '🚘', bunk: '🛏' };
 
+// Удерживаемые клавиши свободного полёта камеры (W/A/S/D + Q/E по высоте).
+const FLY_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE']);
+const held = new Set();
+const FLY_SPEED = 3.4; // м/с
+const FLY_BOOST = 2.8; // множитель по Shift
+
 const state = {
   cat: 'trucks',
   id: 'atlas-vision',
@@ -446,11 +452,7 @@ function installNavpad() {
     right: () => cam.orbit(0.1, 0),
     zin: () => cam.zoomBy(1.05),
     zout: () => cam.zoomBy(1 / 1.05),
-    reset: () => {
-      const unit = currentUnit();
-      goView(viewsOf(unit)[0].id);
-      live('Вид сброшен');
-    },
+    reset: () => resetCamera(),
   };
   pad.querySelectorAll('[data-act]').forEach((btn) => {
     const act = actions[btn.dataset.act];
@@ -499,6 +501,17 @@ function goView(viewId) {
   $('orbit-btn').classList.toggle('active', !!view.autoRotate && autoRotateWanted);
   saveState();
 }
+
+// Ctrl / Home / ⌂ — вернуть камеру в штатное положение текущего вида
+function resetCamera() {
+  const unit = currentUnit();
+  const view = viewsOf(unit).find((v) => v.id === state.view) || viewsOf(unit)[0];
+  cam.setView(view, { instant: true });
+  cam.controls.autoRotate = !!view.autoRotate && autoRotateWanted;
+  live(`Камера: ${view.label || 'исходный вид'}`);
+  haptic(8);
+}
+window.__garageReset = resetCamera;
 
 function toggleInside() {
   const unit = currentUnit();
@@ -812,14 +825,21 @@ function wireUI() {
   }
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
+    // полёт камеры: клавиши удерживаются, движение считаем в цикле кадров
+    if (FLY_KEYS.has(e.code)) {
+      held.add(e.code);
+      e.preventDefault();
+      return;
+    }
+    if (e.key === 'Shift') { held.add('ShiftLeft'); return; }
+    if (e.key === 'Control' || e.key === 'Home') {
+      // Ctrl — вернуть камеру в штатное положение текущего вида
+      resetCamera();
+      return;
+    }
     switch (e.key) {
       case 'ArrowRight': step(1); break;
       case 'ArrowLeft': step(-1); break;
-      // камера: A/D — вокруг, W/S — наклон (работает и в русской раскладке)
-      case 'a': case 'A': case 'ф': case 'Ф': cam.orbit(-0.14, 0); break;
-      case 'd': case 'D': case 'в': case 'В': cam.orbit(0.14, 0); break;
-      case 'w': case 'W': case 'ц': case 'Ц': cam.orbit(0, 0.1); break;
-      case 's': case 'S': case 'ы': case 'Ы': cam.orbit(0, -0.1); break;
       case '+': case '=': case 'ю': cam.zoomBy(1.16); break;
       case '-': case '_': case 'ж': cam.zoomBy(1 / 1.16); break;
       case 'r': case 'R': case 'к': case 'К': randomUnit(); break;
@@ -848,6 +868,11 @@ function wireUI() {
       default: break;
     }
   });
+  window.addEventListener('keyup', (e) => {
+    held.delete(e.code);
+    if (e.key === 'Shift') held.delete('ShiftLeft');
+  });
+  window.addEventListener('blur', () => held.clear());
   // звёздочка на карточке по двойному клику на заголовок
   $('d-name').ondblclick = () => {
     const id = currentUnit().id;
@@ -867,6 +892,16 @@ function loop() {
   requestAnimationFrame(loop);
   const dt = Math.min(0.06, clock.getDelta());
   cam.update(dt);
+  // свободный полёт камеры: W — вперёд, S — назад, A/D — влево/вправо,
+  // Q/E — вниз/вверх, Shift — ускорение
+  if (held.size && cam) {
+    const boost = held.has('ShiftLeft') || held.has('ShiftRight') ? FLY_BOOST : 1;
+    const step = FLY_SPEED * boost * dt;
+    const fwd = (held.has('KeyW') ? 1 : 0) - (held.has('KeyS') ? 1 : 0);
+    const side = (held.has('KeyD') ? 1 : 0) - (held.has('KeyA') ? 1 : 0);
+    const up = (held.has('KeyE') ? 1 : 0) - (held.has('KeyQ') ? 1 : 0);
+    if (fwd || side || up) cam.fly(fwd, side, up, step);
+  }
   // лёгкое «дыхание» юбки подиума и огней
   stage.renderer.render(scene, stage.camera);
 

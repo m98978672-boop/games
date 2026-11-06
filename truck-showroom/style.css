@@ -290,7 +290,10 @@ body {
   transform: translateX(-50%);
   z-index: 4;
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  max-width: min(760px, 92vw);
   align-items: center;
   padding: 5px 12px;
   border-radius: 999px;
@@ -301,6 +304,8 @@ body {
   white-space: nowrap;
   pointer-events: none;
 }
+.stage-hint span { white-space: nowrap; }
+
 .stage-hint kbd {
   font-family: inherit;
   font-size: 9px;
