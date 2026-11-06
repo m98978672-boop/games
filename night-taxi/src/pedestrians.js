@@ -53,7 +53,7 @@ export function createPedestrians(scene,count=36){
 
 // A distinct passenger waits at the pickup marker, with a small bag and idle wave.
 export function createPassenger(){
- const root=new THREE.Group(), coat=new THREE.MeshStandardMaterial({color:0x6b5265,roughness:.85}), trousers=new THREE.MeshStandardMaterial({color:0x303946}),skin=new THREE.MeshStandardMaterial({color:0xc89476}),hair=new THREE.MeshStandardMaterial({color:0x3b2a29}),shoe=new THREE.MeshStandardMaterial({color:0x20292c}),bag=new THREE.MeshStandardMaterial({color:0x9b724d});
+ const root=new THREE.Group();root.name='passenger';root.userData.legs=[];root.userData.arms=[];const coat=new THREE.MeshStandardMaterial({color:0x6b5265,roughness:.85}), trousers=new THREE.MeshStandardMaterial({color:0x303946}),skin=new THREE.MeshStandardMaterial({color:0xc89476}),hair=new THREE.MeshStandardMaterial({color:0x3b2a29}),shoe=new THREE.MeshStandardMaterial({color:0x20292c}),bag=new THREE.MeshStandardMaterial({color:0x9b724d});
  const add=(parent,geometry,material,x,y,z)=>{const mesh=new THREE.Mesh(geometry,material);mesh.position.set(x,y,z);parent.add(mesh);return mesh};
  add(root,new THREE.CylinderGeometry(.22,.19,.65,10),coat,0,1.14,0);
  add(root,new THREE.SphereGeometry(.16,12,8),skin,0,1.68,0);
@@ -61,12 +61,20 @@ export function createPassenger(){
  add(root,new THREE.SphereGeometry(.045,8,6),skin,0,1.68,.15);
  add(root,new THREE.CylinderGeometry(.075,.075,.12,8),skin,0,1.5,0);
  for(const side of [-1,1]){
-  add(root,new THREE.CylinderGeometry(.1,.08,.52,8),trousers,side*.11,.48,0);
-  add(root,new THREE.BoxGeometry(.16,.1,.25),shoe,side*.11,.1,.05);
-  const arm=new THREE.Group();arm.position.set(side*.28,1.37,0);root.add(arm);
+  const leg=new THREE.Group();leg.position.set(side*.11,.74,0);root.add(leg);root.userData.legs.push(leg);
+  add(leg,new THREE.CylinderGeometry(.1,.08,.52,8),trousers,0,-.26,0);
+  add(leg,new THREE.BoxGeometry(.16,.1,.25),shoe,0,-.64,.05);
+  const arm=new THREE.Group();arm.position.set(side*.28,1.37,0);root.add(arm);root.userData.arms.push(arm);
   add(arm,new THREE.CapsuleGeometry(.065,.29,4,8),coat,0,-.23,0);
   add(arm,new THREE.SphereGeometry(.07,8,6),skin,0,-.46,0);
   if(side===1){add(arm,new THREE.BoxGeometry(.26,.3,.13),bag,.04,-.65,0);root.userData.waveArm=arm}
  }
  return root;
+}
+
+// Animate the existing passenger rig without replacing the model.
+export function posePassenger(root,stride=0,sit=0){
+ root.userData.legs.forEach((leg,i)=>{leg.rotation.x=(i?1:-1)*stride-sit*.8});
+ root.userData.arms.forEach((arm,i)=>{arm.rotation.x=(i?-1:1)*stride*.65-sit*.4});
+ root.scale.y=1-sit*.32;
 }

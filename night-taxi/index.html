@@ -1,10 +1,10 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1112"><title>Ночное такси — Последний район</title><link rel="stylesheet" href="style.css?v=20261106e"></head><body>
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#0b1112"><title>Ночное такси — Последний район</title><link rel="stylesheet" href="style.css?v=20261106f"></head><body>
 <div class="app">
 <main>
 <section class="drive"><div class="scene" id="scene">
   <div class="hud-top"><a class="brand" href="../index.html" aria-label="Каталог игр">✳ <span>НОЧНОЕ ТАКСИ</span></a><div class="location"><span class="online"></span><strong id="district">Центр</strong><span class="hud-separator">/</span><span id="clock">00:14</span></div><button id="helpBtn" class="hud-button help-button" aria-label="Как играть">? <span>КАК ЕХАТЬ</span></button><button id="pauseBtn" class="hud-button" aria-label="Пауза">Ⅱ <span>ПАУЗА</span></button></div>
   <div class="driving-help" id="drivingHelp"><button id="closeHelp" aria-label="Закрыть подсказку">×</button><strong>КАК ЕХАТЬ</strong><span>Удерживайте <b>ГАЗ</b>, поворачивайте кнопками <b>◀ ▶</b>. Для заказа откройте <b>ПЛАНШЕТ</b>.</span><small>ПК: W / ↑ — газ, S / ↓ — тормоз, A D / ← → — руль. Пробел — ручник, R — задний ход, C — камера, T — планшет, Esc — пауза.</small></div><div class="route-hud" id="routeHud" hidden><span id="routeArrow">↑</span><div><small>ЦЕЛЬ</small><strong id="hudDistance">0 м</strong></div></div><div class="render-error hidden" id="renderError" role="alert"><strong>Не удалось запустить 3D</strong><span>Браузер не предоставил WebGL. Включите аппаратное ускорение или откройте игру в актуальном Chrome / Safari.</span></div><div class="scene-message" id="sceneMessage"><span>✦</span> НОЧЬ ТОЛЬКО НАЧИНАЕТСЯ</div>
-  <button class="hud-button door-button" id="doorBtn" aria-pressed="false">▣ &nbsp; ДВЕРЬ · НЕДОСТУПНА</button><div class="hud-bottom"><div class="speed"><strong id="speed">0</strong><span>КМ/Ч</span></div><div class="hud-vehicle"><span>ВАШ АВТОМОБИЛЬ</span><strong id="carName">Волга-Комфорт</strong></div><button class="gear gear-button" id="gearBtn" aria-label="Переключить передачу">D <span>ВПЕРЁД</span></button></div>
+  <div class="hud-bottom"><div class="speed"><strong id="speed">0</strong><span>КМ/Ч</span></div><div class="hud-vehicle"><span>ВАШ АВТОМОБИЛЬ</span><strong id="carName">Волга-Комфорт</strong></div><button class="gear gear-button" id="gearBtn" aria-label="Переключить передачу">D <span>ВПЕРЁД</span></button><div class="steering-readout">РУЛЬ <strong id="steeringAngle">0°</strong></div></div>
   <div class="right-actions"><button class="hud-button camera-button" id="cameraBtn" aria-label="Переключить камеру">◉ <span id="cameraLabel">ВИД: САЛОН</span></button><button class="hud-button tablet-button" id="tabletBtn" aria-haspopup="dialog" aria-expanded="false">▦ <span>ПЛАНШЕТ</span><i id="orderDot"></i></button></div>
 </div></section>
 </main>
@@ -17,7 +17,7 @@
         <div class="stats"><div><span>БАЛАНС</span><strong id="money">2 450 <small>₽</small></strong></div><div><span>РЕЙТИНГ</span><strong><em>★</em> <span id="rating">5.0</span></strong></div><div><span>ПОЕЗДКИ</span><strong id="trips">00</strong></div></div>
         <div class="tablet-grid"><div class="order"><div class="panel-title"><div><span class="radio-icon">⌁</span> ДИСПЕТЧЕРСКАЯ</div><span class="signal">▂▄▆</span></div><div id="orderContent"></div></div>
         <div class="map-card"><div class="map-heading"><span>ВАШ МАРШРУТ</span><span>⌖ ГОРОД</span></div><div class="map"></div><div class="map-bottom"><span><i></i> ВЫ ЗДЕСЬ</span><span id="routeLabel">ОЖИДАНИЕ ЗАКАЗА</span></div></div></div>
-        <div class="vehicle-card"><div class="car-status"><div class="status-icon">◉</div><div><span>СОСТОЯНИЕ</span><strong id="condition">100%</strong></div></div><div class="fuel"><div><span>ТОПЛИВО</span><strong id="fuelText">80%</strong></div><div class="bar"><i id="fuelBar"></i></div></div><div class="tablet-actions"><button id="garageBtn" class="secondary">⚒ &nbsp; ГАРАЖ</button><button id="settingsBtn" class="secondary">⚙ &nbsp; НАСТРОЙКИ</button><button id="sound" class="secondary" aria-label="Звук">♫</button></div></div>
+        <div class="vehicle-card"><div class="car-status"><div class="status-icon">◉</div><div><span>СОСТОЯНИЕ</span><strong id="condition">100%</strong></div></div><div class="fuel"><div><span>ТОПЛИВО</span><strong id="fuelText">80%</strong></div><div class="bar"><i id="fuelBar"></i></div></div><div class="tablet-actions"><button id="garageBtn" class="secondary">⚒ &nbsp; ГАРАЖ</button><button id="settingsBtn" class="secondary">⚙ &nbsp; НАСТРОЙКИ</button></div></div>
         <div class="tablet-note">АВТОСОХРАНЕНИЕ ВКЛЮЧЕНО <span>ПЛАНШЕТ СТАВИТ СМЕНУ НА ПАУЗУ</span></div>
       </div>
       <div class="modal hidden" id="modal"><div class="modal-box"><button class="close" id="closeModal" aria-label="Назад">×</button><div id="modalContent"></div></div></div>
@@ -25,4 +25,4 @@
   </div>
 </div>
 <div id="toast" class="toast" role="status"></div><div class="portrait-note">↻ &nbsp; Для удобного вождения поверните устройство</div>
-</div><script src="game.bundle.js?v=20261106e"></script></body></html>
+</div><script src="game.bundle.js?v=20261106f"></script></body></html>

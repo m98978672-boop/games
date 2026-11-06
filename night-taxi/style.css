@@ -16,3 +16,5 @@
 
 /* Compact keyboard reference for desktop, without covering mobile controls. */
 .pc-controls{display:none}@media (hover:hover) and (pointer:fine) and (min-width:900px) and (min-height:540px){.pc-controls{display:block;position:fixed;z-index:3;bottom:20px;left:50%;transform:translateX(-50%);padding:9px 12px;background:#101b1edb;border:1px solid #52675e;color:#d9e5da;font-size:10px;white-space:nowrap;pointer-events:none}.pc-controls span{color:#e4b65f;margin:0 3px}}
+
+.steering-readout{display:flex;flex-direction:column;gap:4px;color:#b5c8bb;font-size:9px;letter-spacing:.8px}.steering-readout strong{color:#e5bd70;font-size:15px;font-variant-numeric:tabular-nums}

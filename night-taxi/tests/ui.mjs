@@ -24,7 +24,7 @@ const canvas=w.testRenderer.domElement;const before=w.testRenderer.camera.getWor
 canvas.dispatchEvent(new w.PointerEvent('pointerdown',{pointerId:55,clientX:200,clientY:200}));canvas.dispatchEvent(new w.PointerEvent('pointermove',{pointerId:55,clientX:260,clientY:240}));nextFrame(w.performance.now()+30);
 const after=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(Math.abs(after.x-before.x)>.1&&Math.abs(after.y-before.y)>.05,'camera follows drag on both axes');
 canvas.dispatchEvent(new w.PointerEvent('pointerup',{pointerId:55}));canvas.dispatchEvent(new w.MouseEvent('dblclick'));nextFrame(w.performance.now()+35);const centred=w.testRenderer.camera.getWorldDirection(new (await import('three')).Vector3());assert.ok(centred.distanceTo(before)<.01,'double click recentres view');
-click('doorBtn');assert.match(d.getElementById('toast').textContent,/дверь пока не открывается/);
+assert.equal(d.getElementById('doorBtn'),null,'nonfunctional door control removed');assert.equal(d.getElementById('sound'),null,'placeholder sound control removed');
 click('tabletBtn');assert.equal(visible('tabletOverlay'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);assert.equal(d.getElementById('tabletBtn').getAttribute('aria-expanded'),'true');
 click('accept');assert.match(d.getElementById('orderContent').textContent,/ЗА ПАССАЖИРОМ/);click('closeTablet');assert.equal(visible('tabletOverlay'),false);assert.match(d.getElementById('pauseBtn').textContent,/ПАУЗА/);
 click('pauseBtn');click('tabletBtn');click('closeTablet');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/,'previous pause preserved');
@@ -41,24 +41,37 @@ assert.ok(gas.classList.contains('is-active'));assert.ok(left.classList.contains
 let time=w.performance.now()+100;for(let i=0;i<20;i++){time+=50;nextFrame(time)}
 assert.ok(Number(d.getElementById('speed').textContent)>0,'gas accelerates using on-screen pointer');
 left.dispatchEvent(new w.PointerEvent('pointerup',{bubbles:true,pointerId:2}));assert.ok(gas.classList.contains('is-active'),'releasing steering keeps gas held');assert.ok(!left.classList.contains('is-active'));left.dispatchEvent(new w.PointerEvent('pointerdown',{bubbles:true,cancelable:true,pointerId:3}));
-click('pauseBtn');assert.ok(!gas.classList.contains('is-active'));assert.ok(!left.classList.contains('is-active'));
+click('pauseBtn');assert.ok(!gas.classList.contains('is-active'));assert.ok(!left.classList.contains('is-active'));const pausedSpeed=Number(d.getElementById('speed').textContent);for(let i=0;i<8;i++){time+=50;nextFrame(time)}assert.equal(Number(d.getElementById('speed').textContent),pausedSpeed,'pause freezes speed');
 click('pauseBtn');for(let i=0;i<8;i++){time+=50;nextFrame(time)}
-assert.equal(Number(d.getElementById('speed').textContent),0,'pause clears held controls');
+assert.ok(Number(d.getElementById('speed').textContent)<pausedSpeed,'released gas allows the car to coast');
 // Physical keys work even when the system keyboard layout produces Cyrillic.
 const key=(type,code,character,extra={})=>w.dispatchEvent(new w.KeyboardEvent(type,{key:character,code,bubbles:true,cancelable:true,...extra}));
 key('keydown','KeyW','ц');for(let i=0;i<20;i++){time+=50;nextFrame(time)}
 assert.ok(Number(d.getElementById('speed').textContent)>0,'physical W accelerates in Russian layout');
-key('keyup','KeyW','ц');click('pauseBtn');click('pauseBtn');for(let i=0;i<8;i++){time+=50;nextFrame(time)}
-assert.equal(Number(d.getElementById('speed').textContent),0,'releasing keys and pausing clears acceleration');
+key('keyup','KeyW','ц');key('keydown','KeyS','ы');for(let i=0;i<60;i++){time+=50;nextFrame(time)}key('keyup','KeyS','ы');
+assert.equal(Number(d.getElementById('speed').textContent),0,'braking brings car to a stop');
 const view=d.getElementById('cameraLabel').textContent;key('keydown','KeyC','с');assert.notEqual(d.getElementById('cameraLabel').textContent,view,'C switches camera');
 const switched=d.getElementById('cameraLabel').textContent;key('keydown','KeyC','с',{repeat:true});assert.equal(d.getElementById('cameraLabel').textContent,switched,'held shortcut does not repeat');
-key('keydown','KeyE','у');assert.match(d.getElementById('toast').textContent,/дверь пока не открывается/);
 key('keydown','KeyR','к');assert.match(d.getElementById('gearBtn').textContent,/R/);key('keydown','KeyR','к');assert.match(d.getElementById('gearBtn').textContent,/D/);
 key('keydown','Escape','Escape');assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);key('keydown','Escape','Escape');assert.match(d.getElementById('pauseBtn').textContent,/ПАУЗА/);
 key('keydown','KeyT','е');assert.equal(visible('tabletOverlay'),true);key('keydown','Escape','Escape');assert.equal(visible('tabletOverlay'),false);
 const lost=new w.Event('webglcontextlost',{cancelable:true});w.testRenderer.domElement.dispatchEvent(lost);assert.ok(lost.defaultPrevented);assert.equal(visible('renderError'),true);assert.match(d.getElementById('pauseBtn').textContent,/ПРОДОЛЖИТЬ/);w.testRenderer.domElement.dispatchEvent(new w.Event('webglcontextrestored'));assert.equal(visible('renderError'),false);
 click('helpBtn');assert.equal(visible('drivingHelp'),true);click('closeHelp');assert.equal(visible('drivingHelp'),false);
 console.log('Планшет, экранные педали, пауза, заказ и камеры: OK');dom.window.close();
+// Start from a saved pickup and run the actual tablet-to-boarding-to-ride flow.
+const boardDom=new JSDOM(html,{url:'https://example.test/night-taxi/',runScripts:'outside-only'}), bw=boardDom.window;
+bw.PointerEvent=w.PointerEvent;let frame;bw.requestAnimationFrame=f=>{frame=f};bw.HTMLCanvasElement.prototype.getContext=w.HTMLCanvasElement.prototype.getContext;
+bw.HTMLElement.prototype.getBoundingClientRect=()=>({width:1000,height:600,left:0,top:0,right:1000,bottom:600});
+bw.TestRenderer=class{constructor(){this.domElement=bw.document.createElement('canvas');bw.testRenderer=this}setPixelRatio(){}setSize(){}render(scene,camera){this.scene=scene;this.camera=camera}};
+bw.localStorage.setItem('nightTaxi3D',JSON.stringify({stage:'board',order:0,x:7,z:200,heading:0}));bw.eval(bundle.outputFiles[0].text);
+let clock=bw.performance.now()+20;frame(clock);const bd=bw.document;bd.getElementById('tabletBtn').click();bd.getElementById('continueOrder').click();
+assert.ok(bd.getElementById('tabletOverlay').classList.contains('hidden'),'tablet closes for boarding animation');
+const passenger=bw.testRenderer.scene.getObjectByName('passenger'),initial=passenger.position.x;
+for(let i=0;i<30;i++){clock+=50;frame(clock)}assert.ok(passenger.position.x<initial,'passenger approaches the car');
+assert.equal(JSON.parse(bw.localStorage.getItem('nightTaxi3D')).stage,'board','trip does not advance before animation finishes');
+bd.getElementById('pauseBtn').click();const frozen=passenger.position.x;for(let i=0;i<15;i++){clock+=50;frame(clock)}assert.equal(passenger.position.x,frozen,'boarding pauses');bd.getElementById('pauseBtn').click();
+for(let i=0;i<70;i++){clock+=50;frame(clock)}assert.equal(JSON.parse(bw.localStorage.getItem('nightTaxi3D')).stage,'ride','trip advances only after boarding');assert.equal(passenger.visible,false);assert.equal(bw.testRenderer.scene.getObjectByName('seatedPassenger').visible,true,'passenger remains in rear seat after boarding');
+boardDom.window.close();console.log('Посадка: интерфейс, пауза и продолжение заказа: OK');
 const broken=new JSDOM(html,{url:'https://example.test/night-taxi/',runScripts:'outside-only'});
 broken.window.TestRenderer=class{constructor(){throw new Error('no WebGL')}};
 assert.throws(()=>broken.window.eval(bundle.outputFiles[0].text),/WebGL недоступен/);
