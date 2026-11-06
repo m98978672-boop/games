@@ -16,7 +16,7 @@ function batchStatic(root){
  root.updateMatrixWorld(true);const buckets=new Map(),remove=[];
  root.traverse(obj=>{
   if(!obj.isMesh||Array.isArray(obj.material))return;
-  let ancestor=obj;while(ancestor&&ancestor!==root){if(ancestor.userData.animatedWheel||ancestor.name==='interior'||ancestor.name==='steering'||ancestor.name.startsWith('gaugeNeedle'))return;ancestor=ancestor.parent}
+  let ancestor=obj;while(ancestor&&ancestor!==root){if(ancestor.userData.animatedWheel||!ancestor.visible||ancestor.name==='interior'||ancestor.name==='steering'||ancestor.name.startsWith('gaugeNeedle'))return;ancestor=ancestor.parent}
   const m=obj.material,g=obj.geometry.index?obj.geometry.toNonIndexed():obj.geometry.clone();
   g.applyMatrix4(obj.matrixWorld);
   // Reflection of the left body panel needs both faces after baking its negative scale.

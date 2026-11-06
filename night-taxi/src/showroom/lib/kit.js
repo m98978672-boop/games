@@ -390,6 +390,59 @@ export function plane(parent, w, h, material, x = 0, y = 0, z = 0) {
   return mesh(parent, new THREE.PlaneGeometry(w, h), material, x, y, z);
 }
 
+/** Фирменный шильдик: прозрачная надпись бренда для борта или двери.
+ *  Один и тот же стиль у тягачей, прицепов и легковых — вся техника
+ *  читается как одна серия. */
+export function brandDecal(unit, opts = {}) {
+  const { width = 512, height = 128, font = null } = opts;
+  return labelTexture(unit.brand || 'GARAGE', {
+    width,
+    height,
+    bg: 'rgba(0,0,0,0)',
+    fg: '#f4f0e4',
+    accent: unit.accent || '#e8b45a',
+    font: font || `bold ${Math.round(height * 0.52)}px Arial, sans-serif`,
+    border: false,
+  });
+}
+
+export function brandDecalMaterial(unit, opts = {}) {
+  const tex = brandDecal(unit, opts);
+  if (!tex) return null;
+  return new THREE.MeshStandardMaterial({
+    map: tex,
+    transparent: true,
+    roughness: 0.5,
+    metalness: 0.1,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -2,
+  });
+}
+
+/** Фирменная линия: акцентная полоса и хром-кант над ней. Общий приём
+ *  оформления для всех 40 машин (тягачи, прицепы, легковые).
+ *  axis: 'z' — вдоль борта, 'x' — поперёк борта/по корме. */
+export function accentLine(parent, opts = {}) {
+  const {
+    length = 1, height = 0.05, depth = 0.02,
+    x = 0, y = 0, z = 0, axis = 'z',
+    accentMat, chromeMat, chrome = true,
+  } = opts;
+  const a = axis === 'z'
+    ? box(parent, depth, height, length, accentMat, x, y, z)
+    : box(parent, length, height, depth, accentMat, x, y, z);
+  let c = null;
+  if (chrome && chromeMat) {
+    c = axis === 'z'
+      ? box(parent, depth * 0.8, height * 0.28, length, chromeMat, x, y + height * 0.78, z)
+      : box(parent, length, height * 0.28, depth * 0.8, chromeMat, x, y + height * 0.78, z);
+  }
+  return { accent: a, chrome: c };
+}
+
 /** Зеркально строит детали для левой (-1) и правой (+1) стороны. */
 export function mirror(parent, build) {
   build(-1);

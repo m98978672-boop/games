@@ -16,7 +16,7 @@ const {createTaxi,animateTaxi}=await import('../src/vehicle.js');
 for(let i=0;i<3;i++){
  const model=createTaxi(0xc0a346,i);
  assert.equal(model.showroom.unit.style,i===2?'van':'sedan');
- let meshes=0;model.showroom.group.traverse(o=>{if(o.isMesh)meshes++});assert.ok(meshes<140,'showroom model is batched');
+ let meshes=0;model.showroom.group.traverse(o=>{if(!o.isMesh)return;let p=o;while(p&&p.visible)p=p.parent;if(!p)meshes++});assert.ok(meshes<140,'visible showroom model is batched');assert.equal(model.showroom.group.getObjectByName('damage').visible,false,'Garage damage decals stay hidden until explicitly used');
  assert.equal(model.showroom.wheels.length,4);assert.equal(model.showroom.wheels.filter(w=>w.front).length,2);
  assert.equal(model.showroom.interior.parent.name,`car:${model.showroom.unit.id}`,'original interior remains attached to the complete car');
  assert.ok(model.group.getObjectByName('interior'),'garage interior exists with the exterior');
