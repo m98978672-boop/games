@@ -122,6 +122,30 @@ function drawMetal(ctx, w, h) {
   noise(ctx, w, h, 1500, 0.03, 1);
 }
 
+/** Текст с разрядкой: canvas не умеет letter-spacing, рисуем по символу. */
+function tracked(ctx, text, x, y, tracking = 0) {
+  let cx = x;
+  for (const ch of text) {
+    ctx.fillText(ch, cx, y);
+    cx += ctx.measureText(ch).width + tracking;
+  }
+  return cx - tracking;
+}
+
+function fitFont(ctx, text, maxWidth, weight, size, family, tracking = 0) {
+  let px = size;
+  for (let i = 0; i < 24; i++) {
+    ctx.font = `${weight} ${px}px ${family}`;
+    const w = ctx.measureText(text).width + tracking * Math.max(0, text.length - 1);
+    if (w <= maxWidth) break;
+    px *= 0.94;
+    if (px < 10) break;
+  }
+  return px;
+}
+
+const FONT_STACK = '"Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif';
+
 export function labelTexture(lines, opts = {}) {
   const {
     bg = '#12161b',
@@ -129,29 +153,44 @@ export function labelTexture(lines, opts = {}) {
     accent = '#e8b45a',
     width = 512,
     height = 128,
-    font = 'bold 54px Arial, sans-serif',
+    font = null,
     sub = '',
-    subFont = 'bold 22px Arial, sans-serif',
+    subFont = null,
     border = true,
   } = opts;
   return canvasTexture(width, height, (ctx, w, h) => {
-    ctx.fillStyle = bg;
+    // плотная подложка с лёгким градиентом — не «чёрный прямоугольник»
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, bg);
+    g.addColorStop(1, '#0b0e11');
+    ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, h);
     if (border) {
-      ctx.strokeStyle = accent;
-      ctx.lineWidth = 6;
-      ctx.strokeRect(6, 6, w - 12, h - 12);
+      ctx.strokeStyle = 'rgba(232,180,90,0.35)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(1, 1, w - 2, h - 2);
     }
+    // акцентная планка слева
     ctx.fillStyle = accent;
-    ctx.fillRect(20, 20, 10, h - 40);
+    ctx.fillRect(0, 0, 7, h);
+    const pad = 26;
+    const main = String(lines || '').toUpperCase();
+    const subText = String(sub || '').toUpperCase();
+    const area = w - pad - 22;
+    const mainSize = subText ? h * 0.4 : h * 0.5;
+    const tracking = Math.max(1, h * 0.02);
+    const size = font
+      ? null
+      : fitFont(ctx, main, area, 700, mainSize, FONT_STACK, tracking);
+    ctx.font = font || `700 ${size}px ${FONT_STACK}`;
     ctx.fillStyle = fg;
-    ctx.font = font;
     ctx.textBaseline = 'middle';
-    ctx.fillText(lines, 48, sub ? h * 0.42 : h * 0.52);
-    if (sub) {
-      ctx.fillStyle = 'rgba(242,236,223,0.7)';
-      ctx.font = subFont;
-      ctx.fillText(sub, 50, h * 0.72);
+    tracked(ctx, main, pad, subText ? h * 0.42 : h * 0.52, tracking);
+    if (subText) {
+      const subSize = subFont ? null : fitFont(ctx, subText, area, 600, h * 0.17, FONT_STACK, 2);
+      ctx.font = subFont || `600 ${subSize}px ${FONT_STACK}`;
+      ctx.fillStyle = 'rgba(242,236,223,0.62)';
+      tracked(ctx, subText, pad + 1, h * 0.73, 2);
     }
   });
 }

@@ -273,8 +273,8 @@ check('«убрать все» чистит кузов', $('damage-count').textC
 $('menu-damage-btn').click(); await wait(60);
 $('light-btn').click(); await wait(60);
 check('всплывашка «Свет» открывается', !$('light-pop').classList.contains('hidden'));
-D.querySelector('#light-pop .chip[data-preset="dark"]').click(); await wait(120);
-check('схема света переключается', D.querySelector('#light-pop .chip[data-preset="dark"]').classList.contains('active'));
+D.querySelector('#light-pop .pop-item[data-preset="dark"]').click(); await wait(120);
+check('схема света переключается', D.querySelector('#light-pop .pop-item[data-preset="dark"]').classList.contains('is-on'));
 check('во вьюпорте есть чипы видов', D.querySelectorAll('#dock-views .chip').length >= 4);
 
 // ---- поддержка разных устройств
