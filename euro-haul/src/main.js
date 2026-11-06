@@ -922,7 +922,7 @@ class Game {
       cargo: 'Без груза',
       mass: 0,
       category: 'general',
-      trailer: 'curtain',
+      trailer: this.profile?.truck?.trailer || 'curtain',
       pay: 0,
       deadlineMin: 9999,
       distance: Math.max(5, cityDistanceKm(CITY_BY_ID.get(this.profile.currentCity), CITY_BY_ID.get(cityId))),
@@ -1069,9 +1069,10 @@ class Game {
     this.junctionKey = null;
 
     const paint = PAINT_COLORS.find((c) => c.id === this.profile.truck.paint) || PAINT_COLORS[1];
-    this.truckView.setPaint(paint.hex);
-    this.truckView.setInteriorVisible(this.cameraMode === 'interior');
     const model = TRUCK_MODELS.find((m) => m.id === this.profile.truck.modelId) || TRUCK_MODELS[0];
+    // Внешность тягача — по модели: у каждой свой обвес, оптика и число мостов.
+    if (!this.truckView.applyModel(model.id, paint.hex)) this.truckView.setPaint(paint.hex);
+    this.truckView.setInteriorVisible(this.cameraMode === 'interior');
     const engineUpg = UPGRADES.engine[this.profile.truck.engine || 0];
     this.truck = new TruckSim({
       model,

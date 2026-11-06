@@ -10,7 +10,8 @@
     "preview": "node tests/render-preview.mjs",
     "assets": "node tools/fetch-assets.mjs",
     "test:assets": "node tests/_assets.mjs",
-    "test:junction": "node tests/_junction.mjs"
+    "test:junction": "node tests/_junction.mjs",
+    "test:models": "node tests/_models.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"
