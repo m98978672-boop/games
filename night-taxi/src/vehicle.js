@@ -11,4 +11,5 @@ export function createTaxi(color=0xc0a346, variant=0) {
 export function animateTaxi(model,speed,steering,gear,dt) {
   if(model.showroom.steering)model.showroom.steering.rotation.z=steering*.7;
   animateShowroomWheels(model.showroom.wheels,speed,steering,gear,dt);
+  for(const [i,needle] of model.showroom.needles.entries())if(needle)needle.rotation.z=-.95+Math.min(1,speed/(i?17:20))*2.0;
 }

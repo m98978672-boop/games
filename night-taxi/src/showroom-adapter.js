@@ -16,7 +16,7 @@ function batchStatic(root){
  root.updateMatrixWorld(true);const buckets=new Map(),remove=[];
  root.traverse(obj=>{
   if(!obj.isMesh||Array.isArray(obj.material))return;
-  let ancestor=obj;while(ancestor&&ancestor!==root){if(ancestor.userData.animatedWheel||ancestor.name==='interior'||ancestor.name==='steering')return;ancestor=ancestor.parent}
+  let ancestor=obj;while(ancestor&&ancestor!==root){if(ancestor.userData.animatedWheel||ancestor.name==='interior'||ancestor.name==='steering'||ancestor.name.startsWith('gaugeNeedle'))return;ancestor=ancestor.parent}
   const m=obj.material,g=obj.geometry.index?obj.geometry.toNonIndexed():obj.geometry.clone();
   g.applyMatrix4(obj.matrixWorld);
   // Reflection of the left body panel needs both faces after baking its negative scale.
@@ -49,8 +49,8 @@ export function buildShowroomTaxi(color,variant){
  for(const wheel of built.wheels){
   // The source car points along -Z; its front axle has a negative Z coordinate.
   const pivot=new THREE.Group();pivot.position.copy(wheel.position);pivot.userData.animatedWheel=true;
-  wheel.position.set(0,0,0);built.root.remove(wheel);pivot.add(wheel);built.root.add(pivot);
-  wheels.push({pivot,wheel,front:pivot.position.z<0,radius:unit.wheelRadius,side:Math.sign(pivot.position.x)});
+  const spin=new THREE.Group();wheel.position.set(0,0,0);built.root.remove(wheel);spin.add(wheel);pivot.add(spin);built.root.add(pivot);
+  wheels.push({pivot,spin,wheel,front:pivot.position.z<0,radius:unit.wheelRadius,side:Math.sign(pivot.position.x)});
  }
  if(interior)batchStatic(interior);
  batchStatic(built.root);
@@ -60,9 +60,15 @@ export function buildShowroomTaxi(color,variant){
  const checkerMat=new THREE.MeshBasicMaterial({color:0x252723});
  for(let i=0;i<5;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.095,.07,.01),checkerMat);square.position.set((i-2)*.13,unit.height+.13,.185);wrapper.add(square)}
  for(const side of [-1,1])for(let i=0;i<7;i++){const square=new THREE.Mesh(new THREE.BoxGeometry(.018,.10,.10),checkerMat);square.position.set(side*(unit.width/2+.025),.77,(i-3)*.10);wrapper.add(square)}
- return {group:wrapper,wheels,unit,interior,driverView,steering:interior?.getObjectByName('steering')};
+ return {group:wrapper,wheels,unit,interior,driverView,steering:interior?.getObjectByName('steering'),needles:[0,1].map(i=>interior?.getObjectByName('gaugeNeedle'+i))};
 }
 
 export function animateShowroomWheels(wheels,speed,steering,gear,dt){
- for(const w of wheels){w.pivot.rotation.y=w.front?steering*.35:0;w.wheel.rotation.x+=speed*gear*dt/w.radius*(w.side<0?-1:1)}
+ for(const w of wheels){
+  // Garage faces -Z; the adapter rotates it 180 degrees. Wheels on the
+  // opposite side are mirrored; spin the shared axle parent in the same direction.
+  const turn=.55/(1+speed*.055)*steering;
+  w.pivot.rotation.y=w.front?-turn*(1-w.side*steering*.08):0;
+  w.spin.rotation.x-=speed*(gear===-1?-1:1)*dt/w.radius;
+ }
 }
