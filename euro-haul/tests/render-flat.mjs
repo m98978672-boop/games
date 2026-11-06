@@ -120,7 +120,7 @@ function renderTruck(modelId, paintHex, views, outName, withTrailer = true, only
   scene.updateMatrixWorld(true);
 
   const camera = new THREE.PerspectiveCamera(38, W / H, 0.5, 800);
-  const target = new THREE.Vector3(0, 1.9, 0.5);
+  const baseTarget = new THREE.Vector3(0, 1.9, 0.5);
 
   const cols = views.length;
   const rows = 1;
@@ -131,6 +131,7 @@ function renderTruck(modelId, paintHex, views, outName, withTrailer = true, only
 
   views.forEach((v, vi) => {
     camera.position.set(v.pos[0], v.pos[1], v.pos[2]);
+    const target = v.target ? new THREE.Vector3(v.target[0], v.target[1], v.target[2]) : baseTarget;
     camera.lookAt(target);
     camera.updateProjectionMatrix();
     camera.updateMatrixWorld(true);
@@ -241,10 +242,14 @@ const viewsFront = [
   { pos: [0.2, 2.1, 10.5] },
   { pos: [7.4, 3.3, 10.4] },
 ];
-const viewsSide = [{ pos: [15.5, 2.6, 1.0] }];
+// Боковой вид: снимаем с расстояния, куда влезает вся сцепка. Раньше камера
+// стояла в 15.5 м и длинные модели (auriga-5/-6) упирались прицепом в край кадра.
+// центр кадра — середина сцепки (тягач спереди + прицеп позади),
+// иначе длинный прицеп уезжает за правый край.
+const viewsSide = [{ pos: [24.5, 3.0, -4.2], target: [0, 1.8, -4.4] }];
 
 if (process.env.TRAILERS) {
-  const views = [{ pos: [17, 3.4, 12.5] }];
+  const views = [{ pos: [19, 3.6, 13.5] }];
   for (const type of ['curtain', 'fridge', 'tank', 'flatbed', 'container', 'log', 'tipper', 'lowboy']) {
     renderTruck('auriga-5', PAINT, views, `trailer-${type}.png`, false, false, type);
   }
