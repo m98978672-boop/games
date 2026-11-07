@@ -11,7 +11,8 @@ import { CATEGORIES, TRUCKS, TRAILERS, CARS, BUILDINGS, findUnit } from './data/
 import { placePanel, rectOf, viewportRect, overlaps, rect } from './lib/layout.js';
 import { damageReport } from './lib/damage.js';
 import { buildDots, dotsCount } from './lib/dots.js';
-import { buildVoxel, voxelStats } from './lib/reconstruct.js';
+import { buildSmoothMesh, voxelStats } from './lib/reconstruct.js';
+import { prepareFourD, tickFourD, resetFourD, clearFourD } from './lib/four-d.js';
 import { createPreview } from './lib/preview.js';
 import { deviceProfile, installGestures, installShake, haptic } from './lib/device.js';
 
@@ -47,7 +48,8 @@ const state = {
   dmgKind: 'any', // выбранный в меню тип повреждения
   lastDmg: null, // индекс последнего добавленного пятна — для текста
   dots: false, // точечный трафарет: модель собрана из точек
-  look: 'solid', // как показана модель: solid | dots | voxel (реконструкция)
+  look: 'solid', // как показана модель: solid | dots | voxel (меш из точек)
+  fourD: false, // точки вращаются в четвёртой оси
 };
 
 // Пятна добавляются ПОШТУЧНО: у каждой модели свой набор индексов.
@@ -70,11 +72,12 @@ state.fav = Array.isArray(saved.fav) ? saved.fav : [];
 state.preset = saved.preset || 'studio';
 state.dots = !!saved.dots;
 state.look = saved.look === 'dots' || saved.look === 'voxel' ? saved.look : (saved.dots ? 'dots' : 'solid');
+state.fourD = !!saved.fourD;
 const colors = saved.colors && typeof saved.colors === 'object' ? saved.colors : {};
 
 function saveState() {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ cat: state.cat, id: state.id, fav: state.fav, preset: state.preset, colors, dots: state.dots, look: state.look }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ cat: state.cat, id: state.id, fav: state.fav, preset: state.preset, colors, dots: state.dots, look: state.look, fourD: state.fourD }));
   } catch { /* приватный режим */ }
 }
 
@@ -224,7 +227,9 @@ function ensureVoxel(built) {
   if (!built?.root) return null;
   if (!built.voxel) {
     const profile = deviceProfile();
-    built.voxel = buildVoxel(built.root, { target: profile.mobile ? 30000 : 62000 });
+    // не кубы, а настоящая поверхность: вершины на пересечениях поля,
+    // треугольные грани и сглаженные нормали
+    built.voxel = buildSmoothMesh(built.root, { target: profile.mobile ? 30000 : 62000 });
     if (built.voxel) built.root.add(built.voxel);
   }
   return built.voxel;
@@ -271,6 +276,7 @@ function setLook(look, { announce = true, rebuild = false } = {}) {
         built.root.remove(built.dots);
         built.dots.geometry.dispose();
         built.dots.material.dispose();
+        clearFourD(built.dots);
         built.dots = null;
       }
       ensureDots(built);
@@ -282,17 +288,22 @@ function setLook(look, { announce = true, rebuild = false } = {}) {
       built.voxel = null;
     }
     if (next === 'voxel') ensureVoxel(built);
+    if (state.fourD && built.dots) {
+      if (next === 'dots') prepareFourD(built.dots);
+      else resetFourD(built.dots);
+    }
     applyLook();
     if (next === 'solid') applyDamage();
   }
   refreshPreviewCaption();
+  syncLookMenu();
   saveState();
   if (announce) {
     if (next === 'solid') live('Обычный вид: поверхности');
     else if (next === 'dots') live(`Точки: ${dotsCount(shown?.root).toLocaleString('ru-RU')} точек — модель собрана из трафарета`);
     else {
       const st = voxelStats(shown?.voxel);
-      live(`Реконструкция: ${st.cells.toLocaleString('ru-RU')} клеток по ${(st.cell * 100).toFixed(0)} см — модель собрана заново из точек`);
+      live(`Меш из точек: ${st.triangles.toLocaleString('ru-RU')} треугольников, ${st.cells.toLocaleString('ru-RU')} узлов — поверхность, а не кубы`);
     }
   }
   haptic(6);
@@ -301,6 +312,31 @@ function setLook(look, { announce = true, rebuild = false } = {}) {
 
 function setDots(on, opts = {}) {
   return setLook(on ? 'dots' : 'solid', opts);
+}
+
+function setFourD(on, { announce = true } = {}) {
+  state.fourD = !!on;
+  const built = shown;
+  if (state.fourD && state.look !== 'dots') setLook('dots', { announce: false });
+  if (built?.dots) {
+    if (state.fourD) prepareFourD(built.dots);
+    else resetFourD(built.dots);
+  }
+  document.body.dataset.fourd = state.fourD ? 'on' : 'off';
+  $('more-4d')?.classList.toggle('is-on', state.fourD);
+  refreshPreviewCaption();
+  saveState();
+  if (announce) {
+    live(state.fourD
+      ? '4D: облако повернулось в четвёртой оси'
+      : '4D выключено: точки вернулись в свои координаты');
+  }
+  haptic(6);
+  return state.fourD;
+}
+
+function toggleFourD() {
+  setFourD(!state.fourD);
 }
 
 function setVoxel(on) {
@@ -607,7 +643,8 @@ function previewCaption(unit = currentUnit()) {
   const preset = { studio: 'Студия', dark: 'Ночь', show: 'Выставка', garage: 'Гараж' }[state.preset] || '';
   const bits = [view?.label || view?.id || '', preset];
   if (state.look === 'dots') bits.push('точки');
-  if (state.look === 'voxel') bits.push('реконструкция');
+  if (state.look === 'voxel') bits.push('меш из точек');
+  if (state.look === 'dots' && state.fourD) bits.push('4D');
   const dmg = damageSet().size;
   if (dmg) bits.push(`${dmg} поврежд.`);
   name.textContent = unit.name || unit.id;
@@ -651,6 +688,13 @@ function refreshPreviewCaption() {
   if (openPop && !$('pop-preview')?.classList.contains('hidden')) previewCaption();
 }
 
+/** Подсветка пунктов «Точки / Меш / 4D» в меню «Ещё». */
+function syncLookMenu() {
+  $('more-dots')?.classList.toggle('is-on', state.look === 'dots');
+  $('more-mesh')?.classList.toggle('is-on', state.look === 'voxel');
+  $('more-4d')?.classList.toggle('is-on', !!state.fourD);
+}
+
 function unmountPreview() {
   $('pop-preview')?.classList.add('hidden');
 }
@@ -668,6 +712,7 @@ function openPopover(name) {
     closePop();
     return;
   }
+  if (name === 'more') syncLookMenu();
   if (name === 'damage') renderDamageMenu();
   if (name === 'view') renderViewMenu();
   el.classList.remove('hidden');
@@ -1526,6 +1571,9 @@ function wireUI() {
   $('compare-btn-2').onclick = toggleCompare;
   $('dots-btn').onclick = toggleDots;
   $('voxel-btn').onclick = toggleVoxel;
+  $('more-dots').onclick = () => { toggleDots(); syncLookMenu(); closePop(); };
+  $('more-mesh').onclick = () => { toggleVoxel(); syncLookMenu(); closePop(); };
+  $('more-4d').onclick = () => { toggleFourD(); syncLookMenu(); };
   $('compare-btn-3').onclick = () => { toggleCompare(); closePop(); };
   $('fav-filter').onclick = () => {
     state.favOnly = !state.favOnly;
@@ -1661,6 +1709,7 @@ function wireUI() {
       case 'x': case 'X': case 'ч': case 'Ч': toggleDamage(); break;
       case 'p': case 'P': case 'з': case 'З': toggleDots(); break;
       case 'v': case 'V': case 'м': case 'М': toggleVoxel(); break;
+      case '4': case 'ч': case 'Ч': toggleFourD(); break;
       case 'Escape': {
         $('help-modal').classList.add('hidden');
         closePop();
@@ -1699,6 +1748,7 @@ function wireUI() {
 
 // ------------------------------------------------------------ запуск
 const clock = new THREE.Clock();
+let fourDTime = 0; // время для качания облака в 4D
 let frames = 0;
 let fpsClock = 0;
 let lowFpsStrikes = 0;
@@ -1718,6 +1768,13 @@ function loop() {
   }
   // лёгкое «дыхание» юбки подиума и огней
   stage.renderer.render(scene, stage.camera);
+  // 4D: облако точек медленно поворачивается в четвёртой оси
+  if (state.fourD && state.look === 'dots' && shown?.dots) {
+    fourDTime += dt;
+    // качание, а не бесконечный поворот: модель узнаваема, но «дышит» в 4D
+    if (!shown.dots.userData.fourD) prepareFourD(shown.dots);
+    tickFourD(shown.dots, 0.7 * Math.sin(fourDTime * 0.9));
+  }
   // предпросмотр в открытом меню: отдельный маленький кадр, не чаще 22 к/с
   if (openPop && preview && shown?.root) {
     const now = performance.now();

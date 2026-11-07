@@ -38,9 +38,11 @@ const root = built.root;
 root.updateMatrixWorld(true);
 
 // --look voxel: модель, собранная заново из точек (воксельная реконструкция)
-if (args.look === 'voxel') {
-  const { buildVoxel } = await import('../src/lib/reconstruct.js');
-  const vox = buildVoxel(root, { target: Number(args.dotstarget || 62000) });
+if (args.look === 'voxel' || args.look === 'mesh') {
+  const { buildVoxel, buildSmoothMesh } = await import('../src/lib/reconstruct.js');
+  const vox = args.look === 'mesh'
+    ? buildSmoothMesh(root, { target: Number(args.dotstarget || 62000) })
+    : buildVoxel(root, { target: Number(args.dotstarget || 62000) });
   if (vox) {
     vox.visible = true;
     root.traverse((o) => {
@@ -48,7 +50,7 @@ if (args.look === 'voxel') {
     });
     root.add(vox);
     root.updateMatrixWorld(true);
-    console.log(`voxel: клеток ${vox.userData.cells}, клетка ${vox.userData.cell.toFixed(3)} м`);
+    console.log(`${args.look}: ${vox.userData.cells || vox.userData.vertices} узлов, ${vox.userData.triangles} треугольников, клетка ${vox.userData.cell.toFixed(3)} м`);
   }
 }
 
@@ -327,6 +329,13 @@ if (seamSegs && seamSegs.length) {
 // --dots true: тот же кадр, но модель собрана из точек (трафарет).
 if (args.dots === 'true') {
   const cloud = buildDots(root, { target: Number(args.dotstarget || 60000) });
+  // --4d <угол>: облако повёрнуто в четвёртой оси перед отрисовкой
+  if (args['4d']) {
+    const { prepareFourD, tickFourD } = await import('../src/lib/four-d.js');
+    prepareFourD(cloud);
+    tickFourD(cloud, Number(args['4d']));
+    console.log(`4D: угол ${Number(args['4d']).toFixed(2)} рад`);
+  }
   const pAttr = cloud.geometry.attributes.position;
   const cAttr = cloud.geometry.attributes.color;
   const nAttr = cloud.geometry.attributes.normal;
