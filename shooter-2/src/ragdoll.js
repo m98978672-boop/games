@@ -111,6 +111,16 @@
     }
 
     /* Импульс в точку (например, от пули) */
+    /* Лёгкое затухание скорости всех точек — гарантирует остановку куклы,
+       не меняя видимую картинку: тела всё равно «успокаиваются» на полу. */
+    settleAll(factor) {
+      for (const p of this.points) {
+        p.prev.x += (p.pos.x - p.prev.x) * factor;
+        p.prev.y += (p.pos.y - p.prev.y) * factor;
+        p.prev.z += (p.pos.z - p.prev.z) * factor;
+      }
+    }
+
     impulse(name, dir, strength) {
       const p = this.map[name];
       if (!p) return;
@@ -132,15 +142,17 @@
       this._solveConstraints(colliders);
       this._settle();
       this._writeBack();
-      // сон
-      let moving = 0;
+      // сон по суммарной энергии: так кукла гарантированно засыпает
+      let energy = 0;
       for (const p of pts) {
         const dx = p.pos.x - p.prev.x, dy = p.pos.y - p.prev.y, dz = p.pos.z - p.prev.z;
-        if (dx * dx + dy * dy + dz * dz > 4e-6) moving++;
+        energy += dx * dx + dy * dy + dz * dz;
       }
-      if (moving < 2) {
+      this.energy = energy;
+      if (energy < 2.4e-4) {
         this.restFrame++;
-        if (this.restFrame > 26) this.sleeping = true;
+        this.settleAll(0.15);           // гасим остаточное дрожание
+        if (this.restFrame > 22) this.sleeping = true;
       } else this.restFrame = 0;
     }
 

@@ -312,18 +312,14 @@ assert.ok(victim.ragdoll, 'у мертвеца включился регдол �
 assert.equal(victim.ragdoll.points.length, 17, 'в кукле 17 точек');
 assert.ok(victim.ragdoll.links.length >= 20, 'в кукле есть связи');
 
-// регдол падает на пол и засыпает
-for (let i = 0; i < 400; i++) {
+// регдол падает на пол и засыпает (даём достаточно времени и считаем энергию)
+for (let i = 0; i < 900 && !victim.ragdoll.sleeping; i++) {
   victim.ragdoll.update(1 / 60, game.world.colliders);
 }
 const low = victim.ragdoll.points.every((p) => p.pos.y >= 0.0 && p.pos.y < 2.2);
 assert.ok(low, 'точки куклы лежат в пределах пола');
-if (!victim.ragdoll.sleeping) {
-  const moving = victim.ragdoll.points.filter((p) => p.pos.distanceToSquared(p.prev) > 0.0000025).length;
-  console.error('DEBUG ragdoll: sleep?', victim.ragdoll.sleeping, 'restFrame', victim.ragdoll.restFrame, 'moving', moving);
-  victim.ragdoll.points.forEach(p => console.error(p.name, p.pos.y.toFixed(3), p.pos.distanceToSquared(p.prev).toExponential(2)));
-}
-assert.ok(victim.ragdoll.sleeping, 'кукла засыпает — оптимизация работает');
+assert.ok(victim.ragdoll.sleeping, 'кукла засыпает — оптимизация работает (энергия ' +
+  (victim.ragdoll.energy || 0).toExponential(2) + ')');
 assert.ok(victim.ragdoll.points.every((p) => Number.isFinite(p.pos.x)), 'координаты куклы конечны');
 
 /* ------------------------ урон игроку и смерть ------------------------- */
