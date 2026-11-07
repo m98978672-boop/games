@@ -61,15 +61,16 @@
           { at: [0, 0.06, 0.0], pts: O.circleSection(0.038, 0.032, 10) }
         ]);
         const palmMesh = new T.Mesh(palm, M(this.glove));
-        palmMesh.scale.set(1, 1, 0.92);
+        palmMesh.scale.set(0.95, 1, 0.88);
         g.add(palmMesh);
         // четыре пальца: трубки поперёк, обхватывают цевьё
-        const finger = O.revolve([[0, 0.011], [0.004, 0.012], [0.052, 0.012], [0.058, 0.010], [0.06, 0.0]], { segments: 8 });
+        const finger = O.revolve([[0, 0.0105], [0.004, 0.0115], [0.040, 0.011], [0.050, 0.009], [0.054, 0.0]], { segments: 8 });
         finger.rotateZ(Math.PI / 2);
         for (let i = 0; i < 4; i++) {
           const f = new T.Mesh(finger, M(this.glove));
-          f.position.set(-0.028, -0.042 + i * 0.021, 0.028);
-          f.rotation.y = -0.16 - i * 0.02;
+          f.position.set(-0.020, -0.040 + i * 0.019, 0.020);
+          f.rotation.y = -0.10 - i * 0.02;
+          f.rotation.z = 0.06;
           g.add(f);
         }
         // большой палец — сверху, вдоль ствола
