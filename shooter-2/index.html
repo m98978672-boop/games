@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0b0e12">
+<title>СЕКТОР «ПЕПЕЛ» — шутер с 1760 анимациями и куклой из точек</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<!-- ============================ ИГРОВОЙ HUD ============================ -->
+<div id="hud" class="hidden">
+  <div id="dmg-flash"></div>
+  <div id="low-hp"></div>
+  <div id="dmg-dir"></div>
+  <div id="scope-overlay"><div class="scope-ring"></div><div class="scope-x"></div><div class="scope-y"></div></div>
+
+  <div id="crosshair">
+    <span class="ch t"></span><span class="ch b"></span><span class="ch l"></span><span class="ch r"></span>
+    <span class="ch-dot"></span>
+  </div>
+  <div id="hitmarker"></div>
+  <div id="aim-tag"></div>
+  <div id="dmg-layer"></div>
+  <div id="thoughts"></div>
+
+  <div id="hud-top">
+    <div id="mission-strip">
+      <span class="ms-label">МИССИЯ</span>
+      <span id="mission-name" class="ms-name">—</span>
+      <span id="mission-timer" class="ms-time">0 с</span>
+    </div>
+    <div id="objectives"></div>
+  </div>
+
+  <div id="killfeed"></div>
+
+  <div id="hud-left">
+    <div class="vital">
+      <div class="vital-label">ЗДОРОВЬЕ <b id="hp-val">100</b></div>
+      <div class="bar"><div id="hp-fill" class="fill hp"></div></div>
+    </div>
+    <div class="vital">
+      <div class="vital-label">БРОНЯ <b id="ar-val">0</b></div>
+      <div class="bar"><div id="ar-fill" class="fill ar"></div></div>
+    </div>
+    <div class="vital small">
+      <div class="vital-label">ВЫНОСЛИВОСТЬ</div>
+      <div class="bar mini"><div id="st-fill" class="fill st"></div></div>
+    </div>
+  </div>
+
+  <canvas id="minimap" width="168" height="168" title="Карта сектора"></canvas>
+
+  <div id="hud-right">
+    <div id="weapon-block">
+      <div id="hud-weapon" class="wname">ПМ-9 «Оса»</div>
+      <div class="ammo"><span id="hud-ammo">12</span><span class="sep">/</span><span id="hud-reserve">120</span></div>
+      <div class="wnote">гранаты: <b id="hud-grenades">3</b> · [G]</div>
+    </div>
+    <div id="hud-fps">60 FPS</div>
+    <button id="btn-hud-menu" title="Пауза (P)">⏸</button>
+  </div>
+
+  <div id="debug-panel"></div>
+
+  <div id="help-panel">
+    <div class="hp-title">Управление</div>
+    <div class="hp-grid">
+      <span>WASD</span><b>движение</b>
+      <span>Мышь</span><b>взгляд</b>
+      <span>ЛКМ</span><b>огонь</b>
+      <span>ПКМ</span><b>прицел</b>
+      <span>Shift</span><b>бег</b>
+      <span>C / Ctrl</span><b>присед</b>
+      <span>R</span><b>перезарядка</b>
+      <span>1 2 3 / Q</span><b>оружие</b>
+      <span>G</span><b>граната</b>
+      <span>P / Esc</span><b>пауза</b>
+      <span>T</span><b>мысли врагов</b>
+      <span>F</span><b>счётчики</b>
+    </div>
+  </div>
+  <div id="score-panel" class="hidden">
+    <div class="sp-title">ТАБЛИЦА</div>
+    <div class="sp-body">Убийств: <b id="sp-kills">0</b></div>
+  </div>
+  <div id="toast"></div>
+
+  <!-- мобильные кнопки (видны только на сенсорных экранах) -->
+  <div id="touch-controls">
+    <button id="t-ads" class="tc tl">ПРИЦЕЛ</button>
+    <button id="t-reload" class="tc tl2">ПЕРЕЗАРЯДКА</button>
+    <button id="t-crouch" class="tc tl3">ПРИСЕД</button>
+    <button id="t-sprint" class="tc tl4">БЕГ</button>
+    <button id="t-grenade" class="tc tr">ГРАНАТА</button>
+    <button id="t-fire" class="tc fire">ОГОНЬ</button>
+  </div>
+</div>
+
+<!-- ============================== МЕНЮ ================================= -->
+<div id="scr-menu" class="screen active">
+  <div class="menu-wrap">
+    <header class="brand">
+      <div class="brand-kicker">ТАКТИЧЕСКИЙ ШУТЕР ОТ ПЕРВОГО ЛИЦА</div>
+      <h1>СЕКТОР <span>«ПЕПЕЛ»</span></h1>
+      <p class="brand-sub">Шесть миссий против боевиков, которым <b>больно думать</b>.
+        Собственные модели, оружие и <b><span id="menu-total">1760</span> анимаций</b>
+        (22 части × 20 анимаций × 4 варианта). Кукла из точек при смерти, оптимизация без потери картинки.</p>
+      <div class="brand-stats">
+        <div><b id="menu-parts">22</b><span>частей тела</span></div>
+        <div><b id="menu-clips">20</b><span>анимаций на часть</span></div>
+        <div><b id="menu-variants">4</b><span>варианта каждой</span></div>
+        <div><b id="menu-per-part">80</b><span>клипов на часть</span></div>
+      </div>
+    </header>
+
+    <div class="menu-total">Рекорд кампании: <b id="menu-total-score">0</b> очков</div>
+
+    <div class="menu-actions">
+      <button class="btn big" id="btn-start">НАЧАТЬ КАМПАНИЮ</button>
+      <button class="btn" id="btn-continue" style="display:none">ПРОДОЛЖИТЬ</button>
+      <button class="btn ghost" id="btn-lab">ЛАБОРАТОРИЯ АНИМАЦИЙ</button>
+      <button class="btn ghost" id="btn-settings">НАСТРОЙКИ</button>
+    </div>
+
+    <div class="menu-columns">
+      <div class="panel">
+        <h2>Миссии</h2>
+        <div id="mission-cards" class="mission-cards"></div>
+      </div>
+      <div class="panel">
+        <h2>Что внутри</h2>
+        <ul class="feature-list">
+          <li><b>22 части тела × 20 анимаций × 4 варианта</b> — каждая часть анимируется отдельно, слои смешиваются: ноги бегут, руки целятся, оружие отдаёт.</li>
+          <li><b>Боевики, которым больно думать</b>: тик размышлений, усталость от мыслей, оценка укрытий, фланги, приказы командира, память о вашей последней позиции.</li>
+          <li><b>Кукла из точек (Verlet)</b>: 17 точек, 23 связи, импульс от пули, сон и адаптивные подшаги.</li>
+          <li><b>Оптимизация без потери графики</b>: слияние статики, LOD бойцов, пулы частиц, адаптивное разрешение, теневые бюджеты.</li>
+          <li><b>6 миссий</b>: зачистка, диверсия, оборона волнами, эвакуация и босс.</li>
+        </ul>
+        <h2 class="mt">Части тела</h2>
+        <div id="menu-part-list" class="chips"></div>
+      </div>
+    </div>
+    <div class="menu-foot">Без установки, без внешних моделей и CDN — всё внутри папки игры. Работает офлайн.</div>
+  </div>
+</div>
+
+<!-- ============================ БРИФИНГ =============================== -->
+<div id="scr-brief" class="screen">
+  <div class="brief-wrap">
+    <div class="brief-head">
+      <span id="brief-num" class="brief-num">МИССИЯ 1 / 6</span>
+      <span id="brief-type" class="tag">Зачистка</span>
+    </div>
+    <h2 id="brief-name">Пепел на складах</h2>
+    <p id="brief-text" class="brief-text"></p>
+    <div class="brief-grid">
+      <div><span>Снаряжение</span><b id="brief-loadout"></b></div>
+      <div><span>Противник</span><b id="brief-enemies"></b></div>
+      <div class="wide"><span>Совет</span><b id="brief-tip"></b></div>
+    </div>
+    <div class="brief-actions">
+      <button class="btn big" id="btn-brief-go">НАЧАТЬ</button>
+      <button class="btn ghost" id="btn-brief-back">НАЗАД</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================== ПАУЗА =============================== -->
+<div id="scr-pause" class="screen">
+  <div class="modal">
+    <h2>ПАУЗА</h2>
+    <div id="pause-stats" class="stats"></div>
+    <div class="modal-actions">
+      <button class="btn big" id="btn-resume">ПРОДОЛЖИТЬ</button>
+      <button class="btn ghost" id="btn-pause-settings">НАСТРОЙКИ</button>
+      <button class="btn ghost" id="btn-pause-menu">В МЕНЮ</button>
+    </div>
+    <div class="hint">Tab — таблица · T — мысли врагов · F — счётчики</div>
+  </div>
+</div>
+
+<!-- ============================== СМЕРТЬ ============================== -->
+<div id="scr-death" class="screen">
+  <div class="modal danger">
+    <div class="dead-mark">✕</div>
+    <h2>ВЫ УБИТЫ</h2>
+    <div id="death-stats" class="stats"></div>
+    <div class="modal-actions">
+      <button class="btn big" id="btn-retry">ПОПРОБОВАТЬ СНОВА</button>
+      <button class="btn ghost" id="btn-death-menu">В МЕНЮ</button>
+    </div>
+    <div class="hint">Подсказка: боец не стреляет сразу — он сначала думает. Это ваше окно.</div>
+  </div>
+</div>
+
+<!-- ============================== ПОБЕДА ============================== -->
+<div id="scr-win" class="screen">
+  <div class="modal success">
+    <h2 id="win-title">МИССИЯ ВЫПОЛНЕНА</h2>
+    <div class="win-name" id="win-name"></div>
+    <div id="win-stats" class="stats"></div>
+    <div class="modal-actions">
+      <button class="btn big" id="btn-next">СЛЕДУЮЩАЯ МИССИЯ</button>
+      <button class="btn ghost" id="btn-win-menu">В МЕНЮ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========================= ЛАБОРАТОРИЯ ============================== -->
+<div id="scr-lab" class="screen">
+  <div class="lab-wrap">
+    <div class="lab-head">
+      <div>
+        <h2>ЛАБОРАТОРИЯ АНИМАЦИЙ</h2>
+        <p>22 части × 20 анимаций × 4 варианта = <b id="lab-total">1760</b> клипов. Выберите любую комбинацию — она проиграется на модели.</p>
+      </div>
+      <button class="btn ghost" id="btn-lab-back">НАЗАД</button>
+    </div>
+    <div class="lab-body">
+      <div class="lab-stage">
+        <canvas id="lab-canvas"></canvas>
+        <div class="lab-progress-wrap"><div id="lab-progress"></div></div>
+        <div class="lab-phase-wrap">фаза: <b id="lab-phase">0.00</b></div>
+      </div>
+      <div class="lab-controls">
+        <div class="lab-group">
+          <div class="lab-title">Часть тела</div>
+          <div id="lab-parts" class="lab-btn-row"></div>
+        </div>
+        <div class="lab-group">
+          <div class="lab-title">Анимация</div>
+          <div id="lab-clips" class="lab-btn-row clips"></div>
+        </div>
+        <div class="lab-group">
+          <div class="lab-title">Вариант</div>
+          <div id="lab-variants" class="lab-btn-row vars"></div>
+        </div>
+        <div id="lab-info" class="lab-info"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- =========================== НАСТРОЙКИ ============================== -->
+<div id="scr-settings" class="screen">
+  <div class="modal wide">
+    <h2>НАСТРОЙКИ</h2>
+    <div class="set-row"><span>Качество графики</span><div id="set-quality" class="opt-row"></div></div>
+    <div class="set-row"><span>Сложность</span><div id="set-difficulty" class="opt-row"></div></div>
+    <div class="set-row"><span>Физика куклы из точек</span><div class="opt-row"><button id="set-ragdoll" class="opt">Кукла из точек: включена</button></div></div>
+    <div class="set-row"><span>Чувствительность мыши</span>
+      <div class="slider"><input id="set-sens" type="range" min="0.3" max="3" step="0.1" value="1"><b id="set-sens-val">1</b></div>
+    </div>
+    <div class="set-note">Все настройки применяются сразу. Качество влияет на тени и плотность эффектов, но не на геометрию мира.</div>
+    <div class="modal-actions"><button class="btn" id="btn-settings-back">ГОТОВО</button></div>
+  </div>
+</div>
+
+<script src="three.min.js"></script>
+<script src="src/data.js"></script>
+<script src="src/model.js"></script>
+<script src="src/anim.js"></script>
+<script src="src/ik.js"></script>
+<script src="src/ragdoll.js"></script>
+<script src="src/world.js"></script>
+<script src="src/ai.js"></script>
+<script src="src/agent.js"></script>
+<script src="src/fx.js"></script>
+<script src="src/viewmodel.js"></script>
+<script src="src/audio.js"></script>
+<script src="src/perf.js"></script>
+<script src="src/game.js"></script>
+<script src="src/ui.js"></script>
+<script>
+(function () {
+  'use strict';
+  const ui = new SH2.ui.UI();
+  const game = new SH2.game.Game({ canvas: document.getElementById('game'), ui: ui });
+  window.__game = game;
+  window.__ui = ui;
+  game.init();
+})();
+</script>
+</body>
+</html>
