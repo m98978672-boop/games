@@ -164,11 +164,6 @@
     <!-- левая колонка: состояние и деньги -->
     <section class="col col-left" data-tab="state">
       <div class="panel card-person">
-        <div class="portrait-wrap">
-          <canvas id="portrait" width="420" height="300" aria-label="Портрет человека"></canvas>
-          <div class="portrait-caption"><span id="portrait-scene">—</span><b id="portrait-clip">—</b></div>
-          <button class="btn tiny portrait-anim" id="btn-anims">Все анимации</button>
-        </div>
         <div class="person-head">
           <div>
             <b id="p-name">—</b>
@@ -196,6 +191,14 @@
 
     <!-- центр: летопись -->
     <section class="col col-mid" data-tab="life">
+      <div class="panel card-portrait">
+        <div class="portrait-wrap">
+          <canvas id="portrait" width="760" height="380" aria-label="Портрет человека"></canvas>
+          <div class="portrait-caption"><span id="portrait-scene">—</span><b id="portrait-clip">—</b></div>
+          <button class="btn tiny portrait-anim" id="btn-anims">Все анимации</button>
+        </div>
+      </div>
+
       <div class="panel card-focus">
         <h3>Фокус этого года <small>можно менять в любой момент</small></h3>
         <div class="focus-list" id="focus-list"></div>
