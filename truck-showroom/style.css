@@ -100,15 +100,17 @@ body {
 .hud-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 12px;
+  gap: 8px;
+  min-height: 42px;
+  padding: 10px 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
   color: var(--ink-dim);
   font: inherit;
-  font-size: 12px;
-  letter-spacing: 0.01em;
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.005em;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -174,15 +176,15 @@ body {
   z-index: 61;
   display: flex;
   flex-direction: column;
-  min-width: 236px;
-  max-width: min(424px, calc(100vw - 20px));
-  padding: 6px;
+  min-width: 260px;
+  max-width: min(820px, calc(100vw - 20px));
+  padding: 10px;
   overflow: auto;
   overscroll-behavior: contain;
   background: linear-gradient(180deg, rgba(26, 30, 29, 0.98), rgba(12, 14, 14, 0.98));
   border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  box-shadow: 0 26px 64px -22px rgba(0, 0, 0, 0.9), 0 2px 0 rgba(0, 0, 0, 0.4) inset,
+  border-radius: 18px;
+  box-shadow: 0 40px 90px -30px rgba(0, 0, 0, 0.95), 0 2px 0 rgba(0, 0, 0, 0.4) inset,
     0 1px 0 rgba(255, 255, 255, 0.05) inset;
   backdrop-filter: blur(22px) saturate(1.25);
   animation: pop-in 0.16s cubic-bezier(0.2, 0.9, 0.3, 1);
@@ -194,35 +196,43 @@ body {
 .pop-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 7px 7px 10px;
+  gap: 10px;
+  padding: 6px 6px 10px 8px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  margin-bottom: 2px;
+  margin-bottom: 6px;
+}
+.pop-title { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pop-sub {
+  font-size: 12px;
+  color: var(--ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pop-head .t {
-  font-size: 13.5px;
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: -0.005em;
+  letter-spacing: -0.015em;
   color: var(--ink);
+  line-height: 1.15;
 }
 .pop-head .mini { font-size: 10px; color: var(--accent-2); font-variant-numeric: tabular-nums; }
 .pop-count {
   margin-left: auto;
-  padding: 2px 8px;
+  padding: 3px 10px;
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
-  color: var(--ink-faint);
-  font-size: 9.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  color: var(--ink-dim);
+  font-size: 11px;
+  letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 .pop-count.is-inside { color: var(--accent-2); border-color: rgba(232, 180, 90, 0.3); }
 .pop-x {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
@@ -230,8 +240,8 @@ body {
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: var(--ink-faint);
-  font-size: 12px;
+  color: var(--ink-dim);
+  font-size: 14px;
   line-height: 1;
   cursor: pointer;
   transition: 0.14s;
@@ -240,37 +250,38 @@ body {
 .pop-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .pop-head .pop-x { margin-left: auto; }
 .pop-head .pop-count + .pop-x { margin-left: 0; }
-.pop-sec { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
+.pop-sec { display: flex; flex-direction: column; gap: 2px; padding: 6px 0; }
 .pop-sec + .pop-sec { border-top: 1px solid rgba(255, 255, 255, 0.07); }
 .pop-sec-t {
-  padding: 8px 9px 5px;
-  font-size: 11px;
+  padding: 10px 10px 7px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
-  color: var(--ink-dim);
+  color: var(--ink);
 }
 .pop-item {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 9px 10px;
+  padding: 12px 12px;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 11px;
   background: transparent;
   color: var(--ink-dim);
   font: inherit;
-  font-size: 13px;
+  font-size: 15px;
   text-align: left;
   cursor: pointer;
   transition: background 0.14s, color 0.14s, border-color 0.14s;
 }
-.pop-item .i { width: 20px; flex: 0 0 auto; text-align: center; font-size: 14px; opacity: 0.9; }
+.pop-item .i { width: 22px; flex: 0 0 auto; text-align: center; font-size: 14px; opacity: 0.9; }
+.pop-item .i .ic { width: 19px; height: 19px; }
 .pop-item .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pop-item .h {
   flex: 0 0 auto;
-  font-size: 9.5px;
+  font-size: 11px;
   letter-spacing: 0.06em;
   color: var(--ink-faint);
   padding: 2px 6px;
@@ -296,10 +307,10 @@ body {
 .pop-row-5 { grid-template-columns: repeat(5, 1fr); gap: 4px; }
 .pop-row-5 .pop-item {
   flex-direction: column;
-  gap: 5px;
-  padding: 8px 2px 7px;
+  gap: 7px;
+  padding: 12px 4px 10px;
   justify-content: center;
-  font-size: 10.5px;
+  font-size: 12.5px;
   letter-spacing: -0.01em;
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.03);
@@ -1258,7 +1269,7 @@ body {
 /* ------------------------------------------------ меню «Модель» */
 .panel-catalog { width: min(424px, calc(100vw - 20px)); gap: 6px; }
 .hud-pop-wide { width: min(430px, calc(100vw - 20px)); }
-.pop-note { margin: 4px 8px 6px; font-size: 10.5px; line-height: 1.5; color: var(--ink-faint); }
+.pop-note { margin: 8px 10px 6px; font-size: 12px; line-height: 1.5; color: var(--ink-faint); }
 .pop-row-wrap { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
 .hud-btn-icon { padding: 6px 9px; }
 
@@ -1311,26 +1322,26 @@ body {
 
 /* ------------------------------------------------ меню повреждений */
 .dmg-place-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  max-height: min(44vh, 380px);
-  overflow: auto;
+  display: block;
   padding: 2px 2px 4px;
-  overscroll-behavior: contain;
+}
+@media (min-width: 900px) {
+  /* две колонки: зоны не рвутся, список целиком без внутренней прокрутки */
+  .dmg-place-list { column-count: 2; column-gap: 20px; }
+  .dmg-group { break-inside: avoid; -webkit-column-break-inside: avoid; margin: 0 0 6px; }
 }
 .dmg-place {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 8px 9px;
+  padding: 10px 11px;
   border: 1px solid transparent;
-  border-radius: 9px;
+  border-radius: 10px;
   background: transparent;
   color: var(--ink-dim);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 14px;
   text-align: left;
   cursor: pointer;
   transition: 0.14s;
@@ -1344,7 +1355,7 @@ body {
   color: var(--ink);
 }
 .dmg-place-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dmg-place-tag { font-size: 9.5px; letter-spacing: 0.04em; color: var(--ink-faint); }
+.dmg-place-tag { font-size: 11px; letter-spacing: 0.02em; color: var(--ink-faint); }
 .dmg-place.on .dmg-place-tag { color: #ffb199; }
 .dmg-place.scratch .dmg-kind { background: #b9c3cb; }
 .dmg-place.dent .dmg-kind { background: #7f8b95; }
@@ -1400,8 +1411,23 @@ body {
   .panel-catalog .unit-list { max-height: min(42vh, 320px); }
   .dock-cat { display: none; }
 }
+@media (max-width: 900px) {
+  .pop-head .t { font-size: 17px; }
+  .pop-item { font-size: 14px; padding: 11px 10px; }
+  .dmg-place { font-size: 13px; }
+}
+@media (max-width: 640px) {
+  /* узкий экран: типы дефектов в две строки, а не в кашу */
+  .pop-row-5 { grid-template-columns: repeat(3, 1fr); }
+  .pop-row-5 .pop-item { font-size: 12px; padding: 10px 4px 8px; gap: 6px; }
+  .pop-item { font-size: 13px; padding: 11px 10px; }
+  .dmg-place { font-size: 13px; }
+  .dmg-place-list { padding-bottom: 8px; }
+}
 @media (max-width: 560px) {
   .hud-pop { max-width: calc(100vw - 16px); }
+  .pop-head .t { font-size: 16px; }
+  .pop-sub { display: none; }
   .hud-btn i { display: none; }
   .foot-note { display: none; }
   .dock-cat { display: none; }
@@ -1420,9 +1446,9 @@ body {
   z-index: 1;
   display: flex;
   align-items: center;
-  gap: 7px;
+  gap: 8px;
   width: 100%;
-  padding: 5px 8px 4px;
+  padding: 9px 10px 7px;
   background: rgba(18, 21, 21, 0.96);
   backdrop-filter: blur(6px);
   border-radius: 6px;
@@ -1430,14 +1456,15 @@ body {
   background: transparent;
   color: var(--ink-faint);
   font: inherit;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
   text-align: left;
+  color: var(--ink-dim);
   cursor: pointer;
 }
-.dmg-group-t:hover { color: var(--ink-dim); }
+.dmg-group-t:hover { color: var(--ink); }
 .dmg-group-t .caret { font-size: 8px; transition: transform 0.16s; }
 .dmg-group-t[aria-expanded="false"] .caret { transform: rotate(-90deg); }
 .dmg-group-t .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1449,8 +1476,8 @@ body {
 .view-sec { display: flex; flex-direction: column; gap: 1px; }
 .view-sec + .view-sec { margin-top: 4px; }
 .view-sec-t {
-  padding: 8px 9px 4px;
-  font-size: 11px;
+  padding: 10px 10px 6px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0;
   text-transform: none;
@@ -1484,8 +1511,10 @@ body {
 @media (max-width: 560px) {
   .panel-catalog .cat-tab b { font-size: 10px; }
   .pop-sec-grid { gap: 4px; }
-  .pop-item { font-size: 12px; padding: 9px 9px; }
-  .pop-head { padding: 7px 6px 7px 9px; }
+  .pop-item { font-size: 13px; padding: 10px 9px; }
+  .pop-head { padding: 8px 6px 9px 8px; }
+  .pop-head .t { font-size: 18px; }
+  .dmg-group-t { font-size: 12.5px; }
 }
 
 
@@ -1499,11 +1528,11 @@ body {
 }
 .ico { display: inline-flex; align-items: center; justify-content: center; }
 .ico .ic { width: 17px; height: 17px; }
-.hud-btn .ico .ic { width: 16px; height: 16px; opacity: 0.9; }
+.hud-btn .ico .ic { width: 19px; height: 19px; opacity: 0.9; }
 .pop-item .i { display: inline-flex; align-items: center; justify-content: center; width: 20px; }
 .pop-item .i .ic { width: 16px; height: 16px; opacity: 0.85; }
 .pop-item:hover .i .ic, .pop-item.is-on .i .ic { opacity: 1; }
-.pop-x .ic { width: 13px; height: 13px; }
+.pop-x .ic { width: 16px; height: 16px; }
 .cat-tab span { display: inline-flex; align-items: center; }
 .cat-tab span .ic { width: 15px; height: 15px; }
 .search span .ic { width: 14px; height: 14px; opacity: 0.6; }
@@ -1514,3 +1543,24 @@ body {
 .chip { display: inline-flex; align-items: center; }
 .unit .thumb .ic { width: 18px; height: 18px; opacity: 0.8; }
 .unit.active .thumb .ic { opacity: 1; color: var(--accent-2); }
+
+
+/* затемнение под меню: панель читается как окно по центру */
+.pop-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  pointer-events: auto;
+  background: rgba(4, 6, 7, 0.55);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.16s ease-out;
+}
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* каталог: карточки моделей крупнее */
+.panel-catalog { width: min(760px, calc(100vw - 20px)); }
+.hud-pop-wide { width: min(820px, calc(100vw - 20px)); }
+.panel-catalog .unit-list { max-height: min(52vh, 460px); }
+.unit { padding: 11px 12px; border-radius: 11px; }
+.unit .u-name { font-size: 14px; }
+.unit .u-sub { font-size: 12px; }

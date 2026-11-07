@@ -328,12 +328,13 @@ function select(cat, id, { instant = false } = {}) {
 // Правило шоурума: никакие два видимых слоя не пересекаются. Меню — плавающие:
 // встают под своей кнопкой, прижимаются к краям и уезжают, если место занято
 // навпадом, доком, шапкой или другой панелью (расчёт — в lib/layout.js).
+// Размеры панелей: меню — крупные окна по центру экрана, а не «попапы» у кнопки
 const POPS = {
-  catalog: { pop: 'panel-catalog', btn: 'catalog-toggle', size: { w: 424, h: 540 } },
-  view: { pop: 'menu-view', btn: 'menu-view-btn', size: { w: 340, h: 250 } },
-  damage: { pop: 'menu-damage', btn: 'menu-damage-btn', size: { w: 396, h: 470 } },
-  light: { pop: 'light-pop', btn: 'light-btn', size: { w: 320, h: 180 } },
-  more: { pop: 'menu-more', btn: 'menu-more-btn', size: { w: 340, h: 300 } },
+  catalog: { pop: 'panel-catalog', btn: 'catalog-toggle', size: { w: 760, h: 620 } },
+  view: { pop: 'menu-view', btn: 'menu-view-btn', size: { w: 620, h: 460 } },
+  damage: { pop: 'menu-damage', btn: 'menu-damage-btn', size: { w: 820, h: 600 } },
+  light: { pop: 'light-pop', btn: 'light-btn', size: { w: 560, h: 320 } },
+  more: { pop: 'menu-more', btn: 'menu-more-btn', size: { w: 620, h: 460 } },
 };
 let openPop = null;
 let openDrawer = null;
@@ -382,24 +383,53 @@ function busyRects(self) {
 }
 
 /** Поставить открытое меню так, чтобы оно ничего не перекрывало. */
+/** Затемнение под меню: панель читается как окно, а не как «прилипшая» плашка. */
+function popBackdrop() {
+  let el = document.getElementById('pop-backdrop');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'pop-backdrop';
+    el.className = 'pop-backdrop hidden';
+    document.getElementById('pop-layer')?.appendChild(el) || document.body.appendChild(el);
+    el.onclick = () => closePop();
+  }
+  return el;
+}
+
+function syncPopBackdrop() {
+  const el = popBackdrop();
+  el.classList.toggle('hidden', !openPop);
+}
+
+/**
+ * Меню ставится ПО ЦЕНТРУ экрана между шапкой и нижней панелью — как обычное
+ * окно приложения. Ширина фиксированная, чтобы панель не «прыгала», высота
+ * ограничена свободным местом, внутри остаётся своя прокрутка.
+ */
 function positionPop(name) {
   const conf = POPS[name];
   const el = conf && $(conf.pop);
   if (!el || el.classList.contains('hidden')) return null;
   const view = viewportRect();
-  const size = sizeOf(el, conf.size);
-  el.style.maxHeight = `${Math.max(160, view.h - 24)}px`;
-  const anchor = rectOf($(conf.btn)) || rect(view.w / 2 - 60, 8, 120, 36);
-  const spot = placePanel({
-    anchor, size, viewport: view, avoid: busyRects(el), margin: 10, gap: 8,
-  });
-  el.style.left = `${spot.x}px`;
-  el.style.top = `${spot.y}px`;
-  // меню не «наезжает», а ужимается: внутри появляется своя прокрутка
-  el.style.maxWidth = `${spot.w}px`;
-  el.style.maxHeight = `${spot.h}px`;
-  el.dataset.side = spot.side;
-  return spot;
+  const wide = view.w >= 900;
+  const margin = wide ? 24 : 8;
+  const w = Math.max(260, Math.min(conf.size.w, view.w - margin * 2));
+  const topLimit = wide ? 66 : 62;
+  const bottomLimit = view.h - (wide ? 24 : 76);
+  const avail = Math.max(200, bottomLimit - topLimit);
+  el.style.width = `${w}px`;
+  el.style.maxWidth = `${w}px`;
+  el.style.maxHeight = `${avail}px`;
+  const natural = sizeOf(el, conf.size).h;
+  const h = Math.min(natural, avail);
+  const x = Math.round((view.w - w) / 2);
+  // если панель ниже свободного места — прижимаем к верху, иначе центрируем
+  const y = Math.round(natural <= avail ? topLimit + (avail - h) / 2 : topLimit);
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  el.dataset.side = 'center';
+  el.dataset.wide = wide ? '1' : '0';
+  return { x, y, w, h, side: 'center', free: h >= natural };
 }
 
 function closePops(except = null) {
@@ -412,6 +442,7 @@ function closePops(except = null) {
     $(POPS[key].btn)?.setAttribute('aria-expanded', 'false');
   }
   if (openPop && openPop !== except) openPop = null;
+  syncPopBackdrop();
 }
 
 function closePop() {
@@ -438,6 +469,7 @@ function openPopover(name) {
   el.classList.add('open');
   $(conf.btn)?.setAttribute('aria-expanded', 'true');
   openPop = name;
+  syncPopBackdrop();
   positionPop(name);
   if (name === 'catalog') {
     setTimeout(() => positionPop('catalog'), 40);
