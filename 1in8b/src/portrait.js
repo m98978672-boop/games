@@ -1159,8 +1159,13 @@
       for (var i = 0; i < w; i += 11) px(g, i + ((i / 11) % 2 ? 5 : 0), gy + 3, 1, V.h - gy - 3, shade(gp[1], -0.1));
       px(g, 0, gy + Math.round((V.h - gy) * 0.6), w, 1, shade(gp[1], -0.08));
     } else if (V.scene === 'hospital') {
-      for (var j = 0; j < w; j += 7) px(g, j, gy + 3, 1, V.h - gy - 3, gp[2]);
-      px(g, 0, gy + 5, w, 1, gp[2]);
+      /* плитка: короткие швы, а не частокол во всю высоту */
+      for (var j = 0; j < w; j += 9) {
+        px(g, j, gy + 3, 1, 3, gp[2]);
+        px(g, j + 4, gy + 8, 1, 3, gp[2]);
+      }
+      px(g, 0, gy + 6, w, 1, gp[2]);
+      px(g, 0, gy + 11, w, 1, shade(gp[1], -0.06));
     } else if (V.scene === 'city' || V.scene === 'night') {
       px(g, 0, gy + 5, w, 1, gp[2]);                  /* бордюр */
       for (var k = 4; k < w; k += 14) px(g, k, gy + 9, 6, 1, '#6f7681'); /* разметка */
@@ -1422,25 +1427,29 @@
   }
 
   function placeHospital(g, V) {
-    var gy = V.gy, w = V.w;
+    var gy = V.gy, w = V.w, P = V.P;
     px(g, 0, Math.round(gy * 0.52), w, 1, '#56686b');
     var wx = Math.round(w * 0.62), wy = Math.round(gy * 0.16);
     px(g, wx - 1, wy - 1, 28, 20, '#56686b');
     px(g, wx, wy, 26, 18, V.sky === 'night' ? '#0f1726' : '#6b97ad');
-    /* койка — ровно там, где лежит человек */
-    var bx = Math.round(w * 0.5) - 22;
-    px(g, bx, gy - 10, 44, 4, '#c9d4d6');
-    px(g, bx, gy - 12, 12, 2, '#e4ebec');
-    px(g, bx, gy - 6, 2, 6, '#8c989a');
-    px(g, bx + 42, gy - 6, 2, 6, '#8c989a');
-    px(g, bx + 42, gy - 18, 2, 8, '#8c989a');
+    /* койка — ровно там, где лежит человек: та же точка опоры, что и у фигуры */
+    var hy = gy + Math.round((P.rootY || 0) * V.h);
+    var hx = Math.round(w * (0.5 + (P.rootX || 0))) - 4;
+    var bx = hx - 24;
+    px(g, bx, hy - 10, 46, 4, '#c9d4d6');
+    px(g, bx + 32, hy - 12, 12, 2, '#e4ebec');   /* подушка там, где голова */
+    px(g, bx, hy - 6, 2, 6, '#8c989a');
+    px(g, bx + 44, hy - 6, 2, 6, '#8c989a');
+    px(g, bx + 44, hy - 20, 2, 10, '#8c989a');
+    px(g, bx + 44, hy - 20, 6, 1, '#8c989a');
     /* тумбочка */
-    px(g, Math.round(w * 0.2), gy - 8, 10, 8, '#6b7577');
-    px(g, Math.round(w * 0.2) + 2, gy - 11, 3, 3, '#cfd8da');
-    /* монитор */
-    px(g, Math.round(w * 0.44), gy - 24, 10, 8, '#2b3436');
-    px(g, Math.round(w * 0.44) + 1, gy - 23, 8, 6, '#15342c');
-    px(g, Math.round(w * 0.44) + 2, gy - 20, 6, 1, '#4fd08a');
+    px(g, Math.max(2, bx - 14), hy - 8, 10, 8, '#6b7577');
+    px(g, Math.max(2, bx - 14) + 2, hy - 11, 3, 3, '#cfd8da');
+    /* монитор у изголовья */
+    var mx2 = Math.min(w - 12, bx + 48);
+    px(g, mx2, hy - 32, 10, 8, '#2b3436');
+    px(g, mx2 + 1, hy - 31, 8, 6, '#15342c');
+    px(g, mx2 + 2, hy - 28, 6, 1, '#4fd08a');
   }
 
   var PLACE = {
