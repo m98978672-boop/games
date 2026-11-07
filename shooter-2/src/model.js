@@ -283,30 +283,79 @@
     c.width = c.height = 256;
     const ctx = c.getContext('2d');
     const rand = D.rng(seed || 7);
+    // Бетон/земля крупными пятнами: сначала база, потом влажные разводы,
+    // масляные лужи и выцветшие полосы — так плита не выглядит однотонной.
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 2600; i++) {
-      const x = rand() * 256, y = rand() * 256, r = 0.6 + rand() * 3.4;
-      ctx.fillStyle = rand() > 0.5 ? accent : 'rgba(0,0,0,0.16)';
-      ctx.globalAlpha = 0.10 + rand() * 0.30;
+    for (let i = 0; i < 90; i++) {
+      const x = rand() * 256, y = rand() * 256, r = 10 + rand() * 40;
+      ctx.globalAlpha = 0.05 + rand() * 0.10;
+      ctx.fillStyle = rand() > 0.5 ? accent : 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    // гравий
+    for (let i = 0; i < 4200; i++) {
+      const x = rand() * 256, y = rand() * 256, r = 0.5 + rand() * 2.2;
+      ctx.fillStyle = rand() > 0.52 ? accent : 'rgba(0,0,0,0.20)';
+      ctx.globalAlpha = 0.10 + rand() * 0.34;
       ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     }
     ctx.globalAlpha = 1;
-    // трещины/стыки плит
-    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
-    for (let i = 0; i < 9; i++) {
+    // стыки плит и трещины
+    ctx.strokeStyle = 'rgba(0,0,0,0.30)';
+    for (let i = 0; i < 11; i++) {
       ctx.lineWidth = 1 + rand() * 2;
       ctx.beginPath();
       let x = rand() * 256, y = 0;
       ctx.moveTo(x, y);
-      while (y < 256) { x += (rand() - 0.5) * 26; y += 18 + rand() * 20; ctx.lineTo(x, y); }
+      while (y < 256) { x += (rand() - 0.5) * 26; y += 14 + rand() * 22; ctx.lineTo(x, y); }
       ctx.stroke();
     }
+    // редкие светлые сколы
+    for (let i = 0; i < 220; i++) {
+      ctx.globalAlpha = 0.05 + rand() * 0.12;
+      ctx.fillStyle = 'rgba(255,235,200,0.9)';
+      ctx.fillRect(rand() * 256, rand() * 256, 1 + rand() * 3, 1 + rand() * 2);
+    }
+    ctx.globalAlpha = 1;
     const tex = new T.CanvasTexture(c);
     tex.wrapS = tex.wrapT = T.RepeatWrapping;
     tex.repeat.set(14, 14);
     tex.anisotropy = 4;
     return tex;
+  }
+
+  /* проёмы в стенах здания: окна по периметру на высоте пояса/груди.
+     Возвращает прямоугольники { dy0, dy1, du0, du1, dv0, dv1 } относительно
+     центра здания — их проверяет world.hitHole для пуль и обзора. */
+  function windowHoles(pb, b) {
+    if ((b.windows === false)) return [];
+    const holes = [];
+    const h = b.h || 4;
+    // окно: от 1.05 до 1.95 м (в приседе — ниже подоконника, стоя — в уровень)
+    const dy0 = Math.min(h - 0.6, 1.02), dy1 = Math.min(h - 0.25, 1.92);
+    if (dy1 - dy0 < 0.35) return holes;
+    // шаг окон вдоль стены — как у настоящих зданий, без окон в углах
+    const step = (b.windowStep || 3.4);
+    const margin = 1.0;
+    const halfW = 0.28;  // полуширина окна, м
+    const alongX = (len) => {
+      const n = Math.max(1, Math.floor((len - margin * 2) / step));
+      for (let i = 0; i < n; i++) {
+        const u = -len / 2 + margin + step * (i + 0.5);
+        holes.push({ dy0, dy1, du0: u - halfW, du1: u + halfW, dv0: -pb.hd - 0.01, dv1: pb.hd + 0.01 });
+      }
+    };
+    const alongZ = (len) => {
+      const n = Math.max(1, Math.floor((len - margin * 2) / step));
+      for (let i = 0; i < n; i++) {
+        const v = -len / 2 + margin + step * (i + 0.5);
+        holes.push({ dy0, dy1, du0: -pb.hw - 0.01, du1: pb.hw + 0.01, dv0: v - halfW, dv1: v + halfW });
+      }
+    };
+    alongX(pb.hw * 2);
+    alongZ(pb.hd * 2);
+    return holes;
   }
 
   function buildLevel(mapId) {
@@ -317,7 +366,7 @@
     const statics = [];
     const addStatic = (color, geometry, m, flat) => statics.push({ color, geometry, matrix: m, flat });
 
-    // земля
+    // земля: две текстуры — обычная и сетка дорог/разметки (blend по UV)
     const groundTex = makeGroundTexture(M.sky, M.accent, D.hash(mapId));
     const ground = new T.Mesh(new T.PlaneGeometry(M.size, M.size, 1, 1),
       new T.MeshLambertMaterial({ map: groundTex, color: 0xffffff }));
@@ -335,9 +384,14 @@
         windowColor: b.windowColor, windowEmissive: b.windowEmissive
       });
       group.add(g);
-      // коллизия: один AABB на здание (в него попадают все лучи и пули)
+      // Коллизия: один AABB на здание — движение останавливается, но в стенах
+      // есть проёмы по высоте: окна (можно стрелять и видеть) и бойницы.
+      // Луч пули проходит через проём, луч обзора — тоже (hitHole в world.js).
       const pb = LV.planBounds(b.poly);
-      colliders.push({ x: pb.cx, z: pb.cz, hw: pb.hw, hd: pb.hd, h: b.h, y: 0, kind: 'building' });
+      colliders.push({
+        x: pb.cx, z: pb.cz, hw: pb.hw, hd: pb.hd, h: b.h, y: 0, kind: 'building',
+        holes: windowHoles(pb, b)
+      });
       // мешки у стены (визуальный акцент, коллизия отдельная)
       void xf; void i;
     });
@@ -365,7 +419,7 @@
       group.add(g);
       const c = Math.abs(Math.cos(sb.a || 0)), sn = Math.abs(Math.sin(sb.a || 0));
       colliders.push({ x: sb.x, z: sb.z, hw: (sb.len / 2) * c + 0.3 * sn,
-        hd: (sb.len / 2) * sn + 0.3 * c, h: 0.72, y: 0, kind: 'sandbag' });
+        hd: (sb.len / 2) * sn + 0.3 * c, h: 0.72, y: 0, kind: 'sandbag', standLow: true });
     });
 
     /* --------------------- бочки, камни, штабели труб ----------------------- */
@@ -381,7 +435,7 @@
       r.position.set(p[0], 0, p[1]);
       r.rotation.y = p[0] * 0.7;
       group.add(r);
-      colliders.push({ x: p[0], z: p[1], hw: 0.7 * (p[2] || 1.1), hd: 0.65 * (p[2] || 1.1), h: 1.1 * (p[2] || 1.1), y: 0, kind: 'rock' });
+      colliders.push({ x: p[0], z: p[1], hw: 0.7 * (p[2] || 1.1), hd: 0.65 * (p[2] || 1.1), h: 1.1 * (p[2] || 1.1), y: 0, kind: 'rock', standLow: true });
     });
     (M.stacks || []).forEach((st) => {
       const g = new T.Group();
@@ -401,7 +455,138 @@
       colliders.push({ x: st[0], z: st[1], hw: 1.0, hd: 0.85, h: 1.9, y: 0, kind: 'stack' });
     });
 
-    /* ------------------------- полосы дороги (полигоны) --------------------- */
+    /* ------------------- новые пропсы карты (контурами) --------------------- */
+    const LV2 = SH2.level;
+    (M.containers || []).forEach((c) => {
+      const len = c.len || 6.1, h = c.h || 2.6;
+      const g = LV2.container(len, h, c.color || 0x4a5a52);
+      g.position.set(c.x, 0, c.z);
+      g.rotation.y = c.a || 0;
+      group.add(g);
+      // коллизия: повёрнутый прямоугольник -> AABB по габаритам
+      const ca = Math.abs(Math.cos(c.a || 0)), sa = Math.abs(Math.sin(c.a || 0));
+      colliders.push({ x: c.x, z: c.z, hw: (len / 2) * ca + 0.61 * sa, hd: (len / 2) * sa + 0.61 * ca,
+        h, y: 0, kind: 'container' });
+    });
+
+    (M.trucks || []).forEach((t) => {
+      const g = LV2.truck(t.color || 0x4a5138);
+      g.position.set(t.x, 0, t.z);
+      g.rotation.y = t.a || 0;
+      group.add(g);
+      const ca = Math.abs(Math.cos(t.a || 0)), sa = Math.abs(Math.sin(t.a || 0));
+      colliders.push({ x: t.x, z: t.z, hw: 2.3 * ca + 1.0 * sa, hd: 2.3 * sa + 1.0 * ca,
+        h: 1.9, y: 0, kind: 'truck', standLow: false });
+    });
+
+    (M.lamps || []).forEach((p) => {
+      const g = LV2.lamp(0x3e4348);
+      g.position.set(p[0], 0, p[1]);
+      g.rotation.y = p[0] * 0.3;
+      group.add(g);
+      colliders.push({ x: p[0], z: p[1], hw: 0.14, hd: 0.14, h: 4.6, y: 0, kind: 'lamp' });
+    });
+
+    (M.watchtowers || []).forEach((t) => {
+      const g = LV2.watchtower(t.w || 2.4, t.h || 6, 0x4a4136);
+      g.position.set(t.x, 0, t.z);
+      group.add(g);
+      colliders.push({ x: t.x, z: t.z, hw: (t.w || 2.4) * 0.42, hd: (t.w || 2.4) * 0.42,
+        h: t.h || 6, y: 0, kind: 'watchtower' });
+    });
+
+    (M.wrecks || []).forEach((w) => {
+      const g = LV2.wreck(0x3b3a30);
+      g.position.set(w.x, 0, w.z);
+      g.rotation.y = w.a || 0;
+      group.add(g);
+      const ca = Math.abs(Math.cos(w.a || 0)), sa = Math.abs(Math.sin(w.a || 0));
+      colliders.push({ x: w.x, z: w.z, hw: 2.0 * ca + 1.3 * sa, hd: 2.0 * sa + 1.3 * ca,
+        h: 2.2, y: 0, kind: 'wreck' });
+    });
+
+    (M.fences || []).forEach((f) => {
+      const g = LV2.fence(f.a, f.b, 0x554a38);
+      group.add(g);
+      const dx = f.b[0] - f.a[0], dz = f.b[1] - f.a[1];
+      const len = Math.hypot(dx, dz);
+      const ca = Math.abs(dx / len), sa = Math.abs(dz / len);
+      const mid = [(f.a[0] + f.b[0]) / 2, (f.a[1] + f.b[1]) / 2];
+      // забор непроходим, но пули проходят — высокий? нет: 1.05 м, значит
+      // присевший укрыт, стоящий нет
+      colliders.push({ x: mid[0], z: mid[1], hw: (len / 2) * ca + 0.2 * sa, hd: (len / 2) * sa + 0.2 * ca,
+        h: 1.05, y: 0, kind: 'fence', standLow: true });
+    });
+
+    (M.trenches || []).forEach((t) => {
+      const g = LV2.trench(t.len || 8, 0x453c2f);
+      g.position.set(t.x, 0, t.z);
+      g.rotation.y = t.a || 0;
+      group.add(g);
+      const ca = Math.abs(Math.cos(t.a || 0)), sa = Math.abs(Math.sin(t.a || 0));
+      colliders.push({ x: t.x, z: t.z, hw: 0.75 * ca + (t.len || 8) / 2 * sa,
+        hd: 0.75 * sa + (t.len || 8) / 2 * ca, h: 0.55, y: 0, kind: 'trench', standLow: true });
+    });
+
+    (M.craters || []).forEach((c) => {
+      const g = LV2.crater(c.r || 2.6);
+      g.position.set(c.x, 0, c.z);
+      group.add(g);
+    });
+
+    (M.bushes || []).forEach((b) => {
+      const g = LV2.bush(b[2] || 0.8, 0x4a5133);
+      g.position.set(b[0], 0, b[1]);
+      group.add(g);
+    });
+
+    (M.rubble || []).forEach((r) => {
+      const x = Array.isArray(r) ? r[0] : r.x;
+      const z = Array.isArray(r) ? r[1] : r.z;
+      const size = r.s || 1.4;
+      const g = LV2.rubble(size, 0x6a6157);
+      g.position.set(x, 0, z);
+      group.add(g);
+      colliders.push({ x, z, hw: size * 0.8, hd: size * 0.7, h: 0.5, y: 0, kind: 'rubble', standLow: true });
+    });
+
+    (M.mgNests || []).forEach((n) => {
+      const g = LV2.mgNest();
+      g.position.set(n.x, 0, n.z);
+      g.rotation.y = n.a || 0;
+      group.add(g);
+      const ca = Math.abs(Math.cos(n.a || 0)), sa = Math.abs(Math.sin(n.a || 0));
+      colliders.push({ x: n.x, z: n.z, hw: 1.9 * ca + 1.0 * sa, hd: 1.9 * sa + 1.0 * ca,
+        h: 0.78, y: 0, kind: 'sandbag', standLow: true });
+    });
+
+    (M.camoNets || []).forEach((n) => {
+      const g = LV2.camoNet(n.w || 4, n.d || 3, n.h || 2.1);
+      g.position.set(n.x, 0, n.z);
+      group.add(g);
+      // сеть не блокирует ни движение, ни пули — только столбы
+      for (const sx of [-1, 1]) {
+        for (const sz of [-1, 1]) {
+          colliders.push({ x: n.x + sx * (n.w || 4) / 2, z: n.z + sz * (n.d || 3) / 2,
+            hw: 0.1, hd: 0.1, h: n.h || 2.1, y: 0, kind: 'netpost' });
+        }
+      }
+    });
+
+    (M.shells || []).forEach((sh) => {
+      const g = LV2.shells(sh.x, sh.z, sh.a || 0);
+      group.add(g);
+    });
+
+    (M.crateStacks || []).forEach((c) => {
+      const g = LV2.crates(c.n || 4, 0x5b4a33);
+      g.position.set(c.x, 0, c.z);
+      g.rotation.y = (c.x * 0.17 + c.z * 0.31) % 3.14;
+      group.add(g);
+      colliders.push({ x: c.x, z: c.z, hw: 0.9, hd: 0.9, h: 1.9, y: 0, kind: 'crates' });
+    });
+
+    /* -------------------- полосы дороги (полигоны) --------------------- */
     (M.road || []).forEach((rd) => {
       const w = rd.w / 2, l = rd.l / 2;
       const geo = SH2.level.extrudePlan([[-l, -w], [l, -w], [l, w], [-l, w]], 0.06, { bevel: 0.02 });
@@ -437,6 +622,32 @@
     (M.buildings || []).forEach(() => props++);
     props += (M.towers || []).length + (M.barriers || []).length + (M.sandbags || []).length;
     props += (M.barrels || []).length + (M.rocks || []).length + (M.stacks || []).length + (M.road || []).length;
+    props += (M.containers || []).length + (M.trucks || []).length + (M.lamps || []).length;
+    props += (M.watchtowers || []).length + (M.wrecks || []).length + (M.fences || []).length;
+    props += (M.trenches || []).length + (M.crateStacks || []).length + (M.shells || []).length;
+    props += (M.craters || []).length + (M.bushes || []).length + (M.rubble || []).length;
+    props += (M.mgNests || []).length + (M.camoNets || []).length;
+
+    /* ------------------ точки опоры, нормали и опорные точки ---------------
+       Для каждого коллайдера вычисляем:
+         anchor   — точка на поверхности, к которой боец встаёт вплотную (для ИИ);
+         normalX/Z — наружная нормаль этой точки (направление, от которого укрывает);
+         open     — открытая сторона, куда можно стрелять и смотреть поверх;
+       Это те же данные, что использует ИИ для укрытия — рисуются на карте. */
+    colliders.forEach((c, ci) => {
+      c.id = ci;
+      if (c.anchor) return;
+      const tall = (c.h || 1) > 1.3;
+      // ставим точку на стороне, обращённой к центру карты: там чаще бой
+      const toCenterX = -c.x, toCenterZ = -c.z;
+      const len = Math.hypot(toCenterX, toCenterZ) || 1;
+      const nx = toCenterX / len, nz = toCenterZ / len;
+      const ex = c.hw * Math.abs(nx) + c.hd * Math.abs(nz);
+      c.anchor = { x: c.x + nx * (ex + 0.62), z: c.z + nz * (ex + 0.62) };
+      c.normalX = nx; c.normalZ = nz;
+      c.coverHeight = tall ? 3 : (c.h || 1) > 0.7 ? 2 : 1;
+      c.open = Math.abs(nx) > Math.abs(nz) ? (nx > 0 ? 'east' : 'west') : (nz > 0 ? 'south' : 'north');
+    });
 
     return { group, colliders, sun, hemi, amb, map: M, mapId, groundTex,
       staticsCount: props, props, bakedCount: baked.length };
@@ -480,7 +691,7 @@
   }
 
   SH2.model = {
-    mat, mergeGeometries, bakeStatic, buildRig, buildWeaponModel, buildLevel,
+    mat, mergeGeometries, bakeStatic, buildRig, buildWeaponModel, buildLevel, windowHoles,
     propBarrel, propRock, propSandbags,
     buildExtractMarker, buildObjectiveBox, makeGroundTexture, xform, box, BONE_DEF,
     matCacheSize: () => matCache.size

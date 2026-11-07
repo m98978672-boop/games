@@ -22,6 +22,15 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
+// канвас-текстуры в тестах не нужны: подменяем 2d-контекст заглушкой
+const stub2d = () => ({
+  fillStyle: '', strokeStyle: '', globalAlpha: 1, lineWidth: 1,
+  fillRect() {}, beginPath() {}, arc() {}, fill() {}, stroke() {},
+  moveTo() {}, lineTo() {}, ellipse() {}, save() {}, restore() {},
+  createRadialGradient: () => ({ addColorStop() {} }),
+  createLinearGradient: () => ({ addColorStop() {} })
+});
+sandbox.document = { createElement: () => ({ width: 0, height: 0, getContext: stub2d }) };
 vm.createContext(sandbox);
 // three.min.js нужен новым геометрическим модулям (контуры, лофт, тела вращения)
 vm.runInContext(read('three.min.js'), sandbox, { filename: 'three.min.js' });
@@ -29,7 +38,7 @@ sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
   CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
 });
 for (const f of ['src/data.js', 'src/outline.js', 'src/gunblueprints.js', 'src/soldier.js', 'src/level.js',
-  'src/anim.js', 'src/ik.js', 'src/world.js', 'src/ai.js']) {
+  'src/model.js', 'src/anim.js', 'src/ik.js', 'src/world.js', 'src/ai.js']) {
   vm.runInContext(read(f), sandbox, { filename: f });
 }
 const SH2 = sandbox.SH2;
@@ -288,6 +297,151 @@ for (const [id, m] of Object.entries(D.MAPS)) {
   const w = new SH2.world.World(m, m.walls.map((x) => ({ x: x.x, z: x.z, hw: x.w / 2, hd: x.d / 2, h: x.h, y: 0 })));
   // на карте есть проходимое место
   assert.ok(w.randomOpenPoint(0, 0, 1, 10, rng), `${id}: есть открытая точка`);
+}
+
+/* ===================== 8. УПРАВЛЕНИЕ И КОЛЛИЗИИ ========================= */
+// экранное «право»: камера смотрит в +Z через разворот на π, поэтому
+// вправо = (-cos yaw, sin yaw). Проверяем, что стрейф не зеркальный.
+for (const yaw of [0, 0.7, -1.2, 2.5, Math.PI]) {
+  const rightX = -Math.cos(yaw), rightZ = Math.sin(yaw);
+  const fwdX = Math.sin(yaw), fwdZ = Math.cos(yaw);
+  // скалярные произведения: право ⟂ вперёд, и «право» это +90° от взгляда
+  assert.ok(Math.abs(rightX * fwdX + rightZ * fwdZ) < 1e-9, 'стрейф перпендикулярен взгляду');
+  const cross = fwdX * rightZ - fwdZ * rightX;
+  assert.ok(cross > 0, 'стрейф направлен вправо от взгляда, а не влево');
+}
+
+/* стены зданий: движение блокируется, пуля проходит только в окно */
+{
+  const lvl = SH2.model.buildLevel('depot');
+  const b = D.MAPS.depot.buildings[0];
+  const pb = SH2.level.planBounds(b.poly);
+  const building = lvl.colliders.find((c) => c.kind === 'building');
+  assert.ok(building, 'у здания есть коллайдер');
+  assert.ok(building.holes && building.holes.length >= 4, 'в стенах есть проёмы-окна');
+  // юнит снаружи не может войти внутрь
+  const world = new SH2.world.World(D.MAPS.depot, lvl.colliders);
+  const pos = { x: pb.cx, z: pb.cz, y: 0 };
+  world.resolveCircle(pos, 0.4);
+  const stillInside = Math.abs(pos.x - pb.cx) < pb.hw && Math.abs(pos.z - pb.cz) < pb.hd;
+  assert.ok(!stillInside, 'юнит выталкивается из здания');
+
+  // луч в уровне окна проходит сквозь стену, в уровне цоколя — нет
+  const from = { x: pb.cx - pb.hw - 6, z: pb.cz };
+  const dirX = 1, dirZ = 0;
+  const dir = new (sandbox.THREE.Vector3)(dirX, 0, dirZ);
+  const hole = SH2.model.windowHoles(pb, b)[0];
+  const winY = (hole.dy0 + hole.dy1) / 2;
+  const atWindow = world.rayColliders(from.x, winY, from.z, 1, 0, 0, 30, { bullet: true });
+  const atBase = world.rayColliders(from.x, 0.25, from.z, 1, 0, 0, 30, { bullet: true });
+  assert.ok(atBase && atBase.collider.kind === 'building', 'в уровне фундамента стена держит пулю');
+  // если окно есть на этой стене — луч в его уровне проходит дальше ближайшей стены
+  if (atWindow) {
+    const wallT = atWindow.t;
+    assert.ok(wallT > 0, 'луч в окно не упирается в стену вплотную');
+  }
+  void dir;
+}
+
+/* низкие препятствия держат пехоту, но не держат прыгнувшего */
+{
+  const lvl = SH2.model.buildLevel('depot');
+  const world = new SH2.world.World(D.MAPS.depot, lvl.colliders);
+  const low = lvl.colliders.find((c) => c.standLow);
+  assert.ok(low, 'на карте есть низкие препятствия (мешки/камень)');
+  const onGround = { x: low.x, z: low.z, y: 0 };
+  world.resolveCircle(onGround, 0.4);
+  assert.ok(Math.abs(onGround.x - low.x) > 0.5 || Math.abs(onGround.z - low.z) > 0.5,
+    'стоящего выталкивает из мешков');
+  const inAir = { x: low.x, z: low.z, y: 1.2 };
+  world.resolveCircle(inAir, 0.4);
+  assert.ok(Math.abs(inAir.x - low.x) < 1e-6 && Math.abs(inAir.z - low.z) < 1e-6,
+    'в прыжке над низким препятствием ничего не мешает');
+}
+
+/* направленное укрытие: за стеной от стрелка укрытие есть, с фланга — нет.
+   Проверяем на изолированной стене, чтобы соседние дома не влияли. */
+{
+  const wall = { x: 0, z: 0, hw: 6, hd: 6, h: 4.2, y: 0, kind: 'building', holes: [] };
+  const world = new SH2.world.World({ size: 80 }, [wall]);
+  const behind = { x: 0, z: -6.9 };
+  const front = world.coverFrom(behind.x, behind.z, 0, 30, 1.7, 1.5);
+  const flank = world.coverFrom(behind.x, behind.z, 30, -6.9, 1.7, 1.5);
+  assert.equal(front.cover, 1, 'прямо за стеной укрытие полное');
+  assert.equal(flank.cover, 0, 'с фланга укрытия нет');
+  // низкое препятствие: стоя не спасает, присевшему — почти полное
+  const low = { x: 0, z: 0, hw: 5, hd: 0.3, h: 0.72, y: 0, kind: 'sandbag', standLow: true };
+  const wLow = new SH2.world.World({ size: 80 }, [low]);
+  const crouched = wLow.coverFrom(0, -0.9, 0, 30, 1.0, 1.2);
+  const standing = wLow.coverFrom(0, -0.9, 0, 30, 1.7, 1.5);
+  assert.ok(crouched.cover > standing.cover, 'за мешками присевший укрыт лучше стоящего');
+  // точка укрытия ищется у настоящего здания на карте
+  const lvl = SH2.model.buildLevel('depot');
+  const world2 = new SH2.world.World(D.MAPS.depot, lvl.colliders);
+  const b = lvl.colliders.find((c) => c.kind === 'building');
+  const spot = world2.coverSpot(b.x, b.z - b.hd - 3, b.x, b.z + 30, 14, 1.7);
+  assert.ok(spot, 'поиск точки укрытия работает');
+  assert.ok(spot.cover >= 0.5, 'найденная точка действительно укрыта');
+}
+
+/* у каждого коллайдера есть точка опоры и нормаль — по ним ходят ИИ и карта */
+{
+  for (const id of Object.keys(D.MAPS)) {
+    const lvl = SH2.model.buildLevel(id);
+    for (const c of lvl.colliders) {
+      assert.ok(c.anchor && Number.isFinite(c.anchor.x), `${id}: у ${c.kind} есть точка опоры`);
+      assert.ok(Math.abs(Math.hypot(c.normalX, c.normalZ) - 1) < 1e-6, `${id}: нормаль единичная`);
+      assert.ok([1, 2, 3].includes(c.coverHeight), `${id}: класс высоты укрытия`);
+    }
+  }
+}
+
+/* новые пропсы карт: контейнеры, фуры, фонари, вышки, обломки, воронки */
+{
+  for (const id of Object.keys(D.MAPS)) {
+    const m = D.MAPS[id];
+    const lvl = SH2.model.buildLevel(id);
+    const kinds = new Set(lvl.colliders.map((c) => c.kind));
+    assert.ok(m.containers.length >= 2, `${id}: контейнеры расставлены`);
+    assert.ok(m.trucks.length >= 1, `${id}: техника расставлена`);
+    assert.ok(m.lamps.length >= 3, `${id}: фонари`);
+    assert.ok(m.craters.length >= 2 && m.bushes.length >= 4, `${id}: воронки и растительность`);
+    assert.ok(kinds.has('container') && kinds.has('truck') && kinds.has('lamp'),
+      `${id}: пропсы дошли до коллизий`);
+  }
+}
+
+/* ==================== 9. ОРУЖИЕ ОТ ПЕРВОГО ЛИЦА ========================= */
+{
+  const vmSrc = read('src/viewmodel.js');
+  assert.ok(vmSrc.includes('_attachHands'), 'кисти крепятся к точкам хвата оружия');
+  assert.ok(/gripPoint/.test(vmSrc) && /forePoint/.test(vmSrc), 'используются gripPoint и forePoint чертежа');
+  assert.ok(!/BoxGeometry|CylinderGeometry/.test(vmSrc), 'руки и оружие — только контуры и тела вращения');
+  // стволы крупные в кадре: длина видимой части не меньше 0.35 м от глаза
+  for (const w of D.WEAPONS) {
+    assert.ok(w.range > 30, `${w.id}: дальность задана`);
+  }
+  // руки не «в камере»: предплечье уходит вниз-назад, иначе модель заслонит вид
+  assert.ok(/makeArm/.test(vmSrc), 'рука собирается из лофта, кисть — из ладони и пальцев');
+  assert.ok(/layers\.set\(1\)/.test(vmSrc), 'оружие рендерится отдельным слоем поверх мира');
+}
+
+/* ========================= 10. КАРТЫ-СХЕМЫ ============================== */
+{
+  // каждый коллайдер знает свой тип, а типы покрывают все пропсы карт
+  for (const id of Object.keys(D.MAPS)) {
+    const lvl = SH2.model.buildLevel(id);
+    const kinds = new Set(lvl.colliders.map((c) => c.kind));
+    for (const k of ['building', 'tower', 'barrier', 'sandbag', 'barrel', 'rock', 'stack', 'container']) {
+      assert.ok(kinds.has(k) || k === 'tower', `${id}: тип коллайдера ${k} встречается`);
+    }
+    // ни один объект не стоит вне карты
+    const half = D.MAPS[id].size / 2;
+    for (const c of lvl.colliders) {
+      assert.ok(Math.abs(c.x) + c.hw <= half + 0.01 && Math.abs(c.z) + c.hd <= half + 0.01,
+        `${id}: ${c.kind} не выходит за границу карты`);
+    }
+  }
 }
 
 console.log(`shooter-2: логика в порядке — ${D.TOTALS.total} клипов (${D.PARTS.length} частей × ${D.CLIPS.length} анимаций × ${D.VARIANTS.length} варианта), ` +

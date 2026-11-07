@@ -50,13 +50,17 @@ func is_blocked_cell(x: float, z: float) -> bool:
 
 ## Разрешение столкновений круга с миром.
 ## Vector2 в GDScript — значимый тип, поэтому результат возвращаем словарём.
-func resolve_circle(pos: Vector2, radius: float) -> Dictionary:
+## pos — точка на плане (x, z); height — высота ног для прыжка через низкое.
+func resolve_circle(pos: Vector2, radius: float, height: float = 0.0) -> Dictionary:
 	var out := pos
 	var lim: float = half - radius
 	out.x = clampf(out.x, -lim, lim)
 	out.y = clampf(out.y, -lim, lim)
 	var hit := false
 	for c in colliders:
+		# мешки и камни ниже пояса не мешают, если боец уже над ними
+		if bool(c.get("stand_low", false)) and height > 0.55 * float(c["h"]):
+			continue
 		var cx: float = clampf(out.x, float(c["x"]) - float(c["hw"]), float(c["x"]) + float(c["hw"]))
 		var cz: float = clampf(out.y, float(c["z"]) - float(c["hd"]), float(c["z"]) + float(c["hd"]))
 		var dx: float = out.x - cx
@@ -118,7 +122,8 @@ static func ray_box(ox: float, oy: float, oz: float, dx: float, dy: float, dz: f
 
 
 ## Ближайшее пересечение луча с миром. Возвращает {t, collider} или {}
-func ray_colliders(origin: Vector3, dir: Vector3, max_t: float) -> Dictionary:
+## bullet = true — учитывать проёмы (окна, бойницы) в стенах.
+func ray_colliders(origin: Vector3, dir: Vector3, max_t: float, bullet: bool = false) -> Dictionary:
 	var best_t := max_t
 	var best = null
 	for c in colliders:
@@ -129,12 +134,90 @@ func ray_colliders(origin: Vector3, dir: Vector3, max_t: float) -> Dictionary:
 			continue
 		var t: float = ray_box(origin.x, origin.y, origin.z, dir.x, dir.y, dir.z,
 			float(c["x"]), 0.0, float(c["z"]), float(c["hw"]), float(c["h"]), float(c["hd"]), best_t)
+		if t >= 0.0 and bool(bullet) and _hit_hole(origin, dir, t, c):
+			continue   # луч прошёл в окно/бойницу — это препятствие не считается
 		if t >= 0.0 and t < best_t:
 			best_t = t
 			best = c
 	if best == null:
 		return {}
 	return {"t": best_t, "collider": best}
+
+
+## проём в препятствии: прямоугольник {dy0, dy1, du0, du1, dv0, dv1}
+## относительно центра коллайдера. Если луч вошёл внутри проёма — стена не мешает.
+func _hit_hole(origin: Vector3, dir: Vector3, t: float, c: Dictionary) -> bool:
+	var holes: Array = c.get("holes", [])
+	if holes.is_empty():
+		return false
+	var y: float = origin.y + dir.y * t
+	var lx: float = (origin.x + dir.x * t) - float(c["x"])
+	var lz: float = (origin.z + dir.z * t) - float(c["z"])
+	for h in holes:
+		var hd: Dictionary = h
+		if y < float(hd["dy0"]) or y > float(hd["dy1"]):
+			continue
+		if lx < float(hd["du0"]) or lx > float(hd["du1"]):
+			continue
+		if lz < float(hd["dv0"]) or lz > float(hd["dv1"]):
+			continue
+		return true
+	return false
+
+
+## направленное укрытие: три луча от стрелка к габаритам цели.
+## Возвращает {cover: 0..1, low_only: bool, blocker}.
+func cover_from(x: float, z: float, threat: Vector2, height: float = 1.7,
+		eye: float = 1.5) -> Dictionary:
+	var targets := [height * 0.20, height * 0.55, height * 0.92]
+	var blocked := 0
+	var low_only := true
+	var blocker = null
+	for ty in targets:
+		var hit := segment_blocks(Vector3(threat.x, eye, threat.y), Vector3(x, float(ty), z))
+		if not hit.is_empty():
+			blocked += 1
+			if blocker == null:
+				blocker = hit.get("collider", null)
+			var col = hit.get("collider", null)
+			if col == null or not bool(col.get("stand_low", false)):
+				low_only = false
+	return {"cover": float(blocked) / float(targets.size()), "low_only": low_only and blocked > 0,
+		"blocker": blocker}
+
+
+## пересекает ли отрезок препятствие (с учётом окон)
+func segment_blocks(a: Vector3, b: Vector3) -> Dictionary:
+	var d: Vector3 = b - a
+	var length: float = d.length()
+	if length < 1e-4:
+		return {}
+	return ray_colliders(a, d / length, length, true)
+
+
+## поиск точки укрытия: важна стена между бойцом и угрозой, а не близость к стене
+func cover_spot(from_x: float, from_z: float, threat: Vector2, radius: float = 12.0,
+		height: float = 1.7) -> Dictionary:
+	var best := {}
+	var best_score := -1e9
+	for a in 16:
+		var ang: float = float(a) / 16.0 * TAU
+		var dist := 2.5
+		while dist < radius:
+			var x: float = from_x + cos(ang) * dist
+			var z: float = from_z + sin(ang) * dist
+			if not is_blocked_cell(x, z):
+				var cov := cover_from(x, z, threat, height)
+				if float(cov["cover"]) >= 0.5:
+					var dist_threat: float = (Vector2(x, z) - threat).length()
+					var score: float = float(cov["cover"]) * 2.2 \
+						- (1.0 - float(cov["cover"])) * 1.4 - dist * 0.06 \
+						+ minf(6.0, dist_threat) * 0.05 - (0.35 if bool(cov["low_only"]) else 0.0)
+					if score > best_score:
+						best_score = score
+						best = {"x": x, "z": z, "cover": cov["cover"], "crouch": cov["low_only"]}
+			dist += 1.8
+	return best
 
 
 func has_los(a: Vector3, b: Vector3) -> bool:

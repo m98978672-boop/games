@@ -851,6 +851,8 @@ func update_playing(dt: float) -> void:
 		combat.player_grenade()
 	if Input.is_action_just_pressed("crouch"):
 		crouch_toggle = not crouch_toggle
+	if Input.is_action_just_pressed("jump"):
+		p.jump()
 	if Input.is_action_just_pressed("weapon_1"):
 		p.select_slot(0)
 	if Input.is_action_just_pressed("weapon_2"):

@@ -9,6 +9,8 @@ var game
 var x: float = 0.0
 var z: float = 0.0
 var y: float = 0.0
+var vy: float = 0.0
+var grounded: bool = true
 var vx: float = 0.0
 var vz: float = 0.0
 var yaw: float = 0.0
@@ -249,7 +251,8 @@ func fire() -> void:
 
 	var origin := ray_origin()
 	var dir_base := ray_direction()
-	var right := Vector3(cos(yaw), 0.0, -sin(yaw))
+	# экранное «право»: камера смотрит в +Z через разворот на PI
+	var right := Vector3(-cos(yaw), 0.0, sin(yaw))
 	var pellets: int = int(w["pellets"])
 	for p in pellets:
 		var rx: float = (randf() - 0.5) * 2.0 * spread
@@ -298,6 +301,18 @@ func finish_reload() -> void:
 
 
 ## ------------------------------ движение --------------------------------
+## прыжок: перепрыгиваем мешки, камни и низкие ограды
+func jump() -> bool:
+	if not alive or not grounded or exhausted:
+		return false
+	if stamina < 12.0:
+		return false
+	vy = 3.6
+	grounded = false
+	stamina -= 12.0
+	return true
+
+
 func update(dt: float, inp: Dictionary, game_ref) -> void:
 	game = game_ref
 	if not alive:
@@ -333,8 +348,9 @@ func update(dt: float, inp: Dictionary, game_ref) -> void:
 		dx += sn * inp_forward
 		dz += cs * inp_forward
 	if inp_strafe != 0.0:
-		dx += cs * inp_strafe
-		dz += -sn * inp_strafe
+		# вправо = (-cos yaw, sin yaw): иначе стрейф зеркальный
+		dx += -cs * inp_strafe
+		dz += sn * inp_strafe
 	var mag: float = sqrt(dx * dx + dz * dz)
 	if mag > 0.0:
 		dx /= mag
@@ -346,7 +362,7 @@ func update(dt: float, inp: Dictionary, game_ref) -> void:
 	var pz: float = z
 	x += vx * dt
 	z += vz * dt
-	var res: Dictionary = game.world.resolve_circle(Vector2(x, z), radius)
+	var res: Dictionary = game.world.resolve_circle(Vector2(x, z), radius, y)
 	var pos: Vector2 = res["pos"]
 	x = pos.x
 	z = pos.y
@@ -364,7 +380,14 @@ func update(dt: float, inp: Dictionary, game_ref) -> void:
 
 	var target_eye: float = 1.06 if crouch else 1.62
 	eye_height = _damp(eye_height, target_eye, 14.0, dt)
-	y = 0.0
+	# вертикаль: прыжок через мешки и камни
+	if not grounded or y > 0.0:
+		vy -= 14.5 * dt
+		y += vy * dt
+		if y <= 0.0:
+			y = 0.0
+			vy = 0.0
+			grounded = true
 	cam_bob = sin(bob) * 0.026 * bob_amt * (0.25 if ads else 1.0)
 	cam_bob_side = cos(bob * 0.5) * 0.022 * bob_amt * (0.2 if ads else 1.0)
 	roll = _damp(roll, -inp_strafe * 0.028 - recoil_yaw * 0.4, 8.0, dt)
