@@ -38,6 +38,10 @@ let hintIndex = 0;
 let hintTimer = 10;
 let buildType = null;
 let dragRect = null;
+let buildDrag = null;
+let zonePreview = null;
+let zonePreviewTimer = 0;
+let buildRot = 0;
 let wasLeft = false;
 
 const state = {
@@ -417,8 +421,8 @@ function handleInput(dt) {
   renderer.camera.x = clamp(renderer.camera.x, 0, game.world.W);
   renderer.camera.y = clamp(renderer.camera.y, 0, game.world.H);
 
-  // выделение рамкой: ЛКМ тянем — рамка, отпускаем — выбор
-  if (m.left) {
+  // выделение рамкой: ЛКМ тянем — рамка, отпускаем — выбор (не мешает стройке)
+  if (m.left && !buildType) {
     if (!wasLeft) dragRect = { x0: m.x, y0: m.y, x1: m.x, y1: m.y };
     if (dragRect) { dragRect.x1 = m.x; dragRect.y1 = m.y; }
     wasLeft = true;
@@ -430,7 +434,10 @@ function handleInput(dt) {
   renderer.drag = dragRect;
 
   if (input.pressed.has('MouseRight')) {
-    if (buildType) { hud.setBuildMode(null); buildType = null; }
+    if (buildType) {
+      if (buildDrag) { buildDrag = null; zonePreview = null; game.buildPreviewMulti = null; return; }
+      hud.setBuildMode(null); buildType = null;
+    }
     else {
       const ctx = game.contextOrderAt(world.x, world.y);
       if (ctx.ok) {
@@ -442,11 +449,12 @@ function handleInput(dt) {
   }
 
   if (buildType) {
-    const check = game.build.canPlace(buildType, world.x, world.y, game.playerFaction);
-    game.buildPreview = { type: buildType, x: world.x, y: world.y, ok: check.ok };
-    if (input.pressed.has('MouseLeft')) placeBuilding(world.x, world.y);
+    handleBuildInput(dt, world.x, world.y);
   } else {
     game.buildPreview = null;
+    game.buildPreviewMulti = null;
+    buildDrag = null;
+    zonePreview = null;
   }
   input.lastX = m.x;
   input.lastY = m.y;
@@ -481,10 +489,97 @@ function placeBuilding(x, y) {
   if (game.playerFaction == null) return;
   const order = game.api.issue({
     source: 'player', type: 'place_build', faction: game.playerFaction,
-    target: { x, y }, params: { buildType }, reason: 'постройка по приказу игрока',
+    target: { x, y }, params: { buildType, priority: hud.buildPriority, rot: buildRot }, reason: 'постройка по приказу игрока',
   });
   hud.toast(`Чертёж: ${cfg.building(buildType).name} · задержка ${order.delay.toFixed(1)} с`, 'good');
 }
+
+// Инструменты стройки: один / линия / зона по профилю / шаблон.
+function handleBuildInput(dt, x, y) {
+  const tool = hud.buildTool || 'single';
+  const faction = game.playerFaction;
+  if (faction == null) return;
+  const wh = input.hit('rotateBuild') || (input.pressed.has('KeyR') ? true : false);
+  if (wh) buildRot = (buildRot + Math.PI / 4) % (Math.PI * 2);
+
+  if (tool === 'single') {
+    const check = game.build.canPlace(buildType, x, y, faction);
+    game.buildPreview = { type: buildType, x, y, ok: check.ok, code: check.code, warn: check.warn || [] };
+    game.buildPreviewMulti = null;
+    if (check.warn?.length) hud.showHint(`${check.code}: ${check.reason}`, 1.2);
+    if (input.pressed.has('MouseLeft')) placeBuilding(x, y);
+    return;
+  }
+
+  if (tool === 'line') {
+    const a = buildDrag ? { x: buildDrag.x0, y: buildDrag.y0 } : { x, y };
+    if (input.pressed.has('MouseLeft') && !buildDrag) buildDrag = { x0: x, y0: y, x1: x, y1: y };
+    if (buildDrag && m_left_down()) { buildDrag.x1 = x; buildDrag.y1 = y; }
+    const items = game.build.planLine(buildType, a, buildDrag ? { x: buildDrag.x1, y: buildDrag.y1 } : a, faction);
+    game.buildPreviewMulti = { kind: 'line', type: buildType, items };
+    game.buildPreview = null;
+    if (buildDrag && !m_left_down()) {
+      const to = { x: buildDrag.x1, y: buildDrag.y1 };
+      const order = game.api.issue({
+        source: 'player', type: 'build_line', faction, target: { x: a.x, y: a.y },
+        params: { buildType, from: a, to, priority: hud.buildPriority }, reason: 'линия по приказу игрока',
+      });
+      hud.toast(`Линия: ${items.length} секций · задержка ${order.delay.toFixed(1)} с`, 'good');
+      buildDrag = null;
+    }
+    return;
+  }
+
+  if (tool === 'zone') {
+    if (input.pressed.has('MouseLeft') && !buildDrag) buildDrag = { x0: x, y0: y, x1: x, y1: y };
+    if (buildDrag && m_left_down()) { buildDrag.x1 = x; buildDrag.y1 = y; }
+    game.buildPreview = null;
+    if (buildDrag) {
+      const poly = rectPolygon(buildDrag);
+      zonePreviewTimer -= dt;
+      if (zonePreviewTimer <= 0 || !zonePreview) {
+        zonePreviewTimer = 0.3;
+        zonePreview = game.build.planZone(poly, hud.buildProfile, faction, {});
+      }
+      game.buildPreviewMulti = { kind: 'zone', items: zonePreview, rect: buildDrag, profile: hud.buildProfile };
+      if (!m_left_down()) {
+        const order = game.api.issue({
+          source: 'player', type: 'build_zone', faction, target: { x: (buildDrag.x0 + buildDrag.x1) / 2, y: (buildDrag.y0 + buildDrag.y1) / 2 },
+          params: { poly, profile: hud.buildProfile, priority: hud.buildPriority }, reason: 'зона по профилю (игрок)',
+        });
+        hud.toast(`Зона «${hud.buildProfile}»: ${zonePreview.length} чертежей · задержка ${order.delay.toFixed(1)} с`, 'good');
+        buildDrag = null;
+        zonePreview = null;
+      }
+    } else {
+      game.buildPreviewMulti = null;
+    }
+    return;
+  }
+
+  // шаблон
+  const tpl = (cfg.buildTemplates || {})[hud.buildTemplateId];
+  if (!tpl) { game.buildPreview = null; game.buildPreviewMulti = null; return; }
+  const cos = Math.cos(buildRot), sin = Math.sin(buildRot);
+  const items = tpl.items.map((it) => ({ type: it.type, x: x + it.dx * cos - it.dy * sin, y: y + it.dx * sin + it.dy * cos }));
+  game.buildPreviewMulti = { kind: 'template', items, template: hud.buildTemplateId };
+  game.buildPreview = null;
+  if (input.pressed.has('MouseLeft')) {
+    const order = game.api.issue({
+      source: 'player', type: 'build_template', faction, target: { x, y },
+      params: { template: hud.buildTemplateId, rot: buildRot, priority: hud.buildPriority }, reason: 'шаблон по приказу игрока',
+    });
+    hud.toast(`Шаблон «${tpl.name}» · задержка ${order.delay.toFixed(1)} с`, 'good');
+  }
+}
+
+function rectPolygon(d) {
+  const x0 = Math.min(d.x0, d.x1), x1 = Math.max(d.x0, d.x1);
+  const y0 = Math.min(d.y0, d.y1), y1 = Math.max(d.y0, d.y1);
+  return [{ x: x0, y: y0 }, { x: x1, y: y0 }, { x: x1, y: y1 }, { x: x0, y: y1 }];
+}
+
+function m_left_down() { return !!input.mouse?.left; }
 
 // ---------- цикл ----------
 function loop(now) {

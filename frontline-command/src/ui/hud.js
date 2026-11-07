@@ -28,6 +28,10 @@ export class HUD {
     this.lastFeed = 0;
     this.lastJournal = 0;
     this.buildMode = null;
+    this.buildTool = 'single';
+    this.buildProfile = 'light';
+    this.buildPriority = 'normal';
+    this.buildTemplateId = null;
     this.directiveOpen = false;
     this.hint = null;
     this.hintTimer = 0;
@@ -97,7 +101,23 @@ export class HUD {
 
       <div class="build-menu" id="hud-build">
         <div class="panel-head"><span>Стройка</span><span id="hud-build-hint">ЛКМ — поставить, ПКМ — отменить</span></div>
+        <div class="build-tools" id="hud-build-tools">
+          <button class="hud-btn active" data-tool="single" title="Одиночная постановка">Один</button>
+          <button class="hud-btn" data-tool="line" title="Протяжка: линия секций">Линия</button>
+          <button class="hud-btn" data-tool="zone" title="Рамка: зона по профилю">Зона</button>
+          <button class="hud-btn" data-tool="template" title="Готовый шаблон застройки">Шаблон</button>
+        </div>
+        <div class="build-config">
+          <label>Профиль <select id="hud-build-profile"></select></label>
+          <label>Приоритет <select id="hud-build-priority">
+            <option value="urgent">Срочно</option>
+            <option value="normal" selected>Обычный</option>
+            <option value="low">Низкий</option>
+          </select></label>
+          <label id="hud-build-template-row" hidden>Шаблон <select id="hud-build-template"></select></label>
+        </div>
         <div class="items" id="hud-build-items"></div>
+        <div class="build-queue" id="hud-build-queue"></div>
       </div>
 
       <div class="directive-panel" id="hud-directive-panel">
@@ -155,6 +175,12 @@ export class HUD {
       build: this.root.querySelector('#hud-build'),
       buildItems: this.root.querySelector('#hud-build-items'),
       buildHint: this.root.querySelector('#hud-build-hint'),
+      buildTools: this.root.querySelector('#hud-build-tools'),
+      buildProfile: this.root.querySelector('#hud-build-profile'),
+      buildPriority: this.root.querySelector('#hud-build-priority'),
+      buildTemplateRow: this.root.querySelector('#hud-build-template-row'),
+      buildTemplate: this.root.querySelector('#hud-build-template'),
+      buildQueue: this.root.querySelector('#hud-build-queue'),
       directivePanel: this.root.querySelector('#hud-directive-panel'),
       apPanel: this.root.querySelector('#hud-autopilot-panel'),
       apList: this.root.querySelector('#hud-ap-list'),
@@ -197,8 +223,65 @@ export class HUD {
       this.handlers.onMinimapClick?.(((e.clientX - r.left) / r.width) * this.game.world.W, ((e.clientY - r.top) / r.height) * this.game.world.H);
     });
 
+    this._buildControls();
     this._buildInventory();
     this._buildAutopilotPanel();
+  }
+
+  _buildControls() {
+    const game = this.game;
+    const profiles = Object.entries(game.cfg.profiles).map(([id, p]) => `<option value="${id}">${p.name}</option>`);
+    this.el.buildProfile.innerHTML = profiles.join('');
+    const templates = Object.entries(game.cfg.buildTemplates || {}).map(([id, t]) => `<option value="${id}">${t.name}</option>`);
+    this.el.buildTemplate.innerHTML = templates.length ? templates.join('') : '<option value="">нет шаблонов</option>';
+    this.buildTemplateId = templates.length ? Object.keys(game.cfg.buildTemplates)[0] : null;
+    this.el.buildTools.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-tool]');
+      if (btn) this.setBuildTool(btn.dataset.tool);
+    });
+    this.el.buildProfile.addEventListener('change', () => { this.buildProfile = this.el.buildProfile.value; });
+    this.el.buildPriority.addEventListener('change', () => { this.buildPriority = this.el.buildPriority.value; });
+    this.el.buildTemplate.addEventListener('change', () => { this.buildTemplateId = this.el.buildTemplate.value; });
+  }
+
+  // Подсказка зависит от инструмента стройки; сбрасывать её каждый тик нельзя.
+  buildHintText() {
+    if (!this.buildMode) return 'Выберите постройку';
+    const hints = {
+      single: 'ЛКМ — поставить, ПКМ — отменить',
+      line: 'ЛКМ и протяни — линия секций, ПКМ — отменить',
+      zone: 'ЛКМ и протяни рамку — зона по профилю',
+      template: 'ЛКМ — поставить шаблон, R — поворот, ПКМ — отменить',
+    };
+    return hints[this.buildTool] || hints.single;
+  }
+
+  setBuildTool(tool) {
+    this.buildTool = tool;
+    this.el.buildTools.querySelectorAll('[data-tool]').forEach((el) => el.classList.toggle('active', el.dataset.tool === tool));
+    this.el.buildTemplateRow.hidden = tool !== 'template';
+    this.el.buildHint.textContent = this.buildHintText();
+    this.handlers.onBuildTool?.(tool);
+  }
+
+  // Очередь стройки: прогресс и причина простоя (NO_MATERIALS / NO_ENGINEERS / DANGER ...)
+  renderBuildQueue() {
+    if (!this.el.buildQueue) return;
+    if (!this.el.build.classList.contains('show')) return;
+    const faction = this.game.playerFaction;
+    if (faction == null) return;
+    const items = this.game.build.queueInfo(faction);
+    if (!items.length) { this.el.buildQueue.innerHTML = '<div class="queue-empty">Очередь пуста</div>'; return; }
+    const stallLabel = {
+      ok: 'в работе', NO_MATERIALS: 'нет материалов', NO_ENGINEERS: 'нет инженеров',
+      DANGER: 'опасно', UNREACHABLE: 'не пройти', paused: 'пауза',
+    };
+    this.el.buildQueue.innerHTML = items.map((it) => `
+      <div class="queue-row" data-bp="${it.id}">
+        <span class="q-name">${it.name}${it.priority === 2 ? ' <b>срочно</b>' : ''}</span>
+        <span class="q-bar"><i style="width:${it.progress}%"></i></span>
+        <span class="q-state ${it.stall === 'ok' ? '' : 'bad'}">${stallLabel[it.stall] || it.stall}</span>
+      </div>`).join('');
   }
 
   _buildInventory() {
@@ -340,7 +423,10 @@ export class HUD {
     this.renderJournal();
     this.renderMinimap();
     if (this.el.apPanel.classList.contains('show')) this.refreshAutopilot();
-    if (this.buildMode) this.updateBuildAffordability();
+    if (this.buildMode) {
+      this.updateBuildAffordability();
+      this.renderBuildQueue();
+    }
   }
 
   renderTop() {
@@ -452,6 +538,6 @@ export class HUD {
       const can = Object.entries(def.cost || {}).every(([k, v]) => (stock[k] || 0) >= v);
       el.classList.toggle('cant', !can);
     });
-    this.el.buildHint.textContent = this.buildMode ? 'ЛКМ — поставить чертёж, ESC — отменить' : 'Выберите постройку';
+    this.el.buildHint.textContent = this.buildHintText();
   }
 }

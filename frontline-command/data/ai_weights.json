@@ -47,7 +47,6 @@
   "capture": {
     "radius": 150,
     "seconds": 7,
-    "ratio": 1.35,
     "minUnits": 1,
     "secondsByType": {
       "hq": 16,
@@ -57,7 +56,15 @@
       "bridge": 8,
       "farm": 7
     },
-    "keyCityMult": 1.35
+    "keyCityMult": 1.35,
+    "holdRatio": 1.0,
+    "startRatio": 1.35,
+    "decayRate": 0.2,
+    "patienceSeconds": 3,
+    "graceSeconds": 10,
+    "resolveAfterSeconds": 600,
+    "resolveSpeed": 0.55,
+    "suddenDeathSeconds": 900
   },
   "influence": {
     "interval": 1.0,
@@ -136,5 +143,18 @@
     "enemySquadCapBonusPerStep": 1,
     "enemyTechSteps": 3
   },
-  "surrenderSeconds": 90
+  "surrenderSeconds": 90,
+  "buildWeights": {
+    "dist": 1.0,
+    "safe": 1.2,
+    "skill": 0.6,
+    "busy": 0.8,
+    "prio": 1.0
+  },
+  "build": {
+    "minArmy": 24,
+    "reserveMaterials": 150,
+    "cooldownSeconds": 25,
+    "maxOpenBlueprints": 10
+  }
 }

@@ -82,6 +82,12 @@ export class InfluenceSystem {
   updateCapture() {
     const game = this.game;
     const cfg = game.cfg.ai.capture;
+    const hysteresis = game.cfg.flag('capture_hysteresis', true);
+    // Поздняя стадия войны: точки берутся быстрее, иначе измотанные армии не сходятся никогда.
+    const late = cfg.resolveAfterSeconds && game.time > cfg.resolveAfterSeconds;
+    const speed = late ? (cfg.resolveSpeed ?? 1) : 1;
+    const startRatio = cfg.startRatio ?? cfg.ratio ?? 1.35;
+    const holdRatio = hysteresis ? (cfg.holdRatio ?? 1.0) : startRatio;
     for (const pt of game.world.points) {
       if (pt.structure && pt.structure.dead) continue;
       if (pt.type === 'bridge' && pt.hp <= 0) continue;
@@ -90,17 +96,41 @@ export class InfluenceSystem {
         if (!u.alive || u.downed) continue;
         if (u.faction === 0) a += u.power(); else b += u.power();
       }
+      const attacking = pt.capturer ?? -1;
+      // Начать захват нужно с ощутимым перевесом, продолжать — уже с минимальным.
+      const needA = attacking === 0 && hysteresis ? holdRatio : startRatio;
+      const needB = attacking === 1 && hysteresis ? holdRatio : startRatio;
       let attacker = -1;
-      if (a > 0 && a >= b * cfg.ratio) attacker = 0;
-      else if (b > 0 && b >= a * cfg.ratio) attacker = 1;
-      if (attacker === pt.owner) { pt.capture = Math.max(0, pt.capture - 0.5); pt.capturer = -1; continue; }
-      if (attacker < 0) { pt.capture = Math.max(0, pt.capture - 0.35); continue; }
+      if (a > 0 && a >= b * needA) attacker = 0;
+      else if (b > 0 && b >= a * needB) attacker = 1;
+      // «Передышка» после смены флага: точку нельзя отбить мгновенно обратно.
+      if (hysteresis && pt.lastOwnerChange != null && game.time - pt.lastOwnerChange < (cfg.graceSeconds ?? 0)) {
+        attacker = -2;
+      }
+      if (attacker === pt.owner) { pt.capture = Math.max(0, pt.capture - 0.5); pt.capturer = -1; pt.captureState = 'idle'; continue; }
+      if (attacker === -2) { pt.captureState = 'grace'; continue; }
+      if (attacker < 0) {
+        // Обе стороны в равновесии: прогресс тает медленно и только после паузы
+        pt.captureNoSide = (pt.captureNoSide || 0) + 1;
+        const patienceTicks = Math.max(1, (cfg.patienceSeconds ?? 3) / (game.cfg.ai.influence.interval || 1));
+        if (pt.captureNoSide >= patienceTicks) {
+          pt.capture = Math.max(0, pt.capture - (hysteresis ? (cfg.decayRate ?? 0.2) : 0.35));
+          if (pt.capture === 0) { pt.capturer = -1; pt.captureState = 'idle'; } else pt.captureState = 'contested';
+        }
+        continue;
+      }
+      pt.captureNoSide = 0;
       if (pt.capturer !== attacker) { pt.capturer = attacker; pt.capture = 0; }
-      // Крупные объекты держатся дольше мелких: штаб и город нельзя «пробежать» за семь секунд.
-      // Ключевые города держатся дольше: их потеря = проигранная война, «пробежать» их нельзя.
-      const secs = (cfg.secondsByType?.[pt.type] ?? cfg.seconds) * (pt.key ? (cfg.keyCityMult ?? 1) : 1);
+      const secs = ((cfg.secondsByType?.[pt.type] ?? cfg.seconds) * (pt.key ? (cfg.keyCityMult ?? 1) : 1)) / speed;
       pt.capture = clamp(pt.capture + 1 / Math.max(1, secs), 0, 1);
-      if (pt.capture >= 1) this.flipPoint(pt, attacker);
+      pt.captureState = pt.capture > 0 ? 'capturing' : 'contested';
+      if (pt.capture >= 1) {
+        // последняя проверка: флаг не переходит, если перевес растаял
+        if (hysteresis && attacker === 0 && a < b * holdRatio) continue;
+        if (hysteresis && attacker === 1 && b < a * holdRatio) continue;
+        this.flipPoint(pt, attacker);
+        pt.captureState = 'captured';
+      }
     }
   }
 

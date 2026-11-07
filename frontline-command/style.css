@@ -280,3 +280,20 @@ input[type="range"] { padding: 0; }
   .hud-minimap { width: 150px; height: 150px; bottom: 92px; }
   .build-menu { left: 218px; width: 380px; }
 }
+
+/* Панель стройки 0.10: инструменты, профили, очередь */
+.build-tools { display: flex; gap: 4px; margin-top: 6px; }
+.build-tools .hud-btn { flex: 1; font-size: 11.5px; padding: 4px 2px; }
+.build-tools .hud-btn.active { border-color: var(--accent); background: #26301f; color: #eaf3df; }
+.build-config { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px; font-size: 11.5px; }
+.build-config label { display: flex; flex-direction: column; gap: 2px; color: var(--text-dim); }
+.build-config select { background: #171c15; color: #dfe7d6; border: 1px solid var(--line); border-radius: 3px; padding: 2px 4px; font-size: 11.5px; }
+.build-config label[hidden] { display: none; }
+.build-queue { margin-top: 8px; border-top: 1px solid #262d20; padding-top: 6px; max-height: 108px; overflow: auto; }
+.build-queue .queue-empty { color: var(--text-dim); font-size: 11.5px; }
+.queue-row { display: grid; grid-template-columns: 1fr 64px 78px; gap: 6px; align-items: center; padding: 2px 0; font-size: 11.5px; }
+.queue-row .q-name b { color: #ffb46b; font-weight: 600; }
+.queue-row .q-bar { height: 6px; background: #1b2117; border: 1px solid #2b3325; border-radius: 3px; overflow: hidden; }
+.queue-row .q-bar i { display: block; height: 100%; background: var(--accent); }
+.queue-row .q-state { color: var(--text-dim); text-align: right; }
+.queue-row .q-state.bad { color: #e98a6a; }

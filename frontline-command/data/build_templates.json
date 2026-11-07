@@ -1,0 +1,145 @@
+{
+  "strongpoint": {
+    "name": "Опорный пункт",
+    "desc": "Окопы по фронту, пулемётное гнездо в центре, склад позади",
+    "items": [
+      {
+        "type": "trench",
+        "dx": -96,
+        "dy": 0
+      },
+      {
+        "type": "trench",
+        "dx": -32,
+        "dy": 0
+      },
+      {
+        "type": "trench",
+        "dx": 32,
+        "dy": 0
+      },
+      {
+        "type": "trench",
+        "dx": 96,
+        "dy": 0
+      },
+      {
+        "type": "mg_nest",
+        "dx": 0,
+        "dy": -96
+      },
+      {
+        "type": "sandbags",
+        "dx": -64,
+        "dy": -96
+      },
+      {
+        "type": "sandbags",
+        "dx": 64,
+        "dy": -96
+      },
+      {
+        "type": "watchtower",
+        "dx": 0,
+        "dy": 120
+      }
+    ]
+  },
+  "line": {
+    "name": "Линия обороны",
+    "desc": "Проволока перед окопами, мешки по флангам",
+    "items": [
+      {
+        "type": "trench",
+        "dx": -128,
+        "dy": 0
+      },
+      {
+        "type": "trench",
+        "dx": -64,
+        "dy": 0
+      },
+      {
+        "type": "trench",
+        "dx": 0,
+        "dy": 0
+      },
+      {
+        "type": "trench",
+        "dx": 64,
+        "dy": 0
+      },
+      {
+        "type": "trench",
+        "dx": 128,
+        "dy": 0
+      },
+      {
+        "type": "wire",
+        "dx": -96,
+        "dy": -80
+      },
+      {
+        "type": "wire",
+        "dx": -32,
+        "dy": -80
+      },
+      {
+        "type": "wire",
+        "dx": 32,
+        "dy": -80
+      },
+      {
+        "type": "wire",
+        "dx": 96,
+        "dy": -80
+      },
+      {
+        "type": "sandbags",
+        "dx": -160,
+        "dy": 40
+      },
+      {
+        "type": "sandbags",
+        "dx": 160,
+        "dy": 40
+      }
+    ]
+  },
+  "rear_node": {
+    "name": "Тыловой узел",
+    "desc": "Наблюдательная вышка, мешки по флангам, окопы для охраны",
+    "items": [
+      {
+        "type": "watchtower",
+        "dx": 0,
+        "dy": -96
+      },
+      {
+        "type": "sandbags",
+        "dx": -128,
+        "dy": 64
+      },
+      {
+        "type": "sandbags",
+        "dx": 128,
+        "dy": 64
+      },
+      {
+        "type": "trench",
+        "dx": -64,
+        "dy": 64
+      },
+      {
+        "type": "trench",
+        "dx": 64,
+        "dy": 64
+      },
+      {
+        "type": "mg_nest",
+        "dx": 0,
+        "dy": 64
+      }
+    ]
+  }
+}

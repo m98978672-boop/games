@@ -2,7 +2,7 @@
 // мораль, укрытия, медики, инженеры, а также ручное управление игроком.
 import { clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp } from '../core/mathx.js';
 import {
-  tryShoot, startReload, moveUnit, moveAlongFlow, updateTimers, reviveUnit, applyDamage, updatePerception,
+  tryShoot, startReload, moveUnit, moveAlongFlow, updateTimers, reviveUnit, applyDamage, updatePerception, tryShootBuilding,
 } from './units.js';
 
 const state = (u, s, label) => { if (u.state !== s) { u.state = s; u.stateLabel = label; } };
@@ -132,6 +132,36 @@ export function thinkSoldier(game, u) {
           }
         } else u.goal = null;
         tryShoot(game, u, target, game.dt);
+        return;
+      }
+    }
+  }
+  // 3б. Штурм укреплений: живой цели нет, но на пути вражеская постройка
+  if (game.cfg.flag('assault_forts', true) && u.ammoRatio() > 0.05) {
+    const sq0 = u.squad;
+    const pushing = !sq0 || ['advance', 'fight', 'capture'].includes(sq0.state);
+    if (pushing && (u.activity === 'advance' || u.activity === 'fight' || !u.perception.hasContact)) {
+      const forts = game.world.buildingGrid.query(u.x, u.y, Math.max(260, u.weapon.range))
+        .filter((b) => !b.dead && b.built && b.faction >= 0 && b.faction !== u.faction
+          && (game.cfg.building(b.type)?.category === 'fort'));
+      const near = forts
+        .filter((b) => dist(u.x, u.y, b.x, b.y) <= Math.max(260, u.weapon.range) && game.world.hasLOS(u.x, u.y, b.x, b.y, false))
+        .sort((a, b) => dist(u.x, u.y, a.x, a.y) - dist(u.x, u.y, b.x, b.y))[0];
+      if (near) {
+        const d = dist(u.x, u.y, near.x, near.y);
+        if (d <= u.weapon.range) {
+          state(u, 'assault', 'штурмует укрепление');
+          u.activity = 'fight';
+          u.aimAngle = angleTo(u.x, u.y, near.x, near.y);
+          u.goal = null;
+          tryShootBuilding(game, u, near, game.dt);
+          return;
+        }
+        // подходим на дистанцию огня, держась за укрытиями
+        const cover = game.world.bestCover(u.x, u.y, angleTo(u.x, u.y, near.x, near.y), 120, (b) => (b.occupants || 0) > 1 ? 1 : 0);
+        u.goal = cover ? { x: cover.x, y: cover.y } : { x: near.x + (u.x - near.x) * 0.4, y: near.y + (u.y - near.y) * 0.4 };
+        state(u, 'advance', 'к укреплению');
+        u.activity = 'advance';
         return;
       }
     }

@@ -1,7 +1,174 @@
 {
-  "light":    { "name": "Лёгкий",   "desc": "Мешки и окопы", "items": [ { "type": "sandbags", "count": 6 }, { "type": "trench", "count": 2 } ] },
-  "medium":   { "name": "Средний",  "desc": "Окопы, проволока, пулемётные гнёзда", "items": [ { "type": "trench", "count": 4 }, { "type": "wire", "count": 4 }, { "type": "mg_nest", "count": 2 }, { "type": "sandbags", "count": 4 } ] },
-  "heavy":    { "name": "Тяжёлый",  "desc": "Бункеры, ДОТы, мины, проволока в несколько линий", "items": [ { "type": "bunker", "count": 2 }, { "type": "mg_nest", "count": 3 }, { "type": "wire", "count": 8 }, { "type": "trench", "count": 4 } ] },
-  "rear":     { "name": "Тыловой",  "desc": "Склады, дороги, ремонт мостов", "items": [ { "type": "watchtower", "count": 1 }, { "type": "sandbags", "count": 2 } ] },
-  "custom":   { "name": "Свой профиль", "desc": "Состав задаётся игроком", "items": [ { "type": "sandbags", "count": 3 } ] }
+  "light": {
+    "name": "Лёгкий",
+    "desc": "Мешки и окопы",
+    "items": [
+      {
+        "type": "sandbags",
+        "count": 6
+      },
+      {
+        "type": "trench",
+        "count": 2
+      }
+    ],
+    "echelons": [
+      {
+        "name": "front",
+        "depth": 70,
+        "share": 0.6
+      },
+      {
+        "name": "main",
+        "depth": 140,
+        "share": 0.4
+      }
+    ],
+    "density": 10,
+    "threatWeight": 0.8,
+    "budget": 260,
+    "maxFortsPerPoint": 3,
+    "dedup": 96
+  },
+  "medium": {
+    "name": "Средний",
+    "desc": "Окопы, проволока, пулемётные гнёзда",
+    "items": [
+      {
+        "type": "trench",
+        "count": 4
+      },
+      {
+        "type": "wire",
+        "count": 4
+      },
+      {
+        "type": "mg_nest",
+        "count": 2
+      },
+      {
+        "type": "sandbags",
+        "count": 4
+      }
+    ],
+    "echelons": [
+      {
+        "name": "front",
+        "depth": 80,
+        "share": 0.45
+      },
+      {
+        "name": "main",
+        "depth": 170,
+        "share": 0.35
+      },
+      {
+        "name": "rear",
+        "depth": 280,
+        "share": 0.2
+      }
+    ],
+    "density": 14,
+    "threatWeight": 1.0,
+    "budget": 520,
+    "maxFortsPerPoint": 4,
+    "dedup": 96
+  },
+  "heavy": {
+    "name": "Тяжёлый",
+    "desc": "Бункеры, ДОТы, мины, проволока в несколько линий",
+    "items": [
+      {
+        "type": "bunker",
+        "count": 2
+      },
+      {
+        "type": "mg_nest",
+        "count": 3
+      },
+      {
+        "type": "wire",
+        "count": 8
+      },
+      {
+        "type": "trench",
+        "count": 4
+      }
+    ],
+    "echelons": [
+      {
+        "name": "front",
+        "depth": 90,
+        "share": 0.4
+      },
+      {
+        "name": "main",
+        "depth": 190,
+        "share": 0.35
+      },
+      {
+        "name": "rear",
+        "depth": 320,
+        "share": 0.25
+      }
+    ],
+    "density": 16,
+    "threatWeight": 1.2,
+    "budget": 820,
+    "maxFortsPerPoint": 6,
+    "dedup": 96
+  },
+  "rear": {
+    "name": "Тыловой",
+    "desc": "Склады, дороги, ремонт мостов",
+    "items": [
+      {
+        "type": "watchtower",
+        "count": 1
+      },
+      {
+        "type": "sandbags",
+        "count": 2
+      }
+    ],
+    "echelons": [
+      {
+        "name": "main",
+        "depth": 160,
+        "share": 0.5
+      },
+      {
+        "name": "rear",
+        "depth": 300,
+        "share": 0.5
+      }
+    ],
+    "density": 6,
+    "threatWeight": 0.3,
+    "budget": 380,
+    "maxFortsPerPoint": 2,
+    "dedup": 96
+  },
+  "custom": {
+    "name": "Свой профиль",
+    "desc": "Состав задаётся игроком",
+    "items": [
+      {
+        "type": "sandbags",
+        "count": 3
+      }
+    ],
+    "echelons": [
+      {
+        "name": "main",
+        "depth": 140,
+        "share": 1.0
+      }
+    ],
+    "density": 8,
+    "threatWeight": 0.5,
+    "budget": 300,
+    "maxFortsPerPoint": 2,
+    "dedup": 96
+  }
 }
