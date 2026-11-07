@@ -548,7 +548,7 @@ if (camApp) {
   check('клик включает реконструкцию', D.body.dataset.look === 'voxel', D.body.dataset.look);
   check('кнопка помечена как включённая', btn.getAttribute('aria-pressed') === 'true' && btn.classList.contains('active'));
   check('точки при этом выключены', D.body.dataset.dots === 'off');
-  check('подпись сообщает про клетки', /Реконструкция:\s*[\d\s\u00a0]+клеток/.test($('stage-live').textContent || ''),
+  check('подпись сообщает про меш', /Меш из точек:\s*[\d\s\u00a0]+треугольников/.test($('stage-live').textContent || ''),
     $('stage-live').textContent || '');
   // режимы не складываются: включили точки — реконструкция погасла
   $('dots-btn').click();
@@ -567,6 +567,43 @@ if (camApp) {
   check('клавиша V возвращает поверхности', D.body.dataset.look === 'solid'
     && btn.getAttribute('aria-pressed') === 'false');
   check('после возврата подпись про поверхности', /поверхности/i.test($('stage-live').textContent || ''));
+}
+
+// ------------------------------------------------------------ 4D-точки и меню слоёв
+{
+  openCatalog();
+  $('catalog-toggle').click();
+  await wait(150);
+  $('menu-more-btn').click();
+  await wait(250);
+  check('в меню «Ещё» есть пункты слоёв', !!$('more-dots') && !!$('more-mesh') && !!$('more-4d'));
+  check('на старте блоке ни один слой не включён', D.body.dataset.look === 'solid'
+    && !$('more-mesh').classList.contains('is-on'), D.body.dataset.look);
+  E_4D: {
+    // включаем меш из меню, затем точки и 4D
+    $('more-mesh').click();
+    await wait(900);
+    check('пункт «Меш из точек» включает меш', D.body.dataset.look === 'voxel', D.body.dataset.look);
+    check('пункт отмечен как включённый', $('more-mesh').classList.contains('is-on'));
+    window.dispatchEvent(new window.KeyboardEvent('keydown', { key: '4' }));
+    await wait(900);
+    check('клавиша 4 включает 4D', D.body.dataset.fourd === 'on', D.body.dataset.fourd);
+    check('4D автоматически включает точки', D.body.dataset.look === 'dots', D.body.dataset.look);
+    check('подпись сообщает про четвёртую ось', /4D/.test($('stage-live').textContent || ''),
+      $('stage-live').textContent || '');
+    // пока 4D включено, кадры идут: точки должны «дышать»
+    await wait(400);
+    check('4D включён и точки на месте', D.body.dataset.dots === 'on' && D.body.dataset.fourd === 'on');
+    window.dispatchEvent(new window.KeyboardEvent('keydown', { key: '4' }));
+    await wait(600);
+    check('повторная 4 возвращает точки в исходные координаты', D.body.dataset.fourd === 'off');
+  }
+  // обратно на поверхности, чтобы не влиять на следующие проверки
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'p' }));
+  await wait(600);
+  check('после 4D точки выключаются как обычно', D.body.dataset.look === 'solid', D.body.dataset.look);
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+  await wait(150);
 }
 
 // ------------------------------------------------------------ предпросмотр в меню
