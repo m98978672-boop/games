@@ -32,6 +32,12 @@ jobs:
         run: node game-base/tests/logic.mjs
       - name: Test Frontline Command (логика, симуляция, производительность)
         run: npm run test:fast --prefix frontline-command
+      - name: Test shooter-2 structure and offline rules
+        run: node shooter-2/tests/smoke.mjs
+      - name: Test shooter-2 animation library (1760 clips), world, AI, ragdoll
+        run: node shooter-2/tests/logic.mjs
+      - name: Test shooter-2 headless game loop
+        run: node shooter-2/tests/headless.mjs
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play
 
