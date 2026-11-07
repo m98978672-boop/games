@@ -37,7 +37,10 @@ vm.runInContext(read('three.min.js'), sandbox, { filename: 'three.min.js' });
 sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
   CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
 });
-for (const m of ['data', 'model', 'anim', 'ik']) vm.runInContext(read(`src/${m}.js`), sandbox, { filename: m });
+// порядок важен: outline/gunblueprints/soldier подключаются ДО model
+for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik']) {
+  vm.runInContext(read(`src/${m}.js`), sandbox, { filename: m });
+}
 const SH2 = sandbox.SH2;
 const D = SH2.data;
 const T = sandbox.THREE;
@@ -203,6 +206,89 @@ if (single) {
   process.exit(0);
 }
 
+/* ------------------------------ лист оружия ----------------------------- */
+// node tools/preview.mjs --guns  -> docs/preview-guns.png (5 стволов, вид сбоку)
+// автоподбор камеры под габариты объекта: силуэт занимает кадр
+function fitCamera(obj, opts) {
+  const o = opts || {};
+  obj.updateMatrixWorld(true);
+  const box = new T.Box3().setFromObject(obj);
+  const size = new T.Vector3(); box.getSize(size);
+  const center = new T.Vector3(); box.getCenter(center);
+  const maxDim = Math.max(size.x, size.y, size.z);
+  const dir = o.dir || new T.Vector3(1.6, 0.5, 0.22).normalize();
+  // единый масштаб для серии: не меньше опорного габарита (пистолет не «раздувается»)
+  const ref = o.refDim || maxDim;
+  const dist = Math.max(maxDim, ref) * (o.k || 1.5);
+  const pos = center.clone().addScaledVector(dir, dist);
+  return { pos, look: center, fov: o.fov || 26 };
+}
+
+if (process.argv.indexOf('--guns') >= 0) {
+  const ids = ['pistol', 'smg', 'rifle', 'shotgun', 'dmr'];
+  const cell = 620, W = cell, H = cell * ids.length * 0.42;
+  const ch = Math.round(H / ids.length);
+  const canvas = new Canvas(W, H, [16, 20, 26]);
+  ids.forEach((id, i) => {
+    const g = SH2.model.buildWeaponModel(id);
+    const tmp = new Canvas(W, ch, [16, 20, 26]);
+    const fit = fitCamera(g, { dir: new T.Vector3(1.0, 0.42, 0.1), k: 1.35, fov: 22, refDim: 0.95 });
+    renderScene(tmp, g, fit.pos, fit.look, fit.fov);
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < W; x++) {
+        const src = (y * W + x) * 4;
+        const dst = ((i * ch + y) * W + x) * 4;
+        canvas.color[dst] = tmp.color[src];
+        canvas.color[dst + 1] = tmp.color[src + 1];
+        canvas.color[dst + 2] = tmp.color[src + 2];
+        canvas.color[dst + 3] = 255;
+      }
+    }
+  });
+  fs.writeFileSync(path.join(root, 'docs', 'preview-guns.png'), png(W, H, canvas.color));
+  console.log('docs/preview-guns.png — 5 стволов по чертежам: pistol, smg, rifle, shotgun, dmr');
+  process.exit(0);
+}
+
+/* ------------------------------ вид на карту ----------------------------- */
+// node tools/preview.mjs --map depot [--cam x,y,z] [--look x,y,z]
+// Собирает уровень настоящими полигонами и рисует общий вид (проверка карты).
+if (process.argv.indexOf('--map') >= 0) {
+  const mapId = process.argv[process.argv.indexOf('--map') + 1] || 'depot';
+  const num = (name, def) => {
+    const i = process.argv.indexOf('--' + name);
+    if (i < 0) return def;
+    return process.argv[i + 1].split(',').map(Number);
+  };
+  const W = Number(process.argv[process.argv.indexOf('--w') + 1]) || 1200;
+  const H = Number(process.argv[process.argv.indexOf('--h') + 1]) || 760;
+  const lvl = SH2.model.buildLevel(mapId);
+  // пару бойцов и оружие для масштаба
+  const poses = [[-6, 4, 0.6, 'rifle'], [8, 10, 2.1, 'dmr'], [-14, -8, 3.6, 'shotgun']];
+  poses.forEach((p) => {
+    const rig = SH2.model.buildRig('grunt', { scale: 1 });
+    const w = SH2.model.buildWeaponModel(p[3]);
+    w.scale.setScalar(1.22);
+    rig.bones.weapon.add(w);
+    rig.setGrips(p[3]);
+    const anim = new SH2.anim.Animator(rig, { smooth: 1000 });
+    for (let k = 0; k < 10; k++) { anim.poseAt('aim', 0, 0.3); SH2.anim.groundLock(rig, anim, 1); }
+    new SH2.ik.ArmIK(rig).update({ raise: 1, tilt: 0 });
+    rig.root.position.set(p[0], 0, p[1]);
+    rig.root.rotation.y = p[2];
+    lvl.group.add(rig.root);
+  });
+  const canvas = new Canvas(W, H, [22, 26, 34]);
+  const camPos = new T.Vector3(...num('cam', [26, 26, 34]));
+  const camLook = new T.Vector3(...num('look', [-2, 2, -4]));
+  renderScene(canvas, lvl.group, camPos, camLook, 46);
+  const out = num('out', null);
+  const file = 'preview-map-' + mapId + '.png';
+  fs.writeFileSync(path.join(root, 'docs', file), png(W, H, canvas.color));
+  console.log('docs/' + file, '| коллайдеров:', lvl.colliders.length);
+  process.exit(0);
+}
+
 /* --------------------------------- главное ------------------------------ */
 const args = process.argv.slice(2);
 const arg = (name, def) => {
@@ -278,6 +364,32 @@ fs.mkdirSync(outDir, { recursive: true });
   });
   fs.writeFileSync(path.join(outDir, 'preview-clips.png'), png(W, H, canvas.color));
   console.log('docs/preview-clips.png — все 20 анимаций (вариант «стандарт»)');
+}
+
+// 2.5) Оружие крупным планом: чертёж -> объём (для README/доков)
+{
+  const ids = ['rifle', 'dmr'];
+  const W = 1200, H = 440;
+  const canvas = new Canvas(W, H, [14, 18, 24]);
+  ids.forEach((id, i) => {
+    const g = SH2.model.buildWeaponModel(id);
+    const tmp = new Canvas(W, H / 2, [14, 18, 24]);
+    const fit = fitCamera(g, { dir: new T.Vector3(1.0, 0.40, 0.12), k: 1.30, fov: 22, refDim: 0.95 });
+    renderScene(tmp, g, fit.pos, fit.look, fit.fov);
+    const off = i * (H / 2);
+    for (let y = 0; y < H / 2; y++) {
+      for (let x = 0; x < W; x++) {
+        const src = (y * W + x) * 4;
+        const dst = ((off + y) * W + x) * 4;
+        canvas.color[dst] = tmp.color[src];
+        canvas.color[dst + 1] = tmp.color[src + 1];
+        canvas.color[dst + 2] = tmp.color[src + 2];
+        canvas.color[dst + 3] = 255;
+      }
+    }
+  });
+  fs.writeFileSync(path.join(outDir, 'preview-weapon-detail.png'), png(W, H, canvas.color));
+  console.log('docs/preview-weapon-detail.png — автомат и винтовка крупным планом');
 }
 
 // 3) Четыре варианта одной анимации (walk)

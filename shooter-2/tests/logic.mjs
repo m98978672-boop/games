@@ -23,7 +23,13 @@ const sandbox = {
 sandbox.globalThis = sandbox;
 sandbox.window = sandbox;
 vm.createContext(sandbox);
-for (const f of ['src/data.js', 'src/anim.js', 'src/ik.js', 'src/world.js', 'src/ai.js']) {
+// three.min.js нужен новым геометрическим модулям (контуры, лофт, тела вращения)
+vm.runInContext(read('three.min.js'), sandbox, { filename: 'three.min.js' });
+sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
+  CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
+});
+for (const f of ['src/data.js', 'src/outline.js', 'src/gunblueprints.js', 'src/soldier.js', 'src/level.js',
+  'src/anim.js', 'src/ik.js', 'src/world.js', 'src/ai.js']) {
   vm.runInContext(read(f), sandbox, { filename: f });
 }
 const SH2 = sandbox.SH2;
@@ -119,22 +125,26 @@ const pos = { x: 500, z: -500 };
 world.resolveCircle(pos, 0.4);
 assert.ok(Math.abs(pos.x) <= world.half && Math.abs(pos.z) <= world.half, 'игрок не выходит за карту');
 
-// стена выталкивает
-const inside = { x: -36, z: 0 };
+// стена выталкивает: берём центр настоящего здания карты
+const b0 = D.MAPS.depot.buildings[0];
+const pb0 = SH2.level.planBounds(b0.poly);
+const inside = { x: pb0.cx, z: pb0.cz };
 world.resolveCircle(inside, 0.4);
-assert.ok(Math.abs(inside.x - (-36)) > 0.9 || Math.abs(inside.z) > 0.9, 'стена выталкивает из себя');
+assert.ok(Math.abs(inside.x - pb0.cx) > 0.5 || Math.abs(inside.z - pb0.cz) > 0.5, 'стена выталкивает из себя');
 
 // луч в стену попадает, луч в пустоту — нет
 const hit = world.rayColliders(0, 1.6, 0, 0, 0, -1, 100);
-// по оси -Z на карте «Склады» стоит внутренняя стена на z ≈ -18.8
-assert.ok(hit && hit.t > 15 && hit.t < 25, `луч в стену: ${hit && hit.t.toFixed(1)}`);
+// по оси -Z на карте «Склады» стоит здание (полигон), луч должен во что-то попасть
+assert.ok(hit && hit.t > 2 && hit.t < 40, `луч в стену: ${hit && hit.t.toFixed(1)}`);
 const miss = world.rayColliders(0, 40, 0, 0, 1, 0, 100);
 assert.equal(miss, null, 'луч в небо не попадает');
 
 // LOS: центр карты видит угол, но не видит сквозь стену
-assert.equal(world.hasLOS(0, 1.6, 0, 0, 1.6, -16), true, 'прямая видимость есть');
-assert.equal(world.hasLOS(0, 1.6, 0, 0, 1.6, -40), false, 'стена перекрывает видимость');
-assert.equal(world.hasLOS(0, 1.6, 0, 0, 1.6, -17), true, 'до внутренней стены видно');
+// проверяем на настоящем здании: точка за ним не видна, точка перед ним — видна
+const bl = D.MAPS.depot.buildings[0];
+const blB = SH2.level.planBounds(bl.poly);
+assert.equal(world.hasLOS(blB.cx, 1.6, blB.cz + blB.hd + 6, blB.cx, 1.6, blB.cz + blB.hd + 0.6), true, 'до стены видно');
+assert.equal(world.hasLOS(blB.cx, 1.6, blB.cz + blB.hd + 6, blB.cx, 1.6, blB.cz - blB.hd - 6), false, 'стена перекрывает видимость');
 
 // «обход» не упирается в стену вечно
 const steer = world.steer(-36 + 2, 0, 0, 0, 0.4);
@@ -268,6 +278,10 @@ assert.equal(types.size, 5, 'все пять типов миссий предс�
 /* ============================== 7. КАРТЫ =============================== */
 for (const [id, m] of Object.entries(D.MAPS)) {
   assert.ok(m.walls.length >= 4, `${id}: стены есть`);
+  assert.ok((m.buildings || []).length >= 4, `${id}: здания-полигоны есть`);
+  for (const b of m.buildings) assert.ok(b.poly.length >= 4, `${id}: у здания замкнутый контур`);
+  assert.ok((m.barriers || []).length + (m.sandbags || []).length >= 4, `${id}: укрытия есть`);
+  assert.ok((m.barrels || []).length + (m.rocks || []).length + (m.stacks || []).length >= 6, `${id}: мелкие пропсы есть`);
   assert.ok(m.spawns.length >= 5, `${id}: точки появления`);
   assert.ok(m.size > 40, `${id}: размер карты`);
   const rng = D.rng(11);

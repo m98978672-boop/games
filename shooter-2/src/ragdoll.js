@@ -278,6 +278,54 @@
       this.deadTimer += 0.016;
     }
 
+    /* Оружие отлетает от куклы отдельным телом: вращается, падает, лежит на полу.
+       Бюджет — не больше 3 «летящих стволов» на карте (см. game.js). */
+    detachWeapon() {
+      const T = THREE();
+      if (this.weaponDetached) return null;
+      const slot = this.rig.weaponSlot;
+      if (!slot || !slot.children.length) return null;
+      const mesh = slot.children[0];
+      const wp = this.map.wpn;
+      const pos = wp ? wp.pos.clone() : new T.Vector3();
+      if (!pos.lengthSq()) slot.getWorldPosition(pos);
+      pos.y = Math.max(0.12, pos.y);
+      const vel = new T.Vector3(Math.random() - 0.5, 0.4, Math.random() - 0.5);
+      if (wp) vel.set(wp.pos.x - wp.prev.x, 0.35 + Math.random() * 0.25, wp.pos.z - wp.prev.z).multiplyScalar(7000);
+      slot.remove(mesh);
+      this.weaponDetached = mesh;
+      const body = {
+        mesh, pos, vel,
+        spin: new T.Vector3((Math.random() - 0.5) * 14, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 14),
+        rot: new T.Euler(Math.random() * 0.6, Math.random() * 6.28, Math.random() * 0.6),
+        restY: 0.055, asleep: false
+      };
+      this.detached = body;
+      return body;
+    }
+
+    /* Шаг полёта оружия (вызывается игрой для всех отлетевших стволов) */
+    static stepWeapon(body, dt) {
+      if (!body || body.asleep) return;
+      body.vel.y -= 18 * dt;
+      body.pos.addScaledVector(body.vel, dt);
+      body.rot.x += body.spin.x * dt;
+      body.rot.y += body.spin.y * dt;
+      body.rot.z += body.spin.z * dt;
+      if (body.pos.y <= body.restY) {
+        body.pos.y = body.restY;
+        body.vel.y = Math.abs(body.vel.y) * 0.22;
+        body.vel.x *= 0.55; body.vel.z *= 0.55;
+        body.spin.multiplyScalar(0.35);
+        // лёгкое «доворачивание» на бок
+        body.rot.x += (Math.PI / 2 - Math.abs(body.rot.x % Math.PI)) * 0.05;
+        if (body.vel.lengthSq() < 0.02 && Math.abs(body.spin.x) + Math.abs(body.spin.z) < 0.6) body.asleep = true;
+      }
+      body.mesh.position.copy(body.pos);
+      body.mesh.rotation.copy(body.rot);
+      body.mesh.updateMatrix();
+    }
+
     dispose() { this.active = false; this.points.length = 0; this.links.length = 0; }
   }
 

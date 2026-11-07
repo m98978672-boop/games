@@ -480,6 +480,7 @@
       this.missionIndex = 0;
       this.enemies = [];
       this.deadBodies = [];
+      this.flyingWeapons = [];
       this.objectives = [];
       this.waves = [];
       this.waveIndex = 0;
@@ -943,7 +944,19 @@
       this.recoilKick = (this.recoilKick || 0) + amount;
     }
 
+    /* Отлетевшее оружие: физика на точках, не больше 6 стволов одновременно */
+    addFlyingWeapon(body) {
+      if (!body) return;
+      this.scene.add(body.mesh);
+      this.flyingWeapons.push(body);
+      if (this.flyingWeapons.length > 6) {
+        const old = this.flyingWeapons.shift();
+        this.scene.remove(old.mesh);
+      }
+    }
+
     onEnemyKilled(agent, info) {
+      agent.flyingWeapon = agent.ragdoll ? agent.ragdoll.detached : null;
       this.kills++;
       const head = !!info.head;
       this.score += Math.round(agent.cfg.score * (head ? 1.5 : 1));
@@ -1122,6 +1135,11 @@
         e.update(dt, this);
       }
       SH2.ai.commanderTick(this, dt);
+
+      // стволы отлетевшего оружия
+      for (let i = 0; i < this.flyingWeapons.length; i++) {
+        SH2.ragdoll.Ragdoll.stepWeapon(this.flyingWeapons[i], dt);
+      }
 
       // трупы чистятся по времени
       for (let i = this.deadBodies.length - 1; i >= 0; i--) {
