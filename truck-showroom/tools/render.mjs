@@ -37,6 +37,21 @@ if (args.damage === 'true' && built.damage?.group) built.damage.group.visible = 
 const root = built.root;
 root.updateMatrixWorld(true);
 
+// --look voxel: модель, собранная заново из точек (воксельная реконструкция)
+if (args.look === 'voxel') {
+  const { buildVoxel } = await import('../src/lib/reconstruct.js');
+  const vox = buildVoxel(root, { target: Number(args.dotstarget || 62000) });
+  if (vox) {
+    vox.visible = true;
+    root.traverse((o) => {
+      if ((o.isMesh || o.isInstancedMesh) && o !== vox) o.visible = false;
+    });
+    root.add(vox);
+    root.updateMatrixWorld(true);
+    console.log(`voxel: клеток ${vox.userData.cells}, клетка ${vox.userData.cell.toFixed(3)} м`);
+  }
+}
+
 // --pos x,y,z --target x,y,z — произвольный ракурс для прицельного осмотра
 const customView = args.pos && args.target
   ? {
@@ -250,6 +265,14 @@ function rasterize(pa, pb, pc, color, opacity) {
 const opaque = tris.filter((t) => t.opacity >= 0.98);
 const clear = tris.filter((t) => t.opacity < 0.98);
 const dotsMode = args.dots === 'true';
+// --seams true: поверх модели рисуем открытые швы (границы поверхностей)
+let seamSegs = null;
+if (args.seams === 'true') {
+  const { analyzeSeams } = await import('../src/lib/seams.js');
+  const rep = analyzeSeams(root, { withBorder: true });
+  seamSegs = rep.borderPoints || [];
+  console.log(`швы: ${seamSegs.length} рёбер, дырок ${rep.holeCount}, швов ${rep.seamCount}, краёв ${rep.openCount}`);
+}
 if (!dotsMode) for (const t of opaque) fillTri(t);
 // полупрозрачные: от дальних к ближним
 clear.sort((a, b) => {
@@ -262,6 +285,42 @@ for (const t of (dotsMode ? [] : clear)) {
   const save = zbuf;
   fillTri(t);
   zbuf.set(save);
+}
+
+// ---------------------------------------------------------- швы поверх кадра
+if (seamSegs && seamSegs.length) {
+  const focalS = (H / 2) / Math.tan(THREE.MathUtils.degToRad((view.fov || 40) / 2));
+  const paint = (p) => {
+    const vz = p.clone().applyMatrix4(viewMatrix);
+    if (vz.z > -NEAR) return;
+    const pv = projectViewPoint(vz, new THREE.Vector3());
+    if (pv.z > 1 || pv.z < -1) return;
+    const sx = ((pv.x + 1) / 2) * W;
+    const sy = ((1 - pv.y) / 2) * H;
+    const r = Math.min(6, Math.max(1.2, (0.035 * focalS) / -vz.z));
+    for (let y = Math.floor(sy - r); y <= Math.ceil(sy + r); y++) {
+      if (y < 0 || y >= H) continue;
+      for (let x = Math.floor(sx - r); x <= Math.ceil(sx + r); x++) {
+        if (x < 0 || x >= W) continue;
+        const dx = x + 0.5 - sx;
+        const dy = y + 0.5 - sy;
+        if (dx * dx + dy * dy > r * r) continue;
+        const i = y * W + x;
+        if (-vz.z > zbuf[i] + 0.02) continue;
+        const o = i * 3;
+        buf[o] = 1; buf[o + 1] = 0.18; buf[o + 2] = 0.62;
+      }
+    }
+  };
+  const A = new THREE.Vector3();
+  const B = new THREE.Vector3();
+  const P = new THREE.Vector3();
+  for (const s9 of seamSegs) {
+    A.set(s9[0], s9[1], s9[2]);
+    B.set(s9[3], s9[4], s9[5]);
+    const n = Math.max(2, Math.ceil(A.distanceTo(B) / 0.02));
+    for (let i = 0; i <= n; i++) paint(P.lerpVectors(A, B, i / n));
+  }
 }
 
 // ---------------------------------------------------------- режим «точки»

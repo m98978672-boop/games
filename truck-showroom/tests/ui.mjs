@@ -536,6 +536,39 @@ if (camApp) {
   check('повторный клик возвращает поверхности', D.body.dataset.dots === 'off');
 }
 
+// ------------------------------------------------------------ реконструкция из точек
+// Модель, собранная заново из облака точек (воксельная сетка).
+{
+  const btn = $('voxel-btn');
+  check('кнопка «Реконструкция» есть в сцене', !!btn);
+  check('по умолчанию включены поверхности', btn?.getAttribute('aria-pressed') === 'false'
+    && (D.body.dataset.look || 'solid') !== 'voxel', D.body.dataset.look);
+  btn.click();
+  await wait(1200);
+  check('клик включает реконструкцию', D.body.dataset.look === 'voxel', D.body.dataset.look);
+  check('кнопка помечена как включённая', btn.getAttribute('aria-pressed') === 'true' && btn.classList.contains('active'));
+  check('точки при этом выключены', D.body.dataset.dots === 'off');
+  check('подпись сообщает про клетки', /Реконструкция:\s*[\d\s\u00a0]+клеток/.test($('stage-live').textContent || ''),
+    $('stage-live').textContent || '');
+  // режимы не складываются: включили точки — реконструкция погасла
+  $('dots-btn').click();
+  await wait(700);
+  check('точки и реконструкция взаимоисключающие', D.body.dataset.look === 'dots'
+    && btn.getAttribute('aria-pressed') === 'false', D.body.dataset.look);
+  $('voxel-btn').click();
+  await wait(900);
+  check('реконструкция включается обратно', D.body.dataset.look === 'voxel');
+  // переключение модели не сбрасывает режим
+  tab('cars')?.click();
+  await wait(1100);
+  check('режим реконструкции переживает смену модели', D.body.dataset.look === 'voxel');
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'v' }));
+  await wait(700);
+  check('клавиша V возвращает поверхности', D.body.dataset.look === 'solid'
+    && btn.getAttribute('aria-pressed') === 'false');
+  check('после возврата подпись про поверхности', /поверхности/i.test($('stage-live').textContent || ''));
+}
+
 // ------------------------------------------------------------ предпросмотр в меню
 {
   openCatalog();

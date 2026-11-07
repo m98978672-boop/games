@@ -10,7 +10,8 @@ import { icon } from './lib/icons.js';
 import { CATEGORIES, TRUCKS, TRAILERS, CARS, BUILDINGS, findUnit } from './data/units.js';
 import { placePanel, rectOf, viewportRect, overlaps, rect } from './lib/layout.js';
 import { damageReport } from './lib/damage.js';
-import { buildDots, applyDots, dotsCount } from './lib/dots.js';
+import { buildDots, dotsCount } from './lib/dots.js';
+import { buildVoxel, voxelStats } from './lib/reconstruct.js';
 import { createPreview } from './lib/preview.js';
 import { deviceProfile, installGestures, installShake, haptic } from './lib/device.js';
 
@@ -46,6 +47,7 @@ const state = {
   dmgKind: 'any', // выбранный в меню тип повреждения
   lastDmg: null, // индекс последнего добавленного пятна — для текста
   dots: false, // точечный трафарет: модель собрана из точек
+  look: 'solid', // как показана модель: solid | dots | voxel (реконструкция)
 };
 
 // Пятна добавляются ПОШТУЧНО: у каждой модели свой набор индексов.
@@ -67,11 +69,12 @@ if (saved.id) state.id = saved.id;
 state.fav = Array.isArray(saved.fav) ? saved.fav : [];
 state.preset = saved.preset || 'studio';
 state.dots = !!saved.dots;
+state.look = saved.look === 'dots' || saved.look === 'voxel' ? saved.look : (saved.dots ? 'dots' : 'solid');
 const colors = saved.colors && typeof saved.colors === 'object' ? saved.colors : {};
 
 function saveState() {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ cat: state.cat, id: state.id, fav: state.fav, preset: state.preset, colors, dots: state.dots }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ cat: state.cat, id: state.id, fav: state.fav, preset: state.preset, colors, dots: state.dots, look: state.look }));
   } catch { /* приватный режим */ }
 }
 
@@ -217,12 +220,54 @@ function ensureDots(built) {
   return built.dots;
 }
 
-function setDots(on, { announce = true, rebuild = false } = {}) {
-  state.dots = !!on;
+function ensureVoxel(built) {
+  if (!built?.root) return null;
+  if (!built.voxel) {
+    const profile = deviceProfile();
+    built.voxel = buildVoxel(built.root, { target: profile.mobile ? 30000 : 62000 });
+    if (built.voxel) built.root.add(built.voxel);
+  }
+  return built.voxel;
+}
+
+/** Показ модели: поверхности, точки или реконструкция из точек. */
+function applyLook() {
+  const built = shown;
+  if (!built?.root) return;
+  const look = state.look;
+  built.root.traverse((o) => {
+    if (o.name === 'dots' || o.name === 'voxel') return;
+    if (o.isMesh || o.isInstancedMesh) {
+      if (o.userData.lookBase === undefined) o.userData.lookBase = o.visible;
+      o.visible = look === 'solid' ? o.userData.lookBase : false;
+    }
+  });
+  const dots = built.root.getObjectByName('dots');
+  if (dots) dots.visible = look === 'dots';
+  const vox = built.root.getObjectByName('voxel');
+  if (vox) vox.visible = look === 'voxel';
+  document.body.dataset.look = look;
+  document.body.dataset.dots = look === 'dots' ? 'on' : 'off';
+  const dbtn = $('dots-btn');
+  if (dbtn) {
+    dbtn.classList.toggle('active', look === 'dots');
+    dbtn.setAttribute('aria-pressed', look === 'dots' ? 'true' : 'false');
+  }
+  const vbtn = $('voxel-btn');
+  if (vbtn) {
+    vbtn.classList.toggle('active', look === 'voxel');
+    vbtn.setAttribute('aria-pressed', look === 'voxel' ? 'true' : 'false');
+  }
+}
+
+function setLook(look, { announce = true, rebuild = false } = {}) {
+  const next = look === 'dots' || look === 'voxel' ? look : 'solid';
+  state.look = next;
+  state.dots = next === 'dots';
   const built = shown;
   if (built?.root) {
-    if (state.dots && (rebuild || !built.dots)) {
-      if (built.dots) {
+    if (next === 'dots') {
+      if (rebuild && built.dots) {
         built.root.remove(built.dots);
         built.dots.geometry.dispose();
         built.dots.material.dispose();
@@ -230,28 +275,44 @@ function setDots(on, { announce = true, rebuild = false } = {}) {
       }
       ensureDots(built);
     }
-    applyDots(built.root, state.dots);
-    if (!state.dots) applyDamage();
+    if (next === 'voxel' && rebuild && built.voxel) {
+      built.root.remove(built.voxel);
+      built.voxel.geometry.dispose();
+      built.voxel.material.dispose();
+      built.voxel = null;
+    }
+    if (next === 'voxel') ensureVoxel(built);
+    applyLook();
+    if (next === 'solid') applyDamage();
   }
-  const btn = $('dots-btn');
-  if (btn) {
-    btn.classList.toggle('active', state.dots);
-    btn.setAttribute('aria-pressed', state.dots ? 'true' : 'false');
-  }
-  document.body.dataset.dots = state.dots ? 'on' : 'off';
   refreshPreviewCaption();
   saveState();
   if (announce) {
-    if (!state.dots) live('Обычный вид: поверхности');
-    else live(`Точки: ${dotsCount(shown?.root).toLocaleString('ru-RU')} точек — модель собрана из трафарета`);
+    if (next === 'solid') live('Обычный вид: поверхности');
+    else if (next === 'dots') live(`Точки: ${dotsCount(shown?.root).toLocaleString('ru-RU')} точек — модель собрана из трафарета`);
+    else {
+      const st = voxelStats(shown?.voxel);
+      live(`Реконструкция: ${st.cells.toLocaleString('ru-RU')} клеток по ${(st.cell * 100).toFixed(0)} см — модель собрана заново из точек`);
+    }
   }
   haptic(6);
-  return state.dots;
+  return next;
 }
-window.__garageDots = setDots;
+
+function setDots(on, opts = {}) {
+  return setLook(on ? 'dots' : 'solid', opts);
+}
+
+function setVoxel(on) {
+  return setLook(on ? 'voxel' : 'solid');
+}
 
 function toggleDots() {
-  setDots(!state.dots);
+  setDots(state.look !== 'dots');
+}
+
+function toggleVoxel() {
+  setVoxel(state.look !== 'voxel');
 }
 
 function applyDamage() {
@@ -266,8 +327,8 @@ function applyDamage() {
   if (shown?.damage?.group) shown.damage.group.visible = any;
   for (const id of ['damage-btn', 'damage-btn-2']) $(id)?.classList.toggle('on', any);
   $('damage-btn')?.classList.toggle('active', any);
-  // в режиме точек поверхности скрыты — пятна тоже, иначе они висят в воздухе
-  if (state.dots && shown?.root) applyDots(shown.root, true);
+  // в режиме точек/реконструкции поверхности скрыты — пятна тоже
+  if (state.look !== 'solid' && shown?.root) applyLook();
   refreshPreviewCaption();
 }
 
@@ -332,12 +393,10 @@ function showUnit(unit, { instant = false, view = null } = {}) {
     paintDamage(built, colorHex);
     scene.add(built.root);
     shown = built;
-    if (state.dots) {
-      ensureDots(built);
-      applyDots(built.root, true);
-    }
+    if (state.look === 'dots') ensureDots(built);
+    if (state.look === 'voxel') ensureVoxel(built);
     applyDamage();
-    setDots(state.dots, { announce: false });
+    setLook(state.look, { announce: false });
     // счётчик треугольников
     let tris = 0;
     built.root.traverse((o) => {
@@ -547,7 +606,8 @@ function previewCaption(unit = currentUnit()) {
   const view = viewsOf(unit).find((v) => v.id === state.view) || viewsOf(unit)[0];
   const preset = { studio: 'Студия', dark: 'Ночь', show: 'Выставка', garage: 'Гараж' }[state.preset] || '';
   const bits = [view?.label || view?.id || '', preset];
-  if (state.dots) bits.push('точки');
+  if (state.look === 'dots') bits.push('точки');
+  if (state.look === 'voxel') bits.push('реконструкция');
   const dmg = damageSet().size;
   if (dmg) bits.push(`${dmg} поврежд.`);
   name.textContent = unit.name || unit.id;
@@ -1050,7 +1110,7 @@ function recolor(unit, hex) {
   if (shown) {
     for (const m of shown.paintMats) if (m?.color) m.color.set(hex);
     paintDamage(shown, hex);
-    if (state.dots) setDots(true, { announce: false, rebuild: true });
+    if (state.look !== 'solid') setLook(state.look, { announce: false, rebuild: true });
   }
   renderList();
   renderDetails(unit);
@@ -1465,6 +1525,7 @@ function wireUI() {
   $('compare-btn').onclick = toggleCompare;
   $('compare-btn-2').onclick = toggleCompare;
   $('dots-btn').onclick = toggleDots;
+  $('voxel-btn').onclick = toggleVoxel;
   $('compare-btn-3').onclick = () => { toggleCompare(); closePop(); };
   $('fav-filter').onclick = () => {
     state.favOnly = !state.favOnly;
@@ -1599,6 +1660,7 @@ function wireUI() {
       case 'i': case 'I': case 'ш': case 'Ш': toggleInside(); break;
       case 'x': case 'X': case 'ч': case 'Ч': toggleDamage(); break;
       case 'p': case 'P': case 'з': case 'З': toggleDots(); break;
+      case 'v': case 'V': case 'м': case 'М': toggleVoxel(); break;
       case 'Escape': {
         $('help-modal').classList.add('hidden');
         closePop();
