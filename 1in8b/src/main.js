@@ -227,6 +227,16 @@
       return;
     }
 
+    /* музыка: нота на год и отклик на событие */
+    var SND = window.IN8B.sound;
+    if (SND && SND.isOn()) {
+      SND.year(life.age);
+      var fresh3 = life.log.slice(before);
+      for (var fi = 0; fi < fresh3.length; fi++) {
+        if (fresh3[fi].kind === 'bad' || fresh3[fi].kind === 'good') { SND.event(fresh3[fi].kind); break; }
+      }
+    }
+
     /* появились ли новые доступные траты */
     if (window.IN8B.purchases) {
       var nb = window.IN8B.purchases.availableFor(life).length;
@@ -275,6 +285,7 @@
 
   function finishLife() {
     var life = S.life;
+    if (window.IN8B.sound && window.IN8B.sound.isOn()) window.IN8B.sound.farewell();
     SAVE.clearLife();
     SAVE.addPastLife(life);
     UI.renderPastList();
@@ -420,6 +431,14 @@
     box.textContent = '1 год ≈ ' + (sec >= 10 ? Math.round(sec) : sec.toFixed(1).replace('.', ',')) + ' сек';
   }
 
+  function paintMusic() {
+    var b = el('btn-music'), SND = window.IN8B.sound;
+    if (!b) return;
+    var now = !!(SND && SND.isOn());
+    b.classList.toggle('on', now);
+    b.textContent = now ? '♪ Музыка вкл.' : '♪ Музыка';
+  }
+
   function paintPauseBtn() {
     var on = S.settings.pauseOn || {};
     var n = (on.big ? 1 : 0) + (on.year ? 1 : 0) + (on.buy ? 1 : 0);
@@ -462,6 +481,15 @@
     el('btn-spend').addEventListener('click', openSpend);
     el('btn-spend-2').addEventListener('click', openSpend);
     el('btn-anims').addEventListener('click', function () { UI.animsModal(S.view); });
+    el('btn-music').addEventListener('click', function () {
+      var SND = window.IN8B.sound;
+      if (!SND || !SND.available) { UI.toast('Браузер не умеет играть звук'); return; }
+      var now = SND.toggle();
+      S.settings.music = now;
+      saveSettings();
+      paintMusic();
+      UI.toast(now ? 'Тихий фон и нота на каждый прожитый год' : 'Музыка выключена');
+    });
     el('btn-pauses').addEventListener('click', function () {
       UI.pausesModal(S.settings, function () { saveSettings(); paintPauseBtn(); });
     });
@@ -537,6 +565,16 @@
     initLifeControls();
     el('btn-auto').classList.toggle('on', !!S.settings.auto);
     paintPauseBtn();
+    /* музыка включается только по жесту игрока — ждём первого клика */
+    var SND0 = window.IN8B.sound;
+    if (S.settings.music && SND0 && SND0.available) {
+      var once = function () {
+        document.removeEventListener('click', once);
+        SND0.set(true);
+        paintMusic();
+      };
+      document.addEventListener('click', once);
+    }
     window.addEventListener('beforeunload', function () {
       if (S.life && S.life.alive) SAVE.saveLife(S.life);
     });
