@@ -1,0 +1,8 @@
+{
+  "losses40":   { "name": "Потери > 40%", "trigger": { "type": "losses", "op": ">", "value": 0.4 }, "action": { "type": "retreat" }, "desc": "Отступить на рубеж" },
+  "ammo20":     { "name": "Патроны < 20%", "trigger": { "type": "ammo", "op": "<", "value": 0.2 }, "action": { "type": "resupply" }, "desc": "Запросить снабжение" },
+  "enemySector":{ "name": "Враг в секторе", "trigger": { "type": "enemySector" }, "action": { "type": "sendFreeSquads" }, "desc": "Отправить свободные отряды" },
+  "captured":   { "name": "Сектор захвачен", "trigger": { "type": "captured" }, "action": { "type": "buildProfile", "profile": "medium" }, "desc": "Построить профиль обороны" },
+  "morale30":   { "name": "Мораль < 30", "trigger": { "type": "morale", "op": "<", "value": 30 }, "action": { "type": "regroup" }, "desc": "Отвести на перегруппировку" },
+  "noSupply":   { "name": "Нет снабжения 60 с", "trigger": { "type": "noSupply", "value": 60 }, "action": { "type": "fallbackDepot" }, "desc": "Вернуться к ближайшему складу" }
+}

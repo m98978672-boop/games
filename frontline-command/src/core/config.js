@@ -1,0 +1,56 @@
+// Загрузка конфигов: JSON правится без перекомпиляции. Работает в браузере и в Node.
+export const DATA_FILES = [
+  'weapons', 'units', 'factions', 'resources', 'buildings', 'skills', 'ai_weights',
+  'sectors', 'squad_templates', 'strategies', 'build_profiles', 'rules_presets',
+  'autopilot', 'difficulty', 'input_map', 'ui_hints', 'audio'
+];
+
+export async function loadConfig({ baseUrl = 'data/', raw = null } = {}) {
+  const data = {};
+  if (raw) return buildConfig(raw);
+  const isNode = typeof process !== 'undefined' && process.versions?.node;
+  if (isNode) {
+    const fs = await import('node:fs/promises');
+    const path = await import('node:path');
+    const url = await import('node:url');
+    const here = path.dirname(url.fileURLToPath(import.meta.url));
+    const dir = path.resolve(here, '../../', baseUrl);
+    for (const name of DATA_FILES) {
+      data[name] = JSON.parse(await fs.readFile(path.join(dir, `${name}.json`), 'utf8'));
+    }
+  } else {
+    const res = await Promise.all(DATA_FILES.map((name) => fetch(baseUrl + name + '.json').then((r) => r.json())));
+    DATA_FILES.forEach((name, i) => { data[name] = res[i]; });
+  }
+  return buildConfig(data);
+}
+
+export function buildConfig(data) {
+  const cfg = {
+    raw: data,
+    weapons: data.weapons,
+    units: data.units,
+    factions: data.factions,
+    resources: data.resources,
+    buildings: data.buildings,
+    skills: data.skills,
+    ai: data.ai_weights,
+    sectors: data.sectors,
+    templates: data.squad_templates,
+    strategies: data.strategies,
+    profiles: data.build_profiles,
+    rules: data.rules_presets,
+    autopilot: data.autopilot,
+    difficulty: data.difficulty,
+    input: data.input_map,
+    hints: data.ui_hints,
+    audio: data.audio,
+  };
+  cfg.weapon = (id) => cfg.weapons[id] || cfg.weapons.none;
+  cfg.unit = (id) => cfg.units[id] || cfg.units.infantry;
+  cfg.building = (id) => cfg.buildings[id] || null;
+  cfg.strategy = (id) => cfg.strategies[id] || cfg.strategies.cautious;
+  cfg.faction = (id) => cfg.factions[id] || cfg.factions[0];
+  cfg.difficultyOf = (id) => cfg.difficulty[id] || cfg.difficulty.regular;
+  return cfg;
+}

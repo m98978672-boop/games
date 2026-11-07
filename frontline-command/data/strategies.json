@@ -1,0 +1,50 @@
+{
+  "rush": {
+    "name": "Натиск", "icon": "st_rush",
+    "desc": "Прямая атака, высокий риск. Хорош, когда врага мало.",
+    "phases": [
+      { "id": "charge", "stance": "attack", "formation": "line", "fire": "free", "advance": 1.0, "flank": 0.0, "speed": 1.2, "until": { "losses": 0.5, "ammo": 0.15 } }
+    ]
+  },
+  "cautious": {
+    "name": "Осторожное продвижение", "icon": "st_cautious",
+    "desc": "Перекаты от укрытия к укрытию, остановки на рубежах.",
+    "phases": [
+      { "id": "probe", "stance": "attack", "formation": "line", "fire": "attack_only", "advance": 0.45, "flank": 0.1, "speed": 0.85, "until": { "contact": true } },
+      { "id": "suppress", "stance": "hold", "formation": "line", "fire": "free", "advance": 0.0, "flank": 0.2, "speed": 0.6, "until": { "suppression": 0.6 } },
+      { "id": "press", "stance": "attack", "formation": "wedge", "fire": "free", "advance": 0.8, "flank": 0.35, "speed": 1.0, "until": { "losses": 0.5, "ammo": 0.15 } }
+    ]
+  },
+  "flank": {
+    "name": "Фланговый обход", "icon": "st_flank",
+    "desc": "Часть отряда обходит, часть сковывает.",
+    "phases": [
+      { "id": "fix", "stance": "hold", "formation": "line", "fire": "free", "advance": 0.1, "flank": 0.45, "speed": 0.8, "until": { "contact": true } },
+      { "id": "turn", "stance": "attack", "formation": "wedge", "fire": "free", "advance": 0.9, "flank": 0.6, "speed": 1.05, "until": { "losses": 0.5 } }
+    ]
+  },
+  "encircle": {
+    "name": "Окружение", "icon": "st_encircle",
+    "desc": "Несколько отрядов сходятся с разных сторон, режут снабжение.",
+    "phases": [
+      { "id": "spread", "stance": "attack", "formation": "free", "fire": "attack_only", "advance": 0.6, "flank": 0.8, "speed": 0.95, "until": { "contact": true } },
+      { "id": "close", "stance": "attack", "formation": "line", "fire": "free", "advance": 1.0, "flank": 0.5, "speed": 1.1, "until": { "losses": 0.55 } }
+    ]
+  },
+  "defense_depth": {
+    "name": "Оборона в глубину", "icon": "st_defense",
+    "desc": "Эшелоны, отход на запасные рубежи.",
+    "phases": [
+      { "id": "hold", "stance": "hold", "formation": "line", "fire": "free", "advance": 0.0, "flank": 0.0, "speed": 0.7, "until": { "losses": 0.35 } },
+      { "id": "fallback", "stance": "avoid", "formation": "column", "fire": "attack_only", "advance": 0.3, "flank": 0.0, "speed": 1.0, "until": { "reached": true } }
+    ]
+  },
+  "attrition": {
+    "name": "Изматывание", "icon": "st_attrition",
+    "desc": "Налёты и отход, враг теряет мораль.",
+    "phases": [
+      { "id": "raid", "stance": "attack", "formation": "free", "fire": "free", "advance": 0.7, "flank": 0.6, "speed": 1.15, "until": { "losses": 0.25, "ammo": 0.4 } },
+      { "id": "break", "stance": "avoid", "formation": "column", "fire": "hold", "advance": 0.0, "flank": 0.0, "speed": 1.2, "until": { "regrouped": true } }
+    ]
+  }
+}

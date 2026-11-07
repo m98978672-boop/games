@@ -1,0 +1,64 @@
+{
+  "order": [
+    "ammo",
+    "materials",
+    "fuel",
+    "meds"
+  ],
+  "types": {
+    "ammo": {
+      "name": "Боеприпасы",
+      "color": "#e8b45a",
+      "icon": "res_ammo"
+    },
+    "materials": {
+      "name": "Материалы",
+      "color": "#9aa88f",
+      "icon": "res_materials"
+    },
+    "fuel": {
+      "name": "Топливо",
+      "color": "#c07a4a",
+      "icon": "res_fuel"
+    },
+    "meds": {
+      "name": "Медикаменты",
+      "color": "#c85f6a",
+      "icon": "res_meds"
+    }
+  },
+  "start": {
+    "ammo": 1400,
+    "materials": 1400,
+    "fuel": 700,
+    "meds": 400
+  },
+  "production": {
+    "farm": {
+      "materials": 0.22,
+      "meds": 0.22
+    },
+    "depot": {
+      "ammo": 0.22
+    },
+    "factory": {
+      "materials": 0.35,
+      "fuel": 0.1
+    },
+    "hq": {
+      "ammo": 0.18,
+      "fuel": 0.1
+    }
+  },
+  "supply": {
+    "decayPerSecond": 0.0055,
+    "delivery": 0.45,
+    "lowThreshold": 0.35,
+    "lowMoralePenalty": 0.8,
+    "influencePenalty": 0.5
+  },
+  "squadAmmoCost": {
+    "ammo": 0.02,
+    "fuel": 0.006
+  }
+}
