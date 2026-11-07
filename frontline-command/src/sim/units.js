@@ -160,6 +160,11 @@ export function hearShot(game, shooter, weapon) {
 }
 
 // ---------- Стрельба ----------
+// id оружия нужен для таблицы пробиваемости стены (weapons.json)
+function weaponIdOf(u) {
+  return u.weaponId || u.def?.weapon || 'rifle';
+}
+
 export function tryShoot(game, u, target, dt) {
   if (u.downed || !u.alive || u.reloading || u.cool > 0 || u.weapon.damage <= 0) return false;
   if (!target || !target.alive || target.downed) return false;
@@ -186,6 +191,26 @@ export function tryShoot(game, u, target, dt) {
   const shotLen = Math.min(u.weapon.range, d + 120);
   const ex = u.x + Math.cos(shotAngle) * shotLen;
   const ey = u.y + Math.sin(shotAngle) * shotLen;
+  // Стены зданий: тонкие сегменты с материалом и проёмами. Проверяем точной геометрией.
+  const wall = game.walls && game.walls.enabled()
+    ? game.walls.bulletRay(u.x, u.y, target.x, target.y, weaponIdOf(u), game.rng)
+    : null;
+  if (wall && wall.blocked) {
+    game.walls.damageSegment(wall.building, wall.segId, u.weapon.damage * u.damageMult, weaponIdOf(u));
+    if (wall.breakDoor) game.walls.breakDoorHit(wall.building, wall.opening, u.weapon.damage);
+    game.addTracer(u.x, u.y, wall.hitPoint.x, wall.hitPoint.y, u);
+    const matDef = game.walls.materials?.[wall.material] || {};
+    game.fxAt(matDef.fx || 'impact', wall.hitPoint.x, wall.hitPoint.y);
+    game.sound(matDef.sound || 'hit_cover', wall.hitPoint.x, wall.hitPoint.y);
+    game.fxAt('muzzle', u.x + Math.cos(u.aimAngle) * (u.isVehicle ? 30 : 12), u.y + Math.sin(u.aimAngle) * (u.isVehicle ? 30 : 12), shotAngle);
+    game.sound(u.weapon.sound, u.x, u.y);
+    if (u.mag <= 0) startReload(game, u);
+    return true;
+  }
+  const wallLoss = wall && wall.penetrated ? (wall.damageMult ?? 1) : 1;
+  if (wall && wall.penetrated) {
+    game.walls.damageSegment(wall.building, wall.segId, u.weapon.damage * u.damageMult * 0.5, weaponIdOf(u));
+  }
   const blockedAt = game.raycastBlocked(u.x, u.y, ex, ey);
   let hit = false;
   if (blockedAt) {
@@ -208,7 +233,7 @@ export function tryShoot(game, u, target, dt) {
     if (u.weapon.kind === 'shell') {
       game.explode(ex, ey, u.weapon.aoe, u.weapon.damage, u);
     } else {
-      applyDamage(game, target, u.weapon.damage * u.damageMult * game.accuracyFactor(u), u, { kind: 'bullet' });
+      applyDamage(game, target, u.weapon.damage * u.damageMult * wallLoss * game.accuracyFactor(u), u, { kind: 'bullet' });
     }
     game.sound('hit_flesh', target.x, target.y);
   } else {
@@ -369,6 +394,36 @@ export function moveUnit(game, u, dx, dy, dt) {
   speed *= game.world.speedAt(u.x, u.y);
   if (u.isVehicle && u.engineDamage) speed *= 0.55;
   if (u.suppression > 0.5) speed *= 0.9;
+  // Внутри стенового ядра путь к внешней цели идёт через проём.
+  if (game.walls && u.goal) {
+    const wp = game.walls.doorWaypoint(u, u.goal.x, u.goal.y);
+    if (wp) { dx = wp.x - u.x; dy = wp.y - u.y; }
+  }
+  // Обход упора (антизастревание): без телепорта — короткий крюк в свободную точку.
+  // Работает только со стенами: с выключенным флагом остаётся прежняя логика.
+  const anti = game.cfg.navBudget?.antiStuck || { stuckThreshold: 1.5, detourSeconds: 1.6 };
+  const wallsOn = !!(game.walls && game.walls.enabled());
+  if (wallsOn && u.detour && game.time < u.detour.until) {
+    dx = u.detour.x - u.x;
+    dy = u.detour.y - u.y;
+  } else if (wallsOn && (u.stuck || 0) > anti.stuckThreshold) {
+    let best = null, bd = Infinity;
+    for (let k = 0; k < (anti.detourTries ?? 12); k++) {
+      const a = game.rng.range(0, Math.PI * 2);
+      const r = game.rng.range(anti.detourMin ?? 48, anti.detourMax ?? 110);
+      const px = u.x + Math.cos(a) * r, py = u.y + Math.sin(a) * r;
+      if (!game.world.isWalkable(px, py)) continue;
+      if (game.walls.blocksMove(px, py, u.radius + 2, u)) continue;
+      const d = Math.hypot(px - u.goal?.x || 0, py - u.goal?.y || 0);
+      if (d < bd) { bd = d; best = { x: px, y: py }; }
+    }
+    if (best) {
+      u.detour = { x: best.x, y: best.y, until: game.time + (anti.detourSeconds ?? 1.6) };
+      dx = best.x - u.x;
+      dy = best.y - u.y;
+      u.stuck = anti.stuckAfterDetour ?? 0.8;
+    }
+  }
   const len = Math.hypot(dx, dy);
   if (len > 1) { dx /= len; dy /= len; }
   // расталкивание (steering separation)
@@ -389,8 +444,12 @@ export function moveUnit(game, u, dx, dy, dt) {
   const step = speed * dt;
   const nx = u.x + dx * step, ny = u.y + dy * step;
   const r = u.radius;
+  // двери открываются перед юнитом (и закрываются сами, если рядом никого)
+  if (game.walls) game.walls.doorsForUnit(u);
+  const wallFree = (x, y) => !game.walls || !game.walls.enabled() || !game.walls.blocksMove(x, y, r, u);
   const free = (x, y) => game.world.isWalkable(x - r, y - r) && game.world.isWalkable(x + r, y - r) &&
-    game.world.isWalkable(x - r, y + r) && game.world.isWalkable(x + r, y + r) && game.world.isWalkable(x, y);
+    game.world.isWalkable(x - r, y + r) && game.world.isWalkable(x + r, y + r) && game.world.isWalkable(x, y) &&
+    wallFree(x, y);
   if (free(nx, ny)) { u.x = nx; u.y = ny; }
   else if (free(nx, u.y)) { u.x = nx; }
   else if (free(u.x, ny)) { u.y = ny; }
@@ -404,6 +463,32 @@ export function moveUnit(game, u, dx, dy, dt) {
       if (free(tx, ty)) { u.x = tx; u.y = ty; moved = true; break; }
     }
     if (!moved) u.stuck = (u.stuck || 0) + dt * 2;
+  }
+  // Антизастревание без телепорта: если юнит оказался в непроходимой клетке
+  // (закрылась дверь, достроилась стена), выталкиваем его к ближайшей свободной.
+  if (wallsOn && (!game.world.isWalkable(u.x, u.y) || game.walls.blocksMove(u.x, u.y, r * 0.5, u))) {
+    let best = null, bd = Infinity;
+    const angles = anti.pushAngles ?? 16;
+    const stepR = anti.pushRadiusStep ?? 12;
+    for (let k = 0; k < angles; k++) {
+      const a = (k / angles) * Math.PI * 2;
+      for (let rr = anti.pushRadiusMin ?? 12; rr <= (anti.pushRadiusMax ?? 64); rr += stepR) {
+        const px = u.x + Math.cos(a) * rr, py = u.y + Math.sin(a) * rr;
+        if (!game.world.isWalkable(px, py)) continue;
+        if (game.walls.blocksMove(px, py, r * 0.5, u)) continue;
+        if (rr < bd) { bd = rr; best = { x: px, y: py }; }
+        break;
+      }
+    }
+    if (best) {
+      // Выталкивание идёт обычным шагом: не быстрее 1.5× своей скорости (это не телепорт)
+      const maxStep = (anti.pushSpeedMult ?? 1.5) * Math.max(u.speed, anti.pushSpeedFloor ?? 30) * dt;
+      const dd = Math.hypot(best.x - u.x, best.y - u.y) || 1;
+      const k = Math.min(1, maxStep / dd);
+      u.x = u.x + (best.x - u.x) * k;
+      u.y = u.y + (best.y - u.y) * k;
+      u.stuck = Math.max(0, (u.stuck || 0) - dt * 4);
+    }
   }
   u.x = clamp(u.x, 8, game.world.W - 8);
   u.y = clamp(u.y, 8, game.world.H - 8);
@@ -448,7 +533,11 @@ export function updateTimers(game, u, dt) {
 export function moveAlongFlow(game, u, dt) {
   if (!u.goal) { u.flowDir = null; return; }
   const d = dist(u.x, u.y, u.goal.x, u.goal.y);
-  if (d < 24) { u.arrived = true; u.flowDir = null; return; }
+  // Радиус прибытия: со стенами чуть больше (юнит стоит у стены, а не в центре точки),
+  // с выключенным флагом — прежние 24 px, чтобы поведение не менялось.
+  const arrive = game.cfg.navBudget?.arriveRadius || { legacy: 24, walls: 34 };
+  const arriveD = game.walls && game.walls.enabled() ? arrive.walls : arrive.legacy;
+  if (d < arriveD) { u.arrived = true; u.flowDir = null; return; }
   u.arrived = false;
   if (!u.flowDir || u.flowTimer <= 0) {
     // Отряд идёт по общему полю (одно на отряд), персональное поле — только для одиночек.

@@ -1,0 +1,82 @@
+{
+ "size": 40,
+ "w": 40,
+ "h": 40,
+ "thickness": 14,
+ "segments": [
+  {
+   "id": "s0",
+   "side": "south",
+   "index": 0,
+   "points": [
+    [
+     -20,
+     0
+    ],
+    [
+     20,
+     0
+    ]
+   ],
+   "length": 40,
+   "thickness": 14,
+   "material": "sandbag",
+   "heightClass": 1,
+   "blocksMove": false,
+   "blocksBullets": true,
+   "blocksVision": false,
+   "coverSides": "both",
+   "hp": 250
+  }
+ ],
+ "openings": [],
+ "type": "sandbags",
+ "name": "Мешки с песком",
+ "mode": "cover-line",
+ "spec": {
+  "mode": "cover-line",
+  "material": "sandbag",
+  "wallSize": 40,
+  "heightClass": 1,
+  "blocksMove": false
+ },
+ "cover_points": [
+  {
+   "x": -20,
+   "y": 14,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 1,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -20,
+   "y": -14,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 1,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 20,
+   "y": 14,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 1,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 20,
+   "y": -14,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 1,
+   "segId": "s0",
+   "kind": "wall"
+  }
+ ],
+ "garrison_slots": []
+}

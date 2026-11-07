@@ -382,6 +382,7 @@ function handleInput(dt) {
 
   if (input.hit('pause')) game.paused = !game.paused;
   if (input.keyHit('F3')) renderer.showDebug = !renderer.showDebug;
+  if (input.keyHit('F4')) renderer.showWallsDebug = !renderer.showWallsDebug; // стены: укрытия, гарнизон, id/HP
   if (input.keyHit('Tab')) switchMode();
   if (input.keyHit('KeyT')) hud.toggleDirective();
   if (input.keyHit('KeyP')) hud.toggleAutopilot();
@@ -597,7 +598,7 @@ function loop(now) {
           acc -= step;
         }
       }
-      for (const s of game.drainSounds()) audio.play(s.name, s.x, s.y);
+      for (const s of game.drainSounds()) audio.play(s.name, s.x, s.y, s.muffle ?? 1);
       audio.listener.x = renderer.camera.x;
       audio.listener.y = renderer.camera.y;
       renderer.draw(dtReal);

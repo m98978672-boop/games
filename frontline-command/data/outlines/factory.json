@@ -1,0 +1,774 @@
+{
+ "size": 160,
+ "w": 160,
+ "h": 160,
+ "thickness": 10,
+ "segments": [
+  {
+   "id": "s0",
+   "side": "north",
+   "index": 0,
+   "points": [
+    [
+     -80,
+     -80
+    ],
+    [
+     -32,
+     -80
+    ]
+   ],
+   "length": 48,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 390
+  },
+  {
+   "id": "s1",
+   "side": "north",
+   "index": 1,
+   "points": [
+    [
+     32,
+     -80
+    ],
+    [
+     80,
+     -80
+    ]
+   ],
+   "length": 48,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 390
+  },
+  {
+   "id": "s2",
+   "side": "east",
+   "index": 0,
+   "points": [
+    [
+     80,
+     -80
+    ],
+    [
+     80,
+     -40
+    ]
+   ],
+   "length": 40,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 325
+  },
+  {
+   "id": "s3",
+   "side": "east",
+   "index": 1,
+   "points": [
+    [
+     80,
+     -8
+    ],
+    [
+     80,
+     16
+    ]
+   ],
+   "length": 24,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 195
+  },
+  {
+   "id": "s4",
+   "side": "east",
+   "index": 2,
+   "points": [
+    [
+     80,
+     48
+    ],
+    [
+     80,
+     80
+    ]
+   ],
+   "length": 32,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 260
+  },
+  {
+   "id": "s5",
+   "side": "south",
+   "index": 0,
+   "points": [
+    [
+     80,
+     80
+    ],
+    [
+     48,
+     80
+    ]
+   ],
+   "length": 32,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 260
+  },
+  {
+   "id": "s6",
+   "side": "south",
+   "index": 1,
+   "points": [
+    [
+     -48,
+     80
+    ],
+    [
+     -80,
+     80
+    ]
+   ],
+   "length": 32,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 260
+  },
+  {
+   "id": "s7",
+   "side": "west",
+   "index": 0,
+   "points": [
+    [
+     -80,
+     80
+    ],
+    [
+     -80,
+     -80
+    ]
+   ],
+   "length": 160,
+   "thickness": 10,
+   "material": "metal",
+   "heightClass": 3,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 1300
+  }
+ ],
+ "openings": [
+  {
+   "id": "o0",
+   "side": "north",
+   "type": "door",
+   "width": 64,
+   "p1": [
+    -32,
+    -80
+   ],
+   "p2": [
+    32,
+    -80
+   ],
+   "cx": 0,
+   "cy": -80,
+   "nx": 0,
+   "ny": -1,
+   "move": true,
+   "bullets": true,
+   "vision": true,
+   "visionFactor": 1,
+   "shoot": true,
+   "arc": null,
+   "state": "open",
+   "breakHp": 130
+  },
+  {
+   "id": "o1",
+   "side": "east",
+   "type": "window",
+   "width": 32,
+   "p1": [
+    80,
+    -40
+   ],
+   "p2": [
+    80,
+    -8
+   ],
+   "cx": 80,
+   "cy": -24,
+   "nx": 1,
+   "ny": 0,
+   "move": false,
+   "bullets": true,
+   "vision": "partial",
+   "visionFactor": 0.5,
+   "shoot": true,
+   "arc": 1.75,
+   "state": "fixed",
+   "breakHp": 130
+  },
+  {
+   "id": "o2",
+   "side": "east",
+   "type": "window",
+   "width": 32,
+   "p1": [
+    80,
+    16
+   ],
+   "p2": [
+    80,
+    48
+   ],
+   "cx": 80,
+   "cy": 32,
+   "nx": 1,
+   "ny": 0,
+   "move": false,
+   "bullets": true,
+   "vision": "partial",
+   "visionFactor": 0.5,
+   "shoot": true,
+   "arc": 1.75,
+   "state": "fixed",
+   "breakHp": 130
+  },
+  {
+   "id": "o3",
+   "side": "south",
+   "type": "gate",
+   "width": 96,
+   "p1": [
+    48,
+    80
+   ],
+   "p2": [
+    -48,
+    80
+   ],
+   "cx": 0,
+   "cy": 80,
+   "nx": 0,
+   "ny": 1,
+   "move": true,
+   "bullets": true,
+   "vision": true,
+   "visionFactor": 1,
+   "shoot": true,
+   "arc": null,
+   "state": "open",
+   "breakHp": 130
+  }
+ ],
+ "type": "factory",
+ "name": "Фабрика",
+ "mode": "ring",
+ "spec": {
+  "mode": "ring",
+  "material": "metal",
+  "wallSize": 160,
+  "heightClass": 3,
+  "blocksMove": true,
+  "openings": [
+   {
+    "type": "gate",
+    "side": "south",
+    "t": 0.5
+   },
+   {
+    "type": "door",
+    "side": "north",
+    "t": 0.5
+   },
+   {
+    "type": "window",
+    "side": "east",
+    "t": 0.35
+   },
+   {
+    "type": "window",
+    "side": "east",
+    "t": 0.7
+   }
+  ]
+ },
+ "cover_points": [
+  {
+   "x": -80,
+   "y": -66,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -80,
+   "y": -94,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -32,
+   "y": -66,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -32,
+   "y": -94,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 32,
+   "y": -66,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 32,
+   "y": -94,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 80,
+   "y": -66,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 80,
+   "y": -94,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 66,
+   "y": -80,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 94,
+   "y": -80,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 66,
+   "y": -40,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 94,
+   "y": -40,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 66,
+   "y": -8,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": 94,
+   "y": -8,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": 66,
+   "y": 16,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": 94,
+   "y": 16,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": 66,
+   "y": 48,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": 94,
+   "y": 48,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": 66,
+   "y": 80,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": 94,
+   "y": 80,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": 80,
+   "y": 66,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": 80,
+   "y": 94,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": 48,
+   "y": 66,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": 48,
+   "y": 94,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": -48,
+   "y": 66,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -48,
+   "y": 94,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -80,
+   "y": 66,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 3,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -80,
+   "y": 94,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 3,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -66,
+   "y": 80,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -94,
+   "y": 80,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -66,
+   "y": 48,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -94,
+   "y": 48,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -66,
+   "y": 16,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -94,
+   "y": 16,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -66,
+   "y": -16,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -94,
+   "y": -16,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -66,
+   "y": -48,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -94,
+   "y": -48,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -66,
+   "y": -80,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": -94,
+   "y": -80,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": "s7",
+   "kind": "wall"
+  },
+  {
+   "x": 70,
+   "y": -24,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": null,
+   "kind": "window",
+   "openingId": "o1"
+  },
+  {
+   "x": 70,
+   "y": 32,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": null,
+   "kind": "window",
+   "openingId": "o2"
+  },
+  {
+   "x": 46,
+   "y": -94,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  },
+  {
+   "x": -46,
+   "y": -94,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  },
+  {
+   "x": -62,
+   "y": 94,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  },
+  {
+   "x": 62,
+   "y": 94,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  }
+ ],
+ "garrison_slots": [
+  {
+   "x": 70,
+   "y": -24,
+   "angle": 0,
+   "arc": 1.75,
+   "openingId": "o1",
+   "type": "window"
+  },
+  {
+   "x": 70,
+   "y": 32,
+   "angle": 0,
+   "arc": 1.75,
+   "openingId": "o2",
+   "type": "window"
+  }
+ ]
+}

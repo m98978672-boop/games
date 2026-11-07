@@ -1,12 +1,12 @@
 {
   "name": "frontline-command",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "description": "Frontline: Command — 2D тактическая песочница с единым Command API и одинаковыми правилами для игрока и ИИ",
   "type": "module",
   "scripts": {
-    "test": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs",
-    "test:fast": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/duel.mjs && node tests/perf.mjs",
+    "test": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/walls.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs",
+    "test:fast": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/walls.mjs && node tests/duel.mjs && node tests/perf.mjs",
     "test:browser": "node tests/browser.mjs",
     "assets": "node tools/gen-assets.mjs",
     "map": "node tools/map-preview.mjs",
@@ -14,6 +14,7 @@
     "serve": "python3 -m http.server 8000",
     "aiwar": "node tools/ai-war.mjs --seeds 31-50 --verbose",
     "test:duel": "node tests/duel.mjs",
-    "test:build": "node tests/build.mjs"
+    "test:build": "node tests/build.mjs",
+    "test:walls": "node tests/walls.mjs"
   }
 }

@@ -66,8 +66,14 @@ export class Nav {
       for (let cx = 0; cx < this.cols; cx++) {
         const i = cx + cy * this.cols;
         const x = cx * this.cell + this.cell / 2, y = cy * this.cell + this.cell / 2;
-        const ok = w.isWalkable(x - 14, y - 14) && w.isWalkable(x + 14, y - 14) &&
-          w.isWalkable(x - 14, y + 14) && w.isWalkable(x + 14, y + 14) && w.isWalkable(x, y);
+        // Со стенами v2: проёмы дверей уже клетки навигации, поэтому правило мягче
+        // (центр + два угла) — иначе внутренности зданий запираются.
+        // С выключенным флагом правило прежнее (центр + все четыре угла).
+        const center = w.isWalkable(x, y);
+        const corners = (w.isWalkable(x - 14, y - 14) ? 1 : 0) + (w.isWalkable(x + 14, y - 14) ? 1 : 0) +
+          (w.isWalkable(x - 14, y + 14) ? 1 : 0) + (w.isWalkable(x + 14, y + 14) ? 1 : 0);
+        const relaxed = this.cfg.flag('wall_collision_v2', true);
+        const ok = center && (relaxed ? corners >= 2 : corners === 4);
         this.openArr[i] = ok ? 1 : 0;
         const t = w.terrainAt(x, y);
         this.costArr[i] = t === 4 ? 0.75 : t === 2 ? 1.35 : t === 1 ? 0.95 : t === 5 ? 0.9 : 1;

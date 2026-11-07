@@ -14,6 +14,7 @@ import { SquadAI } from './ai_squad.js';
 import { StrategicAI } from './ai_strategic.js';
 import { updateSoldier } from './ai_soldier.js';
 import { BuildSystem } from './build.js';
+import { Walls } from './walls.js';
 import { Logistics } from './logistics.js';
 import { RulesEngine } from './rules.js';
 import { Autopilot } from './autopilot.js';
@@ -42,6 +43,12 @@ export class Game {
       this.world.rebuildNav();
     }
     this.nav = new Nav(this.world, cfg);
+    // Стены зданий: коллизия, пули, обзор, укрытия. Мир получает ссылку, чтобы
+    // hasLOS/rebuildNav учитывали стены, не создавая цикл импортов.
+    this.walls = new Walls(this);
+    this.world.walls = this.walls;
+    // Мир построил навигацию до появления стен — пересобираем сетку с учётом сегментов.
+    this.world.rebuildNav();
     this.units = new Map();
     this.unitGrid = new SpatialHash(128, this.world.W, this.world.H);
     this.squads = new Map();
@@ -169,6 +176,40 @@ export class Game {
   }
   canAffordSquad(faction, templateId) { return this.logistics.canAfford(faction, this.squadCost(templateId)); }
 
+  // Точка спавна вне стенового кольца: юниты не рождаются в запертом дворе.
+  wallRadiusOf(point) {
+    const b = point && this.world.buildingAtPoint(point.id);
+    const st = b ? this.walls.state(b) : null;
+    return st ? (st.outline.size || 64) / 2 : 0;
+  }
+
+  // Позиция спавна: при включённых стенах — снаружи контура здания,
+  // при выключенном флаге — ровно прежняя формула (сравнение «флаг off = старое поведение»).
+  spawnPos(point, min, max, mode = 'polar') {
+    if (this.walls && this.walls.enabled()) return this.spawnSpot(point, min, max);
+    if (mode === 'box') {
+      return { x: point.x + this.rng.range(-max, max), y: point.y + this.rng.range(-max, max) };
+    }
+    const a = this.rng.range(0, Math.PI * 2);
+    const r = this.rng.range(min, max);
+    return { x: point.x + Math.cos(a) * r, y: point.y + Math.sin(a) * r };
+  }
+
+  spawnSpot(point, spreadMin = 24, spreadMax = 110) {
+    const base = this.wallRadiusOf(point) + 26;
+    for (let i = 0; i < 30; i++) {
+      const a = this.rng.range(0, Math.PI * 2);
+      const r = base + this.rng.range(spreadMin, spreadMax);
+      const x = point.x + Math.cos(a) * r;
+      const y = point.y + Math.sin(a) * r;
+      if (x < 40 || y < 40 || x > this.world.W - 40 || y > this.world.H - 40) continue;
+      if (!this.world.isWalkable(x, y)) continue;
+      if (this.walls && this.walls.enabled() && this.walls.blocksMove(x, y, 12)) continue;
+      return { x, y };
+    }
+    return { x: point.x, y: point.y };
+  }
+
   createSquadAtBase(faction, templateId, { free = false, name = null } = {}) {
     const t = this.cfg.templates[templateId] || this.cfg.templates.custom;
     const limit = this.squadLimit(faction);
@@ -186,9 +227,8 @@ export class Game {
     const escort = [];
     for (const [role, count] of Object.entries(t.composition)) {
       for (let i = 0; i < count; i++) {
-        const a = this.rng.range(0, Math.PI * 2);
-        const r = this.rng.range(20, 90);
-        const u = this.spawnUnit(faction, role, hq.x + Math.cos(a) * r, hq.y + Math.sin(a) * r, { squadId: squad.id, spawnPoint: hq.id });
+        const spot = this.spawnPos(hq, 20, 90);
+        const u = this.spawnUnit(faction, role, spot.x, spot.y, { squadId: squad.id, spawnPoint: hq.id });
         squad.addUnit(u);
         escort.push(u);
       }
@@ -283,7 +323,8 @@ export class Game {
     const unlocked = mods.unlock_weapon;
     role = role || 'infantry';
     if (role === 'sniper' && !(Array.isArray(unlocked) && unlocked.includes('sniper'))) role = 'infantry';
-    const u = this.spawnUnit(this.playerFaction, role, point.x + this.rng.range(-40, 40), point.y + this.rng.range(-40, 40), { player: true, spawnPoint: point.id });
+    const spot = this.spawnPos(point, 0, 40, 'box');
+    const u = this.spawnUnit(this.playerFaction, role, spot.x, spot.y, { player: true, spawnPoint: point.id });
     u.playerControlled = true;
     u.medkits = Math.max(1, (u.def.medkit || 0) + (mods.medkit_add || 0));
     u.hp = u.maxHp = Math.round(u.maxHp * (mods.hp_mult || 1)) + (mods.hp_add || 0);
@@ -456,7 +497,13 @@ export class Game {
 
   // ---------- визуальные события ----------
   sound(name, x = null, y = null) {
-    this.soundQueue.push({ name, x, y });
+    // Звук за стеной глуше: считаем, перекрыт ли обзор от слушателя к источнику.
+    let muffle = 1;
+    if (x != null && y != null && this.walls && this.walls.enabled() && this.cfg.flag('wall_sound_muffle', true)) {
+      const l = this.playerUnit && this.playerUnit.alive ? this.playerUnit : this.focus;
+      if (l && this.walls.blocksVision(l.x, l.y, x, y)) muffle = this.cfg.audio?.muffleFactor ?? 0.45;
+    }
+    this.soundQueue.push({ name, x, y, muffle });
     if (this.soundQueue.length > 48) this.soundQueue.shift();
   }
   fxAt(type, x, y, angle = 0) {
@@ -481,6 +528,11 @@ export class Game {
       if (x < 0 || y < 0 || x >= this.world.W || y >= this.world.H) return { x, y };
       if (this.world.solidBlock[this.world._idx(x, y)]) return { x, y };
     }
+    // стены зданий проверяем точной геометрией (тонкие сегменты сетка не ловит)
+    if (this.walls) {
+      const hit = this.walls.bulletRay(x1, y1, x2, y2, 'rifle', this.rng);
+      if (hit.blocked) return hit.hitPoint || { x: x2, y: y2 };
+    }
     return null;
   }
   unitUnderAim(u) {
@@ -500,6 +552,14 @@ export class Game {
   }
   explode(x, y, radius, damage, source = null, visualOnly = false) {
     this.fxAt('explosion', x, y);
+    if (!visualOnly && this.walls) {
+      // Сегменты стен рядом со взрывом получают урон: снаряд пробивает стену.
+      for (const b of this.world.buildingGrid.query(x, y, radius + 24)) {
+        if (b.dead || !b.built) continue;
+        if (this.cfg.building(b.type)?.category === 'point') continue;
+        this.walls.damageNearest(b, damage * 0.6, x, y, 'tank_cannon');
+      }
+    }
     this.sound(damage > 100 ? 'explosion_big' : damage > 50 ? 'explosion_mid' : 'explosion_small', x, y);
     if (visualOnly) return;
     for (const u of this.unitsNear(x, y, radius)) {
@@ -635,8 +695,12 @@ export class Game {
       this.createSquadAtBase(faction, 'defense', { free: true, name: 'Браво' });
       this.createSquadAtBase(faction, 'assault', { free: true, name: 'Чарли' });
       this.createSquadAtBase(faction, 'engineer', { free: true, name: 'Инженеры' });
-      this.spawnUnit(faction, 'tank', hq.x + this.rng.range(-70, 70), hq.y + this.rng.range(-70, 70), { spawnPoint: hq.id });
-      for (let i = 0; i < 2; i++) this.spawnUnit(faction, 'truck', hq.x + this.rng.range(-100, 100), hq.y + this.rng.range(-100, 100), { spawnPoint: hq.id });
+      const tankSpot = this.spawnPos(hq, 0, 70, 'box');
+      this.spawnUnit(faction, 'tank', tankSpot.x, tankSpot.y, { spawnPoint: hq.id });
+      for (let i = 0; i < 2; i++) {
+        const t = this.spawnPos(hq, 0, 100, 'box');
+        this.spawnUnit(faction, 'truck', t.x, t.y, { spawnPoint: hq.id });
+      }
     }
     // стартовые приказы: оборона своих городов
     for (const f of this.cfg.factions) {
@@ -688,6 +752,7 @@ export class Game {
     this.rules.update(dt);
     this.logistics.update(dt);
     this.build.update(dt);
+    this.walls.update(dt);
     this.influence.update(dt);
     this.api.update();
     this.cleanup(dt);

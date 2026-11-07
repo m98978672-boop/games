@@ -91,6 +91,8 @@ export const Save = {
       buildings: game.world.buildings.filter((b) => !b.dead && b.built).map((b) => ({
         type: b.type, faction: b.faction, x: b.x, y: b.y, hp: Math.round(b.hp), pointId: b.pointId || null,
       })),
+      // Стены v2: HP сегментов, проломы и состояние дверей. Старые сейвы блока не имеют.
+      walls: game.walls && game.walls.enabled() ? game.walls.serialize() : null,
       blueprints: (game.build.blueprints || []).filter((b) => !b.built).map((b) => ({
         type: b.type, faction: b.faction, x: b.x, y: b.y, pointId: b.pointId || null,
       })),
@@ -131,6 +133,11 @@ export const Save = {
     for (const b of game.world.buildings) b.dead = true;
     for (const b of data.buildings || []) {
       game.world.addBuilding({ type: b.type, faction: b.faction, x: b.x, y: b.y, instant: true, pointId: b.pointId });
+    }
+    // стены: пересобираем инстансы под новые здания и восстанавливаем урон/двери
+    if (game.walls) {
+      game.walls.build();
+      if (data.walls) game.walls.applySaved(data.walls);
     }
     game.world.rebuildNav();
     if (data.stock) game.logistics.stock = data.stock.map((s) => ({ ...s }));
