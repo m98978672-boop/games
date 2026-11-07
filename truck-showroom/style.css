@@ -191,17 +191,52 @@ body {
 .pop-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  padding: 6px 8px 8px;
+  padding: 7px 7px 7px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  margin-bottom: 2px;
 }
 .pop-head .t {
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ink);
 }
 .pop-head .mini { font-size: 10px; color: var(--accent-2); font-variant-numeric: tabular-nums; }
+.pop-count {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ink-faint);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pop-count.is-inside { color: var(--accent-2); border-color: rgba(232, 180, 90, 0.3); }
+.pop-x {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  margin-left: 2px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-faint);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.pop-x:hover { color: var(--ink); background: rgba(255, 255, 255, 0.07); border-color: rgba(255, 255, 255, 0.08); }
+.pop-x:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pop-head .pop-x { margin-left: auto; }
+.pop-head .pop-count + .pop-x { margin-left: 0; }
 .pop-sec { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
 .pop-sec + .pop-sec { border-top: 1px solid rgba(255, 255, 255, 0.07); }
 .pop-sec-t {
@@ -253,6 +288,26 @@ body {
 .pop-item.is-on .h { color: var(--accent-2); background: rgba(232, 180, 90, 0.14); }
 .pop-item:disabled { opacity: 0.4; cursor: default; }
 .pop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 2px; }
+.pop-row-3 { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+.pop-sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; }
+.pop-sec-tools { display: inline-flex; gap: 4px; margin-left: auto; }
+.pop-sec-t { display: flex; align-items: center; gap: 6px; }
+.mini-btn {
+  padding: 3px 7px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--ink-dim);
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.14s;
+}
+.mini-btn:hover { color: var(--ink); border-color: var(--line-strong); background: rgba(255, 255, 255, 0.08); }
+.mini-btn:disabled { opacity: 0.35; cursor: default; }
+.mini-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .chip {
   padding: 7px 11px;
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -686,8 +741,12 @@ body {
 
 .drawer-foot { display: flex; gap: 6px; flex: 0 0 auto; }
 .ghost-btn {
-  flex: 1;
-  padding: 8px 10px;
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 8px 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.03);
@@ -1184,33 +1243,46 @@ body {
 .pop-row-wrap { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
 .hud-btn-icon { padding: 6px 9px; }
 
-/* категории переехали в меню выбора модели: 2×2 плиткой */
-.panel-catalog .cat-tabs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; padding: 2px; flex: 0 0 auto; }
+/* категории в меню «Модель»: один ряд сегментов, без плитки 2×2 */
+.panel-catalog .cat-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
 .panel-catalog .cat-tab {
+  flex: 1 1 0;
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 7px;
-  justify-content: flex-start;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--ink-dim);
+  justify-content: center;
+  gap: 6px;
+  padding: 7px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-faint);
   font: inherit;
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: 0.01em;
   cursor: pointer;
   transition: 0.16s;
 }
-.panel-catalog .cat-tab span { font-size: 14px; }
-.panel-catalog .cat-tab i { margin-left: auto; font-style: normal; font-size: 9px; color: var(--ink-faint); }
-.panel-catalog .cat-tab:hover { color: var(--ink); border-color: rgba(255, 255, 255, 0.16); }
+.panel-catalog .cat-tab span { font-size: 13px; opacity: 0.85; }
+.panel-catalog .cat-tab b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.panel-catalog .cat-tab:hover { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
 .panel-catalog .cat-tab.active {
   color: var(--accent-ink);
   background: linear-gradient(180deg, #ffd98a, var(--accent));
-  border-color: transparent;
+  box-shadow: 0 2px 10px -4px rgba(232, 180, 90, 0.7);
 }
-.panel-catalog .cat-tab.active i { color: rgba(42, 30, 8, 0.7); }
+.panel-catalog .cat-tab.active span { opacity: 1; }
+.panel-catalog .cat-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .panel-catalog .search { margin: 2px; }
 .panel-catalog .unit-list { flex: 1 1 auto; min-height: 132px; max-height: min(44vh, 400px); }
 
@@ -1223,9 +1295,10 @@ body {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  max-height: min(36vh, 280px);
+  max-height: min(44vh, 380px);
   overflow: auto;
-  padding: 2px;
+  padding: 2px 2px 4px;
+  overscroll-behavior: contain;
 }
 .dmg-place {
   display: flex;
@@ -1315,4 +1388,81 @@ body {
   .dock-cat { display: none; }
   .stage-actions { top: 46px; }
   .stage-actions .round-btn { width: 32px; height: 32px; font-size: 13px; }
+}
+
+
+/* ------------------------------------------------ меню 2.2 */
+/* группы дефектов по зонам кузова */
+.dmg-group { display: flex; flex-direction: column; gap: 1px; }
+.dmg-group + .dmg-group { margin-top: 4px; }
+.dmg-group-t {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 5px 8px 4px;
+  background: rgba(18, 21, 21, 0.96);
+  backdrop-filter: blur(6px);
+  border-radius: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+.dmg-group-t:hover { color: var(--ink-dim); }
+.dmg-group-t .caret { font-size: 8px; transition: transform 0.16s; }
+.dmg-group-t[aria-expanded="false"] .caret { transform: rotate(-90deg); }
+.dmg-group-t .n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dmg-group-t .cnt { font-variant-numeric: tabular-nums; color: rgba(255, 122, 82, 0.85); }
+.dmg-group-body { display: flex; flex-direction: column; gap: 1px; }
+.dmg-group-body.folded { display: none; }
+
+/* ракурсы: секции «снаружи» / «внутри» */
+.view-sec { display: flex; flex-direction: column; gap: 1px; }
+.view-sec + .view-sec { margin-top: 4px; }
+.view-sec-t {
+  padding: 5px 9px 3px;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.view-sec-items { display: flex; flex-direction: column; gap: 1px; }
+
+/* свет: плитки со свотчами */
+.light-tile { gap: 8px; }
+.light-tile .sw {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+.light-tile .sw-studio { background: linear-gradient(150deg, #cfd6da, #6f787e); }
+.light-tile .sw-dark { background: linear-gradient(150deg, #2b3340, #0b0f14); }
+.light-tile .sw-show { background: linear-gradient(150deg, #ffe3a3, #8a5f22); }
+.light-tile .sw-garage { background: linear-gradient(150deg, #7d8a7e, #26302a); }
+.light-tile.is-on .sw { border-color: rgba(232, 180, 90, 0.65); }
+
+/* клавиатурный фокус во всех меню */
+.pop-item:focus-visible, .dmg-place:focus-visible, .cat-tab:focus-visible,
+.mini-btn:focus-visible, .pop-x:focus-visible, .unit:focus-visible, .chip:focus-visible {
+  outline: 2px solid rgba(232, 180, 90, 0.85);
+  outline-offset: -1px;
+}
+
+@media (max-width: 560px) {
+  .panel-catalog .cat-tab b { font-size: 10px; }
+  .pop-sec-grid { gap: 4px; }
+  .pop-item { font-size: 12px; padding: 9px 9px; }
+  .pop-head { padding: 7px 6px 7px 9px; }
 }

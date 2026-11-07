@@ -27,14 +27,15 @@
         <!-- меню выбора модели: категории живут здесь, а не в нижней панели -->
         <div class="hud-pop panel-catalog hidden" id="panel-catalog" aria-label="Каталог экспонатов">
           <div class="pop-head">
-            <span class="t">Выбор модели</span>
-            <button class="icon-btn" id="catalog-close" aria-label="Закрыть меню моделей">✕</button>
+            <span class="t">Модель</span>
+            <span class="pop-count" id="cat-count">64</span>
+            <button class="pop-x" id="catalog-close" aria-label="Закрыть меню моделей">✕</button>
           </div>
           <div class="cat-tabs" role="tablist" aria-label="Категории">
-            <button class="cat-tab active" data-cat="trucks" role="tab" aria-selected="true"><span>🚛</span><b>Тягачи</b><i>10</i></button>
-            <button class="cat-tab" data-cat="trailers" role="tab" aria-selected="false"><span>📦</span><b>Прицепы</b><i>20</i></button>
-            <button class="cat-tab" data-cat="cars" role="tab" aria-selected="false"><span>🚗</span><b>Авто</b><i>10</i></button>
-            <button class="cat-tab" data-cat="buildings" role="tab" aria-selected="false"><span>🏢</span><b>Здания</b><i>24</i></button>
+            <button class="cat-tab active" data-cat="trucks" role="tab" aria-selected="true"><span>🚛</span><b>Тягачи</b></button>
+            <button class="cat-tab" data-cat="trailers" role="tab" aria-selected="false"><span>📦</span><b>Прицепы</b></button>
+            <button class="cat-tab" data-cat="cars" role="tab" aria-selected="false"><span>🚗</span><b>Авто</b></button>
+            <button class="cat-tab" data-cat="buildings" role="tab" aria-selected="false"><span>🏢</span><b>Здания</b></button>
           </div>
           <label class="search">
             <span>🔍</span>
@@ -55,13 +56,17 @@
           <span class="ico">🎥</span><b>Ракурсы</b>
         </button>
         <div class="hud-pop hidden" id="menu-view">
-          <div class="pop-head"><span class="t">Ракурсы</span></div>
+          <div class="pop-head">
+            <span class="t">Ракурсы</span>
+            <span class="pop-count" id="view-current">снаружи</span>
+            <button class="pop-x" data-close-pop aria-label="Закрыть меню ракурсов">✕</button>
+          </div>
           <div class="pop-sec" id="menu-view-row"></div>
-          <div class="pop-sec" id="menu-view-actions">
-            <button class="pop-item" id="menu-inside"><span class="i">🧑‍✈️</span><span class="n">Сесть внутрь</span><span class="h">I</span></button>
-            <button class="pop-item" id="menu-outside"><span class="i">🌐</span><span class="n">Выйти наружу</span><span class="h">0</span></button>
-            <button class="pop-item" id="menu-orbit"><span class="i">⟳</span><span class="n">Автовращение</span><span class="h">Пробел</span></button>
-            <button class="pop-item" id="menu-reset"><span class="i">⌖</span><span class="n">Сбросить камеру</span><span class="h">Ctrl</span></button>
+          <div class="pop-sec pop-sec-grid" id="menu-view-actions">
+            <button class="pop-item" id="menu-inside"><span class="i">🧑‍✈️</span><span class="n">Внутрь</span><span class="h">I</span></button>
+            <button class="pop-item" id="menu-outside"><span class="i">🌐</span><span class="n">Наружу</span><span class="h">0</span></button>
+            <button class="pop-item" id="menu-orbit"><span class="i">⟳</span><span class="n">Вращение</span><span class="h">␣</span></button>
+            <button class="pop-item" id="menu-reset"><span class="i">⌖</span><span class="n">Сброс</span><span class="h">Ctrl</span></button>
           </div>
         </div>
       </div>
@@ -73,11 +78,12 @@
         <div class="hud-pop hud-pop-wide hidden" id="menu-damage">
           <div class="pop-head">
             <span class="t">Повреждения</span>
-            <span class="mini" id="damage-menu-count">0 / 15</span>
+            <span class="pop-count" id="damage-menu-count">0 / 15</span>
+            <button class="pop-x" data-close-pop aria-label="Закрыть меню повреждений">✕</button>
           </div>
           <div class="pop-sec">
             <div class="pop-sec-t">Тип дефекта</div>
-            <div class="pop-row" id="damage-type-row">
+            <div class="pop-row pop-row-3" id="damage-type-row">
               <button class="pop-item dmg-type" data-kind="any"><span class="i dot any"></span><span class="n">Любое</span></button>
               <button class="pop-item dmg-type" data-kind="dent"><span class="i dot dent"></span><span class="n">Вмятина</span></button>
               <button class="pop-item dmg-type" data-kind="scratch"><span class="i dot scratch"></span><span class="n">Царапина</span></button>
@@ -86,12 +92,14 @@
             </div>
           </div>
           <div class="pop-sec">
-            <div class="pop-sec-t">Место на кузове</div>
+            <div class="pop-sec-t">
+              <span>Место на кузове</span>
+              <span class="pop-sec-tools">
+                <button class="mini-btn" id="damage-all" title="Показать все дефекты (X)">✷ все</button>
+                <button class="mini-btn" id="damage-clear" title="Убрать все">✕ ничего</button>
+              </span>
+            </div>
             <div class="dmg-place-list" id="dmg-place-list"></div>
-          </div>
-          <div class="pop-sec">
-            <button class="pop-item" id="damage-all"><span class="i">✷</span><span class="n">Показать все дефекты</span><span class="h">X</span></button>
-            <button class="pop-item" id="damage-clear"><span class="i">✕</span><span class="n">Убрать все</span></button>
           </div>
           <p class="pop-note" id="damage-note">Выбери тип — дефект появится на свободной детали. Или ткни в конкретное место.</p>
         </div>
@@ -102,12 +110,15 @@
           <span class="ico">☀</span><b>Свет</b>
         </button>
         <div class="hud-pop hidden" id="light-pop">
-          <div class="pop-head"><span class="t">Схема освещения</span></div>
-          <div class="pop-sec" id="dock-env">
-            <button class="pop-item" data-preset="studio"><span class="i">☀</span><span class="n">Студия</span></button>
-            <button class="pop-item" data-preset="dark"><span class="i">☾</span><span class="n">Ночь</span></button>
-            <button class="pop-item" data-preset="show"><span class="i">✦</span><span class="n">Выставка</span></button>
-            <button class="pop-item" data-preset="garage"><span class="i">⚙</span><span class="n">Гараж</span></button>
+          <div class="pop-head">
+            <span class="t">Свет</span>
+            <button class="pop-x" data-close-pop aria-label="Закрыть меню света">✕</button>
+          </div>
+          <div class="pop-sec pop-sec-grid" id="dock-env">
+            <button class="pop-item light-tile" data-preset="studio"><span class="sw sw-studio"></span><span class="n">Студия</span></button>
+            <button class="pop-item light-tile" data-preset="dark"><span class="sw sw-dark"></span><span class="n">Ночь</span></button>
+            <button class="pop-item light-tile" data-preset="show"><span class="sw sw-show"></span><span class="n">Выставка</span></button>
+            <button class="pop-item light-tile" data-preset="garage"><span class="sw sw-garage"></span><span class="n">Гараж</span></button>
           </div>
         </div>
       </div>
@@ -117,14 +128,19 @@
           <span class="ico">⋯</span>
         </button>
         <div class="hud-pop hidden" id="menu-more">
-          <div class="pop-head"><span class="t">Ещё</span></div>
+          <div class="pop-head">
+            <span class="t">Ещё</span>
+            <button class="pop-x" data-close-pop aria-label="Закрыть меню">✕</button>
+          </div>
           <div class="pop-sec">
+            <div class="pop-sec-t">Сцена</div>
             <button class="pop-item" id="random-btn"><span class="i">🎲</span><span class="n">Случайная модель</span><span class="h">R</span></button>
             <button class="pop-item" id="shot-btn"><span class="i">📷</span><span class="n">Скриншот сцены</span><span class="h">C</span></button>
             <button class="pop-item" id="full-btn"><span class="i">⛶</span><span class="n">Полный экран</span><span class="h">F</span></button>
             <button class="pop-item" id="compare-btn-3"><span class="i">⇄</span><span class="n">Сравнить с соседней</span></button>
           </div>
           <div class="pop-sec">
+            <div class="pop-sec-t">Помощь</div>
             <button class="pop-item" id="help-btn"><span class="i">?</span><span class="n">Справка</span><span class="h">H</span></button>
             <button class="pop-item" id="details-toggle" aria-expanded="false" aria-controls="panel-details"><span class="i">ⓘ</span><span class="n">Карточка модели</span><span class="h">Esc → ✕</span></button>
           </div>
