@@ -82,16 +82,20 @@ for (const seed of [11, 23]) {
   }
 }
 
-// Перекос: если войны завершились, ни одна сторона не должна выигрывать больше 80%
+// Исходы: 4 прогона — слишком мало для статистики баланса, поэтому здесь проверяем только,
+// что война вообще доходит до решения и что ни одна сторона не «выключена» из правил.
+// Системное преимущество первого хода ловит tests/duel.mjs, общий баланс — tools/ai-war.mjs.
 const decided = results.filter((r) => r.winner != null);
-if (decided.length >= 3) {
+{
   const w0 = decided.filter((r) => r.winner === 0).length;
   const w1 = decided.length - w0;
-  const share = Math.max(w0, w1) / decided.length;
-  console.log(`решений: ${decided.length}, побед 0: ${w0}, побед 1: ${w1}, перекос ${(share * 100).toFixed(0)}%`);
-  if (share > 0.8) { fails++; console.log('FAIL: перекос исходов выше порога 80%'); }
-} else {
-  console.log(`решений мало (${decided.length}/${results.length}) — проверяем только живость боя`);
+  console.log(`решений: ${decided.length}/${results.length}, побед 0: ${w0}, побед 1: ${w1}`);
+  const ids = new Set(results.map((r) => r.winner).filter((w) => w != null));
+  if (ids.size > 1) console.log('обе фракции побеждали в этом прогоне');
+  for (const f of [0, 1]) {
+    const dead = results.filter((r) => r.kills[f] === 0).length;
+    if (dead === results.length) { fails++; console.log(`FAIL: фракция ${f} ни разу никого не убила`); }
+  }
 }
 const totalCaps = results.reduce((a, r) => a + r.captures[0] + r.captures[1], 0);
 console.log(`суммарно захватов: ${totalCaps}, среднее время прогона: ${(results.reduce((a, r) => a + r.ms, 0) / results.length / 1000).toFixed(1)} с`);

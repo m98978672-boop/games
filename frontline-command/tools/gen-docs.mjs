@@ -73,8 +73,11 @@ md += table(
     ['Захват штаба / города / склада, с',
       `${fmt(ai.capture?.secondsByType?.hq)} / ${fmt(ai.capture?.secondsByType?.city)} / ${fmt(ai.capture?.secondsByType?.depot)}`],
     ['Захват: перевес сил', fmt(ai.capture?.ratio)],
+    ['Захват ключевого города, ×', fmt(ai.capture?.keyCityMult)],
     ['Захват: радиус, px', fmt(ai.capture?.radius)],
     ['Капитуляция без армии, с', fmt(ai.surrenderSeconds)],
+    ['Гарнизон: своих бойцов в городе', fmt(ai.strategic?.garrisonUnits)],
+    ['Гарнизон: срок караула, с', fmt(ai.strategic?.garrisonSeconds)],
   ],
 );
 md += `\n## Сложность\n\n`;

@@ -56,7 +56,8 @@
       "factory": 9,
       "bridge": 8,
       "farm": 7
-    }
+    },
+    "keyCityMult": 1.35
   },
   "influence": {
     "interval": 1.0,
@@ -107,7 +108,9 @@
     "allInPowerFactor": 0.55,
     "openingSeconds": 180,
     "openingThresholdMult": 2.0,
-    "openingPowerMult": 0
+    "openingPowerMult": 0,
+    "garrisonUnits": 3,
+    "garrisonSeconds": 150
   },
   "squad": {
     "retreatLossesDefault": 0.5,
