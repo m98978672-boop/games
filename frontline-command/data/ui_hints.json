@@ -1,0 +1,17 @@
+{
+  "hints": [
+    { "id": "h_first", "text": "Пробел — пауза, Tab — карта командующего, F3 — отладка.", "seconds": 12 },
+    { "id": "h_select", "text": "Рамкой выдели бойцов и нажми Ctrl+G — получится отряд.", "seconds": 14, "after": "squad" },
+    { "id": "h_order", "text": "ПКМ по земле — идти, по врагу — атаковать, по складу — охранять.", "seconds": 14, "after": "order" },
+    { "id": "h_directive", "text": "T — директива: цель + алгоритм. Отряды выполнят сами.", "seconds": 12, "after": "directive" },
+    { "id": "h_build", "text": "B — стройка: ЛКМ ставит чертёж, инженеры строят сами.", "seconds": 12, "after": "build" }
+  ],
+  "tutorial": [
+    { "id": "t_tab", "text": "Нажми Tab, чтобы открыть тактическую карту.", "check": "commander" },
+    { "id": "t_squad", "text": "Выдели бойцов рамкой и нажми Ctrl+G.", "check": "squadCreated" },
+    { "id": "t_order", "text": "Нажми ПКМ по сектору у моста — отряд получит приказ.", "check": "orderIssued" },
+    { "id": "t_directive", "text": "Открой директивы (T) и поставь цель «Захватить сектор».", "check": "directiveSet" },
+    { "id": "t_build", "text": "Нажми B и поставь чертёж у своего склада.", "check": "blueprintPlaced" },
+    { "id": "t_done", "text": "Готово! Дальше — прокачка (K), автопилот (P) и приказы. Удачи на фронте.", "check": "none" }
+  ]
+}

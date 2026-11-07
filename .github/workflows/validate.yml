@@ -30,6 +30,8 @@ jobs:
         run: node game-base/tests/smoke.mjs
       - name: Test game template logic
         run: node game-base/tests/logic.mjs
+      - name: Test Frontline Command (логика, симуляция, производительность)
+        run: npm run test:fast --prefix frontline-command
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play
 

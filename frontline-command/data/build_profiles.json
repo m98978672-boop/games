@@ -1,0 +1,7 @@
+{
+  "light":    { "name": "Лёгкий",   "desc": "Мешки и окопы", "items": [ { "type": "sandbags", "count": 6 }, { "type": "trench", "count": 2 } ] },
+  "medium":   { "name": "Средний",  "desc": "Окопы, проволока, пулемётные гнёзда", "items": [ { "type": "trench", "count": 4 }, { "type": "wire", "count": 4 }, { "type": "mg_nest", "count": 2 }, { "type": "sandbags", "count": 4 } ] },
+  "heavy":    { "name": "Тяжёлый",  "desc": "Бункеры, ДОТы, мины, проволока в несколько линий", "items": [ { "type": "bunker", "count": 2 }, { "type": "mg_nest", "count": 3 }, { "type": "wire", "count": 8 }, { "type": "trench", "count": 4 } ] },
+  "rear":     { "name": "Тыловой",  "desc": "Склады, дороги, ремонт мостов", "items": [ { "type": "watchtower", "count": 1 }, { "type": "sandbags", "count": 2 } ] },
+  "custom":   { "name": "Свой профиль", "desc": "Состав задаётся игроком", "items": [ { "type": "sandbags", "count": 3 } ] }
+}

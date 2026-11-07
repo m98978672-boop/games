@@ -1,0 +1,51 @@
+{
+  "combine": "multiply",
+  "branches": [
+    { "id": "infantry",  "name": "Пехота",         "color": "#e8b45a", "icon": "role_infantry" },
+    { "id": "engineer",  "name": "Инженер",         "color": "#9aa88f", "icon": "role_engineer" },
+    { "id": "medic",     "name": "Медик",           "color": "#c85f6a", "icon": "role_medic" },
+    { "id": "logistics", "name": "Логист",          "color": "#c07a4a", "icon": "role_driver" },
+    { "id": "armor",     "name": "Бронетехника",    "color": "#8fc0ea", "icon": "role_tank" },
+    { "id": "command",   "name": "Командование",    "color": "#9b8cf0", "icon": "ic_star" }
+  ],
+  "nodes": [
+    { "id": "inf_accuracy_1", "branch": "infantry", "name": "Меткий стрелок I", "desc": "−10% разброса", "cost": 3, "requires": [], "effects": { "spread_mult": 0.90 }, "pos": [1, 1] },
+    { "id": "inf_accuracy_2", "branch": "infantry", "name": "Меткий стрелок II", "desc": "Ещё −10% разброса", "cost": 6, "requires": ["inf_accuracy_1"], "effects": { "spread_mult": 0.90 }, "pos": [1, 2] },
+    { "id": "inf_damage_1",   "branch": "infantry", "name": "Убойная сила",     "desc": "+12% урона", "cost": 5, "requires": ["inf_accuracy_1"], "effects": { "damage_mult": 1.12 }, "pos": [2, 2] },
+    { "id": "inf_hp_1",       "branch": "infantry", "name": "Выносливость",     "desc": "+20 HP", "cost": 4, "requires": [], "effects": { "hp_add": 20 }, "pos": [0, 2] },
+    { "id": "inf_smg",        "branch": "infantry", "name": "Автоматы",         "desc": "Класс «Автомат» при спавне", "cost": 5, "requires": ["inf_damage_1"], "effects": { "unlock_weapon": "smg" }, "pos": [3, 3] },
+    { "id": "inf_sniper",     "branch": "infantry", "name": "Снайперка",        "desc": "Класс «Снайпер» при спавне", "cost": 9, "requires": ["inf_smg"], "effects": { "unlock_weapon": "sniper" }, "pos": [4, 4] },
+
+    { "id": "eng_speed_1",    "branch": "engineer", "name": "Быстрая стройка",  "desc": "+35% скорости стройки", "cost": 3, "requires": [], "effects": { "build_speed_mult": 1.35 }, "pos": [1, 1] },
+    { "id": "eng_speed_2",    "branch": "engineer", "name": "Мастер-строитель", "desc": "Ещё +35%", "cost": 6, "requires": ["eng_speed_1"], "effects": { "build_speed_mult": 1.35 }, "pos": [1, 2] },
+    { "id": "eng_repair",     "branch": "engineer", "name": "Ремонтники",       "desc": "+50% скорости ремонта", "cost": 4, "requires": ["eng_speed_1"], "effects": { "repair_mult": 1.5 }, "pos": [2, 2] },
+    { "id": "eng_cover",      "branch": "engineer", "name": "Укрепления",       "desc": "+20% прочности построек", "cost": 5, "requires": [], "effects": { "build_hp_mult": 1.2 }, "pos": [0, 2] },
+    { "id": "eng_bunker",     "branch": "engineer", "name": "Бункеры",          "desc": "Открывает бункеры и ДОТы", "cost": 8, "requires": ["eng_speed_2", "eng_cover"], "effects": { "unlock_build": ["bunker"] }, "pos": [2, 3] },
+
+    { "id": "med_heal_1",     "branch": "medic", "name": "Санинструктор",     "desc": "+30% скорости лечения", "cost": 3, "requires": [], "effects": { "heal_speed_mult": 1.3 }, "pos": [1, 1] },
+    { "id": "med_kit_1",      "branch": "medic", "name": "Лишняя аптечка",    "desc": "+1 аптечка", "cost": 4, "requires": [], "effects": { "medkit_add": 1 }, "pos": [0, 2] },
+    { "id": "med_revive",     "branch": "medic", "name": "Воскрешение",       "desc": "Раненые встают с 45% HP", "cost": 8, "requires": ["med_heal_1"], "effects": { "revive_hp": 0.45 }, "pos": [1, 2] },
+    { "id": "med_shape",      "branch": "medic", "name": "Свой человек",      "desc": "+50% HP игрока", "cost": 6, "requires": ["med_kit_1"], "effects": { "hp_mult": 1.5 }, "pos": [2, 3] },
+
+    { "id": "log_cargo_1",    "branch": "logistics", "name": "Грузоподъёмность","desc": "+40% груза", "cost": 3, "requires": [], "effects": { "cargo_mult": 1.4 }, "pos": [1, 1] },
+    { "id": "log_speed_1",    "branch": "logistics", "name": "Дальнобойщик",    "desc": "+15% скорости техники", "cost": 4, "requires": ["log_cargo_1"], "effects": { "drive_speed_mult": 1.15 }, "pos": [2, 2] },
+    { "id": "log_auto",       "branch": "logistics", "name": "Автоконвои",      "desc": "Автопилот снабжения по порогам", "cost": 7, "requires": ["log_cargo_1"], "effects": { "auto_convoy": 1 }, "pos": [1, 2] },
+    { "id": "log_depot",      "branch": "logistics", "name": "Тыловые склады",  "desc": "+1 запас ресурсов на складе", "cost": 6, "requires": ["log_auto"], "effects": { "depot_stock_add": 1 }, "pos": [2, 3] },
+
+    { "id": "arm_tank",       "branch": "armor", "name": "Допуск к танку",   "desc": "Класс «Танкист» при спавне", "cost": 8, "requires": [], "effects": { "unlock_tank": 1 }, "pos": [1, 1] },
+    { "id": "arm_damage",     "branch": "armor", "name": "Бронебойные",      "desc": "+15% урона техники", "cost": 5, "requires": ["arm_tank"], "effects": { "tank_damage_mult": 1.15 }, "pos": [2, 2] },
+    { "id": "arm_armor",      "branch": "armor", "name": "Дополнительная броня", "desc": "+2 брони", "cost": 6, "requires": ["arm_tank"], "effects": { "tank_armor_add": 2 }, "pos": [1, 2] },
+    { "id": "arm_repair",     "branch": "armor", "name": "Ремонт в поле",    "desc": "Танк чинится рядом с инженером", "cost": 6, "requires": ["arm_armor"], "effects": { "tank_repair": 1 }, "pos": [3, 3] },
+
+    { "id": "cmd_radio_1",    "branch": "command", "name": "Радиостанция I",  "desc": "+30% скорости приказов", "cost": 3, "requires": [], "effects": { "radio_speed_mult": 1.3 }, "pos": [1, 1] },
+    { "id": "cmd_squads_1",   "branch": "command", "name": "Командир роты",   "desc": "+1 отряд (лимит)", "cost": 5, "requires": [], "effects": { "squad_limit_add": 1 }, "pos": [0, 2] },
+    { "id": "cmd_directive_1","branch": "command", "name": "Штабное дело",    "desc": "+1 активная директива", "cost": 6, "requires": ["cmd_radio_1"], "effects": { "directive_limit_add": 1 }, "pos": [1, 2] },
+    { "id": "cmd_rules_1",    "branch": "command", "name": "Регламент",       "desc": "+2 слота правил Если→То", "cost": 5, "requires": ["cmd_squads_1"], "effects": { "rules_slots_add": 2 }, "pos": [2, 2] },
+    { "id": "cmd_vision",     "branch": "command", "name": "Разведка",        "desc": "+25% радиуса зрения", "cost": 7, "requires": ["cmd_radio_1"], "effects": { "vision_mult": 1.25 }, "pos": [2, 3] },
+    { "id": "cmd_auto",       "branch": "command", "name": "Штабной автопилот","desc": "Все области автоматизации доступны", "cost": 9, "requires": ["cmd_directive_1", "cmd_rules_1"], "effects": { "auto_all_areas": 1 }, "pos": [3, 3] }
+  ],
+  "xpRewards": {
+    "kill": 2, "assist": 1, "capture": 8, "build": 3, "deliver": 4,
+    "heal": 2, "orderAccepted": 1, "directiveDone": 6, "warWin": 25, "warLoss": 8
+  }
+}

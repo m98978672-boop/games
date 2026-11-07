@@ -1,0 +1,12 @@
+[
+  {
+    "id": 0, "key": "alliance", "name": "Альянс", "short": "АЛЬ",
+    "color": "#4a7fb5", "colorLight": "#8fc0ea", "colorDark": "#274a6d",
+    "persona": "balanced", "player": true
+  },
+  {
+    "id": 1, "key": "legion", "name": "Легион", "short": "ЛЕГ",
+    "color": "#b5503a", "colorLight": "#e89077", "colorDark": "#6a2a1d",
+    "persona": "aggressive", "player": false
+  }
+]

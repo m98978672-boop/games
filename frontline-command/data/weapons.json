@@ -1,0 +1,37 @@
+{
+  "pistol": {
+    "name": "Пистолет", "kind": "bullet", "damage": 15, "rof": 3.0, "range": 250,
+    "spread": 5.0, "mag": 12, "reload": 1.5, "muzzle": 1300, "suppression": 5,
+    "sound": "shot_pistol", "icon": "w_pistol", "ammo": "ammo"
+  },
+  "rifle": {
+    "name": "Винтовка", "kind": "bullet", "damage": 25, "rof": 1.2, "range": 600,
+    "spread": 2.0, "mag": 8, "reload": 2.2, "muzzle": 1500, "suppression": 10,
+    "sound": "shot_rifle", "icon": "w_rifle", "ammo": "ammo"
+  },
+  "smg": {
+    "name": "Автомат", "kind": "bullet", "damage": 12, "rof": 9.0, "range": 400,
+    "spread": 6.0, "mag": 30, "reload": 2.0, "muzzle": 1400, "suppression": 8,
+    "sound": "shot_smg", "icon": "w_smg", "ammo": "ammo"
+  },
+  "mg": {
+    "name": "Пулемёт", "kind": "bullet", "damage": 14, "rof": 10.0, "range": 500,
+    "spread": 8.0, "mag": 100, "reload": 5.0, "muzzle": 1600, "suppression": 16,
+    "sound": "shot_mg", "icon": "w_mg", "ammo": "ammo"
+  },
+  "sniper": {
+    "name": "Снайперка", "kind": "bullet", "damage": 80, "rof": 0.6, "range": 1000,
+    "spread": 0.5, "mag": 5, "reload": 3.0, "muzzle": 2000, "suppression": 22,
+    "sound": "shot_sniper", "icon": "w_sniper", "ammo": "ammo"
+  },
+  "tank_cannon": {
+    "name": "Орудие танка", "kind": "shell", "damage": 120, "rof": 0.3, "range": 800,
+    "spread": 1.0, "mag": 1, "reload": 3.5, "muzzle": 900, "aoe": 95,
+    "suppression": 40, "sound": "shot_cannon", "icon": "w_cannon", "ammo": "ammo"
+  },
+  "none": {
+    "name": "Без оружия", "kind": "bullet", "damage": 0, "rof": 1, "range": 1,
+    "spread": 0, "mag": 1, "reload": 1, "muzzle": 0, "suppression": 0,
+    "sound": "click", "icon": "w_none", "ammo": "ammo"
+  }
+}

@@ -1,0 +1,136 @@
+{
+  "perception": {
+    "coneDeg": 110,
+    "hearingMult": 1.0,
+    "hearingRange": 620,
+    "memorySeconds": 6,
+    "closeAwareness": 120,
+    "losSteps": 24
+  },
+  "morale": {
+    "max": 100,
+    "start": 78,
+    "allyDeath": -5,
+    "suppressedPerSec": -1.0,
+    "noCommanderPerSec": -0.5,
+    "commanderPerSec": 2.0,
+    "inCoverPerSec": 1.0,
+    "kill": 5,
+    "win": 5,
+    "ignoreOrderBelow": 40,
+    "panicBelow": 20,
+    "rallyAbove": 55
+  },
+  "lod": {
+    "nearPx": 800,
+    "midPx": 1600,
+    "nearHz": 10,
+    "midHz": 4,
+    "farHz": 1
+  },
+  "utility": {
+    "coverProximity": 0.5,
+    "coverAngle": 0.3,
+    "coverOrderDist": 0.2,
+    "coverOccupiedPenalty": 0.5,
+    "coverSearchRadius": 180
+  },
+  "combat": {
+    "suppressionSpreadMult": 1.8,
+    "suppressionMoraleMult": 1.0,
+    "coverHitMult": 0.45,
+    "downedBleedSeconds": 40,
+    "bulletStep": 24,
+    "aoeDamageFalloff": 0.6,
+    "friendlyFire": false
+  },
+  "capture": {
+    "radius": 150,
+    "seconds": 7,
+    "ratio": 1.35,
+    "minUnits": 1,
+    "secondsByType": {
+      "hq": 16,
+      "city": 12,
+      "depot": 9,
+      "factory": 9,
+      "bridge": 8,
+      "farm": 7
+    }
+  },
+  "influence": {
+    "interval": 1.0,
+    "smoothing": 0.1,
+    "unitWeight": 0.01,
+    "buildingWeight": 0.06,
+    "pointWeight": 0.25,
+    "strengthToCapture": 0.35,
+    "holdSeconds": 8,
+    "captureSeconds": 8
+  },
+  "strategic": {
+    "interval": 5.0,
+    "maxSquadsPerTarget": 3,
+    "attackThreshold": 0.12,
+    "defendThreshold": 0.22,
+    "supplyThreshold": 0.35,
+    "idleSquadRadius": 2200,
+    "weights": {
+      "weakness": 1.0,
+      "value": 1.2,
+      "distance": 0.9,
+      "risk": 0.8,
+      "threat": 1.1,
+      "supply": 0.9
+    },
+    "personaWeights": {
+      "aggressive": {
+        "attack": 1.5,
+        "defense": 0.9,
+        "supply": 0.8
+      },
+      "defensive": {
+        "attack": 0.8,
+        "defense": 1.5,
+        "supply": 1.1
+      },
+      "balanced": {
+        "attack": 1.0,
+        "defense": 1.0,
+        "supply": 1.0
+      }
+    },
+    "finishUnitsBelow": 18,
+    "finishPowerFactor": 1.0,
+    "finishHqBoost": 2.2,
+    "stallSeconds": 240,
+    "allInPowerFactor": 0.55,
+    "openingSeconds": 180,
+    "openingThresholdMult": 2.0,
+    "openingPowerMult": 0
+  },
+  "squad": {
+    "retreatLossesDefault": 0.5,
+    "regroupMorale": 55,
+    "assaultSuppression": 0.5,
+    "leapfrogToggleSeconds": 3.0,
+    "formationSpacing": 34,
+    "maxEngageRange": 700,
+    "flankWidth": 260,
+    "holdRadius": 130
+  },
+  "radio": {
+    "speedPxPerSec": 900,
+    "baseReaction": 0.8,
+    "maxDelay": 14.0
+  },
+  "limits": {
+    "squadBase": 4,
+    "squadPerCity": 1,
+    "directiveBase": 3,
+    "rulesBase": 2,
+    "enemyTechCurveSeconds": 300,
+    "enemySquadCapBonusPerStep": 1,
+    "enemyTechSteps": 3
+  }
+}

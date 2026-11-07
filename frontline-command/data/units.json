@@ -1,0 +1,162 @@
+{
+  "infantry": {
+    "name": "Пехотинец",
+    "hp": 100,
+    "speed": 110,
+    "vision": 500,
+    "weapon": "rifle",
+    "class": "foot",
+    "icon": "role_infantry",
+    "xpRole": "infantry",
+    "medkit": 1,
+    "desc": "Основа любого отряда: винтовка, средняя броня.",
+    "cost": {
+      "materials": 12,
+      "ammo": 18
+    },
+    "buildTime": 3
+  },
+  "mg": {
+    "name": "Пулемётчик",
+    "hp": 110,
+    "speed": 90,
+    "vision": 500,
+    "weapon": "mg",
+    "class": "foot",
+    "icon": "role_mg",
+    "xpRole": "infantry",
+    "medkit": 1,
+    "desc": "Подавляет пехоту с позиции, медленнее остальных.",
+    "cost": {
+      "materials": 16,
+      "ammo": 30
+    },
+    "buildTime": 3
+  },
+  "medic": {
+    "name": "Медик",
+    "hp": 90,
+    "speed": 115,
+    "vision": 450,
+    "weapon": "pistol",
+    "class": "foot",
+    "icon": "role_medic",
+    "xpRole": "medic",
+    "medkit": 3,
+    "healPower": 14,
+    "desc": "Поднимает раненых и лечит отряд.",
+    "cost": {
+      "materials": 13,
+      "ammo": 12,
+      "meds": 7
+    },
+    "buildTime": 3
+  },
+  "engineer": {
+    "name": "Инженер",
+    "hp": 100,
+    "speed": 105,
+    "vision": 450,
+    "weapon": "smg",
+    "class": "foot",
+    "icon": "role_engineer",
+    "xpRole": "engineer",
+    "buildPower": 16,
+    "desc": "Строит укрепления, чинит технику и мосты.",
+    "cost": {
+      "materials": 19,
+      "ammo": 15
+    },
+    "buildTime": 3
+  },
+  "driver": {
+    "name": "Водитель",
+    "hp": 90,
+    "speed": 110,
+    "vision": 450,
+    "weapon": "pistol",
+    "class": "foot",
+    "icon": "role_driver",
+    "xpRole": "logistics",
+    "cargo": 120,
+    "desc": "Водит грузовики, возит снабжение на фронт.",
+    "cost": {
+      "materials": 10,
+      "ammo": 6
+    },
+    "buildTime": 3
+  },
+  "scout": {
+    "name": "Разведчик",
+    "hp": 85,
+    "speed": 125,
+    "vision": 650,
+    "weapon": "smg",
+    "class": "foot",
+    "icon": "role_scout",
+    "xpRole": "infantry",
+    "medkit": 1,
+    "desc": "Дальнее зрение и скорость: открывает туман войны.",
+    "cost": {
+      "materials": 11,
+      "ammo": 15
+    },
+    "buildTime": 3
+  },
+  "tanker": {
+    "name": "Танкист",
+    "hp": 95,
+    "speed": 105,
+    "vision": 450,
+    "weapon": "pistol",
+    "class": "foot",
+    "icon": "role_tanker",
+    "xpRole": "armor",
+    "crew": "tank",
+    "desc": "Экипаж танка; вне машины воюет пистолетом.",
+    "cost": {
+      "materials": 12,
+      "ammo": 6
+    },
+    "buildTime": 3
+  },
+  "truck": {
+    "name": "Грузовик",
+    "hp": 220,
+    "speed": 150,
+    "vision": 420,
+    "weapon": "none",
+    "class": "vehicle",
+    "icon": "role_truck",
+    "xpRole": "logistics",
+    "cargo": 240,
+    "armor": 2,
+    "size": 44,
+    "desc": "Перевозит ресурсы между складами и фронтом.",
+    "cost": {
+      "materials": 42,
+      "fuel": 12
+    },
+    "buildTime": 12
+  },
+  "tank": {
+    "name": "Лёгкий танк",
+    "hp": 400,
+    "speed": 80,
+    "vision": 600,
+    "weapon": "tank_cannon",
+    "class": "vehicle",
+    "icon": "role_tank",
+    "xpRole": "armor",
+    "armor": 6,
+    "size": 52,
+    "turret": true,
+    "desc": "Корпус и башня отдельно, орудие с областью поражения.",
+    "cost": {
+      "materials": 102,
+      "ammo": 36,
+      "fuel": 24
+    },
+    "buildTime": 22
+  }
+}

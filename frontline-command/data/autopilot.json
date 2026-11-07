@@ -1,0 +1,16 @@
+{
+  "areas": [
+    { "id": "combat",     "name": "Бой и наступление", "default": false, "icon": "ap_combat" },
+    { "id": "defense",    "name": "Оборона",           "default": true,  "icon": "ap_defense" },
+    { "id": "build",      "name": "Стройка",           "default": true,  "icon": "ap_build" },
+    { "id": "supply",     "name": "Снабжение",         "default": true,  "icon": "ap_supply" },
+    { "id": "production", "name": "Производство",      "default": true,  "icon": "ap_prod" },
+    { "id": "formation",  "name": "Формирование отрядов", "default": false, "icon": "ap_squads" }
+  ],
+  "soldierModeForcesAll": true,
+  "thresholds": {
+    "attack": 0.2, "defend": 0.25, "supplyLow": 0.4, "reserveSquads": 1,
+    "autoProfile": "medium", "rebuildBelowHp": 0.5, "maxBlueprints": 40
+  },
+  "alerts": { "sectorAttack": true, "supplyLow": true, "hqThreat": true, "cooldown": 12 }
+}

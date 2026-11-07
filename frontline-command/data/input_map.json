@@ -1,0 +1,15 @@
+{
+  "soldier": {
+    "moveUp": "KeyW", "moveDown": "KeyS", "moveLeft": "KeyA", "moveRight": "KeyD",
+    "reload": "KeyR", "interact": "KeyE", "rallySquad": "KeyQ", "markTarget": "KeyF"
+  },
+  "both": {
+    "switchMode": "Tab", "pause": "Space", "debug": "F3", "menu": "Escape",
+    "undo": "Ctrl+KeyZ", "speedDown": "BracketLeft", "speedUp": "BracketRight"
+  },
+  "commander": {
+    "createSquad": "Ctrl+KeyG", "buildMenu": "KeyB", "directives": "KeyT",
+    "autopilot": "KeyP", "skills": "KeyK", "groups": "Digit1..9",
+    "mapZoom": "wheel", "mapPan": "middle|edges"
+  }
+}

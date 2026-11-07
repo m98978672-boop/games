@@ -1,0 +1,56 @@
+{
+  "sandbags": {
+    "name": "Мешки с песком", "size": 32, "hp": 150, "time": 4, "cover": 0.55,
+    "vision": 0, "category": "fort", "cost": { "materials": 12 }, "icon": "b_sandbags",
+    "desc": "Быстрое укрытие от пуль."
+  },
+  "wire": {
+    "name": "Колючая проволока", "size": 32, "hp": 90, "time": 3, "cover": 0.1,
+    "slow": 0.45, "vision": 0, "category": "fort", "cost": { "materials": 8 }, "icon": "b_wire",
+    "desc": "Замедляет пехоту противника."
+  },
+  "trench": {
+    "name": "Окоп", "size": 32, "hp": 220, "time": 8, "cover": 0.72,
+    "vision": 60, "category": "fort", "cost": { "materials": 22 }, "icon": "b_trench",
+    "desc": "Лучшее укрытие для пехоты, бойцы сами занимают окопы."
+  },
+  "mg_nest": {
+    "name": "Пулемётное гнездо", "size": 44, "hp": 260, "time": 14, "cover": 0.66,
+    "vision": 520, "category": "fort", "cost": { "materials": 40 }, "icon": "b_mgnest",
+    "desc": "Автоматический пулемёт: держит подходы."
+  },
+  "bunker": {
+    "name": "Бункер", "size": 64, "hp": 520, "time": 26, "cover": 0.85,
+    "vision": 600, "category": "fort", "cost": { "materials": 80 }, "icon": "b_bunker",
+    "desc": "Тяжёлое укрепление, выдерживает артиллерию."
+  },
+  "watchtower": {
+    "name": "Наблюдательная вышка", "size": 40, "hp": 180, "time": 12, "cover": 0.3,
+    "vision": 900, "category": "fort", "cost": { "materials": 30 }, "icon": "b_tower",
+    "desc": "Раскрывает туман войны в большом радиусе."
+  },
+  "depot": {
+    "name": "Склад", "size": 96, "hp": 800, "time": 0, "cover": 0.4, "vision": 300,
+    "category": "point", "pointType": "depot", "icon": "b_depot", "desc": "Хранит ресурсы и снабжает фронт."
+  },
+  "factory": {
+    "name": "Фабрика", "size": 96, "hp": 900, "time": 0, "cover": 0.4, "vision": 300,
+    "category": "point", "pointType": "factory", "icon": "b_factory", "desc": "Производит технику и снаряжение."
+  },
+  "farm": {
+    "name": "Ферма", "size": 80, "hp": 420, "time": 0, "cover": 0.2, "vision": 260,
+    "category": "point", "pointType": "farm", "icon": "b_farm", "desc": "Даёт медикаменты и материалы."
+  },
+  "hq": {
+    "name": "Штаб", "size": 128, "hp": 2200, "time": 0, "cover": 0.5, "vision": 700,
+    "category": "point", "pointType": "hq", "icon": "b_hq", "desc": "Главный спавн. Потеря штаба — поражение."
+  },
+  "bridge": {
+    "name": "Мост", "size": 96, "hp": 600, "time": 0, "cover": 0.1, "vision": 200,
+    "category": "point", "pointType": "bridge", "icon": "b_bridge", "desc": "Проход снабжения через реку. Разрушаемый."
+  },
+  "city": {
+    "name": "Город", "size": 112, "hp": 1200, "time": 0, "cover": 0.5, "vision": 420,
+    "category": "point", "pointType": "city", "icon": "b_city", "desc": "Ключевая точка: спавн, влияние, победа."
+  }
+}

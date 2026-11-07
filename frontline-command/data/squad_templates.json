@@ -1,0 +1,80 @@
+{
+  "assault": {
+    "name": "Штурмовой",
+    "role": "combat",
+    "icon": "tmpl_assault",
+    "composition": {
+      "infantry": 4,
+      "mg": 1,
+      "medic": 1
+    },
+    "desc": "Пехотинцы, пулемётчик и медик — атака секторов.",
+    "spawnTime": 8
+  },
+  "defense": {
+    "name": "Оборонительный",
+    "role": "defense",
+    "icon": "tmpl_defense",
+    "composition": {
+      "infantry": 3,
+      "mg": 2,
+      "engineer": 1
+    },
+    "desc": "Пулемётчики и инженер — удержание и укрепление.",
+    "spawnTime": 8
+  },
+  "engineer": {
+    "name": "Инженерный",
+    "role": "engineer",
+    "icon": "tmpl_engineer",
+    "composition": {
+      "engineer": 3,
+      "infantry": 2
+    },
+    "desc": "Стройка, ремонт, мосты под охраной.",
+    "spawnTime": 8
+  },
+  "supply": {
+    "name": "Снабжение",
+    "role": "supply",
+    "icon": "tmpl_supply",
+    "composition": {
+      "driver": 3,
+      "infantry": 2
+    },
+    "desc": "Конвой: водители-логисты и охрана.",
+    "spawnTime": 8
+  },
+  "armor": {
+    "name": "Бронегруппа",
+    "role": "armor",
+    "icon": "tmpl_armor",
+    "composition": {
+      "tank": 2,
+      "infantry": 3
+    },
+    "desc": "Танки с пехотным прикрытием — прорыв.",
+    "spawnTime": 18
+  },
+  "recon": {
+    "name": "Разведка",
+    "role": "recon",
+    "icon": "tmpl_recon",
+    "composition": {
+      "scout": 3,
+      "infantry": 1
+    },
+    "desc": "Быстрые разведчики, открывают туман войны.",
+    "spawnTime": 8
+  },
+  "custom": {
+    "name": "Свой шаблон",
+    "role": "custom",
+    "icon": "tmpl_custom",
+    "composition": {
+      "infantry": 4
+    },
+    "desc": "Состав задаётся вручную.",
+    "spawnTime": 10
+  }
+}
