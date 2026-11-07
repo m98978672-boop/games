@@ -33,6 +33,11 @@
 ▶️ **Играть:** [`shooter-2/index.html`](./shooter-2/index.html) · [описание](./shooter-2/README.md) ·
 [лаборатория анимаций](./shooter-2/index.html)
 
+🎮 **Та же игра на Godot 4:** [`shooter-2-godot/`](./shooter-2-godot/) — перенос без внешних
+ассетов: `project.godot` + 17 скриптов GDScript, вся геометрия по контурам, 1760 клипов,
+ИИ «больно думать», регдол. Открыть проект в Godot 4.3+ и нажать F5.
+[Подробности и тесты](./shooter-2-godot/README.md).
+
 ---
 
 🐞 **Нашёл ошибку?** Создай публичный баг-репорт через [GitHub Issue Form](https://github.com/m98978672-boop/games/issues/new?template=bug-report.yml). Не прикладывай личные данные и секреты.

@@ -38,6 +38,8 @@ jobs:
         run: node shooter-2/tests/logic.mjs
       - name: Test shooter-2 headless game loop
         run: node shooter-2/tests/headless.mjs
+      - name: Test shooter-2 Godot port structure and GDScript contracts
+        run: node shooter-2-godot/tests/port.mjs
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play
 

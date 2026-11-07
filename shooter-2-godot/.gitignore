@@ -1,0 +1,4 @@
+# Godot создаёт это при первом открытии проекта
+.godot/
+*.translation
+export/
