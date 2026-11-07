@@ -17,6 +17,7 @@ const W = Number(args.w || 1280);
 const H = Number(args.h || 800);
 const OUT = args.out || '/tmp/prev/mock.png';
 const SCENE = args.scene || '';
+const PREVIEW = args.preview || SCENE;
 
 const C = {
   ink: '#e9ece9', inkDim: '#a9b0ab', inkFaint: '#767d78',
@@ -246,6 +247,7 @@ const pad = 12;
 const inner = pad;
 const iw = DW - pad * 2;
 const headH = NARROW ? 70 : 76;
+const pvH = NARROW ? 124 : 176;
 const placeH = 32;
 const noteH = NARROW ? 52 : 44;
 const rowH = NARROW ? 38 : 40;
@@ -263,6 +265,22 @@ ops.push(text(cntX + cntW / 2, y + 36, '0 / 15', 11.5, C.inkDim, { anchor: 'midd
 ops.push(iconAt('close', DW - 46 + 9, y + 23, 16, C.inkDim));
 ops.push(`<line x1="${inner}" y1="${y + headH - 9.5}" x2="${inner + iw}" y2="${y + headH - 9.5}" stroke="rgba(255,255,255,0.07)"/>`);
 y += headH;
+
+// окно предпросмотра: живой кадр сцены, повторяющий ракурс
+const pvX = inner + 8;
+const pvW = iw - 16;
+ops.push('<defs><clipPath id="ppclip"><rect x="' + pvX + '" y="' + (y + 4) + '" width="' + pvW
+  + '" height="' + pvH + '" rx="9"/></clipPath></defs>');
+if (PREVIEW && fs.existsSync(PREVIEW)) {
+  const b64p = fs.readFileSync(PREVIEW).toString('base64');
+  ops.push('<image x="' + pvX + '" y="' + (y + 4) + '" width="' + pvW + '" height="' + pvH
+    + '" preserveAspectRatio="xMidYMid slice" clip-path="url(#ppclip)" href="data:image/png;base64,' + b64p + '"/>');
+}
+ops.push(rect(pvX, y + 4, pvW, pvH, 9, 'none', 'stroke="rgba(255,255,255,0.09)"'));
+ops.push(text(pvX + 2, y + pvH + 24, 'ATLAS Vision 4×2', 12.5, C.ink, { weight: 600 }));
+ops.push(text(pvX + 12 + textWidth('ATLAS Vision 4×2', 12.5, 700) + 22, y + pvH + 24,
+  'Снаружи · Студия', 11, C.inkFaint));
+y += pvH + 30;
 
 ops.push(text(inner + 8, y + 17, 'Тип дефекта', 13, C.ink, { weight: 600 }));
 y += 26;

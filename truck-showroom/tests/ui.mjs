@@ -536,6 +536,44 @@ if (camApp) {
   check('повторный клик возвращает поверхности', D.body.dataset.dots === 'off');
 }
 
+// ------------------------------------------------------------ предпросмотр в меню
+{
+  openCatalog();
+  await wait(250);
+  const pv = $('pop-preview');
+  check('в меню появился блок предпросмотра', !!pv);
+  check('предпросмотр открыт вместе с каталогом',
+    !!pv && !pv.classList.contains('hidden') && pv.closest('#panel-catalog') !== null);
+  check('подпись предпросмотра — имя модели', ($('pp-name')?.textContent || '').length > 2,
+    $('pp-name')?.textContent);
+  check('подпись показывает ракурс и свет', /Студия|Ночь|Выставка|Гараж/.test($('pp-sub')?.textContent || ''),
+    $('pp-sub')?.textContent);
+  // без WebGL (jsdom) окно показывает заглушку, а не пустую дыру
+  check('без WebGL предпросмотр показывает заглушку', pv?.classList.contains('no-webgl'));
+  check('у канваса есть подпись для скринридера', $('pp-canvas')?.getAttribute('aria-label') === 'Предпросмотр модели');
+
+  // окно переезжает в другое меню, а не дублируется
+  $('catalog-toggle').click();
+  await wait(120);
+  check('закрытое меню прячет предпросмотр', $('pop-preview')?.classList.contains('hidden'));
+  $('light-btn').click();
+  await wait(260);
+  const pv2 = $('pop-preview');
+  check('предпросмотр переехал в меню света',
+    !!pv2 && !pv2.classList.contains('hidden') && pv2.closest('#light-pop') !== null);
+  check('окно предпросмотра в документе одно', D.querySelectorAll('#pop-preview').length === 1);
+  // смена света меняет подпись без пересборки блока
+  D.querySelector('#light-pop [data-preset="dark"]')?.click();
+  await wait(200);
+  check('смена света обновляет подпись предпросмотра', /Ночь/.test($('pp-sub')?.textContent || ''),
+    $('pp-sub')?.textContent);
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
+  await wait(150);
+  check('Escape прячет предпросмотр вместе с меню', $('pop-preview')?.classList.contains('hidden'));
+  // вернём студию, чтобы не менять состояние для следующих проверок
+  D.querySelector('#light-pop [data-preset="studio"]')?.click();
+}
+
 check('ошибок в рантайме нет', errs.length === 0, errs.slice(0, 3).join(' / '));
 
 const fails = ok.filter((l) => l.startsWith('FAIL'));
