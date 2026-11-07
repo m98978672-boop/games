@@ -33,15 +33,22 @@ for (const cat of cats) {
       const out = path.join(outdir, `${cat}-${u.id}-${look}.png`);
       if (args.skip === 'true' && fs.existsSync(out)) { done += 1; continue; }
       // здания крупные: им нужна плотнее сетка и больше точек, иначе окна «заплывают»
-      const big = cat === 'buildings';
+      // облако должно быть гуще сетки: у длинных прицепов и зданий иначе
+      // стенки получаются «кружевом», а не поверхностью
+      const preset = {
+        buildings: { target: 130000, res: 100 },
+        trailers: { target: 120000, res: 100 },
+        trucks: { target: 56000, res: 84 },
+        cars: { target: 56000, res: 84 },
+      }[cat] || { target: 56000, res: 84 };
       const pass = [
         'tools/sides.mjs', '--cat', cat, '--id', u.id, '--look', look,
         '--cell', String(cell),
-        '--dotstarget', String(args.dotstarget || (big ? 90000 : 52000)),
+        '--dotstarget', String(args.dotstarget || preset.target),
         '--out', out,
       ];
       if (look === 'dots') pass.push('--dots', 'true');
-      if (look === 'mesh') pass.push('--res', String(args.res || (big ? 104 : 84)));
+      if (look === 'mesh') pass.push('--res', String(args.res || preset.res));
       try {
         execFileSync('node', pass, { stdio: 'ignore' });
       } catch (e) {
