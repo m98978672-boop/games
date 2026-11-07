@@ -526,6 +526,32 @@
     renderLifeMap(life);
   }
 
+  /* ----------------------- меню «ещё» на телефоне ---------------------- */
+
+  var MORE_ITEMS = [
+    ['btn-skip', 'До следующего решения »'], ['btn-auto', 'Авторежим'],
+    ['btn-spend', '🛒 Траты этого года'], ['btn-anims', 'Все движения сцены'],
+    ['btn-pauses', '✎ Когда ставить паузу'], ['btn-music', '♪ Музыка'],
+    ['btn-help', 'Как играть'], ['btn-quit', 'Сохранить и выйти']
+  ];
+
+  function moreModal() {
+    var w = modal('<h2>Ещё</h2><div class="more-list">' + MORE_ITEMS.map(function (it) {
+      var b = el(it[0]);
+      if (!b) return '';
+      var on = b.classList.contains('on') ? ' on' : '';
+      return '<button class="more-item' + on + '" data-go="' + it[0] + '">' + esc(it[1]) + '</button>';
+    }).join('') + '</div>', { cls: 'more' });
+    w.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-go]');
+      if (!b) return;
+      closeTop();
+      var real = el(b.dataset.go);
+      if (real) real.click();
+    });
+    return w;
+  }
+
   /* ------------------------- когда ставить паузу ----------------------- */
 
   var PAUSE_ROWS = [
@@ -811,6 +837,6 @@
     renderLifeMap: renderLifeMap, decisionModal: decisionModal, reflectionModal: reflectionModal,
     endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS,
     spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote,
-    pausesModal: pausesModal
+    pausesModal: pausesModal, moreModal: moreModal
   };
 })();

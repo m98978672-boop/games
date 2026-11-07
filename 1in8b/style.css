@@ -555,8 +555,29 @@ textarea.note-input {
 }
 .an-chip:hover { color: #17130a; background: var(--accent); border-color: var(--accent); }
 
+/* меню «ещё» */
+.only-phone { display: none; }
+.more-list { display: flex; flex-direction: column; gap: 2px; margin-top: 12px; }
+.more-item {
+  text-align: left; padding: 13px 12px; font-size: 14.5px; border-radius: var(--radius-sm);
+  background: none; border: 1px solid transparent; color: var(--ink); cursor: pointer;
+}
+.more-item:hover { background: rgba(255, 255, 255, .05); }
+.more-item.on { color: var(--accent); border-color: rgba(232, 101, 127, .35); }
+
 @media (max-width: 760px) {
   #portrait { height: 210px; }
+  .only-phone { display: inline-flex; }
+  #screen-life .top-actions #btn-auto,
+  #screen-life .top-actions #btn-spend,
+  #screen-life .top-actions #btn-anims,
+  #screen-life .top-actions #btn-pauses,
+  #screen-life .top-actions #btn-music,
+  #screen-life .top-actions #btn-help,
+  #screen-life .top-actions #btn-quit { display: none; }
+  #screen-life .top-actions { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  #screen-life .top-actions::-webkit-scrollbar { display: none; }
+  #screen-life .top-actions .tb { white-space: nowrap; }
   .scene-line { font-size: 13px; }
   .scene-meta { font-size: 11px; }
   .sp-card { grid-template-columns: 28px 1fr; }

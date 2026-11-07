@@ -490,6 +490,7 @@
       paintMusic();
       UI.toast(now ? 'Тихий фон и нота на каждый прожитый год' : 'Музыка выключена');
     });
+    el('btn-more').addEventListener('click', function () { UI.moreModal(); });
     el('btn-pauses').addEventListener('click', function () {
       UI.pausesModal(S.settings, function () { saveSettings(); paintPauseBtn(); });
     });
