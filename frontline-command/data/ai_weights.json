@@ -48,7 +48,15 @@
     "radius": 150,
     "seconds": 7,
     "ratio": 1.35,
-    "minUnits": 1
+    "minUnits": 1,
+    "secondsByType": {
+      "hq": 16,
+      "city": 12,
+      "depot": 9,
+      "factory": 9,
+      "bridge": 8,
+      "farm": 7
+    }
   },
   "influence": {
     "interval": 1.0,
@@ -94,7 +102,12 @@
     },
     "finishUnitsBelow": 18,
     "finishPowerFactor": 1.0,
-    "finishHqBoost": 2.2
+    "finishHqBoost": 2.2,
+    "stallSeconds": 240,
+    "allInPowerFactor": 0.55,
+    "openingSeconds": 180,
+    "openingThresholdMult": 2.0,
+    "openingPowerMult": 0
   },
   "squad": {
     "retreatLossesDefault": 0.5,

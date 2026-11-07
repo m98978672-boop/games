@@ -107,6 +107,15 @@
       "key": false
     },
     {
+      "id": "city_bend",
+      "name": "Излучина",
+      "type": "city",
+      "x": 1646,
+      "y": 2450,
+      "owner": -1,
+      "key": false
+    },
+    {
       "id": "depot_ally1",
       "name": "Склад «Запад»",
       "type": "depot",

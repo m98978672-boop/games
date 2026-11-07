@@ -66,8 +66,18 @@ export class Autopilot {
         });
       }
     }
-    if (mine.length >= limit) return;
     const reserve = [...g.units.values()].filter((u) => u.faction === faction && u.alive && !u.downed && u.squadId == null && !u.isVehicle);
+    // Аварийная сборка: армия без отрядов не должна стоять без приказов —
+    // собираем неполный отряд из того, что есть на поле, не дожидаясь очереди у базы.
+    if (mine.length === 0 && reserve.length >= 3) {
+      const ids = reserve.slice(0, 8).map((u) => u.id);
+      const res = g.createSquadFromUnits(ids, 'Сводный отряд');
+      if (res.ok) {
+        res.squad.reason = 'сводный отряд из резерва';
+        return;
+      }
+    }
+    if (mine.length >= limit) return;
     const templateId = this.chooseTemplate(faction);
     const need = g.templateSize(templateId);
     if (reserve.length >= need || g.canAffordSquad(faction, templateId)) {

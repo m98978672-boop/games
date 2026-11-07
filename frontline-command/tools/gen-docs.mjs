@@ -58,11 +58,22 @@ md += table(
     ['Порог атаки стратега', fmt(ai.strategic?.attackThreshold)],
     ['Отрядов на цель', fmt(ai.strategic?.maxSquadsPerTarget)],
     ['Конус зрения, °', fmt(ai.perception?.coneDeg)],
-    ['Слух, px', fmt(ai.perception?.hearing)],
-    ['Память, с', fmt(ai.perception?.memory)],
-    ['Мораль: старт / отказ / паника', `${fmt(ai.morale.start)} / ${fmt(ai.morale.refuseBelow)} / ${fmt(ai.morale.panicBelow)}`],
+    ['Слух, px', fmt(ai.perception?.hearingRange)],
+    ['Память, с', fmt(ai.perception?.memorySeconds)],
+    ['Мораль: старт / отказ / паника', `${fmt(ai.morale.start)} / ${fmt(ai.morale.ignoreOrderBelow)} / ${fmt(ai.morale.panicBelow ?? ai.morale.panic)}`],
     ['Мораль: командир / без командира, в с', `${fmt(ai.morale.commanderPerSec)} / ${fmt(ai.morale.noCommanderPerSec)}`],
-    ['Захват точки, с', fmt(ai.influence?.holdSeconds)],
+    ['Добивание: врагов меньше', fmt(ai.strategic?.finishUnitsBelow)],
+    ['Коэф. силы при добивании', fmt(ai.strategic?.finishPowerFactor)],
+    ['Бонус атаки на штаб', fmt(ai.strategic?.finishHqBoost)],
+    ['All-in: простой без захватов, с', fmt(ai.strategic?.stallSeconds)],
+    ['All-in: коэф. требуемой силы', fmt(ai.strategic?.allInPowerFactor)],
+    ['Разминка: длительность, с', fmt(ai.strategic?.openingSeconds)],
+    ['Разминка: множитель порога', fmt(ai.strategic?.openingThresholdMult)],
+    ['Захват точки, с', fmt(ai.capture?.seconds)],
+    ['Захват штаба / города / склада, с',
+      `${fmt(ai.capture?.secondsByType?.hq)} / ${fmt(ai.capture?.secondsByType?.city)} / ${fmt(ai.capture?.secondsByType?.depot)}`],
+    ['Захват: перевес сил', fmt(ai.capture?.ratio)],
+    ['Захват: радиус, px', fmt(ai.capture?.radius)],
   ],
 );
 md += `\n## Сложность\n\n`;
@@ -76,9 +87,11 @@ md += table(['Ветвь', 'Навыков', 'Суммарная цена XP'],
   branches.map((br) => [br.name, nodes.filter((n) => n.branch === br.id).length, nodes.filter((n) => n.branch === br.id).reduce((a, n) => a + n.cost, 0)]));
 md += `\nВсего навыков: ${nodes.length}, суммарно ${nodes.reduce((a, n) => a + n.cost, 0)} XP.\n`;
 md += `\n## Открытые вопросы баланса\n\n`;
-md += `1. **Темп войны.** Среднее решение — 6–20 минут; часть прогонов заканчивается\n   тайм-аутом 20 минут без победителя. Кандидаты: снизить порог силы для атаки\n   (1.25 → 1.15), увеличить награду за контроль городов.\n`;
-md += `2. **Стоимость отрядов.** Отряд «Штурм» ≈ 190 материалов — это ~3 минуты\n   производства в начале войны; при потерях армия восстанавливается медленно.\n`;
-md += `3. **Летальность.** Винтовка 25 урона при 1.2 выстр./с и укрытии −75% радиуса\n   попадания даёт бой на 30–60 секунд — приемлемо, но требует замеров на людях.\n`;
+md += `1. **Темп войны.** На 20 сидах (31–50) заканчивается 85% войн, средняя длительность\n   5–6 минут, но 11 из 20 решаются за 1.5–2.5 минуты: одна-две группы прорываются\n   к ключевым городам раньше, чем вторая сторона разворачивается. Кандидаты:\n   garrison-правило для ключевых городов, рост времени захвата города до 15–18 с.\n`;
+md += `2. **Перекос сторон.** Легион (северо-восток карты) выигрывает ~60–65% войн ИИ×ИИ.\n   Точки и рельеф зеркальны (см. tests/symmetry.mjs), поэтому подозрение на дороги: их\n   сеть не зеркальна (50 узлов без пары). Проверять: зеркалирование data/sectors.json -> roads.\n`;
+md += `3. **Стоимость отрядов.** Отряд «Штурм» ≈ 190 материалов — ~3 минуты производства\n   в начале войны; при потерях армия восстанавливается медленно.\n`;
+md += `4. **Летальность.** Винтовка 25 урона при 1.2 выстр./с и укрытии −75% радиуса\n   попадания даёт бой на 30–60 секунд — приемлемо, но требует замеров на людях.\n`;
+md += `5. **Проверка тюнинга.** \`node tools/ai-war.mjs --seeds 31-50 --verbose\` —\n   таблица финалов, тайм-аутов и длительности; \`--swap\` меняет стороны местами.\n`;
 md += `\nПерегенерация: \`node tools/gen-docs.mjs\`.\n`;
 
 fs.writeFileSync('docs/BALANCE.md', md);

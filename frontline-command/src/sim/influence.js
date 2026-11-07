@@ -96,7 +96,9 @@ export class InfluenceSystem {
       if (attacker === pt.owner) { pt.capture = Math.max(0, pt.capture - 0.5); pt.capturer = -1; continue; }
       if (attacker < 0) { pt.capture = Math.max(0, pt.capture - 0.35); continue; }
       if (pt.capturer !== attacker) { pt.capturer = attacker; pt.capture = 0; }
-      pt.capture = clamp(pt.capture + 1 / cfg.seconds, 0, 1);
+      // Крупные объекты держатся дольше мелких: штаб и город нельзя «пробежать» за семь секунд.
+      const secs = cfg.secondsByType?.[pt.type] ?? cfg.seconds;
+      pt.capture = clamp(pt.capture + 1 / Math.max(1, secs), 0, 1);
       if (pt.capture >= 1) this.flipPoint(pt, attacker);
     }
   }

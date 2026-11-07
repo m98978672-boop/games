@@ -78,6 +78,11 @@ export class StrategicAI {
     // война должна заканчиваться, а не тянуться до тайм-аута.
     const enemyUnits = [...game.units.values()].filter((u) => u.alive && u.faction === enemy).length;
     const finishing = enemyUnits <= (cfg.finishUnitsBelow ?? 12);
+    // Армия выродилась в один-два отряда или давно нет захватов — идём в all-in:
+    // иначе остатки войск «сторожат» точки, и война заканчивается только тайм-аутом.
+    const sinceCapture = game.time - (this.lastCapture?.t ?? 0);
+    const stalled = sinceCapture > (cfg.stallSeconds ?? 240);
+    const allIn = stalled || (mySquads.length <= 2 && enemyUnits <= 24);
     if (finishing) {
       for (const t of scored) {
         if (!t.hasEnemyHQ) continue;
@@ -85,12 +90,25 @@ export class StrategicAI {
       }
     }
 
-    // 2. Оборона: подкрепления к своим угрожаемым точкам
+    // 2. Оборона: подкрепления к своим угрожаемым точкам.
+    // Оборона НЕ съедает всю армию: часть директив зарезервирована под наступление,
+    // иначе отряды бесконечно перебрасываются по фронту и война не заканчивается.
+    // В all-in обороны нет: последние отряды идут на штурм, иначе они «сторожат» точки вечно.
+    // В обычном режиме один отряд всегда остаётся в резерве под наступление.
+    const defenseCap = Math.min(
+      allIn ? 0 : finishing ? 2 : Math.max(1, Math.min(limit - 1, Math.round(limit * 0.6))),
+      Math.max(0, mySquads.length - 1),
+    );
+    // Оборону держим превентивно (сосед уже под угрозой), но только за свои ключевые точки:
+    // иначе армия размазывается по всему фронту и наступление не начинается.
+    const worthHolding = (t) => t.points.some((p) => p.owner === faction && (p.key || p.type === 'hq' || p.type === 'city'));
     const threats = this.defenseAllowed()
-      ? scored.filter((t) => t.defense > cfg.defendThreshold && t.ownPower < t.enemyPower + 2).sort((a, b) => b.defense - a.defense)
+      ? scored.filter((t) => t.defense > cfg.defendThreshold && t.ownPower < t.enemyPower + 2 &&
+        (t.enemyPower >= 1 || worthHolding(t)))
+        .sort((a, b) => b.defense - a.defense)
       : [];
     for (const t of threats) {
-      if (used.size >= limit) break;
+      if (used.size >= Math.min(limit, defenseCap)) break;
       const sq = this.pickSquad(free, t.sector, used, t.enemyPower);
       if (!sq) continue;
       const point = t.points.find((p) => p.owner === faction) || null;
@@ -100,13 +118,21 @@ export class StrategicAI {
     }
 
     // 3. Атака: сильнейшие цели, только собранной группой (не в самоубийство по одному отряду)
+    // «Разминка»: в первые минуты порог атаки выше, чтобы война не решалась одним броском
+    // на 90-й секунде, пока вторая сторона ещё разворачивается.
+    const opening = clamp(1 - game.time / Math.max(1, cfg.openingSeconds ?? 1), 0, 1);
+    const attackThreshold = cfg.attackThreshold * (1 + (cfg.openingThresholdMult ?? 0) * opening);
     const attacks = this.combatAllowed()
-      ? scored.filter((t) => t.attack > cfg.attackThreshold).sort((a, b) => b.attack - a.attack)
+      ? scored.filter((t) => t.attack > attackThreshold).sort((a, b) => b.attack - a.attack)
       : [];
     const totalSquads = mySquads.length;
+    // Концентрация сил: одновременно ведём 1–2 наступления, а не «по отряду на цель».
+    const maxTargets = finishing || allIn ? 1 : 2;
+    const attacked = new Set();
     for (const t of attacks) {
       if (used.size >= limit) break;
-      if (totalSquads <= 2 && game.world.hqOf(faction) && t.value < 2) continue;
+      if (attacked.size >= maxTargets) break;
+      if (!allIn && totalSquads <= 2 && game.world.hqOf(faction) && t.value < 2) continue;
       const already = t.sector.id;
       const count = [...assigned.values()].filter((a) => a.target === already).length;
       const maxForTarget = t.points.some((p) => p.type === 'hq') ? Math.min(3, limit) : cfg.maxSquadsPerTarget;
@@ -114,7 +140,9 @@ export class StrategicAI {
       const point = this.bestTargetPoint(t, enemy, faction);
       if (!point) continue;
       // оцениваем, хватит ли сил: сила отрядов против силы врага в секторе и рядом
-      const need = (t.enemyPower + 1) * (finishing ? (cfg.finishPowerFactor ?? 1) : 1.25);
+      let need = (t.enemyPower + 1) * (finishing ? (cfg.finishPowerFactor ?? 1) : 1.25);
+      need *= 1 + (cfg.openingPowerMult ?? 0) * opening;
+      if (allIn) need = Math.max(1, need * (cfg.allInPowerFactor ?? 0.55));
       const group = [];
       let power = 0;
       const candidates = free.filter((s) => !used.has(s.id))
@@ -131,6 +159,7 @@ export class StrategicAI {
         used.add(sq.id);
         assigned.set(sq.id, { target: t.sector.id, at: game.time });
       }
+      attacked.add(t.sector.id);
     }
 
     // 4. Снабжение: отряды без патронов
@@ -144,8 +173,9 @@ export class StrategicAI {
         });
       }
     }
-    // 5. Ключевые сектора без защитников: занять
-    if (free.length && used.size < limit) {
+    // 5. Ключевые сектора без защитников: занять.
+    // Только когда армия не в режиме «последний бросок»: иначе часовой съедает единственный атакующий отряд.
+    if (!allIn && !finishing && mySquads.length >= 3 && free.length && used.size < limit) {
       const undefended = scored.filter((t) => t.points.some((p) => p.owner === faction && p.key) && t.ownPower === 0)
         .sort((a, b) => b.value - a.value)[0];
       if (undefended) {
@@ -159,7 +189,7 @@ export class StrategicAI {
     }
     this.journal.push({
       t: game.time, faction,
-      text: `свободных ${free.length}/${mySquads.length}, целей ${attacks.length}, угроз ${threats.length}, назначено ${used.size}/${limit}`,
+      text: `свободных ${free.length}/${mySquads.length}, целей ${attacks.length}, угроз ${threats.length}, назначено ${used.size}/${limit}${finishing ? ' [добивание]' : allIn ? ' [all-in]' : ''}`,
       topAttack: attacks.slice(0, 3).map((a) => `${a.sector.name}:${a.attack.toFixed(2)}`),
     });
     if (this.journal.length > 60) this.journal.shift();
