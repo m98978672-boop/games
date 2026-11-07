@@ -100,36 +100,36 @@ const NAV = [
 ];
 const padX = 12;
 const gap = 6;
-const btnH = 36;
+const btnH = 44;
 const btnW = (b) => {
-  if (!b.label) return 40;
-  const badge = b.badge ? 7 + textWidth(b.badge, 10, 600) + 12 : 0;
-  return 12 + 16 + 7 + textWidth(b.label, 12, 600) + badge + 12;
+  if (!b.label) return 46;
+  const badge = b.badge ? 8 + textWidth(b.badge, 10.5, 600) + 12 : 0;
+  return 14 + 19 + 8 + textWidth(b.label, 13.5, 600) + badge + 14;
 };
 const navW = NAV.reduce((s, b) => s + btnW(b), 0) + gap * (NAV.length - 1);
 let bx = W - padX - navW;
 const navPos = {};
 for (const b of NAV) {
   const w = btnW(b);
-  navPos[b.id] = { x: bx, y: 9, w, h: btnH };
+  navPos[b.id] = { x: bx, y: 5, w, h: btnH };
   const open = !!b.open;
   if (open) {
-    out.push(rect(bx, 9, w, btnH, 10, 'rgba(232,180,90,0.13)', `stroke="rgba(232,180,90,0.45)"`));
-    out.push(rect(bx + 1, 9 + btnH - 2, w - 2, 2, 1, C.accent));
+    out.push(rect(bx, 5, w, btnH, 11, 'rgba(232,180,90,0.13)', `stroke="rgba(232,180,90,0.45)"`));
+    out.push(rect(bx + 1, 5 + btnH - 2, w - 2, 2, 1, C.accent));
   } else {
-    out.push(rect(bx, 9, w, btnH, 10, C.surface, `stroke="${C.line}"`));
+    out.push(rect(bx, 5, w, btnH, 11, C.surface, `stroke="${C.line}"`));
   }
   const color = open ? C.accent2 : C.inkDim;
-  out.push(iconAt(b.id, bx + 11, 9 + 10, 16, color));
-  let tx = bx + 34;
+  out.push(iconAt(b.id, bx + 14, 5 + 12, 19, color));
+  let tx = bx + 41;
   if (b.label) {
-    out.push(text(tx, 31, b.label, 12, color, { weight: 600 }));
-    tx += textWidth(b.label, 12, 600) + 8;
+    out.push(text(tx, 32, b.label, 13.5, color, { weight: 600 }));
+    tx += textWidth(b.label, 13.5, 600) + 8;
   }
   if (b.badge) {
-    const bw = textWidth(b.badge, 10, 600) + 12;
-    out.push(rect(tx, 20, bw, 15, 999, open ? 'rgba(232,180,90,0.2)' : 'rgba(0,0,0,0.28)'));
-    out.push(text(tx + bw / 2, 31, b.badge, 10, open ? C.accent2 : C.inkFaint, { weight: 600, anchor: 'middle' }));
+    const bw = textWidth(b.badge, 10.5, 600) + 14;
+    out.push(rect(tx, 20, bw, 18, 999, open ? 'rgba(232,180,90,0.2)' : 'rgba(0,0,0,0.28)'));
+    out.push(text(tx + bw / 2, 33, b.badge, 10.5, open ? C.accent2 : C.inkFaint, { weight: 600, anchor: 'middle' }));
   }
   bx += w + gap;
 }
@@ -220,94 +220,7 @@ out.push(rect(W / 2 - cw / 2, cyF, cw, 30, 9, C.surface, `stroke="${C.line}"`));
 out.push(text(W / 2 - cw / 2 + 20, cyF + 20, '‹', 16, C.inkDim, { anchor: 'middle' }));
 out.push(text(W / 2, cyF + 20, '1 / 10', 12, C.ink, { anchor: 'middle', weight: 600 }));
 out.push(text(W / 2 + cw / 2 - 20, cyF + 20, '›', 16, C.inkDim, { anchor: 'middle' }));
-if (!SMALL) out.push(text(W - 16, H - FOOT / 2 + 4, '64 модели · 10 / 20 / 10 / 24 · v2.1', 10, C.inkFaint, { anchor: 'end' }));
-
-// ---------------- ОТКРЫТОЕ МЕНЮ «ПОВРЕЖДЕНИЯ»
-const M = { y: HUD + 8, w: Math.min(430, W - 20) };
-M.x = SMALL ? 10 : Math.max(10, Math.min(W - M.w - 16, navPos.damage.x + navPos.damage.w - M.w));
-const pad = 7;
-const inner = M.x + pad;
-const iw = M.w - pad * 2;
-
-const zones = [
-  { t: 'Кабина и крыша', n: '0 из 6', items: [['левая дверь кабины', 'сильное'], ['правая дверь кабины', 'сильное'], ['левая боковина кабины', 'среднее'], ['правая боковина кабины', 'среднее'], ['правая задняя стенка кабины', 'сильное'], ['крыша кабины', 'сильное']] },
-  { t: 'Перед и корма', n: '0 из 2', items: [['правый передний бампер', 'среднее'], ['левый передний бампер', 'лёгкое']] },
-  { t: 'Рама, низ и бак', n: '0 из 7', items: [['левый порог кабины', 'лёгкое'], ['правая боковина бака', 'лёгкое'], ['седло', 'сильное']] },
-];
-
-const headH = 44;
-const kindH = 22 + 44 + 8;
-const placeH = 30 + zones.reduce((a, z) => a + 26 + z.items.length * 32 + 6, 0);
-const noteH = 52;
-const menuH = headH + kindH + placeH + noteH;
-
-out.push(`<defs><linearGradient id="pop" x1="0" y1="0" x2="0" y2="1">
-  <stop offset="0" stop-color="rgba(24,28,27,0.99)"/><stop offset="1" stop-color="rgba(12,14,14,0.99)"/></linearGradient>
-  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-    <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000" flood-opacity="0.72"/></filter></defs>`);
-out.push(`<g filter="url(#shadow)">${rect(M.x, M.y, M.w, menuH, 16, 'url(#pop)', `stroke="rgba(255,255,255,0.09)"`)}</g>`);
-let y = M.y;
-
-// шапка
-out.push(text(inner + 10, y + 28, 'Повреждения', 13.5, C.ink, { weight: 700 }));
-const cnt = '0 / 15';
-const cntW = textWidth(cnt, 9.5, 600) + 16;
-const cntX = M.x + M.w - 8 - 26 - 6 - cntW;
-out.push(rect(cntX, y + 13, cntW, 19, 999, C.surface, `stroke="${C.line}"`));
-out.push(text(cntX + cntW / 2, y + 26.5, cnt, 9.5, C.inkFaint, { anchor: 'middle', weight: 600 }));
-out.push(iconAt('close', M.x + M.w - 8 - 26 + 6.5, y + 16.5, 13, C.inkFaint));
-out.push(`<line x1="${inner}" y1="${y + 41.5}" x2="${inner + iw}" y2="${y + 41.5}" stroke="rgba(255,255,255,0.07)"/>`);
-y += headH;
-
-// тип дефекта — один ряд из пяти
-out.push(text(inner + 9, y + 18, 'Тип дефекта', 11, C.inkDim, { weight: 600 }));
-y += kindH - 44 - 8 + 2;
-const kinds = [
-  { t: 'Любое', c: '#ffb27a', on: true }, { t: 'Вмятина', c: '#8f9daa' }, { t: 'Царапина', c: '#d7dee3' },
-  { t: 'Ржавчина', c: '#b8642c' }, { t: 'Трещина', c: '#59697a' },
-];
-const gapK = 4;
-const cellW = (iw - 4 - gapK * 4) / 5;
-kinds.forEach((k, i) => {
-  const x = inner + 2 + i * (cellW + gapK);
-  out.push(rect(x, y, cellW, 44, 9, k.on ? 'rgba(232,180,90,0.16)' : 'rgba(255,255,255,0.03)',
-    `stroke="${k.on ? 'rgba(232,180,90,0.45)' : 'rgba(255,255,255,0.06)'}"`));
-  out.push(`<circle cx="${x + cellW / 2}" cy="${y + 15}" r="5" fill="${k.c}" stroke="rgba(0,0,0,0.35)"/>`);
-  out.push(text(x + cellW / 2, y + 34, k.t, 10.5, k.on ? C.accent2 : C.inkDim, { anchor: 'middle', weight: 600 }));
-});
-y += 44 + 8;
-out.push(`<line x1="${inner}" y1="${y + 0.5}" x2="${inner + iw}" y2="${y + 0.5}" stroke="rgba(255,255,255,0.07)"/>`);
-y += 6;
-
-// место на кузове + «все / ничего»
-out.push(text(inner + 9, y + 16, 'Место на кузове', 11, C.inkDim, { weight: 600 }));
-let mx = inner + iw - 2;
-for (const label of ['✕ ничего', '✷ все'].reverse()) {
-  const w = textWidth(label, 9.5, 600) + 15;
-  mx -= w;
-  out.push(rect(mx, y + 4, w, 19, 7, C.surface, `stroke="${C.line}"`));
-  out.push(text(mx + w / 2, y + 17.5, label, 9.5, C.inkDim, { anchor: 'middle', weight: 600 }));
-  mx -= 4;
-}
-y += 30;
-
-zones.forEach((z, zi) => {
-  out.push(text(inner + 8, y + 17, '▾', 8, C.inkFaint, { weight: 700 }));
-  out.push(text(inner + 21, y + 17, z.t, 11, C.inkDim, { weight: 600 }));
-  out.push(text(inner + iw - 8, y + 17, z.n, 10, 'rgba(255,122,82,0.85)', { anchor: 'end', weight: 600 }));
-  y += 26;
-  z.items.forEach(([name, sev], i) => {
-    const kind = ['dent', 'scratch', 'rust', 'crack'][(zi + i) % 4];
-    const dot = { dent: '#8f9daa', scratch: '#d7dee3', rust: '#b8642c', crack: '#59697a' }[kind];
-    out.push(`<circle cx="${inner + 16}" cy="${y + 16}" r="4" fill="${dot}" stroke="rgba(0,0,0,0.3)"/>`);
-    out.push(text(inner + 29, y + 20.5, name, 12.5, C.inkDim));
-    out.push(text(inner + iw - 8, y + 20.5, sev, 9.5, C.inkFaint, { anchor: 'end' }));
-    y += 32;
-  });
-  y += 6;
-});
-out.push(text(inner + 9, y + 14, 'Выбери тип — дефект появится на свободной детали.', 10.5, C.inkFaint));
-out.push(text(inner + 9, y + 28, 'Или ткни в конкретное место списка.', 10.5, C.inkFaint));
+if (!SMALL) out.push(text(W - 16, H - FOOT / 2 + 4, '64 модели · 10 / 20 / 10 / 24 · v2.2', 10, C.inkFaint, { anchor: 'end' }));
 
 // ---------------- тост «что произошло»
 if (!SMALL) {
@@ -317,6 +230,110 @@ if (!SMALL) {
   out.push(rect(W / 2 - tw / 2, toastY, tw, 30, 999, 'rgba(9,11,10,0.92)', `stroke="${C.line}"`));
   out.push(text(W / 2, toastY + 20, t, 11.5, C.ink, { anchor: 'middle', weight: 500 }));
 }
+
+// ---------------- ОКНО «ПОВРЕЖДЕНИЯ» ПО ЦЕНТРУ
+out.push(rect(0, HUD, W, H - HUD, 0, 'rgba(4,6,7,0.58)'));
+
+const zones = [
+  { t: 'Кабина и крыша', n: '0 из 6', items: [['левая дверь кабины', 'сильное', 'dent'], ['правая дверь кабины', 'сильное', 'crack'], ['левая боковина кабины', 'среднее', 'rust'], ['правая боковина кабины', 'среднее', 'scratch'], ['правая задняя стенка кабины', 'сильное', 'dent'], ['крыша кабины', 'сильное', 'rust']] },
+  { t: 'Перед и корма', n: '0 из 2', items: [['правый передний бампер', 'среднее', 'scratch'], ['левый передний бампер', 'лёгкое', 'dent']] },
+  { t: 'Рама, низ и бак', n: '0 из 7', items: [['левый порог кабины', 'лёгкое', 'rust'], ['правая боковина бака', 'лёгкое', 'scratch'], ['седло', 'сильное', 'crack']] },
+];
+const NARROW = W < 900;
+const DW = Math.min(820, W - (NARROW ? 16 : 40));
+const DX = Math.round((W - DW) / 2);
+const pad = 12;
+const inner = pad;
+const iw = DW - pad * 2;
+const headH = NARROW ? 70 : 76;
+const placeH = 32;
+const noteH = NARROW ? 52 : 44;
+const rowH = NARROW ? 38 : 40;
+
+// считаем содержимое в локальных координатах, потом центрируем всю группу
+const ops = [];
+let y = 0;
+
+ops.push(text(inner + 8, y + 33, 'Повреждения', NARROW ? 18 : 20, C.ink, { weight: 700, ls: -0.3 }));
+if (!NARROW) ops.push(text(inner + 8, y + 55, 'тип → место на кузове', 12, C.inkFaint));
+const cntW = textWidth('0 / 15', 11.5, 600) + 20;
+const cntX = DW - 12 - 34 - 8 - cntW;
+ops.push(rect(cntX, y + 20, cntW, 23, 999, C.surface, `stroke="${C.line}"`));
+ops.push(text(cntX + cntW / 2, y + 36, '0 / 15', 11.5, C.inkDim, { anchor: 'middle', weight: 600 }));
+ops.push(iconAt('close', DW - 46 + 9, y + 23, 16, C.inkDim));
+ops.push(`<line x1="${inner}" y1="${y + headH - 9.5}" x2="${inner + iw}" y2="${y + headH - 9.5}" stroke="rgba(255,255,255,0.07)"/>`);
+y += headH;
+
+ops.push(text(inner + 8, y + 17, 'Тип дефекта', 13, C.ink, { weight: 600 }));
+y += 26;
+const kinds = [
+  { t: 'Любое', c: '#ffb27a', on: true }, { t: 'Вмятина', c: '#8f9daa' }, { t: 'Царапина', c: '#d7dee3' },
+  { t: 'Ржавчина', c: '#b8642c' }, { t: 'Трещина', c: '#59697a' },
+];
+const gapK = 8;
+const perRow = NARROW ? 3 : 5;
+const tileH = NARROW ? 50 : 56;
+const cellW = (iw - 16 - gapK * (perRow - 1)) / perRow;
+kinds.forEach((k, i) => {
+  const x = inner + 8 + (i % perRow) * (cellW + gapK);
+  const ty = y + Math.floor(i / perRow) * (tileH + gapK);
+  ops.push(rect(x, ty, cellW, tileH, 11, k.on ? 'rgba(232,180,90,0.16)' : 'rgba(255,255,255,0.03)',
+    `stroke="${k.on ? 'rgba(232,180,90,0.45)' : 'rgba(255,255,255,0.06)'}"`));
+  ops.push(`<circle cx="${x + cellW / 2}" cy="${ty + (NARROW ? 17 : 20)}" r="5.5" fill="${k.c}" stroke="rgba(0,0,0,0.35)"/>`);
+  ops.push(text(x + cellW / 2, ty + (NARROW ? 39 : 44), k.t, NARROW ? 11.5 : 12.5, k.on ? C.accent2 : C.inkDim, { anchor: 'middle', weight: 600 }));
+});
+y += Math.ceil(kinds.length / perRow) * (tileH + gapK) + 5;
+ops.push(`<line x1="${inner}" y1="${y + 0.5}" x2="${inner + iw}" y2="${y + 0.5}" stroke="rgba(255,255,255,0.07)"/>`);
+y += 7;
+
+ops.push(text(inner + 8, y + 18, 'Куда ставить', 13, C.ink, { weight: 600 }));
+let mx = DW - inner - 8;
+for (const label of ['все', 'ничего']) {
+  const w = textWidth(label, 11, 600) + 18;
+  mx -= w;
+  ops.push(rect(mx, y + 3, w, 22, 8, C.surface, `stroke="${C.line}"`));
+  ops.push(text(mx + w / 2, y + 18, label, 11, C.inkDim, { anchor: 'middle', weight: 600 }));
+  mx -= 6;
+}
+y += placeH;
+
+const colW = NARROW ? iw - 16 : (iw - 16 - 18) / 2;
+const drawZone = (z, x0, yy) => {
+  ops.push(text(x0 + 2, yy + 20, '▾', 9, C.inkFaint, { weight: 700 }));
+  ops.push(text(x0 + 18, yy + 20, z.t, 13, C.inkDim, { weight: 600 }));
+  ops.push(text(x0 + colW - 2, yy + 20, z.n, 11, 'rgba(255,122,82,0.85)', { anchor: 'end', weight: 600 }));
+  let ly = yy + 34;
+  for (const [name, sev, kind] of z.items) {
+    const dot = { dent: '#8f9daa', scratch: '#d7dee3', rust: '#b8642c', crack: '#59697a' }[kind];
+    ops.push(`<circle cx="${x0 + 12}" cy="${ly + 18}" r="4.5" fill="${dot}" stroke="rgba(0,0,0,0.3)"/>`);
+    ops.push(text(x0 + 26, ly + 23, name, 14, C.inkDim));
+    ops.push(text(x0 + colW - 2, ly + 23, sev, 11, C.inkFaint, { anchor: 'end' }));
+    ly += rowH;
+  }
+  return ly;
+};
+const colX = [inner + 8, inner + 8 + colW + 18];
+const ends = [0, 0];
+// раскладка: «кабина» и «перед/корма» слева, «рама» справа
+const plan = NARROW ? [[zones[0], zones[1], zones[2]]] : [[zones[0]], [zones[1], zones[2]]];
+plan.forEach((col, ci) => {
+  let ly = y;
+  for (const z of col) { ly = drawZone(z, colX[ci], ly) + 8; }
+  ends[ci] = ly - 8;
+});
+y = Math.max(...ends);
+ops.push(text(inner + 8, y + 22, NARROW ? 'Выбери тип — дефект встанет на свободную деталь.' : 'Выбери тип — дефект встанет на свободную деталь. Или ткни конкретное место.', 12, C.inkFaint));
+y += noteH;
+
+const menuH = y;
+const avail = H - HUD - 20;
+const DY = Math.round(HUD + 10 + Math.max(0, (avail - menuH) / 2));
+
+out.push(`<defs><linearGradient id="pop" x1="0" y1="0" x2="0" y2="1">
+  <stop offset="0" stop-color="#1b1f1e"/><stop offset="1" stop-color="#0e1010"/></linearGradient>
+  <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+    <feDropShadow dx="0" dy="26" stdDeviation="28" flood-color="#000" flood-opacity="0.8"/></filter></defs>`);
+out.push(`<g transform="translate(${DX},${DY})"><g filter="url(#shadow)">${rect(0, 0, DW, menuH, 18, 'url(#pop)', `stroke="rgba(255,255,255,0.1)"`)}</g>${ops.join('')}</g>`);
 
 out.push('</svg>');
 const svg = out.join('\n');
