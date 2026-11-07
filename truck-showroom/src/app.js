@@ -10,6 +10,7 @@ import { icon } from './lib/icons.js';
 import { CATEGORIES, TRUCKS, TRAILERS, CARS, BUILDINGS, findUnit } from './data/units.js';
 import { placePanel, rectOf, viewportRect, overlaps, rect } from './lib/layout.js';
 import { damageReport } from './lib/damage.js';
+import { buildDots, applyDots, dotsCount } from './lib/dots.js';
 import { deviceProfile, installGestures, installShake, haptic } from './lib/device.js';
 
 const $ = (id) => document.getElementById(id);
@@ -43,6 +44,7 @@ const state = {
   damage: false, // true, если у модели добавлено хотя бы одно пятно
   dmgKind: 'any', // выбранный в меню тип повреждения
   lastDmg: null, // индекс последнего добавленного пятна — для текста
+  dots: false, // точечный трафарет: модель собрана из точек
 };
 
 // Пятна добавляются ПОШТУЧНО: у каждой модели свой набор индексов.
@@ -63,11 +65,12 @@ if (saved.cat && CAT_LISTS[saved.cat]) state.cat = saved.cat;
 if (saved.id) state.id = saved.id;
 state.fav = Array.isArray(saved.fav) ? saved.fav : [];
 state.preset = saved.preset || 'studio';
+state.dots = !!saved.dots;
 const colors = saved.colors && typeof saved.colors === 'object' ? saved.colors : {};
 
 function saveState() {
   try {
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ cat: state.cat, id: state.id, fav: state.fav, preset: state.preset, colors }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ cat: state.cat, id: state.id, fav: state.fav, preset: state.preset, colors, dots: state.dots }));
   } catch { /* приватный режим */ }
 }
 
@@ -196,6 +199,59 @@ function clearShown() {
 }
 
 // ---------- повреждение: пятно на кузове, у каждой модели своё
+// ------------------------------------------------------------ точечный трафарет
+// «Точки» рисуют ту же модель, но собранную из точек: сначала по рёбрам
+// (контур-трафарет), потом по поверхности. Считается лениво — при первом
+// включении, дальше облако живёт рядом с моделью и переживает кэш.
+function ensureDots(built) {
+  if (!built?.root) return null;
+  if (!built.dots) {
+    const profile = deviceProfile();
+    built.dots = buildDots(built.root, {
+      target: profile.mobile ? 30000 : 62000,
+      size: profile.mobile ? 0.03 : 0.022,
+    });
+    built.root.add(built.dots);
+  }
+  return built.dots;
+}
+
+function setDots(on, { announce = true, rebuild = false } = {}) {
+  state.dots = !!on;
+  const built = shown;
+  if (built?.root) {
+    if (state.dots && (rebuild || !built.dots)) {
+      if (built.dots) {
+        built.root.remove(built.dots);
+        built.dots.geometry.dispose();
+        built.dots.material.dispose();
+        built.dots = null;
+      }
+      ensureDots(built);
+    }
+    applyDots(built.root, state.dots);
+    if (!state.dots) applyDamage();
+  }
+  const btn = $('dots-btn');
+  if (btn) {
+    btn.classList.toggle('active', state.dots);
+    btn.setAttribute('aria-pressed', state.dots ? 'true' : 'false');
+  }
+  document.body.dataset.dots = state.dots ? 'on' : 'off';
+  saveState();
+  if (announce) {
+    if (!state.dots) live('Обычный вид: поверхности');
+    else live(`Точки: ${dotsCount(shown?.root).toLocaleString('ru-RU')} точек — модель собрана из трафарета`);
+  }
+  haptic(6);
+  return state.dots;
+}
+window.__garageDots = setDots;
+
+function toggleDots() {
+  setDots(!state.dots);
+}
+
 function applyDamage() {
   const list = shown?.damage?.list || [];
   const set = damageSet();
@@ -208,6 +264,8 @@ function applyDamage() {
   if (shown?.damage?.group) shown.damage.group.visible = any;
   for (const id of ['damage-btn', 'damage-btn-2']) $(id)?.classList.toggle('on', any);
   $('damage-btn')?.classList.toggle('active', any);
+  // в режиме точек поверхности скрыты — пятна тоже, иначе они висят в воздухе
+  if (state.dots && shown?.root) applyDots(shown.root, true);
 }
 
 function toggleDamage() {
@@ -271,7 +329,12 @@ function showUnit(unit, { instant = false, view = null } = {}) {
     paintDamage(built, colorHex);
     scene.add(built.root);
     shown = built;
+    if (state.dots) {
+      ensureDots(built);
+      applyDots(built.root, true);
+    }
     applyDamage();
+    setDots(state.dots, { announce: false });
     // счётчик треугольников
     let tris = 0;
     built.root.traverse((o) => {
@@ -904,6 +967,7 @@ function recolor(unit, hex) {
   if (shown) {
     for (const m of shown.paintMats) if (m?.color) m.color.set(hex);
     paintDamage(shown, hex);
+    if (state.dots) setDots(true, { announce: false, rebuild: true });
   }
   renderList();
   renderDetails(unit);
@@ -1315,6 +1379,7 @@ function wireUI() {
   $('damage-btn-2').onclick = toggleDamage;
   $('compare-btn').onclick = toggleCompare;
   $('compare-btn-2').onclick = toggleCompare;
+  $('dots-btn').onclick = toggleDots;
   $('compare-btn-3').onclick = () => { toggleCompare(); closePop(); };
   $('fav-filter').onclick = () => {
     state.favOnly = !state.favOnly;
@@ -1448,6 +1513,7 @@ function wireUI() {
       case 'h': case 'H': case 'р': case 'Р': $('help-modal').classList.toggle('hidden'); break;
       case 'i': case 'I': case 'ш': case 'Ш': toggleInside(); break;
       case 'x': case 'X': case 'ч': case 'Ч': toggleDamage(); break;
+      case 'p': case 'P': case 'з': case 'З': toggleDots(); break;
       case 'Escape': {
         $('help-modal').classList.add('hidden');
         closePop();

@@ -497,6 +497,45 @@ if (camApp) {
     home ? `отклонение ${camApp.camera.position.distanceTo(home).toFixed(2)} м` : 'нет вида');
 }
 
+// ------------------------------------------------------------ точечный трафарет
+// «Точки»: модель собирается из облака точек, поверхности прячутся.
+{
+  const btn = $('dots-btn');
+  check('кнопка «Точки» есть в сцене', !!btn);
+  check('по умолчанию поверхности, а не точки', btn?.getAttribute('aria-pressed') === 'false');
+  btn.click();
+  await wait(700);
+  const cloud = window.__garageDots && D.body.dataset.dots === 'on';
+  check('клик включает точечный трафарет', D.body.dataset.dots === 'on', `body.dataset.dots=${D.body.dataset.dots}`);
+  check('кнопка помечена как включённая', btn.getAttribute('aria-pressed') === 'true' && btn.classList.contains('active'));
+  const liveTxt = $('stage-live').textContent || '';
+  check('подпись сообщает число точек', /Точки:\s*[\d\s\u00a0]+точек/.test(liveTxt), liveTxt);
+  // точки не ломают каталог: модель переключается и режим сохраняется
+  const catTab = tab('cars');
+  catTab?.click();
+  await wait(900);
+  check('режим точек сохраняется при смене модели', D.body.dataset.dots === 'on'
+    && btn.getAttribute('aria-pressed') === 'true');
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'p' }));
+  await wait(500);
+  check('клавиша P выключает точки', D.body.dataset.dots === 'off' && btn.getAttribute('aria-pressed') === 'false');
+  check('после выключения подпись про поверхности', /поверхности/i.test($('stage-live').textContent || ''),
+    $('stage-live').textContent || '');
+  window.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'P' }));
+  await wait(600);
+  check('клавиша P включает точки обратно', D.body.dataset.dots === 'on');
+  // модель ходит по всем категориям с включёнными точками — без ошибок
+  for (const c of ['trucks', 'trailers', 'buildings']) {
+    tab(c)?.click();
+    await wait(650);
+  }
+  check('в режиме точек все категории собираются', D.body.dataset.dots === 'on' && errs.length === 0,
+    errs.slice(0, 2).join(' / '));
+  btn.click();
+  await wait(400);
+  check('повторный клик возвращает поверхности', D.body.dataset.dots === 'off');
+}
+
 check('ошибок в рантайме нет', errs.length === 0, errs.slice(0, 3).join(' / '));
 
 const fails = ok.filter((l) => l.startsWith('FAIL'));
