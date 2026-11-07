@@ -12,6 +12,7 @@ import { PNG } from 'pngjs';
 import { createMaterials } from '../src/lib/kit.js';
 import { buildUnit } from '../src/models/index.js';
 import { findUnit } from '../src/data/units.js';
+import { buildDots } from '../src/lib/dots.js';
 
 const args = Object.fromEntries(
   process.argv.slice(2).reduce((acc, cur, i, arr) => {
@@ -248,18 +249,77 @@ function rasterize(pa, pb, pc, color, opacity) {
 // сначала непрозрачные, потом прозрачные
 const opaque = tris.filter((t) => t.opacity >= 0.98);
 const clear = tris.filter((t) => t.opacity < 0.98);
-for (const t of opaque) fillTri(t);
+const dotsMode = args.dots === 'true';
+if (!dotsMode) for (const t of opaque) fillTri(t);
 // полупрозрачные: от дальних к ближним
 clear.sort((a, b) => {
   const da = a.a.distanceToSquared(camera.position);
   const db = b.a.distanceToSquared(camera.position);
   return db - da;
 });
-for (const t of clear) {
+for (const t of (dotsMode ? [] : clear)) {
   // для прозрачных не пишем в z-буфер
   const save = zbuf;
   fillTri(t);
   zbuf.set(save);
+}
+
+// ---------------------------------------------------------- режим «точки»
+// --dots true: тот же кадр, но модель собрана из точек (трафарет).
+if (args.dots === 'true') {
+  const cloud = buildDots(root, { target: Number(args.dotstarget || 60000) });
+  const pAttr = cloud.geometry.attributes.position;
+  const cAttr = cloud.geometry.attributes.color;
+  const nAttr = cloud.geometry.attributes.normal;
+  const P = new THREE.Vector3();
+  const N = new THREE.Vector3();
+  const focal = (H / 2) / Math.tan(THREE.MathUtils.degToRad((view.fov || 40) / 2));
+  const size = Number(args.dotsize || 0.017);
+  const drawDisc = (cx, cy, r, col, z) => {
+    const x0 = Math.max(0, Math.floor(cx - r));
+    const x1 = Math.min(W - 1, Math.ceil(cx + r));
+    const y0 = Math.max(0, Math.floor(cy - r));
+    const y1 = Math.min(H - 1, Math.ceil(cy + r));
+    const r2 = r * r;
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const dx = x + 0.5 - cx;
+        const dy = y + 0.5 - cy;
+        const d2 = dx * dx + dy * dy;
+        if (d2 > r2) continue;
+        const i = y * W + x;
+        if (z > zbuf[i]) continue;
+        zbuf[i] = z;
+        // мягкий край точки
+        const k = 1 - Math.min(1, Math.sqrt(d2) / r) * 0.35;
+        const o = i * 3;
+        buf[o] = col.r * k; buf[o + 1] = col.g * k; buf[o + 2] = col.b * k;
+      }
+    }
+  };
+  const colTmp = new THREE.Color();
+  let drawn = 0;
+  for (let i = 0; i < pAttr.count; i++) {
+    P.set(pAttr.getX(i), pAttr.getY(i), pAttr.getZ(i));
+    const vz = P.clone().applyMatrix4(viewMatrix);
+    if (vz.z > -NEAR) continue;
+    const pv = projectViewPoint(vz, new THREE.Vector3());
+    if (pv.z > 1 || pv.z < -1) continue;
+    const sx = ((pv.x + 1) / 2) * W;
+    const sy = ((1 - pv.y) / 2) * H;
+    const r = Math.min(2.2, Math.max(0.7, (size * focal) / -vz.z));
+    N.set(nAttr.getX(i), nAttr.getY(i), nAttr.getZ(i));
+    const nd = N.dot(camDir) < 0 ? N.clone().negate() : N;
+    const light = 0.3 + 0.62 * Math.max(0, nd.dot(L1)) + 0.16 * Math.max(0, nd.dot(L2));
+    colTmp.setRGB(
+      Math.min(1, cAttr.getX(i) * light),
+      Math.min(1, cAttr.getY(i) * light),
+      Math.min(1, cAttr.getZ(i) * light),
+    );
+    drawDisc(sx, sy, r, colTmp, -vz.z);
+    drawn += 1;
+  }
+  console.log(`dots: ${drawn} / ${pAttr.count}`);
 }
 
 // ---------------------------------------------------------- сохранение

@@ -12,6 +12,7 @@ const PATHS = {
   // меню верхней панели
   model: '<path d="M12 3.2 20.4 7.6 12 12 3.6 7.6Z"/><path d="M3.6 12 12 16.4 20.4 12"/><path d="M3.6 16.4 12 20.8 20.4 16.4"/>',
   view: '<rect x="2.6" y="6.4" width="18.8" height="13" rx="3"/><circle cx="12" cy="12.9" r="3.4"/><path d="M8.4 6.4 9.9 3.8h4.2l1.5 2.6"/>',
+  dots: '<circle cx="5" cy="5" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="5" r="1.35" fill="currentColor" stroke="none"/><circle cx="19" cy="5" r="1.35" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.35" fill="currentColor" stroke="none"/><circle cx="5" cy="19" r="1.35" fill="currentColor" stroke="none"/><circle cx="12" cy="19" r="1.35" fill="currentColor" stroke="none"/><circle cx="19" cy="19" r="1.35" fill="currentColor" stroke="none"/>',
   damage: '<path d="M12 3.4 13.9 9.4 20 11.4 13.9 13.5 12 19.6 10.1 13.5 4 11.4 10.1 9.4Z"/>',
   light: '<circle cx="12" cy="12" r="3.9"/><path d="M12 2.6v2.2M12 19.2v2.2M2.6 12h2.2M19.2 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/>',
   more: '<circle cx="5.2" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="18.8" cy="12" r="1.5" fill="currentColor" stroke="none"/>',
