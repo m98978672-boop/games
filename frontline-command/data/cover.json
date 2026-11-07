@@ -1,0 +1,69 @@
+{
+  "version": 1,
+  "note": "Высота укрытий и стойки. Класс высоты: 1 низкая (мешки, забор), 2 средняя (дерево, окоп), 3 высокая (кирпич, бетон). Числа — доля укрытия 0..1, которая идёт в coverValue юнита.",
+  "heightClasses": {
+    "1": {
+      "name": "низкая",
+      "stand": 0.35,
+      "crouch": 0.7,
+      "prone": 1.0,
+      "shootOver": true
+    },
+    "2": {
+      "name": "средняя",
+      "stand": 0.8,
+      "crouch": 0.95,
+      "prone": 1.0,
+      "shootOver": false
+    },
+    "3": {
+      "name": "высокая",
+      "stand": 1.0,
+      "crouch": 1.0,
+      "prone": 1.0,
+      "shootOver": false
+    }
+  },
+  "stances": {
+    "stand": {
+      "name": "стоя",
+      "speedMult": 1.0,
+      "accuracyMult": 1.0
+    },
+    "crouch": {
+      "name": "присев",
+      "speedMult": 0.6,
+      "accuracyMult": 1.1
+    },
+    "prone": {
+      "name": "лёжа",
+      "speedMult": 0.35,
+      "accuracyMult": 1.25
+    }
+  },
+  "points": {
+    "offset": 14,
+    "step": 28,
+    "cornerOffset": 12,
+    "maxPerBuilding": 64,
+    "garrisonOffset": 10
+  },
+  "directional": {
+    "rays": 3,
+    "raySpreadPx": 10,
+    "cacheSeconds": 0.35,
+    "flankPenalty": 0.6,
+    "windowVisionFactor": 0.5
+  },
+  "legacy": {
+    "low": -0.3,
+    "high": -0.6,
+    "trench": -0.5,
+    "note": "Старые значения cover.json из ТЗ; в нашей игре укрытие выражается coverValue 0..1, поэтому они пересчитаны в классы высоты."
+  },
+  "garrison": {
+    "enabled": true,
+    "radius": 260,
+    "share": 0.6
+  }
+}

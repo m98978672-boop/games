@@ -1,0 +1,309 @@
+{
+  "version": 1,
+  "note": "Материалы стен. Пробиваемость — вероятность (0..1) пройти стену пулей/снарядом; damageLoss — доля урона, которая доходит до цели после пробития; structural — урон по стене за попадание (множитель к урону оружия).",
+  "materials": {
+    "wood": {
+      "name": "Дерево",
+      "hpPerTile": 140,
+      "thickness": 10,
+      "heightClass": 2,
+      "penetration": {
+        "pistol": 0.55,
+        "rifle": 0.45,
+        "smg": 0.5,
+        "mg": 0.45,
+        "sniper": 0.9,
+        "tank_cannon": 1
+      },
+      "damageLoss": {
+        "pistol": 0.6,
+        "rifle": 0.55,
+        "smg": 0.6,
+        "mg": 0.55,
+        "sniper": 0.5,
+        "tank_cannon": 1
+      },
+      "structural": {
+        "bullet": 0.4,
+        "shell": 2.5
+      },
+      "sound": "hit_wood",
+      "fx": "impact_wood",
+      "color": "#8a6a42",
+      "edge": "#5b4529",
+      "rubble": "#6d5433"
+    },
+    "brick": {
+      "name": "Кирпич",
+      "hpPerTile": 320,
+      "thickness": 12,
+      "heightClass": 3,
+      "penetration": {
+        "pistol": 0.05,
+        "rifle": 0.08,
+        "smg": 0.06,
+        "mg": 0.08,
+        "sniper": 0.5,
+        "tank_cannon": 1
+      },
+      "damageLoss": {
+        "pistol": 0.7,
+        "rifle": 0.65,
+        "smg": 0.7,
+        "mg": 0.65,
+        "sniper": 0.5,
+        "tank_cannon": 1
+      },
+      "structural": {
+        "bullet": 0.25,
+        "shell": 2.0
+      },
+      "sound": "hit_brick",
+      "fx": "impact_brick",
+      "color": "#9a5a45",
+      "edge": "#6a3a2c",
+      "rubble": "#7c4636"
+    },
+    "concrete": {
+      "name": "Бетон",
+      "hpPerTile": 600,
+      "thickness": 16,
+      "heightClass": 3,
+      "penetration": {
+        "pistol": 0,
+        "rifle": 0,
+        "smg": 0,
+        "mg": 0,
+        "sniper": 0.12,
+        "tank_cannon": 1
+      },
+      "damageLoss": {
+        "pistol": 0.8,
+        "rifle": 0.75,
+        "smg": 0.8,
+        "mg": 0.75,
+        "sniper": 0.6,
+        "tank_cannon": 1
+      },
+      "structural": {
+        "bullet": 0.12,
+        "shell": 1.6
+      },
+      "sound": "hit_concrete",
+      "fx": "impact_concrete",
+      "color": "#8d9096",
+      "edge": "#5f6266",
+      "rubble": "#71747a"
+    },
+    "sandbag": {
+      "name": "Мешки с песком",
+      "hpPerTile": 200,
+      "thickness": 14,
+      "heightClass": 1,
+      "penetration": {
+        "pistol": 0,
+        "rifle": 0,
+        "smg": 0,
+        "mg": 0,
+        "sniper": 0.1,
+        "tank_cannon": 1
+      },
+      "damageLoss": {
+        "pistol": 0.9,
+        "rifle": 0.9,
+        "smg": 0.9,
+        "mg": 0.9,
+        "sniper": 0.8,
+        "tank_cannon": 1
+      },
+      "structural": {
+        "bullet": 0.3,
+        "shell": 1.8
+      },
+      "sound": "hit_sand",
+      "fx": "impact_sand",
+      "color": "#a89163",
+      "edge": "#77653f",
+      "rubble": "#8d7a52"
+    },
+    "metal": {
+      "name": "Металл",
+      "hpPerTile": 260,
+      "thickness": 10,
+      "heightClass": 3,
+      "penetration": {
+        "pistol": 0.1,
+        "rifle": 0.12,
+        "smg": 0.1,
+        "mg": 0.12,
+        "sniper": 0.55,
+        "tank_cannon": 1
+      },
+      "damageLoss": {
+        "pistol": 0.75,
+        "rifle": 0.7,
+        "smg": 0.75,
+        "mg": 0.7,
+        "sniper": 0.55,
+        "tank_cannon": 1
+      },
+      "structural": {
+        "bullet": 0.2,
+        "shell": 2.0
+      },
+      "sound": "hit_metal",
+      "fx": "impact_metal",
+      "color": "#7c8b93",
+      "edge": "#4d5a61",
+      "rubble": "#5f6b72"
+    },
+    "ruins": {
+      "name": "Обломки",
+      "hpPerTile": 120,
+      "thickness": 8,
+      "heightClass": 1,
+      "penetration": {
+        "pistol": 0.5,
+        "rifle": 0.45,
+        "smg": 0.5,
+        "mg": 0.45,
+        "sniper": 0.7,
+        "tank_cannon": 1
+      },
+      "damageLoss": {
+        "pistol": 0.6,
+        "rifle": 0.6,
+        "smg": 0.6,
+        "mg": 0.6,
+        "sniper": 0.5,
+        "tank_cannon": 1
+      },
+      "structural": {
+        "bullet": 0.5,
+        "shell": 2.5
+      },
+      "sound": "hit_brick",
+      "fx": "impact_brick",
+      "color": "#6f6a62",
+      "edge": "#4d4944",
+      "rubble": "#5c5851"
+    },
+    "earth": {
+      "name": "Земля",
+      "hpPerTile": 180,
+      "thickness": 12,
+      "heightClass": 1,
+      "penetration": {
+        "pistol": 0,
+        "rifle": 0,
+        "smg": 0,
+        "mg": 0,
+        "sniper": 0.15,
+        "tank_cannon": 1
+      },
+      "damageLoss": {
+        "pistol": 0.95,
+        "rifle": 0.95,
+        "smg": 0.95,
+        "mg": 0.95,
+        "sniper": 0.85,
+        "tank_cannon": 1
+      },
+      "structural": {
+        "bullet": 0.25,
+        "shell": 2.2
+      },
+      "sound": "hit_sand",
+      "fx": "impact_sand",
+      "color": "#7b6647",
+      "edge": "#564833",
+      "rubble": "#6a583c"
+    }
+  },
+  "openings": {
+    "solid": {
+      "name": "Стена",
+      "move": false,
+      "bullets": false,
+      "vision": false,
+      "shoot": false
+    },
+    "door": {
+      "name": "Дверной проём",
+      "move": true,
+      "bullets": true,
+      "vision": true,
+      "shoot": true,
+      "width": 64
+    },
+    "door_closed": {
+      "name": "Закрытая дверь",
+      "move": false,
+      "bullets": false,
+      "vision": false,
+      "shoot": false,
+      "width": 64,
+      "breakHp": 90
+    },
+    "gate": {
+      "name": "Ворота",
+      "move": true,
+      "bullets": true,
+      "vision": true,
+      "shoot": true,
+      "width": 96,
+      "vehicle": true
+    },
+    "window": {
+      "name": "Окно",
+      "move": false,
+      "bullets": true,
+      "vision": "partial",
+      "visionFactor": 0.5,
+      "shoot": true,
+      "arc": 1.75,
+      "width": 32
+    },
+    "embrasure": {
+      "name": "Бойница",
+      "move": false,
+      "bullets": "rare",
+      "penetrationFactor": 0.15,
+      "vision": "partial",
+      "visionFactor": 0.7,
+      "shoot": true,
+      "arc": 0.5,
+      "width": 24
+    },
+    "breach": {
+      "name": "Пролом",
+      "move": true,
+      "bullets": true,
+      "vision": true,
+      "shoot": true,
+      "width": 40
+    }
+  },
+  "stages": {
+    "intact": {
+      "threshold": 0.6,
+      "coverMult": 1.0
+    },
+    "damaged": {
+      "threshold": 0.25,
+      "coverMult": 0.75,
+      "penetrationBonus": 0.15
+    },
+    "critical": {
+      "threshold": 0.01,
+      "coverMult": 0.5,
+      "penetrationBonus": 0.3
+    },
+    "breach": {
+      "threshold": 0,
+      "coverMult": 0,
+      "penetrationBonus": 1
+    }
+  },
+  "doorAnimSeconds": 0.35
+}

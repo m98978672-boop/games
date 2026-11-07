@@ -1,0 +1,97 @@
+{
+ "version": 1,
+ "generated": "2026-11-07T21:24:26.000Z",
+ "types": [
+  {
+   "type": "sandbags",
+   "mode": "cover-line",
+   "material": "sandbag",
+   "segments": 1,
+   "openings": 0,
+   "coverPoints": 4,
+   "slots": 0,
+   "errors": []
+  },
+  {
+   "type": "mg_nest",
+   "mode": "cover-line",
+   "material": "sandbag",
+   "segments": 1,
+   "openings": 0,
+   "coverPoints": 4,
+   "slots": 0,
+   "errors": []
+  },
+  {
+   "type": "bunker",
+   "mode": "ring",
+   "material": "concrete",
+   "segments": 7,
+   "openings": 3,
+   "coverPoints": 36,
+   "slots": 2,
+   "errors": []
+  },
+  {
+   "type": "watchtower",
+   "mode": "cover-line",
+   "material": "wood",
+   "segments": 1,
+   "openings": 0,
+   "coverPoints": 4,
+   "slots": 0,
+   "errors": []
+  },
+  {
+   "type": "depot",
+   "mode": "ring",
+   "material": "wood",
+   "segments": 7,
+   "openings": 3,
+   "coverPoints": 45,
+   "slots": 1,
+   "errors": []
+  },
+  {
+   "type": "factory",
+   "mode": "ring",
+   "material": "metal",
+   "segments": 8,
+   "openings": 4,
+   "coverPoints": 46,
+   "slots": 2,
+   "errors": []
+  },
+  {
+   "type": "farm",
+   "mode": "ring",
+   "material": "wood",
+   "segments": 7,
+   "openings": 3,
+   "coverPoints": 38,
+   "slots": 2,
+   "errors": []
+  },
+  {
+   "type": "hq",
+   "mode": "ring",
+   "material": "concrete",
+   "segments": 12,
+   "openings": 8,
+   "coverPoints": 74,
+   "slots": 6,
+   "errors": []
+  },
+  {
+   "type": "city",
+   "mode": "ring",
+   "material": "brick",
+   "segments": 10,
+   "openings": 6,
+   "coverPoints": 60,
+   "slots": 4,
+   "errors": []
+  }
+ ],
+ "notes": "Сгенерировано tools/gen-walls.mjs из data/buildings.json (блок walls)."
+}

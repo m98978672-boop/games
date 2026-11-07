@@ -67,6 +67,7 @@ export class Renderer {
     this.chunkCache = new Map();
     this.showGrid = false;
     this.showDebug = false;
+    this.showWallsDebug = false;
     this.fogEnabled = true;
     this.visCols = Math.ceil(game.world.W / 64);
     this.visRows = Math.ceil(game.world.H / 64);
@@ -207,6 +208,7 @@ export class Renderer {
 
     this.drawTerrain();
     this.drawBuildings();
+    this.drawWalls();
     this.drawBlueprints();
     this.drawDecals();
     this.drawPoints();
@@ -246,6 +248,166 @@ export class Renderer {
         ctx.fillRect(p.x - w / 2, p.y + s / 2 + 2, w, 3);
         ctx.fillStyle = b.hp / (def.hp || 100) > 0.5 ? '#9bbf6a' : '#d9b45a';
         ctx.fillRect(p.x - w / 2, p.y + s / 2 + 2, w * (b.hp / (def.hp || 100)), 3);
+      }
+    }
+  }
+
+  // Стены зданий v2: сегменты по материалу, стадии урона (трещины), проломы,
+  // проёмы (двери с анимацией створки, окна, бойницы, ворота).
+  drawWalls() {
+    const walls = this.game.walls;
+    if (!walls || !walls.enabled()) return;
+    const ctx = this.ctx;
+    const z = this.camera.zoom;
+    const halfW = this.viewW / 2 / z, halfH = this.viewH / 2 / z;
+    const cx = this.camera.x, cy = this.camera.y;
+    const mats = walls.materials || {};
+    for (const [bid, st] of walls.instances) {
+      const b = this.game.world.buildings.find((bb) => bb.id === bid);
+      if (!b || b.dead || !b.built) continue;
+      if (Math.abs(b.x - cx) > halfW + 260 || Math.abs(b.y - cy) > halfH + 260) continue;
+      const visible = this.isVisible(b.x, b.y);
+      ctx.globalAlpha = visible ? 1 : 0.3;
+      const tb = Math.max(1.5, st.outline.thickness * z);
+      for (const seg of st.outline.segments) {
+        const state = st.segs.find((x) => x.id === seg.id);
+        if (state && state.breached) {
+          // пролом: обломки по краям, проход открыт
+          const m = mats[seg.material] || {};
+          ctx.fillStyle = m.rubble || '#6f6a62';
+          const p1 = this.worldToScreen(b.x + seg.points[0][0], b.y + seg.points[0][1]);
+          const p2 = this.worldToScreen(b.x + seg.points[1][0], b.y + seg.points[1][1]);
+          for (const p of [p1, p2]) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, tb * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          continue;
+        }
+        const m = mats[seg.material] || {};
+        const stage = state ? walls.stageOf(state) : 'intact';
+        const alpha = stage === 'critical' ? 0.55 : stage === 'damaged' ? 0.8 : 1;
+        ctx.globalAlpha = (visible ? 1 : 0.3) * alpha;
+        ctx.strokeStyle = m.color || '#8d9096';
+        ctx.lineWidth = tb;
+        const a = this.worldToScreen(b.x + seg.points[0][0], b.y + seg.points[0][1]);
+        const c = this.worldToScreen(b.x + seg.points[1][0], b.y + seg.points[1][1]);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(c.x, c.y);
+        ctx.stroke();
+        // тонкая тёмная кромка — объём
+        ctx.strokeStyle = m.edge || '#5f6266';
+        ctx.lineWidth = Math.max(1, tb * 0.22);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(c.x, c.y);
+        ctx.stroke();
+        // трещины на повреждённом и критическом сегменте
+        if (stage !== 'intact' && z > 0.45) {
+          const n = stage === 'critical' ? 4 : 2;
+          ctx.strokeStyle = '#1b1a18';
+          ctx.lineWidth = Math.max(1, tb * 0.14);
+          for (let i = 1; i <= n; i++) {
+            const t = i / (n + 1);
+            const mx = a.x + (c.x - a.x) * t, my = a.y + (c.y - a.y) * t;
+            const nx = -(c.y - a.y), ny = c.x - a.x;
+            const len = Math.hypot(nx, ny) || 1;
+            const d = tb * (0.6 + 0.25 * i);
+            ctx.beginPath();
+            ctx.moveTo(mx, my);
+            ctx.lineTo(mx + (nx / len) * d, my + (ny / len) * d);
+            ctx.stroke();
+          }
+        }
+      }
+      // проёмы
+      for (const o of st.outline.openings || []) {
+        const p1 = this.worldToScreen(b.x + o.p1[0], b.y + o.p1[1]);
+        const p2 = this.worldToScreen(b.x + o.p2[0], b.y + o.p2[1]);
+        const door = st.doors[o.id];
+        if (o.type === 'door' || o.type === 'gate') {
+          const anim = door?.anim ?? 1;
+          // створка «уезжает» в сторону при открытии
+          const t = 1 - anim;
+          ctx.strokeStyle = door?.state === 'open' ? '#7c6a4a' : '#5b4529';
+          ctx.lineWidth = tb * 0.5;
+          if (t > 0.02) {
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p1.x + (p2.x - p1.x) * t, p1.y + (p2.y - p1.y) * t);
+            ctx.stroke();
+          }
+          // косяки
+          ctx.strokeStyle = '#3c3a35';
+          ctx.lineWidth = Math.max(1.5, tb * 0.3);
+          for (const p of [p1, p2]) {
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, tb * 0.5, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+        } else if (o.type === 'window' || o.type === 'embrasure') {
+          ctx.strokeStyle = o.type === 'window' ? '#c9d3da' : '#9aa4ab';
+          ctx.lineWidth = Math.max(1, tb * (o.type === 'window' ? 0.3 : 0.45));
+          ctx.setLineDash(o.type === 'embrasure' ? [3 * z, 3 * z] : []);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        } else if (o.type === 'breach') {
+          ctx.strokeStyle = '#6f6a62';
+          ctx.lineWidth = Math.max(1, tb * 0.2);
+          ctx.setLineDash([2 * z, 4 * z]);
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+    if (this.showWallsDebug) this.drawWallsDebug();
+  }
+
+  // Отладка стен: точки укрытий, слоты гарнизона, id/HP сегментов.
+  drawWallsDebug() {
+    const walls = this.game.walls;
+    if (!walls) return;
+    const ctx = this.ctx;
+    const z = this.camera.zoom;
+    for (const [bid, st] of walls.instances) {
+      const b = this.game.world.buildings.find((bb) => bb.id === bid);
+      if (!b || b.dead || !b.built) continue;
+      for (const p of st.outline.cover_points || []) {
+        const q = this.worldToScreen(b.x + p.x, b.y + p.y);
+        ctx.fillStyle = p.kind === 'wall' ? '#d9b45a' : '#6ad9c0';
+        ctx.fillRect(q.x - 1.5, q.y - 1.5, 3, 3);
+        if (z > 0.7) {
+          const n = this.worldToScreen(b.x + p.x + p.nx * 10, b.y + p.y + p.ny * 10);
+          ctx.strokeStyle = '#d9b45a88';
+          ctx.beginPath();
+          ctx.moveTo(q.x, q.y);
+          ctx.lineTo(n.x, n.y);
+          ctx.stroke();
+        }
+      }
+      for (const g of st.outline.garrison_slots || []) {
+        const q = this.worldToScreen(b.x + g.x, b.y + g.y);
+        ctx.strokeStyle = '#b58ad9';
+        ctx.beginPath();
+        ctx.arc(q.x, q.y, 4 * Math.max(0.4, z), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (z > 0.8) {
+        ctx.fillStyle = '#d7dcd2';
+        ctx.font = '10px monospace';
+        for (const seg of st.outline.segments) {
+          const state = st.segs.find((x) => x.id === seg.id);
+          const mx = this.worldToScreen(b.x + (seg.points[0][0] + seg.points[1][0]) / 2, b.y + (seg.points[0][1] + seg.points[1][1]) / 2);
+          ctx.fillText(`${seg.id} ${Math.round(state ? state.hp : 0)}`, mx.x - 14, mx.y - 6);
+        }
       }
     }
   }
@@ -554,8 +716,27 @@ export class Renderer {
         ctx.globalAlpha = (1 - k) * 0.6;
         if (img) ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
         ctx.globalAlpha = 1;
+      } else if (typeof f.type === 'string' && f.type.startsWith('impact')) {
+        // попадание в стену: короткая пыль/искры (спрайт дыма, цвет материала рисуем точкой)
+        const img = this.bank.get('fx/smoke');
+        const s = (10 + 16 * k) * z;
+        ctx.globalAlpha = (1 - k) * 0.55;
+        if (img) ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
+        ctx.globalAlpha = (1 - k) * 0.7;
+        ctx.fillStyle = this.wallImpactColor(f.type);
+        ctx.fillRect(p.x - 1.5 * z, p.y - 1.5 * z, 3 * z, 3 * z);
+        ctx.globalAlpha = 1;
       }
     }
+  }
+
+  // Цвет искры по материалу стены (имя эффекта из wall_materials.json)
+  wallImpactColor(fx) {
+    const m = this.game.walls?.materials || {};
+    for (const key of Object.keys(m)) {
+      if (m[key].fx === fx) return m[key].color || '#cfc7b0';
+    }
+    return '#cfc7b0';
   }
 
   drawSectors() {

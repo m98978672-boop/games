@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "note": "Бюджет локального перестроения навигации при разрушении стен. Полный ребейк при каждом проломе слишком дорог.",
+  "chunk": 512,
+  "maxChunksPerFrame": 2,
+  "budgetMs": 1.5,
+  "doorAutoCloseSeconds": 12,
+  "doorOpenRadius": 48,
+  "repairMaterialsPerHp": 0.08,
+  "arriveRadius": {
+    "legacy": 24,
+    "walls": 34
+  },
+  "antiStuck": {
+    "stuckThreshold": 1.5,
+    "stuckAfterDetour": 0.8,
+    "detourSeconds": 1.6,
+    "detourTries": 12,
+    "detourMin": 48,
+    "detourMax": 110,
+    "pushAngles": 16,
+    "pushRadiusMin": 12,
+    "pushRadiusMax": 64,
+    "pushStepPerSecond": 8,
+    "pushSpeedMult": 1.5,
+    "pushSpeedFloor": 30,
+    "pushRadiusStep": 12
+  }
+}

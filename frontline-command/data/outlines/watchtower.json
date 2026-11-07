@@ -1,0 +1,82 @@
+{
+ "size": 44,
+ "w": 44,
+ "h": 44,
+ "thickness": 10,
+ "segments": [
+  {
+   "id": "s0",
+   "side": "south",
+   "index": 0,
+   "points": [
+    [
+     -22,
+     0
+    ],
+    [
+     22,
+     0
+    ]
+   ],
+   "length": 44,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": false,
+   "blocksBullets": true,
+   "blocksVision": false,
+   "coverSides": "both",
+   "hp": 193
+  }
+ ],
+ "openings": [],
+ "type": "watchtower",
+ "name": "Наблюдательная вышка",
+ "mode": "cover-line",
+ "spec": {
+  "mode": "cover-line",
+  "material": "wood",
+  "wallSize": 44,
+  "heightClass": 2,
+  "blocksMove": false
+ },
+ "cover_points": [
+  {
+   "x": -22,
+   "y": 14,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -22,
+   "y": -14,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 22,
+   "y": 14,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 22,
+   "y": -14,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  }
+ ],
+ "garrison_slots": []
+}

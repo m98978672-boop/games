@@ -1,0 +1,701 @@
+{
+ "size": 150,
+ "w": 150,
+ "h": 150,
+ "thickness": 10,
+ "segments": [
+  {
+   "id": "s0",
+   "side": "north",
+   "index": 0,
+   "points": [
+    [
+     -75,
+     -75
+    ],
+    [
+     75,
+     -75
+    ]
+   ],
+   "length": 150,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 656
+  },
+  {
+   "id": "s1",
+   "side": "east",
+   "index": 0,
+   "points": [
+    [
+     75,
+     -75
+    ],
+    [
+     75,
+     -32
+    ]
+   ],
+   "length": 43,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 188
+  },
+  {
+   "id": "s2",
+   "side": "east",
+   "index": 1,
+   "points": [
+    [
+     75,
+     32
+    ],
+    [
+     75,
+     75
+    ]
+   ],
+   "length": 43,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 188
+  },
+  {
+   "id": "s3",
+   "side": "south",
+   "index": 0,
+   "points": [
+    [
+     75,
+     75
+    ],
+    [
+     48,
+     75
+    ]
+   ],
+   "length": 27,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 118
+  },
+  {
+   "id": "s4",
+   "side": "south",
+   "index": 1,
+   "points": [
+    [
+     -48,
+     75
+    ],
+    [
+     -75,
+     75
+    ]
+   ],
+   "length": 27,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 118
+  },
+  {
+   "id": "s5",
+   "side": "west",
+   "index": 0,
+   "points": [
+    [
+     -75,
+     75
+    ],
+    [
+     -75,
+     16
+    ]
+   ],
+   "length": 59,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 258
+  },
+  {
+   "id": "s6",
+   "side": "west",
+   "index": 1,
+   "points": [
+    [
+     -75,
+     -16
+    ],
+    [
+     -75,
+     -75
+    ]
+   ],
+   "length": 59,
+   "thickness": 10,
+   "material": "wood",
+   "heightClass": 2,
+   "blocksMove": true,
+   "blocksBullets": true,
+   "blocksVision": true,
+   "coverSides": "both",
+   "hp": 258
+  }
+ ],
+ "openings": [
+  {
+   "id": "o0",
+   "side": "east",
+   "type": "door",
+   "width": 64,
+   "p1": [
+    75,
+    -32
+   ],
+   "p2": [
+    75,
+    32
+   ],
+   "cx": 75,
+   "cy": 0,
+   "nx": 1,
+   "ny": 0,
+   "move": true,
+   "bullets": true,
+   "vision": true,
+   "visionFactor": 1,
+   "shoot": true,
+   "arc": null,
+   "state": "open",
+   "breakHp": 70
+  },
+  {
+   "id": "o1",
+   "side": "south",
+   "type": "gate",
+   "width": 96,
+   "p1": [
+    48,
+    75
+   ],
+   "p2": [
+    -48,
+    75
+   ],
+   "cx": 0,
+   "cy": 75,
+   "nx": 0,
+   "ny": 1,
+   "move": true,
+   "bullets": true,
+   "vision": true,
+   "visionFactor": 1,
+   "shoot": true,
+   "arc": null,
+   "state": "open",
+   "breakHp": 70
+  },
+  {
+   "id": "o2",
+   "side": "west",
+   "type": "window",
+   "width": 32,
+   "p1": [
+    -75,
+    16
+   ],
+   "p2": [
+    -75,
+    -16
+   ],
+   "cx": -75,
+   "cy": 0,
+   "nx": -1,
+   "ny": 0,
+   "move": false,
+   "bullets": true,
+   "vision": "partial",
+   "visionFactor": 0.5,
+   "shoot": true,
+   "arc": 1.75,
+   "state": "fixed",
+   "breakHp": 70
+  }
+ ],
+ "type": "depot",
+ "name": "Склад",
+ "mode": "ring",
+ "spec": {
+  "mode": "ring",
+  "material": "wood",
+  "wallSize": 150,
+  "heightClass": 2,
+  "blocksMove": true,
+  "openings": [
+   {
+    "type": "gate",
+    "side": "south",
+    "t": 0.5
+   },
+   {
+    "type": "door",
+    "side": "east",
+    "t": 0.5
+   },
+   {
+    "type": "window",
+    "side": "west",
+    "t": 0.5
+   }
+  ]
+ },
+ "cover_points": [
+  {
+   "x": -75,
+   "y": -61,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -75,
+   "y": -89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -45,
+   "y": -61,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -45,
+   "y": -89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -15,
+   "y": -61,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": -15,
+   "y": -89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 15,
+   "y": -61,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 15,
+   "y": -89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 45,
+   "y": -61,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 45,
+   "y": -89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 75,
+   "y": -61,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 75,
+   "y": -89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s0",
+   "kind": "wall"
+  },
+  {
+   "x": 61,
+   "y": -75,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 89,
+   "y": -75,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 61,
+   "y": -32,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 89,
+   "y": -32,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s1",
+   "kind": "wall"
+  },
+  {
+   "x": 61,
+   "y": 32,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 89,
+   "y": 32,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 61,
+   "y": 75,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 89,
+   "y": 75,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s2",
+   "kind": "wall"
+  },
+  {
+   "x": 75,
+   "y": 61,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": 75,
+   "y": 89,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": 48,
+   "y": 61,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": 48,
+   "y": 89,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s3",
+   "kind": "wall"
+  },
+  {
+   "x": -48,
+   "y": 61,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": -48,
+   "y": 89,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": -75,
+   "y": 61,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": -75,
+   "y": 89,
+   "nx": 0,
+   "ny": 1,
+   "heightClass": 2,
+   "segId": "s4",
+   "kind": "wall"
+  },
+  {
+   "x": -61,
+   "y": 75,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": -89,
+   "y": 75,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": -61,
+   "y": 45.5,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": -89,
+   "y": 45.5,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": -61,
+   "y": 16,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": -89,
+   "y": 16,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s5",
+   "kind": "wall"
+  },
+  {
+   "x": -61,
+   "y": -16,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -89,
+   "y": -16,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -61,
+   "y": -45.5,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -89,
+   "y": -45.5,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -61,
+   "y": -75,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -89,
+   "y": -75,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": "s6",
+   "kind": "wall"
+  },
+  {
+   "x": -65,
+   "y": 0,
+   "nx": 1,
+   "ny": 0,
+   "heightClass": 3,
+   "segId": null,
+   "kind": "window",
+   "openingId": "o2"
+  },
+  {
+   "x": 89,
+   "y": 46,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  },
+  {
+   "x": 89,
+   "y": -46,
+   "nx": -1,
+   "ny": 0,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  },
+  {
+   "x": -62,
+   "y": 89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  },
+  {
+   "x": 62,
+   "y": 89,
+   "nx": 0,
+   "ny": -1,
+   "heightClass": 2,
+   "segId": null,
+   "kind": "doorway"
+  }
+ ],
+ "garrison_slots": [
+  {
+   "x": -65,
+   "y": 0,
+   "angle": 3.14,
+   "arc": 1.75,
+   "openingId": "o2",
+   "type": "window"
+  }
+ ]
+}

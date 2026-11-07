@@ -197,7 +197,16 @@ export function thinkSoldier(game, u) {
       state(u, 'move', 'выдвигается');
       u.activity = 'advance';
     }
-    const slot = squadSlot(game, u, sq);
+    let slot = squadSlot(game, u, sq);
+    // Внутри стенового ядра Formation-слот может упираться в стену:
+    // занимаем место у окна (гарнизон) или внутреннюю точку укрытия.
+    if (slot && game.walls && game.walls.enabled()) {
+      const b = game.walls.buildingAtPoint(slot.x, slot.y);
+      if (b) {
+        const spot = game.walls.interiorSpot(b, slot.x, slot.y);
+        if (spot) slot = { x: spot.x, y: spot.y };
+      }
+    }
     if (slot) {
       u.goal = slot;
       if (u.activity === 'defend' || sq.behavior === 'hold') {
@@ -249,9 +258,33 @@ function chooseCoverForFight(game, u, force = false) {
   }
 }
 
+// Слот гарнизона у окна/бойницы в стеновом здании своей фракции, которое отряд держит.
+function garrisonSlot(game, u, sq, units) {
+  const walls = game.walls;
+  if (!walls || !walls.enabled()) return null;
+  const cfg = game.cfg.coverRules?.garrison;
+  if (cfg && cfg.enabled === false) return null;
+  if (!sq.holdsAt && sq.state !== 'hold' && sq.state !== 'defend') return null;
+  const anchor = sq.anchor || sq.holdsAt;
+  if (!anchor) return null;
+  const slots = walls.garrisonSlotsNear(anchor.x, anchor.y, cfg?.radius ?? 260)
+    .filter((g) => g.building.faction === sq.faction || g.building.faction < 0);
+  if (!slots.length) return null;
+  const share = Math.max(0, Math.min(1, cfg?.share ?? 0.6));
+  const count = Math.max(1, Math.round(units.length * share));
+  const idx = units.indexOf(u);
+  if (idx < 0 || idx >= count) return null;
+  const slot = slots[idx % slots.length];
+  return { x: slot.x, y: slot.y };
+}
+
 function squadSlot(game, u, sq) {
   const units = sq.units();
   if (!units.length) return null;
+  // Гарнизон: отряд держит стеновое здание — часть бойцов занимает слоты у окон.
+  // Те же правила для обеих фракций (решение зависит только от позиции и владельца здания).
+  const garr = garrisonSlot(game, u, sq, units);
+  if (garr) return garr;
   const spacing = game.cfg.ai.squad.formationSpacing;
   const offset = sq.slotFor(units.indexOf(u), units.length, sq.anchor.x, sq.anchor.y, sq.facing, spacing);
   if (game.world.isWalkable(offset.x, offset.y)) return offset;

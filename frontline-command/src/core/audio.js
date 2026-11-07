@@ -51,7 +51,7 @@ export class Audio {
   }
 
   // Позиционное воспроизведение: чем дальше от центра камеры, тем тише и глуше
-  play(name, x = null, y = null) {
+  play(name, x = null, y = null, muffle = 1) {
     if (!this.enabled || !this.ctx) return;
     const def = this.cfg.audio.events[name];
     if (!def) return;
@@ -59,6 +59,11 @@ export class Audio {
     const maxD = this.cfg.audio.maxDistance || 1500;
     let gain = def.gain ?? 0.4;
     let cutoff = def.filter ?? 2000;
+    // Стена между слушателем и источником: тише и глуше (низкочастотный фильтр).
+    if (muffle < 1) {
+      gain *= muffle;
+      cutoff *= this.cfg.audio.muffleCutoffMult ?? 0.45;
+    }
     if (x != null && y != null) {
       const d = Math.hypot(x - this.listener.x, y - this.listener.y);
       if (d > maxD) return;

@@ -266,10 +266,13 @@ export class World {
     for (let i = 0; i < this.terrain.length; i++) {
       this.walk[i] = this.terrain[i] === T_WATER ? 0 : 1;
     }
+    const wallsOn = !!(this.walls && this.walls.enabled && this.walls.enabled());
     for (const b of this.buildings) {
       if (b.dead) continue;
       if (b.type === 'bridge') { this._markBridge(b, true); continue; }
       if (!b.built) continue;
+      // Стены v2: непроходимость задают сегменты стен (ниже), а не весь контур здания.
+      if (wallsOn && this.walls.state(b)) continue;
       // Точки (штаб, город, склад, фабрика, ферма) — это районы, по ним можно ходить.
       if (b.def?.category === 'point') continue;
       // Из укреплений дорогу перекрывает только бункер: мешки, окопы и проволока — укрытия,
@@ -283,6 +286,8 @@ export class World {
         this.walk[x + y * this.cols] = 0;
       }
     }
+    // Стены зданий: блокируем тайлы вдоль сегментов, проёмы-двери оставляем проходимыми.
+    if (wallsOn) this._markWallTiles();
     // LOS: лес + крупные постройки
     for (let i = 0; i < this.terrain.length; i++) this.losBlock[i] = this.terrain[i] === T_FOREST ? 1 : 0;
     this.solidBlock.fill(0);
@@ -297,6 +302,48 @@ export class World {
         if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) continue;
         this.losBlock[x + y * this.cols] = 1;
         this.solidBlock[x + y * this.cols] = 1;
+      }
+    }
+  }
+
+  // Тайлы вдоль сегментов стен: движение и навигация видят стены, проёмы — нет.
+  _markWallTiles() {
+    const pad = 6;
+    for (const b of this.buildings) {
+      if (b.dead || !b.built) continue;
+      const st = this.walls.state(b);
+      if (!st) continue;
+      const markSeg = (x1, y1, x2, y2, thickness) => {
+        const r = thickness / 2 + pad;
+        const minX = Math.min(x1, x2) - r, maxX = Math.max(x1, x2) + r;
+        const minY = Math.min(y1, y2) - r, maxY = Math.max(y1, y2) + r;
+        const cx0 = this._tile(minX), cx1 = this._tile(maxX);
+        const cy0 = this._tile(minY), cy1 = this._tile(maxY);
+        for (let cy = cy0; cy <= cy1; cy++) {
+          for (let cx = cx0; cx <= cx1; cx++) {
+            if (cx < 0 || cy < 0 || cx >= this.cols || cy >= this.rows) continue;
+            const px = (cx + 0.5) * this.T, py = (cy + 0.5) * this.T;
+            const dx = x2 - x1, dy = y2 - y1;
+            const len2 = dx * dx + dy * dy || 1;
+            let t = ((px - x1) * dx + (py - y1) * dy) / len2;
+            t = clamp(t, 0, 1);
+            const d = Math.hypot(px - (x1 + dx * t), py - (y1 + dy * t));
+            if (d <= r) this.walk[cx + cy * this.cols] = 0;
+          }
+        }
+      };
+      for (const geo of st.outline.segments) {
+        if (!geo.blocksMove) continue;
+        const seg = st.segs.find((x) => x.id === geo.id);
+        if (seg && seg.breached) continue;
+        markSeg(b.x + geo.points[0][0], b.y + geo.points[0][1], b.x + geo.points[1][0], b.y + geo.points[1][1], geo.thickness);
+      }
+      for (const o of st.outline.openings || []) {
+        const door = st.doors[o.id];
+        const passable = (o.type === 'door' || o.type === 'gate') && door && door.state === 'open';
+        if (passable) continue;
+        if (o.type === 'breach') continue;
+        markSeg(b.x + o.p1[0], b.y + o.p1[1], b.x + o.p2[0], b.y + o.p2[1], st.outline.thickness || 12);
       }
     }
   }
@@ -323,6 +370,8 @@ export class World {
   }
 
   hasLOS(x1, y1, x2, y2, vision = true) {
+    // стены: точная геометрия сегментов (сетка тайлов слишком груба для тонких стен)
+    if (this.walls && this.walls.enabled() && this.walls.blocksVision(x1, y1, x2, y2)) return false;
     const d = dist(x1, y1, x2, y2);
     const steps = Math.max(1, Math.ceil(d / 20));
     const skip = Math.ceil(40 / Math.max(1, d / steps));
@@ -338,6 +387,26 @@ export class World {
 
   // Лучшее укрытие рядом с юнитом (Utility: близость, угол к угрозе, дистанция до цели приказа).
   bestCover(x, y, threatAngle, radius, occupiedFn) {
+    // Стены v2: сначала точки укрытия вдоль стен (направленные), потом старые постройки.
+    if (this.walls && this.walls.enabled()) {
+      const spots = this.walls.coverSpotsNear(x, y, radius);
+      let bestSpot = null, bestSpotScore = -1;
+      for (const sp of spots) {
+        const d = sp.d;
+        const toThreat = Math.cos(threatAngle) * sp.nx + Math.sin(threatAngle) * sp.ny;
+        const alignment = 0.5 + 0.5 * toThreat;
+        if (alignment < 0.35) continue;
+        const height = this.cfg.coverRules?.heightClasses?.[String(sp.heightClass || 2)];
+        const coverValue = height ? (height.stand + height.crouch) / 2 : 0.7;
+        let score = (1 - d / radius) * 0.35 + alignment * 0.25 + coverValue * 0.5;
+        if (occupiedFn) score -= occupiedFn(sp) * 0.45;
+        if (score > bestSpotScore) {
+          bestSpotScore = score;
+          bestSpot = { x: sp.x, y: sp.y, cover: coverValue, spot: true, building: sp.building, nx: sp.nx, ny: sp.ny, heightClass: sp.heightClass, occupants: 0 };
+        }
+      }
+      if (bestSpot) return bestSpot;
+    }
     const found = [];
     this.buildingGrid.query(x, y, radius, found);
     let best = null, bestScore = -1;
