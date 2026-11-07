@@ -229,7 +229,12 @@ function ensureVoxel(built) {
     const profile = deviceProfile();
     // не кубы, а настоящая поверхность: вершины на пересечениях поля,
     // треугольные грани и сглаженные нормали
-    built.voxel = buildSmoothMesh(built.root, { target: profile.mobile ? 30000 : 62000 });
+    // больше клеток, чем в прошлой версии: меш из точек стал подробнее,
+    // но оболочка по-прежнему утолщается внутрь, чтобы силуэт не «заплывал»
+    built.voxel = buildSmoothMesh(built.root, {
+      target: profile.mobile ? 40000 : 62000,
+      res: profile.mobile ? 56 : 76,
+    });
     if (built.voxel) built.root.add(built.voxel);
   }
   return built.voxel;
@@ -300,7 +305,13 @@ function setLook(look, { announce = true, rebuild = false } = {}) {
   saveState();
   if (announce) {
     if (next === 'solid') live('Обычный вид: поверхности');
-    else if (next === 'dots') live(`Точки: ${dotsCount(shown?.root).toLocaleString('ru-RU')} точек — модель собрана из трафарета`);
+    else if (next === 'dots') {
+      const ud = shown?.dots?.userData || {};
+      const total = dotsCount(shown?.root).toLocaleString('ru-RU');
+      live(ud.dents
+        ? `Точки: ${total} — контур ${(ud.contour || 0).toLocaleString('ru-RU')} (тушь), ямки ${ud.dents.toLocaleString('ru-RU')} (золото)`
+        : `Точки: ${total} точек — модель собрана из трафарета`);
+    }
     else {
       const st = voxelStats(shown?.voxel);
       live(`Меш из точек: ${st.triangles.toLocaleString('ru-RU')} треугольников, ${st.cells.toLocaleString('ru-RU')} узлов — поверхность, а не кубы`);

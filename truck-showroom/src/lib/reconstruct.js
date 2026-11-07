@@ -18,16 +18,23 @@ export function buildField(root, opts = {}) {
   const target = opts.target || 62000;
   const fill = opts.fill !== false;
   // меньше «туши», чем в трафарете: реконструкция должна нести настоящий цвет
-  const cloud = buildDots(root, { target, inkMix: 0.12 });
+  const cloud = buildDots(root, {
+    target,
+    inkMix: opts.inkMix ?? 0.12,
+    dentMix: opts.dentMix ?? 0.42,
+    recess: opts.recess,
+  });
   const pos = cloud.geometry.attributes.position;
   const col = cloud.geometry.attributes.color;
+  const kindAttr = cloud.geometry.attributes.kind;
+  const nrmAttr = cloud.geometry.attributes.normal;
   const n = pos.count;
   if (!n) return { solid: new Map(), nx: 0, ny: 0, nz: 0, cell: 1, ox: 0, oy: 0, oz: 0, points: 0 };
 
   const box = new THREE.Box3().setFromBufferAttribute(pos);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  const cell = opts.cell || Math.max(0.045, maxDim / (opts.res || 52));
+  const cell = opts.cell || Math.max(0.032, maxDim / (opts.res || 84));
   const ox = box.min.x;
   const oy = box.min.y;
   const oz = box.min.z;
@@ -43,9 +50,10 @@ export function buildField(root, opts = {}) {
     const j = Math.floor((pos.getY(p) - oy) / cell);
     const k = Math.floor((pos.getZ(p) - oz) / cell);
     const kk = key(i, j, k);
+    const kind = kindAttr ? kindAttr.getX(p) : 0;
     let c = shell.get(kk);
     if (!c) {
-      c = { i, j, k, r: 0, g: 0, b: 0, count: 0 };
+      c = { i, j, k, r: 0, g: 0, b: 0, count: 0, k1: 0, k2: 0, nx: 0, ny: 0, nz: 0 };
       shell.set(kk, c);
       const ck = `${i},${k}`;
       let list = columns.get(ck);
@@ -54,11 +62,19 @@ export function buildField(root, opts = {}) {
     }
     c.r += col.getX(p); c.g += col.getY(p); c.b += col.getZ(p);
     c.count += 1;
+    if (kind === 1) c.k1 += 1; else if (kind === 2) c.k2 += 1;
+    // средняя нормаль клетки: по ней оболочка утолщается внутрь, а не наружу
+    if (nrmAttr) { c.nx += nrmAttr.getX(p); c.ny += nrmAttr.getY(p); c.nz += nrmAttr.getZ(p); }
   }
 
   const solid = new Map();
   for (const c of shell.values()) {
-    solid.set(key(c.i, c.j, c.k), { r: c.r / c.count, g: c.g / c.count, b: c.b / c.count });
+    const nl = Math.hypot(c.nx, c.ny, c.nz) || 1;
+    solid.set(key(c.i, c.j, c.k), {
+      r: c.r / c.count, g: c.g / c.count, b: c.b / c.count,
+      k1: c.k1 / c.count, k2: c.k2 / c.count,
+      nx: c.nx / nl, ny: c.ny / nl, nz: c.nz / nl,
+    });
   }
   // заливаем только узкие полости (≤ 3 клетки): пустоту под рамой
   // и просветы кабины оставляем как есть
@@ -82,12 +98,13 @@ export function buildField(root, opts = {}) {
             if (d < bestD) { bestD = d; best = jj; }
           }
           const src = solid.get(key(i, best, k));
-          if (src) solid.set(kk, { r: src.r, g: src.g, b: src.b });
+          if (src) solid.set(kk, { r: src.r, g: src.g, b: src.b, k1: 0, k2: 0, filled: 1 });
         }
       }
     }
   }
-  return { solid, nx, ny, nz, cell, ox, oy, oz, points: n };
+  return { solid, nx, ny, nz, cell, ox, oy, oz, points: n, cloudPos: pos };
+
 }
 
 /** Клетчатая реконструкция: наружу только грани без соседа. */
@@ -151,8 +168,26 @@ export function buildSmoothMesh(root, opts = {}) {
   const { nx, ny, nz, cell, ox, oy, oz } = f;
   // утолщаем оболочку: точки лежат тонким слоем, а поверхности нужна
   // толщина хотя бы в клетку, иначе поле рвётся и меш рассыпается
-  const dilate = opts.dilate ?? 1;
+  const ink = opts.ink ?? 0.26;
+  const dents = opts.dents ?? 0.2;
+  // утолщаем оболочку ВНУТРЬ по нормалям точек: наружная поверхность остаётся
+  // на месте, а не раздувается (иначе колёса и стёкла «заплывают»)
+  const thicken = opts.thicken ?? 2;
   let solid = f.solid;
+  if (thicken > 0) {
+    const inner = new Map(solid);
+    for (const [kk, c] of solid) {
+      if (!c.nx && !c.ny && !c.nz) continue;
+      const [i, j, k] = kk.split(',').map(Number);
+      for (let t = 1; t <= thicken; t++) {
+        const kk2 = `${i + Math.round(-c.nx * t)},${j + Math.round(-c.ny * t)},${k + Math.round(-c.nz * t)}`;
+        if (inner.has(kk2)) continue;
+        inner.set(kk2, { r: c.r, g: c.g, b: c.b, k1: c.k1, k2: c.k2, nx: c.nx, ny: c.ny, nz: c.nz });
+      }
+    }
+    solid = inner;
+  }
+  const dilate = opts.dilate ?? 1;
   if (dilate > 0) {
     const thick = new Map();
     for (const [kk, c] of solid) {
@@ -268,29 +303,90 @@ export function buildSmoothMesh(root, opts = {}) {
           cnt += 1;
         }
         if (!cnt) continue;
-        // цвет — среднее по занятым клеткам вокруг
+        // цвет — среднее по занятым клеткам вокруг; контур подчёркиваем
+        // тушью, ямку — золотом, чтобы обводка читалась и на поверхности
         let r = 0; let g = 0; let bl = 0; let cc = 0;
+        let kk1 = 0; let kk2 = 0;
         for (let a = -1; a <= 1; a++) {
           for (let b = -1; b <= 1; b++) {
             for (let d = -1; d <= 1; d++) {
               const col = cellColor(i + a, j + b, k + d);
               if (!col) continue;
               r += col.r; g += col.g; bl += col.b; cc += 1;
+              kk1 += col.k1 || 0; kk2 += col.k2 || 0;
             }
           }
         }
         if (!cc) continue;
+        let vr = r / cc;
+        let vg = g / cc;
+        let vb = bl / cc;
+        const inkW = Math.min(ink, (kk1 / cc) * 0.75);
+        if (inkW > 0) {
+          vr = vr * (1 - inkW) + 0.04 * inkW;
+          vg = vg * (1 - inkW) + 0.05 * inkW;
+          vb = vb * (1 - inkW) + 0.06 * inkW;
+        }
+        const dentW = Math.min(dents, (kk2 / cc) * 0.55);
+        if (dentW > 0) {
+          vr = vr * (1 - dentW) + 0.91 * dentW;
+          vg = vg * (1 - dentW) + 0.71 * dentW;
+          vb = vb * (1 - dentW) + 0.35 * dentW;
+        }
         cellVert[cellAt(i, j, k)] = verts.length;
         verts.push({
           x: ox + (i + sx / cnt) * cell,
           y: oy + (j + sy / cnt) * cell,
           z: oz + (k + sz / cnt) * cell,
-          r: r / cc, g: g / cc, b: bl / cc,
+          r: vr, g: vg, b: vb,
         });
       }
     }
   }
   if (!verts.length) return null;
+
+  // Обтягиваем поверхность по облаку: вершина сдвигается к ближайшей точке,
+  // поэтому скругления не «заплывают», а контур и ямка читаются как на трафарете.
+  const snap = opts.snap ?? 0.2;
+  const cloudPos = f.cloudPos;
+  if (snap > 0 && cloudPos) {
+    const S = cell;
+    const buckets = new Map();
+    const bkey = (x, y, z) => `${Math.round(x / S)},${Math.round(y / S)},${Math.round(z / S)}`;
+    for (let p2 = 0; p2 < cloudPos.count; p2++) {
+      const kk = bkey(cloudPos.getX(p2), cloudPos.getY(p2), cloudPos.getZ(p2));
+      let arr = buckets.get(kk);
+      if (!arr) { arr = []; buckets.set(kk, arr); }
+      arr.push(p2);
+    }
+    const lim = (S * 1.35) * (S * 1.35);
+    for (const v of verts) {
+      const ci = Math.round(v.x / S);
+      const cj = Math.round(v.y / S);
+      const ck = Math.round(v.z / S);
+      let best = -1;
+      let bestD = lim;
+      for (let a = -1; a <= 1; a++) {
+        for (let b = -1; b <= 1; b++) {
+          for (let d = -1; d <= 1; d++) {
+            const arr = buckets.get(`${ci + a},${cj + b},${ck + d}`);
+            if (!arr) continue;
+            for (const p2 of arr) {
+              const dx = cloudPos.getX(p2) - v.x;
+              const dy = cloudPos.getY(p2) - v.y;
+              const dz = cloudPos.getZ(p2) - v.z;
+              const dist = dx * dx + dy * dy + dz * dz;
+              if (dist < bestD) { bestD = dist; best = p2; }
+            }
+          }
+        }
+      }
+      if (best < 0) continue;
+      v.x += (cloudPos.getX(best) - v.x) * snap;
+      v.y += (cloudPos.getY(best) - v.y) * snap;
+      v.z += (cloudPos.getZ(best) - v.z) * snap;
+    }
+  }
 
   const positions = [];
   const colors = [];

@@ -40,8 +40,18 @@ root.updateMatrixWorld(true);
 // --look voxel: модель, собранная заново из точек (воксельная реконструкция)
 if (args.look === 'voxel' || args.look === 'mesh') {
   const { buildVoxel, buildSmoothMesh } = await import('../src/lib/reconstruct.js');
+  const meshOpts = {
+    target: Number(args.dotstarget || 62000),
+    res: args.res ? Number(args.res) : undefined,
+    dilate: args.dilate ? Number(args.dilate) : undefined,
+    smooth: args.smooth ? Number(args.smooth) : undefined,
+    thicken: args.thicken ? Number(args.thicken) : undefined,
+    snap: args.snap ? Number(args.snap) : undefined,
+    ink: args.ink ? Number(args.ink) : undefined,
+    dents: args.dents ? Number(args.dents) : undefined,
+  };
   const vox = args.look === 'mesh'
-    ? buildSmoothMesh(root, { target: Number(args.dotstarget || 62000) })
+    ? buildSmoothMesh(root, meshOpts)
     : buildVoxel(root, { target: Number(args.dotstarget || 62000) });
   if (vox) {
     vox.visible = true;
@@ -66,6 +76,8 @@ const customView = args.pos && args.target
 const view = customView || built.views.find((v) => v.id === viewId) || built.views[0];
 const camera = new THREE.PerspectiveCamera(view.fov || 40, W / H, 0.05, 400);
 camera.position.set(...view.pos);
+// --up: для вида сверху «верх» камеры — не мировой Y (иначе ракурс заваливается)
+if (args.up) camera.up.set(...args.up.split(',').map(Number));
 camera.lookAt(new THREE.Vector3(...view.target));
 camera.updateMatrixWorld(true);
 camera.updateProjectionMatrix();

@@ -509,7 +509,10 @@ if (camApp) {
   check('клик включает точечный трафарет', D.body.dataset.dots === 'on', `body.dataset.dots=${D.body.dataset.dots}`);
   check('кнопка помечена как включённая', btn.getAttribute('aria-pressed') === 'true' && btn.classList.contains('active'));
   const liveTxt = $('stage-live').textContent || '';
-  check('подпись сообщает число точек', /Точки:\s*[\d\s\u00a0]+точек/.test(liveTxt), liveTxt);
+  check('подпись сообщает число точек', /Точки:\s*[\d\s\u00a0]+/.test(liveTxt), liveTxt);
+  // обводка: в подписи видны и контур (тушь), и ямки (золото)
+  check('подпись делит точки на контур и ямки',
+    /контур\s*[\d\s\u00a0]+/.test(liveTxt) && /ямки\s*[\d\s\u00a0]+/.test(liveTxt), liveTxt);
   // точки не ломают каталог: модель переключается и режим сохраняется
   const catTab = tab('cars');
   catTab?.click();
@@ -577,6 +580,10 @@ if (camApp) {
   $('menu-more-btn').click();
   await wait(250);
   check('в меню «Ещё» есть пункты слоёв', !!$('more-dots') && !!$('more-mesh') && !!$('more-4d'));
+  // подпись про обводку: тушь — контур, золото — ямки
+  const layerNote = [...D.querySelectorAll('.pop-note')].map((n) => n.textContent || '').join(' ');
+  check('у слоёв есть подпись про контур и ямки',
+    /контур/i.test(layerNote) && /ямк/i.test(layerNote), layerNote.slice(0, 80));
   check('на старте блоке ни один слой не включён', D.body.dataset.look === 'solid'
     && !$('more-mesh').classList.contains('is-on'), D.body.dataset.look);
   E_4D: {
