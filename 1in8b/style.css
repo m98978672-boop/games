@@ -361,13 +361,14 @@ textarea.note-input {
 }
 
 /* ======================= ПОРТРЕТ ЧЕЛОВЕКА ========================== */
-.portrait-wrap { position: relative; margin: -4px 0 12px; }
+.card-portrait { padding: 10px; }
+.portrait-wrap { position: relative; }
 #portrait, #end-portrait {
-  display: block; width: 100%; height: 230px;
+  display: block; width: 100%; height: clamp(280px, 38vh, 420px);
   border: 1px solid var(--line); border-radius: var(--radius-sm);
   background: linear-gradient(180deg, #0d1114 0%, #0a0c0e 100%);
 }
-#end-portrait { height: 260px; margin: 12px 0 14px; }
+#end-portrait { height: 300px; margin: 12px 0 14px; }
 .portrait-caption {
   display: flex; justify-content: space-between; gap: 8px; align-items: baseline;
   margin-top: 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em;
@@ -437,7 +438,7 @@ textarea.note-input {
 .an-chip:hover { color: #17130a; background: var(--accent); border-color: var(--accent); }
 
 @media (max-width: 760px) {
-  #portrait { height: 190px; }
+  #portrait { height: 240px; }
   .sp-card { grid-template-columns: 28px 1fr; }
   .sp-buy { grid-column: 1 / -1; flex-direction: row; justify-content: space-between; align-items: center; }
   .sp-why { max-width: none; text-align: left; }
