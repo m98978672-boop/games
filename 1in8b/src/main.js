@@ -9,6 +9,7 @@
   var EN = window.IN8B.engine;
   var UI = window.IN8B.ui;
   var SAVE = window.IN8B.save;
+  var PR = window.IN8B.portrait;
   var CH = window.IN8B.charts;
   var el = UI.el;
 
@@ -22,7 +23,10 @@
     skipping: false,
     acc: 0,
     last: 0,
-    opened: Date.now()
+    opened: Date.now(),
+    view: null,       /* анимированный портрет */
+    endView: null,
+    capTimer: null
   };
 
   /* ======================= стартовый экран =========================== */
@@ -145,6 +149,7 @@
     S.acc = 0;
     S.last = performance.now();
     UI.renderAll(S.life, S.peers, onPlayerChange);
+    startPortrait(fresh);
     if (S.life.pendingDecision) askDecision();
     if (fresh) UI.toast('Жизнь началась. Время идёт само — можно поставить паузу.', 'win');
     requestAnimationFrame(frame);
@@ -194,6 +199,7 @@
     UI.renderBudget(life, onPlayerChange);
     UI.renderPeers(S.peers, life.age);
     if (life.age % 2 === 0 || !life.alive) UI.renderLifeMap(life);
+    if (S.view) { S.view.syncYear(life, life.log.slice(before)); paintPortraitCaption(); }
 
     if (S.skipping && life.log.length > before) {
       var fresh = life.log.slice(before).filter(function (e) { return e.kind !== 'life'; });
@@ -252,10 +258,93 @@
       el('screen-end').hidden = false;
       window.scrollTo(0, 0);
       UI.endScreen(life, S.peers, S.settings.homeCountry);
+      stopPortrait();
+      showEndPortrait(life);
     }, 900);
   }
 
   /* ============================ управление =========================== */
+
+  /* ====================== ПОРТРЕТ И ТРАТЫ ============================ */
+
+  function startPortrait(fresh) {
+    if (!PR || !S.life) return;
+    var cv = el('portrait');
+    if (!cv || !cv.getContext) return;
+    if (!S.view) {
+      S.view = new PR.Portrait(cv);
+      window.addEventListener('resize', function () { if (S.view) S.view.resize(); });
+    }
+    S.view.resize();
+    S.view.setLife(S.life);
+    S.view.play(fresh && S.life.age < 1 ? 'idle-newborn' : 'age-morph');
+    S.view.start();
+    paintPortraitCaption();
+    if (!S.capTimer) S.capTimer = setInterval(paintPortraitCaption, 700);
+  }
+
+  function stopPortrait() {
+    if (S.view) S.view.stop();
+    if (S.capTimer) { clearInterval(S.capTimer); S.capTimer = null; }
+  }
+
+  var SCENE_RU = {
+    home: 'дома', village: 'деревня', city: 'город', room: 'комната', school: 'школа',
+    office: 'работа', factory: 'цех', field: 'поле', hospital: 'больница', park: 'улица', night: 'ночь'
+  };
+
+  function paintPortraitCaption() {
+    if (!S.view || !S.life) return;
+    var sc = el('portrait-scene');
+    var cl = el('portrait-clip');
+    if (sc) sc.textContent = (SCENE_RU[S.view.scene] || S.view.scene) + ' · ' + UI.stageName(S.life.age);
+    if (cl) cl.textContent = S.view.currentName();
+  }
+
+  function showEndPortrait(life) {
+    if (!PR) return;
+    var cv = el('end-portrait');
+    if (!cv || !cv.getContext) return;
+    if (!S.endView) S.endView = new PR.Portrait(cv);
+    S.endView.resize();
+    S.endView.setLife(life);
+    S.endView.play('farewell');
+    S.endView.start();
+  }
+
+  function openSpend() {
+    if (!S.life || !S.life.alive || !UI.spendModal) return;
+    if (el('screen-life').hidden) return;
+    var wasPaused = S.paused;
+    S.blocked = true;
+    var wrap = UI.spendModal(S.life, function () {
+      UI.renderPerson(S.life);
+      UI.renderStats(S.life);
+      UI.renderBudget(S.life, onPlayerChange);
+      UI.renderLog(S.life);
+      UI.renderFamily(S.life);
+    });
+    if (!wrap) { S.blocked = false; return; }
+    wrap.onClosed = function () {
+      S.blocked = false;
+      S.paused = wasPaused;
+      S.last = performance.now();
+      S.acc = 0;
+    };
+  }
+
+  /* покупка сразу видна на портрете */
+  var BUY_CLIP = {
+    edu: 'read-book', health: 'hospital', home: 'buy-house', move: 'walk',
+    work: 'open-business', family: 'hold-hands', fun: 'dance', thing: 'carry-bag', give: 'volunteer'
+  };
+
+  window.IN8B.onPurchase = function (item) {
+    if (!S.view) return;
+    var id = BUY_CLIP[item.g];
+    S.view.play(PR.byId[id] ? id : 'smile-wide');
+    paintPortraitCaption();
+  };
 
   function initLifeControls() {
     el('btn-pause').addEventListener('click', togglePause);
@@ -282,6 +371,9 @@
       UI.toast('Вперёд до следующего события');
     });
     el('btn-help').addEventListener('click', UI.helpModal);
+    el('btn-spend').addEventListener('click', openSpend);
+    el('btn-spend-2').addEventListener('click', openSpend);
+    el('btn-anims').addEventListener('click', function () { UI.animsModal(S.view); });
     el('btn-quit').addEventListener('click', function () {
       if (S.life && S.life.alive) {
         SAVE.saveLife(S.life);
@@ -320,6 +412,7 @@
       else if (e.key === '8') { S.speed = 8; el('btn-speed').textContent = '8×'; }
       else if (e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') UI.helpModal();
       else if (e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') el('btn-auto').click();
+      else if (e.key === 't' || e.key === 'T' || e.key === 'е' || e.key === 'Е') openSpend();
     });
   }
 
@@ -330,6 +423,7 @@
   }
 
   function toStart() {
+    stopPortrait();
     el('screen-life').hidden = true;
     el('screen-end').hidden = true;
     el('screen-start').hidden = false;
@@ -359,6 +453,9 @@
       if (S.life && !el('screen-end').hidden) CH.survival(el('end-survival'), S.life, S.settings.homeCountry);
     });
   }
+
+  /* доступ к состоянию для отладки и автотестов страницы */
+  window.IN8B.state = S;
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

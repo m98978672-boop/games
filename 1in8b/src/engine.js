@@ -135,6 +135,11 @@
     this.history = [];
     this.seenEvents = {};
     this.budget = Object.assign({}, DEFAULT_BUDGET);
+    this.purchased = {};          /* что куплено за жизнь: id → возраст */
+    this.boughtThisYear = {};     /* траты этого года */
+    this.upkeep = 0;              /* ежегодное содержание купленного, в долях need */
+    this.incomeBoost = 1;         /* вложения в работу и дело */
+    this.spentTotal = 0;
     this.focus = 'family';
     this.notes = [];
     this.pendingDecision = null;
@@ -399,7 +404,7 @@
 
     var job = M.jobById[this.job.id];
     this.job.years++;
-    var mult = this.business ? 1.25 : 1;
+    var mult = (this.business ? 1.25 : 1) * clamp(this.incomeBoost || 1, 0.4, 3);
     if (this.abroad) mult *= 2.1;
     if (this.council) mult *= 1.03;
     this.income = M.wageFor(this.c, job, this.job.step, this.stats.know, this.job.years) * mult;
@@ -491,6 +496,8 @@
 
     /* долги и проценты */
     if (this.has('mortgage')) this.money -= need * 0.12;
+    if (this.upkeep) this.money -= need * this.upkeep;      /* содержание купленного */
+    if (this.has('deposit') && this.money > 0) this.money *= 1.035;
     if (this.money < 0) {
       this.money *= 1.08;
       this.stat('happy', -2);
@@ -686,6 +693,7 @@
     var fromAge = this.age;
     this.age++;
     this.year++;
+    this.boughtThisYear = {};
 
     this.driftStep();
     this.focusStep();

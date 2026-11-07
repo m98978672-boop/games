@@ -18,7 +18,9 @@ function ok(cond, msg) {
 const sandbox = { window: {}, console, Math, Date, JSON };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
-for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/engine.js']) {
+sandbox.matchMedia = () => ({ matches: false });
+for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/engine.js',
+  'src/purchases.js', 'src/portrait.js']) {
   try {
     vm.runInContext(readFileSync(join(root, f), 'utf8'), sandbox, { filename: f });
   } catch (e) {
@@ -27,7 +29,7 @@ for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events
   }
 }
 const API = sandbox.window.IN8B;
-const { countries: C, model: M, events: E, engine: EN, names: NM } = API;
+const { countries: C, model: M, events: E, engine: EN, names: NM, purchases: PU, portrait: PR } = API;
 console.log('1 ИЗ 8 МИЛЛИАРДОВ — тест модели');
 
 /* ------------------------------- 1. данные ------------------------------ */
@@ -230,6 +232,147 @@ ok(!/[a-zA-Z]/.test(C.list.map((c) => NM.make(M.makeRng('и-' + c.code), c, 'm')
 const peers = EN.siblingsOfSecond('секунда-1', { era: 'today', drawMode: 'births' }, 4);
 ok(peers.length === 4 && peers.every((p) => p.name && p.country && p.deathAge >= 0),
   'четверо, родившихся в ту же секунду, прожили свои жизни');
+
+/* ----------------------------- 10. траты -------------------------------- */
+console.log('\nМеню «Траты»');
+ok(PU && PU.list.length >= 50, 'в каталоге трат вариантов: ' + (PU ? PU.list.length : 0));
+ok(PU.groups.length >= 6, 'разделов меню: ' + PU.groups.length);
+ok(new Set(PU.list.map((i) => i.id)).size === PU.list.length, 'все id трат уникальны');
+ok(PU.list.every((i) => i.title && i.desc && i.g && typeof i.cost === 'number' && i.cost > 0),
+  'у каждой траты есть название, описание, раздел и цена');
+ok(PU.list.every((i) => PU.groups.some((g) => g.id === i.g)), 'каждая трата лежит в существующем разделе');
+ok(PU.groups.every((g) => PU.list.some((i) => i.g === g.id)), 'в каждом разделе есть хотя бы одна трата');
+
+// жизнь ребёнка ничего не покупает сама
+const kid = new EN.Life({ seed: 'траты-дитя', countryCode: 'ng', silent: true });
+ok(PU.availableFor(kid).length === 0, 'в 0 лет тратить нечего — за ребёнка решают родители');
+
+// взрослый: покупка списывает деньги и действует один раз в год
+const buyer = new EN.Life({ seed: 'траты-взрослый', countryCode: 'in', silent: true });
+let g0 = 0;
+while (buyer.alive && buyer.age < 30 && g0++ < 60) { if (buyer.stepYear()) buyer.autoAnswer(); }
+buyer.money = buyer.need * 12;
+ok(PU.availableFor(buyer).length >= 20, 'взрослому доступно вариантов: ' + PU.availableFor(buyer).length);
+const cash = buyer.money;
+const bought = PU.buy(buyer, 'books');
+ok(bought.ok && buyer.money === cash - bought.price, 'покупка списывает ровно свою цену');
+ok(buyer.purchased.books === buyer.age && buyer.spentTotal === bought.price, 'покупка записана в историю трат');
+ok(PU.buy(buyer, 'books').ok === false, 'одну и ту же трату нельзя оплатить дважды за год');
+ok(PU.spentThisYear(buyer) === bought.price, 'видно, сколько потрачено в этом году');
+buyer.stepYear();
+ok(Object.keys(buyer.boughtThisYear).length === 0, 'новый год — список трат года обнуляется');
+
+// разовые покупки и содержание
+buyer.money = buyer.need * 12;
+const withUpkeep = PU.list.find((i) => i.up && i.once && PU.state(buyer, i).ok);
+const got = PU.buy(buyer, withUpkeep.id);
+ok(got.ok && buyer.upkeep > 0, 'вещь с содержанием («' + withUpkeep.title + '») добавила годовой расход');
+ok(PU.buy(buyer, withUpkeep.id).ok === false, 'разовую покупку нельзя сделать повторно');
+const upkeepBefore = buyer.money;
+buyer.stepYear();
+ok(buyer.money < upkeepBefore + buyer.income, 'содержание купленного вычитается каждый год');
+
+// нельзя уйти в бездонный долг
+const broke = new EN.Life({ seed: 'траты-бедный', countryCode: 'cd', silent: true });
+let g1 = 0;
+while (broke.alive && broke.age < 25 && g1++ < 50) { if (broke.stepYear()) broke.autoAnswer(); }
+broke.money = -broke.need * 2;
+ok(PU.availableFor(broke).length === 0, 'когда долг уже предельный, купить нечего');
+
+// лечение снимает болезнь
+const sick = new EN.Life({ seed: 'траты-болезнь', countryCode: 'br', silent: true });
+let g2 = 0;
+while (sick.alive && sick.age < 40 && g2++ < 80) { if (sick.stepYear()) sick.autoAnswer(); }
+sick.flags.chronic = true;
+sick.money = sick.need * 10;
+const op = PU.buy(sick, 'surgery');
+ok(op.ok && !sick.has('chronic'), 'операция снимает хроническую болезнь');
+
+// ни одна трата не ломает жизнь
+let buyErr = null; let tried = 0;
+for (const it of PU.list) {
+  const t = new EN.Life({ seed: 'т-' + it.id, countryCode: 'br', silent: true });
+  let g = 0;
+  while (t.alive && t.age < 45 && g++ < 90) { if (t.stepYear()) t.autoAnswer(); }
+  if (!t.alive) continue;
+  t.money = t.need * 30;
+  t.marital = 'married';
+  if (PU.state(t, it).ok) {
+    tried++;
+    try {
+      PU.buy(t, it.id);
+      let g3 = 0;
+      while (t.alive && g3++ < 10) { if (t.stepYear()) t.autoAnswer(); }
+    } catch (e) { buyErr = it.id + ': ' + e.message; break; }
+  }
+}
+ok(!buyErr, 'все траты применяются и жизнь идёт дальше' + (buyErr ? ' — ' + buyErr : ''));
+ok(tried >= 40, 'проверено трат в деле: ' + tried);
+
+// сохранение не теряет покупки
+const FIELDS = readFileSync(join(root, 'src/save.js'), 'utf8');
+for (const f of ['purchased', 'upkeep', 'spentTotal', 'incomeBoost']) {
+  ok(FIELDS.includes(`'${f}'`), 'сохранение помнит поле ' + f);
+}
+
+/* --------------------------- 11. портрет -------------------------------- */
+console.log('\nАнимированный портрет');
+ok(PR && PR.clips.length >= 100, 'анимаций у портрета: ' + (PR ? PR.clips.length : 0) + ' (нужно ≥ 100)');
+ok(new Set(PR.clips.map((c) => c.id)).size === PR.clips.length, 'все id анимаций уникальны');
+ok(PR.clips.every((c) => c.id && c.name && c.group && c.dur > 0 && typeof c.fn === 'function'),
+  'у каждой анимации есть id, название, раздел, длительность и функция движения');
+ok(PR.groups.every((g) => PR.clips.some((c) => c.group === g)), 'в каждом разделе анимаций есть клипы');
+ok(PR.clips.every((c) => PR.groups.includes(c.group)), 'все анимации лежат в известных разделах');
+
+// внешность зависит от человека и не меняется от кадра к кадру
+const manA = new EN.Life({ seed: 'портрет-1', countryCode: 'ng', silent: true });
+const manB = new EN.Life({ seed: 'портрет-2', countryCode: 'no', silent: true });
+const lookA = PR.lookFor(manA); const lookA2 = PR.lookFor(manA); const lookB = PR.lookFor(manB);
+ok(JSON.stringify(lookA) === JSON.stringify(lookA2), 'внешность одного человека не меняется между кадрами');
+ok(lookA.skin !== lookB.skin || lookA.hair !== lookB.hair, 'у людей из разных стран разная внешность');
+
+// тело меняется с возрастом
+const mKid = PR.metrics(8); const mOld = PR.metrics(78);
+ok(mKid.head / mKid.h > mOld.head / mOld.h, 'у ребёнка голова больше относительно тела');
+ok(mKid.h < mOld.h, 'взрослый выше ребёнка');
+ok(PR.stageOf(0) !== PR.stageOf(30) && PR.stageOf(30) !== PR.stageOf(80), 'возрастные стадии различаются');
+
+// анимации считаются без DOM и без ошибок
+let clipErr = null;
+function finite(o, path) {
+  for (const k of Object.keys(o)) {
+    const v = o[k];
+    if (typeof v === 'number' && !Number.isFinite(v)) return path + '.' + k;
+    if (v && typeof v === 'object') { const bad = finite(v, path + '.' + k); if (bad) return bad; }
+  }
+  return null;
+}
+for (const c of PR.clips) {
+  try {
+    for (let t = 0; t <= 1.0001; t += 0.1) {
+      const pose = PR.basePose();
+      c.fn(pose, t, { life: manA, look: lookA, time: t * 10, dt: 0.016 });
+      const bad = finite(pose, c.id);
+      if (bad) { clipErr = 'не число: ' + bad; break; }
+    }
+  } catch (e) { clipErr = c.id + ': ' + e.message; }
+  if (clipErr) break;
+}
+ok(!clipErr, 'все анимации считаются без ошибок и дают конечные числа' + (clipErr ? ' — ' + clipErr : ''));
+
+// портрет умеет работать без canvas (в тестах его нет) и подбирает клип по году
+const view = new PR.Portrait(null);
+const hero = new EN.Life({ seed: 'портрет-герой', countryCode: 'in', silent: true });
+let g4 = 0; let picked = [];
+while (hero.alive && g4++ < 90) {
+  const before = hero.log.length;
+  if (hero.stepYear()) hero.autoAnswer();
+  picked.push(view.syncYear(hero, hero.log.slice(before)));
+}
+ok(picked.every((id) => PR.byId[id]), 'на каждый год жизни находится своя анимация');
+ok(new Set(picked).size >= 8, 'за жизнь портрет показал разных движений: ' + new Set(picked).size);
+view.tick(16);
+ok(typeof view.currentName() === 'string', 'портрет считает кадры без canvas и не падает');
 
 if (failed) { console.error(`\n✗ Провалено проверок: ${failed}`); process.exit(1); }
 console.log('\n✓ Все проверки пройдены');
