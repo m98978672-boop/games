@@ -39,7 +39,9 @@
     'grandchildren', 'siblings', 'parentsAlive', 'talents', 'awards', 'flags', 'moves', 'abroad', 'home',
     'business', 'council', 'legacy', 'kidsEducated', 'careerBrake', 'log', 'history', 'seenEvents',
     'budget', 'focus', 'notes', 'marriageAge', 'need', 'warUntil', 'decisions',
-    'purchased', 'boughtThisYear', 'upkeep', 'incomeBoost', 'spentTotal', 'given', 'depositYears'];
+    'purchased', 'boughtThisYear', 'upkeep', 'incomeBoost', 'spentTotal', 'given', 'depositYears',
+    'assets', 'biz', 'capitalIncome', 'capitalDelta', 'investedTotal', 'capitalTotal',
+    'laborIncome', 'bizCount', 'bizFailed', 'boomedBiz'];
 
   function serialize(life) {
     var out = { v: 1, countryCode: life.base.code, rng: life.rnd.state() };

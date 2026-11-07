@@ -20,7 +20,7 @@ sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 sandbox.matchMedia = () => ({ matches: false });
 for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/engine.js',
-  'src/purchases.js', 'src/portrait.js']) {
+  'src/purchases.js', 'src/invest.js', 'src/portrait.js']) {
   try {
     vm.runInContext(readFileSync(join(root, f), 'utf8'), sandbox, { filename: f });
   } catch (e) {
@@ -29,7 +29,7 @@ for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events
   }
 }
 const API = sandbox.window.IN8B;
-const { countries: C, model: M, events: E, engine: EN, names: NM, purchases: PU, portrait: PR } = API;
+const { countries: C, model: M, events: E, engine: EN, names: NM, purchases: PU, portrait: PR, invest: IV } = API;
 console.log('1 ИЗ 8 МИЛЛИАРДОВ — тест модели');
 
 /* ------------------------------- 1. данные ------------------------------ */
@@ -308,6 +308,142 @@ for (let i = 0; i < 200 && !autoErr; i++) {
   } catch (e) { autoErr = e.message; }
 }
 ok(!autoErr, 'авторежим проходит жизнь до конца' + (autoErr ? ': ' + autoErr : ''));
+
+/* --------------------- 8в. вложения и своё дело ------------------------- */
+console.log('\nВложения и своё дело');
+
+ok(IV.assets.length >= 8, 'инструментов вложений: ' + IV.assets.length);
+ok(IV.biz.length >= 6, 'видов своего дела: ' + IV.biz.length);
+ok(new Set(IV.assets.map((a) => a.id)).size === IV.assets.length, 'идентификаторы инструментов не повторяются');
+ok(new Set(IV.biz.map((b) => b.id)).size === IV.biz.length, 'идентификаторы дел не повторяются');
+ok(IV.assets.every((a) => a.icon && a.name && a.desc && a.min > 0 && typeof a.avail === 'function'),
+  'у каждого инструмента есть название, описание, минимальный взнос и условия');
+ok(IV.biz.every((b) => b.cost > 0 && b.margin > 0 && b.fail > 0 && b.fail < 0.4 && b.boom >= 0),
+  'у каждого дела заданы цена, прибыль, шанс прогореть и шанс выстрелить');
+
+/* вспомогательное: довести жизнь до возраста, отвечая нейтрально */
+function liveTo(seed, code, age, money) {
+  const l = new EN.Life({ seed, countryCode: code, silent: true });
+  while (l.alive && l.age < age) { if (l.stepYear()) l.autoAnswer(); }
+  if (l.alive && money != null) l.money = Math.round(l.need * money);
+  return l;
+}
+
+/* 1. пока игрок ничего не вложил, модуль молчит */
+let touched = null;
+for (let i = 0; i < 150 && !touched; i++) {
+  const l = new EN.Life({ seed: 'quiet-' + i, silent: true });
+  let guard = 0;
+  while (l.alive && guard++ < 130) { if (l.stepYear()) l.autoAnswer(); }
+  if (l.capitalIncome !== 0) touched = 'появился доход с капитала из ниоткуда';
+  if (l.biz) touched = 'само завелось своё дело';
+  if (Object.keys(l.assets || {}).length) touched = 'сами появились вложения';
+}
+ok(!touched, 'жизнь без вложений идёт ровно как раньше' + (touched ? ': ' + touched : ''));
+
+/* 2. деньги не появляются и не исчезают при вложении и возврате */
+const l1 = liveTo('вклад-туда-обратно', 'de', 30, 6);
+const before1 = l1.money;
+const sum1 = Math.round(l1.need);
+ok(IV.put(l1, 'depo', sum1).ok && Math.round(l1.money) === Math.round(before1 - sum1),
+  'взнос списывает ровно столько, сколько вложено');
+ok(IV.take(l1, 'depo').ok && Math.abs(l1.money - before1) < 2, 'возврат возвращает ровно вложенное');
+ok(!IV.put(l1, 'depo', l1.money * 10).ok, 'нельзя вложить больше, чем есть');
+ok(!IV.put(l1, 'depo', 1).ok, 'нельзя вложить меньше минимального взноса');
+ok(!IV.put(l1, 'его-нет', 1000).ok, 'нельзя вложить в несуществующий инструмент');
+ok(!IV.take(l1, 'gold').ok, 'нельзя забрать то, чего не покупал');
+
+/* 3. своё дело: открытие, второе дело, продажа */
+const l2 = liveTo('дело-правила', 'br', 30, 12);
+const open1 = IV.openBiz(l2, 'stall');
+ok(open1.ok && l2.biz && l2.business, 'дело открывается и отмечается в жизни');
+ok(!IV.openBiz(l2, 'shop').ok, 'второе дело одновременно открыть нельзя');
+const priceNow = IV.sellPrice(l2);
+const beforeSell = l2.money;
+ok(IV.sellBiz(l2).ok && Math.round(l2.money - beforeSell) === priceNow && !l2.biz,
+  'дело продаётся ровно за показанную цену');
+ok(!IV.sellBiz(l2).ok, 'продать дело второй раз нельзя');
+
+/* 4. честность чисел: показанный шанс прогореть совпадает с тем, что происходит */
+function bizRun(typeId, years, n) {
+  let opened = 0, closed = 0, boomed = 0, shown = 0;
+  for (let i = 0; i < n; i++) {
+    const code = ['de', 'ru', 'in', 'ng', 'br', 'us'][i % 6];
+    const l = liveTo('odds-' + typeId + '-' + i, code, 30, 14);
+    if (!l.alive) continue;
+    const type = IV.bizById[typeId];
+    if (IV.bizState(l, type).reqs.some((r) => !r.ok)) continue;
+    if (!IV.openBiz(l, typeId).ok) continue;
+    opened++;
+    shown += IV.odds(l, type, 0, false).fail3;
+    const until = l.age + years;
+    while (l.alive && l.age < until && l.biz) { if (l.stepYear()) l.autoAnswer(); }
+    if (!l.biz) closed++;
+    if (l.boomedBiz) boomed++;
+  }
+  return { opened, closed, boomed, shown: shown / Math.max(1, opened), real: closed / Math.max(1, opened) };
+}
+const cafe = bizRun('cafe', 3, 220);
+ok(cafe.opened > 120, 'кафе открыли в ' + cafe.opened + ' жизнях');
+ok(Math.abs(cafe.real - cafe.shown) < 0.08,
+  'обещанный шанс прогореть за три года совпадает с жизнью: обещано ' +
+  Math.round(cafe.shown * 100) + '%, вышло ' + Math.round(cafe.real * 100) + '%');
+const stall = bizRun('stall', 3, 220);
+ok(Math.abs(stall.real - stall.shown) < 0.08,
+  'то же для лотка: обещано ' + Math.round(stall.shown * 100) + '%, вышло ' + Math.round(stall.real * 100) + '%');
+ok(cafe.real > stall.real, 'кафе прогорает чаще лотка: ' +
+  Math.round(cafe.real * 100) + '% против ' + Math.round(stall.real * 100) + '%');
+
+const long1 = bizRun('shop', 25, 160);
+ok(long1.closed < long1.opened, 'часть дел доживает до старости: выжило ' +
+  (long1.opened - long1.closed) + ' из ' + long1.opened);
+ok(long1.boomed > 0, 'иногда дело идёт в гору: ' + long1.boomed + ' из ' + long1.opened);
+
+/* 5. долгий прогон инструментов: ничего не ломается и не уходит в бесконечность */
+function hold(id, years, n, code) {
+  const out = [];
+  let bad = null;
+  for (let i = 0; i < n; i++) {
+    const l = liveTo('hold-' + id + '-' + i, code || ['de', 'ru', 'in', 'ng', 'br', 'us'][i % 6], 30, 3);
+    if (!l.alive) continue;
+    const def = IV.assetById[id];
+    if (IV.assetState(l, def).reqs.some((r) => !r.ok)) continue;
+    const put = Math.round(l.need);
+    if (!IV.put(l, id, put).ok) continue;
+    const until = l.age + years;
+    while (l.alive && l.age < until) { if (l.stepYear()) l.autoAnswer(); }
+    const h = IV.holdingOf(l, id) || { val: 0, got: 0 };
+    if (!Number.isFinite(h.val) || h.val < 0) bad = id + ': стоимость стала ' + h.val;
+    if (!Number.isFinite(l.money)) bad = id + ': деньги стали ' + l.money;
+    out.push((h.val + (h.got || 0)) / put);
+  }
+  out.sort((a, b) => a - b);
+  return { bad, n: out.length, med: out[Math.floor(out.length / 2)] || 0, worst: out[0] || 0, best: out[out.length - 1] || 0 };
+}
+const depo = hold('depo', 25, 120);
+const stock = hold('stock', 25, 120);
+const ponzi = hold('ponzi', 5, 120);
+ok(!depo.bad && !stock.bad && !ponzi.bad, 'стоимость вложений остаётся числом и не уходит в минус' +
+  (depo.bad || stock.bad || ponzi.bad ? ': ' + (depo.bad || stock.bad || ponzi.bad) : ''));
+ok(stock.med > depo.med, 'за 25 лет акции обгоняют вклад: ×' + stock.med.toFixed(2) + ' против ×' + depo.med.toFixed(2));
+ok(stock.worst < 1.2 && stock.best > 3, 'у акций есть и неудачные, и удачные жизни: от ×' +
+  stock.worst.toFixed(2) + ' до ×' + stock.best.toFixed(1));
+ok(ponzi.med < 0.2, 'пирамида «40 % в год» за пять лет разоряет: медиана ×' + ponzi.med.toFixed(2));
+
+/* 6. доход с капитала попадает в годовой доход */
+const l3 = liveTo('рента', 'ru', 35, 8);
+const r3 = IV.put(l3, 'bond', Math.round(l3.need * 3));
+if (r3.ok) { if (l3.stepYear()) l3.autoAnswer(); }
+ok(r3.ok && l3.capitalIncome > 0 && l3.income >= l3.laborIncome + l3.capitalIncome - 1,
+  'купоны и рента входят в годовой доход: ' + Math.round(l3.capitalIncome));
+
+/* 7. рынок одинаков для всех бумаг одной жизни и повторяется при пересчёте */
+const l4 = liveTo('рынок', 'us', 40, 1);
+const m1 = IV.market(l4, l4.year), m2 = IV.market(l4, l4.year);
+ok(m1.mood === m2.mood && m1.crisis === m2.crisis, 'год рынка считается одинаково при каждом обращении');
+let crises = 0;
+for (let y = 1950; y < 2100; y++) if (IV.market(l4, y).crisis) crises++;
+ok(crises > 5 && crises < 30, 'кризисы случаются примерно раз в десять лет: ' + crises + ' за 150 лет');
 
 /* ------------------------------ 9. имена -------------------------------- */
 console.log('\nИмена и соседи по секунде');

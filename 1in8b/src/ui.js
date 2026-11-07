@@ -350,6 +350,16 @@
     el('p-name').textContent = life.name;
     el('p-sub').textContent = (life.sex === 'f' ? 'женщина' : 'мужчина') + ' · ' + life.c.name + ' · ' + life.birthYear;
     renderSpendNote(life);
+    renderInvestNote(life);
+    var IVP = window.IN8B.invest ? window.IN8B.invest.portfolio(life) : null;
+    var capRow = el('money-capital-row');
+    if (capRow && IVP) {
+      capRow.hidden = !(IVP.total > 0 || life.capitalIncome > 0);
+      if (!capRow.hidden) {
+        el('money-capital').textContent = money(IVP.total) +
+          (life.capitalIncome ? ' · ' + money(life.capitalIncome) + ' за год' : '');
+      }
+    }
     el('year-age-label').textContent = life.age + ' ' + M.plural(life.age, 'год', 'года', 'лет');
     el('year-stage').textContent = stageName(life.age);
 
@@ -530,7 +540,8 @@
 
   var MORE_ITEMS = [
     ['btn-skip', 'До следующего решения »'], ['btn-auto', 'Авторежим'],
-    ['btn-spend', '🛒 Траты этого года'], ['btn-anims', 'Все движения сцены'],
+    ['btn-spend', '🛒 Траты этого года'], ['btn-invest', '📈 Вложения и своё дело'],
+    ['btn-anims', 'Все движения сцены'],
     ['btn-pauses', '✎ Когда ставить паузу'], ['btn-music', '♪ Музыка'],
     ['btn-help', 'Как играть'], ['btn-quit', 'Сохранить и выйти']
   ];
@@ -673,17 +684,29 @@
       '<li><b>Бюджет</b> — как распределить годовой доход между едой, здоровьем, учёбой, жильём, отдыхом, помощью семье и сбережениями.</li>' +
       '<li><b>Траты (кнопка 🛒 или клавиша T)</b> — на что потратить накопленное в этом году: от тетрадей и репетитора ' +
       'до операции, своего жилья, машины и собственного дела. Купленное работает до конца жизни, часть вещей требует содержания каждый год.</li>' +
+      '<li><b>Вложения (кнопка 📈 или клавиша И)</b> — что делать с накопленным, чтобы оно работало: своё дело, ' +
+      'вклад, облигации, акции, мировой индекс, золото, земля, квартира под сдачу, криптовалюта. ' +
+      'У каждого вложения честно написано, сколько оно приносит в обычный год и с каким шансом можно остаться ни с чем.</li>' +
       '<li><b>Карточки решений</b> — на поворотах: школа, профессия, переезд, брак, дети, лечение, пенсия. ' +
       'Доступны не все варианты: под каждым написано, сколько он стоит и что для него нужно — деньги, знания, ' +
       'здоровье, диплом, работа или сама страна. Чего не хватает, помечено ✗, и такой вариант нажать нельзя. ' +
       'У самых рискованных решений показан шанс: эмиграция, кредит, смена профессии и лечение могут не выйти.</li></ul>' +
+      '<h3>Вложения и своё дело</h3>' +
+      '<ul><li><b>Своё дело</b> — лоток, магазин, мастерская, кафе, ферма, дело в интернете или фирма с работниками. ' +
+      'Каждый год дело приносит прибыль или убыток, может прогореть (в первые три года это случается с каждым вторым кафе) ' +
+      'и может пойти в гору. Дело можно развивать деньгами и можно продать — иногда его приходят покупать сами.</li>' +
+      '<li><b>Инструменты</b> отличаются не доходностью, а тем, как они теряют: банк лопается, государство объявляет дефолт, ' +
+      'золото крадут, биржа исчезает, а контора с «надёжными 40 % в год» просто закрывается за ночь.</li>' +
+      '<li><b>Проценты показаны сверх инфляции</b> и делятся на две части: рост стоимости (его видно только при продаже) ' +
+      'и выплаты наличными — рента, купоны, дивиденды и прибыль дела. Наличные сразу входят в годовой доход.</li>' +
+      '<li><b>Рынок один на всех:</b> примерно раз в десять лет случается кризис, и тогда дешевеет почти всё, кроме золота.</li></ul>' +
       '<h3>Показатели</h3>' +
       '<ul><li><b>Здоровье</b> — влияет на риск умереть и на способность работать.</li>' +
       '<li><b>Счастье</b> — насколько вы довольны жизнью.</li>' +
       '<li><b>Знания</b> — экзамены, предложения работы, зарплата.</li>' +
       '<li><b>Отношения</b> — семья и друзья, одиночество в старости.</li></ul>' +
       '<h3>Клавиши</h3>' +
-      '<ul><li><b>Пробел</b> — пауза, <b>1 2 4 8</b> — скорость, <b>A</b> — авторежим, <b>T</b> — траты, <b>H</b> — помощь.</li></ul>' +
+      '<ul><li><b>Пробел</b> — пауза, <b>1 2 4 8</b> — скорость, <b>A</b> — авторежим, <b>T</b> — траты, <b>И</b> — вложения, <b>H</b> — помощь.</li></ul>' +
       '<h3>Сцена жизни</h3>' +
       '<p>В центре — пиксельная сцена, нарисованная прямо в браузере. Вы — человечек по центру, ' +
       'с розовой меткой под ногами; рядом те, с кем вы живёте сейчас: родители, братья и сёстры, ' +
@@ -835,6 +858,277 @@
     return wrap;
   }
 
+  /* ======================= МЕНЮ «ВЛОЖЕНИЯ» =========================== */
+
+  var investTab = 'biz';
+
+  function IV() { return window.IN8B.invest; }
+
+  /* сумма из поля ввода: игрок пишет в своей валюте, движок считает в межд. $ */
+  function sumOf(card) {
+    var inp = card.querySelector('.iv-sum');
+    if (!inp || !inp.value) return null;
+    var v = parseFloat(String(inp.value).replace(',', '.').replace(/\s/g, ''));
+    if (!isFinite(v) || v <= 0) return null;
+    return v / currency.k;
+  }
+
+  function toInput(v) { return String(Math.round(v * currency.k)); }
+
+  function renderInvestNote(life) {
+    var note = el('invest-note');
+    if (!note || !IV()) return;
+    var p = IV().portfolio(life);
+    if (!p.total) { note.textContent = 'деньги пока не работают'; return; }
+    var txt = money(p.total) + ' вложено';
+    if (p.income) txt += ' · ' + money(p.income) + ' за год';
+    note.textContent = txt;
+  }
+
+  function reqLine(reqs) {
+    return '<span class="d-reqs">' + reqs.map(function (r) {
+      return '<i class="' + (r.ok ? 'req-ok' : 'req-no') + '">' + (r.ok ? '✓ ' : '✗ ') + esc(r.text) + '</i>';
+    }).join('') + '</span>';
+  }
+
+  function sharpPct(v) { return (Math.round(v * 1000) / 10).toString().replace('.', ','); }
+
+  function assetCard(life, def) {
+    var P = IV();
+    var st = P.assetState(life, def);
+    var h = st.held;
+    var own = h && h.val > 0;
+    var sigma = typeof def.sigma === 'function' ? def.sigma(life) : def.sigma;
+    /* типичный год, а не рекламное среднее: разброс сам по себе съедает часть роста */
+    var exp = (typeof def.mean === 'function' ? def.mean(life) : def.mean) +
+      (typeof def.pay === 'function' ? def.pay(life) : def.pay || 0) - sigma * sigma / 2;
+    var stats = [Math.abs(exp) < 0.004
+      ? 'в обычный год ни прибыли, ни убытка'
+      : 'в обычный год ' + (exp >= 0 ? '+' : '−') + sharpPct(Math.abs(exp)) + '%'];
+    if (sigma > 0.02) stats.push('разброс ±' + sharpPct(sigma) + '%');
+    var payRate = typeof def.pay === 'function' ? def.pay(life) : def.pay || 0;
+    if (payRate > 0) stats.push('наличными ' + sharpPct(payRate) + '% в год');
+    if (def.bad) {
+      var bp = typeof def.bad.p === 'function' ? def.bad.p(life) : def.bad.p;
+      stats.push('риск потерять ' + (def.bad.loss >= 1 ? 'всё' : 'больше половины') + ': ' +
+        sharpPct(bp) + '% в год');
+    }
+    if (def.corr >= 0.5) stats.push('в кризис падает вместе с рынком');
+    if (def.corr < 0) stats.push('в кризис обычно дорожает');
+
+    var ownLine = '';
+    if (own) {
+      var delta = h.put > 0 ? (h.val - h.put) / h.put : 0;
+      ownLine = '<span class="iv-own">Вложено ' + money(h.put) + ' · сейчас стоит <b class="' +
+        (h.val >= h.put ? 'up' : 'down') + '">' + money(h.val) + '</b>' +
+        (h.put > 0 ? ' (' + (delta >= 0 ? '+' : '−') + sharpPct(Math.abs(delta)) + '%)' : '') +
+        (h.got ? ' · получено наличными ' + money(h.got) : '') + '</span>';
+    }
+
+    var reqs = st.reqs.filter(function (r) { return !r.ok; });
+    var blocked = reqs.length > 0;
+    return '<article class="iv-card' + (blocked ? ' off' : '') + (own ? ' own' : '') + '" data-id="' + def.id + '">' +
+      '<div class="iv-ico">' + def.icon + '</div>' +
+      '<div class="iv-body">' +
+      '<b>' + esc(def.name) + ' <em class="iv-risk ' + (def.risk === 'опасно' ? 'hot' : def.risk === 'качает' ? 'mid' : 'calm') +
+      '">' + def.risk + '</em></b>' +
+      '<span class="iv-desc">' + esc(def.desc) + '</span>' +
+      '<span class="iv-stats">' + esc(stats.join(' · ')) + '</span>' +
+      ownLine +
+      (blocked ? reqLine(st.reqs) : '') +
+      '</div>' +
+      '<div class="iv-act">' +
+      (blocked ? '<span class="sp-why">' + esc(reqs[0].text) + '</span>'
+        : life.money < st.min
+          ? '<span class="iv-min">минимум ' + money(st.min) + '</span>' +
+          '<span class="sp-why">не хватает ' + money(st.min - life.money) + '</span>' +
+          (own ? '<button class="btn tiny" data-take="' + def.id + '">Забрать</button>' : '')
+          : '<span class="iv-min">минимум ' + money(st.min) + '</span>' +
+        '<input class="iv-sum" type="text" inputmode="numeric" placeholder="' + toInput(st.min) + '" aria-label="Сумма">' +
+        '<span class="iv-chips"><button class="iv-chip" data-part="0.25">¼</button>' +
+        '<button class="iv-chip" data-part="0.5">½</button>' +
+        '<button class="iv-chip" data-part="1">всё</button></span>' +
+        '<button class="btn btn-primary tiny" data-put="' + def.id + '">Вложить</button>' +
+        (own ? '<button class="btn tiny" data-take="' + def.id + '">Забрать</button>' : '')) +
+      '</div></article>';
+  }
+
+  function bizOwnCard(life) {
+    var P = IV();
+    var b = life.biz;
+    var type = P.bizById[b.type];
+    var o = P.odds(life, type, b.age, b.loss);
+    var sell = P.sellPrice(life);
+    var profit = b.profit || 0;
+    return '<article class="iv-card own biz" data-id="biz">' +
+      '<div class="iv-ico">' + b.icon + '</div>' +
+      '<div class="iv-body">' +
+      '<b>' + esc(b.name) + ' <em class="iv-risk mid">' +
+      (b.age < 1 ? 'первый год' : b.age + ' ' + M.plural(b.age, 'год', 'года', 'лет') + ' в деле') + '</em></b>' +
+      '<span class="iv-own">Вложено ' + money(b.put) + ' · дело стоит <b class="' +
+      (b.val >= b.put ? 'up' : 'down') + '">' + money(b.val) + '</b>' +
+      ' · прибыль за год <b class="' + (profit >= 0 ? 'up' : 'down') + '">' +
+      (profit >= 0 ? '+' : '−') + money(Math.abs(profit)) + '</b></span>' +
+      '<span class="iv-stats">риск закрытия в этом году ' + sharpPct(o.fail) + '%' +
+      ' · шанс, что дело пойдёт в гору ' + sharpPct(o.boom) + '%' +
+      ' · обычная прибыль ' + sharpPct(o.margin) + '% от вложенного' +
+      ' · убыточным бывает каждый ' + Math.max(2, Math.round(1 / Math.max(o.lossP, 0.05))) + '-й год</span>' +
+      (b.offer ? '<span class="iv-offer">Вашим делом интересуется покупатель: ' + money(b.offer) + '</span>' : '') +
+      '</div>' +
+      '<div class="iv-act">' +
+      '<span class="iv-min">вложить ещё</span>' +
+      '<input class="iv-sum" type="text" inputmode="numeric" placeholder="' + toInput(Math.round(life.need * 0.3)) + '" aria-label="Сумма">' +
+      '<span class="iv-chips"><button class="iv-chip" data-part="0.25">¼</button>' +
+      '<button class="iv-chip" data-part="0.5">½</button>' +
+      '<button class="iv-chip" data-part="1">всё</button></span>' +
+      '<button class="btn btn-primary tiny" data-grow="1">В развитие</button>' +
+      '<button class="btn tiny" data-sell="1">' + (b.offer ? 'Принять ' : 'Продать за ') + money(sell) + '</button>' +
+      '</div></article>';
+  }
+
+  function bizCard(life, type) {
+    var P = IV();
+    var st = P.bizState(life, type);
+    var o = P.odds(life, type, 0, false);
+    var bad = st.reqs.filter(function (r) { return !r.ok; });
+    var blocked = bad.length > 0 || !!life.biz;
+    return '<article class="iv-card' + (blocked ? ' off' : '') + '" data-id="' + type.id + '">' +
+      '<div class="iv-ico">' + type.icon + '</div>' +
+      '<div class="iv-body"><b>' + esc(type.name) + '</b>' +
+      '<span class="iv-desc">' + esc(type.desc) + '</span>' +
+      '<span class="iv-stats">прогорает за первые три года: ' + Math.round(o.fail3 * 100) + '%' +
+      ' · в среднем приносит ' + sharpPct(o.margin) + '% от вложенного в год' +
+      ' · шанс выстрелить: ' + sharpPct(o.boom) + '% в год</span>' +
+      (bad.length ? reqLine(st.reqs) : '') +
+      '</div>' +
+      '<div class="iv-act"><b>' + money(st.cost) + '</b>' +
+      (blocked
+        ? '<span class="sp-why">' + esc(life.biz ? 'у вас уже есть своё дело' : bad[0].text) + '</span>'
+        : (life.money < st.cost
+          ? '<span class="sp-why">не хватает ' + money(st.cost - life.money) + '</span>'
+          : '<button class="btn btn-primary tiny" data-open="' + type.id + '">Открыть</button>')) +
+      '</div></article>';
+  }
+
+  function investModal(life, onChange) {
+    var P = IV();
+    if (!P) return null;
+    var wrap = modal(
+      '<header class="modal-head"><h3>📈 Вложения · ' + life.age + ' ' +
+      M.plural(life.age, 'год', 'года', 'лет') + '</h3>' +
+      '<button class="icon-btn x" data-close aria-label="Закрыть">✕</button></header>' +
+      '<div class="spend-top" id="iv-top"></div>' +
+      '<div class="spend-tabs" id="iv-tabs"></div>' +
+      '<p class="hint" id="iv-hint">—</p>' +
+      '<div class="spend-list" id="iv-list"></div>' +
+      '<footer class="modal-foot"><span class="hint">Доходность показана сверх инфляции. Деньги могут и пропасть:\n       проценты здесь честные, а не рекламные.</span>' +
+      '<button class="btn btn-primary" data-close>Готово</button></footer>',
+      { cls: 'invest-modal' });
+
+    function top() {
+      var p = P.portfolio(life);
+      el('iv-top').innerHTML =
+        '<div class="sp-kv"><span>Наличные</span><b class="' + (life.money < 0 ? 'bad' : 'good') + '">' +
+        money(life.money) + '</b></div>' +
+        '<div class="sp-kv"><span>Вложено сейчас</span><b>' + money(p.put + (life.biz ? life.biz.put : 0)) + '</b></div>' +
+        '<div class="sp-kv"><span>Стоит сегодня</span><b>' + money(p.total) + '</b></div>' +
+        '<div class="sp-kv"><span>Пришло за год</span><b>' + money(p.income) + '</b></div>' +
+        '<div class="sp-kv"><span>Итог за жизнь</span><b class="' + (p.lifetime >= 0 ? 'good' : 'bad') + '">' +
+        (p.lifetime >= 0 ? '+' : '−') + money(Math.abs(p.lifetime)) + '</b></div>';
+    }
+
+    function tabs() {
+      var open = P.assets.filter(function (d) {
+        return !P.assetState(life, d).reqs.some(function (r) { return !r.ok; });
+      }).length;
+      el('iv-tabs').innerHTML =
+        '<button class="sp-tab' + (investTab === 'biz' ? ' on' : '') + '" data-t="biz">💼 Своё дело' +
+        (life.biz ? '<i>есть</i>' : '') + '</button>' +
+        '<button class="sp-tab' + (investTab === 'asset' ? ' on' : '') + '" data-t="asset">📈 Инструменты<i>' +
+        open + '</i></button>';
+      el('iv-tabs').querySelectorAll('.sp-tab').forEach(function (b) {
+        b.addEventListener('click', function () { investTab = b.dataset.t; draw(); });
+      });
+    }
+
+    function draw() {
+      top(); tabs();
+      var html;
+      if (investTab === 'biz') {
+        el('iv-hint').textContent = life.biz
+          ? 'Дело живёт своей жизнью: приносит прибыль, может прогореть, может пойти в гору. Вложенные деньги работают, но достать их можно только продажей.'
+          : 'Своё дело — самый быстрый и самый опасный способ: половина закрывается в первые годы, зато выжившее кормит семью десятилетиями.';
+        html = (life.biz ? bizOwnCard(life) : '') +
+          P.biz.map(function (t) { return bizCard(life, t); }).join('');
+      } else {
+        el('iv-hint').textContent = 'Проценты показаны сверх инфляции. Чем выше обещанная доходность, тем выше шанс остаться ни с чем.';
+        html = P.assets.map(function (d) { return assetCard(life, d); }).join('');
+      }
+      el('iv-list').innerHTML = html;
+
+      el('iv-list').querySelectorAll('.iv-chip').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var card = b.closest('.iv-card');
+          var inp = card.querySelector('.iv-sum');
+          if (inp) inp.value = toInput(Math.max(0, life.money) * Number(b.dataset.part));
+        });
+      });
+
+      function act(sel, fn) {
+        el('iv-list').querySelectorAll(sel).forEach(function (b) {
+          b.addEventListener('click', function () {
+            var card = b.closest('.iv-card');
+            var res = fn(b, sumOf(card));
+            if (!res) return;
+            toast(res.ok ? res.say : res.why, res.ok ? 'good' : 'bad');
+            if (res.ok && window.IN8B.onInvest) window.IN8B.onInvest(res, life);
+            draw();
+            if (onChange) onChange();
+          });
+        });
+      }
+
+      act('[data-put]', function (b, sum) {
+        var def = P.assetById[b.dataset.put];
+        var min = P.minOf(life, def);
+        var res = P.put(life, def.id, sum == null ? min : sum);
+        res.say = def.icon + ' ' + def.name + ' · вложено ' + money(res.sum || 0);
+        res.kind = 'put';
+        return res;
+      });
+      act('[data-take]', function (b, sum) {
+        var def = P.assetById[b.dataset.take];
+        var res = P.take(life, def.id, sum);
+        res.say = def.icon + ' забрали ' + money(res.sum || 0);
+        res.kind = 'take';
+        return res;
+      });
+      act('[data-open]', function (b, sum) {
+        var type = P.bizById[b.dataset.open];
+        var res = P.openBiz(life, type.id, sum);
+        res.say = type.icon + ' ' + type.name + ' открыто за ' + money(res.sum || 0);
+        res.kind = 'biz';
+        return res;
+      });
+      act('[data-grow]', function (b, sum) {
+        var res = P.investBiz(life, sum == null ? Math.round(life.need * 0.3) : sum);
+        res.say = 'В дело вложено ' + money(res.sum || 0);
+        res.kind = 'biz';
+        return res;
+      });
+      act('[data-sell]', function () {
+        var res = P.sellBiz(life);
+        res.say = 'Дело продано за ' + money(res.sum || 0);
+        res.kind = 'sell';
+        return res;
+      });
+    }
+
+    draw();
+    bindClose(wrap);
+    return wrap;
+  }
+
   /* ===================== КАТАЛОГ АНИМАЦИЙ ============================= */
 
   function animsModal(view) {
@@ -876,6 +1170,7 @@
     renderLifeMap: renderLifeMap, decisionModal: decisionModal, reflectionModal: reflectionModal,
     endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS,
     spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote,
+    investModal: investModal, renderInvestNote: renderInvestNote,
     pausesModal: pausesModal, moreModal: moreModal
   };
 })();
