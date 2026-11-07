@@ -105,6 +105,8 @@
       this.thinkTimer = Math.max(0.18, thinkDelay);
 
       const hpFrac = a.hp / a.maxHp;
+      // «больно»: свежая рана на время сбивает прицел и решения
+      if (this.pain > 0) this.pain = Math.max(0, this.pain - 0.08);
       const hasLOS = this.seenNow;
       const cover = this.coverPoint;
       const nearCover = game.world.findCover(a.x, a.z, P.x, P.z, 12);
@@ -120,7 +122,7 @@
       scores.hold = 0.4 + (inPrefRange ? 1.0 : 0) + (hasLOS ? 0.5 : 0) + (1 - cfg.aggression) * 0.6
         + (hpFrac > 0.6 ? 0.2 : -0.1);
       // Укрытие
-      scores.cover = (nearCover ? 0.9 : -0.4) + (hpFrac < 0.55 ? 1.0 : 0.2) + (hasLOS ? 0.15 : 0.6)
+      scores.cover = (this.pain > 0.3 ? 0.9 : 0) + (nearCover ? 0.9 : -0.4) + (hpFrac < 0.55 ? 1.0 : 0.2) + (hasLOS ? 0.15 : 0.6)
         + (a.underFire ? 1.1 : 0);
       // Обход с фланга
       scores.flank = 0.2 + cfg.aggression * 0.5 + (inPrefRange ? 0.5 : 0) + (hasLOS ? 0.25 : 0.8)
@@ -129,7 +131,7 @@
       scores.suppress = (hasLOS ? 0.7 : -0.3) + (a.ammo > 12 ? 0.5 : -1.4) + (dist > 12 ? 0.5 : 0)
         + cfg.aggression * 0.3;
       // Отход
-      scores.retreat = (hpFrac < 0.35 ? 2.2 : -1.3) + (a.ammo === 0 ? 0.9 : 0) + (this.alert > 0.7 ? -0.2 : 0.2);
+      scores.retreat = (this.pain > 0.6 && hpFrac < 0.7 ? 1.4 : 0) + (hpFrac < 0.35 ? 2.2 : -1.3) + (a.ammo === 0 ? 0.9 : 0) + (this.alert > 0.7 ? -0.2 : 0.2);
       // Граната
       scores.grenade = (dist > 9 && dist < 30 ? 0.8 : -1.5) + (a.grenades > 0 ? 0.8 : -3)
         + (hasLOS ? -0.2 : 0.9) + (cfg.tactics.indexOf('grenade') >= 0 ? 0.7 : 0);
@@ -326,7 +328,7 @@
       const moveFactor = 1 + (Math.hypot(a.vx, a.vz) / Math.max(1, cfg.speed)) * 1.3;
       const playerMove = 1 + Math.min(1.6, Math.hypot(P.vx, P.vz) / 5);
       const skill = 1 / Math.max(0.25, cfg.accuracy);
-      const hurt = (1 - a.hp / a.maxHp) * 0.8;
+      const hurt = (1 - a.hp / a.maxHp) * 0.8 + (this.pain || 0) * 0.9;
       const alertness = 1 + (1 - this.alert) * 1.4;
       return base * distFactor * moveFactor * playerMove * skill * (1 + hurt) * alertness * (0.6 + game.difficulty * 0.3);
     }

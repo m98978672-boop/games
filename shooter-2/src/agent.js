@@ -197,6 +197,7 @@
 
     melee(game) {
       if (!this.alive || this.meleeCool > 0) return;
+      this.animator.setEvent('melee', { fade: 18, weight: 1, restart: true });
       this.meleeCool = 1.1;
       this.animator.setEvent('melee', { fade: 14, weight: 1, restart: true });
       const P = game.player;
@@ -220,6 +221,10 @@
       this.alert = 1;
       if (this.brain) {
         this.brain.alert = 1;
+        this.brain.thinkTimer = Math.min(this.brain.thinkTimer, 0.12);
+        this.brain.coverPoint = null;
+        this.brain.coverTimer = 0;
+        this.brain.underFire = true;
         this.brain.reactionLeft = Math.min(this.brain.reactionLeft, this.cfg.reaction * 0.4);
         if (!this.brain.seenNow) this.brain.memory = { x: game.player.x, z: game.player.z, t: game.time };
       }

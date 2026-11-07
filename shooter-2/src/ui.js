@@ -60,7 +60,38 @@
 
     bindGame(game) {
       this.game = game;
+      this.loadProgress();
       this.refreshMenuStats();
+    }
+
+    /* ------------------------------ прогресс ------------------------------ */
+    loadProgress() {
+      let p = null;
+      try { p = JSON.parse(localStorage.getItem('shooter2.progress') || 'null'); } catch (e) { p = null; }
+      this.progress = p && typeof p === 'object' ? p : { unlocked: 0, best: {}, total: 0 };
+      if (!this.progress.best) this.progress.best = {};
+      if (!Array.isArray(this.progress.unlocked)) this.progress.unlocked = 0;
+    }
+
+    saveProgress() {
+      try { localStorage.setItem('shooter2.progress', JSON.stringify(this.progress)); } catch (e) {}
+    }
+
+    unlockMission(i) {
+      if (i > this.progress.unlocked) {
+        this.progress.unlocked = i;
+        this.saveProgress();
+      }
+    }
+
+    recordMission(m, stats) {
+      const prev = this.progress.best[m.id] || 0;
+      if (stats && stats.score > prev) {
+        this.progress.best[m.id] = stats.score;
+        this.saveProgress();
+      }
+      this.progress.total = (this.progress.total || 0) + (stats ? stats.score : 0);
+      this.saveProgress();
     }
 
     ready(game) {
@@ -85,7 +116,11 @@
       on('btn-death-menu', () => { this.game.state = 'menu'; this.show('menu'); });
       on('btn-next', () => { this.hideAll(); this.game.nextMission(); });
       on('btn-win-menu', () => { this.game.state = 'menu'; this.show('menu'); });
-      on('btn-lab-back', () => { this.show(this.game && this.game.level ? 'pause' : 'menu'); });
+      on('btn-lab-back', () => {
+        const g = this.game;
+        if (g && g.state === 'paused') this.show('pause');
+        else this.show('menu');
+      });
       on('btn-help', () => this.toggleHelp());
       on('btn-hud-menu', () => this.game.pause());
       const missionCards = $('mission-cards');
@@ -137,13 +172,39 @@
       }
       const cont = $('btn-continue');
       if (cont && this.game) {
-        cont.style.display = this.game.missionIndex > 0 ? '' : 'none';
+        const next = Math.min(this.progress.unlocked || 0, D.MISSIONS.length - 1);
+        cont.style.display = (this.progress.unlocked || 0) > 0 ? '' : 'none';
+        cont.textContent = 'ПРОДОЛЖИТЬ · МИССИЯ ' + (next + 1);
+        cont.onclick = () => this.openBriefing(next);
       }
+      // метки на карточках: рекорд/замок
+      const cards = document.querySelectorAll('#mission-cards .mission-card');
+      if (cards && cards.forEach) {
+        cards.forEach((card, i) => {
+          const locked = i > (this.progress.unlocked || 0);
+          card.classList.toggle('locked', locked);
+          let badge = card.querySelector('.mc-best');
+          if (!badge) {
+            badge = el('span', 'mc-best');
+            const num = card.querySelector('.mc-num');
+            if (num) num.appendChild(badge);
+          }
+          const best = this.progress.best[D.MISSIONS[i].id];
+          badge.textContent = locked ? '🔒' : best ? best : '';
+        });
+      }
+      const total = $('menu-total-score');
+      if (total) total.textContent = (this.progress.total || 0).toLocaleString('ru-RU');
     }
 
     /* ------------------------------- брифинг ----------------------------- */
     openBriefing(index) {
       const g = this.game;
+      // открываем только доступные миссии
+      if (index > (this.progress.unlocked || 0)) {
+        this.toast('Сначала пройдите предыдущую миссию', 2);
+        return;
+      }
       g.missionIndex = index;
       this.briefIndex = index;
       const m = D.MISSIONS[index];
@@ -170,8 +231,34 @@
       this.killFeedItems.length = 0;
       const t = $('killfeed');
       if (t) t.innerHTML = '';
+      const name = $('mission-name');
+      if (name) name.textContent = m.index + '. ' + m.name;
+      this.hudAmmo(game.player);
+      this.hudGrenades(game.player.grenadeCount || 0);
       this.toast('Миссия ' + m.index + ': ' + m.name, 3.2);
       this.renderObjectives();
+      this.helpTip();
+    }
+
+    // короткая подсказка по управлению при первом запуске
+    helpTip() {
+      let seen = false;
+      try { seen = localStorage.getItem('shooter2.help') === '1'; } catch (e) { seen = false; }
+      if (seen) return;
+      try { localStorage.setItem('shooter2.help', '1'); } catch (e) {}
+      this.helpOpen = true;
+      const h = $('help-panel');
+      if (h) h.classList.add('open');
+      setTimeout(() => {
+        this.helpOpen = false;
+        if (h) h.classList.remove('open');
+      }, 9000);
+    }
+
+    toggleHelp() {
+      this.helpOpen = !this.helpOpen;
+      const h = $('help-panel');
+      if (h) h.classList.toggle('open', this.helpOpen);
     }
 
     renderObjectives() {
@@ -291,6 +378,9 @@
     }
 
     showMissionComplete(g, m, stats) {
+      this.unlockMission(Math.min(D.MISSIONS.length - 1, g.missionIndex + 1));
+      this.recordMission(m, { score: g.score });
+      stats = Object.assign({ score: g.score }, stats);
       this.show('win');
       const set = (id, v) => { const e = $(id); if (e) e.textContent = v; };
       set('win-title', stats.last ? 'КАМПАНИЯ ПРОЙДЕНА' : 'МИССИЯ ВЫПОЛНЕНА');
@@ -310,11 +400,6 @@
       if (next) next.onclick = stats.last ? () => { this.game.state = 'menu'; this.show('menu'); } : () => { this.hideAll(); this.game.nextMission(); };
     }
 
-    toggleHelp() {
-      this.helpOpen = !this.helpOpen;
-      const h = $('help-panel');
-      if (h) h.classList.toggle('open', this.helpOpen);
-    }
     toggleThoughts() {
       this.game.settings.showThoughts = !this.game.settings.showThoughts;
       this.toast('Мысли боевиков: ' + (this.game.settings.showThoughts ? 'вкл' : 'выкл'));
@@ -325,7 +410,25 @@
     }
     toggleScore() {
       const s = $('score-panel');
-      if (s) s.classList.toggle('hidden');
+      if (!s) return;
+      const open = s.classList.contains('hidden');
+      s.classList.toggle('hidden', !open);
+      if (!open) return;
+      const g = this.game;
+      const P = g.player;
+      const acc = P.shots ? Math.round(P.hits / P.shots * 100) : 0;
+      s.innerHTML = '<div class="sp-title">ТАБЛИЦА БОЯ</div>' +
+        '<div class="sp-grid">' +
+        '<span>Миссия</span><b>' + (g.mission ? g.mission.name : '—') + '</b>' +
+        '<span>Убийств</span><b>' + g.kills + '</b>' +
+        '<span>В голову</span><b>' + P.headshots + '</b>' +
+        '<span>Выстрелов</span><b>' + P.shots + '</b>' +
+        '<span>Точность</span><b>' + acc + '%</b>' +
+        '<span>Урон нанесён</span><b>' + Math.round(P.damageDealt) + '</b>' +
+        '<span>Урон получен</span><b>' + Math.round(P.damageTaken) + '</b>' +
+        '<span>Очки</span><b>' + g.score + '</b>' +
+        '<span>Время</span><b>' + g.missionTimer.toFixed(1) + ' с</b>' +
+        '</div>';
     }
 
     /* -------------------------- обновление кадра ------------------------- */
@@ -354,6 +457,17 @@
         cross.classList.toggle('ads', !!P.ads);
         cross.classList.toggle('scope', !!P.scoped);
       }
+      // подпись врага под прицелом
+      const tag = $('aim-tag');
+      if (tag) {
+        const aim = g.aim;
+        if (aim && aim.enemy) {
+          const e = aim.enemy;
+          tag.textContent = e.cfg.short + ' · ' + Math.round(aim.dist) + ' м · ' + Math.ceil(e.hp) + ' HP';
+          tag.classList.add('show');
+          tag.classList.toggle('lowhp', e.hp < e.maxHp * 0.35);
+        } else tag.classList.remove('show');
+      }
       const scope = $('scope-overlay');
       if (scope) scope.classList.toggle('active', !!P.scoped);
       const low = $('low-hp');
@@ -375,12 +489,67 @@
         this._thoughtTimer = 0;
         this.drawThoughts(g);
       }
+      // мини-карта
+      this._mapTimer = (this._mapTimer || 0) + dt;
+      if (this._mapTimer > 0.12) { this._mapTimer = 0; this.drawMinimap(g); }
       // отладочная панель
       this._dbgTimer = (this._dbgTimer || 0) + dt;
       if (this._dbgTimer > 0.25) {
         this._dbgTimer = 0;
         this.renderDebug(g);
       }
+    }
+
+    drawMinimap(g) {
+      const cv = $('minimap');
+      if (!cv || !cv.getContext) return;
+      const ctx = cv.getContext('2d');
+      if (!ctx || !g.world) return;
+      const W = cv.width, H = cv.height;
+      const half = g.world.half;
+      const k = (W - 8) / (half * 2);
+      const toX = (x) => W / 2 + x * k;
+      const toY = (z) => H / 2 + z * k;
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = 'rgba(8,12,17,0.55)';
+      ctx.fillRect(0, 0, W, H);
+      // стены
+      ctx.fillStyle = 'rgba(150,170,190,0.30)';
+      for (const c of g.world.colliders) {
+        ctx.fillRect(toX(c.x - c.hw), toY(c.z - c.hd), c.hw * 2 * k, c.hd * 2 * k);
+      }
+      // точка эвакуации
+      if (g.extract) {
+        ctx.strokeStyle = 'rgba(92,255,157,0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(toX(g.extract.x), toY(g.extract.z), g.extract.r * k, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      // бойцы: видимые — красные, остальные — приглушённые
+      for (const e of g.enemies) {
+        if (!e.alive) continue;
+        const seen = e.brain && (e.brain.seenNow || e.brain.alert > 0.3);
+        const d = Math.hypot(e.x - g.player.x, e.z - g.player.z);
+        if (!seen && d > 26) continue;
+        ctx.fillStyle = seen ? 'rgba(255,85,96,0.95)' : 'rgba(255,85,96,0.35)';
+        ctx.beginPath();
+        ctx.arc(toX(e.x), toY(e.z), seen ? 2.6 : 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // игрок и конус взгляда
+      const px = toX(g.player.x), py = toY(g.player.z);
+      const yaw = g.player.yaw;
+      ctx.fillStyle = 'rgba(111,200,255,0.22)';
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.arc(px, py, 20, Math.PI / 2 - yaw - 0.5, Math.PI / 2 - yaw + 0.5);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#6fc8ff';
+      ctx.beginPath();
+      ctx.arc(px, py, 3, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     drawThoughts(g) {

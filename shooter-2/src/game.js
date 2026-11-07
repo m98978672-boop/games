@@ -498,6 +498,7 @@
       this.mouse = { dx: 0, dy: 0, down: false, right: false };
       this.locked = false;
       this.difficulty = this.settings.difficulty;
+      this.maxDifficulty = 2;
       this.combat = new Combat(this);
       this.spawnPools = {};
       this.frameTime = 0;
@@ -924,7 +925,8 @@
     damagePlayer(amount, from, kind) {
       const P = this.player;
       if (!P.alive || this.state !== 'playing') return;
-      P.damage(amount, this, from, kind);
+      const scale = [0.62, 1, 1.38][this.difficulty] || 1;
+      P.damage(amount * scale, this, from, kind);
       this.shake(0.22);
       if (P.hp < 35 && P.alive && !this.lowHpBeep) {
         this.lowHpBeep = true;
@@ -1152,9 +1154,28 @@
       this.stats.shots = P.shots;
       this.stats.hits = P.hits;
       // обновление счётчиков
+      this.aim = this.aimInfo();
       this.perf.counters.enemies = this.enemies.filter((e) => e.alive).length;
       this.perf.counters.particles = this.fx.counts.particles;
       this.perf.counters.animators = this.enemies.length + 1;
+    }
+
+    /* Что под прицелом: используется для подсветки врага и подсказок */
+    aimInfo() {
+      const P = this.player;
+      if (!P.alive) return { enemy: null };
+      const o = this.rayOrigin(), d = this.rayDirection();
+      const maxT = 120;
+      const wall = this.world.rayColliders(o.x, o.y, o.z, d.x, d.y, d.z, maxT);
+      let bestT = wall ? wall.t : maxT;
+      let enemy = null;
+      for (const e of this.enemies) {
+        if (!e.alive) continue;
+        const t = SH2.world.rayCylinder(o.x, o.y, o.z, d.x, d.y, d.z, e.x, e.z,
+          0.42 * e.cfg.scale, 0, 1.85 * e.cfg.scale, bestT);
+        if (t !== null && t < bestT) { bestT = t; enemy = e; }
+      }
+      return { enemy, dist: bestT, blocked: !!wall };
     }
 
     nearestAliveEnemy() {

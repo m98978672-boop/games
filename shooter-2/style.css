@@ -400,3 +400,36 @@ body.touch #help-panel { display: none; }
 .tc.tl2 { left: 98px; bottom: 150px; width: 64px; height: 64px; font-size: 9px; }
 .tc.tl3 { left: 24px; bottom: 92px; width: 64px; height: 64px; font-size: 9px; }
 .tc.tl4 { left: 98px; bottom: 72px; width: 64px; height: 64px; font-size: 9px; }
+
+/* таблица боя */
+#score-panel { min-width: 330px; }
+.sp-grid { display: grid; grid-template-columns: 1fr auto; gap: 6px 18px; margin-top: 10px; text-align: left; }
+.sp-grid span { font-size: 12px; color: var(--dim); }
+.sp-grid b { font-family: var(--mono); font-size: 13px; color: var(--text); text-align: right; }
+
+#aim-tag {
+  position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%);
+  font-family: var(--mono); font-size: 11px; letter-spacing: .4px;
+  padding: 3px 10px; border-radius: 999px; color: #ffd9a8;
+  background: rgba(10, 14, 19, .74); border: 1px solid rgba(255, 154, 60, .35);
+  opacity: 0; transition: opacity .12s; white-space: nowrap;
+}
+#aim-tag.show { opacity: 1; }
+#aim-tag.lowhp { color: #ff8a8a; border-color: rgba(255, 85, 96, .6); }
+
+#minimap {
+  position: absolute; left: 22px; top: 18px; width: 168px; height: 168px;
+  border-radius: 12px; border: 1px solid var(--line);
+  background: rgba(6, 9, 13, .5); backdrop-filter: blur(4px);
+}
+@media (max-width: 700px) { #minimap { width: 108px; height: 108px; left: 10px; top: 10px; } }
+
+.menu-total { margin-top: 18px; font-size: 12px; color: var(--dim); letter-spacing: .4px; }
+.menu-total b { color: var(--accent2); font-family: var(--mono); }
+.mc-num { position: relative; }
+.mc-best {
+  display: block; font-family: var(--mono); font-size: 9px; color: var(--accent2);
+  margin-top: 2px; letter-spacing: 0; word-break: break-all; max-width: 40px;
+}
+.mission-card.locked { opacity: .45; filter: grayscale(.6); }
+.mission-card.locked:hover { background: rgba(255,255,255,.03); border-color: transparent; transform: none; }

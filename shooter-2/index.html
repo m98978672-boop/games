@@ -22,6 +22,7 @@
     <span class="ch-dot"></span>
   </div>
   <div id="hitmarker"></div>
+  <div id="aim-tag"></div>
   <div id="dmg-layer"></div>
   <div id="thoughts"></div>
 
@@ -50,6 +51,8 @@
       <div class="bar mini"><div id="st-fill" class="fill st"></div></div>
     </div>
   </div>
+
+  <canvas id="minimap" width="168" height="168" title="Карта сектора"></canvas>
 
   <div id="hud-right">
     <div id="weapon-block">
@@ -113,6 +116,8 @@
         <div><b id="menu-per-part">80</b><span>клипов на часть</span></div>
       </div>
     </header>
+
+    <div class="menu-total">Рекорд кампании: <b id="menu-total-score">0</b> очков</div>
 
     <div class="menu-actions">
       <button class="btn big" id="btn-start">НАЧАТЬ КАМПАНИЮ</button>
