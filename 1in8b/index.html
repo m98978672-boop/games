@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>1 из 8 миллиардов — симулятор одной случайной жизни</title>
+<meta name="description" content="1 из 8 миллиардов (1in8b) — бесплатная браузерная симуляция жизни на открытой статистике 173 стран. Вы рождаетесь случайным человеком, живёте год за годом, выбираете фокус года и на что тратить деньги, принимаете решения на поворотах судьбы.">
+<meta name="theme-color" content="#0b0d0c">
+<meta property="og:type" content="website">
+<meta property="og:title" content="1 из 8 миллиардов — симулятор жизни">
+<meta property="og:description" content="Родиться случайным человеком из 8 миллиардов и прожить одну жизнь до конца: знания, здоровье, отношения, деньги и решения на поворотах.">
+<meta property="og:image" content="cover.svg">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b0d0c'/%3E%3Ctext x='16' y='22' font-family='system-ui' font-size='15' font-weight='700' text-anchor='middle' fill='%23e8b45a'%3E1%2F8%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ============================ СТАРТОВЫЙ ЭКРАН ============================ -->
+<section class="screen" id="screen-start">
+  <header class="start-head">
+    <p class="kicker"><b>v1.0</b> · бесплатная симуляция жизни · статистика <span id="country-count">173</span> стран и территорий · от 15 лет</p>
+    <h1><i>1</i> из 8 миллиардов</h1>
+    <p class="lede">Прямо сейчас каждую секунду на свет появляются около четырёх младенцев. Вы становитесь одним из них
+      и проживаете эту единственную жизнь до самого конца. Где вы родитесь и в чьей семье — выбрать нельзя.
+      Так же, как когда-то не выбирали вы сами.</p>
+
+    <div class="counters">
+      <div class="counter"><b id="cnt-born">0</b><span>младенцев родилось с тех пор, как вы открыли эту страницу</span></div>
+      <div class="counter"><b id="cnt-died">0</b><span>людей ушло из жизни за это же время</span></div>
+    </div>
+
+    <button class="link-btn" id="btn-who">Какой у меня номер среди 8 миллиардов? →</button>
+  </header>
+
+  <main class="start-main">
+    <section class="panel start-panel" id="setup">
+      <h2>Мир, в который вы родитесь</h2>
+
+      <div class="field">
+        <span class="field-label">Эпоха</span>
+        <div class="seg" id="seg-era" role="group" aria-label="Эпоха">
+          <button data-v="past">Прошлое</button>
+          <button data-v="today" class="on">Сегодня</button>
+          <button data-v="future">Будущее</button>
+          <button data-v="any">Любой мир</button>
+        </div>
+        <p class="field-hint" id="era-hint">Проживите целую жизнь в сегодняшнем мире. Сегодняшняя статистика сохраняется до конца.</p>
+        <label class="inline-field" id="year-field" hidden>Год рождения
+          <select id="sel-year"></select>
+        </label>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Как выбирается место рождения</span>
+        <div class="seg" id="seg-draw" role="group" aria-label="Способ жеребьёвки">
+          <button data-v="births" class="on">Младенцы, рождающиеся сейчас</button>
+          <button data-v="pop">8 миллиардов живущих сейчас</button>
+        </div>
+        <p class="field-hint">Первый вариант выбирает место по числу рождений в год, второй — по численности населения.
+          В любом случае жизнь начинается с нуля лет.</p>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Продолжительность одной жизни</span>
+        <div class="seg" id="seg-len" role="group" aria-label="Длительность">
+          <button data-v="10">≈10 мин</button>
+          <button data-v="30" class="on">≈30 мин</button>
+          <button data-v="60">≈1 час</button>
+          <button data-v="90">≈1,5 часа</button>
+        </div>
+        <p class="field-hint">Столько времени нужно, чтобы дожить до ожидаемой продолжительности жизни. Во время жизни
+          можно ставить паузу и ускорять время до 8×.</p>
+      </div>
+
+      <div class="field two-col">
+        <label class="inline-field">Где вы родились на самом деле (по желанию)
+          <select id="sel-home"><option value="">Предпочту не говорить</option></select>
+        </label>
+        <label class="inline-field">Суммы показывать в
+          <select id="sel-currency"></select>
+        </label>
+      </div>
+
+      <label class="check"><input type="checkbox" id="opt-soft"> Убрать пугающие сцены</label>
+      <p class="warn"><b>От 15 лет.</b> Тяжёлые события — смерть, болезни, война, бедность, насилие — происходят здесь
+        так же часто, как в реальной статистике. Сцены не показываются, рядом всегда указано, где искать помощь.
+        Не повторяйте то, что происходит в симуляции.</p>
+
+      <div class="start-actions">
+        <button class="btn btn-primary" id="btn-born">Родиться</button>
+        <button class="btn" id="btn-continue" hidden>Продолжить жизнь</button>
+      </div>
+      <p class="field-hint">Настройки можно не менять и сразу родиться.</p>
+    </section>
+
+    <section class="panel start-panel">
+      <h2>Если бы вы были младенцем, родившимся прямо сейчас</h2>
+      <p class="src">Доли рождений по странам · приближённо по UN World Population Prospects 2024</p>
+      <div class="bars" id="birth-bars"></div>
+      <button class="btn" id="btn-countries">Статистика всех стран и территорий →</button>
+    </section>
+
+    <section class="panel start-panel" id="past-panel">
+      <h2>Прошлые жизни <span class="count" id="past-count"></span></h2>
+      <p class="src">Ваши жизни хранятся только в этом браузере. Ничего никуда не отправляется.</p>
+      <div class="past-list" id="past-list"></div>
+      <div class="row-actions">
+        <button class="btn btn-ghost" id="btn-clear-past">Удалить все записи</button>
+      </div>
+    </section>
+
+    <section class="panel start-panel about">
+      <h2>Как это устроено</h2>
+      <ol class="how">
+        <li><b>Жеребьёвка рождения.</b> Страна выпадает по реальной доле в мировых рождениях: в Индии шанс в сотни раз
+          больше, чем в Исландии. Пол — по соотношению полов при рождении, достаток семьи — по распределению доходов
+          страны (индекс Джини), город или село — по доле городского населения.</li>
+        <li><b>Год за годом.</b> Каждый год считается риск смерти по таблице смертности вашей страны, пола и возраста
+          (модель Брасса, подогнанная под ожидаемую продолжительность жизни и смертность до 5 лет). Школа, работа,
+          брак и дети следуют статистике страны.</li>
+        <li><b>Ваши решения.</b> Фокус года, бюджет семьи и карточки решений меняют шансы, но не отменяют статистику
+          места рождения. В авторежиме выбор делается нейтрально — поэтому средние результаты совпадают с реальными
+          показателями страны (это проверяется тестами).</li>
+      </ol>
+      <p class="src">Источники чисел (приближённо, с округлением): ООН World Population Prospects 2024, Всемирный банк
+        (WDI), ВОЗ, ЮНЕСКО, МОТ, UNODC, World Happiness Report. Это игровая модель, а не справочник: часть значений
+        оценена по региональным средним. Жизнь вымышленная — статистика настоящая.</p>
+    </section>
+  </main>
+</section>
+
+<!-- ============================== ЭКРАН ЖИЗНИ ============================== -->
+<section class="screen" id="screen-life" hidden>
+  <header class="topbar">
+    <a class="brand" href="../index.html" title="Все игры">
+      <span class="logo">1</span>
+      <span class="brand-text"><b>1 из 8 млрд</b><i id="hud-country">—</i></span>
+    </a>
+
+    <div class="top-stats">
+      <div class="stat accent"><span>Возраст</span><b id="hud-age">0</b></div>
+      <div class="stat"><span>Год</span><b id="hud-year">—</b></div>
+      <div class="stat"><span>Доход в год</span><b id="hud-income">—</b></div>
+      <div class="stat"><span>Накоплено</span><b id="hud-money">—</b></div>
+    </div>
+
+    <div class="top-actions">
+      <button class="icon-btn" id="btn-pause" title="Пауза (Пробел)" aria-label="Пауза">⏸</button>
+      <button class="icon-btn speed" id="btn-speed" title="Скорость" aria-label="Скорость">1×</button>
+      <button class="icon-btn" id="btn-auto" title="Авторежим: решения принимаются нейтрально" aria-label="Авторежим">А</button>
+      <button class="icon-btn" id="btn-skip" title="До следующего события" aria-label="До следующего события">⏭</button>
+      <button class="icon-btn" id="btn-help" title="Как играть (H)" aria-label="Помощь">?</button>
+      <button class="icon-btn" id="btn-quit" title="Сохранить и выйти" aria-label="Выйти">✕</button>
+    </div>
+  </header>
+
+  <div class="year-strip">
+    <div class="year-progress"><i id="year-bar"></i></div>
+    <div class="year-label"><b id="year-age-label">0 лет</b><span id="year-stage">младенчество</span></div>
+  </div>
+
+  <main class="life-grid">
+    <!-- левая колонка: состояние и деньги -->
+    <section class="col col-left" data-tab="state">
+      <div class="panel card-person">
+        <div class="person-head">
+          <div class="avatar" id="avatar">●</div>
+          <div>
+            <b id="p-name">—</b>
+            <span id="p-sub">—</span>
+          </div>
+        </div>
+        <ul class="kv" id="p-kv"></ul>
+      </div>
+
+      <div class="panel card-stats">
+        <h3>Состояние <small>0–100</small></h3>
+        <div class="bars-stats" id="stat-bars"></div>
+        <p class="hint">Высокие значения лишь повышают шансы и ничего не предрешают. Как и в настоящей жизни,
+          своё берут удача и обстоятельства.</p>
+      </div>
+
+      <div class="panel card-budget">
+        <h3>На что тратить деньги</h3>
+        <p class="hint" id="budget-sum">—</p>
+        <div class="presets" id="budget-presets"></div>
+        <div class="budget" id="budget-list"></div>
+      </div>
+    </section>
+
+    <!-- центр: летопись -->
+    <section class="col col-mid" data-tab="life">
+      <div class="panel card-focus">
+        <h3>Фокус этого года <small>можно менять в любой момент</small></h3>
+        <div class="focus-list" id="focus-list"></div>
+      </div>
+      <div class="panel card-log">
+        <h3>Летопись жизни <small>нажмите на строку, чтобы отметить ☆</small></h3>
+        <div class="log" id="log-list"></div>
+      </div>
+    </section>
+
+    <!-- правая колонка: семья, соседи по секунде, карта -->
+    <section class="col col-right" data-tab="world">
+      <div class="panel card-family">
+        <h3>Семья и жизнь</h3>
+        <ul class="kv" id="family-kv"></ul>
+      </div>
+      <div class="panel card-peers">
+        <h3>Родившиеся в ту же секунду <small>в этом же возрасте</small></h3>
+        <div class="peers" id="peers-list"></div>
+      </div>
+      <div class="panel card-map">
+        <h3>Карта жизни <small>1 клетка = 1 год</small></h3>
+        <div class="lifemap" id="life-map"></div>
+        <canvas id="stat-canvas" class="mini-canvas" aria-label="Показатели по годам"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <nav class="mobile-tabs" id="mobile-tabs">
+    <button data-tab="state">Состояние</button>
+    <button data-tab="life" class="on">Жизнь</button>
+    <button data-tab="world">Семья</button>
+  </nav>
+</section>
+
+<!-- =============================== ЭКРАН ФИНАЛА ============================ -->
+<section class="screen" id="screen-end" hidden>
+  <div class="end-wrap">
+    <div class="panel end-card">
+      <p class="kicker" id="end-kicker">запись о смерти</p>
+      <h2 id="end-name">—</h2>
+      <p class="end-years" id="end-years">—</p>
+      <p class="end-summary" id="end-summary">—</p>
+      <p class="end-epitaph" id="end-epitaph">—</p>
+      <div class="end-achievements" id="end-ach"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Карта жизни <small>1 клетка = 1 год</small></h3>
+      <div class="lifemap big" id="end-map"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Кривая выживаемости <small>доля доживших среди родившихся тогда же</small></h3>
+      <canvas id="end-survival" class="chart"></canvas>
+      <p class="hint" id="end-survival-note">—</p>
+    </div>
+
+    <div class="panel">
+      <h3>Отмеченные моменты</h3>
+      <div class="log small" id="end-starred"></div>
+    </div>
+
+    <div class="panel">
+      <h3>Родившиеся в ту же секунду</h3>
+      <div class="peers" id="end-peers"></div>
+    </div>
+
+    <div class="panel end-actions">
+      <button class="btn btn-primary" id="btn-new-life">Новая жизнь</button>
+      <button class="btn" id="btn-share">Сохранить карточку (PNG)</button>
+      <button class="btn btn-ghost" id="btn-to-start">На главный экран</button>
+    </div>
+  </div>
+</section>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="modal-root" class="modal-root"></div>
+
+<noscript><p style="color:#f2ecdf;padding:24px">Для игры нужен JavaScript.</p></noscript>
+
+<!-- обычные скрипты без сборки: работает и с file://, и с GitHub Pages -->
+<script src="src/countries.js"></script>
+<script src="src/names.js"></script>
+<script src="src/model.js"></script>
+<script src="src/events.js"></script>
+<script src="src/engine.js"></script>
+<script src="src/charts.js"></script>
+<script src="src/save.js"></script>
+<script src="src/ui.js"></script>
+<script src="src/main.js"></script>
+</body>
+</html>

@@ -241,6 +241,18 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 .card-showroom .badge-new { color: #ffd98a; border-color: rgba(232, 180, 90, 0.45); }
 .card-showroom:hover { border-color: rgba(232, 180, 90, 0.45); }
 
+/* 1 ИЗ 8 МИЛЛИАРДОВ — симулятор жизни: широкая карточка-баннер */
+.card-life { grid-template-columns: 1fr; }
+.card-life .card-art { min-height: 0; aspect-ratio: 1440 / 700; }
+.card-life .card-art img { object-fit: cover; object-position: center 42%; }
+.card-life .card-body { padding: 26px 30px 26px; }
+.card-life .card-body h2 { font-size: 28px; }
+.card-life .features { grid-template-columns: 1fr 1fr; gap: 5px 22px; }
+.card-life .card-actions { margin-top: 6px; }
+.card-life .features li::before { background: var(--accent); }
+.card-life .badge-new { color: #ffd98a; border-color: rgba(232, 180, 90, 0.45); }
+.card-life:hover { border-color: rgba(232, 180, 90, 0.45); }
+
 .card-actions { display: flex; gap: 10px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
 
 .btn {

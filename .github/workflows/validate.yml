@@ -20,6 +20,10 @@ jobs:
           node-version: 22
       - name: Validate community catalog and local files
         run: node site/tests/community-catalog.mjs
+      - name: Test 1 IN 8 BILLION structure
+        run: node 1in8b/tests/smoke.mjs
+      - name: Test 1 IN 8 BILLION life model
+        run: node 1in8b/tests/logic.mjs
       - name: Test NIKA animations, local AI and simulation
         run: node nika-life/tests/smoke.mjs
       - name: Test game template structure
