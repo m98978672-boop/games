@@ -47,6 +47,7 @@ if (args.look === 'voxel' || args.look === 'mesh') {
     smooth: args.smooth ? Number(args.smooth) : undefined,
     thicken: args.thicken ? Number(args.thicken) : undefined,
     snap: args.snap ? Number(args.snap) : undefined,
+    fillGap: args.fillgap ? Number(args.fillgap) : undefined,
     ink: args.ink ? Number(args.ink) : undefined,
     dents: args.dents ? Number(args.dents) : undefined,
   };

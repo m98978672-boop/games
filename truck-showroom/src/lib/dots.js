@@ -85,16 +85,26 @@ function collect(root, opts = {}) {
         n: normal, area: triArea, color,
       });
       // рёбра треугольника
-      const vs = [[ia, ib], [ib, ic], [ic, ia]];
-      for (const [u, v] of vs) {
+      const vs = [[ia, ib, ic], [ib, ic, ia], [ic, ia, ib]];
+      for (const [u, v, w] of vs) {
         const p = new THREE.Vector3().fromBufferAttribute(pos, u).applyMatrix4(o.matrixWorld);
         const q = new THREE.Vector3().fromBufferAttribute(pos, v).applyMatrix4(o.matrixWorld);
         const ku = key(p);
         const kv = key(q);
         const ek = ku < kv ? `${ku}|${kv}` : `${kv}|${ku}`;
         const found = map.get(ek);
-        if (found) { found.n2 = normal; found.count = 2; } else {
-          map.set(ek, { a: p, b: q, n1: normal, n2: null, count: 1, color });
+        if (found) {
+          found.n2 = normal;
+          found.count = 2;
+          // третий угол треугольника — по нему и нормалям считаем, куда
+          // выгнут перегиб; от порядка вершин ребра это не зависит
+          if (!found.p2) found.p2 = new THREE.Vector3().fromBufferAttribute(pos, w).applyMatrix4(o.matrixWorld);
+        } else {
+          map.set(ek, {
+            a: p, b: q, n1: normal, n2: null, count: 1, color,
+            p1: new THREE.Vector3().fromBufferAttribute(pos, w).applyMatrix4(o.matrixWorld),
+            p2: null,
+          });
         }
       }
     }
@@ -102,13 +112,19 @@ function collect(root, opts = {}) {
       // граница панели или перегиб — это и есть линия трафарета
       const sharp = e.count === 1 || (e.n1 && e.n2 && e.n1.dot(e.n2) < Math.cos(angleLimit));
       if (!sharp) continue;
-      // выпуклое ребро обводим как контур, вогнутое — как ямку:
-      // знак считается по направлению ребра и нормалям соседних граней
+      // Выпуклое ребро обводим как контур, вогнутое — как ямку.
+      // Признак: третьи углы двух граней и сумма их нормалей. У выпуклого
+      // перегиба грань уходит «под» соседнюю, у вогнутого — «над» неё.
+      // Тест не зависит от выбранного направления ребра (раньше зависел,
+      // и целые детали красились золотом просто из-за порядка вершин).
       let kind = 1;
-      if (e.n1 && e.n2) {
-        const dir = new THREE.Vector3().subVectors(e.b, e.a).normalize();
-        const cross = new THREE.Vector3().crossVectors(e.n1, e.n2);
-        if (cross.dot(dir) < 0) kind = 2;
+      if (e.n1 && e.n2 && e.p1 && e.p2) {
+        const away = new THREE.Vector3().subVectors(e.p2, e.p1);
+        const sum = new THREE.Vector3().addVectors(e.n1, e.n2);
+        // ямкой считаем только заметную вогнутость (>36°), иначе золотом
+        // заливается вся поверхность: у рам и обвесов мелких перегибов много
+        const deep = e.n1.dot(e.n2) < Math.cos((opts.dentAngle || 55) * Math.PI / 180);
+        if (deep && away.dot(sum) > 0) kind = 2;
       }
       e.kind = kind;
       edges.push(e);
@@ -148,7 +164,10 @@ export function buildDots(root, opts = {}) {
   const seed = opts.seed || 20260101;
   const inkMix = opts.inkMix ?? 0.5;
   const INK = new THREE.Color(opts.ink || '#e6eef4');
-  const { tris, edges, length, area } = collect(root, { angleLimit: opts.angleLimit });
+  const { tris, edges, length, area } = collect(root, {
+    angleLimit: opts.angleLimit,
+    dentAngle: opts.dentAngle,
+  });
   let edgeLen = 0;
   for (const e of edges) edgeLen += e.a.distanceTo(e.b);
   const points = new THREE.BufferGeometry();
@@ -200,7 +219,7 @@ export function buildDots(root, opts = {}) {
     const len = e.a.distanceTo(e.b);
     if (len < 0.014) continue; // фаски и микрорёбра только шумят
     const steps = Math.max(2, Math.ceil(len / edgeStep));
-    if (e.kind === 2) edgeCol.copy(e.color).lerp(DENT, opts.dentMix ?? 0.72);
+    if (e.kind === 2) edgeCol.copy(e.color).lerp(DENT, opts.dentMix ?? 0.62);
     else edgeCol.copy(e.color).lerp(INK, Math.min(0.8, inkMix + 0.12));
     const lifts = e.kind === 2 ? 1.25 : 1.22;
     for (let i = 0; i < steps; i++) {
@@ -263,9 +282,9 @@ export function buildDots(root, opts = {}) {
               const dy = posArr[j * 3 + 1] - py;
               const dz = posArr[j * 3 + 2] - pz;
               const along = dx * nx + dy * ny + dz * nz;
-              if (along < 0.045 || along > 0.11) continue;
+              if (along < 0.05 || along > 0.09) continue;
               const perp = dx * dx + dy * dy + dz * dz - along * along;
-              if (perp > 0.0004) continue; // сосед должен быть почти прямо перед точкой
+              if (perp > 0.00018) continue; // сосед должен быть почти прямо перед точкой
               recessed = true;
               break;
             }
@@ -275,7 +294,7 @@ export function buildDots(root, opts = {}) {
       if (recessed) {
         kindArr[i] = 2;
         // золотой акцент вместо светлой туши
-        const dm = opts.dentMix ?? 0.72;
+        const dm = opts.dentMix ?? 0.62;
         const r0 = colArr[i * 3];
         const g0 = colArr[i * 3 + 1];
         const b0 = colArr[i * 3 + 2];
