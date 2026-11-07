@@ -754,7 +754,7 @@ function renderDamageMenu() {
     head.className = 'dmg-group-t';
     head.setAttribute('aria-expanded', 'true');
     head.innerHTML = `<span class="caret">▾</span><span class="n">${title}</span>`
-      + `<span class="cnt">${onCount}/${idx.length}</span>`;
+      + `<span class="cnt">${onCount} из ${idx.length}</span>`;
     const body = document.createElement('div');
     body.className = 'dmg-group-body';
     head.onclick = () => {
