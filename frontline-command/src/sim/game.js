@@ -59,6 +59,7 @@ export class Game {
     this.warOver = false;
     this.outcome = null;
     this.noArmySince = [null, null];
+    this.tickUnits = [];
     this.focus = { x: this.world.W / 2, y: this.world.H / 2 };
     this.camera = { x: this.world.W / 2, y: this.world.H / 2, zoom: 0.5 };
     this.selectedSquads = new Set();
@@ -577,9 +578,23 @@ export class Game {
     this.unitGrid.clear();
     for (const u of this.units.values()) if (u.alive) this.unitGrid.insert(u);
 
-    for (const u of this.units.values()) {
-      if (!u.alive) continue;
-      if (u.role === 'truck') continue;
+    // Порядок обхода юнитов чередуется по тикам: тот, кто обновляется первым, стреляет
+    // первым и получает преимущество первого хода. Чередование убирает перекос в пользу
+    // фракции, чьи юниты созданы раньше (обычно это игрок/Альянс).
+    // Порядок обхода юнитов перемешивается каждый тик: кто обновляется первым, тот стреляет
+    // первым. Фиксированный порядок (по порядку создания) давал системное преимущество
+    // первой фракции — в чистой дуэли 10 зеркальных отрядов она выигрывала 9 раз из 12.
+    this.tickUnits.length = 0;
+    for (const u of this.units.values()) if (u.alive) this.tickUnits.push(u);
+    for (let k = this.tickUnits.length - 1; k > 0; k--) {
+      const j = this.rng.int(k + 1);
+      const tmp = this.tickUnits[k];
+      this.tickUnits[k] = this.tickUnits[j];
+      this.tickUnits[j] = tmp;
+    }
+    for (let k = 0; k < this.tickUnits.length; k++) {
+      const u = this.tickUnits[k];
+      if (!u.alive || u.role === 'truck') continue;
       updateSoldier(this, u, dt);
     }
 

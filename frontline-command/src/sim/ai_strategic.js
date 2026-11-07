@@ -42,6 +42,9 @@ export class StrategicAI {
     // Свободен тот, у кого нет задачи наступления: обороняющиеся посты можно переназначить,
     // но армия не остаётся без защитников — оборонную ветку план считает первой.
     const free = mySquads.filter((s) => {
+      // гарнизон ключевого города держит пост, пока не истечёт срок — иначе его тут же
+      // забирают в наступление и город остаётся пустым (это и была причина блицкригов)
+      if (s.garrisonCity && game.time < (s.garrisonUntil || 0)) return false;
       if (!s.objective) return true;
       if (s.objective.type === 'capture') return false;
       return s.state !== 'retreat' && s.state !== 'regroup';
@@ -173,18 +176,26 @@ export class StrategicAI {
         });
       }
     }
-    // 5. Ключевые сектора без защитников: занять.
-    // Только когда армия не в режиме «последний бросок»: иначе часовой съедает единственный атакующий отряд.
-    if (!allIn && !finishing && mySquads.length >= 3 && free.length && used.size < limit) {
-      const undefended = scored.filter((t) => t.points.some((p) => p.owner === faction && p.key) && t.ownPower === 0)
-        .sort((a, b) => b.value - a.value)[0];
-      if (undefended) {
-        const sq = free.find((s) => !used.has(s.id));
-        if (sq) {
-          const point = undefended.points.find((p) => p.owner === faction);
-          this.issue(sq, 'hold', undefended.sector, point, 'defense_depth', 'ключевая точка без охраны');
-          used.add(sq.id);
-        }
+    // 5. Гарнизон ключевых городов: один отряд на город, с защитой от переиспользования.
+    // Без этого прорыв к пустому городу решает войну за полторы минуты.
+    if (!allIn && !finishing && mySquads.length >= 3 && used.size < limit) {
+      const keyTargets = scored
+        .filter((t) => t.points.some((p) => p.owner === faction && p.key && p.type === 'city'))
+        .sort((a, b) => a.ownPower - b.ownPower);
+      for (const t of keyTargets) {
+        if (used.size >= limit - 1) break;
+        const point = t.points.find((p) => p.owner === faction && p.key);
+        if (!point) continue;
+        // уже есть гарнизон или достаточно своих бойцов в секторе — не дублируем
+        const hasGarrison = mySquads.some((s) => s.garrisonCity === point.id && game.time < (s.garrisonUntil || 0));
+        if (hasGarrison || t.ownPower >= (cfg.garrisonUnits ?? 3)) continue;
+        const sq = this.pickSquad(free, t.sector, used, 0);
+        if (!sq) continue;
+        this.issue(sq, 'hold', t.sector, point, 'defense_depth', 'гарнизон ключевого города');
+        sq.garrisonCity = point.id;
+        sq.garrisonUntil = game.time + (cfg.garrisonSeconds ?? 150);
+        used.add(sq.id);
+        assigned.set(sq.id, { target: t.sector.id, at: game.time });
       }
     }
     this.journal.push({

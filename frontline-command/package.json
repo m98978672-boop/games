@@ -1,17 +1,18 @@
 {
   "name": "frontline-command",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "private": true,
   "description": "Frontline: Command — 2D тактическая песочница с единым Command API и одинаковыми правилами для игрока и ИИ",
   "type": "module",
   "scripts": {
-    "test": "node tests/logic.mjs && node tests/sim.mjs && node tests/symmetry.mjs && node tests/perf.mjs",
-    "test:fast": "node tests/logic.mjs && node tests/sim.mjs && node tests/perf.mjs",
+    "test": "node tests/logic.mjs && node tests/sim.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs",
+    "test:fast": "node tests/logic.mjs && node tests/sim.mjs && node tests/duel.mjs && node tests/perf.mjs",
     "test:browser": "node tests/browser.mjs",
     "assets": "node tools/gen-assets.mjs",
     "map": "node tools/map-preview.mjs",
     "docs": "node tools/gen-docs.mjs",
     "serve": "python3 -m http.server 8000",
-    "aiwar": "node tools/ai-war.mjs --seeds 31-50 --verbose"
+    "aiwar": "node tools/ai-war.mjs --seeds 31-50 --verbose",
+    "test:duel": "node tests/duel.mjs"
   }
 }
