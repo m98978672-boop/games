@@ -511,21 +511,91 @@
       const toX = (x) => W / 2 + x * k;
       const toY = (z) => H / 2 + z * k;
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = 'rgba(8,12,17,0.55)';
+      ctx.fillStyle = 'rgba(8,12,17,0.62)';
       ctx.fillRect(0, 0, W, H);
-      // стены
-      ctx.fillStyle = 'rgba(150,170,190,0.30)';
+
+      // Типы препятствий: высокие — светлая заливка, низкие — штриховка,
+      // дороги и воронки — только фон. Так карта читается как тактическая.
+      const KIND = {
+        building: ['rgba(196,178,128,0.55)', 'rgba(226,206,150,0.95)'],
+        tower: ['rgba(130,176,236,0.45)', 'rgba(150,196,255,0.9)'],
+        watchtower: ['rgba(130,176,236,0.45)', 'rgba(150,196,255,0.9)'],
+        container: ['rgba(96,200,168,0.42)', 'rgba(120,225,190,0.85)'],
+        truck: ['rgba(150,130,206,0.42)', 'rgba(170,150,225,0.85)'],
+        wreck: ['rgba(176,120,120,0.42)', 'rgba(200,140,140,0.85)'],
+        barrier: ['rgba(206,128,92,0.45)', 'rgba(230,150,110,0.9)'],
+        sandbag: ['rgba(186,176,112,0.45)', 'rgba(210,198,130,0.9)'],
+        crates: ['rgba(192,152,92,0.42)', 'rgba(215,175,110,0.85)'],
+        fence: ['rgba(186,158,108,0.30)', 'rgba(206,178,128,0.75)'],
+        trench: ['rgba(128,108,78,0.40)', 'rgba(150,128,94,0.8)'],
+        rock: ['rgba(148,148,148,0.42)', 'rgba(170,170,170,0.85)'],
+        rubble: ['rgba(132,126,112,0.36)', 'rgba(152,146,132,0.8)'],
+        barrel: ['rgba(150,116,84,0.45)', 'rgba(170,136,100,0.85)'],
+        stack: ['rgba(120,144,168,0.42)', 'rgba(140,164,188,0.85)'],
+        lamp: ['rgba(250,226,138,0.5)', 'rgba(250,226,138,0.9)'],
+        edge: ['rgba(60,66,78,0.8)', 'rgba(90,96,108,0.9)']
+      };
       for (const c of g.world.colliders) {
-        ctx.fillRect(toX(c.x - c.hw), toY(c.z - c.hd), c.hw * 2 * k, c.hd * 2 * k);
+        const col = KIND[c.kind] || ['rgba(150,170,190,0.30)', 'rgba(170,190,210,0.6)'];
+        ctx.fillStyle = col[0];
+        const w = Math.max(1.5, c.hw * 2 * k), h = Math.max(1.5, c.hd * 2 * k);
+        ctx.fillRect(toX(c.x - c.hw), toY(c.z - c.hd), w, h);
+        ctx.strokeStyle = col[1];
+        ctx.lineWidth = 0.8;
+        ctx.strokeRect(toX(c.x - c.hw), toY(c.z - c.hd), w, h);
+        // низкие укрытия — пунктиром по нижней кромке: за ними только присев
+        if (c.standLow && c.kind !== 'edge') {
+          ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+          ctx.setLineDash([2, 2]);
+          ctx.beginPath();
+          ctx.moveTo(toX(c.x - c.hw), toY(c.z + c.hd));
+          ctx.lineTo(toX(c.x + c.hw), toY(c.z + c.hd));
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+        // проёмы-окна: короткие голубые штрихи
+        if (c.holes && c.holes.length) {
+          ctx.strokeStyle = 'rgba(122,224,255,0.85)';
+          ctx.lineWidth = 1;
+          for (const hole of c.holes) {
+            const hx = c.x + (hole.du0 + hole.du1) / 2;
+            const hz = c.z + (hole.dv0 + hole.dv1) / 2;
+            const wide = (hole.du1 - hole.du0) > (hole.dv1 - hole.dv0);
+            ctx.beginPath();
+            if (wide) { ctx.moveTo(toX(hx) - 1.5, toY(hz)); ctx.lineTo(toX(hx) + 1.5, toY(hz)); }
+            else { ctx.moveTo(toX(hx), toY(hz) - 1.5); ctx.lineTo(toX(hx), toY(hz) + 1.5); }
+            ctx.stroke();
+          }
+        }
+      }
+      // выбранное укрытие бойца (подсветка для игрока-командира)
+      if (g.player && g.player.coverHint) {
+        const ch = g.player.coverHint;
+        ctx.strokeStyle = ch >= 0.99 ? 'rgba(92,255,157,0.9)' : ch > 0.4 ? 'rgba(255,205,90,0.9)' : 'rgba(255,90,90,0.9)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(toX(g.player.x), toY(g.player.z), 7, 0, Math.PI * 2);
+        ctx.stroke();
       }
       // точка эвакуации
       if (g.extract) {
         ctx.strokeStyle = 'rgba(92,255,157,0.7)';
         ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.arc(toX(g.extract.x), toY(g.extract.z), g.extract.r * k, 0, Math.PI * 2);
+        ctx.arc(toX(g.extract.x), toY(g.extract.z), Math.max(3, g.extract.r * k), 0, Math.PI * 2);
         ctx.stroke();
+        ctx.setLineDash([3, 3]);
+        ctx.beginPath();
+        ctx.moveTo(toX(g.player.x), toY(g.player.z));
+        ctx.lineTo(toX(g.extract.x), toY(g.extract.z));
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
+      // ящики с припасами
+      (g.level && g.level.map && g.level.map.boxes || []).forEach((b) => {
+        ctx.fillStyle = 'rgba(255,205,90,0.9)';
+        ctx.fillRect(toX(b.x) - 2, toY(b.z) - 2, 4, 4);
+      });
       // бойцы: видимые — красные, остальные — приглушённые
       for (const e of g.enemies) {
         if (!e.alive) continue;
@@ -536,6 +606,15 @@
         ctx.beginPath();
         ctx.arc(toX(e.x), toY(e.z), seen ? 2.6 : 1.8, 0, Math.PI * 2);
         ctx.fill();
+        // направление взгляда видимого бойца
+        if (seen) {
+          ctx.strokeStyle = 'rgba(255,120,120,0.55)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(toX(e.x), toY(e.z));
+          ctx.lineTo(toX(e.x) + Math.sin(e.yaw) * 6, toY(e.z) - Math.cos(e.yaw) * 6);
+          ctx.stroke();
+        }
       }
       // игрок и конус взгляда
       const px = toX(g.player.x), py = toY(g.player.z);

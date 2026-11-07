@@ -53,6 +53,19 @@
       this.deathAnim = 0;
       this.lastDamageTime = -99;
       this.noShootTimer = 0;
+      this.vy = 0;
+      this.grounded = true;
+    }
+
+    /* прыжок: перепрыгиваем мешки, камни, низкие ограды; техника — нет */
+    jump() {
+      if (!this.alive || !this.grounded || this.exhausted) return false;
+      if (this.stamina < 12) return false;
+      this.vy = 3.6;
+      this.grounded = false;
+      this.stamina -= 12;
+      if (this.game.audio) this.game.audio.footstep(this.x, this.z, 0.25);
+      return true;
     }
 
     giveWeapon(id) {
@@ -111,7 +124,7 @@
         // конус разброса
         const rx = (Math.random() - 0.5) * 2 * spread;
         const ry = (Math.random() - 0.5) * 2 * spread;
-        const right = new (root.THREE.Vector3)(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+        const right = new (root.THREE.Vector3)(-Math.cos(this.yaw), 0, Math.sin(this.yaw));
         const up = new (root.THREE.Vector3)(0, 1, 0);
         dir.addScaledVector(right, rx).addScaledVector(up, ry).normalize();
         g.combat.playerBullet(origin, dir, w);
@@ -128,7 +141,7 @@
       if (g.fx) {
         const mz = g.viewmodel ? g.viewmodel.muzzle() : origin;
         g.fx.muzzleFlash(mz, this.ads ? 0.7 : 1);
-        const right = new (root.THREE.Vector3)(Math.cos(this.yaw), 0, -Math.sin(this.yaw));
+        const right = new (root.THREE.Vector3)(-Math.cos(this.yaw), 0, Math.sin(this.yaw));
         g.fx.casing(new (root.THREE.Vector3)(origin.x + right.x * 0.2, origin.y - 0.1, origin.z + right.z * 0.2), right);
         if (g.audio) g.audio.casingSfx();
       }
@@ -186,7 +199,10 @@
       const sin = Math.sin(inp.yaw), cos = Math.cos(inp.yaw);
       let dx = 0, dz = 0;
       if (inp.forward) { dx += sin * inp.forward; dz += cos * inp.forward; }
-      if (inp.strafe) { dx += cos * inp.strafe; dz += -sin * inp.strafe; }
+      // Экранное «право»: камера смотрит в +Z через разворот на π, поэтому
+      // вперёд = (sin, cos), а вправо = (−cos, sin). Раньше здесь стоял знак
+      // наоборот — от этого управление было зеркальным.
+      if (inp.strafe) { dx += -cos * inp.strafe; dz += sin * inp.strafe; }
       const mag = Math.hypot(dx, dz);
       if (mag > 0) { dx /= mag; dz /= mag; }
       const accel = this.y > 0.05 ? 4 : 16;
@@ -195,7 +211,7 @@
       const px = this.x, pz = this.z;
       this.x += this.vx * dt;
       this.z += this.vz * dt;
-      const pos = { x: this.x, z: this.z };
+      const pos = { x: this.x, z: this.z, y: this.y };
       game.world.resolveCircle(pos, this.radius);
       this.x = pos.x; this.z = pos.z;
 
@@ -214,7 +230,12 @@
       // высота глаз
       const targetEye = this.crouch ? 1.06 : 1.62;
       this.eyeHeight = damp(this.eyeHeight, targetEye, 14);
-      this.y = 0;
+      // вертикаль: прыжок через низкие препятствия
+      if (!this.grounded || this.y > 0) {
+        this.vy -= 14.5 * dt;
+        this.y += this.vy * dt;
+        if (this.y <= 0) { this.y = 0; this.vy = 0; this.grounded = true; }
+      }
       // высота камеры: приседание + покачивание
       this.camBob = Math.sin(this.bob) * 0.026 * this.bobAmt * (this.ads ? 0.25 : 1);
       this.camBobSide = Math.cos(this.bob * 0.5) * 0.022 * this.bobAmt * (this.ads ? 0.2 : 1);
@@ -524,6 +545,8 @@
 
       this.scene = new T.Scene();
       this.camera = new T.PerspectiveCamera(this.settings.fov, root.innerWidth / root.innerHeight, 0.05, 320);
+      // слой 0 — мир, слой 1 — оружие от первого лица (рисуется вторым проходом)
+      this.camera.layers.enable(1);
       this.scene.add(this.camera);
       this.scene.fog = new T.FogExp2(0x1a1410, 0.012);
 
@@ -588,6 +611,8 @@
         if (this.state === 'playing' || this.state === 'paused') this.onKeyDown(e);
       };
       const ku = (e) => { this.keys[e.code] = false; };
+      // пробел не должен прокручивать страницу и «нажимать» кнопки меню
+      root.addEventListener('keydown', (e) => { if (e.code === 'Space') e.preventDefault(); });
       root.addEventListener('keydown', kd);
       root.addEventListener('keyup', ku);
       root.addEventListener('mousedown', (e) => {
@@ -680,6 +705,7 @@
       hook('t-ads', () => { this.touchAds = !this.touchAds; });
       hook('t-reload', () => this.player.startReload());
       hook('t-crouch', () => { this.input.crouchToggle = !this.input.crouchToggle; });
+      hook('t-jump', () => { this.player && this.player.jump(); });
       hook('t-sprint', () => { this.keys.ShiftLeft = !this.keys.ShiftLeft; });
       hook('t-grenade', () => this.combat.playerGrenade());
     }
@@ -703,6 +729,7 @@
         case 'KeyP': case 'Escape': this.pause(); break;
         case 'KeyC': this.input.crouchToggle = !this.input.crouchToggle; break;
         case 'KeyH': this.ui && this.ui.toggleHelp(); break;
+        case 'Space': this.player.jump(); break;
         case 'KeyT': this.ui && this.ui.toggleThoughts(); break;
         case 'KeyF': this.ui && this.ui.toggleDebug(); break;
         case 'Tab': e.preventDefault(); this.ui && this.ui.toggleScore(); break;
@@ -1128,6 +1155,9 @@
       // бойцы
       const camPos = new (root.THREE.Vector3)(P.x, P.eyeHeight, P.z);
       const maxDist = 90;
+      // ближайшие бойцы не проходят друг через друга: расталкиваем пары
+      // (это же не даёт толпе слипнуться в одну точку у дверей и укрытий)
+      this.separateEnemies(dt);
       for (const e of this.enemies) {
         const d = Math.hypot(e.x - P.x, e.z - P.z);
         e.setLod(d < 26 ? 0 : d < 48 ? 1 : 2);
@@ -1194,6 +1224,55 @@
         if (t !== null && t < bestT) { bestT = t; enemy = e; }
       }
       return { enemy, dist: bestT, blocked: !!wall };
+    }
+
+    /* расталкивание бойцов: парное отталкивание по кругу, без физики.
+       Дальние пары отбрасываются по сетке, чтобы 20 бойцов стоили копейки. */
+    separateEnemies(dt) {
+      const list = this.enemies;
+      const n = list.length;
+      if (n < 2) return;
+      const cell = 2.4;
+      const buckets = this._sepBuckets || (this._sepBuckets = new Map());
+      buckets.clear();
+      for (let i = 0; i < n; i++) {
+        const e = list[i];
+        if (!e.alive) continue;
+        const gx = Math.floor(e.x / cell), gz = Math.floor(e.z / cell);
+        const key = gx + ':' + gz;
+        let b = buckets.get(key);
+        if (!b) { b = []; buckets.set(key, b); }
+        b.push(e);
+      }
+      const push = 1.05;
+      buckets.forEach((b, key) => {
+        const [gxs, gzs] = key.split(':');
+        const gx = Number(gxs), gz = Number(gzs);
+        for (let ox = 0; ox <= 1; ox++) {
+          for (let oz = -1; oz <= 1; oz++) {
+            if (ox === 0 && oz < 0) continue;
+            const other = ox === 0 && oz === 0 ? b : buckets.get((gx + ox) + ':' + (gz + oz));
+            if (!other) continue;
+            for (const a of b) {
+              for (const c of other) {
+                if (c === a) continue;
+                // пару считаем один раз
+                if (other === b && c.uid < a.uid) continue;
+                const dx = c.x - a.x, dz = c.z - a.z;
+                const rr = (a.radius || 0.38) + (c.radius || 0.38);
+                const d2 = dx * dx + dz * dz;
+                if (d2 > rr * rr || d2 < 1e-9) continue;
+                const d = Math.sqrt(d2);
+                const overlap = (rr - d) * 0.5 * Math.min(1, dt * 18);
+                const nx = dx / d, nz = dz / d;
+                a.x -= nx * overlap; a.z -= nz * overlap;
+                c.x += nx * overlap; c.z += nz * overlap;
+              }
+            }
+          }
+        }
+      });
+      void push;
     }
 
     nearestAliveEnemy() {
@@ -1305,7 +1384,14 @@
           sun.target.updateMatrixWorld();
         }
       }
+      // два прохода: мир (слой 0) и оружие от первого лица (слой 1).
+      // Оружие рисуется поверх и не проваливается в стены и в прицел.
+      this.camera.layers.set(0);
       this.renderer.render(this.scene, this.camera);
+      if (this.renderer.clearDepth) this.renderer.clearDepth();
+      this.camera.layers.set(1);
+      this.renderer.render(this.scene, this.camera);
+      this.camera.layers.set(0);
     }
 
     /* ----------------------------- утилиты ------------------------------- */

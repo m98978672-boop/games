@@ -20,6 +20,8 @@
       const cfg = D.ENEMY_BY_ID[type] || D.ENEMY_BY_ID.grunt;
       this.game = game;
       this.id = 'e' + (nextId++);
+      this.uid = nextId;   // числовой id для дешёвых проверок пар
+      this.radius = 0.38 * cfg.scale;
       this.type = type;
       this.cfg = cfg;
       this.x = spawn.x; this.z = spawn.z;
@@ -93,7 +95,7 @@
       const px = this.x, pz = this.z;
       this.x += this.vx * dt * speedMul;
       this.z += this.vz * dt * speedMul;
-      const pos = { x: this.x, z: this.z };
+      const pos = { x: this.x, z: this.z, y: this.y };
       game.world.resolveCircle(pos, 0.38 * cfg.scale);
       this.x = pos.x; this.z = pos.z;
 

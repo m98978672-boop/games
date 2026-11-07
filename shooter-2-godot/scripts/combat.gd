@@ -20,7 +20,7 @@ func _init(game_ref) -> void:
 func player_bullet(origin: Vector3, dir: Vector3, w: Dictionary) -> Vector3:
 	hitscan_count += 1
 	var max_t: float = float(w["range"])
-	var world_hit: Dictionary = game.world.ray_colliders(origin, dir, max_t)
+	var world_hit: Dictionary = game.world.ray_colliders(origin, dir, max_t, true)
 	var best_t: float = float(world_hit["t"]) if not world_hit.is_empty() else max_t
 	var target = null
 	var hit_y := 0.0
@@ -160,7 +160,7 @@ func _update_bullets(dt: float) -> void:
 		for s in steps:
 			if dead:
 				break
-			var hit: Dictionary = game.world.ray_colliders(bpos, bdir, step)
+			var hit: Dictionary = game.world.ray_colliders(bpos, bdir, step, true)
 			if not hit.is_empty():
 				bpos = bpos + bdir * float(hit["t"])
 				game.fx.impact(bpos, -bdir, false)

@@ -111,7 +111,11 @@ func think(game) -> void:
 	var hp_frac: float = float(agent.hp) / float(agent.max_hp)
 	if pain > 0.0:
 		pain = maxf(0.0, pain - 0.08)
-	var near_cover: Dictionary = game.world.find_cover(agent.x, agent.z, p.x, p.z, 12.0)
+	# направленное укрытие: важно, чтобы стена была между бойцом и игроком,
+	# а не просто «рядом стена»
+	var near_cover: Dictionary = game.world.cover_spot(agent.x, agent.z, Vector2(p.x, p.z), 12.0, 1.7)
+	if near_cover.is_empty():
+		near_cover = game.world.find_cover(agent.x, agent.z, p.x, p.z, 12.0)
 	var pref: Array = cfg["prefer_range"]
 	var in_pref: bool = dist > float(pref[0]) and dist < float(pref[1])
 	var too_close: bool = dist < float(pref[0]) * 0.7
@@ -275,6 +279,9 @@ func update(game, dt: float) -> void:
 			retreating -= dt
 	if tactic == "cover" and not cover_point.is_empty() \
 			and Vector2(cover_point["x"], cover_point["z"]).distance_to(Vector2(agent.x, agent.z)) < 1.2:
+		want_crouch = true
+	# за низким укрытием (мешки, камень) обязательно присесть, иначе его нет
+	if tactic == "cover" and not cover_point.is_empty() and bool(cover_point.get("crouch", false)):
 		want_crouch = true
 	if tactic == "hold" and dist_to_player < 16.0 and dist_to_player > 5.0:
 		want_crouch = true

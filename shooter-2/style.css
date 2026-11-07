@@ -400,6 +400,7 @@ body.touch #help-panel { display: none; }
 .tc.tl2 { left: 98px; bottom: 150px; width: 64px; height: 64px; font-size: 9px; }
 .tc.tl3 { left: 24px; bottom: 92px; width: 64px; height: 64px; font-size: 9px; }
 .tc.tl4 { left: 98px; bottom: 72px; width: 64px; height: 64px; font-size: 9px; }
+.tc.tl5 { left: 172px; bottom: 170px; width: 64px; height: 64px; font-size: 9px; }
 
 /* таблица боя */
 #score-panel { min-width: 330px; }

@@ -754,6 +754,30 @@ const MAPS := {
 
 ## Прямоугольники коллизий, выведенные из полигонов зданий + границы карты.
 ## Возвращает массив словарей {x, z, hw, hd, h, kind}.
+## проёмы в стенах здания: окна на высоте пояса/груди по периметру.
+## Каждый проём — прямоугольник {dy0, dy1, du0, du1, dv0, dv1} относительно центра.
+static func _window_holes(cx: float, cz: float, hw: float, hd: float, h: float) -> Array:
+	var holes: Array = []
+	var dy0: float = minf(h - 0.6, 1.02)
+	var dy1: float = minf(h - 0.25, 1.92)
+	if dy1 - dy0 < 0.35:
+		return holes
+	var step := 3.4
+	var margin := 1.0
+	var half_w := 0.28
+	var nx: int = maxi(1, int(floor((hw * 2.0 - margin * 2.0) / step)))
+	for i in nx:
+		var u: float = -hw + margin + step * (float(i) + 0.5)
+		holes.append({"dy0": dy0, "dy1": dy1, "du0": u - half_w, "du1": u + half_w,
+			"dv0": -hd - 0.01, "dv1": hd + 0.01})
+	var nz: int = maxi(1, int(floor((hd * 2.0 - margin * 2.0) / step)))
+	for i in nz:
+		var v: float = -hd + margin + step * (float(i) + 0.5)
+		holes.append({"dy0": dy0, "dy1": dy1, "du0": -hw - 0.01, "du1": hw + 0.01,
+			"dv0": v - half_w, "dv1": v + half_w})
+	return holes
+
+
 static func map_colliders(map_id: String) -> Array:
 	var m: Dictionary = MAPS.get(map_id, MAPS["depot"])
 	var out: Array = []
@@ -767,9 +791,12 @@ static func map_colliders(map_id: String) -> Array:
 			max_x = maxf(max_x, p.x)
 			min_z = minf(min_z, p.y)
 			max_z = maxf(max_z, p.y)
-		out.append({"x": (min_x + max_x) * 0.5, "z": (min_z + max_z) * 0.5,
-			"hw": (max_x - min_x) * 0.5, "hd": (max_z - min_z) * 0.5,
-			"h": float(b["h"]), "kind": "building"})
+		var cx: float = (min_x + max_x) * 0.5
+		var cz: float = (min_z + max_z) * 0.5
+		var hw: float = (max_x - min_x) * 0.5
+		var hd: float = (max_z - min_z) * 0.5
+		out.append({"x": cx, "z": cz, "hw": hw, "hd": hd, "h": float(b["h"]),
+			"kind": "building", "holes": _window_holes(cx, cz, hw, hd, float(b["h"]))})
 	for t in m["towers"]:
 		out.append({"x": t["x"], "z": t["z"], "hw": float(t["w"]) * 0.36,
 			"hd": float(t["w"]) * 0.36, "h": float(t["h"]), "kind": "tower"})
@@ -783,13 +810,14 @@ static func map_colliders(map_id: String) -> Array:
 		var c2: float = absf(cos(float(sb["a"])))
 		var s2: float = absf(sin(float(sb["a"])))
 		var half2: float = float(sb["len"]) * 0.5
+		# мешки низкие: стоя не укрывают, присевший — почти полностью
 		out.append({"x": sb["x"], "z": sb["z"], "hw": half2 * c2 + 0.3 * s2,
-			"hd": half2 * s2 + 0.3 * c2, "h": 0.72, "kind": "sandbag"})
+			"hd": half2 * s2 + 0.3 * c2, "h": 0.72, "kind": "sandbag", "stand_low": true})
 	for p in m["barrels"]:
 		out.append({"x": p.x, "z": p.y, "hw": 0.48, "hd": 0.48, "h": 1.15, "kind": "barrel"})
 	for p in m["rocks"]:
 		out.append({"x": p.x, "z": p.y, "hw": 0.7 * p.z, "hd": 0.65 * p.z,
-			"h": 1.1 * p.z, "kind": "rock"})
+			"h": 1.1 * p.z, "kind": "rock", "stand_low": true})
 	for p in m["stacks"]:
 		out.append({"x": p.x, "z": p.y, "hw": 1.0, "hd": 0.85, "h": 1.9, "kind": "stack"})
 	# границы карты

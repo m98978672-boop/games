@@ -61,7 +61,8 @@ function fake2d() {
   const grad = { addColorStop() {} };
   return {
     fillStyle: '', strokeStyle: '', globalAlpha: 1, lineWidth: 1, globalCompositeOperation: '',
-    fillRect() {}, beginPath() {}, arc() {}, fill() {}, stroke() {}, moveTo() {}, lineTo() {},
+    fillRect() {}, strokeRect() {}, clearRect() {}, setLineDash() {}, beginPath() {}, arc() {},
+    ellipse() {}, fill() {}, stroke() {}, moveTo() {}, lineTo() {}, rect() {}, quadTo() {},
     save() {}, restore() {}, translate() {}, rotate() {}, closePath() {},
     createRadialGradient() { return grad; }, createLinearGradient() { return grad; },
     clearRect() {}, drawImage() {}, putImageData() {}

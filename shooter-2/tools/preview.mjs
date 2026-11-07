@@ -38,7 +38,7 @@ sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
   CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
 });
 // порядок важен: outline/gunblueprints/soldier подключаются ДО model
-for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik']) {
+for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'viewmodel']) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: m });
 }
 const SH2 = sandbox.SH2;
@@ -206,6 +206,31 @@ if (single) {
   process.exit(0);
 }
 
+/* --------------------- кадр от первого лица ---------------------------- */
+// node tools/preview.mjs --fps rifle -> docs/preview-fp.png
+if (process.argv.indexOf('--fps') >= 0) {
+  const id = process.argv[process.argv.indexOf('--fps') + 1] || 'rifle';
+  const W = 960, H = 560;
+  const cam = new T.PerspectiveCamera(78, W / H, 0.05, 320);
+  cam.rotation.order = 'YXZ';
+  cam.position.set(0, 1.62, 0);
+  cam.rotation.set(0, Math.PI, 0);
+  cam.updateMatrixWorld(true);
+  const vm = new SH2.viewmodel.ViewModel(cam);
+  vm.setWeapon(id);
+  for (let i = 0; i < 40; i++) vm.update(1 / 60, { moving: 0, sprint: false, ads: false });
+  cam.updateMatrixWorld(true);
+  const canvas = new Canvas(W, H, [70, 68, 62]);
+  // сцена: настоящий уровень вокруг глаза игрока — карта «Склады»
+  const lvl = SH2.model.buildLevel('depot');
+  renderScene(canvas, lvl.group, cam.position, cam.position.clone().add(new T.Vector3(0, -1, 6)), 78);
+  // оружие от первого лица: рисуем вторым проходом, всегда поверх мира
+  renderScene(canvas, vm.root, cam.position, cam.position.clone().add(new T.Vector3(0, 0, 6)), 78);
+  fs.writeFileSync(path.join(root, 'docs', 'preview-fp.png'), png(W, H, canvas.color));
+  console.log('docs/preview-fp.png — ' + id + ' от первого лица');
+  process.exit(0);
+}
+
 /* ------------------------------ лист оружия ----------------------------- */
 // node tools/preview.mjs --guns  -> docs/preview-guns.png (5 стволов, вид сбоку)
 // автоподбор камеры под габариты объекта: силуэт занимает кадр
@@ -247,6 +272,337 @@ if (process.argv.indexOf('--guns') >= 0) {
   });
   fs.writeFileSync(path.join(root, 'docs', 'preview-guns.png'), png(W, H, canvas.color));
   console.log('docs/preview-guns.png — 5 стволов по чертежам: pistol, smg, rifle, shotgun, dmr');
+  process.exit(0);
+}
+
+/* --------------------------- карта-схема ------------------------------- */
+// node tools/preview.mjs --plan <id> -> docs/plan-<id>.png
+// План сверху в пиксельной точности: полигоны зданий, проёмы-окна, точки
+// опоры с вектором нормали, сектор обстрела, зона укрытия, дороги и спавны.
+if (process.argv.indexOf('--plan') >= 0) {
+  const mapId = process.argv[process.argv.indexOf('--plan') + 1] || 'depot';
+  const lvl = SH2.model.buildLevel(mapId);
+  const M = lvl.map;
+  const W = 1100, H = 1100;
+  const half = M.size / 2;
+  const k = W / M.size;
+  const canvas = new Canvas(W, H, [13, 15, 19]);
+  const RGB = (i, r, g, b) => { canvas.color[i] = r; canvas.color[i + 1] = g; canvas.color[i + 2] = b; canvas.color[i + 3] = 255; };
+  const blend = (i, r, g, b, a) => {
+    canvas.color[i] = canvas.color[i] * (1 - a) + r * a;
+    canvas.color[i + 1] = canvas.color[i + 1] * (1 - a) + g * a;
+    canvas.color[i + 2] = canvas.color[i + 2] * (1 - a) + b * a;
+    canvas.color[i + 3] = 255;
+  };
+  const px = (x) => Math.round((x + half) * k);
+  const pz = (z) => Math.round((z + half) * k);
+  const at = (X, Y) => (Y * W + X) * 4;
+  const plot = (X, Y, r, g, b, a) => {
+    if (X < 0 || Y < 0 || X >= W || Y >= H) return;
+    const i = at(X, Y);
+    if (a === undefined) RGB(i, r, g, b); else blend(i, r, g, b, a);
+  };
+  // линия в экранных пикселях (Брезенхем) — без «пунктира» из-за шага сетки
+  const linePx = (x0, y0, x1, y1, r, g, b, a) => {
+    let x = Math.round(x0), y = Math.round(y0);
+    const xe = Math.round(x1), ye = Math.round(y1);
+    const dx = Math.abs(xe - x), dy = Math.abs(ye - y);
+    const sx = x < xe ? 1 : -1, sy = y < ye ? 1 : -1;
+    let err = dx - dy;
+    for (let guard = 0; guard < 8000; guard++) {
+      plot(x, y, r, g, b, a);
+      if (x === xe && y === ye) break;
+      const e2 = err * 2;
+      if (e2 > -dy) { err -= dy; x += sx; }
+      if (e2 < dx) { err += dx; y += sy; }
+    }
+  };
+  const seg = (x0, z0, x1, z1, r, g, b, a) => linePx(px(x0), pz(z0), px(x1), pz(z1), r, g, b, a);
+  // заливка полигона по строкам (пиксельная точность)
+  const fillPoly = (pts, r, g, b, a) => {
+    const pxs = pts.map((p) => [px(p[0]), pz(p[1])]);
+    let minY = 1e9, maxY = -1e9;
+    pxs.forEach((p) => { minY = Math.min(minY, p[1]); maxY = Math.max(maxY, p[1]); });
+    minY = Math.max(0, Math.floor(minY)); maxY = Math.min(H - 1, Math.ceil(maxY));
+    for (let y = minY; y <= maxY; y++) {
+      const xs = [];
+      for (let i = 0, j = pxs.length - 1; i < pxs.length; j = i++) {
+        const a1 = pxs[i], b1 = pxs[j];
+        if ((a1[1] > y) !== (b1[1] > y)) {
+          xs.push(a1[0] + (y - a1[1]) * (b1[0] - a1[0]) / (b1[1] - a1[1]));
+        }
+      }
+      xs.sort((m, n) => m - n);
+      for (let i = 0; i + 1 < xs.length; i += 2) {
+        for (let x = Math.ceil(xs[i]); x <= Math.floor(xs[i + 1]); x++) plot(x, y, r, g, b, a);
+      }
+    }
+  };
+  const rectPx = (cx, cz, hw, hd, r, g, b, a) => fillPoly([
+    [cx - hw, cz - hd], [cx + hw, cz - hd], [cx + hw, cz + hd], [cx - hw, cz + hd]
+  ], r, g, b, a);
+  const dot = (x, z, r, g, b, rad) => {
+    const R = rad || 3;
+    for (let dx = -R; dx <= R; dx++) for (let dz = -R; dz <= R; dz++) {
+      if (dx * dx + dz * dz <= R * R) plot(px(x) + dx, pz(z) + dz, r, g, b);
+    }
+  };
+  const arc = (x, z, rad, a0, a1, r, g, b, step) => {
+    const st = step || 0.02;
+    for (let a = a0; a <= a1; a += st) plot(px(x + Math.cos(a) * rad), pz(z + Math.sin(a) * rad), r, g, b, 0.85);
+  };
+  const arrow = (x0, z0, x1, z1, r, g, b) => {
+    linePx(px(x0), pz(z0), px(x1), pz(z1), r, g, b, 0.95);
+    const a = Math.atan2(z1 - z0, x1 - x0);
+    for (const s2 of [2.7, -2.7]) seg(x1, z1, x1 - Math.cos(a + s2) * 1.6, z1 - Math.sin(a + s2) * 1.6, r, g, b, 0.95);
+  };
+
+  // фон: земля с виньеткой. --art даёт тёплую «рисованную» землю.
+  const art = process.argv.indexOf('--art') >= 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const d = Math.hypot(x / W - 0.5, y / H - 0.5) * 2;
+      const t = Math.max(0, 1 - d * 0.9);
+      if (art) {
+        // сухая земля: пятна глины и пепла, край темнее
+        const n = ((x * 37 + y * 91) % 97) / 97;
+        RGB(at(x, y), Math.round(52 + 18 * t + n * 10), Math.round(45 + 14 * t + n * 8),
+          Math.round(35 + 9 * t + n * 6));
+      } else {
+        RGB(at(x, y), 26 + 14 * t, 27 + 15 * t, 30 + 16 * t);
+      }
+    }
+  }
+  // сетка 10 м и рамка карты
+  for (let g2 = -half; g2 <= half + 0.01; g2 += 10) {
+    seg(-half, g2, half, g2, 46, 50, 58, 0.6);
+    seg(g2, -half, g2, half, 46, 50, 58, 0.6);
+  }
+  seg(-half, -half, half, -half, 90, 96, 110, 0.9);
+  seg(half, -half, half, half, 90, 96, 110, 0.9);
+  seg(half, half, -half, half, 90, 96, 110, 0.9);
+  seg(-half, half, -half, -half, 90, 96, 110, 0.9);
+
+  // дороги: полосы с обочиной и осевой разметкой
+  (M.road || []).forEach((rd) => {
+    const ca = Math.cos(rd.a || 0), sa = Math.sin(rd.a || 0);
+    const dx = ca * rd.l / 2, dz = sa * rd.l / 2;
+    const quad = (w) => [
+      [rd.x - dx - sa * w, rd.z - dz + ca * w], [rd.x + dx - sa * w, rd.z + dz + ca * w],
+      [rd.x + dx + sa * w, rd.z + dz - ca * w], [rd.x - dx + sa * w, rd.z - dz - ca * w]
+    ];
+    fillPoly(quad(rd.w / 2 + 0.7), 44, 42, 38, 1);
+    fillPoly(quad(rd.w / 2), 56, 52, 45, 1);
+    // осевая пунктиром
+    const steps = Math.floor(rd.l / 3);
+    for (let i = 0; i < steps; i += 2) {
+      const u0 = -rd.l / 2 + i * 3, u1 = u0 + 1.8;
+      seg(rd.x + ca * u0, rd.z + sa * u0, rd.x + ca * u1, rd.z + sa * u1, 150, 132, 80, 0.85);
+    }
+  });
+
+  // здания: заливка пола, стены, окна, «крыша» пунктиром
+  (M.buildings || []).forEach((b) => {
+    fillPoly(b.poly, 74, 70, 58, 1);
+    const pb = SH2.level.planBounds(b.poly);
+    // внутренние перегородки: делим прямоугольник на 2-3 отсека
+    const rooms = pb.hw > pb.hd ? 2 : 2;
+    for (let i = 1; i < rooms; i++) {
+      const t = i / rooms;
+      if (pb.hw > pb.hd) seg(pb.cx - pb.hw + pb.hw * 2 * t, pb.cz - pb.hd, pb.cx - pb.hw + pb.hw * 2 * t, pb.cz + pb.hd, 118, 108, 88, 0.9);
+      else seg(pb.cx - pb.hw, pb.cz - pb.hd + pb.hd * 2 * t, pb.cx + pb.hw, pb.cz - pb.hd + pb.hd * 2 * t, 118, 108, 88, 0.9);
+    }
+    // стены — толстые линии по контуру
+    for (let i = 0; i < b.poly.length; i++) {
+      const a1 = b.poly[i], c1 = b.poly[(i + 1) % b.poly.length];
+      for (let d = -2; d <= 2; d++) {
+        linePx(px(a1[0]), pz(a1[1]) + d, px(c1[0]), pz(c1[1]) + d, 214, 196, 146, 1);
+      }
+    }
+    // окна
+    (SH2.model.windowHoles(pb, b) || []).forEach((h) => {
+      const cx = pb.cx + (h.du0 + h.du1) / 2, cz = pb.cz + (h.dv0 + h.dv1) / 2;
+      const wide = (h.du1 - h.du0) > (h.dv1 - h.dv0);
+      for (let o = -0.62; o <= 0.62; o += 0.06) {
+        if (wide) plot(px(cx + o), pz(cz), 122, 224, 255); else plot(px(cx), pz(cz + o), 122, 224, 255);
+      }
+    });
+  });
+
+  // коллайдеры-пропсы: полупрозрачная заливка + контур + точка опоры
+  const KIND = {
+    barrier: [190, 118, 86], sandbag: [176, 166, 104], barrel: [150, 116, 84],
+    rock: [140, 140, 140], stack: [116, 138, 160], container: [86, 186, 156],
+    truck: [140, 122, 196], lamp: [248, 224, 138], tower: [124, 168, 226],
+    watchtower: [124, 168, 226], wreck: [168, 114, 114], fence: [176, 150, 102],
+    trench: [122, 102, 74], crates: [184, 146, 88], rubble: [126, 120, 106],
+    netpost: [104, 122, 84]
+  };
+  lvl.colliders.forEach((c) => {
+    if (c.kind === 'building') return;
+    const col = KIND[c.kind] || [180, 180, 180];
+    rectPx(c.x, c.z, c.hw, c.hd, col[0], col[1], col[2], 0.32);
+    seg(c.x - c.hw, c.z - c.hd, c.x + c.hw, c.z - c.hd, col[0], col[1], col[2], 0.95);
+    seg(c.x + c.hw, c.z - c.hd, c.x + c.hw, c.z + c.hd, col[0], col[1], col[2], 0.95);
+    seg(c.x + c.hw, c.z + c.hd, c.x - c.hw, c.z + c.hd, col[0], col[1], col[2], 0.95);
+    seg(c.x - c.hw, c.z + c.hd, c.x - c.hw, c.z - c.hd, col[0], col[1], col[2], 0.95);
+  });
+
+  // точки опоры: точка + нормаль + сектор обстрела + зона укрытия
+  lvl.colliders.forEach((c) => {
+    if (!c.anchor) return;
+    const ax = c.anchor.x, az = c.anchor.z;
+    const base = Math.atan2(c.normalZ, c.normalX);
+    // укрытие — с обратной стороны от нормали (за препятствием)
+    arc(ax, az, 1.05, base + Math.PI * 0.5, base + Math.PI * 1.5, 90, 176, 236, 0.04);
+    // сектор обстрела
+    arc(ax, az, 3.6, base - Math.PI / 3, base + Math.PI / 3, 232, 96, 72, 0.03);
+    seg(ax, az, ax + Math.cos(base) * 3.6, az + Math.sin(base) * 3.6, 232, 96, 72, 0.5);
+    arrow(c.x + c.normalX * 0.4, c.z + c.normalZ * 0.4, ax, az, 255, 198, 96);
+    dot(ax, az, 255, 160, 60, 2);
+  });
+
+  // спавны, эвакуация, ящики
+  (M.spawns || []).forEach((p) => {
+    for (let d = -6; d <= 6; d++) {
+      plot(px(p[0]) + d, pz(p[1]), 96, 240, 132);
+      plot(px(p[0]), pz(p[1]) + d, 96, 240, 132);
+    }
+  });
+  (M.extracts || []).forEach((p) => {
+    arc(p.x, p.z, p.r, 0, Math.PI * 2, 116, 255, 214, 0.01);
+    arc(p.x, p.z, p.r - 0.5, 0, Math.PI * 2, 60, 160, 140, 0.02);
+  });
+  (M.boxes || []).forEach((p) => arc(p.x, p.z, p.r, 0, Math.PI * 2, 255, 205, 90, 0.02));
+
+  if (art) {
+    // ---- заголовок и легенда: мини-шрифт 5×7, без внешних файлов ----
+    const GLYPHS = {
+      'А': ['01110','10001','10001','11111','10001','10001','10001'],
+      'Б': ['11111','10000','10000','11110','10001','10001','11110'],
+      'В': ['11110','10001','10001','11110','10001','10001','11110'],
+      'Г': ['11111','10000','10000','10000','10000','10000','10000'],
+      'Д': ['00111','01001','01001','01001','01001','11111','10001'],
+      'Е': ['11111','10000','10000','11110','10000','10000','11111'],
+      'Ё': ['01010','00000','11111','10000','11110','10000','11111'],
+      'Ж': ['10101','10101','10101','11111','10101','10101','10101'],
+      'З': ['01110','10001','00001','00110','00001','10001','01110'],
+      'И': ['10001','10011','10011','10101','11001','11001','10001'],
+      'Й': ['01010','01110','10001','10011','11001','10001','10001'],
+      'К': ['10001','10010','10100','11000','10100','10010','10001'],
+      'Л': ['00111','01001','01001','01001','01001','11001','10001'],
+      'М': ['10001','11011','10101','10101','10001','10001','10001'],
+      'Н': ['10001','10001','10001','11111','10001','10001','10001'],
+      'О': ['01110','10001','10001','10001','10001','10001','01110'],
+      'П': ['11111','10001','10001','10001','10001','10001','10001'],
+      'Р': ['11110','10001','10001','11110','10000','10000','10000'],
+      'С': ['01110','10001','10000','10000','10000','10001','01110'],
+      'Т': ['11111','00100','00100','00100','00100','00100','00100'],
+      'У': ['10001','10001','10001','01110','00100','00100','00100'],
+      'Ф': ['00100','01110','10101','10101','10101','01110','00100'],
+      'Х': ['10001','10001','01010','00100','01010','10001','10001'],
+      'Ц': ['10010','10010','10010','10010','10010','11111','00001'],
+      'Ч': ['10001','10001','10001','01111','00001','00001','00001'],
+      'Ш': ['10101','10101','10101','10101','10101','10101','11111'],
+      'Щ': ['10101','10101','10101','10101','10101','11111','00001'],
+      'Ъ': ['11000','01000','01000','01110','01001','01001','01110'],
+      'Ы': ['10001','10001','10001','11101','10011','10011','11101'],
+      'Ь': ['10000','10000','10000','11110','10001','10001','11110'],
+      'Э': ['01110','10001','00001','00111','00001','10001','01110'],
+      'Ю': ['10110','11001','11001','11001','11001','11001','10110'],
+      'Я': ['01111','10001','10001','01111','00101','01001','10001'],
+      'A': ['01110','10001','10001','11111','10001','10001','10001'],
+      'B': ['11110','10001','10001','11110','10001','10001','11110'],
+      'C': ['01110','10001','10000','10000','10000','10001','01110'],
+      'D': ['11110','10001','10001','10001','10001','10001','11110'],
+      'E': ['11111','10000','10000','11110','10000','10000','11111'],
+      'F': ['11111','10000','10000','11110','10000','10000','10000'],
+      'G': ['01110','10001','10000','10111','10001','10001','01110'],
+      'H': ['10001','10001','10001','11111','10001','10001','10001'],
+      'I': ['01110','00100','00100','00100','00100','00100','01110'],
+      'K': ['10001','10010','10100','11000','10100','10010','10001'],
+      'L': ['10000','10000','10000','10000','10000','10000','11111'],
+      'M': ['10001','11011','10101','10101','10001','10001','10001'],
+      'N': ['10001','11001','10101','10011','10001','10001','10001'],
+      'O': ['01110','10001','10001','10001','10001','10001','01110'],
+      'P': ['11110','10001','10001','11110','10000','10000','10000'],
+      'R': ['11110','10001','10001','11110','10100','10010','10001'],
+      'S': ['01111','10000','10000','01110','00001','00001','11110'],
+      'T': ['11111','00100','00100','00100','00100','00100','00100'],
+      'U': ['10001','10001','10001','10001','10001','10001','01110'],
+      'V': ['10001','10001','10001','10001','10001','01010','00100'],
+      'W': ['10001','10001','10001','10101','10101','11011','10001'],
+      'X': ['10001','01010','00100','00100','00100','01010','10001'],
+      'Y': ['10001','01010','00100','00100','00100','00100','00100'],
+      'Z': ['11111','00001','00010','00100','01000','10000','11111'],
+      '0': ['01110','10001','10011','10101','11001','10001','01110'],
+      '1': ['00100','01100','00100','00100','00100','00100','01110'],
+      '2': ['01110','10001','00001','00110','01000','10000','11111'],
+      '3': ['11110','00001','00001','01110','00001','00001','11110'],
+      '4': ['00010','00110','01010','10010','11111','00010','00010'],
+      '5': ['11111','10000','11110','00001','00001','10001','01110'],
+      '6': ['00110','01000','10000','11110','10001','10001','01110'],
+      '7': ['11111','00001','00010','00100','01000','01000','01000'],
+      '8': ['01110','10001','10001','01110','10001','10001','01110'],
+      '9': ['01110','10001','10001','01111','00001','00010','01100'],
+      '-': ['00000','00000','00000','11111','00000','00000','00000'],
+      '.': ['00000','00000','00000','00000','00000','01100','01100'],
+      ',': ['00000','00000','00000','00000','01100','00100','01000'],
+      ':': ['00000','01100','01100','00000','01100','01100','00000'],
+      '/': ['00001','00010','00010','00100','01000','01000','10000'],
+      '°': ['01100','10010','10010','01100','00000','00000','00000'],
+      ' ': ['00000','00000','00000','00000','00000','00000','00000']
+    };
+    const text = (str, x0, y0, scale, r, g, b) => {
+      let cx = x0;
+      for (const ch of String(str).toUpperCase()) {
+        const gl = GLYPHS[ch];
+        if (!gl) { cx += 6 * scale; continue; }
+        for (let row = 0; row < 7; row++) {
+          for (let col = 0; col < 5; col++) {
+            if (gl[row][col] !== '1') continue;
+            for (let dy = 0; dy < scale; dy++) for (let dx = 0; dx < scale; dx++) {
+              plot(cx + col * scale + dx, y0 + row * scale + dy, r, g, b);
+            }
+          }
+        }
+        cx += 6 * scale;
+      }
+      return cx;
+    };
+    const title = {
+      depot: 'СКЛАДЫ',
+      convoy: 'КАРАВАН',
+      harbor: 'ПОРТ'
+    }[mapId] || mapId.toUpperCase();
+    // верхняя плашка
+    for (let y = 0; y < 54; y++) for (let x = 0; x < W; x++) blend(at(x, y), 12, 13, 16, 0.86);
+    text('СЕКТОР ПЕПЕЛ / ' + title, 18, 12, 3, 246, 214, 150);
+    text('ПЛАН СЕКТОРА: ' + lvl.colliders.length + ' ОБЪЕКТОВ', 18, 38, 2, 190, 180, 160);
+    // легенда снизу
+    const LY = H - 132;
+    for (let y = LY - 8; y < H; y++) for (let x = 0; x < W; x++) blend(at(x, y), 10, 11, 14, 0.90);
+    const legend = [
+      [[214, 196, 146], 'СТЕНЫ ЗДАНИЙ'],
+      [[122, 224, 255], 'ОКНА'],
+      [[255, 160, 60], 'ТОЧКИ ОПОРЫ'],
+      [[255, 198, 96], 'ВЕКТОР-НОРМАЛЬ'],
+      [[232, 96, 72], 'СЕКТОР ОГНЯ'],
+      [[90, 176, 236], 'ЗОНА УКРЫТИЯ'],
+      [[86, 186, 156], 'КОНТЕЙНЕР'],
+      [[140, 122, 196], 'ФУРА']
+    ];
+    legend.forEach((item, i) => {
+      const col = i % 4, row = Math.floor(i / 4);
+      const x = 30 + col * 270, y = LY + 16 + row * 40;
+      for (let dy = 0; dy < 14; dy++) for (let dx = 0; dx < 14; dx++) plot(x + dx, y + dy, item[0][0], item[0][1], item[0][2]);
+      text(item[1], x + 22, y + 4, 2, 210, 205, 195);
+    });
+  }
+
+  fs.writeFileSync(path.join(root, 'docs', 'plan-' + mapId + (art ? '-art' : '') + '.png'), png(W, H, canvas.color));
+  console.log('docs/plan-' + mapId + (art ? '-art' : '') + '.png — ' + lvl.colliders.length + ' коллайдеров, ' +
+    lvl.props + ' объектов, ' + lvl.colliders.filter((c) => c.anchor).length + ' точек опоры');
   process.exit(0);
 }
 

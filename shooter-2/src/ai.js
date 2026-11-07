@@ -109,7 +109,9 @@
       if (this.pain > 0) this.pain = Math.max(0, this.pain - 0.08);
       const hasLOS = this.seenNow;
       const cover = this.coverPoint;
-      const nearCover = game.world.findCover(a.x, a.z, P.x, P.z, 12);
+      // укрытие ищем с учётом направления на угрозу: стена между нами и игроком
+      const nearCover = game.world.coverSpot(a.x, a.z, P.x, P.z, 12, 1.7)
+        || game.world.findCover(a.x, a.z, P.x, P.z, 12);
       const inPrefRange = dist > cfg.preferRange[0] && dist < cfg.preferRange[1];
       const tooClose = dist < cfg.preferRange[0] * 0.7;
       const tooFar = dist > cfg.preferRange[1] * 1.25;
@@ -165,6 +167,8 @@
         if (!this.coverPoint || this.coverTimer <= 0) {
           this.coverPoint = nearCover || game.world.randomOpenPoint(a.x, a.z, 3, 9, this.rng);
           this.coverTimer = 2 + Math.floor(this.rng() * 3);
+          // за низким укрытием надо присесть, иначе его нет
+          this.wantCrouchCover = !!(this.coverPoint && this.coverPoint.crouch);
         }
       }
       if (best === 'flank') {
@@ -225,6 +229,8 @@
       if (this.tactic === 'cover' && this.coverPoint && Math.hypot(this.coverPoint.x - a.x, this.coverPoint.z - a.z) < 1.2) {
         wantCrouch = true;
       }
+      // за низким укрытием (мешки, камень) приседаем — иначе оно не работает
+      if (this.wantCrouchCover && this.tactic === 'cover') wantCrouch = true;
       if (this.tactic === 'hold' && this.distToPlayer < 16 && this.distToPlayer > 5) wantCrouch = true;
 
       /* ------- стрельба: решение принимается тоже «с трудом» --------- */

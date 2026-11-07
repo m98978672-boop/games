@@ -53,8 +53,12 @@
       if (pos.z < -lim) pos.z = -lim;
       if (pos.z > lim) pos.z = lim;
       let hitWall = false;
+      // высота «ног» тела: перепрыгиваемые и низкие препятствия выше не мешают
+      const feet = pos.y || 0;
       for (let i = 0; i < this.colliders.length; i++) {
         const c = this.colliders[i];
+        // вертикальная полоса: низкое препятствие не держит, если тело уже над ним
+        if (c.standLow && feet > 0.55 * (c.h || 1)) continue;
         const cx = Math.max(c.x - c.hw, Math.min(pos.x, c.x + c.hw));
         const cz = Math.max(c.z - c.hd, Math.min(pos.z, c.z + c.hd));
         let dx = pos.x - cx, dz = pos.z - cz;
@@ -69,9 +73,12 @@
           else pos.z = c.z + Math.sign(pos.z - c.z || 1) * (c.hd + radius);
         } else {
           const d = Math.sqrt(d2);
-          const push = (radius - d) / d;
-          pos.x += dx * push;
-          pos.z += dz * push;
+          const nx = dx / d, nz = dz / d;
+          // выталкиваем ровно на проникновение — касательное движение
+          // сохраняется, поэтому юнит скользит вдоль стены, а не липнет
+          const push = radius - d;
+          pos.x += nx * push;
+          pos.z += nz * push;
         }
       }
       // финальный зажим границами карты
@@ -83,8 +90,11 @@
     }
 
     /* ----------------------------- луч vs мир ----------------------------- */
-    // Возвращает {t, collider} — ближайшее пересечение луча с AABB, либо null
-    rayColliders(ox, oy, oz, dx, dy, dz, maxT) {
+    // Возвращает {t, collider} — ближайшее пересечение луча с AABB, либо null.
+  // opts: { bullet: true } — луч пули; окна и низкие препятствия считаются
+  // по своей высоте, а непробиваемые поверхности возвращают {stopped: true}
+    rayColliders(ox, oy, oz, dx, dy, dz, maxT, opts) {
+      const o = opts || {};
       let bestT = maxT, best = null;
       for (let i = 0; i < this.colliders.length; i++) {
         const c = this.colliders[i];
@@ -92,6 +102,12 @@
         const px = c.x - ox, pz = c.z - oz;
         const far = Math.sqrt(c.hw * c.hw + c.hd * c.hd) + maxT;
         if (px * px + pz * pz > far * far) continue;
+        // у части препятствий есть проём: луч проходит через окно/бойницу,
+        // если попал в его прямоугольник (окно смещено от центра стены)
+        if (o.bullet && c.holes) {
+          // пуля попала в оконный/пулевой проём — проходит сквозь это препятствие
+          if (hitHole(ox, oy, oz, dx, dy, dz, c, bestT)) continue;
+        }
         const t = rayBox(ox, oy, oz, dx, dy, dz, c.x, 0, c.z, c.hw, c.h, c.hd, bestT);
         if (t !== null && t < bestT) { bestT = t; best = c; }
       }
@@ -104,6 +120,66 @@
       if (len < 1e-4) return true;
       const hit = this.rayColliders(ax, ay, az, dx / len, dy / len, dz / len, len - 0.05);
       return !hit;
+    }
+
+    /* --------------------- направленное укрытие ---------------------------- */
+    /* Насколько позиция прикрыта от конкретного стрелка.
+       Считаем три луча от стрелка к габаритам цели (низ/центр/верх).
+       Возвращает { cover: 0..1, crouchHelps: bool, blocker: collider|null }.
+       cover 1 — перекрыты все три, 0 — открыто. Низкие препятствия дают
+       укрытие только присевшему: это и возвращает crouchHelps. */
+    coverFrom(x, z, threatX, threatZ, height, eyeY) {
+      const h = height || 1.7;
+      const from = threatX === undefined ? 0 : threatX;
+      const fromZ = threatZ === undefined ? 0 : threatZ;
+      const targets = [h * 0.20, h * 0.55, h * 0.92];
+      const eye = eyeY === undefined ? 1.5 : eyeY;
+      let blocked = 0;
+      let lowOnly = true;
+      let blocker = null;
+      for (const ty of targets) {
+        const res = this.segmentBlocks(from, eye, fromZ, x, ty, z);
+        if (res) {
+          blocked++;
+          if (res.collider) blocker = blocker || res.collider;
+          if (!res.collider || !res.collider.standLow) lowOnly = false;
+        }
+      }
+      return { cover: blocked / targets.length, lowOnly: lowOnly && blocked > 0, blocker };
+    }
+
+    /* пересекает ли отрезок (стрелок → точка) препятствие, и какое */
+    segmentBlocks(ax, ay, az, bx, by, bz) {
+      const dx = bx - ax, dy = by - ay, dz = bz - az;
+      const len = Math.sqrt(dx * dx + dy * dy + dz * dz);
+      if (len < 1e-4) return null;
+      const hit = this.rayColliders(ax, ay, az, dx / len, dy / len, dz / len, len, { bullet: true });
+      return hit ? { t: hit.t, collider: hit.collider } : null;
+    }
+
+    /* улучшенный поиск укрытия: важно не «рядом со стеной», а «стена между
+       юнитом и угрозой», причём стена должна быть высокой либо юнит присесть */
+    coverSpot(fromX, fromZ, threatX, threatZ, radius, height) {
+      const r = radius || 12;
+      const h = height || 1.7;
+      let best = null, bestScore = -1e9;
+      for (let a = 0; a < 16; a++) {
+        for (let dist = 2.5; dist < r; dist += 1.8) {
+          const ang = (a / 16) * TAU;
+          const x = fromX + Math.cos(ang) * dist;
+          const z = fromZ + Math.sin(ang) * dist;
+          if (this.isBlockedCell(x, z)) continue;
+          const cov = this.coverFrom(x, z, threatX, threatZ, h, 1.5);
+          if (cov.cover < 0.5) continue;
+          // шанс попадания падает с укрытием и растёт с дистанцией до угрозы
+          const distThreat = Math.hypot(x - threatX, z - threatZ);
+          const exposure = 1 - cov.cover;
+          const score = cov.cover * 2.2 - exposure * 1.4 - dist * 0.06
+            + Math.min(6, distThreat) * 0.05 - (cov.lowOnly ? 0.35 : 0);
+          if (score > bestScore) { bestScore = score; best = { x, z, cover: cov.cover, crouch: cov.lowOnly }; }
+        }
+      }
+      return best;
     }
 
     /* ------------------------ укрытие и навигация -------------------------- */
@@ -177,6 +253,26 @@
     }
   }
 
+  /* проём в препятствии (окно, бойница, пролом).
+     Проём задан прямоугольником относительно центра коллайдера:
+       { dy0, dy1, du0, du1, dv0, dv1 } — высота и смещения по X/Z, метры.
+     Если луч входит в препятствие внутри проёма — стена не считается. */
+  function hitHole(ox, oy, oz, dx, dy, dz, c, maxT) {
+    if (!c.holes || !c.holes.length) return false;
+    const t = rayBox(ox, oy, oz, dx, dy, dz, c.x, 0, c.z, c.hw, c.h, c.hd, maxT);
+    if (t === null) return false;
+    const y = oy + dy * t;
+    const lx = (ox + dx * t) - c.x;
+    const lz = (oz + dz * t) - c.z;
+    for (const h of c.holes) {
+      if (y < h.dy0 || y > h.dy1) continue;
+      if (lx < h.du0 || lx > h.du1) continue;
+      if (lz < h.dv0 || lz > h.dv1) continue;
+      return true;
+    }
+    return false;
+  }
+
   /* луч против AABB (slab-метод), возвращает t или null */
   function rayBox(ox, oy, oz, dx, dy, dz, cx, cy, cz, hw, hh, hd, maxT) {
     let tmin = 0, tmax = maxT;
@@ -229,5 +325,5 @@
     return t;
   }
 
-  SH2.world = { World, rayBox, rayCylinder };
+  SH2.world = { World, rayBox, rayCylinder, hitHole };
 })(typeof window !== 'undefined' ? window : globalThis);
