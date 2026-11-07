@@ -11,6 +11,7 @@ import { CATEGORIES, TRUCKS, TRAILERS, CARS, BUILDINGS, findUnit } from './data/
 import { placePanel, rectOf, viewportRect, overlaps, rect } from './lib/layout.js';
 import { damageReport } from './lib/damage.js';
 import { buildDots, applyDots, dotsCount } from './lib/dots.js';
+import { createPreview } from './lib/preview.js';
 import { deviceProfile, installGestures, installShake, haptic } from './lib/device.js';
 
 const $ = (id) => document.getElementById(id);
@@ -238,6 +239,7 @@ function setDots(on, { announce = true, rebuild = false } = {}) {
     btn.setAttribute('aria-pressed', state.dots ? 'true' : 'false');
   }
   document.body.dataset.dots = state.dots ? 'on' : 'off';
+  refreshPreviewCaption();
   saveState();
   if (announce) {
     if (!state.dots) live('Обычный вид: поверхности');
@@ -266,6 +268,7 @@ function applyDamage() {
   $('damage-btn')?.classList.toggle('active', any);
   // в режиме точек поверхности скрыты — пятна тоже, иначе они висят в воздухе
   if (state.dots && shown?.root) applyDots(shown.root, true);
+  refreshPreviewCaption();
 }
 
 function toggleDamage() {
@@ -504,13 +507,92 @@ function closePops(except = null) {
     el.classList.remove('open');
     $(POPS[key].btn)?.setAttribute('aria-expanded', 'false');
   }
-  if (openPop && openPop !== except) openPop = null;
+  if (openPop && openPop !== except) {
+    openPop = null;
+    unmountPreview();
+  }
   syncPopBackdrop();
 }
 
 function closePop() {
   closePops();
   openPop = null;
+  unmountPreview();
+}
+
+// ------------------------------------------------------------ предпросмотр в меню
+// Меню затемняет сцену, поэтому внутри окна живёт своё маленькое окно:
+// второй рендерер рисует ту же сцену своей камерой и кадрирует модель целиком.
+let preview = null;
+let previewBroken = false;
+let previewAt = 0;
+
+function previewBlock() {
+  let el = $('pop-preview');
+  if (el) return el;
+  el = document.createElement('div');
+  el.className = 'pop-preview';
+  el.id = 'pop-preview';
+  el.innerHTML = '<div class="pp-frame">'
+    + '<canvas id="pp-canvas" width="480" height="270" aria-label="Предпросмотр модели" role="img"></canvas>'
+    + '<span class="pp-hint">предпросмотр недоступен без 3D</span>'
+    + '</div>'
+    + '<div class="pp-cap"><b id="pp-name">—</b><span id="pp-sub"></span></div>';
+  return el;
+}
+
+function previewCaption(unit = currentUnit()) {
+  const name = $('pp-name');
+  if (!name) return;
+  const view = viewsOf(unit).find((v) => v.id === state.view) || viewsOf(unit)[0];
+  const preset = { studio: 'Студия', dark: 'Ночь', show: 'Выставка', garage: 'Гараж' }[state.preset] || '';
+  const bits = [view?.label || view?.id || '', preset];
+  if (state.dots) bits.push('точки');
+  const dmg = damageSet().size;
+  if (dmg) bits.push(`${dmg} поврежд.`);
+  name.textContent = unit.name || unit.id;
+  const sub = $('pp-sub');
+  if (sub) sub.textContent = bits.filter(Boolean).join(' · ');
+}
+
+/** Рисуем кадр «сейчас»: при открытии меню и после каждого изменения. */
+function drawPreview() {
+  const el = openPop ? $(POPS[openPop]?.pop) : null;
+  if (!el || el.classList.contains('hidden')) return;
+  // подпись обновляем всегда — она нужна и когда 3D недоступно
+  previewCaption();
+  if (!preview || !shown?.root) return;
+  preview.draw(scene, shown.root, stage.camera.position);
+}
+
+/** Ставим окно предпросмотра в открытое меню (перед содержимым). */
+function mountPreview(popEl) {
+  if (!popEl) return null;
+  const el = previewBlock();
+  el.classList.remove('hidden');
+  popEl.classList.add('has-preview');
+  const head = popEl.querySelector('.pop-head');
+  if (head) head.insertAdjacentElement('afterend', el);
+  else popEl.insertBefore(el, popEl.firstChild);
+  if (!preview && !previewBroken) {
+    const canvas = el.querySelector('#pp-canvas');
+    preview = canvas ? createPreview(canvas) : null;
+    if (!preview) {
+      previewBroken = true;
+      el.classList.add('no-webgl');
+    }
+  }
+  drawPreview();
+  return el;
+}
+
+/** Подпись обновляем сразу, кадр — следующим тиком цикла. */
+function refreshPreviewCaption() {
+  if (openPop && !$('pop-preview')?.classList.contains('hidden')) previewCaption();
+}
+
+function unmountPreview() {
+  $('pop-preview')?.classList.add('hidden');
 }
 
 function openPopover(name) {
@@ -532,6 +614,7 @@ function openPopover(name) {
   el.classList.add('open');
   $(conf.btn)?.setAttribute('aria-expanded', 'true');
   openPop = name;
+  mountPreview(el);
   syncPopBackdrop();
   positionPop(name);
   if (name === 'catalog') {
@@ -971,6 +1054,7 @@ function recolor(unit, hex) {
   }
   renderList();
   renderDetails(unit);
+  refreshPreviewCaption();
   live(`Цвет: ${hex.toUpperCase()}`);
 }
 
@@ -1081,6 +1165,7 @@ function goView(viewId) {
   document.querySelectorAll('#dock-views .chip').forEach((b) => b.classList.toggle('active', b.dataset.view === viewId));
   $('mode-badge').textContent = modeLabel(unit, view);
   $('orbit-btn').classList.toggle('active', !!view.autoRotate && autoRotateWanted);
+  refreshPreviewCaption();
   saveState();
 }
 
@@ -1571,6 +1656,14 @@ function loop() {
   }
   // лёгкое «дыхание» юбки подиума и огней
   stage.renderer.render(scene, stage.camera);
+  // предпросмотр в открытом меню: отдельный маленький кадр, не чаще 22 к/с
+  if (openPop && preview && shown?.root) {
+    const now = performance.now();
+    if (now - previewAt >= 45) {
+      previewAt = now;
+      drawPreview();
+    }
+  }
 
   // раз в секунду смотрим на фактический FPS: на слабых телефонах
   // автоматически опускаем разрешение, чтобы не было «слайд-шоу»
