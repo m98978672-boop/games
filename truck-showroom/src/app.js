@@ -704,7 +704,8 @@ const DMG_ZONES = [
   { id: 'cabin', title: 'Кабина и крыша', re: /кабин|крыш|стойк|лобов|стекл|зеркал|спальн/i },
   { id: 'body', title: 'Двери и борта', re: /двер|борт|боковин|крыл|лючок|тент|штор|кузов|фургон|реф|стенк|сетк|щит/i },
 ];
-const DMG_ZONE_ORDER = [...DMG_ZONES.map((z) => z.id), 'other'];
+// порядок правил — от частного к общему, а порядок показа — сверху вниз по машине
+const DMG_ZONE_ORDER = ['cabin', 'body', 'ends', 'frame', 'other'];
 
 function zoneOf(spec) {
   const where = `${spec.part || ''} ${spec.where || ''}`;
