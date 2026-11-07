@@ -989,6 +989,28 @@
     factory: ['#322a25', '#3f3631', '#4b413a']
   };
   var INDOOR = { room: 1, school: 1, office: 1, hospital: 1, factory: 1 };
+  /* обои жилой комнаты: у каждой жизни свои */
+  var HOMEP = [
+    ['#3b2f25', '#4a3b2e', '#574735'],   /* тёплое дерево */
+    ['#2e3540', '#3a4350', '#46515f'],   /* серо-синий */
+    ['#33382c', '#404636', '#4c5341'],   /* оливковый */
+    ['#3d2f30', '#4c3b3c', '#5a4749'],   /* бордовый */
+    ['#2f3a3a', '#3b4848', '#475656'],   /* бирюзовый */
+    ['#423525', '#52422e', '#60503a']    /* охра */
+  ];
+
+  /* достаток дома: 0 бедно · 1 средне · 2 хорошо */
+  function homeTier(V) {
+    var life = V.life;
+    if (!life) return 1;
+    var inc = life.income || life.famIncome || 0;
+    var gdp = (life.c && life.c.gdp) || 12000;
+    var r = inc / Math.max(gdp * 0.6, 1200);
+    if (life.home) r += 0.35;
+    if (r < 0.55 || inc < 2200) return 0;
+    if (r > 1.5 && inc > 11000) return 2;
+    return 1;
+  }
 
   function skyKey(P) {
     if (P.fx.night) return 'night';
@@ -1053,13 +1075,21 @@
     var w = V.w, h = V.h;
     if (V.indoor) {
       var wp = WALLP[V.scene] || WALLP.room;
+      if (V.scene === 'room' && V.life) wp = HOMEP[hashStr(V.life.seed + 'home') % HOMEP.length];
       px(g, 0, 0, w, V.gy, wp[1]);
       px(g, 0, 0, w, Math.round(V.gy * 0.38), wp[2]);
       dith(g, 0, Math.round(V.gy * 0.38), w, wp[2]);
-      /* обойная полоса */
-      for (var i = 0; i < w; i += 6) px(g, i, 0, 1, Math.round(V.gy * 0.38), 'rgba(255,255,255,0.03)');
+      /* обойная полоса (в бедном доме стены голые) */
+      var tier = V.scene === 'room' ? homeTier(V) : 1;
+      if (tier > 0) for (var i = 0; i < w; i += 6) px(g, i, 0, 1, Math.round(V.gy * 0.38), 'rgba(255,255,255,0.03)');
+      if (V.scene === 'room' && tier === 0) {
+        for (var cr = 0; cr < 5; cr++) {
+          var cx2 = Math.round(nz(cr + 4) * w), cy2 = Math.round(nz(cr + 14) * V.gy * 0.5);
+          px(g, cx2, cy2, 1, 3 + Math.round(nz(cr) * 4), 'rgba(0,0,0,0.18)');
+        }
+      }
       /* панель и плинтус */
-      px(g, 0, Math.round(V.gy * 0.62), w, V.gy - Math.round(V.gy * 0.62), wp[0]);
+      px(g, 0, Math.round(V.gy * 0.62), w, V.gy - Math.round(V.gy * 0.62), shade(wp[0], 0.05));
       px(g, 0, Math.round(V.gy * 0.62), w, 1, shade(wp[2], 0.1));
       px(g, 0, V.gy - 2, w, 2, shade(wp[0], -0.2));
       return;
@@ -1295,21 +1325,42 @@
     px(g, dx + 1, gy - 25, 12, 25, '#5b442e');
     px(g, dx + 11, gy - 13, 1, 2, '#c9a45c');
     /* полка с книгами */
-    var shx = Math.round(w * 0.3);
+    var shx = Math.round(w * 0.36);
     px(g, shx, Math.round(gy * 0.5), 20, 1, '#6b5134');
     for (var b2 = 0; b2 < 7; b2++) {
       px(g, shx + 1 + b2 * 3, Math.round(gy * 0.5) - 4 - (b2 % 2), 2, 4 + (b2 % 2),
         ['#8c4a3a', '#3f6b6b', '#6b5a8c', '#7a6a3a'][b2 % 4]);
     }
-    /* кровать */
+    /* спальное место: матрас на полу — в бедном доме, кровать — дальше */
+    var tier = homeTier(V);
     var bx = Math.round(w * 0.6);
-    px(g, bx, gy - 7, 30, 7, '#5a4530');
-    px(g, bx, gy - 10, 30, 3, '#4a6b7a');
-    px(g, bx, gy - 13, 9, 4, '#dfe6ea');
-    px(g, bx + 29, gy - 14, 2, 14, '#42311f');
-    /* ковёр */
-    px(g, Math.round(w * 0.26), gy + 4, 46, 3, '#7a4038');
-    px(g, Math.round(w * 0.26) + 2, gy + 5, 42, 1, '#9c5a4a');
+    if (tier === 0) {
+      px(g, bx, gy - 4, 30, 4, '#6b5a46');
+      px(g, bx, gy - 6, 10, 2, '#cfd6d8');
+    } else {
+      px(g, bx, gy - 7, 30, 7, '#5a4530');
+      px(g, bx, gy - 10, 30, 3, tier === 2 ? '#3f6b5e' : '#4a6b7a');
+      px(g, bx, gy - 13, 9, 4, '#dfe6ea');
+      px(g, bx + 29, gy - 14, 2, 14, '#42311f');
+    }
+    /* ковёр — только если дом не совсем бедный */
+    if (tier > 0) {
+      px(g, Math.round(w * 0.26), gy + 4, 46, 3, tier === 2 ? '#6b4a7a' : '#7a4038');
+      px(g, Math.round(w * 0.26) + 2, gy + 5, 42, 1, tier === 2 ? '#8c66a0' : '#9c5a4a');
+    }
+    /* в достатке появляются телевизор и цветок */
+    if (tier === 2) {
+      var tx = Math.round(w * 0.16);
+      px(g, tx, gy - 12, 16, 10, '#23282c');
+      px(g, tx + 1, gy - 11, 14, 8, V.sky === 'night' ? '#4a6b8c' : '#38505e');
+      px(g, tx + 2, gy - 10, 5, 2, 'rgba(255,255,255,0.18)');
+      px(g, tx + 5, gy - 2, 6, 2, '#3a3a3a');
+      var fx3 = Math.round(w * 0.3);
+      px(g, fx3, gy - 5, 5, 5, '#8c5a3a');
+      px(g, fx3 + 1, gy - 10, 3, 5, '#3f7a4a');
+      px(g, fx3 - 1, gy - 9, 2, 2, '#4a8c56');
+      px(g, fx3 + 4, gy - 11, 2, 2, '#4a8c56');
+    }
   }
 
   function placeSchool(g, V) {
