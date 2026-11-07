@@ -34,7 +34,11 @@ export function buildField(root, opts = {}) {
   const box = new THREE.Box3().setFromBufferAttribute(pos);
   const size = box.getSize(new THREE.Vector3());
   const maxDim = Math.max(size.x, size.y, size.z) || 1;
-  const cell = opts.cell || Math.max(0.032, maxDim / (opts.res || 84));
+  // Клетка не должна быть толще тонких деталей (дека прицепа, рёбра рамы):
+  // у длинных машин ограничиваем её сверху, иначе меш превращается в «лужу».
+  const resCell = Math.max(0.032, maxDim / (opts.res || 84));
+  const cap = opts.maxCell ?? (maxDim <= 24 ? 0.1 : 0.34);
+  const cell = opts.cell || Math.min(resCell, cap);
   const ox = box.min.x;
   const oy = box.min.y;
   const oz = box.min.z;
@@ -79,7 +83,7 @@ export function buildField(root, opts = {}) {
   // заливаем только узкие полости (≤ 3 клетки): пустоту под рамой
   // и просветы кабины оставляем как есть
   if (fill) {
-    const fillGap = opts.fillGap ?? 3;
+    const fillGap = opts.fillGap ?? 5;
     for (const [ck, list] of columns) {
       if (list.length < 2) continue;
       const [i, k] = ck.split(',').map(Number);
@@ -169,7 +173,7 @@ export function buildSmoothMesh(root, opts = {}) {
   // утолщаем оболочку: точки лежат тонким слоем, а поверхности нужна
   // толщина хотя бы в клетку, иначе поле рвётся и меш рассыпается
   const ink = opts.ink ?? 0.26;
-  const dents = opts.dents ?? 0.2;
+  const dents = opts.dents ?? 0.1;
   // утолщаем оболочку ВНУТРЬ по нормалям точек: наружная поверхность остаётся
   // на месте, а не раздувается (иначе колёса и стёкла «заплывают»)
   const thicken = opts.thicken ?? 2;
@@ -327,7 +331,7 @@ export function buildSmoothMesh(root, opts = {}) {
           vg = vg * (1 - inkW) + 0.05 * inkW;
           vb = vb * (1 - inkW) + 0.06 * inkW;
         }
-        const dentW = Math.min(dents, (kk2 / cc) * 0.55);
+        const dentW = Math.min(dents, (kk2 / cc) * 0.45);
         if (dentW > 0) {
           vr = vr * (1 - dentW) + 0.91 * dentW;
           vg = vg * (1 - dentW) + 0.71 * dentW;

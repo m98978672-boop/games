@@ -63,18 +63,19 @@ function frame(direction, label) {
   const upHint = label === 'TOP' ? new THREE.Vector3(0, 0, -1) : new THREE.Vector3(0, 1, 0);
   const right = new THREE.Vector3().crossVectors(upHint, fwd).normalize();
   const up = new THREE.Vector3().crossVectors(fwd, right).normalize();
-  let hw = 0; let hh = 0; let depth = 0;
-  for (const c of corners) {
-    const v = c.clone().sub(center);
-    hw = Math.max(hw, Math.abs(v.dot(right)));
-    hh = Math.max(hh, Math.abs(v.dot(up)));
-    depth = Math.max(depth, v.dot(fwd));
-  }
   const aspect = cell / ch;
   const tanV = Math.tan((fov * Math.PI) / 360);
   const tanH = tanV * aspect;
-  const d = Math.max(hh / tanV, hw / tanH) * 1.06 * scale + Math.abs(depth) * 0.5;
-  return Math.max(d, sphere.radius * 0.35);
+  // ровно то расстояние, при котором КАЖДЫЙ угол рамки попадает в кадр
+  // с запасом 4%: иначе ближняя часть модели вылезает за край
+  let d = 0;
+  for (const c of corners) {
+    const v = c.clone().sub(center);
+    const near = v.dot(fwd); // чем ближе угол к камере, тем сильнее он растянут
+    d = Math.max(d, near + (Math.abs(v.dot(right)) * 1.04) / tanH);
+    d = Math.max(d, near + (Math.abs(v.dot(up)) * 1.04) / tanV);
+  }
+  return Math.max(d * scale, sphere.radius * 0.3);
 }
 
 // ---------------------------------------------------------------- рендер ракурсов
