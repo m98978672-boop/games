@@ -110,6 +110,8 @@
     this.dead = null;
     this.money = 0;
     this.income = 0;
+    this.ownIncome = 0;
+    this.partnerIncome = 0;
     this.edu = { level: 0, inSchool: false, years: 0, track: null, private: false, partTime: false, left: false };
     this.job = null;
     this.unemployedYears = 0;
@@ -445,7 +447,10 @@
     else if (this.retired) income = this.pension();
     else income = this.income || this.famIncome * 0.3;
 
-    if (this.marital === 'married' || this.marital === 'partner') income += this.income ? this.income * 0.75 : this.famIncome * 0.5;
+    this.ownIncome = income;
+    this.partnerIncome = (this.marital === 'married' || this.marital === 'partner')
+      ? (this.income ? this.income * 0.75 : this.famIncome * 0.5) : 0;
+    income += this.partnerIncome;
     this.income = income;
 
     var spendable = Math.max(income, 0);

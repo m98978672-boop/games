@@ -23,15 +23,15 @@
   /* --------------------------- валюты --------------------------------- */
   /* множитель: сколько местных единиц в одном межд. долларе по ППС (приближённо) */
   var CURRENCIES = [
-    { id: 'int', name: 'Межд. $ (ППС)', sym: '$', k: 1 },
-    { id: 'rub', name: 'Россия (₽)', sym: '₽', k: 30 },
-    { id: 'kzt', name: 'Казахстан (₸)', sym: '₸', k: 190 },
-    { id: 'uah', name: 'Украина (₴)', sym: '₴', k: 13 },
-    { id: 'byn', name: 'Беларусь (Br)', sym: 'Br', k: 1.1 },
-    { id: 'eur', name: 'Германия (€)', sym: '€', k: 0.73 },
-    { id: 'usd', name: 'США ($)', sym: '$', k: 1 },
-    { id: 'inr', name: 'Индия (₹)', sym: '₹', k: 22 },
-    { id: 'try', name: 'Турция (₺)', sym: '₺', k: 11 }
+    { id: 'rub', name: 'Россия (₽)', sym: '₽', k: 30, of: 'по ценам России' },
+    { id: 'kzt', name: 'Казахстан (₸)', sym: '₸', k: 190, of: 'по ценам Казахстана' },
+    { id: 'uah', name: 'Украина (₴)', sym: '₴', k: 13, of: 'по ценам Украины' },
+    { id: 'byn', name: 'Беларусь (Br)', sym: 'Br', k: 1.1, of: 'по ценам Беларуси' },
+    { id: 'eur', name: 'Германия (€)', sym: '€', k: 0.73, of: 'по ценам Германии' },
+    { id: 'usd', name: 'США ($)', sym: '$', k: 1, of: 'по ценам США' },
+    { id: 'inr', name: 'Индия (₹)', sym: '₹', k: 22, of: 'по ценам Индии' },
+    { id: 'try', name: 'Турция (₺)', sym: '₺', k: 11, of: 'по ценам Турции' },
+    { id: 'int', name: 'Межд. $ (ППС)', sym: '$', k: 1, of: 'в международных долларах' }
   ];
   var currency = CURRENCIES[0];
 
@@ -39,6 +39,7 @@
     for (var i = 0; i < CURRENCIES.length; i++) if (CURRENCIES[i].id === id) currency = CURRENCIES[i];
   }
   function money(v) { return M.fmtMoney(v * currency.k) + ' ' + currency.sym; }
+  function moneyPPP(v) { return currency.id === 'int' ? '' : M.fmtMoney(v) + ' $ ППС'; }
 
   /* --------------------------- модальные окна -------------------------- */
   var modalStack = [];
@@ -96,7 +97,7 @@
       o.value = c.id; o.textContent = c.name;
       cur.appendChild(o);
     });
-    cur.value = settings.currency || 'int';
+    cur.value = settings.currency || 'rub';
     setCurrency(cur.value);
 
     var yr = el('sel-year');
@@ -335,6 +336,10 @@
       (life.income > 0 ? '' : ' (по доходу семьи)');
     var wpct = Math.round(M.worldPercentile(inc) * 100);
     el('money-rank-world').textContent = 'верхние ' + Math.max(1, 100 - wpct) + '% человечества';
+    el('income-partner').textContent = life.partnerIncome > 0
+      ? 'из них ' + (life.sex === 'f' ? 'муж' : 'жена') + ' — ' + money(life.partnerIncome) : '';
+    el('money-basis').textContent = currency.of;
+    el('money-ppp').textContent = moneyPPP(life.money);
     var h = life.history;
     var prev = h.length > 1 ? h[h.length - 2].money : 0;
     var dm = Math.round(life.money - prev);
@@ -519,6 +524,37 @@
     renderFamily(life);
     renderPeers(peers, life.age);
     renderLifeMap(life);
+  }
+
+  /* ------------------------- когда ставить паузу ----------------------- */
+
+  var PAUSE_ROWS = [
+    { id: 'decision', t: 'На решениях', h: 'Время всегда ждёт вашего выбора', fixed: true },
+    { id: 'big', t: 'На событиях, которые меняют жизнь', h: 'Рождение, свадьба, утрата, работа, болезнь' },
+    { id: 'year', t: 'Каждый год', h: 'Пауза на каждый день рождения' },
+    { id: 'buy', t: 'Когда появляются новые траты', h: 'Пауза, если в этом году можно что-то купить' }
+  ];
+
+  function pausesModal(settings, onChange) {
+    var on = settings.pauseOn || {};
+    var w = modal('<h2>Когда останавливать время</h2>' +
+      '<p class="d-text">Жизнь идёт сама. Отметьте, на чём она должна подождать вас.</p>' +
+      '<div class="pause-rows">' + PAUSE_ROWS.map(function (r) {
+        var checked = r.fixed || on[r.id] ? ' checked' : '';
+        return '<label class="pause-row"><input type="checkbox" data-id="' + r.id + '"' + checked +
+          (r.fixed ? ' disabled' : '') + '><span><b>' + r.t + '</b><i>' + r.h + '</i></span></label>';
+      }).join('') + '</div>' +
+      '<div class="modal-actions"><button class="btn btn-primary" data-close>Готово</button></div>',
+      { cls: 'pauses' });
+    var inputs = w.querySelectorAll('input[data-id]');
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].addEventListener('change', function () {
+        on[this.dataset.id] = this.checked;
+        settings.pauseOn = on;
+        if (onChange) onChange(on);
+      });
+    }
+    return w;
   }
 
   /* --------------------------- карточка решения ------------------------ */
@@ -765,6 +801,7 @@
     renderFocus: renderFocus, renderLog: renderLog, renderFamily: renderFamily, renderPeers: renderPeers,
     renderLifeMap: renderLifeMap, decisionModal: decisionModal, reflectionModal: reflectionModal,
     endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS,
-    spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote
+    spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote,
+    pausesModal: pausesModal
   };
 })();

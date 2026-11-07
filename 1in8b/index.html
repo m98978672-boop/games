@@ -160,6 +160,7 @@
       <button class="tb" id="btn-auto" title="Авторежим: решения принимаются нейтрально">Авторежим</button>
       <button class="tb" id="btn-spend" title="Траты: на что потратить деньги (T)">Траты</button>
       <button class="tb" id="btn-anims" title="Список всех анимаций портрета">Анимации</button>
+      <button class="tb" id="btn-pauses" title="Когда останавливать время">✎ Паузы</button>
       <button class="tb" id="btn-help" title="Как играть (H)">Справка</button>
       <button class="tb" id="btn-quit" title="Сохранить и выйти">Выйти</button>
     </div>
@@ -187,8 +188,10 @@
             своё берут удача и обстоятельства.</p>
         </details>
         <div class="money-grid">
-          <div><span>Накоплено</span><b id="hud-money">—</b><i id="money-delta">—</i></div>
-          <div><span>Доход за год</span><b id="hud-income">—</b><i id="income-month">—</i></div>
+          <div><span>Накоплено<em id="money-basis"></em></span><b id="hud-money">—</b>
+            <i id="money-ppp"></i><i id="money-delta">—</i></div>
+          <div><span>Доход за год</span><b id="hud-income">—</b><i id="income-month">—</i>
+            <i id="income-partner"></i></div>
         </div>
         <div class="money-rank"><span>Место по доходу</span><b id="money-rank">—</b></div>
         <div class="money-rank"><span>Место в мире</span><b id="money-rank-world">—</b></div>

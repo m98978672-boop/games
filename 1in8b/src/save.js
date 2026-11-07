@@ -125,7 +125,8 @@
   function loadSettings() {
     return Object.assign({
       era: 'today', year: null, drawMode: 'births', lifeMinutes: 30,
-      soft: false, auto: false, homeCountry: '', currency: 'int', music: false
+      soft: false, auto: false, homeCountry: '', currency: 'rub', music: false,
+      pauseOn: { big: false, year: false, buy: false }
     }, read(K_SET, {}));
   }
   function saveSettings(s) { write(K_SET, s); }

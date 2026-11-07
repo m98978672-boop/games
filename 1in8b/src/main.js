@@ -188,6 +188,9 @@
     requestAnimationFrame(frame);
   }
 
+  /* события, ради которых стоит остановить время */
+  var BIG_EVENT = /родил|свадьб|пожен|замуж|женил|развод|умер|ушёл из жизни|ушла из жизни|похорон|война|перееха|переезд|уволен|повышен|диплом|поступил|своё дело|больниц|операц|эмигр/i;
+
   function advanceYear() {
     var life = S.life;
     var before = life.log.length;
@@ -223,6 +226,26 @@
       }
       return;
     }
+
+    /* появились ли новые доступные траты */
+    if (window.IN8B.purchases) {
+      var nb = window.IN8B.purchases.availableFor(life).length;
+      S.newBuys = S.lastBuys != null && nb > S.lastBuys;
+      S.lastBuys = nb;
+    }
+
+    /* паузы по настройке игрока */
+    var on = S.settings.pauseOn || {};
+    if (!S.paused && !S.skipping && life.alive) {
+      var fresh2 = life.log.slice(before);
+      var big = fresh2.filter(function (e) { return BIG_EVENT.test(e.text); });
+      if (on.year) { S.paused = true; paintPause(); }
+      else if (on.big && big.length) {
+        S.paused = true; paintPause();
+        UI.toast(big[0].text.slice(0, 90));
+      } else if (on.buy && S.newBuys) { S.paused = true; paintPause(); UI.toast('В этом году есть на что потратить деньги'); }
+    }
+    S.newBuys = false;
 
     if (life.pendingReflection && !S.settings.auto) {
       S.skipping = false;
@@ -397,6 +420,13 @@
     box.textContent = '1 год ≈ ' + (sec >= 10 ? Math.round(sec) : sec.toFixed(1).replace('.', ',')) + ' сек';
   }
 
+  function paintPauseBtn() {
+    var on = S.settings.pauseOn || {};
+    var n = (on.big ? 1 : 0) + (on.year ? 1 : 0) + (on.buy ? 1 : 0);
+    var b = el('btn-pauses');
+    if (b) { b.textContent = n ? '✎ Паузы · ' + (n + 1) : '✎ Паузы'; b.classList.toggle('on', !!n); }
+  }
+
   function paintPause() {
     var b = el('btn-pause');
     if (!b) return;
@@ -432,6 +462,9 @@
     el('btn-spend').addEventListener('click', openSpend);
     el('btn-spend-2').addEventListener('click', openSpend);
     el('btn-anims').addEventListener('click', function () { UI.animsModal(S.view); });
+    el('btn-pauses').addEventListener('click', function () {
+      UI.pausesModal(S.settings, function () { saveSettings(); paintPauseBtn(); });
+    });
     el('btn-scene-more').addEventListener('click', function () { UI.animsModal(S.view); });
     el('btn-quit').addEventListener('click', function () {
       if (S.life && S.life.alive) {
@@ -499,10 +532,11 @@
   /* ============================== старт ============================== */
 
   function boot() {
-    UI.setCurrency(S.settings.currency || 'int');
+    UI.setCurrency(S.settings.currency || 'rub');
     initStart();
     initLifeControls();
     el('btn-auto').classList.toggle('on', !!S.settings.auto);
+    paintPauseBtn();
     window.addEventListener('beforeunload', function () {
       if (S.life && S.life.alive) SAVE.saveLife(S.life);
     });

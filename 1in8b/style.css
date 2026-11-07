@@ -365,6 +365,19 @@ body { overflow-y: auto; }
 .mini-canvas { width: 100%; height: 110px; margin-top: 10px; display: block; }
 .chart { width: 100%; height: 190px; display: block; }
 
+/* ======================= КОГДА СТАВИТЬ ПАУЗУ ======================== */
+
+.pause-rows { display: flex; flex-direction: column; gap: 2px; margin: 14px 0 4px; }
+.pause-row {
+  display: flex; gap: 10px; align-items: flex-start; padding: 11px 10px;
+  border-radius: var(--radius-sm); cursor: pointer;
+}
+.pause-row:hover { background: rgba(255, 255, 255, .04); }
+.pause-row input { margin-top: 3px; accent-color: var(--accent); }
+.pause-row b { display: block; font-size: 14px; font-weight: 600; }
+.pause-row i { display: block; font-style: normal; font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+.pause-row input:disabled + span { opacity: .6; }
+
 /* ============================ КАРТОЧКА РЕШЕНИЯ ====================== */
 
 .decision .modal { border-color: rgba(232, 180, 90, .45); box-shadow: 0 30px 90px rgba(0, 0, 0, .75); }
@@ -583,6 +596,11 @@ textarea.note-input {
   overflow-wrap: anywhere;
 }
 .money-grid i { display: block; font-style: normal; font-size: 11px; color: var(--ink-faint); margin-top: 2px; }
+.money-grid span em {
+  display: block; font-style: normal; font-size: 9.5px; letter-spacing: .06em;
+  color: var(--ink-faint); margin-top: 2px; text-transform: none;
+}
+.money-grid #money-ppp { color: var(--ink-faint); }
 .money-grid i.up { color: var(--green, #6fd3b0); }
 .money-grid i.down { color: var(--accent); }
 .money-rank { margin-top: 12px; }
