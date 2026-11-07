@@ -277,6 +277,61 @@ D.querySelector('#light-pop .pop-item[data-preset="dark"]').click(); await wait(
 check('схема света переключается', D.querySelector('#light-pop .pop-item[data-preset="dark"]').classList.contains('is-on'));
 check('во вьюпорте есть чипы видов', D.querySelectorAll('#dock-views .chip').length >= 4);
 
+// ---- меню 2.2: шапки с крестиком, зоны дефектов, секции ракурсов, клавиатура
+$('menu-damage-btn').click(); await wait(80);
+check('у меню повреждений есть крестик', !!D.querySelector('#menu-damage .pop-x'));
+const groups = D.querySelectorAll('#dmg-place-list .dmg-group');
+check('дефекты разложены по зонам кузова', groups.length >= 2, `${groups.length} зон`);
+const cntText = D.querySelector('#dmg-place-list .dmg-group-t .cnt')?.textContent?.trim() || '';
+check('у зоны видно «включено / всего»', /^\d+\/\d+$/.test(cntText), cntText);
+const g0 = D.querySelector('#dmg-place-list .dmg-group-t');
+const g0body = g0.parentElement.querySelector('.dmg-group-body');
+g0.click(); await wait(40);
+check('зону можно свернуть', g0.getAttribute('aria-expanded') === 'false' && g0body.classList.contains('folded'));
+g0.click(); await wait(40);
+check('зону можно развернуть', g0.getAttribute('aria-expanded') === 'true' && !g0body.classList.contains('folded'));
+check('«все / ничего» — компактные кнопки в шапке списка',
+  $('damage-all').classList.contains('mini-btn') && $('damage-clear').classList.contains('mini-btn'));
+const firstItem = D.querySelector('#menu-damage .pop-item');
+firstItem.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+await wait(40);
+check('↓ переводит фокус на следующий пункт',
+  !!D.activeElement && D.activeElement !== firstItem && !!D.activeElement.closest('#menu-damage'));
+D.activeElement?.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+await wait(40);
+check('↑ возвращает фокус назад', D.activeElement === firstItem || !!D.activeElement?.closest('#menu-damage'));
+D.querySelector('#menu-damage .pop-x').click(); await wait(60);
+check('крестик закрывает меню повреждений', $('menu-damage').classList.contains('hidden'));
+
+$('menu-view-btn').click(); await wait(80);
+const secs = [...D.querySelectorAll('#menu-view-row .view-sec')];
+check('ракурсы разбиты на секции', secs.length >= 2, `${secs.length} секций`);
+const secTitles = secs.map((x) => x.querySelector('.view-sec-t')?.textContent?.trim()).join(' / ');
+check('секции ракурсов подписаны', /Снаружи/.test(secTitles) && /Внутри/.test(secTitles), secTitles);
+check('в шапке ракурсов видно, где сейчас камера',
+  /снаружи|внутри/.test($('view-current')?.textContent || ''), $('view-current')?.textContent);
+check('у ракурсов есть крестик', !!D.querySelector('#menu-view .pop-x'));
+D.querySelector('#menu-view .pop-x').click(); await wait(60);
+check('крестик закрывает ракурсы', $('menu-view').classList.contains('hidden'));
+
+$('menu-more-btn').click(); await wait(80);
+check('«Ещё» разбито на секции', D.querySelectorAll('#menu-more .pop-sec-t').length >= 2,
+  `${D.querySelectorAll('#menu-more .pop-sec-t').length}`);
+D.querySelector('#menu-more .pop-x').click(); await wait(60);
+check('крестик закрывает «Ещё»', $('menu-more').classList.contains('hidden'));
+
+$('light-btn').click(); await wait(80);
+check('в меню света плитки со свотчами', D.querySelectorAll('#light-pop .light-tile .sw').length === 4,
+  `${D.querySelectorAll('#light-pop .light-tile .sw').length}`);
+D.querySelector('#light-pop .pop-x').click(); await wait(60);
+check('крестик закрывает свет', $('light-pop').classList.contains('hidden'));
+
+openCatalog(); await wait(80);
+check('категории — один ряд, без плитки', D.querySelectorAll('#panel-catalog .cat-tab').length === 4);
+check('в шапке «Модели» есть счётчик', /^\d+(\s*\/\s*\d+)?$/.test($('cat-count')?.textContent?.trim() || ''), $('cat-count')?.textContent);
+D.querySelector('#catalog-close').click(); await wait(60);
+check('меню моделей закрывается крестиком', !$('panel-catalog').classList.contains('open'));
+
 // ---- поддержка разных устройств
 // На десктопе (в jsdom нет тача) классы устройств должны стоять корректно,
 // а подсказки — быть про мышь.

@@ -500,8 +500,14 @@ function renderList() {
     return [u.name, u.brand, u.tagline, u.type, ...(u.tags || []), ...(u.specs || []).flat()].join(' ').toLowerCase().includes(q);
   });
   list.innerHTML = '';
-  $('cat-hint').textContent = CAT_META[state.cat].hint + (state.favOnly ? ' · только избранное' : '');
+  // число уже стоит в шапке — в подсказке оставляем только описание
+  const hintText = String(CAT_META[state.cat].hint || '').replace(/^[^·]*·\s*/, '');
+  $('cat-hint').textContent = hintText + (state.favOnly ? ' · только избранное' : '');
   $('catalog-count').textContent = units.length;
+  if ($('cat-count')) {
+    const total = CAT_LISTS[state.cat].length;
+    $('cat-count').textContent = units.length === total ? `${total}` : `${units.length} / ${total}`;
+  }
   if (!units.length) {
     list.innerHTML = '<p class="mini" style="padding:14px">Ничего не найдено. Очистите поиск или избранное.</p>';
     return;
@@ -689,6 +695,23 @@ function renderDamageReport() {
  * Меню повреждений: сверху тип, ниже — места. Ткнул тип — пятно встало на
  * свободную деталь; ткнул место — включил/убрал конкретный дефект.
  */
+/** Кузов делится на понятные зоны: 15 строк подряд читать невозможно.
+ *  Правила идут от частного к общему — «крышка багажника» это корма,
+ *  а не крыша, «боковина бака» — бак, а не борт. */
+const DMG_ZONES = [
+  { id: 'frame', title: 'Рама, низ и бак', re: /рам[аеыу]|лонжерон|брызгов|порог|юбк|настил|бак|седло|тележ|ось|диск|ящик/i },
+  { id: 'ends', title: 'Перед и корма', re: /бампер|капот|решёт|решет|фар|фонар|крышк|багажник|отбойник|номер/i },
+  { id: 'cabin', title: 'Кабина и крыша', re: /кабин|крыш|стойк|лобов|стекл|зеркал|спальн/i },
+  { id: 'body', title: 'Двери и борта', re: /двер|борт|боковин|крыл|лючок|тент|штор|кузов|фургон|реф|стенк|сетк|щит/i },
+];
+const DMG_ZONE_ORDER = [...DMG_ZONES.map((z) => z.id), 'other'];
+
+function zoneOf(spec) {
+  const where = `${spec.part || ''} ${spec.where || ''}`;
+  for (const z of DMG_ZONES) if (z.re.test(where)) return z.id;
+  return 'other';
+}
+
 function renderDamageMenu() {
   const places = $('dmg-place-list');
   const dmg = shown?.damage || null;
@@ -707,25 +730,58 @@ function renderDamageMenu() {
   if (!places) return;
   places.innerHTML = '';
   if (!dmg) {
-    places.innerHTML = '<p class="mini">У этой модели нет пятен — здания осматриваем по фасадам.</p>';
+    places.innerHTML = '<p class="mini">У этой модели нет повреждений — здания осматриваем по фасадам.</p>';
     return;
   }
+  // раскладываем дефекты по зонам, внутри зоны — как в спецификации
+  const buckets = new Map();
   list.forEach((item, i) => {
-    const kindMatch = state.dmgKind === 'any' || item.spec.kind === state.dmgKind;
-    const b = document.createElement('button');
-    b.className = `dmg-place ${item.spec.kind}` + (set.has(i) ? ' on' : '') + (kindMatch ? '' : ' dim');
-    b.dataset.index = String(i);
-    b.dataset.kind = item.spec.kind;
-    b.title = item.spec.text;
-    b.innerHTML = `<span class="dmg-kind"></span><span class="dmg-place-name">${item.spec.where}</span>`
-      + `<span class="dmg-place-tag">${item.spec.severity}</span>`;
-    b.onclick = () => {
-      toggleDamageAt(i);
-      rememberDamage(i);
-      positionPop('damage');
-    };
-    places.appendChild(b);
+    const id = zoneOf(item.spec);
+    if (!buckets.has(id)) buckets.set(id, []);
+    buckets.get(id).push(i);
   });
+  const order = DMG_ZONE_ORDER;
+  for (const id of order) {
+    const idx = buckets.get(id);
+    if (!idx || !idx.length) continue;
+    const title = DMG_ZONES.find((z) => z.id === id)?.title || 'Прочее';
+    const onCount = idx.filter((i) => set.has(i)).length;
+    const grp = document.createElement('div');
+    grp.className = 'dmg-group';
+    grp.dataset.zone = id;
+    const head = document.createElement('button');
+    head.className = 'dmg-group-t';
+    head.setAttribute('aria-expanded', 'true');
+    head.innerHTML = `<span class="caret">▾</span><span class="n">${title}</span>`
+      + `<span class="cnt">${onCount}/${idx.length}</span>`;
+    const body = document.createElement('div');
+    body.className = 'dmg-group-body';
+    head.onclick = () => {
+      const open = head.getAttribute('aria-expanded') !== 'true';
+      head.setAttribute('aria-expanded', open ? 'true' : 'false');
+      body.classList.toggle('folded', !open);
+    };
+    for (const i of idx) {
+      const item = list[i];
+      const kindMatch = state.dmgKind === 'any' || item.spec.kind === state.dmgKind;
+      const b = document.createElement('button');
+      b.className = `dmg-place ${item.spec.kind}` + (set.has(i) ? ' on' : '') + (kindMatch ? '' : ' dim');
+      b.dataset.index = String(i);
+      b.dataset.kind = item.spec.kind;
+      b.setAttribute('aria-pressed', set.has(i) ? 'true' : 'false');
+      b.title = item.spec.text;
+      b.innerHTML = `<span class="dmg-kind"></span><span class="dmg-place-name">${item.spec.where}</span>`
+        + `<span class="dmg-place-tag">${item.spec.severity}</span>`;
+      b.onclick = () => {
+        toggleDamageAt(i);
+        rememberDamage(i);
+        positionPop('damage');
+      };
+      body.appendChild(b);
+    }
+    grp.append(head, body);
+    places.appendChild(grp);
+  }
   const note = $('damage-note');
   if (note) {
     const last = state.lastDmg != null && list[state.lastDmg];
@@ -777,20 +833,42 @@ function renderViewMenu() {
   if (!row) return;
   row.innerHTML = '';
   const unit = currentUnit();
-  for (const v of viewsOf(unit)) {
-    const b = document.createElement('button');
-    b.className = 'pop-item' + (v.id === state.view ? ' is-on' : '');
-    b.dataset.view = v.id;
-    const hint = v.group === 'interior' ? 'внутри' : 'снаружи';
-    b.innerHTML = `<span class="i">${VIEW_ICONS[v.id] || '📷'}</span><span class="n">${v.label}</span><span class="h">${hint}</span>`;
-    b.onclick = () => {
-      goView(v.id);
-      closePop();
-    };
-    row.appendChild(b);
+  const groups = [
+    { id: 'exterior', title: 'Снаружи' },
+    { id: 'interior', title: 'Внутри' },
+  ];
+  for (const gr of groups) {
+    const items = viewsOf(unit).filter((v) => (v.group || 'exterior') === gr.id);
+    if (!items.length) continue;
+    const sec = document.createElement('div');
+    sec.className = 'view-sec';
+    sec.dataset.group = gr.id;
+    const t = document.createElement('div');
+    t.className = 'view-sec-t';
+    t.textContent = gr.title;
+    const box = document.createElement('div');
+    box.className = 'view-sec-items';
+    for (const v of items) {
+      const b = document.createElement('button');
+      b.className = 'pop-item' + (v.id === state.view ? ' is-on' : '');
+      b.dataset.view = v.id;
+      b.innerHTML = `<span class="i">${VIEW_ICONS[v.id] || '📷'}</span><span class="n">${v.label}</span>`;
+      b.onclick = () => {
+        goView(v.id);
+        closePop();
+      };
+      box.appendChild(b);
+    }
+    sec.append(t, box);
+    row.appendChild(sec);
+  }
+  const cur = viewsOf(unit).find((v) => v.id === state.view);
+  if ($('view-current')) {
+    const inside = cur?.group === 'interior';
+    $('view-current').textContent = inside ? 'внутри' : 'снаружи';
+    $('view-current').classList.toggle('is-inside', inside);
   }
   $('menu-orbit')?.classList.toggle('is-on', autoRotateWanted);
-  $('menu-inside')?.classList.toggle('is-on', false);
 }
 
 function recolor(unit, hex) {
@@ -1125,6 +1203,9 @@ function wireUI() {
     setDrawer(openDrawer === 'details' ? null : 'details');
   };
   $('catalog-close').onclick = () => closePop();
+  document.querySelectorAll('[data-close-pop]').forEach((b) => {
+    b.onclick = (e) => { e.stopPropagation(); closePop(); };
+  });
   $('details-close').onclick = () => setDrawer(null);
   $('backdrop').onclick = () => setDrawer(null);
   // ---- меню повреждений
@@ -1287,8 +1368,36 @@ function wireUI() {
       }
     }, { threshold: 26 });
   }
+  // клавиатура в меню: ↑/↓ ходят по пунктам, Home/End — к краям
+  const MENU_ITEM = '.pop-item, .dmg-place, .cat-tab, .mini-btn, .pop-x, .unit';
+  function menuKey(e) {
+    const pop = e.target.closest?.('.hud-pop');
+    if (!pop) return false;
+    // offsetParent в jsdom всегда null — проверяем только свёрнутые группы
+    const items = [...pop.querySelectorAll(MENU_ITEM)]
+      .filter((el) => !el.disabled && !el.closest('.folded') && !el.closest('.hidden'));
+    if (!items.length) return false;
+    const at = items.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      const dir = e.key === 'ArrowDown' ? 1 : -1;
+      const next = items[(at + dir + items.length) % items.length] || items[0];
+      next.focus({ preventScroll: false });
+      e.preventDefault();
+      return true;
+    }
+    if (e.key === 'Home' || e.key === 'End') {
+      (e.key === 'Home' ? items[0] : items[items.length - 1]).focus();
+      e.preventDefault();
+      return true;
+    }
+    return false;
+  }
+
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT') return;
+    if (menuKey(e)) return;
+    // внутри открытого меню глобальные стрелки не должны листать модели
+    if (e.target.closest?.('.hud-pop') && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) return;
     // полёт камеры: клавиши удерживаются, движение считаем в цикле кадров
     if (FLY_KEYS.has(e.code)) {
       held.add(e.code);

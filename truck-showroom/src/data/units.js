@@ -7,7 +7,7 @@ export const CATEGORIES = [
   { id: 'trucks', title: 'ТЯГАЧИ', short: 'Тягачи', icon: '🚛', count: 10, hint: '10 моделей · седельные тягачи' },
   { id: 'trailers', title: 'ПРИЦЕПЫ', short: 'Прицепы', icon: '📦', count: 20, hint: '20 типов · от шторки до цистерны' },
   { id: 'cars', title: 'АВТОМОБИЛИ', short: 'Авто', icon: '🚗', count: 10, hint: '10 моделей · от микрокара до спорткара' },
-  { id: 'buildings', title: 'ЗДАНИЯ', short: 'Здания', icon: '🏢', count: 22, hint: '22 постройки · 4 фасада у каждой' },
+  { id: 'buildings', title: 'ЗДАНИЯ', short: 'Здания', icon: '🏢', count: 24, hint: '24 постройки · 4 фасада у каждой' },
 ];
 
 export const PAINTS = {
