@@ -149,6 +149,7 @@
       <button class="icon-btn speed" id="btn-speed" title="Скорость" aria-label="Скорость">1×</button>
       <button class="icon-btn" id="btn-auto" title="Авторежим: решения принимаются нейтрально" aria-label="Авторежим">А</button>
       <button class="icon-btn" id="btn-skip" title="До следующего события" aria-label="До следующего события">⏭</button>
+      <button class="icon-btn" id="btn-spend" title="Траты: на что потратить деньги (T)" aria-label="Траты">🛒</button>
       <button class="icon-btn" id="btn-help" title="Как играть (H)" aria-label="Помощь">?</button>
       <button class="icon-btn" id="btn-quit" title="Сохранить и выйти" aria-label="Выйти">✕</button>
     </div>
@@ -163,8 +164,12 @@
     <!-- левая колонка: состояние и деньги -->
     <section class="col col-left" data-tab="state">
       <div class="panel card-person">
+        <div class="portrait-wrap">
+          <canvas id="portrait" width="420" height="300" aria-label="Портрет человека"></canvas>
+          <div class="portrait-caption"><span id="portrait-scene">—</span><b id="portrait-clip">—</b></div>
+          <button class="btn tiny portrait-anim" id="btn-anims">Все анимации</button>
+        </div>
         <div class="person-head">
-          <div class="avatar" id="avatar">●</div>
           <div>
             <b id="p-name">—</b>
             <span id="p-sub">—</span>
@@ -185,6 +190,7 @@
         <p class="hint" id="budget-sum">—</p>
         <div class="presets" id="budget-presets"></div>
         <div class="budget" id="budget-list"></div>
+        <button class="btn btn-primary spend-cta" id="btn-spend-2">🛒 Траты этого года<small id="spend-note">—</small></button>
       </div>
     </section>
 
@@ -233,6 +239,7 @@
       <h2 id="end-name">—</h2>
       <p class="end-years" id="end-years">—</p>
       <p class="end-summary" id="end-summary">—</p>
+      <canvas id="end-portrait" width="420" height="300" aria-label="Последний портрет"></canvas>
       <p class="end-epitaph" id="end-epitaph">—</p>
       <div class="end-achievements" id="end-ach"></div>
     </div>
@@ -277,7 +284,9 @@
 <script src="src/model.js"></script>
 <script src="src/events.js"></script>
 <script src="src/engine.js"></script>
+<script src="src/purchases.js"></script>
 <script src="src/charts.js"></script>
+<script src="src/portrait.js"></script>
 <script src="src/save.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/main.js"></script>

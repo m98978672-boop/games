@@ -63,6 +63,7 @@
     if (wrap && wrap.parentNode) wrap.parentNode.removeChild(wrap);
     modalStack = modalStack.filter(function (w) { return w !== wrap; });
     if (!root.children.length) { root.className = 'modal-root'; }
+    if (wrap && wrap.onClosed) { var f = wrap.onClosed; wrap.onClosed = null; try { f(); } catch (e) { /* ignore */ } }
   }
 
   function closeTop() { if (modalStack.length) close(modalStack[modalStack.length - 1]); }
@@ -284,7 +285,7 @@
     el('hud-money').textContent = money(life.money);
     el('p-name').textContent = life.name;
     el('p-sub').textContent = (life.sex === 'f' ? 'женщина' : 'мужчина') + ' · ' + life.c.name + ' · ' + life.birthYear;
-    el('avatar').textContent = life.sex === 'f' ? '♀' : '♂';
+    renderSpendNote(life);
     el('year-age-label').textContent = life.age + ' ' + M.plural(life.age, 'год', 'года', 'лет');
     el('year-stage').textContent = stageName(life.age);
 
@@ -496,7 +497,9 @@
       '<p>Вы родились случайным человеком из восьми миллиардов. Время идёт само; год проходит за несколько секунд.</p>' +
       '<h3>Что вы решаете</h3>' +
       '<ul><li><b>Фокус года</b> — чему отдать этот год: учёбе, работе, здоровью, семье, друзьям, отдыху или деньгам.</li>' +
-      '<li><b>Траты</b> — как распределить годовой доход между едой, здоровьем, учёбой, жильём, отдыхом, помощью семье и сбережениями.</li>' +
+      '<li><b>Бюджет</b> — как распределить годовой доход между едой, здоровьем, учёбой, жильём, отдыхом, помощью семье и сбережениями.</li>' +
+      '<li><b>Траты (кнопка 🛒 или клавиша T)</b> — на что потратить накопленное в этом году: от тетрадей и репетитора ' +
+      'до операции, своего жилья, машины и собственного дела. Купленное работает до конца жизни, часть вещей требует содержания каждый год.</li>' +
       '<li><b>Карточки решений</b> — на поворотах: школа, профессия, переезд, брак, дети, лечение, пенсия.</li></ul>' +
       '<h3>Показатели</h3>' +
       '<ul><li><b>Здоровье</b> — влияет на риск умереть и на способность работать.</li>' +
@@ -504,7 +507,11 @@
       '<li><b>Знания</b> — экзамены, предложения работы, зарплата.</li>' +
       '<li><b>Отношения</b> — семья и друзья, одиночество в старости.</li></ul>' +
       '<h3>Клавиши</h3>' +
-      '<ul><li><b>Пробел</b> — пауза, <b>1 2 4 8</b> — скорость, <b>A</b> — авторежим, <b>H</b> — помощь.</li></ul>' +
+      '<ul><li><b>Пробел</b> — пауза, <b>1 2 4 8</b> — скорость, <b>A</b> — авторежим, <b>T</b> — траты, <b>H</b> — помощь.</li></ul>' +
+      '<h3>Портрет</h3>' +
+      '<p>Слева живой портрет: он рисуется прямо в браузере и меняется вместе с вами — возраст, причёска, седина, ' +
+      'морщины, одежда, место действия и погода. Больше ста движений: от первых шагов до прощания. ' +
+      'Кнопка «Все анимации» показывает их список.</p>' +
       '<p class="hint">Авторежим принимает решения нейтрально: средние результаты совпадают со статистикой страны.</p>');
     bindClose();
   }
@@ -551,6 +558,128 @@
     }
   }
 
+  /* ======================= МЕНЮ «ТРАТЫ» ============================== */
+
+  var spendGroup = 'edu';
+
+  function PU() { return window.IN8B.purchases; }
+
+  function renderSpendNote(life) {
+    var note = el('spend-note');
+    if (!note || !PU()) return;
+    var free = PU().availableFor(life).length;
+    var spent = PU().spentThisYear(life);
+    note.textContent = spent > 0
+      ? 'в этом году: ' + money(spent) + ' · доступно ' + free
+      : 'доступно ' + free + ' ' + M.plural(free, 'вариант', 'варианта', 'вариантов');
+  }
+
+  function spendModal(life, onChange) {
+    var P = PU();
+    if (!P) return null;
+    var wrap = modal(
+      '<header class="modal-head"><h3>🛒 Траты · ' + life.age + ' ' +
+      M.plural(life.age, 'год', 'года', 'лет') + '</h3>' +
+      '<button class="icon-btn x" data-close aria-label="Закрыть">✕</button></header>' +
+      '<div class="spend-top" id="spend-top"></div>' +
+      '<div class="spend-tabs" id="spend-tabs"></div>' +
+      '<p class="hint" id="spend-hint">—</p>' +
+      '<div class="spend-list" id="spend-list"></div>' +
+      '<footer class="modal-foot"><span class="hint">Купленное работает до конца жизни; часть вещей требует\n       содержания каждый год.</span><button class="btn btn-primary" data-close>Готово</button></footer>',
+      { cls: 'spend-modal' });
+
+    function top() {
+      var up = Math.round(life.need * (life.upkeep || 0));
+      el('spend-top').innerHTML =
+        '<div class="sp-kv"><span>Накоплено</span><b class="' + (life.money < 0 ? 'bad' : 'good') + '">' +
+        money(life.money) + '</b></div>' +
+        '<div class="sp-kv"><span>Доход за год</span><b>' + money(life.income) + '</b></div>' +
+        '<div class="sp-kv"><span>Год жизни стоит</span><b>' + money(life.need) + '</b></div>' +
+        '<div class="sp-kv"><span>Содержание вещей</span><b>' + (up ? money(up) + ' в год' : '—') + '</b></div>' +
+        '<div class="sp-kv"><span>Потрачено за жизнь</span><b>' + money(life.spentTotal || 0) + '</b></div>';
+    }
+
+    function tabs() {
+      el('spend-tabs').innerHTML = P.groups.map(function (g) {
+        var n = P.list.filter(function (it) { return it.g === g.id && P.state(life, it).ok; }).length;
+        return '<button class="sp-tab' + (g.id === spendGroup ? ' on' : '') + '" data-g="' + g.id + '">' +
+          g.icon + ' ' + g.name + (n ? '<i>' + n + '</i>' : '') + '</button>';
+      }).join('');
+      el('spend-tabs').querySelectorAll('.sp-tab').forEach(function (b) {
+        b.addEventListener('click', function () { spendGroup = b.dataset.g; draw(); });
+      });
+    }
+
+    function draw() {
+      top(); tabs();
+      var g = P.groups.filter(function (x) { return x.id === spendGroup; })[0];
+      el('spend-hint').textContent = g ? g.hint : '';
+      var items = P.list.filter(function (it) { return it.g === spendGroup; });
+      el('spend-list').innerHTML = items.map(function (it) {
+        var st = P.state(life, it);
+        var price = st.price || P.priceOf(life, it);
+        var up = P.upkeepOf(life, it);
+        var owned = life.purchased && life.purchased[it.id];
+        return '<article class="sp-card' + (st.ok ? '' : ' off') + (owned ? ' owned' : '') + '" data-id="' + it.id + '">' +
+          '<div class="sp-ico">' + it.icon + '</div>' +
+          '<div class="sp-body"><b>' + esc(it.title) + '</b>' +
+          '<span class="sp-desc">' + esc(it.desc) + '</span>' +
+          '<span class="sp-gain">' + esc(it.gain || '') + (up ? ' · содержание ' + money(up) + '/год' : '') + '</span></div>' +
+          '<div class="sp-buy"><b class="' + (st.ok && st.debt ? 'warn' : '') + '">' + money(price) + '</b>' +
+          (st.ok
+            ? '<button class="btn btn-primary tiny" data-buy="' + it.id + '">' + (st.debt ? 'В долг' : 'Купить') + '</button>'
+            : '<span class="sp-why">' + esc(st.why) + '</span>') +
+          '</div></article>';
+      }).join('');
+
+      el('spend-list').querySelectorAll('[data-buy]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var res = P.buy(life, b.dataset.buy);
+          if (!res.ok) { toast(res.why, 'bad'); return; }
+          var it = P.byId[b.dataset.buy];
+          toast(it.icon + ' ' + it.title + ' · −' + money(res.price), res.debt ? 'bad' : 'good');
+          if (window.IN8B.onPurchase) window.IN8B.onPurchase(it, life);
+          draw();
+          if (onChange) onChange();
+        });
+      });
+    }
+
+    draw();
+    bindClose(wrap);
+    return wrap;
+  }
+
+  /* ===================== КАТАЛОГ АНИМАЦИЙ ============================= */
+
+  function animsModal(view) {
+    var PR = window.IN8B.portrait;
+    if (!PR) return null;
+    var byGroup = {};
+    PR.clips.forEach(function (c) { (byGroup[c.group] = byGroup[c.group] || []).push(c); });
+    var html = PR.groups.map(function (g) {
+      return '<div class="an-group"><h4>' + esc(g) + ' <small>' + byGroup[g].length + '</small></h4>' +
+        '<div class="an-row">' + byGroup[g].map(function (c) {
+          return '<button class="an-chip" data-clip="' + c.id + '">' + esc(c.name) + '</button>';
+        }).join('') + '</div></div>';
+    }).join('');
+    var wrap = modal(
+      '<header class="modal-head"><h3>Анимации портрета <small>' + PR.count + '</small></h3>' +
+      '<button class="icon-btn x" data-close aria-label="Закрыть">✕</button></header>' +
+      '<p class="hint">Портрет рисуется прямо в браузере, без картинок: внешность собирается из возраста,\n       страны и случайного зерна жизни. Нажмите на название, чтобы посмотреть движение.</p>' +
+      '<div class="anims">' + html + '</div>' +
+      '<footer class="modal-foot"><span class="hint">Всего движений: ' + PR.count +
+      '</span><button class="btn btn-primary" data-close>Закрыть</button></footer>',
+      { cls: 'anims-modal' });
+    wrap.querySelectorAll('[data-clip]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (view) { view.play(b.dataset.clip); toast(PR.byId[b.dataset.clip].name); }
+      });
+    });
+    bindClose(wrap);
+    return wrap;
+  }
+
   window.IN8B = window.IN8B || {};
   window.IN8B.ui = {
     el: el, esc: esc, modal: modal, close: close, closeTop: closeTop, toast: toast, bindClose: bindClose,
@@ -560,6 +689,7 @@
     renderAll: renderAll, renderPerson: renderPerson, renderStats: renderStats, renderBudget: renderBudget,
     renderFocus: renderFocus, renderLog: renderLog, renderFamily: renderFamily, renderPeers: renderPeers,
     renderLifeMap: renderLifeMap, decisionModal: decisionModal, reflectionModal: reflectionModal,
-    endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS
+    endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS,
+    spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote
   };
 })();
