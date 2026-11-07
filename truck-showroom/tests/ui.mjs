@@ -283,7 +283,7 @@ check('у меню повреждений есть крестик', !!D.querySel
 const groups = D.querySelectorAll('#dmg-place-list .dmg-group');
 check('дефекты разложены по зонам кузова', groups.length >= 2, `${groups.length} зон`);
 const cntText = D.querySelector('#dmg-place-list .dmg-group-t .cnt')?.textContent?.trim() || '';
-check('у зоны видно «включено / всего»', /^\d+\/\d+$/.test(cntText), cntText);
+check('у зоны видно «включено из всего»', /^\d+ из \d+$/.test(cntText), cntText);
 const g0 = D.querySelector('#dmg-place-list .dmg-group-t');
 const g0body = g0.parentElement.querySelector('.dmg-group-body');
 g0.click(); await wait(40);
