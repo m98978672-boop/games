@@ -74,6 +74,7 @@ md += table(
       `${fmt(ai.capture?.secondsByType?.hq)} / ${fmt(ai.capture?.secondsByType?.city)} / ${fmt(ai.capture?.secondsByType?.depot)}`],
     ['Захват: перевес сил', fmt(ai.capture?.ratio)],
     ['Захват: радиус, px', fmt(ai.capture?.radius)],
+    ['Капитуляция без армии, с', fmt(ai.surrenderSeconds)],
   ],
 );
 md += `\n## Сложность\n\n`;

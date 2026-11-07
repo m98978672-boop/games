@@ -133,17 +133,23 @@ export class World {
         this.terrain[i] = n > 0.66 ? T_FOREST : d > 0.63 ? T_DIRT : T_GRASS;
       }
     }
-    // река (симметричная относительно центра)
+    // река (симметричная относительно центра карты).
+    // Важно: строка тайлов считается по ЦЕНТРУ строки, а не шагом 8 px — иначе зеркальные
+    // шаги попадают в соседнюю строку и река получается несимметричной (было 3.3% тайлов).
     const halfH = this.H / 2;
-    for (let y = 0; y < this.H; y += 8) {
+    const half = river.width / 2;
+    for (let j = 0; j < this.rows; j++) {
+      const y = j * this.T + this.T / 2;
       const yy = y <= halfH ? y : this.H - y;
       const rxUpper = river.baseX + river.amplitude * Math.sin(yy / river.period + river.phase);
       const rx = y <= halfH ? rxUpper : this.W - rxUpper;
-      const half = river.width / 2;
-      for (let x = rx - half; x <= rx + half; x += 8) {
-        this._paint(x, y, T_WATER, 8);
-        this._paint(x - half - 10, y, T_DIRT, 8);
-        this._paint(x + half + 10, y, T_DIRT, 8);
+      const i0 = this._tile(rx - half) - 1;
+      const i1 = this._tile(rx + half) + 1;
+      for (let i = i0; i <= i1; i++) {
+        if (i < 0 || i >= this.cols) continue;
+        const d = Math.abs((i + 0.5) * this.T - rx);
+        if (d <= half) this.terrain[i + j * this.cols] = T_WATER;
+        else if (d <= half + 12) this.terrain[i + j * this.cols] = T_DIRT;
       }
     }
     // площади городов и штабов
@@ -172,9 +178,12 @@ export class World {
     return cx + cy * this.cols;
   }
   terrainAt(x, y) { return this.terrain[this._idx(x, y)]; }
+  // Индекс тайла, согласованный с зеркалом карты: при координатах, кратных T, floor() даёт сдвиг
+  // на тайл — объект ровно на границе тайлов (город в центре карты) красился несимметрично.
+  _tile(v) { return Math.ceil(v / this.T) - 1; }
   _paint(x, y, type, radius = 0) {
     const r = Math.floor(radius / this.T);
-    const cx = Math.floor(x / this.T), cy = Math.floor(y / this.T);
+    const cx = this._tile(x), cy = this._tile(y);
     for (let j = cy - r; j <= cy + r; j++) for (let i = cx - r; i <= cx + r; i++) {
       if (i < 0 || j < 0 || i >= this.cols || j >= this.rows) continue;
       this.terrain[i + j * this.cols] = type;
@@ -182,7 +191,7 @@ export class World {
   }
   _paintCircle(x, y, radius, type) {
     const r = Math.ceil(radius / this.T);
-    const cx = Math.floor(x / this.T), cy = Math.floor(y / this.T);
+    const cx = this._tile(x), cy = this._tile(y);
     for (let j = cy - r; j <= cy + r; j++) for (let i = cx - r; i <= cx + r; i++) {
       if (i < 0 || j < 0 || i >= this.cols || j >= this.rows) continue;
       const dx = (i + 0.5) * this.T - x, dy = (j + 0.5) * this.T - y;
@@ -195,12 +204,14 @@ export class World {
     for (let s = 0; s <= steps; s++) {
       const t = s / steps;
       const x = a[0] + (b[0] - a[0]) * t, y = a[1] + (b[1] - a[1]) * t;
-      const cx = Math.floor(x / this.T), cy = Math.floor(y / this.T);
+      const cx = this._tile(x), cy = this._tile(y);
       for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
         const xx = cx + i, yy = cy + j;
         if (xx < 0 || yy < 0 || xx >= this.cols || yy >= this.rows) continue;
         const k = xx + yy * this.cols;
-        if (this.terrain[k] === T_WATER) continue;
+        // воду и площади городов дорога не перекрывает: иначе стык «дорога/город»
+        // растеризуется по-разному с зеркалом и карта перестаёт быть симметричной
+        if (this.terrain[k] === T_WATER || this.terrain[k] === T_CITY) continue;
         this.terrain[k] = T_ROAD;
       }
     }
@@ -237,7 +248,7 @@ export class World {
 
   _markBridge(b, passable) {
     const cellsX = Math.ceil(b.w / this.T), cellsY = Math.ceil(b.h / this.T);
-    const cx = Math.floor(b.x / this.T), cy = Math.floor(b.y / this.T);
+    const cx = this._tile(b.x), cy = this._tile(b.y);
     for (let j = -Math.floor(cellsY / 2); j <= Math.floor(cellsY / 2); j++) {
       for (let i = -Math.floor(cellsX / 2); i <= Math.floor(cellsX / 2); i++) {
         const x = cx + i, y = cy + j;
@@ -265,8 +276,8 @@ export class World {
       // вокруг которых пехота проходит (иначе отряды запирают себя же построенной обороной).
       if (b.type !== 'bunker') continue;
       const halfW = b.w / 2, halfH = b.h / 2;
-      const cx0 = Math.floor((b.x - halfW) / this.T), cx1 = Math.floor((b.x + halfW) / this.T);
-      const cy0 = Math.floor((b.y - halfH) / this.T), cy1 = Math.floor((b.y + halfH) / this.T);
+      const cx0 = this._tile(b.x - halfW), cx1 = this._tile(b.x + halfW);
+      const cy0 = this._tile(b.y - halfH), cy1 = this._tile(b.y + halfH);
       for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++) {
         if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) continue;
         this.walk[x + y * this.cols] = 0;
@@ -280,8 +291,8 @@ export class World {
       // Пули и взгляд блокируют только тяжёлые бункеры: остальное — укрытия, а не стены.
       if (b.type !== 'bunker') continue;
       const halfW = b.w / 2, halfH = b.h / 2;
-      const cx0 = Math.floor((b.x - halfW) / this.T), cx1 = Math.floor((b.x + halfW) / this.T);
-      const cy0 = Math.floor((b.y - halfH) / this.T), cy1 = Math.floor((b.y + halfH) / this.T);
+      const cx0 = this._tile(b.x - halfW), cx1 = this._tile(b.x + halfW);
+      const cy0 = this._tile(b.y - halfH), cy1 = this._tile(b.y + halfH);
       for (let y = cy0; y <= cy1; y++) for (let x = cx0; x <= cx1; x++) {
         if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) continue;
         this.losBlock[x + y * this.cols] = 1;
