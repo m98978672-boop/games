@@ -1,0 +1,52 @@
+name: Seam bot (шоурум)
+
+# Бот проходит по всем моделям шоурума и ищет незакрытые стыки:
+# открытые контуры поверхностей, которые не примыкают к соседним деталям.
+# Отчёт попадает в Summary прогона; жёсткий режим (--strict) выключен,
+# потому что часть швов — задуманные теневые зазоры.
+
+on:
+  pull_request:
+    paths:
+      - 'truck-showroom/**'
+      - '.github/workflows/seams.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'truck-showroom/**'
+
+permissions:
+  contents: read
+
+jobs:
+  seams:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: truck-showroom
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Тест самого бота (на синтетике)
+        run: node tests/seams.mjs
+
+      - name: Просканировать все модели
+        run: |
+          node tools/seams.mjs --json /tmp/seams.json
+          node tools/seams.mjs --md "$GITHUB_STEP_SUMMARY"
+
+      - name: Сохранить отчёт артефактом
+        uses: actions/upload-artifact@v4
+        with:
+          name: seam-report
+          path: /tmp/seams.json
+          if-no-files-found: ignore
