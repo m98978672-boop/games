@@ -328,5 +328,9 @@ export function orderLabel(type) {
     retreat: 'отступить', patrol: 'патруль', escort: 'сопровождать', build: 'строить',
     repair: 'чинить', resupply: 'снабдить', supply: 'снабдить', create_squad: 'создать отряд',
     disband: 'расформировать', stance: 'сменить стойку', directive: 'директива',
+    build_profile: 'профиль обороны', place_build: 'поставить чертёж', demolish: 'снести',
+    build_line: 'линия укреплений', build_zone: 'зона по профилю', build_template: 'шаблон застройки',
+    set_build_priority: 'приоритет стройки', cancel_build: 'отменить чертёж',
+    produce: 'производство', upgrade: 'улучшение', set_autopilot: 'автопилот',
   }[type] || type;
 }

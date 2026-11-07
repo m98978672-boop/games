@@ -80,7 +80,9 @@ export class CommandAPI {
         results.push(sq.receiveOrder(order, this));
       }
     } else if (order.type === 'create_squad' || order.type === 'produce' || order.type === 'build_profile'
-      || order.type === 'set_autopilot' || order.type === 'upgrade' || order.type === 'place_build' || order.type === 'demolish') {
+      || order.type === 'set_autopilot' || order.type === 'upgrade' || order.type === 'place_build' || order.type === 'demolish'
+      || order.type === 'build_line' || order.type === 'build_zone' || order.type === 'build_template'
+      || order.type === 'set_build_priority' || order.type === 'cancel_build') {
       results.push(game.executeCommand(order));
     } else if (order.unitIds.length) {
       results = this.deliverToUnits(order);

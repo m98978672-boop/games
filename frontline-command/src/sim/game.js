@@ -353,11 +353,70 @@ export class Game {
     return { ok: true, type: 'move', target: { x, y, sectorId: sector?.id }, hint: 'Идти в точку' };
   }
 
+  _zonePolygonAround(x, y, r) {
+    const poly = [];
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      poly.push({ x: x + Math.cos(a) * r, y: y + Math.sin(a) * r });
+    }
+    return poly;
+  }
+
   executeCommand(order) {
     if (order.type === 'place_build') {
       // Единственный путь поставить постройку — приказ через Command API (игрок и ИИ равны)
-      const res = this.build.place(order.params.buildType, order.target.x, order.target.y, order.faction, { pointId: order.params.pointId || null });
+      const res = this.build.place(order.params.buildType, order.target.x, order.target.y, order.faction, {
+        pointId: order.params.pointId || null, priority: order.params.priority || 'normal', reason: order.reason,
+      });
       return { accepted: !!res.ok, reason: res.reason || 'чертёж поставлен' };
+    }
+    if (order.type === 'build_line') {
+      if (!this.cfg.flag('build_line', true)) return { accepted: false, reason: 'линии выключены флагом' };
+      // Линия: точки передаются в params.from / params.to (или target + params.to)
+      const from = order.params.from || { x: order.target.x, y: order.target.y };
+      const to = order.params.to || from;
+      const res = this.build.placeLine(order.params.buildType, from, to, order.faction, {
+        priority: order.params.priority || 'normal', reason: order.reason || 'линия',
+      });
+      return {
+        accepted: !!res.ok,
+        reason: res.ok ? `линия: ${res.placed}/${res.total} секций` : (res.rejected?.[0]?.reason || 'линия не поставлена'),
+        details: res,
+      };
+    }
+    if (order.type === 'build_zone') {
+      const poly = order.params.poly || this._zonePolygonAround(order.target.x, order.target.y, order.params.radius || 180);
+      const res = this.build.placeZone(poly, order.params.profile || 'light', order.faction, {
+        priority: order.params.priority || 'normal', pointId: order.params.pointId || null, budget: order.params.budget ?? null,
+        reason: order.reason || 'зона по профилю',
+      });
+      return {
+        accepted: !!res.ok,
+        reason: res.ok ? `зона «${res.profile}»: ${res.placed}/${res.planned}` : (res.rejected?.[0]?.reason || 'зона не поставлена'),
+        details: res,
+      };
+    }
+    if (order.type === 'build_template') {
+      const res = this.build.placeTemplate(order.params.template, order.target.x, order.target.y, order.faction, {
+        rot: order.params.rot || 0, mirror: !!order.params.mirror, priority: order.params.priority || 'normal',
+      });
+      return {
+        accepted: !!res.ok,
+        reason: res.ok ? `шаблон: ${res.placed}/${res.total}` : (res.reason || res.rejected?.[0]?.reason || 'шаблон не поставлен'),
+        details: res,
+      };
+    }
+    if (order.type === 'set_build_priority') {
+      const b = this.build.blueprints.find((bb) => bb.id === order.params.blueprintId && !bb.dead);
+      if (!b) return { accepted: false, reason: 'чертёж не найден' };
+      const res = this.build.setPriority(b, order.params.priority || 'normal');
+      return { accepted: !!res.ok, reason: res.reason };
+    }
+    if (order.type === 'cancel_build') {
+      const b = this.build.blueprints.find((bb) => bb.id === order.params.blueprintId && !bb.dead);
+      if (!b) return { accepted: false, reason: 'чертёж не найден' };
+      const res = this.build.cancel(b);
+      return { accepted: !!res.ok, reason: res.reason };
     }
     if (order.type === 'demolish') {
       const b = this.world.buildingGrid.query(order.target.x, order.target.y, 48).find((bb) => !bb.dead && bb.faction === order.faction);
@@ -497,6 +556,11 @@ export class Game {
     if (this.warOver) return;
     this.trackArmies();
     if (this.warOver) return;
+    // Измор: после долгой войны побеждает тот, кто держит больше ключевых городов.
+    if (this.cfg.flag('sudden_death', true)) {
+      const limit = this.cfg.ai.capture?.suddenDeathSeconds;
+      if (limit && this.time > limit) return this.resolveByPoints();
+    }
     // Победа/поражение считается по домашней принадлежности штаба, а не по id точки:
     // так тест симметрии может менять стороны местами без переписывания условий.
     for (const faction of [0, 1]) {
@@ -514,6 +578,26 @@ export class Game {
       });
       if (lost) return this.endWar(1 - faction, `Все ключевые города ${this.cfg.faction(faction).name} потеряны`);
     }
+  }
+
+  resolveByPoints() {
+    const score = (f) => {
+      const key = (this.keyCities[f] || []).filter((id) => this.world.pointById(id)?.owner === f).length;
+      const pts = this.world.points.filter((p) => p.owner === f).length;
+      const units = [...this.units.values()].filter((u) => u.alive && !u.downed && u.faction === f).length;
+      const power = [...this.units.values()].filter((u) => u.alive && !u.downed && u.faction === f).reduce((a, u) => a + u.power(), 0);
+      return { key, pts, units, power };
+    };
+    const a = score(0), b = score(1);
+    const better = (k) => (a[k] > b[k] ? 0 : b[k] > a[k] ? 1 : null);
+    for (const k of ['key', 'pts', 'units', 'power']) {
+      const w = better(k);
+      if (w != null) {
+        const label = { key: 'ключевых городов', pts: 'точек', units: 'живых бойцов', power: 'силы армий' }[k];
+        return this.endWar(w, `Война на измор: больше ${label} (${this.cfg.faction(w).name})`);
+      }
+    }
+    return this.endWar(0, 'Война на измор: полный паритет');
   }
 
   endWar(winner, reason) {

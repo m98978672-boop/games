@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "flags": [
+    {
+      "id": "build_line",
+      "desc": "Постановка линий (протяжка ЛКМ) и автосоединение секций",
+      "group": "build",
+      "enabled": true
+    },
+    {
+      "id": "build_zone",
+      "desc": "Расстановка зоны по профилю обороны (эшелоны + карта угроз)",
+      "group": "build",
+      "enabled": true
+    },
+    {
+      "id": "build_templates",
+      "desc": "Шаблоны застройки из data/build_templates.json",
+      "group": "build",
+      "enabled": true
+    },
+    {
+      "id": "build_priority",
+      "desc": "Приоритеты чертежей (срочно / обычный / низкий) и очередь стройки",
+      "group": "build",
+      "enabled": true
+    },
+    {
+      "id": "build_path_warning",
+      "desc": "Предупреждение BLOCKS_PATH: чертёж перекрывает проход",
+      "group": "build",
+      "enabled": true
+    },
+    {
+      "id": "build_builder_utility",
+      "desc": "Выбор строителя по полезности, а не «ближайший»",
+      "group": "ai",
+      "enabled": true
+    },
+    {
+      "id": "ai_auto_plan",
+      "desc": "ИИ-планировщик обороны по карте угроз (та же очередь, что у игрока)",
+      "group": "ai",
+      "enabled": true
+    },
+    {
+      "id": "capture_hysteresis",
+      "desc": "Состояния захвата точки и гистерезис (нет мерцания владельца)",
+      "group": "sim",
+      "enabled": true
+    },
+    {
+      "id": "assault_forts",
+      "desc": "Юниты штурмуют вражеские укрепления, а не стоят перед ними",
+      "group": "sim",
+      "enabled": true
+    },
+    {
+      "id": "sudden_death",
+      "desc": "Ничья по очкам после 900 с: война не может длиться вечно",
+      "group": "sim",
+      "enabled": true
+    }
+  ]
+}

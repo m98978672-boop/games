@@ -477,6 +477,42 @@ export class Renderer {
         ctx.fillRect(p.x - size / 2, p.y - size / 2, size, size);
       }
     }
+    // множественный призрак: линия / зона / шаблон
+    const multi = game.buildPreviewMulti;
+    if (multi) {
+      if (multi.rect) {
+        const a = this.worldToScreen(Math.min(multi.rect.x0, multi.rect.x1), Math.min(multi.rect.y0, multi.rect.y1));
+        const b = this.worldToScreen(Math.max(multi.rect.x0, multi.rect.x1), Math.max(multi.rect.y0, multi.rect.y1));
+        ctx.strokeStyle = '#9bbf6a';
+        ctx.setLineDash([6, 4]);
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#9bbf6a22';
+        ctx.fillRect(a.x, a.y, b.x - a.x, b.y - a.y);
+      }
+      const limit = 160;
+      multi.items.slice(0, limit).forEach((it) => {
+        const def = game.cfg.building(it.type);
+        if (!def) return;
+        const p = this.worldToScreen(it.x, it.y);
+        const size = (def.size || 32) * z;
+        const check = multi.kind === 'zone' ? { ok: true } : game.build.canPlace(it.type, it.x, it.y, game.playerFaction);
+        ctx.globalAlpha = 0.4;
+        const img = this.bank.get(`sprites/${it.type}_${game.playerFaction}`);
+        if (img) ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = check.ok ? '#9bbf6a' : '#c4553f';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(p.x - size / 2, p.y - size / 2, size, size);
+      });
+      if (multi.items.length > limit) {
+        const p = this.worldToScreen(multi.items[0].x, multi.items[0].y);
+        ctx.fillStyle = '#e6ecde';
+        ctx.font = '11px monospace';
+        ctx.fillText(`+${multi.items.length - limit}`, p.x + 8, p.y - 8);
+      }
+    }
   }
 
   drawEffects() {

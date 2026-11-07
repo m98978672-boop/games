@@ -221,6 +221,50 @@ export function tryShoot(game, u, target, dt) {
   return true;
 }
 
+// Штурм укреплений: стрельба по вражеской постройке (мешки, окопы, гнёзда, бункеры).
+export function tryShootBuilding(game, u, b, dt) {
+  if (u.downed || !u.alive || u.reloading || u.cool > 0 || u.weapon.damage <= 0) return false;
+  if (!b || b.dead || !b.built) return false;
+  if (b.faction < 0 || b.faction === u.faction) return false;
+  const d = dist(u.x, u.y, b.x, b.y);
+  if (d > u.weapon.range) return false;
+  if (u.mag <= 0) { startReload(game, u); return false; }
+  const aim = angleTo(u.x, u.y, b.x, b.y);
+  if (u.isVehicle && angleDiff(u.turretAngle, aim) > 0.16) return false;
+  if (angleDiff(u.aimAngle, aim) > 0.4) { u.aimAngle = approachAngle(u.aimAngle, aim, dt * 3.2); return false; }
+  let spread = degToRad(u.weapon.spread * u.spreadMult) * 1.15;
+  spread *= 1 + clamp(d / u.weapon.range, 0, 1) * 0.9;
+  spread *= 1 + u.suppression * (game.cfg.ai.combat.suppressionSpreadMult - 1);
+  const err = game.rng.gauss() * spread * 0.5;
+  const shotAngle = aim + err;
+  u.cool = 1 / Math.max(0.01, u.weapon.rof);
+  u.mag--;
+  u.shotsFired = (u.shotsFired || 0) + 1;
+  combatStats.shots++;
+  const ex = u.x + Math.cos(shotAngle) * Math.min(u.weapon.range, d + 60);
+  const ey = u.y + Math.sin(shotAngle) * Math.min(u.weapon.range, d + 60);
+  game.addTracer(u.x, u.y, ex, ey, u);
+  game.sound(u.weapon.sound, u.x, u.y);
+  game.fxAt('muzzle', u.x + Math.cos(u.aimAngle) * (u.isVehicle ? 30 : 12), u.y + Math.sin(u.aimAngle) * (u.isVehicle ? 30 : 12), shotAngle);
+  hearShot(game, u, u.weapon);
+  const perp = Math.abs(Math.cos(shotAngle) * (b.y - u.y) - Math.sin(shotAngle) * (b.x - u.x));
+  const radius = Math.max(14, (b.w || 32) * 0.5) + 6;
+  if (perp < radius) {
+    if (u.weapon.kind === 'shell') {
+      game.explode(b.x, b.y, u.weapon.aoe, u.weapon.damage, u);
+    } else {
+      // постройки держат удар: пули бьют по ним слабее, чем по людям
+      game.world.damageBuilding(b, u.weapon.damage * u.damageMult * 0.9, u.faction);
+      game.fxAt('impact', b.x + game.rng.range(-8, 8), b.y + game.rng.range(-8, 8));
+    }
+    game.sound('hit_cover', b.x, b.y);
+  } else {
+    game.fxAt('impact', ex, ey);
+  }
+  if (u.mag <= 0) startReload(game, u);
+  return true;
+}
+
 export function startReload(game, u) {
   if (u.reloading) return;
   if (u.reserve <= 0) { u.stateLabel = 'нет патронов'; return; }

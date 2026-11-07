@@ -137,11 +137,13 @@ export class RulesEngine {
         });
       }
     } else if (action.type === 'buildProfile') {
+      if (!game.build.buildWanted(faction)) return;
       game.api.issue({
         source, type: 'build_profile', faction,
         target: { x: res.point?.x ?? res.sector?.cx, y: res.point?.y ?? res.sector?.cy, sectorId: res.sector?.id },
         params: { profile: action.profile, pointId: res.point?.id }, reason: res.reason,
       });
+      game.build.noteBuild(faction);
     } else if (action.type === 'fallbackDepot') {
       const depot = game.world.nearestPoint(game.world.hqOf(faction)?.x || 0, game.world.hqOf(faction)?.y || 0, (p) => p.type === 'depot' && p.owner === faction).point;
       if (depot) game.logistics.requestSector(game.world.sectorAt(depot.x, depot.y).id, faction);

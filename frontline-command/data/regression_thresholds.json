@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "perf": {
+    "units_300_fps_min": 60,
+    "units_500_fps_min": 45,
+    "tick_ms_max": 6.0,
+    "heap_mb_max": 64
+  },
+  "balance": {
+    "wars_decided_share_min": 0.9,
+    "side_share_min": 0.4,
+    "side_share_max": 0.6,
+    "duel_worst_share_max": 0.75
+  },
+  "build": {
+    "blocked_path_allowed": 0,
+    "overlap_allowed": 0,
+    "planner_orders_sane_min": 0.9
+  },
+  "symmetry": {
+    "terrain_mismatch_tiles_max": 4,
+    "sectors_asymmetric_max": 0,
+    "road_nodes_without_mirror_max": 0
+  }
+}

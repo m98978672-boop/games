@@ -2,7 +2,8 @@
 export const DATA_FILES = [
   'weapons', 'units', 'factions', 'resources', 'buildings', 'skills', 'ai_weights',
   'sectors', 'squad_templates', 'strategies', 'build_profiles', 'rules_presets',
-  'autopilot', 'difficulty', 'input_map', 'ui_hints', 'audio'
+  'autopilot', 'difficulty', 'input_map', 'ui_hints', 'audio',
+  'build_templates', 'feature_flags', 'regression_thresholds'
 ];
 
 export async function loadConfig({ baseUrl = 'data/', raw = null } = {}) {
@@ -45,7 +46,14 @@ export function buildConfig(data) {
     input: data.input_map,
     hints: data.ui_hints,
     audio: data.audio,
+    buildTemplates: data.build_templates,
+    thresholds: data.regression_thresholds,
   };
+  // Флаги функций: каждая новая механика включается и отключается из feature_flags.json.
+  cfg.flags = {};
+  for (const f of data.feature_flags?.flags || []) cfg.flags[f.id] = !!f.enabled;
+  cfg.flag = (id, def = false) => (id in cfg.flags ? cfg.flags[id] : def);
+  cfg.template = (id) => cfg.buildTemplates?.[id] || null;
   cfg.weapon = (id) => cfg.weapons[id] || cfg.weapons.none;
   cfg.unit = (id) => cfg.units[id] || cfg.units.infantry;
   cfg.building = (id) => cfg.buildings[id] || null;

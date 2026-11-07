@@ -24,7 +24,7 @@ for (const part of seedsArg.split(',')) {
 }
 
 const baseUrl = new URL('../data/', import.meta.url).pathname;
-let wins = [0, 0], timeouts = 0, byHq = 0, byCities = 0, shortWars = 0, longWars = 0;
+let wins = [0, 0], timeouts = 0, byHq = 0, byCities = 0, byExhaustion = 0, shortWars = 0, longWars = 0;
 const durations = [];
 
 for (const seed of seeds) {
@@ -38,7 +38,9 @@ for (const seed of seeds) {
   durations.push(dur);
   if (game.warOver) {
     wins[game.outcome.winner]++;
-    if (game.outcome.reason.includes('Штаб')) byHq++; else byCities++;
+    if (game.outcome.reason.includes('Штаб')) byHq++;
+    else if (game.outcome.reason.includes('измор')) byExhaustion++;
+    else byCities++;
     if (dur < 150) shortWars++;
     if (dur > 600) longWars++;
     if (verbose) console.log(`seed ${seed}: ${Math.round(dur)}s, победа ${game.outcome.winner} (${game.outcome.reason})`);
@@ -53,7 +55,7 @@ const won = wins[0] + wins[1];
 console.log(`сидов: ${seeds.length} (swap=${swap}, лимит ${cap}s)`);
 console.log(`финалов: ${won}/${seeds.length}, тайм-аутов: ${timeouts}`);
 console.log(`побед Альянса (F0): ${wins[0]}, Легиона (F1): ${wins[1]}`);
-console.log(`финал по штабу: ${byHq}, по ключевым городам: ${byCities}`);
+console.log(`финал по штабу: ${byHq}, по ключевым городам: ${byCities}, по измору: ${byExhaustion}`);
 console.log(`длительность: средняя ${avg}s, мин ${Math.round(Math.min(...durations))}s, макс ${Math.round(Math.max(...durations))}s`);
 console.log(`коротких (<150s): ${shortWars}, длинных (>600s): ${longWars}`);
 if (timeouts > 0) {

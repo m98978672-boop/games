@@ -109,6 +109,8 @@ export class Autopilot {
     const g = this.game;
     const profile = this.state.get(faction)?.profile || g.cfg.autopilot.thresholds.autoProfile;
     if (!point || !point.owner === faction) return;
+    // строим только когда армия и склад в норме, иначе производство важнее
+    if (!g.build.buildWanted(faction)) return;
     const sector = g.world.sectorAt(point.x, point.y);
     if (!sector) return;
     g.api.issue({
@@ -118,5 +120,6 @@ export class Autopilot {
       params: { profile, pointId: point.id, reason: 'сектор захвачен — строим оборону' },
       priority: 2, reason: 'профиль обороны после захвата',
     });
+    g.build.noteBuild(faction);
   }
 }
