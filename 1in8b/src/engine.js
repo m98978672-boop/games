@@ -588,6 +588,93 @@
     }
   };
 
+  /* ------------------- условия у вариантов решения --------------------
+     req — что нужно иметь, чтобы вариант был доступен. Каждое требование
+     возвращается наружу вместе с тем, что у человека есть сейчас: игрок
+     видит и порог, и свой запас, а закрытый вариант не нажимается.      */
+
+  var REQ_WORD = { know: 'знания', health: 'здоровье', bond: 'отношения', happy: 'счастье' };
+  var EDU_WORD = ['без школы', 'начальная школа', 'неполная средняя школа', 'средняя школа',
+    'специальность', 'высшее образование', 'учёная степень'];
+
+  function reqVal(v, x) { return typeof v === 'function' ? v(x) : v; }
+
+  /* чем реально можно заплатить: свои деньги, а пока вы молоды — и помощь семьи */
+  Life.prototype.purse = function () {
+    return this.money + (this.age < 23 && this.parentsAlive > 0 ? this.famIncome * 0.8 : 0);
+  };
+
+  /* список требований варианта: [{k, need, have, ok, word}] */
+  Life.prototype.optionReqs = function (o, x) {
+    var r = o.req, out = [], L = this;
+    if (!r) return out;
+    if (r.money !== undefined) {
+      var needM = Math.max(0, Math.round(reqVal(r.money, x)));
+      var have = Math.round(L.purse());
+      out.push({ k: 'money', need: needM, have: have, ok: have >= needM });
+    }
+    ['know', 'health', 'bond', 'happy'].forEach(function (k) {
+      if (r[k] === undefined) return;
+      var n = Math.round(reqVal(r[k], x)), h = Math.round(L.stats[k]);
+      out.push({ k: 'stat', word: REQ_WORD[k], need: n, have: h, ok: h >= n });
+    });
+    if (r.edu !== undefined) {
+      out.push({
+        k: 'text', ok: L.edu.level >= r.edu,
+        text: 'нужно ' + (EDU_WORD[r.edu] || 'образование'),
+        done: 'есть ' + (EDU_WORD[L.edu.level] || 'образование')
+      });
+    }
+    if (r.job) out.push({ k: 'text', ok: !!L.job, text: 'нужна работа', done: 'работа есть' });
+    if (r.kids) out.push({ k: 'text', ok: L.children.length > 0, text: 'нужны дети', done: 'дети есть' });
+    if (r.partner) out.push({ k: 'text', ok: !!L.partner, text: 'нужна семья', done: 'семья есть' });
+    if (r.custom) {
+      var okc = !!r.custom.test(x);
+      out.push({ k: 'text', ok: okc, text: r.custom.why, done: r.custom.done || r.custom.why });
+    }
+    return out;
+  };
+
+  /* вариант для показа: с условиями, ценой и шансом */
+  Life.prototype.optionView = function (o, i, x) {
+    var reqs = this.optionReqs(o, x);
+    var locked = false;
+    for (var k = 0; k < reqs.length; k++) if (!reqs[k].ok) locked = true;
+    return {
+      i: i, label: o.label, hint: o.hint, run: o.run, fail: o.fail, weight: o.w,
+      reqs: reqs, locked: locked,
+      price: o.cost && o.cost.money !== undefined ? Math.round(reqVal(o.cost.money, x)) : null,
+      gain: o.cost && o.cost.gain !== undefined ? Math.round(reqVal(o.cost.gain, x)) : null,
+      chance: typeof o.chance === 'function' ? clamp(o.chance(x), 0.01, 0.99) : null
+    };
+  };
+
+  /* собрать карточку решения из описания события */
+  Life.prototype.buildDecision = function (card, x) {
+    var L = this;
+    var options = (card.options || []).filter(function (o) { return !o.cond || o.cond(x); });
+    if (!options.length) return null;
+    var view = options.map(function (o, i) { return L.optionView(o, i, x); });
+    /* тупика быть не должно: если закрыто всё, открываем самый лёгкий вариант */
+    var open = view.filter(function (o) { return !o.locked; });
+    if (!open.length) {
+      var best = view[0], bestN = 99;
+      view.forEach(function (o) {
+        var n = o.reqs.filter(function (r) { return !r.ok; }).length;
+        if (n < bestN) { bestN = n; best = o; }
+      });
+      best.locked = false;
+      best.forced = true;
+    }
+    return {
+      id: card.id,
+      title: typeof card.title === 'function' ? card.title(x) : card.title,
+      text: typeof card.text === 'function' ? card.text(x) : card.text,
+      heavy: !!card.heavy,
+      options: view
+    };
+  };
+
   /* Карточка решения на этот год (или null) */
   Life.prototype.pickDecision = function () {
     var self = this;
@@ -611,17 +698,7 @@
     }
     if (!card) return null;
     this.seenEvents['c:' + card.id] = true;
-    var options = (card.options || []).filter(function (o) { return !o.cond || o.cond(x); });
-    if (!options.length) return null;
-    return {
-      id: card.id,
-      title: typeof card.title === 'function' ? card.title(x) : card.title,
-      text: typeof card.text === 'function' ? card.text(x) : card.text,
-      heavy: !!card.heavy,
-      options: options.map(function (o, i) {
-        return { i: i, label: o.label, hint: o.hint, run: o.run, weight: o.w };
-      })
-    };
+    return this.buildDecision(card, x);
   };
 
   /* Нейтральный выбор (авторежим и фоновые жизни): по весам вариантов,
@@ -630,10 +707,11 @@
     var d = this.pendingDecision;
     if (!d) return;
     var x = this.ctx();
-    var pick = this.rnd.weighted(d.options, function (o) {
+    var open = d.options.filter(function (o) { return !o.locked; });
+    var pick = this.rnd.weighted(open, function (o) {
       return o.weight ? Math.max(0.0001, o.weight(x)) : 1;
     });
-    this.answer(pick ? d.options.indexOf(pick) : 0);
+    this.answer(d.options.indexOf(pick || open[0] || d.options[0]));
   };
 
   /* Пересобрать карточку решения по её идентификатору (после загрузки сохранения) */
@@ -641,28 +719,33 @@
     var card = null;
     for (var i = 0; i < E.choices.length; i++) if (E.choices[i].id === id) card = E.choices[i];
     if (!card) return null;
-    var x = this.ctx();
-    var options = (card.options || []).filter(function (o) { return !o.cond || o.cond(x); });
-    if (!options.length) return null;
-    return {
-      id: card.id,
-      title: typeof card.title === 'function' ? card.title(x) : card.title,
-      text: typeof card.text === 'function' ? card.text(x) : card.text,
-      heavy: !!card.heavy,
-      options: options.map(function (o, i2) {
-        return { i: i2, label: o.label, hint: o.hint, run: o.run, weight: o.w };
-      })
-    };
+    return this.buildDecision(card, this.ctx());
   };
 
   Life.prototype.answer = function (index) {
     var d = this.pendingDecision;
     if (!d) return;
     var opt = d.options[clamp(index, 0, d.options.length - 1)];
+    /* закрытый вариант выбрать нельзя — берём первый доступный */
+    if (opt && opt.locked) {
+      for (var i = 0; i < d.options.length; i++) if (!d.options[i].locked) { opt = d.options[i]; break; }
+    }
     this.pendingDecision = null;
-    if (opt && opt.run) opt.run(this.ctx());
+    var x = this.ctx();
+    var failed = false;
+    if (opt) {
+      if (opt.chance !== null && opt.chance !== undefined && opt.fail && this.rnd() >= opt.chance) {
+        failed = true;
+        opt.fail(x);
+      } else if (opt.run) {
+        opt.run(x);
+      }
+    }
     this.decisions = (this.decisions || 0) + 1;
-    this.lastDecision = { age: this.age, title: d.title, choice: opt ? opt.label : '' };
+    this.lastDecision = {
+      age: this.age, title: d.title, choice: opt ? opt.label : '',
+      failed: failed
+    };
   };
 
   /* -------------------------- смертность ------------------------------- */

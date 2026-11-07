@@ -197,10 +197,27 @@ for (const d of E.choices) {
       const card = l.decisionById(d.id);
       if (!card || !card.options[oi]) { skipped++; break; }
       try {
+        const o = card.options[oi];
+        o.locked = false;                 // проверяем сам вариант, а не подмену движка
+        const risky = o.chance !== null && o.chance !== undefined && !!o.fail;
+        o.chance = null;                  // сначала удачный исход
         l.pendingDecision = card;
         l.answer(oi);
         l.stepYear();
         applied++;
+        if (risky) {                      // затем неудачный, если он описан
+          const l2 = new EN.Life({ seed: 'fail-' + d.id + '-' + oi, silent: true });
+          while (l2.alive && l2.age < want) l2.stepYear();
+          const card2 = l2.alive ? l2.decisionById(d.id) : null;
+          if (card2 && card2.options[oi]) {
+            card2.options[oi].locked = false;
+            card2.options[oi].chance = 0;  // гарантированная неудача
+            l2.pendingDecision = card2;
+            l2.answer(oi);
+            l2.stepYear();
+            applied++;
+          }
+        }
       } catch (e) { appliedErr = d.id + '/' + oi + ': ' + e.message + '\n' + e.stack; }
       done = true;
     }
@@ -208,6 +225,77 @@ for (const d of E.choices) {
 }
 ok(!appliedErr, 'все варианты решений применяются без ошибок (' + applied + ' шт.)' + (appliedErr ? ': ' + appliedErr : ''));
 ok(applied >= 40, 'проверено вариантов: ' + applied + ' (пропущено по условиям: ' + skipped + ')');
+
+/* --------------------- 8б. условия у вариантов -------------------------- */
+console.log('\nУсловия у решений');
+
+const withReq = [];
+for (const d of E.choices) for (const o of d.options) if (o.req) withReq.push(d.id);
+ok(withReq.length >= 20, 'вариантов с условиями в данных: ' + withReq.length);
+
+let seenCards = 0, seenOpts = 0, lockedOpts = 0, deadEnd = null, badReq = null, autoLocked = null;
+let pricedOpts = 0, riskyOpts = 0;
+for (let i = 0; i < 300 && !deadEnd && !badReq && !autoLocked; i++) {
+  const l = new EN.Life({ seed: 'req-' + i, silent: true });
+  let guard = 0;
+  while (l.alive && guard++ < 130) {
+    const card = l.stepYear();
+    if (!card) continue;
+    seenCards++;
+    seenOpts += card.options.length;
+    const open = card.options.filter((o) => !o.locked);
+    if (!open.length) deadEnd = card.id + ' в ' + l.age + ' лет: закрыты все варианты';
+    const lockedLabels = card.options.filter((o) => o.locked).map((o) => o.label);
+    lockedOpts += lockedLabels.length;
+    for (const o of card.options) {
+      if (o.price !== null && o.price !== undefined) pricedOpts++;
+      if (o.chance !== null && o.chance !== undefined) riskyOpts++;
+      for (const r of o.reqs || []) {
+        const fine = typeof r.ok === 'boolean' &&
+          (r.k === 'text' ? !!r.text : Number.isFinite(r.need) && Number.isFinite(r.have));
+        if (!fine) badReq = card.id + '/' + o.label + ': условие описано неверно';
+      }
+    }
+    l.autoAnswer();
+    if (lockedLabels.indexOf(l.lastDecision.choice) >= 0) {
+      autoLocked = card.id + ': авторежим выбрал закрытый вариант «' + l.lastDecision.choice + '»';
+    }
+  }
+}
+ok(!deadEnd, 'в каждом решении остаётся хотя бы один доступный вариант' + (deadEnd ? ': ' + deadEnd : ''));
+ok(!badReq, 'каждое условие приходит с порогом и текущим значением' + (badReq ? ': ' + badReq : ''));
+ok(!autoLocked, 'авторежим никогда не выбирает закрытый вариант' + (autoLocked ? ': ' + autoLocked : ''));
+ok(lockedOpts > 0 && lockedOpts < seenOpts * 0.35,
+  'закрытых вариантов ' + lockedOpts + ' из ' + seenOpts + ' (' + (100 * lockedOpts / seenOpts).toFixed(1) + '%) — условия работают, но не запирают игру');
+ok(pricedOpts > 0, 'у вариантов показана цена: ' + pricedOpts + ' шт.');
+ok(riskyOpts > 0, 'у части вариантов есть шанс не выйти: ' + riskyOpts + ' шт.');
+
+// закрытый вариант нельзя выбрать вручную
+let manualErr = 'не нашлось закрытого варианта для проверки';
+for (let i = 0; i < 400 && manualErr; i++) {
+  const l = new EN.Life({ seed: 'lock-' + i, silent: true });
+  let guard = 0;
+  while (l.alive && guard++ < 130) {
+    const card = l.stepYear();
+    if (!card) continue;
+    const li = card.options.findIndex((o) => o.locked);
+    if (li >= 0) {
+      const label = card.options[li].label;
+      l.pendingDecision = card;
+      l.answer(li);
+      manualErr = l.lastDecision.choice === label
+        ? 'закрытый вариант «' + label + '» всё-таки применился' : null;
+      break;
+    }
+    l.autoAnswer();
+  }
+}
+ok(!manualErr, 'закрытый вариант не применяется, даже если нажать' + (manualErr ? ': ' + manualErr : ''));
+
+// кошелёк: учитывает помощь семьи, пока человек молод
+const youngL = new EN.Life({ seed: 'кошелёк', silent: true });
+while (youngL.alive && youngL.age < 17) youngL.stepYear();
+ok(youngL.purse() >= youngL.money, 'кошелёк подростка учитывает помощь семьи');
 
 // авторежим должен выбирать сам и не зависать
 let autoErr = null;

@@ -585,22 +585,58 @@
 
   /* --------------------------- карточка решения ------------------------ */
 
+  /* одно условие варианта: что нужно и что у вас есть */
+  function reqChip(r) {
+    var cls = r.ok ? 'req-ok' : 'req-no';
+    var mark = r.ok ? '✓' : '✗';
+    var t;
+    if (r.k === 'money') {
+      t = r.ok ? 'денег хватает' : 'нужно ' + money(r.need) + ' · у вас ' + money(r.have);
+    } else if (r.k === 'stat') {
+      t = r.word + ' ' + r.need + (r.ok ? '' : ' · у вас ' + r.have);
+    } else {
+      t = r.ok ? (r.done || r.text) : r.text;
+    }
+    return '<i class="' + cls + '">' + mark + ' ' + esc(t) + '</i>';
+  }
+
+  function optionCard(o, i) {
+    var meta = [];
+    if (o.price) meta.push('<em class="d-price">−' + money(o.price) + '</em>');
+    if (o.gain) meta.push('<em class="d-gain">+' + money(o.gain) + '</em>');
+    if (o.chance !== null && o.chance !== undefined) {
+      meta.push('<em class="d-chance">шанс ' + Math.round(o.chance * 100) + '%</em>');
+    }
+    var reqs = (o.reqs || []).length
+      ? '<span class="d-reqs">' + o.reqs.map(reqChip).join('') + '</span>' : '';
+    return '<button class="d-option' + (o.locked ? ' locked' : '') + '" data-i="' + i + '"' +
+      (o.locked ? ' disabled aria-disabled="true"' : '') + '>' +
+      '<b>' + esc(o.label) + '</b>' +
+      (o.hint ? '<span>' + esc(o.hint) + '</span>' : '') +
+      (meta.length ? '<span class="d-meta">' + meta.join('') + '</span>' : '') +
+      reqs + '</button>';
+  }
+
   function decisionModal(life, decision, onPick) {
     var heavy = decision.heavy
       ? '<p class="heavy-note">Это тяжёлая тема. Сцена не показывается. Если вам тяжело — поговорите с близким ' +
       'человеком или со службой психологической помощи.</p>' : '';
+    var locked = decision.options.filter(function (o) { return o.locked; }).length;
+    var risky = decision.options.filter(function (o) { return o.chance !== null && o.chance !== undefined; }).length;
+    var note = locked
+      ? 'Серые варианты закрыты: на них не хватает денег, знаний, здоровья или бумаг.'
+      : risky ? 'У части решений есть шанс не выйти — как в жизни.'
+        : 'Выбор меняет шансы, но не отменяет статистику места рождения.';
     var w = modal('<p class="decision-age">' + life.age + ' ' + M.plural(life.age, 'год', 'года', 'лет') +
-      ' · ' + life.year + ' · ' + esc(life.c.name) + '</p>' +
+      ' · ' + life.year + ' · ' + esc(life.c.name) + ' · у вас ' + money(life.purse()) + '</p>' +
       '<h2>' + esc(decision.title) + '</h2>' +
       '<p class="d-text">' + esc(decision.text) + '</p>' + heavy +
-      '<div class="d-options">' + decision.options.map(function (o, i) {
-        return '<button class="d-option" data-i="' + i + '"><b>' + esc(o.label) + '</b>' +
-          (o.hint ? '<span>' + esc(o.hint) + '</span>' : '') + '</button>';
-      }).join('') + '</div>' +
-      '<p class="d-note">Выбор меняет шансы, но не отменяет статистику места рождения.</p>',
+      '<div class="d-options">' + decision.options.map(optionCard).join('') + '</div>' +
+      '<p class="d-note">' + note + '</p>',
       { sticky: true, cls: 'decision' });
     w.querySelectorAll('.d-option').forEach(function (b) {
       b.addEventListener('click', function () {
+        if (b.disabled) return;
         close(w);
         onPick(Number(b.dataset.i));
       });
@@ -637,7 +673,10 @@
       '<li><b>Бюджет</b> — как распределить годовой доход между едой, здоровьем, учёбой, жильём, отдыхом, помощью семье и сбережениями.</li>' +
       '<li><b>Траты (кнопка 🛒 или клавиша T)</b> — на что потратить накопленное в этом году: от тетрадей и репетитора ' +
       'до операции, своего жилья, машины и собственного дела. Купленное работает до конца жизни, часть вещей требует содержания каждый год.</li>' +
-      '<li><b>Карточки решений</b> — на поворотах: школа, профессия, переезд, брак, дети, лечение, пенсия.</li></ul>' +
+      '<li><b>Карточки решений</b> — на поворотах: школа, профессия, переезд, брак, дети, лечение, пенсия. ' +
+      'Доступны не все варианты: под каждым написано, сколько он стоит и что для него нужно — деньги, знания, ' +
+      'здоровье, диплом, работа или сама страна. Чего не хватает, помечено ✗, и такой вариант нажать нельзя. ' +
+      'У самых рискованных решений показан шанс: эмиграция, кредит, смена профессии и лечение могут не выйти.</li></ul>' +
       '<h3>Показатели</h3>' +
       '<ul><li><b>Здоровье</b> — влияет на риск умереть и на способность работать.</li>' +
       '<li><b>Счастье</b> — насколько вы довольны жизнью.</li>' +
