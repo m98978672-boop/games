@@ -794,7 +794,8 @@
     this.time = 0;
     this.life = null;
     this.look = null;
-    this.scene = 'home';
+    this.scene = 'village';
+    this.baseScene = 'village';
     this.dpr = 1;
     this.w = 300; this.h = 340;
     this.particles = [];
@@ -820,6 +821,7 @@
     this.life = life;
     this.look = lookFor(life);
     this.scene = sceneFor(life);
+    this.baseScene = this.scene;
     this.setAmbient(ambientFor(life));
     this.particles = [];
     return this;
@@ -836,6 +838,7 @@
   };
 
   Portrait.prototype.play = function (id, opts) {
+    if (CLIP_SCENE[id]) this.scene = CLIP_SCENE[id];
     var c = BY_ID[id];
     if (!c) return false;
     opts = opts || {};
@@ -848,6 +851,8 @@
 
   /* реакция на прожитый год: морф возраста + событие из летописи */
   Portrait.prototype.syncYear = function (life, freshEntries) {
+    this.baseScene = sceneFor(life);
+    if (!this.action) this.scene = this.baseScene;
     this.setLife(life);
     this.play('age-morph');
     var best = null;
@@ -882,6 +887,19 @@
     return 'work-desk';
   }
 
+  /* некоторые события происходят не там, где человек работает */
+  var CLIP_SCENE = {
+    wedding: 'park', 'first-kiss': 'park', dance: 'room', 'hold-hands': 'park',
+    birth: 'hospital', 'hold-baby': 'room', 'teach-kid': 'room', 'family-dinner': 'room',
+    hospital: 'hospital', 'take-pill': 'room', surgery: 'hospital', injury: 'hospital',
+    funeral: 'night', grief: 'night', 'say-goodbye': 'night', war: 'night',
+    'buy-house': 'village', move: 'city', travel: 'city', 'open-business': 'city',
+    graduate: 'school', exam: 'school', 'school-write': 'school', 'read-book': 'room',
+    'work-field': 'field', 'work-factory': 'factory', 'work-desk': 'office',
+    retire: 'park', 'walk-park': 'park', sleep: 'room', 'wake-up': 'room',
+    'count-money': 'room', pray: 'room', 'plant-tree': 'village', volunteer: 'city'
+  };
+
   function sceneFor(life) {
     if (!life.alive) return 'night';
     if (life.has('hospital')) return 'hospital';
@@ -915,6 +933,7 @@
       var tt = this.action.t / this.action.clip.dur;
       if (tt >= 1) {
         this.action = null;
+        this.scene = this.baseScene || this.scene;
         if (this.queue.length) this.play(this.queue.shift());
       } else {
         try { this.action.clip.fn(P, tt, S); } catch (e2) { /* ignore */ }
@@ -931,6 +950,75 @@
     return c ? c.name : '—';
   };
 
+  /* ====================== ПИКСЕЛЬНАЯ ОТРИСОВКА ========================
+     Как в оригинале «1 из 8 миллиардов»: сцена и люди — пиксель-арт.
+     Внутри холста своя сетка крупных пикселей, всё рисуется целыми
+     прямоугольниками, сглаживание выключено. Никаких картинок-файлов:
+     каждый дом, дерево и человек собираются из пикселей по ходу игры. */
+
+  function px(g, x, y, w, h, c) {
+    w = Math.round(w); h = Math.round(h);
+    if (w <= 0 || h <= 0) return;
+    g.fillStyle = c;
+    g.fillRect(Math.round(x), Math.round(y), w, h);
+  }
+
+  /* строка «через пиксель»: мягкая граница двух цветов */
+  function dith(g, x, y, w, c, off) {
+    g.fillStyle = c;
+    for (var i = (off || 0) % 2; i < w; i += 2) g.fillRect(Math.round(x + i), Math.round(y), 1, 1);
+  }
+
+  /* детерминированный шум: тот же кадр — те же окна и кусты */
+  function nz(i) {
+    var x = Math.sin(i * 12.9898 + 78.233) * 43758.5453;
+    return x - Math.floor(x);
+  }
+
+  var SKYP = {
+    day: ['#44708f', '#5a8aa6', '#76a6bb', '#95c0cb'],
+    dawn: ['#2b3157', '#56426c', '#9a5c76', '#d68f6b'],
+    dusk: ['#222847', '#423864', '#7a4a62', '#b86d55'],
+    night: ['#0a0f1e', '#101828', '#172238', '#202e49']
+  };
+  var WALLP = {
+    room: ['#3b2f25', '#4a3b2e', '#574735'],
+    school: ['#2b3a33', '#36483e', '#415549'],
+    office: ['#2a3340', '#35404f', '#404d5e'],
+    hospital: ['#2b3a3c', '#38494b', '#44585a'],
+    factory: ['#322a25', '#3f3631', '#4b413a']
+  };
+  var INDOOR = { room: 1, school: 1, office: 1, hospital: 1, factory: 1 };
+  /* обои жилой комнаты: у каждой жизни свои */
+  var HOMEP = [
+    ['#3b2f25', '#4a3b2e', '#574735'],   /* тёплое дерево */
+    ['#2e3540', '#3a4350', '#46515f'],   /* серо-синий */
+    ['#33382c', '#404636', '#4c5341'],   /* оливковый */
+    ['#3d2f30', '#4c3b3c', '#5a4749'],   /* бордовый */
+    ['#2f3a3a', '#3b4848', '#475656'],   /* бирюзовый */
+    ['#423525', '#52422e', '#60503a']    /* охра */
+  ];
+
+  /* достаток дома: 0 бедно · 1 средне · 2 хорошо */
+  function homeTier(V) {
+    var life = V.life;
+    if (!life) return 1;
+    var inc = life.income || life.famIncome || 0;
+    var gdp = (life.c && life.c.gdp) || 12000;
+    var r = inc / Math.max(gdp * 0.6, 1200);
+    if (life.home) r += 0.35;
+    if (r < 0.55 || inc < 2200) return 0;
+    if (r > 1.5 && inc > 11000) return 2;
+    return 1;
+  }
+
+  function skyKey(P) {
+    if (P.fx.night) return 'night';
+    if (P.fx.dawn) return 'dawn';
+    if (P.fx.dusk) return 'dusk';
+    return 'day';
+  }
+
   /* ---------------------------- отрисовка ---------------------------- */
 
   Portrait.prototype.render = function () {
@@ -942,18 +1030,32 @@
     g.clearRect(0, 0, W, H);
     if (!life || !look) return;
 
-    var sh = P.shake ? (Math.random() - 0.5) * P.shake * 3 : 0;
-    g.save();
-    g.translate(W / 2 + sh, H / 2);
-    g.scale(P.zoom, P.zoom);
-    g.translate(-W / 2, -H / 2);
+    /* размер «крупного пикселя»: сцена всегда примерно 190×95 клеток */
+    var s = Math.max(2, Math.floor(Math.min(W / 190, H / 95)));
+    var bw = Math.ceil(W / s), bh = Math.ceil(H / s);
+    var sh = P.shake ? Math.round((Math.random() - 0.5) * P.shake * 2) : 0;
 
-    drawScene(g, this, P, W, H);
-    drawFigure(g, this, P, W, H);
-    drawFrontProps(g, this, P, W, H);
-    drawWeather(g, this, P, W, H);
-    g.restore();
+    g.imageSmoothingEnabled = false;
+    g.setTransform(this.dpr * s, 0, 0, this.dpr * s, 0, 0);
+    g.translate(sh, 0);
 
+    var scene = this.scene || 'village';
+    var V = {
+      w: bw, h: bh, gy: Math.round(bh * 0.78), t: this.time, P: P, life: life,
+      look: look, pt: this, scene: scene,
+      sky: scene === 'night' ? 'night' : skyKey(P), indoor: !!INDOOR[scene],
+      zoom: P.zoom || 1
+    };
+    if (V.indoor) V.gy = Math.round(bh * 0.84);
+
+    drawBackdrop(g, V);
+    (PLACE[scene] || placeVillage)(g, V);
+    drawGround(g, V);
+    drawCrowd(g, V);
+    drawFore(g, V);
+    drawFx(g, V);
+
+    g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     if (P.flash > 0.01) {
       g.fillStyle = 'rgba(255,245,220,' + (P.flash * 0.6).toFixed(3) + ')';
       g.fillRect(0, 0, W, H);
@@ -962,1083 +1064,869 @@
       g.fillStyle = 'rgba(6,8,7,' + Math.min(0.92, P.fade).toFixed(3) + ')';
       g.fillRect(0, 0, W, H);
     }
-    /* рамка и подпись возраста */
-    g.strokeStyle = 'rgba(232,180,90,0.18)';
+    g.strokeStyle = 'rgba(232,180,90,0.16)';
     g.lineWidth = 1;
     g.strokeRect(0.5, 0.5, W - 1, H - 1);
   };
 
-  /* ------------------------------ сцена ------------------------------ */
+  /* ------------------------- небо или стена -------------------------- */
 
-  var SKY = {
-    village: ['#243948', '#3b5a6b', '#5f818a'], city: ['#1d2733', '#324257', '#53657e'],
-    room: ['#271f19', '#3b3027', '#524134'], school: ['#1f2b26', '#34463c', '#4b5d50'],
-    office: ['#1c242e', '#2e3b4a', '#455468'], factory: ['#231f1b', '#39312b', '#51463c'],
-    field: ['#26371f', '#435c36', '#748c55'], hospital: ['#1b2426', '#2c383c', '#3f4f53'],
-    park: ['#1f3029', '#34503e', '#4f6f55'], night: ['#0a0f13', '#121b21', '#1d2930']
-  };
-
-  function drawScene(g, pt, P, W, H) {
-    var s = pt.scene, sky = SKY[s] || SKY.village;
-    var night = P.fx.night ? 1 : 0;
-    var gy = H * 0.9;
-    var grad = g.createLinearGradient(0, 0, 0, gy);
-    grad.addColorStop(0, night ? '#05080b' : sky[0]);
-    grad.addColorStop(0.55, night ? '#0a1016' : sky[1]);
-    grad.addColorStop(1, night ? '#101820' : sky[2]);
-    g.fillStyle = grad;
-    g.fillRect(0, 0, W, gy);
-
-    if (P.fx.dawn) tint(g, W, gy, 'rgba(240,160,90,' + (0.25 * (1 - Math.abs(P.fx.dawn - 0.5) * 2)).toFixed(3) + ')');
-    if (P.fx.dusk) tint(g, W, gy, 'rgba(230,110,80,' + (0.22 * (1 - Math.abs(P.fx.dusk - 0.5) * 2)).toFixed(3) + ')');
-    if (P.fx.haze) tint(g, W, gy, 'rgba(180,170,150,0.10)');
-
-    /* солнце или луна */
-    var sx = W * 0.78, sy = H * 0.2;
-    if (night) {
-      g.fillStyle = 'rgba(240,240,220,0.9)';
-      circle(g, sx, sy, 10);
-      for (var i = 0; i < 26; i++) {
-        var a = (i * 2654435761) % 1000 / 1000, b = (i * 40503) % 997 / 997;
-        g.fillStyle = 'rgba(255,255,230,' + (0.25 + 0.5 * ((i * 7919) % 100) / 100).toFixed(2) + ')';
-        g.fillRect(a * W, b * H * 0.5, 1.4, 1.4);
-      }
-    } else if (P.fx.sun) {
-      var r = 14 + 4 * P.fx.sun;
-      var sg = g.createRadialGradient(sx, sy, 2, sx, sy, r * 4);
-      sg.addColorStop(0, 'rgba(255,225,150,0.75)');
-      sg.addColorStop(1, 'rgba(255,225,150,0)');
-      g.fillStyle = sg; g.fillRect(sx - r * 4, sy - r * 4, r * 8, r * 8);
-      g.fillStyle = 'rgba(255,235,190,0.95)'; circle(g, sx, sy, r);
-    }
-
-    if (P.fx.birds !== undefined && s !== 'room' && s !== 'office') {
-      var bx = (P.fx.birds || 0) * W * 1.2 - W * 0.1;
-      g.strokeStyle = 'rgba(240,236,223,0.45)'; g.lineWidth = 1.2;
-      for (var k = 0; k < 3; k++) {
-        var x = bx + k * 16, y = H * 0.18 + Math.sin((P.fx.birds || 0) * 6 + k) * 6;
-        g.beginPath(); g.moveTo(x - 5, y); g.quadraticCurveTo(x, y - 4, x + 5, y); g.stroke();
-      }
-    }
-
-    /* задний план по сцене */
-    if (s === 'village' || s === 'field' || s === 'park') {
-      g.fillStyle = night ? '#16221c' : '#2c4030';
-      g.beginPath(); g.moveTo(0, gy);
-      for (var x2 = 0; x2 <= W; x2 += 20) g.lineTo(x2, gy - 30 - Math.sin(x2 * 0.03) * 12);
-      g.lineTo(W, gy); g.closePath(); g.fill();
-      if (s !== 'field') { house(g, W * 0.16, gy - 6, 54, night); tree(g, W * 0.8, gy - 4, 34, night); }
-      if (s === 'field') for (var f = 0; f < 10; f++) crop(g, (f + 0.5) * W / 10, gy - 2, night);
-      if (s === 'park') { bench(g, W * 0.5, gy, 0.6); tree(g, W * 0.2, gy - 4, 40, night); }
-    } else if (s === 'city' || s === 'office') {
-      for (var b2 = 0; b2 < 7; b2++) {
-        var bw = W / 7, bh = 40 + ((b2 * 37) % 70);
-        g.fillStyle = night ? '#101820' : '#1d2630';
-        g.fillRect(b2 * bw, gy - bh, bw - 4, bh);
-        for (var wy = 0; wy < bh - 10; wy += 11) {
-          for (var wx = 0; wx < bw - 12; wx += 10) {
-            var on = ((b2 * 31 + wy * 7 + wx * 13) % 100) / 100 < (night ? 0.55 : 0.25);
-            g.fillStyle = on ? 'rgba(255,214,140,0.75)' : 'rgba(120,140,150,0.12)';
-            g.fillRect(b2 * bw + 5 + wx, gy - bh + 6 + wy, 5, 6);
-          }
+  function drawBackdrop(g, V) {
+    var w = V.w, h = V.h;
+    if (V.indoor) {
+      var wp = WALLP[V.scene] || WALLP.room;
+      if (V.scene === 'room' && V.life) wp = HOMEP[hashStr(V.life.seed + 'home') % HOMEP.length];
+      px(g, 0, 0, w, V.gy, wp[1]);
+      px(g, 0, 0, w, Math.round(V.gy * 0.38), wp[2]);
+      dith(g, 0, Math.round(V.gy * 0.38), w, wp[2]);
+      /* обойная полоса (в бедном доме стены голые) */
+      var tier = V.scene === 'room' ? homeTier(V) : 1;
+      if (tier > 0) for (var i = 0; i < w; i += 6) px(g, i, 0, 1, Math.round(V.gy * 0.38), 'rgba(255,255,255,0.03)');
+      if (V.scene === 'room' && tier === 0) {
+        for (var cr = 0; cr < 5; cr++) {
+          var cx2 = Math.round(nz(cr + 4) * w), cy2 = Math.round(nz(cr + 14) * V.gy * 0.5);
+          px(g, cx2, cy2, 1, 3 + Math.round(nz(cr) * 4), 'rgba(0,0,0,0.18)');
         }
       }
-      if (P.fx.traffic !== undefined) {
-        var cx2 = ((P.fx.traffic || 0) * W * 1.3) - W * 0.15;
-        g.fillStyle = 'rgba(232,180,90,0.5)'; g.fillRect(cx2, gy - 9, 16, 6);
-        g.fillStyle = 'rgba(200,80,70,0.45)'; g.fillRect(W - cx2, gy - 9, 14, 6);
+      /* панель и плинтус */
+      px(g, 0, Math.round(V.gy * 0.62), w, V.gy - Math.round(V.gy * 0.62), shade(wp[0], 0.05));
+      px(g, 0, Math.round(V.gy * 0.62), w, 1, shade(wp[2], 0.1));
+      px(g, 0, V.gy - 2, w, 2, shade(wp[0], -0.2));
+      return;
+    }
+    var pal = SKYP[V.sky];
+    var band = Math.ceil(V.gy / 4);
+    for (var i = 0; i < 4; i++) {
+      px(g, 0, i * band, w, band, pal[i]);
+      if (i) dith(g, 0, i * band, w, pal[i - 1], i);
+    }
+    /* солнце, луна, звёзды */
+    var sx = Math.round(w * 0.78), sy = Math.round(V.gy * 0.24);
+    if (V.sky === 'night') {
+      for (var k = 0; k < 26; k++) {
+        var stx = Math.round(nz(k) * w), sty = Math.round(nz(k + 50) * V.gy * 0.6);
+        px(g, stx, sty, 1, 1, nz(k + 90) > 0.6 ? '#e8eef7' : '#9fb3cc');
       }
-    } else if (s === 'school') {
-      g.fillStyle = '#243229'; g.fillRect(W * 0.1, gy - 92, W * 0.8, 92);
-      g.fillStyle = '#16211b'; g.fillRect(W * 0.18, gy - 78, W * 0.64, 46);
-      g.strokeStyle = 'rgba(240,236,223,0.3)'; g.lineWidth = 1.4;
-      g.beginPath(); g.moveTo(W * 0.24, gy - 66); g.lineTo(W * 0.5, gy - 66);
-      g.moveTo(W * 0.24, gy - 56); g.lineTo(W * 0.62, gy - 56);
-      g.moveTo(W * 0.24, gy - 46); g.lineTo(W * 0.44, gy - 46); g.stroke();
-    } else if (s === 'factory') {
-      g.fillStyle = '#1e1a17'; g.fillRect(0, gy - 80, W, 80);
-      for (var p2 = 0; p2 < 4; p2++) {
-        g.fillStyle = '#2a2420'; g.fillRect(10 + p2 * (W - 20) / 4, gy - 60 - (p2 % 2) * 14, 26, 60);
-      }
-      g.fillStyle = 'rgba(232,180,90,0.25)'; g.fillRect(0, gy - 26, W, 3);
-    } else if (s === 'hospital') {
-      g.fillStyle = '#1b2325'; g.fillRect(0, gy - 110, W, 110);
-      g.fillStyle = 'rgba(240,250,250,0.07)'; g.fillRect(W * 0.62, gy - 96, W * 0.3, 60);
-      g.strokeStyle = 'rgba(240,250,250,0.18)'; g.strokeRect(W * 0.62, gy - 96, W * 0.3, 60);
-    } else if (s === 'room') {
-      g.fillStyle = '#241d18'; g.fillRect(0, gy - 120, W, 120);
-      g.fillStyle = 'rgba(255,214,140,0.10)'; g.fillRect(W * 0.08, gy - 104, W * 0.26, 54);
-      g.strokeStyle = 'rgba(232,180,90,0.25)'; g.strokeRect(W * 0.08, gy - 104, W * 0.26, 54);
-      g.fillStyle = '#2d241d'; g.fillRect(W * 0.6, gy - 40, W * 0.33, 8);
-    } else if (s === 'night') {
-      g.fillStyle = 'rgba(10,14,18,0.6)'; g.fillRect(0, 0, W, gy);
-    }
-
-    /* пол */
-    var fg = g.createLinearGradient(0, gy, 0, H);
-    fg.addColorStop(0, night ? '#0e1413' : '#1d2420');
-    fg.addColorStop(1, '#0a0e0d');
-    g.fillStyle = fg; g.fillRect(0, gy, W, H - gy);
-    g.strokeStyle = 'rgba(232,180,90,0.12)'; g.beginPath(); g.moveTo(0, gy); g.lineTo(W, gy); g.stroke();
-
-    /* мягкий свет за человеком, чтобы фигура не сливалась с фоном */
-    var lx = W / 2 + (P.rootX || 0) * W, ly = gy - H * 0.3;
-    var lg = g.createRadialGradient(lx, ly, H * 0.05, lx, ly, H * 0.62);
-    lg.addColorStop(0, 'rgba(255,240,210,0.13)');
-    lg.addColorStop(0.55, 'rgba(255,240,210,0.05)');
-    lg.addColorStop(1, 'rgba(255,240,210,0)');
-    g.fillStyle = lg;
-    g.fillRect(0, 0, W, H);
-  }
-
-  function tint(g, W, H, color) { g.fillStyle = color; g.fillRect(0, 0, W, H); }
-  function circle(g, x, y, r) { g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill(); }
-  function house(g, x, y, s, night) {
-    g.fillStyle = night ? '#1a211c' : '#30372c'; g.fillRect(x - s / 2, y - s * 0.6, s, s * 0.6);
-    g.fillStyle = night ? '#232a24' : '#3c4436';
-    g.beginPath(); g.moveTo(x - s * 0.6, y - s * 0.6); g.lineTo(x, y - s * 1.05); g.lineTo(x + s * 0.6, y - s * 0.6); g.closePath(); g.fill();
-    g.fillStyle = 'rgba(255,214,140,' + (night ? 0.8 : 0.35) + ')'; g.fillRect(x - s * 0.12, y - s * 0.42, s * 0.24, s * 0.22);
-  }
-  function tree(g, x, y, s, night) {
-    g.fillStyle = '#2e2419'; g.fillRect(x - s * 0.06, y - s * 0.5, s * 0.12, s * 0.5);
-    g.fillStyle = night ? '#15251a' : '#27432a';
-    circle(g, x, y - s * 0.66, s * 0.3); circle(g, x - s * 0.2, y - s * 0.5, s * 0.22); circle(g, x + s * 0.2, y - s * 0.52, s * 0.22);
-  }
-  function crop(g, x, y, night) {
-    g.strokeStyle = night ? '#2c3a22' : '#55702f'; g.lineWidth = 2;
-    g.beginPath(); g.moveTo(x, y); g.lineTo(x - 3, y - 14); g.moveTo(x, y); g.lineTo(x + 3, y - 12); g.stroke();
-  }
-  function bench(g, x, y, k) {
-    g.fillStyle = '#39302a'; g.fillRect(x - 30 * k, y - 16 * k, 60 * k, 5 * k);
-    g.fillRect(x - 26 * k, y - 11 * k, 4 * k, 11 * k); g.fillRect(x + 22 * k, y - 11 * k, 4 * k, 11 * k);
-  }
-
-  /* ----------------------------- фигура ------------------------------ */
-
-  /* ===================================================================
-     ФИГУРА ЧЕЛОВЕКА
-     Плоская векторная графика: силуэт из кривых, сужающиеся конечности,
-     кисти, обувь, воротник, причёски. Всё рисуется кодом, без картинок.
-     =================================================================== */
-
-  var TAU = Math.PI * 2;
-
-  /* сегмент конечности с переменной толщиной */
-  function seg(g, x1, y1, x2, y2, w1, w2) {
-    var dx = x2 - x1, dy = y2 - y1;
-    var L = Math.sqrt(dx * dx + dy * dy) || 1;
-    var nx = -dy / L, ny = dx / L;
-    g.beginPath();
-    g.moveTo(x1 + nx * w1 / 2, y1 + ny * w1 / 2);
-    g.lineTo(x2 + nx * w2 / 2, y2 + ny * w2 / 2);
-    g.lineTo(x2 - nx * w2 / 2, y2 - ny * w2 / 2);
-    g.lineTo(x1 - nx * w1 / 2, y1 - ny * w1 / 2);
-    g.closePath(); g.fill();
-  }
-
-  /* кисть: ладонь с большим пальцем, повёрнутая вдоль предплечья */
-  function hand(g, x, y, ang, w, col) {
-    g.save(); g.translate(x, y); g.rotate(-ang);
-    g.fillStyle = col;
-    g.beginPath(); g.ellipse(0, w * 0.34, w * 0.44, w * 0.6, 0, 0, TAU); g.fill();
-    g.beginPath(); g.ellipse(-w * 0.36, w * 0.18, w * 0.17, w * 0.26, 0.6, 0, TAU); g.fill();
-    g.restore();
-  }
-
-  /* ботинок: мысок наружу от центра фигуры */
-  function shoe(g, x, y, ang, w, col, dir) {
-    g.save(); g.translate(x, y); g.rotate(-ang * 0.5);
-    g.fillStyle = col;
-    g.beginPath();
-    g.moveTo(-w * 0.5, -w * 0.25);
-    g.lineTo(w * 0.5, -w * 0.25);
-    g.quadraticCurveTo(w * 0.55 + dir * w * 0.5, -w * 0.1, w * 0.5 + dir * w * 0.62, w * 0.3);
-    g.quadraticCurveTo(w * 0.3, w * 0.52, -w * 0.5, w * 0.42);
-    g.quadraticCurveTo(-w * 0.62, w * 0.1, -w * 0.5, -w * 0.25);
-    g.fill();
-    g.fillStyle = 'rgba(0,0,0,0.3)';
-    g.beginPath();
-    g.moveTo(-w * 0.52, w * 0.3);
-    g.lineTo(w * 0.5 + dir * w * 0.6, w * 0.26);
-    g.lineTo(w * 0.48 + dir * w * 0.6, w * 0.44);
-    g.quadraticCurveTo(w * 0.3, w * 0.52, -w * 0.5, w * 0.42);
-    g.fill();
-    g.restore();
-  }
-
-  /* конечность: плечо → локоть → кисть, с утолщением в суставах */
-  function limb(g, x, y, a1, l1, a2, l2, w1, w2, color, handColor, opts) {
-    var ex = x + Math.sin(a1) * l1, ey = y + Math.cos(a1) * l1;
-    var hx = ex + Math.sin(a1 + a2) * l2, hy = ey + Math.cos(a1 + a2) * l2;
-    var wm = (w1 + w2) * 0.52;
-    g.fillStyle = color;
-    circle(g, x, y, w1 / 2);
-    seg(g, x, y, ex, ey, w1, wm);
-    circle(g, ex, ey, wm / 2);
-    seg(g, ex, ey, hx, hy, wm, w2);
-    circle(g, hx, hy, w2 / 2);
-    opts = opts || {};
-    if (opts.cuff) {
-      g.fillStyle = opts.cuff;
-      var t = 0.82;
-      var cx1 = ex + (hx - ex) * t, cy1 = ey + (hy - ey) * t;
-      seg(g, cx1, cy1, hx, hy, w2 * 1.08, w2 * 1.04);
-    }
-    if (opts.shoe) shoe(g, hx, hy, a1 + a2, w2 * 1.5, opts.shoe, opts.dir || 0);
-    else if (handColor) hand(g, hx, hy, a1 + a2, w2 * 1.5, handColor);
-    return { ex: ex, ey: ey, hx: hx, hy: hy };
-  }
-
-  function drawFigure(g, pt, P, W, H) {
-    var life = pt.life, look = pt.look;
-    var age = life.age;
-    var m = metrics(age);
-    var fh = H * 0.93 * m.h * P.scale;
-    var gy = H * 0.94 + P.rootY * H;
-    /* подгонка: человек любого возраста целиком помещается в кадр */
-    var fullH = fh * (m.leg + m.th + m.neck + 2.5 * m.head);
-    var room = gy - H * 0.035;
-    if (fullH > room) fh *= room / fullH;
-    var cx = W / 2 + P.rootX * W;
-
-    /* седина, бледность, загар */
-    var grayK = clamp((age - 35) / 45, 0, 0.85);
-    var hairCol = mix(look.hair, '#d8d4cc', grayK);
-    var skin = look.skin;
-    if (P.pale) skin = mix(skin, '#cfd6d4', P.pale * 0.45);
-    if (P.blush) skin = mix(skin, '#c4684f', P.blush * 0.25);
-    var health = life.stats ? life.stats.health : 70;
-    if (health < 45) skin = mix(skin, '#9aa6a0', (45 - health) / 110);
-
-    var lying = !!P.props.lying;
-    var legLen = fh * m.leg, torsoH = fh * m.th, torsoW = fh * m.tw * look.wide;
-    var headR = fh * m.head;
-    var crouch = P.torso.crouch || 0;
-    var female = life.sex === 'f' && age > 12;
-
-    if (lying) { g.save(); g.translate(cx, gy - fh * 0.12); g.rotate(-Math.PI / 2 * 0.92); g.translate(-cx, -(gy - fh * 0.12)); }
-
-    var hipY = gy - legLen * (1 - crouch * 0.45);
-    var shoulderY = hipY - torsoH * (1 - P.torso.slouch * 0.1);
-    var headCY = shoulderY - fh * m.neck - headR * 0.95 + P.head.y * fh + P.bob * -H;
-    var leanX = P.lean * fh * 0.3;
-
-    /* тень на земле */
-    if (!lying) {
-      g.fillStyle = 'rgba(0,0,0,0.35)';
-      g.beginPath(); g.ellipse(cx, gy + 2, torsoW * 0.8, torsoW * 0.17, 0, 0, TAU); g.fill();
-    }
-
-    /* реквизит за фигурой */
-    if (P.props.bed) {
-      g.fillStyle = '#2b2a28'; g.fillRect(cx - fh * 0.55, gy - fh * 0.1, fh * 1.1, fh * 0.1);
-      g.fillStyle = '#4a4742'; g.fillRect(cx - fh * 0.58, gy - fh * 0.16, fh * 0.1, fh * 0.16);
-    }
-    if (P.props.chair) { g.fillStyle = '#3a312a'; g.fillRect(cx - torsoW * 0.6, hipY, torsoW * 1.2, fh * 0.06); }
-    if (P.props.bench) bench(g, cx, gy, fh / 90);
-    if (P.props.house) house(g, cx + W * 0.3, gy - 4, fh * 0.5, 0);
-    if (P.props.shop) {
-      g.fillStyle = '#2f3a33'; g.fillRect(cx + fh * 0.2, gy - fh * 0.5, fh * 0.6, fh * 0.5);
-      g.fillStyle = '#e8b45a'; g.fillRect(cx + fh * 0.2, gy - fh * 0.52, fh * 0.6, fh * 0.07);
-    }
-    if (P.props.machine) { g.fillStyle = '#39332c'; g.fillRect(cx + fh * 0.22, gy - fh * 0.42, fh * 0.42, fh * 0.42); }
-    if (P.props.field) for (var cci = 0; cci < 5; cci++) crop(g, cx - fh * 0.5 + cci * fh * 0.25, gy, 0);
-
-    /* ------------------------------ ноги ------------------------------ */
-    var trouser = shade(look.cloth2, -0.3);
-    var shoeCol = look.shoes;
-    var legW = torsoW * 0.30;
-    var ankleW = torsoW * 0.21;
-    var hipHalf = torsoW * (female ? 0.27 : 0.24) * P.legs.spread;
-    var hipL = cx - hipHalf + leanX * 0.3;
-    var hipR = cx + hipHalf + leanX * 0.3;
-    var bare = look.dress && age > 12 && !look.cold;
-    var legCol = bare ? shade(skin, -0.06) : trouser;
-    var legA = limb(g, hipL, hipY, P.legs.lh, legLen * 0.52, P.legs.lk, legLen * 0.5,
-      legW, ankleW, legCol, null, { shoe: shoeCol, dir: -1 });
-    var legB = limb(g, hipR, hipY, P.legs.rh, legLen * 0.52, P.legs.rk, legLen * 0.5,
-      legW, ankleW, legCol, null, { shoe: shoeCol, dir: 1 });
-    void legA; void legB;
-
-    /* ------------------------------ торс ------------------------------ */
-    var tx = cx + leanX, ty = shoulderY;
-    var bodyBot = hipY + fh * 0.012;
-    var shW = torsoW * 0.5;
-    var waW = torsoW * (female ? 0.36 : 0.43);
-    var hipW = torsoW * (female ? 0.49 : 0.44);
-    var rr = torsoW * 0.22;
-
-    g.fillStyle = look.cloth;
-    g.beginPath();
-    g.moveTo(tx - shW + rr, ty);
-    g.quadraticCurveTo(tx - shW, ty, tx - shW, ty + rr * 0.9);
-    g.quadraticCurveTo(tx - waW, ty + torsoH * 0.62, tx - hipW, bodyBot - rr * 0.4);
-    g.quadraticCurveTo(tx - hipW, bodyBot, tx - hipW + rr * 0.5, bodyBot);
-    g.lineTo(tx + hipW - rr * 0.5, bodyBot);
-    g.quadraticCurveTo(tx + hipW, bodyBot, tx + hipW, bodyBot - rr * 0.4);
-    g.quadraticCurveTo(tx + waW, ty + torsoH * 0.62, tx + shW, ty + rr * 0.9);
-    g.quadraticCurveTo(tx + shW, ty, tx + shW - rr, ty);
-    g.closePath();
-    g.fill();
-
-    /* юбка или платье */
-    if (look.dress && age > 6) {
-      g.fillStyle = shade(look.cloth, -0.05);
-      var skirtBot = hipY + legLen * (look.longDress ? 0.72 : 0.36);
-      g.beginPath();
-      g.moveTo(tx - waW * 1.02, hipY - torsoH * 0.3);
-      g.quadraticCurveTo(tx - torsoW * 0.72, hipY + legLen * 0.1, tx - torsoW * 0.82, skirtBot);
-      g.quadraticCurveTo(tx, skirtBot + torsoW * 0.16, tx + torsoW * 0.82, skirtBot);
-      g.quadraticCurveTo(tx + torsoW * 0.72, hipY + legLen * 0.1, tx + waW * 1.02, hipY - torsoH * 0.3);
-      g.closePath(); g.fill();
-    }
-
-    /* дыхание и складки */
-    if (P.breath) {
-      g.fillStyle = 'rgba(255,255,255,0.045)';
-      g.beginPath();
-      g.ellipse(tx, ty + torsoH * 0.3, torsoW * (0.34 + P.breath * 0.025), torsoH * 0.26, 0, 0, TAU);
-      g.fill();
-    }
-    g.fillStyle = 'rgba(0,0,0,0.055)';
-    g.beginPath();
-    g.moveTo(tx + waW * 0.2, ty + torsoH * 0.18);
-    g.quadraticCurveTo(tx + waW * 0.95, ty + torsoH * 0.5, tx + hipW * 0.92, bodyBot - rr * 0.4);
-    g.quadraticCurveTo(tx + waW * 0.6, ty + torsoH * 0.5, tx + waW * 0.2, ty + torsoH * 0.18);
-    g.fill();
-
-    /* пояс */
-    if (!look.dress && age > 9) {
-      g.fillStyle = shade(look.cloth2, -0.45);
-      g.fillRect(tx - hipW * 0.98, bodyBot - fh * 0.028, hipW * 1.96, fh * 0.022);
-      g.fillStyle = '#c9a44c';
-      g.fillRect(tx - fh * 0.016, bodyBot - fh * 0.03, fh * 0.032, fh * 0.026);
-    }
-
-    /* ------------------------------ руки ------------------------------ */
-    var armLen = fh * m.arm;
-    var sleeve = shade(look.cloth, -0.1);
-    var armW = torsoW * 0.235, wristW = torsoW * 0.17;
-    var shL = tx - shW * 0.92, shR = tx + shW * 0.92;
-    var shY = ty + rr * 0.55;
-    var cuffCol = look.sleeveless ? null : shade(look.cloth, -0.22);
-    var upperCol = look.sleeveless ? shade(skin, -0.04) : sleeve;
-    var handsL = limb(g, shL, shY, -P.arms.ls, armLen * 0.5, -P.arms.le, armLen * 0.5,
-      armW, wristW, upperCol, skin, { cuff: cuffCol });
-    var handsR = limb(g, shR, shY, P.arms.rs, armLen * 0.5, P.arms.re, armLen * 0.5,
-      armW, wristW, upperCol, skin, { cuff: cuffCol });
-
-    /* ---------------------------- шея и ворот -------------------------- */
-    var hx = cx + leanX + P.head.x * fh;
-    var hy = headCY + P.head.nod * headR * 0.22;
-    var neckW = headR * 0.54;
-    g.fillStyle = shade(skin, -0.12);
-    g.beginPath();
-    g.moveTo(hx - neckW / 2, hy + headR * 0.55);
-    g.lineTo(hx + neckW / 2, hy + headR * 0.55);
-    g.lineTo(tx + neckW * 0.62, ty + rr * 0.2);
-    g.lineTo(tx - neckW * 0.62, ty + rr * 0.2);
-    g.closePath(); g.fill();
-
-    /* воротник */
-    g.fillStyle = shade(look.cloth, 0.1);
-    g.beginPath();
-    g.moveTo(tx - shW * 0.56, ty + rr * 0.05);
-    g.quadraticCurveTo(tx, ty + rr * (look.dress ? 1.25 : 0.85), tx + shW * 0.56, ty + rr * 0.05);
-    g.quadraticCurveTo(tx, ty - rr * 0.3, tx - shW * 0.56, ty + rr * 0.05);
-    g.fill();
-
-    drawHead(g, pt, P, hx, hy, headR, skin, hairCol, look, life, age, grayK);
-
-    /* реквизит в руках */
-    drawHandProps(g, pt, P, handsL, handsR, fh, skin);
-
-    if (lying) g.restore();
-
-    /* свечение */
-    if (P.glow > 0.01) {
-      var gg = g.createRadialGradient(cx, headCY, headR * 0.5, cx, headCY, headR * 6);
-      gg.addColorStop(0, 'rgba(232,180,90,' + (P.glow * 0.3).toFixed(3) + ')');
-      gg.addColorStop(1, 'rgba(232,180,90,0)');
-      g.fillStyle = gg; g.fillRect(0, 0, W, H);
-    }
-  }
-
-  function roundPath(g, x, y, w, h, r1, r2, r3, r4) {
-    g.beginPath();
-    g.moveTo(x + r1, y);
-    g.lineTo(x + w - r2, y); g.quadraticCurveTo(x + w, y, x + w, y + r2);
-    g.lineTo(x + w, y + h - r3); g.quadraticCurveTo(x + w, y + h, x + w - r3, y + h);
-    g.lineTo(x + r4, y + h); g.quadraticCurveTo(x, y + h, x, y + h - r4);
-    g.lineTo(x, y + r1); g.quadraticCurveTo(x, y, x + r1, y);
-    g.closePath();
-  }
-
-  /* ============================ ГОЛОВА =============================== */
-
-  function drawHead(g, pt, P, hx, hy, r, skin, hairCol, look, life, age, grayK) {
-    g.save();
-    g.translate(hx, hy);
-    g.rotate(P.head.rot);
-
-    var rw = r * (look.round ? 0.92 : 0.86);
-    var rh = r * (look.round ? 0.96 : 1.02);
-    var jaw = look.jaw * (age < 12 ? 1.08 : 1);
-
-    /* волосы сзади (длинные пряди, пучок, афро) */
-    drawHairBack(g, P, r, hairCol, look, life, age);
-
-    /* уши */
-    g.fillStyle = shade(skin, -0.12);
-    g.beginPath(); g.ellipse(-rw * 0.99, r * 0.05, r * 0.14 * look.ears, r * 0.2 * look.ears, 0, 0, TAU); g.fill();
-    g.beginPath(); g.ellipse(rw * 0.99, r * 0.05, r * 0.14 * look.ears, r * 0.2 * look.ears, 0, 0, TAU); g.fill();
-
-    /* череп и подбородок одной формой */
-    g.fillStyle = skin;
-    g.beginPath();
-    g.moveTo(-rw, -rh * 0.12);
-    g.bezierCurveTo(-rw * 1.03, -rh * 1.02, rw * 1.03, -rh * 1.02, rw, -rh * 0.12);
-    g.bezierCurveTo(rw * 0.99, rh * 0.42, rw * 0.62 * jaw, rh * 0.98, 0, rh * 1.0);
-    g.bezierCurveTo(-rw * 0.62 * jaw, rh * 0.98, -rw * 0.99, rh * 0.42, -rw, -rh * 0.12);
-    g.closePath();
-    g.fill();
-
-    /* тень у скул */
-    g.fillStyle = 'rgba(0,0,0,0.07)';
-    g.beginPath();
-    g.moveTo(rw * 0.98, -rh * 0.1);
-    g.bezierCurveTo(rw * 0.97, rh * 0.42, rw * 0.6 * jaw, rh * 0.96, 0, rh * 0.99);
-    g.bezierCurveTo(rw * 0.3, rh * 0.6, rw * 0.62, rh * 0.2, rw * 0.6, -rh * 0.1);
-    g.closePath(); g.fill();
-
-    var eyeY = -r * 0.02, eyeDX = r * 0.35, eyeR = r * 0.165;
-    var openL = clamp(P.eyes.open * (1 - P.eyes.wink), 0, 1.4);
-    var openR = clamp(P.eyes.open, 0, 1.4);
-
-    /* брови */
-    g.strokeStyle = shade(hairCol, -0.12);
-    g.lineWidth = Math.max(1, r * (look.thickBrows ? 0.085 : 0.06));
-    g.lineCap = 'round';
-    var browY = eyeY - r * 0.3 - P.brows.raise * r * 0.1;
-    [-1, 1].forEach(function (s) {
-      var inner = browY + P.brows.angry * r * 0.13 - P.brows.sad * r * 0.11;
-      var outer = browY - P.brows.angry * r * 0.05 + P.brows.sad * r * 0.09;
-      g.beginPath();
-      g.moveTo(s * (eyeDX - eyeR * 0.95), inner);
-      g.quadraticCurveTo(s * eyeDX * 1.02, browY - r * 0.08, s * (eyeDX + eyeR * 0.85), outer);
-      g.stroke();
-    });
-
-    eye(g, -eyeDX, eyeY, eyeR, openL, P, look, -1);
-    eye(g, eyeDX, eyeY, eyeR, openR, P, look, 1);
-
-    /* нос: мягкая тень + крыло */
-    var ny = eyeY + r * 0.4;
-    g.fillStyle = 'rgba(0,0,0,0.075)';
-    g.beginPath();
-    g.moveTo(-r * 0.015, eyeY + r * 0.14);
-    g.quadraticCurveTo(-r * 0.13 * look.nose, ny - r * 0.02, -r * 0.1 * look.nose, ny + r * 0.03);
-    g.quadraticCurveTo(0, ny + r * 0.11, r * 0.1 * look.nose, ny + r * 0.03);
-    g.quadraticCurveTo(r * 0.09 * look.nose, ny - r * 0.06, r * 0.02, eyeY + r * 0.1);
-    g.fill();
-    g.fillStyle = 'rgba(0,0,0,0.2)';
-    circle(g, -r * 0.08 * look.nose, ny + r * 0.03, r * 0.025);
-    circle(g, r * 0.08 * look.nose, ny + r * 0.03, r * 0.025);
-
-    /* борода рисуется под губами, усы — поверх */
-    var my = r * 0.58, mw = r * 0.24 * P.mouth.width, sm = P.mouth.smile, op = clamp(P.mouth.open, 0, 1);
-    var lip = look.lip;
-    drawBeard(g, r, hairCol, look, life, age, grayK);
-
-    if (op > 0.22) {
-      g.fillStyle = '#4a1f1d';
-      g.beginPath();
-      g.moveTo(-mw, my);
-      g.quadraticCurveTo(0, my - r * 0.06 + sm * r * 0.04, mw, my);
-      g.quadraticCurveTo(0, my + r * 0.1 + op * r * 0.3, -mw, my);
-      g.fill();
-      g.fillStyle = '#f3ece0';
-      g.beginPath();
-      g.moveTo(-mw * 0.82, my + r * 0.005);
-      g.quadraticCurveTo(0, my - r * 0.04, mw * 0.82, my + r * 0.005);
-      g.quadraticCurveTo(0, my + r * 0.05, -mw * 0.82, my + r * 0.005);
-      g.fill();
+      px(g, sx, sy, 5, 5, '#e9edf2');
+      px(g, sx + 3, sy - 1, 3, 4, SKYP.night[0]);
     } else {
-      g.fillStyle = lip;
-      g.beginPath();
-      g.moveTo(-mw, my);
-      g.quadraticCurveTo(-mw * 0.45, my - r * 0.075, 0, my - r * 0.025);
-      g.quadraticCurveTo(mw * 0.45, my - r * 0.075, mw, my);
-      g.quadraticCurveTo(mw * 0.5, my + r * 0.07 + sm * r * 0.09, 0, my + r * 0.08 + sm * r * 0.1);
-      g.quadraticCurveTo(-mw * 0.5, my + r * 0.07 + sm * r * 0.09, -mw, my);
-      g.fill();
-      g.strokeStyle = 'rgba(80,30,28,0.55)';
-      g.lineWidth = Math.max(0.8, r * 0.022);
-      g.beginPath();
-      g.moveTo(-mw, my);
-      g.quadraticCurveTo(0, my + sm * r * 0.1 + r * 0.015, mw, my);
-      g.stroke();
+      var sun = V.sky === 'day' ? '#f7e3a8' : '#f2b276';
+      px(g, sx, sy, 6, 6, sun);
+      px(g, sx - 1, sy + 1, 1, 4, sun);
+      px(g, sx + 6, sy + 1, 1, 4, sun);
+      px(g, sx + 1, sy - 1, 4, 1, sun);
+      px(g, sx + 1, sy + 6, 4, 1, sun);
     }
-
-    /* щёки, веснушки, морщины */
-    if (P.blush || age < 10) {
-      g.fillStyle = 'rgba(200,110,90,' + (0.1 + (P.blush || 0) * 0.22).toFixed(2) + ')';
-      g.beginPath(); g.ellipse(-r * 0.56, r * 0.3, r * 0.19, r * 0.13, 0, 0, TAU); g.fill();
-      g.beginPath(); g.ellipse(r * 0.56, r * 0.3, r * 0.19, r * 0.13, 0, 0, TAU); g.fill();
-    }
-    if (look.freckles && age > 4 && age < 45) {
-      g.fillStyle = 'rgba(120,70,40,0.3)';
-      for (var i = 0; i < 8; i++) {
-        var side = i < 4 ? -1 : 1;
-        var fx2 = side * (r * 0.42 + (i % 4) * r * 0.1);
-        circle(g, fx2, r * 0.26 + ((i % 2) * r * 0.07), r * 0.022);
+    /* облака */
+    if (V.sky !== 'night') {
+      for (var c = 0; c < 3; c++) {
+        var cx = Math.round(((nz(c + 7) * w) + V.t * (3 + c)) % (w + 40)) - 20;
+        var cy = Math.round(6 + nz(c + 11) * V.gy * 0.3);
+        pxCloud(g, cx, cy, 8 + Math.round(nz(c + 3) * 7), V.sky === 'day' ? '#cfe2ea' : '#d8b49a');
       }
     }
-    if (age > 42) {
-      var wk = clamp((age - 42) / 45, 0, 1);
-      g.strokeStyle = 'rgba(60,40,28,' + (0.14 + wk * 0.26).toFixed(2) + ')';
-      g.lineWidth = Math.max(0.7, r * 0.022);
-      g.beginPath();
-      g.moveTo(-r * 0.42, -r * 0.46); g.quadraticCurveTo(0, -r * 0.54, r * 0.42, -r * 0.46);
-      g.moveTo(-r * 0.68, r * 0.04); g.lineTo(-r * 0.8, r * 0.12);
-      g.moveTo(r * 0.68, r * 0.04); g.lineTo(r * 0.8, r * 0.12);
-      if (wk > 0.35) {
-        g.moveTo(-r * 0.3, r * 0.62); g.quadraticCurveTo(-r * 0.38, r * 0.42, -r * 0.28, r * 0.3);
-        g.moveTo(r * 0.3, r * 0.62); g.quadraticCurveTo(r * 0.38, r * 0.42, r * 0.28, r * 0.3);
+  }
+
+  function pxCloud(g, x, y, w, c) {
+    px(g, x, y + 2, w, 3, c);
+    px(g, x + 2, y, Math.round(w * 0.5), 2, c);
+    px(g, x + Math.round(w * 0.6), y + 1, Math.round(w * 0.3), 2, c);
+  }
+
+  /* --------------------------- земля и пол --------------------------- */
+
+  var GROUND = {
+    village: ['#3c5a33', '#32492b', '#6b5637'],
+    city: ['#2b2f36', '#23272d', '#3a3f47'],
+    night: ['#23272d', '#1c2026', '#30353c'],
+    field: ['#4a5f2c', '#3d4f25', '#6f5a36'],
+    park: ['#37562f', '#2d4728', '#5f4f33'],
+    room: ['#5a3f28', '#4a3320', '#6b4c2f'],
+    school: ['#4a4438', '#3c382e', '#574f41'],
+    office: ['#3a3f46', '#2f343a', '#464c54'],
+    hospital: ['#50595c', '#424a4d', '#5c6669'],
+    factory: ['#3a342f', '#2e2a26', '#463f38']
+  };
+
+  function drawGround(g, V) {
+    var gp = GROUND[V.scene] || GROUND.village;
+    var w = V.w, gy = V.gy;
+    px(g, 0, gy, w, V.h - gy, gp[1]);
+    px(g, 0, gy, w, 2, gp[0]);
+    dith(g, 0, gy + 2, w, gp[0]);
+    if (V.scene === 'room' || V.scene === 'school' || V.scene === 'office') {
+      px(g, 0, gy + 2, w, 1, gp[2]);
+      for (var i = 0; i < w; i += 11) px(g, i + ((i / 11) % 2 ? 5 : 0), gy + 3, 1, V.h - gy - 3, shade(gp[1], -0.1));
+      px(g, 0, gy + Math.round((V.h - gy) * 0.6), w, 1, shade(gp[1], -0.08));
+    } else if (V.scene === 'hospital') {
+      /* плитка: короткие швы, а не частокол во всю высоту */
+      for (var j = 0; j < w; j += 9) {
+        px(g, j, gy + 3, 1, 3, gp[2]);
+        px(g, j + 4, gy + 8, 1, 3, gp[2]);
       }
-      g.stroke();
+      px(g, 0, gy + 6, w, 1, gp[2]);
+      px(g, 0, gy + 11, w, 1, shade(gp[1], -0.06));
+    } else if (V.scene === 'city' || V.scene === 'night') {
+      px(g, 0, gy + 5, w, 1, gp[2]);                  /* бордюр */
+      for (var k = 4; k < w; k += 14) px(g, k, gy + 9, 6, 1, '#6f7681'); /* разметка */
+    } else if (V.scene === 'field') {
+      for (var m = 0; m < w; m += 5) px(g, m, gy + 3, 3, 1, gp[2]);
+    } else {
+      for (var n = 0; n < w; n += 6) px(g, n + (n % 12 ? 0 : 2), gy + 3, 2, 1, gp[2]);
     }
-
-    drawMoustache(g, r, hairCol, look, life, age, grayK, my);
-
-    /* волосы спереди */
-    drawHair(g, P, r, hairCol, look, life, age);
-
-    /* слёзы, пот, повязка, шапки */
-    if (P.eyes.tear > 0.02) {
-      g.fillStyle = 'rgba(150,200,230,0.85)';
-      var ty2 = eyeY + eyeR + P.eyes.tear * r * 0.9;
-      circle(g, -eyeDX, ty2, r * 0.06); circle(g, eyeDX, ty2 - r * 0.1, r * 0.05);
-    }
-    if (P.sweat > 0.1) {
-      g.fillStyle = 'rgba(180,215,235,' + (0.5 * P.sweat).toFixed(2) + ')';
-      circle(g, -r * 0.72, -r * 0.52, r * 0.07); circle(g, r * 0.64, -r * 0.6, r * 0.06);
-    }
-    if (P.props.patch) {
-      /* влажный компресс, повторяющий изгиб лба */
-      g.fillStyle = 'rgba(196,214,216,0.85)';
-      g.beginPath();
-      g.moveTo(-r * 0.82, -r * 0.48);
-      g.quadraticCurveTo(0, -r * 0.92, r * 0.82, -r * 0.48);
-      g.quadraticCurveTo(0, -r * 0.66, -r * 0.82, -r * 0.48);
-      g.fill();
-      g.fillStyle = 'rgba(120,150,160,0.35)';
-      g.beginPath();
-      g.moveTo(-r * 0.8, -r * 0.5);
-      g.quadraticCurveTo(0, -r * 0.7, r * 0.8, -r * 0.5);
-      g.quadraticCurveTo(0, -r * 0.62, -r * 0.8, -r * 0.5);
-      g.fill();
-    }
-    if (P.props.cap) {
-      g.fillStyle = '#1d2630';
-      g.beginPath();
-      g.moveTo(-rw * 1.02, -rh * 0.42);
-      g.bezierCurveTo(-rw * 1.04, -rh * 1.12, rw * 1.04, -rh * 1.12, rw * 1.02, -rh * 0.42);
-      g.closePath(); g.fill();
-      g.fillStyle = '#16202a';
-      roundPath(g, -rw * 1.15, -rh * 0.5, rw * 2.3, rh * 0.16, r * 0.07, r * 0.07, r * 0.07, r * 0.07); g.fill();
-      g.fillStyle = '#e8b45a'; circle(g, 0, -rh * 0.78, r * 0.08);
-    }
-    if (P.props.helmet) {
-      g.fillStyle = '#d9a33c';
-      g.beginPath(); g.arc(0, -r * 0.22, r * 1.0, Math.PI, 0); g.fill();
-      roundPath(g, -r * 1.14, -r * 0.3, r * 2.28, r * 0.13, r * 0.06, r * 0.06, r * 0.06, r * 0.06); g.fill();
-    }
-    if (P.props.veil) {
-      g.fillStyle = 'rgba(255,255,255,0.35)';
-      g.beginPath(); g.moveTo(-r, -r * 0.6); g.quadraticCurveTo(0, -r * 1.6, r, -r * 0.6);
-      g.quadraticCurveTo(r * 1.4, r * 1.2, 0, r * 1.5); g.quadraticCurveTo(-r * 1.4, r * 1.2, -r, -r * 0.6); g.fill();
-    }
-    if (P.props.cigarette) {
-      g.strokeStyle = '#efe7d8'; g.lineWidth = Math.max(1, r * 0.06);
-      g.beginPath(); g.moveTo(r * 0.24, my); g.lineTo(r * 0.64, my - r * 0.05); g.stroke();
-      g.fillStyle = '#e8743a'; circle(g, r * 0.66, my - r * 0.06, r * 0.045);
-    }
-
-    g.restore();
   }
 
-  /* миндалевидный глаз с веком и ресницами */
-  function eye(g, x, y, r, open, P, look, side) {
-    g.save();
-    g.translate(x, y);
-    var oh = r * clamp(open, 0.02, 1.4) * 0.63 * (1 - P.eyes.squint * 0.6);
-    if (open < 0.1) {
-      g.strokeStyle = shade(look.skin, -0.45);
-      g.lineWidth = Math.max(1, r * 0.13);
-      g.lineCap = 'round';
-      g.beginPath(); g.moveTo(-r * 0.78, 0); g.quadraticCurveTo(0, r * 0.22, r * 0.78, 0); g.stroke();
-      g.restore();
-      return;
-    }
-    g.beginPath();
-    g.moveTo(-r * 0.82, 0);
-    g.quadraticCurveTo(-r * 0.3, -oh * 1.5, r * 0.2, -oh * 1.3);
-    g.quadraticCurveTo(r * 0.68, -oh * 1.05, r * 0.82, 0);
-    g.quadraticCurveTo(r * 0.3, oh * 1.25, -r * 0.4, oh * 1.0);
-    g.quadraticCurveTo(-r * 0.72, oh * 0.7, -r * 0.82, 0);
-    g.closePath();
-    g.save();
-    g.clip();
-    g.fillStyle = '#efe9dd';
-    g.fillRect(-r, -r * 2, r * 2, r * 4);
-    var px = P.eyes.lx * r * 0.3, py = P.eyes.ly * oh * 0.4;
-    g.fillStyle = look.eye;
-    circle(g, px, py, r * 0.62);
-    g.fillStyle = 'rgba(0,0,0,0.22)';
-    circle(g, px, py - r * 0.16, r * 0.62);
-    g.fillStyle = '#0d0b09';
-    circle(g, px, py, r * 0.27);
-    g.fillStyle = 'rgba(255,255,255,0.9)';
-    circle(g, px - r * 0.18, py - r * 0.2, r * 0.1);
-    g.restore();
-    /* верхнее веко */
-    g.strokeStyle = 'rgba(40,26,18,0.75)';
-    g.lineWidth = Math.max(0.9, r * 0.11);
-    g.lineCap = 'round';
-    g.beginPath();
-    g.moveTo(-r * 0.82, 0);
-    g.quadraticCurveTo(-r * 0.3, -oh * 1.5, r * 0.2, -oh * 1.3);
-    g.quadraticCurveTo(r * 0.68, -oh * 1.05, r * 0.82, 0);
-    g.stroke();
-    if (look.lashes) {
-      g.lineWidth = Math.max(0.7, r * 0.07);
-      g.beginPath();
-      g.moveTo(side * r * 0.8, -r * 0.04);
-      g.lineTo(side * r * 1.05, -r * 0.2);
-      g.stroke();
-    }
-    g.restore();
-  }
+  /* --------------------------- элементы сцен ------------------------- */
 
-  /* борода по линии челюсти (рисуется под губами) */
-  function drawBeard(g, r, col, look, life, age, grayK) {
-    if (life.sex !== 'm' || age < 17) return;
-    var f = look.facial;
-    if (f === 'none' || f === 'moustache') return;
-    var c = mix(shade(col, 0.1), '#d8d4cc', grayK);
-    g.fillStyle = c;
-    if (f === 'stubble') {
-      g.globalAlpha = 0.3;
-      g.beginPath();
-      g.moveTo(-r * 0.74, r * 0.22);
-      g.quadraticCurveTo(-r * 0.66, r * 1.02, 0, r * 1.04);
-      g.quadraticCurveTo(r * 0.66, r * 1.02, r * 0.74, r * 0.22);
-      g.quadraticCurveTo(r * 0.4, r * 0.56, 0, r * 0.58);
-      g.quadraticCurveTo(-r * 0.4, r * 0.56, -r * 0.74, r * 0.22);
-      g.fill();
-      g.globalAlpha = 1;
-      return;
-    }
-    if (f === 'goatee') {
-      g.beginPath();
-      g.moveTo(-r * 0.13, r * 0.78);
-      g.quadraticCurveTo(0, r * 0.72, r * 0.13, r * 0.78);
-      g.quadraticCurveTo(r * 0.11, r * 0.95, 0, r * 0.96);
-      g.quadraticCurveTo(-r * 0.11, r * 0.95, -r * 0.13, r * 0.78);
-      g.fill();
-      return;
-    }
-    /* полная или длинная борода: челюсть, подбородок, вырез под рот */
-    var low = f === 'long' ? r * 1.5 : r * 1.1;
-    g.beginPath();
-    g.moveTo(-r * 0.76, r * 0.26);
-    g.quadraticCurveTo(-r * 0.7, low * 0.8, 0, low);
-    g.quadraticCurveTo(r * 0.7, low * 0.8, r * 0.76, r * 0.26);
-    g.quadraticCurveTo(r * 0.52, r * 0.52, r * 0.3, r * 0.52);
-    g.quadraticCurveTo(0, r * 0.78, -r * 0.3, r * 0.52);
-    g.quadraticCurveTo(-r * 0.52, r * 0.52, -r * 0.76, r * 0.26);
-    g.fill();
-    /* бакенбарды к ушам */
-    g.beginPath();
-    g.moveTo(-r * 0.9, -r * 0.1);
-    g.quadraticCurveTo(-r * 0.84, r * 0.26, -r * 0.72, r * 0.4);
-    g.lineTo(-r * 0.76, r * 0.04);
-    g.fill();
-    g.beginPath();
-    g.moveTo(r * 0.9, -r * 0.1);
-    g.quadraticCurveTo(r * 0.84, r * 0.26, r * 0.72, r * 0.4);
-    g.lineTo(r * 0.76, r * 0.04);
-    g.fill();
-  }
-
-  /* усы — поверх верхней губы */
-  function drawMoustache(g, r, col, look, life, age, grayK, my) {
-    if (life.sex !== 'm' || age < 17) return;
-    var f = look.facial;
-    if (f === 'none' || f === 'stubble') return;
-    g.fillStyle = mix(shade(col, -0.05), '#d8d4cc', grayK);
-    var w = f === 'moustache' ? 0.26 : 0.21;
-    g.beginPath();
-    g.moveTo(-r * w, my - r * 0.12);
-    g.quadraticCurveTo(0, my - r * 0.22, r * w, my - r * 0.12);
-    g.quadraticCurveTo(r * w * 0.5, my - r * 0.07, 0, my - r * 0.1);
-    g.quadraticCurveTo(-r * w * 0.5, my - r * 0.07, -r * w, my - r * 0.12);
-    g.fill();
-  }
-
-  /* волосы за головой: длинные пряди, пучок, афро */
-  function drawHairBack(g, P, r, col, look, life, age) {
-    var st = hairStyleNow(look, life, age);
-    if (st === 'bald' || st === 'scarf' || st === 'crop') return;
-    var flow = P.hairFlow * r * 0.16;
-    g.fillStyle = shade(col, -0.12);
-    if (st === 'afro') {
-      circle(g, 0, -r * 0.18, r * 1.3);
-      return;
-    }
-    if (st === 'long' || st === 'bob') {
-      var drop = st === 'long' ? r * 1.85 : r * 1.0;
-      g.beginPath();
-      g.moveTo(-r * 0.98, -r * 0.3);
-      g.quadraticCurveTo(-r * 1.3 - flow, r * 0.6, -r * 1.02 - flow, drop);
-      g.quadraticCurveTo(0, drop + r * 0.3, r * 1.02 + flow, drop);
-      g.quadraticCurveTo(r * 1.3 + flow, r * 0.6, r * 0.98, -r * 0.3);
-      g.closePath(); g.fill();
-    } else if (st === 'pony') {
-      g.beginPath();
-      g.moveTo(r * 0.7, -r * 0.5);
-      g.quadraticCurveTo(r * 1.5 + flow, r * 0.1, r * 1.15 + flow, r * 1.25);
-      g.quadraticCurveTo(r * 0.85, r * 0.6, r * 0.55, -r * 0.1);
-      g.closePath(); g.fill();
-    } else if (st === 'braid') {
-      for (var i = 0; i < 4; i++) {
-        circle(g, r * (0.85 + i * 0.07) + flow * (i / 3), -r * 0.2 + i * r * 0.42, r * (0.3 - i * 0.045));
+  function pxBuilding(g, x, y, w, h, body, dark, lit, seed) {
+    px(g, x, y, w, h, body);
+    px(g, x + w - 2, y, 2, h, dark);
+    px(g, x, y, w, 1, '#ffffff10');
+    for (var wy = y + 3; wy < y + h - 3; wy += 5) {
+      for (var wx = x + 2; wx < x + w - 4; wx += 5) {
+        var on = nz(seed + wx * 7 + wy * 13) < lit;
+        px(g, wx, wy, 2, 3, on ? '#f0c878' : '#20252c');
       }
-    } else if (st === 'bun') {
-      circle(g, 0, -r * 1.12, r * 0.42);
-      circle(g, -r * 0.14, -r * 1.2, r * 0.3);
     }
   }
+
+  function pxHouse(g, x, gy, w, col, roof, night) {
+    var h = Math.round(w * 0.66);
+    px(g, x, gy - h, w, h, col);
+    px(g, x, gy - h, w, 1, shade(col, 0.12));
+    /* крыша «ступеньками» */
+    var half = Math.ceil(w / 2);
+    for (var i = 0; i < half; i++) {
+      px(g, x + i, gy - h - i - 1, w - i * 2, 1, roof);
+    }
+    px(g, x + Math.round(w * 0.3), gy - Math.round(h * 0.6), 3, 3, night ? '#f2c972' : '#2b3038');
+    px(g, x + Math.round(w * 0.62), gy - Math.round(h * 0.45), 3, Math.round(h * 0.45), '#3a2c20');
+  }
+
+  function pxTree(g, x, gy, h, night) {
+    var leaf = night ? '#1d3524' : '#2f5c33', leaf2 = night ? '#25422b' : '#3e7540';
+    px(g, x, gy - Math.round(h * 0.35), 2, Math.round(h * 0.35), '#4a3524');
+    var cw = Math.round(h * 0.7);
+    px(g, x - Math.round(cw / 2) + 1, gy - h, cw, Math.round(h * 0.45), leaf);
+    px(g, x - Math.round(cw / 2) + 2, gy - h - 2, cw - 2, 3, leaf);
+    px(g, x - Math.round(cw / 2) + 2, gy - h + 1, Math.round(cw * 0.5), 2, leaf2);
+  }
+
+  function pxBush(g, x, gy, w, night) {
+    var c = night ? '#1f3a26' : '#36632f';
+    px(g, x, gy - 3, w, 3, c);
+    px(g, x + 1, gy - 5, w - 2, 2, c);
+  }
+
+  function pxLamp(g, x, gy, h, night) {
+    px(g, x, gy - h, 1, h, '#3b4049');
+    px(g, x - 1, gy - h - 2, 3, 2, '#4b525c');
+    if (night) {
+      px(g, x - 1, gy - h - 1, 3, 1, '#f5d98a');
+      for (var r = 1; r < 5; r++) {
+        px(g, x - r, gy - h + r * 2, r * 2 + 1, 1, 'rgba(245,217,138,' + (0.1 - r * 0.018).toFixed(3) + ')');
+      }
+    }
+  }
+
+  /* ------------------------------ места ------------------------------ */
+
+  function placeVillage(g, V) {
+    var night = V.sky === 'night', gy = V.gy, w = V.w;
+    /* дальние холмы */
+    var hc = night ? '#1b2a22' : '#33502f';
+    for (var x = 0; x < w; x++) {
+      var hh = 6 + Math.round(Math.sin(x * 0.06) * 3 + Math.sin(x * 0.021) * 4);
+      px(g, x, gy - hh, 1, hh, hc);
+    }
+    pxHouse(g, Math.round(w * 0.08), gy, 22, night ? '#3a3228' : '#5a4c3a', night ? '#2a2119' : '#6e4433', night);
+    pxHouse(g, Math.round(w * 0.72), gy, 16, night ? '#352e26' : '#524636', night ? '#241d16' : '#63402f', night);
+    pxTree(g, Math.round(w * 0.38), gy, 18, night);
+    pxTree(g, Math.round(w * 0.9), gy, 14, night);
+    pxBush(g, Math.round(w * 0.55), gy, 7, night);
+    /* забор */
+    for (var f = Math.round(w * 0.2); f < w * 0.34; f += 3) px(g, f, gy - 5, 1, 5, '#55442f');
+    px(g, Math.round(w * 0.2), gy - 4, Math.round(w * 0.14), 1, '#55442f');
+  }
+
+  function placeCity(g, V) {
+    var night = V.sky === 'night' || V.scene === 'night', gy = V.gy, w = V.w;
+    var body = night ? '#1b2129' : '#39424e', dark = night ? '#141a21' : '#2d353f';
+    var seed = 3;
+    for (var x = -4; x < w; x += 0) {
+      var bw2 = 13 + Math.round(nz(seed) * 11);
+      var bh2 = 26 + Math.round(nz(seed + 30) * 34);
+      pxBuilding(g, x, gy - bh2, bw2, bh2, body, dark, night ? 0.55 : 0.18, seed * 17);
+      x += bw2 + 1;
+      seed++;
+    }
+    pxLamp(g, Math.round(w * 0.22), gy, 16, night);
+    pxLamp(g, Math.round(w * 0.78), gy, 16, night);
+    /* машина проезжает */
+    var cx = Math.round((V.t * 16) % (w + 30)) - 15;
+    px(g, cx, gy + 6, 11, 4, '#8a4a52');
+    px(g, cx + 2, gy + 3, 6, 3, '#9c5a60');
+    px(g, cx + 1, gy + 10, 2, 1, '#1a1d22');
+    px(g, cx + 8, gy + 10, 2, 1, '#1a1d22');
+    px(g, cx + 11, gy + 7, 1, 1, '#f2d78a');
+  }
+
+  function placeField(g, V) {
+    var night = V.sky === 'night', gy = V.gy, w = V.w;
+    var hc = night ? '#243018' : '#48622c';
+    for (var x = 0; x < w; x++) {
+      var hh = 4 + Math.round(Math.sin(x * 0.04) * 3 + 3);
+      px(g, x, gy - hh, 1, hh, hc);
+    }
+    pxTree(g, Math.round(w * 0.12), gy, 15, night);
+    /* ряды посевов */
+    for (var i = 0; i < w; i += 11) {
+      var sway = Math.round(Math.sin(V.t * 2 + i * 0.3) * 1);
+      px(g, i + sway, gy - 3, 1, 3, night ? '#3b4a22' : '#79903a');
+      px(g, i + sway - 1, gy - 4, 3, 1, night ? '#445527' : '#93a948');
+    }
+  }
+
+  function placePark(g, V) {
+    var night = V.sky === 'night', gy = V.gy, w = V.w;
+    for (var x = 0; x < w; x++) px(g, x, gy - 5 - Math.round(Math.sin(x * 0.05) * 2), 1, 7, night ? '#1d3323' : '#33552c');
+    pxTree(g, Math.round(w * 0.14), gy, 22, night);
+    pxTree(g, Math.round(w * 0.86), gy, 19, night);
+    pxBush(g, Math.round(w * 0.3), gy, 8, night);
+    pxLamp(g, Math.round(w * 0.64), gy, 14, night);
+    /* пруд */
+    px(g, Math.round(w * 0.42), gy + 4, 26, 4, night ? '#1b2a3a' : '#3a6a86');
+    px(g, Math.round(w * 0.44), gy + 5, 10, 1, night ? '#24384c' : '#5d8fa8');
+    /* скамейка */
+    var bx = Math.round(w * 0.2);
+    px(g, bx, gy - 5, 14, 2, '#5a4530');
+    px(g, bx, gy - 9, 14, 2, '#644d35');
+    px(g, bx + 1, gy - 5, 1, 5, '#42311f');
+    px(g, bx + 12, gy - 5, 1, 5, '#42311f');
+  }
+
+  function placeRoom(g, V) {
+    var gy = V.gy, w = V.w;
+    /* окно с видом на улицу */
+    var wx = Math.round(w * 0.08), wy = Math.round(gy * 0.2), ww = 26, wh = 20;
+    px(g, wx - 1, wy - 1, ww + 2, wh + 2, '#6b5134');
+    px(g, wx, wy, ww, wh, V.sky === 'night' ? '#101828' : '#5a8aa6');
+    if (V.sky === 'night') {
+      for (var s2 = 0; s2 < 6; s2++) px(g, wx + 2 + Math.round(nz(s2) * (ww - 4)), wy + 2 + Math.round(nz(s2 + 9) * (wh - 4)), 1, 1, '#dde6f2');
+    } else {
+      px(g, wx, wy + wh - 6, ww, 6, '#3f6b3a');
+    }
+    px(g, wx + Math.round(ww / 2), wy, 1, wh, '#6b5134');
+    px(g, wx, wy + Math.round(wh / 2), ww, 1, '#6b5134');
+    /* картина и лампа */
+    px(g, Math.round(w * 0.46), Math.round(gy * 0.22), 12, 9, '#6b5134');
+    px(g, Math.round(w * 0.46) + 1, Math.round(gy * 0.22) + 1, 10, 7, '#3c5d6b');
+    px(g, Math.round(w * 0.62), 0, 1, 8, '#46403a');
+    px(g, Math.round(w * 0.62) - 3, 8, 7, 4, '#c9a45c');
+    px(g, Math.round(w * 0.62) - 4, 12, 9, 1, 'rgba(240,210,140,0.35)');
+    /* дверь */
+    var dx = Math.round(w * 0.86);
+    px(g, dx, gy - 26, 14, 26, '#4a3625');
+    px(g, dx + 1, gy - 25, 12, 25, '#5b442e');
+    px(g, dx + 11, gy - 13, 1, 2, '#c9a45c');
+    /* полка с книгами */
+    var shx = Math.round(w * 0.36);
+    px(g, shx, Math.round(gy * 0.5), 20, 1, '#6b5134');
+    for (var b2 = 0; b2 < 7; b2++) {
+      px(g, shx + 1 + b2 * 3, Math.round(gy * 0.5) - 4 - (b2 % 2), 2, 4 + (b2 % 2),
+        ['#8c4a3a', '#3f6b6b', '#6b5a8c', '#7a6a3a'][b2 % 4]);
+    }
+    /* спальное место: матрас на полу — в бедном доме, кровать — дальше */
+    var tier = homeTier(V);
+    var bx = Math.round(w * 0.6);
+    if (tier === 0) {
+      px(g, bx, gy - 4, 30, 4, '#6b5a46');
+      px(g, bx, gy - 6, 10, 2, '#cfd6d8');
+    } else {
+      px(g, bx, gy - 7, 30, 7, '#5a4530');
+      px(g, bx, gy - 10, 30, 3, tier === 2 ? '#3f6b5e' : '#4a6b7a');
+      px(g, bx, gy - 13, 9, 4, '#dfe6ea');
+      px(g, bx + 29, gy - 14, 2, 14, '#42311f');
+    }
+    /* ковёр — только если дом не совсем бедный */
+    if (tier > 0) {
+      px(g, Math.round(w * 0.26), gy + 4, 46, 3, tier === 2 ? '#6b4a7a' : '#7a4038');
+      px(g, Math.round(w * 0.26) + 2, gy + 5, 42, 1, tier === 2 ? '#8c66a0' : '#9c5a4a');
+    }
+    /* в достатке появляются телевизор и цветок */
+    if (tier === 2) {
+      var tx = Math.round(w * 0.16);
+      px(g, tx, gy - 12, 16, 10, '#23282c');
+      px(g, tx + 1, gy - 11, 14, 8, V.sky === 'night' ? '#4a6b8c' : '#38505e');
+      px(g, tx + 2, gy - 10, 5, 2, 'rgba(255,255,255,0.18)');
+      px(g, tx + 5, gy - 2, 6, 2, '#3a3a3a');
+      var fx3 = Math.round(w * 0.3);
+      px(g, fx3, gy - 5, 5, 5, '#8c5a3a');
+      px(g, fx3 + 1, gy - 10, 3, 5, '#3f7a4a');
+      px(g, fx3 - 1, gy - 9, 2, 2, '#4a8c56');
+      px(g, fx3 + 4, gy - 11, 2, 2, '#4a8c56');
+    }
+  }
+
+  function placeSchool(g, V) {
+    var gy = V.gy, w = V.w;
+    var bx = Math.round(w * 0.12), by = Math.round(gy * 0.18), bw2 = Math.round(w * 0.42), bh2 = Math.round(gy * 0.46);
+    px(g, bx - 1, by - 1, bw2 + 2, bh2 + 2, '#3a3026');
+    px(g, bx, by, bw2, bh2, '#1f3329');
+    for (var i = 0; i < 3; i++) px(g, bx + 4, by + 5 + i * 5, Math.round(bw2 * (0.6 - i * 0.12)), 1, '#cfd8c8');
+    /* карта на стене */
+    px(g, Math.round(w * 0.66), by, 24, 16, '#4a5a4a');
+    px(g, Math.round(w * 0.68), by + 3, 8, 5, '#7fa06a');
+    px(g, Math.round(w * 0.78), by + 6, 7, 6, '#7fa06a');
+    /* парты */
+    for (var d = 0; d < 3; d++) {
+      var dx = Math.round(w * (0.08 + d * 0.3));
+      px(g, dx, gy - 8, 18, 2, '#6b4a2f');
+      px(g, dx + 1, gy - 6, 2, 6, '#4f3621');
+      px(g, dx + 15, gy - 6, 2, 6, '#4f3621');
+    }
+  }
+
+  function placeOffice(g, V) {
+    var gy = V.gy, w = V.w;
+    var wx = Math.round(w * 0.58), wy = Math.round(gy * 0.16), ww = Math.round(w * 0.34), wh = Math.round(gy * 0.5);
+    px(g, wx - 1, wy - 1, ww + 2, wh + 2, '#343c47');
+    px(g, wx, wy, ww, wh, V.sky === 'night' ? '#121a2a' : '#577e9c');
+    for (var b = 0; b < 5; b++) {
+      var bh2 = 6 + Math.round(nz(b + 4) * (wh - 8));
+      px(g, wx + 2 + b * Math.round(ww / 5), wy + wh - bh2, Math.round(ww / 5) - 2, bh2, V.sky === 'night' ? '#1b2533' : '#43596d');
+    }
+    px(g, wx + Math.round(ww / 2), wy, 1, wh, '#343c47');
+    /* перегородка и стол */
+    px(g, 0, Math.round(gy * 0.52), Math.round(w * 0.42), gy - Math.round(gy * 0.52), '#3f4a57');
+    px(g, 0, Math.round(gy * 0.52), Math.round(w * 0.42), 1, '#525e6b');
+    px(g, Math.round(w * 0.06), gy - 10, 34, 2, '#5a6470');
+    px(g, Math.round(w * 0.07), gy - 8, 2, 8, '#454e58');
+    px(g, Math.round(w * 0.06) + 31, gy - 8, 2, 8, '#454e58');
+    /* растение */
+    px(g, Math.round(w * 0.52), gy - 6, 5, 6, '#7a4a32');
+    px(g, Math.round(w * 0.52) + 1, gy - 11, 3, 5, '#3f7a44');
+  }
+
+  function placeFactory(g, V) {
+    var gy = V.gy, w = V.w;
+    px(g, 0, Math.round(gy * 0.1), w, 3, '#4a423a');
+    for (var p = 0; p < 5; p++) px(g, Math.round(w * (0.1 + p * 0.2)), Math.round(gy * 0.13), 2, Math.round(gy * 0.2), '#564c42');
+    /* станки */
+    for (var m = 0; m < 3; m++) {
+      var mx = Math.round(w * (0.04 + m * 0.42));
+      px(g, mx, gy - 16, 26, 16, '#4b443c');
+      px(g, mx + 2, gy - 13, 22, 6, '#2f2a26');
+      px(g, mx + 4, gy - 11, 4, 2, nz(m + Math.floor(V.t * 2)) > 0.5 ? '#e8b45a' : '#6b5a3a');
+      px(g, mx + 20, gy - 20, 3, 4, '#564c42');
+    }
+    /* конвейер */
+    px(g, 0, gy - 4, w, 2, '#5b5248');
+    var bx = Math.round((V.t * 10) % 20);
+    for (var c = -20; c < w; c += 20) px(g, c + bx, gy - 7, 6, 3, '#7a6a52');
+  }
+
+  function placeHospital(g, V) {
+    var gy = V.gy, w = V.w, P = V.P;
+    px(g, 0, Math.round(gy * 0.52), w, 1, '#56686b');
+    var wx = Math.round(w * 0.62), wy = Math.round(gy * 0.16);
+    px(g, wx - 1, wy - 1, 28, 20, '#56686b');
+    px(g, wx, wy, 26, 18, V.sky === 'night' ? '#0f1726' : '#6b97ad');
+    /* койка — ровно там, где лежит человек: та же точка опоры, что и у фигуры */
+    var hy = gy + Math.round((P.rootY || 0) * V.h);
+    var hx = Math.round(w * (0.5 + (P.rootX || 0))) - 4;
+    var bx = hx - 24;
+    px(g, bx, hy - 10, 46, 4, '#c9d4d6');
+    px(g, bx + 32, hy - 12, 12, 2, '#e4ebec');   /* подушка там, где голова */
+    px(g, bx, hy - 6, 2, 6, '#8c989a');
+    px(g, bx + 44, hy - 6, 2, 6, '#8c989a');
+    px(g, bx + 44, hy - 20, 2, 10, '#8c989a');
+    px(g, bx + 44, hy - 20, 6, 1, '#8c989a');
+    /* тумбочка */
+    px(g, Math.max(2, bx - 14), hy - 8, 10, 8, '#6b7577');
+    px(g, Math.max(2, bx - 14) + 2, hy - 11, 3, 3, '#cfd8da');
+    /* монитор у изголовья */
+    var mx2 = Math.min(w - 12, bx + 48);
+    px(g, mx2, hy - 32, 10, 8, '#2b3436');
+    px(g, mx2 + 1, hy - 31, 8, 6, '#15342c');
+    px(g, mx2 + 2, hy - 28, 6, 1, '#4fd08a');
+  }
+
+  var PLACE = {
+    village: placeVillage, city: placeCity, night: placeCity, field: placeField,
+    park: placePark, room: placeRoom, school: placeSchool, office: placeOffice,
+    factory: placeFactory, hospital: placeHospital
+  };
+
+  /* --------------------------- люди на сцене -------------------------- */
 
   function hairStyleNow(look, life, age) {
     if (look.covered) return 'scarf';
     if (age < 2) return 'baby';
-    if (life.sex === 'm' && look.balding && age > 46 && (age - 46) / 40 > 0.25) return 'bald';
-    return look.hairStyle;
+    if (life.sex === 'm' && look.balding && age > 46) return 'bald';
+    return look.hairStyle || 'short';
   }
 
-  /* волосы спереди: линия роста, чёлка, объём */
-  function drawHair(g, P, r, col, look, life, age) {
-    var st = hairStyleNow(look, life, age);
-    g.fillStyle = col;
+  /* внешность в пиксельном виде */
+  function spriteOf(V, age, sex, look, isHero) {
+    var H = pxHeight(age);
+    return {
+      h: H, age: age, sex: sex,
+      skin: look.skin, hair: look.hair, style: hairStyleNow(look, { sex: sex }, age),
+      cloth: look.cloth, cloth2: look.cloth2, shoe: look.shoes || '#2b2723',
+      dress: look.dress, covered: look.covered, scarf: look.scarfCol,
+      beard: sex === 'm' && age > 17 ? look.facial : 'none',
+      gray: age > 45 ? clamp((age - 45) / 40, 0, 1) : 0,
+      hero: !!isHero
+    };
+  }
 
-    if (st === 'scarf') {
-      g.fillStyle = look.scarfCol;
-      g.beginPath();
-      /* внешний контур платка */
-      g.moveTo(-r * 1.08, r * 0.3);
-      g.quadraticCurveTo(-r * 1.16, -r * 1.22, 0, -r * 1.22);
-      g.quadraticCurveTo(r * 1.16, -r * 1.22, r * 1.08, r * 0.3);
-      g.quadraticCurveTo(r * 1.0, r * 1.15, 0, r * 1.3);
-      g.quadraticCurveTo(-r * 1.0, r * 1.15, -r * 1.08, r * 0.3);
-      g.closePath();
-      /* вырез для лица — та же фигура, обход в другую сторону */
-      g.moveTo(0, -r * 0.92);
-      g.bezierCurveTo(r * 0.84, -r * 0.92, r * 0.9, r * 0.1, r * 0.62, r * 0.6);
-      g.bezierCurveTo(r * 0.36, r * 1.0, -r * 0.36, r * 1.0, -r * 0.62, r * 0.6);
-      g.bezierCurveTo(-r * 0.9, r * 0.1, -r * 0.84, -r * 0.92, 0, -r * 0.92);
-      g.closePath();
-      g.fill('evenodd');
-      /* складка под подбородком */
-      g.fillStyle = 'rgba(0,0,0,0.14)';
-      g.beginPath();
-      g.moveTo(-r * 0.96, r * 0.55);
-      g.quadraticCurveTo(0, r * 1.05, r * 0.96, r * 0.55);
-      g.quadraticCurveTo(0, r * 1.38, -r * 0.96, r * 0.55);
-      g.fill();
+  function pxHeight(age) {
+    if (age < 1) return 9;
+    if (age < 3) return 14;
+    if (age < 8) return 20;
+    if (age < 13) return 25;
+    if (age < 18) return 30;
+    if (age < 60) return 34;
+    if (age < 75) return 33;
+    return 31;
+  }
+
+  /* родные вокруг: в детстве — родители и братья, потом — своя семья */
+  function familyOf(V) {
+    var life = V.life, out = [], age = life.age;
+    var rnd = function (k) { return nz(hashStr(life.seed + k)); };
+    if (age < 19 && life.parentsAlive > 0) {
+      out.push({ who: 'мать', age: momAge(life) + age, sex: 'f', tint: 0.1 });
+      if (life.parentsAlive > 1) out.push({ who: 'отец', age: dadAge(life) + age, sex: 'm', tint: -0.08 });
+      for (var s = 0; s < Math.min(3, life.siblings); s++) {
+        out.push({ who: 'брат или сестра', age: Math.max(1, age + (s % 2 ? 2 : -2) + Math.round(rnd(s) * 3)), sex: rnd(s + 9) > 0.5 ? 'f' : 'm', tint: 0.18 + s * 0.05 });
+      }
+    } else {
+      if (life.partner) out.push({ who: 'супруг', age: partnerAge(life), sex: life.sex === 'f' ? 'm' : 'f', tint: 0.12 });
+      for (var k = 0; k < Math.min(3, life.children.length); k++) {
+        var kid = life.children[k];
+        var kAge = Math.max(0, age - (kid.bornAt || kid.born || age));
+        out.push({ who: 'ребёнок', age: kAge, sex: kid.sex || (rnd(k + 3) > 0.5 ? 'f' : 'm'), tint: 0.2 + k * 0.06 });
+      }
+      if (!life.partner && !life.children.length && age < 40 && life.parentsAlive > 0) {
+        out.push({ who: 'мать', age: momAge(life) + age, sex: 'f', tint: 0.1 });
+      }
+    }
+    return out;
+  }
+
+  function partnerAge(life) {
+    if (!life.partner) return life.age;
+    var since = life.partner.since != null ? life.partner.since : life.age;
+    return (life.partner.age || life.age) + Math.max(0, life.age - since);
+  }
+
+  /* те же числа, что и на картинке, — для подписи под сценой */
+  function familyInfo(life) {
+    var out = { mom: null, dad: null, siblings: life.siblings || 0, partner: null, kids: [] };
+    if (life.parentsAlive > 0) out.mom = momAge(life) + life.age;
+    if (life.parentsAlive > 1) out.dad = dadAge(life) + life.age;
+    if (life.partner) out.partner = { name: life.partner.name, age: partnerAge(life) };
+    (life.children || []).forEach(function (k) {
+      out.kids.push({ name: k.name, age: Math.max(0, life.age - (k.bornAt || 0)) });
+    });
+    return out;
+  }
+
+  function hashStr(str) {
+    var h = 2166136261, s = String(str);
+    for (var i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = (h * 16777619) >>> 0; }
+    return h >>> 0;
+  }
+  function momAge(life) { return 20 + (hashStr(life.seed + 'mom') % 12); }
+  function dadAge(life) { return 22 + (hashStr(life.seed + 'dad') % 13); }
+
+  function drawCrowd(g, V) {
+    var P = V.P, life = V.life, look = V.look;
+    var gy = V.gy + Math.round((P.rootY || 0) * V.h);
+    var hx = Math.round(V.w * (0.5 + (P.rootX || 0)) - 4);
+    var hero = spriteOf(V, life.age, life.sex, look, true);
+
+    /* родные стоят рядом, чуть позади: сначала справа, потом слева */
+    var fam = familyOf(V);
+    var gap = Math.max(16, Math.round(hero.h * 0.7));
+    var side = 1, off = gap;
+    for (var i = 0; i < fam.length; i++) {
+      var f = fam[i];
+      var key = hashStr(life.seed + f.who + i);
+      var fl = {
+        skin: shade(look.skin, ((key % 7) - 3) * 0.035),
+        hair: shade(look.hair, ((key >> 3) % 5 - 2) * 0.06),
+        cloth: FAMCOL[key % FAMCOL.length],
+        cloth2: FAMCOL2[(key >> 4) % FAMCOL2.length],
+        shoes: look.shoes, dress: f.sex === 'f' && (key % 3 !== 0),
+        covered: look.covered && f.sex === 'f', scarfCol: look.scarfCol,
+        hairStyle: f.sex === 'f' ? ['long', 'bun', 'bob', 'pony', 'braid'][key % 5]
+          : ['short', 'crop', 'side', 'fringe'][key % 4],
+        facial: f.sex === 'm' && f.age > 24 ? ['none', 'stubble', 'beard', 'moustache'][key % 4] : 'none',
+        balding: f.sex === 'm' && f.age > 50
+      };
+      var sp = spriteOf(V, f.age, f.sex, fl, false);
+      var fx2 = hx + side * off;
+      if (fx2 < 8 || fx2 > V.w - 8) { side = -side; fx2 = hx + side * off; }
+      pxPerson(g, V, fx2, gy - 1, sp, {
+        bob: Math.sin(V.t * 1.4 + i * 1.7) * 0.6, idle: 1, dir: side > 0 ? -1 : 1,
+        eyes: { open: nz(Math.floor(V.t * 1.3) + i) > 0.07 ? 1 : 0.1, lx: 0 },
+        mouth: { smile: 0.3, open: 0 }, props: {}
+      });
+      side = -side;
+      if (i % 2 === 1) off += gap;
+    }
+    /* метка «это вы» — как подпись под сценой, цвет оригинала */
+    px(g, hx - 2, gy + 2, 5, 1, 'rgba(226,106,138,0.75)');
+    px(g, hx - 1, gy + 3, 3, 1, 'rgba(226,106,138,0.5)');
+    pxHero(g, V, hx, gy, hero);
+  }
+
+  var FAMCOL = ['#3f5f7a', '#6b4a6a', '#46684a', '#7a5a3a', '#55577e', '#7a4a4a', '#3f6b6b', '#8a6a46'];
+  var FAMCOL2 = ['#2f3540', '#3b3328', '#2c3a33', '#403040', '#33384a', '#3e2f2f'];
+
+  /* ---- герой: поза из клипа превращается в пиксельные состояния ---- */
+
+  function pxHero(g, V, x, gy, sp) {
+    var P = V.P;
+    var st = {
+      bob: (P.bob || 0) * 2 + (P.breath || 0) * 0.4,
+      baby: V.life.age < 3 ? 1 : 0,
+      nod: P.head.nod || 0,
+      lean: P.lean || 0,
+      armL: P.arms.ls, armR: P.arms.rs,
+      elbowL: P.arms.le, elbowR: P.arms.re,
+      legs: P.legs,
+      sit: P.props.chair || P.props.bench || P.props.desk || P.torso.crouch > 0.5 ? 1 : 0,
+      lie: P.props.lying || P.props.bed || V.life.age < 2 ? 1 : 0,
+      crawl: P.props.crawl ? 1 : 0,
+      slouch: P.torso.slouch || 0,
+      eyes: P.eyes, mouth: P.mouth, glow: P.glow, pale: P.pale, blush: P.blush,
+      props: P.props, fx: P.fx, hero: 1, dir: 1, t: V.t
+    };
+    pxFurniture(g, V, x, gy, st);
+    pxPerson(g, V, x, gy, sp, st);
+    pxHandProps(g, V, x, gy, sp, st);
+  }
+
+  /* мебель и крупные предметы под человеком */
+  function pxFurniture(g, V, x, gy, st) {
+    var p = st.props;
+    if ((p.bed || p.lying) && V.life.age >= 3 && V.scene !== 'hospital') {
+      px(g, x - 20, gy - 6, 42, 6, '#c3cdd0');
+      px(g, x - 20, gy - 8, 10, 2, '#e4ebec');
+      px(g, x - 20, gy, 3, 5, '#6d7678');
+      px(g, x + 19, gy, 3, 5, '#6d7678');
+    } else if (V.life.age < 3) {
+      /* люлька: малыш лежит в ней, а не на полу */
+      px(g, x - 11, gy - 7, 24, 7, '#6b4a2f');
+      px(g, x - 11, gy - 9, 24, 2, '#7d583a');
+      px(g, x - 10, gy - 6, 22, 4, '#c9b9a0');
+      px(g, x - 13, gy, 3, 4, '#53381f');
+      px(g, x + 11, gy, 3, 4, '#53381f');
+      px(g, x - 14, gy + 3, 29, 2, '#53381f');
+    }
+    if (p.chair || p.bench) {
+      px(g, x - 7, gy - 9, 14, 2, '#6b4a2f');
+      px(g, x - 6, gy - 7, 2, 7, '#53381f');
+      px(g, x + 4, gy - 7, 2, 7, '#53381f');
+      if (p.chair) px(g, x + 5, gy - 18, 2, 9, '#6b4a2f');
+    }
+    if (p.desk) {
+      px(g, x - 16, gy - 12, 32, 2, '#6b4a2f');
+      px(g, x - 15, gy - 10, 2, 10, '#4f3621');
+      px(g, x + 13, gy - 10, 2, 10, '#4f3621');
+    }
+    if (p.counter) px(g, x - 18, gy - 11, 36, 3, '#5a4530');
+    if (p.machine) {
+      px(g, x + 9, gy - 18, 16, 18, '#4b443c');
+      px(g, x + 11, gy - 15, 12, 5, '#2f2a26');
+      px(g, x + 12, gy - 13, 3, 2, nz(Math.floor(V.t * 3)) > 0.5 ? '#e8b45a' : '#6b5a3a');
+    }
+    if (p.house) {
+      pxHouse(g, x + 12, gy, 20, '#54452f', '#6b4332', V.sky === 'night');
+    }
+    if (p.shop) {
+      px(g, x + 10, gy - 20, 26, 20, '#48403a');
+      px(g, x + 12, gy - 17, 22, 6, '#2d6b63');
+      px(g, x + 12, gy - 10, 8, 10, '#2b2520');
+    }
+    if (p.field) {
+      for (var i = -3; i < 4; i++) px(g, x + i * 7 + 20, gy - 5, 1, 5, '#79903a');
+    }
+    if (p.iv) {
+      px(g, x + 13, gy - 26, 1, 26, '#b8c4c6');
+      px(g, x + 11, gy - 28, 5, 4, '#dfeaec');
+    }
+  }
+
+  /* ------------------------- сам пиксель-человек ---------------------- */
+
+  function pxPerson(g, V, x, gy, sp, st) {
+    st = st || {};
+    var H = sp.h;
+    var headH = Math.max(4, Math.round(H * (sp.age < 3 ? 0.34 : sp.age < 12 ? 0.3 : 0.26)));
+    var headW = Math.max(4, headH - (sp.age < 12 ? 0 : 1));
+    var bodyH = Math.max(3, Math.round(H * 0.32));
+    var bodyW = Math.max(4, Math.round(H * (sp.sex === 'f' ? 0.27 : 0.3)));
+    var legH = Math.max(2, H - headH - bodyH - 2);
+    var legW = Math.max(1, Math.round(bodyW * 0.3));
+    var armW = Math.max(1, Math.round(bodyW * 0.22));
+    var skin = st.pale ? mix(sp.skin, '#9aa6a0', st.pale * 0.5) : sp.skin;
+    var hair = mix(sp.hair, '#d8d4cc', sp.gray);
+    var cloth = sp.cloth, cloth2 = sp.cloth2;
+    var bob = Math.round(st.bob || 0);
+    var dir = st.dir || 1;
+
+    /* лежит: разворачиваем фигуру в горизонталь */
+    if (st.lie) {
+      var small = st.baby ? 1 : 0;
+      var hosp = V.scene === 'hospital' ? 1 : 0;
+      var bodyL = small ? 13 : 28;
+      var ly = gy - (small ? 6 : hosp ? 15 : 8);
+      var bodyT = Math.max(3, Math.round(bodyW * 0.75));
+      var hdx = small ? 5 : 12;
+      px(g, x - (small ? 8 : 16), ly, bodyL, bodyT, small ? '#e4d8c4' : cloth);
+      px(g, x - (small ? 8 : 16), ly, bodyL, 1, shade(small ? '#e4d8c4' : cloth, 0.12));
+      if (hosp) {
+        px(g, x - 16, ly + 1, 20, bodyT - 1, '#8fa8b4');     /* одеяло */
+        px(g, x - 16, ly + 1, 20, 1, '#a9c0ca');
+      }
+      px(g, x + hdx, ly - 1, headW, headH, skin);
+      pxHair(g, x + hdx, ly - 1, headW, headH, hair, sp, 1);
+      px(g, x + hdx + 1, ly + 1, 1, 1, '#2a2420');
+      px(g, x + hdx + 3, ly + 1, 1, 1, '#2a2420');
+      if (st.props && st.props.zzz) {
+        px(g, x + hdx + 6, ly - 5 - Math.round((V.t * 3) % 4), 2, 1, '#cfd8e0');
+        px(g, x + hdx + 9, ly - 9 - Math.round((V.t * 2) % 5), 3, 1, '#cfd8e0');
+      }
+      return;
+    }
+
+    var sit = st.sit ? Math.round(legH * 0.55) : 0;
+    var crouch = st.crawl ? Math.round(H * 0.3) : 0;
+    var footY = gy - (st.crawl ? 0 : 0);
+    var legTop = footY - 2 - legH + sit + crouch;
+    var bodyTop = legTop - bodyH;
+    var headTop = bodyTop - headH + (st.slouch ? 1 : 0);
+    var hx = x + Math.round((st.lean || 0) * 2);
+
+    /* ноги */
+    if (st.sit) {
+      /* сидит: бедро вперёд, голень вниз */
+      px(g, x - legW, legTop + bodyH * 0 + 1, legW * 2 + 6, legW, cloth2);
+      px(g, x + legW + 4, legTop + 1, legW, legH - 2, cloth2);
+      px(g, x + legW + 3, footY - 2, legW + 2, 2, sp.shoe);
+      px(g, x - legW, legTop + 1, legW, Math.max(2, legH - 4), cloth2);
+      px(g, x - legW - 1, legTop + Math.max(2, legH - 4) + 1, legW + 2, 2, sp.shoe);
+    } else {
+      var swing = 0;
+      if (st.legs && Math.abs(st.legs.lh - st.legs.rh) > 0.2) swing = Math.round(Math.sin(V.t * 8) * 2);
+      px(g, x - legW - 1, legTop, legW, legH + bob, cloth2);
+      px(g, x + 1, legTop, legW, legH + bob, cloth2);
+      px(g, x - legW - 1 - (swing > 0 ? 1 : 0), footY - 2 + bob, legW + 2, 2, sp.shoe);
+      px(g, x + 1 - (swing < 0 ? 1 : 0), footY - 2 + bob, legW + 2, 2, sp.shoe);
+    }
+
+    /* платье или рубаха */
+    var bTop = bodyTop + bob;
+    if (sp.dress && sp.sex === 'f') {
+      for (var r = 0; r < bodyH; r++) {
+        var ww = bodyW + Math.round((r / bodyH) * bodyW * 0.75);
+        px(g, hx - Math.round(ww / 2), bTop + r, ww, 1, cloth);
+      }
+      px(g, hx - Math.round(bodyW / 2) - 1, bTop + bodyH - 1, bodyW + Math.round(bodyW * 0.75) + 2, 1, shade(cloth, -0.18));
+    } else {
+      px(g, hx - Math.round(bodyW / 2), bTop, bodyW, bodyH, cloth);
+      px(g, hx - Math.round(bodyW / 2), bTop, bodyW, 1, shade(cloth, 0.14));
+      px(g, hx - Math.round(bodyW / 2), bTop + bodyH - 2, bodyW, 1, shade(cloth, -0.2)); /* пояс */
+    }
+
+    /* руки */
+    var armLen = bodyH - 1;
+    var aL = st.armL || 0, aR = st.armR || 0;
+    var lx = hx - Math.round(bodyW / 2) - armW, rx = hx + Math.round(bodyW / 2);
+    drawArm(g, lx, bTop + 1, armW, armLen, cloth, skin, aL, -1, st, bodyW);
+    drawArm(g, rx, bTop + 1, armW, armLen, cloth, skin, aR, 1, st, bodyW);
+
+    /* голова */
+    var hTop = headTop + bob + Math.round((st.nod || 0) * 2);
+    var hX = hx - Math.round(headW / 2);
+    px(g, hx - 1, bTop - 1, 2, 1, shade(skin, -0.15));          /* шея */
+    px(g, hX, hTop, headW, headH, skin);
+    px(g, hX, hTop + headH - 1, headW, 1, shade(skin, -0.12));  /* подбородок */
+
+    /* лицо */
+    var eyeY = hTop + Math.round(headH * 0.42);
+    var ex = Math.round(headW * 0.22);
+    var open = st.eyes ? clamp(st.eyes.open, 0, 1) : 1;
+    var look2 = st.eyes ? Math.round(clamp(st.eyes.lx || 0, -1, 1)) : 0;
+    if (open < 0.35) {
+      px(g, hX + ex, eyeY + 1, 2, 1, '#2a2420');
+      px(g, hX + headW - ex - 2, eyeY + 1, 2, 1, '#2a2420');
+    } else {
+      px(g, hX + ex + look2, eyeY, 1, 2, '#241f1b');
+      px(g, hX + headW - ex - 1 + look2, eyeY, 1, 2, '#241f1b');
+    }
+    if (headH >= 7) {
+      px(g, hX + ex - 1, eyeY - 2, 2, 1, shade(hair, -0.1));
+      px(g, hX + headW - ex - 1, eyeY - 2, 2, 1, shade(hair, -0.1));
+    }
+    var sm = st.mouth ? st.mouth.smile : 0, mo = st.mouth ? st.mouth.open : 0;
+    var my = hTop + Math.round(headH * 0.72);
+    if (mo > 0.3) px(g, hx - 1, my, 2, 2, '#4a1f1d');
+    else if (sm > 0.25) { px(g, hx - 1, my, 3, 1, '#8e4a42'); px(g, hx - 2, my - 1, 1, 1, '#8e4a42'); px(g, hx + 2, my - 1, 1, 1, '#8e4a42'); }
+    else if (sm < -0.25) { px(g, hx - 1, my, 3, 1, '#8e4a42'); px(g, hx - 2, my + 1, 1, 1, '#8e4a42'); px(g, hx + 2, my + 1, 1, 1, '#8e4a42'); }
+    else px(g, hx - 1, my, 3, 1, '#8e4a42');
+    if (st.blush) {
+      px(g, hX + 1, my - 1, 1, 1, 'rgba(200,110,90,0.5)');
+      px(g, hX + headW - 2, my - 1, 1, 1, 'rgba(200,110,90,0.5)');
+    }
+    if (st.eyes && st.eyes.tear > 0.1) px(g, hX + ex, eyeY + 2, 1, 2, '#9fd4ef');
+
+    /* борода и волосы */
+    if (sp.beard && sp.beard !== 'none' && headH >= 6) {
+      var bc = mix(shade(sp.hair, 0.08), '#d8d4cc', sp.gray);
+      if (sp.beard === 'stubble') dith(g, hX + 1, my, headW - 2, bc);
+      else if (sp.beard === 'moustache') px(g, hx - 1, my - 1, 3, 1, bc);
+      else if (sp.beard === 'goatee') px(g, hx - 1, my + 1, 2, 2, bc);
+      else {
+        px(g, hX, my - 1, headW, Math.min(3, headH - Math.round(headH * 0.72) + (sp.beard === 'long' ? 2 : 1)), bc);
+        px(g, hx - 1, my - 2, 3, 1, bc);
+      }
+    }
+    pxHair(g, hX, hTop, headW, headH, hair, sp, 0);
+
+    /* головные уборы и состояние */
+    if (st.props) {
+      if (st.props.cap) { px(g, hX - 1, hTop - 1, headW + 2, 2, '#1d2630'); px(g, hX + headW - 1, hTop, 3, 1, '#16202a'); }
+      if (st.props.helmet) { px(g, hX - 1, hTop - 1, headW + 2, 3, '#d9a33c'); px(g, hX - 2, hTop + 2, headW + 4, 1, '#c08f2e'); }
+      if (st.props.patch || st.props.bandage) px(g, hX, hTop + 1, headW, 2, '#cfdadc');
+      if (st.props.veil) px(g, hX - 2, hTop - 1, headW + 4, headH + 4, 'rgba(255,255,255,0.3)');
+      if (st.props.cigarette) { px(g, hx + 2, my, 3, 1, '#efe7d8'); px(g, hx + 5, my, 1, 1, '#e8743a'); }
+      if (st.props.zzz) {
+        px(g, hX + headW + 1, hTop - 3 - Math.round((V.t * 3) % 4), 2, 1, '#cfd8e0');
+        px(g, hX + headW + 3, hTop - 7 - Math.round((V.t * 2) % 5), 3, 1, '#cfd8e0');
+      }
+    }
+    if (st.glow > 0.05) {
+      px(g, hX - 2, hTop - 2, headW + 4, 1, 'rgba(255,230,160,' + (st.glow * 0.5).toFixed(2) + ')');
+      px(g, hX - 2, hTop - 2, 1, headH + 4, 'rgba(255,230,160,' + (st.glow * 0.35).toFixed(2) + ')');
+      px(g, hX + headW + 1, hTop - 2, 1, headH + 4, 'rgba(255,230,160,' + (st.glow * 0.35).toFixed(2) + ')');
+    }
+  }
+
+  function drawArm(g, x, y, w, len, cloth, skin, ang, side, st, bodyW) {
+    var up = ang < -0.55, fwd = ang > 0.5 || (st.props && (st.props.book || st.props.phone || st.props.laptop || st.props.money || st.props.baby));
+    if (up) {
+      px(g, x, y - Math.round(len * 0.5), w, Math.round(len * 0.9), cloth);
+      px(g, x, y - Math.round(len * 0.5) - 2, w, 2, skin);
+    } else if (fwd) {
+      px(g, x, y, w, Math.round(len * 0.55), cloth);
+      px(g, x + (side > 0 ? w : -Math.round(w * 1.6)), y + Math.round(len * 0.45), Math.round(w * 1.6), w, cloth);
+      px(g, x + (side > 0 ? w + Math.round(w * 1.6) : -Math.round(w * 2.6)), y + Math.round(len * 0.45), w, w, skin);
+    } else {
+      px(g, x, y, w, len - 1, cloth);
+      px(g, x, y + len - 1, w, 2, skin);
+    }
+  }
+
+  /* причёска поверх головы */
+  function pxHair(g, hX, hTop, headW, headH, hair, sp, lying) {
+    var st = sp.style || 'short';
+    if (sp.covered) {
+      var sc = sp.scarf || '#56407a';
+      px(g, hX - 1, hTop - 1, headW + 2, Math.round(headH * 0.5), sc);
+      px(g, hX - 1, hTop - 1, 1, headH + 1, sc);
+      px(g, hX + headW, hTop - 1, 1, headH + 1, sc);
+      px(g, hX - 1, hTop + headH, headW + 2, 2, sc);
       return;
     }
     if (st === 'bald') {
-      g.beginPath();
-      g.moveTo(-r * 0.92, -r * 0.14);
-      g.quadraticCurveTo(-r * 0.96, -r * 0.6, -r * 0.5, -r * 0.66);
-      g.quadraticCurveTo(-r * 0.74, -r * 0.3, -r * 0.84, r * 0.1);
-      g.fill();
-      g.beginPath();
-      g.moveTo(r * 0.92, -r * 0.14);
-      g.quadraticCurveTo(r * 0.96, -r * 0.6, r * 0.5, -r * 0.66);
-      g.quadraticCurveTo(r * 0.74, -r * 0.3, r * 0.84, r * 0.1);
-      g.fill();
+      px(g, hX, hTop, 1, 2, hair);
+      px(g, hX + headW - 1, hTop, 1, 2, hair);
       return;
     }
-    if (st === 'baby') {
-      g.beginPath();
-      g.moveTo(-r * 0.5, -r * 0.78);
-      g.quadraticCurveTo(0, -r * 1.14, r * 0.5, -r * 0.78);
-      g.quadraticCurveTo(r * 0.2, -r * 0.92, 0, -r * 0.86);
-      g.quadraticCurveTo(-r * 0.2, -r * 0.92, -r * 0.5, -r * 0.78);
-      g.fill();
-      return;
-    }
-
-    /* базовая шапка волос по черепу */
-    var top = -r * 1.08, side = r * 0.98;
-    g.beginPath();
-    g.moveTo(-side, r * 0.1);
-    g.bezierCurveTo(-side * 1.06, top, side * 1.06, top, side, r * 0.1);
-    if (st === 'crop') {
-      g.quadraticCurveTo(side * 0.72, -r * 0.42, 0, -r * 0.46);
-      g.quadraticCurveTo(-side * 0.72, -r * 0.42, -side, r * 0.1);
+    var capH = Math.max(1, Math.round(headH * 0.3));
+    px(g, hX, hTop - 1, headW, capH, hair);
+    px(g, hX - 1, hTop, 1, Math.round(headH * 0.5), hair);
+    px(g, hX + headW, hTop, 1, Math.round(headH * 0.5), hair);
+    if (st === 'long') {
+      px(g, hX - 1, hTop, 1, headH + Math.round(headH * 0.7), hair);
+      px(g, hX + headW, hTop, 1, headH + Math.round(headH * 0.7), hair);
+      px(g, hX - 1, hTop + headH + Math.round(headH * 0.5), headW + 2, 2, hair);
+    } else if (st === 'bob') {
+      px(g, hX - 1, hTop, 1, headH, hair);
+      px(g, hX + headW, hTop, 1, headH, hair);
+    } else if (st === 'pony') {
+      px(g, hX + headW, hTop + 1, 2, Math.round(headH * 0.9), hair);
+    } else if (st === 'braid') {
+      px(g, hX + headW, hTop + 2, 1, Math.round(headH * 1.1), hair);
+      px(g, hX + headW, hTop + 2 + Math.round(headH * 1.1), 2, 1, hair);
+    } else if (st === 'bun') {
+      px(g, hX + Math.round(headW / 2) - 1, hTop - 3, 3, 2, hair);
+    } else if (st === 'afro') {
+      px(g, hX - 2, hTop - 2, headW + 4, Math.round(headH * 0.55), hair);
     } else if (st === 'side') {
-      g.quadraticCurveTo(side * 0.5, -r * 0.3, -side * 0.1, -r * 0.44);
-      g.quadraticCurveTo(-side * 0.6, -r * 0.52, -side, r * 0.1);
-    } else if (st === 'fringe' || st === 'bob' || st === 'long') {
-      g.quadraticCurveTo(side * 0.8, -r * 0.12, 0, -r * 0.26);
-      g.quadraticCurveTo(-side * 0.8, -r * 0.12, -side, r * 0.1);
-    } else {
-      g.quadraticCurveTo(side * 0.76, -r * 0.34, 0, -r * 0.4);
-      g.quadraticCurveTo(-side * 0.76, -r * 0.34, -side, r * 0.1);
+      px(g, hX, hTop - 1, Math.round(headW * 0.7), capH + 1, hair);
+    } else if (st === 'crop') {
+      px(g, hX, hTop - 1, headW, Math.max(1, capH - 1), hair);
     }
-    g.closePath();
-    g.fill();
+  }
 
-    if (look.curly || st === 'afro') {
-      for (var i = 0; i <= 12; i++) {
-        var a = Math.PI * (1 + i / 12);
-        circle(g, Math.cos(a) * r * 0.84, Math.sin(a) * r * 0.86 - r * 0.14, r * 0.24);
+  /* предметы в руках */
+  function pxHandProps(g, V, x, gy, sp, st) {
+    var p = st.props, H = sp.h;
+    var handY = gy - Math.round(H * 0.42);
+    var hx = x + Math.round(sp.h * 0.22);
+    if (p.baby || p.swaddle) {
+      px(g, x - 4, handY, 9, 5, '#e4d8c4');
+      px(g, x - 5, handY + 1, 3, 3, sp.skin);
+      px(g, x - 4, handY + 2, 1, 1, '#2a2420');
+    }
+    if (p.book || p.diploma) { px(g, hx - 2, handY, 7, 5, p.diploma ? '#efe7d8' : '#8c4a3a'); px(g, hx + 1, handY, 1, 5, '#2b2520'); }
+    if (p.phone) px(g, hx, handY, 2, 4, '#2b3440');
+    if (p.laptop) { px(g, x - 6, gy - Math.round(H * 0.52), 13, 2, '#5a6470'); px(g, x - 5, gy - Math.round(H * 0.52) - 6, 11, 6, '#2b3440'); px(g, x - 4, gy - Math.round(H * 0.52) - 5, 9, 4, '#3f5f7a'); }
+    if (p.money) { px(g, hx, handY, 6, 3, '#6fae6f'); px(g, hx + 2, handY + 1, 2, 1, '#2f5a33'); }
+    if (p.cane) { px(g, hx + 2, handY, 1, Math.round(H * 0.45), '#6b4a2f'); px(g, hx + 1, handY, 3, 1, '#53381f'); }
+    if (p.bag) { px(g, hx, handY + 2, 6, 6, '#7a5a3a'); px(g, hx + 1, handY, 4, 2, '#5c422a'); }
+    if (p.box) px(g, x - 5, handY - 1, 11, 7, '#8a6a46');
+    if (p.suitcase) { px(g, hx, handY + 3, 8, 6, '#5a4530'); px(g, hx + 3, handY + 1, 2, 2, '#3f2f1f'); }
+    if (p.bouquet) { px(g, hx + 1, handY - 3, 1, 4, '#4a6b3a'); px(g, hx, handY - 5, 3, 2, '#d9728f'); px(g, hx + 2, handY - 4, 2, 2, '#e8b45a'); }
+    if (p.candle) { px(g, hx + 2, handY - 2, 1, 4, '#e8e0cc'); px(g, hx + 2, handY - 4, 1, 2, '#ffd98a'); }
+    if (p.cup) px(g, hx, handY, 3, 3, '#cfd8e0');
+    if (p.tray) px(g, hx - 2, handY, 10, 2, '#8a8f96');
+    if (p.hoe) { px(g, hx + 2, handY - 6, 1, 12, '#6b4a2f'); px(g, hx + 2, handY - 7, 4, 2, '#8a9096'); }
+    if (p.weights) { px(g, x - 9, handY, 4, 4, '#4b525c'); px(g, x + 6, handY, 4, 4, '#4b525c'); }
+    if (p.pot || p.plant) { px(g, hx, handY + 2, 5, 4, '#8a5a3a'); px(g, hx + 1, handY - 2, 3, 4, '#3f7a44'); }
+    if (p.medal) { px(g, x, gy - Math.round(H * 0.5), 1, 3, '#c9a45c'); px(g, x - 1, gy - Math.round(H * 0.47), 3, 3, '#e8b45a'); }
+    if (p.heart) px(g, x + 6, gy - Math.round(H * 0.75) - Math.round((V.t * 4) % 6), 3, 3, '#d9728f');
+    if (p.sign) { px(g, hx, handY - 8, 10, 7, '#efe7d8'); px(g, hx + 4, handY - 1, 1, 6, '#6b4a2f'); px(g, hx + 2, handY - 6, 6, 1, '#2b2520'); }
+    if (p.keys) px(g, hx, handY, 3, 2, '#c9a45c');
+    if (p.ring) px(g, hx, handY, 2, 2, '#e8d48a');
+  }
+
+  /* ------------------------ передний план и fx ------------------------ */
+
+  function drawFore(g, V) {
+    var gy = V.gy, w = V.w, night = V.sky === 'night';
+    if (V.scene === 'village' || V.scene === 'park') {
+      for (var i = 0; i < w; i += 4) {
+        var hgt = 2 + Math.round(nz(i) * 2);
+        px(g, i, V.h - hgt, 1, hgt, night ? '#1a2b1d' : '#2c4a28');
       }
     }
-    if (st === 'bun') {
-      g.fillStyle = shade(col, -0.08);
-      circle(g, 0, -r * 1.05, r * 0.3);
+    if (V.scene === 'field') {
+      for (var j = 0; j < w; j += 13) {
+        var jx = j + Math.round(nz(j) * 5);
+        px(g, jx, V.h - 4, 1, 4, night ? '#2e3d1c' : '#6b8232');
+        px(g, jx - 1, V.h - 5, 3, 1, night ? '#3a4a23' : '#849b3e');
+      }
     }
-
+    if (V.scene === 'city' || V.scene === 'night') px(g, 0, V.h - 3, w, 3, '#1a1e24');
   }
-
-  function drawHandProps(g, pt, P, L, R, fh, skin) {
-    var s = fh * 0.12;
-    if (P.props.book) {
-      g.fillStyle = '#9a5f3a'; g.fillRect((L.hx + R.hx) / 2 - s, (L.hy + R.hy) / 2 - s * 0.6, s * 2, s * 1.2);
-      g.fillStyle = '#efe7d8'; g.fillRect((L.hx + R.hx) / 2 - s * 0.9, (L.hy + R.hy) / 2 - s * 0.5, s * 1.8, s);
-      g.strokeStyle = '#9a5f3a'; g.lineWidth = 1.2;
-      g.beginPath(); g.moveTo((L.hx + R.hx) / 2, (L.hy + R.hy) / 2 - s * 0.5); g.lineTo((L.hx + R.hx) / 2, (L.hy + R.hy) / 2 + s * 0.5); g.stroke();
-    }
-    if (P.props.phone) { g.fillStyle = '#1b2228'; g.fillRect(R.hx - s * 0.25, R.hy - s * 0.45, s * 0.5, s * 0.9); }
-    if (P.props.money) {
-      g.fillStyle = '#7fae6b';
-      for (var i = 0; i < 3; i++) g.fillRect(R.hx - s * 0.6 + i * 3, R.hy - s * 0.3 - i * 2, s * 1.1, s * 0.5);
-    }
-    if (P.props.cane) {
-      g.strokeStyle = '#6b4a2c'; g.lineWidth = Math.max(2, fh * 0.018); g.lineCap = 'round';
-      g.beginPath(); g.moveTo(R.hx, R.hy); g.lineTo(R.hx + fh * 0.04, R.hy + fh * 0.33); g.stroke();
-    }
-    if (P.props.bag) {
-      g.fillStyle = '#5c4a38'; g.fillRect(R.hx - s * 0.5, R.hy, s, s * 0.8);
-      g.strokeStyle = '#5c4a38'; g.lineWidth = 2;
-      g.beginPath(); g.arc(R.hx, R.hy, s * 0.4, Math.PI, 0); g.stroke();
-    }
-    if (P.props.suitcase) { g.fillStyle = '#4a3a2c'; g.fillRect(R.hx - s * 0.6, R.hy, s * 1.2, s * 0.9); }
-    if (P.props.box) { g.fillStyle = '#8a6a44'; g.fillRect((L.hx + R.hx) / 2 - s, (L.hy + R.hy) / 2 - s, s * 2, s * 1.6); }
-    if (P.props.baby) {
-      var bx = (L.hx + R.hx) / 2, by = (L.hy + R.hy) / 2;
-      /* пелёнка */
-      g.fillStyle = '#e4d8c4';
-      g.beginPath(); g.ellipse(bx, by, s * 1.1, s * 0.66, -0.26, 0, Math.PI * 2); g.fill();
-      g.fillStyle = 'rgba(0,0,0,0.08)';
-      g.beginPath(); g.ellipse(bx + s * 0.1, by + s * 0.16, s * 0.9, s * 0.4, -0.26, 0, Math.PI * 2); g.fill();
-      /* личико */
-      var hx2 = bx - s * 0.82, hy2 = by - s * 0.34;
-      g.fillStyle = skin; circle(g, hx2, hy2, s * 0.46);
-      g.fillStyle = 'rgba(60,40,28,0.75)';
-      g.beginPath();
-      g.moveTo(hx2 - s * 0.22, hy2 - s * 0.02); g.quadraticCurveTo(hx2 - s * 0.11, hy2 + s * 0.08, hx2, hy2 - s * 0.02);
-      g.moveTo(hx2 + s * 0.08, hy2 - s * 0.04); g.quadraticCurveTo(hx2 + s * 0.19, hy2 + s * 0.06, hx2 + s * 0.3, hy2 - s * 0.04);
-      g.strokeStyle = 'rgba(60,40,28,0.75)'; g.lineWidth = Math.max(0.8, s * 0.07);
-      g.stroke();
-      g.fillStyle = 'rgba(190,110,96,0.7)';
-      circle(g, hx2 + s * 0.04, hy2 + s * 0.2, s * 0.08);
-      /* чепчик */
-      g.fillStyle = '#d6c7ae';
-      g.beginPath();
-      g.arc(hx2, hy2 - s * 0.06, s * 0.47, Math.PI * 1.08, Math.PI * 2.02);
-      g.closePath(); g.fill();
-    }
-    if (P.props.bouquet) {
-      g.strokeStyle = '#4a6b3a'; g.lineWidth = 2;
-      g.beginPath(); g.moveTo(L.hx, L.hy); g.lineTo(L.hx - s * 0.2, L.hy - s); g.stroke();
-      g.fillStyle = '#d9728f'; circle(g, L.hx - s * 0.25, L.hy - s * 1.1, s * 0.35);
-      g.fillStyle = '#e8b45a'; circle(g, L.hx - s * 0.05, L.hy - s * 0.95, s * 0.25);
-    }
-    if (P.props.weights) {
-      g.fillStyle = '#39414a';
-      g.fillRect(L.hx - s * 0.45, L.hy - s * 0.3, s * 0.9, s * 0.6);
-      g.fillRect(R.hx - s * 0.45, R.hy - s * 0.3, s * 0.9, s * 0.6);
-    }
-    if (P.props.hoe) {
-      g.strokeStyle = '#6b4a2c'; g.lineWidth = Math.max(2, fh * 0.016);
-      g.beginPath(); g.moveTo(R.hx, R.hy); g.lineTo(R.hx + fh * 0.16, R.hy + fh * 0.22); g.stroke();
-      g.fillStyle = '#8a8f94'; g.fillRect(R.hx + fh * 0.14, R.hy + fh * 0.2, fh * 0.08, fh * 0.03);
-    }
-    if (P.props.sign) {
-      g.strokeStyle = '#6b4a2c'; g.lineWidth = 2;
-      g.beginPath(); g.moveTo(R.hx, R.hy); g.lineTo(R.hx, R.hy - fh * 0.2); g.stroke();
-      g.fillStyle = '#efe7d8'; g.fillRect(R.hx - s, R.hy - fh * 0.3, s * 2, s * 1.1);
-    }
-    if (P.props.medal) {
-      g.strokeStyle = '#e8b45a'; g.lineWidth = 2;
-      g.beginPath(); g.arc(R.hx, R.hy, s * 0.4, 0, Math.PI * 2); g.stroke();
-      g.fillStyle = '#e8b45a'; circle(g, R.hx, R.hy, s * 0.3);
-    }
-    if (P.props.cup) { g.fillStyle = '#c9c2b4'; g.fillRect(R.hx - s * 0.3, R.hy - s * 0.4, s * 0.6, s * 0.7); }
-    if (P.props.pot) {
-      g.fillStyle = '#4c5257'; g.fillRect(R.hx - s * 0.7, R.hy - s * 0.3, s * 1.4, s * 0.8);
-      g.fillStyle = 'rgba(240,236,223,0.25)';
-      for (var p3 = 0; p3 < 3; p3++) circle(g, R.hx - s * 0.3 + p3 * s * 0.3, R.hy - s * 0.6 - p3 * 2, s * 0.14);
-    }
-    if (P.props.tray) { g.fillStyle = '#b9b2a4'; g.fillRect((L.hx + R.hx) / 2 - s, (L.hy + R.hy) / 2 - s * 0.2, s * 2, s * 0.3); }
-    if (P.props.keys) {
-      g.strokeStyle = '#e8b45a'; g.lineWidth = 2;
-      g.beginPath(); g.arc(R.hx, R.hy + s * 0.3, s * 0.2, 0, Math.PI * 2); g.stroke();
-      g.beginPath(); g.moveTo(R.hx, R.hy + s * 0.5); g.lineTo(R.hx, R.hy + s * 0.9); g.stroke();
-    }
-    if (P.props.diploma) {
-      g.fillStyle = '#efe7d8'; g.save(); g.translate(R.hx, R.hy); g.rotate(-0.4);
-      g.fillRect(-s * 0.15, -s * 0.6, s * 0.3, s * 1.2); g.restore();
-    }
-    if (P.props.laptop) {
-      g.fillStyle = '#2a3138';
-      g.fillRect((L.hx + R.hx) / 2 - s, (L.hy + R.hy) / 2 - s * 0.1, s * 2, s * 0.2);
-      g.fillStyle = '#39434d'; g.fillRect((L.hx + R.hx) / 2 - s * 0.9, (L.hy + R.hy) / 2 - s * 1.1, s * 1.8, s);
-      g.fillStyle = 'rgba(160,220,255,0.3)'; g.fillRect((L.hx + R.hx) / 2 - s * 0.8, (L.hy + R.hy) / 2 - s, s * 1.6, s * 0.8);
-    }
-  }
-
-  /* спутник рядом: простая, но узнаваемая фигура человека */
-  function sideFigure(g, x, gy, h, kind, alpha) {
-    var headR = h * (kind === 'c' ? 0.17 : 0.13);
-    var legY = gy - h * 0.46, shY = gy - h * (kind === 'c' ? 0.66 : 0.72);
-    var tw2 = h * (kind === 'm' ? 0.155 : kind === 'f' ? 0.135 : 0.14);
-    var skin = 'rgba(222,188,156,' + alpha + ')';
-    var cloth = kind === 'f' ? 'rgba(150,132,166,' + alpha + ')'
-      : kind === 'c' ? 'rgba(146,168,150,' + alpha + ')' : 'rgba(132,148,170,' + alpha + ')';
-    var hair = 'rgba(54,44,38,' + (alpha + 0.2) + ')';
-    /* ноги и обувь */
-    g.fillStyle = 'rgba(92,96,104,' + alpha + ')';
-    roundPath(g, x - tw2 * 0.52, legY, tw2 * 0.42, gy - legY - h * 0.02, 0, 0, h * 0.01, h * 0.01); g.fill();
-    roundPath(g, x + tw2 * 0.1, legY, tw2 * 0.42, gy - legY - h * 0.02, 0, 0, h * 0.01, h * 0.01); g.fill();
-    g.fillStyle = 'rgba(48,44,40,' + (alpha + 0.12) + ')';
-    roundPath(g, x - tw2 * 0.62, gy - h * 0.035, tw2 * 0.58, h * 0.035, h * 0.016, h * 0.016, h * 0.006, h * 0.006); g.fill();
-    roundPath(g, x + tw2 * 0.06, gy - h * 0.035, tw2 * 0.58, h * 0.035, h * 0.016, h * 0.016, h * 0.006, h * 0.006); g.fill();
-    /* туловище */
-    g.fillStyle = cloth;
-    g.beginPath();
-    g.moveTo(x - tw2, shY + h * 0.03);
-    g.quadraticCurveTo(x - tw2 * 0.8, legY - h * 0.08, x - tw2 * (kind === 'f' ? 1.3 : 0.86), legY + h * 0.04);
-    g.lineTo(x + tw2 * (kind === 'f' ? 1.3 : 0.86), legY + h * 0.04);
-    g.quadraticCurveTo(x + tw2 * 0.8, legY - h * 0.08, x + tw2, shY + h * 0.03);
-    g.quadraticCurveTo(x, shY - h * 0.03, x - tw2, shY + h * 0.03);
-    g.fill();
-    /* руки */
-    g.lineCap = 'round';
-    g.strokeStyle = cloth;
-    g.lineWidth = tw2 * 0.42;
-    g.beginPath();
-    g.moveTo(x - tw2 * 0.9, shY + h * 0.05); g.lineTo(x - tw2 * 1.05, legY - h * 0.02);
-    g.moveTo(x + tw2 * 0.9, shY + h * 0.05); g.lineTo(x + tw2 * 1.05, legY - h * 0.02);
-    g.stroke();
-    g.fillStyle = skin;
-    circle(g, x - tw2 * 1.05, legY, tw2 * 0.24);
-    circle(g, x + tw2 * 1.05, legY, tw2 * 0.24);
-    /* шея и голова */
-    g.fillStyle = skin;
-    g.fillRect(x - headR * 0.3, shY - headR * 0.7, headR * 0.6, headR * 0.9);
-    g.beginPath();
-    g.ellipse(x, shY - headR * 1.15, headR * 0.86, headR, 0, 0, TAU);
-    g.fill();
-    /* причёска */
-    g.fillStyle = hair;
-    g.beginPath();
-    if (kind === 'f') {
-      g.moveTo(x - headR * 0.92, shY - headR * 1.0);
-      g.quadraticCurveTo(x - headR * 1.1, shY - headR * 2.4, x, shY - headR * 2.2);
-      g.quadraticCurveTo(x + headR * 1.1, shY - headR * 2.4, x + headR * 0.92, shY - headR * 1.0);
-      g.quadraticCurveTo(x + headR * 1.0, shY - headR * 0.1, x + headR * 0.7, shY);
-      g.quadraticCurveTo(x + headR * 0.76, shY - headR * 1.1, x + headR * 0.56, shY - headR * 1.45);
-      g.quadraticCurveTo(x, shY - headR * 1.75, x - headR * 0.56, shY - headR * 1.45);
-      g.quadraticCurveTo(x - headR * 0.76, shY - headR * 1.1, x - headR * 0.7, shY);
-      g.quadraticCurveTo(x - headR * 1.0, shY - headR * 0.1, x - headR * 0.92, shY - headR * 1.0);
-    } else {
-      g.moveTo(x - headR * 0.9, shY - headR * 1.1);
-      g.quadraticCurveTo(x - headR * 1.0, shY - headR * 2.35, x, shY - headR * 2.2);
-      g.quadraticCurveTo(x + headR * 1.0, shY - headR * 2.35, x + headR * 0.9, shY - headR * 1.1);
-      g.quadraticCurveTo(x + headR * 0.6, shY - headR * 1.6, x, shY - headR * 1.62);
-      g.quadraticCurveTo(x - headR * 0.6, shY - headR * 1.6, x - headR * 0.9, shY - headR * 1.1);
-    }
-    g.fill();
-    /* глаза и улыбка */
-    g.fillStyle = 'rgba(28,24,20,' + (alpha + 0.25) + ')';
-    circle(g, x - headR * 0.32, shY - headR * 1.2, headR * 0.1);
-    circle(g, x + headR * 0.32, shY - headR * 1.2, headR * 0.1);
-    g.strokeStyle = 'rgba(28,24,20,' + (alpha + 0.15) + ')';
-    g.lineWidth = Math.max(1, headR * 0.09);
-    g.beginPath();
-    g.moveTo(x - headR * 0.26, shY - headR * 0.78);
-    g.quadraticCurveTo(x, shY - headR * 0.58, x + headR * 0.26, shY - headR * 0.78);
-    g.stroke();
-  }
-
-  function drawFrontProps(g, pt, P, W, H) {
-    var life = pt.life;
-    var m = metrics(life.age);
-    var fh = H * 0.82 * m.h;
-    var gy = H * 0.9;
-    var groundY = H * 0.94 + P.rootY * H;
-    var cx = W / 2;
-    if (P.props.desk) {
-      g.fillStyle = '#4a3b2c';
-      g.fillRect(cx - fh * 0.42, gy - fh * 0.3, fh * 0.84, fh * 0.06);
-      g.fillRect(cx - fh * 0.38, gy - fh * 0.24, fh * 0.05, fh * 0.24);
-      g.fillRect(cx + fh * 0.33, gy - fh * 0.24, fh * 0.05, fh * 0.24);
-      if (P.props.paper) { g.fillStyle = '#efe7d8'; g.fillRect(cx - fh * 0.14, gy - fh * 0.315, fh * 0.26, fh * 0.03); }
-    }
-    if (P.props.counter) { g.fillStyle = '#54452f'; g.fillRect(cx - fh * 0.5, gy - fh * 0.26, fh, fh * 0.08); }
-    if (P.props.partner) {
-      sideFigure(g, cx + fh * 0.4, groundY, fh * 1.04, life.sex === 'm' ? 'f' : 'm', 0.52);
-    }
-    if (P.props.kid) {
-      sideFigure(g, cx - fh * 0.38, groundY, fh * 0.5, 'c', 0.58);
-    }
-    if (P.props.candle) {
-      var cxx = cx + fh * 0.3, cyy = gy - fh * 0.1;
-      g.fillStyle = '#e8e0cc'; g.fillRect(cxx - 3, cyy - 16, 6, 16);
-      var fl = 6 + (P.fx.candle || 1) * 4;
-      var fg2 = g.createRadialGradient(cxx, cyy - 20, 1, cxx, cyy - 20, fl * 2.2);
-      fg2.addColorStop(0, 'rgba(255,220,150,0.95)'); fg2.addColorStop(1, 'rgba(255,170,60,0)');
-      g.fillStyle = fg2; circle(g, cxx, cyy - 20, fl * 2);
-      g.fillStyle = '#ffd98a'; circle(g, cxx, cyy - 20, fl * 0.45);
-    }
-    if (P.props.iv) {
-      g.strokeStyle = 'rgba(200,220,230,0.6)'; g.lineWidth = 2;
-      g.beginPath(); g.moveTo(cx + fh * 0.45, gy - fh * 0.8); g.lineTo(cx + fh * 0.45, gy); g.stroke();
-      g.fillStyle = 'rgba(200,230,240,0.7)'; g.fillRect(cx + fh * 0.41, gy - fh * 0.86, fh * 0.08, fh * 0.12);
-    }
-    if (P.props.zzz) {
-      g.fillStyle = 'rgba(240,236,223,0.5)';
-      g.font = Math.round(fh * 0.1) + 'px Georgia, serif';
-      g.fillText('z', cx + fh * 0.25, gy - fh * 0.72);
-      g.fillText('z', cx + fh * 0.33, gy - fh * 0.82);
-    }
-    if (P.props.heart) {
-      g.fillStyle = 'rgba(232,120,140,0.75)';
-      var hxx = cx + fh * 0.3, hyy = gy - fh * 0.75;
-      g.beginPath();
-      g.moveTo(hxx, hyy + 6); g.bezierCurveTo(hxx - 9, hyy - 3, hxx - 2, hyy - 9, hxx, hyy - 3);
-      g.bezierCurveTo(hxx + 2, hyy - 9, hxx + 9, hyy - 3, hxx, hyy + 6); g.fill();
-    }
-  }
-
-  /* --------------------------- погода и fx --------------------------- */
 
   Portrait.prototype.particle = function (kind) {
     this.particles.push({
@@ -2047,87 +1935,77 @@
     });
   };
 
-  function drawWeather(g, pt, P, W, H) {
-    var t = pt.time;
+  function drawFx(g, V) {
+    var P = V.P, t = V.t, w = V.w, h = V.h;
     if (P.fx.rain) {
-      g.strokeStyle = 'rgba(170,200,220,0.45)'; g.lineWidth = 1;
-      for (var i = 0; i < 40; i++) {
-        var x = ((i * 97 + t * 220) % W), y = ((i * 53 + t * 420) % H);
-        g.beginPath(); g.moveTo(x, y); g.lineTo(x - 2, y + 9); g.stroke();
+      for (var i = 0; i < 26; i++) {
+        var rx = Math.round((i * 17 + t * 60) % w), ry = Math.round((i * 11 + t * 110) % h);
+        px(g, rx, ry, 1, 2, '#9fc4da');
       }
     }
     if (P.fx.snow) {
-      g.fillStyle = 'rgba(240,246,250,0.75)';
-      for (var s2 = 0; s2 < 30; s2++) {
-        var sx2 = ((s2 * 83 + Math.sin(t + s2) * 18 + t * 12) % W);
-        var sy2 = ((s2 * 61 + t * 42) % H);
-        g.fillRect(sx2, sy2, 2, 2);
+      for (var s = 0; s < 22; s++) {
+        var sx = Math.round((s * 23 + Math.sin(t + s) * 4 + t * 6) % w);
+        var sy = Math.round((s * 13 + t * 16) % h);
+        px(g, sx, sy, 1, 1, '#eef4f8');
       }
     }
     if (P.fx.dust) {
-      g.fillStyle = 'rgba(210,180,130,0.18)';
-      for (var d2 = 0; d2 < 18; d2++) {
-        var dx = ((d2 * 101 + t * 70) % W), dy = H * 0.5 + Math.sin(t * 1.3 + d2) * 30;
-        g.fillRect(dx, dy, 3, 1.6);
+      for (var d = 0; d < 14; d++) {
+        var dx = Math.round((d * 29 + t * 30) % w), dy = V.gy - 4 - Math.round(nz(d) * 8);
+        px(g, dx, dy, 1, 1, 'rgba(214,190,150,0.5)');
       }
     }
-    if (P.fx.leaves) {
-      for (var l2 = 0; l2 < 10; l2++) {
-        var lx = ((l2 * 131 + t * 36) % W), ly = ((l2 * 71 + t * 54) % H);
-        g.fillStyle = l2 % 2 ? 'rgba(200,140,60,0.6)' : 'rgba(170,110,50,0.55)';
-        g.save(); g.translate(lx, ly); g.rotate(t + l2); g.fillRect(-3, -1.5, 6, 3); g.restore();
-      }
-    }
-    if (P.fx.confetti) {
-      for (var c3 = 0; c3 < 26; c3++) {
-        var cx3 = ((c3 * 59 + Math.sin(t * 2 + c3) * 20) % W);
-        var cy3 = ((c3 * 43 + t * 150) % H);
-        g.fillStyle = ['#e8b45a', '#6fd08c', '#8fd4ff', '#f08ea6'][c3 % 4];
-        g.save(); g.translate(cx3, cy3); g.rotate(t * 3 + c3); g.fillRect(-2.5, -1.5, 5, 3); g.restore();
+    if (P.fx.fire) {
+      for (var f = 0; f < 10; f++) {
+        var fx2 = Math.round(w * 0.5 + Math.sin(t * 3 + f) * 6);
+        px(g, fx2, V.gy - Math.round((t * 12 + f * 4) % 20), 1, 2, f % 2 ? '#e8743a' : '#f2b24a');
       }
     }
     if (P.fx.sparkle) {
-      for (var p4 = 0; p4 < 12; p4++) {
-        var a2 = t * 1.4 + p4, rr = 30 + (p4 % 4) * 14;
-        var px2 = W / 2 + Math.cos(a2) * rr, py2 = H * 0.45 + Math.sin(a2 * 1.3) * rr * 0.6;
-        g.fillStyle = 'rgba(255,225,150,' + (0.3 + 0.4 * Math.abs(Math.sin(t * 3 + p4))).toFixed(2) + ')';
-        circle(g, px2, py2, 1.6);
+      for (var k = 0; k < 8; k++) {
+        if (nz(k + Math.floor(t * 4)) > 0.55) {
+          px(g, Math.round(w * 0.5 + Math.sin(k * 2.1) * 14), V.gy - 20 - Math.round(nz(k + 3) * 16), 1, 1, '#ffe9a8');
+        }
       }
     }
     if (P.fx.fireflies) {
       for (var ff = 0; ff < 9; ff++) {
-        var fx3 = (ff * 97 + Math.sin(t * 0.7 + ff) * 40) % W;
-        var fy3 = H * 0.4 + Math.cos(t * 0.9 + ff * 1.3) * 50;
-        g.fillStyle = 'rgba(200,255,150,' + (0.25 + 0.5 * Math.abs(Math.sin(t * 2 + ff))).toFixed(2) + ')';
-        circle(g, fx3, fy3, 2);
+        var ox = Math.round(w * 0.2 + ((ff * 37 + t * 8) % (w * 0.7)));
+        var oy = Math.round(V.gy - 10 - Math.sin(t * 1.4 + ff) * 7);
+        if (nz(ff + Math.floor(t * 2)) > 0.35) px(g, ox, oy, 1, 1, '#d8f08a');
       }
     }
-    if (P.fx.smoke) {
+    if (P.fx.birds !== undefined && !V.indoor) {
+      var bx = Math.round((P.fx.birds || 0) * (w + 20)) - 10;
+      for (var b = 0; b < 3; b++) {
+        var byy = Math.round(V.gy * 0.22 + Math.sin((P.fx.birds || 0) * 6 + b) * 3);
+        px(g, bx + b * 6, byy, 1, 1, '#e8eef2');
+        px(g, bx + b * 6 + 1, byy - 1, 1, 1, '#e8eef2');
+        px(g, bx + b * 6 + 2, byy, 1, 1, '#e8eef2');
+      }
+    }
+    if (P.fx.smoke || P.props.smoke) {
       for (var sm = 0; sm < 6; sm++) {
-        var mt = (t * 0.6 + sm * 0.2) % 1;
-        g.fillStyle = 'rgba(220,220,210,' + (0.18 * (1 - mt)).toFixed(2) + ')';
-        circle(g, W / 2 + 14 + Math.sin(mt * 6 + sm) * 6, H * 0.42 - mt * 60, 3 + mt * 9);
+        var syy = V.gy - 26 - Math.round((t * 8 + sm * 5) % 26);
+        px(g, Math.round(w * 0.5 + 6 + Math.sin(t + sm) * 2), syy, 1 + (sm % 2), 1, 'rgba(190,190,190,0.35)');
       }
     }
-    if (P.fx.balloons !== undefined && P.fx.balloons) {
-      for (var bl = 0; bl < 4; bl++) {
-        var by = H - ((P.fx.balloons * H * 1.4) + bl * 40) % (H * 1.4);
-        var bx3 = W * (0.2 + bl * 0.2) + Math.sin(t + bl) * 8;
-        g.fillStyle = ['#e8737f', '#e8b45a', '#7fb3e8', '#8fd98a'][bl];
-        g.beginPath(); g.ellipse(bx3, by, 7, 9, 0, 0, Math.PI * 2); g.fill();
-        g.strokeStyle = 'rgba(240,236,223,0.3)'; g.beginPath(); g.moveTo(bx3, by + 9); g.lineTo(bx3, by + 22); g.stroke();
-      }
+    /* частицы от событий */
+    var ps = V.pt.particles;
+    for (var i2 = ps.length - 1; i2 >= 0; i2--) {
+      var p = ps[i2];
+      p.y += p.v * 0.016;
+      p.x += Math.sin(p.d + t) * 0.4;
+      if (p.y > V.h * 3) { ps.splice(i2, 1); continue; }
+      var col = p.k === 'confetti' ? ['#e8b45a', '#d9728f', '#6fae6f', '#7fb4d8'][i2 % 4]
+        : p.k === 'heart' ? '#d9728f' : p.k === 'tear' ? '#9fd4ef' : '#e8eef2';
+      px(g, Math.round(p.x / 4), Math.round(p.y / 4), 1, 1, col);
     }
-    if (P.fx.cold) {
-      g.fillStyle = 'rgba(190,220,240,0.10)'; g.fillRect(0, 0, W, H);
-    }
-    if (P.fx.plane !== undefined && P.fx.plane) {
-      var plx = P.fx.plane * W * 1.2 - W * 0.1, ply = H * 0.16;
-      g.fillStyle = 'rgba(240,236,223,0.8)';
-      g.beginPath(); g.moveTo(plx, ply); g.lineTo(plx - 10, ply + 3); g.lineTo(plx - 4, ply + 1); g.lineTo(plx - 6, ply + 6);
-      g.closePath(); g.fill();
-      g.strokeStyle = 'rgba(240,236,223,0.25)'; g.lineWidth = 2;
-      g.beginPath(); g.moveTo(plx - 12, ply + 2); g.lineTo(plx - 60, ply + 4); g.stroke();
+    /* затемнение по краям, чтобы сцена не казалась плоской */
+    if (!V.indoor && V.sky === 'night') {
+      px(g, 0, 0, w, 1, 'rgba(0,0,0,0.25)');
+      px(g, 0, h - 1, w, 1, 'rgba(0,0,0,0.25)');
     }
   }
 
@@ -2162,6 +2040,7 @@
     lookFor: lookFor,
     metrics: metrics,
     stageOf: stageOf,
+    familyInfo: familyInfo,
     ambientFor: ambientFor,
     clipForLog: clipForLog,
     basePose: basePose,

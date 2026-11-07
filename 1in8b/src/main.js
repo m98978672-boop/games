@@ -148,6 +148,8 @@
     S.blocked = false;
     S.acc = 0;
     S.last = performance.now();
+    setSpeed(S.speed);
+    paintPause();
     UI.renderAll(S.life, S.peers, onPlayerChange);
     startPortrait(fresh);
     if (S.life.pendingDecision) askDecision();
@@ -186,6 +188,9 @@
     requestAnimationFrame(frame);
   }
 
+  /* события, ради которых стоит остановить время */
+  var BIG_EVENT = /родил|свадьб|пожен|замуж|женил|развод|умер|ушёл из жизни|ушла из жизни|похорон|война|перееха|переезд|уволен|повышен|диплом|поступил|своё дело|больниц|операц|эмигр/i;
+
   function advanceYear() {
     var life = S.life;
     var before = life.log.length;
@@ -222,6 +227,36 @@
       return;
     }
 
+    /* музыка: нота на год и отклик на событие */
+    var SND = window.IN8B.sound;
+    if (SND && SND.isOn()) {
+      SND.year(life.age);
+      var fresh3 = life.log.slice(before);
+      for (var fi = 0; fi < fresh3.length; fi++) {
+        if (fresh3[fi].kind === 'bad' || fresh3[fi].kind === 'good') { SND.event(fresh3[fi].kind); break; }
+      }
+    }
+
+    /* появились ли новые доступные траты */
+    if (window.IN8B.purchases) {
+      var nb = window.IN8B.purchases.availableFor(life).length;
+      S.newBuys = S.lastBuys != null && nb > S.lastBuys;
+      S.lastBuys = nb;
+    }
+
+    /* паузы по настройке игрока */
+    var on = S.settings.pauseOn || {};
+    if (!S.paused && !S.skipping && life.alive) {
+      var fresh2 = life.log.slice(before);
+      var big = fresh2.filter(function (e) { return BIG_EVENT.test(e.text); });
+      if (on.year) { S.paused = true; paintPause(); }
+      else if (on.big && big.length) {
+        S.paused = true; paintPause();
+        UI.toast(big[0].text.slice(0, 90));
+      } else if (on.buy && S.newBuys) { S.paused = true; paintPause(); UI.toast('В этом году есть на что потратить деньги'); }
+    }
+    S.newBuys = false;
+
     if (life.pendingReflection && !S.settings.auto) {
       S.skipping = false;
       var refl = life.pendingReflection;
@@ -250,6 +285,7 @@
 
   function finishLife() {
     var life = S.life;
+    if (window.IN8B.sound && window.IN8B.sound.isOn()) window.IN8B.sound.farewell();
     SAVE.clearLife();
     SAVE.addPastLife(life);
     UI.renderPastList();
@@ -295,10 +331,42 @@
 
   function paintPortraitCaption() {
     if (!S.view || !S.life) return;
-    var sc = el('portrait-scene');
+    var life = S.life;
     var cl = el('portrait-clip');
-    if (sc) sc.textContent = (SCENE_RU[S.view.scene] || S.view.scene) + ' · ' + UI.stageName(S.life.age);
     if (cl) cl.textContent = S.view.currentName();
+
+    var sc = el('portrait-scene');
+    var mt = el('portrait-meta');
+    if (!sc || !mt) return;
+    var N = window.IN8B.names;
+    var place = N && N.place ? N.place(life.base.code, life.seed, life.urban) : (life.urban ? 'город' : 'село');
+    var home = life.age < 19 ? (life.urban ? 'квартира родителей' : 'дом родителей')
+      : life.home ? 'свой дом' : life.urban ? 'съёмная квартира' : 'дом в селе';
+    var fam = PR.familyInfo(life);
+    var with1;
+    if (life.age < 19) {
+      with1 = fam.mom || fam.dad ? 'с ' + (fam.mom && fam.dad ? 'родителями' : fam.mom ? 'матерью' : 'отцом') : 'без родителей';
+      if (life.siblings) with1 += ' и ' + life.siblings + ' ' +
+        M.plural(life.siblings, 'братом или сестрой', 'братьями и сёстрами', 'братьями и сёстрами');
+    } else if (fam.partner && fam.kids.length) {
+      with1 = 'с ' + (life.sex === 'f' ? 'мужем' : 'женой') + ' и ' + fam.kids.length + ' ' +
+        M.plural(fam.kids.length, 'ребёнком', 'детьми', 'детьми');
+    } else if (fam.partner) {
+      with1 = 'с ' + (life.sex === 'f' ? 'мужем' : 'женой');
+    } else if (fam.kids.length) {
+      with1 = 'с ' + fam.kids.length + ' ' + M.plural(fam.kids.length, 'ребёнком', 'детьми', 'детьми');
+    } else {
+      with1 = life.age < 30 && fam.mom ? 'с матерью' : 'один' + (life.sex === 'f' ? 'а' : '');
+    }
+    sc.textContent = place + ', ' + life.c.name + ' · ' + home + ' · ' + with1;
+
+    var parts = ['Я, ' + life.age + ' ' + M.plural(life.age, 'год', 'года', 'лет')];
+    if (fam.mom) parts.push('Мать, ' + fam.mom);
+    if (fam.dad) parts.push('Отец, ' + fam.dad);
+    if (fam.partner) parts.push((life.sex === 'f' ? 'Муж, ' : 'Жена, ') + fam.partner.age);
+    if (life.age < 19 && life.siblings) parts.push('Братья и сёстры, ' + life.siblings);
+    fam.kids.slice(0, 4).forEach(function (k) { parts.push(k.name + ', ' + k.age); });
+    mt.textContent = parts.join(' · ');
   }
 
   function showEndPortrait(life) {
@@ -346,11 +414,50 @@
     paintPortraitCaption();
   };
 
+  /* скорость времени и подпись «1 год ≈ N сек» — как в оригинале */
+  function setSpeed(v) {
+    S.speed = v;
+    var box = el('speeds');
+    if (box) box.querySelectorAll('button[data-v]').forEach(function (b) {
+      b.classList.toggle('on', Number(b.dataset.v) === v);
+    });
+    paintRate();
+  }
+
+  function paintRate() {
+    var box = el('hud-rate');
+    if (!box || !S.life) return;
+    var sec = yearSeconds() / S.speed;
+    box.textContent = '1 год ≈ ' + (sec >= 10 ? Math.round(sec) : sec.toFixed(1).replace('.', ',')) + ' сек';
+  }
+
+  function paintMusic() {
+    var b = el('btn-music'), SND = window.IN8B.sound;
+    if (!b) return;
+    var now = !!(SND && SND.isOn());
+    b.classList.toggle('on', now);
+    b.textContent = now ? '♪ Музыка вкл.' : '♪ Музыка';
+  }
+
+  function paintPauseBtn() {
+    var on = S.settings.pauseOn || {};
+    var n = (on.big ? 1 : 0) + (on.year ? 1 : 0) + (on.buy ? 1 : 0);
+    var b = el('btn-pauses');
+    if (b) { b.textContent = n ? '✎ Паузы · ' + (n + 1) : '✎ Паузы'; b.classList.toggle('on', !!n); }
+  }
+
+  function paintPause() {
+    var b = el('btn-pause');
+    if (!b) return;
+    b.textContent = S.paused ? '▶ Продолжить' : '❙❙ Пауза';
+    b.classList.toggle('on', S.paused);
+  }
+
   function initLifeControls() {
     el('btn-pause').addEventListener('click', togglePause);
-    el('btn-speed').addEventListener('click', function () {
-      S.speed = S.speed === 1 ? 2 : S.speed === 2 ? 4 : S.speed === 4 ? 8 : 1;
-      el('btn-speed').textContent = S.speed + '×';
+    el('speeds').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-v]');
+      if (b) setSpeed(Number(b.dataset.v));
     });
     el('btn-auto').addEventListener('click', function () {
       S.settings.auto = !S.settings.auto;
@@ -367,13 +474,27 @@
     el('btn-skip').addEventListener('click', function () {
       S.skipping = true;
       S.paused = false;
-      el('btn-pause').textContent = '⏸';
+      paintPause();
       UI.toast('Вперёд до следующего события');
     });
     el('btn-help').addEventListener('click', UI.helpModal);
     el('btn-spend').addEventListener('click', openSpend);
     el('btn-spend-2').addEventListener('click', openSpend);
     el('btn-anims').addEventListener('click', function () { UI.animsModal(S.view); });
+    el('btn-music').addEventListener('click', function () {
+      var SND = window.IN8B.sound;
+      if (!SND || !SND.available) { UI.toast('Браузер не умеет играть звук'); return; }
+      var now = SND.toggle();
+      S.settings.music = now;
+      saveSettings();
+      paintMusic();
+      UI.toast(now ? 'Тихий фон и нота на каждый прожитый год' : 'Музыка выключена');
+    });
+    el('btn-more').addEventListener('click', function () { UI.moreModal(); });
+    el('btn-pauses').addEventListener('click', function () {
+      UI.pausesModal(S.settings, function () { saveSettings(); paintPauseBtn(); });
+    });
+    el('btn-scene-more').addEventListener('click', function () { UI.animsModal(S.view); });
     el('btn-quit').addEventListener('click', function () {
       if (S.life && S.life.alive) {
         SAVE.saveLife(S.life);
@@ -406,10 +527,10 @@
       if (/input|textarea|select/i.test((e.target.tagName || ''))) return;
       if (el('screen-life').hidden) return;
       if (e.code === 'Space') { e.preventDefault(); togglePause(); }
-      else if (e.key === '1') { S.speed = 1; el('btn-speed').textContent = '1×'; }
-      else if (e.key === '2') { S.speed = 2; el('btn-speed').textContent = '2×'; }
-      else if (e.key === '4') { S.speed = 4; el('btn-speed').textContent = '4×'; }
-      else if (e.key === '8') { S.speed = 8; el('btn-speed').textContent = '8×'; }
+      else if (e.key === '1') setSpeed(1);
+      else if (e.key === '2') setSpeed(2);
+      else if (e.key === '4') setSpeed(4);
+      else if (e.key === '8') setSpeed(8);
       else if (e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') UI.helpModal();
       else if (e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') el('btn-auto').click();
       else if (e.key === 't' || e.key === 'T' || e.key === 'е' || e.key === 'Е') openSpend();
@@ -418,8 +539,7 @@
 
   function togglePause() {
     S.paused = !S.paused;
-    el('btn-pause').textContent = S.paused ? '▶' : '⏸';
-    el('btn-pause').classList.toggle('on', S.paused);
+    paintPause();
   }
 
   function toStart() {
@@ -441,10 +561,21 @@
   /* ============================== старт ============================== */
 
   function boot() {
-    UI.setCurrency(S.settings.currency || 'int');
+    UI.setCurrency(S.settings.currency || 'rub');
     initStart();
     initLifeControls();
     el('btn-auto').classList.toggle('on', !!S.settings.auto);
+    paintPauseBtn();
+    /* музыка включается только по жесту игрока — ждём первого клика */
+    var SND0 = window.IN8B.sound;
+    if (S.settings.music && SND0 && SND0.available) {
+      var once = function () {
+        document.removeEventListener('click', once);
+        SND0.set(true);
+        paintMusic();
+      };
+      document.addEventListener('click', once);
+    }
     window.addEventListener('beforeunload', function () {
       if (S.life && S.life.alive) SAVE.saveLife(S.life);
     });

@@ -229,6 +229,15 @@ ok(C.list.every((c) => {
 }), 'для каждой страны генерируется имя и фамилия');
 ok(!/[a-zA-Z]/.test(C.list.map((c) => NM.make(M.makeRng('и-' + c.code), c, 'm').full).join('')),
   'все имена записаны кириллицей');
+const noCity = C.list.filter((c) => !NM.cities[c.code] || !NM.cities[c.code].length);
+ok(noCity.length === 0, 'у каждой страны есть города для подписи: ' +
+  (noCity.length ? noCity.map((c) => c.code).join(' ') : 'все ' + C.list.length));
+ok(C.list.every((c) => {
+  const city = NM.place(c.code, 'зерно-' + c.code, true);
+  const rural = NM.place(c.code, 'зерно-' + c.code, false);
+  return city && rural && city !== rural && !/[a-zA-Z]/.test(city + rural);
+}), 'place() даёт разное место для города и села, кириллицей');
+
 const peers = EN.siblingsOfSecond('секунда-1', { era: 'today', drawMode: 'births' }, 4);
 ok(peers.length === 4 && peers.every((p) => p.name && p.country && p.deathAge >= 0),
   'четверо, родившихся в ту же секунду, прожили свои жизни');

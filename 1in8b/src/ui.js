@@ -8,6 +8,7 @@
 
   var M = window.IN8B.model;
   var C = window.IN8B.countries;
+  var N = window.IN8B.names;
   var EN = window.IN8B.engine;
   var CH = window.IN8B.charts;
   var SAVE = window.IN8B.save;
@@ -22,15 +23,15 @@
   /* --------------------------- валюты --------------------------------- */
   /* множитель: сколько местных единиц в одном межд. долларе по ППС (приближённо) */
   var CURRENCIES = [
-    { id: 'int', name: 'Межд. $ (ППС)', sym: '$', k: 1 },
-    { id: 'rub', name: 'Россия (₽)', sym: '₽', k: 30 },
-    { id: 'kzt', name: 'Казахстан (₸)', sym: '₸', k: 190 },
-    { id: 'uah', name: 'Украина (₴)', sym: '₴', k: 13 },
-    { id: 'byn', name: 'Беларусь (Br)', sym: 'Br', k: 1.1 },
-    { id: 'eur', name: 'Германия (€)', sym: '€', k: 0.73 },
-    { id: 'usd', name: 'США ($)', sym: '$', k: 1 },
-    { id: 'inr', name: 'Индия (₹)', sym: '₹', k: 22 },
-    { id: 'try', name: 'Турция (₺)', sym: '₺', k: 11 }
+    { id: 'rub', name: 'Россия (₽)', sym: '₽', k: 30, of: 'по ценам России' },
+    { id: 'kzt', name: 'Казахстан (₸)', sym: '₸', k: 190, of: 'по ценам Казахстана' },
+    { id: 'uah', name: 'Украина (₴)', sym: '₴', k: 13, of: 'по ценам Украины' },
+    { id: 'byn', name: 'Беларусь (Br)', sym: 'Br', k: 1.1, of: 'по ценам Беларуси' },
+    { id: 'eur', name: 'Германия (€)', sym: '€', k: 0.73, of: 'по ценам Германии' },
+    { id: 'usd', name: 'США ($)', sym: '$', k: 1, of: 'по ценам США' },
+    { id: 'inr', name: 'Индия (₹)', sym: '₹', k: 22, of: 'по ценам Индии' },
+    { id: 'try', name: 'Турция (₺)', sym: '₺', k: 11, of: 'по ценам Турции' },
+    { id: 'int', name: 'Межд. $ (ППС)', sym: '$', k: 1, of: 'в международных долларах' }
   ];
   var currency = CURRENCIES[0];
 
@@ -38,6 +39,7 @@
     for (var i = 0; i < CURRENCIES.length; i++) if (CURRENCIES[i].id === id) currency = CURRENCIES[i];
   }
   function money(v) { return M.fmtMoney(v * currency.k) + ' ' + currency.sym; }
+  function moneyPPP(v) { return currency.id === 'int' ? '' : M.fmtMoney(v) + ' $ ППС'; }
 
   /* --------------------------- модальные окна -------------------------- */
   var modalStack = [];
@@ -95,7 +97,7 @@
       o.value = c.id; o.textContent = c.name;
       cur.appendChild(o);
     });
-    cur.value = settings.currency || 'int';
+    cur.value = settings.currency || 'rub';
     setCurrency(cur.value);
 
     var yr = el('sel-year');
@@ -221,30 +223,72 @@
 
   function birthCard(life, onStart) {
     var c = life.c;
-    var incomeWord = life.famPct < 0.2 ? 'одна из самых бедных' : life.famPct < 0.45 ? 'бедная'
-      : life.famPct < 0.7 ? 'средняя' : life.famPct < 0.9 ? 'обеспеченная' : 'одна из самых богатых';
-    var w = modal('<p class="decision-age">регистрация рождения</p>' +
-      '<h2>' + esc(life.name) + '</h2>' +
-      '<ul class="kv" style="margin:14px 0">' +
-      '<li><span>Страна или территория</span><b>' + esc(c.name) + '</b></li>' +
-      '<li><span>Год рождения</span><b>' + life.birthYear + '</b></li>' +
-      '<li><span>Пол</span><b>' + (life.sex === 'f' ? 'девочка' : 'мальчик') + '</b></li>' +
-      '<li><span>Где</span><b>' + (life.urban ? 'город' : 'село') + '</b></li>' +
-      '<li><span>Семья</span><b>' + incomeWord + ' (' + Math.round(life.famPct * 100) + '-й перцентиль)</b></li>' +
-      '<li><span>Доход семьи на человека</span><b>' + money(life.famIncome) + ' в год</b></li>' +
-      '<li><span>Шанс родиться здесь</span><b>' + (C.birthShare(life.base) * 100).toFixed(2).replace('.', ',') + '%</b></li>' +
-      '<li><span>Ожидаемая продолжительность жизни</span><b>' +
-      (life.sex === 'f' ? c.leF : c.leM).toFixed(1).replace('.', ',') + ' лет</b></li>' +
-      '</ul>' +
-      '<label class="inline-field">Имя можно изменить<input class="note-input" id="birth-name" style="min-height:0;padding:9px" value="' + esc(life.name) + '"></label>' +
-      '<div class="modal-actions"><button class="btn btn-primary" id="birth-go">Начать эту жизнь</button></div>',
-      { sticky: true });
+    var q = Math.min(5, Math.floor(life.famPct * 5) + 1);
+    var dots = '';
+    for (var i = 1; i <= 5; i++) dots += i <= q ? '●' : '○';
+    var band = life.famPct < 0.2 ? 'нижние 20%' : life.famPct < 0.4 ? 'нижние 20–40%'
+      : life.famPct < 0.6 ? 'средние 40–60%' : life.famPct < 0.8 ? 'верхние 20–40%' : 'верхние 20%';
+    var MONTH = ['январе', 'феврале', 'марте', 'апреле', 'мае', 'июне', 'июле',
+      'августе', 'сентябре', 'октябре', 'ноябре', 'декабре'];
+    var month = MONTH[Math.abs(hash32(life.seed + 'm')) % 12];
+    var place = N && N.place ? N.place(life.base.code, life.seed, life.urban)
+      : (life.urban ? 'город' : 'село');
+    var no = c.code.toUpperCase() + '-' + life.birthYear + '-' +
+      String(Math.abs(hash32(life.seed)) % 10000000).padStart(7, '0');
+    var le = (life.sex === 'f' ? c.leF : c.leM);
+    var minutes = life.settings.lifeMinutes;
+    var yearSec = Math.round((minutes * 60) / Math.max(le, 25));
+    var kids = life.siblings
+      ? 'У вас ' + life.siblings + ' ' +
+        M.plural(life.siblings, 'брат или сестра', 'брата или сестры', 'братьев и сестёр') + '. '
+      : 'Вы единственный ребёнок в семье. ';
+
+    function cell(label, value) {
+      return '<div class="bc"><span>' + label + '</span><b>' + value + '</b></div>';
+    }
+
+    var w = modal('<div class="birth-doc">' +
+      '<div class="birth-head"><b>Регистрация рождения</b><span>No. ' + no + '</span></div>' +
+      '<div class="birth-body">' +
+      '<span class="bc-label">имя</span>' +
+      '<h2 class="birth-name">' + esc(life.name) + '</h2>' +
+      '<p class="birth-lede">В ' + month + ' ' + life.birthYear + ' года вы родились ' +
+      (life.sex === 'f' ? 'девочкой' : 'мальчиком') + ' — ' + esc(place) + ', ' + esc(c.name) +
+      '. Семья из группы «' + band + '». ' + kids + '</p>' +
+      '<p class="birth-note">Чтобы прожить жизнь до ожидаемой продолжительности, нужно примерно ' +
+      minutes + ' мин (1 год ≈ ' + yearSec + ' с). Если закрыть страницу, жизнь сохранится в этом браузере ' +
+      'и продолжится, когда вы вернётесь.</p>' +
+      '<div class="birth-grid">' +
+      cell('пол', life.sex === 'f' ? 'Женский пол' : 'Мужской пол') +
+      cell('страна рождения', esc(c.name)) +
+      cell('место рождения', esc(place) + (life.urban ? ' (город)' : '')) +
+      cell('доход семьи', '<i class="quint">' + dots + '</i> квинтиль ' + q + '<br><small>· ' + band + ' в стране</small>') +
+      cell('доход семьи на человека', money(life.famIncome) + ' в год') +
+      cell('шанс родиться здесь', (C.birthShare(life.base) * 100).toFixed(2).replace('.', ',') + '%') +
+      cell('ожидаемая продолжительность жизни', le.toFixed(1).replace('.', ',') + ' года') +
+      cell('вероятность умереть до 5 лет', (c.u5mr / 10).toFixed(1).replace('.', ',') + '%') +
+      cell('ВВП на человека (ППС)', Math.round(c.gdp).toLocaleString('ru-RU') + ' $') +
+      '</div>' +
+      '<label class="inline-field">Имя можно изменить' +
+      '<input class="note-input" id="birth-name" style="min-height:0;padding:9px" value="' + esc(life.name) + '"></label>' +
+      '<div class="modal-actions"><button class="btn btn-primary" id="birth-go">Начать эту жизнь</button></div>' +
+      '</div></div>',
+      { sticky: true, cls: 'birth-modal' });
     el('birth-go').addEventListener('click', function () {
       var nm = el('birth-name').value.trim();
       if (nm) life.name = nm;
       close(w);
       onStart();
     });
+  }
+
+  function hash32(str) {
+    var h = 2166136261;
+    for (var i = 0; i < String(str).length; i++) {
+      h ^= String(str).charCodeAt(i);
+      h = (h * 16777619) >>> 0;
+    }
+    return h >>> 0;
   }
 
   /* --------------------------- панели жизни ---------------------------- */
@@ -278,11 +322,31 @@
   }
 
   function renderPerson(life) {
-    el('hud-country').textContent = life.c.name + ' · ' + (life.urban ? 'город' : 'село');
+    var where = N && N.place ? N.place(life.base.code, life.seed, life.urban) : (life.urban ? 'город' : 'село');
+    el('hud-country').textContent = where + ', ' + life.c.name;
     el('hud-age').textContent = life.age;
     el('hud-year').textContent = life.year;
+    el('hud-name').textContent = life.name;
     el('hud-income').textContent = money(life.income);
     el('hud-money').textContent = money(life.money);
+    el('income-month').textContent = life.income > 0 ? money(life.income / 12) + ' в месяц' : 'дохода пока нет';
+    var inc = Math.max(life.income || life.famIncome, 1);
+    var pct = Math.round(M.percentileOfIncome(life.c, inc) * 100);
+    el('money-rank').textContent = life.c.name + ': верхние ' + Math.max(1, 100 - pct) + '%' +
+      (life.income > 0 ? '' : ' (по доходу семьи)');
+    var wpct = Math.round(M.worldPercentile(inc) * 100);
+    el('money-rank-world').textContent = 'верхние ' + Math.max(1, 100 - wpct) + '% человечества';
+    el('income-partner').textContent = life.partnerIncome > 0
+      ? 'из них ' + (life.sex === 'f' ? 'муж' : 'жена') + ' — ' + money(life.partnerIncome) : '';
+    el('money-basis').textContent = currency.of;
+    el('money-ppp').textContent = moneyPPP(life.money);
+    var h = life.history;
+    var prev = h.length > 1 ? h[h.length - 2].money : 0;
+    var dm = Math.round(life.money - prev);
+    var dEl = el('money-delta');
+    dEl.textContent = h.length < 2 ? 'за прошлый год —'
+      : (dm > 0 ? '+' : dm < 0 ? '−' : '') + money(Math.abs(dm)) + ' за год';
+    dEl.className = dm > 0 ? 'up' : dm < 0 ? 'down' : '';
     el('p-name').textContent = life.name;
     el('p-sub').textContent = (life.sex === 'f' ? 'женщина' : 'мужчина') + ' · ' + life.c.name + ' · ' + life.birthYear;
     renderSpendNote(life);
@@ -381,10 +445,14 @@
 
   function renderLog(life) {
     var box = el('log-list');
-    var atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 40;
+    var atTop = box.scrollTop < 40;
     box.innerHTML = life.log.map(function (e, i) {
-      return '<div class="log-item k-' + e.kind + (e.starred ? ' starred' : '') + '" data-i="' + i + '">' +
-        '<span class="ag">' + e.age + ' ' + (e.age === 1 ? 'год' : 'л.') + '</span>' +
+      return { e: e, i: i };
+    }).reverse().map(function (r, n) {
+      var e = r.e;
+      return '<div class="log-item k-' + e.kind + (e.starred ? ' starred' : '') + (n === 0 ? ' fresh' : '') +
+        '" data-i="' + r.i + '">' +
+        '<span class="ag">' + e.age + ' ' + M.plural(e.age, 'год', 'года', 'лет') + '</span>' +
         '<span class="tx">' + esc(e.text) + '</span>' +
         '<span class="st">☆</span></div>';
     }).join('');
@@ -395,7 +463,7 @@
         d.classList.toggle('starred', e.starred);
       });
     });
-    if (atBottom) box.scrollTop = box.scrollHeight;
+    if (atTop) box.scrollTop = 0;
   }
 
   function renderFamily(life) {
@@ -416,17 +484,29 @@
       '<li><span>Сбережения</span><b>' + money(life.money) + '</b></li>';
   }
 
+  function peerLine(p, age) {
+    if (p.deathAge < age) {
+      return (p.sex === 'f' ? 'ушла' : 'ушёл') + ' в ' + p.deathAge + ' ' +
+        M.plural(p.deathAge, 'год', 'года', 'лет') + (p.cause ? ' · ' + p.cause : '');
+    }
+    var h = null;
+    for (var i = 0; i < p.history.length; i++) if (p.history[i].age === age) h = p.history[i];
+    if (!h) return '—';
+    var bits = [h.job || (age < 6 ? 'дошкольник' + (p.sex === 'f' ? 'ница' : '')
+      : age < 18 ? 'учится' : 'без работы')];
+    if (h.married) bits.push('в браке');
+    if (h.kids) bits.push(h.kids + ' ' + M.plural(h.kids, 'ребёнок', 'ребёнка', 'детей'));
+    return bits.join(' · ');
+  }
+
   function renderPeers(peers, age, box) {
     box = box || el('peers-list');
     box.innerHTML = peers.map(function (p) {
       var gone = p.deathAge < age;
-      var state = gone ? 'ушёл в ' + p.deathAge
-        : (function () {
-          var h = p.history.filter(function (x) { return x.age === age; })[0];
-          return h ? 'счастье ' + h.happy + ' · здоровье ' + h.health : 'жив';
-        })();
-      return '<div class="peer' + (gone ? ' gone' : '') + '"><div><b>' + esc(p.name) + '</b>' +
-        '<span>' + esc(p.country) + '</span></div><div class="st">' + esc(state) + '</div></div>';
+      return '<div class="peer' + (gone ? ' gone' : '') + '">' +
+        '<div class="peer-top"><b>' + esc(p.name) + '</b>' +
+        '<span>' + esc(p.country) + ' · ' + (p.sex === 'f' ? 'Ж' : 'М') + '</span></div>' +
+        '<div class="st">' + esc(peerLine(p, age)) + '</div></div>';
     }).join('');
   }
 
@@ -444,6 +524,63 @@
     renderFamily(life);
     renderPeers(peers, life.age);
     renderLifeMap(life);
+  }
+
+  /* ----------------------- меню «ещё» на телефоне ---------------------- */
+
+  var MORE_ITEMS = [
+    ['btn-skip', 'До следующего решения »'], ['btn-auto', 'Авторежим'],
+    ['btn-spend', '🛒 Траты этого года'], ['btn-anims', 'Все движения сцены'],
+    ['btn-pauses', '✎ Когда ставить паузу'], ['btn-music', '♪ Музыка'],
+    ['btn-help', 'Как играть'], ['btn-quit', 'Сохранить и выйти']
+  ];
+
+  function moreModal() {
+    var w = modal('<h2>Ещё</h2><div class="more-list">' + MORE_ITEMS.map(function (it) {
+      var b = el(it[0]);
+      if (!b) return '';
+      var on = b.classList.contains('on') ? ' on' : '';
+      return '<button class="more-item' + on + '" data-go="' + it[0] + '">' + esc(it[1]) + '</button>';
+    }).join('') + '</div>', { cls: 'more' });
+    w.addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-go]');
+      if (!b) return;
+      closeTop();
+      var real = el(b.dataset.go);
+      if (real) real.click();
+    });
+    return w;
+  }
+
+  /* ------------------------- когда ставить паузу ----------------------- */
+
+  var PAUSE_ROWS = [
+    { id: 'decision', t: 'На решениях', h: 'Время всегда ждёт вашего выбора', fixed: true },
+    { id: 'big', t: 'На событиях, которые меняют жизнь', h: 'Рождение, свадьба, утрата, работа, болезнь' },
+    { id: 'year', t: 'Каждый год', h: 'Пауза на каждый день рождения' },
+    { id: 'buy', t: 'Когда появляются новые траты', h: 'Пауза, если в этом году можно что-то купить' }
+  ];
+
+  function pausesModal(settings, onChange) {
+    var on = settings.pauseOn || {};
+    var w = modal('<h2>Когда останавливать время</h2>' +
+      '<p class="d-text">Жизнь идёт сама. Отметьте, на чём она должна подождать вас.</p>' +
+      '<div class="pause-rows">' + PAUSE_ROWS.map(function (r) {
+        var checked = r.fixed || on[r.id] ? ' checked' : '';
+        return '<label class="pause-row"><input type="checkbox" data-id="' + r.id + '"' + checked +
+          (r.fixed ? ' disabled' : '') + '><span><b>' + r.t + '</b><i>' + r.h + '</i></span></label>';
+      }).join('') + '</div>' +
+      '<div class="modal-actions"><button class="btn btn-primary" data-close>Готово</button></div>',
+      { cls: 'pauses' });
+    var inputs = w.querySelectorAll('input[data-id]');
+    for (var i = 0; i < inputs.length; i++) {
+      inputs[i].addEventListener('change', function () {
+        on[this.dataset.id] = this.checked;
+        settings.pauseOn = on;
+        if (onChange) onChange(on);
+      });
+    }
+    return w;
   }
 
   /* --------------------------- карточка решения ------------------------ */
@@ -508,10 +645,19 @@
       '<li><b>Отношения</b> — семья и друзья, одиночество в старости.</li></ul>' +
       '<h3>Клавиши</h3>' +
       '<ul><li><b>Пробел</b> — пауза, <b>1 2 4 8</b> — скорость, <b>A</b> — авторежим, <b>T</b> — траты, <b>H</b> — помощь.</li></ul>' +
-      '<h3>Портрет</h3>' +
-      '<p>Слева живой портрет: он рисуется прямо в браузере и меняется вместе с вами — возраст, причёска, седина, ' +
-      'морщины, одежда, место действия и погода. Больше ста движений: от первых шагов до прощания. ' +
-      'Кнопка «Все анимации» показывает их список.</p>' +
+      '<h3>Сцена жизни</h3>' +
+      '<p>В центре — пиксельная сцена, нарисованная прямо в браузере. Вы — человечек по центру, ' +
+      'с розовой меткой под ногами; рядом те, с кем вы живёте сейчас: родители, братья и сёстры, ' +
+      'потом супруг и дети. Под картинкой написано, где вы живёте и кто рядом, с их возрастами. ' +
+      'Место меняется вместе с жизнью — деревня, город, комната, школа, цех, поле, кабинет, больница, парк, ' +
+      'а на время события сцена переезжает туда, где событие происходит. Больше ста движений: ' +
+      'от первых шагов до прощания; кнопка «Анимации» показывает их список.</p>' +
+      '<h3>Время, паузы и музыка</h3>' +
+      '<ul><li><b>✎ Паузы</b> — на чём жизнь должна вас подождать: на решениях (всегда), ' +
+      'на событиях, которые меняют жизнь, каждый год или когда появляются новые траты.</li>' +
+      '<li><b>♪ Музыка</b> — тихий фон и нота на каждый прожитый год. Звук считается на лету, файлов нет.</li>' +
+      '<li><b>Валюта</b> выбирается на первом экране: все суммы пересчитываются по ценам выбранной страны, ' +
+      'под накопленным видно ту же сумму в международных долларах (ППС).</li></ul>' +
       '<p class="hint">Авторежим принимает решения нейтрально: средние результаты совпадают со статистикой страны.</p>');
     bindClose();
   }
@@ -690,6 +836,7 @@
     renderFocus: renderFocus, renderLog: renderLog, renderFamily: renderFamily, renderPeers: renderPeers,
     renderLifeMap: renderLifeMap, decisionModal: decisionModal, reflectionModal: reflectionModal,
     endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS,
-    spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote
+    spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote,
+    pausesModal: pausesModal, moreModal: moreModal
   };
 })();

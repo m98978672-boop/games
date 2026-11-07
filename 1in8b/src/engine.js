@@ -110,6 +110,8 @@
     this.dead = null;
     this.money = 0;
     this.income = 0;
+    this.ownIncome = 0;
+    this.partnerIncome = 0;
     this.edu = { level: 0, inSchool: false, years: 0, track: null, private: false, partTime: false, left: false };
     this.job = null;
     this.unemployedYears = 0;
@@ -230,7 +232,7 @@
   Life.prototype.marry = function (noWedding) {
     var rnd = this.rnd;
     var pname = N.make(rnd, this.base, this.sex === 'f' ? 'm' : 'f');
-    this.partner = { name: pname.full, age: this.age + Math.round(rnd.normal(this.sex === 'f' ? 3 : -2, 3)) };
+    this.partner = { name: pname.full, age: this.age + Math.round(rnd.normal(this.sex === 'f' ? 3 : -2, 3)), since: this.age };
     this.marital = noWedding ? 'partner' : 'married';
     this.add(noWedding
       ? 'Вы стали жить вместе: ' + pname.full + '.'
@@ -445,7 +447,10 @@
     else if (this.retired) income = this.pension();
     else income = this.income || this.famIncome * 0.3;
 
-    if (this.marital === 'married' || this.marital === 'partner') income += this.income ? this.income * 0.75 : this.famIncome * 0.5;
+    this.ownIncome = income;
+    this.partnerIncome = (this.marital === 'married' || this.marital === 'partner')
+      ? (this.income ? this.income * 0.75 : this.famIncome * 0.5) : 0;
+    income += this.partnerIncome;
     this.income = income;
 
     var spendable = Math.max(income, 0);
@@ -720,6 +725,8 @@
       health: Math.round(this.stats.health), happy: Math.round(this.stats.happy),
       know: Math.round(this.stats.know), bond: Math.round(this.stats.bond),
       income: Math.round(this.income), money: Math.round(this.money),
+      job: this.job ? M.jobTitle(M.jobById[this.job.id], this.job.step) : (this.retired ? 'на пенсии' : ''),
+      married: this.marital === 'married', kids: this.children.length,
       events: this.log.filter(function (e2) { return e2.age === this.age; }, this).length
     });
 
