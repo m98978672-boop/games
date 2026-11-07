@@ -119,10 +119,13 @@ body {
 .hud-btn:hover { color: var(--ink); border-color: var(--line-strong); background: rgba(255, 255, 255, 0.06); }
 .hud-btn.on,
 .hud-btn[aria-expanded="true"] {
-  color: var(--accent-ink);
-  background: linear-gradient(180deg, #ffd98a, var(--accent));
-  border-color: transparent;
+  color: var(--accent-2);
+  background: rgba(232, 180, 90, 0.13);
+  border-color: rgba(232, 180, 90, 0.45);
+  box-shadow: inset 0 -2px 0 var(--accent);
 }
+.hud-btn.on .ico, .hud-btn[aria-expanded="true"] .ico { color: var(--accent-2); }
+.hud-btn.on i, .hud-btn[aria-expanded="true"] i { background: rgba(232, 180, 90, 0.2); color: var(--accent-2); }
 .hud-btn .ico { font-size: 14px; line-height: 1; }
 .hud-btn i {
   font-style: normal;
@@ -197,9 +200,9 @@ body {
   margin-bottom: 2px;
 }
 .pop-head .t {
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: 0.01em;
+  letter-spacing: -0.005em;
   color: var(--ink);
 }
 .pop-head .mini { font-size: 10px; color: var(--accent-2); font-variant-numeric: tabular-nums; }
@@ -240,24 +243,25 @@ body {
 .pop-sec { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
 .pop-sec + .pop-sec { border-top: 1px solid rgba(255, 255, 255, 0.07); }
 .pop-sec-t {
-  padding: 6px 9px 4px;
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  padding: 8px 9px 5px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-dim);
 }
 .pop-item {
   display: flex;
   align-items: center;
   gap: 10px;
   width: 100%;
-  padding: 8px 9px;
+  padding: 9px 10px;
   border: 1px solid transparent;
   border-radius: 10px;
   background: transparent;
   color: var(--ink-dim);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   text-align: left;
   cursor: pointer;
   transition: background 0.14s, color 0.14s, border-color 0.14s;
@@ -289,6 +293,21 @@ body {
 .pop-item:disabled { opacity: 0.4; cursor: default; }
 .pop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 2px; }
 .pop-row-3 { grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); }
+.pop-row-5 { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+.pop-row-5 .pop-item {
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px 2px 7px;
+  justify-content: center;
+  font-size: 10.5px;
+  letter-spacing: -0.01em;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+.pop-row-5 .pop-item .n { flex: 0 0 auto; overflow: visible; text-overflow: clip; }
+.pop-row-5 .pop-item.is-on { background: rgba(232, 180, 90, 0.16); box-shadow: inset 0 0 0 1px rgba(232, 180, 90, 0.45); }
+.pop-row-5 .pop-item.is-on .n { color: var(--accent-2); }
 .pop-sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; }
 .pop-sec-tools { display: inline-flex; gap: 4px; margin-left: auto; }
 .pop-sec-t { display: flex; align-items: center; gap: 6px; }
@@ -1238,7 +1257,7 @@ body {
 
 /* ------------------------------------------------ меню «Модель» */
 .panel-catalog { width: min(424px, calc(100vw - 20px)); gap: 6px; }
-.hud-pop-wide { width: min(404px, calc(100vw - 20px)); }
+.hud-pop-wide { width: min(430px, calc(100vw - 20px)); }
 .pop-note { margin: 4px 8px 6px; font-size: 10.5px; line-height: 1.5; color: var(--ink-faint); }
 .pop-row-wrap { grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); }
 .hud-btn-icon { padding: 6px 9px; }
@@ -1305,13 +1324,13 @@ body {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 7px 9px;
+  padding: 8px 9px;
   border: 1px solid transparent;
   border-radius: 9px;
   background: transparent;
   color: var(--ink-dim);
   font: inherit;
-  font-size: 11.5px;
+  font-size: 12.5px;
   text-align: left;
   cursor: pointer;
   transition: 0.14s;
@@ -1325,7 +1344,7 @@ body {
   color: var(--ink);
 }
 .dmg-place-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.dmg-place-tag { font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-faint); }
+.dmg-place-tag { font-size: 9.5px; letter-spacing: 0.04em; color: var(--ink-faint); }
 .dmg-place.on .dmg-place-tag { color: #ffb199; }
 .dmg-place.scratch .dmg-kind { background: #b9c3cb; }
 .dmg-place.dent .dmg-kind { background: #7f8b95; }
@@ -1411,9 +1430,10 @@ body {
   background: transparent;
   color: var(--ink-faint);
   font: inherit;
-  font-size: 9.5px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
   text-align: left;
   cursor: pointer;
 }
@@ -1429,11 +1449,12 @@ body {
 .view-sec { display: flex; flex-direction: column; gap: 1px; }
 .view-sec + .view-sec { margin-top: 4px; }
 .view-sec-t {
-  padding: 5px 9px 3px;
-  font-size: 9px;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
+  padding: 8px 9px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink-dim);
 }
 .view-sec-items { display: flex; flex-direction: column; gap: 1px; }
 
@@ -1466,3 +1487,30 @@ body {
   .pop-item { font-size: 12px; padding: 9px 9px; }
   .pop-head { padding: 7px 6px 7px 9px; }
 }
+
+
+/* ------------------------------------------------ иконки 24×24 */
+.ic {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex: 0 0 auto;
+  color: currentColor;
+}
+.ico { display: inline-flex; align-items: center; justify-content: center; }
+.ico .ic { width: 17px; height: 17px; }
+.hud-btn .ico .ic { width: 16px; height: 16px; opacity: 0.9; }
+.pop-item .i { display: inline-flex; align-items: center; justify-content: center; width: 20px; }
+.pop-item .i .ic { width: 16px; height: 16px; opacity: 0.85; }
+.pop-item:hover .i .ic, .pop-item.is-on .i .ic { opacity: 1; }
+.pop-x .ic { width: 13px; height: 13px; }
+.cat-tab span { display: inline-flex; align-items: center; }
+.cat-tab span .ic { width: 15px; height: 15px; }
+.search span .ic { width: 14px; height: 14px; opacity: 0.6; }
+.round-btn .ic { width: 17px; height: 17px; }
+.ghost-btn { display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.ghost-btn .ic { width: 13px; height: 13px; opacity: 0.85; }
+.chip .ic { width: 13px; height: 13px; margin-right: 4px; vertical-align: -2px; opacity: 0.85; }
+.chip { display: inline-flex; align-items: center; }
+.unit .thumb .ic { width: 18px; height: 18px; opacity: 0.8; }
+.unit.active .thumb .ic { opacity: 1; color: var(--accent-2); }
