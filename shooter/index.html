@@ -33,12 +33,26 @@
   #info .line { margin-bottom: 4px; }
   #info b { color: #ffd966; }
   #damageFlash { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,0,0,0); pointer-events: none; z-index: 40; transition: background .15s; }
+
+  #loader { position: absolute; top:0; left:0; width:100%; height:100%; background:#0b1016; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100; text-align:center; transition:opacity .4s; }
+  #loader.hidden { opacity:0; pointer-events:none; }
+  #loader h2 { font-size:28px; color:#ffd966; text-transform:uppercase; letter-spacing:2px; margin-bottom:8px; }
+  #loader p { color:#ccc; margin-bottom:24px; font-size:14px; }
+  #loader .bar-wrap { width:320px; height:10px; background:rgba(255,255,255,0.08); border-radius:6px; overflow:hidden; border:1px solid rgba(255,255,255,0.12); }
+  #loader .bar { width:0%; height:100%; background:linear-gradient(90deg,#ff4d4d,#ffd966); border-radius:6px; transition:width .15s; }
+  #loader .pct { margin-top:10px; font-size:13px; color:#888; }
 </style>
 </head>
 <body>
 <canvas id="canvas"></canvas>
 <div id="damageFlash"></div>
 <div id="crosshair"></div>
+<div id="loader">
+  <h2>ОПЕРАЦИЯ «Точка»</h2>
+  <p>Загрузка ресурсов и анимаций…</p>
+  <div class="bar-wrap"><div class="bar" id="loaderBar"></div></div>
+  <div class="pct" id="loaderPct">0%</div>
+</div>
 <div id="ui">
   <div id="hud" class="panel">
     <h1 id="missionTitle">Миссия 1: Сектор</h1>
@@ -1255,6 +1269,30 @@ function render(){
 }
 
 window.addEventListener('mouseup', e => { if (e.button === 0) keys['MouseDown'] = false; });
+
+// ================= Экран загрузки =================
+(function runLoader(){
+  const loader = document.getElementById('loader');
+  const bar = document.getElementById('loaderBar');
+  const pct = document.getElementById('loaderPct');
+  let progress = 0;
+  const tick = setInterval(()=>{
+    progress += Math.random() * 18 + 6; // 6–24 % за тик
+    if (progress > 100) progress = 100;
+    bar.style.width = progress + '%';
+    pct.textContent = Math.floor(progress) + '%';
+    if (progress >= 100){
+      clearInterval(tick);
+      setTimeout(()=>{
+        loader.classList.add('hidden');
+        // автостарт игры после загрузки
+        state.menu = false;
+        startGame();
+        canvas.requestPointerLock();
+      }, 350);
+    }
+  }, 160);
+})();
 
 initThree();
 </script>
