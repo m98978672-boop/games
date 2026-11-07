@@ -301,6 +301,7 @@
 
     dispose(scene) {
       scene.remove(this.rig.root);
+      if (this.flyingWeapon) scene.remove(this.flyingWeapon.mesh);
     }
   }
 

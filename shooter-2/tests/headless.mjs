@@ -152,7 +152,7 @@ assert.equal(typeof sandbox.THREE.WebGLRenderer, 'function', 'рендерер �
 assert.equal(typeof sandbox.THREE.Scene, 'function', 'остальной three.js на месте');
 
 /* ------------------------- загрузка модулей игры ----------------------- */
-const modules = ['data', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
+const modules = ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
   'viewmodel', 'audio', 'perf', 'game', 'ui'];
 for (const m of modules) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: `src/${m}.js` });
@@ -175,8 +175,10 @@ assert.equal(game.state, 'playing', 'миссия началась');
 assert.ok(game.level && game.world, 'уровень построен');
 assert.ok(game.enemies.length > 0, `боевики созданы: ${game.enemies.length}`);
 assert.ok(game.level.colliders.length > 8, 'коллайдеры уровня есть');
-assert.ok(game.level.bakedCount < game.level.staticsCount / 3,
-  `статика склеена: ${game.level.staticsCount} → ${game.level.bakedCount} мешей`);
+// карта собрана из полигонов: здания, вышки, блоки, мешки, бочки, камни, трубы
+assert.ok(game.level.props > 24, `полигональных объектов на карте: ${game.level.props}`);
+assert.ok(game.level.colliders.some((c) => c.kind === 'building'), 'есть коллайдеры зданий');
+assert.ok(game.level.colliders.some((c) => c.kind === 'sandbag'), 'есть мешки как укрытие');
 
 /* ----------------------------- прокрутка кадров ------------------------ */
 // полный цикл кадра разрешён: тест дергает именно те подсистемы, что и игра

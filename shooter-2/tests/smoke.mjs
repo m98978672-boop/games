@@ -15,7 +15,8 @@ const exists = (p) => fs.existsSync(path.join(root, p));
 
 const requiredFiles = [
   'index.html', 'style.css', 'three.min.js',
-  'src/data.js', 'src/model.js', 'src/anim.js', 'src/ik.js', 'src/ragdoll.js', 'src/world.js',
+  'src/data.js', 'src/outline.js', 'src/gunblueprints.js', 'src/soldier.js', 'src/level.js',
+  'src/model.js', 'src/anim.js', 'src/ik.js', 'src/ragdoll.js', 'src/world.js',
   'src/ai.js', 'src/agent.js', 'src/fx.js', 'src/viewmodel.js', 'src/audio.js',
   'src/perf.js', 'src/game.js', 'src/ui.js'
 ];
@@ -39,6 +40,25 @@ for (const f of requiredFiles.filter((f) => f.startsWith('src/'))) {
   assert.ok(!/fetch\(|XMLHttpRequest|new Worker\(|import\s+\(/.test(code), `${f}: только офлайн, без сети`);
   assert.ok(!/https?:\/\/[a-z0-9.-]+\//i.test(code.replace(/github\.com|w3\.org/g, '')), `${f}: без внешних URL`);
 }
+
+// контуры: оружие и тело строятся по обведённым точкам, а не из кубов
+const gunSrc = read('src/gunblueprints.js');
+const soldierSrc = read('src/soldier.js');
+const levelSrc = read('src/level.js');
+const outlineSrc = read('src/outline.js');
+const viewSrc = read('src/viewmodel.js');
+assert.ok(!/BoxGeometry|CylinderGeometry/.test(viewSrc), 'viewmodel: руки по лофту, без примитивов');
+assert.match(viewSrc, /loftSections/, 'viewmodel: предплечья и кулаки лофтом');
+for (const [name, src] of [['gunblueprints', gunSrc], ['soldier', soldierSrc], ['level', levelSrc]]) {
+  assert.ok(!/new\s+(THREE|T)\(\)\.BoxGeometry/.test(src) && !/BoxGeometry/.test(src),
+    `${name}: без BoxGeometry — только контуры, лофт и тела вращения`);
+}
+assert.match(outlineSrc, /ExtrudeGeometry/, 'контур выдавливается в объём');
+assert.match(outlineSrc, /function loftSections/, 'есть лофт по сечениям');
+assert.match(outlineSrc, /LatheGeometry/, 'есть тела вращения');
+assert.ok((gunSrc.match(/kind: 'outline'/g) || []).length >= 20, 'у стволов много обведённых контуров');
+assert.match(soldierSrc, /loft\(/, 'тело строится лофтом по сечениям');
+assert.match(levelSrc, /extrudePlan/, 'карта строится выдавливанием полигонов в плане');
 
 // README и обложка
 assert.ok(exists('README.md'), 'нужен README.md');

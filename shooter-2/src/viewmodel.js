@@ -43,16 +43,37 @@
     buildHands() {
       const T = THREE();
       const M = SH2.model.mat;
+      const O = SH2.outline;
+
+      // предплечье — лофт по сечениям (сужается к кисти), кисть — тоже лофт
+      const forearm = (len, r0, r1) => O.loftSections([
+        { at: [0, 0, 0], pts: O.circleSection(r0, r0, 10) },
+        { at: [0, 0, len * 0.45], pts: O.circleSection((r0 + r1) / 2, (r0 + r1) / 2, 10) },
+        { at: [0, 0, len], pts: O.circleSection(r1, r1, 10) }
+      ]);
+      const fist = () => {
+        const g = O.loftSections([
+          { at: [0, -0.03, 0], pts: O.circleSection(0.042, 0.040, 10) },
+          { at: [0, 0.0, 0.02], pts: O.circleSection(0.050, 0.046, 10) },
+          { at: [0, 0.035, 0.03], pts: O.circleSection(0.044, 0.040, 10) }
+        ]);
+        return g;
+      };
+
       // правая рука
       const armR = new T.Group();
       armR.position.set(0.055, -0.11, 0.06);
       armR.rotation.set(-0.25, 0.22, 0.12);
-      const foreR = new T.Mesh(new T.CylinderGeometry(0.045, 0.052, 0.30, 8), M(this.sleeve));
-      foreR.rotation.x = Math.PI / 2.2;
-      foreR.position.set(0.01, -0.06, -0.14);
+      const foreR = new T.Mesh(forearm(0.30, 0.048, 0.055), M(this.sleeve));
+      foreR.rotation.x = -Math.PI / 2.2;
+      foreR.position.set(0.01, -0.06, -0.02);
       armR.add(foreR);
-      const handR = new T.Mesh(new T.BoxGeometry(0.075, 0.085, 0.10), M(this.glove));
-      handR.position.set(0, -0.005, 0.01);
+      const cuffR = new T.Mesh(O.revolve([[0, 0.058], [0.03, 0.062], [0.075, 0.056], [0.08, 0]], { segments: 10 }), M(this.sleeve));
+      cuffR.rotation.x = Math.PI / 2;
+      cuffR.position.set(0.01, -0.02, -0.11);
+      armR.add(cuffR);
+      const handR = new T.Mesh(fist(), M(this.glove));
+      handR.position.set(0, -0.005, 0.0);
       armR.add(handR);
       this.weaponHolder.add(armR);
       this.armR = armR;
@@ -61,11 +82,15 @@
       const armL = new T.Group();
       armL.position.set(-0.02, -0.10, 0.34);
       armL.rotation.set(-0.15, -0.35, -0.15);
-      const foreL = new T.Mesh(new T.CylinderGeometry(0.042, 0.05, 0.34, 8), M(this.sleeve));
-      foreL.rotation.x = Math.PI / 2.6;
-      foreL.position.set(-0.02, -0.05, -0.15);
+      const foreL = new T.Mesh(forearm(0.34, 0.050, 0.042), M(this.sleeve));
+      foreL.rotation.x = -Math.PI / 2.6;
+      foreL.position.set(-0.02, -0.05, -0.13);
       armL.add(foreL);
-      const handL = new T.Mesh(new T.BoxGeometry(0.075, 0.08, 0.105), M(this.glove));
+      const cuffL = new T.Mesh(O.revolve([[0, 0.058], [0.03, 0.060], [0.075, 0.052], [0.08, 0]], { segments: 10 }), M(this.sleeve));
+      cuffL.rotation.x = Math.PI / 2;
+      cuffL.position.set(-0.02, -0.01, -0.2);
+      armL.add(cuffL);
+      const handL = new T.Mesh(fist(), M(this.glove));
       handL.position.set(0, -0.01, 0.0);
       armL.add(handL);
       this.weaponHolder.add(armL);
@@ -77,8 +102,9 @@
       this.currentWeapon = id;
       let model = this.models[id];
       if (!model) {
-        model = SH2.model.buildWeaponModel(id, { smooth: false });
-        model.scale.setScalar(1.45);
+        model = SH2.model.buildWeaponModel(id, { smooth: true });
+        // чертежи уже в метрах: от первого лица чуть крупнее, стволом от камеры
+        model.scale.setScalar(1.28);
         model.rotation.set(0, Math.PI, 0);
         this.models[id] = model;
       }

@@ -587,8 +587,7 @@
       const lod1 = cur.filter((e) => e.lod === 1).length;
       const lod2 = cur.filter((e) => e.lod === 2).length;
       const rdSteps = g.deadBodies.reduce((s, b) => s + (b.ragdoll ? b.ragdoll.totalSubsteps : 0), 0);
-      const merged = g.level ? g.level.staticsCount : 0;
-      const baked = g.level ? g.level.bakedCount : 0;
+      const props = g.level ? (g.level.props || 0) : 0;
       const rows = [
         ['FPS', pf.fps + ' (' + pf.frameMsSmooth.toFixed(1) + ' мс)'],
         ['Draw calls', pf.counters.drawCalls],
@@ -597,7 +596,7 @@
         ['Бойцов', cur.length + ' · LOD 0/1/2: ' + lod0 + '/' + lod1 + '/' + lod2],
         ['Регдол-шагов', rdSteps],
         ['Частиц', pf.counters.particles],
-        ['Статика склеена', merged + ' → ' + baked + ' мешей'],
+        ['Полигонов карты', props + ' · коллайдеров ' + (g.level ? g.level.colliders.length : 0)],
         ['Анимаций в кэше', SH2.anim.library.cacheSize()],
         ['Качество', pf.preset + ' · render ' + Math.round(pf.scale * 100) + '%'],
         ['Гранаты', g.combat.grenades.length + ' · пули ' + g.combat.bullets.length]

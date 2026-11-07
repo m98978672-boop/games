@@ -170,84 +170,16 @@
       return mesh;
     };
 
-    /* --- голова (центр 1.60, макушка 1.73) --- */
-    if (!lowDetail) {
-      add('head', new T.SphereGeometry(0.104, 12, 10), skin, 0, 0.055, 0.012);
-      add('head', box(0.15, 0.07, 0.055), 0x23282c, 0, 0.048, 0.078);        // маска
-      add('head', box(0.032, 0.012, 0.014), accent, 0.042, 0.068, 0.104);    // индикатор
-      add('head', box(0.035, 0.045, 0.035), 0x1b1f22, 0.105, 0.03, 0.0);     // наушник
-      add('head', box(0.035, 0.045, 0.035), 0x1b1f22, -0.105, 0.03, 0.0);
-    } else {
-      add('head', box(0.16, 0.17, 0.15), skin, 0, 0.05, 0.01);
-    }
-    // каска с полями
-    add('head', new T.SphereGeometry(0.121, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.60), gear, 0, 0.072, 0.004);
-    add('head', box(0.20, 0.026, 0.055), gear, 0, 0.055, -0.078);             // козырёк
-    add('head', box(0.055, 0.032, 0.03), 0x2a2a2a, 0, 0.098, 0.10);           // крепление ПНВ
+    /* --- всё тело строится по контурам и сечениям (src/soldier.js) --- */
+    const PAL = { skin, body, gear, accent };
+    SH2.soldier.buildBody(add, bones, PAL, { low: !!lowDetail });
 
-    /* --- шея --- */
-    add('neck', new T.CylinderGeometry(0.05, 0.058, 0.12, 7), skin, 0, 0.005, 0);
-
-    /* --- корпус: грудь 1.06–1.44, талия/поясница 0.92–1.08 --- */
-    // грудная клетка: низ уже, верх шире — живая трапеция
-    add('chest', box(0.30, 0.17, 0.205), body, 0, -0.085, 0);
-    add('chest', box(0.345, 0.20, 0.225), body, 0, 0.075, 0);
-    add('chest', box(0.20, 0.055, 0.20), body, 0, 0.185, 0);                  // трапеция к шее
-    if (!lowDetail) {
-      add('chest', new T.SphereGeometry(0.075, 8, 6), body, 0.175, 0.12, 0);  // дельта-накладки
-      add('chest', new T.SphereGeometry(0.075, 8, 6), body, -0.175, 0.12, 0);
-    }
-    // бронежилет
-    add('chest', box(0.275, 0.30, 0.255), gear, 0, 0.035, 0);
-    add('chest', box(0.20, 0.055, 0.245), accent, 0, 0.135, 0);
-    add('chest', box(0.075, 0.30, 0.02), accent, 0.135, 0.03, 0.13);
-    add('chest', box(0.075, 0.30, 0.02), accent, -0.135, 0.03, 0.13);
-    add('chest', box(0.235, 0.20, 0.055), gear, 0, 0.05, -0.135);             // спинная пластина
-    if (!lowDetail) {
-      add('chest', box(0.06, 0.085, 0.045), 0x35393c, 0.085, -0.075, 0.14);   // подсумки
-      add('chest', box(0.06, 0.085, 0.045), 0x35393c, -0.085, -0.075, 0.14);
-      add('chest', box(0.04, 0.04, 0.026), 0xffb347, -0.15, 0.20, 0.06);      // маячок
-      add('chest', box(0.13, 0.05, 0.02), 0xdadada, -0.055, 0.16, 0.145);     // нашивка
-    }
-    // поясница (мягкая)
-    add('spine', lowDetail ? box(0.26, 0.17, 0.185) : new T.CapsuleGeometry(0.115, 0.02, 3, 9), body, 0, -0.01, 0);
-    // таз + ремень
-    add('pelvis', box(0.335, 0.19, 0.215), gear, 0, -0.03, 0);
-    add('pelvis', box(0.345, 0.055, 0.225), 0x1b1f22, 0, 0.045, 0);
-    add('pelvis', box(0.07, 0.07, 0.03), 0xb9a05a, 0, 0.045, 0.12);            // пряжка
-    if (!lowDetail) {
-      add('pelvis', box(0.10, 0.13, 0.09), 0x2a2e31, 0.135, -0.10, 0.06);
-      add('pelvis', box(0.10, 0.13, 0.09), 0x2a2e31, -0.135, -0.10, 0.06);
-    }
-
-    /* --- руки --- */
-    [['L', 1], ['R', -1]].forEach(([s, sign]) => {
-      add('shoulder' + s, lowDetail ? box(0.13, 0.12, 0.14) : new T.SphereGeometry(0.072, 8, 6), body, sign * 0.01, -0.015, 0);
-      add('upperArm' + s, new T.CapsuleGeometry(0.055, 0.19, 2, 8), body, 0, -0.15, 0);
-      add('upperArm' + s, new T.SphereGeometry(0.056, 7, 6), gear, 0, -0.055, 0);   // рукав
-      add('lowerArm' + s, new T.CapsuleGeometry(0.047, 0.17, 2, 8), body, 0, -0.135, 0);
-      if (!lowDetail) add('lowerArm' + s, box(0.06, 0.075, 0.065), gear, 0, -0.20, 0.015);
-      add('hand' + s, box(0.072, 0.085, 0.08), 0x1e2226, 0, -0.045, 0.008);
-    });
-
-    /* --- ноги: бедро 0.44–0.86, голень 0.02–0.42, стопа на полу --- */
-    [['L', 1], ['R', -1]].forEach(([s, sign]) => {
-      add('hip' + s, new T.SphereGeometry(0.088, 8, 6), gear, 0, -0.005, 0);
-      add('upperLeg' + s, new T.CapsuleGeometry(0.079, 0.235, 2, 8), body, 0, -0.21, 0);
-      add('upperLeg' + s, box(0.115, 0.14, 0.09), gear, 0, -0.10, 0.055);      // набедренная сумка
-      add('lowerLeg' + s, new T.SphereGeometry(0.073, 8, 6), gear, 0, 0.0, 0.005); // колено
-      add('lowerLeg' + s, new T.CapsuleGeometry(0.063, 0.235, 2, 8), body, 0, -0.20, 0);
-      if (!lowDetail) add('lowerLeg' + s, box(0.10, 0.11, 0.06), gear, 0, -0.155, 0.055); // наколенник
-      add('foot' + s, new T.CylinderGeometry(0.062, 0.058, 0.06, 8), 0x25292c, 0, 0.05, 0); // голеностоп
-      add('foot' + s, box(0.112, 0.085, 0.26), 0x1a1e21, sign * 0.004, 0.043, 0.055);
-      add('foot' + s, box(0.122, 0.032, 0.09), 0x101315, sign * 0.004, 0.016, 0.155);
-    });
-
+    /* --- оружие: крепится к груди, руки дотягиваются IK-хватом --- */
     /* --- оружие: крепится к груди, руки дотягиваются IK-хватом --- */
     const weaponSlot = new T.Group();
     weaponSlot.name = 'weapon';
-    weaponSlot.position.set(0.15, -0.08, 0.20);
-    weaponSlot.rotation.set(-0.06, 0.10, 0);
+    weaponSlot.position.set(0.135, 0.010, 0.235);
+    weaponSlot.rotation.set(-0.05, 0.09, 0);
     bones.chest.add(weaponSlot);
     const gripR = new T.Object3D();
     const gripL = new T.Object3D();
@@ -290,62 +222,57 @@
   }
 
   /* ============================== ОРУЖИЕ ================================== */
+  // Оружие целиком строится по чертежам: контур сбоку -> выдавливание с фаской,
+  // стволы и оптика -> тела вращения (src/gunblueprints.js).
   function buildWeaponModel(id, opts) {
-    const T = THREE();
     const o = opts || {};
+    const g = SH2.gunblueprints.buildFromBlueprint(id, { noShadow: o.noShadow });
+    // сглаживание силы света: те же материалы, что и у персонажа
+    g.traverse((c) => {
+      if (c.isMesh) {
+        c.castShadow = !o.noShadow;
+        c.receiveShadow = !o.noShadow;
+        c.matrixAutoUpdate = false;
+        c.updateMatrix();
+      }
+    });
+    return g;
+  }
+
+  /* ======================== ПРОПСЫ КАРТЫ (по контурам) ==================== */
+  // Бочка/цистерна — тело вращения по профилю, камень — контур с фаской,
+  // мешки — тела вращения с лёгким сжатием.
+  function propBarrel(s, color) {
+    const T = THREE();
+    const geo = SH2.outline.revolve([
+      [0.0, s * 0.40], [0.02 * s, s * 0.44], [0.10 * s, s * 0.46], [0.48 * s, s * 0.46],
+      [0.55 * s, s * 0.44], [0.58 * s, s * 0.39], [0.585 * s, s * 0.0]
+    ], { segments: 12, scale: [1, 1, 1] });
+    geo.computeVertexNormals();
+    return new T.Mesh(geo, mat(color || 0x6a4a2c, { flat: true }));
+  }
+  function propRock(s, color) {
+    const T = THREE();
+    const geo = SH2.outline.outlineMesh(SH2.outline.smoothOutline([
+      [-0.5, 0.02], [-0.34, 0.34], [-0.10, 0.60], [0.22, 0.52], [0.44, 0.26], [0.50, 0.02]
+    ], 2), { depth: s * 0.9, bevel: s * 0.10, bevelSegments: 2 });
+    geo.scale(s * 1.1, s * 1.1, s * 1.1);
+    return new T.Mesh(geo, mat(color || 0x585349, { flat: true }));
+  }
+  function propSandbags(count, color) {
+    const T = THREE();
     const g = new T.Group();
-    const dark = 0x25292c, mid = 0x3a4147, wood = 0x5b3a26, accent = 0xffb347;
-    const add = (geo, color, x, y, z, rx) => {
-      const m = new T.Mesh(geo, mat(color, { flat: !o.smooth }));
-      m.position.set(x || 0, y || 0, z || 0);
-      if (rx) m.rotation.x = rx;
-      m.castShadow = !o.noShadow;
+    const bagGeo = SH2.outline.revolve([[0, 0.22], [0.10, 0.30], [0.24, 0.30], [0.30, 0.20], [0.31, 0.0]], { segments: 8 });
+    bagGeo.scale(1.0, 1.0, 0.62);
+    for (let i = 0; i < count; i++) {
+      const m = new T.Mesh(bagGeo, mat(color || 0x6b6247, { flat: true }));
+      const row = i < count / 2 ? 0 : 1;
+      const k = row === 0 ? i : i - Math.floor(count / 2);
+      m.position.set(-0.62 + k * 0.46, 0.10 + row * 0.19, row === 0 ? 0 : 0.06);
+      m.rotation.y = (row ? 0.08 : -0.05);
+      m.castShadow = true; m.receiveShadow = true;
       g.add(m);
-      return m;
-    };
-    const muzzle = new T.Object3D();
-    if (id === 'pistol') {
-      add(box(0.045, 0.075, 0.20), dark, 0, 0.02, 0.03);
-      add(box(0.035, 0.05, 0.115), mid, 0, 0.055, 0.10);
-      add(box(0.042, 0.10, 0.055), 0x1b1f22, 0, -0.055, -0.03, 0.28);
-      add(box(0.018, 0.018, 0.02), accent, 0, 0.082, -0.02);
-      muzzle.position.set(0, 0.05, 0.16);
-    } else if (id === 'smg') {
-      add(box(0.055, 0.10, 0.30), dark, 0, 0.02, 0.04);
-      add(box(0.022, 0.022, 0.17), mid, 0, 0.065, 0.14);
-      add(box(0.04, 0.19, 0.05), 0x1b1f22, 0, -0.10, 0.09);   // магазин
-      add(box(0.035, 0.08, 0.05), 0x1b1f22, 0, -0.055, -0.09, 0.2);
-      add(box(0.05, 0.035, 0.14), mid, 0, 0.045, -0.14);       // приклад
-      add(box(0.016, 0.024, 0.02), accent, 0, 0.085, -0.02);
-      muzzle.position.set(0, 0.065, 0.24);
-    } else if (id === 'rifle') {
-      add(box(0.06, 0.105, 0.42), dark, 0, 0.02, 0.05);
-      add(box(0.026, 0.026, 0.30), mid, 0, 0.07, 0.24);
-      add(box(0.045, 0.22, 0.075), 0x6b4a2c, 0, -0.12, 0.13);  // изогнутый магазин
-      add(box(0.04, 0.09, 0.055), wood, 0, -0.06, -0.10);
-      add(box(0.055, 0.045, 0.22), wood, 0, 0.02, -0.24);       // приклад
-      add(box(0.03, 0.05, 0.16), wood, 0, 0.02, 0.30);          // цевьё
-      add(box(0.02, 0.028, 0.024), accent, 0, 0.088, 0.0);
-      muzzle.position.set(0, 0.07, 0.40);
-    } else if (id === 'shotgun') {
-      add(box(0.07, 0.11, 0.34), dark, 0, 0.02, 0.04);
-      add(new T.CylinderGeometry(0.026, 0.026, 0.44, 8), mid, 0, 0.07, 0.28, Math.PI / 2);
-      add(new T.CylinderGeometry(0.021, 0.021, 0.34, 8), 0x1b1f22, 0, 0.028, 0.26, Math.PI / 2);
-      add(box(0.06, 0.05, 0.16), wood, 0, 0.0, 0.20);
-      add(box(0.045, 0.09, 0.06), wood, 0, -0.06, -0.08);
-      add(box(0.06, 0.055, 0.20), wood, 0, 0.01, -0.22);
-      muzzle.position.set(0, 0.07, 0.50);
-    } else if (id === 'dmr') {
-      add(box(0.055, 0.10, 0.46), dark, 0, 0.02, 0.05);
-      add(new T.CylinderGeometry(0.018, 0.018, 0.44, 8), mid, 0, 0.075, 0.30, Math.PI / 2);
-      add(new T.CylinderGeometry(0.036, 0.03, 0.28, 10), 0x15181a, 0, 0.145, 0.05, Math.PI / 2); // оптика
-      add(box(0.045, 0.16, 0.06), 0x4a3320, 0, -0.085, 0.09);
-      add(box(0.05, 0.045, 0.24), 0x4a3320, 0, 0.01, -0.24);
-      add(box(0.03, 0.06, 0.14), 0x4a3320, 0, 0.0, 0.28);
-      muzzle.position.set(0, 0.075, 0.52);
     }
-    g.add(muzzle);
-    g.userData.muzzle = muzzle;
     return g;
   }
 
@@ -398,39 +325,91 @@
     ground.receiveShadow = true;
     group.add(ground);
 
-    // стены
-    M.walls.forEach((w) => {
-      addStatic(M.ground, box(w.w, w.h, w.d), xform(w.x, w.h / 2, w.z));
-      // верхняя кромка (визуальная деталь, не влияет на коллизию)
-      addStatic(M.accent, box(w.w + 0.22, 0.22, w.d + 0.22), xform(w.x, w.h + 0.06, w.z));
-      colliders.push({ x: w.x, z: w.z, hw: w.w / 2, hd: w.d / 2, h: w.h, y: 0 });
+    /* ---------------- здания: полигоны в плане, выдавливание --------------- */
+    const LV = SH2.level;
+    (M.buildings || []).forEach((b, i) => {
+      const xf = b.xf || {};
+      const g = LV.building(b.poly, b.h, {
+        roof: b.roof || 'flat', wallColor: b.wall || (M.wallColors && M.wallColors.wall),
+        roofColor: b.roofColor || (M.wallColors && M.wallColors.roof), ridge: b.ridge,
+        windowColor: b.windowColor, windowEmissive: b.windowEmissive
+      });
+      group.add(g);
+      // коллизия: один AABB на здание (в него попадают все лучи и пули)
+      const pb = LV.planBounds(b.poly);
+      colliders.push({ x: pb.cx, z: pb.cz, hw: pb.hw, hd: pb.hd, h: b.h, y: 0, kind: 'building' });
+      // мешки у стены (визуальный акцент, коллизия отдельная)
+      void xf; void i;
     });
 
-    // вышки
+    /* --------------------------- решётчатые вышки --------------------------- */
     (M.towers || []).forEach((t) => {
-      addStatic(M.accent, box(t.w, t.h, t.d), xform(t.x, t.h / 2, t.z));
-      addStatic(0x0d0f11, box(t.w * 0.72, 0.9, t.d * 0.72), xform(t.x, t.h + 0.5, t.z));
-      for (let i = 0; i < 4; i++) {
-        const sx = (i & 1 ? 1 : -1) * (t.w / 2 - 0.3), sz = (i & 2 ? 1 : -1) * (t.d / 2 - 0.3);
-        addStatic(0x121416, box(0.3, t.h, 0.3), xform(t.x + sx, t.h / 2, t.z + sz));
+      group.add(LV.tower(t.x, t.z, t.w, t.h, M.wallColors && M.wallColors.trim));
+      colliders.push({ x: t.x, z: t.z, hw: t.w * 0.36, hd: t.w * 0.36, h: t.h, y: 0, kind: 'tower' });
+    });
+
+    /* ---------------------- бетонные блоки со скосом ------------------------ */
+    (M.barriers || []).forEach((b) => {
+      group.add(LV.barrier(b.x, b.z, b.a, b.len, 0x565b60));
+      const c = Math.abs(Math.cos(b.a || 0)), sn = Math.abs(Math.sin(b.a || 0));
+      const hw = (b.len / 2) * c + 0.3 * sn;
+      const hd = (b.len / 2) * sn + 0.3 * c;
+      colliders.push({ x: b.x, z: b.z, hw, hd, h: 1.18, y: 0, kind: 'barrier' });
+    });
+
+    /* ------------------------------- мешки ---------------------------------- */
+    (M.sandbags || []).forEach((sb) => {
+      const g = SH2.level.sandbagRow(sb.len, 0x6f6547);
+      g.position.set(sb.x, 0, sb.z);
+      g.rotation.y = sb.a || 0;
+      group.add(g);
+      const c = Math.abs(Math.cos(sb.a || 0)), sn = Math.abs(Math.sin(sb.a || 0));
+      colliders.push({ x: sb.x, z: sb.z, hw: (sb.len / 2) * c + 0.3 * sn,
+        hd: (sb.len / 2) * sn + 0.3 * c, h: 0.72, y: 0, kind: 'sandbag' });
+    });
+
+    /* --------------------- бочки, камни, штабели труб ----------------------- */
+    (M.barrels || []).forEach((p) => {
+      const b = propBarrel(1.0, 0x6a4a2c);
+      b.position.set(p[0], 0, p[1]);
+      b.castShadow = true; b.receiveShadow = true;
+      group.add(b);
+      colliders.push({ x: p[0], z: p[1], hw: 0.48, hd: 0.48, h: 1.15, y: 0, kind: 'barrel' });
+    });
+    (M.rocks || []).forEach((p) => {
+      const r = propRock(p[2] || 1.1, M.accent);
+      r.position.set(p[0], 0, p[1]);
+      r.rotation.y = p[0] * 0.7;
+      group.add(r);
+      colliders.push({ x: p[0], z: p[1], hw: 0.7 * (p[2] || 1.1), hd: 0.65 * (p[2] || 1.1), h: 1.1 * (p[2] || 1.1), y: 0, kind: 'rock' });
+    });
+    (M.stacks || []).forEach((st) => {
+      const g = new T.Group();
+      const pipe = SH2.outline.revolve([[0, 0.34], [0.04, 0.36], [0.9, 0.36], [0.94, 0.34], [0.94, 0.30], [0.02, 0.30]], { segments: 10 });
+      pipe.rotateZ(Math.PI / 2);
+      for (let layer = 0; layer < 3; layer++) {
+        for (let k = 0; k < 2; k++) {
+          const m = new T.Mesh(pipe, mat(0x5a5348, { flat: true }));
+          m.position.set(0, 0.36 + layer * 0.60, (k ? 1 : -1) * 0.34);
+          m.castShadow = true; m.receiveShadow = true;
+          g.add(m);
+        }
       }
-      colliders.push({ x: t.x, z: t.z, hw: t.w / 2, hd: t.d / 2, h: t.h, y: 0 });
+      g.position.set(st[0], 0, st[1]);
+      g.rotation.y = st[2] || 0;
+      group.add(g);
+      colliders.push({ x: st[0], z: st[1], hw: 1.0, hd: 0.85, h: 1.9, y: 0, kind: 'stack' });
     });
 
-    // баррикады
-    (M.barricades || []).forEach((b) => {
-      addStatic(0x53575c, box(5.4, 1.15, 0.5), xform(b[0], 0.58, b[1], 0, b[2], 0));
-      addStatic(0x35393d, box(5.6, 0.16, 0.7), xform(b[0], 1.18, b[1], 0, b[2], 0));
-      colliders.push({ x: b[0], z: b[1], hw: 2.7, hd: 0.4, h: 1.25, y: 0, ry: b[2] });
-    });
-
-    // ящики (по одному мешу, потом инстансим)
-    (M.crates || []).forEach((c, i) => {
-      const s = 1.2, hs = s / 2;
-      const rot = (i % 3) * 0.35;
-      addStatic(M.accent, box(s, s, s), xform(c[0], hs, c[1], 0, rot, 0));
-      addStatic(0x1a140f, box(s * 1.03, 0.12, s * 1.03), xform(c[0], s - 0.06, c[1], 0, rot, 0));
-      colliders.push({ x: c[0], z: c[1], hw: hs, hd: hs, h: s, y: 0 });
+    /* ------------------------- полосы дороги (полигоны) --------------------- */
+    (M.road || []).forEach((rd) => {
+      const w = rd.w / 2, l = rd.l / 2;
+      const geo = SH2.level.extrudePlan([[-l, -w], [l, -w], [l, w], [-l, w]], 0.06, { bevel: 0.02 });
+      const m = new T.Mesh(geo, mat(0x272421, { flat: true }));
+      m.position.set(rd.x, 0.006, rd.z);
+      m.rotation.y = rd.a || 0;
+      m.receiveShadow = true;
+      group.add(m);
     });
 
     // свет: солнце + небо (графика без потери качества после оптимизации)
@@ -451,10 +430,16 @@
     group.add(amb);
 
     // склейка статики -> 2-4 draw call вместо сотен
-    const baked = bakeStatic(statics, 'level');
-    baked.forEach((m) => group.add(m));
+    // статики больше нет: всё построено полигонами, счётчик оставлен для HUD
+    const baked = [];
+    void statics;
+    let props = 0;
+    (M.buildings || []).forEach(() => props++);
+    props += (M.towers || []).length + (M.barriers || []).length + (M.sandbags || []).length;
+    props += (M.barrels || []).length + (M.rocks || []).length + (M.stacks || []).length + (M.road || []).length;
 
-    return { group, colliders, sun, hemi, amb, map: M, mapId, groundTex, staticsCount: statics.length, bakedCount: baked.length };
+    return { group, colliders, sun, hemi, amb, map: M, mapId, groundTex,
+      staticsCount: props, props, bakedCount: baked.length };
   }
 
   /* ------------------------- пункт эвакуации / objective ------------------- */
@@ -496,6 +481,7 @@
 
   SH2.model = {
     mat, mergeGeometries, bakeStatic, buildRig, buildWeaponModel, buildLevel,
+    propBarrel, propRock, propSandbags,
     buildExtractMarker, buildObjectiveBox, makeGroundTexture, xform, box, BONE_DEF,
     matCacheSize: () => matCache.size
   };
