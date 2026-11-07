@@ -101,7 +101,17 @@ function collect(root, opts = {}) {
     for (const e of map.values()) {
       // граница панели или перегиб — это и есть линия трафарета
       const sharp = e.count === 1 || (e.n1 && e.n2 && e.n1.dot(e.n2) < Math.cos(angleLimit));
-      if (sharp) edges.push(e);
+      if (!sharp) continue;
+      // выпуклое ребро обводим как контур, вогнутое — как ямку:
+      // знак считается по направлению ребра и нормалям соседних граней
+      let kind = 1;
+      if (e.n1 && e.n2) {
+        const dir = new THREE.Vector3().subVectors(e.b, e.a).normalize();
+        const cross = new THREE.Vector3().crossVectors(e.n1, e.n2);
+        if (cross.dot(dir) < 0) kind = 2;
+      }
+      e.kind = kind;
+      edges.push(e);
     }
   });
   return { tris, edges, length, area };
@@ -167,7 +177,8 @@ export function buildDots(root, opts = {}) {
   const colArr = new Float32Array(max * 3);
   const nrmArr = new Float32Array(max * 3);
   let n = 0;
-  const push = (x, y, z, col, boost, nrm) => {
+  const kindArr = new Float32Array(max);
+  const push = (x, y, z, col, boost, nrm, kind = 0) => {
     if (n >= max) return;
     const i = n * 3;
     posArr[i] = x; posArr[i + 1] = y; posArr[i + 2] = z;
@@ -175,21 +186,26 @@ export function buildDots(root, opts = {}) {
     colArr[i + 1] = Math.min(1, col.g * boost);
     colArr[i + 2] = Math.min(1, col.b * boost);
     if (nrm) { nrmArr[i] = nrm.x; nrmArr[i + 1] = nrm.y; nrmArr[i + 2] = nrm.z; }
+    kindArr[n] = kind;
     n += 1;
   };
 
   const p = new THREE.Vector3();
   const edgeCol = new THREE.Color();
   const fillCol = new THREE.Color();
-  // 1) контур: точки по линиям перегиба — «обводка» модели точками
+  // 1) контур и ямки: выпуклые перегибы — светлой тушью,
+  //    вогнутые (там, где поверхность уходит внутрь) — золотым акцентом
+  const DENT = new THREE.Color(opts.dentColor || '#e8b45a');
   for (const e of edges) {
     const len = e.a.distanceTo(e.b);
     if (len < 0.014) continue; // фаски и микрорёбра только шумят
     const steps = Math.max(2, Math.ceil(len / edgeStep));
-    edgeCol.copy(e.color).lerp(INK, Math.min(0.8, inkMix + 0.12));
+    if (e.kind === 2) edgeCol.copy(e.color).lerp(DENT, opts.dentMix ?? 0.72);
+    else edgeCol.copy(e.color).lerp(INK, Math.min(0.8, inkMix + 0.12));
+    const lifts = e.kind === 2 ? 1.25 : 1.22;
     for (let i = 0; i < steps; i++) {
       p.lerpVectors(e.a, e.b, i / steps);
-      push(p.x, p.y, p.z, edgeCol, 1.22, null);
+      push(p.x, p.y, p.z, edgeCol, lifts, e.n1 || null, e.kind || 1);
     }
   }
   // 2) поверхность: редкие точки по площади — «заливка» штриховкой
@@ -206,13 +222,74 @@ export function buildDots(root, opts = {}) {
         t.a.y * f + t.b.y * r1 + t.c.y * r2,
         t.a.z * f + t.b.z * r1 + t.c.z * r2,
       );
-      push(p.x, p.y, p.z, fillCol, 0.55 + rand() * 0.2, t.n);
+      push(p.x, p.y, p.z, fillCol, 0.55 + rand() * 0.2, t.n, 0);
+    }
+  }
+
+  // ---- «ямки»: точка спрятана в нише, если прямо перед ней (по нормали)
+  // есть другая поверхность — там арка колеса, решётка, откос окна, козырёк.
+  const markRecess = opts.recess !== false;
+  if (markRecess && n > 0) {
+    const CELL = 0.09;
+    const grid = new Map();
+    const gk = (x, y, z) => `${Math.round(x / CELL)},${Math.round(y / CELL)},${Math.round(z / CELL)}`;
+    for (let i = 0; i < n; i++) {
+      const k = gk(posArr[i * 3], posArr[i * 3 + 1], posArr[i * 3 + 2]);
+      let arr = grid.get(k);
+      if (!arr) { arr = []; grid.set(k, arr); }
+      arr.push(i);
+    }
+    for (let i = 0; i < n; i++) {
+      if (kindArr[i] !== 1) continue; // ищем ниши только вдоль контуров
+      const nx = nrmArr[i * 3];
+      const ny = nrmArr[i * 3 + 1];
+      const nz = nrmArr[i * 3 + 2];
+      if (!nx && !ny && !nz) continue;
+      const px = posArr[i * 3];
+      const py = posArr[i * 3 + 1];
+      const pz = posArr[i * 3 + 2];
+      const ci = Math.round(px / CELL);
+      const cj = Math.round(py / CELL);
+      const ck = Math.round(pz / CELL);
+      let recessed = false;
+      for (let a = -1; a <= 1 && !recessed; a++) {
+        for (let b = -1; b <= 1 && !recessed; b++) {
+          for (let d = -1; d <= 1 && !recessed; d++) {
+            const arr = grid.get(`${ci + a},${cj + b},${ck + d}`);
+            if (!arr) continue;
+            for (const j of arr) {
+              if (j === i) continue;
+              const dx = posArr[j * 3] - px;
+              const dy = posArr[j * 3 + 1] - py;
+              const dz = posArr[j * 3 + 2] - pz;
+              const along = dx * nx + dy * ny + dz * nz;
+              if (along < 0.045 || along > 0.11) continue;
+              const perp = dx * dx + dy * dy + dz * dz - along * along;
+              if (perp > 0.0004) continue; // сосед должен быть почти прямо перед точкой
+              recessed = true;
+              break;
+            }
+          }
+        }
+      }
+      if (recessed) {
+        kindArr[i] = 2;
+        // золотой акцент вместо светлой туши
+        const dm = opts.dentMix ?? 0.72;
+        const r0 = colArr[i * 3];
+        const g0 = colArr[i * 3 + 1];
+        const b0 = colArr[i * 3 + 2];
+        colArr[i * 3] = r0 * (1 - dm) + 0.91 * dm;
+        colArr[i * 3 + 1] = g0 * (1 - dm) + 0.71 * dm;
+        colArr[i * 3 + 2] = b0 * (1 - dm) + 0.35 * dm;
+      }
     }
   }
 
   // если вышло больше цели — прореживаем равномерно по всему облаку,
   // а не обрезаем хвост (иначе верх кабины оставался без точек)
   let count = n;
+  let kindsOut = null;
   let positions = null;
   let colors = null;
   let normals = null;
@@ -221,6 +298,7 @@ export function buildDots(root, opts = {}) {
     positions = new Float32Array(target * 3);
     colors = new Float32Array(target * 3);
     normals = new Float32Array(target * 3);
+    kindsOut = new Float32Array(target);
     let k = 0;
     for (let i = 0; i < n && k < target; i++) {
       if (rand() > keep) continue;
@@ -229,6 +307,7 @@ export function buildDots(root, opts = {}) {
       positions[dst] = posArr[src]; positions[dst + 1] = posArr[src + 1]; positions[dst + 2] = posArr[src + 2];
       colors[dst] = colArr[src]; colors[dst + 1] = colArr[src + 1]; colors[dst + 2] = colArr[src + 2];
       normals[dst] = nrmArr[src]; normals[dst + 1] = nrmArr[src + 1]; normals[dst + 2] = nrmArr[src + 2];
+      kindsOut[k] = kindArr[i];
       k += 1;
     }
     count = k;
@@ -239,10 +318,22 @@ export function buildDots(root, opts = {}) {
   points.setAttribute('position', new THREE.BufferAttribute(positions || posArr.subarray(0, n * 3), 3));
   points.setAttribute('color', new THREE.BufferAttribute(colors || colArr.subarray(0, n * 3), 3));
   points.setAttribute('normal', new THREE.BufferAttribute(normals || nrmArr.subarray(0, n * 3), 3));
+  const kinds = new Float32Array(count);
+  for (let i = 0; i < count; i++) kinds[i] = kindsOut ? kindsOut[i] : kindArr[i];
+  points.setAttribute('kind', new THREE.BufferAttribute(kinds, 1));
+  // сколько точек обводки-контура и сколько золотых ямок — для подписи
+  let contour = 0;
+  let dents = 0;
+  for (let i = 0; i < kinds.length; i++) {
+    if (kinds[i] === 1) contour += 1;
+    else if (kinds[i] === 2) dents += 1;
+  }
   points.computeBoundingSphere();
   const obj = new THREE.Points(points, dotMaterial(opts));
   obj.name = 'dots';
   obj.userData.count = count;
+  obj.userData.contour = contour;
+  obj.userData.dents = dents;
   obj.visible = false;
   obj.frustumCulled = false;
   return obj;
