@@ -58,6 +58,7 @@ export class Game {
     this.alertLog = [];
     this.warOver = false;
     this.outcome = null;
+    this.noArmySince = [null, null];
     this.focus = { x: this.world.W / 2, y: this.world.H / 2 };
     this.camera = { x: this.world.W / 2, y: this.world.H / 2, zoom: 0.5 };
     this.selectedSquads = new Set();
@@ -472,7 +473,28 @@ export class Game {
     if (kind === 'heal') this.warStats.playerHeals++;
   }
 
+  // Армия кончилась: если у фракции нет ни одного живого юнита дольше surrenderSeconds,
+  // война заканчивается капитуляцией, а не тянется до горизонта симуляции.
+  trackArmies() {
+    const limit = this.cfg.ai.surrenderSeconds ?? 90;
+    for (const f of [0, 1]) {
+      let alive = 0;
+      for (const u of this.units.values()) if (u.alive && u.faction === f) { alive = 1; break; }
+      if (alive) { this.noArmySince[f] = null; continue; }
+      if (this.noArmySince[f] == null) this.noArmySince[f] = this.time;
+    }
+    for (const f of [0, 1]) {
+      const since = this.noArmySince[f];
+      if (since != null && this.time - since >= limit) {
+        this.endWar(1 - f, `Армия ${this.cfg.faction(f).name} уничтожена`);
+        return;
+      }
+    }
+  }
+
   checkVictory() {
+    if (this.warOver) return;
+    this.trackArmies();
     if (this.warOver) return;
     // Победа/поражение считается по домашней принадлежности штаба, а не по id точки:
     // так тест симметрии может менять стороны местами без переписывания условий.
