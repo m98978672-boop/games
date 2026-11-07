@@ -6,6 +6,7 @@ import { createStage, createFallbackStage } from './stage.js';
 import { createMaterials, clamp, rad, lerp } from './lib/kit.js';
 import { ShowroomCamera } from './lib/camera.js';
 import { buildUnit } from './models/index.js';
+import { icon } from './lib/icons.js';
 import { CATEGORIES, TRUCKS, TRAILERS, CARS, BUILDINGS, findUnit } from './data/units.js';
 import { placePanel, rectOf, viewportRect, overlaps, rect } from './lib/layout.js';
 import { damageReport } from './lib/damage.js';
@@ -17,8 +18,9 @@ const CAT_META = Object.fromEntries(CATEGORIES.map((c) => [c.id, c]));
 const PAINTS = ['#e9ecec', '#b9c0c6', '#2f5d8a', '#16233f', '#a4241d', '#7d1a2e', '#cf5a13', '#e0b528', '#1f6b45', '#37a58c', '#0f6b70', '#4b3c85', '#6d2a6b', '#7a3b2a', '#5a3c25', '#c2a878', '#2f353b', '#101214'];
 const SAVE_KEY = 'garage3d-showroom-v1';
 const VIEW_ICONS = {
-  exterior: '🌐', side: '◧', rear: '▣', front: '◍', driver: '🧑‍✈️', passenger: '🪑', salon: '🚘', bunk: '🛏',
-  back: '▣', left: '◧', right: '◨',
+  exterior: 'globe', side: 'side', rear: 'rear', front: 'front',
+  driver: 'driver', passenger: 'passenger', salon: 'salon', bunk: 'bunk',
+  back: 'rear', left: 'side', right: 'side',
 };
 
 // Удерживаемые клавиши свободного полёта камеры (W/A/S/D + Q/E по высоте).
@@ -477,18 +479,10 @@ function guardStage() {
 
 // ------------------------------------------------------------ список каталога
 function iconFor(unit) {
-  if (unit.category === 'trucks') return '🚛';
-  if (unit.category === 'buildings') {
-    const map = { metal: '🏭', glass: '🏢', shop: '🏬', brick: '🏛', stalin: '🏛', panel: '🏠' };
-    return map[unit.style] || '🏢';
-  }
-  if (unit.category === 'cars') return unit.style === 'sport' ? '🏎' : unit.style === 'van' ? '🚐' : unit.style === 'pickup' ? '🛻' : '🚗';
-  const map = {
-    tanker: '🛢', adr: '☣', silo: '🏗', tipper: '🚧', livestock: '🐄', logging: '🌲',
-    container: '🧱', refcontainer: '❄', carrier: '🚗', bdouble: '🚚', boat: '⛵',
-    glass: '🪟', crane: '🏗', sidetip: '🚛', dolly: '🪵', lowboy: '🦾', reefer: '❄', curtain: '🎭', van: '📦', flatbed: '▭',
-  };
-  return map[unit.type] || '📦';
+  if (unit.category === 'buildings') return 'building';
+  if (unit.category === 'cars') return 'car';
+  if (unit.category === 'trailers') return 'trailer';
+  return 'truck';
 }
 
 function renderList() {
@@ -519,7 +513,7 @@ function renderList() {
     btn.setAttribute('aria-selected', String(u.id === state.id));
     const color = colors[u.id] || u.color || u.paint || '#888';
     btn.innerHTML = `
-      <span class="thumb">${iconFor(u)}</span>
+      <span class="thumb">${icon(iconFor(u))}</span>
       <span>
         <span class="u-name"><i class="swatch" style="background:${color}"></i>${u.name}</span>
         <span class="u-sub">${u.tagline || ''}</span>
@@ -853,7 +847,7 @@ function renderViewMenu() {
       const b = document.createElement('button');
       b.className = 'pop-item' + (v.id === state.view ? ' is-on' : '');
       b.dataset.view = v.id;
-      b.innerHTML = `<span class="i">${VIEW_ICONS[v.id] || '📷'}</span><span class="n">${v.label}</span>`;
+      b.innerHTML = `<span class="i">${icon(VIEW_ICONS[v.id] || 'view')}</span><span class="n">${v.label}</span>`;
       b.onclick = () => {
         goView(v.id);
         closePop();
@@ -900,7 +894,7 @@ function setActiveChips(unit) {
     for (const v of gr.items) {
       const b = document.createElement('button');
       b.className = 'chip' + (v.id === state.view ? ' active' : '');
-      b.textContent = `${VIEW_ICONS[v.id] || ''} ${v.label}`.trim();
+      b.innerHTML = `${icon(VIEW_ICONS[v.id] || 'view')}<span>${v.label}</span>`;
       b.dataset.view = v.id;
       b.onclick = () => goView(v.id);
       wrap.appendChild(b);
