@@ -437,9 +437,16 @@
           run: function (x) { x.L.edu.inSchool = true; x.stat('know', 6); x.add('Вы пошли в школу.', 'life'); }
         },
         {
-          label: 'В частную школу', hint: 'дорого · знания ++',
+          label: 'В частную школу', hint: 'форма, учебники, строгие учителя',
           w: function (x) { return x.L.famPct > 0.72 ? 2.5 : 0.4; },
-          cond: function (x) { return x.L.famPct > 0.45 || x.c.gdp > 15000; },
+          req: {
+            money: function (x) { return x.need * 0.35; },
+            custom: {
+              test: function (x) { return x.L.famPct > 0.4 || x.c.gdp > 15000; },
+              why: 'частных школ поблизости нет', done: 'частная школа в городе есть'
+            }
+          },
+          cost: { money: function (x) { return x.need * 0.35; } },
           run: function (x) {
             x.L.edu.inSchool = true; x.L.edu.private = true;
             x.money(-x.need * 0.35); x.stat('know', 14);
@@ -463,8 +470,15 @@
       options: [
         { label: 'Учёбе', hint: 'знания ++', run: function (x) { x.stat('know', 12); x.stat('happy', -2); x.add('Вы просиживали вечера за учебниками.', 'life'); } },
         { label: 'Друзьям', hint: 'отношения ++', run: function (x) { x.stat('bond', 12); x.stat('happy', 6); x.add('Подростковые годы прошли во дворе и в разговорах до ночи.', 'life'); } },
-        { label: 'Спорту', hint: 'здоровье ++', run: function (x) { x.stat('health', 12); x.stat('happy', 4); x.add('Вы почти жили в спортивной секции.', 'life'); } },
-        { label: 'Подработке', hint: 'деньги +', run: function (x) { x.money(x.need * 0.3); x.stat('know', -3); x.add('После школы вы работали: семье нужны были деньги.', 'life'); } }
+        {
+          label: 'Спорту', hint: 'здоровье ++', req: { health: 35 },
+          run: function (x) { x.stat('health', 12); x.stat('happy', 4); x.add('Вы почти жили в спортивной секции.', 'life'); }
+        },
+        {
+          label: 'Подработке', hint: 'деньги +', req: { health: 30 },
+          cost: { gain: function (x) { return x.need * 0.3; } },
+          run: function (x) { x.money(x.need * 0.3); x.stat('know', -3); x.add('После школы вы работали: семье нужны были деньги.', 'life'); }
+        }
       ]
     },
     {
@@ -477,11 +491,14 @@
         {
           label: 'Старшие классы', hint: 'знания + · доход позже',
           w: function (x) { return clamp((x.c.school - 2) / 10, 0.05, 0.95) * 10 * (0.6 + x.L.famPct); },
+          req: { know: 28 },
           run: function (x) { x.L.edu.inSchool = true; x.L.edu.track = 'general'; x.stat('know', 10); x.add('Вы остались в школе.', 'life'); }
         },
         {
           label: 'Колледж / ПТУ', hint: 'профессия раньше',
           w: function (x) { return 3; },
+          req: { know: 18, money: function (x) { return x.need * 0.08; } },
+          cost: { money: function (x) { return x.need * 0.08; } },
           run: function (x) { x.L.edu.inSchool = true; x.L.edu.track = 'voc'; x.stat('know', 7); x.add('Вы пошли учиться на специальность.', 'life'); }
         },
         {
@@ -504,9 +521,10 @@
       },
       options: [
         {
-          label: 'Да, учиться дальше', hint: 'знания +++ · расходы',
+          label: 'Да, учиться дальше', hint: 'знания +++ · годы без зарплаты',
           w: function (x) { return 6 * (0.5 + x.L.famPct); },
-          cond: function (x) { return x.L.stats.know > 42 || x.L.famPct > 0.6; },
+          req: { edu: 3, know: 45, money: function (x) { return x.need * 0.6; } },
+          cost: { money: function (x) { return x.need * 0.6; } },
           run: function (x) {
             x.L.edu.inSchool = true; x.L.edu.track = 'uni';
             x.money(-x.need * 0.6); x.stat('know', 16);
@@ -516,6 +534,8 @@
         {
           label: 'Учиться и работать', hint: 'тяжело, но без долгов',
           w: function (x) { return 4; },
+          req: { edu: 3, health: 40 },
+          cost: { gain: function (x) { return x.need * 0.2; } },
           run: function (x) {
             x.L.edu.inSchool = true; x.L.edu.track = 'uni'; x.L.edu.partTime = true;
             x.stat('know', 10); x.stat('health', -5); x.money(x.need * 0.2);
@@ -537,7 +557,10 @@
       options: [
         {
           label: 'Уехать', hint: 'доход + · отношения −',
+          req: { money: function (x) { return x.need * 0.15; }, health: 25 },
+          cost: { money: function (x) { return x.need * 0.15; } },
           run: function (x) {
+            x.money(-x.need * 0.15);
             x.L.urban = true; x.L.moves++;
             x.stat('bond', -8); x.stat('happy', 2);
             x.add('Вы переехали в город с одной сумкой.', 'life');
@@ -554,15 +577,26 @@
       options: [
         {
           label: 'Уехать', hint: 'доход ++ · семья далеко',
+          req: { money: function (x) { return x.need * 0.8; }, health: 35 },
+          cost: { money: function (x) { return x.need * 0.8; } },
+          chance: function (x) {
+            return clamp(0.3 + x.L.stats.know / 180 + x.L.edu.level * 0.06 + (x.L.abroadHelp ? 0.15 : 0), 0.12, 0.92);
+          },
           run: function (x) {
             x.money(-x.need * 0.8); x.L.abroad = true; x.L.moves++;
             x.stat('bond', -12); x.stat('happy', -3);
             x.add('Вы уехали работать за границу.', 'life');
+          },
+          fail: function (x) {
+            x.money(-x.need * 0.8); x.stat('happy', -8);
+            x.add('Документы на выезд не приняли. Деньги за них никто не вернул.', 'bad');
           }
         },
         {
           label: 'Отправить брата, помочь деньгами', hint: 'связи +',
-          run: function (x) { x.money(-x.need * 0.3); x.stat('bond', 8); x.add('Уехал не вы: вы помогли деньгами тому, кто решился.', 'family'); }
+          req: { money: function (x) { return x.need * 0.3; } },
+          cost: { money: function (x) { return x.need * 0.3; } },
+          run: function (x) { x.money(-x.need * 0.3); x.stat('bond', 8); x.L.abroadHelp = true; x.add('Уехал не вы: вы помогли деньгами тому, кто решился.', 'family'); }
         },
         { label: 'Остаться дома', hint: 'спокойнее', run: function (x) { x.stat('bond', 4); x.add('Вы остались дома.', 'life'); } }
       ]
@@ -579,10 +613,12 @@
         },
         {
           label: 'Тяжёлая, но денежная', hint: 'доход + · здоровье −',
+          req: { health: 45 },
           run: function (x) { x.L.hire('hard'); x.stat('health', -5); }
         },
         {
           label: 'То, что нравится', hint: 'счастье + · доход −',
+          req: { know: 50, edu: 3 },
           run: function (x) { x.L.hire('dream'); x.stat('happy', 10); }
         }
       ]
@@ -600,6 +636,8 @@
         {
           label: 'Пожениться', hint: 'отношения ++',
           w: function (x) { return 6 + x.c.tfr; },
+          req: { money: function (x) { return x.need * 0.25; } },
+          cost: { money: function (x) { return x.need * 0.25; } },
           run: function (x) { x.L.marry(); x.money(-x.need * 0.25); x.stat('happy', 12); x.stat('bond', 12); }
         },
         {
@@ -662,11 +700,19 @@
       },
       options: [
         {
-          label: 'Платно и сразу', hint: '−деньги · здоровье ++',
+          label: 'Платно и сразу', hint: 'здоровье ++',
+          req: { money: function (x) { return x.need * 0.5; } },
+          cost: { money: function (x) { return x.need * 0.5; } },
           run: function (x) { x.money(-x.need * 0.5); x.stat('health', 12); x.add('Вы заплатили за лечение и выздоровели.', 'health'); }
         },
         {
           label: 'По очереди', hint: 'бесплатно · долго',
+          req: {
+            custom: {
+              test: function (x) { return x.c.gdp > 2500; },
+              why: 'бесплатной медицины здесь почти нет', done: 'государственная клиника есть'
+            }
+          },
           run: function (x) { x.stat('health', x.c.gdp > 20000 ? 5 : -4); x.add('Вы дождались очереди. Лечение помогло, но не сразу.', 'health'); }
         },
         {
@@ -682,14 +728,29 @@
       options: [
         {
           label: 'Взять кредит и начать', hint: 'риск · большой доход',
+          req: {
+            know: 35, job: true,
+            custom: {
+              test: function (x) { return x.c.gdp > 3000 || x.L.stats.know > 60; },
+              why: 'банк не даст кредит без залога', done: 'кредит здесь дадут'
+            }
+          },
+          cost: { gain: function (x) { return x.need * 1.5; } },
+          chance: function (x) { return clamp(0.34 + x.L.stats.know / 200 + x.L.edu.level * 0.04, 0.15, 0.85); },
           run: function (x) {
             x.money(x.need * 1.5); x.flag('debt', true); x.L.business = true;
             x.add('Вы открыли своё дело и взяли кредит.', 'work');
+          },
+          fail: function (x) {
+            x.money(x.need * 1.5); x.flag('debt', true);
+            x.money(-x.need * 1.9); x.stat('happy', -10); x.stat('health', -4);
+            x.add('Дело прогорело за первый же год, а кредит остался.', 'bad');
           }
         },
         {
           label: 'Начать на свои, медленно', hint: 'без долгов',
-          cond: function (x) { return x.L.money > x.need * 0.4; },
+          req: { money: function (x) { return x.need * 0.4; } },
+          cost: { money: function (x) { return x.need * 0.4; } },
           run: function (x) { x.money(-x.need * 0.4); x.L.business = true; x.add('Вы начали своё дело на собственные сбережения.', 'work'); }
         },
         { label: 'Не рисковать', hint: 'спокойно', run: function (x) { x.stat('happy', -1); x.add('Вы решили не рисковать.', 'work'); } }
@@ -702,7 +763,15 @@
       options: [
         {
           label: 'Купить в ипотеку', hint: 'долг · своё жильё',
-          cond: function (x) { return x.c.gdp > 6000; },
+          req: {
+            job: true,
+            money: function (x) { return x.need * 0.5; },
+            custom: {
+              test: function (x) { return x.c.gdp > 6000; },
+              why: 'ипотеки в стране почти нет', done: 'банки дают ипотеку'
+            }
+          },
+          cost: { money: function (x) { return Math.min(x.L.money * 0.6, x.need); } },
           run: function (x) {
             x.flag('mortgage', true); x.L.home = true; x.money(-Math.min(x.L.money * 0.6, x.need));
             x.add('Вы взяли ипотеку. Своё жильё — и платёж на двадцать лет.', 'money'); x.stat('happy', 6);
@@ -710,6 +779,8 @@
         },
         {
           label: 'Строить самим, по частям', hint: 'долго · без долгов',
+          req: { money: function (x) { return x.need * 0.3; }, health: 40 },
+          cost: { money: function (x) { return x.need * 0.3; } },
           run: function (x) { x.L.home = true; x.money(-x.need * 0.3); x.stat('health', -3); x.add('Дом строили сами, по комнате в год.', 'money'); }
         },
         { label: 'Снимать', hint: 'свобода · ничего своего', run: function (x) { x.stat('happy', 1); x.add('Вы остались в съёмном жилье.', 'money'); } }
@@ -723,10 +794,18 @@
       options: [
         {
           label: 'Переехать и ухаживать', hint: 'отношения ++ · карьера −',
+          req: {
+            custom: {
+              test: function (x) { return x.L.money > x.need * 0.4 || x.L.partner; },
+              why: 'не на что жить без работы', done: 'есть на что жить без работы'
+            }
+          },
           run: function (x) { x.stat('bond', 14); x.stat('happy', 3); x.L.careerBrake = true; x.add('Вы вернулись домой, чтобы ухаживать за родителями.', 'family'); }
         },
         {
-          label: 'Нанять сиделку', hint: '−деньги',
+          label: 'Нанять сиделку', hint: 'работа не пострадает',
+          req: { money: function (x) { return x.need * 0.5; } },
+          cost: { money: function (x) { return x.need * 0.5; } },
           run: function (x) { x.money(-x.need * 0.5); x.stat('bond', 4); x.add('Вы наняли сиделку и помогали деньгами.', 'family'); }
         },
         {
@@ -742,7 +821,9 @@
       text: function (x) { return 'Ребёнок доучился до выбора. Хорошее образование стоит ' + M.fmtMoney(x.need * 0.9) + '.'; },
       options: [
         {
-          label: 'Вложиться в учёбу детей', hint: '−деньги · дети +',
+          label: 'Вложиться в учёбу детей', hint: 'дети выйдут дальше вас',
+          req: { money: function (x) { return x.need * 0.9; } },
+          cost: { money: function (x) { return x.need * 0.9; } },
           run: function (x) { x.money(-x.need * 0.9); x.L.kidsEducated = true; x.stat('happy', 7); x.stat('bond', 6); x.add('Вы отдали всё, что было, на учёбу детей.', 'family'); }
         },
         {
@@ -756,8 +837,22 @@
       title: 'Половина пути',
       text: function (x) { return 'Половина жизни позади. Хочется чего-то другого.'; },
       options: [
-        { label: 'Сменить профессию', hint: 'риск · новая жизнь', run: function (x) { x.L.changeJob(); x.stat('happy', 8); x.add('Вы начали всё заново в другой профессии.', 'work'); } },
-        { label: 'Взять паузу и отдохнуть', hint: 'здоровье + · доход −', run: function (x) { x.money(-x.need * 0.3); x.stat('health', 8); x.stat('happy', 6); x.add('Вы взяли год на себя.', 'life'); } },
+        {
+          label: 'Сменить профессию', hint: 'риск · новая жизнь',
+          req: { know: 40, health: 35 },
+          chance: function (x) { return clamp(0.4 + x.L.stats.know / 180, 0.2, 0.9); },
+          run: function (x) { x.L.changeJob(); x.stat('happy', 8); x.add('Вы начали всё заново в другой профессии.', 'work'); },
+          fail: function (x) {
+            x.L.changeJob(); x.money(-x.need * 0.3); x.stat('happy', -6);
+            x.add('Новая профессия не пошла: полгода без работы и заново с нуля.', 'bad');
+          }
+        },
+        {
+          label: 'Взять паузу и отдохнуть', hint: 'здоровье + · доход −',
+          req: { money: function (x) { return x.need * 0.3; } },
+          cost: { money: function (x) { return x.need * 0.3; } },
+          run: function (x) { x.money(-x.need * 0.3); x.stat('health', 8); x.stat('happy', 6); x.add('Вы взяли год на себя.', 'life'); }
+        },
         { label: 'Работать дальше', hint: 'стабильность', run: function (x) { x.stat('happy', -2); x.add('Ничего не поменялось.', 'work'); } }
       ]
     },
@@ -768,6 +863,7 @@
       options: [
         {
           label: 'Согласиться', hint: 'отношения ++ · время',
+          req: { bond: 45, health: 30 },
           run: function (x) { x.L.council = true; x.stat('bond', 12); x.stat('happy', 5); x.stat('health', -2); x.add('Вас выбрали в местный совет.', 'good'); }
         },
         { label: 'Отказаться', hint: 'время семье', run: function (x) { x.stat('bond', -2); x.add('Вы отказались: своих дел хватает.', 'life'); } }
@@ -780,14 +876,15 @@
       text: function (x) { return 'Третий год разговоры заканчиваются молчанием.'; },
       options: [
         {
-          label: 'Попробовать сохранить', hint: 'шанс',
-          run: function (x) {
-            if (x.rnd() < 0.5 + x.L.stats.bond / 200) { x.stat('bond', 10); x.stat('happy', 6); x.add('Вы прошли через кризис и остались вместе.', 'family'); }
-            else { x.L.divorce(); x.add('Сохранить не получилось.', 'bad'); }
-          }
+          label: 'Попробовать сохранить', hint: 'разговоры, терпение, время',
+          chance: function (x) { return clamp(0.4 + x.L.stats.bond / 200 + x.L.stats.happy / 400, 0.15, 0.92); },
+          run: function (x) { x.stat('bond', 10); x.stat('happy', 6); x.add('Вы прошли через кризис и остались вместе.', 'family'); },
+          fail: function (x) { x.L.divorce(); x.add('Сохранить не получилось.', 'bad'); }
         },
         {
           label: 'Развестись', hint: 'свобода · потери',
+          req: { money: function (x) { return x.need * 0.4; } },
+          cost: { money: function (x) { return x.need * 0.4; } },
           run: function (x) { x.L.divorce(); x.money(-x.need * 0.4); }
         },
         {
@@ -803,15 +900,18 @@
       text: function (x) { return 'Стало слишком много выпивки — это заметили на работе.'; },
       options: [
         {
-          label: 'Обратиться за помощью', hint: 'трудно · шанс',
+          label: 'Обратиться за помощью', hint: 'трудно признать, но работает',
+          req: { money: function (x) { return x.need * 0.3; } },
+          cost: { money: function (x) { return x.need * 0.3; } },
           run: function (x) { x.money(-x.need * 0.3); x.stat('health', 6); x.stat('happy', 8); x.add('Вы обратились за помощью и справились.', 'good'); x.help(); }
         },
         {
-          label: 'Справляться самому', hint: 'риск',
-          run: function (x) {
-            if (x.rnd() < 0.4) { x.stat('happy', 4); x.add('Вы справились сами.', 'good'); }
-            else { x.flag('addiction', true); x.stat('health', -12); x.stat('bond', -8); x.add('Справиться в одиночку не вышло.', 'bad'); }
-            x.help();
+          label: 'Справляться самому', hint: 'без врачей и денег',
+          chance: function (x) { return clamp(0.25 + x.L.stats.bond / 260 + x.L.stats.health / 400, 0.1, 0.7); },
+          run: function (x) { x.stat('happy', 4); x.add('Вы справились сами.', 'good'); x.help(); },
+          fail: function (x) {
+            x.flag('addiction', true); x.stat('health', -12); x.stat('bond', -8);
+            x.add('Справиться в одиночку не вышло.', 'bad'); x.help();
           }
         }
       ]
@@ -829,6 +929,13 @@
         {
           label: 'Выйти на пенсию', hint: 'здоровье + · доход −',
           w: function (x) { return x.c.gdp > 15000 ? 6 : 1.2; },
+          req: {
+            custom: {
+              test: function (x) { return x.c.gdp > 8000 || x.L.money > x.need * 1.5 || x.L.age >= 65; },
+              why: 'пенсии здесь почти нет — нужны накопления или возраст',
+              done: 'пенсия или накопления есть'
+            }
+          },
           run: function (x) { x.L.retire(); x.stat('health', 5); x.stat('happy', 6); }
         },
         {
@@ -845,7 +952,18 @@
       options: [
         { label: 'Переехать к детям', hint: 'отношения ++', cond: function (x) { return hasKids(x.L); }, run: function (x) { x.stat('bond', 12); x.stat('happy', 8); x.add('Вы переехали к детям.', 'family'); } },
         { label: 'Остаться в своём доме', hint: 'своё · одиночество', run: function (x) { x.stat('happy', 3); x.stat('bond', -4); x.add('Вы остались в своём доме.', 'life'); } },
-        { label: 'Пансионат', hint: 'уход · чужие стены', cond: function (x) { return x.c.gdp > 20000; }, run: function (x) { x.money(-x.need * 0.6); x.stat('health', 6); x.stat('happy', -4); x.add('Вы переехали в пансионат.', 'life'); } }
+        {
+          label: 'Пансионат', hint: 'уход · чужие стены',
+          req: {
+            money: function (x) { return x.need * 0.6; },
+            custom: {
+              test: function (x) { return x.c.gdp > 12000; },
+              why: 'пансионатов в стране почти нет', done: 'пансионаты есть'
+            }
+          },
+          cost: { money: function (x) { return x.need * 0.6; } },
+          run: function (x) { x.money(-x.need * 0.6); x.stat('health', 6); x.stat('happy', -4); x.add('Вы переехали в пансионат.', 'life'); }
+        }
       ]
     },
     {
@@ -854,9 +972,19 @@
       title: 'Что оставить после себя',
       text: function (x) { return 'Накопленного хватит на что-то большее, чем вы сами.'; },
       options: [
-        { label: 'Стипендия землякам', hint: 'след в мире', run: function (x) { x.money(-x.L.money * 0.5); x.L.legacy = 'стипендия для школьников'; x.stat('happy', 14); x.add('Вы учредили стипендию для детей из своего района.', 'good'); } },
+        {
+          label: 'Стипендия землякам', hint: 'след в мире',
+          req: { money: function (x) { return x.need * 2; } },
+          cost: { money: function (x) { return x.L.money * 0.5; } },
+          run: function (x) { x.money(-x.L.money * 0.5); x.L.legacy = 'стипендия для школьников'; x.stat('happy', 14); x.add('Вы учредили стипендию для детей из своего района.', 'good'); }
+        },
         { label: 'Всё детям', hint: 'семья +', cond: function (x) { return hasKids(x.L); }, run: function (x) { x.L.legacy = 'наследство детям'; x.stat('bond', 10); x.stat('happy', 6); x.add('Вы оставили всё детям.', 'family'); } },
-        { label: 'Потратить на себя', hint: 'мечта', run: function (x) { x.money(-x.L.money * 0.6); x.L.legacy = 'исполненная мечта'; x.stat('happy', 12); x.add('Вы наконец съездили туда, куда мечтали всю жизнь.', 'good'); } }
+        {
+          label: 'Потратить на себя', hint: 'мечта',
+          req: { money: function (x) { return x.need * 0.8; }, health: 30 },
+          cost: { money: function (x) { return x.L.money * 0.6; } },
+          run: function (x) { x.money(-x.L.money * 0.6); x.L.legacy = 'исполненная мечта'; x.stat('happy', 12); x.add('Вы наконец съездили туда, куда мечтали всю жизнь.', 'good'); }
+        }
       ]
     }
   ];
