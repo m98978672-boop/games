@@ -132,33 +132,38 @@
 <!-- ============================== ЭКРАН ЖИЗНИ ============================== -->
 <section class="screen" id="screen-life" hidden>
   <header class="topbar">
-    <a class="brand" href="../index.html" title="Все игры">
-      <span class="logo">1</span>
-      <span class="brand-text"><b>1 из 8 млрд</b><i id="hud-country">—</i></span>
-    </a>
+    <div class="topbar-row">
+      <a class="brand" href="../index.html" title="Все игры">
+        <span class="logo">1</span>
+        <span class="brand-text">из 8 миллиардов</span>
+      </a>
 
-    <div class="top-stats">
-      <div class="stat accent"><span>Возраст</span><b id="hud-age">0</b></div>
-      <div class="stat"><span>Год</span><b id="hud-year">—</b></div>
-      <div class="stat"><span>Доход в год</span><b id="hud-income">—</b></div>
-      <div class="stat"><span>Накоплено</span><b id="hud-money">—</b></div>
+      <div class="top-stats">
+        <div class="age-big"><span>Возраст</span><b id="hud-age">0</b></div>
+        <div class="age-meta">
+          <p class="age-line">
+            <b id="hud-year">—</b><i id="hud-name">—</i><i id="hud-country">—</i>
+            <span id="hud-rate">1 год ≈ 25 сек</span>
+          </p>
+          <div class="year-progress"><i id="year-bar"></i></div>
+          <p class="age-stage"><b id="year-age-label">0 лет</b><span id="year-stage">младенчество</span></p>
+        </div>
+      </div>
     </div>
 
     <div class="top-actions">
-      <button class="icon-btn" id="btn-pause" title="Пауза (Пробел)" aria-label="Пауза">⏸</button>
-      <button class="icon-btn speed" id="btn-speed" title="Скорость" aria-label="Скорость">1×</button>
-      <button class="icon-btn" id="btn-auto" title="Авторежим: решения принимаются нейтрально" aria-label="Авторежим">А</button>
-      <button class="icon-btn" id="btn-skip" title="До следующего события" aria-label="До следующего события">⏭</button>
-      <button class="icon-btn" id="btn-spend" title="Траты: на что потратить деньги (T)" aria-label="Траты">🛒</button>
-      <button class="icon-btn" id="btn-help" title="Как играть (H)" aria-label="Помощь">?</button>
-      <button class="icon-btn" id="btn-quit" title="Сохранить и выйти" aria-label="Выйти">✕</button>
+      <button class="tb" id="btn-pause" title="Пауза (Пробел)">❙❙ Пауза</button>
+      <div class="speeds" id="speeds" role="group" aria-label="Скорость времени">
+        <button data-v="1" class="on">1×</button><button data-v="2">2×</button><button data-v="4">4×</button><button data-v="8">8×</button><button data-v="12">12×</button><button data-v="16">16×</button>
+      </div>
+      <button class="tb" id="btn-skip" title="Промотать до следующего решения">До следующего решения »</button>
+      <button class="tb" id="btn-auto" title="Авторежим: решения принимаются нейтрально">Авторежим</button>
+      <button class="tb" id="btn-spend" title="Траты: на что потратить деньги (T)">Траты</button>
+      <button class="tb" id="btn-anims" title="Список всех анимаций портрета">Анимации</button>
+      <button class="tb" id="btn-help" title="Как играть (H)">Справка</button>
+      <button class="tb" id="btn-quit" title="Сохранить и выйти">Выйти</button>
     </div>
   </header>
-
-  <div class="year-strip">
-    <div class="year-progress"><i id="year-bar"></i></div>
-    <div class="year-label"><b id="year-age-label">0 лет</b><span id="year-stage">младенчество</span></div>
-  </div>
 
   <main class="life-grid">
     <!-- левая колонка: состояние и деньги -->
@@ -176,8 +181,17 @@
       <div class="panel card-stats">
         <h3>Состояние <small>0–100</small></h3>
         <div class="bars-stats" id="stat-bars"></div>
-        <p class="hint">Высокие значения лишь повышают шансы и ничего не предрешают. Как и в настоящей жизни,
-          своё берут удача и обстоятельства.</p>
+        <details class="what-stats">
+          <summary>Что означают эти показатели?</summary>
+          <p class="hint">Высокие значения лишь повышают шансы и ничего не предрешают. Как и в настоящей жизни,
+            своё берут удача и обстоятельства.</p>
+        </details>
+        <div class="money-grid">
+          <div><span>Накоплено</span><b id="hud-money">—</b><i id="money-delta">—</i></div>
+          <div><span>Доход за год</span><b id="hud-income">—</b><i id="income-month">—</i></div>
+        </div>
+        <div class="money-rank"><span>Место по доходу</span><b id="money-rank">—</b></div>
+        <div class="money-rank"><span>Место в мире</span><b id="money-rank-world">—</b></div>
       </div>
 
       <div class="panel card-budget">
@@ -193,10 +207,11 @@
     <section class="col col-mid" data-tab="life">
       <div class="panel card-portrait">
         <div class="portrait-wrap">
-          <canvas id="portrait" width="760" height="380" aria-label="Портрет человека"></canvas>
-          <div class="portrait-caption"><span id="portrait-scene">—</span><b id="portrait-clip">—</b></div>
-          <button class="btn tiny portrait-anim" id="btn-anims">Все анимации</button>
+          <canvas id="portrait" width="760" height="380" aria-label="Сцена жизни"></canvas>
+          <b class="portrait-clip" id="portrait-clip">—</b>
         </div>
+        <p class="scene-line"><span id="portrait-scene">—</span><button class="scene-more" id="btn-scene-more" title="Все движения портрета">▴</button></p>
+        <p class="scene-meta" id="portrait-meta">—</p>
       </div>
 
       <div class="panel card-focus">
@@ -204,7 +219,7 @@
         <div class="focus-list" id="focus-list"></div>
       </div>
       <div class="panel card-log">
-        <h3>Летопись жизни <small>нажмите на строку, чтобы отметить ☆</small></h3>
+        <h3>Летопись жизни <small>сначала новые · нажмите на строку, чтобы отметить ☆</small></h3>
         <div class="log" id="log-list"></div>
       </div>
     </section>
@@ -222,6 +237,8 @@
       <div class="panel card-map">
         <h3>Карта жизни <small>1 клетка = 1 год</small></h3>
         <div class="lifemap" id="life-map"></div>
+        <p class="map-legend"><span>♡ свадьба</span><span>♥ ребёнок</span><span>† утрата</span>
+          <span>+ здоровье</span><span>у учёба</span><span>₽ работа</span><span>⌂ переезд</span></p>
         <canvas id="stat-canvas" class="mini-canvas" aria-label="Показатели по годам"></canvas>
       </div>
     </section>

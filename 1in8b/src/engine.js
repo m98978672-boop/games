@@ -230,7 +230,7 @@
   Life.prototype.marry = function (noWedding) {
     var rnd = this.rnd;
     var pname = N.make(rnd, this.base, this.sex === 'f' ? 'm' : 'f');
-    this.partner = { name: pname.full, age: this.age + Math.round(rnd.normal(this.sex === 'f' ? 3 : -2, 3)) };
+    this.partner = { name: pname.full, age: this.age + Math.round(rnd.normal(this.sex === 'f' ? 3 : -2, 3)), since: this.age };
     this.marital = noWedding ? 'partner' : 'married';
     this.add(noWedding
       ? 'Вы стали жить вместе: ' + pname.full + '.'
@@ -720,6 +720,8 @@
       health: Math.round(this.stats.health), happy: Math.round(this.stats.happy),
       know: Math.round(this.stats.know), bond: Math.round(this.stats.bond),
       income: Math.round(this.income), money: Math.round(this.money),
+      job: this.job ? M.jobTitle(M.jobById[this.job.id], this.job.step) : (this.retired ? 'на пенсии' : ''),
+      married: this.marital === 'married', kids: this.children.length,
       events: this.log.filter(function (e2) { return e2.age === this.age; }, this).length
     });
 

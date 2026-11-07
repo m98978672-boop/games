@@ -242,6 +242,17 @@
     return clamp(z > 0 ? 1 - prob : prob, 0.001, 0.999);
   }
 
+  /* Доля людей мира, которые живут беднее: по всем странам с весом населения */
+  var WORLD_POP = 0;
+  function worldPercentile(income) {
+    var list = (window.IN8B.countries || {}).list || [];
+    if (!list.length) return percentileOfIncome({ gini: 38, gdp: 22000 }, income);
+    if (!WORLD_POP) WORLD_POP = list.reduce(function (s, c) { return s + c.pop; }, 0);
+    var below = 0;
+    for (var i = 0; i < list.length; i++) below += list[i].pop * percentileOfIncome(list[i], income);
+    return clamp(below / WORLD_POP, 0.001, 0.999);
+  }
+
   /* ---------------------------- профессии -------------------------------- */
 
   /* edu: 0 нет школы · 1 начальная · 2 неполная средняя · 3 средняя
@@ -441,6 +452,7 @@
     sigmaFromGini: sigmaFromGini,
     incomeAtPercentile: incomeAtPercentile,
     percentileOfIncome: percentileOfIncome,
+    worldPercentile: worldPercentile,
     jobs: JOBS,
     jobById: JOB_BY_ID,
     jobsFor: jobsFor,

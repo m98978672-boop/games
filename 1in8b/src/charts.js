@@ -17,6 +17,31 @@
 
   /* ------------------------- карта жизни ------------------------------- */
   /* одна клетка = один год; цвет — по настроению года */
+  /* какой значок поставить на клетку года */
+  var MARKS = [
+    [/сыграли свадьбу|пожен|вышли замуж|женились|свадьб/i, '♡', 'свадьба'],
+    [/родил(ся|ась)|родились|появил(ся|ась) на свет|стали родител/i, '♥', 'ребёнок'],
+    [/умер|ушёл из жизни|ушла из жизни|похорон|не стало|хоронил|развод|расстал/i, '†', 'утрата'],
+    [/больниц|операц|болезн|травм|диагноз|перелом/i, '+', 'здоровье'],
+    [/школ|университет|учил|диплом|экзамен|курс|образован|класс/i, 'у', 'учёба'],
+    [/работ|зарплат|должност|бизнес|уволен|повышен|нанял|подработ/i, '₽', 'деньги и работа'],
+    [/переезд|переехал|уехал|перебрал|эмигр|страну/i, '⌂', 'переезд']
+  ];
+
+  function markFor(life, age) {
+    if (age === 0) return null;
+    var kids = (life.children || []).filter(function (k) { return k.bornAt === age; }).length;
+    if (kids) return ['♥', kids > 1 ? 'дети' : 'ребёнок'];
+    if (life.partner && life.partner.since === age) return ['♡', 'свадьба'];
+    var texts = life.log.filter(function (e) { return e.age === age; });
+    for (var i = 0; i < MARKS.length; i++) {
+      for (var j = 0; j < texts.length; j++) {
+        if (MARKS[i][0].test(texts[j].text)) return [MARKS[i][1], MARKS[i][2]];
+      }
+    }
+    return null;
+  }
+
   function lifeMap(el, life) {
     el.innerHTML = '';
     var hist = life.history;
@@ -25,9 +50,13 @@
       var cell = document.createElement('i');
       var score = (h.happy * 0.5 + h.health * 0.3 + h.bond * 0.2) / 100;
       var hue = 10 + score * 115;              // красный → зелёный
-      cell.style.background = 'hsl(' + hue.toFixed(0) + ' 52% ' + (24 + score * 30).toFixed(0) + '%)';
-      cell.title = h.age + ' лет (' + h.year + '): здоровье ' + h.health + ', счастье ' + h.happy +
-        ', знания ' + h.know + ', отношения ' + h.bond;
+      cell.style.background = 'hsl(' + hue.toFixed(0) + ' 44% ' + (18 + score * 26).toFixed(0) + '%)';
+      var mk = markFor(life, h.age);
+      if (mk) { cell.textContent = mk[0]; cell.className = 'mk'; }
+      if (h.age === life.age) cell.className = (cell.className ? cell.className + ' ' : '') + 'now';
+      cell.title = h.age + ' ' + (h.age % 10 === 1 && h.age % 100 !== 11 ? 'год' : 'лет') +
+        ' (' + h.year + '): здоровье ' + h.health + ', счастье ' + h.happy +
+        ', знания ' + h.know + ', отношения ' + h.bond + (mk ? ' · ' + mk[1] : '');
       el.appendChild(cell);
     });
   }
