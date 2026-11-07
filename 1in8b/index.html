@@ -159,6 +159,7 @@
       <button class="tb" id="btn-skip" title="Промотать до следующего решения">До следующего решения »</button>
       <button class="tb" id="btn-auto" title="Авторежим: решения принимаются нейтрально">Авторежим</button>
       <button class="tb" id="btn-spend" title="Траты: на что потратить деньги (T)">Траты</button>
+      <button class="tb" id="btn-invest" title="Вложения: своё дело, акции, вклад (И)">Вложения</button>
       <button class="tb" id="btn-anims" title="Список всех анимаций портрета">Анимации</button>
       <button class="tb" id="btn-pauses" title="Когда останавливать время">✎ Паузы</button>
       <button class="tb" id="btn-music" title="Музыка: тихий фон, нота на каждый год">♪ Музыка</button>
@@ -197,6 +198,8 @@
         </div>
         <div class="money-rank"><span>Место по доходу</span><b id="money-rank">—</b></div>
         <div class="money-rank"><span>Место в мире</span><b id="money-rank-world">—</b></div>
+        <div class="money-rank" id="money-capital-row" hidden><span>Деньги, которые работают</span><b id="money-capital">—</b></div>
+        <button class="btn spend-cta" id="btn-invest-2">📈 Вложения и своё дело<small id="invest-note">—</small></button>
       </div>
 
       <div class="panel card-budget">
@@ -310,6 +313,7 @@
 <script src="src/events.js"></script>
 <script src="src/engine.js"></script>
 <script src="src/purchases.js"></script>
+<script src="src/invest.js"></script>
 <script src="src/charts.js"></script>
 <script src="src/portrait.js"></script>
 <script src="src/save.js"></script>

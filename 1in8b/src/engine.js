@@ -142,6 +142,12 @@
     this.upkeep = 0;              /* ежегодное содержание купленного, в долях need */
     this.incomeBoost = 1;         /* вложения в работу и дело */
     this.spentTotal = 0;
+    this.assets = {};             /* вложения: id → {put, val, got, since} */
+    this.biz = null;              /* своё дело: тип, вложено, стоимость, возраст */
+    this.capitalIncome = 0;       /* наличными с вложений за прошлый год */
+    this.capitalDelta = 0;        /* насколько подорожал портфель за год */
+    this.investedTotal = 0;       /* всего вложено за жизнь */
+    this.capitalTotal = 0;        /* всего получено обратно */
     this.focus = 'family';
     this.notes = [];
     this.pendingDecision = null;
@@ -445,12 +451,14 @@
     var income;
     if (a < 15 && !this.job) income = this.famIncome * 0.9;
     else if (this.retired) income = this.pension();
-    else income = this.income || this.famIncome * 0.3;
+    else income = this.laborIncome || this.income || this.famIncome * 0.3;
 
     this.ownIncome = income;
     this.partnerIncome = (this.marital === 'married' || this.marital === 'partner')
       ? (this.income ? this.income * 0.75 : this.famIncome * 0.5) : 0;
     income += this.partnerIncome;
+    this.laborIncome = income;                 /* заработанное трудом и семьёй */
+    income += (this.capitalIncome || 0);       /* рента, купоны, прибыль своего дела */
     this.income = income;
 
     var spendable = Math.max(income, 0);
@@ -511,6 +519,16 @@
         this.add('Долги стали больше, чем годовой доход семьи.', 'bad');
       }
     }
+  };
+
+  /* ------------------------- вложения и своё дело ---------------------- */
+  /* Весь расчёт живёт в src/invest.js: пока игрок ничего не вложил,
+     метод просто обнуляет доход с капитала и ничего не меняет. */
+
+  Life.prototype.investStep = function () {
+    var IV = window.IN8B.invest;
+    if (!IV) { this.capitalIncome = 0; return null; }
+    try { return IV.tickYear(this); } catch (e) { this.capitalIncome = 0; return null; }
   };
 
   /* --------------------------- фокус года ------------------------------ */
@@ -787,6 +805,7 @@
     this.focusStep();
     this.schoolStep();
     this.workStep();
+    this.investStep();
     this.moneyStep();
     this.pickEvents();
 
@@ -844,6 +863,9 @@
     if (this.marital === 'widowed') parts.push('Потеряли супруга.');
     if (this.children.length) parts.push('Детей: ' + this.children.length + '.');
     if (this.grandchildren) parts.push('Внуков: ' + this.grandchildren + '.');
+    if (this.biz) parts.push('Своё дело (' + this.biz.name.toLowerCase() + ') пережило вас: ' +
+      this.biz.age + ' ' + M.plural(this.biz.age, 'год', 'года', 'лет') + ' работы.');
+    else if (this.bizFailed) parts.push('Своё дело пробовали, но оно не пошло.');
     if (this.legacy) parts.push('После вас осталось: ' + this.legacy + '.');
     if (this.dead) parts.push('Ушли в ' + this.dead.age + ' ' + M.plural(this.dead.age, 'год', 'года', 'лет') + ': ' + this.dead.cause + '.');
     return parts.join(' ');
@@ -855,6 +877,16 @@
     if (d >= 100) out.push({ icon: '💯', t: 'Прожили сто лет' });
     else if (d >= 90) out.push({ icon: '🎂', t: 'Дожили до девяноста' });
     if (this.edu.level >= 5) out.push({ icon: '🎓', t: 'Высшее образование' });
+    var IVa = window.IN8B.invest;
+    if (IVa) {
+      var pf = IVa.portfolio(this);
+      if (pf.total > this.need * 12) out.push({ icon: '💼', t: 'Нажили состояние' });
+      if (this.boomedBiz) out.push({ icon: '🚀', t: 'Дело пошло в гору' });
+      if (this.biz && this.biz.age >= 20) out.push({ icon: '🏪', t: 'Дело всей жизни' });
+      if (this.bizFailed >= 2) out.push({ icon: '🧱', t: 'Прогорали дважды и начинали снова' });
+      var pz = this.assets && this.assets.ponzi;
+      if (pz && pz.put > 0 && pz.val <= 0) out.push({ icon: '🕳', t: 'Поверили в 40 % годовых' });
+    }
     if (this.edu.level === 0) out.push({ icon: '📭', t: 'Ни одного года в школе' });
     if (this.children.length >= 4) out.push({ icon: '👨‍👩‍👧‍👦', t: 'Большая семья' });
     if (this.grandchildren >= 3) out.push({ icon: '🧓', t: 'Много внуков' });

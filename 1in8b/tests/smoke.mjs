@@ -18,7 +18,7 @@ console.log('1 ИЗ 8 МИЛЛИАРДОВ — смоук-тест');
 // 1. Обязательные файлы
 const files = ['index.html', 'style.css', 'cover.svg', 'README.md', 'PLAN.md', 'LICENSE.md',
   'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js',
-  'src/engine.js', 'src/purchases.js', 'src/charts.js', 'src/portrait.js',
+  'src/engine.js', 'src/purchases.js', 'src/invest.js', 'src/charts.js', 'src/portrait.js',
   'src/save.js', 'src/sound.js', 'src/ui.js', 'src/main.js'];
 for (const f of files) ok(existsSync(join(root, f)), 'есть файл ' + f);
 ok(existsSync(join(root, '../shared/theme.css')), 'есть общая тема ../shared/theme.css');
@@ -52,13 +52,14 @@ for (const cls of ['topbar', 'brand', 'top-stats', 'panel', 'toasts', 'modal-roo
 // 6. Ключевые узлы интерфейса игры
 for (const id of ['screen-start', 'screen-life', 'screen-end', 'btn-born', 'stat-bars', 'budget-list',
   'focus-list', 'log-list', 'peers-list', 'life-map', 'hud-age', 'btn-pause', 'btn-skip', 'end-map',
-  'portrait', 'end-portrait', 'btn-spend', 'btn-spend-2', 'btn-anims', 'portrait-clip']) {
+  'portrait', 'end-portrait', 'btn-spend', 'btn-spend-2', 'btn-invest', 'btn-invest-2',
+  'invest-note', 'money-capital', 'btn-anims', 'portrait-clip']) {
   ok(html.includes('id="' + id + '"'), 'в index.html есть #' + id);
 }
 
 // 6б. Порядок подключения скриптов: модули идут после тех, от кого зависят
 const order = [...html.matchAll(/<script src="src\/([a-z]+)\.js"><\/script>/g)].map((m) => m[1]);
-ok(order.join(',') === 'countries,names,model,events,engine,purchases,charts,portrait,save,sound,ui,main',
+ok(order.join(',') === 'countries,names,model,events,engine,purchases,invest,charts,portrait,save,sound,ui,main',
   'скрипты подключены в правильном порядке: ' + order.join(' → '));
 
 // 7. Обложка — валидный SVG 1440×810

@@ -530,6 +530,7 @@ textarea.note-input {
 }
 .spend-cta small { font-size: 10px; opacity: .72; text-transform: none; letter-spacing: normal; }
 .spend-modal .modal, .anims-modal .modal { max-width: 860px; width: min(96vw, 860px); }
+.invest-modal .modal { max-width: 920px; width: min(96vw, 920px); }
 .spend-top { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
 .sp-kv {
   flex: 1 1 128px; padding: 8px 10px; border: 1px solid var(--line);
@@ -566,6 +567,53 @@ textarea.note-input {
 .sp-why { font-size: 10px; color: var(--ink-faint); max-width: 130px; text-align: right; }
 .btn.tiny { padding: 4px 10px; font-size: 11px; min-height: 0; }
 
+/* ========================= ВЛОЖЕНИЯ ================================ */
+.iv-card {
+  display: grid; grid-template-columns: 34px 1fr 186px; gap: 10px; align-items: center;
+  padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--panel-2);
+}
+.iv-card.off { opacity: .5; }
+.iv-card.own { border-color: rgba(232, 180, 90, .45); background: rgba(232, 180, 90, .05); }
+.iv-card.biz { border-color: rgba(232, 180, 90, .7); }
+.iv-ico { font-size: 20px; text-align: center; }
+.iv-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.iv-body b { font-size: 13px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.iv-risk {
+  font-style: normal; font-size: 9.5px; text-transform: uppercase; letter-spacing: .07em;
+  padding: 1px 6px; border-radius: 20px; border: 1px solid var(--line-strong); color: var(--ink-faint);
+}
+.iv-risk.calm { color: #8fbf9a; border-color: rgba(143, 191, 154, .5); }
+.iv-risk.mid { color: #d8b45f; border-color: rgba(216, 180, 95, .5); }
+.iv-risk.hot { color: #d8755f; border-color: rgba(216, 117, 95, .55); }
+.iv-desc { font-size: 11px; color: var(--ink-faint); line-height: 1.35; }
+.iv-stats { font-size: 10.5px; color: var(--c-know, #7fb2d8); line-height: 1.4; }
+.iv-own { font-size: 11px; color: var(--ink-dim); font-variant-numeric: tabular-nums; }
+.iv-own b.up { color: #8fbf9a; }
+.iv-own b.down { color: #d8755f; }
+.iv-offer { font-size: 11px; color: var(--accent); }
+.iv-act { display: flex; flex-direction: column; align-items: stretch; gap: 4px; text-align: right; }
+.iv-act > b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.iv-min { font-size: 9.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-faint); }
+.iv-sum {
+  width: 100%; padding: 5px 8px; font-size: 12px; text-align: right; font-variant-numeric: tabular-nums;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
+  background: var(--panel); color: var(--ink);
+}
+.iv-chips { display: flex; gap: 4px; justify-content: flex-end; }
+.iv-chip {
+  flex: 1; padding: 3px 0; font-size: 10.5px; cursor: pointer; color: var(--ink-dim);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--panel-2);
+}
+.iv-chip:hover { color: var(--ink); border-color: var(--line-strong); }
+.card-stats .spend-cta { margin-top: 8px; }
+
+@media (max-width: 640px) {
+  .iv-card { grid-template-columns: 28px 1fr; }
+  .iv-act { text-align: left; align-items: stretch; }
+  .iv-sum { text-align: left; }
+}
+
 /* ====================== КАТАЛОГ АНИМАЦИЙ =========================== */
 .anims { max-height: 56vh; overflow: auto; padding-right: 4px; }
 .an-group { margin-bottom: 12px; }
@@ -593,6 +641,7 @@ textarea.note-input {
   .only-phone { display: inline-flex; }
   #screen-life .top-actions #btn-auto,
   #screen-life .top-actions #btn-spend,
+  #screen-life .top-actions #btn-invest,
   #screen-life .top-actions #btn-anims,
   #screen-life .top-actions #btn-pauses,
   #screen-life .top-actions #btn-music,

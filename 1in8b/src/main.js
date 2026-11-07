@@ -380,6 +380,36 @@
     S.endView.start();
   }
 
+  function openInvest() {
+    if (!S.life || !S.life.alive || !UI.investModal) return;
+    if (el('screen-life').hidden) return;
+    var wasPaused = S.paused;
+    S.blocked = true;
+    S.paused = true;
+    paintPause();
+    var wrap = UI.investModal(S.life, function () {
+      UI.renderPerson(S.life);
+      UI.renderStats(S.life);
+      UI.renderLog(S.life);
+    });
+    if (!wrap) { S.blocked = false; S.paused = wasPaused; paintPause(); return; }
+    wrap.onClosed = function () {
+      S.blocked = false;
+      S.paused = wasPaused;
+      paintPause();
+      S.last = performance.now();
+      S.acc = 0;
+    };
+  }
+
+  /* сделка сразу видна на сцене */
+  window.IN8B.onInvest = function (res) {
+    if (!S.view) return;
+    var id = res.kind === 'biz' ? 'open-business' : res.kind === 'sell' ? 'count-money' : 'count-money';
+    S.view.play(PR.byId[id] ? id : 'smile-wide');
+    paintPortraitCaption();
+  };
+
   function openSpend() {
     if (!S.life || !S.life.alive || !UI.spendModal) return;
     if (el('screen-life').hidden) return;
@@ -480,6 +510,8 @@
     el('btn-help').addEventListener('click', UI.helpModal);
     el('btn-spend').addEventListener('click', openSpend);
     el('btn-spend-2').addEventListener('click', openSpend);
+    el('btn-invest').addEventListener('click', openInvest);
+    el('btn-invest-2').addEventListener('click', openInvest);
     el('btn-anims').addEventListener('click', function () { UI.animsModal(S.view); });
     el('btn-music').addEventListener('click', function () {
       var SND = window.IN8B.sound;
@@ -534,6 +566,7 @@
       else if (e.key === 'h' || e.key === 'H' || e.key === 'р' || e.key === 'Р') UI.helpModal();
       else if (e.key === 'a' || e.key === 'A' || e.key === 'ф' || e.key === 'Ф') el('btn-auto').click();
       else if (e.key === 't' || e.key === 'T' || e.key === 'е' || e.key === 'Е') openSpend();
+      else if (e.key === 'i' || e.key === 'I' || e.key === 'ш' || e.key === 'Ш') openInvest();
     });
   }
 
