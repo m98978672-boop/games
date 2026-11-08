@@ -179,13 +179,13 @@ function renderScene(canvas, rootObj, camPos, camLook, fov, bright) {
 const out = process.argv[2] || 'docs/preview-fp-grid.png';
 const SIDE = process.argv.indexOf('--side') >= 0;
 const variants = JSON.parse(process.argv[3] || '[{"weapon":"rifle"}]');
-const W = 460, H = 260, COLS = 2;
+const W = Number(process.env.FP_W || 460), H = Number(process.env.FP_H || 260), COLS = 2;
 const rows = Math.ceil(variants.length / COLS);
 const big = new Canvas(W * COLS, H * rows, [62, 60, 55]);
 const lvl = SH2.model.buildLevel('depot');
 
 variants.forEach((cfg, i) => {
-  const cam = new T.PerspectiveCamera(78, W / H, 0.05, 320);
+  const cam = new T.PerspectiveCamera(Number(process.env.FP_FOV || 78), W / H, 0.05, 320);
   cam.rotation.order = 'YXZ';
   cam.position.set(0, 1.62, 0);
   cam.rotation.set(0, Math.PI, 0);
@@ -194,7 +194,11 @@ variants.forEach((cfg, i) => {
   const vmw = new SH2.viewmodel.ViewModel(cam);
   vmw.setWeapon(cfg.weapon || 'rifle');
   if (cfg.pose) vmw.pose = Object.assign({}, vmw.pose, cfg.pose);
-  for (let k = 0; k < 120; k++) vmw.update(1 / 60, { moving: 0, sprint: false, ads: !!cfg.ads });
+  // FP_NOUPDATE=1 — отрисовать самый первый кадр, без единого update:
+  // так проверяем, что игра не показывает «изнутри ствола» при спавне
+  if (!process.env.FP_NOUPDATE) {
+    for (let k = 0; k < 120; k++) vmw.update(1 / 60, { moving: 0, sprint: false, ads: !!cfg.ads });
+  }
   if (cfg.pose) {
     // после «устаканивания» навязываем позу заново, чтобы сетка была чистой
     const p = vmw.pose;
@@ -209,6 +213,7 @@ variants.forEach((cfg, i) => {
   }
   cam.updateMatrixWorld(true);
   vmw.root.updateMatrixWorld(true);
+  if (process.env.FP_DEBUG) console.log('aspect', cam.aspect.toFixed(2), 'scale', vmw.rig.scale.x.toFixed(2), 'rig', vmw.rig.position.toArray().map((v) => +v.toFixed(2)));
   const cv = new Canvas(W, H, [62, 60, 55]);
   if (SIDE) {
     // крупный план сбоку: оцениваем кисти и детали ствола, а не позу в кадре

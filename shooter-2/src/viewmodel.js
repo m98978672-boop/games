@@ -235,7 +235,12 @@
     }
 
     setWeapon(id) {
-      if (this.currentWeapon === id) return;
+      if (this.currentWeapon === id) {
+        // тот же ствол: пересчитываем позу — экран мог повернуться/сжаться
+        // (resize, поворот телефона), а поза зависит от aspect
+        this.applyPose(this.ads);
+        return;
+      }
       const T = THREE();
       this.currentWeapon = id;
       let model = this.models[id];
@@ -283,7 +288,62 @@
         dmr:     { x: 0.12, y: -0.145, z: -0.54, rx: 0.04, ry: 0.12, rz: 0.06, s: 0.86 }
       };
       this.pose = POSE[id] || POSE.rifle;
-      // кисти ставятся в _attachHands() — точно по gripPoint/forePoint модели
+      // Кисти ставятся в _attachHands() — точно по gripPoint/forePoint модели.
+      // Риг сразу ставим в рабочую позу: иначе до первого update оружие висит
+      // в начале координат камеры — в 11 см от глаза, и первый кадр (а также
+      // пауза и любая отрисовка без update) показывает «изнутри ствола»:
+      // приклад и цевьё закрывают весь экран коричневым.
+      this.applyPose(0);
+    }
+
+    /* Ставит риг в позу от бедра для текущего ads (0 — от бедра, 1 — прицел).
+       Вызывается из setWeapon сразу, чтобы оружие никогда не оказывалось
+       в глазу, и из update каждый кадр. */
+    applyPose(ads) {
+      const a = ads === undefined ? this.ads : ads;
+      const pose = this.pose || { x: 0.12, y: -0.15, z: -0.5, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.9 };
+      const adsX = 0.13, adsY = -0.19, adsZ = -0.52;
+      let sc = pose.s * (1 - a) + (0.86 + 0.16 * a) * a;
+      if (a > 0.01 && this.camera && this.camera.fov) {
+        const tanBase = Math.tan((78 * Math.PI) / 360);
+        const tanNow = Math.tan((this.camera.fov * Math.PI) / 360);
+        sc *= 1 - (1 - tanNow / tanBase) * a;
+      }
+      this.rig.position.set(
+        pose.x * (1 - a) + adsX * a,
+        pose.y * (1 - a) + adsY * a,
+        pose.z * (1 - a) + adsZ * a
+      );
+      this.rig.rotation.set(
+        pose.rx * (1 - a) + 0.16 * a,
+        pose.ry * (1 - a) + 0.10 * a,
+        pose.rz * (1 - a)
+      );
+      // Компенсация по соотношению сторон. FOV у нас задаётся по вертикали,
+      // поэтому при узком кадре (портрет, телефон) горизонтальный угол обзора
+      // резко падает: то же оружие раздувается по ширине и его коричневое
+      // цевьё/приклад лезут в центр экрана. Считаем, во сколько раз кадр уже
+      // эталонного 16:9, и поджимаем оружие по корню из этого отношения:
+      // целиком гасить нельзя — ствол станет игрушечным.
+      let wide = 1;
+      if (this.camera && this.camera.aspect && this.camera.aspect < 1.6) {
+        const AR_BASE = 16 / 9;
+        const ratio = Math.max(0.18, Math.min(1, this.camera.aspect / AR_BASE));
+        wide = Math.sqrt(ratio);           // 1 при 16:9 и шире, ~0.55 при 9:16
+        // на прицеле поджатие нужно вдвое слабее: там важна мушка по центру,
+        // а не «сколько ствола влезло в кадр»
+        const w = 1 - (1 - Math.max(0.5, wide)) * (1 - 0.5 * a);
+        sc *= w;
+        // и отводим ствол к правому нижнему углу, освобождая центр кадра;
+        // по горизонтали тянем к центру — при узком кадре правый край близко
+        // и приклад/кисть уезжали бы за границу экрана
+        const pull = (1 - ratio) * (1 - 0.8 * a);   // 0 при 16:9, ~0.7 при 9:16
+        this.rig.position.x *= 1 - 0.45 * pull;
+        this.rig.position.y -= 0.05 * pull;
+        this.rig.position.z -= 0.06 * pull;
+      }
+      this.rig.scale.setScalar(sc);
+      this._attachHands();
     }
 
     playReload(dur) { this.reloadT = 0; this.reloadDur = dur || 1.6; }
@@ -321,31 +381,17 @@
       // при прицеливании — мушка точно по центру, оружие ближе к глазу
       // «как в CS»: от бедра оружие крупно в правом нижнем углу, ствол
       // сходится к центру кадра; на прицеле — мушка/дульный срез по центру.
-      // поза от бедра — из таблицы под ствол (см. setWeapon)
-      const pose = this.pose || { x: 0.14, y: -0.16, z: -0.60, rx: 0.04, ry: 0.18, rz: 0.07, s: 0.86 };
-      const hipX = pose.x, hipY = pose.y, hipZ = pose.z;
-      const adsX = 0.13, adsY = -0.19, adsZ = -0.52;
-      const lowerY = -0.13 * this.lowered;
-      const lowRot = 0.55 * this.lowered;
-      const rxSw = -this.sway.y * 0.5;
-      let px = (hipX * (1 - this.ads) + adsX * this.ads) + bobX + this.sway.x * 0.10;
-      let py = (hipY * (1 - this.ads) + adsY * this.ads) + bobY + this.sway.y * 0.07 + lowerY;
-      let pz = (hipZ * (1 - this.ads) + adsZ * this.ads) - this.recoil * 0.16;
-      // лёгкий доворот ствола к центру: оружие смотрит туда же, куда камера
-      let rx = (pose.rx * (1 - this.ads) + 0.16 * this.ads) - this.recoilRot * 0.20 + lowRot + rxSw;
-      // доворот к центру кадра: ствол уходит вперёд-влево, приклад — вправо
-      let ry = (pose.ry * (1 - this.ads) + 0.10 * this.ads) - this.sway.x * 0.9;
-      let rz = (pose.rz * (1 - this.ads) + 0.0 * this.ads);
-      // масштаб: от бедра крупнее — оружие должно читаться сразу
-      let sc = pose.s * (1 - this.ads) + (0.86 + 0.16 * this.ads) * this.ads;
-      // При прицеливании камера сужает FOV (у винтовки 78 → 48) — без правки
-      // оружие «раздувается» на весь кадр. Уменьшаем его пропорционально
-      // тангенсу половины FOV, чтобы угловой размер остался прежним.
-      if (this.ads > 0.01 && this.camera && this.camera.fov) {
-        const tanBase = Math.tan((78 * Math.PI) / 360);
-        const tanNow = Math.tan((this.camera.fov * Math.PI) / 360);
-        sc *= 1 - (1 - tanNow / tanBase) * this.ads;
-      }
+      // базовая поза (от бедра ↔ прицел), масштаб, FOV- и aspect-компенсация —
+      // в одном месте (applyPose), чтобы не дублировать расчёт; здесь поверх
+      // неё только покачивание/инерция/отдача/спринт.
+      this.applyPose(this.ads);
+      let px = this.rig.position.x + bobX + this.sway.x * 0.10;
+      let py = this.rig.position.y + bobY + this.sway.y * 0.07 - 0.13 * this.lowered;
+      let pz = this.rig.position.z - this.recoil * 0.16;
+      let rx = this.rig.rotation.x - this.recoilRot * 0.20 + 0.55 * this.lowered - this.sway.y * 0.5;
+      let ry = this.rig.rotation.y - this.sway.x * 0.9;
+      let rz = this.rig.rotation.z;
+      let sc = this.rig.scale.x;
 
       // перезарядка: оружие уходит вниз и крутится
       if (this.reloadT < this.reloadDur) {
@@ -356,16 +402,7 @@
         rx -= arc * 0.4;
         rz += Math.sin(t * Math.PI * 2) * 0.32;
         px += arc * 0.02;
-        // левая рука «ходит» к магазину
-        if (this.armL) {
-          this.armL.position.z = 0.34 - arc * 0.18;
-          this.armL.position.y = -0.13 + Math.sin(t * Math.PI * 3) * 0.03;
-        }
-      } else if (this.armL) {
-        if (this.currentWeapon === 'pistol') { this.armL.position.set(-0.035, -0.12, 0.06); }
-        else if (this.currentWeapon === 'shotgun') { this.armL.position.set(-0.03, -0.13, 0.50); }
-        else if (this.currentWeapon === 'dmr') { this.armL.position.set(-0.03, -0.12, 0.42); }
-        else this.armL.position.set(-0.03, -0.13, 0.34);
+        // левая рука «ходит» к магазину — в _attachHands(), здесь только ствол
       }
 
       this.rig.position.set(px, py, pz);

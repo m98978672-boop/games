@@ -511,6 +511,10 @@ for (const yaw of [0, 0.7, -1.2, 2.5, Math.PI]) {
   // руки не «в камере»: предплечье уходит вниз-назад, иначе модель заслонит вид
   assert.ok(/makeArm/.test(vmSrc), 'рука собирается из лофта, кисть — из ладони и пальцев');
   assert.ok(/layers\.set\(1\)/.test(vmSrc), 'оружие рендерится отдельным слоем поверх мира');
+  // в меню камера летает вокруг уровня — ствол там не нужен и только мешает
+  assert.ok(/viewmodel\.root\.visible = false/.test(read('src/game.js')),
+    'в меню оружие от первого лица скрыто');
+  assert.ok(/applyPose\(0\)/.test(vmSrc), 'поза ставится сразу в setWeapon, до первого update');
   // оружие должно получать свет во втором проходе: все лампы уровня лежат на
   // слое 0, и без собственного света оружие рисуется чёрным силуэтом
   assert.ok(/buildLights/.test(vmSrc), 'у оружия свой свет');
@@ -564,6 +568,60 @@ for (const yaw of [0, 0.7, -1.2, 2.5, Math.PI]) {
     assert.ok(maxX < 1.25, `${id}: приклад не уходит целиком за правый край (${maxX.toFixed(2)})`);
     assert.ok(maxX > 0.1, `${id}: оружие справа, а не по центру экрана (${maxX.toFixed(2)})`);
   }
+
+  /* Первый кадр: игра может отрисовать сцену до первого viewmodel.update —
+     в меню, на паузе, в момент старта миссии. Раньше риг стоял в начале
+     координат камеры (оружие в 0.11 м от глаза) и весь кадр был забит
+     коричневым цевьём: это и была «коричневая коробка» при спавне.
+     Требуем, чтобы уже после setWeapon ствол стоял на рабочем удалении и не
+     закрывал центр кадра — на широком, квадратном и портретном экране. */
+  const boxes = (vm2, cam2) => {
+    vm2.root.updateMatrixWorld(true);
+    cam2.updateMatrixWorld(true);
+    const box = new T2.Box3().setFromObject(vm2.mounted);
+    const v = new T2.Vector3();
+    const r = { x0: 9, x1: -9, y0: 9, y1: -9, d: 0 };
+    const c = box.getCenter(new T2.Vector3());
+    r.d = c.clone().applyMatrix4(cam2.matrixWorldInverse).length();
+    for (const sx of [box.min.x, box.max.x]) for (const sy of [box.min.y, box.max.y]) for (const sz of [box.min.z, box.max.z]) {
+      v.set(sx, sy, sz).applyMatrix4(cam2.matrixWorldInverse).applyMatrix4(cam2.projectionMatrix);
+      r.x0 = Math.min(r.x0, v.x); r.x1 = Math.max(r.x1, v.x);
+      r.y0 = Math.min(r.y0, v.y); r.y1 = Math.max(r.y1, v.y);
+    }
+    return r;
+  };
+  for (const [w, h] of [[1920, 1080], [1024, 768], [300, 560]]) {
+    for (const id of ['pistol', 'smg', 'rifle', 'shotgun', 'dmr']) {
+      const cam2 = new T2.PerspectiveCamera(78, w / h, 0.05, 320);
+      cam2.position.set(0, 1.62, 0);
+      cam2.rotation.order = 'YXZ';
+      cam2.rotation.set(0, Math.PI, 0);
+      cam2.updateMatrixWorld(true);
+      const vm2 = new SH2.viewmodel.ViewModel(cam2);
+      vm2.setWeapon(id);              // без единого update — как в первом кадре
+      const r = boxes(vm2, cam2);
+      const tag = `${id} ${w}x${h}`;
+      // площадь проекции AABB в долях кадра: 1.0 = весь экран
+      const cov = Math.max(0, Math.min(1, r.x1) - Math.max(-1, r.x0)) *
+                  Math.max(0, Math.min(1, r.y1) - Math.max(-1, r.y0)) / 4;
+      assert.ok(r.d > 0.4, `${tag}: сразу после setWeapon ствол не в глазу (${r.d.toFixed(2)} м)`);
+      assert.ok(cov < 0.35, `${tag}: первый кадр не забит оружием (${(cov * 100).toFixed(0)} %)`);
+      assert.ok(r.y1 < 0.25, `${tag}: первый кадр — оружие в нижней части (верх ${r.y1.toFixed(2)})`);
+      assert.ok(r.x1 < 1.3, `${tag}: первый кадр — приклад в кадре (${r.x1.toFixed(2)})`);
+    }
+  }
+  // узкий экран: компенсация по aspect реально уменьшает ствол
+  const camW = new T2.PerspectiveCamera(78, 16 / 9, 0.05, 320);
+  camW.position.set(0, 1.62, 0); camW.updateMatrixWorld(true);
+  const vmW = new SH2.viewmodel.ViewModel(camW);
+  vmW.setWeapon('rifle');
+  const wideScale = vmW.rig.scale.x;
+  const camP = new T2.PerspectiveCamera(78, 9 / 16, 0.05, 320);
+  camP.position.set(0, 1.62, 0); camP.updateMatrixWorld(true);
+  const vmP = new SH2.viewmodel.ViewModel(camP);
+  vmP.setWeapon('rifle');
+  assert.ok(vmP.rig.scale.x < wideScale * 0.8,
+    `портретный экран: оружие поджато (${vmP.rig.scale.x.toFixed(2)} против ${wideScale.toFixed(2)})`);
 }
 
 /* ========================= 10. КАРТЫ-СХЕМЫ ============================== */
