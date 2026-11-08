@@ -210,6 +210,7 @@ if (single) {
 // node tools/preview.mjs --fps rifle -> docs/preview-fp.png
 if (process.argv.indexOf('--fps') >= 0) {
   const id = process.argv[process.argv.indexOf('--fps') + 1] || 'rifle';
+  const adsMode = process.argv.indexOf('--ads') >= 0;
   const W = 960, H = 560;
   const cam = new T.PerspectiveCamera(78, W / H, 0.05, 320);
   cam.rotation.order = 'YXZ';
@@ -218,16 +219,20 @@ if (process.argv.indexOf('--fps') >= 0) {
   cam.updateMatrixWorld(true);
   const vm = new SH2.viewmodel.ViewModel(cam);
   vm.setWeapon(id);
-  for (let i = 0; i < 40; i++) vm.update(1 / 60, { moving: 0, sprint: false, ads: false });
+  // даём позе устояться: оружие плавно выезжает в кадр и в ADS
+  if (adsMode) { cam.fov = 48; cam.updateProjectionMatrix(); }
+  for (let i = 0; i < 90; i++) vm.update(1 / 60, { moving: 0, sprint: false, ads: adsMode });
   cam.updateMatrixWorld(true);
   const canvas = new Canvas(W, H, [70, 68, 62]);
   // сцена: настоящий уровень вокруг глаза игрока — карта «Склады»
   const lvl = SH2.model.buildLevel('depot');
   renderScene(canvas, lvl.group, cam.position, cam.position.clone().add(new T.Vector3(0, -1, 6)), 78);
   // оружие от первого лица: рисуем вторым проходом, всегда поверх мира
-  renderScene(canvas, vm.root, cam.position, cam.position.clone().add(new T.Vector3(0, 0, 6)), 78);
-  fs.writeFileSync(path.join(root, 'docs', 'preview-fp.png'), png(W, H, canvas.color));
-  console.log('docs/preview-fp.png — ' + id + ' от первого лица');
+  // оружие рисуем с тем же FOV, что и камера: при прицеливании он уже (48)
+  renderScene(canvas, vm.root, cam.position, cam.position.clone().add(new T.Vector3(0, 0, 6)), cam.fov);
+  const file = adsMode ? 'preview-fp-ads.png' : 'preview-fp.png';
+  fs.writeFileSync(path.join(root, 'docs', file), png(W, H, canvas.color));
+  console.log('docs/' + file + ' — ' + id + ' от первого лица' + (adsMode ? ' (прицел)' : ''));
   process.exit(0);
 }
 

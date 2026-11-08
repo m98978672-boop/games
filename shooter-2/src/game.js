@@ -809,20 +809,46 @@
       if (this.audio) { this.audio.init(); }
     }
 
+    /* Старт игрока: одна и та же точка при каждом запуске карты (playerSpawn).
+       Раньше позиция выбиралась случайно из массива M.spawns — того же, откуда
+       приходят враги, поэтому игрок мог оказаться внутри чужой спавн-зоны или
+       прямо в пропсе (на harbor — внутри башни). Теперь точка фиксирована,
+       проверена на свободный круг radius + запас и не пересекается с врагами. */
     findStart() {
       const M = this.level.map;
       const ex = M.extracts && M.extracts[0];
-      // старт — дальний угол от первой цели/врагов
-      const spawns = M.spawns || [[0, 0]];
-      let best = { x: 0, z: 0 }, bestD = -1;
-      spawns.forEach((s) => {
-        const w = this.world.randomOpenPoint(s[0], s[1], 0, 3, Math.random) || { x: s[0], z: s[1] };
-        // для эвакуации старт должен быть на другом конце карты
-        const d = ex ? Math.hypot(w.x - ex.x, w.z - ex.z) : Math.abs(s[0]) + Math.abs(s[1]);
-        if (d > bestD) { bestD = d; best = w; }
-      });
-      // смотрим в центр карты
-      const yaw = Math.atan2(-best.x, -best.z);
+      const P = this.player;
+      const rad = (P && P.radius ? P.radius : 0.46) + 0.5;
+      const base = M.playerSpawn;
+      let best = base ? { x: base.x, z: base.z } : null;
+      if (best && this.world.isBlockedCell(best.x, best.z)) best = null;
+      if (!best) {
+        // страховка: перебираем спавны, но только те, что реально свободны
+        const spawns = (M.spawns || [[0, 0]]).slice().sort((a, b) => {
+          if (!ex) return 0;
+          return Math.hypot(b[0] - ex.x, b[1] - ex.z) - Math.hypot(a[0] - ex.x, a[1] - ex.z);
+        });
+        for (const s of spawns) {
+          for (let r = 0; r <= 6 && !best; r += 1.5) {
+            const pts = r === 0 ? [[s[0], s[1]]] : [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+              const a = (i / 8) * Math.PI * 2;
+              return [s[0] + Math.cos(a) * r, s[1] + Math.sin(a) * r];
+            });
+            for (const [cx, cz] of pts) {
+              const p = { x: cx, z: cz };
+              this.world.resolveCircle(p, rad);
+              if (Math.hypot(p.x - cx, p.z - cz) > 1e-4) continue;
+              if (this.world.isBlockedCell(p.x, p.z)) continue;
+              best = p; break;
+            }
+          }
+          if (best) break;
+        }
+        if (!best) best = { x: 0, z: 0 };
+      }
+      // окончательно ставим тело так, чтобы камера/модель/коллайдер были в одной точке
+      this.world.resolveCircle(best, rad);
+      const yaw = base && typeof base.yaw === 'number' ? base.yaw : Math.atan2(-best.x, -best.z);
       return { x: best.x, z: best.z, yaw };
     }
 

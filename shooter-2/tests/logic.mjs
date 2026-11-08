@@ -297,6 +297,31 @@ for (const [id, m] of Object.entries(D.MAPS)) {
   const w = new SH2.world.World(m, m.walls.map((x) => ({ x: x.x, z: x.z, hw: x.w / 2, hd: x.d / 2, h: x.h, y: 0 })));
   // на карте есть проходимое место
   assert.ok(w.randomOpenPoint(0, 0, 1, 10, rng), `${id}: есть открытая точка`);
+  assert.ok(m.playerSpawn, `${id}: задан старт игрока`);
+}
+
+/* старт игрока: детерминированный, свободный и вне вражеских спавнов */
+for (const [id, m] of Object.entries(D.MAPS)) {
+  const sp = m.playerSpawn;
+  assert.ok(sp && isFinite(sp.x) && isFinite(sp.z) && isFinite(sp.yaw), `${id}: старт с координатами и yaw`);
+  const lvl = SH2.model.buildLevel(id);
+  const w = new SH2.world.World(m, lvl.colliders);
+  // тело не сдвигается при разрешении коллизий — значит, стоит на свободном месте
+  const p = { x: sp.x, z: sp.z };
+  w.resolveCircle(p, 0.96);
+  assert.ok(Math.hypot(p.x - sp.x, p.z - sp.z) < 1e-6, `${id}: старт не пересекается с препятствиями`);
+  // вокруг кисти/тела есть запас: минимум 1 м до ближайшего коллайдера
+  let clear = 1e9;
+  for (const c of lvl.colliders) {
+    const dx = Math.max(Math.abs(sp.x - c.x) - c.hw, 0);
+    const dz = Math.max(Math.abs(sp.z - c.z) - c.hd, 0);
+    clear = Math.min(clear, Math.hypot(dx, dz));
+  }
+  assert.ok(clear > 1.0, `${id}: вокруг старта есть место (${clear.toFixed(2)} м)`);
+  // старт не совпадает с точкой появления врагов — нет «спавна в чужой модельке»
+  for (const s of m.spawns) {
+    assert.ok(Math.hypot(s[0] - sp.x, s[1] - sp.z) > 6, `${id}: старт далеко от вражеского спавна`);
+  }
 }
 
 /* ===================== 8. УПРАВЛЕНИЕ И КОЛЛИЗИИ ========================= */

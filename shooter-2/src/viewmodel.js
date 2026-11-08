@@ -170,8 +170,10 @@
       // при прицеливании мушка встаёт точно в центр экрана.
       // от бедра — ствол справа-снизу и сходится к центру кадра;
       // при прицеливании — мушка точно по центру, оружие ближе к глазу
-      const adsX = 0.0, adsY = -0.085, adsZ = -0.55;
-      const hipX = 0.22, hipY = -0.24, hipZ = -0.64;
+      // «как в CS»: от бедра оружие крупно в правом нижнем углу, ствол
+      // сходится к центру кадра; на прицеле — мушка/дульный срез по центру.
+      const adsX = 0.13, adsY = -0.19, adsZ = -0.52;
+      const hipX = 0.17, hipY = -0.135, hipZ = -0.42;
       const lowerY = -0.13 * this.lowered;
       const lowRot = 0.55 * this.lowered;
       const rxSw = -this.sway.y * 0.5;
@@ -179,12 +181,20 @@
       let py = (hipY * (1 - this.ads) + adsY * this.ads) + bobY + this.sway.y * 0.07 + lowerY;
       let pz = (hipZ * (1 - this.ads) + adsZ * this.ads) - this.recoil * 0.16;
       // лёгкий доворот ствола к центру: оружие смотрит туда же, куда камера
-      let rx = 0.05 * (1 - this.ads) - this.recoilRot * 0.20 + lowRot + rxSw;
+      let rx = (0.05 * (1 - this.ads) + 0.16 * this.ads) - this.recoilRot * 0.20 + lowRot + rxSw;
       // доворот к центру кадра: ствол уходит вперёд-влево, приклад — вправо
-      let ry = 0.22 * (1 - this.ads) - this.sway.x * 0.9;
-      let rz = 0.08 * (1 - this.ads);
-      // масштаб: от бедра чуть мельче, чтобы ствол не «съедал» пол-экрана
-      const sc = 0.85 + 0.15 * this.ads;
+      let ry = (0.22 * (1 - this.ads) + 0.10 * this.ads) - this.sway.x * 0.9;
+      let rz = (0.11 * (1 - this.ads) + 0.0 * this.ads);
+      // масштаб: от бедра крупнее — оружие должно читаться сразу
+      let sc = 1.08 - 0.06 * this.ads;
+      // При прицеливании камера сужает FOV (у винтовки 78 → 48) — без правки
+      // оружие «раздувается» на весь кадр. Уменьшаем его пропорционально
+      // тангенсу половины FOV, чтобы угловой размер остался прежним.
+      if (this.ads > 0.01 && this.camera && this.camera.fov) {
+        const tanBase = Math.tan((78 * Math.PI) / 360);
+        const tanNow = Math.tan((this.camera.fov * Math.PI) / 360);
+        sc *= 1 - (1 - tanNow / tanBase) * this.ads;
+      }
 
       // перезарядка: оружие уходит вниз и крутится
       if (this.reloadT < this.reloadDur) {
@@ -211,6 +221,25 @@
       this.rig.rotation.set(rx, ry, rz);
       this.rig.scale.setScalar(sc);
       this._attachHands();
+      // ADS: доводим ствол так, чтобы дульный срез был точно в центре кадра.
+      // У каждого ствола своя длина, поэтому смещение считаем по проекции.
+      if (this.ads > 0.01 && this.muzzleLocal && this.camera) {
+        const T2 = THREE();
+        const mw = this._mw || (this._mw = new T2.Vector3());
+        const mv = this._mv || (this._mv = new T2.Vector3());
+        const tanHalf = Math.tan(((this.camera.fov || 78) * Math.PI) / 360);
+        const aspect = this.camera.aspect || 1.777;
+        for (let k = 0; k < 2; k++) {
+          this.root.updateMatrixWorld(true);
+          if (this.camera.updateMatrixWorld) this.camera.updateMatrixWorld();
+          this.muzzleLocal.getWorldPosition(mv);
+          mv.applyMatrix4(this.camera.matrixWorldInverse);
+          const depth = Math.max(0.05, -mv.z);
+          mw.copy(mv).applyMatrix4(this.camera.projectionMatrix);
+          this.rig.position.x += -mw.x * depth * tanHalf * aspect * this.ads;
+          this.rig.position.y += -mw.y * depth * tanHalf * this.ads;
+        }
+      }
       // новый кадр — оружие на слой 1 (см. constructor), включая только что
       // поставленный ствол: Three не наследует layers у детей автоматически
       this.root.traverse((c) => { if (c.isMesh && c.layers.mask !== 2) c.layers.set(1); });
@@ -247,7 +276,7 @@
         arm.position.copy(v);
         // локоть уводим вниз-назад и в свою сторону, чтобы рука не закрывала
         // ствол и не превращалась в «трубу в глаз»
-        ay.set(side * 0.34, -0.92, 0.62).normalize();
+        ay.set(side * 0.30, -0.85, 0.45).normalize();
         // ортонормируем базис (Y ⟂ Z)
         ay.addScaledVector(az, -ay.dot(az)).normalize();
         ax.copy(ay).cross(az).normalize();
