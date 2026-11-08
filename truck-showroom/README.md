@@ -350,6 +350,23 @@ node tools/sheets.mjs --look both --outdir sheets --cell 340    # 64 модел�
 Ракурсы считаются от рамки модели: спереди у машин −Z, у зданий +Z, у вида сверху
 своя ось «вверх» (`--up`), иначе кадр заваливается.
 
+**Галерея (`sheets/`).** По одному листу на вид для четырёх моделей — тягач `atlas-vision`,
+прицеп `container`, купе `coupe`, здание `panel-9`:
+
+| точки (контур тушью, ямки золотом) | меш из точек |
+| --- | --- |
+| `sheets/trucks-atlas-vision-dots.png` | `sheets/trucks-atlas-vision-mesh.png` |
+| `sheets/trailers-container-dots.png` | `sheets/trailers-container-mesh.png` |
+| `sheets/cars-coupe-dots.png` | `sheets/cars-coupe-mesh.png` |
+| `sheets/buildings-panel-9-dots.png` | `sheets/buildings-panel-9-mesh.png` |
+
+Полный набор — 128 листов (64 модели × точки и меш) собирается одной командой и в
+репозиторий не кладётся:
+
+```bash
+node tools/sheets.mjs --look both --outdir /tmp/sides --cell 340
+```
+
 **Бот стыков (`src/lib/seams.js`, `tools/seams.mjs`).** Проверяет все модели на незакрытые
 швы: сводит меши, сшивает вершины, собирает открытые контуры и для каждого ищет ближайшую
 чужую геометрию. Если зазор больше порога (по умолчанию 20 мм) — это щель; если контур
