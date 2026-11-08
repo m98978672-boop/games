@@ -20,6 +20,10 @@ jobs:
           node-version: 22
       - name: Validate community catalog and local files
         run: node site/tests/community-catalog.mjs
+      - name: Self-test the bug-hunting bot
+        run: node tools/bughunt/tests/selftest.mjs
+      - name: Hunt for bugs across the repository (critical only)
+        run: node tools/bughunt/bughunt.mjs --play --level критично
       - name: Test 1 IN 8 BILLION structure
         run: node 1in8b/tests/smoke.mjs
       - name: Test 1 IN 8 BILLION life model
