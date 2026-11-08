@@ -162,13 +162,26 @@ class FakeRenderer {
       this._wiped = this._passes.length > 0;
       this._passes.length = 0;
     }
-    this._passes.push({ layer, meshes });
+    /* Текстурный фон (небо градиентом) — это не очистка, а полноэкранный
+       квад в списке рендера: depthTest:false, depthWrite:false и
+       layers.enableAll(). Он рисуется ПЕРВЫМ в каждом render() и при
+       autoClearColor=false никуда не девается — поэтому на втором проходе
+       (оружие) он закрывает уже нарисованный мир. Ровно это и случилось,
+       когда плоский цвет неба заменили градиентом: карта «забелилась».
+       Эмулируем: текстура в background на не-первом проходе = мир затёрт. */
+    const bgQuad = !!(bg && !bg.isColor);
+    if (bgQuad) {
+      this._bgQuads = (this._bgQuads || 0) + 1;
+      if (this._passes.length > 0) this._wiped = true;
+    }
+    this._passes.push({ layer, meshes, bgQuad });
   }
   beginFrame() { this._passes = []; this._wiped = false; this._depthCleared = false; }
   endFrame(assert) {
     this.frames.push({ passes: this._passes.slice(), wipedWorld: this._wiped });
     if (assert) {
-      assert.ok(!this._wiped, 'второй проход не затирает нарисованный мир (autoClear выключён)');
+      assert.ok(!this._wiped,
+        'второй проход не затирает нарисованный мир (ни очисткой, ни фоном-текстурой)');
       assert.ok(this._passes.length >= 2, 'кадр рисуется в два прохода (мир + оружие)');
     }
     this._passes = []; this._wiped = false;
