@@ -439,6 +439,18 @@
     return { ok: true, sum: sum };
   }
 
+  /* имущество, доставшееся не за деньги: наследство, подарок, доля в семье */
+  function grant(life, id, value) {
+    var def = ASSET_BY_ID[id];
+    var sum = Math.round(value || 0);
+    if (!def || sum <= 0) return { ok: false, why: 'Нечего записывать' };
+    life.assets = life.assets || {};
+    var h = life.assets[id] || (life.assets[id] = { put: 0, val: 0, got: 0, since: life.age });
+    h.val += sum;
+    h.since = Math.min(h.since, life.age);
+    return { ok: true, sum: sum };
+  }
+
   function take(life, id, amount) {
     var h = holdingOf(life, id);
     var def = ASSET_BY_ID[id];
@@ -681,7 +693,7 @@
     minOf: minOf, bizCost: bizCost,
     assetState: assetState, bizState: bizState, odds: odds,
     holdings: holdings, holdingOf: holdingOf, portfolio: portfolio,
-    put: put, take: take,
+    put: put, take: take, grant: grant,
     openBiz: openBiz, investBiz: investBiz, sellBiz: sellBiz, sellPrice: sellPrice,
     bizMargin: bizMargin, bizHazard: bizHazard, bizBoom: bizBoom, skillOf: skillOf,
     tickYear: tickYear, note: note, pct: pct,

@@ -80,6 +80,16 @@ ok(doc.querySelectorAll('.squad-item').length > 0, 'список отрядов 
 ok(doc.querySelector('#hud-res').textContent.length > 0, 'ресурсы отображаются');
 ok(game.playerUnit && game.playerUnit.alive, 'боец игрока существует');
 
+// F4 действительно переключается через игровой ввод, а не только прямым вызовом рендера.
+const renderer = window.__frontline.renderer;
+ok(renderer.showWallsDebug === false, 'отладка стен по умолчанию выключена');
+key('F4');
+await sleep(120);
+ok(renderer.showWallsDebug === true, 'F4 включает отладку стен');
+key('F4');
+await sleep(120);
+ok(renderer.showWallsDebug === false, 'F4 выключает отладку стен');
+
 // клавиши и режимы
 key('Tab');
 await sleep(120);
