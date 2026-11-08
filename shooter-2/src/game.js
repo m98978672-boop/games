@@ -207,6 +207,13 @@
       this.crouchT = damp(this.crouchT, wantCrouch ? 1 : 0, 12);
       this.crouch = this.crouchT > 0.5;
 
+      /* Аналоговый ход с джойстика: стик отдаёт не «-1/0/+1», а длину
+         вектора. Раньше клавиши (KeyW/KeyA…) включались порогом 0.25 и
+         движение становилось рваным — отсюда «джойстик плохой». Теперь есть
+         аналоговое намерение analog(x,z), оно же приходит с тача. */
+      const ax = inp.analog ? inp.analog.x : (inp.strafe || 0);
+      const az = inp.analog ? inp.analog.z : (inp.forward || 0);
+      const an = Math.min(1, Math.hypot(ax, az));
       const speedWalk = 4.3 * (this.crouch ? 0.48 : 1) * (this.ads ? 0.55 : 1);
       const speedRun = 7.9 * (this.crouch ? 0.4 : 1);
       const targetSpeed = this.sprint ? speedRun : speedWalk;
@@ -214,15 +221,21 @@
       const sin = Math.sin(inp.yaw), cos = Math.cos(inp.yaw);
       let dx = 0, dz = 0;
       if (inp.forward) { dx += sin * inp.forward; dz += cos * inp.forward; }
+      if (inp.analog) { dx += sin * az; dz += cos * az; }
       // Экранное «право»: камера смотрит в +Z через разворот на π, поэтому
       // вперёд = (sin, cos), а вправо = (−cos, sin). Раньше здесь стоял знак
       // наоборот — от этого управление было зеркальным.
       if (inp.strafe) { dx += -cos * inp.strafe; dz += sin * inp.strafe; }
+      if (inp.analog) { dx += -cos * ax; dz += sin * ax; }
       const mag = Math.hypot(dx, dz);
       if (mag > 0) { dx /= mag; dz /= mag; }
+      // скорость тянется к targetSpeed плавно и пропорционально наклону стика:
+      // чуть сдвинул стик — идёшь медленно, до упора — бежишь
+      const stick = inp.analog ? an : 1;
+      const targetV = targetSpeed * stick;
       const accel = this.y > 0.05 ? 4 : 16;
-      this.vx = damp(this.vx, dx * targetSpeed, accel);
-      this.vz = damp(this.vz, dz * targetSpeed, accel);
+      this.vx = damp(this.vx, dx * targetV, accel);
+      this.vz = damp(this.vz, dz * targetV, accel);
       const px = this.x, pz = this.z;
       this.x += this.vx * dt;
       this.z += this.vz * dt;
@@ -477,6 +490,38 @@
       const g = this.game;
       const T = root.THREE;
       g.fx.explosion(gr.pos, gr.radius);
+      /* Осколки — отдельный, «дальний» слой поражения: сам взрыв добивает в
+         радиусе, а шрапнель достаёт тех, кто стоит в 1.35× дальше, и только
+         если между ними нет стены (иначе взрыв «через дом» убивает). */
+      const shardR = gr.radius * 1.35;
+      const shardDmg = gr.damage * 0.34;
+      const victims = [];
+      g.enemies.forEach((e) => {
+        if (!e.alive) return;
+        const d = Math.hypot(e.x - gr.pos.x, e.z - gr.pos.z);
+        if (d < gr.radius || d > shardR) return;
+        if (!g.world.hasLOS(e.x, 1.1, e.z, gr.pos.x, gr.pos.y + 0.2, gr.pos.z)) return;
+        victims.push(e);
+      });
+      victims.forEach((e) => {
+        const d = Math.hypot(e.x - gr.pos.x, e.z - gr.pos.z);
+        const f = 1 - (d - gr.radius) / Math.max(0.001, shardR - gr.radius);
+        const nx = (e.x - gr.pos.x) / (d || 1), nz = (e.z - gr.pos.z) / (d || 1);
+        e.hit(shardDmg * Math.max(0.25, f), g, { force: 3.2 * f, dir: new T.Vector3(nx, 0, nz) });
+      });
+      // осколки бьют и по самому игроку, если он рядом (своя граната опасна)
+      {
+        const P = g.player;
+        const dP2 = Math.hypot(P.x - gr.pos.x, P.z - gr.pos.z);
+        if (P.alive && dP2 >= gr.radius && dP2 < shardR &&
+            g.world.hasLOS(P.x, 1.1, P.z, gr.pos.x, gr.pos.y + 0.2, gr.pos.z)) {
+          const f = 1 - (dP2 - gr.radius) / Math.max(0.001, shardR - gr.radius);
+          // через damagePlayer: учитывает сложность, тряску и звук удара
+          g.damagePlayer(shardDmg * Math.max(0.22, f) * (gr.fromPlayer ? 0.3 : 1), gr.owner, 'shrapnel');
+        }
+      }
+      // ближайшие ящики/цели тоже получают осколки
+      if (g.mission && g.mission.type === 'destroy') g.damageObjective(gr.pos.x, gr.pos.z, gr.damage * 0.22);
       g.shake(0.7);
       const P = g.player;
       const dP = Math.hypot(P.x - gr.pos.x, P.z - gr.pos.z);
@@ -496,6 +541,27 @@
         }
       });
     }
+  }
+
+  /* Полотно неба: вертикальный градиент сверху вниз (зенит темнее горизонта) +
+     мягкая дымка у линии земли. Текстура двухцветная, поэтому стоит копейки. */
+  function makeSky(M) {
+    const T = root.THREE;
+    const c = document.createElement('canvas');
+    c.width = 8; c.height = 128;
+    const ctx = c.getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 0, 128);
+    const hex = (v) => (typeof v === 'string' ? v : '#' + ('000000' + v.toString(16)).slice(-6));
+    const sky = hex(M.sky || '#8ea9c4');
+    const haze = M.fog === undefined ? sky : hex(M.fog);
+    g.addColorStop(0, sky);
+    g.addColorStop(0.58, haze);
+    g.addColorStop(1, haze);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 8, 128);
+    const tex = new T.CanvasTexture(c);
+    if ('colorSpace' in tex && T.SRGBColorSpace) tex.colorSpace = T.SRGBColorSpace;
+    return tex;
   }
 
   /* ============================== ИГРА ==================================== */
@@ -565,7 +631,7 @@
       // слой 0 — мир, слой 1 — оружие от первого лица (рисуется вторым проходом)
       this.camera.layers.enable(1);
       this.scene.add(this.camera);
-      this.scene.fog = new T.FogExp2(0x1a1410, 0.012);
+      this.scene.fog = new T.FogExp2(0x8ea9c4, 0.0035);
 
       this.perf = new SH2.perf.Perf();
       this.audio = new SH2.audio.AudioEngine();
@@ -590,8 +656,8 @@
       this.level = SH2.model.buildLevel(m.map);
       this.scene.add(this.level.group);
       this.world = new SH2.world.World(this.level.map, this.level.colliders);
-      this.scene.background = new (root.THREE.Color)(this.level.map.sky);
-      this.scene.fog = new (root.THREE.FogExp2)(this.level.map.fog, 0.012);
+      this.scene.background = makeSky(this.level.map);
+      this.scene.fog = new (root.THREE.FogExp2)(this.level.map.fog, this.level.map.fogDensity || 0.0035);
       this.perf.setPreset(this.settings.quality, this.renderer, this.level.sun, this.scene);
       this.menuAgents = [];
       const taken = [];
@@ -667,20 +733,74 @@
       this.bindTouch();
     }
 
-    /* ------------------------- управление на телефоне ---------------------- */
+    /* ------------------------- управление на телефоне ----------------------
+       Плавающий стик вместо «полэкрана влево — это ходьба»:
+       • касание левой половиной экрана ставит базу стика ровно под палец,
+         поэтому не важно, где именно вы приложили палец;
+       • выход за радиус не съедается: вектор нормируется к единице, поэтому
+         можно «перетаскивать» стик, не теряя направление;
+       • мёртвая зона 12% и плавный разгон от неё к краю — иначе персонаж
+         дёргается от малейшего шевеления пальца;
+       • на отпускании стик не обнуляется мгновенно, а гаснет ~80 мс, чтобы
+         персонаж не «спотыкался» на каждом подъёме пальца;
+       • правая половина — обзор, чувствительность зависит от того, идёт ли
+         прицеливание. */
     bindTouch() {
       const coarse = root.matchMedia ? root.matchMedia('(pointer: coarse)').matches : false;
-      this.touch = { active: false, moveId: null, lookId: null, mx: 0, my: 0, lx: 0, ly: 0, fire: false, ads: false };
+      this.touch = {
+        active: false, moveId: null, lookId: null,
+        mx: 0, my: 0, lx: 0, ly: 0,
+        sx: 0, sz: 0,            // текущий вектор стика (-1..1)
+        txs: 0, tzs: 0,          // цель стика (что дал палец)
+        stickActive: false,
+        baseX: 0, baseY: 0,
+        radius: 64
+      };
       if (!coarse) return;
       this.touch.active = true;
       document.body.classList.add('touch');
+      const pad = document.getElementById('touch-stick');
+      const knob = document.getElementById('touch-stick-knob');
       const pos = (t) => ({ x: t.clientX, y: t.clientY });
+      const DEAD = 0.12;
+      const setStick = (dx, dy) => {
+        const R = this.touch.radius;
+        let vx = dx / R, vy = dy / R;
+        const len = Math.hypot(vx, vy);
+        if (len > 1) { vx /= len; vy /= len; }
+        const mag = Math.min(1, Math.hypot(vx, vy));
+        // мёртвая зона с плавным выходом: 0 → DEAD → 1
+        const shaped = mag <= DEAD ? 0 : (mag - DEAD) / (1 - DEAD);
+        const n = mag > 1e-4 ? shaped / mag : 0;
+        this.touch.txs = vx * n;
+        this.touch.tzs = -vy * n;   // экранный «вверх» = вперёд
+        this.touch.stickActive = true;
+        if (knob) {
+          const kx = Math.max(-1, Math.min(1, vx)) * R * 0.62;
+          const ky = Math.max(-1, Math.min(1, vy)) * R * 0.62;
+          knob.style.transform = 'translate(' + kx.toFixed(1) + 'px,' + ky.toFixed(1) + 'px)';
+        }
+      };
+      const showPad = (x, y) => {
+        this.touch.baseX = x; this.touch.baseY = y;
+        if (!pad) return;
+        pad.style.display = 'block';
+        pad.style.left = x + 'px';
+        pad.style.top = y + 'px';
+      };
+      const hidePad = () => { if (pad) pad.style.display = 'none'; };
       this.canvas.addEventListener('touchstart', (e) => {
         if (this.state !== 'playing') return;
         for (const t of e.changedTouches) {
           const p = pos(t);
-          if (p.x < root.innerWidth * 0.45 && this.touch.moveId === null) { this.touch.moveId = t.identifier; this.touch.mx = p.x; this.touch.my = p.y; }
-          else if (this.touch.lookId === null) { this.touch.lookId = t.identifier; this.touch.lx = p.x; this.touch.ly = p.y; }
+          if (p.x < root.innerWidth * 0.45 && this.touch.moveId === null) {
+            this.touch.moveId = t.identifier;
+            this.touch.mx = p.x; this.touch.my = p.y;
+            showPad(p.x, p.y);
+          } else if (this.touch.lookId === null) {
+            this.touch.lookId = t.identifier;
+            this.touch.lx = p.x; this.touch.ly = p.y;
+          }
         }
         e.preventDefault();
       }, { passive: false });
@@ -688,16 +808,12 @@
         for (const t of e.changedTouches) {
           const p = pos(t);
           if (t.identifier === this.touch.moveId) {
-            const dx = (p.x - this.touch.mx) / 60, dy = (p.y - this.touch.my) / 60;
-            this.input.forward = Math.max(-1, Math.min(1, -dy));
-            this.input.strafe = Math.max(-1, Math.min(1, dx));
-            this.keys.KeyW = this.input.forward > 0.25;
-            this.keys.KeyS = this.input.forward < -0.25;
-            this.keys.KeyD = this.input.strafe > 0.25;
-            this.keys.KeyA = this.input.strafe < -0.25;
+            setStick(p.x - this.touch.baseX, p.y - this.touch.baseY);
           } else if (t.identifier === this.touch.lookId) {
-            this.mouse.dx += (p.x - this.touch.lx) * 1.5;
-            this.mouse.dy += (p.y - this.touch.ly) * 1.5;
+            // чувствительность обзора ниже на прицеле и выше на бегу
+            const sens = this.mouse.right || this.touchAds ? 1.0 : 1.5;
+            this.mouse.dx += (p.x - this.touch.lx) * sens;
+            this.mouse.dy += (p.y - this.touch.ly) * sens;
             this.touch.lx = p.x; this.touch.ly = p.y;
           }
         }
@@ -707,8 +823,12 @@
         for (const t of e.changedTouches) {
           if (t.identifier === this.touch.moveId) {
             this.touch.moveId = null;
-            this.input.forward = 0; this.input.strafe = 0;
-            this.keys.KeyW = this.keys.KeyA = this.keys.KeyS = this.keys.KeyD = false;
+            // не обнуляем сразу: цель стика — ноль, а к нулю ведёт сглаживание
+            // в updateTouch() — персонаж останавливается, а не «втыкается»
+            this.touch.txs = 0; this.touch.tzs = 0;
+            this.touch.stickActive = false;
+            hidePad();
+            if (knob) knob.style.transform = 'translate(0,0)';
           }
           if (t.identifier === this.touch.lookId) this.touch.lookId = null;
         }
@@ -797,8 +917,8 @@
       this.level = SH2.model.buildLevel(m.map);
       this.scene.add(this.level.group);
       this.world = new SH2.world.World(this.level.map, this.level.colliders);
-      this.scene.fog = new (root.THREE.FogExp2)(this.level.map.fog, m.map === 'harbor' ? 0.010 : 0.013);
-      this.scene.background = new (root.THREE.Color)(this.level.map.sky);
+      this.scene.fog = new (root.THREE.FogExp2)(this.level.map.fog, this.level.map.fogDensity || 0.0035);
+      this.scene.background = makeSky(this.level.map);
       this.level.sun.target.position.set(0, 0, 0);
       this.perf.setPreset(this.settings.quality, this.renderer, this.level.sun, this.scene);
 
@@ -1214,7 +1334,11 @@
       // ввод
       const inp = this.input;
       inp.crouch = this.input.crouchToggle || !!this.keys.ControlLeft || !!this.keys.KeyC;
-      inp.sprint = !!this.keys.ShiftLeft || !!this.keys.ShiftRight;
+      // авто-бег: стик, выведенный почти до упора, сам включает спринт —
+      // на телефоне не нужно отпускать стик ради кнопки «бег»
+      const stickMag = this.touch && this.touch.stickActive
+        ? Math.hypot(this.touch.sx, this.touch.sz) : 0;
+      inp.sprint = !!this.keys.ShiftLeft || !!this.keys.ShiftRight || stickMag > 0.92;
       inp.ads = this.mouse.right || !!this.touchAds;
       let fwd = 0, str = 0;
       if (this.keys.KeyW || this.keys.ArrowUp) fwd += 1;
@@ -1222,6 +1346,17 @@
       if (this.keys.KeyD || this.keys.ArrowRight) str += 1;
       if (this.keys.KeyA || this.keys.ArrowLeft) str -= 1;
       inp.forward = fwd; inp.strafe = str;
+      // виртуальный стик (телефон): плавное сглаживание к цели + автовозврат.
+      // Затухание быстрее разгона (0.28 против 0.16 с), поэтому отпускание
+      // пальца не «тащит» персонажа дальше.
+      if (this.touch && this.touch.active) {
+        const T = this.touch;
+        const k = T.stickActive ? Math.min(1, dt * 16) : Math.min(1, dt * 22);
+        T.sx += (T.txs - T.sx) * k;
+        T.sz += (T.tzs - T.sz) * k;
+        if (!T.stickActive && Math.abs(T.sx) + Math.abs(T.sz) < 0.01) { T.sx = 0; T.sz = 0; }
+        inp.analog = (Math.abs(T.sx) + Math.abs(T.sz) > 0.001) ? { x: T.sx, z: T.sz } : null;
+      } else inp.analog = null;
 
       // мышь
       const sens = 0.0022;

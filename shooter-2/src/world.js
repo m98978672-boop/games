@@ -46,6 +46,11 @@
     /* ---------------------- разрешение столкновений ------------------------ */
     resolveCircle(pos, radius) {
       const half = this.half;
+      /* Толщина коллайдера мешков — не «полстены», а реальная кладка.
+         Раньше в коллайдер закладывался припуск 0.3 м и сверху ещё радиус
+         тела, поэтому до мешков нельзя было подойти ближе чем на полметра:
+         модель стоит в воздухе, а стена «отталкивает». */
+      const lowGap = 0.06;
       // границы карты
       const lim = half - radius;
       if (pos.x < -lim) pos.x = -lim;
@@ -59,24 +64,27 @@
         const c = this.colliders[i];
         // вертикальная полоса: низкое препятствие не держит, если тело уже над ним
         if (c.standLow && feet > 0.55 * (c.h || 1)) continue;
+        // низкие препятствия (мешки, камни) не отталкивают «на вытянутую руку»:
+        // тело подходит вплотную и упирается, а не парит в полуметре
+        const rr = c.standLow ? Math.max(0.16, radius - lowGap - 0.14) : radius;
         const cx = Math.max(c.x - c.hw, Math.min(pos.x, c.x + c.hw));
         const cz = Math.max(c.z - c.hd, Math.min(pos.z, c.z + c.hd));
         let dx = pos.x - cx, dz = pos.z - cz;
         let d2 = dx * dx + dz * dz;
-        if (d2 > radius * radius) continue;
+        if (d2 > rr * rr) continue;
         hitWall = true;
         if (d2 < 1e-8) {
           // центр внутри коробки — выталкиваем по минимальной оси
-          const ox = (c.hw + radius) - Math.abs(pos.x - c.x);
-          const oz = (c.hd + radius) - Math.abs(pos.z - c.z);
-          if (ox < oz) pos.x = c.x + Math.sign(pos.x - c.x || 1) * (c.hw + radius);
-          else pos.z = c.z + Math.sign(pos.z - c.z || 1) * (c.hd + radius);
+          const ox = (c.hw + rr) - Math.abs(pos.x - c.x);
+          const oz = (c.hd + rr) - Math.abs(pos.z - c.z);
+          if (ox < oz) pos.x = c.x + Math.sign(pos.x - c.x || 1) * (c.hw + rr);
+          else pos.z = c.z + Math.sign(pos.z - c.z || 1) * (c.hd + rr);
         } else {
           const d = Math.sqrt(d2);
           const nx = dx / d, nz = dz / d;
           // выталкиваем ровно на проникновение — касательное движение
           // сохраняется, поэтому юнит скользит вдоль стены, а не липнет
-          const push = radius - d;
+          const push = rr - d;
           pos.x += nx * push;
           pos.z += nz * push;
         }
@@ -108,6 +116,8 @@
           // пуля попала в оконный/пулевой проём — проходит сквозь это препятствие
           if (hitHole(ox, oy, oz, dx, dy, dz, c, bestT)) continue;
         }
+        // высота уже учтена в rayBox (box от 0 до c.h): луч выше кладки мешков
+        // проходит над ними, а не упирается в невидимую стену
         const t = rayBox(ox, oy, oz, dx, dy, dz, c.x, 0, c.z, c.hw, c.h, c.hd, bestT);
         if (t !== null && t < bestT) { bestT = t; best = c; }
       }

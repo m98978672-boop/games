@@ -604,9 +604,13 @@
      --------------------------------------------------------------------------- */
   const MAPS = {
     depot: {
-      size: 76, fog: 0x1a1410, sky: '#2a1f19', ground: 0x3a3128, accent: 0x4a3a28,
-      sun: 0xffd0a0, ambient: 0x5a4a3a, sunPos: [-42, 58, 26], dust: 0.9,
-      wallColors: { wall: 0x4a4238, roof: 0x2f2b26, trim: 0x5a5044 },
+      /* Карта в дневном свете: небо светлое, туман почти прозрачный, солнце
+         тёплое и высокое. Раньше всё тонуло в коричневой взвеси (fog 0x1a1410),
+         из-за чего дальние объекты превращались в силуэты. */
+      size: 76, fog: 0xb9c6d2, sky: '#8ea9c4', ground: 0x8d8579, accent: 0xa79c88,
+      sun: 0xffefd0, ambient: 0x8fa2b6, sunPos: [-42, 78, 26], dust: 0.45,
+      fogDensity: 0.0035, brightness: 1.0,
+      wallColors: { wall: 0x8a7f70, roof: 0x9d9488, trim: 0xa2937f },
       buildings: [
         { poly: [[-24, -20], [-9, -22], [-7, -9], [-22, -8]], h: 4.2, roof: 'flat', wall: 0x4d4438 },
         { poly: [[6, -26], [20, -25], [21, -13], [7, -12]], h: 5.0, roof: 'gable', ridge: 0.32, wall: 0x463f35 },
@@ -656,9 +660,10 @@
       boxes: [{ x: -8, z: -26, r: 1 }, { x: 18, z: 26, r: 1 }, { x: 26, z: -26, r: 1 }]
     },
     convoy: {
-      size: 84, fog: 0x181a14, sky: '#2b2a24', ground: 0x3b3a2e, accent: 0x4d4a36,
-      sun: 0xffe0a8, ambient: 0x5c5a44, sunPos: [30, 62, -40], dust: 0.7,
-      wallColors: { wall: 0x4f4a3a, roof: 0x322f28, trim: 0x5e5844 },
+      size: 84, fog: 0xc3cab5, sky: '#a3b291', ground: 0x8f8c74, accent: 0xa8a48a,
+      sun: 0xfff2d4, ambient: 0x93a08a, sunPos: [30, 74, -40], dust: 0.4,
+      fogDensity: 0.0032, brightness: 0.98,
+      wallColors: { wall: 0x8f8768, roof: 0x9d9683, trim: 0xa79c80 },
       buildings: [
         { poly: [[-26, -24], [-10, -26], [-8, -12], [-24, -10]], h: 3.4, roof: 'gable', ridge: 0.42, wall: 0x4c4636 },
         { poly: [[8, -30], [24, -28], [26, -16], [10, -14]], h: 4.4, roof: 'flat', wall: 0x464034 },
@@ -703,9 +708,10 @@
       boxes: [{ x: -2, z: -28, r: 1 }, { x: 30, z: 6, r: 1 }, { x: -30, z: 24, r: 1 }]
     },
     harbor: {
-      size: 90, fog: 0x101820, sky: '#1d2733', ground: 0x2f3540, accent: 0x3d4654,
-      sun: 0xa8c8ff, ambient: 0x4a5a6c, sunPos: [-46, 52, 44], dust: 0.5,
-      wallColors: { wall: 0x3f4852, roof: 0x2a3138, trim: 0x4d5765 },
+      size: 90, fog: 0xb6c9da, sky: '#90aecb', ground: 0x7f8a95, accent: 0x9aa6b2,
+      sun: 0xd6e6fb, ambient: 0x93a6ba, sunPos: [-46, 70, 44], dust: 0.3,
+      fogDensity: 0.003, brightness: 0.95,
+      wallColors: { wall: 0x7c8794, roof: 0x9aa6b2, trim: 0x93a0ad },
       buildings: [
         { poly: [[-30, -26], [-8, -30], [-6, -10], [-28, -6]], h: 6.2, roof: 'flat', wall: 0x414a54 },
         { poly: [[10, -22], [30, -18], [32, 0], [12, -2]], h: 5.4, roof: 'gable', ridge: 0.26, wall: 0x3c454f },
