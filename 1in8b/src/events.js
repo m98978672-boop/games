@@ -1540,6 +1540,850 @@
         }
       ]
     },
+    /* ============== цепочка: крыша над головой =====================
+       Выселение → первая ночь → каждый день на улице → выходы обратно.
+       Карточки с chain:true приходят только по расписанию, из движка. */
+    {
+      id: 'evict', money: true, age: [19, 85], priority: true,
+      cond: function (x) {
+        return !x.L.homeless && !x.L.abroad && x.L.money < -x.need * 1.1 &&
+          x.L.age - (x.L.lastEvict === undefined ? -99 : x.L.lastEvict) > 6 &&
+          !(x.L.home && !x.has('mortgage'));
+      },
+      title: 'Из жилья выселяют',
+      text: function (x) {
+        return x.has('mortgage')
+          ? 'Платежей по ипотеке не было слишком долго. Банк забирает квартиру: съехать надо до конца месяца.'
+          : 'Долг за жильё перерос все разговоры. Хозяин ставит срок: до конца месяца.';
+      },
+      options: [
+        {
+          label: 'Уговорить подождать ещё', hint: 'отсрочка · как получится',
+          w: function (x) { return 3; },
+          chance: function (x) { return clamp(0.25 + x.L.stats.bond / 170 + x.L.stats.know / 320, 0.15, 0.8); },
+          run: function (x) {
+            x.L.schedule('evict', 2);
+            x.add('Вам дали отсрочку. Съезжать пока не надо, но долг никуда не делся.', 'money');
+            x.stat('happy', -4);
+          },
+          fail: function (x) {
+            x.L.toStreet('Ждать больше не стали: вещи вынесли на улицу, замок сменили.');
+          }
+        },
+        {
+          label: 'Переехать к родне', hint: 'тесно · но крыша есть',
+          w: function (x) { return 4; },
+          req: { bond: 42 },
+          run: function (x) {
+            x.L.flag('atRelatives', true); x.L.moves++;
+            x.stat('bond', -6); x.stat('happy', -7);
+            x.add('Вы перебрались к родне: матрас в проходной комнате и чужие правила.', 'family');
+            x.L.schedule('relatives-tired', 2 + x.rnd.int(3));
+          }
+        },
+        {
+          label: 'Продать всё и снять комнату', hint: 'вещи уйдут · адрес останется',
+          w: function (x) { return 2.5; },
+          req: {
+            custom: {
+              test: function (x) { return (x.L.spentTotal || 0) > x.need * 0.5; },
+              why: 'продавать нечего', done: 'есть что продать'
+            }
+          },
+          run: function (x) {
+            x.money(x.need * (0.3 + x.rnd() * 0.4)); x.L.moves++;
+            x.stat('happy', -6);
+            x.add('Продали всё, что нажили, и сняли комнату поменьше.', 'money');
+          }
+        },
+        {
+          label: 'Занять под любой процент', hint: 'крыша сегодня · долг завтра',
+          w: function (x) { return 1.6; },
+          run: function (x) {
+            x.L.takeLoan(x.need * 0.8, 4, 0.34);
+            x.add('Деньги нашли под дикий процент. Выселение отменили.', 'money');
+            x.stat('happy', -3);
+          }
+        },
+        {
+          label: 'Уехать туда, откуда вы родом', hint: 'дом есть · работы нет',
+          w: function (x) { return 2; },
+          req: {
+            custom: {
+              test: function (x) { return x.L.parentsAlive > 0 || !x.L.urban || x.c.gdp < 12000; },
+              why: 'возвращаться некуда', done: 'есть куда вернуться'
+            }
+          },
+          run: function (x) {
+            x.L.urban = false; x.L.moves++;
+            if (x.L.job) { x.L.job = null; x.L.unemployedYears = 0; }
+            x.stat('happy', -5); x.stat('bond', 4);
+            x.add('Вы уехали туда, где вас помнят: дом старый, работы нет, но не улица.', 'life');
+          }
+        },
+        {
+          label: 'Дождаться приставов', hint: 'улица',
+          w: function (x) { return 0.8; },
+          run: function (x) {
+            x.L.toStreet('Пришли приставы. Вещи — в мешки, вы — за дверь.');
+          }
+        }
+      ]
+    },
+    {
+      id: 'relatives-tired', chain: true, age: [19, 90],
+      cond: function (x) { return x.has('atRelatives') && !x.L.homeless; },
+      title: 'У родни кончилось терпение',
+      text: function (x) {
+        return 'Полгода вы спите в проходной комнате. Разговоры на кухне всё громче, и однажды вам говорят прямо.';
+      },
+      options: [
+        {
+          label: 'Снять своё жильё', hint: 'нужны деньги',
+          w: function (x) { return 4; },
+          req: { money: function (x) { return x.need * 0.35; } },
+          cost: { money: function (x) { return x.need * 0.35; } },
+          run: function (x) {
+            x.money(-x.need * 0.35); x.L.flag('atRelatives', false); x.L.moves++;
+            x.stat('happy', 8); x.stat('bond', 3);
+            x.add('Вы сняли своё жильё — пусть комнату, зато свою.', 'life');
+          }
+        },
+        {
+          label: 'Отработать своё место', hint: 'ремонт, уход, помощь',
+          w: function (x) { return 3; },
+          req: { health: 35 },
+          run: function (x) {
+            x.stat('health', -3); x.stat('bond', 8); x.stat('happy', -2);
+            x.add('Вы стали тем, кто чинит, возит и сидит с детьми. Вас терпят.', 'family');
+            x.L.schedule('relatives-tired', 3 + x.rnd.int(4));
+          }
+        },
+        {
+          label: 'Уйти, чтобы не унижаться', hint: 'улица',
+          w: function (x) { return 0.7; },
+          run: function (x) {
+            x.L.flag('atRelatives', false);
+            x.L.toStreet('Вы собрали сумку и ушли, не дожидаясь, пока попросят.');
+          }
+        }
+      ]
+    },
+    {
+      id: 'street-first', chain: true, age: [10, 100],
+      cond: function (x) { return !!x.L.homeless; },
+      title: 'Первая ночь без дома',
+      text: function (x) {
+        return 'Темнеет, и впервые в жизни непонятно, куда идти. В сумке документы, зарядка и две футболки.';
+      },
+      options: [
+        {
+          label: 'Ночевать на вокзале', hint: 'тепло · облавы',
+          w: function (x) { return 3; },
+          run: function (x) {
+            x.stat('health', -2); x.stat('happy', -4);
+            x.add('Вокзал: тепло, светло и каждые два часа обход.', 'bad');
+            if (x.rnd() < 0.3) {
+              x.stat('happy', -4);
+              x.add('Под утро вас вывели на мороз вместе с остальными.', 'bad');
+            }
+          }
+        },
+        {
+          label: 'Подвал или стройка', hint: 'тихо · холодно',
+          w: function (x) { return 3; },
+          run: function (x) {
+            x.stat('health', -4);
+            x.add('Нашли подвал с трубами. Там тепло от теплотрассы и пахнет сыростью.', 'bad');
+          }
+        },
+        {
+          label: 'Пойти в ночлежку', hint: 'койка · очередь · правила',
+          w: function (x) { return 3.5; },
+          req: {
+            custom: {
+              test: function (x) { return x.c.gdp > 6000 && x.L.urban; },
+              why: 'ночлежек здесь нет', done: 'в городе есть ночлежка'
+            }
+          },
+          run: function (x) {
+            x.stat('health', 2); x.stat('happy', 3);
+            x.L.flag('shelter', true);
+            x.add('В ночлежке дали койку, суп и список: что нужно, чтобы вернуться к жизни.', 'good');
+            x.L.schedule('street-help', 1);
+          }
+        },
+        {
+          label: 'Проситься к знакомым', hint: 'на пару ночей',
+          w: function (x) { return 2.5; },
+          req: { bond: 38 },
+          chance: function (x) { return clamp(0.2 + x.L.stats.bond / 150, 0.15, 0.75); },
+          run: function (x) {
+            x.stat('happy', 6);
+            x.L.offStreet('Старый друг пустил пожить и помог встать на ноги.');
+            x.stat('bond', 6);
+          },
+          fail: function (x) {
+            x.stat('happy', -8); x.stat('bond', -6);
+            x.add('Вам не отказали прямо — просто никто не перезвонил.', 'bad');
+          }
+        },
+        {
+          label: 'Уехать куда глаза глядят', hint: 'новый город · никого',
+          w: function (x) { return 1.2; },
+          run: function (x) {
+            x.L.moves++; x.stat('bond', -8); x.stat('health', -2);
+            x.add('Вы уехали в другой город, где вас никто не знает — и некому помочь.', 'life');
+          }
+        }
+      ]
+    },
+    {
+      id: 'street-day', chain: true, age: [10, 100],
+      cond: function (x) { return !!x.L.homeless; },
+      title: function (x) { return 'Улица: чем жить'; },
+      text: function (x) {
+        return 'Утро начинается с одного вопроса: где взять сегодня еду и где спать ночью.';
+      },
+      options: [
+        {
+          label: 'Собирать бутылки и картон', hint: 'копейки · спина',
+          w: function (x) { return 3; },
+          run: function (x) {
+            x.money(x.need * (0.03 + x.rnd() * 0.05)); x.stat('health', -2);
+            x.add('Весь день с мешком по дворам: бутылки, картон, металл.', 'money');
+          }
+        },
+        {
+          label: 'Просить у прохожих', hint: 'быстрее · унизительно',
+          w: function (x) { return 2.5; },
+          run: function (x) {
+            x.money(x.need * (0.05 + x.rnd() * 0.08));
+            x.stat('happy', -7); x.stat('bond', -3);
+            x.add('Вы сидели у перехода с картонкой. Подавали редко, но подавали.', 'money');
+          }
+        },
+        {
+          label: 'Браться за любую подёнщину', hint: 'шанс зацепиться',
+          w: function (x) { return 3; },
+          req: { health: 38 },
+          chance: function (x) { return clamp(0.25 + x.L.stats.health / 220 + x.L.stats.know / 400, 0.15, 0.7); },
+          run: function (x) {
+            x.money(x.need * (0.1 + x.rnd() * 0.15)); x.stat('health', -2);
+            x.add('Разгружали фуры и мешали раствор. Заплатили и позвали ещё.', 'work');
+            x.L.schedule('street-job', 1);
+          },
+          fail: function (x) {
+            x.stat('health', -3); x.stat('happy', -5);
+            x.add('Отработали неделю — расчёт пообещали и пропали.', 'bad');
+          }
+        },
+        {
+          label: 'Взять чужое', hint: 'еда сегодня · суд завтра',
+          w: function (x) { return 1; },
+          chance: function (x) { return clamp(0.55 + x.L.stats.know / 400, 0.3, 0.8); },
+          run: function (x) {
+            x.money(x.need * (0.1 + x.rnd() * 0.2)); x.stat('happy', -4);
+            x.add('Взяли то, что плохо лежало. В этот раз обошлось.', 'bad');
+          },
+          fail: function (x) {
+            x.add('Вас поймали на краже и увезли в отдел.', 'bad');
+            x.L.schedule('court-theft', 0);
+          }
+        },
+        {
+          label: 'Найти своих', hint: 'если есть кому звонить',
+          w: function (x) { return 2.2; },
+          req: { bond: 28 },
+          chance: function (x) { return clamp(0.15 + x.L.stats.bond / 140, 0.1, 0.7); },
+          run: function (x) {
+            x.L.offStreet('Родные нашлись и забрали вас к себе. Вы снова спите в кровати.');
+            x.stat('bond', 10);
+          },
+          fail: function (x) {
+            x.stat('happy', -6); x.stat('bond', -4);
+            x.add('Номер не отвечает. Адрес старый. Своих вы так и не нашли.', 'bad');
+          }
+        },
+        {
+          label: 'Заняться документами', hint: 'долго · но это выход',
+          w: function (x) { return 2.5; },
+          req: {
+            custom: {
+              test: function (x) { return x.c.gdp > 4000; },
+              why: 'без адреса здесь не восстановят бумаги', done: 'бумаги можно восстановить'
+            }
+          },
+          run: function (x) {
+            x.stat('know', 2); x.stat('happy', 2);
+            x.add('Вы начали собирать справки: без паспорта нет ни работы, ни койки.', 'life');
+            x.L.schedule('street-docs', 1);
+          }
+        }
+      ]
+    },
+    {
+      id: 'street-winter', chain: true, heavy: true, age: [10, 100],
+      cond: function (x) { return !!x.L.homeless; },
+      title: 'Зима',
+      text: function (x) {
+        return x.L.coldWinter() > 0.6
+          ? 'Ночью минус двадцать. Пережить зиму на улице получается не у всех.'
+          : 'Ночи стали холодными и мокрыми, а сухой одежды нет.';
+      },
+      options: [
+        {
+          label: 'Спать в подъезде и на трубах', hint: 'опасно',
+          w: function (x) { return 2; },
+          run: function (x) {
+            x.stat('health', -7);
+            var risk = 0.03 + x.L.coldWinter() * 0.07 + (x.L.age > 55 ? 0.03 : 0);
+            if (x.rnd() < risk) {
+              x.add('Эту ночь вы не пережили: утром вас нашли у батареи в подъезде.', 'bad');
+              x.L.die('переохлаждение');
+            } else {
+              x.add('Зиму перетерпели в подъездах: кашель, обморожённые пальцы, но живы.', 'bad');
+            }
+          }
+        },
+        {
+          label: 'Ночлежка на всю зиму', hint: 'койка · правила · трезвость',
+          w: function (x) { return 4; },
+          req: {
+            custom: {
+              test: function (x) { return x.c.gdp > 6000 && x.L.urban; },
+              why: 'ночлежек здесь нет', done: 'в городе есть ночлежка'
+            }
+          },
+          run: function (x) {
+            x.stat('health', -1); x.stat('happy', 4);
+            x.L.flag('shelter', true);
+            x.add('Всю зиму — ночлежка: отбой в десять, зато вы живы и в тепле.', 'good');
+            if (x.has('addiction') && x.rnd() < 0.4) {
+              x.flag('addiction', false);
+              x.add('В ночлежке не наливают. За зиму вы отвыкли.', 'good');
+            }
+            x.L.schedule('street-help', 1);
+          }
+        },
+        {
+          label: 'Уехать туда, где теплее', hint: 'юг · чужой город',
+          w: function (x) { return 1.5; },
+          req: { money: function (x) { return x.need * 0.08; } },
+          cost: { money: function (x) { return x.need * 0.08; } },
+          run: function (x) {
+            x.money(-x.need * 0.08); x.L.moves++;
+            x.stat('health', -2); x.stat('bond', -3);
+            x.add('Зиму переждали на юге: там теплее и таких, как вы, больше.', 'life');
+          }
+        },
+        {
+          label: 'Греться у костра с другими', hint: 'люди · огонь · бутылка',
+          w: function (x) { return 2; },
+          run: function (x) {
+            x.stat('health', -5); x.stat('bond', 5); x.stat('happy', 2);
+            x.add('Бочка с огнём, чужие истории и общая бутылка — так и грелись.', 'life');
+            if (!x.has('addiction') && x.rnd() < 0.3) {
+              x.flag('addiction', true);
+              x.add('Греться стали чаще изнутри, чем снаружи.', 'bad');
+            }
+          }
+        }
+      ]
+    },
+    {
+      id: 'street-docs', chain: true, age: [10, 100],
+      cond: function (x) { return !!x.L.homeless; },
+      title: 'Бумаги',
+      text: function (x) {
+        return 'Без паспорта вы никто: ни работы, ни лечения, ни места в общежитии. Восстановить можно, но это очереди и деньги.';
+      },
+      options: [
+        {
+          label: 'Ходить по кабинетам, пока не дадут', hint: 'месяцы · упрямство',
+          w: function (x) { return 4; },
+          chance: function (x) { return clamp(0.35 + x.L.stats.know / 150, 0.2, 0.9); },
+          run: function (x) {
+            x.L.flag('docs', true); x.stat('happy', 6); x.stat('know', 2);
+            x.add('Паспорт на руках. Теперь с вами хотя бы разговаривают.', 'good');
+            x.L.schedule('street-job', 1);
+          },
+          fail: function (x) {
+            x.stat('happy', -6);
+            x.add('В одном окне не хватило справки из другого. Всё заново.', 'bad');
+            x.L.schedule('street-docs', 2);
+          }
+        },
+        {
+          label: 'Попросить помощи у волонтёров', hint: 'помогут · если дойдёте',
+          w: function (x) { return 3.5; },
+          req: {
+            custom: {
+              test: function (x) { return x.c.gdp > 6000 || x.L.urban; },
+              why: 'таких служб здесь нет', done: 'в городе помогают с бумагами'
+            }
+          },
+          run: function (x) {
+            x.L.flag('docs', true); x.stat('happy', 5); x.stat('bond', 4);
+            x.add('Волонтёры сделали за месяц то, что вы не могли год: паспорт, справки, адрес.', 'good');
+            x.L.schedule('street-help', 1);
+          }
+        },
+        {
+          label: 'Махнуть рукой', hint: 'без бумаг выхода нет',
+          w: function (x) { return 1; },
+          run: function (x) {
+            x.stat('happy', -5);
+            x.add('Вы перестали ходить по кабинетам. Так проще — и так глубже.', 'bad');
+          }
+        }
+      ]
+    },
+    {
+      id: 'street-job', chain: true, age: [14, 75],
+      cond: function (x) { return !!x.L.homeless; },
+      title: 'Работа без адреса',
+      text: function (x) {
+        return x.has('docs')
+          ? 'С паспортом вас готовы взять. Вопрос — куда и какой ценой.'
+          : 'Работа есть и без бумаг, только берут туда, где не спрашивают имени.';
+      },
+      options: [
+        {
+          label: 'Вахта на стройке с общежитием', hint: 'жильё при работе',
+          w: function (x) { return 4; },
+          req: { health: 35 },
+          chance: function (x) { return clamp(0.4 + x.L.stats.health / 200 + (x.has('docs') ? 0.2 : -0.1), 0.2, 0.9); },
+          run: function (x) {
+            x.L.offStreet('Вахта: бытовка, работа по двенадцать часов — и крыша над головой.');
+            x.L.hire('hard'); x.stat('health', -4); x.money(x.need * 0.2);
+          },
+          fail: function (x) {
+            x.stat('health', -4); x.stat('happy', -6);
+            x.add('На вахте продержались месяц: не взяли без прописки, расчёт зажали.', 'bad');
+          }
+        },
+        {
+          label: 'Мыть посуду за еду и угол', hint: 'мало · зато стабильно',
+          w: function (x) { return 3; },
+          chance: function (x) { return clamp(0.45 + (x.has('docs') ? 0.2 : 0), 0.25, 0.85); },
+          run: function (x) {
+            x.L.offStreet('Кухня в столовой: еда, душ и каморка при кухне. Это уже дом.');
+            x.L.hire('stable'); x.stat('happy', 5);
+          },
+          fail: function (x) {
+            x.stat('happy', -4);
+            x.add('Взяли на неделю, а потом сказали, что без документов нельзя.', 'bad');
+          }
+        },
+        {
+          label: 'Сторожем на дальнюю базу', hint: 'одиночество · комната',
+          w: function (x) { return 2.5; },
+          req: {
+            custom: {
+              test: function (x) { return x.has('docs') || x.c.gdp < 9000; },
+              why: 'без паспорта на такое не берут', done: 'берут и так'
+            }
+          },
+          run: function (x) {
+            x.L.offStreet('Сторожка на дальней базе: печка, чайник, тишина. Вы снова при месте.');
+            x.L.hire('stable'); x.stat('bond', -5); x.stat('happy', 4);
+          }
+        },
+        {
+          label: 'Остаться на улице', hint: 'там хотя бы свои',
+          w: function (x) { return 0.8; },
+          run: function (x) {
+            x.stat('happy', -3);
+            x.add('Вы решили не связываться: на улице свои правила, зато понятные.', 'life');
+          }
+        }
+      ]
+    },
+    {
+      id: 'street-help', chain: true, age: [10, 100],
+      cond: function (x) { return !!x.L.homeless; },
+      title: 'Вас нашли',
+      text: function (x) {
+        return 'Соцработник из приюта говорит: есть место в общежитии, лечение и работа — но придётся делать всё по правилам.';
+      },
+      options: [
+        {
+          label: 'Согласиться на всё', hint: 'выход · но не сразу',
+          w: function (x) { return 4; },
+          chance: function (x) { return clamp(0.5 + x.L.stats.health / 300 - (x.has('addiction') ? 0.25 : 0), 0.2, 0.92); },
+          run: function (x) {
+            x.L.offStreet('Общежитие, работа при приюте и своя койка с номером. Улица закончилась.');
+            x.L.hire('stable');
+            if (x.has('addiction') && x.rnd() < 0.5) {
+              x.flag('addiction', false);
+              x.add('В программе помогли завязать.', 'good');
+            }
+          },
+          fail: function (x) {
+            x.stat('happy', -7);
+            x.add('Вы сорвались на второй неделе, и место отдали другому.', 'bad');
+            x.L.schedule('street-help', 3);
+          }
+        },
+        {
+          label: 'Взять только лечение', hint: 'здоровье · без правил',
+          w: function (x) { return 2.5; },
+          run: function (x) {
+            x.stat('health', 9); x.stat('happy', 3);
+            x.flag('untreated', false);
+            x.add('Вас отвезли к врачу и подлечили. Жить всё так же негде.', 'health');
+          }
+        },
+        {
+          label: 'Отказаться', hint: 'сам по себе',
+          w: function (x) { return 1; },
+          run: function (x) {
+            x.stat('happy', -2);
+            x.add('Вы отказались: приют — это правила, а правила вы уже пробовали.', 'life');
+          }
+        }
+      ]
+    },
+    {
+      id: 'court-theft', chain: true, age: [12, 90],
+      title: 'Суд за кражу',
+      text: function (x) {
+        return 'Дело дошло до суда. Украдено немного, но судят не за сумму, а за то, что попались.';
+      },
+      options: [
+        {
+          label: 'Признать вину и просить снисхождения', hint: 'условный срок',
+          w: function (x) { return 3.5; },
+          chance: function (x) { return clamp(0.55 + x.L.stats.know / 250, 0.3, 0.9); },
+          run: function (x) {
+            x.L.flag('exCon', true); x.L.careerBrake = true;
+            x.stat('happy', -6);
+            x.add('Дали условно. Судимость останется с вами дольше, чем долг.', 'bad');
+          },
+          fail: function (x) {
+            x.L.flag('exCon', true); x.L.careerBrake = true;
+            x.L.job = null; x.stat('health', -6); x.stat('happy', -14); x.stat('bond', -8);
+            x.add('Дали реальный срок. Два года прошли за забором.', 'bad');
+            x.L.schedule('after-jail', 2);
+          }
+        },
+        {
+          label: 'Нанять адвоката', hint: 'деньги решают',
+          w: function (x) { return 2; },
+          req: { money: function (x) { return x.need * 0.3; } },
+          cost: { money: function (x) { return x.need * 0.3; } },
+          chance: function (x) { return 0.72; },
+          run: function (x) {
+            x.money(-x.need * 0.3);
+            x.add('Адвокат развалил дело: вас отпустили прямо из зала.', 'good');
+          },
+          fail: function (x) {
+            x.money(-x.need * 0.3); x.L.flag('exCon', true); x.L.careerBrake = true;
+            x.stat('happy', -8);
+            x.add('Адвокат взял деньги, а срок всё равно дали — условный.', 'bad');
+          }
+        },
+        {
+          label: 'Всё отрицать', hint: 'как повезёт',
+          w: function (x) { return 1.5; },
+          chance: function (x) { return clamp(0.2 + x.L.stats.know / 200, 0.1, 0.6); },
+          run: function (x) {
+            x.add('Доказать не смогли: вас отпустили.', 'good');
+            x.stat('happy', 3);
+          },
+          fail: function (x) {
+            x.L.flag('exCon', true); x.L.careerBrake = true; x.L.job = null;
+            x.stat('health', -7); x.stat('happy', -15); x.stat('bond', -9);
+            x.add('За упорство дали по полной: три года.', 'bad');
+            x.L.schedule('after-jail', 3);
+          }
+        }
+      ]
+    },
+    {
+      id: 'after-jail', chain: true, age: [14, 95],
+      title: 'После срока',
+      text: function (x) {
+        return 'Вы вышли. В кармане справка об освобождении, на руках — судимость, которую видно каждому работодателю.';
+      },
+      options: [
+        {
+          label: 'Искать работу честно', hint: 'долго · с отказами',
+          w: function (x) { return 3.5; },
+          chance: function (x) { return clamp(0.3 + x.L.stats.know / 200, 0.15, 0.75); },
+          run: function (x) {
+            x.L.hire('stable'); x.L.careerBrake = false;
+            if (x.L.homeless) x.L.offStreet('Вас взяли на работу с общежитием. Улица закончилась.');
+            x.stat('happy', 8);
+            x.add('Нашёлся работодатель, которому было всё равно на вашу бумагу.', 'work');
+          },
+          fail: function (x) {
+            x.stat('happy', -7);
+            x.add('Везде одно: «мы вам перезвоним». Не перезвонили.', 'bad');
+            if (!x.L.homeless && x.L.money < 0) x.L.toStreet('Деваться стало некуда: вы оказались на улице.');
+          }
+        },
+        {
+          label: 'Вернуться к старым знакомым', hint: 'деньги быстро · риск',
+          w: function (x) { return 1.5; },
+          chance: function (x) { return 0.5; },
+          run: function (x) {
+            x.money(x.need * (0.3 + x.rnd() * 0.6)); x.stat('happy', 2);
+            x.add('Старые знакомые нашли вам дело без вопросов. Деньги появились.', 'money');
+          },
+          fail: function (x) {
+            x.add('Старое дело закончилось новым задержанием.', 'bad');
+            x.L.schedule('court-theft', 0);
+          }
+        },
+        {
+          label: 'Уехать туда, где вас не знают', hint: 'начать с нуля',
+          w: function (x) { return 2.5; },
+          run: function (x) {
+            x.L.moves++; x.stat('bond', -7); x.stat('happy', 3);
+            x.L.careerBrake = false;
+            x.add('Вы уехали в другой город и никому не стали рассказывать, откуда.', 'life');
+          }
+        }
+      ]
+    },
+    /* ================== цепочка: кредит ============================ */
+    {
+      id: 'take-loan', money: true, age: [21, 66],
+      cond: function (x) {
+        return !x.L.loan && !x.L.homeless && working(x.L) && x.L.year >= 1965 && !x.has('bankrupt');
+      },
+      chance: function (x) { return 0.3; },
+      title: 'Взять кредит?',
+      text: function (x) {
+        return 'В банке одобрили кредит: деньги дадут сегодня, платить — каждый год ' +
+          'из тех же самых денег, которых и так не хватает.';
+      },
+      options: [
+        {
+          label: 'На ремонт и мебель', hint: 'дом станет домом',
+          w: function (x) { return 3; },
+          run: function (x) {
+            x.L.takeLoan(x.need * 1.2, 5, 0.14);
+            x.stat('happy', 8);
+            x.add('Взяли кредит на ремонт: обои, плита, диван — и платёж на пять лет.', 'money');
+          }
+        },
+        {
+          label: 'На лечение', hint: 'здоровье сейчас · может не помочь',
+          w: function (x) { return 1.3; },
+          req: {
+            custom: {
+              test: function (x) { return x.has('untreated') || x.has('chronic') || x.L.stats.health < 55; },
+              why: 'лечиться пока не от чего', done: 'лечение нужно'
+            }
+          },
+          chance: function (x) { return clamp(0.5 + x.c.gdp / 90000, 0.42, 0.82); },
+          run: function (x) {
+            x.L.takeLoan(x.need * 1.5, 5, 0.14);
+            x.flag('untreated', false);
+            x.stat('health', 12); x.stat('happy', 6);
+            x.add('Операцию сделали в кредит. Здоровье вернули, долг остался.', 'health');
+          },
+          fail: function (x) {
+            x.L.takeLoan(x.need * 1.5, 5, 0.14);
+            x.stat('health', 3); x.stat('happy', -4);
+            x.add('Деньги ушли на обследования и лекарства, а легче так и не стало. Долг остался.', 'health');
+          }
+        },
+        {
+          label: 'На свадьбу и праздник', hint: 'один день · пять лет платежей',
+          w: function (x) { return 2; },
+          run: function (x) {
+            x.L.takeLoan(x.need * 1.4, 5, 0.16);
+            x.stat('happy', 10); x.stat('bond', 10);
+            x.add('Свадьбу сыграли так, что помнит вся родня. И банк тоже.', 'family');
+          }
+        },
+        {
+          label: 'На машину', hint: 'работа дальше · платёж больше',
+          w: function (x) { return 2.5; },
+          run: function (x) {
+            x.L.takeLoan(x.need * 2.2, 6, 0.15);
+            x.L.incomeBoost = (x.L.incomeBoost || 1) * 1.06;
+            x.L.flag('car', true); x.L.upkeep += 0.03;
+            x.stat('happy', 9);
+            x.add('Машина у подъезда: теперь можно работать дальше от дома.', 'money');
+          }
+        },
+        {
+          label: 'На своё дело', hint: 'шанс · и долг',
+          w: function (x) { return 1.5; },
+          req: { know: 40 },
+          run: function (x) {
+            x.L.takeLoan(x.need * 2.5, 6, 0.18);
+            x.stat('happy', 5); x.stat('know', 2);
+            x.add('Деньги на дело взяли в банке: теперь оно должно хотя бы кормить платёж.', 'money');
+          }
+        },
+        {
+          label: 'Не брать', hint: 'жить по средствам',
+          w: function (x) { return 3; },
+          run: function (x) {
+            x.stat('happy', -2);
+            x.add('Вы отказались от кредита и остались при своих.', 'life');
+          }
+        }
+      ]
+    },
+    {
+      id: 'loan-trouble', chain: true, age: [18, 95],
+      cond: function (x) { return !!x.L.loan; },
+      title: 'Платить нечем',
+      text: function (x) {
+        return 'Второй платёж подряд ушёл в минус. Из банка звонят каждый день, потом начнут звонить родне.';
+      },
+      options: [
+        {
+          label: 'Просить реструктуризацию', hint: 'платёж меньше · срок длиннее',
+          w: function (x) { return 4; },
+          chance: function (x) { return clamp(0.4 + x.L.stats.know / 200, 0.2, 0.85); },
+          run: function (x) {
+            var L = x.L.loan;
+            if (L) { L.pay *= 0.62; L.years += 4; L.left *= 1.08; L.miss = 0; }
+            x.stat('happy', 4);
+            x.add('Банк растянул долг: платёж стал меньше, а срок — длиннее.', 'money');
+          },
+          fail: function (x) {
+            x.stat('happy', -6);
+            x.add('В реструктуризации отказали: платите как договаривались.', 'bad');
+            x.L.schedule('loan-court', 2);
+          }
+        },
+        {
+          label: 'Перекредитоваться', hint: 'закрыть долг новым долгом',
+          w: function (x) { return 2; },
+          run: function (x) {
+            var L = x.L.loan;
+            var left = L ? L.left : x.need;
+            x.L.loan = null;
+            x.L.takeLoan(left * 1.05, 5, 0.3);
+            x.money(-left * 1.05);
+            x.L.flag('spiral', true);
+            x.stat('happy', -3);
+            x.add('Старый кредит закрыли новым — под процент, о котором лучше не думать.', 'money');
+          }
+        },
+        {
+          label: 'Продать нажитое и закрыть', hint: 'вещи уйдут · долг тоже',
+          w: function (x) { return 3; },
+          req: {
+            custom: {
+              test: function (x) { return (x.L.spentTotal || 0) > x.need * 0.6 || (x.L.money || 0) > 0; },
+              why: 'продавать нечего', done: 'есть что продать'
+            }
+          },
+          run: function (x) {
+            var L = x.L.loan;
+            var part = L ? Math.min(L.left, x.need * 1.2) : 0;
+            if (L) { L.left -= part; L.miss = 0; if (L.left <= 0.5) { x.L.loan = null; x.L.flag('goodCredit', true); } }
+            x.money(-x.need * 0.15); x.stat('happy', -7);
+            x.add('Продали машину, технику и кольца — долг стал меньше.', 'money');
+          }
+        },
+        {
+          label: 'Занять у родни', hint: 'отношения −',
+          w: function (x) { return 2.5; },
+          req: { bond: 45 },
+          run: function (x) {
+            var L = x.L.loan;
+            if (L) { L.left -= x.need * 0.8; L.miss = 0; if (L.left <= 0.5) { x.L.loan = null; x.L.flag('goodCredit', true); } }
+            x.stat('bond', -10); x.stat('happy', -3);
+            x.add('Родня скинулась и закрыла самый горящий платёж. Теперь вы должны им.', 'family');
+          }
+        },
+        {
+          label: 'Перестать платить', hint: 'коллекторы · суд',
+          w: function (x) { return 1.2; },
+          run: function (x) {
+            x.L.flag('noPay', true);
+            x.stat('happy', -4);
+            x.add('Вы перестали брать трубку. Платежи остановились, время пошло.', 'bad');
+            x.L.schedule('loan-court', 2);
+          }
+        }
+      ]
+    },
+    {
+      id: 'loan-court', chain: true, age: [18, 95],
+      cond: function (x) { return !!x.L.loan || x.has('noPay'); },
+      title: 'Суд и приставы',
+      text: function (x) {
+        return 'Банк подал в суд. Решение будет не в вашу пользу: вопрос только в том, что заберут.';
+      },
+      options: [
+        {
+          label: 'Объявить себя банкротом', hint: 'долгов нет · кредитов тоже',
+          w: function (x) { return 3; },
+          req: {
+            custom: {
+              test: function (x) { return x.c.gdp > 9000 || x.L.stats.know > 45; },
+              why: 'банкротства здесь нет', done: 'банкротство возможно'
+            }
+          },
+          run: function (x) {
+            x.L.loan = null; x.L.flag('noPay', false); x.L.flag('inCourt', false);
+            x.L.flag('bankrupt', true); x.L.flag('goodCredit', false);
+            var IV = invest();
+            if (IV && IV.holdings) {
+              IV.holdings(x.L).forEach(function (o) { IV.take(x.L, o.id, o.val); });
+            }
+            x.stat('happy', -6); x.stat('know', 3);
+            x.add('Вас признали банкротом: долги списали, имущество забрали, кредитов больше не дадут.', 'money');
+          }
+        },
+        {
+          label: 'Отдать квартиру банку', hint: 'крыша уйдёт',
+          w: function (x) { return 2.5; },
+          req: {
+            custom: {
+              test: function (x) { return !!x.L.home; },
+              why: 'своего жилья нет', done: 'есть своё жильё'
+            }
+          },
+          run: function (x) {
+            x.L.loan = null; x.L.home = false; x.L.flag('mortgage', false);
+            x.L.flag('noPay', false); x.L.flag('inCourt', false);
+            x.money(x.need * 0.3); x.stat('happy', -12);
+            x.add('Квартиру забрали в счёт долга. Остаток вернули наличными — и на этом всё.', 'bad');
+            x.L.schedule('evict', 2);
+          }
+        },
+        {
+          label: 'Платить любой ценой', hint: 'работать на долг',
+          w: function (x) { return 2.5; },
+          run: function (x) {
+            var L = x.L.loan;
+            if (L) { L.pay *= 1.25; L.miss = 0; }
+            x.L.flag('noPay', false); x.L.flag('inCourt', false);
+            x.money(-x.need * 0.3);
+            x.stat('health', -5); x.stat('happy', -8);
+            x.add('Вы взяли вторую работу и платите всё, что зарабатываете.', 'work');
+          }
+        },
+        {
+          label: 'Прятаться от приставов', hint: 'время · потом хуже',
+          w: function (x) { return 1.2; },
+          chance: function (x) { return 0.4; },
+          run: function (x) {
+            x.stat('happy', -4);
+            x.add('Приставы не нашли ни вас, ни имущества. Пока.', 'bad');
+            x.L.schedule('loan-court', 3);
+          },
+          fail: function (x) {
+            x.L.loan = null;
+            x.L.flag('noPay', false); x.L.flag('inCourt', false);
+            x.L.toStreet('Описали и забрали всё, включая жильё. Вы оказались на улице.');
+          }
+        }
+      ]
+    },
     {
       id: 'retire', age: [55, 72], once: true, priority: true,
       cond: function (x) { return working(x.L) && x.L.age >= 55 + (x.L.retireLate || 0); },

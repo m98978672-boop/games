@@ -150,6 +150,10 @@
     this.capitalTotal = 0;        /* всего получено обратно */
     this.focus = 'family';
     this.notes = [];
+    this.homeless = 0;            /* сколько лет человек живёт без крыши */
+    this.streetTotal = 0;         /* всего лет на улице за жизнь */
+    this.loan = null;             /* кредит: сколько осталось, платёж, просрочки */
+    this.queue = [];              /* отложенные карточки: [{id, at}] — цепочки решений */
     this.pendingDecision = null;
     this.pendingReflection = null;
 
@@ -451,7 +455,8 @@
 
     /* доход года */
     var income;
-    if (a < 15 && !this.job) income = this.famIncome * 0.9;
+    if (this.homeless) income = need * (0.05 + this.rnd() * 0.07);   /* случайные заработки */
+    else if (a < 15 && !this.job) income = this.famIncome * 0.9;
     else if (this.retired) income = this.pension();
     else income = this.laborIncome || this.income || this.famIncome * 0.3;
 
@@ -736,6 +741,164 @@
     };
   };
 
+  /* ------------------------- цепочки решений ---------------------------
+     Одно решение тянет за собой следующее: взял кредит — через год
+     разговор о просрочке, оказался на улице — каждый год новый выбор.
+     Отложенная карточка приходит в свой срок и обходит обычный жребий. */
+
+  Life.prototype.schedule = function (id, years) {
+    if (!this.queue) this.queue = [];
+    for (var i = 0; i < this.queue.length; i++) if (this.queue[i].id === id) return;
+    this.queue.push({ id: id, at: this.age + Math.max(0, years === undefined ? 1 : years) });
+  };
+
+  Life.prototype.unschedule = function (id) {
+    if (!this.queue) return;
+    for (var i = this.queue.length - 1; i >= 0; i--) if (this.queue[i].id === id) this.queue.splice(i, 1);
+  };
+
+  Life.prototype.dueCard = function () {
+    if (!this.queue || !this.queue.length) return null;
+    var x = this.ctx();
+    for (var i = 0; i < this.queue.length; i++) {
+      if (this.queue[i].at > this.age) continue;
+      var id = this.queue[i].id;
+      this.queue.splice(i, 1);
+      var card = null;
+      for (var k = 0; k < E.choices.length; k++) if (E.choices[k].id === id) card = E.choices[k];
+      if (!card) return null;
+      if (card.heavy && this.settings.soft) return null;
+      if (card.cond && !card.cond(x)) return null;   /* жизнь ушла вперёд — разговор отпал */
+      this.seenEvents['c:' + card.id] = true;
+      return this.buildDecision(card, x);
+    }
+    return null;
+  };
+
+  /* ---------------------------- улица ----------------------------------
+     Бездомность — не ярлык, а состояние: без работы, без адреса, с другим
+     риском умереть. Из него есть выходы, и каждый год приходится выбирать. */
+
+  /* где зима по-настоящему опасна для того, кто ночует на улице */
+  var COLD_REGION = { eue: 1, eun: 1, asc: 1, amn: 0.9, ase: 0.7, euw: 0.6, eus: 0.3 };
+  Life.prototype.coldWinter = function () { return COLD_REGION[this.c.region] || 0; };
+
+  Life.prototype.toStreet = function (why) {
+    if (this.homeless) return;
+    this.homeless = 1;
+    this.lastEvict = this.age;
+    this.flag('homeless', true);
+    this.home = false;
+    this.flag('mortgage', false);
+    /* с человека без адреса взять нечего: производство закрывают, долг списывают */
+    this.loan = null;
+    this.microDebt = 0;
+    this.flag('noPay', false); this.flag('inCourt', false);
+    this.unschedule('loan-trouble'); this.unschedule('loan-court'); this.unschedule('evict');
+    if (this.job) { this.job = null; this.unemployedYears = 0; }
+    this.add(why || 'Вы остались без крыши над головой.', 'bad');
+    this.stat('happy', -22); this.stat('bond', -10);
+    /* семья выдерживает не всегда */
+    if ((this.marital === 'married' || this.marital === 'partner') && this.rnd() < 0.45) {
+      this.marital = 'single'; this.partner = null;
+      this.add('Семья этого не выдержала: вы остались одни.', 'family');
+      this.stat('happy', -8);
+    }
+    this.schedule('street-first', 0);
+    this.helpLine();
+  };
+
+  Life.prototype.offStreet = function (text) {
+    if (!this.homeless) return;
+    this.streetTotal += this.homeless;
+    this.homeless = 0;
+    this.flag('homeless', false);
+    this.flag('wasHomeless', true);
+    this.lastEvict = this.age;
+    if (this.money < 0) this.money = 0;   /* с улицы возвращаются без долгов и без всего */
+    this.unschedule('street-day');
+    this.unschedule('street-winter');
+    if (text) this.add(text, 'good');
+    this.stat('happy', 14);
+  };
+
+  /* год на улице: холод, болезни, редкий заработок — и шанс зацепиться */
+  Life.prototype.streetStep = function () {
+    if (!this.homeless) return;
+    this.homeless++;
+    this.stat('health', -(3 + this.coldWinter() * 1.8 + (this.age > 55 ? 1.4 : 0)));
+    this.stat('happy', -4);
+    this.stat('bond', -2);
+    if (this.rnd() < 0.12 && !this.has('addiction')) {
+      this.flag('addiction', true);
+      this.add('На улице стало легче, когда выпьешь. Так и втянулись.', 'bad');
+    }
+
+    /* улица иногда отпускает сама: подобрали, пристроили, позвали обратно.
+       Чем дольше человек на улице, тем реже — связи рвутся, навыки уходят. */
+    /* первые год-два вернуться проще всего: есть связи, вещи, навык и силы */
+    var fresh = this.homeless <= 2 ? 2.0 : this.homeless <= 4 ? 1.3 : this.homeless <= 8 ? 0.8 : 0.45;
+    var out = (0.12 + this.stats.bond / 700 + (this.has('docs') ? 0.07 : 0) + (this.has('shelter') ? 0.05 : 0)) *
+      fresh * (this.has('addiction') ? 0.6 : 1) * (this.stats.health > 45 ? 1 : 0.75);
+    if (this.rnd() < out) {
+      var how = this.rnd() < 0.5
+        ? 'Знакомые пустили пожить, и вы зацепились за работу.'
+        : 'Нашлась койка в общежитии при работе: это снова адрес.';
+      this.offStreet(how);
+      this.hire('hard');
+      return;
+    }
+
+    /* каждый год улица задаёт свой вопрос */
+    var r = this.rnd();
+    if (this.coldWinter() > 0.45 && r < 0.45) this.schedule('street-winter', 0);
+    else if (r < 0.45 && (this.has('docs') || this.stats.health > 45)) this.schedule('street-job', 0);
+    else if (r < 0.58) this.schedule('street-help', 0);
+    else this.schedule('street-day', 0);
+  };
+
+  /* ---------------------------- кредит ---------------------------------
+     Настоящий заём: деньги сразу, платёж каждый год, просрочки и суд. */
+
+  Life.prototype.takeLoan = function (sum, years, rate) {
+    sum = Math.max(1, Math.round(sum));
+    years = Math.max(2, Math.round(years || 5));
+    rate = rate === undefined ? 0.14 : rate;
+    var total = sum * (1 + rate * years);
+    this.loan = { sum: sum, left: total, pay: total / years, miss: 0, years: years, since: this.age };
+    this.money += sum;
+    return this.loan;
+  };
+
+  Life.prototype.loanStep = function () {
+    var L = this.loan;
+    if (!L) return;
+    /* небольшой минус банк терпит: люди залезают в долги, но платят */
+    if (this.money - L.pay > -this.need * 0.3) {
+      this.money -= L.pay;
+      L.left -= L.pay;
+      if (L.miss > 0) L.miss--;
+      if (L.left <= 0.5) {
+        this.loan = null;
+        this.flag('goodCredit', true);
+        this.add('Последний платёж по кредиту: долг закрыт.', 'money');
+        this.stat('happy', 7);
+      }
+      return;
+    }
+    /* платить нечем: отдают, что наскребли, остальное обрастает пенями */
+    var part = Math.max(0, Math.min(L.pay, this.money + this.need * 0.3));
+    this.money -= part;
+    L.left = L.left - part + L.pay * 0.15;
+    L.miss++;
+    if (L.miss === 1) this.add('Платёж по кредиту внесли не полностью: денег не хватило.', 'money');
+    if (L.miss === 2) this.schedule('loan-trouble', 0);
+    if (L.miss >= 4 && !this.has('inCourt')) {
+      this.flag('inCourt', true);
+      this.schedule('loan-court', 0);
+    }
+  };
+
   /* Карточка решения на этот год (или null).
      money:true — карточки про деньги. У них своя очередь: их показывают
      в годы, когда ничего другого не случилось, иначе они вытеснили бы
@@ -744,6 +907,7 @@
     var self = this;
     var x = this.ctx();
     var pool = E.choices.filter(function (ch) {
+      if (ch.chain) return false;              /* продолжение истории приходит по расписанию */
       if (!ch.money !== !money) return false;
       if (self.age < ch.age[0] || self.age > ch.age[1]) return false;
       if (ch.once && self.seenEvents['c:' + ch.id]) return false;
@@ -752,8 +916,9 @@
       return true;
     });
     if (!pool.length) return null;
-    if (money && this.rnd() > 0.25) return null;   /* разговор о деньгах — не каждый год */
     var priority = pool.filter(function (p) { return p.priority; });
+    /* разговор о деньгах — не каждый год; беда спрашивает сразу */
+    if (!priority.length && money && this.rnd() > 0.25) return null;
     var card;
     if (priority.length) {
       card = priority[0];
@@ -829,6 +994,7 @@
     var gap = this.baseHealth - this.stats.health;
     var r = Math.exp(gap / 62);
     r *= 1 + (0.45 - clamp(M.percentileOfIncome(this.c, Math.max(this.income || this.famIncome, 1)), 0, 1)) * 0.3;
+    if (this.homeless) r *= this.homeless > 3 ? 5.2 : 3.2;
     if (this.has('smoker') && a > 30) r *= 1.22;
     if (this.has('chronic')) r *= 1.22;
     if (this.has('untreated')) r *= 1.2;
@@ -855,6 +1021,8 @@
     this.workStep();
     this.investStep();
     this.moneyStep();
+    this.loanStep();
+    this.streetStep();
     this.moneyEvent();
     this.pickEvents();
 
@@ -865,7 +1033,8 @@
 
     var decision = null;
     if (this.alive) {
-      decision = this.pickDecision();
+      decision = this.dueCard();                           /* продолжение начатой истории — вне очереди */
+      if (!decision) decision = this.pickDecision();
       if (!decision) decision = this.pickDecision(true);   /* год без событий — повод поговорить о деньгах */
       if (decision) this.pendingDecision = decision;
       var refl = E.reflections.filter(function (r) { return r.age === this.age; }, this)[0];
@@ -916,6 +1085,15 @@
     if (this.biz) parts.push('Своё дело (' + this.biz.name.toLowerCase() + ') пережило вас: ' +
       this.biz.age + ' ' + M.plural(this.biz.age, 'год', 'года', 'лет') + ' работы.');
     else if (this.bizFailed) parts.push('Своё дело пробовали, но оно не пошло.');
+    var street = (this.streetTotal || 0) + (this.homeless || 0);
+    if (street > 0) {
+      parts.push(this.homeless
+        ? 'Последние годы прожили без дома: всего на улице — ' + street + ' ' +
+          M.plural(street, 'год', 'года', 'лет') + '.'
+        : 'Были без дома ' + street + ' ' + M.plural(street, 'год', 'года', 'лет') + ', но вернулись.');
+    }
+    if (this.has('bankrupt')) parts.push('Долги закрывали через банкротство.');
+    else if (this.has('goodCredit')) parts.push('Кредит выплатили до конца.');
     if (this.legacy) parts.push('После вас осталось: ' + this.legacy + '.');
     if (this.dead) parts.push('Ушли в ' + this.dead.age + ' ' + M.plural(this.dead.age, 'год', 'года', 'лет') + ': ' + this.dead.cause + '.');
     return parts.join(' ');
@@ -937,6 +1115,13 @@
       var pz = this.assets && this.assets.ponzi;
       if (pz && pz.put > 0 && pz.val <= 0) out.push({ icon: '🕳', t: 'Поверили в 40 % годовых' });
     }
+    var streetY = (this.streetTotal || 0) + (this.homeless || 0);
+    if (this.homeless) out.push({ icon: '📦', t: 'Жизнь закончилась на улице' });
+    else if (this.has('wasHomeless')) out.push({ icon: '🔑', t: 'Вернулись с улицы' });
+    if (streetY >= 10) out.push({ icon: '🧊', t: 'Десять лет без адреса' });
+    if (this.has('bankrupt')) out.push({ icon: '⚖️', t: 'Прошли через банкротство' });
+    else if (this.has('goodCredit')) out.push({ icon: '🏦', t: 'Выплатили кредит до копейки' });
+    if (this.has('exCon')) out.push({ icon: '🔒', t: 'Была судимость' });
     if (this.edu.level === 0) out.push({ icon: '📭', t: 'Ни одного года в школе' });
     if (this.children.length >= 4) out.push({ icon: '👨‍👩‍👧‍👦', t: 'Большая семья' });
     if (this.grandchildren >= 3) out.push({ icon: '🧓', t: 'Много внуков' });
@@ -959,6 +1144,8 @@
     if (d < 1) return 'Жизнь длиной в несколько месяцев. Её всё равно кто-то ждал.';
     if (d < 6) return 'Успели только начать.';
     if (d < 18) return 'Детство, которое не стало взрослой жизнью.';
+    if (this.homeless) return 'Умерли там, где людей не ищут. Имя всё равно было.';
+    if (this.has('wasHomeless')) return 'Падали на самое дно — и всё-таки поднялись.';
     if (this.legacy) return 'После вас осталось больше, чем вы унесли.';
     if (this.children.length >= 3) return 'Жизнь, которая продолжилась в других.';
     if (this.job && this.job.step >= 3) return 'Жизнь, отданная делу, которое получалось.';

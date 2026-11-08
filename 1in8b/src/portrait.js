@@ -658,6 +658,52 @@
     P.mouth.smile = 0.2; P.fade = t * 0.35;
   });
 
+  /* --- 7б. улица и долги (8) --- */
+  clip('street-sleep', 'Ночь на картоне', 'Жизнь', 5.2, function (P, t) {
+    P.mouth.smile = -0.1;
+    P.props.lying = 1; P.props.cardboard = 1; P.rootY = 0.1;
+    P.eyes.open = 0.06; P.breath = 0.4 + 0.3 * wave(t, 0.7);
+    P.pale = 0.45; P.fx.cold = 1; P.shake = 0.4;
+  });
+  clip('beg', 'Просит у прохожих', 'Жизнь', 4.6, function (P, t) {
+    P.torso.crouch = 0.8; P.props.cup = 1; P.props.sign = 1;
+    P.head.nod = 0.3; P.brows.sad = 0.7; P.mouth.smile = 0;
+    P.arms.rs = -0.5 - 0.1 * wave(t); P.arms.re = -0.3;
+    P.eyes.ly = 0.3; P.pale = 0.3;
+  });
+  clip('bottles', 'Собирает бутылки', 'Жизнь', 4.0, function (P, t) {
+    P.props.bag = 1; P.props.bottle = 1;
+    P.torso.slouch = 0.5 + 0.4 * wave(t, 1);
+    P.arms.ls = -1.2 * (0.5 + 0.5 * wave(t, 1)); P.arms.le = 0.8;
+    P.head.nod = 0.5; P.rootX = -0.03 + 0.06 * wave(t, 0.5);
+  });
+  clip('warm-fire', 'Греется у костра', 'Жизнь', 5.0, function (P, t) {
+    P.props.barrel = 1; P.fx.fire = 1;
+    P.arms.rs = -1.4; P.arms.re = 1.1; P.arms.ls = -0.9; P.arms.le = 0.9;
+    P.torso.slouch = 0.3; P.pale = 0.35; P.fx.cold = 1; P.lean = 0.3;
+    P.mouth.smile = -0.1; P.brows.sad = 0.3;
+    P.shake = 0.5 + 0.3 * wave(t, 2);
+  });
+  clip('soup-line', 'Тарелка в ночлежке', 'Жизнь', 4.4, function (P, t) {
+    P.props.cup = 1; P.props.tray = 1; P.torso.crouch = 0.75;
+    P.head.nod = 0.25; P.mouth.open = 0.3 * Math.abs(wave(t, 2));
+    P.mouth.smile = 0.2; P.pale = 0.25;
+  });
+  clip('papers', 'Собирает документы', 'Жизнь', 4.2, function (P, t) {
+    P.props.paper = 1; P.arms.rs = -0.8; P.arms.re = -0.6;
+    P.eyes.ly = 0.4; P.brows.raise = 0.5; P.head.nod = 0.2 + 0.1 * wave(t, 1.2);
+  });
+  clip('evicted', 'Дверь закрыта', 'Жизнь', 4.8, function (P, t) {
+    P.props.bag = 1; P.props.suitcase = 1;
+    P.head.nod = 0.45; P.brows.sad = 0.9; P.mouth.smile = -0.3;
+    P.torso.slouch = 0.4; P.rootX = -0.02 * wave(t, 0.4); P.fade = 0.1;
+  });
+  clip('debt-papers', 'Счёт из банка', 'Жизнь', 4.4, function (P, t) {
+    P.props.paper = 1; P.arms.rs = -1.0; P.arms.re = -0.8;
+    P.brows.sad = 0.6; P.brows.angry = 0.3; P.mouth.smile = -0.2;
+    P.head.nod = 0.3; P.eyes.squint = 0.4; P.shake = 0.2 * Math.abs(wave(t, 3));
+  });
+
   /* --- 8. сцена и погода (16) --- */
   clip('fx-rain', 'Дождь', 'Сцена', 3.0, function (P) { P.fx.rain = 1; });
   clip('fx-snow', 'Снег', 'Сцена', 4.0, function (P) { P.fx.snow = 1; });
@@ -727,11 +773,22 @@
     if (st.health < 32) out.push('fever');
     if (life.has('smoker') && a > 16) out.push('smoke');
     if (a >= 75) out.push('lean-cane');
+    if (life.homeless) out.push('shiver');   /* на улице зябко даже летом */
     return out;
   }
 
   /* по тексту записи в летописи подбираем действие */
   var LOG_MAP = [
+    /* улица и долги проверяются раньше всего: «остались без жилья» — это не
+       покупка квартиры, а «суд» — не экзамен */
+    [/без жиль|на улиц[еу]|бездомн|ночевал|вокзал|в подъезд|по подъезд|теплотрасс/i, 'street-sleep'],
+    [/выселил|замок смен|выгнали|съехать|описал имущество|квартиру (забрал|отдал)|вещи (в мешки|вынесли)|за дверь/i, 'evicted'],
+    [/вахт|бытовк|общежити|сторожк|каморк|при кухне/i, 'work-factory'],
+    [/костёр|костра|бочк[аеиу]|греться|замёрз|переохлажд|обморож|отморож/i, 'warm-fire'],
+    [/бутылк|картон (и )?металл|сдава(ли|ть) (лом|тару)|подённ/i, 'bottles'],
+    [/просить|подаяни|милостын|шапк[ау] у ног/i, 'beg'],
+    [/ночлежк|приют|столов|миск|суп(?![а-яё])|соцслужб/i, 'soup-line'],
+    [/паспорт|документы восстанов|собирать справк|справки|регистраци|прописк/i, 'papers'],
     [/перв(ые|ый) шаг|пошли ногами|первое слово/i, 'first-steps'],
     [/пошли в школу|школу|перв(ый|ого) класс/i, 'school-write'],
     [/экзамен|поступ/i, 'exam'],
@@ -752,6 +809,8 @@
     [/сво[её] дело|бизнес|лавк|мастерск|открыли/i, 'open-business'],
     [/дом|квартир|ипотек|жиль/i, 'buy-house'],
     [/больниц|операц|лечени|диагноз|заболе/i, 'hospital'],
+    [/кредит|заём|займ|ссуд|рассрочк|банк дал|платёж по/i, 'debt-papers'],
+    [/коллектор|пристав|банкрот|долг вырос|реструктур|пени/i, 'debt-papers'],
     [/травм|перелом|авари|ранени/i, 'injury'],
     [/война|обстрел|бомб|призва/i, 'war-shelter'],
     [/пенси/i, 'retire-bench'],
@@ -897,12 +956,15 @@
     graduate: 'school', exam: 'school', 'school-write': 'school', 'read-book': 'room',
     'work-field': 'field', 'work-factory': 'factory', 'work-desk': 'office',
     retire: 'park', 'walk-park': 'park', sleep: 'room', 'wake-up': 'room',
-    'count-money': 'room', pray: 'room', 'plant-tree': 'village', volunteer: 'city'
+    'count-money': 'room', pray: 'room', 'plant-tree': 'village', volunteer: 'city',
+    'street-sleep': 'street', beg: 'street', bottles: 'street', 'warm-fire': 'street',
+    'soup-line': 'street', papers: 'city', evicted: 'street', 'debt-papers': 'room'
   };
 
   function sceneFor(life) {
     if (!life.alive) return 'night';
     if (life.has('hospital')) return 'hospital';
+    if (life.homeless) return 'street';
     if (life.age < 6) return life.urban ? 'room' : 'village';
     if (life.edu.inSchool) return 'school';
     if (life.job) {
@@ -1145,7 +1207,8 @@
     school: ['#4a4438', '#3c382e', '#574f41'],
     office: ['#3a3f46', '#2f343a', '#464c54'],
     hospital: ['#50595c', '#424a4d', '#5c6669'],
-    factory: ['#3a342f', '#2e2a26', '#463f38']
+    factory: ['#3a342f', '#2e2a26', '#463f38'],
+    street: ['#30343a', '#26292f', '#3f444c']
   };
 
   function drawGround(g, V) {
@@ -1166,6 +1229,12 @@
       }
       px(g, 0, gy + 6, w, 1, gp[2]);
       px(g, 0, gy + 11, w, 1, shade(gp[1], -0.06));
+    } else if (V.scene === 'street') {
+      px(g, 0, gy + 4, w, 1, gp[2]);                  /* бордюр */
+      for (var sj = 0; sj < w; sj += 17) px(g, sj, gy + 2, 9, 1, shade(gp[1], -0.12)); /* плиты */
+      for (var sk = 3; sk < w; sk += 23) {            /* мусор под ногами */
+        px(g, sk, gy + 8 + Math.round(nz(sk) * 4), 2, 1, nz(sk + 2) > 0.5 ? '#6b6252' : '#4f5a60');
+      }
     } else if (V.scene === 'city' || V.scene === 'night') {
       px(g, 0, gy + 5, w, 1, gp[2]);                  /* бордюр */
       for (var k = 4; k < w; k += 14) px(g, k, gy + 9, 6, 1, '#6f7681'); /* разметка */
@@ -1452,10 +1521,57 @@
     px(g, mx2 + 2, hy - 28, 6, 1, '#4fd08a');
   }
 
+  /* задворки: глухая стена, мусорный бак, трубы — место, где не живут */
+  function placeStreet(g, V) {
+    var night = V.sky === 'night', gy = V.gy, w = V.w;
+    var wall = night ? '#232830' : '#3b414a', wall2 = night ? '#1b2027' : '#323841';
+    /* дома поодаль */
+    var seed = 11;
+    for (var bx = -3; bx < w; bx += 0) {
+      var bw2 = 15 + Math.round(nz(seed) * 10), bh2 = 30 + Math.round(nz(seed + 20) * 26);
+      pxBuilding(g, bx, gy - bh2, bw2, bh2, wall2, shade(wall2, -0.2), night ? 0.5 : 0.14, seed * 13);
+      bx += bw2 + 1; seed++;
+    }
+    /* глухая стена за спиной: кирпич, потёки, надписи */
+    var wx = Math.round(w * 0.1), ww = Math.round(w * 0.82), wh = 34;
+    px(g, wx, gy - wh, ww, wh, wall);
+    px(g, wx, gy - wh, ww, 1, shade(wall, 0.12));
+    for (var ry = gy - wh + 3; ry < gy - 2; ry += 4) {
+      px(g, wx, ry, ww, 1, shade(wall, -0.09));
+      for (var rx = wx + ((ry % 8) ? 0 : 4); rx < wx + ww; rx += 9) px(g, rx, ry - 3, 1, 3, shade(wall, -0.07));
+    }
+    for (var dr = 0; dr < 5; dr++) {                      /* потёки */
+      var dx = wx + 4 + Math.round(nz(dr + 31) * (ww - 8));
+      px(g, dx, gy - wh + 1, 1, 6 + Math.round(nz(dr) * 12), 'rgba(0,0,0,0.18)');
+    }
+    px(g, wx + 6, gy - wh + 7, 11, 2, night ? '#5a4a6a' : '#7d5f93');   /* надпись краской */
+    px(g, wx + 8, gy - wh + 10, 7, 1, night ? '#4a5a6a' : '#5f7b93');
+    /* мусорный бак слева */
+    var kx = Math.round(w * 0.12);
+    px(g, kx, gy - 13, 20, 13, night ? '#2c3a36' : '#3f5349');
+    px(g, kx, gy - 15, 22, 3, night ? '#36453f' : '#4b6156');
+    px(g, kx + 2, gy - 12, 16, 1, 'rgba(255,255,255,0.05)');
+    px(g, kx + 3, gy, 2, 2, '#1b1f22'); px(g, kx + 15, gy, 2, 2, '#1b1f22');
+    px(g, kx + 5, gy - 18, 5, 3, '#6b6252'); px(g, kx + 12, gy - 17, 4, 2, '#7a6a4a');
+    /* трубы и ящики справа */
+    var tx = Math.round(w * 0.82);
+    px(g, tx, gy - 30, 2, 30, night ? '#2e3338' : '#454c52');
+    px(g, tx + 4, gy - 22, 2, 22, night ? '#2a2f34' : '#3e454b');
+    px(g, tx - 14, gy - 7, 12, 7, '#6b573a');
+    px(g, tx - 13, gy - 11, 9, 4, '#5c4a31');
+    pxLamp(g, Math.round(w * 0.3), gy, 19, night);
+    /* дальний прохожий, который не смотрит в вашу сторону */
+    var px2 = Math.round((V.t * 7) % (w + 40)) - 20;
+    px(g, px2, gy - 11, 3, 7, night ? '#2f3540' : '#4a5260');
+    px(g, px2, gy - 14, 3, 3, night ? '#50464a' : '#8a7a70');
+    px(g, px2, gy - 4, 1, 4, night ? '#23272d' : '#363b43');
+    px(g, px2 + 2, gy - 4, 1, 4, night ? '#23272d' : '#363b43');
+  }
+
   var PLACE = {
     village: placeVillage, city: placeCity, night: placeCity, field: placeField,
     park: placePark, room: placeRoom, school: placeSchool, office: placeOffice,
-    factory: placeFactory, hospital: placeHospital
+    factory: placeFactory, hospital: placeHospital, street: placeStreet
   };
 
   /* --------------------------- люди на сцене -------------------------- */
@@ -1470,10 +1586,17 @@
   /* внешность в пиксельном виде */
   function spriteOf(V, age, sex, look, isHero) {
     var H = pxHeight(age);
+    var cloth = look.cloth, cloth2 = look.cloth2, ragged = 0;
+    /* человек без дома выглядит иначе: одежда выцветает и сереет */
+    if (isHero && V.life && V.life.homeless) {
+      ragged = Math.min(3, V.life.homeless);
+      cloth = mix(shade(cloth, -0.3), '#5b5346', 0.38 + ragged * 0.07);
+      cloth2 = mix(shade(cloth2, -0.26), '#4a443b', 0.4);
+    }
     return {
-      h: H, age: age, sex: sex,
+      h: H, age: age, sex: sex, ragged: ragged,
       skin: look.skin, hair: look.hair, style: hairStyleNow(look, { sex: sex }, age),
-      cloth: look.cloth, cloth2: look.cloth2, shoe: look.shoes || '#2b2723',
+      cloth: cloth, cloth2: cloth2, shoe: look.shoes || '#2b2723',
       dress: look.dress, covered: look.covered, scarf: look.scarfCol,
       beard: sex === 'm' && age > 17 ? look.facial : 'none',
       gray: age > 45 ? clamp((age - 45) / 40, 0, 1) : 0,
@@ -1495,6 +1618,7 @@
   /* родные вокруг: в детстве — родители и братья, потом — своя семья */
   function familyOf(V) {
     var life = V.life, out = [], age = life.age;
+    if (life.homeless) return out;   /* на улице человек один: в этом и дело */
     var rnd = function (k) { return nz(hashStr(life.seed + k)); };
     if (age < 19 && life.parentsAlive > 0) {
       out.push({ who: 'мать', age: momAge(life) + age, sex: 'f', tint: 0.1 });
@@ -1614,7 +1738,31 @@
   /* мебель и крупные предметы под человеком */
   function pxFurniture(g, V, x, gy, st) {
     var p = st.props;
-    if ((p.bed || p.lying) && V.life.age >= 3 && V.scene !== 'hospital') {
+    if (p.cardboard) {
+      /* картон и тряпьё: постель человека без адреса */
+      px(g, x - 24, gy - 2, 48, 3, '#7a6243');
+      px(g, x - 24, gy - 3, 48, 1, '#8c7150');
+      px(g, x - 26, gy + 1, 52, 1, '#6a543a');
+      for (var cb = -22; cb < 24; cb += 7) px(g, x + cb, gy - 2, 1, 3, '#6b573c'); /* сгибы */
+      px(g, x + 20, gy - 13, 8, 11, '#6e5739');     /* коробка у головы, как ширма */
+      px(g, x + 20, gy - 13, 8, 1, '#7d6442');
+      px(g, x - 26, gy - 8, 9, 6, '#5d5a52');       /* узел с вещами в ногах */
+      px(g, x - 26, gy - 8, 9, 1, '#6d6a60');
+    }
+    if (p.barrel) {
+      /* бочка с огнём: единственное тепло на улице */
+      var bb = x + 11;
+      px(g, bb, gy - 11, 12, 11, '#4a4038');
+      px(g, bb, gy - 11, 12, 1, '#5c5047');
+      px(g, bb, gy - 6, 12, 1, '#3a322c');
+      px(g, bb + 1, gy - 9, 2, 5, '#574b41');
+      var fl = Math.floor(V.t * 8) % 3;
+      px(g, bb + 3, gy - 15 - fl, 6, 4, '#e8853a');
+      px(g, bb + 4, gy - 17 - fl, 3, 3, '#f2c05a');
+      px(g, bb + 5, gy - 19 - fl, 2, 2, '#f7e3a8');
+      px(g, bb + 2, gy - 13, 8, 2, '#c9602e');
+    }
+    if ((p.bed || (p.lying && !p.cardboard)) && V.life.age >= 3 && V.scene !== 'hospital') {
       px(g, x - 20, gy - 6, 42, 6, '#c3cdd0');
       px(g, x - 20, gy - 8, 10, 2, '#e4ebec');
       px(g, x - 20, gy, 3, 5, '#6d7678');
@@ -1694,6 +1842,11 @@
         px(g, x - 16, ly + 1, 20, bodyT - 1, '#8fa8b4');     /* одеяло */
         px(g, x - 16, ly + 1, 20, 1, '#a9c0ca');
       }
+      if (st.props && st.props.cardboard) {
+        px(g, x - 16, ly + 1, 23, bodyT - 1, '#6a655c');     /* тряпьё вместо одеяла */
+        px(g, x - 16, ly + 1, 23, 1, '#7a746a');
+        px(g, x - 12, ly + 3, 6, 1, '#595349');
+      }
       px(g, x + hdx, ly - 1, headW, headH, skin);
       pxHair(g, x + hdx, ly - 1, headW, headH, hair, sp, 1);
       px(g, x + hdx + 1, ly + 1, 1, 1, '#2a2420');
@@ -1743,6 +1896,14 @@
       px(g, hx - Math.round(bodyW / 2), bTop, bodyW, 1, shade(cloth, 0.14));
       px(g, hx - Math.round(bodyW / 2), bTop + bodyH - 2, bodyW, 1, shade(cloth, -0.2)); /* пояс */
     }
+    /* заплаты и рваный подол: одежда, которую негде постирать */
+    if (sp.ragged) {
+      var rw = Math.round(bodyW / 2);
+      px(g, hx - rw + 1, bTop + 2, 2, 2, shade(cloth, -0.32));
+      px(g, hx + rw - 3, bTop + bodyH - 4, 2, 2, shade(cloth, -0.24));
+      for (var rg = 0; rg < bodyW; rg += 2) px(g, hx - rw + rg, bTop + bodyH, 1, 1, cloth);
+      if (sp.ragged > 1) px(g, hx - rw - 1, bTop + 3, 1, 3, shade(cloth, -0.3));
+    }
 
     /* руки */
     var armLen = bodyH - 1;
@@ -1757,6 +1918,10 @@
     px(g, hx - 1, bTop - 1, 2, 1, shade(skin, -0.15));          /* шея */
     px(g, hX, hTop, headW, headH, skin);
     px(g, hX, hTop + headH - 1, headW, 1, shade(skin, -0.12));  /* подбородок */
+    if (sp.ragged) {                                            /* след улицы на лице */
+      px(g, hX + 1, hTop + headH - 3, 1, 1, shade(skin, -0.3));
+      px(g, hX + headW - 2, hTop + 2, 1, 1, shade(skin, -0.22));
+    }
 
     /* лицо */
     var eyeY = hTop + Math.round(headH * 0.42);
@@ -1904,6 +2069,7 @@
     if (p.medal) { px(g, x, gy - Math.round(H * 0.5), 1, 3, '#c9a45c'); px(g, x - 1, gy - Math.round(H * 0.47), 3, 3, '#e8b45a'); }
     if (p.heart) px(g, x + 6, gy - Math.round(H * 0.75) - Math.round((V.t * 4) % 6), 3, 3, '#d9728f');
     if (p.sign) { px(g, hx, handY - 8, 10, 7, '#efe7d8'); px(g, hx + 4, handY - 1, 1, 6, '#6b4a2f'); px(g, hx + 2, handY - 6, 6, 1, '#2b2520'); }
+    if (p.bottle) { px(g, hx, handY - 3, 2, 5, '#4a6b4a'); px(g, hx, handY - 5, 1, 2, '#6b8a6b'); }
     if (p.keys) px(g, hx, handY, 3, 2, '#c9a45c');
     if (p.ring) px(g, hx, handY, 2, 2, '#e8d48a');
   }
@@ -1926,6 +2092,10 @@
       }
     }
     if (V.scene === 'city' || V.scene === 'night') px(g, 0, V.h - 3, w, 3, '#1a1e24');
+    if (V.scene === 'street') {
+      px(g, 0, V.h - 3, w, 3, '#191d22');
+      for (var q = 2; q < w; q += 9) px(g, q, V.h - 4, 2, 1, nz(q) > 0.6 ? '#4a4237' : '#2a3036');
+    }
   }
 
   Portrait.prototype.particle = function (kind) {

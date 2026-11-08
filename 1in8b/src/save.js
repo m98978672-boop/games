@@ -41,7 +41,7 @@
     'budget', 'focus', 'notes', 'marriageAge', 'need', 'warUntil', 'decisions',
     'purchased', 'boughtThisYear', 'upkeep', 'incomeBoost', 'spentTotal', 'given', 'depositYears',
     'assets', 'biz', 'capitalIncome', 'capitalDelta', 'investedTotal', 'capitalTotal',
-    'laborIncome', 'bizCount', 'bizFailed', 'boomedBiz', 'retireLate', 'microDebt'];
+    'laborIncome', 'bizCount', 'bizFailed', 'boomedBiz', 'retireLate', 'microDebt', 'homeless', 'streetTotal', 'lastEvict', 'loan', 'queue'];
 
   function serialize(life) {
     var out = { v: 1, countryCode: life.base.code, rng: life.rnd.state() };
