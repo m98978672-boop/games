@@ -270,6 +270,7 @@ export class Renderer {
       ctx.globalAlpha = visible ? 1 : 0.3;
       const tb = Math.max(1.5, st.outline.thickness * z);
       for (const seg of st.outline.segments) {
+        ctx.globalAlpha = visible ? 1 : 0.3;
         const state = st.segs.find((x) => x.id === seg.id);
         if (state && state.breached) {
           // пролом: обломки по краям, проход открыт
@@ -321,7 +322,8 @@ export class Renderer {
           }
         }
       }
-      // проёмы
+      // проёмы не наследуют прозрачность повреждённого сегмента
+      ctx.globalAlpha = visible ? 1 : 0.3;
       for (const o of st.outline.openings || []) {
         const p1 = this.worldToScreen(b.x + o.p1[0], b.y + o.p1[1]);
         const p2 = this.worldToScreen(b.x + o.p2[0], b.y + o.p2[1]);

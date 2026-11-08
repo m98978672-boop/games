@@ -5,8 +5,8 @@
   "description": "Frontline: Command — 2D тактическая песочница с единым Command API и одинаковыми правилами для игрока и ИИ",
   "type": "module",
   "scripts": {
-    "test": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/walls.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs",
-    "test:fast": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/walls.mjs && node tests/duel.mjs && node tests/perf.mjs",
+    "test": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs",
+    "test:fast": "node tests/logic.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/duel.mjs && node tests/perf.mjs",
     "test:browser": "node tests/browser.mjs",
     "assets": "node tools/gen-assets.mjs",
     "map": "node tools/map-preview.mjs",
