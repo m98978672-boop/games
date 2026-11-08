@@ -310,6 +310,8 @@ DOM, запускает миссию, стреляет, убивает бойц�
 | `docs/preview-map-depot.png` | карта «Склады»: здания-полигоны, вышки, укрытия |
 | `docs/preview-map-harbor.png` | карта «Порт» |
 | `docs/preview-fp.png` | вид от первого лица: автомат и кисти на хватах |
+| `docs/preview-fp-ads.png` | прицеливание: дульный срез сведён в центр кадра |
+| `docs/preview-fp-grid.png` | все стволы от первого лица: пистолет, ПП, автомат, дробовик, DMR, прицел |
 | `docs/plan-depot.png` | план «Складов»: точки опоры, нормали, сектора, окна |
 | `docs/plan-*-art.png` | рисованные планы трёх карт с легендой |
 
@@ -320,6 +322,8 @@ node shooter-2/tools/preview.mjs --guns                       # лист ору�
 node shooter-2/tools/preview.mjs --map depot --cam 6,1.7,16 --look -8,2.5,-12
 node shooter-2/tools/preview.mjs --plan convoy    # схема карты с точками и углами
 node shooter-2/tools/preview.mjs --fps rifle      # кадр от первого лица
+node shooter-2/tools/preview.mjs --fps rifle --ads # то же, но прицеливание
+node shooter-2/tools/fpgrid.mjs docs/fp.png '[{"weapon":"pistol"},{"weapon":"rifle","ads":true}]'
 ```
 
 ## 📁 Структура
