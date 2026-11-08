@@ -64,8 +64,8 @@ export class Walls {
         stamp: 0,
       };
       for (const o of outline.openings || []) {
-        if (o.type === 'door' || o.type === 'gate') st.doors[o.id] = { state: 'open', closeAt: 0 };
-        if (o.type === 'door_closed') st.doors[o.id] = { state: 'closed', closeAt: 0 };
+        if (o.type === 'door' || o.type === 'gate') st.doors[o.id] = { state: 'open', closeAt: 0, anim: 1 };
+        if (o.type === 'door_closed') st.doors[o.id] = { state: 'closed', closeAt: 0, anim: 0 };
       }
       this.instances.set(b.id, st);
     }
@@ -805,7 +805,10 @@ export class Walls {
         seg.breached = !!s.breached || seg.hp <= 0;
       }
       for (const [k, v] of Object.entries(data.doors || {})) {
-        if (st.doors[k]) st.doors[k].state = v.state === 'open' ? 'open' : 'closed';
+        if (st.doors[k]) {
+          st.doors[k].state = v.state === 'open' ? 'open' : 'closed';
+          st.doors[k].anim = st.doors[k].state === 'open' ? 1 : 0;
+        }
       }
       this.reindex(b.id, st);
       restored++;
@@ -822,21 +825,27 @@ export class Walls {
     this.stats.updates++;
     this._perfStart = t0;
     this.flushNav();
+    // Визуальная анимация идёт каждый тик, а не в редком цикле автозакрытия.
+    const animSeconds = Math.max(0.05, this.cfg.wallMaterials?.doorAnimSeconds ?? 0.35);
+    const step = Math.max(0, dt) / animSeconds;
+    for (const st of this.instances.values()) {
+      for (const d of Object.values(st.doors)) {
+        const target = d.state === 'open' ? 1 : 0;
+        const current = d.anim ?? target;
+        d.anim = current < target ? Math.min(target, current + step) : Math.max(target, current - step);
+      }
+    }
     this.doorTimer -= dt;
-    if (this.doorTimer > 0) return;
+    if (this.doorTimer > 0) {
+      this.stats.updateMs += (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0;
+      return;
+    }
     this.doorTimer = 1;
     const now = this.game.time;
     this.unseal();
-    const anim = this.cfg.wallMaterials?.doorAnimSeconds ?? 0.35;
     for (const [bid, st] of this.instances) {
       const b = this.world.buildings.find((bb) => bb.id === bid);
       if (!b || b.dead) { this.instances.delete(bid); continue; }
-      for (const [oid, d] of Object.entries(st.doors)) {
-        // плавная анимация створки: 0 — закрыта, 1 — открыта
-        const target = d.state === 'open' ? 1 : 0;
-        const k = Math.min(1, dt / Math.max(0.05, anim));
-        d.anim = d.anim === undefined ? target : d.anim + (target - d.anim) * k;
-      }
       for (const [oid, d] of Object.entries(st.doors)) {
         if (d.state !== 'open' || !d.closeAt) continue;
         if (now < d.closeAt) continue;
