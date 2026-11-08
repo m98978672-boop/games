@@ -41,7 +41,7 @@
     'budget', 'focus', 'notes', 'marriageAge', 'need', 'warUntil', 'decisions',
     'purchased', 'boughtThisYear', 'upkeep', 'incomeBoost', 'spentTotal', 'given', 'depositYears',
     'assets', 'biz', 'capitalIncome', 'capitalDelta', 'investedTotal', 'capitalTotal',
-    'laborIncome', 'bizCount', 'bizFailed', 'boomedBiz'];
+    'laborIncome', 'bizCount', 'bizFailed', 'boomedBiz', 'retireLate', 'microDebt'];
 
   function serialize(life) {
     var out = { v: 1, countryCode: life.base.code, rng: life.rnd.state() };
