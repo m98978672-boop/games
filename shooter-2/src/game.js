@@ -1148,6 +1148,9 @@
           });
         }
         if (this.menuMarker) this.menuMarker.userData.ring.scale.setScalar(1 + Math.sin(this.time * 2) * 0.04);
+        // в меню ствол не нужен: камера летает вокруг уровня, а оружие висело
+        // бы в кадре крупным планом (первый кадр после загрузки = «коробка»)
+        if (this.viewmodel) this.viewmodel.root.visible = false;
       }
     }
 
