@@ -34,8 +34,21 @@
       this.currentWeapon = null;
       this.recoil = 0;
       this.recoilRot = 0;
+      // отдача по двум осям + пружина ствола (второй, более медленный слой)
+      this.kickY = 0;
+      this.kickPitch = 0;
+      this.kickYaw = 0;
+      this.springY = 0;
+      this.springPitch = 0;
+      this.velY = 0;
+      this.velPitch = 0;
       this.sway = { x: 0, y: 0 };
+      this.swayVel = { x: 0, y: 0 };
       this.bob = 0;
+      this.bobPhase = 0;
+      this.stepPhase = 0;
+      this.mouseVel = { x: 0, y: 0 };
+      this.sprintT = 0;
       this.reloadT = 0;
       this.reloadDur = 0;
       this.ads = 0;
@@ -99,6 +112,8 @@
       this.matSleeve = M(this.sleeve);
       this.matSleeveDark = M(this.sleeveDark);
       this.matCuff = M(this.cuff);
+      // складки на ладони — на полтона темнее перчатки
+      this.matCrease = M(0x2a2e24);
 
       // сегмент пальца: труба по дуге с суставными утолщениями
       const fingerSegment = (len, r0, r1) => {
@@ -134,57 +149,113 @@
       };
 
       /* Кисть. Система руки: +Y — от кисти к локтю (вниз-назад), +Z — вдоль
-         ствола. Значит, кисть обхватывает цилиндр, ось которого идёт по Z:
-         ладонь лежит снизу (−Y) и тянется вдоль ствола, пальцы растут вверх
-         и загибаются вокруг оси Z, большой палец идёт с другой стороны. */
+         ствола. Кисть обхватывает цилиндр, ось которого идёт по Z: ладонь
+         лежит снизу (−Y) и тянется вдоль ствола, пальцы растут вверх и
+         загибаются вокруг оси Z, большой палец идёт с другой стороны.
+
+         Анатомия важнее «красивости»: у пальцев разная длина (средний самый
+         длинный), у каждого три фаланги с суставными утолщениями, на ладони
+         есть подушечки (тенора и гипотенора), складки и костяшки. Именно
+         это отличает руку от «варежки» в кадре. */
       const makeHand = () => {
         const g = new T.Group();
-        // ладонь: контур в плоскости (Z, Y), толщина по X — плоская подушечка
-        const palm = O.outlineMesh([
-          [-0.040, -0.082], [0.036, -0.086], [0.044, -0.062],
-          [0.040, -0.030], [0.020, -0.018], [-0.032, -0.020],
-          [-0.046, -0.044], [-0.046, -0.068]
-        ], { depth: 0.034, bevel: 0.007, bevelSegments: 2 });
-        g.add(new T.Mesh(palm, this.matGlove));
-        // тыльная подушечка у большого пальца
+
+        /* Ладонь: не плоская пластина, а объём — контур с фаской плюс
+           подушечка снизу, поэтому у кисти есть толщина и изгиб. */
+        const palmProfile = [
+          [-0.042, -0.086], [0.030, -0.090], [0.044, -0.074],
+          [0.048, -0.046], [0.042, -0.024], [0.020, -0.016],
+          [-0.030, -0.018], [-0.048, -0.040], [-0.050, -0.066]
+        ];
+        const palm = new T.Mesh(O.outlineMesh(palmProfile, {
+          depth: 0.036, bevel: 0.010, bevelSegments: 3, taper: [[0, 0.86], [0.5, 1.0], [1, 0.88]]
+        }), this.matGlove);
+        g.add(palm);
+        // подушечка ладони (то, чем реально держат рукоять) — тело вращения
+        const pad = new T.Mesh(O.revolve(
+          [[-0.030, 0.004], [-0.020, 0.012], [-0.004, 0.015], [0.012, 0.013], [0.022, 0.006], [0.024, 0.0]],
+          { segments: 12 }
+        ), this.matGlove);
+        pad.rotation.z = Math.PI / 2;
+        pad.rotation.y = 0.06;
+        pad.position.set(-0.004, -0.052, 0.016);
+        pad.scale.set(1.6, 1.0, 1.0);
+        g.add(pad);
+
+        // тенора (у большого пальца) и гипотенора (у мизинца)
         const thenar = new T.Mesh(O.revolve(
-          [[-0.026, 0.010], [-0.010, 0.016], [0.010, 0.017], [0.026, 0.011], [0.030, 0.0]],
-          { segments: 10 }
+          [[-0.026, 0.010], [-0.012, 0.017], [0.008, 0.018], [0.024, 0.012], [0.030, 0.0]],
+          { segments: 12 }
         ), this.matGlove);
         thenar.rotation.z = Math.PI / 2;
-        thenar.rotation.y = 0.2;
-        thenar.position.set(-0.016, -0.040, 0.024);
+        thenar.rotation.y = 0.22;
+        thenar.position.set(-0.014, -0.042, 0.030);
         g.add(thenar);
-        // четыре пальца: растут вверх (+Y) и загибаются вокруг ствола
+        const hypo = new T.Mesh(O.revolve(
+          [[-0.022, 0.006], [-0.008, 0.012], [0.008, 0.011], [0.020, 0.0]],
+          { segments: 10 }
+        ), this.matGloveDark);
+        hypo.rotation.z = Math.PI / 2;
+        hypo.position.set(-0.012, -0.048, -0.030);
+        g.add(hypo);
+
+        /* Пальцы: указательный/средний/безымянный/мизинец. Разная длина и
+           разный сгиб — как на настоящей руке, обхватывающей цевьё. */
         const fingerSpec = [
-          { z: 0.028, len: 0.050, curl: 0.55 },
-          { z: 0.010, len: 0.056, curl: 0.62 },
-          { z: -0.008, len: 0.054, curl: 0.60 },
-          { z: -0.026, len: 0.046, curl: 0.52 }
+          { z: 0.030, len: 0.052, thick: 0.0100, curl: 0.52 },
+          { z: 0.011, len: 0.058, thick: 0.0102, curl: 0.60 },
+          { z: -0.008, len: 0.055, thick: 0.0096, curl: 0.62 },
+          { z: -0.027, len: 0.044, thick: 0.0084, curl: 0.56 }
         ];
         fingerSpec.forEach((f, i) => {
-          const finger = makeFinger(f.len, 0.0096 - i * 0.0005, f.curl);
+          const finger = makeFinger(f.len, f.thick, f.curl);
           finger.position.set(-0.004, -0.034, f.z);
-          finger.rotation.x = -0.16 - i * 0.03;
-          finger.rotation.z = 0.12;
+          finger.rotation.x = -0.16 - i * 0.035;
+          finger.rotation.z = 0.12 + i * 0.02;
           g.add(finger);
         });
-        // большой палец: с другой стороны ствола, наискось вверх
-        const thumb = fingerSegment(0.050, 0.0120, 0.0086);
-        thumb.position.set(-0.008, -0.040, 0.040);
-        thumb.rotation.z = 0.42;
-        thumb.rotation.x = -0.85;
+
+        // большой палец: две фаланги, лежит вдоль ствола с другой стороны
+        const thumb = makeFinger(0.050, 0.0124, 0.32);
+        thumb.position.set(-0.010, -0.040, 0.040);
+        thumb.rotation.z = 0.46;
+        thumb.rotation.x = -0.88;
+        thumb.rotation.y = 0.16;
         g.add(thumb);
-        // костяшки на сгибе ладони
+        const thumbTip = new T.Mesh(O.revolve(
+          [[-0.008, 0.0060], [0.000, 0.0080], [0.008, 0.0068], [0.012, 0.0]], { segments: 8 }
+        ), this.matGlove);
+        thumbTip.rotation.z = Math.PI / 2;
+        thumbTip.rotation.x = -0.88;
+        thumbTip.position.set(-0.004, -0.030, 0.062);
+        g.add(thumbTip);
+
+        // костяшки: четыре, по одной над каждым пальцем
         for (let i = 0; i < 4; i++) {
           const k = new T.Mesh(O.revolve(
-            [[-0.004, 0.0050], [-0.001, 0.0066], [0.003, 0.0064], [0.005, 0.0]],
-            { segments: 7 }
+            [[-0.005, 0.0052], [-0.001, 0.0072], [0.003, 0.0070], [0.006, 0.0]], { segments: 8 }
           ), this.matKnuckle);
           k.rotation.x = Math.PI / 2;
-          k.position.set(-0.004, -0.030, 0.028 - i * 0.0175);
+          k.position.set(-0.006, -0.030, 0.032 - i * 0.0185);
           g.add(k);
         }
+        // складки на ладони — три тонкие полосы другого тона
+        for (let i = 0; i < 3; i++) {
+          const crease = new T.Mesh(O.outlineMesh(
+            [[-0.030, 0], [-0.020, 0.0035], [0.020, 0.0035], [0.030, 0]],
+            { depth: 0.0018, bevel: 0 }
+          ), this.matCrease);
+          crease.position.set(0.0, -0.030 + i * 0.0004, -0.020 + i * 0.024);
+          crease.rotation.x = Math.PI / 2;
+          g.add(crease);
+        }
+        // запястье: узкий «переходник» между кистью и манжетой
+        const wrist = new T.Mesh(O.loftSections([
+          { at: [0, -0.030, 0], pts: O.circleSection(0.030, 0.026, 12) },
+          { at: [0, -0.016, 0], pts: O.circleSection(0.033, 0.028, 12) },
+          { at: [0, -0.004, 0], pts: O.circleSection(0.030, 0.025, 12) }
+        ]), this.matGloveDark);
+        g.add(wrist);
         return g;
       };
 
@@ -270,7 +341,9 @@
       // теряется. От первого лица стволы принято показывать крупнее, поэтому
       // короткие модели домножаем, а длинные (винтовка, дробовик, DMR) держим
       // 1:1 — иначе приклад уезжает за край.
-      const MODEL_SCALE = { pistol: 1.45, smg: 1.25, rifle: 1.0, shotgun: 1.0, dmr: 1.0 };
+      const MODEL_SCALE = { pistol: 1.45, smg: 1.25, rifle: 1.0, shotgun: 1.0, dmr: 1.0,
+        revolver: 1.45, machinepistol: 1.40, pdw: 1.18, carbine: 1.05, lmg: 0.98,
+        tacshotgun: 1.02, bullpup: 1.0, sniper: 0.97, launcher: 1.0, railgun: 0.98 };
       model.scale.setScalar(MODEL_SCALE[id] || 1.0);
       // Поза «от бедра» под конкретный ствол. Длины мало: у пистолета и ПП
       // приклад почти вплотную к глазу, и любая общая формула выдаёт кашу из
@@ -285,7 +358,19 @@
         smg:     { x: 0.13, y: -0.150, z: -0.44, rx: 0.04, ry: 0.12, rz: 0.08, s: 0.98, handScale: 0.92 },
         rifle:   { x: 0.12, y: -0.150, z: -0.50, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.90 },
         shotgun: { x: 0.12, y: -0.150, z: -0.52, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.88 },
-        dmr:     { x: 0.12, y: -0.145, z: -0.54, rx: 0.04, ry: 0.12, rz: 0.06, s: 0.86 }
+        dmr:     { x: 0.12, y: -0.145, z: -0.54, rx: 0.04, ry: 0.12, rz: 0.06, s: 0.86 },
+        /* вторая волна: короткие стволы ближе и крупнее, длинные — дальше */
+        revolver: { x: 0.16, y: -0.175, z: -0.41, rx: 0.03, ry: 0.20, rz: 0.09, s: 1.15,
+                    handScale: 0.88, offL: [-0.05, -0.05, 0.02], offR: [0.03, 0.0, 0.0] },
+        machinepistol: { x: 0.15, y: -0.165, z: -0.39, rx: 0.03, ry: 0.18, rz: 0.09, s: 1.06, handScale: 0.90 },
+        pdw:     { x: 0.13, y: -0.152, z: -0.45, rx: 0.04, ry: 0.13, rz: 0.08, s: 0.96 },
+        carbine: { x: 0.12, y: -0.150, z: -0.49, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.91 },
+        lmg:     { x: 0.13, y: -0.155, z: -0.53, rx: 0.04, ry: 0.13, rz: 0.06, s: 0.87 },
+        tacshotgun: { x: 0.12, y: -0.150, z: -0.51, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.89 },
+        bullpup: { x: 0.12, y: -0.150, z: -0.51, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.89 },
+        sniper:  { x: 0.12, y: -0.145, z: -0.56, rx: 0.04, ry: 0.12, rz: 0.05, s: 0.85 },
+        launcher: { x: 0.14, y: -0.155, z: -0.50, rx: 0.04, ry: 0.14, rz: 0.06, s: 0.88 },
+        railgun: { x: 0.12, y: -0.148, z: -0.54, rx: 0.04, ry: 0.12, rz: 0.06, s: 0.86 }
       };
       this.pose = POSE[id] || POSE.rifle;
       // Кисти ставятся в _attachHands() — точно по gripPoint/forePoint модели.
@@ -348,11 +433,35 @@
 
     playReload(dur) { this.reloadT = 0; this.reloadDur = dur || 1.6; }
 
-    addRecoil(amount) {
-      this.recoil = Math.min(0.16, this.recoil + amount * 0.55);
-      this.recoilRot = Math.min(0.5, this.recoilRot + amount * 3.4);
-      this.sway.x += (Math.random() - 0.5) * amount * 1.6;
-      this.sway.y += amount * 1.1;
+    /* Отдача. Ствол получает толчок назад-вверх с небольшим случайным уводом
+       в сторону (пистолет уводит сильнее, тяжёлый пулемёт — ровнее), и дальше
+       его возвращает к нулю пружина с демпфированием. Пружина даёт «дребезг»
+       после выстрела — именно из-за него отдача чувствуется, а не выглядит
+       как один кадр сдвига. */
+    addRecoil(amount, opts) {
+      const o = opts || {};
+      const swayScale = o.heavy ? 0.55 : 1;
+      const jitter = o.jitter === undefined ? 1 : o.jitter;
+      this.recoil = Math.min(0.20, this.recoil + amount * 0.55);
+      this.recoilRot = Math.min(0.55, this.recoilRot + amount * 3.4);
+      // импульс пружины: вверх-назад + случайный боковой увод
+      this.velY -= amount * 2.6 * swayScale;
+      this.velPitch += amount * 9.5 * swayScale;
+      this.velPitch += (Math.random() - 0.5) * amount * 3.2 * jitter;
+      this.velY += (Math.random() - 0.5) * amount * 1.1 * jitter;
+      // инерция мыши: ствол «отстаёт» от поворота
+      this.sway.x += (Math.random() - 0.5) * amount * 1.6 * jitter;
+      this.sway.y += amount * 1.1 * jitter;
+    }
+
+    /* Инерция от движения мыши: ствол уходит против поворота и потом
+       догоняет. Вызывается из game.js при изменении yaw/pitch. */
+    addLook(dYaw, dPitch) {
+      this.mouseVel.x += dYaw * 0.55;
+      this.mouseVel.y += dPitch * 0.55;
+      const lim = 3.0;
+      this.mouseVel.x = Math.max(-lim, Math.min(lim, this.mouseVel.x));
+      this.mouseVel.y = Math.max(-lim, Math.min(lim, this.mouseVel.y));
     }
 
     update(dt, params) {
@@ -360,20 +469,52 @@
       const moving = p.moving || 0;
       const sprint = p.sprint ? 1 : 0;
       this.adsTarget = p.ads ? 1 : 0;
-      this.ads += (this.adsTarget - this.ads) * Math.min(1, dt * 14);
+      // Прицел входит быстро, но не мгновенно: сначала «подхват» (ease-out),
+      // затем доводка. Выход из прицела чуть медленнее входа — так делают
+      // почти во всех шутерах, и глаз это читает как вес оружия.
+      {
+        const rate = this.adsTarget > this.ads ? 17 : 12;
+        const d = this.adsTarget - this.ads;
+        this.ads += d * Math.min(1, dt * rate);
+        if (Math.abs(d) < 0.0015) this.ads = this.adsTarget;
+      }
       const targetLower = p.sprint && moving > 0.5 ? 1 : 0;
       this.lowered += (targetLower - this.lowered) * Math.min(1, dt * 8);
 
-      // отдача
+      // отдача: затухание «толчка» + пружина возврата
       this.recoil *= Math.exp(-dt * 12);
       this.recoilRot *= Math.exp(-dt * 10);
-      // покачивание при ходьбе
+      {
+        // пружина: k — жёсткость, c — демпфирование. Недодемпфирована
+        // намеренно: ствол проскакивает ноль и мелко дрожит, как настоящий.
+        const k = 150, c = 17;
+        this.velY += (-k * this.springY - c * this.velY) * dt;
+        this.velPitch += (-k * this.springPitch - c * this.velPitch) * dt;
+        this.springY += this.velY * dt;
+        this.springPitch += this.velPitch * dt;
+        this.springY = Math.max(-0.12, Math.min(0.12, this.springY));
+        this.springPitch = Math.max(-0.5, Math.min(0.5, this.springPitch));
+      }
+      // инерция мыши: ствол отстаёт от поворота, потом догоняет (пружина)
+      {
+        const k = 62, c = 12;
+        this.swayVel.x += (-this.mouseVel.x - this.sway.x) * k * dt;
+        this.swayVel.y += (-this.mouseVel.y - this.sway.y) * k * dt;
+        this.swayVel.x *= Math.exp(-dt * c);
+        this.swayVel.y *= Math.exp(-dt * c);
+        this.sway.x += this.swayVel.x * dt;
+        this.sway.y += this.swayVel.y * dt;
+        this.mouseVel.x *= Math.exp(-dt * 11);
+        this.mouseVel.y *= Math.exp(-dt * 11);
+      }
+      // покачивание при ходьбе: восьмёрка + горизонтальная «протяжка»,
+      // амплитуда падает при прицеливании и при остановке
       this.bob += dt * (6 + moving * 5.5);
-      const bobX = Math.sin(this.bob) * 0.008 * moving * (1 - this.ads * 0.75);
-      const bobY = Math.abs(Math.cos(this.bob)) * 0.010 * moving * (1 - this.ads * 0.8);
-      // инерция мыши
-      this.sway.x += (0 - this.sway.x) * Math.min(1, dt * 9);
-      this.sway.y += (0 - this.sway.y) * Math.min(1, dt * 9);
+      const bobAmt = moving * (1 - this.ads * 0.82) * (1 - this.lowered * 0.3);
+      const bobX = Math.sin(this.bob) * 0.0085 * bobAmt;
+      const bobY = (Math.abs(Math.cos(this.bob)) - 0.55) * 0.012 * bobAmt;
+      const bobRoll = Math.sin(this.bob) * 0.010 * bobAmt;
+      const bobYaw = Math.cos(this.bob * 0.5) * 0.012 * bobAmt;
 
       // Позиция оружия в кадре. Первое лицо: ствол уходит стволом вперёд-вправо,
       // при прицеливании мушка встаёт точно в центр экрана.
@@ -386,23 +527,36 @@
       // неё только покачивание/инерция/отдача/спринт.
       this.applyPose(this.ads);
       let px = this.rig.position.x + bobX + this.sway.x * 0.10;
-      let py = this.rig.position.y + bobY + this.sway.y * 0.07 - 0.13 * this.lowered;
-      let pz = this.rig.position.z - this.recoil * 0.16;
-      let rx = this.rig.rotation.x - this.recoilRot * 0.20 + 0.55 * this.lowered - this.sway.y * 0.5;
-      let ry = this.rig.rotation.y - this.sway.x * 0.9;
-      let rz = this.rig.rotation.z;
+      let py = this.rig.position.y + bobY + this.sway.y * 0.07 - 0.13 * this.lowered
+             + this.springY * 0.30;
+      let pz = this.rig.position.z - this.recoil * 0.16 - this.springY * 0.55;
+      let rx = this.rig.rotation.x - this.recoilRot * 0.20 + 0.55 * this.lowered
+             - this.sway.y * 0.5 + this.springPitch * 0.22;
+      let ry = this.rig.rotation.y - this.sway.x * 0.9 + bobYaw - this.sway.x * 0.25;
+      let rz = this.rig.rotation.z + bobRoll + this.sway.x * 0.45;
       let sc = this.rig.scale.x;
 
-      // перезарядка: оружие уходит вниз и крутится
+      // Перезарядка: не просто «уехал вниз и покрутился», а три осмысленные
+      // фазы — ствол наклоняется и уходит вниз-в сторону (достаём магазин),
+      // короткая пауза-толчок (магазин вставлен), возврат с доводкой. Фазы
+      // сшиты гладкими «окнами», поэтому стыков не видно.
       if (this.reloadT < this.reloadDur) {
         this.reloadT += dt;
         const t = Math.min(1, this.reloadT / this.reloadDur);
-        const arc = Math.sin(t * Math.PI);
-        py -= arc * 0.13;
-        rx -= arc * 0.4;
-        rz += Math.sin(t * Math.PI * 2) * 0.32;
-        px += arc * 0.02;
+        const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+        const dip = Math.sin(Math.min(1, t / 0.72) * Math.PI * 0.5); // 0→1 к 72%
+        const seat = t > 0.52 && t < 0.86
+          ? Math.sin((t - 0.52) / 0.34 * Math.PI) : 0;             // толчок магазина
+        py -= dip * 0.150 - seat * 0.022;
+        pz += dip * 0.05;
+        rx -= dip * 0.46 + seat * 0.10;
+        rz += dip * 0.30 + Math.sin(t * Math.PI * 2) * 0.10;
+        ry += dip * 0.14;
+        px += dip * 0.026;
+        // ствол чуть «подпрыгивает», когда магазин встаёт на место
+        py += seat * 0.012;
         // левая рука «ходит» к магазину — в _attachHands(), здесь только ствол
+        void ease;
       }
 
       this.rig.position.set(px, py, pz);
@@ -484,12 +638,20 @@
       const hs = pose.handScale || 1;
       this.armR.scale.setScalar(hs);
       this.armL.scale.setScalar(hs);
-      // перезарядка: левая рука уходит вниз к магазину
+      // Перезарядка: левая рука уходит с цевья к магазину и возвращается.
+      // Движение по дуге (а не просто вниз) — локоть ведёт, кисть догоняет.
       if (this.reloadT < this.reloadDur) {
         const t = Math.min(1, this.reloadT / this.reloadDur);
-        const arc = Math.sin(t * Math.PI);
-        this.armL.position.y -= arc * 0.12;
-        this.armL.rotateZ(arc * 0.45);
+        const go = Math.sin(Math.min(1, t / 0.56) * Math.PI * 0.5);   // уход к магазину
+        const back = t > 0.62 ? Math.sin((t - 0.62) / 0.38 * Math.PI * 0.5) : 0;
+        const reach = Math.max(0, go - back);
+        this.armL.position.y -= reach * 0.115;
+        this.armL.position.z += reach * 0.075;
+        this.armL.position.x += reach * 0.020;
+        this.armL.rotateX(reach * 0.55);
+        this.armL.rotateZ(reach * 0.35);
+        // правая кисть чуть поджимает рукоять, пока левая работает
+        this.armR.rotateX(reach * 0.10);
       }
     }
 

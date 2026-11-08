@@ -111,11 +111,15 @@
       this.saveAmmo();
       this.spreadHeat = Math.min(1.6, this.spreadHeat + (w.auto ? 0.22 : 0.4));
 
-      // разброс: движение, присед, ADS, нагрев
-      const moveFactor = Math.min(1.8, Math.hypot(this.vx, this.vz) / 3.4);
+      // разброс: движение, присед, ADS, нагрев.
+      // При прицеливании ствол «ложится» в плечо: разброс от движения растёт
+      // вдвое медленнее, а свежий нагрев от первого выстрела не рвёт очередь.
+      const moveFactor = Math.min(this.ads ? 1.15 : 1.8, Math.hypot(this.vx, this.vz) / (this.ads ? 5.2 : 3.4));
       const airFactor = this.y > 0.15 ? 2.6 : 1;
       const baseSpread = (this.ads ? w.adsSpread : w.spread);
-      const spread = baseSpread * (1 + moveFactor * 0.9 + this.spreadHeat * 0.55) * (this.crouch ? 0.72 : 1) * airFactor;
+      const heatMul = this.ads ? 0.34 : 0.55;
+      const spread = baseSpread * (1 + moveFactor * (this.ads ? 0.7 : 0.9) + this.spreadHeat * heatMul)
+        * (this.crouch ? 0.72 : 1) * airFactor;
 
       const origin = g.rayOrigin();
       const dirBase = g.rayDirection();
@@ -129,14 +133,25 @@
         dir.addScaledVector(right, rx).addScaledVector(up, ry).normalize();
         g.combat.playerBullet(origin, dir, w);
       }
-      // отдача
+      // Отдача. Куда смотрит ствол в момент выстрела — туда отдача и уводит,
+      // поэтому накопленные recoilPitch/recoilYaw снимаем, а не добавляем
+      // поверх: сумма «дрожи» не растёт, а «отдача» растёт — отпустил мышь,
+      // и прицел сам сползает вниз.
       const recoilMul = (this.crouch ? 0.78 : 1) * (this.ads ? 0.65 : 1) * (this.ads && w.scope ? 0.5 : 1);
-      this.pitch += w.recoil * 0.42 * recoilMul;
-      this.yaw += (Math.random() - 0.5) * w.recoil * 0.5 * recoilMul;
+      const rp = this.recoilPitch || 0, ry2 = this.recoilYaw || 0;
+      this.recoilPitch = 0; this.recoilYaw = 0;
+      this.pitch = clamp(this.pitch + rp + w.recoil * 0.42 * recoilMul, -1.45, 1.45);
+      this.yaw += ry2 + (Math.random() - 0.5) * w.recoil * 0.5 * recoilMul;
       this.recoilPitch = Math.min(0.16, this.recoilPitch + w.recoil * 0.9 * recoilMul);
       this.kick = 1;
       g.kick(w.kick);
-      if (g.viewmodel) g.viewmodel.addRecoil(w.kick * 2.4);
+      if (g.viewmodel) {
+        // тяжёлое оружие толкает ствол ровнее, лёгкое — с большим уводом
+        g.viewmodel.addRecoil(w.kick * 2.4, {
+          heavy: (w.weight || 1) > 1.5,
+          jitter: this.ads ? 0.55 : 1
+        });
+      }
       if (g.audio) g.audio.gunshot(w.sound, this.x, this.z, 1);
       if (g.fx) {
         const mz = g.viewmodel ? g.viewmodel.muzzle() : origin;
@@ -245,9 +260,10 @@
       if (game.time - this.lastDamageTime > 6 && this.hp < this.maxHp) {
         this.hp = Math.min(this.maxHp, this.hp + dt * 5.5);
       }
-      // отдача
-      this.recoilPitch = damp(this.recoilPitch, 0, 7);
-      this.recoilYaw = damp(this.recoilYaw || 0, 0, 8);
+      // отдача: остатки «толчка» гасим, но медленнее, чем раньше —
+      // ствол успевает отыграть пружиной, а не схлопывается в ноль за кадр
+      this.recoilPitch = damp(this.recoilPitch, 0, 9);
+      this.recoilYaw = damp(this.recoilYaw || 0, 0, 9);
       this.spreadHeat = damp(this.spreadHeat, 0, 3.2);
       this.kick = damp(this.kick, 0, 12);
       if (this.fireTimer > 0) this.fireTimer -= dt;
@@ -337,8 +353,9 @@
       this.bullets.push({
         pos: new T.Vector3(origin.x, origin.y, origin.z),
         dir: new T.Vector3(dir.x, dir.y, dir.z),
-        speed: w.id === 'dmr' ? 130 : w.id === 'shotgun' ? 70 : 95,
-        damage: w.damage * (w.id === 'shotgun' ? 0.26 : 0.62),
+        // скорость пули и урон — по классу ствола, а не по двум захардкоженным id
+        speed: (w.range >= 200 ? 130 : (w.pellets || 1) > 1 ? 70 : 95),
+        damage: w.damage * ((w.pellets || 1) > 1 ? 0.26 : 0.62),
         life: 2.2, owner: agent, tracer: w.tracer, traveled: 0, maxDist: w.range
       });
     }
@@ -1208,9 +1225,18 @@
 
       // мышь
       const sens = 0.0022;
-      P.yaw -= this.mouse.dx * sens;
-      P.pitch = clamp(P.pitch - this.mouse.dy * sens * (this.settings.invertY ? -1 : 1), -1.45, 1.45);
+      const yawBefore = P.yaw;
+      // прицеливание гасит поворот (иначе оптика «летает»), мышью на прицеле
+      // доводим точнее — поэтому множитель меньше единицы, но не ноль
+      const lookMul = 1 - 0.34 * P.ads;
+      P.yaw -= this.mouse.dx * sens * lookMul;
+      P.pitch = clamp(P.pitch - this.mouse.dy * sens * lookMul * (this.settings.invertY ? -1 : 1), -1.45, 1.45);
       P.yaw = SH2.ai.wrapAngle(P.yaw);
+      // инерция ствола от поворота: сдвиг в радианах за кадр
+      if (this.viewmodel) {
+        const dYaw = SH2.ai.wrapAngle(P.yaw - yawBefore);
+        this.viewmodel.addLook(dYaw * 6.0, this.mouse.dy * sens * lookMul * 6.0);
+      }
       this.mouse.dx = 0; this.mouse.dy = 0;
 
       P.update(dt, { yaw: P.yaw, forward: fwd, strafe: str, sprint: inp.sprint, crouch: inp.crouch, ads: inp.ads }, this);
@@ -1427,8 +1453,10 @@
         const pitch = P.pitch;
         cam.position.set(P.x + (P.camBobSide || 0), (P.eyeHeight + (P.camBob || 0)) + shy, P.z);
         cam.rotation.order = 'YXZ';
-        cam.rotation.set(pitch + shx + (P.recoilPitch || 0) * 0.25,
-          P.yaw + Math.PI + (P.recoilYaw || 0) * 0.25,
+        // отдача уже вложена в P.pitch/P.yaw в момент выстрела (fire) —
+        // здесь только тряска, иначе камера дёргается дважды за выстрел
+        cam.rotation.set(pitch + shx,
+          P.yaw + Math.PI,
           P.roll + (Math.random() - 0.5) * sh * 0.02);
         if (P.alive === false) {
           // падение камеры
