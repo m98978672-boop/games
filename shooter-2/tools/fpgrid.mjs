@@ -177,6 +177,7 @@ function renderScene(canvas, rootObj, camPos, camLook, fov, bright) {
 
 /* ---------------------------------- кадры ------------------------------- */
 const out = process.argv[2] || 'docs/preview-fp-grid.png';
+const SIDE = process.argv.indexOf('--side') >= 0;
 const variants = JSON.parse(process.argv[3] || '[{"weapon":"rifle"}]');
 const W = 460, H = 260, COLS = 2;
 const rows = Math.ceil(variants.length / COLS);
@@ -209,8 +210,17 @@ variants.forEach((cfg, i) => {
   cam.updateMatrixWorld(true);
   vmw.root.updateMatrixWorld(true);
   const cv = new Canvas(W, H, [62, 60, 55]);
-  renderScene(cv, lvl.group, cam.position, cam.position.clone().add(new T.Vector3(0, -1, 6)), 78, 1.6);
-  renderScene(cv, vmw.root, cam.position, cam.position.clone().add(new T.Vector3(0, 0, 6)), cam.fov, Number(process.env.FP_BRIGHT || 2.6));
+  if (SIDE) {
+    // крупный план сбоку: оцениваем кисти и детали ствола, а не позу в кадре
+    const target = new T.Vector3();
+    vmw.weaponHolder.getWorldPosition(target);
+    const off = new T.Vector3(0.85, 0.30, 0.22);
+    const eye = target.clone().add(off);
+    renderScene(cv, vmw.root, eye, target, 42, Number(process.env.FP_BRIGHT || 2.6));
+  } else {
+    renderScene(cv, lvl.group, cam.position, cam.position.clone().add(new T.Vector3(0, -1, 6)), 78, 1.6);
+    renderScene(cv, vmw.root, cam.position, cam.position.clone().add(new T.Vector3(0, 0, 6)), cam.fov, Number(process.env.FP_BRIGHT || 2.6));
+  }
   const cx = (i % COLS) * W;
   const cy = Math.floor(i / COLS) * H;
   for (let y = 0; y < H; y++) {

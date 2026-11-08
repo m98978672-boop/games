@@ -251,6 +251,66 @@
       }
       return null;
     }
+
+    /* Свободна ли точка для тела радиуса radius ЦЕЛИКОМ.
+       Клетка сетки 4×4 м слишком груба: она помечает занятой любую точку,
+       рядом с которой стоит бочка, поэтому раньше годные места отбрасывались.
+       Здесь проверяется настоящая геометрия: тело не задевает ни один AABB,
+       глаз не оказывается внутри препятствия по высоте, и точка помещается
+       на карте. Именно эта функция отвечает за то, чтобы никто не появлялся
+       «в чужой модельке» — ни игрок, ни боевики, ни ящики целей. */
+    isFreeSpot(x, z, radius, eyeY) {
+      const rad = radius === undefined ? 0.5 : radius;
+      const eye = eyeY === undefined ? 1.62 : eyeY;
+      if (Math.abs(x) > this.half - rad || Math.abs(z) > this.half - rad) return false;
+      for (let i = 0; i < this.colliders.length; i++) {
+        const c = this.colliders[i];
+        // низкое препятствие не мешает, если глаз выше него
+        if (c.standLow && eye > 0.55 * (c.h || 1)) continue;
+        const dx = Math.max(c.x - c.hw - x, 0, x - (c.x + c.hw));
+        const dz = Math.max(c.z - c.hd - z, 0, z - (c.z + c.hd));
+        if (dx * dx + dz * dz < rad * rad) return false;
+        // точка внутри контура и ниже высоты препятствия — это «в стене»
+        if (x > c.x - c.hw && x < c.x + c.hw && z > c.z - c.hd && z < c.z + c.hd && eye < (c.h || 3)) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    /* Свободная точка рядом с центром: сначала кольцами по спирали, затем
+       шире. Возвращает null, если вокруг совсем тесно. */
+    findFreeSpot(centerX, centerZ, opts) {
+      const o = opts || {};
+      const rad = o.radius === undefined ? 0.5 : o.radius;
+      const eye = o.eyeY === undefined ? 1.62 : o.eyeY;
+      const minR = o.minR === undefined ? 0 : o.minR;
+      const maxR = o.maxR === undefined ? 6 : o.maxR;
+      const rand = o.rand || Math.random;
+      const taken = o.taken || null;   // [{x,z,r}] — занятые места (игрок, другие бойцы)
+      const clearOf = (x, z) => {
+        if (!taken) return true;
+        for (const t of taken) {
+          const tr = t.r === undefined ? 0.8 : t.r;
+          if (Math.hypot(x - t.x, z - t.z) < tr) return false;
+        }
+        return true;
+      };
+      if (minR === 0 && this.isFreeSpot(centerX, centerZ, rad, eye) && clearOf(centerX, centerZ)) {
+        return { x: centerX, z: centerZ };
+      }
+      for (let r = Math.max(0.4, minR); r <= maxR + 1e-6; r += 0.8) {
+        const n = Math.max(6, Math.round(r * 6));
+        const a0 = rand() * TAU;
+        for (let i = 0; i < n; i++) {
+          const a = a0 + (i / n) * TAU;
+          const x = centerX + Math.cos(a) * r;
+          const z = centerZ + Math.sin(a) * r;
+          if (this.isFreeSpot(x, z, rad, eye) && clearOf(x, z)) return { x, z };
+        }
+      }
+      return null;
+    }
   }
 
   /* проём в препятствии (окно, бойница, пролом).

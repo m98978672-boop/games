@@ -365,6 +365,27 @@ for (const id of Object.keys(D.MAPS)) {
   assert.ok(mirrored === 0, `${id}: стены не зеркальны относительно коллизий (${mirrored})`);
 }
 
+/* свободное место: ни игрок, ни бойцы, ни ящики не должны стоять в геометрии */
+for (const id of Object.keys(D.MAPS)) {
+  const m = D.MAPS[id];
+  const lvl = SH2.model.buildLevel(id);
+  const w = new SH2.world.World(m, lvl.colliders);
+  assert.equal(typeof w.isFreeSpot, 'function', 'мир умеет проверять свободную точку');
+  // точка внутри здания не свободна, а на открытом месте — свободна
+  const bld = lvl.colliders.find((c) => c.kind === 'building');
+  if (bld) {
+    assert.ok(!w.isFreeSpot(bld.x, bld.z, 0.45, 1.62), `${id}: центр здания занят`);
+  }
+  const sp = m.playerSpawn;
+  assert.ok(w.isFreeSpot(sp.x, sp.z, 0.96, 1.62), `${id}: старт игрока свободен по настоящей геометрии`);
+  // поиск свободной точки рядом с каждым вражеским спавном
+  for (const s of m.spawns) {
+    const spot = w.findFreeSpot(s[0], s[1], { radius: 0.75, eyeY: 1.55, maxR: 8 });
+    assert.ok(spot, `${id}: рядом со спавном ${s[0]},${s[1]} есть свободное место`);
+    assert.ok(w.isFreeSpot(spot.x, spot.z, 0.75, 1.55), `${id}: найденная точка действительно свободна`);
+  }
+}
+
 /* ===================== 8. УПРАВЛЕНИЕ И КОЛЛИЗИИ ========================= */
 // экранное «право»: камера смотрит в +Z через разворот на π, поэтому
 // вправо = (-cos yaw, sin yaw). Проверяем, что стрейф не зеркальный.
@@ -498,6 +519,19 @@ for (const yaw of [0, 0.7, -1.2, 2.5, Math.PI]) {
   const iHands = vmSrc.indexOf('this.buildHands();');
   const iLayer = vmSrc.lastIndexOf('this.root.traverse((c) => { if (c.isMesh) c.layers.set(1); });');
   assert.ok(iHands > 0 && iLayer > iHands, 'слой оружия ставится после сборки рук');
+
+  // детализация: у каждого ствола много частей, часть из них — тела вращения
+  for (const [id, bp] of Object.entries(SH2.gunblueprints.GUNS)) {
+    assert.ok(bp.parts.length >= 20, `${id}: деталей в чертеже ${bp.parts.length} (>= 20)`);
+    const revolvers = bp.parts.filter((p) => p.kind === 'revolve').length;
+    assert.ok(revolvers >= 3, `${id}: тел вращения ${revolvers}`);
+  }
+
+  // руки: пальцы из фаланг (трубы по пути), а не одна «варежка»
+  assert.ok(/tubePath/.test(vmSrc), 'пальцы и предплечья строятся трубой по 3D-пути');
+  assert.ok(/makeFinger\(/.test(vmSrc) && /fingerSegment\(/.test(vmSrc), 'у пальцев есть фаланги');
+  assert.ok(/matCuff|this\.cuff/.test(vmSrc), 'есть манжета перчатки');
+  assert.ok(/matKnuckle|this\.knuckle/.test(vmSrc), 'есть костяшки');
 
   // Поза от бедра под каждый ствол: пистолет не должен оказаться за нижним
   // краем кадра, а винтовка — упереться прикладом в правый край.

@@ -577,11 +577,15 @@
       this.scene.fog = new (root.THREE.FogExp2)(this.level.map.fog, 0.012);
       this.perf.setPreset(this.settings.quality, this.renderer, this.level.sun, this.scene);
       this.menuAgents = [];
+      const taken = [];
       ['grunt', 'officer', 'scout'].forEach((type, i) => {
-        const spot = this.world.randomOpenPoint(0, 0, 3, 7, Math.random) || { x: i * 2 - 2, z: 3 };
+        const spot = this.world.findFreeSpot(0, 0, {
+          radius: 0.8, eyeY: 1.55, minR: 3, maxR: 8, taken
+        }) || { x: i * 2 - 2, z: 3 };
         const a = new SH2.agent.Agent(this, type, { x: spot.x, z: spot.z, yaw: Math.PI + i });
         a.brain.update = () => {};   // в меню бойцы просто стоят
         this.menuAgents.push(a);
+        taken.push({ x: spot.x, z: spot.z, r: 1.6 });
       });
       const ex = this.level.map.extracts[0];
       const marker = SH2.model.buildExtractMarker(ex.r, 0x5cff9d);
@@ -823,10 +827,9 @@
       let best = base ? { x: base.x, z: base.z } : null;
       // Проверка точки — «влезает ли тело целиком», а не «свободна ли клетка
       // сетки»: клетка 4×4 м считается занятой от любого задетого пропса, и
-      // годный старт в двух метрах от контейнера отбрасывался. Теперь точка
-      // принимается, если resolveCircle не сдвигает тело и глаз не внутри
-      // геометрии (eyeClear).
-      if (best && (this.world.isBlockedCell(best.x, best.z) || this._startBlocked(best, rad))) best = null;
+      // годный старт в двух метрах от контейнера отбрасывался.
+      const eye = (P && P.eyeHeight) || 1.62;
+      if (best && !this.world.isFreeSpot(best.x, best.z, rad, eye)) best = null;
       if (!best) {
         // страховка: перебираем спавны, но только те, что реально свободны
         const spawns = (M.spawns || [[0, 0]]).slice().sort((a, b) => {
@@ -834,20 +837,8 @@
           return Math.hypot(b[0] - ex.x, b[1] - ex.z) - Math.hypot(a[0] - ex.x, a[1] - ex.z);
         });
         for (const s of spawns) {
-          for (let r = 0; r <= 6 && !best; r += 1.5) {
-            const pts = r === 0 ? [[s[0], s[1]]] : [0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
-              const a = (i / 8) * Math.PI * 2;
-              return [s[0] + Math.cos(a) * r, s[1] + Math.sin(a) * r];
-            });
-            for (const [cx, cz] of pts) {
-              const p = { x: cx, z: cz };
-              this.world.resolveCircle(p, rad);
-              if (Math.hypot(p.x - cx, p.z - cz) > 1e-4) continue;
-              if (this._startBlocked(p, rad)) continue;
-              best = p; break;
-            }
-          }
-          if (best) break;
+          const found = this.world.findFreeSpot(s[0], s[1], { radius: rad, eyeY: eye, maxR: 8 });
+          if (found) { best = found; break; }
         }
         if (!best) best = { x: 0, z: 0 };
       }
@@ -855,26 +846,6 @@
       this.world.resolveCircle(best, rad);
       const yaw = base && typeof base.yaw === 'number' ? base.yaw : Math.atan2(-best.x, -best.z);
       return { x: best.x, z: best.z, yaw };
-    }
-
-    /* Точка старта «занята», если тело не влезает (resolveCircle сдвигает его)
-       или камера/глаз оказывается внутри полигональной геометрии — именно это
-       читается как «спавнюсь внутри модельки». Клетка сетки здесь не годится:
-       она огрубляет всё до 4 м и отбрасывает свободные точки. */
-    _startBlocked(pt, rad) {
-      const probe = { x: pt.x, z: pt.z };
-      this.world.resolveCircle(probe, rad);
-      if (Math.hypot(probe.x - pt.x, probe.z - pt.z) > 0.02) return true;
-      const eye = (this.player && this.player.eyeHeight) || 1.62;
-      if (this.world.isBlockedCell(pt.x, pt.z)) return true;
-      // глаз внутри коллайдера по высоте — самая вероятная причина «в стене»
-      for (const c of this.world.colliders) {
-        if (c.standLow && eye > 0.55 * (c.h || 1)) continue;
-        if (pt.x > c.x - c.hw && pt.x < c.x + c.hw && pt.z > c.z - c.hd && pt.z < c.z + c.hd && eye < (c.h || 3)) {
-          return true;
-        }
-      }
-      return false;
     }
 
     setupMission(m) {
@@ -886,7 +857,7 @@
         const boxes = (this.level.map.boxes || []);
         boxes.forEach((b, i) => {
           const mesh = SH2.model.buildObjectiveBox(1.1);
-          const pos = this.world.randomOpenPoint(b.x, b.z, 0, 2.5, Math.random) || { x: b.x, z: b.z };
+          const pos = this.world.findFreeSpot(b.x, b.z, { radius: 1.0, eyeY: 1.0, maxR: 4 }) || { x: b.x, z: b.z };
           mesh.position.set(pos.x, 0, pos.z);
           this.scene.add(mesh);
           this.objectives.push({ id: 'box' + i, text: 'Взорвать груз ' + (i + 1), current: 0, max: 1, done: false, mesh, x: pos.x, z: pos.z });
@@ -927,11 +898,17 @@
       const M = this.level.map;
       const P = this.player;
       let idx = 0;
+      // занятые места: сам игрок и уже выставленные в этой волне бойцы
+      const taken = [{ x: P.x, z: P.z, r: 2.2 }];
+      this.enemies.forEach((e) => { if (e.alive) taken.push({ x: e.x, z: e.z, r: 1.4 }); });
       wave.forEach((type) => {
         let spot = null;
-        for (let tries = 0; tries < 40 && !spot; tries++) {
+        const radius = 0.38 * ((D.ENEMY_BY_ID[type] || D.ENEMY_BY_ID.grunt).scale);
+        for (let tries = 0; tries < 24 && !spot; tries++) {
           const s = M.spawns[(idx + tries) % M.spawns.length];
-          const cand = this.world.randomOpenPoint(s[0], s[1], 0, 6, Math.random);
+          const cand = this.world.findFreeSpot(s[0], s[1], {
+            radius: radius + 0.35, eyeY: 1.55, maxR: 7, taken, rand: Math.random
+          });
           if (!cand) continue;
           const d = Math.hypot(cand.x - P.x, cand.z - P.z);
           if (d < 16) continue;
@@ -939,12 +916,17 @@
           spot = cand;
         }
         if (!spot) {
-          const s = M.spawns[idx % M.spawns.length];
-          spot = { x: s[0], z: s[1] };
+          // не нашли рядом со спавнами — ищем где угодно, но честно свободное
+          for (const s of M.spawns) {
+            const cand = this.world.findFreeSpot(s[0], s[1], { radius: radius + 0.35, eyeY: 1.55, maxR: 12, taken });
+            if (cand) { spot = cand; break; }
+          }
         }
+        if (!spot) return;   // места нет — лучше не спавнить вовсе, чем «в модели»
         if (this.enemies.filter((e) => e.alive).length >= 12) return; // лимит активных
         const e = new SH2.agent.Agent(this, type, { x: spot.x, z: spot.z });
         this.enemies.push(e);
+        taken.push({ x: spot.x, z: spot.z, r: radius + 0.7 });
         idx++;
       });
       this.ui && this.ui.waveStarted(i + 1, this.waves.length);

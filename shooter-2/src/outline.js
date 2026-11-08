@@ -170,6 +170,77 @@
   }
 
   /* ---------------------------------------------------------------------------
+     3b. Труба по 3D-пути
+     points: [{ p: [x, y, z], r: радиус, ry: радиус по второму направлению }]
+     Даёт изогнутые пальцы, предплечья и провода без коробок: кольца
+     строятся в плоскости, перпендикулярной касательной, и соединяются в лофт.
+     --------------------------------------------------------------------------- */
+  function tubePath(points, opts) {
+    const T = THREE();
+    const o = opts || {};
+    const seg = o.segments || 8;
+    const n = points.length;
+    if (n < 2) return new T.BufferGeometry();
+    const verts = [];
+    const idx = [];
+    const up = new T.Vector3(0, 1, 0);
+    const alt = new T.Vector3(1, 0, 0);
+    const tangent = new T.Vector3();
+    const normal = new T.Vector3();
+    const binormal = new T.Vector3();
+    const cur = new T.Vector3();
+    for (let i = 0; i < n; i++) {
+      const pt = points[i];
+      const prev = points[Math.max(0, i - 1)].p;
+      const next = points[Math.min(n - 1, i + 1)].p;
+      tangent.set(next[0] - prev[0], next[1] - prev[1], next[2] - prev[2]);
+      if (tangent.lengthSq() < 1e-10) tangent.set(0, 1, 0);
+      tangent.normalize();
+      // опорный вектор не должен быть параллелен касательной
+      const ref = Math.abs(tangent.dot(up)) > 0.94 ? alt : up;
+      normal.copy(ref).cross(tangent).normalize();
+      binormal.copy(tangent).cross(normal).normalize();
+      const rx = Math.max(0.0006, pt.r);
+      const ry = Math.max(0.0006, pt.ry === undefined ? rx : pt.ry);
+      cur.set(pt.p[0], pt.p[1], pt.p[2]);
+      for (let s = 0; s < seg; s++) {
+        const a = (s / seg) * Math.PI * 2;
+        const ca = Math.cos(a), sa = Math.sin(a);
+        verts.push(
+          cur.x + normal.x * ca * rx + binormal.x * sa * ry,
+          cur.y + normal.y * ca * rx + binormal.y * sa * ry,
+          cur.z + normal.z * ca * rx + binormal.z * sa * ry
+        );
+      }
+    }
+    for (let i = 0; i < n - 1; i++) {
+      for (let s = 0; s < seg; s++) {
+        const s2 = (s + 1) % seg;
+        const a = i * seg + s, b = i * seg + s2;
+        const c = (i + 1) * seg + s2, d = (i + 1) * seg + s;
+        idx.push(a, b, c, a, c, d);
+      }
+    }
+    // заглушки на концах: веер от центра крайнего кольца
+    if (o.caps !== false) {
+      const capA = verts.length / 3;
+      verts.push(points[0].p[0], points[0].p[1], points[0].p[2]);
+      for (let s = 0; s < seg; s++) idx.push(capA, (s + 1) % seg, s);
+      const capB = verts.length / 3;
+      const last = points[n - 1].p;
+      verts.push(last[0], last[1], last[2]);
+      const base = (n - 1) * seg;
+      for (let s = 0; s < seg; s++) idx.push(capB, base + s, base + (s + 1) % seg);
+    }
+    const geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.Float32BufferAttribute(verts, 3));
+    geo.setIndex(idx);
+    geo.computeVertexNormals();
+    geo.computeBoundingSphere();
+    return geo;
+  }
+
+  /* ---------------------------------------------------------------------------
      4. Сглаживание контура (Catmull-Rom по точкам обводки)
      --------------------------------------------------------------------------- */
   function smoothOutline(pts, samples) {
@@ -204,5 +275,5 @@
     return outlineMesh(smoothOutline(profile, 2), { depth, bevel: 0.10, taper, bevelSegments: 3 });
   }
 
-  SH2.outline = { outlineMesh, loftSections, section, circleSection, revolve, smoothOutline, vehicleBody };
+  SH2.outline = { outlineMesh, loftSections, section, circleSection, revolve, tubePath, smoothOutline, vehicleBody };
 })(typeof window !== 'undefined' ? window : globalThis);

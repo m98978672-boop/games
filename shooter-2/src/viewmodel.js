@@ -23,7 +23,11 @@
       // Цвета рук: тёмно-синий рукав и оливковая перчатка. Совсем чёрные
       // (0x1c2026) на лампе уровня сливались в одно пятно — кистей не видно.
       this.sleeve = 0x36435e;
+      this.sleeveDark = 0x2a3348;
       this.glove = 0x3a4034;
+      this.gloveDark = 0x2b3027;
+      this.knuckle = 0x474d3e;
+      this.cuff = 0x2f3529;
       this.weaponHolder = new T.Group();
       this.rig.add(this.weaponHolder);
       this.models = {};
@@ -78,69 +82,155 @@
       this.camera.add(g);
     }
 
+    /* --------------------------------- руки ---------------------------------
+       Кисть из отдельных частей, а не одной «варежки»: ладонь-лофт с подушечкой,
+       четыре пальца по две-три фаланги (трубы по 3D-пути, поэтому палец реально
+       обхватывает цевьё), отставленный большой палец, суставные утолщения,
+       манжета перчатки и рукав из трёх секций. Всё — контуры и тела вращения,
+       без коробок.
+       Локальная система руки: +Y — от кисти к локтю, +Z — вдоль ствола. */
     buildHands() {
       const T = THREE();
       const M = SH2.model.mat;
       const O = SH2.outline;
+      this.matGlove = M(this.glove);
+      this.matGloveDark = M(this.gloveDark);
+      this.matKnuckle = M(this.knuckle);
+      this.matSleeve = M(this.sleeve);
+      this.matSleeveDark = M(this.sleeveDark);
+      this.matCuff = M(this.cuff);
 
-      /* Кисть: ладонь + четыре пальца, обхватывающих трубу, + большой палец.
-         Локальная система руки: +Y — от кисти к локтю, +Z — вдоль ствола.
-         Тогда пальцы лежат поперёк (по X) и «держат» цевьё или рукоять. */
-      const makeHand = () => {
+      // сегмент пальца: труба по дуге с суставными утолщениями
+      const fingerSegment = (len, r0, r1) => {
         const g = new T.Group();
-        // ладонь — короткий лофт, чуть сплюснутый по X
-        const palm = O.loftSections([
-          { at: [0, -0.055, 0.0], pts: O.circleSection(0.036, 0.030, 10) },
-          { at: [0, -0.015, 0.004], pts: O.circleSection(0.042, 0.036, 10) },
-          { at: [0, 0.02, 0.004], pts: O.circleSection(0.044, 0.038, 10) },
-          { at: [0, 0.06, 0.0], pts: O.circleSection(0.038, 0.032, 10) }
-        ]);
-        const palmMesh = new T.Mesh(palm, M(this.glove));
-        // Кисть в кадре от первого лица кажется крупнее, чем в жизни: она
-        // ближе к глазу. Уменьшаем ладонь и пальцы, иначе перчатка закрывает
-        // ствол целиком — особенно у пистолета и ПП.
-        palmMesh.scale.set(0.82, 0.86, 0.76);
-        g.add(palmMesh);
-        // четыре пальца: трубки поперёк, обхватывают цевьё
-        const finger = O.revolve([[0, 0.0105], [0.004, 0.0115], [0.040, 0.011], [0.050, 0.009], [0.054, 0.0]], { segments: 8 });
-        finger.rotateZ(Math.PI / 2);
-        for (let i = 0; i < 4; i++) {
-          const f = new T.Mesh(finger, M(this.glove));
-          f.scale.setScalar(0.86);
-          f.position.set(-0.018, -0.034 + i * 0.016, 0.018);
-          f.rotation.y = -0.10 - i * 0.02;
-          f.rotation.z = 0.06;
-          g.add(f);
-        }
-        // большой палец — сверху, вдоль ствола
-        const thumb = O.revolve([[0, 0.013], [0.004, 0.014], [0.042, 0.013], [0.048, 0.0]], { segments: 8 });
-        thumb.rotateX(Math.PI / 2);
-        const th = new T.Mesh(thumb, M(this.glove));
-        th.position.set(0.020, 0.016, 0.010);
-        th.rotation.z = -0.35;
-        g.add(th);
+        const pts = [
+          { p: [0, 0, 0], r: r0 },
+          { p: [0, len * 0.28, 0], r: (r0 + r1) * 0.54 },
+          { p: [0, len * 0.62, 0], r: r1 * 1.04 },
+          { p: [0, len, 0], r: r1 }
+        ];
+        g.add(new T.Mesh(O.tubePath(pts, { segments: 7 }), this.matGlove));
         return g;
       };
 
-      /* Предплечье: от кисти назад к камере, обрезано кадром. */
+      /* Один палец: три фаланги, вложенные друг в друга — каждая следующая
+         повёрнута сильнее, поэтому палец дугой обхватывает цевьё. За основу
+         берём +Y (наружу от ладони), а в кисти поворачиваем палец поперёк
+         ствола: пальцы загибаются в плоскости XY, вокруг оси ствола Z. */
+      const makeFinger = (len, thick, curl) => {
+        const g = new T.Group();
+        g.add(fingerSegment(len * 0.46, thick, thick * 0.93));
+        const mid = new T.Group();
+        mid.position.set(0, len * 0.46, 0);
+        mid.rotation.z = -curl;
+        mid.add(fingerSegment(len * 0.34, thick * 0.93, thick * 0.85));
+        g.add(mid);
+        const tip = new T.Group();
+        tip.position.set(0, len * 0.34, 0);
+        tip.rotation.z = -curl * 0.85;
+        tip.add(fingerSegment(len * 0.26, thick * 0.85, thick * 0.68));
+        mid.add(tip);
+        return g;
+      };
+
+      /* Кисть. Система руки: +Y — от кисти к локтю (вниз-назад), +Z — вдоль
+         ствола. Значит, кисть обхватывает цилиндр, ось которого идёт по Z:
+         ладонь лежит снизу (−Y) и тянется вдоль ствола, пальцы растут вверх
+         и загибаются вокруг оси Z, большой палец идёт с другой стороны. */
+      const makeHand = () => {
+        const g = new T.Group();
+        // ладонь: контур в плоскости (Z, Y), толщина по X — плоская подушечка
+        const palm = O.outlineMesh([
+          [-0.040, -0.082], [0.036, -0.086], [0.044, -0.062],
+          [0.040, -0.030], [0.020, -0.018], [-0.032, -0.020],
+          [-0.046, -0.044], [-0.046, -0.068]
+        ], { depth: 0.034, bevel: 0.007, bevelSegments: 2 });
+        g.add(new T.Mesh(palm, this.matGlove));
+        // тыльная подушечка у большого пальца
+        const thenar = new T.Mesh(O.revolve(
+          [[-0.026, 0.010], [-0.010, 0.016], [0.010, 0.017], [0.026, 0.011], [0.030, 0.0]],
+          { segments: 10 }
+        ), this.matGlove);
+        thenar.rotation.z = Math.PI / 2;
+        thenar.rotation.y = 0.2;
+        thenar.position.set(-0.016, -0.040, 0.024);
+        g.add(thenar);
+        // четыре пальца: растут вверх (+Y) и загибаются вокруг ствола
+        const fingerSpec = [
+          { z: 0.028, len: 0.050, curl: 0.55 },
+          { z: 0.010, len: 0.056, curl: 0.62 },
+          { z: -0.008, len: 0.054, curl: 0.60 },
+          { z: -0.026, len: 0.046, curl: 0.52 }
+        ];
+        fingerSpec.forEach((f, i) => {
+          const finger = makeFinger(f.len, 0.0096 - i * 0.0005, f.curl);
+          finger.position.set(-0.004, -0.034, f.z);
+          finger.rotation.x = -0.16 - i * 0.03;
+          finger.rotation.z = 0.12;
+          g.add(finger);
+        });
+        // большой палец: с другой стороны ствола, наискось вверх
+        const thumb = fingerSegment(0.050, 0.0120, 0.0086);
+        thumb.position.set(-0.008, -0.040, 0.040);
+        thumb.rotation.z = 0.42;
+        thumb.rotation.x = -0.85;
+        g.add(thumb);
+        // костяшки на сгибе ладони
+        for (let i = 0; i < 4; i++) {
+          const k = new T.Mesh(O.revolve(
+            [[-0.004, 0.0050], [-0.001, 0.0066], [0.003, 0.0064], [0.005, 0.0]],
+            { segments: 7 }
+          ), this.matKnuckle);
+          k.rotation.x = Math.PI / 2;
+          k.position.set(-0.004, -0.030, 0.028 - i * 0.0175);
+          g.add(k);
+        }
+        return g;
+      };
+
+      /* Предплечье: три секции лофтом (запястье → предплечье → локоть наружу),
+         манжета перчатки с ремешком и валиком, и кисть. */
       const makeArm = (len, r0, r1) => {
         const g = new T.Group();
         const pipe = O.loftSections([
-          { at: [0, 0.05, 0], pts: O.circleSection(r0, r0 * 0.9, 10) },
-          { at: [0, 0.05 + len * 0.5, 0], pts: O.circleSection((r0 + r1) / 2, (r0 + r1) / 2 * 0.9, 10) },
-          { at: [0, 0.05 + len, 0], pts: O.circleSection(r1, r1 * 0.9, 10) }
+          { at: [0, 0.05, 0], pts: O.circleSection(r0, r0 * 0.92, 12) },
+          { at: [0, 0.05 + len * 0.22, 0], pts: O.circleSection(r0 * 1.06, r0 * 0.94, 12) },
+          { at: [0, 0.05 + len * 0.55, 0], pts: O.circleSection((r0 + r1) * 0.52, (r0 + r1) * 0.48, 12) },
+          { at: [0, 0.05 + len * 0.82, 0], pts: O.circleSection(r1 * 1.12, r1 * 1.02, 12) },
+          { at: [0, 0.05 + len, 0], pts: O.circleSection(r1 * 1.22, r1 * 1.08, 12) }
         ]);
-        g.add(new T.Mesh(pipe, M(this.sleeve)));
-        const cuff = new T.Mesh(O.revolve([[0, 0.040], [0.02, 0.046], [0.055, 0.042], [0.06, 0]], { segments: 10 }), M(this.sleeve));
-        cuff.position.y = 0.10;
+        g.add(new T.Mesh(pipe, this.matSleeve));
+        // складка ткани у локтя
+        const fold = new T.Mesh(O.revolve(
+          [[0, r1 * 1.10], [0.012, r1 * 1.25], [0.030, r1 * 1.18], [0.040, r1 * 0.98]],
+          { segments: 12 }
+        ), this.matSleeveDark);
+        fold.position.y = 0.05 + len * 0.78;
+        g.add(fold);
+        // манжета перчатки: валик + ремешок
+        const cuff = new T.Mesh(O.revolve(
+          [[0, r0 * 0.98], [0.010, r0 * 1.16], [0.028, r0 * 1.20], [0.046, r0 * 1.10], [0.055, r0 * 0.95]],
+          { segments: 14 }
+        ), this.matCuff);
+        cuff.position.y = 0.062;
         g.add(cuff);
-        g.add(makeHand());
+        const strap = new T.Mesh(O.tubePath([
+          { p: [r0 * 1.02, 0.078, 0.006], r: 0.0045, ry: 0.0022 },
+          { p: [0, 0.082, r0 * 1.05], r: 0.0042, ry: 0.0021 },
+          { p: [-r0 * 1.02, 0.078, 0.004], r: 0.0040, ry: 0.0020 }
+        ], { segments: 6 }), this.matGloveDark);
+        g.add(strap);
+        const hand = makeHand();
+        // кисть садится чуть ниже точки хвата: точка хвата — центр рукояти,
+        // а ладонь обхватывает её снизу, иначе пальцы уходят в ствольную коробку
+        hand.position.y = -0.012;
+        g.add(hand);
         return g;
       };
 
-      this.armR = makeArm(0.19, 0.040, 0.034);
+      this.armR = makeArm(0.19, 0.040, 0.032);
       this.weaponHolder.add(this.armR);
-      this.armL = makeArm(0.21, 0.042, 0.034);
+      this.armL = makeArm(0.21, 0.042, 0.032);
       this.weaponHolder.add(this.armL);
     }
 
@@ -175,7 +265,7 @@
       // теряется. От первого лица стволы принято показывать крупнее, поэтому
       // короткие модели домножаем, а длинные (винтовка, дробовик, DMR) держим
       // 1:1 — иначе приклад уезжает за край.
-      const MODEL_SCALE = { pistol: 1.9, smg: 1.25, rifle: 1.0, shotgun: 1.0, dmr: 1.0 };
+      const MODEL_SCALE = { pistol: 1.45, smg: 1.25, rifle: 1.0, shotgun: 1.0, dmr: 1.0 };
       model.scale.setScalar(MODEL_SCALE[id] || 1.0);
       // Поза «от бедра» под конкретный ствол. Длины мало: у пистолета и ПП
       // приклад почти вплотную к глазу, и любая общая формула выдаёт кашу из
@@ -185,8 +275,8 @@
       // хвата всего в 6 см друг от друга, и без разведения рук обе кисти
       // закрывают сам ствол — в кадре остаются только перчатки.
       const POSE = {
-        pistol:  { x: 0.15, y: -0.21, z: -0.54, rx: 0.03, ry: 0.40, rz: 0.10, s: 0.85,
-                   handScale: 0.62, offL: [-0.09, -0.09, 0.05], offR: [0.03, 0.0, 0.0] },
+        pistol:  { x: 0.16, y: -0.18, z: -0.40, rx: 0.03, ry: 0.22, rz: 0.10, s: 1.20,
+                   handScale: 0.85, offL: [-0.055, -0.055, 0.03], offR: [0.03, 0.0, 0.0] },
         smg:     { x: 0.13, y: -0.150, z: -0.44, rx: 0.04, ry: 0.12, rz: 0.08, s: 0.98, handScale: 0.92 },
         rifle:   { x: 0.12, y: -0.150, z: -0.50, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.90 },
         shotgun: { x: 0.12, y: -0.150, z: -0.52, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.88 },
