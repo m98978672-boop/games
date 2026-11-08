@@ -68,6 +68,7 @@
     });
     el('sel-currency').addEventListener('change', function () {
       S.settings.currency = el('sel-currency').value;
+      S.settings.curSet = true;
       UI.setCurrency(S.settings.currency);
       saveSettings();
     });
@@ -594,7 +595,7 @@
   /* ============================== старт ============================== */
 
   function boot() {
-    UI.setCurrency(S.settings.currency || 'rub');
+    UI.setCurrency(S.settings.currency || 'local');
     initStart();
     initLifeControls();
     el('btn-auto').classList.toggle('on', !!S.settings.auto);

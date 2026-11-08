@@ -23,6 +23,7 @@
   /* --------------------------- валюты --------------------------------- */
   /* множитель: сколько местных единиц в одном межд. долларе по ППС (приближённо) */
   var CURRENCIES = [
+    { id: 'local', name: 'Валюта страны', sym: '', k: 1, of: '', local: true },
     { id: 'rub', name: 'Россия (₽)', sym: '₽', k: 30, of: 'по ценам России' },
     { id: 'kzt', name: 'Казахстан (₸)', sym: '₸', k: 190, of: 'по ценам Казахстана' },
     { id: 'uah', name: 'Украина (₴)', sym: '₴', k: 13, of: 'по ценам Украины' },
@@ -34,12 +35,34 @@
     { id: 'int', name: 'Межд. $ (ППС)', sym: '$', k: 1, of: 'в международных долларах' }
   ];
   var currency = CURRENCIES[0];
+  var localCur = C.currencyOf(null);          /* валюта страны, где идёт жизнь */
+  var RUB = 30;                               /* рублей за межд. доллар (ППС) */
 
   function setCurrency(id) {
     for (var i = 0; i < CURRENCIES.length; i++) if (CURRENCIES[i].id === id) currency = CURRENCIES[i];
   }
-  function money(v) { return M.fmtMoney(v * currency.k) + ' ' + currency.sym; }
-  function moneyPPP(v) { return currency.id === 'int' ? '' : M.fmtMoney(v) + ' $ ППС'; }
+  /* чем считаем деньги прямо сейчас: валютой страны или выбранной вручную */
+  function cur() { return currency.local ? localCur : currency; }
+  /* страна жизни задаёт валюту: найра в Нигерии, иена в Японии, рубль в России */
+  function useCountry(life) {
+    if (life && life.c) localCur = C.currencyOf(life.c);
+    return localCur;
+  }
+  function money(v) { var u = cur(); return M.fmtMoney(v * u.k) + ' ' + u.sym; }
+  /* перевод в рубли — второй строкой, мелким шрифтом */
+  function rub(v) {
+    if (cur().sym === '₽') return '';
+    return '≈ ' + M.fmtMoney(v * RUB) + ' ₽';
+  }
+  function rubTag(v, cls) {
+    var t = rub(v);
+    return t ? '<small class="in-rub' + (cls ? ' ' + cls : '') + '">' + t + '</small>' : '';
+  }
+  /* «12 000 ₦ · ≈ 2 300 ₽» — одной строкой, где нет места на вторую */
+  function moneyBoth(v) { var t = rub(v); return money(v) + (t ? ' · ' + t : ''); }
+  function moneyPPP(v) { return cur().sym === '$' && cur().k === 1 ? '' : M.fmtMoney(v) + ' $ ППС'; }
+  /* подпись под суммой: рубли, а если считаем в рублях — межд. доллары */
+  function subMoney(v) { return rub(v) || moneyPPP(v); }
 
   /* --------------------------- модальные окна -------------------------- */
   var modalStack = [];
@@ -97,7 +120,7 @@
       o.value = c.id; o.textContent = c.name;
       cur.appendChild(o);
     });
-    cur.value = settings.currency || 'rub';
+    cur.value = settings.currency || 'local';
     setCurrency(cur.value);
 
     var yr = el('sel-year');
@@ -222,6 +245,7 @@
   /* ------------------------ карточка рождения -------------------------- */
 
   function birthCard(life, onStart) {
+    useCountry(life);
     var c = life.c;
     var q = Math.min(5, Math.floor(life.famPct * 5) + 1);
     var dots = '';
@@ -263,11 +287,11 @@
       cell('страна рождения', esc(c.name)) +
       cell('место рождения', esc(place) + (life.urban ? ' (город)' : '')) +
       cell('доход семьи', '<i class="quint">' + dots + '</i> квинтиль ' + q + '<br><small>· ' + band + ' в стране</small>') +
-      cell('доход семьи на человека', money(life.famIncome) + ' в год') +
+      cell('доход семьи на человека', money(life.famIncome) + ' в год' + rubTag(life.famIncome)) +
       cell('шанс родиться здесь', (C.birthShare(life.base) * 100).toFixed(2).replace('.', ',') + '%') +
       cell('ожидаемая продолжительность жизни', le.toFixed(1).replace('.', ',') + ' года') +
       cell('вероятность умереть до 5 лет', (c.u5mr / 10).toFixed(1).replace('.', ',') + '%') +
-      cell('ВВП на человека (ППС)', Math.round(c.gdp).toLocaleString('ru-RU') + ' $') +
+      cell('ВВП на человека', money(c.gdp) + ' в год' + rubTag(c.gdp)) +
       '</div>' +
       '<label class="inline-field">Имя можно изменить' +
       '<input class="note-input" id="birth-name" style="min-height:0;padding:9px" value="' + esc(life.name) + '"></label>' +
@@ -322,6 +346,7 @@
   }
 
   function renderPerson(life) {
+    useCountry(life);
     var where = N && N.place ? N.place(life.base.code, life.seed, life.urban) : (life.urban ? 'город' : 'село');
     el('hud-country').textContent = where + ', ' + life.c.name;
     el('hud-age').textContent = life.age;
@@ -329,6 +354,7 @@
     el('hud-name').textContent = life.name;
     el('hud-income').textContent = money(life.income);
     el('hud-money').textContent = money(life.money);
+    el('income-rub').textContent = life.income > 0 ? subMoney(life.income) : '';
     el('income-month').textContent = life.income > 0 ? money(life.income / 12) + ' в месяц' : 'дохода пока нет';
     var inc = Math.max(life.income || life.famIncome, 1);
     var pct = Math.round(M.percentileOfIncome(life.c, inc) * 100);
@@ -338,8 +364,8 @@
     el('money-rank-world').textContent = 'верхние ' + Math.max(1, 100 - wpct) + '% человечества';
     el('income-partner').textContent = life.partnerIncome > 0
       ? 'из них ' + (life.sex === 'f' ? 'муж' : 'жена') + ' — ' + money(life.partnerIncome) : '';
-    el('money-basis').textContent = currency.of;
-    el('money-ppp').textContent = moneyPPP(life.money);
+    el('money-basis').textContent = currency.local ? localCur.name : currency.of;
+    el('money-ppp').textContent = subMoney(life.money);
     var h = life.history;
     var prev = h.length > 1 ? h[h.length - 2].money : 0;
     var dm = Math.round(life.money - prev);
@@ -356,7 +382,7 @@
     if (capRow && IVP) {
       capRow.hidden = !(IVP.total > 0 || life.capitalIncome > 0);
       if (!capRow.hidden) {
-        el('money-capital').textContent = money(IVP.total) +
+        el('money-capital').textContent = moneyBoth(IVP.total) +
           (life.capitalIncome ? ' · ' + money(life.capitalIncome) + ' за год' : '');
       }
     }
@@ -397,7 +423,8 @@
             M.plural(life.streetTotal || 0, 'год', 'года', 'лет') + '</b></li>' : '') +
       (life.loan
         ? '<li><span>Кредит</span><b>' + money(life.loan.left) + ' · по ' + money(life.loan.pay) +
-          ' в год' + (life.loan.miss ? ' · просрочек: ' + life.loan.miss : '') + '</b></li>'
+          ' в год' + (life.loan.miss ? ' · просрочек: ' + life.loan.miss : '') +
+          rubTag(life.loan.left) + '</b></li>'
         : '') +
       (life.talents.length ? '<li><span>Талант</span><b>' + esc(life.talents.join(', ')) + '</b></li>' : '');
   }
@@ -411,6 +438,7 @@
   }
 
   function renderBudget(life, onChange) {
+    useCountry(life);
     var box = el('budget-list');
     var inc = Math.max(life.income, 0);
     el('budget-sum').textContent = 'Годовой доход ' + money(inc) + '. Распределите его — проценты пересчитываются сами.';
@@ -420,7 +448,8 @@
         '<span class="b-name">' + m.icon + ' ' + m.name + '</span>' +
         '<span class="b-val">' + Math.round(share * 100) + '%</span>' +
         '<input type="range" min="0" max="100" value="' + Math.round(share * 100) + '" aria-label="' + m.name + '">' +
-        '<span class="b-money">' + money(inc * share) + ' в год · ' + m.hint + '</span>' +
+        '<span class="b-money">' + money(inc * share) + ' в год' + rubTag(inc * share, 'inline') +
+        ' · ' + m.hint + '</span>' +
         '</div>';
     }).join('');
 
@@ -503,6 +532,7 @@
   }
 
   function renderFamily(life) {
+    useCountry(life);
     var kids = life.children.length
       ? life.children.map(function (k) { return k.name + ' (' + (life.age - k.bornAt) + ')'; }).join(', ')
       : '—';
@@ -517,7 +547,7 @@
       '<li><span>Жильё</span><b>' + (life.home ? 'своё' : 'съёмное или родительское') + '</b></li>' +
       (life.abroad ? '<li><span>Живёт</span><b>за границей</b></li>' : '') +
       (life.business ? '<li><span>Своё дело</span><b>да</b></li>' : '') +
-      '<li><span>Сбережения</span><b>' + money(life.money) + '</b></li>';
+      '<li><span>Сбережения</span><b>' + money(life.money) + rubTag(life.money) + '</b></li>';
   }
 
   function peerLine(p, age) {
@@ -552,6 +582,7 @@
   }
 
   function renderAll(life, peers, onChange) {
+    useCountry(life);
     renderPerson(life);
     renderStats(life);
     renderBudget(life, onChange);
@@ -639,8 +670,8 @@
 
   function optionCard(o, i) {
     var meta = [];
-    if (o.price) meta.push('<em class="d-price">−' + money(o.price) + '</em>');
-    if (o.gain) meta.push('<em class="d-gain">+' + money(o.gain) + '</em>');
+    if (o.price) meta.push('<em class="d-price">−' + money(o.price) + rubTag(o.price, 'inline') + '</em>');
+    if (o.gain) meta.push('<em class="d-gain">+' + money(o.gain) + rubTag(o.gain, 'inline') + '</em>');
     if (o.chance !== null && o.chance !== undefined) {
       meta.push('<em class="d-chance">шанс ' + Math.round(o.chance * 100) + '%</em>');
     }
@@ -655,6 +686,7 @@
   }
 
   function decisionModal(life, decision, onPick) {
+    useCountry(life);
     var heavy = decision.heavy
       ? '<p class="heavy-note">Это тяжёлая тема. Сцена не показывается. Если вам тяжело — поговорите с близким ' +
       'человеком или со службой психологической помощи.</p>' : '';
@@ -770,8 +802,10 @@
       '<ul><li><b>✎ Паузы</b> — на чём жизнь должна вас подождать: на решениях (всегда), ' +
       'на событиях, которые меняют жизнь, каждый год или когда появляются новые траты.</li>' +
       '<li><b>♪ Музыка</b> — тихий фон и нота на каждый прожитый год. Звук считается на лету, файлов нет.</li>' +
-      '<li><b>Валюта</b> выбирается на первом экране: все суммы пересчитываются по ценам выбранной страны, ' +
-      'под накопленным видно ту же сумму в международных долларах (ППС).</li></ul>' +
+      '<li><b>Валюта</b> по умолчанию — та, которой платят в вашей стране: найра в Нигерии, иена в Японии, ' +
+      'рубль в России. Заработок, цены и накопления показаны в ней, а строкой ниже, мелким шрифтом, — ' +
+      'примерный перевод в рубли по покупательной способности. На первом экране валюту можно ' +
+      'закрепить за одной страной или перейти на международные доллары (ППС).</li></ul>' +
       '<p class="hint">Авторежим принимает решения нейтрально: средние результаты совпадают со статистикой страны.</p>');
     bindClose();
   }
@@ -779,6 +813,7 @@
   /* ------------------------------ финал -------------------------------- */
 
   function endScreen(life, peers, homeCode) {
+    useCountry(life);
     el('end-kicker').textContent = life.dead ? 'запись о смерти' : 'итог жизни';
     el('end-name').textContent = life.name;
     el('end-years').textContent = life.birthYear + ' – ' + (life.dead ? life.dead.year : life.year) +
@@ -825,6 +860,7 @@
   function PU() { return window.IN8B.purchases; }
 
   function renderSpendNote(life) {
+    useCountry(life);
     var note = el('spend-note');
     if (!note || !PU()) return;
     var free = PU().availableFor(life).length;
@@ -835,6 +871,7 @@
   }
 
   function spendModal(life, onChange) {
+    useCountry(life);
     var P = PU();
     if (!P) return null;
     var wrap = modal(
@@ -852,11 +889,12 @@
       var up = Math.round(life.need * (life.upkeep || 0));
       el('spend-top').innerHTML =
         '<div class="sp-kv"><span>Накоплено</span><b class="' + (life.money < 0 ? 'bad' : 'good') + '">' +
-        money(life.money) + '</b></div>' +
-        '<div class="sp-kv"><span>Доход за год</span><b>' + money(life.income) + '</b></div>' +
-        '<div class="sp-kv"><span>Год жизни стоит</span><b>' + money(life.need) + '</b></div>' +
-        '<div class="sp-kv"><span>Содержание вещей</span><b>' + (up ? money(up) + ' в год' : '—') + '</b></div>' +
-        '<div class="sp-kv"><span>Потрачено за жизнь</span><b>' + money(life.spentTotal || 0) + '</b></div>';
+        money(life.money) + rubTag(life.money) + '</b></div>' +
+        '<div class="sp-kv"><span>Доход за год</span><b>' + money(life.income) + rubTag(life.income) + '</b></div>' +
+        '<div class="sp-kv"><span>Год жизни стоит</span><b>' + money(life.need) + rubTag(life.need) + '</b></div>' +
+        '<div class="sp-kv"><span>Содержание вещей</span><b>' + (up ? money(up) + ' в год' + rubTag(up) : '—') + '</b></div>' +
+        '<div class="sp-kv"><span>Потрачено за жизнь</span><b>' + money(life.spentTotal || 0) +
+        rubTag(life.spentTotal || 0) + '</b></div>';
     }
 
     function tabs() {
@@ -885,7 +923,8 @@
           '<div class="sp-body"><b>' + esc(it.title) + '</b>' +
           '<span class="sp-desc">' + esc(it.desc) + '</span>' +
           '<span class="sp-gain">' + esc(it.gain || '') + (up ? ' · содержание ' + money(up) + '/год' : '') + '</span></div>' +
-          '<div class="sp-buy"><b class="' + (st.ok && st.debt ? 'warn' : '') + '">' + money(price) + '</b>' +
+          '<div class="sp-buy"><b class="' + (st.ok && st.debt ? 'warn' : '') + '">' + money(price) +
+          rubTag(price) + '</b>' +
           (st.ok
             ? '<button class="btn btn-primary tiny" data-buy="' + it.id + '">' + (st.debt ? 'В долг' : 'Купить') + '</button>'
             : '<span class="sp-why">' + esc(st.why) + '</span>') +
@@ -922,12 +961,13 @@
     if (!inp || !inp.value) return null;
     var v = parseFloat(String(inp.value).replace(',', '.').replace(/\s/g, ''));
     if (!isFinite(v) || v <= 0) return null;
-    return v / currency.k;
+    return v / cur().k;
   }
 
-  function toInput(v) { return String(Math.round(v * currency.k)); }
+  function toInput(v) { return String(Math.round(v * cur().k)); }
 
   function renderInvestNote(life) {
+    useCountry(life);
     var note = el('invest-note');
     if (!note || !IV()) return;
     var p = IV().portfolio(life);
@@ -1055,7 +1095,7 @@
       ' · шанс выстрелить: ' + sharpPct(o.boom) + '% в год</span>' +
       (bad.length ? reqLine(st.reqs) : '') +
       '</div>' +
-      '<div class="iv-act"><b>' + money(st.cost) + '</b>' +
+      '<div class="iv-act"><b>' + money(st.cost) + rubTag(st.cost) + '</b>' +
       (blocked
         ? '<span class="sp-why">' + esc(life.biz ? 'у вас уже есть своё дело' : bad[0].text) + '</span>'
         : (life.money < st.cost
@@ -1065,6 +1105,7 @@
   }
 
   function investModal(life, onChange) {
+    useCountry(life);
     var P = IV();
     if (!P) return null;
     var wrap = modal(
@@ -1083,10 +1124,11 @@
       var p = P.portfolio(life);
       el('iv-top').innerHTML =
         '<div class="sp-kv"><span>Наличные</span><b class="' + (life.money < 0 ? 'bad' : 'good') + '">' +
-        money(life.money) + '</b></div>' +
-        '<div class="sp-kv"><span>Вложено сейчас</span><b>' + money(p.put + (life.biz ? life.biz.put : 0)) + '</b></div>' +
-        '<div class="sp-kv"><span>Стоит сегодня</span><b>' + money(p.total) + '</b></div>' +
-        '<div class="sp-kv"><span>Пришло за год</span><b>' + money(p.income) + '</b></div>' +
+        money(life.money) + rubTag(life.money) + '</b></div>' +
+        '<div class="sp-kv"><span>Вложено сейчас</span><b>' + money(p.put + (life.biz ? life.biz.put : 0)) +
+        rubTag(p.put + (life.biz ? life.biz.put : 0)) + '</b></div>' +
+        '<div class="sp-kv"><span>Стоит сегодня</span><b>' + money(p.total) + rubTag(p.total) + '</b></div>' +
+        '<div class="sp-kv"><span>Пришло за год</span><b>' + money(p.income) + rubTag(p.income) + '</b></div>' +
         '<div class="sp-kv"><span>Итог за жизнь</span><b class="' + (p.lifetime >= 0 ? 'good' : 'bad') + '">' +
         (p.lifetime >= 0 ? '+' : '−') + money(Math.abs(p.lifetime)) + '</b></div>';
     }
@@ -1216,7 +1258,7 @@
   window.IN8B = window.IN8B || {};
   window.IN8B.ui = {
     el: el, esc: esc, modal: modal, close: close, closeTop: closeTop, toast: toast, bindClose: bindClose,
-    currencies: CURRENCIES, setCurrency: setCurrency, money: money,
+    currencies: CURRENCIES, setCurrency: setCurrency, money: money, rub: rub, useCountry: useCountry,
     fillStartSelects: fillStartSelects, renderPastList: renderPastList, countriesModal: countriesModal,
     whoModal: whoModal, birthCard: birthCard, helpModal: helpModal,
     renderAll: renderAll, renderPerson: renderPerson, renderStats: renderStats, renderBudget: renderBudget,

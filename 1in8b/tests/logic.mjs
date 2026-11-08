@@ -906,6 +906,76 @@ ok(typeof EN.Life.prototype.workEvent === 'function', 'у работы своя 
   for (const f of Object.keys(SV)) ok(src.includes("'" + f + "'"), 'сохранение помнит поле ' + f);
 }
 
+/* --------------------------- 9б. валюта стран --------------------------- */
+console.log('\nВалюта страны и перевод в рубли');
+{
+  const noCur = C.list.filter((c) => !C.currency[c.code]);
+  ok(noCur.length === 0, 'у каждой из ' + C.list.length + ' стран есть своя валюта' +
+    (noCur.length ? ': нет у ' + noCur.map((c) => c.code).join(' ') : ''));
+  const badCur = C.list.filter((c) => {
+    const u = C.currencyOf(c);
+    return !u.sym || !u.name || !(u.k > 0) || !Number.isFinite(u.k) || /[a-zA-Z]/.test(u.name);
+  });
+  ok(badCur.length === 0, 'у валюты есть знак, название кириллицей и курс больше нуля' +
+    (badCur.length ? ': сломано у ' + badCur[0].code : ''));
+  ok(C.currencyOf(null).sym === '$' && C.currencyOf({ code: 'zz' }).k === 1,
+    'для неизвестной страны остаётся межд. доллар');
+
+  const known = { ru: ['₽', 30], us: ['$', 1], jp: ['¥', 100], in: ['₹', 22], ng: ['₦', 320], de: ['€', 0.73] };
+  const wrong = Object.keys(known).filter((k) => {
+    const u = C.currencyOf(C.byCode[k]);
+    return u.sym !== known[k][0] || u.k !== known[k][1];
+  });
+  ok(wrong.length === 0, 'рубль, доллар, иена, рупия, найра и евро на своих местах' +
+    (wrong.length ? ': не сошлось у ' + wrong.join(' ') : ''));
+
+  /* страны одной валютной зоны считают одинаково */
+  const euro = ['de', 'fr', 'it', 'es', 'nl', 'fi', 'gr', 'pt'].map((k) => C.currencyOf(C.byCode[k]));
+  ok(euro.every((u) => u.sym === '€' && u.k > 0.4 && u.k < 0.95), 'в еврозоне всюду евро и близкие курсы');
+  const cfa = ['ci', 'sn', 'ml', 'cm', 'td'].map((k) => C.currencyOf(C.byCode[k]));
+  ok(cfa.every((u) => u.sym === 'FCFA' && u.k > 150 && u.k < 350), 'страны зоны франка КФА считают в одних деньгах');
+
+  /* месячная зарплата уборщика в местных деньгах — осмысленное число */
+  const samples = ['ru', 'us', 'ng', 'in', 'jp', 'br'].map((k) => {
+    const c = C.byCode[k]; const u = C.currencyOf(c);
+    const wage = M.wageFor(c, M.jobById['cleaner'], 1, 50, 10, { sex: 'm', urban: true });
+    return { k, m: (wage * u.k) / 12, sym: u.sym, rub: (wage * 30) / 12 };
+  });
+  ok(samples.every((x) => x.m > 100 && Number.isFinite(x.m)),
+    'зарплата уборщика в местных деньгах: ' + samples.map((x) => x.k + ' ' + Math.round(x.m) + ' ' + x.sym).join(' · '));
+  ok(samples.every((x) => x.rub > 2000 && x.rub < 400000),
+    'та же зарплата в рублях: ' + samples.map((x) => x.k + ' ' + Math.round(x.rub) + ' ₽').join(' · '));
+
+  /* перевод в рубли не меняет порядок: где доход выше, там и рублей больше */
+  const order = ['et', 'ng', 'in', 'br', 'ru', 'de', 'us'].map((k) => C.byCode[k].gdp * 30);
+  ok(order.every((v, i) => i === 0 || v > order[i - 1]),
+    'рублёвая подпись сохраняет разницу между странами: ' +
+    order.map((v) => Math.round(v / 1000) + ' тыс').join(' < '));
+
+  /* суммы внутри текстов событий печатаются в валюте страны */
+  const cashNg = M.cash(1000, C.byCode['ng']);
+  const cashRu = M.cash(1000, C.byCode['ru']);
+  ok(cashNg.endsWith('₦') && cashRu.endsWith('₽') && cashNg !== cashRu,
+    'в тексте события сумма идёт в местной валюте: ' + cashNg + ' / ' + cashRu);
+  ok(M.cash(1000, C.byCode['ru']).replace(/\s/g, '') === '30000₽',
+    '1000 межд. долларов в России — это 30 000 ₽');
+
+  /* интерфейс знает про режим «валюта страны» и не потерял старые варианты */
+  const ui = readFileSync(join(root, 'src/ui.js'), 'utf8');
+  ok(/id: 'local'/.test(ui) && ui.indexOf("id: 'local'") < ui.indexOf("id: 'rub'"),
+    'в списке валют «Валюта страны» идёт первой');
+  for (const id of ['rub', 'usd', 'eur', 'int']) ok(ui.includes("id: '" + id + "'"), 'остался выбор валюты: ' + id);
+  ok(/function rub\(/.test(ui) && ui.includes("' ₽'"), 'интерфейс умеет подписывать сумму в рублях');
+  ok((ui.match(/rubTag\(/g) || []).length >= 10, 'рублёвая подпись стоит под суммами в разных местах: ' +
+    (ui.match(/rubTag\(/g) || []).length);
+  const saveSrc = readFileSync(join(root, 'src/save.js'), 'utf8');
+  ok(/currency: 'local'/.test(saveSrc), 'по умолчанию суммы показываются в валюте страны');
+  const htmlSrc = readFileSync(join(root, 'index.html'), 'utf8');
+  ok(htmlSrc.includes('id="income-rub"'), 'в шапке есть строка перевода дохода в рубли');
+  const cssSrc = readFileSync(join(root, 'style.css'), 'utf8');
+  ok(/\.in-rub\s*\{/.test(cssSrc), 'у рублёвой подписи есть свой стиль');
+}
+
 console.log('\nИмена и соседи по секунде');
 ok(C.list.every((c) => {
   const n = NM.make(M.makeRng('имя-' + c.code), c, 'f');

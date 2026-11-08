@@ -597,6 +597,15 @@
     return String(x).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
   }
 
+  /* сумма внутри текста события — в той же валюте, что и весь интерфейс */
+  function cash(v, country) {
+    var G = typeof window !== 'undefined' ? window.IN8B : null;
+    if (G && G.ui && G.ui.money) return G.ui.money(v);
+    var CO = G && G.countries;
+    var u = CO && CO.currencyOf ? CO.currencyOf(country) : null;
+    return u ? fmtMoney(v * u.k) + ' ' + u.sym : fmtMoney(v);
+  }
+
   function fmtNum(v, digits) {
     return (Math.round(v * Math.pow(10, digits || 0)) / Math.pow(10, digits || 0))
       .toString().replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '\u2009');
@@ -637,7 +646,7 @@
     pickCause: pickCause,
     hivHigh: HIV_HIGH,
     malaria: MALARIA,
-    fmtMoney: fmtMoney,
+    fmtMoney: fmtMoney, cash: cash,
     fmtNum: fmtNum,
     plural: plural
   };

@@ -125,11 +125,15 @@
 
   /* ----------------------------- настройки ----------------------------- */
   function loadSettings() {
-    return Object.assign({
+    var s = Object.assign({
       era: 'today', year: null, drawMode: 'births', lifeMinutes: 30,
-      soft: false, auto: false, homeCountry: '', currency: 'rub', music: false,
-      pauseOn: { big: false, year: false, buy: false }
+      soft: false, auto: false, homeCountry: '', currency: 'local', music: false,
+      curSet: false, pauseOn: { big: false, year: false, buy: false }
     }, read(K_SET, {}));
+    /* раньше всё считалось в рублях по умолчанию; теперь — в валюте страны,
+       но выбор, сделанный руками, остаётся за игроком */
+    if (!s.curSet && s.currency === 'rub') s.currency = 'local';
+    return s;
   }
   function saveSettings(s) { write(K_SET, s); }
 
