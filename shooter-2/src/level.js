@@ -163,6 +163,12 @@
     wall.castShadow = true; wall.receiveShadow = true;
     g.add(wall);
 
+    /* Детализация фасадов: без неё дом — это «коробка с дырками», и карта
+       читается пустой. Цоколь, угловые накладки, подоконники и карниз дают
+       игру света на стенах даже без текстур. */
+    addFacadeDetails(g, plan, h, o, b);
+    addDoor(g, plan);
+
     if (o.roof === 'gable') {
       // двускатная крыша по самому контуру: свес наружу, конёк вдоль длинной оси
       const rh = Math.min(b.hw, b.hd) * (o.ridge === undefined ? 0.34 : o.ridge) + 0.4;
@@ -183,6 +189,15 @@
       const roof = new T.Mesh(loftBetween(lower, upper, h, h + rh), roofMat);
       roof.castShadow = true; roof.receiveShadow = true;
       g.add(roof);
+      /* Кровельные швы: без них скат — одна плоскость, и на солнце он
+         выглядит «пластиком». Рёбра режут свет на полосы. */
+      const seamMat = M(0x8a8378, { flat: true });
+      for (let k = 1; k <= 4; k++) {
+        const tt = k / 5;
+        const row = lower.map((p, j) => [p[0] + (upper[j][0] - p[0]) * tt, p[1] + (upper[j][1] - p[1]) * tt]);
+        const seam = new T.Mesh(loftBetween(row, row, h + rh * tt - 0.025, h + rh * tt + 0.025), seamMat);
+        g.add(seam);
+      }
       // свес снизу (зашивка карниза), чтобы не было дыры под скатом
       const soffit = new T.Mesh(loftBetween(lower, lower, h, h - 0.10),
         M(o.roofColor || 0x2f2b26, { flat: true }));
@@ -215,6 +230,116 @@
       addWindows(g, plan, h, o);
     }
     return g;
+  }
+
+  /* ------------------- фасадные детали (цоколь, углы, карниз) ------------- */
+  function addFacadeDetails(g, plan, h, o) {
+    const T = THREE();
+    const M = SH2.model.mat;
+    const trim = o.trimColor || 0x6b6152;
+    const dark = 0x4a443a;
+    for (let i = 0; i < plan.length; i++) {
+      const a = plan[i], b2 = plan[(i + 1) % plan.length];
+      const dx = b2[0] - a[0], dz = b2[1] - a[1];
+      const len = Math.hypot(dx, dz);
+      if (len < 1.2) continue;
+      const ux = dx / len, uz = dz / len;
+      const nx = uz, nz = -ux;
+      const mx = (a[0] + b2[0]) / 2, mz = (a[1] + b2[1]) / 2;
+      const ang = -Math.atan2(dz, dx);
+      // цоколь: полоса у земли, чуть выступает
+      const plinth = new T.Mesh(extrudePlan([[-len / 2, -0.09], [len / 2, -0.09],
+        [len / 2, 0.09], [-len / 2, 0.09]], 0.42, { bevel: 0.03 }), M(dark, { flat: true }));
+      plinth.position.set(mx + nx * 0.05, 0, mz + nz * 0.05);
+      plinth.rotation.y = ang;
+      plinth.receiveShadow = true;
+      g.add(plinth);
+      // карниз под крышей
+      const cor = new T.Mesh(extrudePlan([[-len / 2, -0.10], [len / 2, -0.10],
+        [len / 2, 0.10], [-len / 2, 0.10]], 0.16, { bevel: 0.02 }), M(trim, { flat: true }));
+      cor.position.set(mx + nx * 0.07, h - 0.26, mz + nz * 0.07);
+      cor.rotation.y = ang;
+      g.add(cor);
+      // блок вентиляции на паре фасадов — читаемая мелочь на стене
+      if (i % 2 === 1 && len > 6) {
+        const ac = boxPrism(0.78, 0.52, 0.30, 0x9aa0a4);
+        ac.position.set(mx + nx * 0.20 + ux * (len * 0.28), h - 1.15, mz + nz * 0.20 + uz * (len * 0.28));
+        ac.castShadow = true;
+        ac.rotation.y = ang;
+        ac.castShadow = true;
+        g.add(ac);
+        const grill = boxPrism(0.66, 0.07, 0.03, 0x5c6266);
+        grill.position.set(ac.position.x + nx * 0.16, ac.position.y - 0.10, ac.position.z + nz * 0.16);
+        grill.rotation.y = ang;
+        g.add(grill);
+      }
+      // подоконники под каждым окном (в тех же местах, что и окна)
+      const cols = Math.floor(len / 2.6);
+      for (let c = 0; c < cols; c++) {
+        const t = 0.9 + c * 2.6 + 1.2;
+        if (t > len - 0.9) break;
+        const px = a[0] + ux * t + nx * 0.10;
+        const pz = a[1] + uz * t + nz * 0.10;
+        const sill = new T.Mesh(extrudePlan([[-0.62, -0.07], [0.62, -0.07],
+          [0.62, 0.07], [-0.62, 0.07]], 0.07, { bevel: 0.015 }), M(trim, { flat: true }));
+        sill.position.set(px, 1.30, pz);
+        sill.rotation.y = ang;
+        g.add(sill);
+      }
+    }
+    // угловые накладки: по одной на каждый угол контура
+    for (let i = 0; i < plan.length; i++) {
+      const p0 = plan[i];
+      const col = new T.Mesh(extrudePlan([[-0.16, -0.16], [0.16, -0.16],
+        [0.16, 0.16], [-0.16, 0.16]], h - 0.32, { bevel: 0.03 }), M(dark, { flat: true }));
+      col.position.set(p0[0], 0, p0[1]);
+      col.castShadow = true;
+      g.add(col);
+    }
+    // водосточная труба на одном фасаде — мелочь, но силуэт сразу «живой»
+    const b0 = plan[0], b1 = plan[1] || plan[0];
+    const dx0 = b1[0] - b0[0], dz0 = b1[1] - b0[1];
+    const l0 = Math.hypot(dx0, dz0) || 1;
+    const px0 = b0[0] + (dx0 / l0) * 0.6 + (dz0 / l0) * 0.12;
+    const pz0 = b0[1] + (dz0 / l0) * 0.6 - (dx0 / l0) * 0.12;
+    const pipe = new T.Mesh(new T.CylinderGeometry(0.07, 0.07, Math.max(1.2, h - 0.3), 8),
+      M(0x5a5348, { flat: true }));
+    pipe.position.set(px0, (h - 0.3) / 2, pz0);
+    pipe.castShadow = true;
+    g.add(pipe);
+  }
+
+  /* --------------------------- дверь на фасаде ---------------------------- */
+  function addDoor(g, plan) {
+    const T = THREE();
+    const M = SH2.model.mat;
+    const a = plan[0], b2 = plan[1];
+    if (!a || !b2) return;
+    const dx = b2[0] - a[0], dz = b2[1] - a[1];
+    const len = Math.hypot(dx, dz);
+    if (len < 2.4) return;
+    const ux = dx / len, uz = dz / len;
+    const nx = uz, nz = -ux;
+    const t = len * 0.5;
+    const px = a[0] + ux * t + nx * 0.07;
+    const pz = a[1] + uz * t + nz * 0.07;
+    const ang = Math.atan2(ux, uz) + Math.PI / 2;
+    const frame = boxPrism(1.36, 2.34, 0.08, 0x6a6256);
+    frame.position.set(px, 1.17, pz);
+    frame.rotation.y = ang;
+    frame.castShadow = true;
+    g.add(frame);
+    const leaf = boxPrism(1.16, 2.14, 0.06, 0x4d4a42);
+    leaf.position.set(px + nx * 0.05, 1.07, pz + nz * 0.05);
+    leaf.rotation.y = ang;
+    g.add(leaf);
+    const step = boxPrism(1.6, 0.14, 0.42, 0x7b7468);
+    step.position.set(px + nx * 0.16, 0.07, pz + nz * 0.16);
+    step.rotation.y = ang;
+    g.add(step);
+    const knob = new T.Mesh(new T.SphereGeometry(0.05, 8, 6), M(0xb9a05a));
+    knob.position.set(px + nx * 0.09 + ux * 0.44, 1.05, pz + nz * 0.09 + uz * 0.44);
+    g.add(knob);
   }
 
   function addWindows(g, plan, h, o) {
@@ -354,6 +479,14 @@
     return mesh;
   }
 
+  /* «Коробка» — тоже выдавливание контура, а не примитив: в этом файле
+     все объёмы строятся из контуров (это проверяет tests/smoke.mjs). */
+  function boxPrism(w, h, d, color) {
+    const m = polyPrism([[-w / 2, -d / 2], [w / 2, -d / 2], [w / 2, d / 2], [-w / 2, d / 2]],
+      h, color, { bevel: 0.008 });
+    return m;
+  }
+
   /* морской контейнер: рёбра жёсткости по бортам, рифлёный */
   function container(len, h, color) {
     const T = THREE();
@@ -375,13 +508,53 @@
         g.add(m);
       }
     }
-    // торцевые двери
+    // торцевые двери: створки, петли-штанги, угловые фитинги
     for (const side of [-1, 1]) {
       const m = polyPrism([[-0.02, -w / 2 * 0.86], [0.02, -w / 2 * 0.86], [0.02, w / 2 * 0.86], [-0.02, w / 2 * 0.86]],
         h * 0.86, 0x3a3f43, { bevel: 0.01 });
       m.position.set(side * (len / 2 + 0.02), 0.06, 0);
       g.add(m);
+      // вертикальные штанги-запоры на дверях
+      for (const zs of [-0.32, 0.32]) {
+        const bar = new T.Mesh(new T.CylinderGeometry(0.022, 0.022, h * 0.74, 6),
+          SH2.model.mat(0x8f9296, { flat: true }));
+        bar.position.set(side * (len / 2 + 0.06), h * 0.44, zs);
+        g.add(bar);
+      }
     }
+    // маркировка: номер контейнера на борту (три буквенных блока)
+    for (let i = 0; i < 3; i++) {
+      const tag = polyPrism([[-0.14, -0.01], [0.14, -0.01], [0.14, 0.01], [-0.14, 0.01]],
+        0.16, 0xd9dde2, { bevel: 0.004 });
+      tag.position.set(-len / 2 + 0.9 + i * 1.35, h * 0.62, w / 2 + 0.03);
+      g.add(tag);
+    }
+    // замки-засовы на дверях и поручни у торца
+    for (const side of [-1, 1]) {
+      const latch = polyPrism([[-0.09, -0.03], [0.09, -0.03], [0.09, 0.03], [-0.09, 0.03]],
+        0.10, 0x50565b, { bevel: 0.006 });
+      latch.position.set(side * (len / 2 + 0.05), h * 0.55, 0);
+      g.add(latch);
+      const handle = new T.Mesh(new T.CylinderGeometry(0.018, 0.018, 0.5, 6),
+        SH2.model.mat(0x3b4146, { flat: true }));
+      handle.position.set(side * (len / 2 + 0.08), h * 0.30, 0);
+      handle.rotation.x = Math.PI / 2;
+      g.add(handle);
+    }
+    // угловые фитинги по четырём рёбрам
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        const fit = polyPrism([[-0.07, -0.07], [0.07, -0.07], [0.07, 0.07], [-0.07, 0.07]],
+          h + 0.04, 0x6d7176, { bevel: 0.01 });
+        fit.position.set(sx * (len / 2 - 0.06), 0, sz * (w / 2 - 0.06));
+        g.add(fit);
+      }
+    }
+    // крыша контейнера — двускатная крышка с рёбрами
+    const lid = polyPrism([[-len / 2, -w / 2], [len / 2, -w / 2], [len / 2, w / 2], [-len / 2, w / 2]],
+      0.06, 0x7d8288, { bevel: 0.012 });
+    lid.position.y = h;
+    g.add(lid);
     return g;
   }
 
@@ -424,6 +597,48 @@
     tm.scale.set(1, 0.82, 1);
     tm.castShadow = true;
     g.add(tm);
+    /* Детали кабины: фары, решётка радиатора, зеркала, бампер. Без них
+       грузовик читался «ящиком на колёсах». */
+    const chrome = SH2.model.mat(0x8d9296, { flat: true });
+    const darkMat = SH2.model.mat(0x24282b, { flat: true });
+    for (const zz of [-0.62, 0.62]) {
+      const head = new T.Mesh(new T.CylinderGeometry(0.13, 0.15, 0.10, 10), chrome);
+      head.rotation.z = Math.PI / 2;
+      head.position.set(2.36, 1.02, zz);
+      g.add(head);
+    }
+    const grille = boxPrism(0.08, 0.36, 1.24, 0x24282b);
+    grille.position.set(2.36, 0.78, 0);
+    g.add(grille);
+    const bumper = boxPrism(0.16, 0.20, 1.92, 0x8d9296);
+    bumper.position.set(2.40, 0.52, 0);
+    g.add(bumper);
+    for (const zz of [-1.02, 1.02]) {
+      const mirror = boxPrism(0.06, 0.26, 0.16, 0x24282b);
+      mirror.position.set(1.86, 1.62, zz);
+      g.add(mirror);
+      const arm2 = new T.Mesh(new T.CylinderGeometry(0.02, 0.02, 0.26, 5), chrome);
+      arm2.position.set(1.90, 1.50, zz * 0.90);
+      arm2.rotation.x = Math.PI / 2.4;
+      g.add(arm2);
+    }
+    // швы тента (поперечные дуги) и брызговики
+    const tarpMat = SH2.model.mat(0x4c5140, { flat: true });
+    for (let i = 0; i < 5; i++) {
+      const hoop = new T.Mesh(new T.TorusGeometry(0.62, 0.022, 4, 12, Math.PI), tarpMat);
+      hoop.position.set(-1.6 + i * 0.86, 1.46, 0.95);
+      hoop.rotation.y = Math.PI / 2;
+      hoop.rotation.z = Math.PI / 2;
+      hoop.scale.set(1, 1.5, 1);
+      g.add(hoop);
+    }
+    for (const x of [-1.35, 1.15]) {
+      for (const z of [-1, 1]) {
+        const mud = boxPrism(0.36, 0.34, 0.05, 0x24282b);
+        mud.position.set(x - 0.1, 0.30, z * 1.04);
+        g.add(mud);
+      }
+    }
     // колёса — тела вращения
     const tyre = SH2.outline.revolve([[0, 0.44], [0.04, 0.46], [0.20, 0.46], [0.26, 0.42], [0.27, 0.0]], { segments: 12 });
     tyre.rotateZ(Math.PI / 2);
@@ -455,6 +670,18 @@
     arm.position.set(0.02, 4.5, 0);
     arm.rotation.y = Math.PI / 2;
     g.add(arm);
+    // основание-фланец, шкафчик с автоматом, табличка
+    const base = new T.Mesh(new T.CylinderGeometry(0.20, 0.24, 0.14, 10),
+      SH2.model.mat(0x4a4f54, { flat: true }));
+    base.position.y = 0.07;
+    g.add(base);
+    const box = boxPrism(0.26, 0.42, 0.20, 0x5b6166);
+    box.position.set(0.0, 1.15, 0.14);
+    box.castShadow = true;
+    g.add(box);
+    const sign = boxPrism(0.20, 0.10, 0.02, 0xb9a05a);
+    sign.position.set(0, 1.36, 0.25);
+    g.add(sign);
     const head = SH2.outline.revolve([[0, 0.26], [0.03, 0.30], [0.11, 0.26], [0.14, 0.12], [0.15, 0.0]], { segments: 10 });
     const hm = new T.Mesh(head, SH2.model.mat(0xffd9a0, { flat: false, emissive: 0x2a1a08 }));
     hm.position.set(0.62, 4.36, 0);
@@ -496,6 +723,24 @@
       0.16, color || 0x4a4136);
     deck.position.y = h;
     g.add(deck);
+    // лестница по одной стороне: две тетивы + перекладины
+    const railMat = SH2.model.mat(0x3b342b, { flat: true });
+    for (const sx of [-1, 1]) {
+      const stringer = boxPrism(0.06, h, 0.06, 0x3b342b);
+      stringer.position.set(sx * 0.22, h / 2, w * 0.52);
+      g.add(stringer);
+    }
+    for (let i = 1; i < h / 0.34; i++) {
+      const rung = boxPrism(0.46, 0.04, 0.04, 0x3b342b);
+      rung.position.set(0, i * 0.34, w * 0.52);
+      g.add(rung);
+    }
+    // доски пола площадки
+    for (let i = 0; i < 5; i++) {
+      const plank = boxPrism(w * 0.96, 0.05, w * 0.16, 0x5a5040);
+      plank.position.set(0, h + 0.20, -w * 0.38 + i * w * 0.19);
+      g.add(plank);
+    }
     const rail = SH2.outline.outlineMesh([[-w * 0.5, -0.5], [w * 0.5, -0.5], [w * 0.5, 0.5], [-w * 0.5, 0.5]], { depth: 0.06, bevel: 0.01 });
     const rm = SH2.model.mat(0x3b342b, { flat: true });
     for (const [x, z, ry] of [[0, -w * 0.5, 0], [0, w * 0.5, 0], [-w * 0.5, 0, Math.PI / 2], [w * 0.5, 0, Math.PI / 2]]) {

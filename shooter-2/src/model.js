@@ -14,13 +14,26 @@
 
   /* ---------------------------- кэш материалов ------------------------------ */
   const matCache = new Map();
+  /* «Выцветание» карты: карта должна читаться светлой, но переписывать
+     каждый hex в данных (здания, контейнеры, техника задают свои цвета)
+     бессмысленно. Поэтому на время сборки уровня включается общий подъём
+     яркости: цвет подмешивается к белому, контраст при этом сохраняется —
+     тени остаются тенями, просто светлее. */
+  let mapLift = 0;
+  function lift(color) {
+    if (!mapLift) return color;
+    const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+    const L = (v) => Math.round(v + (255 - v) * mapLift);
+    return (L(r) << 16) | (L(g) << 8) | L(b);
+  }
+
   function mat(color, opts) {
-    const key = color + '|' + JSON.stringify(opts || {});
+    const key = lift(color) + '|' + mapLift + '|' + JSON.stringify(opts || {});
     let m = matCache.get(key);
     if (m) return m;
     const o = opts || {};
     m = new (THREE().MeshLambertMaterial)({
-      color: color,
+      color: lift(color),
       flatShading: !!o.flat,
       transparent: !!o.transparent,
       opacity: o.opacity === undefined ? 1 : o.opacity,
@@ -242,15 +255,41 @@
   /* ======================== ПРОПСЫ КАРТЫ (по контурам) ==================== */
   // Бочка/цистерна — тело вращения по профилю, камень — контур с фаской,
   // мешки — тела вращения с лёгким сжатием.
+  /* Бочка: корпус-клёпка с «пузом», два обруча, утопленная крышка и пробка.
+     Раньше это был гладкий цилиндр — на светлой карте он читался «стаканом»
+     и не давал масштаба рядом с бойцом. Профили задаются парами [высота,
+     радиус]: так строит LatheGeometry в outline.revolve. */
   function propBarrel(s, color) {
     const T = THREE();
-    const geo = SH2.outline.revolve([
-      [0.0, s * 0.40], [0.02 * s, s * 0.44], [0.10 * s, s * 0.46], [0.48 * s, s * 0.46],
-      [0.55 * s, s * 0.44], [0.58 * s, s * 0.39], [0.585 * s, s * 0.0]
-    ], { segments: 12, scale: [1, 1, 1] });
-    geo.computeVertexNormals();
-    return new T.Mesh(geo, mat(color || 0x6a4a2c, { flat: true }));
+    const O = SH2.outline;
+    const g = new T.Group();
+    const H = s * 0.93, R = s * 0.44;
+    const m = mat(color || 0x6a4a2c, { flat: true });
+    const body = new T.Mesh(O.revolve([
+      [0, 0], [0.015 * s, R * 0.88], [H * 0.10, R * 1.00],
+      [H * 0.50, R * 1.05], [H * 0.90, R * 1.00], [H * 0.985, R * 0.93], [H, 0]
+    ], { segments: 14 }), m);
+    body.castShadow = true; body.receiveShadow = true;
+    g.add(body);
+    // обручи: узкие обода чуть шире корпуса, тёмный металл
+    const hoopM = mat(0x3b3a36, { flat: true });
+    [0.18, 0.76].forEach((t) => {
+      const hoop = new T.Mesh(O.revolve([
+        [0, R * 1.03], [0.010 * s, R * 1.075], [0.030 * s, R * 1.075], [0.038 * s, R * 1.03]
+      ], { segments: 14 }), hoopM);
+      hoop.position.y = H * t;
+      hoop.castShadow = true;
+      g.add(hoop);
+    });
+    // горловина и пробка на крышке
+    const cap = new T.Mesh(O.revolve([
+      [0, 0], [0, R * 0.26], [0.018 * s, R * 0.24], [0.018 * s, 0]
+    ], { segments: 10 }), mat(0x2a2a28, { flat: true }));
+    cap.position.set(R * 0.36, H - 0.004 * s, 0);
+    g.add(cap);
+    return g;
   }
+
   function propRock(s, color) {
     const T = THREE();
     const geo = SH2.outline.outlineMesh(SH2.outline.smoothOutline([
@@ -277,8 +316,18 @@
   }
 
   /* ============================== ОКРУЖЕНИЕ =============================== */
-  function makeGroundTexture(base, accent, seed) {
+  function cssColor(v) {
+    if (typeof v === 'string') return v;
+    return '#' + ('000000' + (v >>> 0).toString(16)).slice(-6);
+  }
+
+  function makeGroundTexture(baseRaw, accentRaw, seed) {
     const T = THREE();
+    // В данные карт цвета пишутся числами (0x4a3a28), а canvas ждёт строку.
+    // Раньше число молча игнорировалось, и «акцентные» пятна не рисовались —
+    // земля получалась однотонной.
+    const base = cssColor(baseRaw);
+    const accent = cssColor(accentRaw);
     const c = document.createElement('canvas');
     c.width = c.height = 256;
     const ctx = c.getContext('2d');
@@ -361,13 +410,19 @@
   function buildLevel(mapId) {
     const T = THREE();
     const M = D.MAPS[mapId];
+    // подъём яркости всей карты (см. lift/mat): данные карт писались под
+    // тёмный туман, теперь день — и цвета надо поднять синхронно
+    const prevLift = mapLift;
+    mapLift = M.colorLift === undefined ? 0.26 : M.colorLift;
     const group = new T.Group();
     const colliders = [];   // {x,z,hw,hd,h,y}
     const statics = [];
     const addStatic = (color, geometry, m, flat) => statics.push({ color, geometry, matrix: m, flat });
 
     // земля: две текстуры — обычная и сетка дорог/разметки (blend по UV)
-    const groundTex = makeGroundTexture(M.sky, M.accent, D.hash(mapId));
+    // земля — от цвета грунта, а не от неба: иначе после осветления карты
+    // плита становилась голубой (раньше ошибка маскировалась тёмным туманом)
+    const groundTex = makeGroundTexture(M.ground, M.accent, D.hash(mapId));
     const ground = new T.Mesh(new T.PlaneGeometry(M.size, M.size, 1, 1),
       new T.MeshLambertMaterial({ map: groundTex, color: 0xffffff }));
     ground.rotation.x = -Math.PI / 2;
@@ -417,9 +472,12 @@
       g.position.set(sb.x, 0, sb.z);
       g.rotation.y = sb.a || 0;
       group.add(g);
+      /* Коллайдер мешков = реальная кладка, без припуска «на всякий случай».
+         Полутощина стены 0.16 м (мешок 0.30 м + запас 1 см), торцы — по длине.
+         Именно припуск 0.3 м раньше не давал подойти к мешкам вплотную. */
       const c = Math.abs(Math.cos(sb.a || 0)), sn = Math.abs(Math.sin(sb.a || 0));
-      colliders.push({ x: sb.x, z: sb.z, hw: (sb.len / 2) * c + 0.3 * sn,
-        hd: (sb.len / 2) * sn + 0.3 * c, h: 0.72, y: 0, kind: 'sandbag', standLow: true });
+      colliders.push({ x: sb.x, z: sb.z, hw: (sb.len / 2) * c + 0.16 * sn,
+        hd: (sb.len / 2) * sn + 0.16 * c, h: 0.72, y: 0, kind: 'sandbag', standLow: true });
     });
 
     /* --------------------- бочки, камни, штабели труб ----------------------- */
@@ -590,7 +648,9 @@
     (M.road || []).forEach((rd) => {
       const w = rd.w / 2, l = rd.l / 2;
       const geo = SH2.level.extrudePlan([[-l, -w], [l, -w], [l, w], [-l, w]], 0.06, { bevel: 0.02 });
-      const m = new T.Mesh(geo, mat(0x272421, { flat: true }));
+      // асфальт светлее «чёрного»: в дневном свете старый тёмный смотрелся
+      // провалом в земле и читался как тень, а не как дорога
+      const m = new T.Mesh(geo, mat(0x4d4a45, { flat: true }));
       m.position.set(rd.x, 0.006, rd.z);
       m.rotation.y = rd.a || 0;
       m.receiveShadow = true;
@@ -598,7 +658,11 @@
     });
 
     // свет: солнце + небо (графика без потери качества после оптимизации)
-    const sun = new T.DirectionalLight(M.sun, 1.35);
+    // Яркость карты задаётся здесь: раньше всё решал тёмный туман, и сцена
+    // читалась как ночная. Теперь свет сильный, а карта остаётся светлой даже
+    // в тенях (ambient/hemi отвечают за заполнение).
+    const bright = M.brightness || 1.35;
+    const sun = new T.DirectionalLight(M.sun, 1.15 * bright);
     sun.position.set(M.sunPos[0], M.sunPos[1], M.sunPos[2]);
     sun.castShadow = true;
     sun.shadow.mapSize.set(2048, 2048);
@@ -609,10 +673,15 @@
     sun.shadow.normalBias = 0.02;
     group.add(sun);
     group.add(sun.target);
-    const hemi = new T.HemisphereLight(M.sun, M.ground, 0.55);
+    const hemi = new T.HemisphereLight(M.sun, M.ground, 0.66 * bright);
     group.add(hemi);
-    const amb = new T.AmbientLight(M.ambient, 0.42);
+    const amb = new T.AmbientLight(M.ambient, 0.52 * bright);
     group.add(amb);
+    // контровой «отскок» от земли: без него нижние грани моделей проваливаются
+    // в чёрное, и детализация, которую мы добавляем, просто не видна
+    const bounce = new T.DirectionalLight(M.ground, 0.22 * bright);
+    bounce.position.set(-M.sunPos[0] * 0.4, 12, -M.sunPos[2] * 0.4);
+    group.add(bounce);
 
     // склейка статики -> 2-4 draw call вместо сотен
     // статики больше нет: всё построено полигонами, счётчик оставлен для HUD
@@ -663,6 +732,7 @@
       c.open = Math.abs(nx) > Math.abs(nz) ? (nx > 0 ? 'east' : 'west') : (nz > 0 ? 'south' : 'north');
     });
 
+    mapLift = prevLift;
     return { group, colliders, sun, hemi, amb, map: M, mapId, groundTex,
       staticsCount: props, props, bakedCount: baked.length };
   }

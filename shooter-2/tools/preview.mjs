@@ -211,7 +211,10 @@ if (single) {
 if (process.argv.indexOf('--fps') >= 0) {
   const id = process.argv[process.argv.indexOf('--fps') + 1] || 'rifle';
   const adsMode = process.argv.indexOf('--ads') >= 0;
-  const W = 960, H = 560;
+  // --portrait: узкий телефонный кадр (по умолчанию 16:9). По нему видно,
+  // не лезет ли оружие в центр экрана и не уезжает ли приклад за край.
+  const portrait = process.argv.indexOf('--portrait') >= 0;
+  const W = portrait ? 390 : 960, H = portrait ? 844 : 560;
   const cam = new T.PerspectiveCamera(78, W / H, 0.05, 320);
   cam.rotation.order = 'YXZ';
   cam.position.set(0, 1.62, 0);
@@ -230,7 +233,8 @@ if (process.argv.indexOf('--fps') >= 0) {
   // оружие от первого лица: рисуем вторым проходом, всегда поверх мира
   // оружие рисуем с тем же FOV, что и камера: при прицеливании он уже (48)
   renderScene(canvas, vm.root, cam.position, cam.position.clone().add(new T.Vector3(0, 0, 6)), cam.fov);
-  const file = adsMode ? 'preview-fp-ads.png' : 'preview-fp.png';
+  const file = portrait ? 'preview-fp-portrait.png'
+    : (adsMode ? 'preview-fp-ads.png' : 'preview-fp.png');
   fs.writeFileSync(path.join(root, 'docs', file), png(W, H, canvas.color));
   console.log('docs/' + file + ' — ' + id + ' от первого лица' + (adsMode ? ' (прицел)' : ''));
   process.exit(0);
@@ -813,4 +817,45 @@ fs.mkdirSync(outDir, { recursive: true });
   });
   fs.writeFileSync(path.join(outDir, 'preview-enemies.png'), png(W, H, canvas.color));
   console.log('docs/preview-enemies.png — боевые типы и оружие');
+}
+
+/* ---------------------------- лист пропсов -------------------------------
+   node tools/preview.mjs --props -> docs/preview-props.png
+   Проверка мелочи: бочка, мешки, ящики, забор, фонарь, вышка. Всё
+   строится теми же функциями, что и на картах, поэтому лист показывает
+   ровно то, что игрок увидит в игре. */
+if (process.argv.indexOf('--props') >= 0) {
+  const items = [];
+  items.push({ g: SH2.model.propBarrel(1.0, 0x6a4a2c), name: 'бочка' });
+  items.push({ g: SH2.model.propSandbags(6, 0x6f6547), name: 'мешки' });
+  items.push({ g: SH2.level.crates(4, 0x5b4a33), name: 'ящики' });
+  items.push({ g: SH2.level.fence([0, 0], [2.6, 0], 0x554a38), name: 'забор' });
+  items.push({ g: SH2.level.lamp(0x2c3038), name: 'фонарь' });
+  items.push({ g: SH2.model.propRock(1.1, 0x585349), name: 'камень' });
+  const cell = 480, cols = 3, rows = Math.ceil(items.length / cols);
+  const W = cell * cols, H = Math.round(cell * 0.82) * rows;
+  const ch = Math.round(cell * 0.82);
+  const big = new Canvas(W, H, [22, 24, 28]);
+  items.forEach((it, i) => {
+    const col = i % cols, row = (i - col) / cols;
+    const small = new Canvas(cell, ch, [22, 24, 28]);
+    it.g.updateMatrixWorld(true);
+    const box = new T.Box3().setFromObject(it.g);
+    const c = new T.Vector3(); box.getCenter(c);
+    const size = box.getSize(new T.Vector3()).length();
+    const dir = new T.Vector3(1.4, 0.8, 1.7).normalize();
+    renderScene(small, it.g, c.clone().addScaledVector(dir, Math.max(2.0, size * 1.35)), c, 32);
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cell; x++) {
+        const si = (y * cell + x) * 4;
+        const di = ((row * ch + y) * W + col * cell + x) * 4;
+        big.color[di] = small.color[si];
+        big.color[di + 1] = small.color[si + 1];
+        big.color[di + 2] = small.color[si + 2];
+      }
+    }
+  });
+  fs.writeFileSync(path.join(root, 'docs', 'preview-props.png'), png(W, H, big.color));
+  console.log('docs/preview-props.png — бочка, мешки, ящики, забор, фонарь');
+  process.exit(0);
 }

@@ -197,7 +197,28 @@
       this.lightCursor = 0;
 
       this.explosionRings = [];
-      this.counts = { particles: 0 };
+
+      /* Осколки: не частицы, а маленькие кусочки металла с вращением.
+         У них своя физика (отскок от земли, трение), поэтому они считаются
+         отдельно от пула частиц и живут заметно дольше вспышки. */
+      this.shardGeo = new T.BoxGeometry(1, 1, 1);
+      this.shardMats = [
+        new T.MeshLambertMaterial({ color: 0x6b6d70 }),
+        new T.MeshLambertMaterial({ color: 0x8d8f92 }),
+        new T.MeshLambertMaterial({ color: 0x4a4c4f }),
+        new T.MeshLambertMaterial({ color: 0x9a7b52 })
+      ];
+      this.shards = [];
+      for (let i = 0; i < 90; i++) {
+        const m = new T.Mesh(this.shardGeo, this.shardMats[i % this.shardMats.length]);
+        m.visible = false;
+        m.castShadow = false;
+        m.frustumCulled = false;
+        scene.add(m);
+        this.shards.push({ mesh: m, live: 0, vx: 0, vy: 0, vz: 0, rx: 0, ry: 0, rz: 0, sp: 0, size: 1, rest: false });
+      }
+      this.shardCursor = 0;
+      this.counts = { particles: 0, shards: 0 };
     }
 
     _flashTexture() {
@@ -282,6 +303,65 @@
         1.6, 0xd9b25c, 1, 1, 0.995);
     }
 
+    /* Осколки разлёта: размер, скорость и время жизни зависят от радиуса
+       взрыва — граната и РГ-7 дают разный «веер», а не один и тот же шар. */
+    shardBurst(pos, radius, count) {
+      const n = count || Math.round(18 + radius * 2.2);
+      const spd = 5 + radius * 1.1;
+      for (let i = 0; i < n; i++) {
+        const s = this.shards[this.shardCursor++ % this.shards.length];
+        const a = Math.random() * Math.PI * 2;
+        const up = 0.35 + Math.random() * 0.95;      // наклон вверх
+        const v = spd * (0.45 + Math.random() * 0.9);
+        s.vx = Math.cos(a) * v * (1 - up * 0.45);
+        s.vz = Math.sin(a) * v * (1 - up * 0.45);
+        s.vy = v * up * 1.25;
+        s.mesh.position.set(pos.x + Math.cos(a) * 0.12, Math.max(0.12, pos.y + 0.1 + Math.random() * 0.2), pos.z + Math.sin(a) * 0.12);
+        s.rx = Math.random() * 6.28; s.ry = Math.random() * 6.28; s.rz = Math.random() * 6.28;
+        s.sp = 6 + Math.random() * 18;
+        s.size = 0.020 + Math.random() * 0.055;
+        s.live = 1.6 + Math.random() * 2.2;
+        s.rest = false;
+        s.mesh.visible = true;
+        s.mesh.scale.set(s.size * (1 + Math.random() * 1.4), s.size * 0.34, s.size);
+        s.mesh.rotation.set(s.rx, s.ry, s.rz);
+      }
+    }
+
+    updateShards(dt) {
+      let live = 0;
+      for (let i = 0; i < this.shards.length; i++) {
+        const s = this.shards[i];
+        if (s.live <= 0) continue;
+        s.live -= dt;
+        if (s.live <= 0) { s.mesh.visible = false; continue; }
+        live++;
+        if (!s.rest) {
+          s.vy -= 11 * dt;
+          s.mesh.position.x += s.vx * dt;
+          s.mesh.position.y += s.vy * dt;
+          s.mesh.position.z += s.vz * dt;
+          const p = s.mesh.position;
+          if (p.y <= 0.02) {
+            p.y = 0.02;
+            if (Math.abs(s.vy) < 0.8 && Math.hypot(s.vx, s.vz) < 0.9) {
+              s.rest = true; s.vy = 0; s.vx = 0; s.vz = 0;
+            } else {
+              s.vy *= -0.34;
+              s.vx *= 0.58; s.vz *= 0.58;
+            }
+          }
+          // вращение: быстрое в полёте, гаснет после касания
+          s.mesh.rotation.x += s.sp * dt;
+          s.mesh.rotation.y += s.sp * 0.63 * dt;
+          s.mesh.rotation.z += s.sp * 0.41 * dt;
+        }
+        // осколок не исчезает «щелчком»: перед концом жизни схлопывается
+        if (s.live < 0.35) s.mesh.scale.multiplyScalar(Math.max(0.2, 1 - dt * 5));
+      }
+      this.counts.shards = live;
+    }
+
     explosion(pos, radius) {
       const T = THREE();
       for (let i = 0; i < 46; i++) {
@@ -303,6 +383,18 @@
       ring.position.set(pos.x, 0.06, pos.z);
       this.scene.add(ring);
       this.explosionRings.push({ mesh: ring, life: 0.45, max: 0.45 });
+      /* Осколки — визуальная часть взрыва: два «слоя» — крупные куски,
+         которые падают и лежат на земле, и мелкая пыль/металл из искр.
+         Именно они делают взрыв «долгим», а не однокадровым хлопком. */
+      this.shardBurst(pos, radius);
+      this.shardBurst(pos, radius * 0.55, Math.round(8 + radius));
+      // вторичные искры от удара о землю
+      for (let i = 0; i < 14; i++) {
+        const a = Math.random() * Math.PI * 2, r = radius * (0.25 + Math.random() * 0.6);
+        this.dust.spawn(pos.x + Math.cos(a) * r, 0.15, pos.z + Math.sin(a) * r,
+          Math.cos(a) * (0.6 + Math.random() * 1.8), 1.6 + Math.random() * 2.4, Math.sin(a) * (0.6 + Math.random() * 1.8),
+          0.8 + Math.random() * 0.7, 0x9a8a76, 1.5 + Math.random() * 1.5, 0.5, 0.955);
+      }
       const L = this.lights[this.lightCursor++ % this.lights.length];
       L.light.position.set(pos.x, pos.y + 1.2, pos.z);
       L.light.intensity = 14;
@@ -313,6 +405,7 @@
     }
 
     update(dt) {
+      this.updateShards(dt);
       this.sparks.update(dt);
       this.blood.update(dt);
       this.dust.update(dt);
@@ -363,6 +456,7 @@
       this.decals.forEach((d) => { d.mesh.visible = false; d.life = 0; });
       this.explosionRings.forEach((r) => this.scene.remove(r.mesh));
       this.explosionRings.length = 0;
+      this.shards.forEach((s) => { s.live = 0; s.mesh.visible = false; });
     }
   }
 
