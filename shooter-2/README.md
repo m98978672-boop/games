@@ -314,6 +314,7 @@ DOM, запускает миссию, стреляет, убивает бойц�
 | `docs/preview-fp-grid.png` | все стволы от первого лица: пистолет, ПП, автомат, дробовик, DMR, прицел |
 | `docs/preview-hands.png` | крупный план кистей и рукавов: фаланги, манжета, предплечье |
 | `docs/preview-fp-portrait.png` | узкий (телефонный) экран: оружие поджато под aspect, центр кадра свободен |
+| `docs/preview-spawn.png` | что видно на старте каждой миссии: из точки спавна открыт уровень, а не стена |
 | `docs/plan-depot.png` | план «Складов»: точки опоры, нормали, сектора, окна |
 | `docs/plan-*-art.png` | рисованные планы трёх карт с легендой |
 
@@ -324,6 +325,7 @@ node shooter-2/tools/preview.mjs --guns                       # лист ору�
 node shooter-2/tools/preview.mjs --map depot --cam 6,1.7,16 --look -8,2.5,-12
 node shooter-2/tools/preview.mjs --plan convoy    # схема карты с точками и углами
 node shooter-2/tools/preview.mjs --fps rifle      # кадр от первого лица
+node shooter-2/tools/spawnview.mjs                # стартовые кадры всех миссий
 node shooter-2/tools/preview.mjs --fps rifle --ads # то же, но прицеливание
 node shooter-2/tools/fpgrid.mjs docs/fp.png '[{"weapon":"pistol"},{"weapon":"rifle","ads":true}]'
 node shooter-2/tools/fpgrid.mjs docs/hands.png '[{"weapon":"rifle"}]' --side   # крупный план кистей

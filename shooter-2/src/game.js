@@ -844,8 +844,42 @@
       }
       // окончательно ставим тело так, чтобы камера/модель/коллайдер были в одной точке
       this.world.resolveCircle(best, rad);
-      const yaw = base && typeof base.yaw === 'number' ? base.yaw : Math.atan2(-best.x, -best.z);
+      const baseYaw = base && typeof base.yaw === 'number' ? base.yaw : Math.atan2(-best.x, -best.z);
+      // первое, что видит игрок на старте, — направление взгляда. Проверяем,
+      // что там не стена вплотную: иначе стартовый кадр — это коричневая
+      // плоскость, закрывающая весь обзор.
+      const yaw = this.pickStartYaw(best.x, best.z, baseYaw);
       return { x: best.x, z: best.z, yaw };
+    }
+
+    /* Куда смотреть на старте. Базовое направление берём из карты, но если
+       прямо перед глазами стена ближе 12 м — доворачиваем к самому открытому
+       направлению (перебор по кругу). Возвращает выбранный yaw. */
+    pickStartYaw(x, z, baseYaw) {
+      const eye = (this.player && this.player.eyeHeight) || 1.62;
+      const MIN_VIEW = 12;
+      const clearAt = (yaw) => {
+        const dx = Math.sin(yaw), dz = Math.cos(yaw);
+        // смотрим широким конусом ±28°: важно, чтобы открыт был весь кадр,
+        // а не только центральный пиксель
+        let minD = MIN_VIEW * 4;
+        for (let a = -2; a <= 2; a++) {
+          const yy = yaw + a * 0.24;
+          const hit = this.world.rayColliders(x, eye, z, Math.sin(yy), 0, Math.cos(yy), MIN_VIEW * 4);
+          minD = Math.min(minD, hit ? hit.t : MIN_VIEW * 4);
+        }
+        return minD;
+      };
+      if (clearAt(baseYaw) >= MIN_VIEW) return baseYaw;
+      let bestYaw = baseYaw, bestScore = -1;
+      for (let i = 0; i < 24; i++) {
+        const yaw = baseYaw + (i / 24) * Math.PI * 2;
+        const d = Math.min(clearAt(yaw), MIN_VIEW);
+        // при равной открытости ближе к исходному направлению — меньше сюрпризов
+        const score = d - i * 0.02;
+        if (score > bestScore) { bestScore = score; bestYaw = yaw; }
+      }
+      return bestYaw;
     }
 
     setupMission(m) {
@@ -1420,13 +1454,31 @@
           sun.target.updateMatrixWorld();
         }
       }
-      // два прохода: мир (слой 0) и оружие от первого лица (слой 1).
+      // Два прохода: мир (слой 0) и оружие от первого лица (слой 1).
       // Оружие рисуется поверх и не проваливается в стены и в прицел.
+      //
+      // ВАЖНО: перед вторым проходом обязательно гасим автоочистку. Рендерер
+      // по умолчанию очищает цвет в каждом render(), поэтому второй проход
+      // стирал уже нарисованный мир — на экране оставался ровно цвет неба
+      // (scene.background) и оружие поверх него. Это и был «коричневый фон»
+      // при спавне: level и бойцы рисовались, а потом заливались фоном.
+      // Гасим, рисуем оружие, возвращаем как было.
       this.camera.layers.set(0);
       this.renderer.render(this.scene, this.camera);
+      // Второй проход: цвет НЕ трогаем (иначе сотрём только что нарисованный
+      // мир и останется один цвет неба), а глубину чистим — оружие должно
+      // быть поверх стен. autoClear=true не спасает: при scene.background
+      // цвета three.js включает принудительную очистку (forceClear), поэтому
+      // гасим именно autoClearColor — clear() вызывается с этим флагом.
+      const prevAutoClear = this.renderer.autoClear;
+      const prevAutoClearColor = this.renderer.autoClearColor;
+      this.renderer.autoClear = false;
+      this.renderer.autoClearColor = false;
       if (this.renderer.clearDepth) this.renderer.clearDepth();
       this.camera.layers.set(1);
       this.renderer.render(this.scene, this.camera);
+      this.renderer.autoClearColor = prevAutoClearColor;
+      this.renderer.autoClear = prevAutoClear;
       this.camera.layers.set(0);
     }
 
