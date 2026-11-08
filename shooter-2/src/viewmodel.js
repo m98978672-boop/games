@@ -20,13 +20,12 @@
       this.rig = new T.Group();
       this.root.add(this.rig);
       this.skin = 0xd8b394;
-      this.sleeve = 0x2f3a52;
-      this.glove = 0x1c2026;
+      // Цвета рук: тёмно-синий рукав и оливковая перчатка. Совсем чёрные
+      // (0x1c2026) на лампе уровня сливались в одно пятно — кистей не видно.
+      this.sleeve = 0x36435e;
+      this.glove = 0x3a4034;
       this.weaponHolder = new T.Group();
       this.rig.add(this.weaponHolder);
-      // Отдельный слой рендера: оружие не проваливается в стены и не режется
-      // их ближней плоскостью. Камера рисует слой 1 вторым проходом.
-      this.root.traverse((c) => { if (c.isMesh) c.layers.set(1); });
       this.models = {};
       this.currentWeapon = null;
       this.recoil = 0;
@@ -40,7 +39,43 @@
       this.kick = 0;
       this.lowered = 0;
       this.muzzleWorld = new T.Vector3();
+      this.buildLights();
       this.buildHands();
+      // Отдельный слой рендера: оружие не проваливается в стены и не режется
+      // их ближней плоскостью. Камера рисует слой 1 вторым проходом.
+      // Ставим слой ПОСЛЕ сборки рук — иначе кисти, созданные позже, остаются
+      // на слое мира и рисуются в первом проходе (за стеной, с обрезкой).
+      this.root.traverse((c) => { if (c.isMesh) c.layers.set(1); });
+    }
+
+    /* Свет для оружия от первого лица.
+       Второй проход рисуется с camera.layers = 1, а солнце, небо и заливка
+       уровня лежат на слое 0 — рендерер отбрасывает источники по слоям
+       камеры, поэтому оружие получало НОЛЬ света и выглядело чёрным силуэтом.
+       Держим свой набор ламп прямо в камере и включаем у них слой 1: в проходе
+       мира они не участвуют (камера там на слое 0), а оружию дают объём —
+       тёплый ключевой свет сверху-слева, холодную подсветку справа и мягкую
+       заливку, чтобы ствол не был «плоским чёрным пятном». */
+    buildLights() {
+      const T = THREE();
+      const g = new T.Group();
+      g.name = 'vm-lights';
+      // камера смотрит в −Z: свет спереди-сверху-слева, подсветка справа.
+      // target лежит в той же группе — иначе у направленных ламп матрица цели
+      // остаётся единичной и свет «светит в никуда» (оружие снова чёрное).
+      const key = new T.DirectionalLight(0xfff0d8, 1.5);
+      key.position.set(-0.7, 0.9, 0.5);
+      key.target.position.set(0.1, -0.1, -1);
+      const rim = new T.DirectionalLight(0x9fc3ff, 0.7);
+      rim.position.set(1.0, 0.3, -0.4);
+      rim.target.position.set(0, 0, -1);
+      const fill = new T.HemisphereLight(0xdfe8ff, 0x2e2a24, 0.9);
+      const amb = new T.AmbientLight(0xffffff, 0.35);
+      g.add(key, key.target, rim, rim.target, fill, amb);
+      // слой 1 и у света, и у камеры в этом проходе — рендерер пропустит их
+      g.traverse((c) => { if (c.isLight) c.layers.set(1); });
+      this.lights = g;
+      this.camera.add(g);
     }
 
     buildHands() {
@@ -61,14 +96,18 @@
           { at: [0, 0.06, 0.0], pts: O.circleSection(0.038, 0.032, 10) }
         ]);
         const palmMesh = new T.Mesh(palm, M(this.glove));
-        palmMesh.scale.set(0.95, 1, 0.88);
+        // Кисть в кадре от первого лица кажется крупнее, чем в жизни: она
+        // ближе к глазу. Уменьшаем ладонь и пальцы, иначе перчатка закрывает
+        // ствол целиком — особенно у пистолета и ПП.
+        palmMesh.scale.set(0.82, 0.86, 0.76);
         g.add(palmMesh);
         // четыре пальца: трубки поперёк, обхватывают цевьё
         const finger = O.revolve([[0, 0.0105], [0.004, 0.0115], [0.040, 0.011], [0.050, 0.009], [0.054, 0.0]], { segments: 8 });
         finger.rotateZ(Math.PI / 2);
         for (let i = 0; i < 4; i++) {
           const f = new T.Mesh(finger, M(this.glove));
-          f.position.set(-0.020, -0.040 + i * 0.019, 0.020);
+          f.scale.setScalar(0.86);
+          f.position.set(-0.018, -0.034 + i * 0.016, 0.018);
           f.rotation.y = -0.10 - i * 0.02;
           f.rotation.z = 0.06;
           g.add(f);
@@ -99,14 +138,15 @@
         return g;
       };
 
-      this.armR = makeArm(0.34, 0.037, 0.030);
+      this.armR = makeArm(0.19, 0.040, 0.034);
       this.weaponHolder.add(this.armR);
-      this.armL = makeArm(0.36, 0.039, 0.030);
+      this.armL = makeArm(0.21, 0.042, 0.034);
       this.weaponHolder.add(this.armL);
     }
 
     setWeapon(id) {
       if (this.currentWeapon === id) return;
+      const T = THREE();
       this.currentWeapon = id;
       let model = this.models[id];
       if (!model) {
@@ -120,21 +160,40 @@
       if (this.mounted) this.weaponHolder.remove(this.mounted);
       this.mounted = model;
       this.weaponHolder.add(model);
+      // У только что поставленного ствола меши ещё на слое 0: без этого он
+      // попадёт в проход мира и «прилипнет» к стене вместо слоя оружия.
+      model.traverse((c) => { if (c.isMesh) c.layers.set(1); });
       this.muzzleLocal = model.userData.muzzle;
-      // положение рук под оружие
-      if (id === 'pistol') {
-        this.armR.position.set(0.045, -0.115, 0.04);
-        this.armL.position.set(-0.035, -0.12, 0.06);
-      } else if (id === 'shotgun') {
-        this.armR.position.set(0.05, -0.12, 0.02);
-        this.armL.position.set(-0.03, -0.13, 0.50);
-      } else if (id === 'dmr') {
-        this.armR.position.set(0.05, -0.12, 0.0);
-        this.armL.position.set(-0.03, -0.12, 0.42);
-      } else {
-        this.armR.position.set(0.05, -0.12, 0.0);
-        this.armL.position.set(-0.03, -0.13, 0.34);
-      }
+      // Длина ствола в метрах: по ней подбираем, насколько далеко и насколько
+      // крупно держать оружие в кадре. Короткий пистолет нельзя ставить так же
+      // далеко, как винтовку — он превращается в точку, а винтовку нельзя
+      // придвигать вплотную — приклад вылезает за кадр.
+      const box = new T.Box3().setFromObject(model);
+      this.length = Math.max(0.16, box.max.z - box.min.z);
+      // Масштаб самой модели ствола. Пистолет по чертежу всего 19 см — рядом с
+      // кистями он читается как игрушка: руки занимают весь кадр, а ствол
+      // теряется. От первого лица стволы принято показывать крупнее, поэтому
+      // короткие модели домножаем, а длинные (винтовка, дробовик, DMR) держим
+      // 1:1 — иначе приклад уезжает за край.
+      const MODEL_SCALE = { pistol: 1.9, smg: 1.25, rifle: 1.0, shotgun: 1.0, dmr: 1.0 };
+      model.scale.setScalar(MODEL_SCALE[id] || 1.0);
+      // Поза «от бедра» под конкретный ствол. Длины мало: у пистолета и ПП
+      // приклад почти вплотную к глазу, и любая общая формула выдаёт кашу из
+      // кистей. Здесь как в CS — короткий ствол ниже и правее, длинный
+      // отодвинут и слегка развёрнут, приклад в кадре целиком.
+      // offL / offR — сдвиг кисти в системе оружия (метры). У пистолета точки
+      // хвата всего в 6 см друг от друга, и без разведения рук обе кисти
+      // закрывают сам ствол — в кадре остаются только перчатки.
+      const POSE = {
+        pistol:  { x: 0.15, y: -0.21, z: -0.54, rx: 0.03, ry: 0.40, rz: 0.10, s: 0.85,
+                   handScale: 0.62, offL: [-0.09, -0.09, 0.05], offR: [0.03, 0.0, 0.0] },
+        smg:     { x: 0.13, y: -0.150, z: -0.44, rx: 0.04, ry: 0.12, rz: 0.08, s: 0.98, handScale: 0.92 },
+        rifle:   { x: 0.12, y: -0.150, z: -0.50, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.90 },
+        shotgun: { x: 0.12, y: -0.150, z: -0.52, rx: 0.04, ry: 0.12, rz: 0.07, s: 0.88 },
+        dmr:     { x: 0.12, y: -0.145, z: -0.54, rx: 0.04, ry: 0.12, rz: 0.06, s: 0.86 }
+      };
+      this.pose = POSE[id] || POSE.rifle;
+      // кисти ставятся в _attachHands() — точно по gripPoint/forePoint модели
     }
 
     playReload(dur) { this.reloadT = 0; this.reloadDur = dur || 1.6; }
@@ -172,8 +231,10 @@
       // при прицеливании — мушка точно по центру, оружие ближе к глазу
       // «как в CS»: от бедра оружие крупно в правом нижнем углу, ствол
       // сходится к центру кадра; на прицеле — мушка/дульный срез по центру.
+      // поза от бедра — из таблицы под ствол (см. setWeapon)
+      const pose = this.pose || { x: 0.14, y: -0.16, z: -0.60, rx: 0.04, ry: 0.18, rz: 0.07, s: 0.86 };
+      const hipX = pose.x, hipY = pose.y, hipZ = pose.z;
       const adsX = 0.13, adsY = -0.19, adsZ = -0.52;
-      const hipX = 0.17, hipY = -0.135, hipZ = -0.42;
       const lowerY = -0.13 * this.lowered;
       const lowRot = 0.55 * this.lowered;
       const rxSw = -this.sway.y * 0.5;
@@ -181,12 +242,12 @@
       let py = (hipY * (1 - this.ads) + adsY * this.ads) + bobY + this.sway.y * 0.07 + lowerY;
       let pz = (hipZ * (1 - this.ads) + adsZ * this.ads) - this.recoil * 0.16;
       // лёгкий доворот ствола к центру: оружие смотрит туда же, куда камера
-      let rx = (0.05 * (1 - this.ads) + 0.16 * this.ads) - this.recoilRot * 0.20 + lowRot + rxSw;
+      let rx = (pose.rx * (1 - this.ads) + 0.16 * this.ads) - this.recoilRot * 0.20 + lowRot + rxSw;
       // доворот к центру кадра: ствол уходит вперёд-влево, приклад — вправо
-      let ry = (0.22 * (1 - this.ads) + 0.10 * this.ads) - this.sway.x * 0.9;
-      let rz = (0.11 * (1 - this.ads) + 0.0 * this.ads);
+      let ry = (pose.ry * (1 - this.ads) + 0.10 * this.ads) - this.sway.x * 0.9;
+      let rz = (pose.rz * (1 - this.ads) + 0.0 * this.ads);
       // масштаб: от бедра крупнее — оружие должно читаться сразу
-      let sc = 1.08 - 0.06 * this.ads;
+      let sc = pose.s * (1 - this.ads) + (0.86 + 0.16 * this.ads) * this.ads;
       // При прицеливании камера сужает FOV (у винтовки 78 → 48) — без правки
       // оружие «раздувается» на весь кадр. Уменьшаем его пропорционально
       // тангенсу половины FOV, чтобы угловой размер остался прежним.
@@ -276,7 +337,7 @@
         arm.position.copy(v);
         // локоть уводим вниз-назад и в свою сторону, чтобы рука не закрывала
         // ствол и не превращалась в «трубу в глаз»
-        ay.set(side * 0.30, -0.85, 0.45).normalize();
+        ay.set(side * 0.62, -0.70, 0.30).normalize();
         // ортонормируем базис (Y ⟂ Z)
         ay.addScaledVector(az, -ay.dot(az)).normalize();
         ax.copy(ay).cross(az).normalize();
@@ -288,6 +349,14 @@
       };
       place(this.armR, gun.userData.gripPoint, 1.0);
       place(this.armL, gun.userData.forePoint, -1.0);
+      const pose = this.pose || {};
+      if (pose.offR) this.armR.position.add(this._v3.set(pose.offR[0], pose.offR[1], pose.offR[2]));
+      if (pose.offL) this.armL.position.add(this._v3.set(pose.offL[0], pose.offL[1], pose.offL[2]));
+      // Кисти у короткого ствола ближе к глазу и потому кажутся огромными:
+      // поджимаем их под ствол, иначе перчатки закрывают пистолет целиком.
+      const hs = pose.handScale || 1;
+      this.armR.scale.setScalar(hs);
+      this.armL.scale.setScalar(hs);
       // перезарядка: левая рука уходит вниз к магазину
       if (this.reloadT < this.reloadDur) {
         const t = Math.min(1, this.reloadT / this.reloadDur);

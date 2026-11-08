@@ -38,7 +38,7 @@ sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
   CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
 });
 for (const f of ['src/data.js', 'src/outline.js', 'src/gunblueprints.js', 'src/soldier.js', 'src/level.js',
-  'src/model.js', 'src/anim.js', 'src/ik.js', 'src/world.js', 'src/ai.js']) {
+  'src/model.js', 'src/anim.js', 'src/ik.js', 'src/world.js', 'src/ai.js', 'src/viewmodel.js']) {
   vm.runInContext(read(f), sandbox, { filename: f });
 }
 const SH2 = sandbox.SH2;
@@ -322,6 +322,47 @@ for (const [id, m] of Object.entries(D.MAPS)) {
   for (const s of m.spawns) {
     assert.ok(Math.hypot(s[0] - sp.x, s[1] - sp.z) > 6, `${id}: старт далеко от вражеского спавна`);
   }
+  // ...и камера не внутри геометрии: проверяем сами меши, а не только AABB
+  lvl.group.updateMatrixWorld(true);
+  let inside = null;
+  lvl.group.traverse((o) => {
+    if (inside || !o.isMesh || !o.geometry) return;
+    const box = new (sandbox.THREE.Box3)().setFromObject(o);
+    if (sp.x > box.min.x && sp.x < box.max.x && sp.z > box.min.z && sp.z < box.max.z && 1.62 > box.min.y && 1.62 < box.max.y) {
+      inside = { y: [+box.min.y.toFixed(2), +box.max.y.toFixed(2)] };
+    }
+  });
+  assert.ok(!inside, `${id}: глаз не внутри модели на старте`);
+}
+
+/* геометрия зданий должна стоять там же, где их коллайдеры.
+   Раньше extrudePlan зеркалил план по Z: стены рисовались в другом месте,
+   и игрок «оказывался в стене», хотя коллизии были свободны. */
+for (const id of Object.keys(D.MAPS)) {
+  const lvl = SH2.model.buildLevel(id);
+  lvl.group.updateMatrixWorld(true);
+  const walls = [];
+  lvl.group.traverse((o) => {
+    if (!o.isMesh || !o.geometry) return;
+    const box = new (sandbox.THREE.Box3)().setFromObject(o);
+    if (box.max.y - box.min.y < 2) return;                  // только стены зданий
+    if (box.max.x - box.min.x > lvl.map.size * 0.9) return; // не небо/земля
+    walls.push(box);
+  });
+  const bld = lvl.colliders.filter((c) => c.kind === 'building');
+  let ok = 0, mirrored = 0;
+  for (const box of walls) {
+    for (const c of bld) {
+      const x0 = c.x - c.hw, x1 = c.x + c.hw, z0 = c.z - c.hd, z1 = c.z + c.hd;
+      const near = (a, b) => Math.abs(a - b) < 1.7;
+      if (near(box.min.x, x0) && near(box.max.x, x1)) {
+        if (near(box.min.z, z0) && near(box.max.z, z1)) ok++;
+        if (near(box.min.z, -z1) && near(box.max.z, -z0)) mirrored++;
+      }
+    }
+  }
+  assert.ok(ok > 0, `${id}: стены совпадают с коллайдерами зданий (${ok})`);
+  assert.ok(mirrored === 0, `${id}: стены не зеркальны относительно коллизий (${mirrored})`);
 }
 
 /* ===================== 8. УПРАВЛЕНИЕ И КОЛЛИЗИИ ========================= */
@@ -449,6 +490,46 @@ for (const yaw of [0, 0.7, -1.2, 2.5, Math.PI]) {
   // руки не «в камере»: предплечье уходит вниз-назад, иначе модель заслонит вид
   assert.ok(/makeArm/.test(vmSrc), 'рука собирается из лофта, кисть — из ладони и пальцев');
   assert.ok(/layers\.set\(1\)/.test(vmSrc), 'оружие рендерится отдельным слоем поверх мира');
+  // оружие должно получать свет во втором проходе: все лампы уровня лежат на
+  // слое 0, и без собственного света оружие рисуется чёрным силуэтом
+  assert.ok(/buildLights/.test(vmSrc), 'у оружия свой свет');
+  assert.ok(/isLight\) c\.layers\.set\(1\)/.test(vmSrc), 'свет оружия включён на слое 1');
+  // слой ставится после сборки рук, иначе кисти остаются на слое мира
+  const iHands = vmSrc.indexOf('this.buildHands();');
+  const iLayer = vmSrc.lastIndexOf('this.root.traverse((c) => { if (c.isMesh) c.layers.set(1); });');
+  assert.ok(iHands > 0 && iLayer > iHands, 'слой оружия ставится после сборки рук');
+
+  // Поза от бедра под каждый ствол: пистолет не должен оказаться за нижним
+  // краем кадра, а винтовка — упереться прикладом в правый край.
+  const T2 = sandbox.THREE;
+  const cam = new T2.PerspectiveCamera(78, 16 / 9, 0.05, 320);
+  cam.position.set(0, 1.62, 0);
+  cam.updateMatrixWorld(true);
+  const vmw = new SH2.viewmodel.ViewModel(cam);
+  for (const id of ['pistol', 'smg', 'rifle', 'shotgun', 'dmr']) {
+    vmw.setWeapon(id);
+    assert.ok(vmw.pose && isFinite(vmw.pose.s), `${id}: поза от бедра задана`);
+    for (let k = 0; k < 60; k++) vmw.update(1 / 60, { moving: 0, ads: false });
+    vmw.root.updateMatrixWorld(true);
+    cam.updateMatrixWorld(true);
+    // Box3.setFromObject уже в мировых координатах
+    const box = new T2.Box3().setFromObject(vmw.mounted);
+    const v = new T2.Vector3();
+    let minY = 9, maxY = -9, maxX = -9;
+    for (const sx of [box.min.x, box.max.x]) for (const sy of [box.min.y, box.max.y]) for (const sz of [box.min.z, box.max.z]) {
+      v.set(sx, sy, sz)
+        .applyMatrix4(cam.matrixWorldInverse)
+        .applyMatrix4(cam.projectionMatrix);
+      minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y); maxX = Math.max(maxX, v.x);
+    }
+    // как в CS: ствол читается в нижней половине кадра, дуло тянется к центру,
+    // а нижняя часть (магазин, рукоять) законно уходит за край экрана
+    assert.ok(maxY > -0.95, `${id}: ствол виден в кадре (верх ${maxY.toFixed(2)})`);
+    assert.ok(maxY < 0.5, `${id}: оружие не залезает в верхнюю половину (${maxY.toFixed(2)})`);
+    assert.ok(minY < 0.8, `${id}: ствол попадает в кадр (низ ${minY.toFixed(2)})`);
+    assert.ok(maxX < 1.25, `${id}: приклад не уходит целиком за правый край (${maxX.toFixed(2)})`);
+    assert.ok(maxX > 0.1, `${id}: оружие справа, а не по центру экрана (${maxX.toFixed(2)})`);
+  }
 }
 
 /* ========================= 10. КАРТЫ-СХЕМЫ ============================== */
