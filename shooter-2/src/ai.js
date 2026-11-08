@@ -19,6 +19,21 @@
 
   const TACTICS = ['advance', 'hold', 'cover', 'flank', 'suppress', 'retreat', 'grenade', 'melee'];
 
+  /* Тактики, которые умеет и выбирать, и ИСПОЛНЯТЬ мозг (в update есть ветка
+     движения/прицеливания для каждой). `peek`, `rush` и `order` — это
+     осмысленные слова, но собственного поведения у них нет: `order` — роль
+     командира (он и так раздаёт приказы через commanderTick), `rush` — это
+     `advance` на максимальной скорости, `peek` — `hold` с выходом из-за
+     укрытия. Раньше они лежали в данных боевиков, до выбора тактики не
+     доходили, и боец с ними просто медленнее реагировал: на «неправильной»
+     тактике не было ни движения к цели, ни прицельной очереди. */
+  const PLAYABLE_TACTICS = ['advance', 'hold', 'cover', 'flank', 'suppress', 'retreat', 'grenade', 'melee'];
+  const TACTIC_ALIASES = { rush: 'advance', peek: 'hold', order: 'hold' };
+  function playableTactic(t) {
+    if (PLAYABLE_TACTICS.indexOf(t) >= 0) return t;
+    return TACTIC_ALIASES[t] || null;
+  }
+
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function angleTo(ax, az, bx, bz) { return Math.atan2(bx - ax, bz - az); }
   function wrapAngle(a) { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2; return a; }
@@ -154,17 +169,19 @@
 
       // приказ командира
       if (this.order && game.time - this.order.t < 6) {
-        scores[this.order.tactic] = (scores[this.order.tactic] || 0) + 1.8;
+        const ord = playableTactic(this.order.tactic);
+        if (ord) scores[ord] = (scores[ord] || 0) + 1.8;
       }
 
       // «качество мышления»: плохой мыслитель иногда выбирает случайный вариант
       if (this.rng() > cfg.thinkQuality) {
-        const pick = cfg.tactics[Math.floor(this.rng() * cfg.tactics.length)] || 'hold';
-        scores[pick] = (scores[pick] || 0) + 0.6;
+        const raw = cfg.tactics[Math.floor(this.rng() * cfg.tactics.length)];
+        const pick = playableTactic(raw);
+        if (pick) scores[pick] = (scores[pick] || 0) + 0.6;
       }
 
       let best = 'hold', bestScore = -1e9;
-      for (const t of TACTICS) {
+      for (const t of PLAYABLE_TACTICS) {
         let s = scores[t] !== undefined ? scores[t] : -2;
         s += (this.rng() - 0.5) * (1 - cfg.thinkQuality) * 0.9;
         if (s > bestScore) { bestScore = s; best = t; }
@@ -394,7 +411,18 @@
           }
           return this.advanceTarget;
         }
-        if (this.tactic === 'hold' || this.tactic === 'melee') return null;
+        /* `grenade` / `melee` / `hold` — тактики на месте: движение не нужно,
+           но и «залипнуть» нельзя. Если боец не видит игрока, он должен выйти
+           на дистанцию броска/удара, а не стоять в укрытии вечно. */
+        if (this.tactic === 'grenade') {
+          if (this.distToPlayer > 18) return game.world.randomOpenPoint(P.x, P.z, 8, 14, this.rng);
+          return null;
+        }
+        if (this.tactic === 'melee') {
+          if (this.distToPlayer > 4.5) return { x: P.x, z: P.z };
+          return null;
+        }
+        if (this.tactic === 'hold') return null;
       }
       if (this.state === 'search' && this.memory) {
         // идём к последней позиции игрока, петляя
@@ -461,7 +489,12 @@
     const followers = game.enemies.filter((e) => e.alive && e.brain && e.brain.agent !== leaders[0]);
     leaders.forEach((L) => {
       if (!L.brain || L.brain.state !== 'combat') return;
-      const tactic = L.type === 'boss' ? (Math.random() > 0.5 ? 'flank' : 'suppress') : (Math.random() > 0.5 ? 'flank' : 'advance');
+      // Приказ обязан быть исполнимым: `flank`/`suppress`/`advance` есть в
+      // PLAYABLE_TACTICS, иначе подчинённый получит слово без поведения.
+      const tactic = L.type === 'boss'
+        ? (Math.random() > 0.5 ? 'flank' : 'suppress')
+        : (Math.random() > 0.5 ? 'flank' : 'advance');
+      if (!playableTactic(tactic)) return;
       followers.forEach((f) => {
         if (!f.brain || f.type === 'officer') return;
         if (Math.hypot(f.x - L.x, f.z - L.z) < 26) {
@@ -473,5 +506,5 @@
     });
   }
 
-  SH2.ai = { EnemyBrain, commanderTick, TACTICS, wrapAngle, angleTo, clamp };
+  SH2.ai = { EnemyBrain, commanderTick, TACTICS, PLAYABLE_TACTICS, TACTIC_ALIASES, playableTactic, wrapAngle, angleTo, clamp };
 })(typeof window !== 'undefined' ? window : globalThis);

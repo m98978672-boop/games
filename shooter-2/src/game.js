@@ -1635,11 +1635,20 @@
       // гасим именно autoClearColor — clear() вызывается с этим флагом.
       const prevAutoClear = this.renderer.autoClear;
       const prevAutoClearColor = this.renderer.autoClearColor;
+      /* Фон-текстура (градиент неба) — это НЕ цвет очистки, а полноэкранный
+         квад в списке рендера с depthTest:false и layers.enableAll(). На
+         втором проходе он рисуется заново и накрывает уже нарисованный мир:
+         на экране оставалось только небо и оружие. autoClearColor тут не
+         помогает — квад рисуется как обычный объект сцены. Поэтому фон
+         снимаем ровно на время прохода оружия и возвращаем сразу после. */
+      const prevBackground = this.scene.background;
+      this.scene.background = null;
       this.renderer.autoClear = false;
       this.renderer.autoClearColor = false;
       if (this.renderer.clearDepth) this.renderer.clearDepth();
       this.camera.layers.set(1);
       this.renderer.render(this.scene, this.camera);
+      this.scene.background = prevBackground;
       this.renderer.autoClearColor = prevAutoClearColor;
       this.renderer.autoClear = prevAutoClear;
       this.camera.layers.set(0);
