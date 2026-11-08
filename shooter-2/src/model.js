@@ -628,6 +628,20 @@
     props += (M.craters || []).length + (M.bushes || []).length + (M.rubble || []).length;
     props += (M.mgNests || []).length + (M.camoNets || []).length;
 
+    /* ---------------------- граница сектора (периметр) ---------------------- */
+    /* Раньше карта просто обрывалась: за краем — пустота и невидимая стенка.
+       Теперь по периметру стоит ограждение с колючей проволокой, воротами и
+       табличкой, так что граница читается как граница объекта. */
+    if (M.border !== false) {
+      const bd = SH2.level.boundary(mapId, M.size / 2 - 0.6, {
+        gate: M.borderGate === undefined ? 3 : M.borderGate,
+        gateWidth: 5.6,
+        signColor: M.borderSign
+      });
+      group.add(bd.group);
+      bd.colliders.forEach((c) => colliders.push(c));
+    }
+
     /* ------------------ точки опоры, нормали и опорные точки ---------------
        Для каждого коллайдера вычисляем:
          anchor   — точка на поверхности, к которой боец встаёт вплотную (для ИИ);

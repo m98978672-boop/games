@@ -255,7 +255,8 @@ function fitCamera(obj, opts) {
 }
 
 if (process.argv.indexOf('--guns') >= 0) {
-  const ids = ['pistol', 'smg', 'rifle', 'shotgun', 'dmr'];
+  const ids = ['pistol', 'revolver', 'machinepistol', 'smg', 'pdw', 'carbine', 'rifle',
+    'bullpup', 'shotgun', 'tacshotgun', 'lmg', 'dmr', 'sniper', 'launcher', 'railgun'];
   const cell = 620, W = cell, H = cell * ids.length * 0.42;
   const ch = Math.round(H / ids.length);
   const canvas = new Canvas(W, H, [16, 20, 26]);
@@ -276,7 +277,7 @@ if (process.argv.indexOf('--guns') >= 0) {
     }
   });
   fs.writeFileSync(path.join(root, 'docs', 'preview-guns.png'), png(W, H, canvas.color));
-  console.log('docs/preview-guns.png — 5 стволов по чертежам: pistol, smg, rifle, shotgun, dmr');
+  console.log('docs/preview-guns.png — ' + ids.length + ' стволов по чертежам: ' + ids.join(', '));
   process.exit(0);
 }
 

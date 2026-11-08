@@ -77,20 +77,70 @@
   }
 
   /* ------------------------------- мешки ---------------------------------- */
-  function sandbagRow(len, color) {
+  /* Мешок с песком — «подушка»: в плане овал, по высоте вздутый, с плоским
+     дном и чуть приплюснутым верхом. Ряды кладутся вперевязку (как кирпичную
+     кладку) с нахлёстом, поэтому линия обороны читается ровной стеной:
+     контур сверху повторяет дугу стены, без дыр и торчащих «пилюль».
+
+     opts.rows — число рядов (по умолчанию 3), opts.color — цвет. */
+  function sandbagRow(len, color, opts) {
     const T = THREE();
+    const o = opts || {};
     const g = new T.Group();
     const R = SH2.outline;
-    const bag = R.revolve([[0, 0.30], [0.05, 0.34], [0.16, 0.34], [0.26, 0.30], [0.30, 0.18], [0.305, 0.0]], { segments: 8 });
-    bag.scale(1.0, 1.0, 0.66);
+    const BAG_LEN = 0.52;      // вдоль стены
+    const BAG_TH = 0.30;       // толщина стены
+    const BAG_H = 0.175;       // высота мешка
+    const STEP = 0.50;         // шаг кладки: мешки нахлёстываются на 2 см
+    const rows = o.rows || 4;   // 4 ряда по 0.17 м — как раз высота коллайдера
+
+    /* Контур мешка в плане: не овал, а скруглённый прямоугольник
+       (суперэллипс со степенью 0.5). Овал оставляет клинья-дыры в стыках
+       соседних мешков — из-за них стена и выглядела «рассыпанной». */
+    const oval = (k) => {
+      const pts = [];
+      const n = 16;
+      const e = 0.5;                     // 1 — эллипс, <1 — ближе к прямоугольнику
+      for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const cx = Math.sign(Math.cos(a)) * Math.pow(Math.abs(Math.cos(a)), e);
+        const cz = Math.sign(Math.sin(a)) * Math.pow(Math.abs(Math.sin(a)), e);
+        // длинная ось мешка — ВДОЛЬ стены (X), толщина — поперёк (Z)
+        pts.push([cx * (BAG_LEN * 0.5) * k, cz * (BAG_TH * 0.5) * k]);
+      }
+      return pts;
+    };
+    /* Сечения по высоте: дно плоское, пузо шире всего, верх сходится. */
+    const bagGeo = R.loftSections([
+      { at: [0, 0.000, 0], pts: oval(0.80) },
+      { at: [0, BAG_H * 0.14, 0], pts: oval(0.98) },
+      { at: [0, BAG_H * 0.40, 0], pts: oval(1.00) },
+      { at: [0, BAG_H * 0.70, 0], pts: oval(0.97) },
+      { at: [0, BAG_H * 0.90, 0], pts: oval(0.86) },
+      { at: [0, BAG_H * 1.00, 0], pts: oval(0.62) }
+    ]);
     const m = SH2.model.mat(color || 0x6f6547, { flat: true });
-    const n = Math.max(3, Math.round(len / 0.52));
-    for (let row = 0; row < 3; row++) {
-      const count = n - row;
+    // второй тон — часть мешков чуть темнее, чтобы кладка читалась без швов
+    const m2 = SH2.model.mat(0x645c40, { flat: true });
+    const n = Math.max(3, Math.round(len / STEP));
+    const rnd = (i, r) => {
+      const v = Math.sin(i * 12.9898 + r * 78.233) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    for (let row = 0; row < rows; row++) {
+      // вперевязку: чётные ряды без сдвига, нечётные — на полмешка,
+      // и каждый следующий ряд на один мешок короче (стена сужается кверху)
+      const count = Math.max(2, n - row);
+      const off = row % 2 ? STEP * 0.5 : 0;
+      const startX = -len / 2 + STEP * 0.5 - off * 0.5;
       for (let i = 0; i < count; i++) {
-        const mesh = new T.Mesh(bag, m);
-        mesh.position.set(-len / 2 + 0.26 + i * 0.52 + row * 0.13, 0.112 + row * 0.185, row * 0.02);
-        mesh.rotation.y = (i % 2 ? 0.05 : -0.04) + row * 0.03;
+        const x = startX + i * STEP + off;
+        // за пределами стены мешок не ставим — иначе рваный торец
+        if (x - STEP * 0.5 > len / 2 - 0.02) continue;
+        const j = rnd(i, row);
+        const mesh = new T.Mesh(bagGeo, j > 0.72 ? m2 : m);
+        mesh.position.set(x, row * BAG_H * 0.94, (j - 0.5) * 0.014);
+        mesh.rotation.y = (j - 0.5) * 0.06 + (row % 2 ? 0.03 : -0.02);
         mesh.castShadow = true; mesh.receiveShadow = true;
         g.add(mesh);
       }
@@ -704,6 +754,162 @@
     return g;
   }
 
+  /* ------------------------- граница карты -------------------------------- */
+  /* Периметр сектора: бетонный бордюр + сетка-рабица + колючая проволока
+     сверху. Плюс «смысловые» метки: ворота с аркой и табличкой, столбы с
+     фонарями по сторонам, предупредительные знаки у ворот.
+     Возвращает { group, colliders } — коллайдеры короткие (бордюр 0.9 м),
+     стрелять сквозь сетку можно. */
+  function boundary(mapId, half, opts) {
+    const T = THREE();
+    const o = opts || {};
+    const g = new T.Group();
+    const colliders = [];
+    const dark = SH2.model.mat(0x3a3a35, { flat: true });
+    const postMat = SH2.model.mat(0x4a4a42, { flat: true });
+    const wireMat = SH2.model.mat(0x6a6f68, { flat: false });
+
+    // сетка-рабица: полотно из редких прутьев (не текстура, а геометрия)
+    const meshH = 2.05;
+    const cellW = 0.42;
+    const panelGeos = [];
+    const rnd = (i) => Math.sin(i * 91.7) * 0.5 + 0.5;
+
+    /* Одна сторона: бордюр, полотно сетки, столбы, колючка.
+       len — длина, ориентация задаётся поворотом группы. */
+    const side = (len, rngSeed) => {
+      const s = new T.Group();
+      // бетонный бордюр
+      const kerb = SH2.outline.outlineMesh(
+        [[-len / 2, 0], [len / 2, 0], [len / 2, 0.26], [-len / 2, 0.26]],
+        { depth: 0.34, bevel: 0.03 }
+      );
+      const kb = new T.Mesh(kerb, dark);
+      kb.rotation.y = Math.PI / 2;
+      kb.receiveShadow = true;
+      s.add(kb);
+      // полотно: вертикальные прутья через cellW
+      const nBars = Math.floor(len / cellW);
+      for (let i = 0; i < nBars; i++) {
+        const x = -len / 2 + (i + 0.5) * cellW;
+        const bar = SH2.outline.outlineMesh(
+          [[-0.012, 0.26], [0.012, 0.26], [0.012, meshH], [-0.012, meshH]],
+          { depth: 0.024, bevel: 0.002 }
+        );
+        const bm = new T.Mesh(bar, wireMat);
+        bm.position.set(x, 0, 0);
+        s.add(bm);
+      }
+      // горизонтальные нити
+      for (const y of [0.55, 1.1, 1.65, meshH]) {
+        const rail = SH2.outline.revolve([[0, 0.014], [len, 0.014], [len, 0]], { segments: 5 });
+        rail.rotateZ(Math.PI / 2);
+        const rm = new T.Mesh(rail, wireMat);
+        rm.position.set(-len / 2, y, 0);
+        s.add(rm);
+      }
+      // столбы
+      const nPosts = Math.max(2, Math.round(len / 3.2));
+      for (let i = 0; i <= nPosts; i++) {
+        const x = -len / 2 + (len / nPosts) * i;
+        const post = SH2.outline.revolve([[0, 0.06], [0.06, 0.07], [meshH + 0.16, 0.06], [meshH + 0.22, 0.0]], { segments: 7 });
+        const pm = new T.Mesh(post, postMat);
+        pm.position.set(x, 0, 0);
+        pm.castShadow = true;
+        s.add(pm);
+      }
+      // колючка: две наклонные нити с «шипами»
+      for (let k = 0; k < 2; k++) {
+        const y0 = meshH + 0.10 + k * 0.13;
+        const wire = SH2.outline.revolve([[0, 0.009], [len, 0.009], [len, 0]], { segments: 4 });
+        wire.rotateZ(Math.PI / 2);
+        const wm = new T.Mesh(wire, wireMat);
+        wm.position.set(-len / 2, y0, (k ? 0.06 : -0.06));
+        s.add(wm);
+        const nTh = Math.floor(len / 0.55);
+        for (let i = 0; i < nTh; i++) {
+          const th = SH2.outline.outlineMesh([[-0.045, -0.006], [0.045, 0.006], [0.045, 0.014], [-0.045, 0.002]],
+            { depth: 0.006, bevel: 0 });
+          const tm = new T.Mesh(th, wireMat);
+          tm.position.set(-len / 2 + (i + 0.5) * 0.55, y0, (k ? 0.06 : -0.06));
+          tm.rotation.y = rnd(i + rngSeed) * 1.2;
+          s.add(tm);
+        }
+      }
+      return s;
+    };
+
+    // четыре стороны квадрата; в каждой оставлен проём под ворота/калитку
+    const gapAt = o.gate === undefined ? 0 : o.gate;   // индекс стороны с воротами
+    const gapW = o.gateWidth || 5.0;
+    for (let i = 0; i < 4; i++) {
+      const sideLen = half * 2;
+      const segs = i === gapAt
+        ? [[-sideLen / 2, -gapW / 2], [gapW / 2, sideLen / 2]]
+        : [[-sideLen / 2, sideLen / 2]];
+      segs.forEach(([a0, a1], k) => {
+        const len = a1 - a0;
+        if (len < 0.6) return;
+        const part = side(len, i * 7 + k);
+        const mid = (a0 + a1) / 2;
+        // сторона 0 — z = -half (север), 1 — x = +half, 2 — z = +half, 3 — x = -half
+        if (i === 0) { part.position.set(mid, 0, -half); part.rotation.y = 0; }
+        else if (i === 1) { part.position.set(half, 0, mid); part.rotation.y = -Math.PI / 2; }
+        else if (i === 2) { part.position.set(mid, 0, half); part.rotation.y = Math.PI; }
+        else { part.position.set(-half, 0, mid); part.rotation.y = Math.PI / 2; }
+        g.add(part);
+        // коллайдер вдоль стены (тонкий, 1.0 м: присевший укрыт)
+        if (i === 0 || i === 2) {
+          colliders.push({ x: mid, z: i === 0 ? -half : half, hw: len / 2, hd: 0.2, h: 1.05, y: 0, kind: 'border', standLow: true });
+        } else {
+          colliders.push({ x: i === 1 ? half : -half, z: mid, hw: 0.2, hd: len / 2, h: 1.05, y: 0, kind: 'border', standLow: true });
+        }
+      });
+    }
+
+    /* ---------------- ворота: арка с табличкой и шлагбаум ---------------- */
+    const gate = new T.Group();
+    const gw = gapW;
+    const pillar = SH2.outline.outlineMesh([[-0.22, 0], [0.22, 0], [0.18, 3.0], [-0.18, 3.0]], { depth: 0.36, bevel: 0.03 });
+    [-1, 1].forEach((sgn) => {
+      const p = new T.Mesh(pillar, postMat);
+      p.position.set(sgn * gw / 2, 0, 0);
+      p.castShadow = true;
+      gate.add(p);
+    });
+    // перекладина-арка
+    const beam = SH2.outline.outlineMesh([[-gw / 2 - 0.3, 2.75], [gw / 2 + 0.3, 2.75], [gw / 2 + 0.3, 3.12], [-gw / 2 - 0.3, 3.12]],
+      { depth: 0.28, bevel: 0.02 });
+    const bm = new T.Mesh(beam, dark);
+    bm.rotation.y = Math.PI / 2;
+    gate.add(bm);
+    // табличка
+    const sign = SH2.outline.outlineMesh([[-0.82, -0.28], [0.82, -0.28], [0.82, 0.28], [-0.82, 0.28]], { depth: 0.05, bevel: 0.01 });
+    const sm = new T.Mesh(sign, SH2.model.mat(o.signColor || 0x8a7a3a, { flat: true }));
+    sm.position.set(0, 3.45, 0.02);
+    gate.add(sm);
+    // шлагбаум (поднят)
+    const boom = SH2.outline.revolve([[0, 0.05], [gw * 0.92, 0.045], [gw * 0.92, 0]], { segments: 6 });
+    boom.rotateZ(Math.PI / 2);
+    const boomM = new T.Mesh(boom, SH2.model.mat(0xb0a04a, { flat: true }));
+    boomM.position.set(-gw * 0.46, 1.15, 0);
+    boomM.rotation.z = 0.42;
+    gate.add(boomM);
+    // коллайдер только у столбов, проезд свободен
+    [-1, 1].forEach((sgn) => {
+      colliders.push({ x: sgn * gw / 2, z: 0, hw: 0.3, hd: 0.3, h: 3.0, y: 0, kind: 'border-post' });
+    });
+    // ставим ворота на выбранную сторону
+    if (gapAt === 0) { gate.position.set(0, 0, -half); }
+    else if (gapAt === 1) { gate.position.set(half, 0, 0); gate.rotation.y = -Math.PI / 2; }
+    else if (gapAt === 2) { gate.position.set(0, 0, half); gate.rotation.y = Math.PI; }
+    else { gate.position.set(-half, 0, 0); gate.rotation.y = Math.PI / 2; }
+    // сдвигаем ворота по стене к центру (проём и так по центру стороны)
+    g.add(gate);
+
+    return { group: g, colliders };
+  }
+
   /* траншея: три сегмента стенки, выкопанный жёлоб (визуально) */
   function trench(len, color) {
     const T = THREE();
@@ -744,7 +950,7 @@
   }
 
   SH2.level = {
-    building, tower, barrier, sandbagRow, extrudePlan, loftBetween, planBounds, polyShape,
+    building, tower, barrier, sandbagRow, boundary, extrudePlan, loftBetween, planBounds, polyShape,
     container, truck, lamp, watchtower, wreck, fence, trench, crates, shells, crater, bush, rubble, mgNest, camoNet, polyPrism
   };
 })(typeof window !== 'undefined' ? window : globalThis);

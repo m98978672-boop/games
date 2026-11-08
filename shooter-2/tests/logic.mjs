@@ -260,7 +260,7 @@ assert.ok(grunt.reaction > boss.reaction, 'рядовой реагирует м�
 }
 
 /* ============================ 5. ОРУЖИЕ ================================ */
-assert.equal(D.WEAPONS.length, 5, 'пять видов оружия');
+assert.ok(D.WEAPONS.length >= 15, `не меньше 15 видов оружия, есть ${D.WEAPONS.length}`);
 for (const w of D.WEAPONS) {
   assert.ok(w.damage > 0 && w.rpm > 0 && w.mag > 0 && w.range > 0, `${w.id}: параметры`);
   assert.ok(w.adsSpread <= w.spread, `${w.id}: прицел точнее`);
