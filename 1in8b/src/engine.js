@@ -431,7 +431,9 @@
   Life.prototype.pension = function () {
     var base = this.c.gdp * 0.18;
     var worked = this.job ? this.job.years : 25;
-    return base * clamp(0.5 + worked / 60, 0.4, 1.3) * (this.c.gdp > 12000 ? 1.2 : 0.6);
+    var grey = this.has('grey') ? 0.72 : 1;   /* зарплата в конверте — маленькая пенсия */
+    var cut = this.has('pensionCut') ? 0.82 : 1;  /* реформа: позже и меньше */
+    return base * clamp(0.5 + worked / 60, 0.4, 1.3) * (this.c.gdp > 12000 ? 1.2 : 0.6) * grey * cut;
   };
 
   /* эффект траты: при ratio = 1 (норма) ровно ноль, дальше — логарифм */
@@ -556,6 +558,9 @@
     this.baseHealth = clamp(this.baseHealth - baseDecay, 4, 100);
 
     var decay = baseDecay;
+    /* работа после обычного пенсионного возраста изнашивает: тело уже не то,
+       а отложить отдых пришлось не по своей воле */
+    if (this.retireLate && !this.retired && this.job && a > 58) decay += 1.6;
     if (this.has('smoker')) decay += 0.55;
     if (this.has('chronic')) decay += 0.7;
     if (this.has('addiction')) decay += 0.9;
@@ -586,6 +591,7 @@
     var self = this;
     var x = this.ctx();
     var pool = E.auto.filter(function (ev) {
+      if (ev.money) return false;              /* у денежных событий свой слот */
       if (self.age < ev.age[0] || self.age > ev.age[1]) return false;
       if (ev.once && self.seenEvents[ev.id]) return false;
       if (ev.heavy && self.settings.soft) return false;
@@ -604,6 +610,37 @@
       pool = pool.filter(function (e2) { return e2 !== chosen; });
       if (!this.alive) return;
     }
+  };
+
+  /* ----------------------- денежный слот года --------------------------
+     Деньги живут своей чередой: цены, премии, счета, долги и переводы
+     от уехавшей родни. У них отдельный жребий, поэтому новые события
+     не вытесняют болезни и войны из основного потока и не сдвигают
+     статистику жизни. */
+
+  Life.prototype.moneyEvent = function () {
+    if (this.age < 8) return null;
+    var self = this;
+    var x = this.ctx();
+    var pool = E.auto.filter(function (ev) {
+      if (!ev.money) return false;
+      if (self.age < ev.age[0] || self.age > ev.age[1]) return false;
+      if (ev.once && self.seenEvents[ev.id]) return false;
+      if (ev.heavy && self.settings.soft) return false;
+      if (ev.cond && !ev.cond(x)) return false;
+      return true;
+    });
+    if (!pool.length) return null;
+    if (this.rnd() > 0.27) return null;
+    var chosen = this.rnd.weighted(pool, function (ev) {
+      var w = typeof ev.w === 'function' ? ev.w(x) : (ev.w === undefined ? 1 : ev.w);
+      if (self.seenEvents[ev.id]) w *= 0.5;   /* то же самое второй раз — реже */
+      return w;
+    });
+    if (!chosen) return null;
+    this.seenEvents[chosen.id] = true;
+    chosen.run(x);
+    return chosen;
   };
 
   /* ------------------- условия у вариантов решения --------------------
@@ -646,10 +683,16 @@
     if (r.job) out.push({ k: 'text', ok: !!L.job, text: 'нужна работа', done: 'работа есть' });
     if (r.kids) out.push({ k: 'text', ok: L.children.length > 0, text: 'нужны дети', done: 'дети есть' });
     if (r.partner) out.push({ k: 'text', ok: !!L.partner, text: 'нужна семья', done: 'семья есть' });
-    if (r.custom) {
-      var okc = !!r.custom.test(x);
-      out.push({ k: 'text', ok: okc, text: r.custom.why, done: r.custom.done || r.custom.why });
-    }
+    /* особые условия: одно, два или список; текст может зависеть от жизни */
+    var customs = [];
+    if (r.custom) customs.push(r.custom);
+    if (r.custom2) customs.push(r.custom2);
+    if (r.customs && r.customs.length) customs = customs.concat(r.customs);
+    customs.forEach(function (cu) {
+      var why = typeof cu.why === 'function' ? cu.why(x) : cu.why;
+      var done = cu.done === undefined ? why : (typeof cu.done === 'function' ? cu.done(x) : cu.done);
+      out.push({ k: 'text', ok: !!cu.test(x), text: why, done: done });
+    });
     return out;
   };
 
@@ -693,11 +736,15 @@
     };
   };
 
-  /* Карточка решения на этот год (или null) */
-  Life.prototype.pickDecision = function () {
+  /* Карточка решения на этот год (или null).
+     money:true — карточки про деньги. У них своя очередь: их показывают
+     в годы, когда ничего другого не случилось, иначе они вытеснили бы
+     решения о семье, работе и учёбе. */
+  Life.prototype.pickDecision = function (money) {
     var self = this;
     var x = this.ctx();
     var pool = E.choices.filter(function (ch) {
+      if (!ch.money !== !money) return false;
       if (self.age < ch.age[0] || self.age > ch.age[1]) return false;
       if (ch.once && self.seenEvents['c:' + ch.id]) return false;
       if (ch.heavy && self.settings.soft) return false;
@@ -705,13 +752,14 @@
       return true;
     });
     if (!pool.length) return null;
+    if (money && this.rnd() > 0.25) return null;   /* разговор о деньгах — не каждый год */
     var priority = pool.filter(function (p) { return p.priority; });
     var card;
     if (priority.length) {
       card = priority[0];
     } else {
       var cand = this.rnd.pick(pool);
-      var p = cand.chance ? cand.chance(x) : 0.28;
+      var p = cand.chance ? cand.chance(x) : (money ? 0.18 : 0.28);
       if (this.rnd() < p) card = cand;
     }
     if (!card) return null;
@@ -807,6 +855,7 @@
     this.workStep();
     this.investStep();
     this.moneyStep();
+    this.moneyEvent();
     this.pickEvents();
 
     if (this.alive && this.rnd() < this.mortalityRisk(fromAge)) {
@@ -817,6 +866,7 @@
     var decision = null;
     if (this.alive) {
       decision = this.pickDecision();
+      if (!decision) decision = this.pickDecision(true);   /* год без событий — повод поговорить о деньгах */
       if (decision) this.pendingDecision = decision;
       var refl = E.reflections.filter(function (r) { return r.age === this.age; }, this)[0];
       if (refl && !this.silent) this.pendingReflection = refl;

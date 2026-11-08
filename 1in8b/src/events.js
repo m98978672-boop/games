@@ -27,6 +27,40 @@
     af: 3, sy: 3, ye: 3, ss: 2.6, so: 2.6, cd: 2, sd: 2.6, ml: 2, bf: 2.2, ne: 1.6,
     mm: 2, ua: 2.2, ps: 2.6, cf: 2, et: 1.4, ng: 1.4, iq: 1.6, ly: 1.6, cm: 1.1, mz: 1.1
   };
+  /* где деньги регулярно обесценивались: вес инфляционных событий */
+  var INFLATION = {
+    ve: 3.2, zw: 3, ar: 3, lb: 3, sy: 3, sd: 2.8, ye: 2.6, tr: 2.4, ir: 2.2, ng: 2, eg: 2,
+    gh: 1.9, et: 1.8, ao: 1.8, ua: 1.8, mw: 1.8, sl: 1.7, pk: 1.6, by: 1.6, mm: 1.6, ht: 1.6,
+    la: 1.5, lk: 1.5, ru: 1.4, uz: 1.3, mn: 1.3, br: 1.2, bo: 1.2, mx: 1.1, kz: 1.2
+  };
+  /* страны, которые во многом живут переводами уехавших */
+  var REMIT = {
+    tj: 3, ws: 2.6, to: 2.6, np: 2.6, kg: 2.4, ht: 2.4, md: 2.4, hn: 2.2, sv: 2.2, lb: 2.2,
+    ph: 2.2, am: 2.2, uz: 2, gt: 2, ni: 2, jm: 2, bd: 1.8, pk: 1.8, lk: 1.8, ge: 1.8, eg: 1.8,
+    ma: 1.8, sn: 1.8, ml: 1.8, do: 1.8, ua: 1.6, mx: 1.6, gh: 1.4, ne: 1.4, vn: 1.4, ke: 1.2,
+    in: 1.2, ng: 1.2, al: 2, rs: 1.4
+  };
+  /* где микрозаймы и кассы взаимопомощи — часть обычной жизни */
+  var MICRO = {
+    bd: 2.6, ke: 2.4, in: 2, ug: 2, ph: 2, tz: 1.8, gh: 1.8, ng: 1.8, pe: 1.8, bo: 1.8,
+    id: 1.8, kh: 1.8, np: 1.8, sn: 1.6, za: 1.6, mx: 1.6, pk: 1.6, cm: 1.4, et: 1.4, vn: 1.4
+  };
+  /* страны, где свадьба по обычаю разоряет семью жениха или невесты */
+  var DOWRY = {
+    in: 2.6, bd: 2.4, pk: 2.4, np: 2.2, af: 2.2, lk: 1.6, ng: 2, gh: 1.8, ke: 1.6, tz: 1.6,
+    ug: 1.6, et: 1.6, sd: 1.8, eg: 1.6, ma: 1.4, tj: 1.8, uz: 1.8, kg: 1.8, az: 1.6, tr: 1.3
+  };
+
+  function wmap(map, c, base) { var v = map[c.code]; return v === undefined ? (base || 0) : v; }
+  /* до середины девяностых деньги обесценивались почти везде */
+  function oldMoney(L) { return L.year < 1995 ? 1.7 : L.year < 2005 ? 1.2 : 1; }
+  function invest() { return window.IN8B.invest; }
+  function holds(L, id) {
+    var IV = invest();
+    var h = IV && IV.holdingOf ? IV.holdingOf(L, id) : null;
+    return h && h.val > 0 ? h : null;
+  }
+
   var QUAKE = ['tr', 'ir', 'np', 'id', 'ph', 'jp', 'cl', 'pe', 'mx', 'gt', 'ht', 'af', 'pk', 'tw', 'ec', 'sv', 'ni', 'ma'];
   var CYCLONE = ['bd', 'ph', 'mz', 'mg', 'in', 'vn', 'ht', 'fj', 'mm', 'jm', 'hn', 'pg', 'sb', 'cu', 'do'];
   var DROUGHT = ['et', 'so', 'ke', 'sd', 'ss', 'ne', 'ml', 'td', 'mr', 'af', 'ye', 'zw', 'mw', 'mg', 'bf', 'er'];
@@ -375,6 +409,354 @@
         x.add('Вы стали жертвой ограбления. Все остались живы.', 'bad');
         x.money(-Math.min(x.L.money * 0.4, x.need * 0.5)); x.stat('happy', -8); x.stat('health', -3);
         x.help();
+      }
+    },
+
+    /* ------------------- деньги: цены, долги, заработки ---------------- */
+    {
+      id: 'inflation', money: true, age: [14, 110],
+      w: function (x) { return wmap(INFLATION, x.c, x.c.gdp < 12000 ? 0.6 : 0.3) * 0.45 * oldMoney(x.L); },
+      run: function (x) {
+        var loss = x.L.money > 0 ? x.L.money * (0.1 + x.rnd() * 0.14) : 0;
+        x.add('Цены за год ушли вперёд зарплат: на те же деньги покупается заметно меньше.', 'money');
+        x.money(-loss); x.stat('happy', -3);
+      }
+    },
+    {
+      id: 'money-crash', money: true, age: [16, 110],
+      w: function (x) { return wmap(INFLATION, x.c, 0.15) * 0.16 * oldMoney(x.L); },
+      run: function (x) {
+        var gold = holds(x.L, 'gold');
+        var share = gold ? 0.3 : 0.55;
+        var loss = Math.max(0, x.L.money) * share;
+        x.money(-loss);
+        x.add(gold
+          ? 'Валюта обвалилась за несколько недель. Сбережения растаяли, но золото подорожало и спасло часть.'
+          : 'Валюта обвалилась за несколько недель. Половины сбережений как не бывало.', 'bad');
+        x.stat('happy', -8);
+      }
+    },
+    {
+      id: 'money-reform', money: true, age: [10, 110], once: true,
+      w: function (x) { return (x.L.year < 2000 ? 0.5 : 0.12) * (x.c.gdp < 20000 ? 1.4 : 0.5); },
+      run: function (x) {
+        var loss = Math.max(0, x.L.money) * (0.15 + x.rnd() * 0.3);
+        x.add('Денежная реформа: старые деньги меняют в очередях и не все. Часть сбережений пропала.', 'bad');
+        x.money(-loss); x.stat('happy', -6);
+      }
+    },
+    {
+      id: 'bank-fail', money: true, age: [18, 110],
+      w: function (x) { return holds(x.L, 'depo') || x.has('deposit') ? (x.c.gdp < 8000 ? 0.7 : 0.25) : 0; },
+      run: function (x) {
+        var h = holds(x.L, 'depo');
+        if (h) {
+          var lost = h.val * (0.4 + x.rnd() * 0.4);
+          h.val -= lost;
+          if (h.val < 1) { h.val = 0; h.put = 0; }
+          x.add('Банк, где лежал вклад, остался без лицензии. Вернули меньше половины.', 'bad');
+        } else {
+          x.flag('deposit', false);
+          x.money(-Math.max(0, x.L.money) * 0.3);
+          x.add('Банк, где лежали деньги, закрылся. Очередь за компенсацией стоит второй месяц.', 'bad');
+        }
+        x.stat('happy', -7);
+      }
+    },
+    {
+      id: 'remittance', money: true, age: [0, 95],
+      w: function (x) { return wmap(REMIT, x.c, x.c.gdp < 9000 ? 0.4 : 0.08) * 0.5; },
+      run: function (x) {
+        var sum = x.need * (0.08 + x.rnd() * 0.3);
+        x.add('Родственник, уехавший на заработки, прислал денег.', 'money');
+        x.money(sum); x.stat('bond', 2);
+      }
+    },
+    {
+      id: 'remit-send', money: true, age: [19, 70],
+      w: function (x) { return x.L.abroad ? 2.2 : 0; },
+      run: function (x) {
+        var sum = (x.L.income || x.need) * (0.08 + x.rnd() * 0.12);
+        x.add('Вы отправили часть заработка домой: там на эти деньги живёт вся семья.', 'family');
+        x.money(-sum); x.stat('bond', 5); x.stat('happy', 2);
+      }
+    },
+    {
+      id: 'wage-delay', money: true, age: [16, 70],
+      w: function (x) { return working(x.L) && x.c.gdp < 18000 ? 0.7 * oldMoney(x.L) : 0.05; },
+      run: function (x) {
+        x.add('Зарплату задержали на несколько месяцев. Жили в долг у соседей и магазина.', 'bad');
+        x.money(-(x.L.income || x.need) * 0.12); x.stat('happy', -5);
+      }
+    },
+    {
+      id: 'employer-bust', money: true, age: [18, 64],
+      w: function (x) { return working(x.L) ? 0.3 : 0; },
+      run: function (x) {
+        x.add('Предприятие закрылось. Последнюю зарплату так и не выдали.', 'bad');
+        x.money(-(x.L.income || x.need) * 0.15);
+        x.L.job = null; x.L.unemployedYears = 0;
+        x.stat('happy', -9);
+      }
+    },
+    {
+      id: 'year-bonus', money: true, age: [18, 66],
+      w: function (x) { return working(x.L) ? (x.c.gdp > 12000 ? 0.8 : 0.35) : 0; },
+      run: function (x) {
+        var sum = (x.L.income || x.need) * (0.08 + x.rnd() * 0.14);
+        x.add('В конце года выдали премию.', 'money');
+        x.money(sum); x.stat('happy', 3);
+      }
+    },
+    {
+      id: 'tax-audit', money: true, age: [20, 75],
+      w: function (x) { return (x.L.biz || x.L.business) ? (x.has('legal') ? 0.35 : 0.8) : 0.05; },
+      run: function (x) {
+        var fine = x.need * (0.1 + x.rnd() * 0.35) * (x.has('legal') ? 0.5 : 1);
+        x.add(x.has('legal')
+          ? 'Налоговая проверка. Всё оформлено, отделались мелким штрафом.'
+          : 'Налоговая насчитала недоимку и штраф. Платить пришлось сразу.', 'bad');
+        x.money(-fine); x.stat('happy', -4);
+      }
+    },
+    {
+      id: 'child-benefit', money: true, age: [18, 60],
+      w: function (x) { return hasKids(x.L) && x.c.gdp > 10000 ? 1 : 0.1; },
+      run: function (x) {
+        var sum = x.need * (0.05 + x.rnd() * 0.12) * Math.min(3, x.L.children.length);
+        x.add('Государство выплатило пособие на детей.', 'money');
+        x.money(sum); x.stat('happy', 2);
+      }
+    },
+    {
+      id: 'school-fees', money: true, age: [24, 60],
+      w: function (x) { return hasKids(x.L) && x.c.gdp < 12000 ? 1.1 : 0.05; },
+      run: function (x) {
+        x.add('Школа снова собирает деньги: форма, учебники, ремонт класса, экзамены.', 'money');
+        x.money(-x.need * (0.06 + x.rnd() * 0.12) * Math.min(3, x.L.children.length));
+      }
+    },
+    {
+      id: 'medical-bill', money: true, age: [25, 95],
+      w: function (x) {
+        var noIns = !(x.L.purchased && x.L.purchased.insurance);
+        return noIns && (x.c.gdp < 9000 || x.c.code === 'us') ? 0.65 : 0.1;
+      },
+      run: function (x) {
+        var bill = x.need * (0.3 + x.rnd() * 1.1);
+        if (x.L.purchased && x.L.purchased.insurance !== undefined) {
+          x.add('Больничный счёт оказался огромным, но страховка закрыла почти всё.', 'money');
+          x.money(-bill * 0.25);
+          return;
+        }
+        if (x.L.purse() < bill * 0.5 && x.c.gdp < 12000 && x.rnd() < 0.45) {
+          /* платить нечем — лечение откладывают на потом, которое не наступает */
+          x.add('Лечение стоило больше, чем есть в доме. Решили перетерпеть.', 'bad');
+          x.flag('untreated', true);
+          x.stat('happy', -7); x.stat('health', -3);
+          x.money(-bill * 0.2);
+          return;
+        }
+        x.add('Счёт за лечение съел все сбережения семьи — и часть будущих.', 'bad');
+        x.stat('happy', -6);
+        x.money(-bill);
+      }
+    },
+    {
+      id: 'rent-up', money: true, age: [19, 80],
+      w: function (x) { return !x.L.home && x.L.urban ? 0.9 : 0.1; },
+      run: function (x) {
+        x.add('Хозяин поднял плату за жильё. Переезжать дороже, чем доплатить.', 'money');
+        x.money(-x.need * (0.06 + x.rnd() * 0.14)); x.stat('happy', -3);
+      }
+    },
+    {
+      id: 'utilities', money: true, age: [20, 95],
+      w: function (x) { return x.L.urban && x.c.gdp > 4000 ? 0.6 : 0.2; },
+      run: function (x) {
+        x.add('Свет и отопление подорожали: зимние счета стали заметной строкой расходов.', 'money');
+        x.money(-x.need * (0.03 + x.rnd() * 0.08));
+      }
+    },
+    {
+      id: 'phone-scam', money: true, age: [18, 105],
+      w: function (x) {
+        if (x.L.year < 2005) return 0.06;
+        return (x.L.age > 60 ? 0.7 : 0.35) * (x.L.stats.know < 45 ? 1.4 : 0.7);
+      },
+      run: function (x) {
+        var smart = x.rnd() < clamp(0.35 + x.L.stats.know / 160, 0.3, 0.92);
+        if (smart) {
+          x.add('Позвонили «из службы безопасности банка». Вы положили трубку и перезвонили сами.', 'good');
+          x.stat('know', 1);
+        } else {
+          var sum = Math.min(Math.max(0, x.L.money) * 0.4, x.need * 1.4);
+          x.add('Позвонили «из службы безопасности банка» — и вы перевели деньги сами. Их больше нет.', 'bad');
+          x.money(-sum); x.stat('happy', -9);
+        }
+      }
+    },
+    {
+      id: 'lottery', money: true, age: [18, 95], w: 0.3,
+      run: function (x) {
+        var r = x.rnd();
+        if (r < 0.02) {
+          x.add('Крупный выигрыш в лотерею. Такое бывает раз на сотни тысяч билетов.', 'good');
+          x.money(x.need * (5 + x.rnd() * 9)); x.stat('happy', 12);
+        } else if (r < 0.3) {
+          x.add('Небольшой выигрыш в лотерею: хватило на подарки.', 'money');
+          x.money(x.need * (0.05 + x.rnd() * 0.15)); x.stat('happy', 3);
+        } else {
+          x.add('Весь год покупали лотерейные билеты. Не выиграли ничего.', 'money');
+          x.money(-x.need * 0.03);
+        }
+      }
+    },
+    {
+      id: 'micro-due', money: true, age: [18, 100],
+      w: function (x) { return (x.L.microDebt || 0) > 0 ? 3.5 : 0; },
+      run: function (x) {
+        var due = x.L.microDebt || 0;
+        x.L.microDebt = 0;
+        x.money(-due);
+        if (x.L.money >= 0) {
+          x.stat('happy', -5);
+          x.add('Микрозайм отдали целиком: проценты вышли больше самого долга.', 'money');
+        } else {
+          x.stat('happy', -9); x.stat('health', -2);
+          x.add('Отдавать микрозайм нечем: пошли пени, звонки и описи имущества.', 'bad');
+        }
+      }
+    },
+    {
+      id: 'collectors', money: true, age: [20, 80],
+      w: function (x) { return x.L.money < -x.need * 0.4 ? 1.6 : 0; },
+      run: function (x) {
+        x.add('Долг передали коллекторам: звонят вам, соседям и на работу.', 'bad');
+        x.money(-x.need * 0.1); x.stat('happy', -9); x.stat('health', -2);
+      }
+    },
+    {
+      id: 'debt-relief', money: true, age: [20, 80],
+      w: function (x) { return x.L.money < -x.need * 0.5 ? (x.c.gdp < 9000 ? 0.5 : 0.3) : 0; },
+      run: function (x) {
+        var cut = Math.min(-x.L.money * 0.5, x.need * 1.2);
+        x.add('Часть долга удалось списать: помогли программа для должников и родня.', 'good');
+        x.money(cut); x.stat('happy', 6);
+      }
+    },
+    {
+      id: 'rosca', money: true, age: [20, 75],
+      w: function (x) { return wmap(MICRO, x.c, x.c.gdp < 7000 ? 0.7 : 0.1) * 0.45; },
+      run: function (x) {
+        if (x.rnd() < 0.55) {
+          x.add('Подошла ваша очередь в кассе взаимопомощи: соседи скинулись, и вы получили всю сумму сразу.', 'money');
+          x.money(x.need * (0.2 + x.rnd() * 0.4)); x.stat('bond', 4);
+        } else {
+          x.add('Весь год носили взносы в кассу взаимопомощи: очередь дойдёт не скоро.', 'money');
+          x.money(-x.need * (0.05 + x.rnd() * 0.12)); x.stat('bond', 2);
+        }
+      }
+    },
+    {
+      id: 'strike', money: true, age: [18, 64],
+      w: function (x) { return working(x.L) && x.c.gdp > 3000 ? 0.4 : 0.1; },
+      run: function (x) {
+        if (x.rnd() < 0.5) {
+          x.L.incomeBoost = (x.L.incomeBoost || 1) * 1.07;
+          x.add('Забастовка на работе: добились прибавки к зарплате.', 'good');
+          x.stat('bond', 3);
+        } else {
+          x.add('Забастовка ничего не дала, а дни простоя не оплатили.', 'bad');
+          x.money(-(x.L.income || x.need) * 0.06); x.stat('happy', -3);
+        }
+      }
+    },
+    {
+      id: 'gig-work', money: true, age: [17, 60],
+      w: function (x) { return x.L.year >= 2012 && x.L.urban ? 0.8 : 0.05; },
+      run: function (x) {
+        x.add('Вечерами подрабатывали через приложение: доставка, такси, заказы.', 'money');
+        x.money(x.need * (0.08 + x.rnd() * 0.22)); x.stat('health', -1);
+      }
+    },
+    {
+      id: 'pension-reform', money: true, age: [45, 64], once: true,
+      w: function (x) { return x.L.year >= 1995 ? 0.6 : 0.15; },
+      run: function (x) {
+        x.L.retireLate = (x.L.retireLate || 0) + 2 + x.rnd.int(3);
+        x.flag('pensionCut', true);
+        x.add('Пенсионный возраст подняли: работать придётся дольше, чем обещали.', 'bad');
+        x.stat('happy', -6);
+      }
+    },
+    {
+      id: 'pension-thin', money: true, age: [60, 110],
+      w: function (x) { return x.L.retired ? 1 : 0; },
+      run: function (x) {
+        if (x.rnd() < 0.45) {
+          x.add('Пенсию проиндексировали: прибавка меньше, чем подорожали лекарства.', 'money');
+          x.money(x.need * 0.03); x.stat('happy', -2);
+        } else {
+          x.add('Пенсия отстала от цен: приходится считать каждый день до выплаты.', 'bad');
+          x.money(-x.need * 0.06); x.stat('happy', -4);
+        }
+      }
+    },
+    {
+      id: 'fire-home', money: true, age: [5, 100], once: true,
+      w: function (x) { return x.c.gdp < 9000 ? 0.3 : 0.16; },
+      run: function (x) {
+        var ins = x.L.purchased && x.L.purchased.insurance;
+        var loss = x.need * (0.3 + x.rnd() * 0.9) * (ins ? 0.25 : 1);
+        x.add(ins
+          ? 'Пожар в доме. Сгорело многое, но страховая почти всё возместила.'
+          : 'Пожар в доме. Сгорели вещи, документы и то, что копили годами.', ins ? 'money' : 'bad');
+        x.money(-loss); x.stat('happy', ins ? -4 : -10); x.stat('health', -2);
+      }
+    },
+    {
+      id: 'biz-robbery', money: true, age: [18, 80],
+      w: function (x) { return x.L.biz ? clamp(x.c.homicide / 14, 0.15, 1.4) : 0; },
+      run: function (x) {
+        var b = x.L.biz;
+        if (!b) return;
+        var loss = Math.round(b.val * (0.08 + x.rnd() * 0.17));
+        b.val = Math.max(0, b.val - loss);
+        x.add('Дело обокрали: вынесли товар и кассу.', 'bad');
+        x.stat('happy', -7);
+      }
+    },
+    {
+      id: 'harvest-price', money: true, age: [18, 85],
+      w: function (x) {
+        var farm = x.L.biz && x.L.biz.type === 'farm';
+        return (farm || holds(x.L, 'land') || (x.L.purchased && x.L.purchased.land)) ? 1.2 : 0;
+      },
+      run: function (x) {
+        if (x.rnd() < 0.5) {
+          x.add('Урожай удалось продать дорого: в этом году цены стояли высоко.', 'money');
+          x.money(x.need * (0.15 + x.rnd() * 0.4));
+        } else {
+          x.add('Перекупщики сбили цену: урожай ушёл почти даром.', 'bad');
+          x.money(-x.need * (0.05 + x.rnd() * 0.15)); x.stat('happy', -4);
+        }
+      }
+    },
+    {
+      id: 'land-sale', money: true, age: [25, 85], once: true,
+      w: function (x) { return rural(x.L) && x.L.parentsAlive === 0 ? 0.8 : 0.08; },
+      run: function (x) {
+        x.add('Семейный участок продали и деньги поделили между роднёй.', 'money');
+        x.money(x.need * (0.4 + x.rnd() * 1.6) * (0.5 + x.L.famPct)); x.stat('bond', -2);
+      }
+    },
+    {
+      id: 'dowry', money: true, age: [18, 70],
+      w: function (x) { return wmap(DOWRY, x.c, 0.1) * 0.35 * (hasKids(x.L) || x.L.siblings ? 1.2 : 0.6); },
+      run: function (x) {
+        x.add('Свадьба в семье: по обычаю платит ваша сторона, и отказаться нельзя.', 'money');
+        x.money(-x.need * (0.3 + x.rnd() * 1.1)); x.stat('bond', 4); x.stat('happy', -2);
       }
     },
 
@@ -916,9 +1298,251 @@
         }
       ]
     },
+    /* ------------------- деньги: что делать с ними ---------------------- */
+    {
+      id: 'grey-pay', money: true, age: [19, 58], once: true,
+      chance: function (x) { return x.c.gdp < 12000 ? 0.26 : 0.16; },
+      cond: function (x) { return working(x.L) && x.c.gdp < 30000 && !x.L.abroad; },
+      title: 'Зарплата в конверте',
+      text: function (x) {
+        return 'На работе предлагают платить «в конверте»: на руки выйдет заметно больше, ' +
+          'а по бумагам вы будете получать самый минимум. Пенсию потом посчитают по бумагам.';
+      },
+      options: [
+        {
+          label: 'Согласиться на конверт', hint: 'доход + · пенсия −',
+          w: function (x) { return x.c.gdp < 9000 ? 5 : 2.5; },
+          run: function (x) {
+            x.L.incomeBoost = (x.L.incomeBoost || 1) * 1.12;
+            x.flag('grey', true); x.stat('happy', 3);
+            x.add('Зарплату стали платить в конверте: денег больше, бумаг меньше.', 'money');
+          }
+        },
+        {
+          label: 'Просить белую зарплату', hint: 'как посмотрит начальство',
+          chance: function (x) {
+            return clamp(0.3 + x.L.stats.know / 180 + (x.L.job && x.L.job.years > 5 ? 0.12 : 0), 0.15, 0.85);
+          },
+          run: function (x) {
+            x.flag('grey', false); x.stat('happy', 4);
+            x.add('Вас оформили полностью официально: идут взносы, копится стаж.', 'work');
+          },
+          fail: function (x) {
+            x.L.job = null; x.L.unemployedYears = 0; x.stat('happy', -9);
+            x.add('Разговор о белой зарплате закончился расчётом: с вами попрощались.', 'bad');
+          }
+        },
+        {
+          label: 'Искать место, где платят по-белому', hint: 'перерыв в работе',
+          req: { know: 35 },
+          run: function (x) {
+            x.L.job = null; x.L.unemployedYears = 0; x.stat('happy', -3);
+            x.add('Вы ушли искать работу с нормальным договором.', 'work');
+          }
+        }
+      ]
+    },
+    {
+      id: 'relative-loan', money: true, age: [24, 72], once: true,
+      chance: function (x) { return 0.16; },
+      cond: function (x) { return x.L.money > x.need * 0.5 && (x.L.siblings > 0 || hasKids(x.L)); },
+      title: 'Родня просит в долг',
+      text: function (x) {
+        return 'Близкий человек просит взаймы ' + M.fmtMoney(x.need * 0.4) +
+          ': у него беда, а занять больше не у кого. Обещает вернуть, как сможет.';
+      },
+      options: [
+        {
+          label: 'Дать, сколько просит', hint: 'родня запомнит · деньги могут не вернуться',
+          req: { money: function (x) { return x.need * 0.4; } },
+          cost: { money: function (x) { return x.need * 0.4; } },
+          chance: function (x) { return clamp(0.3 + x.L.stats.bond / 150, 0.2, 0.88); },
+          run: function (x) {
+            x.money(-x.need * 0.04); x.stat('bond', 12); x.stat('happy', 2);
+            x.add('Долг вернули — позже обещанного, но вернули. Такое не забывают.', 'family');
+          },
+          fail: function (x) {
+            x.money(-x.need * 0.4); x.stat('bond', -10); x.stat('happy', -7);
+            x.add('Деньги не вернули. Теперь нет ни денег, ни разговоров при встрече.', 'bad');
+          }
+        },
+        {
+          label: 'Дать половину', hint: 'меньше риск · меньше благодарность',
+          req: { money: function (x) { return x.need * 0.2; } },
+          cost: { money: function (x) { return x.need * 0.2; } },
+          chance: function (x) { return clamp(0.4 + x.L.stats.bond / 150, 0.25, 0.9); },
+          run: function (x) {
+            x.money(-x.need * 0.02); x.stat('bond', 6);
+            x.add('Половину одолжили, половину вернули вовремя.', 'family');
+          },
+          fail: function (x) {
+            x.money(-x.need * 0.2); x.stat('bond', -4); x.stat('happy', -4);
+            x.add('Одолженного так и не дождались, но хотя бы не всю сумму.', 'money');
+          }
+        },
+        {
+          label: 'Отказать', hint: 'деньги целы · отношения −',
+          run: function (x) {
+            x.stat('bond', -9); x.stat('happy', -4);
+            x.add('Вы отказали. Деньги остались при вас, родня — на расстоянии.', 'family');
+          }
+        }
+      ]
+    },
+    {
+      id: 'cash-crunch', money: true, age: [21, 70], once: true,
+      chance: function (x) { return 0.4; },
+      cond: function (x) { return x.L.purse() < x.need * 0.55 && x.L.money < x.need * 0.3; },
+      title: 'Деньги нужны сегодня',
+      text: function (x) {
+        return 'Срочно нужны ' + M.fmtMoney(x.need * 0.35) +
+          ': лекарства, крыша, долг за учёбу — выбирать не приходится. В доме пусто.';
+      },
+      options: [
+        {
+          label: 'Взять микрозайм', hint: 'деньги сразу · отдавать вдвое',
+          w: function (x) { return x.L.year >= 2005 ? 3 : 0.6; },
+          run: function (x) {
+            var sum = x.need * 0.35;
+            x.money(sum);
+            x.L.microDebt = (x.L.microDebt || 0) + sum * (1.9 + x.rnd() * 0.9);
+            x.add('Деньги дали в тот же день — под проценты, от которых темнеет в глазах.', 'money');
+          }
+        },
+        {
+          label: 'Занять у родни', hint: 'без процентов · с разговорами',
+          req: { bond: 40 },
+          run: function (x) {
+            x.money(x.need * 0.35); x.stat('bond', -7); x.stat('happy', -2);
+            x.add('Деньги собрали всей роднёй. Теперь вы должны не банку, а своим.', 'family');
+          }
+        },
+        {
+          label: 'Продать нажитое', hint: 'вещи уйдут',
+          req: {
+            custom: {
+              test: function (x) { return (x.L.spentTotal || 0) > x.need * 0.3; },
+              why: 'продавать пока нечего', done: 'есть что продать'
+            }
+          },
+          run: function (x) {
+            x.money(x.need * 0.3); x.stat('happy', -6);
+            x.add('Продали то, что покупали годами. Деньги есть, вещей нет.', 'money');
+          }
+        },
+        {
+          label: 'Обойтись без этого', hint: 'здоровье −',
+          run: function (x) {
+            x.stat('health', -5); x.stat('happy', -7);
+            x.add('Денег не нашли. Пришлось обойтись — и это ещё аукнется.', 'bad');
+          }
+        }
+      ]
+    },
+    {
+      id: 'pyramid-call', money: true, age: [23, 75], once: true,
+      chance: function (x) { return x.L.year >= 1990 ? 0.11 : 0.06; },
+      cond: function (x) { return x.L.money > x.need * 0.3; },
+      title: 'Сорок процентов в год',
+      text: function (x) {
+        return 'Знакомый зовёт в «надёжное дело»: обещают сорок процентов в год, показывают чужие выплаты ' +
+          'и просят наличными. Говорит, он уже забрал первую прибыль.';
+      },
+      options: [
+        {
+          label: 'Вложить немного', hint: 'может удвоиться · может сгореть',
+          req: { money: function (x) { return x.need * 0.25; } },
+          cost: { money: function (x) { return x.need * 0.25; } },
+          chance: function (x) { return 0.45; },
+          run: function (x) {
+            x.money(x.need * 0.25 * 0.4); x.stat('happy', 5);
+            x.add('Выплату принесли вовремя, как и обещали. Вы вышли вовремя.', 'money');
+          },
+          fail: function (x) {
+            x.money(-x.need * 0.25); x.stat('happy', -8);
+            x.add('Контора закрылась, телефоны молчат. Деньги уехали вместе с конторой.', 'bad');
+          }
+        },
+        {
+          label: 'Вложить всерьёз', hint: 'большой куш · большой риск',
+          req: { money: function (x) { return x.need * 0.9; } },
+          cost: { money: function (x) { return x.need * 0.9; } },
+          chance: function (x) { return 0.28; },
+          run: function (x) {
+            x.money(x.need * 0.9 * 0.8); x.stat('happy', 10);
+            x.add('Вы успели забрать и свои, и чужие проценты до того, как всё рухнуло.', 'money');
+          },
+          fail: function (x) {
+            x.money(-x.need * 0.9); x.stat('happy', -16); x.stat('bond', -5);
+            x.add('Пирамида сложилась. Пропали деньги, которые копили годами.', 'bad');
+          }
+        },
+        {
+          label: 'Отказаться и отговорить родню', hint: 'отношения + · спокойный сон',
+          run: function (x) {
+            x.stat('bond', 6); x.stat('know', 2); x.stat('happy', 2);
+            x.add('Вы не понесли ни копейки и отговорили своих. Через год контора исчезла.', 'good');
+          }
+        }
+      ]
+    },
+    {
+      id: 'inherit-house', money: true, age: [30, 78], once: true,
+      chance: function (x) { return 0.22; },
+      cond: function (x) { return x.L.parentsAlive === 0 && !x.L.abroad; },
+      title: 'Дом, который остался',
+      text: function (x) {
+        return 'После родителей остался дом. Жить в нём некому, но и бросить нельзя: решать надо сейчас.';
+      },
+      options: [
+        {
+          label: 'Продать', hint: 'деньги сразу',
+          w: function (x) { return 3; },
+          run: function (x) {
+            x.money(x.need * (1.2 + x.rnd() * 1.6)); x.stat('happy', -4);
+            x.add('Дом продали. Деньги пришли, детство осталось на фотографиях.', 'money');
+          }
+        },
+        {
+          /* сдавать — дело хлопотное: в фоновых жизнях им не занимаются,
+             поэтому вес нулевой и авторежим выбирает что-то попроще */
+          label: 'Сдавать жильцам', hint: 'понемногу каждый год',
+          w: function (x) { return 0; },
+          req: {
+            custom: {
+              test: function (x) { return x.L.urban || x.c.gdp > 5000; },
+              why: 'снимать здесь некому', done: 'жильцы найдутся'
+            }
+          },
+          run: function (x) {
+            var val = x.need * (1.2 + x.rnd() * 1.4);
+            var IV = invest();
+            if (IV && IV.grant) IV.grant(x.L, 'rent', val);
+            else x.money(val * 0.1);
+            x.add('Дом сдали жильцам: теперь он приносит понемногу, зато каждый год.', 'money');
+          }
+        },
+        {
+          label: 'Переехать самим', hint: 'своё жильё',
+          w: function (x) { return 3; },
+          run: function (x) {
+            x.L.home = true; x.L.moves++; x.money(-x.need * 0.2); x.stat('happy', 7);
+            x.add('Вы перебрались в родительский дом и привели его в порядок.', 'life');
+          }
+        },
+        {
+          label: 'Отдать родне', hint: 'отношения ++',
+          w: function (x) { return 2; },
+          run: function (x) {
+            x.stat('bond', 12); x.stat('happy', 3);
+            x.add('Дом отдали родне — без бумажных войн и обид.', 'family');
+          }
+        }
+      ]
+    },
     {
       id: 'retire', age: [55, 72], once: true, priority: true,
-      cond: function (x) { return working(x.L); },
+      cond: function (x) { return working(x.L) && x.L.age >= 55 + (x.L.retireLate || 0); },
       title: 'Пора на покой?',
       text: function (x) {
         return x.c.gdp > 15000

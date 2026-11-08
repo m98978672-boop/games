@@ -446,6 +446,138 @@ for (let y = 1950; y < 2100; y++) if (IV.market(l4, y).crisis) crises++;
 ok(crises > 5 && crises < 30, 'кризисы случаются примерно раз в десять лет: ' + crises + ' за 150 лет');
 
 /* ------------------------------ 9. имена -------------------------------- */
+/* ------------------- 10б. деньги, которые случаются сами ---------------- */
+console.log('\nДеньги вокруг человека');
+
+const MONEY_AUTO = E.auto.filter((e) => e.money);
+const MONEY_CARDS = E.choices.filter((c) => c.money);
+ok(MONEY_AUTO.length >= 25, 'денежных событий в своей очереди: ' + MONEY_AUTO.length);
+ok(MONEY_CARDS.length >= 5, 'денежных карточек решений: ' + MONEY_CARDS.length);
+ok(MONEY_AUTO.every((e) => typeof e.run === 'function' && Array.isArray(e.age) && e.age.length === 2),
+  'у каждого денежного события есть возраст и последствие');
+ok(MONEY_CARDS.every((c) => c.title && c.text && c.options.length >= 3),
+  'у каждой денежной карточки есть заголовок, текст и минимум три варианта');
+ok(typeof EN.Life.prototype.moneyEvent === 'function', 'у денег своя очередь событий в движке');
+
+/* денежные события не лезут в общий пул: иначе они вытеснят болезни и войны */
+{
+  let leaked = null, fired = 0, inSlot = false;
+  const real = {};
+  for (const ev of MONEY_AUTO) {
+    real[ev.id] = ev.run;
+    ev.run = function (x) {
+      fired++;
+      if (!inSlot && !leaked) leaked = ev.id;
+      return real[ev.id].call(null, x);
+    };
+  }
+  const slot = EN.Life.prototype.moneyEvent;
+  EN.Life.prototype.moneyEvent = function () {
+    inSlot = true;
+    try { return slot.call(this); } finally { inSlot = false; }
+  };
+  for (let i = 0; i < 200; i++) {
+    const l = new EN.Life({ seed: 'слот-' + i, silent: true });
+    let guard = 0;
+    while (l.alive && guard++ < 130) { if (l.stepYear()) l.autoAnswer(); }
+  }
+  EN.Life.prototype.moneyEvent = slot;
+  for (const ev of MONEY_AUTO) ev.run = real[ev.id];
+  ok(fired > 100, 'денежные события случаются: ' + fired + ' за 200 жизней');
+  ok(!leaked, 'денежные события приходят только из своей очереди' + (leaked ? ': ' + leaked : ''));
+}
+
+/* как часто деньги напоминают о себе */
+{
+  let hits = 0, years = 0, broken = null;
+  const ids = new Set();
+  for (const code of ['ng', 'in', 'ru', 'us']) {
+    for (let i = 0; i < 150; i++) {
+      const l = new EN.Life({ seed: 'мон-' + code + '-' + i, countryCode: code, silent: true });
+      const real = l.moneyEvent.bind(l);
+      l.moneyEvent = function () {
+        let ev = null;
+        try { ev = real(); } catch (e) { if (!broken) broken = code + ': ' + e.message; }
+        if (ev) { hits++; ids.add(ev.id); }
+        return ev;
+      };
+      let guard = 0;
+      while (l.alive && guard++ < 130) { if (l.stepYear()) l.autoAnswer(); }
+      years += l.dead.age;
+    }
+  }
+  ok(!broken, 'денежные события считаются без ошибок' + (broken ? ': ' + broken : ''));
+  const per10 = hits / years * 10;
+  ok(per10 > 1 && per10 < 4.5, 'денежных событий на 10 лет жизни: ' + per10.toFixed(2));
+  ok(ids.size >= 18, 'разных денежных событий за прогон: ' + ids.size);
+}
+
+/* зарплата в конверте: больше на руки — меньше пенсия */
+{
+  const l = liveTo('конверт', 'ru', 40);
+  const before = l.pension();
+  l.flag('grey', true);
+  ok(l.pension() < before * 0.9, 'зарплата в конверте уменьшает будущую пенсию');
+  l.flag('grey', false);
+  l.flag('pensionCut', true);
+  ok(l.pension() < before * 0.9, 'пенсионная реформа уменьшает пенсию');
+}
+
+/* пенсионная реформа отодвигает карточку о выходе на покой, но не запирает её */
+{
+  const card = E.choices.find((c) => c.id === 'retire');
+  let checked = 0;
+  for (let i = 0; i < 40 && checked < 1; i++) {
+    const l = liveTo('реформа-' + i, 'ru', 57);
+    if (!l.alive || !l.job || l.retired) continue;
+    checked++;
+    l.retireLate = 6;
+    ok(!card.cond(l.ctx()), 'после реформы карточка о пенсии ещё не приходит');
+    l.retireLate = 0;
+    ok(card.cond(l.ctx()), 'без реформы карточка о пенсии приходит вовремя');
+    const option = card.options[0];
+    l.retireLate = 0;
+    const view = l.optionView(option, 0, l.ctx());
+    ok(!view.locked || view.reqs.some((r) => !r.ok), 'у карточки о пенсии понятно, что мешает выйти на покой');
+  }
+  ok(checked === 1, 'нашлась работающая жизнь в 57 лет для проверки пенсии');
+}
+
+/* микрозайм: деньги сразу, отдавать вдвое */
+{
+  const l = liveTo('микро', 'ng', 35, 0.02);
+  const card = E.choices.find((c) => c.id === 'cash-crunch');
+  const opt = card.options.find((o) => o.label.indexOf('микрозайм') >= 0);
+  const moneyBefore = l.money;
+  opt.run(l.ctx());
+  ok(l.money > moneyBefore, 'микрозайм приносит деньги сразу');
+  ok(l.microDebt > (l.money - moneyBefore) * 1.5, 'отдавать придётся заметно больше взятого');
+  const due = E.auto.find((e) => e.id === 'micro-due');
+  const owed = l.microDebt, had = l.money;
+  due.run(l.ctx());
+  ok(l.microDebt === 0 && Math.abs(had - l.money - owed) < 1, 'срок по микрозайму списывает весь долг');
+}
+
+/* дом в наследство можно сдавать — он становится настоящим вложением */
+{
+  const l = liveTo('наследство', 'ru', 50, 1);
+  l.parentsAlive = 0;
+  const card = E.choices.find((c) => c.id === 'inherit-house');
+  const opt = card.options.find((o) => o.label.indexOf('Сдавать') >= 0);
+  const putBefore = l.investedTotal || 0;
+  opt.run(l.ctx());
+  const h = IV.holdingOf(l, 'rent');
+  ok(h && h.val > 0, 'сданный дом записан как вложение');
+  ok(h.put === 0 && (l.investedTotal || 0) === putBefore, 'доставшийся даром дом не считается вложенными деньгами');
+  l.stepYear();
+  ok(l.capitalIncome > 0, 'сданный дом приносит доход каждый год');
+}
+
+/* сохранение помнит новые поля */
+for (const f of ['retireLate', 'microDebt']) {
+  ok(readFileSync(join(root, 'src/save.js'), 'utf8').includes(`'${f}'`), 'сохранение помнит поле ' + f);
+}
+
 console.log('\nИмена и соседи по секунде');
 ok(C.list.every((c) => {
   const n = NM.make(M.makeRng('имя-' + c.code), c, 'f');
