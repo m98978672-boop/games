@@ -146,13 +146,17 @@ const diedUrban = lives.filter((l) => l.urban).length / lives.length * 100;
 ok(diedUrban > bornUrbanPct, 'к концу жизни горожан больше (' + diedUrban.toFixed(0) + '%): люди переезжают в города');
 
 /* ------------------- 7. ОПЖ по отдельным странам ------------------------ */
-console.log('\nПродолжительность жизни по странам (по 400 жизней)');
+/* 400 жизней на страну давали ошибку выборки до полутора лет — в странах с высокой
+   детской смертностью разброс возрастов огромен. Берём 1500: случайная ошибка падает
+   вдвое с лишним, и проверка ловит именно сдвиг модели, а не невезение жребия. */
+const LE_N = 1500;
+console.log('\nПродолжительность жизни по странам (по ' + LE_N + ' жизней)');
 let sumErr = 0, nC = 0;
 for (const code of ['jp', 'de', 'us', 'ru', 'br', 'cn', 'in', 'ng', 'et']) {
   const c = C.byCode[code];
   let s = 0;
-  for (let i = 0; i < 400; i++) s += new EN.Life({ seed: code + '-' + i, countryCode: code, silent: true }).runToEnd().dead.age;
-  const got = s / 400, exp = (c.leM + c.leF) / 2;
+  for (let i = 0; i < LE_N; i++) s += new EN.Life({ seed: code + '-' + i, countryCode: code, silent: true }).runToEnd().dead.age;
+  const got = s / LE_N, exp = (c.leM + c.leF) / 2;
   const d = Math.abs(got - exp); sumErr += d; nC++;
   ok(d < 3.5, c.name + ': модель ' + got.toFixed(1) + ' / факт ' + exp.toFixed(1) + ' (Δ ' + d.toFixed(1) + ')');
 }
@@ -444,6 +448,127 @@ ok(m1.mood === m2.mood && m1.crisis === m2.crisis, 'год рынка счита
 let crises = 0;
 for (let y = 1950; y < 2100; y++) if (IV.market(l4, y).crisis) crises++;
 ok(crises > 5 && crises < 30, 'кризисы случаются примерно раз в десять лет: ' + crises + ' за 150 лет');
+
+/* ------------- 10в. когда денег нет: улица, кредит, цепочки ------------- */
+console.log('\nУлица и долги');
+
+const CHAIN = E.choices.filter((c) => c.chain);
+ok(CHAIN.length >= 10, 'карточек-продолжений в цепочках: ' + CHAIN.length);
+ok(CHAIN.every((c) => c.title && c.text && c.options.length >= 3),
+  'у каждой карточки цепочки есть заголовок, текст и минимум три варианта');
+ok(CHAIN.every((c) => c.options.every((o) => o.label && typeof o.run === 'function')),
+  'у каждого варианта в цепочке есть подпись и последствие');
+['toStreet', 'offStreet', 'streetStep', 'takeLoan', 'loanStep', 'schedule', 'unschedule', 'dueCard']
+  .forEach((fn) => ok(typeof EN.Life.prototype[fn] === 'function', 'в движке есть ' + fn + '()'));
+
+/* карточка цепочки приходит ровно в назначенный год и ни годом раньше */
+{
+  const l = liveTo('очередь', 'ru', 30, 3);
+  l.toStreet('проверка очереди');
+  l.schedule('street-help', 2);
+  const now = l.dueCard();
+  ok(now && now.id === 'street-first', 'сразу после улицы приходит «первая ночь»: ' + (now && now.id));
+  l.age += 1;
+  ok(l.dueCard() === null, 'назначенная на через два года карточка раньше срока не приходит');
+  l.age += 1;
+  const later = l.dueCard();
+  ok(later && later.id === 'street-help', 'в назначенный год карточка приходит: ' + (later && later.id));
+}
+
+/* цепочки не лезут в общий пул: без расписания их не бывает */
+{
+  const sched = EN.Life.prototype.schedule;
+  EN.Life.prototype.schedule = function () { return this; };
+  let leaked = null;
+  for (let i = 0; i < 120 && !leaked; i++) {
+    const l = new EN.Life({ seed: 'без-расписания-' + i, countryCode: i % 2 ? 'ng' : 'ru', silent: true });
+    l.runToEnd();
+    for (const c of CHAIN) if (l.seenEvents['c:' + c.id]) { leaked = c.id; break; }
+  }
+  EN.Life.prototype.schedule = sched;
+  ok(!leaked, 'без расписания карточки цепочек не приходят никогда' + (leaked ? ' — пришла ' + leaked : ''));
+}
+
+/* улица: работа и жильё исчезают, риск смерти растёт, долги списывают */
+{
+  const l = liveTo('на-улицу', 'ru', 42, 5);
+  l.home = true; l.flag('mortgage', true);
+  l.takeLoan(l.need, 5, 0.15);
+  const riskBefore = l.mortalityRisk(l.age);
+  l.toStreet('проверка');
+  ok(l.homeless === 1 && !l.job && !l.home, 'на улице не остаётся ни работы, ни жилья');
+  ok(!l.loan, 'с человека без адреса долг списывают');
+  const riskAfter = l.mortalityRisk(l.age);
+  ok(riskAfter > riskBefore * 2, 'на улице умирают чаще: риск вырос в ' +
+    (riskAfter / riskBefore).toFixed(1) + ' раза');
+  l.homeless = 6;
+  ok(l.mortalityRisk(l.age) > riskAfter, 'через несколько лет на улице риск ещё выше');
+  l.offStreet('проверка возвращения');
+  ok(!l.homeless && l.has('wasHomeless') && l.money >= 0,
+    'с улицы возвращаются без долгов: деньги не уходят в минус');
+}
+
+/* с улицы есть дорога обратно, и она не бесконечная */
+{
+  let out = 0, years = [];
+  for (let i = 0; i < 60; i++) {
+    const l = liveTo('выход-' + i, 'ru', 34, 11 + i);
+    if (!l.alive) continue;
+    l.toStreet('проверка выхода');
+    const from = l.age;
+    for (let y = 0; y < 25 && l.alive && l.homeless; y++) { if (l.stepYear()) l.autoAnswer(); }
+    if (!l.homeless && l.alive) { out++; years.push(l.age - from); }
+  }
+  const mid = years.sort((a, b) => a - b)[Math.floor(years.length / 2)];
+  ok(out >= 30, 'большинство с улицы выбирается: ' + out + ' из 60');
+  ok(mid <= 8, 'обычно это занимает несколько лет, а не всю жизнь: медиана ' + mid);
+}
+
+/* кредит: деньги сразу, платёж каждый год, закрытие — с отметкой */
+{
+  const l = liveTo('кредит', 'de', 35, 7);
+  const before = l.money;
+  l.takeLoan(l.need * 2, 5, 0.1);
+  ok(l.money - before >= l.need * 1.9, 'кредит приходит деньгами сразу');
+  ok(l.loan && l.loan.pay > 0 && l.loan.left > l.need * 2, 'отдавать придётся больше, чем взяли');
+  l.money = l.need * 40;
+  for (let y = 0; y < 6; y++) { l.age++; l.loanStep(); }
+  ok(!l.loan && l.has('goodCredit'), 'выплаченный кредит закрывается и остаётся в истории');
+}
+
+/* не платить нечем: просрочки копятся и зовут на разговор, а потом в суд */
+{
+  const l = liveTo('просрочка', 'ru', 40, 9);
+  l.takeLoan(l.need * 2, 5, 0.2);
+  l.money = -l.need;
+  const seen = [];
+  for (let y = 0; y < 5; y++) {
+    l.age++; l.money = -l.need; l.loanStep();
+    (l.queue || []).forEach((q) => { if (seen.indexOf(q.id) < 0) seen.push(q.id); });
+  }
+  ok(l.loan && l.loan.miss >= 3, 'без денег просрочки копятся: ' + (l.loan && l.loan.miss));
+  ok(seen.indexOf('loan-trouble') >= 0, 'после второй просрочки зовут на разговор');
+  ok(seen.indexOf('loan-court') >= 0 || l.has('inCourt'), 'упорное молчание доводит до суда');
+}
+
+/* улица остаётся редкостью и не ломает продолжительность жизни */
+{
+  let ever = 0, died = 0, n = 0, sumAge = 0;
+  for (const code of ['ru', 'us', 'ng', 'in']) {
+    for (let i = 0; i < 250; i++) {
+      const l = new EN.Life({ seed: 'улица-доля-' + code + '-' + i, countryCode: code, silent: true });
+      l.runToEnd();
+      n++; sumAge += l.dead.age;
+      if (l.has('wasHomeless') || l.homeless) ever++;
+      if (l.homeless) died++;
+    }
+  }
+  const pct = ever / n * 100;
+  ok(pct > 0.2 && pct < 7, 'без дома за жизнь остаётся ' + pct.toFixed(1) + '% людей');
+  ok(died / Math.max(1, ever) < 0.6, 'улица — не приговор: на ней заканчивают ' +
+    Math.round(died / Math.max(1, ever) * 100) + '% из тех, кто там оказался');
+  ok(sumAge / n > 55 && sumAge / n < 85, 'средний возраст смерти не поехал: ' + (sumAge / n).toFixed(1));
+}
 
 /* ------------------------------ 9. имена -------------------------------- */
 /* ------------------- 10б. деньги, которые случаются сами ---------------- */
