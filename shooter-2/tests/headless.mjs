@@ -130,15 +130,48 @@ class FakeRenderer {
     this.outputColorSpace = '';
     this.toneMapping = 0;
     this.toneMappingExposure = 1;
+    // как у настоящего WebGLRenderer: render() сам очищает цвет
+    this.autoClear = true;
+    this.autoClearColor = true;
+    this.autoClearDepth = true;
+    this.autoClearStencil = true;
+    this.frames = [];      // { passes: [...], wipedWorld: bool }
+    this._passes = [];
+    this.clearDepth = () => { this._depthCleared = true; };
   }
   setPixelRatio(v) { this.pixelRatio = v; }
   getPixelRatio() { return this.pixelRatio; }
   setSize() {}
+  /* Эмуляция того, что видно на экране: проход по слою 0 рисует мир,
+     проход по слою 1 — оружие. Если второй проход идёт с autoClear,
+     он затирает уже нарисованный мир цветом фона — на экране остаётся
+     только небо (именно так и выглядел «коричневый фон» на телефоне). */
   render(scene, camera) {
     this.renders++;
-    // проверяем, что мир действительно наполнен и камера в нём
     assert.ok(scene, 'сцена есть');
     assert.ok(camera, 'камера есть');
+    let meshes = 0;
+    scene.traverseVisible((o) => { if (o.isMesh && o.layers.test(camera.layers)) meshes++; });
+    const layer = camera.layers.mask;
+    // как в three.js: при scene.background цвета очистка форсируется
+    // (forceClear), поэтому смотрим именно на autoClearColor
+    const bg = scene.background;
+    const forceClear = !!(bg && bg.isColor);
+    if ((this.autoClear || forceClear) && this.autoClearColor) {
+      // очистка цвета: всё, что было нарисовано в этом кадре, стёрто
+      this._wiped = this._passes.length > 0;
+      this._passes.length = 0;
+    }
+    this._passes.push({ layer, meshes });
+  }
+  beginFrame() { this._passes = []; this._wiped = false; this._depthCleared = false; }
+  endFrame(assert) {
+    this.frames.push({ passes: this._passes.slice(), wipedWorld: this._wiped });
+    if (assert) {
+      assert.ok(!this._wiped, 'второй проход не затирает нарисованный мир (autoClear выключён)');
+      assert.ok(this._passes.length >= 2, 'кадр рисуется в два прохода (мир + оружие)');
+    }
+    this._passes = []; this._wiped = false;
   }
   setClearColor() {}
   dispose() {}
@@ -218,7 +251,14 @@ function simulate(seconds, opts) {
     }
     game.checkMissionProgress(dt);
     if (typeof game.update === 'function' && o.fullUpdate) game.update(dt);
+    game.renderer.beginFrame();
     game.render(dt);
+    // каждый кадр: мир нарисован, и второй проход (оружие) его не стёр
+    game.renderer.endFrame(assert);
+    // и в кадре действительно есть геометрия мира, а не только небо
+    const last = game.renderer.frames[game.renderer.frames.length - 1];
+    assert.ok(last.passes[0] && last.passes[0].meshes > 100,
+      `в кадре мир: мешей на слое 0 — ${last.passes[0] ? last.passes[0].meshes : 0}`);
     ui.frame(game, dt);
     assert.ok(Number.isFinite(game.player.x) && Number.isFinite(game.player.z), 'позиция игрока конечна');
     if (game.state !== 'playing') break;

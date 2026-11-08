@@ -624,6 +624,44 @@ for (const yaw of [0, 0.7, -1.2, 2.5, Math.PI]) {
     `портретный экран: оружие поджато (${vmP.rig.scale.x.toFixed(2)} против ${wideScale.toFixed(2)})`);
 }
 
+/* ============ 9b. СТАРТ: КАМЕРА СМОТРИТ НА УРОВЕНЬ, А НЕ В СТЕНУ ======== */
+{
+  // «Коричневая коробка» при спавне складывалась из двух вещей: второй проход
+  // рендера затирал мир (проверяется в tools/headless) и направление взгляда
+  // упиралось в стену в 5 метрах. Здесь проверяем второе: из точки старта
+  // каждой миссии в конусе ±28° до препятствия должно быть не меньше 12 м.
+  const MIN_VIEW = 12;
+  for (const m of D.MISSIONS) {
+    const lvl = SH2.model.buildLevel(m.map);
+    const world = new SH2.world.World(lvl.map, lvl.colliders);
+    const sp = lvl.map.playerSpawn;
+    const eye = 1.62;
+    // та же логика, что в Game.pickStartYaw
+    const clearAt = (yaw) => {
+      let minD = MIN_VIEW * 4;
+      for (let a = -2; a <= 2; a++) {
+        const yy = yaw + a * 0.24;
+        const hit = world.rayColliders(sp.x, eye, sp.z, Math.sin(yy), 0, Math.cos(yy), MIN_VIEW * 4);
+        minD = Math.min(minD, hit ? hit.t : MIN_VIEW * 4);
+      }
+      return minD;
+    };
+    let yaw = sp.yaw;
+    if (clearAt(yaw) < MIN_VIEW) {
+      let bestScore = -1;
+      for (let i = 0; i < 24; i++) {
+        const y = sp.yaw + (i / 24) * Math.PI * 2;
+        const score = Math.min(clearAt(y), MIN_VIEW) - i * 0.02;
+        if (score > bestScore) { bestScore = score; yaw = y; }
+      }
+    }
+    assert.ok(clearAt(yaw) >= MIN_VIEW,
+      `${m.map}: на старте перед игроком открыто ${clearAt(yaw).toFixed(1)} м (нужно >= ${MIN_VIEW})`);
+  }
+  // и сам код игры содержит этот доворот
+  assert.ok(/pickStartYaw/.test(read('src/game.js')), 'стартовое направление проверяется на открытость');
+}
+
 /* ========================= 10. КАРТЫ-СХЕМЫ ============================== */
 {
   // каждый коллайдер знает свой тип, а типы покрывают все пропсы карт
