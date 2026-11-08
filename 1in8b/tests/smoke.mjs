@@ -17,9 +17,10 @@ console.log('1 ИЗ 8 МИЛЛИАРДОВ — смоук-тест');
 
 // 1. Обязательные файлы
 const files = ['index.html', 'style.css', 'cover.svg', 'README.md', 'PLAN.md', 'LICENSE.md',
-  'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js',
+  'src/algo.js', 'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js',
+  'src/pay.js', 'src/mechanics.js', 'src/variations.js',
   'src/engine.js', 'src/purchases.js', 'src/invest.js', 'src/charts.js', 'src/portrait.js',
-  'src/save.js', 'src/sound.js', 'src/ui.js', 'src/main.js'];
+  'src/save.js', 'src/sound.js', 'src/ui.js', 'src/main.js', 'tests/bot.mjs'];
 for (const f of files) ok(existsSync(join(root, f)), 'есть файл ' + f);
 ok(existsSync(join(root, '../shared/theme.css')), 'есть общая тема ../shared/theme.css');
 
@@ -38,8 +39,19 @@ ok(!/https?:\/\/(?!www\.w3\.org)/.test(html.replace(/<!--[\s\S]*?-->/g, '')), '�
 const css = readFileSync(join(root, 'style.css'), 'utf8');
 ok(/^@import url\("\.\.\/shared\/theme\.css"\);/.test(css.trimStart()), 'style.css начинается с @import ../shared/theme.css');
 
+// 3б. Сотни: алгоритмы, виды заработка, механики, вариации — ровно по сто
+const hundreds = [
+  ['src/algo.js', /A\.count = /, 'алгоритмы'],
+  ['src/pay.js', /count: PAYS\.length/, 'виды заработка'],
+  ['src/mechanics.js', /count: MECH\.length/, 'механики'],
+  ['src/variations.js', /count: VARS\.length/, 'вариации'],
+];
+for (const [f, re, name] of hundreds) {
+  ok(re.test(readFileSync(join(root, f), 'utf8')), f + ' ведёт счёт: ' + name);
+}
+
 // 4. Все скрипты парсятся
-for (const f of files.filter((f) => f.endsWith('.js'))) {
+for (const f of files.filter((f) => f.endsWith('.js') || f.endsWith('.mjs'))) {
   try { execFileSync(process.execPath, ['--check', join(root, f)], { stdio: 'pipe' }); ok(true, 'синтаксис ' + f); }
   catch (e) { ok(false, 'синтаксис ' + f + ': ' + e.stderr); }
 }
@@ -59,7 +71,8 @@ for (const id of ['screen-start', 'screen-life', 'screen-end', 'btn-born', 'stat
 
 // 6б. Порядок подключения скриптов: модули идут после тех, от кого зависят
 const order = [...html.matchAll(/<script src="src\/([a-z]+)\.js"><\/script>/g)].map((m) => m[1]);
-ok(order.join(',') === 'countries,names,model,events,work,engine,purchases,invest,charts,portrait,save,sound,ui,main',
+ok(order.join(',') === 'algo,countries,names,model,events,work,pay,mechanics,variations,engine,purchases,invest,' +
+  'charts,portrait,save,sound,ui,main',
   'скрипты подключены в правильном порядке: ' + order.join(' → '));
 
 // 7. Обложка — валидный SVG 1440×810

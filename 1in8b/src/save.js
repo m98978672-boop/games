@@ -39,7 +39,9 @@
     'grandchildren', 'siblings', 'parentsAlive', 'talents', 'awards', 'flags', 'moves', 'abroad', 'home',
     'business', 'council', 'legacy', 'kidsEducated', 'careerBrake', 'log', 'history', 'seenEvents',
     'budget', 'focus', 'notes', 'marriageAge', 'need', 'warUntil', 'decisions',
-    'purchased', 'boughtThisYear', 'upkeep', 'incomeBoost', 'spentTotal', 'given', 'depositYears',
+    'purchased', 'boughtThisYear', 'upkeep', 'incomeBoost', 'spentTotal', 'given',
+    'payWage', 'payActive', 'payIncome', 'payJob', 'support', 'pocketTotal', 'priceLevel', 'econ',
+    'variations', 'mechSaid', 'minorYear', 'paySupport', 'rep', 'taxPaid', 'saveStreak', 'pensionSave', 'depositYears',
     'assets', 'biz', 'capitalIncome', 'capitalDelta', 'investedTotal', 'capitalTotal',
     'laborIncome', 'bizCount', 'bizFailed', 'boomedBiz', 'retireLate', 'microDebt', 'homeless', 'streetTotal', 'lastEvict', 'loan', 'queue'];
 

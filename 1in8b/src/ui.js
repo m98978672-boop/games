@@ -293,6 +293,9 @@
       cell('вероятность умереть до 5 лет', (c.u5mr / 10).toFixed(1).replace('.', ',') + '%') +
       cell('ВВП на человека', money(c.gdp) + ' в год' + rubTag(c.gdp)) +
       '</div>' +
+      (varNames(life).length
+        ? '<p class="birth-note"><b>Чем эта жизнь особенная:</b> ' + esc(varNames(life).join(' · ')) + '.</p>'
+        : '') +
       '<label class="inline-field">Имя можно изменить' +
       '<input class="note-input" id="birth-name" style="min-height:0;padding:9px" value="' + esc(life.name) + '"></label>' +
       '<div class="modal-actions"><button class="btn btn-primary" id="birth-go">Начать эту жизнь</button></div>' +
@@ -355,11 +358,24 @@
     el('hud-income').textContent = money(life.income);
     el('hud-money').textContent = money(life.money);
     el('income-rub').textContent = life.income > 0 ? subMoney(life.income) : '';
-    el('income-month').textContent = life.income > 0 ? money(life.income / 12) + ' в месяц' : 'дохода пока нет';
-    var inc = Math.max(life.income || life.famIncome, 1);
+    /* У ребёнка «доход» — это карманные и подработки, а не зарплата.
+       Деньги, которые семья тратит на него, идут отдельной строкой:
+       своими они не становятся и в копилку не попадают. */
+    var kidMoney = life.minorYear && life.age < 18;
+    el('income-title').textContent = kidMoney ? 'Свои деньги за год' : 'Доход за год';
+    el('income-month').textContent = life.income > 0
+      ? money(life.income / 12) + ' в месяц' + (kidMoney ? ' на руках' : '')
+      : (kidMoney ? 'своих денег пока нет' : 'дохода пока нет');
+    el('income-support').textContent = life.support > 0
+      ? 'семья тратит на вас ' + money(life.support) + ' в год' : '';
+    el('income-sources').textContent = payNote(life);
+    /* место по достатку у ребёнка считается по семье: карманные деньги
+       говорят не о том, как человек живёт, а о том, сколько ему дают */
+    var inc = rankIncome(life);
+    var byFamily = life.minorYear || !(life.income > 0);
     var pct = Math.round(M.percentileOfIncome(life.c, inc) * 100);
     el('money-rank').textContent = life.c.name + ': верхние ' + Math.max(1, 100 - pct) + '%' +
-      (life.income > 0 ? '' : ' (по доходу семьи)');
+      (byFamily ? ' (по доходу семьи)' : '');
     var wpct = Math.round(M.worldPercentile(inc) * 100);
     el('money-rank-world').textContent = 'верхние ' + Math.max(1, 100 - wpct) + '% человечества';
     el('income-partner').textContent = life.partnerIncome > 0
@@ -415,7 +431,7 @@
       (workWord ? '<li><span>Работа</span><b>' + esc(workWord) + '</b></li>' : '') +
       '<li><span>Образование</span><b>' + eduWord + '</b></li>' +
       '<li><span>Достаток в стране</span><b>' +
-      Math.round(M.percentileOfIncome(life.c, Math.max(life.income || life.famIncome, 1)) * 100) + '-й перцентиль</b></li>' +
+      Math.round(M.percentileOfIncome(life.c, rankIncome(life)) * 100) + '-й перцентиль</b></li>' +
       (life.homeless
         ? '<li><span>Без дома</span><b>' + life.homeless + '-й год</b></li>'
         : life.has('wasHomeless')
@@ -426,7 +442,46 @@
           ' в год' + (life.loan.miss ? ' · просрочек: ' + life.loan.miss : '') +
           rubTag(life.loan.left) + '</b></li>'
         : '') +
-      (life.talents.length ? '<li><span>Талант</span><b>' + esc(life.talents.join(', ')) + '</b></li>' : '');
+      (life.talents.length ? '<li><span>Талант</span><b>' + esc(life.talents.join(', ')) + '</b></li>' : '') +
+      (varNames(life).length
+        ? '<li><span>Обстоятельства</span><b>' + esc(varNames(life).join(', ')) + '</b></li>' : '') +
+      (life.minorYear && life.support > 0
+        ? '<li><span>Вас содержит семья</span><b>' + money(life.support) + ' в год' +
+          rubTag(life.support) + '</b></li>' : '');
+  }
+
+  /* по каким деньгам сравнивать человека со страной и миром */
+  function rankIncome(life) {
+    if (life.minorYear) return Math.max(life.famIncome, 1);
+    return Math.max(life.income || life.famIncome, 1);
+  }
+
+  /* вариации этой жизни — человеческими словами */
+  function varNames(life) {
+    var VR = window.IN8B.variations;
+    if (!VR || !life.variations) return [];
+    return life.variations.map(function (id) {
+      var v = VR.byId[id];
+      return v ? v.name : null;
+    }).filter(Boolean);
+  }
+
+  /* откуда в этом году приходили деньги: форма оплаты и подработки */
+  function payNote(life) {
+    var PAY = window.IN8B.pay;
+    if (!PAY) return '';
+    var out = [];
+    if (life.payWage && life.job) {
+      var w = PAY.byId[life.payWage];
+      if (w) out.push(w.name.toLowerCase());
+    }
+    (life.payActive || []).forEach(function (id) {
+      var p = PAY.byId[id];
+      if (p) out.push(p.name.toLowerCase());
+    });
+    if (!out.length) return '';
+    if (out.length > 3) out = out.slice(0, 3).concat('и ещё ' + (out.length - 3));
+    return 'откуда: ' + out.join(', ');
   }
 
   function renderStats(life) {

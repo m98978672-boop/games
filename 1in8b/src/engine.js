@@ -162,6 +162,19 @@
     this.career = { held: [], promos: 0, fired: 0, quit: 0, maxStep: 0, years: 0,
       injuries: 0, strikes: 0, courses: 0, sideline: 0 };
     this.pendingReflection = null;
+    this.minorYear = true;        /* пока человек ребёнок, его содержит семья */
+    /* заработок: форма оплаты основной работы и всё, что приходит помимо неё */
+    this.payWage = null;          /* id формы оплаты (оклад, сделка, чаевые…) */
+    this.payActive = [];          /* остальные виды заработка в этом году */
+    this.payIncome = 0;           /* сколько они дали за год */
+    this.payJob = null;           /* к какой работе привязана форма оплаты */
+    this.support = 0;             /* сколько тратит на вас семья, пока вы не зарабатываете */
+    this.pocketTotal = 0;         /* детские деньги, накопленные до работы */
+    this.priceLevel = 1;          /* во сколько раз выросли цены с рождения */
+    this.econ = 'ровно';          /* кризис, ровно, подъём */
+    this.variations = [];         /* вариации этой жизни */
+    this.mechSaid = {};           /* когда механика последний раз говорила вслух */
+    this.mechFired = {};          /* какие механики срабатывали за жизнь */
 
     /* возраст вступления в брак — по стране */
     this.marriageAge = Math.round(clamp(
@@ -171,6 +184,14 @@
     this.need = this.c.gdp * 0.3;              // базовая стоимость года жизни
     this.add('Родились ' + (this.sex === 'f' ? 'девочкой' : 'мальчиком') + ' в ' +
       (this.urban ? 'городе' : 'сельской местности') + '. ' + this.familyWord() + '.', 'life');
+
+    /* вариации: то, с чем человек родился или что случилось с ним так рано,
+       что стало частью его самого. От одной до четырёх на жизнь. */
+    var VR = window.IN8B.variations;
+    if (VR) {
+      try { VR.apply(this, VR.draw(this)); } catch (e) { this.variations = []; }
+      this.famIncome = M.incomeAtPercentile(this.c, this.famPct);   /* вариации могли сдвинуть достаток */
+    }
   };
 
   /* Детерминированный бросок по метке: не сдвигает основной поток случайности */
@@ -199,7 +220,11 @@
     this.stats[key] = clamp(this.stats[key] + delta, 0, 100);
   };
 
-  Life.prototype.addMoney = function (delta) { this.money += delta; };
+  Life.prototype.addMoney = function (delta) {
+    this.money += delta;
+    /* у несовершеннолетнего без работы не бывает долгов: счета взрослых — не его счета */
+    if (this.age < 18 && !this.job && this.money < 0) this.money = 0;
+  };
 
   Life.prototype.flag = function (k, v) { this.flags[k] = v; };
   Life.prototype.has = function (k) { return !!this.flags[k]; };
@@ -476,8 +501,10 @@
     var mult = (this.business ? 1.25 : 1) * clamp(this.incomeBoost || 1, 0.4, 3);
     if (this.abroad) mult *= 2.1;
     if (this.council) mult *= 1.03;
+    var PAYM = window.IN8B.pay;
     this.income = M.wageFor(this.c, job, w.step, this.stats.know, w.years,
-      { sex: this.sex, urban: this.urban }) * mult * this.jobPay();
+      { sex: this.sex, urban: this.urban }) * mult * this.jobPay() *
+      (PAYM ? PAYM.wageMult(this) : 1);
 
     /* рост по службе: чем выше ступень, тем уже горлышко */
     var pUp = (0.11 + this.stats.know / 900 + (this.focus === 'work' ? 0.06 : 0) +
@@ -492,6 +519,102 @@
       this.stat('happy', 4); w.mood = clamp(w.mood + 8, 0, 100);
     }
     this.jobWear(job);
+  };
+
+  /* ----------------------- сто видов заработка -------------------------
+     Каждый год заново: какой формой платят на работе и что приходит
+     помимо неё — карманные ребёнку, приработки, пособия, деньги мимо кассы.
+     Набор держится годами и меняется, только когда меняется жизнь. */
+
+  Life.prototype.payStep = function () {
+    var PAY = window.IN8B.pay;
+    this.payIncome = 0;
+    if (!PAY) { this.payActive = []; return; }
+    var self = this, rnd = this.rnd;
+
+    /* форма оплаты основной работы: выбирается при устройстве и живёт с работой */
+    if (!this.job) { this.payWage = null; this.payJob = null; }
+    else {
+      var jobKey = this.job.id + ':' + (this.job.contract || '') + ':' + (this.job.schedule || '');
+      var fitW = PAY.fitFor(this, 'wage');
+      var stillOk = this.payWage && fitW.some(function (p) { return p.id === self.payWage; });
+      if (!stillOk || this.payJob !== jobKey) {
+        this.payWage = fitW.length ? rnd.weighted(fitW, function (p) { return p.mult || 1; }).id : null;
+        this.payJob = jobKey;
+      }
+    }
+
+    /* остальные виды: детские деньги, приработки, выплаты, мимо кассы */
+    var keep = [];
+    (this.payActive || []).forEach(function (id) {
+      var p = PAY.byId[id];
+      if (!p) return;
+      if (self.age < p.age[0] || self.age > p.age[1]) return;
+      var ok = false;
+      try { ok = p.fit ? p.fit(self) : true; } catch (e) { ok = false; }
+      if (ok && rnd() > 0.12) keep.push(id);               /* редко бросают то, что кормит */
+    });
+
+    var caps = { child: this.age < 18 ? 3 : 0, extra: 2, social: 4, shadow: 1 };
+    var have = { child: 0, extra: 0, social: 0, shadow: 0 };
+    keep.forEach(function (id) { var k = PAY.byId[id].kind; have[k] = (have[k] || 0) + 1; });
+
+    var tight = this.money < 0 || this.famPct < 0.4;
+    var odds = {
+      child: 0.55,
+      extra: (this.focus === 'money' ? 0.3 : 0.14) + (tight ? 0.12 : 0),
+      social: 0.7,
+      shadow: (this.job && this.job.contract !== 'official' ? 0.22 : 0.07) + (tight ? 0.08 : 0)
+    };
+    ['child', 'extra', 'social', 'shadow'].forEach(function (kind) {
+      if (have[kind] >= caps[kind]) return;
+      if (rnd() > odds[kind]) return;
+      var pool = PAY.fitFor(self, kind).filter(function (p) { return keep.indexOf(p.id) < 0; });
+      if (!pool.length) return;
+      keep.push(rnd.weighted(pool, function (p) { return (p.ev && p.ev.w) || 1; }).id);
+    });
+
+    this.payActive = keep;
+    /* У ребёнка своими деньгами считаются только детские: карманные,
+       подарки, подработка. Пособия и переводы родне — это деньги семьи,
+       они идут в содержание, а не в «ваш доход». */
+    var minor = this.age < 18 && !this.job;
+    var own = 0, sup = 0;
+    keep.forEach(function (id) {
+      var p = PAY.byId[id], v = PAY.amountOf(self, p);
+      if (minor && p.kind !== 'child') sup += v; else own += v;
+    });
+    this.payIncome = Math.min(own, this.need * (minor ? 0.35 : 1.4));
+    this.paySupport = Math.min(sup, this.need * 0.8);
+    if (minor) this.pocketTotal += this.payIncome;
+  };
+
+  /* слот года для ста событий заработка */
+  Life.prototype.payEvent = function () {
+    var PAY = window.IN8B.pay;
+    if (!PAY) return null;
+    var self = this;
+    var x = this.ctx();
+    var pool = PAY.auto.filter(function (ev) {
+      if (self.age < ev.age[0] || self.age > ev.age[1]) return false;
+      try { return ev.cond(x); } catch (e) { return false; }
+    });
+    if (!pool.length) return null;
+    if (this.rnd() > 0.3) return null;
+    var chosen = this.rnd.weighted(pool, function (ev) {
+      return (typeof ev.w === 'function' ? ev.w(x) : ev.w) * (self.seenEvents[ev.id] ? 0.5 : 1);
+    });
+    if (!chosen) return null;
+    this.seenEvents[chosen.id] = true;
+    try { chosen.run(x); } catch (e) { return null; }
+    return chosen;
+  };
+
+  /* сто механик: маленькие правила, которые работают сами */
+  Life.prototype.mechStep = function (hook) {
+    var MC = window.IN8B.mechanics;
+    if (!MC) return 0;
+    return MC.run(this, hook);
   };
 
   /* Личный множитель к зарплате: договор, переработки, график, разряды,
@@ -623,20 +746,30 @@
        профессии, ступени, стажу и знаниям — здесь он только собирается
        с доходом супруга и доходом с капитала. Складывать прошлогодний итог
        обратно в свою зарплату нельзя: получается снежный ком. */
-    var income;
-    if (this.homeless) income = need * (0.05 + this.rnd() * 0.07);   /* случайные заработки */
-    else if (a < 15 && !this.job) income = this.famIncome * 0.9;
-    else if (this.retired) income = this.pension();
-    else income = this.income || this.famIncome * 0.3;
+    /* Ребёнок не зарабатывает. Его кормит, одевает и учит семья — это
+       support, «на вас тратят», а не ваш доход. Своими у ребёнка могут
+       быть только детские деньги: карманные, подарки, подработки. */
+    var minor = a < 18 && !this.job && !this.homeless;
+    this.minorYear = minor;        /* этот год человек прожил на деньги семьи */
+    var own = 0, support = 0;
+    var extra = this.payIncome || 0;
+    if (this.homeless) own = need * (0.05 + this.rnd() * 0.07) + extra;
+    else if (minor) { own = extra; support = this.famIncome * 0.9 + (this.paySupport || 0); }
+    else if (a < 18 && !this.job) { own = extra; support = this.famIncome * 0.9; }
+    else if (this.retired) own = this.pension() + extra;
+    else if (!this.job) { own = extra; support = this.famIncome * 0.3; }
+    else own = (this.income || 0) + extra;
 
-    this.ownIncome = income;
+    this.ownIncome = own;
+    this.support = support;
     this.partnerIncome = this.partnerWage();
-    income += this.partnerIncome;
+    var income = own + this.partnerIncome;
     this.laborIncome = income;                 /* заработанное трудом и семьёй */
     income += (this.capitalIncome || 0);       /* рента, купоны, прибыль своего дела */
     this.income = income;
 
-    var spendable = Math.max(income, 0);
+    /* домохозяйство живёт на свой доход плюс то, что даёт семья */
+    var spendable = Math.max(income + support, 0);
     var spent = {};
     BUDGET_META.forEach(function (m) { spent[m.id] = spendable * b[m.id]; });
 
@@ -677,15 +810,31 @@
           self.stat('bond', clamp(centered(ratio, 2.4), -3, 3.2));
           break;
         case 'save':
-          self.money += spent.save;
+          /* ребёнок откладывает только свои деньги, а не семейные */
+          self.money += minor ? Math.max(own, 0) * b.save : spent.save;
           break;
       }
     });
+
+    /* сто механик денежного шага: коммуналка, дорога, лекарства, мелочи */
+    this.mechSpend = 0; this.mechEarn = 0;
+    this.mechStep('money');
+    var mechRaw = (this.mechSpend || 0) * 0.45;
+    var mechGain = (this.mechEarn || 0) * 0.6;
+    if (minor) { mechRaw = 0; mechGain *= 0.3; }      /* мелочи ребёнка оплачивает семья */
+    /* Мелкие траты не висят поверх бюджета и не загоняют в долг: сперва
+       они съедают то, что человек собирался отложить, а когда откладывать
+       нечего — он просто урезает эти самые мелочи. */
+    var mechCost = Math.min(mechRaw, spendable * 0.12, Math.max(this.money + mechGain, 0));
+    this.mechCost = mechCost; this.mechGain = mechGain;
+    this.money += mechGain - mechCost;
 
     /* долги и проценты */
     if (this.has('mortgage')) this.money -= need * 0.12;
     if (this.upkeep) this.money -= need * this.upkeep;      /* содержание купленного */
     if (this.has('deposit') && this.money > 0) this.money *= 1.035;
+    /* у несовершеннолетнего не бывает долгов: счета семьи — не его счета */
+    if (minor && this.money < 0) this.money = 0;
     if (this.money < 0) {
       this.money *= 1.08;
       this.stat('happy', -2);
@@ -1088,8 +1237,15 @@
     /* платить нечем: отдают, что наскребли, остальное обрастает пенями */
     var part = Math.max(0, Math.min(L.pay, this.money + this.need * 0.3));
     this.money -= part;
-    L.left = L.left - part + L.pay * 0.15;
+    L.left = Math.max(0, L.left - part + L.pay * 0.15);
     L.miss++;
+    if (L.left <= 0.5) {                      /* даже с просрочками долг кончается */
+      this.loan = null;
+      this.flag('goodCredit', true);
+      this.add('Долг закрыт — последние платежи дались тяжело.', 'money');
+      this.stat('happy', 5);
+      return;
+    }
     if (L.miss === 1) this.add('Платёж по кредиту внесли не полностью: денег не хватило.', 'money');
     if (L.miss === 2) this.schedule('loan-trouble', 0);
     if (L.miss >= 4 && !this.has('inCourt')) {
@@ -1207,7 +1363,10 @@
     if (this.job) r *= Math.pow(M.jobById[this.job.id].risk / 1.12, 0.5);
     if (this.budget.health > 0.16) r *= 0.92;
     if (this.budget.food < 0.2) r *= 1.08;
-    return clamp(q * RISK_CAL * clamp(r, 0.5, 6), 0, 0.97);
+    /* Потолок множителя: иначе редкое совпадение бед даёт верную смерть.
+       У человека без дома потолок выше — на улице четвёртая зима
+       действительно опаснее первой, и это должно быть видно в числах. */
+    return clamp(q * RISK_CAL * clamp(r, 0.5, this.homeless ? 12 : 6), 0, 0.97);
   };
 
   /* ---------------------------- один год ------------------------------- */
@@ -1221,14 +1380,18 @@
 
     this.driftStep();
     this.focusStep();
+    this.mechStep('early');
     this.schoolStep();
     this.workStep();
+    this.payStep();
     this.investStep();
     this.moneyStep();
     this.loanStep();
     this.streetStep();
+    this.mechStep('late');
     this.moneyEvent();
     this.workEvent();
+    this.payEvent();
     this.pickEvents();
 
     if (this.alive && this.rnd() < this.mortalityRisk(fromAge)) {
@@ -1247,11 +1410,17 @@
       if (refl && !this.silent) this.pendingReflection = refl;
     }
 
+    /* хвосты года: форма оплаты без работы и доход супруга без супруга
+       не должны пережить событие, которое их отменило */
+    if (!this.job) { this.payWage = null; this.payJob = null; }
+    if (!this.partner) this.partnerIncome = 0;
+
     this.history.push({
       age: this.age, year: this.year,
       health: Math.round(this.stats.health), happy: Math.round(this.stats.happy),
       know: Math.round(this.stats.know), bond: Math.round(this.stats.bond),
       income: Math.round(this.income), money: Math.round(this.money),
+      support: Math.round(this.support || 0), pay: Math.round(this.payIncome || 0),
       job: this.job ? M.jobTitle(M.jobById[this.job.id], this.job.step) : (this.retired ? 'на пенсии' : ''),
       married: this.marital === 'married', kids: this.children.length,
       events: this.log.filter(function (e2) { return e2.age === this.age; }, this).length

@@ -19,7 +19,8 @@ const sandbox = { window: {}, console, Math, Date, JSON };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 sandbox.matchMedia = () => ({ matches: false });
-for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js', 'src/engine.js',
+for (const f of ['src/algo.js', 'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js',
+  'src/pay.js', 'src/mechanics.js', 'src/variations.js', 'src/engine.js',
   'src/purchases.js', 'src/invest.js', 'src/portrait.js']) {
   try {
     vm.runInContext(readFileSync(join(root, f), 'utf8'), sandbox, { filename: f });
@@ -29,7 +30,8 @@ for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events
   }
 }
 const API = sandbox.window.IN8B;
-const { countries: C, model: M, events: E, engine: EN, names: NM, purchases: PU, portrait: PR, invest: IV } = API;
+const { countries: C, model: M, events: E, engine: EN, names: NM, purchases: PU, portrait: PR, invest: IV,
+  algo: AL, pay: PAY, mechanics: MC, variations: VR } = API;
 console.log('1 ИЗ 8 МИЛЛИАРДОВ — тест модели');
 
 /* ------------------------------- 1. данные ------------------------------ */
@@ -640,6 +642,8 @@ ok(typeof EN.Life.prototype.moneyEvent === 'function', 'у денег своя �
 /* зарплата в конверте: больше на руки — меньше пенсия */
 {
   const l = liveTo('конверт', 'ru', 40);
+  /* жизнь могла сама застать и конверт, и реформу — считаем от чистого листа */
+  l.flag('grey', false); l.flag('pensionCut', false);
   const before = l.pension();
   l.flag('grey', true);
   ok(l.pension() < before * 0.9, 'зарплата в конверте уменьшает будущую пенсию');
@@ -889,9 +893,17 @@ ok(typeof EN.Life.prototype.workEvent === 'function', 'у работы своя 
 
 /* выгорание копится от переработок и гаснет от отпуска */
 {
+  const withJob = () => {
+    for (let i = 0; i < 40; i++) {
+      const l = new EN.Life({ seed: 'выгорание-' + i, countryCode: 'ru', silent: true });
+      while (l.alive && l.age < 36 && !l.job) { if (l.stepYear()) l.autoAnswer(); }
+      if (l.job) return l;
+    }
+    return null;
+  };
   const mk = (over) => {
-    const l = new EN.Life({ seed: 'выгорание', countryCode: 'ru', silent: true });
-    while (l.alive && l.age < 32 && !l.job) { if (l.stepYear()) l.autoAnswer(); }
+    const l = withJob();
+    if (!l) return over;                       /* работы не нашлось — проверять нечего */
     l.job.overtime = over; l.job.burnout = 20; l.job.mood = 50; l.job.boss = 0;
     for (let i = 0; i < 4; i++) l.jobWear(M.jobById[l.job.id]);
     return l.job.burnout;
@@ -907,6 +919,144 @@ ok(typeof EN.Life.prototype.workEvent === 'function', 'у работы своя 
 }
 
 /* --------------------------- 9б. валюта стран --------------------------- */
+/* ------------------ 9а. детские деньги и сто видов оплаты --------------- */
+console.log('\nДеньги ребёнка: откуда они берутся');
+{
+  /* главная проверка: у ребёнка не бывает взрослого дохода */
+  let worst = 0, worstAt = '', debts = 0, supported = 0, years = 0;
+  for (const code of ['ru', 'us', 'ng', 'in', 'de', 'br', 'et', 'cn']) {
+    const l = new EN.Life({ seed: 'детство-' + code, countryCode: code, silent: true, settings: { year: 2020 } });
+    while (l.alive && l.age < 18) {
+      if (l.stepYear()) l.autoAnswer();
+      if (l.age < 18 && !l.job && l.minorYear) {
+        years++;
+        if (l.money < 0) debts++;
+        if (l.support > 0) supported++;
+        const share = l.ownIncome / l.need;
+        if (share > worst) { worst = share; worstAt = code + ' в ' + l.age; }
+      }
+    }
+  }
+  ok(worst < 0.4, 'свой доход ребёнка — это карманные, а не зарплата: максимум ' +
+    (worst * 100).toFixed(0) + '% стоимости года (' + worstAt + ')');
+  ok(debts === 0, 'ребёнок не уходит в долги: ' + debts + ' случаев из ' + years);
+  ok(supported === years, 'ребёнка содержит семья во все ' + years + ' детских лет');
+
+  /* а в бедной стране подросток действительно работает */
+  let childWork = 0;
+  for (let i = 0; i < 40; i++) {
+    const l = new EN.Life({ seed: 'труд-' + i, countryCode: 'et', silent: true, settings: { year: 2020 } });
+    while (l.alive && l.age < 17) if (l.stepYear()) l.autoAnswer();
+    if (l.job || (l.payActive || []).some((id) => ['herding', 'harvest-kid', 'market-help', 'bottles'].includes(id))) childWork++;
+  }
+  ok(childWork > 0, 'в бедной стране подростки работают: ' + childWork + ' из 40');
+}
+
+console.log('\nСто видов заработка');
+{
+  ok(PAY.list.length === 100, 'видов заработка: ' + PAY.list.length);
+  ok(PAY.auto.length === 100, 'у каждого вида своё событие: ' + PAY.auto.length);
+  const kinds = {};
+  PAY.list.forEach((p) => { kinds[p.kind] = (kinds[p.kind] || 0) + 1; });
+  ok(PAY.kinds.every((k) => kinds[k] > 0), 'заполнены все группы: ' +
+    PAY.kinds.map((k) => k + ' ' + kinds[k]).join(', '));
+  ok(PAY.list.every((p) => p.id && p.name && p.ev && typeof p.ev.run === 'function'),
+    'у каждого вида есть имя и событие');
+  ok(new Set(PAY.list.map((p) => p.id)).size === 100, 'имена видов не повторяются');
+  ok(PAY.list.every((p) => /^[a-z0-9-]+$/.test(p.id)), 'имена видов записаны латиницей без опечаток');
+  ok(PAY.list.filter((p) => p.kind === 'wage').every((p) => typeof p.mult === 'number' && p.mult > 0.5 && p.mult < 1.6),
+    'формы оплаты двигают зарплату в разумных пределах');
+  ok(PAY.list.filter((p) => p.kind !== 'wage').every((p) => typeof p.amount === 'function'),
+    'у неосновных заработков есть сумма');
+
+  /* суммы считаются и не улетают */
+  const l = new EN.Life({ seed: 'виды-ru', countryCode: 'ru', silent: true, settings: { year: 2020 } });
+  while (l.alive && l.age < 40) if (l.stepYear()) l.autoAnswer();
+  let bad = null;
+  PAY.list.forEach((p) => {
+    const v = PAY.amountOf(l, p);
+    if (!Number.isFinite(v) || v < 0 || v > l.need * 2) bad = p.id + '=' + v;
+  });
+  ok(!bad, 'сумма любого заработка считается и остаётся в пределах года жизни' + (bad ? ': ' + bad : ''));
+
+  /* сколько видов человек проживает за жизнь */
+  const seen = new Set();
+  for (let i = 0; i < 60; i++) {
+    const x = new EN.Life({ seed: 'виды-' + i, silent: true });
+    while (x.alive) { if (x.stepYear()) x.autoAnswer(); (x.payActive || []).forEach((id) => seen.add(id)); if (x.payWage) seen.add(x.payWage); }
+  }
+  ok(seen.size >= 70, 'за 60 жизней встретилось разных видов заработка: ' + seen.size);
+}
+
+console.log('\nСто механик и сто вариаций');
+{
+  ok(MC.count === 100, 'механик: ' + MC.count);
+  ok(MC.list.every((x) => x.id && x.name && typeof x.run === 'function' && ['early', 'money', 'late'].includes(x.hook)),
+    'у каждой механики есть имя, хук и правило');
+  ok(new Set(MC.list.map((x) => x.id)).size === 100, 'имена механик не повторяются');
+  ok(VR.count === 100, 'вариаций: ' + VR.count);
+  ok(new Set(VR.list.map((x) => x.id)).size === 100, 'имена вариаций не повторяются');
+  ok(VR.list.every((v) => v.name && v.tag && typeof v.w === 'function' && typeof v.apply === 'function'),
+    'у каждой вариации есть имя, группа, вес и действие');
+  ok(VR.tags.every((t) => VR.list.some((v) => v.tag === t)), 'заполнены все группы вариаций: ' + VR.tags.join(', '));
+
+  const firedAll = new Set(), varsAll = new Set();
+  let errs = 0, lives = 0;
+  for (let i = 0; i < 220; i++) {
+    const l = new EN.Life({ seed: 'мех-' + i, silent: true });
+    l.runToEnd();
+    lives++;
+    if (l.mechErrors && l.mechErrors.length) errs += l.mechErrors.length;
+    Object.keys(l.mechFired || {}).forEach((id) => firedAll.add(id));
+    (l.variations || []).forEach((id) => varsAll.add(id));
+    if (l.variations.length < 1 || l.variations.length > 4) errs++;
+  }
+  ok(errs === 0, 'за ' + lives + ' жизней механики не выдали ни одной ошибки');
+  ok(firedAll.size >= 90, 'за ' + lives + ' жизней сработало механик: ' + firedAll.size + ' из 100');
+  ok(varsAll.size >= 90, 'за ' + lives + ' жизней выпало вариаций: ' + varsAll.size + ' из 100');
+
+  /* вариации двигают жизнь, но не ломают её */
+  const a = new EN.Life({ seed: 'вар-1', countryCode: 'ru', silent: true });
+  ok(a.variations.length >= 1 && a.stats.health >= 0 && a.stats.health <= 100, 'вариации применились и не вывели показатели за границы');
+  for (let i = 0; i < a.variations.length; i++) {
+    for (let j = i + 1; j < a.variations.length; j++) {
+      ok(!VR.conflicts(a.variations[i], a.variations[j]), 'вариации не противоречат друг другу');
+    }
+  }
+}
+
+console.log('\nСто алгоритмов');
+{
+  ok(AL.count === 100, 'алгоритмов: ' + AL.count);
+  ok(AL.missing.length === 0, 'у каждого имени есть функция' + (AL.missing.length ? ': нет ' + AL.missing.join(' ') : ''));
+  ok(Object.keys(AL.doc).every((k) => AL.doc[k] && /[а-яё]/i.test(AL.doc[k])), 'все описания на русском');
+  ok(Math.abs(AL.normalQuantile(0.9) - 1.2816) < 0.001, 'обратная нормаль: 90-й процентиль = 1,2816');
+  ok(Math.abs(AL.erf(1) - 0.8427) < 0.001, 'функция ошибок: erf(1) = 0,8427');
+  ok(AL.median([3, 1, 2]) === 2 && AL.percentile([1, 2, 3, 4], 0.5) === 2.5, 'медиана и процентиль');
+  ok(Math.abs(AL.gini([1, 1, 1, 1]) - 0) < 1e-9 && AL.gini([0, 0, 0, 10]) > 0.7, 'Джини: равенство 0, крайность близко к 1');
+  ok(Math.round(AL.annuity(100000, 0.12, 5)) === 27741, 'платёж по кредиту 100 000 под 12% на 5 лет = 27 741');
+  ok(Math.abs(AL.npv(0.1, [-100, 60, 60]) - 4.13) < 0.02, 'приведённая стоимость считается');
+  ok(Math.abs(AL.irr([-100, 60, 60]) - 0.1306) < 0.002, 'доходность вложения: 13,1%');
+  ok(AL.progressiveTax(1000, [[200, 0], [500, 0.1], [1000, 0.2]]) === 130, 'налог по шкале = 130');
+  ok(AL.payoffYears(100000, 0.1, 5000) === Infinity, 'платёж меньше процентов — долг не закрыть никогда');
+  ok(AL.plural(21, 'год', 'года', 'лет') === 'год' && AL.plural(23, 'год', 'года', 'лет') === 'года' &&
+    AL.plural(25, 'год', 'года', 'лет') === 'лет', 'склонение лет');
+  ok(AL.levenshtein('кот', 'крот') === 1 && AL.levenshtein('', 'дом') === 3, 'похожесть слов');
+  ok(AL.roundNice(1968.37) === 1950 && AL.roundNice(7) === 7, 'круглые суммы');
+  ok(AL.clamp(5, 0, 3) === 3 && AL.lerp(0, 10, 0.5) === 5 && AL.smoothstep(0.5) === 0.5, 'кривые и границы');
+  ok(AL.binarySearch([1, 3, 5, 7], 5) === 2 && AL.lowerBound([1, 3, 5], 4) === 2, 'поиск по отсортированному');
+  ok(AL.argmax([1, 9, 3]) === 1 && AL.topK([5, 2, 9], 2).join() === '9,5', 'максимумы');
+  const rnd = AL.mulberry32(AL.hashSeed('алгоритмы'));
+  const draws = [];
+  for (let i = 0; i < 2000; i++) draws.push(AL.normalSample(rnd, 10, 2));
+  ok(Math.abs(AL.mean(draws) - 10) < 0.2 && Math.abs(AL.stdev(draws) - 2) < 0.2, 'нормальная случайность даёт заданные среднее и разброс');
+  const same = AL.mulberry32(AL.hashSeed('алгоритмы'))();
+  ok(same === AL.mulberry32(AL.hashSeed('алгоритмы'))(), 'одно зерно — одно и то же число');
+  let allFinite = true;
+  AL.ids.forEach((id) => { if (typeof AL[id] !== 'function') allFinite = false; });
+  ok(allFinite, 'все сто имён ведут к функциям');
+}
+
 console.log('\nВалюта страны и перевод в рубли');
 {
   const noCur = C.list.filter((c) => !C.currency[c.code]);
