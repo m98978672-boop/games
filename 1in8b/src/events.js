@@ -236,7 +236,7 @@
       id: 'promotion', age: [20, 64], w: function (x) { return working(x.L) ? 1.1 + x.L.stats.know / 90 : 0; },
       run: function (x) {
         if (!x.L.job) return;
-        if (x.L.job.step < 4 && x.rnd() < 0.45 + x.L.stats.know / 260) {
+        if (x.L.job.step < M.topStep(M.jobById[x.L.job.id]) && x.rnd() < 0.3 + x.L.stats.know / 300) {
           x.L.job.step++;
           x.add('Повышение: теперь вы ' + M.jobTitle(M.jobById[x.L.job.id], x.L.job.step) + '.', 'work');
           x.stat('happy', 5);

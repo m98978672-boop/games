@@ -369,8 +369,24 @@
       : life.job ? M.jobTitle(M.jobById[life.job.id], life.job.step)
         : life.edu.inSchool ? 'учится' : (life.age >= 16 ? 'без работы' : 'ребёнок');
     if (life.homeless) jobWord = life.job ? jobWord + ', без дома' : 'без дома';
+    /* как устроена работа: оформление, график, нагрузка */
+    var workWord = '';
+    if (life.job) {
+      var jw = [];
+      jw.push(life.job.contract === 'official' ? 'по договору'
+        : life.job.contract === 'grey' ? 'часть в конверте' : 'без оформления');
+      if (life.job.schedule === 'night') jw.push('ночные смены');
+      else if (life.job.schedule === 'shift') jw.push('сменами');
+      else if (life.job.schedule === 'rotation') jw.push('вахтой');
+      if (life.job.remote) jw.push('из дома');
+      if (life.job.overtime) jw.push('переработки');
+      if (life.job.union) jw.push('профсоюз');
+      if (life.job.burnout > 60) jw.push('выгорание');
+      workWord = jw.join(' · ');
+    }
     el('p-kv').innerHTML =
       '<li><span>Занятие</span><b>' + esc(jobWord) + '</b></li>' +
+      (workWord ? '<li><span>Работа</span><b>' + esc(workWord) + '</b></li>' : '') +
       '<li><span>Образование</span><b>' + eduWord + '</b></li>' +
       '<li><span>Достаток в стране</span><b>' +
       Math.round(M.percentileOfIncome(life.c, Math.max(life.income || life.famIncome, 1)) * 100) + '-й перцентиль</b></li>' +

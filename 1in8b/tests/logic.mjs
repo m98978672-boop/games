@@ -19,7 +19,7 @@ const sandbox = { window: {}, console, Math, Date, JSON };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
 sandbox.matchMedia = () => ({ matches: false });
-for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/engine.js',
+for (const f of ['src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js', 'src/engine.js',
   'src/purchases.js', 'src/invest.js', 'src/portrait.js']) {
   try {
     vm.runInContext(readFileSync(join(root, f), 'utf8'), sandbox, { filename: f });
@@ -701,6 +701,209 @@ ok(typeof EN.Life.prototype.moneyEvent === 'function', 'у денег своя �
 /* сохранение помнит новые поля */
 for (const f of ['retireLate', 'microDebt']) {
   ok(readFileSync(join(root, 'src/save.js'), 'utf8').includes(`'${f}'`), 'сохранение помнит поле ' + f);
+}
+
+console.log('\nРабота: профессии, заработок, карьера');
+
+const WK = API.work;
+const JOBS = M.jobs;
+ok(JOBS.length >= 100, 'профессий в игре: ' + JOBS.length);
+ok(new Set(JOBS.map((j) => j.id)).size === JOBS.length, 'все id профессий уникальны');
+ok(JOBS.every((j) => j.title && j.sector && j.edu !== undefined && j.wage > 0 && j.risk > 0),
+  'у каждой профессии есть название, сектор, образование, оплата и риск');
+{
+  const sectors = [...new Set(JOBS.map((j) => j.sector))];
+  ok(sectors.every((sec) => M.sectorPay(C.byCode.ru, sec) > 0), 'у каждого сектора есть своя оплата: ' + sectors.length);
+  const perSector = sectors.map((sec) => JOBS.filter((j) => j.sector === sec).length);
+  ok(Math.min(...perSector) >= 5, 'в каждом секторе не меньше пяти профессий (минимум ' + Math.min(...perSector) + ')');
+}
+
+/* заработок зависит от страны, профессии, ступени, стажа, знаний, села и пола */
+{
+  const ru = C.byCode.ru, loader = M.jobById.loader, doc = M.jobById.doctor;
+  const w = (c, j, step, know, years, opts) => M.wageFor(c, j, step, know, years, opts || { sex: 'm', urban: true });
+  ok(w(ru, doc, 1, 55, 10) > w(ru, loader, 1, 55, 10) * 2, 'врач зарабатывает заметно больше грузчика');
+  ok(w(ru, loader, 3, 55, 10) > w(ru, loader, 0, 55, 10) * 1.8, 'ступень карьеры поднимает заработок');
+  ok(w(ru, loader, 1, 55, 20) > w(ru, loader, 1, 55, 1) * 1.15, 'стаж поднимает заработок');
+  ok(w(ru, loader, 1, 90, 10) > w(ru, loader, 1, 10, 10) * 1.2, 'знания поднимают заработок');
+  ok(w(ru, loader, 1, 55, 10, { sex: 'm', urban: false }) < w(ru, loader, 1, 55, 10), 'в селе платят меньше');
+  ok(w(ru, loader, 1, 55, 10, { sex: 'f', urban: true }) < w(ru, loader, 1, 55, 10), 'женщинам платят меньше');
+  const gapRich = 1 - w(C.byCode.de, loader, 1, 55, 10, { sex: 'f', urban: true }) / w(C.byCode.de, loader, 1, 55, 10);
+  const gapPoor = 1 - w(C.byCode.ng, loader, 1, 55, 10, { sex: 'f', urban: true }) / w(C.byCode.ng, loader, 1, 55, 10);
+  ok(gapPoor > gapRich, 'в бедной стране разрыв в оплате между мужчиной и женщиной больше: ' +
+    Math.round(gapPoor * 100) + '% против ' + Math.round(gapRich * 100) + '%');
+  ok(w(C.byCode.us, doc, 1, 55, 10) > w(ru, doc, 1, 55, 10) && w(ru, doc, 1, 55, 10) > w(C.byCode.ng, doc, 1, 55, 10),
+    'одна и та же профессия в богатой стране оплачивается выше');
+  const ratioPoor = w(C.byCode.ng, doc, 1, 55, 10) / w(C.byCode.ng, loader, 1, 55, 10);
+  const ratioRich = w(C.byCode.us, doc, 1, 55, 10) / w(C.byCode.us, loader, 1, 55, 10);
+  ok(ratioPoor > ratioRich, 'в бедной стране разрыв между врачом и грузчиком больше: ×' +
+    ratioPoor.toFixed(1) + ' против ×' + ratioRich.toFixed(1));
+}
+
+/* профессии знают своё время и своё место */
+{
+  const rnd = M.makeRng(M.hashSeed('профессии'));
+  const old = M.jobsFor(C.byCode.ru, 6, rnd, { year: 1960, urban: true }).map((p) => p.job.id);
+  const now = M.jobsFor(C.byCode.ru, 6, rnd, { year: 2020, urban: true }).map((p) => p.job.id);
+  ok(!old.includes('it') && now.includes('it'), 'программиста нет в 1960 году и есть в 2020');
+  const village = M.jobsFor(C.byCode.ru, 6, rnd, { year: 2020, urban: false }).map((p) => p.job.id);
+  ok(!village.includes('barista'), 'в селе нет бариста');
+  const rich = M.jobsFor(C.byCode.de, 3, rnd, { year: 2020, urban: true }).map((p) => p.job.id);
+  ok(!rich.includes('planter'), 'в богатой стране нет сборщика на плантации');
+}
+
+/* уровень заработка: медиана своего дохода в 42 года — около половины ВВП на душу */
+{
+  const rows = [];
+  for (const code of ['ru', 'us', 'in', 'ng']) {
+    const own = [];
+    for (let i = 0; i < 220; i++) {
+      const l = new EN.Life({ seed: 'зп-' + code + '-' + i, countryCode: code, silent: true });
+      while (l.alive && l.age < 42) { if (l.stepYear()) l.autoAnswer(); }
+      if (l.alive && l.job) own.push(l.ownIncome);
+    }
+    own.sort((a, b) => a - b);
+    rows.push([code, own[Math.floor(own.length / 2)] / C.byCode[code].gdp]);
+  }
+  ok(rows.every((r) => r[1] > 0.3 && r[1] < 0.85), 'свой заработок в 42 года — доля ВВП на душу: ' +
+    rows.map((r) => r[0] + ' ' + r[1].toFixed(2)).join(' · '));
+}
+
+/* снежного кома больше нет: доход не умножается сам на себя год за годом */
+{
+  const l = new EN.Life({ seed: 'снежный-ком', countryCode: 'ru', silent: true });
+  let worst = 0, prev = 0;
+  while (l.alive && l.age < 60) {
+    if (l.stepYear()) l.autoAnswer();
+    if (l.job && prev > 0) worst = Math.max(worst, l.ownIncome / prev);
+    if (l.job) prev = l.ownIncome;
+  }
+  ok(worst < 2.6, 'за год свой заработок не вырастает в разы: худший скачок ×' + worst.toFixed(2));
+  const top = M.wageFor(C.byCode.ru, M.jobById[l.job ? l.job.id : 'doctor'], 4, 100, 40, { sex: 'm', urban: true }) * 6;
+  ok(!l.alive || l.ownIncome < top, 'заработок остаётся в пределах таблицы профессий');
+}
+
+/* карьера — пирамида: наверх проходят единицы */
+{
+  let high = 0, n = 0;
+  for (let i = 0; i < 300; i++) {
+    const l = new EN.Life({ seed: 'карьера-' + i, countryCode: 'de', silent: true });
+    while (l.alive && l.age < 45) { if (l.stepYear()) l.autoAnswer(); }
+    if (l.alive && l.job) { n++; if (l.job.step >= 3) high++; }
+  }
+  ok(n > 50 && high / n < 0.3, 'к 45 годам «ведущим» и «главным» стал не каждый: ' +
+    Math.round(high / n * 100) + '%');
+  ok(JOBS.every((j) => M.topStep(j) >= 1 && M.topStep(j) <= 4), 'у каждой профессии есть свой потолок ступеней');
+  ok(M.topStep(M.jobById.loader) < M.topStep(M.jobById.doctor), 'у грузчика потолок ниже, чем у врача');
+  ok(M.promoteOdds(0) > M.promoteOdds(1) && M.promoteOdds(1) > M.promoteOdds(2) && M.promoteOdds(4) === 0,
+    'с каждой ступенью подняться выше труднее');
+}
+
+/* слой работы: свои события, свои карточки */
+ok(WK && WK.auto.length >= 100, 'рабочих событий: ' + (WK ? WK.auto.length : 0));
+ok(WK.auto.every((e) => typeof e.run === 'function' && Array.isArray(e.age) && e.age.length === 2),
+  'у каждого рабочего события есть возраст и последствие');
+ok(new Set(WK.auto.map((e) => e.id)).size === WK.auto.length, 'все id рабочих событий уникальны');
+ok(WK.choices.length >= 15, 'карточек решений о работе: ' + WK.choices.length);
+{
+  const opts = WK.choices.reduce((a, c) => a + c.options.length, 0);
+  ok(opts >= 100, 'вариантов ответа о работе: ' + opts);
+  ok(WK.choices.every((c) => c.title && c.text && c.options.length >= 5),
+    'у каждой рабочей карточки есть заголовок, текст и минимум пять вариантов');
+  ok(WK.choices.every((c) => c.work === true), 'все рабочие карточки помечены своим слотом');
+  ok(WK.choices.every((c) => c.options.every((o) => o.label && typeof o.run === 'function')),
+    'у каждого варианта есть название и последствие');
+}
+ok(typeof EN.Life.prototype.workEvent === 'function', 'у работы своя очередь событий в движке');
+
+/* рабочие события не лезут в общий пул */
+{
+  let leaked = null, fired = 0, inSlot = false;
+  const real = {};
+  for (const ev of WK.auto) {
+    real[ev.id] = ev.run;
+    ev.run = function (x) { fired++; if (!inSlot && !leaked) leaked = ev.id; return real[ev.id].call(null, x); };
+  }
+  const slot = EN.Life.prototype.workEvent;
+  EN.Life.prototype.workEvent = function () { inSlot = true; const r = slot.call(this); inSlot = false; return r; };
+  for (let i = 0; i < 40; i++) {
+    const l = new EN.Life({ seed: 'раб-поток-' + i, silent: true });
+    while (l.alive && l.age < 80) { if (l.stepYear()) l.autoAnswer(); }
+  }
+  EN.Life.prototype.workEvent = slot;
+  for (const ev of WK.auto) ev.run = real[ev.id];
+  ok(!leaked, 'рабочие события приходят только в свой слот' + (leaked ? ' — утекло ' + leaked : ''));
+  ok(fired > 100, 'за 40 жизней рабочих событий случилось: ' + fired);
+}
+
+/* место работы — это не только название профессии */
+{
+  const l = new EN.Life({ seed: 'место-работы', countryCode: 'ru', silent: true });
+  while (l.alive && l.age < 30 && !l.job) { if (l.stepYear()) l.autoAnswer(); }
+  const w = l.job;
+  ok(!!w && ['official', 'grey', 'none'].includes(w.contract), 'у работы есть оформление: ' + (w && w.contract));
+  ok(!!w && ['day', 'shift', 'night', 'rotation'].includes(w.schedule), 'у работы есть график: ' + (w && w.schedule));
+  ok(!!w && w.rep >= 0 && w.mood >= 0 && w.safety > 0 && w.boss >= -3 && w.boss <= 3,
+    'у работы есть репутация, отношение, охрана труда и начальник');
+  ok(typeof l.career === 'object' && Array.isArray(l.career.held), 'у человека есть трудовая книжка');
+}
+
+/* деньги за работу: конверт, переработки, разряды, ночные смены */
+{
+  const base = () => {
+    const l = new EN.Life({ seed: 'надбавки', countryCode: 'ru', silent: true });
+    while (l.alive && l.age < 30 && !l.job) { if (l.stepYear()) l.autoAnswer(); }
+    l.job.contract = 'official'; l.job.overtime = 0; l.job.certs = 0; l.job.union = false;
+    l.job.schedule = 'day'; l.job.remote = false; l.job.rep = 50; l.job.boost = 1; l.job.payDelay = 0;
+    return l;
+  };
+  const l0 = base(), p0 = l0.jobPay();
+  const l1 = base(); l1.job.contract = 'grey';
+  const l2 = base(); l2.job.overtime = 2;
+  const l3 = base(); l3.job.certs = 2;
+  const l4 = base(); l4.job.schedule = 'night';
+  const l5 = base(); l5.job.payDelay = 1;
+  ok(l1.jobPay() > p0, 'в конверте на руки выходит больше');
+  ok(l2.jobPay() > p0, 'переработки прибавляют к заработку');
+  ok(l3.jobPay() > p0, 'разряды и курсы прибавляют к заработку');
+  ok(l4.jobPay() > p0, 'за ночные смены платят больше');
+  ok(l5.jobPay() < p0, 'при задержке зарплаты на руки приходит меньше');
+}
+
+/* работа берёт плату здоровьем и временем */
+{
+  let hurtRisky = 0, hurtSafe = 0, firedAny = 0, n = 0;
+  for (let i = 0; i < 160; i++) {
+    const l = new EN.Life({ seed: 'износ-' + i, countryCode: 'ru', silent: true });
+    while (l.alive && l.age < 60) { if (l.stepYear()) l.autoAnswer(); }
+    n++;
+    if (l.career.injuries) {
+      const risky = (l.career.held || []).some((id) => M.jobById[id] && M.jobById[id].risk > 1.3);
+      if (risky) hurtRisky++; else hurtSafe++;
+    }
+    if (l.career.fired) firedAny++;
+  }
+  ok(hurtRisky + hurtSafe > 0, 'травмы на работе случаются: у ' + (hurtRisky + hurtSafe) + ' из ' + n + ' жизней');
+  ok(firedAny > 0 && firedAny < n, 'увольняют не всех и не никого: ' + firedAny + ' из ' + n);
+}
+
+/* выгорание копится от переработок и гаснет от отпуска */
+{
+  const mk = (over) => {
+    const l = new EN.Life({ seed: 'выгорание', countryCode: 'ru', silent: true });
+    while (l.alive && l.age < 32 && !l.job) { if (l.stepYear()) l.autoAnswer(); }
+    l.job.overtime = over; l.job.burnout = 20; l.job.mood = 50; l.job.boss = 0;
+    for (let i = 0; i < 4; i++) l.jobWear(M.jobById[l.job.id]);
+    return l.job.burnout;
+  };
+  ok(mk(3) > mk(0), 'переработки копят выгорание: ' + Math.round(mk(3)) + ' против ' + Math.round(mk(0)));
+}
+
+/* сохранение помнит новую работу целиком */
+{
+  const SV = { job: 1, career: 1 };
+  const src = readFileSync(join(root, 'src/save.js'), 'utf8');
+  for (const f of Object.keys(SV)) ok(src.includes("'" + f + "'"), 'сохранение помнит поле ' + f);
 }
 
 console.log('\nИмена и соседи по секунде');

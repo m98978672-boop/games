@@ -35,7 +35,7 @@
   /* поля жизни, которые нужно сохранить (функции и таблицы восстанавливаются) */
   var FIELDS = ['seed', 'settings', 'birthYear', 'sex', 'name', 'given', 'urban', 'famPct', 'famIncome',
     'stats', 'baseHealth', 'medianIncome', 'desiredKids', 'lastChildAge', 'age', 'year', 'alive', 'dead',
-    'money', 'income', 'edu', 'job', 'unemployedYears', 'retired', 'marital', 'partner', 'children',
+    'money', 'income', 'edu', 'job', 'career', 'unemployedYears', 'retired', 'marital', 'partner', 'children',
     'grandchildren', 'siblings', 'parentsAlive', 'talents', 'awards', 'flags', 'moves', 'abroad', 'home',
     'business', 'council', 'legacy', 'kidsEducated', 'careerBrake', 'log', 'history', 'seenEvents',
     'budget', 'focus', 'notes', 'marriageAge', 'need', 'warUntil', 'decisions',

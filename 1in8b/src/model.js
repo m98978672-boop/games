@@ -222,9 +222,15 @@
   }
 
   /* Годовой доход домохозяйства на человека (межд. $ ППС) по перцентилю */
+  /* Средний доход семьи в стране. В богатой стране на семью приходится больше
+     долей ВВП (двое работающих, пособия, пенсии), в бедной часть продукта
+     вообще не доходит до домохозяйств. Подогнано под заработки из wageFor. */
+  function householdMean(country) {
+    return country.gdp * clamp(0.68 + country.gdp / 200000, 0.68, 1.05);
+  }
   function incomeAtPercentile(country, p) {
     var sigma = sigmaFromGini(country.gini);
-    var mean = country.gdp * 0.54;                       // доля домохозяйств в ВВП
+    var mean = householdMean(country);
     var mu = Math.log(Math.max(mean, 200)) - sigma * sigma / 2;
     return Math.exp(mu + sigma * probit(clamp(p, 0.004, 0.996)));
   }
@@ -232,7 +238,7 @@
   /* Обратная задача: по доходу — его перцентиль в стране */
   function percentileOfIncome(country, income) {
     var sigma = sigmaFromGini(country.gini);
-    var mean = country.gdp * 0.54;
+    var mean = householdMean(country);
     var mu = Math.log(Math.max(mean, 200)) - sigma * sigma / 2;
     var z = (Math.log(Math.max(income, 1)) - mu) / sigma;
     /* нормальная функция распределения через приближение Зелена–Северо */
@@ -257,41 +263,124 @@
 
   /* edu: 0 нет школы · 1 начальная · 2 неполная средняя · 3 средняя
          4 колледж/ПТУ · 5 бакалавр · 6 магистр/аспирантура            */
+  /* 100 профессий. wage — во сколько раз платят относительно СВОЕГО сектора
+     (в среднем по сектору ≈ 1), а сам уровень сектора зависит от страны.
+     from/to — годы, когда профессия существует; urban/rural — где она бывает;
+     minGdp/maxGdp — в каких странах. */
   var JOBS = [
-    { id: 'farm', title: 'работник в поле', sector: 'agri', edu: 0, wage: 0.45, risk: 1.15, status: 1 },
-    { id: 'fisher', title: 'рыбак', sector: 'agri', edu: 0, wage: 0.5, risk: 1.3, status: 1 },
-    { id: 'herder', title: 'пастух', sector: 'agri', edu: 0, wage: 0.45, risk: 1.1, status: 1 },
-    { id: 'market', title: 'продавец на рынке', sector: 'informal', edu: 0, wage: 0.6, risk: 1.0, status: 1 },
-    { id: 'domestic', title: 'работник по дому', sector: 'informal', edu: 0, wage: 0.55, risk: 1.0, status: 1 },
-    { id: 'loader', title: 'грузчик', sector: 'manual', edu: 1, wage: 0.7, risk: 1.2, status: 1 },
-    { id: 'builder', title: 'строитель', sector: 'manual', edu: 1, wage: 0.85, risk: 1.35, status: 2 },
-    { id: 'miner', title: 'шахтёр', sector: 'manual', edu: 1, wage: 1.15, risk: 1.8, status: 2 },
-    { id: 'factory', title: 'рабочий на производстве', sector: 'manual', edu: 2, wage: 0.9, risk: 1.15, status: 2 },
-    { id: 'driver', title: 'водитель', sector: 'service', edu: 2, wage: 0.95, risk: 1.4, status: 2 },
-    { id: 'cook', title: 'повар', sector: 'service', edu: 2, wage: 0.85, risk: 1.05, status: 2 },
-    { id: 'shop', title: 'продавец в магазине', sector: 'service', edu: 2, wage: 0.8, risk: 1.0, status: 2 },
-    { id: 'care', title: 'работник по уходу', sector: 'service', edu: 3, wage: 0.9, risk: 1.05, status: 2 },
-    { id: 'soldier', title: 'военнослужащий', sector: 'service', edu: 3, wage: 1.05, risk: 1.9, status: 3 },
-    { id: 'police', title: 'полицейский', sector: 'service', edu: 3, wage: 1.1, risk: 1.5, status: 3 },
-    { id: 'clerk', title: 'офисный служащий', sector: 'skilled', edu: 3, wage: 1.05, risk: 0.95, status: 3 },
-    { id: 'tailor', title: 'швея-мастер', sector: 'skilled', edu: 3, wage: 0.9, risk: 1.0, status: 2 },
-    { id: 'mechanic', title: 'автомеханик', sector: 'skilled', edu: 4, wage: 1.1, risk: 1.2, status: 3 },
-    { id: 'electrician', title: 'электрик', sector: 'skilled', edu: 4, wage: 1.2, risk: 1.25, status: 3 },
-    { id: 'nurse', title: 'медсестра / медбрат', sector: 'skilled', edu: 4, wage: 1.25, risk: 1.05, status: 4 },
-    { id: 'railway', title: 'железнодорожник', sector: 'skilled', edu: 4, wage: 1.15, risk: 1.25, status: 3 },
-    { id: 'stylist', title: 'парикмахер-стилист', sector: 'service', edu: 3, wage: 0.95, risk: 0.95, status: 2 },
-    { id: 'teacher', title: 'учитель', sector: 'prof', edu: 5, wage: 1.3, risk: 0.9, status: 4 },
-    { id: 'accountant', title: 'бухгалтер', sector: 'prof', edu: 5, wage: 1.5, risk: 0.85, status: 4 },
-    { id: 'engineer', title: 'инженер', sector: 'prof', edu: 5, wage: 1.9, risk: 0.95, status: 5 },
-    { id: 'it', title: 'программист', sector: 'prof', edu: 5, wage: 2.3, risk: 0.85, status: 5 },
-    { id: 'designer', title: 'дизайнер', sector: 'prof', edu: 5, wage: 1.5, risk: 0.9, status: 4 },
-    { id: 'lawyer', title: 'юрист', sector: 'prof', edu: 6, wage: 2.4, risk: 0.85, status: 5 },
-    { id: 'doctor', title: 'врач', sector: 'prof', edu: 6, wage: 2.8, risk: 0.9, status: 6 },
-    { id: 'scientist', title: 'научный сотрудник', sector: 'prof', edu: 6, wage: 1.7, risk: 0.85, status: 5 },
-    { id: 'manager', title: 'руководитель отдела', sector: 'elite', edu: 5, wage: 2.6, risk: 0.9, status: 6 },
-    { id: 'owner', title: 'владелец своего дела', sector: 'elite', edu: 3, wage: 2.2, risk: 1.0, status: 5 },
-    { id: 'artist', title: 'художник / музыкант', sector: 'prof', edu: 3, wage: 0.9, risk: 1.0, status: 3 },
-    { id: 'athlete', title: 'спортсмен', sector: 'prof', edu: 3, wage: 1.4, risk: 1.3, status: 4 }
+    /* --- земля и вода (8) --- */
+    { id: 'farm', title: 'работник в поле', sector: 'agri', edu: 0, wage: 0.85, risk: 1.15, status: 1 },
+    { id: 'fisher', title: 'рыбак', sector: 'agri', edu: 0, wage: 0.95, risk: 1.5, status: 1 },
+    { id: 'herder', title: 'пастух', sector: 'agri', edu: 0, wage: 0.8, risk: 1.1, status: 1, rural: 1 },
+    { id: 'planter', title: 'сборщик на плантации', sector: 'agri', edu: 0, wage: 0.78, risk: 1.2, status: 1, maxGdp: 20000 },
+    { id: 'forester', title: 'лесоруб', sector: 'agri', edu: 1, wage: 1.15, risk: 1.7, status: 2, rural: 1 },
+    { id: 'agromech', title: 'механизатор', sector: 'agri', edu: 2, wage: 1.3, risk: 1.3, status: 2, rural: 1 },
+    { id: 'beekeeper', title: 'пчеловод', sector: 'agri', edu: 1, wage: 0.95, risk: 1.05, status: 2, rural: 1 },
+    { id: 'greenhouse', title: 'работник теплиц', sector: 'agri', edu: 1, wage: 1.02, risk: 1.05, status: 1 },
+
+    /* --- без оформления (10) --- */
+    { id: 'market', title: 'продавец на рынке', sector: 'informal', edu: 0, wage: 0.95, risk: 1.0, status: 1 },
+    { id: 'domestic', title: 'работник по дому', sector: 'informal', edu: 0, wage: 0.8, risk: 1.0, status: 1 },
+    { id: 'streetfood', title: 'уличная еда', sector: 'informal', edu: 0, wage: 1.0, risk: 1.05, status: 1, urban: 1 },
+    { id: 'porter', title: 'носильщик', sector: 'informal', edu: 0, wage: 0.88, risk: 1.35, status: 1, urban: 1 },
+    { id: 'scrap', title: 'сборщик вторсырья', sector: 'informal', edu: 0, wage: 0.72, risk: 1.4, status: 1, urban: 1 },
+    { id: 'rickshaw', title: 'извозчик', sector: 'informal', edu: 0, wage: 1.0, risk: 1.5, status: 1, maxGdp: 18000 },
+    { id: 'laundry', title: 'прачка', sector: 'informal', edu: 0, wage: 0.82, risk: 1.05, status: 1 },
+    { id: 'nanny', title: 'няня', sector: 'informal', edu: 1, wage: 0.95, risk: 0.95, status: 2 },
+    { id: 'handyman', title: 'мастер на все руки', sector: 'informal', edu: 1, wage: 1.2, risk: 1.3, status: 2 },
+    { id: 'trader', title: 'перекупщик', sector: 'informal', edu: 2, wage: 1.35, risk: 1.1, status: 2 },
+
+    /* --- руки и производство (16) --- */
+    { id: 'loader', title: 'грузчик', sector: 'manual', edu: 1, wage: 0.8, risk: 1.25, status: 1 },
+    { id: 'builder', title: 'строитель', sector: 'manual', edu: 1, wage: 0.95, risk: 1.45, status: 2 },
+    { id: 'miner', title: 'шахтёр', sector: 'manual', edu: 1, wage: 1.35, risk: 1.9, status: 2, rural: 1 },
+    { id: 'factory', title: 'рабочий на производстве', sector: 'manual', edu: 2, wage: 1.0, risk: 1.2, status: 2 },
+    { id: 'welder', title: 'сварщик', sector: 'manual', edu: 2, wage: 1.2, risk: 1.5, status: 2 },
+    { id: 'carpenter', title: 'плотник', sector: 'manual', edu: 2, wage: 1.05, risk: 1.3, status: 2 },
+    { id: 'painter', title: 'маляр', sector: 'manual', edu: 1, wage: 0.9, risk: 1.3, status: 1 },
+    { id: 'roofer', title: 'кровельщик', sector: 'manual', edu: 1, wage: 1.05, risk: 1.75, status: 2 },
+    { id: 'plumber', title: 'сантехник', sector: 'manual', edu: 2, wage: 1.1, risk: 1.2, status: 2, urban: 1 },
+    { id: 'docker', title: 'портовый рабочий', sector: 'manual', edu: 1, wage: 1.15, risk: 1.5, status: 2, urban: 1 },
+    { id: 'textile', title: 'швейное производство', sector: 'manual', edu: 1, wage: 0.78, risk: 1.15, status: 1 },
+    { id: 'butcher', title: 'мясник', sector: 'manual', edu: 1, wage: 0.95, risk: 1.3, status: 2 },
+    { id: 'baker', title: 'пекарь', sector: 'manual', edu: 2, wage: 0.92, risk: 1.1, status: 2 },
+    { id: 'driller', title: 'буровик', sector: 'manual', edu: 2, wage: 1.6, risk: 1.75, status: 3 },
+    { id: 'concrete', title: 'бетонщик', sector: 'manual', edu: 1, wage: 0.95, risk: 1.5, status: 1 },
+    { id: 'machinist', title: 'станочник', sector: 'manual', edu: 3, wage: 1.15, risk: 1.25, status: 2 },
+
+    /* --- люди и услуги (18) --- */
+    { id: 'driver', title: 'водитель', sector: 'service', edu: 2, wage: 1.05, risk: 1.5, status: 2 },
+    { id: 'cook', title: 'повар', sector: 'service', edu: 2, wage: 0.95, risk: 1.1, status: 2 },
+    { id: 'shop', title: 'продавец в магазине', sector: 'service', edu: 2, wage: 0.88, risk: 1.0, status: 2 },
+    { id: 'care', title: 'работник по уходу', sector: 'service', edu: 3, wage: 0.95, risk: 1.1, status: 2 },
+    { id: 'soldier', title: 'военнослужащий', sector: 'service', edu: 3, wage: 1.15, risk: 1.9, status: 3 },
+    { id: 'police', title: 'полицейский', sector: 'service', edu: 3, wage: 1.2, risk: 1.55, status: 3 },
+    { id: 'waiter', title: 'официант', sector: 'service', edu: 2, wage: 0.85, risk: 1.0, status: 1, urban: 1 },
+    { id: 'barista', title: 'бариста', sector: 'service', edu: 2, wage: 0.85, risk: 0.95, status: 1, urban: 1, from: 1990 },
+    { id: 'stylist', title: 'парикмахер-стилист', sector: 'service', edu: 3, wage: 1.0, risk: 0.95, status: 2 },
+    { id: 'guard', title: 'охранник', sector: 'service', edu: 2, wage: 0.85, risk: 1.3, status: 1 },
+    { id: 'courier', title: 'курьер', sector: 'service', edu: 1, wage: 0.85, risk: 1.4, status: 1, urban: 1 },
+    { id: 'cleaner', title: 'уборщик', sector: 'service', edu: 0, wage: 0.75, risk: 1.1, status: 1 },
+    { id: 'postman', title: 'почтальон', sector: 'service', edu: 2, wage: 0.85, risk: 1.1, status: 2 },
+    { id: 'busdriver', title: 'водитель автобуса', sector: 'service', edu: 3, wage: 1.1, risk: 1.4, status: 2, urban: 1 },
+    { id: 'firefighter', title: 'пожарный', sector: 'service', edu: 3, wage: 1.15, risk: 1.7, status: 3 },
+    { id: 'hotel', title: 'работник гостиницы', sector: 'service', edu: 2, wage: 0.9, risk: 1.0, status: 2, urban: 1 },
+    { id: 'callcenter', title: 'оператор поддержки', sector: 'service', edu: 3, wage: 0.95, risk: 0.9, status: 2, urban: 1, from: 1995 },
+    { id: 'agent', title: 'торговый представитель', sector: 'service', edu: 3, wage: 1.15, risk: 1.15, status: 3 },
+
+    /* --- ремесло и техника (18) --- */
+    { id: 'clerk', title: 'офисный служащий', sector: 'skilled', edu: 3, wage: 0.95, risk: 0.95, status: 3 },
+    { id: 'tailor', title: 'швея-мастер', sector: 'skilled', edu: 3, wage: 0.82, risk: 1.0, status: 2 },
+    { id: 'mechanic', title: 'автомеханик', sector: 'skilled', edu: 4, wage: 1.0, risk: 1.25, status: 3 },
+    { id: 'electrician', title: 'электрик', sector: 'skilled', edu: 4, wage: 1.1, risk: 1.35, status: 3 },
+    { id: 'nurse', title: 'медсестра / медбрат', sector: 'skilled', edu: 4, wage: 1.1, risk: 1.1, status: 4 },
+    { id: 'railway', title: 'железнодорожник', sector: 'skilled', edu: 4, wage: 1.05, risk: 1.3, status: 3 },
+    { id: 'technician', title: 'техник-наладчик', sector: 'skilled', edu: 4, wage: 1.1, risk: 1.15, status: 3 },
+    { id: 'crane', title: 'крановщик', sector: 'skilled', edu: 3, wage: 1.15, risk: 1.5, status: 3 },
+    { id: 'lab', title: 'лаборант', sector: 'skilled', edu: 4, wage: 0.9, risk: 1.05, status: 3 },
+    { id: 'dental', title: 'зубной техник', sector: 'skilled', edu: 4, wage: 1.2, risk: 0.95, status: 3, urban: 1 },
+    { id: 'optician', title: 'оптик', sector: 'skilled', edu: 4, wage: 1.05, risk: 0.9, status: 3, urban: 1 },
+    { id: 'paramedic', title: 'фельдшер скорой', sector: 'skilled', edu: 4, wage: 1.05, risk: 1.35, status: 3 },
+    { id: 'surveyor', title: 'геодезист', sector: 'skilled', edu: 4, wage: 1.15, risk: 1.2, status: 3 },
+    { id: 'printer', title: 'печатник', sector: 'skilled', edu: 3, wage: 0.95, risk: 1.1, status: 2 },
+    { id: 'jeweller', title: 'ювелир', sector: 'skilled', edu: 4, wage: 1.25, risk: 0.95, status: 3, urban: 1 },
+    { id: 'locksmith', title: 'слесарь', sector: 'skilled', edu: 3, wage: 0.95, risk: 1.2, status: 2 },
+    { id: 'conductor', title: 'проводник', sector: 'skilled', edu: 3, wage: 0.9, risk: 1.15, status: 2 },
+    { id: 'chef', title: 'шеф-повар', sector: 'skilled', edu: 4, wage: 1.3, risk: 1.05, status: 4, urban: 1 },
+
+    /* --- учёные, лечащие, считающие (20) --- */
+    { id: 'teacher', title: 'учитель', sector: 'prof', edu: 5, wage: 0.88, risk: 0.9, status: 4 },
+    { id: 'accountant', title: 'бухгалтер', sector: 'prof', edu: 5, wage: 0.9, risk: 0.85, status: 4 },
+    { id: 'engineer', title: 'инженер', sector: 'prof', edu: 5, wage: 1.1, risk: 1.0, status: 5 },
+    { id: 'it', title: 'программист', sector: 'prof', edu: 5, wage: 1.4, risk: 0.85, status: 5, urban: 1, from: 1975 },
+    { id: 'designer', title: 'дизайнер', sector: 'prof', edu: 5, wage: 0.9, risk: 0.9, status: 4, urban: 1 },
+    { id: 'lawyer', title: 'юрист', sector: 'prof', edu: 6, wage: 1.4, risk: 0.85, status: 5 },
+    { id: 'doctor', title: 'врач', sector: 'prof', edu: 6, wage: 1.5, risk: 0.95, status: 6 },
+    { id: 'scientist', title: 'научный сотрудник', sector: 'prof', edu: 6, wage: 0.95, risk: 0.85, status: 5, urban: 1 },
+    { id: 'artist', title: 'художник / музыкант', sector: 'prof', edu: 3, wage: 0.7, risk: 1.05, status: 3 },
+    { id: 'athlete', title: 'спортсмен', sector: 'prof', edu: 3, wage: 0.95, risk: 1.4, status: 4 },
+    { id: 'architect', title: 'архитектор', sector: 'prof', edu: 6, wage: 1.15, risk: 0.9, status: 5, urban: 1 },
+    { id: 'pharmacist', title: 'фармацевт', sector: 'prof', edu: 5, wage: 1.0, risk: 0.9, status: 4 },
+    { id: 'journalist', title: 'журналист', sector: 'prof', edu: 5, wage: 0.85, risk: 1.15, status: 4, urban: 1 },
+    { id: 'translator', title: 'переводчик', sector: 'prof', edu: 5, wage: 0.9, risk: 0.85, status: 4 },
+    { id: 'psycho', title: 'психолог', sector: 'prof', edu: 6, wage: 0.95, risk: 0.85, status: 4, urban: 1, from: 1970 },
+    { id: 'vet', title: 'ветеринар', sector: 'prof', edu: 5, wage: 0.95, risk: 1.1, status: 4 },
+    { id: 'pilot', title: 'пилот', sector: 'prof', edu: 5, wage: 1.8, risk: 1.3, status: 6, urban: 1, from: 1950 },
+    { id: 'officer', title: 'офицер', sector: 'prof', edu: 5, wage: 1.05, risk: 1.6, status: 5 },
+    { id: 'analyst', title: 'аналитик', sector: 'prof', edu: 5, wage: 1.2, risk: 0.85, status: 5, urban: 1, from: 1985 },
+    { id: 'agronomist', title: 'агроном', sector: 'prof', edu: 5, wage: 0.85, risk: 0.95, status: 4, rural: 1 },
+
+    /* --- верхушка (10) --- */
+    { id: 'manager', title: 'руководитель отдела', sector: 'elite', edu: 5, wage: 0.95, risk: 0.9, status: 6 },
+    { id: 'owner', title: 'владелец своего дела', sector: 'elite', edu: 3, wage: 0.85, risk: 1.0, status: 5 },
+    { id: 'banker', title: 'банковский работник', sector: 'elite', edu: 5, wage: 1.05, risk: 0.85, status: 5, urban: 1 },
+    { id: 'director', title: 'директор предприятия', sector: 'elite', edu: 6, wage: 1.35, risk: 0.9, status: 6, urban: 1 },
+    { id: 'surgeon', title: 'хирург', sector: 'elite', edu: 6, wage: 1.2, risk: 0.95, status: 6, urban: 1 },
+    { id: 'judge', title: 'судья', sector: 'elite', edu: 6, wage: 1.1, risk: 0.9, status: 6, urban: 1 },
+    { id: 'consultant', title: 'консультант', sector: 'elite', edu: 6, wage: 1.15, risk: 0.85, status: 5, urban: 1, from: 1980 },
+    { id: 'diplomat', title: 'дипломат', sector: 'elite', edu: 6, wage: 1.0, risk: 1.0, status: 6, urban: 1 },
+    { id: 'producer', title: 'продюсер', sector: 'elite', edu: 5, wage: 1.1, risk: 0.95, status: 5, urban: 1, from: 1970 },
+    { id: 'devlead', title: 'технический директор', sector: 'elite', edu: 5, wage: 1.35, risk: 0.85, status: 6, urban: 1, from: 1995 }
   ];
 
   var JOB_BY_ID = {};
@@ -306,10 +395,24 @@
     { t: 4, pre: 'главный ', mult: 2.4 }
   ];
 
-  /* Доступные профессии при данном образовании и стране */
-  function jobsFor(country, edu, rnd) {
+  /* Доступные профессии: образование, страна, город или село и сам год.
+     Программиста не было в 1960-м, плантаций не бывает в Норвегии,
+     а крановщика — в деревне. */
+  function jobsFor(country, edu, rnd, opts) {
+    opts = opts || {};
+    var year = opts.year || 2000;
+    var urban = opts.urban === undefined ? country.urban > 50 : !!opts.urban;
     var agriShare = clamp(0.9 - country.gdp / 30000, 0.02, 0.62);
-    return JOBS.filter(function (j) { return j.edu <= edu; }).map(function (j) {
+    return JOBS.filter(function (j) {
+      if (j.edu > edu) return false;
+      if (j.from && year < j.from) return false;
+      if (j.to && year > j.to) return false;
+      if (j.minGdp && country.gdp < j.minGdp) return false;
+      if (j.maxGdp && country.gdp > j.maxGdp) return false;
+      if (j.urban && !urban) return false;
+      if (j.rural && urban && rnd() > 0.25) return false;
+      return true;
+    }).map(function (j) {
       var w = 1;
       if (j.sector === 'agri') w *= agriShare * 6;
       if (j.sector === 'informal') w *= clamp(1.4 - country.gdp / 25000, 0.15, 1.6) * 2.2;
@@ -323,12 +426,81 @@
     });
   }
 
-  /* Годовая зарплата профессии (межд. $ ППС) */
-  function wageFor(country, job, step, knowledge, years) {
-    var base = country.gdp * 0.62;
-    var exp = 1 + clamp(years, 0, 35) * 0.011;
-    var know = 0.75 + clamp(knowledge, 0, 100) / 100 * 0.5;
-    return base * job.wage * CAREER_STEPS[clamp(step, 0, 4)].mult * exp * know;
+  /* ------------------------- сколько платят ------------------------------
+     Зарплата собирается из пяти множителей, и каждый из них — про страну:
+
+     1. средний заработок в экономике — доля труда в ВВП на душу. В бедных
+        странах эта доля меньше: много натурального хозяйства и своего дела,
+        которое в зарплату не попадает;
+     2. оплата сектора — в бедной стране врач получает не вдвое, а в пять раз
+        больше продавца; с ростом ВВП разрыв сжимается;
+     3. сама профессия внутри сектора;
+     4. ступень карьеры, стаж и знания;
+     5. поправки человека: город или село, пол, бюджетная работа.          */
+
+  /* средний годовой заработок работающего человека, межд. $ ППС */
+  function avgWage(country) {
+    /* Чем беднее страна, тем большая часть ВВП — это прямой труд людей:
+       в бедной стране на зарплаты уходит почти весь продукт, в богатой
+       заметную часть забирают капитал, рента и налоги. */
+    return country.gdp * clamp(0.55 - 0.24 * Math.pow(country.gdp / 40000, 0.5), 0.33, 0.58);
+  }
+
+  /* уровень развития: 0 — беднейшие, 1 — богатые, 1.2 — самые богатые */
+  function devLevel(country) { return clamp(country.gdp / 60000, 0, 1.2); }
+
+  /* во сколько раз сектор оплачивается относительно среднего по стране */
+  function sectorPay(country, sector) {
+    var d = devLevel(country);
+    if (sector === 'agri') return 0.8 - d * 0.3;
+    if (sector === 'informal') return 0.82 - d * 0.28;
+    if (sector === 'manual') return 0.92 + d * 0.04;
+    if (sector === 'service') return 0.86 + d * 0.1;
+    if (sector === 'skilled') return 1.04 + d * 0.06;
+    if (sector === 'prof') return 1.75 - d * 0.15;
+    if (sector === 'elite') return 2.4 - d * 0.2;
+    return 1;
+  }
+
+  /* бюджетная работа: в бедной стране это надёжно и даже выгодно,
+     в богатой — заметно меньше частного сектора */
+  var PUBLIC_JOBS = {
+    teacher: 1, nurse: 1, doctor: 1, soldier: 1, police: 1, scientist: 1, clerk: 1,
+    postman: 1, firefighter: 1, paramedic: 1, judge: 1, railway: 1, conductor: 1,
+    vet: 1, officer: 1, diplomat: 1, busdriver: 1, lab: 1, agronomist: 1, surgeon: 1
+  };
+
+  /* Годовая зарплата профессии (межд. $ ППС).
+     opts: { sex: 'm' | 'f', urban: bool } — поправки человека. */
+  function wageFor(country, job, step, knowledge, years, opts) {
+    opts = opts || {};
+    var d = devLevel(country);
+    var base = avgWage(country) * sectorPay(country, job.sector) * (job.wage || 1);
+    /* стаж: быстро в начале, потом выходит на полку и после тридцати лет оседает */
+    var y = clamp(years, 0, 45);
+    var exp = 0.82 + 0.45 * (1 - Math.exp(-y / 9)) - y * 0.003;
+    var know = 0.85 + clamp(knowledge, 0, 100) / 100 * 0.35;
+    var w = base * CAREER_STEPS[clamp(step, 0, 4)].mult * exp * know;
+    if (PUBLIC_JOBS[job.id]) w *= 1.06 - d * 0.1;
+    if (opts.urban === false && job.sector !== 'agri') w *= 0.74;   /* в селе платят меньше */
+    if (opts.urban === true && job.sector === 'agri') w *= 1.12;
+    if (opts.sex === 'f') w *= 1 - (0.07 + 0.13 * (1 - clamp(d, 0, 1)));
+    return w;
+  }
+
+  /* Вероятность подняться на ступень: карьера — пирамида, наверх проходят
+     единицы. Без этого к сорока годам «главным» становится каждый второй. */
+  function promoteOdds(step) {
+    return [1, 0.2, 0.08, 0.03, 0][clamp(step, 0, 4)];
+  }
+
+  /* Потолок профессии: «главным грузчиком» не становятся. У простой работы
+     две ступени, у ремесла и услуг — три, у учёной работы и начальства — все пять. */
+  function topStep(job) {
+    if (job.sector === 'agri' || job.sector === 'informal') return 1;
+    if (job.sector === 'manual' || job.sector === 'service') return 2;
+    if (job.sector === 'skilled') return 3;
+    return 4;
   }
 
   function jobTitle(job, step) {
@@ -450,7 +622,10 @@
     baseYear: BASE_YEAR,
     maxAge: MAX_AGE,
     sigmaFromGini: sigmaFromGini,
+    householdMean: householdMean,
     incomeAtPercentile: incomeAtPercentile,
+    avgWage: avgWage, sectorPay: sectorPay, devLevel: devLevel, promoteOdds: promoteOdds, topStep: topStep,
+    PUBLIC_JOBS: PUBLIC_JOBS,
     percentileOfIncome: percentileOfIncome,
     worldPercentile: worldPercentile,
     jobs: JOBS,
