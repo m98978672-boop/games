@@ -79,6 +79,8 @@
         <label class="inline-field">Суммы показывать в
           <select id="sel-currency"></select>
         </label>
+        <p class="field-hint">По умолчанию деньги считаются в валюте той страны, где идёт жизнь, а под каждой
+          суммой мелким шрифтом стоит примерный перевод в рубли.</p>
       </div>
 
       <label class="check"><input type="checkbox" id="opt-soft"> Убрать пугающие сцены</label>
@@ -193,8 +195,8 @@
         <div class="money-grid">
           <div><span>Накоплено<em id="money-basis"></em></span><b id="hud-money">—</b>
             <i id="money-ppp"></i><i id="money-delta">—</i></div>
-          <div><span>Доход за год</span><b id="hud-income">—</b><i id="income-month">—</i>
-            <i id="income-partner"></i></div>
+          <div><span>Доход за год</span><b id="hud-income">—</b><i id="income-rub"></i>
+            <i id="income-month">—</i><i id="income-partner"></i></div>
         </div>
         <div class="money-rank"><span>Место по доходу</span><b id="money-rank">—</b></div>
         <div class="money-rank"><span>Место в мире</span><b id="money-rank-world">—</b></div>
@@ -311,6 +313,7 @@
 <script src="src/names.js"></script>
 <script src="src/model.js"></script>
 <script src="src/events.js"></script>
+<script src="src/work.js"></script>
 <script src="src/engine.js"></script>
 <script src="src/purchases.js"></script>
 <script src="src/invest.js"></script>

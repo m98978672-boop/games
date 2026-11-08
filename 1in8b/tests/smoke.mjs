@@ -17,7 +17,7 @@ console.log('1 ИЗ 8 МИЛЛИАРДОВ — смоук-тест');
 
 // 1. Обязательные файлы
 const files = ['index.html', 'style.css', 'cover.svg', 'README.md', 'PLAN.md', 'LICENSE.md',
-  'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js',
+  'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js',
   'src/engine.js', 'src/purchases.js', 'src/invest.js', 'src/charts.js', 'src/portrait.js',
   'src/save.js', 'src/sound.js', 'src/ui.js', 'src/main.js'];
 for (const f of files) ok(existsSync(join(root, f)), 'есть файл ' + f);
@@ -59,7 +59,7 @@ for (const id of ['screen-start', 'screen-life', 'screen-end', 'btn-born', 'stat
 
 // 6б. Порядок подключения скриптов: модули идут после тех, от кого зависят
 const order = [...html.matchAll(/<script src="src\/([a-z]+)\.js"><\/script>/g)].map((m) => m[1]);
-ok(order.join(',') === 'countries,names,model,events,engine,purchases,invest,charts,portrait,save,sound,ui,main',
+ok(order.join(',') === 'countries,names,model,events,work,engine,purchases,invest,charts,portrait,save,sound,ui,main',
   'скрипты подключены в правильном порядке: ' + order.join(' → '));
 
 // 7. Обложка — валидный SVG 1440×810

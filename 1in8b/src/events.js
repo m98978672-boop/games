@@ -236,7 +236,7 @@
       id: 'promotion', age: [20, 64], w: function (x) { return working(x.L) ? 1.1 + x.L.stats.know / 90 : 0; },
       run: function (x) {
         if (!x.L.job) return;
-        if (x.L.job.step < 4 && x.rnd() < 0.45 + x.L.stats.know / 260) {
+        if (x.L.job.step < M.topStep(M.jobById[x.L.job.id]) && x.rnd() < 0.3 + x.L.stats.know / 300) {
           x.L.job.step++;
           x.add('Повышение: теперь вы ' + M.jobTitle(M.jobById[x.L.job.id], x.L.job.step) + '.', 'work');
           x.stat('happy', 5);
@@ -899,7 +899,7 @@
       },
       title: 'Поступать ли в университет',
       text: function (x) {
-        return 'Экзамены позади. Учёба стоит около ' + M.fmtMoney(x.need * 0.6) + ' в год, и это годы без зарплаты.';
+        return 'Экзамены позади. Учёба стоит около ' + M.cash(x.need * 0.6, x.c) + ' в год, и это годы без зарплаты.';
       },
       options: [
         {
@@ -955,7 +955,7 @@
       id: 'emigrate', age: [18, 45], once: true,
       cond: function (x) { return x.c.gdp < 30000; },
       title: 'Уехать за границу?',
-      text: function (x) { return 'Родственник зовёт работать за рубеж. Дорога и документы — около ' + M.fmtMoney(x.need * 0.8) + '.'; },
+      text: function (x) { return 'Родственник зовёт работать за рубеж. Дорога и документы — около ' + M.cash(x.need * 0.8, x.c) + '.'; },
       options: [
         {
           label: 'Уехать', hint: 'доход ++ · семья далеко',
@@ -1077,7 +1077,7 @@
       id: 'illness-treat', age: [10, 95],
       title: 'Лечиться или потерпеть',
       text: function (x) {
-        return 'Боль не проходит третий месяц. Хорошая клиника возьмёт ' + M.fmtMoney(x.need * 0.5) +
+        return 'Боль не проходит третий месяц. Хорошая клиника возьмёт ' + M.cash(x.need * 0.5, x.c) +
           ', в государственной — очередь на полгода.';
       },
       options: [
@@ -1106,7 +1106,7 @@
     {
       id: 'loan', age: [22, 60], once: true,
       title: 'Своё дело',
-      text: function (x) { return 'Можно взять кредит ' + M.fmtMoney(x.need * 1.5) + ' и открыть своё дело. Или не рисковать.'; },
+      text: function (x) { return 'Можно взять кредит ' + M.cash(x.need * 1.5, x.c) + ' и открыть своё дело. Или не рисковать.'; },
       options: [
         {
           label: 'Взять кредит и начать', hint: 'риск · большой доход',
@@ -1200,7 +1200,7 @@
       id: 'kid-edu', age: [32, 60], once: true,
       cond: function (x) { return hasKids(x.L); },
       title: 'Образование детей',
-      text: function (x) { return 'Ребёнок доучился до выбора. Хорошее образование стоит ' + M.fmtMoney(x.need * 0.9) + '.'; },
+      text: function (x) { return 'Ребёнок доучился до выбора. Хорошее образование стоит ' + M.cash(x.need * 0.9, x.c) + '.'; },
       options: [
         {
           label: 'Вложиться в учёбу детей', hint: 'дети выйдут дальше вас',
@@ -1348,7 +1348,7 @@
       cond: function (x) { return x.L.money > x.need * 0.5 && (x.L.siblings > 0 || hasKids(x.L)); },
       title: 'Родня просит в долг',
       text: function (x) {
-        return 'Близкий человек просит взаймы ' + M.fmtMoney(x.need * 0.4) +
+        return 'Близкий человек просит взаймы ' + M.cash(x.need * 0.4, x.c) +
           ': у него беда, а занять больше не у кого. Обещает вернуть, как сможет.';
       },
       options: [
@@ -1395,7 +1395,7 @@
       cond: function (x) { return x.L.purse() < x.need * 0.55 && x.L.money < x.need * 0.3; },
       title: 'Деньги нужны сегодня',
       text: function (x) {
-        return 'Срочно нужны ' + M.fmtMoney(x.need * 0.35) +
+        return 'Срочно нужны ' + M.cash(x.need * 0.35, x.c) +
           ': лекарства, крыша, долг за учёбу — выбирать не приходится. В доме пусто.';
       },
       options: [

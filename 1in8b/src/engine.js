@@ -15,11 +15,14 @@
   var C = window.IN8B.countries;
   var N = window.IN8B.names;
   var E = window.IN8B.events;
+  var W = window.IN8B.work || { auto: [], choices: [] };
+  /* все карточки решений: обычные, денежные и рабочие */
+  var ALLCH = E.choices.concat(W.choices);
   var clamp = M.clamp;
 
   /* общая калибровка риска: подобрана так, чтобы средний возраст смерти
      в авторежиме совпадал с ожидаемой продолжительностью жизни страны */
-  var RISK_CAL = 0.55;
+  var RISK_CAL = 0.455;
 
   /* доли бюджета по умолчанию */
   var DEFAULT_BUDGET = { food: 0.34, health: 0.1, edu: 0.1, home: 0.18, fun: 0.1, family: 0.08, save: 0.1 };
@@ -155,6 +158,9 @@
     this.loan = null;             /* кредит: сколько осталось, платёж, просрочки */
     this.queue = [];              /* отложенные карточки: [{id, at}] — цепочки решений */
     this.pendingDecision = null;
+    /* трудовая книжка: что с вами было на работе за всю жизнь */
+    this.career = { held: [], promos: 0, fired: 0, quit: 0, maxStep: 0, years: 0,
+      injuries: 0, strikes: 0, courses: 0, sideline: 0 };
     this.pendingReflection = null;
 
     /* возраст вступления в брак — по стране */
@@ -201,7 +207,7 @@
   /* ------------------------------ работа ------------------------------ */
 
   Life.prototype.hire = function (style) {
-    var pool = M.jobsFor(this.c, this.edu.level, this.rnd);
+    var pool = M.jobsFor(this.c, this.edu.level, this.rnd, { year: this.year, urban: this.urban });
     if (!pool.length) return;
     var rnd = this.rnd;
     var self = this;
@@ -219,9 +225,50 @@
       return w;
     });
     if (!chosen) return;
-    this.job = { id: chosen.job.id, step: 0, years: 0, risk: chosen.job.risk, dream: style === 'dream' };
+    this.job = this.makeJob(chosen.job, style);
     this.unemployedYears = 0;
-    this.add('Вы начали работать: ' + M.jobTitle(chosen.job, 0) + '.', 'work');
+    this.career.held.push(chosen.job.id);
+    this.add('Вы начали работать: ' + M.jobTitle(chosen.job, 0) +
+      (this.job.contract === 'none' ? ' (без оформления)' : '') + '.', 'work');
+  };
+
+  /* Место работы — это не только название профессии. Как оформлен договор,
+     какой график, далеко ли ехать, следят ли за безопасностью, есть ли
+     профсоюз: всё это потом решает, сколько вам платят и чем вы за это
+     платите сами. */
+  Life.prototype.makeJob = function (j, style) {
+    var rnd = this.rnd;
+    var dev = M.devLevel(this.c);
+    var grey = clamp(0.62 - dev * 0.42, 0.06, 0.62);          /* доля работы «в конверте» */
+    if (j.sector === 'informal' || j.sector === 'agri') grey += 0.3;
+    if (j.sector === 'prof' || j.sector === 'elite') grey -= 0.18;
+    if (M.PUBLIC_JOBS[j.id]) grey -= 0.25;
+    var r = rnd();
+    var contract = r < clamp(grey, 0.02, 0.92) * 0.45 ? 'none'
+      : (r < clamp(grey, 0.02, 0.92) ? 'grey' : 'official');
+    var sch = 'day';
+    var sr = rnd();
+    if (j.sector === 'manual' || j.sector === 'agri') { if (sr < 0.34) sch = 'shift'; else if (sr < 0.44) sch = 'night'; }
+    else if (j.sector === 'service') { if (sr < 0.3) sch = 'shift'; else if (sr < 0.42) sch = 'night'; }
+    else if (sr < 0.12) sch = 'shift';
+    if ((j.id === 'miner' || j.id === 'driller' || j.id === 'fisher') && rnd() < 0.45) sch = 'rotation';
+    return {
+      id: j.id, step: 0, years: 0, risk: j.risk, dream: style === 'dream',
+      contract: contract,
+      boss: Math.round(rnd.normal(0, 1.1)),                   /* как вас встретил начальник */
+      rep: clamp(34 + this.stats.know * 0.2 + rnd.normal(0, 7), 5, 80),
+      mood: clamp(52 + (style === 'dream' ? 14 : 0) + rnd.normal(0, 10), 5, 95),
+      burnout: 0,
+      overtime: 0,
+      schedule: sch,
+      commute: clamp((this.urban ? rnd() * 2.2 : rnd() * 1.2) + (this.urban && this.c.gdp > 20000 ? 0.4 : 0), 0, 3),
+      safety: clamp(0.25 + dev * 0.45 + (M.PUBLIC_JOBS[j.id] ? 0.15 : 0) + rnd.normal(0, 0.12), 0.05, 0.98),
+      union: rnd() < clamp(0.06 + dev * 0.16 + (M.PUBLIC_JOBS[j.id] ? 0.2 : 0), 0.02, 0.45),
+      remote: false,
+      certs: 0,
+      payDelay: 0,
+      boost: 1
+    };
   };
 
   Life.prototype.changeJob = function () {
@@ -415,21 +462,140 @@
     }
 
     var job = M.jobById[this.job.id];
-    this.job.years++;
+    if (!job) { this.job = null; return; }          /* профессия из старого сохранения */
+    if (this.job.rep === undefined) {               /* дополняем работу из прошлой версии */
+      var fresh = this.makeJob(job, this.job.dream ? 'dream' : 'stable');
+      fresh.id = this.job.id; fresh.step = this.job.step || 0; fresh.years = this.job.years || 0;
+      this.job = fresh;
+    }
+    if (!this.career) this.career = { held: [], promos: 0, fired: 0, quit: 0, maxStep: 0, years: 0,
+      injuries: 0, strikes: 0, courses: 0, sideline: 0 };
+    var w = this.job;
+    w.years++;
+    this.career.years++;
     var mult = (this.business ? 1.25 : 1) * clamp(this.incomeBoost || 1, 0.4, 3);
     if (this.abroad) mult *= 2.1;
     if (this.council) mult *= 1.03;
-    this.income = M.wageFor(this.c, job, this.job.step, this.stats.know, this.job.years) * mult;
+    this.income = M.wageFor(this.c, job, w.step, this.stats.know, w.years,
+      { sex: this.sex, urban: this.urban }) * mult * this.jobPay();
 
-    /* рост по службе */
-    var pUp = 0.08 + this.stats.know / 900 + (this.focus === 'work' ? 0.07 : 0) - (this.careerBrake ? 0.03 : 0);
-    if (this.job.step < 4 && rnd() < pUp) {
-      this.job.step++;
-      this.add('Вас повысили: ' + M.jobTitle(job, this.job.step) + '.', 'work');
-      this.stat('happy', 4);
+    /* рост по службе: чем выше ступень, тем уже горлышко */
+    var pUp = (0.11 + this.stats.know / 900 + (this.focus === 'work' ? 0.06 : 0) +
+      clamp(w.rep - 45, -25, 45) / 900 + w.boss * 0.012 + w.certs * 0.01 -
+      (this.careerBrake ? 0.03 : 0) - (w.burnout > 70 ? 0.03 : 0)) * M.promoteOdds(w.step);
+    if (w.years < 3 + w.step * 2) pUp = 0;                 /* на ступени надо посидеть */
+    if (w.step < M.topStep(job) && rnd() < clamp(pUp, 0, 0.6)) {
+      w.step++;
+      this.career.promos++;
+      this.career.maxStep = Math.max(this.career.maxStep, w.step);
+      this.add('Вас повысили: ' + M.jobTitle(job, w.step) + '.', 'work');
+      this.stat('happy', 4); w.mood = clamp(w.mood + 8, 0, 100);
     }
-    /* риск профессии бьёт по здоровью */
-    if (job.risk > 1.2 && rnd() < 0.1) this.stat('health', -2);
+    this.jobWear(job);
+  };
+
+  /* Личный множитель к зарплате: договор, переработки, график, разряды,
+     профсоюз, репутация и надбавки, которые принесли события. */
+  Life.prototype.jobPay = function () {
+    var w = this.job, k = clamp(w.boost || 1, 0.5, 2.2);
+    if (w.contract === 'grey') k *= 1.08;                  /* в конверте — больше на руки */
+    else if (w.contract === 'none') k *= 0.93;             /* и меньше, и в любой день конец */
+    k *= 1 + (w.overtime || 0) * 0.09;
+    k *= 1 + (w.certs || 0) * 0.045;
+    if (w.union) k *= 1.04;
+    if (w.schedule === 'night') k *= 1.12;
+    else if (w.schedule === 'shift') k *= 1.05;
+    else if (w.schedule === 'rotation') k *= 1.38;
+    if (w.remote) k *= 1.02;
+    k *= 1 + clamp(w.rep - 50, -35, 45) / 520;
+    if (w.payDelay > 0) { w.payDelay--; k *= 0.72; }       /* зарплату задержали */
+    return k;
+  };
+
+  /* Чем работа берёт с человека плату: усталостью, графиком, дорогой,
+     отношением начальника и риском покалечиться. */
+  Life.prototype.jobWear = function (job) {
+    var w = this.job, rnd = this.rnd;
+    var hard = (job.sector === 'manual' || job.sector === 'agri' || job.sector === 'informal');
+    if (w.overtime) { this.stat('health', -w.overtime * 0.4); this.stat('bond', -w.overtime * 0.5); }
+    if (w.schedule === 'night') this.stat('health', -0.6);
+    if (w.schedule === 'shift') this.stat('health', -0.25);
+    if (w.schedule === 'rotation') { this.stat('bond', -1.3); this.stat('happy', -0.6); }
+    if (w.commute > 1.6) this.stat('happy', -0.7);
+    if (w.remote) { this.stat('happy', 0.5); this.stat('bond', -0.3); }
+    if (hard && this.age > 45) this.stat('health', -0.35);
+
+    /* выгорание копится от нелюбимой работы и переработок и тает в отпуске */
+    var fuel = (w.mood < 45 ? 3.4 : -1.7) + (w.overtime || 0) * 2.8 +
+      (this.focus === 'work' ? 1.5 : -0.6) + (w.boss < 0 ? 1.8 : -0.4) +
+      (w.schedule === 'night' || w.schedule === 'rotation' ? 1 : 0) + (w.commute > 1.6 ? 0.7 : 0);
+    w.burnout = clamp((w.burnout || 0) + fuel, 0, 100);
+    if (w.burnout > 70) { this.stat('happy', -2); this.stat('health', -0.5); }
+    else if (w.burnout < 20) this.stat('happy', 0.6);
+
+    /* как вы относитесь к своему делу */
+    w.mood = clamp(w.mood + w.boss * 1.1 + (w.dream ? 1.2 : 0) + (w.union ? 0.3 : 0) -
+      (w.burnout > 60 ? 2.5 : 0) - 0.4, 0, 100);
+    this.stat('happy', (w.mood - 50) / 60);
+
+    /* репутация в профессии: её наживают годами и теряют быстро */
+    w.rep = clamp(w.rep + 1.1 + (w.certs || 0) * 0.4 + (this.focus === 'work' ? 1.2 : 0) -
+      (w.burnout > 70 ? 1.8 : 0), 0, 100);
+
+    /* травма на работе: чем опаснее дело и хуже с охраной труда, тем чаще */
+    var pHurt = clamp((job.risk - 0.85) * 0.055 * (1.25 - w.safety * 0.8), 0, 0.09);
+    if (rnd() < pHurt) {
+      var heavy = rnd() < 0.22;
+      this.career.injuries++;
+      this.stat('health', heavy ? -11 : -3.5);
+      if (heavy) {
+        this.add('Травма на работе: ' + (w.safety < 0.4 ? 'технику безопасности здесь не соблюдают' :
+          'несчастный случай') + '. Лечение затянулось.', 'bad');
+        this.addMoney(-this.need * (w.contract === 'official' ? 0.08 : 0.3));
+        if (rnd() < 0.3) this.flag('chronic', true);
+      } else {
+        this.add('Мелкая травма на работе. Пару недель работали через боль.', 'work');
+      }
+    }
+
+    /* увольнение: сокращения, конфликт с начальником, работа без договора */
+    var pFire = clamp(0.012 + (w.boss < -1 ? 0.05 : 0) + (w.contract === 'none' ? 0.05 : 0) +
+      (w.contract === 'grey' ? 0.02 : 0) + (w.rep < 30 ? 0.03 : 0) + (w.burnout > 80 ? 0.02 : 0) -
+      (w.union ? 0.02 : 0) - (M.PUBLIC_JOBS[job.id] ? 0.008 : 0), 0, 0.2);
+    if (this.age > 55) pFire += 0.012;
+    if (rnd() < pFire) {
+      this.career.fired++;
+      this.add('Вас уволили: ' + (w.boss < -1 ? 'начальник давно искал повод' :
+        w.contract === 'none' ? 'без договора это делается за один день' : 'сокращение штата') + '.', 'bad');
+      this.addMoney(w.contract === 'official' ? this.need * 0.25 : 0);
+      this.stat('happy', -8);
+      this.job = null;
+      this.unemployedYears = 0;
+    }
+  };
+
+  /* Заработок супруга. У него своя работа и свой уровень дохода: люди сходятся
+     с похожими (процентиль наполовину наследует ваш), но не с копиями себя.
+     Работает супруг не всегда: в бедных и сельских странах чаще сидит дома,
+     и маленькие дети тоже держат его дома. */
+  Life.prototype.partnerWage = function () {
+    var withPartner = (this.marital === 'married' || this.marital === 'partner') && this.partner;
+    if (!withPartner) return 0;
+    var p = this.partner;
+    if (p.pct === undefined) {
+      var mine = clamp(M.percentileOfIncome(this.c, Math.max(this.ownIncome || this.famIncome, 1)), 0.02, 0.98);
+      p.pct = clamp(mine * 0.45 + this.rnd() * 0.55, 0.03, 0.97);
+      p.works = this.rnd() < clamp(0.26 + this.c.urban / 260 + this.c.gdp / 70000, 0.2, 0.9);
+    }
+    var small = 0;
+    for (var i = 0; i < this.children.length; i++) {
+      if (this.age - (this.children[i].bornAt || this.children[i].born || this.age) < 6) small++;
+    }
+    var base = M.incomeAtPercentile(this.c, p.pct);
+    if (!p.works) return base * 0.18;                 /* дом, огород, подработки */
+    if (small) base *= clamp(1 - small * 0.22, 0.35, 1);
+    if (this.abroad) base *= 1.6;
+    return base;
   };
 
   Life.prototype.pension = function () {
@@ -453,16 +619,18 @@
     var need = this.need;
     var household = 1 + (this.partner ? 0.7 : 0) + this.children.length * 0.5;
 
-    /* доход года */
+    /* Доход года. Свой заработок каждый год заново считает workStep() по
+       профессии, ступени, стажу и знаниям — здесь он только собирается
+       с доходом супруга и доходом с капитала. Складывать прошлогодний итог
+       обратно в свою зарплату нельзя: получается снежный ком. */
     var income;
     if (this.homeless) income = need * (0.05 + this.rnd() * 0.07);   /* случайные заработки */
     else if (a < 15 && !this.job) income = this.famIncome * 0.9;
     else if (this.retired) income = this.pension();
-    else income = this.laborIncome || this.income || this.famIncome * 0.3;
+    else income = this.income || this.famIncome * 0.3;
 
     this.ownIncome = income;
-    this.partnerIncome = (this.marital === 'married' || this.marital === 'partner')
-      ? (this.income ? this.income * 0.75 : this.famIncome * 0.5) : 0;
+    this.partnerIncome = this.partnerWage();
     income += this.partnerIncome;
     this.laborIncome = income;                 /* заработанное трудом и семьёй */
     income += (this.capitalIncome || 0);       /* рента, купоны, прибыль своего дела */
@@ -648,6 +816,37 @@
     return chosen;
   };
 
+  /* ----------------------- рабочий слот года ---------------------------
+     У работы свой жребий, отдельно от болезней, войн и денег: начальник,
+     коллеги, график, разряды, проверки, слухи о сокращении. Поэтому сто
+     рабочих событий ничего не вытесняют из остальной жизни. */
+
+  Life.prototype.workEvent = function () {
+    if (this.age < 13) return null;
+    if (!this.job && !(this.unemployedYears > 0 && this.age < 66)) return null;
+    var self = this;
+    var x = this.ctx();
+    var pool = W.auto.filter(function (ev) {
+      if (self.age < ev.age[0] || self.age > ev.age[1]) return false;
+      if (ev.once && self.seenEvents[ev.id]) return false;
+      if (ev.heavy && self.settings.soft) return false;
+      if (ev.needJob !== false && !self.job) return false;
+      if (ev.cond && !ev.cond(x)) return false;
+      return true;
+    });
+    if (!pool.length) return null;
+    if (this.rnd() > 0.36) return null;
+    var chosen = this.rnd.weighted(pool, function (ev) {
+      var w = typeof ev.w === 'function' ? ev.w(x) : (ev.w === undefined ? 1 : ev.w);
+      if (self.seenEvents[ev.id]) w *= 0.45;
+      return w;
+    });
+    if (!chosen) return null;
+    this.seenEvents[chosen.id] = true;
+    chosen.run(x);
+    return chosen;
+  };
+
   /* ------------------- условия у вариантов решения --------------------
      req — что нужно иметь, чтобы вариант был доступен. Каждое требование
      возвращается наружу вместе с тем, что у человека есть сейчас: игрок
@@ -765,7 +964,7 @@
       var id = this.queue[i].id;
       this.queue.splice(i, 1);
       var card = null;
-      for (var k = 0; k < E.choices.length; k++) if (E.choices[k].id === id) card = E.choices[k];
+      for (var k = 0; k < ALLCH.length; k++) if (ALLCH[k].id === id) card = ALLCH[k];
       if (!card) return null;
       if (card.heavy && this.settings.soft) return null;
       if (card.cond && !card.cond(x)) return null;   /* жизнь ушла вперёд — разговор отпал */
@@ -903,12 +1102,15 @@
      money:true — карточки про деньги. У них своя очередь: их показывают
      в годы, когда ничего другого не случилось, иначе они вытеснили бы
      решения о семье, работе и учёбе. */
-  Life.prototype.pickDecision = function (money) {
+  Life.prototype.pickDecision = function (kind) {
+    if (kind === true) kind = 'money';
+    var slot = kind || 'life';
     var self = this;
     var x = this.ctx();
-    var pool = E.choices.filter(function (ch) {
+    var pool = ALLCH.filter(function (ch) {
       if (ch.chain) return false;              /* продолжение истории приходит по расписанию */
-      if (!ch.money !== !money) return false;
+      if ((ch.work ? 'work' : (ch.money ? 'money' : 'life')) !== slot) return false;
+      if (slot === 'work' && ch.needJob !== false && !self.job) return false;
       if (self.age < ch.age[0] || self.age > ch.age[1]) return false;
       if (ch.once && self.seenEvents['c:' + ch.id]) return false;
       if (ch.heavy && self.settings.soft) return false;
@@ -918,13 +1120,14 @@
     if (!pool.length) return null;
     var priority = pool.filter(function (p) { return p.priority; });
     /* разговор о деньгах — не каждый год; беда спрашивает сразу */
-    if (!priority.length && money && this.rnd() > 0.25) return null;
+    if (!priority.length && slot === 'money' && this.rnd() > 0.25) return null;
+    if (!priority.length && slot === 'work' && this.rnd() > 0.3) return null;
     var card;
     if (priority.length) {
       card = priority[0];
     } else {
       var cand = this.rnd.pick(pool);
-      var p = cand.chance ? cand.chance(x) : (money ? 0.18 : 0.28);
+      var p = cand.chance ? cand.chance(x) : (slot === 'life' ? 0.28 : 0.18);
       if (this.rnd() < p) card = cand;
     }
     if (!card) return null;
@@ -940,7 +1143,8 @@
     var x = this.ctx();
     var open = d.options.filter(function (o) { return !o.locked; });
     var pick = this.rnd.weighted(open, function (o) {
-      return o.weight ? Math.max(0.0001, o.weight(x)) : 1;
+      if (!o.weight) return 1;
+      return Math.max(0.0001, typeof o.weight === 'function' ? o.weight(x) : o.weight);
     });
     this.answer(d.options.indexOf(pick || open[0] || d.options[0]));
   };
@@ -948,7 +1152,7 @@
   /* Пересобрать карточку решения по её идентификатору (после загрузки сохранения) */
   Life.prototype.decisionById = function (id) {
     var card = null;
-    for (var i = 0; i < E.choices.length; i++) if (E.choices[i].id === id) card = E.choices[i];
+    for (var i = 0; i < ALLCH.length; i++) if (ALLCH[i].id === id) card = ALLCH[i];
     if (!card) return null;
     return this.buildDecision(card, this.ctx());
   };
@@ -1003,7 +1207,7 @@
     if (this.job) r *= Math.pow(M.jobById[this.job.id].risk / 1.12, 0.5);
     if (this.budget.health > 0.16) r *= 0.92;
     if (this.budget.food < 0.2) r *= 1.08;
-    return clamp(q * RISK_CAL * clamp(r, 0.5, 4), 0, 0.97);
+    return clamp(q * RISK_CAL * clamp(r, 0.5, 6), 0, 0.97);
   };
 
   /* ---------------------------- один год ------------------------------- */
@@ -1024,6 +1228,7 @@
     this.loanStep();
     this.streetStep();
     this.moneyEvent();
+    this.workEvent();
     this.pickEvents();
 
     if (this.alive && this.rnd() < this.mortalityRisk(fromAge)) {
@@ -1035,7 +1240,8 @@
     if (this.alive) {
       decision = this.dueCard();                           /* продолжение начатой истории — вне очереди */
       if (!decision) decision = this.pickDecision();
-      if (!decision) decision = this.pickDecision(true);   /* год без событий — повод поговорить о деньгах */
+      if (!decision) decision = this.pickDecision('work');  /* разговор о работе — свой слот */
+      if (!decision) decision = this.pickDecision('money'); /* год без событий — повод поговорить о деньгах */
       if (decision) this.pendingDecision = decision;
       var refl = E.reflections.filter(function (r) { return r.age === this.age; }, this)[0];
       if (refl && !this.silent) this.pendingReflection = refl;
@@ -1077,6 +1283,15 @@
     parts.push('Выросли ' + eduWord + '.');
     if (this.job) parts.push('Работали: ' + M.jobTitle(M.jobById[this.job.id], this.job.step) + '.');
     else if (this.retired) parts.push('Вышли на пенсию.');
+    var cr = this.career;
+    if (cr && cr.years > 0) {
+      var line = 'Трудовая жизнь: ' + cr.years + ' ' + M.plural(cr.years, 'год', 'года', 'лет') + ' работы';
+      if (cr.held.length > 1) line += ', ' + cr.held.length + ' ' + M.plural(cr.held.length, 'место', 'места', 'мест');
+      if (cr.promos) line += ', повышений — ' + cr.promos;
+      if (cr.fired) line += ', увольнений — ' + cr.fired;
+      if (cr.injuries) line += ', травм на работе — ' + cr.injuries;
+      parts.push(line + '.');
+    }
     if (this.marital === 'married') parts.push('Были в браке.');
     if (this.marital === 'divorced') parts.push('Пережили развод.');
     if (this.marital === 'widowed') parts.push('Потеряли супруга.');
