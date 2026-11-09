@@ -103,7 +103,7 @@
 
     if (compareCode && C.byCode[compareCode]) {
       var cc = C.byCode[compareCode];
-      drawCurve(M.lifeTable(life.sex === 'f' ? cc.leF : cc.leM, cc.u5mr), 'rgba(155,140,240,0.75)', 1.6);
+      drawCurve(M.lifeTable(life.sex === 'f' ? cc.leF : cc.leM, cc.u5mr, cc.imr), 'rgba(155,140,240,0.75)', 1.6);
     }
     drawCurve(life.table, '#e8b45a', 2.2);
 

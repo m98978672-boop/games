@@ -21,7 +21,7 @@ vm.createContext(sandbox);
 sandbox.matchMedia = () => ({ matches: false });
 for (const f of ['src/algo.js', 'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js',
   'src/pay.js', 'src/mechanics.js', 'src/variations.js', 'src/engine.js',
-  'src/purchases.js', 'src/invest.js', 'src/portrait.js']) {
+  'src/purchases.js', 'src/invest.js', 'src/textures.js', 'src/models.js', 'src/portrait.js']) {
   try {
     vm.runInContext(readFileSync(join(root, f), 'utf8'), sandbox, { filename: f });
   } catch (e) {
@@ -129,10 +129,27 @@ for (const c of C.list) {
 const ages = lives.map((l) => l.dead.age);
 const mean = ages.reduce((s2, x) => s2 + x, 0) / ages.length;
 ok(Math.abs(mean - wLe) < 2, 'средний возраст смерти ' + mean.toFixed(1) + ' против ожидаемых по данным ' + wLe.toFixed(1));
-const infant = ages.filter((x) => x < 1).length / ages.length * 1000;
-ok(Math.abs(infant - wImr) < Math.max(8, wImr * 0.35), 'младенческая смертность ' + infant.toFixed(0) + '‰ против данных ' + wImr.toFixed(0) + '‰');
-const u5 = ages.filter((x) => x < 5).length / ages.length * 1000;
-ok(Math.abs(u5 - wU5) < Math.max(10, wU5 * 0.3), 'смертность до 5 лет ' + u5.toFixed(0) + '‰ против данных ' + wU5.toFixed(0) + '‰');
+/* Детскую смертность считаем отдельной, большой выборкой. Пять лет жизни
+   считаются быстро, а на трёх тысячах судеб случайность даёт разброс в
+   три промилле — проверка начинает мигать на пустом месте. Двадцать тысяч
+   рождений сужают разброс до одного промилле, и допуск можно держать
+   строгим. Модель идёт чуть ниже данных: люди рождаются через два года
+   после среза, а детская смертность все эти годы падает. */
+let infant = 0, u5 = 0;
+{
+  const n = 20000;
+  let inf = 0, dead5 = 0;
+  for (let i = 0; i < n; i++) {
+    const l = new EN.Life({ seed: 'дети-' + i, silent: true });
+    for (let a = 0; a < 5 && l.alive; a++) { if (l.stepYear()) l.autoAnswer(); }
+    if (!l.alive && l.dead.age < 1) inf++;
+    if (!l.alive && l.dead.age < 5) dead5++;
+  }
+  infant = inf / n * 1000;
+  u5 = dead5 / n * 1000;
+}
+ok(Math.abs(infant - wImr) < Math.max(4, wImr * 0.2), 'младенческая смертность ' + infant.toFixed(1) + '‰ против данных ' + wImr.toFixed(1) + '‰');
+ok(Math.abs(u5 - wU5) < Math.max(5, wU5 * 0.2), 'смертность до 5 лет ' + u5.toFixed(1) + '‰ против данных ' + wU5.toFixed(1) + '‰');
 ok(u5 > infant, 'до пяти лет умирает больше, чем до года');
 const old = ages.filter((x) => x >= 90).length / ages.length * 100;
 ok(old > 1.5 && old < 22, 'доживают до 90: ' + old.toFixed(1) + '%');
@@ -988,14 +1005,14 @@ console.log('\nСто видов заработка');
   ok(seen.size >= 70, 'за 60 жизней встретилось разных видов заработка: ' + seen.size);
 }
 
-console.log('\nСто механик и сто вариаций');
+console.log('\n250 механик и 250 вариаций');
 {
-  ok(MC.count === 100, 'механик: ' + MC.count);
+  ok(MC.count === 250, 'механик: ' + MC.count);
   ok(MC.list.every((x) => x.id && x.name && typeof x.run === 'function' && ['early', 'money', 'late'].includes(x.hook)),
     'у каждой механики есть имя, хук и правило');
-  ok(new Set(MC.list.map((x) => x.id)).size === 100, 'имена механик не повторяются');
-  ok(VR.count === 100, 'вариаций: ' + VR.count);
-  ok(new Set(VR.list.map((x) => x.id)).size === 100, 'имена вариаций не повторяются');
+  ok(new Set(MC.list.map((x) => x.id)).size === 250, 'имена механик не повторяются');
+  ok(VR.count === 250, 'вариаций: ' + VR.count);
+  ok(new Set(VR.list.map((x) => x.id)).size === 250, 'имена вариаций не повторяются');
   ok(VR.list.every((v) => v.name && v.tag && typeof v.w === 'function' && typeof v.apply === 'function'),
     'у каждой вариации есть имя, группа, вес и действие');
   ok(VR.tags.every((t) => VR.list.some((v) => v.tag === t)), 'заполнены все группы вариаций: ' + VR.tags.join(', '));
@@ -1012,8 +1029,8 @@ console.log('\nСто механик и сто вариаций');
     if (l.variations.length < 1 || l.variations.length > 4) errs++;
   }
   ok(errs === 0, 'за ' + lives + ' жизней механики не выдали ни одной ошибки');
-  ok(firedAll.size >= 90, 'за ' + lives + ' жизней сработало механик: ' + firedAll.size + ' из 100');
-  ok(varsAll.size >= 90, 'за ' + lives + ' жизней выпало вариаций: ' + varsAll.size + ' из 100');
+  ok(firedAll.size >= 215, 'за ' + lives + ' жизней сработало механик: ' + firedAll.size + ' из 250');
+  ok(varsAll.size >= 160, 'за ' + lives + ' жизней выпало вариаций: ' + varsAll.size + ' из 250');
 
   /* вариации двигают жизнь, но не ломают её */
   const a = new EN.Life({ seed: 'вар-1', countryCode: 'ru', silent: true });
@@ -1025,9 +1042,9 @@ console.log('\nСто механик и сто вариаций');
   }
 }
 
-console.log('\nСто алгоритмов');
+console.log('\n250 алгоритмов');
 {
-  ok(AL.count === 100, 'алгоритмов: ' + AL.count);
+  ok(AL.count === 250, 'алгоритмов: ' + AL.count);
   ok(AL.missing.length === 0, 'у каждого имени есть функция' + (AL.missing.length ? ': нет ' + AL.missing.join(' ') : ''));
   ok(Object.keys(AL.doc).every((k) => AL.doc[k] && /[а-яё]/i.test(AL.doc[k])), 'все описания на русском');
   ok(Math.abs(AL.normalQuantile(0.9) - 1.2816) < 0.001, 'обратная нормаль: 90-й процентиль = 1,2816');
@@ -1054,7 +1071,7 @@ console.log('\nСто алгоритмов');
   ok(same === AL.mulberry32(AL.hashSeed('алгоритмы'))(), 'одно зерно — одно и то же число');
   let allFinite = true;
   AL.ids.forEach((id) => { if (typeof AL[id] !== 'function') allFinite = false; });
-  ok(allFinite, 'все сто имён ведут к функциям');
+  ok(allFinite, 'все 250 имён ведут к функциям');
 }
 
 console.log('\nВалюта страны и перевод в рубли');

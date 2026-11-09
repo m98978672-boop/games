@@ -1,5 +1,5 @@
 /* ============================================================
-   1 ИЗ 8 МИЛЛИАРДОВ — сто механик.
+   1 ИЗ 8 МИЛЛИАРДОВ — 250 механик.
    ------------------------------------------------------------
    Механика — это маленькое правило, которое работает каждый год
    само, без карточек и без вопросов игроку: цены растут, зимой
@@ -597,6 +597,763 @@
   m('last-years', 'Последние годы', 'late', function (L) { return L.age >= 85; }, function (L, api) {
     L.stat('happy', L.stats.bond > 55 ? 0.5 : -1);
     if (api.chance(0.15)) api.spend(L.need * 0.04);
+  });
+
+
+  /* ======================================================================
+     ВТОРАЯ ВОЛНА МЕХАНИК (v1.8): ещё 150 маленьких правил.
+     Те же три хука, тот же безопасный api. Каждое правило — это что-то,
+     что происходит с человеком само: кофе по дороге, зимние дороги,
+     очередь в поликлинике, первая зарплата, внуки по выходным.
+     Все суммы — доли годовой потребности need, все сдвиги показателей
+     маленькие: за сорок лет они складываются в заметную разницу.
+     ====================================================================== */
+
+  function sectorOf(L) { var j = L.job && M.jobById[L.job.id]; return j ? j.sector : null; }
+  function kidAged(L, lo, hi) {
+    var k = L.children || [];
+    for (var i = 0; i < k.length; i++) { var a = L.age - k[i].bornAt; if (a >= lo && a <= hi) return true; }
+    return false;
+  }
+  function adult(L) { return L.age >= 18; }
+  function married(L) { return L.marital === 'married' || L.marital === 'partner'; }
+
+  /* ================= 7. ДЕНЬГИ И БЫТ: ещё тридцать (30) ================ */
+
+  m('grocery-run', 'Еженедельные продукты', 'money', adult, function (L, api) {
+    api.spend(L.need * (0.012 + kids(L) * 0.004) * (poor(L.c) ? 1.2 : 1));
+  });
+
+  m('cheap-brands', 'Переход на дешёвое', 'money', function (L) { return adult(L) && L.money < 0; }, function (L, api) {
+    L.stat('happy', -0.3);
+    if (api.say('cheap-brands', 9)) api.add('Вы перешли на самые дешёвые марки — это заметно по вкусу еды.', 'money');
+  });
+
+  m('market-haggle', 'Торг на рынке', 'money', function (L) { return adult(L) && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.4)) api.earn(L.need * 0.004);
+  });
+
+  m('sale-season', 'Распродажи', 'money', function (L) { return adult(L) && !poor(L.c); }, function (L, api) {
+    if (api.chance(0.3)) { api.spend(L.need * 0.012); L.stat('happy', 0.25); }
+  });
+
+  m('repair-not-buy', 'Чинить, а не покупать', 'money', function (L) { return adult(L) && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.25)) { api.earn(L.need * 0.006); L.stat('happy', -0.1); }
+  });
+
+  m('street-coffee', 'Кофе по дороге', 'money', function (L) { return working(L) && L.urban && L.year >= 1995; }, function (L, api) {
+    api.spend(L.need * (rich(L.c) ? 0.012 : 0.005)); L.stat('happy', 0.25);
+  });
+
+  m('subscription', 'Подписки', 'money', function (L) { return adult(L) && L.year >= 2012 && !poor(L.c); }, function (L, api) {
+    api.spend(L.need * 0.009);
+    if (api.chance(0.12) && api.say('subscription', 11)) api.add('Вы посчитали подписки и половину отключили.', 'money');
+  });
+
+  m('phone-bill', 'Связь', 'money', function (L) { return L.age >= 14 && L.year >= 1998; }, function (L, api) {
+    api.spend(L.need * 0.006);
+  });
+
+  m('tax-refund', 'Налоговый вычет', 'money', function (L) { return working(L) && !poor(L.c) && L.job.contract === 'official'; }, function (L, api) {
+    if (api.chance(0.22)) {
+      api.earn(L.need * 0.03);
+      if (api.say('tax-refund', 8)) api.add('Вернули часть налога — неожиданные деньги в начале года.', 'money');
+    }
+  });
+
+  m('pension-contrib', 'Отчисления на пенсию', 'money', function (L) { return working(L) && L.job.contract === 'official'; }, function (L, api) {
+    L.pensionSave = (L.pensionSave || 0) + L.need * 0.015;
+  });
+
+  m('informal-tips', 'Чаевые', 'money', function (L) { return working(L) && sectorOf(L) === 'service'; }, function (L, api) {
+    api.earn(L.need * (rich(L.c) ? 0.05 : 0.03));
+  });
+
+  m('overtime-pay', 'Сверхурочные', 'money', function (L) { return working(L); }, function (L, api) {
+    if (api.chance(0.3)) {
+      api.earn(L.need * 0.035); L.stat('health', -0.12); L.stat('bond', -0.1);
+    }
+  });
+
+  m('side-gig', 'Подработка по вечерам', 'money', function (L) { return adult(L) && L.age < 65 && L.money < L.need * 0.3; }, function (L, api) {
+    if (api.chance(0.35)) {
+      api.earn(L.need * 0.05); L.stat('health', -0.15); L.stat('happy', -0.2);
+      if (api.say('side-gig', 7)) api.add('Вечерами вы подрабатываете: денег чуть больше, сил — меньше.', 'work');
+    }
+  });
+
+  m('barter', 'Обмен без денег', 'money', function (L) { return poor(L.c) && !L.urban && adult(L); }, function (L, api) {
+    if (api.chance(0.3)) { api.earn(L.need * 0.012); L.stat('bond', 0.3); }
+  });
+
+  m('family-pot', 'Общий котёл семьи', 'money', function (L) { return kids(L) > 0 && !rich(L.c); }, function (L, api) {
+    api.spend(L.need * 0.01 * Math.min(kids(L), 4));
+  });
+
+  m('remittance-send', 'Переводы родным', 'money', function (L) { return working(L) && (L.abroad || (L.urban && !rich(L.c))) && L.parentsAlive > 0; }, function (L, api) {
+    if (api.chance(0.5)) { api.spend(L.need * 0.04); L.stat('bond', 0.5); }
+  });
+
+  m('remittance-get', 'Переводы от родных', 'money', function (L) { return !rich(L.c) && L.age >= 16 && L.money < 0; }, function (L, api) {
+    if (api.chance(0.2)) { api.earn(L.need * 0.05); L.stat('bond', 0.3); }
+  });
+
+  m('utility-debt', 'Долг за коммуналку', 'money', function (L) { return adult(L) && L.money < -L.need * 0.2 && !L.homeless; }, function (L, api) {
+    L.stat('happy', -0.4);
+    if (api.chance(0.15) && api.say('utility-debt', 6)) api.add('Пришло уведомление о долге за квартиру.', 'bad');
+  });
+
+  m('microloan-temptation', 'Микрозайм на углу', 'late', function (L) { return adult(L) && L.money < 0 && L.year >= 2005; }, function (L, api) {
+    if (api.chance(0.1)) {
+      L.stat('happy', -0.4);
+      if (api.say('microloan-temptation', 9)) api.add('Вывеска «деньги за пять минут» теперь висит у дома. Вы прошли мимо.', 'money');
+    }
+  });
+
+  m('savings-jar', 'Банка на полке', 'money', function (L) { return adult(L) && L.money > 0 && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.3)) L.jar = (L.jar || 0) + L.need * 0.01;
+  });
+
+  m('gold-ring', 'Золото как сбережение', 'money', function (L) { return adult(L) && !rich(L.c) && L.money > L.need * 0.5 && !L.has('gold'); }, function (L, api) {
+    if (api.chance(0.06)) {
+      api.spend(L.need * 0.08); L.flag('gold', true);
+      if (api.say('gold-ring', 12)) api.add('Вы купили золотое кольцо — так надёжнее, чем держать деньги.', 'money');
+    }
+  });
+
+  m('sell-gold', 'Продать золото', 'money', function (L) { return L.has('gold') && L.money < -L.need * 0.3; }, function (L, api) {
+    L.flag('gold', false); api.earn(L.need * 0.09); L.stat('happy', -0.6);
+    if (api.say('sell-gold', 10)) api.add('Пришлось отнести кольцо в ломбард.', 'bad');
+  });
+
+  m('second-hand', 'Вторая рука', 'money', function (L) { return adult(L) && (poor(L.c) || L.money < 0); }, function (L, api) {
+    if (api.chance(0.3)) { api.earn(L.need * 0.008); L.stat('happy', -0.1); }
+  });
+
+  m('bulk-buy', 'Запасы на зиму', 'money', function (L) { return adult(L) && cold(L.c); }, function (L, api) {
+    api.spend(L.need * 0.02);
+    if (api.chance(0.1) && api.say('bulk-buy', 10)) api.add('Балкон забит банками и мешками: зима длинная.', 'money');
+  });
+
+  m('fuel-price', 'Бензин дорожает', 'money', function (L) { return L.has('car'); }, function (L, api) {
+    api.spend(L.need * 0.02 * (L.priceLevel || 1));
+  });
+
+  m('car-insurance', 'Страховка машины', 'money', function (L) { return L.has('car') && !poor(L.c); }, function (L, api) {
+    api.spend(L.need * 0.015);
+  });
+
+  m('health-insurance', 'Медицинская страховка', 'money', function (L) { return working(L) && rich(L.c); }, function (L, api) {
+    api.spend(L.need * 0.025); L.stat('health', 0.3);
+  });
+
+  m('school-fees-small', 'Сборы в школе', 'money', function (L) { return kidAged(L, 6, 17) && !rich(L.c); }, function (L, api) {
+    api.spend(L.need * 0.012);
+    if (api.chance(0.1) && api.say('school-fees-small', 7)) api.add('Опять сбор на ремонт класса и подарки учителям.', 'money');
+  });
+
+  m('inherit-small', 'Небольшое наследство', 'late', function (L) { return L.age >= 35 && L.age <= 75 && L.parentsAlive < 2; }, function (L, api) {
+    if (api.chance(0.012)) {
+      L.addMoney(L.need * (rich(L.c) ? 1.6 : 0.7));
+      api.add('Вам досталось небольшое наследство: деньги и старые фотографии.', 'money');
+    }
+  });
+
+  m('money-talk', 'Разговор о деньгах дома', 'late', function (L) { return married(L) && adult(L); }, function (L, api) {
+    if (api.chance(0.12)) L.stat(L.money > 0 ? 'bond' : 'happy', L.money > 0 ? 0.3 : -0.5);
+  });
+
+  /* ============== 8. ТЕЛО И ЗДОРОВЬЕ: ещё двадцать пять (25) =========== */
+
+  m('morning-walk', 'Утренняя ходьба', 'late', function (L) { return L.age >= 25; }, function (L, api) {
+    if (api.chance(0.35)) { L.stat('health', 0.4); L.stat('happy', 0.12); }
+  });
+
+  m('gym', 'Спортзал', 'money', function (L) { return L.age >= 16 && L.age <= 60 && L.urban && !poor(L.c) && L.year >= 1980; }, function (L, api) {
+    if (api.chance(0.3)) { api.spend(L.need * 0.015); L.stat('health', 0.7); L.stat('happy', 0.2); }
+  });
+
+  m('smoking', 'Сигареты', 'money', function (L) { return L.age >= 16; }, function (L, api) {
+    if (!L.has('smoker') && api.chance(L.age < 25 ? 0.035 : 0.006) && (poor(L.c) || api.chance(0.5))) L.flag('smoker', true);
+    if (L.has('smoker')) {
+      api.spend(L.need * 0.02); L.stat('health', -0.3);
+      if (api.chance(0.05) && api.say('smoking', 12)) api.add('Пачка в день — привычка, которую не считают расходом.', 'bad');
+    }
+  });
+
+  m('quit-smoking', 'Бросить курить', 'late', function (L) { return L.has('smoker') && L.age >= 30; }, function (L, api) {
+    if (api.chance(0.07)) {
+      L.flag('smoker', false); L.stat('health', 1.5); L.stat('happy', -0.5);
+      api.add('Вы бросили курить. Первые месяцы были злыми.', 'good');
+    }
+  });
+
+  m('drinking', 'Выпивка', 'money', function (L) { return L.age >= 18; }, function (L, api) {
+    var p = (cold(L.c) ? 0.3 : 0.2) * (L.stats.happy < 40 ? 1.5 : 1);
+    if (api.chance(p)) { api.spend(L.need * 0.012); L.stat('health', -0.2); L.stat('happy', 0.2); }
+  });
+
+  m('dentist-visit', 'Поход к стоматологу', 'money', function (L) { return L.age >= 18 && !poor(L.c); }, function (L, api) {
+    if (api.chance(0.3)) { api.spend(L.need * 0.02); L.stat('health', 0.3); }
+  });
+
+  m('eyes-screen', 'Экран весь день', 'late', function (L) { return L.year >= 2000 && (sectorOf(L) === 'prof' || sectorOf(L) === 'elite'); }, function (L, api) {
+    L.stat('health', -0.07); L.stat('know', 0.1);
+  });
+
+  m('posture', 'Сидячая работа', 'late', function (L) { return working(L) && (sectorOf(L) === 'prof' || sectorOf(L) === 'elite' || sectorOf(L) === 'service'); }, function (L, api) {
+    if (api.chance(0.3)) L.stat('health', -0.1);
+  });
+
+  m('vitamin-d', 'Мало солнца', 'late', function (L) { return cold(L.c); }, function (L, api) {
+    L.stat('health', -0.06); if (api.chance(0.2)) L.stat('happy', -0.3);
+  });
+
+  m('heat-sleep', 'Душные ночи', 'late', function (L) { return hot(L.c) && !L.has('ac'); }, function (L, api) {
+    if (api.chance(0.4)) { L.stat('happy', -0.25); L.stat('health', -0.05); }
+  });
+
+  m('allergy-season', 'Сезон пыльцы', 'late', function (L) { return L.has('allergy') || L.has('chronic') || !L.urban; }, function (L, api) {
+    if (api.chance(0.5)) L.stat('health', -0.15);
+  });
+
+  m('flu-season', 'Сезон простуд', 'late', function (L) { return true; }, function (L, api) {
+    if (api.chance(L.age < 10 || L.age > 65 ? 0.35 : 0.25)) {
+      L.stat('health', -0.22);
+      if (api.chance(0.3)) api.spend(L.need * 0.006);
+    }
+  });
+
+  m('food-poison', 'Отравление', 'late', function (L) { return poor(L.c) || hot(L.c); }, function (L, api) {
+    if (api.chance(0.06)) { L.stat('health', -0.6); if (api.say('food-poison', 8)) api.add('Два дня вы не могли встать: что-то не то съели.', 'bad'); }
+  });
+
+  m('injury-home', 'Бытовая травма', 'late', function (L) { return L.age >= 3; }, function (L, api) {
+    if (api.chance(0.04)) {
+      L.stat('health', -0.7); api.spend(L.need * 0.01);
+      if (api.say('injury-home', 7)) api.add('Неудачно оступились дома — рука в гипсе.', 'bad');
+    }
+  });
+
+  m('blood-pressure', 'Давление', 'early', function (L) { return L.age >= 45; }, function (L, api) {
+    L.stat('health', -0.1);
+    if (api.chance(0.05) && !L.has('chronic')) { L.flag('chronic', true); if (api.say('blood-pressure', 10)) api.add('Врач записал вам гипертонию и выписал таблетки навсегда.', 'bad'); }
+  });
+
+  m('cholesterol', 'Холестерин', 'late', function (L) { return L.age >= 40 && !poor(L.c); }, function (L, api) {
+    if (api.chance(0.25)) L.stat('health', -0.1);
+  });
+
+  m('diabetes-risk', 'Сахар', 'late', function (L) { return L.age >= 45; }, function (L, api) {
+    if (!L.has('diabetes') && api.chance(rich(L.c) ? 0.012 : 0.018)) {
+      L.flag('diabetes', true); L.flag('chronic', true); L.stat('health', -1);
+      api.add('Анализы показали диабет. Теперь есть список запрещённого.', 'bad');
+    }
+    if (L.has('diabetes')) { api.spend(L.need * 0.015); L.stat('health', -0.1); }
+  });
+
+  m('physio', 'Лечебная физкультура', 'money', function (L) { return L.has('chronic') && L.age >= 35; }, function (L, api) {
+    if (api.chance(0.3)) { api.spend(L.need * 0.015); L.stat('health', 0.55); }
+  });
+
+  m('hospital-queue', 'Очередь в поликлинике', 'late', function (L) { return L.age >= 50 && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.3)) L.stat('happy', -0.3);
+  });
+
+  m('medicine-cost', 'Лекарства', 'money', function (L) { return L.age >= 55 || L.has('chronic'); }, function (L, api) {
+    api.spend(L.need * (poor(L.c) ? 0.03 : 0.02));
+  });
+
+  m('hearing-loss', 'Слух садится', 'late', function (L) { return L.age >= 60; }, function (L, api) {
+    if (api.chance(0.2)) { L.stat('bond', -0.2); if (api.chance(0.1) && api.say('hearing-loss', 9)) api.add('Телевизор приходится делать громче, чем нравится домашним.', 'neutral'); }
+  });
+
+  m('sleep-apnea', 'Храп', 'late', function (L) { return L.age >= 45; }, function (L, api) {
+    if (api.chance(0.12)) { L.stat('health', -0.12); if (married(L)) L.stat('bond', -0.1); }
+  });
+
+  m('mental-help', 'Разговор с психологом', 'money', function (L) { return L.age >= 16 && L.stats.happy < 42 && L.year >= 1995 && !poor(L.c); }, function (L, api) {
+    if (api.chance(0.15)) {
+      api.spend(L.need * 0.025); L.stat('happy', 1.6);
+      if (api.say('mental-help', 6)) api.add('Вы начали ходить к психологу. Сначала было неловко.', 'good');
+    }
+  });
+
+  m('burnout-creep', 'Выгорание подкрадывается', 'late', function (L) { return working(L) && L.age >= 25; }, function (L, api) {
+    if (L.job && (L.job.overtime || 0) > 3 && api.chance(0.2)) {
+      L.job.burnout = clamp((L.job.burnout || 0) + 4, 0, 100);
+      L.stat('happy', -0.6);
+    }
+  });
+
+  m('recovery-walks', 'Восстановление после болезни', 'late', function (L) { return L.has('chronic') && L.stats.health < 55; }, function (L, api) {
+    if (api.chance(0.35)) L.stat('health', 0.35);
+  });
+
+  /* ================ 9. ЛЮДИ ВОКРУГ: ещё двадцать пять (25) ============= */
+
+  m('birthday', 'День рождения', 'money', function (L) { return L.age >= 3; }, function (L, api) {
+    api.spend(L.need * (rich(L.c) ? 0.02 : 0.012));
+    L.stat('happy', L.stats.bond > 50 ? 0.5 : 0.15);
+  });
+
+  m('new-year', 'Праздники', 'money', function (L) { return L.age >= 3; }, function (L, api) {
+    api.spend(L.need * 0.022); L.stat('happy', 0.4); L.stat('bond', 0.25);
+  });
+
+  m('school-friends', 'Школьные друзья', 'late', function (L) { return L.edu.inSchool; }, function (L, api) {
+    L.stat('bond', 0.4);
+    if (api.chance(0.08) && api.say('school-friends', 8)) api.add('Полкласса подружилось на всю жизнь — вы в их числе.', 'good');
+  });
+
+  m('colleagues', 'Коллеги', 'late', working, function (L, api) {
+    L.stat('bond', 0.25);
+    if (L.job && L.job.mood > 70 && api.chance(0.1)) L.stat('happy', 0.3);
+  });
+
+  m('office-party', 'Корпоратив', 'late', function (L) { return working(L) && L.urban; }, function (L, api) {
+    if (api.chance(0.3)) { L.stat('happy', 0.4); L.stat('bond', 0.3); }
+  });
+
+  m('neighbour-conflict', 'Ссора с соседями', 'late', function (L) { return adult(L) && L.urban; }, function (L, api) {
+    if (api.chance(0.07)) {
+      L.stat('happy', -0.7); L.stat('bond', -0.4);
+      if (api.say('neighbour-conflict', 8)) api.add('Соседи сверху делают ремонт третий месяц.', 'bad');
+    }
+  });
+
+  m('borrow-tool', 'Одолжить соседу', 'late', function (L) { return adult(L) && !L.urban; }, function (L, api) {
+    if (api.chance(0.3)) L.stat('bond', 0.35);
+  });
+
+  m('babysit-help', 'Посидеть с чужими детьми', 'late', function (L) { return adult(L) && L.stats.bond > 55; }, function (L, api) {
+    if (api.chance(0.2)) { L.stat('bond', 0.5); L.stat('happy', 0.2); }
+  });
+
+  m('elder-respect', 'Уважение к старшим', 'late', function (L) { return L.age >= 65 && !rich(L.c); }, function (L, api) {
+    L.stat('happy', 0.2);
+  });
+
+  m('in-laws', 'Родня супруга', 'late', married, function (L, api) {
+    if (api.chance(0.25)) L.stat(api.chance(0.55) ? 'bond' : 'happy', api.chance(0.55) ? 0.3 : -0.4);
+  });
+
+  m('family-dinner', 'Воскресный обед', 'late', function (L) { return kids(L) > 0 || L.parentsAlive > 0; }, function (L, api) {
+    if (api.chance(0.4)) { L.stat('bond', 0.3); L.stat('happy', 0.15); }
+  });
+
+  m('village-gossip', 'Деревенские разговоры', 'late', function (L) { return adult(L) && !L.urban; }, function (L, api) {
+    if (api.chance(0.2)) L.stat('happy', api.chance(0.5) ? 0.3 : -0.3);
+  });
+
+  m('city-anonymity', 'Город не спрашивает имени', 'late', function (L) { return adult(L) && L.urban; }, function (L, api) {
+    L.stat('bond', -0.12);
+  });
+
+  m('club-hobby', 'Кружок по интересам', 'money', function (L) { return L.age >= 8 && L.age <= 75; }, function (L, api) {
+    if (api.chance(0.15)) {
+      api.spend(L.need * 0.008); L.stat('happy', 0.5); L.stat('bond', 0.3);
+      if (api.chance(0.1) && api.say('club-hobby', 9)) api.add('Вы нашли своих людей — раз в неделю вместе занимаетесь любимым делом.', 'good');
+    }
+  });
+
+  m('volunteer', 'Волонтёрство', 'late', function (L) { return adult(L) && L.stats.bond > 60; }, function (L, api) {
+    if (api.chance(0.15)) { L.stat('happy', 0.3); L.stat('bond', 0.3); }
+  });
+
+  m('charity-give', 'Пожертвование', 'money', function (L) { return adult(L) && L.money > L.need * 0.5; }, function (L, api) {
+    if (api.chance(0.25)) { api.spend(L.need * 0.008); L.stat('happy', 0.35); }
+  });
+
+  m('funeral-help', 'Собрать на похороны', 'money', function (L) { return adult(L) && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.12)) { api.spend(L.need * 0.015); L.stat('bond', 0.4); }
+  });
+
+  m('anniversary', 'Годовщина', 'money', function (L) { return married(L); }, function (L, api) {
+    api.spend(L.need * 0.008); L.stat('happy', 0.5); L.stat('bond', 0.3);
+  });
+
+  m('quarrel-partner', 'Домашняя ссора', 'late', married, function (L, api) {
+    if (api.chance(0.22)) { L.stat('happy', -0.6); L.stat('bond', -0.35); L.flag('quarrel', true); }
+  });
+
+  m('make-up', 'Помирились', 'late', function (L) { return married(L) && L.has('quarrel'); }, function (L, api) {
+    if (api.chance(0.7)) { L.flag('quarrel', false); L.stat('happy', 0.5); L.stat('bond', 0.4); }
+  });
+
+  m('long-distance', 'Жизнь на два города', 'late', function (L) { return married(L) && (L.abroad || L.moves > 2); }, function (L, api) {
+    if (api.chance(0.25)) { L.stat('happy', -0.4); L.stat('bond', -0.2); }
+  });
+
+  m('letters', 'Письма и звонки', 'late', function (L) { return L.age >= 12; }, function (L, api) {
+    if (api.chance(0.3)) L.stat('bond', 0.2);
+  });
+
+  m('social-media', 'Лента в телефоне', 'late', function (L) { return L.age >= 12 && L.year >= 2008; }, function (L, api) {
+    if (api.chance(0.5)) { L.stat('happy', api.chance(0.5) ? 0.25 : -0.35); L.stat('bond', 0.1); }
+  });
+
+  m('reunion', 'Встреча выпускников', 'late', function (L) { return L.age >= 28 && L.age <= 65; }, function (L, api) {
+    if (api.chance(0.05)) {
+      L.stat('happy', 0.9); L.stat('bond', 0.5);
+      if (api.say('reunion', 10)) api.add('Встреча выпускников: все изменились, а разговоры те же.', 'good');
+    }
+  });
+
+  m('rumours', 'Про вас говорят', 'late', adult, function (L, api) {
+    if (api.chance(0.05)) L.stat('happy', -0.4);
+  });
+
+  /* =========== 10. УЧЁБА, РАБОТА И ВЕЩИ: ещё двадцать пять (25) ======== */
+
+  m('homework', 'Домашние задания', 'late', function (L) { return L.edu.inSchool; }, function (L, api) {
+    L.stat('know', 0.25); if (api.chance(0.3)) L.stat('happy', -0.2);
+  });
+
+  m('exam-stress', 'Экзамены', 'late', function (L) { return L.edu.inSchool && L.age >= 14; }, function (L, api) {
+    L.stat('happy', -0.4); L.stat('know', 0.3);
+    if (api.chance(0.1) && api.say('exam-stress', 6)) api.add('Ночь перед экзаменом вы не спали.', 'neutral');
+  });
+
+  m('tutor', 'Репетитор', 'money', function (L) { return L.edu.inSchool && L.age >= 12 && !poor(L.c); }, function (L, api) {
+    if (api.chance(0.25)) { api.spend(L.need * 0.02); L.stat('know', 0.6); }
+  });
+
+  m('school-meal', 'Школьная столовая', 'money', function (L) { return L.edu.inSchool; }, function (L, api) {
+    api.spend(L.need * 0.005);
+  });
+
+  m('library-card', 'Библиотека', 'late', function (L) { return L.edu.inSchool || L.stats.know > 22; }, function (L, api) {
+    if (api.chance(0.25)) L.stat('know', 0.3);
+  });
+
+  m('night-shift', 'Ночные смены', 'late', function (L) { return working(L) && L.job.schedule === 'night'; }, function (L, api) {
+    L.stat('health', -0.2); if (api.chance(0.1) && api.say('night-shift', 8)) api.add('Ночные смены сбили сон: днём вы спите, ночью работаете.', 'work');
+  });
+
+  m('boss-bad', 'Тяжёлый начальник', 'late', function (L) { return working(L) && L.job.boss < 0; }, function (L, api) {
+    if (api.chance(0.25)) { L.stat('happy', -0.5); if (L.job) L.job.mood = clamp(L.job.mood - 1.5, 5, 95); }
+  });
+
+  m('boss-good', 'Начальник на вашей стороне', 'late', function (L) { return working(L) && L.job.boss > 0; }, function (L, api) {
+    if (api.chance(0.2)) { L.stat('happy', 0.4); if (L.job) L.job.rep = clamp(L.job.rep + 1, 5, 95); }
+  });
+
+  m('promotion-talk', 'Разговор о повышении', 'late', function (L) { return working(L) && L.age >= 24 && L.job.years >= 2; }, function (L, api) {
+    if (api.chance(0.1)) {
+      if (L.job) L.job.boost = clamp((L.job.boost || 1) + 0.02, 0.5, 1.08);
+      L.stat('happy', 0.3);
+    }
+  });
+
+  m('layoff-rumor', 'Слухи о сокращении', 'late', function (L) { return working(L) && L.econ === 'кризис'; }, function (L, api) {
+    if (api.chance(0.3)) { L.stat('happy', -0.6); if (L.job) L.job.mood = clamp(L.job.mood - 2, 5, 95); }
+  });
+
+  m('union-shop', 'Профсоюз', 'late', function (L) { return working(L) && L.job.union; }, function (L, api) {
+    L.stat('bond', 0.2);
+    if (api.chance(0.08)) { if (L.job) L.job.boost = clamp((L.job.boost || 1) + 0.01, 0.5, 1.08); }
+  });
+
+  m('work-scratch', 'Мелкие травмы на работе', 'late', function (L) { return working(L) && L.job.risk > 1.2; }, function (L, api) {
+    if (api.chance(0.2 * (1 - (L.job.safety || 0.5)))) L.stat('health', -0.3);
+  });
+
+  m('commute-jam', 'Пробки', 'late', function (L) { return working(L) && L.urban && L.has('car'); }, function (L, api) {
+    if (api.chance(0.4)) L.stat('happy', -0.25);
+  });
+
+  m('remote-work', 'Работа из дома', 'late', function (L) { return working(L) && L.year >= 2020 && (sectorOf(L) === 'prof' || sectorOf(L) === 'elite'); }, function (L, api) {
+    if (!L.job.remote && api.chance(0.3)) {
+      L.job.remote = true; L.stat('happy', 0.6); L.stat('health', 0.2);
+      if (api.say('remote-work', 9)) api.add('Вы перешли на работу из дома: кухня стала кабинетом.', 'work');
+    }
+  });
+
+  m('skill-course', 'Курсы по специальности', 'money', function (L) { return working(L) && L.age >= 22 && L.age <= 58; }, function (L, api) {
+    if (api.chance(0.04)) {
+      api.spend(L.need * 0.02); L.stat('know', 0.8);
+      if (L.job) L.job.certs = Math.min((L.job.certs || 0) + 1, 6);
+    }
+  });
+
+  m('certificate', 'Разряд и сертификат', 'late', function (L) { return working(L) && (L.job.certs || 0) >= 2; }, function (L, api) {
+    if (api.chance(0.15)) {
+      if (L.job) L.job.boost = clamp((L.job.boost || 1) + 0.03, 0.5, 1.08);
+      if (api.say('certificate', 8)) api.add('Вы подтвердили разряд — это сразу видно в зарплате.', 'work');
+    }
+  });
+
+  m('toolkit-buy', 'Свой инструмент', 'money', function (L) { return working(L) && (sectorOf(L) === 'skilled' || sectorOf(L) === 'manual'); }, function (L, api) {
+    if (api.chance(0.15)) { api.spend(L.need * 0.02); if (L.job) L.job.boost = clamp((L.job.boost || 1) + 0.01, 0.5, 1.08); }
+  });
+
+  m('workwear', 'Спецодежда', 'money', function (L) { return working(L) && (sectorOf(L) === 'manual' || sectorOf(L) === 'agri'); }, function (L, api) {
+    api.spend(L.need * 0.006);
+  });
+
+  m('phone-upgrade', 'Новый телефон', 'money', function (L) { return L.age >= 14 && L.year >= 2005; }, function (L, api) {
+    if (api.chance(0.18)) { api.spend(L.need * (rich(L.c) ? 0.035 : 0.05)); L.stat('happy', 0.4); }
+  });
+
+  m('computer-home', 'Компьютер дома', 'money', function (L) { return L.year >= 1995 && !poor(L.c) && !L.has('pc'); }, function (L, api) {
+    if (api.chance(0.12)) {
+      api.spend(L.need * 0.06); L.flag('pc', true); L.stat('know', 0.6); L.stat('happy', 0.5);
+      api.add('В доме появился компьютер.', 'good');
+    }
+  });
+
+  m('internet-slow', 'Интернет еле тянет', 'late', function (L) { return L.year >= 2000 && !L.urban; }, function (L, api) {
+    if (api.chance(0.3)) L.stat('happy', -0.2);
+  });
+
+  m('furniture', 'Мебель в дом', 'money', function (L) { return L.home && adult(L); }, function (L, api) {
+    if (api.chance(0.15)) { api.spend(L.need * 0.03); L.stat('happy', 0.4); }
+  });
+
+  m('appliance-buy', 'Новая техника в дом', 'money', function (L) { return adult(L) && !poor(L.c); }, function (L, api) {
+    if (api.chance(0.12)) { api.spend(L.need * 0.04); L.stat('happy', 0.45); }
+  });
+
+  m('garden-plot', 'Огород', 'money', function (L) { return adult(L) && (!L.urban || L.has('dacha')); }, function (L, api) {
+    if (api.chance(0.5)) { api.earn(L.need * 0.025); L.stat('health', 0.22); L.stat('happy', 0.15); }
+  });
+
+  /* ========== 11. СТРАНА, ВРЕМЯ И ПРИРОДА: ещё двадцать пять (25) ====== */
+
+  m('winter-roads', 'Зимние дороги', 'late', function (L) { return cold(L.c) && adult(L); }, function (L, api) {
+    if (api.chance(0.15)) { L.stat('health', -0.2); L.stat('happy', -0.2); }
+  });
+
+  m('summer-heat', 'Жара', 'late', function (L) { return hot(L.c); }, function (L, api) {
+    if (api.chance(0.3)) { L.stat('health', -0.12); if (L.age > 70) L.stat('health', -0.15); }
+  });
+
+  m('monsoon', 'Сезон дождей', 'money', function (L) { return ['in', 'bd', 'pk', 'np', 'mm', 'th', 'vn', 'ph', 'id', 'lk', 'kh', 'la'].indexOf(L.c.code) >= 0; }, function (L, api) {
+    if (api.chance(0.4)) { api.spend(L.need * 0.01); L.stat('happy', -0.2); }
+  });
+
+  m('drought', 'Засуха', 'money', function (L) { return sectorOf(L) === 'agri' || (!L.urban && poor(L.c)); }, function (L, api) {
+    if (api.chance(0.08)) {
+      api.spend(L.need * 0.03); L.stat('happy', -0.5);
+      if (api.say('drought', 9)) api.add('Засуха: урожай сгорел, цены на еду поднялись.', 'bad');
+    }
+  });
+
+  m('harvest-good', 'Хороший урожай', 'money', function (L) { return sectorOf(L) === 'agri'; }, function (L, api) {
+    if (api.chance(0.25)) { api.earn(L.need * 0.05); L.stat('happy', 0.5); }
+  });
+
+  m('power-cut', 'Отключения света', 'late', function (L) { return poor(L.c) || (L.c.gdp < 14000 && !L.urban); }, function (L, api) {
+    if (api.chance(0.3)) L.stat('happy', -0.3);
+  });
+
+  m('water-shortage', 'Перебои с водой', 'late', function (L) { return poor(L.c) || hot(L.c); }, function (L, api) {
+    if (api.chance(0.2)) { L.stat('health', -0.08); L.stat('happy', -0.2); }
+  });
+
+  m('smog', 'Смог над городом', 'late', function (L) { return L.urban && ['cn', 'in', 'pk', 'bd', 'ir', 'eg', 'ng', 'id', 'vn', 'mn', 'th'].indexOf(L.c.code) >= 0; }, function (L, api) {
+    L.stat('health', -0.15);
+    if (api.chance(0.05) && api.say('smog', 9)) api.add('Воздух в городе такой, что к вечеру першит в горле.', 'bad');
+  });
+
+  m('noise-city', 'Шум за окном', 'late', function (L) { return L.urban; }, function (L, api) {
+    if (api.chance(0.3)) L.stat('happy', -0.15);
+  });
+
+  m('public-transport', 'Общественный транспорт', 'money', function (L) { return L.urban && adult(L) && !L.has('car'); }, function (L, api) {
+    api.spend(L.need * 0.012);
+  });
+
+  m('road-build', 'Построили дорогу', 'late', function (L) { return !L.urban && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.03)) {
+      L.stat('happy', 0.6);
+      if (api.say('road-build', 20)) api.add('До райцентра наконец проложили асфальт.', 'good');
+    }
+  });
+
+  m('new-school', 'Открыли школу', 'late', function (L) { return kidAged(L, 3, 15) && poor(L.c); }, function (L, api) {
+    if (api.chance(0.04)) { L.stat('happy', 0.5); api.add('В селе открыли новую школу — детям ближе ходить.', 'good'); }
+  });
+
+  m('clinic-open', 'Открыли амбулаторию', 'late', function (L) { return !rich(L.c) && !L.urban; }, function (L, api) {
+    if (api.chance(0.04)) { L.stat('health', 0.5); L.stat('happy', 0.3); }
+  });
+
+  m('price-control', 'Цены заморозили', 'early', function (L) { return adult(L) && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.04)) {
+      L.priceLevel = clamp((L.priceLevel || 1) * 0.985, 1, 3);
+      if (api.say('price-control', 12)) api.add('Власти заморозили цены на хлеб и молоко.', 'neutral');
+    }
+  });
+
+  m('pension-later', 'Пенсию отодвинули', 'early', function (L) { return L.age >= 40 && L.age <= 62 && !L.retired; }, function (L, api) {
+    if (api.chance(0.03) && !L.has('pensionLater')) {
+      L.flag('pensionLater', true); L.stat('happy', -0.8);
+      api.add('Пенсионный возраст подняли. Работать придётся дольше.', 'bad');
+    }
+  });
+
+  m('census', 'Перепись населения', 'late', function (L) { return L.age >= 6; }, function (L, api) {
+    if (api.chance(0.02) && api.say('census', 10)) api.add('К вам пришёл переписчик: вы — одна строка в большой таблице.', 'neutral');
+  });
+
+  m('papers-queue', 'Очередь за документами', 'money', adult, function (L, api) {
+    if (api.chance(0.12)) { api.spend(L.need * 0.005); L.stat('happy', -0.2); }
+  });
+
+  m('visa-refuse', 'Отказ в визе', 'late', function (L) { return adult(L) && !rich(L.c) && L.age <= 55; }, function (L, api) {
+    if (api.chance(0.03)) {
+      L.stat('happy', -0.5);
+      if (api.say('visa-refuse', 12)) api.add('В визе отказали без объяснений.', 'bad');
+    }
+  });
+
+  m('emigration-talk', 'Разговоры об отъезде', 'late', function (L) { return L.age >= 18 && L.age <= 45 && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.12)) { L.stat('happy', -0.2); L.flag('thinkMove', true); }
+  });
+
+  m('bad-news', 'Плохие новости', 'late', function (L) { return L.age >= 12; }, function (L, api) {
+    if (api.chance(0.2)) L.stat('happy', -0.25);
+  });
+
+  m('isolation', 'Страна закрывается', 'early', function (L) { return adult(L) && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.02)) {
+      if (L.money > 0) L.money *= 0.97;
+      L.stat('happy', -0.5);
+      if (api.say('isolation', 12)) api.add('Границы и счета закрываются: мир вокруг стал меньше.', 'bad');
+    }
+  });
+
+  m('tech-wave', 'Новая техника вокруг', 'late', function (L) { return L.year >= 1985 && L.age >= 10; }, function (L, api) {
+    if (api.chance(0.25)) L.stat('know', L.age < 50 ? 0.2 : 0.05);
+  });
+
+  m('tv-evening', 'Вечер у телевизора', 'late', function (L) { return L.year >= 1960 && L.age >= 6; }, function (L, api) {
+    if (api.chance(0.5)) { L.stat('happy', 0.15); L.stat('health', -0.04); }
+  });
+
+  m('radio-morning', 'Утреннее радио', 'late', function (L) { return L.year < 1995 && L.age >= 6; }, function (L, api) {
+    if (api.chance(0.4)) L.stat('happy', 0.2);
+  });
+
+  m('festival', 'Городской праздник', 'late', function (L) { return L.age >= 4; }, function (L, api) {
+    if (api.chance(0.25)) { L.stat('happy', 0.25); L.stat('bond', 0.15); }
+  });
+
+  /* ============= 12. ВОЗРАСТ И ПЕРЕХОДЫ: ещё двадцать (20) ============= */
+
+  m('first-steps', 'Первые шаги', 'late', function (L) { return L.age === 1; }, function (L, api) {
+    api.add('Вы пошли — держась за палец взрослого.', 'life');
+  });
+
+  m('first-word', 'Первое слово', 'late', function (L) { return L.age === 2; }, function (L, api) {
+    L.stat('know', 0.8);
+    api.add('Первое слово сказано. Дальше их будет много.', 'life');
+  });
+
+  m('kindergarten-friends', 'Друзья в саду', 'late', function (L) { return L.age >= 3 && L.age <= 6; }, function (L, api) {
+    L.stat('bond', 0.3);
+  });
+
+  m('first-bell', 'Первый класс', 'late', function (L) { return L.age === 7 && L.edu.inSchool; }, function (L, api) {
+    L.stat('happy', 1);
+    api.add('Первый раз в первый класс: форма, букет и чужие большие коридоры.', 'life');
+  });
+
+  m('teen-argue', 'Подростковые ссоры', 'late', function (L) { return L.age >= 13 && L.age <= 17; }, function (L, api) {
+    if (api.chance(0.4)) { L.stat('happy', -0.4); L.stat('bond', -0.25); }
+  });
+
+  m('first-job-teen', 'Первая подработка', 'money', function (L) { return L.age >= 14 && L.age <= 18 && !rich(L.c); }, function (L, api) {
+    if (api.chance(0.25)) {
+      api.earn(L.need * 0.03); L.stat('know', 0.3);
+      if (api.say('first-job-teen', 5)) api.add('Первые свои деньги — заработаны летом.', 'work');
+    }
+  });
+
+  m('graduation', 'Выпускной', 'money', function (L) { return L.age === 17 || L.age === 18; }, function (L, api) {
+    if (L.edu.years >= 9 && api.say('graduation', 99)) {
+      api.spend(L.need * 0.02); L.stat('happy', 1);
+      api.add('Выпускной: все обещали не теряться.', 'life');
+    }
+  });
+
+  m('first-flat', 'Своё первое жильё', 'late', function (L) { return L.age >= 19 && L.age <= 40 && !L.home && !L.homeless; }, function (L, api) {
+    if (!L.has('ownPlace') && api.chance(0.08)) {
+      L.flag('ownPlace', true); L.stat('happy', 1);
+      api.add('Вы впервые живёте отдельно: чужая мебель, свои правила.', 'life');
+    }
+  });
+
+  m('first-salary', 'Первая зарплата', 'late', function (L) { return working(L) && !L.has('firstPay'); }, function (L, api) {
+    L.flag('firstPay', true); L.stat('happy', 1.5);
+    api.add('Первая зарплата. Половина ушла в тот же вечер.', 'work');
+  });
+
+  m('wedding-costs', 'Свадебные расходы', 'money', function (L) { return married(L) && !L.has('weddingPaid'); }, function (L, api) {
+    L.flag('weddingPaid', true);
+    api.spend(L.need * (poor(L.c) ? 0.25 : 0.15));
+  });
+
+  m('newborn-nights', 'Бессонные ночи', 'late', function (L) { return kidAged(L, 0, 1); }, function (L, api) {
+    L.stat('health', -0.3); L.stat('happy', 0.4);
+    if (api.say('newborn-nights', 4)) api.add('Ночи теперь короткие: ребёнок просыпается каждые два часа.', 'family');
+  });
+
+  m('kid-school-start', 'Ребёнок пошёл в школу', 'money', function (L) { return kidAged(L, 6, 7); }, function (L, api) {
+    api.spend(L.need * 0.03);
+    if (api.say('kid-school-start', 6)) api.add('Собрали ребёнка в школу: форма, ранец, тетради.', 'family');
+  });
+
+  m('kid-exams', 'Экзамены у ребёнка', 'late', function (L) { return kidAged(L, 16, 18); }, function (L, api) {
+    L.stat('happy', -0.3);
+    if (api.chance(0.3)) api.spend(L.need * 0.01);
+  });
+
+  m('kid-wedding', 'Свадьба ребёнка', 'money', function (L) { return L.age >= 45 && kids(L) > 0; }, function (L, api) {
+    if (api.chance(0.06) && api.say('kid-wedding', 10)) {
+      api.spend(L.need * 0.12); L.stat('happy', 2); L.stat('bond', 1);
+      api.add('Свадьба у ребёнка. Вы плакали и не скрывали.', 'family');
+    }
+  });
+
+  m('grandchild-joy', 'Внуки приехали', 'late', function (L) { return L.grandchildren > 0; }, function (L, api) {
+    if (api.chance(0.4)) { L.stat('happy', 0.4); L.stat('bond', 0.3); }
+  });
+
+  m('parents-ill', 'Болезнь родителей', 'money', function (L) { return L.age >= 35 && L.parentsAlive > 0; }, function (L, api) {
+    if (api.chance(0.15)) {
+      api.spend(L.need * 0.03); L.stat('happy', -0.5);
+      if (api.say('parents-ill', 6)) api.add('Родители болеют: больницы, лекарства, дорога туда и обратно.', 'family');
+    }
+  });
+
+  m('retire-garden', 'Пенсия и грядки', 'late', function (L) { return L.retired; }, function (L, api) {
+    if (api.chance(0.4)) { L.stat('happy', 0.25); L.stat('health', 0.2); }
+  });
+
+  m('grandkid-care', 'Сидеть с внуками', 'late', function (L) { return L.retired && L.grandchildren > 0; }, function (L, api) {
+    if (api.chance(0.5)) { L.stat('bond', 0.5); L.stat('health', -0.08); }
+  });
+
+  m('peers-pass', 'Уходят ровесники', 'late', function (L) { return L.age >= 68; }, function (L, api) {
+    if (api.chance(0.18)) {
+      L.stat('happy', -0.7); L.stat('bond', -0.3);
+      if (api.say('peers-pass', 7)) api.add('Ещё один одноклассник не дожил до встречи.', 'bad');
+    }
+  });
+
+  m('haircut', 'Стрижка', 'money', function (L) { return L.age >= 3; }, function (L, api) {
+    api.spend(L.need * (rich(L.c) ? 0.009 : 0.004));
+    if (api.chance(0.05)) L.stat('happy', 0.2);
+  });
+
+  m('last-wish', 'Последние распоряжения', 'late', function (L) { return L.age >= 78; }, function (L, api) {
+    if (!L.has('willDone') && api.chance(0.12)) {
+      L.flag('willDone', true); L.stat('happy', 0.4);
+      api.add('Вы написали завещание и впервые за долгое время спали спокойно.', 'neutral');
+    }
   });
 
   /* ======================================================================

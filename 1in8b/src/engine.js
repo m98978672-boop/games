@@ -104,7 +104,7 @@
     this.lastChildAge = -99;
 
     /* --- таблица смертности --- */
-    this.table = M.lifeTable(this.sex === 'f' ? this.c.leF : this.c.leM, this.c.u5mr);
+    this.table = M.lifeTable(this.sex === 'f' ? this.c.leF : this.c.leM, this.c.u5mr, this.c.imr);
 
     /* --- жизнь --- */
     this.age = 0;
@@ -1346,7 +1346,7 @@
     var q = this.table.qx[a];
     if (a < 5) {
       /* в первые годы решает не образ жизни, а достаток семьи и медицина */
-      return clamp(q * clamp(1 + (0.5 - this.famPct) * 0.6 - this.budget.health * 0.8, 0.55, 1.8), 0, 0.97);
+      return clamp(q * clamp(1 + (0.5 - this.famPct) * 0.6 - (this.budget.health - 0.1) * 0.8, 0.55, 1.8), 0, 0.97);
     }
     /* отклонение от базовой кривой здоровья: хуже среднего — выше риск.
        Множители подобраны так, чтобы у «нейтральной» жизни их произведение
@@ -1354,7 +1354,9 @@
     var gap = this.baseHealth - this.stats.health;
     var r = Math.exp(gap / 62);
     r *= 1 + (0.45 - clamp(M.percentileOfIncome(this.c, Math.max(this.income || this.famIncome, 1)), 0, 1)) * 0.3;
-    if (this.homeless) r *= this.homeless > 3 ? 5.2 : 3.2;
+    /* каждая зима без дома тяжелее предыдущей: сперва держишься,
+       потом здоровье уходит быстрее, чем успеваешь его чинить */
+    if (this.homeless) r *= (this.homeless > 3 ? 5.2 : 3.2) * (1 + (this.homeless - 1) * 0.06);
     if (this.has('smoker') && a > 30) r *= 1.22;
     if (this.has('chronic')) r *= 1.22;
     if (this.has('untreated')) r *= 1.2;
@@ -1366,7 +1368,8 @@
     /* Потолок множителя: иначе редкое совпадение бед даёт верную смерть.
        У человека без дома потолок выше — на улице четвёртая зима
        действительно опаснее первой, и это должно быть видно в числах. */
-    return clamp(q * RISK_CAL * clamp(r, 0.5, this.homeless ? 12 : 6), 0, 0.97);
+    var cap = this.homeless ? 11 + this.homeless : 6;
+    return clamp(q * RISK_CAL * clamp(r, 0.5, cap), 0, 0.97);
   };
 
   /* ---------------------------- один год ------------------------------- */
