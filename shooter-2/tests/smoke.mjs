@@ -18,7 +18,7 @@ const requiredFiles = [
   'src/data.js', 'src/outline.js', 'src/gunblueprints.js', 'src/soldier.js', 'src/level.js',
   'src/model.js', 'src/anim.js', 'src/ik.js', 'src/ragdoll.js', 'src/world.js',
   'src/ai.js', 'src/agent.js', 'src/fx.js', 'src/viewmodel.js', 'src/audio.js',
-  'src/perf.js', 'src/game.js', 'src/ui.js', 'src/bugcodes.js'
+  'src/perf.js', 'src/gamebot.js', 'src/game.js', 'src/ui.js', 'src/bugcodes.js'
 ];
 for (const f of requiredFiles) assert.ok(exists(f), `нет файла ${f}`);
 

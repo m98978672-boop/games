@@ -164,7 +164,7 @@ sandbox.THREE = THREE_PROXY;
 
 /* ============================ загрузка модулей =========================== */
 const MODULES = ['bugcodes', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik',
-  'ragdoll', 'world', 'ai', 'agent', 'fx', 'viewmodel', 'audio', 'perf', 'game', 'ui'];
+  'ragdoll', 'world', 'ai', 'agent', 'fx', 'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui'];
 const bootErrors = [];
 for (const m of MODULES) {
   try { vm.runInContext(read(`src/${m}.js`), sandbox, { filename: `src/${m}.js` }); }
@@ -940,6 +940,179 @@ det(418, () => {
 });
 det(419, () => ({ bad: game.player.radius <= 0.2 || game.player.radius > 1 }));
 
+/* ======================= 420–429: «я не могу ходить» ====================
+   Прошлые проверки смотрели на формулу стика (мёртвая зона, нормировка,
+   радиус), поэтому и пропустили главный баг: вектор стика считался, но в
+   физику тела не передавался. Теперь каждый детектор честно жмёт клавишу
+   или тянет стик и смотрит, сдвинулся ли игрок в мире. */
+function walkReset(mission) {
+  game.startMission(mission === undefined ? 0 : mission);
+  game.state = 'playing';
+  game.locked = true;
+  game.enemies.slice().forEach((e) => e.dispose(game.scene));
+  game.enemies.length = 0;
+  Object.keys(game.keys).forEach((k) => { game.keys[k] = false; });
+  game.input.crouchToggle = false;
+  game.input.analog = null;
+  game.mouse.dx = 0; game.mouse.dy = 0;
+  if (game.touch) {
+    game.touch.active = true;
+    game.touch.stickActive = false;
+    game.touch.sx = 0; game.touch.sz = 0;
+    game.touch.txs = 0; game.touch.tzs = 0;
+  }
+  game.player.yaw = 0;
+  game.player.pitch = 0;
+  return { x: game.player.x, z: game.player.z };
+}
+function walkFrames(n) {
+  for (let i = 0; i < (n || 90); i++) {
+    if (!game.player.alive) break;
+    game.player.hp = game.player.maxHp;
+    game.update(1 / 60);
+  }
+}
+function stickTo(x, z) {
+  game.touch.active = true;
+  game.touch.stickActive = true;
+  game.touch.txs = x; game.touch.tzs = z;
+}
+const dist = (a) => Math.hypot(game.player.x - a.x, game.player.z - a.z);
+
+det(420, () => {
+  /* Клавиши WASD: каждая из четырёх обязана сдвинуть тело. Это первое, что
+     проверяет живой человек, и первое, что должно падать, если ввод сломан. */
+  const bad = [];
+  const dirs = { KeyW: 'вперёд', KeyS: 'назад', KeyA: 'влево', KeyD: 'вправо' };
+  Object.keys(dirs).forEach((code) => {
+    const a = walkReset(0);
+    game.keys[code] = true;
+    walkFrames(90);
+    const d = dist(a);
+    if (!(d > 1.5)) bad.push(`${code} (${dirs[code]}): сдвиг ${d.toFixed(2)} м`);
+  });
+  return { bad };
+});
+
+det(421, () => {
+  /* Стик телефона: палец вверх до упора = идём вперёд. Ровно этот сценарий
+     и был сломан — стик двигался на экране, а боец стоял. */
+  const a = walkReset(0);
+  stickTo(0, 1);
+  walkFrames(120);
+  const d = dist(a);
+  return { moved: +d.toFixed(2), bad: d > 1.5 ? [] : [`стик вперёд: сдвиг ${d.toFixed(2)} м`] };
+});
+
+det(422, () => {
+  /* Статическая страховка от той же регрессии: вектор стика обязан уходить
+     в вызов update() игрока параметром analog, а не только в inp. */
+  const src = read('src/game.js');
+  const call = (src.match(/P\.update\(dt,\s*\{[\s\S]{0,320}?\}, this\)/) || [''])[0];
+  const bad = [];
+  if (!call) bad.push('не найден вызов P.update(dt, {...}, this)');
+  else if (!/analog:\s*inp\.analog/.test(call)) bad.push('в P.update не передаётся analog');
+  if (!/inp\.analog\s*=/.test(src)) bad.push('inp.analog нигде не заполняется');
+  return { bad };
+});
+
+det(423, () => {
+  /* Стик идёт туда, куда смотрит камера: повернулись на 90° — и «вперёд»
+     обязан стать другим направлением, а не мировой осью +Z. */
+  const a = walkReset(0);
+  game.player.yaw = Math.PI / 2;
+  stickTo(0, 1);
+  walkFrames(90);
+  const dx = game.player.x - a.x, dz = game.player.z - a.z;
+  const bad = [];
+  if (!(Math.abs(dx) > 1.5) || Math.abs(dx) < Math.abs(dz)) {
+    bad.push(`при yaw=90° ушли в (${dx.toFixed(2)}, ${dz.toFixed(2)}) — ожидали движение по X`);
+  }
+  return { bad };
+});
+
+det(424, () => {
+  /* «Вправо» по экрану при yaw=0 — это −X (камера смотрит в +Z). Здесь
+     раньше стоял перевёрнутый знак, и управление было зеркальным. */
+  const a = walkReset(0);
+  stickTo(1, 0);
+  walkFrames(90);
+  const dx = game.player.x - a.x;
+  return { dx: +dx.toFixed(2), bad: dx < -1.5 ? [] : [`стик вправо увёл в ${dx.toFixed(2)} м по X`] };
+});
+
+det(425, () => {
+  /* Половина наклона стика — примерно половина скорости: аналоговый шаг. */
+  const a = walkReset(0);
+  stickTo(0, 0.5);
+  walkFrames(60);
+  const slow = dist(a);
+  const b = walkReset(0);
+  stickTo(0, 1);
+  walkFrames(60);
+  const fast = dist(b);
+  const bad = [];
+  if (!(slow > 0.5)) bad.push(`полунаклон не двигает: ${slow.toFixed(2)} м`);
+  if (!(fast > slow * 1.3)) bad.push(`полунаклон ${slow.toFixed(2)} м против полного ${fast.toFixed(2)} м`);
+  return { slow: +slow.toFixed(2), fast: +fast.toFixed(2), bad };
+});
+
+det(426, () => {
+  /* Отпустили палец — тормозим. Инерция есть, но за полсекунды она обязана
+     погаснуть, иначе боец «уезжает» сам по себе. */
+  const a = walkReset(0);
+  stickTo(0, 1);
+  walkFrames(60);
+  game.touch.stickActive = false;
+  game.touch.txs = 0; game.touch.tzs = 0;
+  walkFrames(30);
+  const stop = { x: game.player.x, z: game.player.z };
+  walkFrames(60);
+  const drift = Math.hypot(game.player.x - stop.x, game.player.z - stop.z);
+  return { drift: +drift.toFixed(2), bad: drift > 0.4 ? [`после отпускания проехал ${drift.toFixed(2)} м`] : [] };
+});
+
+det(427, () => {
+  /* Движение на всех шести картах: спавн на harbor был внутри башни, и
+     человек честно не мог выйти с точки старта. */
+  const bad = [];
+  const report = [];
+  for (let m = 0; m < D.MISSIONS.length; m++) {
+    const a = walkReset(m);
+    game.keys.KeyW = true;
+    walkFrames(90);
+    const d = dist(a);
+    report.push(`м${m + 1}:${d.toFixed(1)}`);
+    if (!(d > 1.2)) bad.push(`миссия ${m + 1}: со спавна прошли ${d.toFixed(2)} м`);
+  }
+  return { report: report.join(' '), bad };
+});
+
+det(428, () => {
+  /* Спавн свободен во все четыре стороны: если игрок зажат в углу, ходьба
+     есть только в одном направлении и это ощущается как «не ходит». */
+  const bad = [];
+  for (let m = 0; m < D.MISSIONS.length; m++) {
+    walkReset(m);
+    const P = game.player;
+    const blocked = game.world.isFreeSpot(P.x, P.z, P.radius + 0.02, P.eyeHeight);
+    if (!blocked) bad.push(`миссия ${m + 1}: спавн (${P.x.toFixed(1)}, ${P.z.toFixed(1)}) занят`);
+  }
+  return { bad };
+});
+
+det(429, () => {
+  /* Мышь двигает только взгляд: без клавиш и стика тело стоит. Если оно
+     ползёт от поворота камеры — это «самоход», его тоже видно как поломку. */
+  const a = walkReset(0);
+  for (let i = 0; i < 60; i++) {
+    game.mouse.dx = 12; game.mouse.dy = 3;
+    game.update(1 / 60);
+  }
+  const d = dist(a);
+  return { drift: +d.toFixed(3), bad: d > 0.25 ? [`от поворота мыши уехал на ${d.toFixed(2)} м`] : [] };
+});
+
 /* ============================ 5xx: БОЙ ================================ */
 det(500, () => {
   game.startMission(0);
@@ -1514,6 +1687,215 @@ det(999, () => {
   return { bad: bad.slice(0, 8), detectors: BC.detectors(), total: BC.TOTAL };
 });
 
+/* =================== 920–929: бот-диагност внутри игры ================== */
+det(920, () => {
+  const bad = [];
+  if (!SH2.gamebot || !SH2.gamebot.GameBot) bad.push('нет модуля src/gamebot.js');
+  if (!game.bot) bad.push('бот не подключён к живой игре');
+  else if (!game.bot.attached) bad.push('бот не подписан на кадр');
+  const html = read('index.html');
+  if (!/src\/gamebot\.js/.test(html)) bad.push('index.html не подключает src/gamebot.js');
+  if (!/new SH2\.gamebot\.GameBot/.test(html)) bad.push('бот не создаётся при запуске игры');
+  return { bad };
+});
+det(921, () => {
+  const bad = [];
+  if (!SH2.bugcodes || SH2.bugcodes.TOTAL !== 1000) bad.push('таблица кодов неполная');
+  const bot = game.bot;
+  if (!bot || !bot.lookup) bad.push('в игре нет поиска по коду');
+  return { bad };
+});
+det(922, () => {
+  /* Поиск по коду в панели бота: вводим реальный номер и смотрим ответ. */
+  const bot = game.bot;
+  const bad = [];
+  if (!bot) return { bad: ['нет бота'] };
+  const ui = sandbox.document.getElementById('bot-search');
+  const answer = sandbox.document.getElementById('bot-answer');
+  if (!ui || !answer) return { bad: ['нет поля поиска или ответа в разметке'] };
+  ui.value = '421';
+  bot.lookup();
+  const text = String(answer.textContent || '');
+  if (!/Игрок и управление/.test(text)) bad.push('поиск по 421 не показал категорию: ' + text);
+  if (!/стик/.test(text)) bad.push('поиск по 421 не показал проверку: ' + text);
+  ui.value = '999';
+  bot.lookup();
+  if (!/Устойчивость/.test(String(answer.textContent))) bad.push('поиск по 999 не показал категорию');
+  return { bad };
+});
+det(923, () => {
+  /* Пассивный режим обязан поймать «намерение есть, движения нет». Подсовываем
+     боту ситуацию: игрок жив, клавиша нажата, а тело не двигается. */
+  const bot = game.bot;
+  if (!bot) return { bad: ['нет бота'] };
+  const bad = [];
+  const keepState = game.state, keepFound = bot.found.length;
+  const P = game.player;
+  const keep = { x: P.x, z: P.z };
+  game.state = 'playing';
+  game.keys.KeyW = true;
+  bot.watch.lastX = P.x; bot.watch.lastZ = P.z;
+  bot.watch.stillFrames = 60;
+  bot.tick(1 / 60, 1);
+  const caught = bot.found.some((f) => f.code === 420 || f.code === 421);
+  if (!caught) bad.push('пассивный режим не заметил, что игрок стоит при нажатой клавише');
+  /* Убираем искусственную находку, чтобы не портить отчёт. */
+  for (let i = bot.found.length - 1; i >= 0; i--) {
+    if (bot.found[i].code === 420 || bot.found[i].code === 421) bot.found.splice(i, 1);
+  }
+  bot.badges = bot.found.length;
+  game.keys.KeyW = false;
+  P.x = keep.x; P.z = keep.z;
+  game.state = keepState;
+  if (bot.found.length !== keepFound) bad.push('после проверки в находках остался мусор');
+  bot.watch.stillFrames = 0;
+  return { bad };
+});
+det(924, () => {
+  /* Прогон бота не должен менять мир: снимаем состояние до и после. */
+  const bot = game.bot;
+  if (!bot) return { bad: ['нет бота'] };
+  const a = { x: game.player.x, z: game.player.z, hp: game.player.hp, stamina: game.player.stamina };
+  bot.busy = false;
+  bot.runNow();
+  const bad = [];
+  const drift = Math.hypot(game.player.x - a.x, game.player.z - a.z);
+  if (drift > 0.001) bad.push(`игрок сместился на ${drift.toFixed(3)} м`);
+  if (Math.abs(game.player.hp - a.hp) > 0.001) bad.push('здоровье изменилось');
+  if (Math.abs(game.player.stamina - a.stamina) > 0.001) bad.push('выносливость изменилась');
+  if (!bot.lastRun) bad.push('прогон не оставил отчёт');
+  /* В игре прогон идёт порциями по кадрам (requestAnimationFrame), поэтому
+     стенное время здесь ничего не говорит: в headless RAF нет, и весь набор
+     исполняется сразу. Смотрим размер порции в коде, а не секундомер. */
+  const pumpSrc = String(bot.pump || '');
+  if (!/requestAnimationFrame/.test(pumpSrc)) bad.push('прогон не разбит на кадры');
+  if (!/< 8\b/.test(pumpSrc)) bad.push('порция прогона не ограничена по времени');
+  return { bad, checks: bot.checks, ms: bot.lastRun ? bot.lastRun.ms : 0 };
+});
+det(925, () => {
+  const bot = game.bot;
+  if (!bot) return { bad: ['нет бота'] };
+  const text = bot.reportText();
+  const bad = [];
+  if (!/таблица кодов: 1000/.test(text)) bad.push('в отчёте нет таблицы кодов');
+  if (!/проверок выполнено/.test(text)) bad.push('в отчёте нет числа проверок');
+  if (!/Бот-диагност/.test(text)) bad.push('отчёт не подписан');
+  if (text.length < 80) bad.push('отчёт пустой');
+  return { bad, bytes: text.length };
+});
+det(926, () => {
+  const need = ['bot-panel', 'bot-list', 'bot-summary', 'bot-search', 'bot-answer',
+    'bot-run', 'bot-copy', 'bot-save', 'bot-clear', 'bot-close', 'bot-badge'];
+  const html = read('index.html');
+  const miss = need.filter((id) => !html.includes('id="' + id + '"'));
+  const css = read('style.css');
+  const noStyle = ['bot-panel', 'bot-row', 'bot-code'].filter((c) => !css.includes('#' + c) && !css.includes('.' + c));
+  const bad = [];
+  if (miss.length) bad.push('нет элементов: ' + miss.join(', '));
+  if (noStyle.length) bad.push('нет стилей: ' + noStyle.join(', '));
+  if (!/KeyB/.test(read('src/game.js'))) bad.push('клавиша B не открывает бота');
+  return { bad };
+});
+det(927, () => {
+  /* Панель рисуется быстро и не теряет находки при перерисовке. */
+  const bot = game.bot;
+  if (!bot) return { bad: ['нет бота'] };
+  const n = bot.found.length;
+  const t0 = Date.now();
+  for (let i = 0; i < 20; i++) bot.render();
+  const ms = (Date.now() - t0) / 20;
+  const bad = [];
+  if (bot.found.length !== n) bad.push('перерисовка меняет находки');
+  if (ms > 8) bad.push(`перерисовка ${ms.toFixed(1)} мс`);
+  return { bad, ms: +ms.toFixed(2) };
+});
+det(928, () => {
+  const html = read('index.html');
+  const bad = [];
+  if (!/id="bot-btn-hud"/.test(html)) bad.push('нет кнопки бота в HUD');
+  if (!/bot-btn-hud/.test(read('style.css'))) bad.push('кнопка бота без стилей');
+  if (!/media \(max-width: 700px\)[\s\S]{0,120}bot-btn-hud/.test(read('style.css'))) {
+    bad.push('кнопка не поджата на телефоне');
+  }
+  return { bad };
+});
+det(929, () => {
+  /* Каждая находка обязана ссылаться на существующий код и категорию. */
+  const bot = game.bot;
+  if (!bot) return { bad: ['нет бота'] };
+  const bad = [];
+  bot.found.forEach((f) => {
+    if (!SH2.bugcodes.BY_CODE[f.code]) bad.push('код ' + f.code + ' вне таблицы');
+    if (!f.category || f.category === '—') bad.push('у находки ' + f.code + ' нет категории');
+    if (!f.title) bad.push('у находки ' + f.code + ' нет названия проверки');
+  });
+  return { bad };
+});
+det(430, () => {
+  /* Направление стика: «вправо» на экране — это −X при yaw=0, «вперёд» — +Z.
+     Ошибка знака здесь ощущается как зеркальное управление. */
+  const bot = game.bot;
+  const bad = [];
+  const keepState = game.state;
+  game.state = 'playing';
+  game.startMission(0);
+  game.state = 'playing';
+  game.locked = true;
+  game.enemies.slice().forEach((e) => e.dispose(game.scene));
+  game.enemies.length = 0;
+  const P = game.player;
+  Object.keys(game.keys).forEach((k) => { game.keys[k] = false; });
+  P.yaw = 0;
+  const x0 = P.x, z0 = P.z;
+  game.touch.active = true; game.touch.stickActive = true;
+  game.touch.sx = 1; game.touch.sz = 0; game.touch.txs = 1; game.touch.tzs = 0;
+  for (let i = 0; i < 60 && P.alive; i++) { P.hp = P.maxHp; game.update(1 / 60); }
+  const dx = P.x - x0;
+  if (!(dx < -0.8)) bad.push(`стик «вправо» увёл в ${dx.toFixed(2)} м по X`);
+  game.touch.stickActive = false; game.touch.active = false;
+  game.touch.sx = 0; game.touch.sz = 0; game.touch.txs = 0; game.touch.tzs = 0;
+  game.state = keepState;
+  return { bad, dx: +dx.toFixed(2), bot: !!bot };
+});
+det(431, () => {
+  /* Отпустили стик — игрок останавливается: инерция не должна нести тело. */
+  game.startMission(0);
+  game.state = 'playing';
+  game.enemies.slice().forEach((e) => e.dispose(game.scene));
+  game.enemies.length = 0;
+  const P = game.player;
+  Object.keys(game.keys).forEach((k) => { game.keys[k] = false; });
+  P.yaw = 0;
+  game.touch.active = true; game.touch.stickActive = true;
+  game.touch.sx = 0; game.touch.sz = 1; game.touch.txs = 0; game.touch.tzs = 1;
+  for (let i = 0; i < 60; i++) { P.hp = P.maxHp; game.update(1 / 60); }
+  game.touch.stickActive = false; game.touch.txs = 0; game.touch.tzs = 0;
+  const stop = { x: P.x, z: P.z };
+  for (let i = 0; i < 60; i++) { P.hp = P.maxHp; game.update(1 / 60); }
+  const drift = Math.hypot(P.x - stop.x, P.z - stop.z);
+  game.touch.active = false;
+  return { drift: +drift.toFixed(2), bad: drift > 0.5 ? [`после отпускания проехал ${drift.toFixed(2)} м`] : [] };
+});
+
+det(432, () => {
+  /* Тач-управление обязано включаться по любому признаку пальца. На webview
+     `pointer: coarse` не срабатывает — и тогда стика нет вовсе. */
+  const src = read('src/game.js');
+  const bad = [];
+  if (!/ontouchstart' in root/.test(src)) bad.push('нет проверки ontouchstart');
+  if (!/maxTouchPoints/.test(src)) bad.push('нет проверки maxTouchPoints');
+  return { bad, touchEnabled: !!(game.touch && game.touch.active) };
+});
+det(433, () => {
+  /* Кнопки тача должны дублировать игровые действия, а не быть декорацией:
+     у каждой кнопки из разметки есть обработчик в bindTouch. */
+  const src = read('src/game.js');
+  const html = read('index.html');
+  const ids = (html.match(/id="t-[a-z]+"/g) || []).map((x) => x.slice(4, -1));
+  const unbound = ids.filter((id) => !src.includes("hook('" + id + "'"));
+  return { buttons: ids.length, bad: unbound.length ? ['без обработчика: ' + unbound.join(', ')] : [] };
+});
+
 /* =============================== ОТЧЁТ ================================= */
 function runDetector(rec) {
   if (!rec.detector) return null;
@@ -1570,6 +1952,20 @@ results.started = 1;
    поднять — об этом честно скажем один раз, а не 90 раз в каждом детекторе. */
 try { bootGame(); }
 catch (e) { emit(0, false, 'игра не поднялась: ' + e.message, (e.stack || '').split('\n')[1] || ''); }
+/* Арбитр для детекторов бота-диагноста: настоящий прогон его проверок по
+   живой игре. Проверки обращаются к game.bot, иначе они честно скажут «бот не
+   подключён». Ставим бота туда же, где он живёт в index.html. */
+let inGameBot = null;
+try {
+  if (game && SH2.gamebot) {
+    inGameBot = new SH2.gamebot.GameBot(game).attach();
+    game.bot = inGameBot;
+    if (typeof game.startMission === 'function') game.startMission(0);
+  }
+} catch (e) {
+  emit(920, false, 'бот-диагност не поднялся: ' + e.message, (e.stack || '').split('\n')[1] || '');
+}
+
 const runList = BC.CODES.filter((c) => c.detector);
 for (const rec of runList) {
   if (only && !onlyOk(rec.code)) continue;
