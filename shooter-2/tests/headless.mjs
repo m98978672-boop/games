@@ -315,6 +315,42 @@ assert.ok(game.enemies.some((e) => e.brain && e.brain.tactic), 'мозги бо�
     'поиск по коду показывает категорию');
 }
 
+/* --------------------- все шесть миссий проходятся ---------------------- */
+{
+  /* Не «запускаются», а именно ПРОХОДЯТСЯ: выполняем цели так, как их
+     выполнил бы игрок, и требуем победу. Именно так нашлись две миссии,
+     которые раньше нельзя было закончить. */
+  const play = (idx) => {
+    game.startMission(idx);
+    const m = SH2.data.MISSIONS[idx];
+    const P = game.player;
+    for (let f = 0; f < 60 * 400; f++) {
+      P.hp = P.maxHp; P.armor = 40;
+      if (m.type === 'eliminate' || m.type === 'boss' || m.type === 'destroy' || m.type === 'extract') {
+        for (const e of game.enemies) if (e.alive) e.hit(9999, game, {});
+        if (m.type === 'destroy') {
+          game.objectives.forEach((o) => { if (!o.done && o.mesh) game.damageObjective(o.x, o.z, 200); });
+        }
+        if (m.type === 'extract') { game.kills = 99; P.x = game.extract.x; P.z = game.extract.z; }
+      }
+      game.update(1 / 60);
+      if (game.state !== 'playing') break;
+    }
+    return game.state;
+  };
+  for (let i = 0; i < SH2.data.MISSIONS.length; i++) {
+    const st = play(i);
+    assert.ok(st === 'won' || st === 'complete',
+      `миссия ${i + 1} проходится до победы (состояние: ${st})`);
+  }
+  /* «Порт» проходится и БЕЗ зачистки: цель «зачистить путь» необязательная. */
+  game.startMission(4);
+  const P = game.player;
+  P.x = game.extract.x; P.z = game.extract.z;
+  for (let i = 0; i < 180 && game.state === 'playing'; i++) { P.hp = P.maxHp; game.update(1 / 60); }
+  assert.equal(game.state, 'won', 'миссия 5 проходится мимо охраны: цель «зачистить путь» необязательная');
+}
+
 /* --------- «палец в левый нижний угол»: весь путь события ----------------
    Именно так играет человек на телефоне: палец ложится в левый нижний угол
    экрана. Раньше там стояли кнопки (ПРИСЕЛ/БЕГ/ПРИЦЕЛ): кнопка ловила
