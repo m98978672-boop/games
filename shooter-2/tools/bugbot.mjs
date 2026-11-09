@@ -2067,6 +2067,127 @@ det(438, () => {
   return { bad, buttons: rects.length };
 });
 
+/* ============ 930–934: игру можно ПРОЙТИ, а не только запустить =========
+   Проверки 907/908 запускают миссии, но не доводят их до победы. Здесь бот
+   играет каждую миссию до конца: цели выполняются так, как их выполнил бы
+   игрок (убить охрану, взорвать груз, дойти до эвакуации, продержаться),
+   и отчёт говорит, доходит ли дело до победы. Именно так ловится миссия,
+   которую нельзя закончить: цель висит, состояние остаётся 'playing'. */
+function playMissionToEnd(idx, maxSeconds) {
+  game.startMission(idx);
+  const m = D.MISSIONS[idx];
+  const P = game.player;
+  const limit = Math.round((maxSeconds || 400) * 60);
+  for (let f = 0; f < limit; f++) {
+    /* «игрок не умирает» — проверяем выполнимость целей, а не стрельбу. */
+    P.hp = P.maxHp; P.armor = 40;
+    if (m.type === 'eliminate' || m.type === 'boss' || m.type === 'destroy' || m.type === 'extract') {
+      for (const e of game.enemies) if (e.alive) e.hit(9999, game, {});
+      if (m.type === 'destroy') {
+        game.objectives.forEach((o) => { if (!o.done && o.mesh) game.damageObjective(o.x, o.z, 200); });
+      }
+      if (m.type === 'extract') {
+        game.kills = Math.max(game.kills, 99);
+        if (game.extract) { P.x = game.extract.x; P.z = game.extract.z; }
+      }
+    }
+    game.update(1 / 60);
+    if (game.state !== 'playing') break;
+  }
+  return {
+    state: game.state,
+    time: +game.missionTimer.toFixed(1),
+    objectives: game.objectives.map((o) => `${o.id}:${o.current}/${o.max}${o.done ? '✓' : '✗'}`).join(' ')
+  };
+}
+
+det(930, () => {
+  /* Каждая миссия доходит до победы. Победа для последней — 'complete'. */
+  const bad = [];
+  const report = [];
+  for (let i = 0; i < D.MISSIONS.length; i++) {
+    const r = playMissionToEnd(i);
+    const won = r.state === 'won' || r.state === 'complete';
+    report.push(`м${i + 1}:${r.state} ${r.time}с`);
+    if (!won) bad.push(`миссия ${i + 1}: состояние «${r.state}» за ${r.time} с (${r.objectives})`);
+  }
+  return { bad, report: report.join(' · ') };
+});
+
+det(931, () => {
+  /* Ни одна цель не должна остаться невыполнимой после того, как все условия
+     выполнены: иначе миссия висит. */
+  const bad = [];
+  game.startMission(2);                     // «Караван»: ящики + охрана
+  const boxes = game.objectives.filter((o) => o.id !== 'killall');
+  for (const e of game.enemies) if (e.alive) e.hit(9999, game, {});
+  game.update(1 / 60);
+  boxes.forEach((o) => game.damageObjective(o.x, o.z, 200));
+  for (let i = 0; i < 40; i++) { game.player.hp = game.player.maxHp; game.update(1 / 60); }
+  const stuck = game.objectives.filter((o) => !o.done);
+  if (stuck.length) {
+    bad.push('после зачистки не закрылись: ' + stuck.map((o) => `${o.id} ${o.current}/${o.max}`).join(', '));
+  }
+  return { bad, state: game.state };
+});
+
+det(932, () => {
+  /* Счётчик охраны совпадает с числом бойцов на карте. Раньше max брался из
+     данных, а спавн мог поставить меньше — цель становилась невыполнимой. */
+  const bad = [];
+  for (let i = 0; i < D.MISSIONS.length; i++) {
+    game.startMission(i);
+    const killAll = game.objectives.find((o) => o.id === 'killall');
+    if (!killAll) continue;
+    const alive = game.enemies.filter((e) => e.alive).length;
+    if (killAll.max > alive) bad.push(`миссия ${i + 1}: цель ${killAll.max}, бойцов ${alive}`);
+  }
+  return { bad };
+});
+
+det(933, () => {
+  /* Победа начисляет очки и открывает следующую миссию — прогресс кампании. */
+  const bad = [];
+  game.startMission(0);
+  const score0 = game.score;
+  playMissionToEnd(0);
+  if (!(game.score > score0)) bad.push('за победу не начислены очки');
+  if (game.state !== 'won') bad.push('первая миссия не завершилась победой: ' + game.state);
+  return { bad, score: game.score };
+});
+
+det(935, () => {
+  /* Необязательная цель не должна блокировать победу. «Порт» (эвакуация):
+     игрок дошёл до точки, никого не убив. Раньше optional игнорировался,
+     и миссия оставалась в 'playing' навсегда. */
+  const bad = [];
+  let checked = 0;
+  for (let i = 0; i < D.MISSIONS.length; i++) {
+    game.startMission(i);
+    const opt = game.objectives.filter((o) => o.optional);
+    if (!opt.length) continue;
+    checked++;
+    const P = game.player;
+    /* обнуляем все ОБЯЗАТЕЛЬНЫЕ цели по-настоящему, необязательные — нет */
+    game.objectives.forEach((o) => { if (!o.optional) { o.current = o.max; o.done = true; } });
+    game.update(1 / 60);
+    if (game.state !== 'won' && game.state !== 'complete') {
+      bad.push(`миссия ${i + 1}: optional-цель держит миссию (${game.state})`);
+    }
+  }
+  return { bad, missionsWithOptional: checked };
+});
+
+det(934, () => {
+  /* Смерть игрока заканчивает миссию поражением, а не подвешивает её. */
+  game.startMission(0);
+  game.damagePlayer(9999, null, 'bullet');
+  return {
+    state: game.state,
+    bad: game.state === 'dead' ? [] : ['после смерти состояние ' + game.state]
+  };
+});
+
 /* =============================== ОТЧЁТ ================================= */
 function runDetector(rec) {
   if (!rec.detector) return null;

@@ -967,6 +967,11 @@
       this.setupMission(m);
       // враги
       this.spawnInitialEnemies(m);
+      /* Список в данных и реально заспавненные бойцы могут расходиться
+         (спавн ищет свободную точку). Цель считаем по факту: иначе «Зачистить
+         охрану» требует убить больше, чем есть на карте. */
+      const killAll = this.objectives.find((o) => o.id === 'killall');
+      if (killAll) killAll.max = Math.max(killAll.current + 1, this.enemies.length);
       this.ui && this.ui.missionStart(m, this);
       this.lock();
       if (this.audio) { this.audio.init(); }
@@ -1055,7 +1060,15 @@
           this.scene.add(mesh);
           this.objectives.push({ id: 'box' + i, text: 'Взорвать груз ' + (i + 1), current: 0, max: 1, done: false, mesh, x: pos.x, z: pos.z });
         });
-        this.objectives.push({ id: 'killall', text: 'Зачистить охрану', current: 0, max: m.enemies.length, done: false });
+        /* Охрану считаем по реально заспавненным бойцам, а не по списку в
+           данных: если спавн кого-то пропустил, цель «Зачистить охрану»
+           становится невыполнимой и миссию нельзя закончить. Ниже (см.
+           checkMissionProgress) цель дополнительно закрывается, когда живых
+           не осталось, — страховка на случай подкреплений. */
+        this.objectives.push({
+          id: 'killall', text: 'Зачистить охрану', current: 0,
+          max: Math.max(1, m.enemies.length), done: false
+        });
       } else if (m.type === 'survive') {
         this.objectives.push({ id: 'survive', text: 'Продержаться', current: 0, max: m.time, done: false });
       } else if (m.type === 'extract') {
@@ -1257,6 +1270,11 @@
       let allDone = true;
       for (const o of this.objectives) {
         if (o.done) continue;
+        /* Необязательная цель (например, «зачистить путь» в эвакуации) не
+           должна держать миссию: её выполнение только добавляет очков.
+           Раньше optional игнорировался и «Порт» нельзя было закончить,
+           пройдя мимо охраны. */
+        if (o.optional) continue;
         if (o.id === 'survive') o.current = Math.floor(this.missionTimer);
         if (o.id === 'reach') {
           if (Math.hypot(P.x - this.extract.x, P.z - this.extract.z) < this.extract.r) o.current = 1;
@@ -1562,6 +1580,16 @@
           this.spawnWave(this.waveIndex);
         }
       } else if (m.type === 'destroy') {
+        /* Зачистка охраны: как только живых бойцов не осталось, цель
+           закрывается целиком. Счётчик убийств может отставать (подкрепление,
+           добивание, лимит трупов), и тогда миссия висела бы навсегда. */
+        const killObj = this.objectives.find((o) => o.id === 'killall');
+        const aliveNow = this.enemies.filter((e) => e.alive).length;
+        if (killObj && !killObj.done && aliveNow === 0) {
+          killObj.current = killObj.max;
+          killObj.done = true;
+          this.ui && this.ui.objectiveDone(killObj);
+        }
         // ящики взрываются от пуль/гранат — проверяем здесь
         this.objectives.forEach((o) => {
           if (o.mesh && !o.done) {
