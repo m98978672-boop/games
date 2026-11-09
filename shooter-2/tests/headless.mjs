@@ -39,7 +39,9 @@ function fakeElement(tag) {
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
     removeChild(c) { this.children = this.children.filter((x) => x !== c); return c; },
     insertBefore(c) { return this.appendChild(c); },
-    addEventListener() {},
+    _handlers: {},
+    addEventListener(t, fn) { (this._handlers[t] = this._handlers[t] || []).push(fn); },
+    removeEventListener() {},
     removeEventListener() {},
     setAttribute(k, v) { this[k] = v; },
     getAttribute(k) { return this[k]; },
@@ -102,7 +104,9 @@ const sandbox = {
   performance: { now: () => Date.now() },
   requestAnimationFrame: (cb) => { rafCallback = cb; return 1; },
   document: documentStub,
-  navigator: { userAgent: 'node', maxTouchPoints: 0 },
+  /* 5 точек касания: headless-прогон изображает телефон, иначе тач-ветка
+     управления вообще не включается и её баги не видны. */
+  navigator: { userAgent: 'node-touch', maxTouchPoints: 5 },
   devicePixelRatio: 1,
   innerWidth: 1280, innerHeight: 720,
   addEventListener: (type, fn) => { (listeners[type] = listeners[type] || []).push(fn); },
@@ -309,6 +313,45 @@ assert.ok(game.enemies.some((e) => e.brain && e.brain.tactic), 'мозги бо�
   bot.lookup();
   assert.match(getEl('bot-answer').textContent, /Игрок и управление/,
     'поиск по коду показывает категорию');
+}
+
+/* --------- «палец в левый нижний угол»: весь путь события ----------------
+   Именно так играет человек на телефоне: палец ложится в левый нижний угол
+   экрана. Раньше там стояли кнопки (ПРИСЕЛ/БЕГ/ПРИЦЕЛ): кнопка ловила
+   touchstart и делала preventDefault, канвас касания не получал вовсе.
+   Теперь проверяем не «стик работает», а «касание в этой точке доходит». */
+{
+  const canvasEl = getEl('game');
+  const handlers = canvasEl._handlers;
+  game.startMission(0);
+  game.state = 'playing';
+  game.locked = true;
+  game.enemies.slice().forEach((e) => e.dispose(game.scene));
+  game.enemies.length = 0;
+  if (!game.touch || !game.touch.active) { game.touch = null; game.bindTouch(); }
+  assert.ok(game.touch.active, 'тач-режим включён по maxTouchPoints');
+  for (const t of ['touchstart', 'touchmove', 'touchend']) {
+    assert.ok(handlers[t] && handlers[t].length, `на канвасе есть обработчик ${t}`);
+  }
+  const fire = (type, list) => {
+    const e = {
+      changedTouches: list.map((t) => ({ identifier: t.id, clientX: t.x, clientY: t.y })),
+      preventDefault() {}
+    };
+    (handlers[type] || []).forEach((fn) => fn(e));
+  };
+  const P = game.player;
+  Object.keys(game.keys).forEach((k) => { game.keys[k] = false; });
+  P.yaw = 0;
+  const x0 = P.x, z0 = P.z;
+  // точка 70,760 — левый нижний угол телефона 390×844
+  fire('touchstart', [{ id: 1, x: 70, y: 760 }]);
+  fire('touchmove', [{ id: 1, x: 70, y: 640 }]);
+  for (let i = 0; i < 120; i++) { P.hp = P.maxHp; game.update(1 / 60); }
+  const walked = Math.hypot(P.x - x0, P.z - z0);
+  fire('touchend', [{ id: 1, x: 70, y: 640 }]);
+  assert.ok(walked > 2, `палец в левом нижнем углу ведёт игрока: ${walked.toFixed(2)} м`);
+  assert.equal(game.touch.stickActive, false, 'после touchend стик отпущен');
 }
 
 /* ------------------------- «я не могу ходить» ---------------------------

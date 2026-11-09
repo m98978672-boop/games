@@ -238,6 +238,7 @@
       this.toast('Миссия ' + m.index + ': ' + m.name, 3.2);
       this.renderObjectives();
       this.helpTip();
+      this.stickHint(game);
     }
 
     // короткая подсказка по управлению при первом запуске
@@ -253,6 +254,19 @@
         this.helpOpen = false;
         if (h) h.classList.remove('open');
       }, 9000);
+    }
+
+    /* Подсказка «где ходить» на телефоне. Раньше левый нижний угол был
+       заставлен кнопками, палец опускался на «ПРИСЕД», и человек решал, что
+       ходьба не работает. Теперь угол свободен, а подсказка объясняет, куда
+       класть палец — один раз на устройство. */
+    stickHint(game) {
+      if (!game || !game.touch || !game.touch.active) return;
+      let seen = false;
+      try { seen = localStorage.getItem('shooter2.stick') === '1'; } catch (e) { seen = false; }
+      if (seen) return;
+      try { localStorage.setItem('shooter2.stick', '1'); } catch (e) { /* приватный режим */ }
+      this.toast('Идти: палец в ЛЕВУЮ НИЖНЮЮ часть экрана и потянуть — база стика появится под пальцем', 6.5);
     }
 
     toggleHelp() {

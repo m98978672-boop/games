@@ -63,7 +63,9 @@ function fakeElement(tag) {
     appendChild(c) { c.parentNode = this; this.children.push(c); return c; },
     removeChild(c) { this.children = this.children.filter((x) => x !== c); return c; },
     insertBefore(c) { return this.appendChild(c); },
-    addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+    _handlers: {},
+    addEventListener(t, fn) { (this._handlers[t] = this._handlers[t] || []).push(fn); },
+    removeEventListener() {}, dispatchEvent() { return true; },
     setAttribute() {}, getAttribute() { return null; }, removeAttribute() {},
     querySelector() { return null; }, querySelectorAll() { return []; },
     focus() {}, blur() {}, click() {},
@@ -99,7 +101,7 @@ const sandbox = {
   performance: { now: () => Date.now() },
   requestAnimationFrame: () => 1, cancelAnimationFrame() {},
   document: documentStub,
-  navigator: { userAgent: 'bugbot', maxTouchPoints: 0, language: 'ru' },
+  navigator: { userAgent: 'bugbot', maxTouchPoints: 5, language: 'ru' },
   location: { href: 'http://localhost/shooter-2/', protocol: 'http:' },
   devicePixelRatio: 1, innerWidth: 1280, innerHeight: 720,
   addEventListener() {}, removeEventListener() {},
@@ -1894,6 +1896,175 @@ det(433, () => {
   const ids = (html.match(/id="t-[a-z]+"/g) || []).map((x) => x.slice(4, -1));
   const unbound = ids.filter((id) => !src.includes("hook('" + id + "'"));
   return { buttons: ids.length, bad: unbound.length ? ['без обработчика: ' + unbound.join(', ')] : [] };
+});
+
+/* ============ 434–437: «палец попадает в кнопку, а не в стик» ============
+   Настоящая причина «ходьба не работает» на телефоне: левый нижний угол был
+   заставлен кнопками (ПРИЦЕЛ/ПЕРЕЗАРЯДКА/ПРИСЕД/БЕГ/ПРЫЖОК). Кнопка ловит
+   touchstart, делает preventDefault — и канвас со стиком касания не видит.
+   Палец «ходит» по кнопкам, персонаж стоит. */
+const TOUCH_BUTTONS = ['t-ads', 't-reload', 't-crouch', 't-jump', 't-sprint', 't-grenade', 't-fire'];
+
+/* Селектор для кнопки: в разметке у неё id и класс (tc tl), а стили — по
+   классу. Берём класс из index.html, чтобы проверка смотрела настоящую CSS. */
+function selectorFor(id) {
+  const html = read('index.html');
+  const m = html.match(new RegExp('id="' + id + '"[^>]*class="([^"]+)"'));
+  if (!m) return null;
+  return '.' + m[1].trim().split(/\s+/).join('.');
+}
+function cssBlock(sel) {
+  const css = read('style.css');
+  const esc = sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const m = css.match(new RegExp(esc + '\\s*\\{([^}]*)\\}'));
+  return m ? m[1] : '';
+}
+function cssRect(sel, W, H) {
+  const b = cssBlock(sel);
+  if (!b) return null;
+  const num = (k, d) => {
+    const m = b.match(new RegExp(k + ':\\s*(-?\\d+(?:\\.\\d+)?)px'));
+    return m ? parseFloat(m[1]) : d;
+  };
+  const w = num('width', 64), h = num('height', 64);
+  const left = b.includes('left:') ? num('left', 0) : (b.includes('right:') ? W - num('right', 0) - w : 0);
+  const top = b.includes('top:') ? num('top', 0) : (b.includes('bottom:') ? H - num('bottom', 0) - h : 0);
+  return { id: sel, x0: left, y0: top, x1: left + w, y1: top + h, w, h };
+}
+/* Геометрия стика повторяет bindTouch: левые 45% ширины и весь низ. */
+function stickZone(W, H) {
+  return { x0: 0, x1: W * 0.45, y0: H * 0.42, y1: H };
+}
+function overlaps(a, b) {
+  return a.x0 < b.x1 - 0.5 && a.x1 > b.x0 + 0.5 && a.y0 < b.y1 - 0.5 && a.y1 > b.y0 + 0.5;
+}
+
+det(434, () => {
+  /* Кнопки не должны стоять в зоне стика. Проверяем на трёх реальных
+     размерах экрана: узкий телефон, обычный телефон, планшет. */
+  const screens = [[360, 780], [390, 844], [844, 390]];
+  const bad = [];
+  const report = [];
+  screens.forEach(([W, H]) => {
+    const zone = stickZone(W, H);
+    TOUCH_BUTTONS.forEach((id) => {
+      const sel = selectorFor(id);
+      const r = sel ? cssRect(sel, W, H) : null;
+      if (!r) { bad.push('нет стилей для #' + id); return; }
+      if (overlaps(r, zone)) {
+        bad.push(`${W}×${H}: #${id} лежит в зоне стика (${Math.round(r.x0)},${Math.round(r.y0)})`);
+      }
+    });
+    report.push(`${W}×${H}: зона ${Math.round(zone.x1)}px`);
+  });
+  return { bad, report: report.join(' · ') };
+});
+
+det(435, () => {
+  /* В зоне стика кнопки не только не должны стоять — там вообще не должно
+     быть интерактивных элементов, иначе палец снова попадёт не туда. */
+  const W = 390, H = 844;
+  const zone = stickZone(W, H);
+  const css = read('style.css');
+  const pos = [...css.matchAll(/\.tc\.[a-z0-9]+\s*\{([^}]*)\}/g)].map((m) => m[0]);
+  const bad = [];
+  pos.forEach((block) => {
+    const name = (block.match(/\.tc\.([a-z0-9]+)/) || [])[1];
+    if (name !== 'tl4' && name !== 'tl5' && !/\.tc\.[a-z0-9]+\s*\{[^}]*left:/.test(block)) return;
+  });
+  /* Настоящая проверка — общая площадь: сумма площадей кнопок внутри зоны. */
+  let area = 0;
+  TOUCH_BUTTONS.forEach((id) => {
+    const sel = selectorFor(id);
+    const r = sel ? cssRect(sel, W, H) : null;
+    if (!r) return;
+    const x0 = Math.max(r.x0, zone.x0), x1 = Math.min(r.x1, zone.x1);
+    const y0 = Math.max(r.y0, zone.y0), y1 = Math.min(r.y1, zone.y1);
+    if (x1 > x0 && y1 > y0) area += (x1 - x0) * (y1 - y0);
+  });
+  if (area > 1) bad.push(`в зоне стика ${Math.round(area)} px² кнопок`);
+  return { bad, area: Math.round(area) };
+});
+
+det(436, () => {
+  /* Путь события целиком: палец в зоне стика → touchstart на канвасе →
+     touchmove → тело поехало. Это ловит и «кнопка съела касание», и потерю
+     analog между вводом и физикой. */
+  const canvas = getEl('game');
+  const handlers = canvas._handlers || {};
+  const bad = [];
+  /* Обработчики на канвасе появляются только когда игра решила, что это
+     тач-устройство. Заглушка сообщает maxTouchPoints=5, но bindTouch мог
+     выйти раньше — тогда сами зовём его и смотрим, что он привяжет. */
+  if (!game.touch || !game.touch.active) {
+    game.touch = null;
+    game.bindTouch();
+  }
+  ['touchstart', 'touchmove', 'touchend'].forEach((t) => {
+    if (!handlers[t] || !handlers[t].length) bad.push('на канвасе нет обработчика ' + t);
+  });
+  if (!game.touch || !game.touch.active) bad.push('bindTouch не включил тач-режим при maxTouchPoints=5');
+  if (bad.length) return { bad };
+  const fire = (type, list) => {
+    const e = {
+      changedTouches: list.map((t) => ({ identifier: t.id, clientX: t.x, clientY: t.y })),
+      preventDefault() {}
+    };
+    (handlers[type] || []).forEach((fn) => fn(e));
+  };
+  game.startMission(0);
+  game.state = 'playing';
+  game.locked = true;
+  game.enemies.slice().forEach((e) => e.dispose(game.scene));
+  game.enemies.length = 0;
+  const P = game.player;
+  Object.keys(game.keys).forEach((k) => { game.keys[k] = false; });
+  P.yaw = 0;
+  const x0 = P.x, z0 = P.z;
+  /* касание в левом нижнем углу — ровно туда, куда кладёт палец человек */
+  fire('touchstart', [{ id: 1, x: 70, y: 760 }]);
+  fire('touchmove', [{ id: 1, x: 70, y: 640 }]);
+  for (let i = 0; i < 120; i++) { P.hp = P.maxHp; game.update(1 / 60); }
+  const d = Math.hypot(P.x - x0, P.z - z0);
+  fire('touchend', [{ id: 1, x: 70, y: 640 }]);
+  if (!game.touch || !game.touch.active) bad.push('тач-управление не включилось');
+  if (!(d > 2)) bad.push(`палец в левом нижнем углу сдвинул на ${d.toFixed(2)} м`);
+  return { bad, moved: +d.toFixed(2) };
+});
+
+det(437, () => {
+  /* Игра объявляет, что понимает жесты: без touch-action браузер сам
+     скроллит/зумит страницу и гасит touchmove. */
+  const css = read('style.css');
+  const bad = [];
+  if (!/touch-action/.test(css)) bad.push('в style.css нет touch-action');
+  if (!/#game[^{]*\{[^}]*touch-action/.test(css) && !/canvas[^{]*\{[^}]*touch-action/.test(css)) {
+    bad.push('touch-action не задан для канваса');
+  }
+  const html = read('index.html');
+  if (!/user-scalable=no/.test(html)) bad.push('нет запрета масштабирования');
+  return { bad };
+});
+
+det(438, () => {
+  /* Кнопки не должны перекрывать друг друга: на старой раскладке ПРЫЖОК
+     стоял вплотную к ПЕРЕЗАРЯДКЕ, и часть нажатий уходила «не туда». */
+  const W = 390, H = 844;
+  const rects = TOUCH_BUTTONS.map((id) => {
+    const sel = selectorFor(id);
+    return { id, r: sel ? cssRect(sel, W, H) : null };
+  }).filter((x) => x.r);
+  const bad = [];
+  for (let i = 0; i < rects.length; i++) {
+    for (let j = i + 1; j < rects.length; j++) {
+      if (overlaps(rects[i].r, rects[j].r)) bad.push(rects[i].id + ' × ' + rects[j].id);
+    }
+    const r = rects[i].r;
+    if (r.x1 > W + 1 || r.y1 > H + 1 || r.x0 < -1 || r.y0 < -1) {
+      bad.push(rects[i].id + ' выходит за экран');
+    }
+  }
+  return { bad, buttons: rects.length };
 });
 
 /* =============================== ОТЧЁТ ================================= */
