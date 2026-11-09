@@ -199,8 +199,8 @@ assert.equal(typeof sandbox.THREE.WebGLRenderer, 'function', 'рендерер �
 assert.equal(typeof sandbox.THREE.Scene, 'function', 'остальной three.js на месте');
 
 /* ------------------------- загрузка модулей игры ----------------------- */
-const modules = ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
-  'viewmodel', 'audio', 'perf', 'game', 'ui'];
+const modules = ['bugcodes', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
+  'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui'];
 for (const m of modules) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: `src/${m}.js` });
 }
@@ -282,6 +282,58 @@ function simulate(seconds, opts) {
 simulate(4, { forward: 0.4 });
 assert.ok(game.renderer.renders > 200, 'кадры рендерятся');
 assert.ok(game.enemies.some((e) => e.brain && e.brain.tactic), 'мозги боевиков работают');
+
+/* --------------------- бот-диагност внутри игры ------------------------- */
+{
+  const bot = new SH2.gamebot.GameBot(game).attach();
+  game.bot = bot;
+  assert.ok(bot.attached, 'бот подписался на кадр игры');
+  const before = { x: game.player.x, z: game.player.z, hp: game.player.hp };
+  bot.runNow();
+  assert.ok(bot.checks >= 60, `бот прогнал проверки: ${bot.checks}`);
+  const drift = Math.hypot(game.player.x - before.x, game.player.z - before.z);
+  assert.ok(drift < 0.001, `прогон бота не сдвигает игрока (${drift.toFixed(4)} м)`);
+  assert.ok(Math.abs(game.player.hp - before.hp) < 0.001, 'прогон бота не меняет здоровье');
+  /* отчёт бота ссылается на таблицу кодов и не придумывает номера */
+  const text = bot.reportText();
+  assert.match(text, /таблица кодов: 1000/);
+  bot.found.forEach((f) => {
+    assert.ok(SH2.bugcodes.BY_CODE[f.code], `код ${f.code} есть в таблице`);
+    assert.ok(f.category && f.category !== '—', `у находки ${f.code} есть категория`);
+  });
+  assert.equal(bot.found.length, 0, 'бот-диагност в игре не нашёл ошибок: ' +
+    bot.found.map((f) => f.code + ' ' + f.msg).join('; '));
+  /* поиск по коду: ввод «421» объясняет категорию */
+  const search = getEl('bot-search');
+  search.value = '421';
+  bot.lookup();
+  assert.match(getEl('bot-answer').textContent, /Игрок и управление/,
+    'поиск по коду показывает категорию');
+}
+
+/* ------------------------- «я не могу ходить» ---------------------------
+   Главный сценарий игрока на телефоне: палец тянет стик вперёд. Раньше вектор
+   стика считался, но в физику тела не передавался, и боец стоял. */
+{
+  game.startMission(0);
+  game.state = 'playing';
+  game.locked = true;
+  game.enemies.slice().forEach((e) => e.dispose(game.scene));
+  game.enemies.length = 0;
+  const x0 = game.player.x, z0 = game.player.z;
+  game.touch.active = true;
+  game.touch.stickActive = true;
+  game.touch.sx = 0; game.touch.sz = 1;
+  game.touch.txs = 0; game.touch.tzs = 1;
+  for (let i = 0; i < 120; i++) game.update(1 / 60);
+  const walked = Math.hypot(game.player.x - x0, game.player.z - z0);
+  assert.ok(walked > 3, `стик телефона ведёт игрока: прошли ${walked.toFixed(2)} м`);
+  game.touch.stickActive = false;
+  game.touch.txs = 0; game.touch.tzs = 0;
+  for (let i = 0; i < 60; i++) game.update(1 / 60);
+  assert.ok(Math.hypot(game.touch.sx, game.touch.sz) < 0.05, 'стик отпущен — вектор погас');
+  game.touch.active = false;
+}
 
 /* ------------------------------- стрельба ------------------------------ */
 const beforeShots = game.player.shots;

@@ -730,6 +730,13 @@
       this.canvas.addEventListener('click', () => {
         if (this.state === 'playing' && !this.locked) this.lock();
       });
+      /* Кнопка бота вешается здесь, а не в bindTouch: на настольном
+         компьютере bindTouch выходит сразу (нет coarse-указателя). */
+      const botBtn = document.getElementById('bot-btn-hud');
+      if (botBtn) botBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.bot) this.bot.toggle();
+      });
       this.bindTouch();
     }
 
@@ -746,7 +753,13 @@
        • правая половина — обзор, чувствительность зависит от того, идёт ли
          прицеливание. */
     bindTouch() {
-      const coarse = root.matchMedia ? root.matchMedia('(pointer: coarse)').matches : false;
+      /* Тач-управление включаем по любому признаку пальца, а не только по
+         CSS-медиазапросу: на части устройств (и в webview) `pointer: coarse`
+         не срабатывает, стик не появлялся вовсе — и «ходить» было нечем.
+         Признаки: медиазапрос, наличие ontouchstart и число точек касания. */
+      const coarse = (root.matchMedia && root.matchMedia('(pointer: coarse)').matches) ||
+        ('ontouchstart' in root) ||
+        (root.navigator && (root.navigator.maxTouchPoints || 0) > 0);
       this.touch = {
         active: false, moveId: null, lookId: null,
         mx: 0, my: 0, lx: 0, ly: 0,
@@ -849,6 +862,7 @@
       hook('t-jump', () => { this.player && this.player.jump(); });
       hook('t-sprint', () => { this.keys.ShiftLeft = !this.keys.ShiftLeft; });
       hook('t-grenade', () => this.combat.playerGrenade());
+
     }
 
     lock() {
@@ -874,6 +888,14 @@
         case 'KeyT': this.ui && this.ui.toggleThoughts(); break;
         case 'KeyF': this.ui && this.ui.toggleDebug(); break;
         case 'Tab': e.preventDefault(); this.ui && this.ui.toggleScore(); break;
+        case 'KeyB':
+          /* B — панель бота-диагноста. Ctrl+B (или Cmd+B) — сразу полный
+             прогон по таблице кодов, без лишних нажатий. */
+          if (this.bot) {
+            if (e.ctrlKey || e.metaKey) { this.bot.toggle(true); this.bot.runAll(); }
+            else this.bot.toggle();
+          }
+          break;
         default: break;
       }
     }
@@ -1357,6 +1379,11 @@
         if (!T.stickActive && Math.abs(T.sx) + Math.abs(T.sz) < 0.01) { T.sx = 0; T.sz = 0; }
         inp.analog = (Math.abs(T.sx) + Math.abs(T.sz) > 0.001) ? { x: T.sx, z: T.sz } : null;
       } else inp.analog = null;
+      /* ВАЖНО: вектор стика доезжает до тела только через параметр analog.
+         Раньше он считался и складывался в inp.analog, но в update() игрока
+         не передавался — на телефоне палец вёл стик, а боец стоял на месте
+         («почему я ходить не могу?»). Мышь при этом работала, потому что yaw
+         идёт отдельным полем, поэтому баг и выглядел странно. */
 
       // мышь
       const sens = 0.0022;
@@ -1374,7 +1401,11 @@
       }
       this.mouse.dx = 0; this.mouse.dy = 0;
 
-      P.update(dt, { yaw: P.yaw, forward: fwd, strafe: str, sprint: inp.sprint, crouch: inp.crouch, ads: inp.ads }, this);
+      P.update(dt, {
+        yaw: P.yaw, forward: fwd, strafe: str,
+        sprint: inp.sprint, crouch: inp.crouch, ads: inp.ads,
+        analog: inp.analog
+      }, this);
 
       // авто-огонь и восстановление полуавтомата
       if (this._semiLatch > 0) this._semiLatch -= dt;

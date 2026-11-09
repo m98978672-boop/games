@@ -66,6 +66,27 @@
 
   <div id="debug-panel"></div>
 
+  <!-- бот-диагност: живёт всегда, кнопка — вход в панель с таблицей кодов -->
+  <button id="bot-btn-hud" title="Бот-диагност: проверка игры по кодам 000–999 (B)">🛠<span id="bot-badge" class="hidden"></span></button>
+  <div id="bot-panel" class="hidden">
+    <div class="bot-head">
+      <div class="bot-title">БОТ-ДИАГНОСТ<span>таблица кодов 000–999</span></div>
+      <button id="bot-close" class="bot-x" title="Закрыть (B)">×</button>
+    </div>
+    <div class="bot-bar">
+      <input id="bot-search" type="text" inputmode="numeric" maxlength="3" placeholder="код 000–999">
+      <button id="bot-run">ПРОВЕРИТЬ</button>
+    </div>
+    <div id="bot-answer" class="bot-answer">введите код — покажу категорию и проверку</div>
+    <div id="bot-summary" class="bot-summary">проверок готово: —</div>
+    <div id="bot-list" class="bot-list"></div>
+    <div class="bot-actions">
+      <button id="bot-copy">СКОПИРОВАТЬ</button>
+      <button id="bot-save">СОХРАНИТЬ .md</button>
+      <button id="bot-clear">ОЧИСТИТЬ</button>
+    </div>
+  </div>
+
   <div id="help-panel">
     <div class="hp-title">Управление</div>
     <div class="hp-grid">
@@ -81,7 +102,9 @@
       <span>G</span><b>граната</b>
       <span>P / Esc</span><b>пауза</b>
       <span>T</span><b>мысли врагов</b>
+      <span>B</span><b>бот: найти баг</b>
       <span>F</span><b>счётчики</b>
+      <span>B</span><b>бот-диагност</b>
     </div>
   </div>
   <div id="score-panel" class="hidden">
@@ -283,6 +306,7 @@
 <script src="src/viewmodel.js"></script>
 <script src="src/audio.js"></script>
 <script src="src/perf.js"></script>
+<script src="src/gamebot.js"></script>
 <script src="src/game.js"></script>
 <script src="src/ui.js"></script>
 <script>
@@ -293,6 +317,12 @@
   window.__game = game;
   window.__ui = ui;
   game.init();
+  /* Бот-диагност: подписывается на уже работающую игру. Кнопка в HUD и
+     клавиша B открывают панель, Ctrl+B — сразу полный прогон по коду. */
+  if (SH2.gamebot && SH2.gamebot.GameBot) {
+    window.__bot = new SH2.gamebot.GameBot(game).attach();
+    game.bot = window.__bot;
+  }
 })();
 </script>
 </body>
