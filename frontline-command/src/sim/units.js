@@ -413,27 +413,32 @@ export function moveUnit(game, u, dx, dy, dt) {
     // Только экспериментальный маршрут вне зданий. Точки доступны обычным
     // движением, а их порядок определяется общим полем стоимости без RNG.
     const field = game.nav.field(u.goal.x, u.goal.y);
-    let best = null, bestScore = Infinity;
-    const steps = anti.detourTries ?? 12;
-    const radius = anti.detourMax ?? 110;
-    for (let k = 0; k < steps; k++) {
-      const a = k * Math.PI * 2 / steps;
-      const px = u.x + Math.cos(a) * radius, py = u.y + Math.sin(a) * radius;
-      const n = Math.ceil(radius / u.radius);
-      let free = true;
-      for (let j = 1; j <= n; j++) {
-        const x = u.x + (px - u.x) * j / n, y = u.y + (py - u.y) * j / n, r = u.radius;
-        if (!game.world.isBaseWalkable(x,y) || !game.world.isBaseWalkable(x-r,y-r) || !game.world.isBaseWalkable(x+r,y-r) ||
-            !game.world.isBaseWalkable(x-r,y+r) || !game.world.isBaseWalkable(x+r,y+r) ||
-            game.walls.blocksMove(x,y,r,u)) { free = false; break; }
+    // Включённый эксперимент применяется лишь когда поле требует движения
+    // от цели; это ещё не гарантия для всех маршрутов и он по умолчанию off.
+    const fieldDir = game.nav.step(field, u.x, u.y);
+    if (fieldDir && fieldDir.dx * (u.goal.x - u.x) + fieldDir.dy * (u.goal.y - u.y) < 0) {
+      let best = null, bestScore = Infinity;
+      const steps = anti.detourTries ?? 12;
+      const radius = anti.detourMax ?? 110;
+      for (let k = 0; k < steps; k++) {
+        const a = k * Math.PI * 2 / steps;
+        const px = u.x + Math.cos(a) * radius, py = u.y + Math.sin(a) * radius;
+        const n = Math.ceil(radius / u.radius);
+        let free = true;
+        for (let j = 1; j <= n; j++) {
+          const x = u.x + (px - u.x) * j / n, y = u.y + (py - u.y) * j / n, r = u.radius;
+          if (!game.world.isBaseWalkable(x,y) || !game.world.isBaseWalkable(x-r,y-r) || !game.world.isBaseWalkable(x+r,y-r) ||
+              !game.world.isBaseWalkable(x-r,y+r) || !game.world.isBaseWalkable(x+r,y+r) ||
+              game.walls.blocksMove(x,y,r,u)) { free = false; break; }
+        }
+        if (!free || !field) continue;
+        const cost = field.dist[game.nav.idxOf(px,py)];
+        if (cost < bestScore) { bestScore = cost; best = { x: px, y: py }; }
       }
-      if (!free || !field) continue;
-      const cost = field.dist[game.nav.idxOf(px,py)];
-      if (cost < bestScore) { bestScore = cost; best = { x: px, y: py }; }
-    }
-    if (best && Number.isFinite(bestScore)) {
-      u.detour = { ...best, until: game.time + (anti.detourSeconds ?? 1.6) };
-      u.stuck = anti.stuckAfterDetour ?? 0.8;
+      if (best && Number.isFinite(bestScore)) {
+        u.detour = { ...best, until: game.time + (anti.detourSeconds ?? 1.6) };
+        u.stuck = anti.stuckAfterDetour ?? 0.8;
+      }
     }
   }
   if (wallsOn && u.detour && game.time < u.detour.until) {

@@ -5,7 +5,7 @@
 ```text
 ВСЯ ИГРА: NOT_ACCEPTED
 Режим: full. Алгоритмы: 0/40 подтверждены. PNG проверено: 149, проблем: 0.
-Блок 1: NOT_ACCEPTED. Всего блокирующих замечаний и непроверенных пунктов: 65.
+Блок 1: NOT_ACCEPTED. Всего блокирующих замечаний и непроверенных пунктов: 66.
 Неподтверждённое — не обязательно дефект; исторические выводы не заменяют актуальные тесты.
 
 [500] ALG-01: полная приёмка не подтверждена — ALG-01
@@ -285,6 +285,12 @@ U-ловушка: пройдено 8 из 18.
 Требование: 18 из 18
 Действие: Исправить маршрут и повторить все типы юнитов, стороны и seed без телепорта и регрессий.
 
+[116] Не пройдены варианты U-ловушки — u_trap
+Варианты U-ловушки: пройдено 64 из 216.
+Факт: {"passed":64,"total":216,"failedByRole":{"infantry":48,"truck":56,"tank":48},"examples":[{"role":"infantry","seed":5,"rotation":0,"size":128,"faction":0,"arrived":false,"pathFailed":true,"collided":false,"noTeleport":true,"movesAway":false,"seconds":7.65,"distanceToGoal":248},{"role":"infantry","seed":5,"rotation":0,"size":128,"faction":1,"arrived":false,"pathFailed":true,"collided":false,"noTeleport":true,"movesAway":false,"seconds":7.65,"distanceToGoal":248},{"role":"infantry","seed":7,"rotation":0,"size":128,"faction":0,"arrived":false,"pathFailed":true,"collided":false,"noTeleport":true,"movesAway":false,"seconds":7.65,"distanceToGoal":248},{"role":"infantry","seed":7,"rotation":0,"size":128,"faction":1,"arrived":false,"pathFailed":true,"collided":false,"noTeleport":true,"movesAway":false,"seconds":7.65,"distanceToGoal":248}]}
+Требование: 216 из 216
+Действие: Проверить четыре поворота, размеры, обе стороны и типы юнитов; не подменять их одним исходным размером.
+
 [201] Нет интеграционных испытаний — integration
 Сценарии S1, S8, S9 и S10: проверочный сценарий отсутствует.
 Факт: tests/acceptance/block1-integration.mjs
@@ -370,20 +376,20 @@ column: превышений контрольного шага — 12.
 Действие: Обеспечить целевое число живых юнитов на протяжении измерения, не скрывая спавны или потери.
 
 [302] Средний FPS при 400 ниже порога — browser_fps
-average400: 17.64 FPS, требуется не менее 60.
-Факт: {"fps":17.642993617626733,"browser":"Chromium 153.0.8010.0","mode":"headless software rendering"}
+average400: 15.60 FPS, требуется не менее 60.
+Факт: {"fps":15.600624024960998,"browser":"Chromium 153.0.8010.0","mode":"headless software rendering"}
 Требование: 60
 Действие: Исследовать полный браузерный кадр и повторить замер на корректной нагрузке.
 
 [303] 1% low при 400 ниже порога — browser_fps
-low1_400: 1.49 FPS, требуется не менее 45.
-Факт: {"fps":1.4876524843796486,"browser":"Chromium 153.0.8010.0","mode":"headless software rendering"}
+low1_400: 1.52 FPS, требуется не менее 45.
+Факт: {"fps":1.519064256418046,"browser":"Chromium 153.0.8010.0","mode":"headless software rendering"}
 Требование: 45
 Действие: Исследовать длинные реальные интервалы кадров и повторить замер на корректной нагрузке.
 
 [304] Средний FPS при 500 ниже порога — browser_fps
-average500: 17.18 FPS, требуется не менее 45.
-Факт: {"fps":17.178353646125917,"browser":"Chromium 153.0.8010.0","mode":"headless software rendering"}
+average500: 17.49 FPS, требуется не менее 45.
+Факт: {"fps":17.48728562031734,"browser":"Chromium 153.0.8010.0","mode":"headless software rendering"}
 Требование: 45
 Действие: Исследовать полный браузерный кадр и повторить замер на корректной нагрузке.
 

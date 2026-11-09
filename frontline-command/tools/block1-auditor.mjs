@@ -128,6 +128,23 @@ function jsonOutput(result) {
   try { return JSON.parse(result.stdout); } catch { return null; }
 }
 
+// Расширенная проверка U-геометрии: одного исходного размера недостаточно.
+export function validateUVariants(data, vehicleDetour) {
+  if (!object(data) || data.vehicleDetour !== vehicleDetour || data.total !== 216 || data.passed !== 216 ||
+      !Array.isArray(data.results) || data.results.length !== 216) return false;
+  const keys = new Set();
+  for (const r of data.results) {
+    if (!object(r) || !['infantry','truck','tank'].includes(r.role) || ![0,1,2,3].includes(r.rotation) ||
+        ![128,160,192].includes(r.size) || ![5,7,11].includes(r.seed) || ![0,1].includes(r.faction) || r.arrived !== true || r.pathFailed !== false ||
+        r.collided !== false || r.noTeleport !== true || r.movesAway !== true || !numeric(r.distanceToGoal) ||
+        r.distanceToGoal < 0 || r.distanceToGoal >= 34) return false;
+    const key = `${r.role}:${r.rotation}:${r.size}:${r.seed}:${r.faction}`;
+    if (keys.has(key)) return false;
+    keys.add(key);
+  }
+  return keys.size === 216;
+}
+
 export const requiredChecks = ['full_suite', 'production_flags', 'u_trap', ...requirements.map((r) => r.id)];
 export function verdict(checks) {
   const required = requiredChecks;
@@ -162,12 +179,19 @@ export function audit({ quick = false } = {}) {
       const args = ['tools/audit-u-trap.mjs'];
       if (flags.vehicle_detour_v2) args.push('--vehicle-detour');
       const result = run(process.execPath, args, 60_000), data = jsonOutput(result);
+      const variantArgs = ['tools/audit-u-variants.mjs'];
+      if (flags.vehicle_detour_v2) variantArgs.push('--vehicle-detour');
+      const variants = run(process.execPath, variantArgs, 60_000), variantData = jsonOutput(variants);
       checks.push({ id: 'u_trap', description: 'U-ловушка с настройками по умолчанию',
-        status: result.code === 0 && data?.total === 18 && data?.passed === data.total &&
-          data?.vehicleDetour === !!flags.vehicle_detour_v2 ? 'pass' : 'fail',
-        passed: data?.passed ?? null, total: data?.total ?? null, elapsedMs: result.elapsedMs,
+        status: result.code === 0 && !result.error && data?.total === 18 && data?.passed === data.total &&
+          data?.vehicleDetour === !!flags.vehicle_detour_v2 && variants.code === 0 && !variants.error &&
+          validateUVariants(variantData, !!flags.vehicle_detour_v2) ? 'pass' : 'fail',
+        passed: data?.passed ?? null, total: data?.total ?? null, elapsedMs: result.elapsedMs + variants.elapsedMs,
         exitCode: result.code, error: result.error, signal: result.signal, evidence: data,
-        ...(data ? {} : { outputTail: (result.stdout + result.stderr).trim().slice(-1500) }) });
+        variantsPassed: variantData?.passed ?? null, variantsTotal: variantData?.total ?? null, variantsEvidence: variantData,
+        variantsExitCode: variants.code, variantsError: variants.error, variantsSignal: variants.signal,
+        ...(data ? {} : { outputTail: (result.stdout + result.stderr).trim().slice(-1500) }),
+        ...(variantData ? {} : { variantsOutputTail: (variants.stdout + variants.stderr).trim().slice(-1500) }) });
     } else checks.push({ id: 'u_trap', description: 'U-ловушка с настройками по умолчанию', status: 'not_run', reason: 'Выключены необходимые флаги.' });
   }
   if (!flags) checks.push({ id: 'u_trap', description: 'U-ловушка с настройками по умолчанию', status: 'not_run', reason: 'Не удалось прочитать флаги.' });

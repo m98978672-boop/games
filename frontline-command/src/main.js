@@ -9,6 +9,7 @@ import { Save } from './core/save.js';
 import { Audio } from './core/audio.js';
 import { Input } from './core/input.js';
 import { clamp } from './core/mathx.js';
+import { InspectorPanel } from './inspector.js';
 
 const canvas = document.getElementById('game');
 const hudRoot = document.getElementById('hud');
@@ -626,6 +627,20 @@ function loop(now) {
   requestAnimationFrame(loop);
 }
 
+// Инспектор не управляет бойцами и не останавливает/изменяет войну.
+const inspector = new InspectorPanel(() => ({ game, renderer, bank, hud, audio }));
+window.addEventListener('keydown', (e) => {
+  if (e.code !== 'F8' || e.repeat) return;
+  e.preventDefault();
+  inspector.toggle();
+});
+const inspectorButton = document.createElement('button');
+inspectorButton.type = 'button';
+inspectorButton.className = 'inspector-launch';
+inspectorButton.textContent = 'Инспектор · F8';
+inspectorButton.addEventListener('click', () => inspector.toggle());
+document.body.appendChild(inspectorButton);
+
 // Отладочный доступ из консоли (не влияет на игру)
 window.__frontline = {
   get game() { return game; },
@@ -633,6 +648,7 @@ window.__frontline = {
   get hud() { return hud; },
   cfg,
   state,
+  inspector,
   newGame,
 };
 

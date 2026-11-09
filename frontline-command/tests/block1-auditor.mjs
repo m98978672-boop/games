@@ -1,7 +1,17 @@
 // Проверка самого независимого аудита: отсутствие доказательств — не успех.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { requirements, validateEvidence, verdict } from '../tools/block1-auditor.mjs';
+import { requirements, validateEvidence, validateUVariants, verdict } from '../tools/block1-auditor.mjs';
+
+const variants = { vehicleDetour: false, total: 216, passed: 216, results:
+  ['infantry','truck','tank'].flatMap((role) => [0,1,2,3].flatMap((rotation) => [128,160,192].flatMap((size) =>
+    [5,7,11].flatMap((seed) => [0,1].map((faction) => ({ role, rotation, size, seed, faction, arrived: true, pathFailed: false,
+      collided: false, noTeleport: true, movesAway: true, distanceToGoal: 20 })))))) };
+assert.equal(validateUVariants(variants, false), true);
+assert.equal(validateUVariants(variants, true), false, 'настройка production совпадает');
+assert.equal(validateUVariants({ ...variants, results: [...variants.results.slice(0,215), variants.results[0]] }, false), false, 'повторы не заменяют покрытие');
+assert.equal(validateUVariants({ ...variants, results: variants.results.map((r, i) => i ? r : { ...r, distanceToGoal: 35 }) }, false), false, 'флаг прибытия не заменяет достижение цели');
+assert.equal(validateUVariants({ ...variants, results: variants.results.slice(0, 18) }, false), false);
 
 assert.equal(verdict([]), 'NOT_ACCEPTED');
 assert.equal(verdict([{ id: 'full_suite', status: 'pass' }]), 'NOT_ACCEPTED');
@@ -77,7 +87,11 @@ assert.ok(report.checks.some((x) => x.id === 'full_suite' && x.status === 'not_r
 assert.ok(report.checks.some((x) => x.id === 'soak' && ['missing', 'not_run'].includes(x.status)));
 const trap = report.checks.find((x) => x.id === 'u_trap');
 assert.ok(trap && ['pass', 'fail', 'not_run'].includes(trap.status));
-if (trap.status !== 'not_run') assert.ok(Number.isInteger(trap.passed) && trap.total === 18);
+if (trap.status !== 'not_run') {
+  assert.ok(Number.isInteger(trap.passed) && trap.total === 18);
+  assert.equal(trap.variantsTotal, 216);
+  if (trap.variantsPassed !== 216) assert.equal(trap.status, 'fail', 'успешная исходная сцена не покрывает расширенный набор');
+}
 // Прогоняет реальный маршрут хотя бы один раз: все юниты должны сначала
 // пересечь плоскость, а не засчитаться по начальному Unit.arrived=true.
 const doors = spawnSync(process.execPath, ['tests/acceptance/block1-doorways.mjs', '--attempts=1'], { encoding: 'utf8', timeout: 60_000 });

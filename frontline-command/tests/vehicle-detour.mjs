@@ -36,3 +36,24 @@ for (const dep of ['pathing_v2','wall_collision_v2']) {
   assert.ok(warnings.some((w) => w.includes('vehicle_detour_v2')), `${dep}: есть предупреждение о зависимости`);
 }
 console.log(`экспериментальный обход техники: off ${legacy.passed}/18, on ${improved.passed}/18 в U-сцене; зависимости предупреждают`);
+
+// Условие срабатывания узкого варианта: поле направлено строго от цели;
+// нулевое/отсутствующее направление и движение к цели не запускают обход.
+const { moveUnit } = await import('../src/sim/units.js');
+for (const faction of [0, 1]) for (const direction of ['back', 'forward', 'none']) {
+  const c = await loadConfig(); c.flags.vehicle_detour_v2 = true;
+  const game = new Game({ cfg: c, seed: 5, aiVsAi: true });
+  game.units.clear(); game.unitGrid.clear();
+  const u = game.spawnUnit(faction, 'truck', 1000, 1000);
+  u.goal = { x: faction === 0 ? 1400 : 600, y: 1000 }; u.stuck = 1;
+  const toward = faction === 0 ? 1 : -1;
+  game.world = { W: 4096, H: 4096, speedAt: () => 1, isBaseWalkable: () => true, isWalkable: () => true };
+  game.walls = { enabled: () => true, doorWaypoint: () => null, doorsForUnit: () => {}, blocksMove: () => false };
+  game.nav = { field: () => ({ dist: [0] }), idxOf: () => 0,
+    step: () => direction === 'none' ? null : { dx: direction === 'back' ? -toward : toward, dy: 0 } };
+  const x = u.x, y = u.y;
+  moveUnit(game, u, toward, 0, 0.05);
+  assert.equal(!!u.detour, direction === 'back', `фракция ${faction}, поле ${direction}`);
+  assert.ok(Math.hypot(u.x - x, u.y - y) <= u.speed * .05 * 1.5, 'контроль шага');
+}
+console.log('условия обхода: только направление поля от цели для обеих фракций, обычная скорость');

@@ -5,8 +5,8 @@
   "description": "Frontline: Command — 2D тактическая песочница с единым Command API и одинаковыми правилами для игрока и ИИ",
   "type": "module",
   "scripts": {
-    "test": "node tests/logic.mjs && node tests/block1-auditor.mjs && node tests/block1-diagnostics.mjs && node tests/game-auditor.mjs && node tests/save-identity.mjs && node tests/save-state.mjs && node tests/save-squads.mjs && node tests/save-orders.mjs && node tests/save-transport.mjs && node tests/save-structures.mjs && node tests/save-blueprints.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/wall-data.mjs && node tests/wall-contours.mjs && node tests/wall-materials.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/pathing.mjs && node tests/nav-batch.mjs && node tests/nav-local.mjs && node tests/nav-local-simulation.mjs && node tests/vehicle-detour.mjs && node tests/deadlock-observation.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs",
-    "test:fast": "node tests/logic.mjs && node tests/block1-auditor.mjs && node tests/block1-diagnostics.mjs && node tests/game-auditor.mjs && node tests/save-identity.mjs && node tests/save-state.mjs && node tests/save-squads.mjs && node tests/save-orders.mjs && node tests/save-transport.mjs && node tests/save-structures.mjs && node tests/save-blueprints.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/wall-data.mjs && node tests/wall-contours.mjs && node tests/wall-materials.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/pathing.mjs && node tests/nav-batch.mjs && node tests/nav-local.mjs && node tests/nav-local-simulation.mjs && node tests/vehicle-detour.mjs && node tests/deadlock-observation.mjs && node tests/duel.mjs && node tests/perf.mjs",
+    "test": "node tests/logic.mjs && node tests/block1-auditor.mjs && node tests/block1-diagnostics.mjs && node tests/game-auditor.mjs && node tests/inspector.mjs && node tests/repository-auditor.mjs && node tests/audit-all.mjs && node tests/save-identity.mjs && node tests/save-state.mjs && node tests/save-squads.mjs && node tests/save-squad-identity.mjs && node tests/save-orders.mjs && node tests/save-transport.mjs && node tests/save-structures.mjs && node tests/save-blueprints.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/wall-data.mjs && node tests/wall-contours.mjs && node tests/wall-materials.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/pathing.mjs && node tests/nav-batch.mjs && node tests/nav-local.mjs && node tests/nav-local-simulation.mjs && node tests/vehicle-detour.mjs && node tests/deadlock-observation.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs",
+    "test:fast": "node tests/logic.mjs && node tests/block1-auditor.mjs && node tests/block1-diagnostics.mjs && node tests/game-auditor.mjs && node tests/inspector.mjs && node tests/repository-auditor.mjs && node tests/audit-all.mjs && node tests/save-identity.mjs && node tests/save-state.mjs && node tests/save-squads.mjs && node tests/save-squad-identity.mjs && node tests/save-orders.mjs && node tests/save-transport.mjs && node tests/save-structures.mjs && node tests/save-blueprints.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/wall-data.mjs && node tests/wall-contours.mjs && node tests/wall-materials.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/pathing.mjs && node tests/nav-batch.mjs && node tests/nav-local.mjs && node tests/nav-local-simulation.mjs && node tests/vehicle-detour.mjs && node tests/deadlock-observation.mjs && node tests/duel.mjs && node tests/perf.mjs",
     "test:browser": "node tests/browser.mjs",
     "assets": "node tools/gen-assets.mjs",
     "map": "node tools/map-preview.mjs",
@@ -24,7 +24,14 @@
     "audit:game": "node tools/game-auditor.mjs",
     "audit:game:human": "node tools/game-auditor.mjs --human",
     "audit:game:quick": "node tools/game-auditor.mjs --quick",
-    "audit:game:quick:human": "node tools/game-auditor.mjs --quick --human"
+    "audit:game:quick:human": "node tools/game-auditor.mjs --quick --human",
+    "audit:repo": "node tools/repository-auditor.mjs",
+    "audit:repo:human": "node tools/repository-auditor.mjs --human",
+    "test:inspector:browser": "node tests/inspector-browser.mjs",
+    "audit:all": "node tools/audit-all.mjs",
+    "audit:all:human": "node tools/audit-all.mjs --human",
+    "audit:all:quick": "node tools/audit-all.mjs --quick",
+    "audit:all:quick:human": "node tools/audit-all.mjs --quick --human"
   },
   "devDependencies": {
     "@sparticuz/chromium": "153.0.0",

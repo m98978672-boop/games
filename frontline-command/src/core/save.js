@@ -289,6 +289,7 @@ export const Save = {
         version: 1,
         rngState: game.rng.s,
         nextUnitId: game.nextUnitId,
+        nextSquadId: game.nextSquadId,
         playerUnitId: game.playerUnit && game.playerUnit.alive ? game.playerUnit.id : null,
         playerDead: game.playerDead,
         playerRole: game.playerRole,
@@ -470,6 +471,15 @@ export const Save = {
       if (Number.isSafeInteger(ext.api.seq) && ext.api.seq >= 0) game.api.seq = ext.api.seq;
       if (ext.api.stats && typeof ext.api.stats === 'object') game.api.stats = { ...ext.api.stats };
       if (Array.isArray(ext.api.journal)) game.api.journal = JSON.parse(JSON.stringify(ext.api.journal));
+    }
+    if (ext) {
+      // Расформированные отряды в сейв не попадают, но отложенный приказ
+      // может всё ещё ссылаться на них. Не присваиваем их ID новым отрядам.
+      // Для старого расширения учитываем хотя бы ID ожидающих приказов.
+      const validId = (id) => Number.isSafeInteger(id) && id > 0 && id < Number.MAX_SAFE_INTEGER - 1;
+      const queuedMax = game.api.orders.reduce((max, order) => (order.status === 'queued' && Array.isArray(order.squadIds))
+        ? order.squadIds.reduce((n, id) => validId(id) ? Math.max(n, id) : n, max) : max, 0);
+      game.nextSquadId = Math.max(game.nextSquadId, queuedMax + 1, validId(ext.nextSquadId) ? ext.nextSquadId : 1);
     }
     // При создании объектов расходуется RNG; восстанавливаем его только после
     // пересоздания. Это сохраняет поток, но не заменяет полное состояние игры.

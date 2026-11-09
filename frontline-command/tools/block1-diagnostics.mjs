@@ -16,6 +16,7 @@ export const catalog = Object.freeze({
   112: { name: 'Превышен контрольный шаг движения', action: 'Исследовать сочетание steering и выталкивания; само превышение ещё не доказывает телепорт.' },
   113: { name: 'Обнаружены пересечения стены', action: 'Исправить коллизию на всём маршруте и повторить обе стороны.' },
   114: { name: 'Обнаружен крупный скачок', action: 'Исследовать зафиксированные перемещения и устранить телепорт или другую причину аномалии.' },
+  116: { name: 'Не пройдены варианты U-ловушки', action: 'Проверить четыре поворота, размеры, обе стороны и типы юнитов; не подменять их одним исходным размером.' },
   115: { name: 'Плоскость проёма не пересечена', action: 'Проверить фактическое пересечение каждым юнитом, а не только флаг прибытия.' },
   201: { name: 'Нет интеграционных испытаний', action: 'Реализовать и запустить S1, S8, S9 и S10 с проверяемыми результатами.' },
   202: { name: 'Нет испытаний карточек', action: 'Реализовать и запустить проверки карточек ALG-04/18/19/21/22.' },
@@ -85,6 +86,14 @@ export function diagnoseChecks(checks, required = []) {
       const failed = Array.isArray(c.evidence?.results) ? c.evidence.results.filter((r) => !r.arrived || r.pathFailed || r.collided || !r.noTeleport || !r.movesAway) : null;
       const failedByRole = failed?.reduce((counts, r) => { counts[r.role || 'неизвестно'] = (counts[r.role || 'неизвестно'] || 0) + 1; return counts; }, {});
       add(c, 101, `U-ловушка: пройдено ${c.passed} из ${c.total}.`, { passed: c.passed, total: c.total, failedByRole: failedByRole ?? null }, '18 из 18');
+    }
+    if (c.id === 'u_trap' && c.variantsError)
+      add(c, 4, 'Расширенный стенд U-ловушки не выполнен корректно.', { error: c.variantsError, output: c.variantsOutputTail ?? null }, 'успешное выполнение');
+    if (c.id === 'u_trap' && number(c.variantsPassed) && number(c.variantsTotal) && c.variantsPassed !== c.variantsTotal) {
+      const failed = Array.isArray(c.variantsEvidence?.results) ? c.variantsEvidence.results.filter((r) => !r.arrived || r.pathFailed || r.collided || !r.noTeleport || !r.movesAway || !(r.distanceToGoal < 34)) : [];
+      const byRole = failed.reduce((counts, r) => { counts[r.role || 'неизвестно'] = (counts[r.role || 'неизвестно'] || 0) + 1; return counts; }, {});
+      add(c, 116, `Варианты U-ловушки: пройдено ${c.variantsPassed} из ${c.variantsTotal}.`,
+        { passed: c.variantsPassed, total: c.variantsTotal, failedByRole: byRole, examples: failed.slice(0, 4) }, '216 из 216');
     }
     const e = c.evidence;
     if (c.id === 'doors' && Array.isArray(e?.scenarios)) for (const s of e.scenarios) {

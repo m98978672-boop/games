@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { auditAll, formatAllReport } from '../tools/audit-all.mjs';
+const game = () => ({ verdict: 'PASS', mode: 'full', issues: [], summary: {}, block1: {} });
+const partial = () => ({ complete: false, issues: [], counts: {}, limitations: [] });
+const full = () => ({ complete: true, issues: [], counts: {}, limitations: [] });
+assert.equal(auditAll({ gameAudit: game, repositoryAudit: partial }).verdict, 'NOT_ACCEPTED');
+assert.equal(auditAll({ quick: true, gameAudit: game, repositoryAudit: full }).verdict, 'NOT_ACCEPTED');
+assert.equal(auditAll({ gameAudit: game, repositoryAudit: full }).verdict, 'PASS');
+assert.equal(auditAll({ gameAudit: () => ({ verdict: 'NOT_ACCEPTED' }), repositoryAudit: full }).verdict, 'NOT_ACCEPTED');
+let gameRan = false;
+const failure = auditAll({ gameAudit: () => { gameRan = true; throw Error('game broken'); }, repositoryAudit: () => { throw Error('git broken'); } });
+assert.equal(gameRan, true); assert.deepEqual(failure.issues.map((x) => x.code), [806, 807]);
+assert.equal(failure.verdict, 'NOT_ACCEPTED');
+assert.match(formatAllReport(failure), /Обзор репозитория не выполнен/);
+console.log('общий запуск: частичный обзор не становится PASS, независимые сбои и быстрый режим проверены');
