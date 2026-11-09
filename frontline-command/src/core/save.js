@@ -24,6 +24,50 @@ const write = (key, value) => {
   }
 };
 
+// Часть состояния отрядов, не входящая в формат v1. Ссылки на бойцов
+// восстанавливаются только после пересоздания состава и проверки ID.
+const squadNumbers = ['facing', 'thinkTimer', 'lastOrderAt', 'createdAt', 'supplyTimer',
+  'leapfrogTimer', 'phaseEnteredAt'];
+const squadBooleans = ['autoResupply', 'requestedSupply', 'contact', 'wantLeapfrog'];
+const squadStatKeys = ['kills', 'losses', 'shotsFired', 'shotsHit', 'delivered', 'built', 'ordersOk', 'ordersRefused'];
+function saveSquads(game) {
+  return [...game.squads.values()].filter((s) => s.state !== 'destroyed').map((s) => ({
+    id: s.id, commanderId: s.commanderId, initialCount: s.initialCount,
+    retreatTier: s.retreatTier, phaseIndex: s.phaseIndex, phaseId: s.phase?.id ?? null,
+    leapfrog: s.leapfrog, stats: { ...s.stats },
+    ...Object.fromEntries(squadNumbers.map((key) => [key, s[key]])),
+    ...Object.fromEntries(squadBooleans.map((key) => [key, s[key]])),
+  }));
+}
+function restoreSquads(game, states, restoreIds) {
+  if (!Array.isArray(states)) return;
+  const seen = new Set();
+  for (const state of states) {
+    if (!state || !Number.isSafeInteger(state.id) || seen.has(state.id)) continue;
+    seen.add(state.id);
+    const squad = game.squads.get(state.id);
+    if (!squad) continue;
+    if (restoreIds && Number.isSafeInteger(state.commanderId) && squad.memberIds.has(state.commanderId)) {
+      const commander = game.unitById(state.commanderId);
+      if (commander?.alive && !commander.downed && commander.faction === squad.faction) squad.commanderId = state.commanderId;
+    }
+    if (Number.isSafeInteger(state.initialCount) && state.initialCount >= squad.memberIds.size) squad.initialCount = state.initialCount;
+    if (['never', 'ammo', '30', '50'].includes(state.retreatTier)) squad.retreatTier = state.retreatTier;
+    const phases = game.cfg.strategy(squad.strategyId)?.phases;
+    if (Array.isArray(phases) && Number.isSafeInteger(state.phaseIndex) && state.phaseIndex >= 0 && state.phaseIndex < phases.length) squad.phaseIndex = state.phaseIndex;
+    if (Array.isArray(phases) && typeof state.phaseId === 'string') {
+      const phase = phases.find((p) => p.id === state.phaseId);
+      if (phase) squad.phase = phase;
+    }
+    if (state.leapfrog === 0 || state.leapfrog === 1) squad.leapfrog = state.leapfrog;
+    for (const key of squadNumbers) if (Number.isFinite(state[key])) squad[key] = state[key];
+    for (const key of squadBooleans) if (typeof state[key] === 'boolean') squad[key] = state[key];
+    if (state.stats && typeof state.stats === 'object' && !Array.isArray(state.stats)) {
+      for (const key of squadStatKeys) if (Number.isSafeInteger(state.stats[key]) && state.stats[key] >= 0) squad.stats[key] = state.stats[key];
+    }
+  }
+}
+
 // Запросы могут встречаться в очереди и одновременно в нескольких задачах.
 // Сохраняем ссылки как индексы, а не независимые копии: unloadTruck удаляет
 // заявку по идентичности объекта. Сам объект точки не сериализуется (в нём
@@ -253,6 +297,7 @@ export const Save = {
         exactTime: game.time,
         transport: saveTransport(game),
         blueprints: saveBlueprints(game),
+        squads: saveSquads(game),
         api: {
           orders: game.api.orders.filter((order) => order.status === 'queued'),
           nextId: game.api.nextId, seq: game.api.seq,
@@ -398,6 +443,7 @@ export const Save = {
       const maxId = savedIds.reduce((max, id) => Math.max(max, id), 0);
       game.nextUnitId = Math.max(maxId + 1, Number.isSafeInteger(ext?.nextUnitId) ? ext.nextUnitId : 1);
     }
+    if (ext) restoreSquads(game, ext.squads, restoreIds);
     // Рейсы ссылаются на ID машин и заявки/точки; не восстанавливаем ссылки,
     // если ID юнитов повреждены и загрузчик перешёл на legacy-нумерацию.
     if (restoreIds && ext?.transport) restoreTransport(game, ext.transport);
