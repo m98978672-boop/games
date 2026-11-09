@@ -1,0 +1,197 @@
+{
+  "baseline_commit": "ee5a44d",
+  "description": "Отклонённые эксперименты, НЕ текущая игровая логика. 60 игровых секунд, однократные прогоны каждого seed/нагрузки; см. PATHING_SPEC.md. Числа тиков не сравниваются из-за шума и параллельной нагрузки.",
+  "experiments": {
+    "stuck_no_distance": {
+      "runs": [
+        {
+          "seed": 5,
+          "initialUnits": 100,
+          "beforeEvents": 32,
+          "beforeEligibleMinutes": 29.9,
+          "beforePer100Minutes": 107.02,
+          "afterEvents": 24,
+          "afterEligibleMinutes": 28.28,
+          "afterPer100Minutes": 84.86
+        },
+        {
+          "seed": 5,
+          "initialUnits": 300,
+          "beforeEvents": 37,
+          "beforeEligibleMinutes": 30.52,
+          "beforePer100Minutes": 121.25,
+          "afterEvents": 34,
+          "afterEligibleMinutes": 28.43,
+          "afterPer100Minutes": 119.58
+        },
+        {
+          "seed": 5,
+          "initialUnits": 400,
+          "beforeEvents": 62,
+          "beforeEligibleMinutes": 36.22,
+          "beforePer100Minutes": 171.19,
+          "afterEvents": 40,
+          "afterEligibleMinutes": 33.1,
+          "afterPer100Minutes": 120.85
+        },
+        {
+          "seed": 7,
+          "initialUnits": 100,
+          "beforeEvents": 32,
+          "beforeEligibleMinutes": 29.08,
+          "beforePer100Minutes": 110.03,
+          "afterEvents": 26,
+          "afterEligibleMinutes": 29.82,
+          "afterPer100Minutes": 87.2
+        },
+        {
+          "seed": 7,
+          "initialUnits": 300,
+          "beforeEvents": 46,
+          "beforeEligibleMinutes": 31.37,
+          "beforePer100Minutes": 146.65,
+          "afterEvents": 32,
+          "afterEligibleMinutes": 31.03,
+          "afterPer100Minutes": 103.11
+        },
+        {
+          "seed": 7,
+          "initialUnits": 400,
+          "beforeEvents": 46,
+          "beforeEligibleMinutes": 32.87,
+          "beforePer100Minutes": 139.96,
+          "afterEvents": 37,
+          "afterEligibleMinutes": 31.47,
+          "afterPer100Minutes": 117.58
+        },
+        {
+          "seed": 11,
+          "initialUnits": 100,
+          "beforeEvents": 30,
+          "beforeEligibleMinutes": 29.03,
+          "beforePer100Minutes": 103.33,
+          "afterEvents": 27,
+          "afterEligibleMinutes": 29.37,
+          "afterPer100Minutes": 91.94
+        },
+        {
+          "seed": 11,
+          "initialUnits": 300,
+          "beforeEvents": 40,
+          "beforeEligibleMinutes": 30.73,
+          "beforePer100Minutes": 130.15,
+          "afterEvents": 31,
+          "afterEligibleMinutes": 28.33,
+          "afterPer100Minutes": 109.41
+        },
+        {
+          "seed": 11,
+          "initialUnits": 400,
+          "beforeEvents": 43,
+          "beforeEligibleMinutes": 31.38,
+          "beforePer100Minutes": 137.02,
+          "afterEvents": 33,
+          "afterEligibleMinutes": 30.5,
+          "afterPer100Minutes": 108.2
+        }
+      ],
+      "duel": "7:1, fail; полный npm test fail"
+    },
+    "stuck_distance_512": {
+      "runs": [
+        {
+          "seed": 5,
+          "initialUnits": 100,
+          "beforeEvents": 32,
+          "beforeEligibleMinutes": 29.9,
+          "beforePer100Minutes": 107.02,
+          "afterEvents": 24,
+          "afterEligibleMinutes": 28.38,
+          "afterPer100Minutes": 84.56
+        },
+        {
+          "seed": 5,
+          "initialUnits": 300,
+          "beforeEvents": 37,
+          "beforeEligibleMinutes": 30.52,
+          "beforePer100Minutes": 121.25,
+          "afterEvents": 47,
+          "afterEligibleMinutes": 30.88,
+          "afterPer100Minutes": 152.19
+        },
+        {
+          "seed": 5,
+          "initialUnits": 400,
+          "beforeEvents": 62,
+          "beforeEligibleMinutes": 36.22,
+          "beforePer100Minutes": 171.19,
+          "afterEvents": 47,
+          "afterEligibleMinutes": 33.97,
+          "afterPer100Minutes": 138.37
+        },
+        {
+          "seed": 7,
+          "initialUnits": 100,
+          "beforeEvents": 32,
+          "beforeEligibleMinutes": 29.08,
+          "beforePer100Minutes": 110.03,
+          "afterEvents": 31,
+          "afterEligibleMinutes": 28.18,
+          "afterPer100Minutes": 109.99
+        },
+        {
+          "seed": 7,
+          "initialUnits": 300,
+          "beforeEvents": 46,
+          "beforeEligibleMinutes": 31.37,
+          "beforePer100Minutes": 146.65,
+          "afterEvents": 40,
+          "afterEligibleMinutes": 31.12,
+          "afterPer100Minutes": 128.55
+        },
+        {
+          "seed": 7,
+          "initialUnits": 400,
+          "beforeEvents": 46,
+          "beforeEligibleMinutes": 32.87,
+          "beforePer100Minutes": 139.96,
+          "afterEvents": 36,
+          "afterEligibleMinutes": 30.58,
+          "afterPer100Minutes": 117.71
+        },
+        {
+          "seed": 11,
+          "initialUnits": 100,
+          "beforeEvents": 30,
+          "beforeEligibleMinutes": 29.03,
+          "beforePer100Minutes": 103.33,
+          "afterEvents": 29,
+          "afterEligibleMinutes": 29.97,
+          "afterPer100Minutes": 96.77
+        },
+        {
+          "seed": 11,
+          "initialUnits": 300,
+          "beforeEvents": 40,
+          "beforeEligibleMinutes": 30.73,
+          "beforePer100Minutes": 130.15,
+          "afterEvents": 29,
+          "afterEligibleMinutes": 29.05,
+          "afterPer100Minutes": 99.83
+        },
+        {
+          "seed": 11,
+          "initialUnits": 400,
+          "beforeEvents": 43,
+          "beforeEligibleMinutes": 31.38,
+          "beforePer100Minutes": 137.02,
+          "afterEvents": 42,
+          "afterEligibleMinutes": 30.4,
+          "afterPer100Minutes": 138.16
+        }
+      ],
+      "duel": "4:4, pass; seed 5 / 300: ухудшение 121.25→152.19, вариант отклонён"
+    }
+  },
+  "provenanceNote": "Исторический Git ID из предшествующей сессии; объект недоступен в текущем клоне. Измеренная оставленная навигационная логика включена в восстановленный checkpoint 39a11ab."
+}

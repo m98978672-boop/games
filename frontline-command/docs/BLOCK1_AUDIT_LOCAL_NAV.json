@@ -1,0 +1,611 @@
+{
+  "source": "9dbe038 + итоговый эксперимент локальных масок, флаг по умолчанию off",
+  "note": "Исторический прогон, не подтверждение текущего состояния: повторять полный аудитор. Полный набор прошёл, блок 1 не принят.",
+  "version": 1,
+  "mode": "full",
+  "verdict": "NOT_ACCEPTED",
+  "checks": [
+    {
+      "id": "full_suite",
+      "description": "Полный npm test",
+      "status": "pass",
+      "elapsedMs": 211378,
+      "exitCode": 0,
+      "error": null,
+      "outputTail": "юнитов: 392, шагов: 500, всего 2493 мс, средний тик 4.99 мс (201 FPS только на симуляцию)\nкуча: 21 МБ, убито: 0/0\nстены: update 0.049 мс/тик, запросов за тик движение 133, пули 3, укрытия 0\nстены: blocksMove 0.40 мкс, bulletRay 4.30 мкс → всего 0.116 мс/кадр\n400 юнитов: тик 2.92 мс → 342 FPS симуляции (нужно ≥60)\n500 юнитов: тик 2.92 мс → 342 FPS симуляции (нужно ≥45)\n\nпроизводительность в порядке"
+    },
+    {
+      "id": "production_flags",
+      "description": "Зависимости навигации в конфигурации по умолчанию",
+      "status": "pass",
+      "vehicleDetour": false
+    },
+    {
+      "id": "u_trap",
+      "description": "U-ловушка с настройками по умолчанию",
+      "status": "fail",
+      "passed": 8,
+      "total": 18,
+      "elapsedMs": 475,
+      "error": null
+    },
+    {
+      "id": "integration",
+      "description": "Сценарии S1, S8, S9 и S10",
+      "status": "missing",
+      "path": "tests/acceptance/block1-integration.mjs"
+    },
+    {
+      "id": "cards",
+      "description": "Все проверки карточек ALG-04/18/19/21/22",
+      "status": "missing",
+      "path": "tests/acceptance/block1-cards.mjs"
+    },
+    {
+      "id": "doors",
+      "description": "100 повторов проходов и колонны",
+      "status": "fail",
+      "elapsedMs": 14319,
+      "exitCode": 1,
+      "error": null,
+      "evidence": {
+        "passed": false,
+        "method": "independent scenes; both factions; seeds 1..N each; simulation 0.05s; max 30s; no combat",
+        "scenarios": [
+          {
+            "name": "foot-hq-enter",
+            "kind": "foot-hq-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "foot-hq-exit",
+            "kind": "foot-hq-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "foot-city-enter",
+            "kind": "foot-city-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "foot-city-exit",
+            "kind": "foot-city-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-depot-enter",
+            "kind": "truck-depot-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-depot-exit",
+            "kind": "truck-depot-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-factory-enter",
+            "kind": "truck-factory-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-factory-exit",
+            "kind": "truck-factory-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "column",
+            "kind": "column",
+            "attempts": 200,
+            "passed": 0,
+            "reached": 89,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 12,
+            "wallCollisions": 0,
+            "overlapFrames": 27378,
+            "maxOverlap": 17.942,
+            "crossed": 2000,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 0,
+                "reached": 89
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 0,
+                "reached": 0
+              }
+            ],
+            "failures": [
+              {
+                "ok": false,
+                "seed": 1,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.201,
+                "overlapFrames": 66,
+                "maxOverlap": 16.834,
+                "seconds": 4.45
+              },
+              {
+                "ok": false,
+                "seed": 2,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.442,
+                "overlapFrames": 70,
+                "maxOverlap": 16.453,
+                "seconds": 4.65
+              },
+              {
+                "ok": false,
+                "seed": 3,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.47,
+                "overlapFrames": 81,
+                "maxOverlap": 17.323,
+                "seconds": 5.15
+              },
+              {
+                "ok": false,
+                "seed": 4,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.25,
+                "overlapFrames": 93,
+                "maxOverlap": 16.331,
+                "seconds": 5.8
+              },
+              {
+                "ok": false,
+                "seed": 5,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.417,
+                "overlapFrames": 67,
+                "maxOverlap": 16.475,
+                "seconds": 4.5
+              },
+              {
+                "ok": false,
+                "seed": 6,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.199,
+                "overlapFrames": 77,
+                "maxOverlap": 15.288,
+                "seconds": 4.85
+              },
+              {
+                "ok": false,
+                "seed": 7,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.417,
+                "overlapFrames": 77,
+                "maxOverlap": 15.653,
+                "seconds": 5
+              },
+              {
+                "ok": false,
+                "seed": 8,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.176,
+                "overlapFrames": 78,
+                "maxOverlap": 16.667,
+                "seconds": 5.05
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "navigation",
+      "description": "Нагрузка и снижение застреваний не менее чем на 70%",
+      "status": "missing",
+      "path": "tests/acceptance/block1-navigation.mjs"
+    },
+    {
+      "id": "deadlocks",
+      "description": "Устранение встречных пробок без телепорта",
+      "status": "missing",
+      "path": "tests/acceptance/block1-deadlocks.mjs"
+    },
+    {
+      "id": "nav_budget",
+      "description": "Локальный перестрой и бюджет навигации",
+      "status": "missing",
+      "path": "tests/acceptance/block1-nav-budget.mjs"
+    },
+    {
+      "id": "save_replay",
+      "description": "Старый сейв и воспроизведение полного состояния",
+      "status": "missing",
+      "path": "tests/acceptance/block1-save-replay.mjs"
+    },
+    {
+      "id": "input_replay",
+      "description": "Запись и воспроизведение ввода и отдельных RNG",
+      "status": "missing",
+      "path": "tests/acceptance/block1-input-replay.mjs"
+    },
+    {
+      "id": "browser_fps",
+      "description": "Реальный браузерный FPS на 400/500 юнитов",
+      "status": "fail",
+      "elapsedMs": 134226,
+      "exitCode": 1,
+      "error": null,
+      "evidence": {
+        "passed": false,
+        "environment": "browser",
+        "measurement": "requestAnimationFrame",
+        "rendered": true,
+        "browser": "Chromium 153.0.8010.0",
+        "mode": "headless software rendering",
+        "quick": false,
+        "viewport": "1280x900 DPR 1",
+        "frames400": 185,
+        "average400": 14.52940437295803,
+        "low1_400": 0.9836226823390543,
+        "minAlive400": 402,
+        "maxAlive400": 422,
+        "duration400Ms": 12732.8,
+        "frames500": 182,
+        "average500": 15.062609141845087,
+        "low1_500": 0.9677731539727086,
+        "minAlive500": 502,
+        "maxAlive500": 522,
+        "duration500Ms": 12082.9,
+        "measurements": [
+          {
+            "target": 400,
+            "initial": 400,
+            "minAlive": 402,
+            "maxAlive": 422,
+            "minVisible": 371,
+            "spritesReady": true,
+            "elapsedMs": 12732.8,
+            "frames": 185,
+            "worstCount": 2,
+            "worstTimeMs": 2033.300000000001,
+            "averageFps": 14.52940437295803,
+            "low1Fps": 0.9836226823390543,
+            "drawFrames": 186,
+            "canvas": {
+              "width": 1280,
+              "height": 900
+            },
+            "gameTimeStart": 0.4333333333333333,
+            "gameSeconds": 4.533333333333323,
+            "sameGame": true,
+            "warOver": false,
+            "screen": "game",
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+            "timings": {
+              "step": {
+                "samples": 246,
+                "meanMs": 3.4,
+                "p95Ms": 12.4,
+                "maxMs": 26.9
+              },
+              "draw": {
+                "samples": 186,
+                "meanMs": 2.71,
+                "p95Ms": 6.1,
+                "maxMs": 24.6
+              },
+              "hud": {
+                "samples": 186,
+                "meanMs": 0.577,
+                "p95Ms": 1.8,
+                "maxMs": 11.3
+              }
+            },
+            "canvasDataLength": 2286190,
+            "pageErrors": []
+          },
+          {
+            "target": 500,
+            "initial": 500,
+            "minAlive": 502,
+            "maxAlive": 522,
+            "minVisible": 454,
+            "spritesReady": true,
+            "elapsedMs": 12082.9,
+            "frames": 182,
+            "worstCount": 2,
+            "worstTimeMs": 2066.6000000000004,
+            "averageFps": 15.062609141845087,
+            "low1Fps": 0.9677731539727086,
+            "drawFrames": 183,
+            "canvas": {
+              "width": 1280,
+              "height": 900
+            },
+            "gameTimeStart": 0.36666666666666664,
+            "gameSeconds": 4.333333333333323,
+            "sameGame": true,
+            "warOver": false,
+            "screen": "game",
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+            "timings": {
+              "step": {
+                "samples": 238,
+                "meanMs": 4.281,
+                "p95Ms": 17.4,
+                "maxMs": 30.9
+              },
+              "draw": {
+                "samples": 183,
+                "meanMs": 2.667,
+                "p95Ms": 6.7,
+                "maxMs": 14.9
+              },
+              "hud": {
+                "samples": 183,
+                "meanMs": 0.506,
+                "p95Ms": 1.5,
+                "maxMs": 8.6
+              }
+            },
+            "canvasDataLength": 2287142,
+            "pageErrors": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "soak",
+      "description": "30 реальных минут и контроль утечек/застреваний",
+      "status": "missing",
+      "path": "tests/acceptance/block1-soak.mjs"
+    }
+  ]
+}

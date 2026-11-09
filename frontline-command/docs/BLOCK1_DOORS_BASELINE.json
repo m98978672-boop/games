@@ -1,0 +1,398 @@
+{
+  "source": "24f6256 + незакоммиченная тестовая диагностика; все здания найдены",
+  "note": "Один полный прогон; seed 1–100 отдельно для каждой фракции; лимит 30 игровых секунд. Не полноценный бой или ИИ строя.",
+  "passed": false,
+  "method": "independent scenes; both factions; seeds 1..N each; simulation 0.05s; max 30s; no combat",
+  "scenarios": [
+    {
+      "name": "foot-hq-enter",
+      "kind": "foot-hq-enter",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "foot-hq-exit",
+      "kind": "foot-hq-exit",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "foot-city-enter",
+      "kind": "foot-city-enter",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "foot-city-exit",
+      "kind": "foot-city-exit",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "truck-depot-enter",
+      "kind": "truck-depot-enter",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "truck-depot-exit",
+      "kind": "truck-depot-exit",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "truck-factory-enter",
+      "kind": "truck-factory-enter",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "truck-factory-exit",
+      "kind": "truck-factory-exit",
+      "attempts": 200,
+      "passed": 200,
+      "reached": 200,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "crossed": 200,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 100,
+          "reached": 100
+        }
+      ],
+      "failures": []
+    },
+    {
+      "name": "column",
+      "kind": "column",
+      "attempts": 200,
+      "passed": 0,
+      "reached": 89,
+      "crossedAll": 200,
+      "teleports": 0,
+      "speedViolations": 12,
+      "wallCollisions": 0,
+      "overlapFrames": 27378,
+      "maxOverlap": 17.942,
+      "crossed": 2000,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 100,
+          "passed": 0,
+          "reached": 89
+        },
+        {
+          "id": 1,
+          "attempts": 100,
+          "passed": 0,
+          "reached": 0
+        }
+      ],
+      "failures": [
+        {
+          "ok": false,
+          "seed": 1,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.201,
+          "overlapFrames": 66,
+          "maxOverlap": 16.834,
+          "seconds": 4.45
+        },
+        {
+          "ok": false,
+          "seed": 2,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.442,
+          "overlapFrames": 70,
+          "maxOverlap": 16.453,
+          "seconds": 4.65
+        },
+        {
+          "ok": false,
+          "seed": 3,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.47,
+          "overlapFrames": 81,
+          "maxOverlap": 17.323,
+          "seconds": 5.15
+        },
+        {
+          "ok": false,
+          "seed": 4,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.25,
+          "overlapFrames": 93,
+          "maxOverlap": 16.331,
+          "seconds": 5.8
+        },
+        {
+          "ok": false,
+          "seed": 5,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.417,
+          "overlapFrames": 67,
+          "maxOverlap": 16.475,
+          "seconds": 4.5
+        },
+        {
+          "ok": false,
+          "seed": 6,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.199,
+          "overlapFrames": 77,
+          "maxOverlap": 15.288,
+          "seconds": 4.85
+        },
+        {
+          "ok": false,
+          "seed": 7,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.417,
+          "overlapFrames": 77,
+          "maxOverlap": 15.653,
+          "seconds": 5
+        },
+        {
+          "ok": false,
+          "seed": 8,
+          "faction": 0,
+          "arrived": 10,
+          "crossed": 10,
+          "failed": 0,
+          "count": 10,
+          "teleports": 0,
+          "speedViolations": 0,
+          "wallCollisions": 0,
+          "maxStepRatio": 1.176,
+          "overlapFrames": 78,
+          "maxOverlap": 16.667,
+          "seconds": 5.05
+        }
+      ]
+    }
+  ]
+}

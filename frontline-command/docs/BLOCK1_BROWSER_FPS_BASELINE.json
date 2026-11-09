@@ -1,0 +1,246 @@
+{
+  "source": "a64bcba + инструменты браузерного теста до коммита",
+  "note": "Исторический результат одного полного прогона, не действующая приёмка; повторять на текущем коде. Измерены интервалы реального rAF headless Chromium с программным рендерингом. Целевые популяции превысились, поэтому сцену нельзя считать корректным тестом ровно 400 или 500.",
+  "auditorElapsedMs": 126686,
+  "status": "fail",
+  "evidence": {
+    "passed": false,
+    "environment": "browser",
+    "measurement": "requestAnimationFrame",
+    "rendered": true,
+    "browser": "Chromium 153.0.8010.0",
+    "mode": "headless software rendering",
+    "quick": false,
+    "viewport": "1280x900 DPR 1",
+    "frames400": 199,
+    "average400": 16.267739192989342,
+    "low1_400": 1.11111111111111,
+    "minAlive400": 402,
+    "maxAlive400": 422,
+    "duration400Ms": 12232.8,
+    "frames500": 196,
+    "average500": 15.453878844743707,
+    "low1_500": 0.869603026218532,
+    "minAlive500": 502,
+    "maxAlive500": 522,
+    "duration500Ms": 12682.900000000001,
+    "measurements": [
+      {
+        "target": 400,
+        "initial": 400,
+        "minAlive": 402,
+        "maxAlive": 422,
+        "minVisible": 363,
+        "spritesReady": true,
+        "elapsedMs": 12232.8,
+        "frames": 199,
+        "worstCount": 2,
+        "worstTimeMs": 1800.0000000000018,
+        "averageFps": 16.267739192989342,
+        "low1Fps": 1.11111111111111,
+        "drawFrames": 200,
+        "canvas": {
+          "width": 1280,
+          "height": 900
+        },
+        "gameTimeStart": 0.19999999999999998,
+        "gameSeconds": 4.2833333333333234,
+        "sameGame": true,
+        "warOver": false,
+        "screen": "game",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+        "timings": {
+          "step": {
+            "samples": 245,
+            "meanMs": 2.858,
+            "p95Ms": 10.1,
+            "maxMs": 20.5
+          },
+          "draw": {
+            "samples": 200,
+            "meanMs": 2.176,
+            "p95Ms": 5.7,
+            "maxMs": 10.9
+          },
+          "hud": {
+            "samples": 200,
+            "meanMs": 0.316,
+            "p95Ms": 0.8,
+            "maxMs": 7.8
+          }
+        },
+        "canvasDataLength": 2285570,
+        "pageErrors": []
+      },
+      {
+        "target": 500,
+        "initial": 500,
+        "minAlive": 502,
+        "maxAlive": 522,
+        "minVisible": 452,
+        "spritesReady": true,
+        "elapsedMs": 12682.900000000001,
+        "frames": 196,
+        "worstCount": 2,
+        "worstTimeMs": 2299.899999999998,
+        "averageFps": 15.453878844743707,
+        "low1Fps": 0.869603026218532,
+        "drawFrames": 197,
+        "canvas": {
+          "width": 1280,
+          "height": 900
+        },
+        "gameTimeStart": 0.2833333333333333,
+        "gameSeconds": 4.433333333333323,
+        "sameGame": true,
+        "warOver": false,
+        "screen": "game",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+        "timings": {
+          "step": {
+            "samples": 249,
+            "meanMs": 3.751,
+            "p95Ms": 13.5,
+            "maxMs": 27.4
+          },
+          "draw": {
+            "samples": 197,
+            "meanMs": 2.514,
+            "p95Ms": 6.3,
+            "maxMs": 17.4
+          },
+          "hud": {
+            "samples": 197,
+            "meanMs": 0.4,
+            "p95Ms": 0.9,
+            "maxMs": 6.9
+          }
+        },
+        "canvasDataLength": 2287650,
+        "pageErrors": []
+      }
+    ]
+  },
+  "repeat": {
+    "note": "Повтор самостоятельного полного браузерного стенда после npm ci, без изменения игрового кода.",
+    "processElapsedMs": 133921,
+    "evidence": {
+      "passed": false,
+      "environment": "browser",
+      "measurement": "requestAnimationFrame",
+      "rendered": true,
+      "browser": "Chromium 153.0.8010.0",
+      "mode": "headless software rendering",
+      "quick": false,
+      "viewport": "1280x900 DPR 1",
+      "frames400": 198,
+      "average400": 15.968257040549695,
+      "low1_400": 1.0256410256410255,
+      "minAlive400": 402,
+      "maxAlive400": 422,
+      "duration400Ms": 12399.6,
+      "frames500": 190,
+      "average500": 15.790042300692269,
+      "low1_500": 0.8450942280064225,
+      "minAlive500": 502,
+      "maxAlive500": 522,
+      "duration500Ms": 12032.9,
+      "measurements": [
+        {
+          "target": 400,
+          "initial": 400,
+          "minAlive": 402,
+          "maxAlive": 422,
+          "minVisible": 364,
+          "spritesReady": true,
+          "elapsedMs": 12399.6,
+          "frames": 198,
+          "worstCount": 2,
+          "worstTimeMs": 1950,
+          "averageFps": 15.968257040549695,
+          "low1Fps": 1.0256410256410255,
+          "drawFrames": 199,
+          "canvas": {
+            "width": 1280,
+            "height": 900
+          },
+          "gameTimeStart": 0.31666666666666665,
+          "gameSeconds": 4.24999999999999,
+          "sameGame": true,
+          "warOver": false,
+          "screen": "game",
+          "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+          "timings": {
+            "step": {
+              "samples": 236,
+              "meanMs": 2.831,
+              "p95Ms": 12.1,
+              "maxMs": 21.8
+            },
+            "draw": {
+              "samples": 199,
+              "meanMs": 2.249,
+              "p95Ms": 5,
+              "maxMs": 25.8
+            },
+            "hud": {
+              "samples": 199,
+              "meanMs": 0.318,
+              "p95Ms": 0.8,
+              "maxMs": 4.4
+            }
+          },
+          "canvasDataLength": 2285594,
+          "pageErrors": []
+        },
+        {
+          "target": 500,
+          "initial": 500,
+          "minAlive": 502,
+          "maxAlive": 522,
+          "minVisible": 452,
+          "spritesReady": true,
+          "elapsedMs": 12032.9,
+          "frames": 190,
+          "worstCount": 2,
+          "worstTimeMs": 2366.6000000000004,
+          "averageFps": 15.790042300692269,
+          "low1Fps": 0.8450942280064225,
+          "drawFrames": 191,
+          "canvas": {
+            "width": 1280,
+            "height": 900
+          },
+          "gameTimeStart": 0.3,
+          "gameSeconds": 4.3666666666666565,
+          "sameGame": true,
+          "warOver": false,
+          "screen": "game",
+          "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+          "timings": {
+            "step": {
+              "samples": 244,
+              "meanMs": 3.816,
+              "p95Ms": 12.8,
+              "maxMs": 34.5
+            },
+            "draw": {
+              "samples": 191,
+              "meanMs": 3.237,
+              "p95Ms": 9,
+              "maxMs": 18
+            },
+            "hud": {
+              "samples": 191,
+              "meanMs": 0.661,
+              "p95Ms": 1.5,
+              "maxMs": 17.2
+            }
+          },
+          "canvasDataLength": 2287190,
+          "pageErrors": []
+        }
+      ]
+    }
+  }
+}

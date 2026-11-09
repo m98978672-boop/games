@@ -23,6 +23,14 @@ import { Skills, techMods, xpFor } from './skills.js';
 export class Game {
   constructor({ cfg, seed = 1, difficulty = 'regular', meta = null, settings = {}, aiVsAi = false, mode = 'soldier', swapSides = false }) {
     this.cfg = cfg;
+    if (cfg.flag('vehicle_detour_v2', false) &&
+        (!cfg.flag('pathing_v2', false) || !cfg.flag('wall_collision_v2', true))) {
+      console.warn('vehicle_detour_v2 выключен: нужны pathing_v2 и wall_collision_v2');
+    }
+    if (cfg.flag('wall_nav_local', false) &&
+        (!cfg.flag('pathing_v2', false) || !cfg.flag('wall_collision_v2', true))) {
+      console.warn('wall_nav_local выключен: нужны pathing_v2 и wall_collision_v2');
+    }
     this.seed = seed;
     this.rng = new RNG(seed);
     this.aiVsAi = aiVsAi;

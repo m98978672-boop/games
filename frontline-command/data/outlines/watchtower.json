@@ -21,6 +21,7 @@
    "length": 44,
    "thickness": 10,
    "material": "wood",
+   "texture_set": "wood",
    "heightClass": 2,
    "blocksMove": false,
    "blocksBullets": true,

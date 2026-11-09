@@ -200,7 +200,7 @@ const openPts = (o) => ({ x1: o.p1[0], y1: o.p1[1], x2: o.p2[0], y2: o.p2[1] });
     }
   }
   ok(hits === 0, `из-за бетонной стены попаданий 0 (проверено ${300 * flat.length} выстрелов, прошло ${hits})`);
-  // Снайпер бетон иногда пробивает — но только по коэффициенту материала и с потерей урона
+  // Проверяем пробитие снайпером по текущему коэффициенту материала.
   let sniperThrough = 0, lossSum = 0;
   for (let i = 0; i < 1000; i++) {
     const r = walls.bulletRay(shooter.x, shooter.y, target.x, target.y, 'sniper', { next: rnd });
@@ -208,7 +208,7 @@ const openPts = (o) => ({ x1: o.p1[0], y1: o.p1[1], x2: o.p2[0], y2: o.p2[1] });
   }
   const expSniper = walls.penetrationChance('concrete', 'sniper', 'intact');
   ok(Math.abs(sniperThrough / 1000 - expSniper) <= 0.03 && (sniperThrough === 0 || lossSum / sniperThrough < 1),
-    `снайпер пробивает бетон в ${(sniperThrough / 1000).toFixed(3)} случаев (норма ${expSniper}), урон после стены ×${(sniperThrough ? lossSum / sniperThrough : 0).toFixed(2)}`);
+    `снайпер и бетон: прошло ${(sniperThrough / 1000).toFixed(3)} (норма ${expSniper}), урон после стены ×${(sniperThrough ? lossSum / sniperThrough : 0).toFixed(2)}`);
 }
 
 // ---------- 7. Стойки и высота укрытия ----------

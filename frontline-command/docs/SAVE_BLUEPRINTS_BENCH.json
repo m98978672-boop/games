@@ -1,0 +1,71 @@
+{
+  "note": "Node, синтетический сценарий; результаты отдельного запуска, до 393ff20; загрузчик до восстановления игнорировал чертежи",
+  "save": [
+    {
+      "units": 52,
+      "blueprints": 10,
+      "legacySaveBytesEqual": true,
+      "legacySelectedLoadStateEqual": true,
+      "previous": {
+        "bytes": 34582,
+        "meanMs": 0.264,
+        "p95Ms": 0.437,
+        "samples": 200
+      },
+      "current": {
+        "bytes": 36418,
+        "meanMs": 0.252,
+        "p95Ms": 0.372,
+        "samples": 200
+      }
+    },
+    {
+      "units": 400,
+      "blueprints": 10,
+      "legacySaveBytesEqual": true,
+      "legacySelectedLoadStateEqual": true,
+      "previous": {
+        "bytes": 134594,
+        "meanMs": 0.924,
+        "p95Ms": 1.136,
+        "samples": 200
+      },
+      "current": {
+        "bytes": 136430,
+        "meanMs": 0.936,
+        "p95Ms": 1.135,
+        "samples": 200
+      }
+    }
+  ],
+  "load": [
+    {
+      "units": 52,
+      "blueprints": 10,
+      "previous": {
+        "meanMs": 2.745,
+        "p95Ms": 12.162,
+        "samples": 20
+      },
+      "current": {
+        "meanMs": 2.927,
+        "p95Ms": 4.782,
+        "samples": 20
+      }
+    },
+    {
+      "units": 400,
+      "blueprints": 10,
+      "previous": {
+        "meanMs": 3.196,
+        "p95Ms": 5.814,
+        "samples": 20
+      },
+      "current": {
+        "meanMs": 3.667,
+        "p95Ms": 9.267,
+        "samples": 20
+      }
+    }
+  ]
+}

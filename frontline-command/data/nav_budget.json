@@ -24,6 +24,10 @@
     "pushStepPerSecond": 8,
     "pushSpeedMult": 1.5,
     "pushSpeedFloor": 30,
-    "pushRadiusStep": 12
-  }
+    "pushRadiusStep": 12,
+    "doorFlowAfter": 1,
+    "failureLogLimit": 128,
+    "vehicleDetourThreshold": 1
+  },
+  "doorExitClearance": 8
 }

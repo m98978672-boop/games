@@ -1,0 +1,171 @@
+{
+  "source": "1068f35 + новый стенд встречных пар; исходный игровой код",
+  "note": "Исторический результат, повторять на текущем коде. Частичное испытание пехоты, не полное покрытие пробок.",
+  "evidence": {
+    "passed": false,
+    "coverageComplete": false,
+    "coverage": [
+      {
+        "id": "foot-door-opposing",
+        "scenarios": 200,
+        "participants": 2,
+        "passed": 0,
+        "factions": [
+          {
+            "id": 0,
+            "attempts": 100,
+            "passed": 0
+          },
+          {
+            "id": 1,
+            "attempts": 100,
+            "passed": 0
+          }
+        ],
+        "crossed": 400,
+        "arrived": 400,
+        "teleports": 0,
+        "speedViolations": 160,
+        "wallCollisions": 0,
+        "overlapFrames": 1200
+      }
+    ],
+    "method": "встречная пара через дверь штаба; 100 seed на фракцию в полном режиме; 0,05 с шаг; до 60 с; без боя",
+    "scenarios": 200,
+    "failed": 200,
+    "factionsChecked": 2,
+    "factions": [
+      {
+        "id": 0,
+        "attempts": 100,
+        "passed": 0
+      },
+      {
+        "id": 1,
+        "attempts": 100,
+        "passed": 0
+      }
+    ],
+    "crossed": 400,
+    "arrived": 400,
+    "teleports": 0,
+    "speedViolations": 160,
+    "wallCollisions": 0,
+    "overlapFrames": 1200,
+    "maxOverlap": 17.971,
+    "failures": [
+      {
+        "seed": 1,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 1,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 17.971,
+        "seconds": 1.6
+      },
+      {
+        "seed": 2,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 1,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 17.971,
+        "seconds": 1.6
+      },
+      {
+        "seed": 3,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 0,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 16.424,
+        "seconds": 1.9
+      },
+      {
+        "seed": 4,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 1,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 17.971,
+        "seconds": 1.6
+      },
+      {
+        "seed": 5,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 1,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 17.971,
+        "seconds": 1.6
+      },
+      {
+        "seed": 6,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 1,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 17.971,
+        "seconds": 1.6
+      },
+      {
+        "seed": 7,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 1,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 17.971,
+        "seconds": 1.6
+      },
+      {
+        "seed": 8,
+        "faction": 0,
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "pathFailed": 0,
+        "teleports": 0,
+        "speedViolations": 1,
+        "wallCollisions": 0,
+        "overlapFrames": 6,
+        "maxOverlap": 17.971,
+        "seconds": 1.6
+      }
+    ]
+  }
+}

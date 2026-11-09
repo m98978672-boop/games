@@ -1,0 +1,36 @@
+[
+  {
+    "units": 52,
+    "legacySaveBytesEqual": true,
+    "legacySelectedLoadStateEqual": true,
+    "previous": {
+      "bytes": 31676,
+      "meanMs": 0.201,
+      "p95Ms": 0.287,
+      "samples": 200
+    },
+    "current": {
+      "bytes": 33942,
+      "meanMs": 0.239,
+      "p95Ms": 0.399,
+      "samples": 200
+    }
+  },
+  {
+    "units": 400,
+    "legacySaveBytesEqual": true,
+    "legacySelectedLoadStateEqual": true,
+    "previous": {
+      "bytes": 131688,
+      "meanMs": 0.87,
+      "p95Ms": 1.197,
+      "samples": 200
+    },
+    "current": {
+      "bytes": 133954,
+      "meanMs": 0.928,
+      "p95Ms": 1.301,
+      "samples": 200
+    }
+  }
+]

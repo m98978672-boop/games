@@ -39,10 +39,10 @@
       "thickness": 12,
       "heightClass": 3,
       "penetration": {
-        "pistol": 0.05,
-        "rifle": 0.08,
-        "smg": 0.06,
-        "mg": 0.08,
+        "pistol": 0,
+        "rifle": 0,
+        "smg": 0,
+        "mg": 0,
         "sniper": 0.5,
         "tank_cannon": 1
       },
@@ -74,7 +74,7 @@
         "rifle": 0,
         "smg": 0,
         "mg": 0,
-        "sniper": 0.12,
+        "sniper": 0,
         "tank_cannon": 1
       },
       "damageLoss": {
@@ -105,7 +105,7 @@
         "rifle": 0,
         "smg": 0,
         "mg": 0,
-        "sniper": 0.1,
+        "sniper": 0,
         "tank_cannon": 1
       },
       "damageLoss": {

@@ -1,0 +1,93 @@
+{
+  "source": "e918435 + незакоммиченный на момент запуска инструментарий проверки блока 1",
+  "note": "Исторический результат одного запуска, не подтверждение актуального состояния; повторить npm run audit:block1.",
+  "version": 1,
+  "mode": "full",
+  "verdict": "NOT_ACCEPTED",
+  "checks": [
+    {
+      "id": "full_suite",
+      "description": "Полный npm test",
+      "status": "pass",
+      "elapsedMs": 199541,
+      "exitCode": 0,
+      "error": null,
+      "outputTail": "юнитов: 392, шагов: 500, всего 2467 мс, средний тик 4.93 мс (203 FPS только на симуляцию)\nкуча: 23 МБ, убито: 0/0\nстены: update 0.053 мс/тик, запросов за тик движение 133, пули 3, укрытия 0\nстены: blocksMove 0.41 мкс, bulletRay 4.10 мкс → всего 0.119 мс/кадр\n400 юнитов: тик 2.81 мс → 356 FPS симуляции (нужно ≥60)\n500 юнитов: тик 2.93 мс → 342 FPS симуляции (нужно ≥45)\n\nпроизводительность в порядке"
+    },
+    {
+      "id": "production_flags",
+      "description": "Зависимости навигации в конфигурации по умолчанию",
+      "status": "pass",
+      "vehicleDetour": false
+    },
+    {
+      "id": "u_trap",
+      "description": "U-ловушка с настройками по умолчанию",
+      "status": "fail",
+      "passed": 8,
+      "total": 18,
+      "elapsedMs": 476,
+      "error": null
+    },
+    {
+      "id": "integration",
+      "description": "Сценарии S1, S8, S9 и S10",
+      "status": "missing",
+      "path": "tests/acceptance/block1-integration.mjs"
+    },
+    {
+      "id": "cards",
+      "description": "Все проверки карточек ALG-04/18/19/21/22",
+      "status": "missing",
+      "path": "tests/acceptance/block1-cards.mjs"
+    },
+    {
+      "id": "doors",
+      "description": "100 повторов проходов и колонны",
+      "status": "missing",
+      "path": "tests/acceptance/block1-doorways.mjs"
+    },
+    {
+      "id": "navigation",
+      "description": "Нагрузка и снижение застреваний не менее чем на 70%",
+      "status": "missing",
+      "path": "tests/acceptance/block1-navigation.mjs"
+    },
+    {
+      "id": "deadlocks",
+      "description": "Устранение встречных пробок без телепорта",
+      "status": "missing",
+      "path": "tests/acceptance/block1-deadlocks.mjs"
+    },
+    {
+      "id": "nav_budget",
+      "description": "Локальный перестрой и бюджет навигации",
+      "status": "missing",
+      "path": "tests/acceptance/block1-nav-budget.mjs"
+    },
+    {
+      "id": "save_replay",
+      "description": "Старый сейв и воспроизведение полного состояния",
+      "status": "missing",
+      "path": "tests/acceptance/block1-save-replay.mjs"
+    },
+    {
+      "id": "input_replay",
+      "description": "Запись и воспроизведение ввода и отдельных RNG",
+      "status": "missing",
+      "path": "tests/acceptance/block1-input-replay.mjs"
+    },
+    {
+      "id": "browser_fps",
+      "description": "Реальный браузерный FPS на 400/500 юнитов",
+      "status": "missing",
+      "path": "tests/acceptance/block1-browser-fps.mjs"
+    },
+    {
+      "id": "soak",
+      "description": "30 реальных минут и контроль утечек/застреваний",
+      "status": "missing",
+      "path": "tests/acceptance/block1-soak.mjs"
+    }
+  ]
+}

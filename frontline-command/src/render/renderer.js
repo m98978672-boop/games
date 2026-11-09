@@ -826,6 +826,10 @@ export class Renderer {
       `тик ${(game.dt * 1000).toFixed(1)} мс  время ${game.time.toFixed(0)} с`,
       `убито ${game.stats.kills.join('/')} захвачено ${game.stats.captures.join('/')}`,
     ];
+    if (game.cfg.flag('alg_deadlock', false)) {
+      const counts = game.deadlockStats?.pathFailures || [0, 0];
+      lines.push(`сбросы пути A/Л ${counts.join('/')}`);
+    }
     lines.forEach((l, i) => ctx.fillText(l, 14, 24 + i * 16));
     // навигационная сетка
     ctx.globalAlpha = 0.25;

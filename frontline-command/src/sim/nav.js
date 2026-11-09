@@ -83,6 +83,41 @@ export class Nav {
     this.cache.clear();
   }
 
+  // Пересчитать только навигационные клетки, образцы которых могли попасть в
+  // изменённые тайлы стен. При изменении сетки поля сбрасываются целиком:
+  // частичный Dijkstra не реализован. Если версия устарела, advance сделает full.
+  patchWallTiles(regions, oldVersion) {
+    const w = this.world;
+    if (this.version !== oldVersion || !regions.length) return false;
+    let changed = false;
+    for (const r of regions) {
+      const x0 = Math.max(0, Math.floor((r.x0 * w.T - 14 - this.cell / 2) / this.cell) - 1);
+      const x1 = Math.min(this.cols - 1, Math.ceil(((r.x1 + 1) * w.T + 14 - this.cell / 2) / this.cell) + 1);
+      const y0 = Math.max(0, Math.floor((r.y0 * w.T - 14 - this.cell / 2) / this.cell) - 1);
+      const y1 = Math.min(this.rows - 1, Math.ceil(((r.y1 + 1) * w.T + 14 - this.cell / 2) / this.cell) + 1);
+      for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+        const i = cx + cy * this.cols;
+        const x = cx * this.cell + this.cell / 2, y = cy * this.cell + this.cell / 2;
+        const center = w.isWalkable(x, y);
+        const corners = (w.isWalkable(x - 14, y - 14) ? 1 : 0) + (w.isWalkable(x + 14, y - 14) ? 1 : 0) +
+          (w.isWalkable(x - 14, y + 14) ? 1 : 0) + (w.isWalkable(x + 14, y + 14) ? 1 : 0);
+        const relaxed = this.cfg.flag('wall_collision_v2', true);
+        const open = center && (relaxed ? corners >= 2 : corners === 4) ? 1 : 0;
+        const t = w.terrainAt(x, y);
+        const cost = t === 4 ? 0.75 : t === 2 ? 1.35 : t === 1 ? 0.95 : t === 5 ? 0.9 : 1;
+        // Сравниваем с Float32-представлением, как в costArr; иначе 1.35 и
+        // 0.95 дают ложное расхождение при каждом повторном обновлении.
+        const cost32 = Math.fround(cost);
+        if (this.openArr[i] !== open || this.costArr[i] !== cost32) changed = true;
+        this.openArr[i] = open;
+        this.costArr[i] = cost;
+      }
+    }
+    this.version = w.navVersion || 0;
+    if (changed) this.cache.clear();
+    return true;
+  }
+
   idxOf(x, y) {
     const cx = clamp(Math.floor(x / this.cell), 0, this.cols - 1);
     const cy = clamp(Math.floor(y / this.cell), 0, this.rows - 1);
@@ -162,7 +197,14 @@ export class Nav {
       if (!dx && !dy) continue;
       const nx = cx + dx, ny = cy + dy;
       if (nx < 0 || ny < 0 || nx >= this.cols || ny >= this.rows) continue;
-      const d = field.dist[nx + ny * this.cols];
+      const ni = nx + ny * this.cols;
+      // Те же ограничения диагоналей, что при построении поля: иначе шаг
+      // может выбрать запрещённый срез угла, хотя путь его не содержит.
+      if (this.cfg.flag('wall_collision_v2', true) && this.cfg.flag('pathing_v2', false)) {
+        if (!this.open(ni)) continue;
+        if (dx && dy && (!this.open(cx + dx + cy * this.cols) || !this.open(cx + (cy + dy) * this.cols))) continue;
+      }
+      const d = field.dist[ni];
       if (d < bestD) { bestD = d; bx = dx; by = dy; }
     }
     if (!bx && !by) return null;
