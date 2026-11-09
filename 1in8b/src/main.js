@@ -514,6 +514,7 @@
     el('btn-invest').addEventListener('click', openInvest);
     el('btn-invest-2').addEventListener('click', openInvest);
     el('btn-anims').addEventListener('click', function () { UI.animsModal(S.view); });
+    el('btn-things').addEventListener('click', function () { UI.thingsModal(); });
     el('btn-music').addEventListener('click', function () {
       var SND = window.IN8B.sound;
       if (!SND || !SND.available) { UI.toast('Браузер не умеет играть звук'); return; }

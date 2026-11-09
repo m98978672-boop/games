@@ -653,7 +653,7 @@
   var MORE_ITEMS = [
     ['btn-skip', 'До следующего решения »'], ['btn-auto', 'Авторежим'],
     ['btn-spend', '🛒 Траты этого года'], ['btn-invest', '📈 Вложения и своё дело'],
-    ['btn-anims', 'Все движения сцены'],
+    ['btn-anims', 'Все движения сцены'], ['btn-things', 'Текстуры и вещи'],
     ['btn-pauses', '✎ Когда ставить паузу'], ['btn-music', '♪ Музыка'],
     ['btn-help', 'Как играть'], ['btn-quit', 'Сохранить и выйти']
   ];
@@ -1310,6 +1310,93 @@
     return wrap;
   }
 
+  /* ================= КАТАЛОГ ТЕКСТУР И МОДЕЛЕК ======================= */
+
+  /* Образец рисуется на своём маленьком холсте: то же самое, что видно
+     в сцене, только крупным планом и с подписью. */
+  function texSwatch(t, w, h) {
+    var c = document.createElement('canvas');
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = w * dpr; c.height = h * dpr;
+    c.style.width = w + 'px'; c.style.height = h + 'px';
+    var g = c.getContext && c.getContext('2d');
+    if (!g) return c;
+    g.imageSmoothingEnabled = false;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    window.IN8B.textures.draw(t.id, g, 0, 0, w, h, { seed: 11 });
+    return c;
+  }
+
+  function modelSwatch(m, box) {
+    var c = document.createElement('canvas');
+    var dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = box * dpr; c.height = box * dpr;
+    c.style.width = box + 'px'; c.style.height = box + 'px';
+    var g = c.getContext && c.getContext('2d');
+    if (!g) return c;
+    g.imageSmoothingEnabled = false;
+    var s = Math.max(1, Math.floor(Math.min((box - 6) / m.w, (box - 6) / m.h)));
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.fillStyle = 'rgba(255,255,255,0.04)';
+    g.fillRect(0, 0, box, box);
+    window.IN8B.models.draw(m.id, g, Math.round((box - m.w * s) / 2), Math.round(box / 2 + m.h * s / 2), s, {});
+    return c;
+  }
+
+  function thingsModal() {
+    var TX = window.IN8B.textures, MD = window.IN8B.models;
+    if (!TX || !MD) return null;
+    var wrap = modal(
+      '<header class="modal-head"><h3>Текстуры и вещи <small>' + (TX.count + MD.count) + '</small></h3>' +
+      '<button class="icon-btn x" data-close aria-label="Закрыть">✕</button></header>' +
+      '<p class="hint">Сцены собираются из этих кусочков: ' + TX.count + ' текстур для стен, полов, земли,\n' +
+      '       фасадов и ткани и ' + MD.count + ' моделек-предметов. Картинок в игре нет — всё рисуется кодом.</p>' +
+      '<div class="things"></div>' +
+      '<footer class="modal-foot"><span class="hint">Текстур: ' + TX.count + ' · моделек: ' + MD.count +
+      '</span><button class="btn btn-primary" data-close>Закрыть</button></footer>',
+      { cls: 'things-modal' });
+    var box = wrap.querySelector('.things');
+
+    TX.groups.forEach(function (gr) {
+      var list = TX.byGroup(gr);
+      var sec = document.createElement('div');
+      sec.className = 'th-group';
+      sec.innerHTML = '<h4>Текстуры: ' + esc(gr) + ' <small>' + list.length + '</small></h4>';
+      var row = document.createElement('div');
+      row.className = 'th-row';
+      list.forEach(function (t) {
+        var cell = document.createElement('figure');
+        cell.className = 'th-cell';
+        cell.appendChild(texSwatch(t, 54, 36));
+        cell.appendChild(document.createElement('figcaption')).textContent = t.name;
+        row.appendChild(cell);
+      });
+      sec.appendChild(row);
+      box.appendChild(sec);
+    });
+
+    MD.groups.forEach(function (gr) {
+      var list = MD.byGroup(gr);
+      var sec = document.createElement('div');
+      sec.className = 'th-group';
+      sec.innerHTML = '<h4>Модельки: ' + esc(gr) + ' <small>' + list.length + '</small></h4>';
+      var row = document.createElement('div');
+      row.className = 'th-row';
+      list.forEach(function (m) {
+        var cell = document.createElement('figure');
+        cell.className = 'th-cell';
+        cell.appendChild(modelSwatch(m, 46));
+        cell.appendChild(document.createElement('figcaption')).textContent = m.name;
+        row.appendChild(cell);
+      });
+      sec.appendChild(row);
+      box.appendChild(sec);
+    });
+
+    bindClose(wrap);
+    return wrap;
+  }
+
   window.IN8B = window.IN8B || {};
   window.IN8B.ui = {
     el: el, esc: esc, modal: modal, close: close, closeTop: closeTop, toast: toast, bindClose: bindClose,
@@ -1320,7 +1407,7 @@
     renderFocus: renderFocus, renderLog: renderLog, renderFamily: renderFamily, renderPeers: renderPeers,
     renderLifeMap: renderLifeMap, decisionModal: decisionModal, reflectionModal: reflectionModal,
     endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS,
-    spendModal: spendModal, animsModal: animsModal, renderSpendNote: renderSpendNote,
+    spendModal: spendModal, animsModal: animsModal, thingsModal: thingsModal, renderSpendNote: renderSpendNote,
     investModal: investModal, renderInvestNote: renderInvestNote,
     pausesModal: pausesModal, moreModal: moreModal
   };

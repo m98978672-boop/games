@@ -61,7 +61,7 @@
     FIELDS.forEach(function (f) { if (data[f] !== undefined) life[f] = data[f]; });
     life.base = C.byCode[data.countryCode] || life.base;
     life.c = M.countryAtYear(life.base, life.birthYear);
-    life.table = M.lifeTable(life.sex === 'f' ? life.c.leF : life.c.leM, life.c.u5mr);
+    life.table = M.lifeTable(life.sex === 'f' ? life.c.leF : life.c.leM, life.c.u5mr, life.c.imr);
     life.rnd.setState(data.rng || 1);
     life.silent = false;
     life.pendingDecision = data.pendingDecisionId ? life.decisionById(data.pendingDecisionId) : null;

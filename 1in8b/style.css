@@ -530,6 +530,16 @@ textarea.note-input {
 }
 .spend-cta small { font-size: 10px; opacity: .72; text-transform: none; letter-spacing: normal; }
 .spend-modal .modal, .anims-modal .modal { max-width: 860px; width: min(96vw, 860px); }
+.things-modal .modal { max-width: 920px; width: min(96vw, 920px); }
+.things { max-height: 60vh; overflow: auto; padding-right: 4px; }
+.th-group { margin: 0 0 14px; }
+.th-group h4 { margin: 0 0 6px; font-size: 14px; color: var(--ink-2, #cfc6b4); }
+.th-group h4 small { opacity: .6; font-weight: normal; }
+.th-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.th-cell { margin: 0; width: 62px; text-align: center; }
+.th-cell canvas { display: block; margin: 0 auto; border-radius: 3px; image-rendering: pixelated;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08); background: rgba(0,0,0,.25); }
+.th-cell figcaption { margin-top: 3px; font-size: 10px; line-height: 1.15; opacity: .72; word-break: break-word; }
 .invest-modal .modal { max-width: 920px; width: min(96vw, 920px); }
 .spend-top { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }
 .sp-kv {

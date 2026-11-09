@@ -30,7 +30,7 @@ vm.createContext(sandbox);
 sandbox.matchMedia = () => ({ matches: false });
 const FILES = ['src/algo.js', 'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js',
   'src/work.js', 'src/pay.js', 'src/mechanics.js', 'src/variations.js', 'src/engine.js',
-  'src/purchases.js', 'src/invest.js', 'src/portrait.js', 'src/save.js'];
+  'src/purchases.js', 'src/invest.js', 'src/textures.js', 'src/models.js', 'src/portrait.js', 'src/save.js'];
 for (const f of FILES) {
   try { vm.runInContext(readFileSync(join(root, f), 'utf8'), sandbox, { filename: f }); }
   catch (e) { console.error('✗ не загрузился ' + f + ': ' + e.message); process.exit(1); }

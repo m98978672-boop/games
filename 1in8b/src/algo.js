@@ -1,5 +1,5 @@
 /* ============================================================
-   1 ИЗ 8 МИЛЛИАРДОВ — сто алгоритмов.
+   1 ИЗ 8 МИЛЛИАРДОВ — 250 алгоритмов.
    ------------------------------------------------------------
    Маленькая библиотека, на которой стоит вся остальная игра:
    статистика, случайность с зерном, деньги и проценты, кривые,
@@ -7,7 +7,7 @@
 
    Каждая функция чистая: одни и те же входы дают один и тот же
    результат, глобального состояния нет. Внизу файла — словарь
-   DOC: сто имён с описанием на русском, по нему тесты проверяют,
+   DOC: все имена с описанием на русском, по нему тесты проверяют,
    что ни один алгоритм не потерялся и все они считают числа.
    ============================================================ */
 (function () {
@@ -405,7 +405,587 @@
     return A.clamp(r, 0, 1);
   };
 
-  /* ===================== словарь: сто имён и смыслов =================== */
+
+  /* ======================================================================
+     ВТОРАЯ СОТНЯ С ПОЛОВИНОЙ (v1.8): ещё 150 алгоритмов.
+     Те же правила: чистые функции, никакого состояния, всё считается
+     из входных данных. Ниже — связи и регрессия, ещё пять генераторов
+     случайности, деньги на каждый день, кривые и волны, списки, текст
+     по-русски, демография, здоровье и принятие решений.
+     ====================================================================== */
+
+  /* --------------------- 8. связи и разброс (25) ---------------------- */
+
+  A.harmonicMean = function (a) {
+    var s = 0, n = 0;
+    for (var i = 0; i < a.length; i++) if (a[i] > 0) { s += 1 / a[i]; n++; }
+    return n ? n / s : 0;
+  };
+  A.geoMean = function (a) {
+    var s = 0, n = 0;
+    for (var i = 0; i < a.length; i++) if (a[i] > 0) { s += Math.log(a[i]); n++; }
+    return n ? Math.exp(s / n) : 0;
+  };
+  A.rms = function (a) {
+    var s = 0;
+    for (var i = 0; i < a.length; i++) s += a[i] * a[i];
+    return a.length ? Math.sqrt(s / a.length) : 0;
+  };
+  A.covariance = function (x, y) {
+    var n = Math.min(x.length, y.length);
+    if (n < 2) return 0;
+    var mx = A.mean(x.slice(0, n)), my = A.mean(y.slice(0, n)), s = 0;
+    for (var i = 0; i < n; i++) s += (x[i] - mx) * (y[i] - my);
+    return s / (n - 1);
+  };
+  A.correlation = function (x, y) {
+    var sx = A.stdev(x), sy = A.stdev(y);
+    return sx && sy ? A.clamp(A.covariance(x, y) / (sx * sy), -1, 1) : 0;
+  };
+  A.linregSlope = function (x, y) { var v = A.variance(x); return v ? A.covariance(x, y) / v : 0; };
+  A.linregIntercept = function (x, y) { return A.mean(y) - A.linregSlope(x, y) * A.mean(x); };
+  A.linregPredict = function (x, y, at) { return A.linregIntercept(x, y) + A.linregSlope(x, y) * at; };
+  A.rSquared = function (x, y) { var r = A.correlation(x, y); return r * r; };
+  A.trimmedMean = function (a, p) {
+    if (!a.length) return 0;
+    var s = a.slice().sort(function (u, v) { return u - v; });
+    var k = Math.floor(s.length * A.clamp(p === undefined ? 0.1 : p, 0, 0.45));
+    var cut = s.slice(k, s.length - k);
+    return cut.length ? A.mean(cut) : A.mean(s);
+  };
+  A.winsorize = function (a, p) {
+    if (!a.length) return [];
+    var lo = A.percentile(a, A.clamp(p === undefined ? 0.05 : p, 0, 0.5));
+    var hi = A.percentile(a, 1 - A.clamp(p === undefined ? 0.05 : p, 0, 0.5));
+    return a.map(function (v) { return A.clamp(v, lo, hi); });
+  };
+  A.iqr = function (a) { return A.percentile(a, 0.75) - A.percentile(a, 0.25); };
+  A.spread = function (a) {
+    if (!a.length) return 0;
+    var lo = a[0], hi = a[0];
+    for (var i = 1; i < a.length; i++) { if (a[i] < lo) lo = a[i]; if (a[i] > hi) hi = a[i]; }
+    return hi - lo;
+  };
+  A.cv = function (a) { var m = A.mean(a); return m ? A.stdev(a) / Math.abs(m) : 0; };
+  A.sem = function (a) { return a.length ? A.stdev(a) / Math.sqrt(a.length) : 0; };
+  A.ci95 = function (a) { return 1.96 * A.sem(a); };
+  A.weightedMean = function (a, w) {
+    var s = 0, sw = 0;
+    for (var i = 0; i < a.length; i++) { var k = w && w[i] !== undefined ? w[i] : 1; s += a[i] * k; sw += k; }
+    return sw ? s / sw : 0;
+  };
+  A.rankOf = function (a, v) {
+    if (!a.length) return 0;
+    var less = 0, eq = 0;
+    for (var i = 0; i < a.length; i++) { if (a[i] < v) less++; else if (a[i] === v) eq++; }
+    return (less + eq / 2) / a.length;
+  };
+  A.spearman = function (x, y) {
+    var n = Math.min(x.length, y.length);
+    if (n < 2) return 0;
+    var rx = [], ry = [];
+    for (var i = 0; i < n; i++) { rx.push(A.rankOf(x.slice(0, n), x[i])); ry.push(A.rankOf(y.slice(0, n), y[i])); }
+    return A.correlation(rx, ry);
+  };
+  A.histogram = function (a, bins, lo, hi) {
+    bins = Math.max(1, Math.floor(bins || 10));
+    if (lo === undefined) lo = Math.min.apply(null, a.length ? a : [0]);
+    if (hi === undefined) hi = Math.max.apply(null, a.length ? a : [1]);
+    var out = [], i;
+    for (i = 0; i < bins; i++) out.push(0);
+    if (hi <= lo) { out[0] = a.length; return out; }
+    for (i = 0; i < a.length; i++) {
+      var k = Math.floor((a[i] - lo) / (hi - lo) * bins);
+      out[A.clamp(k, 0, bins - 1)]++;
+    }
+    return out;
+  };
+  A.bucket = function (v, edges) {
+    for (var i = 0; i < edges.length; i++) if (v < edges[i]) return i;
+    return edges.length;
+  };
+  A.theil = function (a) {
+    var m = A.mean(a);
+    if (m <= 0) return 0;
+    var s = 0, n = 0;
+    for (var i = 0; i < a.length; i++) if (a[i] > 0) { s += (a[i] / m) * Math.log(a[i] / m); n++; }
+    return n ? s / n : 0;
+  };
+  A.palma = function (a) {
+    if (a.length < 10) return 1;
+    var s = a.slice().sort(function (u, v) { return u - v; });
+    var bot = A.sum(s.slice(0, Math.floor(s.length * 0.4)));
+    var top = A.sum(s.slice(Math.ceil(s.length * 0.9)));
+    return bot > 0 ? top / bot : Infinity;
+  };
+  A.atkinson = function (a, eps) {
+    eps = eps === undefined ? 0.5 : eps;
+    var m = A.mean(a);
+    if (m <= 0) return 0;
+    var pos = a.filter(function (v) { return v > 0; });
+    if (!pos.length) return 0;
+    if (eps === 1) return A.clamp(1 - A.geoMean(pos) / m, 0, 1);
+    var s = 0;
+    for (var i = 0; i < pos.length; i++) s += Math.pow(pos[i] / m, 1 - eps);
+    return A.clamp(1 - Math.pow(s / pos.length, 1 / (1 - eps)), 0, 1);
+  };
+  A.herfindahl = function (a) {
+    var t = A.sum(a);
+    if (t <= 0) return 0;
+    var s = 0;
+    for (var i = 0; i < a.length; i++) s += (a[i] / t) * (a[i] / t);
+    return s;
+  };
+
+  /* ------------------- 9. ещё случайность (18) ------------------------ */
+
+  A.pcg32 = function (seed) {
+    var s = (seed >>> 0) || 1;
+    return function () {
+      s = (Math.imul(s, 747796405) + 2891336453) >>> 0;
+      var w = Math.imul(s ^ (s >>> ((s >>> 28) + 4)), 277803737) >>> 0;
+      return ((w ^ (w >>> 22)) >>> 0) / 4294967296;
+    };
+  };
+  A.lcg32 = function (seed) {
+    var s = (seed >>> 0) || 1;
+    return function () { s = (Math.imul(s, 1664525) + 1013904223) >>> 0; return s / 4294967296; };
+  };
+  A.jsf32 = function (seed) {
+    var a = 0xf1ea5eed, b = (seed >>> 0) || 1, c = b, d = b;
+    return function () {
+      var t = (a - ((b << 27) | (b >>> 5))) >>> 0;
+      a = (b ^ ((c << 17) | (c >>> 15))) >>> 0;
+      b = (c + d) >>> 0;
+      c = (d + t) >>> 0;
+      d = (t + a) >>> 0;
+      return d / 4294967296;
+    };
+  };
+  A.randInt = function (rnd, lo, hi) { return lo + Math.floor(rnd() * (hi - lo + 1)); };
+  A.randRange = function (rnd, lo, hi) { return lo + rnd() * (hi - lo); };
+  A.randSign = function (rnd) { return rnd() < 0.5 ? -1 : 1; };
+  A.bernoulli = function (rnd, p) { return rnd() < A.clamp(p, 0, 1) ? 1 : 0; };
+  A.exponentialSample = function (rnd, rate) {
+    var r = rate > 0 ? rate : 1;
+    return -Math.log(1 - rnd() * 0.999999) / r;
+  };
+  A.gammaSample = function (rnd, shape, scale) {
+    shape = Math.max(0.05, shape || 1); scale = scale === undefined ? 1 : scale;
+    if (shape < 1) return A.gammaSample(rnd, shape + 1, scale) * Math.pow(rnd() + 1e-9, 1 / shape);
+    var d = shape - 1 / 3, c = 1 / Math.sqrt(9 * d);
+    for (var i = 0; i < 100; i++) {
+      var x = A.normalSample(rnd, 0, 1), v = 1 + c * x;
+      if (v <= 0) continue;
+      v = v * v * v;
+      var u = rnd();
+      if (u < 1 - 0.0331 * x * x * x * x) return d * v * scale;
+      if (Math.log(u) < 0.5 * x * x + d * (1 - v + Math.log(v))) return d * v * scale;
+    }
+    return d * scale;
+  };
+  A.betaSample = function (rnd, a, b) {
+    var x = A.gammaSample(rnd, a, 1), y = A.gammaSample(rnd, b, 1);
+    return x + y > 0 ? x / (x + y) : 0.5;
+  };
+  A.paretoSample = function (rnd, xm, alpha) {
+    var al = alpha > 0 ? alpha : 1.5;
+    return (xm || 1) / Math.pow(1 - rnd() * 0.999999, 1 / al);
+  };
+  A.weibullSample = function (rnd, shape, scale) {
+    var k = shape > 0 ? shape : 1;
+    return (scale || 1) * Math.pow(-Math.log(1 - rnd() * 0.999999), 1 / k);
+  };
+  A.multinomial = function (rnd, weights, n) {
+    var out = weights.map(function () { return 0; });
+    var total = A.sum(weights);
+    if (total <= 0) return out;
+    for (var i = 0; i < n; i++) {
+      var r = rnd() * total, acc = 0;
+      for (var k = 0; k < weights.length; k++) { acc += weights[k]; if (r <= acc) { out[k]++; break; } }
+    }
+    return out;
+  };
+  A.reservoirSample = function (rnd, list, k) {
+    var res = [];
+    for (var i = 0; i < list.length; i++) {
+      if (res.length < k) res.push(list[i]);
+      else { var j = Math.floor(rnd() * (i + 1)); if (j < k) res[j] = list[i]; }
+    }
+    return res;
+  };
+  A.pickExcept = function (rnd, list, skip) {
+    var pool = list.filter(function (v) { return v !== skip; });
+    return pool.length ? pool[Math.floor(rnd() * pool.length) % pool.length] : skip;
+  };
+  A.dice = function (rnd, sides, count) {
+    var s = 0;
+    for (var i = 0; i < (count || 1); i++) s += 1 + Math.floor(rnd() * (sides || 6));
+    return s;
+  };
+  A.hashCombine = function (a, b) {
+    var h = (a >>> 0) ^ (Math.imul((b >>> 0) + 0x9e3779b9, 2654435761) >>> 0);
+    h = Math.imul(h ^ (h >>> 16), 2246822507) >>> 0;
+    return (h ^ (h >>> 13)) >>> 0;
+  };
+  A.jitter = function (rnd, v, frac) { return v * (1 + (rnd() * 2 - 1) * (frac === undefined ? 0.1 : frac)); };
+
+  /* --------------------- 10. деньги на каждый день (22) --------------- */
+
+  A.futureValue = function (pv, rate, years) { return pv * Math.pow(1 + rate, years); };
+  A.presentValue = function (fv, rate, years) { return fv / Math.pow(1 + rate, years); };
+  A.rule72 = function (rate) { return rate > 0 ? 72 / (rate * 100) : Infinity; };
+  A.cagr = function (from, to, years) {
+    if (from <= 0 || years <= 0) return 0;
+    return Math.pow(to / from, 1 / years) - 1;
+  };
+  A.payback = function (cost, perYear) { return perYear > 0 ? cost / perYear : Infinity; };
+  A.breakEven = function (fixed, price, unitCost) {
+    var m = price - unitCost;
+    return m > 0 ? fixed / m : Infinity;
+  };
+  A.markup = function (cost, pct) { return cost * (1 + pct); };
+  A.margin = function (price, cost) { return price > 0 ? (price - cost) / price : 0; };
+  A.discountPrice = function (price, pct) { return price * (1 - A.clamp(pct, 0, 1)); };
+  A.vatAdd = function (net, rate) { return net * (1 + rate); };
+  A.vatExtract = function (gross, rate) { return gross * rate / (1 + rate); };
+  A.tip = function (bill, pct) { return bill * (pct === undefined ? 0.1 : pct); };
+  A.splitBill = function (total, people) { return people > 0 ? total / people : total; };
+  A.installment = function (price, months, monthRate) {
+    if (months <= 0) return price;
+    if (!monthRate) return price / months;
+    var q = Math.pow(1 + monthRate, months);
+    return price * monthRate * q / (q - 1);
+  };
+  A.overdraft = function (amount, dailyRate, days) { return amount * dailyRate * days; };
+  A.minPayment = function (balance, pct, floor) {
+    return Math.min(balance, Math.max(balance * (pct || 0.05), floor || 0));
+  };
+  A.debtRatio = function (debt, income) { return income > 0 ? debt / income : Infinity; };
+  A.savingsRate = function (income, spend) { return income > 0 ? A.clamp((income - spend) / income, -1, 1) : 0; };
+  A.emergencyFund = function (monthSpend, months) { return monthSpend * (months || 6); };
+  A.retirementNeed = function (yearSpend, years, realRate) {
+    if (!realRate) return yearSpend * years;
+    return yearSpend * (1 - Math.pow(1 + realRate, -years)) / realRate;
+  };
+  A.safeWithdraw = function (pot, rate) { return pot * (rate === undefined ? 0.04 : rate); };
+  A.effectiveRate = function (nominal, periods) {
+    var p = Math.max(1, periods || 1);
+    return Math.pow(1 + nominal / p, p) - 1;
+  };
+
+  /* ------------------- 11. кривые, волны и сглаживание (18) ----------- */
+
+  A.smootherstep = function (t) { t = A.clamp(t, 0, 1); return t * t * t * (t * (t * 6 - 15) + 10); };
+  A.easeIn = function (t, p) { return Math.pow(A.clamp(t, 0, 1), p === undefined ? 2 : p); };
+  A.easeOut = function (t, p) { return 1 - Math.pow(1 - A.clamp(t, 0, 1), p === undefined ? 2 : p); };
+  A.bezier2 = function (a, b, c, t) {
+    var u = 1 - t;
+    return u * u * a + 2 * u * t * b + t * t * c;
+  };
+  A.bezier3 = function (a, b, c, d, t) {
+    var u = 1 - t;
+    return u * u * u * a + 3 * u * u * t * b + 3 * u * t * t * c + t * t * t * d;
+  };
+  A.expDecay = function (v0, rate, t) { return v0 * Math.exp(-rate * t); };
+  A.halfLife = function (v0, half, t) { return half > 0 ? v0 * Math.pow(0.5, t / half) : v0; };
+  A.saturate = function (v, cap) { return cap > 0 ? cap * v / (cap + Math.abs(v)) : v; };
+  A.pulse = function (t, period, width) {
+    if (period <= 0) return 0;
+    var ph = ((t % period) + period) % period;
+    return ph < period * A.clamp(width === undefined ? 0.5 : width, 0, 1) ? 1 : 0;
+  };
+  A.triangleWave = function (t, period) {
+    if (period <= 0) return 0;
+    var ph = ((t % period) + period) % period / period;
+    return ph < 0.5 ? ph * 2 : 2 - ph * 2;
+  };
+  A.sawWave = function (t, period) {
+    if (period <= 0) return 0;
+    return ((t % period) + period) % period / period;
+  };
+  A.sineWave = function (t, period, amp) {
+    if (period <= 0) return 0;
+    return (amp === undefined ? 1 : amp) * Math.sin(2 * Math.PI * t / period);
+  };
+  A.noise1d = function (x, seed) {
+    var i = Math.floor(x), f = x - i;
+    function h(n) {
+      var s = Math.sin(n * 127.1 + (seed || 0) * 311.7) * 43758.5453;
+      return s - Math.floor(s);
+    }
+    return A.lerp(h(i), h(i + 1), A.smoothstep(f));
+  };
+  A.pingpong = function (t, len) {
+    if (len <= 0) return 0;
+    var p = ((t % (len * 2)) + len * 2) % (len * 2);
+    return p < len ? p : len * 2 - p;
+  };
+  A.wrapAround = function (v, lo, hi) {
+    var span = hi - lo;
+    if (span <= 0) return lo;
+    return lo + (((v - lo) % span) + span) % span;
+  };
+  A.approach = function (cur, target, step) {
+    if (cur < target) return Math.min(target, cur + Math.abs(step));
+    return Math.max(target, cur - Math.abs(step));
+  };
+  A.damp = function (cur, target, lambda, dt) {
+    return target + (cur - target) * Math.exp(-Math.abs(lambda) * (dt === undefined ? 1 : dt));
+  };
+  A.deadzone = function (v, dz) {
+    if (Math.abs(v) <= dz) return 0;
+    return v > 0 ? v - dz : v + dz;
+  };
+
+  /* ---------------------- 12. списки и поиск (16) --------------------- */
+
+  A.upperBound = function (a, v) {
+    var lo = 0, hi = a.length;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (a[mid] <= v) lo = mid + 1; else hi = mid; }
+    return lo;
+  };
+  A.insertSorted = function (a, v) { var out = a.slice(); out.splice(A.upperBound(a, v), 0, v); return out; };
+  A.minBy = function (a, f) {
+    var best = null, bv = Infinity;
+    for (var i = 0; i < a.length; i++) { var v = f(a[i]); if (v < bv) { bv = v; best = a[i]; } }
+    return best;
+  };
+  A.maxBy = function (a, f) {
+    var best = null, bv = -Infinity;
+    for (var i = 0; i < a.length; i++) { var v = f(a[i]); if (v > bv) { bv = v; best = a[i]; } }
+    return best;
+  };
+  A.sumBy = function (a, f) { var s = 0; for (var i = 0; i < a.length; i++) s += f(a[i]); return s; };
+  A.meanBy = function (a, f) { return a.length ? A.sumBy(a, f) / a.length : 0; };
+  A.partition = function (a, f) {
+    var yes = [], no = [];
+    for (var i = 0; i < a.length; i++) (f(a[i]) ? yes : no).push(a[i]);
+    return [yes, no];
+  };
+  A.flatten = function (a) {
+    var out = [];
+    for (var i = 0; i < a.length; i++) {
+      if (Object.prototype.toString.call(a[i]) === '[object Array]') out = out.concat(A.flatten(a[i]));
+      else out.push(a[i]);
+    }
+    return out;
+  };
+  A.seq = function (from, to, step) {
+    var s = step || 1, out = [];
+    if (s === 0) return out;
+    for (var v = from; s > 0 ? v < to : v > to; v += s) out.push(v);
+    return out;
+  };
+  A.repeatN = function (v, n) { var out = []; for (var i = 0; i < n; i++) out.push(v); return out; };
+  A.intersect = function (a, b) { return a.filter(function (v) { return b.indexOf(v) >= 0; }); };
+  A.difference = function (a, b) { return a.filter(function (v) { return b.indexOf(v) < 0; }); };
+  A.windowed = function (a, size) {
+    var out = [];
+    for (var i = 0; i + size <= a.length; i++) out.push(a.slice(i, i + size));
+    return out;
+  };
+  A.pairwise = function (a) { return A.windowed(a, 2); };
+  A.sortBy = function (a, f) {
+    return a.slice().sort(function (u, v) { var x = f(u), y = f(v); return x < y ? -1 : x > y ? 1 : 0; });
+  };
+  A.takeWhile = function (a, f) {
+    var out = [];
+    for (var i = 0; i < a.length && f(a[i]); i++) out.push(a[i]);
+    return out;
+  };
+
+  /* -------------------------- 13. слова (12) -------------------------- */
+
+  A.capitalize = function (s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; };
+  A.titleCase = function (s) {
+    return String(s || '').split(' ').map(function (w) { return A.capitalize(w); }).join(' ');
+  };
+  A.padLeft = function (s, len, ch) {
+    s = String(s); ch = ch || ' ';
+    while (s.length < len) s = ch + s;
+    return s;
+  };
+  A.padNum = function (n, len) { return A.padLeft(Math.floor(n), len, '0'); };
+  A.ordinal = function (n) { return Math.floor(n) + '-й'; };
+  A.roman = function (n) {
+    n = Math.floor(n);
+    if (n <= 0 || n >= 4000) return String(n);
+    var v = [1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1];
+    var s = ['M', 'CM', 'D', 'CD', 'C', 'XC', 'L', 'XL', 'X', 'IX', 'V', 'IV', 'I'];
+    var out = '';
+    for (var i = 0; i < v.length; i++) while (n >= v[i]) { out += s[i]; n -= v[i]; }
+    return out;
+  };
+  A.translit = function (s) {
+    var map = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'e', 'ж': 'zh', 'з': 'z',
+      'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm', 'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r',
+      'с': 's', 'т': 't', 'у': 'u', 'ф': 'f', 'х': 'h', 'ц': 'c', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+      'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+    };
+    return String(s || '').toLowerCase().split('').map(function (ch) {
+      return map[ch] !== undefined ? map[ch] : ch;
+    }).join('');
+  };
+  A.wordCount = function (s) {
+    var m = String(s || '').trim();
+    return m ? m.split(/\s+/).length : 0;
+  };
+  A.ellipsisMiddle = function (s, len) {
+    s = String(s || '');
+    if (s.length <= len || len < 4) return s;
+    var head = Math.ceil((len - 1) / 2), tail = Math.floor((len - 1) / 2);
+    return s.slice(0, head) + '…' + s.slice(s.length - tail);
+  };
+  A.spellNumber = function (n) {
+    n = Math.floor(Math.abs(n || 0));
+    if (n === 0) return 'ноль';
+    var ones = ['', 'один', 'два', 'три', 'четыре', 'пять', 'шесть', 'семь', 'восемь', 'девять',
+      'десять', 'одиннадцать', 'двенадцать', 'тринадцать', 'четырнадцать', 'пятнадцать',
+      'шестнадцать', 'семнадцать', 'восемнадцать', 'девятнадцать'];
+    var tens = ['', '', 'двадцать', 'тридцать', 'сорок', 'пятьдесят', 'шестьдесят', 'семьдесят', 'восемьдесят', 'девяносто'];
+    var hund = ['', 'сто', 'двести', 'триста', 'четыреста', 'пятьсот', 'шестьсот', 'семьсот', 'восемьсот', 'девятьсот'];
+    function trio(v, fem) {
+      var out = [];
+      if (v >= 100) { out.push(hund[Math.floor(v / 100)]); v %= 100; }
+      if (v >= 20) { out.push(tens[Math.floor(v / 10)]); v %= 10; }
+      if (v > 0) {
+        if (fem && v === 1) out.push('одна');
+        else if (fem && v === 2) out.push('две');
+        else out.push(ones[v]);
+      }
+      return out.join(' ');
+    }
+    var parts = [];
+    var mil = Math.floor(n / 1000000) % 1000, th = Math.floor(n / 1000) % 1000, rest = n % 1000;
+    if (Math.floor(n / 1000000000) > 0) parts.push(trio(Math.floor(n / 1000000000)) + ' ' + A.plural(Math.floor(n / 1000000000), 'миллиард', 'миллиарда', 'миллиардов'));
+    if (mil) parts.push(trio(mil) + ' ' + A.plural(mil, 'миллион', 'миллиона', 'миллионов'));
+    if (th) parts.push(trio(th, true) + ' ' + A.plural(th, 'тысяча', 'тысячи', 'тысяч'));
+    if (rest) parts.push(trio(rest));
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
+  };
+  A.fmtPercent = function (v, digits) { return (v * 100).toFixed(digits === undefined ? 1 : digits) + '%'; };
+  A.fmtRange = function (lo, hi) { return A.fmtNum(Math.round(lo)) + '–' + A.fmtNum(Math.round(hi)); };
+
+  /* ------------------- 14. люди, годы и тело (20) --------------------- */
+
+  A.crudeBirthRate = function (births, pop) { return pop > 0 ? births / pop * 1000 : 0; };
+  A.crudeDeathRate = function (deaths, pop) { return pop > 0 ? deaths / pop * 1000 : 0; };
+  A.naturalGrowth = function (cbr, cdr) { return (cbr - cdr) / 10; };
+  A.doublingTime = function (growthPct) { return growthPct > 0 ? 70 / growthPct : Infinity; };
+  A.popAtYear = function (pop0, growthPct, years) { return pop0 * Math.pow(1 + growthPct / 100, years); };
+  A.dependencyRatio = function (young, old, working) { return working > 0 ? (young + old) / working * 100 : 0; };
+  A.infantFromU5 = function (u5) { return Math.min(u5 * 0.74, Math.max(0, u5 - 0.3)); };
+  A.u5FromInfant = function (imr) { return imr / 0.74; };
+  A.yearsLost = function (ageAtDeath, expectancy) { return Math.max(0, expectancy - ageAtDeath); };
+  A.healthIndex = function (le) { return A.clamp((le - 20) / 65, 0, 1); };
+  A.eduIndex = function (meanYears, expectedYears) {
+    return A.clamp((A.clamp(meanYears / 15, 0, 1) + A.clamp((expectedYears === undefined ? meanYears * 1.4 : expectedYears) / 18, 0, 1)) / 2, 0, 1);
+  };
+  A.incomeIndex = function (gni) {
+    if (gni <= 100) return 0;
+    return A.clamp((Math.log(gni) - Math.log(100)) / (Math.log(75000) - Math.log(100)), 0, 1);
+  };
+  A.hdi = function (le, meanYears, gni) {
+    return Math.pow(A.healthIndex(le) * A.eduIndex(meanYears) * A.incomeIndex(gni), 1 / 3);
+  };
+  A.inequalityAdjust = function (index, gini) { return index * (1 - A.clamp(gini, 0, 100) / 100); };
+  A.migrationRate = function (inflow, outflow, pop) { return pop > 0 ? (inflow - outflow) / pop * 1000 : 0; };
+  A.urbanAtYear = function (urbanPct, ratePct, years) {
+    var u = A.clamp(urbanPct / 100, 0.001, 0.999);
+    var odds = u / (1 - u) * Math.exp(ratePct / 100 * years);
+    return A.clamp(odds / (1 + odds) * 100, 0, 100);
+  };
+  A.cohortSurvival = function (qxList) {
+    var s = 1;
+    for (var i = 0; i < qxList.length; i++) s *= 1 - A.clamp(qxList[i], 0, 1);
+    return s;
+  };
+  A.bmi = function (kg, cm) { return cm > 0 ? kg / ((cm / 100) * (cm / 100)) : 0; };
+  A.bmr = function (kg, cm, age, sex) {
+    return 10 * kg + 6.25 * cm - 5 * age + (sex === 'f' ? -161 : 5);
+  };
+  A.caloriesNeed = function (bmrValue, activity) { return bmrValue * (activity === undefined ? 1.4 : activity); };
+
+  /* ------------- 15. решения, привычки и окружающий мир (19) ---------- */
+
+  A.kelly = function (p, odds) {
+    var o = odds > 0 ? odds : 1;
+    return A.clamp((p * (o + 1) - 1) / o, 0, 1);
+  };
+  A.expectedValue = function (values, probs) {
+    var s = 0;
+    for (var i = 0; i < values.length; i++) s += values[i] * (probs[i] || 0);
+    return s;
+  };
+  A.regret = function (got, best) { return Math.max(0, best - got); };
+  A.riskAdjusted = function (gain, variance, aversion) {
+    return gain - (aversion === undefined ? 0.5 : aversion) * variance;
+  };
+  A.thresholdDecide = function (score, threshold, inertia) {
+    return score > threshold + (inertia || 0) ? 1 : score < threshold - (inertia || 0) ? -1 : 0;
+  };
+  A.learningCurve = function (reps, rate) {
+    return 1 - Math.exp(-(rate === undefined ? 0.12 : rate) * Math.max(0, reps));
+  };
+  A.forgetting = function (strength, days) {
+    return Math.exp(-Math.max(0, days) / Math.max(0.1, strength));
+  };
+  A.habitUpdate = function (level, didIt, speed) {
+    var k = speed === undefined ? 0.2 : speed;
+    return A.clamp(level + (didIt ? k * (1 - level) : -k * level), 0, 1);
+  };
+  A.fatigue = function (hoursWorked, sleepHours) {
+    return A.clamp((hoursWorked / 8) * 0.5 + (8 - A.clamp(sleepHours, 0, 12)) * 0.12, 0, 2);
+  };
+  A.burnoutRisk = function (load, control, support) {
+    return A.clamp(load * 0.6 - control * 0.25 - support * 0.2 + 0.1, 0, 1);
+  };
+  A.trustUpdate = function (trust, kept, weight) {
+    var w = weight === undefined ? 0.25 : weight;
+    return A.clamp(trust + (kept ? w * (1 - trust) : -w * 1.5 * trust), 0, 1);
+  };
+  A.moraleUpdate = function (morale, events) {
+    var s = morale;
+    for (var i = 0; i < events.length; i++) s = A.clamp(s + events[i] * (1 - Math.abs(s) * 0.4), -1, 1);
+    return s;
+  };
+  A.matchScore = function (a, b, weights) {
+    var s = 0, w = 0;
+    for (var k in a) {
+      if (!Object.prototype.hasOwnProperty.call(a, k) || b[k] === undefined) continue;
+      var kw = weights && weights[k] !== undefined ? weights[k] : 1;
+      s += kw * (1 - Math.abs(a[k] - b[k]));
+      w += kw;
+    }
+    return w ? A.clamp(s / w, 0, 1) : 0;
+  };
+  A.degToRad = function (d) { return d * Math.PI / 180; };
+  A.radToDeg = function (r) { return r * 180 / Math.PI; };
+  A.haversine = function (lat1, lon1, lat2, lon2) {
+    var R = 6371;
+    var dLat = A.degToRad(lat2 - lat1), dLon = A.degToRad(lon2 - lon1);
+    var h = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(A.degToRad(lat1)) * Math.cos(A.degToRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+  };
+  A.heatIndex = function (tempC, humidity) {
+    var h = A.clamp(humidity, 0, 100);
+    return tempC + 0.33 * (h / 100 * 6.105 * Math.exp(17.27 * tempC / (237.7 + tempC))) - 4;
+  };
+  A.windChill = function (tempC, windKmh) {
+    if (tempC > 10 || windKmh < 4.8) return tempC;
+    var v = Math.pow(windKmh, 0.16);
+    return 13.12 + 0.6215 * tempC - 11.37 * v + 0.3965 * tempC * v;
+  };
+  A.sleepDebt = function (hoursList, need) {
+    var n = need === undefined ? 8 : need, s = 0;
+    for (var i = 0; i < hoursList.length; i++) s += Math.max(0, n - hoursList[i]);
+    return s;
+  };
+
+  /* ============ словарь: двести пятьдесят имён и смыслов ============== */
   var DOC = {
     mean: 'среднее', sum: 'сумма', kahanSum: 'точная сумма Кэхана', median: 'медиана',
     percentile: 'значение по процентилю', variance: 'дисперсия', stdev: 'стандартное отклонение',
@@ -450,7 +1030,72 @@
     utility: 'полезность решения', softmaxPick: 'выбор по полезности', epsilonGreedy: 'иногда пробовать новое',
     ucb1: 'баланс опыта и риска', elo: 'рейтинг после встречи', bayes: 'обновить веру по факту',
     markovStep: 'переход между состояниями', hysteresis: 'решение без дрожания',
-    cooldown: 'не чаще раза в N лет', riskScore: 'итоговый риск'
+    cooldown: 'не чаще раза в N лет', riskScore: 'итоговый риск',
+    harmonicMean: 'среднее гармоническое', geoMean: 'среднее геометрическое', rms: 'среднеквадратичное',
+    covariance: 'ковариация двух рядов', correlation: 'связь двух рядов', linregSlope: 'наклон прямой',
+    linregIntercept: 'сдвиг прямой', linregPredict: 'предсказание по прямой', rSquared: 'качество прямой',
+    trimmedMean: 'среднее без краёв', winsorize: 'подрезать выбросы', iqr: 'межквартильный размах',
+    spread: 'разброс от мин до макс', cv: 'относительный разброс', sem: 'ошибка среднего',
+    ci95: 'доверительный интервал', weightedMean: 'среднее с весами', rankOf: 'место в ряду',
+    spearman: 'связь по рангам', histogram: 'гистограмма', bucket: 'номер корзины',
+    theil: 'неравенство по Тейлу', palma: 'отношение Пальмы', atkinson: 'неравенство по Аткинсону',
+    herfindahl: 'концентрация рынка',
+
+    pcg32: 'генератор PCG', lcg32: 'линейный генератор', jsf32: 'генератор JSF',
+    randInt: 'целое в диапазоне', randRange: 'число в диапазоне', randSign: 'плюс или минус',
+    bernoulli: 'ноль или один', exponentialSample: 'сколько ждать до события',
+    gammaSample: 'гамма-случайность', betaSample: 'доля от нуля до единицы',
+    paretoSample: 'правило Парето', weibullSample: 'срок службы вещи',
+    multinomial: 'разложить попытки по корзинам', reservoirSample: 'выбрать из потока',
+    pickExcept: 'любой, кроме этого', dice: 'бросок костей', hashCombine: 'смешать два зерна',
+    jitter: 'немного сдвинуть значение',
+
+    futureValue: 'сколько станет через годы', presentValue: 'сколько это стоит сегодня',
+    rule72: 'правило 72: за сколько удвоится', cagr: 'среднегодовой рост', payback: 'за сколько окупится',
+    breakEven: 'точка безубыточности', markup: 'цена с наценкой', margin: 'маржа',
+    discountPrice: 'цена со скидкой', vatAdd: 'цена с налогом', vatExtract: 'налог внутри цены',
+    tip: 'чаевые', splitBill: 'счёт на всех', installment: 'платёж по рассрочке',
+    overdraft: 'переплата за овердрафт', minPayment: 'минимальный платёж', debtRatio: 'долг к доходу',
+    savingsRate: 'норма сбережений', emergencyFund: 'подушка безопасности',
+    retirementNeed: 'сколько нужно к пенсии', safeWithdraw: 'сколько можно снимать в год',
+    effectiveRate: 'ставка с учётом капитализации',
+
+    smootherstep: 'очень мягкий переход', easeIn: 'медленное начало', easeOut: 'мягкое окончание',
+    bezier2: 'кривая по трём точкам', bezier3: 'кривая по четырём точкам', expDecay: 'затухание',
+    halfLife: 'период полураспада', saturate: 'насыщение с потолком', pulse: 'импульс',
+    triangleWave: 'треугольная волна', sawWave: 'пилообразная волна', sineWave: 'синусоида',
+    noise1d: 'плавный шум', pingpong: 'туда и обратно', wrapAround: 'закольцевать значение',
+    approach: 'шаг к цели', damp: 'плавно подтянуть к цели', deadzone: 'мёртвая зона',
+
+    upperBound: 'первая позиция больше', insertSorted: 'вставить по порядку', minBy: 'наименьший по признаку',
+    maxBy: 'наибольший по признаку', sumBy: 'сумма по признаку', meanBy: 'среднее по признаку',
+    partition: 'разделить надвое', flatten: 'разгладить вложенность', seq: 'ряд чисел',
+    repeatN: 'повторить n раз', intersect: 'общие элементы', difference: 'что есть только здесь',
+    windowed: 'скользящее окно', pairwise: 'соседние пары', sortBy: 'сортировка по признаку',
+    takeWhile: 'брать, пока верно',
+
+    capitalize: 'с большой буквы', titleCase: 'каждое слово с большой', padLeft: 'дополнить слева',
+    padNum: 'число с нулями', ordinal: 'порядковый номер', roman: 'римские цифры',
+    translit: 'кириллица латиницей', wordCount: 'сколько слов', ellipsisMiddle: 'сократить середину',
+    spellNumber: 'число прописью', fmtPercent: 'доля в процентах', fmtRange: 'диапазон чисел',
+
+    crudeBirthRate: 'рождаемость на тысячу', crudeDeathRate: 'смертность на тысячу',
+    naturalGrowth: 'естественный прирост', doublingTime: 'за сколько удвоится население',
+    popAtYear: 'население через годы', dependencyRatio: 'нагрузка на работающих',
+    infantFromU5: 'младенческая из детской смертности', u5FromInfant: 'детская из младенческой',
+    yearsLost: 'сколько лет жизни потеряно', healthIndex: 'индекс здоровья',
+    eduIndex: 'индекс образования', incomeIndex: 'индекс дохода', hdi: 'индекс развития человека',
+    inequalityAdjust: 'поправка на неравенство', migrationRate: 'сальдо миграции',
+    urbanAtYear: 'городское население через годы', cohortSurvival: 'доля доживших по когорте',
+    bmi: 'индекс массы тела', bmr: 'основной обмен', caloriesNeed: 'сколько калорий нужно',
+
+    kelly: 'ставка по Келли', expectedValue: 'ожидаемый выигрыш', regret: 'сожаление о выборе',
+    riskAdjusted: 'выигрыш с поправкой на риск', thresholdDecide: 'решение с порогом',
+    learningCurve: 'кривая обучения', forgetting: 'кривая забывания', habitUpdate: 'привычка крепнет или тает',
+    fatigue: 'усталость за день', burnoutRisk: 'риск выгорания', trustUpdate: 'доверие после поступка',
+    moraleUpdate: 'настроение после событий', matchScore: 'насколько подходят друг другу',
+    degToRad: 'градусы в радианы', radToDeg: 'радианы в градусы', haversine: 'расстояние по земле',
+    heatIndex: 'как ощущается жара', windChill: 'как ощущается мороз', sleepDebt: 'недосып за неделю'
   };
 
   var IDS = Object.keys(DOC);

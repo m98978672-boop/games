@@ -12,6 +12,8 @@
   'use strict';
 
   var M = window.IN8B.model;
+  var TX = window.IN8B.textures || null;   /* 150 текстур: стены, полы, земля, фасады, ткань */
+  var MD = window.IN8B.models || null;     /* 155 моделек: мебель, утварь, улица, природа */
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function lerp(a, b, t) { return a + (b - a) * t; }
@@ -1113,6 +1115,7 @@
     drawBackdrop(g, V);
     (PLACE[scene] || placeVillage)(g, V);
     drawGround(g, V);
+    placeProps(g, V);
     drawCrowd(g, V);
     drawFore(g, V);
     drawFx(g, V);
@@ -1141,6 +1144,10 @@
       px(g, 0, 0, w, V.gy, wp[1]);
       px(g, 0, 0, w, Math.round(V.gy * 0.38), wp[2]);
       dith(g, 0, Math.round(V.gy * 0.38), w, wp[2]);
+      /* узор стены: кирпич, обои, плитка, доски — свой у каждого места */
+      if (paintTex(g, V, 'стена', 0, 0, w, Math.round(V.gy * 0.62), wp[1], 0.52)) {
+        px(g, 0, 0, w, Math.round(V.gy * 0.14), 'rgba(255,255,255,0.05)');
+      }
       /* обойная полоса (в бедном доме стены голые) */
       var tier = V.scene === 'room' ? homeTier(V) : 1;
       if (tier > 0) for (var i = 0; i < w; i += 6) px(g, i, 0, 1, Math.round(V.gy * 0.38), 'rgba(255,255,255,0.03)');
@@ -1195,6 +1202,58 @@
     px(g, x + Math.round(w * 0.6), y + 1, Math.round(w * 0.3), 2, c);
   }
 
+  /* ------------------- текстуры и вещи в сцене ----------------------- */
+
+  /* Узор выбирается раз и навсегда: одна жизнь всегда видит одни и те
+     же стены своей комнаты, но у школы, завода и улицы они свои. */
+  function paintTex(g, V, group, x, y, w, h, tint, k, extra) {
+    if (!TX) return false;
+    var key = (V.life ? V.life.seed : 'нет') + '/' + V.scene + '/' + (extra || group);
+    var t = TX.pick(group, TX.hashStr(key));
+    if (!t) return false;
+    TX.draw(t.id, g, x, y, w, h, {
+      seed: TX.hashStr(key + 'узор'),
+      tint: tint, tintK: k === undefined ? 0.5 : k,
+      dark: V.sky === 'night' ? 0.26 : 0
+    });
+    return true;
+  }
+
+  /* Какие вещи уместны в этой сцене */
+  var PROPS = {
+    room: ['мебель', 'кухня', 'техника'],
+    school: ['мебель', 'техника'],
+    office: ['мебель', 'техника'],
+    hospital: ['мебель', 'техника'],
+    factory: ['инструменты', 'техника'],
+    street: ['улица', 'транспорт'],
+    city: ['улица', 'транспорт'],
+    night: ['улица', 'транспорт'],
+    village: ['природа', 'улица', 'инструменты'],
+    field: ['природа', 'инструменты'],
+    park: ['природа', 'улица']
+  };
+
+  /* Две-три вещи по краям сцены: середину оставляем человеку. */
+  function placeProps(g, V) {
+    if (!MD) return;
+    var groups = PROPS[V.scene] || PROPS.village;
+    var key = (V.life ? V.life.seed : 'нет') + V.scene;
+    var h0 = hashStr(key);
+    var count = 2 + (h0 % 2);
+    var spots = [0.08, 0.88, 0.22, 0.76];
+    for (var i = 0; i < count; i++) {
+      var group = groups[(h0 >> (i * 3)) % groups.length];
+      var m = MD.pick(group, hashStr(key + 'вещь' + i));
+      if (!m) continue;
+      var x = Math.round(V.w * spots[i % spots.length] - m.w / 2);
+      MD.draw(m.id, g, x, V.gy + 1 + (i % 2), 1, {
+        flip: ((h0 >> (i + 7)) & 1) === 1,
+        dark: V.sky === 'night' ? 0.4 : 0.05
+      });
+    }
+  }
+
   /* --------------------------- земля и пол --------------------------- */
 
   var GROUND = {
@@ -1217,6 +1276,10 @@
     px(g, 0, gy, w, V.h - gy, gp[1]);
     px(g, 0, gy, w, 2, gp[0]);
     dith(g, 0, gy + 2, w, gp[0]);
+    /* под ногами тоже узор: доски и плитка в помещении, земля на улице */
+    if (paintTex(g, V, V.indoor ? 'пол' : 'земля', 0, gy, w, V.h - gy, gp[1], V.indoor ? 0.46 : 0.5)) {
+      px(g, 0, gy, w, 1, shade(gp[0], 0.1));
+    }
     if (V.scene === 'room' || V.scene === 'school' || V.scene === 'office') {
       px(g, 0, gy + 2, w, 1, gp[2]);
       for (var i = 0; i < w; i += 11) px(g, i + ((i / 11) % 2 ? 5 : 0), gy + 3, 1, V.h - gy - 3, shade(gp[1], -0.1));
@@ -1249,6 +1312,11 @@
 
   function pxBuilding(g, x, y, w, h, body, dark, lit, seed) {
     px(g, x, y, w, h, body);
+    if (TX) {                                   /* панели, штукатурка, стекло */
+      var face = TX.byGroup('фасад');
+      var f = face[Math.abs(Math.round(seed)) % face.length];
+      TX.draw(f.id, g, x, y, w, h, { seed: seed, tint: body, tintK: 0.6, dark: 0.08 });
+    }
     px(g, x + w - 2, y, 2, h, dark);
     px(g, x, y, w, 1, '#ffffff10');
     for (var wy = y + 3; wy < y + h - 3; wy += 5) {
@@ -1893,6 +1961,11 @@
       px(g, hx - Math.round(bodyW / 2) - 1, bTop + bodyH - 1, bodyW + Math.round(bodyW * 0.75) + 2, 1, shade(cloth, -0.18));
     } else {
       px(g, hx - Math.round(bodyW / 2), bTop, bodyW, bodyH, cloth);
+      if (TX && st.hero && bodyW > 5) {          /* ткань: клетка, вязка, джинса */
+        var fab = TX.pick('ткань', hashStr((V.life ? V.life.seed : '') + 'ткань'));
+        TX.draw(fab.id, g, hx - Math.round(bodyW / 2), bTop, bodyW, bodyH - 1,
+          { seed: 7, tint: cloth, tintK: 0.78, dark: V.sky === 'night' ? 0.2 : 0 });
+      }
       px(g, hx - Math.round(bodyW / 2), bTop, bodyW, 1, shade(cloth, 0.14));
       px(g, hx - Math.round(bodyW / 2), bTop + bodyH - 2, bodyW, 1, shade(cloth, -0.2)); /* пояс */
     }

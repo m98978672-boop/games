@@ -1,5 +1,5 @@
 /* ============================================================
-   1 ИЗ 8 МИЛЛИАРДОВ — сто вариаций жизни.
+   1 ИЗ 8 МИЛЛИАРДОВ — 250 вариаций жизни.
    ------------------------------------------------------------
    Две жизни в одной стране, в один год, с одним достатком всё
    равно будут разными. Вариация — это то, с чем человек
@@ -375,7 +375,535 @@
      без противоречий (например, «единственный ребёнок» и «многодетная»).
      ====================================================================== */
 
+
+  /* ======================================================================
+     ВТОРАЯ ВОЛНА ВАРИАЦИЙ (v1.8): ещё 150 способов родиться другим.
+     Те же шесть групп, те же правила: вес решает, бывает ли такое в этой
+     стране и в этом году, apply меняет стартовые показатели и ставит
+     флаги, которые потом читают механики и события.
+     ====================================================================== */
+
+  /* ========================= ТЕЛО: ещё 25 ============================= */
+
+  V('triplet', 'Один из тройни', 'тело', function () { return 0.25; }, function (L) {
+    L.siblings += 2; st(L, 'health', -4); st(L, 'bond', 7);
+  }, 'Вас было трое сразу — родители так и не выспались.');
+
+  V('big-family-body', 'Крепкая порода', 'тело', function () { return 1.1; }, function (L) { st(L, 'health', 6); });
+
+  V('weak-lungs', 'Слабые лёгкие', 'тело', function (L) { return poor(L.c) ? 1.6 : 0.9; }, function (L) {
+    st(L, 'health', -5); L.flag('chronic', true);
+  });
+
+  V('heart-murmur', 'Шум в сердце', 'тело', function () { return 0.8; }, function (L) { st(L, 'health', -4); });
+
+  V('flat-feet', 'Плоскостопие', 'тело', function () { return 1.2; }, function (L) { st(L, 'health', -1.5); });
+
+  V('red-hair', 'Рыжие волосы', 'тело', function (L) { return ['ie', 'gb', 'ru', 'ua', 'nl', 'se'].indexOf(L.c.code) >= 0 ? 1.4 : 0.3; }, function (L) {
+    st(L, 'happy', -1); st(L, 'bond', 1);
+  });
+
+  V('green-eyes', 'Редкий цвет глаз', 'тело', function () { return 0.8; }, function (L) { st(L, 'happy', 1.5); });
+
+  V('freckles', 'Веснушки', 'тело', function () { return 1.1; }, function (L) { st(L, 'happy', 1); });
+
+  V('early-teeth', 'Ранние зубы', 'тело', function () { return 1; }, function (L) { st(L, 'health', 1.5); });
+
+  V('colic-baby', 'Беспокойный младенец', 'тело', function () { return 1.3; }, function (L) {
+    st(L, 'health', -2); st(L, 'bond', -1);
+  });
+
+  V('long-fingers', 'Длинные пальцы', 'тело', function () { return 1; }, function (L) {
+    st(L, 'know', 2); L.flag('music', true);
+  });
+
+  V('good-ear-balance', 'Хороший вестибулярный аппарат', 'тело', function () { return 1; }, function (L) {
+    st(L, 'health', 2); L.flag('sport', true);
+  });
+
+  V('colour-blind', 'Дальтонизм', 'тело', function (L) { return L.sex === 'm' ? 1.2 : 0.2; }, function (L) { st(L, 'know', -1); });
+
+  V('stutter', 'Заикание', 'тело', function () { return 0.9; }, function (L) {
+    st(L, 'happy', -3); st(L, 'bond', -2);
+  }, 'Вы заикались, и каждое выступление у доски было пыткой.');
+
+  V('birth-injury', 'Родовая травма', 'тело', function (L) { return poor(L.c) ? 1.8 : 0.5; }, function (L) {
+    st(L, 'health', -7); L.flag('fragile', true);
+  });
+
+  V('strong-immunity', 'Крепкий иммунитет', 'тело', function () { return 1.3; }, function (L) { st(L, 'health', 5); });
+
+  V('slow-growth', 'Медленный рост', 'тело', function (L) { return poor(L.c) ? 1.6 : 0.7; }, function (L) {
+    st(L, 'health', -3); st(L, 'happy', -1);
+  });
+
+  V('sweet-sleep', 'Спокойный сон', 'тело', function () { return 1.2; }, function (L) { st(L, 'health', 3); st(L, 'happy', 2); });
+
+  V('migraine', 'Мигрени', 'тело', function () { return 0.9; }, function (L) { st(L, 'health', -3); st(L, 'happy', -2); });
+
+  V('lactose', 'Непереносимость молока', 'тело', function (L) { return ['cn', 'jp', 'kr', 'vn', 'th', 'id'].indexOf(L.c.code) >= 0 ? 2.2 : 0.6; }, function (L) {
+    st(L, 'health', -1);
+  });
+
+  V('left-eye-weak', 'Слабый глаз', 'тело', function () { return 0.9; }, function (L) { L.flag('glasses', true); st(L, 'know', 1); });
+
+  V('scoliosis', 'Сколиоз', 'тело', function () { return 1.1; }, function (L) { st(L, 'health', -3); });
+
+  V('fast-metabolism', 'Быстрый обмен веществ', 'тело', function () { return 1; }, function (L) { st(L, 'health', 3); });
+
+  V('birth-at-home', 'Роды дома', 'тело', function (L) { return poor(L.c) ? 2.4 : 0.2; }, function (L) {
+    st(L, 'health', -3);
+  }, 'Вас принимала соседка-повитуха: до больницы было слишком далеко.');
+
+  V('late-walker', 'Поздно пошёл', 'тело', function () { return 1; }, function (L) { st(L, 'health', -1); st(L, 'know', 1); });
+
+  /* ========================= СЕМЬЯ: ещё 25 =========================== */
+
+  V('many-siblings', 'Много братьев и сестёр', 'семья', function (L) { return L.c.tfr > 3 ? 2 : 0.5; }, function (L) {
+    L.siblings += 3; st(L, 'bond', 5); L.famPct = clamp(L.famPct - 0.06, 0.02, 1);
+  });
+
+  V('middle-child', 'Средний ребёнок', 'семья', function () { return 1.3; }, function (L) { st(L, 'bond', 2); st(L, 'happy', -1); });
+
+  V('young-parents', 'Совсем молодые родители', 'семья', function (L) { return poor(L.c) ? 1.8 : 0.8; }, function (L) {
+    L.famPct = clamp(L.famPct - 0.07, 0.02, 1); st(L, 'bond', 2);
+  });
+
+  V('old-parents', 'Поздний ребёнок', 'семья', function (L) { return rich(L.c) ? 1.6 : 0.7; }, function (L) {
+    L.famPct = clamp(L.famPct + 0.05, 0, 1); st(L, 'know', 3); st(L, 'bond', -1);
+  });
+
+  V('single-mother', 'Мать одна', 'семья', function (L) { return 1.4; }, function (L) {
+    L.famPct = clamp(L.famPct - 0.1, 0.02, 1); st(L, 'bond', 2); st(L, 'happy', -3);
+  }, 'Мать растила вас одна и работала на двух работах.');
+
+  V('big-brother', 'Старший брат-защитник', 'семья', function () { return 1.2; }, function (L) {
+    L.siblings += 1; st(L, 'bond', 4); st(L, 'happy', 2);
+  });
+
+  V('sister-close', 'Сестра-подруга', 'семья', function () { return 1.2; }, function (L) {
+    L.siblings += 1; st(L, 'bond', 5);
+  });
+
+  V('family-shop', 'Семейная лавка', 'семья', function (L) { return !rich(L.c) ? 1.4 : 0.8; }, function (L) {
+    L.flag('familyBiz', true); st(L, 'know', 2); L.famPct = clamp(L.famPct + 0.04, 0, 1);
+  });
+
+  V('farm-family', 'Семья с хозяйством', 'семья', function (L) { return !L.urban ? 2 : 0.3; }, function (L) {
+    st(L, 'health', 3); st(L, 'know', -2); L.flag('farmKid', true);
+  });
+
+  V('priest-family', 'Семья священника', 'семья', function () { return 0.6; }, function (L) {
+    st(L, 'bond', 4); st(L, 'know', 2); L.flag('faith', true);
+  });
+
+  V('artist-family', 'Семья артистов', 'семья', function (L) { return L.urban ? 0.9 : 0.3; }, function (L) {
+    st(L, 'know', 3); st(L, 'happy', 2); L.flag('music', true);
+  });
+
+  V('engineer-family', 'Семья инженеров', 'семья', function (L) { return mid(L.c) || rich(L.c) ? 1.2 : 0.5; }, function (L) {
+    st(L, 'know', 5);
+  });
+
+  V('trader-family', 'Семья торговцев', 'семья', function (L) { return !rich(L.c) ? 1.3 : 0.6; }, function (L) {
+    st(L, 'know', 2); L.famPct = clamp(L.famPct + 0.05, 0, 1);
+  });
+
+  V('miner-family', 'Шахтёрская семья', 'семья', function (L) { return ['ru', 'ua', 'kz', 'pl', 'cn', 'za', 'cl'].indexOf(L.c.code) >= 0 ? 1.4 : 0.3; }, function (L) {
+    st(L, 'health', -2); st(L, 'bond', 3);
+  });
+
+  V('parents-abroad', 'Родители на заработках', 'семья', function (L) { return poor(L.c) || mid(L.c) ? 1.6 : 0.4; }, function (L) {
+    st(L, 'happy', -4); st(L, 'bond', -3); L.flag('moneyFromAbroad', true);
+  }, 'Родители уехали работать за границу, а вы остались с бабушкой.');
+
+  V('stepfather', 'Отчим', 'семья', function () { return 1.1; }, function (L) {
+    st(L, 'happy', -2); L.flag('parentsSplit', true);
+  });
+
+  V('stepmother', 'Мачеха', 'семья', function () { return 0.8; }, function (L) { st(L, 'happy', -2); });
+
+  V('foster-care', 'Приёмная семья', 'семья', function () { return 0.5; }, function (L) {
+    st(L, 'bond', -2); st(L, 'happy', -2); L.flag('adopted', true);
+  });
+
+  V('large-dowry', 'Семья с достатком', 'семья', function (L) { return 0.8; }, function (L) {
+    L.famPct = clamp(L.famPct + 0.12, 0, 1); L.flag('willInherit', true);
+  });
+
+  V('debt-family', 'Семья в долгах', 'семья', function (L) { return poor(L.c) || mid(L.c) ? 1.5 : 0.6; }, function (L) {
+    L.famPct = clamp(L.famPct - 0.1, 0.02, 1); st(L, 'happy', -3);
+  }, 'Дома всегда говорили о долгах — шёпотом.');
+
+  V('strict-grandma', 'Строгая бабушка', 'семья', function () { return 1.2; }, function (L) {
+    st(L, 'know', 3); st(L, 'happy', -1); st(L, 'health', 2);
+  });
+
+  V('family-reads', 'Дома читали вслух', 'семья', function (L) { return rich(L.c) || mid(L.c) ? 1.4 : 0.7; }, function (L) {
+    st(L, 'know', 6); st(L, 'bond', 2);
+  }, 'По вечерам дома читали вслух — вы запомнили это навсегда.');
+
+  V('family-music', 'Дома пели', 'семья', function () { return 1.1; }, function (L) {
+    st(L, 'happy', 3); L.flag('music', true);
+  });
+
+  V('family-sport', 'Спортивная семья', 'семья', function () { return 1; }, function (L) {
+    st(L, 'health', 4); L.flag('sport', true);
+  });
+
+  V('many-cousins', 'Большая родня', 'семья', function (L) { return L.c.tfr > 2.5 ? 1.6 : 0.7; }, function (L) {
+    st(L, 'bond', 4);
+  });
+
+  /* ========================= МЕСТО: ещё 28 =========================== */
+
+  V('steppe', 'Степь', 'место', function (L) { return ['kz', 'mn', 'ru', 'ua', 'ar'].indexOf(L.c.code) >= 0 ? 1.8 : 0.2; }, function (L) {
+    st(L, 'health', 1); st(L, 'know', -1);
+  });
+
+  V('jungle', 'Тропический лес', 'место', function (L) { return ['br', 'id', 'cd', 'pe', 'co', 'my', 'pg'].indexOf(L.c.code) >= 0 ? 2 : 0.1; }, function (L) {
+    st(L, 'health', -2); st(L, 'know', -1);
+  });
+
+  V('river-town', 'Город на реке', 'место', function () { return 1.1; }, function (L) { st(L, 'happy', 2); });
+
+  V('port-city', 'Портовый город', 'место', function (L) { return L.urban ? 1.3 : 0.2; }, function (L) {
+    st(L, 'know', 3); L.flag('port', true);
+  });
+
+  V('mining-town', 'Рудничный посёлок', 'место', function (L) { return !rich(L.c) ? 1.2 : 0.4; }, function (L) {
+    st(L, 'health', -4); L.famPct = clamp(L.famPct + 0.03, 0, 1);
+  });
+
+  V('resort-town', 'Курортный городок', 'место', function (L) { return 0.9; }, function (L) {
+    st(L, 'happy', 3); st(L, 'know', -1);
+  });
+
+  V('student-town', 'Студенческий город', 'место', function (L) { return L.urban && !poor(L.c) ? 1.4 : 0.3; }, function (L) {
+    st(L, 'know', 5);
+  });
+
+  V('industrial-east', 'Промышленная окраина', 'место', function (L) { return L.urban ? 1.3 : 0.3; }, function (L) {
+    st(L, 'health', -3); st(L, 'bond', 2);
+  });
+
+  V('new-district', 'Новый микрорайон', 'место', function (L) { return L.urban ? 1.4 : 0.2; }, function (L) {
+    st(L, 'happy', 1); st(L, 'bond', -1);
+  });
+
+  V('old-center', 'Старый центр', 'место', function (L) { return L.urban ? 1.1 : 0.1; }, function (L) {
+    st(L, 'know', 2); st(L, 'happy', 2);
+  });
+
+  V('near-railway', 'У железной дороги', 'место', function () { return 1; }, function (L) {
+    st(L, 'happy', -1); st(L, 'know', 1);
+  });
+
+  V('near-airport', 'Рядом с аэропортом', 'место', function (L) { return L.urban && !poor(L.c) ? 0.9 : 0.2; }, function (L) {
+    st(L, 'happy', -2);
+  });
+
+  V('high-altitude', 'Высокогорье', 'место', function (L) { return ['bo', 'pe', 'np', 'et', 'kg', 'tj'].indexOf(L.c.code) >= 0 ? 2 : 0.1; }, function (L) {
+    st(L, 'health', 2); st(L, 'know', -2);
+  });
+
+  V('oasis', 'Оазис', 'место', function (L) { return ['eg', 'ly', 'dz', 'sa', 'mr', 'td'].indexOf(L.c.code) >= 0 ? 1.6 : 0.05; }, function (L) {
+    st(L, 'bond', 3); st(L, 'know', -1);
+  });
+
+  V('tundra', 'Тундра', 'место', function (L) { return ['ru', 'ca', 'gl', 'no'].indexOf(L.c.code) >= 0 ? 1.2 : 0.02; }, function (L) {
+    st(L, 'health', -2); st(L, 'bond', 4);
+  }, 'Зима длилась восемь месяцев, и все друг друга знали.');
+
+  V('small-island-born', 'Крошечный остров', 'место', function (L) { return L.c.pop < 500000 ? 2.5 : 0.05; }, function (L) {
+    st(L, 'bond', 5); st(L, 'know', -2);
+  }, 'На вашем острове все друг другу родня.');
+
+  V('capital-suburb', 'Пригород столицы', 'место', function (L) { return L.urban ? 1.5 : 0.2; }, function (L) {
+    st(L, 'know', 2); st(L, 'happy', 1);
+  });
+
+  V('two-rooms-five', 'Две комнаты на пятерых', 'место', function (L) { return !rich(L.c) ? 1.8 : 0.5; }, function (L) {
+    st(L, 'happy', -3); st(L, 'bond', 3);
+  });
+
+  V('house-with-garden', 'Дом с садом', 'место', function (L) { return !L.urban || rich(L.c) ? 1.5 : 0.5; }, function (L) {
+    st(L, 'happy', 3); st(L, 'health', 2); L.flag('dacha', true);
+  });
+
+  V('no-running-water', 'Вода из колодца', 'место', function (L) { return poor(L.c) ? 2.2 : 0.2; }, function (L) {
+    st(L, 'health', -4);
+  });
+
+  V('air-conditioner', 'Кондиционер в доме', 'место', function (L) { return rich(L.c) || mid(L.c) ? 1.3 : 0.3; }, function (L) {
+    L.flag('ac', true); st(L, 'health', 1);
+  });
+
+  V('first-computer-home', 'Компьютер уже стоял дома', 'место', function (L) { return L.birthYear >= 1995 && !poor(L.c) ? 1.6 : 0; }, function (L) {
+    L.flag('pc', true); st(L, 'know', 4);
+  });
+
+  V('noisy-street', 'Окна на дорогу', 'место', function (L) { return L.urban ? 1.4 : 0.1; }, function (L) { st(L, 'happy', -2); });
+
+  V('green-yard', 'Зелёный двор', 'место', function () { return 1.2; }, function (L) { st(L, 'happy', 2); st(L, 'health', 1); });
+
+  V('near-school', 'Школа во дворе', 'место', function () { return 1.2; }, function (L) { st(L, 'know', 3); });
+
+  V('far-from-school', 'Школа за рекой', 'место', function (L) { return !L.urban ? 1.8 : 0.2; }, function (L) {
+    st(L, 'know', -3); st(L, 'health', 1);
+  }, 'До школы было шесть километров — в любую погоду пешком.');
+
+  V('temporary-housing', 'Временное жильё', 'место', function (L) { return poor(L.c) || mid(L.c) ? 1.2 : 0.4; }, function (L) {
+    st(L, 'happy', -3); L.flag('moved', true);
+  });
+
+  V('company-flat', 'Квартира от предприятия', 'место', function (L) { return old(L) && !rich(L.c) ? 1.6 : 0.2; }, function (L) {
+    st(L, 'happy', 2); L.famPct = clamp(L.famPct + 0.03, 0, 1);
+  });
+
+  /* ========================= ВРЕМЯ: ещё 25 =========================== */
+
+  V('post-war-years', 'Послевоенные годы', 'время', function (L) { return L.birthYear < 1960 ? 1.8 : 0; }, function (L) {
+    st(L, 'health', -3); st(L, 'bond', 4);
+  }, 'Страна ещё отстраивалась, и всё было по карточкам.');
+
+  V('space-age', 'Эпоха космоса', 'время', function (L) { return L.birthYear >= 1955 && L.birthYear <= 1975 ? 1.5 : 0; }, function (L) {
+    st(L, 'know', 3); st(L, 'happy', 2);
+  });
+
+  V('oil-crisis', 'Нефтяной кризис', 'время', function (L) { return L.birthYear >= 1968 && L.birthYear <= 1982 ? 1.3 : 0; }, function (L) {
+    L.famPct = clamp(L.famPct - 0.05, 0.02, 1);
+  });
+
+  V('nineties', 'Девяностые', 'время', function (L) { return L.birthYear >= 1978 && L.birthYear <= 1995 && !rich(L.c) ? 1.8 : 0; }, function (L) {
+    st(L, 'happy', -3); st(L, 'know', 2); L.famPct = clamp(L.famPct - 0.07, 0.02, 1);
+  }, 'Ваше детство пришлось на годы, когда всё менялось каждый месяц.');
+
+  V('millennium-kid', 'Ребёнок нулевых', 'время', function (L) { return L.birthYear >= 1998 && L.birthYear <= 2010 ? 1.6 : 0; }, function (L) {
+    st(L, 'know', 3);
+  });
+
+  V('crisis-2008', 'Кризис 2008-го', 'время', function (L) { return L.birthYear >= 2000 && L.birthYear <= 2008 ? 1.4 : 0; }, function (L) {
+    L.famPct = clamp(L.famPct - 0.05, 0.02, 1); st(L, 'happy', -1);
+  });
+
+  V('pandemic-kid', 'Детство в пандемию', 'время', function (L) { return L.birthYear >= 2012 && L.birthYear <= 2020 ? 2 : 0; }, function (L) {
+    st(L, 'know', -3); st(L, 'bond', -2);
+  }, 'Год вы учились из дома, через экран.');
+
+  V('green-revolution', 'Зелёная революция', 'время', function (L) { return L.birthYear >= 1960 && L.birthYear <= 1985 && poor(L.c) ? 1.6 : 0; }, function (L) {
+    st(L, 'health', 3);
+  });
+
+  V('vaccination-wave', 'Большая прививочная кампания', 'время', function (L) { return L.birthYear >= 1970 && poor(L.c) ? 1.8 : 0.3; }, function (L) {
+    st(L, 'health', 5);
+  });
+
+  V('school-reform', 'Школьная реформа', 'время', function () { return 1.2; }, function (L) { st(L, 'know', -2); });
+
+  V('inflation-childhood', 'Детство при гиперинфляции', 'время', function (L) { return !rich(L.c) ? 1.1 : 0.2; }, function (L) {
+    L.famPct = clamp(L.famPct - 0.06, 0.02, 1); st(L, 'know', 2);
+  });
+
+  V('new-constitution', 'Страна меняла законы', 'время', function () { return 1; }, function (L) { st(L, 'know', 1); });
+
+  V('olympics-home', 'Олимпиада в своей стране', 'время', function () { return 0.6; }, function (L) {
+    st(L, 'happy', 3); L.flag('sport', true);
+  });
+
+  V('world-cup-year', 'Год большого футбола', 'время', function () { return 0.8; }, function (L) { st(L, 'happy', 2); });
+
+  V('tv-colour', 'Первый цветной телевизор', 'время', function (L) { return L.birthYear >= 1965 && L.birthYear <= 1990 ? 1.5 : 0; }, function (L) {
+    st(L, 'happy', 2);
+  });
+
+  V('mobile-first', 'Первый мобильный в классе', 'время', function (L) { return L.birthYear >= 1988 && L.birthYear <= 2002 ? 1.4 : 0; }, function (L) {
+    st(L, 'happy', 2); st(L, 'bond', 1);
+  });
+
+  V('internet-dialup', 'Интернет по модему', 'время', function (L) { return L.birthYear >= 1985 && L.birthYear <= 2000 ? 1.5 : 0; }, function (L) {
+    st(L, 'know', 3);
+  }, 'Интернет занимал телефонную линию, и это было чудо.');
+
+  V('social-network-teen', 'Соцсети с подросткового возраста', 'время', function (L) { return L.birthYear >= 1995 ? 1.7 : 0; }, function (L) {
+    st(L, 'bond', 2); st(L, 'happy', -2);
+  });
+
+  V('ai-childhood', 'Детство с говорящими машинами', 'время', function (L) { return L.birthYear >= 2018 ? 2 : 0; }, function (L) {
+    st(L, 'know', 4); st(L, 'bond', -1);
+  });
+
+  V('big-migration', 'Годы большого переселения', 'время', function (L) { return !rich(L.c) ? 1.2 : 0.4; }, function (L) {
+    L.flag('migrantKid', true); st(L, 'know', 2); st(L, 'bond', -2);
+  });
+
+  V('city-building', 'Годы большой стройки', 'время', function (L) { return !rich(L.c) ? 1.3 : 0.5; }, function (L) {
+    st(L, 'happy', 1); L.famPct = clamp(L.famPct + 0.03, 0, 1);
+  });
+
+  V('rationing', 'Талоны и очереди', 'время', function (L) { return old(L) && !rich(L.c) ? 1.6 : 0.2; }, function (L) {
+    st(L, 'health', -2); st(L, 'know', 1);
+  }, 'За сахаром и маслом стояли с талонами.');
+
+  V('radio-era', 'Эпоха радио', 'время', function (L) { return L.birthYear < 1970 ? 1.5 : 0; }, function (L) { st(L, 'happy', 1); st(L, 'know', 1); });
+
+  V('independence-year', 'Год независимости', 'время', function (L) { return poor(L.c) || mid(L.c) ? 0.9 : 0.2; }, function (L) {
+    st(L, 'happy', 2); st(L, 'bond', 2);
+  });
+
+  V('climate-summers', 'Всё более жаркие лета', 'время', function (L) { return L.birthYear >= 2005 ? 1.6 : 0.2; }, function (L) {
+    st(L, 'health', -2);
+  });
+
+  /* ======================== ХАРАКТЕР: ещё 25 ========================== */
+
+  V('patient', 'Терпеливый', 'характер', function () { return 1.2; }, function (L) { st(L, 'know', 3); st(L, 'happy', 1); });
+
+  V('impatient', 'Нетерпеливый', 'характер', function () { return 1.2; }, function (L) { st(L, 'know', -1); st(L, 'happy', -1); });
+
+  V('stubborn-learner', 'Упрямый в учёбе', 'характер', function () { return 1.1; }, function (L) { st(L, 'know', 4); });
+
+  V('charmer', 'Обаятельный', 'характер', function () { return 1.1; }, function (L) { st(L, 'bond', 5); st(L, 'happy', 2); });
+
+  V('honest', 'Честный до неудобства', 'характер', function () { return 1.1; }, function (L) { st(L, 'bond', 2); st(L, 'happy', -1); });
+
+  V('sly', 'Хитрый', 'характер', function () { return 1; }, function (L) { st(L, 'know', 2); st(L, 'bond', -2); });
+
+  V('generous', 'Щедрый', 'характер', function () { return 1.1; }, function (L) { st(L, 'bond', 4); });
+
+  V('thrifty', 'Бережливый', 'характер', function () { return 1.2; }, function (L) { st(L, 'know', 2); L.flag('thrifty', true); });
+
+  V('spender', 'Лёгкий на трату', 'характер', function () { return 1.1; }, function (L) { st(L, 'happy', 2); L.flag('spender', true); });
+
+  V('workaholic', 'Работяга с детства', 'характер', function () { return 1.1; }, function (L) { st(L, 'know', 3); st(L, 'health', -1); });
+
+  V('daydreamer', 'Витает в облаках', 'характер', function () { return 1.1; }, function (L) { st(L, 'know', -1); st(L, 'happy', 3); });
+
+  V('organiser', 'Организатор', 'характер', function () { return 1; }, function (L) { st(L, 'bond', 3); st(L, 'know', 2); });
+
+  V('peacemaker', 'Миротворец', 'характер', function () { return 1.1; }, function (L) { st(L, 'bond', 4); st(L, 'happy', 1); });
+
+  V('hot-temper', 'Вспыльчивый', 'характер', function () { return 1.2; }, function (L) { st(L, 'bond', -3); st(L, 'happy', -1); });
+
+  V('melancholic', 'Задумчивый', 'характер', function () { return 1.1; }, function (L) { st(L, 'know', 3); st(L, 'happy', -3); });
+
+  V('optimist', 'Неисправимый оптимист', 'характер', function () { return 1.2; }, function (L) { st(L, 'happy', 6); });
+
+  V('pessimist', 'Во всём видит худшее', 'характер', function () { return 1.1; }, function (L) { st(L, 'happy', -5); st(L, 'know', 1); });
+
+  V('collector', 'Собиратель', 'характер', function () { return 1; }, function (L) { st(L, 'know', 2); st(L, 'happy', 1); });
+
+  V('storyteller', 'Рассказчик', 'характер', function () { return 1.1; }, function (L) { st(L, 'bond', 4); L.flag('words', true); });
+
+  V('handy-kid', 'Руки на месте', 'характер', function () { return 1.2; }, function (L) { st(L, 'know', 2); L.flag('hands', true); });
+
+  V('bookworm', 'Книжный ребёнок', 'характер', function () { return 1.2; }, function (L) { st(L, 'know', 6); st(L, 'health', -1); });
+
+  V('street-smart', 'Дворовая смекалка', 'характер', function (L) { return L.urban && !rich(L.c) ? 1.6 : 0.6; }, function (L) {
+    st(L, 'know', 2); st(L, 'bond', 2); st(L, 'health', -1);
+  });
+
+  V('perfectionist', 'Перфекционист', 'характер', function () { return 1.1; }, function (L) { st(L, 'know', 3); st(L, 'happy', -2); });
+
+  V('joker', 'Шутник', 'характер', function () { return 1.1; }, function (L) { st(L, 'happy', 3); st(L, 'bond', 3); });
+
+  V('quiet-worker', 'Тихий труженик', 'характер', function () { return 1.2; }, function (L) { st(L, 'know', 2); st(L, 'bond', -1); st(L, 'health', 1); });
+
+  /* ========================= СЛУЧАЙ: ещё 22 ========================== */
+
+  V('saved-by-doctor', 'Врач успел вовремя', 'случай', function (L) { return !poor(L.c) ? 1.2 : 0.5; }, function (L) {
+    st(L, 'health', 4);
+  }, 'В детстве вас спасли в последний момент — вы об этом знаете только по рассказам.');
+
+  V('car-crash-child', 'Авария в детстве', 'случай', function () { return 0.7; }, function (L) {
+    st(L, 'health', -6); L.flag('scar', true);
+  });
+
+  V('lost-in-crowd', 'Потерялся в толпе', 'случай', function () { return 0.9; }, function (L) { st(L, 'happy', -2); st(L, 'know', 1); });
+
+  V('found-money', 'Нашли деньги на улице', 'случай', function () { return 0.8; }, function (L) { st(L, 'happy', 2); });
+
+  V('dog-bite', 'Укусила собака', 'случай', function (L) { return poor(L.c) ? 1.3 : 0.7; }, function (L) {
+    st(L, 'health', -3); st(L, 'happy', -1);
+  });
+
+  V('drowning-escape', 'Чуть не утонул', 'случай', function () { return 0.7; }, function (L) {
+    st(L, 'health', -2); L.flag('careful', true);
+  });
+
+  V('school-contest-win', 'Победа на олимпиаде', 'случай', function () { return 0.9; }, function (L) {
+    st(L, 'know', 5); st(L, 'happy', 2); L.flag('spotted', true);
+  });
+
+  V('tv-appearance', 'Попали в телевизор', 'случай', function (L) { return L.birthYear >= 1965 ? 0.6 : 0.1; }, function (L) {
+    st(L, 'happy', 3); st(L, 'bond', 1);
+  });
+
+  V('bullied', 'Травля в школе', 'случай', function () { return 1.4; }, function (L) {
+    st(L, 'happy', -6); st(L, 'bond', -3);
+  }, 'Вас травили в школе, и взрослые говорили: «сам разберёшься».');
+
+  V('protected-by-teacher', 'Учитель заступился', 'случай', function () { return 1; }, function (L) {
+    st(L, 'happy', 3); st(L, 'know', 3);
+  });
+
+  V('earthquake-child', 'Землетрясение', 'случай', function (L) { return ['tr', 'ir', 'jp', 'id', 'np', 'cl', 'pe', 'mx', 'ph'].indexOf(L.c.code) >= 0 ? 1.8 : 0.1; }, function (L) {
+    st(L, 'health', -3); st(L, 'happy', -3);
+  });
+
+  V('flood-child', 'Большое наводнение', 'случай', function (L) { return ['bd', 'in', 'pk', 'vn', 'th', 'mz', 'br'].indexOf(L.c.code) >= 0 ? 1.8 : 0.3; }, function (L) {
+    st(L, 'health', -2); L.famPct = clamp(L.famPct - 0.05, 0.02, 1);
+  });
+
+  V('hurricane-child', 'Ураган', 'случай', function (L) { return ['ph', 'cu', 'ht', 'jm', 'us', 'mx', 'bs'].indexOf(L.c.code) >= 0 ? 1.4 : 0.1; }, function (L) {
+    st(L, 'health', -2); st(L, 'happy', -2);
+  });
+
+  V('family-moved-city', 'Семья переехала в город', 'случай', function (L) { return !rich(L.c) ? 1.6 : 0.6; }, function (L) {
+    L.flag('moved', true); st(L, 'know', 3); st(L, 'bond', -2); L.urban = true;
+  });
+
+  V('scholarship-child', 'Стипендия с детства', 'случай', function () { return 0.7; }, function (L) {
+    st(L, 'know', 5); L.flag('spotted', true);
+  });
+
+  V('neighbour-mentor', 'Сосед-наставник', 'случай', function () { return 1; }, function (L) {
+    st(L, 'know', 4); st(L, 'bond', 2); L.flag('hands', true);
+  });
+
+  V('lost-parent-job', 'Родитель потерял работу', 'случай', function () { return 1.4; }, function (L) {
+    L.famPct = clamp(L.famPct - 0.08, 0.02, 1); st(L, 'happy', -3);
+  });
+
+  V('family-won-flat', 'Семье дали квартиру', 'случай', function (L) { return old(L) && !rich(L.c) ? 1.4 : 0.2; }, function (L) {
+    st(L, 'happy', 4); L.famPct = clamp(L.famPct + 0.05, 0, 1);
+  });
+
+  V('stolen-bike', 'Украли велосипед', 'случай', function () { return 1.1; }, function (L) { st(L, 'happy', -2); });
+
+  V('rescued-animal', 'Подобрали щенка', 'случай', function () { return 1.2; }, function (L) {
+    st(L, 'happy', 3); st(L, 'bond', 2); L.flag('pet', true);
+  });
+
+  V('long-trip-child', 'Дальняя поездка в детстве', 'случай', function (L) { return !poor(L.c) ? 1.2 : 0.4; }, function (L) {
+    st(L, 'know', 3); st(L, 'happy', 2);
+  });
+
+  V('fire-at-school', 'Пожар в школе', 'случай', function () { return 0.5; }, function (L) { st(L, 'happy', -2); st(L, 'know', -1); });
+
   var CONFLICT = [
+    ['triplet', 'only-child'], ['many-siblings', 'only-child'], ['big-brother', 'only-child'],
+    ['sister-close', 'only-child'], ['many-cousins', 'only-child'], ['optimist', 'pessimist'],
+    ['patient', 'impatient'], ['thrifty', 'spender'], ['generous', 'sly'], ['honest', 'sly'],
+    ['single-mother', 'warm-home'], ['foster-care', 'warm-home'], ['foster-care', 'orphan'],
+    ['foster-care', 'adopted'], ['debt-family', 'large-dowry'], ['large-dowry', 'poor-family'],
+    ['debt-family', 'rich-family'], ['house-with-garden', 'two-rooms-five'], ['no-running-water', 'new-flat'],
+    ['air-conditioner', 'no-running-water'], ['nineties', 'post-war-years'], ['pandemic-kid', 'radio-era'],
+    ['ai-childhood', 'radio-era'], ['internet-dialup', 'radio-era'], ['melancholic', 'optimist'],
+    ['joker', 'melancholic'], ['bookworm', 'street-smart'], ['capital-suburb', 'village-far'],
+    ['small-island-born', 'steppe'], ['tundra', 'jungle'], ['high-altitude', 'seaside'],
+    ['young-parents', 'old-parents'], ['strong-immunity', 'weak-lungs'], ['big-family-body', 'birth-injury'],
+    ['sweet-sleep', 'colic-baby'], ['family-moved-city', 'village-far'], ['farm-family', 'capital-born'],
     ['only-child', 'many-kids'], ['only-child', 'eldest'], ['only-child', 'youngest'],
     ['eldest', 'youngest'], ['rich-family', 'poor-family'], ['rich-family', 'slum'],
     ['tall', 'small'], ['shy', 'loud'], ['careful', 'risky'], ['loner', 'leader'],
