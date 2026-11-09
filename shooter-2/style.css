@@ -26,7 +26,15 @@ body {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
-#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; background: #05070a; }
+/* touch-action: none — без этого iOS/Android начинают панорамировать и
+   масштабировать страницу прямо во время ведения пальца, браузер гасит
+   touchmove (или шлёт touchcancel) и стик «отваливается» на середине шага. */
+#game {
+  position: fixed; inset: 0; width: 100%; height: 100%; display: block;
+  background: #05070a; touch-action: none; -ms-touch-action: none;
+}
+#touch-controls, #touch-stick { touch-action: none; }
+.tc { touch-action: manipulation; }
 .hidden { display: none !important; }
 b { font-weight: 700; }
 
@@ -394,13 +402,29 @@ body.touch #help-panel { display: none; }
   width: 78px; height: 78px; backdrop-filter: blur(6px); -webkit-user-select: none;
 }
 .tc:active { background: rgba(255, 154, 60, .32); }
-.tc.fire { right: 24px; bottom: 150px; width: 96px; height: 96px; border-color: rgba(255, 154, 60, .6); color: #ffcf6b; }
-.tc.tr { right: 130px; bottom: 110px; width: 62px; height: 62px; font-size: 9px; }
-.tc.tl { left: 24px; bottom: 170px; width: 64px; height: 64px; font-size: 9px; }
-.tc.tl2 { left: 98px; bottom: 150px; width: 64px; height: 64px; font-size: 9px; }
-.tc.tl3 { left: 24px; bottom: 92px; width: 64px; height: 64px; font-size: 9px; }
-.tc.tl4 { left: 98px; bottom: 72px; width: 64px; height: 64px; font-size: 9px; }
-.tc.tl5 { left: 172px; bottom: 170px; width: 64px; height: 64px; font-size: 9px; }
+/* ФАЙЕР и граната — правая половина: там смотрит большой палец.
+   Всё остальное ушло наверх и вправо-вниз: ЛЕВАЯ НИЖНЯЯ ЧЕТВЕРТЬ ЭКРАНА
+   должна быть полностью свободна под виртуальный стик. Раньше там стояли
+   пять кнопок вплотную друг к другу — палец опускался на «ПРИСЕД», кнопка
+   съедала касание, и персонаж «не ходил» вовсе. */
+.tc.fire { right: 22px; bottom: 118px; width: 96px; height: 96px; border-color: rgba(255, 154, 60, .6); color: #ffcf6b; }
+.tc.tr { right: 128px; bottom: 84px; width: 62px; height: 62px; font-size: 9px; }
+/* ряд вспомогательных кнопок — по верхней кромке, вне зоны больших пальцев */
+.tc.tl   { left: 14px;  top: 96px;  width: 56px; height: 56px; font-size: 8px; }
+.tc.tl2  { left: 78px;  top: 96px;  width: 56px; height: 56px; font-size: 8px; }
+.tc.tl3  { left: 142px; top: 96px;  width: 56px; height: 56px; font-size: 8px; }
+/* ПРЫЖОК и БЕГ — у правого края, рядом с огнём */
+.tc.tl4  { right: 22px;  bottom: 222px; width: 62px; height: 62px; font-size: 8px; }
+.tc.tl5  { right: 128px; bottom: 158px; width: 62px; height: 62px; font-size: 8px; }
+
+/* На узком экране верхний ряд не влезает справа — оставляем только те
+   кнопки, без которых нельзя играть, и поджимаем их к верху. */
+@media (max-width: 430px) {
+  .tc.tl, .tc.tl2, .tc.tl3 { width: 50px; height: 50px; top: 88px; }
+  .tc.tl  { left: 10px; }
+  .tc.tl2 { left: 66px; }
+  .tc.tl3 { left: 122px; }
+}
 
 /* виртуальный стик: показывается только на тач-экранах и только по касанию */
 #touch-stick {
