@@ -21,6 +21,7 @@
    "length": 52,
    "thickness": 14,
    "material": "sandbag",
+   "texture_set": "sandbag",
    "heightClass": 1,
    "blocksMove": false,
    "blocksBullets": true,

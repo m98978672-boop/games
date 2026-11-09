@@ -297,3 +297,14 @@ input[type="range"] { padding: 0; }
 .queue-row .q-bar i { display: block; height: 100%; background: var(--accent); }
 .queue-row .q-state { color: var(--text-dim); text-align: right; }
 .queue-row .q-state.bad { color: #e98a6a; }
+
+/* Отдельный, не блокирующий игру отчёт F8 */
+.inspector-launch { position: fixed; z-index: 70; bottom: 8px; left: 50%; transform: translateX(-50%); padding: 5px 10px; border: 1px solid #6e8264; border-radius: 4px; background: #172018; color: #e5f3db; cursor: pointer; }
+.inspector-panel { position: fixed; z-index: 80; top: 12px; right: 12px; width: min(620px, calc(100vw - 24px)); max-height: calc(100vh - 24px); box-sizing: border-box; display: flex; flex-direction: column; padding: 14px; background: #141b15; color: #e5f3db; border: 1px solid #829977; box-shadow: 0 8px 30px #000a; font: 14px/1.4 'Trebuchet MS', sans-serif; }
+.inspector-panel[hidden] { display: none; }
+.inspector-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.inspector-panel p { margin: 8px 0; }
+.inspector-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.inspector-panel button { padding: 6px 10px; cursor: pointer; background: #29392b; border: 1px solid #6e8264; color: #e5f3db; }
+.inspector-feedback:empty { display: none; }
+.inspector-report { margin: 8px 0 0; padding: 10px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: #0c110d; font: 12px/1.4 monospace; user-select: text; }

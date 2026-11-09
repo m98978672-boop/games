@@ -1,0 +1,28 @@
+[
+  {
+    "units": 52,
+    "previous": {
+      "meanMs": 2.612,
+      "p95Ms": 8.501,
+      "samples": 20
+    },
+    "current": {
+      "meanMs": 2.31,
+      "p95Ms": 3.273,
+      "samples": 20
+    }
+  },
+  {
+    "units": 400,
+    "previous": {
+      "meanMs": 2.904,
+      "p95Ms": 4.002,
+      "samples": 20
+    },
+    "current": {
+      "meanMs": 3.044,
+      "p95Ms": 5.805,
+      "samples": 20
+    }
+  }
+]

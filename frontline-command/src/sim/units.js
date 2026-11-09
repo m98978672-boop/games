@@ -397,12 +397,50 @@ export function moveUnit(game, u, dx, dy, dt) {
   // Внутри стенового ядра путь к внешней цели идёт через проём.
   if (game.walls && u.goal) {
     const wp = game.walls.doorWaypoint(u, u.goal.x, u.goal.y);
-    if (wp) { dx = wp.x - u.x; dy = wp.y - u.y; }
+    // После упора в другую стену дальняя дверь не должна постоянно
+    // перекрывать поле маршрута. В бою сохраняем текущую реакцию.
+    const retryFlow = game.cfg.flag('pathing_v2', false) && !u.perception.hasContact &&
+      (u.stuck || 0) >= (game.cfg.navBudget?.antiStuck?.doorFlowAfter ?? 1);
+    if (wp && !retryFlow) { dx = wp.x - u.x; dy = wp.y - u.y; }
   }
   // Обход упора (антизастревание): без телепорта — короткий крюк в свободную точку.
   // Работает только со стенами: с выключенным флагом остаётся прежняя логика.
   const anti = game.cfg.navBudget?.antiStuck || { stuckThreshold: 1.5, detourSeconds: 1.6 };
   const wallsOn = !!(game.walls && game.walls.enabled());
+  if (wallsOn && u.isVehicle && u.goal && game.cfg.flag('pathing_v2', false) && game.cfg.flag('vehicle_detour_v2', false) &&
+      !u.perception.hasContact && (u.stuck || 0) >= (anti.vehicleDetourThreshold ?? 1) && (!u.detour || game.time >= u.detour.until) &&
+      !game.walls.buildingAtPoint?.(u.x, u.y) && !game.walls.buildingAtPoint?.(u.goal.x, u.goal.y)) {
+    // Только экспериментальный маршрут вне зданий. Точки доступны обычным
+    // движением, а их порядок определяется общим полем стоимости без RNG.
+    const field = game.nav.field(u.goal.x, u.goal.y);
+    // Включённый эксперимент применяется лишь когда поле требует движения
+    // от цели; это ещё не гарантия для всех маршрутов и он по умолчанию off.
+    const fieldDir = game.nav.step(field, u.x, u.y);
+    if (fieldDir && fieldDir.dx * (u.goal.x - u.x) + fieldDir.dy * (u.goal.y - u.y) < 0) {
+      let best = null, bestScore = Infinity;
+      const steps = anti.detourTries ?? 12;
+      const radius = anti.detourMax ?? 110;
+      for (let k = 0; k < steps; k++) {
+        const a = k * Math.PI * 2 / steps;
+        const px = u.x + Math.cos(a) * radius, py = u.y + Math.sin(a) * radius;
+        const n = Math.ceil(radius / u.radius);
+        let free = true;
+        for (let j = 1; j <= n; j++) {
+          const x = u.x + (px - u.x) * j / n, y = u.y + (py - u.y) * j / n, r = u.radius;
+          if (!game.world.isBaseWalkable(x,y) || !game.world.isBaseWalkable(x-r,y-r) || !game.world.isBaseWalkable(x+r,y-r) ||
+              !game.world.isBaseWalkable(x-r,y+r) || !game.world.isBaseWalkable(x+r,y+r) ||
+              game.walls.blocksMove(x,y,r,u)) { free = false; break; }
+        }
+        if (!free || !field) continue;
+        const cost = field.dist[game.nav.idxOf(px,py)];
+        if (cost < bestScore) { bestScore = cost; best = { x: px, y: py }; }
+      }
+      if (best && Number.isFinite(bestScore)) {
+        u.detour = { ...best, until: game.time + (anti.detourSeconds ?? 1.6) };
+        u.stuck = anti.stuckAfterDetour ?? 0.8;
+      }
+    }
+  }
   if (wallsOn && u.detour && game.time < u.detour.until) {
     dx = u.detour.x - u.x;
     dy = u.detour.y - u.y;
@@ -447,9 +485,13 @@ export function moveUnit(game, u, dx, dy, dt) {
   // двери открываются перед юнитом (и закрываются сами, если рядом никого)
   if (game.walls) game.walls.doorsForUnit(u);
   const wallFree = (x, y) => !game.walls || !game.walls.enabled() || !game.walls.blocksMove(x, y, r, u);
-  const free = (x, y) => game.world.isWalkable(x - r, y - r) && game.world.isWalkable(x + r, y - r) &&
-    game.world.isWalkable(x - r, y + r) && game.world.isWalkable(x + r, y + r) && game.world.isWalkable(x, y) &&
-    wallFree(x, y);
+  // Грубая 32-px маска стен может закрывать часть дверного проёма. В новом
+  // режиме рельеф проверяется отдельно, а стены — точной геометрией с радиусом.
+  const walk = wallsOn && game.cfg.flag('pathing_v2', false)
+    ? (x, y) => game.world.isBaseWalkable(x, y)
+    : (x, y) => game.world.isWalkable(x, y);
+  const free = (x, y) => walk(x - r, y - r) && walk(x + r, y - r) &&
+    walk(x - r, y + r) && walk(x + r, y + r) && walk(x, y) && wallFree(x, y);
   if (free(nx, ny)) { u.x = nx; u.y = ny; }
   else if (free(nx, u.y)) { u.x = nx; }
   else if (free(u.x, ny)) { u.y = ny; }
@@ -466,7 +508,7 @@ export function moveUnit(game, u, dx, dy, dt) {
   }
   // Антизастревание без телепорта: если юнит оказался в непроходимой клетке
   // (закрылась дверь, достроилась стена), выталкиваем его к ближайшей свободной.
-  if (wallsOn && (!game.world.isWalkable(u.x, u.y) || game.walls.blocksMove(u.x, u.y, r * 0.5, u))) {
+  if (wallsOn && (!walk(u.x, u.y) || game.walls.blocksMove(u.x, u.y, r * 0.5, u))) {
     let best = null, bd = Infinity;
     const angles = anti.pushAngles ?? 16;
     const stepR = anti.pushRadiusStep ?? 12;
@@ -474,7 +516,7 @@ export function moveUnit(game, u, dx, dy, dt) {
       const a = (k / angles) * Math.PI * 2;
       for (let rr = anti.pushRadiusMin ?? 12; rr <= (anti.pushRadiusMax ?? 64); rr += stepR) {
         const px = u.x + Math.cos(a) * rr, py = u.y + Math.sin(a) * rr;
-        if (!game.world.isWalkable(px, py)) continue;
+        if (!walk(px, py)) continue;
         if (game.walls.blocksMove(px, py, r * 0.5, u)) continue;
         if (rr < bd) { bd = rr; best = { x: px, y: py }; }
         break;
@@ -525,7 +567,22 @@ export function updateTimers(game, u, dt) {
     u.lastCheck = { x: u.x, y: u.y, t: u.age };
     if (u.goal && moved < 6 && u.alive && !u.downed) {
       u.stuck += 1;
-      if (u.stuck >= 2) { u.goal = null; u.flowDir = null; u.stuck = 0; u.pathFailed = true; }
+      if (u.stuck >= 2) {
+        if (game.cfg.flag('alg_deadlock', false)) {
+          // Это только наблюдение старого сброса цели, не разрешение дедлока.
+          const event = { t: game.time, unitId: u.id, faction: u.faction, role: u.role,
+            x: u.x, y: u.y, goalX: u.goal.x, goalY: u.goal.y };
+          const stats = game.deadlockStats || (game.deadlockStats = { pathFailures: [0, 0], recent: [] });
+          if (u.faction === 0 || u.faction === 1) stats.pathFailures[u.faction]++;
+          const limit = Math.max(0, Math.floor(game.cfg.navBudget?.antiStuck?.failureLogLimit ?? 128));
+          if (limit > 0) {
+            stats.recent.push(event);
+            if (stats.recent.length > limit) stats.recent.splice(0, stats.recent.length - limit);
+          }
+          game.events.emit('pathFailed', event);
+        }
+        u.goal = null; u.flowDir = null; u.stuck = 0; u.pathFailed = true;
+      }
     } else if (moved > 20) u.stuck = 0;
   }
 }

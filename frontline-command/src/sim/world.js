@@ -35,6 +35,8 @@ export class World {
     const n = this.cols * this.rows;
     this.terrain = new Uint8Array(n);
     this.walk = new Uint8Array(n);
+    // Рельеф и наследуемые препятствия без грубой растеризации стен.
+    this.baseWalk = new Uint8Array(n);
     this.losBlock = new Uint8Array(n);
     this.solidBlock = new Uint8Array(n);
     this.buildings = [];
@@ -286,6 +288,8 @@ export class World {
         this.walk[x + y * this.cols] = 0;
       }
     }
+    // Сохраняем рельеф отдельно: точная коллизия стен проверяется сегментами.
+    this.baseWalk.set(this.walk);
     // Стены зданий: блокируем тайлы вдоль сегментов, проёмы-двери оставляем проходимыми.
     if (wallsOn) this._markWallTiles();
     // LOS: лес + крупные постройки
@@ -307,7 +311,7 @@ export class World {
   }
 
   // Тайлы вдоль сегментов стен: движение и навигация видят стены, проёмы — нет.
-  _markWallTiles() {
+  _markWallTiles(bounds = null) {
     const pad = 6;
     for (const b of this.buildings) {
       if (b.dead || !b.built) continue;
@@ -317,8 +321,10 @@ export class World {
         const r = thickness / 2 + pad;
         const minX = Math.min(x1, x2) - r, maxX = Math.max(x1, x2) + r;
         const minY = Math.min(y1, y2) - r, maxY = Math.max(y1, y2) + r;
-        const cx0 = this._tile(minX), cx1 = this._tile(maxX);
-        const cy0 = this._tile(minY), cy1 = this._tile(maxY);
+        const cx0 = bounds ? Math.max(this._tile(minX), bounds.x0) : this._tile(minX);
+        const cx1 = bounds ? Math.min(this._tile(maxX), bounds.x1) : this._tile(maxX);
+        const cy0 = bounds ? Math.max(this._tile(minY), bounds.y0) : this._tile(minY);
+        const cy1 = bounds ? Math.min(this._tile(maxY), bounds.y1) : this._tile(maxY);
         for (let cy = cy0; cy <= cy1; cy++) {
           for (let cx = cx0; cx <= cx1; cx++) {
             if (cx < 0 || cy < 0 || cx >= this.cols || cy >= this.rows) continue;
@@ -348,9 +354,43 @@ export class World {
     }
   }
 
+  // Только геометрия стен/дверей: базовый рельеф и маски LOS не менялись.
+  // Для всех остальных изменений по-прежнему обязателен полный rebuildNav.
+  rebuildWallTiles(b, st) {
+    if (!b || !st || b.dead || !b.built || !this.walls?.enabled()) return null;
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    const include = (p1, p2, thickness) => {
+      const r = thickness / 2 + 6; // те же границы, что в _markWallTiles
+      minX = Math.min(minX, b.x + p1[0] - r, b.x + p2[0] - r);
+      maxX = Math.max(maxX, b.x + p1[0] + r, b.x + p2[0] + r);
+      minY = Math.min(minY, b.y + p1[1] - r, b.y + p2[1] - r);
+      maxY = Math.max(maxY, b.y + p1[1] + r, b.y + p2[1] + r);
+    };
+    for (const geo of st.outline.segments) if (geo.blocksMove) include(geo.points[0], geo.points[1], geo.thickness);
+    for (const o of st.outline.openings || []) if (o.type !== 'breach') include(o.p1, o.p2, st.outline.thickness || 12);
+    if (![minX, maxX, minY, maxY].every(Number.isFinite)) return null;
+    const bounds = { x0: Math.max(0, this._tile(minX)), x1: Math.min(this.cols - 1, this._tile(maxX)),
+      y0: Math.max(0, this._tile(minY)), y1: Math.min(this.rows - 1, this._tile(maxY)) };
+    if (bounds.x0 > bounds.x1 || bounds.y0 > bounds.y1) return null;
+    for (let y = bounds.y0; y <= bounds.y1; y++) {
+      const from = y * this.cols + bounds.x0, to = y * this.cols + bounds.x1 + 1;
+      this.walk.set(this.baseWalk.subarray(from, to), from);
+    }
+    // Нельзя рисовать только изменённое здание: соседние стены могут перекрывать
+    // тот же тайл. Ограничиваем запись, но учитываем все пересекающие сегменты.
+    this._markWallTiles(bounds);
+    this.navVersion = (this.navVersion || 0) + 1;
+    return bounds;
+  }
+
   isWalkable(x, y) {
     if (x < 0 || y < 0 || x >= this.W || y >= this.H) return false;
     return this.walk[this._idx(x, y)] === 1;
+  }
+
+  isBaseWalkable(x, y) {
+    if (x < 0 || y < 0 || x >= this.W || y >= this.H) return false;
+    return this.baseWalk[this._idx(x, y)] === 1;
   }
 
   speedAt(x, y) {

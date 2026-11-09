@@ -657,7 +657,16 @@ export class Walls {
       if (u.isVehicle && o.type !== 'gate') continue;
       const px = b.x + o.cx, py = b.y + o.cy;
       const cost = dist(u.x, u.y, px, py) + dist(px, py, gx, gy);
-      if (cost < bd) { bd = cost; best = { x: px, y: py }; }
+      if (cost < bd) {
+        bd = cost;
+        if (this.cfg.flag('pathing_v2', false)) {
+          // Цель не в центре проёма, а за ним: иначе входящий останавливается
+          // ровно на границе и не может переключиться на конечный маршрут.
+          const clearance = (u.radius || 0) + (st.outline.thickness || 0) / 2 + (this.budget.doorExitClearance ?? 0);
+          const forward = bU === b ? 1 : -1;
+          best = { x: px + o.nx * clearance * forward, y: py + o.ny * clearance * forward };
+        } else best = { x: px, y: py };
+      }
     }
     return best;
   }
@@ -765,10 +774,35 @@ export class Walls {
   flushNav() {
     if (!this.navQueue.size) return;
     let budget = this.budget.maxChunksPerFrame ?? 2;
+    // Обычный пакетный rebuild отражает и те двери, которые ещё ждут
+    // переиндексации. Если очередь не помещается в кадр, локальная обработка
+    // только первых зданий дала бы другую карту, поэтому используем legacy.
+    if (this.enabled() && this.cfg.flag('pathing_v2', false) && this.cfg.flag('wall_nav_local', false) &&
+        this.navQueue.size <= Math.max(0, budget)) {
+      const oldVersion = this.world.navVersion, regions = [];
+      let full = false;
+      for (const id of [...this.navQueue]) {
+        if (budget-- <= 0) break;
+        this.navQueue.delete(id);
+        const b = this.world.buildings.find((bb) => bb.id === id);
+        const st = b && this.state(b);
+        const region = this.world.rebuildWallTiles(b, st);
+        if (region) regions.push(region);
+        else { this.world.rebuildNav(); full = true; }
+        if (b) this.reindex(b.id, st);
+      }
+      if (!full && this.game.nav) this.game.nav.patchWallTiles(regions, oldVersion);
+      return;
+    }
+    const batch = this.enabled() && this.cfg.flag('pathing_v2', false);
+    let rebuilt = false;
     for (const id of [...this.navQueue]) {
       if (budget-- <= 0) break;
       this.navQueue.delete(id);
-      this.world.rebuildNav();
+      // Полный rebuild уже видит актуальное состояние всех стен. Для пакета
+      // из нескольких зданий достаточно одного rebuild; каждый индекс при этом
+      // обновляется отдельно в пределах прежнего лимита очереди.
+      if (!batch || !rebuilt) { this.world.rebuildNav(); rebuilt = true; }
       const b = this.world.buildings.find((bb) => bb.id === id);
       if (b) this.reindex(b.id, this.state(b));
     }

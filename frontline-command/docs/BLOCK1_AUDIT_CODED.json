@@ -1,0 +1,1347 @@
+{
+  "source": "1068f35 + стенд встречной пары; эксперимент уступания удалён",
+  "note": "Исторический полный запуск; повторить после изменений. Отчёт не является доказательством приёмки.",
+  "version": 2,
+  "mode": "full",
+  "verdict": "NOT_ACCEPTED",
+  "checks": [
+    {
+      "id": "full_suite",
+      "description": "Полный npm test",
+      "status": "pass",
+      "elapsedMs": 216518,
+      "exitCode": 0,
+      "error": null,
+      "outputTail": "юнитов: 392, шагов: 500, всего 2533 мс, средний тик 5.07 мс (197 FPS только на симуляцию)\nкуча: 27 МБ, убито: 0/0\nстены: update 0.067 мс/тик, запросов за тик движение 133, пули 3, укрытия 0\nстены: blocksMove 0.39 мкс, bulletRay 4.20 мкс → всего 0.132 мс/кадр\n400 юнитов: тик 2.90 мс → 345 FPS симуляции (нужно ≥60)\n500 юнитов: тик 3.23 мс → 310 FPS симуляции (нужно ≥45)\n\nпроизводительность в порядке"
+    },
+    {
+      "id": "production_flags",
+      "description": "Зависимости навигации в конфигурации по умолчанию",
+      "status": "pass",
+      "vehicleDetour": false
+    },
+    {
+      "id": "u_trap",
+      "description": "U-ловушка с настройками по умолчанию",
+      "status": "fail",
+      "passed": 8,
+      "total": 18,
+      "elapsedMs": 494,
+      "exitCode": 1,
+      "error": null,
+      "signal": null,
+      "evidence": {
+        "vehicleDetour": false,
+        "passed": 8,
+        "total": 18,
+        "results": [
+          {
+            "role": "infantry",
+            "seed": 5,
+            "mirrored": false,
+            "seconds": 10.25,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 922.48,
+            "y": 536.98
+          },
+          {
+            "role": "infantry",
+            "seed": 7,
+            "mirrored": false,
+            "seconds": 10.9,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 899.97,
+            "y": 542.05
+          },
+          {
+            "role": "infantry",
+            "seed": 11,
+            "mirrored": false,
+            "seconds": 9.85,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 901.67,
+            "y": 545.83
+          },
+          {
+            "role": "infantry",
+            "seed": 5,
+            "mirrored": true,
+            "seconds": 10.25,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 357.52,
+            "y": 536.98
+          },
+          {
+            "role": "infantry",
+            "seed": 7,
+            "mirrored": true,
+            "seconds": 10.9,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 380.03,
+            "y": 542.05
+          },
+          {
+            "role": "infantry",
+            "seed": 11,
+            "mirrored": true,
+            "seconds": 9.85,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 378.33,
+            "y": 545.83
+          },
+          {
+            "role": "truck",
+            "seed": 5,
+            "mirrored": false,
+            "seconds": 7.65,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 305.33,
+            "y": 643.67
+          },
+          {
+            "role": "truck",
+            "seed": 7,
+            "mirrored": false,
+            "seconds": 10.15,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 317,
+            "y": 644.58
+          },
+          {
+            "role": "truck",
+            "seed": 11,
+            "mirrored": false,
+            "seconds": 7.65,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 379.42,
+            "y": 644.58
+          },
+          {
+            "role": "truck",
+            "seed": 5,
+            "mirrored": true,
+            "seconds": 7.65,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 974.67,
+            "y": 643.67
+          },
+          {
+            "role": "truck",
+            "seed": 7,
+            "mirrored": true,
+            "seconds": 10.15,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 963,
+            "y": 644.58
+          },
+          {
+            "role": "truck",
+            "seed": 11,
+            "mirrored": true,
+            "seconds": 7.65,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 900.58,
+            "y": 644.58
+          },
+          {
+            "role": "tank",
+            "seed": 5,
+            "mirrored": false,
+            "seconds": 10.15,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 319.83,
+            "y": 640.17
+          },
+          {
+            "role": "tank",
+            "seed": 7,
+            "mirrored": false,
+            "seconds": 14.35,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 917.36,
+            "y": 539.61
+          },
+          {
+            "role": "tank",
+            "seed": 11,
+            "mirrored": false,
+            "seconds": 10.15,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 301.29,
+            "y": 646.71
+          },
+          {
+            "role": "tank",
+            "seed": 5,
+            "mirrored": true,
+            "seconds": 10.15,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 960.17,
+            "y": 640.17
+          },
+          {
+            "role": "tank",
+            "seed": 7,
+            "mirrored": true,
+            "seconds": 14.35,
+            "arrived": true,
+            "pathFailed": false,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 362.64,
+            "y": 539.61
+          },
+          {
+            "role": "tank",
+            "seed": 11,
+            "mirrored": true,
+            "seconds": 10.15,
+            "arrived": false,
+            "pathFailed": true,
+            "collided": false,
+            "noTeleport": true,
+            "movesAway": true,
+            "x": 978.71,
+            "y": 646.71
+          }
+        ]
+      }
+    },
+    {
+      "id": "integration",
+      "description": "Сценарии S1, S8, S9 и S10",
+      "status": "missing",
+      "path": "tests/acceptance/block1-integration.mjs"
+    },
+    {
+      "id": "cards",
+      "description": "Все проверки карточек ALG-04/18/19/21/22",
+      "status": "missing",
+      "path": "tests/acceptance/block1-cards.mjs"
+    },
+    {
+      "id": "doors",
+      "description": "100 повторов проходов и колонны",
+      "status": "fail",
+      "elapsedMs": 14616,
+      "exitCode": 1,
+      "error": null,
+      "signal": null,
+      "evidence": {
+        "passed": false,
+        "method": "independent scenes; both factions; seeds 1..N each; simulation 0.05s; max 30s; no combat",
+        "scenarios": [
+          {
+            "name": "foot-hq-enter",
+            "kind": "foot-hq-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "foot-hq-exit",
+            "kind": "foot-hq-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "foot-city-enter",
+            "kind": "foot-city-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "foot-city-exit",
+            "kind": "foot-city-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-depot-enter",
+            "kind": "truck-depot-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-depot-exit",
+            "kind": "truck-depot-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-factory-enter",
+            "kind": "truck-factory-enter",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "truck-factory-exit",
+            "kind": "truck-factory-exit",
+            "attempts": 200,
+            "passed": 200,
+            "reached": 200,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 0,
+            "maxOverlap": 0,
+            "crossed": 200,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 100,
+                "reached": 100
+              }
+            ],
+            "failures": []
+          },
+          {
+            "name": "column",
+            "kind": "column",
+            "attempts": 200,
+            "passed": 0,
+            "reached": 89,
+            "crossedAll": 200,
+            "teleports": 0,
+            "speedViolations": 12,
+            "wallCollisions": 0,
+            "overlapFrames": 27378,
+            "maxOverlap": 17.942,
+            "crossed": 2000,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 0,
+                "reached": 89
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 0,
+                "reached": 0
+              }
+            ],
+            "failures": [
+              {
+                "ok": false,
+                "seed": 1,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.201,
+                "overlapFrames": 66,
+                "maxOverlap": 16.834,
+                "seconds": 4.45
+              },
+              {
+                "ok": false,
+                "seed": 2,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.442,
+                "overlapFrames": 70,
+                "maxOverlap": 16.453,
+                "seconds": 4.65
+              },
+              {
+                "ok": false,
+                "seed": 3,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.47,
+                "overlapFrames": 81,
+                "maxOverlap": 17.323,
+                "seconds": 5.15
+              },
+              {
+                "ok": false,
+                "seed": 4,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.25,
+                "overlapFrames": 93,
+                "maxOverlap": 16.331,
+                "seconds": 5.8
+              },
+              {
+                "ok": false,
+                "seed": 5,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.417,
+                "overlapFrames": 67,
+                "maxOverlap": 16.475,
+                "seconds": 4.5
+              },
+              {
+                "ok": false,
+                "seed": 6,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.199,
+                "overlapFrames": 77,
+                "maxOverlap": 15.288,
+                "seconds": 4.85
+              },
+              {
+                "ok": false,
+                "seed": 7,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.417,
+                "overlapFrames": 77,
+                "maxOverlap": 15.653,
+                "seconds": 5
+              },
+              {
+                "ok": false,
+                "seed": 8,
+                "faction": 0,
+                "arrived": 10,
+                "crossed": 10,
+                "failed": 0,
+                "count": 10,
+                "teleports": 0,
+                "speedViolations": 0,
+                "wallCollisions": 0,
+                "maxStepRatio": 1.176,
+                "overlapFrames": 78,
+                "maxOverlap": 16.667,
+                "seconds": 5.05
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "navigation",
+      "description": "Нагрузка и снижение застреваний не менее чем на 70%",
+      "status": "missing",
+      "path": "tests/acceptance/block1-navigation.mjs"
+    },
+    {
+      "id": "deadlocks",
+      "description": "Устранение встречных пробок без телепорта",
+      "status": "fail",
+      "elapsedMs": 2081,
+      "exitCode": 1,
+      "error": null,
+      "signal": null,
+      "evidence": {
+        "passed": false,
+        "coverageComplete": false,
+        "coverage": [
+          {
+            "id": "foot-door-opposing",
+            "scenarios": 200,
+            "participants": 2,
+            "passed": 0,
+            "factions": [
+              {
+                "id": 0,
+                "attempts": 100,
+                "passed": 0
+              },
+              {
+                "id": 1,
+                "attempts": 100,
+                "passed": 0
+              }
+            ],
+            "crossed": 400,
+            "arrived": 400,
+            "teleports": 0,
+            "speedViolations": 160,
+            "wallCollisions": 0,
+            "overlapFrames": 1200
+          }
+        ],
+        "method": "встречная пара через дверь штаба; 100 seed на фракцию в полном режиме; 0,05 с шаг; до 60 с; без боя",
+        "scenarios": 200,
+        "failed": 200,
+        "factionsChecked": 2,
+        "factions": [
+          {
+            "id": 0,
+            "attempts": 100,
+            "passed": 0
+          },
+          {
+            "id": 1,
+            "attempts": 100,
+            "passed": 0
+          }
+        ],
+        "crossed": 400,
+        "arrived": 400,
+        "teleports": 0,
+        "speedViolations": 160,
+        "wallCollisions": 0,
+        "overlapFrames": 1200,
+        "maxOverlap": 17.971,
+        "failures": [
+          {
+            "seed": 1,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          },
+          {
+            "seed": 2,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          },
+          {
+            "seed": 3,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 16.424,
+            "seconds": 1.9
+          },
+          {
+            "seed": 4,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          },
+          {
+            "seed": 5,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          },
+          {
+            "seed": 6,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          },
+          {
+            "seed": 7,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          },
+          {
+            "seed": 8,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          }
+        ]
+      }
+    },
+    {
+      "id": "nav_budget",
+      "description": "Локальный перестрой и бюджет навигации",
+      "status": "missing",
+      "path": "tests/acceptance/block1-nav-budget.mjs"
+    },
+    {
+      "id": "save_replay",
+      "description": "Старый сейв и воспроизведение полного состояния",
+      "status": "missing",
+      "path": "tests/acceptance/block1-save-replay.mjs"
+    },
+    {
+      "id": "input_replay",
+      "description": "Запись и воспроизведение ввода и отдельных RNG",
+      "status": "missing",
+      "path": "tests/acceptance/block1-input-replay.mjs"
+    },
+    {
+      "id": "browser_fps",
+      "description": "Реальный браузерный FPS на 400/500 юнитов",
+      "status": "fail",
+      "elapsedMs": 137839,
+      "exitCode": 1,
+      "error": null,
+      "signal": null,
+      "evidence": {
+        "passed": false,
+        "environment": "browser",
+        "measurement": "requestAnimationFrame",
+        "rendered": true,
+        "browser": "Chromium 153.0.8010.0",
+        "mode": "headless software rendering",
+        "quick": false,
+        "viewport": "1280x900 DPR 1",
+        "frames400": 170,
+        "average400": 13.299120693431798,
+        "low1_400": 0.9092148929399468,
+        "minAlive400": 402,
+        "maxAlive400": 422,
+        "duration400Ms": 12782.800000000001,
+        "frames500": 194,
+        "average500": 15.196377935485891,
+        "low1_500": 1.0084203095850346,
+        "minAlive500": 502,
+        "maxAlive500": 522,
+        "duration500Ms": 12766.2,
+        "measurements": [
+          {
+            "target": 400,
+            "initial": 400,
+            "minAlive": 402,
+            "maxAlive": 422,
+            "minVisible": 376,
+            "spritesReady": true,
+            "elapsedMs": 12782.800000000001,
+            "frames": 170,
+            "worstCount": 2,
+            "worstTimeMs": 2199.699999999999,
+            "averageFps": 13.299120693431798,
+            "low1Fps": 0.9092148929399468,
+            "drawFrames": 171,
+            "canvas": {
+              "width": 1280,
+              "height": 900
+            },
+            "gameTimeStart": 0.5666666666666668,
+            "gameSeconds": 4.116666666666657,
+            "sameGame": true,
+            "warOver": false,
+            "screen": "game",
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+            "timings": {
+              "step": {
+                "samples": 213,
+                "meanMs": 3.057,
+                "p95Ms": 10.6,
+                "maxMs": 27.6
+              },
+              "draw": {
+                "samples": 171,
+                "meanMs": 2.411,
+                "p95Ms": 5.8,
+                "maxMs": 13.9
+              },
+              "hud": {
+                "samples": 171,
+                "meanMs": 0.435,
+                "p95Ms": 0.8,
+                "maxMs": 9.7
+              }
+            },
+            "canvasDataLength": 2285518,
+            "pageErrors": []
+          },
+          {
+            "target": 500,
+            "initial": 500,
+            "minAlive": 502,
+            "maxAlive": 522,
+            "minVisible": 448,
+            "spritesReady": true,
+            "elapsedMs": 12766.2,
+            "frames": 194,
+            "worstCount": 2,
+            "worstTimeMs": 1983.300000000001,
+            "averageFps": 15.196377935485891,
+            "low1Fps": 1.0084203095850346,
+            "drawFrames": 195,
+            "canvas": {
+              "width": 1280,
+              "height": 900
+            },
+            "gameTimeStart": 0.24999999999999997,
+            "gameSeconds": 4.433333333333323,
+            "sameGame": true,
+            "warOver": false,
+            "screen": "game",
+            "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+            "timings": {
+              "step": {
+                "samples": 251,
+                "meanMs": 3.727,
+                "p95Ms": 14.7,
+                "maxMs": 33.5
+              },
+              "draw": {
+                "samples": 195,
+                "meanMs": 2.764,
+                "p95Ms": 8.1,
+                "maxMs": 12.1
+              },
+              "hud": {
+                "samples": 195,
+                "meanMs": 0.462,
+                "p95Ms": 2.5,
+                "maxMs": 6.3
+              }
+            },
+            "canvasDataLength": 2287650,
+            "pageErrors": []
+          }
+        ]
+      }
+    },
+    {
+      "id": "soak",
+      "description": "30 реальных минут и контроль утечек/застреваний",
+      "status": "missing",
+      "path": "tests/acceptance/block1-soak.mjs"
+    }
+  ],
+  "issues": [
+    {
+      "code": 101,
+      "check": "u_trap",
+      "status": "fail",
+      "title": "U-ловушка не пройдена",
+      "message": "U-ловушка: пройдено 8 из 18.",
+      "observed": {
+        "passed": 8,
+        "total": 18,
+        "failedByRole": {
+          "truck": 6,
+          "tank": 4
+        }
+      },
+      "expected": "18 из 18",
+      "action": "Исправить маршрут и повторить все типы юнитов, стороны и seed без телепорта и регрессий."
+    },
+    {
+      "code": 201,
+      "check": "integration",
+      "status": "missing",
+      "title": "Нет интеграционных испытаний",
+      "message": "Сценарии S1, S8, S9 и S10: проверочный сценарий отсутствует.",
+      "observed": "tests/acceptance/block1-integration.mjs",
+      "expected": "существующий, выполненный сценарий",
+      "action": "Реализовать и запустить S1, S8, S9 и S10 с проверяемыми результатами."
+    },
+    {
+      "code": 202,
+      "check": "cards",
+      "status": "missing",
+      "title": "Нет испытаний карточек",
+      "message": "Все проверки карточек ALG-04/18/19/21/22: проверочный сценарий отсутствует.",
+      "observed": "tests/acceptance/block1-cards.mjs",
+      "expected": "существующий, выполненный сценарий",
+      "action": "Реализовать и запустить проверки карточек ALG-04/18/19/21/22."
+    },
+    {
+      "code": 110,
+      "check": "doors",
+      "status": "fail",
+      "title": "Проход или колонна не завершены",
+      "message": "column: успешно 0 из 200; все достигли цели в 89 попытках.",
+      "observed": {
+        "passed": 0,
+        "attempts": 200,
+        "reached": 89,
+        "factions": [
+          {
+            "id": 0,
+            "attempts": 100,
+            "passed": 0,
+            "reached": 89
+          },
+          {
+            "id": 1,
+            "attempts": 100,
+            "passed": 0,
+            "reached": 0
+          }
+        ],
+        "failureSamples": [
+          {
+            "ok": false,
+            "seed": 1,
+            "faction": 0,
+            "arrived": 10,
+            "crossed": 10,
+            "failed": 0,
+            "count": 10,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "maxStepRatio": 1.201,
+            "overlapFrames": 66,
+            "maxOverlap": 16.834,
+            "seconds": 4.45
+          },
+          {
+            "ok": false,
+            "seed": 2,
+            "faction": 0,
+            "arrived": 10,
+            "crossed": 10,
+            "failed": 0,
+            "count": 10,
+            "teleports": 0,
+            "speedViolations": 0,
+            "wallCollisions": 0,
+            "maxStepRatio": 1.442,
+            "overlapFrames": 70,
+            "maxOverlap": 16.453,
+            "seconds": 4.65
+          }
+        ]
+      },
+      "expected": "все попытки обеих фракций",
+      "action": "Проверить неудачные seed и фракции, устранить остановки и повторить все попытки."
+    },
+    {
+      "code": 111,
+      "check": "doors",
+      "status": "fail",
+      "title": "Наложения юнитов в проходе",
+      "message": "column: кадров с наложением — 27378.",
+      "observed": {
+        "overlapFrames": 27378,
+        "maxOverlap": 17.942
+      },
+      "expected": 0,
+      "action": "Исправить очередность и разделение движения без телепорта и блокировки прохода."
+    },
+    {
+      "code": 112,
+      "check": "doors",
+      "status": "fail",
+      "title": "Превышен контрольный шаг движения",
+      "message": "column: превышений контрольного шага — 12.",
+      "observed": 12,
+      "expected": 0,
+      "action": "Исследовать сочетание steering и выталкивания; само превышение ещё не доказывает телепорт."
+    },
+    {
+      "code": 203,
+      "check": "navigation",
+      "status": "missing",
+      "title": "Нет приёмочного испытания навигации",
+      "message": "Нагрузка и снижение застреваний не менее чем на 70%: проверочный сценарий отсутствует.",
+      "observed": "tests/acceptance/block1-navigation.mjs",
+      "expected": "существующий, выполненный сценарий",
+      "action": "Проверить три seed и нагрузки 100/300/400 с измерением снижения застреваний."
+    },
+    {
+      "code": 422,
+      "check": "deadlocks",
+      "status": "fail",
+      "title": "Неполное покрытие встречных пробок",
+      "message": "Стенд встречных пробок пока охватывает не все обязательные типы.",
+      "observed": {
+        "missing": [
+          "vehicle-opposing",
+          "column-opposing",
+          "dock-opposing"
+        ],
+        "coverageComplete": false
+      },
+      "expected": [
+        "foot-door-opposing",
+        "vehicle-opposing",
+        "column-opposing",
+        "dock-opposing"
+      ],
+      "action": "Добавить проверяемые испытания техники, колонн и доков, не подменяя их одиночной парой."
+    },
+    {
+      "code": 420,
+      "check": "deadlocks",
+      "status": "fail",
+      "title": "Наложения при встречном движении",
+      "message": "Встречная пара: кадров с наложением — 1200.",
+      "observed": {
+        "overlapFrames": 1200,
+        "maxOverlap": 17.971,
+        "failureSamples": [
+          {
+            "seed": 1,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          },
+          {
+            "seed": 2,
+            "faction": 0,
+            "ok": false,
+            "arrived": 2,
+            "crossed": 2,
+            "pathFailed": 0,
+            "teleports": 0,
+            "speedViolations": 1,
+            "wallCollisions": 0,
+            "overlapFrames": 6,
+            "maxOverlap": 17.971,
+            "seconds": 1.6
+          }
+        ]
+      },
+      "expected": 0,
+      "action": "Обеспечить безопасный разъезд через дверь без наложения и телепорта; проверить обе фракции."
+    },
+    {
+      "code": 112,
+      "check": "deadlocks",
+      "status": "fail",
+      "title": "Превышен контрольный шаг движения",
+      "message": "Встречная пара: превышений контрольного шага — 160.",
+      "observed": 160,
+      "expected": 0,
+      "action": "Исследовать сочетание steering и выталкивания; само превышение ещё не доказывает телепорт."
+    },
+    {
+      "code": 205,
+      "check": "nav_budget",
+      "status": "missing",
+      "title": "Нет приёмочного испытания бюджета навигации",
+      "message": "Локальный перестрой и бюджет навигации: проверочный сценарий отсутствует.",
+      "observed": "tests/acceptance/block1-nav-budget.mjs",
+      "expected": "существующий, выполненный сценарий",
+      "action": "Проверить локальность, фактический бюджет и совместимость режима off."
+    },
+    {
+      "code": 206,
+      "check": "save_replay",
+      "status": "missing",
+      "title": "Нет испытания сохранения и продолжения",
+      "message": "Старый сейв и воспроизведение полного состояния: проверочный сценарий отсутствует.",
+      "observed": "tests/acceptance/block1-save-replay.mjs",
+      "expected": "существующий, выполненный сценарий",
+      "action": "Сравнить полное состояние, старый сейв и детерминированное продолжение."
+    },
+    {
+      "code": 207,
+      "check": "input_replay",
+      "status": "missing",
+      "title": "Нет испытания ввода и RNG",
+      "message": "Запись и воспроизведение ввода и отдельных RNG: проверочный сценарий отсутствует.",
+      "observed": "tests/acceptance/block1-input-replay.mjs",
+      "expected": "существующий, выполненный сценарий",
+      "action": "Проверить запись и повтор ввода и восстановление отдельных потоков RNG."
+    },
+    {
+      "code": 301,
+      "check": "browser_fps",
+      "status": "fail",
+      "title": "Нагрузка браузерной сцены не соответствует цели",
+      "message": "400: популяция во время замера отличается от целевой.",
+      "observed": {
+        "initial": 400,
+        "minAlive": 402,
+        "maxAlive": 422
+      },
+      "expected": 400,
+      "action": "Обеспечить целевое число живых юнитов на протяжении измерения, не скрывая спавны или потери.",
+      "target": 400
+    },
+    {
+      "code": 301,
+      "check": "browser_fps",
+      "status": "fail",
+      "title": "Нагрузка браузерной сцены не соответствует цели",
+      "message": "500: популяция во время замера отличается от целевой.",
+      "observed": {
+        "initial": 500,
+        "minAlive": 502,
+        "maxAlive": 522
+      },
+      "expected": 500,
+      "action": "Обеспечить целевое число живых юнитов на протяжении измерения, не скрывая спавны или потери.",
+      "target": 500
+    },
+    {
+      "code": 302,
+      "check": "browser_fps",
+      "status": "fail",
+      "title": "Средний FPS при 400 ниже порога",
+      "message": "average400: 13.30 FPS, требуется не менее 60.",
+      "observed": {
+        "fps": 13.299120693431798,
+        "browser": "Chromium 153.0.8010.0",
+        "mode": "headless software rendering"
+      },
+      "expected": 60,
+      "action": "Исследовать полный браузерный кадр и повторить замер на корректной нагрузке."
+    },
+    {
+      "code": 303,
+      "check": "browser_fps",
+      "status": "fail",
+      "title": "1% low при 400 ниже порога",
+      "message": "low1_400: 0.91 FPS, требуется не менее 45.",
+      "observed": {
+        "fps": 0.9092148929399468,
+        "browser": "Chromium 153.0.8010.0",
+        "mode": "headless software rendering"
+      },
+      "expected": 45,
+      "action": "Исследовать длинные реальные интервалы кадров и повторить замер на корректной нагрузке."
+    },
+    {
+      "code": 304,
+      "check": "browser_fps",
+      "status": "fail",
+      "title": "Средний FPS при 500 ниже порога",
+      "message": "average500: 15.20 FPS, требуется не менее 45.",
+      "observed": {
+        "fps": 15.196377935485891,
+        "browser": "Chromium 153.0.8010.0",
+        "mode": "headless software rendering"
+      },
+      "expected": 45,
+      "action": "Исследовать полный браузерный кадр и повторить замер на корректной нагрузке."
+    },
+    {
+      "code": 209,
+      "check": "soak",
+      "status": "missing",
+      "title": "Нет 30-минутного испытания",
+      "message": "30 реальных минут и контроль утечек/застреваний: проверочный сценарий отсутствует.",
+      "observed": "tests/acceptance/block1-soak.mjs",
+      "expected": "существующий, выполненный сценарий",
+      "action": "Выполнить реальный soak с контролем памяти, объектов и зависших задач."
+    }
+  ]
+}

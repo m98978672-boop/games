@@ -1,0 +1,616 @@
+{
+  "passed": 8,
+  "total": 18,
+  "results": [
+    {
+      "role": "infantry",
+      "seed": 5,
+      "mirrored": false,
+      "seconds": 10.25,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 922.48,
+      "y": 536.98
+    },
+    {
+      "role": "infantry",
+      "seed": 7,
+      "mirrored": false,
+      "seconds": 10.9,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 899.97,
+      "y": 542.05
+    },
+    {
+      "role": "infantry",
+      "seed": 11,
+      "mirrored": false,
+      "seconds": 9.85,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 901.67,
+      "y": 545.83
+    },
+    {
+      "role": "infantry",
+      "seed": 5,
+      "mirrored": true,
+      "seconds": 10.25,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 357.52,
+      "y": 536.98
+    },
+    {
+      "role": "infantry",
+      "seed": 7,
+      "mirrored": true,
+      "seconds": 10.9,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 380.03,
+      "y": 542.05
+    },
+    {
+      "role": "infantry",
+      "seed": 11,
+      "mirrored": true,
+      "seconds": 9.85,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 378.33,
+      "y": 545.83
+    },
+    {
+      "role": "truck",
+      "seed": 5,
+      "mirrored": false,
+      "seconds": 7.65,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 305.33,
+      "y": 643.67
+    },
+    {
+      "role": "truck",
+      "seed": 7,
+      "mirrored": false,
+      "seconds": 10.15,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 317,
+      "y": 644.58
+    },
+    {
+      "role": "truck",
+      "seed": 11,
+      "mirrored": false,
+      "seconds": 7.65,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 379.42,
+      "y": 644.58
+    },
+    {
+      "role": "truck",
+      "seed": 5,
+      "mirrored": true,
+      "seconds": 7.65,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 974.67,
+      "y": 643.67
+    },
+    {
+      "role": "truck",
+      "seed": 7,
+      "mirrored": true,
+      "seconds": 10.15,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 963,
+      "y": 644.58
+    },
+    {
+      "role": "truck",
+      "seed": 11,
+      "mirrored": true,
+      "seconds": 7.65,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 900.58,
+      "y": 644.58
+    },
+    {
+      "role": "tank",
+      "seed": 5,
+      "mirrored": false,
+      "seconds": 10.15,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 319.83,
+      "y": 640.17
+    },
+    {
+      "role": "tank",
+      "seed": 7,
+      "mirrored": false,
+      "seconds": 14.35,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 917.36,
+      "y": 539.61
+    },
+    {
+      "role": "tank",
+      "seed": 11,
+      "mirrored": false,
+      "seconds": 10.15,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 301.29,
+      "y": 646.71
+    },
+    {
+      "role": "tank",
+      "seed": 5,
+      "mirrored": true,
+      "seconds": 10.15,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 960.17,
+      "y": 640.17
+    },
+    {
+      "role": "tank",
+      "seed": 7,
+      "mirrored": true,
+      "seconds": 14.35,
+      "arrived": true,
+      "pathFailed": false,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 362.64,
+      "y": 539.61
+    },
+    {
+      "role": "tank",
+      "seed": 11,
+      "mirrored": true,
+      "seconds": 10.15,
+      "arrived": false,
+      "pathFailed": true,
+      "collided": false,
+      "noTeleport": true,
+      "movesAway": true,
+      "x": 978.71,
+      "y": 646.71
+    }
+  ],
+  "method": "Синтетическая статическая U-ловушка, 30 с, без других юнитов; см. tools/audit-u-trap.mjs",
+  "baselineCommit": "e763b2c",
+  "rejectedTrial": {
+    "description": "Раздельное поле для техники с расширенным препятствием, наведением на центр клетки и частым пересчётом; код удалён",
+    "uTrapPassed": 18,
+    "uTrapTotal": 18,
+    "uTrapMaxSeconds": 14.7,
+    "doorFactoryInSecondsBefore": 0.9,
+    "doorFactoryInSecondsTrial": 10.8,
+    "duelWins": [
+      3,
+      5
+    ],
+    "loadRuns": [
+      {
+        "seed": 5,
+        "count": 100,
+        "beforePer100Minutes": 82.24,
+        "trialPer100Minutes": 54.15
+      },
+      {
+        "seed": 5,
+        "count": 300,
+        "beforePer100Minutes": 116.6,
+        "trialPer100Minutes": 112.42
+      },
+      {
+        "seed": 5,
+        "count": 400,
+        "beforePer100Minutes": 103.03,
+        "trialPer100Minutes": 108.84
+      },
+      {
+        "seed": 7,
+        "count": 100,
+        "beforePer100Minutes": 101.14,
+        "trialPer100Minutes": 69.95
+      },
+      {
+        "seed": 7,
+        "count": 300,
+        "beforePer100Minutes": 104.46,
+        "trialPer100Minutes": 105.49
+      },
+      {
+        "seed": 7,
+        "count": 400,
+        "beforePer100Minutes": 123.09,
+        "trialPer100Minutes": 110.55
+      },
+      {
+        "seed": 11,
+        "count": 100,
+        "beforePer100Minutes": 92.62,
+        "trialPer100Minutes": 60.5
+      },
+      {
+        "seed": 11,
+        "count": 300,
+        "beforePer100Minutes": 107.85,
+        "trialPer100Minutes": 114.45
+      },
+      {
+        "seed": 11,
+        "count": 400,
+        "beforePer100Minutes": 120.97,
+        "trialPer100Minutes": 105.61
+      }
+    ],
+    "note": "На 3/9 коротких нагрузочных прогонов показатель вырос; у ворот проход замедлился. Сырые траектории пробного U-прогона не сохранены; код варианта не включён в проект."
+  },
+  "rejectedTrial2": {
+    "description": "Слой техники используется только если текущая позиция и цель вне зданий; прежние параметры и сценарий ворот сохраняются. Исходники изменения удалены.",
+    "uTrapResult": {
+      "passed": 18,
+      "total": 18,
+      "results": [
+        {
+          "role": "infantry",
+          "seed": 5,
+          "mirrored": false,
+          "seconds": 10.25,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 922.48,
+          "y": 536.98
+        },
+        {
+          "role": "infantry",
+          "seed": 7,
+          "mirrored": false,
+          "seconds": 10.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 899.97,
+          "y": 542.05
+        },
+        {
+          "role": "infantry",
+          "seed": 11,
+          "mirrored": false,
+          "seconds": 9.85,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 901.67,
+          "y": 545.83
+        },
+        {
+          "role": "infantry",
+          "seed": 5,
+          "mirrored": true,
+          "seconds": 10.25,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 357.52,
+          "y": 536.98
+        },
+        {
+          "role": "infantry",
+          "seed": 7,
+          "mirrored": true,
+          "seconds": 10.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 380.03,
+          "y": 542.05
+        },
+        {
+          "role": "infantry",
+          "seed": 11,
+          "mirrored": true,
+          "seconds": 9.85,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 378.33,
+          "y": 545.83
+        },
+        {
+          "role": "truck",
+          "seed": 5,
+          "mirrored": false,
+          "seconds": 7.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 901.38,
+          "y": 543.1
+        },
+        {
+          "role": "truck",
+          "seed": 7,
+          "mirrored": false,
+          "seconds": 7.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 901.38,
+          "y": 543.1
+        },
+        {
+          "role": "truck",
+          "seed": 11,
+          "mirrored": false,
+          "seconds": 7.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 901.38,
+          "y": 543.1
+        },
+        {
+          "role": "truck",
+          "seed": 5,
+          "mirrored": true,
+          "seconds": 7.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 378.68,
+          "y": 543.17
+        },
+        {
+          "role": "truck",
+          "seed": 7,
+          "mirrored": true,
+          "seconds": 7.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 378.68,
+          "y": 543.17
+        },
+        {
+          "role": "truck",
+          "seed": 11,
+          "mirrored": true,
+          "seconds": 7.9,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 378.68,
+          "y": 543.17
+        },
+        {
+          "role": "tank",
+          "seed": 5,
+          "mirrored": false,
+          "seconds": 14.65,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 897.92,
+          "y": 543.61
+        },
+        {
+          "role": "tank",
+          "seed": 7,
+          "mirrored": false,
+          "seconds": 14.65,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 897.92,
+          "y": 543.61
+        },
+        {
+          "role": "tank",
+          "seed": 11,
+          "mirrored": false,
+          "seconds": 14.65,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 897.92,
+          "y": 543.61
+        },
+        {
+          "role": "tank",
+          "seed": 5,
+          "mirrored": true,
+          "seconds": 14.55,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 378.68,
+          "y": 544.74
+        },
+        {
+          "role": "tank",
+          "seed": 7,
+          "mirrored": true,
+          "seconds": 14.55,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 378.68,
+          "y": 544.74
+        },
+        {
+          "role": "tank",
+          "seed": 11,
+          "mirrored": true,
+          "seconds": 14.55,
+          "arrived": true,
+          "pathFailed": false,
+          "collided": false,
+          "noTeleport": true,
+          "movesAway": true,
+          "x": 378.68,
+          "y": 544.74
+        }
+      ]
+    },
+    "factoryInSeconds": 0.9,
+    "duelWins": [
+      6,
+      2
+    ],
+    "loadRuns": [
+      {
+        "seed": 5,
+        "count": 100,
+        "beforePer100Minutes": 82.24,
+        "trialPer100Minutes": 81.91
+      },
+      {
+        "seed": 5,
+        "count": 300,
+        "beforePer100Minutes": 116.6,
+        "trialPer100Minutes": 119.21
+      },
+      {
+        "seed": 5,
+        "count": 400,
+        "beforePer100Minutes": 103.03,
+        "trialPer100Minutes": 109.97
+      },
+      {
+        "seed": 7,
+        "count": 100,
+        "beforePer100Minutes": 101.14,
+        "trialPer100Minutes": 85.97
+      },
+      {
+        "seed": 7,
+        "count": 300,
+        "beforePer100Minutes": 104.46,
+        "trialPer100Minutes": 125.95
+      },
+      {
+        "seed": 7,
+        "count": 400,
+        "beforePer100Minutes": 123.09,
+        "trialPer100Minutes": 87.74
+      },
+      {
+        "seed": 11,
+        "count": 100,
+        "beforePer100Minutes": 92.62,
+        "trialPer100Minutes": 88.64
+      },
+      {
+        "seed": 11,
+        "count": 300,
+        "beforePer100Minutes": 107.85,
+        "trialPer100Minutes": 109.93
+      },
+      {
+        "seed": 11,
+        "count": 400,
+        "beforePer100Minutes": 120.97,
+        "trialPer100Minutes": 144.25
+      }
+    ],
+    "note": "Показатель вырос в 5 из 9 коротких сценариев, включая +20% при seed 7/300 и +19% при seed 11/400; вариант отклонён."
+  }
+}

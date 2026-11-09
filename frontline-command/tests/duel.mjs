@@ -13,6 +13,7 @@ let fails = 0;
 
 for (const seed of SEEDS) {
   const cfg = await loadConfig();
+  if (process.env.VEHICLE_DETOUR === '1') cfg.flags.vehicle_detour_v2 = true;
   cfg.factions[0].persona = 'balanced';
   cfg.factions[1].persona = 'balanced';
   const game = new Game({ cfg, seed, difficulty: 'regular', aiVsAi: true });

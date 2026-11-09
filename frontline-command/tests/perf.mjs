@@ -3,6 +3,7 @@ import { loadConfig } from '../src/core/config.js';
 import { Game } from '../src/sim/game.js';
 
 const cfg = await loadConfig();
+if (process.env.VEHICLE_DETOUR === '1') cfg.flags.vehicle_detour_v2 = true;
 const game = new Game({ cfg, seed: 5, difficulty: 'regular', aiVsAi: true });
 const perf = (() => { const p = typeof performance !== 'undefined' ? performance : null; return p || { now: () => Date.now() }; })();
 // досыпаем юнитов вокруг баз, чтобы получить плотный бой
@@ -52,6 +53,7 @@ if (heap > 800) { console.log('FAIL: слишком большая куча'); p
 // ---------- масштаб: 400 и 500 юнитов ----------
 for (const target of [400, 500]) {
   const c2 = await loadConfig();
+  if (process.env.VEHICLE_DETOUR === '1') c2.flags.vehicle_detour_v2 = true;
   const g2 = new Game({ cfg: c2, seed: 5, difficulty: 'regular', aiVsAi: true });
   const alive = () => [...g2.units.values()].filter((u) => u.alive).length;
   for (const f of [0, 1]) {

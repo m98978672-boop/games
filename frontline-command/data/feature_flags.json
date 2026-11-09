@@ -78,6 +78,36 @@
       "desc": "Приглушение звука выстрелов за стеной (звук слышен хуже через материал)",
       "group": "walls",
       "enabled": true
+    },
+    {
+      "id": "pathing_v2",
+      "desc": "Точная геометрия стен при движении через проёмы",
+      "group": "ai",
+      "enabled": true
+    },
+    {
+      "id": "alg_save",
+      "desc": "Восстановление идентификаторов, состояния RNG и игрока из расширенного сохранения",
+      "group": "sim",
+      "enabled": false
+    },
+    {
+      "id": "alg_deadlock",
+      "desc": "Диагностика сброса недостигнутой цели без изменения поведения",
+      "group": "ai",
+      "enabled": false
+    },
+    {
+      "id": "vehicle_detour_v2",
+      "desc": "Экспериментальный локальный обход техники вне зданий; требует pathing_v2 и wall_collision_v2",
+      "group": "ai",
+      "enabled": false
+    },
+    {
+      "id": "wall_nav_local",
+      "desc": "Экспериментальное локальное обновление навигационной маски стен; нужны pathing_v2 и wall_collision_v2",
+      "group": "ai",
+      "enabled": false
     }
   ]
 }

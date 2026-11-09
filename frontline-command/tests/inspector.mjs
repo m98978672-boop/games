@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import { loadConfig } from '../src/core/config.js';
+import { Game } from '../src/sim/game.js';
+import { inspectGame, formatInspectorReport, requiredImages, MovementObserver } from '../src/inspector.js';
+const cfg = await loadConfig();
+const game = new Game({ cfg, seed: 5, aiVsAi: true });
+const images = new Map(requiredImages.map((name) => [name, {}]));
+const context = { game, bank: { ready: true, images }, renderer: { canvas: { width: 100, height: 100 }, ctx: {}, camera: { x: 0, y: 0, zoom: 1 } }, hud: { root: {} } };
+const before = { rng: game.rng.s, time: game.time, units: game.units.size, stock: JSON.stringify(game.logistics.stock) };
+let report = inspectGame(context);
+assert.equal(report.entries.length, 13);
+assert.equal(report.entries.find((e) => e.code === 711).status, 'unverified');
+assert.deepEqual(report.entries.filter((e) => e.status === 'fail'), []);
+assert.deepEqual({ rng: game.rng.s, time: game.time, units: game.units.size, stock: JSON.stringify(game.logistics.stock) }, before);
+assert.match(formatInspectorReport(report), /не полная приёмка/);
+images.delete('sprites/tank_1_3');
+game.logistics.stock[1].fuel = -1;
+const u = [...game.units.values()][0], oldX = u.x; u.x = NaN;
+report = inspectGame(context);
+for (const code of [702,703,706]) assert.equal(report.entries.find((e) => e.code === code).status, 'fail');
+assert.match(report.entries.find((e) => e.code === 702).fact, /sprites\/tank_1_3/);
+assert.match(report.entries.find((e) => e.code === 706).fact, /1\/fuel/);
+u.x = oldX;
+const menu = inspectGame();
+assert.equal(menu.entries.find((e) => e.code === 700).status, 'unverified');
+assert.notEqual(menu.entries.find((e) => e.code === 711).status, 'pass');
+console.log('F8: реальная игра, обнаружение повреждений, отсутствие изменений в игре и непроверенные области');
+
+// Наблюдение не засчитывает паузу и не называет малое смещение дефектом.
+const observer = new MovementObserver();
+const actor = { alive: true, downed: false, arrived: false, pathFailed: false, perception: { hasContact: false },
+  x: 0, y: 0, speed: 10, faction: 0, goal: { x: 100, y: 0 } };
+const scene = { time: 0, units: new Map([[1, actor]]) };
+assert.equal(observer.update(scene), null);
+assert.equal(observer.update(scene), null, 'пауза не считается временем движения');
+scene.time = 5; const motion = observer.update(scene);
+assert.equal(motion.compared, 1); assert.equal(motion.slow.length, 1);
+assert.equal(inspectGame({ ...context, motion }).entries.find((e) => e.code === 712).status, 'unverified');
+actor.goal = { x: 200, y: 0 }; scene.time = 10;
+assert.equal(observer.update(scene).compared, 0, 'смена цели исключает сравнение');
+const other = { time: 0, units: new Map([[1, actor]]) };
+assert.equal(observer.update(other), null, 'новая война сбрасывает предыдущие данные');

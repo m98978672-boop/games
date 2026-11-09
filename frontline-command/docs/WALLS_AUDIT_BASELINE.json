@@ -1,0 +1,1863 @@
+{
+  "baselineCommit": "8a3cbb7843a982a16347786d94fcbfa2693107db",
+  "node": "v22.22.3",
+  "seed": 5,
+  "note": "Измерение одной машины; FPS только симуляции. См. методику и ограничения в WALLS_AUDIT.md.",
+  "simulation": [
+    {
+      "count": 100,
+      "initial": [
+        50,
+        50
+      ],
+      "final": [
+        64,
+        71
+      ],
+      "simulationSeconds": 60,
+      "ticks": 500,
+      "meanMs": 3.546,
+      "meanSimFps": 282,
+      "p99Ms": 17.071,
+      "low1SimFps": 58.6,
+      "eligibleBotMinutes": 33.12,
+      "eventCount": 45,
+      "eventsPer100EligibleBotMinutes": 135.88,
+      "categories": {
+        "у двери/ворот": 34,
+        "у торца/угла": 6,
+        "прочее/открытая зона": 2,
+        "у стены": 2,
+        "у цели": 1
+      },
+      "events": [
+        {
+          "t": 11,
+          "id": 8,
+          "faction": 0,
+          "role": "infantry",
+          "x": 524,
+          "y": 3418,
+          "goalX": 1614,
+          "goalY": 2354,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 12,
+          "id": 9,
+          "faction": 0,
+          "role": "infantry",
+          "x": 520,
+          "y": 3210,
+          "goalX": 1614,
+          "goalY": 2354,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 12,
+          "id": 40,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3581,
+          "y": 678,
+          "goalX": 2482,
+          "goalY": 1742,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 14,
+          "id": 104,
+          "faction": 1,
+          "role": "driver",
+          "x": 3725,
+          "y": 854,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 18,
+          "id": 11,
+          "faction": 0,
+          "role": "mg",
+          "x": 516,
+          "y": 3418,
+          "goalX": 1678,
+          "goalY": 2546,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 19,
+          "id": 8,
+          "faction": 0,
+          "role": "infantry",
+          "x": 513,
+          "y": 3419,
+          "goalX": 1614,
+          "goalY": 2354,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 19,
+          "id": 9,
+          "faction": 0,
+          "role": "infantry",
+          "x": 520,
+          "y": 3210,
+          "goalX": 1614,
+          "goalY": 2354,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 20,
+          "id": 40,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3576,
+          "y": 679,
+          "goalX": 2546,
+          "goalY": 1674,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 21,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3351,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 21,
+          "id": 35,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3578,
+          "y": 679,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 23,
+          "id": 14,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1663,
+          "y": 2560,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 23,
+          "id": 20,
+          "faction": 0,
+          "role": "engineer",
+          "x": 527,
+          "y": 3412,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 23,
+          "id": 103,
+          "faction": 1,
+          "role": "driver",
+          "x": 2451,
+          "y": 1535,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 26,
+          "id": 115,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1151,
+          "y": 2656,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 27,
+          "id": 113,
+          "faction": 0,
+          "role": "tank",
+          "x": 997,
+          "y": 2522,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 27,
+          "id": 117,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1147,
+          "y": 2659,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 28,
+          "id": 118,
+          "faction": 1,
+          "role": "tank",
+          "x": 2686,
+          "y": 938,
+          "goalX": 2144,
+          "goalY": 2076,
+          "category": "у стены"
+        },
+        {
+          "t": 31,
+          "id": 3,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1759,
+          "y": 2812,
+          "goalX": 2400,
+          "goalY": 646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 33,
+          "id": 21,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1646,
+          "y": 2563,
+          "goalX": 1863,
+          "goalY": 2793,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 34,
+          "id": 32,
+          "faction": 1,
+          "role": "medic",
+          "x": 2444,
+          "y": 1536,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 35,
+          "id": 4,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1756,
+          "y": 2824,
+          "goalX": 2592,
+          "goalY": 646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 35,
+          "id": 6,
+          "faction": 0,
+          "role": "medic",
+          "x": 1755,
+          "y": 2810,
+          "goalX": 2592,
+          "goalY": 674,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 37,
+          "id": 5,
+          "faction": 0,
+          "role": "mg",
+          "x": 1758,
+          "y": 2821,
+          "goalX": 2592,
+          "goalY": 674,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 37,
+          "id": 17,
+          "faction": 0,
+          "role": "mg",
+          "x": 1911,
+          "y": 2062,
+          "goalX": 2978,
+          "goalY": 1642,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 37,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3339,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 37,
+          "id": 40,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3570,
+          "y": 681,
+          "goalX": 1696,
+          "goalY": 3478,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 38,
+          "id": 35,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3570,
+          "y": 679,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 40,
+          "id": 115,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1164,
+          "y": 2664,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 42,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 521,
+          "y": 3417,
+          "goalX": 2400,
+          "goalY": 618,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 42,
+          "id": 23,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1649,
+          "y": 2559,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 45,
+          "id": 30,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2188,
+          "y": 1964,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у стены"
+        },
+        {
+          "t": 46,
+          "id": 104,
+          "faction": 1,
+          "role": "driver",
+          "x": 2185,
+          "y": 2067,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 46,
+          "id": 119,
+          "faction": 1,
+          "role": "tank",
+          "x": 2033,
+          "y": 1475,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 47,
+          "id": 21,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1646,
+          "y": 2562,
+          "goalX": 1877,
+          "goalY": 2791,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 47,
+          "id": 115,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1149,
+          "y": 2668,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 48,
+          "id": 44,
+          "faction": 1,
+          "role": "medic",
+          "x": 2233,
+          "y": 2126,
+          "goalX": 2197,
+          "goalY": 2166,
+          "category": "у цели"
+        },
+        {
+          "t": 49,
+          "id": 6,
+          "faction": 0,
+          "role": "medic",
+          "x": 1757,
+          "y": 2812,
+          "goalX": 2592,
+          "goalY": 674,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 49,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3339,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 49,
+          "id": 123,
+          "faction": 1,
+          "role": "scout",
+          "x": 2947,
+          "y": 1440,
+          "goalX": 1696,
+          "goalY": 3478,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 52,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 520,
+          "y": 3417,
+          "goalX": 2400,
+          "goalY": 618,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 53,
+          "id": 125,
+          "faction": 1,
+          "role": "scout",
+          "x": 2953,
+          "y": 1440,
+          "goalX": 1504,
+          "goalY": 3450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 54,
+          "id": 29,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3576,
+          "y": 882,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 56,
+          "id": 115,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1147,
+          "y": 2661,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 59,
+          "id": 21,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1630,
+          "y": 2565,
+          "goalX": 1843,
+          "goalY": 2800,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 60,
+          "id": 117,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1148,
+          "y": 2657,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        }
+      ]
+    },
+    {
+      "count": 300,
+      "initial": [
+        150,
+        150
+      ],
+      "final": [
+        165,
+        171
+      ],
+      "simulationSeconds": 60,
+      "ticks": 500,
+      "meanMs": 3.297,
+      "meanSimFps": 303.3,
+      "p99Ms": 11.989,
+      "low1SimFps": 83.4,
+      "eligibleBotMinutes": 32.68,
+      "eventCount": 53,
+      "eventsPer100EligibleBotMinutes": 162.16,
+      "categories": {
+        "у двери/ворот": 30,
+        "у торца/угла": 9,
+        "у стены": 5,
+        "прочее/открытая зона": 9
+      },
+      "events": [
+        {
+          "t": 11,
+          "id": 11,
+          "faction": 0,
+          "role": "mg",
+          "x": 531,
+          "y": 3429,
+          "goalX": 1678,
+          "goalY": 2546,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 12,
+          "id": 13,
+          "faction": 0,
+          "role": "infantry",
+          "x": 528,
+          "y": 3433,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 12,
+          "id": 17,
+          "faction": 0,
+          "role": "mg",
+          "x": 529,
+          "y": 3169,
+          "goalX": 2978,
+          "goalY": 1642,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 18,
+          "id": 9,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1146,
+          "y": 2662,
+          "goalX": 1614,
+          "goalY": 2354,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 19,
+          "id": 40,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3536,
+          "y": 653,
+          "goalX": 2546,
+          "goalY": 1674,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 19,
+          "id": 47,
+          "faction": 1,
+          "role": "engineer",
+          "x": 3721,
+          "y": 835,
+          "goalX": 1246,
+          "goalY": 2550,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 20,
+          "id": 19,
+          "faction": 0,
+          "role": "engineer",
+          "x": 373,
+          "y": 3225,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 20,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3384,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у стены"
+        },
+        {
+          "t": 20,
+          "id": 27,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3405,
+          "y": 1152,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 21,
+          "id": 16,
+          "faction": 0,
+          "role": "infantry",
+          "x": 371,
+          "y": 3195,
+          "goalX": 2978,
+          "goalY": 1642,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 21,
+          "id": 38,
+          "faction": 1,
+          "role": "engineer",
+          "x": 3569,
+          "y": 929,
+          "goalX": 1977,
+          "goalY": 1952,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 22,
+          "id": 14,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1643,
+          "y": 2553,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 22,
+          "id": 23,
+          "faction": 0,
+          "role": "infantry",
+          "x": 476,
+          "y": 3441,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 26,
+          "id": 313,
+          "faction": 1,
+          "role": "tank",
+          "x": 3417,
+          "y": 1263,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 26,
+          "id": 314,
+          "faction": 1,
+          "role": "tank",
+          "x": 3400,
+          "y": 1242,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 27,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3384,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у стены"
+        },
+        {
+          "t": 27,
+          "id": 27,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3405,
+          "y": 1176,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 27,
+          "id": 47,
+          "faction": 1,
+          "role": "engineer",
+          "x": 3721,
+          "y": 835,
+          "goalX": 1246,
+          "goalY": 2550,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 27,
+          "id": 316,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3585,
+          "y": 681,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 28,
+          "id": 28,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2442,
+          "y": 1543,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 29,
+          "id": 1,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3228,
+          "goalX": 3364,
+          "goalY": 1830,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 29,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 531,
+          "y": 3432,
+          "goalX": 3364,
+          "goalY": 1830,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 30,
+          "id": 319,
+          "faction": 0,
+          "role": "tank",
+          "x": 1001,
+          "y": 2414,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 31,
+          "id": 304,
+          "faction": 0,
+          "role": "driver",
+          "x": 1661,
+          "y": 2561,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 35,
+          "id": 21,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1645,
+          "y": 2554,
+          "goalX": 1856,
+          "goalY": 2790,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 35,
+          "id": 316,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3580,
+          "y": 680,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 36,
+          "id": 11,
+          "faction": 0,
+          "role": "mg",
+          "x": 532,
+          "y": 3417,
+          "goalX": 2592,
+          "goalY": 674,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 37,
+          "id": 1,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3228,
+          "goalX": 3364,
+          "goalY": 1830,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 37,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 519,
+          "y": 3431,
+          "goalX": 3364,
+          "goalY": 1830,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 37,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3384,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у стены"
+        },
+        {
+          "t": 38,
+          "id": 6,
+          "faction": 0,
+          "role": "medic",
+          "x": 2164,
+          "y": 2610,
+          "goalX": 3449,
+          "goalY": 1991,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 40,
+          "id": 3,
+          "faction": 0,
+          "role": "infantry",
+          "x": 2163,
+          "y": 2602,
+          "goalX": 3364,
+          "goalY": 1830,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 40,
+          "id": 35,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3575,
+          "y": 679,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 41,
+          "id": 4,
+          "faction": 0,
+          "role": "infantry",
+          "x": 2165,
+          "y": 2628,
+          "goalX": 3462,
+          "goalY": 1912,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 41,
+          "id": 5,
+          "faction": 0,
+          "role": "mg",
+          "x": 2165,
+          "y": 2616,
+          "goalX": 3444,
+          "goalY": 1962,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 41,
+          "id": 12,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1644,
+          "y": 2561,
+          "goalX": 1848,
+          "goalY": 2790,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 42,
+          "id": 21,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1653,
+          "y": 2561,
+          "goalX": 1841,
+          "goalY": 2798,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 44,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 521,
+          "y": 3419,
+          "goalX": 3364,
+          "goalY": 1830,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 44,
+          "id": 11,
+          "faction": 0,
+          "role": "mg",
+          "x": 509,
+          "y": 3421,
+          "goalX": 2592,
+          "goalY": 646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 44,
+          "id": 23,
+          "faction": 0,
+          "role": "infantry",
+          "x": 476,
+          "y": 3441,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 44,
+          "id": 38,
+          "faction": 1,
+          "role": "engineer",
+          "x": 3569,
+          "y": 929,
+          "goalX": 1977,
+          "goalY": 1952,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 47,
+          "id": 1,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3228,
+          "goalX": 3364,
+          "goalY": 1830,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 47,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3384,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "у стены"
+        },
+        {
+          "t": 50,
+          "id": 32,
+          "faction": 1,
+          "role": "medic",
+          "x": 2001,
+          "y": 1909,
+          "goalX": 2186,
+          "goalY": 2140,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 50,
+          "id": 47,
+          "faction": 1,
+          "role": "engineer",
+          "x": 3402,
+          "y": 1175,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 50,
+          "id": 304,
+          "faction": 0,
+          "role": "driver",
+          "x": 1644,
+          "y": 2557,
+          "goalX": 3042,
+          "goalY": 1546,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 54,
+          "id": 4,
+          "faction": 0,
+          "role": "infantry",
+          "x": 2165,
+          "y": 2602,
+          "goalX": 3462,
+          "goalY": 1912,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 54,
+          "id": 319,
+          "faction": 0,
+          "role": "tank",
+          "x": 1001,
+          "y": 2414,
+          "goalX": 2080,
+          "goalY": 2144,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 54,
+          "id": 324,
+          "faction": 1,
+          "role": "scout",
+          "x": 2948,
+          "y": 1443,
+          "goalX": 1696,
+          "goalY": 3450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 55,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3384,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у стены"
+        },
+        {
+          "t": 57,
+          "id": 31,
+          "faction": 1,
+          "role": "mg",
+          "x": 2053,
+          "y": 1949,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 57,
+          "id": 316,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3580,
+          "y": 679,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 58,
+          "id": 48,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2061,
+          "y": 1940,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у двери/ворот"
+        }
+      ]
+    },
+    {
+      "count": 400,
+      "initial": [
+        200,
+        200
+      ],
+      "final": [
+        215,
+        221
+      ],
+      "simulationSeconds": 60,
+      "ticks": 500,
+      "meanMs": 3.667,
+      "meanSimFps": 272.7,
+      "p99Ms": 12.798,
+      "low1SimFps": 78.1,
+      "eligibleBotMinutes": 35,
+      "eventCount": 50,
+      "eventsPer100EligibleBotMinutes": 142.86,
+      "categories": {
+        "у двери/ворот": 35,
+        "у торца/угла": 7,
+        "у стены": 4,
+        "прочее/открытая зона": 4
+      },
+      "events": [
+        {
+          "t": 12,
+          "id": 13,
+          "faction": 0,
+          "role": "infantry",
+          "x": 513,
+          "y": 3416,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 12,
+          "id": 17,
+          "faction": 0,
+          "role": "mg",
+          "x": 531,
+          "y": 3172,
+          "goalX": 2978,
+          "goalY": 1642,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 12,
+          "id": 40,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3618,
+          "y": 657,
+          "goalX": 2482,
+          "goalY": 1742,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 18,
+          "id": 408,
+          "faction": 1,
+          "role": "driver",
+          "x": 3626,
+          "y": 658,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 19,
+          "id": 406,
+          "faction": 0,
+          "role": "infantry",
+          "x": 550,
+          "y": 3445,
+          "goalX": 2978,
+          "goalY": 1642,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 20,
+          "id": 13,
+          "faction": 0,
+          "role": "infantry",
+          "x": 512,
+          "y": 3415,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 21,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 524,
+          "y": 3425,
+          "goalX": 1952,
+          "goalY": 2020,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 22,
+          "id": 14,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1641,
+          "y": 2556,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 23,
+          "id": 410,
+          "faction": 1,
+          "role": "driver",
+          "x": 2434,
+          "y": 1530,
+          "goalX": 1246,
+          "goalY": 2550,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 24,
+          "id": 11,
+          "faction": 0,
+          "role": "mg",
+          "x": 527,
+          "y": 3419,
+          "goalX": 1678,
+          "goalY": 2546,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 24,
+          "id": 37,
+          "faction": 1,
+          "role": "mg",
+          "x": 3728,
+          "y": 913,
+          "goalX": 2016,
+          "goalY": 1952,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 25,
+          "id": 411,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2444,
+          "y": 1546,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 28,
+          "id": 3,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1746,
+          "y": 2815,
+          "goalX": 1952,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 28,
+          "id": 4,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1747,
+          "y": 2811,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 28,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3385,
+          "goalX": 3444,
+          "goalY": 1962,
+          "category": "у стены"
+        },
+        {
+          "t": 29,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 514,
+          "y": 3414,
+          "goalX": 1952,
+          "goalY": 2020,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 29,
+          "id": 418,
+          "faction": 1,
+          "role": "tank",
+          "x": 2631,
+          "y": 933,
+          "goalX": 2144,
+          "goalY": 2076,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 30,
+          "id": 14,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1652,
+          "y": 2556,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 30,
+          "id": 414,
+          "faction": 0,
+          "role": "tank",
+          "x": 1456,
+          "y": 3119,
+          "goalX": 1952,
+          "goalY": 2020,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 31,
+          "id": 6,
+          "faction": 0,
+          "role": "medic",
+          "x": 1744,
+          "y": 2814,
+          "goalX": 2144,
+          "goalY": 2108,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 31,
+          "id": 419,
+          "faction": 1,
+          "role": "tank",
+          "x": 2634,
+          "y": 931,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 32,
+          "id": 32,
+          "faction": 1,
+          "role": "medic",
+          "x": 2450,
+          "y": 1535,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 32,
+          "id": 38,
+          "faction": 1,
+          "role": "engineer",
+          "x": 3567,
+          "y": 677,
+          "goalX": 1977,
+          "goalY": 1952,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 32,
+          "id": 413,
+          "faction": 0,
+          "role": "tank",
+          "x": 1001,
+          "y": 2419,
+          "goalX": 1952,
+          "goalY": 2020,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 33,
+          "id": 408,
+          "faction": 1,
+          "role": "driver",
+          "x": 3626,
+          "y": 658,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 33,
+          "id": 416,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1764,
+          "y": 2816,
+          "goalX": 2144,
+          "goalY": 2076,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 36,
+          "id": 404,
+          "faction": 0,
+          "role": "driver",
+          "x": 1639,
+          "y": 2563,
+          "goalX": 2914,
+          "goalY": 1450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 37,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3385,
+          "goalX": 3444,
+          "goalY": 1962,
+          "category": "у стены"
+        },
+        {
+          "t": 40,
+          "id": 30,
+          "faction": 1,
+          "role": "infantry",
+          "x": 1931,
+          "y": 1911,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 42,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 515,
+          "y": 3414,
+          "goalX": 1952,
+          "goalY": 2020,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 43,
+          "id": 408,
+          "faction": 1,
+          "role": "driver",
+          "x": 3626,
+          "y": 658,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 44,
+          "id": 23,
+          "faction": 0,
+          "role": "infantry",
+          "x": 440,
+          "y": 3438,
+          "goalX": 3444,
+          "goalY": 1962,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 44,
+          "id": 27,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3404,
+          "y": 1182,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 45,
+          "id": 11,
+          "faction": 0,
+          "role": "mg",
+          "x": 530,
+          "y": 3418,
+          "goalX": 2978,
+          "goalY": 1642,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 45,
+          "id": 414,
+          "faction": 0,
+          "role": "tank",
+          "x": 1456,
+          "y": 3119,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 46,
+          "id": 4,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1748,
+          "y": 2816,
+          "goalX": 2144,
+          "goalY": 2076,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 46,
+          "id": 31,
+          "faction": 1,
+          "role": "mg",
+          "x": 2185,
+          "y": 2047,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у стены"
+        },
+        {
+          "t": 46,
+          "id": 428,
+          "faction": 1,
+          "role": "scout",
+          "x": 2961,
+          "y": 1434,
+          "goalX": 1696,
+          "goalY": 3450,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 46,
+          "id": 430,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2940,
+          "y": 1438,
+          "goalX": 1504,
+          "goalY": 3422,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 47,
+          "id": 22,
+          "faction": 0,
+          "role": "infantry",
+          "x": 373,
+          "y": 3385,
+          "goalX": 3444,
+          "goalY": 1962,
+          "category": "у стены"
+        },
+        {
+          "t": 48,
+          "id": 12,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1777,
+          "y": 2341,
+          "goalX": 1556,
+          "goalY": 2416,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 52,
+          "id": 11,
+          "faction": 0,
+          "role": "mg",
+          "x": 528,
+          "y": 3421,
+          "goalX": 2978,
+          "goalY": 1642,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 52,
+          "id": 410,
+          "faction": 1,
+          "role": "driver",
+          "x": 1948,
+          "y": 1910,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 53,
+          "id": 408,
+          "faction": 1,
+          "role": "driver",
+          "x": 3626,
+          "y": 658,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 54,
+          "id": 4,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1749,
+          "y": 2814,
+          "goalX": 2144,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 54,
+          "id": 19,
+          "faction": 0,
+          "role": "engineer",
+          "x": 1512,
+          "y": 2340,
+          "goalX": 1555,
+          "goalY": 2410,
+          "category": "у торца/угла"
+        },
+        {
+          "t": 54,
+          "id": 29,
+          "faction": 1,
+          "role": "infantry",
+          "x": 3569,
+          "y": 927,
+          "goalX": 1182,
+          "goalY": 2646,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 56,
+          "id": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 510,
+          "y": 3417,
+          "goalX": 1952,
+          "goalY": 2048,
+          "category": "у двери/ворот"
+        },
+        {
+          "t": 60,
+          "id": 413,
+          "faction": 0,
+          "role": "tank",
+          "x": 1001,
+          "y": 2419,
+          "goalX": 1952,
+          "goalY": 2048,
+          "category": "прочее/открытая зона"
+        },
+        {
+          "t": 60,
+          "id": 422,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2055,
+          "y": 1939,
+          "goalX": 1118,
+          "goalY": 2454,
+          "category": "у двери/ворот"
+        }
+      ]
+    }
+  ],
+  "doorways": [
+    {
+      "type": "hq",
+      "role": "infantry",
+      "opening": "door",
+      "width": 64,
+      "direction": "out",
+      "result": "pathFailed",
+      "t": 7.65,
+      "distance": 133,
+      "at": [
+        520,
+        3213
+      ]
+    },
+    {
+      "type": "hq",
+      "role": "infantry",
+      "opening": "door",
+      "width": 64,
+      "direction": "in",
+      "result": "pathFailed",
+      "t": 7.65,
+      "distance": 122,
+      "at": [
+        520,
+        3158
+      ]
+    },
+    {
+      "type": "city",
+      "role": "infantry",
+      "opening": "door",
+      "width": 64,
+      "direction": "out",
+      "result": "arrived",
+      "t": 1.2,
+      "distance": 28.5,
+      "at": [
+        1150,
+        2368.5
+      ]
+    },
+    {
+      "type": "city",
+      "role": "infantry",
+      "opening": "door",
+      "width": 64,
+      "direction": "in",
+      "result": "pathFailed",
+      "t": 7.65,
+      "distance": 100,
+      "at": [
+        1150,
+        2440
+      ]
+    },
+    {
+      "type": "depot",
+      "role": "truck",
+      "opening": "gate",
+      "width": 96,
+      "direction": "out",
+      "result": "arrived",
+      "t": 0.9,
+      "distance": 27.5,
+      "at": [
+        800,
+        2997.5
+      ]
+    },
+    {
+      "type": "depot",
+      "role": "truck",
+      "opening": "gate",
+      "width": 96,
+      "direction": "in",
+      "result": "arrived",
+      "t": 0.9,
+      "distance": 27.5,
+      "at": [
+        800,
+        2852.5
+      ]
+    },
+    {
+      "type": "factory",
+      "role": "truck",
+      "opening": "gate",
+      "width": 96,
+      "direction": "out",
+      "result": "arrived",
+      "t": 0.9,
+      "distance": 27.5,
+      "at": [
+        700,
+        2352.5
+      ]
+    },
+    {
+      "type": "factory",
+      "role": "truck",
+      "opening": "gate",
+      "width": 96,
+      "direction": "in",
+      "result": "arrived",
+      "t": 0.9,
+      "distance": 27.5,
+      "at": [
+        700,
+        2207.5
+      ]
+    },
+    {
+      "type": "city",
+      "role": "truck",
+      "opening": "door",
+      "width": 64,
+      "direction": "out",
+      "result": "pathFailed",
+      "t": 7.65,
+      "distance": 125,
+      "at": [
+        1150,
+        2465
+      ]
+    },
+    {
+      "type": "city",
+      "role": "truck",
+      "opening": "door",
+      "width": 64,
+      "direction": "in",
+      "result": "pathFailed",
+      "t": 7.65,
+      "distance": 125,
+      "at": [
+        1150,
+        2415
+      ]
+    }
+  ]
+}
