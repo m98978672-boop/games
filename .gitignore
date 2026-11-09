@@ -1,3 +1,7 @@
 
 # артефакты рендера
 truck-showroom/preview.png
+
+# отчёты бота-багоискателя
+tools/bughunt/report.md
+tools/bughunt/report.json
