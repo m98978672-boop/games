@@ -234,6 +234,85 @@
     return y;
   }
 
+  /* ------------- кривая дожития целой пачки жизней --------------------
+     Рядом с прожитой тысячей рисуем ту кривую, которую обещает
+     демография: видно, совпал ли игрушечный мир с настоящим. */
+  function batchCurve(canvas, curve, expectTable) {
+    var ctx = canvas && canvas.getContext && canvas.getContext('2d');
+    if (!ctx || !curve || !curve.length) return;
+    var dpr = window.devicePixelRatio || 1;
+    var w = canvas.clientWidth || 420, h = canvas.clientHeight || 190;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+
+    var pad = { l: 34, r: 10, t: 12, b: 22 };
+    var iw = w - pad.l - pad.r, ih = h - pad.t - pad.b, maxAge = 100;
+
+    ctx.strokeStyle = 'rgba(242,236,223,0.10)';
+    ctx.fillStyle = 'rgba(242,236,223,0.45)';
+    ctx.font = '10px system-ui, sans-serif';
+    ctx.lineWidth = 1;
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (p) {
+      var y = pad.t + ih * (1 - p);
+      ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
+      ctx.fillText(Math.round(p * 100) + '%', 4, y + 3);
+    });
+    [0, 25, 50, 75, 100].forEach(function (a) {
+      ctx.fillText(String(a), pad.l + iw * (a / maxAge) - 6, h - 6);
+    });
+
+    function line(at, color, width) {
+      ctx.strokeStyle = color; ctx.lineWidth = width;
+      ctx.beginPath();
+      for (var a = 0; a <= maxAge; a++) {
+        var v = at(a);
+        if (v === null || v === undefined) continue;
+        var x = pad.l + iw * (a / maxAge), y = pad.t + ih * (1 - v);
+        if (a === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    if (expectTable && expectTable.lx) {
+      line(function (a) { return expectTable.lx[a]; }, 'rgba(155,140,240,0.7)', 1.6);
+    }
+    line(function (a) { return curve[a] === undefined ? null : curve[a]; }, '#e8b45a', 2.2);
+
+    ctx.fillStyle = 'rgba(242,236,223,0.55)';
+    ctx.fillText('— прожито', pad.l + 6, pad.t + 12);
+    ctx.fillStyle = 'rgba(155,140,240,0.85)';
+    ctx.fillText('— ожидание', pad.l + 70, pad.t + 12);
+  }
+
+  /* ---------------- горизонтальные доли (страны, причины) -------------- */
+  function barList(box, items, opts) {
+    if (!box) return;
+    opts = opts || {};
+    box.innerHTML = '';
+    var max = 0;
+    items.forEach(function (x) { if (x.share > max) max = x.share; });
+    if (!max) max = 1;
+    items.forEach(function (x) {
+      var row = document.createElement('div');
+      row.className = 'bl-row';
+      var name = document.createElement('span');
+      name.className = 'bl-name';
+      name.textContent = x.name;
+      var bar = document.createElement('span');
+      bar.className = 'bl-bar';
+      var fill = document.createElement('i');
+      fill.style.width = Math.max(2, x.share / max * 100) + '%';
+      if (opts.color) fill.style.background = opts.color;
+      bar.appendChild(fill);
+      var val = document.createElement('span');
+      val.className = 'bl-val';
+      val.textContent = x.share.toFixed(1) + '%';
+      row.appendChild(name); row.appendChild(bar); row.appendChild(val);
+      box.appendChild(row);
+    });
+  }
+
   window.IN8B = window.IN8B || {};
   window.IN8B.charts = {
     lifeMap: lifeMap,
@@ -241,6 +320,8 @@
     statLines: statLines,
     birthBars: birthBars,
     shareCard: shareCard,
+    batchCurve: batchCurve,
+    barList: barList,
     kindColor: KIND_COLOR
   };
 })();

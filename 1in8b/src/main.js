@@ -77,6 +77,15 @@
     });
 
     el('btn-born').addEventListener('click', newLife);
+    el('btn-batch').addEventListener('click', function () {
+      UI.batchModal({
+        era: S.settings.era,
+        year: S.settings.era === 'past' ? (S.settings.year || Number(el('sel-year').value) || 2000) : null,
+        drawMode: S.settings.drawMode,
+        soft: S.settings.soft,
+        homeCountry: el('sel-home') && el('sel-home').value ? el('sel-home').value : null
+      });
+    });
     el('btn-countries').addEventListener('click', function () { UI.countriesModal(S.settings.drawMode); });
     el('btn-who').addEventListener('click', UI.whoModal);
     el('btn-clear-past').addEventListener('click', function () {

@@ -21,7 +21,7 @@ vm.createContext(sandbox);
 sandbox.matchMedia = () => ({ matches: false });
 for (const f of ['src/algo.js', 'src/countries.js', 'src/names.js', 'src/model.js', 'src/events.js', 'src/work.js',
   'src/pay.js', 'src/mechanics.js', 'src/variations.js', 'src/engine.js',
-  'src/purchases.js', 'src/invest.js', 'src/textures.js', 'src/models.js', 'src/portrait.js']) {
+  'src/purchases.js', 'src/invest.js', 'src/batch.js', 'src/textures.js', 'src/models.js', 'src/portrait.js']) {
   try {
     vm.runInContext(readFileSync(join(root, f), 'utf8'), sandbox, { filename: f });
   } catch (e) {
@@ -31,7 +31,7 @@ for (const f of ['src/algo.js', 'src/countries.js', 'src/names.js', 'src/model.j
 }
 const API = sandbox.window.IN8B;
 const { countries: C, model: M, events: E, engine: EN, names: NM, purchases: PU, portrait: PR, invest: IV,
-  algo: AL, pay: PAY, mechanics: MC, variations: VR } = API;
+  algo: AL, pay: PAY, mechanics: MC, variations: VR, batch: BT } = API;
 console.log('1 ИЗ 8 МИЛЛИАРДОВ — тест модели');
 
 /* ------------------------------- 1. данные ------------------------------ */
@@ -1303,6 +1303,92 @@ ok(picked.every((id) => PR.byId[id]), 'на каждый год жизни на�
 ok(new Set(picked).size >= 8, 'за жизнь портрет показал разных движений: ' + new Set(picked).size);
 view.tick(16);
 ok(typeof view.currentName() === 'string', 'портрет считает кадры без canvas и не падает');
+
+/* --------------------- 20. тысяча жизней (пачка) ------------------------ */
+console.log('\nПакетный прогон');
+
+ok(typeof BT.make === 'function' && typeof BT.summarize === 'function', 'модуль пачки на месте');
+
+// прогон идёт порциями и никогда не перескакивает заданное число жизней
+const run = BT.make({ count: 40, seed: 'тест-пачки' });
+let guardSteps = 0;
+let sawPartial = false;
+while (!run.finished && guardSteps++ < 400) {
+  run.step(0);                      /* нулевой бюджет — по одной жизни за шаг */
+  if (run.done > 0 && run.done < run.total) sawPartial = true;
+}
+ok(run.finished && run.done === 40, 'порционный прогон закончил ровно 40 жизней: ' + run.done);
+ok(sawPartial, 'прогон отдаёт управление между порциями');
+ok(run.errors === 0, 'ни одна жизнь не упала с ошибкой' + (run.lastError ? ': ' + run.lastError : ''));
+ok(run.rows.length === 40, 'записей о жизнях: ' + run.rows.length);
+
+const rowKeys = ['age', 'cause', 'code', 'sex', 'edu', 'kids', 'money', 'income'];
+ok(run.rows.every((r) => rowKeys.every((k) => r[k] !== undefined)), 'в записи есть все нужные поля');
+ok(run.rows.every((r) => r.age >= 0 && r.age <= 120 && Number.isFinite(r.age)), 'возраст в разумных границах');
+ok(run.rows.every((r) => C.byCode[r.code]), 'страна каждой записи есть в справочнике');
+ok(run.rows.every((r) => typeof r.cause === 'string' && r.cause.length), 'у каждой записи есть причина ухода');
+
+// один и тот же seed даёт тот же результат — прогон можно повторить
+const twin = BT.make({ count: 12, seed: 'повтор' }).all();
+const twin2 = BT.make({ count: 12, seed: 'повтор' }).all();
+ok(twin.meanAge === twin2.meanAge && twin.imr === twin2.imr, 'одно зерно — один и тот же результат');
+const other = BT.make({ count: 12, seed: 'другое' }).all();
+ok(other.meanAge !== twin.meanAge, 'другое зерно — другие жизни');
+
+// сводка считается по простым, проверяемым руками правилам
+const rows = [
+  { age: 0, cause: 'роды', code: 'in', sex: 'f', urban: false, edu: 0, job: null, kids: 0,
+    married: false, street: false, abroad: false, money: 0, income: 0, gdp: 2500 },
+  { age: 50, cause: 'инсульт', code: 'ru', sex: 'm', urban: true, edu: 3, job: 'driver', kids: 2,
+    married: true, street: true, abroad: false, money: 100, income: 600000, gdp: 13000 },
+  { age: 90, cause: 'старость', code: 'ru', sex: 'f', urban: true, edu: 5, job: 'teacher', kids: 2,
+    married: true, street: false, abroad: true, money: 300, income: 400000, gdp: 13000 },
+  { age: 4, cause: 'воспаление лёгких', code: 'ng', sex: 'm', urban: false, edu: 0, job: null, kids: 0,
+    married: false, street: false, abroad: false, money: 0, income: 0, gdp: 2000 }
+];
+const st = BT.summarize(rows);
+ok(st.count === 4, 'сводка видит все записи');
+ok(Math.abs(st.meanAge - 36) < 1e-9, 'средний возраст 36: ' + st.meanAge);
+ok(st.medianAge === 27, 'медианный возраст 27: ' + st.medianAge);
+ok(Math.abs(st.imr - 250) < 1e-9, 'младенческая смертность 250‰: ' + st.imr);
+ok(Math.abs(st.u5 - 500) < 1e-9, 'смертность до пяти 500‰: ' + st.u5);
+ok(Math.abs(st.to90 - 25) < 1e-9, 'до 90 дожили 25 %: ' + st.to90);
+ok(Math.abs(st.to60 - 25) < 1e-9, 'до 60 дожили 25 %: ' + st.to60);
+ok(Math.abs(st.kids - 1) < 1e-9, 'детей в среднем 1: ' + st.kids);
+ok(Math.abs(st.married - 50) < 1e-9, 'в браке половина: ' + st.married);
+ok(Math.abs(st.homeless - 25) < 1e-9, 'на улице четверть: ' + st.homeless);
+ok(Math.abs(st.noJob - 50) < 1e-9, 'без работы половина: ' + st.noJob);
+ok(st.income === 500000, 'медианный доход среди работавших: ' + st.income);
+ok(st.countries === 3, 'разных стран три: ' + st.countries);
+ok(st.byCountry[0].key === 'ru' && Math.abs(st.byCountry[0].share - 50) < 1e-9, 'самая частая страна — Россия');
+ok(st.byCountry[0].name === C.byCode.ru.name, 'страна в сводке названа по-человечески');
+ok(st.byCause.length === 4 && st.byCause.every((x) => x.n === 1), 'причины ухода разложены по одной');
+ok(st.byJob.length === 2, 'профессий в сводке две: ' + st.byJob.length);
+ok(st.oldest.age === 90 && st.youngest.age === 0, 'найдены самый долгий и самый короткий путь');
+
+// кривая дожития: начинается с единицы, не растёт и повторяет записи
+ok(st.survival.length === BT.maxAge + 1, 'кривая дожития на каждый год до ' + BT.maxAge + ': ' + st.survival.length);
+ok(st.survival[0] === 1, 'в нулевом возрасте живы все');
+ok(Math.abs(st.survival[1] - 0.75) < 1e-9, 'после первого года осталось 75 %: ' + st.survival[1]);
+ok(Math.abs(st.survival[50] - 0.5) < 1e-9, 'к 50 годам осталась половина: ' + st.survival[50]);
+ok(Math.abs(st.survival[90] - 0.25) < 1e-9, 'до 90 дошла четверть: ' + st.survival[90]);
+ok(st.survival.every((v, i) => i === 0 || v <= st.survival[i - 1] + 1e-12), 'кривая дожития только убывает');
+
+// пустая пачка не должна ронять интерфейс
+const empty = BT.summarize([]);
+ok(empty.count === 0 && empty.meanAge === 0 && Array.isArray(empty.survival), 'пустая сводка не падает');
+
+// ожидание берётся из демографии: мир в целом и отдельная страна
+const expWorld = BT.expected();
+ok(expWorld.le > 65 && expWorld.le < 78, 'ожидаемая ОПЖ мира: ' + expWorld.le.toFixed(1));
+ok(expWorld.imr > 15 && expWorld.imr < 45, 'ожидаемая младенческая смертность мира: ' + expWorld.imr.toFixed(1));
+const expJp = BT.expected('jp');
+ok(expJp.name === C.byCode.jp.name && expJp.le > 83, 'ожидание по Японии: ' + expJp.le.toFixed(1));
+
+// пачка по одной стране рождает только в ней
+const one = BT.make({ count: 15, seed: 'только-япония', countryCode: 'jp' });
+one.all();
+ok(one.rows.every((r) => r.code === 'jp'), 'пачка по стране рождает только в ней');
 
 if (failed) { console.error(`\n✗ Провалено проверок: ${failed}`); process.exit(1); }
 console.log('\n✓ Все проверки пройдены');
