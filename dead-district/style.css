@@ -335,3 +335,127 @@ html, body {
   color: var(--sh-accent);
   padding: 0 8px;
 }
+
+.f3-rating-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #0f2935;
+  border: 1px solid var(--sh-border);
+}
+
+.f3-rate-filters,
+.f3-rate-actions,
+.f3-reason-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.f3-rate-filters .dd-btn.active {
+  border-color: var(--sh-accent);
+  color: var(--sh-accent);
+  background: #402c56;
+}
+
+.f3-export-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  background: #0f2935;
+  border: 2px solid var(--sh-danger);
+}
+.f3-export-panel[hidden] { display: none; }
+
+.f3-export-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--sh-accent);
+}
+
+.f3-export-text {
+  width: 100%;
+  font-family: monospace;
+  font-size: 12px;
+  color: var(--sh-text);
+  background: #191d2b;
+  border: 1px solid var(--sh-border);
+  padding: 8px;
+  resize: vertical;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.f3-inspect-info {
+  flex: 1 1 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.f3-card.rated-good {
+  border-color: var(--sh-ok);
+  background: #20494b;
+}
+
+.f3-card.rated-bad {
+  border-color: var(--sh-danger);
+  background: #4f1b30;
+}
+
+.f3-card-preview {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.f3-rate-row {
+  width: 100%;
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+
+.f3-rate-btn {
+  flex: 1 1 0;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--sh-text);
+  background: #191d2b;
+  border: 1px solid var(--sh-border);
+  padding: 3px 6px;
+  cursor: pointer;
+}
+.f3-rate-btn:hover { border-color: var(--sh-accent); }
+.f3-rate-btn.active-good {
+  background: #41745a;
+  border-color: #95bf91;
+  color: #ffffff;
+}
+.f3-rate-btn.active-bad {
+  background: #71353f;
+  border-color: #d3564c;
+  color: #ffffff;
+}
+
+.f3-note-badge {
+  width: 100%;
+  font-size: 11px;
+  color: #c9cb9f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

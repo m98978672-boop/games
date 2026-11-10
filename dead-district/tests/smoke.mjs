@@ -72,4 +72,16 @@ assert.equal(DD.CatalogF3.getFilteredList().length, 181);
 DD.CatalogF3.setTab('all');
 assert.equal(DD.CatalogF3.getFilteredList().length, 10000);
 
+// Проверка оценки плохих/хороших текстур и экспорта отчёта в F3
+DD.CatalogF3.rateItem('D01_tile_grass', 'bad', 'Мало травинок');
+DD.CatalogF3.rateItem('TEX-0001', 'good', 'Отличный кирпич');
+assert.equal(DD.CatalogF3.getRatingStats().bad, 1);
+assert.equal(DD.CatalogF3.getRatingStats().good, 1);
+DD.CatalogF3.setRateFilter('bad');
+assert.equal(DD.CatalogF3.getFilteredList().length, 1);
+assert.ok(DD.CatalogF3.getBadReportText().includes('D01_tile_grass'));
+assert.ok(DD.CatalogF3.getBadReportText().includes('Мало травинок'));
+DD.CatalogF3.clearRatings();
+assert.equal(DD.CatalogF3.getRatingStats().total, 0);
+
 console.log('[dead-district smoke] ALL CHECKS PASSED');

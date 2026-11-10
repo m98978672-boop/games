@@ -119,12 +119,54 @@
       <button type="button" class="dd-btn" data-f3-tab="mesh">3D Меши (3 000)</button>
     </div>
 
+    <div class="f3-rating-bar">
+      <div class="f3-rate-filters">
+        <button type="button" class="dd-btn active" data-f3-rate="all">Все оценки</button>
+        <button type="button" class="dd-btn" data-f3-rate="bad" id="f3-filter-bad">👎 Плохие (0)</button>
+        <button type="button" class="dd-btn" data-f3-rate="good" id="f3-filter-good">👍 Хорошие (0)</button>
+        <button type="button" class="dd-btn" data-f3-rate="unrated">Без оценки</button>
+      </div>
+      <div class="f3-rate-actions">
+        <span id="f3-rating-stats" class="f3-subtitle">Оценено: 👍 0 · 👎 0</span>
+        <button type="button" class="dd-btn danger" id="f3-export-toggle">📋 Список плохих (0)</button>
+      </div>
+    </div>
+
+    <div id="f3-export-panel" class="f3-export-panel" hidden>
+      <div class="f3-export-head">
+        <strong>Отчёт плохих текстур/моделей для замены (скопируйте и отправьте мне в чат)</strong>
+        <div class="f3-controls">
+          <button type="button" class="dd-btn" id="f3-export-copy">Скопировать список</button>
+          <button type="button" class="dd-btn" id="f3-export-download">Скачать JSON</button>
+          <button type="button" class="dd-btn danger" id="f3-export-clear">Сбросить оценки</button>
+          <button type="button" class="dd-btn" id="f3-export-close">Скрыть</button>
+        </div>
+      </div>
+      <textarea id="f3-export-text" class="f3-export-text" rows="5" readonly aria-label="Список плохих текстур"></textarea>
+      <div id="f3-export-status" class="f3-subtitle"></div>
+    </div>
+
     <div id="f3-inspector" class="f3-inspector" hidden>
       <canvas id="f3-inspect-canvas" width="160" height="160" class="f3-inspect-canvas"></canvas>
       <div class="f3-inspect-info">
         <h3 id="f3-inspect-title">Предпросмотр</h3>
         <p id="f3-inspect-meta"></p>
-        <button id="f3-inspect-close" type="button" class="dd-btn">Скрыть предпросмотр</button>
+        <div class="f3-controls">
+          <button id="f3-inspect-good" type="button" class="dd-btn">👍 Хорошая</button>
+          <button id="f3-inspect-bad" type="button" class="dd-btn danger">👎 Плохая (на замену)</button>
+          <button id="f3-inspect-clear" type="button" class="dd-btn">Убрать оценку</button>
+          <button id="f3-inspect-close" type="button" class="dd-btn">Скрыть</button>
+        </div>
+        <div class="f3-reason-row">
+          <button type="button" class="dd-btn" data-f3-reason="Примитивная форма">Примитивная</button>
+          <button type="button" class="dd-btn" data-f3-reason="Плохие цвета">Плохие цвета</button>
+          <button type="button" class="dd-btn" data-f3-reason="Мало деталей">Мало деталей</button>
+          <button type="button" class="dd-btn" data-f3-reason="Перерисовать заново">Перерисовать</button>
+        </div>
+        <div class="f3-controls">
+          <input id="f3-inspect-note" class="f3-search" type="text" placeholder="Что именно исправить в этой текстуре/модели?" aria-label="Комментарий к оценке">
+          <button id="f3-inspect-save-note" type="button" class="dd-btn">Сохранить заметку</button>
+        </div>
       </div>
     </div>
 
