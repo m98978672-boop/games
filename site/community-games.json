@@ -66,6 +66,22 @@
       ]
     },
     {
+      "id": "dead-district",
+      "title": "DEAD DISTRICT",
+      "subtitle": "Пиксельная зомби-выживалка (480x270 Nearest · Godot 4 + Web)",
+      "description": "Выживание в процедурном городе 32x32 чанков: 6 зон, туман войны shadowcasting, 5 типов зомби (FSM 10 состояний, до 1200 в мире), выжившие NPC, 6 частей тела, крафт, стройка, ферма, транспорт и отключение света по реальным данным.",
+      "version": "v1.0",
+      "cover": "../dead-district/cover.svg",
+      "play": "../dead-district/index.html",
+      "readme": "../dead-district/README.md",
+      "features": [
+        "Пиксель-арт 480x270 Nearest в палитре Survival Horror 32",
+        "Чанки 32x32 (Voronoi, Simplex, L-System, BSP), Flow Field и Shadowcasting FOV",
+        "5 типов зомби (10 состояний FSM) + NPC на Utility AI с диалогами и бартером",
+        "6 частей тела, 5000 мл крови, крафт, стройка, фермерство, транспорт и Godot 4 проект"
+      ]
+    },
+    {
       "id": "shooter-2",
       "title": "СЕКТОР «ПЕПЕЛ»",
       "subtitle": "Шутер: модели по контурам, карты-полигоны, 1760 анимаций",

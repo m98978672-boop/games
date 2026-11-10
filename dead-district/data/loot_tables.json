@@ -1,0 +1,106 @@
+{
+  "zones": {
+    "residential": {
+      "rolls": [2, 4],
+      "entries": [
+        {"id": "canned_beans", "weight": 20, "rarity": "common"},
+        {"id": "bottled_water", "weight": 22, "rarity": "common"},
+        {"id": "bread", "weight": 12, "rarity": "common"},
+        {"id": "apple", "weight": 10, "rarity": "common"},
+        {"id": "kitchen_knife", "weight": 10, "rarity": "common"},
+        {"id": "cloth_rag", "weight": 18, "rarity": "common"},
+        {"id": "bandage", "weight": 10, "rarity": "uncommon"},
+        {"id": "painkillers", "weight": 8, "rarity": "uncommon"},
+        {"id": "winter_jacket", "weight": 6, "rarity": "uncommon"},
+        {"id": "school_bag", "weight": 6, "rarity": "uncommon"},
+        {"id": "novel", "weight": 9, "rarity": "common"},
+        {"id": "baseball_bat", "weight": 5, "rarity": "uncommon"},
+        {"id": "glock_17", "weight": 2, "rarity": "rare"},
+        {"id": "ammo_9mm", "weight": 4, "rarity": "rare"}
+      ]
+    },
+    "grocery": {
+      "rolls": [3, 6],
+      "entries": [
+        {"id": "canned_beans", "weight": 25, "rarity": "common"},
+        {"id": "canned_soup", "weight": 22, "rarity": "common"},
+        {"id": "bottled_water", "weight": 24, "rarity": "common"},
+        {"id": "soda", "weight": 18, "rarity": "common"},
+        {"id": "apple", "weight": 14, "rarity": "common"},
+        {"id": "tomato", "weight": 12, "rarity": "common"},
+        {"id": "potato", "weight": 14, "rarity": "common"},
+        {"id": "carrot", "weight": 12, "rarity": "common"},
+        {"id": "raw_beef", "weight": 10, "rarity": "uncommon"},
+        {"id": "beef_jerky", "weight": 8, "rarity": "uncommon"},
+        {"id": "chocolate_bar", "weight": 15, "rarity": "common"},
+        {"id": "can_opener", "weight": 6, "rarity": "uncommon"},
+        {"id": "seeds_tomato", "weight": 5, "rarity": "uncommon"},
+        {"id": "seeds_potato", "weight": 5, "rarity": "uncommon"}
+      ]
+    },
+    "hospital": {
+      "rolls": [3, 5],
+      "entries": [
+        {"id": "bandage", "weight": 24, "rarity": "common"},
+        {"id": "sterile_bandage", "weight": 18, "rarity": "uncommon"},
+        {"id": "antiseptic", "weight": 16, "rarity": "uncommon"},
+        {"id": "antibiotics", "weight": 10, "rarity": "rare"},
+        {"id": "painkillers", "weight": 18, "rarity": "common"},
+        {"id": "suture_kit", "weight": 9, "rarity": "rare"},
+        {"id": "splint", "weight": 12, "rarity": "uncommon"},
+        {"id": "thermometer", "weight": 7, "rarity": "uncommon"},
+        {"id": "book_medicine", "weight": 5, "rarity": "rare"},
+        {"id": "bottled_water", "weight": 12, "rarity": "common"}
+      ]
+    },
+    "police": {
+      "rolls": [3, 5],
+      "entries": [
+        {"id": "glock_17", "weight": 14, "rarity": "uncommon"},
+        {"id": "m1911", "weight": 8, "rarity": "rare"},
+        {"id": "mossberg_500", "weight": 8, "rarity": "rare"},
+        {"id": "ar15", "weight": 4, "rarity": "very_rare"},
+        {"id": "ammo_9mm", "weight": 22, "rarity": "common"},
+        {"id": "ammo_45acp", "weight": 12, "rarity": "uncommon"},
+        {"id": "ammo_12ga", "weight": 14, "rarity": "uncommon"},
+        {"id": "ammo_556", "weight": 6, "rarity": "rare"},
+        {"id": "bulletproof_vest", "weight": 8, "rarity": "rare"},
+        {"id": "helmet", "weight": 9, "rarity": "uncommon"},
+        {"id": "flashlight", "weight": 12, "rarity": "common"},
+        {"id": "boots", "weight": 10, "rarity": "uncommon"}
+      ]
+    },
+    "warehouse": {
+      "rolls": [3, 6],
+      "entries": [
+        {"id": "wood_plank", "weight": 24, "rarity": "common"},
+        {"id": "nails", "weight": 20, "rarity": "common"},
+        {"id": "scrap_metal", "weight": 16, "rarity": "common"},
+        {"id": "wire", "weight": 12, "rarity": "common"},
+        {"id": "duct_tape", "weight": 10, "rarity": "uncommon"},
+        {"id": "hammer", "weight": 12, "rarity": "common"},
+        {"id": "saw", "weight": 9, "rarity": "uncommon"},
+        {"id": "crowbar", "weight": 8, "rarity": "uncommon"},
+        {"id": "fire_axe", "weight": 5, "rarity": "rare"},
+        {"id": "wrench", "weight": 10, "rarity": "uncommon"},
+        {"id": "gas_can", "weight": 10, "rarity": "uncommon"},
+        {"id": "generator_part", "weight": 6, "rarity": "rare"},
+        {"id": "hiking_pack", "weight": 5, "rarity": "rare"},
+        {"id": "seeds_cabbage", "weight": 5, "rarity": "uncommon"},
+        {"id": "seeds_carrot", "weight": 5, "rarity": "uncommon"},
+        {"id": "seeds_radish", "weight": 5, "rarity": "uncommon"},
+        {"id": "seeds_strawberry", "weight": 4, "rarity": "rare"}
+      ]
+    },
+    "forest": {
+      "rolls": [1, 3],
+      "entries": [
+        {"id": "wood_plank", "weight": 28, "rarity": "common"},
+        {"id": "strawberry", "weight": 15, "rarity": "uncommon"},
+        {"id": "apple", "weight": 12, "rarity": "uncommon"},
+        {"id": "tainted_water", "weight": 14, "rarity": "common"},
+        {"id": "hunting_knife", "weight": 3, "rarity": "rare"}
+      ]
+    }
+  }
+}

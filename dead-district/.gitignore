@@ -1,0 +1,7 @@
+# Артефакты Godot 4 и отчёты локальных тестов
+.godot/
+*.translation
+export/
+qa_report.json
+asset_report.json
+source_report.json

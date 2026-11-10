@@ -1,0 +1,79 @@
+{
+  "types": {
+    "walker": {
+      "id": "walker",
+      "name": "Ходячий",
+      "hp": 100.0,
+      "speed": 2.35,
+      "damage": 16.0,
+      "vision_range": 14.0,
+      "vision_fov_deg": 110.0,
+      "hearing_sensitivity": 1.0,
+      "smell_range": 4.5,
+      "door_damage": 14.0,
+      "infect_chance": 0.12,
+      "bite_chance": 0.28,
+      "scale": 1.0
+    },
+    "runner": {
+      "id": "runner",
+      "name": "Быстрый",
+      "hp": 75.0,
+      "speed": 5.1,
+      "damage": 14.0,
+      "vision_range": 17.0,
+      "vision_fov_deg": 120.0,
+      "hearing_sensitivity": 1.25,
+      "smell_range": 5.0,
+      "door_damage": 16.0,
+      "infect_chance": 0.14,
+      "bite_chance": 0.25,
+      "scale": 0.96
+    },
+    "crawler": {
+      "id": "crawler",
+      "name": "Ползун",
+      "hp": 65.0,
+      "speed": 1.25,
+      "damage": 14.0,
+      "vision_range": 9.0,
+      "vision_fov_deg": 95.0,
+      "hearing_sensitivity": 0.85,
+      "smell_range": 3.5,
+      "door_damage": 10.0,
+      "infect_chance": 0.15,
+      "bite_chance": 0.35,
+      "scale": 0.8
+    },
+    "brute": {
+      "id": "brute",
+      "name": "Громила",
+      "hp": 260.0,
+      "speed": 1.95,
+      "damage": 30.0,
+      "vision_range": 13.0,
+      "vision_fov_deg": 100.0,
+      "hearing_sensitivity": 0.9,
+      "smell_range": 4.0,
+      "door_damage": 42.0,
+      "infect_chance": 0.1,
+      "bite_chance": 0.18,
+      "scale": 1.25
+    },
+    "infected": {
+      "id": "infected",
+      "name": "Больной (заразный)",
+      "hp": 90.0,
+      "speed": 2.6,
+      "damage": 15.0,
+      "vision_range": 14.0,
+      "vision_fov_deg": 110.0,
+      "hearing_sensitivity": 1.1,
+      "smell_range": 6.5,
+      "door_damage": 14.0,
+      "infect_chance": 0.45,
+      "bite_chance": 0.48,
+      "scale": 1.0
+    }
+  }
+}

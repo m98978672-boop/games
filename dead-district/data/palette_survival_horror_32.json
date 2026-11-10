@@ -1,0 +1,16 @@
+{
+  "name": "Survival Horror 32 Palette",
+  "author": "ShatteredReality",
+  "source": "https://lospec.com/palette-list/survival-horror-32",
+  "license": "Public Use / Lospec Palette List (colors cannot be copyrighted; palette metadata attributed)",
+  "max_colors": 32,
+  "colors": [
+    "#cea19d", "#9e6363", "#71353f", "#4f1b30", "#380e27",
+    "#c9cb9f", "#a99a73", "#805947", "#623333", "#471f1f",
+    "#95bf91", "#679a73", "#41745a", "#20494b", "#0f2935",
+    "#96a5bc", "#6f779e", "#514a78", "#402c56", "#351740",
+    "#b29cc3", "#a278ad", "#8b5084", "#693054", "#5a2033",
+    "#b7c0c7", "#8c929e", "#5c6174", "#403e52", "#2d2738",
+    "#ffffff", "#000000"
+  ]
+}

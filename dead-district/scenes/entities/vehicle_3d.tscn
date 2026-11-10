@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://ddentveh3d001"]
+
+[ext_resource type="PackedScene" path="res://assets/models/veh_sedan.glb" id="1_glb"]
+
+[node name="Vehicle3D" type="Node3D"]
+
+[node name="Mesh" parent="." instance=ExtResource("1_glb")]
