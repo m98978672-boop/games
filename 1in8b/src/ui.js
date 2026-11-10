@@ -1397,6 +1397,157 @@
     return wrap;
   }
 
+  /* ----------------------- тысяча жизней ------------------------------
+     Одна жизнь — судьба, тысяча — статистика. Прогон идёт порциями по
+     кадрам, чтобы страница не застывала, а в конце показывает, похож
+     ли получившийся мир на настоящий. */
+  function batchModal(settings) {
+    var B = window.IN8B.batch;
+    if (!B) return null;
+    var wrap = modal(
+      '<header class="modal-head"><h3>Тысяча жизней</h3>' +
+      '<button class="icon-btn x" data-close aria-label="Закрыть">✕</button></header>' +
+      '<p class="hint">Игра проживёт целую пачку жизней тем же движком, только молча и без пауз, ' +
+      'а потом покажет, что из этого вышло: сколько прожили, где родились, от чего ушли. ' +
+      'Это и есть ответ на вопрос «а мне просто повезло или нет».</p>' +
+      '<div class="batch-setup">' +
+      '  <div class="seg" id="seg-batch">' +
+      '    <button data-v="100">100</button><button data-v="300" class="on">300</button>' +
+      '    <button data-v="1000">1000</button>' +
+      '  </div>' +
+      '  <label class="chk"><input type="checkbox" id="batch-home"> только моя страна</label>' +
+      '  <button class="btn btn-primary" id="batch-go">Прожить</button>' +
+      '</div>' +
+      '<div class="batch-prog" hidden><div class="bar"><i></i></div><span class="t"></span></div>' +
+      '<div class="batch-out" hidden></div>' +
+      '<footer class="modal-foot"><span class="hint">Считается прямо здесь, без интернета: сотня — пара секунд, ' +
+      'тысяча — около полуминуты.</span><button class="btn" data-close>Закрыть</button></footer>',
+      { cls: 'batch-modal' });
+
+    var count = 300, runner = null, raf = 0, stopped = false;
+    var prog = wrap.querySelector('.batch-prog');
+    var bar = wrap.querySelector('.batch-prog .bar i');
+    var tip = wrap.querySelector('.batch-prog .t');
+    var out = wrap.querySelector('.batch-out');
+    var go = wrap.querySelector('#batch-go');
+    var home = wrap.querySelector('#batch-home');
+    var segBox = wrap.querySelector('#seg-batch');
+
+    segBox.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        segBox.querySelectorAll('button').forEach(function (x) { x.classList.remove('on'); });
+        b.classList.add('on');
+        count = Number(b.dataset.v);
+      });
+    });
+
+    var homeCode = (settings && settings.homeCountry) || null;
+    if (!homeCode) home.parentNode.hidden = true;
+
+    wrap.onClosed = function () { stopped = true; if (raf) cancelAnimationFrame(raf); };
+
+    go.addEventListener('click', function () {
+      if (runner && !runner.finished) return;
+      out.hidden = true; out.innerHTML = '';
+      prog.hidden = false;
+      go.disabled = true;
+      segBox.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
+      runner = B.make({
+        count: count,
+        countryCode: home.checked ? homeCode : null,
+        settings: settings || {},
+        seed: 'пачка-' + Date.now()
+      });
+      var t0 = Date.now();
+      function tick() {
+        if (stopped) return;
+        runner.step(14);                      /* кусок работы на один кадр */
+        var p = runner.done / runner.total;
+        bar.style.width = (p * 100).toFixed(1) + '%';
+        var spent = (Date.now() - t0) / 1000;
+        var left = p > 0.02 ? Math.max(0, spent / p - spent) : 0;
+        tip.textContent = runner.done + ' из ' + runner.total +
+          (runner.finished ? ' — готово' : ' · осталось ~' + Math.ceil(left) + ' с');
+        if (!runner.finished) { raf = requestAnimationFrame(tick); return; }
+        go.disabled = false;
+        segBox.querySelectorAll('button').forEach(function (b) { b.disabled = false; });
+        showBatch(out, runner.stats(), home.checked ? homeCode : null, spent);
+      }
+      raf = requestAnimationFrame(tick);
+    });
+
+    bindClose(wrap);
+    return wrap;
+  }
+
+  /* 1 год, 2 года, 5 лет — без этого статистика звучит коряво */
+  function years(n) {
+    var t = Math.abs(n) % 100, o = t % 10;
+    if (t > 10 && t < 20) return n + ' лет';
+    if (o === 1) return n + ' год';
+    if (o >= 2 && o <= 4) return n + ' года';
+    return n + ' лет';
+  }
+
+  /* какая доля пачки добралась до ступени образования from и выше */
+  function share(edu, from) {
+    var all = 0, got = 0;
+    for (var i = 0; i < edu.length; i++) { all += edu[i]; if (i >= from) got += edu[i]; }
+    return all ? (got / all * 100).toFixed(0) : '0';
+  }
+
+  function showBatch(box, st, countryCode, secs) {
+    var B = window.IN8B.batch, CH = window.IN8B.charts;
+    var exp = B.expected(countryCode);
+    function dev(got, want, unit) {
+      var d = got - want;
+      var sign = d >= 0 ? '+' : '−';
+      return '<small class="' + (Math.abs(d) / Math.max(want, 1) < 0.12 ? 'ok' : 'off') + '">' +
+        'в жизни ' + want.toFixed(1) + (unit || '') + ' · ' + sign + Math.abs(d).toFixed(1) + '</small>';
+    }
+    function card(t, v, note) {
+      return '<div class="bcard"><b>' + v + '</b><span>' + t + '</span>' + (note || '') + '</div>';
+    }
+    box.hidden = false;
+    box.innerHTML =
+      '<div class="bcards">' +
+      card('средний возраст', st.meanAge.toFixed(1), dev(st.meanAge, exp.le)) +
+      card('медиана', String(st.medianAge), '<small>половина ушла раньше</small>') +
+      card('до года не дожили', st.imr.toFixed(1) + '‰', dev(st.imr, exp.imr, '‰')) +
+      card('до пяти не дожили', st.u5.toFixed(1) + '‰', dev(st.u5, exp.u5, '‰')) +
+      card('дожили до 60', st.to60.toFixed(1) + '%', '') +
+      card('дожили до 90', st.to90.toFixed(1) + '%', '') +
+      '</div>' +
+      '<h4>Кривая дожития <small>' + st.count + ' жизней, ' + exp.name + '</small></h4>' +
+      '<canvas class="bcurve" width="460" height="190"></canvas>' +
+      '<div class="bcols">' +
+      '<div><h4>Где родились <small>стран: ' + st.countries + '</small></h4><div class="blist" data-k="c"></div></div>' +
+      '<div><h4>От чего ушли</h4><div class="blist" data-k="d"></div></div>' +
+      '<div><h4>Кем работали</h4><div class="blist" data-k="j"></div></div>' +
+      '</div>' +
+      '<p class="hint batch-tail">Среднюю школу окончили ' + share(st.edu, 3) +
+      ' % · получили высшее ' + share(st.edu, 5) +
+      ' % · в браке побывали ' + st.married.toFixed(0) +
+      ' % · детей в среднем ' + st.kids.toFixed(2) +
+      ' · на улице оказывались ' + st.homeless.toFixed(1) +
+      ' % · так и не нашли работу ' + st.noJob.toFixed(0) +
+      ' % · дольше всех прожил ' + years(st.oldest ? st.oldest.age : 0) +
+      (secs ? ' · посчитано за ' + secs.toFixed(0) + ' с' : '') + '</p>';
+
+    var cv = box.querySelector('.bcurve');
+    var table = null;
+    if (CH && window.IN8B.model) {
+      var c = countryCode && C.byCode[countryCode] ? C.byCode[countryCode] : null;
+      table = c
+        ? window.IN8B.model.lifeTable((c.leM + c.leF) / 2, c.u5mr, c.imr)
+        : window.IN8B.model.lifeTable(exp.le, exp.u5, exp.imr);
+      CH.batchCurve(cv, st.survival, table);
+      CH.barList(box.querySelector('[data-k="c"]'), st.byCountry);
+      CH.barList(box.querySelector('[data-k="d"]'), st.byCause, { color: 'rgba(224,122,95,0.75)' });
+      CH.barList(box.querySelector('[data-k="j"]'), st.byJob, { color: 'rgba(120,180,160,0.75)' });
+    }
+  }
+
   window.IN8B = window.IN8B || {};
   window.IN8B.ui = {
     el: el, esc: esc, modal: modal, close: close, closeTop: closeTop, toast: toast, bindClose: bindClose,
@@ -1409,6 +1560,6 @@
     endScreen: endScreen, downloadShare: downloadShare, stageName: stageName, presets: BUDGET_PRESETS,
     spendModal: spendModal, animsModal: animsModal, thingsModal: thingsModal, renderSpendNote: renderSpendNote,
     investModal: investModal, renderInvestNote: renderInvestNote,
-    pausesModal: pausesModal, moreModal: moreModal
+    pausesModal: pausesModal, moreModal: moreModal, batchModal: batchModal
   };
 })();

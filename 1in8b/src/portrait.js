@@ -1204,15 +1204,43 @@
 
   /* ------------------- текстуры и вещи в сцене ----------------------- */
 
+  /* Текстура — это полтысячи мелких прямоугольников, а сцена
+     перерисовывается шестьдесят раз в секунду. Поэтому каждый узор
+     рисуется один раз в маленькую картинку и дальше кладётся на место
+     целиком. Кэш маленький: ключ — узор, размер, подкраска, затемнение. */
+  var texCache = {}, texCacheN = 0;
+
+  function texPaint(g, t, x, y, w, h, o) {
+    w = Math.max(1, Math.round(w)); h = Math.max(1, Math.round(h));
+    if (typeof document === 'undefined' || !document.createElement) {
+      TX.draw(t.id, g, x, y, w, h, o);
+      return;
+    }
+    var key = t.id + '|' + w + '×' + h + '|' + (o.tint || '') + '|' + o.tintK + '|' +
+      (o.dark || 0) + '|' + (o.seed || 0);
+    var c = texCache[key];
+    if (!c) {
+      if (texCacheN > 90) { texCache = {}; texCacheN = 0; }   /* не копим без конца */
+      c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      var g2 = c.getContext && c.getContext('2d');
+      if (!g2) { TX.draw(t.id, g, x, y, w, h, o); return; }
+      g2.imageSmoothingEnabled = false;
+      TX.draw(t.id, g2, 0, 0, w, h, o);
+      texCache[key] = c; texCacheN++;
+    }
+    g.drawImage(c, Math.round(x), Math.round(y));
+  }
+
   /* Узор выбирается раз и навсегда: одна жизнь всегда видит одни и те
      же стены своей комнаты, но у школы, завода и улицы они свои. */
   function paintTex(g, V, group, x, y, w, h, tint, k, extra) {
-    if (!TX) return false;
+    if (!TX || w <= 0 || h <= 0) return false;
     var key = (V.life ? V.life.seed : 'нет') + '/' + V.scene + '/' + (extra || group);
     var t = TX.pick(group, TX.hashStr(key));
     if (!t) return false;
-    TX.draw(t.id, g, x, y, w, h, {
-      seed: TX.hashStr(key + 'узор'),
+    texPaint(g, t, x, y, w, h, {
+      seed: TX.hashStr(key + 'узор') % 100000,
       tint: tint, tintK: k === undefined ? 0.5 : k,
       dark: V.sky === 'night' ? 0.26 : 0
     });
@@ -1315,7 +1343,7 @@
     if (TX) {                                   /* панели, штукатурка, стекло */
       var face = TX.byGroup('фасад');
       var f = face[Math.abs(Math.round(seed)) % face.length];
-      TX.draw(f.id, g, x, y, w, h, { seed: seed, tint: body, tintK: 0.6, dark: 0.08 });
+      texPaint(g, f, x, y, w, h, { seed: Math.abs(Math.round(seed)) % 1000, tint: body, tintK: 0.6, dark: 0.08 });
     }
     px(g, x + w - 2, y, 2, h, dark);
     px(g, x, y, w, 1, '#ffffff10');
@@ -1963,7 +1991,7 @@
       px(g, hx - Math.round(bodyW / 2), bTop, bodyW, bodyH, cloth);
       if (TX && st.hero && bodyW > 5) {          /* ткань: клетка, вязка, джинса */
         var fab = TX.pick('ткань', hashStr((V.life ? V.life.seed : '') + 'ткань'));
-        TX.draw(fab.id, g, hx - Math.round(bodyW / 2), bTop, bodyW, bodyH - 1,
+        texPaint(g, fab, hx - Math.round(bodyW / 2), bTop, bodyW, bodyH - 1,
           { seed: 7, tint: cloth, tintK: 0.78, dark: V.sky === 'night' ? 0.2 : 0 });
       }
       px(g, hx - Math.round(bodyW / 2), bTop, bodyW, 1, shade(cloth, 0.14));
