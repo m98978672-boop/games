@@ -77,9 +77,11 @@ for (const gf of gdFiles) {
     if (seenFuncs.has(fm[1])) errors.push(`Дублирование функции ${fm[1]} в ${rel}`);
     seenFuncs.add(fm[1]);
   }
-  // Проверка всех строковых res:// путей (кроме динамических шаблонов)
+  // Проверка всех строковых res:// путей (кроме динамических шаблонов и сгенерированных отчётов)
+  const OPTIONAL_GENERATED = new Set(["asset_report.json", "source_report.json", "qa_report.json"]);
   for (const rm of src.matchAll(/"(res:\/\/[^"{}%\s]+)"/g)) {
     const rp = rm[1].replace("res://", "");
+    if (OPTIONAL_GENERATED.has(rp)) continue;
     if (!fs.existsSync(path.join(ROOT, rp))) {
       errors.push(`Не найден ресурс ${rm[1]} в ${rel}`);
     }
