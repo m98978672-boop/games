@@ -20,6 +20,7 @@ signal action_requested(action_id: String, payload: Dictionary)
 
 var current_modal: String = ""
 var _log_lines: Array[String] = []
+var _catalog_ratings: Dictionary = {}
 
 
 func _ready() -> void:
@@ -144,11 +145,27 @@ func toggle_modal(kind: String, inv: InventorySystem, health: PlayerHealth, near
 				if box != null: box.add_child(btn)
 		"catalog":
 			if title != null: title.text = "КАТАЛОГ 10 000 ТЕКСТУР, МОДЕЛЕК И 3D МЕШЕЙ (F3)"
-			if body != null: body.text = "Всего в библиотеке: %d (4000 текстур · 3000 моделек · 3000 3D мешей)." % AssetPack10K.TOTAL_COUNT
+			var bad_codes: Array[String] = []
+			for k in _catalog_ratings.keys():
+				if String(_catalog_ratings[k]) == "bad":
+					bad_codes.append(String(k))
+			if body != null:
+				body.text = "Всего: %d | Нажмите на карточку для оценки 👎 на замену (%d шт.: %s)" % [
+					AssetPack10K.TOTAL_COUNT, bad_codes.size(), ", ".join(bad_codes)
+				]
 			for item in AssetPack10K.get_page(0, 12, "all"):
+				var code := String(item["code"])
+				var mark := String(_catalog_ratings.get(code, ""))
+				var tag := " [👎 ПЛОХАЯ]" if mark == "bad" else (" [👍 ОК]" if mark == "good" else "")
 				var btn := Button.new()
-				btn.text = "[%s] %s (%s · %s)" % [String(item["code"]), String(item["name"]), String(item["family"]), String(item["specs"])]
+				btn.text = "[%s] %s (%s · %s)%s" % [code, String(item["name"]), String(item["family"]), String(item["specs"]), tag]
 				btn.icon = AssetPack10K.build_texture(int(item["index"]))
+				btn.pressed.connect(func():
+					var cur := String(_catalog_ratings.get(code, ""))
+					_catalog_ratings[code] = "bad" if cur == "" else ("good" if cur == "bad" else "")
+					current_modal = ""
+					toggle_modal("catalog", inv, health, near_wb, near_heat)
+				)
 				if box != null: box.add_child(btn)
 
 
