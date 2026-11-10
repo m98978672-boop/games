@@ -29,6 +29,7 @@
         death: $('scr-death'),
         win: $('scr-win'),
         lab: $('scr-lab'),
+        content: $('scr-content'),
         settings: $('scr-settings')
       };
       this.hud = $('hud');
@@ -39,6 +40,14 @@
       this.damageTimer = 0;
       this.killFeedItems = [];
       this.damageNumbers = [];
+    }
+
+    /* Лаборатория контента: 1000 моделей, 250 звуков, 250 механик, поле мешей.
+       Ленивая: объект создаётся при первом открытии, DOM строится внутри. */
+    openContent() {
+      if (!SH2.contentlab) return;
+      if (!this.contentLab) this.contentLab = new SH2.contentlab.ContentLab(this.game, this);
+      this.contentLab.open();
     }
 
     /* ------------------------------- утилиты ------------------------------ */
@@ -105,6 +114,7 @@
       on('btn-start', () => this.openBriefing(0));
       on('btn-continue', () => this.openBriefing(this.game.missionIndex));
       on('btn-lab', () => this.openLab());
+      on('btn-content', () => this.openContent());
       on('btn-settings', () => { this.show('settings'); this.syncSettings(); });
       on('btn-settings-back', () => this.show(this.game && this.game.level ? 'pause' : 'menu'));
       on('btn-brief-go', () => this.startFromBrief());

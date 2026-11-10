@@ -23,6 +23,21 @@
     low:    { label: 'Экономное', shadows: false, shadowMap: 1024, dust: 0.35, maxParticles: 0.5, lodBias: 1.8, msaa: false, scale: 0.9 }
   };
 
+  /* --------------------- бюджеты кадра для поля мешей ---------------------
+     Поле из 100 000 мешей не должно «съесть» кадр. Бюджеты ниже — это не
+     пожелания, а числа, которые проверяет бот (коды 937–939): если корзин
+     стало больше 40 или треугольников больше 2.6 млн, значит кто-то собрал
+     поле «в лоб» и телефон умрёт. */
+  const BUDGETS = {
+    fieldBuckets: 40,       // корзин-комплектов (по одной на семейство × LOD)
+    fieldDrawCalls: 200,    // корзины + отдельные меши ближнего кольца
+    fieldTriangles: 2600000,
+    meshField: 100000,
+    meshTemplates: 1000,
+    sounds: 250,
+    mechanics: 250
+  };
+
   class Perf {
     constructor() {
       this.frames = 0;
@@ -103,5 +118,5 @@
     renderer.setPixelRatio(Math.min(root.devicePixelRatio || 1, 2) * scale);
   }
 
-  SH2.perf = { Perf, PRESETS };
+  SH2.perf = { Perf, PRESETS, BUDGETS };
 })(typeof window !== 'undefined' ? window : globalThis);

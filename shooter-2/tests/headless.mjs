@@ -203,8 +203,8 @@ assert.equal(typeof sandbox.THREE.WebGLRenderer, 'function', 'рендерер �
 assert.equal(typeof sandbox.THREE.Scene, 'function', 'остальной three.js на месте');
 
 /* ------------------------- загрузка модулей игры ----------------------- */
-const modules = ['bugcodes', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
-  'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui'];
+const modules = ['bugcodes', 'meshpack', 'meshfield', 'soundbank', 'mechanics', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
+  'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui', 'contentlab'];
 for (const m of modules) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: `src/${m}.js` });
 }
@@ -520,6 +520,123 @@ assert.equal(game.state, 'dead', 'состояние смерти');
 game.retry();
 assert.equal(game.state, 'playing', 'retry возвращает в игру');
 assert.equal(game.player.alive, true, 'игрок жив после retry');
+
+/* ---------------------- новые пакеты контента ------------------------- */
+/* 1. 1000 моделек: каждый шаблон строится, у каждого есть меши и радиус. */
+{
+  const pack = SH2.meshpack;
+  assert.equal(pack.COUNT, 1000, 'в пакете 1000 моделей');
+  assert.equal(pack.FAMILIES.length, 10, '10 семейств');
+  let meshes = 0, tris = 0, empty = 0;
+  for (let i = 0; i < pack.COUNT; i++) {
+    const r = pack.probe(i);
+    meshes += r.meshes; tris += r.tris;
+    if (!r.meshes || r.tris < 4) empty++;
+  }
+  assert.equal(empty, 0, 'нет пустых моделей');
+  assert.ok(meshes >= 7000, `подмешей в пакете: ${meshes}`);
+  assert.ok(tris > 250000, `треугольников в пакете: ${Math.round(tris)}`);
+  /* разные индексы — разные модели (а не одна перекрашенная) */
+  const a = pack.describe(0), b = pack.describe(501);
+  assert.notEqual(a.id, b.id, 'id разные');
+  const ga = pack.build(0), gb = pack.build(501);
+  /* сравниваем суммарный объём деталей: у разных семейств он не совпадает */
+  const volume = (g) => { let v = 0; g.traverse((o) => { if (o.isMesh) { o.geometry.computeBoundingBox(); const b = o.geometry.boundingBox; v += (b.max.x - b.min.x) * (b.max.y - b.min.y) * (b.max.z - b.min.z); } }); return v; };
+  const va = volume(ga), vb = volume(gb);
+  assert.ok(Math.abs(va - vb) > 0.02, `модели 0 и 501 отличаются объёмом: ${va.toFixed(2)} против ${vb.toFixed(2)}`);
+}
+
+/* 2. 100 000 мешей в поле: объекты, матрицы, попадания, LOD. */
+{
+  const field = game.meshfield;
+  assert.ok(field, 'поле мешей построено');
+  const st = field.stats();
+  assert.equal(st.requested, 100000, 'запрошено 100 000');
+  assert.equal(st.meshes, 100000, `мешей в поле: ${st.meshes}`);
+  assert.ok(st.individual >= 100000, `всего объектов: ${st.individual}`);
+  assert.ok(st.drawCalls <= 130, `draw call поля: ${st.drawCalls}`);
+  assert.ok(st.triangles < 2600000, `треугольников поля: ${st.triangles}`);
+  assert.ok(st.realMeshes > 0, 'есть отдельные (не инстанс) меши');
+  /* меш — не счётчик: у него есть матрица, его можно спрятать */
+  const m = field.matrixAt(99999);
+  assert.ok(m && isFinite(m.elements[12]) && isFinite(m.elements[14]), 'матрица 100000-го меша');
+  assert.ok(Math.hypot(m.elements[12], m.elements[14]) > 30, 'поле стоит вне игровой зоны');
+  assert.equal(field.hide(4242), true, 'меш найден и скрыт');
+  assert.equal(field.hide(200000), false, 'несуществующий меш не скрывается');
+  assert.ok(field.forEachInRadius(0, 0, 120) > 1000, 'в радиусе 120 м тысячи мешей');
+  const counts = Object.values(st.byFamily);
+  assert.equal(counts.length, 10, 'все 10 семейств в поле');
+  assert.ok(counts.every((c) => c === 10000), 'по 10 000 мешей на семейство');
+}
+
+/* 3. 250 звуков: каждый рендерится в волну и не тишина. */
+{
+  const SB = SH2.soundbank;
+  assert.equal(SB.COUNT, 250, '250 звуков');
+  assert.equal(SB.FAMILIES.length, 25, '25 семейств звуков');
+  let silent = 0, clipped = 0, totalMs = 0;
+  const peaks = [];
+  for (let i = 0; i < SB.COUNT; i++) {
+    const pcm = SB.render(i, 16000);
+    const an = SB.analyse(pcm, 16000);
+    totalMs += an.ms;
+    peaks.push(an.peak);
+    if (an.rms < 0.008) silent++;
+    if (an.peak > 1.001) clipped++;
+  }
+  assert.equal(silent, 0, 'нет беззвучных образцов');
+  assert.equal(clipped, 0, 'нет клиппинга');
+  assert.ok(totalMs / SB.COUNT > 120, 'средняя длина больше 120 мс');
+  /* через AudioEngine тот же звук играется как обычный выстрел */
+  game.audio.init();
+  const before = SH2.soundbank.SOUNDS.length;
+  const sb = new SB.SoundBank(game.audio);
+  const played = sb.play(0, 0, 0, 0.5);
+  assert.ok(sb.lastPlayed && sb.lastPlayed.id === SH2.soundbank.describe(0).id, 'звук отмечен как проигранный');
+  if (game.audio.ctx) assert.ok(played, 'источник создан в WebAudio');
+  assert.equal(before, 250, 'список звуков полный');
+}
+
+/* 4. 250 механик: включаются, меняют числа, срабатывают на события. */
+{
+  const M = SH2.mechanics;
+  assert.equal(M.COUNT, 250, '250 механик');
+  assert.equal(M.FAMILIES.length, 25, '25 семейств механик');
+  assert.equal(M.list().length, 250, 'реестр полный');
+  const neutral = M.registry.mods().damage;
+  M.enable('damage-10', true);
+  assert.ok(M.registry.mods().damage > neutral, 'урон вырос от механики');
+  M.enable('damage-10', false);
+  assert.equal(M.registry.mods().damage, neutral, 'после выключения урон вернулся');
+  /* событие «убийство» проходит через включённые правила */
+  const before = M.stats().emits;
+  M.emit(game, 'kill', { agent: game.enemies[0] || null });
+  assert.ok(M.stats().emits > before, 'события механик доходят до реестра');
+  /* модификаторы уже применены к игре: здоровье и броня не нулевые */
+  assert.ok(game.mods && game.mods.damage >= 1, 'у игры есть модификаторы');
+  assert.ok(game.player.maxHp >= 100, 'здоровье с механиками применено');
+}
+
+/* 5. Лаборатория контента: все четыре вкладки открываются и наполняются. */
+{
+  const lab = new SH2.contentlab.ContentLab(game, ui);
+  for (const tab of ['models', 'sounds', 'mechanics', 'field']) {
+    lab.tab = tab;
+    assert.doesNotThrow(() => lab.render(), `вкладка ${tab} рисуется`);
+  }
+  assert.ok(lab.built, 'каркас лаборатории построен');
+  assert.ok(lab.body.children.length > 0, 'вкладка поля наполнена');
+  /* механику можно включить из лаборатории — числа игры меняются */
+  const dmgBefore = game.mods.damage;
+  SH2.mechanics.enable('damage-10', true);
+  lab.applyNow();
+  assert.ok(game.mods.damage > dmgBefore, 'включённая в лаборатории механика меняет игру');
+  SH2.mechanics.enable('damage-10', false);
+  lab.applyNow();
+  /* звук из лаборатории доходит до банка, а не «в пустоту» */
+  game.soundbank.play(7, 0, 0, 0.4);
+  assert.equal(game.soundbank.lastPlayed.index, 7, 'лаборатория играет конкретный звук');
+}
 
 /* --------------------------- другие миссии ---------------------------- */
 for (let i = 1; i < SH2.data.MISSIONS.length; i++) {

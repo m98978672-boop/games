@@ -165,8 +165,8 @@ for (const key of Object.getOwnPropertyNames(T)) THREE_PROXY[key] = key === 'Web
 sandbox.THREE = THREE_PROXY;
 
 /* ============================ загрузка модулей =========================== */
-const MODULES = ['bugcodes', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik',
-  'ragdoll', 'world', 'ai', 'agent', 'fx', 'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui'];
+const MODULES = ['bugcodes', 'meshpack', 'meshfield', 'soundbank', 'mechanics', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik',
+  'ragdoll', 'world', 'ai', 'agent', 'fx', 'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui', 'contentlab'];
 const bootErrors = [];
 for (const m of MODULES) {
   try { vm.runInContext(read(`src/${m}.js`), sandbox, { filename: `src/${m}.js` }); }
@@ -2178,6 +2178,168 @@ det(935, () => {
   return { bad, missionsWithOptional: checked };
 });
 
+/* ============ 936–943: новый контент (меши / звуки / механики) ========= */
+det(936, () => {
+  const P = SH2.meshpack;
+  if (!P || P.COUNT !== 1000) return 'пакет моделей не загружен';
+  const bad = [];
+  /* память не должна расти: все 1000 моделей прогоняются и освобождаются */
+  const before = game.renderer && game.renderer.info ? game.renderer.info.memory.geometries : 0;
+  for (let i = 0; i < P.COUNT; i++) {
+    const r = P.probe(i);
+    if (!r.meshes) bad.push(i + ': нет мешей');
+    else if (r.tris < 4) bad.push(i + ': ' + r.tris + ' треугольников');
+    else if (!(r.radius > 0)) bad.push(i + ': радиус ' + r.radius);
+  }
+  const after = game.renderer && game.renderer.info ? game.renderer.info.memory.geometries : 0;
+  if (before && after > before + 4) return `после обхода 1000 моделей геометрий ${before} → ${after} (течёт память)`;
+  return bad.length ? bad.slice(0, 3).join(' | ') : null;
+});
+
+det(937, () => {
+  /* смотрим ПЕРВЫЙ построенный экземпляр: другие детекторы могли пересобрать
+     поле, и проверка «сколько просили» должна относиться к игре, а не к ним */
+  const f = (game._fieldBuilt || game.meshfield);
+  if (!f) return 'поле мешей не построено при старте миссии';
+  const st = f.stats();
+  /* контракт модуля: DEFAULTS.count обязан быть 100 000, а поле — столько и
+     строить. Проверяем оба, иначе правка одной цифры в игре проходила молча. */
+  const want = (game.settings && game.settings.meshfield) ||
+    (SH2.meshfield.DEFAULTS ? SH2.meshfield.DEFAULTS.count : 100000);
+  if (want !== 100000) return 'поле настраивается на ' + want + ' вместо 100 000';
+  if (st.requested !== want) return 'поле собрано на ' + st.requested + ' вместо ' + want;
+  /* И поле ИГРЫ тоже: детектор обязан падать, если игру настроили на меньшее. */
+  if (game.meshfield && game.meshfield !== f) {
+    const live = game.meshfield.stats();
+    if (live.requested !== 100000) return 'поле игры собрано на ' + live.requested;
+  }
+  if (st.meshes !== 100000) return 'мешей в поле ' + st.meshes + ' вместо 100 000';
+  if (st.individual < 100000) return 'объектов меньше, чем мешей: ' + st.individual;
+  return null;
+});
+
+det(938, () => {
+  const f = game.meshfield;
+  if (!f) return 'нет поля мешей';
+  const st = f.stats();
+  const B = (SH2.perf && SH2.perf.BUDGETS) || {};
+  const maxBuckets = B.fieldBuckets || 40;
+  const maxField = B.fieldDrawCalls || 200;
+  const maxTris = B.fieldTriangles || 2600000;
+  if (!(st.fieldDrawCalls > 0)) return 'поле не сообщает, сколько стоит в кадре';
+  if (st.drawCalls > maxBuckets) return 'корзин поля ' + st.drawCalls + ' > ' + maxBuckets;
+  if (st.fieldDrawCalls > maxField) return 'поле стоит ' + st.fieldDrawCalls + ' draw call > ' + maxField;
+  if (st.triangles > maxTris) return 'треугольников в поле ' + st.triangles + ' > ' + maxTris;
+  if (!(st.lodTris && st.lodTris.length === 3)) return 'нет разбиения по LOD';
+  if (!(st.lodTris[0] > 0)) return 'ближний пояс LOD пуст';
+  return null;
+});
+
+det(939, () => {
+  const f = game.meshfield;
+  if (!f) return 'нет поля мешей';
+  const bad = [];
+  [0, 1, 12345, 54321, 99999].forEach((i) => {
+    const m = f.matrixAt(i);
+    if (!m) return bad.push(i + ': нет матрицы');
+    if (!isFinite(m.elements[12]) || !isFinite(m.elements[14])) bad.push(i + ': матрица не число');
+    if (Math.hypot(m.elements[12], m.elements[14]) < 20) bad.push(i + ': меш внутри игровой зоны');
+  });
+  if (f.matrixAt(100000)) bad.push('за границей поля вернулась матрица');
+  return bad.length ? bad.slice(0, 3).join(' | ') : null;
+});
+
+det(940, () => {
+  const SB = SH2.soundbank;
+  if (!SB || SB.COUNT !== 250) return 'банк звуков не загружен';
+  const bad = [];
+  for (let i = 0; i < SB.COUNT; i++) {
+    const an = SB.analyse(SB.render(i, 12000), 12000);
+    if (!(an.rms > 0.005)) bad.push(SB.describe(i).id + ': тишина');
+    else if (an.peak > 1.001) bad.push(SB.describe(i).id + ': клиппинг');
+  }
+  return bad.length ? bad.slice(0, 3).join(' | ') : null;
+});
+
+det(941, () => {
+  const SB = SH2.soundbank;
+  if (!SB) return 'нет банка звуков';
+  if (!game.soundbank) return 'у игры нет банка звуков';
+  const src = game.soundbank.play(3, 0, 0, 0.5);
+  if (!game.soundbank.lastPlayed || game.soundbank.lastPlayed.index !== 3) return 'звук не отмечен как проигранный';
+  const A = game.audio;
+  if (A && A.ctx && A.enabled && !src) return 'WebAudio не создал источник';
+  return null;
+});
+
+det(942, () => {
+  const M = SH2.mechanics;
+  if (!M || M.COUNT !== 250) return 'реестр механик не загружен';
+  const base = M.registry.mods();
+  const dmg = base.damage;
+  const bad = [];
+  M.enable('damage-10', true);
+  if (!(M.registry.mods().damage > dmg)) bad.push('урон не вырос');
+  M.enable('damage-10', false);
+  if (M.registry.mods().damage !== dmg) bad.push('урон не вернулся');
+  /* каждое правило либо меняет числа, либо подписано на событие */
+  const stub = { score: 0, player: { alive: true, hp: 1, maxHp: 10 }, mechRng: () => 0.001,
+    soundbank: { play() { return {}; } }, meshfield: { buildReal() { return null; } },
+    scene: {}, level: { map: { fog: 1 }, sun: { intensity: 1 } } };
+  /* База сравнения — состояние БЕЗ этого правила. Иначе механики, включённые
+     по умолчанию (CORE), выглядели бы «без эффекта»: они уже в базе. */
+  const enabledNow = M.active();
+  M.list().forEach((e) => {
+    const was = e.on;
+    M.enable(e.id, true);
+    enabledNow.forEach((id) => { if (id !== e.id) M.enable(id, true); });
+    M.enable(e.id, false);
+    const neutral = JSON.stringify(M.registry.mods());
+    M.enable(e.id, true);
+    const changed = JSON.stringify(M.registry.mods()) !== neutral;
+    let fired = false;
+    /* `mechRng` у критов решает вероятность: 0.001 < любого порога, поэтому
+       крит обязан сработать на первом же событии */
+    /* свежий игрок и НЕНУЛЕВОЙ счёт на каждое правило: вампиризм лечит только
+       раненого, а «добыча» умножает только ненулевые очки — на нулях эффект
+       невидим, и правило ошибочно попадало в «без эффекта» */
+    const spy = { score: 100, player: { alive: true, hp: 10, maxHp: 100 }, mechRng: () => 0.001,
+      soundbank: { play() { fired = true; return {}; } },
+      meshfield: { buildReal() { fired = true; return null; } },
+      scene: {}, level: { map: { fog: 1 }, sun: { intensity: 1 } } };
+    ['beforeHit', 'kill', 'playerHurt', 'missionStart'].forEach((t) => {
+      /* событие может изменить ПЕРЕДАННЫЕ данные (крит поднимает урон) —
+         это тоже эффект правила, поэтому данные держим и сверяем */
+      const data = { attacker: { hit() { fired = true; } }, damage: 1 };
+      const out = M.emit(spy, t, data);
+      if (out && (out.crit || out.damage > 1 || out.healed > 0)) fired = true;
+    });
+    /* погодные правила подменяют туман сцены — это тоже видимый эффект */
+    if (spy.scene && spy.scene.fog) fired = true;
+    if (spy.score !== 100 || spy.level.sun.intensity !== 1) fired = true;
+    if (!changed && !fired) bad.push(e.id + ': без эффекта');
+    /* вернуть исходное состояние и восстановить остальные правила */
+    M.enable(e.id, was);
+    enabledNow.forEach((id) => M.enable(id, true));
+  });
+  return bad.length ? bad.slice(0, 3).join(' | ') : null;
+});
+
+det(943, () => {
+  if (!SH2.contentlab) return 'нет лаборатории контента';
+  if (root.document && root.document.getElementById && !root.document.getElementById('scr-content')) {
+    return 'в разметке нет экрана лаборатории';
+  }
+  const lab = new SH2.contentlab.ContentLab(game, game.ui);
+  const bad = [];
+  ['models', 'sounds', 'mechanics', 'field'].forEach((tab) => {
+    lab.tab = tab;
+    try { lab.render(); } catch (e) { bad.push(tab + ': ' + e.message); }
+    if (!lab.body || !lab.body.children.length) bad.push(tab + ': пустая вкладка');
+  });
+  return bad.length ? bad.join(' | ') : null;
+});
+
 det(934, () => {
   /* Смерть игрока заканчивает миссию поражением, а не подвешивает её. */
   game.startMission(0);
@@ -2201,6 +2363,14 @@ function runDetector(rec) {
   if (out === undefined || out === null) { emit(rec.code, true, '');
     return true; }
   if (out === true) { emit(rec.code, true, ''); return true; }
+  /* Строка — это ПРИГОВОР, а не пройденная проверка. Раньше строка просто
+     проваливалась мимо всех разборов ниже, и детектор, который нашёл баг и
+     вернул «поле собрано на 99999», считался успешным. */
+  if (typeof out === 'string') {
+    if (out.length) { emit(rec.code, false, out, ''); return false; }
+    emit(rec.code, true, '');
+    return true;
+  }
 
   /* Расшифровка результата: конкретные «плохие» поля → ошибка. */
   const decode = (res) => {
@@ -2235,8 +2405,14 @@ if (bootErrors.length) {
   bootErrors.forEach((e) => emit(0, false, `модуль ${e.file} не загрузился: ${e.error.message}`, ''));
 }
 const only = opt('--only', '');
-const onlyOk = (code) => !only || String(code).padStart(3, '0').startsWith(only.replace(/x/g, '')) ||
-  (only.slice(0, 1) + 'xx' === only.slice(0, 1) + 'xx' && Math.floor(code / 100) === Number(only[0]));
+/* --only 93 — диапазон; --only 9xx — вся категория; --only 937 — один код.
+   Раньше третье условие было тавтологией (x === x), и фильтр не фильтровал. */
+const onlyOk = (code) => {
+  if (!only) return true;
+  const s = String(code).padStart(3, '0');
+  if (/^\dxx$/i.test(only)) return s[0] === only[0];
+  return s.startsWith(only.replace(/x/gi, ''));
+};
 
 results.started = 1;
 /* Порядок прогона фиксирован: детекторы опираются на живую игру, и код 300
@@ -2262,6 +2438,14 @@ const runList = BC.CODES.filter((c) => c.detector);
 for (const rec of runList) {
   if (only && !onlyOk(rec.code)) continue;
   runDetector(rec);
+}
+/* Сводка результатов: без неё «провалено 0» в таблице категорий ничего не
+   доказывает — таблица печатается по числу зарегистрированных детекторов,
+   а не по тому, что реально выполнилось. */
+if (flag('--results') || only) {
+  const failed = checks.filter((c) => !c.ok).map((c) => c.code);
+  console.log('выполнено ' + checks.length + ', провалено ' + failed.length +
+    (failed.length ? ': ' + failed.join(', ') : ''));
 }
 results.checks = checks.length;
 results.errors = findings.filter((f) => f.level === 'error').length;
