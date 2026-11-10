@@ -60,6 +60,7 @@
     <button id="btn-inv" class="dd-btn" title="Инвентарь (I)">Инвентарь</button>
     <button id="btn-health" class="dd-btn" title="Тело и лечение (H)">Тело</button>
     <button id="btn-craft" class="dd-btn" title="Крафт и стройка (C)">Крафт</button>
+    <button id="btn-catalog" class="dd-btn" title="Каталог текстур и моделей (F3)">F3 Каталог 10K</button>
     <button id="btn-save" class="dd-btn" title="Сохранить">Сохр</button>
     <button id="btn-load" class="dd-btn" title="Загрузить">Загр</button>
     <button id="btn-qa" class="dd-btn" title="Проверка систем">QA</button>
@@ -97,12 +98,56 @@
   </div>
 </div>
 
+<div id="f3-overlay" class="modal-overlay" hidden>
+  <div class="f3-shell">
+    <div class="f3-header">
+      <div>
+        <h2>КАТАЛОГ ТЕКСТУР, МОДЕЛЕК И 3D МЕШЕЙ (F3)</h2>
+        <div id="f3-count-info" class="f3-subtitle">Загрузка библиотеки 10 000...</div>
+      </div>
+      <div class="f3-controls">
+        <input id="f3-search" class="f3-search" type="search" placeholder="Поиск по названию, коду, категории..." aria-label="Поиск в каталоге">
+        <button id="f3-close" type="button" class="dd-btn danger">Закрыть (F3)</button>
+      </div>
+    </div>
+
+    <div class="f3-tabs">
+      <button type="button" class="dd-btn active" data-f3-tab="all">Все (10 000)</button>
+      <button type="button" class="dd-btn" data-f3-tab="base">Базовые ассеты (181)</button>
+      <button type="button" class="dd-btn" data-f3-tab="texture">Текстуры (4 000)</button>
+      <button type="button" class="dd-btn" data-f3-tab="model">Модельки 2D (3 000)</button>
+      <button type="button" class="dd-btn" data-f3-tab="mesh">3D Меши (3 000)</button>
+    </div>
+
+    <div id="f3-inspector" class="f3-inspector" hidden>
+      <canvas id="f3-inspect-canvas" width="160" height="160" class="f3-inspect-canvas"></canvas>
+      <div class="f3-inspect-info">
+        <h3 id="f3-inspect-title">Предпросмотр</h3>
+        <p id="f3-inspect-meta"></p>
+        <button id="f3-inspect-close" type="button" class="dd-btn">Скрыть предпросмотр</button>
+      </div>
+    </div>
+
+    <div id="f3-grid" class="f3-grid"></div>
+
+    <div class="f3-pager">
+      <button id="f3-first" type="button" class="dd-btn">⏮ В начало</button>
+      <button id="f3-prev" type="button" class="dd-btn">◀ Назад</button>
+      <span id="f3-page-info" class="f3-page-info">Стр. 1 / 1</span>
+      <button id="f3-next" type="button" class="dd-btn">Вперёд ▶</button>
+      <button id="f3-last" type="button" class="dd-btn">В конец ⏭</button>
+    </div>
+  </div>
+</div>
+
 <noscript><p style="color:#ffffff;padding:24px">Для запуска Dead District в браузере нужен JavaScript.</p></noscript>
 
 <script src="web/data_bundle.js"></script>
 <script src="web/core.js"></script>
 <script src="web/algorithms.js"></script>
 <script src="web/systems.js"></script>
+<script src="web/content_pack.js"></script>
+<script src="web/catalog_f3.js"></script>
 <script src="web/renderer_audio.js"></script>
 <script src="web/main.js"></script>
 </body>

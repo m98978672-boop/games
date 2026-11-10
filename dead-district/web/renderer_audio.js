@@ -19,7 +19,7 @@
   TILE_COLORS[TILE.WALL_PLASTER] = '#cea19d';
   TILE_COLORS[TILE.DOOR] = '#805947';
   TILE_COLORS[TILE.WINDOW] = '#96a5bc';
-  TILE_COLORS[TILE.TREE_OAK] = '#20494b';
+  TILE_COLORS[TILE.TREE_OAK] = '#41745a';
   TILE_COLORS[TILE.TREE_PINE] = '#20494b';
 
   var sprites = {};
@@ -36,14 +36,63 @@
 
   function initSprites() {
     loadSprite('player', 'assets/sprites/player/player_base_walk.png');
+    loadSprite('player_melee', 'assets/sprites/player/player_melee_swing.png');
+    loadSprite('player_aim', 'assets/sprites/player/player_aim_fire.png');
     loadSprite('walker', 'assets/sprites/zombies/zombie_walker_sheet.png');
     loadSprite('runner', 'assets/sprites/zombies/zombie_runner_sheet.png');
     loadSprite('crawler', 'assets/sprites/zombies/zombie_crawler_sheet.png');
     loadSprite('brute', 'assets/sprites/zombies/zombie_brute_sheet.png');
     loadSprite('infected', 'assets/sprites/zombies/zombie_infected_sheet.png');
-    loadSprite('npc', 'assets/sprites/npcs/npc_scavenger_sheet.png');
-    loadSprite('grass', 'assets/tiles/tile_grass_variants.png');
-    loadSprite('asphalt', 'assets/tiles/tile_asphalt_road.png');
+    loadSprite('npc_medic', 'assets/sprites/npcs/npc_medic_sheet.png');
+    loadSprite('npc_mechanic', 'assets/sprites/npcs/npc_mechanic_sheet.png');
+    loadSprite('npc_scavenger', 'assets/sprites/npcs/npc_scavenger_sheet.png');
+    loadSprite('npc_raider', 'assets/sprites/npcs/npc_raider_sheet.png');
+    loadSprite('npc_farmer', 'assets/sprites/npcs/npc_farmer_sheet.png');
+    loadSprite('npc_cop', 'assets/sprites/npcs/npc_cop_sheet.png');
+
+    loadSprite('tile_grass', 'assets/tiles/tile_grass_variants.png');
+    loadSprite('tile_dirt', 'assets/tiles/tile_dirt_path.png');
+    loadSprite('tile_asphalt', 'assets/tiles/tile_asphalt_road.png');
+    loadSprite('tile_sidewalk', 'assets/tiles/tile_sidewalk_curb.png');
+    loadSprite('tile_floor_wood', 'assets/tiles/tile_wood_floor.png');
+    loadSprite('tile_floor_hospital', 'assets/tiles/tile_hospital_tile.png');
+    loadSprite('tile_floor_warehouse', 'assets/tiles/tile_warehouse_concrete.png');
+    loadSprite('tile_water', 'assets/tiles/tile_water_puddle.png');
+    loadSprite('tile_wall_brick', 'assets/tiles/tile_wall_brick.png');
+    loadSprite('tile_wall_wood', 'assets/tiles/tile_wall_wood.png');
+    loadSprite('tile_wall_plaster', 'assets/tiles/tile_wall_plaster.png');
+    loadSprite('tile_door', 'assets/tiles/tile_door_states.png');
+    loadSprite('tile_window', 'assets/tiles/tile_window_states.png');
+    loadSprite('tile_farm_soil', 'assets/tiles/tile_farm_soil_stages.png');
+    loadSprite('tile_crops', 'assets/tiles/tile_crops_sheet.png');
+  }
+
+  function tileHash(tx, ty) {
+    var h = (Math.imul(tx | 0, 374761393) + Math.imul(ty | 0, 668265263)) | 0;
+    h = Math.imul(h ^ (h >>> 13), 1274126177) | 0;
+    return (h ^ (h >>> 16)) >>> 0;
+  }
+
+  function drawTileCell(ctx, img, frameIdx, framesPerRow, sx, sy, T) {
+    var cols = Math.max(1, framesPerRow || Math.floor(img.width / 32));
+    var fx = (frameIdx % cols) * 32;
+    var fy = Math.floor(frameIdx / cols) * 32;
+    if (fy + 32 <= img.height && fx + 32 <= img.width) {
+      ctx.drawImage(img, fx, fy, 32, 32, sx, sy, T, T);
+      return true;
+    }
+    return false;
+  }
+
+  function drawSpriteCell(ctx, img, frameIdx, cw, ch, dx, dy, dw, dh) {
+    var cols = Math.max(1, Math.floor((img.width || 256) / cw));
+    var fx = (frameIdx % cols) * cw;
+    var fy = Math.floor(frameIdx / cols) * ch;
+    if (fy + ch <= (img.height || ch) && fx + cw <= (img.width || cw)) {
+      ctx.drawImage(img, fx, fy, cw, ch, dx, dy, dw, dh);
+      return true;
+    }
+    return false;
   }
 
   var audioCache = {};
@@ -83,8 +132,9 @@
     var halfH = Math.floor(H / T / 2) + 2;
     var cx = Math.round(px);
     var cy = Math.round(py);
+    var waterPhase = Math.floor((state.elapsed || 0) * 2.5);
 
-    // 1. Тайл-карта и туман войны
+    // 1. Тайл-карта и туман войны с реальными 32x32 текстурами
     for (var ty = cy - halfH; ty <= cy + halfH; ty++) {
       for (var tx = cx - halfW; tx <= cx + halfW; tx++) {
         var k = tx + ',' + ty;
@@ -95,47 +145,90 @@
         if (!vis && !exp) continue;
 
         var tt = state.world.getTile(tx, ty);
+        var th = tileHash(tx, ty);
         ctx.fillStyle = TILE_COLORS[tt] || '#2d2738';
         ctx.fillRect(sx, sy, T, T);
 
-        if (tt === TILE.GRASS && sprites.grass && sprites.grass.complete) {
-          ctx.drawImage(sprites.grass, 0, 0, 16, 16, sx, sy, T, T);
-        } else if (tt === TILE.ASPHALT && sprites.asphalt && sprites.asphalt.complete) {
-          ctx.drawImage(sprites.asphalt, 0, 0, 16, 16, sx, sy, T, T);
+        var drew = false;
+        if (tt === TILE.GRASS && sprites.tile_grass && sprites.tile_grass.complete) {
+          drew = drawTileCell(ctx, sprites.tile_grass, th % 4, 4, sx, sy, T);
+        } else if (tt === TILE.DIRT && sprites.tile_dirt && sprites.tile_dirt.complete) {
+          drew = drawTileCell(ctx, sprites.tile_dirt, th % 2, 2, sx, sy, T);
+        } else if (tt === TILE.ASPHALT && sprites.tile_asphalt && sprites.tile_asphalt.complete) {
+          drew = drawTileCell(ctx, sprites.tile_asphalt, th % 8, 4, sx, sy, T);
+        } else if (tt === TILE.SIDEWALK && sprites.tile_sidewalk && sprites.tile_sidewalk.complete) {
+          drew = drawTileCell(ctx, sprites.tile_sidewalk, th % 2, 2, sx, sy, T);
+        } else if (tt === TILE.FLOOR_WOOD && sprites.tile_floor_wood && sprites.tile_floor_wood.complete) {
+          drew = drawTileCell(ctx, sprites.tile_floor_wood, th % 2, 2, sx, sy, T);
+        } else if (tt === TILE.FLOOR_HOSPITAL && sprites.tile_floor_hospital && sprites.tile_floor_hospital.complete) {
+          drew = drawTileCell(ctx, sprites.tile_floor_hospital, th % 2, 2, sx, sy, T);
+        } else if (tt === TILE.FLOOR_WAREHOUSE && sprites.tile_floor_warehouse && sprites.tile_floor_warehouse.complete) {
+          drew = drawTileCell(ctx, sprites.tile_floor_warehouse, th % 2, 2, sx, sy, T);
+        } else if (tt === TILE.WATER && sprites.tile_water && sprites.tile_water.complete) {
+          drew = drawTileCell(ctx, sprites.tile_water, (th + waterPhase) % 3, 3, sx, sy, T);
+        } else if (tt === TILE.WALL_BRICK && sprites.tile_wall_brick && sprites.tile_wall_brick.complete) {
+          drew = drawTileCell(ctx, sprites.tile_wall_brick, th % 4, 2, sx, sy, T);
+        } else if (tt === TILE.WALL_WOOD && sprites.tile_wall_wood && sprites.tile_wall_wood.complete) {
+          drew = drawTileCell(ctx, sprites.tile_wall_wood, th % 4, 2, sx, sy, T);
+        } else if (tt === TILE.WALL_PLASTER && sprites.tile_wall_plaster && sprites.tile_wall_plaster.complete) {
+          drew = drawTileCell(ctx, sprites.tile_wall_plaster, th % 4, 2, sx, sy, T);
+        } else if (tt === TILE.DOOR && sprites.tile_door && sprites.tile_door.complete) {
+          var dr = state.world.doors[k];
+          drew = drawTileCell(ctx, sprites.tile_door, dr && dr.open ? 1 : 0, 3, sx, sy, T);
+        } else if (tt === TILE.WINDOW && sprites.tile_window && sprites.tile_window.complete) {
+          drew = drawTileCell(ctx, sprites.tile_window, th % 3, 4, sx, sy, T);
         }
 
-        if (tt === TILE.WALL_BRICK || tt === TILE.WALL_WOOD || tt === TILE.WALL_PLASTER) {
-          ctx.strokeStyle = '#000000';
-          ctx.strokeRect(sx + 0.5, sy + 0.5, T - 1, T - 1);
-        } else if (tt === TILE.DOOR) {
-          var d = state.world.doors[k];
-          if (d && !d.open) {
+        // Процедурные акценты поверх тайла или если PNG ещё грузится
+        if (!drew) {
+          if (tt === TILE.WALL_BRICK) {
+            ctx.fillStyle = '#b7c0c7';
+            ctx.fillRect(sx, sy + 5, T, 1);
+            ctx.fillRect(sx, sy + 11, T, 1);
             ctx.fillStyle = '#000000';
-            ctx.fillRect(sx + 1, sy + 4, T - 2, 7);
-            ctx.fillStyle = '#805947';
-            ctx.fillRect(sx + 2, sy + 5, T - 4, 5);
+            ctx.strokeRect(sx + 0.5, sy + 0.5, T - 1, T - 1);
+          } else if (tt === TILE.GRASS && (th % 3 === 0)) {
+            ctx.fillStyle = '#95bf91';
+            ctx.fillRect(sx + 3 + (th % 7), sy + 4, 1, 3);
+            ctx.fillRect(sx + 9, sy + 10, 2, 2);
+          } else if (tt === TILE.ASPHALT && (th % 4 === 0)) {
+            ctx.fillStyle = '#c9cb9f';
+            ctx.fillRect(sx + 7, sy + 3, 2, 6);
           }
-        } else if (tt === TILE.WINDOW) {
-          ctx.fillStyle = '#96a5bc';
-          ctx.fillRect(sx + 2, sy + 6, T - 4, 4);
-        } else if (tt === TILE.TREE_OAK || tt === TILE.TREE_PINE) {
-          ctx.fillStyle = '#000000';
-          ctx.fillRect(sx + 2, sy + 2, T - 4, T - 4);
-          ctx.fillStyle = '#41745a';
-          ctx.fillRect(sx + 3, sy + 3, T - 6, T - 6);
         }
 
-        // Индикатор контейнера лута
+        if (tt === TILE.TREE_OAK || tt === TILE.TREE_PINE) {
+          if (sprites.tile_grass && sprites.tile_grass.complete) {
+            drawTileCell(ctx, sprites.tile_grass, th % 4, 4, sx, sy, T);
+          }
+          // Ствол + многослойная крона
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(sx + 6, sy + 9, 4, 6);
+          ctx.fillStyle = '#805947';
+          ctx.fillRect(sx + 7, sy + 10, 2, 5);
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(sx + 1, sy + 1, T - 2, T - 5);
+          ctx.fillStyle = tt === TILE.TREE_PINE ? '#20494b' : '#41745a';
+          ctx.fillRect(sx + 2, sy + 2, T - 4, T - 7);
+          ctx.fillStyle = tt === TILE.TREE_PINE ? '#41745a' : '#679a73';
+          ctx.fillRect(sx + 4, sy + 3, T - 8, T - 10);
+          ctx.fillStyle = '#95bf91';
+          ctx.fillRect(sx + 5, sy + 4, 4, 3);
+        }
+
+        // Индикатор контейнера лута (деревянный/армейский ящик с окантовкой)
         var cont = state.world.containers[k];
         if (vis && cont && !cont.looted) {
-          ctx.fillStyle = '#c9cb9f';
+          ctx.fillStyle = '#000000';
+          ctx.fillRect(sx + 3, sy + 3, 10, 10);
+          ctx.fillStyle = '#a99a73';
           ctx.fillRect(sx + 4, sy + 4, 8, 8);
-          ctx.fillStyle = '#805947';
-          ctx.fillRect(sx + 5, sy + 5, 6, 6);
+          ctx.fillStyle = '#c9cb9f';
+          ctx.fillRect(sx + 4, sy + 6, 8, 2);
         }
 
         if (!vis) {
-          ctx.fillStyle = 'rgba(15, 41, 53, 0.52)';
+          ctx.fillStyle = 'rgba(15, 41, 53, 0.56)';
           ctx.fillRect(sx, sy, T, T);
         }
       }
@@ -147,24 +240,36 @@
       if (!state.visible[fp.tx + ',' + fp.ty]) continue;
       var fsx = Math.floor(originX + fp.tx * T);
       var fsy = Math.floor(originY + fp.ty * T);
-      ctx.fillStyle = '#623333';
-      ctx.fillRect(fsx + 2, fsy + 2, 12, 12);
+      if (sprites.tile_farm_soil && sprites.tile_farm_soil.complete) {
+        drawTileCell(ctx, sprites.tile_farm_soil, Math.min(4, fp.stage + 1), 5, fsx, fsy, T);
+      } else {
+        ctx.fillStyle = '#623333';
+        ctx.fillRect(fsx + 1, fsy + 1, 14, 14);
+      }
       if (fp.stage > 0) {
-        ctx.fillStyle = fp.dead ? '#805947' : '#95bf91';
-        ctx.fillRect(fsx + 4, fsy + 4, 3 + fp.stage * 2, 3 + fp.stage * 2);
+        if (sprites.tile_crops && sprites.tile_crops.complete) {
+          drawTileCell(ctx, sprites.tile_crops, Math.min(3, fp.stage), 6, fsx, fsy, T);
+        } else {
+          ctx.fillStyle = fp.dead ? '#805947' : '#95bf91';
+          ctx.fillRect(fsx + 4, fsy + 4, 3 + fp.stage * 2, 3 + fp.stage * 2);
+        }
       }
     }
     for (var bi = 0; bi < state.campfires.length; bi++) {
       var cf = state.campfires[bi];
       var csx = Math.floor(originX + cf.tx * T);
       var csy = Math.floor(originY + cf.ty * T);
-      ctx.fillStyle = '#d3564c';
-      ctx.fillRect(csx + 4, csy + 4, 8, 8);
+      ctx.fillStyle = '#000000';
+      ctx.fillRect(csx + 2, csy + 6, 12, 5);
+      ctx.fillStyle = '#805947';
+      ctx.fillRect(csx + 3, csy + 7, 10, 3);
+      ctx.fillStyle = '#9e6363';
+      ctx.fillRect(csx + 5, csy + 3, 6, 6);
       ctx.fillStyle = '#c9cb9f';
-      ctx.fillRect(csx + 6, csy + 6, 4, 4);
+      ctx.fillRect(csx + 6, csy + 4 + ((waterPhase) % 2), 4, 4);
     }
 
-    // 3. Машины (3D-проекция сверху с пиксельной обводкой и фарами)
+    // 3. Детализированные 3D-машины сверху (кузов, крыша, лобовое стекло, колёса, фары/мигалка)
     for (var vi = 0; vi < state.vehicles.length; vi++) {
       var v = state.vehicles[vi];
       var vx = Math.floor(originX + v.x * T);
@@ -172,16 +277,42 @@
       ctx.save();
       ctx.translate(vx, vy);
       ctx.rotate(v.angle);
+      // Тень + колёса
       ctx.fillStyle = '#000000';
-      ctx.fillRect(-13, -8, 26, 16);
-      ctx.fillStyle = v.type === 'veh_ambulance' ? '#b7c0c7' : (v.type === 'veh_police' ? '#403e52' : '#5c6174');
-      ctx.fillRect(-12, -7, 24, 14);
+      ctx.fillRect(-15, -10, 30, 20);
+      ctx.fillStyle = '#2d2738';
+      ctx.fillRect(-12, -10, 6, 2);
+      ctx.fillRect(6, -10, 6, 2);
+      ctx.fillRect(-12, 8, 6, 2);
+      ctx.fillRect(6, 8, 6, 2);
+      // Кузов
+      var carCol = v.type === 'veh_ambulance' ? '#b7c0c7' : (v.type === 'veh_police' ? '#2d2738' : (v.type === 'veh_pickup' ? '#71353f' : '#5c6174'));
+      ctx.fillStyle = carCol;
+      ctx.fillRect(-14, -8, 28, 16);
+      // Капот + крыша + стекло
       ctx.fillStyle = '#96a5bc';
-      ctx.fillRect(-3, -5, 8, 10);
+      ctx.fillRect(2, -6, 5, 12);
+      ctx.fillRect(-8, -5, 4, 10);
+      ctx.fillStyle = v.type === 'veh_police' ? '#ffffff' : carCol;
+      ctx.fillRect(-4, -6, 6, 12);
+      // Фары и мигалка
+      ctx.fillStyle = '#c9cb9f';
+      ctx.fillRect(12, -7, 2, 3);
+      ctx.fillRect(12, 4, 2, 3);
+      if (v.type === 'veh_police') {
+        ctx.fillStyle = waterPhase % 2 === 0 ? '#9e6363' : '#96a5bc';
+        ctx.fillRect(-2, -4, 2, 8);
+      } else if (v.type === 'veh_ambulance') {
+        ctx.fillStyle = '#9e6363';
+        ctx.fillRect(-3, -1, 4, 2);
+        ctx.fillRect(-2, -2, 2, 4);
+      }
       ctx.restore();
     }
 
-    // 4. Зомби
+    var animStep = Math.floor((state.elapsed || 0) * 6) % 4;
+
+    // 4. Зомби (реальные 32x32 / 40x48 кадры)
     for (var zi = 0; zi < state.zombies.length; zi++) {
       var z = state.zombies[zi];
       if (z.state === DD.ZSTATE.DEAD) continue;
@@ -189,47 +320,49 @@
       var zx = Math.floor(originX + z.x * T);
       var zy = Math.floor(originY + z.y * T);
       var zSpr = sprites[z.type] || sprites.walker;
-      if (zSpr && zSpr.complete) {
-        ctx.drawImage(zSpr, 0, 0, 16, 16, zx - 8, zy - 8, 16, 16);
-      } else {
+      var zW = z.type === 'brute' ? 40 : 32;
+      var zH = z.type === 'brute' ? 48 : 32;
+      var drawZ = z.type === 'brute' ? 24 : 18;
+      if (!zSpr || !zSpr.complete || !drawSpriteCell(ctx, zSpr, animStep, zW, zH, zx - drawZ * 0.5, zy - drawZ * 0.5, drawZ, drawZ)) {
         ctx.fillStyle = '#000000';
-        ctx.fillRect(zx - 5, zy - 6, 10, 12);
+        ctx.fillRect(zx - 6, zy - 8, 12, 16);
         ctx.fillStyle = z.type === 'brute' ? '#71353f' : (z.type === 'runner' ? '#9e6363' : '#679a73');
-        ctx.fillRect(zx - 4, zy - 5, 8, 10);
+        ctx.fillRect(zx - 5, zy - 7, 10, 14);
       }
     }
 
-    // 5. Выжившие NPC
+    // 5. Выжившие NPC (реальные 32x32 кадры по архетипу)
     for (var ni = 0; ni < state.npcs.length; ni++) {
       var npc = state.npcs[ni];
       if (npc.hp <= 0 || !state.visible[Math.round(npc.x) + ',' + Math.round(npc.y)]) continue;
       var nx = Math.floor(originX + npc.x * T);
       var ny = Math.floor(originY + npc.y * T);
-      if (sprites.npc && sprites.npc.complete) {
-        ctx.drawImage(sprites.npc, 0, 0, 16, 16, nx - 8, ny - 8, 16, 16);
-      } else {
+      var npcKey = 'npc_' + (npc.archetype || 'scavenger');
+      var nSpr = sprites[npcKey] || sprites.npc_scavenger;
+      if (!nSpr || !nSpr.complete || !drawSpriteCell(ctx, nSpr, animStep, 32, 32, nx - 9, ny - 9, 18, 18)) {
         ctx.fillStyle = '#000000';
-        ctx.fillRect(nx - 5, ny - 6, 10, 12);
+        ctx.fillRect(nx - 6, ny - 8, 12, 16);
         ctx.fillStyle = npc.hostility >= 0.6 ? '#8b5084' : '#96a5bc';
-        ctx.fillRect(nx - 4, ny - 5, 8, 10);
+        ctx.fillRect(nx - 5, ny - 7, 10, 14);
       }
     }
 
-    // 6. Персонаж игрока в центре
+    // 6. Персонаж игрока в центре (реальный 32x32 кадр + анимация атаки/прицела)
     var ppx = W * 0.5, ppy = H * 0.5;
-    if (sprites.player && sprites.player.complete) {
-      ctx.drawImage(sprites.player, 0, 0, 16, 16, ppx - 8, ppy - 8, 16, 16);
-    } else {
+    var pSpr = (state.player.attackCd > 0.15 && sprites.player_melee && sprites.player_melee.complete) ? sprites.player_melee : sprites.player;
+    if (!pSpr || !pSpr.complete || !drawSpriteCell(ctx, pSpr, animStep, 32, 32, ppx - 9, ppy - 9, 18, 18)) {
       ctx.fillStyle = '#000000';
-      ctx.fillRect(ppx - 5, ppy - 6, 10, 12);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(ppx - 4, ppy - 5, 8, 10);
+      ctx.fillRect(ppx - 6, ppy - 8, 12, 16);
+      ctx.fillStyle = '#96a5bc';
+      ctx.fillRect(ppx - 5, ppy - 3, 10, 9);
+      ctx.fillStyle = '#cea19d';
+      ctx.fillRect(ppx - 4, ppy - 7, 8, 5);
     }
-    // Луч прицела / фонарика
+    // Луч фонарика / прицела
     ctx.strokeStyle = state.player.flashlightOn ? '#c9cb9f' : '#8c929e';
     ctx.beginPath();
     ctx.moveTo(ppx, ppy);
-    ctx.lineTo(ppx + state.player.fx * 14, ppy + state.player.fy * 14);
+    ctx.lineTo(ppx + state.player.fx * 15, ppy + state.player.fy * 15);
     ctx.stroke();
 
     // 7. Звуковые кольца

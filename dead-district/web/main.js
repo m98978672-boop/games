@@ -697,6 +697,7 @@
     onClick('btn-inv', function () { openModal('inv'); });
     onClick('btn-health', function () { openModal('health'); });
     onClick('btn-craft', function () { openModal('craft'); });
+    onClick('btn-catalog', function () { if (DD.CatalogF3) DD.CatalogF3.toggle(); });
     onClick('btn-qa', function () { openModal('qa'); });
     onClick('btn-interact', performInteract);
     onClick('btn-attack', performAttack);
@@ -748,6 +749,16 @@
     onClick('touch-interact', performInteract);
 
     global.addEventListener('keydown', function (e) {
+      if (e.code === 'F3') {
+        if (e.preventDefault) e.preventDefault();
+        if (DD.CatalogF3) DD.CatalogF3.toggle();
+        return;
+      }
+      var activeTag = document.activeElement && document.activeElement.tagName;
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+        if (e.code === 'Escape' && DD.CatalogF3 && DD.CatalogF3.isOpen()) DD.CatalogF3.close();
+        return;
+      }
       keys[e.code] = true;
       if (e.code === 'KeyE') performInteract();
       else if (e.code === 'KeyR') performReload();
@@ -757,7 +768,8 @@
       else if (e.code === 'KeyC') openModal('craft');
       else if (e.code === 'Space') performAttack();
       else if (e.code === 'Escape') {
-        if (activeModal) closeModals();
+        if (DD.CatalogF3 && DD.CatalogF3.isOpen()) DD.CatalogF3.close();
+        else if (activeModal) closeModals();
         else if (state) {
           state.paused = !state.paused;
           var po = document.getElementById('pause-overlay');
@@ -769,7 +781,7 @@
 
     if (canvasEl) {
       canvasEl.addEventListener('mousedown', function (e) {
-        if (!state || state.paused || activeModal) return;
+        if (!state || state.paused || activeModal || (DD.CatalogF3 && DD.CatalogF3.isOpen())) return;
         if (e.button === 0) performAttack();
       });
     }
@@ -778,6 +790,13 @@
   function init() {
     canvasEl = document.getElementById('game');
     DD.Renderer.initSprites();
+    if (DD.CatalogF3) {
+      DD.CatalogF3.init({
+        onToggle: function (open) {
+          if (state) state.paused = open;
+        }
+      });
+    }
     bindUi();
     newGame(false);
     DD.Renderer.renderFrame(canvasEl, state);

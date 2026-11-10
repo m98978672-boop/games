@@ -24,7 +24,7 @@ const sandbox = {
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 
-for (const jsFile of ['web/data_bundle.js', 'web/core.js', 'web/algorithms.js', 'web/systems.js']) {
+for (const jsFile of ['web/data_bundle.js', 'web/core.js', 'web/algorithms.js', 'web/systems.js', 'web/content_pack.js', 'web/catalog_f3.js']) {
   const code = fs.readFileSync(path.join(ROOT, jsFile), 'utf8');
   vm.runInContext(code, sandbox, { filename: jsFile });
 }
@@ -57,5 +57,19 @@ assert.equal(recovered.player.x, 10, 'SaveManager должен откатыва�
 const z = DD.Systems.createZombie(1, 'walker', 18, 15);
 DD.Systems.damageZombie(z, 999, 1.0);
 assert.equal(z.state, DD.ZSTATE.DEAD, 'ZombieAI должен переходить в DEAD при смертельном уроне');
+
+// Проверка 10 000 процедурных текстур, моделек и 3D мешей + каталога F3
+assert.equal(DD.ContentPack.count(), 10000, 'ContentPack должен содержать ровно 10000 ассетов');
+const all10k = DD.ContentPack.getAll();
+assert.equal(all10k.length, 10000);
+assert.equal(all10k.filter((x) => x.kind === 'texture').length, 4000, 'Ожидалось 4000 текстур');
+assert.equal(all10k.filter((x) => x.kind === 'model').length, 3000, 'Ожидалось 3000 моделек');
+assert.equal(all10k.filter((x) => x.kind === 'mesh').length, 3000, 'Ожидалось 3000 3D мешей');
+assert.ok(all10k.every((x) => x.code && x.name && x.family && x.specs), 'Каждый из 10000 ассетов должен быть подписан');
+assert.equal(sandbox.DD_DATA.manifest.length, 181, 'Манифест должен содержать все 181 базовых ассетов');
+DD.CatalogF3.setTab('base');
+assert.equal(DD.CatalogF3.getFilteredList().length, 181);
+DD.CatalogF3.setTab('all');
+assert.equal(DD.CatalogF3.getFilteredList().length, 10000);
 
 console.log('[dead-district smoke] ALL CHECKS PASSED');
