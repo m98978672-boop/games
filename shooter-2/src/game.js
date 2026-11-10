@@ -105,7 +105,8 @@
     fire(time) {
       const w = this.weapon;
       const g = this.game;
-      this.fireTimer = 60 / w.rpm;
+      const modsNow = g.mods;
+      this.fireTimer = 60 / (w.rpm * (modsNow ? modsNow.rpm : 1));
       this.ammoInMag--;
       this.shots++;
       this.saveAmmo();
@@ -118,8 +119,9 @@
       const airFactor = this.y > 0.15 ? 2.6 : 1;
       const baseSpread = (this.ads ? w.adsSpread : w.spread);
       const heatMul = this.ads ? 0.34 : 0.55;
+      const mods = g.mods || null;
       const spread = baseSpread * (1 + moveFactor * (this.ads ? 0.7 : 0.9) + this.spreadHeat * heatMul)
-        * (this.crouch ? 0.72 : 1) * airFactor;
+        * (this.crouch ? 0.72 : 1) * airFactor * (mods ? mods.spread : 1);
 
       const origin = g.rayOrigin();
       const dirBase = g.rayDirection();
@@ -140,9 +142,10 @@
       const recoilMul = (this.crouch ? 0.78 : 1) * (this.ads ? 0.65 : 1) * (this.ads && w.scope ? 0.5 : 1);
       const rp = this.recoilPitch || 0, ry2 = this.recoilYaw || 0;
       this.recoilPitch = 0; this.recoilYaw = 0;
-      this.pitch = clamp(this.pitch + rp + w.recoil * 0.42 * recoilMul, -1.45, 1.45);
-      this.yaw += ry2 + (Math.random() - 0.5) * w.recoil * 0.5 * recoilMul;
-      this.recoilPitch = Math.min(0.16, this.recoilPitch + w.recoil * 0.9 * recoilMul);
+      const recMul = recoilMul * (mods ? mods.recoil : 1);
+      this.pitch = clamp(this.pitch + rp + w.recoil * 0.42 * recMul, -1.45, 1.45);
+      this.yaw += ry2 + (Math.random() - 0.5) * w.recoil * 0.5 * recMul;
+      this.recoilPitch = Math.min(0.16, this.recoilPitch + w.recoil * 0.9 * recMul);
       this.kick = 1;
       g.kick(w.kick);
       if (g.viewmodel) {
@@ -171,7 +174,7 @@
       const w = this.weapon;
       if (this.reloading || this.ammoInMag >= w.mag || this.reserve <= 0) return;
       this.reloading = true;
-      this.reloadTimer = w.reload;
+      this.reloadTimer = w.reload * (this.game && this.game.mods ? this.game.mods.reloadTime : 1);
       this.saveAmmo();
       if (this.game.audio) this.game.audio.reload(this.x, this.z);
       if (this.game.viewmodel) this.game.viewmodel.playReload(w.reload);
@@ -344,7 +347,13 @@
         let dmg = w.damage * (isHead ? w.headshot : isLegs ? 0.72 : 1);
         // падение урона по дистанции
         if (bestT > 28) dmg *= Math.max(0.45, 1 - (bestT - 28) / (w.range * 1.6));
-        const res = target.hit(dmg, g, { dir, force: 2 + w.damage / 22, hitPoint: end, head: isHead, weapon: w.id });
+        /* механики: сначала множитель урона, потом событие «перед ударом»
+           (криты). Событие может поднять dmg — тогда и число урона на экране
+           и жизни бойца совпадут. */
+        const pack = { damage: dmg * (g.mods ? g.mods.damage : 1), head: isHead };
+        if (SH2.mechanics) SH2.mechanics.emit(g, 'beforeHit', pack);
+        dmg = pack.damage;
+        const res = target.hit(dmg, g, { dir, force: 2 + w.damage / 22, hitPoint: end, head: isHead, weapon: w.id, crit: !!pack.crit });
         g.player.hits++;
         g.player.damageDealt += res.damage;
         if (isHead) g.player.headshots++;
@@ -635,6 +644,11 @@
 
       this.perf = new SH2.perf.Perf();
       this.audio = new SH2.audio.AudioEngine();
+      /* Банк из 250 звуков и реестр из 250 механик. Звук играется через тот
+         же AudioEngine, поэтому панорама и лимит голосов общие. */
+      this.soundbank = SH2.soundbank ? new SH2.soundbank.SoundBank(this.audio) : null;
+      this.mechRng = (() => { let s = 20261107; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
+      this.meshfield = null;
       this.fx = new SH2.fx.FX(this.scene, this.audio);
       this.viewmodel = new SH2.viewmodel.ViewModel(this.camera);
       this.player = new Player(this);
@@ -944,6 +958,14 @@
       this.level.sun.target.position.set(0, 0, 0);
       this.perf.setPreset(this.settings.quality, this.renderer, this.level.sun, this.scene);
 
+      /* Механики: собрать модификаторы один раз и применить к игроку.
+         Порядок важен: сначала числа, потом события (missionStart может
+         хотеть уже исправленный уровень). */
+      this.applyMechanics();
+      /* Поле декораций: 100 000 мешей за 40–120 draw call. Строится один раз
+         на миссию, при смене карты пересобирается. */
+      this.buildMeshField();
+
       // игрок
       const P = this.player;
       P.alive = true; P.hp = P.maxHp; P.armor = 40; P.stamina = P.maxStamina;
@@ -975,6 +997,49 @@
       this.ui && this.ui.missionStart(m, this);
       this.lock();
       if (this.audio) { this.audio.init(); }
+    }
+
+    /* ------------------------- механики и поле -------------------------- */
+    applyMechanics() {
+      const M = SH2.mechanics;
+      if (!M) return null;
+      const mods = M.mods(this);
+      this.mods = mods;
+      const P = this.player;
+      if (P) {
+        /* здоровье/броня — аддитивно; темп, разброс, отдача — множители
+           (их читает Player.fire, см. ниже) */
+        P.maxHp = Math.max(20, Math.round(100 + mods.maxHp));
+        P.hp = Math.min(P.maxHp, P.hp > 0 ? Math.max(P.hp, P.maxHp) : P.maxHp);
+        P.armorBase = Math.round(40 + mods.armor);
+        P.armor = Math.max(P.armor, P.armorBase);
+        P.grenadeCount = 3 + Math.round(mods.grenades);
+      }
+      M.emit(this, 'missionStart', { mission: this.missionIndex });
+      return mods;
+    }
+
+    /* Поле декораций строится ОДИН раз на сессию: это кольцо снаружи игровой
+       зоны, от карты оно не зависит. Пересобирать 100 000 мешей на каждый
+       старт миссии — это полсекунды впустую и лишние 4 МБ памяти. */
+    buildMeshField() {
+      if (!SH2.meshfield) return null;
+      const count = (this.settings && this.settings.meshfield) || 100000;
+      if (this.meshfield && this.meshfield.count === count && this.meshfield.group) {
+        if (!this.meshfield.group.parent) this.scene.add(this.meshfield.group);
+        return this.meshfield;
+      }
+      if (this.meshfield) this.meshfield.dispose();
+      this.meshfield = new SH2.meshfield.MeshField({ count, seed: 1337 });
+      this.meshfield.build(this.scene);
+      this._fieldBuilt = this.meshfield;   // первый экземпляр — эталон для проверок
+      /* экономный пресет гасит 4 семейства: -40 % треугольников на горизонте.
+         Внимание: `perf.preset` — это СТРОКА (имя пресета), а не метод;
+         таблица лежит в SH2.perf.PRESETS. */
+      const presetName = this.perf && this.perf.preset;
+      const p = SH2.perf && SH2.perf.PRESETS ? SH2.perf.PRESETS[presetName] : null;
+      this.meshfield.setReduced(!!p && p.lodBias > 1.4);
+      return this.meshfield;
     }
 
     /* Старт игрока: одна и та же точка при каждом запуске карты (playerSpawn).
@@ -1194,6 +1259,7 @@
       if (!P.alive || this.state !== 'playing') return;
       const scale = [0.62, 1, 1.38][this.difficulty] || 1;
       P.damage(amount * scale, this, from, kind);
+      if (SH2.mechanics) SH2.mechanics.emit(this, 'playerHurt', { attacker: from, kind, damage: amount });
       this.shake(0.22);
       if (P.hp < 35 && P.alive && !this.lowHpBeep) {
         this.lowHpBeep = true;
@@ -1226,6 +1292,7 @@
       this.kills++;
       const head = !!info.head;
       this.score += Math.round(agent.cfg.score * (head ? 1.5 : 1));
+      if (SH2.mechanics) SH2.mechanics.emit(this, 'kill', { agent, head });
       this.deadBodies.push(agent);
       this.audio && this.audio._tone(head ? 900 : 620, 0.07, 0.10, 'square');
       this.ui && this.ui.killFeed(agent, head);

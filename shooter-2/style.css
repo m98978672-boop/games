@@ -548,3 +548,54 @@ body:not(.touch) #touch-stick { display: none !important; }
 .bot-msg i { color: #ff9ea4; font-style: normal; }
 .bot-ok { font-size: 10px; line-height: 1.5; color: #8fe0a4; padding: 8px; }
 body.touch #bot-panel { top: 104px; }
+
+
+/* ============================ ЛАБОРАТОРИЯ КОНТЕНТА ===================== */
+#scr-content { overflow-y: auto; align-items: flex-start; justify-content: center; }
+.content-wrap { width: min(1180px, 96vw); margin: 16px auto 32px; display: flex; flex-direction: column; gap: 12px; }
+.content-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.content-head h2 { margin: 0; font-size: 20px; letter-spacing: 0.14em; color: #e7dcc4; }
+.content-tabs { display: flex; gap: 8px; flex-wrap: wrap; flex: 1; }
+.ct-tab { background: #171c24; border: 1px solid #2c3440; color: #93a0b0; padding: 8px 12px; font: inherit; font-size: 12px; letter-spacing: 0.08em; cursor: pointer; border-radius: 3px; }
+.ct-tab.active, .ct-tab:hover { color: #f2ead6; border-color: #b08a44; background: #221d15; }
+.ct-close { background: none; border: 1px solid #2c3440; color: #93a0b0; width: 34px; height: 34px; font-size: 20px; line-height: 1; cursor: pointer; border-radius: 3px; }
+.content-summary { font-size: 12.5px; color: #9fabb9; line-height: 1.5; background: #12161d; border: 1px solid #232b36; border-radius: 4px; padding: 10px 12px; }
+.content-body { min-height: 300px; }
+.content-pager { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 12px; color: #93a0b0; }
+.pg-info { letter-spacing: 0.08em; }
+
+.mesh-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+.mesh-card { background: #12161d; border: 1px solid #232b36; border-radius: 5px; padding: 8px; cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
+.mesh-card:hover { border-color: #b08a44; transform: translateY(-1px); }
+.mesh-canvas { width: 100%; height: 150px; display: block; background: #11151c; border-radius: 3px; }
+.mesh-name { font-size: 11.5px; color: #d9cdb2; margin-top: 6px; letter-spacing: 0.04em; }
+.mesh-sub { font-size: 10.5px; color: #7d8794; }
+
+.sound-list { display: flex; flex-direction: column; gap: 6px; }
+.sound-row { display: grid; grid-template-columns: 96px 1fr 260px 40px; align-items: center; gap: 10px; background: #12161d; border: 1px solid #232b36; border-radius: 4px; padding: 6px 10px; }
+.sound-id { font-size: 11px; color: #b08a44; letter-spacing: 0.04em; }
+.sound-title { font-size: 12px; color: #c8d1dc; }
+.sound-wave { width: 260px; height: 44px; background: #0d1117; border-radius: 3px; display: block; }
+.sound-row .btn.on { border-color: #6fe3a2; color: #6fe3a2; }
+
+.mech-fams { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.mech-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 6px; }
+.mech-row { display: grid; grid-template-columns: 18px 108px 1fr 110px; align-items: center; gap: 8px; background: #12161d; border: 1px solid #232b36; border-radius: 4px; padding: 7px 10px; font-size: 12px; color: #a9b4c1; cursor: pointer; }
+.mech-row.on { border-color: #5d7a4a; background: #141b12; color: #dbe6cf; }
+.mech-id { color: #b08a44; font-size: 11px; }
+.mech-keys { color: #6f7a87; font-size: 10.5px; }
+
+.field-stats { display: flex; flex-direction: column; gap: 8px; background: #12161d; border: 1px solid #232b36; border-radius: 5px; padding: 14px; }
+.field-line { display: flex; justify-content: space-between; font-size: 13px; color: #a9b4c1; border-bottom: 1px dashed #222a34; padding-bottom: 6px; }
+.field-v { color: #f2ead6; }
+.field-fams { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.field-stats .btn { align-self: flex-start; }
+
+@media (max-width: 720px) {
+  .sound-row { grid-template-columns: 1fr 40px; grid-template-areas: 'id btn' 'title btn' 'wave wave'; }
+  .sound-id { grid-area: id; } .sound-title { grid-area: title; } .sound-wave { grid-area: wave; width: 100%; }
+  .sound-row .btn { grid-area: btn; }
+  .mech-list { grid-template-columns: 1fr; }
+  .mech-row { grid-template-columns: 18px 1fr; grid-template-areas: 'cb id' 'cb title'; }
+  .mesh-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}

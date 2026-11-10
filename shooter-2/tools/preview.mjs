@@ -38,7 +38,7 @@ sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
   CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
 });
 // порядок важен: outline/gunblueprints/soldier подключаются ДО model
-for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'viewmodel']) {
+for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'viewmodel', 'meshpack', 'meshfield']) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: m });
 }
 const SH2 = sandbox.SH2;
@@ -256,6 +256,98 @@ function fitCamera(obj, opts) {
   const dist = Math.max(maxDim, ref) * (o.k || 1.5);
   const pos = center.clone().addScaledVector(dir, dist);
   return { pos, look: center, fov: o.fov || 26 };
+}
+
+/* ------------------------ лист мешей (1000 моделей) ---------------------
+   node tools/preview.mjs --meshes                 -> docs/preview-meshes.png
+   node tools/preview.mjs --meshes 10 20           -> подмножество
+   Рисуем по одному представителю от каждого семейства + варианты одного
+   архетипа, чтобы глазами видеть, что варианты РАЗНЫЕ, а не перекрашенные. */
+if (process.argv.indexOf('--meshes') >= 0) {
+  const mi = process.argv.indexOf('--meshes');
+  const only = Number(process.argv[mi + 1]);
+  const grid = Number(process.argv[mi + 2]) || 5;
+  const pick = [];
+  if (Number.isFinite(only) && only >= 0) {
+    for (let i = 0; i < grid * grid; i++) pick.push((only + i * 17) % SH2.meshpack.COUNT);
+  } else {
+    /* по одному архетипу каждого семейства + 10 вариантов «ящика» */
+    SH2.meshpack.families.forEach((f, k) => {
+      pick.push(SH2.meshpack.pickIndex(f.key, () => (0.13 + k * 0.19) % 1));
+    });
+    for (let v = 0; v < 10; v++) pick.push(v * 10);
+    for (let v = 1; v < 10; v++) pick.push(100 + v * 10);
+  }
+  const cell = Number(process.argv.indexOf('--cell') >= 0 ? process.argv[process.argv.indexOf('--cell') + 1] : 0) || 250;
+  const cols = grid;
+  const rows = Math.ceil(pick.length / cols);
+  const W = cell * cols, H = cell * rows;
+  const canvas = new Canvas(W, H, [16, 20, 26]);
+  pick.forEach((idx, i) => {
+    const g = SH2.meshpack.build(idx);
+    const tmp = new Canvas(cell, cell, [16, 20, 26]);
+    const d = SH2.meshpack.describe(idx);
+    const fit = fitCamera(g, { dir: new T.Vector3(1.1, 0.55, 1.0), k: 1.5, fov: 34, refDim: 1.2 });
+    renderScene(tmp, g, fit.pos, fit.look, fit.fov);
+    const cx = (i % cols) * cell, cy = Math.floor(i / cols) * cell;
+    for (let y = 0; y < cell; y++) {
+      for (let x = 0; x < cell; x++) {
+        const src = (y * cell + x) * 4;
+        /* рамка: границы ячейки светлее */
+        const edge = x < 1 || y < 1 || x > cell - 2 || y > cell - 2;
+        const dst = ((cy + y) * W + cx + x) * 4;
+        canvas.color[dst] = edge ? 40 : tmp.color[src];
+        canvas.color[dst + 1] = edge ? 48 : tmp.color[src + 1];
+        canvas.color[dst + 2] = edge ? 60 : tmp.color[src + 2];
+        canvas.color[dst + 3] = 255;
+      }
+    }
+  });
+  const out = process.argv.indexOf('--out') >= 0 ? process.argv[process.argv.indexOf('--out') + 1] : 'docs/preview-meshes.png';
+  fs.writeFileSync(path.isAbsolute(out) ? out : path.join(root, out), png(W, H, canvas.color));
+  console.log(out + ' — ' + pick.length + ' мешей из ' + SH2.meshpack.COUNT);
+  process.exit(0);
+}
+
+/* --------------------- поле из 100 000 мешей сверху --------------------
+   node tools/preview.mjs --field  -> docs/preview-field.png
+   Видно раскладку: кольцо вокруг игровой зоны, пояс ближних мешей, пояса LOD.
+   Это проверка глазами, что поле реально расставлено, а не «счётчик». */
+if (process.argv.indexOf('--field') >= 0) {
+  const W = 900, H = 900;
+  const canvas = new Canvas(W, H, [12, 16, 22]);
+  const F = new SH2.meshfield.MeshField({ count: 100000 });
+  F.build(null);
+  const outer = SH2.meshfield.DEFAULTS.outer || 220;
+  const k = W / (outer * 2.2);
+  const put = (x, z, r, g, b) => {
+    const px = Math.round(W / 2 + x * k), py = Math.round(H / 2 + z * k);
+    if (px < 0 || py < 0 || px >= W || py >= H) return;
+    const i = (py * W + px) * 4;
+    canvas.color[i] = r; canvas.color[i + 1] = g; canvas.color[i + 2] = b; canvas.color[i + 3] = 255;
+  };
+  const m = new T.Matrix4();
+  const palette = { crate: [176, 138, 84], barrel: [110, 128, 104], rock: [138, 132, 120], bag: [160, 148, 112],
+    fence: [140, 148, 156], lamp: [90, 100, 110], tower: [124, 112, 96], vehicle: [104, 118, 96],
+    plant: [86, 118, 78], scrap: [122, 106, 90] };
+  F.buckets.forEach((b) => {
+    const c = palette[b.fam] || [160, 160, 160];
+    const shade = b.lod === 0 ? 1 : b.lod === 1 ? 0.72 : 0.5;
+    for (let i = 0; i < b.count; i++) {
+      b.mesh.getMatrixAt(i, m);
+      put(m.elements[12], m.elements[14], Math.round(c[0] * shade), Math.round(c[1] * shade), Math.round(c[2] * shade));
+    }
+  });
+  /* игровая зона и точка старта */
+  for (let a = 0; a < 360; a += 1) {
+    const r = SH2.meshfield.DEFAULTS.inner || 30;
+    put(Math.cos(a * Math.PI / 180) * r, Math.sin(a * Math.PI / 180) * r, 90, 200, 150);
+  }
+  put(0, 0, 255, 90, 70); put(1, 0, 255, 90, 70); put(-1, 0, 255, 90, 70); put(0, 1, 255, 90, 70); put(0, -1, 255, 90, 70);
+  const st = F.stats();
+  fs.writeFileSync(path.join(root, 'docs', 'preview-field.png'), png(W, H, canvas.color));
+  console.log('docs/preview-field.png — ' + st.meshes + ' мешей, ' + st.drawCalls + ' корзин, ' + st.fieldDrawCalls + ' draw call в кадре');
+  process.exit(0);
 }
 
 if (process.argv.indexOf('--guns') >= 0) {

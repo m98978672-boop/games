@@ -142,6 +142,10 @@
         <div><b id="menu-clips">20</b><span>анимаций на часть</span></div>
         <div><b id="menu-variants">4</b><span>варианта каждой</span></div>
         <div><b id="menu-per-part">80</b><span>клипов на часть</span></div>
+        <div><b>100 000</b><span>мешей на карте</span></div>
+        <div><b>1000</b><span>моделек</span></div>
+        <div><b>250</b><span>звуков</span></div>
+        <div><b>250</b><span>механик</span></div>
       </div>
     </header>
 
@@ -151,6 +155,7 @@
       <button class="btn big" id="btn-start">НАЧАТЬ КАМПАНИЮ</button>
       <button class="btn" id="btn-continue" style="display:none">ПРОДОЛЖИТЬ</button>
       <button class="btn ghost" id="btn-lab">ЛАБОРАТОРИЯ АНИМАЦИЙ</button>
+      <button class="btn ghost" id="btn-content">КОНТЕНТ: 1000 МОДЕЛЕЙ · 250 ЗВУКОВ · 250 МЕХАНИК</button>
       <button class="btn ghost" id="btn-settings">НАСТРОЙКИ</button>
     </div>
 
@@ -167,6 +172,10 @@
           <li><b>Кукла из точек (Verlet)</b>: 17 точек, 23 связи, импульс от пули, сон и адаптивные подшаги.</li>
           <li><b>Оптимизация без потери графики</b>: слияние статики, LOD бойцов, пулы частиц, адаптивное разрешение, теневые бюджеты.</li>
           <li><b>6 миссий</b>: зачистка, диверсия, оборона волнами, эвакуация и босс.</li>
+          <li><b>100 000 мешей</b> декораций вокруг карты: инстансами, 30 корзин — ~90 draw call вместо ста тысяч.</li>
+          <li><b>1000 моделек</b>: 10 семейств × 10 архетипов × 10 вариантов, каждая строится по контуру — выдавливание, лофт, тело вращения.</li>
+          <li><b>250 звуков</b>: 25 семейств × 10 вариантов, всё синтезируется в WebAudio и проверяется замером волны.</li>
+          <li><b>250 механик</b>: правила с числами и событиями — включаются в лаборатории контента и сразу меняют игру.</li>
         </ul>
         <h2 class="mt">Части тела</h2>
         <div id="menu-part-list" class="chips"></div>
@@ -195,6 +204,11 @@
       <button class="btn ghost" id="btn-brief-back">НАЗАД</button>
     </div>
   </div>
+</div>
+
+<!-- =========================== КОНТЕНТ (ЛАБОРАТОРИЯ) =================== -->
+<div id="scr-content" class="screen">
+  <div class="content-shell"></div>
 </div>
 
 <!-- ============================== ПАУЗА =============================== -->
@@ -292,6 +306,11 @@
 <script src="src/bugcodes.js"></script>
 <script src="src/data.js"></script>
 <script src="src/outline.js"></script>
+<script src="src/meshpack.js"></script>
+<script src="src/meshfield.js"></script>
+<script src="src/soundbank.js"></script>
+<script src="src/mechanics.js"></script>
+
 <script src="src/gunblueprints.js"></script>
 <script src="src/soldier.js"></script>
 <script src="src/level.js"></script>
@@ -309,6 +328,7 @@
 <script src="src/gamebot.js"></script>
 <script src="src/game.js"></script>
 <script src="src/ui.js"></script>
+<script src="src/contentlab.js"></script>
 <script>
 (function () {
   'use strict';
