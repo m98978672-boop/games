@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Генерирует dead-district/web/data_bundle.js напрямую из JSON-файлов /data/ и /data/real/.
+"""Генерирует dead-district/web/data_bundle.js напрямую из JSON-файлов /data/, /data/real/ и assets/assets_manifest.json.
 Единый источник истины для Godot 4 и браузерной версии Dead District.
 """
 
@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
+MANIFEST_PATH = ROOT / "assets" / "assets_manifest.json"
 OUT_FILE = ROOT / "web" / "data_bundle.js"
 
 
@@ -20,6 +21,20 @@ def main() -> None:
     for jf in sorted((DATA_DIR / "real").glob("*.json")):
         real_data[jf.stem] = load_json(jf)
 
+    raw_manifest = load_json(MANIFEST_PATH)
+    manifest_assets = [
+        {
+            "id": a.get("id", ""),
+            "type": a.get("type", ""),
+            "category": a.get("category", ""),
+            "file": a.get("file", ""),
+            "dimensions": a.get("dimensions", ""),
+            "frames": a.get("frames", 1),
+            "notes": a.get("notes", ""),
+        }
+        for a in raw_manifest.get("assets", [])
+    ]
+
     bundle = {
         "palette": load_json(DATA_DIR / "palette_survival_horror_32.json"),
         "real": real_data,
@@ -29,10 +44,11 @@ def main() -> None:
         "buildings": load_json(DATA_DIR / "buildings.json"),
         "zombies": load_json(DATA_DIR / "zombies.json"),
         "npcs": load_json(DATA_DIR / "npcs.json"),
+        "manifest": manifest_assets,
     }
 
     OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    header = "// Сгенерировано build_web_data.py из data/*.json и data/real/*.json — не редактировать вручную.\n"
+    header = "// Сгенерировано build_web_data.py из data/*.json, data/real/*.json и assets_manifest.json.\n"
     OUT_FILE.write_text(
         header + "window.DD_DATA = " + json.dumps(bundle, ensure_ascii=False, separators=(",", ":")) + ";\n",
         encoding="utf-8",

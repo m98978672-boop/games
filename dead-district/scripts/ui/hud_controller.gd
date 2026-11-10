@@ -142,6 +142,14 @@ func toggle_modal(kind: String, inv: InventorySystem, health: PlayerHealth, near
 				btn.text = "Построить: %s" % String(b.get("name", bid))
 				btn.pressed.connect(func(): action_requested.emit("build", {"id": bid}))
 				if box != null: box.add_child(btn)
+		"catalog":
+			if title != null: title.text = "КАТАЛОГ 10 000 ТЕКСТУР, МОДЕЛЕК И 3D МЕШЕЙ (F3)"
+			if body != null: body.text = "Всего в библиотеке: %d (4000 текстур · 3000 моделек · 3000 3D мешей)." % AssetPack10K.TOTAL_COUNT
+			for item in AssetPack10K.get_page(0, 12, "all"):
+				var btn := Button.new()
+				btn.text = "[%s] %s (%s · %s)" % [String(item["code"]), String(item["name"]), String(item["family"]), String(item["specs"])]
+				btn.icon = AssetPack10K.build_texture(int(item["index"]))
+				if box != null: box.add_child(btn)
 
 
 func show_npc_dialogue(info: Dictionary) -> void:

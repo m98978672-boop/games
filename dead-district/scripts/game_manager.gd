@@ -170,6 +170,8 @@ func _handle_hotkeys() -> void:
 		hud.toggle_modal("crafting", inventory, health, near_wb, near_heat)
 	elif Input.is_action_just_pressed("toggle_health_ui") and hud != null:
 		hud.toggle_modal("health", inventory, health, near_wb, near_heat)
+	elif Input.is_action_just_pressed("toggle_catalog") and hud != null:
+		hud.toggle_modal("catalog", inventory, health, near_wb, near_heat)
 	elif Input.is_action_just_pressed("toggle_flashlight"):
 		player.flashlight_on = not player.flashlight_on
 		_play_sfx("res://assets/audio/sfx_ui_click.wav")
