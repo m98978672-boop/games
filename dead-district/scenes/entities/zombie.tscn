@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3 uid="uid://ddentzombie01"]
+
+[ext_resource type="Texture2D" path="res://assets/sprites/zombies/zombie_walker_sheet.png" id="1_tex"]
+
+[node name="ZombieEntity" type="Node2D"]
+texture_filter = 1
+
+[node name="Sprite" type="Sprite2D" parent="."]
+texture_filter = 1
+texture = ExtResource("1_tex")
+hframes = 4
+vframes = 4

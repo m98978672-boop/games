@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dead District — пиксельная зомби-выживалка (480x270 Nearest)</title>
+<meta name="description" content="Dead District — пиксель-арт выживание среди зомби: 32x32 чанки, поле зрения shadowcasting, 10-состояний ИИ зомби, 6 частей тела, крафт, стройка, ферма, транспорт и реальная статистика.">
+<meta name="theme-color" content="#0f2935">
+<link rel="icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="viewport-wrap">
+  <canvas id="game" width="480" height="270" aria-label="Игровое поле Dead District 480x270"></canvas>
+</div>
+
+<header class="hud-top">
+  <div class="hud-bar">
+    <a class="brand-link" href="../index.html">← ИГРЫ</a>
+    <span class="stat">HP <b id="hud-hp">100%</b></span>
+    <span class="stat">Кровь <b id="hud-blood">5000 мл</b></span>
+    <span class="stat">Голод <b id="hud-hunger">85%</b></span>
+    <span class="stat">Жажда <b id="hud-thirst">85%</b></span>
+    <span class="stat">Темп <b id="hud-temp">37.0°C</b></span>
+  </div>
+  <div class="hud-bar">
+    <span class="stat"><b id="hud-time">День 1 08:00</b></span>
+    <span class="stat">Зомби: <b id="hud-zombies">0/0</b></span>
+  </div>
+</header>
+
+<div id="hud-log" class="hud-log">Dead District готов.</div>
+
+<div class="touch-controls">
+  <div class="touch-dpad">
+    <span></span>
+    <button id="touch-up" class="dd-btn" aria-label="Вверх">▲</button>
+    <span></span>
+    <button id="touch-left" class="dd-btn" aria-label="Влево">◀</button>
+    <button id="touch-down" class="dd-btn" aria-label="Вниз">▼</button>
+    <button id="touch-right" class="dd-btn" aria-label="Вправо">▶</button>
+  </div>
+  <div class="touch-actions">
+    <button id="touch-interact" class="dd-btn">E</button>
+    <button id="touch-attack" class="dd-btn danger">УДАР</button>
+  </div>
+</div>
+
+<footer class="hud-bottom">
+  <div class="hud-bar">
+    <span class="stat">Оружие: <b id="hud-weapon">Бита</b></span>
+    <span class="stat">Состояние: <b id="hud-moodles">Норма</b></span>
+  </div>
+  <div class="hud-bar">
+    <button id="btn-attack" class="dd-btn danger" title="Атака (ЛКМ/Пробел)">Удар</button>
+    <button id="btn-interact" class="dd-btn" title="Дверь/Лут/Машина (E)">Действие (E)</button>
+    <button id="btn-flash" class="dd-btn" title="Фонарик (F)">Фонарь</button>
+    <button id="btn-reload" class="dd-btn" title="Перезарядка (R)">Патроны</button>
+    <button id="btn-inv" class="dd-btn" title="Инвентарь (I)">Инвентарь</button>
+    <button id="btn-health" class="dd-btn" title="Тело и лечение (H)">Тело</button>
+    <button id="btn-craft" class="dd-btn" title="Крафт и стройка (C)">Крафт</button>
+    <button id="btn-save" class="dd-btn" title="Сохранить">Сохр</button>
+    <button id="btn-load" class="dd-btn" title="Загрузить">Загр</button>
+    <button id="btn-qa" class="dd-btn" title="Проверка систем">QA</button>
+    <button id="btn-mute" class="dd-btn" title="Звук">Звук</button>
+    <button id="btn-pause" class="dd-btn" title="Пауза (Esc)">Пауза</button>
+    <button id="btn-new" class="dd-btn" title="Новая игра">Заново</button>
+  </div>
+</footer>
+
+<div id="modal-overlay" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <h2 id="modal-title">МЕНЮ</h2>
+    <p id="modal-body"></p>
+    <div id="modal-list" class="modal-list"></div>
+    <button id="modal-close" class="dd-btn">Закрыть</button>
+  </div>
+</div>
+
+<div id="pause-overlay" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <h2>ПАУЗА — DEAD DISTRICT</h2>
+    <p>Управление: WASD — шаг, Shift — бег, Ctrl — красться, ЛКМ/Пробел — бой, E — дверь/лут/машина/NPC, F — фонарь, R — перезарядка, I/H/C — меню.</p>
+    <button id="btn-resume" class="dd-btn">Продолжить</button>
+    <button id="btn-pause-save" class="dd-btn">Сохранить игру</button>
+    <button id="btn-pause-load" class="dd-btn">Загрузить игру</button>
+    <button id="btn-pause-new" class="dd-btn danger">Новая игра</button>
+  </div>
+</div>
+
+<div id="death-overlay" class="modal-overlay" hidden>
+  <div class="modal-card">
+    <h2>ЭТО КОНЕЦ ВАШЕЙ ИСТОРИИ</h2>
+    <p id="death-reason">Вы погибли.</p>
+    <button id="btn-death-restart" class="dd-btn danger">Начать заново</button>
+  </div>
+</div>
+
+<noscript><p style="color:#ffffff;padding:24px">Для запуска Dead District в браузере нужен JavaScript.</p></noscript>
+
+<script src="web/data_bundle.js"></script>
+<script src="web/core.js"></script>
+<script src="web/algorithms.js"></script>
+<script src="web/systems.js"></script>
+<script src="web/renderer_audio.js"></script>
+<script src="web/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+{
+  "recipes": [
+    {
+      "id": "craft_bandage_from_rag",
+      "name": "Свернуть бинт",
+      "category": "medical",
+      "requires_workbench": false,
+      "requires_heat": false,
+      "ingredients": [{"id": "cloth_rag", "qty": 2}],
+      "tools": [],
+      "result": {"id": "bandage", "qty": 1},
+      "time_sec": 3.0
+    },
+    {
+      "id": "craft_sterile_bandage",
+      "name": "Обеззаразить бинт",
+      "category": "medical",
+      "requires_workbench": false,
+      "requires_heat": false,
+      "ingredients": [{"id": "bandage", "qty": 1}, {"id": "antiseptic", "qty": 1}],
+      "tools": [],
+      "result": {"id": "sterile_bandage", "qty": 1},
+      "time_sec": 4.0
+    },
+    {
+      "id": "craft_splint",
+      "name": "Связать шину",
+      "category": "medical",
+      "requires_workbench": false,
+      "requires_heat": false,
+      "ingredients": [{"id": "wood_plank", "qty": 1}, {"id": "cloth_rag", "qty": 2}],
+      "tools": [],
+      "result": {"id": "splint", "qty": 1},
+      "time_sec": 5.0
+    },
+    {
+      "id": "cook_beef",
+      "name": "Пожарить говядину",
+      "category": "cooking",
+      "requires_workbench": false,
+      "requires_heat": true,
+      "ingredients": [{"id": "raw_beef", "qty": 1}],
+      "tools": [],
+      "result": {"id": "cooked_beef", "qty": 1},
+      "time_sec": 8.0
+    },
+    {
+      "id": "cook_potato",
+      "name": "Запечь картофель",
+      "category": "cooking",
+      "requires_workbench": false,
+      "requires_heat": true,
+      "ingredients": [{"id": "potato", "qty": 1}],
+      "tools": [],
+      "result": {"id": "baked_potato", "qty": 1},
+      "time_sec": 7.0
+    },
+    {
+      "id": "boil_water",
+      "name": "Прокипятить воду",
+      "category": "cooking",
+      "requires_workbench": false,
+      "requires_heat": true,
+      "ingredients": [{"id": "tainted_water", "qty": 1}],
+      "tools": [],
+      "result": {"id": "boiled_water", "qty": 1},
+      "time_sec": 6.0
+    },
+    {
+      "id": "craft_spiked_bat",
+      "name": "Бита с гвоздями (ремонт/усиление)",
+      "category": "weapon",
+      "requires_workbench": true,
+      "requires_heat": false,
+      "ingredients": [{"id": "baseball_bat", "qty": 1}, {"id": "nails", "qty": 1}],
+      "tools": ["hammer"],
+      "result": {"id": "baseball_bat", "qty": 1, "bonus_dmg": 8, "repair": true},
+      "time_sec": 10.0
+    },
+    {
+      "id": "repair_melee_tape",
+      "name": "Починить инструмент скотчем",
+      "category": "repair",
+      "requires_workbench": true,
+      "requires_heat": false,
+      "ingredients": [{"id": "duct_tape", "qty": 1}, {"id": "scrap_metal", "qty": 1}],
+      "tools": ["wrench"],
+      "result": {"id": "repair_equipped_melee", "qty": 1},
+      "time_sec": 8.0
+    },
+    {
+      "id": "craft_planks_from_scrap",
+      "name": "Нарубить досок",
+      "category": "carpentry",
+      "requires_workbench": true,
+      "requires_heat": false,
+      "ingredients": [{"id": "wood_plank", "qty": 1}],
+      "tools": ["saw"],
+      "result": {"id": "nails", "qty": 1},
+      "time_sec": 6.0
+    }
+  ],
+  "buildables": [
+    {"id": "build_wood_wall", "name": "Деревянная стена", "cost": [{"id": "wood_plank", "qty": 3}, {"id": "nails", "qty": 1}], "tools": ["hammer"], "hp": 250, "blocks_fov": true, "blocks_move": true},
+    {"id": "build_door", "name": "Деревянная дверь", "cost": [{"id": "wood_plank", "qty": 3}, {"id": "nails", "qty": 1}], "tools": ["hammer", "saw"], "hp": 180, "blocks_fov": true, "blocks_move": true, "is_door": true},
+    {"id": "build_barricade", "name": "Баррикада (на окно/проём)", "cost": [{"id": "wood_plank", "qty": 2}, {"id": "nails", "qty": 1}], "tools": ["hammer"], "hp": 200, "blocks_fov": false, "blocks_move": true},
+    {"id": "build_spike_trap", "name": "Шипастая ловушка", "cost": [{"id": "wood_plank", "qty": 1}, {"id": "nails", "qty": 2}, {"id": "wire", "qty": 1}], "tools": ["hammer"], "hp": 100, "damage": 22, "blocks_fov": false, "blocks_move": false},
+    {"id": "build_campfire", "name": "Костёр", "cost": [{"id": "wood_plank", "qty": 2}], "tools": ["lighter"], "hp": 120, "heat_radius": 6.0, "blocks_fov": false, "blocks_move": false},
+    {"id": "build_rain_barrel", "name": "Бочка для сбора дождя", "cost": [{"id": "wood_plank", "qty": 4}, {"id": "duct_tape", "qty": 1}], "tools": ["hammer", "saw"], "hp": 140, "water_max": 40.0, "blocks_fov": false, "blocks_move": true}
+  ]
+}

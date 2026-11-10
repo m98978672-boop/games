@@ -1,0 +1,110 @@
+{
+  "dataset": "climate",
+  "description": "Климатические нормы региона (Луисвилл/Кентукки, США), акустика (закон обратных квадратов и дБ) и параметры генераторов",
+  "records": [
+    {
+      "id": "clim_jan_mean_temp_c",
+      "item": "season_winter_jan",
+      "metric": "january_mean_temperature",
+      "real_value": 1.6,
+      "unit": "°C",
+      "game_value": 1.6,
+      "scale_factor": 1.0,
+      "source": "https://en.wikipedia.org/wiki/Louisville,_Kentucky",
+      "license": "CC BY-SA 4.0 (Wikipedia / NOAA Normals)",
+      "confidence": "HIGH",
+      "note": "Луисвилл (Köppen Cfa): средняя температура января +1.6°C (34.9°F), минимумы до -12°C."
+    },
+    {
+      "id": "clim_july_mean_temp_c",
+      "item": "season_summer_jul",
+      "metric": "july_mean_temperature",
+      "real_value": 26.3,
+      "unit": "°C",
+      "game_value": 26.3,
+      "scale_factor": 1.0,
+      "source": "https://en.wikipedia.org/wiki/Louisville,_Kentucky",
+      "license": "CC BY-SA 4.0 (Wikipedia / NOAA Normals)",
+      "confidence": "HIGH",
+      "note": "Луисвилл: средняя температура июля +26.3°C (79.3°F), дневные максимумы 32–38°C."
+    },
+    {
+      "id": "clim_annual_precip_mm",
+      "item": "annual_rainfall",
+      "metric": "average_annual_rainfall",
+      "real_value": 1140.0,
+      "unit": "mm/year",
+      "game_value": 1140.0,
+      "scale_factor": 1.0,
+      "source": "https://en.wikipedia.org/wiki/Louisville,_Kentucky",
+      "license": "CC BY-SA 4.0 (Wikipedia / NOAA Normals)",
+      "confidence": "HIGH",
+      "note": "Годовые осадки 1140 мм (44.9 дюйма) + 32 см снега зимой; пик дождей весной и летом."
+    },
+    {
+      "id": "clim_comfort_ambient_temp_c",
+      "item": "thermoneutral_ambient",
+      "metric": "minimum_metabolic_effort_temp",
+      "real_value": 21.0,
+      "unit": "°C",
+      "game_value": 21.0,
+      "scale_factor": 1.0,
+      "source": "https://en.wikipedia.org/wiki/Cold_and_heat_adaptations_in_humans",
+      "license": "CC BY-SA 4.0 (Wikipedia)",
+      "confidence": "HIGH",
+      "note": "Wikipedia: 21°C (70°F) — термонейтральная комфортная температура с минимальными энергозатратами."
+    },
+    {
+      "id": "acoustics_gunshot_spl_db",
+      "item": "sound_gunshot_base",
+      "metric": "muzzle_blast_spl",
+      "real_value": 140.0,
+      "unit": "dB",
+      "game_value": 140.0,
+      "scale_factor": 1.0,
+      "source": "https://en.wikipedia.org/wiki/Gunshot",
+      "license": "CC BY-SA 4.0 (Wikipedia)",
+      "confidence": "HIGH",
+      "note": "Wikipedia Gunshot: типовой выстрел даёт >=140 дБ SPL на 1 м; ночной шумовой фон ниже -> радиус слышимости выше."
+    },
+    {
+      "id": "acoustics_inverse_square_attenuation",
+      "item": "sound_doubling_loss",
+      "metric": "free_field_attenuation_per_doubling",
+      "real_value": 6.02,
+      "unit": "dB",
+      "game_value": 6.02,
+      "scale_factor": 1.0,
+      "source": "https://en.wikipedia.org/wiki/Intensity_(physics)",
+      "license": "CC BY-SA 4.0 (Wikipedia)",
+      "confidence": "HIGH",
+      "note": "Закон обратных квадратов I = P/(4*pi*r^2): удвоение расстояния снижает интенсивность в 4 раза (-6.02 дБ)."
+    },
+    {
+      "id": "power_diesel_genset_kwh_per_l",
+      "item": "portable_generator_efficiency",
+      "metric": "electrical_energy_per_liter",
+      "real_value": 3.0,
+      "unit": "kWh/L",
+      "game_value": 0.45,
+      "scale_factor": 0.15,
+      "source": "https://en.wikipedia.org/wiki/Diesel_generator",
+      "license": "CC BY-SA 4.0 (Wikipedia)",
+      "confidence": "HIGH",
+      "note": "Wikipedia Diesel generator: 3–4 кВт·ч на 1 л топлива при нагрузке 65–70%; портативный инвертор 3 кВА весит ~26 кг -> в игре ~0.45 л/час на дом."
+    },
+    {
+      "id": "power_grid_shutoff_days",
+      "item": "municipal_grid_failure",
+      "metric": "apocalypse_outage_day",
+      "real_value": "ДАННЫЕ НЕ НАЙДЕНЫ",
+      "unit": "days",
+      "game_value": 14.0,
+      "scale_factor": 1.0,
+      "source": "https://en.wikipedia.org/wiki/Portable_generator",
+      "license": "CC BY-SA 4.0 (Wikipedia)",
+      "confidence": "LOW",
+      "note": "[ОЦЕНКА] Реальное время автономной работы брошенной городской энергосети зависит от режима аварийной автоматики и не задано единой нормой; для баланса установлено отключение света на 14-й день, воды на 16-й день."
+    }
+  ]
+}

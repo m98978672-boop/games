@@ -1,0 +1,76 @@
+{
+  "archetypes": [
+    {
+      "id": "medic",
+      "name": "Медик",
+      "hostility": 0.1,
+      "bravery": 0.55,
+      "trade_pool": ["bandage", "sterile_bandage", "antiseptic", "antibiotics", "suture_kit"],
+      "dialogues": {
+        "greet": "Держись в тени, коллега. Нужны бинты или антибиотики?",
+        "flee": "Их слишком много! Отступаем!",
+        "trade": "Меняю перевязочные на консервы и чистую воду."
+      }
+    },
+    {
+      "id": "mechanic",
+      "name": "Механик",
+      "hostility": 0.15,
+      "bravery": 0.65,
+      "trade_pool": ["wrench", "gas_can", "generator_part", "scrap_metal", "crowbar"],
+      "dialogues": {
+        "greet": "Если найдёшь генератор или канистру — заглядывай, помогу починить.",
+        "flee": "Бросаем тачку, уходим дворами!",
+        "trade": "Запасные свечи и ремкомплекты на вес золота."
+      }
+    },
+    {
+      "id": "scavenger",
+      "name": "Мародёр-собиратель",
+      "hostility": 0.25,
+      "bravery": 0.6,
+      "trade_pool": ["canned_beans", "bottled_water", "flashlight", "duct_tape", "hiking_pack"],
+      "dialogues": {
+        "greet": "Тише, не шуми. Вон в том квартале ещё остался лут.",
+        "flee": "Засада! Бежим!",
+        "trade": "Показывай, что принёс с вылазки."
+      }
+    },
+    {
+      "id": "raider",
+      "name": "Рейдер",
+      "hostility": 0.85,
+      "bravery": 0.8,
+      "trade_pool": ["ammo_9mm", "ammo_12ga", "machete"],
+      "dialogues": {
+        "greet": "Стой! Бросай рюкзак на землю, или открою огонь!",
+        "flee": "Чёрт, уходим отсюда!",
+        "trade": "Свои патроны я не отдам."
+      }
+    },
+    {
+      "id": "farmer",
+      "name": "Фермер",
+      "hostility": 0.05,
+      "bravery": 0.45,
+      "trade_pool": ["seeds_tomato", "seeds_potato", "seeds_carrot", "seeds_cabbage", "potato", "tomato"],
+      "dialogues": {
+        "greet": "Пока почва не промёрзла, нужно успеть высадить картофель и редис.",
+        "flee": "Они топчут грядки! Назад в дом!",
+        "trade": "Возьми семян, вырастишь свой огород."
+      }
+    },
+    {
+      "id": "cop",
+      "name": "Офицер полиции",
+      "hostility": 0.12,
+      "bravery": 0.9,
+      "trade_pool": ["glock_17", "ammo_9mm", "bulletproof_vest", "helmet"],
+      "dialogues": {
+        "greet": "Гражданский, оставайтесь в укрытии! Периметр прорван.",
+        "flee": "Вызываю подкрепление — отходим к участку!",
+        "trade": "Делюсь боекомплектом с теми, кто держит оборону."
+      }
+    }
+  ]
+}

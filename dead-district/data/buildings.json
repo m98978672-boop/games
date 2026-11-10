@@ -1,0 +1,76 @@
+{
+  "building_types": [
+    {
+      "id": "house_small",
+      "name": "Жилой дом (малый)",
+      "loot_zone": "residential",
+      "min_size": [10, 8],
+      "max_size": [14, 12],
+      "min_rooms": 3,
+      "windows": 4,
+      "doors": 2,
+      "zombie_density": 0.04,
+      "furniture": ["bed", "fridge", "stove", "shelf", "table", "chair"]
+    },
+    {
+      "id": "house_large",
+      "name": "Коттедж (большой)",
+      "loot_zone": "residential",
+      "min_size": [14, 12],
+      "max_size": [20, 16],
+      "min_rooms": 5,
+      "windows": 7,
+      "doors": 3,
+      "zombie_density": 0.06,
+      "furniture": ["bed", "fridge", "stove", "cabinet", "sofa", "table", "tv"]
+    },
+    {
+      "id": "grocery",
+      "name": "Продуктовый магазин",
+      "loot_zone": "grocery",
+      "min_size": [14, 10],
+      "max_size": [18, 14],
+      "min_rooms": 3,
+      "windows": 5,
+      "doors": 2,
+      "zombie_density": 0.09,
+      "furniture": ["shelf", "fridge", "counter", "crate"]
+    },
+    {
+      "id": "hospital",
+      "name": "Клиника / Госпиталь",
+      "loot_zone": "hospital",
+      "min_size": [18, 14],
+      "max_size": [24, 18],
+      "min_rooms": 6,
+      "windows": 8,
+      "doors": 3,
+      "zombie_density": 0.14,
+      "furniture": ["med_cabinet", "bed", "table", "fridge"]
+    },
+    {
+      "id": "police_station",
+      "name": "Полицейский участок",
+      "loot_zone": "police",
+      "min_size": [16, 12],
+      "max_size": [22, 16],
+      "min_rooms": 5,
+      "windows": 6,
+      "doors": 2,
+      "zombie_density": 0.13,
+      "furniture": ["gun_locker", "desk", "shelf", "cabinet"]
+    },
+    {
+      "id": "warehouse",
+      "name": "Строительный склад",
+      "loot_zone": "warehouse",
+      "min_size": [16, 14],
+      "max_size": [24, 20],
+      "min_rooms": 2,
+      "windows": 4,
+      "doors": 3,
+      "zombie_density": 0.08,
+      "furniture": ["crate", "workbench", "barrel", "shelf"]
+    }
+  ]
+}

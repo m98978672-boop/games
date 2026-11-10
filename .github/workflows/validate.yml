@@ -44,6 +44,10 @@ jobs:
         run: node shooter-2/tests/headless.mjs
       - name: Test shooter-2 Godot port structure and GDScript contracts
         run: node shooter-2-godot/tests/port.mjs
+      - name: Test Dead District browser runtime and Godot 4 structure
+        run: |
+          node dead-district/tests/smoke.mjs
+          node dead-district/tools/static_gd_check.mjs
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play
 

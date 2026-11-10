@@ -1,0 +1,191 @@
+[gd_scene load_steps=3 format=3 uid="uid://ddhud00000001"]
+
+[ext_resource type="Script" path="res://scripts/ui/hud_controller.gd" id="1_hud"]
+[ext_resource type="FontFile" path="res://assets/fonts/font_pixelify_sans.ttf" id="2_font"]
+
+[node name="HUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_hud")
+status_label_path = NodePath("TopBar/StatusLabel")
+time_label_path = NodePath("TopBar/TimeLabel")
+moodles_label_path = NodePath("BottomBar/MoodlesLabel")
+weapon_label_path = NodePath("BottomBar/WeaponLabel")
+log_label_path = NodePath("LogLabel")
+modal_panel_path = NodePath("ModalPanel")
+modal_title_path = NodePath("ModalPanel/VBox/ModalTitle")
+modal_body_path = NodePath("ModalPanel/VBox/ModalBody")
+modal_buttons_box_path = NodePath("ModalPanel/VBox/Scroll/ButtonsBox")
+death_panel_path = NodePath("DeathPanel")
+death_reason_path = NodePath("DeathPanel/VBox/DeathReason")
+pause_panel_path = NodePath("PausePanel")
+
+[node name="TopBar" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 8.0
+offset_right = -12.0
+offset_bottom = 44.0
+
+[node name="StatusLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 20
+text = "HP 100 | Кровь 5000 мл | Голод 85 | Жажда 85"
+
+[node name="TimeLabel" type="Label" parent="TopBar"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 20
+text = "День 1 08:00 | CLEAR"
+
+[node name="LogLabel" type="Label" parent="."]
+layout_mode = 1
+offset_left = 12.0
+offset_top = 56.0
+offset_right = 560.0
+offset_bottom = 220.0
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+text = "Dead District запущен."
+
+[node name="BottomBar" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -68.0
+offset_right = -12.0
+offset_bottom = -8.0
+
+[node name="MoodlesLabel" type="Label" parent="BottomBar"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+text = "Состояние: Норма"
+
+[node name="WeaponLabel" type="Label" parent="BottomBar"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+text = "[ЛКМ] Бита | [E] Взаимодействие | [I] Инвентарь | [C] Крафт | [H] Тело"
+
+[node name="ModalPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -280.0
+offset_top = -220.0
+offset_right = 280.0
+offset_bottom = 220.0
+
+[node name="VBox" type="VBoxContainer" parent="ModalPanel"]
+layout_mode = 2
+
+[node name="ModalTitle" type="Label" parent="ModalPanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 22
+text = "ОКНО"
+
+[node name="ModalBody" type="Label" parent="ModalPanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 16
+autowrap_mode = 3
+
+[node name="Scroll" type="ScrollContainer" parent="ModalPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ButtonsBox" type="VBoxContainer" parent="ModalPanel/VBox/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="PausePanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -120.0
+offset_right = 160.0
+offset_bottom = 120.0
+
+[node name="VBox" type="VBoxContainer" parent="PausePanel"]
+layout_mode = 2
+
+[node name="PauseTitle" type="Label" parent="PausePanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 24
+text = "ПАУЗА"
+
+[node name="ResumeBtn" type="Button" parent="PausePanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+text = "Продолжить"
+
+[node name="SaveBtn" type="Button" parent="PausePanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+text = "Сохранить (F5)"
+
+[node name="LoadBtn" type="Button" parent="PausePanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+text = "Загрузить (F9)"
+
+[node name="RestartBtn" type="Button" parent="PausePanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+text = "Новая игра"
+
+[node name="DeathPanel" type="PanelContainer" parent="."]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -220.0
+offset_top = -100.0
+offset_right = 220.0
+offset_bottom = 100.0
+
+[node name="VBox" type="VBoxContainer" parent="DeathPanel"]
+layout_mode = 2
+
+[node name="DeathTitle" type="Label" parent="DeathPanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 26
+text = "ЭТО КОНЕЦ ВАШЕЙ ИСТОРИИ"
+
+[node name="DeathReason" type="Label" parent="DeathPanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+theme_override_font_sizes/font_size = 18
+autowrap_mode = 3
+
+[node name="RestartDeathBtn" type="Button" parent="DeathPanel/VBox"]
+layout_mode = 2
+theme_override_fonts/font = ExtResource("2_font")
+text = "Начать заново"
