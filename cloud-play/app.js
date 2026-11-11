@@ -7,6 +7,16 @@ const elements = {
   sidebarStatusText: $('#sidebarStatusText'),
   updateStatus: $('#updateStatus'),
   installAppButton: $('#installAppButton'),
+  localSettingsButton: $('#localSettingsButton'),
+  localSettingsDialog: $('#localSettingsDialog'),
+  localSettingsForm: $('#localSettingsForm'),
+  steamApiKeyInput: $('#steamApiKeyInput'),
+  localSettingsFeedback: $('#localSettingsFeedback'),
+  autoLoginCheckbox: $('#autoLoginCheckbox'),
+  clearSteamApiKeyButton: $('#clearSteamApiKeyButton'),
+  saveLocalSettingsButton: $('#saveLocalSettingsButton'),
+  closeLocalSettingsButton: $('#closeLocalSettingsButton'),
+  closeLocalSettingsFooter: $('#closeLocalSettingsFooter'),
   serverBadge: $('#serverBadge'),
   serviceNotice: $('#serviceNotice'),
   noticeIcon: $('#noticeIcon'),
@@ -36,6 +46,32 @@ const elements = {
   gameSearch: $('#gameSearch'),
   loadMoreButton: $('#loadMoreButton'),
   filterButtons: $$('.filter-tab'),
+  remoteHostCard: $('#remoteHostCard'),
+  remoteHostPill: $('#remoteHostPill'),
+  remoteHostCopy: $('#remoteHostCopy'),
+  remoteToggleButton: $('#remoteToggleButton'),
+  remoteNewCodeButton: $('#remoteNewCodeButton'),
+  remoteCodeBox: $('#remoteCodeBox'),
+  remoteCode: $('#remoteCode'),
+  remoteCodeTimer: $('#remoteCodeTimer'),
+  remoteUrls: $('#remoteUrls'),
+  remoteRequests: $('#remoteRequests'),
+  remoteRequestItems: $('#remoteRequestItems'),
+  remoteSessions: $('#remoteSessions'),
+  remoteSessionItems: $('#remoteSessionItems'),
+  remoteGuestCard: $('#remoteGuestCard'),
+  remoteGuestPill: $('#remoteGuestPill'),
+  pairForm: $('#pairForm'),
+  pairCodeInput: $('#pairCodeInput'),
+  pairButton: $('#pairButton'),
+  pairStatus: $('#pairStatus'),
+  remoteViewer: $('#remoteViewer'),
+  remoteStage: $('#remoteStage'),
+  remoteScreen: $('#remoteScreen'),
+  remoteStageBadge: $('#remoteStageBadge'),
+  remoteBigPictureButton: $('#remoteBigPictureButton'),
+  remoteLeaveButton: $('#remoteLeaveButton'),
+  remoteKeys: $$('[data-remote-key]'),
 };
 
 const PAGE_SIZE = 48;
@@ -54,6 +90,8 @@ let gameLoadInProgress = false;
 let activeFilter = 'all';
 let visibleLimit = PAGE_SIZE;
 const UPDATE_RESUME_KEY = 'playbridge:update-resume:v1';
+const AUTO_LOGIN_ATTEMPT_KEY = 'playbridge:auto-steam-login:v1';
+const AUTO_LOGIN_RETRY_MS = 10 * 60 * 1000;
 const GITHUB_MANIFEST_URL = 'https://api.github.com/repos/m98978672-boop/games/contents/cloud-play/manifest.webmanifest?ref=main';
 const GITHUB_VERSION_CACHE_KEY = 'playbridge:github-version:v1';
 const GITHUB_VERSION_CACHE_TTL_MS = 15 * 60 * 1000;
@@ -403,6 +441,7 @@ function setBackendUnavailable(error) {
   elements.sidebarStatusText.textContent = 'Нужен Node-сервер';
   elements.connectButton.disabled = true;
   elements.connectButton.textContent = 'Вход недоступен';
+  elements.localSettingsButton.hidden = true;
   elements.profileTitle.textContent = 'Не подключено';
   elements.profileSub.textContent = 'API не найден';
   elements.logoutButton.hidden = true;
@@ -433,8 +472,19 @@ function applyBackendStatus(status) {
   elements.sidebarStatus.dataset.state = 'online';
   elements.sidebarStatusTitle.textContent = 'BACKEND ONLINE';
   elements.sidebarStatusText.textContent = status.steam?.loginReady ? 'Steam OpenID настроен' : 'Нужна настройка входа';
+  elements.localSettingsButton.hidden = !status.settings?.localSetupAvailable || Boolean(status.remoteContext);
+  elements.localSettingsButton.textContent = status.steam?.libraryReady ? 'Настройки' : 'Настроить API';
+  elements.localSettingsButton.title = status.steam?.libraryReady
+    ? 'Заменить или удалить локально сохранённый Steam Web API key'
+    : 'Ввести Steam Web API key в локальное приложение';
   updateCloudStatus(status);
 
+  if (status.remoteContext) {
+    elements.connectButton.disabled = true;
+    elements.connectButton.textContent = 'Steam-вход только на ПК';
+    setNotice('online', 'Телефон подключён к домашнему ПК', 'Steam-вход, библиотека и настройки ключа доступны только на самом компьютере. Здесь работает «Пульт»: экран и управление.');
+    return;
+  }
   if (!status.steam?.loginReady) {
     elements.connectButton.disabled = true;
     elements.connectButton.textContent = 'Настрой Steam-вход';
@@ -447,6 +497,63 @@ function applyBackendStatus(status) {
     elements.connectButton.disabled = false;
     elements.connectButton.textContent = 'Войти через Steam';
     setNotice('online', 'Backend готов к подключению', 'Вход пойдёт через официальный Steam OpenID; список игр — через Steam Web API с учётом настроек приватности.');
+  }
+}
+
+function openLocalSettings() {
+  if (!backendStatus?.settings?.localSetupAvailable || !elements.localSettingsDialog?.showModal) return;
+  elements.localSettingsFeedback.textContent = backendStatus.steam?.libraryReady
+    ? 'Ключ уже сохранён локально. Введи новый для замены или нажми «Удалить ключ».'
+    : 'Ключ будет сохранён только в локальной папке данных приложения.';
+  elements.steamApiKeyInput.value = '';
+  elements.autoLoginCheckbox.checked = Boolean(backendStatus.settings?.autoLoginEnabled);
+  elements.clearSteamApiKeyButton.hidden = !backendStatus.steam?.libraryReady;
+  elements.localSettingsDialog.showModal();
+}
+
+async function saveLocalSteamApiKey(event) {
+  event.preventDefault();
+  const steamApiKey = elements.steamApiKeyInput.value.trim();
+  if (steamApiKey && !/^[a-f0-9]{32}$/i.test(steamApiKey)) {
+    elements.localSettingsFeedback.textContent = 'Ключ должен состоять ровно из 32 шестнадцатеричных символов.';
+    elements.steamApiKeyInput.focus();
+    return;
+  }
+  elements.saveLocalSettingsButton.disabled = true;
+  elements.localSettingsFeedback.textContent = 'Сохраняю ключ локально…';
+  try {
+    const settings = { autoLoginEnabled: elements.autoLoginCheckbox.checked };
+    if (steamApiKey) settings.steamApiKey = steamApiKey;
+    await api('/api/settings/steam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(settings),
+    });
+    elements.localSettingsDialog.close();
+    window.location.reload();
+  } catch (error) {
+    elements.localSettingsFeedback.textContent = error.message || 'Не удалось сохранить настройки.';
+  } finally {
+    elements.saveLocalSettingsButton.disabled = false;
+  }
+}
+
+async function clearLocalSteamApiKey() {
+  if (!window.confirm('Удалить сохранённый на этом компьютере ключ Steam Web API?')) return;
+  elements.clearSteamApiKeyButton.disabled = true;
+  elements.localSettingsFeedback.textContent = 'Удаляю ключ из локальной папки данных…';
+  try {
+    await api('/api/settings/steam', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ steamApiKey: '', autoLoginEnabled: elements.autoLoginCheckbox.checked }),
+    });
+    elements.localSettingsDialog.close();
+    window.location.reload();
+  } catch (error) {
+    elements.localSettingsFeedback.textContent = error.message || 'Не удалось удалить ключ.';
+  } finally {
+    elements.clearSteamApiKeyButton.disabled = false;
   }
 }
 
@@ -758,10 +865,8 @@ async function disconnectDropbox() {
 
 async function boot() {
   const params = new URLSearchParams(window.location.search);
+  const hadAuthError = params.has('auth_error');
   let callbackFeedback;
-  if (params.has('auth_error')) {
-    setNotice('offline', 'Steam не подтвердил вход', 'Авторизация не завершилась. Проверь callback URL и вернись к настройке backend.');
-  }
   if (params.get('dropbox') === 'connected') {
     callbackFeedback = { state: 'ready', message: 'Dropbox подключён к этому Steam-аккаунту. Теперь можно сохранить резервную копию списка игр.' };
   } else if (params.has('dropbox_error')) {
@@ -780,12 +885,28 @@ async function boot() {
   try {
     const status = await api('/api/status');
     applyBackendStatus(status);
+    if (hadAuthError) setNotice('offline', 'Steam не подтвердил вход', 'Вход не завершился. Нажми кнопку Steam, чтобы попробовать ещё раз.');
     const session = await api('/api/session');
     updateProfile(session);
     if (session.authenticated) {
+      try { window.sessionStorage.removeItem(AUTO_LOGIN_ATTEMPT_KEY); } catch {}
       elements.librarySource.textContent = 'STEAM API';
       await Promise.all([loadGames(), refreshDropboxStatus(callbackFeedback)]);
     } else {
+      if (!status.remoteContext && status.settings?.localSetupAvailable && status.settings?.autoLoginEnabled && status.steam?.loginReady && !hadAuthError) {
+        let shouldStartSteamLogin = false;
+        try {
+          const lastAttempt = Number(window.sessionStorage.getItem(AUTO_LOGIN_ATTEMPT_KEY));
+          shouldStartSteamLogin = !Number.isFinite(lastAttempt) || Date.now() - lastAttempt >= AUTO_LOGIN_RETRY_MS;
+          if (shouldStartSteamLogin) window.sessionStorage.setItem(AUTO_LOGIN_ATTEMPT_KEY, String(Date.now()));
+        } catch {
+          shouldStartSteamLogin = false;
+        }
+        if (shouldStartSteamLogin) {
+          window.location.assign('/auth/steam/start');
+          return;
+        }
+      }
       elements.gameCount.textContent = '—';
       elements.navGameCount.textContent = '—';
       elements.librarySub.textContent = status.steam?.libraryReady
@@ -803,6 +924,15 @@ async function boot() {
     window.requestAnimationFrame(() => window.scrollTo(0, updateResumeState.scrollY));
   }
 }
+
+elements.localSettingsButton.addEventListener('click', openLocalSettings);
+elements.localSettingsForm.addEventListener('submit', (event) => { void saveLocalSteamApiKey(event); });
+elements.clearSteamApiKeyButton.addEventListener('click', () => { void clearLocalSteamApiKey(); });
+elements.closeLocalSettingsButton.addEventListener('click', () => elements.localSettingsDialog.close());
+elements.closeLocalSettingsFooter.addEventListener('click', () => elements.localSettingsDialog.close());
+elements.localSettingsDialog.addEventListener('click', (event) => {
+  if (event.target === elements.localSettingsDialog) elements.localSettingsDialog.close();
+});
 
 elements.connectButton.addEventListener('click', () => {
   if (!elements.connectButton.disabled && backendStatus?.steam?.loginReady) {
@@ -825,6 +955,14 @@ elements.refreshGamesButton.addEventListener('click', () => { void loadGames(); 
 elements.logoutButton.addEventListener('click', async () => {
   elements.logoutButton.disabled = true;
   try {
+    if (backendStatus?.settings?.localSetupAvailable) {
+      await api('/api/settings/steam', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ autoLoginEnabled: false }),
+      }).catch(() => {});
+    }
+    try { window.sessionStorage.setItem(AUTO_LOGIN_ATTEMPT_KEY, String(Date.now())); } catch {}
     await api('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
     window.location.reload();
   } catch (error) {
@@ -854,9 +992,31 @@ elements.filterButtons.forEach((button) => button.addEventListener('click', () =
   renderGames();
 }));
 
-$$('[data-nav]').forEach((link) => link.addEventListener('click', () => {
-  $$('[data-nav]').forEach((candidate) => candidate.classList.toggle('is-active', candidate === link));
-}));
+const navigationLinks = $$('[data-nav]');
+function setActiveNavigation(activeLink) {
+  navigationLinks.forEach((candidate) => {
+    const active = candidate === activeLink;
+    candidate.classList.toggle('is-active', active);
+    if (active) candidate.setAttribute('aria-current', 'location');
+    else candidate.removeAttribute('aria-current');
+  });
+}
+
+navigationLinks.forEach((link) => link.addEventListener('click', () => setActiveNavigation(link)));
+if ('IntersectionObserver' in window) {
+  const navigationSections = navigationLinks
+    .map((link) => document.getElementById(link.dataset.nav))
+    .filter(Boolean);
+  const navigationObserver = new IntersectionObserver((entries) => {
+    const currentSection = entries
+      .filter((entry) => entry.isIntersecting)
+      .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+    if (!currentSection) return;
+    const currentLink = navigationLinks.find((link) => link.dataset.nav === currentSection.target.id);
+    if (currentLink) setActiveNavigation(currentLink);
+  }, { rootMargin: '-8% 0px -72% 0px', threshold: [0, 0.1, 0.25, 0.5] });
+  navigationSections.forEach((section) => navigationObserver.observe(section));
+}
 
 document.addEventListener('keydown', (event) => {
   const target = event.target;
@@ -867,6 +1027,439 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+/* ---- Remote control: pairing a phone with this PC ---- */
+const remoteState = {
+  host: null,
+  hostTimer: null,
+  pair: null,
+  pairTimer: null,
+  connected: false,
+  streaming: false,
+  frameTimer: null,
+  frameUrl: null,
+  capabilities: { screen: false, input: false },
+};
+
+function setPairStatus(message, state = 'idle') {
+  elements.pairStatus.textContent = message;
+  elements.pairStatus.dataset.state = state;
+}
+
+function remotePost(path, body) {
+  return api(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {}),
+  });
+}
+
+function formatClock(timestamp) {
+  if (!Number.isFinite(timestamp)) return '';
+  return new Date(timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+
+function renderRemoteHost(status) {
+  remoteState.host = status;
+  const enabled = Boolean(status?.enabled);
+  elements.remoteHostPill.dataset.state = enabled ? 'on' : 'off';
+  elements.remoteHostPill.textContent = enabled ? 'ВКЛЮЧЕНО' : 'ВЫКЛЮЧЕНО';
+  elements.remoteToggleButton.textContent = enabled ? 'Выключить доступ' : 'Включить доступ с телефона';
+  elements.remoteNewCodeButton.hidden = !enabled;
+  elements.remoteCodeBox.hidden = !enabled;
+
+  if (enabled) {
+    elements.remoteCode.textContent = status.code || '······';
+    elements.remoteCodeTimer.textContent = status.codeExpiresAt
+      ? `Действует до ${formatClock(status.codeExpiresAt)}`
+      : 'Нажми «Новый код»';
+    const urls = Array.isArray(status.urls) ? status.urls : [];
+    elements.remoteUrls.replaceChildren();
+    if (urls.length) {
+      for (const url of urls) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.textContent = url.replace(/^https?:\/\//, '');
+        link.target = '_blank';
+        link.rel = 'noreferrer noopener';
+        elements.remoteUrls.append(link);
+      }
+    } else {
+      const empty = document.createElement('span');
+      empty.textContent = 'Сетевой адрес не найден — проверь подключение к Wi-Fi.';
+      elements.remoteUrls.append(empty);
+    }
+    elements.remoteUrls.hidden = false;
+    elements.remoteHostCopy.textContent = 'Открой этот адрес на телефоне в той же сети, введи код — запрос появится ниже.';
+  } else {
+    elements.remoteUrls.hidden = true;
+    elements.remoteHostCopy.textContent = 'Включи доступ — на этом экране появятся код и адрес для телефона. Пока доступ выключен, сеть компьютера не используется.';
+  }
+
+  const pending = Array.isArray(status?.pending) ? status.pending : [];
+  elements.remoteRequests.hidden = !enabled || pending.length === 0;
+  elements.remoteRequestItems.replaceChildren();
+  for (const request of pending) {
+    const row = document.createElement('div');
+    row.className = 'remote-request-row';
+    const label = document.createElement('span');
+    label.textContent = request.device;
+    const meta = document.createElement('small');
+    meta.textContent = `${request.ip || 'устройство'} · ${formatClock(request.createdAt)}`;
+    label.append(meta);
+    const actions = document.createElement('div');
+    actions.className = 'remote-row-actions';
+    const approve = document.createElement('button');
+    approve.type = 'button';
+    approve.dataset.approve = request.id;
+    approve.textContent = 'Разрешить';
+    const deny = document.createElement('button');
+    deny.type = 'button';
+    deny.dataset.deny = request.id;
+    deny.textContent = 'Нет';
+    actions.append(approve, deny);
+    row.append(label, actions);
+    elements.remoteRequestItems.append(row);
+  }
+
+  const sessions = Array.isArray(status?.sessions) ? status.sessions : [];
+  elements.remoteSessions.hidden = !enabled || sessions.length === 0;
+  elements.remoteSessionItems.replaceChildren();
+  for (const session of sessions) {
+    const row = document.createElement('div');
+    row.className = 'remote-session-row';
+    const label = document.createElement('span');
+    label.textContent = session.device;
+    const meta = document.createElement('small');
+    meta.textContent = `подключено ${formatClock(session.createdAt)} · до ${formatClock(session.expiresAt)}`;
+    label.append(meta);
+    const actions = document.createElement('div');
+    actions.className = 'remote-row-actions';
+    const end = document.createElement('button');
+    end.type = 'button';
+    end.dataset.endSession = session.tokenHint;
+    end.textContent = 'Завершить';
+    actions.append(end);
+    row.append(label, actions);
+    elements.remoteSessionItems.append(row);
+  }
+}
+
+async function refreshRemoteHost() {
+  if (!elements.remoteHostCard || !backendStatus?.remote?.managementAvailable) {
+    if (elements.remoteHostCard) elements.remoteHostCard.hidden = true;
+    return;
+  }
+  elements.remoteHostCard.hidden = false;
+  try {
+    renderRemoteHost(await api('/api/remote/status'));
+  } catch (error) {
+    elements.remoteHostPill.dataset.state = 'off';
+    elements.remoteHostPill.textContent = 'НЕДОСТУПНО';
+    elements.remoteHostCopy.textContent = error.message;
+  }
+}
+
+function scheduleRemoteHostRefresh() {
+  if (remoteState.hostTimer) window.clearInterval(remoteState.hostTimer);
+  remoteState.hostTimer = window.setInterval(() => {
+    if (document.hidden) return;
+    void refreshRemoteHost();
+  }, 4000);
+}
+
+async function toggleRemoteAccess() {
+  const enabled = Boolean(remoteState.host?.enabled);
+  elements.remoteToggleButton.disabled = true;
+  try {
+    renderRemoteHost(await remotePost(enabled ? '/api/remote/stop' : '/api/remote/start'));
+  } catch (error) {
+    elements.remoteHostCopy.textContent = error.message;
+  } finally {
+    elements.remoteToggleButton.disabled = false;
+  }
+}
+
+async function requestRemoteCode() {
+  elements.remoteNewCodeButton.disabled = true;
+  try {
+    renderRemoteHost(await remotePost('/api/remote/code'));
+  } catch (error) {
+    elements.remoteHostCopy.textContent = error.message;
+  } finally {
+    elements.remoteNewCodeButton.disabled = false;
+  }
+}
+
+async function answerRemoteRequest(id, approve) {
+  try {
+    renderRemoteHost(await remotePost(`/api/remote/requests/${id}/${approve ? 'approve' : 'deny'}`));
+  } catch (error) {
+    elements.remoteHostCopy.textContent = error.message;
+  }
+}
+
+async function endRemoteSession(tokenHint) {
+  try {
+    renderRemoteHost(await remotePost('/api/remote/end', { tokenHint }));
+  } catch (error) {
+    elements.remoteHostCopy.textContent = error.message;
+  }
+}
+
+function stopRemoteStream() {
+  remoteState.streaming = false;
+  if (remoteState.frameTimer) {
+    window.clearTimeout(remoteState.frameTimer);
+    remoteState.frameTimer = null;
+  }
+  if (remoteState.frameUrl) {
+    URL.revokeObjectURL(remoteState.frameUrl);
+    remoteState.frameUrl = null;
+  }
+  elements.remoteScreen.removeAttribute('src');
+}
+
+function setStageBadge(text, state = 'idle') {
+  elements.remoteStageBadge.textContent = text;
+  elements.remoteStageBadge.dataset.state = state;
+}
+
+function scheduleRemoteFrame(delay) {
+  if (!remoteState.streaming) return;
+  if (remoteState.frameTimer) window.clearTimeout(remoteState.frameTimer);
+  remoteState.frameTimer = window.setTimeout(() => { void pullRemoteFrame(); }, delay);
+}
+
+async function pullRemoteFrame() {
+  if (!remoteState.streaming) return;
+  if (document.hidden) {
+    setStageBadge('ПАУЗА', 'idle');
+    scheduleRemoteFrame(1500);
+    return;
+  }
+  try {
+    const response = await fetch(`/api/remote/screen?ts=${Date.now()}`, {
+      credentials: 'same-origin',
+      cache: 'no-store',
+      headers: { Accept: 'image/jpeg' },
+    });
+    if (!response.ok) {
+      let code = '';
+      try { code = (await response.json())?.error?.code || ''; } catch { /* ignore */ }
+      if (response.status === 401) {
+        stopRemoteStream();
+        await refreshRemoteSession();
+        setPairStatus('Сессия завершена на компьютере. Введи новый код, чтобы продолжить.', 'error');
+        return;
+      }
+      setStageBadge(code === 'slow_down' ? 'ЖДУ КАДР' : 'ЭКРАН НЕДОСТУПЕН', 'error');
+      scheduleRemoteFrame(code === 'slow_down' ? 1200 : 4000);
+      return;
+    }
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    elements.remoteScreen.src = url;
+    if (remoteState.frameUrl) URL.revokeObjectURL(remoteState.frameUrl);
+    remoteState.frameUrl = url;
+    setStageBadge('ЭКРАН ПК', 'live');
+    scheduleRemoteFrame(900);
+  } catch {
+    setStageBadge('НЕТ СВЯЗИ', 'error');
+    scheduleRemoteFrame(3500);
+  }
+}
+
+function startRemoteStream() {
+  if (remoteState.streaming) return;
+  if (!remoteState.capabilities.screen) {
+    setStageBadge('ЗАХВАТ НЕДОСТУПЕН', 'error');
+    return;
+  }
+  remoteState.streaming = true;
+  void pullRemoteFrame();
+}
+
+function updateRemoteGuest(info) {
+  remoteState.capabilities = info?.capabilities || { screen: false, input: false };
+  remoteState.connected = Boolean(info?.connected);
+  elements.remoteGuestPill.dataset.state = remoteState.connected ? 'on' : 'off';
+  elements.remoteGuestPill.textContent = remoteState.connected ? 'ПОДКЛЮЧЕНО' : 'НЕ ПОДКЛЮЧЕНО';
+  elements.remoteViewer.hidden = !remoteState.connected;
+  elements.pairForm.hidden = remoteState.connected;
+  for (const button of elements.remoteKeys) button.disabled = !remoteState.capabilities.input;
+  elements.remoteBigPictureButton.disabled = !remoteState.capabilities.input;
+  if (remoteState.connected) {
+    setPairStatus(`Управление компьютером активно: ${info.session.device}.`, 'ok');
+    startRemoteStream();
+  } else {
+    stopRemoteStream();
+  }
+}
+
+async function refreshRemoteSession() {
+  if (!elements.remoteGuestCard) return;
+  try {
+    updateRemoteGuest(await api('/api/remote/session'));
+  } catch {
+    elements.remoteGuestPill.dataset.state = 'off';
+    elements.remoteGuestPill.textContent = 'НЕТ BACKEND';
+    elements.remoteViewer.hidden = true;
+  }
+}
+
+function stopPairPolling() {
+  if (remoteState.pairTimer) {
+    window.clearInterval(remoteState.pairTimer);
+    remoteState.pairTimer = null;
+  }
+  remoteState.pair = null;
+}
+
+async function pollPairing() {
+  if (!remoteState.pair) return;
+  const { id, token } = remoteState.pair;
+  try {
+    const result = await api(`/api/remote/pair/status?id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`);
+    if (result.status === 'pending') {
+      setPairStatus('Компьютер получил запрос. Подтверди подключение на его экране.', 'waiting');
+      return;
+    }
+    stopPairPolling();
+    if (result.status === 'approved') {
+      setPairStatus('Готово: телефон подключён к компьютеру.', 'ok');
+      elements.pairCodeInput.value = '';
+      await refreshRemoteSession();
+    } else {
+      setPairStatus('Компьютер отклонил запрос. Попроси новый код и попробуй снова.', 'error');
+    }
+  } catch (error) {
+    stopPairPolling();
+    setPairStatus(error.message, 'error');
+  }
+}
+
+async function startPairing(event) {
+  event.preventDefault();
+  const code = elements.pairCodeInput.value.replace(/\D+/g, '').slice(0, 6);
+  if (code.length !== 6) {
+    setPairStatus('Код состоит из шести цифр — посмотри его на компьютере.', 'error');
+    elements.pairCodeInput.focus();
+    return;
+  }
+  stopPairPolling();
+  elements.pairButton.disabled = true;
+  setPairStatus('Отправляю запрос компьютеру…', 'waiting');
+  try {
+    const device = navigator.userAgent.includes('Android') ? 'Android-устройство'
+      : /iPhone|iPad|iPod/.test(navigator.userAgent) ? 'iPhone или iPad'
+        : 'Браузер на телефоне';
+    const created = await remotePost('/api/remote/pair', { code, device });
+    remoteState.pair = { id: created.id, token: created.pollToken };
+    setPairStatus('Компьютер получил запрос. Подтверди подключение на его экране.', 'waiting');
+    remoteState.pairTimer = window.setInterval(() => { void pollPairing(); }, 2000);
+    void pollPairing();
+  } catch (error) {
+    setPairStatus(error.message, 'error');
+  } finally {
+    elements.pairButton.disabled = false;
+  }
+}
+
+async function sendRemoteKey(action) {
+  if (!remoteState.connected || !remoteState.capabilities.input) return;
+  try {
+    await remotePost('/api/remote/input', { action });
+    if (navigator.vibrate) navigator.vibrate(8);
+  } catch (error) {
+    setPairStatus(error.message, 'error');
+    if (error.status === 401) await refreshRemoteSession();
+  }
+}
+
+async function sendRemoteClick(event) {
+  if (!remoteState.connected || !remoteState.capabilities.input) return;
+  const image = elements.remoteScreen;
+  const rect = image.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const naturalWidth = image.naturalWidth || rect.width;
+  const naturalHeight = image.naturalHeight || rect.height;
+  const scale = Math.min(rect.width / naturalWidth, rect.height / naturalHeight);
+  const drawnWidth = naturalWidth * scale;
+  const drawnHeight = naturalHeight * scale;
+  const left = rect.left + (rect.width - drawnWidth) / 2;
+  const top = rect.top + (rect.height - drawnHeight) / 2;
+  const x = (event.clientX - left) / drawnWidth;
+  const y = (event.clientY - top) / drawnHeight;
+  if (x < 0 || x > 1 || y < 0 || y > 1) return;
+  try {
+    await remotePost('/api/remote/input', { action: 'click', x: Number(x.toFixed(4)), y: Number(y.toFixed(4)) });
+    if (navigator.vibrate) navigator.vibrate(8);
+  } catch (error) {
+    setPairStatus(error.message, 'error');
+  }
+}
+
+async function launchRemoteBigPicture() {
+  if (!remoteState.connected || !remoteState.capabilities.input) return;
+  try {
+    await remotePost('/api/remote/launch', { target: 'bigpicture' });
+    setPairStatus('Steam Big Picture запускается на компьютере.', 'ok');
+  } catch (error) {
+    setPairStatus(error.message, 'error');
+  }
+}
+
+async function leaveRemoteSession() {
+  stopRemoteStream();
+  try {
+    await remotePost('/api/remote/leave');
+  } catch {
+    // The local server may already have dropped the session.
+  }
+  setPairStatus('Сессия завершена. Введи новый код с компьютера, чтобы подключиться снова.', 'idle');
+  await refreshRemoteSession();
+}
+
+async function initRemote() {
+  if (!elements.remoteGuestCard) return;
+  if (backendStatus?.remote?.managementAvailable) {
+    elements.remoteHostCard.hidden = false;
+    await refreshRemoteHost();
+    scheduleRemoteHostRefresh();
+  }
+  await refreshRemoteSession();
+  if (remoteState.connected) scheduleRemoteHostRefresh();
+}
+
+elements.pairForm.addEventListener('submit', (event) => { void startPairing(event); });
+elements.pairCodeInput.addEventListener('input', () => {
+  elements.pairCodeInput.value = elements.pairCodeInput.value.replace(/\D+/g, '').slice(0, 6);
+});
+elements.remoteToggleButton.addEventListener('click', () => { void toggleRemoteAccess(); });
+elements.remoteNewCodeButton.addEventListener('click', () => { void requestRemoteCode(); });
+elements.remoteRequestItems.addEventListener('click', (event) => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (!target) return;
+  if (target.dataset.approve) void answerRemoteRequest(target.dataset.approve, true);
+  if (target.dataset.deny) void answerRemoteRequest(target.dataset.deny, false);
+});
+elements.remoteSessionItems.addEventListener('click', (event) => {
+  const target = event.target instanceof HTMLElement ? event.target : null;
+  if (target?.dataset.endSession) void endRemoteSession(target.dataset.endSession);
+});
+elements.remoteKeys.forEach((button) => button.addEventListener('click', () => { void sendRemoteKey(button.dataset.remoteKey); }));
+elements.remoteStage.addEventListener('click', (event) => { void sendRemoteClick(event); });
+elements.remoteBigPictureButton.addEventListener('click', () => { void launchRemoteBigPicture(); });
+elements.remoteLeaveButton.addEventListener('click', () => { void leaveRemoteSession(); });
+document.addEventListener('visibilitychange', () => {
+  if (!remoteState.connected) return;
+  if (document.hidden) {
+    if (remoteState.frameTimer) window.clearTimeout(remoteState.frameTimer);
+  } else {
+    scheduleRemoteFrame(200);
+  }
+});
+
 setupAppInstall();
 void setupAppUpdates();
-boot();
+boot().finally(() => { void initRemote(); });

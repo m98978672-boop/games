@@ -1,3 +1,6 @@
 .env
 node_modules/
+runtime/
+portable-download/
+.playbridge-update-*/
 *.log
