@@ -493,3 +493,5 @@ body { font-family: system-ui, "Segoe UI", sans-serif; }
 /* Значки предметов остаются видимыми и на узком экране. */
 .inventory-item { display:flex; align-items:center; gap:10px; text-align:left; }
 .item-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; font-size:21px; border:1px solid #62796d; background:#253b35; border-radius:4px; }
+
+.item-icon img { width:28px; height:28px; object-fit:contain; image-rendering:pixelated; }

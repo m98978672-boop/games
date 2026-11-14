@@ -188,16 +188,18 @@
         containers.push(cObj);
         this.containers[this.tileKey(cObj.tx, cObj.ty)] = cObj;
 
-        // Мебель ставится у углов комнаты, не на оси двери или лута.
-        // Угловые клетки оставляют доступ к обеим половинам здания.
+        // Мебель у стен и рядом с входом; центральная ось двери свободна.
+        // Ближайшие к двери предметы видны сразу после входа.
         var choices = zone === 'hospital' ? ['hospital_bed', 'cabinet', 'table', 'shelf'] :
           zone === 'industrial' ? ['shelf', 'workbench', 'cabinet', 'crate'] :
           ['bed', 'sofa', 'table', 'fridge', 'shelf', 'cabinet'];
-        var corners = [[bz.x+1,bz.y+1],[bz.x+bz.w-2,bz.y+1],[bz.x+1,bz.y+bz.h-2],[bz.x+bz.w-2,bz.y+bz.h-2]];
-        for (var ci = 0; ci < corners.length; ci++) {
-          var fx = corners[ci][0], fy = corners[ci][1];
-          if (tiles[fy * CHUNK_SIZE + fx] !== floorT) continue;
-          var furn = { tx:ox+fx, ty:oy+fy, kind:choices[hash2i(cx*4+bi,cy*4+ci,this.seed+190) % choices.length] };
+        var places = [[bz.x+1,bz.y+1],[bz.x+bz.w-2,bz.y+1],[bz.x+1,bz.y+bz.h-2],[bz.x+bz.w-2,bz.y+bz.h-2],
+          [splitX-2,doorY+inward*2],[splitX+2,doorY+inward*2]];
+        var rotation = hash2i(cx*4+bi,cy,this.seed+190) % choices.length;
+        for (var ci = 0; ci < places.length; ci++) {
+          var fx = places[ci][0], fy = places[ci][1];
+          if (tiles[fy * CHUNK_SIZE + fx] !== floorT || (ox+fx===cObj.tx && oy+fy===cObj.ty)) continue;
+          var furn = { tx:ox+fx, ty:oy+fy, kind:choices[(ci+rotation) % choices.length] };
           furniture.push(furn); this.furniture[this.tileKey(furn.tx,furn.ty)] = furn;
         }
       }
