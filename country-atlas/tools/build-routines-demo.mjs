@@ -17,7 +17,8 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const PAGES = [
   { entry: "routine-demo.js", html: "routines-demo.html", label: "крутилка алгоритмов" },
-  { entry: "equations-demo.js", html: "equations-demo.html", label: "демо уравнений" }
+  { entry: "equations-demo.js", html: "equations-demo.html", label: "демо уравнений" },
+  { entry: "ai-demo.js", html: "ai-demo.html", label: "инспектор ИИ" }
 ];
 
 const which = process.argv[2];
