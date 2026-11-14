@@ -106,7 +106,7 @@
       if (tile === T.ASPHALT) roadMark(ctx,gx,gy,tx,ty);
       if (!visible) diamond(ctx,gx,gy,'rgba(10,24,28,.62)');
       if (isStructure || tree) items.push({type:tree?'tree':'wall', x:tx,y:ty,tile:tile,visible:visible,key:key});
-      var cont = state.world.containers[key]; if (cont && !cont.looted && visible) items.push({type:'crate',x:tx,y:ty});
+      var cont = state.world.containers[key]; if (cont && !cont.furnished && visible) items.push({type:'crate',x:tx,y:ty,data:cont});
       var furnishing = state.world.furniture && state.world.furniture[key];
       if (furnishing && visible) items.push({type:'furniture',x:tx,y:ty,data:furnishing});
     }
@@ -182,7 +182,12 @@
       // Высота смещает экранную Y, не мировую позицию.
       function p(f,side,h){var z=point(f,side,0);return [z.x,z.y-h];}
       function face(coords,col){polygon(ctx,coords.map(function(t){return p(t[0],t[1],t[2]);}),col);}
-      var body=v.type==='veh_ambulance'?'#d7d7c7':v.type==='veh_police'?'#394552':v.type==='veh_pickup'?'#924c46':'#778795';
+      var palettes = {
+        veh_sedan:['#728b91','#9caead'], veh_police:['#394f5f','#a7bdc0'], veh_pickup:['#95554a','#c08970'],
+        veh_van:['#8f9a7f','#c0c8ac'], veh_truck:['#a78a58','#d3bc84'], veh_ambulance:['#d9d9c9','#eef0e2']
+      };
+      var palette=palettes[v.type] || palettes.veh_sedan, body=palette[0], highlight=palette[1];
+      function line(points,color,width) { ctx.strokeStyle=color;ctx.lineWidth=width||1;ctx.beginPath();points.forEach(function(t,i){var point=p(t[0],t[1],t[2]);if(i)ctx.lineTo(point[0],point[1]);else ctx.moveTo(point[0],point[1]);});ctx.stroke();ctx.lineWidth=1; }
       var shadow=project(v.x,v.y,px,py);ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(shadow.x,shadow.y+4,20,7,0,0,Math.PI*2);ctx.fill();
       // Колёса, бамперы и кузов в координатах автомобиля поворачиваются вместе с ним.
       [[-.68,-.49],[.65,-.49],[-.68,.49],[.65,.49]].forEach(function(w){
@@ -192,6 +197,10 @@
       face([[-1,-.48,0],[1,-.48,0],[1,-.48,7],[-1,-.48,7]],'#344047');
       face([[-1,.48,0],[1,.48,0],[1,.48,7],[-1,.48,7]],'#29343a');
       face([[-1,-.48,7],[1,-.48,7],[1,.48,7],[-1,.48,7]],body);
+      face([[.53,-.38,7.2],[.91,-.38,7.2],[.91,.38,7.2],[.53,.38,7.2]],highlight);
+      line([[.53,-.37,7.4],[.92,-.37,7.4],[.92,.37,7.4],[.53,.37,7.4]],'#52666a',.7);
+      line([[-.86,.49,3],[.86,.49,3]],'#172b30',1);
+      line([[-.13,.49,3],[-.13,.49,7]],'#263d40',.8);
       face([[.97,-.48,1],[.97,.48,1],[.97,.48,6],[.97,-.48,6]],'#596970');
       face([[1.01,-.28,2],[1.01,.28,2],[1.01,.28,4],[1.01,-.28,4]],'#263638');
       face([[-.88,.49,4],[.85,.49,4],[.85,.49,5],[-.88,.49,5]],v.type==='veh_ambulance'?'#bb4844':v.type==='veh_police'?'#d4d6c8':'#87969a');
@@ -203,17 +212,26 @@
       }
       face([[-.5,-.40,7],[.45,-.40,7],[.25,-.36,14],[-.4,-.36,14]],'#557b87');
       face([[-.5,.40,7],[.45,.40,7],[.25,.36,14],[-.4,.36,14]],'#314f59');
-      face([[.45,-.40,7],[.45,.40,7],[.25,.36,14],[.25,-.36,14]],'#9bbbc0');
+      face([[.45,-.40,7],[.45,.40,7],[.25,.36,14],[.25,-.36,14]],'#8eafb4');
+      line([[.43,-.35,8],[.26,-.32,13],[.26,.32,13]],'#d4dfd8',.9);
+      line([[-.06,.40,7],[-.08,.37,14]],'#253d43',1.2);
+      line([[.28,-.40,8],[.08,-.37,14]],'#304d54',1);
+      face([[-.09,.50,5],[.08,.50,5],[.08,.50,6],[-.09,.50,6]],'#c5c9b9');
       if (state.player.inVehicleId===v.id) {
         // Видимый водитель за лобовым стеклом, без отдельного спрайта поверх машины.
         var driver=p(.31,-.13,10);ctx.fillStyle='#273844';ctx.fillRect(driver[0]-3,driver[1]-3,6,5);ctx.fillStyle='#d7aa90';ctx.fillRect(driver[0]-2,driver[1]-5,4,4);ctx.fillStyle='#292b30';ctx.fillRect(driver[0]-2,driver[1]-6,4,2);
       }
       face([[-.4,-.36,14],[.25,-.36,14],[.25,.36,14],[-.4,.36,14]],body);
-      var head=p(.98,-.30,7);ctx.fillStyle='#ffe6a0';ctx.fillRect(head[0]-2,head[1]-1,3,2);head=p(.98,.30,7);ctx.fillRect(head[0]-2,head[1]-1,3,2);
+      line([[-.36,-.30,14.5],[.18,-.30,14.5],[.18,.30,14.5]],highlight,1);
+      var head=p(.99,-.31,5);ctx.fillStyle='#ffefb5';ctx.fillRect(head[0]-2,head[1]-1,4,3);head=p(.99,.31,5);ctx.fillRect(head[0]-2,head[1]-1,4,3);
+      var tail=p(-.99,.33,5);ctx.fillStyle='#c65e4c';ctx.fillRect(tail[0]-2,tail[1]-1,3,3);
+      line([[1.02,-.38,1],[1.02,.38,1]],'#adbdb6',1.3);
+      var mirror=p(.32,.52,10);ctx.fillStyle='#263b3c';ctx.fillRect(mirror[0]-2,mirror[1]-1,4,2);
       if(v.type==='veh_ambulance'){var cross=p(-.06,0,15);ctx.fillStyle='#c5403d';ctx.fillRect(cross[0]-3,cross[1]-1,6,2);ctx.fillRect(cross[0]-1,cross[1]-3,2,6);}
       if(v.type==='veh_police'){var beacon=p(-.05,0,15);ctx.fillStyle='#d75555';ctx.fillRect(beacon[0]-3,beacon[1]-1,3,2);ctx.fillStyle='#80bad4';ctx.fillRect(beacon[0],beacon[1]-1,3,2);}
       // Колёса поверх боковины, иначе кузов закрывает их почти полностью.
-      [[-.68,.50],[.65,.50]].forEach(function(w){
+      var visibleSide=(c-s)>=0 ? .50 : -.50;
+      [[-.68,visibleSide],[.65,visibleSide]].forEach(function(w){
         var wheel=p(w[0],w[1],1); ctx.fillStyle='#111b1e';ctx.beginPath();ctx.ellipse(wheel[0],wheel[1],3.4,3.7,0,0,Math.PI*2);ctx.fill();
         ctx.fillStyle='#a2acad';ctx.fillRect(wheel[0]-1,wheel[1]-1,2,2);
       });
@@ -284,7 +302,11 @@
           polygon(ctx,[[q.x,q.y-8-h],[q.x+16,q.y-h],[q.x,q.y+8-h],[q.x-16,q.y-h]],fog);
         }
       } else if(item.type==='tree') {ctx.fillStyle='#564332';ctx.fillRect(q.x-2,q.y-20,4,20);ctx.fillStyle=item.tile===T.TREE_PINE?'#275044':'#3b6945';ctx.beginPath();ctx.arc(q.x,q.y-23,12,0,Math.PI*2);ctx.fill();ctx.fillStyle='#648e58';ctx.beginPath();ctx.arc(q.x-4,q.y-27,6,0,Math.PI*2);ctx.fill();}
-      else if(item.type==='crate') {block(ctx,q.x,q.y,7,'#87613d','#674b32','#bc9862');}
+      else if(item.type==='crate') {
+        block(ctx,q.x,q.y,7,'#87613d','#674b32',item.data && item.data.kind==='chest'?'#a87846':'#bc9862');
+        if(item.data && item.data.kind==='chest') {ctx.fillStyle='#e0c47b';ctx.fillRect(q.x-2,q.y-2,4,3);ctx.fillStyle='#56402c';ctx.fillRect(q.x-1,q.y-1,2,1);}
+        else {ctx.strokeStyle='#69462e';ctx.beginPath();ctx.moveTo(q.x-10,q.y-5);ctx.lineTo(q.x,q.y);ctx.lineTo(q.x+10,q.y-5);ctx.stroke();}
+      }
       else if(item.type==='farm'){diamond(ctx,q.x,q.y,'#664735');if(item.data.stage>0){ctx.fillStyle='#80a85a';ctx.fillRect(q.x-2,q.y-5,4,5);}}
       else if(item.type==='fire'){ctx.fillStyle='#f3af49';ctx.fillRect(q.x-2,q.y-7,4,7);}
       else if(item.type==='vehicle') vehicle(item.data);

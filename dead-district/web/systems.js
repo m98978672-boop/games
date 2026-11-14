@@ -185,7 +185,7 @@
     var rem = qty;
     if (maxStack > 1) {
       for (var i = 0; i < inv.items.length && rem > 0; i++) {
-        if (inv.items[i].id === id && inv.items[i].qty < maxStack) {
+        if (inv.items[i].id === id && inv.items[i].freshness === clamp(freshness === undefined ? 1 : freshness, 0, 1) && inv.items[i].qty < maxStack) {
           var addNow = Math.min(rem, maxStack - inv.items[i].qty);
           inv.items[i].qty += addNow;
           rem -= addNow;
