@@ -3,6 +3,26 @@
 
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { CODE_BY_RULE, CATEGORIES, codeOf } from './catalog.mjs';
+
+/* У каждой находки есть код из таблицы 000–999 — по нему ищут причину. */
+export function withCodes(list) {
+  return list.map((x) => {
+    const code = CODE_BY_RULE.get(x.rule);
+    return code == null ? x : { ...x, code: codeOf(code) };
+  });
+}
+
+export function codesByCategory(list) {
+  const rows = CATEGORIES.map((c) => ({ title: c.title, base: c.base, codes: new Set(), count: 0 }));
+  for (const x of list) {
+    if (!x.code) continue;
+    const n = Number(x.code);
+    const row = rows.find((r) => n >= r.base && n <= r.base + 99);
+    if (row) { row.codes.add(x.code); row.count++; }
+  }
+  return rows.filter((r) => r.count);
+}
 
 export const LEVELS = ['критично', 'важно', 'мелочь'];
 const ICON = { критично: '🔴', важно: '🟡', мелочь: '⚪' };
@@ -65,8 +85,21 @@ export function toMarkdown(result) {
   lines.push('');
   lines.push('Проверено: проектов ' + stats.projects + ', файлов ' + stats.files +
     ', скриптов ' + stats.scripts + ', правил ' + stats.rules +
-    ', тестов запущено ' + stats.testsRun + ', игр сыграно ' + stats.played + '.');
+    ', тестов запущено ' + stats.testsRun + ', игр сыграно ' + stats.played +
+    (stats.codes ? ', кодов в таблице ' + stats.codes : '') + '.');
   lines.push('');
+
+  const byCat = codesByCategory(findings);
+  if (byCat.length) {
+    lines.push('| Категория кодов | Находок | Коды |');
+    lines.push('|---|---:|---|');
+    for (const r of byCat) {
+      const codes = [...r.codes].sort().slice(0, 8).join(', ') + (r.codes.size > 8 ? '…' : '');
+      lines.push('| ' + String(r.base).padStart(3, '0') + '–' + (r.base + 99) + ' · ' + r.title +
+        ' | ' + r.count + ' | ' + codes + ' |');
+    }
+    lines.push('');
+  }
 
   if (!findings.length) {
     lines.push('## Ничего не найдено');
@@ -86,7 +119,8 @@ export function toMarkdown(result) {
       lines.push('');
     }
     const where = x.file + (x.line ? ':' + x.line : '');
-    lines.push('- ' + ICON[x.severity] + ' **' + x.rule + '** · `' + where + '` — ' + x.msg +
+    lines.push('- ' + ICON[x.severity] + (x.code ? ' `' + x.code + '`' : '') + ' **' + x.rule +
+      '** · `' + where + '` — ' + x.msg +
       (x.hint ? '  \n  _' + x.hint + '_' : ''));
     if (x.details && x.details.length) {
       lines.push('  ```');
@@ -97,10 +131,12 @@ export function toMarkdown(result) {
   lines.push('');
   lines.push('## По правилам');
   lines.push('');
-  lines.push('| Правило | Находок |');
-  lines.push('|---|---:|');
+  lines.push('| Код | Правило | Находок |');
+  lines.push('|---|---|---:|');
   [...s.byRule.entries()].sort((a, b) => b[1] - a[1])
-    .forEach(([rule, n]) => lines.push('| ' + rule + ' | ' + n + ' |'));
+    .forEach(([rule, n]) => lines.push('| ' +
+      (CODE_BY_RULE.has(rule) ? '`' + codeOf(CODE_BY_RULE.get(rule)) + '`' : '—') +
+      ' | ' + rule + ' | ' + n + ' |'));
   lines.push('');
   if (result.stubs && result.stubs.length) {
     lines.push('## Боту не хватило заглушек (это не баги игр)');
@@ -125,6 +161,10 @@ export function write(result, mdPath, jsonPath) {
     режим: result.mode,
     секунд: Number(((result.finished - result.started) / 1000).toFixed(1)),
     сводка: summary(result.findings).by,
+    категории: codesByCategory(result.findings).map((r) => ({
+      сотня: String(r.base).padStart(3, '0') + '–' + (r.base + 99),
+      категория: r.title, находок: r.count, коды: [...r.codes].sort(),
+    })),
     проверено: result.stats,
     находки: sortFindings(result.findings),
     заглушки: result.stubs || [],
@@ -146,8 +186,8 @@ export function printSummary(result, log = console.log) {
     log('');
     log('Самое важное:');
     for (const x of top) {
-      log('  ' + ICON[x.severity] + ' ' + x.project + ' · ' + x.file + (x.line ? ':' + x.line : '') +
-        ' — ' + x.msg.slice(0, 120));
+      log('  ' + ICON[x.severity] + (x.code ? ' [' + x.code + ']' : '') + ' ' + x.project + ' · ' +
+        x.file + (x.line ? ':' + x.line : '') + ' — ' + x.msg.slice(0, 120));
     }
   }
 }

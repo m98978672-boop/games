@@ -710,19 +710,31 @@
 
   var BY_ID = {};
   PAYS.forEach(function (p) {
-    /* возраст по умолчанию: подработки и серые деньги — не детское дело */
+    /* Возраст по умолчанию. Своя граница у вида остаётся, но не ниже
+       шестнадцати для всего, что не детские деньги и не выплаты семье:
+       бот ловил пятнадцатилетнего с «картами» и «ломбардом», потому что
+       такие виды объявляли свой age явно и проходили мимо общей проверки. */
     if (!p.age) p.age = p.kind === 'wage' ? [14, 95]
       : p.kind === 'extra' ? [16, 80]
         : p.kind === 'shadow' ? [16, 95] : [0, 120];
+    if (['child', 'social'].indexOf(p.kind) < 0) p.age[0] = Math.max(16, p.age[0]);
     BY_ID[p.id] = p;
   });
 
   /* какие виды заработка подходят человеку в этом году */
+  /* Вид заработка, закрытый человеку по возрасту: детские и семейные —
+     всегда, всё остальное — с шестнадцати. Одна функция на все места,
+     чтобы правило не разъезжалось между подбором, удержанием и событиями. */
+  function ageOk(L, p) {
+    if (L.age < 16 && ['child', 'social'].indexOf(p.kind) < 0) return false;
+    return !p.age || (L.age >= p.age[0] && L.age <= p.age[1]);
+  }
+
   function fitFor(L, kind) {
     var minor = L.age < 18 && !L.job;
     return PAYS.filter(function (p) {
       if (kind && p.kind !== kind) return false;
-      if (p.age && (L.age < p.age[0] || L.age > p.age[1])) return false;
+      if (!ageOk(L, p)) return false;
       if (p.kind === 'wage' && !L.job) return false;
       if (p.kind === 'extra' && L.age < 16) return false;
       /* до шестнадцати у человека бывают только детские деньги и выплаты семье */
@@ -770,6 +782,7 @@
     byId: BY_ID,
     auto: PAY_AUTO,
     fitFor: fitFor,
+    ageOk: ageOk,
     amountOf: amountOf,
     wageMult: wageMult,
     kinds: ['child', 'wage', 'extra', 'social', 'shadow'],

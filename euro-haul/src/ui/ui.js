@@ -10,6 +10,12 @@ import { fmt, fmtMoney, fmtDuration, fmtTime, clamp, fmtDistance } from '../core
 import { skillPrice } from '../core/save.js';
 
 const $ = (id) => document.getElementById(id);
+/* В мини-браузере бота (и в старых сборках) игра может прийти без метода
+   качества — «Об игре» не должен из-за этого падать. */
+const qualityOf = (g) => {
+  try { return typeof g.resolveQuality === 'function' ? g.resolveQuality() : 'medium'; }
+  catch { return 'medium'; }
+};
 
 // Русские формы числительных для подписей карты: «152 города в 28 странах».
 const plural = (n, one, few, many) => {
@@ -1494,6 +1500,7 @@ export class UI {
   }
 
   showAbout() {
+    const g = this.game;
     this.openModal({
       eyebrow: 'ОБ ИГРЕ',
       title: 'ЕВРОТРАК',
@@ -1508,7 +1515,7 @@ export class UI {
         фотографических HDR-панорам <b>Poly Haven</b> (лицензия CC0). Ничего из чужих игр не используется:
         все сторонние ассеты — только CC0, список с контрольными суммами лежит в <code>assets/manifest.json</code>.</p>
         <p>Три профиля качества (низкий / средний / высокий) меняют разрешение кадра, размер теней, число HDR-сред,
-        плотность растительности и частиц. Сейчас: <b>${g.resolveQuality() === 'low' ? 'низкий' : g.resolveQuality() === 'medium' ? 'средний' : 'высокий'}</b>.</p>`,
+        плотность растительности и частиц. Сейчас: <b>${qualityOf(g) === 'low' ? 'низкий' : qualityOf(g) === 'medium' ? 'средний' : 'высокий'}</b>.</p>`,
       actions: [{ label: 'Понятно', primary: true, act: 'close' }],
     });
   }

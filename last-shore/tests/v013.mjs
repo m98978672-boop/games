@@ -266,3 +266,5 @@ log('F8: бот появился', started, '· прошёл', moved.toFixed(2),
 
 if (game.creative && !wasCreative) game.toggleCreative();
 log('ошибок нет');
+/* Проваленные проверки бота должны ронять прогон, а не тонуть в логе */
+if (failures.length) process.exitCode = 1;

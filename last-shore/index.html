@@ -235,6 +235,13 @@
       <h2 data-en="Saved games">Сохранения</h2>
       <p class="small" data-en="Three local slots in this browser. Saving copies the current game or autosave.">Три слота в этом браузере. Сохранение копирует текущую игру или автосохранение.</p>
       <div id="save-slots"></div>
+      <div id="save-ask" class="save-ask hidden" role="dialog" aria-live="polite">
+        <p id="save-ask-text" class="small"></p>
+        <div class="btn-row">
+          <button id="save-ask-yes" class="btn-ghost" type="button" data-en="Yes">Да</button>
+          <button id="save-ask-no" class="btn-ghost" type="button" data-en="Cancel">Отмена</button>
+        </div>
+      </div>
       <p id="save-status" class="small" role="status"></p>
       <button id="btn-saves-close" class="btn-ghost" data-en="Close">Закрыть</button>
     </div>

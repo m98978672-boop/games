@@ -298,9 +298,16 @@
 
   Life.prototype.changeJob = function () {
     var old = this.job;
+    var oldStep = old ? Math.max(0, old.step - 1) : 0;
     this.job = null;
     this.hire(this.rnd() < 0.5 ? 'dream' : 'stable');
-    if (this.job && old) this.job.step = Math.max(0, old.step - 1);
+    if (this.job && old) {
+      /* Прежняя ступень переезжает на новую работу только в пределах её
+         потолка: «главным старьёвщиком» не становятся. Бот ловил это у
+         вернувшихся на простую работу после пенсии. */
+      var top = M.topStep(M.jobById[this.job.id]);
+      this.job.step = Math.min(oldStep, top);
+    }
   };
 
   Life.prototype.retire = function () {
@@ -549,7 +556,13 @@
     (this.payActive || []).forEach(function (id) {
       var p = PAY.byId[id];
       if (!p) return;
-      if (self.age < p.age[0] || self.age > p.age[1]) return;
+      /* вид, который человеку больше не по возрасту, выпадает из списка —
+         иначе он тянется годами с того года, когда он ещё подходил */
+      if (PAY.ageOk && !PAY.ageOk(self, p)) return;
+      /* Уже накопленное тоже подчиняется правилу возраста: «мимо кассы»
+         и приработки могли остаться в списке с прошлых лет, и подросток
+         донашивал их до шестнадцати. */
+      if (self.age < 16 && ['child', 'social'].indexOf(p.kind) < 0) return;
       var ok = false;
       try { ok = p.fit ? p.fit(self) : true; } catch (e) { ok = false; }
       if (ok && rnd() > 0.12) keep.push(id);               /* редко бросают то, что кормит */

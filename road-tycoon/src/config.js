@@ -378,7 +378,7 @@
         apply: (s) => {
           const open = s.roads.filter((r) => r.open && !r.blockedUntil);
           if (!open.length) return;
-          const road = open[Math.floor(Math.random() * open.length)];
+          const road = open[Math.floor(s.rand() * open.length)];
           road.blockedUntil = s.time + 0.3;
           TR.Sim.invalidatePaths(s);
           TR.Sim.notice(s, 'bad', 'ДТП: участок перекрыт на несколько часов.');
@@ -388,7 +388,7 @@
         id: 'grant', weight: 1, good: true, title: 'Субсидия на благоустройство',
         text: 'Область выделила субсидию вашей компании.',
         apply: (s) => {
-          const sum = 12000 + Math.round(Math.random() * 8000);
+          const sum = 12000 + Math.round(s.rand() * 8000);
           s.money += sum;
           s.stats.totalIncome += sum;
           TR.Sim.notice(s, 'good', `Получена субсидия: +${TR.Util.money(sum)}`);

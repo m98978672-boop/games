@@ -93,6 +93,30 @@
 
   function closeTop() { if (modalStack.length) close(modalStack[modalStack.length - 1]); }
 
+  /* Свой вопрос «да/нет» вместо window.confirm: браузерное окно перекрывает
+     игру, а на телефоне выглядит как поломка. Колбэк зовётся только на «да». */
+  function confirmBox(text, onYes, opts) {
+    opts = opts || {};
+    var wrap = modal(
+      '<div class="modal-head"><h2>' + esc(opts.title || 'Подтвердите') + '</h2>' +
+      '<button class="icon-btn x" data-close>\u2715</button></div>' +
+      '<div class="modal-body"><p>' + esc(text) + '</p></div>' +
+      '<div class="modal-actions"><button class="btn" data-close>' + esc(opts.cancel || 'Отмена') + '</button>' +
+      '<button class="btn btn-primary' + (opts.danger ? ' danger' : '') + '" data-yes>' +
+      esc(opts.yes || 'Да') + '</button></div>',
+      { cls: 'confirm' }
+    );
+    bindClose(wrap);
+    var yes = wrap.querySelector('[data-yes]');
+    if (yes) yes.addEventListener('click', function () {
+      close(wrap);
+      if (typeof onYes === 'function') onYes();
+    });
+    var cancel = wrap.querySelector('.modal-actions [data-close]');
+    if (cancel) cancel.focus();
+    return wrap;
+  }
+
   function toast(text, kind) {
     var box = el('toasts');
     var t = document.createElement('div');
@@ -1551,6 +1575,7 @@
   window.IN8B = window.IN8B || {};
   window.IN8B.ui = {
     el: el, esc: esc, modal: modal, close: close, closeTop: closeTop, toast: toast, bindClose: bindClose,
+    confirm: confirmBox,
     currencies: CURRENCIES, setCurrency: setCurrency, money: money, rub: rub, useCountry: useCountry,
     fillStartSelects: fillStartSelects, renderPastList: renderPastList, countriesModal: countriesModal,
     whoModal: whoModal, birthCard: birthCard, helpModal: helpModal,
