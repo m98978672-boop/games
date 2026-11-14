@@ -20,7 +20,7 @@ export function clampCenter(center, view, scale, extent = WORLD2D.halfKm) {
 }
 
 /* F-93: зум к якорю — точка под курсором остаётся на месте. */
-export function zoomAt(center, view, scale, next, anchor, limits = { min: 0.08, max: 200 }, extent = WORLD2D.halfKm) {
+export function zoomAt(center, view, scale, next, anchor, limits = { min: 0.08, max: 600 }, extent = WORLD2D.halfKm) {
   const s = Math.max(limits.min, Math.min(limits.max, next));
   if (!anchor) return { center: clampCenter(center, view, s, extent), scale: s };
   const before = screenToWorld(center, view, scale, anchor.x, anchor.y);
@@ -40,7 +40,7 @@ export function shiftBy(center, view, scale, dx, dy, extent = WORLD2D.halfKm) {
 }
 
 /* F-95: шаг сетки в километрах — крупнейший, чей квадрат не шире 220 px. */
-const GRID_STEPS = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000];
+const GRID_STEPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000];
 export function gridStep(scale) {
   let step = GRID_STEPS[0];
   for (const s of GRID_STEPS) if (s * scale <= 220) step = s;
@@ -49,7 +49,7 @@ export function gridStep(scale) {
 
 /* F-99a: длина масштабной линейки — ближайшее значение не шире 160 px. */
 export function scaleBarKm(scale) {
-  const targets = [1, 2, 5, 10, 20, 50, 100, 250, 500, 1000, 2000];
+  const targets = [0.25, 0.5, 1, 2, 5, 10, 20, 50, 100, 250, 500, 1000, 2000];
   let km = targets[0];
   for (const t of targets) if (t * scale <= 160) km = t;
   return km;

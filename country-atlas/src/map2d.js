@@ -2,6 +2,7 @@
    Движение простое: тянуть — сдвиг, колесо — зум, без поворотов. */
 import { WORLD2D, settlements, rankSettlements, heightKm, colorAtKm } from './world2d.js';
 import { buildRoads, ROAD_CLASS } from './roads2d.js';
+import { buildTransport, advance as advanceTransport, vehiclePosition, screenLengthPx, VEHICLE } from './transport2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
 export class Map2D {
@@ -12,7 +13,7 @@ export class Map2D {
     this.center = { x: 0, y: 0 };
     this.scale = 0.16;           // пикселей на километр: весь мир 7000 км на экране
     this.minScale = 0.08;
-    this.maxScale = 200;
+    this.maxScale = 600;          // 1 px ≈ 1.7 м: в этом зуме видно и машину, и дом
     this.overview = null;        // canvas с обзором 700 км
     this.detail = null;          // { canvas, x0, y0, sizeKm }
     this.detailWanted = null;
@@ -24,6 +25,8 @@ export class Map2D {
     this.showSettlements = true;
     this.showQ = true;
     this.showRoads = true;
+    this.showVehicles = true;   // слой транспорта §44
+    this.transport = null;
     this.worker = null;
     this.pendingPatch = false;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -89,7 +92,7 @@ export class Map2D {
           if (e.data.type === 'overview') { paintQuick(e.data.buffer, e.data.size); done(); }
           else if (e.data.type === 'tile') { paintTile(e.data.buffer, e.data.size, e.data.i, e.data.j); this.draw(); }
           else if (e.data.type === 'patch') this.acceptPatch(e.data);
-          else if (e.data.type === 'roads') { this.roads = e.data.net; this.draw(); }
+          else if (e.data.type === 'roads') { this.roads = e.data.net; this.buildTransport(); this.draw(); }
         };
         worker.onerror = () => { done(); };
         worker.postMessage({ type: 'overview', size });
@@ -103,6 +106,7 @@ export class Map2D {
       await nextFrame();
       this.overviewLocal(size);
       this.roads = buildRoads();
+      this.buildTransport();
     }
 
     if (onProgress) onProgress(this.overview ? 1 : 0, 1);
@@ -184,10 +188,82 @@ export class Map2D {
     this.draw();
   }
 
+  /* Транспорт §44: маршруты строятся по готовой сети дорог — A и B у каждой единицы. */
+  buildTransport() {
+    if (!this.roads) return null;
+    const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    this.transport = buildTransport(this.roads, this.settlements);
+    this.transport.buildMs = Math.round((typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0);
+    return this.transport;
+  }
+
+  /* Шаг мира: реальные секунды → игровые часы (F-120). */
+  tick(dtSec) {
+    if (!this.transport) return;
+    advanceTransport(this.transport, dtSec);
+  }
+
   /* ---------------- отрисовка ---------------- */
+  /* Ключ неподвижных слоёв: пока камера и галочки не менялись, мир не пересобирается,
+     а живой транспорт рисуется поверх готовой картинки (§44.10). */
+  staticKey() {
+    const d = this.detail;
+    return [
+      this.view.w, this.view.h, this.dpr, this.center.x, this.center.y, this.scale,
+      this.showGrid ? 1 : 0, this.showRoads ? 1 : 0, this.showSettlements ? 1 : 0, this.showQ ? 1 : 0,
+      this.overview ? this.overview.width : 0,
+      d ? d.canvas.width + ':' + d.x0.toFixed(2) + ':' + d.y0.toFixed(2) : '',
+      this.selected ? this.selected.name : ''
+    ].join('|');
+  }
+
   draw() {
     const { ctx, view } = this;
+    const key = this.staticKey();
+    if (key !== this.paintedKey || !this.staticLayer) {
+      this.paintStatic(key);
+      this.paintedKey = key;
+    }
     ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(this.staticLayer, 0, 0);
+    ctx.restore();
+
+    const s = this.scale;
+    const originX = view.w / 2 - this.center.x * s;
+    const originY = view.h / 2 + this.center.y * s;
+    if (this.showVehicles && this.transport) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
+      ctx.clip();
+      this.drawVehicles(ctx, originX, originY, s);
+      ctx.restore();
+    }
+
+    this.frames++;
+    const now = performance.now();
+    if (now - this.fpsT > 500) {
+      this.fps = Math.round(this.frames * 1000 / (now - this.fpsT));
+      this.frames = 0; this.fpsT = now;
+      this.updateHud();
+    }
+  }
+
+  /* Неподвижный слой: море, обзор, патч, сетка, дороги, поселения, Q-кольцо, линейка. */
+  paintStatic(key) {
+    if (!this.staticLayer) {
+      this.staticLayer = document.createElement('canvas');
+      this.staticCtx = this.staticLayer.getContext('2d');
+    }
+    const layer = this.staticLayer;
+    const pw = Math.max(1, Math.round(this.view.w * this.dpr));
+    const ph = Math.max(1, Math.round(this.view.h * this.dpr));
+    if (layer.width !== pw || layer.height !== ph) { layer.width = pw; layer.height = ph; }
+    const ctx = this.staticCtx;
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    const { view } = this;
+
     ctx.fillStyle = '#0d2233';
     ctx.fillRect(0, 0, view.w, view.h);
 
@@ -208,7 +284,6 @@ export class Map2D {
       ctx.drawImage(d.canvas, dx, dy, d.wKm * s, d.hKm * s);
     }
 
-    // сетка, поселения и Q-кольцо не выходят за карту
     ctx.save();
     ctx.beginPath();
     ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
@@ -221,15 +296,7 @@ export class Map2D {
     ctx.restore();
 
     this.drawScaleBar(ctx);
-    ctx.restore();
-
-    this.frames++;
-    const now = performance.now();
-    if (now - this.fpsT > 500) {
-      this.fps = Math.round(this.frames * 1000 / (now - this.fpsT));
-      this.frames = 0; this.fpsT = now;
-      this.updateHud();
-    }
+    this.paintedKey = key;
   }
 
   drawRoads(ctx, originX, originY, s) {
@@ -291,6 +358,64 @@ export class Map2D {
       const sy = originY - y * s;
       if (sy < 14 || sy > this.view.h - 26) continue;
       ctx.fillText(y + ' км', 6, sy - 3);
+    }
+  }
+
+  /* F-116: единица видна на любом масштабе — не меньше 3 px; в зуме — почти в размер. */
+  drawVehicles(ctx, originX, originY, s) {
+    const view = this.view;
+    const pad = 40;
+    const list = this.transport.vehicles;
+    ctx.lineCap = 'round';
+    // сначала наземные, потом суда и самолёты — транспорт читается поверх дорог
+    for (const v of list) {
+      const p = vehiclePosition(v);
+      const sx = originX + p.x * s, sy = originY - p.y * s;
+      if (sx < -pad || sy < -pad || sx > view.w + pad || sy > view.h + pad) continue;
+      const len = screenLengthPx(v.lengthM, s);
+      const dir = v.dir >= 0 ? 1 : -1;
+      const ca = Math.cos(p.angle) * dir, sa = Math.sin(p.angle) * dir;
+      if (v.kind === 'plane') {
+        // самолёт: треугольник носом по курсу, размер фиксированный и заметный
+        const r = Math.max(3.2, len * 0.9);
+        ctx.fillStyle = '#101820';
+        ctx.beginPath();
+        ctx.moveTo(sx + ca * r, sy - sa * r);
+        ctx.lineTo(sx - ca * r * 0.6 + sa * r * 0.75, sy + sa * r * 0.6 + ca * r * 0.75);
+        ctx.lineTo(sx - ca * r * 0.6 - sa * r * 0.75, sy + sa * r * 0.6 - ca * r * 0.75);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = v.tone;
+        ctx.beginPath();
+        ctx.moveTo(sx + ca * r * 0.8, sy - sa * r * 0.8);
+        ctx.lineTo(sx - ca * r * 0.45 + sa * r * 0.55, sy + sa * r * 0.45 + ca * r * 0.55);
+        ctx.lineTo(sx - ca * r * 0.45 - sa * r * 0.55, sy + sa * r * 0.45 - ca * r * 0.55);
+        ctx.closePath();
+        ctx.fill();
+        continue;
+      }
+      if (v.refuelMin > 0) {
+        // F-123: стоит у колонки — вокруг точки тонкое кольцо, чтобы это было видно
+        ctx.strokeStyle = 'rgba(255,214,110,0.85)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sx, sy, Math.max(4, len * 0.6 + 3), 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      const w = v.kind === 'ship' ? Math.max(2.4, len * 0.34) : Math.max(1.6, len * 0.5);
+      // тёмный контур, затем корпус — иначе на светлой дороге машина теряется
+      ctx.strokeStyle = 'rgba(12,18,24,0.85)';
+      ctx.lineWidth = w + 1.6;
+      ctx.beginPath();
+      ctx.moveTo(sx - ca * len * 0.5, sy + sa * len * 0.5);
+      ctx.lineTo(sx + ca * len * 0.5, sy - sa * len * 0.5);
+      ctx.stroke();
+      ctx.strokeStyle = v.tone;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(sx - ca * len * 0.5, sy + sa * len * 0.5);
+      ctx.lineTo(sx + ca * len * 0.5, sy - sa * len * 0.5);
+      ctx.stroke();
     }
   }
 
@@ -404,6 +529,23 @@ export class Map2D {
     if (this.hud.roads) {
       const n = this.roads;
       this.hud.roads.textContent = n ? n.edges.length + ' · ' + n.totalKm + ' км' : '—';
+    }
+    if (this.hud.clock) {
+      const total = Math.floor(this.transport ? this.transport.minutes : 8 * 60);
+      const day = Math.floor(total / 1440) + 1;
+      const hh = String(Math.floor((total % 1440) / 60)).padStart(2, '0');
+      const mm = String(total % 60).padStart(2, '0');
+      this.hud.clock.textContent = 'день ' + day + ' · ' + hh + ':' + mm;
+    }
+    if (this.hud.cars) {
+      const t = this.transport;
+      if (!t) this.hud.cars.textContent = '—';
+      else {
+        const k = t.counts.byKind;
+        const ref = t.refueling || 0;
+        this.hud.cars.textContent = t.vehicles.length + ' ед. · ' + k.car + ' авто · ' + k.ship + ' судов · ' +
+          k.plane + ' самолётов' + (ref ? ' · на заправке ' + ref : '');
+      }
     }
   }
 }

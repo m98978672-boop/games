@@ -94,7 +94,7 @@ for (let i = 0; i < 20; i++) {
   // якорь держится, пока центр не упёрся в границу карты
   const pinned = Math.abs(r.center.x) < extent - view.w / (2 * r.scale) - 1e-6;
   if (pinned) assert.ok(Math.abs(before.x - after.x) < 1e-6, 'F-93 x на шаге ' + i);
-  assert.ok(r.scale >= 0.08 && r.scale <= 200, 'F-93 предел зума');
+  assert.ok(r.scale >= 0.08 && r.scale <= 600, 'F-93 предел зума');
 }
 
 // F-94: сдвиг в пикселях → километры (20 значений)
@@ -107,9 +107,9 @@ for (let i = 0; i < 20; i++) {
 }
 
 // F-95: шаг сетки из ряда 1/2/5/10/25/50/100/250/500/1000, 20 значений
-const STEPS = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000];
+const STEPS = [0.25, 0.5, 1, 2, 5, 10, 25, 50, 100, 250, 500, 1000];
 for (let i = 0; i < 20; i++) {
-  const s = Math.min(200, 0.08 * Math.pow(1.5, i));   // 0.08 … 200 px/км
+  const s = Math.min(600, 0.08 * Math.pow(1.62, i));   // 0.08 … 600 px/км
   const step = gridStep(s);
   assert.ok(STEPS.includes(step), 'F-95: шаг из ряда, а не ' + step);
   assert.ok(step * s <= 220 + 1e-9, 'F-95: шаг не шире 220 px при s=' + s.toFixed(2));

@@ -11,6 +11,8 @@ const hud = {
   center: document.getElementById('hud-center'),
   roads: document.getElementById('hud-roads'),
   town: document.getElementById('hud-town'),
+  cars: document.getElementById('hud-cars'),
+  clock: document.getElementById('hud-clock'),
   loading: document.getElementById('loading'),
   loadingText: document.getElementById('loading-text')
 };
@@ -159,7 +161,8 @@ const toggles = {
   'toggle-grid': (v) => { map.showGrid = v; map.draw(); },
   'toggle-roads': (v) => { map.showRoads = v; map.draw(); },
   'toggle-towns': (v) => { map.showSettlements = v; map.draw(); },
-  'toggle-q': (v) => { map.showQ = v; map.draw(); }
+  'toggle-q': (v) => { map.showQ = v; map.draw(); },
+  'toggle-cars': (v) => { map.showVehicles = v; map.draw(); }
 };
 for (const [id, fn] of Object.entries(toggles)) {
   const el = document.getElementById(id);
@@ -184,6 +187,25 @@ window.addEventListener('keydown', (e) => {
   map.requestDetail();
   map.updateHud();
 });
+
+/* Живой слой §44: пока включён транспорт, мир идёт своими часами.
+   Кадр рисуется не чаще 20 раз в секунду, в скрытой вкладке — ни одного. */
+let lastTick = 0;
+let lastDraw = 0;
+function liveLoop(now) {
+  requestAnimationFrame(liveLoop);
+  if (document.hidden || !map.showVehicles || !map.transport) { lastTick = now; return; }
+  const dt = Math.min(0.5, (now - lastTick) / 1000);
+  lastTick = now;
+  map.tick(dt);
+  if (now - lastDraw < 50) return;
+  lastDraw = now;
+  map.draw();
+}
+if (typeof requestAnimationFrame === 'function') {
+  lastTick = performance.now();
+  requestAnimationFrame(liveLoop);
+}
 
 if (hud.loadingText) hud.loadingText.textContent = 'мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км…';
 boot();
