@@ -117,6 +117,47 @@ const assert = require('node:assert/strict');
       return { total: textures.length, distinct: hashes.size };
     });
     assert.deepEqual(textureStats, { total: 10000, distinct: 10000 });
+    // Exercise the real isometric renderer with the actual atlases and controlled visibility.
+    const surfaces = await page.evaluate(async () => {
+      const paths = {
+        tile_grass:'tile_grass_variants.png', tile_dirt:'tile_dirt_path.png', tile_asphalt:'tile_asphalt_road.png',
+        tile_sidewalk:'tile_sidewalk_curb.png', tile_floor_wood:'tile_wood_floor.png', tile_floor_hospital:'tile_hospital_tile.png',
+        tile_floor_warehouse:'tile_warehouse_concrete.png', tile_water:'tile_water_puddle.png', tile_wall_wood:'tile_wall_wood.png',
+        tile_wall_brick:'tile_wall_brick.png', tile_wall_plaster:'tile_wall_plaster.png'
+      };
+      const sprites = {};
+      await Promise.all(Object.entries(paths).map(async ([name, path]) => {
+        const image = new Image(); image.src = 'assets/tiles/' + path; await image.decode(); sprites[name] = image;
+      }));
+      const canvas = document.createElement('canvas'); canvas.width = 480; canvas.height = 270;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true }); const T = DD.TILE;
+      let tile = T.GRASS;
+      const state = { player:{x:0,y:0,inVehicleId:'hidden'}, visible:{'0,0':true}, explored:{},
+        world:{getTile:()=>tile, doors:{'0,0':{open:false,broken:false}}, windows:{'0,0':{broken:false,barricade:0}}, containers:{}},
+        farms:[],campfires:[],vehicles:[],zombies:[],npcs:[],tw:{darkness:0,rainIntensity:0},health:{bloodMl:5000,maxBloodMl:5000},elapsed:0 };
+      function render(images) { DD.Isometric.render(ctx, state, images, () => false, {speed:1,bob:1}); return canvas.toDataURL(); }
+      const different = [];
+      for (const value of [T.GRASS,T.DIRT,T.ASPHALT,T.SIDEWALK,T.FLOOR_WOOD,T.FLOOR_HOSPITAL,T.FLOOR_WAREHOUSE,T.WATER,T.WALL_WOOD,T.WALL_BRICK,T.WALL_PLASTER]) {
+        tile=value; different.push(render({}) !== render(sprites));
+      }
+      tile=T.WATER; state.elapsed=0; const water1=render(sprites); state.elapsed=.5; const water2=render(sprites);
+      tile=T.DOOR; const closed=render(sprites); state.world.doors['0,0'].open=true; const open=render(sprites);
+      tile=T.WINDOW; const intact=render(sprites); state.world.windows['0,0'].broken=true; const broken=render(sprites);
+      tile=T.WALL_WOOD; state.visible={}; state.explored={'0,0':true}; render(sprites);
+      const fogCorner=Array.from(ctx.getImageData(225,110,1,1).data);
+      const untouched=Array.from(ctx.getImageData(200,90,1,1).data);
+      const texCanvas=document.createElement('canvas');texCanvas.width=texCanvas.height=32;
+      const textureCtx=texCanvas.getContext('2d', {willReadFrequently:true});
+      const plaster=DD.ContentPack.getAll().find(it => it.familyId==='plaster' && it.variantIdx===2);
+      DD.ContentPack.renderItemToCanvas(texCanvas,plaster,0,0);
+      const pixels=textureCtx.getImageData(0,0,32,32).data;let light=0;
+      for(let i=0;i<pixels.length;i+=4) light+=(pixels[i]+pixels[i+1]+pixels[i+2])/3;
+      return {different, water:water1!==water2, door:closed!==open, window:intact!==broken, fogCorner, untouched, plasterLight:light/1024};
+    });
+    assert.ok(surfaces.different.every(Boolean), 'все материалы используют свои атласы');
+    assert.ok(surfaces.water && surfaces.door && surfaces.window, 'виды воды, дверей и окон меняются с состоянием');
+    assert.deepEqual(surfaces.fogCorner, surfaces.untouched, 'туман не рисует прямоугольник вокруг стены');
+    assert.ok(surfaces.plasterLight > 100, 'светлая штукатурка не становится чёрной из-за индекса палитры');
     assert.deepEqual(errors, []);
     console.log('[dead-district browser] OK');
   } finally { await browser.close(); }
