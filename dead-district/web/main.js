@@ -16,6 +16,9 @@
   var activeModal = '';
   var rafId = 0;
   var lastTime = 0;
+  var pausedBeforeCatalog = false;
+
+  function clearInput() { keys = {}; touchVec.x = 0; touchVec.y = 0; }
 
   function addToast(msg) {
     if (!state) return;
@@ -94,6 +97,10 @@
       addToast('Сохранение загружено.');
     }
 
+    var safe = DD.GameplayHelpers.nearestWalkable(world, state.player.x, state.player.y);
+    state.player.x = safe.x; state.player.y = safe.y;
+    clearInput();
+
     // Спавним транспорт из чанков
     var cKeys = Object.keys(world.chunks);
     for (var i = 0; i < cKeys.length; i++) {
@@ -151,8 +158,10 @@
   }
 
   function stepSimulation(dt) {
-    if (!state || state.paused || state.health.dead) return;
+    if (!state || state.paused || activeModal || state.health.dead) return;
     state.elapsed += dt;
+    state.player.moving = false;
+    state.player.hitFlash = Math.max(0, (state.player.hitFlash || 0) - dt);
     if (state.player.attackCd > 0) state.player.attackCd = Math.max(0, state.player.attackCd - dt);
 
     // 1. Ввод игрока (клавиатура + мобильный тач)
@@ -162,7 +171,7 @@
     if (len > 1) { ix /= len; iy /= len; }
 
     var sprint = Boolean(keys.ShiftLeft || keys.ShiftRight) && state.needs.stamina > 8;
-    var sneak = Boolean(keys.ControlLeft || keys.KeyC);
+    var sneak = Boolean(keys.ControlLeft || keys.ControlRight);
 
     if (state.player.inVehicleId) {
       var veh = null;
@@ -199,11 +208,14 @@
       var spd = sprint ? 7.2 : (sneak ? 2.6 : 4.6);
       if (state.health.parts.LEG_L.fractureDays > 0 || state.health.parts.LEG_R.fractureDays > 0) spd *= 0.45;
       if (Sys.getTotalWeight(state.inv) > Sys.getMaxWeight(state.inv)) spd *= 0.72;
+      var oldX = state.player.x, oldY = state.player.y;
       var nx = state.player.x + state.player.fx * spd * dt;
       var ny = state.player.y + state.player.fy * spd * dt;
       if (state.world.isWalkable(Math.round(nx), Math.round(state.player.y))) state.player.x = nx;
       if (state.world.isWalkable(Math.round(state.player.x), Math.round(ny))) state.player.y = ny;
 
+      state.player.moving = Math.hypot(state.player.x - oldX, state.player.y - oldY) > 0.00001;
+      state.player.motion = sprint ? 'run' : (sneak ? 'sneak' : 'walk');
       state.player.stepTimer += dt;
       if (state.player.stepTimer >= (sprint ? 0.28 : 0.45)) {
         state.player.stepTimer = 0;
@@ -354,8 +366,9 @@
   }
 
   function performAttack() {
-    if (!state || state.paused || state.health.dead || state.player.attackCd > 0) return;
+    if (!state || state.paused || activeModal || state.health.dead || state.player.attackCd > 0) return;
     var wmeta = DataDB.getItem(state.player.weapon) || { cat: 'melee', damage: 22, range: 1.8, noise_db: 70 };
+    state.player.attackFx = state.player.fx; state.player.attackFy = state.player.fy;
     if (wmeta.cat === 'firearm') {
       var mag = state.player.ammo[state.player.weapon] || 0;
       if (mag <= 0) {
@@ -364,6 +377,8 @@
       }
       state.player.ammo[state.player.weapon] = mag - 1;
       state.player.attackCd = wmeta.fire_rate || 0.3;
+      state.player.attackDuration = state.player.attackCd;
+      state.player.attackKind = 'firearm';
       emitNoise(state.player.x, state.player.y, wmeta.noise_db || 145, 'gunshot');
       DD.Renderer.playSfx(state.player.weapon === 'mossberg_500' ? 'sfx_gun_shotgun.wav' : 'sfx_gun_pistol.wav');
       var maxR = wmeta.range || 16;
@@ -383,18 +398,16 @@
       }
     } else {
       state.player.attackCd = 0.42;
+      state.player.attackDuration = 0.42;
+      state.player.attackKind = 'melee';
       emitNoise(state.player.x, state.player.y, wmeta.noise_db || 70, 'melee');
       DD.Renderer.playSfx('sfx_melee_swing.wav');
-      var ids = state.spatial.queryRadius(state.player.x, state.player.y, (wmeta.range || 1.8) + 0.6);
-      for (var j = 0; j < ids.length; j++) {
-        var zm = state.zombies[ids[j]];
-        if (!zm || zm.state === DD.ZSTATE.DEAD) continue;
-        var d = Math.hypot(zm.x - state.player.x, zm.y - state.player.y);
-        if (d <= (wmeta.range || 1.8)) {
-          if (Sys.damageZombie(zm, wmeta.damage || 24, wmeta.stun || 0.3)) state.kills += 1;
-          DD.Renderer.playSfx('sfx_melee_hit.wav');
-          break;
-        }
+      var target = DD.GameplayHelpers.meleeTarget(state.zombies, state.player, wmeta.range || 1.8, DD.ZSTATE.DEAD);
+      if (target) {
+        if (Sys.damageZombie(target, wmeta.damage || 24, wmeta.stun || 0.3)) state.kills += 1;
+        DD.Renderer.playSfx('sfx_melee_hit.wav');
+        state.player.hitFlash = 0.18;
+        state.player.hitX = target.x; state.player.hitY = target.y;
       }
     }
     updateHud();
@@ -418,26 +431,11 @@
   }
 
   function performInteract() {
-    if (!state || state.paused || state.health.dead) return;
+    if (!state || state.paused || activeModal || state.health.dead) return;
     if (state.player.inVehicleId) {
       state.player.inVehicleId = '';
       addToast('Вы вышли из машины.');
       return;
-    }
-    for (var vi = 0; vi < state.vehicles.length; vi++) {
-      var v = state.vehicles[vi];
-      if (Math.hypot(v.x - state.player.x, v.y - state.player.y) <= 2.5) {
-        state.player.inVehicleId = v.id;
-        addToast('За рулём: ' + v.name + ' (топливо ' + v.fuel.toFixed(1) + ' л)');
-        return;
-      }
-    }
-    for (var ni = 0; ni < state.npcs.length; ni++) {
-      var npc = state.npcs[ni];
-      if (npc.hp > 0 && Math.hypot(npc.x - state.player.x, npc.y - state.player.y) <= 2.8) {
-        openNpcModal(npc);
-        return;
-      }
     }
     var candidates = [
       [Math.round(state.player.x + state.player.fx), Math.round(state.player.y + state.player.fy)],
@@ -470,6 +468,21 @@
           addToast('Собран урожай: ' + fp.crop);
           return;
         }
+      }
+    }
+    for (var vi = 0; vi < state.vehicles.length; vi++) {
+      var v = state.vehicles[vi];
+      if (Math.hypot(v.x - state.player.x, v.y - state.player.y) <= 2.5) {
+        state.player.inVehicleId = v.id;
+        addToast('За рулём: ' + v.name + ' (топливо ' + v.fuel.toFixed(1) + ' л)');
+        return;
+      }
+    }
+    for (var ni = 0; ni < state.npcs.length; ni++) {
+      var npc = state.npcs[ni];
+      if (npc.hp > 0 && Math.hypot(npc.x - state.player.x, npc.y - state.player.y) <= 2.8) {
+        openNpcModal(npc);
+        return;
       }
     }
   }
@@ -510,6 +523,7 @@
   }
 
   function closeModals() {
+    clearInput();
     activeModal = '';
     var mo = document.getElementById('modal-overlay');
     if (mo) mo.hidden = true;
@@ -522,6 +536,7 @@
   function openModal(kind) {
     if (!state) return;
     if (activeModal === kind) { closeModals(); return; }
+    clearInput();
     activeModal = kind;
     var mo = document.getElementById('modal-overlay');
     var title = document.getElementById('modal-title');
@@ -647,6 +662,7 @@
   }
 
   function openNpcModal(npc) {
+    clearInput();
     activeModal = 'npc';
     var mo = document.getElementById('modal-overlay');
     var title = document.getElementById('modal-title');
@@ -711,6 +727,7 @@
     onClick('btn-load', function () { newGame(true); });
     onClick('btn-pause', function () {
       if (!state) return;
+      clearInput();
       state.paused = !state.paused;
       var po = document.getElementById('pause-overlay');
       if (po) po.hidden = !state.paused;
@@ -733,13 +750,12 @@
     var bindHold = function (id, dx, dy) {
       var el = document.getElementById(id);
       if (!el) return;
-      var start = function (e) { if (e && e.preventDefault) e.preventDefault(); touchVec.x = dx; touchVec.y = dy; };
+      var start = function (e) { if (e && e.preventDefault) e.preventDefault(); touchVec.x = dx; touchVec.y = dy; if (el.setPointerCapture && e.pointerId != null) el.setPointerCapture(e.pointerId); };
       var stop = function () { touchVec.x = 0; touchVec.y = 0; };
       el.addEventListener('pointerdown', start);
       el.addEventListener('pointerup', stop);
-      el.addEventListener('pointerleave', stop);
-      el.addEventListener('touchstart', start);
-      el.addEventListener('touchend', stop);
+      el.addEventListener('pointercancel', stop);
+      el.addEventListener('lostpointercapture', stop);
     };
     bindHold('touch-up', 0, -1);
     bindHold('touch-down', 0, 1);
@@ -750,6 +766,7 @@
 
     global.addEventListener('keydown', function (e) {
       if (e.code === 'F3') {
+        if (e.repeat) return;
         if (e.preventDefault) e.preventDefault();
         if (DD.CatalogF3) DD.CatalogF3.toggle();
         return;
@@ -759,6 +776,8 @@
         if (e.code === 'Escape' && DD.CatalogF3 && DD.CatalogF3.isOpen()) DD.CatalogF3.close();
         return;
       }
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0 && e.preventDefault) e.preventDefault();
+      if (e.repeat && ['KeyE', 'KeyR', 'KeyF', 'KeyI', 'KeyH', 'KeyC', 'Space', 'Escape'].indexOf(e.code) >= 0) return;
       keys[e.code] = true;
       if (e.code === 'KeyE') performInteract();
       else if (e.code === 'KeyR') performReload();
@@ -778,11 +797,20 @@
       }
     });
     global.addEventListener('keyup', function (e) { keys[e.code] = false; });
+    global.addEventListener('blur', clearInput);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) clearInput(); });
 
     if (canvasEl) {
       canvasEl.addEventListener('mousedown', function (e) {
         if (!state || state.paused || activeModal || (DD.CatalogF3 && DD.CatalogF3.isOpen())) return;
-        if (e.button === 0) performAttack();
+        if (e.button === 0) {
+          var rect = canvasEl.getBoundingClientRect();
+          var dx = (e.clientX - rect.left) / rect.width - 0.5;
+          var dy = ((e.clientY - rect.top) / rect.height - 0.5) * 270 / 480;
+          var length = Math.hypot(dx, dy);
+          if (length > 0.01) { state.player.fx = dx / length; state.player.fy = dy / length; }
+          performAttack();
+        }
       });
     }
   }
@@ -793,7 +821,9 @@
     if (DD.CatalogF3) {
       DD.CatalogF3.init({
         onToggle: function (open) {
-          if (state) state.paused = open;
+          clearInput();
+          if (state && open) { pausedBeforeCatalog = state.paused; state.paused = true; }
+          else if (state) state.paused = pausedBeforeCatalog;
         }
       });
     }

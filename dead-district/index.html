@@ -111,8 +111,23 @@
       </div>
     </div>
 
+    <div class="f3-controls f3-tools">
+      <button type="button" class="dd-btn" id="f3-animation-toggle">Анимации: 10 000 вариантов</button>
+      <span class="f3-subtitle">Выберите карточку для просмотра, оценки и проверки ассистентом.</span>
+    </div>
+    <section id="f3-animations" class="f3-animation-panel" hidden>
+      <strong>Процедурные варианты анимации</strong>
+      <p>5 действий × 4 направления × 5 стилей × 100 темпов. Это варианты одного набора спрайтов, а не 10 000 нарисованных анимаций.</p>
+      <div class="f3-controls">
+        <label>Действие <select id="anim-action"><option>Покой</option><option>Ходьба</option><option>Бег</option><option>Красться</option><option>Удар</option></select></label>
+        <label>Направление <select id="anim-direction"><option>Вниз</option><option>Вверх</option><option>Влево</option><option>Вправо</option></select></label>
+        <label>Стиль <select id="anim-style"><option>Обычный</option><option>Тяжёлый</option><option>Лёгкий</option><option>Осторожный</option><option>Резкий</option></select></label>
+        <label>Темп <input id="anim-variant" type="number" min="1" max="100" value="45"></label>
+      </div>
+      <div class="f3-controls"><canvas id="anim-preview" width="96" height="96" aria-label="Предпросмотр анимации"></canvas><div><b id="anim-label"></b><p>Направление и действие в игре выбираются автоматически; можно применить стиль и темп.</p><button type="button" class="dd-btn" id="anim-apply">Применить стиль и темп</button> <span id="anim-status" aria-live="polite"></span></div></div>
+    </section>
     <div class="f3-tabs">
-      <button type="button" class="dd-btn active" data-f3-tab="all">Все (10 000)</button>
+      <button type="button" class="dd-btn active" data-f3-tab="all">Все (10 181)</button>
       <button type="button" class="dd-btn" data-f3-tab="base">Базовые ассеты (181)</button>
       <button type="button" class="dd-btn" data-f3-tab="texture">Текстуры (4 000)</button>
       <button type="button" class="dd-btn" data-f3-tab="model">Модельки 2D (3 000)</button>
@@ -157,6 +172,14 @@
           <button id="f3-inspect-clear" type="button" class="dd-btn">Убрать оценку</button>
           <button id="f3-inspect-close" type="button" class="dd-btn">Скрыть</button>
         </div>
+        <div class="f3-assistant">
+          <strong>Ассистент проверки изображения</strong>
+          <p>Проверяет контраст и заполнение. Можно загрузить эталон для попиксельного сравнения с предпросмотром. Это техническая эвристика, не ИИ: она не понимает содержание и не ставит оценки за вас. Файл остаётся в браузере.</p>
+          <label>Эталон (PNG/JPEG): <input id="f3-reference" type="file" accept="image/png,image/jpeg"></label>
+          <div class="f3-controls"><canvas id="f3-reference-preview" width="64" height="64" aria-label="Эталон"></canvas><button type="button" class="dd-btn" id="f3-assess">Проверить текущий предпросмотр</button></div>
+          <button type="button" class="dd-btn" id="f3-assess-note">Добавить результат в заметку</button>
+          <p id="f3-assess-result" aria-live="polite">Эталон не выбран. Для 3D и аудио показан условный предпросмотр, не исходный файл.</p>
+        </div>
         <div class="f3-reason-row">
           <button type="button" class="dd-btn" data-f3-reason="Примитивная форма">Примитивная</button>
           <button type="button" class="dd-btn" data-f3-reason="Плохие цвета">Плохие цвета</button>
@@ -176,6 +199,7 @@
       <button id="f3-first" type="button" class="dd-btn">⏮ В начало</button>
       <button id="f3-prev" type="button" class="dd-btn">◀ Назад</button>
       <span id="f3-page-info" class="f3-page-info">Стр. 1 / 1</span>
+      <label>Страница <input id="f3-page-jump" type="number" min="1" value="1" aria-label="Перейти на страницу"></label><button type="button" id="f3-page-go" class="dd-btn">Перейти</button>
       <button id="f3-next" type="button" class="dd-btn">Вперёд ▶</button>
       <button id="f3-last" type="button" class="dd-btn">В конец ⏭</button>
     </div>
@@ -189,6 +213,9 @@
 <script src="web/algorithms.js"></script>
 <script src="web/systems.js"></script>
 <script src="web/content_pack.js"></script>
+<script src="web/gameplay_helpers.js"></script>
+<script src="web/animations.js"></script>
+<script src="web/asset_assistant.js"></script>
 <script src="web/catalog_f3.js"></script>
 <script src="web/renderer_audio.js"></script>
 <script src="web/main.js"></script>
