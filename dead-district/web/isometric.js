@@ -14,6 +14,67 @@
   var ground = {};
   ground[T.GRASS]='#365b43'; ground[T.DIRT]='#735b46'; ground[T.ASPHALT]='#393d46'; ground[T.SIDEWALK]='#737b78';
   ground[T.FLOOR_WOOD]='#a28a68'; ground[T.FLOOR_HOSPITAL]='#a6b4b3'; ground[T.FLOOR_WAREHOUSE]='#797d7d'; ground[T.WATER]='#37636b';
+
+  // Изображения уже загружает Renderer: кэшируем только маленькие
+  // изометрические отпечатки, а не пересоздаём canvas для каждого тайла.
+  var floorMaterials = {};
+  floorMaterials[T.GRASS] = ['tile_grass', 4]; floorMaterials[T.DIRT] = ['tile_dirt', 2];
+  floorMaterials[T.ASPHALT] = ['tile_asphalt', 4]; floorMaterials[T.SIDEWALK] = ['tile_sidewalk', 2];
+  floorMaterials[T.FLOOR_WOOD] = ['tile_floor_wood', 2]; floorMaterials[T.FLOOR_HOSPITAL] = ['tile_floor_hospital', 2];
+  floorMaterials[T.FLOOR_WAREHOUSE] = ['tile_floor_warehouse', 2]; floorMaterials[T.WATER] = ['tile_water', 3];
+  var floorStamps = Object.create(null);
+  function stampFor(img, name, frame) {
+    if (!img || !img.complete || !img.naturalWidth || typeof document === 'undefined') return null;
+    var columns = Math.floor(img.naturalWidth / 32), rows = Math.floor(img.naturalHeight / 32);
+    if (!columns || !rows || frame < 0 || frame >= columns * rows) return null;
+    var key = name + ':' + frame, cached = floorStamps[key];
+    if (cached && cached.image === img) return cached.canvas;
+    var canvas = document.createElement('canvas'); canvas.width = 32; canvas.height = 16;
+    var stamp = canvas.getContext('2d'); if (!stamp) return null;
+    stamp.imageSmoothingEnabled = false;
+    stamp.setTransform(0.5, 0.25, -0.5, 0.25, 16, 0);
+    stamp.drawImage(img, (frame % columns) * 32, Math.floor(frame / columns) * 32, 32, 32, 0, 0, 32, 32);
+    floorStamps[key] = { image: img, canvas: canvas }; return canvas;
+  }
+  function floorStamp(sprites, tile, hash, time) {
+    var material = floorMaterials[tile]; if (!material) return null;
+    // Чётные кадры дороги содержат разметку; рисуем её отдельно в привязке к дороге.
+    var frame = tile === T.ASPHALT ? 1 + (hash % 4) * 2 : tile === T.WATER ? (hash + Math.floor(time * 2)) % 3 : hash % material[1];
+    return stampFor(sprites[material[0]], material[0], frame);
+  }
+  var wallStamps = Object.create(null);
+  function wallFace(ctx, img, name, frame, x, y, height, right) {
+    if (!img || !img.complete || !img.naturalWidth || typeof document === 'undefined') return false;
+    var cols = Math.floor(img.naturalWidth / 32), rows = Math.floor(img.naturalHeight / 32);
+    if (!cols || !rows || frame < 0 || frame >= cols * rows) return false;
+    var key = name + ':' + frame + ':' + height + ':' + (right ? 1 : 0), cached = wallStamps[key];
+    if (!cached || cached.image !== img) {
+      var canvas = document.createElement('canvas'); canvas.width = 16; canvas.height = height + 8;
+      var face = canvas.getContext('2d'); if (!face) return false;
+      face.imageSmoothingEnabled = false;
+      face.setTransform(0.5, right ? -0.25 : 0.25, 0, height / 32, 0, right ? 8 : 0);
+      face.drawImage(img, (frame % cols) * 32, Math.floor(frame / cols) * 32, 32, 32, 0, 0, 32, 32);
+      cached = wallStamps[key] = { image: img, canvas: canvas };
+    }
+    ctx.drawImage(cached.canvas, Math.round(x) + (right ? 0 : -16), Math.round(y - height));
+    return true;
+  }
+  // UV-разметка граней сохраняется и на обычной стене, и на пониженной рядом с игроком.
+  function faceRect(ctx, x, y, height, right, u0, v0, u1, v1, color) {
+    function at(u, v) { return right ? [x + 16*u, y + 8 - 8*u - height + height*v] : [x - 16 + 16*u, y + 8*u - height + height*v]; }
+    polygon(ctx, [at(u0,v0), at(u1,v0), at(u1,v1), at(u0,v1)], color);
+  }
+  function roadMark(ctx, x, y, tx, ty) {
+    var lx = ((tx % 32) + 32) % 32, ly = ((ty % 32) + 32) % 32;
+    var crossX = lx >= 13 && lx <= 16, crossY = ly >= 13 && ly <= 16;
+    var vertical = lx === 14 && !crossY && ((ty % 4) + 4) % 4 < 2;
+    var horizontal = ly === 14 && !crossX && ((tx % 4) + 4) % 4 < 2;
+    if (!vertical && !horizontal) return;
+    ctx.strokeStyle = '#c9bd89'; ctx.lineWidth = 1.4; ctx.beginPath();
+    if (vertical) { ctx.moveTo(x + 5, y - 2.5); ctx.lineTo(x - 5, y + 2.5); }
+    else { ctx.moveTo(x - 5, y - 2.5); ctx.lineTo(x + 5, y + 2.5); }
+    ctx.stroke(); ctx.lineWidth = 1;
+  }
   function render(ctx, state, sprites, drawSpriteCell, animationSettings) {
     var px = state.player.x, py = state.player.y, time = state.elapsed || 0;
     ctx.imageSmoothingEnabled = false; ctx.fillStyle = '#101b1d'; ctx.fillRect(0,0,W,H);
@@ -25,12 +86,25 @@
       var isWall = tile === T.WALL_BRICK || tile === T.WALL_WOOD || tile === T.WALL_PLASTER;
       var tree = tile === T.TREE_OAK || tile === T.TREE_PINE;
       var isStructure = isWall || tile === T.DOOR || tile === T.WINDOW;
-      var base = isStructure ? '#a28a68' : tree ? ground[T.GRASS] : (ground[tile] || '#555d50');
-      diamond(ctx,p.x,p.y,base);
-      if ((tile === T.GRASS || tree) && hash % 3 === 0) { ctx.fillStyle='#64805a'; ctx.fillRect(p.x-2+(hash%7),p.y-1,2,1); }
-      if (tile === T.ASPHALT && hash % 8 === 0) { ctx.fillStyle='#b0a884'; ctx.fillRect(p.x-2,p.y-1,4,1); }
-      if (tile === T.FLOOR_WOOD) { ctx.strokeStyle='rgba(71,50,36,.3)'; ctx.beginPath(); ctx.moveTo(p.x-8,p.y-4); ctx.lineTo(p.x+8,p.y+4); ctx.stroke(); }
-      if (!visible) diamond(ctx,p.x,p.y,'rgba(10,24,28,.62)');
+      var materialTile = isStructure ? T.FLOOR_WOOD : tree ? T.GRASS : tile;
+      if (tile === T.DOOR || tile === T.WINDOW) {
+        var neighbours = [[0,1],[0,-1],[1,0],[-1,0]];
+        for (var n = 0; n < neighbours.length; n++) {
+          var adjacent = state.world.getTile(tx + neighbours[n][0], ty + neighbours[n][1]);
+          if (adjacent === T.FLOOR_WOOD || adjacent === T.FLOOR_HOSPITAL || adjacent === T.FLOOR_WAREHOUSE) { materialTile = adjacent; break; }
+        }
+      }
+      var base = ground[materialTile] || '#555d50';
+      // Одинаковое округление для соседних клеток исключает дрожание и щели при движении камеры.
+      var gx = Math.round(p.x), gy = Math.round(p.y);
+      diamond(ctx,gx,gy,base);
+      var stamp = floorStamp(sprites, materialTile, hash, time);
+      if (stamp) {
+        ctx.save(); ctx.globalAlpha = materialTile === T.FLOOR_WOOD ? 0.65 : (materialTile === T.ASPHALT || materialTile === T.GRASS ? 0.72 : 0.85);
+        ctx.drawImage(stamp, gx - 16, gy - 8); ctx.restore();
+      }
+      if (tile === T.ASPHALT) roadMark(ctx,gx,gy,tx,ty);
+      if (!visible) diamond(ctx,gx,gy,'rgba(10,24,28,.62)');
       if (isStructure || tree) items.push({type:tree?'tree':'wall', x:tx,y:ty,tile:tile,visible:visible,key:key});
       var cont = state.world.containers[key]; if (cont && !cont.looted && visible) items.push({type:'crate',x:tx,y:ty});
     }
@@ -79,19 +153,43 @@
       if(item.type==='wall') {
         var tile=item.tile, door=state.world.doors[item.key], near=Math.abs(item.x-px)+Math.abs(item.y-py)<3;
         var h=near?8:18;
-        if(tile===T.DOOR && door && (door.open || door.broken)) {block(ctx,q.x,q.y,3,'#634c37','#46392f','#9a8060');}
+        if(tile===T.DOOR && door && (door.open || door.broken)) {h=3;block(ctx,q.x,q.y,h,'#634c37','#46392f','#9a8060');}
         else {var colors=tile===T.WALL_WOOD?['#674736','#4c352e','#9c7958']:tile===T.WALL_PLASTER?['#b3aaa0','#938c87','#ded4c6']:['#85554d','#693f3a','#ac7565'];if(tile===T.DOOR)colors=['#71503a','#563b30','#a8845a'];if(tile===T.WINDOW)colors=['#62818a','#476570','#b5c7c6'];block(ctx,q.x,q.y,h,colors[0],colors[1],colors[2]);
-          if(tile===T.DOOR){
-            polygon(ctx, [[q.x+2,q.y+5],[q.x+13,q.y-1],[q.x+13,q.y-h+2],[q.x+2,q.y-h+8]], '#4c3025');
-            polygon(ctx, [[q.x+3,q.y+3],[q.x+12,q.y-2],[q.x+12,q.y-h+4],[q.x+3,q.y-h+9]], '#af8151');
-            ctx.fillStyle='#f2df8d';ctx.fillRect(q.x+9,q.y-h+9,2,2);
-          } else if(tile===T.WINDOW){
-            polygon(ctx, [[q.x+2,q.y+2],[q.x+13,q.y-3],[q.x+13,q.y-h+3],[q.x+2,q.y-h+9]], '#b1d5db');
-            ctx.strokeStyle='#536e75';ctx.beginPath();ctx.moveTo(q.x+7,q.y-h+7);ctx.lineTo(q.x+7,q.y-1);ctx.stroke();
-          } else if(tile===T.WALL_BRICK && h>8) {
-            ctx.strokeStyle='rgba(50,29,25,.32)'; ctx.beginPath();ctx.moveTo(q.x-15,q.y-h+6);ctx.lineTo(q.x,q.y-h+14);ctx.lineTo(q.x+15,q.y-h+6);ctx.stroke();
-          }}
-        if(!item.visible){ctx.fillStyle='rgba(10,24,28,.48)';ctx.fillRect(q.x-16,q.y-h-8,32,h+16);}
+          if (tile===T.WALL_WOOD || tile===T.WALL_BRICK || tile===T.WALL_PLASTER) {
+            var material = tile===T.WALL_WOOD?'tile_wall_wood':tile===T.WALL_BRICK?'tile_wall_brick':'tile_wall_plaster';
+            var frame = Math.abs(Math.imul(item.x,73856093)^Math.imul(item.y,19349663)) % 4;
+            if (wallFace(ctx,sprites[material],material,frame,q.x,q.y,h,false)) {
+              wallFace(ctx,sprites[material],material,frame,q.x,q.y,h,true);
+              polygon(ctx,[[q.x,q.y+8],[q.x+16,q.y],[q.x+16,q.y-h],[q.x,q.y+8-h]],'rgba(0,0,0,.18)');
+              var wallTop = stampFor(sprites[material],material,frame);
+              if (wallTop) { ctx.save(); ctx.globalAlpha = 0.4; ctx.drawImage(wallTop, Math.round(q.x)-16, Math.round(q.y-h)-8); ctx.restore(); }
+            }
+          }
+          if(tile===T.DOOR || tile===T.WINDOW) {
+            var win = tile === T.WINDOW ? state.world.windows[item.key] : null;
+            for (var side = 0; side < 2; side++) {
+              var right = side === 1;
+              faceRect(ctx,q.x,q.y,h,right,.10,.08,.90,.95,tile===T.DOOR?'#483229':'#405d63');
+              faceRect(ctx,q.x,q.y,h,right,.18,.14,.82,.88,tile===T.DOOR?'#ad8051':(win && win.broken?'#39575d':'#a8cbd0'));
+              if (tile===T.DOOR) {
+                faceRect(ctx,q.x,q.y,h,right,.24,.25,.76,.32,'#755439');
+                faceRect(ctx,q.x,q.y,h,right,.69,.53,.78,.62,'#f3dc85');
+              } else {
+                faceRect(ctx,q.x,q.y,h,right,.46,.14,.54,.88,'#536e75');
+                faceRect(ctx,q.x,q.y,h,right,.18,.48,.82,.55,'#536e75');
+                if (win && win.broken) faceRect(ctx,q.x,q.y,h,right,.22,.20,.42,.40,'#d3e5df');
+                if (win && win.barricade > 0) faceRect(ctx,q.x,q.y,h,right,.08,.53,.92,.72,'#8c6746');
+              }
+            }
+          }
+        }
+        if(!item.visible) {
+          // Не затемнять соседние клетки прямоугольником вокруг стены.
+          var fog='rgba(10,24,28,.48)';
+          polygon(ctx,[[q.x-16,q.y],[q.x,q.y+8],[q.x,q.y+8-h],[q.x-16,q.y-h]],fog);
+          polygon(ctx,[[q.x,q.y+8],[q.x+16,q.y],[q.x+16,q.y-h],[q.x,q.y+8-h]],fog);
+          polygon(ctx,[[q.x,q.y-8-h],[q.x+16,q.y-h],[q.x,q.y+8-h],[q.x-16,q.y-h]],fog);
+        }
       } else if(item.type==='tree') {ctx.fillStyle='#564332';ctx.fillRect(q.x-2,q.y-20,4,20);ctx.fillStyle=item.tile===T.TREE_PINE?'#275044':'#3b6945';ctx.beginPath();ctx.arc(q.x,q.y-23,12,0,Math.PI*2);ctx.fill();ctx.fillStyle='#648e58';ctx.beginPath();ctx.arc(q.x-4,q.y-27,6,0,Math.PI*2);ctx.fill();}
       else if(item.type==='crate') {block(ctx,q.x,q.y,7,'#87613d','#674b32','#bc9862');}
       else if(item.type==='farm'){diamond(ctx,q.x,q.y,'#664735');if(item.data.stage>0){ctx.fillStyle='#80a85a';ctx.fillRect(q.x-2,q.y-5,4,5);}}

@@ -74,3 +74,12 @@ assert.notEqual(trace3D(ctx => pack.renderBaseGlbPreview(ctx, 'E17_prop_oak', 16
 
 const variantA = pack.getMeshVariant(0), variantB = pack.getMeshVariant(3000);
 assert.notEqual(trace3D(ctx => pack.renderMesh3D(ctx, variantA, 160, 0.62)), trace3D(ctx => pack.renderMesh3D(ctx, variantB, 160, 0.62)), 'формы параметрических мешей меняют геометрию');
+
+// Светлые материалы не должны превращаться в чёрный только из-за соседа в палитре.
+const plaster = items.find(x => x.kind === 'texture' && x.familyId === 'plaster' && x.variantIdx === 2);
+let drawn;
+pack.renderTexture32({ clearRect() {}, save() {}, translate() {}, rotate() {}, restore() {},
+  drawImage(canvas) { drawn = Buffer.from(canvas.data); } }, plaster, 32, 0);
+let brightness = 0;
+for (let i = 0; i < drawn.length; i += 4) brightness += (drawn[i] + drawn[i + 1] + drawn[i + 2]) / 3;
+assert.ok(brightness / 1024 > 100, 'штукатурка остаётся светлой');

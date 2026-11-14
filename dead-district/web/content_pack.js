@@ -178,6 +178,13 @@
     return ITEMS;
   }
 
+  var TEXTURE_TONES = {
+    brick:[2,1,3], wood_floor:[6,5,7], asphalt:[28,27,29], grass:[12,11,13], dirt:[7,6,8],
+    clinic:[25,30,26], concrete:[27,26,28], water:[13,15,14], wood_wall:[7,6,8], plaster:[0,5,25],
+    metal:[27,26,28], blood:[28,27,29], bark:[9,7,8], snow:[25,30,26], roof:[28,27,29],
+    tarp:[12,11,13], glass:[15,25,26], farm:[8,7,9], foliage:[12,11,13], cobble:[26,25,27]
+  };
+
   // ---------- 1. РЕНДЕР ТЕКСТУРЫ 32×32 НА CANVAS ----------
   function renderTexture32(ctx, item, outSize, direction) {
     var fam = TEX_FAMILIES[item.famIdx] || TEX_FAMILIES[0];
@@ -186,9 +193,11 @@
     var off = createScratch(32, 32);
     if (!off) return;
     var octx = off.getContext('2d');
-    var shift = (v % 3 === 1) ? 1 : (v % 3 === 2 ? -1 : 0);
-    var baseCol = PALETTE[(fam.base + shift + 32) % 30];
-    var hiCol = PALETTE[(fam.hi + (a % 2) + 32) % 30];
+    // Соседние индексы палитры не всегда близки по цвету (например,
+    // рядом с белым — чёрный). Варианты должны сохранять цвет материала.
+    var tones = TEXTURE_TONES[fam.id] || [fam.base, fam.base, fam.base];
+    var baseCol = PALETTE[tones[v % 3]];
+    var hiCol = PALETTE[fam.hi];
     var seamCol = PALETTE[fam.seam];
     if (v === 8) hiCol = PALETTE[25]; // заснеженный оттенок
     if (v === 9) hiCol = PALETTE[1];  // кровавый след
@@ -258,6 +267,42 @@
         octx.fillRect(0, wy, 32, 1);
         octx.fillStyle = hiCol;
         octx.fillRect((wy + v) % 12, wy + 1, 10, 1);
+      }
+    } else if (style === 'plaster') {
+      for (var pl = 0; pl < 18; pl++) {
+        octx.fillStyle = pl % 3 ? hiCol : seamCol;
+        octx.fillRect(hash32(pl, a, v) % 31, hash32(v, pl, a) % 31, 1, 1);
+      }
+      var crackX = 4 + hash32(a, v, 31) % 22;
+      octx.fillStyle = seamCol;
+      for (var cl = 0; cl < 9; cl++) octx.fillRect(crackX + Math.floor(cl / 3), 5 + cl, 1, 1);
+    } else if (style === 'glass') {
+      octx.fillStyle = seamCol; octx.fillRect(0, 0, 32, 2); octx.fillRect(0, 30, 32, 2);
+      octx.fillRect(0, 0, 2, 32); octx.fillRect(30, 0, 2, 32);
+      octx.fillStyle = hiCol;
+      for (var gl = 0; gl < 12; gl++) { octx.fillRect(5 + gl, 20 - gl, 1, 2); octx.fillRect(13 + gl, 26 - gl, 1, 1); }
+    } else if (style === 'snow') {
+      for (var sn = 0; sn < 36; sn++) {
+        octx.fillStyle = sn % 3 ? hiCol : seamCol;
+        octx.fillRect(hash32(sn, a, v) % 32, hash32(v, sn, a) % 32, 2, 1);
+      }
+    } else if (style === 'bark') {
+      for (var ba = 0; ba < 32; ba += 5) {
+        octx.fillStyle = seamCol; octx.fillRect(ba, 0, 1, 32);
+        octx.fillStyle = hiCol;
+        for (var by = 3; by < 32; by += 9) octx.fillRect(ba + 2, (by + hash32(ba, a, v) % 5) % 32, 1, 4);
+      }
+    } else if (style === 'shingle') {
+      for (var roofY = 0; roofY < 32; roofY += 8) {
+        octx.fillStyle = seamCol; octx.fillRect(0, roofY, 32, 1);
+        for (var roofX = (roofY % 16 ? 4 : 0); roofX < 32; roofX += 8) {
+          octx.fillRect(roofX, roofY, 1, 8); octx.fillStyle = hiCol; octx.fillRect((roofX + 1) % 32, roofY + 1, 5, 1); octx.fillStyle = seamCol;
+        }
+      }
+    } else if (style === 'weave') {
+      for (var thread = 0; thread < 32; thread += 4) {
+        octx.fillStyle = seamCol; octx.fillRect(0, thread, 32, 1);
+        octx.fillStyle = hiCol; for (var knot = 0; knot < 32; knot += 4) octx.fillRect(knot + ((thread / 4) % 2) * 2, thread + 1, 1, 2);
       }
     } else if (style === 'splatter') {
       for (var sp = 0; sp < 14; sp++) {
