@@ -514,3 +514,16 @@ body { font-family: system-ui, "Segoe UI", sans-serif; }
 .storage-arrow { color:#e7d593; font-size:20px; padding:0 4px; }
 .storage-empty { color:#9bada4; padding:10px; font-size:14px; }
 @media (max-width:600px) { .storage-card { padding:10px; max-height:95vh; } .storage-grid { gap:6px; } .storage-column-header { flex-wrap:wrap; } .storage-item { font-size:12px; gap:4px; } .storage-item .item-icon { flex-basis:28px; width:28px; height:28px; } .storage-item .item-icon img { width:24px; height:24px; } }
+
+.interaction-hint { position:fixed; left:50%; bottom:112px; transform:translateX(-50%); z-index:11; pointer-events:none; max-width:90vw; padding:7px 12px; color:#fff2bf; background:rgba(18,33,31,.92); border:1px solid #d2bf7d; border-radius:3px; font-size:14px; text-align:center; }
+.interaction-hint[hidden] { display:none; }
+@media (max-width:780px) { .interaction-hint { bottom:165px; font-size:12px; } }
+.storage-tools { display:flex; gap:8px; align-items:stretch; }
+.storage-tools input { flex:1; min-width:0; padding:7px 9px; color:#f1f5ef; background:#0f1c1d; border:1px solid #617c6c; font:inherit; }
+#storage-mode[aria-pressed="true"] { background:#466452; border-color:#d2bf7d; }
+@media (max-width:600px) {
+  .storage-card { height:min(95vh, 760px); }
+  .storage-grid { grid-template-columns:1fr; grid-template-rows:minmax(0, 1fr) minmax(0, 1fr); }
+  .storage-column-header { flex-wrap:nowrap; min-height:40px; }
+  .storage-list { flex:1; min-height:0; max-height:none; }
+}

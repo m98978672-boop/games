@@ -15,6 +15,7 @@
   var canvasEl = null;
   var activeModal = '';
   var activeStorage = null;
+  var storageWholeStack = false;
   var rafId = 0;
   var lastTime = 0;
   var pausedBeforeCatalog = false;
@@ -452,67 +453,50 @@
 
   function performInteract() {
     if (!state || state.paused || activeModal || state.health.dead) return;
-    if (state.player.inVehicleId) {
-      state.player.inVehicleId = '';
-      addToast('Вы вышли из машины.');
-      return;
+    var target=DD.GameplayHelpers.interactionTarget(state);
+    if (!target) return;
+    var tx=target.x, ty=target.y;
+    if (target.type==='exitVehicle') {
+      state.player.inVehicleId=''; addToast('Вы вышли из машины.');
+    } else if (target.type==='door') {
+      if (target.blocked) { addToast('Выйдите из дверного проёма, прежде чем закрыть дверь.'); return; }
+      if (state.world.toggleDoor(tx,ty)) { DD.Renderer.playSfx('sfx_door_open.wav'); emitNoise(tx,ty,58,'door'); recomputeFovAndFlow(); }
+    } else if (target.type==='window') {
+      if (state.world.breakWindow(tx,ty)) { DD.Renderer.playSfx('sfx_glass_shatter.wav'); emitNoise(tx,ty,85,'glass'); addToast('Окно разбито.'); }
+    } else if (target.type==='storage') openStorage(target.object);
+    else if (target.type==='farm') {
+      if (Sys.addItem(state.inv,target.object.crop,3,1)) { state.farms.splice(target.index,1); addToast('Собран урожай: ' + target.object.crop); }
+      else addToast('Не хватает места для урожая.');
+    } else if (target.type==='vehicle') {
+      var v=target.object; state.player.inVehicleId=v.id;
+      addToast('За рулём: ' + v.name + ' (топливо ' + v.fuel.toFixed(1) + ' л)');
+    } else if (target.type==='npc') openNpcModal(target.object);
+  }
+
+  function interactionLabel(target) {
+    if (!target) return '';
+    if (target.type==='exitVehicle') return 'E · Выйти из машины';
+    if (target.type==='door') return target.blocked ? 'Выйдите из дверного проёма' : 'E · ' + (target.object.open ? 'Закрыть' : 'Открыть') + ' дверь';
+    if (target.type==='window') return 'E · Разбить окно';
+    if (target.type==='storage') {
+      var names={shelf:'полку',cabinet:'шкаф',fridge:'холодильник',crate:'ящик',chest:'сундук'};
+      var key=target.x+','+target.y, items=state.storage[key];
+      return 'E · Открыть ' + (names[target.object.kind] || 'контейнер') + (items ? (items.length ? ' · осмотрен' : ' · пусто') : ' · не осмотрен');
     }
-    var candidates = [
-      [Math.round(state.player.x + state.player.fx), Math.round(state.player.y + state.player.fy)],
-      [Math.round(state.player.x), Math.round(state.player.y)]
-    ];
-    for (var ci = 0; ci < candidates.length; ci++) {
-      var tx = candidates[ci][0], ty = candidates[ci][1];
-      var k = tx + ',' + ty;
-      if (state.world.getTile(tx, ty) === TILE.DOOR) {
-        var door = state.world.doors[k];
-        if (door && door.open && Math.abs(state.player.x - tx) < 0.7 && Math.abs(state.player.y - ty) < 0.7) {
-          addToast('Выйдите из дверного проёма, прежде чем закрыть дверь.');
-          return;
-        }
-      }
-      if (state.world.getTile(tx, ty) === TILE.DOOR && state.world.toggleDoor(tx, ty)) {
-        DD.Renderer.playSfx('sfx_door_open.wav');
-        emitNoise(tx, ty, 58, 'door');
-        recomputeFovAndFlow();
-        return;
-      }
-      if (state.world.getTile(tx, ty) === TILE.WINDOW && state.world.breakWindow(tx, ty)) {
-        DD.Renderer.playSfx('sfx_glass_shatter.wav'); emitNoise(tx, ty, 85, 'glass');
-        addToast('Окно разбито.'); return;
-      }
-      var cont = state.world.containers[k];
-      if (cont) { openStorage(cont); return; }
-      for (var pi = 0; pi < state.farms.length; pi++) {
-        var fp = state.farms[pi];
-        if (fp.tx === tx && fp.ty === ty && fp.stage >= 3 && !fp.dead) {
-          Sys.addItem(state.inv, fp.crop, 3, 1);
-          state.farms.splice(pi, 1);
-          addToast('Собран урожай: ' + fp.crop);
-          return;
-        }
-      }
-    }
-    for (var vi = 0; vi < state.vehicles.length; vi++) {
-      var v = state.vehicles[vi];
-      if (Math.hypot(v.x - state.player.x, v.y - state.player.y) <= 2.5) {
-        state.player.inVehicleId = v.id;
-        addToast('За рулём: ' + v.name + ' (топливо ' + v.fuel.toFixed(1) + ' л)');
-        return;
-      }
-    }
-    for (var ni = 0; ni < state.npcs.length; ni++) {
-      var npc = state.npcs[ni];
-      if (npc.hp > 0 && Math.hypot(npc.x - state.player.x, npc.y - state.player.y) <= 2.8) {
-        openNpcModal(npc);
-        return;
-      }
-    }
+    if (target.type==='farm') return 'E · Собрать урожай';
+    if (target.type==='vehicle') return 'E · Сесть в ' + target.object.name;
+    if (target.type==='npc') return 'E · Поговорить: ' + target.object.name;
+    return '';
   }
 
   function updateHud() {
     if (!state) return;
     var set = function (id, txt) { var el = document.getElementById(id); if (el) el.textContent = txt; };
+    var target = !state.paused && !activeModal && !state.health.dead && !(DD.CatalogF3 && DD.CatalogF3.isOpen()) ? DD.GameplayHelpers.interactionTarget(state) : null;
+    state.interactionTarget = target;
+    var hint=document.getElementById('interaction-hint'), label=interactionLabel(target);
+    if (hint) { hint.textContent=label; hint.hidden=!label; }
+
     set('hud-hp', Math.round(state.health.globalHp) + '%');
     set('hud-blood', Math.round(state.health.bloodMl) + ' мл');
     set('hud-hunger', Math.round(state.needs.hunger) + '%');
@@ -584,6 +568,10 @@
       state.storage[key] = Sys.rollZoneLoot(cont.zone, state.util.hoursOutage);
     }
     activeStorage = {key:key, kind:cont.kind || 'crate'};
+    storageWholeStack = false;
+    document.getElementById('storage-search').value = '';
+    document.getElementById('storage-mode').textContent = 'Перенос: по 1';
+    document.getElementById('storage-mode').setAttribute('aria-pressed','false');
     activeModal = 'storage';
     document.getElementById('storage-overlay').hidden = false;
     document.getElementById('storage-message').textContent = '';
@@ -609,6 +597,11 @@
     if (--slot.qty <= 0) state.inv.items.splice(index, 1);
     return true;
   }
+  function storageMatches(slot) {
+    var query = document.getElementById('storage-search').value.trim().toLowerCase();
+    var meta = DataDB.getItem(slot.id);
+    return !query || ((meta && meta.name || slot.id) + ' ' + slot.id).toLowerCase().indexOf(query) !== -1;
+  }
   function renderStorage() {
     if (!state || !activeStorage) return;
     var name=storageNames[activeStorage.kind] || 'Контейнер';
@@ -616,31 +609,44 @@
     document.getElementById('storage-title').textContent=name.toUpperCase();
     document.getElementById('storage-container-title').textContent='Внутри · ' + contents.reduce(function(n,s){return n+s.qty;},0);
     document.getElementById('storage-inventory-title').textContent='Инвентарь · ' + Sys.getTotalWeight(state.inv).toFixed(1) + ' кг (перегруз от ' + Sys.getMaxWeight(state.inv).toFixed(1) + ')';
+    var scrollContents=contentsEl.scrollTop, scrollInventory=invEl.scrollTop;
     contentsEl.innerHTML=''; invEl.innerHTML='';
     function drawList(el, items, take) {
-      if (!items.length) { var empty=document.createElement('p'); empty.className='storage-empty'; empty.textContent=take?'Здесь пусто':'Инвентарь пуст'; el.appendChild(empty); return; }
+      var shown=items.filter(storageMatches);
+      if (!shown.length) { var empty=document.createElement('p'); empty.className='storage-empty'; empty.textContent=items.length?'Ничего не найдено':(take?'Здесь пусто':'Инвентарь пуст'); el.appendChild(empty); return; }
       items.forEach(function(slot,index) {
+        if (!storageMatches(slot)) return;
         var meta=DataDB.getItem(slot.id) || {name:slot.id};
         var btn=document.createElement('button'); btn.type='button'; btn.className='storage-item';
         btn.appendChild(itemIcon(slot,meta));
         var text=document.createElement('span'); text.className='storage-item-label'; text.textContent=meta.name + ' ×' + slot.qty; btn.appendChild(text);
         var arrow=document.createElement('span'); arrow.className='storage-arrow'; arrow.textContent=take?'→':'←'; btn.appendChild(arrow);
-        btn.setAttribute('aria-label',(take?'Взять ':'Положить ') + meta.name + ', одна штука');
+        btn.setAttribute('aria-label',(take?'Взять ':'Положить ') + meta.name + (storageWholeStack ? ', всю стопку' : ', одна штука'));
         btn.addEventListener('click',function(){
-          var ok=take?takeStorageItem(index):putStorageItem(index);
-          document.getElementById('storage-message').textContent=ok?'':(take?'Не хватает места в инвентаре.':'Сначала смените экипированное оружие.');
+          var rowPosition=Array.prototype.indexOf.call(el.children,btn);
+          var amount=storageWholeStack?slot.qty:1, moved=0, ok=true;
+          while (moved<amount) {
+            ok=take?takeStorageItem(index):putStorageItem(index);
+            if (!ok) break;
+            moved++;
+          }
+          document.getElementById('storage-message').textContent=ok?(storageWholeStack?'Перенесено: '+moved:''):
+            (take?'Перенесено: '+moved+'. Не хватает места в инвентаре.':'Перенесено: '+moved+'. Сначала смените экипированное оружие.');
           renderStorage(); updateHud();
+          var replacement=el.children[Math.min(rowPosition,el.children.length-1)]; if (replacement && replacement.focus) replacement.focus();
         });
         el.appendChild(btn);
       });
     }
     drawList(contentsEl,contents,true); drawList(invEl,state.inv.items,false);
+    contentsEl.scrollTop=scrollContents; invEl.scrollTop=scrollInventory;
   }
   function takeAllStorage() {
     if (!activeStorage) return;
     var contents=state.storage[activeStorage.key], taken=0, blocked=false;
-    // Перебираем все стопки: тяжёлый предмет не должен блокировать лёгкие.
+    // Перебираем видимые стопки: тяжёлый предмет не блокирует лёгкие.
     for (var i=contents.length-1;i>=0;i--) {
+      if (!storageMatches(contents[i])) continue;
       while (contents[i] && contents[i].qty>0) {
         if (!takeStorageItem(i)) { blocked=true; break; }
         taken++;
@@ -883,6 +889,13 @@
     onClick('modal-close', closeModals);
     onClick('storage-close', closeModals);
     onClick('storage-take-all', takeAllStorage);
+    onClick('storage-mode', function () {
+      storageWholeStack=!storageWholeStack;
+      var mode=document.getElementById('storage-mode'); mode.textContent=storageWholeStack?'Перенос: стопка':'Перенос: по 1';
+      mode.setAttribute('aria-pressed',storageWholeStack?'true':'false'); renderStorage();
+    });
+    var storageSearch=document.getElementById('storage-search');
+    if (storageSearch) storageSearch.addEventListener('input', function () { if (activeStorage) renderStorage(); });
     onClick('btn-resume', function () { if (state) { state.paused = false; closeModals(); } });
     onClick('btn-pause-save', function () {
       if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay, storage: state.storage })) addToast('Сохранено!');
@@ -919,6 +932,7 @@
       var activeTag = document.activeElement && document.activeElement.tagName;
       if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
         if (e.code === 'Escape' && DD.CatalogF3 && DD.CatalogF3.isOpen()) DD.CatalogF3.close();
+        else if (e.code === 'Escape' && activeModal) { closeModals(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); }
         return;
       }
       if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].indexOf(e.code) >= 0 && e.preventDefault) e.preventDefault();

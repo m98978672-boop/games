@@ -55,12 +55,19 @@ state.player.x = 15; state.player.y = 15; state.player.fx = 1; state.player.fy =
 state.world.setTile(16, 15, win.DD.TILE.DOOR);
 state.world.doors['16,15'] = { tx: 16, ty: 15, open: false, broken: false };
 state.vehicles.push({ id: 'test-car', x: 15, y: 15, fuel: 10, name: 'test' });
+let target=win.DD.GameplayHelpers.interactionTarget(state);
+assert.equal(target.type,'door', 'подсказка выбирает дверь раньше соседней машины');
+tick(timers, 2);
+assert.match(document.getElementById('interaction-hint').textContent,/Открыть дверь/);
+
 key('keydown', 'KeyE'); key('keyup', 'KeyE');
 assert.equal(state.world.doors['16,15'].open, true);
+assert.equal(win.DD.GameplayHelpers.interactionTarget(state).object.open, true);
 assert.equal(state.player.inVehicleId, '');
 state.player.x = 16; state.player.y = 15; state.player.fx = 1; state.player.fy = 0;
 key('keydown', 'KeyE'); key('keyup', 'KeyE');
 assert.equal(state.world.doors['16,15'].open, true, 'нельзя закрыть дверь, стоя в проёме');
+assert.equal(win.DD.GameplayHelpers.interactionTarget(state).blocked, true);
 state.player.x = 15; state.player.y = 15;
 // Ближний удар попадает в ближайшего врага перед игроком, а не за спиной.
 const front = win.DD.Systems.createZombie(1, 'walker', 16, 15);
