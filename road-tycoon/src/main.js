@@ -427,7 +427,8 @@
   const btnRestart = document.getElementById('btn-restart');
   if (btnRestart) {
     btnRestart.addEventListener('click', () => {
-      if (confirm('Начать новую игру? Текущий прогресс будет удалён.')) app.reset();
+      TR.UI.ask('Начать новую игру? Текущий прогресс будет удалён.', () => app.reset(),
+        { danger: true, yes: 'Новая игра' });
     });
   }
 

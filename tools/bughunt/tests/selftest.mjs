@@ -34,7 +34,8 @@ function findingsFor(root, name) {
   const p = projects(root, files).find((x) => x.name === name);
   const out = [];
   for (const rule of STATIC_RULES) {
-    if (rule.async) continue;                 /* синтаксис проверяем отдельно */
+    /* синтаксис проверяется отдельно, правила репозитория — в конце файла */
+    if (rule.async || rule.repo) continue;
     out.push(...rule.fn(root, p));
   }
   return { findings: out, project: p };
@@ -63,6 +64,8 @@ build(root, 'сломанная', {
     "  function начать() { return стaрт; }",
     "  function начать() { return 2; }",
     "  function шаг(x) { if (x = 1) { return NaN; } return x; }",
+    "  function сравни(a, b) { return a === a ? b : a; }",
+    "  function сбить(x) { x = x; return x; }",
     "  function сохранить() { localStorage.setItem('игра', JSON.stringify(G)); }",
     "  function загрузить() { return JSON.parse(localStorage.getItem('игра')); }",
     "  window.addEventListener('load', function () {",
@@ -70,6 +73,9 @@ build(root, 'сломанная', {
     "  });",
     "  document.getElementById('btn-start').addEventListener('click', function () {",
     "    G.счёт = undefined.length;        /* падение по нажатию */",
+    "  });",
+    "  document.getElementById('btn-start').addEventListener('dblclick', function () {",
+    "    if (confirm('Точно?')) { G.счёт = 0; }   /* модальное окно вместо своего диалога */",
     "  });",
     "  window.G = G; window.шаг = шаг; window.сохранить = сохранить; window.загрузить = загрузить;",
     "  try { null.x; } catch (e) {}",
@@ -82,15 +88,19 @@ build(root, 'сломанная', {
   const { findings, project } = findingsFor(root, 'сломанная');
   const has = (rule) => findings.some((x) => x.rule === rule);
   console.log('\nПодсадная игра: бот обязан найти');
-  ok(has('битая-ссылка'), 'ссылку на несуществующий файл');
+  ok(has('ссылка'), 'ссылку на несуществующий файл');
   ok(has('дубль-id'), 'повторяющийся id в разметке');
   ok(has('нет-узла'), 'обращение к узлу, которого нет');
   ok(has('кириллица-в-коде'), 'кириллическую букву внутри латинского имени');
   ok(has('дубль-функции'), 'функцию, объявленную дважды в одной области');
   ok(has('присваивание-в-условии'), 'присваивание вместо сравнения');
-  ok(has('дубль-ключа'), 'повторяющийся ключ в JSON');
+  ok(has('дубль-ключа-json') || has('дубль-ключа'), 'повторяющийся ключ в JSON');
   ok(has('пустой-catch'), 'молча проглоченную ошибку');
   ok(has('разбор-без-защиты') || has('хранилище-без-защиты'), 'разбор сохранения без защиты');
+  ok(has('тавтология'), 'сравнение переменной с самой собой');
+  ok(has('самоприсваивание'), 'присваивание переменной самой себе');
+  ok(has('alert'), 'модальное окно, блокирующее игру');
+  ok(!has('нечисло-в-json'), 'не выдумывает нечисла в обычном JSON');
 
   const play = playGame(root, project, {});
   ok(play.findings.some((x) => /кнопк/i.test(x.msg)), 'падение игры при нажатии кнопки');

@@ -419,9 +419,14 @@ function setBackendUnavailable(error) {
 }
 
 function updateCloudStatus(status) {
+  /* Панель может быть уже выгружена из DOM: без проверки это TypeError
+     «после хода», и он роняет страницу, пока игрок смотрит на другое. */
+  if (!elements.cloudState) return;
   elements.cloudState.dataset.state = 'offline';
-  $('strong', elements.cloudState).textContent = 'GPU-хост не подключён';
-  $('small', elements.cloudState).textContent = 'Нужны безопасное сопряжение и реальный видеопоток';
+  const strong = $('strong', elements.cloudState);
+  const small = $('small', elements.cloudState);
+  if (strong) strong.textContent = 'GPU-хост не подключён';
+  if (small) small.textContent = 'Нужны безопасное сопряжение и реальный видеопоток';
   elements.cloudButton.disabled = true;
   elements.cloudButton.textContent = 'Облачный запуск недоступен';
 }

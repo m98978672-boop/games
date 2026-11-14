@@ -89,9 +89,11 @@
     el('btn-countries').addEventListener('click', function () { UI.countriesModal(S.settings.drawMode); });
     el('btn-who').addEventListener('click', UI.whoModal);
     el('btn-clear-past').addEventListener('click', function () {
-      if (confirm('Удалить все записи о прошлых жизнях? Вернуть их нельзя.')) {
+      /* Свой диалог вместо confirm: модальное окно браузера перекрывает игру
+         и на телефоне выглядит как сломанная страница. */
+      UI.confirm('Удалить все записи о прошлых жизнях? Вернуть их нельзя.', function () {
         SAVE.clearPast(); UI.renderPastList(); UI.toast('Записи удалены');
-      }
+      }, { danger: true, title: 'История жизней' });
     });
 
     var saved = SAVE.peekLife();

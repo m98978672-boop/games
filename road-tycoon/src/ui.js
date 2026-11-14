@@ -247,21 +247,23 @@
       else toast('Объект улучшен', 'good');
     } else if (act === 'demolish-fac') {
       const f = s.facilities.find((x) => x.id === Number(btn.dataset.id));
-      if (f && confirm(`Снести «${C.facilityByKey[f.type].name}»?`)) {
-        const res = Sim.demolishFacility(s, f.id);
-        if (res.ok) toast(`Снесено, возврат ${U.money(res.refund)}`, 'info');
+      if (f) {
+        ask(`Снести «${C.facilityByKey[f.type].name}»?`, () => {
+          const res = Sim.demolishFacility(s, f.id);
+          if (res.ok) toast(`Снесено, возврат ${U.money(res.refund)}`, 'info');
+        }, { danger: true, yes: 'Снести' });
       }
     } else if (act === 'upgrade-road') {
       const res = Sim.upgradeRoad(s, Number(btn.dataset.id), Number(btn.dataset.q));
       if (!res.ok) toast(res.error, 'bad');
     } else if (act === 'demolish-road') {
-      if (confirm('Разобрать участок дороги? Объекты на нём тоже исчезнут.')) {
+      ask('Разобрать участок дороги? Объекты на нём тоже исчезнут.', () => {
         const res = Sim.demolishRoad(s, Number(btn.dataset.id));
         if (res.ok) {
           toast(`Участок разобран, возврат ${U.money(res.refund)}`, 'info');
           S.app.selection = null;
         }
-      }
+      }, { danger: true, yes: 'Разобрать' });
     } else if (act === 'focus-fac') {
       const f = s.facilities.find((x) => x.id === Number(btn.dataset.id));
       if (f) {
@@ -689,12 +691,28 @@
 
   /* ----------------------------------------------------------- модалки */
 
+  /* Вопрос «да/нет» своим окном: window.confirm перекрывает игру и на
+     телефоне выглядит как поломка страницы. Колбэк зовётся только на «да». */
+  function ask(text, onYes, opts) {
+    const o = opts || {};
+    openModal(
+      `<h2 class="modal-title">${o.title || 'Подтвердите'}</h2>
+       <p class="modal-text">${String(text)}</p>
+       <div class="modal-actions">
+         <button class="btn" data-modal="close">${o.cancel || 'Отмена'}</button>
+         <button class="btn btn-primary${o.danger ? ' danger' : ''}" data-modal="ask-yes">${o.yes || 'Да'}</button>
+       </div>`, {});
+    S.askYes = typeof onYes === 'function' ? onYes : null;
+  }
+
   function openModal(html, opts) {
     const root = $('modal-root');
     root.innerHTML = `<div class="modal-backdrop"><div class="modal ${opts && opts.wide ? 'wide' : ''}">${html}</div></div>`;
     root.classList.add('open');
     S.modalOpen = true;
   }
+
+  UI.ask = ask;
 
   UI.closeModal = function () {
     if (!S.modalOpen) return false;
@@ -709,14 +727,20 @@
     const btn = e.target.closest('[data-modal]');
     if (btn) {
       const act = btn.dataset.modal;
-      if (act === 'close') UI.closeModal();
+      if (act === 'close') { S.askYes = null; UI.closeModal(); }
+      else if (act === 'ask-yes') {
+        const run = S.askYes;
+        S.askYes = null;
+        UI.closeModal();
+        if (run) run();
+      }
       else if (act === 'help') showHelp();
       else if (act === 'reset') {
-        if (confirm('Начать новую игру? Текущий прогресс будет удалён.')) {
+        ask('Начать новую игру? Текущий прогресс будет удалён.', () => {
           UI.closeModal();
           S.app.reset();
           S.winShown = false;
-        }
+        }, { danger: true, yes: 'Новая игра' });
       } else if (act === 'save') {
         S.app.save();
       } else if (act === 'start') {

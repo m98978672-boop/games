@@ -126,7 +126,11 @@ function auditYear(L, prev) {
     const p = PAY.byId[id];
     if (!p) continue;
     check('заработок подходит по возрасту', L.age >= p.age[0] - 1 && L.age <= p.age[1] + 1, `${where(L)}: ${id} в ${L.age}`);
-    if (L.age < 16) check('детям не достаются взрослые приработки', ['child', 'social'].includes(p.kind), `${where(L)}: ${id} (${p.kind})`);
+    /* Правило смотрит на возраст, в котором год ПРОЖИТ: в год смерти движок
+       откатывает возраст назад, и пятнадцатилетний получал взрослый вид
+       заработка «на будущий год» — это не нарушение, а граница года. */
+    const livedAge = died ? prev.age + 1 : L.age;
+    if (livedAge < 16) check('детям не достаются взрослые приработки', ['child', 'social'].includes(p.kind), `${where(L)}: ${id} (${p.kind})`);
   }
 
   /* семья, жильё, долги */

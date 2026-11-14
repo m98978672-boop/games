@@ -29,9 +29,15 @@
   Sim.newGame = function (seed) {
     Sim.resetCities();
     if (!simWorld) simWorld = TR.World.build(seed || 1);
+    /* Свой генератор на игру: одно зерно должно давать одну и ту же партию,
+       иначе сохранение, повтор и тесты расходятся. Раньше здесь был
+       Math.random(), и «та же» игра после загрузки шла по-другому. */
+    const rand = U.mulberry32((seed || 1) * 2654435761 >>> 0);
     const s = {
       v: C.version,
       seed: seed || 1,
+      rand,
+      randRaw: Math.random,
       time: C.dayStartHour / 24,
       money: C.startMoney,
       debt: 0,
@@ -62,7 +68,7 @@
       dailyReport: null,
       nextEventDay: 1.4,
       crisis: null,
-      nextCrisisDay: 7 + Math.random() * 3,
+      nextCrisisDay: 7 + rand() * 3,
       nextVillageDay: 1,
       rushHour: 0,
       tutorial: { step: 0, done: false },
@@ -93,7 +99,7 @@
   };
 
   Sim.notice = function (s, kind, text) {
-    s.notices.push({ kind, text, id: Math.random() });
+    s.notices.push({ kind, text, id: s.rand() });
     if (s.notices.length > 40) s.notices.shift();
   };
   Sim.addNews = function (s, kind, text) {
@@ -102,8 +108,8 @@
   };
   Sim.addFloat = function (s, x, y, text, kind) {
     s.floats.push({
-      x: x + (Math.random() - 0.5) * 3,
-      y: y + (Math.random() - 0.5) * 2.2,
+      x: x + (s.rand() - 0.5) * 3,
+      y: y + (s.rand() - 0.5) * 2.2,
       text, kind: kind || 'coin', life: 1.25, max: 1.25,
     });
     if (s.floats.length > 70) s.floats.shift();
@@ -322,10 +328,10 @@
   };
 
   Sim.startCrisis = function (s, forceId) {
-    const c = forceId ? C.crises.find((x) => x.id === forceId) : pickWeighted(C.crises, 'weight');
+    const c = forceId ? C.crises.find((x) => x.id === forceId) : pickWeighted(s, C.crises, 'weight');
     if (!c) return null;
     s.crisis = { id: c.id, title: c.title, text: c.text, until: s.time + c.days, mods: Object.assign({}, c.mods) };
-    s.nextCrisisDay = s.time + c.days + 6 + Math.random() * 7;
+    s.nextCrisisDay = s.time + c.days + 6 + s.rand() * 7;
     Sim.notice(s, 'bad', `Кризис: ${c.title}. ${c.text}`);
     Sim.addNews(s, 'bad', `Кризис: «${c.title}». ${c.text}`);
     s.sfx.push('bad');
@@ -678,12 +684,12 @@
     ev: ['charge', 'food', 'wash'],
   };
 
-  function pickWants(kind) {
+  function pickWants(s, kind) {
     const pool = WANTS[kind].slice();
-    const count = Math.random() < 0.55 ? 2 : 1;
+    const count = s.rand() < 0.55 ? 2 : 1;
     const want = [];
     while (want.length < count && pool.length) {
-      const i = Math.floor(Math.random() * pool.length);
+      const i = Math.floor(s.rand() * pool.length);
       want.push(pool.splice(i, 1)[0]);
     }
     return want;
@@ -696,7 +702,7 @@
       total += w;
       return w;
     });
-    let r = Math.random() * total;
+    let r = s.rand() * total;
     for (let i = 0; i < ids.length; i++) {
       r -= weights[i];
       if (r <= 0) return ids[i];
@@ -727,17 +733,17 @@
     });
     const path = Sim.findPath(s, from, to);
     if (!path || !path.length) return;
-    const r = Math.random();
+    const r = s.rand();
     let kind = r < 0.66 ? 'car' : r < 0.86 ? 'truck' : r < 0.94 ? 'ev' : 'bus';
     const firstRoad = Sim.roadById(s, path[0].roadId);
     if (firstRoad && C.roadTypes[firstRoad.quality] && C.roadTypes[firstRoad.quality].rail) kind = 'train';
     const colorSet = KIND_COLORS[kind];
     const v = {
-      id: Math.random().toString(36).slice(2, 9),
-      kind, color: colorSet[Math.floor(Math.random() * colorSet.length)],
-      path, edgeIdx: 0, t: 0, dir: path[0].dir, speedMul: 0.88 + Math.random() * 0.26,
-      want: pickWants(kind), stops: 2,
-      pause: 0, x: 0, y: 0, angle: 0, lane: 0.22 + Math.random() * 0.34,
+      id: s.rand().toString(36).slice(2, 9),
+      kind, color: colorSet[Math.floor(s.rand() * colorSet.length)],
+      path, edgeIdx: 0, t: 0, dir: path[0].dir, speedMul: 0.88 + s.rand() * 0.26,
+      want: pickWants(s, kind), stops: 2,
+      pause: 0, x: 0, y: 0, angle: 0, lane: 0.22 + s.rand() * 0.34,
       from, to, hit: {},
       len: kind === 'truck' || kind === 'bus' ? 1.25 : 1,
     };
@@ -760,7 +766,7 @@
     v.x = p.x + Math.cos(ang + Math.PI / 2) * lane * step.dir;
     v.y = p.y + Math.sin(ang + Math.PI / 2) * lane * step.dir;
     v.angle = ang + (step.dir === 1 ? 0 : Math.PI);
-    if (initial) v.pause = 0.2 + Math.random() * 0.4;
+    if (initial) v.pause = 0.2 + s.rand() * 0.4;
   }
 
   function onEnterRoad(s, v, road) {
@@ -768,19 +774,19 @@
     road.trafficToday++;
     const rt = C.roadTypes[road.quality];
     if (rt && rt.rail) {
-      const amount = Math.round(C.tollPrice * 1.8 * (1 + 0.15 * s.level) * (0.9 + Math.random() * 0.2));
+      const amount = Math.round(C.tollPrice * 1.8 * (1 + 0.15 * s.level) * (0.9 + s.rand() * 0.2));
       addIncome(s, amount, null);
-      if (Math.random() < 0.25) s.effects.push({ kind: 'money', x: v.x, y: v.y, amount, life: 1.6 });
+      if (s.rand() < 0.25) s.effects.push({ kind: 'money', x: v.x, y: v.y, amount, life: 1.6 });
     }
     const facs = Sim.facilitiesOnRoad(s, road.id);
     for (const f of facs) {
       if (!f.ready || !f.type) continue;
       const def = C.facilityByKey[f.type];
       if (def.edgeWide && def.key === 'toll') {
-        const amount = addIncome(s, C.tollPrice * (1 + 0.1 * s.upgrades.quality) * (0.9 + Math.random() * 0.2), f);
+        const amount = addIncome(s, C.tollPrice * (1 + 0.1 * s.upgrades.quality) * (0.9 + s.rand() * 0.2), f);
         f.visitsToday++;
         f.totalVisits++;
-        if (Math.random() < 0.5) addFloatAt(s, f, road, amount);
+        if (s.rand() < 0.5) addFloatAt(s, f, road, amount);
       }
     }
   }
@@ -812,11 +818,11 @@
 
     if (def.passive) {
       if (def.edgeWide) return; // платный пункт считается при въезде
-      if (Math.random() > 0.4) return; // не каждый смотрит на щит
-      const amount = addIncome(s, def.perPass * (1 + 0.1 * (s.upgrades.quality)) * (0.8 + Math.random() * 0.4), facility);
+      if (s.rand() > 0.4) return; // не каждый смотрит на щит
+      const amount = addIncome(s, def.perPass * (1 + 0.1 * (s.upgrades.quality)) * (0.8 + s.rand() * 0.4), facility);
       facility.visitsToday++;
       facility.totalVisits++;
-      if (Math.random() < 0.35) Sim.addFloat(s, fx, fy, '+' + U.num(amount) + ' ₽', 'coin');
+      if (s.rand() < 0.35) Sim.addFloat(s, fx, fy, '+' + U.num(amount) + ' ₽', 'coin');
       return;
     }
 
@@ -825,7 +831,7 @@
     const light = road.light ? 1.06 : 1;
     const comfort = 1 + Sim.effectMul(s, 'comfort') * 0 + (road.light ? 0 : 0);
     let chance = def.chance * (0.75 + s.upgrades.marketing * 0.07) * light * comfort;
-    if (Math.random() > chance) return;
+    if (s.rand() > chance) return;
     const capacity = def.capacity * (1 + 0.3 * (facility.level - 1));
     if (facility.visitsToday >= capacity) return;
 
@@ -836,24 +842,24 @@
     if (def.nightBonus && U.isNight(s.time)) multiplier *= def.nightBonus;
     if (U.isNight(s.time) && def.want === 'food') multiplier *= 1.15;
 
-    const amount = addIncome(s, def.income * multiplier * (0.9 + Math.random() * 0.2), facility);
+    const amount = addIncome(s, def.income * multiplier * (0.9 + s.rand() * 0.2), facility);
     facility.visitsToday++;
     facility.totalVisits++;
     s.stats.servicesToday++;
     s.stats.totalServices++;
     v.want = v.want.filter((w) => w !== def.want);
     v.stops--;
-    v.pause = 0.35 + Math.random() * 0.5;
+    v.pause = 0.35 + s.rand() * 0.5;
     addFloatAt(s, facility, road, amount);
-    if (Math.random() < 0.16) s.sfx.push('coin');
+    if (s.rand() < 0.16) s.sfx.push('coin');
     // иногда водитель пишет отзыв
-    if (Math.random() < 0.006) {
+    if (s.rand() < 0.006) {
       const phrases = [
         'Водители хвалят ' + def.name.toLowerCase() + ' — очередь.',
         'Водитель фуры оставил 5 звёзд: «быстро и по-человечески».',
         'Кто-то оставил чаевые на кассе. Мелочь, а приятно.',
       ];
-      Sim.addNews(s, 'good', phrases[Math.floor(Math.random() * phrases.length)]);
+      Sim.addNews(s, 'good', phrases[Math.floor(s.rand() * phrases.length)]);
     }
     return amount;
   }
@@ -983,10 +989,10 @@
 
   /* ------------------------------------------------------------- контракты */
 
-  function pickWeighted(list, key) {
+  function pickWeighted(s, list, key) {
     let total = 0;
     for (const item of list) total += item[key] || 1;
-    let r = Math.random() * total;
+    let r = s.rand() * total;
     for (const item of list) {
       r -= item[key] || 1;
       if (r <= 0) return item;
@@ -997,8 +1003,8 @@
   Sim.spawnContract = function (s, force) {
     if (!force && s.contracts.length >= 3) return null;
     if (s.contracts.length >= 4) return null;
-    const kind = pickWeighted(C.contractPool, 'weight').kind;
-    const contract = { id: s.nextContractId++, kind, expires: s.time + 3 + Math.random() * 3, xp: 100 };
+    const kind = pickWeighted(s, C.contractPool, 'weight').kind;
+    const contract = { id: s.nextContractId++, kind, expires: s.time + 3 + s.rand() * 3, xp: 100 };
 
     if (kind === 'connect') {
       const pairs = [];
@@ -1011,7 +1017,7 @@
         }
       }
       if (!pairs.length) return null;
-      const pair = pairs[Math.floor(Math.random() * pairs.length)];
+      const pair = pairs[Math.floor(s.rand() * pairs.length)];
       contract.params = { a: pair.a, b: pair.b };
       contract.title = `Дорога ${C.cities[pair.a].name} — ${C.cities[pair.b].name}`;
       contract.desc = `Проложите дорогу между городами (${Math.round(pair.d)} км). Любой класс покрытия.`;
@@ -1020,22 +1026,22 @@
     } else if (kind === 'facility') {
       const options = C.facilities.filter((f) => f.cat === 'service' && !f.passive && f.unlock <= s.level);
       if (!options.length) return null;
-      const def = options[Math.floor(Math.random() * options.length)];
-      const count = 1 + (Math.random() < 0.3 ? 1 : 0);
+      const def = options[Math.floor(s.rand() * options.length)];
+      const count = 1 + (s.rand() < 0.3 ? 1 : 0);
       contract.params = { type: def.key, count };
       contract.title = `${def.name} × ${count}`;
       contract.desc = `Постройте ${count} ${U.plural(count, 'объект', 'объекта', 'объектов')} «${def.name}» у любой дороги.`;
       contract.reward = Math.round(def.cost * 0.85 * count + 6000);
       contract.xp = 140;
     } else if (kind === 'beauty') {
-      const count = 2 + Math.floor(Math.random() * 2);
+      const count = 2 + Math.floor(s.rand() * 2);
       contract.params = { count };
       contract.title = `Благоустройство: ${count} ${U.plural(count, 'объект', 'объекта', 'объектов')}`;
       contract.desc = `Поставьте ${count} объекта благоустройства (озеленение, остановка, освещение, сквер).`;
       contract.reward = Math.round(9000 + count * 8000);
       contract.xp = 130;
     } else {
-      const km = 20 + Math.round(Math.random() * 20);
+      const km = 20 + Math.round(s.rand() * 20);
       contract.params = { km, quality: 2 };
       contract.title = `Асфальт: ${km} км`;
       contract.desc = `Уложите асфальт или автобан суммарно на ${km} км.`;
@@ -1131,9 +1137,9 @@
   /* ------------------------------------------------------------- события */
 
   function triggerEvent(s) {
-    const ev = pickWeighted(C.events, 'weight');
-    const city = C.cities[Math.floor(Math.random() * C.cities.length)];
-    s.nextEventDay = s.time + 1.6 + Math.random() * 2.4;
+    const ev = pickWeighted(s, C.events, 'weight');
+    const city = C.cities[Math.floor(s.rand() * C.cities.length)];
+    s.nextEventDay = s.time + 1.6 + s.rand() * 2.4;
     // не повторяем одно и то же событие подряд
     if (s.lastEvent === ev.id) return;
     s.lastEvent = ev.id;
@@ -1203,7 +1209,7 @@
     Sim.addNews(s, 'day', `Итоги дня ${day}: выручка ${U.money(s.dailyReport.income)}, расходы ${U.money(expense)}.`);
 
     if (s.money < 0) Sim.notice(s, 'bad', 'Касса в минусе! Возьмите кредит или урежьте расходы.');
-    if (Math.random() < 0.5) Sim.spawnContract(s, false);
+    if (s.rand() < 0.5) Sim.spawnContract(s, false);
     if (s.time >= s.nextEventDay) triggerEvent(s);
     checkObjectives(s);
   }
@@ -1375,8 +1381,8 @@
     const V = C.villages;
     const w = simWorld;
     for (let tries = 0; tries < 160; tries++) {
-      const x = 60 + Math.random() * (C.worldW - 120);
-      const y = 60 + Math.random() * (C.worldH - 120);
+      const x = 60 + s.rand() * (C.worldW - 120);
+      const y = 60 + s.rand() * (C.worldH - 120);
       if (w) {
         if (TR.World.riverDist(w, x, y) < 8) continue;
         if (TR.World.lakeFactor(w, x, y) > 0.02) continue;
@@ -1385,8 +1391,8 @@
       if (s.villages.some((v) => U.dist(v.x, v.y, x, y) < V.minDistVillage)) continue;
       const used = new Set(s.villages.map((v) => v.name));
       const names = V.names.filter((n) => !used.has(n));
-      const name = names.length ? names[Math.floor(Math.random() * names.length)] : 'Посёлок ' + (s.villages.length + 1);
-      const village = { id: s.villages.length + 1, name, x, y, pop: V.startPop * (0.7 + Math.random() * 0.8), born: s.time, promoted: false };
+      const name = names.length ? names[Math.floor(s.rand() * names.length)] : 'Посёлок ' + (s.villages.length + 1);
+      const village = { id: s.villages.length + 1, name, x, y, pop: V.startPop * (0.7 + s.rand() * 0.8), born: s.time, promoted: false };
       s.villages.push(village);
       s.cityVersion = (s.cityVersion || 0) + 1;
       Sim.addNews(s, 'good', `У трассы появился посёлок ${name}: ${U.num(Math.round(village.pop))} жителей. Если рядом пройдёт дорога, он вырастет в город.`);
@@ -1408,7 +1414,7 @@
       if (!st) continue;
       if (st.ruined) {
         const road = s.roads.find((r) => r.open && (r.a === i || r.b === i));
-        if (road && Math.random() < G.recoverChance * dDays) {
+        if (road && s.rand() < G.recoverChance * dDays) {
           st.ruined = false; st.pop = 2200; st.sat = 1.1; st.alarm = 0;
           c.pop = 2200;
           dirty = true;
@@ -1424,7 +1430,7 @@
       const crisisBad = s.crisis ? 1.7 : 1;
       if (sat < G.ruinSat) st.alarm = (st.alarm || 0) + dDays * crisisBad;
       else st.alarm = Math.max(0, (st.alarm || 0) - dDays * 0.9);
-      if (st.alarm > G.ruinDays && Math.random() < G.ruinChance * dDays * crisisBad) {
+      if (st.alarm > G.ruinDays && s.rand() < G.ruinChance * dDays * crisisBad) {
         st.ruined = true; st.pop = 40; st.alarm = 0; st.ruinDay = s.time;
         dirty = true;
         Sim.addNews(s, 'bad', `Город ${c.name} опустел: люди уехали из-за кризиса. Дороги к нему теперь ведут в пустоту.`);
@@ -1451,7 +1457,7 @@
     if (s.villageAcc >= 1) {
       s.villageAcc = 0;
       const alive = s.villages.filter((v) => !v.promoted).length;
-      if (alive < V.max && Math.random() < V.chance) spawnVillage(s);
+      if (alive < V.max && s.rand() < V.chance) spawnVillage(s);
     }
     if (dirty) s.cityVersion = (s.cityVersion || 0) + 1;
   };

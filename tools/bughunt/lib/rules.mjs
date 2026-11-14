@@ -77,7 +77,7 @@ export function ruleLinks(root, p) {
       else if (existsSync(asSite)) target = asSite;
     }
     if (!existsSync(target)) {
-      out.push(f('битая-ссылка', clean.startsWith('/') ? 'важно' : 'критично', p.name, file, line,
+      out.push(f('ссылка', clean.startsWith('/') ? 'важно' : 'критично', p.name, file, line,
         what + ' указывает на несуществующий файл: ' + url,
         'поправить путь или добавить файл'));
     }
@@ -100,7 +100,7 @@ export function ruleLinks(root, p) {
       const url = m[1];
       const target = resolve(root, dirname(file), url.split('#')[0]);
       if (!existsSync(target)) {
-        out.push(f('битая-ссылка', 'мелочь', p.name, file, lineAt(src, m.index),
+        out.push(f('ссылка', 'мелочь', p.name, file, lineAt(src, m.index),
           'ссылка в тексте ведёт в никуда: ' + url, 'поправить путь в документе'));
       }
     }
@@ -204,7 +204,7 @@ export function ruleJson(root, p) {
     try {
       JSON.parse(src);
     } catch (e) {
-      out.push(f('битый-json', 'критично', p.name, file, 1, 'файл данных не читается: ' + e.message,
+      out.push(f('json-разбор', 'критично', p.name, file, 1, 'файл данных не читается: ' + e.message,
         'JSON.parse падает — игра не получит данные'));
       continue;
     }
@@ -220,7 +220,7 @@ export function ruleJson(root, p) {
       if (!map) continue;
       const k = m[1];
       if (map.has(k)) {
-        out.push(f('дубль-ключа', 'важно', p.name, file, lineAt(src, m.index),
+        out.push(f('дубль-ключа-json', 'важно', p.name, file, lineAt(src, m.index),
           'ключ «' + k + '» повторяется (первый — строка ' + map.get(k) + ')',
           'останется только последнее значение'));
       } else map.set(k, lineAt(src, m.index));
@@ -273,7 +273,7 @@ export function ruleCodeSmells(root, p) {
         'в коде остался debugger', 'у игрока остановится вкладка'));
     }
     for (const m of code.matchAll(/[!=]==?\s*NaN|NaN\s*[!=]==?/g)) {
-      out.push(f('сравнение-с-NaN', 'важно', p.name, file, lineAt(code, m.index),
+      out.push(f('сравнение-с-nan', 'важно', p.name, file, lineAt(code, m.index),
         'сравнение с NaN всегда ложно: ' + m[0].trim(), 'нужен Number.isNaN(x)'));
     }
     for (const m of code.matchAll(/\bif\s*\(\s*[\w.[\]]+\s*=\s*(?!=)[^;)]+\)/g)) {
@@ -340,7 +340,7 @@ export function ruleSeed(root, p) {
   if (!seeded) return out;
   /* рисование, звук и интерфейс могут шуметь как хотят: на расчёт это
      не влияет. Важна случайность в самой модели мира. */
-  const VISUAL = /(portrait|charts?|anim|render|fx|particle|sound|audio|ui|view|draw|paint|visual|main)\.js$/i;
+  const VISUAL = /(portrait|charts?|anim|render|fx|particle|sound|audio|ui|view|view3d|draw|paint|visual|main)\.js$/i;
   let total = 0, fallback = 0, first = null, filesHit = new Set();
   for (const file of p.js) {
     if (isVendor(file) || isTest(file) || VISUAL.test(file)) continue;
@@ -413,7 +413,7 @@ export function ruleOrphans(root, p) {
     const name = file.slice(file.lastIndexOf('/') + 1);
     const used = all.includes(name);
     if (!used) {
-      out.push(f('файл-не-подключён', 'мелочь', p.name, file, 1,
+      out.push(f('сирота', 'мелочь', p.name, file, 1,
         'файл есть, но его никто не загружает', 'подключить или удалить'));
     }
   }
@@ -427,7 +427,7 @@ export function ruleWeight(root, p) {
   for (const file of p.files) {
     const size = sizeOf(root, file);
     if (size > 6 * 1024 * 1024) {
-      out.push(f('тяжёлый-файл', 'мелочь', p.name, file, 1,
+      out.push(f('большой-файл', 'мелочь', p.name, file, 1,
         'файл весит ' + (size / 1048576).toFixed(1) + ' МБ',
         'страница будет долго открываться на телефоне'));
     }
@@ -465,6 +465,11 @@ export function ruleHtml(root, p) {
   return out;
 }
 
+import { checkDataDuplicates, checkLinks2, checkPathCase, checkCodeExtras, checkSecurity,
+  checkMarkup, checkAssets, checkTree, checkSecrets, checkTodo, checkDoubles, checkReadme,
+  checkPackages, checkTestsHead, checkPerf, checkRepoCi } from './checks.mjs';
+
+/* Порядок = порядок в отчёте. `repo: true` — проверка на весь репозиторий. */
 export const STATIC_RULES = [
   { id: 'синтаксис', fn: ruleSyntax, async: true },
   { id: 'ссылки', fn: ruleLinks },
@@ -478,4 +483,21 @@ export const STATIC_RULES = [
   { id: 'сироты', fn: ruleOrphans },
   { id: 'вес', fn: ruleWeight },
   { id: 'html', fn: ruleHtml },
+  /* --- проверки, добавленные вместе с таблицей кодов --- */
+  { id: 'дерево', fn: checkTree },
+  { id: 'секреты', fn: checkSecrets },
+  { id: 'todo', fn: checkTodo },
+  { id: 'двойники', fn: checkDoubles },
+  { id: 'readme', fn: checkReadme },
+  { id: 'данные-дубли', fn: checkDataDuplicates },
+  { id: 'ссылки-2', fn: checkLinks2 },
+  { id: 'регистр-путей', fn: checkPathCase },
+  { id: 'код-дополнительно', fn: checkCodeExtras },
+  { id: 'безопасность', fn: checkSecurity },
+  { id: 'разметка-дополнительно', fn: checkMarkup },
+  { id: 'ассеты', fn: checkAssets },
+  { id: 'производительность', fn: checkPerf },
+  { id: 'пакеты', fn: checkPackages },
+  { id: 'тесты-шапка', fn: checkTestsHead },
+  { id: 'ci', fn: checkRepoCi, repo: true },
 ];

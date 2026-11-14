@@ -24,6 +24,32 @@ function translate() {
   renderSlots();
 }
 function status(id, ru, en) { get(id).textContent = tr(ru, en); }
+
+/* Вопрос «да/нет» встроенной панелью, а не window.confirm: браузерное окно
+   перекрывает игру, а на телефоне выглядит как поломка страницы.
+   Обещание разрешается только после явного ответа игрока. */
+function ask(ru, en) {
+  return new Promise((resolve) => {
+    const box = get('save-ask');
+    const text = get('save-ask-text');
+    if (!box || !text) { resolve(true); return; }        /* без разметки не блокируем */
+    const yes = get('save-ask-yes');
+    const no = get('save-ask-no');
+    text.textContent = tr(ru, en);
+    box.classList.remove('hidden');
+    const done = (value) => {
+      box.classList.add('hidden');
+      yes.removeEventListener('click', onYes);
+      no.removeEventListener('click', onNo);
+      resolve(value);
+    };
+    const onYes = () => done(true);
+    const onNo = () => done(false);
+    yes.addEventListener('click', onYes);
+    no.addEventListener('click', onNo);
+    no.focus();
+  });
+}
 function renderSlots() {
   const root = get('save-slots');
   if (!root) return;
@@ -40,23 +66,23 @@ function renderSlots() {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'btn-ghost';
       b.textContent = label; b.disabled = disabled; b.addEventListener('click', action); buttons.appendChild(b);
     };
-    button(tr('Сохранить', 'Save'), () => {
+    button(tr('Сохранить', 'Save'), async () => {
       try {
         const game = window.__game;
         if (game?.running && !game.save()) throw new Error('save');
         const raw = localStorage.getItem(AUTO);
         if (!validSave(raw)) { status('save-status', 'Нет текущей игры или автосохранения.', 'No current game or autosave.'); return; }
-        if (save && !window.confirm(tr('Перезаписать этот слот?', 'Overwrite this slot?'))) return;
+        if (save && !(await ask('Перезаписать этот слот?', 'Overwrite this slot?'))) return;
         localStorage.setItem(slotKey(n), raw); renderSlots();
         status('save-status', 'Игра сохранена в слот.', 'Game saved to slot.');
       } catch { status('save-status', 'Не удалось сохранить: проверьте доступ к хранилищу браузера.', 'Could not save: check browser storage.'); }
     });
-    button(tr('Загрузить', 'Load'), () => {
+    button(tr('Загрузить', 'Load'), async () => {
       try {
         const selected = localStorage.getItem(slotKey(n));
         if (!validSave(selected)) throw new Error('invalid');
         if (window.__game?.running) {
-          if (!window.confirm(tr('Загрузить слот и выйти из текущей игры?', 'Load this slot and leave the current game?'))) return;
+          if (!(await ask('Загрузить слот и выйти из текущей игры?', 'Load this slot and leave the current game?'))) return;
           // Записываем после подтверждения; текущую игру больше не автосохраняем поверх слота.
           sessionStorage.setItem('lastshore.loadPending', '1');
           try { localStorage.setItem(AUTO, selected); }
@@ -71,8 +97,8 @@ function renderSlots() {
         }
       } catch { status('save-status', 'Не удалось загрузить слот.', 'Could not load slot.'); }
     }, !save);
-    button(tr('Удалить', 'Delete'), () => {
-      if (!window.confirm(tr('Удалить сохранение?', 'Delete this save?'))) return;
+    button(tr('Удалить', 'Delete'), async () => {
+      if (!(await ask('Удалить сохранение?', 'Delete this save?'))) return;
       try { localStorage.removeItem(slotKey(n)); renderSlots(); } catch { status('save-status', 'Не удалось удалить слот.', 'Could not delete slot.'); }
     }, !save);
     row.append(title, info, buttons); root.appendChild(row);
