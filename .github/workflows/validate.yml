@@ -50,6 +50,7 @@ jobs:
         run: |
           node dead-district/tests/smoke.mjs
           node dead-district/tests/interaction.mjs
+          node dead-district/tests/interaction-targets.mjs
           node dead-district/tests/storage.mjs
           node dead-district/tests/model-views.mjs
           node dead-district/tests/isometric-textures.mjs

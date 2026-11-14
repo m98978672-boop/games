@@ -10,7 +10,7 @@ const assert = require('node:assert/strict');
     page.on('pageerror', e => errors.push(e.message));
     await page.goto(process.env.DD_URL || 'http://127.0.0.1:4173/dead-district/');
     await page.waitForFunction(() => window.DD_STATE);
-    assert.match(await page.locator('.hud-top').textContent(), /ОБЫСК · 4/, 'виден номер обновления');
+    assert.match(await page.locator('.hud-top').textContent(), /УДОБНЫЙ ОБЫСК · 5/, 'виден номер обновления');
     await page.keyboard.press('i');
     const batIcon = page.locator('#modal-list .inventory-item').filter({hasText:'Бейсбольная бита'}).locator('img');
     assert.match(await batIcon.getAttribute('src'), /icons\/weapons\/icon_baseball_bat.png/);

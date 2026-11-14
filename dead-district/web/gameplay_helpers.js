@@ -58,26 +58,58 @@
     }
     return best;
   }
-  // Подсказка и действие используют один и тот же выбор цели и приоритет.
+  // Проверяем путь к соседней клетке: нельзя обыскивать предмет через стену
+  // или через угол двух непроходимых клеток. Сам объект может быть твёрдым.
+  function canReachInteraction(world, p, tx, ty) {
+    var dx=tx-p.x, dy=ty-p.y, steps=Math.max(1,Math.ceil(Math.max(Math.abs(dx),Math.abs(dy))*12));
+    var prevX=Math.round(p.x), prevY=Math.round(p.y);
+    for (var step=1;step<=steps;step++) {
+      var x=Math.round(p.x+dx*step/steps), y=Math.round(p.y+dy*step/steps);
+      if (x===prevX && y===prevY) continue;
+      if (x!==prevX && y!==prevY && (!world.isWalkable(x,prevY) || !world.isWalkable(prevX,y))) return false;
+      if ((x!==tx || y!==ty) && !world.isWalkable(x,y)) return false;
+      prevX=x; prevY=y;
+    }
+    return true;
+  }
+  // Подсказка и действие используют одну цель. Сначала точное направление,
+  // затем ближайший доступный контейнер или урожай без точного наведения.
   function interactionTarget(state) {
     var p=state.player, world=state.world, T=DD.TILE;
     if (p.inVehicleId) return {type:'exitVehicle'};
-    var candidates=[[Math.round(p.x+p.fx),Math.round(p.y+p.fy)],[Math.round(p.x),Math.round(p.y)]];
-    for (var i=0;i<candidates.length;i++) {
-      var tx=candidates[i][0],ty=candidates[i][1],key=tx+','+ty,tile=world.getTile(tx,ty);
+    function at(tx,ty,allowStructures) {
+      var key=tx+','+ty,tile=world.getTile(tx,ty);
       var door=world.doors[key], win=world.windows[key];
-      if (tile===T.DOOR && door && !door.broken) {
+      if (allowStructures && tile===T.DOOR && door && !door.broken) {
         var blocked=door.open && Math.abs(p.x-tx)<0.7 && Math.abs(p.y-ty)<0.7;
         return {type:'door',x:tx,y:ty,object:door,blocked:blocked};
       }
-      if (tile===T.WINDOW && win && !win.broken && !(win.barricade>0)) return {type:'window',x:tx,y:ty,object:win};
+      if (allowStructures && tile===T.WINDOW && win && !win.broken && !(win.barricade>0)) return {type:'window',x:tx,y:ty,object:win};
       var cont=world.containers[key];
       if (cont) return {type:'storage',x:tx,y:ty,object:cont};
       for(var j=0;j<state.farms.length;j++) {
         var f=state.farms[j];
         if(f.tx===tx && f.ty===ty && f.stage>=3 && !f.dead) return {type:'farm',x:tx,y:ty,object:f,index:j};
       }
+      return null;
     }
+    var candidates=[[Math.round(p.x+p.fx),Math.round(p.y+p.fy)],[Math.round(p.x),Math.round(p.y)]];
+    for (var i=0;i<candidates.length;i++) {
+      var target=at(candidates[i][0],candidates[i][1],true);
+      if (target && canReachInteraction(world,p,target.x,target.y)) return target;
+    }
+    var cx=Math.round(p.x), cy=Math.round(p.y), best=null, bestScore=Infinity;
+    for (var dy=-1;dy<=1;dy++) for (var dx=-1;dx<=1;dx++) {
+      var x=cx+dx,y=cy+dy, distance=Math.hypot(x-p.x,y-p.y);
+      if (distance>1.55) continue;
+      var nearby=at(x,y,false);
+      if (!nearby || !canReachInteraction(world,p,x,y)) continue;
+      // Направление помогает выбрать из нескольких предметов, но не является обязательным.
+      var facing=distance>0.001 ? ((x-p.x)*(p.fx||0)+(y-p.y)*(p.fy||0))/distance : 0;
+      var score=distance-0.2*facing;
+      if (score<bestScore) { best=nearby; bestScore=score; }
+    }
+    if (best) return best;
     for(var v=0;v<state.vehicles.length;v++) {
       var veh=state.vehicles[v];
       if(Math.hypot(veh.x-p.x,veh.y-p.y)<=2.5) return {type:'vehicle',x:veh.x,y:veh.y,object:veh};
