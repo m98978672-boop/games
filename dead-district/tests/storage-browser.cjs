@@ -52,8 +52,24 @@ const assert = require('node:assert/strict');
     assert.equal(await page.evaluate(k=>JSON.stringify(DD_STATE.storage[k]),chest),stored,'повторное открытие не генерирует лут');
     await page.locator('#storage-search').focus(); await page.keyboard.press('Escape');
     assert.equal(await page.locator('#storage-overlay').isHidden(),true,'Escape закрывает окно, даже когда фокус в поиске');
-    await locate('shelf'); await page.keyboard.press('e');
+    // Находим настоящую полку с доступным подходом, повернувшись от неё.
+    const shelfKey=await page.evaluate(() => {
+      const s=DD_STATE;
+      for (const c of Object.values(s.world.containers).filter(c=>c.kind==='shelf')) {
+        for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+          if (!s.world.isWalkable(c.tx-dx,c.ty-dy)) continue;
+          Object.assign(s.player,{x:c.tx-dx,y:c.ty-dy,fx:-dx,fy:-dy,inVehicleId:''});
+          const t=DD.GameplayHelpers.interactionTarget(s);
+          if(t && t.type==='storage' && t.x===c.tx && t.y===c.ty) return c.tx+','+c.ty;
+        }
+      }
+      throw new Error('Нет полки с доступным подходом');
+    });
+    await page.waitForFunction(k => DD_STATE.interactionTarget && DD_STATE.interactionTarget.type==='storage' && DD_STATE.interactionTarget.x+','+DD_STATE.interactionTarget.y===k,shelfKey);
+    assert.match(await page.locator('#interaction-hint').textContent(),/полку/);
+    await page.keyboard.press('e');
     assert.equal(await page.locator('#storage-title').textContent(),'ПОЛКА');
+    assert.ok(await page.evaluate(k=>Object.prototype.hasOwnProperty.call(DD_STATE.storage,k),shelfKey));
     await page.setViewportSize({width:375,height:667});
     const fits=await page.locator('.storage-card').evaluate(el=>{const r=el.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight;});
     assert.ok(fits,'интерфейс помещается на экране телефона');
