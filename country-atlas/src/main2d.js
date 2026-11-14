@@ -12,6 +12,8 @@ const hud = {
   roads: document.getElementById('hud-roads'),
   town: document.getElementById('hud-town'),
   cars: document.getElementById('hud-cars'),
+  peds: document.getElementById('hud-peds'),
+  hint: document.getElementById('hint'),
   clock: document.getElementById('hud-clock'),
   country: document.getElementById('hud-country'),
   status: document.getElementById('hud-status'),
@@ -179,7 +181,8 @@ const toggles = {
   'toggle-cars': (v) => { map.showVehicles = v; map.draw(); },
   'toggle-borders': (v) => { map.showBorders = v; map.draw(); },
   'toggle-cities': (v) => { map.showCities = v; map.draw(); },
-  'toggle-water': (v) => { map.showWater = v; map.draw(); }
+  'toggle-water': (v) => { map.showWater = v; map.draw(); },
+  'toggle-peds': (v) => { map.showPeds = v; map.draw(); }
 };
 for (const [id, fn] of Object.entries(toggles)) {
   const el = document.getElementById(id);
