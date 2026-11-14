@@ -19,8 +19,9 @@
     "test:equations": "node tests/equations.mjs",
     "test:equations-demo": "node tests/equations-demo.mjs",
     "ai:doc": "node tools/gen-ai-doc.mjs",
-    "test:ai": "node tests/ai-formulas.mjs",
-    "test:ai-demo": "node tests/ai-demo.mjs"
+    "test:ai": "node tools/gen-formulas-page.mjs && node tests/ai-formulas.mjs",
+    "test:ai-demo": "node tests/ai-demo.mjs",
+    "formulas": "node tools/gen-formulas-page.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"

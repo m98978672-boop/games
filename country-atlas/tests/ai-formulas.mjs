@@ -27,6 +27,8 @@ import assert from "node:assert/strict";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..");
 const doc = readFileSync(join(root, "AI.md"), "utf8");
+const spec = readFileSync(join(root, "SPEC.md"), "utf8");
+const page = readFileSync(join(root, "formulas.html"), "utf8");
 const src = readFileSync(join(root, "src", "sim", "ai-formulas.js"), "utf8");
 
 let checks = 0;
@@ -237,6 +239,28 @@ for (const f of FORMULAS) {
 ok((doc.match(/✓/g) || []).length >= 800, "в таблицах проверок меньше 800 галочек");
 ok(doc.includes("20 значений"), "в AI.md не сказано про правило 20 значений");
 
-console.log(`OK — ${checks} проверок (§34: ${FORMULAS.length} формул, ${formulaChecks} значений, документ сверен)`);
+/* ---------- 13. Закон промта: формулы записаны и в SPEC.md ---------- */
+ok(spec.includes("Закон промта"), "в SPEC.md нет закона промта (0.4)");
+const specRows = (spec.match(/^\| F-\d+ \|/gm) || []).length;
+ok(specRows === 40, `в SPEC.md ${specRows} строк формул вместо 40`);
+for (const f of FORMULAS) {
+  ok(spec.includes(`| ${f.id} |`), `в промте нет формулы ${f.id}`);
+  ok(spec.includes(f.expr), `в промте нет записи формулы ${f.id}: ${f.expr}`);
+  ok(spec.includes(f.name), `в промте нет названия формулы ${f.id}`);
+}
+ok((spec.match(/\| 20\/20 \|/g) || []).length === 40, "в промте не у всех формул стоит «20/20»");
+ok(spec.includes("## 34. ИИ и его инструменты"), "раздел §34 пропал из промта");
+
+/* ---------- 14. Страница формул собирается из реестра ---------------- */
+const pageCards = (page.match(/<section class="card"/g) || []).length;
+ok(pageCards === 40, `на странице формул ${pageCards} карточек вместо 40`);
+const pageRows = (page.match(/<tr><td>\d+<\/td>/g) || []).length;
+ok(pageRows === 800, `на странице формул ${pageRows} строк значений вместо 800`);
+for (const f of FORMULAS) {
+  ok(page.includes(`id="${f.id}"`), `на странице нет якоря ${f.id}`);
+  ok(page.includes(f.name), `на странице нет формулы «${f.name}»`);
+}
+
+console.log(`OK — ${checks} проверок (§34: ${FORMULAS.length} формул, ${formulaChecks} значений, промт и страница сверены)`);
 console.log(`   формул: ${FORMULAS.length}, значений: ${formulaChecks}, с проверкой ≥ 20: ${FORMULAS.length}`);
 console.log(`   в AI.md: ${detailsCount} таблиц проверок, ${rowsPerBlock.reduce((a, b) => a + b, 0)} строк значений`);
