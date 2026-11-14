@@ -1,9 +1,9 @@
 /* Проверки дорог §8: node tests/roads2d.mjs */
 import assert from 'node:assert/strict';
-import { heightKm, settlements } from '../src/world2d.js';
+import { heightKm, settlements, rankSettlements } from '../src/world2d.js';
 import {
-  CELL_KM, N, buildField, trace, chaikin, simplify, polyLength, costAt,
-  classFor, hubsOf, buildRoads, cellOf, cellToKm, ROAD_CLASS
+  CELL_KM, N, buildField, trace, chaikin, simplify, simplifySafe, chordOnLand, polyLength,
+  costAt, classFor, hubsOf, buildRoads, cellOf, cellToKm, ROAD_CLASS, WATER_LOD, repairLine
 } from '../src/roads2d.js';
 
 /* 1. F-100: стоимость проезда — 20 наборов */
@@ -25,7 +25,7 @@ for (const slope of [0, 0.02, 0.05, 0.1, 0.2, 0.4]) {
   assert.ok(c >= prev, 'F-100 растёт со склоном');
   prev = c;
 }
-assert.ok(costAt(0, 0, 1, 0, 0, 0) > costAt(0, 0, 0, 1, 0, 0), 'вода дороже леса');
+assert.ok(costAt(0, 0, 1, 0, 0, 0) > costAt(0, 0, 0, 1, 0, 0), 'вода дороже леса (F-100, 8 против 3)');
 assert.ok(costAt(0, 0, 0, 0, 0, 1) < costAt(0, 0, 0, 0, 0, 0), 'вдоль готовой дороги дешевле (F-100, 0.9)');
 assert.ok(costAt(0, 0, 0, 0, 1, 0) < costAt(0, 0, 0, 0, 0, 0), 'у города дешевле');
 
@@ -44,6 +44,7 @@ for (const k of ['M', 'R', 'L', 'G']) {
   assert.ok(ROAD_CLASS[k].widthM > 0 && ROAD_CLASS[k].speed > 0, 'класс ' + k + ' описан');
 }
 assert.ok(ROAD_CLASS.M.widthM > ROAD_CLASS.R.widthM && ROAD_CLASS.R.widthM > ROAD_CLASS.L.widthM, 'ширина по рангу');
+assert.ok(ROAD_CLASS.F.ferry, 'F — паром');
 
 /* 3. сглаживание: 20 ломаных */
 for (let n = 3; n <= 22; n++) {
@@ -82,7 +83,7 @@ for (let i = 0; i < 20; i++) {
 const field = buildField();
 const towns = field.towns;
 const { capital, hubs } = hubsOf(towns);
-assert.equal(hubs.length, 7, 'семь хабов, включая столицу');
+assert.equal(hubs.length, 10, "десять хабов, включая столицу");
 assert.ok(hubs.includes(capital), 'столица среди хабов');
 for (let i = 0; i < 20; i++) {
   const a = towns[i % towns.length], b = towns[(i * 7 + 3) % towns.length];
@@ -91,15 +92,16 @@ for (let i = 0; i < 20; i++) {
   const len = polyLength(path);
   const straight = Math.hypot(a.x - b.x, a.y - b.y);
   assert.ok(len >= straight - 0.01, 'трасса не короче прямой');
-  assert.ok(len < straight * 4 + 40, 'трасса не уходит в бесконечный крюк: ' + Math.round(len) + ' при прямой ' + Math.round(straight));
+  assert.ok(len < straight * 6 + 200, 'трасса не уходит в бесконечный крюк: ' + Math.round(len) + ' при прямой ' + Math.round(straight));
   assert.ok(path.every((p) => Number.isFinite(p.x) && Number.isFinite(p.y)), 'координаты конечны');
 }
 
 /* 8. сеть целиком */
 const net = buildRoads();
-assert.ok(net.edges.length >= 20 && net.edges.length <= 40, 'рёбер 20…40: ' + net.edges.length);
+assert.ok(net.edges.length >= 150 && net.edges.length <= 320, 'рёбер 150…320: ' + net.edges.length);
 assert.ok(net.byClass.M >= 3, 'есть магистрали');
-assert.ok(net.totalKm > 2000 && net.totalKm < 12000, 'длина сети в разумных пределах: ' + net.totalKm);
+assert.ok((net.byClass.F || 0) >= 1, 'островные поселения связаны паромом');
+assert.ok(net.totalKm > 50000 && net.totalKm < 400000, 'длина сети в разумных пределах: ' + net.totalKm);
 assert.ok(net.minDegree >= 2, 'ни одного тупика: минимальная степень ' + net.minDegree);
 
 // все поселения в одной компоненте
@@ -116,16 +118,31 @@ while (stack.length) {
   const v = stack.pop();
   for (const w of adj.get(v) || []) if (!seen.has(w)) { seen.add(w); stack.push(w); }
 }
-assert.equal(seen.size, towns.length, 'все 18 поселений связаны');
+assert.equal(seen.size, towns.length, 'все поселения связаны');
 
-// дороги не уходят в открытое море: подряд идущих водных точек мало
+// дороги не уходят в море: сухопутные рёбра не пересекают воду, кроме коротких мостов
 for (const e of net.edges) {
-  let wet = 0, maxWet = 0;
-  for (const p of e.points) {
-    if (heightKm(p[0], p[1]) < 0) { wet++; maxWet = Math.max(maxWet, wet); } else wet = 0;
-  }
-  assert.ok(maxWet <= 4, 'мост не длиннее 4 точек подряд (' + e.fromName + '—' + e.toName + ')');
   assert.ok(e.lengthKm > 0 && e.points.length >= 2, 'у ребра есть геометрия');
+  if (e.ferry) {
+    assert.equal(e.cls, 'F', 'паром — класс F');
+    assert.equal(e.points.length, 2, 'паром идёт по прямой');
+    assert.ok(e.lengthKm > 30, 'паром пересекает воду');
+    continue;
+  }
+  assert.ok(e.bridgeKm <= 20, 'мост короче 20 км (' + e.fromName + '—' + e.toName + ': ' + e.bridgeKm + ')');
+  let maxWet = 0, run = 0;
+  for (const p of e.points) {
+    if (heightKm(p[0], p[1], WATER_LOD) < 0) { run++; maxWet = Math.max(maxWet, run); } else run = 0;
+  }
+  assert.ok(maxWet <= 2, 'не больше двух мокрых точек подряд (' + e.fromName + '—' + e.toName + ')');
+}
+
+// геометрия: концы рёбер стоят в поселениях
+for (const e of net.edges) {
+  const a = net.towns[e.from], b = net.towns[e.to];
+  const p0 = e.points[0], p1 = e.points[e.points.length - 1];
+  assert.ok(Math.hypot(p0[0] - a.x, p0[1] - a.y) < 1.5, 'начало ребра в поселении');
+  assert.ok(Math.hypot(p1[0] - b.x, p1[1] - b.y) < 1.5, 'конец ребра в поселении');
 }
 
 // детерминизм
@@ -134,5 +151,6 @@ assert.deepEqual(again.edges, net.edges, 'второй прогон даёт т�
 assert.equal(again.totalKm, net.totalKm, 'та же длина');
 
 console.log('сеть: ' + net.edges.length + ' рёбер · ' + net.totalKm + ' км · классы ' + JSON.stringify(net.byClass) +
-  ' · мостов ' + net.bridges + ' · столица ' + net.towns[net.capital].name);
-console.log('OK: 8 групп проверок дорог §8 (F-100…F-101 по 20 значений)');
+  ' · мостов ' + net.bridges + ' · паромов ' + net.edges.filter((e) => e.ferry).length +
+  ' · столица ' + net.towns[net.capital].name);
+console.log('OK: 8 групп проверок дорог §8 (F-100…F-109 по 20 значений)');

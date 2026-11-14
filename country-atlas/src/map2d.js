@@ -1,8 +1,8 @@
 /* 2D-карта: обзор мира, детальный патч, сетка, поселения, масштабная линейка.
    Движение простое: тянуть — сдвиг, колесо — зум, без поворотов. */
-import { WORLD2D, settlements, heightKm, colorAtKm } from './world2d.js';
+import { WORLD2D, settlements, rankSettlements, heightKm, colorAtKm } from './world2d.js';
 import { buildRoads, ROAD_CLASS } from './roads2d.js';
-import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels } from './view2d.js';
+import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
 export class Map2D {
   constructor(canvas, hud) {
@@ -10,14 +10,16 @@ export class Map2D {
     this.ctx = canvas.getContext('2d');
     this.hud = hud || {};
     this.center = { x: 0, y: 0 };
-    this.scale = 1.6;            // пикселей на километр
-    this.minScale = 0.35;
-    this.maxScale = 90;
+    this.scale = 0.16;           // пикселей на километр: весь мир 7000 км на экране
+    this.minScale = 0.08;
+    this.maxScale = 200;
     this.overview = null;        // canvas с обзором 700 км
     this.detail = null;          // { canvas, x0, y0, sizeKm }
     this.detailWanted = null;
-    this.settlements = settlements(18);
+    this.settlements = settlements();
+    this.ranks = rankSettlements(this.settlements, 10);
     this.roads = null;
+    this.selected = null;
     this.showGrid = true;
     this.showSettlements = true;
     this.showQ = true;
@@ -53,7 +55,7 @@ export class Map2D {
 
   /* ---------------- обзор мира ---------------- */
   async init(onProgress) {
-    const size = 1024;
+    const size = 1280;
     const worker = this.makeWorker();
     this.worker = worker;
 
@@ -61,9 +63,21 @@ export class Map2D {
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
 
-    const paint = (buffer) => {
-      const img = new ImageData(new Uint8ClampedArray(buffer), size, size);
-      ctx.putImageData(img, 0, 0);
+    // грубый мир растягиваем на весь холст, резкие плитки потом ложатся поверх
+    const paintQuick = (buffer, lowSize) => {
+      const tmp = document.createElement('canvas');
+      tmp.width = lowSize; tmp.height = lowSize;
+      tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buffer), lowSize, lowSize), 0, 0);
+      ctx.imageSmoothingEnabled = true;
+      ctx.drawImage(tmp, 0, 0, size, size);
+      this.overview = canvas;
+    };
+    const paintTile = (buffer, tileSize, i, j) => {
+      const tmp = document.createElement('canvas');
+      tmp.width = tileSize; tmp.height = tileSize;
+      tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buffer), tileSize, tileSize), 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(tmp, i * tileSize, j * tileSize);
       this.overview = canvas;
     };
 
@@ -72,7 +86,8 @@ export class Map2D {
         let settled = false;
         const done = () => { if (!settled) { settled = true; resolve(); } };
         worker.onmessage = (e) => {
-          if (e.data.type === 'overview') { paint(e.data.buffer); done(); }
+          if (e.data.type === 'overview') { paintQuick(e.data.buffer, e.data.size); done(); }
+          else if (e.data.type === 'tile') { paintTile(e.data.buffer, e.data.size, e.data.i, e.data.j); this.draw(); }
           else if (e.data.type === 'patch') this.acceptPatch(e.data);
           else if (e.data.type === 'roads') { this.roads = e.data.net; this.draw(); }
         };
@@ -115,13 +130,13 @@ export class Map2D {
 
   /* ---------------- детальный слой ---------------- */
   requestDetail() {
-    if (!this.worker || this.scale < 3.5) return;
+    if (!this.worker || this.scale < 0.55) return;
     const s = this.scale;
     const wKm = Math.min(WORLD2D.sizeKm, Math.max(4, this.view.w / s));
     const hKm = Math.min(WORLD2D.sizeKm, Math.max(4, this.view.h / s));
     const x0 = this.center.x, y0 = this.center.y;
-    const w = patchPixels(this.view.w, this.dpr);
-    const h = patchPixels(this.view.h, this.dpr);
+    const w = patchPixels(this.view.w, this.dpr, 768);
+    const h = patchPixels(this.view.h, this.dpr, 768);
     const key = [Math.round(x0), Math.round(y0), Math.round(wKm), Math.round(hKm), w, h].join(':');
     if (this.detail && this.detail.key === key) return;
     if (this.detailWanted === key || this.pendingPatch) return;
@@ -145,6 +160,22 @@ export class Map2D {
   toWorld(sx, sy) { return screenToWorld(this.center, this.view, this.scale, sx, sy); }
   clampCenter() { this.center = clampCenter(this.center, this.view, this.scale); }
   shift(dx, dy) { this.center = shiftBy(this.center, this.view, this.scale, dx, dy); }
+  fitWorld() {
+    this.scale = Math.max(this.minScale, Math.min(this.maxScale, fitScale(this.view)));
+    this.center = { x: 0, y: 0 };
+    this.clampCenter();
+    this.draw();
+  }
+  /* ближайшее поселение к экранной точке (в пределах 10 px) */
+  townAt(sx, sy) {
+    let best = null, bestD = 12;
+    for (const p of this.settlements) {
+      const q = this.toScreen(p.x, p.y);
+      const d = Math.hypot(q.x - sx, q.y - sy);
+      if (d < bestD) { bestD = d; best = p; }
+    }
+    return best;
+  }
 
   setZoom(next, anchor) {
     const r = zoomAt(this.center, this.view, this.scale, next, anchor, { min: this.minScale, max: this.maxScale });
@@ -169,7 +200,7 @@ export class Map2D {
       ctx.drawImage(this.overview, originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
     }
 
-    if (this.detail && s >= 3.5) {
+    if (this.detail && s >= 0.55) {
       const d = this.detail;
       ctx.imageSmoothingEnabled = false;
       const dx = originX + (d.x0 - d.wKm / 2) * s;
@@ -264,20 +295,65 @@ export class Map2D {
   }
 
   drawSettlements(ctx, originX, originY, s) {
-    if (s < 1.4) return;
-    for (const p of this.settlements) {
+    const cap = this.ranks.capital;
+    const hubSet = this.ranks.hubSet;
+    const labelTowns = s >= 0.45;
+    ctx.textBaseline = 'middle';
+    for (let i = 0; i < this.settlements.length; i++) {
+      const p = this.settlements[i];
       const sx = originX + p.x * s, sy = originY - p.y * s;
+      if (sx < -40 || sy < -40 || sx > this.view.w + 40 || sy > this.view.h + 40) continue;
+      const isCap = i === cap, isHub = hubSet.has(i);
+      const r = isCap ? Math.max(5, Math.min(9, s * 4)) : isHub ? Math.max(3.6, Math.min(7, s * 3)) : Math.max(2.2, Math.min(5, s * 2));
+      // мягкое свечение — город видно на любом фоне
+      const glow = ctx.createRadialGradient
+        ? ctx.createRadialGradient(sx, sy, r * 0.4, sx, sy, r * 2.6)
+        : null;
+      if (glow) {
+        glow.addColorStop(0, isCap ? 'rgba(255,226,140,0.55)' : 'rgba(255,255,255,0.35)');
+        glow.addColorStop(1, 'rgba(255,255,255,0)');
+        ctx.fillStyle = glow;
+        ctx.beginPath(); ctx.arc(sx, sy, r * 2.6, 0, Math.PI * 2); ctx.fill();
+      }
       ctx.beginPath();
-      ctx.arc(sx, sy, 3.2, 0, Math.PI * 2);
-      ctx.fillStyle = '#f6f1e4';
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fillStyle = isCap ? '#ffd75e' : '#fdfaf2';
       ctx.fill();
-      ctx.lineWidth = 1.4;
-      ctx.strokeStyle = '#1a1a1a';
+      ctx.lineWidth = isCap ? 2 : 1.3;
+      ctx.strokeStyle = '#141414';
       ctx.stroke();
-      if (s > 4) {
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.font = '11px ui-monospace, monospace';
-        ctx.fillText(p.name + ' · ' + Math.round(p.h) + ' м', sx + 6, sy + 4);
+      if (isCap) {
+        // звезда столицы
+        ctx.beginPath();
+        for (let k = 0; k < 10; k++) {
+          const a = -Math.PI / 2 + k * Math.PI / 5;
+          const rr = k % 2 ? r * 0.45 : r * 1.05;
+          const px = sx + Math.cos(a) * rr, py = sy + Math.sin(a) * rr;
+          if (k === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.fillStyle = '#2a2010';
+        ctx.fill();
+      }
+      if (p === this.selected) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, r + 4, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffd75e';
+        ctx.lineWidth = 2;
+        ctx.setLineDash([3, 3]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      if (isCap || isHub || p === this.selected || (labelTowns && s * 6 > 8)) {
+        const size = isCap ? 13 : isHub ? 12 : 11;
+        ctx.font = (isCap ? '600 ' : '') + size + 'px ui-monospace, monospace';
+        const text = p.name;
+        const tx = sx + r + 5, ty = sy;
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(8,14,20,0.85)';
+        ctx.strokeText(text, tx, ty);
+        ctx.fillStyle = isCap ? '#ffe9a8' : '#ffffff';
+        ctx.fillText(text, tx, ty);
       }
     }
   }
@@ -320,7 +396,9 @@ export class Map2D {
     const h = heightKm(w.x, w.y);
     if (this.hud.pos) this.hud.pos.textContent = w.x.toFixed(0) + '; ' + w.y.toFixed(0) + ' км';
     if (this.hud.height) this.hud.height.textContent = Math.round(h) + ' м';
-    if (this.hud.zoom) this.hud.zoom.textContent = this.scale.toFixed(1) + ' px/км';
+    if (this.hud.zoom) this.hud.zoom.textContent = this.scale < 1
+      ? (1 / this.scale).toFixed(1) + ' км/px'
+      : this.scale.toFixed(1) + ' px/км';
     if (this.hud.fps) this.hud.fps.textContent = this.fps;
     if (this.hud.center) this.hud.center.textContent = this.center.x.toFixed(0) + '; ' + this.center.y.toFixed(0) + ' км';
     if (this.hud.roads) {
