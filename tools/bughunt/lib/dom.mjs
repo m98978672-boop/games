@@ -119,6 +119,8 @@ export class El {
   get firstElementChild() { return this.children[0] || null; }
   get nextSibling() { return null; }
   get parentElement() { return this.parentNode; }
+  // Упрощённый парсер не связывает body с документом.
+  getRootNode() { let node = this; while (node.parentNode) node = node.parentNode; return node === this.ownerDocument.body ? this.ownerDocument : node; }
   appendChild(c) {
     if (!c) return c;
     c.parentNode = this;
