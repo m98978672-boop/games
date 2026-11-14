@@ -16,7 +16,17 @@
         {"id": "novel", "weight": 9, "rarity": "common"},
         {"id": "baseball_bat", "weight": 5, "rarity": "uncommon"},
         {"id": "glock_17", "weight": 2, "rarity": "rare"},
-        {"id": "ammo_9mm", "weight": 4, "rarity": "rare"}
+        {"id": "ammo_9mm", "weight": 4, "rarity": "rare"},
+        {"id": "oatmeal", "weight": 8, "rarity": "common"},
+        {"id": "crackers", "weight": 8, "rarity": "common"},
+        {"id": "peanut_butter", "weight": 8, "rarity": "common"},
+        {"id": "tea", "weight": 8, "rarity": "common"},
+        {"id": "soap", "weight": 8, "rarity": "common"},
+        {"id": "towel", "weight": 8, "rarity": "common"},
+        {"id": "matches", "weight": 8, "rarity": "common"},
+        {"id": "magazine", "weight": 8, "rarity": "common"},
+        {"id": "raincoat", "weight": 8, "rarity": "common"},
+        {"id": "wool_socks", "weight": 8, "rarity": "common"}
       ]
     },
     "grocery": {
@@ -35,7 +45,14 @@
         {"id": "chocolate_bar", "weight": 15, "rarity": "common"},
         {"id": "can_opener", "weight": 6, "rarity": "uncommon"},
         {"id": "seeds_tomato", "weight": 5, "rarity": "uncommon"},
-        {"id": "seeds_potato", "weight": 5, "rarity": "uncommon"}
+        {"id": "seeds_potato", "weight": 5, "rarity": "uncommon"},
+        {"id": "rice", "weight": 8, "rarity": "common"},
+        {"id": "dried_fruit", "weight": 8, "rarity": "common"},
+        {"id": "canned_corn", "weight": 8, "rarity": "common"},
+        {"id": "canned_fish", "weight": 8, "rarity": "common"},
+        {"id": "energy_bar", "weight": 8, "rarity": "common"},
+        {"id": "juice", "weight": 8, "rarity": "common"},
+        {"id": "sports_drink", "weight": 8, "rarity": "common"}
       ]
     },
     "hospital": {
@@ -50,7 +67,10 @@
         {"id": "splint", "weight": 12, "rarity": "uncommon"},
         {"id": "thermometer", "weight": 7, "rarity": "uncommon"},
         {"id": "book_medicine", "weight": 5, "rarity": "rare"},
-        {"id": "bottled_water", "weight": 12, "rarity": "common"}
+        {"id": "bottled_water", "weight": 12, "rarity": "common"},
+        {"id": "soap", "weight": 8, "rarity": "common"},
+        {"id": "towel", "weight": 8, "rarity": "common"},
+        {"id": "juice", "weight": 8, "rarity": "common"}
       ]
     },
     "police": {
@@ -67,7 +87,9 @@
         {"id": "bulletproof_vest", "weight": 8, "rarity": "rare"},
         {"id": "helmet", "weight": 9, "rarity": "uncommon"},
         {"id": "flashlight", "weight": 12, "rarity": "common"},
-        {"id": "boots", "weight": 10, "rarity": "uncommon"}
+        {"id": "boots", "weight": 10, "rarity": "uncommon"},
+        {"id": "binoculars", "weight": 8, "rarity": "common"},
+        {"id": "map", "weight": 8, "rarity": "common"}
       ]
     },
     "warehouse": {
@@ -89,7 +111,12 @@
         {"id": "seeds_cabbage", "weight": 5, "rarity": "uncommon"},
         {"id": "seeds_carrot", "weight": 5, "rarity": "uncommon"},
         {"id": "seeds_radish", "weight": 5, "rarity": "uncommon"},
-        {"id": "seeds_strawberry", "weight": 4, "rarity": "rare"}
+        {"id": "seeds_strawberry", "weight": 4, "rarity": "rare"},
+        {"id": "rope", "weight": 8, "rarity": "common"},
+        {"id": "matches", "weight": 8, "rarity": "common"},
+        {"id": "work_gloves", "weight": 8, "rarity": "common"},
+        {"id": "binoculars", "weight": 8, "rarity": "common"},
+        {"id": "map", "weight": 8, "rarity": "common"}
       ]
     },
     "forest": {
@@ -99,7 +126,11 @@
         {"id": "strawberry", "weight": 15, "rarity": "uncommon"},
         {"id": "apple", "weight": 12, "rarity": "uncommon"},
         {"id": "tainted_water", "weight": 14, "rarity": "common"},
-        {"id": "hunting_knife", "weight": 3, "rarity": "rare"}
+        {"id": "hunting_knife", "weight": 3, "rarity": "rare"},
+        {"id": "dried_fruit", "weight": 8, "rarity": "common"},
+        {"id": "energy_bar", "weight": 8, "rarity": "common"},
+        {"id": "rope", "weight": 8, "rarity": "common"},
+        {"id": "map", "weight": 8, "rarity": "common"}
       ]
     }
   }

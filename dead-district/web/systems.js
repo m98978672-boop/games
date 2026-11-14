@@ -341,7 +341,12 @@
       var my = (fdir.x !== 0 || fdir.y !== 0) ? z.y + fdir.y * 2 : py;
       var res = steerZombie(z, mx, my, z.speed, dt, world, true);
       if (res === 'door') z.state = ZSTATE.BREAK_DOOR;
-      else if (res === 'window') { z.state = ZSTATE.CLIMB_WINDOW; z.timer = 1.1; }
+      else if (res === 'window') {
+        var wx = z.windowTx, wy = z.windowTy;
+        if (world.breakWindow && world.breakWindow(wx, wy) && DD.Renderer) DD.Renderer.playSfx('sfx_glass_shatter.wav');
+        var window = world.windows && world.windows[wx + ',' + wy];
+        if (!window || !window.barricade) { z.state = ZSTATE.CLIMB_WINDOW; z.timer = 1.1; }
+      }
     } else if (z.state === ZSTATE.BREAK_DOOR) {
       var dtx = Math.round(z.x + z.dx * 0.9);
       var dty = Math.round(z.y + z.dy * 0.9);
@@ -381,7 +386,7 @@
     if (checkObs) {
       var tt = world.getTile(rtx, rty);
       if (tt === TILE.DOOR) return 'door';
-      if (tt === TILE.WINDOW && !z.crippled) return 'window';
+      if (tt === TILE.WINDOW && !z.crippled) { z.windowTx = rtx; z.windowTy = rty; return 'window'; }
     }
     if (world.isWalkable(Math.round(nx), Math.round(z.y))) z.x = nx;
     else if (world.isWalkable(Math.round(z.x), Math.round(ny))) z.y = ny;

@@ -44,6 +44,13 @@ const assert = require('node:assert/strict');
     assert.notEqual(driverImages[0], driverImages[1], 'водитель показан в машине');
     await page.keyboard.press('e');
     assert.equal(await page.evaluate(() => DD_STATE.player.inVehicleId), '');
+    await page.evaluate(() => DD.Systems.addItem(DD_STATE.inv, 'canned_fish', 1, 1));
+    await page.keyboard.press('i');
+    const fish = page.locator('#modal-list .inventory-item').filter({hasText:'Рыбные консервы'});
+    assert.equal(await fish.locator('.item-icon').textContent(), '🐟');
+    await fish.click();
+    assert.equal(await page.evaluate(() => DD.Systems.countItem(DD_STATE.inv, 'canned_fish')), 0, 'новую еду можно употребить');
+    await page.locator('#modal-close').click();
     await page.locator('#btn-event').click();
     assert.match(await page.locator('#modal-body').textContent(), /EVT-/);
     await page.locator('#modal-list button').nth(0).click();
@@ -158,6 +165,29 @@ const assert = require('node:assert/strict');
     assert.ok(surfaces.water && surfaces.door && surfaces.window, 'виды воды, дверей и окон меняются с состоянием');
     assert.deepEqual(surfaces.fogCorner, surfaces.untouched, 'туман не рисует прямоугольник вокруг стены');
     assert.ok(surfaces.plasterLight > 100, 'светлая штукатурка не становится чёрной из-за индекса палитры');
+    const details = await page.evaluate(async () => {
+      const runnerSprite=new Image(); runnerSprite.src='assets/sprites/zombies/zombie_runner_sheet.png'; await runnerSprite.decode();
+      const canvas=document.createElement('canvas');canvas.width=480;canvas.height=270;
+      const ctx=canvas.getContext('2d'); const T=DD.TILE;
+      const state={player:{x:0,y:0,inVehicleId:'hidden'},visible:{'0,0':true},explored:{},
+        world:{getTile:()=>T.FLOOR_WOOD,doors:{},windows:{},containers:{},furniture:{}},
+        farms:[],campfires:[],vehicles:[],zombies:[],npcs:[],bloodMarks:[],tw:{darkness:0,rainIntensity:0},health:{bloodMl:5000,maxBloodMl:5000},elapsed:0};
+      const render=()=>{DD.Isometric.render(ctx,state,{},()=>{}, {speed:1,bob:1});return canvas.toDataURL();};
+      const empty=render(); state.world.furniture['0,0']={kind:'bed'}; const bed=render();
+      state.world.furniture['0,0']={kind:'fridge'}; const fridge=render(); state.world.furniture={};
+      state.bloodMarks=[{x:0,y:0,time:0,seed:2}]; const fresh=render(); state.elapsed=.4; const settled=render();
+      state.bloodMarks=[]; state.world.getTile=()=>T.DOOR; state.elapsed=0;
+      state.world.doors['0,0']={open:true,broken:false,animFrom:0,animStart:0}; const doorStart=render(); state.elapsed=.2;const doorMid=render();state.elapsed=.5;const doorEnd=render();
+      state.world.getTile=()=>T.WINDOW;state.world.windows['0,0']={broken:true,barricade:0,breakTime:0};state.elapsed=.2;const glass=render();state.elapsed=1;const noGlass=render();
+      state.world.getTile=()=>T.FLOOR_WOOD;
+      state.vehicles=[{x:0,y:0,angle:0,type:'veh_sedan'}]; const sedan=render(); state.vehicles[0].type='veh_ambulance';const ambulance=render();
+      state.vehicles=[]; state.zombies=[{x:0,y:0,dx:1,dy:0,type:'runner',state:DD.ZSTATE.CHASE,moving:true}];
+      const draw=(c,img,idx,cw,ch,x,y,w,h)=>c.drawImage(img,(idx%8)*cw,Math.floor(idx/8)*ch,cw,ch,x,y,w,h);
+      state.elapsed=0;DD.Isometric.render(ctx,state,{runner:runnerSprite},draw,{speed:1,bob:1});const run1=canvas.toDataURL();
+      state.elapsed=.18;DD.Isometric.render(ctx,state,{runner:runnerSprite},draw,{speed:1,bob:1});const run2=canvas.toDataURL();
+      return {furniture:empty!==bed&&bed!==fridge,blood:empty!==fresh&&fresh!==settled,door:doorStart!==doorMid&&doorMid!==doorEnd,glass:glass!==noGlass,car:sedan!==ambulance,run:run1!==run2};
+    });
+    assert.ok(Object.values(details).every(Boolean), 'мебель и анимации двери, стекла и крови видны на Canvas');
     assert.deepEqual(errors, []);
     console.log('[dead-district browser] OK');
   } finally { await browser.close(); }
