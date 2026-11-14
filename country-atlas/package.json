@@ -9,7 +9,10 @@
     "test:catalog": "node tests/catalog.mjs",
     "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --outfile=atlas.bundle.js",
     "dev": "esbuild src/main.js --bundle --format=iife --target=es2019 --outfile=atlas.bundle.js --watch",
-    "serve": "python3 -m http.server 8080 --bind 0.0.0.0"
+    "serve": "python3 -m http.server 8080 --bind 0.0.0.0",
+    "routines": "node tools/gen-routines.mjs",
+    "test:routines": "node tests/routines.mjs",
+    "test": "node tests/catalog.mjs && node tests/routines.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"
