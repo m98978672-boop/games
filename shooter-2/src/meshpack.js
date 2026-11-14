@@ -166,7 +166,9 @@
           prof.push([h * t, r * k * (t > 0.93 ? 0.96 : 1)]);
         }
         prof.push([h, r * 0.92]);
-        parts.push({ geo: O.revolve(prof, { segments: 14 + (v % 4) * 2 }), color, pos: [0, 0, 0], rot: [0, 0, 0] });
+        /* 22–30 сегментов вместо 14–20: на близкой дистанции силуэт
+           перестаёт быть «гранёным ведром», оставаясь мешем */
+        parts.push({ geo: O.revolve(prof, { segments: 22 + (v % 4) * 3 }), color, pos: [0, 0, 0], rot: [0, 0, 0] });
         /* обручи: радиус берём по профилю в этой высоте, иначе кольцо
            проваливается в «пузо» и рисуется чёрными обрывками */
         const rAt = (y) => {
@@ -178,7 +180,7 @@
           const y = lerp(0.10, h - 0.14, (i + 1) / (hoops + 1));
           const rr = rAt(y) * 1.03 + 0.004;
           parts.push({
-            geo: O.revolve([[y, rr], [y + 0.055, rr]], { segments: 16 }),
+            geo: O.revolve([[y, rr], [y + 0.055, rr]], { segments: 24 }),
             color: 0x35383a, pos: [0, 0, 0], rot: [0, 0, 0]
           });
         }
@@ -207,7 +209,7 @@
         const color = PALETTES.rock[v % PALETTES.rock.length];
         /* валун: несколько сжатых сфер со смещением — так силуэт «рваный»,
            но поверхность остаётся гладкой, без «пузырей» из плоских граней */
-        const core = new T.SphereGeometry(s, 10 + (v % 4), 8 + (v % 3));
+        const core = new T.SphereGeometry(s, 16 + (v % 5), 12 + (v % 4));
         const pos = core.attributes.position;
         const ph = rng() * 6;
         for (let i = 0; i < pos.count; i++) {

@@ -27,13 +27,57 @@
     return (L(r) << 16) | (L(g) << 8) | L(b);
   }
 
+  /* Материал по цвету и настройкам. Кэш один на игру, поэтому материал,
+     выданный отсюда, считается ОБЩИМ: менять его цвет на месте нельзя —
+     потемнеет всё, что этим цветом нарисовано (так «серела» вся карта от
+     рёбер контейнеров). Процедурный шум поверхности — mapNoise. */
+  const noiseCache = new Map();
+
+  /* Мягкий процедурный шум в canvas-текстуре: даёт «материальность» без
+     внешних файлов. Один и тот же шум переиспользуется всеми материалами
+     с этим ключом, поэтому на всю карту приходится 2–3 текстуры. */
+  function noiseTexture(kind) {
+    if (noiseCache.has(kind)) return noiseCache.get(kind);
+    const T = THREE();
+    const doc = root.document;
+    let tex = null;
+    if (doc && doc.createElement) {
+      const cv = doc.createElement('canvas');
+      const size = kind === 'grain' ? 64 : 128;
+      cv.width = cv.height = size;
+      const g = cv.getContext && cv.getContext('2d');
+      if (g) {
+        /* крупное пятно + мелкое зерно: так читается и вблизи, и вдали */
+        g.fillStyle = '#ffffff';
+        g.fillRect(0, 0, size, size);
+        for (let i = 0; i < size * size * 0.28; i++) {
+          const x = Math.random() * size, y = Math.random() * size;
+          const v = 200 + Math.random() * 55;
+          g.fillStyle = 'rgba(' + v + ',' + v + ',' + v + ',' + (0.35 + Math.random() * 0.4) + ')';
+          g.fillRect(x, y, 1 + Math.random() * 2, 1 + Math.random() * 2);
+        }
+        tex = new T.CanvasTexture(cv);
+        tex.wrapS = tex.wrapT = T.RepeatWrapping;
+        tex.repeat.set(kind === 'grain' ? 4 : 2, kind === 'grain' ? 4 : 2);
+      }
+    }
+    if (!tex) tex = null;
+    noiseCache.set(kind, tex);
+    return tex;
+  }
+
   function mat(color, opts) {
     const key = lift(color) + '|' + mapLift + '|' + JSON.stringify(opts || {});
     let m = matCache.get(key);
     if (m) return m;
     const o = opts || {};
+    /* mapNoise: 'grain' — мелкое зерно (металл, бетон), 'blotch' — пятна
+       (ткань, грунт). Без него материал остаётся ровной заливкой. */
+    const map = o.mapNoise ? noiseTexture(o.mapNoise) : null;
     m = new (THREE().MeshLambertMaterial)({
       color: lift(color),
+      /* при наличии карты шума цвет умножается на неё — компенсируем */
+      map,
       flatShading: !!o.flat,
       transparent: !!o.transparent,
       opacity: o.opacity === undefined ? 1 : o.opacity,
@@ -42,6 +86,7 @@
       side: o.side || THREE().FrontSide,
       depthWrite: o.depthWrite === undefined ? true : o.depthWrite
     });
+    if (map) m.color.multiplyScalar(1.12);
     matCache.set(key, m);
     return m;
   }
@@ -264,11 +309,13 @@
     const O = SH2.outline;
     const g = new T.Group();
     const H = s * 0.93, R = s * 0.44;
-    const m = mat(color || 0x6a4a2c, { flat: true });
+    const m = mat(color || 0x6a4a2c, { flat: true, mapNoise: 'grain' });
+    /* 24 сегмента вместо 14: на близком плане бочка больше не «ведро»;
+       рёбра профиля остаются, меняется только гладкость силуэта */
     const body = new T.Mesh(O.revolve([
       [0, 0], [0.015 * s, R * 0.88], [H * 0.10, R * 1.00],
       [H * 0.50, R * 1.05], [H * 0.90, R * 1.00], [H * 0.985, R * 0.93], [H, 0]
-    ], { segments: 14 }), m);
+    ], { segments: 24 }), m);
     body.castShadow = true; body.receiveShadow = true;
     g.add(body);
     // обручи: узкие обода чуть шире корпуса, тёмный металл
@@ -296,7 +343,7 @@
       [-0.5, 0.02], [-0.34, 0.34], [-0.10, 0.60], [0.22, 0.52], [0.44, 0.26], [0.50, 0.02]
     ], 2), { depth: s * 0.9, bevel: s * 0.10, bevelSegments: 2 });
     geo.scale(s * 1.1, s * 1.1, s * 1.1);
-    return new T.Mesh(geo, mat(color || 0x585349, { flat: true }));
+    return new T.Mesh(geo, mat(color || 0x585349, { flat: true, mapNoise: 'blotch' }));
   }
   function propSandbags(count, color) {
     const T = THREE();
