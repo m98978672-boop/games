@@ -212,12 +212,20 @@
       var head=p(.98,-.30,7);ctx.fillStyle='#ffe6a0';ctx.fillRect(head[0]-2,head[1]-1,3,2);head=p(.98,.30,7);ctx.fillRect(head[0]-2,head[1]-1,3,2);
       if(v.type==='veh_ambulance'){var cross=p(-.06,0,15);ctx.fillStyle='#c5403d';ctx.fillRect(cross[0]-3,cross[1]-1,6,2);ctx.fillRect(cross[0]-1,cross[1]-3,2,6);}
       if(v.type==='veh_police'){var beacon=p(-.05,0,15);ctx.fillStyle='#d75555';ctx.fillRect(beacon[0]-3,beacon[1]-1,3,2);ctx.fillStyle='#80bad4';ctx.fillRect(beacon[0],beacon[1]-1,3,2);}
+      // Колёса поверх боковины, иначе кузов закрывает их почти полностью.
+      [[-.68,.50],[.65,.50]].forEach(function(w){
+        var wheel=p(w[0],w[1],1); ctx.fillStyle='#111b1e';ctx.beginPath();ctx.ellipse(wheel[0],wheel[1],3.4,3.7,0,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle='#a2acad';ctx.fillRect(wheel[0]-1,wheel[1]-1,2,2);
+      });
     }
     items.forEach(function(item) {
       var q=project(item.x,item.y,px,py);
       if(item.type==='wall') {
         var tile=item.tile, door=state.world.doors[item.key], near=Math.abs(item.x-px)+Math.abs(item.y-py)<3;
-        var h=near?8:18;
+        // Передняя стена опускается, когда игрок в помещении: она не прячет мебель.
+        var indoors = state.world.isIndoor && state.world.isIndoor(Math.round(px),Math.round(py));
+        var foreground = indoors && item.x+item.y > px+py && Math.abs(item.x-px)+Math.abs(item.y-py)<12;
+        var h = tile === T.DOOR || tile === T.WINDOW ? 18 : (foreground ? 4 : (near ? 8 : 18));
         var doorProgress = door && door.animStart != null ? door.animFrom + ((door.open ? 1 : 0)-door.animFrom)*Math.min(1,Math.max(0,(time-door.animStart)/.4)) : (door && door.open ? 1 : 0);
         if(tile===T.DOOR && door && (doorProgress > .01 || door.broken)) {
           var fullHeight=h; h=3;block(ctx,q.x,q.y,h,'#634c37','#46392f','#9a8060');

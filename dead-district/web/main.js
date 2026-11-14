@@ -567,6 +567,7 @@
     baseball_bat:'🏏',crowbar:'🔧',fire_axe:'🪓',kitchen_knife:'🔪',hunting_knife:'🔪',machete:'🔪',hammer:'🔨',saw:'🪚',screwdriver:'🪛',wrench:'🔧',flashlight:'🔦',lighter:'🔥',battery:'🔋',gas_can:'⛽',
     oatmeal:'🥣',rice:'🍚',peanut_butter:'🥜',crackers:'🍘',dried_fruit:'🍇',canned_corn:'🌽',canned_fish:'🐟',energy_bar:'🍫',tea:'🍵',juice:'🧃',sports_drink:'🥤',first_aid_kit:'🧰',gauze:'🩹',vitamins:'💊',soap:'🧼',towel:'🧻',matches:'🕯️',rope:'🪢',binoculars:'🔭',map:'🗺️',magazine:'📰',raincoat:'🧥',wool_socks:'🧦',work_gloves:'🧤'
   };
+  var pixelIcons = {"antibiotics":"items","antiseptic":"items","apple":"items","backpack":"items","baked_potato":"items","bandage":"items","beef_jerky":"items","boiled_water":"items","book_skill":"items","bottled_water":"items","bread":"items","cabbage":"items","canned_beans":"items","canned_soup":"items","carrot":"items","chocolate_bar":"items","clothing_item":"items","coffee":"items","cooked_beef":"items","dirty_bandage":"items","key":"items","novel":"items","painkillers":"items","potato":"items","radish":"items","raw_beef":"items","seeds_packet":"items","soda":"items","splint":"items","sterile_bandage":"items","strawberry":"items","suture_kit":"items","tainted_water":"items","thermometer":"items","tomato":"items","battery":"tools","can_opener":"tools","cloth_rag":"tools","duct_tape":"tools","flashlight":"tools","gas_can":"tools","generator_part":"tools","lighter":"tools","nails":"tools","saw":"tools","scrap_metal":"tools","screwdriver":"tools","wire":"tools","wood_plank":"tools","wrench":"tools","ammo_12ga":"weapons","ammo_45acp":"weapons","ammo_556":"weapons","ammo_9mm":"weapons","ar15":"weapons","baseball_bat":"weapons","crowbar":"weapons","fire_axe":"weapons","glock_17":"weapons","hammer":"weapons","hunting_knife":"weapons","kitchen_knife":"weapons","m1911":"weapons","machete":"weapons","mossberg_500":"weapons"};
   var categoryIcons = {food:'🍽️',drink:'🥤',medical:'🩺',melee:'⚔️',firearm:'🔫',ammo:'📦',tool:'🔧',clothing:'👕',backpack:'🎒',book:'📕',seed:'🌱',material:'🧱'};
   function openModal(kind) {
     if (!state) return;
@@ -612,7 +613,12 @@
           var meta = DataDB.getItem(slot.id) || { name: slot.id };
           var btn = document.createElement('button');
           btn.className = 'dd-btn inventory-item';
-          var icon = document.createElement('span'); icon.className = 'item-icon'; icon.textContent = itemIcons[slot.id] || categoryIcons[meta.cat] || '📦'; icon.setAttribute('aria-hidden', 'true');
+          var icon = document.createElement('span'); icon.className = 'item-icon'; icon.setAttribute('aria-hidden', 'true');
+          var iconName = pixelIcons[slot.id] ? slot.id : (meta.cat === 'seed' ? 'seeds_packet' : (meta.cat === 'backpack' ? 'backpack' : (meta.cat === 'clothing' ? 'clothing_item' : (meta.cat === 'book' && slot.id !== 'magazine' ? 'book_skill' : ''))));
+          if (iconName) {
+            var picture = document.createElement('img'); picture.alt = ''; picture.src = 'assets/icons/' + pixelIcons[iconName] + '/icon_' + iconName + '.png';
+            icon.appendChild(picture);
+          } else icon.textContent = itemIcons[slot.id] || categoryIcons[meta.cat] || '📦';
           var label = document.createElement('span'); label.textContent = meta.name + ' x' + slot.qty + ' (' + ((meta.weight || 0.1) * slot.qty).toFixed(1) + ' кг)';
           btn.appendChild(icon); btn.appendChild(label);
           btn.addEventListener('click', function () {
