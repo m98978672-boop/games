@@ -51,8 +51,8 @@ const ranks = rankSettlements(towns, 10);
     const city = buildCity(t, i, ranks);
     assert.ok(city.streets.length >= 1, 'у города есть улицы');
     assert.ok(city.buildings.length >= 3, 'у города есть здания: ' + city.buildings.length);
-    // R-10.3: бюджет зданий по классу — 1200/800/420, иначе мельче 1 px не различить
-    const cap = city.cls === 'capital' ? 2400 : city.cls === 'city' ? 1500 : 700;
+    // R-10.3: бюджет зданий по классу (дома стоят стеной к улице, мельче 1 px их не различить)
+    const cap = city.cls === 'capital' ? 12000 : city.cls === 'city' ? 8000 : city.cls === 'town' ? 2600 : city.cls === 'small' ? 900 : 240;
     assert.ok(city.buildings.length <= cap, 'зданий не больше ' + cap);
     totalBuildings += city.buildings.length;
     for (const b of city.buildings) {
@@ -60,18 +60,35 @@ const ranks = rankSettlements(towns, 10);
       assert.ok(d <= city.radiusKm * 1.05, 'здание внутри радиуса города');
       assert.ok(BUILDING[b.type], 'тип здания из библиотеки §10');
       assert.ok(b.floors >= 1, 'этажность положительна');
-      assert.ok(b.corners.length === 4, 'пятно — четырёхугольник');
+      // R-10.1: пятно — прямоугольник, Г, П или Т (4…8 точек)
+      assert.ok(b.corners.length >= 4 && b.corners.length <= 8, 'пятно из 4…8 точек: ' + b.corners.length);
+      assert.ok(['rect', 'L', 'U', 'T'].includes(b.shape), 'форма пятна из библиотеки §10.1: ' + b.shape);
     }
     for (const s of city.streets) {
       assert.ok(s.widthM >= 5 && s.widthM <= 30, 'ширина улицы 5…30 м');
-      const d = Math.hypot(s.a[0] - city.x, s.a[1] - city.y);
-      assert.ok(d <= city.radiusKm * 1.2, 'улица внутри радиуса');
+      // улица может быть ломаной (кольцевая дуга) — проверяем все её точки
+      const pts = s.pts || [s.a, s.b];
+      assert.ok(pts.length >= 2, 'у улицы не меньше двух точек');
+      for (const p of pts) {
+        const d = Math.hypot(p[0] - city.x, p[1] - city.y);
+        assert.ok(d <= city.radiusKm * 1.2, 'улица внутри радиуса');
+      }
+    }
+    // §9.9: кварталы получают тип, у кольцевых городов есть площадь и парк
+    assert.ok(city.blocks.length >= 3, 'у города есть кварталы');
+    for (const bl of city.blocks) {
+      assert.ok(city.zones && city.zones[bl.zone] >= 1, 'зона квартала известна: ' + bl.zone);
+      assert.ok(bl.corners.length >= 4, 'контур квартала из 4+ точек');
+    }
+    if (city.cls === 'capital' || city.cls === 'city' || city.cls === 'town') {
+      assert.ok(city.zones.plaza >= 1, 'есть площадь в центре');
+      assert.ok(city.zones.park >= 1, 'есть парк');
     }
     // детерминизм: та же раскладка при повторной сборке
     const again = buildCity(t, i, ranks);
     assert.equal(again.buildings.length, city.buildings.length, 'город собирается одинаково');
   }
-  assert.ok(totalBuildings > 2000, 'зданий в выборке много: ' + totalBuildings);
+  assert.ok(totalBuildings > 20000, 'зданий в выборке много: ' + totalBuildings);
 
   // все 120 поселений заселены
   let empty = 0;

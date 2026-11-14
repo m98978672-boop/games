@@ -10,8 +10,8 @@ export const RIVER = {
   epsilonM: 0.01,        // «наклон» после заполнения впадин, чтобы вода всегда находила путь
   minRiverKm2: 900,      // с какой площади начинается река (~9 клеток)
   minLakeKm2: 2000,      // озеро меньше — не рисуем
-  maxLakes: 40,          // крупнейшие 40 — больше на карте не различить
-  maxLakeKm2: 8000,      // озеро крупнее Ладоги в этой стране не нужно
+  maxLakes: 25,          // крупнейшие 25 — больше на карте не различить
+  maxLakeKm2: 4000,      // озеро крупнее Ладоги в этой стране не нужно
   widthMinM: 3,          // F-135
   widthMaxM: 600,
   minLengthKm: 40,       // короче — не река, а ручей
@@ -250,6 +250,142 @@ export function buildRivers(grid, filled, dir, area, opts = {}) {
   return { lines, isRiver, order, maxFlow, totalKm, count: lines.length };
 }
 
+/* Обводка маски: грани клеток, у которых сосед не в маске, сшиваются в замкнутое кольцо.
+   Так озеро рисуется своей настоящей формой, а не кружком-заглушкой (§5.6). */
+export function traceRings(cells, grid) {
+  const { n, stepKm, x0 } = grid;
+  const inside = new Set(cells);
+  const edges = new Map();
+  const key = (x, y) => x.toFixed(3) + ',' + y.toFixed(3);
+  const px = (i) => x0 + i * stepKm;
+  const py = (j) => x0 + j * stepKm;
+  const add = (ax, ay, bx, by) => {
+    const k = key(ax, ay);
+    const list = edges.get(k);
+    if (list) list.push([bx, by]); else edges.set(k, [[bx, by]]);
+  };
+  for (const id of cells) {
+    const i = id % n, j = (id / n) | 0;
+    const ax = px(i), ay = py(j), bx = px(i + 1), by = py(j), cx = px(i + 1), cy = py(j + 1), dx = px(i), dy = py(j + 1);
+    if (j === 0 || !inside.has((j - 1) * n + i)) add(ax, ay, bx, by);
+    if (i === n - 1 || !inside.has(j * n + i + 1)) add(bx, by, cx, cy);
+    if (j === n - 1 || !inside.has((j + 1) * n + i)) add(cx, cy, dx, dy);
+    if (i === 0 || !inside.has(j * n + i - 1)) add(dx, dy, ax, ay);
+  }
+  const rings = [];
+  let guard = cells.length * 8 + 64;
+  while (edges.size && guard-- > 0) {
+    const first = edges.keys().next().value;
+    const [sx, sy] = first.split(',').map(Number);
+    const ring = [[sx, sy]];
+    let cx = sx, cy = sy;
+    for (let step = 0; step < cells.length * 4 + 16; step++) {
+      const k = key(cx, cy);
+      const list = edges.get(k);
+      if (!list || !list.length) break;
+      const [nx, ny] = list.pop();
+      if (!list.length) edges.delete(k);
+      ring.push([nx, ny]);
+      cx = nx; cy = ny;
+      if (cx === sx && cy === sy) break;
+    }
+    if (ring.length > 3) rings.push(ring);
+  }
+  // площадь по формуле шнурков: внешнее кольцо — самое большое
+  const areaOf = (r) => {
+    let a = 0;
+    for (let i = 0, j = r.length - 1; i < r.length; j = i++) a += r[j][0] * r[i][1] - r[i][0] * r[j][1];
+    return a / 2;
+  };
+  rings.sort((a, b) => Math.abs(areaOf(b)) - Math.abs(areaOf(a)));
+  return rings;
+}
+
+/* Упрощение ломаной (Дуглас–Пекер): у озера остаются изгибы, а не каждая клетка сетки. */
+export function simplifyRing(ring, tolKm = 3) {
+  if (ring.length < 4) return ring;
+  const dist = (p, a, b) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1];
+    const L = dx * dx + dy * dy;
+    if (L === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+    let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+  };
+  const keep = new Uint8Array(ring.length);
+  keep[0] = 1; keep[ring.length - 1] = 1;
+  const stack = [[0, ring.length - 1]];
+  while (stack.length) {
+    const [a, b] = stack.pop();
+    let far = -1, maxD = tolKm;
+    for (let k = a + 1; k < b; k++) {
+      const d = dist(ring[k], ring[a], ring[b]);
+      if (d > maxD) { maxD = d; far = k; }
+    }
+    if (far > 0) { keep[far] = 1; stack.push([a, far], [far, b]); }
+  }
+  const out = [];
+  for (let k = 0; k < ring.length; k++) if (keep[k]) out.push(ring[k]);
+  return out.length >= 4 ? out : ring;
+}
+
+/* Изрезанность берега (R-5.1): точки кольца сдвигаются по нормали на ±amp — берег перестаёт быть
+   гладким овалом, появляются заливы, мысы и острова. Сдвиг берётся из синус-хеша координат. */
+export function crinkleRing(ring, ampKm = 3.5) {
+  const out = [];
+  for (let i = 0; i < ring.length; i++) {
+    const prev = ring[(i - 1 + ring.length) % ring.length];
+    const next = ring[(i + 1) % ring.length];
+    const dx = next[0] - prev[0], dy = next[1] - prev[1];
+    const len = Math.hypot(dx, dy) || 1;
+    const k = Math.sin((ring[i][0] * 12.9898 + ring[i][1] * 78.233) * 4375.5453);
+    const off = ((k - Math.floor(k)) - 0.5) * 2 * ampKm;
+    out.push([ring[i][0] - (dy / len) * off, ring[i][1] + (dx / len) * off]);
+  }
+  return out;
+}
+
+/* Сглаживание берега (Чайкин, 2 прохода): у озера плавная линия, а не ступеньки сетки. */
+export function smoothRing(ring, passes = 2) {
+  let r = ring;
+  for (let p = 0; p < passes; p++) {
+    const out = [];
+    for (let i = 0; i < r.length; i++) {
+      const a = r[i], b = r[(i + 1) % r.length];
+      out.push([0.75 * a[0] + 0.25 * b[0], 0.75 * a[1] + 0.25 * b[1]]);
+      out.push([0.25 * a[0] + 0.75 * b[0], 0.25 * a[1] + 0.75 * b[1]]);
+    }
+    r = out;
+  }
+  return r;
+}
+
+/* Море и внутренние водоёмы: связана ли вода с открытым океаном.
+   Бессточные впадины ниже уровня моря — это не океан, а внутренние моря и солончаки (R-5.6). */
+export function seaConnectivity(grid) {
+  const { n, h } = grid;
+  const sea = new Uint8Array(n * n);
+  const queue = [];
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const edge = i === 0 || j === 0 || i === n - 1 || j === n - 1;
+      const id = j * n + i;
+      if (edge && h[id] <= 0 && !sea[id]) { sea[id] = 1; queue.push(id); }
+    }
+  }
+  for (let q = 0; q < queue.length; q++) {
+    const id = queue[q];
+    const i = id % n, j = (id / n) | 0;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const ii = i + di, jj = j + dj;
+      if (ii < 0 || jj < 0 || ii >= n || jj >= n) continue;
+      const nid = jj * n + ii;
+      if (!sea[nid] && h[nid] <= 0) { sea[nid] = 1; queue.push(nid); }
+    }
+  }
+  return sea;
+}
+
 /* F-139: озёра — замкнутые впадины, которые заполнение подняло выше рельефа. */
 export function buildLakes(grid, filled, opts = {}) {
   const { n, stepKm, x0, cellKm2 } = grid;
@@ -258,18 +394,17 @@ export function buildLakes(grid, filled, opts = {}) {
   for (let id = 0; id < n * n; id++) if (grid.h[id] > 0 && filled[id] - grid.h[id] > 6) mask[id] = 1;
   const seen = new Uint8Array(n * n);
   const lakes = [];
-  const stack = [];
   for (let s = 0; s < n * n; s++) {
     if (!mask[s] || seen[s]) continue;
-    let count = 0, level = -Infinity, top = 0, sumI = 0, sumJ = 0;
-    let minI = n, maxI = -1, minJ = n, maxJ = -1;
-    seen[s] = 1; stack.push(s);
+    const cells = [];
+    let level = -Infinity, top = 0, sumI = 0, sumJ = 0;
+    seen[s] = 1;
+    const stack = [s];
     while (stack.length) {
       const id = stack.pop();
       const i = id % n, j = (id / n) | 0;
-      count++; sumI += i; sumJ += j;
-      if (i < minI) minI = i; if (i > maxI) maxI = i;
-      if (j < minJ) minJ = j; if (j > maxJ) maxJ = j;
+      cells.push(id);
+      sumI += i; sumJ += j;
       if (filled[id] > level) level = filled[id];
       if (grid.h[id] > top) top = grid.h[id];
       for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -279,22 +414,73 @@ export function buildLakes(grid, filled, opts = {}) {
         if (mask[nid] && !seen[nid]) { seen[nid] = 1; stack.push(nid); }
       }
     }
-    const areaKm2 = count * cellKm2;
+    const areaKm2 = cells.length * cellKm2;
     if (areaKm2 < minKm2 || areaKm2 > RIVER.maxLakeKm2) continue;   // «море внутри суши» — это не озеро
-    if (level - top < 6) continue;              // лужа глубиной в метр — не озеро
+    if (level - top < 6) continue;                                  // лужа глубиной в метр — не озеро
+    const rings = traceRings(cells, grid);
+    if (!rings.length) continue;
+    const ring = smoothRing(crinkleRing(smoothRing(simplifyRing(rings[0], Math.max(2, stepKm * 0.9)), 2), 3), 1);
+    // настоящее очертание важнее центроида: центр берём из кольца
+    let cx = 0, cy = 0;
+    for (const p of ring) { cx += p[0]; cy += p[1]; }
     lakes.push({
-      x: x0 + (sumI / count) * stepKm,
-      y: x0 + (sumJ / count) * stepKm,
+      x: cx / ring.length,
+      y: cy / ring.length,
+      ring,
       areaKm2: Math.round(areaKm2),
       levelM: Math.round(level),
       depthM: Math.round(level - top),
-      cells: count,
-      rxKm: Math.max(stepKm, ((maxI - minI + 1) * stepKm) / 2),
-      ryKm: Math.max(stepKm, ((maxJ - minJ + 1) * stepKm) / 2)
+      cells: cells.length
     });
   }
   lakes.sort((a, b) => b.areaKm2 - a.areaKm2);
   return lakes.slice(0, opts.maxLakes || RIVER.maxLakes);
+}
+
+/* Внутренние моря: вода ниже уровня моря, не связанная с океаном. Рисуются настоящим очертанием,
+   иначе посреди суши остаются бесформенные синие пятна (§5.6). */
+export function buildInlandSeas(grid, opts = {}) {
+  const { n, stepKm, x0, cellKm2 } = grid;
+  const sea = seaConnectivity(grid);
+  const mask = new Uint8Array(n * n);
+  let any = false;
+  for (let id = 0; id < n * n; id++) if (grid.h[id] <= 0 && !sea[id]) { mask[id] = 1; any = true; }
+  if (!any) return [];
+  const seen = new Uint8Array(n * n);
+  const out = [];
+  for (let s2 = 0; s2 < n * n; s2++) {
+    if (!mask[s2] || seen[s2]) continue;
+    const cells = [];
+    let sumI = 0, sumJ = 0, minH = 0;
+    const stack = [s2];
+    seen[s2] = 1;
+    while (stack.length) {
+      const id = stack.pop();
+      const i = id % n, j = (id / n) | 0;
+      cells.push(id);
+      sumI += i; sumJ += j;
+      if (grid.h[id] < minH) minH = grid.h[id];
+      for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const ii = i + di, jj = j + dj;
+        if (ii < 0 || jj < 0 || ii >= n || jj >= n) continue;
+        const nid = jj * n + ii;
+        if (mask[nid] && !seen[nid]) { seen[nid] = 1; stack.push(nid); }
+      }
+    }
+    const areaKm2 = cells.length * cellKm2;
+    if (areaKm2 < (opts.minInlandKm2 || 2000)) continue;
+    const rings = traceRings(cells, grid);
+    if (!rings.length) continue;
+    const ring = smoothRing(crinkleRing(smoothRing(simplifyRing(rings[0], Math.max(3, stepKm)), 2), 5), 1);
+    out.push({
+      x: x0 + (sumI / cells.length) * stepKm,
+      y: x0 + (sumJ / cells.length) * stepKm,
+      ring, areaKm2: Math.round(areaKm2), depthM: Math.round(-minH),
+      cells: cells.length, inland: true
+    });
+  }
+  out.sort((a, b) => b.areaKm2 - a.areaKm2);
+  return out.slice(0, opts.maxInland || 24);
 }
 
 /* F-140: мосты — пересечения дорог с реками (§8.15, R-5.12). Длина моста ≥ ширины русла.
@@ -361,14 +547,37 @@ export function buildWater(roads) {
   const { dir, area } = accumulate(grid, filled);
   const rivers = buildRivers(grid, filled, dir, area);
   const lakes = buildLakes(grid, filled);
+  const inland = buildInlandSeas(grid);
   rivers.grid = grid;
   rivers.filled = filled;
   const bridges = roads ? bridgesBetween(roads, rivers) : { list: [], count: 0, longKm: 0 };
   delete rivers.filled;
   return {
     grid: grid.n, stepKm: grid.stepKm,
-    rivers, lakes, bridges,
+    rivers, lakes, inland, bridges,
     totalKm: rivers.totalKm,
     ms: Date.now() - t0
   };
+}
+
+/* ---------- как река рисуется на карте (§5.5, R-52.4…R-52.6) ---------- */
+/* R-52.4: ширина русла в пикселях — метры делятся на 1000 (в километры!) и умножаются
+   на масштаб px/км. Раньше метры умножались прямо на px/км — река выходила в 1000 раз
+   толще, и на обзоре страны появлялись «огромные синие пятна». */
+export function riverStrokePx(widthM, s, isMain) {
+  const px = (widthM / 1000) * s;
+  return Math.min(6, Math.max(isMain ? 0.9 : 0.45, px));
+}
+
+/* R-52.5: сколько русел рисуем на данном масштабе (генерализация, §5.5). */
+export function riverKeepCount(s, total) {
+  const k = s < 0.3 ? 420 : s < 0.8 ? 1100 : s < 2 ? 2400 : s < 6 ? 4400 : total;
+  return Math.min(total, k);
+}
+
+/* R-52.6: русло видно, если оно входит в квоту по длине и на обзоре страны длиннее ~90 км. */
+export function riverVisibleAt(s, points, rank, keep) {
+  if (rank >= keep) return false;
+  if (s < 0.3 && points < 30) return false;
+  return true;
 }

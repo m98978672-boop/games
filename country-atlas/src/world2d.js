@@ -53,33 +53,62 @@ const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b
 /* Карта читается по четвертям: юго-запад — море, северо-восток — горы, север — тайга
    (чек-лист §37). Суша «поднимается» по диагонали SW → NE.
    Крупные формы заданы в масштабе 7000 км, мелкие — в километрах и гаснут на обзоре (lod). */
+/* R-52.2: глубина суши — 0 у уреза воды, 1 в глубине материка. Складки, горы и мелкий
+   рельеф умножаются на неё, поэтому берег задают крупные формы, а не рябь. */
+export function landDepth01(h) {
+  return smoothstep(-30, 340, h);
+}
+
 export function heightKm(x, y, lod = 0) {
   const cont = fbm(x * 0.00038, y * 0.00038, 101, 4);                 // береговая линия, волна ~2600 км
   const grad = (0.55 * x + 0.80 * y) / WORLD2D.halfKm;                // −1.35…+1.35, SW в минус
   let h = 700 * grad + (cont - 0.5) * 1200 + 380;                     // суша северо-востока
+  // Глубина суши: 0 у воды, 1 в глубине материка (R-50.12). Складки, горы и впадины
+  // работают ТОЛЬКО там, поэтому вода не проступает пятнами по всей равнине:
+  // берег задают крупные формы (grad + cont), а не мелкая рябь.
+  const landF = landDepth01(h);
   // горная цепь: полоса по диагонали на северо-востоке
   const band = smoothstep(0.02, 0.38, grad) * (1 - smoothstep(0.85, 1.25, grad)) *
     smoothstep(-0.10, 0.55, x / WORLD2D.halfKm);
   const plate = band * (0.30 + 0.70 * smoothstep(0.40, 0.75, fbm(x * 0.00024 + 13, y * 0.00024 - 7, 211, 3)));
+  // хребты: две волны разной длины дают отроги, а не гладкий купол (R-50.12)
   const ridBig = ridgeFbm(x * 0.00045 + 31, y * 0.00045 - 17, 307, 3); // хребты через ~2000 км
   const ridSmall = ridgeFbm(x * 0.0014 + 7, y * 0.0014 + 11, 617, 3);  // отроги через ~700 км
-  h += 4200 * ridBig * ridBig * plate + 1500 * ridSmall * ridSmall * plate;   // гребни, не плато
+  const ridFine = ridgeFbm(x * 0.0037 - 5, y * 0.0037 + 9, 719, 3);    // гребни через ~270 км
+  let relief = 3100 * ridBig * ridBig * plate + 1100 * ridSmall * ridSmall * plate +
+    520 * ridFine * ridFine * plate;                                                  // гребни, не плато
   // средняя складка: 450 км, видна всегда
-  h += 160 * (fbm(x * 0.0022, y * 0.0022, 517, 3) - 0.5) * (0.3 + plate);
-  // острова в юго-западном море
+  relief += 160 * (fbm(x * 0.0022, y * 0.0022, 517, 3) - 0.5) * (0.3 + plate);
+  // впадины и внутренние озёра
+  relief -= 900 * smoothstep(0.50, 0.78, fbm(x * 0.00028 - 3, y * 0.00028 + 5, 409, 2));
+  h += relief * landF;
+  // острова в юго-западном море (лежат в воде — их глубина суши не гасит)
   if (grad < 0.05) {
     const isl = smoothstep(0.62, 0.86, fbm(x * 0.00075 + 91, y * 0.00075 + 13, 823, 3));
     h += 900 * isl * smoothstep(0.05, -0.5, grad);
   }
-  // впадины и внутренние озёра
-  h -= 620 * smoothstep(0.55, 0.80, fbm(x * 0.00028 - 3, y * 0.00028 + 5, 409, 2));
+  const hMid = h;                 // сглаженный рельеф: по нему считаем, где урез воды
+  // изрезанный берег (§5.1, R-50.11): берег СМЕЩАЕТСЯ на десятки километров, а не рябит.
+  // Амплитуда пропорциональна уклону (м/км) и расстоянию до уреза, поэтому море не
+  // проступает вглубь суши: |h| меньше уклона × 130 км только возле настоящего берега.
+  const contX = noise2((x + 40) * 0.00038, y * 0.00038, 101) - noise2((x - 40) * 0.00038, y * 0.00038, 101);
+  const contY = noise2(x * 0.00038, (y + 40) * 0.00038, 101) - noise2(x * 0.00038, (y - 40) * 0.00038, 101);
+  const slope = Math.max(0.12, Math.hypot(contX, contY) * 15 + 0.19);  // м/км
+  const dCoast = Math.abs(hMid) / slope;                               // км до уреза
+  if (dCoast < 130) {
+    const cband = 1 - smoothstep(0, 130, dCoast);
+    const c1 = noise2(x * 0.014 + 5, y * 0.014 - 3, 1301) - 0.5;       // заливы через 70 км
+    const c2 = noise2(x * 0.040 - 9, y * 0.040 + 4, 1409) - 0.5;      // мысы через 25 км
+    const c3 = noise2(x * 0.095 + 21, y * 0.095 - 17, 1511) - 0.5;    // косы через 10 км
+    h += cband * slope * (66 * c1 + 24 * c2 + 8 * c3);
+  }
   // мелкий рельеф: 50 / 17 / 5 км, гаснет при грубой выборке
   const a50 = 1 - smoothstep(6, 14, lod);
   const a17 = 1 - smoothstep(2, 5, lod);
   const a5 = 1 - smoothstep(0.6, 1.6, lod);
-  h += 120 * a50 * (fbm(x * 0.02, y * 0.02, 719, 3) - 0.5) * (0.55 + 0.9 * plate);
-  h += 45 * a17 * (fbm(x * 0.06, y * 0.06, 941, 2) - 0.5);
-  h += 18 * a5 * (fbm(x * 0.20, y * 0.20, 1103, 2) - 0.5);
+  h += landF * (120 * a50 * (fbm(x * 0.02, y * 0.02, 719, 3) - 0.5) * (0.55 + 0.9 * plate) +
+    45 * a17 * (fbm(x * 0.06, y * 0.06, 941, 2) - 0.5) +
+    18 * a5 * (fbm(x * 0.20, y * 0.20, 1103, 2) - 0.5));
   // береговая полка: море плавно уходит на −250 м
   if (h < 0) h *= 0.5;
   return Math.max(-250, Math.min(WORLD2D.maxHeight, h));
@@ -121,14 +150,18 @@ export function colorFor(h, t, m, shade = 1) {
     c = h < -170 ? mix(C.deep, C.sea, (h + 250) / 80) : mix(C.sea, C.shelf, (h + 170) / 170);
     return [c[0] * shade, c[1] * shade, c[2] * shade];
   }
+  // суша ниже 4 м — это пойма и песчаный берег, а не море: синие «круги» внутри страны
+  // получались именно из-за того, что низкая суша красилась цветом мелководья (R-5.2)
   if (h < 4) {
-    c = mix(C.shallow, C.sand, h / 4);
+    c = mix(C.sand, C.steppe, 0.35 + 0.3 * smoothstep(0.35, 0.6, m));
   } else if (h < 1000) {
     // суша: степь → луг → лес по влаге, тайга по холоду; песок только у самой воды
     let green = mix(C.steppe, C.meadow, smoothstep(0.30, 0.46, m));
     green = mix(green, C.forest, smoothstep(0.50, 0.64, m));
     if (t < 0.42) green = mix(green, C.taiga, smoothstep(0.42, 0.18, t) * 0.85);
-    c = h < 14 ? mix(C.sand, green, (h - 4) / 10) : green;
+    // прибрежная полоса: песок и сухая степь у самой воды, дальше — луг и лес
+    const low = smoothstep(90, 12, h);
+    c = mix(green, mix(C.sand, C.steppe, 0.25 + 0.5 * smoothstep(0.32, 0.6, m)), low * 0.75);
     c = mix(c, C.rock, smoothstep(760, 1150, h) * 0.5);
   } else if (h < 2500) {
     // выше леса: зелёный склон долго держится, камень — только у самых гребней
@@ -240,7 +273,7 @@ export function renderBox(x0, y0, wKm, hKm, width, height, out) {
       if (h > 0) {
         const dzdx = (hh[k + 1] - hh[k - 1]) / (2 * dxKm);
         const dzdy = (hh[k + W] - hh[k - W]) / (2 * dyKm);
-        shade = 1 + (dzdx * Lx + dzdy * Ly) * 0.007;
+        shade = 1 + (dzdx * Lx + dzdy * Ly) * (h > 900 ? 0.011 : 0.007);
         shade = Math.max(0.68, Math.min(1.32, shade));
       }
       const [r, g, b] = colorFor(h, tt[k], mm[k], shade);
