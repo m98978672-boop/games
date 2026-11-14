@@ -126,11 +126,12 @@ export const WATER_LOD = CELL_KM;
 
 export const HEURISTIC_WEIGHT = 1.8;   // взвешенный A*: в разы меньше раскрытий, путь чуть длиннее
 
-export function trace(field, from, to, dirPenalty = 0) {
+export function trace(field, from, to, dirPenalty = 0, wetBudgetKm = 0) {
   const start = cellOf(from.x, from.y), goal = cellOf(to.x, to.y);
   const g = new Float32Array(N * N).fill(Infinity);
   const came = new Int32Array(N * N).fill(-1);
   const done = new Uint8Array(N * N);
+  const wet = new Float32Array(N * N);      // сколько километров идём по воде (мост через пролив)
   const heap = new Heap();
   g[start] = 0;
   heap.push(0, start);
@@ -155,13 +156,22 @@ export function trace(field, from, to, dirPenalty = 0) {
       const diag = di !== 0 && dj !== 0;
       const dist = diag ? CELL_KM * Math.SQRT2 : CELL_KM;
       const slope = Math.abs(field.height[kk] - hHere) / (dist * 1000);
-      if (field.water[kk]) continue;          // по морю не едем: там паром (F-109)
-      if (diag && (field.water[i + di + j * N] || field.water[i + (j + dj) * N])) continue;  // не срезаем угол залива
+      // по морю не едем: там паром (F-109). Исключение — короткий мост через пролив,
+      // но только когда обычный путь не нашёлся (wetBudgetKm > 0)
+      let wetHere = wet[k];
+      if (field.water[kk]) {
+        if (!wetBudgetKm) continue;
+        wetHere += dist;
+        if (wetHere > wetBudgetKm) continue;
+      }
+      if (diag && !field.water[kk] && (field.water[i + di + j * N] || field.water[i + (j + dj) * N])) continue;  // не срезаем угол залива
       const extra = field.nearRoad[kk] ? 1 : 0;
-      const c = dist * costAt(field.height[kk], slope, field.water[kk], field.forest[kk], field.nearTown[kk], extra);
+      const bridgeFine = field.water[kk] ? 14 : 1;            // мост дороже суши
+      const c = dist * costAt(field.height[kk], slope, field.water[kk], field.forest[kk], field.nearTown[kk], extra) * bridgeFine;
       const cand = g[k] + c + (dirPenalty ? dirPenalty * dist * extra : 0);
       if (cand < g[kk]) {
         g[kk] = cand;
+        wet[kk] = wetHere;
         came[kk] = k;
         heap.push(cand + HEURISTIC_WEIGHT * hEst(kk), kk);
       }
@@ -380,6 +390,37 @@ export function buildRoads() {
     if (best !== -1) push(i, best, 'G', 700);
   }
 
+  // 5b. связность страны (F-101): ни одно поселение не остаётся отрезанным.
+  //    Считаем компоненты и соединяем самую далёкую с ближайшей чужой — даже если между ними 2000 км.
+  {
+    const parent = towns.map((_, i) => i);
+    const find = (x) => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+    const union = (a, b) => { const ra = find(a), rb = find(b); if (ra !== rb) parent[ra] = rb; };
+    for (const e of edges) union(e.a, e.b);
+    for (let pass = 0; pass < 200; pass++) {
+      const comps = new Map();
+      for (let i = 0; i < towns.length; i++) {
+        const r = find(i);
+        if (!comps.has(r)) comps.set(r, []);
+        comps.get(r).push(i);
+      }
+      if (comps.size <= 1) break;
+      const groups = [...comps.values()].sort((a, b) => a.length - b.length);
+      const small = groups[0];
+      const rest = new Set(groups.slice(1).flat());
+      let bestI = -1, bestJ = -1, bestD = Infinity;
+      for (const i of small) {
+        for (const j of rest) {
+          const d = Math.hypot(towns[i].x - towns[j].x, towns[i].y - towns[j].y);
+          if (d < bestD) { bestD = d; bestI = i; bestJ = j; }
+        }
+      }
+      if (bestI < 0) break;
+      push(bestI, bestJ, 'R', 4000);
+      union(bestI, bestJ);
+    }
+  }
+
   // 6. трассировка по рельефу, с притяжением к уже проложенным дорогам
   const out = [];
   const addFerry = (i, j, cls = 'F') => {
@@ -398,7 +439,7 @@ export function buildRoads() {
 
   for (const e of edges) {
     const from = towns[e.a], to = towns[e.b];
-    const raw = trace(field, from, to);
+    const raw = trace(field, from, to) || trace(field, from, to, 0, 24);
     if (!raw) { addFerry(e.a, e.b); continue; }
     // концы ставим точно в поселения, а не в центры клеток
     raw[0] = { x: from.x, y: from.y };
@@ -463,7 +504,7 @@ export function buildRoads() {
         if (c < bestC) { bestC = c; best = j; }
       }
       if (best === -1) continue;
-      const raw = trace(field, towns[i], towns[best]);
+      const raw = trace(field, towns[i], towns[best]) || trace(field, towns[i], towns[best], 0, 24);
       if (!raw) { addFerry(i, best); have.add(key(i, best)); degree[i]++; degree[best]++; continue; }
       raw[0] = { x: towns[i].x, y: towns[i].y };
       raw[raw.length - 1] = { x: towns[best].x, y: towns[best].y };

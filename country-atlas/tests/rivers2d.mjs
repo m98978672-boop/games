@@ -202,9 +202,11 @@ const buildMs = Date.now() - t0;
     if (l.areaKm2 < RIVER.minLakeKm2 || l.areaKm2 > RIVER.maxLakeKm2) bad++;
     if (l.depthM < 6) bad++;
     if (Math.abs(l.x) > WORLD2D.halfKm || Math.abs(l.y) > WORLD2D.halfKm) bad++;
+    if (!l.ring || l.ring.length < 4) bad++;                    // озеро рисуется очертанием
+    for (const p of l.ring) if (Math.abs(p[0]) > WORLD2D.halfKm + 1 || Math.abs(p[1]) > WORLD2D.halfKm + 1) bad++;
     if (heightKm(l.x, l.y) <= 0) bad++;            // озеро не в море
   }
-  eq(bad, 0, 'F-139: озёра внутри суши, глубже 6 м, не «моря»');
+  eq(bad, 0, 'F-139: озёра внутри суши, глубже 6 м, с настоящим кольцом берега');
   ok(lakes.length >= 5 && lakes.length <= RIVER.maxLakes, 'озёра найдены: ' + lakes.length + ' (не больше ' + RIVER.maxLakes + ')');
   // 20 проверок: уровень озера — порог стока, он выше дна минимум на глубину озера
   let lvl = 0;

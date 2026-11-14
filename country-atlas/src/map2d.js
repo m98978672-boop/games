@@ -3,10 +3,10 @@
 import { WORLD2D, settlements, rankSettlements, heightKm, colorAtKm } from './world2d.js';
 import { buildRoads, ROAD_CLASS } from './roads2d.js';
 import { buildTransport, advance as advanceTransport, vehiclePosition, screenLengthPx, VEHICLE } from './transport2d.js';
-import { buildCity, cityLod, CITY_STREET_SCALE, CITY_BUILDING_SCALE } from './city2d.js';
+import { buildCity, cityLod, ZONE, CITY_STREET_SCALE, CITY_BUILDING_SCALE, buildingOutlinePx } from './city2d.js';
 import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
-import { buildWater, RIVER } from './rivers2d.js';
+import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
 export class Map2D {
@@ -232,31 +232,64 @@ export class Map2D {
       return !(x1 < this.center.x - halfW || x0 > this.center.x + halfW ||
                y1 < this.center.y - halfH || y0 > this.center.y + halfH);
     };
-    // озёра
-    ctx.fillStyle = 'rgba(53,113,154,0.92)';
+    // внутренние моря: вода ниже уровня моря, не связанная с океаном (§5.6)
+    const seas = w.inland || [];
+    for (const lake of seas) {
+      if (Math.abs(lake.x - this.center.x) > halfW + 60 || Math.abs(lake.y - this.center.y) > halfH + 60) continue;
+      const ring = lake.ring;
+      ctx.beginPath();
+      ctx.moveTo(X(ring[0][0]), Y(ring[0][1]));
+      for (let i = 1; i < ring.length; i++) ctx.lineTo(X(ring[i][0]), Y(ring[i][1]));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(52,110,146,0.97)';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(126,182,212,0.6)';
+      ctx.lineWidth = Math.max(0.8, Math.min(4, 1.2 * s * 0.3));
+      ctx.stroke();
+    }
+    // озёра — настоящим очертанием (§5.6), а не кружком
     for (const lake of w.lakes) {
       if (Math.abs(lake.x - this.center.x) > halfW || Math.abs(lake.y - this.center.y) > halfH) continue;
-      // эллипс по bbox, но площадью ровно в площадь озера (иначе «лужа» раздувается)
-      const bx = lake.rxKm || Math.sqrt(lake.areaKm2 / Math.PI);
-      const by = lake.ryKm || Math.sqrt(lake.areaKm2 / Math.PI);
-      const fit = Math.min(1, Math.sqrt(lake.areaKm2 / (Math.PI * bx * by))) || 1;
-      const rx = Math.max(1.2, bx * fit * s);
-      const ry = Math.max(1.2, by * fit * s);
+      const ring = lake.ring;
       ctx.beginPath();
-      ctx.ellipse(X(lake.x), Y(lake.y), rx, ry, 0, 0, Math.PI * 2);
+      ctx.moveTo(X(ring[0][0]), Y(ring[0][1]));
+      for (let i = 1; i < ring.length; i++) ctx.lineTo(X(ring[i][0]), Y(ring[i][1]));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(58,117,155,0.95)';
       ctx.fill();
+      // отмель у берега и тёмная кромка — озеро не выглядит заливкой
+      ctx.strokeStyle = 'rgba(150,200,222,0.65)';
+      ctx.lineWidth = Math.max(0.8, 0.9 * Math.min(3, s * 0.6));
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(34,78,110,0.55)';
+      ctx.lineWidth = 0.6;
+      ctx.stroke();
     }
     // реки: главные заметны всегда, остальные — с 0.4 px ширины
     ctx.strokeStyle = RIVER.riverColor;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    for (const line of w.rivers.lines) {
-      const px = line.widthM * s;
+    // Генерализация §5.5: на обзоре страны рисуем только крупнейшие русла — иначе карта
+    // превращается в «дождь» из четырёх тысяч коротких ручьёв (R-50.14)
+    if (!this.riverRank) {
+      // значимость = длина русла (точек × 3 км), а не расход: расход в модели насыщается,
+      // и по нему на обзор вылезали короткие ручьи-«гребёнки» (R-50.14)
+      const order = w.rivers.lines.map((l, i) => i)
+        .sort((a, b) => w.rivers.lines[b].pts.length - w.rivers.lines[a].pts.length);
+      this.riverRank = new Map(order.map((idx, r) => [idx, r]));
+    }
+    const keep = riverKeepCount(s, w.rivers.lines.length);
+    for (let ri = 0; ri < w.rivers.lines.length; ri++) {
+      const line = w.rivers.lines[ri];
+      if (!riverVisibleAt(s, line.pts.length, this.riverRank.get(ri), keep)) continue;
+      // ширина русла в МЕТРАХ → в пиксели: /1000 (было widthM * s — река в 1000 раз толще,
+      // отсюда «огромные синие пятна» на обзоре, R-50.13)
       const main = line.flowKm2 > 40000;
-      if (px < 0.4 && !main) continue;
+      const rank = this.riverRank.get(ri);
+      if (!main && line.flowKm2 < 4000 && (line.widthM / 1000) * s < 0.12) continue;
       if (!visible(line.pts)) continue;
-      ctx.lineWidth = main ? Math.max(0.9, px) : Math.max(0.5, px);
-      ctx.globalAlpha = px < 0.8 ? 0.75 : 0.95;
+      ctx.lineWidth = riverStrokePx(line.widthM, s, main || rank < 40);
+      ctx.globalAlpha = rank < 40 ? 0.9 : 0.5;
       ctx.beginPath();
       ctx.moveTo(X(line.pts[0].x), Y(line.pts[0].y));
       for (let i = 1; i < line.pts.length; i++) ctx.lineTo(X(line.pts[i].x), Y(line.pts[i].y));
@@ -461,40 +494,57 @@ export class Map2D {
       const X = (x) => originX + x * s;
       const Y = (y) => originY - y * s;
 
-      // кварталы: заливка пятнами, чтобы город читался не только по улицам
+      // кварталы — по зонам §9.9: парк зелёный, промзона серая, центр тёплый, частный сектор светлый
       if (lod >= 1) {
-        ctx.fillStyle = 'rgba(176,166,146,0.55)';
         for (const bl of city.blocks) {
           const c = bl.corners;
           ctx.beginPath();
           ctx.moveTo(X(c[0][0]), Y(c[0][1]));
-          for (let k = 1; k < 4; k++) ctx.lineTo(X(c[k][0]), Y(c[k][1]));
+          for (let k = 1; k < c.length; k++) ctx.lineTo(X(c[k][0]), Y(c[k][1]));
           ctx.closePath();
+          ctx.fillStyle = (ZONE[bl.zone] || ZONE.mid).fill;
           ctx.fill();
         }
       }
 
-      // улицы: переулки тише, проспекты и главные — ярче (R-9.6)
-      ctx.lineCap = 'butt';
-      ctx.strokeStyle = 'rgba(244,238,226,0.62)';
-      for (const st of city.streets) {
-        if (st.major) continue;
-        const w = Math.max(0.6, (st.widthM / 1000) * s);
-        ctx.lineWidth = w;
+      // улицы: переулки тише, проспекты ярче; кольцевые — ломаной pts (R-9.6)
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      const drawStreet = (st, style, minPx) => {
+        const pts = st.pts || [st.a, st.b];
+        if (!pts || pts.length < 2) return;
+        ctx.strokeStyle = style;
+        ctx.lineWidth = Math.max(minPx, (st.widthM / 1000) * s);
         ctx.beginPath();
-        ctx.moveTo(X(st.a[0]), Y(st.a[1]));
-        ctx.lineTo(X(st.b[0]), Y(st.b[1]));
+        ctx.moveTo(X(pts[0][0]), Y(pts[0][1]));
+        for (let k = 1; k < pts.length; k++) ctx.lineTo(X(pts[k][0]), Y(pts[k][1]));
         ctx.stroke();
-      }
-      ctx.strokeStyle = 'rgba(252,248,238,0.95)';
-      for (const st of city.streets) {
-        if (!st.major) continue;
-        const w = Math.max(1, (st.widthM / 1000) * s);
-        ctx.lineWidth = w;
-        ctx.beginPath();
-        ctx.moveTo(X(st.a[0]), Y(st.a[1]));
-        ctx.lineTo(X(st.b[0]), Y(st.b[1]));
-        ctx.stroke();
+      };
+      for (const st of city.streets) if (!st.major) drawStreet(st, 'rgba(244,238,226,0.62)', 0.6);
+      for (const st of city.streets) if (st.major) drawStreet(st, 'rgba(252,248,238,0.95)', 1);
+
+      // парки: деревья в глубоком зуме, чтобы зелёное пятно читалось как парк
+      if (lod >= 2) {
+        ctx.fillStyle = 'rgba(72,104,60,0.75)';
+        for (const bl of city.blocks) {
+          if (bl.zone !== 'park') continue;
+          const c = bl.corners;
+          let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+          for (const q of c) {
+            const px = X(q[0]), py = Y(q[1]);
+            if (px < bx0) bx0 = px; if (px > bx1) bx1 = px;
+            if (py < by0) by0 = py; if (py > by1) by1 = py;
+          }
+          const step = 9;
+          for (let yy = by0 + 4; yy < by1 - 2; yy += step) {
+            for (let xx = bx0 + 4; xx < bx1 - 2; xx += step) {
+              if ((xx * 7 + yy * 13) % 11 > 6) continue;
+              ctx.beginPath();
+              ctx.arc(xx, yy, Math.max(1, 0.5 + s * 0.004), 0, Math.PI * 2);
+              ctx.fill();
+            }
+          }
+        }
       }
 
       if (lod < 2) continue;
@@ -510,16 +560,28 @@ export class Map2D {
           if (py < by0) by0 = py; if (py > by1) by1 = py;
         }
         if (bx1 < -4 || by1 < -4 || bx0 > cw + 4 || by0 > ch + 4) continue;
+        // генерализация: дом мельче 1.6 px растягиваем вокруг центра, иначе квартал выглядит пустым
+        const span = Math.max(bx1 - bx0, by1 - by0, 0.01);
+        const grow = span < 1.6 ? Math.min(3.2, 1.6 / span) : 1;
+        const cxm = (bx0 + bx1) / 2, cym = (by0 + by1) / 2;
         ctx.beginPath();
-        ctx.moveTo(X(c[0][0]), Y(c[0][1]));
-        for (let k = 1; k < 4; k++) ctx.lineTo(X(c[k][0]), Y(c[k][1]));
+        ctx.moveTo(cxm + (X(c[0][0]) - cxm) * grow, cym + (Y(c[0][1]) - cym) * grow);
+        for (let k = 1; k < c.length; k++) ctx.lineTo(cxm + (X(c[k][0]) - cxm) * grow, cym + (Y(c[k][1]) - cym) * grow);
         ctx.closePath();
+        // R-52.7: дом мельче 1.6 px растягиваем и обводим, иначе квартал — светлая «крупа»
+        const outPx = buildingOutlinePx(span * grow);
+        if (outPx > 0) {
+          ctx.fillStyle = 'rgba(46,42,34,0.28)';
+          ctx.fill();   // тёмная подложка по тому же контуру
+        }
         ctx.fillStyle = b.wall;
         ctx.fill();
-        // крыша — обводка по краю: дом не плоский квадрат и читается даже в 1 px
-        ctx.strokeStyle = b.roof;
-        ctx.lineWidth = Math.max(0.6, 0.06 * s + 0.4);
-        ctx.stroke();
+        // обводка: тонкая кромка при 1.6 px, крыша — когда дом крупнее 3 px (R-52.7)
+        if (outPx > 0) {
+          ctx.strokeStyle = b.roof;
+          ctx.lineWidth = outPx;
+          ctx.stroke();
+        }
       }
     }
   }

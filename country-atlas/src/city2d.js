@@ -30,6 +30,13 @@ export const BUILDING = {
   church:   { name: 'церковь',            wM: 12, dM: 12, floors: 1,  wall: '#efe6cf', roof: '#8f7f5c' }
 };
 
+/* R-52.7: обводка дома. Дом мельче 1.6 px читается светлой точкой на светлом квартале,
+   поэтому его всегда обводим; крышу рисуем, только когда пятно ≥ 3 px. */
+export function buildingOutlinePx(spanPx) {
+  if (!(spanPx >= 1.6)) return 0;
+  return spanPx >= 3 ? 0.6 : 0.35;
+}
+
 /* F-125: радиус застройки — от населения: r = 0.8 + 1.5·log10(население/1000) км, 0.5…7 км. */
 export function cityRadiusKm(pop) {
   const r = 0.8 + 1.5 * Math.log10(Math.max(200, pop) / 1000);
@@ -56,16 +63,64 @@ export function cityPopulation(cls, index) {
 }
 
 /* Город целиком: улицы, кварталы, здания. Кэшируется вызывающим по номеру поселения. */
+/* §9.9: зонирование кварталов — тип, цвет заливки и правила застройки. */
+export const ZONE = {
+  plaza:      { name: 'площадь',        fill: 'rgba(216,206,184,0.72)' },
+  center:     { name: 'центр',          fill: 'rgba(200,187,163,0.64)' },
+  mid:        { name: 'жилой',          fill: 'rgba(190,181,159,0.52)' },
+  private:    { name: 'частный сектор', fill: 'rgba(178,172,148,0.40)' },
+  park:       { name: 'парк',           fill: 'rgba(96,132,80,0.68)'   },
+  industrial: { name: 'промзона',       fill: 'rgba(148,146,138,0.56)' }
+};
+
+/* R-10.1: пятно здания — прямоугольник, Г или П. Возвращает контур в локальных осях:
+   x — вдоль фасада (ширина), y — в глубину квартала. */
+export function footprint(shape, w, d) {
+  const hw = w / 2, hd = d / 2;
+  if (shape === 'L') {
+    return [[-hw, -hd], [hw, -hd], [hw, -hd + d * 0.45], [-hw + w * 0.45, -hd + d * 0.45], [-hw + w * 0.45, hd], [-hw, hd]];
+  }
+  if (shape === 'U') {
+    return [[-hw, -hd], [hw, -hd], [hw, hd], [hw - w * 0.32, hd], [hw - w * 0.32, hd - d * 0.5],
+      [-hw + w * 0.32, hd - d * 0.5], [-hw + w * 0.32, hd], [-hw, hd]];
+  }
+  if (shape === 'T') {
+    return [[-hw, -hd], [hw, -hd], [hw, -hd + d * 0.4], [w * 0.18, -hd + d * 0.4], [w * 0.18, hd], [-w * 0.18, hd], [-w * 0.18, -hd + d * 0.4], [-hw, -hd + d * 0.4]];
+  }
+  return [[-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]];
+}
+
+/* Тип здания по зоне квартала (§9.9–§9.11, §10.4–§10.6). */
+function pickByZone(zone, rand) {
+  const r = rand();
+  if (zone === 'center') return r < 0.3 ? 'tower' : r < 0.55 ? 'panel9' : r < 0.72 ? 'stalinka' : r < 0.85 ? 'brick5' : r < 0.93 ? 'shop' : 'school';
+  if (zone === 'mid') return r < 0.42 ? 'panel9' : r < 0.68 ? 'brick5' : r < 0.8 ? 'stalinka' : r < 0.9 ? 'school' : 'shop';
+  if (zone === 'private') return r < 0.72 ? 'house' : r < 0.9 ? 'dacha' : 'shop';
+  if (zone === 'industrial') return r < 0.62 ? 'plant' : 'shop';
+  if (zone === 'plaza') return r < 0.5 ? 'church' : r < 0.8 ? 'stalinka' : 'shop';
+  return 'house';
+}
+
+function shapeFor(zone, rand) {
+  const r = rand();
+  if (zone === 'center') return r < 0.55 ? 'rect' : r < 0.75 ? 'L' : r < 0.9 ? 'T' : 'U';
+  if (zone === 'mid') return r < 0.7 ? 'rect' : r < 0.88 ? 'L' : 'U';
+  if (zone === 'industrial') return r < 0.5 ? 'rect' : r < 0.8 ? 'L' : 'U';
+  return r < 0.92 ? 'rect' : 'L';
+}
+
+/* Планировка города (§9.4–§9.5): основа — сетка кварталов с неровным шагом,
+   поверх неё бульварное кольцо и радиальные проспекты, в центре — площадь,
+   по краям — частный сектор, отдельным сектором — промзона, плюс парки.
+   Кварталы застраиваются по периметру зданиями формы прямоугольник / Г / П / Т (§10.1). */
 export function buildCity(town, index, ranks) {
   const cls = classFor(town, index, ranks);
   const spec = CITY_CLASS[cls];
   const pop = cityPopulation(cls, index);
   const radiusKm = cityRadiusKm(pop);
   const rand = rng(0x51ed + index * 7919);
-  const angle = rand() * Math.PI;                       // своя ориентация сетки
+  const angle = rand() * Math.PI;
   const ca = Math.cos(angle), sa = Math.sin(angle);
-
-  // координаты: u — вдоль главной оси, v — поперёк, в километрах от центра
   const toWorld = (u, v) => [town.x + u * ca - v * sa, town.y + u * sa + v * ca];
 
   const streets = [];
@@ -73,163 +128,218 @@ export function buildCity(town, index, ranks) {
   const buildings = [];
   const blockKm = spec.blockM / 1000;
   const half = radiusKm;
-  const n = Math.max(2, Math.min(26, Math.round((half * 2) / blockKm)));
-
-  // граница города не круглая: радиус «дышит» по углам (лесопарки, овраги, река)
   const lobes = [rand() * 6.28, rand() * 6.28, rand() * 6.28];
-  const radiusAt = (ang) => half * (0.72 + 0.14 * Math.sin(ang * 2 + lobes[0]) + 0.1 * Math.sin(ang * 3 + lobes[1]) + 0.06 * Math.sin(ang * 5 + lobes[2]));
+  // граница застройки «дышит» — город не круг и не квадрат
+  const radiusAt = (ang) => half * (0.76 + 0.12 * Math.sin(ang * 2 + lobes[0]) + 0.08 * Math.sin(ang * 3 + lobes[1]) + 0.05 * Math.sin(ang * 5 + lobes[2]));
+  const cap = cls === 'capital' ? 12000 : cls === 'city' ? 8000 : cls === 'town' ? 2600 : cls === 'small' ? 900 : 240;
+  const isBig = cls === 'capital' || cls === 'city' || cls === 'town';
 
-  // сетка улиц: режем плоскость линиями u = const и v = const в пределах круга
-  const lines = [];
-  // шаг кварталов растёт к окраине: в центре плотно, на выезде — частный сектор
-  const jitter = () => (rand() - 0.5) * blockKm * 0.22;
-  const uLines = [];
-  for (let i = -n; i <= n; i++) {
-    const u = i * blockKm + jitter();
-    if (Math.abs(u) > half) continue;
-    const halfChord = Math.sqrt(Math.max(0, half * half - u * u));
-    if (halfChord < blockKm * 0.4) continue;
-    uLines.push({ at: u, from: -halfChord, to: halfChord });
-  }
-  const vLines = [];
-  for (let j = -n; j <= n; j++) {
-    const v = j * blockKm + jitter();
-    if (Math.abs(v) > half) continue;
-    const halfChord = Math.sqrt(Math.max(0, half * half - v * v));
-    if (halfChord < blockKm * 0.4) continue;
-    vLines.push({ at: v, from: -halfChord, to: halfChord });
-  }
-  for (const L of uLines) lines.push({ dir: 0, ...L });
-  for (const L of vLines) lines.push({ dir: 1, ...L });
-  for (const L of lines) {
-    // концы улицы подрезаем по «дышащей» границе города
-    const angA = L.dir === 0 ? Math.atan2(L.from, L.at) : Math.atan2(L.at, L.from);
-    const angB = L.dir === 0 ? Math.atan2(L.to, L.at) : Math.atan2(L.at, L.to);
-    const chordA = Math.hypot(L.dir === 0 ? L.at : L.from, L.dir === 0 ? L.from : L.at);
-    const chordB = Math.hypot(L.dir === 0 ? L.at : L.to, L.dir === 0 ? L.to : L.at);
-    const kA = Math.min(1, radiusAt(angA) / Math.max(1e-6, chordA));
-    const kB = Math.min(1, radiusAt(angB) / Math.max(1e-6, chordB));
-    const from = L.from * kA, to = L.to * kB;
-    if (Math.abs(to - from) < blockKm * 0.5) continue;
-    const a = L.dir === 0 ? toWorld(L.at, from) : toWorld(from, L.at);
-    const b = L.dir === 0 ? toWorld(L.at, to) : toWorld(to, L.at);
-    L.from = from; L.to = to;
-    // R-9.6: главные улицы шире, переулки уже
-    const major = L.dir === 0 ? Math.abs(L.at) < blockKm * 0.6 : Math.abs(L.at) < blockKm * 0.6;
-    streets.push({ a, b, widthM: major ? 18 : 9, major, cls: major ? 'street' : 'lane' });
-  }
-
-  // радиальные проспекты: 3–4 луча из центра (R-9.6: иерархия улиц)
-  const rays = cls === 'capital' || cls === 'city' ? 4 : 2;
-  for (let r = 0; r < rays; r++) {
-    const ang = angle + (r / rays) * Math.PI + 0.3 * rand();
-    const len = radiusAt(ang) * 0.98;
-    streets.push({
-      a: toWorld(0, 0),
-      b: toWorld(Math.cos(ang) * len, Math.sin(ang) * len),
-      widthM: 24, major: true, cls: 'avenue'
-    });
-  }
-
-  // кварталы: в каждой клетке между соседними улицами (§10.1)
-  const maxFloors = spec.floors[1];
-  const minFloors = spec.floors[0];
-  for (let i = -n; i < n; i++) {
-    for (let j = -n; j < n; j++) {
-      const u0 = i * blockKm, v0 = j * blockKm;
-      const uc = u0 + blockKm / 2, vc = v0 + blockKm / 2;
-      const angc = Math.atan2(vc, uc);
-      const dc = Math.hypot(uc, vc);
-      const rim = radiusAt(angc);
-      if (dc > rim - blockKm * 0.45) continue;
-      const edge = 1 - dc / Math.max(1e-6, rim);              // 1 в центре, 0 на краю
-      if (rand() > 0.25 + 0.7 * edge) continue;               // к краю застройка реже
-      const w = blockKm * (0.62 + 0.16 * rand());
-      const h = blockKm * (0.62 + 0.16 * rand());
-      const cu = uc + (rand() - 0.5) * blockKm * 0.12;
-      const cv = vc + (rand() - 0.5) * blockKm * 0.12;
-      const corners = [toWorld(cu - w / 2, cv - h / 2), toWorld(cu + w / 2, cv - h / 2), toWorld(cu + w / 2, cv + h / 2), toWorld(cu - w / 2, cv + h / 2)];
-      blocks.push({ corners, center: toWorld(cu, cv), floors: Math.round(minFloors + (maxFloors - minFloors) * edge), w, h, cu, cv, edge });
-    }
-  }
-
-  // здания: застройка по периметру квартала с двором внутри (R-10.2), бюджет на город
-  const budget = cls === 'capital' ? 2100 : cls === 'city' ? 1300 : cls === 'town' ? 620 : 340;
-  const perBlock = Math.max(2, Math.min(18, Math.round(budget / Math.max(1, blocks.length))));
-  const emit = (type, bu, bv, bw, bd, turn) => {
+  const pushBuilding = (type, corners, center, floors, wM, dM, shape, zone) => {
+    if (buildings.length >= cap) return;
     const sp = BUILDING[type];
-    const cos = Math.cos(turn), sin = Math.sin(turn);
-    const pt = (du, dv) => toWorld(bu + du * cos - dv * sin, bv + du * sin + dv * cos);
-    buildings.push({
-      type, corners: [pt(-bw / 2, -bd / 2), pt(bw / 2, -bd / 2), pt(bw / 2, bd / 2), pt(-bw / 2, bd / 2)],
-      center: toWorld(bu, bv), floors: sp.floors, wall: sp.wall, roof: sp.roof, wM: bw * 1000, dM: bd * 1000,
-      name: sp.name
-    });
+    buildings.push({ type, shape, zone, corners, center, floors, wall: sp.wall, roof: sp.roof, wM, dM, name: sp.name });
   };
-  for (const bl of blocks) {
-    const { cu, cv, w, h, edge } = bl;
-    if (perBlock <= 1) {
-      const type = pickBuilding(cls, edge, rand);
-      const sp = BUILDING[type];
-      const bw = Math.min(w * 0.8, (sp.wM / 1000) * (0.9 + 0.3 * rand()));
-      const bd = Math.min(h * 0.8, (sp.dM / 1000) * (0.9 + 0.3 * rand()));
-      emit(type, cu + (rand() - 0.5) * (w - bw), cv + (rand() - 0.5) * (h - bd), bw, bd, angle);
-      continue;
+
+  /* --- 1. Сетка улиц: неровный шаг, лёгкая волна — вместо чертёжной доски --- */
+  const n = Math.max(2, Math.min(26, Math.round((half * 1.55) / blockKm)));
+  const jitter = () => (rand() - 0.5) * blockKm * 0.3;
+  const uLines = [], vLines = [];
+  for (let i = -n; i <= n; i++) {
+    const at = i * blockKm + jitter();
+    if (Math.abs(at) > half * 1.05) continue;
+    uLines.push(at);
+  }
+  for (let j = -n; j <= n; j++) {
+    const at = j * blockKm + jitter();
+    if (Math.abs(at) > half * 1.05) continue;
+    vLines.push(at);
+  }
+  const wave = (fixed, dir) => {
+    // улица — не идеальная прямая: 5 точек со слабой волной (радиус поворота ≥ 6 м, R-9.5)
+    const pts = [];
+    const len = radiusAt(0) * 1.05;
+    const phase = rand() * 6.28;
+    for (let k = 0; k <= 6; k++) {
+      const t = -1 + (2 * k) / 6;
+      const s = t * len;
+      const off = Math.sin(t * Math.PI * 1.2 + phase) * blockKm * 0.06;
+      const u = dir === 0 ? fixed + off : s;
+      const v = dir === 0 ? s : fixed + off;
+      const d = Math.hypot(u, v);
+      const rim = radiusAt(Math.atan2(v, u)) * 0.99;
+      const kk = Math.min(1, rim / Math.max(1e-6, d));
+      pts.push(toWorld(u * kk, v * kk));
     }
-    // обход периметра: дома ставятся лицом к улице, двор остаётся пустым
-    const per = 2 * (w + h);
-    for (let k = 0; k < perBlock; k++) {
-      const t = ((k + 0.5) / perBlock) * per;
-      let pu, pv, turn;
-      if (t < w) { pu = cu - w / 2 + t; pv = cv - h / 2; turn = 0; }
-      else if (t < w + h) { pu = cu + w / 2; pv = cv - h / 2 + (t - w); turn = Math.PI / 2; }
-      else if (t < 2 * w + h) { pu = cu + w / 2 - (t - w - h); pv = cv + h / 2; turn = 0; }
-      else { pu = cu - w / 2; pv = cv + h / 2 - (t - 2 * w - h); turn = Math.PI / 2; }
-      const type = pickBuilding(cls, edge, rand);
-      const sp = BUILDING[type];
-      const span = (per / perBlock) * 0.94;
-      const bw = Math.min(span, (sp.wM / 1000) * (0.9 + 0.25 * rand()));
-      const bd = Math.min(h * 0.42, (sp.dM / 1000) * (0.9 + 0.25 * rand()));
-      // внутрь квартала: нормаль к стороне
-      const nu = (cu - pu), nv = (cv - pv);
-      const nl = Math.hypot(nu, nv) || 1;
-      const off = bd / 2 + Math.min(w, h) * 0.04;
-      emit(type, pu + (nu / nl) * off, pv + (nv / nl) * off, bw, bd, angle + turn);
+    return pts;
+  };
+  for (const at of uLines) {
+    const major = Math.abs(at) < blockKm * 0.7 || Math.abs(Math.abs(at) - blockKm * 4) < blockKm * 0.4;
+    streets.push({ pts: wave(at, 0), widthM: major ? 22 : 10, major, cls: major ? 'street' : 'lane' });
+  }
+  for (const at of vLines) {
+    const major = Math.abs(at) < blockKm * 0.7 || Math.abs(Math.abs(at) - blockKm * 3) < blockKm * 0.4;
+    streets.push({ pts: wave(at, 1), widthM: major ? 22 : 10, major, cls: major ? 'street' : 'lane' });
+  }
+
+  /* --- 2. Бульварные кольца и радиальные проспекты (R-9.4: город растёт кольцами) --- */
+  if (isBig) {
+    const rings = cls === 'capital' ? [2.3, 4.6] : cls === 'city' ? [2.6] : [3.2];
+    for (const mult of rings) {
+      const r = blockKm * mult;
+      const pts = [];
+      const N = Math.max(28, Math.round((2 * Math.PI * r) / 0.6));
+      for (let i = 0; i <= N; i++) {
+        const ang = (i / N) * Math.PI * 2;
+        const rr = r * (1 + 0.05 * Math.sin(ang * 3 + lobes[0]) + 0.03 * Math.sin(ang * 5 + lobes[1]));
+        if (rr > radiusAt(ang) * 0.99) continue;
+        pts.push(toWorld(Math.cos(ang) * rr, Math.sin(ang) * rr));
+      }
+      if (pts.length > 4) streets.push({ pts, widthM: 28, major: true, cls: 'avenue' });
     }
-    // редкие общественные здания во дворе
-    if (rand() < 0.12 + 0.2 * (1 - edge)) {
-      const type = rand() < 0.45 ? 'school' : rand() < 0.6 ? 'shop' : 'church';
-      const sp = BUILDING[type];
-      const bw = Math.min(w * 0.5, sp.wM / 1000), bd = Math.min(h * 0.5, sp.dM / 1000);
-      emit(type, cu, cv, bw, bd, angle);
+    const rays = cls === 'capital' ? 6 : cls === 'city' ? 5 : 3;
+    for (let s2 = 0; s2 <= rays; s2++) {
+      const ang = (s2 / rays) * Math.PI * 2 + (rand() - 0.5) * 0.25;
+      const rEnd = radiusAt(ang) * 0.96;
+      const pts = [];
+      for (let i = 0; i <= 6; i++) {
+        const t = i / 6;
+        const r = blockKm * 0.4 + (rEnd - blockKm * 0.4) * t;
+        const a = ang + Math.sin(t * Math.PI) * (rand() - 0.5) * 0.12;
+        pts.push(toWorld(Math.cos(a) * r, Math.sin(a) * r));
+      }
+      streets.push({ pts, widthM: 30, major: true, cls: 'avenue' });
     }
   }
 
-  // деревня не влезает в сетку — ставим дома вдоль одной улицы (§9.1: «одна главная улица»)
+  /* --- 3. Кварталы: клетки сетки с зонированием (§9.9) --- */
+  const industrialSector = Math.floor(rand() * 6);
+  for (let i = 0; i < uLines.length - 1; i++) {
+    for (let j = 0; j < vLines.length - 1; j++) {
+      const u0 = uLines[i], u1 = uLines[i + 1], v0 = vLines[j], v1 = vLines[j + 1];
+      const uc = (u0 + u1) / 2, vc = (v0 + v1) / 2;
+      const dc = Math.hypot(uc, vc);
+      const angc = Math.atan2(vc, uc);
+      const rim = radiusAt(angc);
+      if (dc > rim - blockKm * 0.5) continue;                  // за границей застройки
+      const outside = dc / Math.max(1e-6, rim);                // 0 в центре, 1 на краю
+      const sector = Math.floor(((angc + Math.PI * 2) % (Math.PI * 2)) / (Math.PI / 3));
+      let zone;
+      const rr = rand();
+      if (dc < blockKm * 1.2 && isBig) zone = rr < 0.55 ? 'plaza' : 'center';
+      else if (sector === industrialSector && outside > 0.45) zone = 'industrial';
+      else if (rr < 0.06) zone = 'park';
+      else if (outside > 0.72) zone = 'private';
+      else if (outside > 0.4) zone = 'mid';
+      else zone = 'center';
+      // квартал — прямоугольник, но с подрезанным углом, если выходит за границу
+      const corners = [];
+      const inset = 0.06 * blockKm;
+      const quad = [
+        [u0 + inset, v0 + inset], [u1 - inset, v0 + inset],
+        [u1 - inset, v1 - inset], [u0 + inset, v1 - inset]
+      ];
+      for (const [u, v] of quad) {
+        const d = Math.hypot(u, v);
+        const lim = radiusAt(Math.atan2(v, u)) * 0.995;
+        const kk = Math.min(1, lim / Math.max(1e-6, d));
+        corners.push(toWorld(u * kk, v * kk));
+      }
+      const floors = Math.max(1, Math.round(spec.floors[0] + (spec.floors[1] - spec.floors[0]) * Math.pow(1 - outside, 1.4)));
+      blocks.push({ corners, center: toWorld(uc, vc), zone, floors, outside, uc, vc, blockKm });
+    }
+  }
+
+  /* --- 4. Застройка кварталов по периметру, двор внутри (§10.1).
+     Бюджет дома делится на все кварталы сразу, иначе он кончается в первом углу карты. --- */
+  const buildable = blocks.filter((b) => b.zone !== 'park');
+  const spacingFor = { center: 0.05, mid: 0.055, private: 0.032, industrial: 0.11, plaza: 0.09 };
+  // считаем, сколько домов дала бы сплошная застройка, и подрезаем шаг равномерно по всему городу
+  let wanted = 0;
+  for (const b of buildable) {
+    let per = 0;
+    for (let e = 0; e < 4; e++) { const a = b.corners[e], c2 = b.corners[(e + 1) % 4]; per += Math.hypot(c2[0] - a[0], c2[1] - a[1]); }
+    wanted += Math.max(2, Math.min(48, Math.round(per / (spacingFor[b.zone] || 0.06))));
+  }
+  const fit = wanted > cap ? cap / wanted : 1;
+  for (const blk of buildable) {
+    const { corners, zone, uc, vc } = blk;
+    {
+      /* периметр квартала */
+      const per = [];
+      for (let e = 0; e < 4; e++) {
+        const a = corners[e], b = corners[(e + 1) % 4];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (len < 0.01) continue;
+        per.push({ a, b, len });
+      }
+      const totalPer = per.reduce((s2, e) => s2 + e.len, 0);
+      // шаг застройки — по длине дома: дома стоят стеной к улице, как в настоящем городе
+      const count = Math.max(1, Math.round(Math.min(48, totalPer / (spacingFor[zone] || 0.06)) * fit));
+      for (let k = 0; k < count; k++) {
+        if (rand() < 0.1) continue;                             // разрывы в застройке
+        const t = ((k + 0.5) / count) * totalPer;
+        let acc = 0, seg = per[0];
+        for (const e of per) { if (t <= acc + e.len) { seg = e; break; } acc += e.len; }
+        const tt = Math.min(1, Math.max(0, (t - acc) / seg.len));
+        const px2 = seg.a[0] + (seg.b[0] - seg.a[0]) * tt;
+        const py2 = seg.a[1] + (seg.b[1] - seg.a[1]) * tt;
+        const nx = seg.b[1] - seg.a[1], ny = -(seg.b[0] - seg.a[0]);
+        const nl = Math.hypot(nx, ny) || 1;
+        // нормаль внутрь квартала
+        const cx2 = (corners[0][0] + corners[2][0]) / 2, cy2 = (corners[0][1] + corners[2][1]) / 2;
+        const inward = (cx2 - px2) * nx + (cy2 - py2) * ny > 0 ? 1 : -1;
+        const type = pickByZone(zone, rand);
+        const shape = shapeFor(zone, rand);
+        const sp = BUILDING[type];
+        const w = Math.min((totalPer / count) * 0.9, (sp.wM / 1000) * (0.85 + 0.3 * rand()));
+        const d = Math.min(blockKm * 0.34, (sp.dM / 1000) * (0.85 + 0.3 * rand()));
+        const off = d * 0.55 + 0.008;
+        const bu = px2 + (nx / nl) * off * inward, bv = py2 + (ny / nl) * off * inward;
+        const turn = Math.atan2(seg.b[1] - seg.a[1], seg.b[0] - seg.a[0]);
+        const cosT = Math.cos(turn), sinT = Math.sin(turn);
+        const cu = bu - town.x, cv = bv - town.y;               // обратно в локальные оси
+        const lu = cu * ca + cv * sa, lv = -cu * sa + cv * ca;
+        const corners2 = footprint(shape, w, d).map(([du, dv]) => toWorld(lu + du * cosT - dv * sinT, lv + du * sinT + dv * cosT));
+        pushBuilding(type, corners2, toWorld(lu, lv), Math.max(1, Math.round(sp.floors * (zone === 'center' ? 1.25 : 1))), w * 1000, d * 1000, shape, zone);
+      }
+      // центр и общественные зоны получают здание во дворе (школа, магазин, церковь)
+      if (zone !== 'private' && rand() < 0.35) {
+        const type = rand() < 0.5 ? 'school' : rand() < 0.65 ? 'shop' : 'church';
+        const sp = BUILDING[type];
+        const w = Math.min(blockKm * 0.4, sp.wM / 1000), d = Math.min(blockKm * 0.34, sp.dM / 1000);
+        const turn = angle + rand() * Math.PI;
+        const cosT = Math.cos(turn), sinT = Math.sin(turn);
+        const corners2 = footprint('rect', w, d).map(([du, dv]) => toWorld(uc + du * cosT - dv * sinT, vc + du * sinT + dv * cosT));
+        pushBuilding(type, corners2, toWorld(uc, vc), sp.floors, w * 1000, d * 1000, 'rect', zone);
+      }
+    }
+  }
+
+  // деревня не влезает в сетку — одна главная улица и дома по обе стороны (§9.1)
   if (buildings.length < 3) {
     const len = Math.max(0.35, radiusKm * 1.6);
     const count = 6 + Math.floor(rand() * 8);
     streets.length = 0;
-    streets.push({ a: toWorld(-len, 0), b: toWorld(len, 0), widthM: 8, major: true, cls: 'street' });
+    const a = toWorld(-len, 0), b = toWorld(len, 0);
+    streets.push({ a, b, pts: [a, b], widthM: 8, major: true, cls: 'street' });
     for (let k = 0; k < count; k++) {
       const u = -len + (2 * len) * (k / count) + (rand() - 0.5) * 0.05;
       const side = k % 2 === 0 ? 1 : -1;
-      const type = rand() < 0.8 ? 'house' : 'dacha';
-      const spec2 = BUILDING[type];
-      const bw = spec2.wM / 1000, bd = spec2.dM / 1000;
+      const type = rand() < 0.78 ? 'house' : 'dacha';
+      const sp = BUILDING[type];
+      const bw = sp.wM / 1000, bd = sp.dM / 1000;
       const v = side * (bd * 0.9 + 0.012);
-      buildings.push({
-        type, corners: [toWorld(u - bw / 2, v - bd / 2), toWorld(u + bw / 2, v - bd / 2), toWorld(u + bw / 2, v + bd / 2), toWorld(u - bw / 2, v + bd / 2)],
-        center: toWorld(u, v), floors: spec2.floors, wall: spec2.wall, roof: spec2.roof, wM: spec2.wM, dM: spec2.dM
-      });
+      const corners = [toWorld(u - bw / 2, v - bd / 2), toWorld(u + bw / 2, v - bd / 2), toWorld(u + bw / 2, v + bd / 2), toWorld(u - bw / 2, v + bd / 2)];
+      pushBuilding(type, corners, toWorld(u, v), sp.floors, sp.wM, sp.dM, 'rect', 'private');
     }
   }
 
-  // потолок на город: при 18 px/км мельче 1 px всё равно не различить (R-10.3)
-  const hardCap = cls === 'capital' ? 2400 : cls === 'city' ? 1500 : 700;
-  if (buildings.length > hardCap) buildings.length = hardCap;
-
-  return { index, name: town.name, x: town.x, y: town.y, cls, clsName: spec.name, pop, radiusKm, angle, streets, blocks, buildings, h: heightKm(town.x, town.y) };
+  const zones = {};
+  for (const b of blocks) zones[b.zone] = (zones[b.zone] || 0) + 1;
+  return {
+    index, name: town.name, x: town.x, y: town.y, cls, clsName: spec.name, pop, radiusKm, angle,
+    streets, blocks, buildings, zones, h: heightKm(town.x, town.y)
+  };
 }
 
 function pickBuilding(cls, edge, rand) {
