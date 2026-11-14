@@ -119,9 +119,9 @@
       { at: [0, BAG_H * 0.90, 0], pts: oval(0.86) },
       { at: [0, BAG_H * 1.00, 0], pts: oval(0.62) }
     ]);
-    const m = SH2.model.mat(color || 0x6f6547, { flat: true });
+    const m = SH2.model.mat(color || 0x6f6547, { flat: true, mapNoise: 'blotch' });
     // второй тон — часть мешков чуть темнее, чтобы кладка читалась без швов
-    const m2 = SH2.model.mat(0x645c40, { flat: true });
+    const m2 = SH2.model.mat(0x645c40, { flat: true, mapNoise: 'blotch' });
     const n = Math.max(3, Math.round(len / STEP));
     const rnd = (i, r) => {
       const v = Math.sin(i * 12.9898 + r * 78.233) * 43758.5453;
@@ -487,6 +487,14 @@
     return m;
   }
 
+  /* Затемнить/осветлить цвет, не трогая исходный объект: множитель
+     применяется к каналам, результат — новый 0xRRGGBB. */
+  function shade(color, k) {
+    const r = (color >> 16) & 255, g = (color >> 8) & 255, b = color & 255;
+    const ch = (v) => Math.max(0, Math.min(255, Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k)));
+    return (ch(r) << 16) | (ch(g) << 8) | ch(b);
+  }
+
   /* морской контейнер: рёбра жёсткости по бортам, рифлёный */
   function container(len, h, color) {
     const T = THREE();
@@ -496,8 +504,12 @@
     const rib = SH2.outline.outlineMesh([
       [-0.02, h - 0.10], [0.02, h - 0.10], [0.02, 0.10], [-0.02, 0.10]
     ], { depth: 0.04, bevel: 0.008 });
-    const ribMat = SH2.model.mat(0xffffff, { flat: true });
-    ribMat.color.offsetHSL(0, 0, -0.06);
+    /* Рёбра темнее корпуса. Раньше здесь брался материал из общего кэша
+       (SH2.model.mat(0xffffff)) и затемнялся на месте — а кэш один на всю
+       игру, поэтому каждый контейнер гасил ОДИН И ТОТ ЖЕ белый материал:
+       после пятого контейнера любая белая деталь карты становилась серой.
+       Теперь цвет считается заранее и не мутирует чужой материал. */
+    const ribMat = SH2.model.mat(shade(color, -0.09), { flat: true, mapNoise: 'grain' });
     const n = Math.max(3, Math.round(len / 0.62));
     for (let i = 0; i < n; i++) {
       const x = -len / 2 + (i + 0.5) * (len / n);
@@ -1010,8 +1022,8 @@
     const o = opts || {};
     const g = new T.Group();
     const colliders = [];
-    const dark = SH2.model.mat(0x3a3a35, { flat: true });
-    const postMat = SH2.model.mat(0x4a4a42, { flat: true });
+    const dark = SH2.model.mat(0x3a3a35, { flat: true, mapNoise: 'grain' });
+    const postMat = SH2.model.mat(0x4a4a42, { flat: true, mapNoise: 'grain' });
     const wireMat = SH2.model.mat(0x6a6f68, { flat: false });
 
     // сетка-рабица: полотно из редких прутьев (не текстура, а геометрия)
@@ -1173,21 +1185,62 @@
     return g;
   }
 
-  /* ящики: сложенный штабель, каждый ящик чуть повёрнут */
+  /* ящик: корпус + силовой каркас. Без каркаса это был просто параллелепипед
+     со скошенными рёбрами — именно он и выглядел «коробкой из примитивов».
+     Геометрия каркаса строится один раз и переиспользуется всеми ящиками. */
+  let crateKit = null;
+  function crateParts() {
+    if (crateKit) return crateKit;
+    const O = SH2.outline;
+    const W = 0.64, H = 0.62, half = W / 2;
+    /* угловые стойки: узкий брусок по высоте ящика */
+    const post = O.outlineMesh([[-0.035, 0.02], [0.035, 0.02], [0.030, H - 0.02], [-0.030, H - 0.02]],
+      { depth: 0.07, bevel: 0.006 });
+    /* две стяжные ленты по периметру */
+    const belt = O.outlineMesh([[-half - 0.012, -0.028], [half + 0.012, -0.028],
+      [half + 0.012, 0.028], [-half - 0.012, 0.028]], { depth: W + 0.024, bevel: 0.006 });
+    /* поперечина-накладка на крышке */
+    const lid = O.outlineMesh([[-half + 0.05, 0], [half - 0.05, 0], [half - 0.05, 0.018], [-half + 0.05, 0.018]],
+      { depth: 0.10, bevel: 0.004 });
+    crateKit = { post, belt, lid, H, half };
+    return crateKit;
+  }
+
   function crates(n, color) {
     const T = THREE();
     const g = new T.Group();
     const geo = SH2.outline.outlineMesh([[-0.32, 0], [0.32, 0], [0.32, 0.62], [-0.32, 0.62]], { depth: 0.62, bevel: 0.05 });
-    const m = SH2.model.mat(color || 0x5b4a33, { flat: true });
+    const base = color || 0x5b4a33;
+    const m = SH2.model.mat(base, { flat: true, mapNoise: 'blotch' });
+    const wood = SH2.model.mat(shade(base, -0.16), { flat: true, mapNoise: 'blotch' });
+    const kit = crateParts();
     let placed = 0;
     for (let layer = 0; layer < 3 && placed < n; layer++) {
       const k = Math.min(n - placed, 3 - layer);
       for (let i = 0; i < k; i++) {
-        const mesh = new T.Mesh(geo, m);
-        mesh.position.set((i - (k - 1) / 2) * 0.68, layer * 0.64, (Math.random() - 0.5) * 0.05);
-        mesh.rotation.y = (Math.random() - 0.5) * 0.12;
-        mesh.castShadow = true; mesh.receiveShadow = true;
-        g.add(mesh);
+        const one = new T.Group();
+        const body = new T.Mesh(geo, m);
+        body.castShadow = true; body.receiveShadow = true;
+        one.add(body);
+        /* каркас — четыре стойки, две ленты, накладка */
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+          const p = new T.Mesh(kit.post, wood);
+          p.position.set(sx * (kit.half + 0.002), 0, sz * (kit.half + 0.002));
+          p.castShadow = true;
+          one.add(p);
+        }
+        for (const y of [kit.H * 0.22, kit.H * 0.78]) {
+          const b = new T.Mesh(kit.belt, wood);
+          b.position.set(0, y, 0);
+          one.add(b);
+        }
+        const l = new T.Mesh(kit.lid, wood);
+        l.position.set(0, kit.H, 0);
+        one.add(l);
+
+        one.position.set((i - (k - 1) / 2) * 0.68, layer * 0.64, (Math.random() - 0.5) * 0.05);
+        one.rotation.y = (Math.random() - 0.5) * 0.12;
+        g.add(one);
         placed++;
       }
     }
