@@ -25,7 +25,7 @@ const sandbox = {
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 
-for (const jsFile of ['web/data_bundle.js', 'web/core.js', 'web/algorithms.js', 'web/systems.js', 'web/content_pack.js', 'web/gameplay_helpers.js', 'web/animations.js', 'web/asset_assistant.js', 'web/catalog_f3.js']) {
+for (const jsFile of ['web/data_bundle.js', 'web/core.js', 'web/algorithms.js', 'web/systems.js', 'web/content_pack.js', 'web/gameplay_helpers.js', 'web/animations.js', 'web/encounters.js', 'web/isometric.js', 'web/asset_assistant.js', 'web/catalog_f3.js']) {
   const code = fs.readFileSync(path.join(ROOT, jsFile), 'utf8');
   vm.runInContext(code, sandbox, { filename: jsFile });
 }
@@ -60,10 +60,10 @@ DD.Systems.damageZombie(z, 999, 1.0);
 assert.equal(z.state, DD.ZSTATE.DEAD, 'ZombieAI должен переходить в DEAD при смертельном уроне');
 
 // Проверка 10 000 процедурных текстур, моделек и 3D мешей + каталога F3
-assert.equal(DD.ContentPack.count(), 10000, 'ContentPack должен содержать ровно 10000 ассетов');
+assert.equal(DD.ContentPack.count(), 16000, 'ContentPack должен содержать ровно 10000 ассетов');
 const all10k = DD.ContentPack.getAll();
-assert.equal(all10k.length, 10000);
-assert.equal(all10k.filter((x) => x.kind === 'texture').length, 4000, 'Ожидалось 4000 текстур');
+assert.equal(all10k.length, 16000);
+assert.equal(all10k.filter((x) => x.kind === 'texture').length, 10000, 'Ожидалось 4000 текстур');
 assert.equal(all10k.filter((x) => x.kind === 'model').length, 3000, 'Ожидалось 3000 моделек');
 assert.equal(all10k.filter((x) => x.kind === 'mesh').length, 3000, 'Ожидалось 3000 3D мешей');
 assert.ok(all10k.every((x) => x.code && x.name && x.family && x.specs), 'Каждый из 10000 ассетов должен быть подписан');
@@ -71,7 +71,7 @@ assert.equal(sandbox.DD_DATA.manifest.length, 181, 'Манифест долже�
 DD.CatalogF3.setTab('base');
 assert.equal(DD.CatalogF3.getFilteredList().length, 181);
 DD.CatalogF3.setTab('all');
-assert.equal(DD.CatalogF3.getFilteredList().length, 10181);
+assert.equal(DD.CatalogF3.getFilteredList().length, 16181);
 
 // Проверка оценки плохих/хороших текстур и экспорта отчёта в F3
 DD.CatalogF3.rateItem('D01_tile_grass', 'bad', 'Мало травинок');
@@ -96,10 +96,30 @@ const forward = {x: 1, y: 0, state: 'alive'};
 const backward = {x: -0.5, y: 0, state: 'alive'};
 assert.equal(DD.GameplayHelpers.meleeTarget([backward, forward], {x: 0, y: 0, fx: 1, fy: 0}, 2, 'dead'), forward);
 assert.equal(DD.GameplayHelpers.meleeTarget([backward], {x: 0, y: 0, fx: 1, fy: 0}, 2, 'dead'), null);
-assert.equal(DD.Animations.count, 10000);
+assert.equal(DD.Animations.count, 1000000);
 assert.equal(new Set(Array.from({length: 10000}, (_, i) => DD.Animations.get(i).code)).size, 10000);
-assert.equal(DD.Animations.get(9999).action, 4);
-assert.equal(DD.Animations.get(10000), null);
+assert.equal(DD.Animations.get(999999).action, 4);
+assert.equal(DD.Animations.get(1000000), null);
+assert.equal(DD.ContentPack.meshVariantCount, 1002000);
+assert.equal(DD.ContentPack.getMeshVariant(-1), null);
+assert.equal(DD.ContentPack.getMeshVariant(1002000), null);
+assert.notEqual(DD.ContentPack.getMeshVariant(0).shapeVariant, DD.ContentPack.getMeshVariant(3000).shapeVariant);
+DD.CatalogF3.setTab('mesh');
+DD.CatalogF3.rateItem('VMESH-0000001', 'bad', 'форма');
+DD.CatalogF3.setRateFilter('bad');
+assert.ok(DD.CatalogF3.getFilteredList().some(it => it.code === 'VMESH-0000001'));
+assert.equal(DD.ContentPack.getAll().length, 16000, 'выборка не изменяет каталог');
+DD.CatalogF3.clearRatings(); DD.CatalogF3.setRateFilter('all'); DD.CatalogF3.setTab('all');
+assert.equal(DD.Encounters.count, 21000);
+assert.equal(DD.Encounters.get(21000), null);
+for (let i = 0; i < DD.Encounters.count; i++) {
+  const e = DD.Encounters.get(i);
+  assert.ok(e && e.code && e.description);
+  for (const choice of ['quiet', 'force', 'leave']) assert.ok(DD.Encounters.resolve(e, choice, 50).ending);
+}
+const origin = DD.Isometric.project(1, 0, 0, 0);
+const unprojected = DD.Isometric.screenToWorld(origin.x - 240, origin.y - 135);
+assert.equal(unprojected.x, 1); assert.equal(unprojected.y, 0);
 const dark = new Uint8Array([0, 0, 0, 255, 0, 0, 0, 255]);
 const bright = new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255]);
 assert.equal(DD.AssetAssistant.analyze(dark, dark).difference, 0);

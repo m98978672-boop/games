@@ -82,7 +82,8 @@
       paused: false,
       elapsed: 0,
       flowTimer: 0,
-      kills: 0
+      kills: 0,
+      encounterDay: 0
     };
 
     if (saved && saved.player) {
@@ -94,6 +95,7 @@
       if (saved.health) state.health = saved.health;
       if (saved.inv) state.inv = saved.inv;
       if (saved.util) state.util = saved.util;
+      if (Number.isFinite(saved.encounterDay)) state.encounterDay = saved.encounterDay;
       addToast('Сохранение загружено.');
     }
 
@@ -205,6 +207,9 @@
         }
       }
     } else if (len > 0.02) {
+      // WASD/крестовина перемещают по экрану; физика остаётся в координатах мира.
+      var worldInput = DD.Isometric.screenToWorld(ix * 16, iy * 8);
+      ix = worldInput.x; iy = worldInput.y;
       var nlen = Math.hypot(ix, iy);
       state.player.fx = ix / nlen;
       state.player.fy = iy / nlen;
@@ -554,7 +559,30 @@
     mo.hidden = false;
     list.innerHTML = '';
 
-    if (kind === 'inv') {
+    if (kind === 'event') {
+      title.textContent = 'СИТУАЦИЯ — ВЫБОР И ПОСЛЕДСТВИЯ';
+      if (state.encounterDay === state.tw.day) {
+        body.textContent = 'Сегодня ситуация уже разрешена. Вернитесь на следующий игровой день.';
+      } else {
+        var index = ((Math.floor(state.player.x) * 73856093 ^ Math.floor(state.player.y) * 19349663 ^ state.tw.day * 83492791) >>> 0) % DD.Encounters.count;
+        var event = DD.Encounters.get(index);
+        body.textContent = event.code + ' · ' + event.description;
+        [['quiet', 'Осмотреть тихо'], ['force', 'Действовать быстро'], ['leave', 'Уйти']].forEach(function (option) {
+          var choice = document.createElement('button'); choice.className = 'dd-btn'; choice.textContent = option[1];
+          choice.addEventListener('click', function () {
+            if (state.encounterDay === state.tw.day) return;
+            var outcome = DD.Encounters.resolve(event, option[0], state.needs.stamina);
+            state.encounterDay = state.tw.day;
+            state.health.globalHp = Math.max(0, state.health.globalHp + outcome.hp);
+            state.needs.stamina = Math.max(0, Math.min(100, state.needs.stamina + outcome.stamina));
+            if (outcome.item) Sys.addItem(state.inv, outcome.item, 1, 1);
+            if (outcome.noise) emitNoise(state.player.x, state.player.y, outcome.noise, 'encounter');
+            body.textContent = outcome.ending + ': ' + outcome.text; list.innerHTML = '';
+            addToast(outcome.ending + ': ' + outcome.text); updateHud();
+          }); list.appendChild(choice);
+        });
+      }
+    } else if (kind === 'inv') {
       title.textContent = 'ИНВЕНТАРЬ (' + Sys.getTotalWeight(state.inv).toFixed(1) + '/' + Sys.getMaxWeight(state.inv).toFixed(1) + ' кг)';
       body.textContent = 'Нажмите на предмет: еда утолит голод/жажду, оружие экипируется, семена сажаются под ноги.';
       for (var i = 0; i < state.inv.items.length; i++) {
@@ -723,12 +751,13 @@
     onClick('btn-craft', function () { openModal('craft'); });
     onClick('btn-catalog', function () { if (DD.CatalogF3) DD.CatalogF3.toggle(); });
     onClick('btn-qa', function () { openModal('qa'); });
+    onClick('btn-event', function () { if (state && !state.paused && !state.health.dead && !(DD.CatalogF3 && DD.CatalogF3.isOpen())) openModal('event'); });
     onClick('btn-interact', performInteract);
     onClick('btn-attack', performAttack);
     onClick('btn-flash', function () { if (state) { state.player.flashlightOn = !state.player.flashlightOn; recomputeFovAndFlow(); } });
     onClick('btn-reload', performReload);
     onClick('btn-save', function () {
-      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util })) {
+      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay })) {
         addToast('Игра сохранена!');
       }
     });
@@ -748,7 +777,7 @@
     onClick('modal-close', closeModals);
     onClick('btn-resume', function () { if (state) { state.paused = false; closeModals(); } });
     onClick('btn-pause-save', function () {
-      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util })) addToast('Сохранено!');
+      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay })) addToast('Сохранено!');
     });
     onClick('btn-pause-load', function () { newGame(true); });
     onClick('btn-pause-new', function () { newGame(false); });
@@ -815,8 +844,9 @@
           var rect = canvasEl.getBoundingClientRect();
           var dx = (e.clientX - rect.left) / rect.width - 0.5;
           var dy = ((e.clientY - rect.top) / rect.height - 0.5) * 270 / 480;
-          var length = Math.hypot(dx, dy);
-          if (length > 0.01) { state.player.fx = dx / length; state.player.fy = dy / length; }
+          var aim = DD.Isometric.screenToWorld(dx * 480, dy * 480);
+          var length = Math.hypot(aim.x, aim.y);
+          if (length > 0.01) { state.player.fx = aim.x / length; state.player.fy = aim.y / length; }
           performAttack();
         }
       });

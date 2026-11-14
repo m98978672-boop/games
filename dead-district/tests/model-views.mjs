@@ -71,3 +71,6 @@ assert.equal(new Set(meshViews).size, 4, 'процедурный автомоб�
 const baseViews = angles.map(angle => trace3D(ctx => pack.renderBaseGlbPreview(ctx, 'E01_veh_sedan', 160, angle)));
 assert.equal(new Set(baseViews).size, 4, 'GLB автомобиля: четыре ракурса');
 assert.notEqual(trace3D(ctx => pack.renderBaseGlbPreview(ctx, 'E17_prop_oak', 160, 0)), trace3D(ctx => pack.renderBaseGlbPreview(ctx, 'E18_prop_pine', 160, 0)), 'разные модели деревьев не подменяются одинаковым ящиком');
+
+const variantA = pack.getMeshVariant(0), variantB = pack.getMeshVariant(3000);
+assert.notEqual(trace3D(ctx => pack.renderMesh3D(ctx, variantA, 160, 0.62)), trace3D(ctx => pack.renderMesh3D(ctx, variantB, 160, 0.62)), 'формы параметрических мешей меняют геометрию');

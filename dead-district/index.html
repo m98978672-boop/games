@@ -7,7 +7,7 @@
 <meta name="description" content="Dead District — пиксель-арт выживание среди зомби: 32x32 чанки, поле зрения shadowcasting, 10-состояний ИИ зомби, 6 частей тела, крафт, стройка, ферма, транспорт и реальная статистика.">
 <meta name="theme-color" content="#0f2935">
 <link rel="icon" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=20261110b">
+<link rel="stylesheet" href="style.css?v=20261110c">
 </head>
 <body>
 
@@ -60,7 +60,8 @@
     <button id="btn-inv" class="dd-btn" title="Инвентарь (I)">Инвентарь</button>
     <button id="btn-health" class="dd-btn" title="Тело и лечение (H)">Тело</button>
     <button id="btn-craft" class="dd-btn" title="Крафт и стройка (C)">Крафт</button>
-    <button id="btn-catalog" class="dd-btn" title="Каталог текстур и моделей (F3)">F3 Каталог 10K</button>
+    <button id="btn-event" class="dd-btn" title="Ситуация с выбором (раз в день)">Событие</button>
+    <button id="btn-catalog" class="dd-btn" title="Каталог текстур и моделей (F3)">F3 Каталог</button>
     <button id="btn-save" class="dd-btn" title="Сохранить">Сохр</button>
     <button id="btn-load" class="dd-btn" title="Загрузить">Загр</button>
     <button id="btn-qa" class="dd-btn" title="Проверка систем">QA</button>
@@ -103,7 +104,7 @@
     <div class="f3-header">
       <div>
         <h2>КАТАЛОГ ТЕКСТУР, МОДЕЛЕК И 3D МЕШЕЙ (F3)</h2>
-        <div id="f3-count-info" class="f3-subtitle">Загрузка библиотеки 10 000...</div>
+        <div id="f3-count-info" class="f3-subtitle">Загрузка библиотеки 16 000...</div>
       </div>
       <div class="f3-controls">
         <input id="f3-search" class="f3-search" type="search" placeholder="Поиск по названию, коду, категории..." aria-label="Поиск в каталоге">
@@ -112,24 +113,26 @@
     </div>
 
     <div class="f3-controls f3-tools">
-      <button type="button" class="dd-btn" id="f3-animation-toggle">Анимации: 10 000 вариантов</button>
+      <button type="button" class="dd-btn" id="f3-animation-toggle">Анимации: 1 000 000 вариантов</button>
       <span class="f3-subtitle">Выберите карточку для просмотра, оценки и проверки ассистентом.</span>
+      <label>Вариант меша 1–1 002 000 <input id="f3-mesh-number" type="number" min="1" max="1002000" value="1"></label><button id="f3-mesh-go" type="button" class="dd-btn">Показать</button>
+      <span class="f3-subtitle">Меши генерируются по номеру из базовых форм; это не отдельные файлы.</span>
     </div>
     <section id="f3-animations" class="f3-animation-panel" hidden>
       <strong>Процедурные варианты анимации</strong>
-      <p>5 действий × 4 направления × 5 стилей × 100 темпов. Это варианты одного набора спрайтов, а не 10 000 нарисованных анимаций.</p>
+      <p>5 действий × 4 направления × 5 стилей × 100 темпов × 100 амплитуд. Это параметрические варианты одного набора спрайтов, а не миллион нарисованных клипов.</p>
       <div class="f3-controls">
         <label>Действие <select id="anim-action"><option>Покой</option><option>Ходьба</option><option>Бег</option><option>Красться</option><option>Удар</option></select></label>
         <label>Направление <select id="anim-direction"><option>Вниз</option><option>Вверх</option><option>Влево</option><option>Вправо</option></select></label>
         <label>Стиль <select id="anim-style"><option>Обычный</option><option>Тяжёлый</option><option>Лёгкий</option><option>Осторожный</option><option>Резкий</option></select></label>
-        <label>Темп <input id="anim-variant" type="number" min="1" max="100" value="45"></label>
+        <label>Вариант (темп и амплитуда) <input id="anim-variant" type="number" min="1" max="10000" value="45"></label>
       </div>
       <div class="f3-controls"><canvas id="anim-preview" width="96" height="96" aria-label="Предпросмотр анимации"></canvas><div><b id="anim-label"></b><p>Направление и действие в игре выбираются автоматически; можно применить стиль и темп.</p><button type="button" class="dd-btn" id="anim-apply">Применить стиль и темп</button> <span id="anim-status" aria-live="polite"></span></div></div>
     </section>
     <div class="f3-tabs">
-      <button type="button" class="dd-btn active" data-f3-tab="all">Все (10 181)</button>
+      <button type="button" class="dd-btn active" data-f3-tab="all">Все (16 181)</button>
       <button type="button" class="dd-btn" data-f3-tab="base">Базовые ассеты (181)</button>
-      <button type="button" class="dd-btn" data-f3-tab="texture">Текстуры (4 000)</button>
+      <button type="button" class="dd-btn" data-f3-tab="texture">Текстуры (10 000)</button>
       <button type="button" class="dd-btn" data-f3-tab="model">Модельки 2D (3 000)</button>
       <button type="button" class="dd-btn" data-f3-tab="mesh">3D Меши (3 000)</button>
     </div>
@@ -216,16 +219,18 @@
 
 <noscript><p style="color:#ffffff;padding:24px">Для запуска Dead District в браузере нужен JavaScript.</p></noscript>
 
-<script src="web/data_bundle.js?v=20261110b"></script>
-<script src="web/core.js?v=20261110b"></script>
-<script src="web/algorithms.js?v=20261110b"></script>
-<script src="web/systems.js?v=20261110b"></script>
-<script src="web/content_pack.js?v=20261110b"></script>
-<script src="web/gameplay_helpers.js?v=20261110b"></script>
-<script src="web/animations.js?v=20261110b"></script>
-<script src="web/asset_assistant.js?v=20261110b"></script>
-<script src="web/catalog_f3.js?v=20261110b"></script>
-<script src="web/renderer_audio.js?v=20261110b"></script>
-<script src="web/main.js?v=20261110b"></script>
+<script src="web/data_bundle.js?v=20261110c"></script>
+<script src="web/core.js?v=20261110c"></script>
+<script src="web/algorithms.js?v=20261110c"></script>
+<script src="web/systems.js?v=20261110c"></script>
+<script src="web/content_pack.js?v=20261110c"></script>
+<script src="web/gameplay_helpers.js?v=20261110c"></script>
+<script src="web/animations.js?v=20261110c"></script>
+<script src="web/asset_assistant.js?v=20261110c"></script>
+<script src="web/catalog_f3.js?v=20261110c"></script>
+<script src="web/encounters.js?v=20261110c"></script>
+<script src="web/isometric.js?v=20261110c"></script>
+<script src="web/renderer_audio.js?v=20261110c"></script>
+<script src="web/main.js?v=20261110c"></script>
 </body>
 </html>
