@@ -50,7 +50,7 @@ npm run build     # src/ → game.js (игра) и terrain-worker.js (ворке
 | `src/buildings.js` | дома: стены, крыши, этажи, окна |
 | `src/main.js` | сцена, небо, свет, камера, HUD, переключатели |
 | `src/terrain-worker.js` | воркер: считает чанк и отдаёт буфер переносом |
-| `game.js`, `terrain-worker.js` | собранные бандлы (esbuild, IIFE) |
+| `bundle.js`, `terrain-worker.min.js` | собранные бандлы (esbuild, IIFE) |
 | `site/` | белый холст и его проверки |
 
 ## Многоядерность

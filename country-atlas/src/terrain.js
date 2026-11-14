@@ -26,7 +26,7 @@ export class Terrain {
   makePool() {
     if (typeof Worker === 'undefined' || location.protocol === 'file:') return null;
     try {
-      const url = new URL('terrain-worker.js', document.baseURI);
+      const url = new URL('terrain-worker.min.js', document.baseURI);
       const count = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
       const workers = [];
       for (let i = 0; i < count; i++) {

@@ -1,10 +1,21 @@
-/* РАТГРАД — краски. Сцена, свет, камера, HUD. Рельеф — по A28, дома — первые цвета. */
 import * as THREE from 'three';
 import { Terrain } from './terrain.js';
 import { buildHouses } from './buildings.js';
 import { WORLD } from './heightfield.js';
 
+function fatal(message) {
+  const box = document.getElementById('loading');
+  const text = document.getElementById('loading-text');
+  if (text) text.textContent = message;
+  if (box) box.classList.remove('done');
+  if (box) box.style.background = '#f7f4ee';
+}
+
+function start() {
+/* РАТГРАД — краски. Сцена, свет, камера, HUD. Рельеф — по A28, дома — первые цвета. */
+
 const canvas = document.getElementById('scene');
+  if (!canvas) return;
 const hud = {
   fps: document.getElementById('hud-fps'),
   tris: document.getElementById('hud-tris'),
@@ -15,7 +26,13 @@ const hud = {
 };
 
 /* ---------- рендерер ---------- */
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+let renderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  } catch (e) {
+    fatal('нет WebGL2: ' + (e && e.message ? e.message : e));
+    return;
+  }
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -174,3 +191,12 @@ terrain.init((done, total) => {
   hud.loadText.textContent = 'готово';
   window.__ratgrad = { scene, terrain, camera, view, renderer, tris };
 });
+
+}
+
+try {
+  start();
+} catch (e) {
+  console.error(e);
+  fatal('не удалось запустить 3D: ' + (e && e.message ? e.message : e) + '. Нужен браузер с WebGL2.');
+}
