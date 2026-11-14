@@ -162,6 +162,12 @@
         var doorX = bz.x + Math.floor(bz.w / 2);
         var doorY = bz.y < 14 ? bz.y + bz.h - 1 : bz.y;
         tiles[doorY * CHUNK_SIZE + doorX] = TILE.DOOR;
+        // Перегородка проходит по оси двери: оставляем свободную клетку
+        // сразу за ней и очищаем подход с улицы от случайного дерева.
+        var inward = bz.y < 14 ? -1 : 1;
+        tiles[(doorY + inward) * CHUNK_SIZE + doorX] = floorT;
+        var outside = (doorY - inward) * CHUNK_SIZE + doorX;
+        if (tiles[outside] === TILE.TREE_OAK || tiles[outside] === TILE.TREE_PINE || tiles[outside] === TILE.WATER) tiles[outside] = TILE.DIRT;
         var dObj = { tx: ox + doorX, ty: oy + doorY, hp: 100, open: false, broken: false };
         doors.push(dObj);
         this.doors[this.tileKey(dObj.tx, dObj.ty)] = dObj;

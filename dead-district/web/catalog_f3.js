@@ -16,6 +16,7 @@
   var previewTimer = null;
   var inspectedItem = null;
   var inspectDirection = 0;
+  var spinEnabled = false;
   var previewYaw = 0.62;
   var onToggleCb = null;
   var ratingsMap = null;
@@ -223,6 +224,19 @@
     return Boolean(isCharacter && dims && Number(dims[1]) >= 128 && Number(dims[2]) >= cellHeight * 4);
   }
 
+  function isRotatable3D(item) {
+    return Boolean(item && (item.kind === 'mesh' || item.kind === 'base_3d'));
+  }
+  function hasModelViews(item) {
+    return Boolean(item && (hasDirectionalSprite(item) || isRotatable3D(item) ||
+      (item.kind === 'model' && item.famIdx >= 0 && item.famIdx < 5)));
+  }
+  function setPreviewDirection(direction) {
+    inspectDirection = Math.max(0, Math.min(3, direction | 0));
+    previewYaw = [0, Math.PI, -Math.PI / 2, Math.PI / 2][inspectDirection];
+    spinEnabled = false;
+  }
+
   function drawBaseCard(canvas, item, yaw, direction) {
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -295,18 +309,20 @@
     var rec = loadRatings()[inspectedItem.code];
     var voteLabel = rec ? (rec.vote === 'bad' ? ' · 👎 ПЛОХАЯ (на замену)' : ' · 👍 ХОРОШАЯ') : '';
     title.textContent = '[' + inspectedItem.code + '] ' + inspectedItem.name + voteLabel;
-    meta.textContent = 'Категория: ' + inspectedItem.family + ' · Тип: ' + inspectedItem.kindLabel + ' · ' + inspectedItem.specs + (inspectedItem.file ? ' · Файл: ' + inspectedItem.file : '');
+    meta.textContent = 'Категория: ' + inspectedItem.family + ' · Тип: ' + inspectedItem.kindLabel + ' · ' + inspectedItem.specs + (inspectedItem.file ? ' · Файл: ' + inspectedItem.file : '') + (inspectedItem.kind === 'base_3d' ? ' · Геометрия из GLB, цвета по палитре' : (inspectedItem.kind === 'model' && !hasModelViews(inspectedItem) ? ' · Плоская иконка (без других ракурсов)' : ''));
     if (noteIn && document.activeElement !== noteIn) noteIn.value = (rec && rec.note) || '';
     var directionControls = document.getElementById('f3-direction-controls');
     if (directionControls) {
-      directionControls.hidden = !hasDirectionalSprite(inspectedItem);
+      directionControls.hidden = !hasModelViews(inspectedItem);
       var directions = directionControls.querySelectorAll('[data-f3-direction]');
       for (var d = 0; d < directions.length; d++) {
-        directions[d].setAttribute('aria-pressed', String(Number(directions[d].getAttribute('data-f3-direction')) === inspectDirection));
+        directions[d].setAttribute('aria-pressed', String(!spinEnabled && Number(directions[d].getAttribute('data-f3-direction')) === inspectDirection));
       }
     }
+    var spin = document.getElementById('f3-spin-toggle');
+    if (spin) { spin.hidden = !isRotatable3D(inspectedItem); spin.setAttribute('aria-pressed', String(spinEnabled)); spin.textContent = spinEnabled ? 'Остановить вращение' : 'Вращать 3D'; }
     if (inspectedItem.isBase) drawBaseCard(c, inspectedItem, previewYaw, inspectDirection);
-    else DD.ContentPack.renderItemToCanvas(c, inspectedItem, previewYaw);
+    else DD.ContentPack.renderItemToCanvas(c, inspectedItem, previewYaw, inspectDirection);
   }
 
   function renderCurrentPage() {
@@ -380,7 +396,7 @@
 
         previewWrap.addEventListener('click', function () {
           inspectedItem = item;
-          inspectDirection = 0;
+          setPreviewDirection(0);
           assistantResult = '';
           var result = document.getElementById('f3-assess-result');
           if (result) result.textContent = 'Нажмите «Проверить» для этого ассета.';
@@ -440,7 +456,7 @@
       if (!isOpen) return;
       var animPanel = document.getElementById('f3-animations');
       if (animPanel && !animPanel.hidden && DD.Renderer) { animationTime += 0.06; DD.Renderer.renderAnimationPreview(document.getElementById('anim-preview'), selectedAnimation(), animationTime); }
-      if (inspectedItem && (inspectedItem.kind === 'mesh' || inspectedItem.kind === 'base_3d')) {
+      if (spinEnabled && isRotatable3D(inspectedItem)) {
         previewYaw += 0.08;
         var canvas = document.getElementById('f3-inspect-canvas');
         if (canvas) {
@@ -504,8 +520,11 @@
     for (var di = 0; di < directionBtns.length; di++) {
       (function (btn) {
         btn.addEventListener('click', function () {
-          inspectDirection = Number(btn.getAttribute('data-f3-direction')) || 0;
+          var note = document.getElementById('f3-inspect-note');
+          var draft = note ? note.value : '';
+          setPreviewDirection(Number(btn.getAttribute('data-f3-direction')) || 0);
           renderInspector();
+          if (note) note.value = draft;
         });
       })(directionBtns[di]);
     }
@@ -548,6 +567,13 @@
       if (el) el.addEventListener('click', fn);
     };
     bindBtn('f3-close', function () { setOpen(false); });
+    bindBtn('f3-spin-toggle', function () {
+      var note = document.getElementById('f3-inspect-note');
+      var draft = note ? note.value : '';
+      spinEnabled = !spinEnabled;
+      renderInspector();
+      if (note) note.value = draft;
+    });
     bindBtn('f3-page-go', function () {
       var input = document.getElementById('f3-page-jump');
       var max = Math.max(1, Math.ceil(getFilteredList().length / PAGE_SIZE));
@@ -602,11 +628,15 @@
       var result = document.getElementById('f3-assess-result');
       try {
         var sample = document.createElement('canvas'); sample.width = 64; sample.height = 64;
-        var ctx = sample.getContext('2d'); ctx.imageSmoothingEnabled = false;
+        var ctx = sample.getContext('2d');
+        if (!ctx) throw new Error('Canvas недоступен');
+        ctx.imageSmoothingEnabled = false;
         ctx.drawImage(document.getElementById('f3-inspect-canvas'), 0, 0, 64, 64);
         var pixels = ctx.getImageData(0, 0, 64, 64).data;
         var refCanvas = document.getElementById('f3-reference-preview');
-        var ref = referenceReady ? refCanvas.getContext('2d').getImageData(0, 0, 64, 64).data : null;
+        var refCtx = referenceReady && refCanvas ? refCanvas.getContext('2d') : null;
+        if (referenceReady && !refCtx) throw new Error('Canvas эталона недоступен');
+        var ref = refCtx ? refCtx.getImageData(0, 0, 64, 64).data : null;
         var report = DD.AssetAssistant.analyze(pixels, ref);
         assistantResult = 'Контраст: ' + Math.round(report.contrast * 100) + '%, заполнение: ' + Math.round(report.coverage * 100) + '%' +
           (ref ? ', разница с эталоном: ' + Math.round(report.difference * 100) + '%' : ' (без эталона)') +
@@ -733,6 +763,10 @@
     isOpen: function () { return isOpen; },
     getFilteredList: getFilteredList,
     hasDirectionalSprite: hasDirectionalSprite,
+    hasModelViews: hasModelViews,
+    setPreviewDirection: setPreviewDirection,
+    getPreviewDirection: function () { return inspectDirection; },
+    getPreviewYaw: function () { return previewYaw; },
     setTab: function (t) { activeTab = t; currentPage = 0; invalidateFilter(); if (isOpen) renderCurrentPage(); },
     setRateFilter: function (rf) { rateFilter = rf; currentPage = 0; invalidateFilter(); if (isOpen) renderCurrentPage(); },
     rateItem: rateItem,

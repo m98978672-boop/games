@@ -149,12 +149,20 @@ for (const asset of sandbox.DD_DATA.manifest.filter(a => a.type === '3D_glb')) {
   const gltf = JSON.parse(glb.subarray(20, 20 + jsonLen).toString('utf8'));
   const binStart = 20 + jsonLen + 8;
   const primitive = gltf.meshes[0].primitives[0];
+  assert.ok(primitive.attributes.COLOR_0 !== undefined, asset.id + ': цвета вершин');
+  assert.equal(gltf.accessors[primitive.attributes.COLOR_0].normalized, true);
   function viewOffset(accessorIndex) {
     const a = gltf.accessors[accessorIndex];
     return binStart + (gltf.bufferViews[a.bufferView].byteOffset || 0) + (a.byteOffset || 0);
   }
   const p = viewOffset(primitive.attributes.POSITION), n = viewOffset(primitive.attributes.NORMAL), idx = viewOffset(primitive.indices);
   const count = gltf.accessors[primitive.indices].count;
+  const parts = sandbox.DD_DATA.glbPreviewParts[asset.id];
+  assert.equal(parts.length, gltf.accessors[primitive.attributes.POSITION].count / 24);
+  for (let box = 0; box < parts.length; box++) {
+    const xs = Array.from({length: 24}, (_, i) => glb.readFloatLE(p + (box * 24 + i) * 12));
+    assert.ok(Math.abs(parts[box].sx - (Math.max(...xs) - Math.min(...xs))) < 0.0001, asset.id + ': ширина GLB');
+  }
   function vec(base, i) { return [0, 1, 2].map(k => glb.readFloatLE(base + i * 12 + k * 4)); }
   for (let t = 0; t < count; t += 3) {
     const a = glb.readUInt16LE(idx + t * 2), b = glb.readUInt16LE(idx + (t + 1) * 2), c = glb.readUInt16LE(idx + (t + 2) * 2);
@@ -163,6 +171,38 @@ for (const asset of sandbox.DD_DATA.manifest.filter(a => a.type === '3D_glb')) {
     const cross = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
     assert.ok(cross.reduce((sum, x, i) => sum + x * normal[i], 0) > 0, `${asset.id}: грань смотрит внутрь`);
   }
+}
+
+assert.ok(sandbox.DD_DATA.glbPreviewParts.E17_prop_oak.length >= 3, 'дерево не должно превращаться в ящик');
+assert.ok(sandbox.DD_DATA.glbPreviewParts.E19_prop_lamp.length >= 3, 'фонарь не должен превращаться в ящик');
+assert.ok(sandbox.DD_DATA.glbPreviewParts.E01_veh_sedan.length >= 10, 'у автомобиля должны быть передние и задние огни');
+
+// Реальные процедурно сгенерированные здания: открытая дверь должна вести в комнату.
+let doorsChecked = 0;
+for (const seed of [1, 42, 20261110]) {
+  const w = new DD.ChunkWorld(seed);
+  for (let cy = -3; cy <= 3; cy++) for (let cx = -3; cx <= 3; cx++) {
+    const ch = w.generateChunk(cx, cy);
+    for (const door of ch.doors) {
+      doorsChecked++;
+      const ly = ((door.ty % 32) + 32) % 32;
+      const dy = ly === 10 ? -1 : 1;
+      assert.equal(w.isWalkable(door.tx, door.ty), false);
+      door.open = true;
+      assert.ok(w.isWalkable(door.tx, door.ty - dy), 'подход к двери должен быть свободен');
+      assert.ok(w.isWalkable(door.tx, door.ty + dy), 'клетка за дверью должна быть свободна');
+      const pos = DD.GameplayHelpers.moveWithCollision(w, door.tx, door.ty - dy, 0, 2 * dy, 0.2);
+      assert.ok(Math.abs(pos.y - (door.ty + dy)) < 1e-5, 'в открытый дверной проём можно войти');
+    }
+  }
+}
+assert.ok(doorsChecked > 100, 'нужно проверить разные здания и чанки');
+assert.equal(DD.CatalogF3.hasModelViews(DD.ContentPack.getAll().find(x => x.code === 'MOD-0001')), true);
+assert.equal(DD.CatalogF3.hasModelViews(DD.ContentPack.getAll().find(x => x.code === 'MOD-1201')), false);
+for (let dir = 0; dir < 4; dir++) {
+  DD.CatalogF3.setPreviewDirection(dir);
+  assert.equal(DD.CatalogF3.getPreviewDirection(), dir);
+  assert.equal(DD.CatalogF3.getPreviewYaw(), [0, Math.PI, -Math.PI / 2, Math.PI / 2][dir]);
 }
 
 // Открытая дверь не делает соседнюю стену проходимой; прямой проход возможен.

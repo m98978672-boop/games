@@ -85,4 +85,18 @@ state.player.x = 16; state.player.y = 14;
 key('keydown', 'KeyS'); tick(timers, 40); key('keyup', 'KeyS');
 assert.ok(state.player.y > 15, 'через открытый проём пройти можно');
 
+// Настоящая дверь процедурного здания, а не вручную расставленные тайлы.
+const generatedDoor = Object.values(state.world.chunks).flatMap(chunk => chunk.doors)[0];
+assert.ok(generatedDoor, 'в мире есть двери');
+const localY = ((generatedDoor.ty % 32) + 32) % 32;
+const inward = localY === 10 ? -1 : 1;
+generatedDoor.open = false;
+state.player.x = generatedDoor.tx; state.player.y = generatedDoor.ty - inward;
+state.player.fx = 0; state.player.fy = inward;
+key('keydown', 'KeyE'); key('keyup', 'KeyE');
+assert.equal(generatedDoor.open, true, 'E открывает настоящую дверь');
+key('keydown', inward > 0 ? 'KeyS' : 'KeyW'); tick(timers, 50);
+key('keyup', inward > 0 ? 'KeyS' : 'KeyW');
+assert.ok((state.player.y - generatedDoor.ty) * inward > 0.7, 'можно войти в настоящее здание');
+
 console.log('[dead-district interaction] OK');

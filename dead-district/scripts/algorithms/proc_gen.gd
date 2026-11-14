@@ -271,6 +271,13 @@ static func generate_chunk_data(cx: int, cy: int, world_seed: int) -> Dictionary
 				"items": []
 			})
 
+		# Проход у входной двери должен оставаться свободным после BSP.
+		if tiles[(dy + 1) * CHUNK_SIZE + dx] != TileType.DOOR:
+			tiles[(dy + 1) * CHUNK_SIZE + dx] = floor_tile
+		var outside_type: int = tiles[(dy - 1) * CHUNK_SIZE + dx]
+		if outside_type == TileType.TREE_OAK or outside_type == TileType.TREE_PINE or outside_type == TileType.WATER:
+			tiles[(dy - 1) * CHUNK_SIZE + dx] = TileType.DIRT
+
 		buildings.append({
 			"rect": b_rect,
 			"district": district,

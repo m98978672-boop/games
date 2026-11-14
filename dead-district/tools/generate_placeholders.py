@@ -351,54 +351,59 @@ def draw_character_cell(grid, ox: int, oy: int, cw: int, ch: int, aid: str, idx:
         return
 
     facing = row_idx % 4  # 0=вниз, 1=вверх, 2=влево, 3=вправо
-    bw = 16 if is_brute else (8 if facing >= 2 else 10)
-    # Ноги с шагом и ботинками
-    frect(grid, cx - bw // 3 - 1, cy + 4 + step, 4, 7, pants)
-    frect(grid, cx + bw // 3 - 2, cy + 4 - step, 4, 7, pants)
-    frect(grid, cx - bw // 3 - 1, cy + 9 + step, 4, 2, pal[9])
-    frect(grid, cx + bw // 3 - 2, cy + 9 - step, 4, 2, pal[9])
+    side = facing >= 2
+    bw = (11 if side else 16) if is_brute else (7 if side else 10)
+    # Разные силуэты в профиль и анфас, шаг виден с обеих сторон.
+    if side:
+        frect(grid, cx - 5, cy + 4 + step, 4, 7, pants)
+        frect(grid, cx + 1, cy + 4 - step, 4, 7, pants)
+        frect(grid, cx - 5, cy + 9 + step, 4, 2, pal[9])
+        frect(grid, cx + 1, cy + 9 - step, 4, 2, pal[9])
+    else:
+        frect(grid, cx - bw // 3 - 1, cy + 4 + step, 4, 7, pants)
+        frect(grid, cx + bw // 3 - 2, cy + 4 - step, 4, 7, pants)
+        frect(grid, cx - bw // 3 - 1, cy + 9 + step, 4, 2, pal[9])
+        frect(grid, cx + bw // 3 - 2, cy + 9 - step, 4, 2, pal[9])
 
-    # Торс, плечи, блик и ремень
     frect(grid, cx - bw // 2, cy - 4, bw, 9, shirt)
     frect(grid, cx - bw // 2 + 1, cy - 4, bw - 2, 2, shirt_hi)
     frect(grid, cx - bw // 2, cy + 3, bw, 1, pal[9])
-    if "medic" in aid:
+    if facing == 1:
+        # Лямки/спина вместо лица и передней части одежды.
+        frect(grid, cx - 3, cy - 3, 6, 6, pants)
+        frect(grid, cx - 2, cy - 2, 4, 4, shirt_hi)
+    elif side:
+        frect(grid, cx + (bw // 2 - 1 if facing == 2 else -bw // 2 - 2), cy - 3, 3, 7, pants)
+    elif "medic" in aid:
         frect(grid, cx - 1, cy - 2, 3, 5, pal[1])
         frect(grid, cx - 2, cy - 1, 5, 3, pal[1])
     elif is_zombie:
         frect(grid, cx - 2, cy - 1, 4, 3, pal[2])
-        pset(grid, cx + 1, cy + 1, pal[1])
-        if "infected" in aid:
-            pset(grid, cx - 3, cy - 2, pal[5])
-            pset(grid, cx + 2, cy, pal[5])
 
-    # Руки в зависимости от направления/действия
-    if is_zombie:
-        frect(grid, cx - bw // 2 - 3, cy - 3 - step, 3, 7, skin)
-        frect(grid, cx + bw // 2, cy - 3 + step, 3, 7, skin)
-    elif "aim" in aid:
-        frect(grid, cx + bw // 2 - 1, cy - 1, 7, 3, pal[27])
-        frect(grid, cx - bw // 2 - 2, cy - 1, 3, 5, skin)
-    elif "melee" in aid:
-        frect(grid, cx + bw // 2, cy - 7 + step, 3, 11, pal[6])
-        frect(grid, cx - bw // 2 - 2, cy - 1, 3, 5, skin)
+    # Руки и оружие ориентированы по выбранной стороне.
+    if side:
+        frect(grid, cx - 1, cy - 2 + step, 3, 7, skin)
+        if "aim" in aid or "melee" in aid:
+            frect(grid, cx - 10 if facing == 2 else cx + 3, cy - 1, 7, 2, pal[6] if "melee" in aid else pal[27])
     else:
         frect(grid, cx - bw // 2 - 3, cy - 2 + step, 3, 6, skin)
         frect(grid, cx + bw // 2, cy - 2 - step, 3, 6, skin)
+        if "aim" in aid or "melee" in aid:
+            frect(grid, cx + bw // 2, cy - 7 + step, 3, 9, pal[6] if "melee" in aid else pal[27])
 
-    # Голова + причёска/каска + лицо/глаза по направлению
     hr = 5 if is_brute else 4
-    frect(grid, cx - hr, cy - 4 - hr * 2 + 1, hr * 2, hr * 2, skin)
-    frect(grid, cx - hr + 1, cy - 4 - hr * 2 + 1, hr * 2 - 2, 1, skin_hi)
-    if facing == 1:  # вид со спины — шапка/волосы закрывают затылок
-        frect(grid, cx - hr, cy - 4 - hr * 2 + 1, hr * 2, hr * 2 - 1, head_acc)
-    else:
-        frect(grid, cx - hr, cy - 4 - hr * 2 + 1, hr * 2, 3, head_acc)
+    head_x = cx - hr + (-2 if facing == 2 else (2 if facing == 3 else 0))
+    head_y = cy - 4 - hr * 2 + 1
+    frect(grid, head_x, head_y, hr * 2, hr * 2, head_acc if facing == 1 else skin)
+    frect(grid, head_x, head_y, hr * 2, 3, head_acc)
+    if facing != 1:
         eye_col = pal[1] if is_zombie else pal[31]
         if facing == 2:
-            pset(grid, cx - 2, cy - 7, eye_col)
+            pset(grid, head_x + 1, cy - 7, eye_col)
+            frect(grid, head_x - 1, cy - 6, 2, 2, skin)  # профиль / нос
         elif facing == 3:
-            pset(grid, cx + 1, cy - 7, eye_col)
+            pset(grid, head_x + hr * 2 - 2, cy - 7, eye_col)
+            frect(grid, head_x + hr * 2 - 1, cy - 6, 2, 2, skin)
         else:
             pset(grid, cx - 2, cy - 7, eye_col)
             pset(grid, cx + 1, cy - 7, eye_col)
@@ -564,7 +569,9 @@ def build_multipart_glb(path: str, boxes):
     pos_buf = bytearray()
     nrm_buf = bytearray()
     uv_buf = bytearray()
+    color_buf = bytearray()
     idx_buf = bytearray()
+    palette = load_palette()
     min_p = [1e9, 1e9, 1e9]
     max_p = [-1e9, -1e9, -1e9]
     v_offset = 0
@@ -589,15 +596,16 @@ def build_multipart_glb(path: str, boxes):
                 pos_buf.extend(struct.pack("<fff", *p))
                 nrm_buf.extend(struct.pack("<fff", *nrm))
                 uv_buf.extend(struct.pack("<ff", *uv_quad[vi]))
+                color_buf.extend(bytes(palette[color_idx % len(palette)]))
                 for k in range(3):
                     min_p[k] = min(min_p[k], p[k])
                     max_p[k] = max(max_p[k], p[k])
             idx_buf.extend(struct.pack("<HHHHHH", v_offset, v_offset + 1, v_offset + 2, v_offset, v_offset + 2, v_offset + 3))
             v_offset += 4
 
-    bin_blob = bytes(pos_buf + nrm_buf + uv_buf + idx_buf)
+    bin_blob = bytes(pos_buf + nrm_buf + uv_buf + color_buf + idx_buf)
     bin_chunk = bin_blob + (b"\x00" * ((4 - (len(bin_blob) % 4)) % 4))
-    pos_len, nrm_len, uv_len, idx_len = len(pos_buf), len(nrm_buf), len(uv_buf), len(idx_buf)
+    pos_len, nrm_len, uv_len, color_len, idx_len = len(pos_buf), len(nrm_buf), len(uv_buf), len(color_buf), len(idx_buf)
     idx_count = len(boxes) * 36
 
     gltf = {
@@ -605,19 +613,22 @@ def build_multipart_glb(path: str, boxes):
         "scene": 0,
         "scenes": [{"nodes": [0]}],
         "nodes": [{"mesh": 0, "name": os.path.splitext(os.path.basename(path))[0]}],
-        "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1, "TEXCOORD_0": 2}, "indices": 3}]}],
+        "meshes": [{"primitives": [{"attributes": {"POSITION": 0, "NORMAL": 1, "TEXCOORD_0": 2, "COLOR_0": 3}, "indices": 4, "material": 0}]}],
+        "materials": [{"pbrMetallicRoughness": {"baseColorFactor": [1, 1, 1, 1], "metallicFactor": 0, "roughnessFactor": 1}}],
         "buffers": [{"byteLength": len(bin_blob)}],
         "bufferViews": [
             {"buffer": 0, "byteOffset": 0, "byteLength": pos_len, "target": 34962},
             {"buffer": 0, "byteOffset": pos_len, "byteLength": nrm_len, "target": 34962},
             {"buffer": 0, "byteOffset": pos_len + nrm_len, "byteLength": uv_len, "target": 34962},
-            {"buffer": 0, "byteOffset": pos_len + nrm_len + uv_len, "byteLength": idx_len, "target": 34963},
+            {"buffer": 0, "byteOffset": pos_len + nrm_len + uv_len, "byteLength": color_len, "target": 34962},
+            {"buffer": 0, "byteOffset": pos_len + nrm_len + uv_len + color_len, "byteLength": idx_len, "target": 34963},
         ],
         "accessors": [
             {"bufferView": 0, "componentType": 5126, "count": v_offset, "type": "VEC3", "min": min_p, "max": max_p},
             {"bufferView": 1, "componentType": 5126, "count": v_offset, "type": "VEC3"},
             {"bufferView": 2, "componentType": 5126, "count": v_offset, "type": "VEC2"},
-            {"bufferView": 3, "componentType": 5123, "count": idx_count, "type": "SCALAR"},
+            {"bufferView": 3, "componentType": 5121, "normalized": True, "count": v_offset, "type": "VEC4"},
+            {"bufferView": 4, "componentType": 5123, "count": idx_count, "type": "SCALAR"},
         ],
     }
     json_bytes = json.dumps(gltf, separators=(",", ":")).encode("utf-8")
@@ -640,14 +651,17 @@ def model_parts_for(aid: str):
             (-0.9, 0.3, -1.3, 0.28, 0.6, 0.6, 29),
             (0.9, 0.3, -1.3, 0.28, 0.6, 0.6, 29),
         ]
+        # Передние фары и задние габариты делают ракурсы различимыми.
+        parts.extend([(-0.65, 0.62, 2.12, 0.35, 0.18, 0.08, 5), (0.65, 0.62, 2.12, 0.35, 0.18, 0.08, 5),
+                      (-0.65, 0.62, -2.12, 0.35, 0.18, 0.08, 1), (0.65, 0.62, -2.12, 0.35, 0.18, 0.08, 1)])
         if "police" in aid or "ambulance" in aid:
             parts.append((0.0, 1.4, -0.1, 0.9, 0.16, 0.25, 1))  # мигалка
         if "truck" in aid or "van" in aid:
             parts.append((0.0, 1.3, -0.4, 2.0, 1.2, 2.8, 25))
         return parts
-    if "tree_oak" in aid:
+    if "tree_oak" in aid or "prop_oak" in aid:
         return [(0, 1.0, 0, 0.45, 2.0, 0.45, 7), (0, 2.4, 0, 1.8, 1.2, 1.8, 12), (0.3, 3.1, -0.2, 1.1, 0.8, 1.1, 11)]
-    if "tree_pine" in aid:
+    if "tree_pine" in aid or "prop_pine" in aid:
         return [(0, 0.9, 0, 0.35, 1.8, 0.35, 8), (0, 1.8, 0, 1.7, 0.7, 1.7, 13), (0, 2.5, 0, 1.2, 0.7, 1.2, 12), (0, 3.1, 0, 0.7, 0.6, 0.7, 11)]
     if "campfire" in aid:
         return [(0, 0.15, 0, 0.9, 0.2, 0.25, 7), (0, 0.15, 0, 0.25, 0.2, 0.9, 8), (0, 0.45, 0, 0.35, 0.4, 0.35, 1)]
@@ -655,6 +669,20 @@ def model_parts_for(aid: str):
         return [(0, 0.25, 0, 1.1, 0.3, 2.0, 7), (0, 0.45, 0, 1.0, 0.18, 1.85, 25), (0, 0.58, -0.7, 0.8, 0.12, 0.4, 30)]
     if "workbench" in aid or "table" in aid:
         return [(0, 0.8, 0, 1.5, 0.12, 0.8, 6), (-0.65, 0.4, -0.3, 0.12, 0.8, 0.12, 7), (0.65, 0.4, -0.3, 0.12, 0.8, 0.12, 7), (-0.65, 0.4, 0.3, 0.12, 0.8, 0.12, 7), (0.65, 0.4, 0.3, 0.12, 0.8, 0.12, 7)]
+    if "prop_lamp" in aid:
+        return [(0, 1.4, 0, 0.18, 2.8, 0.18, 27), (0.4, 2.75, 0, 0.9, 0.14, 0.14, 27), (0.8, 2.62, 0, 0.35, 0.2, 0.35, 5)]
+    if "spike_trap" in aid:
+        return [(0, 0.18, 0, 1.5, 0.25, 0.8, 7), (-0.5, 0.6, 0, 0.18, 0.9, 0.18, 26), (0, 0.65, 0, 0.18, 1.0, 0.18, 26), (0.5, 0.6, 0, 0.18, 0.9, 0.18, 26)]
+    if "fridge" in aid or "gun_locker" in aid:
+        return [(0, 0.95, 0, 0.9, 1.9, 0.75, 25 if "fridge" in aid else 27), (0.3, 1.15, 0.39, 0.09, 0.35, 0.07, 29)]
+    if "stove" in aid:
+        return [(0, 0.5, 0, 1.0, 1.0, 0.8, 25), (0, 0.55, 0.41, 0.7, 0.5, 0.05, 29), (-0.25, 1.02, 0, 0.3, 0.04, 0.3, 28), (0.25, 1.02, 0, 0.3, 0.04, 0.3, 28)]
+    if "shelf" in aid:
+        return [(-0.5, 0.8, 0, 0.12, 1.6, 0.55, 7), (0.5, 0.8, 0, 0.12, 1.6, 0.55, 7), (0, 0.2, 0, 1.0, 0.12, 0.55, 6), (0, 0.8, 0, 1.0, 0.12, 0.55, 6), (0, 1.45, 0, 1.0, 0.12, 0.55, 6)]
+    if "generator" in aid:
+        return [(0, 0.45, 0, 1.1, 0.8, 0.7, 27), (0, 0.9, 0, 0.8, 0.12, 0.6, 1), (0.3, 0.5, 0.37, 0.22, 0.3, 0.06, 25)]
+    if "barrel" in aid:
+        return [(0, 0.55, 0, 0.8, 1.1, 0.8, 12), (0, 0.25, 0, 0.84, 0.1, 0.84, 27), (0, 0.85, 0, 0.84, 0.1, 0.84, 27)]
     if "wpn_" in aid:
         return [(0, 0.1, 0, 0.12, 0.12, 0.9, 27 if "rifle" in aid or "shotgun" in aid else 6), (0, 0.15, 0.32, 0.22, 0.2, 0.22, 1 if "axe" in aid else 29)]
     return [(0, 0.45, 0, 0.9, 0.9, 0.9, 7 if "crate" in aid or "barrel" in aid else 27), (0, 0.92, 0, 0.75, 0.1, 0.75, 26)]
