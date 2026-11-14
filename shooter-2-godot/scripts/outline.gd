@@ -236,6 +236,13 @@ static func outline_mesh(pts: Array, opts: Dictionary = {}) -> ArrayMesh:
 	return st.commit()
 
 
+## Публичный квад: две согласованные по нормали треугольника. Нужен
+## генераторам полей (mesh_field.gd), чтобы не копировать _add_tri.
+static func _quad_raw(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
+	_add_tri(st, a, b, c)
+	_add_tri(st, a, c, d)
+
+
 static func _signed_area(poly: Array) -> float:
 	var s := 0.0
 	for i in poly.size():

@@ -53,6 +53,8 @@ var player: SH2Player
 var combat: SH2Combat
 var level: Dictionary = {}
 var level_root: Node3D
+var mesh_field: SH2MeshField
+var mesh_field_quality: String = "high"
 var world_root: Node3D
 var agents_root: Node3D
 
@@ -120,7 +122,7 @@ func _setup_nodes() -> void:
 
 
 ## ------------------------------- уровень ---------------------------------
-func build_level(map_id: String) -> void:
+func build_level(map_id: String, field_quality: String = "") -> void:
 	if level_root != null and is_instance_valid(level_root):
 		level_root.queue_free()
 	level_root = Node3D.new()
@@ -128,6 +130,7 @@ func build_level(map_id: String) -> void:
 	world_root.add_child(level_root)
 	level = SH2Level.build(map_id)
 	level_root.add_child(level["root"])
+	_build_mesh_field(field_quality)
 	world = SH2World.new(level["map"], level["colliders"])
 	# солнце и среда уже внутри уровня; туман подкручиваем по карте
 	var env_node: WorldEnvironment = null
@@ -136,6 +139,26 @@ func build_level(map_id: String) -> void:
 			env_node = c
 	if env_node != null and env_node.environment != null:
 		env_node.environment.fog_density = 0.012
+
+
+## Застройка за периметром: 10 000 монолитов и больше миллиона мешей.
+## Собирается один раз на карту; на слабых GPU поле урезается пресетом.
+func _build_mesh_field(quality: String = "") -> void:
+	if mesh_field != null and is_instance_valid(mesh_field):
+		mesh_field.queue_free()
+	var q: String = quality if quality != "" else mesh_field_quality
+	var edge: float = float(level["map"].get("size", 76.0)) * 0.5
+	mesh_field = SH2MeshField.new(20261107 + level.get("map_id", "").hash(), q, edge)
+	mesh_field.name = "MeshField"
+	world_root.add_child(mesh_field)
+
+
+## Заменить застройку за периметром другим пресетом (настройки → качество).
+## Полный миллион собирается только на «высоком»: на телефоне это ощутимо.
+func set_mesh_field_quality(quality: String) -> void:
+	mesh_field_quality = quality
+	if level != null:
+		_build_mesh_field(quality)
 
 
 func clear_agents() -> void:
@@ -155,7 +178,8 @@ func all_agents() -> Array:
 
 func build_menu_scene() -> void:
 	clear_menu_scene()
-	build_level(str(SH2Data.MISSIONS[0]["map"]))
+	# в меню поле застройки урезано: полный миллион мешей собирается к бою
+	build_level(str(SH2Data.MISSIONS[0]["map"]), "low")
 	var types := ["grunt", "officer", "scout"]
 	for i in types.size():
 		var spot: Dictionary = world.random_open_point(0.0, 0.0, 3.0, 7.0)
