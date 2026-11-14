@@ -1,0 +1,21 @@
+{
+  "name": "atlas-ratgrad",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "АТЛАС РАТГРАДА — интерактивная 3D-карта вымышленной страны: рельеф, дороги, города, границы, транспорт и локальный ИИ",
+  "scripts": {
+    "catalog": "node tools/gen-catalog.mjs",
+    "test:catalog": "node tests/catalog.mjs",
+    "build": "esbuild src/main.js --bundle --minify --format=iife --target=es2019 --outfile=atlas.bundle.js",
+    "dev": "esbuild src/main.js --bundle --format=iife --target=es2019 --outfile=atlas.bundle.js --watch",
+    "serve": "python3 -m http.server 8080 --bind 0.0.0.0"
+  },
+  "dependencies": {
+    "three": "^0.186.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "jsdom": "^26.0.0"
+  }
+}

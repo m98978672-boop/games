@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b0f14">
+<meta name="description" content="Каталог проекта «Атлас Ратграда»: все разделы техзадания, поиск, вкладки, оценки и заметки. Работает офлайн.">
+<title>АТЛАС РАТГРАДА — каталог проекта</title>
+<style>
+  :root{
+    --bg:#0b0f14; --bg2:#111823; --bg3:#16202d;
+    --line:#223040; --text:#e9eef5; --muted:#93a1b3;
+    --acc:#5fd0b0; --warn:#e8b34a; --bad:#e0674f; --star:#e8c05a;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:radial-gradient(1200px 600px at 20% -10%, #17263a 0%, var(--bg) 55%) fixed;
+    color:var(--text);
+    font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--acc);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .top{
+    position:sticky;top:0;z-index:20;
+    display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+    padding:14px clamp(14px,3vw,28px);
+    background:rgba(11,15,20,.88);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .brand{
+    display:inline-flex;gap:8px;align-items:center;
+    color:var(--text);font-weight:600;font-size:13px;letter-spacing:.08em;
+    border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--bg2);
+  }
+  .brand:hover{border-color:#2f4357;text-decoration:none}
+  .title .eyebrow{display:block;font-size:11px;letter-spacing:.22em;color:var(--muted)}
+  .title h1{margin:2px 0 0;font-size:clamp(18px,2.4vw,24px);letter-spacing:.04em}
+  .progress{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+  .progress b{color:var(--text)}
+  .bar{width:120px;height:6px;border-radius:6px;background:var(--bg3);overflow:hidden}
+  .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3fae93,var(--acc))}
+  .avg{color:var(--star)}
+
+  main{padding:clamp(14px,3vw,28px);max-width:1600px;margin:0 auto}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .search{position:relative;flex:1 1 320px;min-width:220px}
+  .search input{
+    width:100%;padding:12px 40px 12px 14px;border-radius:12px;
+    border:1px solid var(--line);background:var(--bg2);color:var(--text);font-size:14px;outline:none;
+  }
+  .search input:focus{border-color:#3b5670;box-shadow:0 0 0 3px rgba(95,208,176,.12)}
+  .kbd{
+    position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    font-size:11px;color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:1px 6px;
+  }
+  select,button{
+    font:inherit;color:var(--text);background:var(--bg2);
+    border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer;
+  }
+  select{padding-right:26px}
+  button:hover,select:hover{border-color:#33506b}
+  button.danger:hover{border-color:#6b2f28;color:#ffb4a6}
+  .chk{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
+  .chk input{accent-color:#3fae93;width:16px;height:16px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .actions button{font-size:13px}
+
+  .tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;scrollbar-width:thin}
+  .tab{
+    white-space:nowrap;font-size:13px;padding:8px 12px;border-radius:999px;
+    border:1px solid var(--line);background:var(--bg2);color:var(--muted);
+  }
+  .tab[aria-selected="true"]{color:#0b0f14;background:var(--acc);border-color:var(--acc);font-weight:600}
+  .tab .n{opacity:.6;margin-left:6px;font-size:11px}
+
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));padding-bottom:40px}
+  .card{
+    background:linear-gradient(180deg,#121b26,#0f1620);
+    border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 14px 12px;display:flex;flex-direction:column;gap:10px;
+    transition:border-color .15s, transform .15s;
+  }
+  .card:hover{border-color:#2d435a}
+  .card.rated{border-color:#274a42}
+  .card header{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+  .num{font-size:12px;color:var(--acc);font-weight:700;letter-spacing:.04em}
+  .card h2{margin:0;font-size:16px;line-height:1.25;flex:1 1 160px}
+  .cat{
+    font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+    border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap;
+  }
+  .desc{margin:0;color:#c3cedb;font-size:13.5px;line-height:1.5}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:11.5px;color:var(--muted);background:var(--bg3);border-radius:8px;padding:3px 7px}
+  .rate{display:flex;align-items:center;gap:4px;margin-top:auto}
+  .rate .lbl{font-size:12px;color:var(--muted);margin-right:4px}
+  .rate button{
+    background:none;border:0;padding:2px 3px;font-size:20px;line-height:1;color:#3a4a5c;border-radius:6px;
+  }
+  .rate button.on{color:var(--star)}
+  .rate button:hover{color:var(--star);transform:scale(1.08)}
+  .rate .val{margin-left:auto;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+  details{border-top:1px dashed var(--line);padding-top:8px}
+  summary{cursor:pointer;font-size:12.5px;color:var(--muted);list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary:hover{color:var(--text)}
+  textarea{
+    width:100%;margin-top:8px;padding:9px 10px;border-radius:10px;resize:vertical;min-height:56px;
+    background:var(--bg);border:1px solid var(--line);color:var(--text);font:inherit;font-size:13px;outline:none;
+  }
+  textarea:focus{border-color:#3b5670}
+
+  .empty{text-align:center;color:var(--muted);padding:40px 0}
+  .hidden{display:none !important}
+
+  footer{
+    border-top:1px solid var(--line);margin-top:10px;padding:18px clamp(14px,3vw,28px);
+    color:var(--muted);font-size:12.5px;display:flex;gap:14px;flex-wrap:wrap;justify-content:space-between;
+  }
+  .toast{
+    position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);
+    background:var(--bg3);border:1px solid var(--line);color:var(--text);
+    padding:10px 16px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;
+    transition:opacity .2s, transform .2s;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width:640px){
+    .progress{width:100%;margin-left:0}
+    .bar{flex:1}
+    .card h2{font-size:15px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none !important}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="../index.html" aria-label="На главную страницу игр">← GAMES</a>
+  <div class="title">
+    <span class="eyebrow">КАТАЛОГ ПРОЕКТА</span>
+    <h1>АТЛАС РАТГРАДА</h1>
+  </div>
+  <div class="progress" aria-live="polite">
+    <span>оценено <b id="ratedCount">0</b> из <span id="total">0</span></span>
+    <div class="bar" role="progressbar" aria-label="Прогресс оценок"><i id="bar"></i></div>
+    <span class="avg" id="avg">средняя —</span>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <label class="search">
+      <input id="q" type="search" placeholder="Поиск: номер, слово, «дороги», «стриминг»…" autocomplete="off" aria-label="Поиск по каталогу">
+      <span class="kbd">/</span>
+    </label>
+    <select id="sort" aria-label="Сортировка">
+      <option value="num">По номеру раздела</option>
+      <option value="rate-desc">Сначала высокие оценки</option>
+      <option value="rate-asc">Сначала низкие оценки</option>
+      <option value="unrated">Сначала неоценённые</option>
+    </select>
+    <label class="chk"><input type="checkbox" id="onlyUnrated"> только неоценённые</label>
+    <div class="actions">
+      <button id="export" type="button">Экспорт оценок</button>
+      <button id="importBtn" type="button">Импорт<input id="import" type="file" accept="application/json,.json" hidden></button>
+      <button id="reset" class="danger" type="button">Сброс</button>
+    </div>
+  </div>
+
+  <nav class="tabs" id="tabs" aria-label="Категории разделов"></nav>
+
+  <div class="grid" id="grid"></div>
+  <p class="empty hidden" id="empty">Ничего не найдено. Попробуй другой запрос или сбрось оценку фильтра.</p>
+</main>
+
+<footer>
+  <span>Оценки и заметки хранятся только в этом браузере (localStorage). В игре каталог открывается по <b>F5</b>.</span>
+  <span><a href="SPEC.md">Техзадание (SPEC.md)</a> · <a href="../index.html">Все игры</a></span>
+</footer>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script id="sections-data" type="application/json">/*DATA-START*/[
+  {
+    "num": 0,
+    "id": "0",
+    "title": "Как читать этот документ",
+    "cat": "Документ",
+    "desc": "Документ — это одновременно промт (что именно должно быть сделано) и техзадание",
+    "subs": []
+  },
+  {
+    "num": 1,
+    "id": "1",
+    "title": "Замысел",
+    "cat": "Общее",
+    "desc": "Дать «вау-объект» в каталоге: не игру с правилами, а мир, который живёт сам.",
+    "subs": [
+      "Одной фразой",
+      "Зачем это нужно",
+      "Что это НЕ такое",
+      "Критерий «получилось»"
+    ]
+  },
+  {
+    "num": 2,
+    "id": "2",
+    "title": "Визуальный язык",
+    "cat": "Общее",
+    "desc": "Стиль — «архитектурный макет, который ожил»: чистые объёмы, мягкий свет,",
+    "subs": [
+      "Общий стиль",
+      "Палитра (базовая, правится в одном файле `src/config/palette.js`)",
+      "Свет и материалы",
+      "Дымка и атмосфера"
+    ]
+  },
+  {
+    "num": 3,
+    "id": "3",
+    "title": "Мир: размеры, координаты, единицы",
+    "cat": "Мир",
+    "desc": "Размер страны: 640 × 480 км (307 200 км²) — «довольно большая» страна по",
+    "subs": [
+      "Двухуровневая модель мира (важно)",
+      "Образ страны: с юга на север (решение Q1)"
+    ]
+  },
+  {
+    "num": 4,
+    "id": "4",
+    "title": "Генерация рельефа",
+    "cat": "Мир",
+    "desc": "Рельеф строится в четыре шага: (1) базовый континентальный шум, (2) тектонические",
+    "subs": [
+      "Общая схема",
+      "Маски и производные карты",
+      "Шейдер земли"
+    ]
+  },
+  {
+    "num": 5,
+    "id": "5",
+    "title": "Вода: море, реки, озёра, приливы",
+    "cat": "Мир",
+    "desc": "Море — тёплое Средиземное, волны мягкие; плоскость с шейдером волн (две-три",
+    "subs": []
+  },
+  {
+    "num": 6,
+    "id": "6",
+    "title": "Биомы и растительность",
+    "cat": "Мир",
+    "desc": "Биом определяется парой (температура, влажность), где температура зависит от",
+    "subs": []
+  },
+  {
+    "num": 7,
+    "id": "7",
+    "title": "Границы: страна, регионы, КПП",
+    "cat": "Мир",
+    "desc": "Граница страны — замкнутый контур, сгенерированный по правилам:",
+    "subs": [
+      "Государственная граница",
+      "Регионы",
+      "Внутренние границы и городские черты",
+      "Смысл границ в симуляции",
+      "Внешний мир: соседи, торговля, отношения (решение В2)"
+    ]
+  },
+  {
+    "num": 8,
+    "id": "8",
+    "title": "Дорожная сеть",
+    "cat": "Дороги",
+    "desc": "Пять классов дорог, у каждого — свои правила геометрии, разметки, освещения и",
+    "subs": [
+      "Иерархия",
+      "Алгоритм генерации сети",
+      "Мосты, тоннели, серпантины",
+      "Данные для симуляции"
+    ]
+  },
+  {
+    "num": 9,
+    "id": "9",
+    "title": "Города и населённые пункты",
+    "cat": "Города",
+    "desc": "Пять классов, у каждого свой профиль застройки:",
+    "subs": [
+      "Классы поселений",
+      "Выбор места",
+      "Уличная сеть",
+      "Зонирование"
+    ]
+  },
+  {
+    "num": 10,
+    "id": "10",
+    "title": "Библиотека зданий",
+    "cat": "Города",
+    "desc": "Здание собирается процедурно из параметров, а не грузится моделью:",
+    "subs": [
+      "Принцип",
+      "Каталог типов (не менее 60 в [v1], 24 в [MVP])",
+      "Стили и региональные особенности",
+      "Детали, которые создают «живость»"
+    ]
+  },
+  {
+    "num": 11,
+    "id": "11",
+    "title": "Достопримечательности и «якоря внимания»",
+    "cat": "Города",
+    "desc": "На карте должно быть не менее 30 «якорей» — объектов, к которым хочется",
+    "subs": []
+  },
+  {
+    "num": 12,
+    "id": "12",
+    "title": "Транспорт",
+    "cat": "Транспорт",
+    "desc": "Типы: седан, хэтчбек, универсал, кроссовер, внедорожник, пикап, фургон,",
+    "subs": [
+      "Автомобили",
+      "Общественный транспорт",
+      "Железная дорога",
+      "Авиация",
+      "Суда"
+    ]
+  },
+  {
+    "num": 13,
+    "id": "13",
+    "title": "Пешеходы и «жизнь на улице»",
+    "cat": "Транспорт",
+    "desc": "Пешеходы — до 400 в кадре в городе, инстансированные фигуры из 4–6 частей",
+    "subs": []
+  },
+  {
+    "num": 14,
+    "id": "14",
+    "title": "Время суток, погода, сезоны",
+    "cat": "Время",
+    "desc": "Положение солнца по времени: азимут и высота по «упрощённой» модели для",
+    "subs": [
+      "Сутки",
+      "Погода",
+      "Сезоны"
+    ]
+  },
+  {
+    "num": 15,
+    "id": "15",
+    "title": "Каталог анимаций",
+    "cat": "Жизнь",
+    "desc": "`A-01` Волны на море — всегда — цикл 6–9 с — синус с фазой по позиции.",
+    "subs": [
+      "Мир и природа",
+      "Дороги и транспорт",
+      "Город и люди",
+      "Погодные и событийные анимации",
+      "Камера и интерфейс"
+    ]
+  },
+  {
+    "num": 16,
+    "id": "16",
+    "title": "Искусственный интеллект (локальный, детерминированный)",
+    "cat": "ИИ",
+    "desc": "Пять слоёв, снизу вверх:",
+    "subs": [
+      "Архитектура ИИ",
+      "Водитель: продольное движение (IDM)",
+      "Водитель: поперечное движение (MOBIL)",
+      "Перекрёстки и светофоры",
+      "Маршруты и пробки",
+      "Пешеходы (социальные силы)",
+      "Поезда, самолёты, суда",
+      "Мэры и экономика (стратегический слой)",
+      "«Гид» (навигационный ИИ)",
+      "Режиссёр камеры (кинематографический ИИ)",
+      "LOD-менеджер и стриминг (оптимизационный ИИ)",
+      "Что НЕ является ИИ в этом проекте"
+    ]
+  },
+  {
+    "num": 17,
+    "id": "17",
+    "title": "Названия, язык, события",
+    "cat": "Мир",
+    "desc": "Все имена вымышленные и генерируются из морфем, без совпадений с реальными",
+    "subs": [
+      "Генератор названий",
+      "События и «новостная лента»",
+      "Климат и «паспорт страны»"
+    ]
+  },
+  {
+    "num": 18,
+    "id": "18",
+    "title": "Рендеринг и производительность",
+    "cat": "Рендер",
+    "desc": "Бюджет кадра: 16.6 мс на десктопе (цель 60 FPS) и 33 мс на мобильном",
+    "subs": []
+  },
+  {
+    "num": 19,
+    "id": "19",
+    "title": "Камера и управление",
+    "cat": "Интерфейс",
+    "desc": "Пять режимов: обзор (орбита вокруг центра карты), свободный полёт",
+    "subs": [
+      "Режимы камеры",
+      "Управление",
+      "Выбор объекта"
+    ]
+  },
+  {
+    "num": 20,
+    "id": "20",
+    "title": "Интерфейс и HUD",
+    "cat": "Интерфейс",
+    "desc": "Оболочка: верхняя панель (логотип, название страны, часы/дата/сезон, скорость",
+    "subs": [
+      "Стартовый экран и меню (решение В2)"
+    ]
+  },
+  {
+    "num": 21,
+    "id": "21",
+    "title": "Звук",
+    "cat": "Интерфейс",
+    "desc": "Всё процедурно на WebAudio, без файлов: ветер (шум + фильтр по высоте),",
+    "subs": []
+  },
+  {
+    "num": 22,
+    "id": "22",
+    "title": "Данные, сохранение, экспорт",
+    "cat": "Данные",
+    "desc": "Сохранение в `localStorage`: `seed`, выбранные слои, режим камеры, позиция",
+    "subs": []
+  },
+  {
+    "num": 23,
+    "id": "23",
+    "title": "Структура проекта",
+    "cat": "Данные",
+    "desc": "Модули — ES-модули, бандл — IIFE, собранный esbuild. Три.js — из",
+    "subs": []
+  },
+  {
+    "num": 24,
+    "id": "24",
+    "title": "Тесты и контроль качества",
+    "cat": "Тесты",
+    "desc": "`tests/smoke.mjs`: страница грузится в jsdom, нет исключений, есть canvas,",
+    "subs": []
+  },
+  {
+    "num": 25,
+    "id": "25",
+    "title": "Этапы реализации",
+    "cat": "Процесс",
+    "desc": "Рельеф + море + небо + камера + обзор страны.",
+    "subs": []
+  },
+  {
+    "num": 26,
+    "id": "26",
+    "title": "Журнал решений (append-only)",
+    "cat": "Процесс",
+    "desc": "Формат записи: `дата — решение — причина — что меняется в документе`.",
+    "subs": []
+  },
+  {
+    "num": 27,
+    "id": "27",
+    "title": "Риски и ограничения",
+    "cat": "Процесс",
+    "desc": "Риск: «мыльная» карта на обзорном масштабе. Решение: стилизация под макет, чёткая",
+    "subs": []
+  },
+  {
+    "num": 28,
+    "id": "28",
+    "title": "Ответы на вопросы (закрыто 2026-11-14)",
+    "cat": "Процесс",
+    "desc": "Название пришло как «RatGrad». В документе принято написание",
+    "subs": []
+  },
+  {
+    "num": 29,
+    "id": "29",
+    "title": "Физика, реалистичность и логика (решения Ф1–Ф4)",
+    "cat": "Физика",
+    "desc": "Точность физики = функция видимости. Игрок не должен увидеть физическую",
+    "subs": [
+      "Главный принцип: физика по видимости (Ф1)",
+      "Время: страна идёт своим ходом (Ф2 — выбрано адаптивное)",
+      "Числа, которые нельзя менять",
+      "Ошибки ИИ и «конец агента» (Ф3)",
+      "Логика мира: три инварианта",
+      "Логика застройки (её видно на скриншоте)",
+      "Погода как физика",
+      "Что видит игрок (Ф4: только нужное, остальное в F3)",
+      "Чего в проекте не будет (и почему это не потеря)"
+    ]
+  },
+  {
+    "num": 30,
+    "id": "30",
+    "title": "Видимость, стриминг и сжатие состояния (решение В1)",
+    "cat": "Стриминг",
+    "desc": "Экран — это рамка, и всё, что за рамкой, не нужно рисовать. Поэтому у мира две",
+    "subs": [
+      "Принцип: у каждого агента есть «запись», но не всегда «тело»",
+      "«Векторы и уравнения»: как агент движется без кадров",
+      "Распаковка и упаковка (бюджеты в миллисекундах)",
+      "Прогноз камеры (грузим то, куда я попаду)",
+      "Что за рамкой «просто считается в цифрах»",
+      "Дальние представления (чтобы страна была видна целиком)",
+      "Отсечение того, что не видно, даже если близко",
+      "Список дальнейших оптимизаций «по списку»",
+      "Тесты и метрики этого раздела"
+    ]
+  },
+  {
+    "num": 31,
+    "id": "31",
+    "title": "Чек-лист приёмки (по нему принимается работа)",
+    "cat": "Тесты",
+    "desc": "Страна генерируется из сида; второй запуск с тем же сидом даёт тот же мир.",
+    "subs": []
+  }
+]/*DATA-END*/</script>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORE_KEY = "ratgrad-catalog-v1";
+  var DATA_MARKERS = /\/\*DATA-(START|END)\*\//g;
+  var SECTIONS = JSON.parse(document.getElementById("sections-data").textContent.replace(DATA_MARKERS, ""));
+
+  var state = {
+    ratings: {},          // id -> { stars: 1..5, note: "..." }
+    tab: "all",
+    q: "",
+    sort: "num",
+    onlyUnrated: false
+  };
+
+  var el = {
+    grid: document.getElementById("grid"),
+    tabs: document.getElementById("tabs"),
+    q: document.getElementById("q"),
+    sort: document.getElementById("sort"),
+    onlyUnrated: document.getElementById("onlyUnrated"),
+    ratedCount: document.getElementById("ratedCount"),
+    total: document.getElementById("total"),
+    bar: document.getElementById("bar"),
+    avg: document.getElementById("avg"),
+    empty: document.getElementById("empty"),
+    export: document.getElementById("export"),
+    importBtn: document.getElementById("importBtn"),
+    import: document.getElementById("import"),
+    reset: document.getElementById("reset"),
+    toast: document.getElementById("toast")
+  };
+
+  /* ---------- storage ---------- */
+  function load(){
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return;
+      var data = JSON.parse(raw);
+      if(data && typeof data.ratings === "object" && data.ratings){
+        state.ratings = data.ratings;
+      }
+    } catch(e){ /* приватный режим или битый JSON — работаем без сохранения */ }
+  }
+  function save(){
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ version: 1, ratings: state.ratings })); }
+    catch(e){ toast("Не удалось сохранить: браузер запретил localStorage"); }
+  }
+
+  function toast(msg){
+    el.toast.textContent = msg;
+    el.toast.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ el.toast.classList.remove("show"); }, 2200);
+  }
+
+  /* ---------- helpers ---------- */
+  function esc(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[c];
+    });
+  }
+  function ratingOf(id){ return state.ratings[id] && state.ratings[id].stars || 0; }
+  function noteOf(id){ return state.ratings[id] && state.ratings[id].note || ""; }
+
+  function matches(sec){
+    var q = state.q.trim().toLowerCase();
+    if(!q) return true;
+    var hay = [sec.id, sec.title, sec.cat, sec.desc].concat(sec.subs || []).join(" ").toLowerCase();
+    return hay.indexOf(q) !== -1;
+  }
+
+  /* ---------- tabs ---------- */
+  function buildTabs(){
+    var counts = {};
+    SECTIONS.forEach(function(s){ counts[s.cat] = (counts[s.cat] || 0) + 1; });
+    var cats = Object.keys(counts).sort(function(a,b){ return counts[b] - counts[a]; });
+    var html = ['<button class="tab" role="tab" data-tab="all" aria-selected="true">Все<span class="n">' + SECTIONS.length + '</span></button>'];
+    cats.forEach(function(c){
+      html.push('<button class="tab" role="tab" data-tab="' + esc(c) + '" aria-selected="false">' +
+                esc(c) + '<span class="n">' + counts[c] + '</span></button>');
+    });
+    el.tabs.innerHTML = html.join("");
+    el.tabs.addEventListener("click", function(e){
+      var btn = e.target.closest(".tab");
+      if(!btn) return;
+      state.tab = btn.dataset.tab;
+      Array.prototype.forEach.call(el.tabs.querySelectorAll(".tab"), function(b){
+        b.setAttribute("aria-selected", b === btn ? "true" : "false");
+      });
+      render();
+    });
+  }
+
+  /* ---------- render ---------- */
+  function visibleSections(){
+    var list = SECTIONS.filter(function(s){
+      if(state.tab !== "all" && s.cat !== state.tab) return false;
+      if(!matches(s)) return false;
+      if(state.onlyUnrated && ratingOf(s.id) > 0) return false;
+      return true;
+    });
+    var sort = state.sort;
+    list.sort(function(a,b){
+      if(sort === "rate-desc" || sort === "rate-asc"){
+        var ra = ratingOf(a.id) || 0, rb = ratingOf(b.id) || 0;
+        if(ra !== rb) return sort === "rate-desc" ? rb - ra : ra - rb;
+        return a.num - b.num;
+      }
+      if(sort === "unrated"){
+        var ua = ratingOf(a.id) ? 1 : 0, ub = ratingOf(b.id) ? 1 : 0;
+        if(ua !== ub) return ua - ub;
+        return a.num - b.num;
+      }
+      return a.num - b.num;
+    });
+    return list;
+  }
+
+  function cardHTML(sec){
+    var r = ratingOf(sec.id);
+    var stars = "";
+    for(var i = 1; i <= 5; i++){
+      stars += '<button type="button" data-star="' + i + '" class="' + (i <= r ? "on" : "") +
+               '" aria-label="Оценка ' + i + ' из 5" title="' + i + ' из 5">★</button>';
+    }
+    var chips = (sec.subs || []).slice(0, 8).map(function(s){
+      return '<span class="chip">' + esc(s) + '</span>';
+    }).join("");
+
+    return '' +
+      '<article class="card ' + (r ? "rated" : "") + '" data-id="' + esc(sec.id) + '">' +
+        '<header>' +
+          '<span class="num">§' + esc(sec.id) + '</span>' +
+          '<h2>' + esc(sec.title) + '</h2>' +
+          '<span class="cat">' + esc(sec.cat) + '</span>' +
+        '</header>' +
+        (sec.desc ? '<p class="desc">' + esc(sec.desc) + '</p>' : "") +
+        (chips ? '<div class="chips">' + chips + '</div>' : "") +
+        '<div class="rate" role="group" aria-label="Оценка раздела">' +
+          '<span class="lbl">Оценка</span>' + stars +
+          '<span class="val">' + (r ? r + "/5" : "—") + '</span>' +
+        '</div>' +
+        '<details' + (noteOf(sec.id) ? " open" : "") + '>' +
+          '<summary>Заметка' + (noteOf(sec.id) ? " · есть" : "") + '</summary>' +
+          '<textarea rows="2" placeholder="Что поправить, что нравится, что непонятно…">' + esc(noteOf(sec.id)) + '</textarea>' +
+        '</details>' +
+      '</article>';
+  }
+
+  function render(){
+    var list = visibleSections();
+    el.grid.innerHTML = list.map(cardHTML).join("");
+    el.empty.classList.toggle("hidden", list.length > 0);
+    updateProgress();
+  }
+
+  function updateProgress(){
+    var total = SECTIONS.length;
+    var rated = 0, sum = 0;
+    SECTIONS.forEach(function(s){
+      var r = ratingOf(s.id);
+      if(r){ rated++; sum += r; }
+    });
+    el.total.textContent = total;
+    el.ratedCount.textContent = rated;
+    el.bar.style.width = (total ? (rated / total * 100) : 0).toFixed(1) + "%";
+    el.avg.textContent = rated ? ("средняя " + (sum / rated).toFixed(1)) : "средняя —";
+  }
+
+  /* ---------- events ---------- */
+  el.grid.addEventListener("click", function(e){
+    var btn = e.target.closest("button[data-star]");
+    if(!btn) return;
+    var card = btn.closest(".card");
+    var id = card.dataset.id;
+    var val = Number(btn.dataset.star);
+    var cur = ratingOf(id);
+    var next = (cur === val) ? 0 : val;      // повторный клик по той же звезде снимает оценку
+    if(next){
+      state.ratings[id] = { stars: next, note: noteOf(id) };
+    } else {
+      delete state.ratings[id];
+    }
+    save();
+    render();
+  });
+
+  var noteTimer = null;
+  el.grid.addEventListener("input", function(e){
+    if(e.target.tagName !== "TEXTAREA") return;
+    var card = e.target.closest(".card");
+    var id = card.dataset.id;
+    var text = e.target.value;
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(function(){
+      if(!state.ratings[id]) state.ratings[id] = { stars: 0, note: "" };
+      state.ratings[id].note = text;
+      if(!state.ratings[id].stars && !text){ delete state.ratings[id]; }
+      save();
+      updateProgress();
+    }, 350);
+  });
+
+  el.q.addEventListener("input", function(){
+    state.q = el.q.value;
+    render();
+  });
+  el.sort.addEventListener("change", function(){
+    state.sort = el.sort.value;
+    render();
+  });
+  el.onlyUnrated.addEventListener("change", function(){
+    state.onlyUnrated = el.onlyUnrated.checked;
+    render();
+  });
+
+  document.addEventListener("keydown", function(e){
+    if(e.key === "/" && document.activeElement !== el.q){
+      e.preventDefault();
+      el.q.focus();
+      el.q.select();
+    } else if(e.key === "Escape" && document.activeElement === el.q){
+      el.q.value = "";
+      state.q = "";
+      el.q.blur();
+      render();
+    }
+  });
+
+  el.export.addEventListener("click", function(){
+    var payload = {
+      project: "atlas-ratgrad",
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      ratings: state.ratings
+    };
+    var blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ratgrad-ratings.json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+    toast("Оценки выгружены в JSON");
+  });
+
+  el.importBtn.addEventListener("click", function(){ el.import.click(); });
+  el.import.addEventListener("change", function(){
+    var file = el.import.files && el.import.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try {
+        var data = JSON.parse(String(reader.result));
+        if(!data || typeof data.ratings !== "object") throw new Error("нет поля ratings");
+        var merged = {};
+        Object.keys(data.ratings).forEach(function(k){
+          var v = data.ratings[k] || {};
+          merged[k] = { stars: Number(v.stars) || 0, note: String(v.note || "") };
+        });
+        state.ratings = merged;
+        save();
+        render();
+        toast("Импортировано оценок: " + Object.keys(merged).length);
+      } catch(err){
+        toast("Не удалось прочитать файл: " + err.message);
+      }
+      el.import.value = "";
+    };
+    reader.readAsText(file);
+  });
+
+  el.reset.addEventListener("click", function(){
+    if(!Object.keys(state.ratings).length){ toast("Оценок пока нет"); return; }
+    if(!confirm("Сбросить все оценки и заметки? Это нельзя отменить.")) return;
+    state.ratings = {};
+    save();
+    render();
+    toast("Оценки сброшены");
+  });
+
+  /* ---------- start ---------- */
+  load();
+  buildTabs();
+  render();
+})();
+</script>
+</body>
+</html>
