@@ -153,10 +153,12 @@
         }
         // Внутренняя перегородка BSP
         var splitX = bz.x + Math.floor(bz.w / 2);
+        var hallEnd = bz.y + Math.floor(bz.h / 2);
         for (var sy = bz.y + 1; sy < bz.y + bz.h - 1; sy++) {
-          if (sy !== bz.y + Math.floor(bz.h / 2)) {
-            tiles[sy * CHUNK_SIZE + splitX] = wallT;
-          }
+          // Дверь находится на оси перегородки. Половина перегородки
+          // остаётся открытым коридором до середины, а не тупиком за дверью.
+          var isHall = bz.y < 14 ? sy >= hallEnd : sy <= hallEnd;
+          if (!isHall) tiles[sy * CHUNK_SIZE + splitX] = wallT;
         }
         // Дверь к дороге и окно
         var doorX = bz.x + Math.floor(bz.w / 2);

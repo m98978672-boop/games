@@ -334,8 +334,11 @@
       var side = dir >= 2;
       var bw = isHeavy ? (side ? 10 : 14) : (side ? 7 : 10);
       var skin = isZ ? PALETTE[11] : PALETTE[0];
-      var shirt = isZ ? c1 : (a === 7 ? PALETTE[30] : c1);
-      var pants = c2;
+      // Одежда не должна сливаться с кожей; у первого персонажа
+      // джинсовая куртка действительно синяя, а не телесный прямоугольник.
+      var shirts = [16, 12, 27, 13, 28, 18, 12, 25, 17, 9];
+      var shirt = PALETTE[shirts[a % shirts.length]];
+      var pants = PALETTE[isZ ? 28 : [28, 27, 9, 14][v % 4]];
       octx.fillStyle = pants;
       if (side) { octx.fillRect(12, 20, 4, 8); octx.fillRect(17, 20, 4, 7); }
       else { octx.fillRect(12, 20, 4, 8); octx.fillRect(17, 20, 4, 8); }
@@ -345,9 +348,16 @@
       } else if (side) {
         octx.fillStyle = accent; octx.fillRect(dir === 2 ? 18 : 11, 13, 3, 7);
       }
-      octx.fillStyle = skin;
-      if (side) octx.fillRect(dir === 2 ? 15 : 14, 13, 3, 7);
-      else { octx.fillRect(16 - Math.floor(bw / 2) - 3, 13, 3, 6); octx.fillRect(16 + Math.floor(bw / 2), 13, 3, 6); }
+      // Рукава цвета одежды, кисти отдельно от туловища.
+      octx.fillStyle = shirt;
+      if (side) {
+        octx.fillRect(dir === 2 ? 14 : 15, 13, 3, 6);
+        octx.fillStyle = skin; octx.fillRect(dir === 2 ? 14 : 15, 19, 3, 2);
+      } else {
+        octx.fillRect(16 - Math.floor(bw / 2) - 3, 13, 3, 6); octx.fillRect(16 + Math.floor(bw / 2), 13, 3, 6);
+        octx.fillStyle = skin; octx.fillRect(16 - Math.floor(bw / 2) - 3, 19, 3, 2); octx.fillRect(16 + Math.floor(bw / 2), 19, 3, 2);
+        if (dir === 0) { octx.fillStyle = PALETTE[25]; octx.fillRect(15, 13, 1, 7); }
+      }
       var headX = side ? (dir === 2 ? 11 : 14) : 12;
       octx.fillStyle = dir === 1 ? accent : skin; octx.fillRect(headX, 4, side ? 7 : 8, 8);
       octx.fillStyle = accent; octx.fillRect(headX, 4, side ? 7 : 8, 3);

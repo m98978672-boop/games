@@ -36,7 +36,7 @@ export function scriptsOf(html, htmlPath, root) {
     if (/type\s*=\s*"(module|importmap|application\/json)"/i.test(attrs)) continue;
     const src = (attrs.match(/src\s*=\s*"([^"]+)"/) || [])[1];
     if (!src || /^https?:/i.test(src)) continue;
-    const file = resolve(root, dirname(htmlPath), src);
+    const file = resolve(root, dirname(htmlPath), src.split(/[?#]/, 1)[0]);
     out.push({ src, file });
   }
   return out;

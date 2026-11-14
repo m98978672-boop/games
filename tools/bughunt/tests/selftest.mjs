@@ -114,7 +114,7 @@ build(root, 'честная', {
     '<title>Честная игра</title></head><body>',
     '<button id="btn-go">Ход</button><div id="экран"></div>',
     '<select id="сложность"><option value="лёгкая">Лёгкая</option><option value="трудная">Трудная</option></select>',
-    '<script src="src/lib.bundle.js"></script>',
+    '<script src="src/lib.bundle.js?v=2"></script>',
     '<script src="src/игра.js"></script>',
     '</body></html>',
   ].join('\n'),
@@ -154,7 +154,7 @@ build(root, 'честная', {
   const play = playGame(root, project, {});
   ok(play.findings.length === 0, 'игра проходит прогон без падений' +
     (play.findings.length ? ': ' + play.findings[0].msg : ''));
-  ok(play.loaded === 2, 'загружены оба скрипта страницы');
+  ok(play.loaded === 2, 'загружены оба скрипта страницы, в том числе с версией в URL');
 }
 
 rmSync(root, { recursive: true, force: true });

@@ -243,8 +243,9 @@ html, body {
 .f3-inspector[hidden] { display: none; }
 
 .f3-inspect-canvas {
-  width: 120px;
-  height: 120px;
+  width: 176px;
+  height: 176px;
+  align-self: flex-start;
   background: #191d2b;
   border: 2px solid var(--sh-border);
   image-rendering: pixelated;
