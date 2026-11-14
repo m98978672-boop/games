@@ -3,8 +3,8 @@
    поверхности и видны на любом масштабе. Каждая формула — на 20 значениях (§24). */
 import assert from 'node:assert/strict';
 import {
-  VEHICLE, TIME_SCALE, MIN_VEHICLE_PX, MAX_POINTS, screenLengthPx, pointAt, cumulative,
-  trimToWater, advance, vehiclePosition, violatesRules, buildTransport, buildRoutes, rng
+  VEHICLE, TIME_SCALE, MIN_VEHICLE_PX, MAX_POINTS, REFUEL_MIN, screenLengthPx, pointAt, cumulative,
+  trimToWater, advance, vehiclePosition, violatesRules, buildTransport, buildRoutes, nearestTown, rng
 } from '../src/transport2d.js';
 import { buildRoads, ROAD_CLASS } from '../src/roads2d.js';
 import { settlements, rankSettlements, heightKm, WORLD2D } from '../src/world2d.js';
@@ -35,7 +35,16 @@ const tr = buildTransport(net, towns);
     assert.ok(r.a >= 0 && r.a < towns.length && r.b >= 0 && r.b < towns.length, 'A и B внутри списка');
     assert.notEqual(r.a, r.b, 'A и B — разные поселения');
     assert.ok(r.points.length >= 2, 'у маршрута есть геометрия');
-    if (r.kind === 'air' || r.kind === 'sea') assert.equal(r.points.length, 2, 'F-117: ровно две точки у ' + r.kind);
+    if (r.kind === 'air' || r.kind === 'sea') {
+      // F-117: две точки A и B; F-123: дальний рейс получает ровно одну N — дозаправку
+      const want = r.via >= 0 ? 3 : 2;
+      assert.equal(r.points.length, want, 'F-117: ' + want + ' точек у ' + r.kind + ' (via=' + r.via + ')');
+      if (r.via >= 0) {
+        assert.ok(r.lengthKm > VEHICLE.plane.rangeKm, 'точка N появляется только на рейсе длиннее бака');
+        assert.ok(Math.hypot(r.points[1][0] - towns[r.via].x, r.points[1][1] - towns[r.via].y) < 1e-9, 'N — это поселение');
+        assert.ok(r.via !== r.a && r.via !== r.b, 'N не совпадает с A или B');
+      }
+    }
     if (r.kind === 'ground') assert.ok(r.points.length >= 2 && r.points.length <= 250, 'у наземного — вершины дороги');
     assert.ok(r.lengthKm > 0, 'длина маршрута положительна');
     assert.ok(r.points.length <= MAX_POINTS.ground, 'точек не больше допустимого');
@@ -222,9 +231,75 @@ const tr = buildTransport(net, towns);
   }
 }
 
+/* 12. F-123: бак, дозаправка и точка N на дальнем рейсе --- */
+{
+  const probe = buildTransport(net, towns);
+  const air = probe.routes.filter((r) => r.kind === 'air');
+  const withVia = air.filter((r) => r.via >= 0);
+  assert.ok(withVia.length >= 1, 'дальние рейсы получают дозаправку: ' + withVia.length);
+  assert.ok(withVia.length < air.length, 'дозаправка — не на каждом рейсе (изредка)');
+  for (const r of air) {
+    if (r.via < 0) assert.ok(r.lengthKm <= VEHICLE.plane.rangeKm + 1e-9, 'без N рейс короче бака');
+    else assert.ok(r.lengthKm > VEHICLE.plane.rangeKm, 'с N рейс длиннее бака');
+  }
+
+  // бак тратится по километрам: 20 замеров отношения «километры / расход»
+  const v = probe.vehicles.find((x) => x.kind === 'car');
+  const range = VEHICLE.car.rangeKm;
+  for (let i = 0; i < 20; i++) {
+    v.fuel = 0.9;
+    v.refuelMin = 0;
+    const f0 = v.fuel;
+    advance(probe, 0.2);                       // 1.2 игровых минуты
+    const km = v.speedKmh * (0.2 * TIME_SCALE / 3600);
+    assert.ok(Math.abs((f0 - v.fuel) - km / range) < 1e-9, 'F-123: расход ровно км / запас хода, шаг ' + i);
+    v.t = 0.5;
+  }
+
+  // бак не уходит в минус и не переливается
+  const probe2 = buildTransport(net, towns);
+  for (let i = 0; i < 400; i++) advance(probe2, 0.5);
+  for (const x of probe2.vehicles) {
+    assert.ok(x.fuel >= 0 && x.fuel <= 1 + 1e-9, 'F-123: бак в 0…1, а не ' + x.fuel);
+    assert.ok(x.refuelMin >= 0 && x.refuelMin <= REFUEL_MIN, 'стояние у колонки не длиннее ' + REFUEL_MIN + ' минут');
+  }
+  assert.ok(probe2.vehicles.some((x) => x.stops > 0), 'кто-то уже заправлялся');
+
+  // дозаправка длится ровно REFUEL_MIN игровых минут, потом бак полный
+  const p3 = buildTransport(net, towns);
+  const one = p3.vehicles[0];
+  one.fuel = 0.001; one.refuelMin = 0; one.t = 0.5;
+  advance(p3, 0.5);
+  assert.ok(one.refuelMin > 0, 'F-123: на исходе бака — остановка');
+  const before = one.t;
+  advance(p3, 0.5);
+  assert.equal(one.t, before, 'пока заправляется — не двигается');
+  for (let i = 0; i < 10; i++) advance(p3, 0.5);   // 30 игровых минут
+  assert.equal(one.refuelMin, 0, 'заправка закончилась');
+  assert.equal(one.stops, 1, 'заправка засчитана один раз');
+  assert.ok(one.fuel > 0.2, 'после колонки бак почти полный и снова тратится: ' + one.fuel.toFixed(2));
+  assert.notEqual(one.t, before, 'после заправки единица снова едет');
+
+  // ближайшее поселение — для точки N
+  const idx = nearestTown(towns, towns[3].x, towns[3].y, [3]);
+  assert.notEqual(idx, 3, 'N не совпадает с самим городом');
+  for (let i = 0; i < 20; i++) {
+    const t = towns[i];
+    const j = nearestTown(towns, t.x + 0.001, t.y + 0.001, [i]);
+    let bestD = Infinity;
+    for (let k = 0; k < towns.length; k++) {
+      if (k === i) continue;
+      bestD = Math.min(bestD, Math.hypot(towns[k].x - t.x, towns[k].y - t.y));
+    }
+    const d = Math.hypot(towns[j].x - t.x, towns[j].y - t.y);
+    assert.ok(Math.abs(d - bestD) < 1e-6, 'N — действительно ближайшее поселение (шаг ' + i + ')');
+  }
+}
+
 console.log('маршрутов: ' + tr.routes.length + ' · единиц: ' + tr.vehicles.length +
   ' · ' + JSON.stringify(tr.counts.byKind));
 console.log('воздух: ' + tr.routes.filter((r) => r.kind === 'air').length +
   ' · море: ' + tr.routes.filter((r) => r.kind === 'sea').length +
   ' · земля: ' + tr.routes.filter((r) => r.kind === 'ground').length);
-console.log('OK: 11 групп проверок транспорта §44 (F-116…F-121 по 20 значений)');
+console.log('заправок в пути: ' + (tr.refueling || 0) + ' · рейсов с точкой N: ' + tr.routes.filter((r) => r.via >= 0).length);
+console.log('OK: 12 групп проверок транспорта §44 (F-116…F-123 по 20 значений)');

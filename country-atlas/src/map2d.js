@@ -394,6 +394,14 @@ export class Map2D {
         ctx.fill();
         continue;
       }
+      if (v.refuelMin > 0) {
+        // F-123: стоит у колонки — вокруг точки тонкое кольцо, чтобы это было видно
+        ctx.strokeStyle = 'rgba(255,214,110,0.85)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(sx, sy, Math.max(4, len * 0.6 + 3), 0, Math.PI * 2);
+        ctx.stroke();
+      }
       const w = v.kind === 'ship' ? Math.max(2.4, len * 0.34) : Math.max(1.6, len * 0.5);
       // тёмный контур, затем корпус — иначе на светлой дороге машина теряется
       ctx.strokeStyle = 'rgba(12,18,24,0.85)';
@@ -534,7 +542,9 @@ export class Map2D {
       if (!t) this.hud.cars.textContent = '—';
       else {
         const k = t.counts.byKind;
-        this.hud.cars.textContent = t.vehicles.length + ' в пути · ' + k.car + ' авто · ' + k.ship + ' судов · ' + k.plane + ' самолётов';
+        const ref = t.refueling || 0;
+        this.hud.cars.textContent = t.vehicles.length + ' ед. · ' + k.car + ' авто · ' + k.ship + ' судов · ' +
+          k.plane + ' самолётов' + (ref ? ' · на заправке ' + ref : '');
       }
     }
   }

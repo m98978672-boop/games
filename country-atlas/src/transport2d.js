@@ -4,14 +4,19 @@
 import { WORLD2D, heightKm, settlements, rankSettlements } from './world2d.js';
 import { buildRoads, ROAD_CLASS } from './roads2d.js';
 
-/* Типы единиц §44.6: длина в метрах, своя скорость и цвет. */
+/* Типы единиц §44.6: длина в метрах, своя скорость, запас хода и цвет. */
 export const VEHICLE = {
-  car:   { id: 'car',   name: 'легковая',  lengthM: 4.5,   speedKmh: 110, kind: 'ground', tone: '#f4f6f8', weight: 6 },
-  truck: { id: 'truck', name: 'грузовик',  lengthM: 12,    speedKmh: 85,  kind: 'ground', tone: '#e8a24a', weight: 2.4 },
-  bus:   { id: 'bus',   name: 'автобус',   lengthM: 12,    speedKmh: 80,  kind: 'ground', tone: '#8fd0a0', weight: 1.2 },
-  ship:  { id: 'ship',  name: 'судно',     lengthM: 120,   speedKmh: 34,  kind: 'sea',    tone: '#e6f2f8', weight: 1 },
-  plane: { id: 'plane', name: 'самолёт',   lengthM: 38,    speedKmh: 780, kind: 'air',    tone: '#ffffff', weight: 1 }
+  car:   { id: 'car',   name: 'легковая',  lengthM: 4.5,   speedKmh: 110, kind: 'ground', tone: '#f4f6f8', weight: 6,   rangeKm: 700 },
+  truck: { id: 'truck', name: 'грузовик',  lengthM: 12,    speedKmh: 85,  kind: 'ground', tone: '#e8a24a', weight: 2.4, rangeKm: 1200 },
+  bus:   { id: 'bus',   name: 'автобус',   lengthM: 12,    speedKmh: 80,  kind: 'ground', tone: '#8fd0a0', weight: 1.2, rangeKm: 900 },
+  ship:  { id: 'ship',  name: 'судно',     lengthM: 120,   speedKmh: 34,  kind: 'sea',    tone: '#e6f2f8', weight: 1,   rangeKm: 1800 },
+  plane: { id: 'plane', name: 'самолёт',   lengthM: 38,    speedKmh: 780, kind: 'air',    tone: '#ffffff', weight: 1,   rangeKm: 5500 }
 };
+
+/* F-123: дозаправка. Бак рассчитан на запас хода; кончился — 12 игровых минут у колонки.
+   Дальний рейс (длиннее бака) получает ровно одну промежуточную точку N — там и заправляется. */
+export const REFUEL_MIN = 12;
+export const FUEL_LOW = 0.02;
 
 /* Порядок точек маршрута: у наземного — любое число N, у воздушного и водного — ровно две (A и B). */
 export const MAX_POINTS = { ground: Infinity, sea: 2, air: 2 };
@@ -97,6 +102,17 @@ export function screenLengthPx(lengthM, scale) {
   return Math.max(MIN_VEHICLE_PX, (lengthM / 1000) * scale);
 }
 
+/* Ближайшее поселение к точке — для точки N (дозаправки). */
+export function nearestTown(towns, x, y, except = []) {
+  let best = -1, bestD = Infinity;
+  for (let i = 0; i < towns.length; i++) {
+    if (except.includes(i)) continue;
+    const d = Math.hypot(towns[i].x - x, towns[i].y - y);
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  return best;
+}
+
 /* Маршруты: наземные — по рёбрам дорог, водные — паромы, воздушные — между хабами. */
 export function buildRoutes(net, towns, hubCount = 10) {
   const routes = [];
@@ -170,9 +186,11 @@ export function buildRoutes(net, towns, hubCount = 10) {
   pairs.sort((x, y) => y.d - x.d);
   for (const p of pairs.slice(0, 15)) {
     const A = towns[p.i], B = towns[p.j];
-    const pts = [[A.x, A.y], [B.x, B.y]];
-    const route = { id: 'r' + (id++), kind: 'air', cls: 'A', a: p.i, b: p.j, points: pts, edge: null, speedKmh: VEHICLE.plane.speedKmh, acc: cumulative(pts) };
-    route.lengthKm = p.d;
+    // F-123: рейс длиннее бака получает одну точку N — дозаправку по пути
+    const via = p.d > VEHICLE.plane.rangeKm ? nearestTown(towns, (A.x + B.x) / 2, (A.y + B.y) / 2, [p.i, p.j]) : -1;
+    const pts = via >= 0 ? [[A.x, A.y], [towns[via].x, towns[via].y], [B.x, B.y]] : [[A.x, A.y], [B.x, B.y]];
+    const route = { id: 'r' + (id++), kind: 'air', cls: 'A', a: p.i, b: p.j, via, points: pts, edge: null, speedKmh: VEHICLE.plane.speedKmh, acc: cumulative(pts) };
+    route.lengthKm = route.acc[route.acc.length - 1];
     routes.push(route);
   }
   return { routes, ranks };
@@ -215,6 +233,9 @@ function makeVehicle(kind, route, rand, index) {
   const lane = route.kind === 'ground' ? (ROAD_CLASS[route.cls].widthM / 2000) : 0;
   return {
     kind, route, dir,
+    fuel: 0.35 + 0.65 * rand(),                 // F-123: кто-то только заправился, кто-то на исходе
+    refuelMin: 0,                               // сколько игровых минут ещё стоять у колонки
+    stops: 0,                                   // сколько раз заправлялся
     t: rand(),                                  // доля пройденного пути A → B
     speedKmh: cap * (0.85 + 0.3 * rand()),      // живая скорость вокруг предела
     offsetKm: dir > 0 ? lane : -lane,           // своя половина дороги
@@ -243,21 +264,51 @@ export function buildTransport(net = buildRoads(), towns = settlements(), seed =
   return { routes, vehicles, counts, towns, ranks, minutes: 8 * 60 };   // мир стартует в 8:00
 }
 
-/* F-119: шаг мира. dtSec — реальные секунды, часы игры идут в TIME_SCALE раз быстрее. */
+/* F-119: шаг мира. dtSec — реальные секунды, часы игры идут в TIME_SCALE раз быстрее.
+   Большой шаг режется на куски не длиннее 2 с: иначе единица «сжигала» весь бак за один вызов. */
 export function advance(transport, dtSec) {
+  let left = Math.max(0, dtSec);
+  while (left > 1e-9) {
+    const dt = Math.min(2, left);
+    stepOnce(transport, dt);
+    left -= dt;
+  }
+  return transport;
+}
+
+function stepOnce(transport, dtSec) {
   const hours = (dtSec * TIME_SCALE) / 3600;
   transport.minutes += dtSec * TIME_SCALE / 60;
+  const minutes = dtSec * TIME_SCALE / 60;
+  transport.refueling = 0;
   for (const v of transport.vehicles) {
     const r = v.route;
     if (!r.lengthKm) continue;
-    const step = (v.speedKmh * hours) / r.lengthKm;
+    // F-123: стоит у колонки — мир идёт, машина нет
+    if (v.refuelMin > 0) {
+      v.refuelMin -= minutes;
+      if (v.refuelMin <= 0) { v.refuelMin = 0; v.fuel = 1; }
+      transport.refueling++;
+      continue;
+    }
+    const range = VEHICLE[v.kind].rangeKm;
+    // за один шаг нельзя уехать дальше, чем осталось в баке
+    const step = Math.min((v.speedKmh * hours) / r.lengthKm, (v.fuel * range) / r.lengthKm);
+    const km = step * r.lengthKm;
+    v.fuel -= km / range;
+    if (v.fuel <= FUEL_LOW) {
+      v.fuel = Math.max(0, v.fuel);
+      v.refuelMin = REFUEL_MIN;
+      v.stops++;
+      transport.refueling++;
+      continue;
+    }
     // «фаза» растёт всегда: 0…1 — путь A→B, 1…2 — обратно B→A. Точки A и B не меняются.
     const phase = v.dir > 0 ? v.t : 2 - v.t;
     const next = (phase + step) % 2;
     v.dir = next <= 1 ? 1 : -1;
     v.t = next <= 1 ? next : 2 - next;
   }
-  return transport;
 }
 
 /* Положение единицы на карте в километрах (со смещением в свою полосу). */
@@ -277,7 +328,8 @@ export function violatesRules(v) {
   // мост короче 20 км допускается: дорожный слой сам держит мокрый участок не длиннее двух клеток
   if (v.route.kind === 'ground' && h < -20) return 'на воде';
   if (v.route.kind === 'sea' && h >= 0) return 'на суше';
-  if (v.route.kind === 'air' && v.route.points.length !== 2) return 'лишние точки';
-  if (v.route.kind !== 'ground' && v.route.points.length !== 2) return 'лишние точки';
+  // F-117 + F-123: у воздуха и воды две точки A и B, а дальний рейс получает ровно одну N
+  const allowed = v.route.via >= 0 ? 3 : 2;
+  if (v.route.kind !== 'ground' && v.route.points.length !== allowed) return 'лишние точки';
   return null;
 }
