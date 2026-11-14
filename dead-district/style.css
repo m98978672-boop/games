@@ -495,3 +495,22 @@ body { font-family: system-ui, "Segoe UI", sans-serif; }
 .item-icon { display:inline-flex; align-items:center; justify-content:center; flex:0 0 32px; width:32px; height:32px; font-size:21px; border:1px solid #62796d; background:#253b35; border-radius:4px; }
 
 .item-icon img { width:28px; height:28px; object-fit:contain; image-rendering:pixelated; }
+
+/* Двухстороннее хранилище: отдельные списки и крупные цели для касания. */
+.storage-card { width:min(850px, 100%); max-height:min(90vh, 760px); display:flex; flex-direction:column; gap:10px; padding:18px; border:2px solid #a8b5a0; background:#172728; box-shadow:0 16px 60px #000b; }
+.storage-header { display:flex; justify-content:space-between; align-items:center; gap:12px; border-bottom:1px solid #53665c; padding-bottom:10px; }
+.storage-header h2 { margin:2px 0 0; color:#e1d4a5; letter-spacing:.08em; }
+.storage-kicker { color:#9eb8a8; font-size:11px; letter-spacing:.16em; }
+.storage-help, .storage-footer { margin:0; color:#b5c6bd; font-size:13px; }
+.storage-message { min-height:1.2em; color:#f4d895; font-size:13px; }
+.storage-grid { min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:12px; flex:1; }
+.storage-column { min-width:0; min-height:0; background:#101c20; border:1px solid #4e675d; display:flex; flex-direction:column; }
+.storage-column-header { min-height:52px; padding:8px; display:flex; align-items:center; justify-content:space-between; gap:6px; background:#263a36; }
+.storage-column-header h3 { margin:0; font-size:14px; color:#e4e7d8; }
+.storage-list { overflow-y:auto; padding:6px; min-height:100px; max-height:49vh; display:flex; flex-direction:column; gap:5px; }
+.storage-item { width:100%; display:flex; align-items:center; gap:8px; text-align:left; color:#f0f3ed; background:#263834; border:1px solid #50665a; padding:5px; font:inherit; cursor:pointer; }
+.storage-item:hover, .storage-item:focus-visible { background:#3b5747; border-color:#e3d49e; }
+.storage-item-label { flex:1; overflow-wrap:anywhere; }
+.storage-arrow { color:#e7d593; font-size:20px; padding:0 4px; }
+.storage-empty { color:#9bada4; padding:10px; font-size:14px; }
+@media (max-width:600px) { .storage-card { padding:10px; max-height:95vh; } .storage-grid { gap:6px; } .storage-column-header { flex-wrap:wrap; } .storage-item { font-size:12px; gap:4px; } .storage-item .item-icon { flex-basis:28px; width:28px; height:28px; } .storage-item .item-icon img { width:24px; height:24px; } }

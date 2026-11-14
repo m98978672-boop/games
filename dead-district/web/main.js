@@ -14,6 +14,7 @@
   var touchVec = { x: 0, y: 0 };
   var canvasEl = null;
   var activeModal = '';
+  var activeStorage = null;
   var rafId = 0;
   var lastTime = 0;
   var pausedBeforeCatalog = false;
@@ -72,6 +73,7 @@
       vehicles: [],
       farms: [],
       campfires: [],
+      storage: {},
       spatial: new DD.SpatialHash(8),
       flowField: {},
       visible: {},
@@ -96,6 +98,7 @@
       if (saved.health) state.health = saved.health;
       if (saved.inv) state.inv = saved.inv;
       if (saved.util) state.util = saved.util;
+      if (saved.storage && typeof saved.storage === 'object') state.storage = saved.storage;
       if (Number.isFinite(saved.encounterDay)) state.encounterDay = saved.encounterDay;
       addToast('Сохранение загружено.');
     }
@@ -479,15 +482,7 @@
         addToast('Окно разбито.'); return;
       }
       var cont = state.world.containers[k];
-      if (cont && !cont.looted) {
-        cont.looted = true;
-        var found = Sys.rollZoneLoot(cont.zone, state.util.hoursOutage);
-        for (var fi = 0; fi < found.length; fi++) {
-          Sys.addItem(state.inv, found[fi].id, found[fi].qty, found[fi].freshness);
-        }
-        addToast('Обыск: найдено предметов ' + found.length);
-        return;
-      }
+      if (cont) { openStorage(cont); return; }
       for (var pi = 0; pi < state.farms.length; pi++) {
         var fp = state.farms[pi];
         if (fp.tx === tx && fp.ty === ty && fp.stage >= 3 && !fp.dead) {
@@ -553,6 +548,9 @@
   function closeModals() {
     clearInput();
     activeModal = '';
+    activeStorage = null;
+    var storageOverlay = document.getElementById('storage-overlay');
+    if (storageOverlay) storageOverlay.hidden = true;
     var mo = document.getElementById('modal-overlay');
     if (mo) mo.hidden = true;
     var po = document.getElementById('pause-overlay');
@@ -569,9 +567,92 @@
   };
   var pixelIcons = {"antibiotics":"items","antiseptic":"items","apple":"items","backpack":"items","baked_potato":"items","bandage":"items","beef_jerky":"items","boiled_water":"items","book_skill":"items","bottled_water":"items","bread":"items","cabbage":"items","canned_beans":"items","canned_soup":"items","carrot":"items","chocolate_bar":"items","clothing_item":"items","coffee":"items","cooked_beef":"items","dirty_bandage":"items","key":"items","novel":"items","painkillers":"items","potato":"items","radish":"items","raw_beef":"items","seeds_packet":"items","soda":"items","splint":"items","sterile_bandage":"items","strawberry":"items","suture_kit":"items","tainted_water":"items","thermometer":"items","tomato":"items","battery":"tools","can_opener":"tools","cloth_rag":"tools","duct_tape":"tools","flashlight":"tools","gas_can":"tools","generator_part":"tools","lighter":"tools","nails":"tools","saw":"tools","scrap_metal":"tools","screwdriver":"tools","wire":"tools","wood_plank":"tools","wrench":"tools","ammo_12ga":"weapons","ammo_45acp":"weapons","ammo_556":"weapons","ammo_9mm":"weapons","ar15":"weapons","baseball_bat":"weapons","crowbar":"weapons","fire_axe":"weapons","glock_17":"weapons","hammer":"weapons","hunting_knife":"weapons","kitchen_knife":"weapons","m1911":"weapons","machete":"weapons","mossberg_500":"weapons"};
   var categoryIcons = {food:'🍽️',drink:'🥤',medical:'🩺',melee:'⚔️',firearm:'🔫',ammo:'📦',tool:'🔧',clothing:'👕',backpack:'🎒',book:'📕',seed:'🌱',material:'🧱'};
+  function itemIcon(slot, meta) {
+    var icon = document.createElement('span'); icon.className = 'item-icon'; icon.setAttribute('aria-hidden', 'true');
+    var iconName = pixelIcons[slot.id] ? slot.id : (meta.cat === 'seed' ? 'seeds_packet' : (meta.cat === 'backpack' ? 'backpack' : (meta.cat === 'clothing' ? 'clothing_item' : (meta.cat === 'book' && slot.id !== 'magazine' ? 'book_skill' : ''))));
+    if (iconName) {
+      var picture = document.createElement('img'); picture.alt = ''; picture.src = 'assets/icons/' + pixelIcons[iconName] + '/icon_' + iconName + '.png';
+      icon.appendChild(picture);
+    } else icon.textContent = itemIcons[slot.id] || categoryIcons[meta.cat] || '📦';
+    return icon;
+  }
+  var storageNames = {shelf:'Полка',cabinet:'Шкаф',fridge:'Холодильник',crate:'Ящик',chest:'Сундук'};
+  function openStorage(cont) {
+    clearInput();
+    var key = cont.tx + ',' + cont.ty;
+    if (!Object.prototype.hasOwnProperty.call(state.storage, key)) {
+      state.storage[key] = Sys.rollZoneLoot(cont.zone, state.util.hoursOutage);
+    }
+    activeStorage = {key:key, kind:cont.kind || 'crate'};
+    activeModal = 'storage';
+    document.getElementById('storage-overlay').hidden = false;
+    document.getElementById('storage-message').textContent = '';
+    renderStorage();
+  }
+  // При переносе проверяем вместимость до удаления из исходного списка.
+  function takeStorageItem(index) {
+    var contents = state.storage[activeStorage.key], slot = contents[index];
+    if (!slot) return false;
+    if (!Sys.addItem(state.inv, slot.id, 1, slot.freshness)) return false;
+    if (--slot.qty <= 0) contents.splice(index, 1);
+    return true;
+  }
+  function putStorageItem(index) {
+    var slot = state.inv.items[index];
+    if (!slot) return false;
+    if (slot.id === state.player.weapon && Sys.countItem(state.inv, slot.id) <= 1) return false;
+    var contents = state.storage[activeStorage.key];
+    var meta = DataDB.getItem(slot.id) || {}, maxStack = meta.stack || 1;
+    var target = contents.find(function(s) { return s.id === slot.id && s.freshness === slot.freshness && s.qty < maxStack; });
+    if (target) target.qty += 1;
+    else contents.push({id:slot.id,qty:1,freshness:slot.freshness});
+    if (--slot.qty <= 0) state.inv.items.splice(index, 1);
+    return true;
+  }
+  function renderStorage() {
+    if (!state || !activeStorage) return;
+    var name=storageNames[activeStorage.kind] || 'Контейнер';
+    var contents=state.storage[activeStorage.key], contentsEl=document.getElementById('storage-contents'), invEl=document.getElementById('storage-inventory');
+    document.getElementById('storage-title').textContent=name.toUpperCase();
+    document.getElementById('storage-container-title').textContent='Внутри · ' + contents.reduce(function(n,s){return n+s.qty;},0);
+    document.getElementById('storage-inventory-title').textContent='Инвентарь · ' + Sys.getTotalWeight(state.inv).toFixed(1) + ' кг (перегруз от ' + Sys.getMaxWeight(state.inv).toFixed(1) + ')';
+    contentsEl.innerHTML=''; invEl.innerHTML='';
+    function drawList(el, items, take) {
+      if (!items.length) { var empty=document.createElement('p'); empty.className='storage-empty'; empty.textContent=take?'Здесь пусто':'Инвентарь пуст'; el.appendChild(empty); return; }
+      items.forEach(function(slot,index) {
+        var meta=DataDB.getItem(slot.id) || {name:slot.id};
+        var btn=document.createElement('button'); btn.type='button'; btn.className='storage-item';
+        btn.appendChild(itemIcon(slot,meta));
+        var text=document.createElement('span'); text.className='storage-item-label'; text.textContent=meta.name + ' ×' + slot.qty; btn.appendChild(text);
+        var arrow=document.createElement('span'); arrow.className='storage-arrow'; arrow.textContent=take?'→':'←'; btn.appendChild(arrow);
+        btn.setAttribute('aria-label',(take?'Взять ':'Положить ') + meta.name + ', одна штука');
+        btn.addEventListener('click',function(){
+          var ok=take?takeStorageItem(index):putStorageItem(index);
+          document.getElementById('storage-message').textContent=ok?'':(take?'Не хватает места в инвентаре.':'Сначала смените экипированное оружие.');
+          renderStorage(); updateHud();
+        });
+        el.appendChild(btn);
+      });
+    }
+    drawList(contentsEl,contents,true); drawList(invEl,state.inv.items,false);
+  }
+  function takeAllStorage() {
+    if (!activeStorage) return;
+    var contents=state.storage[activeStorage.key], taken=0, blocked=false;
+    // Перебираем все стопки: тяжёлый предмет не должен блокировать лёгкие.
+    for (var i=contents.length-1;i>=0;i--) {
+      while (contents[i] && contents[i].qty>0) {
+        if (!takeStorageItem(i)) { blocked=true; break; }
+        taken++;
+      }
+    }
+    document.getElementById('storage-message').textContent=blocked?'Взято: ' + taken + '. Остальное не помещается.':'Взято предметов: ' + taken;
+    renderStorage(); updateHud();
+  }
   function openModal(kind) {
     if (!state) return;
     if (activeModal === kind) { closeModals(); return; }
+    if (activeModal === 'storage') closeModals();
     clearInput();
     activeModal = kind;
     var mo = document.getElementById('modal-overlay');
@@ -613,12 +694,7 @@
           var meta = DataDB.getItem(slot.id) || { name: slot.id };
           var btn = document.createElement('button');
           btn.className = 'dd-btn inventory-item';
-          var icon = document.createElement('span'); icon.className = 'item-icon'; icon.setAttribute('aria-hidden', 'true');
-          var iconName = pixelIcons[slot.id] ? slot.id : (meta.cat === 'seed' ? 'seeds_packet' : (meta.cat === 'backpack' ? 'backpack' : (meta.cat === 'clothing' ? 'clothing_item' : (meta.cat === 'book' && slot.id !== 'magazine' ? 'book_skill' : ''))));
-          if (iconName) {
-            var picture = document.createElement('img'); picture.alt = ''; picture.src = 'assets/icons/' + pixelIcons[iconName] + '/icon_' + iconName + '.png';
-            icon.appendChild(picture);
-          } else icon.textContent = itemIcons[slot.id] || categoryIcons[meta.cat] || '📦';
+          var icon = itemIcon(slot, meta);
           var label = document.createElement('span'); label.textContent = meta.name + ' x' + slot.qty + ' (' + ((meta.weight || 0.1) * slot.qty).toFixed(1) + ' кг)';
           btn.appendChild(icon); btn.appendChild(label);
           btn.addEventListener('click', function () {
@@ -787,7 +863,7 @@
     onClick('btn-flash', function () { if (state) { state.player.flashlightOn = !state.player.flashlightOn; recomputeFovAndFlow(); } });
     onClick('btn-reload', performReload);
     onClick('btn-save', function () {
-      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay })) {
+      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay, storage: state.storage })) {
         addToast('Игра сохранена!');
       }
     });
@@ -805,9 +881,11 @@
     });
     onClick('btn-new', function () { newGame(false); });
     onClick('modal-close', closeModals);
+    onClick('storage-close', closeModals);
+    onClick('storage-take-all', takeAllStorage);
     onClick('btn-resume', function () { if (state) { state.paused = false; closeModals(); } });
     onClick('btn-pause-save', function () {
-      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay })) addToast('Сохранено!');
+      if (state && DD.SaveManager.save({ player: state.player, tw: state.tw, needs: state.needs, health: state.health, inv: state.inv, util: state.util, encounterDay: state.encounterDay, storage: state.storage })) addToast('Сохранено!');
     });
     onClick('btn-pause-load', function () { newGame(true); });
     onClick('btn-pause-new', function () { newGame(false); });

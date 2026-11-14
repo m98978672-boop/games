@@ -184,7 +184,7 @@
 
         // Контейнер лута внутри здания
         var lootZone = zone === 'hospital' ? 'hospital' : (zone === 'commercial' ? 'grocery' : (zone === 'industrial' ? 'warehouse' : 'residential'));
-        var cObj = { tx: ox + bz.x + 2, ty: oy + bz.y + 2, zone: lootZone, looted: false };
+        var cObj = { tx: ox + bz.x + 2, ty: oy + bz.y + 2, zone: lootZone, kind: (bi % 2 ? 'chest' : 'crate') };
         containers.push(cObj);
         this.containers[this.tileKey(cObj.tx, cObj.ty)] = cObj;
 
@@ -201,6 +201,10 @@
           if (tiles[fy * CHUNK_SIZE + fx] !== floorT || (ox+fx===cObj.tx && oy+fy===cObj.ty)) continue;
           var furn = { tx:ox+fx, ty:oy+fy, kind:choices[(ci+rotation) % choices.length] };
           furniture.push(furn); this.furniture[this.tileKey(furn.tx,furn.ty)] = furn;
+          if (furn.kind === 'shelf' || furn.kind === 'cabinet' || furn.kind === 'fridge' || furn.kind === 'crate') {
+            var store = { tx:furn.tx, ty:furn.ty, zone:lootZone, kind:furn.kind, furnished:true };
+            containers.push(store); this.containers[this.tileKey(store.tx,store.ty)] = store;
+          }
         }
       }
     }
