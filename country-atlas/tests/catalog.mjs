@@ -96,7 +96,8 @@ type(q, "");
 /* 5. Вкладки ------------------------------------------------------------- */
 const phys = [...document.querySelectorAll(".tab")].find((t) => t.dataset.tab === "Физика");
 click(phys);
-ok(cards().length === 1 && cards()[0].dataset.id === "29", "вкладка «Физика» показывает не то");
+const physIds = cards().map((c) => c.dataset.id).sort();
+ok(physIds.join(",") === "29,33", `вкладка «Физика» показывает не то: ${physIds.join(",")}`);
 const all = [...document.querySelectorAll(".tab")].find((t) => t.dataset.tab === "all");
 click(all);
 ok(cards().length === data.length, "вкладка «Все» не вернула все карточки");

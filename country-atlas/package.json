@@ -12,9 +12,12 @@
     "serve": "python3 -m http.server 8080 --bind 0.0.0.0",
     "routines": "node tools/gen-routines.mjs",
     "test:routines": "node tests/routines.mjs",
-    "test": "node tests/catalog.mjs && node tests/routines.mjs && node tests/demo.mjs",
+    "test": "node tests/catalog.mjs && node tests/routines.mjs && node tests/demo.mjs && node tests/equations.mjs && node tests/equations-demo.mjs",
     "demo": "node tools/build-routines-demo.mjs",
-    "test:demo": "node tests/demo.mjs"
+    "test:demo": "node tests/demo.mjs",
+    "demo:eq": "node tools/build-routines-demo.mjs equations",
+    "test:equations": "node tests/equations.mjs",
+    "test:equations-demo": "node tests/equations-demo.mjs"
   },
   "dependencies": {
     "three": "^0.186.0"
