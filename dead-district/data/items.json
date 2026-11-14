@@ -98,6 +98,28 @@
 
     {"id": "key_house", "name": "Ключ от дома", "cat": "key", "weight": 0.03, "real_ref": "clim_comfort_ambient_temp_c"},
     {"id": "key_police", "name": "Ключ от оружейной", "cat": "key", "weight": 0.04, "real_ref": "wpn_glock17_mag_capacity"},
-    {"id": "key_car", "name": "Ключи от авто", "cat": "key", "weight": 0.05, "real_ref": "veh_sedan_mass_kg"}
+    {"id": "key_car", "name": "Ключи от авто", "cat": "key", "weight": 0.05, "real_ref": "veh_sedan_mass_kg"},
+
+    {"id": "oatmeal", "name": "Овсяная каша", "cat": "food", "weight": 0.3, "real_ref": "food_canned_beans_kcal", "hunger": 32, "thirst": 0, "spoil_days": 365, "perishable": false},
+    {"id": "rice", "name": "Рис", "cat": "food", "weight": 0.4, "real_ref": "food_canned_beans_kcal", "hunger": 38, "thirst": -3, "spoil_days": 365, "perishable": false},
+    {"id": "peanut_butter", "name": "Арахисовая паста", "cat": "food", "weight": 0.35, "real_ref": "food_canned_beans_kcal", "hunger": 42, "thirst": -5, "spoil_days": 365, "perishable": false},
+    {"id": "crackers", "name": "Крекеры", "cat": "food", "weight": 0.18, "real_ref": "food_canned_beans_kcal", "hunger": 23, "thirst": -4, "spoil_days": 365, "perishable": false},
+    {"id": "dried_fruit", "name": "Сухофрукты", "cat": "food", "weight": 0.16, "real_ref": "food_canned_beans_kcal", "hunger": 26, "thirst": -2, "spoil_days": 365, "perishable": false},
+    {"id": "canned_corn", "name": "Консервированная кукуруза", "cat": "food", "weight": 0.4, "real_ref": "food_canned_beans_kcal", "hunger": 32, "thirst": 5, "spoil_days": 365, "perishable": false},
+    {"id": "canned_fish", "name": "Рыбные консервы", "cat": "food", "weight": 0.3, "real_ref": "food_canned_beans_kcal", "hunger": 40, "thirst": -3, "spoil_days": 365, "perishable": false},
+    {"id": "energy_bar", "name": "Энергетический батончик", "cat": "food", "weight": 0.08, "real_ref": "food_canned_beans_kcal", "hunger": 25, "thirst": 0, "spoil_days": 365, "perishable": false},
+    {"id": "tea", "name": "Бутылка чая", "cat": "drink", "weight": 0.5, "real_ref": "med_daily_water_intake_l", "thirst": 30, "hunger": 0},
+    {"id": "juice", "name": "Фруктовый сок", "cat": "drink", "weight": 0.5, "real_ref": "med_daily_water_intake_l", "thirst": 29, "hunger": 10},
+    {"id": "sports_drink", "name": "Спортивный напиток", "cat": "drink", "weight": 0.5, "real_ref": "med_daily_water_intake_l", "thirst": 32, "hunger": 5},
+    {"id": "soap", "name": "Мыло", "cat": "tool", "weight": 0.12, "real_ref": "clim_comfort_ambient_temp_c"},
+    {"id": "towel", "name": "Полотенце", "cat": "tool", "weight": 0.3, "real_ref": "clim_comfort_ambient_temp_c"},
+    {"id": "matches", "name": "Спички", "cat": "tool", "weight": 0.04, "real_ref": "clim_comfort_ambient_temp_c"},
+    {"id": "rope", "name": "Моток верёвки", "cat": "tool", "weight": 0.6, "real_ref": "clim_comfort_ambient_temp_c"},
+    {"id": "binoculars", "name": "Бинокль", "cat": "tool", "weight": 0.7, "real_ref": "clim_comfort_ambient_temp_c"},
+    {"id": "map", "name": "Карта города", "cat": "tool", "weight": 0.1, "real_ref": "clim_comfort_ambient_temp_c"},
+    {"id": "magazine", "name": "Журнал", "cat": "book", "weight": 0.2, "real_ref": "clim_comfort_ambient_temp_c", "boredom": -12},
+    {"id": "raincoat", "name": "Дождевик", "cat": "clothing", "weight": 0.6, "real_ref": "clim_comfort_ambient_temp_c", "slot": "torso", "insulation": 1, "bite_def": 0.1, "scratch_def": 0.15},
+    {"id": "wool_socks", "name": "Шерстяные носки", "cat": "clothing", "weight": 0.15, "real_ref": "clim_comfort_ambient_temp_c", "slot": "feet", "insulation": 1.2, "bite_def": 0.05, "scratch_def": 0.1},
+    {"id": "work_gloves", "name": "Рабочие перчатки", "cat": "clothing", "weight": 0.25, "real_ref": "clim_comfort_ambient_temp_c", "slot": "hands", "insulation": 0.7, "bite_def": 0.2, "scratch_def": 0.35}
   ]
 }

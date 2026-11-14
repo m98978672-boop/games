@@ -87,6 +87,7 @@
     this.doors = {};
     this.windows = {};
     this.containers = {};
+    this.furniture = {};
   }
 
   ChunkWorld.prototype.key = function (cx, cy) {
@@ -108,6 +109,7 @@
     var doors = [];
     var windows = [];
     var containers = [];
+    var furniture = [];
     var vehicleSpawns = [];
 
     // 1. Биом и дороги L-системы
@@ -181,10 +183,23 @@
         this.windows[this.tileKey(wObj.tx, wObj.ty)] = wObj;
 
         // Контейнер лута внутри здания
-        var lootZone = zone === 'hospital' ? 'pharmacy' : (zone === 'commercial' ? 'supermarket' : zone);
+        var lootZone = zone === 'hospital' ? 'hospital' : (zone === 'commercial' ? 'grocery' : (zone === 'industrial' ? 'warehouse' : 'residential'));
         var cObj = { tx: ox + bz.x + 2, ty: oy + bz.y + 2, zone: lootZone, looted: false };
         containers.push(cObj);
         this.containers[this.tileKey(cObj.tx, cObj.ty)] = cObj;
+
+        // Мебель ставится у углов комнаты, не на оси двери или лута.
+        // Угловые клетки оставляют доступ к обеим половинам здания.
+        var choices = zone === 'hospital' ? ['hospital_bed', 'cabinet', 'table', 'shelf'] :
+          zone === 'industrial' ? ['shelf', 'workbench', 'cabinet', 'crate'] :
+          ['bed', 'sofa', 'table', 'fridge', 'shelf', 'cabinet'];
+        var corners = [[bz.x+1,bz.y+1],[bz.x+bz.w-2,bz.y+1],[bz.x+1,bz.y+bz.h-2],[bz.x+bz.w-2,bz.y+bz.h-2]];
+        for (var ci = 0; ci < corners.length; ci++) {
+          var fx = corners[ci][0], fy = corners[ci][1];
+          if (tiles[fy * CHUNK_SIZE + fx] !== floorT) continue;
+          var furn = { tx:ox+fx, ty:oy+fy, kind:choices[hash2i(cx*4+bi,cy*4+ci,this.seed+190) % choices.length] };
+          furniture.push(furn); this.furniture[this.tileKey(furn.tx,furn.ty)] = furn;
+        }
       }
     }
 
@@ -197,7 +212,7 @@
 
     var chunk = {
       cx: cx, cy: cy, zone: zone, tiles: tiles,
-      doors: doors, windows: windows, containers: containers, vehicleSpawns: vehicleSpawns
+      doors: doors, windows: windows, containers: containers, furniture: furniture, vehicleSpawns: vehicleSpawns
     };
     this.chunks[k] = chunk;
     return chunk;
@@ -223,6 +238,7 @@
     if (t === TILE.WALL_BRICK || t === TILE.WALL_WOOD || t === TILE.WALL_PLASTER || t === TILE.WINDOW || t === TILE.WATER || t === TILE.TREE_OAK || t === TILE.TREE_PINE) {
       return false;
     }
+    if (this.furniture[this.tileKey(tx, ty)]) return false;
     if (t === TILE.DOOR) {
       var d = this.doors[this.tileKey(tx, ty)];
       return Boolean(d && (d.open || d.broken));
@@ -250,7 +266,17 @@
   ChunkWorld.prototype.toggleDoor = function (tx, ty) {
     var d = this.doors[this.tileKey(tx, ty)];
     if (!d || d.broken) return false;
+    var now = this.animationTime || 0;
+    var previous = d.animStart == null ? (d.open ? 1 : 0) : d.animFrom + ((d.open ? 1 : 0) - d.animFrom) * Math.min(1, Math.max(0, (now - d.animStart) / 0.4));
+    d.animFrom = previous; d.animStart = now;
     d.open = !d.open;
+    return true;
+  };
+
+  ChunkWorld.prototype.breakWindow = function (tx, ty) {
+    var w = this.windows[this.tileKey(tx, ty)];
+    if (!w || w.broken || w.barricade > 0) return false;
+    w.broken = true; w.breakTime = this.animationTime || 0;
     return true;
   };
 

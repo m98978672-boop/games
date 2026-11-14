@@ -70,6 +70,39 @@ const frontHP = front.hp, backHP = back.hp;
 key('keydown', 'Space'); key('keyup', 'Space');
 assert.ok(front.hp < frontHP);
 assert.equal(back.hp, backHP);
+assert.equal(state.bloodMarks.length, 1, 'удар оставляет кровь');
+assert.equal(state.bloodMarks[0].x, front.x);
+assert.ok(Object.keys(state.world.furniture).length > 0, 'в зданиях есть мебель');
+for (const f of Object.values(state.world.furniture)) assert.equal(state.world.isWalkable(f.tx, f.ty), false, 'мебель не проходится насквозь');
+// Разбивание окна игроком меняет состояние и записывает время для частиц.
+state.world.setTile(16, 15, win.DD.TILE.WINDOW);
+state.world.windows['16,15'] = {tx:16,ty:15,broken:false,barricade:0};
+key('keydown','KeyE'); key('keyup','KeyE');
+assert.equal(state.world.windows['16,15'].broken, true);
+assert.equal(state.world.windows['16,15'].breakTime, state.elapsed);
+assert.equal(state.world.breakWindow(16,15), false, 'повторного разбивания нет');
+// Зомби разбивает именно клетку, на которой остановился, и перелезает.
+const winWorld = new win.DD.ChunkWorld(123);
+winWorld.setTile(1,0,win.DD.TILE.WINDOW);
+winWorld.windows['1,0']={tx:1,ty:0,broken:false,barricade:0};
+const runner = win.DD.Systems.createZombie(10,'runner',0,0);
+runner.state = win.DD.ZSTATE.CHASE; runner.speed = 1;
+win.DD.Systems.stepZombieActive(runner,.6,5,0,true,{},winWorld);
+assert.equal(winWorld.windows['1,0'].broken,true);
+assert.equal(runner.state,win.DD.ZSTATE.CLIMB_WINDOW);
+win.DD.Systems.stepZombieActive(runner,1.2,5,0,true,{},winWorld);
+assert.ok(runner.x > 1, 'зомби перелезает через окно');
+
+state.world.setTile(16, 15, win.DD.TILE.DOOR);
+// Таблицы районов ссылаются на новые реальные предметы.
+const additions = ['oatmeal','rice','canned_fish','rope','work_gloves','juice'];
+const loot = JSON.parse(fs.readFileSync(path.join(root,'data/loot_tables.json'),'utf8'));
+const items = JSON.parse(fs.readFileSync(path.join(root,'data/items.json'),'utf8')).items;
+for (const id of additions) {
+  assert.ok(items.some(item=>item.id===id));
+  assert.ok(Object.values(loot.zones).some(zone=>zone.entries.some(entry=>entry.id===id)));
+}
+
 
 // На реальном игровом цикле бег вдоль открытой двери не пересекает стену.
 state.zombies.length = 0;

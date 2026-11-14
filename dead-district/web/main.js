@@ -77,6 +77,7 @@
       visible: {},
       explored: {},
       noiseRings: [],
+      bloodMarks: [],
       lastNoise: { x: 15, y: 15, ttl: 0 },
       logs: ['Добро пожаловать в Dead District! Выживите любой ценой.'],
       paused: false,
@@ -162,6 +163,7 @@
   function stepSimulation(dt) {
     if (!state || state.paused || activeModal || state.health.dead) return;
     state.elapsed += dt;
+    state.world.animationTime = state.elapsed;
     state.player.moving = false;
     state.player.hitFlash = Math.max(0, (state.player.hitFlash || 0) - dt);
     if (state.player.attackCd > 0) state.player.attackCd = Math.max(0, state.player.attackCd - dt);
@@ -329,13 +331,15 @@
       if (zb.state === DD.ZSTATE.DEAD) continue;
       if (zb.lod === 'ACTIVE') {
         var vis = Boolean(state.visible[Math.round(zb.x) + ',' + Math.round(zb.y)]);
+        var oldX = zb.x, oldY = zb.y;
         var atk = Sys.stepZombieActive(zb, dt, state.player.x, state.player.y, vis, state.flowField, state.world);
+        zb.moving = Math.hypot(zb.x - oldX, zb.y - oldY) > 0.0001;
         if (atk && atk.attack) {
           var hitPart = DD.BODY_PARTS[DD.randInt(0, DD.BODY_PARTS.length - 1)];
           var torsoMeta = state.inv.equipment.torso ? DataDB.getItem(state.inv.equipment.torso) : null;
           var armor = { biteDef: (torsoMeta && torsoMeta.bite_def) || 0, scratchDef: (torsoMeta && torsoMeta.scratch_def) || 0 };
           var wr = Sys.applyWound(state.health, hitPart, atk.damage, atk.biteChance, atk.infectChance, armor);
-          if (wr) addToast('Ранение (' + wr.part + '): ' + wr.wound);
+          if (wr) { addToast('Ранение (' + wr.part + '): ' + wr.wound); addBlood(state.player.x, state.player.y); }
           DD.Renderer.playSfx('sfx_zombie_bite.wav');
         }
       } else if (state.lastNoise.ttl > 0 && Math.hypot(zb.x - state.lastNoise.x, zb.y - state.lastNoise.y) < 80) {
@@ -371,6 +375,11 @@
     }
   }
 
+  function addBlood(x, y) {
+    state.bloodMarks.push({ x:x, y:y, time:state.elapsed, seed:state.bloodMarks.length % 17 });
+    if (state.bloodMarks.length > 120) state.bloodMarks.shift();
+  }
+
   function performAttack() {
     if (!state || state.paused || activeModal || state.health.dead || state.player.attackCd > 0) return;
     var wmeta = DataDB.getItem(state.player.weapon) || { cat: 'melee', damage: 22, range: 1.8, noise_db: 70 };
@@ -400,6 +409,7 @@
         }
       }
       if (bestZ) {
+        addBlood(bestZ.x, bestZ.y);
         if (Sys.damageZombie(bestZ, wmeta.damage || 38, 0.25)) state.kills += 1;
       }
     } else {
@@ -410,6 +420,7 @@
       DD.Renderer.playSfx('sfx_melee_swing.wav');
       var target = DD.GameplayHelpers.meleeTarget(state.zombies, state.player, wmeta.range || 1.8, DD.ZSTATE.DEAD);
       if (target) {
+        addBlood(target.x, target.y);
         if (Sys.damageZombie(target, wmeta.damage || 24, wmeta.stun || 0.3)) state.kills += 1;
         DD.Renderer.playSfx('sfx_melee_hit.wav');
         state.player.hitFlash = 0.18;
@@ -462,6 +473,10 @@
         emitNoise(tx, ty, 58, 'door');
         recomputeFovAndFlow();
         return;
+      }
+      if (state.world.getTile(tx, ty) === TILE.WINDOW && state.world.breakWindow(tx, ty)) {
+        DD.Renderer.playSfx('sfx_glass_shatter.wav'); emitNoise(tx, ty, 85, 'glass');
+        addToast('Окно разбито.'); return;
       }
       var cont = state.world.containers[k];
       if (cont && !cont.looted) {
@@ -546,6 +561,13 @@
     if (dO) dO.hidden = true;
   }
 
+  var itemIcons = {
+    canned_beans:'🥫',canned_soup:'🥫',apple:'🍎',bread:'🍞',potato:'🥔',baked_potato:'🥔',tomato:'🍅',carrot:'🥕',cabbage:'🥬',radish:'🥕',strawberry:'🍓',raw_beef:'🥩',cooked_beef:'🍖',beef_jerky:'🥓',chocolate_bar:'🍫',
+    bottled_water:'💧',tainted_water:'🧪',boiled_water:'💧',soda:'🥤',coffee:'☕',bandage:'🩹',sterile_bandage:'🩹',dirty_bandage:'🩹',antiseptic:'🧴',antibiotics:'💊',painkillers:'💊',suture_kit:'🧵',thermometer:'🌡️',
+    baseball_bat:'🏏',crowbar:'🔧',fire_axe:'🪓',kitchen_knife:'🔪',hunting_knife:'🔪',machete:'🔪',hammer:'🔨',saw:'🪚',screwdriver:'🪛',wrench:'🔧',flashlight:'🔦',lighter:'🔥',battery:'🔋',gas_can:'⛽',
+    oatmeal:'🥣',rice:'🍚',peanut_butter:'🥜',crackers:'🍘',dried_fruit:'🍇',canned_corn:'🌽',canned_fish:'🐟',energy_bar:'🍫',tea:'🍵',juice:'🧃',sports_drink:'🥤',first_aid_kit:'🧰',gauze:'🩹',vitamins:'💊',soap:'🧼',towel:'🧻',matches:'🕯️',rope:'🪢',binoculars:'🔭',map:'🗺️',magazine:'📰',raincoat:'🧥',wool_socks:'🧦',work_gloves:'🧤'
+  };
+  var categoryIcons = {food:'🍽️',drink:'🥤',medical:'🩺',melee:'⚔️',firearm:'🔫',ammo:'📦',tool:'🔧',clothing:'👕',backpack:'🎒',book:'📕',seed:'🌱',material:'🧱'};
   function openModal(kind) {
     if (!state) return;
     if (activeModal === kind) { closeModals(); return; }
@@ -589,8 +611,10 @@
         (function (slot) {
           var meta = DataDB.getItem(slot.id) || { name: slot.id };
           var btn = document.createElement('button');
-          btn.className = 'dd-btn';
-          btn.textContent = meta.name + ' x' + slot.qty + ' (' + ((meta.weight || 0.1) * slot.qty).toFixed(1) + ' кг)';
+          btn.className = 'dd-btn inventory-item';
+          var icon = document.createElement('span'); icon.className = 'item-icon'; icon.textContent = itemIcons[slot.id] || categoryIcons[meta.cat] || '📦'; icon.setAttribute('aria-hidden', 'true');
+          var label = document.createElement('span'); label.textContent = meta.name + ' x' + slot.qty + ' (' + ((meta.weight || 0.1) * slot.qty).toFixed(1) + ' кг)';
+          btn.appendChild(icon); btn.appendChild(label);
           btn.addEventListener('click', function () {
             if (meta.cat === 'food' || meta.cat === 'drink') {
               Sys.removeItem(state.inv, slot.id, 1);
