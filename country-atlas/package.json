@@ -6,7 +6,7 @@
   "description": "РАТГРАД — белый холст, который учится быть картой",
   "scripts": {
     "build": "node build.mjs",
-    "test": "node tests/world2d.mjs && node tests/roads2d.mjs && node tests/transport2d.mjs && node tests/country2d.mjs && node tests/rivers2d.mjs && node tests/heightfield.mjs && node tests/render2d.mjs && node site/selftest.js"
+    "test": "node tests/world2d.mjs && node tests/roads2d.mjs && node tests/transport2d.mjs && node tests/country2d.mjs && node tests/rivers2d.mjs && node tests/heightfield.mjs && node tests/render2d.mjs && node tests/ped2d.mjs && node site/selftest.js"
   },
   "dependencies": {
     "three": "0.186.1"

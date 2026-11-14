@@ -7,6 +7,7 @@ import { buildCity, cityLod, ZONE, CITY_STREET_SCALE, CITY_BUILDING_SCALE, build
 import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
 import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
+import { buildPedestrians, advancePeds, pedPositions, pedBudget, PED, PED_LOD, PED_CAP } from './ped2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
 export class Map2D {
@@ -35,6 +36,9 @@ export class Map2D {
     this.borders = null;
     this.showCities = true;     // города §9–§10
     this.cityCache = new Map();
+    this.showPeds = true;       // пешеходы §13
+    this.pedCache = new Map();
+    this.pedsInFrame = 0;
     this.economy = null;        // экономика §31.33
     this.lastEconomyDay = 0;
     this.showWater = true;      // реки, озёра и мосты §5
@@ -324,6 +328,7 @@ export class Map2D {
   /* Шаг мира: реальные секунды → игровые часы (F-120). */
   tick(dtSec) {
     if (this.transport) advanceTransport(this.transport, dtSec);
+    if (this.showPeds) for (const pack of this.pedCache.values()) advancePeds(pack, dtSec);
     if (this.transport && this.economy) {
       const day = Math.floor(this.transport.minutes / 1440);
       if (day > this.lastEconomyDay) {
@@ -371,6 +376,14 @@ export class Map2D {
       ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
       ctx.clip();
       this.drawVehicles(ctx, originX, originY, s);
+      ctx.restore();
+    }
+    if (this.showPeds && s >= PED_LOD) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
+      ctx.clip();
+      this.drawPeds(ctx, originX, originY, s);
       ctx.restore();
     }
 
@@ -584,6 +597,86 @@ export class Map2D {
         }
       }
     }
+  }
+
+  /* Пешеходы §13: точка с подшагом ног. Видны с 40 px/км и не больше 400 в кадре,
+     иначе на карте не жизнь, а «крупа» (R-13.1 в редакции 2D). */
+  pedsAt(index) {
+    if (!this.pedCache.has(index)) {
+      this.pedCache.set(index, buildPedestrians(this.cityAt(index), index));
+    }
+    return this.pedCache.get(index);
+  }
+
+  drawPeds(ctx, originX, originY, s) {
+    this.pedsInFrame = 0;
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view;
+    const pad = 60;
+    let drawn = 0;
+    const deep = s >= 160;                       // с этого масштаба видно подшаг ног
+    for (let i = 0; i < this.settlements.length; i++) {
+      const t = this.settlements[i];
+      const sx = X(t.x), sy = Y(t.y);
+      const reach = 12 * s + pad;
+      if (sx < -reach || sy < -reach || sx > view.w + reach || sy > view.h + reach) continue;
+      if (cityLod(s) < 2) break;                 // пешеходы только среди домов (§9.10)
+      const pack = this.pedsAt(i);
+      const budget = pedBudget(s, pack.count);
+      if (!budget) continue;
+      const list = pedPositions(pack);
+      for (const p of list) {
+        if (drawn >= Math.min(budget, PED_CAP)) break;
+        const x = X(p.x), y = Y(p.y);
+        if (x < -8 || y < -8 || x > view.w + 8 || y > view.h + 8) continue;
+        drawn++;
+        const spec = PED[p.kind] || PED.walker;
+        // тень-направление: короткий штрих по ходу движения, читается как «человек идёт»
+        ctx.strokeStyle = spec.dark;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - p.dx * 2.4, y + p.dy * 2.4);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        if (p.bike) {
+          // велосипед: короткая поперечная черта вместо фигуры
+          ctx.strokeStyle = spec.tone;
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(x - p.dy * 2.8, y - p.dx * 2.8);
+          ctx.lineTo(x + p.dy * 2.8, y + p.dx * 2.8);
+          ctx.stroke();
+        }
+        ctx.fillStyle = spec.tone;
+        ctx.strokeStyle = spec.dark;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        if (p.dog) {
+          // собака на поводке: точка позади и сбоку
+          ctx.fillStyle = '#6b5a48';
+          ctx.beginPath();
+          ctx.arc(x - p.dx * 3.6 - p.dy * 2.4, y + p.dy * 3.6 - p.dx * 2.4, 1.1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (deep) {
+          // подшаг: две ноги качаются по фазе
+          const amp = 2.0;
+          ctx.strokeStyle = spec.dark;
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(x - p.dy * amp * p.stride, y - p.dx * amp * p.stride);
+          ctx.lineTo(x + p.dy * amp * p.stride, y + p.dx * amp * p.stride);
+          ctx.stroke();
+        }
+      }
+    }
+    this.pedsInFrame = drawn;
   }
 
   drawRoads(ctx, originX, originY, s) {
@@ -844,6 +937,17 @@ export class Map2D {
       const hh = String(Math.floor((total % 1440) / 60)).padStart(2, '0');
       const mm = String(total % 60).padStart(2, '0');
       this.hud.clock.textContent = 'день ' + day + ' · ' + hh + ':' + mm;
+    }
+    if (this.hud.peds) {
+      this.hud.peds.textContent = this.pedsInFrame
+        ? this.pedsInFrame + ' в кадре'
+        : (this.showPeds ? '— (с 40 px/км)' : 'выключены');
+    }
+    if (this.hud.hint) {
+      const t = this.transport;
+      this.hud.hint.textContent = 'тяните — сдвиг · колесо и щипок — зум · двойной клик — ближе · клик по городу — выбрать' +
+        (t ? ' · §44: ' + t.vehicles.length + ' ед. в пути' : '') +
+        (this.pedsInFrame ? ' · §13: ' + this.pedsInFrame + ' пешеходов' : '');
     }
     if (this.hud.cars) {
       const t = this.transport;
