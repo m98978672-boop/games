@@ -20,6 +20,13 @@
   #hud table{ border-collapse:collapse; font-size:11.5px; width:100%; }
   #hud td{ padding:1px 0; }
   #hud td:last-child{ text-align:right; }
+  #country{ right:14px; top:14px; min-width:220px; }
+  #country h2{ margin:0 0 6px; font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
+  #country table{ border-collapse:collapse; font-size:11.5px; width:100%; }
+  #country td{ padding:1px 0; }
+  #country td:last-child{ text-align:right; font-variant-numeric:tabular-nums; }
+  #country tr.good td:last-child{ color:#8fd0a0; }
+  #country tr.bad td:last-child{ color:#e8896a; }
 
   #controls{ right:14px; top:14px; width:186px; }
   #controls label{ display:flex; align-items:center; gap:7px; margin:4px 0; font-size:12px; }
@@ -45,6 +52,7 @@
 
   @media (max-width:760px){
     #hud{ min-width:0; max-width:54vw; }
+    #country{ display:none; }
     #controls{ width:150px; }
     #legend{ display:none; }
   }
@@ -60,9 +68,16 @@
   </div>
 </div>
 
+<section class="panel" id="country">
+  <h2>страна · §31.33</h2>
+  <table id="hud-country">
+    <tr><td>загрузка</td><td>…</td></tr>
+  </table>
+</section>
+
 <section class="panel" id="hud">
   <h1>Ратград · карта</h1>
-  <div class="sub">7000 × 7000 км · вид сверху · промт §38–§44</div>
+  <div class="sub">7000 × 7000 км · вид сверху · промт §7 · §9–§10 · §38–§44</div>
   <table>
     <tr><td>курсор</td><td id="hud-pos">0; 0 км</td></tr>
     <tr><td>высота</td><td id="hud-height">— м</td></tr>
@@ -71,6 +86,7 @@
     <tr><td>дороги</td><td id="hud-roads">—</td></tr>
     <tr><td>транспорт</td><td id="hud-cars">—</td></tr>
     <tr><td>время мира</td><td id="hud-clock">день 1 · 08:00</td></tr>
+    <tr><td>состояние</td><td id="hud-status">—</td></tr>
     <tr><td>выбрано</td><td id="hud-town">—</td></tr>
     <tr><td>кадров в секунду</td><td id="hud-fps">—</td></tr>
   </table>
@@ -87,6 +103,8 @@
   <label><input type="checkbox" id="toggle-grid" checked> сетка 10/25/50 км</label>
   <label><input type="checkbox" id="toggle-towns" checked> поселения</label>
   <label><input type="checkbox" id="toggle-cars" checked> транспорт §44</label>
+  <label><input type="checkbox" id="toggle-borders" checked> границы §7</label>
+  <label><input type="checkbox" id="toggle-cities" checked> города §9–§10</label>
   <label><input type="checkbox" id="toggle-q" checked> QООВЗ 250 м</label>
 </section>
 
@@ -107,6 +125,9 @@
   <div class="row"><i style="background:#e8a24a"></i> грузовик §44</div>
   <div class="row"><i style="background:#8fd0a0"></i> автобус §44</div>
   <div class="row"><i style="background:#e6f2f8"></i> судно и самолёт §44</div>
+  <div class="row"><i style="background:#a2452c"></i> государственная граница</div>
+  <div class="row"><i style="background:#8a7350"></i> границы 14 регионов</div>
+  <div class="row"><i style="background:#c4baa6"></i> город: пятно и улицы</div>
 </section>
 
 <div class="hint">тяните — сдвиг · колесо и щипок — зум · двойной клик — ближе · клик по городу — выбрать · §44: 840 единиц в пути</div>

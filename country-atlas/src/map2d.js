@@ -3,6 +3,9 @@
 import { WORLD2D, settlements, rankSettlements, heightKm, colorAtKm } from './world2d.js';
 import { buildRoads, ROAD_CLASS } from './roads2d.js';
 import { buildTransport, advance as advanceTransport, vehiclePosition, screenLengthPx, VEHICLE } from './transport2d.js';
+import { buildCity, cityLod, CITY_STREET_SCALE, CITY_BUILDING_SCALE } from './city2d.js';
+import { buildBorders, BORDER } from './borders2d.js';
+import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
 export class Map2D {
@@ -27,6 +30,12 @@ export class Map2D {
     this.showRoads = true;
     this.showVehicles = true;   // слой транспорта §44
     this.transport = null;
+    this.showBorders = true;    // границы §7
+    this.borders = null;
+    this.showCities = true;     // города §9–§10
+    this.cityCache = new Map();
+    this.economy = null;        // экономика §31.33
+    this.lastEconomyDay = 0;
     this.worker = null;
     this.pendingPatch = false;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -189,6 +198,28 @@ export class Map2D {
   }
 
   /* Транспорт §44: маршруты строятся по готовой сети дорог — A и B у каждой единицы. */
+  /* Границы §7: берег, морская граница и 14 регионов — считаются один раз. */
+  buildBorders() {
+    if (this.borders) return this.borders;
+    this.borders = buildBorders(this.settlements, this.ranks);
+    return this.borders;
+  }
+
+  /* Экономика §31.33: население, угодья, приход и расход ресурсов. */
+  buildEconomy() {
+    if (this.economy) return this.economy;
+    this.economy = buildEconomy(this.settlements, this.ranks);
+    return this.economy;
+  }
+
+  /* Раскладка города: считается при первом подходе и лежит в кэше. */
+  cityAt(index) {
+    if (!this.cityCache.has(index)) {
+      this.cityCache.set(index, buildCity(this.settlements[index], index, this.ranks));
+    }
+    return this.cityCache.get(index);
+  }
+
   buildTransport() {
     if (!this.roads) return null;
     const t0 = (typeof performance !== 'undefined' ? performance.now() : Date.now());
@@ -199,8 +230,15 @@ export class Map2D {
 
   /* Шаг мира: реальные секунды → игровые часы (F-120). */
   tick(dtSec) {
-    if (!this.transport) return;
-    advanceTransport(this.transport, dtSec);
+    if (this.transport) advanceTransport(this.transport, dtSec);
+    if (this.transport && this.economy) {
+      const day = Math.floor(this.transport.minutes / 1440);
+      if (day > this.lastEconomyDay) {
+        advanceEconomy(this.economy, day - this.lastEconomyDay);
+        this.lastEconomyDay = day;
+        this.updateEconomyPanel();
+      }
+    }
   }
 
   /* ---------------- отрисовка ---------------- */
@@ -211,6 +249,7 @@ export class Map2D {
     return [
       this.view.w, this.view.h, this.dpr, this.center.x, this.center.y, this.scale,
       this.showGrid ? 1 : 0, this.showRoads ? 1 : 0, this.showSettlements ? 1 : 0, this.showQ ? 1 : 0,
+      this.showBorders ? 1 : 0, this.showCities ? 1 : 0, this.borders ? 1 : 0,
       this.overview ? this.overview.width : 0,
       d ? d.canvas.width + ':' + d.x0.toFixed(2) + ':' + d.y0.toFixed(2) : '',
       this.selected ? this.selected.name : ''
@@ -289,7 +328,9 @@ export class Map2D {
     ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
     ctx.clip();
 
+    if (this.showBorders && this.borders) this.drawBorders(ctx, originX, originY, s);
     if (this.showRoads && this.roads) this.drawRoads(ctx, originX, originY, s);
+    if (this.showCities && cityLod(s) > 0) this.drawCities(ctx, originX, originY, s);
     if (this.showGrid) this.drawGrid(ctx, originX, originY, s);
     if (this.showSettlements) this.drawSettlements(ctx, originX, originY, s);
     if (this.showQ) this.drawQ(ctx, originX, originY, s);
@@ -297,6 +338,128 @@ export class Map2D {
 
     this.drawScaleBar(ctx);
     this.paintedKey = key;
+  }
+
+  /* Границы §7: регионы — тонкий пунктир, государственная — охра, морская — пунктир по воде. */
+  drawBorders(ctx, originX, originY, s) {
+    const b = this.borders;
+    if (!b) return;
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+
+    // регионы: 14 областей, линии тонкие и тихие
+    ctx.strokeStyle = 'rgba(138,115,80,0.55)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 4]);
+    ctx.beginPath();
+    for (const line of b.regions) {
+      ctx.moveTo(X(line[0][0]), Y(line[0][1]));
+      for (let i = 1; i < line.length; i++) ctx.lineTo(X(line[i][0]), Y(line[i][1]));
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // государственная граница: тёмная подложка + светлая нить — читается на любом фоне
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = 'rgba(40,20,14,0.55)';
+    ctx.lineWidth = Math.max(2.6, 0.01 * s);
+    ctx.beginPath();
+    for (const line of b.coast) {
+      ctx.moveTo(X(line[0][0]), Y(line[0][1]));
+      for (let i = 1; i < line.length; i++) ctx.lineTo(X(line[i][0]), Y(line[i][1]));
+    }
+    ctx.stroke();
+    ctx.strokeStyle = BORDER.coastTone;
+    ctx.lineWidth = Math.max(1.4, 0.006 * s);
+    ctx.stroke();
+
+    // морская граница — пунктир по воде (§7.6)
+    ctx.strokeStyle = BORDER.seaTone;
+    ctx.lineWidth = Math.max(1, 0.004 * s);
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    for (const line of b.sea) {
+      ctx.moveTo(X(line[0][0]), Y(line[0][1]));
+      for (let i = 1; i < line.length; i++) ctx.lineTo(X(line[i][0]), Y(line[i][1]));
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  /* Города §9–§10: пятно застройки, улицы и — в глубоком зуме — отдельные здания. */
+  drawCities(ctx, originX, originY, s) {
+    const lod = cityLod(s);
+    const view = this.view;
+    const pad = 80;
+    for (let i = 0; i < this.settlements.length; i++) {
+      const t = this.settlements[i];
+      const sx = originX + t.x * s, sy = originY - t.y * s;
+      if (sx < -pad || sy < -pad || sx > view.w + pad || sy > view.h + pad) continue;
+      const city = this.cityAt(i);
+      const X = (x) => originX + x * s;
+      const Y = (y) => originY - y * s;
+
+      // кварталы: заливка пятнами, чтобы город читался не только по улицам
+      if (lod >= 1) {
+        ctx.fillStyle = 'rgba(176,166,146,0.55)';
+        for (const bl of city.blocks) {
+          const c = bl.corners;
+          ctx.beginPath();
+          ctx.moveTo(X(c[0][0]), Y(c[0][1]));
+          for (let k = 1; k < 4; k++) ctx.lineTo(X(c[k][0]), Y(c[k][1]));
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // улицы: переулки тише, проспекты и главные — ярче (R-9.6)
+      ctx.lineCap = 'butt';
+      ctx.strokeStyle = 'rgba(244,238,226,0.62)';
+      for (const st of city.streets) {
+        if (st.major) continue;
+        const w = Math.max(0.6, (st.widthM / 1000) * s);
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(X(st.a[0]), Y(st.a[1]));
+        ctx.lineTo(X(st.b[0]), Y(st.b[1]));
+        ctx.stroke();
+      }
+      ctx.strokeStyle = 'rgba(252,248,238,0.95)';
+      for (const st of city.streets) {
+        if (!st.major) continue;
+        const w = Math.max(1, (st.widthM / 1000) * s);
+        ctx.lineWidth = w;
+        ctx.beginPath();
+        ctx.moveTo(X(st.a[0]), Y(st.a[1]));
+        ctx.lineTo(X(st.b[0]), Y(st.b[1]));
+        ctx.stroke();
+      }
+
+      if (lod < 2) continue;
+      // здания: пятно + крыша
+      const cw = ctx.canvas.width, ch = ctx.canvas.height;
+      for (const b of city.buildings) {
+        const c = b.corners;
+        // отсечение по экрану: у столицы 2400 домов, за кадром их рисовать незачем
+        let bx0 = Infinity, bx1 = -Infinity, by0 = Infinity, by1 = -Infinity;
+        for (const q of c) {
+          const px = X(q[0]), py = Y(q[1]);
+          if (px < bx0) bx0 = px; if (px > bx1) bx1 = px;
+          if (py < by0) by0 = py; if (py > by1) by1 = py;
+        }
+        if (bx1 < -4 || by1 < -4 || bx0 > cw + 4 || by0 > ch + 4) continue;
+        ctx.beginPath();
+        ctx.moveTo(X(c[0][0]), Y(c[0][1]));
+        for (let k = 1; k < 4; k++) ctx.lineTo(X(c[k][0]), Y(c[k][1]));
+        ctx.closePath();
+        ctx.fillStyle = b.wall;
+        ctx.fill();
+        // крыша — обводка по краю: дом не плоский квадрат и читается даже в 1 px
+        ctx.strokeStyle = b.roof;
+        ctx.lineWidth = Math.max(0.6, 0.06 * s + 0.4);
+        ctx.stroke();
+      }
+    }
   }
 
   drawRoads(ctx, originX, originY, s) {
@@ -513,6 +676,27 @@ export class Map2D {
     ctx.fillStyle = '#fff';
     ctx.font = '11px ui-monospace, monospace';
     ctx.fillText(km + ' км', x + w / 2 - 12, y - 8);
+  }
+
+  /* Панель страны §31.33: население, восемь ресурсов, приход/расход и запас в сутках. */
+  updateEconomyPanel() {
+    const e = this.economy;
+    if (!e || !this.hud.country) return;
+    const rows = [];
+    rows.push('<tr><td>население</td><td>' + e.population.toLocaleString('ru-RU') + '</td></tr>');
+    rows.push('<tr><td>города</td><td>' + (e.byClass ? Object.entries(e.byClass).filter(([, v]) => v).length + ' классов · ' + this.settlements.length + ' поселений' : '—') + '</td></tr>');
+    for (const id of RESOURCE_ORDER) {
+      const b = e.balance[id];
+      const res = RESOURCE[id];
+      const pct = b.consumption > 0 ? (b.balance / b.consumption) * 100 : 0;
+      const num = (v) => v >= 100 ? Math.round(v).toLocaleString('ru-RU') : v.toFixed(1);
+      const sign = b.balance >= 0 ? '+' : '−';
+      const cls = b.deficit > 0.01 ? 'bad' : b.balance >= 0 ? 'good' : '';
+      rows.push('<tr class="' + cls + '"><td>' + res.name + '</td><td>' + num(b.production) + ' / ' + num(b.consumption) +
+        ' · ' + sign + Math.abs(pct).toFixed(0) + '%</td></tr>');
+    }
+    rows.push('<tr><td>сутки</td><td>' + Math.floor(e.days) + '</td></tr>');
+    this.hud.country.innerHTML = rows.join('');
   }
 
   updateHud() {
