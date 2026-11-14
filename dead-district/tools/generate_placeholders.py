@@ -329,13 +329,24 @@ def draw_character_cell(grid, ox: int, oy: int, cw: int, ch: int, aid: str, idx:
         return
 
     if is_crawler:
-        frect(grid, cx - 5, cy - 2, 10, 8, shirt)
-        frect(grid, cx - 3, cy - 6, 7, 6, skin)
-        frect(grid, cx - 6, cy + 2 + step, 3, 7, skin)
-        frect(grid, cx + 3, cy + 2 - step, 3, 7, skin)
-        frect(grid, cx - 3, cy + 6, 6, 3, pal[2])
-        pset(grid, cx - 1, cy - 3, pal[1])
-        pset(grid, cx + 1, cy - 3, pal[1])
+        facing = row_idx % 4  # вниз, вверх, влево, вправо
+        # Ползущий силуэт: положение головы и рук соответствует направлению.
+        if facing < 2:
+            head_y = cy - 6 if facing == 0 else cy + 3
+            frect(grid, cx - 5, cy - 2, 10, 8, shirt)
+            frect(grid, cx - 3, head_y, 7, 6, skin if facing == 0 else head_acc)
+            frect(grid, cx - 7, cy + step, 3, 7, skin)
+            frect(grid, cx + 4, cy - step, 3, 7, skin)
+            if facing == 0:
+                pset(grid, cx - 1, head_y + 3, pal[1])
+                pset(grid, cx + 1, head_y + 3, pal[1])
+        else:
+            head_x = cx - 8 if facing == 2 else cx + 2
+            frect(grid, cx - 4, cy - 4, 8, 9, shirt)
+            frect(grid, head_x, cy - 5, 6, 7, skin)
+            frect(grid, cx - 3 + step, cy + 4, 7, 3, skin)
+            frect(grid, cx - 3 - step, cy - 6, 7, 3, skin)
+            pset(grid, head_x + (1 if facing == 2 else 4), cy - 2, pal[1])
         add_outline(grid, ox, oy, cw, ch, BLK)
         return
 

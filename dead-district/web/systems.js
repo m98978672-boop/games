@@ -396,7 +396,7 @@
       hp: 100, hunger: 72, thirst: 70,
       hostility: arch.hostility || 0.15, bravery: arch.bravery || 0.55,
       action: 'IDLE_PATROL', tradePool: (arch.trade_pool || ['bandage']).slice(),
-      dialogues: arch.dialogues || {}, tx: x, ty: y, cd: 0
+      dialogues: arch.dialogues || {}, tx: x, ty: y, dx: 0, dy: 1, cd: 0
     };
   }
 
@@ -457,6 +457,7 @@
     }
 
     if (mx !== 0 || my !== 0) {
+      npc.dx = mx; npc.dy = my;
       var nx = npc.x + mx * spd * dt;
       var ny = npc.y + my * spd * dt;
       if (world.isWalkable(Math.round(nx), Math.round(ny))) { npc.x = nx; npc.y = ny; }

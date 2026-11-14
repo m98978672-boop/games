@@ -183,10 +183,13 @@
         var steer = ix;
         veh.speed += (throttle * 13 - veh.speed) * Math.min(1, 5 * dt);
         if (Math.abs(veh.speed) > 0.3) veh.angle += steer * 2.4 * Math.sign(veh.speed) * dt;
-        var vx = veh.x + Math.cos(veh.angle) * veh.speed * dt;
-        var vy = veh.y + Math.sin(veh.angle) * veh.speed * dt;
-        if (state.world.isWalkable(Math.round(vx), Math.round(vy))) {
-          veh.x = vx; veh.y = vy;
+        var dxv = Math.cos(veh.angle) * veh.speed * dt;
+        var dyv = Math.sin(veh.angle) * veh.speed * dt;
+        var move = DD.GameplayHelpers.moveWithCollision(state.world, veh.x, veh.y, dxv, dyv, 0.3);
+        var moved = Math.hypot(move.x - veh.x, move.y - veh.y);
+        if (moved > 0.00001) {
+          if (moved + 0.001 < Math.hypot(dxv, dyv)) veh.speed = 0;
+          veh.x = move.x; veh.y = move.y;
           veh.fuel = Math.max(0, veh.fuel - Math.abs(veh.speed) * dt * 0.002);
           state.player.x = veh.x; state.player.y = veh.y;
           if (Math.abs(veh.speed) > 4.5) {
@@ -209,10 +212,8 @@
       if (state.health.parts.LEG_L.fractureDays > 0 || state.health.parts.LEG_R.fractureDays > 0) spd *= 0.45;
       if (Sys.getTotalWeight(state.inv) > Sys.getMaxWeight(state.inv)) spd *= 0.72;
       var oldX = state.player.x, oldY = state.player.y;
-      var nx = state.player.x + state.player.fx * spd * dt;
-      var ny = state.player.y + state.player.fy * spd * dt;
-      if (state.world.isWalkable(Math.round(nx), Math.round(state.player.y))) state.player.x = nx;
-      if (state.world.isWalkable(Math.round(state.player.x), Math.round(ny))) state.player.y = ny;
+      var movedPlayer = DD.GameplayHelpers.moveWithCollision(state.world, oldX, oldY, state.player.fx * spd * dt, state.player.fy * spd * dt, 0.2);
+      state.player.x = movedPlayer.x; state.player.y = movedPlayer.y;
 
       state.player.moving = Math.hypot(state.player.x - oldX, state.player.y - oldY) > 0.00001;
       state.player.motion = sprint ? 'run' : (sneak ? 'sneak' : 'walk');
@@ -444,6 +445,13 @@
     for (var ci = 0; ci < candidates.length; ci++) {
       var tx = candidates[ci][0], ty = candidates[ci][1];
       var k = tx + ',' + ty;
+      if (state.world.getTile(tx, ty) === TILE.DOOR) {
+        var door = state.world.doors[k];
+        if (door && door.open && Math.abs(state.player.x - tx) < 0.7 && Math.abs(state.player.y - ty) < 0.7) {
+          addToast('Выйдите из дверного проёма, прежде чем закрыть дверь.');
+          return;
+        }
+      }
       if (state.world.getTile(tx, ty) === TILE.DOOR && state.world.toggleDoor(tx, ty)) {
         DD.Renderer.playSfx('sfx_door_open.wav');
         emitNoise(tx, ty, 58, 'door');

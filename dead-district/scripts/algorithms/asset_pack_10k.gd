@@ -193,8 +193,9 @@ static func _append_box(st: SurfaceTool, center: Vector3, size: Vector3, col: Co
 	st.set_color(col)
 	for q in quads:
 		st.set_uv(Vector2(0, 0)); st.add_vertex(c[q[0]])
+		# Godot считает лицевой гранью треугольник с обходом по часовой стрелке.
+		st.set_uv(Vector2(1, 1)); st.add_vertex(c[q[2]])
 		st.set_uv(Vector2(1, 0)); st.add_vertex(c[q[1]])
-		st.set_uv(Vector2(1, 1)); st.add_vertex(c[q[2]])
 		st.set_uv(Vector2(0, 0)); st.add_vertex(c[q[0]])
-		st.set_uv(Vector2(1, 1)); st.add_vertex(c[q[2]])
 		st.set_uv(Vector2(0, 1)); st.add_vertex(c[q[3]])
+		st.set_uv(Vector2(1, 1)); st.add_vertex(c[q[2]])

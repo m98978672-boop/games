@@ -106,12 +106,42 @@ func set_tile(world_tile: Vector2i, tile_type: int) -> void:
 
 func is_walkable(world_tile: Vector2i) -> bool:
 	var t := get_tile(world_tile)
-	if t == ProcGen.TileType.WALL_BRICK or t == ProcGen.TileType.WALL_WOOD or t == ProcGen.TileType.WALL_PLASTER or t == ProcGen.TileType.WATER or t == ProcGen.TileType.TREE_OAK or t == ProcGen.TileType.TREE_PINE:
+	if t == ProcGen.TileType.WALL_BRICK or t == ProcGen.TileType.WALL_WOOD or t == ProcGen.TileType.WALL_PLASTER or t == ProcGen.TileType.WINDOW or t == ProcGen.TileType.WATER or t == ProcGen.TileType.TREE_OAK or t == ProcGen.TileType.TREE_PINE:
 		return false
-	if t == ProcGen.TileType.DOOR and _doors.has(world_tile):
+	if t == ProcGen.TileType.DOOR:
+		if not _doors.has(world_tile):
+			return false
 		var d: Dictionary = _doors[world_tile]
 		return bool(d["open"]) or bool(d["broken"])
 	return true
+
+
+# Совпадает с центрами тайлов в целых координатах. Тело не может
+# пересекать край стены/закрытой двери даже при диагональном движении.
+func can_occupy(world_pos: Vector2, radius: float = 0.2) -> bool:
+	var left := floori(world_pos.x - radius + 0.5000001)
+	var right := floori(world_pos.x + radius + 0.4999999)
+	var top := floori(world_pos.y - radius + 0.5000001)
+	var bottom := floori(world_pos.y + radius + 0.4999999)
+	for y in range(top, bottom + 1):
+		for x in range(left, right + 1):
+			if not is_walkable(Vector2i(x, y)):
+				return false
+	return true
+
+
+func move_with_collision(start: Vector2, delta: Vector2, radius: float = 0.2) -> Vector2:
+	var result := start
+	var steps := maxi(1, ceili(maxf(absf(delta.x), absf(delta.y)) / 0.15))
+	var step := delta / float(steps)
+	for i in range(steps):
+		var next_x := result + Vector2(step.x, 0.0)
+		if can_occupy(next_x, radius):
+			result.x = next_x.x
+		var next_y := result + Vector2(0.0, step.y)
+		if can_occupy(next_y, radius):
+			result.y = next_y.y
+	return result
 
 
 func is_opaque(world_tile: Vector2i) -> bool:

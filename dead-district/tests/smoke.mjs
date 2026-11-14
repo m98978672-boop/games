@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -104,5 +105,79 @@ const bright = new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255]);
 assert.equal(DD.AssetAssistant.analyze(dark, dark).difference, 0);
 assert.equal(DD.AssetAssistant.analyze(dark, bright).difference, 1);
 assert.ok(DD.AssetAssistant.analyze(dark).warnings.includes('Низкий контраст'));
+
+// Четыре направления спрайтов, включая более короткую ползущую фигуру.
+for (const [id, dims] of [['B01_z_walker', [32, 32]], ['B03_z_crawler', [32, 32]], ['B04_z_brute', [40, 48]], ['C01_npc_medic', [32, 32]]]) {
+  const entry = sandbox.DD_DATA.manifest.find(a => a.id === id);
+  assert.ok(entry, id);
+  assert.ok(DD.CatalogF3.hasDirectionalSprite({ isBase: true, kindLabel: entry.type, file: entry.file, dimensions: entry.dimensions }));
+  const png = fs.readFileSync(path.join(ROOT, entry.file));
+  const width = png.readUInt32BE(16), height = png.readUInt32BE(20);
+  const idats = [];
+  for (let off = 8; off < png.length;) {
+    const size = png.readUInt32BE(off), type = png.toString('ascii', off + 4, off + 8);
+    if (type === 'IDAT') idats.push(png.subarray(off + 8, off + 8 + size));
+    off += size + 12;
+  }
+  const data = zlib.inflateSync(Buffer.concat(idats));
+  const [cw, ch] = dims;
+  assert.ok(height >= ch * 4, `${id}: нужны четыре строки`);
+  const views = [];
+  for (let row = 0; row < 4; row++) {
+    const pixels = [];
+    for (let y = row * ch; y < (row + 1) * ch; y++) {
+      assert.equal(data[y * (width * 4 + 1)], 0, 'ожидается PNG без фильтра');
+      const start = y * (width * 4 + 1) + 1;
+      pixels.push(data.subarray(start, start + cw * 4));
+    }
+    views.push(Buffer.concat(pixels).toString('hex'));
+  }
+  assert.equal(new Set(views).size, 4, `${id}: четыре вида должны различаться`);
+  for (const [dx, dy, expectedRow] of [[0, 1, 0], [0, -1, 1], [-1, 0, 2], [1, 0, 3]]) {
+    assert.equal(DD.GameplayHelpers.directionalFrame({width, height}, cw, ch, dx, dy, 2), expectedRow * (width / cw) + 2);
+  }
+}
+
+// Генератор Godot использует clockwise winding; готовые GLB используют CCW, как требует glTF.
+const gdMesh = fs.readFileSync(path.join(ROOT, 'scripts/algorithms/asset_pack_10k.gd'), 'utf8');
+const boxBody = gdMesh.slice(gdMesh.indexOf('static func _append_box'));
+assert.deepEqual(Array.from(boxBody.matchAll(/st\.add_vertex\(c\[q\[(\d)\]\]\)/g), m => Number(m[1])), [0, 2, 1, 0, 3, 2]);
+for (const asset of sandbox.DD_DATA.manifest.filter(a => a.type === '3D_glb')) {
+  const glb = fs.readFileSync(path.join(ROOT, asset.file));
+  assert.equal(glb.readUInt32LE(0), 0x46546c67);
+  const jsonLen = glb.readUInt32LE(12);
+  const gltf = JSON.parse(glb.subarray(20, 20 + jsonLen).toString('utf8'));
+  const binStart = 20 + jsonLen + 8;
+  const primitive = gltf.meshes[0].primitives[0];
+  function viewOffset(accessorIndex) {
+    const a = gltf.accessors[accessorIndex];
+    return binStart + (gltf.bufferViews[a.bufferView].byteOffset || 0) + (a.byteOffset || 0);
+  }
+  const p = viewOffset(primitive.attributes.POSITION), n = viewOffset(primitive.attributes.NORMAL), idx = viewOffset(primitive.indices);
+  const count = gltf.accessors[primitive.indices].count;
+  function vec(base, i) { return [0, 1, 2].map(k => glb.readFloatLE(base + i * 12 + k * 4)); }
+  for (let t = 0; t < count; t += 3) {
+    const a = glb.readUInt16LE(idx + t * 2), b = glb.readUInt16LE(idx + (t + 1) * 2), c = glb.readUInt16LE(idx + (t + 2) * 2);
+    const va = vec(p, a), vb = vec(p, b), vc = vec(p, c), normal = vec(n, a);
+    const u = vb.map((v, i) => v - va[i]), v = vc.map((v, i) => v - va[i]);
+    const cross = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+    assert.ok(cross.reduce((sum, x, i) => sum + x * normal[i], 0) > 0, `${asset.id}: грань смотрит внутрь`);
+  }
+}
+
+// Открытая дверь не делает соседнюю стену проходимой; прямой проход возможен.
+let open = true;
+const wall = { isWalkable: (x, y) => y !== 0 || (x === 0 && open) };
+const G = DD.GameplayHelpers;
+const blocked = G.moveWithCollision(wall, 1, -1, 0, 3, 0.2);
+assert.ok(blocked.y <= -0.7 + 1e-6, 'бег не перескакивает стену');
+const diagonal = G.moveWithCollision(wall, 0.8, -1, -0.25, 3, 0.2);
+assert.ok(diagonal.y <= -0.7 + 1e-6, 'нельзя срезать угол соседней с дверью стены');
+const through = G.moveWithCollision(wall, 0, -1, 0, 2, 0.2);
+assert.ok(through.y > 0.9, 'через открытую дверь можно пройти');
+open = false;
+assert.ok(G.moveWithCollision(wall, 0, -1, 0, 2, 0.2).y <= -0.7 + 1e-6, 'закрытая дверь блокирует проход');
+world.setTile(15, 15, DD.TILE.WINDOW);
+assert.equal(world.isWalkable(15, 15), false, 'через закрытое окно нельзя пройти пешком');
 
 console.log('[dead-district smoke] ALL CHECKS PASSED');
