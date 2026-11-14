@@ -3,76 +3,88 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ратград — белый холст</title>
+<title>РАТГРАД — краски</title>
 <style>
-  :root{ --ink:#0b0b0b; --line:#d8d8d8; --mute:#6b6b6b; --ok:#0a7d2c; --bad:#b00020; }
+  :root{ --ink:#101010; --paper:#f7f4ee; --line:rgba(0,0,0,.16); }
   *{ box-sizing:border-box; }
-  html,body{ margin:0; padding:0; background:#fff; color:var(--ink);
+  html,body{ margin:0; height:100%; overflow:hidden; background:#dfeaf1; color:var(--ink);
     font:13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  header{ display:flex; align-items:baseline; gap:16px; padding:10px 14px; border-bottom:1px solid var(--line); }
-  header h1{ font-size:14px; margin:0; font-weight:600; letter-spacing:.02em; }
-  header .hint{ color:var(--mute); font-size:12px; }
-  main{ display:grid; grid-template-columns:1fr 400px; height:calc(100vh - 42px); }
-  @media (max-width:900px){ main{ grid-template-columns:1fr; grid-template-rows:1fr auto; height:auto; } }
-  #stage{ position:relative; border-right:1px solid var(--line); overflow:hidden; }
-  canvas{ display:block; width:100%; height:100%; background:#fff; cursor:crosshair; touch-action:none; }
-  #status{ position:absolute; left:10px; bottom:8px; font-size:11px; color:var(--mute); background:#fff; padding:2px 6px; border:1px solid var(--line); }
-  aside{ display:flex; flex-direction:column; min-height:0; }
-  .tabs{ display:flex; flex-wrap:wrap; border-bottom:1px solid var(--line); }
-  .tabs button{ flex:0 0 auto; font:inherit; background:#fff; color:var(--ink); border:0; border-right:1px solid var(--line);
-    padding:7px 10px; cursor:pointer; }
-  .tabs button[aria-selected="true"]{ background:#0b0b0b; color:#fff; }
-  .panes{ flex:1; overflow:auto; padding:12px 14px; }
-  .pane{ display:none; } .pane.on{ display:block; }
-  h2{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--mute); margin:14px 0 6px; font-weight:600; }
-  h2:first-child{ margin-top:0; }
-  table{ width:100%; border-collapse:collapse; font-size:12px; }
-  td,th{ text-align:left; padding:3px 4px; border-bottom:1px solid #eee; vertical-align:top; }
-  th{ color:var(--mute); font-weight:500; }
-  .rec{ display:block; padding:8px; border:1px solid var(--line); background:#fafafa; word-break:break-all; margin:4px 0 8px; }
-  .kv{ display:grid; grid-template-columns:132px 1fr; gap:2px 8px; font-size:12px; }
-  .kv span:nth-child(odd){ color:var(--mute); }
-  .ok{ color:var(--ok); } .bad{ color:var(--bad); }
-  label.row{ display:flex; align-items:center; gap:8px; margin:5px 0; }
-  label.row input[type=range]{ flex:1; }
-  input[type=number], input[type=text]{ width:80px; font:inherit; border:1px solid var(--line); padding:2px 4px; }
-  input[type=text]{ width:100%; }
-  .chips{ display:flex; flex-wrap:wrap; gap:10px; margin:6px 0 10px; }
-  .chips label{ display:flex; gap:5px; align-items:center; }
-  button.act{ font:inherit; border:1px solid var(--ink); background:#fff; padding:4px 9px; cursor:pointer; }
-  button.act:active{ background:#0b0b0b; color:#fff; }
-  #log{ white-space:pre-wrap; font-size:11.5px; color:#333; }
-  .muted{ color:var(--mute); }
+  #scene{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  #scene:active{ cursor:grabbing; }
+
+  .panel{ position:fixed; background:rgba(247,244,238,.92); border:1px solid var(--line);
+    padding:10px 12px; backdrop-filter:blur(6px); }
+  #hud{ left:14px; top:14px; min-width:238px; }
+  #hud h1{ margin:0 0 6px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; }
+  #hud .sub{ color:#6b6b6b; margin-bottom:8px; font-size:11.5px; }
+  #hud table{ border-collapse:collapse; font-size:11.5px; width:100%; }
+  #hud td{ padding:1px 0; }
+  #hud td:last-child{ text-align:right; }
+
+  #controls{ right:14px; top:14px; width:198px; }
+  #controls label{ display:flex; align-items:center; gap:7px; margin:4px 0; font-size:12px; }
+  #controls input{ accent-color:#333; }
+
+  #legend{ left:14px; bottom:14px; font-size:11px; }
+  #legend .row{ display:flex; align-items:center; gap:7px; margin:2px 0; }
+  #legend i{ width:14px; height:9px; display:inline-block; border:1px solid rgba(0,0,0,.2); }
+
+  #loading{ position:fixed; inset:0; display:grid; place-items:center; background:#f7f4ee;
+    transition:opacity .4s; z-index:10; }
+  #loading.done{ opacity:0; pointer-events:none; }
+  #loading .box{ text-align:center; }
+  #loading b{ font-size:18px; letter-spacing:.14em; }
+  #loading-text{ color:#6b6b6b; margin-top:8px; font-size:12px; }
+
+  .hint{ position:fixed; right:14px; bottom:14px; color:#5c5c5c; font-size:11px; background:rgba(247,244,238,.82);
+    border:1px solid var(--line); padding:5px 8px; }
+  @media (max-width:760px){
+    #hud{ min-width:0; max-width:52vw; }
+    #controls{ width:150px; }
+    #legend{ display:none; }
+  }
 </style>
 </head>
 <body>
-<header>
-  <h1>РАТГРАД · белый холст</h1>
-  <span class="hint">формулы F-71…F-89 по промту §35–§36 · без моделей и красок</span>
-</header>
-<main>
-  <div id="stage">
-    <canvas id="c"></canvas>
-    <div id="status">—</div>
+<canvas id="scene"></canvas>
+
+<div id="loading">
+  <div class="box">
+    <b>РАТГРАД</b>
+    <div id="loading-text">считаю рельеф по A28…</div>
   </div>
-  <aside>
-    <div class="tabs" role="tablist">
-      <button role="tab" aria-selected="true" data-tab="col">Столб</button>
-      <button role="tab" aria-selected="false" data-tab="face">Грань</button>
-      <button role="tab" aria-selected="false" data-tab="q">QООВЗ</button>
-      <button role="tab" aria-selected="false" data-tab="f">Формулы</button>
-      <button role="tab" aria-selected="false" data-tab="log">Журнал</button>
-    </div>
-    <div class="panes">
-      <section class="pane on" id="pane-col"></section>
-      <section class="pane" id="pane-face"></section>
-      <section class="pane" id="pane-q"></section>
-      <section class="pane" id="pane-f"></section>
-      <section class="pane" id="pane-log"><div id="log"></div></section>
-    </div>
-  </aside>
-</main>
-<script src="site/core.js"></script>
-<script src="site/app.js"></script>
+</div>
+
+<section class="panel" id="hud">
+  <h1>Ратград · краски</h1>
+  <div class="sub">рельеф A28 · формулы F-71…F-89</div>
+  <table>
+    <tr><td>кадров в секунду</td><td id="hud-fps">—</td></tr>
+    <tr><td>треугольников</td><td id="hud-tris">—</td></tr>
+    <tr><td>чанков</td><td id="hud-chunks">0 / 36</td></tr>
+    <tr><td>камера</td><td id="hud-cam">—</td></tr>
+  </table>
+</section>
+
+<section class="panel" id="controls">
+  <label><input type="checkbox" id="toggle-colors" checked> краски рельефа</label>
+  <label><input type="checkbox" id="toggle-contours" checked> изолинии 5 м</label>
+  <label><input type="checkbox" id="toggle-water" checked> вода</label>
+  <label><input type="checkbox" id="toggle-shadows" checked> тени</label>
+  <label><input type="checkbox" id="toggle-q" checked> QООВЗ</label>
+</section>
+
+<section class="panel" id="legend">
+  <div class="row"><i style="background:#2f6f8f"></i> вода</div>
+  <div class="row"><i style="background:#d8c9a3"></i> песок</div>
+  <div class="row"><i style="background:#7f9b62"></i> луг</div>
+  <div class="row"><i style="background:#4c6b46"></i> лес</div>
+  <div class="row"><i style="background:#8b8a83"></i> камень</div>
+  <div class="row"><i style="background:#f2f4f5"></i> снег</div>
+</section>
+
+<div class="hint">тяните — поворот · Shift+тяните — сдвиг · колесо — зум</div>
+
+<script src="bundle.js"></script>
 </body>
 </html>

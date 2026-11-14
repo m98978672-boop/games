@@ -1,7 +1,7 @@
 // Мини-заглушка DOM: проверяем, что app.js отрабатывает без исключений.
 const fs = require('fs');
 const vm = require('node:vm');
-const path = './';
+const path = __dirname + '/';
 
 function makeCtx(){
   const noop = ()=>{};
