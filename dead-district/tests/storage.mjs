@@ -67,10 +67,24 @@ const shelfKey=shelf.tx+','+shelf.ty;
 state.storage[shelfKey]=[{id:'apple',qty:2,freshness:.7}];
 key('Escape'); approach(shelf); key('KeyE');
 const appleBefore=win.DD.Systems.countItem(state.inv,'apple');
-document.getElementById('storage-take-all').click();
+// Поиск фильтрует обе стороны, режим стопки переносит весь выбранный слот.
+const search=document.getElementById('storage-search'); search.value='яблоко'; search.dispatchEvent({type:'input'});
+document.getElementById('storage-mode').click();
+assert.equal(document.getElementById('storage-mode').getAttribute('aria-pressed'),'true');
+document.getElementById('storage-contents').children[0].click();
 assert.equal(win.DD.Systems.countItem(state.inv,'apple'),appleBefore+2);
 assert.equal(state.storage[shelfKey].length,0);
 key('Escape'); document.getElementById('btn-save').click(); document.getElementById('btn-load').click();
 state=win.DD_STATE; approach(state.world.containers[shelfKey]); key('KeyE');
 assert.equal(state.storage[shelfKey].length,0,'пустая полка не заполняется снова после загрузки');
+// Переполненный инвентарь больше не уничтожает урожай при сборе.
+key('Escape'); state.zombies=[]; state.npcs=[];
+Object.assign(state.player,{x:15,y:15,fx:1,fy:0,inVehicleId:''});
+state.world.setTile(16,15,win.DD.TILE.ASPHALT);
+state.farms=[{tx:16,ty:15,crop:'radish',stage:3,dead:false}];
+state.inv.items.push({id:'gas_can',qty:20,freshness:1}); key('KeyE');
+assert.equal(state.farms.length,1,'урожай не исчезает, когда он не помещается');
+state.inv.items.pop(); const radish=win.DD.Systems.countItem(state.inv,'radish'); key('KeyE');
+assert.equal(state.farms.length,0); assert.equal(win.DD.Systems.countItem(state.inv,'radish'),radish+3);
+
 console.log('[dead-district storage] OK');

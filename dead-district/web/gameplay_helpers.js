@@ -58,5 +58,35 @@
     }
     return best;
   }
-  DD.GameplayHelpers = { directionRow: directionRow, directionalFrame: directionalFrame, canOccupy: canOccupy, moveWithCollision: moveWithCollision, nearestWalkable: nearestWalkable, meleeTarget: meleeTarget };
+  // Подсказка и действие используют один и тот же выбор цели и приоритет.
+  function interactionTarget(state) {
+    var p=state.player, world=state.world, T=DD.TILE;
+    if (p.inVehicleId) return {type:'exitVehicle'};
+    var candidates=[[Math.round(p.x+p.fx),Math.round(p.y+p.fy)],[Math.round(p.x),Math.round(p.y)]];
+    for (var i=0;i<candidates.length;i++) {
+      var tx=candidates[i][0],ty=candidates[i][1],key=tx+','+ty,tile=world.getTile(tx,ty);
+      var door=world.doors[key], win=world.windows[key];
+      if (tile===T.DOOR && door && !door.broken) {
+        var blocked=door.open && Math.abs(p.x-tx)<0.7 && Math.abs(p.y-ty)<0.7;
+        return {type:'door',x:tx,y:ty,object:door,blocked:blocked};
+      }
+      if (tile===T.WINDOW && win && !win.broken && !(win.barricade>0)) return {type:'window',x:tx,y:ty,object:win};
+      var cont=world.containers[key];
+      if (cont) return {type:'storage',x:tx,y:ty,object:cont};
+      for(var j=0;j<state.farms.length;j++) {
+        var f=state.farms[j];
+        if(f.tx===tx && f.ty===ty && f.stage>=3 && !f.dead) return {type:'farm',x:tx,y:ty,object:f,index:j};
+      }
+    }
+    for(var v=0;v<state.vehicles.length;v++) {
+      var veh=state.vehicles[v];
+      if(Math.hypot(veh.x-p.x,veh.y-p.y)<=2.5) return {type:'vehicle',x:veh.x,y:veh.y,object:veh};
+    }
+    for(var n=0;n<state.npcs.length;n++) {
+      var npc=state.npcs[n];
+      if(npc.hp>0 && Math.hypot(npc.x-p.x,npc.y-p.y)<=2.8) return {type:'npc',x:npc.x,y:npc.y,object:npc};
+    }
+    return null;
+  }
+  DD.GameplayHelpers = { directionRow: directionRow, directionalFrame: directionalFrame, canOccupy: canOccupy, moveWithCollision: moveWithCollision, nearestWalkable: nearestWalkable, meleeTarget: meleeTarget, interactionTarget: interactionTarget };
 })(window);

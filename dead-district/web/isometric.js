@@ -313,6 +313,12 @@
       else if(item.type==='furniture') furniture(item);
       else actor(item,q);
     });
+    var target=state.interactionTarget;
+    if(target && target.x != null && state.visible[Math.round(target.x)+','+Math.round(target.y)]) {
+      var mark=project(target.x,target.y,px,py);
+      ctx.strokeStyle='rgba(255,221,137,.95)';ctx.lineWidth=1.5;ctx.beginPath();
+      ctx.moveTo(mark.x,mark.y-8);ctx.lineTo(mark.x+16,mark.y);ctx.lineTo(mark.x,mark.y+8);ctx.lineTo(mark.x-16,mark.y);ctx.closePath();ctx.stroke();ctx.lineWidth=1;
+    }
     if(state.tw.darkness>0.02){ctx.fillStyle='rgba(10,23,34,'+(state.tw.darkness*.65).toFixed(2)+')';ctx.fillRect(0,0,W,H);}
     if(state.tw.rainIntensity>0.1){ctx.fillStyle='rgba(185,205,215,.55)';for(var r=0;r<45;r++)ctx.fillRect((r*73+Math.floor(time*100))%W,(r*47+Math.floor(time*260))%H,1,4);}
     var blood=1-state.health.bloodMl/state.health.maxBloodMl;if(blood>.08){ctx.strokeStyle='rgba(113,53,63,'+Math.min(.85,blood*1.4)+')';ctx.lineWidth=6;ctx.strokeRect(0,0,W,H);ctx.lineWidth=1;}

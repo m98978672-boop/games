@@ -7,7 +7,7 @@
 <meta name="description" content="Dead District — пиксель-арт выживание среди зомби: 32x32 чанки, поле зрения shadowcasting, 10-состояний ИИ зомби, 6 частей тела, крафт, стройка, ферма, транспорт и реальная статистика.">
 <meta name="theme-color" content="#0f2935">
 <link rel="icon" href="icon.svg">
-<link rel="stylesheet" href="style.css?v=20261110g">
+<link rel="stylesheet" href="style.css?v=20261110h">
 </head>
 <body>
 
@@ -27,9 +27,11 @@
   <div class="hud-bar">
     <span class="stat"><b id="hud-time">День 1 08:00</b></span>
     <span class="stat">Зомби: <b id="hud-zombies">0/0</b></span>
-    <span class="stat" title="Версия с видимой мебелью и пиксельными иконками">ОБНОВЛЕНИЕ: ХРАНИЛИЩА · 3</span>
+    <span class="stat" title="Версия с видимой мебелью и пиксельными иконками">ОБНОВЛЕНИЕ: ОБЫСК · 4</span>
   </div>
 </header>
+
+<div id="interaction-hint" class="interaction-hint" hidden></div>
 
 <div id="hud-log" class="hud-log">Dead District готов.</div>
 
@@ -84,10 +86,11 @@
 <div id="storage-overlay" class="modal-overlay" hidden>
   <section class="storage-card" role="dialog" aria-modal="true" aria-labelledby="storage-title">
     <header class="storage-header"><div><span class="storage-kicker">ОБЫСК И ХРАНЕНИЕ</span><h2 id="storage-title">КОНТЕЙНЕР</h2></div><button id="storage-close" class="dd-btn" type="button">Закрыть ✕</button></header>
-    <p class="storage-help">Нажмите на предмет, чтобы перенести одну штуку. Экипированное оружие переносить нельзя.</p>
+    <p class="storage-help">Выберите режим и нажмите на предмет. Экипированное оружие переносить нельзя.</p>
+    <div class="storage-tools"><input id="storage-search" type="search" placeholder="Поиск предметов" aria-label="Поиск предметов в обоих списках"><button id="storage-mode" class="dd-btn" type="button" aria-pressed="false">Перенос: по 1</button></div>
     <div id="storage-message" class="storage-message" aria-live="polite"></div>
     <div class="storage-grid">
-      <section class="storage-column"><div class="storage-column-header"><h3 id="storage-container-title">Внутри</h3><button id="storage-take-all" class="dd-btn" type="button">Взять всё →</button></div><div id="storage-contents" class="storage-list"></div></section>
+      <section class="storage-column"><div class="storage-column-header"><h3 id="storage-container-title">Внутри</h3><button id="storage-take-all" class="dd-btn" type="button">Взять показанное →</button></div><div id="storage-contents" class="storage-list"></div></section>
       <section class="storage-column"><div class="storage-column-header"><h3 id="storage-inventory-title">Ваш инвентарь</h3></div><div id="storage-inventory" class="storage-list"></div></section>
     </div>
     <footer class="storage-footer">E — открыть рядом стоящий контейнер · Esc — закрыть</footer>
@@ -238,13 +241,13 @@
 <script src="web/algorithms.js?v=20261110g"></script>
 <script src="web/systems.js?v=20261110g"></script>
 <script src="web/content_pack.js?v=20261110d"></script>
-<script src="web/gameplay_helpers.js?v=20261110c"></script>
+<script src="web/gameplay_helpers.js?v=20261110h"></script>
 <script src="web/animations.js?v=20261110c"></script>
 <script src="web/asset_assistant.js?v=20261110c"></script>
 <script src="web/catalog_f3.js?v=20261110c"></script>
 <script src="web/encounters.js?v=20261110c"></script>
-<script src="web/isometric.js?v=20261110g"></script>
+<script src="web/isometric.js?v=20261110h"></script>
 <script src="web/renderer_audio.js?v=20261110e"></script>
-<script src="web/main.js?v=20261110g"></script>
+<script src="web/main.js?v=20261110h"></script>
 </body>
 </html>
