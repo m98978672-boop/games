@@ -1,0 +1,1222 @@
+{
+  "kind": "game_step_courtesy_and_solid_probe",
+  "summary": {
+    "pairs": 40,
+    "offPassed": 0,
+    "onPassed": 40,
+    "orderOn": 40,
+    "regressed": 0,
+    "offOverlap": 240,
+    "onOverlap": 0,
+    "offSpeed": 36,
+    "onSpeed": 0
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 58,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 2,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 58,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 3,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 57,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 4,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 57,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 5,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 35,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 62,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 6,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 38,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 67,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 7,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 58,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 8,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 33,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 57,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 9,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 36,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 62,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 10,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 58,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 11,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 37,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 67,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 12,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 33,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 57,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 13,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 57,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 14,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 39,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 66,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 15,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 59,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 16,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 36,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 64,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 17,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 34,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 63,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 18,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 36,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 63,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 19,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 57,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 20,
+      "faction": 0,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 36,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 63,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 1,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 59,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 2,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 62,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 3,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 61,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 4,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 63,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 5,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 62,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 6,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 61,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 7,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 63,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 8,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 33,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 59,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 9,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 62,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 10,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 64,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 11,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 68,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 12,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 33,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 59,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 13,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 60,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 14,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 61,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 15,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 59,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 16,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 60,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 17,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 62,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 18,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 61,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 19,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": false,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 59,
+        "warOver": false
+      }
+    },
+    {
+      "seed": 20,
+      "faction": 1,
+      "off": {
+        "ok": false,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 6,
+        "speed": 1,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 32,
+        "warOver": false
+      },
+      "on": {
+        "ok": true,
+        "arrived": 2,
+        "crossed": 2,
+        "failed": 0,
+        "overlapFrames": 0,
+        "speed": 0,
+        "walls": 0,
+        "exitFirst": true,
+        "maxUnits": 2,
+        "ticks": 59,
+        "warOver": false
+      }
+    }
+  ],
+  "caveats": [
+    "Two infantry only, goals held by freezing their think timers",
+    "Autopilot disabled to prevent reinforcements; other systems active",
+    "One HQ door per faction; positions checked after each full tick, not between unit updates",
+    "Not a combat, crowd, vehicle or complete game acceptance test"
+  ]
+}

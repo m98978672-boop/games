@@ -1,0 +1,21 @@
+import assert from 'node:assert/strict';
+import { loadConfig } from '../src/core/config.js';
+import { Game } from '../src/sim/game.js';
+import { captureGraph, graphId } from '../tools/block0-graph-state.mjs';
+const cfg1=await loadConfig(), cfg2=await loadConfig();
+const a=new Game({cfg:cfg1,seed:5,aiVsAi:true}), b=new Game({cfg:cfg2,seed:5,aiVsAi:true});
+const snap=g=>captureGraph(g).bytes;
+assert.ok(snap(a)===snap(b),'independent games with same seed match at start');
+const original=snap(a);
+assert.equal(graphId(original),graphId(original));
+const unit=[...a.units.values()][0], oldThink=unit.thinkTimer;unit.thinkTimer+=1;
+assert.ok(snap(a)!==original,'non-projected soldier AI timer included');unit.thinkTimer=oldThink;
+a.nav.openArr[0]^=1;assert.ok(snap(a)!==original,'typed navigation grid included');a.nav.openArr[0]^=1;
+const oldRng=a.world.rng.s;a.world.rng.s=(oldRng+1)>>>0;assert.ok(snap(a)!==original,'world RNG included');a.world.rng.s=oldRng;
+a.walls.stats.updateMs+=1;a.walls._perfStart=123456;assert.ok(snap(a)===original,'documented wall-clock fields excluded');
+a.api.nextId++;assert.ok(snap(a)!==original,'command IDs included');a.api.nextId--;
+const ref={x:1};a._testAlias=[ref,ref];const alias=snap(a);a._testAlias=[{x:1},{x:1}];assert.ok(snap(a)!==alias,'alias identity matters');delete a._testAlias;
+a._testOrder=new Map([['a',1],['b',2]]);const ordered=snap(a);a._testOrder=new Map([['b',2],['a',1]]);assert.ok(snap(a)!==ordered,'Map order matters');delete a._testOrder;
+for(let i=0;i<5;i++){a.step(1/60);b.step(1/60);assert.ok(snap(a)===snap(b),`both graphs match on tick ${i+1}`);}
+assert.ok(captureGraph(a).limitations.includes('function closure state unavailable'));
+console.log('block0 state-graph: AI timers, typed arrays, RNG, IDs, references and map order are represented; closures remain unverified');

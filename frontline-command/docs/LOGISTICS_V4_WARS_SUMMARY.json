@@ -1,0 +1,104 @@
+{
+  "pairs": 50,
+  "seeds": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50
+  ],
+  "incompleteLine": false,
+  "plannedPairs": 50,
+  "off": {
+    "games": 50,
+    "ended": 50,
+    "wins": [
+      25,
+      25
+    ],
+    "timeLimit": 10,
+    "kills": [
+      2858,
+      3005
+    ],
+    "captures": [
+      552,
+      554
+    ],
+    "physical": 140,
+    "virtual": 357,
+    "buildingUnloads": 4,
+    "outsideArrivalRadius": 0,
+    "withFailure": 0,
+    "wallBreaches": 473
+  },
+  "on": {
+    "games": 50,
+    "ended": 50,
+    "wins": [
+      23,
+      27
+    ],
+    "timeLimit": 9,
+    "kills": [
+      2567,
+      2878
+    ],
+    "captures": [
+      548,
+      580
+    ],
+    "physical": 130,
+    "virtual": 333,
+    "buildingUnloads": 4,
+    "outsideArrivalRadius": 0,
+    "withFailure": 0,
+    "wallBreaches": 454
+  },
+  "complete": true
+}

@@ -29,6 +29,7 @@ try {
   const errors = []; page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/`, { waitUntil: 'load' });
   await page.waitForFunction(() => !!window.__frontline);
+  assert.equal(await page.locator('#build-version').count(), 0, 'флаг версии по умолчанию выключен');
   await page.keyboard.press('F8');
   assert.equal(await page.locator('#inspector-panel').isVisible(), true);
   assert.match(await page.locator('.inspector-report').textContent(), /Запустите войну/);
@@ -64,8 +65,35 @@ try {
   assert.ok(result.includes(702) && result.includes(706), `обнаружены: ${result}`);
   await page.locator('[data-action="close"]').click();
   assert.equal(await page.locator('#inspector-panel').isVisible(), false);
+  // Проверяем настоящий старт страницы при включённом флаге: только ответ
+  // конфигурации в тестовом контексте меняется, файлы игры не переписываются.
+  const routePattern = '**/data/feature_flags.json';
+  await page.route(routePattern, async (route) => {
+    const response = await route.fetch(), data = await response.json();
+    const entry = data.flags.find((f) => f.id === 'build_version_badge_v1');
+    if (!entry) throw Error('отсутствует флаг версии');
+    entry.enabled = true;
+    await route.fulfill({ response, json: data });
+  });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.__frontline);
+  const label = await page.locator('#build-version').textContent();
+  assert.match(label, /^Сборка 0\.11\.0-dev\./);
+  await page.keyboard.press('F8');
+  assert.ok((await page.locator('.inspector-report').textContent()).includes(label.replace('Сборка ', 'Сборка: ')), 'версия в F8 совпадает с версией на экране');
+  await page.keyboard.press('F8');
+  await page.evaluate(() => { const g = window.__frontline.newGame({ seed: 5, aiVsAi: true }); g.paused = true; });
+  assert.equal(await page.locator('#build-version').isVisible(), true, 'версия видна и в игре');
+  await page.keyboard.press('F8');
+  assert.ok((await page.locator('.inspector-report').textContent()).includes(label.replace('Сборка ', 'Сборка: ')), 'версия в F8 внутри игры');
+  await page.unroute(routePattern);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(() => !!window.__frontline);
+  assert.equal(await page.locator('#build-version').count(), 0, 'off после перезагрузки снова без метки');
+  await page.keyboard.press('F8');
+  assert.doesNotMatch(await page.locator('.inspector-report').textContent(), /Сборка:/, 'off возвращает прежний отчёт');
   assert.deepEqual(errors, []);
-  console.log('Chromium: F8 в меню, кнопка в игре, реальные найденные повреждения, закрытие, ошибок страницы нет');
+  console.log('Chromium: F8 и обнаружение повреждений, версия on/off в меню и инспекторе, ошибок страницы нет');
 } finally {
   if (browser) await browser.close();
   if (server.listening) await new Promise((resolve) => server.close(resolve));

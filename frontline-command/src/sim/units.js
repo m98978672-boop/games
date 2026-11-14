@@ -1,7 +1,15 @@
+import { motionWallSweepFree } from './motion_wall_sweep.js';
 // Юнит: данные, движение, Perception, урон и стрельба. Один код для игрока, ботов и врага.
 import {
   clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp, TAU, normAngle, approachAngle,
 } from '../core/mathx.js';
+import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute } from './smart_route.js';
+import { doorPairWaypoint, doorPairPositionFree } from './door_pair.js';
+import { solidUnitMoveFree } from './solid_units.js';
+import { courtesyYield } from './door_courtesy.js';
+import { chooseVisionNavigation } from './vision_nav_policy.js';
+import { wallSafeGoal } from './wall_goal.js';
+import { clearCrowdState, prepareCrowdNavigation, setCrowdDetour, crowdPositionFree } from './crowd_nav.js';
 
 export const NEAR_RADIUS = 40;
 // Счётчики для debug-оверлея (F3) и тестов баланса.
@@ -119,6 +127,9 @@ export function updatePerception(game, u, dt) {
   p.memory = Math.max(0, p.memory - dt);
   if (u.downed || !u.alive) { p.hasContact = false; p.enemies.length = 0; return; }
   const cone = degToRad(game.cfg.ai.perception.coneDeg);
+  // Opt-in: all directions within the existing vision radius, with actual LOS.
+  // Existing hearing and memory remain separate; this is not x-ray vision.
+  const surround = game.cfg.flag('bot_surround_vision_v1', false);
   const enemies = game.nearbyEnemies(u, u.vision + 60);
   let best = null, bestScore = -Infinity;
   p.enemies.length = 0;
@@ -126,11 +137,16 @@ export function updatePerception(game, u, dt) {
     if (!e.alive || e.downed) continue;
     const d = dist(u.x, u.y, e.x, e.y);
     if (d > u.vision) continue;
-    let visible = d < game.cfg.ai.perception.closeAwareness;
-    if (!visible) {
-      const a = angleTo(u.x, u.y, e.x, e.y);
-      if (angleDiff(a, u.facing) < cone / 2) {
-        visible = game.world.hasLOS(u.x, u.y, e.x, e.y, true);
+    let visible;
+    if (surround) {
+      visible = game.world.hasLOS(u.x, u.y, e.x, e.y, true);
+    } else {
+      visible = d < game.cfg.ai.perception.closeAwareness;
+      if (!visible) {
+        const a = angleTo(u.x, u.y, e.x, e.y);
+        if (angleDiff(a, u.facing) < cone / 2) {
+          visible = game.world.hasLOS(u.x, u.y, e.x, e.y, true);
+        }
       }
     }
     if (!visible) continue;
@@ -157,6 +173,14 @@ export function hearShot(game, shooter, weapon) {
     u.perception.heard = { x: shooter.x + game.rng.range(-60, 60), y: shooter.y + game.rng.range(-60, 60), t: 4 };
     if (u.state === 'idle' && u.role !== 'engineer') u.perception.investigate = true;
   }
+}
+
+// A remembered ID is not sight. Recheck the real range and LOS at use time;
+// the enemy may have moved behind a wall since the last perception update.
+export function vehicleHasCurrentSight(game, u, target) {
+  return !!target && target.alive && !target.downed && target.faction !== u.faction &&
+    !!u.perception.hasContact && u.perception.enemies.includes(target) &&
+    dist(u.x,u.y,target.x,target.y) <= u.vision && game.world.hasLOS(u.x,u.y,target.x,target.y,true);
 }
 
 // ---------- Стрельба ----------
@@ -388,8 +412,11 @@ export function reviveUnit(game, u) {
 }
 
 // ---------- Движение ----------
-export function moveUnit(game, u, dx, dy, dt) {
+export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
+  if (u._crowdActive && (!game.cfg.flag('crowd_nav_v2', false) || u.playerControlled || u.perception.hasContact || !u.goal)) clearCrowdState(u);
+  if (u._smartRoute && ((!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false)) || !u.goal || u.perception.hasContact || u.playerControlled)) discardSmartRoute(u);
   if (!u.alive || u.downed) return;
+  const solid = game.cfg.flag('unit_solid_2d_v1', false);
   let speed = u.speed;
   speed *= game.world.speedAt(u.x, u.y);
   if (u.isVehicle && u.engineDamage) speed *= 0.55;
@@ -462,6 +489,18 @@ export function moveUnit(game, u, dx, dy, dt) {
       u.stuck = anti.stuckAfterDetour ?? 0.8;
     }
   }
+  const yieldPoint = game.cfg.flag('door_courtesy_v1', false) && (!visionChoice || visionChoice.mode !== 'combat')
+    ? courtesyYield(game,u,visionChoice?.visibleIds || null) : null;
+  if (yieldPoint) {
+    u.stuck = 0;
+    if (Math.hypot(yieldPoint.x-u.x,yieldPoint.y-u.y)<2) return;
+    dx = yieldPoint.x-u.x; dy = yieldPoint.y-u.y;
+  }
+  const allowPair = !visionChoice || (visionChoice.mode === 'pair' && !game.cfg.flag('door_courtesy_v1', false));
+  const doorLane = !yieldPoint && allowPair && game.cfg.flag('door_pair_lanes_v1', false) ? doorPairWaypoint(game,u) : null;
+  if (visionChoice && !allowPair && u._doorPass) u._doorPass = null;
+  if (!doorLane && u._doorPass && !game.cfg.flag('door_pair_lanes_v1', false)) u._doorPass = null;
+  if (doorLane) { dx = doorLane.x-u.x; dy = doorLane.y-u.y; }
   const len = Math.hypot(dx, dy);
   if (len > 1) { dx /= len; dy /= len; }
   // расталкивание (steering separation)
@@ -478,8 +517,14 @@ export function moveUnit(game, u, dx, dy, dt) {
       sy += ((u.y - o.y) / d) * (1 - d / r);
     }
     dx += sx * 0.9; dy += sy * 0.9;
+    if (u._crowdActive || doorLane || solid || yieldPoint) {
+      const length=Math.hypot(dx,dy);
+      if(length>1){dx/=length;dy/=length;}
+    }
   }
-  const step = speed * dt;
+  let step = speed * dt;
+  if (yieldPoint) step=Math.min(step, Math.hypot(u.x-yieldPoint.x,u.y-yieldPoint.y));
+  if (u._crowdActive && u._crowdPoint) step=Math.min(step, Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y));
   const nx = u.x + dx * step, ny = u.y + dy * step;
   const r = u.radius;
   // двери открываются перед юнитом (и закрываются сами, если рядом никого)
@@ -491,10 +536,14 @@ export function moveUnit(game, u, dx, dy, dt) {
     ? (x, y) => game.world.isBaseWalkable(x, y)
     : (x, y) => game.world.isWalkable(x, y);
   const free = (x, y) => walk(x - r, y - r) && walk(x + r, y - r) &&
-    walk(x - r, y + r) && walk(x + r, y + r) && walk(x, y) && wallFree(x, y);
+    walk(x - r, y + r) && walk(x + r, y + r) && walk(x, y) && wallFree(x, y) &&
+    motionWallSweepFree(game, u, x, y) && crowdPositionFree(game, u, x, y) && (!doorLane || doorPairPositionFree(game, u, x, y)) &&
+    (!solid || solidUnitMoveFree(game, u, x, y));
+  const probe = game._motionDiagnostic, startX = probe && u.x, startY = probe && u.y;
+  const avoidNoopSlide = game.cfg.flag('motion_slide_guard_v1', false);
   if (free(nx, ny)) { u.x = nx; u.y = ny; }
-  else if (free(nx, u.y)) { u.x = nx; }
-  else if (free(u.x, ny)) { u.y = ny; }
+  else if ((!avoidNoopSlide || Math.abs(nx-u.x)>1e-9) && free(nx, u.y)) { u.x = nx; }
+  else if ((!avoidNoopSlide || Math.abs(ny-u.y)>1e-9) && free(u.x, ny)) { u.y = ny; }
   else {
     // обход препятствия: пробуем скользить под углом (wall follow)
     let moved = false;
@@ -506,6 +555,8 @@ export function moveUnit(game, u, dx, dy, dt) {
     }
     if (!moved) u.stuck = (u.stuck || 0) + dt * 2;
   }
+  if (probe) probe(u,startX,startY,u.x,u.y,'ordinary');
+  const rescueX = probe && u.x, rescueY = probe && u.y;
   // Антизастревание без телепорта: если юнит оказался в непроходимой клетке
   // (закрылась дверь, достроилась стена), выталкиваем его к ближайшей свободной.
   if (wallsOn && (!walk(u.x, u.y) || game.walls.blocksMove(u.x, u.y, r * 0.5, u))) {
@@ -527,13 +578,16 @@ export function moveUnit(game, u, dx, dy, dt) {
       const maxStep = (anti.pushSpeedMult ?? 1.5) * Math.max(u.speed, anti.pushSpeedFloor ?? 30) * dt;
       const dd = Math.hypot(best.x - u.x, best.y - u.y) || 1;
       const k = Math.min(1, maxStep / dd);
-      u.x = u.x + (best.x - u.x) * k;
-      u.y = u.y + (best.y - u.y) * k;
-      u.stuck = Math.max(0, (u.stuck || 0) - dt * 4);
+      const pushX = u.x + (best.x - u.x) * k, pushY = u.y + (best.y - u.y) * k;
+      if (!solid || solidUnitMoveFree(game, u, pushX, pushY)) {
+        u.x = pushX; u.y = pushY;
+        u.stuck = Math.max(0, (u.stuck || 0) - dt * 4);
+      }
     }
   }
   u.x = clamp(u.x, 8, game.world.W - 8);
   u.y = clamp(u.y, 8, game.world.H - 8);
+  if (probe) probe(u,rescueX,rescueY,u.x,u.y,'rescue');
   if (Math.hypot(dx, dy) > 0.1) u.facing = approachAngle(u.facing, Math.atan2(dy, dx), dt * 8);
 }
 
@@ -556,7 +610,8 @@ export function updateTimers(game, u, dt) {
   if (u.isVehicle) {
     if (u.targetId != null) {
       const t = game.unitById(u.targetId);
-      if (t && t.alive && dist(u.x, u.y, t.x, t.y) < u.vision) {
+      if (t && t.alive && dist(u.x, u.y, t.x, t.y) < u.vision &&
+          (!game.cfg.flag('vehicle_visible_fire_v1', false) || vehicleHasCurrentSight(game, u, t))) {
         u.turretAngle = approachAngle(u.turretAngle, angleTo(u.x, u.y, t.x, t.y), dt * (u.turretDamage ? 1.2 : 2.4));
       }
     }
@@ -565,7 +620,13 @@ export function updateTimers(game, u, dt) {
   if (u.age - u.lastCheck.t > 2.5) {
     const moved = dist(u.x, u.y, u.lastCheck.x, u.lastCheck.y);
     u.lastCheck = { x: u.x, y: u.y, t: u.age };
-    if (u.goal && moved < 6 && u.alive && !u.downed) {
+    // Arrival may persist while the next order is being assigned. Recheck the
+    // current goal and any crowd slot; a stale `arrived` flag is not enough.
+    const arrivedAtCurrentGoal = game.cfg.flag('arrival_stuck_guard_v1', false) && u.arrived && u.goal &&
+      dist(u.x,u.y,u.goal.x,u.goal.y) < (game.walls && game.walls.enabled()
+        ? (game.cfg.navBudget?.arriveRadius?.walls ?? 34) : (game.cfg.navBudget?.arriveRadius?.legacy ?? 24)) &&
+      (!u._crowdActive || !u._crowdPoint || dist(u.x,u.y,u._crowdPoint.x,u._crowdPoint.y)<2);
+    if (u.goal && moved < 6 && u.alive && !u.downed && !arrivedAtCurrentGoal) {
       u.stuck += 1;
       if (u.stuck >= 2) {
         if (game.cfg.flag('alg_deadlock', false)) {
@@ -583,19 +644,52 @@ export function updateTimers(game, u, dt) {
         }
         u.goal = null; u.flowDir = null; u.stuck = 0; u.pathFailed = true;
       }
-    } else if (moved > 20) u.stuck = 0;
+    } else if (arrivedAtCurrentGoal || moved > 20) u.stuck = 0;
   }
 }
 
 export function moveAlongFlow(game, u, dt) {
-  if (!u.goal) { u.flowDir = null; return; }
+  if (!u.goal) { if (u._smartRoute) discardSmartRoute(u); if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u); u.flowDir = null; return; }
+  // Adjust a destination embedded in a wall before asking for a flow field.
+  // This does not validate all intermediate edges of the coarse nav grid.
+  if (game.cfg.flag('wall_goal_guard_v1', false) && game.walls?.enabled() &&
+      game.walls.blocksMove(u.goal.x, u.goal.y, u.radius, u)) {
+    const goal = u.goal, safe = wallSafeGoal(game,u);
+    if (u._smartRoute) discardSmartRoute(u);
+    if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u);
+    u.flowDir = null; u.stuck = 0;
+    if (!safe) {
+      u.goal = null; u.pathFailed = true;
+      game.events?.emit('pathFailed', {t:game.time,unitId:u.id,faction:u.faction,role:u.role,
+        x:u.x,y:u.y,goalX:goal.x,goalY:goal.y,reason:'goal_blocked_by_wall'});
+      return;
+    }
+    u.goal = safe;
+  }
+  // updateTimers при отказе удаляет цель. Новая цель бойца или танка — новая
+  // попытка; F8 не должен игнорировать её из-за прошлого отказа. Грузовики
+  // управляются отдельно логистикой, которая сама обрабатывает этот статус.
+  if (u.pathFailed && u.role !== 'truck') u.pathFailed = false;
   const d = dist(u.x, u.y, u.goal.x, u.goal.y);
+  const visionChoice = game.cfg.flag('vision_nav_policy_v1', false) ? chooseVisionNavigation(game,u) : null;
+  // The two-person formation is restricted to a visibly opposing exit. This
+  // avoids silently reforming normal squads when their members disperse.
+  const allowPair = !!visionChoice && visionChoice.mode !== 'combat' && game.cfg.flag('group_nav_pair_v1', false) &&
+    (u._crowdPairManaged || !!courtesyYield(game,u,visionChoice.visibleIds));
+  const managedPair = allowPair && visionChoice.mode === 'pair' && (!u._crowdGroupGoal || u._crowdPairManaged);
+  if (!visionChoice || visionChoice.mode === 'group' || managedPair) prepareCrowdNavigation(game, u, d, managedPair ? 2 : undefined, allowPair);
+  else if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u);
   // Радиус прибытия: со стенами чуть больше (юнит стоит у стены, а не в центре точки),
   // с выключенным флагом — прежние 24 px, чтобы поведение не менялось.
   const arrive = game.cfg.navBudget?.arriveRadius || { legacy: 24, walls: 34 };
   const arriveD = game.walls && game.walls.enabled() ? arrive.walls : arrive.legacy;
-  if (d < arriveD) { u.arrived = true; u.flowDir = null; return; }
+  if (d < arriveD && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) { if (u._smartRoute) discardSmartRoute(u); u.arrived = true; u.flowDir = null; return; }
   u.arrived = false;
+  if (visionChoice && (visionChoice.mode === 'combat' || ((visionChoice.mode === 'group' || visionChoice.mode === 'pair') && u._crowdActive))) cancelSelectedSmartRoute(game,u);
+  else if (game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false)) {
+    if (!visionChoice || visionChoice.obstacle || (u.stuck || 0) >= 1 || u._smartRoute || game._smartRouteState?.active?.unit === u)
+      updateSmartRoute(game,u);
+  } else if (u._smartRoute) discardSmartRoute(u);
   if (!u.flowDir || u.flowTimer <= 0) {
     // Отряд идёт по общему полю (одно на отряд), персональное поле — только для одиночек.
     const sq = u.squad;
@@ -614,5 +708,18 @@ export function moveAlongFlow(game, u, dt) {
     u.flowTimer = 0.45 + game.rng.next() * 0.25;
   }
   u.flowTimer -= dt;
-  moveUnit(game, u, u.flowDir.x, u.flowDir.y, dt);
+  setCrowdDetour(game,u);
+  let mx=u.flowDir.x,my=u.flowDir.y;
+  if(game.cfg.flag('near_goal_direct_v1',false) && !u.isVehicle && !u.playerControlled &&
+     !u.perception.hasContact && !u._crowdActive && !u.detour && d<90 && game.walls?.enabled() &&
+     !game.walls.buildingAtPoint(u.x,u.y) && !game.walls.buildingAtPoint(u.goal.x,u.goal.y)) {
+    let clear=true;const r=u.radius,steps=Math.ceil(d/6),w=game.world;
+    for(let i=1;i<=steps;i++){
+      const x=u.x+(u.goal.x-u.x)*i/steps,y=u.y+(u.goal.y-u.y)*i/steps;
+      if(!w.isBaseWalkable(x,y)||!w.isBaseWalkable(x-r,y-r)||!w.isBaseWalkable(x+r,y-r)||
+         !w.isBaseWalkable(x-r,y+r)||!w.isBaseWalkable(x+r,y+r)||game.walls.blocksMove(x,y,r,u)){clear=false;break;}
+    }
+    if(clear){mx=u.goal.x-u.x;my=u.goal.y-u.y;}
+  }
+  moveUnit(game, u, mx, my, dt, visionChoice);
 }

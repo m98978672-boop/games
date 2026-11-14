@@ -10,13 +10,15 @@ import { chromium as playwright } from 'playwright-core';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const quick = process.argv.includes('--quick');
+// Candidate workload only: it cannot satisfy the original acceptance scene.
+const warmed = process.argv.includes('--warmed');
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
   '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer(async (request, response) => {
   try {
     const name = decodeURIComponent(new URL(request.url, 'http://test.invalid').pathname).replace(/^\/+/, '') || 'index.html';
     if (name.split(/[\\/]/).includes('..')) { response.writeHead(404).end(); return; }
-    if (!['index.html', 'style.css', 'cover.svg'].includes(name) && !['src/', 'data/', 'assets/'].some((p) => name.startsWith(p))) {
+    if (!['index.html', 'style.css', 'cover.svg', 'tests/acceptance/population-monitor.js'].includes(name) && !['src/', 'data/', 'assets/'].some((p) => name.startsWith(p))) {
       response.writeHead(404).end(); return;
     }
     const path = resolve(root, name);
@@ -46,11 +48,17 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/index.html`, { waitUntil: 'load', timeout: 60_000 });
     await page.waitForFunction(() => !!window.__frontline, { timeout: 60_000 });
-    const result = await page.evaluate(async ({ target, quick }) => {
+    const result = await page.evaluate(async ({ target, quick, warmed }) => {
+      const { createPopulationMonitor } = await import('/tests/acceptance/population-monitor.js');
       const app = window.__frontline;
       const game = app.newGame({ seed: 5, aiVsAi: true, difficulty: 'regular' });
       const renderer = app.renderer;
       const count = (f = null) => [...game.units.values()].filter((u) => u.alive && (f === null || u.faction === f)).length;
+      // Candidate mode performs 5s of ordinary simulation before topping up;
+      // it does not suppress or undo natural spawns or deaths.
+      if (warmed) for (let i = 0; i < 300; i++) game.step(1 / 60);
+      const warmup = { ticks: warmed ? 300 : 0, gameTime: game.time, aliveByFaction: [count(0), count(1)] };
+      if (game.warOver || warmup.aliveByFaction.some((n) => n > target / 2)) throw Error('cannot top up candidate workload without removing units');
       for (const faction of [0, 1]) {
         const hq = game.world.hqOf(faction);
         let k = 0;
@@ -81,7 +89,19 @@ try {
           finally { if (measuring) samples[key].push(performance.now() - t); }
         };
       };
-      instrument(game, 'step', 'step');
+      const population = createPopulationMonitor(target, initial);
+      const originalStep = game.step;
+      game.step = function (...args) {
+        if (measuring) population.observe(count(), 'before-step');
+        const t = performance.now();
+        try { return originalStep.apply(this, args); }
+        finally {
+          if (measuring) {
+            samples.step.push(performance.now() - t);
+            population.observe(count(), 'after-step');
+          }
+        }
+      };
       instrument(app.hud, 'update', 'hud');
       const draw = renderer.draw.bind(renderer);
       renderer.draw = (...args) => {
@@ -93,11 +113,13 @@ try {
       await new Promise((resolve) => setTimeout(resolve, quick ? 1000 : 3000));
       const drawStart = drawCount, canvas = renderer.canvas, gameTimeStart = game.time;
       measuring = true;
+      population.observe(count(), 'start');
       const measurement = await new Promise((resolve) => {
         let start = null, previous = null, minAlive = Infinity, maxAlive = 0, minVisible = Infinity;
         const durations = [];
         function frame(timestamp) {
           const alive = count();
+          population.observe(alive, 'frame');
           minAlive = Math.min(minAlive, alive); maxAlive = Math.max(maxAlive, alive);
           minVisible = Math.min(minVisible, visibleCount());
           if (start === null) start = timestamp;
@@ -119,7 +141,9 @@ try {
       const sorted = [...measurement.durations].sort((a, b) => b - a);
       const worstCount = Math.max(1, Math.ceil(sorted.length * 0.01));
       const worstTime = sorted.slice(0, worstCount).reduce((a, b) => a + b, 0);
-      return { target, initial, minAlive: measurement.minAlive, maxAlive: measurement.maxAlive,
+      const populationSummary = population.summary();
+      return { target, initial, warmup, minAlive: populationSummary.minAlive, maxAlive: populationSummary.maxAlive,
+        frameMinAlive: measurement.minAlive, frameMaxAlive: measurement.maxAlive, population: populationSummary,
         minVisible: measurement.minVisible, spritesReady,
         elapsedMs: measurement.durationMs, frames: sorted.length, worstCount, worstTimeMs: worstTime,
         averageFps: sorted.length * 1000 / measurement.durationMs,
@@ -128,7 +152,7 @@ try {
         sameGame: app.game === game,
         warOver: game.warOver, screen: app.state.screen, userAgent: navigator.userAgent,
         timings: { step: stats(samples.step), draw: stats(samples.draw), hud: stats(samples.hud) } };
-    }, { target, quick });
+    }, { target, quick, warmed });
     // Читаем настоящий Canvas после измерения; это не screenshot-регрессия.
     result.canvasDataLength = await page.evaluate(() => {
       window.__frontline.game.paused = true;
@@ -143,11 +167,12 @@ try {
   const rendered = measurements.every((r) => r.drawFrames >= r.frames * 0.9 && r.canvas.width > 0 && r.canvas.height > 0 &&
     r.canvasDataLength > 1000 && r.spritesReady && r.minVisible >= r.target / 4 && r.screen === 'game' &&
     r.sameGame && r.gameSeconds > r.gameTimeStart && r.timings.step.samples > 0);
-  const passed = !quick && rendered && a.initial === 400 && b.initial === 500 && a.minAlive === 400 && a.maxAlive === 400 && b.minAlive === 500 && b.maxAlive === 500 &&
+  // Existing acceptance requires exact population, not merely the diagnostic 2% bound.
+  const passed = !quick && !warmed && rendered && a.population.strictExact && b.population.strictExact && a.initial === 400 && b.initial === 500 && a.minAlive === 400 && a.maxAlive === 400 && b.minAlive === 500 && b.maxAlive === 500 &&
     a.averageFps >= 60 && a.low1Fps >= 45 && b.averageFps >= 45 &&
     measurements.every((r) => r.elapsedMs >= 12_000 && r.frames > 0 && r.pageErrors.length === 0 && r.warOver === false);
   const report = { passed, environment: 'browser', measurement: 'requestAnimationFrame', rendered,
-    browser: `Chromium ${version}`, mode: 'headless software rendering', quick, viewport: '1280x900 DPR 1',
+    browser: `Chromium ${version}`, mode: 'headless software rendering', quick, warmed, viewport: '1280x900 DPR 1',
     frames400: a.frames, average400: a.averageFps, low1_400: a.low1Fps, minAlive400: a.minAlive, maxAlive400: a.maxAlive,
     duration400Ms: a.elapsedMs, frames500: b.frames, average500: b.averageFps, low1_500: b.low1Fps,
     minAlive500: b.minAlive, maxAlive500: b.maxAlive, duration500Ms: b.elapsedMs, measurements };

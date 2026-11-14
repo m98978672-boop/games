@@ -7,6 +7,8 @@ import { moveAlongFlow, moveUnit, updateTimers } from '../src/sim/units.js';
 
 async function setup(enabled) {
   const cfg = await loadConfig();
+  if (process.env.SMART_ROUTE === '1') cfg.flags.smart_route_v2 = true;
+  if (process.env.BOT_VISION === '1') cfg.flags.bot_obstacle_vision_v1 = true;
   cfg.flags.pathing_v2 = enabled;
   if (process.env.VEHICLE_DETOUR === '1') cfg.flags.vehicle_detour_v2 = true;
   if (enabled && process.env.WALL_NAV_LOCAL === '1') cfg.flags.wall_nav_local = true;

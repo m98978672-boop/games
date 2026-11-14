@@ -1,0 +1,1099 @@
+{
+  "passed": true,
+  "kind": "warmed_population_scenario_diagnostic",
+  "node": "v22.22.3",
+  "seeds": 20,
+  "warmupTicks": 300,
+  "measuredTicks": 600,
+  "dt": 0.016666666666666666,
+  "limits": [
+    "Node only: no browser, draw, FPS or target device",
+    "Warmup occurs before scripted top-up to the exact target",
+    "All normal game spawning, deaths and AI remain enabled",
+    "Counts sampled before and after each step, not continuously inside it",
+    "No frame observations are performed in Node",
+    "This candidate scenario is not the original FPS workload"
+  ],
+  "runs": [
+    {
+      "target": 400,
+      "seed": 1,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 2,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 3,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 4,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 5,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 6,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 7,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 8,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 9,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 10,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 11,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 12,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 13,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 14,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 15,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 16,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 17,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 18,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 19,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 400,
+      "seed": 20,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 400,
+        "maxAlive": 400,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 1,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 2,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 3,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 4,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 5,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 6,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 7,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 8,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 9,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 10,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 11,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 12,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 13,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 14,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 15,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 16,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 17,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 18,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 19,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    },
+    {
+      "target": 500,
+      "seed": 20,
+      "warmupAlive": [
+        37,
+        37
+      ],
+      "simStart": 4.999999999999988,
+      "simEnd": 15.000000000000325,
+      "steps": 600,
+      "warOverAt": null,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": false,
+        "samples": 1201,
+        "beforeStepSamples": 600,
+        "afterStepSamples": 600,
+        "frameSamples": 0,
+        "minAlive": 500,
+        "maxAlive": 500,
+        "firstOutside2Percent": null,
+        "strictExact": true,
+        "within2Percent": true
+      },
+      "pass": true
+    }
+  ]
+}

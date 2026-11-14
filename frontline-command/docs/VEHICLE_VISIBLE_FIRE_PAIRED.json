@@ -1,0 +1,2440 @@
+{
+  "expected": true,
+  "kind": "vehicle_visible_target_paired_diagnostic",
+  "seeds": 20,
+  "summary": [
+    {
+      "kind": "hidden_memory",
+      "pairs": 40,
+      "offShots": 40,
+      "onShots": 0
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "pairs": 40,
+      "offShots": 40,
+      "onShots": 0
+    },
+    {
+      "kind": "hidden_think",
+      "pairs": 40,
+      "offShots": 40,
+      "onShots": 0
+    },
+    {
+      "kind": "visible",
+      "pairs": 40,
+      "offShots": 40,
+      "onShots": 40
+    }
+  ],
+  "pairs": [
+    {
+      "kind": "hidden_memory",
+      "seed": 1,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 2,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 3,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 4,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 5,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 6,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 7,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 8,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 9,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 10,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 11,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 12,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 13,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 14,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 15,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 16,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 17,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 18,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 19,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 20,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 1,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 2,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 3,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 4,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 5,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 6,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 7,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 8,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 9,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 10,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 11,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 12,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 13,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 14,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 15,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 16,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 17,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 18,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 19,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_memory",
+      "seed": 20,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": false,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": false,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 1,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 2,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 3,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 4,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 5,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 6,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 7,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 8,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 9,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 10,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 11,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 12,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 13,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 14,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 15,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 16,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 17,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 18,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 19,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 20,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 1,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 2,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 3,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 4,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 5,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 6,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 7,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 8,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 9,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 10,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 11,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 12,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 13,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 14,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 15,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 16,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 17,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 18,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 19,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_stale_contact",
+      "seed": 20,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 1,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 2,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 3,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 4,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 5,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 6,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 7,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 8,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 9,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 10,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 11,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 12,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 13,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 14,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 15,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 16,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 17,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 18,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 19,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 20,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 1,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 2,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 3,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 4,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 5,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 6,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 7,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 8,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 9,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 10,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 11,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 12,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 13,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 14,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 15,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 16,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 17,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 18,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 19,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "hidden_think",
+      "seed": 20,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 0,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 1,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 2,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 3,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 4,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 5,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 6,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 7,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 8,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 9,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 10,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 11,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 12,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 13,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 14,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 15,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 16,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 17,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 18,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 19,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 20,
+      "faction": 0,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 1,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 2,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 3,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 4,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 5,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 6,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 7,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 8,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 9,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 10,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 11,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 12,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 13,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 14,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 15,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 16,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 17,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 18,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 19,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    },
+    {
+      "kind": "visible",
+      "seed": 20,
+      "faction": 1,
+      "off": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      },
+      "on": {
+        "shots": 1,
+        "contact": true,
+        "targetRemembered": true
+      }
+    }
+  ],
+  "caveats": [
+    "One tick, isolated tank and infantry, both factions",
+    "Actual HQ wall for hidden cases; open case uses synthetic LOS",
+    "No group combat, win rate, long battles, browser performance, or save/load",
+    "Runtime LOS checks add potential cost",
+    "Combat change is default off"
+  ]
+}

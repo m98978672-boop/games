@@ -1,7 +1,19 @@
 // Проверка самого независимого аудита: отсутствие доказательств — не успех.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { requirements, validateEvidence, validateUVariants, verdict } from '../tools/block1-auditor.mjs';
+import { requirements, validateEvidence, validateUVariants, validateUnitGrid, verdict, skippedLines, summarize, hasSkippedEvidence } from '../tools/block1-auditor.mjs';
+
+// A passing process exit must never conceal an explicit skipped test.
+const output = { code: 0, error: null, elapsedMs: 1, stderr: '', stdout: 'ok  первая проверка\nskip  узких проходов на карте не найдено\nok  конец' };
+assert.equal(summarize('full_suite', 'suite', output).status, 'fail');
+assert.equal(summarize('full_suite', 'suite', output).skipCount, 1);
+assert.equal(summarize('full_suite', 'suite', { ...output, stdout: 'ok  первая\n# skipped 0\nok конец' }).status, 'pass');
+assert.equal(summarize('full_suite', 'suite', { ...output, stdout: 'ok 1 foo # SKIP причина' }).status, 'fail');
+assert.equal(summarize('full_suite', 'suite', { ...output, stdout: 'пропущено: проверка' }).status, 'fail');
+assert.equal(summarize('full_suite', 'suite', { ...output, stdout: 'ok', stderr: 'skip missing runtime' }).status, 'fail');
+assert.equal(skippedLines('# skipped 0\nпропущено: 0').length, 0);
+assert.equal(skippedLines('# skipped 2').length, 1);
+assert.equal(summarize('full_suite', 'suite', { ...output, code: 1, stdout: 'ok' }).status, 'fail');
 
 const variants = { vehicleDetour: false, total: 216, passed: 216, results:
   ['infantry','truck','tank'].flatMap((role) => [0,1,2,3].flatMap((rotation) => [128,160,192].flatMap((size) =>
@@ -15,14 +27,25 @@ assert.equal(validateUVariants({ ...variants, results: variants.results.slice(0,
 
 assert.equal(verdict([]), 'NOT_ACCEPTED');
 assert.equal(verdict([{ id: 'full_suite', status: 'pass' }]), 'NOT_ACCEPTED');
-const complete = ['full_suite', 'production_flags', 'u_trap', ...requirements.map((r) => r.id)]
+const complete = ['full_suite', 'production_flags', 'u_trap', 'unit_grid', ...requirements.map((r) => r.id)]
   .map((id) => ({ id, status: 'pass' }));
 assert.equal(verdict(complete), 'PASS');
+const grid = {passed:true,runs:[5,7,11].map(seed=>({seed,ticks:60,crossings:1,observations:10,mismatches:0,examples:[]}))};
+assert.equal(validateUnitGrid(grid),true);
+assert.equal(validateUnitGrid({...grid,runs:grid.runs.map((r,i)=>i?r:{...r,mismatches:1})}),false);
+assert.equal(validateUnitGrid({...grid,runs:grid.runs.map((r,i)=>i?r:{...r,crossings:0})}),false,'no boundary crossings is not evidence');
+assert.equal(validateUnitGrid({...grid,runs:[grid.runs[0],grid.runs[0],grid.runs[2]]}),false,'duplicate seed is not coverage');
 assert.equal(verdict([...complete, { id: 'other', status: 'fail' }]), 'NOT_ACCEPTED');
 assert.equal(verdict([...complete, { id: 'cards', status: 'pass' }]), 'NOT_ACCEPTED', 'дублирование обязательного результата не разрешает приёмку');
 assert.ok(requirements.every((r) => !validateEvidence(r.id, { passed: true })));
 assert.equal(validateEvidence('unknown', { passed: true }), false);
-assert.equal(validateEvidence('cards', { passed: true, cards: ['04','18','19','21','22'].map((id) => ({ id, checks: 1, failed: 0 })) }), true);
+const validCards = { passed: true, cards: ['04','18','19','21','22'].map((id) => ({ id, checks: 1, failed: 0 })) };
+assert.equal(validateEvidence('cards', validCards), true);
+assert.equal(validateEvidence('cards', { ...validCards, skipped: 1 }), false);
+assert.equal(validateEvidence('cards', { ...validCards, cards: validCards.cards.map((c, i) => i ? c : { ...c, subcases: [{ status: 'skipped' }] }) }), false);
+assert.equal(validateEvidence('cards', { ...validCards, skipCount: 0 }), true);
+assert.equal(hasSkippedEvidence({ cases: [{ status: 'not_run' }] }), true);
+assert.equal(hasSkippedEvidence({ cases: [{ skipped: [] }] }), false);
 assert.equal(validateEvidence('cards', { passed: true, cards: [{ id: '04', checks: 0, failed: 0 }] }), false);
 const scenarios = ['foot-hq-enter','foot-hq-exit','foot-city-enter','foot-city-exit',
   'truck-depot-enter','truck-depot-exit','truck-factory-enter','truck-factory-exit','column']
@@ -46,17 +69,29 @@ const makeFpsRun = (target, frames, low1) => {
     drawFrames: frames, canvas: { width: 1280, height: 900 }, canvasDataLength: 1001,
     spritesReady: true, minVisible: target / 4,
     screen: 'game', sameGame: true, warOver: false, gameTimeStart: 0, gameSeconds: 1,
+    population: { target, initial: target, frameRequired: true, minAlive: target, maxAlive: target, strictExact: true,
+      within2Percent: true, firstOutside2Percent: null, beforeStepSamples: 1, afterStepSamples: 1,
+      frameSamples: frames + 1, samples: frames + 4 },
     timings: { step: { samples: 1 } }, pageErrors: [] };
 };
 const a = makeFpsRun(400, 720, 45), b = makeFpsRun(500, 540, 45);
 const fps = { passed: true, environment: 'browser', measurement: 'requestAnimationFrame', rendered: true,
-  browser: 'test', quick: false, frames400: a.frames, frames500: b.frames, average400: a.averageFps,
+  browser: 'test', quick: false, warmed: false, frames400: a.frames, frames500: b.frames, average400: a.averageFps,
   low1_400: a.low1Fps, average500: b.averageFps, measurements: [a, b] };
 assert.equal(validateEvidence('browser_fps', fps, 24000), true);
 assert.equal(validateEvidence('browser_fps', fps, 1000), false, 'суммарное время измерения реально прошло');
 assert.equal(validateEvidence('browser_fps', { ...fps, environment: 'node' }, 24000), false);
 assert.equal(validateEvidence('browser_fps', { ...fps, low1_400: 44.99 }, 24000), false);
 assert.equal(validateEvidence('browser_fps', { ...fps, quick: true }, 24000), false);
+assert.equal(validateEvidence('browser_fps', { ...fps, warmed: true }, 24000), false, 'candidate workload must never replace original acceptance scene');
+assert.equal(validateEvidence('browser_fps', { ...fps, warmed: undefined }, 24000), false);
+for (const population of [undefined, { ...a.population, strictExact: false }, { ...a.population, maxAlive: 401 },
+  { ...a.population, frameRequired: false }, { ...a.population, beforeStepSamples: 0 }, { ...a.population, afterStepSamples: 0 },
+  { ...a.population, frameSamples: 1 }, { ...a.population, samples: 1 },
+  { ...a.population, firstOutside2Percent: { alive: 409 } }]) {
+  assert.equal(validateEvidence('browser_fps', { ...fps, measurements: [{ ...a, population }, b] }, 24000), false,
+    'FPS evidence must include consistent per-step population observations');
+}
 for (const bad of [{ minAlive: 399 }, { maxAlive: 401 }, { elapsedMs: 11999 }, { drawFrames: 0 },
   { gameSeconds: 0 }, { sameGame: false }, { pageErrors: ['error'] }, { worstTimeMs: 1 },
   { spritesReady: false }, { minVisible: 0 }]) {

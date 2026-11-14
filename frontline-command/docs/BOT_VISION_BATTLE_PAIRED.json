@@ -1,0 +1,1832 @@
+{
+  "kind": "paired_battle_smoke",
+  "seeds": 20,
+  "ticks": 600,
+  "dt": 0.05,
+  "summary": {
+    "onActiveSeeds": 20,
+    "onRoutedSeeds": 16,
+    "warEndedOff": 0,
+    "warEndedOn": 0,
+    "offMeanMs": 1.3309968377499999,
+    "onMeanMs": 1.5807327914166673
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 40,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 961.9674999999964,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 931.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 1444.076752,
+        "meanMs": 2.4067945866666665
+      },
+      "on": {
+        "seed": 1,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 40,
+        "failures": 0,
+        "jobStarts": 34,
+        "routedUnits": 2,
+        "observedJobs": {
+          "cancelled:stale": 17,
+          "failed:no accessible grid node": 6,
+          "found": 3,
+          "cancelled:owner unavailable": 8
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 961.4724999999959,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 931.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 1252.4075090000001,
+        "meanMs": 2.0873458483333334
+      }
+    },
+    {
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 950.8124999999949,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 928.3724999999946,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 803.3280649999997,
+        "meanMs": 1.3388801083333328
+      },
+      "on": {
+        "seed": 2,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 29,
+        "routedUnits": 0,
+        "observedJobs": {
+          "cancelled:stale": 12,
+          "failed:no accessible grid node": 7,
+          "cancelled:owner unavailable": 9,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 950.8124999999949,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 928.3724999999946,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 1278.0612220000003,
+        "meanMs": 2.130102036666667
+      }
+    },
+    {
+      "seed": 3,
+      "off": {
+        "seed": 3,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 949.8224999999939,
+            "fuel": 652.0000000000027,
+            "meds": 401.98000000000025
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 945.4799999999983,
+            "fuel": 648.0000000000027,
+            "meds": 401.98000000000025
+          }
+        ],
+        "elapsedMs": 874.4332730000006,
+        "meanMs": 1.4573887883333343
+      },
+      "on": {
+        "seed": 3,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 35,
+        "routedUnits": 1,
+        "observedJobs": {
+          "cancelled:stale": 22,
+          "found": 1,
+          "cancelled:owner unavailable": 10,
+          "failed:no accessible grid node": 1,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 949.3274999999933,
+            "fuel": 652.0000000000027,
+            "meds": 401.98000000000025
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 944.7924999999975,
+            "fuel": 648.0000000000027,
+            "meds": 401.98000000000025
+          }
+        ],
+        "elapsedMs": 1004.2047920000005,
+        "meanMs": 1.673674653333334
+      }
+    },
+    {
+      "seed": 4,
+      "off": {
+        "seed": 4,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 949.1349999999929,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000029,
+            "materials": 944.9849999999976,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 804.377422999999,
+        "meanMs": 1.3406290383333317
+      },
+      "on": {
+        "seed": 4,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 39,
+        "failures": 0,
+        "jobStarts": 23,
+        "routedUnits": 2,
+        "observedJobs": {
+          "failed:no accessible grid node": 2,
+          "cancelled:owner unavailable": 5,
+          "cancelled:stale": 14,
+          "found": 2
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 948.0349999999917,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000029,
+            "materials": 945.6999999999985,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 857.7859879999996,
+        "meanMs": 1.4296433133333328
+      }
+    },
+    {
+      "seed": 5,
+      "off": {
+        "seed": 5,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 37,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 953.6999999999981,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000029,
+            "materials": 930.8474999999975,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 969.8934540000009,
+        "meanMs": 1.6164890900000015
+      },
+      "on": {
+        "seed": 5,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 28,
+        "routedUnits": 2,
+        "observedJobs": {
+          "cancelled:stale": 17,
+          "cancelled:owner unavailable": 6,
+          "failed:no accessible grid node": 2,
+          "found": 2,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 953.6999999999981,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000029,
+            "materials": 930.0224999999965,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 891.4875419999989,
+        "meanMs": 1.4858125699999982
+      }
+    },
+    {
+      "seed": 6,
+      "off": {
+        "seed": 6,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.0399999999977,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 665.4596750000001,
+        "meanMs": 1.1090994583333333
+      },
+      "on": {
+        "seed": 6,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 29,
+        "routedUnits": 0,
+        "observedJobs": {
+          "cancelled:stale": 16,
+          "failed:no accessible grid node": 7,
+          "cancelled:owner unavailable": 5,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.0399999999977,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 801.6278870000006,
+        "meanMs": 1.3360464783333343
+      }
+    },
+    {
+      "seed": 7,
+      "off": {
+        "seed": 7,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 953.1499999999974,
+            "fuel": 652.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 941.8224999999939,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 837.5733540000001,
+        "meanMs": 1.3959555900000002
+      },
+      "on": {
+        "seed": 7,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 20,
+        "routedUnits": 1,
+        "observedJobs": {
+          "cancelled:stale": 10,
+          "cancelled:owner unavailable": 5,
+          "failed:no accessible grid node": 3,
+          "found": 1,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 953.1499999999974,
+            "fuel": 652.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 941.8224999999939,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 1068.843124000001,
+        "meanMs": 1.7814052066666681
+      }
+    },
+    {
+      "seed": 8,
+      "off": {
+        "seed": 8,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 964.1399999999987,
+            "fuel": 652.0000000000027,
+            "meds": 402.6400000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 942.3724999999946,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 732.0290060000007,
+        "meanMs": 1.2200483433333345
+      },
+      "on": {
+        "seed": 8,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 21,
+        "routedUnits": 0,
+        "observedJobs": {
+          "cancelled:stale": 15,
+          "cancelled:owner unavailable": 4,
+          "failed:no accessible grid node": 1,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 964.1399999999987,
+            "fuel": 652.0000000000027,
+            "meds": 402.6400000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 942.3724999999946,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 931.0509899999997,
+        "meanMs": 1.5517516499999995
+      }
+    },
+    {
+      "seed": 9,
+      "off": {
+        "seed": 9,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 945.6999999999985,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 741.1246340000016,
+        "meanMs": 1.235207723333336
+      },
+      "on": {
+        "seed": 9,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 18,
+        "routedUnits": 1,
+        "observedJobs": {
+          "failed:no accessible grid node": 5,
+          "cancelled:owner unavailable": 5,
+          "cancelled:stale": 6,
+          "found": 1,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 945.6999999999985,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 981.1025499999996,
+        "meanMs": 1.635170916666666
+      }
+    },
+    {
+      "seed": 10,
+      "off": {
+        "seed": 10,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 963.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 945.4799999999983,
+            "fuel": 652.0000000000027,
+            "meds": 401.98000000000025
+          }
+        ],
+        "elapsedMs": 679.1090570000015,
+        "meanMs": 1.1318484283333359
+      },
+      "on": {
+        "seed": 10,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 26,
+        "routedUnits": 1,
+        "observedJobs": {
+          "cancelled:stale": 14,
+          "cancelled:owner unavailable": 5,
+          "failed:no accessible grid node": 5,
+          "found": 1,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 963.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 945.4799999999983,
+            "fuel": 652.0000000000027,
+            "meds": 401.98000000000025
+          }
+        ],
+        "elapsedMs": 1113.8211470000024,
+        "meanMs": 1.8563685783333372
+      }
+    },
+    {
+      "seed": 11,
+      "off": {
+        "seed": 11,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 37,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 953.6999999999982,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 945.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 694.8476870000013,
+        "meanMs": 1.1580794783333355
+      },
+      "on": {
+        "seed": 11,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 28,
+        "routedUnits": 4,
+        "observedJobs": {
+          "cancelled:stale": 13,
+          "cancelled:owner unavailable": 8,
+          "failed:no accessible grid node": 2,
+          "found": 4,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 953.6999999999982,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 945.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 788.7807870000033,
+        "meanMs": 1.3146346450000055
+      }
+    },
+    {
+      "seed": 12,
+      "off": {
+        "seed": 12,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000029,
+            "materials": 949.244999999993,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 929.5824999999959,
+            "fuel": 652.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 818.6884959999988,
+        "meanMs": 1.3644808266666648
+      },
+      "on": {
+        "seed": 12,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 30,
+        "routedUnits": 3,
+        "observedJobs": {
+          "cancelled:stale": 16,
+          "failed:no accessible grid node": 5,
+          "found": 5,
+          "cancelled:owner unavailable": 4
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000029,
+            "materials": 949.299999999993,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 931.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 852.0278419999995,
+        "meanMs": 1.4200464033333324
+      }
+    },
+    {
+      "seed": 13,
+      "off": {
+        "seed": 13,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 960.3724999999946,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 945.9199999999986,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 745.6499809999987,
+        "meanMs": 1.2427499683333312
+      },
+      "on": {
+        "seed": 13,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 24,
+        "routedUnits": 1,
+        "observedJobs": {
+          "cancelled:stale": 15,
+          "cancelled:owner unavailable": 6,
+          "found": 1,
+          "failed:no accessible grid node": 2
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 960.2899999999945,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 944.1049999999965,
+            "fuel": 648.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 832.2000990000015,
+        "meanMs": 1.3870001650000026
+      }
+    },
+    {
+      "seed": 14,
+      "off": {
+        "seed": 14,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 952.9574999999973,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 943.3899999999958,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 699.4684639999978,
+        "meanMs": 1.1657807733333296
+      },
+      "on": {
+        "seed": 14,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 30,
+        "routedUnits": 1,
+        "observedJobs": {
+          "cancelled:stale": 15,
+          "cancelled:owner unavailable": 9,
+          "found": 1,
+          "failed:no accessible grid node": 5
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 952.9299999999972,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 942.3724999999946,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 905.8445060000013,
+        "meanMs": 1.5097408433333355
+      }
+    },
+    {
+      "seed": 15,
+      "off": {
+        "seed": 15,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 38,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 963.9199999999986,
+            "fuel": 652.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 943.0599999999954,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 825.7394910000003,
+        "meanMs": 1.3762324850000005
+      },
+      "on": {
+        "seed": 15,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 37,
+        "failures": 0,
+        "jobStarts": 22,
+        "routedUnits": 1,
+        "observedJobs": {
+          "found": 1,
+          "cancelled:stale": 15,
+          "failed:no accessible grid node": 3,
+          "cancelled:owner unavailable": 2,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 963.9199999999986,
+            "fuel": 652.0000000000027,
+            "meds": 402.4200000000003
+          },
+          {
+            "ammo": 935.6000000000033,
+            "materials": 945.6999999999985,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 910.605481999999,
+        "meanMs": 1.5176758033333317
+      }
+    },
+    {
+      "seed": 16,
+      "off": {
+        "seed": 16,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.6999999999985,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 927.6299999999936,
+            "fuel": 652.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 759.5375289999974,
+        "meanMs": 1.2658958816666623
+      },
+      "on": {
+        "seed": 16,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 36,
+        "failures": 0,
+        "jobStarts": 27,
+        "routedUnits": 0,
+        "observedJobs": {
+          "cancelled:stale": 15,
+          "failed:no accessible grid node": 5,
+          "cancelled:owner unavailable": 6,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.6999999999985,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 927.6299999999936,
+            "fuel": 652.0000000000027,
+            "meds": 402.4200000000003
+          }
+        ],
+        "elapsedMs": 979.6462599999977,
+        "meanMs": 1.6327437666666629
+      }
+    },
+    {
+      "seed": 17,
+      "off": {
+        "seed": 17,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 34,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000029,
+            "materials": 949.3549999999932,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 700.501311,
+        "meanMs": 1.167502185
+      },
+      "on": {
+        "seed": 17,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 24,
+        "routedUnits": 1,
+        "observedJobs": {
+          "cancelled:stale": 15,
+          "found": 1,
+          "failed:no accessible grid node": 4,
+          "cancelled:owner unavailable": 4
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000029,
+            "materials": 949.5749999999935,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 854.9588920000024,
+        "meanMs": 1.4249314866666707
+      }
+    },
+    {
+      "seed": 18,
+      "off": {
+        "seed": 18,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 39,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 963.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.4799999999983,
+            "fuel": 652.0000000000027,
+            "meds": 401.98000000000025
+          }
+        ],
+        "elapsedMs": 716.4453940000021,
+        "meanMs": 1.1940756566666701
+      },
+      "on": {
+        "seed": 18,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 39,
+        "failures": 0,
+        "jobStarts": 24,
+        "routedUnits": 2,
+        "observedJobs": {
+          "cancelled:stale": 11,
+          "failed:no accessible grid node": 6,
+          "found": 2,
+          "cancelled:owner unavailable": 4,
+          "running": 1
+        },
+        "stock": [
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 963.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.4799999999983,
+            "fuel": 652.0000000000027,
+            "meds": 401.98000000000025
+          }
+        ],
+        "elapsedMs": 899.1685779999971,
+        "meanMs": 1.4986142966666618
+      }
+    },
+    {
+      "seed": 19,
+      "off": {
+        "seed": 19,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 39,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 953.6999999999981,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 739.6412869999986,
+        "meanMs": 1.2327354783333309
+      },
+      "on": {
+        "seed": 19,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 39,
+        "failures": 0,
+        "jobStarts": 26,
+        "routedUnits": 1,
+        "observedJobs": {
+          "failed:no accessible grid node": 7,
+          "cancelled:stale": 15,
+          "cancelled:owner unavailable": 3,
+          "found": 1
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 953.6999999999981,
+            "fuel": 648.0000000000027,
+            "meds": 402.2000000000003
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.6999999999985,
+            "fuel": 652.0000000000027,
+            "meds": 402.2000000000003
+          }
+        ],
+        "elapsedMs": 832.3393700000015,
+        "meanMs": 1.387232283333336
+      }
+    },
+    {
+      "seed": 20,
+      "off": {
+        "seed": 20,
+        "on": false,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 0,
+        "routedUnits": 0,
+        "observedJobs": {},
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.4799999999983,
+            "fuel": 648.0000000000027,
+            "meds": 401.98000000000025
+          },
+          {
+            "ammo": 935.6000000000029,
+            "materials": 929.9949999999963,
+            "fuel": 648.0000000000027,
+            "meds": 402.6400000000003
+          }
+        ],
+        "elapsedMs": 720.0377200000003,
+        "meanMs": 1.200062866666667
+      },
+      "on": {
+        "seed": 20,
+        "on": true,
+        "steps": 600,
+        "seconds": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          41,
+          41
+        ],
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "orders": 35,
+        "failures": 0,
+        "jobStarts": 24,
+        "routedUnits": 2,
+        "observedJobs": {
+          "cancelled:stale": 15,
+          "cancelled:owner unavailable": 3,
+          "failed:no accessible grid node": 4,
+          "found": 2
+        },
+        "stock": [
+          {
+            "ammo": 935.6000000000033,
+            "materials": 963.4799999999983,
+            "fuel": 648.0000000000027,
+            "meds": 401.98000000000025
+          },
+          {
+            "ammo": 1175.6000000000035,
+            "materials": 931.0399999999975,
+            "fuel": 652.0000000000027,
+            "meds": 402.6400000000003
+          }
+        ],
+        "elapsedMs": 932.828929999996,
+        "meanMs": 1.5547148833333266
+      }
+    }
+  ],
+  "limitations": [
+    "short AI-vs-AI runs; not 100 complete wars or win-rate/confidence intervals",
+    "common RNG means different decisions can shift random draws",
+    "one machine Node timing includes measurement and route counters, not stable FPS or device acceptance",
+    "no keyboard/player or save/load",
+    "Jobs only observed at tick boundaries; same-tick starts and completions can be missed",
+    "not an equivalence or non-inferiority test"
+  ]
+}

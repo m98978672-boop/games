@@ -1,11 +1,11 @@
 // Дымовой тест в jsdom: поднимаем страницу, стартуем войну, жмём клавиши и кнопки.
-// Требует jsdom (не часть CI-зависимостей): npm i --no-save jsdom
+// jsdom входит в devDependencies; отсутствие зависимости — ошибка стенда, не успех.
 let JSDOM;
 try {
   ({ JSDOM } = await import('jsdom'));
 } catch (e) {
-  console.log('jsdom не установлен — тест пропущен (npm i --no-save jsdom)');
-  process.exit(0);
+  console.error('ОШИБКА: jsdom недоступен, браузерный дымовой тест не выполнен. Запустите npm ci.', e.message);
+  process.exit(1);
 }
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';

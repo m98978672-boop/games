@@ -125,24 +125,36 @@ ok(planned >= 0, `планировщик ИИ обрабатывается (но
 const aiOrders = game.api.journal.filter((j) => j.source === 'enemyAI' && (j.type === 'build_zone' || j.type === 'build_line'));
 ok(aiOrders.length >= 0, `ИИ строит только через Command API (${aiOrders.length} приказов)`);
 
-// 11. Свойства проходимости: предупреждение BLOCKS_PATH на узком месте
-let narrow = null;
-for (let yy = 200; yy < game.world.H - 200 && !narrow; yy += 40) {
-  for (let xx = 200; xx < game.world.W - 200; xx += 40) {
-    if (!game.world.isWalkable(xx, yy)) continue;
-    let blocked = 0;
-    for (let i = 0; i < 8; i++) {
-      const ang = (i / 8) * Math.PI * 2;
-      if (!game.world.isWalkable(xx + Math.cos(ang) * 46, yy + Math.sin(ang) * 46)) blocked++;
+// 11. Изолированный воспроизводимый геометрический стенд: 34-единичный
+// горизонтальный коридор, реальные методы validate/footprint/blocksPath.
+// Наличие предупреждения здесь не доказывает его корректность на реальной карте
+// или сохранение связности для техники; отдельная интеграционная проверка нужна.
+{
+  const fixture = new Game({ cfg, seed: 7, difficulty: 'regular', aiVsAi: true });
+  let spot = null;
+  for (let y = 200; y < fixture.world.H - 200 && !spot; y += 80) {
+    for (let x = 200; x < fixture.world.W - 200; x += 80) {
+      if (fixture.build.validate('sandbags', x, y, 0, { ignoreCost: true, ignoreFog: true }).ok) {
+        spot = { x, y }; break;
+      }
     }
-    if (blocked >= 6) { narrow = { x: xx, y: yy }; break; }
   }
-}
-if (narrow) {
-  const check = build.validate('sandbags', narrow.x, narrow.y, 0, { ignoreCost: true, ignoreFog: true });
-  ok(check.ok && check.warn.some((w) => w.code === 'BLOCKS_PATH'), 'узкий проход → предупреждение BLOCKS_PATH');
-} else {
-  console.log('skip  узких проходов на карте не найдено');
+  ok(!!spot, 'для изолированного прохода найдено место без построек');
+  if (spot) {
+    const original = fixture.world.isWalkable;
+    try {
+      // Половина ширины 17 > половины мешков (16), но меньше диагонального
+      // смещения проб 32*0.9/sqrt(2). Все пять точек пятна проходимы.
+      fixture.world.isWalkable = (_x, y) => Math.abs(y - spot.y) <= 17;
+      const narrow = fixture.build.validate('sandbags', spot.x, spot.y, 0, { ignoreCost: true, ignoreFog: true });
+      ok(narrow.ok && narrow.warn.some((w) => w.code === 'BLOCKS_PATH'), 'узкий проход → предупреждение BLOCKS_PATH');
+      fixture.world.isWalkable = (_x, y) => Math.abs(y - spot.y) <= 40;
+      const wide = fixture.build.validate('sandbags', spot.x, spot.y, 0, { ignoreCost: true, ignoreFog: true });
+      ok(wide.ok && !wide.warn.some((w) => w.code === 'BLOCKS_PATH'), 'широкий проход → нет предупреждения BLOCKS_PATH');
+    } finally {
+      fixture.world.isWalkable = original;
+    }
+  }
 }
 
 // 12. Флаги действительно переключают механику (rollback без правки кода)

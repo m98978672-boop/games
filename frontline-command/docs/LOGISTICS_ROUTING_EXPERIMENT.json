@@ -1,0 +1,480 @@
+{
+  "version": 1,
+  "method": "3 seed x 100/300/400, 60 simulated seconds, identical initial seeds but combat/RNG may diverge; not an acceptance test",
+  "notes": [
+    "strict: request reservations, physical delivery and retreat; centre loading",
+    "exterior: strict plus outside-wall pickup; taken before later pickup invalidation guard",
+    "baseline: existing legacy logic may mark blocked trucks as delivered",
+    "diagnostic event excludes trucks and is not proof of navigation improvements"
+  ],
+  "runs": [
+    {
+      "seed": 5,
+      "count": 100,
+      "baseline": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          71,
+          65
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 82.24,
+        "deliveries": [
+          1,
+          1
+        ]
+      },
+      "strict": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          65,
+          70
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 82.93,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          65,
+          65
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 86.41,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "count": 300,
+      "baseline": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          165,
+          171
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 114.25,
+        "deliveries": [
+          1,
+          1
+        ]
+      },
+      "strict": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          165,
+          171
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 116.37,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          165,
+          171
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 113.78,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "count": 400,
+      "baseline": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          215,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 109.31,
+        "deliveries": [
+          1,
+          1
+        ]
+      },
+      "strict": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          215,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 110.45,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          215,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 120.59,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "count": 100,
+      "baseline": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          64,
+          65
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 101.14,
+        "deliveries": [
+          1,
+          1
+        ]
+      },
+      "strict": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          65,
+          71
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 107.45,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          65,
+          70
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 71.27,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "count": 300,
+      "baseline": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          171,
+          164
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 101.92,
+        "deliveries": [
+          1,
+          0
+        ]
+      },
+      "strict": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          171,
+          164
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 96.72,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          171,
+          169
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 108.26,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "count": 400,
+      "baseline": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          215,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 120.57,
+        "deliveries": [
+          1,
+          1
+        ]
+      },
+      "strict": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          220,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 94,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          220,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 86.54,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 11,
+      "count": 100,
+      "baseline": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          65,
+          65
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 92.62,
+        "deliveries": [
+          1,
+          0
+        ]
+      },
+      "strict": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          64,
+          65
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 90.71,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          50,
+          50
+        ],
+        "final": [
+          71,
+          81
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 99.01,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 11,
+      "count": 300,
+      "baseline": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          164,
+          171
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 100.54,
+        "deliveries": [
+          1,
+          1
+        ]
+      },
+      "strict": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          164,
+          171
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 103.39,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          150,
+          150
+        ],
+        "final": [
+          169,
+          171
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 100.54,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 11,
+      "count": 400,
+      "baseline": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          221,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 110.41,
+        "deliveries": [
+          1,
+          1
+        ]
+      },
+      "strict": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          214,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 121.91,
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "exterior": {
+        "initial": [
+          200,
+          200
+        ],
+        "final": [
+          215,
+          221
+        ],
+        "simulationSeconds": 60,
+        "eventsPer100EligibleBotMinutes": 121.42,
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    }
+  ]
+}

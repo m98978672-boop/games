@@ -1,0 +1,3799 @@
+{
+  "kind": "paired_logistics_spawn_diagnostic",
+  "seeds": 20,
+  "steps": 1200,
+  "dt": 0.05,
+  "summary": {
+    "pairs": 20,
+    "offVehicleSpawns": 121,
+    "onVehicleSpawns": 120,
+    "offSpawnOverlaps": 46,
+    "onSpawnOverlaps": 41,
+    "offWallBlocked": 8,
+    "onWallBlocked": 6,
+    "offDeliveries": 37,
+    "onDeliveries": 0,
+    "offWarsEnded": 0,
+    "onWarsEnded": 0
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 589.4422727078199,
+            "y": 3316.007986664772,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3588.273305989802,
+            "y": 847.2162736989558,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 729.2216055327156,
+            "y": 3223.596692322775,
+            "overlapping": [
+              14
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 727.0748669727298,
+            "y": 3385.015030683957,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3422.734184532974,
+            "y": 635.3040521342117,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3382.697035218333,
+            "y": 781.754110568467,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 597.2000000000035,
+            "materials": 635.487499999988,
+            "fuel": 660.0000000000055,
+            "meds": 394.8000000000011
+          },
+          {
+            "ammo": 825.2000000000044,
+            "materials": 758.3249999999938,
+            "fuel": 660.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 1,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3576,
+            "y": 946,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 729.2216055327156,
+            "y": 3223.596692322775,
+            "overlapping": [
+              14
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 727.0748669727298,
+            "y": 3385.015030683957,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3422.734184532974,
+            "y": 635.3040521342117,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3382.697035218333,
+            "y": 781.754110568467,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1080.200000000007,
+            "materials": 813.8,
+            "fuel": 664.0000000000055,
+            "meds": 401.8000000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 812.3649999999924,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 486.2201315490529,
+            "y": 3247.922154497355,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3605.757711379789,
+            "y": 707.5684345876798,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.8999999999999977,
+            "x": 3676.8232760307465,
+            "y": 971.1018231958346,
+            "overlapping": [
+              51,
+              52
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.8999999999999977,
+            "x": 3521.2570243117525,
+            "y": 977.37010766759,
+            "overlapping": [
+              33,
+              35
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 635.2093302731881,
+            "y": 3467.7729748388656,
+            "overlapping": [
+              4
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 463.41508979327057,
+            "y": 3137.4046478952464,
+            "overlapping": [
+              23
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 825.2000000000044,
+            "materials": 803.5799999999998,
+            "fuel": 660.0000000000055,
+            "meds": 408.58000000000106
+          },
+          {
+            "ammo": 954.2000000000044,
+            "materials": 817.4724999999961,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 2,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.8999999999999977,
+            "x": 3676.8232760307465,
+            "y": 971.1018231958346,
+            "overlapping": [
+              51,
+              52
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.8999999999999977,
+            "x": 3521.2570243117525,
+            "y": 977.37010766759,
+            "overlapping": [
+              33,
+              35
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 635.2093302731881,
+            "y": 3467.7729748388656,
+            "overlapping": [
+              4
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 463.41508979327057,
+            "y": 3137.4046478952464,
+            "overlapping": [
+              23
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 907.3749999999915,
+            "fuel": 664.0000000000055,
+            "meds": 408.58000000000106
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 840.3974999999856,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 3,
+      "off": {
+        "seed": 3,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 487.0590990781784,
+            "y": 3280.4932578792796,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3499.9399775722995,
+            "y": 776.0030627660453,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3495.4063921639754,
+            "y": 641.9897477440074,
+            "overlapping": [
+              48,
+              49
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3780.241495961571,
+            "y": 802.4272986453949,
+            "overlapping": [
+              41
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 720.9760027842939,
+            "y": 3360.802241827952,
+            "overlapping": [
+              19
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 327.6964967433896,
+            "y": 3395.186986666193,
+            "overlapping": [
+              25
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.2000000000035,
+            "materials": 860.5799999999996,
+            "fuel": 660.0000000000055,
+            "meds": 408.58000000000106
+          },
+          {
+            "ammo": 825.2000000000048,
+            "materials": 753.1774999999855,
+            "fuel": 660.0000000000055,
+            "meds": 408.58000000000106
+          }
+        ],
+        "aliveVehicles": 11
+      },
+      "on": {
+        "seed": 3,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3576,
+            "y": 946,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3495.4063921639754,
+            "y": 641.9897477440074,
+            "overlapping": [
+              48,
+              49
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3780.241495961571,
+            "y": 802.4272986453949,
+            "overlapping": [
+              41
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 720.9760027842939,
+            "y": 3360.802241827952,
+            "overlapping": [
+              19
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 327.6964967433896,
+            "y": 3395.186986666193,
+            "overlapping": [
+              25
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1080.200000000007,
+            "materials": 816.4149999999867,
+            "fuel": 664.0000000000055,
+            "meds": 401.58000000000106
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 848.1774999999855,
+            "fuel": 664.0000000000055,
+            "meds": 408.58000000000106
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 4,
+      "off": {
+        "seed": 4,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 441.071871900931,
+            "y": 3219.435308952816,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3518.470678961836,
+            "y": 801.8611394604668,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3446.1761445337274,
+            "y": 653.2180312563826,
+            "overlapping": [
+              40,
+              49
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3402.165743399391,
+            "y": 883.235311059321,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 621.0627800103439,
+            "y": 3136.8797155980455,
+            "overlapping": [
+              11
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 697.9390890808477,
+            "y": 3319.4835419948663,
+            "overlapping": [
+              1,
+              13,
+              21,
+              57
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1011.1400000000068,
+            "materials": 773.8249999999814,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 800.1449999999923,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 4,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 520,
+            "y": 3450,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3446.1761445337274,
+            "y": 653.2180312563826,
+            "overlapping": [
+              40,
+              49
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.1999999999999966,
+            "x": 3402.165743399391,
+            "y": 883.235311059321,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 621.0627800103439,
+            "y": 3136.8797155980455,
+            "overlapping": [
+              11
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 697.9390890808477,
+            "y": 3319.4835419948663,
+            "overlapping": [
+              1,
+              13,
+              21,
+              57
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1065.1200000000072,
+            "materials": 872.6349999999868,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 849.4724999999961,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 5,
+      "off": {
+        "seed": 5,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 529.5052693877369,
+            "y": 3278.487184094265,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3521.7407748000696,
+            "y": 764.3601591689512,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.8999999999999977,
+            "x": 3723.612070935394,
+            "y": 695.3968199298643,
+            "overlapping": [],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.8999999999999977,
+            "x": 3402.951771905299,
+            "y": 905.2409412490127,
+            "overlapping": [
+              41,
+              57
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 674.9194524210452,
+            "y": 3435.567615260146,
+            "overlapping": [
+              6,
+              62,
+              63
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 693.5360570218288,
+            "y": 3268.119242593021,
+            "overlapping": [
+              3
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 825.2000000000039,
+            "materials": 782.4474999999854,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 819.200000000003,
+            "materials": 708.7249999999894,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 5,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3576,
+            "y": 946,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 472.1197169249478,
+            "y": 3463.353440210524,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9499999999999975,
+            "x": 311.258283523337,
+            "y": 3263.591645536444,
+            "overlapping": [
+              16
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3386.5247060165298,
+            "y": 698.0082337490742,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3431.613696551719,
+            "y": 648.6497838007115,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 865.6349999999867,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1065.200000000007,
+            "materials": 875.8,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 6,
+      "off": {
+        "seed": 6,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 607.7712104143575,
+            "y": 3214.9648274760693,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3556.919151683338,
+            "y": 813.2182795451954,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 556.8330082733349,
+            "y": 3476.1294768021157,
+            "overlapping": [
+              7,
+              57
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 396.6341269873137,
+            "y": 3487.9366899835977,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3541.321754445226,
+            "y": 573.3055581818463,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3757.9923011024716,
+            "y": 771.5298447037226,
+            "overlapping": [
+              41
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.2000000000035,
+            "materials": 943.6349999999868,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 825.2000000000044,
+            "materials": 861.8,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 6,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 556.8330082733349,
+            "y": 3476.1294768021157,
+            "overlapping": [
+              7,
+              57
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 396.6341269873137,
+            "y": 3487.9366899835977,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3541.321754445226,
+            "y": 573.3055581818463,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3757.9923011024716,
+            "y": 771.5298447037226,
+            "overlapping": [
+              34,
+              41,
+              54
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1065.200000000007,
+            "materials": 790.6349999999868,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1064.980000000007,
+            "materials": 713.1449999999923,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 7,
+      "off": {
+        "seed": 7,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 442.7432410372421,
+            "y": 3302.873107739724,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3619.4077612683177,
+            "y": 736.6825582962483,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 707.2106784953704,
+            "y": 3165.6892515848067,
+            "overlapping": [
+              6,
+              12
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 538.540556341999,
+            "y": 3098.2159586763273,
+            "overlapping": [
+              64
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3353.9473901324272,
+            "y": 728.118798811581,
+            "overlapping": [
+              36
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3785.0496438956898,
+            "y": 833.7355285183577,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 825.2000000000044,
+            "materials": 783.7899999999879,
+            "fuel": 660.0000000000055,
+            "meds": 409.0200000000011
+          },
+          {
+            "ammo": 954.2000000000039,
+            "materials": 808.6174999999857,
+            "fuel": 660.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 7,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 520,
+            "y": 3450,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 707.2106784953704,
+            "y": 3165.6892515848067,
+            "overlapping": [
+              6,
+              12
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 538.540556341999,
+            "y": 3098.2159586763273,
+            "overlapping": [
+              64
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3353.9473901324272,
+            "y": 728.118798811581,
+            "overlapping": [
+              36
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3785.0496438956898,
+            "y": 833.7355285183577,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 877.8549999999868,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 825.7374999999847,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 8,
+      "off": {
+        "seed": 8,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 472.34990167897195,
+            "y": 3342.8222996229306,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3632.354264714755,
+            "y": 716.6425708532333,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 346.2918342701457,
+            "y": 3441.0795039790783,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 705.0371129040279,
+            "y": 3334.2127945606117,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3765.0080985254967,
+            "y": 846.9910355840623,
+            "overlapping": [
+              37
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3562.9902228811784,
+            "y": 621.3379351694705,
+            "overlapping": [
+              50
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.2000000000039,
+            "materials": 891.2400000000002,
+            "fuel": 660.0000000000055,
+            "meds": 409.24000000000115
+          },
+          {
+            "ammo": 825.2000000000035,
+            "materials": 762.4724999999961,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 8,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 520,
+            "y": 3450,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 346.2918342701457,
+            "y": 3441.0795039790783,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 705.0371129040279,
+            "y": 3334.2127945606117,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3765.0080985254967,
+            "y": 846.9910355840623,
+            "overlapping": [
+              37
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3562.9902228811784,
+            "y": 621.3379351694705,
+            "overlapping": [
+              50
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 877.0399999999977,
+            "fuel": 664.0000000000055,
+            "meds": 409.24000000000115
+          },
+          {
+            "ammo": 1065.200000000007,
+            "materials": 875.8,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 9,
+      "off": {
+        "seed": 9,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 541.5285104745999,
+            "y": 3247.610400086269,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3587.2428321735933,
+            "y": 851.3743545617908,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.149999999999997,
+            "x": 589.4064283959312,
+            "y": 3468.28576750824,
+            "overlapping": [
+              7,
+              13,
+              26
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.149999999999997,
+            "x": 610.8758547282474,
+            "y": 3447.788618379401,
+            "overlapping": [
+              26,
+              65
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3536.257925760936,
+            "y": 623.8266467124786,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3432.3997762140584,
+            "y": 922.3012423894306,
+            "overlapping": [
+              31
+            ],
+            "blocked": true,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.2000000000062,
+            "materials": 899.0200000000001,
+            "fuel": 660.0000000000055,
+            "meds": 409.0200000000011
+          },
+          {
+            "ammo": 825.2000000000035,
+            "materials": 875.8,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 9,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.149999999999997,
+            "x": 589.4064283959312,
+            "y": 3468.28576750824,
+            "overlapping": [
+              7,
+              13,
+              26
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.149999999999997,
+            "x": 610.8758547282474,
+            "y": 3447.788618379401,
+            "overlapping": [
+              26,
+              65
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3536.257925760936,
+            "y": 623.8266467124786,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3432.3997762140584,
+            "y": 922.3012423894306,
+            "overlapping": [
+              31
+            ],
+            "blocked": true,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1065.200000000007,
+            "materials": 804.0200000000001,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 845.4724999999961,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 10,
+      "off": {
+        "seed": 10,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 594.8237043665722,
+            "y": 3277.498673060909,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3613.8294775122777,
+            "y": 764.9084035297856,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 403.40971951194405,
+            "y": 3121.078757773548,
+            "overlapping": [
+              24
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 466.09591687151396,
+            "y": 3514.4217884182876,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3556.9984997672823,
+            "y": 584.6690575379768,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3786.514747783904,
+            "y": 885.7620611931563,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.2000000000035,
+            "materials": 898.8,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 825.1600000000062,
+            "materials": 753.1774999999855,
+            "fuel": 660.0000000000055,
+            "meds": 408.58000000000106
+          }
+        ],
+        "aliveVehicles": 11
+      },
+      "on": {
+        "seed": 10,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 403.40971951194405,
+            "y": 3121.078757773548,
+            "overlapping": [
+              24
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 466.09591687151396,
+            "y": 3514.4217884182876,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3556.9984997672823,
+            "y": 584.6690575379768,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3786.514747783904,
+            "y": 885.7620611931563,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1026.2000000000066,
+            "materials": 759.8,
+            "fuel": 664.0000000000055,
+            "meds": 401.8000000000011
+          },
+          {
+            "ammo": 1065.200000000007,
+            "materials": 747.5799999999998,
+            "fuel": 664.0000000000055,
+            "meds": 408.58000000000106
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 11,
+      "off": {
+        "seed": 11,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 571.0764736542478,
+            "y": 3383.868570816703,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3614.67229484953,
+            "y": 832.6680668434128,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 696.8103077244089,
+            "y": 3242.6706107932537,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 350.2272728104168,
+            "y": 3172.650796998472,
+            "overlapping": [
+              24
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3403.271197691631,
+            "y": 849.3004548205123,
+            "overlapping": [
+              33
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3726.225918110961,
+            "y": 617.7855966113498,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 900.2000000000044,
+            "materials": 839.6349999999868,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 954.200000000003,
+            "materials": 808.3974999999856,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 11,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 696.8103077244089,
+            "y": 3242.6706107932537,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 350.2272728104168,
+            "y": 3172.650796998472,
+            "overlapping": [
+              24
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3403.271197691631,
+            "y": 849.3004548205123,
+            "overlapping": [
+              33
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3726.225918110961,
+            "y": 617.7855966113498,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 868.7949999999812,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1065.200000000007,
+            "materials": 724.7249999999894,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 12,
+      "off": {
+        "seed": 12,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 592.9027361935005,
+            "y": 3271.9372882694006,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3641.586596452631,
+            "y": 744.8911866163835,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 617.7544368588075,
+            "y": 3478.495173942328,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 373.37063361428477,
+            "y": 3193.2424800868366,
+            "overlapping": [
+              8
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3592.8096973266993,
+            "y": 976.6136541041892,
+            "overlapping": [
+              50,
+              51
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3726.2623927569366,
+            "y": 620.9353197309085,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 825.200000000003,
+            "materials": 873.1174999999816,
+            "fuel": 660.9000000000053,
+            "meds": 409.0200000000011
+          },
+          {
+            "ammo": 723.2000000000048,
+            "materials": 680.6424999999962,
+            "fuel": 659.1000000000053,
+            "meds": 402.0200000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 12,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 520,
+            "y": 3450,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 617.7544368588075,
+            "y": 3478.495173942328,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 373.37063361428477,
+            "y": 3193.2424800868366,
+            "overlapping": [
+              8
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3592.8096973266993,
+            "y": 976.6136541041892,
+            "overlapping": [
+              50,
+              51
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3726.2623927569366,
+            "y": 620.9353197309085,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1065.200000000007,
+            "materials": 876.1824999999907,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 845.6924999999962,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 13,
+      "off": {
+        "seed": 13,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 493.0945303244516,
+            "y": 3248.8076512282714,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3619.043265743181,
+            "y": 785.7670483542606,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 366.8118101633973,
+            "y": 3208.490875681891,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 522.14918786472,
+            "y": 3510.329688572203,
+            "overlapping": [
+              58
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3558.9732306906812,
+            "y": 608.0434316021625,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3751.571567040402,
+            "y": 744.7369468470148,
+            "overlapping": [
+              41,
+              61
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 840.2000000000044,
+            "materials": 811.8999999999885,
+            "fuel": 660.0000000000055,
+            "meds": 401.8000000000011
+          },
+          {
+            "ammo": 954.2000000000035,
+            "materials": 836.6174999999857,
+            "fuel": 660.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 13,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 366.8118101633973,
+            "y": 3208.490875681891,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.9999999999999973,
+            "x": 522.14918786472,
+            "y": 3510.329688572203,
+            "overlapping": [
+              58
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3558.9732306906812,
+            "y": 608.0434316021625,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.099999999999997,
+            "x": 3751.571567040402,
+            "y": 744.7369468470148,
+            "overlapping": [
+              41,
+              61
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1113.200000000007,
+            "materials": 803.487499999988,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1064.880000000007,
+            "materials": 803.0499999999967,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 14,
+      "off": {
+        "seed": 14,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 554.3566648848355,
+            "y": 3294.7355660051107,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3664.19704240188,
+            "y": 743.8745240392163,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 664.0975374234166,
+            "y": 3401.843951284467,
+            "overlapping": [],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 588.1945377265031,
+            "y": 3125.104488096663,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3727.7635277164522,
+            "y": 626.3733845651107,
+            "overlapping": [
+              35,
+              39
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3505.0054868450034,
+            "y": 632.9176007197734,
+            "overlapping": [
+              34
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.2000000000044,
+            "materials": 890.5799999999998,
+            "fuel": 660.0000000000055,
+            "meds": 408.58000000000106
+          },
+          {
+            "ammo": 825.2000000000053,
+            "materials": 753.3974999999856,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 14,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 664.0975374234166,
+            "y": 3401.843951284467,
+            "overlapping": [],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 2.8999999999999977,
+            "x": 588.1945377265031,
+            "y": 3125.104488096663,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3727.7635277164522,
+            "y": 626.3733845651107,
+            "overlapping": [
+              35,
+              39
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3505.0054868450034,
+            "y": 632.9176007197734,
+            "overlapping": [
+              34
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 897.2000000000065,
+            "materials": 652.5799999999998,
+            "fuel": 664.0000000000055,
+            "meds": 401.58000000000106
+          },
+          {
+            "ammo": 1065.200000000007,
+            "materials": 846.2949999999764,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 15,
+      "off": {
+        "seed": 15,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 434.9356021685526,
+            "y": 3364.7470089560375,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3647.3556367345154,
+            "y": 810.9112585559487,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 673.1077320786771,
+            "y": 3136.7469030096663,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 551.2232483790699,
+            "y": 3093.923821819382,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3766.330733447275,
+            "y": 927.8133504002539,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3442.6959581110764,
+            "y": 962.7593598017266,
+            "overlapping": [
+              30
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 528.200000000003,
+            "materials": 676.0200000000001,
+            "fuel": 660.0000000000055,
+            "meds": 402.0200000000011
+          },
+          {
+            "ammo": 954.2000000000035,
+            "materials": 836.3974999999856,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 15,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 673.1077320786771,
+            "y": 3136.7469030096663,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 551.2232483790699,
+            "y": 3093.923821819382,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3766.330733447275,
+            "y": 927.8133504002539,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.149999999999997,
+            "x": 3442.6959581110764,
+            "y": 962.7593598017266,
+            "overlapping": [
+              30
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 899.0200000000001,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          },
+          {
+            "ammo": 1065.200000000007,
+            "materials": 749.2924999999849,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 16,
+      "off": {
+        "seed": 16,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 486.63290872238576,
+            "y": 3270.980881517753,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3655.197465344332,
+            "y": 797.6271473886445,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3635.6911935338685,
+            "y": 580.6041079272327,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3770.352668706444,
+            "y": 882.4727660483911,
+            "overlapping": [
+              28,
+              63
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 492.4362927478021,
+            "y": 3073.294534476097,
+            "overlapping": [
+              21,
+              22
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 295.2505496060856,
+            "y": 3345.379949660765,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 825.2000000000039,
+            "materials": 883.8999999999885,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 954.2000000000053,
+            "materials": 823.9449999999896,
+            "fuel": 660.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 12
+      },
+      "on": {
+        "seed": 16,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3635.6911935338685,
+            "y": 580.6041079272327,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3770.352668706444,
+            "y": 882.4727660483911,
+            "overlapping": [
+              28,
+              63
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 492.4362927478021,
+            "y": 3073.294534476097,
+            "overlapping": [
+              21,
+              22
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 295.2505496060856,
+            "y": 3345.379949660765,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 880.8999999999885,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 808.6174999999857,
+            "fuel": 664.0000000000055,
+            "meds": 409.0200000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 17,
+      "off": {
+        "seed": 17,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 476.99143923353404,
+            "y": 3310.545822274871,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3617.049047028646,
+            "y": 780.7822612617165,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9499999999999975,
+            "x": 3751.2363579327007,
+            "y": 911.198893948514,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9499999999999975,
+            "x": 3424.4079626798393,
+            "y": 868.0821178313743,
+            "overlapping": [
+              43,
+              49
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 628.7275259357814,
+            "y": 3156.476839652926,
+            "overlapping": [
+              14,
+              59
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 352.98709925698176,
+            "y": 3318.08318196418,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.200000000003,
+            "materials": 943.6349999999868,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 954.2000000000048,
+            "materials": 817.4724999999961,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      },
+      "on": {
+        "seed": 17,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9499999999999975,
+            "x": 3751.2363579327007,
+            "y": 911.198893948514,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9499999999999975,
+            "x": 3424.4079626798393,
+            "y": 868.0821178313743,
+            "overlapping": [
+              43,
+              49
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 628.7275259357814,
+            "y": 3156.476839652926,
+            "overlapping": [
+              14,
+              59
+            ],
+            "blocked": true,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 352.98709925698176,
+            "y": 3318.08318196418,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.040000000007,
+            "materials": 943.6349999999868,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1194.200000000007,
+            "materials": 817.4724999999961,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 18,
+      "off": {
+        "seed": 18,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 579.0748603735119,
+            "y": 3275.5504735931754,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3582.1189427878708,
+            "y": 728.5438047479838,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 306.4576342937878,
+            "y": 3226.283931200132,
+            "overlapping": [
+              17
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.1999999999999966,
+            "x": 686.0808788779209,
+            "y": 3254.5734122399135,
+            "overlapping": [
+              4
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3526.5207098344963,
+            "y": 961.1103443399088,
+            "overlapping": [
+              31,
+              41
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3762.581291230867,
+            "y": 892.4281547206768,
+            "overlapping": [
+              33,
+              50
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 825.2000000000039,
+            "materials": 769.8999999999885,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 825.2000000000035,
+            "materials": 861.6774999999755,
+            "fuel": 660.0000000000055,
+            "meds": 408.58000000000106
+          }
+        ],
+        "aliveVehicles": 11
+      },
+      "on": {
+        "seed": 18,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3405.432150025266,
+            "y": 642.8042742308764,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 2.9999999999999973,
+            "x": 3486.2429563650044,
+            "y": 976.401894971928,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 697.121297932594,
+            "y": 3211.300424508445,
+            "overlapping": [
+              12
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.049999999999997,
+            "x": 411.64705002615545,
+            "y": 3459.3049203588635,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1140.200000000007,
+            "materials": 833.7299999999807,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1065.200000000007,
+            "materials": 906.3199999999918,
+            "fuel": 664.0000000000055,
+            "meds": 407.920000000001
+          }
+        ],
+        "aliveVehicles": 12
+      }
+    },
+    {
+      "seed": 19,
+      "off": {
+        "seed": 19,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 553.9989237906411,
+            "y": 3382.101191841066,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3596.1939204661176,
+            "y": 779.6839251685888,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.049999999999997,
+            "x": 3518.0801070133684,
+            "y": 991.0220440460786,
+            "overlapping": [
+              39
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.049999999999997,
+            "x": 3642.573424407947,
+            "y": 611.8579015396798,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 368.4699432453373,
+            "y": 3455.4761941887737,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 716.1978435676548,
+            "y": 3397.5732865766663,
+            "overlapping": [
+              25,
+              64
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 954.2000000000048,
+            "materials": 877.4999999999958,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 825.160000000004,
+            "materials": 730.4724999999961,
+            "fuel": 660.0000000000055,
+            "meds": 408.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      },
+      "on": {
+        "seed": 19,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.049999999999997,
+            "x": 3518.0801070133684,
+            "y": 991.0220440460786,
+            "overlapping": [
+              39
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.049999999999997,
+            "x": 3642.573424407947,
+            "y": 611.8579015396798,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 368.4699432453373,
+            "y": 3455.4761941887737,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.099999999999997,
+            "x": 716.1978435676548,
+            "y": 3397.5732865766663,
+            "overlapping": [
+              25,
+              64
+            ],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1065.200000000007,
+            "materials": 782.6349999999867,
+            "fuel": 664.0000000000055,
+            "meds": 408.8000000000011
+          },
+          {
+            "ammo": 1080.200000000007,
+            "materials": 768.4724999999961,
+            "fuel": 664.0000000000055,
+            "meds": 401.8000000000011
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    },
+    {
+      "seed": 20,
+      "off": {
+        "seed": 20,
+        "on": false,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 512.680618641898,
+            "y": 3215.8038916485384,
+            "overlapping": [],
+            "blocked": false,
+            "building": 1
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3647.416044901125,
+            "y": 877.5730678196996,
+            "overlapping": [],
+            "blocked": false,
+            "building": 2
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 702.7313067048738,
+            "y": 3193.2055610515745,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 729.5417834521662,
+            "y": 3283.5699023207258,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3684.998949245015,
+            "y": 618.7348018365919,
+            "overlapping": [
+              38
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3511.92009893741,
+            "y": 575.3903801945773,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 58.04999999999884,
+            "x": 615.4437457025051,
+            "y": 3363.3957942947745,
+            "overlapping": [],
+            "blocked": true,
+            "building": 1
+          }
+        ],
+        "delivered": [
+          1,
+          1
+        ],
+        "stock": [
+          {
+            "ammo": 855.2000000000039,
+            "materials": 751.5799999999998,
+            "fuel": 636.0000000000055,
+            "meds": 408.58000000000106
+          },
+          {
+            "ammo": 825.2000000000044,
+            "materials": 872.5149999999937,
+            "fuel": 660.0000000000055,
+            "meds": 409.24000000000115
+          }
+        ],
+        "aliveVehicles": 11
+      },
+      "on": {
+        "seed": 20,
+        "on": true,
+        "ticks": 1200,
+        "warOver": false,
+        "spawned": [
+          {
+            "role": "truck",
+            "faction": 0,
+            "t": 0.05,
+            "x": 670,
+            "y": 3300,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "truck",
+            "faction": 1,
+            "t": 0.05,
+            "x": 3726,
+            "y": 796,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 702.7313067048738,
+            "y": 3193.2055610515745,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 0,
+            "t": 3.2499999999999964,
+            "x": 729.5417834521662,
+            "y": 3283.5699023207258,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3684.998949245015,
+            "y": 618.7348018365919,
+            "overlapping": [
+              38
+            ],
+            "blocked": false,
+            "building": null
+          },
+          {
+            "role": "tank",
+            "faction": 1,
+            "t": 3.2499999999999964,
+            "x": 3511.92009893741,
+            "y": 575.3903801945773,
+            "overlapping": [],
+            "blocked": false,
+            "building": null
+          }
+        ],
+        "delivered": [
+          0,
+          0
+        ],
+        "stock": [
+          {
+            "ammo": 1194.200000000007,
+            "materials": 980.5799999999998,
+            "fuel": 664.0000000000055,
+            "meds": 408.58000000000106
+          },
+          {
+            "ammo": 951.180000000006,
+            "materials": 795.9124999999964,
+            "fuel": 664.0000000000055,
+            "meds": 402.24000000000115
+          }
+        ],
+        "aliveVehicles": 11
+      }
+    }
+  ],
+  "caveats": [
+    "All vehicle unitSpawned events after initial game construction; may include non-logistics sources",
+    "Checks exact positions at spawn, not all later movement",
+    "60 simulated seconds with normal systems; not a complete war or logistics acceptance",
+    "Same seeds may diverge as actions consume random numbers differently",
+    "Legacy logistics movement; safe_logistics_v2 remains off"
+  ]
+}

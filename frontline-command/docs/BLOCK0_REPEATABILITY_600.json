@@ -1,0 +1,131 @@
+{
+  "passed": true,
+  "kind": "partial_state_repeatability_diagnostic",
+  "node": "v22.22.3",
+  "dt": 0.016666666666666666,
+  "ticks": 600,
+  "seeds": 20,
+  "note": "Only selected units, point, stocks, stats and shared RNG fields; not full determinism, input replay, save/load or cross-browser proof.",
+  "runs": [
+    {
+      "seed": 1,
+      "ticksCompared": 601,
+      "lastHash": "1978f882a4edcf68",
+      "firstMismatch": null
+    },
+    {
+      "seed": 2,
+      "ticksCompared": 601,
+      "lastHash": "2d954d116feb2219",
+      "firstMismatch": null
+    },
+    {
+      "seed": 3,
+      "ticksCompared": 601,
+      "lastHash": "d0fee09e1043d366",
+      "firstMismatch": null
+    },
+    {
+      "seed": 4,
+      "ticksCompared": 601,
+      "lastHash": "b981a806273df284",
+      "firstMismatch": null
+    },
+    {
+      "seed": 5,
+      "ticksCompared": 601,
+      "lastHash": "1682e43129b8623b",
+      "firstMismatch": null
+    },
+    {
+      "seed": 6,
+      "ticksCompared": 601,
+      "lastHash": "fcae44896ac1f34b",
+      "firstMismatch": null
+    },
+    {
+      "seed": 7,
+      "ticksCompared": 601,
+      "lastHash": "be8f7666aadb0997",
+      "firstMismatch": null
+    },
+    {
+      "seed": 8,
+      "ticksCompared": 601,
+      "lastHash": "8d6e556b29786215",
+      "firstMismatch": null
+    },
+    {
+      "seed": 9,
+      "ticksCompared": 601,
+      "lastHash": "8c43eac703074757",
+      "firstMismatch": null
+    },
+    {
+      "seed": 10,
+      "ticksCompared": 601,
+      "lastHash": "dd0d58874f743bea",
+      "firstMismatch": null
+    },
+    {
+      "seed": 11,
+      "ticksCompared": 601,
+      "lastHash": "399f33c4dc3114e6",
+      "firstMismatch": null
+    },
+    {
+      "seed": 12,
+      "ticksCompared": 601,
+      "lastHash": "8fe51a38dfa249be",
+      "firstMismatch": null
+    },
+    {
+      "seed": 13,
+      "ticksCompared": 601,
+      "lastHash": "10089da375ed646d",
+      "firstMismatch": null
+    },
+    {
+      "seed": 14,
+      "ticksCompared": 601,
+      "lastHash": "1d84ee89c93a8511",
+      "firstMismatch": null
+    },
+    {
+      "seed": 15,
+      "ticksCompared": 601,
+      "lastHash": "419a1dafe94430a1",
+      "firstMismatch": null
+    },
+    {
+      "seed": 16,
+      "ticksCompared": 601,
+      "lastHash": "d1abc2626349a7bd",
+      "firstMismatch": null
+    },
+    {
+      "seed": 17,
+      "ticksCompared": 601,
+      "lastHash": "9aec5d164b015b61",
+      "firstMismatch": null
+    },
+    {
+      "seed": 18,
+      "ticksCompared": 601,
+      "lastHash": "43f4e30768c8aa71",
+      "firstMismatch": null
+    },
+    {
+      "seed": 19,
+      "ticksCompared": 601,
+      "lastHash": "8494e29882a56a2b",
+      "firstMismatch": null
+    },
+    {
+      "seed": 20,
+      "ticksCompared": 601,
+      "lastHash": "a9bd1f52962f2d54",
+      "firstMismatch": null
+    }
+  ]
+}

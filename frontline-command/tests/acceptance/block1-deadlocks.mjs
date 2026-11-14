@@ -8,6 +8,13 @@ const arg = process.argv.find((s) => s.startsWith('--attempts='));
 const attempts = arg ? Number(arg.slice('--attempts='.length)) : 100;
 if (!Number.isInteger(attempts) || attempts < 1 || attempts > 1000) throw new Error('attempts: 1…1000');
 const cfg = await loadConfig();
+if (process.env.SMART_ROUTE === '1') cfg.flags.smart_route_v2 = true;
+if (process.env.BOT_VISION === '1') cfg.flags.bot_obstacle_vision_v1 = true;
+if (process.env.CROWD_NAV === '1') cfg.flags.crowd_nav_v2 = true;
+if (process.env.DOOR_PAIR_LANES === '1') cfg.flags.door_pair_lanes_v1 = true;
+if (process.env.UNIT_SOLID === '1') cfg.flags.unit_solid_2d_v1 = true;
+if (process.env.DOOR_COURTESY === '1') cfg.flags.door_courtesy_v1 = true;
+if (process.env.WALL_GOAL_GUARD === '1') cfg.flags.wall_goal_guard_v1 = true;
 function scene(seed, faction) {
   const game = new Game({ cfg, seed, difficulty: 'regular', aiVsAi: true });
   game.units.clear(); game.unitGrid.clear();

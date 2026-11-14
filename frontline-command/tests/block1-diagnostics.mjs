@@ -35,6 +35,10 @@ assert.equal(diagnoseChecks([mk({ evidence: null })])[0].code, 5);
 assert.equal(diagnoseChecks([mk({ evidence: { passed: false } })])[0].code, 6);
 assert.equal(diagnoseChecks([mk({ evidence: { passed: true } })])[0].code, 4, 'ошибочный процесс не маскируется положительным JSON');
 assert.deepEqual(diagnoseChecks([mk({ status: 'pass' })]), []);
+const skipIssue = diagnoseChecks([{ id: 'full_suite', description: 'набор', status: 'fail', exitCode: 0, skipCount: 1, skipLines: ['skip узкий проход'] }])[0];
+assert.equal(skipIssue.code, 1);
+assert.match(skipIssue.message, /пропущенные/);
+assert.deepEqual(skipIssue.observed.skipLines, ['skip узкий проход']);
 for (const status of ['fail', 'not_run', 'missing', 'unexpected']) assert.ok(diagnoseChecks([mk({ status })]).length > 0);
 const variantsFailure = diagnoseChecks([{ id: 'u_trap', description: 'ловушка', status: 'fail', passed: 18, total: 18,
   evidence: { results: [] }, variantsPassed: 72, variantsTotal: 216, variantsEvidence: { results: [{ role: 'truck', arrived: false, pathFailed: true }] } }]);

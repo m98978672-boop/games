@@ -1,0 +1,54 @@
+{
+  "passed": false,
+  "coverageComplete": false,
+  "coverage": [
+    {
+      "id": "foot-door-opposing",
+      "scenarios": 40,
+      "participants": 2,
+      "passed": 40,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 20,
+          "passed": 20
+        },
+        {
+          "id": 1,
+          "attempts": 20,
+          "passed": 20
+        }
+      ],
+      "crossed": 80,
+      "arrived": 80,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0
+    }
+  ],
+  "method": "встречная пара через дверь штаба; 100 seed на фракцию в полном режиме; 0,05 с шаг; до 60 с; без боя",
+  "scenarios": 40,
+  "failed": 0,
+  "factionsChecked": 2,
+  "factions": [
+    {
+      "id": 0,
+      "attempts": 20,
+      "passed": 20
+    },
+    {
+      "id": 1,
+      "attempts": 20,
+      "passed": 20
+    }
+  ],
+  "crossed": 80,
+  "arrived": 80,
+  "teleports": 0,
+  "speedViolations": 0,
+  "wallCollisions": 0,
+  "overlapFrames": 0,
+  "maxOverlap": 0,
+  "failures": []
+}

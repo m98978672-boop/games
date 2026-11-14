@@ -1,0 +1,1675 @@
+{
+  "kind": "all_owned_building_points_isolated_game_step",
+  "seeds": 2,
+  "summary": {
+    "cases": 24,
+    "off": 12,
+    "on": 24,
+    "regressed": 0,
+    "improved": 12
+  },
+  "pairs": [
+    {
+      "id": "hq_ally",
+      "type": "hq",
+      "faction": 0,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 0,
+        "type": "hq",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 670,
+          "y": 3300,
+          "goal": {
+            "x": 520,
+            "y": 3300
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 1,
+        "faction": 0,
+        "type": "hq",
+        "on": true,
+        "ticks": 2,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 670,
+          "y": 3300,
+          "request": {
+            "x": 520,
+            "y": 3300
+          },
+          "dropoff": {
+            "x": 684.48,
+            "y": 3300
+          },
+          "targetDistance": 14.480000000000018,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 670,
+          "y": 3300,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "hq_ally",
+      "type": "hq",
+      "faction": 0,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 0,
+        "type": "hq",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 670,
+          "y": 3300,
+          "goal": {
+            "x": 520,
+            "y": 3300
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 2,
+        "faction": 0,
+        "type": "hq",
+        "on": true,
+        "ticks": 2,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 670,
+          "y": 3300,
+          "request": {
+            "x": 520,
+            "y": 3300
+          },
+          "dropoff": {
+            "x": 684.48,
+            "y": 3300
+          },
+          "targetDistance": 14.480000000000018,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 670,
+          "y": 3300,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "hq_legion",
+      "type": "hq",
+      "faction": 1,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 1,
+        "type": "hq",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3539.630681963119,
+          "y": 944.1801948466054,
+          "goal": {
+            "x": 3576,
+            "y": 796
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 1,
+        "faction": 1,
+        "type": "hq",
+        "on": true,
+        "ticks": 2,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3726,
+          "y": 796,
+          "request": {
+            "x": 3576,
+            "y": 796
+          },
+          "dropoff": {
+            "x": 3740.48,
+            "y": 796
+          },
+          "targetDistance": 14.480000000000018,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3726,
+          "y": 796,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "hq_legion",
+      "type": "hq",
+      "faction": 1,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 1,
+        "type": "hq",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3582.057088834312,
+          "y": 946.3768939877064,
+          "goal": {
+            "x": 3576,
+            "y": 796
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 2,
+        "faction": 1,
+        "type": "hq",
+        "on": true,
+        "ticks": 2,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3726,
+          "y": 796,
+          "request": {
+            "x": 3576,
+            "y": 796
+          },
+          "dropoff": {
+            "x": 3740.48,
+            "y": 796
+          },
+          "targetDistance": 14.480000000000018,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3726,
+          "y": 796,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_white",
+      "type": "city",
+      "faction": 0,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 0,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1088.9607678530283,
+          "y": 2686.0392321469717,
+          "goal": {
+            "x": 1150,
+            "y": 2550
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 1,
+        "faction": 0,
+        "type": "city",
+        "on": true,
+        "ticks": 177,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 968.9478803935883,
+          "y": 2695.1759786669836,
+          "request": {
+            "x": 1150,
+            "y": 2550
+          },
+          "dropoff": {
+            "x": 997.52,
+            "y": 2702.48
+          },
+          "targetDistance": 29.490926510305716,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 968.9478803935883,
+          "y": 2695.1759786669836,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_white",
+      "type": "city",
+      "faction": 0,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 0,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1126.083873865322,
+          "y": 2686.416126134678,
+          "goal": {
+            "x": 1150,
+            "y": 2550
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 2,
+        "faction": 0,
+        "type": "city",
+        "on": true,
+        "ticks": 95,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 998.8046532517437,
+          "y": 2731.1953467482563,
+          "request": {
+            "x": 1150,
+            "y": 2550
+          },
+          "dropoff": {
+            "x": 997.52,
+            "y": 2702.48
+          },
+          "targetDistance": 28.74406848116332,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 998.8046532517437,
+          "y": 2731.1953467482563,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_harbor",
+      "type": "city",
+      "faction": 0,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 0,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1459.9308710430278,
+          "y": 3429.9308710430278,
+          "goal": {
+            "x": 1600,
+            "y": 3450
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 1,
+        "faction": 0,
+        "type": "city",
+        "on": true,
+        "ticks": 92,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 1421.7484441105048,
+          "y": 3309.2807765030734,
+          "request": {
+            "x": 1600,
+            "y": 3450
+          },
+          "dropoff": {
+            "x": 1447.52,
+            "y": 3297.52
+          },
+          "targetDistance": 28.328236036163943,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1421.7484441105048,
+          "y": 3309.2807765030734,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_harbor",
+      "type": "city",
+      "faction": 0,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 0,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1462.3940744786241,
+          "y": 3451.144074478624,
+          "goal": {
+            "x": 1600,
+            "y": 3450
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 2,
+        "faction": 0,
+        "type": "city",
+        "on": true,
+        "ticks": 92,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 1416.1234441105048,
+          "y": 3309.2807765030734,
+          "request": {
+            "x": 1600,
+            "y": 3450
+          },
+          "dropoff": {
+            "x": 1447.52,
+            "y": 3297.52
+          },
+          "targetDistance": 33.52699786257992,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1416.1234441105048,
+          "y": 3309.2807765030734,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_granite",
+      "type": "city",
+      "faction": 1,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 1,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3396.81845276055,
+          "y": 1267.68154723945,
+          "goal": {
+            "x": 2946,
+            "y": 1546
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 1,
+        "faction": 1,
+        "type": "city",
+        "on": true,
+        "ticks": 168,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3130.9624948656888,
+          "y": 1391.99999995908,
+          "request": {
+            "x": 2946,
+            "y": 1546
+          },
+          "dropoff": {
+            "x": 3098.48,
+            "y": 1393.52
+          },
+          "targetDistance": 32.51803919094589,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3130.9624948656888,
+          "y": 1391.99999995908,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_granite",
+      "type": "city",
+      "faction": 1,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 1,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3395.5316561961463,
+          "y": 1253.9683438038537,
+          "goal": {
+            "x": 2946,
+            "y": 1546
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 2,
+        "faction": 1,
+        "type": "city",
+        "on": true,
+        "ticks": 169,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3131.053058847694,
+          "y": 1391.9999999464592,
+          "request": {
+            "x": 2946,
+            "y": 1546
+          },
+          "dropoff": {
+            "x": 3098.48,
+            "y": 1393.52
+          },
+          "targetDistance": 32.60850445601733,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3131.053058847694,
+          "y": 1391.9999999464592,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_north",
+      "type": "city",
+      "faction": 1,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 1,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2539.954873793393,
+          "y": 507.5594351334431,
+          "goal": {
+            "x": 2496,
+            "y": 646
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 1,
+        "faction": 1,
+        "type": "city",
+        "on": true,
+        "ticks": 195,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 2673.5119626277046,
+          "y": 778.0277789372968,
+          "request": {
+            "x": 2496,
+            "y": 646
+          },
+          "dropoff": {
+            "x": 2648.48,
+            "y": 798.48
+          },
+          "targetDistance": 32.32479697372407,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2673.5119626277046,
+          "y": 778.0277789372968,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "city_north",
+      "type": "city",
+      "faction": 1,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 1,
+        "type": "city",
+        "on": false,
+        "ticks": 2000,
+        "loaded": true,
+        "delivered": 0,
+        "unload": null,
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2510.55059607321,
+          "y": 511.5062235579808,
+          "goal": {
+            "x": 2496,
+            "y": 646
+          },
+          "failed": false,
+          "task": "toTarget",
+          "cargo": 240
+        },
+        "passed": false
+      },
+      "on": {
+        "seed": 2,
+        "faction": 1,
+        "type": "city",
+        "on": true,
+        "ticks": 182,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 2681.936080306375,
+          "y": 801.8619455827061,
+          "request": {
+            "x": 2496,
+            "y": 646
+          },
+          "dropoff": {
+            "x": 2648.48,
+            "y": 798.48
+          },
+          "targetDistance": 33.62657974565658,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2681.936080306375,
+          "y": 801.8619455827061,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_ally1",
+      "type": "depot",
+      "faction": 0,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 0,
+        "type": "depot",
+        "on": false,
+        "ticks": 49,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 780.2341024020328,
+          "y": 2955.323400427862,
+          "request": {
+            "x": 800,
+            "y": 2850
+          },
+          "targetDistance": 107.16207064787935,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 780.2341024020328,
+          "y": 2955.323400427862,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 1,
+        "faction": 0,
+        "type": "depot",
+        "on": true,
+        "ticks": 40,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 670,
+          "y": 2992.5,
+          "request": {
+            "x": 800,
+            "y": 2850
+          },
+          "dropoff": {
+            "x": 683.52,
+            "y": 2966.48
+          },
+          "targetDistance": 29.32287161926673,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 670,
+          "y": 2992.5,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_ally1",
+      "type": "depot",
+      "faction": 0,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 0,
+        "type": "depot",
+        "on": false,
+        "ticks": 49,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 780.2341024020328,
+          "y": 2955.323400427862,
+          "request": {
+            "x": 800,
+            "y": 2850
+          },
+          "targetDistance": 107.16207064787935,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 780.2341024020328,
+          "y": 2955.323400427862,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 2,
+        "faction": 0,
+        "type": "depot",
+        "on": true,
+        "ticks": 40,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 673.3452746838784,
+          "y": 2993.1171599529675,
+          "request": {
+            "x": 800,
+            "y": 2850
+          },
+          "dropoff": {
+            "x": 683.52,
+            "y": 2966.48
+          },
+          "targetDistance": 28.51426530034575,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 673.3452746838784,
+          "y": 2993.1171599529675,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_ally2",
+      "type": "depot",
+      "faction": 0,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 0,
+        "type": "depot",
+        "on": false,
+        "ticks": 97,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 1366.0256864566254,
+          "y": 3115.749508026199,
+          "request": {
+            "x": 1450,
+            "y": 3050
+          },
+          "targetDistance": 106.65215956917217,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1366.0256864566254,
+          "y": 3115.749508026199,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 1,
+        "faction": 0,
+        "type": "depot",
+        "on": true,
+        "ticks": 91,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 1304.1949138837324,
+          "y": 3173.602327592004,
+          "request": {
+            "x": 1450,
+            "y": 3050
+          },
+          "dropoff": {
+            "x": 1333.52,
+            "y": 3166.48
+          },
+          "targetDistance": 30.17761133778365,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1304.1949138837324,
+          "y": 3173.602327592004,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_ally2",
+      "type": "depot",
+      "faction": 0,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 0,
+        "type": "depot",
+        "on": false,
+        "ticks": 97,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 1366.0256864566254,
+          "y": 3115.749508026199,
+          "request": {
+            "x": 1450,
+            "y": 3050
+          },
+          "targetDistance": 106.65215956917217,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1366.0256864566254,
+          "y": 3115.749508026199,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 2,
+        "faction": 0,
+        "type": "depot",
+        "on": true,
+        "ticks": 92,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 1308.7449942333033,
+          "y": 3154.159226380275,
+          "request": {
+            "x": 1450,
+            "y": 3050
+          },
+          "dropoff": {
+            "x": 1333.52,
+            "y": 3166.48
+          },
+          "targetDistance": 27.669520655919733,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 1308.7449942333033,
+          "y": 3154.159226380275,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_leg1",
+      "type": "depot",
+      "faction": 1,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 1,
+        "type": "depot",
+        "on": false,
+        "ticks": 84,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3393.066324690162,
+          "y": 1203.0895802130588,
+          "request": {
+            "x": 3296,
+            "y": 1246
+          },
+          "targetDistance": 106.12810897753485,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3393.066324690162,
+          "y": 1203.0895802130588,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 1,
+        "faction": 1,
+        "type": "depot",
+        "on": true,
+        "ticks": 72,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3441.597673374128,
+          "y": 1140.4023266258719,
+          "request": {
+            "x": 3296,
+            "y": 1246
+          },
+          "dropoff": {
+            "x": 3412.48,
+            "y": 1129.52
+          },
+          "targetDistance": 31.084786238843105,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3441.597673374128,
+          "y": 1140.4023266258719,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_leg1",
+      "type": "depot",
+      "faction": 1,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 1,
+        "type": "depot",
+        "on": false,
+        "ticks": 84,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3393.066324690162,
+          "y": 1203.0895802130588,
+          "request": {
+            "x": 3296,
+            "y": 1246
+          },
+          "targetDistance": 106.12810897753485,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3393.066324690162,
+          "y": 1203.0895802130588,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 2,
+        "faction": 1,
+        "type": "depot",
+        "on": true,
+        "ticks": 71,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3435.274080245321,
+          "y": 1105.4759197546791,
+          "request": {
+            "x": 3296,
+            "y": 1246
+          },
+          "dropoff": {
+            "x": 3412.48,
+            "y": 1129.52
+          },
+          "targetDistance": 33.13137318424268,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3435.274080245321,
+          "y": 1105.4759197546791,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_leg2",
+      "type": "depot",
+      "faction": 1,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 1,
+        "type": "depot",
+        "on": false,
+        "ticks": 234,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 2749.3142076367217,
+          "y": 1075.1512452626005,
+          "request": {
+            "x": 2646,
+            "y": 1046
+          },
+          "targetDistance": 107.34812806921192,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2749.3142076367217,
+          "y": 1075.1512452626005,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 1,
+        "faction": 1,
+        "type": "depot",
+        "on": true,
+        "ticks": 153,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 2790.16369055211,
+          "y": 944.1801948466054,
+          "request": {
+            "x": 2646,
+            "y": 1046
+          },
+          "dropoff": {
+            "x": 2762.48,
+            "y": 929.52
+          },
+          "targetDistance": 31.3258365494909,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2790.16369055211,
+          "y": 944.1801948466054,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "depot_leg2",
+      "type": "depot",
+      "faction": 1,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 1,
+        "type": "depot",
+        "on": false,
+        "ticks": 234,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 2749.3142076367217,
+          "y": 1075.1512452626005,
+          "request": {
+            "x": 2646,
+            "y": 1046
+          },
+          "targetDistance": 107.34812806921192,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2749.3142076367217,
+          "y": 1075.1512452626005,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 2,
+        "faction": 1,
+        "type": "depot",
+        "on": true,
+        "ticks": 155,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 2787.057088834312,
+          "y": 946.3768939877064,
+          "request": {
+            "x": 2646,
+            "y": 1046
+          },
+          "dropoff": {
+            "x": 2762.48,
+            "y": 929.52
+          },
+          "targetDistance": 29.802485978227118,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 2787.057088834312,
+          "y": 946.3768939877064,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "factory_ally",
+      "type": "factory",
+      "faction": 0,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 0,
+        "type": "factory",
+        "on": false,
+        "ticks": 129,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 698.2878857869295,
+          "y": 2308.5284617586535,
+          "request": {
+            "x": 700,
+            "y": 2200
+          },
+          "targetDistance": 108.54196583247476,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 698.2878857869295,
+          "y": 2308.5284617586535,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 1,
+        "faction": 0,
+        "type": "factory",
+        "on": true,
+        "ticks": 127,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 658.067573067477,
+          "y": 2352.7966046011466,
+          "request": {
+            "x": 700,
+            "y": 2200
+          },
+          "dropoff": {
+            "x": 649.6813364429164,
+            "y": 2321.48
+          },
+          "targetDistance": 32.4200352940535,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 658.067573067477,
+          "y": 2352.7966046011466,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "factory_ally",
+      "type": "factory",
+      "faction": 0,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 0,
+        "type": "factory",
+        "on": false,
+        "ticks": 129,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 698.2878857869295,
+          "y": 2308.5284617586535,
+          "request": {
+            "x": 700,
+            "y": 2200
+          },
+          "targetDistance": 108.54196583247476,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 698.2878857869295,
+          "y": 2308.5284617586535,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 2,
+        "faction": 0,
+        "type": "factory",
+        "on": true,
+        "ticks": 128,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 655.4159226380275,
+          "y": 2354.3499054600456,
+          "request": {
+            "x": 700,
+            "y": 2200
+          },
+          "dropoff": {
+            "x": 649.6813364429164,
+            "y": 2321.48
+          },
+          "targetDistance": 33.36639272953395,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 655.4159226380275,
+          "y": 2354.3499054600456,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "factory_legion",
+      "type": "factory",
+      "faction": 1,
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "faction": 1,
+        "type": "factory",
+        "on": false,
+        "ticks": 152,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3423.7706087150946,
+          "y": 1789.6839769545813,
+          "request": {
+            "x": 3396,
+            "y": 1896
+          },
+          "targetDistance": 109.88313548766651,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3423.7706087150946,
+          "y": 1789.6839769545813,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 1,
+        "faction": 1,
+        "type": "factory",
+        "on": true,
+        "ticks": 149,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3493.9805874231647,
+          "y": 1752.1045042334413,
+          "request": {
+            "x": 3396,
+            "y": 1896
+          },
+          "dropoff": {
+            "x": 3517.48,
+            "y": 1774.52
+          },
+          "targetDistance": 32.475788549578546,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3493.9805874231647,
+          "y": 1752.1045042334413,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    },
+    {
+      "id": "factory_legion",
+      "type": "factory",
+      "faction": 1,
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "faction": 1,
+        "type": "factory",
+        "on": false,
+        "ticks": 152,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3423.7706087150946,
+          "y": 1789.6839769545813,
+          "request": {
+            "x": 3396,
+            "y": 1896
+          },
+          "targetDistance": 109.88313548766651,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3423.7706087150946,
+          "y": 1789.6839769545813,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      },
+      "on": {
+        "seed": 2,
+        "faction": 1,
+        "type": "factory",
+        "on": true,
+        "ticks": 151,
+        "loaded": true,
+        "delivered": 1,
+        "unload": {
+          "x": 3489.1715540689875,
+          "y": 1757.8510197590545,
+          "request": {
+            "x": 3396,
+            "y": 1896
+          },
+          "dropoff": {
+            "x": 3517.48,
+            "y": 1774.52
+          },
+          "targetDistance": 32.851529847209456,
+          "pathFailed": false
+        },
+        "wall": 0,
+        "speed": 0,
+        "fails": 0,
+        "final": {
+          "x": 3489.1715540689875,
+          "y": 1757.8510197590545,
+          "goal": null,
+          "failed": false,
+          "task": "idleTruck",
+          "cargo": 0
+        },
+        "passed": true
+      }
+    }
+  ],
+  "caveats": [
+    "one truck, one fixed request; autopilot, strategic AI, threat and new demand disabled",
+    "points owned at game start, not all map buildings",
+    "sampled collision and speed; not full war",
+    "obstacle vision and vehicle detour enabled in both"
+  ]
+}

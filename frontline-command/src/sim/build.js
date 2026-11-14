@@ -2,6 +2,7 @@
 // шаблоны, приоритеты, очередь, работа инженеров, ремонт, пулемётные гнёзда.
 // Правила одинаковы для игрока и ИИ: любая постановка идёт через Command API.
 import { clamp, dist, angleTo } from '../core/mathx.js';
+import { Walls } from './walls.js';
 
 export const FORT_TYPES = ['sandbags', 'wire', 'trench', 'mg_nest', 'bunker', 'watchtower'];
 export const LINE_TYPES = ['sandbags', 'wire', 'trench'];
@@ -455,13 +456,12 @@ export class BuildSystem {
       .filter((p) => p.owner === faction && ['city', 'depot', 'hq', 'factory'].includes(p.type))
       .map((p) => ({ p, threat: this.threatAt(faction, p.x, p.y) }))
       .sort((a, b) => b.threat - a.threat);
-    const target = targets[0];
-    if (!target || target.threat < 0.8) return 0;
-    let forts = 0;
-    for (const b of game.world.buildings) {
-      if (!b.dead && b.faction === faction && dist(b.x, b.y, target.p.x, target.p.y) < 260) forts++;
-    }
-    if (forts >= 4) return 0;
+    // Самая опасная точка может быть уже укреплена: это не повод игнорировать
+    // следующую угрожаемую. Штаб и производственные здания не являются фортами.
+    const target = targets.find(({ p, threat }) => threat >= 0.8 &&
+      game.world.buildings.filter((b) => !b.dead && b.faction === faction && FORT_TYPES.includes(b.type) &&
+        dist(b.x, b.y, p.x, p.y) < 260).length < 4);
+    if (!target) return 0;
     const profileId = target.threat > 2.5 ? 'medium' : 'light';
     const res = game.api.issue({
       source: faction === game.playerFaction ? 'autopilot' : 'enemyAI',
@@ -470,8 +470,10 @@ export class BuildSystem {
       params: { profile: profileId, radius: 190, pointId: target.p.id },
       priority: 2, reason: `укрепление ${target.p.name} (угроза ${target.threat.toFixed(1)})`,
     });
-    if (res?.ok) this.noteBuild(faction);
-    return res?.ok ? 1 : 0;
+    // issue() ставит приказ в радиоочередь, а не возвращает результат строительства.
+    // Ограничиваем повторные заявки уже при постановке; доставка может позже отказать.
+    if (res?.status === 'queued') this.noteBuild(faction);
+    return res?.status === 'queued' ? 1 : 0;
   }
 
   // ---------- очередь и работа ----------
@@ -574,11 +576,64 @@ export class BuildSystem {
     return best;
   }
 
+  // Opt-in wall repair targets an actual segment, not the centre of a ring.
+  nearestDamagedWall(u, radius = 320) {
+    const game = this.game, walls = game.walls;
+    if (!game.cfg.flag('wall_engineer_repair_v1', false) || !walls?.destructionEnabled()) return null;
+    let best = null, bestDistance = radius;
+    for (const b of game.world.buildings) {
+      if (b.dead || !b.built || b.faction !== u.faction) continue;
+      const st = walls.state(b); if (!st) continue;
+      for (const seg of st.segs) {
+        if (seg.hp >= seg.maxHp) continue;
+        const geo = st.outline.segments.find(g => g.id === seg.id); if (!geo) continue;
+        const x1 = b.x + geo.points[0][0], y1 = b.y + geo.points[0][1];
+        const x2 = b.x + geo.points[1][0], y2 = b.y + geo.points[1][1];
+        const nearest = Walls.distPointSegment(u.x, u.y, x1, y1, x2, y2);
+        if (nearest.d >= bestDistance) continue;
+        const x = x1 + (x2-x1)*nearest.t, y = y1 + (y2-y1)*nearest.t;
+        const dx=x2-x1, dy=y2-y1, length=Math.hypot(dx,dy); if (length < 1e-9) continue;
+        let nx=-dy/length, ny=dx/length;
+        if ((u.x-x)*nx+(u.y-y)*ny < 0) { nx=-nx; ny=-ny; }
+        const offset=geo.thickness/2+u.radius+4;
+        const goal={x:x+nx*offset,y:y+ny*offset};
+        if (!game.world.isBaseWalkable(goal.x,goal.y) || walls.blocksMove(goal.x,goal.y,u.radius,u)) continue;
+        bestDistance=nearest.d; best={building:b,segId:seg.id,geo,x1,y1,x2,y2,distance:nearest.d,goal};
+      }
+    }
+    return best;
+  }
+
+  repairWall(target, dt, engineer) {
+    const game=this.game, walls=game.walls, b=target?.building;
+    if (!game.cfg.flag('wall_engineer_repair_v1',false) || !walls?.destructionEnabled() ||
+        !b || b.dead || !b.built || !engineer?.alive || engineer.downed || engineer.role !== 'engineer' ||
+        engineer.faction !== b.faction || engineer.perception?.hasContact || !Number.isFinite(dt) || dt<=0) return 0;
+    // Re-read geometry and positions: cached targets must not authorize remote repair.
+    const st=walls.state(b),seg=st?.segs.find(s=>s.id===target.segId),geo=st?.outline.segments.find(s=>s.id===target.segId);
+    if (!seg || !geo || seg.hp>=seg.maxHp) return 0;
+    const x1=b.x+geo.points[0][0],y1=b.y+geo.points[0][1],x2=b.x+geo.points[1][0],y2=b.y+geo.points[1][1];
+    if (Walls.distPointSegment(engineer.x,engineer.y,x1,y1,x2,y2).d>60) return 0;
+    // Never seal a breach around a live unit, including downed soldiers.
+    if (seg.breached && [...game.units.values()].some(u=>u.alive &&
+      Walls.distPointSegment(u.x,u.y,x1,y1,x2,y2).d <= u.radius+geo.thickness/2)) return 0;
+    const stock=game.logistics.supply(engineer.faction), price=game.cfg.navBudget?.repairMaterialsPerHp ?? 0.08;
+    if (!Number.isFinite(stock.materials) || !Number.isFinite(price) || price<=0 || stock.materials<=0) return 0;
+    const power=(engineer.buildPower||10)*(game.modsFor(engineer.faction).repair_mult||1)*dt*1.6;
+    const amount=Math.min(power,seg.maxHp-seg.hp,stock.materials/price);
+    const repaired=walls.repairSegment(b,seg.id,amount);
+    stock.materials=Math.max(0,stock.materials-repaired*price);
+    return repaired;
+  }
+
   work(b, dt, engineer) {
     const game = this.game;
-    if (!b || b.built || b.dead) return;
+    if (!b || b.built || b.dead || !Number.isFinite(dt) || dt <= 0) return;
     const stock = game.logistics.supply(b.faction);
-    if (stock.materials < 0.6) {
+    const materialCost = 0.55 * dt;
+    // Сохраняем прежний минимальный запас для начала работы, но учитываем
+    // реальную стоимость всего шага (взаимодействие игрока использует 1,2 с).
+    if (!Number.isFinite(stock.materials) || stock.materials < Math.max(0.6, materialCost)) {
       b.paused = true;
       b.pauseReason = 'NO_MATERIALS';
       b.stall = 'NO_MATERIALS';
@@ -591,7 +646,7 @@ export class BuildSystem {
     b.paused = false;
     b.pauseReason = null;
     b.stall = 'ok';
-    stock.materials -= 0.55 * dt;
+    stock.materials -= materialCost;
     const mods = game.modsFor(b.faction);
     const power = (engineer?.buildPower || 10) * (mods.build_speed_mult || 1);
     const time = Math.max(1, b.def.time);
@@ -615,9 +670,14 @@ export class BuildSystem {
 
   repair(b, dt, engineer) {
     const game = this.game;
+    if (!b || !engineer || !Number.isFinite(dt) || dt <= 0) return;
     const stock = game.logistics.supply(engineer.faction);
-    if (stock.materials < 0.2) { b.paused = true; b.pauseReason = 'NO_MATERIALS'; return; }
-    stock.materials -= 0.15 * dt;
+    const materialCost = 0.15 * dt;
+    if (!Number.isFinite(stock.materials) || stock.materials < Math.max(0.2, materialCost)) {
+      b.paused = true; b.pauseReason = 'NO_MATERIALS'; return;
+    }
+    stock.materials -= materialCost;
+    if (b.pauseReason === 'NO_MATERIALS') { b.paused = false; b.pauseReason = null; }
     const mods = game.modsFor(engineer.faction);
     b.hp = Math.min(b.maxHp, b.hp + (engineer.buildPower || 10) * (mods.repair_mult || 1) * dt * 1.6);
     if (b.hp >= b.maxHp) b.paused = false;
