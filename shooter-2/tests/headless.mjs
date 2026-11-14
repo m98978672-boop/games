@@ -203,7 +203,7 @@ assert.equal(typeof sandbox.THREE.WebGLRenderer, 'function', 'рендерер �
 assert.equal(typeof sandbox.THREE.Scene, 'function', 'остальной three.js на месте');
 
 /* ------------------------- загрузка модулей игры ----------------------- */
-const modules = ['bugcodes', 'meshpack', 'meshfield', 'soundbank', 'mechanics', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
+const modules = ['bugcodes', 'monolith', 'meshpack', 'meshfield', 'soundbank', 'mechanics', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'ai', 'agent', 'fx',
   'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui', 'contentlab'];
 for (const m of modules) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: `src/${m}.js` });
@@ -215,6 +215,7 @@ assert.ok(SH2 && SH2.data && SH2.game && SH2.ui, 'все модули загру
 const ui = new SH2.ui.UI();
 const canvas = getEl('game');
 const game = new SH2.game.Game({ canvas, ui });
+game.syncFields = true;   // в тестах поле строится целиком, без покадровой нарезки
 game.init();
 assert.ok(game.renderer instanceof FakeRenderer, 'рендерер создан');
 assert.ok(game.scene && game.camera, 'сцена и камера');
@@ -546,27 +547,70 @@ assert.equal(game.player.alive, true, 'игрок жив после retry');
   assert.ok(Math.abs(va - vb) > 0.02, `модели 0 и 501 отличаются объёмом: ${va.toFixed(2)} против ${vb.toFixed(2)}`);
 }
 
-/* 2. 100 000 мешей в поле: объекты, матрицы, попадания, LOD. */
+/* 1b. Монолиты: 10 000 моделей, прорези вычтены, а не наложены. */
+{
+  const M = SH2.monolith;
+  assert.equal(M.COUNT, 10000, 'каталог: 10 000 моделей');
+  assert.equal(M.FAMILIES.length, 10, '10 семейств');
+  /* площадь грани после вычитания прорезей сходится */
+  const free = M.decompose(1, 1, [[0.2, 0.2, 0.2, 0.6], [0.6, 0.4, 0.2, 0.2]]);
+  const area = free.reduce((acc, r) => acc + r[2] * r[3], 0);
+  assert.ok(Math.abs(area - 0.84) < 1e-6, `площадь после вычитания: ${area.toFixed(4)}`);
+  let holes = 0, recs = 0, neither = 0, tris = 0;
+  const ids = new Set();
+  for (let i = 0; i < 400; i++) {
+    const idx = (i * 37) % M.COUNT;
+    const made = M.build(idx);
+    ids.add(made.id);
+    tris += made.tris;
+    if (made.openings > 0) holes++;
+    if (made.recesses > 0) recs++;
+    if (!made.openings && !made.recesses) neither++;
+    const pa = made.geometry.attributes.position.array;
+    for (let k = 0; k < pa.length; k += 97) {
+      assert.ok(isFinite(pa[k]), `вершина ${idx} конечна`);
+    }
+  }
+  assert.equal(ids.size, 400, 'id моделей не повторяются');
+  assert.equal(neither, 0, 'нет моделей без прорезей и выемок');
+  assert.ok(holes > 200, `с прорезями: ${holes}/400`);
+  assert.ok(recs > 80, `с выемками: ${recs}/400`);
+  const avg = tris / 400;
+  assert.ok(avg > 60 && avg < 400, `среднее число треугольников: ${avg.toFixed(0)}`);
+  /* монолит — ОДИН меш и один материал (вершинные цвета) */
+  const mesh = M.buildMesh(123);
+  assert.equal(mesh.isMesh, true, 'модель — один Mesh');
+  assert.equal(mesh.material.vertexColors, true, 'раскраска вершинная, материал общий');
+  /* на карте стоят монолиты-укрытия со своими коллайдерами */
+  const maps = SH2.data.MAPS || SH2.data.maps || {};
+  assert.ok((maps.depot && maps.depot.monoliths.length) >= 4, 'на карте есть монолиты-укрытия');
+  assert.ok(game.level.colliders.some((c) => c.kind === 'monolith'), 'у монолитов есть коллайдеры');
+}
+
+/* 2. Больше миллиона мешей в поле: объекты, матрицы, попадания, LOD. */
 {
   const field = game.meshfield;
   assert.ok(field, 'поле мешей построено');
   const st = field.stats();
-  assert.equal(st.requested, 100000, 'запрошено 100 000');
-  assert.equal(st.meshes, 100000, `мешей в поле: ${st.meshes}`);
-  assert.ok(st.individual >= 100000, `всего объектов: ${st.individual}`);
-  assert.ok(st.drawCalls <= 130, `draw call поля: ${st.drawCalls}`);
-  assert.ok(st.triangles < 2600000, `треугольников поля: ${st.triangles}`);
+  assert.ok(st.requested >= 1000000, `запрошено больше миллиона: ${st.requested}`);
+  assert.ok(st.meshes > 1000000, `мешей в поле: ${st.meshes}`);
+  assert.ok(st.drawCalls <= 80, `draw call поля: ${st.drawCalls}`);
+  assert.ok(st.triangles < 14000000, `треугольников поля: ${st.triangles}`);
   assert.ok(st.realMeshes > 0, 'есть отдельные (не инстанс) меши');
+  /* все 10 000 моделей каталога стоят в мире поштучно */
+  assert.equal(SH2.monolith.COUNT, 10000, 'каталог монолитов: 10 000');
+  assert.equal(st.modelsUsed, 10000, 'каждая модель каталога стоит в мире');
+  assert.equal(st.staticMeshes, 10000, 'статичный пояс из 10 000 разных мешей');
   /* меш — не счётчик: у него есть матрица, его можно спрятать */
-  const m = field.matrixAt(99999);
-  assert.ok(m && isFinite(m.elements[12]) && isFinite(m.elements[14]), 'матрица 100000-го меша');
+  const m = field.matrixAt(9999);
+  assert.ok(m && isFinite(m.elements[12]) && isFinite(m.elements[14]), 'матрица 10 000-го меша');
   assert.ok(Math.hypot(m.elements[12], m.elements[14]) > 30, 'поле стоит вне игровой зоны');
-  assert.equal(field.hide(4242), true, 'меш найден и скрыт');
-  assert.equal(field.hide(200000), false, 'несуществующий меш не скрывается');
-  assert.ok(field.forEachInRadius(0, 0, 120) > 1000, 'в радиусе 120 м тысячи мешей');
+  assert.equal(field.hideMesh(4242), true, 'меш найден и скрыт');
+  assert.equal(field.hide(2000000), false, 'несуществующий меш не скрывается');
+  assert.ok(field.forEachInRadius(0, 0, 200) > 1000, 'в радиусе 200 м тысячи мешей');
   const counts = Object.values(st.byFamily);
   assert.equal(counts.length, 10, 'все 10 семейств в поле');
-  assert.ok(counts.every((c) => c === 10000), 'по 10 000 мешей на семейство');
+  assert.ok(counts.every((c) => c >= 5000), 'на каждое семейство тысячи мешей');
 }
 
 /* 3. 250 звуков: каждый рендерится в волну и не тишина. */

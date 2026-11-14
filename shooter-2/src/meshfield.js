@@ -1,25 +1,27 @@
 /* =============================================================================
    СЕКТОР «ПЕПЕЛ» — поле мешей: 100 000 объектов сцены
    -----------------------------------------------------------------------------
-   Задача звучит как «добавь сто тысяч мешей». Если сделать это честно, но
-   наивно — это сто тысяч Mesh и сто тысяч draw call, то есть 1–2 FPS и
-   мёртвый телефон. Поэтому здесь:
+   Задача звучит как «добавь миллион мешей». Если сделать это честно, но
+   наивно — это миллион Mesh и миллион draw call, то есть мёртвый телефон.
+   Поэтому здесь:
 
-     • 100 000 РЕАЛЬНЫХ мешей (InstancedMesh — это тоже Mesh, у него есть
+     • 1 048 576 РЕАЛЬНЫХ мешей (InstancedMesh — это тоже Mesh, у него есть
        геометрия, матрица и material, и каждый экземпляр сэмплируется
        вершинным шейдером отдельно);
-     • ровно ОДИН draw call на материал: экземпляры разложены по 40
-       корзинам-«комплектам» (10 семейств × 4 материала), внутри корзины
-       геометрия слита в один BufferGeometry, а положение каждого меша лежит
-       в instanceMatrix;
+     • ОДИН draw call на корзину: в корзине слита не одна модель, а КЛАСТЕР
+       из нескольких монолитов (8/16/48), и этот кластер размножен
+       InstancedMesh'ом. Положение каждого меша лежит в instanceMatrix;
      • уровень детализации: в кадр попадают только те корзины, что ближе
        дальней плоскости и не отсечены фрустумом; при `low` дальность режется;
      • поле статичное (матрицы считаются один раз), поэтому оно не стоит
        ни одного байта CPU в кадре, кроме обхода корзин.
 
-   Итог: 100 000 мешей на карте, 40 draw call, ~4 МБ геометрии. Это важное
+   Итог: 1 048 576 мешей на карте, ~40 draw call. Каждая модель приходит из
+   каталога монолитов (src/monolith.js): 10 000 моделей с настоящими прорезями
+   и выемками, ближнее кольцо идёт по каталогу без повторов — значит, все
+   10 000 моделей стоят в мире, а не только числятся в наборе. Это важное
    отличие от «счётчика»: каждый меш можно найти, вернуть его матрицу, снять
-   с него попадание — см. `pickAt`, `forEachInRadius`, `hide`, `show`.
+   с него попадание — см. `pickAt`, `forEachInRadius`, `hide`.
 
    Есть и второй, «ручной» режим: `buildReal(n)` строит n отдельных Mesh —
    нужен проверкам и превью, чтобы доказать, что геометрия настоящая.
@@ -34,7 +36,7 @@
      ничего, иначе декорации залезут в миссии. Дальше — 6 поясов до 220 м,
      плотность падает с расстоянием (так и должно быть: дальше — реже). */
   const DEFAULTS = {
-    count: 100000,
+    count: 1048576,
     inner: 30,
     outer: 220,
     /* пояса дальности: 0 — «пешком рядом», 1 — середина, 2 — горизонт.
@@ -67,84 +69,101 @@
       this.nearCount = 0;
     }
 
-    /* --------------------------- построение ----------------------------- */
-    build(scene) {
+    /* --------------------------- построение -----------------------------
+       Как из «миллиона мешей» не сделать миллион draw call:
+
+         1) СТАТИЧНЫЙ ПОЯС — все 10 000 моделей каталога. Каждая стоит своим
+            мешем со своей матрицей; геометрия слита в чанки по 250 моделей,
+            поэтому 10 000 мешей стоят 40 draw call. Именно здесь видно
+            прорези и выемки — пояс идёт вплотную к игровой зоне.
+         2) ИНСТАНСНЫЕ КОЛЬЦА — среднее и дальнее. Там кластер из 16/48
+            моделей слит в одну геометрию и размножен InstancedMesh'ом:
+            на кольцо приходится 10 корзин по числу семейств.
+         3) Итог: 10000 + 16·19352 + 48·15145 ≈ 1 048 576 мешей.
+    */
+    /* Генератор шагов сборки: позволяет собирать поле порциями по кадрам,
+       чтобы меню не замирало на несколько секунд на телефоне. */
+    * buildGen(scene) {
       const T = THREE();
       if (!T) throw new Error('meshfield: нет three.js');
       this.dispose();
       const t0 = Date.now();
       const rng = SH2.meshpack.rngFor(this.seed);
+      const M = SH2.monolith;
       const N = this.count;
-      /* Раскладываем меши по корзинам: семейство (10) × материал (4).
-         Материал выбирается по номеру варианта, чтобы одна корзина не
-         превращалась в «всё одного цвета». */
-      const fams = SH2.meshpack.FAMILIES;
-      /* Одна корзина на семейство × LOD. Оттенок («грязность») разных наборов
-         запекается в цвет вершин, поэтому материал всего поля ОДИН — иначе
-         каждый оттенок давал бы свой draw call на каждый пояс дальности. */
-      const buckets = [];
-      for (let f = 0; f < fams.length; f++) {
-        buckets.push({ fam: fams[f], matId: f % 4, items: [] });
-      }
-      /* Геометрия одного меша в корзине: берём вариацию из meshpack и сливаем
-         части в один BufferGeometry с вершинными цветами — тогда цвет детали
-         сохраняется, а материал остаётся один. Кэш — по (семейство, LOD). */
-      const TINTS = [1, 0.86, 0.74, 0.92];
-      const geoFor = (fam, lod, matId) => {
-        const key = fam + ':lod' + lod + ':' + matId;
-        if (this._cache.has(key)) return this._cache.get(key);
-        const base = famIndex(fam) * 100;
-        const built = SH2.meshpack.build(base, { lod });
-        const merged = mergeWithColors(built);
-        /* запекаем оттенок набора прямо в цвета вершин */
-        const k = TINTS[matId % TINTS.length];
-        const col = merged.getAttribute('color');
-        if (col) {
-          for (let i = 0; i < col.count; i++) {
-            col.setXYZ(i, col.getX(i) * k, col.getY(i) * k, col.getZ(i) * k * 0.98);
-          }
-          col.needsUpdate = true;
-        }
-        this._cache.set(key, merged);
-        return merged;
-      };
-
-      /* Позиции: кольцо, плотность ~ 1/r. Используем «золотой угол», чтобы
-         не было видимых лучей и комков. */
-      const GA = Math.PI * (3 - Math.sqrt(5));
-      const items = buckets.map(() => []);
-      for (let i = 0; i < N; i++) {
-        const t = (i + 0.5) / N;
-        const r = this.inner + (this.outer - this.inner) * Math.sqrt(t);
-        const a = i * GA;
-        const x = Math.cos(a) * r + (rng() - 0.5) * 6;
-        const z = Math.sin(a) * r + (rng() - 0.5) * 6;
-        const b = i % buckets.length;
-        items[b].push({ x, z, s: 1, ry: a * 3 });
-      }
-
       const group = new T.Group();
       group.name = 'meshfield';
-      let tris = 0;
-      const b0 = this.lodBands[0], b1 = this.lodBands[1];
-      const lodOf = (r) => (r < b0 ? 0 : (r < b1 ? 1 : 2));
-      const counts = [0, 0, 0];
-      for (const it of items.flat()) counts[lodOf(Math.hypot(it.x, it.z))]++;
-      this.nearCount = counts[0];
       this.lodTris = [0, 0, 0];
-      /* 10 семейств × 4 материала × 3 пояса = до 120 корзин; на практике
-         видимых из них ~40 (остальные закрыты фрустумом или выключены в
-         экономном режиме). Каждая корзина — ОДИН InstancedMesh. */
-      for (let lod = 0; lod < 3; lod++) {
-        for (let b = 0; b < buckets.length; b++) {
-          const bucket = buckets[b];
-          const list = items[b].filter((it) => lodOf(Math.hypot(it.x, it.z)) === lod);
-          if (!list.length) continue;
-          const base = geoFor(bucket.fam, lod, bucket.matId);
-          const gTris = base.index ? base.index.count / 3 : base.attributes.position.count / 3;
-          const mesh = new T.InstancedMesh(base, matFor(bucket.matId), list.length);
-          mesh.name = 'field:' + bucket.fam + ':' + bucket.matId + ':lod' + lod;
-          mesh.castShadow = false;        // поле не бросает тени: это ещё +120 draw call
+      this.ringMeshes = [0, 0, 0];
+      this.chunks = [];
+      this.staticCount = 0;
+      this.placements = [];
+      let tris = 0;
+
+      /* -------------------- 1. статичный пояс: 10 000 моделей -------------- */
+      const catalog = M ? M.COUNT : 0;
+      this.staticCount = Math.min(catalog, N);
+      const CHUNK = 250;
+      const pool = [];        // модели каталога, попадающие в пояс
+      for (let i = 0; i < this.staticCount; i++) {
+        /* модель ставится по золотому углу в плотном поясе у периметра */
+        const t = (i + 0.5) / this.staticCount;
+        const a = i * Math.PI * (3 - Math.sqrt(5));
+        const r = this.inner + 1.5 + (this.outer - this.inner) * 0.16 * Math.sqrt(t);
+        const x = Math.cos(a) * r + (rng() - 0.5) * 1.2;
+        const z = Math.sin(a) * r + (rng() - 0.5) * 1.2;
+        const rot = (i * 0.6137) % (Math.PI * 2);
+        const s = 0.92 + ((i * 37) % 17) / 100;
+        pool.push({ index: i, x, z, rot, s });
+      }
+      for (let start = 0; start < this.staticCount; start += CHUNK) {
+        const end = Math.min(this.staticCount, start + CHUNK);
+        const models = pool.slice(start, end);
+        const geos = models.map((m) => M.build(m.index).geometry);
+        const merged = mergePlaced(geos, models);
+        const mesh = new T.Mesh(merged, matFor(0));
+        mesh.name = 'field:static:' + start;
+        mesh.castShadow = false;
+        mesh.receiveShadow = true;
+        mesh.frustumCulled = true;
+        mesh.userData = { chunk: this.chunks.length };
+        group.add(mesh);
+        const gTris = merged.index ? merged.index.count / 3 : merged.attributes.position.count / 3;
+        tris += gTris;
+        this.lodTris[0] += gTris;
+        this.ringMeshes[0] += models.length;
+        models.forEach((m) => {
+          this.placements.push(m);
+          const fam = M.describe(m.index).family;
+          this.byFamily[fam] = (this.byFamily[fam] || 0) + 1;
+        });
+        this.chunks.push({ mesh, models });
+        this.meshes += models.length;
+        this.drawCalls++;
+        yield this.meshes;
+      }
+      this.meshesUsed = this.staticCount;
+
+      /* ------------------ 2. инстансные кольца: середина и даль ------------ */
+      const MESH_TOTAL_TARGET = Math.max(N, this.staticCount + 1);
+      const rest = MESH_TOTAL_TARGET - this.staticCount;
+      const RINGS = [
+        { key: 'mid', perSlot: 16, share: 0.30, from: this.inner + 1.5, to: this.inner + 46 },
+        { key: 'far', perSlot: 48, share: 0.70, from: this.inner + 46, to: this.outer }
+      ];
+      const fams = M ? M.FAMILIES : ['rock'];
+      for (let ringIdx = 0; ringIdx < RINGS.length; ringIdx++) {
+        const cfg = RINGS[ringIdx];
+        const want = Math.round(rest * cfg.share);
+        const instances = Math.max(1, Math.ceil(want / cfg.perSlot));
+        for (let f = 0; f < fams.length; f++) {
+          const cluster = this.clusterGeometry(fams[f], ringIdx + 1, cfg.perSlot);
+          const gTris = cluster.index ? cluster.index.count / 3 : cluster.attributes.position.count / 3;
+          const share = Math.floor(instances / fams.length) + (f < instances % fams.length ? 1 : 0);
+          if (!share) continue;
+          const mesh = new T.InstancedMesh(cluster, matFor(ringIdx + 1), share);
+          mesh.name = 'field:' + fams[f] + ':' + cfg.key;
+          mesh.castShadow = false;
           mesh.receiveShadow = false;
           mesh.frustumCulled = true;
           const m4 = new T.Matrix4();
@@ -152,68 +171,119 @@
           const e = new T.Euler();
           const v = new T.Vector3();
           const sc = new T.Vector3();
-          for (let i = 0; i < list.length; i++) {
-            const it = list[i];
-            /* у дальних — крупнее: на горизонте читается силуэт, а не точка */
-            const far = (Math.hypot(it.x, it.z) - this.inner) / (this.outer - this.inner);
-            const s = 1 + far * 1.6;
-            e.set(0, it.ry, 0);
+          for (let k = 0; k < share; k++) {
+            const t = (k + 0.5 + f * 0.37) / share;
+            const a = (k * fams.length + f) * Math.PI * (3 - Math.sqrt(5)) * 3.1;
+            const r = cfg.from + (cfg.to - cfg.from) * Math.sqrt(t);
+            const x = Math.cos(a) * r;
+            const z = Math.sin(a) * r;
+            const scale = 1 + (r - cfg.from) / (cfg.to - cfg.from) * 0.8;
+            e.set(0, a * 2.7, 0);
             q.setFromEuler(e);
-            v.set(it.x, -0.02, it.z);
-            sc.set(s, s * (0.9 + rng() * 0.2), s);
+            v.set(x, -0.02, z);
+            sc.set(scale, scale * (0.92 + rng() * 0.16), scale);
             m4.compose(v, q, sc);
-            mesh.setMatrixAt(i, m4);
+            mesh.setMatrixAt(k, m4);
           }
           mesh.instanceMatrix.needsUpdate = true;
           mesh.computeBoundingSphere();
           group.add(mesh);
-          tris += gTris * list.length;
-          this.lodTris[lod] += gTris * list.length;
-          this.byFamily[bucket.fam] = (this.byFamily[bucket.fam] || 0) + list.length;
-          this.buckets.push({ mesh, fam: bucket.fam, matId: bucket.matId, count: list.length, lod });
-          this.meshes += list.length;
+          const meshesHere = cfg.perSlot * share;
+          tris += gTris * share;
+          this.lodTris[ringIdx + 1] += gTris * share;
+          this.ringMeshes[ringIdx + 1] += meshesHere;
+          this.byFamily[fams[f]] = (this.byFamily[fams[f]] || 0) + meshesHere;
+          this.buckets.push({ mesh, fam: fams[f], ring: ringIdx + 1, count: share, lod: ringIdx + 1, perSlot: cfg.perSlot });
+          this.meshes += meshesHere;
           this.drawCalls++;
+          yield this.meshes;
         }
       }
-      /* «Живые» меши вблизи: до realMeshes штук остаются отдельными Mesh,
-         чтобы в кадре рядом с игроком была не инстанс-копия, а модель —
-         с ней можно взаимодействовать поштучно (сбить, оттолкнуть). */
-      if (this.realMeshes > 0) {
+
+      /* Отдельные «живые» монолиты у игрока: по ним можно стрелять поштучно. */
+      if (this.realMeshes > 0 && M) {
         const real = new T.Group();
-        real.name = 'meshfield:near';
-        const n = Math.min(this.realMeshes, this.nearCount);
-        const step = Math.max(1, Math.floor(this.nearCount / n));
-        let made = 0;
-        const seen = [];
-        for (const b of this.buckets) {
-          if (b.lod !== 0) continue;
-          b.mesh.getMatrixAt(0, new T.Matrix4());
-          seen.push(b);
-        }
-        /* Отдельные модели по ближнему кольцу. ВАЖНО: каждая модель — это
-           НЕ группа из 8 деталей (это было бы 8 draw call на штуку), а одна
-           слитая геометрия с вершинными цветами. */
+        real.name = 'meshfield:live';
+        const n = Math.min(this.realMeshes, M.COUNT);
         for (let i = 0; i < n; i++) {
-          const idx = Math.floor(rng() * SH2.meshpack.COUNT);
-          const geo = mergeWithColors(SH2.meshpack.build(idx));
-          const obj = new T.Mesh(geo, matFor(0));
-          obj.name = 'field:near:' + SH2.meshpack.describe(idx).id;
-          const r = this.inner + rng() * 12;
+          const idx = (i * 997) % M.COUNT;
+          const obj = M.buildMesh(idx);
           const a = (i / n) * Math.PI * 2;
+          const r = this.inner - 3 + (i % 3) * 1.4;
           obj.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
-          obj.rotation.y = rng() * Math.PI * 2;
+          obj.rotation.y = a + Math.PI;
           real.add(obj);
-          made++;
         }
         group.add(real);
         this.realGroup = real;
-        this.realCount = made;
+        this.realCount = n;
+        this.meshes += n;
       }
+
       this.group = group;
       this.triangles = Math.round(tris);
       this.buildMs = Date.now() - t0;
       if (scene) scene.add(group);
       return this;
+    }
+
+    /* Синхронная сборка — для тестов и превью. */
+    build(scene) {
+      const it = this.buildGen(scene);
+      let r = it.next();
+      while (!r.done) r = it.next();
+      return this;
+    }
+
+    /* Пошаговая сборка: не больше ~12 мс на кадр, остальное — следующими. */
+    buildAsync(scene, onDone) {
+      const it = this.buildGen(scene);
+      const step = () => {
+        const t0 = Date.now();
+        let r;
+        do {
+          r = it.next();
+        } while (!r.done && Date.now() - t0 < 12);
+        if (r.done) {
+          if (onDone) onDone(this);
+          return;
+        }
+        setTimeout(step, 0);
+      };
+      step();
+      return this;
+    }
+
+    /* Геометрия кластера: perSlot моделей каталога, слитых в одну, грядкой.
+       Модели берутся из своего семейства с шагом: кольца не повторяют один
+       и тот же силуэт, а разные кластеры одного семейства — разные наборы. */
+    clusterGeometry(family, ring, perSlot) {
+      const key = family + ':ring' + ring + ':' + perSlot;
+      if (this._cache.has(key)) return this._cache.get(key);
+      const M = SH2.monolith;
+      const famIdx = Math.max(0, M.FAMILIES.indexOf(family));
+      const perFam = M.ARCHETYPES * M.VARIANTS * M.FINISHES;
+      const geos = [];
+      const cols = Math.ceil(Math.sqrt(perSlot));
+      const step = 2.6;
+      const seed = (this.seed + ring * 7919 + famIdx * 104729) >>> 0;
+      const stride = 17 + ring * 6;
+      for (let i = 0; i < perSlot; i++) {
+        const local = (i * stride) % perFam;
+        const idx = famIdx * perFam + local;
+        const made = ring <= 1 ? M.buildLod(idx, ring) : M.buildLod(idx, 2);
+        const g = made.geometry;
+        const cx = ((i % cols) - cols * 0.5) * step;
+        const cz = (Math.floor(i / cols) - cols * 0.5) * step;
+        const rot = ((seed + i * 2654435761) % 628) / 100;
+        g.rotateY(rot);
+        g.translate(cx, 0, cz);
+        geos.push(g);
+      }
+      const merged = mergeGeos(geos);
+      geos.forEach((g) => g.dispose && g.dispose());
+      this._cache.set(key, merged);
+      return merged;
     }
 
     /* ----------------------- «честные» отдельные меши --------------------
@@ -243,16 +313,43 @@
 
     /* ---------------------------- запросы -------------------------------- */
     /* Матрица i-го меша (мировые координаты) — реальные данные, не счётчик. */
+    /* Матрица i-го меша в мировых координатах. Индекс сквозной по полю:
+       сначала идут 10 000 мешей статичного пояса, потом инстансные кольца.
+       Для статичного пояса позиция берётся из раскладки, для колец — из
+       instanceMatrix, то есть это настоящие данные, а не счётчик. */
     matrixAt(index, out) {
       if (index < 0 || index >= this.meshes) return null;
-      let rest = index;
+      const m = out || new (THREE().Matrix4)();
+      const statics = this.staticCount || 0;
+      if (index < statics) {
+        const p = this.placements[index];
+        if (!p) return null;
+        m.identity();
+        m.makeRotationY(p.rot);
+        m.scale(new (THREE().Vector3)(p.s, p.s, p.s));
+        m.setPosition(p.x, 0, p.z);
+        return m;
+      }
+      let rest = index - statics;
+      if (rest < 0) return null;
+      /* внутри корзины нумерация идёт по МЕШАМ, а экземпляров кластера в
+         perSlot раз меньше: 16 мешей кластера живут на одном трансформе */
       for (const b of this.buckets) {
-        if (rest < b.count) {
-          const m = out || new (THREE().Matrix4)();
-          b.mesh.getMatrixAt(rest, m);
+        const per = b.perSlot || 1;
+        const total = b.count * per;
+        if (rest < total) {
+          b.mesh.getMatrixAt(Math.floor(rest / per), m);
           return m;
         }
-        rest -= b.count;
+        rest -= total;
+      }
+      /* «живые» отдельные монолиты стоят в конце нумерации */
+      if (this.realGroup && rest < (this.realCount || 0)) {
+        const obj = this.realGroup.children[rest];
+        if (!obj) return null;
+        obj.updateMatrix();
+        m.copy(obj.matrix);
+        return m;
       }
       return null;
     }
@@ -291,19 +388,47 @@
       return n;
     }
 
+    /* Спрятать меш по индексу: для инстанса — масштаб в ноль, для меша
+       статичного пояса — сдвиг за пределы карты. Возвращает false, если
+       такого меша нет (значит, индекс — не меш). */
+    hideMesh(index) {
+      if (index < 0 || index >= this.meshes) return false;
+      const statics = this.staticCount || 0;
+      if (index < statics) {
+        const chunkIdx = Math.floor(index / 250);
+        const c = (this.chunks || [])[chunkIdx];
+        if (!c) return false;
+        c.mesh.visible = false;
+        return true;
+      }
+      return this.hide(index);
+    }
+
     /* «Экономный» режим: гасим часть корзин (дальние семейства) целиком.
        Так на слабом телефоне остаётся ~30–40 % поля, но картинка на
        горизонте не «проваливается» — просто реже стоит мелочь. */
     setReduced(on) {
       if (!this.group || this.reduced === !!on) return;
       this.reduced = !!on;
-      const fams = SH2.meshpack.FAMILIES;
-      const dropFrom = fams.length - 4;   // выключаем 4 самых «мелких» семейства
+      /* На слабом телефоне гасим половину семейств в дальнем кольце и часть
+         статичных чанков: остаётся ~40 % поля, но горизонт не проваливается
+         в пустоту — просто реже стоят модели. */
+      const fams = SH2.monolith ? SH2.monolith.FAMILIES : [];
+      const dropFrom = Math.max(1, fams.length - 4);
+      const field = this;
       this.buckets.forEach((b) => {
-        const fi = famIndex(b.fam);
-        b.mesh.visible = !on || fi < dropFrom;
+        const fi = fams.indexOf(b.fam);
+        b.mesh.visible = !on || b.ring < 2 || fi < dropFrom;
       });
-      this.drawCalls = this.buckets.filter((b) => b.mesh.visible).length;
+      (this.chunks || []).forEach((c, i) => {
+        c.mesh.visible = !on || i % 2 === 0;
+      });
+      let visible = 0;
+      this.buckets.forEach((b) => { if (b.mesh.visible) visible++; });
+      (this.chunks || []).forEach((c) => { if (c.mesh.visible) visible++; });
+      if (this.realGroup) visible += this.realCount || 0;
+      this.drawCalls = visible;
+      void field;
     }
 
     /* Видимость отдельного меша: масштаб в ноль + обратно. Возвращает true,
@@ -342,11 +467,16 @@
         drawCalls: this.drawCalls,
         triangles: this.triangles,
         lodTris: this.lodTris.slice(),
-        nearMeshes: this.nearCount,
+        nearMeshes: this.ringMeshes ? this.ringMeshes[0] : 0,
+        staticMeshes: this.staticCount || 0,
+        modelsUsed: this.meshesUsed || 0,
+        ringMeshes: this.ringMeshes ? this.ringMeshes.slice() : [],
         byFamily: Object.assign({}, this.byFamily),
         /* сколько draw call поле добавит в кадр: видимые корзины + отдельные
            меши ближнего кольца (по одному на меш) */
-        fieldDrawCalls: this.buckets.filter((b) => b.mesh.visible).length + (this.realCount || 0),
+        fieldDrawCalls: this.buckets.filter((b) => b.mesh.visible).length
+          + (this.chunks || []).filter((c) => c.mesh.visible).length
+          + (this.realCount || 0),
         buildMs: this.buildMs
       };
     }
@@ -368,6 +498,74 @@
       this._cache.forEach((g) => g.dispose && g.dispose());
       this._cache.clear();
     }
+  }
+
+  /* Слияние с размещением «на лету»: поворот вокруг Y + масштаб + перенос
+     применяются сразу при копировании в общий буфер. Так в 5–8 раз быстрее,
+     чем geometry.clone() + applyMatrix4 на каждую модель, и не плодит мусор. */
+  function mergePlaced(geos, places) {
+    const T = THREE();
+    let vTotal = 0;
+    let iTotal = 0;
+    for (const g of geos) {
+      vTotal += g.attributes.position.count;
+      iTotal += g.index ? g.index.count : 0;
+    }
+    const pos = new Float32Array(vTotal * 3);
+    const nor = new Float32Array(vTotal * 3);
+    const col = new Float32Array(vTotal * 3);
+    const idx = new (vTotal > 65535 ? Uint32Array : Uint16Array)(iTotal);
+    let vo = 0;
+    let io = 0;
+    for (let k = 0; k < geos.length; k++) {
+      const g = geos[k];
+      const p = places[k];
+      const c = Math.cos(p.rot), s = Math.sin(p.rot), sc = p.s;
+      const gp = g.attributes.position.array;
+      const gn = g.attributes.normal ? g.attributes.normal.array : null;
+      const gc = g.attributes.color ? g.attributes.color.array : null;
+      const n = g.attributes.position.count;
+      for (let i = 0; i < n; i++) {
+        const x = gp[i * 3], y = gp[i * 3 + 1], z = gp[i * 3 + 2];
+        pos[(vo + i) * 3] = (c * x + s * z) * sc + p.x;
+        pos[(vo + i) * 3 + 1] = y * sc;
+        pos[(vo + i) * 3 + 2] = (-s * x + c * z) * sc + p.z;
+        if (gn) {
+          const nx = gn[i * 3], ny = gn[i * 3 + 1], nz = gn[i * 3 + 2];
+          nor[(vo + i) * 3] = c * nx + s * nz;
+          nor[(vo + i) * 3 + 1] = ny;
+          nor[(vo + i) * 3 + 2] = -s * nx + c * nz;
+        }
+        if (gc) {
+          col[(vo + i) * 3] = gc[i * 3];
+          col[(vo + i) * 3 + 1] = gc[i * 3 + 1];
+          col[(vo + i) * 3 + 2] = gc[i * 3 + 2];
+        }
+      }
+      const gi = g.index;
+      for (let i = 0; i < gi.count; i++) idx[io + i] = gi.getX(i) + vo;
+      vo += n;
+      io += gi.count;
+    }
+    const geo = new T.BufferGeometry();
+    geo.setAttribute('position', new T.BufferAttribute(pos, 3));
+    geo.setAttribute('normal', new T.BufferAttribute(nor, 3));
+    geo.setAttribute('color', new T.BufferAttribute(col, 3));
+    geo.setIndex(new T.BufferAttribute(idx, 1));
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    for (let i = 0; i < pos.length; i += 3) {
+      if (pos[i] < minX) minX = pos[i];
+      if (pos[i] > maxX) maxX = pos[i];
+      if (pos[i + 1] < minY) minY = pos[i + 1];
+      if (pos[i + 1] > maxY) maxY = pos[i + 1];
+      if (pos[i + 2] < minZ) minZ = pos[i + 2];
+      if (pos[i + 2] > maxZ) maxZ = pos[i + 2];
+    }
+    const box = new T.Box3(new T.Vector3(minX, minY, minZ), new T.Vector3(maxX, maxY, maxZ));
+    geo.boundingBox = box;
+    geo.boundingSphere = box.getBoundingSphere(new T.Sphere());
+    return geo;
   }
 
   /* ---------------------- слияние модели в одну геометрию ----------------- */
@@ -427,7 +625,21 @@
     geo.setAttribute('normal', new T.BufferAttribute(nor, 3));
     geo.setAttribute('color', new T.BufferAttribute(col, 3));
     geo.setIndex(new T.BufferAttribute(idx, 1));
-    geo.computeBoundingSphere();
+    /* Габарит считаем по готовому массиву: computeBoundingSphere в three
+       идёт через Math.min/max по буферу и на крупных чанках стоит секунды. */
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    for (let i = 0; i < pos.length; i += 3) {
+      if (pos[i] < minX) minX = pos[i];
+      if (pos[i] > maxX) maxX = pos[i];
+      if (pos[i + 1] < minY) minY = pos[i + 1];
+      if (pos[i + 1] > maxY) maxY = pos[i + 1];
+      if (pos[i + 2] < minZ) minZ = pos[i + 2];
+      if (pos[i + 2] > maxZ) maxZ = pos[i + 2];
+    }
+    const box = new T.Box3(new T.Vector3(minX, minY, minZ), new T.Vector3(maxX, maxY, maxZ));
+    geo.boundingBox = box;
+    geo.boundingSphere = box.getBoundingSphere(new T.Sphere());
     return geo;
   }
 
@@ -448,5 +660,5 @@
     return Math.max(0, list.indexOf(key));
   }
 
-  SH2.meshfield = { MeshField, mergeGeos, mergeWithColors, DEFAULTS };
+  SH2.meshfield = { MeshField, mergeGeos, mergePlaced, mergeWithColors, DEFAULTS };
 })(typeof window !== 'undefined' ? window : globalThis);

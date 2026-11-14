@@ -41,7 +41,7 @@ vm.runInContext(read('three.min.js'), sandbox, { filename: 'three.min.js' });
 sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
   CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
 });
-for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'ragdoll', 'world', 'viewmodel']) {
+for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'monolith', 'model', 'anim', 'ik', 'ragdoll', 'world', 'viewmodel']) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: m });
 }
 const SH2 = sandbox.SH2;
@@ -131,13 +131,21 @@ function renderScene(canvas, rootObj, camPos, camLook, fov, bright) {
   const pv = new T.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse);
   const v = new T.Vector3();
   const meshes = [];
-  rootObj.traverse((c) => { if (c.isMesh && c.visible) meshes.push(c); });
+  rootObj.traverse((c) => {
+    if (!c.isMesh || !c.visible) return;
+    /* InstancedMesh рисуем по экземплярам: иначе в кадре только первый */
+    if (c.isInstancedMesh) { meshes.push(c); return; }
+    meshes.push(c);
+  });
   for (const mesh of meshes) {
+    if (mesh.isInstancedMesh) { renderInstanced(canvas, mesh, cam, pv, bright); continue; }
     const geo = mesh.geometry;
     const pos = geo.attributes.position;
     const index = geo.index;
     const color = mesh.material.color || { r: 0.7, g: 0.7, b: 0.7 };
     const rgb = [Math.round(color.r * 255 * bright), Math.round(color.g * 255 * bright), Math.round(color.b * 255 * bright)];
+    /* вершинные цвета (монолиты, поле): берём цвет каждого треугольника */
+    const vcol = mesh.material.vertexColors && geo.attributes.color ? geo.attributes.color : null;
     const count = index ? index.count : pos.count;
     for (let i = 0; i < count; i += 3) {
       const ia = index ? index.getX(i) : i;
@@ -161,16 +169,75 @@ function renderScene(canvas, rootObj, camPos, camLook, fov, bright) {
       const L2 = new T.Vector3(-0.6, 0.25, -0.4).normalize();
       let lam = 0.55 + 0.75 * Math.max(0, n.dot(L1)) + 0.3 * Math.max(0, n.dot(L2));
       lam = Math.min(1.9, lam);
+      let r0 = rgb[0], g0 = rgb[1], b0 = rgb[2];
+      if (vcol) {
+        r0 = Math.round(vcol.getX(ia) * 255 * bright);
+        g0 = Math.round(vcol.getY(ia) * 255 * bright);
+        b0 = Math.round(vcol.getZ(ia) * 255 * bright);
+      }
       canvas.tri(
         pts[0][0], pts[0][1], pts[0][2], pts[1][0], pts[1][1], pts[1][2],
-        pts[2][0], pts[2][1], pts[2][2], rgb[0], rgb[1], rgb[2], lam
+        pts[2][0], pts[2][1], pts[2][2], r0, g0, b0, lam
       );
     }
   }
 }
 
 
+/* Инстансы (поле застройки) — по матрицам, как в игре. */
+function renderInstanced(canvas, mesh, cam, pv, bright) {
+  const T3 = T;
+  const v = new T3.Vector3();
+  const mtx = new T3.Matrix4();
+  const geo = mesh.geometry;
+  const pos = geo.attributes.position;
+  const index = geo.index;
+  const vcol = geo.attributes.color || null;
+  const count = index ? index.count : pos.count;
+  const L1 = new T3.Vector3(0.45, 0.8, 0.5).normalize();
+  const L2 = new T3.Vector3(-0.6, 0.25, -0.4).normalize();
+  const maxI = Math.min(mesh.count, 4000);   // превью: не больше 4000 экземпляров
+  for (let inst = 0; inst < maxI; inst++) {
+    mesh.getMatrixAt(inst, mtx);
+    for (let i = 0; i < count; i += 3) {
+      const pts = [], world = [];
+      let skip = false;
+      for (let k = 0; k < 3; k++) {
+        const ii = index ? index.getX(i + k) : i + k;
+        v.set(pos.getX(ii), pos.getY(ii), pos.getZ(ii));
+        v.applyMatrix4(mtx);
+        mesh.localToWorld(v);
+        world.push(v.clone());
+        v.applyMatrix4(pv);
+        if (v.z > 1 || v.z < -1) { skip = true; break; }
+        pts.push([(v.x * 0.5 + 0.5) * canvas.w, (-v.y * 0.5 + 0.5) * canvas.h, v.z]);
+      }
+      if (skip) continue;
+      const e1 = world[1].clone().sub(world[0]);
+      const e2 = world[2].clone().sub(world[0]);
+      const n = e1.cross(e2).normalize();
+      let lam = 0.55 + 0.75 * Math.max(0, n.dot(L1)) + 0.3 * Math.max(0, n.dot(L2));
+      lam = Math.min(1.9, lam);
+      let r0 = 120, g0 = 120, b0 = 115;
+      if (vcol) {
+        const ii = index ? index.getX(i) : i;
+        r0 = Math.round(vcol.getX(ii) * 255 * bright);
+        g0 = Math.round(vcol.getY(ii) * 255 * bright);
+        b0 = Math.round(vcol.getZ(ii) * 255 * bright);
+      }
+      canvas.tri(pts[0][0], pts[0][1], pts[0][2], pts[1][0], pts[1][1], pts[1][2],
+        pts[2][0], pts[2][1], pts[2][2], r0, g0, b0, lam);
+    }
+  }
+}
+
 /* ---------------------------------- кадры ------------------------------- */
+/* Крупный план монолитов-укрытий: камера ставится к первому из них. */
+const focusArg = argOf2('--focus');
+function argOf2(name) {
+  const i = process.argv.indexOf(name);
+  return i > 0 ? process.argv[i + 1] : null;
+}
 const argOf = (name, def) => {
   const i = process.argv.indexOf('--' + name);
   return i >= 0 ? process.argv[i + 1] : def;
@@ -206,8 +273,13 @@ maps.forEach((mapId, i) => {
     }
   }
   const cv = new Canvas(W, H, [12, 10, 9]);
-  const camPos = new T.Vector3(sp.x, eye, sp.z);
-  const look = new T.Vector3(sp.x + Math.sin(yaw) * 8, eye - 0.15, sp.z + Math.cos(yaw) * 8);
+  let camPos = new T.Vector3(sp.x, eye, sp.z);
+  let look = new T.Vector3(sp.x + Math.sin(yaw) * 8, eye - 0.15, sp.z + Math.cos(yaw) * 8);
+  if (focusArg === 'monoliths' && (SH2.data.MAPS[mapId].monoliths || []).length) {
+    const m0 = SH2.data.MAPS[mapId].monoliths[0];
+    camPos = new T.Vector3(m0.x + 4.6, 2.1, m0.z + 5.4);
+    look = new T.Vector3(m0.x, 1.1, m0.z);
+  }
   renderScene(cv, lvl.group, camPos, look, 78, 1.7);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {

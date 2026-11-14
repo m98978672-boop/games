@@ -165,7 +165,7 @@ for (const key of Object.getOwnPropertyNames(T)) THREE_PROXY[key] = key === 'Web
 sandbox.THREE = THREE_PROXY;
 
 /* ============================ загрузка модулей =========================== */
-const MODULES = ['bugcodes', 'meshpack', 'meshfield', 'soundbank', 'mechanics', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik',
+const MODULES = ['bugcodes', 'monolith', 'meshpack', 'meshfield', 'soundbank', 'mechanics', 'data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik',
   'ragdoll', 'world', 'ai', 'agent', 'fx', 'viewmodel', 'audio', 'perf', 'gamebot', 'game', 'ui', 'contentlab'];
 const bootErrors = [];
 for (const m of MODULES) {
@@ -225,6 +225,7 @@ let game = null, ui = null, booted = false;
 function bootGame() {
   ui = new SH2.ui.UI();
   game = new SH2.game.Game({ canvas: getEl('game'), ui, difficulty: 1 });
+  game.syncFields = true;   // в боте поле собирается целиком, без нарезки по кадрам
   game.init();
   booted = true;
   return game;
@@ -2202,19 +2203,25 @@ det(937, () => {
   const f = (game._fieldBuilt || game.meshfield);
   if (!f) return 'поле мешей не построено при старте миссии';
   const st = f.stats();
-  /* контракт модуля: DEFAULTS.count обязан быть 100 000, а поле — столько и
-     строить. Проверяем оба, иначе правка одной цифры в игре проходила молча. */
+  /* контракт модуля: DEFAULTS.count обязан быть больше миллиона, а поле —
+     столько и строить. Проверяем оба, иначе правка одной цифры в игре
+     проходила бы молча. */
+  const WANT = 1048576;
   const want = (game.settings && game.settings.meshfield) ||
-    (SH2.meshfield.DEFAULTS ? SH2.meshfield.DEFAULTS.count : 100000);
-  if (want !== 100000) return 'поле настраивается на ' + want + ' вместо 100 000';
-  if (st.requested !== want) return 'поле собрано на ' + st.requested + ' вместо ' + want;
+    (SH2.meshfield.DEFAULTS ? SH2.meshfield.DEFAULTS.count : WANT);
+  if (want !== WANT) return 'поле настраивается на ' + want + ' вместо ' + WANT;
+  if (st.requested < WANT) return 'поле собрано на ' + st.requested + ' вместо ' + WANT;
   /* И поле ИГРЫ тоже: детектор обязан падать, если игру настроили на меньшее. */
   if (game.meshfield && game.meshfield !== f) {
     const live = game.meshfield.stats();
-    if (live.requested !== 100000) return 'поле игры собрано на ' + live.requested;
+    if (live.requested < WANT) return 'поле игры собрано на ' + live.requested;
   }
-  if (st.meshes !== 100000) return 'мешей в поле ' + st.meshes + ' вместо 100 000';
-  if (st.individual < 100000) return 'объектов меньше, чем мешей: ' + st.individual;
+  if (st.meshes <= 1000000) return 'мешей в поле ' + st.meshes + ', нужно больше миллиона';
+  if (st.individual < 1000000) return 'объектов меньше, чем мешей: ' + st.individual;
+  /* монолиты: каждая из 10 000 моделей реально стоит в мире своим мешем */
+  if (!SH2.monolith) return 'нет каталога монолитов';
+  if (SH2.monolith.COUNT !== 10000) return 'моделей в каталоге ' + SH2.monolith.COUNT;
+  if (st.modelsUsed !== 10000) return 'моделей в мире ' + st.modelsUsed + ', а не 10 000';
   return null;
 });
 
@@ -2239,13 +2246,15 @@ det(939, () => {
   const f = game.meshfield;
   if (!f) return 'нет поля мешей';
   const bad = [];
-  [0, 1, 12345, 54321, 99999].forEach((i) => {
+  const st = f.stats();
+  if (!st.meshes) return 'поле ещё не собрано';
+  [0, 9999, 12345, 543210, st.meshes - 1].forEach((i) => {
     const m = f.matrixAt(i);
     if (!m) return bad.push(i + ': нет матрицы');
     if (!isFinite(m.elements[12]) || !isFinite(m.elements[14])) bad.push(i + ': матрица не число');
     if (Math.hypot(m.elements[12], m.elements[14]) < 20) bad.push(i + ': меш внутри игровой зоны');
   });
-  if (f.matrixAt(100000)) bad.push('за границей поля вернулась матрица');
+  if (f.matrixAt(st.meshes)) bad.push('за границей поля вернулась матрица');
   return bad.length ? bad.slice(0, 3).join(' | ') : null;
 });
 
