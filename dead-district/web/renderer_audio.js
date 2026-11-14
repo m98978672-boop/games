@@ -23,6 +23,7 @@
   TILE_COLORS[TILE.TREE_PINE] = '#20494b';
 
   var sprites = {};
+  var animationSettings = { speed: 1, bob: 1 };
   function loadSprite(key, relPath) {
     if (typeof global.Image !== 'function') return;
     try {
@@ -36,6 +37,8 @@
 
   function initSprites() {
     loadSprite('player', 'assets/sprites/player/player_base_walk.png');
+    loadSprite('player_run', 'assets/sprites/player/player_base_run.png');
+    loadSprite('player_sneak', 'assets/sprites/player/player_base_sneak.png');
     loadSprite('player_melee', 'assets/sprites/player/player_melee_swing.png');
     loadSprite('player_aim', 'assets/sprites/player/player_aim_fire.png');
     loadSprite('walker', 'assets/sprites/zombies/zombie_walker_sheet.png');
@@ -216,6 +219,15 @@
           ctx.fillRect(sx + 5, sy + 4, 4, 3);
         }
 
+        // Небольшой рельеф на стенах: свет сверху и боковая тень.
+        if (tt === TILE.WALL_BRICK || tt === TILE.WALL_WOOD || tt === TILE.WALL_PLASTER) {
+          ctx.fillStyle = 'rgba(0,0,0,0.32)';
+          ctx.fillRect(sx + T - 3, sy + 2, 3, T - 2);
+          ctx.fillRect(sx, sy + T - 3, T, 3);
+          ctx.fillStyle = 'rgba(255,255,255,0.18)';
+          ctx.fillRect(sx + 1, sy + 1, T - 4, 2);
+        }
+
         // Индикатор контейнера лута (деревянный/армейский ящик с окантовкой)
         var cont = state.world.containers[k];
         if (vis && cont && !cont.looted) {
@@ -347,23 +359,39 @@
       }
     }
 
-    // 6. Персонаж игрока в центре (реальный 32x32 кадр + анимация атаки/прицела)
+    // 6. Направленный спрайт, бег/крадущийся шаг и удар в сторону прицела.
     var ppx = W * 0.5, ppy = H * 0.5;
-    var pSpr = (state.player.attackCd > 0.15 && sprites.player_melee && sprites.player_melee.complete) ? sprites.player_melee : sprites.player;
-    if (!pSpr || !pSpr.complete || !drawSpriteCell(ctx, pSpr, animStep, 32, 32, ppx - 9, ppy - 9, 18, 18)) {
-      ctx.fillStyle = '#000000';
-      ctx.fillRect(ppx - 6, ppy - 8, 12, 16);
-      ctx.fillStyle = '#96a5bc';
-      ctx.fillRect(ppx - 5, ppy - 3, 10, 9);
-      ctx.fillStyle = '#cea19d';
-      ctx.fillRect(ppx - 4, ppy - 7, 8, 5);
+    var player = state.player;
+    var attacking = player.attackCd > 0 && player.attackDuration;
+    var pSpr = attacking ? (player.attackKind === 'firearm' ? sprites.player_aim : sprites.player_melee) :
+      (player.moving && player.motion === 'run' ? sprites.player_run : (player.moving && player.motion === 'sneak' ? sprites.player_sneak : sprites.player));
+    var cols = pSpr ? Math.max(1, Math.floor(pSpr.width / 32)) : 8;
+    var facingX = attacking ? player.attackFx : player.fx;
+    var facingY = attacking ? player.attackFy : player.fy;
+    var row = DD.GameplayHelpers.directionRow(facingX, facingY);
+    var phase = attacking ? Math.min(cols - 1, Math.floor((1 - player.attackCd / player.attackDuration) * cols)) : (player.moving ? Math.floor(state.elapsed * (player.motion === 'run' ? 10 : 6) * animationSettings.speed) % cols : 0);
+    ctx.fillStyle = 'rgba(0,0,0,0.36)';
+    ctx.fillRect(ppx - 7, ppy + 6, 14, 4);
+    var bob = player.moving && !attacking ? Math.round(Math.sin(state.elapsed * 12 * animationSettings.speed) * animationSettings.bob) : 0;
+    if (!pSpr || !pSpr.complete || !drawSpriteCell(ctx, pSpr, row * cols + phase, 32, 32, ppx - 9, ppy - 11 + bob, 18, 18)) {
+      ctx.fillStyle = '#000000'; ctx.fillRect(ppx - 6, ppy - 8, 12, 16);
+      ctx.fillStyle = '#96a5bc'; ctx.fillRect(ppx - 5, ppy - 3, 10, 9);
+      ctx.fillStyle = '#cea19d'; ctx.fillRect(ppx - 4, ppy - 7, 8, 5);
     }
-    // Луч фонарика / прицела
-    ctx.strokeStyle = state.player.flashlightOn ? '#c9cb9f' : '#8c929e';
-    ctx.beginPath();
-    ctx.moveTo(ppx, ppy);
-    ctx.lineTo(ppx + state.player.fx * 15, ppy + state.player.fy * 15);
-    ctx.stroke();
+    if (attacking) {
+      var progress = 1 - player.attackCd / player.attackDuration;
+      var angle = Math.atan2(facingY, facingX) + (player.attackKind === 'melee' ? (progress - 0.5) * 1.4 : 0);
+      ctx.strokeStyle = player.attackKind === 'melee' ? '#e7c88d' : '#fff3a4';
+      ctx.lineWidth = player.attackKind === 'melee' ? 3 : 1;
+      ctx.beginPath(); ctx.moveTo(ppx, ppy); ctx.lineTo(ppx + Math.cos(angle) * 20, ppy + Math.sin(angle) * 20); ctx.stroke();
+      ctx.lineWidth = 1;
+    }
+    if (player.hitFlash > 0) {
+      ctx.strokeStyle = '#fff2bc'; ctx.beginPath();
+      ctx.arc(ppx + (player.hitX - player.x) * T, ppy + (player.hitY - player.y) * T, 4, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.strokeStyle = player.flashlightOn ? '#c9cb9f' : '#8c929e';
+    ctx.beginPath(); ctx.moveTo(ppx, ppy); ctx.lineTo(ppx + player.fx * 15, ppy + player.fy * 15); ctx.stroke();
 
     // 7. Звуковые кольца
     for (var ri = 0; ri < state.noiseRings.length; ri++) {
@@ -398,8 +426,25 @@
     }
   }
 
+  function renderAnimationPreview(canvas, preset, elapsed) {
+    if (!canvas || !preset) return;
+    var ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.imageSmoothingEnabled = false;
+    ctx.fillStyle = '#14242c'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    var key = ['player', 'player', 'player_run', 'player_sneak', 'player_melee'][preset.action];
+    var img = sprites[key];
+    var cols = img ? Math.max(1, Math.floor(img.width / 32)) : 8;
+    var frame = preset.action === 0 ? 0 : Math.floor(elapsed * 6 * preset.speed) % cols;
+    var bob = preset.action === 0 ? 0 : Math.round(Math.sin(elapsed * 12 * preset.speed) * preset.bob * 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.4)'; ctx.fillRect(28, 73, 40, 8);
+    if (img && img.complete) drawSpriteCell(ctx, img, preset.direction * cols + frame, 32, 32, 16, 10 + bob, 64, 64);
+  }
+
   DD.Renderer = {
     initSprites: initSprites,
+    renderAnimationPreview: renderAnimationPreview,
+    setAnimationStyle: function (preset) { if (preset) animationSettings = { speed: preset.speed, bob: preset.bob }; },
     renderFrame: renderFrame,
     playSfx: playSfx,
     setMuted: function (m) { audioMuted = Boolean(m); },

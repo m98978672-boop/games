@@ -24,7 +24,7 @@ const sandbox = {
 sandbox.window = sandbox;
 vm.createContext(sandbox);
 
-for (const jsFile of ['web/data_bundle.js', 'web/core.js', 'web/algorithms.js', 'web/systems.js', 'web/content_pack.js', 'web/catalog_f3.js']) {
+for (const jsFile of ['web/data_bundle.js', 'web/core.js', 'web/algorithms.js', 'web/systems.js', 'web/content_pack.js', 'web/gameplay_helpers.js', 'web/animations.js', 'web/asset_assistant.js', 'web/catalog_f3.js']) {
   const code = fs.readFileSync(path.join(ROOT, jsFile), 'utf8');
   vm.runInContext(code, sandbox, { filename: jsFile });
 }
@@ -70,7 +70,7 @@ assert.equal(sandbox.DD_DATA.manifest.length, 181, 'Манифест долже�
 DD.CatalogF3.setTab('base');
 assert.equal(DD.CatalogF3.getFilteredList().length, 181);
 DD.CatalogF3.setTab('all');
-assert.equal(DD.CatalogF3.getFilteredList().length, 10000);
+assert.equal(DD.CatalogF3.getFilteredList().length, 10181);
 
 // Проверка оценки плохих/хороших текстур и экспорта отчёта в F3
 DD.CatalogF3.rateItem('D01_tile_grass', 'bad', 'Мало травинок');
@@ -83,5 +83,26 @@ assert.ok(DD.CatalogF3.getBadReportText().includes('D01_tile_grass'));
 assert.ok(DD.CatalogF3.getBadReportText().includes('Мало травинок'));
 DD.CatalogF3.clearRatings();
 assert.equal(DD.CatalogF3.getRatingStats().total, 0);
+
+// Направления, исправление сохранения в стене и выбор цели в секторе удара.
+assert.equal(DD.GameplayHelpers.directionRow(0, 1), 0);
+assert.equal(DD.GameplayHelpers.directionRow(0, -1), 1);
+assert.equal(DD.GameplayHelpers.directionRow(-1, 0), 2);
+assert.equal(DD.GameplayHelpers.directionRow(1, 0), 3);
+const safe = DD.GameplayHelpers.nearestWalkable({ isWalkable: (x, y) => x === 1 && y === 0 }, 0, 0);
+assert.equal(safe.x, 1); assert.equal(safe.y, 0);
+const forward = {x: 1, y: 0, state: 'alive'};
+const backward = {x: -0.5, y: 0, state: 'alive'};
+assert.equal(DD.GameplayHelpers.meleeTarget([backward, forward], {x: 0, y: 0, fx: 1, fy: 0}, 2, 'dead'), forward);
+assert.equal(DD.GameplayHelpers.meleeTarget([backward], {x: 0, y: 0, fx: 1, fy: 0}, 2, 'dead'), null);
+assert.equal(DD.Animations.count, 10000);
+assert.equal(new Set(Array.from({length: 10000}, (_, i) => DD.Animations.get(i).code)).size, 10000);
+assert.equal(DD.Animations.get(9999).action, 4);
+assert.equal(DD.Animations.get(10000), null);
+const dark = new Uint8Array([0, 0, 0, 255, 0, 0, 0, 255]);
+const bright = new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255]);
+assert.equal(DD.AssetAssistant.analyze(dark, dark).difference, 0);
+assert.equal(DD.AssetAssistant.analyze(dark, bright).difference, 1);
+assert.ok(DD.AssetAssistant.analyze(dark).warnings.includes('Низкий контраст'));
 
 console.log('[dead-district smoke] ALL CHECKS PASSED');

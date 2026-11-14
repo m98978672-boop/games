@@ -459,3 +459,29 @@ html, body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Более разборчивые интерфейс и каталог; игра остаётся пиксельной. */
+body { font-family: system-ui, "Segoe UI", sans-serif; }
+.hud-bar, .dd-btn, .f3-search { font-size: 15px; }
+.hud-log, .f3-subtitle, .f3-inspect-info p, .f3-spec, .f3-name, .f3-rate-btn { font-size: 14px; color: #eef1ed; }
+.f3-code, .f3-note-badge { font-size: 13px; color: #f1efb4; }
+.f3-shell { overflow-y: auto; overscroll-behavior: contain; }
+.f3-grid { min-height: 220px; flex: 1 0 300px; }
+.f3-card-preview:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid #f9e99b; outline-offset: 2px; }
+.f3-search { max-width: 100%; min-width: min(240px, 100%); }
+.f3-assistant, .f3-animation-panel { background: #142b35; border: 1px solid #a5b8c0; padding: 10px; font-size: 14px; }
+.f3-animation-panel[hidden] { display: none; }
+.f3-assistant p, .f3-animation-panel p { margin: 5px 0 8px; line-height: 1.4; }
+#anim-preview, #f3-reference-preview { width: 80px; height: 80px; image-rendering: pixelated; background: #263841; border: 1px solid #a5b8c0; }
+#anim-variant, #f3-page-jump { width: 65px; }
+.f3-shell input, .f3-shell select { font: inherit; color: #fff; background: #142b35; border: 1px solid #a5b8c0; padding: 5px; }
+.f3-shell input[type=file] { max-width: 100%; }
+.touch-dpad button { touch-action: none; }
+@media (max-width: 780px) {
+  .modal-overlay { padding: 5px; }
+  .f3-shell { width: 100%; max-height: 98vh; padding: 8px; }
+  .f3-grid { grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); }
+  .hud-bar { font-size: 13px; gap: 4px; padding: 4px; }
+  .hud-bottom .dd-btn { font-size: 12px; padding: 3px 5px; }
+  .hud-log { top: 90px; font-size: 13px; }
+}

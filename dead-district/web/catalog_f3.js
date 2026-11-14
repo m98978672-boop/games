@@ -18,6 +18,10 @@
   var previewYaw = 0.62;
   var onToggleCb = null;
   var ratingsMap = null;
+  var referenceReady = false;
+  var referenceVersion = 0;
+  var assistantResult = '';
+  var animationTime = 0;
 
   function loadRatings() {
     if (ratingsMap) return ratingsMap;
@@ -183,8 +187,7 @@
     var source;
     if (activeTab === 'base') {
       source = getBaseList();
-    } else if (activeTab === 'all' && rateFilter !== 'all' && rateFilter !== 'unrated') {
-      // При фильтре оценённых ищем как среди 10K, так и среди 181 базовых!
+    } else if (activeTab === 'all') {
       source = getBaseList().concat(DD.ContentPack.getAll());
     } else {
       source = DD.ContentPack.getAll();
@@ -243,7 +246,7 @@
     if (!img) {
       if (typeof global.Image === 'function') {
         img = new global.Image();
-        img.onload = function () { if (isOpen) renderCurrentPage(); };
+        img.onload = function () { if (isOpen) { renderCurrentPage(); if (inspectedItem && inspectedItem.code === item.code) renderInspector(); } };
         img.src = item.file;
         baseImgCache[item.file] = img;
       }
@@ -283,7 +286,7 @@
     var voteLabel = rec ? (rec.vote === 'bad' ? ' · 👎 ПЛОХАЯ (на замену)' : ' · 👍 ХОРОШАЯ') : '';
     title.textContent = '[' + inspectedItem.code + '] ' + inspectedItem.name + voteLabel;
     meta.textContent = 'Категория: ' + inspectedItem.family + ' · Тип: ' + inspectedItem.kindLabel + ' · ' + inspectedItem.specs + (inspectedItem.file ? ' · Файл: ' + inspectedItem.file : '');
-    if (noteIn) noteIn.value = (rec && rec.note) || '';
+    if (noteIn && document.activeElement !== noteIn) noteIn.value = (rec && rec.note) || '';
     if (inspectedItem.isBase) drawBaseCard(c, inspectedItem, previewYaw);
     else DD.ContentPack.renderItemToCanvas(c, inspectedItem, previewYaw);
   }
@@ -307,8 +310,10 @@
     if (pageInfo) {
       pageInfo.textContent = 'Стр. ' + (currentPage + 1) + ' / ' + totalPages;
     }
-
+    var jump = document.getElementById('f3-page-jump');
+    if (jump && document.activeElement !== jump) { jump.value = currentPage + 1; jump.max = totalPages; }
     grid.innerHTML = '';
+    if (!list.length) grid.textContent = 'Ничего не найдено. Измените поиск или фильтр.';
     var start = currentPage * PAGE_SIZE;
     var end = Math.min(list.length, start + PAGE_SIZE);
     for (var i = start; i < end; i++) {
@@ -320,6 +325,9 @@
 
         var previewWrap = document.createElement('div');
         previewWrap.className = 'f3-card-preview';
+        previewWrap.setAttribute('role', 'button');
+        previewWrap.setAttribute('tabindex', '0');
+        previewWrap.setAttribute('aria-label', 'Открыть ' + item.code + ' ' + item.name);
 
         var cv = document.createElement('canvas');
         cv.width = 84;
@@ -354,8 +362,13 @@
 
         previewWrap.addEventListener('click', function () {
           inspectedItem = item;
+          assistantResult = '';
+          var result = document.getElementById('f3-assess-result');
+          if (result) result.textContent = 'Нажмите «Проверить» для этого ассета.';
           renderInspector();
         });
+
+        previewWrap.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); previewWrap.click(); } });
 
         var rateRow = document.createElement('div');
         rateRow.className = 'f3-rate-row';
@@ -406,9 +419,15 @@
     if (typeof global.setInterval !== 'function') return;
     previewTimer = global.setInterval(function () {
       if (!isOpen) return;
+      var animPanel = document.getElementById('f3-animations');
+      if (animPanel && !animPanel.hidden && DD.Renderer) { animationTime += 0.06; DD.Renderer.renderAnimationPreview(document.getElementById('anim-preview'), selectedAnimation(), animationTime); }
       if (inspectedItem && (inspectedItem.kind === 'mesh' || inspectedItem.kind === 'base_3d')) {
         previewYaw += 0.08;
-        renderInspector();
+        var canvas = document.getElementById('f3-inspect-canvas');
+        if (canvas) {
+          if (inspectedItem.isBase) drawBaseCard(canvas, inspectedItem, previewYaw);
+          else DD.ContentPack.renderItemToCanvas(canvas, inspectedItem, previewYaw);
+        }
       }
     }, 60);
   }
@@ -437,6 +456,13 @@
       if (expPanel) expPanel.hidden = true;
     }
     if (typeof onToggleCb === 'function') onToggleCb(isOpen);
+  }
+
+  function selectedAnimation() {
+    function selected(id) { var e = document.getElementById(id); return e ? e.selectedIndex : 0; }
+    var input = document.getElementById('anim-variant');
+    var n = Math.max(1, Math.min(100, Number(input && input.value) || 1));
+    return DD.Animations.get(selected('anim-action') * 2000 + selected('anim-direction') * 500 + selected('anim-style') * 100 + Math.floor(n) - 1);
   }
 
   function init(opts) {
@@ -493,6 +519,76 @@
       if (el) el.addEventListener('click', fn);
     };
     bindBtn('f3-close', function () { setOpen(false); });
+    bindBtn('f3-page-go', function () {
+      var input = document.getElementById('f3-page-jump');
+      var max = Math.max(1, Math.ceil(getFilteredList().length / PAGE_SIZE));
+      currentPage = Math.max(0, Math.min(max - 1, Math.floor(Number(input && input.value) || 1) - 1));
+      renderCurrentPage();
+    });
+    bindBtn('f3-animation-toggle', function () {
+      var panel = document.getElementById('f3-animations');
+      panel.hidden = !panel.hidden;
+      updateAnimationLabel();
+    });
+    function updateAnimationLabel() {
+      var preset = selectedAnimation();
+      var label = document.getElementById('anim-label');
+      if (label && preset) label.textContent = preset.code + ' · ' + preset.label;
+      if (DD.Renderer) DD.Renderer.renderAnimationPreview(document.getElementById('anim-preview'), preset, animationTime);
+    }
+    ['anim-action', 'anim-direction', 'anim-style', 'anim-variant'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener('input', updateAnimationLabel);
+    });
+    bindBtn('anim-apply', function () {
+      if (DD.Renderer) DD.Renderer.setAnimationStyle(selectedAnimation());
+      var status = document.getElementById('anim-status');
+      if (status) status.textContent = 'Применено до перезагрузки страницы.';
+    });
+    var referenceInput = document.getElementById('f3-reference');
+    if (referenceInput) referenceInput.addEventListener('change', function () {
+      referenceReady = false;
+      var version = ++referenceVersion;
+      var file = referenceInput.files && referenceInput.files[0];
+      var result = document.getElementById('f3-assess-result');
+      if (!file) { if (result) result.textContent = 'Эталон не выбран.'; return; }
+      if (!/^image\/(png|jpeg)$/.test(file.type) || file.size > 5 * 1024 * 1024) {
+        if (result) result.textContent = 'Выберите PNG или JPEG размером не более 5 МБ.'; return;
+      }
+      var url = global.URL.createObjectURL(file);
+      var img = new global.Image();
+      img.onload = function () {
+        global.URL.revokeObjectURL(url);
+        if (version !== referenceVersion) return;
+        var ref = document.getElementById('f3-reference-preview');
+        var ctx = ref.getContext('2d'); ctx.clearRect(0, 0, 64, 64); ctx.drawImage(img, 0, 0, 64, 64);
+        referenceReady = true;
+        if (result) result.textContent = 'Эталон загружен локально. Нажмите «Проверить».';
+      };
+      img.onerror = function () { global.URL.revokeObjectURL(url); if (version === referenceVersion && result) result.textContent = 'Не удалось прочитать изображение.'; };
+      img.src = url;
+    });
+    bindBtn('f3-assess', function () {
+      if (!inspectedItem) return;
+      var result = document.getElementById('f3-assess-result');
+      try {
+        var sample = document.createElement('canvas'); sample.width = 64; sample.height = 64;
+        var ctx = sample.getContext('2d'); ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(document.getElementById('f3-inspect-canvas'), 0, 0, 64, 64);
+        var pixels = ctx.getImageData(0, 0, 64, 64).data;
+        var refCanvas = document.getElementById('f3-reference-preview');
+        var ref = referenceReady ? refCanvas.getContext('2d').getImageData(0, 0, 64, 64).data : null;
+        var report = DD.AssetAssistant.analyze(pixels, ref);
+        assistantResult = 'Контраст: ' + Math.round(report.contrast * 100) + '%, заполнение: ' + Math.round(report.coverage * 100) + '%' +
+          (ref ? ', разница с эталоном: ' + Math.round(report.difference * 100) + '%' : ' (без эталона)') +
+          (report.warnings.length ? '. Возможные проблемы: ' + report.warnings.join(', ') : '. Технических предупреждений нет.');
+        if (result) result.textContent = assistantResult + ' Сравниваются уменьшенные предпросмотры; это не оценка сходства по смыслу.';
+      } catch (err) { if (result) result.textContent = 'Не удалось проверить изображение: ' + err.message; }
+    });
+    bindBtn('f3-assess-note', function () {
+      var note = document.getElementById('f3-inspect-note');
+      if (note && assistantResult) { note.value = (note.value ? note.value + ' | ' : '') + assistantResult; note.focus(); }
+    });
     bindBtn('f3-first', function () { currentPage = 0; renderCurrentPage(); });
     bindBtn('f3-prev', function () { currentPage = Math.max(0, currentPage - 1); renderCurrentPage(); });
     bindBtn('f3-next', function () {
@@ -593,6 +689,7 @@
       if (status) status.textContent = 'Скачивание недоступно — используйте копирование текста.';
     });
     bindBtn('f3-export-clear', function () {
+      if (typeof global.confirm === 'function' && !global.confirm('Удалить все оценки и заметки?')) return;
       clearRatings();
       if (inspectedItem) renderInspector();
       if (isOpen) renderCurrentPage();
