@@ -744,6 +744,35 @@
     props += (M.craters || []).length + (M.bushes || []).length + (M.rubble || []).length;
     props += (M.mgNests || []).length + (M.camoNets || []).length;
 
+    /* -------------------------- монолиты-укрытия ----------------------------
+       10 000 моделей каталога (src/monolith.js) стоят ещё и внутри карты:
+       у каждой настоящие прорези и выемки, поэтому укрытие читается и на
+       просвет, и вблизи. Модель детерминирована номером — карта не меняется
+       от запуска к запуску. */
+    if (SH2.monolith) {
+      const monoSpots = M.monoliths || [];
+      monoSpots.forEach((spot, si) => {
+        const idx = (spot.model === undefined ? si * 97 + 13 : spot.model) % SH2.monolith.COUNT;
+        const node = SH2.monolith.buildMesh(idx);
+        node.position.set(spot.x, 0, spot.z);
+        node.rotation.y = spot.a || 0;
+        group.add(node);
+        /* коллайдер по габариту с учётом поворота — ровно как у Godot-версии */
+        const made = SH2.monolith.describe(idx);
+        const c = Math.abs(Math.cos(spot.a || 0));
+        const sn = Math.abs(Math.sin(spot.a || 0));
+        const w = node.userData.w || 1.2;
+        const dpt = node.userData.d || 1.2;
+        const hh = node.userData.h || 1.2;
+        colliders.push({
+          x: spot.x, z: spot.z,
+          hw: w * 0.5 * c + dpt * 0.5 * sn,
+          hd: w * 0.5 * sn + dpt * 0.5 * c,
+          h: hh, y: 0, kind: 'monolith', standLow: hh < 1.0, model: made.id
+        });
+      });
+    }
+
     /* ---------------------- граница сектора (периметр) ---------------------- */
     /* Раньше карта просто обрывалась: за краем — пустота и невидимая стенка.
        Теперь по периметру стоит ограждение с колючей проволокой, воротами и

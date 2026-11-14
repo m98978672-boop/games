@@ -38,7 +38,7 @@ sandbox.THREE = Object.assign(Object.create(null), sandbox.THREE, {
   CanvasTexture: class { constructor() { this.isTexture = true; this.repeat = { set() {} }; } dispose() {} }
 });
 // порядок важен: outline/gunblueprints/soldier подключаются ДО model
-for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'model', 'anim', 'ik', 'viewmodel', 'meshpack', 'meshfield']) {
+for (const m of ['data', 'outline', 'gunblueprints', 'soldier', 'level', 'monolith', 'model', 'anim', 'ik', 'viewmodel', 'meshpack', 'meshfield']) {
   vm.runInContext(read(`src/${m}.js`), sandbox, { filename: m });
 }
 const SH2 = sandbox.SH2;

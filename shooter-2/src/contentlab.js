@@ -52,7 +52,7 @@
       const head = el('div', 'content-head');
       head.appendChild(el('h2', null, 'КОНТЕНТ СЕКТОРА'));
       const tabs = el('div', 'content-tabs');
-      [['models', 'МОДЕЛИ 1000'], ['sounds', 'ЗВУКИ 250'], ['mechanics', 'МЕХАНИКИ 250'], ['field', 'ПОЛЕ 100 000']]
+      [['models', 'МОДЕЛИ 10 000'], ['sounds', 'ЗВУКИ 250'], ['mechanics', 'МЕХАНИКИ 250'], ['field', 'ПОЛЕ 1 048 576']]
         .forEach(([key, label]) => {
           const b = el('button', 'ct-tab' + (this.tab === key ? ' active' : ''), label);
           b.dataset.tab = key;
@@ -119,7 +119,7 @@
     renderPager() {
       this.pager.innerHTML = '';
       if (this.tab === 'field') return;
-      const total = this.tab === 'models' ? SH2.meshpack.COUNT : (this.tab === 'sounds' ? SH2.soundbank.COUNT : SH2.mechanics.COUNT);
+      const total = this.tab === 'models' ? SH2.monolith.COUNT : (this.tab === 'sounds' ? SH2.soundbank.COUNT : SH2.mechanics.COUNT);
       const page = this.tab === 'models' ? this.page : (this.tab === 'sounds' ? this.soundPage : this.mechPage);
       const pages = Math.ceil(total / PAGE);
       const mk = (label, to, disabled) => {
@@ -140,8 +140,8 @@
 
     /* -------------------------------- модели ------------------------------ */
     renderModels() {
-      const P = SH2.meshpack;
-      this.summary.textContent = `${P.COUNT} моделей · 10 семейств × 10 архетипов × 10 вариантов. Каждая строится процедурно по контуру: выдавливание, лофт, тело вращения.`;
+      const P = SH2.monolith;
+      this.summary.textContent = `${P.COUNT.toLocaleString('ru-RU')} монолитных моделей · 10 семейств × 10 архетипов × 10 вариантов × 10 отделок. У каждой настоящие прорези (видно насквозь) и выемки с дном — это вычтенные из объёма отверстия, а не накладки.`;
       const grid = el('div', 'mesh-grid');
       const from = this.page * PAGE;
       for (let i = from; i < Math.min(P.COUNT, from + PAGE); i++) {
@@ -179,7 +179,7 @@
           const scene = new T.Scene();
           scene.background = new T.Color(0x11151c);
           const cam = new T.PerspectiveCamera(32, cv.width / cv.height, 0.05, 60);
-          const model = SH2.meshpack.build(index);
+          const model = SH2.monolith.buildMesh(index);
           scene.add(model);
           const sun = new T.DirectionalLight(0xffffff, 1.15);
           sun.position.set(3, 5, 4);
@@ -208,7 +208,7 @@
         return;
       }
       /* без WebGL: рисуем проекцию модели на 2D-канвас — честные вершины */
-      q.forEach(({ cv, index }) => this.drawSilhouette(cv, SH2.meshpack.build(index)));
+      q.forEach(({ cv, index }) => this.drawSilhouette(cv, SH2.monolith.buildMesh(index)));
     }
 
     drawSilhouette(cv, group) {
@@ -219,10 +219,12 @@
       ctx.fillRect(0, 0, W, H);
       group.updateMatrixWorld(true);
       const pts = [];
-      group.traverse((o) => {
-        if (!o.isMesh) return;
+      /* Монолит — уже один меш (а не группа): берём его вершины напрямую. */
+      const src = group.isMesh ? [group] : [];
+      if (!src.length && group.traverse) group.traverse((o) => { if (o.isMesh) src.push(o); });
+      src.forEach((o) => {
         const p = o.geometry.attributes.position;
-        for (let i = 0; i < p.count; i += 3) {
+        for (let i = 0; i < p.count; i += 2) {
           pts.push([p.getX(i), p.getY(i), p.getZ(i)]);
         }
       });
@@ -255,7 +257,7 @@
       const g = this.game;
       if (!g || !g.scene) return;
       const T = root.THREE;
-      const m = SH2.meshpack.build(index);
+      const m = SH2.monolith.buildMesh(index);
       const P = g.player || { x: 0, z: 0, yaw: 0 };
       const d = 3.2;
       m.position.set(P.x + Math.sin(P.yaw) * d + 0.8, 0, P.z + Math.cos(P.yaw) * d);
@@ -266,7 +268,7 @@
         const old = this.spawned.shift();
         g.scene.remove(old);
       }
-      if (g.ui) g.ui.toast('Меш ' + SH2.meshpack.describe(index).id + ' поставлен на карту');
+      if (g.ui) g.ui.toast('Монолит ' + SH2.monolith.describe(index).id + ' поставлен на карту');
     }
 
     /* -------------------------------- звуки ------------------------------- */
@@ -374,7 +376,7 @@
     renderField() {
       const g = this.game;
       const f = g && g.meshfield;
-      this.summary.textContent = 'Поле декораций: 100 000 мешей вокруг игровой зоны. Стоят инстансами — один draw call на материал, поэтому телефон не умирает.';
+      this.summary.textContent = 'Поле застройки: больше миллиона мешей вокруг игровой зоны. Все 10 000 моделей каталога стоят отдельными мешами в ближнем поясе, дальше — инстансные кластеры: ~60 draw call вместо миллиона.';
       const st = f ? f.stats() : null;
       const box = el('div', 'field-stats');
       if (!st) {

@@ -669,6 +669,14 @@ const MAPS := {
 		"spawns": [Vector2(-30, -30), Vector2(30, -30), Vector2(-30, 30), Vector2(30, 30),
 			Vector2(0, -31), Vector2(0, 31), Vector2(30, 2), Vector2(-30, 2)],
 		"extracts": [{"x": -30.0, "z": -30.0, "r": 4.0}],
+		"monoliths": [
+			{"x": -6.0, "z": -4.0, "a": 0.18, "model": 131},
+			{"x": 10.0, "z": 12.0, "a": -0.42, "model": 1024},
+			{"x": -20.0, "z": -14.0, "a": 0.86, "model": 2671},
+			{"x": 22.0, "z": 3.0, "a": 1.24, "model": 5108},
+			{"x": -2.0, "z": 27.0, "a": -0.12, "model": 7422},
+			{"x": 15.0, "z": -18.0, "a": 0.55, "model": 9613},
+		],
 		"boxes": [Vector2(-8, -26), Vector2(18, 26), Vector2(26, -26)],
 	},
 	"convoy": {
@@ -708,6 +716,11 @@ const MAPS := {
 		"spawns": [Vector2(-34, -34), Vector2(34, 34), Vector2(-34, 34), Vector2(34, -34),
 			Vector2(0, -36), Vector2(0, 36)],
 		"extracts": [{"x": 34.0, "z": -34.0, "r": 4.5}],
+		"monoliths": [
+			{"x": -10.0, "z": 8.0, "a": 0.3, "model": 4021},
+			{"x": 14.0, "z": -6.0, "a": -0.7, "model": 6688},
+			{"x": 4.0, "z": 22.0, "a": 1.1, "model": 8841},
+		],
 		"boxes": [Vector2(-2, -28), Vector2(30, 6), Vector2(-30, 24)],
 	},
 	"harbor": {
@@ -747,6 +760,10 @@ const MAPS := {
 		"spawns": [Vector2(-36, 36), Vector2(36, -36), Vector2(-36, -36), Vector2(36, 36),
 			Vector2(0, -38), Vector2(0, 38), Vector2(38, 0), Vector2(-38, 0)],
 		"extracts": [{"x": -38.0, "z": 38.0, "r": 5.0}],
+		"monoliths": [
+			{"x": -12.0, "z": 6.0, "a": 0.12, "model": 2199},
+			{"x": 16.0, "z": -10.0, "a": 0.9, "model": 5077},
+		],
 		"boxes": [],
 	},
 }

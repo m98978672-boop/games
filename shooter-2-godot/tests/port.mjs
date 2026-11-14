@@ -63,13 +63,17 @@ for (const text of Object.values(sources)) {
 }
 for (const expected of ['SH2Data', 'SH2Outline', 'SH2Guns', 'SH2Soldier', 'SH2Level',
   'SH2Animator', 'SH2ArmIK', 'SH2Ragdoll', 'SH2World', 'SH2Brain', 'SH2Agent', 'SH2Player',
-  'SH2Combat', 'SH2Fx', 'SH2Audio', 'SH2UI', 'SH2Game']) {
+  'SH2Combat', 'SH2Fx', 'SH2Audio', 'SH2UI', 'SH2Game', 'SH2Monolith', 'SH2MeshField']) {
   assert.ok(classNames.has(expected), `класс ${expected} не объявлен через class_name`);
 }
 assert.equal(classNames.size, new Set([...classNames]).size, 'имена классов уникальны');
 
 /* --------------------- контракты: требуемые методы --------------------- */
 const requiredMethods = {
+  'monolith.gd': ['describe', 'build', 'build_node', 'decompose', 'panel_mesh', 'solid_box',
+    'stats', 'family_keys'],
+  'mesh_field.gd': ['build', 'stats', 'meshes_total', 'matrix_at', 'hide_mesh',
+    'for_each_in_radius', 'set_enabled', 'summary', 'preset_scale', 'cluster_of'],
   'data.gd': ['totals', 'enemy_by_id', 'weapon_by_id', 'clip_by_id', 'clip_curve',
     'map_colliders', 'signals', 'apply_arms'],
   'outline.gd': ['outline_mesh', 'loft_sections', 'section', 'circle_section', 'revolve',
@@ -130,15 +134,45 @@ for (const [file, text] of Object.entries(sources)) {
     if (member === 'new') continue; // создание экземпляра — не static-вызов
     const target = Object.entries(sources).find(([, body]) => body.includes(`class_name ${cls}`))[1];
     const isStatic = new RegExp(`static (func|var) ${member}\\b`).test(target)
-      || new RegExp(`^(static )?const ${member}\\b`, 'm').test(target);
+      || new RegExp(`^(static )?const ${member}\\b`, 'm').test(target)
+      // вложенный класс (SH2Monolith.Rng) — тоже статический член
+      || new RegExp(`^class ${member}\\b`, 'm').test(target);
     if (!isStatic) {
       throw new Error(`${file}: вызывается ${cls}.${member}, но в ${cls} это не static`);
     }
   }
 }
 
+/* ------------------- монолиты и поле мешей: масштаб -------------------- */
+assert.match(sources['monolith.gd'], /const COUNT := FAMILIES\.size\(\) \* ARCHETYPES \* VARIANTS \* FINISHES/,
+  'количество моделей считается из семейств и вариантов, а не вписано числом');
+for (const [file, text] of Object.entries(sources)) {
+  for (const m of text.matchAll(/(?:const|var)\s+COUNT\s*:?=\s*(\d+)/g)) {
+    assert.equal(m[1], '10000', `${file}: COUNT должен быть 10 000 моделей`);
+  }
+}
+assert.match(sources['monolith.gd'], /const ARCHETYPES := 10[\s\S]*const VARIANTS := 10[\s\S]*const FINISHES := 10/,
+  '10 архетипов × 10 вариантов × 10 отделок');
+assert.match(sources['monolith.gd'], /static func _quad_n\([\s\S]*?\.dot\(out_dir\)/,
+  'у граней проверяется направление нормали (иначе прорези чёрные изнутри)');
+assert.match(sources['monolith.gd'], /static func decompose\([\s\S]*?xs\.sort\(\)/,
+  'прорези вычитаются декомпозицией на столбцы, а не накладками');
+assert.match(sources['monolith.gd'], /static func _rect_tube\(/, 'у сквозных прорезей есть внутренние стенки');
+assert.match(sources['monolith.gd'], /"recesses": recesses/, 'выемки считаются отдельно от прорезей');
+
+const field = sources['mesh_field.gd'];
+assert.match(field, /const TARGET_MESHES := 1048576/, 'цель — больше миллиона мешей (2^20)');
+assert.ok(/MultiMesh/.test(field) && /instance_count/.test(field),
+  'поле рисуется через MultiMesh: миллион экземпляров без миллиона draw call');
+assert.match(field, /const MODELS_PER_CLUSTER_FAR := \d+/, 'кластеры собираются из нескольких моделей');
+assert.equal((field.match(/const POOL_(NEAR|MID|FAR) := \d+/g) || []).length, 3,
+  'три кольца детализации');
+assert.match(field, /static func _model_index_for\(lod: int, slot: int/,
+  'индекс модели в кластере зависит от кольца детализации');
+assert.match(field, /func summary\(\)/, 'поле умеет отчитываться числом мешей');
+
 /* ------------------------------- тесты --------------------------------- */
-for (const file of ['tests/test_logic.gd', 'tests/test_smoke.gd']) {
+for (const file of ['tests/test_logic.gd', 'tests/test_smoke.gd', 'tests/test_monolith.gd']) {
   const text = await read(file);
   assert.match(text, /quit\(1 if fails > 0 else 0\)/, `${file}: должен возвращать код ошибки`);
   assert.match(text, /extends (SceneTree|Node)/, `${file}: нет базового класса для запуска`);

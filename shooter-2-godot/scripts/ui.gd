@@ -308,6 +308,9 @@ func _build_menu() -> void:
 	stats.add_child(_label("Клипов в наборе: %d" % int(totals["total"]), 14, COL_TEXT))
 	stats.add_child(_label("Стволов: %d · Боевиков: %d · Карт: %d"
 		% [SH2Data.WEAPONS.size(), SH2Data.ENEMY_TYPES.size(), SH2Data.MAPS.size()], 14, COL_TEXT))
+	stats.add_child(_label("Монолитов: %s · Мешей в поле: %s"
+		% [SH2MeshField._thousands(SH2Monolith.COUNT),
+			SH2MeshField._thousands(SH2MeshField.TARGET_MESHES)], 14, COL_TEXT))
 
 	var right := VBoxContainer.new()
 	right.add_theme_constant_override("separation", 10)

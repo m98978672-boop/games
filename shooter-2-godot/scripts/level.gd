@@ -194,6 +194,31 @@ static func tower(spec: Dictionary, color: Color) -> Node3D:
 	return out
 
 
+## Монолит-укрытие: одна из 10 000 моделей, поставленная на карту. Прорези и
+## выемки настоящие, поэтому укрытие читается и на просвет, и вблизи.
+static func monolith(index: int, x: float, z: float, angle: float = 0.0,
+		opts: Dictionary = {}) -> Node3D:
+	var node := SH2Monolith.build_node(index, opts)
+	node.position = Vector3(x, 0.0, z)
+	node.rotation.y = angle
+	return node
+
+
+## Коллайдеры монолита с учётом поворота: круг вокруг модели плюс её габарит.
+static func monolith_colliders(index: int, x: float, z: float,
+		angle: float = 0.0) -> Array:
+	var made := SH2Monolith.build(index)
+	var w: float = float(made["w"])
+	var d: float = float(made["d"])
+	var h: float = float(made["h"])
+	var c: float = absf(cos(angle))
+	var sn: float = absf(sin(angle))
+	var hw: float = (w * 0.5) * c + (d * 0.5) * sn
+	var hd: float = (w * 0.5) * sn + (d * 0.5) * c
+	return [{"x": x, "z": z, "hw": hw, "hd": hd, "h": h, "kind": "monolith",
+		"stand_low": h < 1.0, "model": made["id"]}]
+
+
 ## Бетонный блок со скошенными гранями
 static func barrier(spec: Dictionary, color: Color) -> Node3D:
 	var length: float = float(spec["len"])
@@ -326,6 +351,16 @@ static func build(map_id: String) -> Dictionary:
 		bag_row.position = Vector3(sb["x"], 0, sb["z"])
 		bag_row.rotation.y = float(sb["a"])
 		root.add_child(bag_row)
+	# монолиты-укрытия внутри карты: вблизи видны прорези и выемки
+	var mono_spots: Array = m.get("monoliths", [])
+	var mono_colliders: Array = []
+	for i in mono_spots.size():
+		var spot: Dictionary = mono_spots[i]
+		var idx: int = int(spot.get("model", i * 97 + 13)) % SH2Monolith.COUNT
+		root.add_child(monolith(idx, float(spot["x"]), float(spot["z"]),
+			float(spot.get("a", 0.0))))
+		mono_colliders.append_array(monolith_colliders(idx, float(spot["x"]),
+			float(spot["z"]), float(spot.get("a", 0.0))))
 	for p in m["barrels"]:
 		root.add_child(barrel(p, Color("#6a4a2c")))
 	for p in m["rocks"]:
@@ -358,5 +393,7 @@ static func build(map_id: String) -> Dictionary:
 	hemi.environment = env
 	root.add_child(hemi)
 
-	return {"root": root, "colliders": SH2Data.map_colliders(map_id), "map_id": map_id,
-		"map": m}
+	var colliders: Array = SH2Data.map_colliders(map_id)
+	colliders.append_array(mono_colliders)
+	return {"root": root, "colliders": colliders, "map_id": map_id,
+		"map": m, "monoliths": mono_spots.size()}

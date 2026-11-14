@@ -962,7 +962,7 @@
          Порядок важен: сначала числа, потом события (missionStart может
          хотеть уже исправленный уровень). */
       this.applyMechanics();
-      /* Поле декораций: 100 000 мешей за 40–120 draw call. Строится один раз
+      /* Поле застройки: 1 048 576 мешей за ~60 draw call. Строится один раз
          на миссию, при смене карты пересобирается. */
       this.buildMeshField();
 
@@ -1020,26 +1020,50 @@
     }
 
     /* Поле декораций строится ОДИН раз на сессию: это кольцо снаружи игровой
-       зоны, от карты оно не зависит. Пересобирать 100 000 мешей на каждый
+       зоны, от карты оно не зависит. Пересобирать миллион мешей на каждый
        старт миссии — это полсекунды впустую и лишние 4 МБ памяти. */
     buildMeshField() {
       if (!SH2.meshfield) return null;
-      const count = (this.settings && this.settings.meshfield) || 100000;
+      const count = (this.settings && this.settings.meshfield) || 1048576;
       if (this.meshfield && this.meshfield.count === count && this.meshfield.group) {
         if (!this.meshfield.group.parent) this.scene.add(this.meshfield.group);
         return this.meshfield;
       }
       if (this.meshfield) this.meshfield.dispose();
       this.meshfield = new SH2.meshfield.MeshField({ count, seed: 1337 });
-      this.meshfield.build(this.scene);
-      this._fieldBuilt = this.meshfield;   // первый экземпляр — эталон для проверок
+      /* Сборка порциями по кадрам: миллион мешей не должен вешать меню.
+         Первые чанки появляются сразу, остальное доезжает за 2–3 секунды. */
+      this._fieldBuilding = true;
+      const done = (f) => {
+        this._fieldBuilding = false;
+        this._fieldBuilt = f;               // эталон для проверок
+        this.applyFieldPerf();
+        if (this.ui && this.ui.toast) {
+          const st = f.stats();
+          this.ui.toast('Застройка: ' + st.meshes.toLocaleString('ru-RU') + ' мешей · '
+            + st.drawCalls + ' draw call');
+        }
+      };
+      /* В тестах и на превью поле нужно целиком и сразу — там нет кадров. */
+      if (this.syncFields) {
+        this.meshfield.build(this.scene);
+        done(this.meshfield);
+      } else {
+        this.meshfield.buildAsync(this.scene, done);
+      }
       /* экономный пресет гасит 4 семейства: -40 % треугольников на горизонте.
          Внимание: `perf.preset` — это СТРОКА (имя пресета), а не метод;
          таблица лежит в SH2.perf.PRESETS. */
+      this.applyFieldPerf();
+      return this.meshfield;
+    }
+
+    /* «Экономный» режим поля по текущему пресету производительности. */
+    applyFieldPerf() {
+      if (!this.meshfield) return;
       const presetName = this.perf && this.perf.preset;
       const p = SH2.perf && SH2.perf.PRESETS ? SH2.perf.PRESETS[presetName] : null;
       this.meshfield.setReduced(!!p && p.lodBias > 1.4);
-      return this.meshfield;
     }
 
     /* Старт игрока: одна и та же точка при каждом запуске карты (playerSpawn).
