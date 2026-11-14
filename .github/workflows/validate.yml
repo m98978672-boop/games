@@ -50,6 +50,7 @@ jobs:
         run: |
           node dead-district/tests/smoke.mjs
           node dead-district/tests/interaction.mjs
+          node dead-district/tests/model-views.mjs
           node dead-district/tools/static_gd_check.mjs
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play

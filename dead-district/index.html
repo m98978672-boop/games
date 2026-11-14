@@ -167,11 +167,12 @@
         <h3 id="f3-inspect-title">Предпросмотр</h3>
         <p id="f3-inspect-meta"></p>
         <div id="f3-direction-controls" class="f3-controls" hidden aria-label="Направление спрайта">
-          <span>Вид спрайта:</span>
+          <span>Ракурс:</span>
           <button type="button" class="dd-btn" data-f3-direction="0">Спереди</button>
           <button type="button" class="dd-btn" data-f3-direction="1">Сзади</button>
           <button type="button" class="dd-btn" data-f3-direction="2">Слева</button>
           <button type="button" class="dd-btn" data-f3-direction="3">Справа</button>
+          <button type="button" id="f3-spin-toggle" class="dd-btn" hidden aria-pressed="false">Вращать 3D</button>
         </div>
         <div class="f3-controls">
           <button id="f3-inspect-good" type="button" class="dd-btn">👍 Хорошая</button>
@@ -185,7 +186,7 @@
           <label>Эталон (PNG/JPEG): <input id="f3-reference" type="file" accept="image/png,image/jpeg"></label>
           <div class="f3-controls"><canvas id="f3-reference-preview" width="64" height="64" aria-label="Эталон"></canvas><button type="button" class="dd-btn" id="f3-assess">Проверить текущий предпросмотр</button></div>
           <button type="button" class="dd-btn" id="f3-assess-note">Добавить результат в заметку</button>
-          <p id="f3-assess-result" aria-live="polite">Эталон не выбран. Для 3D и аудио показан условный предпросмотр, не исходный файл.</p>
+          <p id="f3-assess-result" aria-live="polite">Эталон не выбран. 3D: геометрия наших GLB, цвета по палитре; аудио показано условно.</p>
         </div>
         <div class="f3-reason-row">
           <button type="button" class="dd-btn" data-f3-reason="Примитивная форма">Примитивная</button>

@@ -136,7 +136,7 @@
             archIdx: ma,
             famIdx: mf,
             name: mfam.arch[ma] + ' (' + mvTag + ')',
-            specs: '32×32 px · 1px контур'
+            specs: '32×32 px · процедурный эскиз'
           };
           idx++;
         }
@@ -149,7 +149,6 @@
       for (var ga = 0; ga < 10; ga++) {
         for (var gv = 0; gv < 20; gv++) {
           var gvTag = VARIANT_TAGS[gv];
-          var partsCount = gfam.kind === 'car' || gfam.kind === 'police' || gfam.kind === 'pickup' || gfam.kind === 'van' || gfam.kind === 'truck' ? 7 + (gv % 3) : (4 + (gv % 4));
           ITEMS[idx] = {
             index: idx,
             code: 'MESH-' + String(idx - 6999).padStart(4, '0'),
@@ -162,7 +161,7 @@
             archIdx: ga,
             famIdx: gf,
             name: gfam.arch[ga] + ' (' + gvTag + ')',
-            specs: (partsCount * 12) + ' трианг. · ' + partsCount + ' дет.'
+            specs: 'Процедурный 3D-эскиз'
           };
           idx++;
         }
@@ -314,53 +313,48 @@
     octx.putImageData(img, 0, 0);
   }
 
-  function renderModel32(ctx, item, outSize) {
+  function renderModel32(ctx, item, outSize, direction) {
     var fam = MODEL_FAMILIES[item.famIdx] || MODEL_FAMILIES[0];
     var a = item.archIdx;
     var v = item.variantIdx;
     var off = createScratch(32, 32);
     if (!off) return;
     var octx = off.getContext('2d');
+    // Scratch canvas общий для всех карточек: каждый новый рисунок начинается с чистого листа.
+    octx.clearRect(0, 0, 32, 32);
     var cat = fam.cat;
     var c1 = PALETTE[(hash32(item.famIdx, a, v) % 28)];
     var c2 = PALETTE[(hash32(v, a, item.famIdx + 9) % 28)];
     var accent = PALETTE[(v === 9 ? 1 : (v === 10 ? 12 : 5))];
 
     if (cat === 'human' || cat === 'zombie' || cat === 'zombie_heavy') {
+      var dir = Math.max(0, Math.min(3, direction | 0));
       var isZ = cat !== 'human';
       var isHeavy = cat === 'zombie_heavy';
-      var bw = isHeavy ? 14 : 10;
+      var side = dir >= 2;
+      var bw = isHeavy ? (side ? 10 : 14) : (side ? 7 : 10);
       var skin = isZ ? PALETTE[11] : PALETTE[0];
       var shirt = isZ ? c1 : (a === 7 ? PALETTE[30] : c1);
       var pants = c2;
-      // Ноги
       octx.fillStyle = pants;
-      octx.fillRect(16 - Math.floor(bw / 3) - 1, 20, 4, 8);
-      octx.fillRect(16 + Math.floor(bw / 3) - 2, 20, 4, 8);
-      // Торс
-      octx.fillStyle = shirt;
-      octx.fillRect(16 - Math.floor(bw / 2), 12, bw, 9);
-      // Руки
-      octx.fillStyle = skin;
-      if (isZ) {
-        octx.fillRect(16 - Math.floor(bw / 2) - 3, 12, 3, 8);
-        octx.fillRect(16 + Math.floor(bw / 2), 12, 3, 8);
-      } else {
-        octx.fillRect(16 - Math.floor(bw / 2) - 3, 13, 3, 6);
-        octx.fillRect(16 + Math.floor(bw / 2), 13, 3, 6);
+      if (side) { octx.fillRect(12, 20, 4, 8); octx.fillRect(17, 20, 4, 7); }
+      else { octx.fillRect(12, 20, 4, 8); octx.fillRect(17, 20, 4, 8); }
+      octx.fillStyle = shirt; octx.fillRect(16 - Math.floor(bw / 2), 12, bw, 9);
+      if (dir === 1) {
+        octx.fillStyle = accent; octx.fillRect(13, 14, 6, 6); // спина / лямки
+      } else if (side) {
+        octx.fillStyle = accent; octx.fillRect(dir === 2 ? 18 : 11, 13, 3, 7);
       }
-      // Голова и шляпа/волосы
       octx.fillStyle = skin;
-      octx.fillRect(12, 4, 8, 8);
-      octx.fillStyle = accent;
-      octx.fillRect(12, 4, 8, 3);
+      if (side) octx.fillRect(dir === 2 ? 15 : 14, 13, 3, 7);
+      else { octx.fillRect(16 - Math.floor(bw / 2) - 3, 13, 3, 6); octx.fillRect(16 + Math.floor(bw / 2), 13, 3, 6); }
+      var headX = side ? (dir === 2 ? 11 : 14) : 12;
+      octx.fillStyle = dir === 1 ? accent : skin; octx.fillRect(headX, 4, side ? 7 : 8, 8);
+      octx.fillStyle = accent; octx.fillRect(headX, 4, side ? 7 : 8, 3);
       octx.fillStyle = isZ ? PALETTE[1] : PALETTE[31];
-      octx.fillRect(14, 8, 1, 1);
-      octx.fillRect(17, 8, 1, 1);
-      if (isZ && v % 3 === 0) {
-        octx.fillStyle = PALETTE[2];
-        octx.fillRect(14, 15, 4, 3);
-      }
+      if (dir === 0) { octx.fillRect(14, 8, 1, 1); octx.fillRect(17, 8, 1, 1); }
+      else if (side) octx.fillRect(dir === 2 ? 12 : 19, 8, 1, 1);
+      if (isZ && v % 3 === 0 && dir !== 1) { octx.fillStyle = PALETTE[2]; octx.fillRect(14, 15, 4, 3); }
     } else if (cat === 'melee') {
       for (var k = -8; k <= 8; k++) {
         octx.fillStyle = k > 2 ? PALETTE[25] : PALETTE[7];
@@ -425,6 +419,11 @@
         { cx: -0.92, cy: 0.3, cz: -len * 0.32, sx: 0.3, sy: 0.6, sz: 0.6, c: 29 },
         { cx: 0.92, cy: 0.3, cz: -len * 0.32, sx: 0.3, sy: 0.6, sz: 0.6, c: 29 }
       ];
+      // Фары и задние огни помогают различать перед и зад автомобиля.
+      parts.push({ cx: -0.65, cy: 0.6, cz: len * 0.5 + 0.04, sx: 0.35, sy: 0.18, sz: 0.08, c: 5 });
+      parts.push({ cx: 0.65, cy: 0.6, cz: len * 0.5 + 0.04, sx: 0.35, sy: 0.18, sz: 0.08, c: 5 });
+      parts.push({ cx: -0.65, cy: 0.6, cz: -len * 0.5 - 0.04, sx: 0.35, sy: 0.18, sz: 0.08, c: 1 });
+      parts.push({ cx: 0.65, cy: 0.6, cz: -len * 0.5 - 0.04, sx: 0.35, sy: 0.18, sz: 0.08, c: 1 });
       if (kind === 'police' || (kind === 'van' && archIdx === 0)) {
         parts.push({ cx: 0, cy: 1.44, cz: 0.1, sx: 1.0, sy: 0.16, sz: 0.25, c: 1 });
       } else if (kind === 'pickup') {
@@ -594,29 +593,25 @@
   }
 
   function renderBaseGlbPreview(ctx, assetId, size, yaw) {
-    var kind = 'crate';
-    if (assetId.indexOf('veh_police') >= 0) kind = 'police';
-    else if (assetId.indexOf('veh_pickup') >= 0) kind = 'pickup';
-    else if (assetId.indexOf('veh_van') >= 0 || assetId.indexOf('veh_ambulance') >= 0) kind = 'van';
-    else if (assetId.indexOf('veh_truck') >= 0) kind = 'truck';
-    else if (assetId.indexOf('veh_') >= 0) kind = 'car';
-    else if (assetId.indexOf('tree_oak') >= 0) kind = 'oak';
-    else if (assetId.indexOf('tree_pine') >= 0) kind = 'pine';
-    else if (assetId.indexOf('campfire') >= 0) kind = 'campfire';
-    else if (assetId.indexOf('wpn_') >= 0) kind = 'wpn3d';
-    else if (assetId.indexOf('bed') >= 0 || assetId.indexOf('workbench') >= 0 || assetId.indexOf('table') >= 0 || assetId.indexOf('cabinet') >= 0) kind = 'furniture';
-    var arch = assetId.indexOf('ambulance') >= 0 ? 0 : 1;
-    var parts = getMeshParts(kind, arch, 0);
+    var models = (global.DD_DATA && global.DD_DATA.glbPreviewParts) || {};
+    var parts = models[assetId];
+    if (!parts || !parts.length) {
+      ctx.clearRect(0, 0, size, size);
+      ctx.fillStyle = '#b7c0c7'; ctx.font = '12px sans-serif';
+      ctx.fillText('Нет 3D предпросмотра', 4, size / 2);
+      return false;
+    }
     renderParts3D(ctx, parts, size, yaw == null ? 0.62 : yaw, 0.48);
+    return true;
   }
 
-  function renderItemToCanvas(canvas, item, yaw) {
+  function renderItemToCanvas(canvas, item, yaw, direction) {
     if (!canvas || !item) return;
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
     var size = canvas.width;
     if (item.kind === 'texture') renderTexture32(ctx, item, size);
-    else if (item.kind === 'model') renderModel32(ctx, item, size);
+    else if (item.kind === 'model') renderModel32(ctx, item, size, direction);
     else renderMesh3D(ctx, item, size, yaw);
   }
 
