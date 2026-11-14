@@ -1,5 +1,6 @@
 // Мини-заглушка DOM: проверяем, что app.js отрабатывает без исключений.
 const fs = require('fs');
+const vm = require('node:vm');
 const path = './';
 
 function makeCtx(){
@@ -51,7 +52,7 @@ require(path+'core.js');
 global.RatgradCore = global.window.RatgradCore;
 
 try {
-  new Function(fs.readFileSync(path+'app.js','utf8'))();
+  vm.runInThisContext(fs.readFileSync(path+'app.js','utf8'), { filename: 'app.js' });
 } catch (e) {
   console.error('ОШИБКА при загрузке app.js:', e.message);
   console.error(e.stack.split('\n').slice(0,4).join('\n'));

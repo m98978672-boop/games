@@ -24,7 +24,7 @@
 
 * **Кнут (1968):** алгоритм — конечный набор правил, который задаёт последовательность операций
   для решения задачи определённого типа и обладает пятью свойствами: **конечность, определённость,
-  вход, выход, эффективность** [1](https://masteringalgorithms.com/chapters/introduction.html) [2](http://ada-developers-academy.github.io/jumpstart-textbook/jumpstart-lessons/problem-solving/algorithms/).
+  вход, выход, эффективность** [1](https://masteringalgorithms.com/chapters/introduction.html) [2](https://ada-developers-academy.github.io/jumpstart-textbook/jumpstart-lessons/problem-solving/algorithms/).
 * **Русская школа информатики:** алгоритм — точное и понятное предписание исполнителю выполнить
   конечную последовательность действий, ведущую к решению задачи; свойства — **дискретность,
   понятность, определённость, результативность, массовость** [3](https://pro-schools.ru/uchebnik/informatika/7-klass/svoystva-algoritma-7/) [4](https://it-inform.narod.ru/index/svojstva_algoritmov/0-48) [5](https://blog.skillfactory.ru/glossary/algoritm/).
@@ -1480,7 +1480,7 @@ R-IX.6. **[v1]** Проверка уровня: 20 сценариев на ал�
 ## Источники
 
 1. Introduction to Algorithms — свойства Кнута, машина Тьюринга — https://masteringalgorithms.com/chapters/introduction.html
-2. Algorithms (Ada Developers Academy) — пять свойств на примере «добраться до работы» — http://ada-developers-academy.github.io/jumpstart-textbook/jumpstart-lessons/problem-solving/algorithms/
+2. Algorithms (Ada Developers Academy) — пять свойств на примере «добраться до работы» — https://ada-developers-academy.github.io/jumpstart-textbook/jumpstart-lessons/problem-solving/algorithms/
 3. Свойства алгоритма, 7 класс — дискретность, определённость, результативность, массовость — https://pro-schools.ru/uchebnik/informatika/7-klass/svoystva-algoritma-7/
 4. Свойства алгоритмов (it-inform) — https://it-inform.narod.ru/index/svojstva_algoritmov/0-48
 5. Skillfactory — алгоритм: виды, свойства, применение — https://blog.skillfactory.ru/glossary/algoritm/

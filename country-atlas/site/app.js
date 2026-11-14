@@ -136,7 +136,8 @@
   }
 
   /* ---------------- панели ---------------- */
-  function isTab(t) { return document.querySelector('.tabs button[data-tab="' + t + '"]').getAttribute('aria-selected') === 'true'; }
+  let activeTab = 'col';
+  function isTab(t) { return activeTab === t; }
   function kv(title, rows) {
     return '<h2>' + title + '</h2><div class="kv">' +
       rows.map(r => '<span>' + r[0] + '</span><span>' + r[1] + '</span>').join('') + '</div>';
@@ -297,6 +298,7 @@
 
   /* ---------------- события ---------------- */
   function setTab(t) {
+    activeTab = t;
     document.querySelectorAll('.tabs button').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === t ? 'true' : 'false'));
     document.querySelectorAll('.pane').forEach(p => p.classList.remove('on'));
     $('#pane-' + t).classList.add('on');
