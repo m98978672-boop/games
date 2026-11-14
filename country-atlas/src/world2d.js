@@ -1,12 +1,13 @@
-/* Мир 700 × 700 км в 2D: высота, биом, цвет. Чистый модуль — работает и в воркере, и в тестах.
-   Координаты: километры от центра, x — восток, y — север. Море — высота ниже 0. */
+/* Мир 7000 × 7000 км в 2D: высота, биом, цвет. Чистый модуль — работает и в воркере, и в тестах.
+   Координаты: километры от центра, x — восток, y — север. Море — высота ниже 0.
+   `lod` — шаг выборки в километрах: на обзоре мелкий рельеф гасится, чтобы не рябил. */
 
 export const WORLD2D = {
-  sizeKm: 700,
-  halfKm: 350,
+  sizeKm: 7000,
+  halfKm: 3500,
   seed: 424242,
   seaLevel: 0,
-  maxHeight: 2900
+  maxHeight: 4800
 };
 
 /* ---------- детерминированный шум ---------- */
@@ -50,36 +51,38 @@ const smoothstep = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b
 
 /* ---------- высота в метрах ---------- */
 /* Карта читается по четвертям: юго-запад — море, северо-восток — горы, север — тайга
-   (чек-лист §37). Суша «поднимается» по диагонали SW → NE. */
-export function heightKm(x, y) {
-  const cont = fbm(x * 0.0038, y * 0.0038, 101, 4);                  // береговая линия
-  const grad = (0.55 * x + 0.80 * y) / WORLD2D.halfKm;               // −1.35…+1.35, SW в минус
-  let h = 650 * grad + (cont - 0.5) * 700 + 320;                     // суша северо-востока
-  // горная цепь: только на северо-востоке, крупные хребты + мелкие отроги
-  // хребет идёт полосой по диагонали, а не заливает весь северо-восток
+   (чек-лист §37). Суша «поднимается» по диагонали SW → NE.
+   Крупные формы заданы в масштабе 7000 км, мелкие — в километрах и гаснут на обзоре (lod). */
+export function heightKm(x, y, lod = 0) {
+  const cont = fbm(x * 0.00038, y * 0.00038, 101, 4);                 // береговая линия, волна ~2600 км
+  const grad = (0.55 * x + 0.80 * y) / WORLD2D.halfKm;                // −1.35…+1.35, SW в минус
+  let h = 700 * grad + (cont - 0.5) * 1200 + 380;                     // суша северо-востока
+  // горная цепь: полоса по диагонали на северо-востоке
   const band = smoothstep(0.02, 0.38, grad) * (1 - smoothstep(0.85, 1.25, grad)) *
     smoothstep(-0.10, 0.55, x / WORLD2D.halfKm);
-  const plate = band * (0.30 + 0.70 * smoothstep(0.40, 0.75, fbm(x * 0.0024 + 13, y * 0.0024 - 7, 211, 3)));
-  const ridBig = ridgeFbm(x * 0.0045 + 31, y * 0.0045 - 17, 307, 3);
-  const ridSmall = ridgeFbm(x * 0.014 + 7, y * 0.014 + 11, 617, 3);
-  h += 1400 * ridBig * plate + 520 * ridSmall * plate;
-  // мелкая складка по всей суше, в горах заметнее
-  h += 90 * (fbm(x * 0.022, y * 0.022, 517, 3) - 0.5) * (0.3 + plate);
-  // рельеф ближнего плана: холмы 8 км и кочки 3 км — чтобы было что рассматривать в зуме;
-  // у самой воды он затухает, иначе берег превращается в «рябь»
-  const shore = smoothstep(0, 60, h + 30);
-  h += 70 * (fbm(x * 0.13, y * 0.13, 719, 3) - 0.5) * (0.55 + 0.9 * plate) * shore;
-  h += 22 * (fbm(x * 0.42, y * 0.42, 941, 2) - 0.5) * shore;
+  const plate = band * (0.30 + 0.70 * smoothstep(0.40, 0.75, fbm(x * 0.00024 + 13, y * 0.00024 - 7, 211, 3)));
+  const ridBig = ridgeFbm(x * 0.00045 + 31, y * 0.00045 - 17, 307, 3); // хребты через ~2000 км
+  const ridSmall = ridgeFbm(x * 0.0014 + 7, y * 0.0014 + 11, 617, 3);  // отроги через ~700 км
+  h += 4200 * ridBig * ridBig * plate + 1500 * ridSmall * ridSmall * plate;   // гребни, не плато
+  // средняя складка: 450 км, видна всегда
+  h += 160 * (fbm(x * 0.0022, y * 0.0022, 517, 3) - 0.5) * (0.3 + plate);
   // острова в юго-западном море
   if (grad < 0.05) {
-    const isl = smoothstep(0.62, 0.86, fbm(x * 0.0075 + 91, y * 0.0075 + 13, 823, 3));
-    h += 520 * isl * smoothstep(0.05, -0.5, grad);
+    const isl = smoothstep(0.62, 0.86, fbm(x * 0.00075 + 91, y * 0.00075 + 13, 823, 3));
+    h += 900 * isl * smoothstep(0.05, -0.5, grad);
   }
   // впадины и внутренние озёра
-  h -= 380 * smoothstep(0.55, 0.80, fbm(x * 0.0028 - 3, y * 0.0028 + 5, 409, 2));
-  // береговая полка: море плавно уходит на −180 м
+  h -= 620 * smoothstep(0.55, 0.80, fbm(x * 0.00028 - 3, y * 0.00028 + 5, 409, 2));
+  // мелкий рельеф: 50 / 17 / 5 км, гаснет при грубой выборке
+  const a50 = 1 - smoothstep(6, 14, lod);
+  const a17 = 1 - smoothstep(2, 5, lod);
+  const a5 = 1 - smoothstep(0.6, 1.6, lod);
+  h += 120 * a50 * (fbm(x * 0.02, y * 0.02, 719, 3) - 0.5) * (0.55 + 0.9 * plate);
+  h += 45 * a17 * (fbm(x * 0.06, y * 0.06, 941, 2) - 0.5);
+  h += 18 * a5 * (fbm(x * 0.20, y * 0.20, 1103, 2) - 0.5);
+  // береговая полка: море плавно уходит на −250 м
   if (h < 0) h *= 0.5;
-  return Math.max(-180, Math.min(WORLD2D.maxHeight, h));
+  return Math.max(-250, Math.min(WORLD2D.maxHeight, h));
 }
 
 /* ---------- влажность и тепло ---------- */
@@ -93,7 +96,7 @@ export function moistureKm(x, y) {
 export function temperature01(x, y, h) {
   const north = (y + WORLD2D.halfKm) / WORLD2D.sizeKm;   // 0 — юг, 1 — север
   const byNorth = 1 - 0.75 * north;                      // север холоднее: тайга
-  const byHeight = 1 - Math.min(1, Math.max(0, h) / 2200) * 0.60;
+  const byHeight = 1 - Math.min(1, Math.max(0, h) / 3200) * 0.60;
   return Math.max(0, Math.min(1, byNorth * byHeight));
 }
 
@@ -115,27 +118,29 @@ function mix(a, b, t) {
 export function colorFor(h, t, m, shade = 1) {
   let c;
   if (h < 0) {
-    c = h < -120 ? mix(C.deep, C.sea, (h + 180) / 60) : mix(C.sea, C.shelf, (h + 120) / 120);
+    c = h < -170 ? mix(C.deep, C.sea, (h + 250) / 80) : mix(C.sea, C.shelf, (h + 170) / 170);
     return [c[0] * shade, c[1] * shade, c[2] * shade];
   }
   if (h < 4) {
     c = mix(C.shallow, C.sand, h / 4);
-  } else if (h < 700) {
+  } else if (h < 1000) {
     // суша: степь → луг → лес по влаге, тайга по холоду; песок только у самой воды
     let green = mix(C.steppe, C.meadow, smoothstep(0.30, 0.46, m));
     green = mix(green, C.forest, smoothstep(0.50, 0.64, m));
     if (t < 0.42) green = mix(green, C.taiga, smoothstep(0.42, 0.18, t) * 0.85);
     c = h < 14 ? mix(C.sand, green, (h - 4) / 10) : green;
-    // камень проступает с высоты
-    c = mix(c, C.rock, smoothstep(460, 760, h) * 0.55);
-  } else if (h < 1200) {
-    c = mix(m > 0.5 ? C.forest : C.rock, C.rock, (h - 700) / 500);
-  } else if (h < 1750) {
-    c = mix(C.rock, C.snow, smoothstep(1250, 1750, h) * 0.6);
+    c = mix(c, C.rock, smoothstep(760, 1150, h) * 0.5);
+  } else if (h < 2500) {
+    // выше леса: зелёный склон долго держится, камень — только у самых гребней
+    let high = mix(C.forest, C.taiga, smoothstep(0.55, 0.2, t));
+    high = mix(high, C.meadow, smoothstep(0.45, 0.25, m) * 0.3);
+    c = mix(high, C.rock, smoothstep(1750, 2500, h) * 0.85);
+  } else if (h < 2900) {
+    c = mix(C.rock, C.snow, smoothstep(2500, 2900, h) * 0.75);
   } else if (t < 0.3) {
     c = mix(C.snow, C.ice, 0.35);
   } else {
-    c = mix(C.rock, C.snow, 0.72 + 0.28 * Math.min(1, (h - 1750) / 500));
+    c = mix(C.rock, C.snow, 0.72 + 0.28 * Math.min(1, (h - 2600) / 800));
   }
   return [c[0] * shade, c[1] * shade, c[2] * shade];
 }
@@ -146,25 +151,56 @@ export function colorAtKm(x, y) {
 }
 
 /* ---------- поселения: детерминированный список на суше ---------- */
-const TOWN_NAMES = [
-  'Валдор', 'Скархейм', 'Дорн', 'Фьорд-Скар', 'Яр-Вал', 'Литваль', 'Остров', 'Кемь', 'Мшара',
-  'Тихвин', 'Заславль', 'Белояр', 'Городец', 'Крутояр', 'Соль-Вал', 'Ветлуга', 'Красный Яр', 'Межа'
-];
+/* Имена собираются из морфем §17: два набора (северный и южный) дают 64 уникальных названия. */
+const NAME_A = ['Вал', 'Скар', 'Дор', 'Яр', 'Лит', 'Ост', 'Кем', 'Мшар', 'Тихв', 'Заслав', 'Бел',
+  'Город', 'Крут', 'Соль', 'Ветл', 'Красн', 'Меж', 'Светл', 'Черн', 'Глух', 'Бор', 'Кам', 'Лес', 'Реч'];
+const NAME_B = ['град', 'поль', 'ово', 'ск', 'хейм', 'фьорд', 'яр', 'овка', 'ец', 'ино', 'ань', 'ич'];
+/* имя n-го поселения: перестановка 24 × 12 пар морфем, без повторов */
+const NAME_SPAN = NAME_A.length * NAME_B.length;
+function townName(n) {
+  const k = (n * 137) % NAME_SPAN;
+  return NAME_A[k % NAME_A.length] + NAME_B[Math.floor(k / NAME_A.length) % NAME_B.length];
+}
 
-export function settlements(count = 18) {
+export const TOWN_COUNT = 120;
+export const TOWN_MIN_GAP_KM = 90;
+
+export function settlements(count = TOWN_COUNT) {
   const out = [];
   let seed = 991;
   const rnd = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   let guard = 0;
-  while (out.length < count && guard++ < 5000) {
-    const x = (rnd() * 2 - 1) * (WORLD2D.halfKm - 20);
-    const y = (rnd() * 2 - 1) * (WORLD2D.halfKm - 20);
+  const edge = WORLD2D.halfKm - 250;
+  while (out.length < count && guard++ < 90000) {
+    const x = (rnd() * 2 - 1) * edge;
+    const y = (rnd() * 2 - 1) * edge;
     const h = heightKm(x, y);
-    if (h < 12 || h > 620) continue;
-    if (out.some((s) => Math.hypot(s.x - x, s.y - y) < 45)) continue;
-    out.push({ x, y, h, name: TOWN_NAMES[out.length] || ('п.' + out.length) });
+    if (h < 12 || h > 1200) continue;
+    if (out.some((s) => Math.hypot(s.x - x, s.y - y) < TOWN_MIN_GAP_KM)) continue;
+    out.push({ x, y, h, name: townName(out.length) });
   }
   return out;
+}
+
+/* F-108: столица — ближайшее к центру мира поселение, дальше farthest-point до hubCount. */
+export function rankSettlements(towns, hubCount = 10) {
+  let capital = 0;
+  for (let i = 1; i < towns.length; i++) {
+    if (Math.hypot(towns[i].x, towns[i].y) < Math.hypot(towns[capital].x, towns[capital].y)) capital = i;
+  }
+  const hubs = [capital];
+  while (hubs.length < Math.min(hubCount, towns.length)) {
+    let best = -1, bestD = -1;
+    for (let i = 0; i < towns.length; i++) {
+      if (hubs.includes(i)) continue;
+      let d = Infinity;
+      for (const h of hubs) d = Math.min(d, Math.hypot(towns[i].x - towns[h].x, towns[i].y - towns[h].y));
+      if (d > bestD) { bestD = d; best = i; }
+    }
+    if (best === -1) break;
+    hubs.push(best);
+  }
+  return { capital, hubs, hubSet: new Set(hubs) };
 }
 
 /* ---------- карта в пиксели ---------- */
@@ -204,8 +240,8 @@ export function renderBox(x0, y0, wKm, hKm, width, height, out) {
       if (h > 0) {
         const dzdx = (hh[k + 1] - hh[k - 1]) / (2 * dxKm);
         const dzdy = (hh[k + W] - hh[k - W]) / (2 * dyKm);
-        shade = 1 + (dzdx * Lx + dzdy * Ly) * 0.012;
-        shade = Math.max(0.55, Math.min(1.45, shade));
+        shade = 1 + (dzdx * Lx + dzdy * Ly) * 0.007;
+        shade = Math.max(0.68, Math.min(1.32, shade));
       }
       const [r, g, b] = colorFor(h, tt[k], mm[k], shade);
       const o = (j * width + i) * 4;

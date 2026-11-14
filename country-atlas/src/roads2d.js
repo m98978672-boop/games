@@ -1,8 +1,8 @@
 /* Дорожная сеть 2D по §8: каркас (MST) → избыточность → A* по сетке → сглаживание.
    Всё детерминировано: ни одного Math.random, только сид мира. */
-import { WORLD2D, heightKm, moistureKm, settlements } from './world2d.js';
+import { WORLD2D, heightKm, moistureKm, settlements, rankSettlements } from './world2d.js';
 
-export const CELL_KM = 4;                       // шаг сетки трассировки
+export const CELL_KM = 20;                      // шаг сетки трассировки (мир 7000 км)
 export const N = Math.round(WORLD2D.sizeKm / CELL_KM) + 1;   // 176 клеток
 
 /* Классы дорог §8.1; U (городские) появятся вместе с улицами §9.3. */
@@ -10,7 +10,8 @@ export const ROAD_CLASS = {
   M: { id: 'M', name: 'Автомагистраль', widthM: 21, lanes: 4, speed: 110, tone: [255, 214, 110], dash: null },
   R: { id: 'R', name: 'Региональная', widthM: 14, lanes: 2, speed: 90, tone: [246, 240, 226], dash: null },
   L: { id: 'L', name: 'Местная', widthM: 8, lanes: 2, speed: 60, tone: [214, 200, 172], dash: null },
-  G: { id: 'G', name: 'Грунтовая', widthM: 5, lanes: 1.5, speed: 30, tone: [176, 146, 104], dash: [4, 3] }
+  G: { id: 'G', name: 'Грунтовая', widthM: 5, lanes: 1.5, speed: 30, tone: [176, 146, 104], dash: [4, 3] },
+  F: { id: 'F', name: 'Паром', widthM: 6, lanes: 1, speed: 20, tone: [118, 190, 232], dash: [3, 4], ferry: true }
 };
 
 export const kmToCell = (km) => (km + WORLD2D.halfKm) / CELL_KM;
@@ -25,7 +26,7 @@ export const cellOf = (x, y) => {
    slope — метры на метр, water — клетка ниже уровня моря (мост), forest — лес (m > 0.55). */
 export function costAt(h, slope, water, forest, nearTown, nearRoad) {
   const s = 4 * slope;
-  const v = 1 + 6 * s * s + 4 * water + 3 * forest - 0.8 * nearTown - 0.9 * nearRoad;
+  const v = 1 + 6 * s * s + 8 * water + 3 * forest - 0.8 * nearTown - 0.9 * nearRoad;
   return Math.max(0.25, v);
 }
 
@@ -34,18 +35,27 @@ export function buildField() {
   const forest = new Uint8Array(N * N);
   const water = new Uint8Array(N * N);
   const slope = new Float32Array(N * N);
+  const lod = CELL_KM;
   const nearTown = new Uint8Array(N * N);
-  const towns = settlements(18);
+  const towns = settlements();
 
   for (let j = 0; j < N; j++) {
     const y = cellToKm(j);
     for (let i = 0; i < N; i++) {
       const x = cellToKm(i);
       const k = i + j * N;
-      const h = heightKm(x, y);
+      const h = heightKm(x, y, lod);
       height[k] = h;
-      if (h < 0) water[k] = 1;
-      else if (h > 40 && h < 700 && moistureKm(x, y) > 0.55) forest[k] = 1;
+      // клетка считается водой, если вода есть в любом её углу: дорога не срезает залив
+      let wet = h < 0;
+      if (!wet) {
+        const q = CELL_KM * 0.4;
+        for (const [dx, dy] of [[-q, -q], [q, -q], [-q, q], [q, q]]) {
+          if (heightKm(x + dx, y + dy, lod) < 0) { wet = true; break; }
+        }
+      }
+      if (wet) water[k] = 1;
+      else if (h > 40 && h < 900 && moistureKm(x, y) > 0.55) forest[k] = 1;
     }
   }
   for (let j = 0; j < N; j++) {
@@ -65,7 +75,12 @@ export function buildField() {
       }
     }
   }
-  return { height, forest, water, slope, nearTown, nearRoad: new Uint8Array(N * N), towns };
+  // базовая стоимость клетки считается один раз: дальше A* только прибавляет скидку за дорогу
+  const base = new Float32Array(N * N);
+  for (let k = 0; k < N * N; k++) {
+    base[k] = water[k] ? Infinity : costAt(height[k], slope[k], 0, forest[k], nearTown[k], 0);
+  }
+  return { height, forest, water, slope, nearTown, base, nearRoad: new Uint8Array(N * N), towns };
 }
 
 /* ---------- A* по сетке ---------- */
@@ -105,6 +120,12 @@ class Heap {
 
 const NB = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
 
+/* Вода и суша определяются на том же шаге выборки, что и поле A*: иначе дорога «увидит»
+   другой берег, чем сетка трассировки (F-109). */
+export const WATER_LOD = CELL_KM;
+
+export const HEURISTIC_WEIGHT = 1.8;   // взвешенный A*: в разы меньше раскрытий, путь чуть длиннее
+
 export function trace(field, from, to, dirPenalty = 0) {
   const start = cellOf(from.x, from.y), goal = cellOf(to.x, to.y);
   const g = new Float32Array(N * N).fill(Infinity);
@@ -134,13 +155,15 @@ export function trace(field, from, to, dirPenalty = 0) {
       const diag = di !== 0 && dj !== 0;
       const dist = diag ? CELL_KM * Math.SQRT2 : CELL_KM;
       const slope = Math.abs(field.height[kk] - hHere) / (dist * 1000);
+      if (field.water[kk]) continue;          // по морю не едем: там паром (F-109)
+      if (diag && (field.water[i + di + j * N] || field.water[i + (j + dj) * N])) continue;  // не срезаем угол залива
       const extra = field.nearRoad[kk] ? 1 : 0;
       const c = dist * costAt(field.height[kk], slope, field.water[kk], field.forest[kk], field.nearTown[kk], extra);
       const cand = g[k] + c + (dirPenalty ? dirPenalty * dist * extra : 0);
       if (cand < g[kk]) {
         g[kk] = cand;
         came[kk] = k;
-        heap.push(cand + hEst(kk), kk);
+        heap.push(cand + HEURISTIC_WEIGHT * hEst(kk), kk);
       }
     }
   }
@@ -191,6 +214,61 @@ export function simplify(pts, tol = 0.8) {
   return left.slice(0, -1).concat(right);
 }
 
+/* Хорда не пересекает воду: проверяем каждый километр (F-109). */
+export function chordOnLand(a, b) {
+  const len = Math.hypot(b.x - a.x, b.y - a.y);
+  const steps = Math.max(1, Math.ceil(len / 2));
+  for (let k = 0; k <= steps; k++) {
+    const t = k / steps;
+    if (heightKm(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, WATER_LOD) < 0) return false;
+  }
+  return true;
+}
+
+/* Упрощение с запретом «срезать» через воду: точка выбрасывается, только если хорда по суше
+   и отклонение выброшенных точек не больше tol. Точки в воде выбрасываются заранее. */
+export function simplifySafe(pts, tol = 2) {
+  const land = pts.filter((p) => heightKm(p.x, p.y, WATER_LOD) >= 0);
+  const src = land.length >= 2 ? land : pts.slice(0, 2);
+  if (src.length < 3) return src.slice();
+  const out = [src[0]];
+  let i = 0;
+  while (i < src.length - 1) {
+    let j = i + 1;
+    if (!chordOnLand(src[i], src[j])) { i++; continue; }
+    while (j + 1 < src.length) {
+      const a = src[i], b = src[j + 1];
+      if (!chordOnLand(a, b)) break;
+      let ok = true;
+      for (let k = i + 1; k < j + 1; k++) {
+        if (distToLine(src[k], a, b) > tol) { ok = false; break; }
+      }
+      if (!ok) break;
+      j++;
+    }
+    out.push(src[j]);
+    i = j;
+  }
+  const last = src[src.length - 1];
+  if (out[out.length - 1] !== last && chordOnLand(out[out.length - 1], last)) out.push(last);
+  return out;
+}
+
+/* Дорога не режет воду: мокрую хорду делим пополам, пока куски не станут сухими.
+   Остаток короче 2 км — это и есть мост (F-105). */
+export function repairLine(pts) {
+  if (pts.length < 2) return pts.slice();
+  const out = [pts[0]];
+  const pushSafe = (a, b, depth) => {
+    if (chordOnLand(a, b) || depth > 12) { out.push(b); return; }
+    const m = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    pushSafe(a, m, depth + 1);
+    pushSafe(m, b, depth + 1);
+  };
+  for (let i = 1; i < pts.length; i++) pushSafe(out[out.length - 1], pts[i], 0);
+  return out;
+}
+
 export const polyLength = (pts) => {
   let s = 0;
   for (let i = 1; i < pts.length; i++) s += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
@@ -228,25 +306,9 @@ function mst(nodes, cost) {
   return edges;
 }
 
-export function hubsOf(towns) {
-  // столица — ближайшее к центру мира поселение; дальше — самые удалённые друг от друга
-  let cap = 0;
-  for (let i = 1; i < towns.length; i++) {
-    if (Math.hypot(towns[i].x, towns[i].y) < Math.hypot(towns[cap].x, towns[cap].y)) cap = i;
-  }
-  const hubs = [cap];
-  while (hubs.length < 7) {
-    let best = -1, bestD = -1;
-    for (let i = 0; i < towns.length; i++) {
-      if (hubs.includes(i)) continue;
-      let d = Infinity;
-      for (const h of hubs) d = Math.min(d, Math.hypot(towns[i].x - towns[h].x, towns[i].y - towns[h].y));
-      if (d > bestD) { bestD = d; best = i; }
-    }
-    if (best === -1) break;
-    hubs.push(best);
-  }
-  return { capital: cap, hubs };
+export function hubsOf(towns, hubCount = 10) {
+  const r = rankSettlements(towns, hubCount);
+  return { capital: r.capital, hubs: r.hubs };
 }
 
 /* ---------- сборка сети ---------- */
@@ -255,7 +317,7 @@ export function hubsOf(towns) {
 export function buildRoads() {
   const field = buildField();
   const towns = field.towns;
-  const { capital, hubs } = hubsOf(towns);
+  const { capital, hubs } = hubsOf(towns, 10);
   const isHub = new Set(hubs);
   const edges = [];
   const key = (a, b) => (a < b ? a + '-' + b : b + '-' + a);
@@ -268,7 +330,7 @@ export function buildRoads() {
     return d * (1 + 6 * Math.pow(climb * 4, 2));
   };
 
-  const push = (i, j, cls, maxKm = 420) => {
+  const push = (i, j, cls, maxKm = 900) => {
     const k = key(i, j);
     const d = Math.hypot(towns[i].x - towns[j].x, towns[i].y - towns[j].y);
     if (i === j || have.has(k) || d > maxKm) return;
@@ -279,20 +341,20 @@ export function buildRoads() {
   // 1. каркас страны: хаб ↔ хаб
   const hubList = hubs.slice();
   for (const e of mst(hubList, (p, q) => cost(hubList.indexOf(p), hubList.indexOf(q)))) {
-    push(hubList[e.a], hubList[e.b], 'M', 700);
+    push(hubList[e.a], hubList[e.b], 'M', 4500);
   }
   // 2. избыточность: у каждого хаба — второй короткий выход
   for (const i of hubs) {
     const others = hubs.filter((h) => h !== i).sort((p, q) => cost(i, p) - cost(i, q));
     for (const j of others) {
-      if (!have.has(key(i, j))) { push(i, j, 'R', 520); break; }
+      if (!have.has(key(i, j))) { push(i, j, 'R', 2600); break; }
     }
   }
   // 3. каждое поселение — к ближайшему хабу
   for (let i = 0; i < towns.length; i++) {
     if (isHub.has(i)) continue;
     const near = hubs.slice().sort((p, q) => cost(i, p) - cost(i, q));
-    push(i, near[0], 'R', 460);
+    push(i, near[0], 'R', 1600);
   }
   // 4. местные связи: поселение ↔ ближайшее поселение
   for (let i = 0; i < towns.length; i++) {
@@ -303,7 +365,7 @@ export function buildRoads() {
       const c = cost(i, j);
       if (c < bestC) { bestC = c; best = j; }
     }
-    if (best !== -1) push(i, best, 'L', 380);
+    if (best !== -1) push(i, best, 'L', 900);
   }
   // 5. грунтовый второй выход — там, где связи мало
   for (let i = 0; i < towns.length; i++) {
@@ -315,28 +377,52 @@ export function buildRoads() {
       const c = cost(i, j);
       if (c < bestC) { bestC = c; best = j; }
     }
-    if (best !== -1) push(i, best, 'G', 300);
+    if (best !== -1) push(i, best, 'G', 700);
   }
 
   // 6. трассировка по рельефу, с притяжением к уже проложенным дорогам
   const out = [];
+  const addFerry = (i, j, cls = 'F') => {
+    const a = towns[i], b = towns[j];
+    const line = [ { x: a.x, y: a.y }, { x: b.x, y: b.y } ];
+    const len = Math.hypot(b.x - a.x, b.y - a.y);
+    out.push({
+      id: cls + '-' + out.length, cls, from: i, to: j,
+      fromName: a.name, toName: b.name,
+      points: line.map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]),
+      lengthKm: Math.round(len * 10) / 10,
+      straightKm: Math.round(len),
+      bridges: 0, bridgeKm: 0, ferry: true
+    });
+  };
+
   for (const e of edges) {
     const from = towns[e.a], to = towns[e.b];
     const raw = trace(field, from, to);
-    if (!raw) continue;
+    if (!raw) { addFerry(e.a, e.b); continue; }
     // концы ставим точно в поселения, а не в центры клеток
     raw[0] = { x: from.x, y: from.y };
     raw[raw.length - 1] = { x: to.x, y: to.y };
-    const line = simplify(chaikin(raw, 2), 0.9);
-    line[0] = { x: from.x, y: from.y };
-    line[line.length - 1] = { x: to.x, y: to.y };
+    const line = simplifySafe(chaikin(raw, 1), 2);
+    // концы — точно в поселениях, если до них можно дойти по суше
+    const head = { x: from.x, y: from.y }, tail = { x: to.x, y: to.y };
+    line.unshift(head);
+    line.push(tail);
+    const fixed = repairLine(line);
     let bridges = 0, bridgeKm = 0;
-    for (let i = 1; i < line.length; i++) {
-      const p = line[i - 1], q = line[i];
-      const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
-      if (heightKm(mid.x, mid.y) < 0) {
+    for (let i = 1; i < fixed.length; i++) {
+      const p = fixed[i - 1], q = fixed[i];
+      const seg = Math.hypot(q.x - p.x, q.y - p.y);
+      const steps = Math.max(1, Math.ceil(seg / 2));
+      let wetSeg = 0;
+      for (let k = 0; k < steps; k++) {
+        const t = (k + 0.5) / steps;
+        const x = p.x + (q.x - p.x) * t, y = p.y + (q.y - p.y) * t;
+        if (heightKm(x, y, WATER_LOD) < 0) wetSeg++;
+      }
+      if (wetSeg) {
         bridges++;
-        bridgeKm += Math.hypot(q.x - p.x, q.y - p.y);
+        bridgeKm += seg * (wetSeg / steps);
       }
     }
     // помечаем клетки рядом с трассой — следующие дороги идут вдоль
@@ -349,14 +435,14 @@ export function buildRoads() {
         }
       }
     }
-    const len = polyLength(line);
+    const len = polyLength(fixed);
     if (len < 1) continue;
     out.push({
       id: e.cls + '-' + out.length,
       cls: e.cls,
       from: e.a, to: e.b,
       fromName: from.name, toName: to.name,
-      points: line.map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]),
+      points: fixed.map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]),
       lengthKm: Math.round(len * 10) / 10,
       straightKm: Math.round(Math.hypot(to.x - from.x, to.y - from.y)),
       bridges,
@@ -378,19 +464,20 @@ export function buildRoads() {
       }
       if (best === -1) continue;
       const raw = trace(field, towns[i], towns[best]);
-      if (!raw) continue;
+      if (!raw) { addFerry(i, best); have.add(key(i, best)); degree[i]++; degree[best]++; continue; }
       raw[0] = { x: towns[i].x, y: towns[i].y };
       raw[raw.length - 1] = { x: towns[best].x, y: towns[best].y };
-      const line = simplify(chaikin(raw, 2), 0.9);
-      line[0] = { x: towns[i].x, y: towns[i].y };
-      line[line.length - 1] = { x: towns[best].x, y: towns[best].y };
+      const line = simplifySafe(chaikin(raw, 1), 2);
+      line.unshift({ x: towns[i].x, y: towns[i].y });
+      line.push({ x: towns[best].x, y: towns[best].y });
+      const fixed = repairLine(line);
       if (line.length < 2) continue;
       have.add(key(i, best));
       out.push({
         id: 'G-' + out.length, cls: 'G', from: i, to: best,
         fromName: towns[i].name, toName: towns[best].name,
-        points: line.map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]),
-        lengthKm: Math.round(polyLength(line) * 10) / 10,
+        points: fixed.map((p) => [Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10]),
+        lengthKm: Math.round(polyLength(fixed) * 10) / 10,
         straightKm: Math.round(Math.hypot(towns[best].x - towns[i].x, towns[best].y - towns[i].y)),
         bridges: 0, bridgeKm: 0
       });
