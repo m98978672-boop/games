@@ -352,6 +352,120 @@ const GOALS = {
   }
 };
 
+
+/* ------------------------------------------------------------------ *
+ * 2a. Теги целей: какие пулы применимы
+ * ------------------------------------------------------------------ */
+const GOAL_TAGS = {
+  commute: ["city","road","weather","social","health","money"],
+  work:    ["work","city","weather","social","health","money"],
+  shop:    ["city","money","weather","social","health"],
+  eat:     ["home","city","social","health","money"],
+  rest:    ["home","city","social","health"],
+  study:   ["city","work","social","weather","health"],
+  repair:  ["work","weather","road","health"],
+  service: ["city","work","road","weather","health"],
+  deliver: ["city","road","weather","social","money"],
+  haul:    ["road","work","weather","money","health"],
+  sail:    ["sea","weather","health","money"],
+  harvest: ["field","weather","work","money","health"],
+  patrol:  ["city","road","weather","social","health"],
+  travel:  ["city","weather","social","money","health"],
+  fly:     ["air","weather","health","work"],
+  celebrate:["home","social","weather","money"]
+};
+
+
+/* Тема развилки выводится из самого вопроса — так концовки получаются «по делу». */
+const TAG_RULES = [
+  [/очеред|опазд|пробк|авари|перекры|задерж|проверк|досмотр|красн/i, "delay"],
+  [/дожд|снег|ветер|туман|жар|мороз|гроз|ливн/i, "weather"],
+  [/сломал|поломк|не хватило|нет нужн|забыл|инструмент|детал|материал|станок/i, "work"],
+  [/встрет|знаком|ребён|сосед|коллег|друг|пассажир|помо/i, "social"],
+  [/денег|скидк|подорож|штраф|чаев|касс|цен/i, "money"],
+  [/голов|ног|устал|травм|бол|плохо/i, "health"],
+  [/ветер|волн|шторм|катер|судн|море|сет|причал/i, "sea"],
+  [/дорог|полос|объезд|светофор|шины|фур|трасс/i, "road"]
+];
+function tagFor(question) {
+  for (const [re, tag] of TAG_RULES) if (re.test(question)) return tag;
+  return "goal";
+}
+
+/* ------------------------------------------------------------------ *
+ * 2b. Общие развилки: подходят многим целям (тег + вопрос + да/нет)
+ * ------------------------------------------------------------------ */
+const GENERIC_COMPS = [
+  ["any",   "пошёл дождь?",                        "вернулся за курткой", "дошёл под козырьками"],
+  ["any",   "поднялся сильный ветер?",             "придержал дверь и ускорился", "не обратил внимания"],
+  ["any",   "встретил знакомого?",                 "поговорил пять минут", "кивнул и пошёл дальше"],
+  ["any",   "зазвонил телефон?",                   "ответил и сбился с плана", "не взял трубку"],
+  ["any",   "забыл дома нужную вещь?",             "вернулся и потерял 10 минут", "обошёлся без неё"],
+  ["any",   "почувствовал усталость?",             "сел на скамейку передохнуть", "стиснул зубы и пошёл"],
+  ["any",   "нашёл на дороге мелочь?",             "поднял и положил в карман", "прошёл мимо"],
+  ["any",   "на улице перекрыли проход?",          "пошёл в обход через двор", "пролез под лентой"],
+  ["city",  "на переходе красный дольше обычного?", "ждал и опоздал на две минуты", "перебежал на мигающий"],
+  ["city",  "на площади ярмарка?",                 "заглянул и потратил 200 ₽", "обошёл стороной"],
+  ["city",  "во дворе ремонт?",                    "пошёл другой дорогой", "перешагнул через трубы"],
+  ["road",  "на дороге пробка?",                   "поехал объездом", "стоял и слушал радио"],
+  ["road",  "сломался светофор?",                  "перешёл по правилу «помеха справа»", "дождался просвета"],
+  ["road",  "проверка документов?",                "показал всё и поехал", "искал документы пять минут"],
+  ["weather","начался снегопад?",                  "сбавил темп", "продолжил как обычно"],
+  ["weather","туман до 200 метров?",               "двигался медленнее, всматриваясь", "не сбавил хода"],
+  ["weather","жара выше 30?",                      "купил воды", "терпел"],
+  ["work",  "начальник попросил задержаться?",     "остался на час", "сослался на дела"],
+  ["work",  "сломался инструмент?",                "взял запасной", "чинил на месте"],
+  ["work",  "не хватило материалов?",              "сходил на склад", "работал с тем, что есть"],
+  ["health","разболелась голова?",                 "выпил таблетку", "дотерпел до конца"],
+  ["health","подвернул ногу?",                    "прихрамывая дошёл", "вызвал такси"],
+  ["money", "подорожал проезд?",                   "пошёл пешком", "заплатил"],
+  ["money", "нашёл скидку 30 %?",                  "взял два", "прошёл мимо"],
+  ["money", "не хватило денег?",                   "занял у знакомого", "отложил покупку"],
+  ["social","рядом заплакал ребёнок?",             "помог найти маму", "прошёл мимо"],
+  ["social","кто-то попросил дорогу?",             "показал и проводил", "махнул рукой"],
+  ["sea",   "поднялась волна?",                    "лёг на обратный курс", "держался"],
+  ["field", "поле размокло?",                      "ждал два часа", "работал в грязи"],
+  ["air",   "сдвинулся ветер?",                    "запросил другую полосу", "продолжил заход"]
+];
+
+/* ------------------------------------------------------------------ *
+ * 2c. Общие концовки: текст + базовый вес + тег-триггер
+ * ------------------------------------------------------------------ */
+const GENERIC_ENDS = [
+  ["справился без потерь",                         3.0, null],
+  ["опоздал на восемь минут",                      1.2, "delay"],
+  ["потратил лишние 300 ₽",                        1.0, "money"],
+  ["устал сильнее обычного",                       0.8, "health"],
+  ["познакомился с кем-то новым",                  0.6, "social"],
+  ["помог человеку и получил благодарность",       0.5, "social"],
+  ["вернулся домой и всё отложил",                 0.7, "any"],
+  ["сделал работу лучше, чем ожидал",              0.8, null],
+  ["получил замечание от старшего",                0.6, "work"],
+  ["нашёл короткую дорогу",                        0.5, "road"],
+  ["промок до нитки",                              0.5, "weather"],
+  ["заработал сверху 500 ₽",                       0.6, "money"]
+];
+
+/* ------------------------------------------------------------------ *
+ * 2d. Общие необязательные шаги (вставляются случайно)
+ * ------------------------------------------------------------------ */
+const GENERIC_OPTS = [
+  ["any",   "проверил телефон и ответил на сообщение"],
+  ["any",   "зашёл в уборную и умылся"],
+  ["any",   "купил кофе в автомате"],
+  ["any",   "перекинулся парой слов с соседом"],
+  ["any",   "посмотрел на часы и прибавил шагу"],
+  ["any",   "поправил одежду перед входом"],
+  ["city",  "обошёл лужу по бордюру"],
+  ["city",  "подождал, пока проедет трамвай"],
+  ["road",  "проверил давление в шинах"],
+  ["work",  "расписался во втором журнале"],
+  ["work",  "переставил инструмент на место"],
+  ["home",  "полил цветок на подоконнике"],
+  ["social","позвонил родственнику"],
+  ["weather","стряхнул снег с плеч"]
+];
+
 /* ------------------------------------------------------------------ *
  * 3. Детерминированный ГПСЧ
  * ------------------------------------------------------------------ */
@@ -386,80 +500,57 @@ function fill(template, ctx) {
   });
 }
 
-function buildRoutine(actor, goalId, window, variant) {
-  const goal = GOALS[goalId];
-  const key = `${actor.id}|${goalId}|${window}|${variant}`;
-  const rnd = mulberry32(hashString(key));
-
+function applyVariant(actor, variant) {
   const ctx = {
-    home: actor.home,
-    work: actor.work,
-    transit: actor.transit,
-    stop: actor.stop,
-    tool: actor.tool,
-    good: actor.good,
-    gap: String(8 + Math.floor(rnd() * 25))
+    home: actor.home, work: actor.work, transit: actor.transit,
+    stop: actor.stop, tool: actor.tool, good: actor.good
   };
   if (variant === 1) ctx.stop = "соседняя остановка";
-  if (variant === 2) ctx.transit = "попутная машина";
-  if (variant === 3) ctx.work = actor.work + " (филиал)";
-
-  // шаги: 4–6, всегда с началом и концом
-  const stepCount = 3 + Math.floor(rnd() * 3);
-  const steps = goal.steps.slice(0, stepCount).map((s) => fill(s, ctx));
-
-  // ветки: 2–4 уникальные развилки из пула цели
-  const pool = goal.comps.slice();
-  const branches = [];
-  const branchCount = 2 + Math.floor(rnd() * 3);
-  while (branches.length < branchCount && pool.length) {
-    const idx = Math.floor(rnd() * pool.length);
-    const [q, yes, no] = pool.splice(idx, 1)[0];
-    branches.push({ q: fill(q, ctx), y: fill(yes, ctx), n: fill(no, ctx) });
-  }
-
-  // концы: успех + 1–3 варианта, сумма вероятностей = 1
-  const endings = [];
-  const successP = 0.5 + rnd() * 0.25;
-  endings.push({ t: fill(goal.ends[0], ctx), p: Number(successP.toFixed(2)) });
-  const extra = 1 + Math.floor(rnd() * 3);
-  const rest = 1 - successP;
-  const picks = goal.ends.slice(1).sort(() => rnd() - 0.5).slice(0, extra);
-  picks.forEach((t, i) => {
-    const p = i === picks.length - 1
-      ? rest - Number((rest / picks.length).toFixed(2)) * (picks.length - 1)
-      : Number((rest / picks.length).toFixed(2));
-    endings.push({ t: fill(t, ctx), p: Number(p.toFixed(2)) });
-  });
-
-  return {
-    id: "",
-    actor: actor.name,
-    actorId: actor.id,
-    goal: goal.name,
-    goalId,
-    window,
-    start: `${window}: ${actor.name.toLowerCase()} — ${fill(goal.steps[0], ctx)}`,
-    steps,
-    branches,
-    endings
-  };
+  if (variant === 2) ctx.work = actor.work + " (филиал)";
+  if (variant === 3) ctx.stop = actor.stop + " (дальний конец)";
+  if (variant === 4) ctx.tool = actor.tool + " (запасной)";
+  return ctx;
 }
 
-/* ------------------------------------------------------------------ *
- * 5. Перебор комбинаций (детерминированный порядок)
- * ------------------------------------------------------------------ */
+/* Пул — общий для всех рутин одной цели: подстановка мест делается в раннере.
+   Это уменьшает файл в двадцать раз и даёт одинаковое поведение у всех агентов. */
+const POOLS = {};
+for (const [goalId, goal] of Object.entries(GOALS)) {
+  const tags = GOAL_TAGS[goalId] || ["any"];
+  const opt = [
+    ...(goal.opts || []),
+    ...GENERIC_OPTS.filter(([tag]) => tag === "any" || tags.includes(tag)).map(([, t]) => t)
+  ].filter((x, i, a) => a.indexOf(x) === i);
+  const comps = [
+    ...(goal.comps || []).map(([q, y, n]) => [tagFor(q), q, y, n]),
+    ...GENERIC_COMPS.filter(([tag]) => tag === "any" || tags.includes(tag))
+  ];
+  const ends = [
+    ...(goal.ends || []).map((t, i) => [t, i === 0 ? 3.0 : 0.9, null]),
+    ...GENERIC_ENDS
+  ];
+  POOLS[goalId] = { name: goal.name, steps: goal.steps, opt, comps, ends };
+}
+
+/* Перебор: 1008 случаев. Каждый случай — свой алгоритм, собранный раннером. */
 const routines = [];
 let seq = 0;
-for (let variant = 0; variant < 6 && routines.length < TARGET; variant++) {
+outer:
+for (let variant = 0; variant < 8; variant++) {
   for (const actor of ACTORS) {
     for (const goalId of actor.goals) {
       for (const window of GOALS[goalId].windows) {
-        if (routines.length >= TARGET) break;
-        const r = buildRoutine(actor, goalId, window, variant);
+        if (routines.length >= TARGET) break outer;
         seq += 1;
-        r.id = "R-" + String(seq).padStart(4, "0");
-        routines.push(r);
+        const rnd = mulberry32(hashString(`${actor.id}|${goalId}|${window}|${variant}`));
+        routines.push({
+          id: "R-" + String(seq).padStart(4, "0"),
+          actorId: actor.id,
+          goalId,
+          window,
+          variant,
+          core: 3 + Math.floor(rnd() * 3)
+        });
       }
     }
   }
@@ -470,30 +561,51 @@ if (routines.length < TARGET) {
   process.exit(1);
 }
 
-/* ------------------------------------------------------------------ *
- * 6. Запись data/routines.js
- * ------------------------------------------------------------------ */
+/* ---------- запись data/routines.js ---------- */
+const ACTORS_OUT = {};
+for (const a of ACTORS) {
+  ACTORS_OUT[a.id] = {
+    name: a.name, home: a.home, work: a.work, transit: a.transit,
+    stop: a.stop, tool: a.tool, good: a.good
+  };
+}
+
 const jsHeader = `// Сгенерировано tools/gen-routines.mjs — не править руками.
-// ${routines.length} алгоритмов поведения: 1 начало → x концов.
-// Формат: { id, actor, actorId, goal, goalId, window, start, steps[], branches[{q,y,n}], endings[{t,p}] }
-export const ROUTINES = `;
-const js = jsHeader + JSON.stringify(routines) + ";\n\nexport default ROUTINES;\n";
+//
+// ${routines.length} случаев поведения: «1 начало → x концов».
+// Каждый случай при исполнении получает СВОЙ алгоритм: раннер (src/sim/routine-runner.js)
+// случайно, но детерминированно выбирает необязательные шаги, 2–4 развилки из пула
+// и концовку по итогам этих развилок.
+//
+// Формат:
+//   ACTORS[id]   = { name, home, work, transit, stop, tool, good }
+//   POOLS[goal]  = { name, steps[], opt[], comps[[tag,q,y,n]], ends[[t,w,trigger]] }
+//   ROUTINES[i]  = { id, actorId, goalId, window, variant, core }
+export const ACTORS = `;
+const js =
+  jsHeader + JSON.stringify(ACTORS_OUT) + ";\n\n" +
+  "export const POOLS = " + JSON.stringify(POOLS) + ";\n\n" +
+  "export const ROUTINES = " + JSON.stringify(routines) + ";\n\n" +
+  "export default ROUTINES;\n";
 
 mkdirSync(join(root, "data"), { recursive: true });
 writeFileSync(join(root, "data", "routines.js"), js, "utf8");
 
-/* ------------------------------------------------------------------ *
- * 7. Таблица в ALGORITHMS.md
- * ------------------------------------------------------------------ */
-const mdPath = join(root, "ALGORITHMS.md");
+/* ---------- таблица в ALGORITHMS.md ---------- */
+const rows = routines.map((r) => {
+  const actor = ACTORS.find((a) => a.id === r.actorId);
+  const pool = POOLS[r.goalId];
+  const ctx = applyVariant(actor, r.variant);
+  const start = fill(pool.steps[0], ctx);
+  return `| ${r.id} | ${actor.name} | ${pool.name} | ${r.window} | ${pool.comps.length} | ${pool.ends.length} | ${start} |`;
+});
 const table = [
-  "| № | Кто | Алгоритм | Окно | Ветки | Концы | Начало |",
+  "| № | Кто | Алгоритм | Окно | Развилок в пуле | Концов в пуле | Начало |",
   "|---|---|---|---|---|---|---|",
-  ...routines.map((r) =>
-    `| ${r.id} | ${r.actor} | ${r.goal} | ${r.window} | ${r.branches.length} | ${r.endings.length} | ${r.start.replace(/^\S+,\s*/, "")} |`
-  )
+  ...rows
 ].join("\n");
 
+const mdPath = join(root, "ALGORITHMS.md");
 try {
   const doc = readFileSync(mdPath, "utf8");
   const START = "<!--TABLE-START-->";
@@ -506,11 +618,13 @@ try {
   console.log("ALGORITHMS.md ещё нет или нет маркеров — таблица не вписана:", e.message);
 }
 
-const actorsUsed = new Set(routines.map((r) => r.actorId)).size;
-const goalsUsed = new Set(routines.map((r) => r.goalId)).size;
-const branches = routines.reduce((n, r) => n + r.branches.length, 0);
-const endings = routines.reduce((n, r) => n + r.endings.length, 0);
-console.log(`алгоритмов: ${routines.length}`);
-console.log(`акторов: ${actorsUsed}, целей: ${goalsUsed}`);
-console.log(`развилок всего: ${branches}, концов всего: ${endings}`);
+const avgComps = Math.round(Object.values(POOLS).reduce((n, p) => n + p.comps.length, 0) / Object.keys(POOLS).length);
+const avgEnds = Math.round(Object.values(POOLS).reduce((n, p) => n + p.ends.length, 0) / Object.keys(POOLS).length);
+const avgOpts = Math.round(Object.values(POOLS).reduce((n, p) => n + p.opt.length, 0) / Object.keys(POOLS).length);
+const runs = Object.values(POOLS).reduce((n, p) => n + p.comps.length ** 3 * p.ends.length, 0);
+
+console.log(`случаев: ${routines.length}`);
+console.log(`акторов: ${ACTORS.length}, целей: ${Object.keys(POOLS).length}`);
+console.log(`в среднем на цель: ${avgComps} развилок, ${avgEnds} концовок, ${avgOpts} необязательных шагов`);
+console.log(`порядок числа различных исполнений: ~${(runs / 1e6).toFixed(0)} млн`);
 console.log(`файл: data/routines.js (${(js.length / 1024).toFixed(0)} КБ)`);
