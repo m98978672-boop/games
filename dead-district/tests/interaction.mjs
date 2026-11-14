@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 const { win, sandbox, document, timers } = makeWindow(html);
 for (const match of html.matchAll(/<script src="([^"]+)"/g)) {
-  vm.runInContext(fs.readFileSync(path.join(root, match[1]), 'utf8'), sandbox, { filename: match[1] });
+  vm.runInContext(fs.readFileSync(path.join(root, match[1].split('?')[0]), 'utf8'), sandbox, { filename: match[1] });
 }
 document.dispatchEvent({ type: 'DOMContentLoaded' });
 assert.ok(win.DD_STATE, 'игра должна запуститься');

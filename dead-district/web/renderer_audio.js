@@ -29,7 +29,7 @@
     try {
       var img = new global.Image();
       img.onload = function () { sprites[key] = img; };
-      img.src = relPath;
+      img.src = relPath + '?v=20261110b';
     } catch (err) {
       DD.ErrorManager.warn('E101', 'Renderer', 'Ошибка загрузки спрайта', { key: key, err: String(err) });
     }

@@ -271,9 +271,14 @@ static func generate_chunk_data(cx: int, cy: int, world_seed: int) -> Dictionary
 				"items": []
 			})
 
-		# Проход у входной двери должен оставаться свободным после BSP.
-		if tiles[(dy + 1) * CHUNK_SIZE + dx] != TileType.DOOR:
-			tiles[(dy + 1) * CHUNK_SIZE + dx] = floor_tile
+		# Прямой коридор от входа до середины здания, даже если BSP
+		# поставил перегородку на одной оси с наружной дверью.
+		for corridor_y in range(dy + 1, dy + b_rect.size.y / 2 + 1):
+			tiles[corridor_y * CHUNK_SIZE + dx] = floor_tile
+		for door_idx in range(doors.size() - 1, 0, -1):
+			var door_tile: Vector2i = doors[door_idx]["tile"]
+			if door_tile.x == cx * CHUNK_SIZE + dx and door_tile.y > cy * CHUNK_SIZE + dy and door_tile.y <= cy * CHUNK_SIZE + dy + b_rect.size.y / 2:
+				doors.remove_at(door_idx)
 		var outside_type: int = tiles[(dy - 1) * CHUNK_SIZE + dx]
 		if outside_type == TileType.TREE_OAK or outside_type == TileType.TREE_PINE or outside_type == TileType.WATER:
 			tiles[(dy - 1) * CHUNK_SIZE + dx] = TileType.DIRT

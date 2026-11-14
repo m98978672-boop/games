@@ -193,6 +193,12 @@ for (const seed of [1, 42, 20261110]) {
       assert.ok(w.isWalkable(door.tx, door.ty + dy), 'клетка за дверью должна быть свободна');
       const pos = DD.GameplayHelpers.moveWithCollision(w, door.tx, door.ty - dy, 0, 2 * dy, 0.2);
       assert.ok(Math.abs(pos.y - (door.ty + dy)) < 1e-5, 'в открытый дверной проём можно войти');
+      const deep = DD.GameplayHelpers.moveWithCollision(w, door.tx, door.ty - dy, 0, 3 * dy, 0.2);
+      assert.ok(Math.abs(deep.y - (door.ty + 2 * dy)) < 1e-5, 'по входному коридору можно пройти дальше одной клетки');
+      for (const side of [-1, 1]) {
+        const room = DD.GameplayHelpers.moveWithCollision(w, deep.x, deep.y, side, 0, 0.2);
+        assert.ok(Math.abs(room.x - (door.tx + side)) < 1e-5, 'обе стороны здания доступны из коридора');
+      }
     }
   }
 }

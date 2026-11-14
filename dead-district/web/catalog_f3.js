@@ -271,7 +271,7 @@
       if (typeof global.Image === 'function') {
         img = new global.Image();
         img.onload = function () { if (isOpen) { renderCurrentPage(); if (inspectedItem && inspectedItem.code === item.code) renderInspector(); } };
-        img.src = item.file;
+        img.src = item.file + '?v=20261110b';
         baseImgCache[item.file] = img;
       }
     }
@@ -279,8 +279,8 @@
       var cw = img.width;
       var ch = img.height;
       if (item.frames > 1) {
-        cw = item.code.indexOf('brute') >= 0 ? 40 : (img.width >= 32 && img.height >= 32 ? 32 : Math.floor(img.width / item.frames));
-        ch = item.code.indexOf('brute') >= 0 ? 48 : (img.height >= 32 ? 32 : img.height);
+        cw = item.file.indexOf('brute') >= 0 ? 40 : (img.width >= 32 && img.height >= 32 ? 32 : Math.floor(img.width / item.frames));
+        ch = item.file.indexOf('brute') >= 0 ? 48 : (img.height >= 32 ? 32 : img.height);
       }
       var pad = 6;
       var scale = Math.min((sz - pad * 2) / Math.max(1, cw), (sz - pad * 2) / Math.max(1, ch));
@@ -401,6 +401,8 @@
           var result = document.getElementById('f3-assess-result');
           if (result) result.textContent = 'Нажмите «Проверить» для этого ассета.';
           renderInspector();
+          var inspector = document.getElementById('f3-inspector');
+          if (inspector && typeof inspector.scrollIntoView === 'function') inspector.scrollIntoView({ block: 'start' });
         });
 
         previewWrap.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); previewWrap.click(); } });
