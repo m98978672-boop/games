@@ -19,7 +19,7 @@ function key(type, code) { win.dispatchEvent({ type, code, preventDefault() {} }
 const oldX = state.player.x;
 key('keydown', 'KeyD'); tick(timers, 20); key('keyup', 'KeyD');
 assert.ok(state.player.x > oldX, 'персонаж должен двигаться вправо');
-assert.equal(win.DD.GameplayHelpers.directionRow(state.player.fx, state.player.fy), 3);
+assert.ok(state.player.fx > 0 && state.player.fy < 0, 'клавиша вправо следует экранной оси изометрии');
 const x = state.player.x;
 key('keydown', 'KeyD'); win.dispatchEvent({ type: 'blur' }); tick(timers, 10);
 assert.equal(state.player.x, x, 'потеря фокуса должна сбрасывать ввод');
@@ -78,11 +78,11 @@ state.world.setTile(17, 15, win.DD.TILE.WALL_BRICK);
 state.world.setTile(16, 14, win.DD.TILE.ASPHALT);
 state.world.setTile(16, 16, win.DD.TILE.ASPHALT);
 state.player.x = 17; state.player.y = 14;
-key('keydown', 'ShiftLeft'); key('keydown', 'KeyS'); tick(timers, 40);
-key('keyup', 'KeyS'); key('keyup', 'ShiftLeft');
+key('keydown', 'ShiftLeft'); key('keydown', 'KeyS'); key('keydown', 'KeyA'); tick(timers, 40);
+key('keyup', 'KeyS'); key('keyup', 'KeyA'); key('keyup', 'ShiftLeft');
 assert.ok(state.player.y <= 14.3 + 1e-6, 'нельзя пробежать через стену рядом с дверью');
 state.player.x = 16; state.player.y = 14;
-key('keydown', 'KeyS'); tick(timers, 40); key('keyup', 'KeyS');
+key('keydown', 'KeyS'); key('keydown', 'KeyA'); tick(timers, 40); key('keyup', 'KeyS'); key('keyup', 'KeyA');
 assert.ok(state.player.y > 15, 'через открытый проём пройти можно');
 
 // Настоящая дверь процедурного здания, а не вручную расставленные тайлы.
@@ -95,8 +95,17 @@ state.player.x = generatedDoor.tx; state.player.y = generatedDoor.ty - inward;
 state.player.fx = 0; state.player.fy = inward;
 key('keydown', 'KeyE'); key('keyup', 'KeyE');
 assert.equal(generatedDoor.open, true, 'E открывает настоящую дверь');
-key('keydown', inward > 0 ? 'KeyS' : 'KeyW'); tick(timers, 50);
-key('keyup', inward > 0 ? 'KeyS' : 'KeyW');
+key('keydown', inward > 0 ? 'KeyS' : 'KeyW'); key('keydown', inward > 0 ? 'KeyA' : 'KeyD'); tick(timers, 50);
+key('keyup', inward > 0 ? 'KeyS' : 'KeyW'); key('keyup', inward > 0 ? 'KeyA' : 'KeyD');
 assert.ok((state.player.y - generatedDoor.ty) * inward > 0.7, 'можно войти в настоящее здание');
 
+document.getElementById('btn-event').click();
+assert.ok(document.getElementById('modal-body').textContent.includes('EVT-'));
+const hpBefore = state.health.globalHp, day = state.tw.day;
+document.getElementById('modal-list').children[2].click();
+assert.equal(state.encounterDay, day);
+assert.equal(state.health.globalHp, hpBefore);
+document.getElementById('modal-close').click();
+document.getElementById('btn-event').click();
+assert.ok(document.getElementById('modal-body').textContent.includes('уже разрешена'));
 console.log('[dead-district interaction] OK');

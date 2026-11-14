@@ -77,6 +77,8 @@
   }
 
   function findItemByCode(code) {
+    var variantMatch = /^VMESH-(\d+)$/i.exec(code);
+    if (variantMatch) return DD.ContentPack.getMeshVariant(Number(variantMatch[1]) - 1);
     var bases = getBaseList();
     for (var i = 0; i < bases.length; i++) {
       if (bases[i].code === code) return bases[i];
@@ -192,9 +194,17 @@
     } else if (activeTab === 'all') {
       source = getBaseList().concat(DD.ContentPack.getAll());
     } else {
-      source = DD.ContentPack.getAll();
+      source = DD.ContentPack.getAll().slice();
     }
 
+    // Варианты мешей генерируются по коду; оценки также можно найти фильтрами.
+    if (activeTab === 'all' || activeTab === 'mesh') {
+      var variants = {};
+      var match = /^vmesh-(\d+)$/.exec(q);
+      if (match) { q = 'vmesh-' + match[1].padStart(7, '0'); variants[q.toUpperCase()] = true; }
+      if (rateFilter !== 'all') Object.keys(map).forEach(function (code) { if (/^VMESH-\d+$/.test(code)) variants[code] = true; });
+      Object.keys(variants).forEach(function (code) { var item = findItemByCode(code); if (item) source.push(item); });
+    }
     var out = [];
     for (var i = 0; i < source.length; i++) {
       var it = source[i];
@@ -229,7 +239,7 @@
   }
   function hasModelViews(item) {
     return Boolean(item && (hasDirectionalSprite(item) || isRotatable3D(item) ||
-      (item.kind === 'model' && item.famIdx >= 0 && item.famIdx < 5)));
+      item.kind === 'texture' || (item.kind === 'model' && item.famIdx >= 0 && item.famIdx < 5)));
   }
   function setPreviewDirection(direction) {
     inspectDirection = Math.max(0, Math.min(3, direction | 0));
@@ -271,7 +281,7 @@
       if (typeof global.Image === 'function') {
         img = new global.Image();
         img.onload = function () { if (isOpen) { renderCurrentPage(); if (inspectedItem && inspectedItem.code === item.code) renderInspector(); } };
-        img.src = item.file + '?v=20261110b';
+        img.src = item.file + '?v=20261110c';
         baseImgCache[item.file] = img;
       }
     }
@@ -309,14 +319,16 @@
     var rec = loadRatings()[inspectedItem.code];
     var voteLabel = rec ? (rec.vote === 'bad' ? ' · 👎 ПЛОХАЯ (на замену)' : ' · 👍 ХОРОШАЯ') : '';
     title.textContent = '[' + inspectedItem.code + '] ' + inspectedItem.name + voteLabel;
-    meta.textContent = 'Категория: ' + inspectedItem.family + ' · Тип: ' + inspectedItem.kindLabel + ' · ' + inspectedItem.specs + (inspectedItem.file ? ' · Файл: ' + inspectedItem.file : '') + (inspectedItem.kind === 'base_3d' ? ' · Геометрия из GLB, цвета по палитре' : (inspectedItem.kind === 'model' && !hasModelViews(inspectedItem) ? ' · Плоская иконка (без других ракурсов)' : ''));
+    meta.textContent = 'Категория: ' + inspectedItem.family + ' · Тип: ' + inspectedItem.kindLabel + ' · ' + inspectedItem.specs + (inspectedItem.file ? ' · Файл: ' + inspectedItem.file : '') + (inspectedItem.kind === 'base_3d' ? ' · Геометрия из GLB, цвета по палитре' : (inspectedItem.kind === 'texture' ? ' · Плоская текстура: поворот на 90°' : (inspectedItem.kind === 'model' && !hasModelViews(inspectedItem) ? ' · Плоская иконка (без других ракурсов)' : '')));
     if (noteIn && document.activeElement !== noteIn) noteIn.value = (rec && rec.note) || '';
     var directionControls = document.getElementById('f3-direction-controls');
     if (directionControls) {
       directionControls.hidden = !hasModelViews(inspectedItem);
       var directions = directionControls.querySelectorAll('[data-f3-direction]');
       for (var d = 0; d < directions.length; d++) {
-        directions[d].setAttribute('aria-pressed', String(!spinEnabled && Number(directions[d].getAttribute('data-f3-direction')) === inspectDirection));
+        var direction = Number(directions[d].getAttribute('data-f3-direction'));
+        directions[d].setAttribute('aria-pressed', String(!spinEnabled && direction === inspectDirection));
+        directions[d].textContent = (inspectedItem.kind === 'texture' ? ['0°', '90°', '180°', '270°'] : ['Спереди', 'Сзади', 'Слева', 'Справа'])[direction];
       }
     }
     var spin = document.getElementById('f3-spin-toggle');
@@ -339,7 +351,7 @@
     if (currentPage < 0) currentPage = 0;
 
     if (countInfo) {
-      countInfo.textContent = 'Показано: ' + list.length.toLocaleString('ru-RU') + ' (в библиотеке 10 000 + 181 базовых)';
+      countInfo.textContent = 'Показано: ' + list.length.toLocaleString('ru-RU') + ' (в библиотеке 16 000 + 181 базовых)';
     }
     if (pageInfo) {
       pageInfo.textContent = 'Стр. ' + (currentPage + 1) + ' / ' + totalPages;
@@ -498,8 +510,8 @@
   function selectedAnimation() {
     function selected(id) { var e = document.getElementById(id); return e ? e.selectedIndex : 0; }
     var input = document.getElementById('anim-variant');
-    var n = Math.max(1, Math.min(100, Number(input && input.value) || 1));
-    return DD.Animations.get(selected('anim-action') * 2000 + selected('anim-direction') * 500 + selected('anim-style') * 100 + Math.floor(n) - 1);
+    var n = Math.max(1, Math.min(10000, Number(input && input.value) || 1));
+    return DD.Animations.get(selected('anim-action') * 200000 + selected('anim-direction') * 50000 + selected('anim-style') * 10000 + Math.floor(n) - 1);
   }
 
   function init(opts) {
@@ -569,6 +581,15 @@
       if (el) el.addEventListener('click', fn);
     };
     bindBtn('f3-close', function () { setOpen(false); });
+    bindBtn('f3-mesh-go', function () {
+      var input = document.getElementById('f3-mesh-number');
+      var number = Math.max(1, Math.min(DD.ContentPack.meshVariantCount, Math.floor(Number(input && input.value) || 1)));
+      if (input) input.value = number;
+      activeTab = 'mesh'; rateFilter = 'all'; currentPage = 0;
+      searchQuery = 'VMESH-' + String(number).padStart(7, '0');
+      var field = document.getElementById('f3-search'); if (field) field.value = searchQuery;
+      invalidateFilter(); renderCurrentPage();
+    });
     bindBtn('f3-spin-toggle', function () {
       var note = document.getElementById('f3-inspect-note');
       var draft = note ? note.value : '';

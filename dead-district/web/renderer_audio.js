@@ -29,7 +29,7 @@
     try {
       var img = new global.Image();
       img.onload = function () { sprites[key] = img; };
-      img.src = relPath + '?v=20261110b';
+      img.src = relPath + '?v=20261110c';
     } catch (err) {
       DD.ErrorManager.warn('E101', 'Renderer', 'Ошибка загрузки спрайта', { key: key, err: String(err) });
     }
@@ -445,7 +445,7 @@
     initSprites: initSprites,
     renderAnimationPreview: renderAnimationPreview,
     setAnimationStyle: function (preset) { if (preset) animationSettings = { speed: preset.speed, bob: preset.bob }; },
-    renderFrame: renderFrame,
+    renderFrame: function (canvas, state) { if (canvas && canvas.getContext) DD.Isometric.render(canvas.getContext('2d'), state, sprites, drawSpriteCell, animationSettings); },
     playSfx: playSfx,
     setMuted: function (m) { audioMuted = Boolean(m); },
     isMuted: function () { return audioMuted; }

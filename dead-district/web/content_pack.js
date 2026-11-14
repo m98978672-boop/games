@@ -18,8 +18,8 @@
     return (h ^ (h >>> 16)) >>> 0;
   }
 
-  // ---------- КАТАЛОГ ИЗ 10 000 ПРОЦЕДУРНЫХ ТЕКСТУР, МОДЕЛЕК И 3D МЕШЕЙ ----------
-  // 4 000 текстур (0..3999) + 3 000 моделек (4000..6999) + 3 000 3D мешей (7000..9999) = 10 000
+  // ---------- КАТАЛОГ ПРОЦЕДУРНЫХ ТЕКСТУР, МОДЕЛЕК И 3D МЕШЕЙ ----------
+  // Первые 10 000 кодов сохранены; ещё 6 000 текстур добавлены в конец.
   var TEX_FAMILIES = [
     { id: 'brick', name: 'Кирпичная кладка', base: 2, hi: 1, seam: 26, style: 'brick', arch: ['Красный кирпич', 'Обожжённая стена', 'Сырой подвал', 'Потрескавшаяся стена', 'Проём фасада', 'Дымоходная кладка', 'Заводской цех', 'Облупленный торец', 'Угловой пилон', 'Гаражная стена'] },
     { id: 'wood_floor', name: 'Деревянный пол', base: 6, hi: 5, seam: 8, style: 'planks', arch: ['Дубовый паркет', 'Сосновая доска', 'Половица чердака', 'Гнилой настил', 'Скрипучий пол', 'Следы сапог', 'Палуба веранды', 'Старый ламинат', 'Складской поддон', 'Настил сарая'] },
@@ -90,7 +90,7 @@
 
   function buildCatalogIndex() {
     if (ITEMS) return ITEMS;
-    ITEMS = new Array(10000);
+    ITEMS = new Array(16000);
     var idx = 0;
 
     // 0..3999 — 4 000 Текстур
@@ -111,7 +111,7 @@
             archIdx: a,
             famIdx: f,
             name: fam.arch[a] + ' (' + vTag + ')',
-            specs: '32×32 px · Палитра SH-32'
+            specs: '32×32 px · палитра и оттенки'
           };
           idx++;
         }
@@ -167,11 +167,19 @@
         }
       }
     }
+    // Дополнительные 6000 вариантов добавлены в конец, чтобы старые коды
+    // моделей и сохранённые оценки не менялись.
+    for (var tf = 0; tf < TEX_FAMILIES.length; tf++) for (var ta = 0; ta < 10; ta++) for (var tv = 20; tv < 50; tv++) {
+      var extra = TEX_FAMILIES[tf];
+      ITEMS[idx++] = { index: idx - 1, code: 'TEX-' + String(4001 + tf * 300 + ta * 30 + tv - 20).padStart(4, '0'),
+        kind:'texture', kindLabel:'Текстура', familyId:extra.id, family:extra.name, archetype:extra.arch[ta],
+        variantIdx:tv, archIdx:ta, famIdx:tf, name:extra.arch[ta] + ' (вариант ' + (tv + 1) + ')', specs:'32×32 px · процедурный вариант' };
+    }
     return ITEMS;
   }
 
   // ---------- 1. РЕНДЕР ТЕКСТУРЫ 32×32 НА CANVAS ----------
-  function renderTexture32(ctx, item, outSize) {
+  function renderTexture32(ctx, item, outSize, direction) {
     var fam = TEX_FAMILIES[item.famIdx] || TEX_FAMILIES[0];
     var v = item.variantIdx;
     var a = item.archIdx;
@@ -284,9 +292,18 @@
       octx.fillRect(20, 18, 5, 5);
     }
 
+    // Индивидуальный рисунок износа для каждого семейства, материала и варианта.
+    var wearCol = shadeHex(baseCol, 0.72);
+    if (wearCol === baseCol) wearCol = '#343434';
+    for (var mark = 0; mark < 24; mark++) {
+      var salt = item.famIdx * 10 + a;
+      octx.fillStyle = wearCol;
+      octx.fillRect(hash32(mark, salt, v + 103) % 32, hash32(v + 47, mark, salt) % 32, 1, 1);
+    }
     ctx.imageSmoothingEnabled = false;
     ctx.clearRect(0, 0, outSize, outSize);
-    ctx.drawImage(off, 0, 0, 32, 32, 0, 0, outSize, outSize);
+    ctx.save(); ctx.translate(outSize / 2, outSize / 2); ctx.rotate((direction || 0) * Math.PI / 2);
+    ctx.drawImage(off, 0, 0, 32, 32, -outSize / 2, -outSize / 2, outSize, outSize); ctx.restore();
   }
 
   // ---------- 2. РЕНДЕР МОДЕЛЬКИ / СПРАЙТА 32×32 С 1px ОБВОДКОЙ ----------
@@ -596,9 +613,23 @@
     return scratchPool[key];
   }
 
+  // Ленивый доступ: миллион вариантов не размещается массивом в памяти.
+  function getMeshVariant(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= 1002000) return null;
+    var base = buildCatalogIndex()[7000 + index % 3000];
+    return Object.assign({}, base, { code: 'VMESH-' + String(index + 1).padStart(7, '0'),
+      name: base.name + ' · форма ' + (Math.floor(index / 3000) + 1),
+      specs: 'Параметрический 3D-эскиз · изменённые пропорции', shapeVariant: Math.floor(index / 3000) });
+  }
+
   function renderMesh3D(ctx, item, size, yaw) {
     var fam = MESH_FAMILIES[item.famIdx] || MESH_FAMILIES[0];
     var parts = getMeshParts(fam.kind, item.archIdx, item.variantIdx);
+    if (item.shapeVariant != null) {
+      var n = item.shapeVariant;
+      var sx = 0.72 + (n % 10) * 0.065, sz = 0.72 + (Math.floor(n / 10) % 10) * 0.065, sy = 0.8 + Math.floor(n / 100) * 0.13;
+      parts = parts.map(function (p) { return { cx:p.cx*sx, cy:p.cy*sy, cz:p.cz*sz, sx:p.sx*sx, sy:p.sy*sy, sz:p.sz*sz, c:p.c }; });
+    }
     renderParts3D(ctx, parts, size, yaw == null ? 0.62 : yaw, 0.48);
   }
 
@@ -620,7 +651,7 @@
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
     var size = canvas.width;
-    if (item.kind === 'texture') renderTexture32(ctx, item, size);
+    if (item.kind === 'texture') renderTexture32(ctx, item, size, direction);
     else if (item.kind === 'model') renderModel32(ctx, item, size, direction);
     else renderMesh3D(ctx, item, size, yaw);
   }
@@ -628,11 +659,13 @@
   DD.ContentPack = {
     PALETTE: PALETTE,
     getAll: buildCatalogIndex,
-    count: function () { return 10000; },
+    count: function () { return 16000; },
     renderItemToCanvas: renderItemToCanvas,
     renderTexture32: renderTexture32,
     renderModel32: renderModel32,
     renderMesh3D: renderMesh3D,
+    meshVariantCount: 1002000,
+    getMeshVariant: getMeshVariant,
     renderBaseGlbPreview: renderBaseGlbPreview
   };
 })(window);
