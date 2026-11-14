@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 810" width="1440" height="810" role="img" aria-label="Ратград — белый холст: изолинии рельефа, три здания и окружность видимости">
+  <rect width="1440" height="810" fill="#ffffff"/>
+
+  <!-- сетка -->
+  <g stroke="#efefef" stroke-width="1">
+    <path d="M0 90H1440M0 180H1440M0 270H1440M0 360H1440M0 450H1440M0 540H1440M0 630H1440M0 720H1440"/>
+    <path d="M90 0V810M180 0V810M270 0V810M360 0V810M450 0V810M540 0V810M630 0V810M720 0V810M810 0V810M900 0V810M990 0V810M1080 0V810M1170 0V810M1260 0V810M1350 0V810"/>
+  </g>
+
+  <!-- изолинии рельефа -->
+  <g fill="none" stroke="#cfcfcf" stroke-width="1.4">
+    <ellipse cx="430" cy="470" rx="300" ry="215"/>
+    <ellipse cx="430" cy="470" rx="240" ry="168"/>
+    <ellipse cx="430" cy="470" rx="180" ry="124"/>
+    <ellipse cx="430" cy="470" rx="118" ry="80"/>
+    <ellipse cx="430" cy="470" rx="58" ry="38"/>
+    <path d="M760 640c120-40 210-110 250-210s60-160 40-230"/>
+    <path d="M810 660c120-40 200-108 238-200s52-150 30-214"/>
+  </g>
+
+  <!-- три белые коробки -->
+  <g fill="#ffffff" stroke="#0b0b0b" stroke-width="3">
+    <rect x="330" y="392" width="86" height="66"/>
+    <rect x="470" y="424" width="70" height="58"/>
+    <rect x="600" y="330" width="66" height="66"/>
+  </g>
+  <g stroke="#bdbdbd" stroke-width="1.6">
+    <path d="M330 414h86M330 436h86"/>
+    <path d="M470 443h70M470 462h70"/>
+    <path d="M600 352h66M600 374h66M600 396h66"/>
+  </g>
+  <g fill="#0b0b0b">
+    <circle cx="373" cy="425" r="4"/>
+    <circle cx="505" cy="453" r="4"/>
+    <circle cx="633" cy="363" r="4"/>
+  </g>
+
+  <!-- QООВЗ -->
+  <circle cx="820" cy="405" r="250" fill="none" stroke="#0b0b0b" stroke-width="2" stroke-dasharray="10 8"/>
+  <rect x="640" y="245" width="360" height="320" fill="none" stroke="#8a8a8a" stroke-width="1.6"/>
+
+  <!-- подписи -->
+  <g fill="#0b0b0b" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">
+    <text x="96" y="128" font-size="64" letter-spacing="2">РАТГРАД</text>
+    <text x="98" y="176" font-size="24" fill="#6b6b6b">белый холст · проверка формул F-71…F-89</text>
+    <text x="98" y="740" font-size="20" fill="#6b6b6b">(0;0)H3(0,0;0,0) · ID 64 бита · QООВЗ</text>
+    <text x="662" y="600" font-size="16" fill="#6b6b6b">Q = центр + радиус + прямоугольник камеры</text>
+    <text x="336" y="386" font-size="16" fill="#6b6b6b">p=3 · H=9 м</text>
+    <text x="606" y="322" font-size="16" fill="#6b6b6b">p=6 · H=18 м</text>
+  </g>
+</svg>
