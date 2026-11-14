@@ -3,87 +3,98 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>РАТГРАД — краски</title>
+<title>РАТГРАД — карта 700 × 700 км</title>
 <style>
-  :root{ --ink:#101010; --paper:#f7f4ee; --line:rgba(0,0,0,.16); }
+  :root{ --ink:#101010; --paper:rgba(247,244,238,.94); --line:rgba(0,0,0,.16); --mute:#5f5f5f; }
   *{ box-sizing:border-box; }
-  html,body{ margin:0; height:100%; overflow:hidden; background:#dfeaf1; color:var(--ink);
+  html,body{ margin:0; height:100%; overflow:hidden; background:#0d2233; color:var(--ink);
     font:13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
-  #scene{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
-  #scene:active{ cursor:grabbing; }
+  #map{ position:fixed; inset:0; width:100%; height:100%; display:block; touch-action:none; cursor:grab; }
+  #map.dragging{ cursor:grabbing; }
 
-  .panel{ position:fixed; background:rgba(247,244,238,.92); border:1px solid var(--line);
-    padding:10px 12px; backdrop-filter:blur(6px); }
-  #hud{ left:14px; top:14px; min-width:238px; }
+  .panel{ position:fixed; background:var(--paper); border:1px solid var(--line); padding:10px 12px;
+    backdrop-filter:blur(6px); }
+  #hud{ left:14px; top:14px; min-width:230px; }
   #hud h1{ margin:0 0 6px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; }
-  #hud .sub{ color:#6b6b6b; margin-bottom:8px; font-size:11.5px; }
+  #hud .sub{ color:var(--mute); margin-bottom:8px; font-size:11.5px; }
   #hud table{ border-collapse:collapse; font-size:11.5px; width:100%; }
   #hud td{ padding:1px 0; }
   #hud td:last-child{ text-align:right; }
 
-  #controls{ right:14px; top:14px; width:198px; }
+  #controls{ right:14px; top:14px; width:186px; }
   #controls label{ display:flex; align-items:center; gap:7px; margin:4px 0; font-size:12px; }
   #controls input{ accent-color:#333; }
+  .rowbtn{ display:flex; gap:6px; margin:8px 0 4px; }
+  .rowbtn button{ flex:1; font:inherit; font-size:12px; border:1px solid var(--ink); background:#fff;
+    padding:4px 0; cursor:pointer; }
+  .rowbtn button:active{ background:#0b0b0b; color:#fff; }
 
-  #legend{ left:14px; bottom:14px; font-size:11px; }
+  #legend{ left:14px; bottom:14px; font-size:11px; max-width:210px; }
   #legend .row{ display:flex; align-items:center; gap:7px; margin:2px 0; }
   #legend i{ width:14px; height:9px; display:inline-block; border:1px solid rgba(0,0,0,.2); }
 
-  #loading{ position:fixed; inset:0; display:grid; place-items:center; background:#f7f4ee;
-    transition:opacity .4s; z-index:10; }
+  .hint{ position:fixed; right:14px; bottom:14px; color:#f2f2f2; font-size:11px;
+    background:rgba(10,20,28,.55); border:1px solid rgba(255,255,255,.18); padding:5px 8px; }
+
+  #loading{ position:fixed; inset:0; display:grid; place-items:center; background:#0d2233;
+    color:#e9eef2; transition:opacity .4s; z-index:10; }
   #loading.done{ opacity:0; pointer-events:none; }
   #loading .box{ text-align:center; }
-  #loading b{ font-size:18px; letter-spacing:.14em; }
-  #loading-text{ color:#6b6b6b; margin-top:8px; font-size:12px; }
+  #loading b{ font-size:18px; letter-spacing:.14em; display:block; margin-bottom:8px; }
+  #loading-text{ color:#9db0bd; font-size:12px; }
 
-  .hint{ position:fixed; right:14px; bottom:14px; color:#5c5c5c; font-size:11px; background:rgba(247,244,238,.82);
-    border:1px solid var(--line); padding:5px 8px; }
   @media (max-width:760px){
-    #hud{ min-width:0; max-width:52vw; }
+    #hud{ min-width:0; max-width:54vw; }
     #controls{ width:150px; }
     #legend{ display:none; }
   }
 </style>
 </head>
 <body>
-<canvas id="scene"></canvas>
+<canvas id="map"></canvas>
 
 <div id="loading">
   <div class="box">
     <b>РАТГРАД</b>
-    <div id="loading-text">считаю рельеф по A28…</div>
+    <div id="loading-text">мир 700 × 700 км…</div>
   </div>
 </div>
 
 <section class="panel" id="hud">
-  <h1>Ратград · краски</h1>
-  <div class="sub">рельеф A28 · формулы F-71…F-89</div>
+  <h1>Ратград · карта</h1>
+  <div class="sub">700 × 700 км · вид сверху · промт §31–§36</div>
   <table>
+    <tr><td>курсор</td><td id="hud-pos">0; 0 км</td></tr>
+    <tr><td>высота</td><td id="hud-height">— м</td></tr>
+    <tr><td>масштаб</td><td id="hud-zoom">1.6 px/км</td></tr>
+    <tr><td>центр</td><td id="hud-center">0; 0 км</td></tr>
     <tr><td>кадров в секунду</td><td id="hud-fps">—</td></tr>
-    <tr><td>треугольников</td><td id="hud-tris">—</td></tr>
-    <tr><td>чанков</td><td id="hud-chunks">0 / 36</td></tr>
-    <tr><td>камера</td><td id="hud-cam">—</td></tr>
   </table>
 </section>
 
 <section class="panel" id="controls">
-  <label><input type="checkbox" id="toggle-colors" checked> краски рельефа</label>
-  <label><input type="checkbox" id="toggle-contours" checked> изолинии 5 м</label>
-  <label><input type="checkbox" id="toggle-water" checked> вода</label>
-  <label><input type="checkbox" id="toggle-shadows" checked> тени</label>
-  <label><input type="checkbox" id="toggle-q" checked> QООВЗ</label>
+  <div class="rowbtn">
+    <button id="zoom-in" title="приблизить">+</button>
+    <button id="zoom-out" title="отдалить">−</button>
+    <button id="center" title="в центр мира">⌂</button>
+  </div>
+  <label><input type="checkbox" id="toggle-grid" checked> сетка 10/25/50 км</label>
+  <label><input type="checkbox" id="toggle-towns" checked> поселения</label>
+  <label><input type="checkbox" id="toggle-q" checked> QООВЗ 250 м</label>
 </section>
 
 <section class="panel" id="legend">
-  <div class="row"><i style="background:#2f6f8f"></i> вода</div>
-  <div class="row"><i style="background:#d8c9a3"></i> песок</div>
-  <div class="row"><i style="background:#7f9b62"></i> луг</div>
-  <div class="row"><i style="background:#4c6b46"></i> лес</div>
-  <div class="row"><i style="background:#8b8a83"></i> камень</div>
-  <div class="row"><i style="background:#f2f4f5"></i> снег</div>
+  <div class="row"><i style="background:#1a3e63"></i> глубина</div>
+  <div class="row"><i style="background:#2c688a"></i> море</div>
+  <div class="row"><i style="background:#7eb2c4"></i> отмель / песок</div>
+  <div class="row"><i style="background:#a6a870"></i> степь</div>
+  <div class="row"><i style="background:#7a9458"></i> луг</div>
+  <div class="row"><i style="background:#4a6c42"></i> лес</div>
+  <div class="row"><i style="background:#8b867a"></i> камень</div>
+  <div class="row"><i style="background:#f0f3f4"></i> снег</div>
 </section>
 
-<div class="hint">тяните — поворот · Shift+тяните — сдвиг · колесо — зум</div>
+<div class="hint">тяните — сдвиг · колесо — зум · стрелки — тоже сдвиг · без поворотов</div>
 
 <script src="bundle.js"></script>
 </body>
