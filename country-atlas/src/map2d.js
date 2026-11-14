@@ -6,6 +6,7 @@ import { buildTransport, advance as advanceTransport, vehiclePosition, screenLen
 import { buildCity, cityLod, CITY_STREET_SCALE, CITY_BUILDING_SCALE } from './city2d.js';
 import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
+import { buildWater, RIVER } from './rivers2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
 export class Map2D {
@@ -36,6 +37,8 @@ export class Map2D {
     this.cityCache = new Map();
     this.economy = null;        // экономика §31.33
     this.lastEconomyDay = 0;
+    this.showWater = true;      // реки, озёра и мосты §5
+    this.water = null;
     this.worker = null;
     this.pendingPatch = false;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -205,6 +208,63 @@ export class Map2D {
     return this.borders;
   }
 
+  /* Реки, озёра и мосты §5: сток по сетке 10 км, ~0.9 с один раз при старте. */
+  buildWater() {
+    if (this.water) return this.water;
+    this.water = buildWater(this.roads);
+    return this.water;
+  }
+
+  /* Вода §5: реки — лента шириной по расходу (F-135), озёра — заливка, мосты дороги рисуют сами.
+     На мировом обзоре видны только главные реки, вблизи — вся сеть. */
+  drawWater(ctx, originX, originY, s) {
+    const w = this.water;
+    if (!w) return;
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const halfW = this.view.w / 2 / s + 40, halfH = this.view.h / 2 / s + 40;
+    const visible = (pts) => {
+      let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+      for (const p of pts) {
+        if (p.x < x0) x0 = p.x; if (p.x > x1) x1 = p.x;
+        if (p.y < y0) y0 = p.y; if (p.y > y1) y1 = p.y;
+      }
+      return !(x1 < this.center.x - halfW || x0 > this.center.x + halfW ||
+               y1 < this.center.y - halfH || y0 > this.center.y + halfH);
+    };
+    // озёра
+    ctx.fillStyle = 'rgba(53,113,154,0.92)';
+    for (const lake of w.lakes) {
+      if (Math.abs(lake.x - this.center.x) > halfW || Math.abs(lake.y - this.center.y) > halfH) continue;
+      // эллипс по bbox, но площадью ровно в площадь озера (иначе «лужа» раздувается)
+      const bx = lake.rxKm || Math.sqrt(lake.areaKm2 / Math.PI);
+      const by = lake.ryKm || Math.sqrt(lake.areaKm2 / Math.PI);
+      const fit = Math.min(1, Math.sqrt(lake.areaKm2 / (Math.PI * bx * by))) || 1;
+      const rx = Math.max(1.2, bx * fit * s);
+      const ry = Math.max(1.2, by * fit * s);
+      ctx.beginPath();
+      ctx.ellipse(X(lake.x), Y(lake.y), rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // реки: главные заметны всегда, остальные — с 0.4 px ширины
+    ctx.strokeStyle = RIVER.riverColor;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const line of w.rivers.lines) {
+      const px = line.widthM * s;
+      const main = line.flowKm2 > 40000;
+      if (px < 0.4 && !main) continue;
+      if (!visible(line.pts)) continue;
+      ctx.lineWidth = main ? Math.max(0.9, px) : Math.max(0.5, px);
+      ctx.globalAlpha = px < 0.8 ? 0.75 : 0.95;
+      ctx.beginPath();
+      ctx.moveTo(X(line.pts[0].x), Y(line.pts[0].y));
+      for (let i = 1; i < line.pts.length; i++) ctx.lineTo(X(line.pts[i].x), Y(line.pts[i].y));
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   /* Экономика §31.33: население, угодья, приход и расход ресурсов. */
   buildEconomy() {
     if (this.economy) return this.economy;
@@ -250,6 +310,7 @@ export class Map2D {
       this.view.w, this.view.h, this.dpr, this.center.x, this.center.y, this.scale,
       this.showGrid ? 1 : 0, this.showRoads ? 1 : 0, this.showSettlements ? 1 : 0, this.showQ ? 1 : 0,
       this.showBorders ? 1 : 0, this.showCities ? 1 : 0, this.borders ? 1 : 0,
+      this.showWater ? 1 : 0, this.water ? 1 : 0,
       this.overview ? this.overview.width : 0,
       d ? d.canvas.width + ':' + d.x0.toFixed(2) + ':' + d.y0.toFixed(2) : '',
       this.selected ? this.selected.name : ''
@@ -328,6 +389,7 @@ export class Map2D {
     ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
     ctx.clip();
 
+    if (this.showWater && this.water) this.drawWater(ctx, originX, originY, s);
     if (this.showBorders && this.borders) this.drawBorders(ctx, originX, originY, s);
     if (this.showRoads && this.roads) this.drawRoads(ctx, originX, originY, s);
     if (this.showCities && cityLod(s) > 0) this.drawCities(ctx, originX, originY, s);

@@ -55,6 +55,7 @@ map.init((done, total) => {
     setTimeout(() => {
       try {
         map.buildBorders();
+        map.buildWater();
         map.buildEconomy();
         map.updateEconomyPanel();
         map.draw();
@@ -177,7 +178,8 @@ const toggles = {
   'toggle-q': (v) => { map.showQ = v; map.draw(); },
   'toggle-cars': (v) => { map.showVehicles = v; map.draw(); },
   'toggle-borders': (v) => { map.showBorders = v; map.draw(); },
-  'toggle-cities': (v) => { map.showCities = v; map.draw(); }
+  'toggle-cities': (v) => { map.showCities = v; map.draw(); },
+  'toggle-water': (v) => { map.showWater = v; map.draw(); }
 };
 for (const [id, fn] of Object.entries(toggles)) {
   const el = document.getElementById(id);
