@@ -13,6 +13,8 @@ const hud = {
   town: document.getElementById('hud-town'),
   cars: document.getElementById('hud-cars'),
   clock: document.getElementById('hud-clock'),
+  country: document.getElementById('hud-country'),
+  status: document.getElementById('hud-status'),
   loading: document.getElementById('loading'),
   loadingText: document.getElementById('loading-text')
 };
@@ -49,6 +51,17 @@ map.init((done, total) => {
     map.draw();
     if (hud.loading) hud.loading.classList.add('done');
     window.__ratgrad = { map };
+    // границы §7 и экономика §31.33 считаются следом, чтобы карта появилась сразу
+    setTimeout(() => {
+      try {
+        map.buildBorders();
+        map.buildEconomy();
+        map.updateEconomyPanel();
+        map.draw();
+      } catch (err) {
+        if (hud.status) hud.status.textContent = 'границы не собрались: ' + err.message;
+      }
+    }, 30);
   });
 }
 
@@ -162,7 +175,9 @@ const toggles = {
   'toggle-roads': (v) => { map.showRoads = v; map.draw(); },
   'toggle-towns': (v) => { map.showSettlements = v; map.draw(); },
   'toggle-q': (v) => { map.showQ = v; map.draw(); },
-  'toggle-cars': (v) => { map.showVehicles = v; map.draw(); }
+  'toggle-cars': (v) => { map.showVehicles = v; map.draw(); },
+  'toggle-borders': (v) => { map.showBorders = v; map.draw(); },
+  'toggle-cities': (v) => { map.showCities = v; map.draw(); }
 };
 for (const [id, fn] of Object.entries(toggles)) {
   const el = document.getElementById(id);
