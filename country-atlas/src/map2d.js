@@ -1,6 +1,7 @@
 /* 2D-карта: обзор мира, детальный патч, сетка, поселения, масштабная линейка.
    Движение простое: тянуть — сдвиг, колесо — зум, без поворотов. */
 import { WORLD2D, settlements, heightKm, colorAtKm } from './world2d.js';
+import { buildRoads, ROAD_CLASS } from './roads2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels } from './view2d.js';
 
 export class Map2D {
@@ -16,9 +17,11 @@ export class Map2D {
     this.detail = null;          // { canvas, x0, y0, sizeKm }
     this.detailWanted = null;
     this.settlements = settlements(18);
+    this.roads = null;
     this.showGrid = true;
     this.showSettlements = true;
     this.showQ = true;
+    this.showRoads = true;
     this.worker = null;
     this.pendingPatch = false;
     this.dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -71,9 +74,11 @@ export class Map2D {
         worker.onmessage = (e) => {
           if (e.data.type === 'overview') { paint(e.data.buffer); done(); }
           else if (e.data.type === 'patch') this.acceptPatch(e.data);
+          else if (e.data.type === 'roads') { this.roads = e.data.net; this.draw(); }
         };
         worker.onerror = () => { done(); };
         worker.postMessage({ type: 'overview', size });
+        worker.postMessage({ type: 'roads' });
         // запасной путь, если воркер молчит
         setTimeout(() => {
           if (!this.overview) { this.overviewLocal(size); done(); }
@@ -82,6 +87,7 @@ export class Map2D {
     } else {
       await nextFrame();
       this.overviewLocal(size);
+      this.roads = buildRoads();
     }
 
     if (onProgress) onProgress(this.overview ? 1 : 0, 1);
@@ -177,6 +183,7 @@ export class Map2D {
     ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
     ctx.clip();
 
+    if (this.showRoads && this.roads) this.drawRoads(ctx, originX, originY, s);
     if (this.showGrid) this.drawGrid(ctx, originX, originY, s);
     if (this.showSettlements) this.drawSettlements(ctx, originX, originY, s);
     if (this.showQ) this.drawQ(ctx, originX, originY, s);
@@ -191,6 +198,37 @@ export class Map2D {
       this.fps = Math.round(this.frames * 1000 / (now - this.fpsT));
       this.frames = 0; this.fpsT = now;
       this.updateHud();
+    }
+  }
+
+  drawRoads(ctx, originX, originY, s) {
+    // на мелком зуме ширина картографическая (иначе дорога тоньше пикселя), на крупном — по метрам
+    const MIN = { M: 2.6, R: 2.0, L: 1.5, G: 1.0 };
+    const order = { G: 0, L: 1, R: 2, M: 3 };
+    const edges = this.roads.edges.slice().sort((a, b) => order[a.cls] - order[b.cls]);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (const e of edges) {
+      const meta = ROAD_CLASS[e.cls] || ROAD_CLASS.L;
+      const real = (meta.widthM / 1000) * s;
+      const w = Math.max(MIN[e.cls] || 1, Math.min(30, real));
+      ctx.beginPath();
+      for (let i = 0; i < e.points.length; i++) {
+        const p = e.points[i];
+        const sx = originX + p[0] * s, sy = originY - p[1] * s;
+        if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+      }
+      // тёмная обводка — дорога читается на любом фоне
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(28,32,26,0.55)';
+      ctx.lineWidth = w + 1.6;
+      ctx.stroke();
+      const [r, g, b] = meta.tone;
+      ctx.strokeStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+      ctx.lineWidth = w;
+      if (meta.dash) ctx.setLineDash(meta.dash.map((v) => v * Math.max(1, w / 1.5)));
+      ctx.stroke();
+      ctx.setLineDash([]);
     }
   }
 
@@ -285,6 +323,10 @@ export class Map2D {
     if (this.hud.zoom) this.hud.zoom.textContent = this.scale.toFixed(1) + ' px/км';
     if (this.hud.fps) this.hud.fps.textContent = this.fps;
     if (this.hud.center) this.hud.center.textContent = this.center.x.toFixed(0) + '; ' + this.center.y.toFixed(0) + ' км';
+    if (this.hud.roads) {
+      const n = this.roads;
+      this.hud.roads.textContent = n ? n.edges.length + ' · ' + n.totalKm + ' км' : '—';
+    }
   }
 }
 

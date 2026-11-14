@@ -9,6 +9,7 @@ const hud = {
   zoom: document.getElementById('hud-zoom'),
   fps: document.getElementById('hud-fps'),
   center: document.getElementById('hud-center'),
+  roads: document.getElementById('hud-roads'),
   loading: document.getElementById('loading'),
   loadingText: document.getElementById('loading-text')
 };
@@ -127,6 +128,7 @@ document.getElementById('center').addEventListener('click', () => {
 
 const toggles = {
   'toggle-grid': (v) => { map.showGrid = v; map.draw(); },
+  'toggle-roads': (v) => { map.showRoads = v; map.draw(); },
   'toggle-towns': (v) => { map.showSettlements = v; map.draw(); },
   'toggle-q': (v) => { map.showQ = v; map.draw(); }
 };
