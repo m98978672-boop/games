@@ -1,0 +1,3220 @@
+{
+  "passed": false,
+  "kind": "bounded_save_load_continuation_diagnostic",
+  "node": "v22.22.3",
+  "seeds": 20,
+  "beforeTicks": 120,
+  "afterTicks": 120,
+  "dt": 0.016666666666666666,
+  "outcomes": [
+    {
+      "extended": false,
+      "seed": 1,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1020901714,
+          "loaded": 4001321009
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 658.1345149432116,
+          "loaded": 658
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 658.1345149432116,
+          "loaded": 658
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.34709634113435917,
+          "loaded": 0.43377100431825966
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 58,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 58,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "37fff61db580fb6496667882bbe7a9c2f0730d95168996a37dc48e753747d231",
+          "sha256Loaded": "97ca416fb9773f095888a1c1741c93c55d7f5341e5b1589b2ef3bfffc89342d1"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "03b084085fc505c73c7c8eeaf7ecef015af4d3c835aa39bb6aaf665f178f6f54",
+          "sha256Loaded": "95642ffec399b2c91f41d77e22039832448f6f06fa3036590b8d65c409741d84"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "c4002e259576366f90f4cd86628ea667cda157608d857498947884af81bf8eb6",
+          "sha256Loaded": "125ed9c85fff57edecbfef7b1edead5a38b395783c4d2e472e9e4227e2bfb4d2"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 2,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 2461244046,
+          "loaded": 338189384
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 382.0572459214678,
+          "loaded": 382
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 382.0572459214678,
+          "loaded": 382
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.20044586779549678,
+          "loaded": 0.03248213522601873
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "b74d20460ccc40a9f0b1241196b76c00f1eb81d5efb28cc9a146b05e7fda16b4",
+          "sha256Loaded": "1b439100a3d7cf662bc8698a0628a5bef68b662c96528e73aa37f204a6ff45e1"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "96d1ed10951b2de64bd33c296a78ff02baff541fddf29426547d294783ce25cc",
+          "sha256Loaded": "497389c1bcb4c69eb1de40ff72ef0fbd46d2acd1090349a07813473baacef5ef"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "eb5a06dd1a34e16657c02743c648e79b935904aaa7d76f1f94c06306ea11c5cb",
+          "sha256Loaded": "8a79bdcc3c33b128e428acbdf9cbb75984788482424a91b809403f3127c41492"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 3,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 125724958,
+          "loaded": 4001321011
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 715.5411142030503,
+          "loaded": 716
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 715.5411142030503,
+          "loaded": 716
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.3255017364863298,
+          "loaded": 0.4264402101980522
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "c9ce37f280b0a3d01ec7946408e254c133ca3e9890376781f4fc3d672d5e77b3",
+          "sha256Loaded": "11a0a804bc7aefd017229c28c9b344be4cba941888ecd7a277bb76106fbfba06"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "de67e5813a3c3b970d6f636704d9068bc08cde47c5e864a487c279b13e3c9d90",
+          "sha256Loaded": "408df2e964ce3259ca29f3df20e9a146897c7fba8e02a5983060b1efb3239c77"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "c85a1f93ed779422c6a5723f7cd5ca1f871c7f54612dc016a0c0b5c2b4b2f363",
+          "sha256Loaded": "0ed9899c9d345ea71c55b38bf0df09aed33ddb3598c7fe25ec1232dfbe0264d4"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 4,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1317878802,
+          "loaded": 338189386
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 678.7936308207943,
+          "loaded": 679
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 678.7936308207943,
+          "loaded": 679
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.1192689617086819,
+          "loaded": 0.25484452745877206
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 54,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 54,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "c1575af47e407a1af7d9271d690a71b7d1f12e867bf6b4006edf96c385f0613a",
+          "sha256Loaded": "7ea0267d0ad96c0aadf76fe9a46500d7ed1133dfc4ba92de48ffedd070ac4221"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "b228716a1e7595d0f434372fd96b05a948ce0b1cd0bf2d1a41233540a9b096d7",
+          "sha256Loaded": "d14e8146f1b29d2b0f1bb9a5e402fb55dddd5e314ea60ceb7368e0d6cfd16431"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "598bf728f8b87b172c01c9e2c2f190b34997232bcf9b8217bc7259b997d61bb0",
+          "sha256Loaded": "0afe230b32a663a3d66117b6a6ac3e7f84fe9f048d69ff27208e20f63860d43b"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 5,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1084842915,
+          "loaded": 970025057
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 338.8755768760908,
+          "loaded": 339
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 338.8755768760908,
+          "loaded": 339
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.0257232671991609,
+          "loaded": 0.39424141426570714
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "76be023bebef9fd7dd1f6eb25617be42718abadf12b98c6e13742fab8defe95a",
+          "sha256Loaded": "6b629e435d8a30cf95cec2a9ef2cb6b0d5e934dc9f1389c6957b25faef64dd17"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "e2d5bb3cd54f3da04d60160c742907040f30534d16de3afde5b41ed596a62740",
+          "sha256Loaded": "598a1abd8ecbea3f56cf13cb3c158c3a0221cfe2227e875230097df03d005de6"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "5742837f2b7920840398d136307dfe1ebd79687d72d170844d0488b85d18dc8d",
+          "sha256Loaded": "fe746c477cbec9f1bef2641392580bd62e5d44f8dd7534311f6186e64108426a"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 6,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1069690316,
+          "loaded": 4001321014
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 580.3820331994682,
+          "loaded": 580
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 580.3820331994682,
+          "loaded": 580
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.32499966591130874,
+          "loaded": 0.29835349740460515
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "c024d9d823f74cc1f62d9d0cd83068ab450c8d707ca25af8261a5d52d2c1a86c",
+          "sha256Loaded": "d1bf3c65144995d985fe99772b29249fddd8494c01cc94eb8ec256b37a9f88b8"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "b9f58c18577e50495ac19054d73615e97d706c83c238ec769b3f2a4832e819b3",
+          "sha256Loaded": "abab2b46a43805d8f45243b01154b9f00c9898def9d3d3a778a27b5306008ae9"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "b78c77b03c25f8362a2c0879f80589ba9202a664e45b99f531a5bc2d5f21133a",
+          "sha256Loaded": "b456e50a1349511d8fcdc3febe3ae347d1abfd19f30d5afebed35be2d52dbb16"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 7,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 2077596869,
+          "loaded": 3369485345
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 456.24952723163665,
+          "loaded": 456
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 456.24952723163665,
+          "loaded": 456
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.28769791615971646,
+          "loaded": 0.2619335901690647
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 50,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 50,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "fc45c7f4b7dbae917f19facf83888a91922580be60b0eaa839e2662a29786875",
+          "sha256Loaded": "52e57fbb6c4e96008149da0e4f35605493ccb8b7406140ddc76ee1e872599eb3"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "eab3c3856245ae753660d9bab06e4989a35a16b8da8727b4767c4fb8f09662e5",
+          "sha256Loaded": "c4144c65dd72d0a3edf053792bbae40aef8a307aba2fa6a99642c3d8035cf317"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "b73d84d00ae8e8c95e039405c09932db63e3f3c6cfc4ae61f68a90e6b539ffa1",
+          "sha256Loaded": "8b2acb78c9a9470eaa3c4a01abac87f6daf177ad81c645edc9acb1f1bf0e3c75"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 8,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 246031057,
+          "loaded": 4001321016
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 451.0667339738103,
+          "loaded": 451
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 451.0667339738103,
+          "loaded": 451
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.2487300546451776,
+          "loaded": 0.09113507415167987
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "5c5d6f3c049f07526f159762f1a6f47136b2c2c3a0f405c9ea3555ae45159eba",
+          "sha256Loaded": "66985de2ed1a0a84e626c7dff6c47857e71ef856c87716151ac26668e441a2bd"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "7fa297979525100f32ab6f8ca3f29eef01b3f8bd17fe14ea4f7f0e9d98459c8a",
+          "sha256Loaded": "3cea998c87803558e2e75c15cfb555f60f43f3d5d81b75edfbd599dad64c2fbf"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "b978ed8e25d229f96ad232382d12a8563fe89175daec799e05ab6958c121f32d",
+          "sha256Loaded": "4d35acf9bd313cc4c914ba9a7de8e5ca51eab4d8d7e00e30304f8a6cb7fe8f9c"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 9,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1205149013,
+          "loaded": 338189391
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 614.3061057631796,
+          "loaded": 614
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 614.3061057631796,
+          "loaded": 614
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.22800914441856174,
+          "loaded": 0.4960394959198311
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "0f0cc8a02f21c705a6edc14bfef7c0733803797785e9c48f189c98cc89950ce9",
+          "sha256Loaded": "90f3d6261330ffce09210a3e59e821ca95c9349ba00fd7a53b319ee50066ebbd"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "b3b4bb3b5bedb08e779b286c711290eed657da68a25c3270114ac2b78a584679",
+          "sha256Loaded": "5698113ea156d566338bc2a25af709fe74bbef1d572f6903885e843ddc31e1a7"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "3f9f7ea9432a32122d6659ca3e50b8c84dc60145c8ec9c93720dce85f5c9952f",
+          "sha256Loaded": "9298dfb95e216efb188718ed95f7bc7d2e4eea43bd63e2d037ed127d6b972ef9"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 10,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1205149014,
+          "loaded": 4001321018
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 583.6739859417632,
+          "loaded": 584
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 583.6739859417632,
+          "loaded": 584
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.32626557918265425,
+          "loaded": 0.13390099455136806
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 55,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 55,
+          "path": "stocks.0.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "970d5ec55e66c7bb779ce036318d9fa06406d0cf77de6345f32b0aaa1b08e0e6",
+          "sha256Loaded": "795a1c085a8a544da8efd89001fd96d7e47683b129e7ac01a75a78ed7ae5612e"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "595247472137c12965d9e6ee2b3643ef43bce7368ef3fdc1bd88e40ffaf9014a",
+          "sha256Loaded": "3fabfe6cef352a9fbb3e0e315b801ed786bf46e7a332e016797be97816ff4605"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "120e52bd6547e4ca388657cb067f4a994c8ae9c423a18afd3f1ea3dbda6412d3",
+          "sha256Loaded": "5966c1292e2923f43e4fe70cba7584abfa4a9b0f8a001ceab0220e959f28f56d"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 11,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 5418872,
+          "loaded": 4001321019
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 382.1836009691644,
+          "loaded": 382
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 382.1836009691644,
+          "loaded": 382
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.42337511129056377,
+          "loaded": 0.2751144350040704
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "stocks": {
+          "tick": 62,
+          "path": "stocks.0.ammo",
+          "original": 1347.8600000000004,
+          "loaded": 1221.8600000000004
+        },
+        "unitHealthAndAmmo": {
+          "tick": 64,
+          "path": "unitHealthAndAmmo.length",
+          "original": 74,
+          "loaded": 69
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "7882a19499febed91663684ffe3b3034fcb54d0863b6d25fc592790baa4969b2",
+          "sha256Loaded": "87ee03382caf6e6ff46fe1e95b3d265d79ad4edcc15d3357eb5b46902b0ad920"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "1a934239b5258d49bea4be84317bed1103dd8265f296a9f280bc49bb3f77c87c",
+          "sha256Loaded": "ff41dba2739313ecb57213daae89f47c272ceb90cbf43aa9daa6e73b558d3c4f"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "36c0ee5cbf6aa8a83e29e9bd38c301453949e1e50b7d1fcd7f4a8365c3e8bca0",
+          "sha256Loaded": "5f240d3ac32249fb96368ef3e3fa0c89bfac34cdda40bfa99deecb2b4b9c66df"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 12,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 3348844514,
+          "loaded": 2737649680
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 684.8359297478487,
+          "loaded": 685
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 684.8359297478487,
+          "loaded": 685
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.2282621854062497,
+          "loaded": 0.14833537582308054
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 53,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 53,
+          "path": "stocks.1.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "518b8599cf733764b3948b35e86e7e93eee6a146f289dfca474113e58c1800ee",
+          "sha256Loaded": "d4238222cfdcc32e6ff30befe0348b32ffd6107b722000778bf6c8addbcdea99"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "3ff7e2c357c283199672cd89947f41bfcf374fe3f84d3781df5cdbe655d40873",
+          "sha256Loaded": "2eb9e7d8a7e72132ee8e97588e409b447dd8d65162ee1f5539c48b9ad6296357"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "1c345b2059e420f0377b643339c35aafcf583e566f9f741bb9ffcf2d9c32d4a8",
+          "sha256Loaded": "a135e0ec23e6ccc0caadc86634d169e2ea3264ca4b67963d5f5f9d096cc2173b"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 13,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 3796432894,
+          "loaded": 3369485351
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 680.9127147346574,
+          "loaded": 681
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 680.9127147346574,
+          "loaded": 681
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.14452656839663724,
+          "loaded": 0.052098354091867805
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 51,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 51,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "afefae43e8a57985275223380b38c8c8cdb42c48f9f6c14146db253cf9548d31",
+          "sha256Loaded": "3ec686006cd15dd4a355225b66f3929210373f528e44e358c13c4ecec3e9bf65"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "cd756e9d909a3074edf80c677ffdc7c95d5d7420d76f39498f679c7bdea48be8",
+          "sha256Loaded": "487267d2389df1dd165fea0ba1774e92bbf3c942e0075f83e728d3bf5ab4453e"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "2693fae460cf6d997ecd5abced8fc800acd7c48a6790573360ad2b7551338fdd",
+          "sha256Loaded": "da0f7a766f695585e6ddfb12cbf5ef92f7a159d4ad9e4803cadb2bca7c255374"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 14,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1269090215,
+          "loaded": 338189396
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 410.9502248632858,
+          "loaded": 411
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 410.9502248632858,
+          "loaded": 411
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.20926106836025904,
+          "loaded": 0.23144623741973191
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "07ef5a414034309565edfeeaec7d5dfa45e669821223fbfa00c7083de5dec6e8",
+          "sha256Loaded": "1c3fe19a2c59a835faad2f78863defed757c2cc8d272fb6bf79c50470184f2f7"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "32b73e970cdce775803c968151db999595a1969cbfed6e2454f449000cd64392",
+          "sha256Loaded": "544e20ee71e02573dfffbd103680b5c7ba423b422395352fc9852bd98b88f764"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "3d500439dee2cecb44eaa9a4eb2ef08bab82902b3e0b88c43bd56c6ec8991d68",
+          "sha256Loaded": "0d07fb504ae85aa5e2fbad1f1af130f0275f2e9f0491431ad2919a3f2b255c0e"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 15,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 2732161447,
+          "loaded": 3369485353
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 348.69622918845346,
+          "loaded": 349
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 348.69622918845346,
+          "loaded": 349
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.36160214559640674,
+          "loaded": 0.46643070690333843
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 58,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 58,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "301deb3cfc63d626b49ca7d105af8df278b9323de10dd139c035278961e07ed2",
+          "sha256Loaded": "d99265b29f77b74f09c3ca74211a98f740a6daddd03f6852c0350c4c04ecb1e6"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "826f800460055d82bda96e373860abc5ecd19553abaf95404ae39e10a7c9f078",
+          "sha256Loaded": "f748c576d64568341f222d012a27754ead4db3e6dac0a6f12f487836059a5a2f"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "2e2b89756db3db4bd4862b108af209a57fc14debac4351df14ece515e78bbd9a",
+          "sha256Loaded": "9d0ac1b590711d9f0ee1956746118624ed3d9db0f1fc09ec8c1250eb8771a7d2"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 16,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 693619444,
+          "loaded": 970025068
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 375.0945251825736,
+          "loaded": 375
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 375.0945251825736,
+          "loaded": 375
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.15265253244433524,
+          "loaded": 0.22959577245637774
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 53,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 53,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "4ff87d3bf0309c3738be9fbcbaa05920782eb353eb550146e0cf5784907922f1",
+          "sha256Loaded": "13c69a06948ba708887410145f090e2fc7a655c0c89d01059d0e74929ff1780f"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "ff610b512355818873d6364d5b80ea2b6c40d18412e80c139cd9878357bc24d5",
+          "sha256Loaded": "188c0ec69a7c30ace3df1dc1c0e16892f0eb4f6bb37eff9fdc6bf8691f50b606"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "9241bd1445024ac9e0f808a16b5ed0ca678db66c565697204804d68e1ac09ab7",
+          "sha256Loaded": "c58fdfffab81a37ad2ce18324e008bbe70979449dd19545bd3eb673c5fdae9e0"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 17,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1964867085,
+          "loaded": 4001321025
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 607.1888077142711,
+          "loaded": 607
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 607.1888077142711,
+          "loaded": 607
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.22356132700418402,
+          "loaded": 0.3159397493582219
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 51,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 51,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "9e53d71c09a45fdc6b0bef481e46ae3a0aa440d673a19a9a2c48809aba27e25b",
+          "sha256Loaded": "a2984173b67f883d0a3f1785860e281292197e3b240703e9dbf9caa67c3db7e1"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "e6ea29ed5e344fc7b0a8c462888af2d8c5e944dfa2e2bebd13820de24d9f9261",
+          "sha256Loaded": "8b359979047048d15fd490ae95e0c7bc62fe3bb1ab50d634af7dcb2cc04695d7"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "e7c8135a77045c5ca3f55b4658f29e743aa37b4d6c1483ce3710f0e94b42c5af",
+          "sha256Loaded": "1dbb4d16b0ec2a2a74b98ade7cf19a0696c0bc7bac00fc9fd8d386f368dd4a1e"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 18,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 3277327023,
+          "loaded": 970025070
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 544.4221811611101,
+          "loaded": 544
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 544.4221811611101,
+          "loaded": 544
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.3300259022973476,
+          "loaded": 0.1750927777029574
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 50,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 50,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "0509e59718a0e652207d5a3817d1adae25e1fb7f59c47de9edd38546d6630115",
+          "sha256Loaded": "f1061398fd23aa8414a4262ec111a18b08e3f44ea468891599cc890142c6398b"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "2f32e129345fff5ac769d7501cca908e688fd8c91c5c9d0c4936ecab8a547fa6",
+          "sha256Loaded": "d91d687a0e93a6a0aca4a3dc76ed43375b7a538948f85021747c5f6e51febcb7"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "ffea9ec985c9a557f5cc3af7894c694b0ae44364fa396f166e447c3464c900ba",
+          "sha256Loaded": "0a3561ff800e61f05939f3051007bd4d6df6b56db19a1e68aecddf6f0b417b5c"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 19,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 4116138885,
+          "loaded": 2737649687
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 521.9822652326505,
+          "loaded": 522
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 521.9822652326505,
+          "loaded": 522
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.2865164757551005,
+          "loaded": 0.0843751922948286
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 57,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 57,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "8acc6ef53cf0f5491e1d2f41dc82cf9b647ee2eac04eb92dcb67ecfe9d67f3ad",
+          "sha256Loaded": "172b6bcd911c8fabe9bb963571f827e6f9352c400f94438d74293df329925e08"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "08ddd9c6c47b38dae60d68dc48ac0126db41ff22d85d1f60b2775501bf153ad6",
+          "sha256Loaded": "5a5d0d0d1ef2fe921b7b98696e79a8d4e826914ed2917d2d3d11053cbfb49725"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "f5e9f07fcfbdb4d50afe53e745ad36b45cce8846ce17918a3bc6cc1eefc8d49f",
+          "sha256Loaded": "07175f4e518153616f55c332e1a462bc9e661a35cf85c1a7920f9f4705496821"
+        }
+      ]
+    },
+    {
+      "extended": false,
+      "seed": 20,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "time": {
+          "tick": 0,
+          "path": "time",
+          "original": 1.9999999999999978,
+          "loaded": 2
+        },
+        "rng": {
+          "tick": 0,
+          "path": "rng",
+          "original": 1381820015,
+          "loaded": 4001321028
+        },
+        "identifiers": {
+          "tick": 0,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 5
+        },
+        "units": {
+          "tick": 0,
+          "path": "units.0.x",
+          "original": 474.72291656537925,
+          "loaded": 475
+        },
+        "unitPositions": {
+          "tick": 0,
+          "path": "unitPositions.0.x",
+          "original": 474.72291656537925,
+          "loaded": 475
+        },
+        "squads": {
+          "tick": 0,
+          "path": "squads.0.thinkTimer",
+          "original": 0.11220923409952455,
+          "loaded": 0.11783785745501518
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "unitHealthAndAmmo": {
+          "tick": 53,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 53,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "7f641ac7a87b4987d1da76e56b201f07c20d2fd9e5efa1591472be8722160ff6",
+          "sha256Loaded": "8d5a9b3c1c22aa58d5c10fe7d30d9563d011d4749ca9de8a8438d7ad870fcf76"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "215746173ef25cba408e002a41570c5d9bedae5daca4b3a032d769ee2ec2ff57",
+          "sha256Loaded": "0d93efcbcd9a56a6b0093424a7e23e50a3bc4078fd96d88a4d19c45ce393a03a"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "dc24bc01b427d1de4ea75541d714b4b51823c7a966a084d98cf612ae92e484f0",
+          "sha256Loaded": "4cfe04f189b88af92109355348c80a08ee00d3a7f7d4858d66d75d0817859aa3"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 1,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.arrived",
+          "original": false,
+          "loaded": true
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 7
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 2276996754,
+          "loaded": 2213055557
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 16
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.x",
+          "original": 571.5092620859147,
+          "loaded": 570.5664530443325
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.3.thinkTimer",
+          "original": 0.5849341425811871,
+          "loaded": 0.5840332337655127
+        },
+        "unitHealthAndAmmo": {
+          "tick": 54,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 54,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "760b3be862e80cbf74adfeb76969090c961db5e3fc3d9a258bddf64343f26de1",
+          "sha256Loaded": "bbc4848ffc87059369ed68d901426e75e2c209ed7b6f189c7c7352bf2606870f"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "0d99ea071669b1effbe6464a558a6267ae32849fe11ac91a264f942ed3ff1b70",
+          "sha256Loaded": "95bfe72d620d1659523b5d6eeff1d01407b1d41402bd8f8ef3db12412b7c155f"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "5197a45cc09066d1089c07ca4fd8e1588f9cda3606b1347b62688c97544f249f",
+          "sha256Loaded": "6509bfd8029d3028d73616d60006691d127905bde27778b21ada9238e1b767a6"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 2,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.arrived",
+          "original": false,
+          "loaded": true
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 6
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 3717339086,
+          "loaded": 3085503416
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.x",
+          "original": 541.4853412053412,
+          "loaded": 540.5425321637591
+        },
+        "squads": {
+          "tick": 3,
+          "path": "squads.3.thinkTimer",
+          "original": 0.6019125932594761,
+          "loaded": 0.7062411613529548
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "f71f17e6ee693bf9df3f666a1ce55eae9b6b1f772db778f1081a53c62701d9e4",
+          "sha256Loaded": "5d7d87b31eb09ef58ac79af16226c36bdb1f756acdd1c8632043402bb272466e"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "03131cc74b31c44c7f9a35588c2504c146eb22735672f37ea6a24a10c4074bc8",
+          "sha256Loaded": "b3e802c56726fd41a7e3270caae992feb42e9bc96d3a46ebf0a85b8991eb89e2"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "7784edc4b836b4ddbdc233ce2fb0f545c8cfcab02e829a33a55ee2cfdcb00771",
+          "sha256Loaded": "4469536d5e52954ca4b75220ef1a170fbde7a7bf49716c395d9dffd2336735d8"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 3,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.7384089844679824,
+          "loaded": -1.5234753507948757
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 8
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 3845221481,
+          "loaded": 3213385811
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.55.x",
+          "original": 703.4787657185051,
+          "loaded": 705.2090710888364
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 528.6097395430863,
+          "loaded": 528.9558006171525
+        },
+        "unitHealthAndAmmo": {
+          "tick": 57,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 57,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "486fb4e2eb124447ba7a44867e39b784942e0876abd8be6347634e37e6480c0a",
+          "sha256Loaded": "8d769bb502c68806925d6e28a86820ff215ce9d510a8fd57966501b13d150912"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "0e38c705d640b30e05b9dbd286c07e96275f78a379ec758e54e1dda79bf40e20",
+          "sha256Loaded": "cc687ea0cc63273b2b7e4d1b5cc9daf9518c25778fbe167c2d439c5affcb945a"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "dd575235a76335bd7e829fbc29aacb9c5bf2ddd121f5ebe71248ff815aa99b34",
+          "sha256Loaded": "e4c02c7cee3d258ddd56fd049247ea36627ca2befb23cb63ac5364224e3d4749"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 4,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.7301809338031855,
+          "loaded": -1.1659195463489966
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 6
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 2573973842,
+          "loaded": 1942138172
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.56.y",
+          "original": 3339.288710628781,
+          "loaded": 3338.593878996103
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.y",
+          "original": 3363.548588575258,
+          "loaded": 3363.409622248722
+        },
+        "unitHealthAndAmmo": {
+          "tick": 54,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 54,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "ca511e53b32b9742e80841cdebb82e70087612cb1b952fe649c35b378bcb211e",
+          "sha256Loaded": "ad41120e30bfb9988a549d788a30661c5e96146e7fa4e3545d6ca46767f375f7"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "1dc6652cbaa807dce39b7b8d3253e544abb08409f409ae82ddcf3aa3d748a634",
+          "sha256Loaded": "1adcf3c094c5e35851d79b1f838c6042526c1e5c9fd774964ec5bc0d37f010e1"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "7f2942a0f602bf0e47d7e604cdf81b1fd8037016e3b55cf7c837b3d9a794e8f0",
+          "sha256Loaded": "1d74bfa9e46c88f92284d4dd8b3ec0df1cbd9cfbddea23789a70a9a96bdc0700"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 5,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.6350906015725152,
+          "loaded": -0.3605124364929
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 6
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 2340937955,
+          "loaded": 3540668098
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.10.x",
+          "original": 488.78424745454015,
+          "loaded": 490.9055677980998
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.6.thinkTimer",
+          "original": 0.7933071173727513,
+          "loaded": 0.5351908472133801
+        },
+        "unitHealthAndAmmo": {
+          "tick": 50,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 50,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "a977f63eb87ba2ed0254f7ce2c85cfdcf324f9eb559e7e4218095d14d34f248b",
+          "sha256Loaded": "1a9c39610ce7f604fdd99d19c212aa1dfa2210723007b68c600a342a9ce0018a"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "cc6148d2ebade04c7c6d214ac1ac14b0d31823fb76cc5c40282970ff6fff3425",
+          "sha256Loaded": "ae0e8df5f3ade9c4865a59dd66b8734c7c9af2fc95873fddcf3423f654f44fc0"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "af25ac20ce23c5fd4692cfdf6f3c2275a833d04fded644d148cadad7cd9edf60",
+          "sha256Loaded": "d43de2874044bb081e30f8b9a0f64c3bdc0af0552e3b1b5aa95ea7d2df9f9f2d"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 6,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.7333218224221446,
+          "loaded": 3.0541174904467026
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 7
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 2325785356,
+          "loaded": 430278346
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 16
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.0.x",
+          "original": 581.7716245735445,
+          "loaded": 580.3820331994682
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.9.anchor.x",
+          "original": 3584.561307573071,
+          "loaded": 3584.5584041741904
+        },
+        "unitHealthAndAmmo": {
+          "tick": 50,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 74
+        },
+        "stocks": {
+          "tick": 50,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "5170154534954603bc4bce76e8d4ef461dad8903839e1a01e9a012fdc08f8e2a",
+          "sha256Loaded": "36cb2e68d6fecac5d676ce5dd5267759f19263e7aa81cd4ba4614f0ec521a8d9"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "8c541d26d1f1b4d11f0985014f3ca4817a283e2dde695a8a64445c0ff9ff9cf3",
+          "sha256Loaded": "25d4bab769b0d624ee0547f9eb082c1f9d42c67ce1f0f56becf26024071bfe2e"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "310f06358d8eb3034b03df31e2c42738c9e131a688c6c3c7f03826cb8b42a008",
+          "sha256Loaded": "d47ebf1cd5507450ba39459b380a69ef1682b0f2397936ab04bd04a680847f4f"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 7,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.6377286634911811,
+          "loaded": 1.8585215668374753
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 6
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 870290426,
+          "loaded": 2701856239
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.7.x",
+          "original": 605.3836317253392,
+          "loaded": 606.7695356585085
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 3590.578291204768,
+          "loaded": 3590.948458744226
+        },
+        "unitHealthAndAmmo": {
+          "tick": 58,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 58,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "fbecbfc1ebc3a078b6703c4cfdf48105cf01a23b86ce22a06bb9e75e6b3b7d3e",
+          "sha256Loaded": "b8b593ed44795d271909441403ff3ca5d120027fd93349be9383349420b9bb43"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "71461d2049cc33a1df9fc0aa325381bba3fbacbdcb3963d031980a227509de67",
+          "sha256Loaded": "59d18a0948d7fa48fcb561a10698112939cb3d8790533939ad8d6f273b9d43ec"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "f92e1ca1ba1b9f4e4f87162df069d08e39c309dc98d656242abb06cf019a397e",
+          "sha256Loaded": "3e6cd8837f73704aec95c787ea217448283d324bab43267673f0e2722e64ff3a"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 8,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.636328978098556,
+          "loaded": 1.8679040811768575
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 4
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 3333691910,
+          "loaded": 870290427
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.29.x",
+          "original": 3624.159175871468,
+          "loaded": 3624.9571999230343
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.1.thinkTimer",
+          "original": 0.5539935053326189,
+          "loaded": 0.7153027774998918
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "703cbc19f601e736bae103f294bd7e0061c9821b5dad91e2be48eb5fbc29d648",
+          "sha256Loaded": "a72527c1c0754d86594a58ce97dcec5c28fd1f2e1145ce41605bcbfe066bfe2f"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "adb2d1ac57ee4b8e21e0d24da3afd17200b696e443989b78b37d8a79a68cc4cf",
+          "sha256Loaded": "495db25500b1874e44a67ed6270402cef13cf91494bb61f2e97dc4c2243093fd"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "53bdb84bdb15884b2596916777da1077931298bca2b724e2dc6fd07a07590ff6",
+          "sha256Loaded": "b4fe01833222c890eb460e74571aa31bd45b686e11bf9414ea450868aae84ed0"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 9,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.6621770657865637,
+          "loaded": 1.3916549991481153
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 7
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 629678240,
+          "loaded": 3660974196
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.3.x",
+          "original": 493.9192199259092,
+          "loaded": 495.4271415078463
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 3608.580293408467,
+          "loaded": 3608.848863868171
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "cf7ea1e62160b6bf27838b028adafdcd506eaf32cf268ae64a92837d5ab8be5f",
+          "sha256Loaded": "1ef57e1001d8cbc7fdc5f8176968b5d3230174a214d8c79c82550ee3beb9ffde"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "4af41e5d92daf9d5c9208bf7a9b371b04ac96e7ee302a8aaafe9ceb8dc765255",
+          "sha256Loaded": "c390e965f9b93fb7bd801e04056e3ba9255e6cfa983ff59137ea819e08abc044"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "78c423b1f8e41a7118fd4c2219a194367b2cbf052624bce90f62e94970f55dd0",
+          "sha256Loaded": "b2074337ebbcf4e3d6e6a0379c245ec906ee87d476a414e9ed76321b4b651f03"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 10,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.6587763360503127,
+          "loaded": 0.015318128895839944
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 6
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 2461244054,
+          "loaded": 4292809867
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.x",
+          "original": 321.7613784910855,
+          "loaded": 320.4280451577522
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 622.2706107090078,
+          "loaded": 622.0023585107438
+        },
+        "unitHealthAndAmmo": {
+          "tick": 55,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 55,
+          "path": "stocks.0.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "0efcd72d7e805430a7dbb3d16b3f48956b5d1a9e946bf93de40d8c779cc41a3d",
+          "sha256Loaded": "e1d42b29005441156c1a05035ec8cdef408003413846698c0a61bc33cc44d2be"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "7e4a3721d0da7d597dd8a3f13f5fb6baaaa1fb9fc51e669fb7064f94a02c20a6",
+          "sha256Loaded": "340ad25d1f7c12aa75e4b39e3940a75a4c5bc829fb4c7e017023a9973558a3a3"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "a558c3941a35a62a17349f8400e0ae33f536aa137f42d1c2d43660a529916b72",
+          "sha256Loaded": "9ec4fe27517e18c87a9e783c9d6c88cbc7c21f62ff138925c05c82fc24291e35"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 11,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.arrived",
+          "original": false,
+          "loaded": true
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 6
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 3724915395,
+          "loaded": 629678242
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.9.x",
+          "original": 619.4026540425702,
+          "loaded": 620.4064091590793
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.9.anchor.x",
+          "original": 3635.1756297897746,
+          "loaded": 3635.3348718833286
+        },
+        "unitHealthAndAmmo": {
+          "tick": 61,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 61,
+          "path": "stocks.0.ammo",
+          "original": 1347.8600000000004,
+          "loaded": 1221.8600000000004
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "7c276aea52d3525bd0d6351c14cde8bd2550396d3c9cf040330d8f5cd2bdcdf3",
+          "sha256Loaded": "b24635e60c60c768d7388a5aa7078c7301df315196c666fc5c92ca1c915cb183"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "079c99e6475b21cc468db816a59b3665a3cef94f1f121c2bcef61dcdd3e825bb",
+          "sha256Loaded": "c21e90ca7da1681acee2f856675a909c6263cf7edeaaebd3dac3d53da2c59ffc"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "02eb34da86d9c458dd8a4d498b0e17182e0abd71cd84d762a1d2cc864fc9a4a2",
+          "sha256Loaded": "590c7a70940bb9e167ca1518ad93d24a6d23154bf7bc30c913854d3e956db3f3"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 12,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.7010446157603704,
+          "loaded": 0.9695828674753875
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 7
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 309972258,
+          "loaded": 2141538071
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.1.x",
+          "original": 389.1703464603696,
+          "loaded": 389.5614799862746
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 3510.556935848025,
+          "loaded": 3510.3016767236013
+        },
+        "unitHealthAndAmmo": {
+          "tick": 54,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 54,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "33002cfc840348da946d3e9a760b89a3eb41abde19ae00f5057e779172bba5c1",
+          "sha256Loaded": "d952a6c781c94f47aeed15809ab7ab15cfd4e3b88dd410763ca3e403d83a7821"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "2fa4c280e51464142704e71036750a3def77537db7f11091b40e2f91c42a25cb",
+          "sha256Loaded": "59d48e56579310b7e47ca3789ebf98be282a151a570722cec626bdf8853cbf3e"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "0519bfc7e106e29933384dc7f5c20f5f7741f2140c1bdca7f7a851c43644e96e",
+          "sha256Loaded": "7ef6036ae3bddbb141aa5203538baec04ada1336c0feced0780c79d834be7a6d"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 13,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.7229314623583822,
+          "loaded": -0.4706422831802084
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 8
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 3220962121,
+          "loaded": 2589126451
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.57.x",
+          "original": 3603.8406957846496,
+          "loaded": 3604.880726731904
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 3614.603106222028,
+          "loaded": 3614.811112411479
+        },
+        "unitHealthAndAmmo": {
+          "tick": 51,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 51,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "edd0ffe7309b795ac384ff8591431718284e6aa11cec60ddef8681643fe49e33",
+          "sha256Loaded": "7e89cee0aa8058a9b86f03cc4af58dfa6c7ebb50262d3b37cd839b19109b1230"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "2c0aa5c98c0f9a86f57662817d39a721e517f47f29cff577d6325230d1a2eec8",
+          "sha256Loaded": "5391bee5d734478337b03afe9e49cac067c90294bc7174c3dbad261d12ab767a"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "a0ecff8b42d236845d805fcfdcf508b3bb90eeee7b1b7e3030855f18a915248d",
+          "sha256Loaded": "8907639f706038f9d71269cfa034ee380e2342422e82312565c5dbb8bc68f90c"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 14,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.6964444338913358,
+          "loaded": 2.888611002562869
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 8
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 693619442,
+          "loaded": 61783772
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.y",
+          "original": 3219.1791577541226,
+          "loaded": 3217.845824420789
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.9.anchor.x",
+          "original": 551.8275701066239,
+          "loaded": 551.5276954930911
+        },
+        "unitHealthAndAmmo": {
+          "tick": 58,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 58,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "df0381be660fec90c313ca7282850def1645e57ed4dfa843b7a7cdcd2281d79f",
+          "sha256Loaded": "b34252aab9965ab9fc207e197f0d9f09208e6d90233936153242f92b6b182d36"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "b315ad8faf118308699e9aef35edaa1c509b1a62e087e1d6f43e7fd6a218b830",
+          "sha256Loaded": "1bad1c83805a8f915a2303b3e23eb9dc88d6d9472b418e7c0f2ba0921551934c"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "6c2412d6c315af40220bf4e1e082f2bb28640a66856ef439c30306b3d182601b",
+          "sha256Loaded": "e16c6f3153646c8c6f6efafa3d3dd0b7b86457513625833e3bd9cea98b34edf7"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 15,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.6714093896768353,
+          "loaded": 0.9900178785841955
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 7
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 2156690674,
+          "loaded": 1524855004
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.54.x",
+          "original": 3596.2465905462973,
+          "loaded": 3597.183358514227
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 3548.000862637301,
+          "loaded": 3548.1882162308875
+        },
+        "unitHealthAndAmmo": {
+          "tick": 58,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 58,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "774faa8287b1607fb8e80bc7c59df278a281d2ca6eb66513b667fd50ed9c0cf8",
+          "sha256Loaded": "c1593d900d58c4387236238b0e3b6c7f0978c63dfa2f6363ad40ce3259edbcaa"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "3f346a63c9332395350d9887e5eb6ca66f8397286c63a5784dac64ee958c478f",
+          "sha256Loaded": "dfdfae0a87a9734261543dad6d6d761b6502e81331f6e75b5a8c33e2641e2f57"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "89b432730a09a210de222f026039b90b59d6cb74b9caf4ca5a23bbb4bc62028f",
+          "sha256Loaded": "fb81e58f9f171d5c5d86ef04ac8eeb26a74c9f90d297d8222aba7ec4b1ee5658"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 16,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.6871548745752137,
+          "loaded": 0.3730478011554399
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 7
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 1949714484,
+          "loaded": 3781280297
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.y",
+          "original": 3123.4587093656023,
+          "loaded": 3122.125376032269
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 544.6338860160289,
+          "loaded": 544.8513920051897
+        },
+        "unitHealthAndAmmo": {
+          "tick": 50,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 50,
+          "path": "stocks.0.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "6b00bce92467331cc5918672830e9f54758eceb3843bbe440307e425da6f0f76",
+          "sha256Loaded": "92d83eb15a64b44e266762d16ff612ca4ca7289259d07c9e2060c821c32c3163"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "c03d81e2914719a521cacf11b37698f5970fe6b3391e0e4f89f5fb5f01b07bd2",
+          "sha256Loaded": "258f1050f7b060979941ea86f07d9bf5d82491a45893d32654b1a8b532233e78"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "787f7d5b1e66fe6560cf92f7507fede8567229e54016a0d83cf42a1807847ad0",
+          "sha256Loaded": "4b2d0f31df4c5cfa5b2c07d53fb86e64f05c0e79e2736f70df17f840fac1a98a"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 17,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.7291746638868355,
+          "loaded": 0.1835132919737874
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 7
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 1389396312,
+          "loaded": 757560642
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.y",
+          "original": 3324.275183062401,
+          "loaded": 3322.9418497290676
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.9.anchor.x",
+          "original": 508.00034640344285,
+          "loaded": 508.243915712909
+        },
+        "unitHealthAndAmmo": {
+          "tick": 57,
+          "path": "unitHealthAndAmmo.length",
+          "original": 69,
+          "loaded": 64
+        },
+        "stocks": {
+          "tick": 57,
+          "path": "stocks.1.ammo",
+          "original": 1221.2400000000002,
+          "loaded": 1347.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "aa6d263def17b2b9c6169dd1f68cf8d601985d758accad9e9f88d7f6491541de",
+          "sha256Loaded": "b86b06b4c39f8d6b8958549774f0d0f92eb06a0359a4bc5c0ddddf46a11cd272"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "2cc9d93793f369778f01abd708e94eadbe9fd7705295559f8b217ef1c66473cc",
+          "sha256Loaded": "1a5ab69228b08a9ef804f2e514cd69fbf80cec0871721d84be35b8e81f95ca0b"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "aa28c22cc0a55bdf6fd956b9e6fc979ee828b13a2a4ee5f76e4fde1c27cff7e6",
+          "sha256Loaded": "249b394cf87c0c0e2e5d247106997bee36550dd039d7e092bdd614a8cc75b543"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 18,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.arrived",
+          "original": false,
+          "loaded": true
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 8
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 2701856250,
+          "loaded": 2070020580
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.49.y",
+          "original": 660.5798069736785,
+          "loaded": 661.9131403070119
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 475.84105146717286,
+          "loaded": 475.5744492824938
+        },
+        "unitHealthAndAmmo": {
+          "tick": 66,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 66,
+          "path": "stocks.1.ammo",
+          "original": 1347.8600000000004,
+          "loaded": 1221.8600000000004
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "524770438f2e512e6d862f0dffd1a81737c9d5f37f25da81e09204f8870e8911",
+          "sha256Loaded": "c03d37714d7c6f842cc8be321ee37732d97d3d8d2323c1860c3c6c03b4e28852"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "a29e75237d7be66e78bd93441fdb128a0f1847c2bc643436ed0767fd560d57cc",
+          "sha256Loaded": "516e3480bcd06c1331c3410e2ee0a0b5d99537e0372f7348c483783ae0abda8e"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "97f52571a1a69d8eccc7216b1ddceaa716f5e028d6f853349c52dfd59e3dce84",
+          "sha256Loaded": "fde6f5b927d647ece81f7cc527478f58876dfa0381a5b1f79f2948d84e4e7ff0"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 19,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.arrived",
+          "original": false,
+          "loaded": true
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 8
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 3540668112,
+          "loaded": 2908832442
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.x",
+          "original": 489.47280114079655,
+          "loaded": 490.80613447412986
+        },
+        "squads": {
+          "tick": 1,
+          "path": "squads.8.anchor.x",
+          "original": 3529.6449146862615,
+          "loaded": 3529.29573803088
+        },
+        "unitHealthAndAmmo": {
+          "tick": 52,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 52,
+          "path": "stocks.1.ammo",
+          "original": 1347.2400000000002,
+          "loaded": 1221.2400000000002
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "aadcda053af838742385940ccc47d17d0e6034c4091f93829e1edc4945897c65",
+          "sha256Loaded": "18e30180dd161bab296577cd3ba4408f77d8ffb196597a34f37ccd0da826f86e"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "af2ee56be7c902de1550f2cea22dd771199d0e9063ede786f2fe685d70b06a62",
+          "sha256Loaded": "a802f7e1d322af36c3b1c48bd856ed137f73ad3dd25f13b48d290ed9e2d3074a"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "978cebbd753020d10586720179026c313c7bcff5baf07a3545dc43d2bb1290e6",
+          "sha256Loaded": "33369d0a521b8c42a77a0ee9e82625d702b5ddbea4ff6ac449cb01a224b3db91"
+        }
+      ]
+    },
+    {
+      "extended": true,
+      "seed": 20,
+      "matched": false,
+      "controlMismatch": null,
+      "saveDidNotChangeCapturedGraph": true,
+      "firstByCategory": {
+        "units": {
+          "tick": 0,
+          "path": "units.0.aimAngle",
+          "original": -0.7153493493181485,
+          "loaded": -1.141559057899729
+        },
+        "orders": {
+          "tick": 0,
+          "path": "orders.length",
+          "original": 10,
+          "loaded": 8
+        },
+        "rng": {
+          "tick": 1,
+          "path": "rng",
+          "original": 806349242,
+          "loaded": 174513572
+        },
+        "identifiers": {
+          "tick": 1,
+          "path": "identifiers.order",
+          "original": 11,
+          "loaded": 13
+        },
+        "unitPositions": {
+          "tick": 1,
+          "path": "unitPositions.23.y",
+          "original": 3317.2400312435693,
+          "loaded": 3316.297222201987
+        },
+        "squads": {
+          "tick": 5,
+          "path": "squads.2.thinkTimer",
+          "original": 0.7913125190418213,
+          "loaded": 0.7257919847266748
+        },
+        "unitHealthAndAmmo": {
+          "tick": 64,
+          "path": "unitHealthAndAmmo.length",
+          "original": 64,
+          "loaded": 69
+        },
+        "stocks": {
+          "tick": 64,
+          "path": "stocks.0.ammo",
+          "original": 1347.8600000000004,
+          "loaded": 1221.8600000000004
+        }
+      },
+      "graphCheckpoints": [
+        {
+          "tick": 0,
+          "matched": false,
+          "sha256Original": "6d1e8d0d4d3a027bbc955076da9acb9b6b2b79cbb3994376a56a2ace8afb76fa",
+          "sha256Loaded": "6c22cde282e5bf910561b3507341233a02e47e89e1ee58ee711a227d506a7332"
+        },
+        {
+          "tick": 1,
+          "matched": false,
+          "sha256Original": "6b9e793b5675ebbf95796062daa0c9e3cff6ae9f4f1611d94c879f0d22f69187",
+          "sha256Loaded": "7890190126cd0d9f8b928aa21069afab1fbc809a964191ef25e916f0cff2bd24"
+        },
+        {
+          "tick": 120,
+          "matched": false,
+          "sha256Original": "6d15eda722c4dedd3dac2a360114c5980706224bfc9e5e7b3115d34357b5d161",
+          "sha256Loaded": "9cee27c476d98ef8616ec617acf9d465fe6662b013765b8e3b53eec7b48557e6"
+        }
+      ]
+    }
+  ],
+  "caveats": [
+    "AI-vs-AI only, same Node process; no browser input",
+    "Existing alg_save flag set in the test only; it remains default-off",
+    "Exact sampled projections compared every tick; reachable graph compared only at ticks 0, 1 and final",
+    "Graph excludes wall profiling clock fields and cannot capture closures, module globals, all prototype and buffer identity state",
+    "Save itself is checked against its pre-save graph; control projection checked for continuation",
+    "Save/load may legitimately rebuild caches and indexes; not every graph difference is a gameplay defect",
+    "No attempt to modify save format or claim complete replay"
+  ]
+}

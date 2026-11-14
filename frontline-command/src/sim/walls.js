@@ -275,6 +275,44 @@ export class Walls {
     return false;
   }
 
+  // Exact swept circle against nearby wall segments/openings. The broad phase
+  // reads the live index; no cache that can go stale on door or wall changes.
+  blocksMoveSweep(x0,y0,x1,y1,radius=8,mover=null) {
+    if(!this.enabled())return false;
+    const minX=Math.min(x0,x1),maxX=Math.max(x0,x1),minY=Math.min(y0,y1),maxY=Math.max(y0,y1);
+    // refs are inserted into all cells touched by their thickness-expanded box.
+    const xlo=Math.floor((minX-radius)/CELL),xhi=Math.floor((maxX+radius)/CELL);
+    const ylo=Math.floor((minY-radius)/CELL),yhi=Math.floor((maxY+radius)/CELL);
+    const visited=new Set(),isVeh=!!mover?.isVehicle;
+    for(let cx=xlo;cx<=xhi;cx++)for(let cy=ylo;cy<=yhi;cy++){
+      const refs=this.grid.get(cellKey(cx,cy));if(!refs)continue;
+      for(const ref of refs){
+        if(visited.has(ref))continue;visited.add(ref);if(ref.breached)continue;
+        const lim=radius+ref.thickness*.5;
+        if(maxX<ref.bx0-lim||minX>ref.bx1+lim||maxY<ref.by0-lim||minY>ref.by1+lim)continue;
+        if(ref.kind==='segment'){
+          if(!ref.blocksMove || (isVeh&&!this.vehicleBlocked(ref)))continue;
+        } else {
+          const o=ref.opening;
+          if(o.type==='door'||o.type==='gate'){
+            if(!(isVeh&&o.type!=='gate')&&this.doorOpen(ref.bid,o.id))continue;
+          } else if(o.type==='door_closed'){
+            if(this.doorOpen(ref.bid,o.id))continue;
+          } else if(o.type!=='window'&&o.type!=='embrasure')continue;
+        }
+        // Minimum distance between two finite segments: intersection or one
+        // of four point-to-segment distances (also handles collinearity).
+        if(Walls.segIntersect(x0,y0,x1,y1,ref.x1,ref.y1,ref.x2,ref.y2))return true;
+        const d2=Math.min(Walls.dist2PointSegment(x0,y0,ref.x1,ref.y1,ref.x2,ref.y2),
+          Walls.dist2PointSegment(x1,y1,ref.x1,ref.y1,ref.x2,ref.y2),
+          Walls.dist2PointSegment(ref.x1,ref.y1,x0,y0,x1,y1),
+          Walls.dist2PointSegment(ref.x2,ref.y2,x0,y0,x1,y1));
+        if(d2<=lim*lim)return true;
+      }
+    }
+    return false;
+  }
+
   vehicleBlocked(ref) { return !!(ref.blocksMove && (ref.material === 'concrete' || ref.material === 'brick' || ref.material === 'metal')); }
 
   segStateOf(ref) { return ref.st.segs.find((s) => s.id === ref.segId) || null; }
@@ -452,6 +490,26 @@ export class Walls {
       if (amount <= 0) break;
     }
     return repaired;
+  }
+
+  // Target one segment; callers perform ownership, range and payment checks.
+  repairSegment(building, segId, amount) {
+    if (!this.destructionEnabled() || !building || building.dead || !building.built || !Number.isFinite(amount) || amount <= 0) return 0;
+    const st = this.state(building), seg = st?.segs.find(s => s.id === segId);
+    if (!seg || seg.hp >= seg.maxHp) return 0;
+    const add = Math.min(amount, seg.maxHp - seg.hp);
+    const previousStage = this.stageOf(seg);
+    seg.hp += add;
+    // A few hit points must not instantly turn an open gap into a full wall.
+    if (seg.breached && seg.hp >= seg.maxHp * (this.stageDefs.damaged?.threshold ?? 0.25)) {
+      seg.breached = false;
+      this.reindex(building.id, st);
+      this.invalidateCover(building);
+      this.queueNavRebuild(building);
+    } else if (this.stageOf(seg) !== previousStage) {
+      this.invalidateCover(building);
+    }
+    return add;
   }
 
   // ---------- обзор ----------

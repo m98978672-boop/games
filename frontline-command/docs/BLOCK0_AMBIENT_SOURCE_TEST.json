@@ -1,0 +1,129 @@
+{
+  "passed": true,
+  "seeds": 20,
+  "requestedTicks": 600,
+  "dt": 0.016666666666666666,
+  "scope": "Node Game constructor and 600 headless AI-vs-AI steps; no browser input/audio/save/load, no guarantee that all code paths ran",
+  "results": [
+    {
+      "seed": 1,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 2,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 3,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 4,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 5,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 6,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 7,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 8,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 9,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 10,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 11,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 12,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 13,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 14,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 15,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 16,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 17,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 18,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 19,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 20,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    }
+  ]
+}

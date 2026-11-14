@@ -1,0 +1,638 @@
+{
+  "kind": "population_diagnostic",
+  "browser": "Chromium 153.0.8010.0",
+  "mode": "headless software rendering",
+  "note": "Natural spawns not suppressed; timer samples may miss brief count fluctuations. Not performance acceptance.",
+  "measurements": [
+    {
+      "target": 400,
+      "seed": 5,
+      "initial": 400,
+      "samples": [
+        {
+          "wallMs": 2.199999999953434,
+          "simTime": 0,
+          "alive": 400,
+          "faction0": 200,
+          "faction1": 200
+        },
+        {
+          "wallMs": 3174.100000000093,
+          "simTime": 0.11666666666666665,
+          "alive": 402,
+          "faction0": 201,
+          "faction1": 201
+        },
+        {
+          "wallMs": 4055.1999999999534,
+          "simTime": 0.966666666666668,
+          "alive": 407,
+          "faction0": 206,
+          "faction1": 201
+        },
+        {
+          "wallMs": 5008.399999999907,
+          "simTime": 1.9333333333333313,
+          "alive": 412,
+          "faction0": 206,
+          "faction1": 206
+        },
+        {
+          "wallMs": 6002.899999999907,
+          "simTime": 2.8999999999999946,
+          "alive": 412,
+          "faction0": 206,
+          "faction1": 206
+        },
+        {
+          "wallMs": 7008.300000000047,
+          "simTime": 3.8833333333333244,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 8002.5,
+          "simTime": 4.166666666666657,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 9002.5,
+          "simTime": 4.166666666666657,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 10002.600000000093,
+          "simTime": 4.266666666666657,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 11002.5,
+          "simTime": 4.3666666666666565,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 12002.5,
+          "simTime": 4.4499999999999895,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 13005.199999999953,
+          "simTime": 4.4499999999999895,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 14002.5,
+          "simTime": 4.549999999999989,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 15002.5,
+          "simTime": 4.633333333333322,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        },
+        {
+          "wallMs": 15002.800000000047,
+          "simTime": 4.633333333333322,
+          "alive": 422,
+          "faction0": 211,
+          "faction1": 211
+        }
+      ],
+      "events": [
+        {
+          "kind": "spawn",
+          "wallMs": 77,
+          "simTime": 0.016666666666666666,
+          "id": 401,
+          "role": "truck",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Logistics.maintainTrucks (http://127.0.0.1:35745/src/sim/logistics.js:178:10)\n    at Autopilot.update (http://127.0.0.1:35745/src/sim/autopilot.js:48:68)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:759:20)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 77.69999999995343,
+          "simTime": 0.016666666666666666,
+          "id": 402,
+          "role": "truck",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Logistics.maintainTrucks (http://127.0.0.1:35745/src/sim/logistics.js:178:10)\n    at Autopilot.update (http://127.0.0.1:35745/src/sim/autopilot.js:48:68)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:759:20)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 3974.3000000000466,
+          "simTime": 0.9166666666666679,
+          "id": 403,
+          "role": "driver",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 3974.399999999907,
+          "simTime": 0.9166666666666679,
+          "id": 404,
+          "role": "driver",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 3974.399999999907,
+          "simTime": 0.9166666666666679,
+          "id": 405,
+          "role": "driver",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 3974.399999999907,
+          "simTime": 0.9166666666666679,
+          "id": 406,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 3974.399999999907,
+          "simTime": 0.9166666666666679,
+          "id": 407,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4279.199999999953,
+          "simTime": 1.1666666666666674,
+          "id": 408,
+          "role": "driver",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4279.199999999953,
+          "simTime": 1.1666666666666674,
+          "id": 409,
+          "role": "driver",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4279.300000000047,
+          "simTime": 1.1666666666666674,
+          "id": 410,
+          "role": "driver",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4279.300000000047,
+          "simTime": 1.1666666666666674,
+          "id": 411,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4279.300000000047,
+          "simTime": 1.1666666666666674,
+          "id": 412,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6054.399999999907,
+          "simTime": 2.9499999999999944,
+          "id": 413,
+          "role": "tank",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6054.399999999907,
+          "simTime": 2.9499999999999944,
+          "id": 414,
+          "role": "tank",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6054.5,
+          "simTime": 2.9499999999999944,
+          "id": 415,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6054.600000000093,
+          "simTime": 2.9499999999999944,
+          "id": 416,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6054.600000000093,
+          "simTime": 2.9499999999999944,
+          "id": 417,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6067,
+          "simTime": 2.966666666666661,
+          "id": 418,
+          "role": "tank",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6067,
+          "simTime": 2.966666666666661,
+          "id": 419,
+          "role": "tank",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6067,
+          "simTime": 2.966666666666661,
+          "id": 420,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6067,
+          "simTime": 2.966666666666661,
+          "id": 421,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6067.100000000093,
+          "simTime": 2.966666666666661,
+          "id": 422,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        }
+      ],
+      "warOver": false,
+      "sameGame": true,
+      "pageErrors": []
+    },
+    {
+      "target": 500,
+      "seed": 5,
+      "initial": 500,
+      "samples": [
+        {
+          "wallMs": 0.5,
+          "simTime": 0,
+          "alive": 500,
+          "faction0": 250,
+          "faction1": 250
+        },
+        {
+          "wallMs": 3327.399999999907,
+          "simTime": 0.11666666666666665,
+          "alive": 502,
+          "faction0": 251,
+          "faction1": 251
+        },
+        {
+          "wallMs": 4091.1999999999534,
+          "simTime": 0.8166666666666675,
+          "alive": 502,
+          "faction0": 251,
+          "faction1": 251
+        },
+        {
+          "wallMs": 5001.199999999953,
+          "simTime": 1.6999999999999988,
+          "alive": 512,
+          "faction0": 256,
+          "faction1": 256
+        },
+        {
+          "wallMs": 6015,
+          "simTime": 2.6999999999999953,
+          "alive": 512,
+          "faction0": 256,
+          "faction1": 256
+        },
+        {
+          "wallMs": 7020.600000000093,
+          "simTime": 3.7166666666666583,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 8000.899999999907,
+          "simTime": 4.233333333333324,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 9000.899999999907,
+          "simTime": 4.233333333333324,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 10000.899999999907,
+          "simTime": 4.34999999999999,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 11000.899999999907,
+          "simTime": 4.433333333333323,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 12000.899999999907,
+          "simTime": 4.516666666666656,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 13000.899999999907,
+          "simTime": 4.516666666666656,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 14004.199999999953,
+          "simTime": 4.633333333333322,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 15000.899999999907,
+          "simTime": 4.733333333333322,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        },
+        {
+          "wallMs": 15001.199999999953,
+          "simTime": 4.733333333333322,
+          "alive": 522,
+          "faction0": 261,
+          "faction1": 261
+        }
+      ],
+      "events": [
+        {
+          "kind": "spawn",
+          "wallMs": 59.39999999990687,
+          "simTime": 0.016666666666666666,
+          "id": 501,
+          "role": "truck",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Logistics.maintainTrucks (http://127.0.0.1:35745/src/sim/logistics.js:178:10)\n    at Autopilot.update (http://127.0.0.1:35745/src/sim/autopilot.js:48:68)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:759:20)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 60,
+          "simTime": 0.016666666666666666,
+          "id": 502,
+          "role": "truck",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Logistics.maintainTrucks (http://127.0.0.1:35745/src/sim/logistics.js:178:10)\n    at Autopilot.update (http://127.0.0.1:35745/src/sim/autopilot.js:48:68)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:759:20)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4222.399999999907,
+          "simTime": 0.966666666666668,
+          "id": 503,
+          "role": "driver",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4222.399999999907,
+          "simTime": 0.966666666666668,
+          "id": 504,
+          "role": "driver",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4222.5,
+          "simTime": 0.966666666666668,
+          "id": 505,
+          "role": "driver",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4222.5,
+          "simTime": 0.966666666666668,
+          "id": 506,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4222.5,
+          "simTime": 0.966666666666668,
+          "id": 507,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4429.699999999953,
+          "simTime": 1.100000000000001,
+          "id": 508,
+          "role": "driver",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4429.800000000047,
+          "simTime": 1.100000000000001,
+          "id": 509,
+          "role": "driver",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4429.800000000047,
+          "simTime": 1.100000000000001,
+          "id": 510,
+          "role": "driver",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4429.800000000047,
+          "simTime": 1.100000000000001,
+          "id": 511,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 4429.899999999907,
+          "simTime": 1.100000000000001,
+          "id": 512,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6439.600000000093,
+          "simTime": 3.133333333333327,
+          "id": 513,
+          "role": "tank",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6439.600000000093,
+          "simTime": 3.133333333333327,
+          "id": 514,
+          "role": "tank",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6439.699999999953,
+          "simTime": 3.133333333333327,
+          "id": 515,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6439.699999999953,
+          "simTime": 3.133333333333327,
+          "id": 516,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6439.800000000047,
+          "simTime": 3.133333333333327,
+          "id": 517,
+          "role": "infantry",
+          "faction": 0,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6466,
+          "simTime": 3.1666666666666603,
+          "id": 518,
+          "role": "tank",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6466,
+          "simTime": 3.1666666666666603,
+          "id": 519,
+          "role": "tank",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6466,
+          "simTime": 3.1666666666666603,
+          "id": 520,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6466.100000000093,
+          "simTime": 3.1666666666666603,
+          "id": 521,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        },
+        {
+          "kind": "spawn",
+          "wallMs": 6466.100000000093,
+          "simTime": 3.1666666666666603,
+          "id": 522,
+          "role": "infantry",
+          "faction": 1,
+          "stack": "Error\n    at g.spawnUnit (eval at evaluate (:370:30), <anonymous>:8:49)\n    at Game.createSquadAtBase (http://127.0.0.1:35745/src/sim/game.js:239:24)\n    at Game.executeCommand (http://127.0.0.1:35745/src/sim/game.js:483:24)\n    at CommandAPI.deliver (http://127.0.0.1:35745/src/sim/command_api.js:86:25)\n    at CommandAPI.update (http://127.0.0.1:35745/src/sim/command_api.js:64:12)\n    at Game.step (http://127.0.0.1:35745/src/sim/game.js:765:14)\n    at loop (http://127.0.0.1:35745/src/main.js:598:16)"
+        }
+      ],
+      "warOver": false,
+      "sameGame": true,
+      "pageErrors": []
+    }
+  ]
+}

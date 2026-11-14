@@ -167,6 +167,28 @@ export class Logistics {
     return [...this.game.units.values()].filter((u) => u.faction === faction && u.alive && u.role === 'truck');
   }
 
+  // Logistics-only opt-in: candidates are outside buildings and checked
+  // against actual unit positions, not a potentially stale grid snapshot.
+  // No unchecked fallback and no charge if a site cannot be found.
+  vehicleProductionSpot(hq, role, x, y, reserved=[]) {
+    const game=this.game, w=game.world, walls=game.walls;
+    const radius=(game.cfg.unit(role).size || 44)*0.42;
+    const free=(px,py)=>{
+      if(px-radius<0 || py-radius<0 || px+radius>w.W || py+radius>w.H ||
+         walls?.buildingAtPoint(px,py) || !w.isBaseWalkable(px,py) ||
+         !w.isBaseWalkable(px-radius,py-radius) || !w.isBaseWalkable(px+radius,py-radius) ||
+         !w.isBaseWalkable(px-radius,py+radius) || !w.isBaseWalkable(px+radius,py+radius) ||
+         (walls?.enabled() && walls.blocksMove(px,py,radius,{isVehicle:true}))) return false;
+      return ![...game.units.values(),...reserved].some(u=>u.alive!==false && !u.downed && Math.hypot(u.x-px,u.y-py)<u.radius+radius+2);
+    };
+    if(free(x,y))return {x,y};
+    for(let r=120;r<=360;r+=30)for(let k=0;k<24;k++){
+      const a=2*Math.PI*k/24,px=hq.x+Math.cos(a)*r,py=hq.y+Math.sin(a)*r;
+      if(free(px,py))return {x:px,y:py};
+    }
+    return null;
+  }
+
   maintainTrucks(faction) {
     const game = this.game;
     const trucks = this.trucksOf(faction);
@@ -174,8 +196,14 @@ export class Logistics {
     const hasFactory = game.world.points.some((p) => p.owner === faction && p.type === 'factory' && p.hp > 0);
     if (trucks.length >= 3 || !hq || !hasFactory) return;
     if (!this.canAfford(faction, game.cfg.unit('truck').cost)) return;
-    if (!this.spend(faction, game.cfg.unit('truck').cost)) return;
-    game.spawnUnit(faction, 'truck', hq.x + game.rng.range(-90, 90), hq.y + game.rng.range(-90, 90), { spawnPoint: hq.id });
+    if (game.cfg.flag('safe_vehicle_spawn_v1', false)) {
+      const spot=this.vehicleProductionSpot(hq,'truck',hq.x+game.rng.range(-90,90),hq.y+game.rng.range(-90,90));
+      if(!spot || !this.spend(faction,game.cfg.unit('truck').cost))return;
+      game.spawnUnit(faction,'truck',spot.x,spot.y,{spawnPoint:hq.id});
+    } else {
+      if (!this.spend(faction, game.cfg.unit('truck').cost)) return;
+      game.spawnUnit(faction, 'truck', hq.x + game.rng.range(-90, 90), hq.y + game.rng.range(-90, 90), { spawnPoint: hq.id });
+    }
   }
 
   autoProduction(faction) {
@@ -188,16 +216,125 @@ export class Logistics {
     const tanks = [...game.units.values()].filter((u) => u.faction === faction && u.alive && u.role === 'tank').length;
     const cap = 2 + (game.techLevel(faction) || 0);
     if (tanks < cap && this.canAfford(faction, game.cfg.unit('tank').cost) && game.time - (this.lastTank?.[faction] || 0) > 45) {
-      if (!this.lastTank) this.lastTank = [0, 0];
-      if (this.spend(faction, game.cfg.unit('tank').cost)) {
-        this.lastTank[faction] = game.time;
-        const hq = game.world.hqOf(faction);
-        if (hq) game.spawnUnit(faction, 'tank', hq.x + game.rng.range(-100, 100), hq.y + game.rng.range(-100, 100), { spawnPoint: hq.id });
+      if (game.cfg.flag('safe_vehicle_spawn_v1', false)) {
+        const hq=game.world.hqOf(faction);if(!hq)return;
+        const spot=this.vehicleProductionSpot(hq,'tank',hq.x+game.rng.range(-100,100),hq.y+game.rng.range(-100,100));
+        if(!spot || !this.spend(faction,game.cfg.unit('tank').cost))return;
+        if(!this.lastTank)this.lastTank=[0,0];
+        this.lastTank[faction]=game.time;
+        game.spawnUnit(faction,'tank',spot.x,spot.y,{spawnPoint:hq.id});
+      } else {
+        if (!this.lastTank) this.lastTank = [0, 0];
+        if (this.spend(faction, game.cfg.unit('tank').cost)) {
+          this.lastTank[faction] = game.time;
+          const hq = game.world.hqOf(faction);
+          if (hq) game.spawnUnit(faction, 'tank', hq.x + game.rng.range(-100, 100), hq.y + game.rng.range(-100, 100), { spawnPoint: hq.id });
+        }
       }
     }
   }
 
+  safeTransportEnabled() {
+    // Полный legacy-режим при отключённых стенах/новой навигации нужен для
+    // воспроизводимости старых игр; исправление доступно в современной конфигурации.
+    return (this.game.cfg.flag('safe_logistics_v2', false) ||
+      (this.game.cfg.flag('safe_vehicle_spawn_v1', false) && this.game.cfg.flag('vehicle_pickup_exterior_v1', false))) &&
+      this.game.cfg.flag('pathing_v2', false) && this.game.cfg.flag('wall_collision_v2', true);
+  }
+
   moveTrucks(dt) {
+    if (!this.safeTransportEnabled()) return this.moveTrucksLegacy(dt);
+    const game = this.game;
+    for (const f of game.cfg.factions) {
+      const faction = f.id;
+      const trucks = this.trucksOf(faction);
+      // Заявка остаётся в общем списке до доставки, но активный рейс уже её
+      // зарезервировал. Не назначаем один и тот же груз нескольким машинам.
+      const activeRequests = new Set(trucks.filter((t) => t.truckTask?.state === 'toSource' || t.truckTask?.state === 'toTarget')
+        .map((t) => t.truckTask.request));
+      // Повреждённый старый рейс может оставить груз на стоянке; повторная
+      // загрузка не должна незаметно перезаписать его.
+      const idle = trucks.filter((t) => !(t.cargo > 0) && (!t.truckTask || t.truckTask.state === 'idle' || t.truckTask.state === 'idleTruck'));
+      const pending = [...new Set(this.requests.filter((r) => r.faction === faction && !activeRequests.has(r)))].sort((a, b) => b.priority - a.priority || a.created - b.created);
+      for (const truck of idle) {
+        if (!pending.length) break;
+        const req = pending.shift();
+        this.assignTruck(truck, req);
+      }
+      for (const truck of trucks) {
+        updateTimers(game, truck, dt);
+        if (!truck.truckTask) continue;
+        const task = truck.truckTask;
+        // При угрозе груз и заявка остаются за машиной; после ухода врага
+        // рейс продолжается. Иначе вторая машина могла забрать ту же заявку,
+        // пока первая всё ещё везёт груз.
+        const foes = game.nearbyEnemies(truck, 300);
+        if (foes.length && (task.state === 'toSource' || task.state === 'toTarget')) {
+          truck._supplyRetreating = true;
+          const home = game.world.nearestPoint(truck.x, truck.y, (p) => p.owner === truck.faction && ['hq', 'depot'].includes(p.type)).point;
+          truck.goal = home ? { x: home.x, y: home.y } : null;
+          moveAlongFlow(game, truck, dt);
+          continue;
+        }
+        if (truck._supplyRetreating) { truck.goal = null; truck._supplyRetreating = false; }
+        if (task.state === 'toSource') {
+          if (task.source.owner !== faction || task.source.hp <= 0) {
+            truck.truckTask = null; truck.goal = null; continue;
+          }
+          if (task.pickup && task.pickupVersion !== game.world.navVersion) {
+            if (!this.pickupPassable(truck, task.pickup)) task.pickup = null;
+            task.pickupVersion = game.world.navVersion;
+          }
+          if (!task.pickup) {
+            task.pickup = this.pickupPoint(truck, task.source);
+            task.pickupVersion = game.world.navVersion;
+          }
+          if (!task.pickup) { truck.goal = null; continue; }
+          if (!truck.goal || truck.goal.x !== task.pickup.x || truck.goal.y !== task.pickup.y) {
+            truck.goal = { ...task.pickup }; truck.pathFailed = false;
+          }
+          moveAlongFlow(game, truck, dt);
+          if (dist(truck.x, truck.y, task.pickup.x, task.pickup.y) < 34) this.loadTruck(truck, task);
+        } else if (task.state === 'toTarget') {
+          let target=task.request, range=110;
+          if(game.cfg.flag('logistics_dropoff_v1',false)) {
+            const b=game.walls.buildingAtPoint(task.request.x,task.request.y);
+            if(b){
+              // Re-evaluate when the destination or geometry changes. Loading
+              // and unloading use physical exterior points, never pathFailed.
+              if(task.dropoff && (task.dropoffBuilding!==b.id || task.dropoffVersion!==game.world.navVersion ||
+                 task.dropoffRequestX!==task.request.x || task.dropoffRequestY!==task.request.y ||
+                 !this.pickupPassable(truck,task.dropoff)))task.dropoff=null;
+              if(!task.dropoff){task.dropoff=this.exteriorPoint(truck,b);task.dropoffBuilding=b.id;
+                task.dropoffVersion=game.world.navVersion;task.dropoffRequestX=task.request.x;task.dropoffRequestY=task.request.y;}
+              if(!task.dropoff){truck.goal=null;continue;}
+              target=task.dropoff;range=34;
+            } else {task.dropoff=null;}
+          }
+          if (!truck.goal || truck.goal.x !== target.x || truck.goal.y !== target.y) {
+            truck.goal = { x: target.x, y: target.y }; truck.pathFailed = false;
+          }
+          moveAlongFlow(game, truck, dt);
+          // A blocked path is not a delivery; the cargo and reservation stay.
+          if (dist(truck.x, truck.y, target.x, target.y) < range) this.unloadTruck(truck, task);
+        } else if (task.state === 'idleTruck') {
+          truck.goal = null;
+        }
+      }
+      // запросы, которые никто не забрал, через 2 минуты обслуживает резервная колонна
+      for (const req of [...this.requests]) {
+        if (game.time - req.created > 120 && req.faction === faction &&
+            !trucks.some((t) => (t.truckTask?.state === 'toSource' || t.truckTask?.state === 'toTarget') && t.truckTask.request === req)) {
+          this.applyDelivery(faction, req, 0.18);
+          this.requests.splice(this.requests.indexOf(req), 1);
+          game.alertLog.push({ kind: 'supply', text: 'Резервная колонна доставила снабжение', x: req.x, y: req.y, t: game.time });
+        }
+      }
+    }
+  }
+
+  // Исходный алгоритм для честного отката флага и старого режима без стен.
+  moveTrucksLegacy(dt) {
     const game = this.game;
     for (const f of game.cfg.factions) {
       const faction = f.id;
@@ -247,6 +384,41 @@ export class Logistics {
     }
   }
 
+
+  pickupPassable(truck, point) {
+    const { world, walls } = this.game, { x, y } = point, r = truck.radius;
+    return [[-r,-r],[-r,r],[r,-r],[r,r],[0,0]].every(([dx,dy]) => world.isBaseWalkable(x+dx,y+dy)) &&
+      !walls.blocksMove(x,y,r,truck);
+  }
+
+  // Внешняя точка погрузки: грузовик не должен целиться в центр штаба,
+  // где вообще нет ворот для техники. Точка выбирается только на рельефе
+  // и без пересечения стены для полного радиуса машины.
+  pickupPoint(truck, source) {
+    const { world, walls } = this.game;
+    const building = world.buildingAtPoint(source.id);
+    if (!building || !walls?.state(building)) return { x: source.x, y: source.y };
+    return this.exteriorPoint(truck,building);
+  }
+
+  exteriorPoint(truck, building) {
+    const walls=this.game.walls, st=walls?.state(building);
+    if (!st) return null;
+    const half = (st.outline.size || Math.max(building.w, building.h)) / 2;
+    const offset = half + (st.outline.thickness || 0) / 2 + truck.radius + 18;
+    let best = null, bestDistance = Infinity;
+    for (let i = 0; i < 16; i++) {
+      const a = i * Math.PI * 2 / 16;
+      // Проекция на квадрат, а не окружность внутри его углов.
+      const cx = Math.cos(a), cy = Math.sin(a), scale = offset / Math.max(Math.abs(cx), Math.abs(cy));
+      const x = building.x + cx * scale, y = building.y + cy * scale;
+      if (!this.pickupPassable(truck, {x,y})) continue;
+      const d = dist(truck.x,truck.y,x,y);
+      if (d < bestDistance) { bestDistance = d; best = {x,y}; }
+    }
+    return best;
+  }
+
   assignTruck(truck, req) {
     const game = this.game;
     const stock = this.stock[truck.faction];
@@ -269,7 +441,7 @@ export class Logistics {
     const cargoMult = game.modsFor(truck.faction).cargo_mult || 1;
     const amount = Math.min(truck.def.cargo * cargoMult, stock.ammo - 40, 240);
     if (amount <= 0 || stock.fuel < 4) {
-      this.requests.push(task.request);
+      if (!this.safeTransportEnabled() || (task.request && !this.requests.includes(task.request))) this.requests.push(task.request);
       truck.truckTask = null;
       return;
     }
@@ -288,6 +460,7 @@ export class Logistics {
     const req = task.request;
     const amount = truck.cargo || 0;
     truck.cargo = 0;
+    if (this.safeTransportEnabled()) truck.cargoType = null;
     this.applyDelivery(truck.faction, req, Math.max(0.2, amount / 240));
     this.delivered[truck.faction]++;
     game.awardXP(truck.faction, 'logistics', 'deliver', 1);

@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';
+import {adjustBlockedCrowdSlot} from '../src/sim/crowd_nav.js';
+const cfg=await loadConfig();assert.equal(cfg.flag('crowd_slot_avoid_v1',false),false);
+for(const faction of [0,1]){
+ const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();
+ const b=g.world.buildings.find(b=>b.type==='hq'&&b.faction===faction&&g.walls.state(b));
+ const o=g.walls.state(b).outline.openings.find(o=>o.type==='door'),px=b.x+o.cx,py=b.y+o.cy;
+ const goal={x:px-o.nx*100,y:py-o.ny*100},slot={x:goal.x-o.nx*30,y:goal.y-o.ny*30};
+ const u=g.spawnUnit(faction,'infantry',slot.x+o.nx*4,slot.y+o.ny*4);u.goal={...goal};u._crowdActive=true;u._crowdGroupGoal={...goal};u._crowdAssigned={...slot};u._crowdPoint=u._crowdAssigned;
+ const truck=g.spawnUnit(faction,'truck',slot.x-o.nx*23-o.ny*9,slot.y-o.ny*23+o.nx*9);truck.goal=null;truck.arrived=true;
+ const reserved=g.spawnUnit(faction,'infantry',goal.x+o.ny*30,goal.y-o.nx*30);reserved.goal={...goal};reserved._crowdGroupGoal={...goal};reserved._crowdAssigned={x:goal.x+o.ny*24,y:goal.y-o.nx*24};
+ assert.equal(adjustBlockedCrowdSlot(g,u),false,'flag off');assert.deepEqual(u._crowdPoint,slot);
+ cfg.flags.crowd_slot_avoid_v1=true;
+ const initial={x:u.x,y:u.y};u.x=slot.x;u.y=slot.y;u.arrived=true;
+ assert.equal(adjustBlockedCrowdSlot(g,u),false,'do not move an already arrived unit due to a later spawn');
+ u.x=initial.x;u.y=initial.y;u.arrived=false;
+ const position={x:u.x,y:u.y};assert.equal(adjustBlockedCrowdSlot(g,u),true);
+ assert.deepEqual({x:u.x,y:u.y},position,'no teleport');assert.ok(Math.hypot(u._crowdPoint.x-goal.x,u._crowdPoint.y-goal.y)<34);
+ assert.ok(Math.hypot(u._crowdPoint.x-truck.x,u._crowdPoint.y-truck.y)>=u.radius+truck.radius+1);
+ assert.ok(Math.hypot(u._crowdPoint.x-reserved._crowdAssigned.x,u._crowdPoint.y-reserved._crowdAssigned.y)>=u.radius+reserved.radius+1);
+ assert.equal(g.walls.blocksMove(u._crowdPoint.x,u._crowdPoint.y,u.radius,u),false);
+ assert.equal(adjustBlockedCrowdSlot(g,u),false,'clear slot remains stable');
+ u._crowdPoint={...slot};u._crowdAssigned=u._crowdPoint;const blocked=g.walls.blocksMove;g.walls.blocksMove=()=>true;
+ assert.equal(adjustBlockedCrowdSlot(g,u),false,'no safe candidate');assert.deepEqual(u._crowdPoint,slot);g.walls.blocksMove=blocked;
+ truck.alive=false;reserved.x=slot.x;reserved.y=slot.y;g.unitGrid.update(reserved);reserved.arrived=true;
+ u._crowdPoint={...slot};u._crowdAssigned=u._crowdPoint;
+ assert.equal(adjustBlockedCrowdSlot(g,u),false,'do not reshuffle around own group member');
+ cfg.flags.crowd_slot_avoid_v1=false;
+}
+console.log('crowd slot avoidance: default off, reservations, geometry, no teleport and no candidate');

@@ -1,0 +1,344 @@
+{
+  "kind": "vision_fast_paired_node_load",
+  "node": "v22.22.3",
+  "seeds": 3,
+  "warmup": 30,
+  "ticks": 120,
+  "dt": 0.1,
+  "pairs": [
+    {
+      "target": 400,
+      "seed": 1,
+      "off": {
+        "target": 400,
+        "seed": 1,
+        "on": false,
+        "initial": 400,
+        "minAlive": 417,
+        "maxAlive": 422,
+        "finalAlive": 422,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 41.36581084166665,
+        "p95Ms": 66.6128520000002,
+        "maxMs": 77.71055700000011,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 12218,
+          "obstacle": 1139,
+          "pair": 47,
+          "solo": 148
+        }
+      },
+      "on": {
+        "target": 400,
+        "seed": 1,
+        "on": true,
+        "initial": 400,
+        "minAlive": 417,
+        "maxAlive": 422,
+        "finalAlive": 422,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 42.95993324166652,
+        "p95Ms": 63.87527499999851,
+        "maxMs": 86.88636899999983,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 12218,
+          "obstacle": 1106,
+          "pair": 47,
+          "solo": 148,
+          "skippedObstacle": 95
+        }
+      }
+    },
+    {
+      "target": 400,
+      "seed": 2,
+      "off": {
+        "target": 400,
+        "seed": 2,
+        "on": false,
+        "initial": 400,
+        "minAlive": 417,
+        "maxAlive": 422,
+        "finalAlive": 422,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 39.73314100833307,
+        "p95Ms": 59.66356900000028,
+        "maxMs": 71.8818539999993,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 12000,
+          "obstacle": 574,
+          "solo": 170,
+          "pair": 93
+        }
+      },
+      "on": {
+        "target": 400,
+        "seed": 2,
+        "on": true,
+        "initial": 400,
+        "minAlive": 417,
+        "maxAlive": 422,
+        "finalAlive": 422,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 47.22677918333308,
+        "p95Ms": 66.0537690000001,
+        "maxMs": 81.78243900000052,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 12000,
+          "obstacle": 574,
+          "solo": 170,
+          "pair": 93,
+          "skippedObstacle": 10
+        }
+      }
+    },
+    {
+      "target": 400,
+      "seed": 3,
+      "off": {
+        "target": 400,
+        "seed": 3,
+        "on": false,
+        "initial": 400,
+        "minAlive": 412,
+        "maxAlive": 422,
+        "finalAlive": 422,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 50.35969349999962,
+        "p95Ms": 73.34936899999957,
+        "maxMs": 88.70269399999961,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 13547,
+          "obstacle": 806,
+          "pair": 60,
+          "solo": 220
+        }
+      },
+      "on": {
+        "target": 400,
+        "seed": 3,
+        "on": true,
+        "initial": 400,
+        "minAlive": 412,
+        "maxAlive": 422,
+        "finalAlive": 422,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 43.58755763333308,
+        "p95Ms": 61.95710300000064,
+        "maxMs": 70.55790599999455,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 13547,
+          "obstacle": 806,
+          "pair": 60,
+          "solo": 220
+        }
+      }
+    },
+    {
+      "target": 500,
+      "seed": 1,
+      "off": {
+        "target": 500,
+        "seed": 1,
+        "on": false,
+        "initial": 500,
+        "minAlive": 512,
+        "maxAlive": 522,
+        "finalAlive": 522,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 70.26224345833319,
+        "p95Ms": 106.87902399999439,
+        "maxMs": 131.23595899999782,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 19123,
+          "obstacle": 1040,
+          "pair": 2,
+          "solo": 131
+        }
+      },
+      "on": {
+        "target": 500,
+        "seed": 1,
+        "on": true,
+        "initial": 500,
+        "minAlive": 512,
+        "maxAlive": 522,
+        "finalAlive": 522,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 73.06095554999999,
+        "p95Ms": 113.95569600000454,
+        "maxMs": 130.56603599999653,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 19123,
+          "obstacle": 1040,
+          "pair": 2,
+          "solo": 131
+        }
+      }
+    },
+    {
+      "target": 500,
+      "seed": 2,
+      "off": {
+        "target": 500,
+        "seed": 2,
+        "on": false,
+        "initial": 500,
+        "minAlive": 512,
+        "maxAlive": 522,
+        "finalAlive": 522,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 70.77431302500118,
+        "p95Ms": 114.35850400000345,
+        "maxMs": 128.11372399999527,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 19962,
+          "obstacle": 504,
+          "pair": 75,
+          "solo": 62
+        }
+      },
+      "on": {
+        "target": 500,
+        "seed": 2,
+        "on": true,
+        "initial": 500,
+        "minAlive": 512,
+        "maxAlive": 522,
+        "finalAlive": 522,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 69.79393934166698,
+        "p95Ms": 106.9204849999951,
+        "maxMs": 147.6950780000043,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 19962,
+          "obstacle": 504,
+          "skippedObstacle": 274,
+          "pair": 75,
+          "solo": 62
+        }
+      }
+    },
+    {
+      "target": 500,
+      "seed": 3,
+      "off": {
+        "target": 500,
+        "seed": 3,
+        "on": false,
+        "initial": 500,
+        "minAlive": 517,
+        "maxAlive": 522,
+        "finalAlive": 522,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 64.6628879999999,
+        "p95Ms": 84.29198399999586,
+        "maxMs": 109.83959800000594,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 20037,
+          "obstacle": 918,
+          "pair": 63,
+          "solo": 183
+        }
+      },
+      "on": {
+        "target": 500,
+        "seed": 3,
+        "on": true,
+        "initial": 500,
+        "minAlive": 517,
+        "maxAlive": 522,
+        "finalAlive": 522,
+        "warOver": false,
+        "ticks": 120,
+        "meanMs": 60.14642729999978,
+        "p95Ms": 72.40800599999784,
+        "maxMs": 92.64892999999574,
+        "shots": 0,
+        "kills": [
+          0,
+          0
+        ],
+        "metrics": {
+          "group": 20037,
+          "obstacle": 918,
+          "pair": 63,
+          "solo": 183,
+          "skippedObstacle": 19
+        }
+      }
+    }
+  ],
+  "caveats": [
+    "Serial, alternating order, warmed simulation; Node, no rendering or GPU, not browser FPS",
+    "Target is initial population; production and deaths may change it",
+    "Fast vs slow use all listed experimental flags; shared RNG may diverge",
+    "Elapsed times include instrumentation and noise; few seeds, not acceptance"
+  ]
+}

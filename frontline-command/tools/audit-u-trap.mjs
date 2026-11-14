@@ -6,11 +6,15 @@ import { Nav } from '../src/sim/nav.js';
 import { Walls } from '../src/sim/walls.js';
 import { moveAlongFlow, updateTimers } from '../src/sim/units.js';
 const vehicleDetour = process.argv.includes('--vehicle-detour');
+const smartRoute = process.argv.includes('--smart-route');
+const vision = process.argv.includes('--vision');
 
 async function scenario(role, seed, mirrored) {
   const cfg = await loadConfig();
   cfg.flags.pathing_v2 = true;
   cfg.flags.vehicle_detour_v2 = vehicleDetour;
+  cfg.flags.smart_route_v2 = smartRoute;
+  cfg.flags.bot_obstacle_vision_v1 = vision;
   const game = new Game({ cfg, seed, aiVsAi: true });
   game.units.clear(); game.unitGrid.clear();
   const width = 1280;
@@ -53,5 +57,5 @@ for (const role of ['infantry','truck','tank']) {
 }
 const ok = (r) => r.arrived && !r.pathFailed && !r.collided && r.noTeleport && r.movesAway;
 const passed = results.filter(ok).length;
-console.log(JSON.stringify({ vehicleDetour, passed, total: results.length, results }, null, 2));
+console.log(JSON.stringify({ vehicleDetour, smartRoute, vision, passed, total: results.length, results }, null, 2));
 if (passed !== results.length) process.exitCode = 1;

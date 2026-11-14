@@ -7,6 +7,11 @@ const seed = process.argv[2] === undefined ? 5 : Number(process.argv[2]);
 if (!Number.isInteger(seed) || seed < 0 || seed > 0xffffffff) throw new Error('seed должен быть целым числом 0…4294967295');
 const vehicleDetour = process.argv.includes('--vehicle-detour');
 const wallNavLocal = process.argv.includes('--wall-nav-local');
+const legacyLogistics = process.argv.includes('--legacy-logistics');
+const safeLogistics = process.argv.includes('--safe-logistics');
+const smartRoute = process.argv.includes('--smart-route');
+const crowdNav = process.argv.includes('--crowd-nav');
+if (legacyLogistics && safeLogistics) throw new Error('Выберите один вариант логистики');
 function location(g,u) {
   if (u.goal && distance(u.x,u.y,u.goal.x,u.goal.y) < 70) return 'у цели';
   let wall=Infinity, door=Infinity, corner=Infinity;
@@ -27,7 +32,12 @@ for (const count of [100,300,400]) {
   const cfg=await loadConfig();
   if (vehicleDetour) cfg.flags.vehicle_detour_v2 = true;
   if (wallNavLocal) cfg.flags.wall_nav_local = true;
+  if (legacyLogistics) cfg.flags.safe_logistics_v2 = false;
+  if (safeLogistics) cfg.flags.safe_logistics_v2 = true;
+  if (smartRoute) cfg.flags.smart_route_v2 = true;
+  if (crowdNav) cfg.flags.crowd_nav_v2 = true;
   const game=new Game({cfg,seed,difficulty:'regular',aiVsAi:true});
+  if (smartRoute) game._smartRouteMetrics={calls:0,maxMs:0,samples:[]};
   const alive=(f)=>[...game.units.values()].filter(u=>u.alive && u.faction===f).length;
   for (const f of [0,1]) {
     const hq=game.world.hqOf(f);
@@ -38,10 +48,11 @@ for (const count of [100,300,400]) {
     }
   }
   const initial=[alive(0),alive(1)];
-  const timing=[], windows=new Map(), events=[]; let eligibleSeconds=0;
+  const timing=[], windows=new Map(), events=[]; let eligibleSeconds=0, crowdFrames=0; const crowdUnits=new Set();
   for (let i=0;i<600;i++) {
     let t=performance.now(); game.step(0.1); const elapsed=performance.now()-t;
     if (i>=100) timing.push(elapsed);
+    if (crowdNav) for (const u of game.units.values()) if (u._crowdActive) { crowdFrames++; crowdUnits.add(u.id); }
     if (i%10!==9) continue;
     for (const u of game.units.values()) {
       const eligible=u.alive && !u.downed && u.goal && !u.arrived && !u.perception.hasContact && ['advance','retreat','flee','investigate','resupply'].includes(u.activity) && distance(u.x,u.y,u.goal.x,u.goal.y)>34;
@@ -57,5 +68,9 @@ for (const count of [100,300,400]) {
   }
   timing.sort((a,b)=>a-b); const avg=timing.reduce((a,b)=>a+b,0)/timing.length;
   let counts={};for(const e of events) counts[e.category]=(counts[e.category]||0)+1;
-  console.log(JSON.stringify({seed,vehicleDetour:cfg.flag('vehicle_detour_v2',false),wallNavLocal:cfg.flag('wall_nav_local',false),count,initial,final:[alive(0),alive(1)],simulationSeconds:+game.time.toFixed(1),ticks:timing.length,meanMs:+avg.toFixed(3),meanSimFps:+(1000/avg).toFixed(1),p99Ms:+timing[Math.floor(timing.length*.99)].toFixed(3),low1SimFps:+(1000/timing[Math.floor(timing.length*.99)]).toFixed(1),eligibleBotMinutes:+(eligibleSeconds/60).toFixed(2),eventCount:events.length,eventsPer100EligibleBotMinutes:eligibleSeconds?+(events.length*6000/eligibleSeconds).toFixed(2):null,categories:counts,events}));
+  const samples=game._smartRouteMetrics?.samples.sort((a,b)=>a-b) || [];
+  const routeMetrics=smartRoute ? {calls:samples.length, p95Ms:samples.length ? +samples[Math.ceil(samples.length*.95)-1].toFixed(3) : null,
+    maxMs:samples.length ? +samples.at(-1).toFixed(3) : null} : null;
+  const crowdMetrics=crowdNav ? {unitFrames:crowdFrames,uniqueUnits:crowdUnits.size} : null;
+  console.log(JSON.stringify({seed,vehicleDetour:cfg.flag('vehicle_detour_v2',false),wallNavLocal:cfg.flag('wall_nav_local',false),safeLogistics:cfg.flag('safe_logistics_v2',false),smartRoute:cfg.flag('smart_route_v2',false),crowdNav:cfg.flag('crowd_nav_v2',false),routeMetrics,crowdMetrics,count,initial,final:[alive(0),alive(1)],simulationSeconds:+game.time.toFixed(1),ticks:timing.length,meanMs:+avg.toFixed(3),meanSimFps:+(1000/avg).toFixed(1),p99Ms:+timing[Math.floor(timing.length*.99)].toFixed(3),low1SimFps:+(1000/timing[Math.floor(timing.length*.99)]).toFixed(1),eligibleBotMinutes:+(eligibleSeconds/60).toFixed(2),eventCount:events.length,eventsPer100EligibleBotMinutes:eligibleSeconds?+(events.length*6000/eligibleSeconds).toFixed(2):null,delivered:[...game.logistics.delivered],categories:counts,events}));
 }

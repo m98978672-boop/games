@@ -1,0 +1,1173 @@
+{
+  "kind": "paired_courtesy_solid_wall_goal_short_encounter_diagnostic",
+  "mode": "all",
+  "seeds": 20,
+  "firstSeed": 1,
+  "steps": 600,
+  "dt": 0.05,
+  "summary": {
+    "pairs": 20,
+    "offShots": 657,
+    "onShots": 358,
+    "offKills": 0,
+    "onKills": 0,
+    "offContacts": 863,
+    "onContacts": 528,
+    "offPathFailures": 0,
+    "onPathFailures": 0,
+    "onWallGoalFailures": 0,
+    "endedOff": 0,
+    "endedOn": 0
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 70,
+        "contactSamples": 92,
+        "observations": 5712,
+        "elapsedMs": 2967.119276
+      },
+      "on": {
+        "seed": 1,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 17,
+        "contactSamples": 16,
+        "observations": 5741,
+        "elapsedMs": 5012.102776000001
+      }
+    },
+    {
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 22,
+        "contactSamples": 19,
+        "observations": 5734,
+        "elapsedMs": 1627.4414350000006
+      },
+      "on": {
+        "seed": 2,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 14,
+        "contactSamples": 38,
+        "observations": 5762,
+        "elapsedMs": 5026.134507000001
+      }
+    },
+    {
+      "seed": 3,
+      "off": {
+        "seed": 3,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 42,
+        "contactSamples": 55,
+        "observations": 5715,
+        "elapsedMs": 1408.222577999999
+      },
+      "on": {
+        "seed": 3,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 20,
+        "contactSamples": 35,
+        "observations": 5755,
+        "elapsedMs": 4700.929631000003
+      }
+    },
+    {
+      "seed": 4,
+      "off": {
+        "seed": 4,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 73,
+        "contactSamples": 74,
+        "observations": 5723,
+        "elapsedMs": 1451.2151290000002
+      },
+      "on": {
+        "seed": 4,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 13,
+        "contactSamples": 18,
+        "observations": 5741,
+        "elapsedMs": 4301.225992
+      }
+    },
+    {
+      "seed": 5,
+      "off": {
+        "seed": 5,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 25,
+        "contactSamples": 34,
+        "observations": 5726,
+        "elapsedMs": 974.9477690000022
+      },
+      "on": {
+        "seed": 5,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 24,
+        "contactSamples": 35,
+        "observations": 5770,
+        "elapsedMs": 4162.416866
+      }
+    },
+    {
+      "seed": 6,
+      "off": {
+        "seed": 6,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 82,
+        "contactSamples": 103,
+        "observations": 5722,
+        "elapsedMs": 944.7078209999963
+      },
+      "on": {
+        "seed": 6,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 50,
+        "contactSamples": 61,
+        "observations": 5716,
+        "elapsedMs": 3665.718175999995
+      }
+    },
+    {
+      "seed": 7,
+      "off": {
+        "seed": 7,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 88,
+        "contactSamples": 130,
+        "observations": 5700,
+        "elapsedMs": 1021.0609599999952
+      },
+      "on": {
+        "seed": 7,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 29,
+        "contactSamples": 38,
+        "observations": 5725,
+        "elapsedMs": 4064.677985000002
+      }
+    },
+    {
+      "seed": 8,
+      "off": {
+        "seed": 8,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 31,
+        "contactSamples": 34,
+        "observations": 5729,
+        "elapsedMs": 804.5734499999962
+      },
+      "on": {
+        "seed": 8,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 19,
+        "contactSamples": 27,
+        "observations": 5767,
+        "elapsedMs": 3807.2044330000062
+      }
+    },
+    {
+      "seed": 9,
+      "off": {
+        "seed": 9,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 10,
+        "contactSamples": 24,
+        "observations": 5727,
+        "elapsedMs": 807.551486999997
+      },
+      "on": {
+        "seed": 9,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 2,
+        "contactSamples": 2,
+        "observations": 5771,
+        "elapsedMs": 3562.335131
+      }
+    },
+    {
+      "seed": 10,
+      "off": {
+        "seed": 10,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 1,
+        "contactSamples": 2,
+        "observations": 5720,
+        "elapsedMs": 862.4418409999998
+      },
+      "on": {
+        "seed": 10,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 2,
+        "contactSamples": 2,
+        "observations": 5746,
+        "elapsedMs": 4149.756043000001
+      }
+    },
+    {
+      "seed": 11,
+      "off": {
+        "seed": 11,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 13,
+        "contactSamples": 29,
+        "observations": 5727,
+        "elapsedMs": 2534.517414
+      },
+      "on": {
+        "seed": 11,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 29,
+        "contactSamples": 36,
+        "observations": 5720,
+        "elapsedMs": 5740.2817319999995
+      }
+    },
+    {
+      "seed": 12,
+      "off": {
+        "seed": 12,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 16,
+        "contactSamples": 26,
+        "observations": 5716,
+        "elapsedMs": 1629.4079649999985
+      },
+      "on": {
+        "seed": 12,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 31,
+        "contactSamples": 52,
+        "observations": 5756,
+        "elapsedMs": 5083.9363140000005
+      }
+    },
+    {
+      "seed": 13,
+      "off": {
+        "seed": 13,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 34,
+        "contactSamples": 45,
+        "observations": 5740,
+        "elapsedMs": 1592.4248019999995
+      },
+      "on": {
+        "seed": 13,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 29,
+        "contactSamples": 33,
+        "observations": 5711,
+        "elapsedMs": 5103.053950999998
+      }
+    },
+    {
+      "seed": 14,
+      "off": {
+        "seed": 14,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 27,
+        "contactSamples": 34,
+        "observations": 5731,
+        "elapsedMs": 948.3011839999999
+      },
+      "on": {
+        "seed": 14,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 6,
+        "contactSamples": 6,
+        "observations": 5774,
+        "elapsedMs": 4580.34031
+      }
+    },
+    {
+      "seed": 15,
+      "off": {
+        "seed": 15,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 18,
+        "contactSamples": 24,
+        "observations": 5719,
+        "elapsedMs": 1065.8499220000012
+      },
+      "on": {
+        "seed": 15,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 30,
+        "contactSamples": 31,
+        "observations": 5766,
+        "elapsedMs": 4192.056939999995
+      }
+    },
+    {
+      "seed": 16,
+      "off": {
+        "seed": 16,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 6,
+        "contactSamples": 10,
+        "observations": 5722,
+        "elapsedMs": 1034.3986520000035
+      },
+      "on": {
+        "seed": 16,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 16,
+        "contactSamples": 57,
+        "observations": 5772,
+        "elapsedMs": 4085.348450999998
+      }
+    },
+    {
+      "seed": 17,
+      "off": {
+        "seed": 17,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 6,
+        "contactSamples": 8,
+        "observations": 5732,
+        "elapsedMs": 972.0772389999984
+      },
+      "on": {
+        "seed": 17,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 26,
+        "contactSamples": 39,
+        "observations": 5727,
+        "elapsedMs": 3882.320778999994
+      }
+    },
+    {
+      "seed": 18,
+      "off": {
+        "seed": 18,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 22,
+        "contactSamples": 36,
+        "observations": 5730,
+        "elapsedMs": 923.2512569999963
+      },
+      "on": {
+        "seed": 18,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 0,
+        "contactSamples": 0,
+        "observations": 5746,
+        "elapsedMs": 3845.581124999997
+      }
+    },
+    {
+      "seed": 19,
+      "off": {
+        "seed": 19,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 38,
+        "contactSamples": 55,
+        "observations": 5720,
+        "elapsedMs": 1134.3059520000024
+      },
+      "on": {
+        "seed": 19,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 1,
+        "contactSamples": 2,
+        "observations": 5745,
+        "elapsedMs": 4605.081289000002
+      }
+    },
+    {
+      "seed": 20,
+      "off": {
+        "seed": 20,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 33,
+        "contactSamples": 29,
+        "observations": 5730,
+        "elapsedMs": 847.435384999997
+      },
+      "on": {
+        "seed": 20,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 0,
+        "contactSamples": 0,
+        "observations": 5753,
+        "elapsedMs": 3832.314523999994
+      }
+    }
+  ],
+  "caveats": [
+    "One symmetric placement, 30 seconds, 20 seeds; not 100 complete wars",
+    "Same seed but shared RNG consumption can differ after decisions diverge",
+    "Counts are descriptive, not a confidence interval, equivalence test or balance proof",
+    "Contact sampled every 10 steps",
+    "Node execution time includes instrumentation and is not browser FPS",
+    "Normal production/strategic/autopilot remain enabled; no published game is changed",
+    "Two batches of 10 seeds; timings are not comparable to one continuous run"
+  ]
+}

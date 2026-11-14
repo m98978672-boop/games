@@ -1,0 +1,5236 @@
+{
+  "kind": "vehicle_spawn_source_tests",
+  "seeds": 20,
+  "summary": {
+    "pairs": 20,
+    "offInitialOverlap": 49,
+    "onInitialOverlap": 0,
+    "offInitialWalls": 10,
+    "onInitialWalls": 0,
+    "offSpawnOverlap": 64,
+    "onSpawnOverlap": 0,
+    "offSpawnWalls": 6,
+    "onSpawnWalls": 0,
+    "offCreated": 40,
+    "onCreated": 40,
+    "offReinforced": 40,
+    "onReinforced": 40
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              22
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              36
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": [
+              48
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              15
+            ],
+            "blocked": true
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              11
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              54
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              45,
+              49
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              51
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 1,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              52
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": [
+              51
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              26
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              45
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              50
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              51
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 2,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "off": {
+        "seed": 3,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": [
+              8,
+              21
+            ]
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              28
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              11,
+              23
+            ],
+            "blocked": true
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              4,
+              9,
+              13
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 3,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "off": {
+        "seed": 4,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": true,
+            "overlap": [
+              18
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": [
+              5,
+              19
+            ]
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": [
+              10
+            ]
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": [
+              30,
+              34
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              11
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              31
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              37,
+              50
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 4,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "off": {
+        "seed": 5,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": true,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": [
+              12
+            ]
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              27,
+              52
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": [
+              27,
+              51
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              9,
+              17
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              12,
+              26
+            ],
+            "blocked": true
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": true
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 5,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "off": {
+        "seed": 6,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              17,
+              19,
+              23
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": [
+              18
+            ]
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": [
+              5,
+              14
+            ]
+          },
+          {
+            "id": 50,
+            "blocked": true,
+            "overlap": [
+              35
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              32,
+              39
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 6,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "off": {
+        "seed": 7,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              7,
+              22
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              6,
+              12
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              37
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              37,
+              45,
+              59
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 7,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "off": {
+        "seed": 8,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": true,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": [
+              8
+            ]
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": [
+              27,
+              31
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              2,
+              10
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 8,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 9,
+      "off": {
+        "seed": 9,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": true,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": [
+              40,
+              41
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              52
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": [
+              51
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              20
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              53
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              45
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              29
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 9,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 10,
+      "off": {
+        "seed": 10,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": [
+              8
+            ]
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              34
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 10,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 11,
+      "off": {
+        "seed": 11,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              6
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": true,
+            "overlap": [
+              45
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              6,
+              16,
+              23,
+              24
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              3,
+              10
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              37
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 11,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 12,
+      "off": {
+        "seed": 12,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              19
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": [
+              23
+            ]
+          },
+          {
+            "id": 26,
+            "blocked": true,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": true,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              16
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              11
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              54
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              53
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              53
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              51
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              42
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 12,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 13,
+      "off": {
+        "seed": 13,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": true,
+            "overlap": [
+              36
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              24
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              36,
+              50
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              51
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 13,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 14,
+      "off": {
+        "seed": 14,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              5
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": [
+              17
+            ]
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": [
+              29,
+              51
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              29,
+              50
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": [
+              47
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              1,
+              14,
+              22
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              25
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              29,
+              50,
+              51
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              50
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              50,
+              60
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 14,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 15,
+      "off": {
+        "seed": 15,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              17,
+              20
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              31,
+              37,
+              43
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              14
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              21
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": true
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 15,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 16,
+      "off": {
+        "seed": 16,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              6
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": [
+              9
+            ]
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              38
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": [
+              34
+            ]
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              26
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              3
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              38,
+              51
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              41
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 16,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 17,
+      "off": {
+        "seed": 17,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": [
+              30
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              4
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              14
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              24
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              25
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              51
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              46
+            ],
+            "blocked": true
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 17,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 18,
+      "off": {
+        "seed": 18,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": true,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": [
+              14
+            ]
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              37
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [
+              53
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              42
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              42,
+              59
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 18,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 19,
+      "off": {
+        "seed": 19,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": [
+              5
+            ]
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": [
+              32
+            ]
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              15
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              20
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              33
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 19,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    },
+    {
+      "seed": 20,
+      "off": {
+        "seed": 20,
+        "on": false,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": [
+              1
+            ]
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": [
+              38,
+              45
+            ]
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              9,
+              20
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              27,
+              42
+            ],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [
+              46
+            ],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      },
+      "on": {
+        "seed": 20,
+        "on": true,
+        "initial": [
+          {
+            "id": 24,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 25,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 26,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 50,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 51,
+            "blocked": false,
+            "overlap": []
+          },
+          {
+            "id": 52,
+            "blocked": false,
+            "overlap": []
+          }
+        ],
+        "actions": [
+          {
+            "f": 0,
+            "create": true,
+            "reinforce": true
+          },
+          {
+            "f": 1,
+            "create": true,
+            "reinforce": true
+          }
+        ],
+        "events": [
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "infantry",
+            "isVehicle": false,
+            "overlap": [],
+            "blocked": false
+          },
+          {
+            "role": "tank",
+            "isVehicle": true,
+            "overlap": [],
+            "blocked": false
+          }
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "Initial overlaps sampled after constructor; later events capture both newly spawned infantry and newly spawned vehicles",
+    "Two armor squads and reinforcements per seed, no ordinary Game.step; explicitly induced losses",
+    "Initial infantry overlaps not involving vehicles excluded",
+    "Flag-off RNG and placements may diverge after initial spawn"
+  ]
+}

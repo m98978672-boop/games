@@ -1,0 +1,219 @@
+{
+  "passed": true,
+  "kind": "bounded_reachable_graph_diagnostic",
+  "node": "v22.22.3",
+  "dt": 0.016666666666666666,
+  "seeds": 20,
+  "ticks": 60,
+  "comparison": "Exact serialized graphs compared, FNV-1a 32-bit reported only as diagnostic identifier",
+  "limitations": [
+    "same process, Node only; not independent browsers or replay",
+    "no commands from player",
+    "function closure and external module state unavailable",
+    "prototype state and shared typed-array backing identity not fully represented",
+    "wall profiling clock fields intentionally excluded",
+    "not a complete save format"
+  ],
+  "runs": [
+    {
+      "seed": 1,
+      "compared": 61,
+      "nodes": 2969,
+      "lastId": "1c825475",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 2,
+      "compared": 61,
+      "nodes": 3079,
+      "lastId": "3af98c6a",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 3,
+      "compared": 61,
+      "nodes": 3050,
+      "lastId": "5d593042",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 4,
+      "compared": 61,
+      "nodes": 3068,
+      "lastId": "6f46bfe0",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 5,
+      "compared": 61,
+      "nodes": 2934,
+      "lastId": "a3a9428d",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 6,
+      "compared": 61,
+      "nodes": 3074,
+      "lastId": "6957259f",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 7,
+      "compared": 61,
+      "nodes": 3075,
+      "lastId": "d251e32b",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 8,
+      "compared": 61,
+      "nodes": 3074,
+      "lastId": "89ecd57c",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 9,
+      "compared": 61,
+      "nodes": 2962,
+      "lastId": "f56f27f0",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 10,
+      "compared": 61,
+      "nodes": 2957,
+      "lastId": "89b6ae90",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 11,
+      "compared": 61,
+      "nodes": 3018,
+      "lastId": "b7c938ee",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 12,
+      "compared": 61,
+      "nodes": 3009,
+      "lastId": "394ae691",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 13,
+      "compared": 61,
+      "nodes": 3015,
+      "lastId": "0a71ea4d",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 14,
+      "compared": 61,
+      "nodes": 3017,
+      "lastId": "abbbf948",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 15,
+      "compared": 61,
+      "nodes": 2971,
+      "lastId": "ac092bcd",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 16,
+      "compared": 61,
+      "nodes": 3081,
+      "lastId": "ec9d6a75",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 17,
+      "compared": 61,
+      "nodes": 2994,
+      "lastId": "342454f7",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 18,
+      "compared": 61,
+      "nodes": 3094,
+      "lastId": "b6c2dcf2",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 19,
+      "compared": 61,
+      "nodes": 2968,
+      "lastId": "62907afc",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    },
+    {
+      "seed": 20,
+      "compared": 61,
+      "nodes": 3065,
+      "lastId": "0a4118f5",
+      "limitations": [
+        "function closure state unavailable"
+      ],
+      "divergence": null
+    }
+  ]
+}

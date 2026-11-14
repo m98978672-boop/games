@@ -1,0 +1,232 @@
+{
+  "kind": "paired_courtesy_solid_wall_goal_short_encounter_diagnostic",
+  "mode": "wall",
+  "seeds": 3,
+  "steps": 600,
+  "dt": 0.05,
+  "summary": {
+    "pairs": 3,
+    "offShots": 134,
+    "onShots": 0,
+    "offKills": 0,
+    "onKills": 0,
+    "offContacts": 166,
+    "onContacts": 0,
+    "offPathFailures": 0,
+    "onPathFailures": 16044,
+    "onWallGoalFailures": 16044,
+    "endedOff": 0,
+    "endedOn": 0
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 70,
+        "contactSamples": 92,
+        "observations": 5712,
+        "elapsedMs": 3925.051319
+      },
+      "on": {
+        "seed": 1,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 4781,
+        "wallGoalFailures": 4781,
+        "firstWallGoalFailure": {
+          "t": 0.05,
+          "unitId": 39,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2396,
+          "y": 1700,
+          "goalX": 3050.8186783120036,
+          "goalY": 1574.6988594569266,
+          "reason": "goal_blocked_by_wall"
+        },
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 0,
+        "contactSamples": 0,
+        "observations": 5728,
+        "elapsedMs": 1584.0600189999996
+      }
+    },
+    {
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 22,
+        "contactSamples": 19,
+        "observations": 5734,
+        "elapsedMs": 2014.927869000001
+      },
+      "on": {
+        "seed": 2,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 5438,
+        "wallGoalFailures": 5438,
+        "firstWallGoalFailure": {
+          "t": 0.05,
+          "unitId": 40,
+          "faction": 1,
+          "role": "infantry",
+          "x": 2372,
+          "y": 1700,
+          "goalX": 2982.370536130853,
+          "goalY": 1437.9169756071642,
+          "reason": "goal_blocked_by_wall"
+        },
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 0,
+        "contactSamples": 0,
+        "observations": 5721,
+        "elapsedMs": 1222.1173170000002
+      }
+    },
+    {
+      "seed": 3,
+      "off": {
+        "seed": 3,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 42,
+        "contactSamples": 55,
+        "observations": 5715,
+        "elapsedMs": 1524.980708000001
+      },
+      "on": {
+        "seed": 3,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "pathFailures": 5825,
+        "wallGoalFailures": 5825,
+        "firstWallGoalFailure": {
+          "t": 0.1,
+          "unitId": 2,
+          "faction": 0,
+          "role": "infantry",
+          "x": 1676,
+          "y": 2348,
+          "goalX": 1054.1762708919123,
+          "goalY": 2442.187983863987,
+          "reason": "goal_blocked_by_wall"
+        },
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 0,
+        "contactSamples": 0,
+        "observations": 5717,
+        "elapsedMs": 1246.2575720000004
+      }
+    }
+  ],
+  "caveats": [
+    "One symmetric placement, 30 seconds, 20 seeds; not 100 complete wars",
+    "Same seed but shared RNG consumption can differ after decisions diverge",
+    "Counts are descriptive, not a confidence interval, equivalence test or balance proof",
+    "Contact sampled every 10 steps",
+    "Node execution time includes instrumentation and is not browser FPS",
+    "Normal production/strategic/autopilot remain enabled; no published game is changed"
+  ]
+}

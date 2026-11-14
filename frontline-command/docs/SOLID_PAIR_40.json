@@ -1,0 +1,167 @@
+{
+  "passed": false,
+  "coverageComplete": false,
+  "coverage": [
+    {
+      "id": "foot-door-opposing",
+      "scenarios": 40,
+      "participants": 2,
+      "passed": 0,
+      "factions": [
+        {
+          "id": 0,
+          "attempts": 20,
+          "passed": 0
+        },
+        {
+          "id": 1,
+          "attempts": 20,
+          "passed": 0
+        }
+      ],
+      "crossed": 0,
+      "arrived": 0,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0
+    }
+  ],
+  "method": "встречная пара через дверь штаба; 100 seed на фракцию в полном режиме; 0,05 с шаг; до 60 с; без боя",
+  "scenarios": 40,
+  "failed": 40,
+  "factionsChecked": 2,
+  "factions": [
+    {
+      "id": 0,
+      "attempts": 20,
+      "passed": 0
+    },
+    {
+      "id": 1,
+      "attempts": 20,
+      "passed": 0
+    }
+  ],
+  "crossed": 0,
+  "arrived": 0,
+  "teleports": 0,
+  "speedViolations": 0,
+  "wallCollisions": 0,
+  "overlapFrames": 0,
+  "maxOverlap": 0,
+  "failures": [
+    {
+      "seed": 1,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    },
+    {
+      "seed": 2,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    },
+    {
+      "seed": 3,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    },
+    {
+      "seed": 4,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    },
+    {
+      "seed": 5,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    },
+    {
+      "seed": 6,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    },
+    {
+      "seed": 7,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    },
+    {
+      "seed": 8,
+      "faction": 0,
+      "ok": false,
+      "arrived": 0,
+      "crossed": 0,
+      "pathFailed": 2,
+      "teleports": 0,
+      "speedViolations": 0,
+      "wallCollisions": 0,
+      "overlapFrames": 0,
+      "maxOverlap": 0,
+      "seconds": 7.65
+    }
+  ]
+}

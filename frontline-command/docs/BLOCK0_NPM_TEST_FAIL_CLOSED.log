@@ -1,0 +1,109 @@
+
+> frontline-command@0.11.0 test
+> node tests/logic.mjs && node tests/block1-auditor.mjs && node tests/block1-diagnostics.mjs && node tests/game-auditor.mjs && node tests/inspector.mjs && node tests/repository-auditor.mjs && node tests/audit-all.mjs && node tests/save-identity.mjs && node tests/save-state.mjs && node tests/save-squads.mjs && node tests/save-squad-identity.mjs && node tests/save-orders.mjs && node tests/save-transport.mjs && node tests/logistics-routing.mjs && node tests/save-structures.mjs && node tests/save-blueprints.mjs && node tests/crowd-nav.mjs && node tests/easystar-route.mjs && node tests/smart-route.mjs && node tests/path-retry-observation.mjs && node tests/incremental-planner.mjs && node tests/incremental-planner-door.mjs && node tests/movement-experiment.mjs && node tests/engineer-combat.mjs && node tests/build-material-budget.mjs && node tests/build-auto-orders.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/wall-data.mjs && node tests/wall-contours.mjs && node tests/wall-materials.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/pathing.mjs && node tests/nav-batch.mjs && node tests/nav-local.mjs && node tests/nav-local-simulation.mjs && node tests/vehicle-detour.mjs && node tests/deadlock-observation.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs
+
+ok   оружие загружено из weapons.json
+ok   юниты загружены из units.json
+ok   точки карты загружены из sectors.json
+ok   шаблоны отрядов загружены
+ok   пресеты правил If→Then загружены
+ok   две фракции
+ok   акценты фракций из factions.json
+ok   оружие Пистолет: урон/скорострельность/дальность заданы
+ok   оружие Винтовка: урон/скорострельность/дальность заданы
+ok   оружие Автомат: урон/скорострельность/дальность заданы
+ok   оружие Пулемёт: урон/скорострельность/дальность заданы
+ok   оружие Снайперка: урон/скорострельность/дальность заданы
+ok   оружие Орудие танка: урон/скорострельность/дальность заданы
+ok   оружие Без оружия: урон/скорострельность/дальность заданы
+ok   юнит Пехотинец: цена в конфиге (30)
+ok   юнит Пулемётчик: цена в конфиге (46)
+ok   юнит Медик: цена в конфиге (32)
+ok   юнит Инженер: цена в конфиге (34)
+ok   юнит Водитель: цена в конфиге (16)
+ok   юнит Разведчик: цена в конфиге (26)
+ok   юнит Танкист: цена в конфиге (18)
+ok   юнит Грузовик: цена в конфиге (54)
+ok   юнит Лёгкий танк: цена в конфиге (162)
+ok   режим ИИ против ИИ: игрок не назначен
+ok   стартовые армии созданы (52 юнитов)
+ok   приказ без исполнителей отклонён (нет исполнителей)
+ok   задержка ближнего приказа > 0 (1.29 с)
+ok   дальний приказ идёт дольше ближнего
+ok   создание отряда отклоняется с причиной (лимит отрядов: 7/7 (растёт в ветке «Командование»))
+ok   журнал приказов: источник + результат
+ok   лимит отрядов одинаков для фракций (6)
+ok   лимит директив одинаков (3)
+ok   все юниты используют оружие из общего конфига
+ok   домашний штаб фракции 0 определён
+ok   захват штаба завершает войну (Штаб Легион захвачен)
+
+все логические проверки пройдены
+проверяющий блока 1: отсутствующие проверки, фальшивый soak, FPS симуляции и быстрый режим не дают PASS
+диагностика блока 1: 40 устойчивых кодов, реальные причины, отсутствие данных и дубликаты проверены
+общий проверяющий: 40 алгоритмов, статусы доказательств, PNG, графика, лицензии, S1–S10 и блок 1 проверены без ложной приёмки
+F8: реальная игра, обнаружение повреждений, отсутствие изменений в игре и непроверенные области
+репозиторий: JSON, синтаксис JS, PNG, пути, отсутствие файлов и символические ссылки
+общий запуск: частичный обзор не становится PASS, независимые сбои и быстрый режим проверены
+сохранение: потерянных исходных ID до 3, после 0/50; игрок и следующий RNG восстановлены; старый формат и флаг off проверены
+состояние: ошибка позиции до 0.395 px, после 0; таймеры ранения и перезарядки сохраняются; размер +15693 байт
+отряды: командир, потери, порог отступления, фаза и таймеры сохранены для обеих фракций; повреждённые данные и старый формат проверены
+сохранение: следующий ID отряда и старые приказы не перенаправляются новому отряду; старые и повреждённые расширения
+очередь приказов: до загрузки 2, legacy восстановил 0, alg_save восстановил 2; обе фракции, доставка, отмена и повреждённые ID проверены
+рейсы и груз: legacy потерял груз 240 и 2 заявки, alg_save восстанавливает обе стороны, ссылки и списание; повреждённый рейс припаркован
+logistics: exclusive requests, failed path, threat, delivery and reuse verified for both factions
+logistics: orphaned saved cargo is not overwritten
+logistics: two isolated real-geometry trips complete without teleport or wall collisions
+logistics: rollback and dependencies checked
+постройки: мёртвые ссылки живых точек 18/18 → 0/18; HP и захват сохранены, разрушенная не воскресает
+чертежи: legacy 0/2, alg_save 2/2; прогресс, очередь, ресурсы, приказы и повреждённые ID проверены
+crowd nav: 180 paired variants, clearance, collision, goal and combat invalidation OK
+EasyStar route: bounded search, wall clearance, cancellation, unreachable endpoints and size guard OK
+smart route: opt-in, bounded scheduler, slot reuse and stale cancellation OK
+path retry: old failure remains visible until a new goal; retried units return to observation
+incremental planner: sliced search, path clearance, stale cancellation and bounds OK
+incremental planner: real door changes cancel before deferred navigation rebuild for both factions OK
+movement experiment: paired evaluation, persistence and fail-closed format OK
+engineers: visible combat interrupts construction; work resumes without contact for both factions
+construction and repair: actual step cost, no overdraft, pause/resume for both factions OK
+build auto orders: queue, refusal, cooldown and ownership for both factions OK
+build auto orders: next threatened target and fort classification OK
+ok   есть validate() с кодами причин
+ok   флаги функций загружены из feature_flags.json
+ok   пороги регрессии загружены из regression_thresholds.json
+ok   вода → TERRAIN (TERRAIN)
+ok   найдено свободное место для проверок
+ok   чертёж поставлен
+ok   занятое место → OVERLAP (OVERLAP)
+ok   край карты → RANGE (RANGE)
+ok   лимит постройки читается из buildings.json
+ok   код отказа учтён в статистике
+ok   линия планируется (18 секций)
+ok   приказ линии покрывает весь план
+ok   линия поставлена (18/18)
+ok   секции линии попали в очередь
+ok   приоритет «срочно» применён к линии
+ok   зона ставится (5/5)
+ok   зона не превышает количество по профилю
+ok   наложений в зоне нет (0)
+ok   у профиля описаны эшелоны
+ok   у профиля есть threatWeight
+ok   шаблон обрабатывается (2/8)
+ok   шаблон ставит все элементы по списку
+ok   очередь стройки не пуста (25)
+ok   очередь отсортирована по приоритету
+ok   приказ set_build_priority работает
+ok   queueInfo отдаёт причину простоя для панели
+ok   нет материалов → NO_MATERIALS
+ok   приказ cancel_build снимает чертёж
+ok   возврат материалов при отмене (12)
+ok   приказ линии доставлен (refused: место занято)
+ok   зеркальная линия для второй фракции той же длины
+ok   планировщик ИИ обрабатывается (новых приказов: 1, в очереди было 0)
+ok   ИИ строит только через Command API (1 приказов)
+FAIL сценарий узкого прохода не выполнен: узких проходов на карте не найдено
+ok   флаг build_zone=false отключает планирование зоны
+ok   флаг build_templates=false отключает шаблоны
+ok   флаг build_priority=false отключает приоритеты
+
+провалено проверок: 1

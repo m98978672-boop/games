@@ -77,10 +77,22 @@ export function sizeOf(root, file) {
 export function fileName(path) { return basename(path); }
 
 /* номер строки по индексу символа — чтобы находку можно было открыть в редакторе */
+// Calls for many keys in the same large JSON used to rescan its prefix each
+// time (quadratic in file length). Keep only the most recent file's line
+// breaks and binary-search them; offsets remain UTF-16 indices as before.
+let lineAtText = null, lineAtBreaks = [];
 export function lineAt(text, index) {
-  let line = 1;
-  for (let i = 0; i < index && i < text.length; i++) if (text.charCodeAt(i) === 10) line++;
-  return line;
+  if (text !== lineAtText) {
+    lineAtText = text;
+    lineAtBreaks = [];
+    for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) lineAtBreaks.push(i);
+  }
+  let lo = 0, hi = lineAtBreaks.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (lineAtBreaks[mid] < index) lo = mid + 1; else hi = mid;
+  }
+  return lo + 1;
 }
 
 /* Вырезать из кода строковые литералы, шаблоны, регулярки и комментарии,

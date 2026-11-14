@@ -218,6 +218,31 @@ export class Game {
     return { x: point.x, y: point.y };
   }
 
+  // Preflight a whole squad so failed vehicle placement never charges or
+  // creates a partial squad. Planned infantry positions reserve space too.
+  planBaseSpawns(hq,roles,reinforce=false) {
+    const spots=new Array(roles.length),reserved=[];
+    const vehicles=[...this.units.values()].filter(u=>u.alive&&!u.downed&&u.isVehicle);
+    for(let i=0;i<roles.length;i++){
+      if(this.cfg.unit(roles[i]).class==='vehicle')continue;
+      let spot=null;
+      for(let k=0;k<30;k++){
+        const p=reinforce?{x:hq.x+this.rng.range(-70,70),y:hq.y+this.rng.range(-70,70)}:this.spawnPos(hq,20,90);
+        if(!vehicles.some(v=>Math.hypot(v.x-p.x,v.y-p.y)<v.radius+11)){spot=p;break;}
+      }
+      if(!spot)return null;
+      spots[i]=spot;reserved.push({...spot,radius:9});
+    }
+    for(let i=0;i<roles.length;i++){
+      const def=this.cfg.unit(roles[i]);if(def.class!=='vehicle')continue;
+      const p=reinforce?{x:hq.x+this.rng.range(-70,70),y:hq.y+this.rng.range(-70,70)}:this.spawnPos(hq,20,90);
+      const spot=this.logistics.vehicleProductionSpot(hq,roles[i],p.x,p.y,reserved);
+      if(!spot)return null;
+      spots[i]=spot;reserved.push({...spot,radius:(def.size||44)*.42});
+    }
+    return spots;
+  }
+
   createSquadAtBase(faction, templateId, { free = false, name = null } = {}) {
     const t = this.cfg.templates[templateId] || this.cfg.templates.custom;
     const limit = this.squadLimit(faction);
@@ -229,13 +254,16 @@ export class Game {
     if (!free && !this.logistics.canAfford(faction, cost)) {
       return { ok: false, reason: 'не хватает ресурсов: ' + this.logistics.missing(faction, cost).join(', ') };
     }
+    const roles=Object.entries(t.composition).flatMap(([role,count])=>Array(count).fill(role));
+    const planned=this.cfg.flag('vehicle_spawn_all_v1',false)?this.planBaseSpawns(hq,roles):null;
+    if(this.cfg.flag('vehicle_spawn_all_v1',false)&&!planned)return {ok:false,reason:'нет безопасного места для отряда'};
     if (!free) this.logistics.spend(faction, cost);
     const squad = new Squad(this, { faction, templateId, name });
     this.squads.set(squad.id, squad);
-    const escort = [];
+    const escort = [];let planIndex=0;
     for (const [role, count] of Object.entries(t.composition)) {
       for (let i = 0; i < count; i++) {
-        const spot = this.spawnPos(hq, 20, 90);
+        const spot = planned ? planned[planIndex++] : this.spawnPos(hq, 20, 90);
         const u = this.spawnUnit(faction, role, spot.x, spot.y, { squadId: squad.id, spawnPoint: hq.id });
         squad.addUnit(u);
         escort.push(u);
@@ -285,9 +313,13 @@ export class Game {
       for (const [k, v] of Object.entries(rc)) cost[k] = (cost[k] || 0) + v;
     }
     if (!this.logistics.canAfford(squad.faction, cost)) return { ok: false, reason: 'не хватает ресурсов на пополнение' };
+    const planned=this.cfg.flag('vehicle_spawn_all_v1',false)?this.planBaseSpawns(hq,missing,true):null;
+    if(this.cfg.flag('vehicle_spawn_all_v1',false)&&!planned)return {ok:false,reason:'нет безопасного места для пополнения'};
     this.logistics.spend(squad.faction, cost);
+    let planIndex=0;
     for (const role of missing) {
-      const u = this.spawnUnit(squad.faction, role, hq.x + this.rng.range(-70, 70), hq.y + this.rng.range(-70, 70), { squadId: squad.id, spawnPoint: hq.id });
+      const p=planned?planned[planIndex++]:{x:hq.x+this.rng.range(-70,70),y:hq.y+this.rng.range(-70,70)};
+      const u = this.spawnUnit(squad.faction, role, p.x, p.y, { squadId: squad.id, spawnPoint: hq.id });
       squad.addUnit(u);
     }
     squad.initialCount = Math.max(squad.initialCount, squad.count());
@@ -324,6 +356,21 @@ export class Game {
   }
 
   spawnPlayerAt(point, role = 'infantry', weaponId = null) {
+    // Check first: a failed respawn must not detach the existing player.
+    let planned=null;
+    if(this.cfg.flag('vehicle_spawn_all_v1',false)) {
+      const unlocked=this.skills.mods().unlock_weapon;
+      const actualRole=role==='sniper'&&!(Array.isArray(unlocked)&&unlocked.includes('sniper'))?'infantry':(role||'infantry');
+      const vehicle=this.cfg.unit(actualRole).class==='vehicle';
+      for(let k=0;k<30&&!planned;k++){
+        const p=this.spawnPos(point,0,40,'box');
+        if(vehicle) planned=this.logistics.vehicleProductionSpot(point,actualRole,p.x,p.y);
+        else if(p.x>=9&&p.y>=9&&p.x<=this.world.W-9&&p.y<=this.world.H-9&&this.world.isWalkable(p.x,p.y)&&
+          !(this.walls.enabled()&&this.walls.blocksMove(p.x,p.y,9))&&
+          ![...this.units.values()].some(v=>v.alive&&!v.downed&&v.isVehicle&&Math.hypot(v.x-p.x,v.y-p.y)<v.radius+11)) planned=p;
+      }
+      if(!planned){this.alertLog.push({kind:'spawn',text:'Нет безопасного места для появления игрока',x:point.x,y:point.y,t:this.time});return null;}
+    }
     if (this.playerUnit && this.playerUnit.alive) { this.playerUnit.input = { mx: 0, my: 0, aim: 0, fire: false }; this.playerUnit = null; }
     this.playerRole = role;
     this.playerWeapon = weaponId;
@@ -331,7 +378,7 @@ export class Game {
     const unlocked = mods.unlock_weapon;
     role = role || 'infantry';
     if (role === 'sniper' && !(Array.isArray(unlocked) && unlocked.includes('sniper'))) role = 'infantry';
-    const spot = this.spawnPos(point, 0, 40, 'box');
+    const spot = planned || this.spawnPos(point, 0, 40, 'box');
     const u = this.spawnUnit(this.playerFaction, role, spot.x, spot.y, { player: true, spawnPoint: point.id });
     u.playerControlled = true;
     u.medkits = Math.max(1, (u.def.medkit || 0) + (mods.medkit_add || 0));
@@ -703,11 +750,13 @@ export class Game {
       this.createSquadAtBase(faction, 'defense', { free: true, name: 'Браво' });
       this.createSquadAtBase(faction, 'assault', { free: true, name: 'Чарли' });
       this.createSquadAtBase(faction, 'engineer', { free: true, name: 'Инженеры' });
-      const tankSpot = this.spawnPos(hq, 0, 70, 'box');
-      this.spawnUnit(faction, 'tank', tankSpot.x, tankSpot.y, { spawnPoint: hq.id });
+      let tankSpot = this.spawnPos(hq, 0, 70, 'box');
+      if(this.cfg.flag('vehicle_spawn_all_v1',false))tankSpot=this.logistics.vehicleProductionSpot(hq,'tank',tankSpot.x,tankSpot.y);
+      if(tankSpot)this.spawnUnit(faction, 'tank', tankSpot.x, tankSpot.y, { spawnPoint: hq.id });
       for (let i = 0; i < 2; i++) {
-        const t = this.spawnPos(hq, 0, 100, 'box');
-        this.spawnUnit(faction, 'truck', t.x, t.y, { spawnPoint: hq.id });
+        let t = this.spawnPos(hq, 0, 100, 'box');
+        if(this.cfg.flag('vehicle_spawn_all_v1',false))t=this.logistics.vehicleProductionSpot(hq,'truck',t.x,t.y);
+        if(t)this.spawnUnit(faction, 'truck', t.x, t.y, { spawnPoint: hq.id });
       }
     }
     // стартовые приказы: оборона своих городов

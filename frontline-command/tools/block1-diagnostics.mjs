@@ -17,6 +17,7 @@ export const catalog = Object.freeze({
   113: { name: 'Обнаружены пересечения стены', action: 'Исправить коллизию на всём маршруте и повторить обе стороны.' },
   114: { name: 'Обнаружен крупный скачок', action: 'Исследовать зафиксированные перемещения и устранить телепорт или другую причину аномалии.' },
   116: { name: 'Не пройдены варианты U-ловушки', action: 'Проверить четыре поворота, размеры, обе стороны и типы юнитов; не подменять их одним исходным размером.' },
+  117: { name: 'Расхождение индекса с позициями после шага', action: 'Определить семантику индекса и точки чтения; исследовать и устранить нарушения, не ухудшая баланс, движение и производительность.' },
   115: { name: 'Плоскость проёма не пересечена', action: 'Проверить фактическое пересечение каждым юнитом, а не только флаг прибытия.' },
   201: { name: 'Нет интеграционных испытаний', action: 'Реализовать и запустить S1, S8, S9 и S10 с проверяемыми результатами.' },
   202: { name: 'Нет испытаний карточек', action: 'Реализовать и запустить проверки карточек ALG-04/18/19/21/22.' },
@@ -74,7 +75,10 @@ export function diagnoseChecks(checks, required = []) {
       continue;
     }
     if (c.id === 'full_suite' || c.id.startsWith('partial_')) {
-      add(c, 1, `${c.description}: процесс завершился с ошибкой.`, { exitCode: c.exitCode ?? null, error: c.error ?? null, outputTail: c.outputTail ?? null }, 'код выхода 0');
+      const hasSkips = Number.isSafeInteger(c.skipCount) && c.skipCount > 0;
+      add(c, 1, hasSkips ? `${c.description}: обнаружены пропущенные проверки.` : `${c.description}: процесс завершился с ошибкой.`,
+        { exitCode: c.exitCode ?? null, error: c.error ?? null, skipCount: c.skipCount ?? null,
+          skipLines: c.skipLines ?? null, outputTail: c.outputTail ?? null }, 'код выхода 0 и отсутствие пропусков');
       continue;
     }
     if (c.id === 'production_flags') {
@@ -96,6 +100,10 @@ export function diagnoseChecks(checks, required = []) {
         { passed: c.variantsPassed, total: c.variantsTotal, failedByRole: byRole, examples: failed.slice(0, 4) }, '216 из 216');
     }
     const e = c.evidence;
+    if (c.id === 'unit_grid' && Array.isArray(e?.runs) && e.runs.some((r) => number(r.mismatches) && r.mismatches > 0))
+      add(c, 117, 'После шага позиция части живых юнитов не совпадает с клеткой в индексе, построенном до движения. Корректность зависит от семантики и точек чтения; они не установлены.',
+        e.runs.map((r) => ({ seed: r.seed, crossings: r.crossings, mismatches: r.mismatches, examples: r.examples })),
+        '0 несовпадений по действующему критерию при реальных пересечениях границ клеток');
     if (c.id === 'doors' && Array.isArray(e?.scenarios)) for (const s of e.scenarios) {
       if (!s || typeof s !== 'object') continue;
       const tag = s.kind || s.name || 'неизвестный сценарий';

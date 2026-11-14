@@ -1,0 +1,679 @@
+{
+  "kind": "save_autopilot_timer_counterfactual",
+  "reproduced": true,
+  "seeds": 20,
+  "saveFlag": true,
+  "saveAfterTicks": 120,
+  "observedTicks": 1,
+  "results": [
+    {
+      "seed": 1,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1020901714,
+        "afterRng": 2213055557,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1020901714,
+        "afterRng": 2844891227,
+        "timer": 2.1024848528838902e-15,
+        "issued": [
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 2,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 2461244046,
+        "afterRng": 3085503416,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 2461244046,
+        "afterRng": 3717339086,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 3,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 125724958,
+        "afterRng": 3213385811,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 125724958,
+        "afterRng": 3845221481,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 4,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1317878802,
+        "afterRng": 1942138172,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1317878802,
+        "afterRng": 2573973842,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 5,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1084842915,
+        "afterRng": 3540668098,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1084842915,
+        "afterRng": 4172503768,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 6,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1069690316,
+        "afterRng": 430278346,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1069690316,
+        "afterRng": 1062114016,
+        "timer": 2.1024848528838902e-15,
+        "issued": [
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          },
+          {
+            "type": "directive",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 7,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 2077596869,
+        "afterRng": 2701856239,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 2077596869,
+        "afterRng": 3333691909,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 8,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 246031057,
+        "afterRng": 870290427,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 246031057,
+        "afterRng": 1502126097,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 9,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1205149013,
+        "afterRng": 3660974196,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1205149013,
+        "afterRng": 4292809866,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 10,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1205149014,
+        "afterRng": 4292809867,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1205149014,
+        "afterRng": 629678241,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 11,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 5418872,
+        "afterRng": 629678242,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 5418872,
+        "afterRng": 1261513912,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 12,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 3348844514,
+        "afterRng": 2141538071,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 3348844514,
+        "afterRng": 2773373741,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 13,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 3796432894,
+        "afterRng": 2589126451,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 3796432894,
+        "afterRng": 3220962121,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 14,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1269090215,
+        "afterRng": 61783772,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1269090215,
+        "afterRng": 693619442,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 15,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 2732161447,
+        "afterRng": 1524855004,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 2732161447,
+        "afterRng": 2156690674,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 16,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 693619444,
+        "afterRng": 3781280297,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 693619444,
+        "afterRng": 118148671,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 17,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1964867085,
+        "afterRng": 757560642,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1964867085,
+        "afterRng": 1389396312,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 18,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 3277327023,
+        "afterRng": 2070020580,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 3277327023,
+        "afterRng": 2701856250,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 19,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 4116138885,
+        "afterRng": 2908832442,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 4116138885,
+        "afterRng": 3540668112,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    },
+    {
+      "seed": 20,
+      "sourceTimer": 0.01666666666666877,
+      "loadedTimer": null,
+      "identicalLoadedGraphsBeforeIntervention": true,
+      "normal": {
+        "beforeRng": 1381820015,
+        "afterRng": 174513572,
+        "timer": 2,
+        "issued": [
+          {
+            "type": "create_squad",
+            "faction": 0,
+            "source": "enemyAI"
+          },
+          {
+            "type": "create_squad",
+            "faction": 1,
+            "source": "enemyAI"
+          }
+        ]
+      },
+      "override": {
+        "beforeRng": 1381820015,
+        "afterRng": 806349242,
+        "timer": 2.1024848528838902e-15,
+        "issued": []
+      },
+      "reproduced": true
+    }
+  ],
+  "limitations": [
+    "Only alg_save=true AI-vs-AI scene in one Node process",
+    "Overrides only an in-memory value in one of two loaded twins, not a save-format change",
+    "Effects shown for first step only; other state remains unrestored",
+    "Captured graph cannot observe closures or all module globals",
+    "Does not establish a complete save/load fix or explain every later difference"
+  ]
+}

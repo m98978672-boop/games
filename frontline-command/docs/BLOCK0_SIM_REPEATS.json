@@ -1,0 +1,490 @@
+{
+  "note": "5 consecutive processes, same seed 1 and same initial target; Node simulation with instrumentation, natural spawns and background OS activity; not browser FPS and not a paired comparison of game changes.",
+  "rows": [
+    {
+      "run": 1,
+      "measures": [
+        {
+          "target": 400,
+          "seed": 1,
+          "initial": 400,
+          "minAlive": 417,
+          "maxAlive": 422,
+          "finalAlive": 422,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 4.407847275000011,
+            "p95": 11.624365000000012,
+            "max": 50.377702
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.010890333333333047,
+            "build": 0.005416341666655929,
+            "commands": 0.018227850000003324,
+            "grid_clear": 0.001581875000005084,
+            "grid_insert": 0.15461484166660475,
+            "grid_query": 0.3353146416667651,
+            "influence": 0.07368863333333782,
+            "logistics": 0.07436770833333525,
+            "nav_advance": 0.000585708333335333,
+            "nav_step": 0.011376924999997111,
+            "squad_ai": 0.11866113333334075,
+            "strategic_ai": 0.0252641583333381,
+            "walls": 0.03566282499999905
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 50630,
+            "nav_step": 936,
+            "grid_query": 11005,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        },
+        {
+          "target": 500,
+          "seed": 1,
+          "initial": 500,
+          "minAlive": 517,
+          "maxAlive": 522,
+          "finalAlive": 522,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 3.000352516666669,
+            "p95": 6.5265589999999065,
+            "max": 17.837410999999975
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.016521566666671105,
+            "build": 0.0038503416666515024,
+            "commands": 0.013703333333326857,
+            "grid_clear": 0.0021236416666492158,
+            "grid_insert": 0.16506360833348974,
+            "grid_query": 0.4386003000000282,
+            "influence": 0.048418283333343956,
+            "logistics": 0.060744833333338494,
+            "nav_advance": 0.0005163749999932558,
+            "nav_step": 0.012417450000017045,
+            "squad_ai": 0.10650648333331673,
+            "strategic_ai": 0.012189141666639595,
+            "walls": 0.03317109166666986
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 62630,
+            "grid_query": 12116,
+            "nav_step": 926,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        }
+      ]
+    },
+    {
+      "run": 2,
+      "measures": [
+        {
+          "target": 400,
+          "seed": 1,
+          "initial": 400,
+          "minAlive": 417,
+          "maxAlive": 422,
+          "finalAlive": 422,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 3.689776883333339,
+            "p95": 8.71634400000005,
+            "max": 17.743678000000045
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.02648250000000208,
+            "build": 0.003952841666669353,
+            "commands": 0.014780550000003246,
+            "grid_clear": 0.0014201333333337138,
+            "grid_insert": 0.12401254166669559,
+            "grid_query": 0.22349040000001044,
+            "influence": 0.05779609166666546,
+            "logistics": 0.14236786666666604,
+            "nav_advance": 0.0005226750000057715,
+            "nav_step": 0.010967791666664084,
+            "squad_ai": 0.15152218333333375,
+            "strategic_ai": 0.03919660833333959,
+            "walls": 0.03670349999999871
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 50630,
+            "nav_step": 936,
+            "grid_query": 11005,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        },
+        {
+          "target": 500,
+          "seed": 1,
+          "initial": 500,
+          "minAlive": 517,
+          "maxAlive": 522,
+          "finalAlive": 522,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 2.888301833333338,
+            "p95": 6.213854999999967,
+            "max": 9.693762000000106
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.008970649999993915,
+            "build": 0.0037398333333195904,
+            "commands": 0.011768558333354424,
+            "grid_clear": 0.0013307583333225163,
+            "grid_insert": 0.15558709166655452,
+            "grid_query": 0.44552937499994416,
+            "influence": 0.040439916666671634,
+            "logistics": 0.056976466666662874,
+            "nav_advance": 0.0004816250000033051,
+            "nav_step": 0.010104941666645573,
+            "squad_ai": 0.10873685833333487,
+            "strategic_ai": 0.03331900000000398,
+            "walls": 0.033398691666663656
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 62630,
+            "grid_query": 12116,
+            "nav_step": 926,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        }
+      ]
+    },
+    {
+      "run": 3,
+      "measures": [
+        {
+          "target": 400,
+          "seed": 1,
+          "initial": 400,
+          "minAlive": 417,
+          "maxAlive": 422,
+          "finalAlive": 422,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 3.395720541666667,
+            "p95": 9.334475999999995,
+            "max": 14.084028999999987
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.010694016666667494,
+            "build": 0.003932058333332596,
+            "commands": 0.013686533333332326,
+            "grid_clear": 0.001387749999991191,
+            "grid_insert": 0.11584715833342993,
+            "grid_query": 0.27576597500002625,
+            "influence": 0.06992000833332289,
+            "logistics": 0.11446166666666689,
+            "nav_advance": 0.0005087916666695946,
+            "nav_step": 0.010957025000013231,
+            "squad_ai": 0.08779965833333278,
+            "strategic_ai": 0.039939549999994974,
+            "walls": 0.11656445833333086
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 50630,
+            "nav_step": 936,
+            "grid_query": 11005,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        },
+        {
+          "target": 500,
+          "seed": 1,
+          "initial": 500,
+          "minAlive": 517,
+          "maxAlive": 522,
+          "finalAlive": 522,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 2.8566161333333278,
+            "p95": 6.24045799999999,
+            "max": 9.289629999999988
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.00827860833332655,
+            "build": 0.0034588749999916973,
+            "commands": 0.015173658333336941,
+            "grid_clear": 0.0017825833333328471,
+            "grid_insert": 0.1558307083331158,
+            "grid_query": 0.45963268333326257,
+            "influence": 0.042872083333329175,
+            "logistics": 0.057193991666664105,
+            "nav_advance": 0.0004623333333275544,
+            "nav_step": 0.010297449999992143,
+            "squad_ai": 0.09808695000000019,
+            "strategic_ai": 0.011052166666661378,
+            "walls": 0.03195232499999747
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 62630,
+            "grid_query": 12116,
+            "nav_step": 926,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        }
+      ]
+    },
+    {
+      "run": 4,
+      "measures": [
+        {
+          "target": 400,
+          "seed": 1,
+          "initial": 400,
+          "minAlive": 417,
+          "maxAlive": 422,
+          "finalAlive": 422,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 4.098713416666661,
+            "p95": 12.051895000000059,
+            "max": 13.252169000000094
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.022749575000001226,
+            "build": 0.004689233333334641,
+            "commands": 0.09315058333333846,
+            "grid_clear": 0.0028758750000065446,
+            "grid_insert": 0.2042051666666064,
+            "grid_query": 0.24259618333327448,
+            "influence": 0.07502650833333083,
+            "logistics": 0.09560955833333841,
+            "nav_advance": 0.000656241666661117,
+            "nav_step": 0.01374655833332478,
+            "squad_ai": 0.11272592499999329,
+            "strategic_ai": 0.028022499999995412,
+            "walls": 0.044026600000000825
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 50630,
+            "nav_step": 936,
+            "grid_query": 11005,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        },
+        {
+          "target": 500,
+          "seed": 1,
+          "initial": 500,
+          "minAlive": 517,
+          "maxAlive": 522,
+          "finalAlive": 522,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 2.7721900333333283,
+            "p95": 6.162600999999995,
+            "max": 9.607711999999992
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.015452249999998457,
+            "build": 0.003602783333328337,
+            "commands": 0.011139374999991484,
+            "grid_clear": 0.001586158333344656,
+            "grid_insert": 0.15531391666638494,
+            "grid_query": 0.42841787500000617,
+            "influence": 0.04019146666666226,
+            "logistics": 0.05897944999998496,
+            "nav_advance": 0.00047632499999584376,
+            "nav_step": 0.009688191666670794,
+            "squad_ai": 0.09301930000000311,
+            "strategic_ai": 0.012420241666651085,
+            "walls": 0.031199083333342516
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 62630,
+            "grid_query": 12116,
+            "nav_step": 926,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        }
+      ]
+    },
+    {
+      "run": 5,
+      "measures": [
+        {
+          "target": 400,
+          "seed": 1,
+          "initial": 400,
+          "minAlive": 417,
+          "maxAlive": 422,
+          "finalAlive": 422,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 3.576947633333335,
+            "p95": 8.774020999999948,
+            "max": 19.790994999999953
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.0163898500000073,
+            "build": 0.003825941666663842,
+            "commands": 0.0141883833333272,
+            "grid_clear": 0.0016466333333350273,
+            "grid_insert": 0.22698439166665121,
+            "grid_query": 0.2434454416666635,
+            "influence": 0.057402049999997,
+            "logistics": 0.09343141666667047,
+            "nav_advance": 0.0005037000000015724,
+            "nav_step": 0.010235133333327439,
+            "squad_ai": 0.12705257500000186,
+            "strategic_ai": 0.039258025000006566,
+            "walls": 0.035050999999996675
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 50630,
+            "nav_step": 936,
+            "grid_query": 11005,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        },
+        {
+          "target": 500,
+          "seed": 1,
+          "initial": 500,
+          "minAlive": 517,
+          "maxAlive": 522,
+          "finalAlive": 522,
+          "warOver": false,
+          "simTime": 14.999999999999963,
+          "ticks": 120,
+          "tickMs": {
+            "mean": 2.9217344083333385,
+            "p95": 5.948165000000017,
+            "max": 10.053453999999874
+          },
+          "instrumentedMsPerTick": {
+            "autopilot": 0.009929458333332756,
+            "build": 0.003711949999994128,
+            "commands": 0.012439324999993081,
+            "grid_clear": 0.005226325000004787,
+            "grid_insert": 0.14658470000003757,
+            "grid_query": 0.4375915416666923,
+            "influence": 0.04064380833333416,
+            "logistics": 0.05914789999999168,
+            "nav_advance": 0.0004581916666685023,
+            "nav_step": 0.010834525000003243,
+            "squad_ai": 0.12610321666666663,
+            "strategic_ai": 0.012509041666652366,
+            "walls": 0.042450508333322055
+          },
+          "calls": {
+            "nav_advance": 120,
+            "grid_clear": 120,
+            "grid_insert": 62630,
+            "grid_query": 12116,
+            "nav_step": 926,
+            "squad_ai": 120,
+            "strategic_ai": 240,
+            "autopilot": 120,
+            "logistics": 120,
+            "build": 120,
+            "walls": 120,
+            "influence": 120,
+            "commands": 120
+          }
+        }
+      ]
+    }
+  ]
+}

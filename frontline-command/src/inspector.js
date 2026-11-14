@@ -47,7 +47,7 @@ export class MovementObserver {
   }
 }
 
-export function inspectGame({ game, renderer, bank, hud, audio, motion } = {}) {
+export function inspectGame({ game, renderer, bank, hud, audio, motion, buildVersion } = {}) {
   const entries = [];
   function check(code, name, expected, run) {
     try {
@@ -152,12 +152,14 @@ export function inspectGame({ game, renderer, bank, hud, audio, motion } = {}) {
       'Это эвристика по двум снимкам, а не доказательство застревания или отсутствия проблем.');
   });
   return { version: 1, kind: 'live_snapshot', gameStarted: !!game, seed: game?.seed ?? null,
-    gameSeconds: finite(game?.time) ? game.time : null, entries };
+    gameSeconds: finite(game?.time) ? game.time : null, entries,
+    ...(typeof buildVersion === 'string' && buildVersion ? { buildVersion } : {}) };
 }
 
 export function formatInspectorReport(report) {
   const lines = ['FRONTLINE COMMAND — БОТ-ИНСПЕКТОР F8', 'Это снимок текущей игры, не полная приёмка и не сканирование файлов репозитория.',
     `Seed: ${report.seed ?? 'нет'}, игровое время: ${report.gameSeconds == null ? 'нет' : report.gameSeconds.toFixed(1) + ' с'}.`];
+  if (report.buildVersion) lines.push(`Сборка: ${report.buildVersion}`);
   for (const e of report.entries) lines.push('', `[${String(e.code).padStart(3,'0')}] ${e.name} — ${e.status === 'pass' ? 'проверено' : e.status === 'fail' ? 'ошибка' : 'не проверено'}`,
     `Ожидание: ${e.expected}`, `Факт: ${e.fact}`);
   return lines.join('\n');

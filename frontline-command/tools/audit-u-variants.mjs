@@ -5,7 +5,9 @@ import { Nav } from '../src/sim/nav.js';
 import { Walls } from '../src/sim/walls.js';
 import { moveAlongFlow, updateTimers } from '../src/sim/units.js';
 const on = process.argv.includes('--vehicle-detour');
-const cfg = await loadConfig(); cfg.flags.pathing_v2 = true; cfg.flags.vehicle_detour_v2 = on;
+const smart = process.argv.includes('--smart-route');
+const vision = process.argv.includes('--vision');
+const cfg = await loadConfig(); cfg.flags.pathing_v2 = true; cfg.flags.vehicle_detour_v2 = on; cfg.flags.smart_route_v2 = smart; cfg.flags.bot_obstacle_vision_v1 = vision;
 function run(role, seed, rotation, size, faction) {
   const game = new Game({ cfg, seed, aiVsAi: true }); game.units.clear(); game.unitGrid.clear();
   const width = 1536, c = width/2;
@@ -39,5 +41,5 @@ for (const role of ['infantry','truck','tank']) for (const rotation of [0,1,2,3]
   for (const seed of [5,7,11]) for (const faction of [0,1]) results.push(run(role,seed,rotation,size,faction));
 const ok = (r) => r.arrived && !r.pathFailed && !r.collided && r.noTeleport && r.movesAway && r.distanceToGoal < 34;
 const passed=results.filter(ok).length;
-console.log(JSON.stringify({ vehicleDetour:on, method:'216 одиночных сцен: 4 поворота × 3 размера × 3 seed × 3 типа × 2 фракции, без боя и других юнитов', passed,total:results.length,results },null,2));
+console.log(JSON.stringify({ vehicleDetour:on, smartRoute:smart, vision, method:'216 одиночных сцен: 4 поворота × 3 размера × 3 seed × 3 типа × 2 фракции, без боя и других юнитов', passed,total:results.length,results },null,2));
 if (passed !== results.length) process.exitCode=1;

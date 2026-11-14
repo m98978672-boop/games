@@ -1,0 +1,142 @@
+{
+  "passed": true,
+  "kind": "prechange_vs_new_flag_off_graph_comparison",
+  "seeds": 20,
+  "ticks": 60,
+  "dt": 0.016666666666666666,
+  "baselineFilesSha256": {
+    "src/sim/ai_soldier.js": "2a250be8f82360964efc9af8ee117e9bb7dd63782d51a6136d216d094235abca",
+    "src/sim/units.js": "e2e85013fa3e003233cae923a2d984d98e84fd5e1340b27f5f26ef5b80ee4c01",
+    "data/feature_flags.json": "990c13fcc460ecba48c8770997379b122fa72a4777b28d10481605a5d51fd864"
+  },
+  "runs": [
+    {
+      "seed": 1,
+      "compared": 61,
+      "lastSha": "e6904b8000135279122f592f6b922122938f81decf82a7201505f0b2cd487298",
+      "mismatch": null
+    },
+    {
+      "seed": 2,
+      "compared": 61,
+      "lastSha": "e5e484f8fa393250405a631225637eea0982e74a991a6832adcf53726c8c8ce4",
+      "mismatch": null
+    },
+    {
+      "seed": 3,
+      "compared": 61,
+      "lastSha": "1eb00c29ddff8d707ec730f6baa7671643563a33e554530e2f84a1f93200687c",
+      "mismatch": null
+    },
+    {
+      "seed": 4,
+      "compared": 61,
+      "lastSha": "f091c3215aaa5523c626ac65d8be34e152736646263025d6f203e9e1220b6007",
+      "mismatch": null
+    },
+    {
+      "seed": 5,
+      "compared": 61,
+      "lastSha": "6df5124267c2fc4a76aad7acba1a54c847659de5ca2bebbb76091df5595733ef",
+      "mismatch": null
+    },
+    {
+      "seed": 6,
+      "compared": 61,
+      "lastSha": "45487550de1a2081aedb0349b643c58294bee8cfa00c8ab8577f04f0e93771d3",
+      "mismatch": null
+    },
+    {
+      "seed": 7,
+      "compared": 61,
+      "lastSha": "52ff85c9e2de19171dbb1353421e88c4f65fe2a19e5620a3260e2ccf4c10e699",
+      "mismatch": null
+    },
+    {
+      "seed": 8,
+      "compared": 61,
+      "lastSha": "abff44cf69322e4bd47df1b7f515fac23a2b80fc775857bab508a81e5481b6aa",
+      "mismatch": null
+    },
+    {
+      "seed": 9,
+      "compared": 61,
+      "lastSha": "cd640bf1842029b683adb1a8e2623a665891d9f4efc28217116584b59cbc4815",
+      "mismatch": null
+    },
+    {
+      "seed": 10,
+      "compared": 61,
+      "lastSha": "fa0d1c03ead7c0d60ebf8e652d1f1269ee25782f94371776430215fafd4a8140",
+      "mismatch": null
+    },
+    {
+      "seed": 11,
+      "compared": 61,
+      "lastSha": "cbf34779d4c6f8b086b32e00664af087a1767762b10d32e695daa0fdf97d6173",
+      "mismatch": null
+    },
+    {
+      "seed": 12,
+      "compared": 61,
+      "lastSha": "34957f681e8b106748fe035b873415496b6247e9f348e2ead359435841d95f3a",
+      "mismatch": null
+    },
+    {
+      "seed": 13,
+      "compared": 61,
+      "lastSha": "32fed9029935f0c792b09467afe0415ae9f0be9206019318b390d72f90b50fe1",
+      "mismatch": null
+    },
+    {
+      "seed": 14,
+      "compared": 61,
+      "lastSha": "53bb978190820d5fb780e97c3ac2e9687e58160f3b8f3ce25f9c7ed7f695e89a",
+      "mismatch": null
+    },
+    {
+      "seed": 15,
+      "compared": 61,
+      "lastSha": "4713262500616de7423391dde0606c42adba78f9addbee4b6ef041beb4888908",
+      "mismatch": null
+    },
+    {
+      "seed": 16,
+      "compared": 61,
+      "lastSha": "254a702ee5517b91efe05c69b0b820936341ee9e47a21c372b8003dfed5d89b8",
+      "mismatch": null
+    },
+    {
+      "seed": 17,
+      "compared": 61,
+      "lastSha": "b0d7743cc6fbd572d55714eb776c2d93d1acc8c2ddbe60c28461fc4f6a8d7182",
+      "mismatch": null
+    },
+    {
+      "seed": 18,
+      "compared": 61,
+      "lastSha": "32ec60cbdfc1a744fc29e626b10d91982c365bc1edf679ba5ad7d41036c82781",
+      "mismatch": null
+    },
+    {
+      "seed": 19,
+      "compared": 61,
+      "lastSha": "eccf02b687ec65f25bcca25f93ab92ab391c49dc2654a0f6b06e87ba2e30c3f6",
+      "mismatch": null
+    },
+    {
+      "seed": 20,
+      "compared": 61,
+      "lastSha": "8d7cc24515b281914c62527bed968d517039692a7b9c0812ca5c91f24cb73b4d",
+      "mismatch": null
+    }
+  ],
+  "caveats": [
+    "Same Node process and no user input or browser",
+    "Exact reachable graph strings compared; hashes are identifiers",
+    "Feature flag config entry removed from new test config solely for comparison",
+    "Function closures, module globals, prototypes and shared typed-array backing identity not fully captured",
+    "Two wall timing fields excluded",
+    "Pre-change source snapshot must be supplied separately"
+  ]
+}

@@ -27,8 +27,20 @@ export const requirements = [
   { id: 'soak', path: 'tests/acceptance/block1-soak.mjs', description: '30 реальных минут и контроль утечек/застреваний', timeout: 1_950_000 },
 ];
 
+// Evidence can have a successful exit and `passed: true` yet contain a nested
+// skipped case. Reject explicit structured skip markers before card validation.
+export function hasSkippedEvidence(value) {
+  if (!value || typeof value !== 'object') return false;
+  if (Array.isArray(value)) return value.some(hasSkippedEvidence);
+  for (const [key, v] of Object.entries(value)) {
+    if (key === 'status' && typeof v === 'string' && ['skip', 'skipped', 'not_run'].includes(v.toLowerCase())) return true;
+    if (['skipped', 'skipCount'].includes(key) && (v === true || (typeof v === 'number' && v > 0) || (Array.isArray(v) && v.length > 0))) return true;
+    if (v && typeof v === 'object' && hasSkippedEvidence(v)) return true;
+  }
+  return false;
+}
 export function validateEvidence(id, x, elapsedMs = 0) {
-  if (!object(x) || x.passed !== true) return false;
+  if (!object(x) || x.passed !== true || hasSkippedEvidence(x)) return false;
   switch (id) {
     case 'integration':
       return Array.isArray(x.scenarios) && ['S1','S8','S9','S10'].every((id) =>
@@ -82,11 +94,17 @@ export function validateEvidence(id, x, elapsedMs = 0) {
         x.separateRng === true && x.rngRestored === true && x.stateMatches === true;
     case 'browser_fps': {
       if (x.environment !== 'browser' || x.measurement !== 'requestAnimationFrame' || x.rendered !== true ||
-          x.quick !== false || typeof x.browser !== 'string' || !x.browser ||
+          x.quick !== false || x.warmed !== false || typeof x.browser !== 'string' || !x.browser ||
           !Array.isArray(x.measurements) || x.measurements.length !== 2) return false;
       const validRun = (target) => {
         const m = x.measurements.find((entry) => entry?.target === target);
+        const pop = m?.population;
         return object(m) && m.initial === target && m.minAlive === target && m.maxAlive === target &&
+          object(pop) && pop.target === target && pop.initial === target && pop.minAlive === target && pop.maxAlive === target &&
+          pop.frameRequired === true && pop.strictExact === true && pop.within2Percent === true && pop.firstOutside2Percent === null &&
+          positiveInt(pop.beforeStepSamples) && pop.afterStepSamples === pop.beforeStepSamples &&
+          pop.beforeStepSamples === m.timings?.step?.samples && pop.frameSamples === m.frames + 1 &&
+          pop.samples === 1 + pop.beforeStepSamples + pop.afterStepSamples + pop.frameSamples &&
           numeric(m.elapsedMs) && m.elapsedMs >= 12_000 && positiveInt(m.frames) &&
           m.worstCount === Math.ceil(m.frames * 0.01) && numeric(m.worstTimeMs) && m.worstTimeMs > 0 &&
           numeric(m.averageFps) && Math.abs(m.averageFps - m.frames * 1000 / m.elapsedMs) < 1e-8 &&
@@ -119,10 +137,24 @@ function run(command, args, timeout) {
     stdout: result.stdout || '', stderr: result.stderr || '', error: result.error?.message || null,
     signal: result.signal || null };
 }
-function summarize(id, description, result) {
-  return { id, description, status: result.code === 0 && !result.error ? 'pass' : 'fail',
+// Fail closed for the explicit skip formats emitted by this repository and TAP.
+// A zero summary (e.g. '# skipped 0') is not itself a skipped test. This is not
+// a parser for every possible test runner; new formats require new tests.
+export function skippedLines(output) {
+  return String(output).split(/\r?\n/).filter((line) => {
+    if (/^\s*#?\s*(?:skip(?:ped)?|пропущено)\s*[:=]?\s*0\s*$/iu.test(line)) return false;
+    return /^\s*(?:skip(?:ped)?\b|пропущен(?:о|а|ы)?(?=\s|:|$))/iu.test(line) ||
+      /^\s*(?:ok|not ok)\b.*#\s*skip\b/iu.test(line) ||
+      /^\s*#\s*skipped\s+[1-9]\d*\s*$/iu.test(line);
+  });
+}
+export function summarize(id, description, result) {
+  const output = (result.stdout || '') + '\n' + (result.stderr || '');
+  const skips = skippedLines(output);
+  return { id, description, status: result.code === 0 && !result.error && skips.length === 0 ? 'pass' : 'fail',
     elapsedMs: result.elapsedMs, exitCode: result.code, error: result.error,
-    outputTail: (result.stdout + result.stderr).trim().split('\n').slice(-8).join('\n') };
+    skipCount: skips.length, skipLines: skips.slice(0, 20),
+    outputTail: output.trim().split('\n').slice(-8).join('\n') };
 }
 function jsonOutput(result) {
   try { return JSON.parse(result.stdout); } catch { return null; }
@@ -130,7 +162,7 @@ function jsonOutput(result) {
 
 // Расширенная проверка U-геометрии: одного исходного размера недостаточно.
 export function validateUVariants(data, vehicleDetour) {
-  if (!object(data) || data.vehicleDetour !== vehicleDetour || data.total !== 216 || data.passed !== 216 ||
+  if (!object(data) || hasSkippedEvidence(data) || data.vehicleDetour !== vehicleDetour || data.total !== 216 || data.passed !== 216 ||
       !Array.isArray(data.results) || data.results.length !== 216) return false;
   const keys = new Set();
   for (const r of data.results) {
@@ -145,7 +177,14 @@ export function validateUVariants(data, vehicleDetour) {
   return keys.size === 216;
 }
 
-export const requiredChecks = ['full_suite', 'production_flags', 'u_trap', ...requirements.map((r) => r.id)];
+export function validateUnitGrid(data) {
+  if (!object(data) || data.passed !== true || hasSkippedEvidence(data) || !Array.isArray(data.runs) || data.runs.length !== 3) return false;
+  return [5,7,11].every((seed) => data.runs.filter((r) => r?.seed === seed && r.ticks === 60 &&
+    positiveInt(r.crossings) && positiveInt(r.observations) && r.mismatches === 0 &&
+    Array.isArray(r.examples) && r.examples.length === 0).length === 1);
+}
+
+export const requiredChecks = ['full_suite', 'production_flags', 'u_trap', 'unit_grid', ...requirements.map((r) => r.id)];
 export function verdict(checks) {
   const required = requiredChecks;
   return checks.every((c) => c.status === 'pass') &&
@@ -183,7 +222,7 @@ export function audit({ quick = false } = {}) {
       if (flags.vehicle_detour_v2) variantArgs.push('--vehicle-detour');
       const variants = run(process.execPath, variantArgs, 60_000), variantData = jsonOutput(variants);
       checks.push({ id: 'u_trap', description: 'U-ловушка с настройками по умолчанию',
-        status: result.code === 0 && !result.error && data?.total === 18 && data?.passed === data.total &&
+        status: result.code === 0 && !result.error && data?.total === 18 && data?.passed === data.total && !hasSkippedEvidence(data) &&
           data?.vehicleDetour === !!flags.vehicle_detour_v2 && variants.code === 0 && !variants.error &&
           validateUVariants(variantData, !!flags.vehicle_detour_v2) ? 'pass' : 'fail',
         passed: data?.passed ?? null, total: data?.total ?? null, elapsedMs: result.elapsedMs + variants.elapsedMs,
@@ -195,6 +234,12 @@ export function audit({ quick = false } = {}) {
     } else checks.push({ id: 'u_trap', description: 'U-ловушка с настройками по умолчанию', status: 'not_run', reason: 'Выключены необходимые флаги.' });
   }
   if (!flags) checks.push({ id: 'u_trap', description: 'U-ловушка с настройками по умолчанию', status: 'not_run', reason: 'Не удалось прочитать флаги.' });
+  const gridRun = run(process.execPath, ['tools/audit-unit-grid.mjs'], 60_000);
+  const gridEvidence = jsonOutput(gridRun);
+  checks.push({ id: 'unit_grid', description: 'Актуальность пространственного индекса после движения',
+    status: gridRun.code === 0 && !gridRun.error && validateUnitGrid(gridEvidence) ? 'pass' : 'fail',
+    elapsedMs: gridRun.elapsedMs, exitCode: gridRun.code, error: gridRun.error, signal: gridRun.signal,
+    evidence: gridEvidence, ...(gridEvidence ? {} : { outputTail: (gridRun.stdout + gridRun.stderr).trim().slice(-1500) }) });
   for (const req of requirements) {
     if (!existsSync(resolve(root, req.path))) {
       checks.push({ id: req.id, description: req.description, status: 'missing', path: req.path });

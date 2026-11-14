@@ -1,0 +1,419 @@
+
+> frontline-command@0.11.0 test
+> node tests/logic.mjs && node tests/block0-nondeterminism.mjs && node tests/block0-state-graph.mjs && node tests/block0-process-repeatability.mjs && node tests/block0-population-monitor.mjs && node tests/block0-save-continuation-probe.mjs && node tests/door-pair.mjs && node tests/vision-nav-policy.mjs && node tests/vision-small-group.mjs && node tests/arrival-stuck-guard.mjs && node tests/crowd-slot-avoid.mjs && node tests/group-pair.mjs && node tests/vision-fast.mjs && node tests/safe-vehicle-spawn.mjs && node tests/motion-slide-guard.mjs && node tests/near-goal-direct.mjs && node tests/motion-safety-probe.mjs && node tests/motion-wall-sweep.mjs && node tests/vehicle-pickup-exterior.mjs && node tests/logistics-dropoff.mjs && node tests/logistics-dropoff-save.mjs && node tests/motion-wall-exact.mjs && node tests/vehicle-spawn-all.mjs && node tests/solid-units.mjs && node tests/door-courtesy.mjs && node tests/wall-goal-guard.mjs && node tests/bot-obstacle-vision.mjs && node tests/bot-surround-vision.mjs && node tests/vehicle-visible-fire.mjs && node tests/build-version.mjs && node tests/block1-auditor.mjs && node tests/block1-diagnostics.mjs && node tests/game-auditor.mjs && node tests/inspector.mjs && node tests/repository-auditor.mjs && node tests/audit-all.mjs && node tests/save-identity.mjs && node tests/save-state.mjs && node tests/save-squads.mjs && node tests/save-squad-identity.mjs && node tests/save-orders.mjs && node tests/save-transport.mjs && node tests/logistics-routing.mjs && node tests/save-structures.mjs && node tests/save-blueprints.mjs && node tests/crowd-nav.mjs && node tests/easystar-route.mjs && node tests/smart-route.mjs && node tests/path-retry-observation.mjs && node tests/incremental-planner.mjs && node tests/incremental-planner-door.mjs && node tests/movement-experiment.mjs && node tests/engineer-combat.mjs && node tests/build-material-budget.mjs && node tests/build-auto-orders.mjs && node tests/build.mjs && node tests/sim.mjs && node tests/wall-data.mjs && node tests/wall-contours.mjs && node tests/wall-materials.mjs && node tests/walls.mjs && node tests/wall-render.mjs && node tests/pathing.mjs && node tests/nav-batch.mjs && node tests/nav-local.mjs && node tests/nav-local-simulation.mjs && node tests/vehicle-detour.mjs && node tests/deadlock-observation.mjs && node tests/symmetry.mjs && node tests/duel.mjs && node tests/perf.mjs
+
+ok   оружие загружено из weapons.json
+ok   юниты загружены из units.json
+ok   точки карты загружены из sectors.json
+ok   шаблоны отрядов загружены
+ok   пресеты правил If→Then загружены
+ok   две фракции
+ok   акценты фракций из factions.json
+ok   оружие Пистолет: урон/скорострельность/дальность заданы
+ok   оружие Винтовка: урон/скорострельность/дальность заданы
+ok   оружие Автомат: урон/скорострельность/дальность заданы
+ok   оружие Пулемёт: урон/скорострельность/дальность заданы
+ok   оружие Снайперка: урон/скорострельность/дальность заданы
+ok   оружие Орудие танка: урон/скорострельность/дальность заданы
+ok   оружие Без оружия: урон/скорострельность/дальность заданы
+ok   юнит Пехотинец: цена в конфиге (30)
+ok   юнит Пулемётчик: цена в конфиге (46)
+ok   юнит Медик: цена в конфиге (32)
+ok   юнит Инженер: цена в конфиге (34)
+ok   юнит Водитель: цена в конфиге (16)
+ok   юнит Разведчик: цена в конфиге (26)
+ok   юнит Танкист: цена в конфиге (18)
+ok   юнит Грузовик: цена в конфиге (54)
+ok   юнит Лёгкий танк: цена в конфиге (162)
+ok   режим ИИ против ИИ: игрок не назначен
+ok   стартовые армии созданы (52 юнитов)
+ok   приказ без исполнителей отклонён (нет исполнителей)
+ok   задержка ближнего приказа > 0 (1.29 с)
+ok   дальний приказ идёт дольше ближнего
+ok   создание отряда отклоняется с причиной (лимит отрядов: 7/7 (растёт в ветке «Командование»))
+ok   журнал приказов: источник + результат
+ok   лимит отрядов одинаков для фракций (6)
+ok   лимит директив одинаков (3)
+ok   все юниты используют оружие из общего конфига
+ok   домашний штаб фракции 0 определён
+ok   захват штаба завершает войну (Штаб Легион захвачен)
+
+все логические проверки пройдены
+{
+  "passed": true,
+  "seeds": 20,
+  "requestedTicks": 600,
+  "dt": 0.016666666666666666,
+  "scope": "Node Game constructor and 600 headless AI-vs-AI steps; no browser input/audio/save/load, no guarantee that all code paths ran",
+  "results": [
+    {
+      "seed": 1,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 2,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 3,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 4,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 5,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 6,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 7,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 8,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 9,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 10,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 11,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 12,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 13,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 14,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 15,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 16,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 17,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 18,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 19,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    },
+    {
+      "seed": 20,
+      "ticks": 600,
+      "endedEarly": false,
+      "error": null
+    }
+  ]
+}
+block0 state-graph: AI timers, typed arrays, RNG, IDs, references and map order are represented; closures remain unverified
+Independent processes: exact graph comparison and injected mismatch detected
+Population monitor: exact start, 2% boundary, transient deviations and missing steps checked
+Save-continuation diagnostic ran; mismatches remain failures, this test is not replay acceptance
+door-pair: default off, cancellation and third-unit guards checked for both factions
+vision nav policy: solo/pair/group, LOS, obstacle, contact, cancellation, opt-in dispatch and visible-only courtesy for both factions
+small-group nav: 3-5 infantry, opt-in, distinct destinations and combat cancellation
+arrival stuck guard: default off, arrival validation and stale goals for both factions
+crowd slot avoidance: default off, reservations, geometry, no teleport and no candidate
+group pair: off by default, opposing exit, common goal, separated slots, contact cancellation
+vision fast: off by default, skips only unused sensing, preserves changed-goal sampling
+safe vehicle spawn: opt-in, clear exterior and unit clearance, no charge or cooldown on failure
+motion slide: opt-in, zero-axis fallback reproduced and avoided in both directions
+near goal direct: opt-in, terrain/wall segment sampled, combat excluded, speed preserved
+motion safety probe: catches swept unit/wall hits, separates existing overlap
+wall sweep: opt-in detects intermediate wall, preserves rescue when starting embedded
+vehicle pickup: opt-in exterior point, loads only on proximity
+logistics dropoff: default off, external point, no failed-route delivery, retains cargo under threat
+logistics dropoff save: request, cargo and exterior point recovery for both factions with alg_save
+exact wall sweep: 6000 real-geometry sweeps vs dense samples, open/closed doors and vehicle/infantry
+vehicle spawn: opt-in initial army, atomic armor squad, reinforcement and player, no-cost failure
+solid units: off by default, endpoint/sweep and overlap recovery
+door courtesy: off by default, exit priority, contact/faction checks
+wall goal guard: blocked goal adjusted before field or rejected if no candidate; both factions and infantry/tank
+Bot obstacle vision: wall and terrain sensing, opt-in, combat/door guard and stale route cancellation
+Surround vision: 8 directions, factions, range, actual wall LOS, memory and AI response
+Vehicle sight: no firing/tracking a hidden remembered target; visible targets and both factions checked
+build version: default off, no DOM/report change; on shows the local build in badge and inspector
+проверяющий блока 1: отсутствующие проверки, фальшивый soak, FPS симуляции и быстрый режим не дают PASS
+диагностика блока 1: 40 устойчивых кодов, реальные причины, отсутствие данных и дубликаты проверены
+общий проверяющий: 40 алгоритмов, статусы доказательств, PNG, графика, лицензии, S1–S10 и блок 1 проверены без ложной приёмки
+F8: реальная игра, обнаружение повреждений, отсутствие изменений в игре и непроверенные области
+репозиторий: JSON, синтаксис JS, PNG, пути, отсутствие файлов и символические ссылки
+общий запуск: частичный обзор не становится PASS, независимые сбои и быстрый режим проверены
+сохранение: потерянных исходных ID до 3, после 0/50; игрок и следующий RNG восстановлены; старый формат и флаг off проверены
+состояние: ошибка позиции до 0.395 px, после 0; таймеры ранения и перезарядки сохраняются; размер +15693 байт
+отряды: командир, потери, порог отступления, фаза и таймеры сохранены для обеих фракций; повреждённые данные и старый формат проверены
+сохранение: следующий ID отряда и старые приказы не перенаправляются новому отряду; старые и повреждённые расширения
+очередь приказов: до загрузки 2, legacy восстановил 0, alg_save восстановил 2; обе фракции, доставка, отмена и повреждённые ID проверены
+рейсы и груз: legacy потерял груз 240 и 2 заявки, alg_save восстанавливает обе стороны, ссылки и списание; повреждённый рейс припаркован
+logistics: exclusive requests, failed path, threat, delivery and reuse verified for both factions
+logistics: orphaned saved cargo is not overwritten
+logistics: two isolated real-geometry trips complete without teleport or wall collisions
+logistics: rollback and dependencies checked
+постройки: мёртвые ссылки живых точек 18/18 → 0/18; HP и захват сохранены, разрушенная не воскресает
+чертежи: legacy 0/2, alg_save 2/2; прогресс, очередь, ресурсы, приказы и повреждённые ID проверены
+crowd nav: 180 paired variants, clearance, collision, goal and combat invalidation OK
+EasyStar route: bounded search, wall clearance, cancellation, unreachable endpoints and size guard OK
+smart route: opt-in, bounded scheduler, slot reuse and stale cancellation OK
+path retry: old failure remains visible until a new goal; retried units return to observation
+incremental planner: sliced search, path clearance, stale cancellation and bounds OK
+incremental planner: real door changes cancel before deferred navigation rebuild for both factions OK
+movement experiment: paired evaluation, persistence and fail-closed format OK
+engineers: visible combat interrupts construction; work resumes without contact for both factions
+construction and repair: actual step cost, no overdraft, pause/resume for both factions OK
+build auto orders: queue, refusal, cooldown and ownership for both factions OK
+build auto orders: next threatened target and fort classification OK
+ok   есть validate() с кодами причин
+ok   флаги функций загружены из feature_flags.json
+ok   пороги регрессии загружены из regression_thresholds.json
+ok   вода → TERRAIN (TERRAIN)
+ok   найдено свободное место для проверок
+ok   чертёж поставлен
+ok   занятое место → OVERLAP (OVERLAP)
+ok   край карты → RANGE (RANGE)
+ok   лимит постройки читается из buildings.json
+ok   код отказа учтён в статистике
+ok   линия планируется (18 секций)
+ok   приказ линии покрывает весь план
+ok   линия поставлена (18/18)
+ok   секции линии попали в очередь
+ok   приоритет «срочно» применён к линии
+ok   зона ставится (5/5)
+ok   зона не превышает количество по профилю
+ok   наложений в зоне нет (0)
+ok   у профиля описаны эшелоны
+ok   у профиля есть threatWeight
+ok   шаблон обрабатывается (2/8)
+ok   шаблон ставит все элементы по списку
+ok   очередь стройки не пуста (25)
+ok   очередь отсортирована по приоритету
+ok   приказ set_build_priority работает
+ok   queueInfo отдаёт причину простоя для панели
+ok   нет материалов → NO_MATERIALS
+ok   приказ cancel_build снимает чертёж
+ok   возврат материалов при отмене (12)
+ok   приказ линии доставлен (refused: место занято)
+ok   зеркальная линия для второй фракции той же длины
+ok   планировщик ИИ обрабатывается (новых приказов: 1, в очереди было 0)
+ok   ИИ строит только через Command API (1 приказов)
+ok   для изолированного прохода найдено место без построек
+ok   узкий проход → предупреждение BLOCKS_PATH
+ok   широкий проход → нет предупреждения BLOCKS_PATH
+ok   флаг build_zone=false отключает планирование зоны
+ok   флаг build_templates=false отключает шаблоны
+ok   флаг build_priority=false отключает приоритеты
+
+строительство в порядке
+config loaded: 7 weapons, 19 points
+squads 8 units 53
+60s sim in 2288 ms; units 89 alive 89 squads 15
+points hq_ally:0 hq_legion:1 city_white:0 city_harbor:0 city_granite:1 city_north:1 city_bridge:0 city_fork:1 city_bend:0 depot_ally1:0 depot_ally2:0 depot_leg1:1 depot_leg2:1 factory_ally:0 factory_legion:1 farm_west:0 farm_east:1 bridge_north:1 bridge_south:0
+influence 0.00,-0.15,-0.18,0.00,0.00,-0.15,-0.78,-0.51
+orders { issued: 50, accepted: 46, refused: 3, cancelled: 0 } journal [
+  {
+    t: 54.1000000000005,
+    orderId: 45,
+    source: 'autopilot',
+    sourceLabel: 'автопилот',
+    type: 'directive',
+    label: 'директива',
+    faction: 0,
+    result: 'accepted',
+    reason: '',
+    delay: 2.831559231072218,
+    actors: [ 'Ноябрь' ]
+  },
+  {
+    t: 57.300000000000544,
+    orderId: 47,
+    source: 'enemyAI',
+    sourceLabel: 'ИИ врага',
+    type: 'reinforce',
+    label: 'reinforce',
+    faction: 1,
+    result: 'refused',
+    reason: 'нет исполнителей',
+    delay: 3.184870209451848,
+    actors: []
+  },
+  {
+    t: 57.90000000000055,
+    orderId: 48,
+    source: 'autopilot',
+    sourceLabel: 'автопилот',
+    type: 'directive',
+    label: 'директива',
+    faction: 0,
+    result: 'accepted',
+    reason: '',
+    delay: 2.1236943145630898,
+    actors: [ 'Лима' ]
+  },
+  {
+    t: 58.000000000000554,
+    orderId: 49,
+    source: 'autopilot',
+    sourceLabel: 'автопилот',
+    type: 'directive',
+    label: 'директива',
+    faction: 0,
+    result: 'accepted',
+    reason: '',
+    delay: 2.207247660151101,
+    actors: [ 'Чарли' ]
+  }
+]
+alerts [
+  'автопилот: директива — принято',
+  'Сектор «Развилка»: нехватка снабжения',
+  'ИИ врага: reinforce — нет исполнителей',
+  'автопилот: директива — принято',
+  'автопилот: директива — принято'
+]
+supply [ { ammo: 825, mat: 851 }, { ammo: 954, mat: 884 } ]
+delivered [ 1, 1 ]
+player hp 100 alive true
+данные стен: 9 контуров, 54 сегментов; генерация воспроизводима
+контуры: 6 зданий, 102000 пересечений сегментов с двух сторон; щелей и наложений на сторонах нет
+материалы: 28000 выстрелов в целые стены с обеих сторон, непредусмотренных пробитий 0
+стены: 17 зданий, 152 сегментов
+ok   контур замкнут у всех типов: худший разрыв 0.000 px (depot)
+ok   непроходимость: 1000/1000 попыток прохода остановлено
+ok   пробивание concrete/rifle: ожидалось 0.000, получено 0.000 (отклонение 0.000)
+ok   пробивание concrete/sniper: ожидалось 0.000, получено 0.000 (отклонение 0.000)
+ok   пробивание brick/rifle: ожидалось 0.000, получено 0.000 (отклонение 0.000)
+ok   пробивание brick/sniper: ожидалось 0.500, получено 0.506 (отклонение 0.006)
+ok   пробивание wood/rifle: ожидалось 0.450, получено 0.460 (отклонение 0.010)
+ok   пробивание wood/sniper: ожидалось 0.900, получено 0.898 (отклонение 0.002)
+ok   пробивание metal/rifle: ожидалось 0.120, получено 0.109 (отклонение 0.011)
+ok   пробивание metal/sniper: ожидалось 0.550, получено 0.559 (отклонение 0.009)
+     худшее отклонение пробивания: 0.0110
+ok   пуля 2800 px сквозь бетон не туннелирует (blocked=true)
+ok   raycastBlocked (старый код, шаг 14/46 px) тоже видит стену на 2800 px
+ok   дверь: открыта — проходима, закрыта — запирает
+ok   закрытая дверь останавливает пулю и помечается как выламываемая
+ok   окно: не проходимо, но простреливается
+ok   бойница: доля прошедших пуль 0.147 при норме 0.15
+ok   ворота открыты: проходят и техника, и пехота
+ok   ворота закрыты: техника заперта
+ok   из-за бетонной стены попаданий 0 (проверено 1200 выстрелов, прошло 0)
+ok   снайпер и бетон: прошло 0.000 (норма 0), урон после стены ×0.00
+ok   укрытие у стены штаба даёт value 1.00 (класс 3)
+ok   стойки: класс 3/1.00 ≥ класс 2/0.88 ≥ класс 1/0.52
+     укрытие с обратной стороны: 1.00
+ok   пролом в дереве: стена была непроходима, через 0.05 с (0.05 с симуляции) навигация свободна
+ok   телепортов нет: скачков 0, максимум 1.95× скорости за тик (в игре без стен 2.06×)
+ok   застрявших со стенами 1 из 88, без стен 4 из 124 (разница ≤2)
+ok   симметрия hq: геометрия совпала, пробивание 0.000/0.000 (Δ 0.000)
+ok   симметрия city: геометрия совпала, пробивание 0.000/0.000 (Δ 0.000)
+ok   симметрия depot: геометрия совпала, пробивание 0.446/0.444 (Δ 0.002)
+ok   симметрия factory: геометрия совпала, пробивание 0.114/0.114 (Δ 0.000)
+ok   сравнено типов зданий по фракциям: 4
+ok   сейв стен: восстановлено 17 зданий, сегменты совпали: true
+ok   старый сейв без блока стен загружается без ошибок (applySaved(undefined) → 0)
+ok   новый сейв содержит блок стен
+ok   флаг off: стены не блокируют движение/пули/обзор и не дают укрытия
+ok   звук за стеной: muffle 0.45 при включённом флаге, 1 при выключенном
+ok   флаг off = прежнее поведение: 60 с, расхождение позиций 0.0007 px, отличий hp 0, лишних юнитов 0
+
+стены: 36 ok, 0 fail
+рендер стен: стадии, пролом, проёмы, анимация, загрузка, F4 и флаг — OK
+промежуточная стена: дверь → (421.4, 3148.6), поле → (382.0, 3297.7) за 2 с
+проходы: пехота входит и выходит, грузовик проходит ворота; стена, вода и флаг off проверены
+пакет навигации: за 2 кадра legacy 3 полных перестройки, новый режим 2; маски и коллизии совпали
+локальная маска стен: 321 состояний совпали с полной перестройкой; сетка изменилась 153, не изменилась 168; пересечение, край и устаревшая версия проверены
+локальная навигация: выбранное состояние и RNG совпали on/off при 30 принудительных переключениях двери, 3 seed × 300 тиков
+экспериментальный обход техники: off 8/18, on 18/18 в U-сцене; зависимости предупреждают
+условия обхода: только направление поля от цели для обеих фракций, обычная скорость
+deadlock-наблюдение: off 0 событий; on 3, фракции 2/1, журнал 2; RNG, сброс целей и счётчик F3 проверены
+геометрия: секторов 38 (асимметричных 0), точек 19, узлов дорог 36, расхождений рельефа 0/16384
+{"seed":11,"swap":false,"seconds":900,"winner":0,"reason":"Война на измор: больше ключевых городов (Альянс)","kills":[112,103],"captures":[21,18],"deliveries":[1,2],"units":[22,6],"ms":19364}
+{"seed":11,"swap":true,"seconds":900,"winner":1,"reason":"Война на измор: больше ключевых городов (Легион)","kills":[108,84],"captures":[7,15],"deliveries":[1,1],"units":[4,31],"ms":22947}
+{"seed":23,"swap":false,"seconds":561.1,"winner":0,"reason":"Все ключевые города Легион потеряны","kills":[88,76],"captures":[16,7],"deliveries":[1,1],"units":[29,6],"ms":13296}
+{"seed":23,"swap":true,"seconds":251.1,"winner":1,"reason":"Все ключевые города Альянс потеряны","kills":[54,64],"captures":[6,13],"deliveries":[1,1],"units":[11,38],"ms":9783}
+решений: 4/4, побед 0: 2, побед 1: 2
+обе фракции побеждали в этом прогоне
+суммарно захватов: 103, среднее время прогона: 16.3 с
+
+симметрия в порядке
+seed 1: 600 с, живых 30/15
+seed 2: 600 с, живых 26/31
+seed 3: 600 с, живых 42/5
+seed 4: 600 с, живых 31/26
+seed 5: 600 с, живых 41/18
+seed 6: 600 с, живых 34/25
+seed 7: 600 с, живых 25/17
+seed 8: 600 с, живых 26/27
+
+дуэль: побед 0 — 6, побед 1 — 2, ничьих 0; перекос 75%
+преимущества первого хода нет
+юнитов: 392, шагов: 500, всего 2703 мс, средний тик 5.41 мс (185 FPS только на симуляцию)
+куча: 30 МБ, убито: 0/0
+стены: update 0.051 мс/тик, запросов за тик движение 133, пули 3, укрытия 0
+стены: blocksMove 0.42 мкс, bulletRay 4.87 мкс → всего 0.121 мс/кадр
+400 юнитов: тик 3.06 мс → 327 FPS симуляции (нужно ≥60)
+500 юнитов: тик 3.10 мс → 322 FPS симуляции (нужно ≥45)
+
+производительность в порядке

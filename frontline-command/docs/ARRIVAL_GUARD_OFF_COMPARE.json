@@ -1,0 +1,142 @@
+{
+  "passed": true,
+  "kind": "prechange_vs_new_flag_off_graph_comparison",
+  "seeds": 20,
+  "ticks": 60,
+  "dt": 0.016666666666666666,
+  "baselineFilesSha256": {
+    "src/sim/ai_soldier.js": "17cb6cb4f9385d04580b1daa0c583495e6ca41646a7dc955475f9760df3f00a7",
+    "src/sim/units.js": "0b081b6879065d0e762c5bb92aea4395b2437c42a7da34b493b3d56324ab511e",
+    "data/feature_flags.json": "f587e92d369142509e04ad04081045c507af77fc88a7f7fb57c6f77c8f233d35"
+  },
+  "runs": [
+    {
+      "seed": 1,
+      "compared": 61,
+      "lastSha": "9c87840e2aeab5d893322149341461c5ecc264f1143cc2e0b7c85f6598f101d8",
+      "mismatch": null
+    },
+    {
+      "seed": 2,
+      "compared": 61,
+      "lastSha": "41706a04c4377885c9c4b029a86f7781664d9ac324c1e5fdf691c7ec65dd1f2c",
+      "mismatch": null
+    },
+    {
+      "seed": 3,
+      "compared": 61,
+      "lastSha": "d868daca3e05d63f16d6d7921e7c6e16f4899db4e2293f120aeea352e1b99728",
+      "mismatch": null
+    },
+    {
+      "seed": 4,
+      "compared": 61,
+      "lastSha": "740d03e5af2f084e285a034466626f3a831286a1a8987e6a6cecb42b28334283",
+      "mismatch": null
+    },
+    {
+      "seed": 5,
+      "compared": 61,
+      "lastSha": "f4a80aa6213b7b3aac1d7c2f6163f76f6c045dc66ea026c87c27e13e5183cd3d",
+      "mismatch": null
+    },
+    {
+      "seed": 6,
+      "compared": 61,
+      "lastSha": "dc5fc45724559f7d5b7601ce276d5577c4bf2764e8a3805c7d81f522fb4a9ab9",
+      "mismatch": null
+    },
+    {
+      "seed": 7,
+      "compared": 61,
+      "lastSha": "689f85ad9d225772708d1c979fcad6b974740481ebbf326187241f1a2b5074da",
+      "mismatch": null
+    },
+    {
+      "seed": 8,
+      "compared": 61,
+      "lastSha": "65569a391b3235510e4f380af026abec75f6416e170d4ea1541e9ffe158afa7b",
+      "mismatch": null
+    },
+    {
+      "seed": 9,
+      "compared": 61,
+      "lastSha": "2be6ef34d70d0c3e2505b34f5a95233f23c4b91bd67f062bc2face282a808745",
+      "mismatch": null
+    },
+    {
+      "seed": 10,
+      "compared": 61,
+      "lastSha": "baa2fdd9865f1fb5766a620e36d3c5a352f4162e23e1c7536575e37b0363a63e",
+      "mismatch": null
+    },
+    {
+      "seed": 11,
+      "compared": 61,
+      "lastSha": "7dcaefce8fe43bd59674127770b4adb1a63b3ceb6da315779ded4e9ead5217c4",
+      "mismatch": null
+    },
+    {
+      "seed": 12,
+      "compared": 61,
+      "lastSha": "14abc81b770dee7bac6adfbc4282b8a81d47450483b00992473f2d5443de9709",
+      "mismatch": null
+    },
+    {
+      "seed": 13,
+      "compared": 61,
+      "lastSha": "f4998db440e4185fa08de3c4d04407ad1d8804cae241b6b891ccb302e2000083",
+      "mismatch": null
+    },
+    {
+      "seed": 14,
+      "compared": 61,
+      "lastSha": "0b203c566866d15918982e13d4492280a39f45a63b1c87cbf3f34474ce552bd0",
+      "mismatch": null
+    },
+    {
+      "seed": 15,
+      "compared": 61,
+      "lastSha": "65704331cd64a4cf8c978c116ece1c47723db529dbd36971f9336b014519f0d4",
+      "mismatch": null
+    },
+    {
+      "seed": 16,
+      "compared": 61,
+      "lastSha": "8a75396b6b431e9cb003e9816d10b72a9afbfa8fa926be73b6307ab176f702cf",
+      "mismatch": null
+    },
+    {
+      "seed": 17,
+      "compared": 61,
+      "lastSha": "d4dbff967e84bbffc7a13db3d4f55f18ad57677774655dc09328a78304c518fc",
+      "mismatch": null
+    },
+    {
+      "seed": 18,
+      "compared": 61,
+      "lastSha": "c405bdd67ba81ac7dc5e78cad3221881cc11adde785bbb2efec5e53a7df25dbc",
+      "mismatch": null
+    },
+    {
+      "seed": 19,
+      "compared": 61,
+      "lastSha": "61384ecfeb7a1d9d24790fe7d2e895ad1a09a5adbab6c47df86ce6e53cebb974",
+      "mismatch": null
+    },
+    {
+      "seed": 20,
+      "compared": 61,
+      "lastSha": "3d0685b56527adbddea5d6ac10c35e44b310c1297aef94717720ffa61f0e9ab5",
+      "mismatch": null
+    }
+  ],
+  "caveats": [
+    "Same Node process and no user input or browser",
+    "Exact reachable graph strings compared; hashes are identifiers",
+    "New flag config entry removed from new test config; vision selector and crowd enabled on both sides",
+    "Function closures, module globals, prototypes and shared typed-array backing identity not fully captured",
+    "Two wall timing fields excluded",
+    "Pre-change source snapshot must be supplied separately"
+  ]
+}

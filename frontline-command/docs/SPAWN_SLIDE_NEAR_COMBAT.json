@@ -1,0 +1,1532 @@
+{
+  "kind": "paired_spawn_motion_near_goal_short_encounter_diagnostic",
+  "seeds": 20,
+  "firstSeed": 1,
+  "steps": 600,
+  "dt": 0.05,
+  "summary": {
+    "pairs": 20,
+    "offShots": 502,
+    "onShots": 496,
+    "offKills": 0,
+    "onKills": 0,
+    "offContacts": 696,
+    "onContacts": 645,
+    "offPathFailures": 0,
+    "onPathFailures": 0,
+    "onWallGoalFailures": 0,
+    "endedOff": 0,
+    "endedOn": 0
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "off": {
+        "seed": 1,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28832,
+          "obstacle": 11754,
+          "pair": 1619,
+          "solo": 2096,
+          "skippedObstacle": 289,
+          "combat": 451,
+          "skippedCombat": 451
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 49,
+        "contactSamples": 105,
+        "observations": 5726,
+        "elapsedMs": 19043.305205
+      },
+      "on": {
+        "seed": 1,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28598,
+          "obstacle": 10324,
+          "pair": 2947,
+          "solo": 1100,
+          "combat": 429,
+          "skippedCombat": 383,
+          "skippedObstacle": 46
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 40,
+        "contactSamples": 57,
+        "observations": 5746,
+        "elapsedMs": 14562.211817
+      }
+    },
+    {
+      "seed": 2,
+      "off": {
+        "seed": 2,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 29559,
+          "obstacle": 7805,
+          "skippedObstacle": 1809,
+          "solo": 819,
+          "pair": 2122,
+          "combat": 187,
+          "skippedCombat": 184
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 36,
+        "contactSamples": 26,
+        "observations": 5731,
+        "elapsedMs": 14832.880958000002
+      },
+      "on": {
+        "seed": 2,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 27452,
+          "obstacle": 7908,
+          "skippedObstacle": 1601,
+          "pair": 3159,
+          "solo": 1173,
+          "combat": 127,
+          "skippedCombat": 115
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 11,
+        "contactSamples": 18,
+        "observations": 5735,
+        "elapsedMs": 15148.961987000002
+      }
+    },
+    {
+      "seed": 3,
+      "off": {
+        "seed": 3,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 28518,
+          "obstacle": 8360,
+          "skippedObstacle": 879,
+          "solo": 1626,
+          "pair": 2646,
+          "combat": 62,
+          "skippedCombat": 45
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 20,
+        "contactSamples": 24,
+        "observations": 5757,
+        "elapsedMs": 14401.942209
+      },
+      "on": {
+        "seed": 3,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 27822,
+          "obstacle": 8479,
+          "pair": 2583,
+          "solo": 1376,
+          "combat": 109,
+          "skippedCombat": 109,
+          "skippedObstacle": 125
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 21,
+        "contactSamples": 25,
+        "observations": 5714,
+        "elapsedMs": 9773.205486000006
+      }
+    },
+    {
+      "seed": 4,
+      "off": {
+        "seed": 4,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 27207,
+          "obstacle": 8155,
+          "skippedObstacle": 1544,
+          "pair": 2122,
+          "solo": 1030,
+          "combat": 83,
+          "skippedCombat": 55
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 13,
+        "contactSamples": 14,
+        "observations": 5789,
+        "elapsedMs": 7559.942986999988
+      },
+      "on": {
+        "seed": 4,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 27172,
+          "obstacle": 9154,
+          "skippedObstacle": 1498,
+          "pair": 2600,
+          "solo": 959,
+          "combat": 90,
+          "skippedCombat": 56
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 4,
+        "contactSamples": 14,
+        "observations": 5770,
+        "elapsedMs": 8917.787135999999
+      }
+    },
+    {
+      "seed": 5,
+      "off": {
+        "seed": 5,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28942,
+          "obstacle": 9237,
+          "pair": 2124,
+          "solo": 1476,
+          "combat": 217,
+          "skippedCombat": 193,
+          "skippedObstacle": 24
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 23,
+        "contactSamples": 36,
+        "observations": 5724,
+        "elapsedMs": 7561.562911000001
+      },
+      "on": {
+        "seed": 5,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28964,
+          "obstacle": 9736,
+          "pair": 2564,
+          "solo": 1575,
+          "combat": 350,
+          "skippedCombat": 342,
+          "skippedObstacle": 8
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 33,
+        "contactSamples": 62,
+        "observations": 5715,
+        "elapsedMs": 8995.338982000001
+      }
+    },
+    {
+      "seed": 6,
+      "off": {
+        "seed": 6,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 30069,
+          "obstacle": 10478,
+          "pair": 2623,
+          "solo": 737,
+          "skippedObstacle": 727,
+          "combat": 328,
+          "skippedCombat": 298
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 41,
+        "contactSamples": 46,
+        "observations": 5724,
+        "elapsedMs": 7552.991980000006
+      },
+      "on": {
+        "seed": 6,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 27792,
+          "obstacle": 9985,
+          "pair": 2814,
+          "solo": 1507,
+          "combat": 438,
+          "skippedCombat": 398,
+          "skippedObstacle": 365
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 45,
+        "contactSamples": 62,
+        "observations": 5721,
+        "elapsedMs": 7518.3717190000025
+      }
+    },
+    {
+      "seed": 7,
+      "off": {
+        "seed": 7,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 29142,
+          "obstacle": 9675,
+          "skippedObstacle": 1557,
+          "solo": 2067,
+          "pair": 1877,
+          "combat": 572,
+          "skippedCombat": 563
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 73,
+        "contactSamples": 98,
+        "observations": 5721,
+        "elapsedMs": 7269.63373500001
+      },
+      "on": {
+        "seed": 7,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 29407,
+          "obstacle": 9667,
+          "skippedObstacle": 2163,
+          "pair": 3215,
+          "solo": 1278,
+          "combat": 694,
+          "skippedCombat": 630
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 84,
+        "contactSamples": 110,
+        "observations": 5725,
+        "elapsedMs": 7558.91461800001
+      }
+    },
+    {
+      "seed": 8,
+      "off": {
+        "seed": 8,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28290,
+          "obstacle": 8938,
+          "skippedObstacle": 795,
+          "solo": 1529,
+          "pair": 2811,
+          "combat": 135,
+          "skippedCombat": 135
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 20,
+        "contactSamples": 30,
+        "observations": 5725,
+        "elapsedMs": 4065.780079999997
+      },
+      "on": {
+        "seed": 8,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28300,
+          "obstacle": 10289,
+          "skippedObstacle": 475,
+          "pair": 2209,
+          "solo": 1190,
+          "combat": 83,
+          "skippedCombat": 78
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 7,
+        "contactSamples": 9,
+        "observations": 5715,
+        "elapsedMs": 6469.76820000002
+      }
+    },
+    {
+      "seed": 9,
+      "off": {
+        "seed": 9,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28501,
+          "obstacle": 8608,
+          "skippedObstacle": 1256,
+          "pair": 3047,
+          "solo": 1519,
+          "combat": 101,
+          "skippedCombat": 101
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 11,
+        "contactSamples": 17,
+        "observations": 5733,
+        "elapsedMs": 3889.264718999999
+      },
+      "on": {
+        "seed": 9,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28762,
+          "obstacle": 8686,
+          "skippedObstacle": 2449,
+          "pair": 1657,
+          "solo": 1448,
+          "combat": 285,
+          "skippedCombat": 278
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 37,
+        "contactSamples": 39,
+        "observations": 5726,
+        "elapsedMs": 3490.5358650000126
+      }
+    },
+    {
+      "seed": 10,
+      "off": {
+        "seed": 10,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28576,
+          "obstacle": 8744,
+          "pair": 2140,
+          "solo": 1799,
+          "skippedObstacle": 507,
+          "combat": 197,
+          "skippedCombat": 141
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 17,
+        "contactSamples": 30,
+        "observations": 5704,
+        "elapsedMs": 3516.8160830000124
+      },
+      "on": {
+        "seed": 10,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 28671,
+          "obstacle": 10119,
+          "pair": 2987,
+          "solo": 1535,
+          "skippedObstacle": 268,
+          "combat": 133,
+          "skippedCombat": 133
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 36,
+        "contactSamples": 47,
+        "observations": 5777,
+        "elapsedMs": 3795.05149100002
+      }
+    },
+    {
+      "seed": 11,
+      "off": {
+        "seed": 11,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 29219,
+          "obstacle": 9565,
+          "skippedObstacle": 1230,
+          "pair": 1992,
+          "solo": 1342,
+          "combat": 183,
+          "skippedCombat": 178
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 31,
+        "contactSamples": 34,
+        "observations": 5733,
+        "elapsedMs": 3599.995731999981
+      },
+      "on": {
+        "seed": 11,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 28047,
+          "obstacle": 8287,
+          "skippedObstacle": 1029,
+          "pair": 2913,
+          "solo": 711,
+          "combat": 6,
+          "skippedCombat": 6
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 1,
+        "contactSamples": 2,
+        "observations": 5762,
+        "elapsedMs": 3441.366131000017
+      }
+    },
+    {
+      "seed": 12,
+      "off": {
+        "seed": 12,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28734,
+          "obstacle": 9866,
+          "skippedObstacle": 645,
+          "pair": 2115,
+          "solo": 1684,
+          "combat": 206,
+          "skippedCombat": 178
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 27,
+        "contactSamples": 36,
+        "observations": 5711,
+        "elapsedMs": 3343.6973200000066
+      },
+      "on": {
+        "seed": 12,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 29369,
+          "obstacle": 8083,
+          "skippedObstacle": 613,
+          "pair": 3663,
+          "solo": 991,
+          "combat": 128,
+          "skippedCombat": 128
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 12,
+        "contactSamples": 19,
+        "observations": 5735,
+        "elapsedMs": 3660.476465999993
+      }
+    },
+    {
+      "seed": 13,
+      "off": {
+        "seed": 13,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28315,
+          "obstacle": 9356,
+          "skippedObstacle": 555,
+          "pair": 2900,
+          "solo": 1641,
+          "combat": 244,
+          "skippedCombat": 213
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 21,
+        "contactSamples": 35,
+        "observations": 5726,
+        "elapsedMs": 3408.7201010000135
+      },
+      "on": {
+        "seed": 13,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 27428,
+          "obstacle": 9201,
+          "skippedObstacle": 999,
+          "pair": 1996,
+          "solo": 1813,
+          "combat": 20,
+          "skippedCombat": 20
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 4,
+        "contactSamples": 3,
+        "observations": 5752,
+        "elapsedMs": 3444.209840000025
+      }
+    },
+    {
+      "seed": 14,
+      "off": {
+        "seed": 14,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 29320,
+          "obstacle": 8964,
+          "skippedObstacle": 1227,
+          "pair": 3219,
+          "solo": 1249,
+          "combat": 218,
+          "skippedCombat": 205
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 18,
+        "contactSamples": 36,
+        "observations": 5717,
+        "elapsedMs": 3473.7518979999877
+      },
+      "on": {
+        "seed": 14,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 27841,
+          "obstacle": 8699,
+          "skippedObstacle": 1444,
+          "pair": 2821,
+          "solo": 1092,
+          "combat": 107,
+          "skippedCombat": 107
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 16,
+        "contactSamples": 23,
+        "observations": 5727,
+        "elapsedMs": 3393.4768449999974
+      }
+    },
+    {
+      "seed": 15,
+      "off": {
+        "seed": 15,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 27414,
+          "obstacle": 8192,
+          "skippedObstacle": 1601,
+          "solo": 1307,
+          "pair": 2822,
+          "combat": 52,
+          "skippedCombat": 52
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 12,
+        "contactSamples": 12,
+        "observations": 5761,
+        "elapsedMs": 3404.781866000005
+      },
+      "on": {
+        "seed": 15,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28380,
+          "obstacle": 9043,
+          "skippedObstacle": 1098,
+          "pair": 2492,
+          "solo": 1401,
+          "combat": 78,
+          "skippedCombat": 77
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 13,
+        "contactSamples": 14,
+        "observations": 5730,
+        "elapsedMs": 3442.6545310000074
+      }
+    },
+    {
+      "seed": 16,
+      "off": {
+        "seed": 16,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 28954,
+          "obstacle": 8625,
+          "pair": 2145,
+          "solo": 1642,
+          "skippedObstacle": 266,
+          "combat": 50,
+          "skippedCombat": 50
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 15,
+        "contactSamples": 12,
+        "observations": 5766,
+        "elapsedMs": 3386.462618999998
+      },
+      "on": {
+        "seed": 16,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 30445,
+          "obstacle": 9161,
+          "pair": 1440,
+          "solo": 1125,
+          "skippedObstacle": 984,
+          "combat": 203,
+          "skippedCombat": 190
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 34,
+        "contactSamples": 35,
+        "observations": 5719,
+        "elapsedMs": 3634.8105050000013
+      }
+    },
+    {
+      "seed": 17,
+      "off": {
+        "seed": 17,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 29404,
+          "obstacle": 8996,
+          "pair": 1907,
+          "skippedObstacle": 1405,
+          "solo": 1324,
+          "combat": 44,
+          "skippedCombat": 44
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 4,
+        "contactSamples": 9,
+        "observations": 5776,
+        "elapsedMs": 3372.358967999986
+      },
+      "on": {
+        "seed": 17,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28967,
+          "obstacle": 10576,
+          "skippedObstacle": 876,
+          "pair": 2468,
+          "solo": 1783,
+          "combat": 99,
+          "skippedCombat": 99
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 43,
+        "contactSamples": 26,
+        "observations": 5736,
+        "elapsedMs": 3403.0194909999846
+      }
+    },
+    {
+      "seed": 18,
+      "off": {
+        "seed": 18,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28592,
+          "obstacle": 9350,
+          "pair": 2566,
+          "solo": 1663,
+          "combat": 189,
+          "skippedCombat": 185,
+          "skippedObstacle": 145
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 32,
+        "contactSamples": 36,
+        "observations": 5725,
+        "elapsedMs": 3429.5124369999976
+      },
+      "on": {
+        "seed": 18,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28028,
+          "obstacle": 7753,
+          "pair": 1894,
+          "skippedObstacle": 1358,
+          "solo": 1796,
+          "combat": 114,
+          "skippedCombat": 105
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 20,
+        "contactSamples": 14,
+        "observations": 5711,
+        "elapsedMs": 3474.8148079999955
+      }
+    },
+    {
+      "seed": 19,
+      "off": {
+        "seed": 19,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 27016,
+          "obstacle": 7802,
+          "skippedObstacle": 1428,
+          "pair": 2607,
+          "solo": 1443,
+          "combat": 381,
+          "skippedCombat": 329
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 36,
+        "contactSamples": 51,
+        "observations": 5738,
+        "elapsedMs": 3414.1537020000105
+      },
+      "on": {
+        "seed": 19,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          58
+        ],
+        "policyMetrics": {
+          "group": 28080,
+          "obstacle": 7626,
+          "skippedObstacle": 1791,
+          "pair": 2726,
+          "solo": 1220,
+          "combat": 270,
+          "skippedCombat": 270
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 24,
+        "contactSamples": 45,
+        "observations": 5723,
+        "elapsedMs": 3760.0226709999843
+      }
+    },
+    {
+      "seed": 20,
+      "off": {
+        "seed": 20,
+        "on": false,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 27859,
+          "obstacle": 8072,
+          "skippedObstacle": 2185,
+          "pair": 2550,
+          "solo": 1378,
+          "combat": 43,
+          "skippedCombat": 43
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 3,
+        "contactSamples": 9,
+        "observations": 5772,
+        "elapsedMs": 3523.1936589999823
+      },
+      "on": {
+        "seed": 20,
+        "on": true,
+        "ticks": 600,
+        "time": 30.00000000000029,
+        "warOver": false,
+        "outcome": null,
+        "alive": [
+          58,
+          64
+        ],
+        "policyMetrics": {
+          "group": 29649,
+          "obstacle": 7963,
+          "skippedObstacle": 2805,
+          "pair": 1385,
+          "solo": 1310,
+          "combat": 95,
+          "skippedCombat": 95
+        },
+        "pathFailures": 0,
+        "wallGoalFailures": 0,
+        "firstWallGoalFailure": null,
+        "kills": [
+          0,
+          0
+        ],
+        "losses": [
+          0,
+          0
+        ],
+        "shots": 11,
+        "contactSamples": 21,
+        "observations": 5769,
+        "elapsedMs": 4062.053018000006
+      }
+    }
+  ],
+  "caveats": [
+    "Safe vehicle spawn, motion slide and near goal flags off/on together; fast, selector, group, arrival, slot, pair, obstacle, crowd, courtesy and solid enabled in both runs",
+    "One symmetric placement, 30 seconds, 20 seeds; not 100 complete wars",
+    "Same seed but shared RNG consumption can differ after decisions diverge",
+    "Counts are descriptive, not a confidence interval, equivalence test or balance proof",
+    "Contact sampled every 10 steps",
+    "Node execution time includes instrumentation and is not browser FPS",
+    "Normal production/strategic/autopilot remain enabled; no published game is changed"
+  ]
+}

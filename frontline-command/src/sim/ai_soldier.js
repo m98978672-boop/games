@@ -2,7 +2,7 @@
 // мораль, укрытия, медики, инженеры, а также ручное управление игроком.
 import { clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp } from '../core/mathx.js';
 import {
-  tryShoot, startReload, moveUnit, moveAlongFlow, updateTimers, reviveUnit, applyDamage, updatePerception, tryShootBuilding,
+  tryShoot, startReload, moveUnit, moveAlongFlow, updateTimers, reviveUnit, applyDamage, updatePerception, tryShootBuilding, vehicleHasCurrentSight,
 } from './units.js';
 
 const state = (u, s, label) => { if (u.state !== s) { u.state = s; u.stateLabel = label; } };
@@ -47,6 +47,9 @@ function moraleTick(game, u, dt) {
 export function thinkSoldier(game, u) {
   if (u.downed) return;
   updatePerception(game, u, game.dt);
+  // Vehicle target memory and legacy close-awareness are not line of sight.
+  const vehicleCanEngage = !u.isVehicle || !game.cfg.flag('vehicle_visible_fire_v1', false) ||
+    vehicleHasCurrentSight(game, u, game.unitById(u.targetId));
   // 1. Паника
   if (u.morale < game.cfg.ai.morale.panicBelow) {
     state(u, 'panic', 'паника');
@@ -68,7 +71,7 @@ export function thinkSoldier(game, u) {
     u.activity = 'retreat';
     const spread = 26 + (u.formationIndex % 4) * 16;
     u.goal = { x: rp.x + ((u.id % 5) - 2) * spread * 0.5, y: rp.y + ((u.id % 7) - 3) * spread * 0.5 };
-    if (u.perception.hasContact) {
+    if (u.perception.hasContact && vehicleCanEngage) {
       const t = game.unitById(u.targetId);
       if (t && t.alive && dist(u.x, u.y, t.x, t.y) < 170) {
         u.aimAngle = angleTo(u.x, u.y, t.x, t.y);
@@ -97,7 +100,7 @@ export function thinkSoldier(game, u) {
     return;
   }
   // 3. Видит врага
-  if (u.perception.hasContact) {
+  if (u.perception.hasContact && vehicleCanEngage) {
     const target = game.unitById(u.targetId);
     const d = target ? dist(u.x, u.y, target.x, target.y) : Infinity;
     if (target && u.ammoRatio() <= 0.02) {
@@ -311,8 +314,12 @@ function requestResupply(game, u) {
 function actSoldier(game, u, dt) {
   // медик: поднимает и лечит раненых рядом
   if (u.role === 'medic') { medicAct(game, u, dt); if (u.healBusy) return; }
-  // инженер: строит и чинит
-  if (u.role === 'engineer') { engineerAct(game, u, dt); if (u.buildBusy) return; }
+  // Боевой контакт имеет приоритет: стройка не должна отменять цель боя
+  // и удерживать инженера у чертежа после обнаружения врага.
+  if (u.role === 'engineer') {
+    if (game.cfg.flag('engineer_combat_priority_v2', false) && u.perception.hasContact) u.buildBusy = false;
+    else { engineerAct(game, u, dt); if (u.buildBusy) return; }
+  }
   if (u.goal) moveAlongFlow(game, u, dt);
   else if (u.perception.hasContact) {
     const target = game.unitById(u.targetId);
@@ -375,6 +382,17 @@ function engineerAct(game, u, dt) {
     u.aimAngle = angleTo(u.x, u.y, bp.x, bp.y);
     game.build.work(bp, dt, u);
     return;
+  }
+  if (game.cfg.flag('wall_engineer_repair_v1', false) && !u.perception.hasContact) {
+    const wall = game.build.nearestDamagedWall(u, 320);
+    if (wall) {
+      if (wall.distance > 60) { u.goal = wall.goal; return; }
+      if (game.build.repairWall(wall, dt, u) > 0) {
+        u.goal = null; u.buildBusy = true;
+        state(u, 'repair', 'чинит стену'); u.activity = 'repair';
+        return;
+      }
+    }
   }
   const rep = game.build.nearestRepair(u, 320);
   if (rep) {
@@ -447,7 +465,7 @@ export function playerInteract(game, u) {
 function updateVehicleThink(game, u) {
   if (u.isVehicle && u.weapon.kind === 'shell') {
     const target = game.unitById(u.targetId);
-    if (target && target.alive) { u.goal = null; return; }
+    if (target && target.alive && (!game.cfg.flag('vehicle_visible_fire_v1', false) || vehicleHasCurrentSight(game, u, target))) { u.goal = null; return; }
   }
   if (!u.goal) {
     const p = game.world.nearestPoint(u.x, u.y, (pt) => pt.owner === u.faction).point;
@@ -457,7 +475,7 @@ function updateVehicleThink(game, u) {
 
 function updateVehicle(game, u, dt) {
   const target = game.unitById(u.targetId);
-  if (target && target.alive) {
+  if (target && target.alive && (!game.cfg.flag('vehicle_visible_fire_v1', false) || vehicleHasCurrentSight(game, u, target))) {
     const d = dist(u.x, u.y, target.x, target.y);
     if (d < u.weapon.range) {
       tryShoot(game, u, target, dt);

@@ -1,0 +1,119 @@
+{
+  "passed": true,
+  "seeds": 20,
+  "ticks": 60,
+  "dt": 0.016666666666666666,
+  "mode": "20 paired seeds; flag off vs on; exact reachable-graph comparison",
+  "exclusions": [
+    "cfg.flags.build_version_badge_v1",
+    "wall performance clock fields"
+  ],
+  "limitations": [
+    "Node, no render/input",
+    "function closures/module globals/prototypes and shared backing buffers not fully represented",
+    "no performance confidence intervals",
+    "not proof of bitwise legacy before this code change"
+  ],
+  "runs": [
+    {
+      "seed": 1,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 2,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 3,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 4,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 5,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 6,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 7,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 8,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 9,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 10,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 11,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 12,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 13,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 14,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 15,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 16,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 17,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 18,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 19,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 20,
+      "compared": 61,
+      "divergence": null
+    }
+  ]
+}

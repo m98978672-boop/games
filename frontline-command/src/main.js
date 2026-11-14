@@ -10,6 +10,7 @@ import { Audio } from './core/audio.js';
 import { Input } from './core/input.js';
 import { clamp } from './core/mathx.js';
 import { InspectorPanel } from './inspector.js';
+import { BUILD_VERSION, mountBuildVersion } from './core/build-info.js';
 
 const canvas = document.getElementById('game');
 const hudRoot = document.getElementById('hud');
@@ -21,6 +22,7 @@ boot.textContent = 'Загрузка фронта…';
 document.body.appendChild(boot);
 
 const cfg = await loadConfig();
+mountBuildVersion(document, cfg.flag('build_version_badge_v1', false));
 const bank = await new SpriteBank('assets/').loadAll();
 Save.loadSettings();
 Save.loadMeta();
@@ -349,7 +351,7 @@ function switchMode() {
     hud.showHint('Командир: ЛКМ — выделение, ПКМ — приказ, B — стройка, T — директива', 6);
   } else {
     game.mode = 'soldier';
-    if (!game.playerUnit || !game.playerUnit.alive) respawnPlayer();
+    if ((!game.playerUnit || !game.playerUnit.alive) && !respawnPlayer()) { game.mode = 'commander'; return; }
     if (game.playerUnit) { renderer.camera.x = game.playerUnit.x; renderer.camera.y = game.playerUnit.y; }
     renderer.camera.zoom = 1.15;
     hud.showHint('Солдат: WASD — движение, мышь — прицел, ЛКМ — огонь, R — перезарядка', 6);
@@ -359,12 +361,16 @@ function switchMode() {
 
 function respawnPlayer() {
   const hq = game.world.hqOf(game.playerFaction);
-  if (!hq) return;
-  game.spawnPlayerAt(hq, game.playerRole, game.playerWeapon);
+  if (!hq) return false;
+  if (!game.spawnPlayerAt(hq, game.playerRole, game.playerWeapon)) {
+    hud.toast('Нет безопасного места для появления игрока', 'bad');
+    return false;
+  }
   if (game.playerUnit) { renderer.camera.x = game.playerUnit.x; renderer.camera.y = game.playerUnit.y; }
   state.screen = 'game';
   menus.hide();
   game.paused = false;
+  return true;
 }
 
 // ---------- ввод ----------
@@ -628,7 +634,8 @@ function loop(now) {
 }
 
 // Инспектор не управляет бойцами и не останавливает/изменяет войну.
-const inspector = new InspectorPanel(() => ({ game, renderer, bank, hud, audio }));
+const inspector = new InspectorPanel(() => ({ game, renderer, bank, hud, audio,
+  ...(cfg.flag('build_version_badge_v1', false) ? { buildVersion: BUILD_VERSION } : {}) }));
 window.addEventListener('keydown', (e) => {
   if (e.code !== 'F8' || e.repeat) return;
   e.preventDefault();
