@@ -212,7 +212,7 @@
 
   ChunkWorld.prototype.isWalkable = function (tx, ty) {
     var t = this.getTile(tx, ty);
-    if (t === TILE.WALL_BRICK || t === TILE.WALL_WOOD || t === TILE.WALL_PLASTER || t === TILE.WATER || t === TILE.TREE_OAK || t === TILE.TREE_PINE) {
+    if (t === TILE.WALL_BRICK || t === TILE.WALL_WOOD || t === TILE.WALL_PLASTER || t === TILE.WINDOW || t === TILE.WATER || t === TILE.TREE_OAK || t === TILE.TREE_PINE) {
       return false;
     }
     if (t === TILE.DOOR) {

@@ -58,6 +58,10 @@ state.vehicles.push({ id: 'test-car', x: 15, y: 15, fuel: 10, name: 'test' });
 key('keydown', 'KeyE'); key('keyup', 'KeyE');
 assert.equal(state.world.doors['16,15'].open, true);
 assert.equal(state.player.inVehicleId, '');
+state.player.x = 16; state.player.y = 15; state.player.fx = 1; state.player.fy = 0;
+key('keydown', 'KeyE'); key('keyup', 'KeyE');
+assert.equal(state.world.doors['16,15'].open, true, 'нельзя закрыть дверь, стоя в проёме');
+state.player.x = 15; state.player.y = 15;
 // Ближний удар попадает в ближайшего врага перед игроком, а не за спиной.
 const front = win.DD.Systems.createZombie(1, 'walker', 16, 15);
 const back = win.DD.Systems.createZombie(2, 'walker', 14.5, 15);
@@ -66,5 +70,19 @@ const frontHP = front.hp, backHP = back.hp;
 key('keydown', 'Space'); key('keyup', 'Space');
 assert.ok(front.hp < frontHP);
 assert.equal(back.hp, backHP);
+
+// На реальном игровом цикле бег вдоль открытой двери не пересекает стену.
+state.zombies.length = 0;
+state.world.setTile(17, 14, win.DD.TILE.ASPHALT);
+state.world.setTile(17, 15, win.DD.TILE.WALL_BRICK);
+state.world.setTile(16, 14, win.DD.TILE.ASPHALT);
+state.world.setTile(16, 16, win.DD.TILE.ASPHALT);
+state.player.x = 17; state.player.y = 14;
+key('keydown', 'ShiftLeft'); key('keydown', 'KeyS'); tick(timers, 40);
+key('keyup', 'KeyS'); key('keyup', 'ShiftLeft');
+assert.ok(state.player.y <= 14.3 + 1e-6, 'нельзя пробежать через стену рядом с дверью');
+state.player.x = 16; state.player.y = 14;
+key('keydown', 'KeyS'); tick(timers, 40); key('keyup', 'KeyS');
+assert.ok(state.player.y > 15, 'через открытый проём пройти можно');
 
 console.log('[dead-district interaction] OK');

@@ -135,7 +135,7 @@ func _draw() -> void:
 	for ty in range(center.y - half_h, center.y + half_h + 1):
 		for tx in range(center.x - half_w, center.x + half_w + 1):
 			var t := Vector2i(tx, ty)
-			var screen_pos := origin_px + Vector2(t) * float(TILE_PX)
+			var screen_pos := origin_px + (Vector2(t) - Vector2(0.5, 0.5)) * float(TILE_PX)
 			var rect := Rect2(screen_pos.floor(), Vector2(TILE_PX, TILE_PX))
 			var is_vis := visible_tiles.has(t)
 			var is_exp := explored_tiles.has(t)
@@ -161,7 +161,7 @@ func _draw() -> void:
 		var ft: Vector2i = fp["tile"]
 		if not visible_tiles.has(ft):
 			continue
-		var p := (origin_px + Vector2(ft) * float(TILE_PX)).floor()
+		var p := (origin_px + (Vector2(ft) - Vector2(0.5, 0.5)) * float(TILE_PX)).floor()
 		draw_rect(Rect2(p + Vector2(2, 2), Vector2(12, 12)), Color.html("#623333"))
 		var stage := int(fp.get("stage", 0))
 		if stage > 0:

@@ -143,8 +143,8 @@
         var k = tx + ',' + ty;
         var vis = Boolean(state.visible[k]);
         var exp = Boolean(state.explored[k]);
-        var sx = Math.floor(originX + tx * T);
-        var sy = Math.floor(originY + ty * T);
+        var sx = Math.floor(originX + (tx - 0.5) * T);
+        var sy = Math.floor(originY + (ty - 0.5) * T);
         if (!vis && !exp) continue;
 
         var tt = state.world.getTile(tx, ty);
@@ -250,8 +250,8 @@
     for (var fi = 0; fi < state.farms.length; fi++) {
       var fp = state.farms[fi];
       if (!state.visible[fp.tx + ',' + fp.ty]) continue;
-      var fsx = Math.floor(originX + fp.tx * T);
-      var fsy = Math.floor(originY + fp.ty * T);
+      var fsx = Math.floor(originX + (fp.tx - 0.5) * T);
+      var fsy = Math.floor(originY + (fp.ty - 0.5) * T);
       if (sprites.tile_farm_soil && sprites.tile_farm_soil.complete) {
         drawTileCell(ctx, sprites.tile_farm_soil, Math.min(4, fp.stage + 1), 5, fsx, fsy, T);
       } else {
@@ -269,8 +269,8 @@
     }
     for (var bi = 0; bi < state.campfires.length; bi++) {
       var cf = state.campfires[bi];
-      var csx = Math.floor(originX + cf.tx * T);
-      var csy = Math.floor(originY + cf.ty * T);
+      var csx = Math.floor(originX + (cf.tx - 0.5) * T);
+      var csy = Math.floor(originY + (cf.ty - 0.5) * T);
       ctx.fillStyle = '#000000';
       ctx.fillRect(csx + 2, csy + 6, 12, 5);
       ctx.fillStyle = '#805947';
@@ -335,7 +335,7 @@
       var zW = z.type === 'brute' ? 40 : 32;
       var zH = z.type === 'brute' ? 48 : 32;
       var drawZ = z.type === 'brute' ? 24 : 18;
-      if (!zSpr || !zSpr.complete || !drawSpriteCell(ctx, zSpr, animStep, zW, zH, zx - drawZ * 0.5, zy - drawZ * 0.5, drawZ, drawZ)) {
+      if (!zSpr || !zSpr.complete || !drawSpriteCell(ctx, zSpr, DD.GameplayHelpers.directionalFrame(zSpr, zW, zH, z.dx, z.dy, animStep), zW, zH, zx - drawZ * 0.5, zy - drawZ * 0.5, drawZ, drawZ)) {
         ctx.fillStyle = '#000000';
         ctx.fillRect(zx - 6, zy - 8, 12, 16);
         ctx.fillStyle = z.type === 'brute' ? '#71353f' : (z.type === 'runner' ? '#9e6363' : '#679a73');
@@ -351,7 +351,7 @@
       var ny = Math.floor(originY + npc.y * T);
       var npcKey = 'npc_' + (npc.archetype || 'scavenger');
       var nSpr = sprites[npcKey] || sprites.npc_scavenger;
-      if (!nSpr || !nSpr.complete || !drawSpriteCell(ctx, nSpr, animStep, 32, 32, nx - 9, ny - 9, 18, 18)) {
+      if (!nSpr || !nSpr.complete || !drawSpriteCell(ctx, nSpr, DD.GameplayHelpers.directionalFrame(nSpr, 32, 32, npc.dx, npc.dy, animStep), 32, 32, nx - 9, ny - 9, 18, 18)) {
         ctx.fillStyle = '#000000';
         ctx.fillRect(nx - 6, ny - 8, 12, 16);
         ctx.fillStyle = npc.hostility >= 0.6 ? '#8b5084' : '#96a5bc';

@@ -393,6 +393,9 @@ func _handle_interact() -> void:
 	var cur := Vector2i(int(round(player.pos.x)), int(round(player.pos.y)))
 	for t in [front, cur]:
 		if chunks.get_tile(t) == ProcGen.TileType.DOOR:
+			var door := chunks.get_door(t)
+			if bool(door.get("open", false)) and absf(player.pos.x - t.x) < 0.7 and absf(player.pos.y - t.y) < 0.7:
+				return # Нельзя закрыть дверь, находясь внутри проёма.
 			chunks.toggle_door(t)
 			_play_sfx("res://assets/audio/sfx_door_open.wav")
 			_recompute_fov_and_flow()

@@ -113,9 +113,10 @@ func drive_step(veh_id: String, throttle: float, steer: float, dt: float, chunks
 		veh["angle"] = float(veh["angle"]) + steer * 2.4 * signf(float(veh["speed"])) * dt
 
 	var vel := Vector2(cos(float(veh["angle"])), sin(float(veh["angle"]))) * float(veh["speed"])
-	var next_pos: Vector2 = veh["pos"] + vel * dt
-	if chunks.is_walkable(Vector2i(int(round(next_pos.x)), int(round(next_pos.y)))):
-		var dist_moved := vel.length() * dt
+	var previous_pos: Vector2 = veh["pos"]
+	var next_pos := chunks.move_with_collision(previous_pos, vel * dt, 0.3)
+	var dist_moved := previous_pos.distance_to(next_pos)
+	if dist_moved + 0.001 >= vel.length() * dt:
 		veh["pos"] = next_pos
 		# Масштаб: 100 тайлов ~ 1 игровой км -> расход по l_per_10km
 		veh["fuel"] = maxf(0.0, float(veh["fuel"]) - (dist_moved / 1000.0) * float(veh["l_per_10km"]))

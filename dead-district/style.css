@@ -485,3 +485,6 @@ body { font-family: system-ui, "Segoe UI", sans-serif; }
   .hud-bottom .dd-btn { font-size: 12px; padding: 3px 5px; }
   .hud-log { top: 90px; font-size: 13px; }
 }
+
+#f3-direction-controls[hidden] { display: none; }
+#f3-direction-controls button[aria-pressed="true"] { border-color: #f5e8a1; background: #46605b; }

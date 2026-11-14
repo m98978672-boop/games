@@ -15,6 +15,7 @@
   var baseImgCache = {};
   var previewTimer = null;
   var inspectedItem = null;
+  var inspectDirection = 0;
   var previewYaw = 0.62;
   var onToggleCb = null;
   var ratingsMap = null;
@@ -213,7 +214,16 @@
     return out;
   }
 
-  function drawBaseCard(canvas, item, yaw) {
+  function hasDirectionalSprite(item) {
+    if (!item || !item.isBase || item.kindLabel !== '2D_spritesheet') return false;
+    var path = item.file || '';
+    var isCharacter = /\/(?:player_(?:base_|melee|aim|interact|hit)|zombie_(?:walker|runner|crawler|brute|infected)|npc_)/.test(path);
+    var dims = /^(\d+)x(\d+)$/.exec(item.dimensions || '');
+    var cellHeight = path.indexOf('brute') >= 0 ? 48 : 32;
+    return Boolean(isCharacter && dims && Number(dims[1]) >= 128 && Number(dims[2]) >= cellHeight * 4);
+  }
+
+  function drawBaseCard(canvas, item, yaw, direction) {
     var ctx = canvas.getContext('2d');
     if (!ctx) return;
     var sz = canvas.width;
@@ -262,7 +272,7 @@
       var scale = Math.min((sz - pad * 2) / Math.max(1, cw), (sz - pad * 2) / Math.max(1, ch));
       var dw = Math.max(1, Math.floor(cw * scale));
       var dh = Math.max(1, Math.floor(ch * scale));
-      ctx.drawImage(img, 0, 0, cw, ch, Math.floor((sz - dw) * 0.5), Math.floor((sz - dh) * 0.5), dw, dh);
+      ctx.drawImage(img, 0, hasDirectionalSprite(item) ? (direction || 0) * ch : 0, cw, ch, Math.floor((sz - dw) * 0.5), Math.floor((sz - dh) * 0.5), dw, dh);
     } else {
       ctx.fillStyle = '#2d2738';
       ctx.fillRect(10, 10, sz - 20, sz - 20);
@@ -287,7 +297,15 @@
     title.textContent = '[' + inspectedItem.code + '] ' + inspectedItem.name + voteLabel;
     meta.textContent = 'Категория: ' + inspectedItem.family + ' · Тип: ' + inspectedItem.kindLabel + ' · ' + inspectedItem.specs + (inspectedItem.file ? ' · Файл: ' + inspectedItem.file : '');
     if (noteIn && document.activeElement !== noteIn) noteIn.value = (rec && rec.note) || '';
-    if (inspectedItem.isBase) drawBaseCard(c, inspectedItem, previewYaw);
+    var directionControls = document.getElementById('f3-direction-controls');
+    if (directionControls) {
+      directionControls.hidden = !hasDirectionalSprite(inspectedItem);
+      var directions = directionControls.querySelectorAll('[data-f3-direction]');
+      for (var d = 0; d < directions.length; d++) {
+        directions[d].setAttribute('aria-pressed', String(Number(directions[d].getAttribute('data-f3-direction')) === inspectDirection));
+      }
+    }
+    if (inspectedItem.isBase) drawBaseCard(c, inspectedItem, previewYaw, inspectDirection);
     else DD.ContentPack.renderItemToCanvas(c, inspectedItem, previewYaw);
   }
 
@@ -362,6 +380,7 @@
 
         previewWrap.addEventListener('click', function () {
           inspectedItem = item;
+          inspectDirection = 0;
           assistantResult = '';
           var result = document.getElementById('f3-assess-result');
           if (result) result.textContent = 'Нажмите «Проверить» для этого ассета.';
@@ -479,6 +498,16 @@
           renderCurrentPage();
         });
       })(tabs[i]);
+    }
+
+    var directionBtns = overlay.querySelectorAll('[data-f3-direction]');
+    for (var di = 0; di < directionBtns.length; di++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          inspectDirection = Number(btn.getAttribute('data-f3-direction')) || 0;
+          renderInspector();
+        });
+      })(directionBtns[di]);
     }
 
     var rateBtns = overlay.querySelectorAll('[data-f3-rate]');
@@ -703,6 +732,7 @@
     close: function () { setOpen(false); },
     isOpen: function () { return isOpen; },
     getFilteredList: getFilteredList,
+    hasDirectionalSprite: hasDirectionalSprite,
     setTab: function (t) { activeTab = t; currentPage = 0; invalidateFilter(); if (isOpen) renderCurrentPage(); },
     setRateFilter: function (rf) { rateFilter = rf; currentPage = 0; invalidateFilter(); if (isOpen) renderCurrentPage(); },
     rateItem: rateItem,

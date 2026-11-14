@@ -46,13 +46,7 @@ func move_step(input_dir: Vector2, dt: float, sprint_req: bool, sneak_req: bool,
 	spd *= health.get_speed_multiplier() * inv_weight_mult
 	var delta := dir * spd * dt
 
-	# Раздельное скольжение по X и Y по проходимости чанков
-	var nx := pos + Vector2(delta.x, 0.0)
-	if chunks.is_walkable(Vector2i(int(round(nx.x)), int(round(pos.y)))):
-		pos.x = nx.x
-	var ny := pos + Vector2(0.0, delta.y)
-	if chunks.is_walkable(Vector2i(int(round(pos.x)), int(round(ny.y)))):
-		pos.y = ny.y
+	pos = chunks.move_with_collision(pos, delta, 0.2)
 
 	_step_noise_timer += dt
 	if _step_noise_timer >= (0.28 if is_sprinting else 0.45):
