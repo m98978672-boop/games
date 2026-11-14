@@ -68,6 +68,7 @@
     <tr><td>высота</td><td id="hud-height">— м</td></tr>
     <tr><td>масштаб</td><td id="hud-zoom">1.6 px/км</td></tr>
     <tr><td>центр</td><td id="hud-center">0; 0 км</td></tr>
+    <tr><td>дороги</td><td id="hud-roads">—</td></tr>
     <tr><td>кадров в секунду</td><td id="hud-fps">—</td></tr>
   </table>
 </section>
@@ -78,6 +79,7 @@
     <button id="zoom-out" title="отдалить">−</button>
     <button id="center" title="в центр мира">⌂</button>
   </div>
+  <label><input type="checkbox" id="toggle-roads" checked> дороги §8</label>
   <label><input type="checkbox" id="toggle-grid" checked> сетка 10/25/50 км</label>
   <label><input type="checkbox" id="toggle-towns" checked> поселения</label>
   <label><input type="checkbox" id="toggle-q" checked> QООВЗ 250 м</label>
@@ -92,6 +94,9 @@
   <div class="row"><i style="background:#4a6c42"></i> лес</div>
   <div class="row"><i style="background:#8b867a"></i> камень</div>
   <div class="row"><i style="background:#f0f3f4"></i> снег</div>
+  <div class="row"><i style="background:#ffd66e"></i> магистраль M</div>
+  <div class="row"><i style="background:#f6f0e2"></i> региональная R</div>
+  <div class="row"><i style="background:#d6c8ac"></i> местная L / грунт G</div>
 </section>
 
 <div class="hint">тяните — сдвиг · колесо — зум · стрелки — тоже сдвиг · без поворотов</div>

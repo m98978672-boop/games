@@ -1,5 +1,6 @@
 /* Воркер карты: считает обзор мира и патчи видимой области, пиксели отдаёт переносом. */
 import { WORLD2D, renderRect, renderBox } from './world2d.js';
+import { buildRoads } from './roads2d.js';
 
 self.onmessage = (e) => {
   const m = e.data || {};
@@ -7,6 +8,10 @@ self.onmessage = (e) => {
     const n = m.size || 1024;
     const buf = renderRect(0, 0, WORLD2D.sizeKm, n, n);
     self.postMessage({ type: 'overview', size: n, buffer: buf.buffer }, [buf.buffer]);
+    return;
+  }
+  if (m.type === 'roads') {
+    self.postMessage({ type: 'roads', net: buildRoads() });
     return;
   }
   if (m.type === 'patch') {
