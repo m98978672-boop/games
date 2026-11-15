@@ -47,6 +47,17 @@ wireButton('zoom-out', () => map.setZoom(map.scale / 1.6, mid()));
 wireButton('fit', () => map.fitWorld());
 wireButton('center', () => { map.center = { x: 0, y: 0 }; });
 
+/* §14: прыжки по времени суток. «Утро» и «вечер» ищут час по сезону — зимой и летом
+   рассвет и закат в разное время; «день» и «ночь» — фиксированные 13:00 и 01:00. */
+const times = [
+  ['time-morning', 'dawn'], ['time-day', 13], ['time-evening', 'dusk'], ['time-night', 1]
+];
+for (const [id, when] of times) {
+  const el = document.getElementById(id);
+  if (!el) continue;
+  el.addEventListener('click', () => (typeof when === 'number' ? map.setClockHour(when) : map.setClockPhase(when)));
+}
+
 map.init((done, total) => {
     if (hud.loadingText) hud.loadingText.textContent = 'рисую мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км… ' + done + '/' + total;
   }).then(() => {

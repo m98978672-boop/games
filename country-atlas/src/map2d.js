@@ -8,6 +8,7 @@ import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
 import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
 import { buildPedestrians, advancePeds, pedPositions, pedBudget, PED, PED_LOD, PED_CAP } from './ped2d.js';
+import { lightAt, overlayCss, cityLights, clockText, phaseAt, sunAltitudeDeg, seasonOf, snowCover01, DAY_MINUTES, dayOfYearOf, hourWithPhase } from './light2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
 export class Map2D {
@@ -39,6 +40,7 @@ export class Map2D {
     this.showPeds = true;       // пешеходы §13
     this.pedCache = new Map();
     this.pedsInFrame = 0;
+    this.light = lightAt(8 * 60, dayOfYearOf(0));   // время суток §14; обновляется из tick
     this.economy = null;        // экономика §31.33
     this.lastEconomyDay = 0;
     this.showWater = true;      // реки, озёра и мосты §5
@@ -328,6 +330,7 @@ export class Map2D {
   /* Шаг мира: реальные секунды → игровые часы (F-120). */
   tick(dtSec) {
     if (this.transport) advanceTransport(this.transport, dtSec);
+    this.updateLight();
     if (this.showPeds) for (const pack of this.pedCache.values()) advancePeds(pack, dtSec);
     if (this.transport && this.economy) {
       const day = Math.floor(this.transport.minutes / 1440);
@@ -384,6 +387,24 @@ export class Map2D {
       ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
       ctx.clip();
       this.drawPeds(ctx, originX, originY, s);
+      ctx.restore();
+    }
+
+    /* §14: ночь и огни. Сначала всё притухает наложением, потом поверх зажигаются окна
+       и фонари — так город ночью читается, а не просто «темнеет». */
+    const light = this.light || this.updateLight();
+    if (light.strength < 0.98) {
+      ctx.save();
+      ctx.fillStyle = overlayCss(light.strength, light.tone);
+      ctx.fillRect(0, 0, view.w, view.h);
+      ctx.restore();
+    }
+    if (light.artificial.windows > 0.02) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
+      ctx.clip();
+      this.drawLights(ctx, originX, originY, s, light.artificial);
       ctx.restore();
     }
 
@@ -601,6 +622,29 @@ export class Map2D {
 
   /* Пешеходы §13: точка с подшагом ног. Видны с 40 px/км и не больше 400 в кадре,
      иначе на карте не жизнь, а «крупа» (R-13.1 в редакции 2D). */
+  /* Время суток §14: минуты мира → фаза, сила света и расписание огней. */
+  updateLight() {
+    const m = this.transport ? this.transport.minutes : 8 * 60;
+    this.light = lightAt(m, dayOfYearOf(Math.floor(m / DAY_MINUTES)));
+    return this.light;
+  }
+
+  /* Перевести часы на нужную фазу (утро, вечер): час ищется по текущему сезону. */
+  setClockPhase(phaseId) {
+    const day = this.transport ? Math.floor(this.transport.minutes / DAY_MINUTES) : 0;
+    this.setClockHour(hourWithPhase(phaseId, dayOfYearOf(day)));
+  }
+
+  /* Перевести часы: та же игровая дата, заданный час (кнопки «утро/день/вечер/ночь»). */
+  setClockHour(hour) {
+    if (!this.transport) return;
+    const day = Math.floor(this.transport.minutes / DAY_MINUTES);
+    this.transport.minutes = day * DAY_MINUTES + hour * 60;
+    this.updateLight();
+    this.draw();
+    this.updateHud();
+  }
+
   pedsAt(index) {
     if (!this.pedCache.has(index)) {
       this.pedCache.set(index, buildPedestrians(this.cityAt(index), index));
@@ -610,6 +654,7 @@ export class Map2D {
 
   drawPeds(ctx, originX, originY, s) {
     this.pedsInFrame = 0;
+    this.light = lightAt(8 * 60, dayOfYearOf(0));   // время суток §14; обновляется из tick
     const X = (x) => originX + x * s;
     const Y = (y) => originY - y * s;
     const view = this.view;
@@ -677,6 +722,97 @@ export class Map2D {
       }
     }
     this.pedsInFrame = drawn;
+  }
+
+  /* Огни §14.3: окна домов и фонари. Ночью далёкий город — тёплое пятно, в зуме — точки
+     в кварталах. Точки детерминированы номером квартала, поэтому не мигают от кадра к кадру. */
+  drawLights(ctx, originX, originY, s, artificial) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view;
+    const conf = cityLights(artificial, s);
+    const windows = artificial.windows, lamps = artificial.lamps;
+    /* хеш-дробь: свет в квартале не мигает от кадра к кадру (§16.1, без Math.random) */
+    const h01 = (n) => {
+      let x = Math.imul(n | 0, 2246822519) ^ 0x9e3779b9;
+      x = Math.imul(x ^ (x >>> 15), 3266489917);
+      return ((x ^ (x >>> 13)) >>> 0) / 4294967296;
+    };
+    // сколько городов в кадре — столько и делим бюджет огней
+    const visible = [];
+    for (let i = 0; i < this.settlements.length; i++) {
+      const t = this.settlements[i];
+      const glow = Math.min(16, Math.max(2.5, this.cityAt(i).radiusKm * s * 0.06));
+      const cx = X(t.x), cy = Y(t.y);
+      if (cx < -glow || cy < -glow || cx > view.w + glow || cy > view.h + glow) continue;
+      visible.push({ i, t, cx, cy, glow });
+    }
+    const perCity = Math.max(60, Math.round(1600 / Math.max(1, visible.length)));
+    let dots = 0;
+    for (const { i, cx, cy, glow } of visible) {
+      // свечение города — символ, а не контур застройки: три круга убывающей плотности
+      if (s < 40) {
+        const g = [0.26, 0.16, 0.09];
+        for (let k = 0; k < 3; k++) {
+          ctx.fillStyle = 'rgba(255,208,142,' + (g[k] * windows).toFixed(3) + ')';
+          ctx.beginPath();
+          ctx.arc(cx, cy, glow * (1 - k * 0.3), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      if (s < 20) continue;                       // в кварталах огни только в зуме
+      const city = this.cityAt(i);
+      const blocks = city.blocks;
+      const stride = Math.max(1, Math.ceil(blocks.length / perCity));
+      for (let b = 0; b < blocks.length; b += stride) {
+        if (dots >= 2200) return;
+        const bl = blocks[b];
+        if (bl.zone === 'park') continue;
+        if (h01(b * 131 + i * 17) > windows * 0.85) continue;
+        const c = bl.corners;
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (const q of c) {
+          if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0];
+          if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1];
+        }
+        const count = windows > 0.6 ? 2 : 1;
+        for (let k = 0; k < count; k++) {
+          const fx = 0.2 + 0.6 * h01(b * 977 + k * 37 + i * 5);
+          const fy = 0.2 + 0.6 * h01(b * 613 + k * 91 + i * 29);
+          const px = X(x0 + (x1 - x0) * fx), py = Y(y0 + (y1 - y0) * fy);
+          if (px < -4 || py < -4 || px > view.w + 4 || py > view.h + 4) continue;
+          ctx.fillStyle = bl.zone === 'center'
+            ? 'rgba(255,226,168,0.92)'
+            : 'rgba(255,214,150,' + (0.5 + 0.4 * windows).toFixed(2) + ')';
+          ctx.beginPath();
+          ctx.arc(px, py, conf.radiusPx, 0, Math.PI * 2);
+          ctx.fill();
+          dots++;
+        }
+      }
+      // фонари по кольцам и проспектам
+      if (s >= 40 && lamps > 0.1) {
+        for (const st of city.streets) {
+          if (!st.major || !st.pts || st.pts.length < 2) continue;
+          for (let k = 1; k < st.pts.length; k++) {
+            if (dots >= 2200) return;
+            const [x1, y1] = st.pts[k - 1], [x2, y2] = st.pts[k];
+            const len = Math.hypot(x2 - x1, y2 - y1);
+            for (let d = 0.18; d < len; d += 0.18) {
+              if (dots >= 2200) return;
+              const u = d / len;
+              const px = X(x1 + (x2 - x1) * u), py = Y(y1 + (y2 - y1) * u);
+              if (px < -4 || py < -4 || px > view.w + 4 || py > view.h + 4) continue;
+              ctx.fillStyle = 'rgba(255,238,190,' + (0.8 * lamps).toFixed(2) + ')';
+              ctx.beginPath();
+              ctx.arc(px, py, Math.max(0.6, conf.radiusPx * 0.7), 0, Math.PI * 2);
+              ctx.fill();
+              dots++;
+            }
+          }
+        }
+      }
+    }
   }
 
   drawRoads(ctx, originX, originY, s) {
@@ -933,10 +1069,12 @@ export class Map2D {
     }
     if (this.hud.clock) {
       const total = Math.floor(this.transport ? this.transport.minutes : 8 * 60);
-      const day = Math.floor(total / 1440) + 1;
-      const hh = String(Math.floor((total % 1440) / 60)).padStart(2, '0');
-      const mm = String(total % 60).padStart(2, '0');
-      this.hud.clock.textContent = 'день ' + day + ' · ' + hh + ':' + mm;
+      const doy = dayOfYearOf(Math.floor(total / DAY_MINUTES));
+      const season = { winter: 'зима', spring: 'весна', summer: 'лето', autumn: 'осень' }[seasonOf(doy)];
+      const alt = Math.round(sunAltitudeDeg(total, doy));
+      const snow = snowCover01(doy);
+      this.hud.clock.textContent = clockText(total, doy) + ' · ' + season +
+        ' · солнце ' + (alt > 0 ? '+' : '') + alt + '°' + (snow > 0.05 ? ' · снег ' + Math.round(snow * 100) + '%' : '');
     }
     if (this.hud.peds) {
       this.hud.peds.textContent = this.pedsInFrame
