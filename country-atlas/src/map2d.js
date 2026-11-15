@@ -8,6 +8,7 @@ import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
 import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
 import { buildDams, DAM } from './dams2d.js';
+import { iceState, lakeFreezes, riverFreezes, iceThicknessCm, north01, tideM, icebreakerAt, ICE } from './ice2d.js';
 import { buildPedestrians, advancePeds, pedPositions, pedBudget, PED, PED_LOD, PED_CAP } from './ped2d.js';
 import { MARK_LOD, JUNCTION_LOD, LANES, markingWidthPx, dashPattern, turnRadiusM, isSolidAt,
   junctionType, ringDiameterM, zebra, junctions, roadFill, clipPolyline } from './markings2d.js';
@@ -36,6 +37,8 @@ export class Map2D {
     this.showRoads = true;
     this.showMarkings = true;   // разметка и развязки §8.9–8.14
     this.showDams = true;       // плотины и ГЭС §5.9
+    this.showIce = true;        // лёд и иней §5.11
+    this.ice = null;            // состояние льда на текущий час (пересчитывается по календарю)
     this.dams = null;
     this.junctionCache = null;
     this.showVehicles = true;   // слой транспорта §44
@@ -268,23 +271,45 @@ export class Map2D {
       ctx.lineWidth = Math.max(0.8, Math.min(4, 1.2 * s * 0.3));
       ctx.stroke();
     }
-    // озёра — настоящим очертанием (§5.6), а не кружком
+    // озёра — настоящим очертанием (§5.6), а не кружком; зимой северные встают (§5.11)
+    const ice = this.showIce ? this.updateIce() : null;
     for (const lake of w.lakes) {
       if (Math.abs(lake.x - this.center.x) > halfW || Math.abs(lake.y - this.center.y) > halfH) continue;
       const ring = lake.ring;
+      const frozen = ice && ice.iceByLake && ice.iceByLake.has(lake);
       ctx.beginPath();
       ctx.moveTo(X(ring[0][0]), Y(ring[0][1]));
       for (let i = 1; i < ring.length; i++) ctx.lineTo(X(ring[i][0]), Y(ring[i][1]));
       ctx.closePath();
-      ctx.fillStyle = 'rgba(58,117,155,0.95)';
+      // лёд — не белое пятно: голубовато-серый, с береговой кромкой
+      ctx.fillStyle = frozen ? 'rgba(196,216,226,0.96)' : 'rgba(58,117,155,0.95)';
       ctx.fill();
-      // отмель у берега и тёмная кромка — озеро не выглядит заливкой
-      ctx.strokeStyle = 'rgba(150,200,222,0.65)';
+      ctx.strokeStyle = frozen ? 'rgba(238,246,250,0.85)' : 'rgba(150,200,222,0.65)';
       ctx.lineWidth = Math.max(0.8, 0.9 * Math.min(3, s * 0.6));
       ctx.stroke();
-      ctx.strokeStyle = 'rgba(34,78,110,0.55)';
+      ctx.strokeStyle = frozen ? 'rgba(120,150,170,0.8)' : 'rgba(34,78,110,0.55)';
       ctx.lineWidth = 0.6;
       ctx.stroke();
+      // трещины на льду — в глубоком зуме, по хешу озера
+      if (frozen && s >= 40) {
+        const cm = ice.iceByLake.get(lake);
+        let h = Math.round((lake.x * 7 + lake.y * 13) % 1000) | 0;
+        const rnd = () => { h = (h * 1103515245 + 12345) & 0x7fffffff; return h / 0x7fffffff; };
+        ctx.strokeStyle = 'rgba(120,148,168,' + Math.min(0.75, 0.25 + cm / 140) + ')';
+        ctx.lineWidth = Math.max(0.6, s / 900);
+        const n = Math.min(9, 3 + Math.round(cm / 12));
+        for (let k = 0; k < n; k++) {
+          const a = rnd() * Math.PI * 2, r = rnd() * 0.55;
+          const cx0 = lake.x + Math.cos(a) * r * (lake.areaKm2 ** 0.5) * 0.02;
+          const cy0 = lake.y + Math.sin(a) * r * (lake.areaKm2 ** 0.5) * 0.02;
+          const len = 0.25 + rnd() * 0.9;
+          const ang = rnd() * Math.PI;
+          ctx.beginPath();
+          ctx.moveTo(X(cx0), Y(cy0));
+          ctx.lineTo(X(cx0 + Math.cos(ang) * len), Y(cy0 + Math.sin(ang) * len));
+          ctx.stroke();
+        }
+      }
     }
     // реки: главные заметны всегда, остальные — с 0.4 px ширины
     ctx.strokeStyle = RIVER.riverColor;
@@ -310,13 +335,22 @@ export class Map2D {
       if (!main && line.flowKm2 < 4000 && (line.widthM / 1000) * s < 0.12) continue;
       if (!visible(line.pts)) continue;
       ctx.lineWidth = riverStrokePx(line.widthM, s, main || rank < 40);
-      ctx.globalAlpha = rank < 40 ? 0.9 : 0.5;
+      // §5.11: мелкая таёжная река зимой встаёт — рисуем льдом, а не водой
+      const iced = ice && riverFreezes(line.widthM, ice.snow, north01(line.pts[0].y));
+      if (iced) {
+        ctx.strokeStyle = 'rgba(206,224,232,0.95)';
+        ctx.globalAlpha = rank < 60 ? 0.85 : 0.45;
+      } else {
+        ctx.strokeStyle = RIVER.riverColor;
+        ctx.globalAlpha = rank < 40 ? 0.9 : 0.5;
+      }
       ctx.beginPath();
       ctx.moveTo(X(line.pts[0].x), Y(line.pts[0].y));
       for (let i = 1; i < line.pts.length; i++) ctx.lineTo(X(line.pts[i].x), Y(line.pts[i].y));
       ctx.stroke();
     }
     ctx.globalAlpha = 1;
+    ctx.strokeStyle = RIVER.riverColor;
   }
 
   /* Экономика §31.33: население, угодья, приход и расход ресурсов. */
@@ -473,6 +507,7 @@ export class Map2D {
 
     if (this.showWater && this.water) this.drawWater(ctx, originX, originY, s);
     if (this.showDams && this.showMarkings !== null && this.buildDams()) this.drawDams(ctx, originX, originY, s);
+    if (this.showIce && this.ice) this.drawIce(ctx, originX, originY, s);
     if (this.showBorders && this.borders) this.drawBorders(ctx, originX, originY, s);
     if (this.showRoads && this.roads) this.drawRoads(ctx, originX, originY, s);
     if (this.showRoads && this.showMarkings && this.roads && s >= JUNCTION_LOD) this.drawJunctions(ctx, originX, originY, s);
@@ -647,6 +682,19 @@ export class Map2D {
     return this.light;
   }
 
+  /* Лёд и иней §5.11: пересчитываем не каждый кадр, а раз в игровой час — за это время
+     ничего не меняется, а обход 5294 русел и 25 озёр стоит денег. */
+  updateIce() {
+    const m = Math.floor((this.transport ? this.transport.minutes : 8 * 60) / 60) * 60;
+    const key = m + ':' + Math.round(this.center.y);
+    if (this.ice && this.iceKey === key) return this.ice;
+    this.iceKey = key;
+    this.ice = iceState(this.water, this.light, {
+      minutes: m, doy: dayOfYearOf(Math.floor(m / DAY_MINUTES)), centerY: this.center.y
+    });
+    return this.ice;
+  }
+
   /* Перевести часы на нужную фазу (утро, вечер): час ищется по текущему сезону. */
   setClockPhase(phaseId) {
     const day = this.transport ? Math.floor(this.transport.minutes / DAY_MINUTES) : 0;
@@ -744,6 +792,36 @@ export class Map2D {
 
   /* Огни §14.3: окна домов и фонари. Ночью далёкий город — тёплое пятно, в зуме — точки
      в кварталах. Точки детерминированы номером квартала, поэтому не мигают от кадра к кадру. */
+  /* Иней §5.11: на юге утром трава седая, но снега нет. Это не туман — налёт тонкий,
+     поэтому альфа не больше 0.07, иначе карта «выцветает». Ледокол — точка с курсом. */
+  drawIce(ctx, originX, originY, s) {
+    const ice = this.ice;
+    if (!ice) return;
+    const view = this.view;
+    if (ice.frost > 0.25) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.07 * Math.min(1, ice.frost)).toFixed(3) + ')';
+      ctx.fillRect(0, 0, view.w, view.h);
+      ctx.restore();
+    }
+    if (ice.breakerPos && s >= 1.5) {
+      const px = originX + ice.breakerPos.x * s, py = originY - ice.breakerPos.y * s;
+      if (px > -20 && py > -20 && px < view.w + 20 && py < view.h + 20) {
+        const r = Math.max(1.6, Math.min(5, s * 0.9));
+        ctx.fillStyle = 'rgba(196,66,48,0.95)';
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+        ctx.lineWidth = Math.max(0.7, r * 0.4);
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + Math.cos(ice.breakerPos.heading) * r * 2.2, py - Math.sin(ice.breakerPos.heading) * r * 2.2);
+        ctx.stroke();
+      }
+    }
+  }
+
   /* Плотины и ГЭС §5.9. Водохранилище рисуем вместе с водой (это вода), стену, машинный зал,
      водосброс с пеной и ЛЭП — в глубоком зуме, иначе от них остаются точки в пиксель. */
   drawDams(ctx, originX, originY, s) {
@@ -1390,8 +1468,14 @@ export class Map2D {
       const season = { winter: 'зима', spring: 'весна', summer: 'лето', autumn: 'осень' }[seasonOf(doy)];
       const alt = Math.round(sunAltitudeDeg(total, doy));
       const snow = snowCover01(doy);
+      const ice = this.showIce ? this.updateIce() : null;
+      const iceText = ice && ice.maxIce >= 10 ? ' · лёд до ' + Math.round(ice.maxIce) + ' см' : '';
+      const frostText = ice && ice.frost >= 0.3 ? ' · иней' : '';
+      const tide = tideM(total);
+      const tideText = Math.abs(tide) >= 0.4 ? ' · прилив ' + (tide > 0 ? '+' : '') + tide.toFixed(1) + ' м' : '';
       this.hud.clock.textContent = clockText(total, doy) + ' · ' + season +
-        ' · солнце ' + (alt > 0 ? '+' : '') + alt + '°' + (snow > 0.05 ? ' · снег ' + Math.round(snow * 100) + '%' : '');
+        ' · солнце ' + (alt > 0 ? '+' : '') + alt + '°' + (snow > 0.05 ? ' · снег ' + Math.round(snow * 100) + '%' : '') +
+        iceText + frostText + tideText;
     }
     if (this.hud.peds) {
       this.hud.peds.textContent = this.pedsInFrame
