@@ -9,6 +9,7 @@ import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './econom
 import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
 import { buildDams, DAM } from './dams2d.js';
 import { iceState, lakeFreezes, riverFreezes, iceThicknessCm, north01, tideM, icebreakerAt, ICE } from './ice2d.js';
+import { buildTides, tidalBand, tidalQuads, flatsKm, TIDE2D } from './tide2d.js';
 import { buildPedestrians, advancePeds, pedPositions, pedBudget, PED, PED_LOD, PED_CAP } from './ped2d.js';
 import { MARK_LOD, JUNCTION_LOD, LANES, markingWidthPx, dashPattern, turnRadiusM, isSolidAt,
   junctionType, ringDiameterM, zebra, junctions, roadFill, clipPolyline } from './markings2d.js';
@@ -38,6 +39,8 @@ export class Map2D {
     this.showMarkings = true;   // разметка и развязки §8.9–8.14
     this.showDams = true;       // плотины и ГЭС §5.9
     this.showIce = true;        // лёд и иней §5.11
+    this.showTides = true;      // приливные отмели и доки §5.10
+    this.tides = null;
     this.ice = null;            // состояние льда на текущий час (пересчитывается по календарю)
     this.dams = null;
     this.junctionCache = null;
@@ -229,6 +232,14 @@ export class Map2D {
     if (this.water) return this.water;
     this.water = buildWater(this.roads);
     return this.water;
+  }
+
+  /* Порты §5.10: строятся один раз — 4 порта в устьях больших рек у тёплого моря. */
+  buildTides() {
+    if (this.tides) return this.tides;
+    if (!this.water) return null;
+    this.tides = buildTides(this.water, this.borders || buildBorders(), this.settlements);
+    return this.tides;
   }
 
   /* Плотины и ГЭС §5.9: 2–3 створа на самых полноводных реках, рядом с городом. */
@@ -508,6 +519,7 @@ export class Map2D {
     if (this.showWater && this.water) this.drawWater(ctx, originX, originY, s);
     if (this.showDams && this.showMarkings !== null && this.buildDams()) this.drawDams(ctx, originX, originY, s);
     if (this.showIce && this.ice) this.drawIce(ctx, originX, originY, s);
+    if (this.showTides && this.buildTides()) this.drawTides(ctx, originX, originY, s);
     if (this.showBorders && this.borders) this.drawBorders(ctx, originX, originY, s);
     if (this.showRoads && this.roads) this.drawRoads(ctx, originX, originY, s);
     if (this.showRoads && this.showMarkings && this.roads && s >= JUNCTION_LOD) this.drawJunctions(ctx, originX, originY, s);
@@ -792,6 +804,90 @@ export class Map2D {
 
   /* Огни §14.3: окна домов и фонари. Ночью далёкий город — тёплое пятно, в зуме — точки
      в кварталах. Точки детерминированы номером квартала, поэтому не мигают от кадра к кадру. */
+  /* Приливы §5.10. При малой воде у пологого берега обнажается песок, в портах видно,
+     как причалы стоят над осушкой. Уровень — тот же `tideM`, что в HUD (§62). */
+  drawTides(ctx, originX, originY, s) {
+    const t = this.tides;
+    if (!t) return;
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view;
+    const minutes = this.transport ? this.transport.minutes : 8 * 60;
+    const tide = tideM(minutes);
+    const flats = flatsKm(tide);
+    const halfW = view.w / 2 / s + 30, halfH = view.h / 2 / s + 30;
+
+    // полоса осушки вдоль берега
+    if (flats > 0.02) {
+      ctx.fillStyle = 'rgba(226,210,172,0.92)';
+      for (const line of t.shoreLines) {
+        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+        for (const p of line) {
+          if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0];
+          if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1];
+        }
+        if (x1 < this.center.x - halfW || x0 > this.center.x + halfW ||
+            y1 < this.center.y - halfH || y0 > this.center.y + halfH) continue;
+        // полосами по сегментам: кольцо на изгибах пересекается и заливает сушу
+        for (const quad of tidalQuads(line, tide)) {
+          ctx.beginPath();
+          ctx.moveTo(X(quad[0][0]), Y(quad[0][1]));
+          for (let i = 1; i < 4; i++) ctx.lineTo(X(quad[i][0]), Y(quad[i][1]));
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+    }
+
+    // порты: набережная, причалы, сваи
+    for (const port of t.ports) {
+      const px = X(port.x), py = Y(port.y);
+      if (px < -60 || py < -60 || px > view.w + 60 || py > view.h + 60) continue;
+      const wQuay = Math.max(1.2, 0.02 * s);
+      ctx.strokeStyle = 'rgba(74,70,62,0.95)';
+      ctx.lineWidth = wQuay;
+      ctx.beginPath();
+      ctx.moveTo(X(port.quay[0][0]), Y(port.quay[0][1]));
+      ctx.lineTo(X(port.quay[1][0]), Y(port.quay[1][1]));
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(238,232,214,0.9)';
+      ctx.lineWidth = Math.max(0.6, wQuay * 0.4);
+      ctx.stroke();
+
+      for (const pier of port.piers) {
+        ctx.strokeStyle = 'rgba(84,78,68,0.95)';
+        ctx.lineWidth = Math.max(1, 0.014 * s);
+        ctx.beginPath();
+        ctx.moveTo(X(pier.root[0]), Y(pier.root[1]));
+        ctx.lineTo(X(pier.tip[0]), Y(pier.tip[1]));
+        ctx.stroke();
+        if (s >= 20) {
+          ctx.fillStyle = 'rgba(60,56,48,0.9)';
+          for (let k = 1; k <= pier.piles; k++) {
+            const tt = k / (pier.piles + 1);
+            const cx0 = pier.root[0] + (pier.tip[0] - pier.root[0]) * tt;
+            const cy0 = pier.root[1] + (pier.tip[1] - pier.root[1]) * tt;
+            const r = Math.max(0.6, 0.006 * s);
+            ctx.beginPath();
+            ctx.arc(X(cx0), Y(cy0), r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // склад у набережной
+      if (s >= 12) {
+        const bw = Math.max(1.6, 0.05 * s), bh = Math.max(1.2, 0.035 * s);
+        const cx0 = X(port.x - port.nx * 0.12), cy0 = Y(port.y - port.ny * 0.12);
+        ctx.fillStyle = 'rgba(198,186,166,0.95)';
+        ctx.fillRect(cx0 - bw / 2, cy0 - bh / 2, bw, bh);
+        ctx.strokeStyle = 'rgba(88,78,64,0.9)';
+        ctx.lineWidth = 0.6;
+        if (ctx.strokeRect) ctx.strokeRect(cx0 - bw / 2, cy0 - bh / 2, bw, bh);
+      }
+    }
+  }
+
   /* Иней §5.11: на юге утром трава седая, но снега нет. Это не туман — налёт тонкий,
      поэтому альфа не больше 0.07, иначе карта «выцветает». Ледокол — точка с курсом. */
   drawIce(ctx, originX, originY, s) {
