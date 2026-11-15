@@ -189,6 +189,7 @@ const toggles = {
   'toggle-roads': (v) => { map.showRoads = v; map.draw(); },
   'toggle-markings': (v) => { map.showMarkings = v; map.draw(); },
   'toggle-dams': (v) => { map.showDams = v; map.draw(); },
+  'toggle-ice': (v) => { map.showIce = v; map.iceKey = null; map.draw(); },
   'toggle-towns': (v) => { map.showSettlements = v; map.draw(); },
   'toggle-q': (v) => { map.showQ = v; map.draw(); },
   'toggle-cars': (v) => { map.showVehicles = v; map.draw(); },
