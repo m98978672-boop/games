@@ -7,7 +7,10 @@ import { buildCity, cityLod, ZONE, CITY_STREET_SCALE, CITY_BUILDING_SCALE, build
 import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
 import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
+import { buildDams, DAM } from './dams2d.js';
 import { buildPedestrians, advancePeds, pedPositions, pedBudget, PED, PED_LOD, PED_CAP } from './ped2d.js';
+import { MARK_LOD, JUNCTION_LOD, LANES, markingWidthPx, dashPattern, turnRadiusM, isSolidAt,
+  junctionType, ringDiameterM, zebra, junctions, roadFill, clipPolyline } from './markings2d.js';
 import { lightAt, overlayCss, cityLights, clockText, phaseAt, sunAltitudeDeg, seasonOf, snowCover01, DAY_MINUTES, dayOfYearOf, hourWithPhase } from './light2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 
@@ -31,6 +34,10 @@ export class Map2D {
     this.showSettlements = true;
     this.showQ = true;
     this.showRoads = true;
+    this.showMarkings = true;   // разметка и развязки §8.9–8.14
+    this.showDams = true;       // плотины и ГЭС §5.9
+    this.dams = null;
+    this.junctionCache = null;
     this.showVehicles = true;   // слой транспорта §44
     this.transport = null;
     this.showBorders = true;    // границы §7
@@ -219,6 +226,14 @@ export class Map2D {
     if (this.water) return this.water;
     this.water = buildWater(this.roads);
     return this.water;
+  }
+
+  /* Плотины и ГЭС §5.9: 2–3 створа на самых полноводных реках, рядом с городом. */
+  buildDams() {
+    if (this.dams) return this.dams;
+    if (!this.water) return null;
+    this.dams = buildDams(this.water, this.settlements, DAM.count);
+    return this.dams;
   }
 
   /* Вода §5: реки — лента шириной по расходу (F-135), озёра — заливка, мосты дороги рисуют сами.
@@ -457,8 +472,11 @@ export class Map2D {
     ctx.clip();
 
     if (this.showWater && this.water) this.drawWater(ctx, originX, originY, s);
+    if (this.showDams && this.showMarkings !== null && this.buildDams()) this.drawDams(ctx, originX, originY, s);
     if (this.showBorders && this.borders) this.drawBorders(ctx, originX, originY, s);
     if (this.showRoads && this.roads) this.drawRoads(ctx, originX, originY, s);
+    if (this.showRoads && this.showMarkings && this.roads && s >= JUNCTION_LOD) this.drawJunctions(ctx, originX, originY, s);
+    if (this.showRoads && this.showMarkings && this.roads && s >= MARK_LOD) this.drawMarkings(ctx, originX, originY, s);
     if (this.showCities && cityLod(s) > 0) this.drawCities(ctx, originX, originY, s);
     if (this.showGrid) this.drawGrid(ctx, originX, originY, s);
     if (this.showSettlements) this.drawSettlements(ctx, originX, originY, s);
@@ -726,6 +744,298 @@ export class Map2D {
 
   /* Огни §14.3: окна домов и фонари. Ночью далёкий город — тёплое пятно, в зуме — точки
      в кварталах. Точки детерминированы номером квартала, поэтому не мигают от кадра к кадру. */
+  /* Плотины и ГЭС §5.9. Водохранилище рисуем вместе с водой (это вода), стену, машинный зал,
+     водосброс с пеной и ЛЭП — в глубоком зуме, иначе от них остаются точки в пиксель. */
+  drawDams(ctx, originX, originY, s) {
+    const d = this.dams;
+    if (!d || !d.dams.length) return;
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view;
+
+    // водохранилище: полосы вдоль русла — ширина растёт от стены к верховью
+    for (const dam of d.dams) {
+      const axis = dam.axis || [];
+      if (axis.length < 2) continue;
+      ctx.fillStyle = 'rgba(44,98,138,0.95)';
+      for (let k = 1; k < axis.length; k++) {
+        const a = axis[k - 1], b = axis[k];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const len = Math.hypot(dx, dy) || 1e-6;
+        const nx = -dy / len, ny = dx / len;
+        ctx.beginPath();
+        ctx.moveTo(X(a.x + nx * a.half), Y(a.y + ny * a.half));
+        ctx.lineTo(X(b.x + nx * b.half), Y(b.y + ny * b.half));
+        ctx.lineTo(X(b.x - nx * b.half), Y(b.y - ny * b.half));
+        ctx.lineTo(X(a.x - nx * a.half), Y(a.y - ny * a.half));
+        ctx.closePath();
+        ctx.fill();
+      }
+      // круглые стыки полос: на резких изгибах без них остаются «зубцы»
+      for (let k = 1; k < axis.length; k++) {
+        ctx.beginPath();
+        ctx.arc(X(axis[k].x), Y(axis[k].y), Math.max(0.5, axis[k].half * s), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // кромка чаши: тонкая тёмная линия по берегам
+      if (s >= 10 && dam.reservoir.length) {
+        ctx.strokeStyle = 'rgba(30,74,104,0.85)';
+        ctx.lineWidth = Math.max(0.6, s / 1500);
+        ctx.beginPath();
+        for (let i = 0; i < dam.reservoir.length; i++) {
+          const p = dam.reservoir[i];
+          const px = X(p.x), py = Y(p.y);
+          if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        }
+        ctx.closePath();
+        ctx.stroke();
+      }
+    }
+
+    if (s < 6) return;                    // ниже значки не читаются
+    for (const dam of d.dams) {
+      const px = X(dam.x), py = Y(dam.y);
+      if (px < -40 || py < -40 || px > view.w + 40 || py > view.h + 40) continue;
+
+      // стена: поперёк русла, тёмный бетон с гребнем
+      const line = this.water.rivers.lines[dam.riverIndex];
+      const i = Math.min(dam.index, (line ? line.pts.length : 1) - 1);
+      const a = line ? line.pts[Math.max(0, i - 1)] : { x: dam.x, y: dam.y };
+      const b = line ? line.pts[Math.min(line.pts.length - 1, i + 1)] : { x: dam.x + 1, y: dam.y };
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const len = Math.hypot(dx, dy) || 1;
+      const halfKm = dam.wall.lengthKm / 2;
+      const ax = dam.x - (dx / len) * 0 + (-dy / len) * halfKm;
+      const ay = dam.y - (dy / len) * 0 + (dx / len) * halfKm;
+      const bx = dam.x + (dy / len) * halfKm;
+      const by = dam.y - (dx / len) * halfKm;
+      const wpx = Math.max(1.4, (dam.wall.thicknessM / 1000) * s);
+      ctx.strokeStyle = 'rgba(70,68,64,0.95)';
+      ctx.lineWidth = wpx;
+      ctx.beginPath();
+      ctx.moveTo(X(ax), Y(ay));
+      ctx.lineTo(X(bx), Y(by));
+      ctx.stroke();
+      if (s >= 12) {
+        ctx.strokeStyle = 'rgba(238,236,228,0.9)';
+        ctx.lineWidth = Math.max(0.6, wpx * 0.35);
+        ctx.beginPath();
+        ctx.moveTo(X(ax), Y(ay));
+        ctx.lineTo(X(bx), Y(by));
+        ctx.stroke();
+      }
+
+      if (s < 12) continue;
+      // машинный зал — небольшой прямоугольник у подошвы, со стороны города
+      const toCity = Math.atan2(dam.cityY - dam.y, dam.cityX - dam.x);
+      const hx = dam.x + Math.cos(toCity) * (dam.wall.lengthKm * 0.55 + 0.25) - Math.sin(toCity) * 0.3;
+      const hy = dam.y + Math.sin(toCity) * (dam.wall.lengthKm * 0.55 + 0.25) + Math.cos(toCity) * 0.3;
+      const hw = Math.max(1.6, 0.18 * s), hh = Math.max(1.2, 0.12 * s);
+      ctx.fillStyle = 'rgba(196,190,178,0.95)';
+      ctx.strokeStyle = 'rgba(70,64,56,0.9)';
+      ctx.lineWidth = 0.7;
+      ctx.fillRect(X(hx) - hw / 2, Y(hy) - hh / 2, hw, hh);
+      ctx.strokeRect ? ctx.strokeRect(X(hx) - hw / 2, Y(hy) - hh / 2, hw, hh) : null;
+
+      // водосброс: пена ниже по течению
+      if (s >= 20) {
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        for (const f of dam.foam) {
+          const fx = dam.x + (dx / len) * f.dx - (dy / len) * f.dy;
+          const fy = dam.y + (dy / len) * f.dx + (dx / len) * f.dy;
+          const r = Math.max(0.5, (f.r * 0.5 * s) / 1000);
+          ctx.beginPath();
+          ctx.arc(X(fx), Y(fy), r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // ЛЭП: пунктир к городу и точки опор
+      if (s >= 8 && dam.towers.count > 1) {
+        ctx.strokeStyle = 'rgba(120,110,92,0.55)';
+        ctx.lineWidth = Math.max(0.6, s / 1400);
+        ctx.setLineDash([Math.max(2, s / 60), Math.max(2, s / 90)]);
+        ctx.beginPath();
+        ctx.moveTo(X(dam.x), Y(dam.y));
+        ctx.lineTo(X(dam.cityX), Y(dam.cityY));
+        ctx.stroke();
+        ctx.setLineDash([]);
+        if (s >= 20) {
+          ctx.fillStyle = 'rgba(96,86,70,0.8)';
+          const step = Math.max(1, Math.ceil(dam.towers.count / 24));   // бюджет точек на кадр
+          for (let k = 0; k < dam.towers.count; k += step) {
+            const t = dam.towers.towers[k];
+            ctx.fillRect(X(t.x) - 0.7, Y(t.y) - 0.7, 1.4, 1.4);
+          }
+        }
+      }
+    }
+  }
+
+  /* Развязки §8.9–8.11: значок в узле. Клевер — четыре лепестка, труба — петля,
+     кольцо — круг в 26…60 м, перекрёсток — точка со светофором. */
+  junctionAt() {
+    if (!this.junctionCache) {
+      this.junctionCache = junctions(this.roads.edges).map((j) => ({
+        ...j,
+        type: junctionType(j.clsA, j.clsB, j.angleDeg, 1.2)
+      }));
+    }
+    return this.junctionCache;
+  }
+
+  drawJunctions(ctx, originX, originY, s) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view;
+    for (const j of this.junctionAt()) {
+      const px = X(j.x), py = Y(j.y);
+      if (px < -30 || py < -30 || px > view.w + 30 || py > view.h + 30) continue;
+      const cls = j.clsA === 'M' || j.clsB === 'M' ? 'M' : j.clsA === 'R' || j.clsB === 'R' ? 'R' : 'L';
+      ctx.strokeStyle = cls === 'M' ? 'rgba(96,72,28,0.9)' : cls === 'R' ? 'rgba(88,84,74,0.8)' : 'rgba(96,90,80,0.6)';
+      ctx.fillStyle = 'rgba(250,246,236,0.85)';
+      ctx.lineWidth = Math.max(0.8, cls === 'M' ? 1.4 : 1);
+      if (j.type === 'clover') {
+        const r = Math.max(3, (ringDiameterM(4) / 2) * s / 1000);
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        for (let k = 0; k < 4; k++) {
+          const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+          ctx.beginPath();
+          ctx.arc(px + Math.cos(a) * r, py + Math.sin(a) * r, r * 0.45, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      } else if (j.type === 'ring') {
+        const r = Math.max(2.2, (ringDiameterM(2) / 2) * s / 1000);
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (j.type === 'trumpet') {
+        const r = Math.max(2.4, 20 * s / 1000 + 2);
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(px + r * 0.8, py - r * 0.8, r * 0.7, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const r = Math.max(1.6, 8 * s / 1000 + 1);
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* Разметка §8.14: краевая линия, прерывистая осевая (сплошная на повороте), «зебра»
+     у въезда в город. Растёт из масштаба: до 25 px/км её физически не видно. */
+  drawMarkings(ctx, originX, originY, s) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view;
+    const dash = dashPattern(s);
+    const lineW = markingWidthPx(s, 0.15);
+    const kx0 = (-originX - 40) / s, kx1 = (view.w - originX + 40) / s;
+    const kyA = (originY - view.h - 40) / s, kyB = (originY + 40) / s;
+    for (const e of this.roads.edges) {
+      if (e.cls === 'F' || !e.points || e.points.length < 2) continue;
+      // рисуем только видимый кусок (R-58.2), иначе ломаная в тысячи км съедает кадр
+      const visible = clipPolyline(e.points, kx0, Math.min(kyA, kyB), kx1, Math.max(kyA, kyB));
+      if (visible.length < 2) continue;
+
+      // сплошная на поворотах (R-8.14): ищем самый крутой изгиб
+      let solid = false;
+      for (let i = 1; i < visible.length - 1; i++) {
+        if (isSolidAt(e.cls, turnRadiusM(visible[i - 1], visible[i], visible[i + 1]))) { solid = true; break; }
+      }
+      const widthPx = Math.max(2, ((ROAD_CLASS[e.cls] || ROAD_CLASS.L).widthM * s) / 1000);
+
+      // краевая линия — только там, где полос больше одной
+      if ((LANES[e.cls] || 1) >= 2 && widthPx >= 4) {
+        ctx.strokeStyle = 'rgba(255,252,244,0.8)';
+        ctx.lineWidth = lineW;
+        ctx.setLineDash([]);
+        for (const side of [-1, 1]) {
+          ctx.beginPath();
+          for (let i = 0; i < visible.length; i++) {
+            const prev = visible[Math.max(0, i - 1)], next = visible[Math.min(visible.length - 1, i + 1)];
+            const dx = next[0] - prev[0], dy = next[1] - prev[1];
+            const len = Math.hypot(dx, dy) || 1;
+            const off = (widthPx / 2 - Math.max(1, lineW * 1.5)) / s;   // отступ в км
+            const nx = -dy / len * off * side, ny = dx / len * off * side;
+            const px = X(visible[i][0] + nx), py = Y(visible[i][1] + ny);
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+      }
+
+      // полосы: у четырёхполосной магистрали — пунктир между полосами каждого направления
+      if ((LANES[e.cls] || 1) >= 4 && widthPx >= 8) {
+        ctx.strokeStyle = 'rgba(250,244,228,0.55)';
+        ctx.lineWidth = lineW;
+        ctx.setLineDash([dash.stroke, dash.gap]);
+        for (const side of [-1, 1]) {
+          ctx.beginPath();
+          for (let i = 0; i < visible.length; i++) {
+            const prev = visible[Math.max(0, i - 1)], next = visible[Math.min(visible.length - 1, i + 1)];
+            const dx = next[0] - prev[0], dy = next[1] - prev[1];
+            const len = Math.hypot(dx, dy) || 1;
+            const off = (widthPx / 4) / s * side;
+            const nx = -dy / len * off, ny = dx / len * off;
+            const px = X(visible[i][0] + nx), py = Y(visible[i][1] + ny);
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+        ctx.setLineDash([]);
+      }
+
+      // осевая: прерывистая или сплошная
+      ctx.strokeStyle = solid ? 'rgba(255,236,170,0.95)' : 'rgba(255,252,244,0.92)';
+      ctx.lineWidth = lineW;
+      ctx.setLineDash(solid ? [] : [dash.stroke, dash.gap]);
+      ctx.beginPath();
+      for (let i = 0; i < visible.length; i++) {
+        const px = X(visible[i][0]), py = Y(visible[i][1]);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // «зебра» у въезда в город: 80…120 м от узла, поперёк дороги (R-8.14)
+    for (const t of this.settlements) {
+      const cx = X(t.x), cy = Y(t.y);
+      if (cx < -40 || cy < -40 || cx > view.w + 40 || cy > view.h + 40) continue;
+      for (const e of this.roads.edges) {
+        if (!e.points || e.points.length < 2) continue;
+        const widthM = (ROAD_CLASS[e.cls] || ROAD_CLASS.L).widthM;
+        const z = zebra(s, widthM);
+        if (!z) continue;
+        for (const [p, q] of [[e.points[0], e.points[1]], [e.points[e.points.length - 1], e.points[e.points.length - 2]]]) {
+          const d = Math.hypot(p[0] - t.x, p[1] - t.y);
+          if (d > 3) continue;                       // переход только у самого въезда
+          const dx = q[0] - p[0], dy = q[1] - p[1];
+          const len = Math.hypot(dx, dy) || 1;
+          const ux = dx / len, uy = dy / len;
+          const off = Math.min(0.12, len * 0.3);     // 80…120 м от узла
+          const bx = p[0] + ux * off, by = p[1] + uy * off;
+          ctx.fillStyle = 'rgba(252,250,242,0.8)';
+          for (let i = 0; i < z.count; i++) {
+            const shift = (i - (z.count - 1) / 2) * (z.stripe * 2) / s;
+            const px = X(bx - uy * shift), py = Y(by + ux * shift);
+            ctx.fillRect(px - z.stripe / 2, py - z.stripe / 2, z.stripe, z.stripe);
+          }
+        }
+      }
+    }
+  }
+
   drawLights(ctx, originX, originY, s, artificial) {
     const X = (x) => originX + x * s;
     const Y = (y) => originY - y * s;
@@ -822,13 +1132,19 @@ export class Map2D {
     const edges = this.roads.edges.slice().sort((a, b) => order[a.cls] - order[b.cls]);
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
+    // кадр в километрах: дальше рисуем только видимые куски дорог (R-58.2)
+    const view = this.view;
+    const kx0 = (-originX - 40) / s, kx1 = (view.w - originX + 40) / s;
+    const kyA = (originY - view.h - 40) / s, kyB = (originY + 40) / s;
     for (const e of edges) {
       const meta = ROAD_CLASS[e.cls] || ROAD_CLASS.L;
       const real = (meta.widthM / 1000) * s;
       const w = Math.max(MIN[e.cls] || 1, Math.min(30, real));
+      const pts = clipPolyline(e.points, kx0, Math.min(kyA, kyB), kx1, Math.max(kyA, kyB));
+      if (pts.length < 2) continue;
       ctx.beginPath();
-      for (let i = 0; i < e.points.length; i++) {
-        const p = e.points[i];
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
         const sx = originX + p[0] * s, sy = originY - p[1] * s;
         if (i === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
       }
@@ -837,8 +1153,9 @@ export class Map2D {
       ctx.strokeStyle = 'rgba(28,32,26,0.55)';
       ctx.lineWidth = w + 1.6;
       ctx.stroke();
+      const fill = roadFill(e.cls, s);          // R-58.1: в глубоком зуме — асфальт
       const [r, g, b] = meta.tone;
-      ctx.strokeStyle = 'rgb(' + r + ',' + g + ',' + b + ')';
+      ctx.strokeStyle = fill || ('rgb(' + r + ',' + g + ',' + b + ')');
       ctx.lineWidth = w;
       if (meta.dash) ctx.setLineDash(meta.dash.map((v) => v * Math.max(1, w / 1.5)));
       ctx.stroke();
