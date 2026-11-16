@@ -14,8 +14,12 @@
 
   .panel{ position:fixed; background:var(--paper); border:1px solid var(--line); padding:10px 12px;
     backdrop-filter:blur(6px); }
-  #hud{ left:14px; top:14px; min-width:250px; max-width:min(360px, 46vw);
-    max-height:calc(100% - 210px); overflow:auto; scrollbar-width:thin; }
+  /* R-74.5: панели живут в двух рейках и не могут наехать друг на друга */
+  #left-rail{ position:fixed; left:14px; top:14px; bottom:14px; width:258px; display:flex;
+    flex-direction:column; gap:10px; pointer-events:none; }
+  #left-rail > *{ pointer-events:auto; }
+  #left-rail .panel{ position:static; }
+  #hud{ min-width:0; flex:0 1 auto; max-height:62%; overflow:auto; scrollbar-width:thin; }
   #hud h1{ margin:0 0 6px; font-size:13px; letter-spacing:.08em; text-transform:uppercase;
     display:flex; align-items:center; justify-content:space-between; gap:10px; }
   #hud .fold{ font:inherit; font-size:12px; line-height:1; border:1px solid var(--line); background:#fff;
@@ -45,6 +49,9 @@
   #country tr.bad td:last-child{ color:#e8896a; }
 
   #controls{ width:100%; }
+  #play-dock h2{ margin:0 0 6px; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--mute); }
+  #play-map{ display:block; width:100%; height:auto; border:1px solid rgba(0,0,0,.12); background:#0b141c; }
+  #play-dock .foot{ margin-top:5px; font-size:10.5px; color:var(--mute); line-height:1.35; }
   #controls label{ display:flex; align-items:center; gap:7px; margin:4px 0; font-size:12px; }
   #controls input{ accent-color:#333; }
   #controls .group{ margin:9px 0 2px; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
@@ -55,13 +62,14 @@
     padding:4px 0; cursor:pointer; }
   .rowbtn button:active{ background:#0b0b0b; color:#fff; }
 
-  #legend{ left:14px; bottom:14px; font-size:11px; width:232px; padding:8px 10px; }
+  #legend{ font-size:11px; width:100%; padding:8px 10px; flex:0 1 auto; min-height:0; display:flex;
+    flex-direction:column; }
   #legend summary{ cursor:pointer; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
     color:var(--mute); list-style:none; display:flex; justify-content:space-between; }
   #legend summary::-webkit-details-marker{ display:none; }
   #legend summary::after{ content:'▾'; color:var(--mute); }
   #legend[open] summary::after{ content:'▴'; }
-  #legend .body{ max-height:52vh; overflow:auto; margin-top:6px; scrollbar-width:thin; }
+  #legend .body{ overflow:auto; margin-top:6px; scrollbar-width:thin; min-height:0; }
   #legend .cap{ margin:7px 0 3px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
   #legend .row{ display:flex; align-items:center; gap:7px; margin:2px 0; }
   #legend i{ width:14px; height:9px; display:inline-block; border:1px solid rgba(0,0,0,.2); flex:none; }
@@ -78,10 +86,11 @@
   #loading-text{ color:#9db0bd; font-size:12px; }
 
   @media (max-width:760px){
-    #hud{ min-width:0; max-width:54vw; }
+    #left-rail{ width:54vw; }
     #country{ display:none; }
     #right-rail{ width:150px; }
     #legend{ display:none; }
+    #play-dock .foot{ display:none; }
   }
 </style>
 </head>
@@ -95,6 +104,7 @@
   </div>
 </div>
 
+<div id="left-rail">
 <section class="panel" id="hud">
   <h1>Ратград · карта<button class="fold" id="fold-hud" title="свернуть подсказки">—</button></h1>
   <div class="sub">7000 × 7000 км · вид сверху · 120 поселений</div>
@@ -120,59 +130,6 @@
     <tr><td>кадров в секунду</td><td id="hud-fps">—</td></tr>
   </table>
 </section>
-
-<div id="right-rail">
-<section class="panel" id="controls">
-  <div class="rowbtn">
-    <button id="zoom-in" title="приблизить">+</button>
-    <button id="zoom-out" title="отдалить">−</button>
-    <button id="fit" title="весь мир">⤢</button>
-    <button id="center" title="в центр мира">⌂</button>
-  </div>
-  <div class="rowbtn" title="время суток">
-    <button id="time-morning" title="07:00">утро</button>
-    <button id="time-day" title="13:00">день</button>
-    <button id="time-evening" title="19:30">вечер</button>
-    <button id="time-night" title="01:00">ночь</button>
-  </div>
-  <div class="group">карта</div>
-  <label><input type="checkbox" id="toggle-roads" checked> дороги</label>
-  <label><input type="checkbox" id="toggle-markings" checked> разметка и развязки</label>
-  <label><input type="checkbox" id="toggle-towns" checked> поселения</label>
-  <label><input type="checkbox" id="toggle-cities" checked> города</label>
-  <label><input type="checkbox" id="toggle-borders" checked> границы</label>
-  <label><input type="checkbox" id="toggle-water" checked> реки</label>
-  <label><input type="checkbox" id="toggle-grid" checked> сетка 10/25/50 км</label>
-  <label><input type="checkbox" id="toggle-q" checked> квадраты 250 м</label>
-  <div class="group">вода и рельеф</div>
-  <label><input type="checkbox" id="toggle-dams" checked> плотины и ГЭС</label>
-  <label><input type="checkbox" id="toggle-tides" checked> отмели и доки</label>
-  <label><input type="checkbox" id="toggle-ice" checked> лёд и иней</label>
-  <div class="group">жизнь</div>
-  <label><input type="checkbox" id="toggle-cars" checked> транспорт</label>
-  <label><input type="checkbox" id="toggle-peds" checked> пешеходы</label>
-  <label><input type="checkbox" id="toggle-trains" checked> железная дорога и поезда</label>
-  <label><input type="checkbox" id="toggle-airport" checked> аэропорты и вышка</label>
-  <label><input type="checkbox" id="toggle-seatraffic" checked> суда и разводные мосты</label>
-  <div class="group">город и мэры</div>
-  <label><input type="checkbox" id="toggle-ai" checked> мэры и журнал решений</label>
-  <label><input type="checkbox" id="toggle-growth" checked> рост городов</label>
-  <label><input type="checkbox" id="toggle-pedai" checked> толпа: силы и переходы</label>
-  <label><input type="checkbox" id="toggle-play" checked> полигон вождения</label>
-</section>
-
-<section class="panel" id="country">
-  <h2 id="country-title">страна</h2>
-  <table id="hud-country">
-    <tr><td>загрузка</td><td>…</td></tr>
-  </table>
-</section>
-
-<section class="panel" id="why">
-  <h2>что решили мэры</h2>
-  <ul id="why-list"><li>пока тихо</li></ul>
-</section>
-</div>
 
 <details class="panel" id="legend">
   <summary>легенда</summary>
@@ -219,11 +176,79 @@
     <div class="row"><i style="background:#58a8c8"></i> фарватер судов</div>
     <div class="row"><i style="background:#ffd75e"></i> самолёт на круге</div>
 
+    <div class="cap">ночь</div>
+    <div class="row"><i style="background:#ffd08e"></i> окна и фонари</div>
+    <div class="row"><i style="background:#fff2c8"></i> фары машин</div>
+    <div class="row"><i style="background:#ff6a6a"></i> хвостовые огни</div>
+    <div class="row"><i style="background:#9fe0ff"></i> огни полосы</div>
+
     <div class="cap">что построили мэры</div>
     <div class="row"><i style="background:#d8c8ae"></i> новые дома</div>
     <div class="row"><i style="background:#60804a"></i> парк</div>
   </div>
 </details>
+</div>
+
+<div id="right-rail">
+<section class="panel" id="controls">
+  <div class="rowbtn">
+    <button id="zoom-in" title="приблизить">+</button>
+    <button id="zoom-out" title="отдалить">−</button>
+    <button id="fit" title="весь мир">⤢</button>
+    <button id="center" title="в центр мира">⌂</button>
+  </div>
+  <div class="rowbtn" title="время суток">
+    <button id="time-morning" title="07:00">утро</button>
+    <button id="time-day" title="13:00">день</button>
+    <button id="time-evening" title="19:30">вечер</button>
+    <button id="time-night" title="01:00">ночь</button>
+  </div>
+  <div class="group">карта</div>
+  <label><input type="checkbox" id="toggle-roads" checked> дороги</label>
+  <label><input type="checkbox" id="toggle-markings" checked> разметка и развязки</label>
+  <label><input type="checkbox" id="toggle-towns" checked> поселения</label>
+  <label><input type="checkbox" id="toggle-cities" checked> города</label>
+  <label><input type="checkbox" id="toggle-borders" checked> границы</label>
+  <label><input type="checkbox" id="toggle-water" checked> реки</label>
+  <label><input type="checkbox" id="toggle-grid" checked> сетка 10/25/50 км</label>
+  <label><input type="checkbox" id="toggle-q" checked> квадраты 250 м</label>
+  <div class="group">вода и рельеф</div>
+  <label><input type="checkbox" id="toggle-dams" checked> плотины и ГЭС</label>
+  <label><input type="checkbox" id="toggle-tides" checked> отмели и доки</label>
+  <label><input type="checkbox" id="toggle-ice" checked> лёд и иней</label>
+  <div class="group">жизнь</div>
+  <label><input type="checkbox" id="toggle-cars" checked> транспорт</label>
+  <label><input type="checkbox" id="toggle-peds" checked> пешеходы</label>
+  <label><input type="checkbox" id="toggle-trains" checked> железная дорога и поезда</label>
+  <label><input type="checkbox" id="toggle-airport" checked> аэропорты и вышка</label>
+  <label><input type="checkbox" id="toggle-seatraffic" checked> суда и разводные мосты</label>
+  <div class="group">город и мэры</div>
+  <label><input type="checkbox" id="toggle-ai" checked> мэры и журнал решений</label>
+  <label><input type="checkbox" id="toggle-growth" checked> рост городов</label>
+  <label><input type="checkbox" id="toggle-pedai" checked> толпа: силы и переходы</label>
+  <label><input type="checkbox" id="toggle-play" checked> полигон вождения</label>
+</section>
+
+<section class="panel" id="play-dock">
+  <h2>полигон вождения</h2>
+  <canvas id="play-map" width="236" height="116"></canvas>
+  <div class="foot" id="play-foot">12 машин · светофор · очередь</div>
+</section>
+
+<section class="panel" id="country">
+  <h2 id="country-title">страна</h2>
+  <table id="hud-country">
+    <tr><td>загрузка</td><td>…</td></tr>
+  </table>
+</section>
+
+<section class="panel" id="why">
+  <h2>что решили мэры</h2>
+  <ul id="why-list"><li>пока тихо</li></ul>
+</section>
+</div>
+
+
 
 <div class="hint" id="hint">тяните — сдвиг · колесо и щипок — зум · двойной клик — ближе · клик по городу — выбрать</div>
 

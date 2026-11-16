@@ -14,6 +14,8 @@ import { buildPedestrians, advancePeds, pedPositions, pedBudget, PED, PED_LOD, P
 import { MARK_LOD, JUNCTION_LOD, LANES, markingWidthPx, dashPattern, turnRadiusM, isSolidAt,
   junctionType, ringDiameterM, zebra, junctions, roadFill, clipPolyline } from './markings2d.js';
 import { lightAt, overlayCss, cityLights, clockText, phaseAt, sunAltitudeDeg, seasonOf, snowCover01, DAY_MINUTES, dayOfYearOf, hourWithPhase } from './light2d.js';
+import { NIGHT, nightAmount, nightVeilCss, starsVisibility, starField, lightPoints, lightsBudget,
+  headlightPoly, strobeOn, lighthouseAngle, h01 as nightHash } from './night2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 import { buildMayors, advanceMayors, mayorStats, DRIVER } from './ai2d.js';
 import { buildPlay, stepPlay, playStats, PROFILE_COLOR, PLAY2D } from './play2d.js';
@@ -501,9 +503,11 @@ export class Map2D {
     /* §14: ночь и огни. Сначала всё притухает наложением, потом поверх зажигаются окна
        и фонари — так город ночью читается, а не просто «темнеет». */
     const light = this.light || this.updateLight();
+    const night = nightAmount(light);
     if (light.strength < 0.98) {
       ctx.save();
-      ctx.fillStyle = overlayCss(light.strength, light.tone);
+      // R-74.1: к ночи вуаль становится глубокой синевой, а не серой пеленой
+      ctx.fillStyle = night > 0.3 ? nightVeilCss(night) : overlayCss(light.strength, light.tone);
       ctx.fillRect(0, 0, view.w, view.h);
       ctx.restore();
     }
@@ -515,6 +519,8 @@ export class Map2D {
       this.drawLights(ctx, originX, originY, s, light.artificial);
       ctx.restore();
     }
+    if (night > 0.04) this.drawNightLight(ctx, originX, originY, s, light, night);
+    if (this.playCtx && this.showPlay && (this.frames % 2 === 0)) this.renderPlayDock();
 
     this.frames++;
     const now = performance.now();
@@ -584,7 +590,6 @@ export class Map2D {
     ctx.restore();
 
     this.drawScaleBar(ctx);
-    if (this.showPlay && this.play) this.drawPlayPanel(ctx);
     this.paintedKey = key;
   }
 
@@ -1147,7 +1152,7 @@ export class Map2D {
 
   drawPeds(ctx, originX, originY, s) {
     this.pedsInFrame = 0;
-    this.light = lightAt(8 * 60, dayOfYearOf(0));   // время суток §14; обновляется из tick
+    // R-74.1: время суток здесь не трогаем — раньше эта строка сбрасывала ночь на день
     const X = (x) => originX + x * s;
     const Y = (y) => originY - y * s;
     const view = this.view;
@@ -1645,12 +1650,6 @@ export class Map2D {
     const view = this.view;
     const conf = cityLights(artificial, s);
     const windows = artificial.windows, lamps = artificial.lamps;
-    /* хеш-дробь: свет в квартале не мигает от кадра к кадру (§16.1, без Math.random) */
-    const h01 = (n) => {
-      let x = Math.imul(n | 0, 2246822519) ^ 0x9e3779b9;
-      x = Math.imul(x ^ (x >>> 15), 3266489917);
-      return ((x ^ (x >>> 13)) >>> 0) / 4294967296;
-    };
     // сколько городов в кадре — столько и делим бюджет огней
     const visible = [];
     for (let i = 0; i < this.settlements.length; i++) {
@@ -1660,71 +1659,303 @@ export class Map2D {
       if (cx < -glow || cy < -glow || cx > view.w + glow || cy > view.h + glow) continue;
       visible.push({ i, t, cx, cy, glow });
     }
-    const perCity = Math.max(60, Math.round(1600 / Math.max(1, visible.length)));
+    const budget = lightsBudget(artificial, s, visible.length);
+    const perCity = budget.perCity;
     let dots = 0;
     for (const { i, cx, cy, glow } of visible) {
-      // свечение города — символ, а не контур застройки: три круга убывающей плотности
-      if (s < 40) {
-        const g = [0.26, 0.16, 0.09];
-        for (let k = 0; k < 3; k++) {
-          ctx.fillStyle = 'rgba(255,208,142,' + (g[k] * windows).toFixed(3) + ')';
-          ctx.beginPath();
-          ctx.arc(cx, cy, glow * (1 - k * 0.3), 0, Math.PI * 2);
-          ctx.fill();
-        }
+      // световое пятно города: тёплый ореол над застройкой — он и есть «город ночью»
+      {
+        const r = Math.min(120, Math.max(glow, this.cityAt(i).radiusKm * s * 0.8));
+        const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+        g2.addColorStop(0, 'rgba(255,206,138,' + (0.13 * windows).toFixed(3) + ')');
+        g2.addColorStop(0.5, 'rgba(255,196,124,' + (0.05 * windows).toFixed(3) + ')');
+        g2.addColorStop(1, 'rgba(255,190,120,0)');
+        ctx.fillStyle = g2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.fill();
       }
       if (s < 20) continue;                       // в кварталах огни только в зуме
       const city = this.cityAt(i);
-      const blocks = city.blocks;
-      const stride = Math.max(1, Math.ceil(blocks.length / perCity));
-      for (let b = 0; b < blocks.length; b += stride) {
-        if (dots >= 2200) return;
-        const bl = blocks[b];
-        if (bl.zone === 'park') continue;
-        if (h01(b * 131 + i * 17) > windows * 0.85) continue;
-        const c = bl.corners;
-        let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-        for (const q of c) {
-          if (q[0] < x0) x0 = q[0]; if (q[0] > x1) x1 = q[0];
-          if (q[1] < y0) y0 = q[1]; if (q[1] > y1) y1 = q[1];
-        }
-        const count = windows > 0.6 ? 2 : 1;
-        for (let k = 0; k < count; k++) {
-          const fx = 0.2 + 0.6 * h01(b * 977 + k * 37 + i * 5);
-          const fy = 0.2 + 0.6 * h01(b * 613 + k * 91 + i * 29);
-          const px = X(x0 + (x1 - x0) * fx), py = Y(y0 + (y1 - y0) * fy);
+      // R-74.4: точки света посчитаны один раз на город (F-226) — рисуем только те, что горят
+      const pts = lightPoints(city, i);
+      const stride = Math.max(1, Math.ceil(pts.windows.length / perCity));
+      for (let b = 0; b < pts.windows.length; b += stride) {
+        if (dots >= NIGHT.maxDots) return;
+        const bl = pts.windows[b];
+        if (bl.on > budget.windowsFrom) continue;
+        for (let k = 0; k < budget.dotCount; k++) {
+          const q = bl.pts[k];
+          if (budget.dotCount === 1 && q.h > windows) continue;   // одна лампа на квартал — по жребию
+          const px = X(q.x), py = Y(q.y);
           if (px < -4 || py < -4 || px > view.w + 4 || py > view.h + 4) continue;
-          ctx.fillStyle = bl.zone === 'center'
-            ? 'rgba(255,226,168,0.92)'
-            : 'rgba(255,214,150,' + (0.5 + 0.4 * windows).toFixed(2) + ')';
+          if (s >= 30) {
+            // ореол вокруг окна: ночью свет не точка, а пятно
+            const halo = ctx.createRadialGradient(px, py, 0, px, py, conf.radiusPx * 3);
+            halo.addColorStop(0, 'rgba(255,214,150,' + (0.18 * windows).toFixed(3) + ')');
+            halo.addColorStop(1, 'rgba(255,210,146,0)');
+            ctx.fillStyle = halo;
+            ctx.beginPath();
+            ctx.arc(px, py, conf.radiusPx * 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = bl.center
+            ? 'rgba(255,232,176,0.96)'
+            : 'rgba(255,220,160,' + (0.62 + 0.34 * windows).toFixed(2) + ')';
           ctx.beginPath();
-          ctx.arc(px, py, conf.radiusPx, 0, Math.PI * 2);
+          ctx.arc(px, py, Math.max(0.8, conf.radiusPx * (s >= 30 ? 1.25 : 1)), 0, Math.PI * 2);
           ctx.fill();
           dots++;
         }
       }
-      // фонари по кольцам и проспектам
+      // фонари по кольцам и проспектам; в глубоком зуме — ещё и световые пятна
       if (s >= 40 && lamps > 0.1) {
-        for (const st of city.streets) {
-          if (!st.major || !st.pts || st.pts.length < 2) continue;
-          for (let k = 1; k < st.pts.length; k++) {
-            if (dots >= 2200) return;
-            const [x1, y1] = st.pts[k - 1], [x2, y2] = st.pts[k];
-            const len = Math.hypot(x2 - x1, y2 - y1);
-            for (let d = 0.18; d < len; d += 0.18) {
-              if (dots >= 2200) return;
-              const u = d / len;
-              const px = X(x1 + (x2 - x1) * u), py = Y(y1 + (y2 - y1) * u);
-              if (px < -4 || py < -4 || px > view.w + 4 || py > view.h + 4) continue;
-              ctx.fillStyle = 'rgba(255,238,190,' + (0.8 * lamps).toFixed(2) + ')';
-              ctx.beginPath();
-              ctx.arc(px, py, Math.max(0.6, conf.radiusPx * 0.7), 0, Math.PI * 2);
-              ctx.fill();
-              dots++;
+        const lampStride = Math.max(1, Math.ceil(pts.lamps.length / perCity));
+        for (let k = 0; k < pts.lamps.length; k += lampStride) {
+          if (dots >= NIGHT.maxDots) return;
+          const q = pts.lamps[k];
+          const px = X(q.x), py = Y(q.y);
+          if (px < -4 || py < -4 || px > view.w + 4 || py > view.h + 4) continue;
+          ctx.fillStyle = 'rgba(255,238,190,' + (0.8 * lamps).toFixed(2) + ')';
+          ctx.beginPath();
+          ctx.arc(px, py, Math.max(0.6, conf.radiusPx * 0.7), 0, Math.PI * 2);
+          ctx.fill();
+          dots++;
+        }
+        if (budget.pools) this.drawLampPools(ctx, X, Y, s, lamps, visible);
+      }
+    }
+  }
+
+  /* R-74.2: световые пятна фонарей — только в глубоком зуме и только там, где они видны. */
+  drawLampPools(ctx, X, Y, s, lamps, cities) {
+    const r = Math.max(3, (NIGHT.lampPoolM / 1000) * s);
+    if (r < 2.6) return;
+    let drawn = 0;
+    ctx.save();
+    for (const { i, cx, cy } of cities) {
+      if (drawn >= 160) break;
+      const pts = lightPoints(this.cityAt(i), i);
+      const step = Math.max(1, Math.ceil(pts.lamps.length / 40));
+      for (let k = 0; k < pts.lamps.length; k += step) {
+        if (drawn >= 160) break;
+        const q = pts.lamps[k];
+        const px = X(q.x), py = Y(q.y);
+        if (Math.hypot(px - cx, py - cy) > 260) continue;
+        const g = ctx.createRadialGradient(px, py, 0, px, py, r);
+        g.addColorStop(0, 'rgba(255,226,168,' + (0.32 * lamps).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,214,150,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
+        drawn++;
+      }
+    }
+    ctx.restore();
+  }
+
+  /* R-74.1–R-74.3: ночь как состояние — звёзды над миром, фары, прожектор поезда,
+     огни полосы, ходовые огни судов и луч маяка. Всё от игрового времени, без Math.random. */
+  drawNightLight(ctx, originX, originY, s, light, night) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view;
+    const half = WORLD2D.halfKm * s;
+    const wx0 = originX - half, wy0 = originY - half;
+    const wx1 = originX + half, wy1 = originY + half;
+    const tSec = (this.transport ? this.transport.minutes : 0) * 60;
+
+    /* 1. звёзды — только за пределами мира: там, где нет карты, ночь буквальная */
+    const stars = starsVisibility(night);
+    if (stars > 0.02) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, view.w, view.h);
+      ctx.rect(Math.max(0, wx0), Math.max(0, wy0), Math.min(view.w, wx1) - Math.max(0, wx0),
+        Math.min(view.h, wy1) - Math.max(0, wy0));
+      ctx.clip('evenodd');
+      const field = this.starField || (this.starField = starField());
+      for (const st of field) {
+        const px = st.u * view.w, py = st.v * view.h;
+        const tw = 0.65 + 0.35 * Math.sin(tSec * 0.7 + st.tw);
+        ctx.fillStyle = 'rgba(232,240,255,' + (0.55 * stars * st.b * tw).toFixed(3) + ')';
+        ctx.fillRect(px, py, st.b > 0.8 ? 1.8 : 1.1, st.b > 0.8 ? 1.8 : 1.1);
+      }
+      ctx.restore();
+    }
+
+    /* 2. машины: конус фар вперёд и красный огонёк сзади */
+    if (night > NIGHT.beamFrom && this.showVehicles && this.transport) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(wx0, wy0, wx1 - wx0, wy1 - wy0);
+      ctx.clip();
+      let lit = 0;
+      for (const v of this.transport.vehicles) {
+        if (v.kind !== 'ground') continue;
+        const p = vehiclePosition(v);
+        const px = X(p.x), py = Y(p.y);
+        if (px < -60 || py < -60 || px > view.w + 60 || py > view.h + 60) continue;
+        if (lit++ > 320) break;
+        const ang = -p.angle;                    // экранный угол: ось Y вниз
+        const beam = headlightPoly(px, py, ang, s);
+        const cx = X(p.x + Math.cos(p.angle) * 0.02), cy = Y(p.y + Math.sin(p.angle) * 0.02);
+        const g = ctx.createLinearGradient(cx, cy, px + Math.cos(ang) * (NIGHT.beamM / 1000) * s,
+          py + Math.sin(ang) * (NIGHT.beamM / 1000) * s);
+        g.addColorStop(0, 'rgba(255,244,208,' + (0.30 * night).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,244,208,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(beam[0][0], beam[0][1]);
+        for (let k = 1; k < beam.length; k++) ctx.lineTo(beam[k][0], beam[k][1]);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,92,72,' + (0.75 * night).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(px - Math.cos(ang) * 1.4, py - Math.sin(ang) * 1.4, 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    /* 3. поезда: прожектор вдоль пути и огни на станциях */
+    if (night > 0.35 && this.rail && s >= 2) {
+      ctx.save();
+      for (const t of this.rail.trains) {
+        const pts = trainPoints(this.rail, t);
+        if (!pts) continue;
+        const px = X(pts.x), py = Y(pts.y);
+        if (px < -120 || py < -120 || px > view.w + 120 || py > view.h + 120) continue;
+        const line = this.rail.lines.find((l) => l.id === t.line);
+        if (!line) continue;
+        const b = pointOnLineCached(line, Math.max(0, Math.min(line.lengthKm, t.s + t.dir * 0.4)));
+        const ang = Math.atan2(-(Y(b.y) - py), X(b.x) - px);
+        const len = Math.min(140, (NIGHT.trainBeamM / 1000) * s);
+        const g = ctx.createLinearGradient(px, py, px + Math.cos(ang) * len, py + Math.sin(ang) * len);
+        g.addColorStop(0, 'rgba(255,248,214,' + (0.34 * night).toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(255,248,214,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + Math.cos(ang - 0.16) * len, py + Math.sin(ang - 0.16) * len);
+        ctx.lineTo(px + Math.cos(ang + 0.16) * len, py + Math.sin(ang + 0.16) * len);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,252,226,' + (0.9 * night).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    /* 4. аэродромы: огни ВПП и стробы бортов */
+    if (night > NIGHT.runwayFrom && this.air) {
+      ctx.save();
+      for (const a of this.air.airports) {
+        const L = AIR.runwayKm * s;
+        const ca = Math.cos(a.heading), sa = Math.sin(a.heading);
+        const cx = X(a.x), cy = Y(a.y);
+        if (cx < -L || cy < -L || cx > view.w + L || cy > view.h + L) continue;
+        if (s >= 1.2) {
+          const stepPx = Math.max(4, (NIGHT.runwayM / 1000) * s);
+          for (let d = -L / 2; d <= L / 2; d += stepPx) {
+            for (const side of [-1, 1]) {
+              const ex = cx + ca * d - sa * side * Math.max(2.5, s * 0.03);
+              const ey = cy - sa * d - ca * side * Math.max(2.5, s * 0.03);
+              ctx.fillStyle = 'rgba(159,224,255,' + (0.45 + 0.5 * night).toFixed(2) + ')';
+              ctx.fillRect(ex - 0.9, ey - 0.9, 1.8, 1.8);
             }
           }
+          // торец полосы — ярче
+          ctx.fillStyle = 'rgba(220,244,255,' + (0.8 * night).toFixed(2) + ')';
+          ctx.fillRect(cx + ca * L / 2 - 1.5, cy - sa * L / 2 - 1.5, 3, 3);
         }
       }
+      for (const p of this.air.planes) {
+        const px = X(p.x), py = Y(p.y);
+        if (px < 0 || py < 0 || px > view.w || py > view.h) continue;
+        if (!strobeOn(tSec + p.id.length * 0.37)) continue;
+        ctx.fillStyle = 'rgba(255,255,255,' + (0.85 * night).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,90,80,' + (0.7 * night).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(px - 2.4, py + 1.2, 1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    /* 5. суда, мосты и маяк у порта */
+    if (night > 0.3 && this.seaTraffic && s >= 0.25) {
+      const ports = this.tides ? this.tides.ports : [];
+      ctx.save();
+      for (const ship of this.seaTraffic.ships) {
+        const p = shipPoint(this.seaTraffic, ship, ports);
+        if (!p) continue;
+        const px = X(p.x), py = Y(p.y);
+        if (px < -20 || py < -20 || px > view.w + 20 || py > view.h + 20) continue;
+        const lane = this.seaTraffic.lanes.find((l) => l.id === ship.lane);
+        const A = ports[lane.a], B = ports[lane.b];
+        if (!A || !B) continue;
+        const dx = B.x - A.x, dy = B.y - A.y, l = Math.max(1e-9, Math.hypot(dx, dy));
+        const ux = (dx / l) * ship.dir, uy = (dy / l) * ship.dir;
+        const nx = -uy, ny = ux;
+        const side = Math.max(2, Math.min(7, s * 0.05));
+        // ходовые огни: зелёный справа, красный слева, белый на мачте
+        ctx.fillStyle = 'rgba(120,255,170,' + (0.85 * night).toFixed(2) + ')';
+        ctx.beginPath(); ctx.arc(px + ux * side * 0.6 + nx * side * 0.5, py - uy * side * 0.6 - ny * side * 0.5, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,110,96,' + (0.85 * night).toFixed(2) + ')';
+        ctx.beginPath(); ctx.arc(px + ux * side * 0.6 - nx * side * 0.5, py - uy * side * 0.6 + ny * side * 0.5, 1.2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,248,214,' + (0.7 * night).toFixed(2) + ')';
+        ctx.fillRect(px - 0.8, py - side * 0.7, 1.6, 1.6);
+        // кильватерный след светится
+        if (ship.v > 0) {
+          ctx.strokeStyle = 'rgba(200,236,255,' + (0.22 * night).toFixed(2) + ')';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(px - ux * side, py + uy * side);
+          ctx.lineTo(px - ux * side * 3.4, py + uy * side * 3.4);
+          ctx.stroke();
+        }
+      }
+      // разводные мосты: жёлтые огни на башнях
+      for (const lane of this.seaTraffic.lanes) {
+        for (const br of lane.bridges || []) {
+          const px = X(br.x), py = Y(br.y);
+          if (px < -10 || py < -10 || px > view.w + 10 || py > view.h + 10) continue;
+          const blink = strobeOn(tSec + br.sKm) ? 1 : 0.35;
+          ctx.fillStyle = 'rgba(255,214,110,' + (0.85 * night * blink).toFixed(2) + ')';
+          ctx.beginPath(); ctx.arc(px, py - 3, 1.6, 0, Math.PI * 2); ctx.fill();
+          ctx.beginPath(); ctx.arc(px, py + 3, 1.6, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      // маяк: луч вращается, видно только в среднем зуме
+      if (s >= 0.8 && s <= 120) {
+        const ang = lighthouseAngle(tSec);
+        for (const port of ports) {
+          const px = X(port.x), py = Y(port.y);
+          if (px < -40 || py < -40 || px > view.w + 40 || py > view.h + 40) continue;
+          const len = Math.min(180, NIGHT.lighthouseM * s * 0.5);
+          const a = -ang;
+          const g = ctx.createLinearGradient(px, py, px + Math.cos(a) * len, py + Math.sin(a) * len);
+          g.addColorStop(0, 'rgba(255,246,214,' + (0.30 * night).toFixed(3) + ')');
+          g.addColorStop(1, 'rgba(255,246,214,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.moveTo(px, py);
+          ctx.lineTo(px + Math.cos(a - 0.05) * len, py + Math.sin(a - 0.05) * len);
+          ctx.lineTo(px + Math.cos(a + 0.05) * len, py + Math.sin(a + 0.05) * len);
+          ctx.closePath();
+          ctx.fill();
+          ctx.fillStyle = 'rgba(255,252,226,' + (0.9 * night).toFixed(2) + ')';
+          ctx.beginPath(); ctx.arc(px, py, 1.8, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+      ctx.restore();
     }
   }
 
@@ -2058,28 +2289,32 @@ export class Map2D {
 
   /* §16.4: полигон ИИ в кадре — 12 машин на кольце, светофор по F-193, очередь и «прошло».
      Коробка живёт в правом нижнем углу над линейкой масштаба и стоит 12 машин, а не 966. */
-  drawPlayPanel(ctx) {
-    const play = this.play;
-    const st = playStats(play);
-    const w = 246, h = 108;
-    // внизу по центру: слева легенда и HUD, справа колонка и линейка — там тесно
-    const x = Math.max(12, (this.view.w - w) / 2), y = this.view.h - h - 42;
-    ctx.save();
-    ctx.fillStyle = 'rgba(8,16,24,0.72)';
-    ctx.strokeStyle = 'rgba(150,190,220,0.35)';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = 'rgba(206,226,240,0.92)';
-    ctx.font = '10.5px ui-monospace, monospace';
-    ctx.textBaseline = 'top';
-    ctx.fillText('полигон вождения · 12 машин', x + 9, y + 7);
+  /* R-74.5: полигон живёт в правой рейке, в своём канвасе — на карту он больше не наезжает. */
+  attachPlayCanvas(el) {
+    if (!el || typeof el.getContext !== 'function') return;
+    this.playCanvas = el;
+    this.playCtx = el.getContext('2d');
+    this.renderPlayDock();
+  }
 
-    // полоса: кольцо 700 м укладывается в 220 px
-    const roadX = x + 13, roadY = y + 40, roadW = w - 26;
+  renderPlayDock() {
+    const ctx = this.playCtx, el = this.playCanvas;
+    if (!ctx || !el || !this.play) return;
+    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
+    const w = el.clientWidth || 236, h = 116;
+    if (el.width !== Math.round(w * dpr) || el.height !== Math.round(h * dpr)) {
+      el.width = Math.round(w * dpr);
+      el.height = Math.round(h * dpr);
+    }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const st = playStats(this.play);
+
+    // полоса: кольцо 700 м укладывается в ширину дока
+    const roadX = 12, roadY = 26, roadW = w - 24;
     const k = roadW / PLAY2D.ringM;
+    ctx.fillStyle = 'rgba(11,20,28,1)';
+    ctx.fillRect(0, 0, w, h);
     ctx.strokeStyle = 'rgba(120,140,155,0.85)';
     ctx.lineWidth = 9;
     ctx.beginPath();
@@ -2094,7 +2329,7 @@ export class Map2D {
     ctx.lineTo(roadX + roadW, roadY);
     ctx.stroke();
     ctx.setLineDash([]);
-    // стоп-линия и светофор
+
     const stopX = roadX + PLAY2D.stopM * k;
     ctx.strokeStyle = 'rgba(245,245,240,0.9)';
     ctx.lineWidth = 2;
@@ -2105,18 +2340,17 @@ export class Map2D {
     const lamp = st.state === 'green' ? '#5ddc84' : st.state === 'yellow' ? '#ffd75e' : '#ff6a52';
     ctx.fillStyle = 'rgba(6,10,14,0.9)';
     ctx.beginPath();
-    ctx.arc(stopX + 9, roadY - 15, 5.4, 0, Math.PI * 2);
+    ctx.arc(stopX + 9, roadY - 16, 5.6, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = lamp;
     ctx.beginPath();
-    ctx.arc(stopX + 9, roadY - 15, 3.6, 0, Math.PI * 2);
+    ctx.arc(stopX + 9, roadY - 16, 3.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // машины: короткие штрихи по характеру; тормозящие — с красной искрой
-    for (const c of play.cars) {
+    for (const c of this.play.cars) {
       const cx = roadX + c.x * k;
       ctx.strokeStyle = PROFILE_COLOR[c.profile.id];
-      ctx.lineWidth = 4.4;
+      ctx.lineWidth = 4.6;
       ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(cx - 2.4, roadY - 1);
@@ -2125,23 +2359,33 @@ export class Map2D {
       if (c.braking > 0.15) {
         ctx.fillStyle = 'rgba(255,90,70,' + (0.3 + 0.6 * c.braking).toFixed(2) + ')';
         ctx.beginPath();
-        ctx.arc(cx + 2.6, roadY - 5.2, 1.7, 0, Math.PI * 2);
+        ctx.arc(cx + 2.8, roadY - 5.4, 1.7, 0, Math.PI * 2);
         ctx.fill();
       }
     }
     ctx.lineCap = 'butt';
 
+    // замер дистанции в очереди
+    if (st.minGap !== null) {
+      ctx.strokeStyle = 'rgba(150,200,235,0.35)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(stopX, roadY + 12);
+      ctx.lineTo(roadX + roadW, roadY + 12);
+      ctx.stroke();
+    }
     ctx.fillStyle = 'rgba(196,214,228,0.85)';
     ctx.font = '10px ui-monospace, monospace';
-    const names = { green: 'зелёный', yellow: 'жёлтый', red: 'красный' };
-    ctx.fillText('свет ' + names[st.state] + ' · очередь ' + st.queue + ' · зелёный ' + st.green.toFixed(0) + ' с', x + 9, y + 58);
-    ctx.fillText('прошло ' + st.passed + ' · в среднем ' + st.avgKmh.toFixed(0) + ' км/ч · зазор ' +
-      (st.minGap === null ? '—' : st.minGap.toFixed(1) + ' м'), x + 9, y + 73);
-    const byProf = Object.entries(st.byProfile).filter(([, n]) => n > 0)
-      .map(([id, n]) => (DRIVER[id] ? DRIVER[id].name : id) + ' ' + n).join(' · ');
-    ctx.fillStyle = 'rgba(150,172,188,0.9)';
-    ctx.fillText(byProf, x + 9, y + 88);
-    ctx.restore();
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('прошло ' + st.passed + ' · зазор ' +
+      (st.minGap === null ? '—' : st.minGap.toFixed(1) + ' м'), 10, h - 8);
+    ctx.textBaseline = 'alphabetic';
+
+    if (this.hud.playFoot) {
+      const names = { green: 'зелёный', yellow: 'жёлтый', red: 'красный' };
+      this.hud.playFoot.textContent = 'свет ' + names[st.state] + ' · очередь ' + st.queue +
+        ' · зелёный ' + st.green.toFixed(0) + ' с';
+    }
   }
 
   /* §16.8: журнал «почему» — последние решения мэров с решающими факторами. */
@@ -2363,4 +2607,15 @@ function pointOnLineLocal(line, sKm) {
   let dx = (b[0] - a[0]) / seg, dy = (b[1] - a[1]) / seg;
   if (Math.hypot(dx, dy) < 1e-6) { dx = 1; dy = 0; }
   return { x: a[0] + (b[0] - a[0]) * u, y: a[1] + (b[1] - a[1]) * u, dx, dy };
+}
+
+/* Точка на перегоне для ночного прожектора: та же формула F-211, что в transit2d. */
+function pointOnLineCached(line, sKm) {
+  const s = Math.max(0, Math.min(line.lengthKm, sKm));
+  let i = 1;
+  while (i < line.acc.length - 1 && line.acc[i] < s) i++;
+  const a = line.pts[i - 1], b = line.pts[i];
+  const seg = Math.max(1e-9, line.acc[i] - line.acc[i - 1]);
+  const u = Math.max(0, Math.min(1, (s - line.acc[i - 1]) / seg));
+  return { x: a[0] + (b[0] - a[0]) * u, y: a[1] + (b[1] - a[1]) * u };
 }
