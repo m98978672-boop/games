@@ -123,11 +123,13 @@ function subStep(play, dt) {
 
 /* Сводка для HUD и рисунка. */
 export function playStats(play) {
+  // §98: и панель, и HUD спрашивают одно и то же — считаем раз на шаг
+  if (play.statsCache && play.statsCache.steps === play.steps) return play.statsCache.stats;
   const speed = play.cars.reduce((a, c) => a + c.v, 0) / Math.max(1, play.cars.length);
   const byProfile = {};
   for (const p of Object.keys(DRIVER)) byProfile[p] = 0;
   for (const c of play.cars) byProfile[c.profile.id]++;
-  return {
+  const stats = {
     state: play.light.state,
     queue: play.light.queue,
     green: play.light.green,
@@ -138,6 +140,8 @@ export function playStats(play) {
     minGap: Number.isFinite(play.minGap) ? play.minGap : null,
     byProfile
   };
+  play.statsCache = { steps: play.steps, stats };
+  return stats;
 }
 
 /* Цвет машины по характеру — он же в кадре на карте мира. */

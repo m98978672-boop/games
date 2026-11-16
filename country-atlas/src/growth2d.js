@@ -36,10 +36,10 @@ function centerOf(city, town) {
   return [town.x, town.y];
 }
 
-export function buildGrowth(town, city) {
+export function buildGrowth(town, city, radiusKm = null) {
   return {
     town: town.name, cx: centerOf(city, town)[0], cy: centerOf(city, town)[1],
-    radiusKm: cityRadius(city, town),
+    radiusKm: radiusKm || cityRadius(city, town),
     houses: [], industry: [], parks: [], civic: [], bypass: null,
     widen: 0, day: 0, decisions: 0, built: 0
   };
@@ -87,6 +87,7 @@ export function applyGrowth(growth, actionId, decisionNo, day) {
       const spot = place(growth, rand, GROWTH.houseW);
       if (!spot) break;
       const h = {
+        kind: 'house',
         x: spot.x, y: spot.y, ang: spot.ang + (rand() - 0.5) * 0.5,
         corners: quad(spot.x, spot.y, GROWTH.houseW, GROWTH.houseD, spot.ang),
         floors: 2 + Math.floor(rand() * 6), builtDay: day, etaDays: eta,
@@ -99,7 +100,7 @@ export function applyGrowth(growth, actionId, decisionNo, day) {
   } else if (actionId === 'industry') {
     const spot = place(growth, rand, GROWTH.industryW);
     if (spot) {
-      const w = { x: spot.x, y: spot.y, ang: spot.ang,
+      const w = { kind: 'industry', x: spot.x, y: spot.y, ang: spot.ang,
         corners: quad(spot.x, spot.y, GROWTH.industryW, GROWTH.industryD, spot.ang),
         builtDay: day, etaDays: eta, tone: '#9aa0a2', roof: '#6c7476' };
       growth.industry.push(w);
@@ -118,6 +119,7 @@ export function applyGrowth(growth, actionId, decisionNo, day) {
         });
       }
       const park = {
+        kind: 'park',
         x: spot.x, y: spot.y, ang: spot.ang, w: GROWTH.parkM, d: GROWTH.parkM * 0.72,
         corners: quad(spot.x, spot.y, GROWTH.parkM, GROWTH.parkM * 0.72, spot.ang),
         trees, builtDay: day, etaDays: eta,
@@ -129,7 +131,7 @@ export function applyGrowth(growth, actionId, decisionNo, day) {
   } else if (actionId === 'school' || actionId === 'hospital') {
     const spot = place(growth, rand, GROWTH.civicW);
     if (spot) {
-      const w = { kind: actionId, x: spot.x, y: spot.y, ang: spot.ang,
+      const w = { kind: 'civic', type: actionId, x: spot.x, y: spot.y, ang: spot.ang,
         corners: quad(spot.x, spot.y, GROWTH.civicW, GROWTH.civicD, spot.ang),
         builtDay: day, etaDays: eta, tone: actionId === 'school' ? '#d9c9a6' : '#e4e0d6',
         roof: actionId === 'school' ? '#7a5a3e' : '#8a8f92' };
@@ -148,7 +150,7 @@ export function applyGrowth(growth, actionId, decisionNo, day) {
       const a = a0 + (span * k) / 24;
       pts.push([growth.cx + Math.cos(a) * r, growth.cy + Math.sin(a) * r]);
     }
-    growth.bypass = { pts, radiusKm: r, builtDay: day, etaDays: eta, span };
+    growth.bypass = { kind: 'bypass', pts, radiusKm: r, builtDay: day, etaDays: eta, span };
     out.push(growth.bypass);
   }
   growth.built += out.length;
@@ -163,6 +165,10 @@ export function progressAt(item, day) {
 
 /* Сколько всего построено и сколько ещё в лесах. */
 export function growthStats(growth, day = growth.day) {
+  // §98: сводка спрашивается каждый кадр, а меняется раз в день — кэшим по состоянию
+  const key = day + ':' + growth.houses.length + ':' + growth.industry.length + ':' + growth.parks.length +
+    ':' + growth.civic.length + ':' + growth.widen + ':' + (growth.bypass ? 1 : 0) + ':' + growth.decisions;
+  if (growth.statsCache && growth.statsCache.key === key) return growth.statsCache.stats;
   const all = [...growth.houses, ...growth.industry, ...growth.parks, ...growth.civic];
   if (growth.bypass) all.push(growth.bypass);
   let done = 0, building = 0, areaKm2 = 0;
@@ -171,10 +177,12 @@ export function growthStats(growth, day = growth.day) {
     if (p >= 1) done++; else building++;
   }
   for (const h of growth.houses) areaKm2 += GROWTH.houseW * GROWTH.houseD * (h.floors || 1);
-  return {
+  const stats = {
     houses: growth.houses.length, industry: growth.industry.length,
     parks: growth.parks.length, civic: growth.civic.length,
     bypass: !!growth.bypass, widen: growth.widen,
     done, building, areaKm2, decisions: growth.decisions, day: growth.day
   };
+  growth.statsCache = { key, stats };
+  return stats;
 }

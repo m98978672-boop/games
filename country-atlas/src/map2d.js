@@ -3,7 +3,7 @@
 import { WORLD2D, settlements, rankSettlements, heightKm, colorAtKm } from './world2d.js';
 import { buildRoads, ROAD_CLASS } from './roads2d.js';
 import { buildTransport, advance as advanceTransport, vehiclePosition, screenLengthPx, VEHICLE } from './transport2d.js';
-import { buildCity, cityLod, ZONE, CITY_STREET_SCALE, CITY_BUILDING_SCALE, buildingOutlinePx } from './city2d.js';
+import { buildCity, cityLod, cityPopulation, classFor, cityRadiusKm, ZONE, CITY_STREET_SCALE, CITY_BUILDING_SCALE, buildingOutlinePx } from './city2d.js';
 import { buildBorders, BORDER } from './borders2d.js';
 import { buildEconomy, advanceEconomy, RESOURCE_ORDER, RESOURCE } from './economy2d.js';
 import { buildWater, RIVER, riverStrokePx, riverKeepCount, riverVisibleAt } from './rivers2d.js';
@@ -17,6 +17,9 @@ import { lightAt, overlayCss, cityLights, clockText, phaseAt, sunAltitudeDeg, se
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 import { buildMayors, advanceMayors, mayorStats, DRIVER } from './ai2d.js';
 import { buildPlay, stepPlay, playStats, PROFILE_COLOR, PLAY2D } from './play2d.js';
+import { buildRail, stepRail, trainPoints, buildAir, stepAir, buildSea, stepSea, shipPoint,
+  transitStats, RAIL, AIR, SEA } from './transit2d.js';
+import { loadFrom, saveTo, elapsedMinutes, catchUp, formatReport, OFFLINE } from './offline2d.js';
 import { buildGrowth, applyGrowth, growthStats, progressAt, GROWTH } from './growth2d.js';
 import { buildCrowd, stepCrowd, crowdStats, mayCross } from './pedsoc2d.js';
 
@@ -65,6 +68,13 @@ export class Map2D {
     this.why = [];             // последние решения мэров — то самое «почему»
     this.lastMayorDay = 0;
     this.showPlay = true;      // полигон IDM и светофор §16.4
+    this.showTrains = true;    // железная дорога и поезда §16.7
+    this.rail = null;
+    this.showAir = true;       // аэропорты, самолёты и вышка §16.7
+    this.air = null;
+    this.showSeaTraffic = true;// суда, фарватер и разводные мосты §16.7
+    this.seaTraffic = null;
+    this.catchUpReport = null; // что случилось, пока окна не было (F-218…F-220)
     this.showGrowth = true;    // рост городов от решений мэров §16.8
     this.growth = new Map();   // индекс города → что там выросло
     this.showPedAI = true;     // социальные силы и переходы §16.6
@@ -428,6 +438,14 @@ export class Map2D {
         this.updateWhyPanel(events);
       }
     }
+    if (this.showTrains && this.roads) stepRail(this.buildRailLayer(), dtSec);
+    if (this.showAir) stepAir(this.buildAirLayer(), dtSec);
+    if (this.showSeaTraffic && this.water) {
+      const sea = this.buildSeaLayer();
+      const tides = this.buildTides();
+      const bridges = (this.water.bridges && this.water.bridges.list) || [];
+      stepSea(sea, tides.ports, dtSec, bridges, this.transport ? this.transport.minutes : 0);
+    }
     if (this.showPedAI && this.showPeds) this.stepCrowds(dtSec);
     this.updatePlay(dtSec);
   }
@@ -554,7 +572,12 @@ export class Map2D {
     if (this.showRoads && this.roads) this.drawRoads(ctx, originX, originY, s);
     if (this.showRoads && this.showMarkings && this.roads && s >= JUNCTION_LOD) this.drawJunctions(ctx, originX, originY, s);
     if (this.showRoads && this.showMarkings && this.roads && s >= MARK_LOD) this.drawMarkings(ctx, originX, originY, s);
+    if (this.showTrains && this.rail && s >= 0.35) this.drawRail(ctx, originX, originY, s);
     if (this.showCities && cityLod(s) > 0) this.drawCities(ctx, originX, originY, s);
+    if (this.showTrains && this.rail && s >= 6) this.drawTrains(ctx, originX, originY, s);
+    if (this.showSeaTraffic && this.seaTraffic && s >= 0.3) this.drawSeaTraffic(ctx, originX, originY, s);
+    if (this.showAir && this.air && s >= 1.0) this.drawAirports(ctx, originX, originY, s);
+    if (this.showAir && this.air) this.drawPlanes(ctx, originX, originY, s);
     if (this.showGrid) this.drawGrid(ctx, originX, originY, s);
     if (this.showSettlements) this.drawSettlements(ctx, originX, originY, s);
     if (this.showQ) this.drawQ(ctx, originX, originY, s);
@@ -731,11 +754,311 @@ export class Map2D {
     return this.mayors;
   }
 
-  /* §16.8: что выросло в городе от решений мэра (R-16.28). */
-  growthAt(index) {
+  /* §16.7: рельсы строятся из магистралей один раз — 98 перегонов и 8 составов. */
+  buildRailLayer() {
+    if (this.rail) return this.rail;
+    this.rail = buildRail(this.roads || buildRoads(), this.settlements);
+    return this.rail;
+  }
+
+  buildAirLayer() {
+    if (this.air) return this.air;
+    this.air = buildAir(this.settlements, this.ranks);
+    return this.air;
+  }
+
+  buildSeaLayer() {
+    if (this.seaTraffic) return this.seaTraffic;
+    const tides = this.buildTides();
+    const bridges = (this.water && this.water.bridges && this.water.bridges.list) || [];
+    this.seaTraffic = buildSea(tides.ports, bridges);
+    return this.seaTraffic;
+  }
+
+  /* F-218…F-220: пока окна не было, страна жила числами — догоняем теми же системами. */
+  catchUpOffline(minutes, now = Date.now()) {
+    const days = Math.floor(minutes / 1440);
+    const leftMin = minutes - days * 1440;
+    if (this.transport) this.transport.minutes += leftMin;
+    const self = this;
+    const report = catchUp({
+      transport: this.transport,
+      economy: this.economy,
+      advanceEconomy: advanceEconomy,
+      mayors: this.showAI ? this.buildMayorsLayer() : null,
+      journal: this.why,
+      advanceMayors: advanceMayors,
+      applyGrowth: (index, action) => {
+        const g = self.growthAt(index, true);
+        return applyGrowth(g, action, g.decisions, Math.floor(self.transport.minutes / 1440));
+      }
+    }, days);
+    if (report.days) {
+      this.lastMayorDay = Math.floor(this.transport.minutes / 1440);
+      this.lastEconomyDay = this.lastMayorDay;
+      this.catchUpReport = report;
+      this.updateWhyPanel(this.why.slice(-3));
+    }
+    return report;
+  }
+
+  /* §16.7: железная дорога. На обзоре — тонкая нить вдоль трассы, в зуме — два рельса
+     и шпалы, а по ним идут составы: голова, вагоны и огонёк спереди. */
+  drawRail(ctx, originX, originY, s) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const view = this.view, pad = 60;
+    const halfW = view.w / 2 / s + 20, halfH = view.h / 2 / s + 20;
+    const deep = s >= 70, mid = s >= 6;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+
+    for (const line of this.rail.lines) {
+      // грубое отсечение по габаритам перегона
+      let mx = 0, my = 0;
+      for (const p of line.pts) { mx += p[0]; my += p[1]; }
+      mx /= line.pts.length; my /= line.pts.length;
+      if (Math.abs(mx - this.center.x) > halfW + line.lengthKm / 2 || Math.abs(my - this.center.y) > halfH + line.lengthKm / 2) continue;
+
+      ctx.strokeStyle = 'rgba(30,28,26,0.55)';
+      ctx.lineWidth = Math.max(1.1, Math.min(4, 0.004 * s + 1));
+      ctx.beginPath();
+      ctx.moveTo(X(line.pts[0][0]), Y(line.pts[0][1]));
+      for (let k = 1; k < line.pts.length; k++) ctx.lineTo(X(line.pts[k][0]), Y(line.pts[k][1]));
+      ctx.stroke();
+
+      if (deep) {
+        // два рельса: колея 1.52 м
+        const off = 0.00076 * s;
+        if (off >= 0.35) {
+          ctx.strokeStyle = 'rgba(206,214,220,0.75)';
+          ctx.lineWidth = 0.7;
+          for (const side of [-1, 1]) {
+            ctx.beginPath();
+            for (let k = 1; k < line.pts.length; k++) {
+              const dx = line.pts[k][0] - line.pts[k - 1][0], dy = line.pts[k][1] - line.pts[k - 1][1];
+              const l = Math.max(1e-9, Math.hypot(dx, dy));
+              const nx = -dy / l * 0.00076 * side, ny = dx / l * 0.00076 * side;
+              if (k === 1) ctx.moveTo(X(line.pts[0][0] + nx), Y(line.pts[0][1] + ny));
+              ctx.lineTo(X(line.pts[k][0] + nx), Y(line.pts[k][1] + ny));
+            }
+            ctx.stroke();
+          }
+        }
+        // шпалы
+        const stepKm = 0.012;
+        if (s * stepKm >= 2) {
+          ctx.strokeStyle = 'rgba(92,74,56,0.55)';
+          ctx.lineWidth = Math.max(0.6, s * 0.0016);
+          ctx.beginPath();
+          for (let d = 0; d < line.lengthKm; d += stepKm) {
+            const p = pointOnLineLocal(line, d);
+            if (Math.abs(p.x - this.center.x) > halfW || Math.abs(p.y - this.center.y) > halfH) continue;
+            const px = X(p.x), py = Y(p.y);
+            if (px < -pad || py < -pad || px > view.w + pad || py > view.h + pad) continue;
+            ctx.moveTo(px - p.dy * 2.6, py + p.dx * 2.6);
+            ctx.lineTo(px + p.dy * 2.6, py - p.dx * 2.6);
+          }
+          ctx.stroke();
+        }
+      }
+      if (s >= 12) {
+        ctx.fillStyle = 'rgba(246,240,228,0.9)';
+        for (const st of this.rail.stations) {
+          if (st.index !== line.from && st.index !== line.to) continue;
+          const px = X(st.x), py = Y(st.y);
+          if (px < -6 || py < -6 || px > view.w + 6 || py > view.h + 6) continue;
+          ctx.beginPath();
+          ctx.rect(px - 2.2, py - 2.2, 4.4, 4.4);
+          ctx.fill();
+        }
+      }
+    }
+
+    if (!mid) return;
+  }
+
+  /* §16.7: составы рисуются поверх застройки — поезд в городе не должен прятаться под кварталами. */
+  drawTrains(ctx, originX, originY, s) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const pad = 60;
+    for (const t of this.rail.trains) {
+      const pts = trainPoints(this.rail, t);
+      if (!pts) continue;
+      const px = X(pts.x), py = Y(pts.y);
+      if (px < -pad || py < -pad || px > view.w + pad || py > view.h + pad) continue;
+      const w = Math.max(2.2, Math.min(7, s * 0.0026));
+      ctx.strokeStyle = 'rgba(16,20,24,0.85)';
+      ctx.lineWidth = w + 1.8;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      for (const q of pts.tail) ctx.lineTo(X(q.x), Y(q.y));
+      ctx.stroke();
+      ctx.strokeStyle = t.tone;
+      ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      for (const q of pts.tail) ctx.lineTo(X(q.x), Y(q.y));
+      ctx.stroke();
+      // голова состава: локомотив светится
+      ctx.fillStyle = t.state === 'wait' ? '#ff8f6a' : '#fff4c2';
+      ctx.beginPath();
+      ctx.arc(px, py, w * 0.55 + 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* §16.7: аэропорты — полоса, перрон и круг ожидания. */
+  drawAirports(ctx, originX, originY, s) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    for (const a of this.air.airports) {
+      const px = X(a.x), py = Y(a.y);
+      if (px < -200 || py < -200 || px > this.view.w + 200 || py > this.view.h + 200) continue;
+      const L = AIR.runwayKm * s;
+      const ca = Math.cos(a.heading), sa = Math.sin(a.heading);
+      // круг ожидания — если кто-то ждёт
+      if (this.air.planes.some((p) => p.state === 'hold' && p.to === a.index)) {
+        ctx.strokeStyle = 'rgba(255,214,110,0.45)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 5]);
+        ctx.beginPath();
+        ctx.arc(px, py, AIR.holdKm * s, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      // полоса
+      ctx.strokeStyle = 'rgba(58,58,62,0.95)';
+      ctx.lineWidth = Math.max(2.2, AIR.runwayM * s / 1000);
+      ctx.beginPath();
+      ctx.moveTo(px - ca * L / 2, py + sa * L / 2);
+      ctx.lineTo(px + ca * L / 2, py - sa * L / 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(244,244,238,0.85)';
+      ctx.lineWidth = Math.max(0.6, s * 0.0012);
+      ctx.setLineDash([Math.max(2, s * 0.02), Math.max(2, s * 0.02)]);
+      ctx.beginPath();
+      ctx.moveTo(px - ca * L / 2, py + sa * L / 2);
+      ctx.lineTo(px + ca * L / 2, py - sa * L / 2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // перрон
+      ctx.fillStyle = 'rgba(210,208,200,0.85)';
+      ctx.beginPath();
+      ctx.arc(px - sa * Math.max(4, s * 0.06), py - ca * Math.max(4, s * 0.06), Math.max(2, s * 0.012), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* §16.7: самолёты — треугольник носом по курсу, на круге видно, кто ждёт полосу. */
+  drawPlanes(ctx, originX, originY, s) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    for (const p of this.air.planes) {
+      const px = X(p.x), py = Y(p.y);
+      if (px < -30 || py < -30 || px > this.view.w + 30 || py > this.view.h + 30) continue;
+      const to = this.air.airports.find((a) => a.index === p.to);
+      const from = this.air.airports.find((a) => a.index === p.from);
+      let ca = 1, sa = 0;
+      if (p.state === 'hold' && to) { ca = -Math.sin(p.holdAngle); sa = Math.cos(p.holdAngle); }
+      else if (to && from && p.state !== 'taxi') {
+        const dx = to.x - from.x, dy = to.y - from.y, l = Math.max(1e-9, Math.hypot(dx, dy));
+        ca = dx / l; sa = dy / l;
+      } else if (to) { ca = Math.cos(to.heading); sa = Math.sin(to.heading); }
+      const r = Math.max(3, Math.min(9, s * 0.022));
+      ctx.fillStyle = p.state === 'hold' ? '#ffd75e' : p.state === 'runway' ? '#9fe0a0' : '#f4f6f8';
+      ctx.strokeStyle ='rgba(20,26,32,0.7)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(px + ca * r, py - sa * r);
+      ctx.lineTo(px - ca * r * 0.55 + sa * r * 0.7, py + sa * r * 0.55 + ca * r * 0.7);
+      ctx.lineTo(px - ca * r * 0.55 - sa * r * 0.7, py + sa * r * 0.55 - ca * r * 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  /* §16.7: суда и диспетчер — фарватер, разводные мосты и швартовка. */
+  drawSeaTraffic(ctx, originX, originY, s) {
+    const X = (x) => originX + x * s;
+    const Y = (y) => originY - y * s;
+    const ports = this.tides ? this.tides.ports : [];
+    ctx.strokeStyle = 'rgba(120,190,220,0.22)';
+    ctx.lineWidth = Math.max(0.8, Math.min(3, s * 0.0016));
+    ctx.setLineDash([Math.max(3, s * 0.03), Math.max(4, s * 0.03)]);
+    for (const lane of this.seaTraffic.lanes) {
+      const A = ports[lane.a], B = ports[lane.b];
+      if (!A || !B) continue;
+      ctx.beginPath();
+      ctx.moveTo(X(A.x), Y(A.y));
+      ctx.lineTo(X(B.x), Y(B.y));
+      ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    // разводные мосты
+    for (const lane of this.seaTraffic.lanes) {
+      for (const br of lane.bridges || []) {
+        const px = X(br.x), py = Y(br.y);
+        if (px < -20 || py < -20 || px > this.view.w + 20 || py > this.view.h + 20) continue;
+        const size = Math.max(4, s * 0.02);
+        ctx.strokeStyle = 'rgba(60,56,50,0.9)';
+        ctx.lineWidth = Math.max(1.2, s * 0.0025);
+        ctx.beginPath();
+        ctx.moveTo(px - size, py - size * 0.4);
+        ctx.lineTo(px + size, py + size * 0.4);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,214,110,0.9)';
+        ctx.beginPath();
+        ctx.arc(px - size, py - size * 0.4, Math.max(1.2, s * 0.003), 0, Math.PI * 2);
+        ctx.arc(px + size, py + size * 0.4, Math.max(1.2, s * 0.003), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    // суда
+    for (const ship of this.seaTraffic.ships) {
+      const p = shipPoint(this.seaTraffic, ship, ports);
+      if (!p) continue;
+      const px = X(p.x), py = Y(p.y);
+      if (px < -25 || py < -25 || px > this.view.w + 25 || py > this.view.h + 25) continue;
+      const lane = this.seaTraffic.lanes.find((l) => l.id === ship.lane);
+      const A = ports[lane.a], B = ports[lane.b];
+      const dx = B.x - A.x, dy = B.y - A.y, l = Math.max(1e-9, Math.hypot(dx, dy));
+      const dirX = (dx / l) * ship.dir, dirY = (dy / l) * ship.dir;
+      const len = Math.max(6, Math.min(26, 0.12 * s));
+      ctx.strokeStyle = 'rgba(12,26,34,0.6)';
+      ctx.lineWidth = Math.max(2, len * 0.28) + 1.4;
+      ctx.beginPath();
+      ctx.moveTo(px - dirX * len / 2, py + dirY * len / 2);
+      ctx.lineTo(px + dirX * len / 2, py - dirY * len / 2);
+      ctx.stroke();
+      ctx.strokeStyle = ship.state === 'bridge' ? '#ffd75e' : '#e6f2f8';
+      ctx.lineWidth = Math.max(2, len * 0.28);
+      ctx.stroke();
+      // кильватерный след
+      if (ship.v > 0 && s >= 4) {
+        ctx.strokeStyle = 'rgba(230,242,248,0.25)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(px - dirX * len * 0.6, py + dirY * len * 0.6);
+        ctx.lineTo(px - dirX * len * 2.4, py + dirY * len * 2.4);
+        ctx.stroke();
+      }
+    }
+  }
+
+  /* §16.8: что выросло в городе от решений мэра (R-16.28). При догоне §98 раскладку
+     города не строим: радиус берём из населения — иначе 82 раскладки стоят полсекунды. */
+  growthAt(index, fast = false) {
     if (!this.growth.has(index)) {
-      const g = buildGrowth(this.settlements[index], this.cityAt(index));
-      this.growth.set(index, g);
+      if (fast) {
+        const cls = classFor(this.settlements[index], index, this.ranks);
+        const r = cityRadiusKm(cityPopulation(cls, index));
+        this.growth.set(index, buildGrowth(this.settlements[index], null, r));
+      } else {
+        this.growth.set(index, buildGrowth(this.settlements[index], this.cityAt(index)));
+      }
     }
     return this.growth.get(index);
   }
@@ -1890,6 +2213,41 @@ export class Map2D {
           ' · давка ' + Math.round((pressure / Math.max(1, n)) * 100) + '%';
       }
     }
+    if (this.hud.trains) {
+      if (!this.showTrains) this.hud.trains.textContent = 'выключены';
+      else if (!this.rail) this.hud.trains.textContent = '— (мир строится)';
+      else {
+        const st = transitStats(this.rail, null, null);
+        this.hud.trains.textContent = st.trains + ' составов · держат блок ' + st.waiting +
+          ' · на станции ' + st.atStation + ' · ' + st.railKm.toLocaleString('ru-RU') + ' км';
+      }
+    }
+    if (this.hud.air) {
+      if (!this.showAir) this.hud.air.textContent = 'выключена';
+      else if (!this.air) this.hud.air.textContent = '—';
+      else {
+        const st = transitStats(this.rail || { trains: [], totalKm: 0 }, this.air, null);
+        this.hud.air.textContent = st.planes + ' бортов · на круге ' + st.holding +
+          ' · сели ' + st.landed;
+      }
+    }
+    if (this.hud.sea) {
+      if (!this.showSeaTraffic) this.hud.sea.textContent = 'выключены';
+      else if (!this.seaTraffic) this.hud.sea.textContent = '—';
+      else {
+        const st = transitStats({ trains: [], totalKm: 0 }, null, this.seaTraffic);
+        this.hud.sea.textContent = st.ships + ' судна · уступают ' + st.giveWay + ' · у моста ' +
+          st.bridgeWaiting + ' · на стоянке ' + st.moored;
+      }
+    }
+    if (this.hud.offline) {
+      if (this.catchUpReport && this.catchUpReport.days) {
+        this.hud.offline.textContent = formatReport(this.catchUpReport) +
+          (this.catchUpReport.capped ? ' (дальше не считаем)' : '');
+      } else if (!this.hud.offline.textContent || this.hud.offline.textContent === '—') {
+        this.hud.offline.textContent = 'всё под контролем';
+      }
+    }
     if (this.hud.growth) {
       if (!this.showGrowth) this.hud.growth.textContent = 'выключен';
       else if (!this.growth.size) this.hud.growth.textContent = '— (с первого дня)';
@@ -1981,4 +2339,17 @@ export class Map2D {
 
 function nextFrame() {
   return new Promise((r) => setTimeout(r, 0));
+}
+
+/* Локальная копия F-211 для отрисовки рельсов: без импорта лишнего модуля в горячем пути. */
+function pointOnLineLocal(line, sKm) {
+  const s = Math.max(0, Math.min(line.lengthKm, sKm));
+  let i = 1;
+  while (i < line.acc.length - 1 && line.acc[i] < s) i++;
+  const a = line.pts[i - 1], b = line.pts[i];
+  const seg = Math.max(1e-9, line.acc[i] - line.acc[i - 1]);
+  const u = Math.max(0, Math.min(1, (s - line.acc[i - 1]) / seg));
+  let dx = (b[0] - a[0]) / seg, dy = (b[1] - a[1]) / seg;
+  if (Math.hypot(dx, dy) < 1e-6) { dx = 1; dy = 0; }
+  return { x: a[0] + (b[0] - a[0]) * u, y: a[1] + (b[1] - a[1]) * u, dx, dy };
 }

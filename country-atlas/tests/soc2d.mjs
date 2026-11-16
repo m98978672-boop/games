@@ -240,7 +240,7 @@ globalThis.window = globalThis.window || { addEventListener() {} };
   applyGrowth(g, 'school', 9, 19);
   applyGrowth(g, 'hospital', 10, 20);
   ok(g.civic.length === 2, 'школа и больница');
-  ok(g.civic[0].kind === 'school' && g.civic[1].kind === 'hospital', 'виды общественных зданий различаются');
+  ok(g.civic[0].type === 'school' && g.civic[1].type === 'hospital', 'виды общественных зданий различаются');
 
   const st = growthStats(g, 40);
   ok(st.houses === g.houses.length, 'сводка считает дома');

@@ -122,6 +122,7 @@ export function buildPedestrians(city, index, seed = 424242) {
 /* F-119-совместимый шаг: dtSec — реальные секунды, пешеход живёт по игровому времени. */
 export function advancePeds(pack, dtSec) {
   const sec = Math.max(0, dtSec) * TIME_SCALE;
+  pack.version = (pack.version || 0) + 1;      // позиции поменялись — кэш §98 сбрасывается
   for (const p of pack.peds) {
     const speedKmPerSec = p.speed / 3600;
     p.t += p.dir * speedKmPerSec * sec;
@@ -131,6 +132,8 @@ export function advancePeds(pack, dtSec) {
 
 /* Положение всех пешеходов города, готовое к отрисовке. */
 export function pedPositions(pack) {
+  // §98: одна и та же геометрия нужна и слою, и социальным силам — считаем раз на версию
+  if (pack.posCache && pack.posCache.version === (pack.version || 0)) return pack.posCache.list;
   const out = [];
   for (let idx = 0; idx < pack.peds.length; idx++) {
     const p = pack.peds[idx];
@@ -156,5 +159,6 @@ export function pedPositions(pack) {
       idx                                  // номер в пакете — для социальных сил §16.6
     });
   }
+  pack.posCache = { version: pack.version || 0, list: out };
   return out;
 }
