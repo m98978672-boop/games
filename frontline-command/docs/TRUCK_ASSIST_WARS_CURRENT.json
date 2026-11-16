@@ -1,0 +1,204 @@
+{
+  "seeds": 4,
+  "seconds": 180,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          20,
+          36
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "truckFailures": 43,
+        "physicalDeliveries": 0,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 0,
+        "alive": [
+          17,
+          23
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          35,
+          38
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "truckFailures": 36,
+        "physicalDeliveries": 1,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 843,
+        "alive": [
+          38,
+          30
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          24,
+          38
+        ],
+        "captures": [
+          5,
+          5
+        ],
+        "truckFailures": 25,
+        "physicalDeliveries": 0,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 0,
+        "alive": [
+          32,
+          42
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          39,
+          43
+        ],
+        "captures": [
+          4,
+          4
+        ],
+        "truckFailures": 15,
+        "physicalDeliveries": 2,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 846,
+        "alive": [
+          29,
+          38
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          36,
+          35
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "truckFailures": 43,
+        "physicalDeliveries": 0,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 0,
+        "alive": [
+          33,
+          30
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          22,
+          47
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "truckFailures": 15,
+        "physicalDeliveries": 0,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 460,
+        "alive": [
+          24,
+          31
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          46,
+          32
+        ],
+        "captures": [
+          8,
+          5
+        ],
+        "truckFailures": 31,
+        "physicalDeliveries": 1,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 0,
+        "alive": [
+          38,
+          25
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          36,
+          44
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "truckFailures": 15,
+        "physicalDeliveries": 1,
+        "falseDeliveries": 0,
+        "activeSearchTicks": 638,
+        "alive": [
+          24,
+          35
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "normal game but short non-adjudicating horizon",
+    "random streams and battles may diverge between modes",
+    "not browser FPS, full balance, or a soak test",
+    "delivery counter excludes virtual backup delivery"
+  ]
+}

@@ -831,12 +831,12 @@ export class Game {
       this.createSquadAtBase(faction, 'engineer', { free: true, name: 'Инженеры' });
       let tankSpot = this.spawnPos(hq, 0, 70, 'box');
       if(this.cfg.flag('movement_occupancy_v1',false))tankSpot=this.occupancySpawnSpot(hq,'tank');
-      else if(this.cfg.flag('vehicle_spawn_all_v1',false))tankSpot=this.logistics.vehicleProductionSpot(hq,'tank',tankSpot.x,tankSpot.y);
+      else if(this.cfg.flag('vehicle_spawn_all_v1',false) || (this.cfg.flag('vehicle_exterior_v1',true) && this.walls.enabled()))tankSpot=this.logistics.vehicleProductionSpot(hq,'tank',tankSpot.x,tankSpot.y);
       if(tankSpot)this.spawnUnit(faction, 'tank', tankSpot.x, tankSpot.y, { spawnPoint: hq.id });
       for (let i = 0; i < 2; i++) {
         let t = this.spawnPos(hq, 0, 100, 'box');
         if(this.cfg.flag('movement_occupancy_v1',false))t=this.occupancySpawnSpot(hq,'truck');
-        else if(this.cfg.flag('vehicle_spawn_all_v1',false))t=this.logistics.vehicleProductionSpot(hq,'truck',t.x,t.y);
+        else if(this.cfg.flag('vehicle_spawn_all_v1',false) || (this.cfg.flag('vehicle_exterior_v1',true) && this.walls.enabled()))t=this.logistics.vehicleProductionSpot(hq,'truck',t.x,t.y);
         if(t)this.spawnUnit(faction, 'truck', t.x, t.y, { spawnPoint: hq.id });
       }
     }

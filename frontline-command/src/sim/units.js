@@ -4,7 +4,7 @@ import { motionWallSweepFree } from './motion_wall_sweep.js';
 import {
   clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp, TAU, normAngle, approachAngle,
 } from '../core/mathx.js';
-import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute, smartRouteSearching } from './smart_route.js';
+import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute, smartRouteSearching, truckRouteAssist } from './smart_route.js';
 import { doorPairWaypoint, doorPairPositionFree } from './door_pair.js';
 import { solidUnitMoveFree, occupiedDetour, blockingUnit } from './solid_units.js';
 import { courtesyYield } from './door_courtesy.js';
@@ -420,7 +420,7 @@ export function reviveUnit(game, u) {
 // ---------- Движение ----------
 export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWaypoint = false } = {}) {
   if (u._crowdActive && (!(game.cfg.flag('crowd_nav_v2', false) || game.cfg.flag('movement_occupancy_v1', false)) || u.playerControlled || u.perception.hasContact || !u.goal)) clearCrowdState(u);
-  if (u._smartRoute && ((!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false)) || !u.goal || u.perception.hasContact || u.playerControlled)) discardSmartRoute(u);
+  if (u._smartRoute && ((!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false) && !truckRouteAssist(game,u)) || !u.goal || u.perception.hasContact || u.playerControlled)) discardSmartRoute(u);
   if (!u.alive || u.downed) return;
   const solid = game.cfg.flag('unit_solid_2d_v1', false);
   const occupancy = game.cfg.flag('movement_occupancy_v1', false);
@@ -657,7 +657,7 @@ export function updateTimers(game, u, dt) {
     if (u.targetId != null) {
       const t = game.unitById(u.targetId);
       if (t && t.alive && dist(u.x, u.y, t.x, t.y) < u.vision &&
-          (!game.cfg.flag('vehicle_visible_fire_v1', false) || vehicleHasCurrentSight(game, u, t))) {
+          (!(game.cfg.flag('vehicle_visible_fire_v1', false) || (game.cfg.flag('tank_tactical_v1', true) && game.walls?.enabled())) || vehicleHasCurrentSight(game, u, t))) {
         u.turretAngle = approachAngle(u.turretAngle, angleTo(u.x, u.y, t.x, t.y), dt * (u.turretDamage ? 1.2 : 2.4));
       }
     }
@@ -701,7 +701,7 @@ export function updateTimers(game, u, dt) {
 }
 
 export function moveAlongFlow(game, u, dt) {
-  if (!u.goal) { if (u._smartRoute) discardSmartRoute(u); if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u); u.flowDir = null; return; }
+  if (!u.goal) { if (u._smartRoute || game._smartRouteState?.active?.unit === u) cancelSelectedSmartRoute(game,u); if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u); u.flowDir = null; return; }
   // Adjust a destination embedded in a wall before asking for a flow field.
   // This does not validate all intermediate edges of the coarse nav grid.
   if (game.cfg.flag('wall_goal_guard_v1', false) && game.walls?.enabled() &&
@@ -717,6 +717,20 @@ export function moveAlongFlow(game, u, dt) {
       return;
     }
     u.goal = safe;
+  }
+  // A vehicle cannot squeeze through pedestrian doors. Orders targeting the
+  // centre of a walled building are approached from an accessible exterior.
+  if (u.isVehicle && !u.playerControlled && game.cfg.flag('vehicle_exterior_v1', true) &&
+      game.walls?.enabled() && game.walls.buildingAtPoint && game.logistics?.exteriorPoint) {
+    const b = game.walls.buildingAtPoint(u.goal.x,u.goal.y);
+    if (b && game.walls.state(b) && game.walls.buildingAtPoint(u.x,u.y) !== b) {
+      const safe = game.logistics.exteriorPoint(u,b);
+      cancelSelectedSmartRoute(game,u);
+      if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u);
+      u.flowDir = null;
+      if (!safe) { u.goal = null; u.pathFailed = true; return; }
+      u.goal = {...u.goal, x:safe.x, y:safe.y};
+    }
   }
   // Bot destinations are parking places, not waypoints: keep door transit legal.
   if (!u.playerControlled && game.walls?.enabled() && unsafeRest(game, u.goal.x, u.goal.y, u.radius)) {
@@ -772,10 +786,10 @@ export function moveAlongFlow(game, u, dt) {
     return;
   }
   if (visionChoice && (visionChoice.mode === 'combat' || ((visionChoice.mode === 'group' || visionChoice.mode === 'pair') && u._crowdActive))) cancelSelectedSmartRoute(game,u);
-  else if (game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false)) {
+  else if (game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false) || truckRouteAssist(game,u)) {
     if (!visionChoice || visionChoice.obstacle || (u.stuck || 0) >= 1 || u._smartRoute || game._smartRouteState?.active?.unit === u)
       updateSmartRoute(game,u);
-  } else if (u._smartRoute) discardSmartRoute(u);
+  } else if (u._smartRoute || game._smartRouteState?.active?.unit === u) cancelSelectedSmartRoute(game,u);
   if (!u.flowDir || u.flowTimer <= 0) {
     // Отряд идёт по общему полю (одно на отряд), персональное поле — только для одиночек.
     const sq = u.squad;

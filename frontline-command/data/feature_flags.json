@@ -98,6 +98,24 @@
       "enabled": false
     },
     {
+      "id": "vehicle_exterior_v1",
+      "desc": "Техника появляется снаружи стен; грузовики выбирают внешние точки у зданий",
+      "group": "ai",
+      "enabled": true
+    },
+    {
+      "id": "truck_route_assist_v1",
+      "desc": "Грузовики используют ограниченный поиск обхода препятствий",
+      "group": "ai",
+      "enabled": true
+    },
+    {
+      "id": "tank_tactical_v1",
+      "desc": "Свободные танки выбирают задачу и не стоят из-за невидимой цели",
+      "group": "ai",
+      "enabled": true
+    },
+    {
       "id": "vehicle_detour_v2",
       "desc": "Экспериментальный локальный обход техники вне зданий; требует pathing_v2 и wall_collision_v2",
       "group": "ai",

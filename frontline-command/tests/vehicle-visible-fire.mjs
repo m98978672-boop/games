@@ -6,7 +6,7 @@ import { vehicleHasCurrentSight } from '../src/sim/units.js';
 
 const base=await loadConfig();assert.equal(base.flag('vehicle_visible_fire_v1'),false,'feature defaults off');
 async function scene(faction,flag,wall,contact){
-  const cfg=await loadConfig();cfg.flags.vehicle_visible_fire_v1=flag;
+  const cfg=await loadConfig();cfg.flags.tank_tactical_v1=false;cfg.flags.vehicle_visible_fire_v1=flag;
   const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.dt=.05;
   let x=2000,y=2000,tx=2100,ty=2000;
   if(wall){
