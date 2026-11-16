@@ -1,0 +1,175 @@
+{
+  "passed": false,
+  "environment": "browser",
+  "measurement": "requestAnimationFrame",
+  "rendered": true,
+  "browser": "Chromium 153.0.8010.0",
+  "mode": "headless software rendering",
+  "quick": false,
+  "warmed": false,
+  "viewport": "1280x900 DPR 1",
+  "frames400": 179,
+  "average400": 14.733116589160048,
+  "low1_400": 0.9835743090390472,
+  "minAlive400": 402,
+  "maxAlive400": 422,
+  "duration400Ms": 12149.5,
+  "frames500": 179,
+  "average500": 14.113602674488282,
+  "low1_500": 0.9677263269947256,
+  "minAlive500": 502,
+  "maxAlive500": 522,
+  "duration500Ms": 12682.800000000001,
+  "measurements": [
+    {
+      "target": 400,
+      "initial": 400,
+      "warmup": {
+        "ticks": 0,
+        "gameTime": 0,
+        "aliveByFaction": [
+          26,
+          26
+        ]
+      },
+      "minAlive": 402,
+      "maxAlive": 422,
+      "frameMinAlive": 402,
+      "frameMaxAlive": 422,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": true,
+        "samples": 647,
+        "beforeStepSamples": 233,
+        "afterStepSamples": 233,
+        "frameSamples": 180,
+        "minAlive": 402,
+        "maxAlive": 422,
+        "firstOutside2Percent": {
+          "sample": 97,
+          "phase": "after-step",
+          "alive": 412
+        },
+        "strictExact": false,
+        "within2Percent": false
+      },
+      "minVisible": 376,
+      "spritesReady": true,
+      "elapsedMs": 12149.5,
+      "frames": 179,
+      "worstCount": 2,
+      "worstTimeMs": 2033.4000000000015,
+      "averageFps": 14.733116589160048,
+      "low1Fps": 0.9835743090390472,
+      "drawFrames": 180,
+      "canvas": {
+        "width": 1280,
+        "height": 900
+      },
+      "gameTimeStart": 0.5666666666666668,
+      "gameSeconds": 4.4499999999999895,
+      "sameGame": true,
+      "warOver": false,
+      "screen": "game",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+      "timings": {
+        "step": {
+          "samples": 233,
+          "meanMs": 3.198,
+          "p95Ms": 11.7,
+          "maxMs": 28
+        },
+        "draw": {
+          "samples": 180,
+          "meanMs": 2.263,
+          "p95Ms": 5.4,
+          "maxMs": 13.9
+        },
+        "hud": {
+          "samples": 180,
+          "meanMs": 0.403,
+          "p95Ms": 1.2,
+          "maxMs": 8.7
+        }
+      },
+      "canvasDataLength": 2285694,
+      "pageErrors": []
+    },
+    {
+      "target": 500,
+      "initial": 500,
+      "warmup": {
+        "ticks": 0,
+        "gameTime": 0,
+        "aliveByFaction": [
+          26,
+          26
+        ]
+      },
+      "minAlive": 502,
+      "maxAlive": 522,
+      "frameMinAlive": 502,
+      "frameMaxAlive": 522,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": true,
+        "samples": 729,
+        "beforeStepSamples": 274,
+        "afterStepSamples": 274,
+        "frameSamples": 180,
+        "minAlive": 502,
+        "maxAlive": 522,
+        "firstOutside2Percent": {
+          "sample": 81,
+          "phase": "after-step",
+          "alive": 512
+        },
+        "strictExact": false,
+        "within2Percent": false
+      },
+      "minVisible": 467,
+      "spritesReady": true,
+      "elapsedMs": 12682.800000000001,
+      "frames": 179,
+      "worstCount": 2,
+      "worstTimeMs": 2066.7000000000007,
+      "averageFps": 14.113602674488282,
+      "low1Fps": 0.9677263269947256,
+      "drawFrames": 180,
+      "canvas": {
+        "width": 1280,
+        "height": 900
+      },
+      "gameTimeStart": 0.55,
+      "gameSeconds": 5.116666666666654,
+      "sameGame": true,
+      "warOver": false,
+      "screen": "game",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+      "timings": {
+        "step": {
+          "samples": 274,
+          "meanMs": 4.424,
+          "p95Ms": 16.4,
+          "maxMs": 49.5
+        },
+        "draw": {
+          "samples": 180,
+          "meanMs": 3.295,
+          "p95Ms": 10.1,
+          "maxMs": 14.6
+        },
+        "hud": {
+          "samples": 180,
+          "meanMs": 0.613,
+          "p95Ms": 2.6,
+          "maxMs": 10.3
+        }
+      },
+      "canvasDataLength": 2261206,
+      "pageErrors": []
+    }
+  ]
+}

@@ -1,0 +1,264 @@
+{
+  "passed": true,
+  "seeds": 20,
+  "ticks": 60,
+  "dt": 0.016666666666666666,
+  "baselineFilesSha256": {
+    "src/sim/game.js": "695e7b70e15d8041d7f042523371fa17ee476e7856bc15a9472ba98882100885",
+    "src/sim/ai_soldier.js": "c060f18a356cdee12304863b91d9774f9babb8c30ff09bb56aa5a32b4881b3a6",
+    "src/sim/units.js": "d6e01b84b7e27d03f3e99c1b74c4ed07d67a2ba3aa17ea226b67cf39e9f7a4e9",
+    "src/sim/walls.js": "cb2c493bd9fbea28942b41618663c6116fdda5d92fff231c616023e3273bc009",
+    "src/sim/world.js": "c5cff64ac0498cf5ab8c3620442a198bc7a96f628fdec916a3df604ff5039b89",
+    "src/sim/build.js": "21093c34c03051cae6d7d1f4fdffb55f8887cdf2223c3d13a0d09709e62a0a45",
+    "src/sim/solid_units.js": "166dd0708caf330906445713b4426212888ba6a7e5fe630a0b138b142069d9c4",
+    "data/feature_flags.json": "5299a42f93665987833009b5f48c3cda0fc8e38fdabed2512c323360a40cecd1"
+  },
+  "runs": [
+    {
+      "mode": "default",
+      "seed": 1,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 2,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 3,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 4,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 5,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 6,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 7,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 8,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 9,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 10,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 11,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 12,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 13,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 14,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 15,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 16,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 17,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 18,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 19,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 20,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 1,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 2,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 3,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 4,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 5,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 6,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 7,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 8,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 9,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 10,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 11,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 12,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 13,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 14,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 15,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 16,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 17,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 18,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 19,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 20,
+      "compared": 61,
+      "mismatch": null
+    }
+  ],
+  "caveats": [
+    "Node, no render or external input, 60 short fixed steps",
+    "New off flags removed from new test config and raw metadata, both game graphs otherwise compared in full",
+    "Wall timing fields excluded; closures, module globals, prototypes and shared buffers not fully represented",
+    "Pre-turn baseline snapshot must be supplied separately; not proof for every possible game"
+  ]
+}

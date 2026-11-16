@@ -1,0 +1,45 @@
+--- a/src/sim/game.js
++++ b/src/sim/game.js
+@@ -817,0 +818,7 @@
++    // In-tick readers use the snapshot built before soldier updates. Refresh
++    // at the boundary so input/render queries after step see current positions.
++    // This does not make reads during the step a live spatial index.
++    for (const u of this.unitGrid.cellOf.keys()) {
++      if (!u.alive || this.units.get(u.id) !== u) this.unitGrid.remove(u);
++    }
++    for (const u of this.units.values()) if (u.alive) this.unitGrid.update(u);
+--- a/src/sim/units.js
++++ b/src/sim/units.js
+@@ -415 +415 @@
+-export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
++export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWaypoint = false } = {}) {
+@@ -425 +425 @@
+-  if (game.walls && u.goal) {
++  if (game.walls && u.goal && !skipDoorWaypoint) {
+--- a/src/sim/ai_soldier.js
++++ b/src/sim/ai_soldier.js
+@@ -321 +321 @@
+-    else { engineerAct(game, u, dt); if (u.buildBusy) return; }
++    else { if (engineerAct(game, u, dt) || u.buildBusy) return; }
+@@ -389 +389,20 @@
+-      if (wall.distance > 60) { u.goal = wall.goal; return; }
++      if (wall.distance > 60) {
++        u.goal = wall.goal;
++        // Flow fields can point away from the near side of a wall, especially
++        // inside a building. Use a direct approach only when the entire swept
++        // circle and terrain corridor are clear. Otherwise retain normal routing.
++        const dx = wall.goal.x - u.x, dy = wall.goal.y - u.y;
++        const steps = Math.ceil(Math.hypot(dx, dy) / 6), r = u.radius;
++        let clear = !game.walls.blocksMoveSweep(u.x, u.y, wall.goal.x, wall.goal.y, r, u);
++        for (let i = 0; clear && i <= steps; i++) {
++          const t = steps ? i / steps : 0, x = u.x + dx * t, y = u.y + dy * t;
++          for (const [ox, oy] of [[0, 0], [-r, -r], [r, -r], [-r, r], [r, r]]) {
++            if (!game.world.isBaseWalkable(x + ox, y + oy)) { clear = false; break; }
++          }
++        }
++        if (clear) {
++          moveUnit(game, u, dx, dy, dt, null, { skipDoorWaypoint: true });
++          return true;
++        }
++        return;
++      }

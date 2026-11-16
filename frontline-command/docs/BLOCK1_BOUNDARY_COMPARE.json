@@ -1,0 +1,121 @@
+{
+  "passed": true,
+  "seeds": 20,
+  "ticks": 60,
+  "dt": 0.016666666666666666,
+  "baselineFilesSha256": {
+    "src/sim/game.js": "afbeedad23135e3d71a38bd2cc4e2077677fc9f0438735250b66361e16067bf2",
+    "src/sim/units.js": "31e02fa76869b39d9ce8dd142527a745f3f47165f6c731eb6296a07a4fc38758",
+    "src/sim/ai_soldier.js": "252da58199f08e578fc617b001096ce593aa0bdecc1b9b7c3b64a7f127978f56",
+    "data/feature_flags.json": "5299a42f93665987833009b5f48c3cda0fc8e38fdabed2512c323360a40cecd1"
+  },
+  "runs": [
+    {
+      "seed": 1,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 2,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 3,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 4,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 5,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 6,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 7,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 8,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 9,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 10,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 11,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 12,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 13,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 14,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 15,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 16,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 17,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 18,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 19,
+      "compared": 61,
+      "divergence": null
+    },
+    {
+      "seed": 20,
+      "compared": 61,
+      "divergence": null
+    }
+  ],
+  "caveats": [
+    "Node with no render or external input, default feature flags",
+    "Unit grid excluded intentionally; external queries may differ",
+    "Wall profiling clocks excluded",
+    "Function closures, module globals, prototypes and shared typed-array backing identity not fully represented",
+    "Pre-change checkout supplied separately"
+  ]
+}

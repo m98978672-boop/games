@@ -35,6 +35,18 @@ export class SpatialHash {
     this.remove(obj);
     this.insert(obj);
   }
+  // Bounding-box query for a known radius: unlike the legacy coarse query,
+  // visit only cells intersecting the box. Returns candidates, not a circle.
+  queryRange(x,y,radius,out=[]) {
+    out.length=0;
+    const x0=Math.floor((x-radius)/this.cell),x1=Math.floor((x+radius)/this.cell);
+    const y0=Math.floor((y-radius)/this.cell),y1=Math.floor((y+radius)/this.cell);
+    for(let cy=y0;cy<=y1;cy++)for(let cx=x0;cx<=x1;cx++){
+      const b=this.buckets.get(cx+cy*4096);
+      if(b)for(let i=0;i<b.length;i++)out.push(b[i]);
+    }
+    return out;
+  }
   query(x, y, radius, out = []) {
     out.length = 0;
     const r = Math.ceil(radius / this.cell);

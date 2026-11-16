@@ -100,3 +100,17 @@ debug/счётчики F3 и миграция сохранений. Legacy-ср�
 ### Блок 2 — эксперимент ремонта стен
 
 `node tests/wall-engineer-repair.mjs` проверяет материалы, видимость врага, владельца, дистанцию и занятость пролома; `node tools/block2-wall-repair-step.mjs --seeds=20` — пары контролируемых сцен с реальным `Game.step`. Оба симулируют не полную войну. `wall_engineer_repair_v1` выключен по умолчанию, подробности и незавершённые требования — `docs/BLOCK2_WALL_REPAIR.md`.
+
+### Индекс после тика и подход к стене
+
+`node tests/unit-grid-boundary.mjs` проверяет актуальность и уникальность записей на границе шага, включая гибель и создание грузовика; `tests/wall-engineer-repair.mjs` расширен проверками подхода с обеих сторон. Оба входят в `npm test`. Условия парных сравнений, профиль нагрузки и полный текущий аудит — `docs/BLOCKS_1_2_BOUNDARY_PROGRESS.md`. Это не приёмка обоих блоков: индекс внутри тика остаётся снимком, а эксперимент ремонта выключен по умолчанию.
+
+### Блоки 1–3 — обновление диагностики и узкие эксперименты
+
+`tests/swap-side-ownership.mjs`, `tests/wall-destroyed-lifecycle.mjs`, `tests/crowd-swept-units.mjs` и `tests/overlap-metrics.mjs` входят в `npm test`. Парные стенды: `node tools/block2-destroyed-wall-paired.mjs --seeds=20` и `node tools/block3-crowd-sweep.mjs --seeds=20`. Второй возвращает ненулевой код при остающихся отказах. Метрика 0,7 добавлена к строгой, не заменяет её. Флаги `wall_remove_destroyed_v1` и `crowd_swept_units_v1` выключены по умолчанию. Условия и ограничения: `docs/BLOCKS_1_2_3_PROGRESS.md`.
+
+Дополнительные экспериментальные проверки: `node tests/crowd-slot-exchange.mjs`, `node tests/door-occupied-guard.mjs`, `node tools/block3-crowd-sweep.mjs --slot-exchange --seeds=20`. Условия, ограничения и результаты — `docs/BLOCKS_1_2_3_PROGRESS.md`; они не заменяют общую приёмку блоков.
+
+Дополнительные проверки продолжения: `node tests/smart-route-cancellation.mjs`, `node tests/crowd-group-survivor.mjs`, `node tools/block3-death-door.mjs --seeds=20`, `node tools/block3-crowd-sweep.mjs --group-survivor --seeds=20`. Для парных U-тестов и передачи слота нужен восстановленный исходный снимок, см. `docs/BLOCKS_1_2_3_PROGRESS.md`.
+
+Промежуточные проверки экспериментальных правил победы: `node tests/victory-hq-rules.mjs`, `node tests/victory-hq-step.mjs`, `npm run test:browser`. Сценарии и ограничения описаны в `docs/BLOCKS_1_2_3_PROGRESS.md`; отдельный главнокомандующий не реализован.

@@ -1,0 +1,7021 @@
+{
+  "summary": {
+    "u18": {
+      "cases": 18,
+      "beforePassed": 18,
+      "afterPassed": 18,
+      "regressions": 0,
+      "improvements": 0,
+      "identical": 18,
+      "reportedBefore": 18,
+      "reportedAfter": 18
+    },
+    "u216": {
+      "cases": 216,
+      "beforePassed": 216,
+      "afterPassed": 216,
+      "regressions": 0,
+      "improvements": 0,
+      "identical": 216,
+      "reportedBefore": 216,
+      "reportedAfter": 216
+    }
+  },
+  "u18": [
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "mirrored": false,
+        "seconds": 10.25,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 922.48,
+        "y": 536.98
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "mirrored": false,
+        "seconds": 10.25,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 922.48,
+        "y": 536.98
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "mirrored": false,
+        "seconds": 10.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 899.97,
+        "y": 542.05
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "mirrored": false,
+        "seconds": 10.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 899.97,
+        "y": 542.05
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "mirrored": false,
+        "seconds": 9.85,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 901.67,
+        "y": 545.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "mirrored": false,
+        "seconds": 9.85,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 901.67,
+        "y": 545.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "mirrored": true,
+        "seconds": 10.25,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 357.52,
+        "y": 536.98
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "mirrored": true,
+        "seconds": 10.25,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 357.52,
+        "y": 536.98
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "mirrored": true,
+        "seconds": 10.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 380.03,
+        "y": 542.05
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "mirrored": true,
+        "seconds": 10.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 380.03,
+        "y": 542.05
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "mirrored": true,
+        "seconds": 9.85,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 378.33,
+        "y": 545.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "mirrored": true,
+        "seconds": 9.85,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 378.33,
+        "y": 545.83
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "mirrored": false,
+        "seconds": 12.1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 897.8,
+        "y": 542.2
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "mirrored": false,
+        "seconds": 12.1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 897.8,
+        "y": 542.2
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "mirrored": false,
+        "seconds": 14.7,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 897.73,
+        "y": 542.27
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "mirrored": false,
+        "seconds": 14.7,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 897.73,
+        "y": 542.27
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "mirrored": false,
+        "seconds": 12.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 899.07,
+        "y": 540.93
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "mirrored": false,
+        "seconds": 12.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 899.07,
+        "y": 540.93
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "mirrored": true,
+        "seconds": 12.1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 382.2,
+        "y": 542.2
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "mirrored": true,
+        "seconds": 12.1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 382.2,
+        "y": 542.2
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "mirrored": true,
+        "seconds": 14.7,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 382.27,
+        "y": 542.27
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "mirrored": true,
+        "seconds": 14.7,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 382.27,
+        "y": 542.27
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "mirrored": true,
+        "seconds": 12.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 380.93,
+        "y": 540.93
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "mirrored": true,
+        "seconds": 12.9,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 380.93,
+        "y": 540.93
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "mirrored": false,
+        "seconds": 20.75,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 910.56,
+        "y": 543.39
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "mirrored": false,
+        "seconds": 20.75,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 910.56,
+        "y": 543.39
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "mirrored": false,
+        "seconds": 14.35,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 917.36,
+        "y": 539.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "mirrored": false,
+        "seconds": 14.35,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 917.36,
+        "y": 539.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "mirrored": false,
+        "seconds": 20.6,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 910.23,
+        "y": 541.19
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "mirrored": false,
+        "seconds": 20.6,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 910.23,
+        "y": 541.19
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "mirrored": true,
+        "seconds": 20.75,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 369.44,
+        "y": 543.39
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "mirrored": true,
+        "seconds": 20.75,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 369.44,
+        "y": 543.39
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "mirrored": true,
+        "seconds": 14.35,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 362.64,
+        "y": 539.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "mirrored": true,
+        "seconds": 14.35,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 362.64,
+        "y": 539.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "mirrored": true,
+        "seconds": 20.6,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 369.77,
+        "y": 541.19
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "mirrored": true,
+        "seconds": 20.6,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "x": 369.77,
+        "y": 541.19
+      }
+    }
+  ],
+  "u216": [
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.95,
+        "distanceToGoal": 32.47
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.25,
+        "distanceToGoal": 32.3
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 10.9,
+        "distanceToGoal": 30.1
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 9.85,
+        "distanceToGoal": 33.83
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      },
+      "after": {
+        "role": "infantry",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 18.1,
+        "distanceToGoal": 32.49
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.7,
+        "distanceToGoal": 33.68
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.45,
+        "distanceToGoal": 28.96
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 7.8,
+        "distanceToGoal": 30.18
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 12.25,
+        "distanceToGoal": 29.45
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      },
+      "after": {
+        "role": "truck",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 15.05,
+        "distanceToGoal": 30.42
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 0,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.45,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 1,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.8,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 2,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 128,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 19.5,
+        "distanceToGoal": 31.3
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13.1,
+        "distanceToGoal": 30.08
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 14.35,
+        "distanceToGoal": 31.58
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 160,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 13,
+        "distanceToGoal": 33.74
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 5,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 7,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 0,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    },
+    {
+      "before": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      },
+      "after": {
+        "role": "tank",
+        "seed": 11,
+        "rotation": 3,
+        "size": 192,
+        "faction": 1,
+        "arrived": true,
+        "pathFailed": false,
+        "collided": false,
+        "noTeleport": true,
+        "movesAway": true,
+        "seconds": 23.85,
+        "distanceToGoal": 30.61
+      }
+    }
+  ],
+  "baselineFilesSha256": {
+    "src/sim/smart_route.js": "cff7bf4f81ab22ce05cd5ca814d560eb4e955a864e494be3707e54a20333898a",
+    "src/sim/units.js": "59a0ce21bf794bb09511d30cca7e051117749fe626020955bd2a1e9d31d671b8"
+  },
+  "caveats": [
+    "Isolated direct movement calls, no combat or other units; enabled smart_route_v2 on both sides",
+    "U18 and U216 use existing strict acceptance rules, including movesAway and distance-to-goal for U216",
+    "Same scenes and seeds; no proof for full gameplay, concurrency, timing or default-off configuration"
+  ]
+}

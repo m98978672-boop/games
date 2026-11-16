@@ -9,6 +9,7 @@ import { Save } from './core/save.js';
 import { Audio } from './core/audio.js';
 import { Input } from './core/input.js';
 import { clamp } from './core/mathx.js';
+import { zoomCamera, fitCamera } from './core/map_coordinates.js';
 import { InspectorPanel } from './inspector.js';
 import { BUILD_VERSION, mountBuildVersion } from './core/build-info.js';
 
@@ -25,6 +26,7 @@ const cfg = await loadConfig();
 mountBuildVersion(document, cfg.flag('build_version_badge_v1', false));
 const bank = await new SpriteBank('assets/').loadAll();
 Save.loadSettings();
+cfg.flags.movement_occupancy_v1 = !!Save.settings.movementOccupancy;
 Save.loadMeta();
 
 const audio = new Audio(cfg, Save.settings);
@@ -129,7 +131,8 @@ function bindGameEvents() {
       const f = game.playerFaction ?? 0;
       const won = game.outcome && game.outcome.winner === f;
       if (game.playerFaction != null) {
-        game.awardXP(f, 'command', won ? 'warWin' : 'warLoss', won ? 30 : 10);
+        // Draw has no configured reward and is not a loss.
+        if (game.outcome?.winner != null) game.awardXP(f, 'command', won ? 'warWin' : 'warLoss', won ? 30 : 10);
         Save.saveMeta(game.skills.serialize());
       }
       state.screen = 'result';
@@ -170,6 +173,16 @@ function bindHud() {
     },
     onMenu: () => openPause(),
     onMode: () => switchMode(),
+    onMapAction: (action) => {
+      if(action==='grid') renderer.showCoordinates=!renderer.showCoordinates;
+      else if(action==='vectors') renderer.showMapVectors=!renderer.showMapVectors;
+      else if(game.mode==='commander') {
+        const view={width:renderer.viewW,height:renderer.viewH};
+        if(action==='fit') Object.assign(renderer.camera,fitCamera(view,game.world));
+        else if(action==='in'||action==='out') Object.assign(renderer.camera,zoomCamera(renderer.camera,view,game.world,renderer.camera.zoom*(action==='in'?1.25:0.8)));
+      }
+      hud.updateMapOverlay(renderer,input.mouse);
+    },
     onCreateSquad: () => createSquad(),
     onDirective: (data) => issueDirective(data),
     onAutopilotToggle: (area, on) => {
@@ -284,6 +297,7 @@ function openPause() {
 
 function applySettings(s) {
   if (!s) return;
+  cfg.flags.movement_occupancy_v1 = !!s.movementOccupancy;
   document.documentElement.style.setProperty('font-size', `${14 * (s.uiScale || 1)}px`);
   document.body.classList.toggle('colorblind', !!s.colorblind);
   audio.setVolumes({ volume: s.volume, music: s.music });
@@ -377,7 +391,7 @@ function respawnPlayer() {
 function handleInput(dt) {
   if (!game) return;
   const m = input.mouse;
-  const world = renderer.screenToWorld(m.x, m.y);
+  let world = renderer.screenToWorld(m.x, m.y);
 
   if (input.keyHit('Escape') && state.screen === 'game') {
     if (buildType) { hud.setBuildMode(null); buildType = null; }
@@ -425,9 +439,14 @@ function handleInput(dt) {
     renderer.camera.x -= (m.x - (input.lastX ?? m.x)) / renderer.camera.zoom;
     renderer.camera.y -= (m.y - (input.lastY ?? m.y)) / renderer.camera.zoom;
   }
-  if (m.wheel) renderer.camera.zoom = clamp(renderer.camera.zoom * (m.wheel > 0 ? 0.88 : 1.14), 0.28, 1.8);
+  if (m.wheel) {
+    const anchor=m.inCanvas?{x:m.x,y:m.y}:null;
+    Object.assign(renderer.camera,zoomCamera(renderer.camera,{width:renderer.viewW,height:renderer.viewH},game.world,
+      renderer.camera.zoom*(m.wheel>0?0.88:1.14),anchor));
+  }
   renderer.camera.x = clamp(renderer.camera.x, 0, game.world.W);
   renderer.camera.y = clamp(renderer.camera.y, 0, game.world.H);
+  world=renderer.screenToWorld(m.x,m.y);
 
   // выделение рамкой: ЛКМ тянем — рамка, отпускаем — выбор (не мешает стройке)
   if (m.left && !buildType) {
@@ -609,6 +628,7 @@ function loop(now) {
       audio.listener.x = renderer.camera.x;
       audio.listener.y = renderer.camera.y;
       renderer.draw(dtReal);
+      hud.updateMapOverlay(renderer,input.mouse);
       hud.update(dtReal);
       autosaveTimer += dtReal;
       if (autosaveTimer > 30 && Save.settings.autosave && game.playerFaction != null && !game.warOver && state.screen === 'game') {

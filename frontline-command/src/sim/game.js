@@ -46,7 +46,9 @@ export class Game {
     // проверяем, что правила не дают преимущества конкретной фракции.
     if (swapSides) {
       for (const p of this.world.points) if (p.owner === 0 || p.owner === 1) { p.owner = 1 - p.owner; p.home = p.owner; }
-      for (const b of this.world.buildings) if (b.owner === 0 || b.owner === 1) b.owner = 1 - b.owner;
+      // Buildings store ownership in `faction`, not `owner`.  Keep the
+      // point's structure and faction-based building logic on the same side.
+      for (const b of this.world.buildings) if (b.faction === 0 || b.faction === 1) b.faction = 1 - b.faction;
       for (const s of this.world.sectors) if (s.owner === 0 || s.owner === 1) s.owner = 1 - s.owner;
       this.world.rebuildNav();
     }
@@ -59,6 +61,10 @@ export class Game {
     this.world.rebuildNav();
     this.units = new Map();
     this.unitGrid = new SpatialHash(128, this.world.W, this.world.H);
+    // Separate live index: perception keeps its existing tick snapshot while
+    // collision checks see every movement committed earlier in this tick.
+    this.occupancyGrid = new SpatialHash(128, this.world.W, this.world.H);
+    this.occupancyMaxRadius = 0;
     this.squads = new Map();
     this.nextUnitId = 1;
     this.nextSquadId = 1;
@@ -158,6 +164,10 @@ export class Game {
     const u = new Unit(this, { faction, role, x, y, squadId, player, spawnPoint });
     this.units.set(u.id, u);
     this.unitGrid.insert(u);
+    if (this.cfg.flag('movement_occupancy_v1', false)) {
+      this.occupancyGrid.insert(u);
+      this.occupancyMaxRadius=Math.max(this.occupancyMaxRadius,u.radius);
+    }
     this.events.emit('unitSpawned', { unit: u, t: this.time });
     return u;
   }
@@ -218,6 +228,41 @@ export class Game {
     return { x: point.x, y: point.y };
   }
 
+  // Occupancy mode preflights every spawn against live units and reserved
+  // positions. Fail without charging instead of placing inside another unit.
+  occupancySpawnFree(x,y,r,reserved=[],isVehicle=false) {
+    const w=this.world, walls=this.walls;
+    if(x-r<0||y-r<0||x+r>w.W||y+r>w.H)return false;
+    const walk=walls?.enabled()?w.isBaseWalkable.bind(w):w.isWalkable.bind(w);
+    if(!walk(x,y)||!walk(x-r,y-r)||!walk(x+r,y-r)||!walk(x-r,y+r)||!walk(x+r,y+r)||
+       (walls?.enabled()&&walls.blocksMove(x,y,r,{isVehicle})))return false;
+    return ![...this.units.values(),...reserved].some(v=>v.alive!==false&&!v.downed&&Math.hypot(v.x-x,v.y-y)<r+v.radius+1);
+  }
+
+  occupancySpawnSpot(point,role,reserved=[]) {
+    const def=this.cfg.unit(role),radius=def.class==='vehicle'?(def.size||44)*0.42:9;
+    for(let i=0;i<30;i++) {
+      const p=this.spawnPos(point,20,120);
+      if(this.occupancySpawnFree(p.x,p.y,radius,reserved,def.class==='vehicle'))return p;
+    }
+    // Deterministic fallback; still checks terrain, walls and every occupant.
+    for(let d=80;d<=440;d+=20)for(let i=0;i<48;i++) {
+      const a=i*Math.PI/24,p={x:point.x+Math.cos(a)*d,y:point.y+Math.sin(a)*d};
+      if(this.occupancySpawnFree(p.x,p.y,radius,reserved,def.class==='vehicle'))return p;
+    }
+    return null;
+  }
+
+  planOccupancySpawns(point,roles) {
+    const spots=[],reserved=[];
+    for(const role of roles){
+      const p=this.occupancySpawnSpot(point,role,reserved);if(!p)return null;
+      const def=this.cfg.unit(role),radius=def.class==='vehicle'?(def.size||44)*0.42:9;
+      spots.push(p);reserved.push({...p,radius});
+    }
+    return spots;
+  }
+
   // Preflight a whole squad so failed vehicle placement never charges or
   // creates a partial squad. Planned infantry positions reserve space too.
   planBaseSpawns(hq,roles,reinforce=false) {
@@ -255,8 +300,9 @@ export class Game {
       return { ok: false, reason: 'не хватает ресурсов: ' + this.logistics.missing(faction, cost).join(', ') };
     }
     const roles=Object.entries(t.composition).flatMap(([role,count])=>Array(count).fill(role));
-    const planned=this.cfg.flag('vehicle_spawn_all_v1',false)?this.planBaseSpawns(hq,roles):null;
-    if(this.cfg.flag('vehicle_spawn_all_v1',false)&&!planned)return {ok:false,reason:'нет безопасного места для отряда'};
+    const occupancy=this.cfg.flag('movement_occupancy_v1',false),safe=this.cfg.flag('vehicle_spawn_all_v1',false);
+    const planned=occupancy?this.planOccupancySpawns(hq,roles):safe?this.planBaseSpawns(hq,roles):null;
+    if((occupancy||safe)&&!planned)return {ok:false,reason:'нет безопасного места для отряда'};
     if (!free) this.logistics.spend(faction, cost);
     const squad = new Squad(this, { faction, templateId, name });
     this.squads.set(squad.id, squad);
@@ -313,8 +359,9 @@ export class Game {
       for (const [k, v] of Object.entries(rc)) cost[k] = (cost[k] || 0) + v;
     }
     if (!this.logistics.canAfford(squad.faction, cost)) return { ok: false, reason: 'не хватает ресурсов на пополнение' };
-    const planned=this.cfg.flag('vehicle_spawn_all_v1',false)?this.planBaseSpawns(hq,missing,true):null;
-    if(this.cfg.flag('vehicle_spawn_all_v1',false)&&!planned)return {ok:false,reason:'нет безопасного места для пополнения'};
+    const occupancy=this.cfg.flag('movement_occupancy_v1',false),safe=this.cfg.flag('vehicle_spawn_all_v1',false);
+    const planned=occupancy?this.planOccupancySpawns(hq,missing):safe?this.planBaseSpawns(hq,missing,true):null;
+    if((occupancy||safe)&&!planned)return {ok:false,reason:'нет безопасного места для пополнения'};
     this.logistics.spend(squad.faction, cost);
     let planIndex=0;
     for (const role of missing) {
@@ -358,7 +405,12 @@ export class Game {
   spawnPlayerAt(point, role = 'infantry', weaponId = null) {
     // Check first: a failed respawn must not detach the existing player.
     let planned=null;
-    if(this.cfg.flag('vehicle_spawn_all_v1',false)) {
+    if(this.cfg.flag('movement_occupancy_v1',false)) {
+      const unlocked=this.skills.mods().unlock_weapon;
+      const actualRole=role==='sniper'&&!(Array.isArray(unlocked)&&unlocked.includes('sniper'))?'infantry':(role||'infantry');
+      planned=this.occupancySpawnSpot(point,actualRole);
+      if(!planned){this.alertLog.push({kind:'spawn',text:'Нет безопасного места для появления игрока',x:point.x,y:point.y,t:this.time});return null;}
+    } else if(this.cfg.flag('vehicle_spawn_all_v1',false)) {
       const unlocked=this.skills.mods().unlock_weapon;
       const actualRole=role==='sniper'&&!(Array.isArray(unlocked)&&unlocked.includes('sniper'))?'infantry':(role||'infantry');
       const vehicle=this.cfg.unit(actualRole).class==='vehicle';
@@ -658,6 +710,13 @@ export class Game {
       if (alive) { this.noArmySince[f] = null; continue; }
       if (this.noArmySince[f] == null) this.noArmySince[f] = this.time;
     }
+    // Both sides can exhaust their armies in the same simulation interval.
+    // The experimental rules must not award this symmetry to faction 1.
+    if (this.cfg.flag('victory_hq_rules_v1', false) && [0,1].every(f =>
+        this.noArmySince[f] != null && this.time - this.noArmySince[f] >= limit)) {
+      this.endWar(null, 'Обе армии уничтожены');
+      return;
+    }
     for (const f of [0, 1]) {
       const since = this.noArmySince[f];
       if (since != null && this.time - since >= limit) {
@@ -669,6 +728,26 @@ export class Game {
 
   checkVictory() {
     if (this.warOver) return;
+    if (this.cfg.flag('victory_hq_rules_v1', false)) {
+      // Simultaneous losses are evaluated together, never by array order.
+      // A neutral point is not an enemy capture; an absent structure is not
+      // assumed destroyed. Destruction is the actual primary HQ object.
+      const losses = [0,1].map(faction => {
+        const hq=this.world.homeHQ(faction);
+        if (!hq) return null;
+        const captured=hq.owner===1-faction, destroyed=!!hq.structure?.dead;
+        return captured || destroyed ? {faction,captured,destroyed} : null;
+      }).filter(Boolean);
+      if (losses.length===2) return this.endWar(null, 'Оба штаба потеряны одновременно');
+      if (losses.length===1) {
+        const loss=losses[0];
+        return this.endWar(1-loss.faction, `Штаб ${this.cfg.faction(loss.faction).name} ${loss.destroyed ? 'разрушен' : 'захвачен'}`);
+      }
+      // Existing no-army timeout is retained as the legacy approximation of
+      // surrender, but city/timer victories are not part of this experiment.
+      this.trackArmies();
+      return;
+    }
     this.trackArmies();
     if (this.warOver) return;
     // Измор: после долгой войны побеждает тот, кто держит больше ключевых городов.
@@ -712,20 +791,20 @@ export class Game {
         return this.endWar(w, `Война на измор: больше ${label} (${this.cfg.faction(w).name})`);
       }
     }
-    return this.endWar(0, 'Война на измор: полный паритет');
+    return this.endWar(this.cfg.flag('victory_hq_rules_v1', false) ? null : 0, 'Война на измор: полный паритет');
   }
 
   endWar(winner, reason) {
     if (this.warOver) return;
     this.warOver = true;
     this.outcome = { winner, reason, t: this.time };
-    if (this.playerFaction != null) {
+    if (this.playerFaction != null && winner != null) {
       this.awardXP(this.playerFaction, 'infantry', winner === this.playerFaction ? 'warWin' : 'warLoss', 1);
     }
     this.meta.warCount = (this.meta.warCount || 0) + 1;
     this.skills.warCount = this.meta.warCount;
     this.events.emit('warOver', { winner, reason, t: this.time });
-    this.sound(winner === this.playerFaction ? 'alert_capture' : 'alert_loss');
+    if (winner != null) this.sound(winner === this.playerFaction ? 'alert_capture' : 'alert_loss');
   }
 
   nextWar(seed = this.seed + 1) {
@@ -751,11 +830,13 @@ export class Game {
       this.createSquadAtBase(faction, 'assault', { free: true, name: 'Чарли' });
       this.createSquadAtBase(faction, 'engineer', { free: true, name: 'Инженеры' });
       let tankSpot = this.spawnPos(hq, 0, 70, 'box');
-      if(this.cfg.flag('vehicle_spawn_all_v1',false))tankSpot=this.logistics.vehicleProductionSpot(hq,'tank',tankSpot.x,tankSpot.y);
+      if(this.cfg.flag('movement_occupancy_v1',false))tankSpot=this.occupancySpawnSpot(hq,'tank');
+      else if(this.cfg.flag('vehicle_spawn_all_v1',false))tankSpot=this.logistics.vehicleProductionSpot(hq,'tank',tankSpot.x,tankSpot.y);
       if(tankSpot)this.spawnUnit(faction, 'tank', tankSpot.x, tankSpot.y, { spawnPoint: hq.id });
       for (let i = 0; i < 2; i++) {
         let t = this.spawnPos(hq, 0, 100, 'box');
-        if(this.cfg.flag('vehicle_spawn_all_v1',false))t=this.logistics.vehicleProductionSpot(hq,'truck',t.x,t.y);
+        if(this.cfg.flag('movement_occupancy_v1',false))t=this.occupancySpawnSpot(hq,'truck');
+        else if(this.cfg.flag('vehicle_spawn_all_v1',false))t=this.logistics.vehicleProductionSpot(hq,'truck',t.x,t.y);
         if(t)this.spawnUnit(faction, 'truck', t.x, t.y, { spawnPoint: hq.id });
       }
     }
@@ -781,7 +862,12 @@ export class Game {
     this.nav.advance();
 
     this.unitGrid.clear();
-    for (const u of this.units.values()) if (u.alive) this.unitGrid.insert(u);
+    const occupancy = this.cfg.flag('movement_occupancy_v1', false);
+    if (occupancy) { this.occupancyGrid.clear(); this.occupancyMaxRadius=0; }
+    for (const u of this.units.values()) if (u.alive) {
+      this.unitGrid.insert(u);
+      if (occupancy) { this.occupancyGrid.insert(u); this.occupancyMaxRadius=Math.max(this.occupancyMaxRadius,u.radius); u.vx = 0; u.vy = 0; }
+    }
 
     // Порядок обхода юнитов чередуется по тикам: тот, кто обновляется первым, стреляет
     // первым и получает преимущество первого хода. Чередование убирает перекос в пользу
@@ -815,6 +901,13 @@ export class Game {
     this.cleanup(dt);
     this.checkVictory();
     this.updateFocus();
+    // In-tick readers use the snapshot built before soldier updates. Refresh
+    // at the boundary so input/render queries after step see current positions.
+    // This does not make reads during the step a live spatial index.
+    for (const u of this.unitGrid.cellOf.keys()) {
+      if (!u.alive || this.units.get(u.id) !== u) this.unitGrid.remove(u);
+    }
+    for (const u of this.units.values()) if (u.alive) this.unitGrid.update(u);
   }
 
   updateFocus() {

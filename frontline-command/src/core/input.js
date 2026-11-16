@@ -5,7 +5,7 @@ export class Input {
     this.bindings = bindings || {};
     this.keys = new Set();
     this.pressed = new Set();
-    this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0, left: false, right: false, middle: false, wheel: 0, wheelDelta: 0 };
+    this.mouse = { x: 0, y: 0, worldX: 0, worldY: 0, inCanvas: false, left: false, right: false, middle: false, wheel: 0, wheelDelta: 0 };
     this.dragging = false;
     this.dragStart = null;
     this.enabled = true;
@@ -27,8 +27,10 @@ export class Input {
       const r = this.canvas.getBoundingClientRect();
       this.mouse.x = e.clientX - r.left;
       this.mouse.y = e.clientY - r.top;
+      this.mouse.inCanvas = this.mouse.x >= 0 && this.mouse.y >= 0 && this.mouse.x <= r.width && this.mouse.y <= r.height;
     };
     this.canvas.addEventListener('pointermove', (e) => pos(e));
+    this.canvas.addEventListener('pointerleave', () => { this.mouse.inCanvas = false; });
     this.canvas.addEventListener('pointerdown', (e) => {
       pos(e);
       this.canvas.setPointerCapture?.(e.pointerId);

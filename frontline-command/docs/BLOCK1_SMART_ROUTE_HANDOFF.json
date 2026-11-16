@@ -1,0 +1,2552 @@
+{
+  "seeds": 20,
+  "summary": {
+    "cases": 120,
+    "bothReached": 120,
+    "bothAssigned": 120,
+    "faster": 120,
+    "slower": 0,
+    "beforeWaitRange": [
+      5.75,
+      5.85
+    ],
+    "afterWaitRange": [
+      0,
+      0
+    ],
+    "allNoTeleport": true,
+    "allStartedOnA": true
+  },
+  "pairs": [
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 1,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 2,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 3,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 4,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 5,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 6,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 7,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 8,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 9,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 10,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 11,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 12,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 13,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 14,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 15,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 16,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 17,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 18,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 19,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 0,
+      "seed": 20,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 1,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 2,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 3,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 4,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 5,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 6,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 7,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 8,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 9,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 10,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 11,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 12,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 13,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 14,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 15,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 16,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 17,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 18,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 19,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "infantry",
+      "faction": 1,
+      "seed": 20,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 1,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 2,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 3,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 4,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 5,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 6,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 7,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 8,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 9,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 10,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 11,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 12,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 13,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 14,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 15,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 16,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 17,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 18,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 19,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 0,
+      "seed": 20,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 1,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 2,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 3,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 4,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 5,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 6,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 7,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 8,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 9,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 10,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 11,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 12,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 13,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 14,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 15,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 16,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 17,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 18,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 19,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "truck",
+      "faction": 1,
+      "seed": 20,
+      "before": {
+        "reached": 0.2,
+        "assigned": 6.050000000000001,
+        "wait": 5.85,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.2,
+        "assigned": 0.2,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 1,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 2,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 3,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 4,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 5,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 6,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 7,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 8,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 9,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 10,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 11,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 12,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 13,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 14,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 15,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 16,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 17,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 18,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 19,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 0,
+      "seed": 20,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 1,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 2,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 3,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 4,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 5,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 6,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 7,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 8,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 9,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 10,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 11,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 12,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 13,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 14,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 15,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 16,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 17,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 18,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 19,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    },
+    {
+      "role": "tank",
+      "faction": 1,
+      "seed": 20,
+      "before": {
+        "reached": 0.30000000000000004,
+        "assigned": 6.050000000000001,
+        "wait": 5.75,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      },
+      "after": {
+        "reached": 0.30000000000000004,
+        "assigned": 0.30000000000000004,
+        "wait": 0,
+        "firstWasA": true,
+        "originalJobStatus": "cancelled",
+        "noTeleport": true
+      }
+    }
+  ],
+  "baselineFilesSha256": {
+    "src/sim/smart_route.js": "cff7bf4f81ab22ce05cd5ca814d560eb4e955a864e494be3707e54a20333898a",
+    "src/sim/units.js": "59a0ce21bf794bb09511d30cca7e051117749fe626020955bd2a1e9d31d671b8"
+  },
+  "caveats": [
+    "Controlled direct moveAlongFlow/updateSmartRoute calls, not Game.step or a battle",
+    "Same synthetic empty geometry and forced stuck state on both sides; a starts 50 units from its goal and moves normally",
+    "No crowds, obstacles, combat, changing doors, save/replay, fps or balance coverage",
+    "Only experimental smart_route_v2 is enabled; it remains off by default"
+  ]
+}

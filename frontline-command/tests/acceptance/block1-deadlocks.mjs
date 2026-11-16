@@ -3,6 +3,7 @@
 import { loadConfig } from '../../src/core/config.js';
 import { Game } from '../../src/sim/game.js';
 import { moveAlongFlow, updateTimers } from '../../src/sim/units.js';
+import { emptyOverlapMetrics, observeOverlaps } from './overlap-metrics.mjs';
 
 const arg = process.argv.find((s) => s.startsWith('--attempts='));
 const attempts = arg ? Number(arg.slice('--attempts='.length)) : 100;
@@ -30,7 +31,8 @@ function scene(seed, faction) {
     return { u, side };
   });
   const crossed = new Set();
-  let teleports = 0, speedViolations = 0, wallCollisions = 0, overlapFrames = 0, maxOverlap = 0;
+  let teleports = 0, speedViolations = 0, wallCollisions = 0;
+  const overlaps = emptyOverlapMetrics();
   for (let tick = 0; tick < 1200; tick++) {
     game.time += 0.05; game.nav.advance(); game.walls.update(0.05);
     for (const { u, side } of units) {
@@ -44,19 +46,17 @@ function scene(seed, faction) {
       if (ratio > 1.5 + 1e-8) speedViolations++;
       if (game.walls.blocksMove(u.x, u.y, u.radius, u)) wallCollisions++;
     }
-    const a = units[0].u, b = units[1].u;
-    const overlap = a.radius + b.radius - Math.hypot(a.x - b.x, a.y - b.y);
-    if (overlap > 0) { overlapFrames++; maxOverlap = Math.max(maxOverlap, overlap); }
+    observeOverlaps(units.map(({u}) => u), overlaps);
     if (units.every(({ u }) => u.arrived || u.pathFailed)) break;
   }
   const arrived = units.filter(({ u }) => u.arrived && !u.pathFailed).length;
   const pathFailed = units.filter(({ u }) => u.pathFailed).length;
-  const ok = arrived === 2 && crossed.size === 2 && !pathFailed && !teleports && !speedViolations && !wallCollisions && !overlapFrames;
+  const ok = arrived === 2 && crossed.size === 2 && !pathFailed && !teleports && !speedViolations && !wallCollisions && !overlaps.overlapFrames;
   return { seed, faction, ok, arrived, crossed: crossed.size, pathFailed, teleports, speedViolations,
-    wallCollisions, overlapFrames, maxOverlap: +maxOverlap.toFixed(3), seconds: +game.time.toFixed(2) };
+    wallCollisions, ...overlaps, maxOverlap: +overlaps.maxOverlap.toFixed(3), seconds: +game.time.toFixed(2) };
 }
 const factions = [];
-let passed = 0, crossed = 0, arrived = 0, teleports = 0, speedViolations = 0, wallCollisions = 0, overlapFrames = 0, maxOverlap = 0;
+let passed = 0, crossed = 0, arrived = 0, teleports = 0, speedViolations = 0, wallCollisions = 0, overlapFrames = 0, overlapPairFrames = 0, overlapFrames70 = 0, overlapPairFrames70 = 0, maxOverlap = 0;
 const failures = [];
 for (const faction of [0, 1]) {
   let factionPassed = 0;
@@ -66,6 +66,7 @@ for (const faction of [0, 1]) {
     else if (failures.length < 8) failures.push(result);
     crossed += result.crossed; arrived += result.arrived; teleports += result.teleports;
     speedViolations += result.speedViolations; wallCollisions += result.wallCollisions; overlapFrames += result.overlapFrames;
+    overlapPairFrames += result.overlapPairFrames; overlapFrames70 += result.overlapFrames70; overlapPairFrames70 += result.overlapPairFrames70;
     maxOverlap = Math.max(maxOverlap, result.maxOverlap);
   }
   factions.push({ id: faction, attempts, passed: factionPassed });
@@ -75,7 +76,7 @@ const scenarios = attempts * 2;
 // Даже при успешной паре приёмка категории остаётся закрытой до расширения стенда.
 const report = { passed: false, coverageComplete: false,
   coverage: [{ id: 'foot-door-opposing', scenarios, participants: 2, passed, factions, crossed, arrived,
-    teleports, speedViolations, wallCollisions, overlapFrames }], method: 'встречная пара через дверь штаба; 100 seed на фракцию в полном режиме; 0,05 с шаг; до 60 с; без боя',
-  scenarios, failed: scenarios - passed, factionsChecked: 2, factions, crossed, arrived, teleports, speedViolations, wallCollisions, overlapFrames, maxOverlap, failures };
+    teleports, speedViolations, wallCollisions, overlapFrames, overlapPairFrames, overlapFrames70, overlapPairFrames70 }], method: 'встречная пара через дверь штаба; 100 seed на фракцию в полном режиме; 0,05 с шаг; до 60 с; без боя',
+  scenarios, failed: scenarios - passed, factionsChecked: 2, factions, crossed, arrived, teleports, speedViolations, wallCollisions, overlapFrames, overlapPairFrames, overlapFrames70, overlapPairFrames70, maxOverlap, failures };
 console.log(JSON.stringify(report, null, 2));
 if (!report.passed) process.exitCode = 1;

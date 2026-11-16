@@ -496,6 +496,7 @@ export class World {
       b.hp = 0;
       b.dead = true;
       b.built = false;
+      if (this.cfg.flag('wall_remove_destroyed_v1', false)) this.walls?.detach(b);
       if (b.point) {
         b.point.hp = 0;
         this.events.push({ type: 'buildingDestroyed', building: b, point: b.point });

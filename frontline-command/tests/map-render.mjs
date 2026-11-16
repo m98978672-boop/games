@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';import {Renderer} from '../src/render/renderer.js';
+const calls=[];const ctx={save(){calls.push(['save']);},restore(){calls.push(['restore']);},beginPath(){calls.push(['begin']);},moveTo(...p){calls.push(['move',...p]);},lineTo(...p){calls.push(['line',...p]);},stroke(){calls.push(['stroke']);},fillText(...p){calls.push(['text',...p]);},setLineDash(...p){calls.push(['dash',...p]);}};
+const friendly={faction:0,state:'active',centroid:()=>({x:2000,y:2050}),objective:{x:2100,y:1950}};
+const enemy={...friendly,faction:1,objective:{x:2400,y:1700}};
+const game={world:{W:4096,H:4096},playerFaction:0,playerUnit:null,selectedSquads:new Set([1,2]),squads:new Map([[1,friendly],[2,enemy]])};
+const r=Object.create(Renderer.prototype);Object.assign(r,{ctx,game,canvas:{width:1280,height:900},dpr:1,camera:{x:2048,y:2048,zoom:1}});
+r.drawCoordinateGrid();assert.ok(calls.some(x=>x[0]==='stroke'));assert.ok(calls.some(x=>x[0]==='text'&&x[1].includes('ед.')));assert.equal(calls.filter(x=>x[0]==='save').length,1);assert.equal(calls.filter(x=>x[0]==='restore').length,1);
+calls.length=0;r.drawMapVectors();assert.ok(calls.some(x=>x[0]==='text'&&x[1]==='Δ(100, 100) · 141 ед.'),'north-up displacement and length');
+assert.equal(calls.filter(x=>x[0]==='text'&&x[1].startsWith('Δ')).length,1,'hidden enemy target not shown');
+assert.ok(calls.some(x=>x[0]==='dash'&&x[1].length===2));
+game.cfg={flag:(id)=>id==='movement_occupancy_v1'};
+friendly.units=()=>[{x:2000,y:2050,vx:30,vy:0}];enemy.units=()=>[{x:2500,y:2000,vx:-30,vy:0}];
+calls.length=0;r.drawMapVectors();assert.ok(calls.some(c=>c[0]==='line'&&c[1]===612&&c[2]===452),'selected friendly motion arrow uses actual vector');
+assert.ok(!calls.some(c=>c[0]==='move'&&c[1]===1092&&c[2]===402),'enemy velocity is not revealed');
+game.selectedSquads.clear();calls.length=0;r.drawMapVectors();assert.equal(calls.filter(x=>x[0]==='text').length,0,'no target means no invented vector');
+console.log('map renderer: grid, scale and friendly displacement vector; enemy objective not leaked');

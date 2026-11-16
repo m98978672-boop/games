@@ -163,6 +163,15 @@ canvas#game.panning { cursor: grabbing; }
 .order-btn img { width: 18px; height: 18px; image-rendering: pixelated; }
 .order-btn kbd { font-size: 10px; color: #7d8874; border: 1px solid #2f3629; border-radius: 2px; padding: 0 3px; }
 
+.hud-map-tools {
+  position: absolute; right: 10px; bottom: 302px; width: 200px;
+  padding: 5px; background: rgba(18, 21, 17, 0.94);
+  border: 1px solid var(--line); border-radius: 4px;
+}
+.map-tool-row { display: flex; gap: 3px; }
+.map-tool-row .hud-btn { padding: 4px 5px; flex: 1; letter-spacing: 0; }
+.map-readout { padding: 5px 2px 0; white-space: pre-line; font: 10px/1.4 monospace; color: #d8e4cd; }
+
 .hud-minimap {
   position: absolute; right: 10px; bottom: 96px; width: 200px; height: 200px;
   border: 1px solid var(--line); border-radius: 4px; background: #12150f;
@@ -278,6 +287,8 @@ input[type="range"] { padding: 0; }
   .hud-left { width: 210px; }
   .hud-right { width: 220px; }
   .hud-minimap { width: 150px; height: 150px; bottom: 92px; }
+  .hud-map-tools { width: 180px; bottom: 248px; }
+  .map-tool-row .hud-btn { font-size: 10px; padding: 4px 3px; }
   .build-menu { left: 218px; width: 380px; }
 }
 

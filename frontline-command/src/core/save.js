@@ -359,6 +359,11 @@ export const Save = {
         const p = byId.get(b.pointId);
         const type = p?.type === 'city' ? 'city' : p?.type;
         if (p && b.type === type && b.x === p.x && b.y === p.y) p.structure = built;
+      } else if (game.cfg.flag('victory_hq_rules_v1', false)) {
+        // Legacy loading otherwise leaves HQ pointing at a discarded dead
+        // starter object and would falsely end the war after loading.
+        const p=byId.get(b.pointId);
+        if (p?.type==='hq' && b.type==='hq' && b.x===p.x && b.y===p.y) p.structure=built;
       }
     }
     if (game.cfg.flag('alg_save', false)) {
@@ -380,6 +385,7 @@ export const Save = {
 
     game.units.clear();
     game.unitGrid.clear();
+    game.occupancyGrid?.clear();
     game.squads.clear();
     game.nextUnitId = 1;
     game.nextSquadId = 1;
@@ -436,6 +442,7 @@ export const Save = {
         }
         if (typeof exact.reloading === 'boolean') unit.reloading = exact.reloading;
         game.unitGrid.update(unit);
+        if (game.cfg.flag('movement_occupancy_v1', false)) game.occupancyGrid.update(unit);
       }
       const squad = u.squadId != null ? game.squads.get(u.squadId) : null;
       if (squad) squad.addUnit(unit);

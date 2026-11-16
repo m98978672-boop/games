@@ -15,7 +15,7 @@ export function cancelSelectedSmartRoute(game, u) {
   if(u._smartRoute)discardSmartRoute(u);
 }
 function eligible(game, u) {
-  if (!u.goal || !u.alive || u.downed || u.playerControlled || u.perception?.hasContact || !game.walls?.enabled() ||
+  if (!u.goal || !u.alive || u.downed || u.arrived || u.playerControlled || u.perception?.hasContact || !game.walls?.enabled() ||
       !game.cfg.flag('pathing_v2', false) || !game.cfg.flag('wall_collision_v2', false)) return false;
   // Не подменяем штатные маршруты внутрь и из зданий (особенно дверные).
   return !game.walls.buildingAtPoint?.(u.x, u.y) && !game.walls.buildingAtPoint?.(u.goal.x, u.goal.y);
@@ -42,7 +42,7 @@ function seesObstacle(game,u) {
 }
 function validPath(game, u, route) {
   return eligible(game,u) && game.world === route.world && game.walls === route.walls &&
-    game.world.navVersion === route.version && !game.walls.navQueue?.size &&
+    game.world.navVersion === route.version && u.radius === route.radius && !game.walls.navQueue?.size &&
     Math.hypot(u.goal.x-route.gx,u.goal.y-route.gy) <= 1;
 }
 export function updateSmartRoute(game, u) {
@@ -84,7 +84,7 @@ export function updateSmartRoute(game, u) {
   if (result.status==='running') return;
   state.active=null;
   if (result.status==='found' && eligible(game,u)) {
-    u._smartRoute={path:result.path,index:0,gx:u.goal.x,gy:u.goal.y,world:game.world,walls:game.walls,version:game.world.navVersion,detour:null};
+    u._smartRoute={path:result.path,index:0,gx:u.goal.x,gy:u.goal.y,world:game.world,walls:game.walls,version:game.world.navVersion,radius:u.radius,detour:null};
     const r=u._smartRoute;
     while (r.index < r.path.length && Math.hypot(u.x-r.path[r.index].x,u.y-r.path[r.index].y)<8) r.index++;
     if (r.index < r.path.length) r.detour = u.detour = {...r.path[r.index],until:game.time+1};
