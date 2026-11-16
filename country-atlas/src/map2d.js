@@ -2215,7 +2215,7 @@ export class Map2D {
     }
     if (this.hud.trains) {
       if (!this.showTrains) this.hud.trains.textContent = 'выключены';
-      else if (!this.rail) this.hud.trains.textContent = '— (со дня 1)';
+      else if (!this.rail) this.hud.trains.textContent = '— (мир строится)';
       else {
         const st = transitStats(this.rail, null, null);
         this.hud.trains.textContent = st.trains + ' составов · держат блок ' + st.waiting +
