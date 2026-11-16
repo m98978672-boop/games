@@ -1,7 +1,7 @@
 // Генератор растровых спрайтов (PNG) для Frontline: Command.
 // Рисуем пиксель-арт программно и сохраняем как обычные PNG-файлы:
 // в игре нет ни одной нарисованной кодом фигуры (кроме отладочного оверлея).
-// Все полученные файлы — PLACEHOLDER_REPLACE: их можно заменить на CC0-арт.
+// Большинство файлов — PLACEHOLDER_REPLACE; подготовленные текстуры земли копируются в конце.
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -515,10 +515,18 @@ fs.writeFileSync(path.resolve('assets/manifest.json'), JSON.stringify(written.ma
 
 fs.writeFileSync(path.resolve('assets/README.md'), `# Ассеты Frontline: Command
 
-Все PNG в этом каталоге сгенерированы процедурно скриптом \`tools/gen-assets.mjs\`
-(растровые, 32×32 юниты, 64×64 техника, 32×32 тайлы). Статус: **PLACEHOLDER_REPLACE** —
+Большинство PNG в этом каталоге сгенерированы процедурно скриптом \`tools/gen-assets.mjs\`
+(растровые, 32×32 юниты, 64×64 техника, 32×32 тайлы). Трава, земля, грязь и вода заменены текстурами, созданными ИИ (исходники и подготовленные тайлы: \`assets/source\`). Остальные ассеты — **PLACEHOLDER_REPLACE** —
 замените на CC0/CC-BY пиксель-арт из \`docs/ASSETS_CREDITS.md\` на этапе 9.
 
 Перегенерация: \`node tools/gen-assets.mjs\`.
 `);
 console.log(`готово: ${written.length} файлов`);
+
+// Curated ground tiles replace the procedural placeholders after regeneration.
+const curatedTiles = path.join('assets', 'source', 'tiles');
+if (fs.existsSync(curatedTiles)) {
+  for (const name of fs.readdirSync(curatedTiles).filter((n) => n.endsWith('.png'))) {
+    fs.copyFileSync(path.join(curatedTiles, name), path.join('assets', 'tiles', name));
+  }
+}

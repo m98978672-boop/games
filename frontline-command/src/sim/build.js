@@ -3,6 +3,7 @@
 // Правила одинаковы для игрока и ИИ: любая постановка идёт через Command API.
 import { clamp, dist, angleTo } from '../core/mathx.js';
 import { Walls } from './walls.js';
+import { footprintTouchesWalls } from './rest_positions.js';
 
 export const FORT_TYPES = ['sandbags', 'wire', 'trench', 'mg_nest', 'bunker', 'watchtower'];
 export const LINE_TYPES = ['sandbags', 'wire', 'trench'];
@@ -21,7 +22,8 @@ export const REASONS = {
   LIMIT: 'достигнут лимит построек этого типа',
   FOG: 'точка в тумане войны',
   FOG_BEHIND: 'за линией фронта строить нельзя',
-  BLOCKS_PATH: 'перекрывает единственный проход',
+  BLOCKS_PATH: 'может перекрыть узкий проход',
+  WALL_OPENING: 'нельзя строить на стене или проёме',
   ACCESS: 'нет подхода для строителей',
   ENEMY_NEAR: 'рядом противник',
   NO_UNITS: 'нет инженеров',
@@ -50,9 +52,17 @@ export class BuildSystem {
   }
 
   // Проверка «чертёж перекрывает проход»: если вокруг пятна почти всё непроходимо,
-  // это узкое место — ставим предупреждение, но не запрещаем.
+  // это вероятное узкое место — размещение запрещается (локальная эвристика).
   blocksPath(def, x, y) {
-    if (!this.game.cfg.flag('build_path_warning', true)) return false;
+    // Two facing obstacles may form a narrow channel even when most of the
+    // eight old probes are open. Reserve room for an infantry-sized circle on
+    // either side of the footprint, in four orientations.
+    const clearance = def.size / 2 + 9 + 8;
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 4, dx = Math.cos(a) * clearance, dy = Math.sin(a) * clearance;
+      if (!this.game.world.isWalkable(x + dx, y + dy) &&
+          !this.game.world.isWalkable(x - dx, y - dy)) return true;
+    }
     let blocked = 0;
     const r = def.size * 0.9;
     for (let i = 0; i < 8; i++) {
@@ -97,6 +107,7 @@ export class BuildSystem {
     if (type === 'bunker' && !(game.modsFor(faction).unlock_build || []).includes('bunker')) {
       return fail('SKILL', 'Бункеры');
     }
+    if (footprintTouchesWalls(game, x, y, def.size / 2)) return fail('WALL_OPENING');
     const foot = this.footprint(def, x, y);
     if (foot.some((p) => !p.walk)) return fail('TERRAIN');
     const near = game.world.buildingGrid.query(x, y, def.size + 20);
@@ -108,6 +119,7 @@ export class BuildSystem {
       if (bp.dead || bp.built) continue;
       if (dist(x, y, bp.x, bp.y) < (bp.w + def.size) * 0.5 - 4) return fail('OVERLAP');
     }
+    if (this.blocksPath(def, x, y)) return fail('BLOCKS_PATH');
     const limit = (game.modsFor(faction).build_limit_add || 0) + (def.limit ?? Infinity);
     if (this.countOf(faction, type) >= limit) return fail('LIMIT', String(limit));
     if (!ignoreFog && !this.fogAllows(faction, x, y)) return fail('FOG_BEHIND');
@@ -119,7 +131,6 @@ export class BuildSystem {
     }
     // предупреждения — не запрет
     const warns = [];
-    if (this.blocksPath(def, x, y)) warns.push({ code: 'BLOCKS_PATH', reason: REASONS.BLOCKS_PATH });
     if (this.enemyNear(faction, x, y, 320)) warns.push({ code: 'ENEMY_NEAR', reason: REASONS.ENEMY_NEAR });
     if (!this.hasBuilderNear(faction, x, y, 900)) warns.push({ code: 'ACCESS', reason: REASONS.ACCESS });
     return { ok: true, code: 'OK', reason: REASONS.OK, warn: warns };

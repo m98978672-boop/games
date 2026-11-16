@@ -1,0 +1,253 @@
+{
+  "kind": "smart_route_wait_paired_wars",
+  "seeds": 4,
+  "seconds": 180,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "wait": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          28,
+          34
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "pathFailures": [
+          108,
+          114
+        ],
+        "activeSearchesObserved": 82,
+        "activeSearchTicks": 448,
+        "alive": [
+          33,
+          25
+        ]
+      },
+      "on": {
+        "wait": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          33,
+          17
+        ],
+        "captures": [
+          6,
+          5
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "pathFailures": [
+          89,
+          125
+        ],
+        "activeSearchesObserved": 99,
+        "activeSearchTicks": 397,
+        "alive": [
+          35,
+          23
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "wait": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          31,
+          40
+        ],
+        "captures": [
+          3,
+          7
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "pathFailures": [
+          25,
+          111
+        ],
+        "activeSearchesObserved": 86,
+        "activeSearchTicks": 473,
+        "alive": [
+          24,
+          47
+        ]
+      },
+      "on": {
+        "wait": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          13,
+          39
+        ],
+        "captures": [
+          6,
+          7
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "pathFailures": [
+          39,
+          81
+        ],
+        "activeSearchesObserved": 67,
+        "activeSearchTicks": 273,
+        "alive": [
+          23,
+          45
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "wait": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          35,
+          34
+        ],
+        "captures": [
+          7,
+          8
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "pathFailures": [
+          91,
+          98
+        ],
+        "activeSearchesObserved": 116,
+        "activeSearchTicks": 972,
+        "alive": [
+          41,
+          43
+        ]
+      },
+      "on": {
+        "wait": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          19,
+          42
+        ],
+        "captures": [
+          6,
+          11
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "pathFailures": [
+          98,
+          105
+        ],
+        "activeSearchesObserved": 143,
+        "activeSearchTicks": 832,
+        "alive": [
+          25,
+          42
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "wait": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          32,
+          37
+        ],
+        "captures": [
+          6,
+          7
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "pathFailures": [
+          25,
+          84
+        ],
+        "activeSearchesObserved": 136,
+        "activeSearchTicks": 574,
+        "alive": [
+          32,
+          36
+        ]
+      },
+      "on": {
+        "wait": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          63,
+          23
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "pathFailures": [
+          64,
+          87
+        ],
+        "activeSearchesObserved": 153,
+        "activeSearchTicks": 845,
+        "alive": [
+          35,
+          29
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "experimental smart_route_v2 enabled in both groups; waiting is the only toggled flag",
+    "observation horizon is not an adjudicated draw; battle and RNG streams can diverge",
+    "search counts are sampled after game steps, so short searches may not be counted",
+    "not a full balance, browser FPS, save or soak acceptance"
+  ]
+}

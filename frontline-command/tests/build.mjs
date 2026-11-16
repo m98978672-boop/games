@@ -147,7 +147,7 @@ ok(aiOrders.length >= 0, `ИИ строит только через Command API 
       // смещения проб 32*0.9/sqrt(2). Все пять точек пятна проходимы.
       fixture.world.isWalkable = (_x, y) => Math.abs(y - spot.y) <= 17;
       const narrow = fixture.build.validate('sandbags', spot.x, spot.y, 0, { ignoreCost: true, ignoreFog: true });
-      ok(narrow.ok && narrow.warn.some((w) => w.code === 'BLOCKS_PATH'), 'узкий проход → предупреждение BLOCKS_PATH');
+      ok(!narrow.ok && narrow.code === 'BLOCKS_PATH', 'узкий проход → запрет BLOCKS_PATH');
       fixture.world.isWalkable = (_x, y) => Math.abs(y - spot.y) <= 40;
       const wide = fixture.build.validate('sandbags', spot.x, spot.y, 0, { ignoreCost: true, ignoreFog: true });
       ok(wide.ok && !wide.warn.some((w) => w.code === 'BLOCKS_PATH'), 'широкий проход → нет предупреждения BLOCKS_PATH');

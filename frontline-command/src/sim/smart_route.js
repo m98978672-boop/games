@@ -20,6 +20,20 @@ function eligible(game, u) {
   // Не подменяем штатные маршруты внутрь и из зданий (особенно дверные).
   return !game.walls.buildingAtPoint?.(u.x, u.y) && !game.walls.buildingAtPoint?.(u.goal.x, u.goal.y);
 }
+// A bounded active search may need several seconds to build its grid. Do not
+// let the legacy stuck timer discard the very goal it is searching for. A
+// stale, cancelled or timed-out job never grants this grace period.
+export function smartRouteSearching(game, u) {
+  if (!game.cfg.flag('smart_route_wait_v1', true) ||
+      (!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false))) return false;
+  const job = game._smartRouteState?.active, p = job?.planner;
+  return !!(job?.unit === u && p?.status === 'running' && eligible(game,u) &&
+    game.time >= job.started && game.time - job.started <= 6 &&
+    p.world === game.world && p.walls === game.walls && p.version === game.world.navVersion &&
+    !game.walls.navQueue?.size && p.radius === u.radius && p.goal && p.start &&
+    Math.hypot(p.goal.x-u.goal.x,p.goal.y-u.goal.y) <= 1 &&
+    Math.hypot(p.start.x-u.x,p.start.y-u.y) <= 32);
+}
 // Short-range geometric "eyes": look along the desired direction with the
 // unit's real radius. This does not detect enemies or replace door logic.
 export function obstacleAhead(game, u) {

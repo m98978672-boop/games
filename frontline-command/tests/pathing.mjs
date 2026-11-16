@@ -80,7 +80,8 @@ async function remoteDoorObstacle(flowAfter, contact = false) {
   const g = await setup(true);
   g.cfg.navBudget.antiStuck.doorFlowAfter = flowAfter;
   const u = g.spawnUnit(0, 'infantry', 382, 3251, {});
-  u.goal = { x: 1678, y: 2546 };
+  // Цель вне геометрии стены: иначе корректировка безопасной остановки сбросит stuck.
+  u.goal = { x: 1678, y: 2526 };
   u.activity = 'advance';
   u.stuck = 1;
   u.perception.hasContact = contact;
