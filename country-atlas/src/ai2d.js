@@ -172,7 +172,7 @@ export function advanceMayor(mayor, journal, rand = rngFork(424242, mayor.index)
     mayor.log.push(why);
     if (mayor.log.length > 12) mayor.log.shift();
     pushWhy(journal, { day: mayor.day, city: mayor.name, text: why }, 40);
-    out.push({ day: mayor.day, city: mayor.name, action: best.action.id, text: why });
+    out.push({ day: mayor.day, index: mayor.index, city: mayor.name, action: best.action.id, text: why });
   }
   // день прошёл: спрос, пробки и настроение ползут дальше
   mayor.housingDemand = Math.max(0.6, mayor.housingDemand + (rand() - 0.45) * 0.08);

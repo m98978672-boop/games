@@ -17,6 +17,8 @@ import { lightAt, overlayCss, cityLights, clockText, phaseAt, sunAltitudeDeg, se
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 import { buildMayors, advanceMayors, mayorStats, DRIVER } from './ai2d.js';
 import { buildPlay, stepPlay, playStats, PROFILE_COLOR, PLAY2D } from './play2d.js';
+import { buildGrowth, applyGrowth, growthStats, progressAt, GROWTH } from './growth2d.js';
+import { buildCrowd, stepCrowd, crowdStats, mayCross } from './pedsoc2d.js';
 
 export class Map2D {
   constructor(canvas, hud) {
@@ -63,6 +65,10 @@ export class Map2D {
     this.why = [];             // последние решения мэров — то самое «почему»
     this.lastMayorDay = 0;
     this.showPlay = true;      // полигон IDM и светофор §16.4
+    this.showGrowth = true;    // рост городов от решений мэров §16.8
+    this.growth = new Map();   // индекс города → что там выросло
+    this.showPedAI = true;     // социальные силы и переходы §16.6
+    this.crowds = new Map();   // индекс города → толпа
     this.play = null;
     this.showWater = true;      // реки, озёра и мосты §5
     this.water = null;
@@ -412,9 +418,17 @@ export class Map2D {
         const mayors = this.buildMayorsLayer();
         const events = advanceMayors(mayors, this.why, day - this.lastMayorDay);
         this.lastMayorDay = day;
+        // R-16.28: решение видно в мире — дома, парк, объездная
+        if (this.showGrowth) {
+          for (const e of events) {
+            const g = this.growthAt(e.index);
+            applyGrowth(g, e.action, g.decisions, day);
+          }
+        }
         this.updateWhyPanel(events);
       }
     }
+    if (this.showPedAI && this.showPeds) this.stepCrowds(dtSec);
     this.updatePlay(dtSec);
   }
 
@@ -663,6 +677,9 @@ export class Map2D {
         }
       }
 
+      // §16.8: объездная и расширенная дорога видны уже с общего вида города
+      if (this.showGrowth && this.growth.has(i)) this.drawGrowth(ctx, X, Y, s, lod, this.growth.get(i), false);
+
       if (lod < 2) continue;
       // здания: пятно + крыша
       const cw = ctx.canvas.width, ch = ctx.canvas.height;
@@ -699,6 +716,9 @@ export class Map2D {
           ctx.stroke();
         }
       }
+
+      // §16.8: новые дома, парк, склады и школа/больница — поверх старых кварталов
+      if (this.showGrowth && this.growth.has(i)) this.drawGrowth(ctx, X, Y, s, lod, this.growth.get(i), true);
     }
   }
 
@@ -709,6 +729,24 @@ export class Map2D {
     if (this.mayors) return this.mayors;
     this.mayors = buildMayors(this.settlements, this.ranks);
     return this.mayors;
+  }
+
+  /* §16.8: что выросло в городе от решений мэра (R-16.28). */
+  growthAt(index) {
+    if (!this.growth.has(index)) {
+      const g = buildGrowth(this.settlements[index], this.cityAt(index));
+      this.growth.set(index, g);
+    }
+    return this.growth.get(index);
+  }
+
+  /* §16.6: толпа города — стороны тротуаров, желание перейти и давление соседей. */
+  crowdAt(index) {
+    if (!this.crowds.has(index)) {
+      const pack = this.pedsAt(index);
+      this.crowds.set(index, buildCrowd(pack, 424242 + index));
+    }
+    return this.crowds.get(index);
   }
 
   /* §16.4: полигон IDM — 12 машин на кольце и светофор, живой кусок тех же мозгов. */
@@ -761,6 +799,29 @@ export class Map2D {
     return this.pedCache.get(index);
   }
 
+  /* §16.6: шаг социальных сил для городов, попавших в кадр, — не больше 12 одновременно. */
+  stepCrowds(dtSec) {
+    if (this.scale < 20) return;                 // пешеходы и так не видны (§13 LOD 40)
+    this.crowdAcc = (this.crowdAcc || 0) + dtSec;
+    if (this.crowdAcc < 0.1) return;            // 10 раз в секунду хватает: шаг 4.8 км/ч
+    const dt = this.crowdAcc;
+    this.crowdAcc = 0;
+    const hour = ((this.transport ? this.transport.minutes : 480) % 1440) / 60;
+    const lightState = this.play ? this.play.light.state : 'green';
+    const halfW = this.view.w / (2 * this.scale) + 8, halfH = this.view.h / (2 * this.scale) + 8;
+    let n = 0;
+    for (let i = 0; i < this.settlements.length && n < 12; i++) {
+      const t = this.settlements[i];
+      if (Math.abs(t.x - this.center.x) > halfW || Math.abs(t.y - this.center.y) > halfH) continue;
+      const pack = this.pedsAt(i);
+      if (!pack || !pack.peds.length) continue;
+      const crowd = this.crowdAt(i);
+      const pos = pedPositions(pack);
+      stepCrowd(pack, crowd, pos, dt, { light: lightState, regulated: true, hour });
+      n++;
+    }
+  }
+
   drawPeds(ctx, originX, originY, s) {
     this.pedsInFrame = 0;
     this.light = lightAt(8 * 60, dayOfYearOf(0));   // время суток §14; обновляется из tick
@@ -780,9 +841,23 @@ export class Map2D {
       const budget = pedBudget(s, pack.count);
       if (!budget) continue;
       const list = pedPositions(pack);
+      const crowd = this.showPedAI ? this.crowdAt(i) : null;
+      const samePack = crowd && crowd.side.length === pack.peds.length;
       for (const p of list) {
         if (drawn >= Math.min(budget, PED_CAP)) break;
-        const x = X(p.x), y = Y(p.y);
+        // §16.6: сторона тротуара и сдвиг к середине от толпы
+        let wx = p.x, wy = p.y;
+        if (samePack && p.idx != null) {
+          const base = pack.peds[p.idx];
+          const off = base ? base.offsetKm : 0;
+          const side = crowd.side[p.idx] || (off >= 0 ? 1 : -1);
+          const mag = Math.max(0, Math.abs(off) - (crowd.shiftKm[p.idx] || 0));
+          const nx = -p.dy, ny = p.dx;
+          const delta = side * mag - off;
+          wx = p.x + nx * delta;
+          wy = p.y + ny * delta;
+        }
+        const x = X(wx), y = Y(wy);
         if (x < -8 || y < -8 || x > view.w + 8 || y > view.h + 8) continue;
         drawn++;
         const spec = PED[p.kind] || PED.walker;
@@ -1465,6 +1540,119 @@ export class Map2D {
     }
   }
 
+  /* §16.8: то, что выросло от решений мэра (R-16.28). Дома, парк, склады, школа/больница;
+     недостроенное стоит в лесах. Всё считается от прогресса стройки в игровых днях. */
+  drawGrowth(ctx, X, Y, s, lod, growth, small) {
+    const day = Math.floor((this.transport ? this.transport.minutes : 0) / 1440);
+    const toPx = (km) => km * s;
+
+    // расширение дороги: кольцо вокруг города становится шире (полосы)
+    if (growth.widen > 0 && lod >= 1) {
+      const r = growth.radiusKm * 0.995;
+      ctx.strokeStyle = 'rgba(58,58,62,0.85)';
+      ctx.lineWidth = Math.max(1.4, toPx(0.008 + 0.004 * growth.widen));
+      ctx.beginPath();
+      ctx.arc(X(growth.cx), Y(growth.cy), r * s, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(246,240,226,0.8)';
+      ctx.lineWidth = Math.max(0.6, toPx(0.0016));
+      ctx.setLineDash([Math.max(2, toPx(0.006)), Math.max(2, toPx(0.006))]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    // объездная: дуга вокруг города
+    if (growth.bypass && lod >= 1) {
+      const bp = growth.bypass;
+      const p = progressAt(bp, day);
+      ctx.strokeStyle = p >= 1 ? 'rgba(64,62,58,0.95)' : 'rgba(120,110,96,0.8)';
+      ctx.lineWidth = Math.max(1.6, toPx(0.011));
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(X(bp.pts[0][0]), Y(bp.pts[0][1]));
+      for (let k = 1; k < bp.pts.length; k++) ctx.lineTo(X(bp.pts[k][0]), Y(bp.pts[k][1]));
+      ctx.stroke();
+      ctx.strokeStyle = 'rgba(246,240,226,0.75)';
+      ctx.lineWidth = Math.max(0.6, toPx(0.0014));
+      ctx.setLineDash([Math.max(2, toPx(0.007)), Math.max(2, toPx(0.007))]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    if (!small || lod < 2) return;
+
+    // парк: пятно, дорожка, деревья
+    for (const park of growth.parks) {
+      const p = progressAt(park, day);
+      const c = park.corners;
+      ctx.beginPath();
+      ctx.moveTo(X(c[0][0]), Y(c[0][1]));
+      for (let k = 1; k < c.length; k++) ctx.lineTo(X(c[k][0]), Y(c[k][1]));
+      ctx.closePath();
+      ctx.fillStyle = 'rgba(96,128,74,' + (0.35 + 0.5 * p).toFixed(2) + ')';
+      ctx.fill();
+      if (p >= 1) {
+        const path = park.paths[0];
+        ctx.strokeStyle = 'rgba(214,204,178,0.9)';
+        ctx.lineWidth = Math.max(0.8, toPx(0.0022));
+        ctx.beginPath();
+        ctx.moveTo(X(path.x0), Y(path.y0));
+        ctx.lineTo(X(path.x1), Y(path.y1));
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(58,92,50,0.92)';
+        for (const t of park.trees) {
+          ctx.beginPath();
+          ctx.arc(X(t.x), Y(t.y), Math.max(1, toPx(t.r)), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // дома, склады, школа/больница: готовое — с крышей, в стройке — леса
+    const drawBox = (item, toneFallback) => {
+      const p = progressAt(item, day);
+      const c = item.corners;
+      ctx.beginPath();
+      ctx.moveTo(X(c[0][0]), Y(c[0][1]));
+      for (let k = 1; k < c.length; k++) ctx.lineTo(X(c[k][0]), Y(c[k][1]));
+      ctx.closePath();
+      if (p < 1) {
+        // стройка: светлый контур и стойки лесов
+        ctx.fillStyle = 'rgba(196,186,168,0.35)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(122,106,84,0.9)';
+        ctx.lineWidth = Math.max(0.8, toPx(0.0014));
+        ctx.setLineDash([2, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        return;
+      }
+      ctx.fillStyle = item.tone || toneFallback;
+      ctx.fill();
+      ctx.strokeStyle = item.roof || 'rgba(96,74,54,0.9)';
+      ctx.lineWidth = Math.max(0.6, toPx(0.0012));
+      ctx.stroke();
+    };
+    for (const h of growth.houses) drawBox(h, '#d8c8ae');
+    for (const w of growth.industry) drawBox(w, '#9aa0a2');
+    for (const c of growth.civic) {
+      drawBox(c, '#d9c9a6');
+      if (progressAt(c, day) >= 1) {
+        // двор: светлое пятно рядом с больницей/школой
+        const dx = X(c.x), dy = Y(c.y);
+        const r = Math.max(2, toPx(GROWTH.civicW * 0.75));
+        ctx.fillStyle = 'rgba(206,208,198,0.55)';
+        ctx.beginPath();
+        ctx.arc(dx, dy, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = c.tone;
+        ctx.beginPath();
+        ctx.arc(dx, dy, r * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
   drawSettlements(ctx, originX, originY, s) {
     const cap = this.ranks.capital;
     const hubSet = this.ranks.hubSet;
@@ -1643,6 +1831,7 @@ export class Map2D {
       else { el.innerHTML = '<li>пока тихо</li>'; return; }
     }
     el.innerHTML = rows.map((e) => '<li>' + e.text + '</li>').join('');
+    this.updateAiHud();
     if (this.hud.mayors) {
       const s = mayorStats(this.mayors || []);
       this.hud.mayors.textContent = s.count + ' мэр · ' + s.decisions + ' решений';
@@ -1686,7 +1875,39 @@ export class Map2D {
     this.hud.country.innerHTML = rows.join('');
   }
 
+  /* §16.6 и §16.8: строки HUD про толпу и стройку — обновляются и по дням, и по кадрам. */
+  updateAiHud() {
+    if (this.hud.crowd) {
+      if (!this.showPedAI || !this.showPeds) this.hud.crowd.textContent = 'выключена';
+      else if (!this.crowds.size) this.hud.crowd.textContent = '— (нужен зум от 20 px/км)';
+      else {
+        let waiting = 0, crossed = 0, pressure = 0, n = 0;
+        for (const c of this.crowds.values()) {
+          const s3 = crowdStats(c);
+          waiting += s3.waiting; crossed += s3.crossed; pressure += s3.pressure; n++;
+        }
+        this.hud.crowd.textContent = n + ' город · ждут ' + waiting + ' · перешли ' + crossed +
+          ' · давка ' + Math.round((pressure / Math.max(1, n)) * 100) + '%';
+      }
+    }
+    if (this.hud.growth) {
+      if (!this.showGrowth) this.hud.growth.textContent = 'выключен';
+      else if (!this.growth.size) this.hud.growth.textContent = '— (с первого дня)';
+      else {
+        let houses = 0, parks = 0, civic = 0, building = 0, bypass = 0;
+        for (const g of this.growth.values()) {
+          const st2 = growthStats(g);
+          houses += st2.houses; parks += st2.parks; civic += st2.civic;
+          building += st2.building; if (st2.bypass) bypass++;
+        }
+        this.hud.growth.textContent = houses + ' домов · ' + parks + ' парков · ' + civic +
+          ' обществ. · в лесах ' + building + (bypass ? ' · объездных ' + bypass : '');
+      }
+    }
+  }
+
   updateHud() {
+    this.updateAiHud();
     const p = this.pointer;
     const w = this.toWorld(p.x, p.y);
     const h = heightKm(w.x, w.y);
