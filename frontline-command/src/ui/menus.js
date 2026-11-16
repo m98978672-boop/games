@@ -114,6 +114,8 @@ export class Menus {
       <div class="form-row"><label>Подсказки</label><input id="set-hints" type="checkbox" ${settings.showHints ? 'checked' : ''}></div>
       <div class="form-row"><label>Режим для дальтоников</label><input id="set-cb" type="checkbox" ${settings.colorblind ? 'checked' : ''}></div>
       <div class="form-row"><label>Автосохранение</label><input id="set-auto" type="checkbox" ${settings.autosave ? 'checked' : ''}></div>
+      <div class="form-row"><label for="set-occupancy">Боты не проходят друг сквозь друга (эксперимент)</label><input id="set-occupancy" type="checkbox" ${settings.movementOccupancy ? 'checked' : ''}></div>
+      <div style="font-size:12px;color:#c8ae7a">Боты ждут или пробуют обход; в тесных группах возможны пробки. Наложения из старых сохранений или до включения режима могут сохраняться.</div>
       <div class="btn-row">
         <button class="btn primary" id="set-close">Готово</button>
         <button class="btn" id="set-reset">Сбросить прогресс навыков</button>
@@ -135,6 +137,7 @@ export class Menus {
     bind('#set-hints', 'showHints', true);
     bind('#set-cb', 'colorblind', true);
     bind('#set-auto', 'autosave', true);
+    bind('#set-occupancy', 'movementOccupancy', true);
     this.overlay.querySelector('#set-close').onclick = () => handlers.onClose?.();
     this.overlay.querySelector('#set-reset').onclick = () => handlers.onResetMeta?.();
   }
@@ -206,10 +209,11 @@ export class Menus {
   result(game) {
     const f = game.playerFaction ?? 0;
     const won = game.outcome && game.outcome.winner === f;
+    const draw = game.outcome && game.outcome.winner === null;
     const stats = game.stats;
     const contrib = game.warStats;
     this.show(`
-      <h1>${won ? 'Победа' : 'Поражение'}</h1>
+      <h1>${draw ? 'Ничья' : won ? 'Победа' : 'Поражение'}</h1>
       <div class="subtitle">${game.outcome ? game.outcome.reason : 'Война завершена'} · ${(game.time / 60).toFixed(1)} мин</div>
       <div class="stat-row"><span>Уничтожено врагов</span><b>${stats.kills[f]}</b></div>
       <div class="stat-row"><span>Потери</span><b>${stats.losses[f]}</b></div>

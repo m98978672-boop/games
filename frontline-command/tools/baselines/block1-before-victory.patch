@@ -1,0 +1,249 @@
+--- a/src/sim/ai_soldier.js
++++ b/src/sim/ai_soldier.js
+@@ -321 +321 @@
+-    else { engineerAct(game, u, dt); if (u.buildBusy) return; }
++    else { if (engineerAct(game, u, dt) || u.buildBusy) return; }
+@@ -389 +389,20 @@
+-      if (wall.distance > 60) { u.goal = wall.goal; return; }
++      if (wall.distance > 60) {
++        u.goal = wall.goal;
++        // Flow fields can point away from the near side of a wall, especially
++        // inside a building. Use a direct approach only when the entire swept
++        // circle and terrain corridor are clear. Otherwise retain normal routing.
++        const dx = wall.goal.x - u.x, dy = wall.goal.y - u.y;
++        const steps = Math.ceil(Math.hypot(dx, dy) / 6), r = u.radius;
++        let clear = !game.walls.blocksMoveSweep(u.x, u.y, wall.goal.x, wall.goal.y, r, u);
++        for (let i = 0; clear && i <= steps; i++) {
++          const t = steps ? i / steps : 0, x = u.x + dx * t, y = u.y + dy * t;
++          for (const [ox, oy] of [[0, 0], [-r, -r], [r, -r], [-r, r], [r, r]]) {
++            if (!game.world.isBaseWalkable(x + ox, y + oy)) { clear = false; break; }
++          }
++        }
++        if (clear) {
++          moveUnit(game, u, dx, dy, dt, null, { skipDoorWaypoint: true });
++          return true;
++        }
++        return;
++      }
+--- a/src/sim/build.js
++++ b/src/sim/build.js
+@@ -701,0 +702 @@
++    if (this.game.cfg.flag('wall_remove_destroyed_v1', false)) this.game.walls?.detach(b);
+--- a/src/sim/crowd_nav.js
++++ b/src/sim/crowd_nav.js
+@@ -56,0 +57 @@
++  if (u._crowdPoint && game.cfg.flag('crowd_slot_exchange_v1', false)) exchangeCrowdSlots(game,u);
+@@ -94,0 +96,44 @@
++}
++
++// Exchange existing reservations only when both direct paths are presently
++// clear and the combined remaining distance strictly decreases. In particular,
++// never move an arrived member's reservation or create a new destination.
++export function exchangeCrowdSlots(game,u) {
++  if (!game.cfg.flag('crowd_slot_exchange_v1', false) || !u._crowdActive || !u._crowdPoint ||
++      !u.goal || !u.alive || u.downed || u.isVehicle || u.playerControlled || u.perception?.hasContact || u.arrived || !game.walls?.enabled()) return false;
++  const w=game.world, walls=game.walls;
++  const clear=(a,p)=>{
++    const dx=p.x-a.x,dy=p.y-a.y,den=dx*dx+dy*dy;
++    // Positions may have changed since the tick's spatial snapshot.
++    for(const o of game.units.values()) {
++      if(o===a || !o.alive || o.downed) continue;
++      const ox=a.x-o.x,oy=a.y-o.y, min=a.radius+o.radius+0.01;
++      const t=den ? Math.max(0,Math.min(1,-(ox*dx+oy*dy)/den)) : 0;
++      if((ox+dx*t)**2+(oy+dy*t)**2<min*min) return false;
++    }
++    if(walls.blocksMoveSweep(a.x,a.y,p.x,p.y,a.radius,a)) return false;
++    const d=Math.sqrt(den), steps=Math.max(1,Math.ceil(d/8)), r=a.radius;
++    for(let i=1;i<=steps;i++) {
++      const x=a.x+(p.x-a.x)*i/steps, y=a.y+(p.y-a.y)*i/steps;
++      if(x-r<0||y-r<0||x+r>w.W||y+r>w.H||!w.isBaseWalkable(x,y)||
++         !w.isBaseWalkable(x-r,y-r)||!w.isBaseWalkable(x+r,y-r)||
++         !w.isBaseWalkable(x-r,y+r)||!w.isBaseWalkable(x+r,y+r)||walls.blocksMove(x,y,r,a)) return false;
++    }
++    return true;
++  };
++  const candidates=game.unitGrid.query(u.goal.x,u.goal.y,150).filter(v=>v!==u && v.alive && !v.downed &&
++    !v.isVehicle && !v.playerControlled && !v.perception?.hasContact && !v.arrived && !v.pathFailed && v.faction===u.faction && v.goal &&
++    Math.hypot(v.goal.x-u.goal.x,v.goal.y-u.goal.y)<1 && v._crowdGroupGoal && v._crowdAssigned &&
++    Math.hypot(v._crowdGroupGoal.x-u._crowdGroupGoal.x,v._crowdGroupGoal.y-u._crowdGroupGoal.y)<1)
++    .sort((a,b)=>a.id-b.id);
++  for(const v of candidates) {
++    const a=u._crowdAssigned,b=v._crowdAssigned;
++    const before=Math.hypot(u.x-a.x,u.y-a.y)+Math.hypot(v.x-b.x,v.y-b.y);
++    const after=Math.hypot(u.x-b.x,u.y-b.y)+Math.hypot(v.x-a.x,v.y-a.y);
++    if(after+1>=before || !clear(u,b) || !clear(v,a)) continue;
++    u._crowdAssigned=b; u._crowdPoint=b; v._crowdAssigned=a;
++    if(v._crowdPoint) v._crowdPoint=a;
++    for(const member of [u,v]) if(member.detour===member._crowdDetour) { member.detour=null; member._crowdDetour=null; }
++    return true;
++  }
++  return false;
+--- a/src/sim/game.js
++++ b/src/sim/game.js
+@@ -49 +49,3 @@
+-      for (const b of this.world.buildings) if (b.owner === 0 || b.owner === 1) b.owner = 1 - b.owner;
++      // Buildings store ownership in `faction`, not `owner`.  Keep the
++      // point's structure and faction-based building logic on the same side.
++      for (const b of this.world.buildings) if (b.faction === 0 || b.faction === 1) b.faction = 1 - b.faction;
+@@ -817,0 +820,7 @@
++    // In-tick readers use the snapshot built before soldier updates. Refresh
++    // at the boundary so input/render queries after step see current positions.
++    // This does not make reads during the step a live spatial index.
++    for (const u of this.unitGrid.cellOf.keys()) {
++      if (!u.alive || this.units.get(u.id) !== u) this.unitGrid.remove(u);
++    }
++    for (const u of this.units.values()) if (u.alive) this.unitGrid.update(u);
+--- a/src/sim/smart_route.js
++++ b/src/sim/smart_route.js
+@@ -18 +18 @@
+-  if (!u.goal || !u.alive || u.downed || u.playerControlled || u.perception?.hasContact || !game.walls?.enabled() ||
++  if (!u.goal || !u.alive || u.downed || u.arrived || u.playerControlled || u.perception?.hasContact || !game.walls?.enabled() ||
+@@ -45 +45 @@
+-    game.world.navVersion === route.version && !game.walls.navQueue?.size &&
++    game.world.navVersion === route.version && u.radius === route.radius && !game.walls.navQueue?.size &&
+@@ -87 +87 @@
+-    u._smartRoute={path:result.path,index:0,gx:u.goal.x,gy:u.goal.y,world:game.world,walls:game.walls,version:game.world.navVersion,detour:null};
++    u._smartRoute={path:result.path,index:0,gx:u.goal.x,gy:u.goal.y,world:game.world,walls:game.walls,version:game.world.navVersion,radius:u.radius,detour:null};
+--- a/src/sim/solid_units.js
++++ b/src/sim/solid_units.js
+@@ -3 +3 @@
+-export function solidUnitMoveFree(game,u,x,y) {
++export function solidUnitMoveFree(game,u,x,y,clearance=0) {
+@@ -5 +5 @@
+-  const reach=Math.sqrt(den)+u.radius+128;
++  const reach=Math.sqrt(den)+u.radius+128+clearance;
+@@ -8 +8 @@
+-    const ox=u.x-o.x,oy=u.y-o.y,r=u.radius+o.radius;
++    const ox=u.x-o.x,oy=u.y-o.y,r=u.radius+o.radius+clearance;
+--- a/src/sim/units.js
++++ b/src/sim/units.js
+@@ -415 +415 @@
+-export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
++export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWaypoint = false } = {}) {
+@@ -425 +425 @@
+-  if (game.walls && u.goal) {
++  if (game.walls && u.goal && !skipDoorWaypoint) {
+@@ -503,0 +504 @@
++  const groupSweep = game.cfg.flag('crowd_swept_units_v1', false) && (u._crowdActive || !!doorLane);
+@@ -541 +542 @@
+-    (!solid || solidUnitMoveFree(game, u, x, y));
++    (!(solid || groupSweep) || solidUnitMoveFree(game, u, x, y, groupSweep ? 0.01 : 0));
+@@ -582 +583 @@
+-      if (!solid || solidUnitMoveFree(game, u, pushX, pushY)) {
++      if (!(solid || groupSweep) || solidUnitMoveFree(game, u, pushX, pushY, groupSweep ? 0.01 : 0)) {
+@@ -680 +681,10 @@
+-  if (!visionChoice || visionChoice.mode === 'group' || managedPair) prepareCrowdNavigation(game, u, d, managedPair ? 2 : undefined, allowPair);
++  // A formed 3+ group must not silently lose its reservations when a casualty
++  // leaves two visible members. Keep only the existing formation, never create
++  // a new pair, and immediately yield to combat/changed goals as before.
++  const survivorPair = game.cfg.flag('crowd_group_survivor_v1', false) && visionChoice?.mode === 'pair' &&
++    u._crowdGroupGoal && !u._crowdPairManaged && Math.hypot(u.goal.x-u._crowdGroupGoal.x,u.goal.y-u._crowdGroupGoal.y)<1 &&
++    game.unitGrid.query(u.x,u.y,220).some(v=>v!==u && visionChoice.visibleIds.has(v.id) && v.alive && !v.downed &&
++      !v.perception?.hasContact && v.faction===u.faction && v.goal && v._crowdGroupGoal &&
++      Math.hypot(v.goal.x-u.goal.x,v.goal.y-u.goal.y)<1 &&
++      Math.hypot(v._crowdGroupGoal.x-u._crowdGroupGoal.x,v._crowdGroupGoal.y-u._crowdGroupGoal.y)<1);
++  if (!visionChoice || visionChoice.mode === 'group' || managedPair || survivorPair) prepareCrowdNavigation(game, u, d, managedPair ? 2 : undefined, allowPair);
+@@ -686 +696,6 @@
+-  if (d < arriveD && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) { if (u._smartRoute) discardSmartRoute(u); u.arrived = true; u.flowDir = null; return; }
++  if (d < arriveD && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) {
++    // A unit can reach its goal while its incremental search is still active.
++    // Release that job immediately; otherwise another unit may wait six seconds.
++    if (u._smartRoute || game._smartRouteState?.active?.unit === u) cancelSelectedSmartRoute(game,u);
++    u.arrived = true; u.flowDir = null; return;
++  }
+--- a/src/sim/walls.js
++++ b/src/sim/walls.js
+@@ -47,0 +48,3 @@
++    if (this.cfg.flag('wall_remove_destroyed_v1', false)) {
++      for (const id of this.navQueue) if (!this.instances.has(id)) this.navQueue.delete(id);
++    }
+@@ -51,0 +55,3 @@
++    // In the experimental lifecycle mode, rebuilds must not resurrect the
++    // wall state of a building that has already been destroyed.
++    if (this.cfg.flag('wall_remove_destroyed_v1', false) && b.dead) { b.wall = null; return null; }
+@@ -81,0 +88,4 @@
++    if (this.cfg.flag('wall_remove_destroyed_v1', false)) {
++      this.navQueue.delete(b.id);
++      this.invalidateCover(b);
++    }
+@@ -748,0 +759,13 @@
++  // Scan live positions, not unitGrid: door commands and wall updates can
++  // happen after movement but before the spatial index is refreshed.
++  doorOccupant(building, opening, thickness) {
++    const x1=building.x+opening.p1[0],y1=building.y+opening.p1[1];
++    const x2=building.x+opening.p2[0],y2=building.y+opening.p2[1];
++    for (const u of this.game.units.values()) {
++      if (!u.alive || u.downed) continue;
++      const limit=(u.radius || 0)+thickness*0.5;
++      if (Walls.dist2PointSegment(u.x,u.y,x1,y1,x2,y2)<=limit*limit) return u;
++    }
++    return null;
++  }
++
+@@ -753,0 +777,8 @@
++    if (this.cfg.flag('door_occupied_guard_v1', false) && d.state === 'open') {
++      const o=st.outline.openings.find(o=>o.id===openingId);
++      const occupant=o && this.doorOccupant(building,o,st.outline.thickness || 12);
++      if (occupant) {
++        this.game.events?.emit('doorCloseBlocked', { building, openingId, unit: occupant, t: this.game.time });
++        return { ok: false, reason: 'occupied', unitId: occupant.id, state: d.state };
++      }
++    }
+@@ -937,0 +969 @@
++    let lifecycleRebuild = false;
+@@ -940 +972,8 @@
+-      if (!b || b.dead) { this.instances.delete(bid); continue; }
++      if (!b || b.dead || (this.cfg.flag('wall_remove_destroyed_v1', false) && !b.built)) {
++        if (this.cfg.flag('wall_remove_destroyed_v1', false)) {
++          lifecycleRebuild = true;
++          if (b) this.detach(b);
++          else { this.instances.delete(bid); this.reindex(bid, null); this.navQueue.delete(bid); this.invalidateCover(); }
++        } else this.instances.delete(bid);
++        continue;
++      }
+@@ -954 +993,3 @@
+-        if (!occupied) { d.state = 'closed'; d.closeAt = 0; this.queueNavRebuild(b); }
++        if (!occupied && this.cfg.flag('door_occupied_guard_v1', false)) {
++          if (!this.closeDoor(b,oid).ok) d.closeAt = now + 3;
++        } else if (!occupied) { d.state = 'closed'; d.closeAt = 0; this.queueNavRebuild(b); }
+@@ -957,0 +999,3 @@
++    // Fallback for external direct mutations that bypass damage/demolish.
++    // Normal destruction rebuilds immediately at the mutation site.
++    if (lifecycleRebuild) this.world.rebuildNav();
+--- a/src/sim/world.js
++++ b/src/sim/world.js
+@@ -498,0 +499 @@
++      if (this.cfg.flag('wall_remove_destroyed_v1', false)) this.walls?.detach(b);
+--- a/data/feature_flags.json
++++ b/data/feature_flags.json
+@@ -272,0 +273,30 @@
++    },
++    {
++      "id": "wall_remove_destroyed_v1",
++      "desc": "Эксперимент: удаление стен разрушенных и снесённых зданий из пространственного индекса",
++      "group": "walls",
++      "enabled": false
++    },
++    {
++      "id": "crowd_swept_units_v1",
++      "desc": "Эксперимент: проверка всей траектории кругов в активной колонне или паре у двери",
++      "group": "ai",
++      "enabled": false
++    },
++    {
++      "id": "crowd_group_survivor_v1",
++      "desc": "Эксперимент: сохранение мест двух выживших участников группы",
++      "group": "ai",
++      "enabled": false
++    },
++    {
++      "id": "door_occupied_guard_v1",
++      "desc": "Эксперимент: запрет закрытия двери на живом юните",
++      "group": "ai",
++      "enabled": false
++    },
++    {
++      "id": "crowd_slot_exchange_v1",
++      "desc": "Эксперимент: безопасный обмен назначенными местами между соседями группы",
++      "group": "ai",
++      "enabled": false

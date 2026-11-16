@@ -3,6 +3,7 @@
 import { loadConfig } from '../../src/core/config.js';
 import { Game } from '../../src/sim/game.js';
 import { moveAlongFlow, updateTimers } from '../../src/sim/units.js';
+import { emptyOverlapMetrics, observeOverlaps } from './overlap-metrics.mjs';
 
 const arg = process.argv.find((s) => s.startsWith('--attempts='));
 const attempts = arg ? Number(arg.slice('--attempts='.length)) : 100;
@@ -44,7 +45,8 @@ function run(definition, seed, faction) {
   // Отслеживаем пересечение плоскости проёма, а не только флаг arrived:
   // у нового Unit он изначально true даже до первого шага к новой цели.
   const crossed = new Set();
-  let teleports = 0, speedViolations = 0, wallCollisions = 0, maxStepRatio = 0, overlapFrames = 0, maxOverlap = 0;
+  let teleports = 0, speedViolations = 0, wallCollisions = 0, maxStepRatio = 0;
+  const overlaps = emptyOverlapMetrics();
   for (let tick = 0; tick < 600; tick++) {
     game.time += 0.05; game.nav.advance(); game.walls.update(0.05);
     for (const u of units) {
@@ -63,24 +65,19 @@ function run(definition, seed, faction) {
       if (ratio > 1.5 + 1e-8) speedViolations++;
       if (game.walls.blocksMove(u.x, u.y, u.radius, u)) wallCollisions++;
     }
-    let anyOverlap = false;
-    for (let i = 0; i < units.length; i++) for (let j = i + 1; j < units.length; j++) {
-      const overlap = units[i].radius + units[j].radius - Math.hypot(units[i].x - units[j].x, units[i].y - units[j].y);
-      if (overlap > 0) { anyOverlap = true; maxOverlap = Math.max(maxOverlap, overlap); }
-    }
-    if (anyOverlap) overlapFrames++;
+    observeOverlaps(units, overlaps);
     if (units.every((u) => u.arrived || u.pathFailed)) break;
   }
   const arrived = units.filter((u) => u.arrived).length;
   const failed = units.filter((u) => u.pathFailed).length;
-  return { ok: arrived === count && crossed.size === count && failed === 0 && teleports === 0 && speedViolations === 0 && wallCollisions === 0 && overlapFrames === 0,
+  return { ok: arrived === count && crossed.size === count && failed === 0 && teleports === 0 && speedViolations === 0 && wallCollisions === 0 && overlaps.overlapFrames === 0,
     seed, faction, arrived, crossed: crossed.size, failed, count, teleports, speedViolations, wallCollisions, maxStepRatio: +maxStepRatio.toFixed(3),
-    overlapFrames, maxOverlap: +maxOverlap.toFixed(3), seconds: +game.time.toFixed(2) };
+    ...overlaps, maxOverlap: +overlaps.maxOverlap.toFixed(3), seconds: +game.time.toFixed(2) };
 }
 const scenarios = [];
 for (const definition of definitions) {
   const [kind] = definition;
-  let passed = 0, reached = 0, crossedAll = 0, teleports = 0, speedViolations = 0, wallCollisions = 0, overlapFrames = 0, maxOverlap = 0, crossed = 0;
+  let passed = 0, reached = 0, crossedAll = 0, teleports = 0, speedViolations = 0, wallCollisions = 0, overlapFrames = 0, overlapPairFrames = 0, overlapFrames70 = 0, overlapPairFrames70 = 0, maxOverlap = 0, crossed = 0;
   const failures = [], factions = [];
   for (const faction of [0, 1]) {
     let factionPassed = 0, factionReached = 0;
@@ -95,11 +92,14 @@ for (const definition of definitions) {
       crossed += result.crossed || 0;
       wallCollisions += result.wallCollisions || 0;
       overlapFrames += result.overlapFrames || 0;
+      overlapPairFrames += result.overlapPairFrames || 0;
+      overlapFrames70 += result.overlapFrames70 || 0;
+      overlapPairFrames70 += result.overlapPairFrames70 || 0;
       maxOverlap = Math.max(maxOverlap, result.maxOverlap || 0);
     }
     factions.push({ id: faction, attempts, passed: factionPassed, reached: factionReached });
   }
-  scenarios.push({ name: kind, kind, attempts: attempts * 2, passed, reached, crossedAll, teleports, speedViolations, wallCollisions, overlapFrames, maxOverlap, crossed, factions, failures });
+  scenarios.push({ name: kind, kind, attempts: attempts * 2, passed, reached, crossedAll, teleports, speedViolations, wallCollisions, overlapFrames, overlapPairFrames, overlapFrames70, overlapPairFrames70, maxOverlap, crossed, factions, failures });
 }
 const passed = scenarios.every((s) => s.passed === s.attempts && s.teleports === 0 && s.speedViolations === 0 && s.wallCollisions === 0 && s.overlapFrames === 0);
 console.log(JSON.stringify({ passed, method: 'independent scenes; both factions; seeds 1..N each; simulation 0.05s; max 30s; no combat', scenarios }, null, 2));

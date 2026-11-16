@@ -1,0 +1,2182 @@
+{
+  "seeds": 20,
+  "summary": {
+    "cases": 40,
+    "bothInjected": 40,
+    "blockedBefore": 40,
+    "offImmediate": 40,
+    "onImmediate": 0,
+    "offAfterOneSecond": 40,
+    "onAfterOneSecond": 0,
+    "offAtEnd": 40,
+    "onAtEnd": 0
+  },
+  "pairs": [
+    {
+      "seed": 1,
+      "faction": 0,
+      "off": {
+        "seed": 1,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 1,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 1,
+      "faction": 1,
+      "off": {
+        "seed": 1,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 1,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "faction": 0,
+      "off": {
+        "seed": 2,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 2,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "faction": 1,
+      "off": {
+        "seed": 2,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 2,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "faction": 0,
+      "off": {
+        "seed": 3,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 3,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "faction": 1,
+      "off": {
+        "seed": 3,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 3,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "faction": 0,
+      "off": {
+        "seed": 4,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 4,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "faction": 1,
+      "off": {
+        "seed": 4,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 4,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "faction": 0,
+      "off": {
+        "seed": 5,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 5,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "faction": 1,
+      "off": {
+        "seed": 5,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 5,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "faction": 0,
+      "off": {
+        "seed": 6,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 6,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "faction": 1,
+      "off": {
+        "seed": 6,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 6,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "faction": 0,
+      "off": {
+        "seed": 7,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 7,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "faction": 1,
+      "off": {
+        "seed": 7,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 7,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "faction": 0,
+      "off": {
+        "seed": 8,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 8,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "faction": 1,
+      "off": {
+        "seed": 8,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 8,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 9,
+      "faction": 0,
+      "off": {
+        "seed": 9,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 9,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 9,
+      "faction": 1,
+      "off": {
+        "seed": 9,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 9,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 10,
+      "faction": 0,
+      "off": {
+        "seed": 10,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 10,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 10,
+      "faction": 1,
+      "off": {
+        "seed": 10,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 10,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 11,
+      "faction": 0,
+      "off": {
+        "seed": 11,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 11,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 11,
+      "faction": 1,
+      "off": {
+        "seed": 11,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 11,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 12,
+      "faction": 0,
+      "off": {
+        "seed": 12,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 12,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 12,
+      "faction": 1,
+      "off": {
+        "seed": 12,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 12,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 13,
+      "faction": 0,
+      "off": {
+        "seed": 13,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 13,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 13,
+      "faction": 1,
+      "off": {
+        "seed": 13,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 13,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 14,
+      "faction": 0,
+      "off": {
+        "seed": 14,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 14,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 14,
+      "faction": 1,
+      "off": {
+        "seed": 14,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 14,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 15,
+      "faction": 0,
+      "off": {
+        "seed": 15,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 15,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 15,
+      "faction": 1,
+      "off": {
+        "seed": 15,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 15,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 16,
+      "faction": 0,
+      "off": {
+        "seed": 16,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 16,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 16,
+      "faction": 1,
+      "off": {
+        "seed": 16,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 16,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 17,
+      "faction": 0,
+      "off": {
+        "seed": 17,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 17,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 17,
+      "faction": 1,
+      "off": {
+        "seed": 17,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 17,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 18,
+      "faction": 0,
+      "off": {
+        "seed": 18,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 18,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 18,
+      "faction": 1,
+      "off": {
+        "seed": 18,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 18,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 19,
+      "faction": 0,
+      "off": {
+        "seed": 19,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 19,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          2
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 19,
+      "faction": 1,
+      "off": {
+        "seed": 19,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 19,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 20,
+      "faction": 0,
+      "off": {
+        "seed": 20,
+        "faction": 0,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 20,
+        "faction": 0,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          3,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 20,
+      "faction": 1,
+      "off": {
+        "seed": 20,
+        "faction": 1,
+        "on": false,
+        "injected": true,
+        "before": true,
+        "immediate": true,
+        "oneSecond": true,
+        "end": true,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "seed": 20,
+        "faction": 1,
+        "on": true,
+        "injected": true,
+        "before": true,
+        "immediate": false,
+        "oneSecond": false,
+        "end": false,
+        "seconds": 30.000000000000156,
+        "warOver": false,
+        "outcome": null,
+        "kills": [
+          0,
+          0
+        ],
+        "captures": [
+          2,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "Normal Game.step and all systems active, but one starting city is forcibly destroyed at 5 seconds",
+    "One segment and two starting cities, 30 seconds maximum, not full war or complete destruction acceptance",
+    "Shared RNG trajectories may diverge; counts are descriptive, not causal balance estimates",
+    "Only wall_remove_destroyed_v1 changes; it remains off by default"
+  ]
+}

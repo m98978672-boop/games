@@ -196,7 +196,7 @@ export class Logistics {
     const hasFactory = game.world.points.some((p) => p.owner === faction && p.type === 'factory' && p.hp > 0);
     if (trucks.length >= 3 || !hq || !hasFactory) return;
     if (!this.canAfford(faction, game.cfg.unit('truck').cost)) return;
-    if (game.cfg.flag('safe_vehicle_spawn_v1', false)) {
+    if (game.cfg.flag('safe_vehicle_spawn_v1', false) || game.cfg.flag('movement_occupancy_v1', false)) {
       const spot=this.vehicleProductionSpot(hq,'truck',hq.x+game.rng.range(-90,90),hq.y+game.rng.range(-90,90));
       if(!spot || !this.spend(faction,game.cfg.unit('truck').cost))return;
       game.spawnUnit(faction,'truck',spot.x,spot.y,{spawnPoint:hq.id});
@@ -216,7 +216,7 @@ export class Logistics {
     const tanks = [...game.units.values()].filter((u) => u.faction === faction && u.alive && u.role === 'tank').length;
     const cap = 2 + (game.techLevel(faction) || 0);
     if (tanks < cap && this.canAfford(faction, game.cfg.unit('tank').cost) && game.time - (this.lastTank?.[faction] || 0) > 45) {
-      if (game.cfg.flag('safe_vehicle_spawn_v1', false)) {
+      if (game.cfg.flag('safe_vehicle_spawn_v1', false) || game.cfg.flag('movement_occupancy_v1', false)) {
         const hq=game.world.hqOf(faction);if(!hq)return;
         const spot=this.vehicleProductionSpot(hq,'tank',hq.x+game.rng.range(-100,100),hq.y+game.rng.range(-100,100));
         if(!spot || !this.spend(faction,game.cfg.unit('tank').cost))return;

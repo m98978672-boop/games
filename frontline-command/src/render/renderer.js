@@ -1,5 +1,6 @@
 // Рендер: только растровые спрайты (PNG) и тайлы. Кодом рисуется лишь отладочный оверлей (F3).
 import { clamp, dist, hexCenter, angleTo } from '../core/mathx.js';
+import { visibleGrid, scaleBarStep, mapVector } from '../core/map_coordinates.js';
 
 const TILE = 32;
 const CHUNK = 512;
@@ -65,7 +66,9 @@ export class Renderer {
     this.bank = bank;
     this.camera = { x: game.world.W / 2, y: game.world.H / 2, zoom: 1 };
     this.chunkCache = new Map();
-    this.showGrid = false;
+    this.showGrid = false; // existing hex-sector debug
+    this.showCoordinates = true;
+    this.showMapVectors = true;
     this.showDebug = false;
     this.showWallsDebug = false;
     this.fogEnabled = true;
@@ -183,8 +186,9 @@ export class Renderer {
     const halfW = this.viewW / 2 / z, halfH = this.viewH / 2 / z;
     const x0 = this.camera.x - halfW, y0 = this.camera.y - halfH;
     const x1 = this.camera.x + halfW, y1 = this.camera.y + halfH;
-    const c0 = Math.floor(x0 / CHUNK), c1 = Math.floor(x1 / CHUNK);
-    const r0 = Math.floor(y0 / CHUNK), r1 = Math.floor(y1 / CHUNK);
+    // Do not allocate off-map chunks when the entire map fits in the view.
+    const c0 = Math.max(0, Math.floor(x0 / CHUNK)), c1 = Math.min(Math.ceil(this.game.world.W / CHUNK)-1, Math.floor(x1 / CHUNK));
+    const r0 = Math.max(0, Math.floor(y0 / CHUNK)), r1 = Math.min(Math.ceil(this.game.world.H / CHUNK)-1, Math.floor(y1 / CHUNK));
     for (let cy = r0; cy <= r1; cy++) {
       for (let cx = c0; cx <= c1; cx++) {
         const chunk = this.terrainChunk(cx, cy);
@@ -218,6 +222,8 @@ export class Renderer {
     // сектора показываем в «стратегическом» масштабе, чтобы карта не пестрела вблизи
     if ((this.game.mode === 'commander' && this.camera.zoom < 0.62) || this.showGrid) this.drawSectors();
     this.drawFog();
+    if (this.showCoordinates) this.drawCoordinateGrid();
+    if (this.showMapVectors) this.drawMapVectors();
     if (this.showDebug) this.drawDebug();
     this.drawVignette();
   }
@@ -739,6 +745,70 @@ export class Renderer {
       if (m[key].fx === fx) return m[key].color || '#cfc7b0';
     }
     return '#cfc7b0';
+  }
+
+  // Ratgrad-style adaptive coordinate grid. Overlay only: it neither changes
+  // the simulation's 64-unit navigation grid nor reveals hidden objects.
+  drawCoordinateGrid() {
+    const ctx=this.ctx,world=this.game.world,z=this.camera.zoom;
+    const grid=visibleGrid(world,this.camera,this.viewW,this.viewH);
+    if (!grid.bounds) return;
+    const {x0,x1,y0,y1}=grid.bounds;
+    ctx.save();ctx.lineWidth=1;ctx.strokeStyle='rgba(255,255,255,0.16)';ctx.beginPath();
+    for(const l of grid.vertical){const a=this.worldToScreen(l.world,y0),b=this.worldToScreen(l.world,y1);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);}
+    for(const l of grid.horizontal){const a=this.worldToScreen(x0,l.world),b=this.worldToScreen(x1,l.world);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);}
+    ctx.stroke();
+    // Emphasise the zero axes without moving the world's origin.
+    ctx.strokeStyle='rgba(232,180,90,0.45)';ctx.beginPath();
+    if(x0<=world.W/2&&x1>=world.W/2){const a=this.worldToScreen(world.W/2,y0),b=this.worldToScreen(world.W/2,y1);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);}
+    if(y0<=world.H/2&&y1>=world.H/2){const a=this.worldToScreen(x0,world.H/2),b=this.worldToScreen(x1,world.H/2);ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);}
+    ctx.stroke();ctx.fillStyle='rgba(255,255,255,0.76)';ctx.font='11px monospace';
+    for(const l of grid.vertical){const p=this.worldToScreen(l.world,y1);if(p.x>=24&&p.x<=this.viewW-24)ctx.fillText(`${l.value} ед.`,p.x+3,Math.min(this.viewH-9,p.y-5));}
+    for(const l of grid.horizontal){const p=this.worldToScreen(x0,l.world);if(p.y>=50&&p.y<=this.viewH-22)ctx.fillText(`${l.value} ед.`,Math.max(6,p.x+4),p.y-4);}
+    const step=scaleBarStep(z),length=step*z,x=Math.max(12,(this.viewW-length)/2),y=this.viewH-155;
+    if(y>55&&length<=this.viewW-24){ctx.strokeStyle='rgba(255,255,255,0.85)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x,y-4);ctx.lineTo(x,y+4);ctx.moveTo(x,y);ctx.lineTo(x+length,y);ctx.moveTo(x+length,y-4);ctx.lineTo(x+length,y+4);ctx.stroke();ctx.fillText(`${step} ед.`,x,y-8);}
+    ctx.restore();
+  }
+
+  // The gold arrow is the straight displacement to the selected squad's
+  // objective, not a promise that its actual obstacle-aware path is straight.
+  drawMapVectors() {
+    const ctx=this.ctx,game=this.game,items=[];
+    for(const id of game.selectedSquads){
+      const sq=game.squads.get(id);
+      if(!sq||sq.state==='destroyed'||!sq.objective||(game.playerFaction!=null&&sq.faction!==game.playerFaction))continue;
+      items.push([sq.centroid(),sq.objective]);if(items.length>=12)break;
+    }
+    if(!items.length&&game.playerUnit?.alive&&game.playerUnit.goal)items.push([game.playerUnit,game.playerUnit.goal]);
+    ctx.save();ctx.strokeStyle='#f2c76b';ctx.fillStyle='#f2c76b';ctx.lineWidth=2;ctx.font='11px monospace';
+    for(const [from,to] of items){
+      if(![from.x,from.y,to.x,to.y].every(Number.isFinite))continue;
+      const v=mapVector(from,to);if(v.length<1)continue;
+      const a=this.worldToScreen(from.x,from.y),b=this.worldToScreen(to.x,to.y),ang=Math.atan2(b.y-a.y,b.x-a.x);
+      ctx.setLineDash([6,4]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-10*Math.cos(ang-0.45),b.y-10*Math.sin(ang-0.45));ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-10*Math.cos(ang+0.45),b.y-10*Math.sin(ang+0.45));ctx.stroke();
+      const x=(a.x+b.x)/2,y=(a.y+b.y)/2;
+      if(x>=0&&x<=this.viewW&&y>=50&&y<=this.viewH-20)ctx.fillText(`Δ(${Math.round(v.x)}, ${Math.round(v.y)}) · ${Math.round(v.length)} ед.`,x+5,y-5);
+    }
+    // Short cyan arrows show the last actual movement, not the intended order.
+    // Only selected friendly units are exposed through fog; stationary units
+    // have a zero vector and therefore no arrow.
+    if(game.cfg?.flag('movement_occupancy_v1',false) && !game.paused && !game.warOver){
+      ctx.strokeStyle='#80d7e3';ctx.lineWidth=1.5;let count=0;
+      for(const id of game.selectedSquads){
+        const sq=game.squads.get(id);
+        if(!sq||sq.state==='destroyed'||(game.playerFaction!=null&&sq.faction!==game.playerFaction)||typeof sq.units!=='function')continue;
+        for(const u of sq.units()){
+          const len=Math.hypot(u.vx,u.vy);if(!Number.isFinite(len)||len<0.1)continue;
+          const a=this.worldToScreen(u.x,u.y),dx=u.vx/len,dy=u.vy/len,b={x:a.x+dx*20,y:a.y+dy*20};
+          if(a.x<0||a.x>this.viewW||a.y<0||a.y>this.viewH)continue;
+          ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.lineTo(b.x-dx*6-dy*3,b.y-dy*6+dx*3);ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-dx*6+dy*3,b.y-dy*6-dx*3);ctx.stroke();
+          if(++count>=60)break;
+        }
+        if(count>=60)break;
+      }
+    }
+    ctx.restore();
   }
 
   drawSectors() {

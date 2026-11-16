@@ -1,0 +1,36 @@
+{
+  "complete": true,
+  "pairs": 20,
+  "partial": false,
+  "off": {
+    "games": 20,
+    "finished": 7,
+    "unfinished": 13,
+    "wins": [
+      2,
+      5
+    ],
+    "draws": 0,
+    "reasons": {
+      "Все ключевые города Легион потеряны": 2,
+      "Все ключевые города Альянс потеряны": 5
+    }
+  },
+  "on": {
+    "games": 20,
+    "finished": 0,
+    "unfinished": 20,
+    "wins": [
+      0,
+      0
+    ],
+    "draws": 0,
+    "reasons": {}
+  },
+  "caveats": [
+    "Paired seeds use alternating normal/swapped starts, balanced personas, but do not each run both starting sides",
+    "RNG trajectories can diverge; cap only stops observation and unfinished games are not ties",
+    "New rules omit a separate commander and use legacy no-army timeout; neither version is full victory-rule acceptance",
+    "Short Node wars are not a browser, 100-game balance or long-duration completion test"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "passed": true,
+  "method": "3 seeds × 60 live Game.step ticks; cell and bucket compared with current position",
+  "runs": [
+    {
+      "seed": 5,
+      "ticks": 60,
+      "crossings": 83,
+      "observations": 4020,
+      "mismatches": 0,
+      "examples": []
+    },
+    {
+      "seed": 7,
+      "ticks": 60,
+      "crossings": 107,
+      "observations": 4045,
+      "mismatches": 0,
+      "examples": []
+    },
+    {
+      "seed": 11,
+      "ticks": 60,
+      "crossings": 79,
+      "observations": 4035,
+      "mismatches": 0,
+      "examples": []
+    }
+  ]
+}

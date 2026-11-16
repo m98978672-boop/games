@@ -3,9 +3,9 @@
 // and aliases. Functions are represented by source, not captured closures.
 // No code here is called by the game. The only excluded fields are the two
 // wall-clock-dependent profiling counters identified in Walls.update().
-export function captureGraph(game, { excludeFlagIds = [] } = {}) {
+export function captureGraph(game, { excludeFlagIds = [], excludeUnitGrid = false } = {}) {
   const ids=new Map(), nodes=[], pending=[], limitations=[];
-  const excluded=(obj,key)=> (obj===game.walls && key==='_perfStart') || (obj===game.walls?.stats && key==='updateMs') ||
+  const excluded=(obj,key)=> (excludeUnitGrid && obj===game && key==='unitGrid') || (obj===game.walls && key==='_perfStart') || (obj===game.walls?.stats && key==='updateMs') ||
     (obj===game.cfg?.flags && excludeFlagIds.includes(key));
   function enc(v){
     if(v===null)return ['null'];
@@ -51,7 +51,7 @@ export function captureGraph(game, { excludeFlagIds = [] } = {}) {
     nodes[id]=['object',name,fields];
   }
   return {bytes:JSON.stringify({version:1,root,nodes}), nodes:nodes.length,
-    limitations:[...new Set(limitations)].sort(), exclusions:['game.walls._perfStart','game.walls.stats.updateMs',...excludeFlagIds.map(id=>`game.cfg.flags.${id}`)]};
+    limitations:[...new Set(limitations)].sort(), exclusions:['game.walls._perfStart','game.walls.stats.updateMs',...(excludeUnitGrid?['game.unitGrid']:[]),...excludeFlagIds.map(id=>`game.cfg.flags.${id}`)]};
 }
 // FNV-1a 32 is a compact diagnostic identifier, NOT a collision-proof hash.
 // Tests compare full serialized bytes; never infer equality from this ID alone.

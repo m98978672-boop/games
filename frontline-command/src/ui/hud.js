@@ -1,6 +1,7 @@
 // HUD: ресурсы, отряды, приказы, директивы, автопилот, стройка, лента событий и журнал приказов.
 // Вся информация берётся из симуляции; ничего не дублируется и не «дорисовывается».
 import { clamp, dist } from '../core/mathx.js';
+import { worldToMap, mapVector, gridStep, scaleBarStep } from '../core/map_coordinates.js';
 
 const RES = [
   { key: 'ammo', icon: 'res_ammo', name: 'Боеприпасы' },
@@ -39,6 +40,35 @@ export class HUD {
   }
 
   on(handlers) { this.handlers = handlers; return this; }
+
+  updateMapOverlay(renderer,mouse) {
+    const world=this.game.world,center=worldToMap(world,renderer.camera.x,renderer.camera.y);
+    const fmt=p=>`${Math.round(p.x)}, ${Math.round(p.y)}`;
+    const lines=[`Центр X/Y: ${fmt(center)} ед.`,
+      `Сетка: ${gridStep(renderer.camera.zoom)} · линейка: ${scaleBarStep(renderer.camera.zoom)} ед.`];
+    if(mouse?.inCanvas && mouse.x>=0 && mouse.y>=0 && mouse.x<=renderer.viewW && mouse.y<=renderer.viewH) {
+      const p=renderer.screenToWorld(mouse.x,mouse.y);
+      if(p.x>=0&&p.x<=world.W&&p.y>=0&&p.y<=world.H){
+        lines.push(`Курсор X/Y: ${fmt(worldToMap(world,p.x,p.y))} ед.`);
+        let origin=null,label='';
+        for(const id of this.game.selectedSquads){const sq=this.game.squads.get(id);
+          if(sq&&sq.state!=='destroyed'&&(this.game.playerFaction==null||sq.faction===this.game.playerFaction)){origin=sq.centroid();label='отряда';break;}}
+        if(!origin&&this.game.playerUnit?.alive){origin=this.game.playerUnit;label='бойца';}
+        if(!origin){origin=renderer.camera;label='центра вида';}
+        const v=mapVector(origin,p);lines.push(`Δ от ${label}: ${fmt(v)} · ${Math.round(v.length)} ед.`);
+      } else lines.push('Курсор: вне карты');
+    } else lines.push('Курсор: наведите на карту');
+    const text=lines.join('\n');if(this.el.mapReadout.textContent!==text)this.el.mapReadout.textContent=text;
+    for(const [action,enabled] of [['grid',renderer.showCoordinates],['vectors',renderer.showMapVectors]]){
+      const button=this.el.mapTools.querySelector(`[data-map-action="${action}"]`);
+      button.classList.toggle('active',!!enabled);button.setAttribute('aria-pressed',String(!!enabled));
+    }
+    for(const action of ['in','out','fit']) {
+      const button=this.el.mapTools.querySelector(`[data-map-action="${action}"]`);
+      button.disabled=this.game.mode!=='commander';
+      button.title=button.disabled?'Доступно в режиме командира (Tab)':action==='fit'?'Показать всю карту':action==='in'?'Приблизить':'Отдалить';
+    }
+  }
 
   icon(name, size = 16) {
     const img = this.bank.get('ui/' + name);
@@ -95,6 +125,16 @@ export class HUD {
         <div class="panel orders" id="hud-orders"></div>
       </div>
 
+      <div class="hud-map-tools" aria-label="Карта и координаты">
+        <div class="map-tool-row">
+          <button class="hud-btn" type="button" data-map-action="grid" aria-pressed="true" title="Координатная сетка">Сетка</button>
+          <button class="hud-btn" type="button" data-map-action="vectors" aria-pressed="true" title="Прямые векторы к целям выбранных отрядов">Векторы</button>
+          <button class="hud-btn" type="button" data-map-action="out" aria-label="Отдалить карту">−</button>
+          <button class="hud-btn" type="button" data-map-action="in" aria-label="Приблизить карту">+</button>
+          <button class="hud-btn" type="button" data-map-action="fit" title="Показать всю карту" aria-label="Показать всю карту">⤢</button>
+        </div>
+        <div class="map-readout" id="hud-map-readout">Координаты карты</div>
+      </div>
       <div class="hud-minimap" id="hud-minimap"><canvas width="200" height="200"></canvas></div>
       <div class="hud-hint" id="hud-hint"></div>
       <div class="toast" id="hud-toast"></div>
@@ -170,6 +210,8 @@ export class HUD {
       selection: this.root.querySelector('#hud-selection'),
       orders: this.root.querySelector('#hud-orders'),
       minimap: this.root.querySelector('#hud-minimap canvas'),
+      mapReadout: this.root.querySelector('#hud-map-readout'),
+      mapTools: this.root.querySelector('.hud-map-tools'),
       hint: this.root.querySelector('#hud-hint'),
       toast: this.root.querySelector('#hud-toast'),
       build: this.root.querySelector('#hud-build'),
@@ -205,6 +247,10 @@ export class HUD {
       else this.handlers.onOrder?.(type);
     });
     this.root.querySelectorAll('[data-speed]').forEach((b) => b.addEventListener('click', () => this.handlers.onSpeed?.(Number(b.dataset.speed))));
+    this.el.mapTools.addEventListener('click', (e) => {
+      const button=e.target.closest('[data-map-action]');
+      if(button) this.handlers.onMapAction?.(button.dataset.mapAction);
+    });
     this.root.querySelector('#hud-menu').addEventListener('click', () => this.handlers.onMenu?.());
     this.root.querySelector('#hud-mode').addEventListener('click', () => this.handlers.onMode?.());
     this.el.squads.addEventListener('click', (e) => {

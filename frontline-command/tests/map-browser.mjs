@@ -1,0 +1,40 @@
+// Real Chromium integration of the map overlay and controls (not an FPS test).
+import assert from 'node:assert/strict';import http from 'node:http';import {readFile} from 'node:fs/promises';import {createRequire} from 'node:module';import {dirname,extname,resolve,sep} from 'node:path';import {fileURLToPath} from 'node:url';
+import chromium,{inflate} from '@sparticuz/chromium';import {chromium as playwright} from 'playwright-core';
+const repo=resolve(dirname(fileURLToPath(import.meta.url)),'../..');
+const mime={'.html':'text/html','.js':'text/javascript','.json':'application/json','.css':'text/css','.png':'image/png','.svg':'image/svg+xml'};
+const server=http.createServer(async(req,res)=>{try{const name=decodeURIComponent(new URL(req.url,'http://test').pathname).replace(/^\/+/,''),path=resolve(repo,name);
+ if(!path.startsWith(repo+sep)||!['frontline-command/','shared/'].some(p=>name.startsWith(p)))throw Error('bad path');
+ res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream'});res.end(await readFile(path));}catch{res.writeHead(404).end();}});
+let browser;
+try{
+ await new Promise((r,j)=>{server.once('error',j);server.listen(0,'127.0.0.1',r);});
+ const req=createRequire(import.meta.url),libs=resolve(await inflate(resolve(dirname(req.resolve('@sparticuz/chromium')),'../bin/al2023.tar.br')),'lib');
+ browser=await playwright.launch({executablePath:process.env.FRONTLINE_CHROMIUM_PATH||await chromium.executablePath(),args:chromium.args,headless:true,env:{...process.env,LD_LIBRARY_PATH:[libs,process.env.LD_LIBRARY_PATH].filter(Boolean).join(':')}});
+ const page=await browser.newPage({viewport:{width:1440,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(`http://127.0.0.1:${server.address().port}/frontline-command/index.html`,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline,{timeout:60000});
+ await page.evaluate(()=>{const g=window.__frontline.newGame({mode:'commander',aiVsAi:true,seed:7});g.paused=true;});
+ await page.waitForFunction(()=>document.querySelector('#hud-map-readout')?.textContent.includes('Центр X/Y'));
+ assert.match(await page.locator('#hud-map-readout').innerText(),/Центр X\/Y: 0, 0/);
+ const grid=page.locator('[data-map-action="grid"]'),vectors=page.locator('[data-map-action="vectors"]');
+ assert.equal(await grid.getAttribute('aria-pressed'),'true');await grid.click();assert.equal(await grid.getAttribute('aria-pressed'),'false');
+ assert.equal(await page.evaluate(()=>window.__frontline.renderer.showCoordinates),false);await grid.click();
+ await vectors.click();assert.equal(await vectors.getAttribute('aria-pressed'),'false');await vectors.click();
+ await page.locator('[data-map-action="fit"]').click();
+ const fit=await page.evaluate(()=>{const r=window.__frontline.renderer,w=r.game.world;return {camera:{...r.camera},W:w.W,H:w.H,width:r.viewW,height:r.viewH};});
+ assert.equal(fit.camera.x,fit.W/2);assert.equal(fit.camera.y,fit.H/2);assert.ok(fit.W*fit.camera.zoom<=fit.width&&fit.H*fit.camera.zoom<=fit.height);
+ await page.evaluate(()=>Object.assign(window.__frontline.renderer.camera,{x:2048,y:2048,zoom:.5}));
+ await page.mouse.move(870,300);await page.waitForFunction(()=>document.querySelector('#hud-map-readout')?.textContent.includes('Курсор X/Y'));
+ const before=await page.evaluate(()=>{const r=window.__frontline.renderer;return {...r.screenToWorld(870,300),zoom:r.camera.zoom};});
+ await page.mouse.wheel(0,-100);await page.waitForFunction(z=>window.__frontline.renderer.camera.zoom>z,before.zoom);
+ const after=await page.evaluate(()=>window.__frontline.renderer.screenToWorld(870,300));
+ assert.ok(Math.abs(before.x-after.x)<.01&&Math.abs(before.y-after.y)<.01,'wheel zoom keeps the world point beneath the cursor');
+ await page.evaluate(()=>{const app=window.__frontline,g=app.game,sq=[...g.squads.values()][0];g.selectedSquads.add(sq.id);sq.objective={x:2000,y:1800};});
+ await page.waitForFunction(()=>document.querySelector('#hud-map-readout')?.textContent.includes('Δ от отряда'));
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(200);
+ const box=await page.locator('.hud-map-tools').boundingBox();assert.ok(box&&box.x>=0&&box.x+box.width<=390,'mobile controls remain within viewport');
+ await page.locator('[data-map-action="fit"]').click();
+ const mobileFit=await page.evaluate(()=>{const r=window.__frontline.renderer;return {width:r.viewW,height:r.viewH,W:r.game.world.W,H:r.game.world.H,zoom:r.camera.zoom};});
+ assert.ok(mobileFit.W*mobileFit.zoom<=mobileFit.width&&mobileFit.H*mobileFit.zoom<=mobileFit.height,'fit covers world on mobile');
+ assert.deepEqual(errors,[]);console.log('Chromium map: toggles, coordinates, selected vector, anchored zoom, fit and small viewport passed');
+}finally{if(browser)await browser.close();if(server.listening)await new Promise(r=>server.close(r));}

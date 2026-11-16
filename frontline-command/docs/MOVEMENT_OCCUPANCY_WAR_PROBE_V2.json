@@ -1,0 +1,54 @@
+{
+  "results": [
+    {
+      "seed": 1,
+      "on": false,
+      "moves": 5327,
+      "swept": 161,
+      "initialOverlap": 9,
+      "maxOverlapPairs": 22,
+      "framesWithOverlap": 200,
+      "elapsedMs": 619,
+      "units": 74
+    },
+    {
+      "seed": 1,
+      "on": true,
+      "moves": 5820,
+      "swept": 0,
+      "initialOverlap": 0,
+      "maxOverlapPairs": 0,
+      "framesWithOverlap": 0,
+      "elapsedMs": 668,
+      "units": 74
+    },
+    {
+      "seed": 7,
+      "on": false,
+      "moves": 5764,
+      "swept": 226,
+      "initialOverlap": 9,
+      "maxOverlapPairs": 18,
+      "framesWithOverlap": 200,
+      "elapsedMs": 338,
+      "units": 74
+    },
+    {
+      "seed": 7,
+      "on": true,
+      "moves": 5552,
+      "swept": 0,
+      "initialOverlap": 0,
+      "maxOverlapPairs": 0,
+      "framesWithOverlap": 0,
+      "elapsedMs": 387,
+      "units": 74
+    }
+  ],
+  "caveats": [
+    "200 short ticks and two seeds, not full battle coverage or an FPS benchmark",
+    "Movement segments against current sequential positions; excludes pre-existing overlaps as violations",
+    "Uncontrolled random events and other systems mean on/off trajectories diverge",
+    "Direct scripted spawns, enabling mid-game, and old saves can introduce overlaps, which are counted separately"
+  ]
+}

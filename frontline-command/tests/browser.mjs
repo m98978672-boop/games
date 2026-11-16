@@ -152,6 +152,16 @@ ok(window.__frontline.game.aiVsAi === true, 'демо ИИ против ИИ с�
 for (let i = 0; i < 120; i++) await sleep(8);
 ok(window.__frontline.game.time > 0.2, 'демо ИИ против ИИ тикает');
 
+// Полный путь события: ничья не изображается поражением и не начисляет
+// бонус победы/поражения в асинхронном обработчике экрана результата.
+const drawGame = window.__frontline.newGame({ mode: 'commander', aiVsAi: false, seed: 7 });
+drawGame.paused = true;
+const xpBeforeDraw = drawGame.skills.xp;
+drawGame.endWar(null, 'Проверка ничьей');
+await sleep(1100);
+ok(doc.querySelector('#overlay h1')?.textContent === 'Ничья', 'результат ничьей показан отдельно');
+ok(drawGame.skills.xp === xpBeforeDraw, 'за ничью не начислена награда победы или поражения');
+
 console.log(errors.length ? `\nОшибки страницы:\n${errors.join('\n')}` : '\nошибок страницы нет');
 if (errors.length) fails++;
 console.log(fails ? `\nПРОВАЛЕНО: ${fails}` : '\nбраузерный дымовой тест пройден');

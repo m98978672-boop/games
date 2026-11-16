@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {emptyOverlapMetrics,observeOverlaps} from './acceptance/overlap-metrics.mjs';
+const units=[{x:0,y:0,radius:5},{x:9,y:0,radius:5},{x:18,y:0,radius:5}];
+const m=emptyOverlapMetrics();observeOverlaps(units,m);
+assert.deepEqual(m,{overlapFrames:1,overlapPairFrames:2,overlapFrames70:0,overlapPairFrames70:0,maxOverlap:1});
+units[1].x=6;units[2].x=12;observeOverlaps(units,m);
+assert.deepEqual(m,{overlapFrames:2,overlapPairFrames:4,overlapFrames70:1,overlapPairFrames70:2,maxOverlap:4});
+const boundary=emptyOverlapMetrics();observeOverlaps([{x:0,y:0,radius:5},{x:7,y:0,radius:5}],boundary);
+assert.equal(boundary.overlapFrames,1);assert.equal(boundary.overlapFrames70,0,'0.7 is strictly less than, not less-or-equal');
+const tangent=emptyOverlapMetrics();observeOverlaps([{x:0,y:0,radius:5},{x:10,y:0,radius:5}],tangent);
+assert.equal(tangent.overlapFrames,0,'tangent circles do not overlap');
+console.log('overlap metrics: strict and 0.7 frame/pair-frame counts and boundaries');

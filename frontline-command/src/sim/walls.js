@@ -45,10 +45,16 @@ export class Walls {
     this.grid.clear();
     this.coverCache.clear();
     for (const b of this.world.buildings) this.attach(b);
+    if (this.cfg.flag('wall_remove_destroyed_v1', false)) {
+      for (const id of this.navQueue) if (!this.instances.has(id)) this.navQueue.delete(id);
+    }
     this.dirty = false;
   }
 
   attach(b) {
+    // In the experimental lifecycle mode, rebuilds must not resurrect the
+    // wall state of a building that has already been destroyed.
+    if (this.cfg.flag('wall_remove_destroyed_v1', false) && b.dead) { b.wall = null; return null; }
     const outline = this.outlineFor(b.type);
     if (!outline) return null;
     if (!b.built) return null;
@@ -79,6 +85,10 @@ export class Walls {
     this.instances.delete(b.id);
     b.wall = null;
     this.reindex(b.id, null);
+    if (this.cfg.flag('wall_remove_destroyed_v1', false)) {
+      this.navQueue.delete(b.id);
+      this.invalidateCover(b);
+    }
   }
 
   state(b) { return this.instances.get(b.id) || null; }
@@ -746,11 +756,32 @@ export class Walls {
     return { ok: true, state: d.state };
   }
 
+  // Scan live positions, not unitGrid: door commands and wall updates can
+  // happen after movement but before the spatial index is refreshed.
+  doorOccupant(building, opening, thickness) {
+    const x1=building.x+opening.p1[0],y1=building.y+opening.p1[1];
+    const x2=building.x+opening.p2[0],y2=building.y+opening.p2[1];
+    for (const u of this.game.units.values()) {
+      if (!u.alive || u.downed) continue;
+      const limit=(u.radius || 0)+thickness*0.5;
+      if (Walls.dist2PointSegment(u.x,u.y,x1,y1,x2,y2)<=limit*limit) return u;
+    }
+    return null;
+  }
+
   closeDoor(building, openingId) {
     const st = this.state(building);
     if (!st) return { ok: false };
     const d = st.doors[openingId];
     if (!d) return { ok: false };
+    if (this.cfg.flag('door_occupied_guard_v1', false) && d.state === 'open') {
+      const o=st.outline.openings.find(o=>o.id===openingId);
+      const occupant=o && this.doorOccupant(building,o,st.outline.thickness || 12);
+      if (occupant) {
+        this.game.events?.emit('doorCloseBlocked', { building, openingId, unit: occupant, t: this.game.time });
+        return { ok: false, reason: 'occupied', unitId: occupant.id, state: d.state };
+      }
+    }
     d.state = 'closed';
     d.closeAt = 0;
     this.queueNavRebuild(building);
@@ -935,9 +966,17 @@ export class Walls {
     this.doorTimer = 1;
     const now = this.game.time;
     this.unseal();
+    let lifecycleRebuild = false;
     for (const [bid, st] of this.instances) {
       const b = this.world.buildings.find((bb) => bb.id === bid);
-      if (!b || b.dead) { this.instances.delete(bid); continue; }
+      if (!b || b.dead || (this.cfg.flag('wall_remove_destroyed_v1', false) && !b.built)) {
+        if (this.cfg.flag('wall_remove_destroyed_v1', false)) {
+          lifecycleRebuild = true;
+          if (b) this.detach(b);
+          else { this.instances.delete(bid); this.reindex(bid, null); this.navQueue.delete(bid); this.invalidateCover(); }
+        } else this.instances.delete(bid);
+        continue;
+      }
       for (const [oid, d] of Object.entries(st.doors)) {
         if (d.state !== 'open' || !d.closeAt) continue;
         if (now < d.closeAt) continue;
@@ -951,10 +990,15 @@ export class Walls {
           if (dist(u.x, u.y, cx, cy) < 52) { occupied = true; break; }
           if (Math.abs(u.x - b.x) < half && Math.abs(u.y - b.y) < half) { occupied = true; break; }
         }
-        if (!occupied) { d.state = 'closed'; d.closeAt = 0; this.queueNavRebuild(b); }
+        if (!occupied && this.cfg.flag('door_occupied_guard_v1', false)) {
+          if (!this.closeDoor(b,oid).ok) d.closeAt = now + 3;
+        } else if (!occupied) { d.state = 'closed'; d.closeAt = 0; this.queueNavRebuild(b); }
         else d.closeAt = now + 3;
       }
     }
+    // Fallback for external direct mutations that bypass damage/demolish.
+    // Normal destruction rebuilds immediately at the mutation site.
+    if (lifecycleRebuild) this.world.rebuildNav();
     // сброс устаревшего кэша укрытий
     if (this.coverCache.size > 2000) this.coverCache.clear();
     const t1 = (typeof performance !== 'undefined' ? performance.now() : Date.now());

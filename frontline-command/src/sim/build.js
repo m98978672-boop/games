@@ -699,6 +699,7 @@ export class BuildSystem {
     if (!b || b.dead) return;
     b.dead = true;
     b.built = false;
+    if (this.game.cfg.flag('wall_remove_destroyed_v1', false)) this.game.walls?.detach(b);
     this.game.world.rebuildNav();
     this.game.events.emit('buildingRemoved', { building: b, t: this.game.time });
   }

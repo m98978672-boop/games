@@ -1,0 +1,21 @@
+{
+  "complete": true,
+  "games": 20,
+  "finished": 12,
+  "unfinished": 8,
+  "wins": [
+    6,
+    6
+  ],
+  "draws": 0,
+  "reasons": {
+    "Штаб Легион захвачен": 6,
+    "Штаб Альянс захвачен": 6
+  },
+  "caveats": [
+    "20 seeds when complete, half normal and half swapped; not paired between map sides and not 100-game balance acceptance",
+    "Observation horizon is not an in-game victory or draw; unfinished games stay unfinished",
+    "Experimental rules do not yet implement the separate commander and use legacy no-army timeout",
+    "Node only; no browser FPS, multiplayer, save/replay or deterministic continuation evidence"
+  ]
+}

@@ -5,7 +5,7 @@ import {
 } from '../core/mathx.js';
 import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute } from './smart_route.js';
 import { doorPairWaypoint, doorPairPositionFree } from './door_pair.js';
-import { solidUnitMoveFree } from './solid_units.js';
+import { solidUnitMoveFree, occupiedDetour, blockingUnit } from './solid_units.js';
 import { courtesyYield } from './door_courtesy.js';
 import { chooseVisionNavigation } from './vision_nav_policy.js';
 import { wallSafeGoal } from './wall_goal.js';
@@ -402,27 +402,34 @@ export function killUnit(game, u, source = null) {
 }
 
 export function reviveUnit(game, u) {
-  if (!u.downed || !u.alive) return;
+  if (!u.downed || !u.alive) return false;
+  // A prone body is not an obstacle, but standing up may not create a new
+  // overlap. Keep the wounded unit down until the area is clear.
+  if (game.cfg.flag('movement_occupancy_v1', false) && [...game.units.values()].some(v=>
+    v!==u && v.alive && !v.downed && Math.hypot(v.x-u.x,v.y-u.y)<v.radius+u.radius+0.01)) return false;
   u.downed = false;
   u.hp = Math.round(u.maxHp * (game.modsFor(u.faction).revive_hp || 0.35));
   u.bleed = 0;
   u.state = 'active';
   u.stateLabel = 'поднят';
   game.events.emit('unitRevived', { unit: u, t: game.time });
+  return true;
 }
 
 // ---------- Движение ----------
-export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
-  if (u._crowdActive && (!game.cfg.flag('crowd_nav_v2', false) || u.playerControlled || u.perception.hasContact || !u.goal)) clearCrowdState(u);
+export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWaypoint = false } = {}) {
+  if (u._crowdActive && (!(game.cfg.flag('crowd_nav_v2', false) || game.cfg.flag('movement_occupancy_v1', false)) || u.playerControlled || u.perception.hasContact || !u.goal)) clearCrowdState(u);
   if (u._smartRoute && ((!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false)) || !u.goal || u.perception.hasContact || u.playerControlled)) discardSmartRoute(u);
   if (!u.alive || u.downed) return;
   const solid = game.cfg.flag('unit_solid_2d_v1', false);
+  const occupancy = game.cfg.flag('movement_occupancy_v1', false);
+  const motionX = u.x, motionY = u.y;
   let speed = u.speed;
   speed *= game.world.speedAt(u.x, u.y);
   if (u.isVehicle && u.engineDamage) speed *= 0.55;
   if (u.suppression > 0.5) speed *= 0.9;
   // Внутри стенового ядра путь к внешней цели идёт через проём.
-  if (game.walls && u.goal) {
+  if (game.walls && u.goal && !skipDoorWaypoint) {
     const wp = game.walls.doorWaypoint(u, u.goal.x, u.goal.y);
     // После упора в другую стену дальняя дверь не должна постоянно
     // перекрывать поле маршрута. В бою сохраняем текущую реакцию.
@@ -501,6 +508,19 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
   if (visionChoice && !allowPair && u._doorPass) u._doorPass = null;
   if (!doorLane && u._doorPass && !game.cfg.flag('door_pair_lanes_v1', false)) u._doorPass = null;
   if (doorLane) { dx = doorLane.x-u.x; dy = doorLane.y-u.y; }
+  // Keep the requested direction separately from the short avoidance vector.
+  const intentLen=occupancy?Math.hypot(dx,dy):0, intentX=intentLen>1?dx/intentLen:dx, intentY=intentLen>1?dy/intentLen:dy;
+  const groupSweep = game.cfg.flag('crowd_swept_units_v1', false) && (u._crowdActive || !!doorLane);
+  // No other unit can move while this call runs. Reuse one conservative
+  // neighborhood for lookahead, all candidate steps and the rescue step.
+  const nearbyRadius=u.radius+(game.occupancyMaxRadius||0);
+  const occupancyReach = Math.max(Math.hypot(nearbyRadius+28,nearbyRadius+6),
+    nearbyRadius+speed*dt+(anti.pushSpeedMult??1.5)*Math.max(u.speed,anti.pushSpeedFloor??30)*dt+1);
+  const occupancyNeighbors = occupancy ? game.occupancyGrid.queryRange(u.x,u.y,occupancyReach) : null;
+  if (occupancy && !yieldPoint && !doorLane && !u._crowdActive) {
+    const detour=occupiedDetour(game,u,dx,dy,game.occupancyGrid,occupancyNeighbors);
+    if (detour) { dx=detour.x;dy=detour.y; }
+  }
   const len = Math.hypot(dx, dy);
   if (len > 1) { dx /= len; dy /= len; }
   // расталкивание (steering separation)
@@ -517,7 +537,7 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
       sy += ((u.y - o.y) / d) * (1 - d / r);
     }
     dx += sx * 0.9; dy += sy * 0.9;
-    if (u._crowdActive || doorLane || solid || yieldPoint) {
+    if (u._crowdActive || doorLane || solid || occupancy || yieldPoint) {
       const length=Math.hypot(dx,dy);
       if(length>1){dx/=length;dy/=length;}
     }
@@ -535,12 +555,13 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
   const walk = wallsOn && game.cfg.flag('pathing_v2', false)
     ? (x, y) => game.world.isBaseWalkable(x, y)
     : (x, y) => game.world.isWalkable(x, y);
-  const free = (x, y) => walk(x - r, y - r) && walk(x + r, y - r) &&
-    walk(x - r, y + r) && walk(x + r, y + r) && walk(x, y) && wallFree(x, y) &&
+  const free = (x, y) => (!occupancy || solidUnitMoveFree(game,u,x,y,0.01,game.occupancyGrid,occupancyNeighbors)) &&
+    walk(x - r, y - r) && walk(x + r, y - r) && walk(x - r, y + r) && walk(x + r, y + r) && walk(x, y) && wallFree(x, y) &&
     motionWallSweepFree(game, u, x, y) && crowdPositionFree(game, u, x, y) && (!doorLane || doorPairPositionFree(game, u, x, y)) &&
-    (!solid || solidUnitMoveFree(game, u, x, y));
+    (occupancy || !(solid || groupSweep) || solidUnitMoveFree(game, u, x, y, groupSweep ? 0.01 : 0));
   const probe = game._motionDiagnostic, startX = probe && u.x, startY = probe && u.y;
-  const avoidNoopSlide = game.cfg.flag('motion_slide_guard_v1', false);
+  // A zero-length axis slide must not suppress the alternate-direction search.
+  const avoidNoopSlide = occupancy || game.cfg.flag('motion_slide_guard_v1', false);
   if (free(nx, ny)) { u.x = nx; u.y = ny; }
   else if ((!avoidNoopSlide || Math.abs(nx-u.x)>1e-9) && free(nx, u.y)) { u.x = nx; }
   else if ((!avoidNoopSlide || Math.abs(ny-u.y)>1e-9) && free(u.x, ny)) { u.y = ny; }
@@ -555,6 +576,23 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
     }
     if (!moved) u.stuck = (u.stuck || 0) + dt * 2;
   }
+  if (occupancy && game.cfg.flag('movement_queue_wait_v1',true) && !u.playerControlled && u.goal && !u.perception.hasContact && intentLen>0.1 &&
+      Math.hypot(u.x-motionX,u.y-motionY)<0.01) {
+    const tx=motionX+intentX*step,ty=motionY+intentY*step;
+    // Waiting is recognised only when terrain/walls allow the intended step;
+    // a wall blockage alone must still trigger the normal stuck recovery.
+    const terrainFree=walk(tx-r,ty-r)&&walk(tx+r,ty-r)&&walk(tx-r,ty+r)&&walk(tx+r,ty+r)&&walk(tx,ty)&&wallFree(tx,ty)&&motionWallSweepFree(game,u,tx,ty);
+    const blocker=terrainFree && blockingUnit(game,u,tx,ty,0.01,game.occupancyGrid,occupancyNeighbors);
+    if(blocker) {
+      const w=u._occupancyWait;
+      if(!w || w.goalX!==u.goal.x || w.goalY!==u.goal.y || game.time-w.lastBlocked>0.5)
+        u._occupancyWait={goalX:u.goal.x,goalY:u.goal.y,since:game.time,lastBlocked:game.time,blockerId:blocker.id};
+      else { w.lastBlocked=game.time;w.blockerId=blocker.id; }
+      // A short queue is not a navigation failure. Do not hide a permanent
+      // blockade: after ten seconds the ordinary recovery/failure resumes.
+      if(game.time-u._occupancyWait.since<10)u.stuck=0;
+    } else u._occupancyWait=null;
+  } else if(occupancy) u._occupancyWait=null;
   if (probe) probe(u,startX,startY,u.x,u.y,'ordinary');
   const rescueX = probe && u.x, rescueY = probe && u.y;
   // Антизастревание без телепорта: если юнит оказался в непроходимой клетке
@@ -579,7 +617,8 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
       const dd = Math.hypot(best.x - u.x, best.y - u.y) || 1;
       const k = Math.min(1, maxStep / dd);
       const pushX = u.x + (best.x - u.x) * k, pushY = u.y + (best.y - u.y) * k;
-      if (!solid || solidUnitMoveFree(game, u, pushX, pushY)) {
+      if (!(solid || groupSweep || occupancy) || solidUnitMoveFree(game, u, pushX, pushY, (groupSweep || occupancy) ? 0.01 : 0,
+        occupancy ? game.occupancyGrid : game.unitGrid, occupancyNeighbors)) {
         u.x = pushX; u.y = pushY;
         u.stuck = Math.max(0, (u.stuck || 0) - dt * 4);
       }
@@ -587,6 +626,12 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null) {
   }
   u.x = clamp(u.x, 8, game.world.W - 8);
   u.y = clamp(u.y, 8, game.world.H - 8);
+  if (occupancy) {
+    game.occupancyGrid.update(u);
+    // Actual displacement vector (world +Y down) per simulated second.
+    u.vx = dt > 0 ? (u.x - motionX) / dt : 0;
+    u.vy = dt > 0 ? (u.y - motionY) / dt : 0;
+  }
   if (probe) probe(u,rescueX,rescueY,u.x,u.y,'rescue');
   if (Math.hypot(dx, dy) > 0.1) u.facing = approachAngle(u.facing, Math.atan2(dy, dx), dt * 8);
 }
@@ -622,11 +667,16 @@ export function updateTimers(game, u, dt) {
     u.lastCheck = { x: u.x, y: u.y, t: u.age };
     // Arrival may persist while the next order is being assigned. Recheck the
     // current goal and any crowd slot; a stale `arrived` flag is not enough.
-    const arrivedAtCurrentGoal = game.cfg.flag('arrival_stuck_guard_v1', false) && u.arrived && u.goal &&
+    const arrivedAtCurrentGoal = (game.cfg.flag('arrival_stuck_guard_v1', false) || game.cfg.flag('movement_occupancy_v1', false)) && u.arrived && u.goal &&
       dist(u.x,u.y,u.goal.x,u.goal.y) < (game.walls && game.walls.enabled()
         ? (game.cfg.navBudget?.arriveRadius?.walls ?? 34) : (game.cfg.navBudget?.arriveRadius?.legacy ?? 24)) &&
       (!u._crowdActive || !u._crowdPoint || dist(u.x,u.y,u._crowdPoint.x,u._crowdPoint.y)<2);
-    if (u.goal && moved < 6 && u.alive && !u.downed && !arrivedAtCurrentGoal) {
+    const wait=u._occupancyWait, blocker=wait&&game.units.get(wait.blockerId);
+    const waitingForUnit=game.cfg.flag('movement_occupancy_v1',false) && game.cfg.flag('movement_queue_wait_v1',true) && !u.playerControlled && !u.perception.hasContact &&
+      u.goal && wait && wait.goalX===u.goal.x && wait.goalY===u.goal.y && game.time-wait.lastBlocked<=0.5 &&
+      game.time-wait.since<10 && blocker?.alive && !blocker.downed &&
+      dist(u.x,u.y,blocker.x,blocker.y)<=u.radius+blocker.radius+Math.max(u.speed,1)*(game.dt||0.1)+3;
+    if (u.goal && moved < 6 && u.alive && !u.downed && !arrivedAtCurrentGoal && !waitingForUnit) {
       u.stuck += 1;
       if (u.stuck >= 2) {
         if (game.cfg.flag('alg_deadlock', false)) {
@@ -644,7 +694,7 @@ export function updateTimers(game, u, dt) {
         }
         u.goal = null; u.flowDir = null; u.stuck = 0; u.pathFailed = true;
       }
-    } else if (arrivedAtCurrentGoal || moved > 20) u.stuck = 0;
+    } else if (arrivedAtCurrentGoal || waitingForUnit || moved > 20) u.stuck = 0;
   }
 }
 
@@ -677,13 +727,27 @@ export function moveAlongFlow(game, u, dt) {
   const allowPair = !!visionChoice && visionChoice.mode !== 'combat' && game.cfg.flag('group_nav_pair_v1', false) &&
     (u._crowdPairManaged || !!courtesyYield(game,u,visionChoice.visibleIds));
   const managedPair = allowPair && visionChoice.mode === 'pair' && (!u._crowdGroupGoal || u._crowdPairManaged);
-  if (!visionChoice || visionChoice.mode === 'group' || managedPair) prepareCrowdNavigation(game, u, d, managedPair ? 2 : undefined, allowPair);
+  // A formed 3+ group must not silently lose its reservations when a casualty
+  // leaves two visible members. Keep only the existing formation, never create
+  // a new pair, and immediately yield to combat/changed goals as before.
+  const survivorPair = game.cfg.flag('crowd_group_survivor_v1', false) && visionChoice?.mode === 'pair' &&
+    u._crowdGroupGoal && !u._crowdPairManaged && Math.hypot(u.goal.x-u._crowdGroupGoal.x,u.goal.y-u._crowdGroupGoal.y)<1 &&
+    game.unitGrid.query(u.x,u.y,220).some(v=>v!==u && visionChoice.visibleIds.has(v.id) && v.alive && !v.downed &&
+      !v.perception?.hasContact && v.faction===u.faction && v.goal && v._crowdGroupGoal &&
+      Math.hypot(v.goal.x-u.goal.x,v.goal.y-u.goal.y)<1 &&
+      Math.hypot(v._crowdGroupGoal.x-u._crowdGroupGoal.x,v._crowdGroupGoal.y-u._crowdGroupGoal.y)<1);
+  if (!visionChoice || visionChoice.mode === 'group' || managedPair || survivorPair) prepareCrowdNavigation(game, u, d, managedPair ? 2 : undefined, allowPair);
   else if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u);
   // Радиус прибытия: со стенами чуть больше (юнит стоит у стены, а не в центре точки),
   // с выключенным флагом — прежние 24 px, чтобы поведение не менялось.
   const arrive = game.cfg.navBudget?.arriveRadius || { legacy: 24, walls: 34 };
   const arriveD = game.walls && game.walls.enabled() ? arrive.walls : arrive.legacy;
-  if (d < arriveD && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) { if (u._smartRoute) discardSmartRoute(u); u.arrived = true; u.flowDir = null; return; }
+  if (d < arriveD && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) {
+    // A unit can reach its goal while its incremental search is still active.
+    // Release that job immediately; otherwise another unit may wait six seconds.
+    if (u._smartRoute || game._smartRouteState?.active?.unit === u) cancelSelectedSmartRoute(game,u);
+    u.arrived = true; u.flowDir = null; return;
+  }
   u.arrived = false;
   if (visionChoice && (visionChoice.mode === 'combat' || ((visionChoice.mode === 'group' || visionChoice.mode === 'pair') && u._crowdActive))) cancelSelectedSmartRoute(game,u);
   else if (game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false)) {

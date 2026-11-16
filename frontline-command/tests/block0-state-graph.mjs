@@ -18,4 +18,9 @@ const ref={x:1};a._testAlias=[ref,ref];const alias=snap(a);a._testAlias=[{x:1},{
 a._testOrder=new Map([['a',1],['b',2]]);const ordered=snap(a);a._testOrder=new Map([['b',2],['a',1]]);assert.ok(snap(a)!==ordered,'Map order matters');delete a._testOrder;
 for(let i=0;i<5;i++){a.step(1/60);b.step(1/60);assert.ok(snap(a)===snap(b),`both graphs match on tick ${i+1}`);}
 assert.ok(captureGraph(a).limitations.includes('function closure state unavailable'));
+const withGrid=snap(a),withoutGrid=captureGraph(a,{excludeUnitGrid:true}).bytes;
+const extra={x:0,y:0};a.unitGrid.insert(extra);
+assert.notEqual(snap(a),withGrid,'default graph includes unitGrid');
+assert.equal(captureGraph(a,{excludeUnitGrid:true}).bytes,withoutGrid,'optional exclusion affects only unitGrid');
+assert.ok(captureGraph(a,{excludeUnitGrid:true}).exclusions.includes('game.unitGrid'));
 console.log('block0 state-graph: AI timers, typed arrays, RNG, IDs, references and map order are represented; closures remain unverified');

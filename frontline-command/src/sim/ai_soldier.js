@@ -318,7 +318,7 @@ function actSoldier(game, u, dt) {
   // и удерживать инженера у чертежа после обнаружения врага.
   if (u.role === 'engineer') {
     if (game.cfg.flag('engineer_combat_priority_v2', false) && u.perception.hasContact) u.buildBusy = false;
-    else { engineerAct(game, u, dt); if (u.buildBusy) return; }
+    else { if (engineerAct(game, u, dt) || u.buildBusy) return; }
   }
   if (u.goal) moveAlongFlow(game, u, dt);
   else if (u.perception.hasContact) {
@@ -359,7 +359,7 @@ function medicAct(game, u, dt) {
     u.aimAngle = angleTo(u.x, u.y, t.x, t.y);
     if (t.downed) {
       t.reviveProgress = (t.reviveProgress || 0) + dt * (1 + (u.healPower || 10) / 20) * ((game.modsFor(u.faction).heal_speed_mult) || 1);
-      if (t.reviveProgress >= 2) { t.reviveProgress = 0; reviveUnit(game, t); game.awardXP(u.faction, 'medic', 'heal', 1); game.sound('heal', t.x, t.y); }
+      if (t.reviveProgress >= 2 && reviveUnit(game, t)) { t.reviveProgress = 0; game.awardXP(u.faction, 'medic', 'heal', 1); game.sound('heal', t.x, t.y); }
     } else {
       t.hp = Math.min(t.maxHp, t.hp + (u.healPower || 10) * dt * ((game.modsFor(u.faction).heal_speed_mult) || 1));
       u.healed += dt;
@@ -386,7 +386,26 @@ function engineerAct(game, u, dt) {
   if (game.cfg.flag('wall_engineer_repair_v1', false) && !u.perception.hasContact) {
     const wall = game.build.nearestDamagedWall(u, 320);
     if (wall) {
-      if (wall.distance > 60) { u.goal = wall.goal; return; }
+      if (wall.distance > 60) {
+        u.goal = wall.goal;
+        // Flow fields can point away from the near side of a wall, especially
+        // inside a building. Use a direct approach only when the entire swept
+        // circle and terrain corridor are clear. Otherwise retain normal routing.
+        const dx = wall.goal.x - u.x, dy = wall.goal.y - u.y;
+        const steps = Math.ceil(Math.hypot(dx, dy) / 6), r = u.radius;
+        let clear = !game.walls.blocksMoveSweep(u.x, u.y, wall.goal.x, wall.goal.y, r, u);
+        for (let i = 0; clear && i <= steps; i++) {
+          const t = steps ? i / steps : 0, x = u.x + dx * t, y = u.y + dy * t;
+          for (const [ox, oy] of [[0, 0], [-r, -r], [r, -r], [-r, r], [r, r]]) {
+            if (!game.world.isBaseWalkable(x + ox, y + oy)) { clear = false; break; }
+          }
+        }
+        if (clear) {
+          moveUnit(game, u, dx, dy, dt, null, { skipDoorWaypoint: true });
+          return true;
+        }
+        return;
+      }
       if (game.build.repairWall(wall, dt, u) > 0) {
         u.goal = null; u.buildBusy = true;
         state(u, 'repair', 'чинит стену'); u.activity = 'repair';

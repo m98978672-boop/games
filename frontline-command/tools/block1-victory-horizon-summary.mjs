@@ -1,0 +1,9 @@
+import {readFileSync} from 'node:fs';
+const arg=n=>process.argv.find(x=>x.startsWith(`--${n}=`))?.slice(n.length+3);if(!arg('file'))throw Error('pass --file=...');
+const expected=Number(arg('seeds')||20);if(!Number.isSafeInteger(expected)||expected<1||expected>100)throw Error('bad seeds');
+const text=readFileSync(arg('file'),'utf8'),partial=!text.endsWith('\n'),lines=text.split('\n');if(partial)lines.pop();const rows=lines.filter(Boolean).map(JSON.parse),seen=new Set();
+for(const r of rows){if(!Number.isSafeInteger(r.seed)||r.seed<1||r.seed>expected||seen.has(r.seed)||r.swap!==(r.seed%2===0)||!Number.isFinite(r.seconds)||r.seconds<=0||!Number.isSafeInteger(r.steps)||r.steps<1||typeof r.warOver!=='boolean'||(r.warOver?(!r.outcome||![0,1,null].includes(r.outcome.winner)):r.outcome!==null))throw Error('invalid result');seen.add(r.seed);}
+const reasons={};for(const r of rows)if(r.warOver)reasons[r.outcome.reason]=(reasons[r.outcome.reason]||0)+1;
+const complete=!partial&&rows.length===expected&&Array.from({length:expected},(_,i)=>i+1).every(i=>seen.has(i));
+console.log(JSON.stringify({complete,games:rows.length,finished:rows.filter(r=>r.warOver).length,unfinished:rows.filter(r=>!r.warOver).length,wins:[0,1].map(f=>rows.filter(r=>r.warOver&&r.outcome.winner===f).length),draws:rows.filter(r=>r.warOver&&r.outcome.winner===null).length,reasons,
+ caveats:['20 seeds when complete, half normal and half swapped; not paired between map sides and not 100-game balance acceptance','Observation horizon is not an in-game victory or draw; unfinished games stay unfinished','Experimental rules do not yet implement the separate commander and use legacy no-army timeout','Node only; no browser FPS, multiplayer, save/replay or deterministic continuation evidence']},null,2));if(!complete)process.exitCode=1;

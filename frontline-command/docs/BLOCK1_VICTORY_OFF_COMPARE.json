@@ -1,0 +1,265 @@
+{
+  "passed": true,
+  "seeds": 20,
+  "ticks": 60,
+  "dt": 0.016666666666666666,
+  "baselineFilesSha256": {
+    "src/sim/game.js": "59ad79bc5705ff3f569e6fae6f56848499115ba5c66135f5e221034eed54f1bb",
+    "src/sim/ai_soldier.js": "c060f18a356cdee12304863b91d9774f9babb8c30ff09bb56aa5a32b4881b3a6",
+    "src/sim/units.js": "f4ec30a523aea5141814c57962b95e20ce81db4b4f87203e982e25a0928abe54",
+    "src/sim/walls.js": "d706aaf1eb547f1a7e2fb88af6ac626eb7997fb2f5ee849ed286d1f5e0e44282",
+    "src/sim/world.js": "3f7504128c125e5572404ea8c5acb53446365eb10984b61b124ea1c581d4d04d",
+    "src/sim/build.js": "3b4470f2bf9d54f6d7c5058c51be7e8690e8f5a72b3704388444ef360f37c26d",
+    "src/sim/solid_units.js": "78a788049e0da5eb8affc2b71593c6b099c91c1663b05f48d9d05e619bc4e0d2",
+    "src/sim/crowd_nav.js": "24af400396e2818f638477ca179b46afbefcfcf07dd36d5670ddbc68e5685be7",
+    "data/feature_flags.json": "7358f3c7b8ea15e2cc85c5b57b1e4c3ebcc55a4b1868b44bd0eee48ae114bc2a"
+  },
+  "runs": [
+    {
+      "mode": "default",
+      "seed": 1,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 2,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 3,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 4,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 5,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 6,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 7,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 8,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 9,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 10,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 11,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 12,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 13,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 14,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 15,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 16,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 17,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 18,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 19,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "default",
+      "seed": 20,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 1,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 2,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 3,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 4,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 5,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 6,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 7,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 8,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 9,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 10,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 11,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 12,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 13,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 14,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 15,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 16,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 17,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 18,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 19,
+      "compared": 61,
+      "mismatch": null
+    },
+    {
+      "mode": "existing-movement-experiments",
+      "seed": 20,
+      "compared": 61,
+      "mismatch": null
+    }
+  ],
+  "caveats": [
+    "Node, no render or external input, 60 short fixed steps",
+    "Only off flags absent from the baseline are removed from the new test config and raw metadata; both game graphs otherwise compared in full",
+    "Wall timing fields excluded; closures, module globals, prototypes and shared buffers not fully represented",
+    "Pre-turn baseline snapshot must be supplied separately; not proof for every possible game"
+  ]
+}
