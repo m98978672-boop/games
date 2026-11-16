@@ -57,6 +57,19 @@ wireButton('zoom-out', () => map.setZoom(map.scale / 1.6, mid()));
 wireButton('fit', () => map.fitWorld());
 wireButton('center', () => { map.center = { x: 0, y: 0 }; });
 
+/* R-72.5: панель карты складывается — на маленьком экране игрок оставляет только заголовок. */
+{
+  const fold = document.getElementById('fold-hud');
+  const panel = document.getElementById('hud');
+  if (fold && panel) {
+    fold.addEventListener('click', () => {
+      const folded = panel.classList.toggle('folded');
+      fold.textContent = folded ? '+' : '—';
+      fold.title = folded ? 'показать подсказки' : 'свернуть подсказки';
+    });
+  }
+}
+
 /* §14: прыжки по времени суток. «Утро» и «вечер» ищут час по сезону — зимой и летом
    рассвет и закат в разное время; «день» и «ночь» — фиксированные 13:00 и 01:00. */
 const times = [
