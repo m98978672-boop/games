@@ -14,12 +14,15 @@
 
   .panel{ position:fixed; background:var(--paper); border:1px solid var(--line); padding:10px 12px;
     backdrop-filter:blur(6px); }
-  #hud{ left:14px; top:14px; min-width:230px; }
+  #hud{ left:14px; top:14px; min-width:250px; max-width:min(360px, 46vw);
+    max-height:calc(100% - 210px); overflow:auto; scrollbar-width:thin; }
   #hud h1{ margin:0 0 6px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; }
   #hud .sub{ color:var(--mute); margin-bottom:8px; font-size:11.5px; }
   #hud table{ border-collapse:collapse; font-size:11.5px; width:100%; }
   #hud td{ padding:1px 0; }
-  #hud td:last-child{ text-align:right; }
+  #hud td:first-child{ color:var(--mute); padding-right:12px; }
+  #hud td:last-child{ text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    max-width:0; font-variant-numeric:tabular-nums; }
   /* правая колонка: тумблеры и «страна» стоят друг под другом, а не друг на друге */
   #right-rail{ position:fixed; right:14px; top:14px; width:236px; display:flex; flex-direction:column;
     gap:10px; max-height:calc(100% - 28px); overflow:auto; scrollbar-width:thin; }
@@ -39,17 +42,28 @@
   #controls{ width:100%; }
   #controls label{ display:flex; align-items:center; gap:7px; margin:4px 0; font-size:12px; }
   #controls input{ accent-color:#333; }
+  #controls .group{ margin:9px 0 2px; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--mute); border-top:1px solid rgba(0,0,0,.1); padding-top:7px; }
+  #controls .group:first-of-type{ border-top:0; padding-top:0; margin-top:4px; }
   .rowbtn{ display:flex; gap:6px; margin:8px 0 4px; }
   .rowbtn button{ flex:1; font:inherit; font-size:12px; border:1px solid var(--ink); background:#fff;
     padding:4px 0; cursor:pointer; }
   .rowbtn button:active{ background:#0b0b0b; color:#fff; }
 
-  #legend{ left:14px; bottom:14px; font-size:11px; max-width:210px; }
+  #legend{ left:14px; bottom:14px; font-size:11px; width:232px; padding:8px 10px; }
+  #legend summary{ cursor:pointer; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--mute); list-style:none; display:flex; justify-content:space-between; }
+  #legend summary::-webkit-details-marker{ display:none; }
+  #legend summary::after{ content:'▾'; color:var(--mute); }
+  #legend[open] summary::after{ content:'▴'; }
+  #legend .body{ max-height:52vh; overflow:auto; margin-top:6px; scrollbar-width:thin; }
+  #legend .cap{ margin:7px 0 3px; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--mute); }
   #legend .row{ display:flex; align-items:center; gap:7px; margin:2px 0; }
-  #legend i{ width:14px; height:9px; display:inline-block; border:1px solid rgba(0,0,0,.2); }
+  #legend i{ width:14px; height:9px; display:inline-block; border:1px solid rgba(0,0,0,.2); flex:none; }
 
   .hint{ position:fixed; right:14px; bottom:14px; color:#f2f2f2; font-size:11px;
-    background:rgba(10,20,28,.55); border:1px solid rgba(255,255,255,.18); padding:5px 8px; }
+    background:rgba(10,20,28,.62); border:1px solid rgba(255,255,255,.18); padding:5px 8px;
+    max-width:44vw; line-height:1.35; }
 
   #loading{ position:fixed; inset:0; display:grid; place-items:center; background:#0d2233;
     color:#e9eef2; transition:opacity .4s; z-index:10; }
@@ -78,7 +92,7 @@
 
 <section class="panel" id="hud">
   <h1>Ратград · карта</h1>
-  <div class="sub">7000 × 7000 км · вид сверху · промт §7 · §9–§10 · §38–§44</div>
+  <div class="sub">7000 × 7000 км · вид сверху · 120 поселений</div>
   <table>
     <tr><td>курсор</td><td id="hud-pos">0; 0 км</td></tr>
     <tr><td>высота</td><td id="hud-height">— м</td></tr>
@@ -86,14 +100,14 @@
     <tr><td>центр</td><td id="hud-center">0; 0 км</td></tr>
     <tr><td>дороги</td><td id="hud-roads">—</td></tr>
     <tr><td>транспорт</td><td id="hud-cars">—</td></tr>
-    <tr><td>пешеходы §13</td><td id="hud-peds">—</td></tr>
-    <tr><td>мэры §16.8</td><td id="hud-mayors">—</td></tr>
-    <tr><td>полигон §16.4</td><td id="hud-play">—</td></tr>
-    <tr><td>толпа §16.6</td><td id="hud-crowd">—</td></tr>
-    <tr><td>стройка §16.8</td><td id="hud-growth">—</td></tr>
-    <tr><td>поезда §16.7</td><td id="hud-trains">—</td></tr>
-    <tr><td>авиация §16.7</td><td id="hud-air">—</td></tr>
-    <tr><td>суда §16.7</td><td id="hud-sea">—</td></tr>
+    <tr><td>пешеходы</td><td id="hud-peds">—</td></tr>
+    <tr><td>мэры</td><td id="hud-mayors">—</td></tr>
+    <tr><td>полигон</td><td id="hud-play">—</td></tr>
+    <tr><td>толпа</td><td id="hud-crowd">—</td></tr>
+    <tr><td>стройка</td><td id="hud-growth">—</td></tr>
+    <tr><td>поезда</td><td id="hud-trains">—</td></tr>
+    <tr><td>авиация</td><td id="hud-air">—</td></tr>
+    <tr><td>суда</td><td id="hud-sea">—</td></tr>
     <tr><td>без вас</td><td id="hud-offline">—</td></tr>
     <tr><td>время мира</td><td id="hud-clock">день 1 · 08:00</td></tr>
     <tr><td>состояние</td><td id="hud-status">—</td></tr>
@@ -110,84 +124,101 @@
     <button id="fit" title="весь мир">⤢</button>
     <button id="center" title="в центр мира">⌂</button>
   </div>
-  <div class="rowbtn" title="время суток §14">
+  <div class="rowbtn" title="время суток">
     <button id="time-morning" title="07:00">утро</button>
     <button id="time-day" title="13:00">день</button>
     <button id="time-evening" title="19:30">вечер</button>
     <button id="time-night" title="01:00">ночь</button>
   </div>
-  <label><input type="checkbox" id="toggle-roads" checked> дороги §8</label>
-  <label><input type="checkbox" id="toggle-markings" checked> разметка §8.14</label>
-  <label><input type="checkbox" id="toggle-dams" checked> плотины §5.9</label>
-  <label><input type="checkbox" id="toggle-ice" checked> лёд и иней §5.11</label>
-  <label><input type="checkbox" id="toggle-tides" checked> отмели и доки §5.10</label>
-  <label><input type="checkbox" id="toggle-ai" checked> мэры и «почему» §16.8</label>
-  <label><input type="checkbox" id="toggle-play" checked> полигон IDM §16.4</label>
-  <label><input type="checkbox" id="toggle-pedai" checked> пешеходы: силы и переходы §16.6</label>
-  <label><input type="checkbox" id="toggle-growth" checked> рост городов §16.8</label>
-  <label><input type="checkbox" id="toggle-trains" checked> железная дорога и поезда §16.7</label>
-  <label><input type="checkbox" id="toggle-airport" checked> аэропорты и вышка §16.7</label>
-  <label><input type="checkbox" id="toggle-seatraffic" checked> суда и разводные мосты §16.7</label>
-  <label><input type="checkbox" id="toggle-grid" checked> сетка 10/25/50 км</label>
+  <div class="group">карта</div>
+  <label><input type="checkbox" id="toggle-roads" checked> дороги</label>
+  <label><input type="checkbox" id="toggle-markings" checked> разметка и развязки</label>
   <label><input type="checkbox" id="toggle-towns" checked> поселения</label>
-  <label><input type="checkbox" id="toggle-cars" checked> транспорт §44</label>
-  <label><input type="checkbox" id="toggle-borders" checked> границы §7</label>
-  <label><input type="checkbox" id="toggle-cities" checked> города §9–§10</label>
-  <label><input type="checkbox" id="toggle-peds" checked> пешеходы §13</label>
-  <label><input type="checkbox" id="toggle-water" checked> реки §5</label>
-  <label><input type="checkbox" id="toggle-q" checked> QООВЗ 250 м</label>
+  <label><input type="checkbox" id="toggle-cities" checked> города</label>
+  <label><input type="checkbox" id="toggle-borders" checked> границы</label>
+  <label><input type="checkbox" id="toggle-water" checked> реки</label>
+  <label><input type="checkbox" id="toggle-grid" checked> сетка 10/25/50 км</label>
+  <label><input type="checkbox" id="toggle-q" checked> квадраты 250 м</label>
+  <div class="group">вода и рельеф</div>
+  <label><input type="checkbox" id="toggle-dams" checked> плотины и ГЭС</label>
+  <label><input type="checkbox" id="toggle-tides" checked> отмели и доки</label>
+  <label><input type="checkbox" id="toggle-ice" checked> лёд и иней</label>
+  <div class="group">жизнь</div>
+  <label><input type="checkbox" id="toggle-cars" checked> транспорт</label>
+  <label><input type="checkbox" id="toggle-peds" checked> пешеходы</label>
+  <label><input type="checkbox" id="toggle-trains" checked> железная дорога и поезда</label>
+  <label><input type="checkbox" id="toggle-airport" checked> аэропорты и вышка</label>
+  <label><input type="checkbox" id="toggle-seatraffic" checked> суда и разводные мосты</label>
+  <div class="group">город и мэры</div>
+  <label><input type="checkbox" id="toggle-ai" checked> мэры и журнал решений</label>
+  <label><input type="checkbox" id="toggle-growth" checked> рост городов</label>
+  <label><input type="checkbox" id="toggle-pedai" checked> толпа: силы и переходы</label>
+  <label><input type="checkbox" id="toggle-play" checked> полигон вождения</label>
 </section>
 
 <section class="panel" id="country">
-  <h2 id="country-title">страна · §31.33</h2>
+  <h2 id="country-title">страна</h2>
   <table id="hud-country">
     <tr><td>загрузка</td><td>…</td></tr>
   </table>
 </section>
 
 <section class="panel" id="why">
-  <h2>решения мэров · §16.8</h2>
+  <h2>что решили мэры</h2>
   <ul id="why-list"><li>пока тихо</li></ul>
 </section>
 </div>
 
-<section class="panel" id="legend">
-  <div class="row"><i style="background:#1a3e63"></i> глубина</div>
-  <div class="row"><i style="background:#2c688a"></i> море</div>
-  <div class="row"><i style="background:#7eb2c4"></i> отмель / песок</div>
-  <div class="row"><i style="background:#ff8f6a"></i> агрессивный водитель §16.6</div>
-  <div class="row"><i style="background:#ffd75e"></i> новичок §16.6</div>
-  <div class="row"><i style="background:#a6a870"></i> степь</div>
-  <div class="row"><i style="background:#7a9458"></i> луг</div>
-  <div class="row"><i style="background:#4a6c42"></i> лес</div>
-  <div class="row"><i style="background:#8b867a"></i> камень</div>
-  <div class="row"><i style="background:#f0f3f4"></i> снег</div>
-  <div class="row"><i style="background:#ffd66e"></i> магистраль M</div>
-  <div class="row"><i style="background:#f6f0e2"></i> региональная R</div>
-  <div class="row"><i style="background:#d6c8ac"></i> местная L / грунт G</div>
-  <div class="row"><i style="background:#76bee8"></i> паром по морю</div>
-  <div class="row"><i style="background:#f4f6f8"></i> транспорт: легковая / грузовик</div>
-  <div class="row"><i style="background:#e8a24a"></i> грузовик §44</div>
-  <div class="row"><i style="background:#8fd0a0"></i> автобус §44</div>
-  <div class="row"><i style="background:#e6f2f8"></i> судно и самолёт §44</div>
-  <div class="row"><i style="background:#a2452c"></i> государственная граница</div>
-  <div class="row"><i style="background:#8a7350"></i> границы 14 регионов</div>
-  <div class="row"><i style="background:#c4baa6"></i> город: пятно и улицы</div>
-  <div class="row"><i style="background:#f4eee2"></i> пешеход §13</div>
-  <div class="row"><i style="background:#c4d8e2"></i> лёд на северных озёрах §5.11</div>
-  <div class="row"><i style="background:#c44230"></i> ледокол §5.11</div>
-  <div class="row"><i style="background:#2c628a"></i> водохранилище и плотина §5.9</div>
-  <div class="row"><i style="background:#e2d2ac"></i> приливная отмель §5.10</div>
-  <div class="row"><i style="background:#4a463e"></i> причалы порта §5.10</div>
-  <div class="row"><i style="background:#a8d8f4"></i> курьер на велосипеде §13</div>
-  <div class="row"><i style="background:#f2f0a8"></i> бегун §13</div>
-  <div class="row"><i style="background:#d8c8ae"></i> новые дома мэра §16.8</div>
-  <div class="row"><i style="background:#60804a"></i> парк мэра §16.8</div>
-  <div class="row"><i style="background:#2a2724"></i> железная дорога §16.7</div>
-  <div class="row"><i style="background:#fff4c2"></i> поезд §16.7</div>
-  <div class="row"><i style="background:#58a8c8"></i> фарватер судов §16.7</div>
-  <div class="row"><i style="background:#ffd75e"></i> самолёт на круге §16.7</div>
-</section>
+<details class="panel" id="legend">
+  <summary>легенда</summary>
+  <div class="body">
+    <div class="cap">вода</div>
+    <div class="row"><i style="background:#1a3e63"></i> глубина</div>
+    <div class="row"><i style="background:#2c688a"></i> море</div>
+    <div class="row"><i style="background:#7eb2c4"></i> отмель и песок</div>
+    <div class="row"><i style="background:#c4d8e2"></i> лёд на северных озёрах</div>
+    <div class="row"><i style="background:#2c628a"></i> водохранилище и плотина</div>
+    <div class="row"><i style="background:#e2d2ac"></i> приливная отмель</div>
+    <div class="row"><i style="background:#4a463e"></i> причалы порта</div>
+    <div class="row"><i style="background:#c44230"></i> ледокол</div>
+
+    <div class="cap">земля</div>
+    <div class="row"><i style="background:#a6a870"></i> степь</div>
+    <div class="row"><i style="background:#7a9458"></i> луг</div>
+    <div class="row"><i style="background:#4a6c42"></i> лес</div>
+    <div class="row"><i style="background:#8b867a"></i> камень</div>
+    <div class="row"><i style="background:#f0f3f4"></i> снег</div>
+
+    <div class="cap">дороги</div>
+    <div class="row"><i style="background:#ffd66e"></i> магистраль</div>
+    <div class="row"><i style="background:#f6f0e2"></i> региональная</div>
+    <div class="row"><i style="background:#d6c8ac"></i> местная и грунтовая</div>
+    <div class="row"><i style="background:#76bee8"></i> паром по морю</div>
+    <div class="row"><i style="background:#a2452c"></i> государственная граница</div>
+    <div class="row"><i style="background:#8a7350"></i> границы регионов</div>
+    <div class="row"><i style="background:#c4baa6"></i> город: пятно и улицы</div>
+
+    <div class="cap">транспорт и люди</div>
+    <div class="row"><i style="background:#f4f6f8"></i> легковая и фура</div>
+    <div class="row"><i style="background:#8fd0a0"></i> автобус</div>
+    <div class="row"><i style="background:#e6f2f8"></i> судно и самолёт</div>
+    <div class="row"><i style="background:#ff8f6a"></i> агрессивный водитель</div>
+    <div class="row"><i style="background:#ffd75e"></i> новичок за рулём</div>
+    <div class="row"><i style="background:#f4eee2"></i> пешеход</div>
+    <div class="row"><i style="background:#a8d8f4"></i> курьер на велосипеде</div>
+    <div class="row"><i style="background:#f2f0a8"></i> бегун</div>
+
+    <div class="cap">рельсы и небо</div>
+    <div class="row"><i style="background:#2a2724"></i> железная дорога</div>
+    <div class="row"><i style="background:#fff4c2"></i> поезд</div>
+    <div class="row"><i style="background:#58a8c8"></i> фарватер судов</div>
+    <div class="row"><i style="background:#ffd75e"></i> самолёт на круге</div>
+
+    <div class="cap">что построили мэры</div>
+    <div class="row"><i style="background:#d8c8ae"></i> новые дома</div>
+    <div class="row"><i style="background:#60804a"></i> парк</div>
+  </div>
+</details>
 
 <div class="hint" id="hint">тяните — сдвиг · колесо и щипок — зум · двойной клик — ближе · клик по городу — выбрать</div>
 

@@ -2075,7 +2075,7 @@ export class Map2D {
     ctx.fillStyle = 'rgba(206,226,240,0.92)';
     ctx.font = '10.5px ui-monospace, monospace';
     ctx.textBaseline = 'top';
-    ctx.fillText('ИИ §16.4 · IDM, полигон', x + 9, y + 7);
+    ctx.fillText('полигон вождения · 12 машин', x + 9, y + 7);
 
     // полоса: кольцо 700 м укладывается в 220 px
     const roadX = x + 13, roadY = y + 40, roadW = w - 26;
@@ -2198,19 +2198,28 @@ export class Map2D {
     this.hud.country.innerHTML = rows.join('');
   }
 
+  /* R-72.2: в строке HUD — короткое число, в подсказке (title) — полная расшифровка.
+     Игроку не нужны ни номера параграфов, ни служебные слова. */
+  hudLine(id, short, full) {
+    const el = this.hud[id];
+    if (!el) return;
+    el.textContent = short;
+    if (full && typeof el.setAttribute === 'function') el.setAttribute('title', full);
+  }
+
   /* §16.6 и §16.8: строки HUD про толпу и стройку — обновляются и по дням, и по кадрам. */
   updateAiHud() {
     if (this.hud.crowd) {
       if (!this.showPedAI || !this.showPeds) this.hud.crowd.textContent = 'выключена';
-      else if (!this.crowds.size) this.hud.crowd.textContent = '— (нужен зум от 20 px/км)';
+      else if (!this.crowds.size) this.hudLine('crowd', '— (ближе к городу)', 'толпа считается с 20 px/км');
       else {
         let waiting = 0, crossed = 0, pressure = 0, n = 0;
         for (const c of this.crowds.values()) {
           const s3 = crowdStats(c);
           waiting += s3.waiting; crossed += s3.crossed; pressure += s3.pressure; n++;
         }
-        this.hud.crowd.textContent = n + ' город · ждут ' + waiting + ' · перешли ' + crossed +
-          ' · давка ' + Math.round((pressure / Math.max(1, n)) * 100) + '%';
+        this.hudLine('crowd', n + ' город · ждут ' + waiting,
+          'перешли ' + crossed + ' · давка ' + Math.round((pressure / Math.max(1, n)) * 100) + '%');
       }
     }
     if (this.hud.trains) {
@@ -2218,8 +2227,8 @@ export class Map2D {
       else if (!this.rail) this.hud.trains.textContent = '— (мир строится)';
       else {
         const st = transitStats(this.rail, null, null);
-        this.hud.trains.textContent = st.trains + ' составов · держат блок ' + st.waiting +
-          ' · на станции ' + st.atStation + ' · ' + st.railKm.toLocaleString('ru-RU') + ' км';
+        this.hudLine('trains', st.trains + ' составов · ' + st.railKm.toLocaleString('ru-RU') + ' км',
+          'держат блок ' + st.waiting + ' · на станции ' + st.atStation);
       }
     }
     if (this.hud.air) {
@@ -2227,8 +2236,8 @@ export class Map2D {
       else if (!this.air) this.hud.air.textContent = '—';
       else {
         const st = transitStats(this.rail || { trains: [], totalKm: 0 }, this.air, null);
-        this.hud.air.textContent = st.planes + ' бортов · на круге ' + st.holding +
-          ' · сели ' + st.landed;
+        this.hudLine('air', st.planes + ' бортов · сели ' + st.landed,
+          'на круге ожидания ' + st.holding + ' · полоса занята: ' + st.runwayBusy);
       }
     }
     if (this.hud.sea) {
@@ -2236,21 +2245,22 @@ export class Map2D {
       else if (!this.seaTraffic) this.hud.sea.textContent = '—';
       else {
         const st = transitStats({ trains: [], totalKm: 0 }, null, this.seaTraffic);
-        this.hud.sea.textContent = st.ships + ' судна · уступают ' + st.giveWay + ' · у моста ' +
-          st.bridgeWaiting + ' · на стоянке ' + st.moored;
+        this.hudLine('sea', st.ships + ' судна · у моста ' + st.bridgeWaiting,
+          'уступают ' + st.giveWay + ' · на стоянке ' + st.moored);
       }
     }
     if (this.hud.offline) {
       if (this.catchUpReport && this.catchUpReport.days) {
-        this.hud.offline.textContent = formatReport(this.catchUpReport) +
-          (this.catchUpReport.capped ? ' (дальше не считаем)' : '');
+        const r = this.catchUpReport;
+        this.hudLine('offline', '+' + r.days + ' дн · ' + r.decisions + ' решений',
+          formatReport(r) + (r.capped ? ' (дальше не считаем)' : ''));
       } else if (!this.hud.offline.textContent || this.hud.offline.textContent === '—') {
-        this.hud.offline.textContent = 'всё под контролем';
+        this.hudLine('offline', 'всё под контролем', 'страна идёт и без вашего окна');
       }
     }
     if (this.hud.growth) {
       if (!this.showGrowth) this.hud.growth.textContent = 'выключен';
-      else if (!this.growth.size) this.hud.growth.textContent = '— (с первого дня)';
+      else if (!this.growth.size) this.hudLine('growth', '— (день первый)', 'мэры начнут строить со второго дня');
       else {
         let houses = 0, parks = 0, civic = 0, building = 0, bypass = 0;
         for (const g of this.growth.values()) {
@@ -2258,8 +2268,8 @@ export class Map2D {
           houses += st2.houses; parks += st2.parks; civic += st2.civic;
           building += st2.building; if (st2.bypass) bypass++;
         }
-        this.hud.growth.textContent = houses + ' домов · ' + parks + ' парков · ' + civic +
-          ' обществ. · в лесах ' + building + (bypass ? ' · объездных ' + bypass : '');
+        this.hudLine('growth', houses + ' домов · ' + parks + ' парков',
+          civic + ' общественных · в лесах ' + building + (bypass ? ' · объездных ' + bypass : ''));
       }
     }
   }
@@ -2296,15 +2306,15 @@ export class Map2D {
         iceText + frostText + tideText;
     }
     if (this.hud.peds) {
-      this.hud.peds.textContent = this.pedsInFrame
-        ? this.pedsInFrame + ' в кадре'
-        : (this.showPeds ? '— (с 40 px/км)' : 'выключены');
+      if (!this.showPeds) this.hudLine('peds', 'выключены');
+      else if (this.pedsInFrame) this.hudLine('peds', this.pedsInFrame + ' в кадре', 'прохожие на тротуарах города');
+      else this.hudLine('peds', '— (с 40 px/км)', 'подойдите ближе, чтобы увидеть людей');
     }
     if (this.hud.hint) {
       const t = this.transport;
-      this.hud.hint.textContent = 'тяните — сдвиг · колесо и щипок — зум · двойной клик — ближе · клик по городу — выбрать' +
-        (t ? ' · §44: ' + t.vehicles.length + ' ед. в пути' : '') +
-        (this.pedsInFrame ? ' · §13: ' + this.pedsInFrame + ' пешеходов' : '');
+      this.hud.hint.textContent = 'тяните — сдвиг · колесо и щипок — зум · двойной клик — ближе' +
+        (t ? ' · в пути ' + t.vehicles.length + ' ед.' : '') +
+        (this.pedsInFrame ? ' · пешеходов ' + this.pedsInFrame : '');
     }
     if (this.hud.play) {
       const p2 = this.play;
@@ -2312,16 +2322,17 @@ export class Map2D {
       else {
         const st = playStats(p2);
         const names = { green: 'зелёный', yellow: 'жёлтый', red: 'красный' };
-        this.hud.play.textContent = 'свет ' + names[st.state] + ' · очередь ' + st.queue + ' · прошло ' + st.passed;
+        this.hudLine('play', 'свет ' + names[st.state] + ' · прошло ' + st.passed,
+          'очередь ' + st.queue + ' · в среднем ' + st.avgKmh.toFixed(0) + ' км/ч');
       }
     }
     if (this.hud.mayors) {
       if (!this.showAI) this.hud.mayors.textContent = 'выключены';
-      else if (!this.mayors) this.hud.mayors.textContent = '— (с первого дня)';
+      else if (!this.mayors) this.hudLine('mayors', '— (день первый)', 'мэры приступят со второго дня');
       else {
         const s2 = mayorStats(this.mayors);
-        this.hud.mayors.textContent = s2.count + ' мэр · ' + s2.decisions + ' решений · пробки ' +
-          Math.round(s2.jams * 100) + '%';
+        this.hudLine('mayors', s2.count + ' мэра · ' + s2.decisions + ' решений',
+          'пробки ' + Math.round(s2.jams * 100) + '%');
       }
     }
     if (this.hud.cars) {
@@ -2330,8 +2341,8 @@ export class Map2D {
       else {
         const k = t.counts.byKind;
         const ref = t.refueling || 0;
-        this.hud.cars.textContent = t.vehicles.length + ' ед. · ' + k.car + ' авто · ' + k.ship + ' судов · ' +
-          k.plane + ' самолётов' + (ref ? ' · на заправке ' + ref : '');
+        this.hudLine('cars', t.vehicles.length + ' ед. · ' + k.car + ' авто',
+          k.ship + ' судов · ' + k.plane + ' самолётов' + (ref ? ' · на заправке ' + ref : ''));
       }
     }
   }
