@@ -31,7 +31,12 @@ export function snapshot(transport, now = Date.now()) {
 export function saveTo(storage, transport, now = Date.now()) {
   if (!storage) return null;
   const snap = snapshot(transport, now);
-  try { storage.setItem(OFFLINE.key, JSON.stringify(snap)); } catch (e) { /* приватный режим — не беда */ }
+  try {
+    storage.setItem(OFFLINE.key, JSON.stringify(snap));
+  } catch (e) {
+    // приватный режим и переполненное хранилище: играть можно, сейва не будет
+    saveTo.failed = (saveTo.failed || 0) + 1;
+  }
   return snap;
 }
 

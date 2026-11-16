@@ -22,6 +22,8 @@ import { buildPlay, stepPlay, playStats, PROFILE_COLOR, PLAY2D } from './play2d.
 import { buildRail, stepRail, trainPoints, buildAir, stepAir, buildSea, stepSea, shipPoint,
   transitStats, RAIL, AIR, SEA } from './transit2d.js';
 import { loadFrom, saveTo, elapsedMinutes, catchUp, formatReport, OFFLINE } from './offline2d.js';
+import { WEATHER, weatherAt, weatherCached, weatherStats, gripFactor, airfieldClosed,
+  cloud01, cloudSprite, dropAt } from './weather2d.js';
 import { buildGrowth, applyGrowth, growthStats, progressAt, GROWTH } from './growth2d.js';
 import { buildCrowd, stepCrowd, crowdStats, mayCross } from './pedsoc2d.js';
 
@@ -77,6 +79,10 @@ export class Map2D {
     this.showSeaTraffic = true;// суда, фарватер и разводные мосты §16.7
     this.seaTraffic = null;
     this.catchUpReport = null; // что случилось, пока окна не было (F-218…F-220)
+    this.showWeather = true;   // погода: облака, дождь, снег, туман §76
+    this.weather = { map: new Map(), hits: 0, misses: 0 };
+    this.weatherSec = 0;       // реальные секунды для капель — от fps не зависит
+    this.cloudTile = null;     // спрайт тени облака: один на все облака
     this.showGrowth = true;    // рост городов от решений мэров §16.8
     this.growth = new Map();   // индекс города → что там выросло
     this.showPedAI = true;     // социальные силы и переходы §16.6
@@ -122,12 +128,15 @@ export class Map2D {
     const canvas = document.createElement('canvas');
     canvas.width = size; canvas.height = size;
     const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('канва не даёт 2d-контекст — обновите браузер');
 
     // грубый мир растягиваем на весь холст, резкие плитки потом ложатся поверх
     const paintQuick = (buffer, lowSize) => {
       const tmp = document.createElement('canvas');
       tmp.width = lowSize; tmp.height = lowSize;
-      tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buffer), lowSize, lowSize), 0, 0);
+      const tctx = tmp.getContext('2d');
+      if (!tctx) return;
+      tctx.putImageData(new ImageData(new Uint8ClampedArray(buffer), lowSize, lowSize), 0, 0);
       ctx.imageSmoothingEnabled = true;
       ctx.drawImage(tmp, 0, 0, size, size);
       this.overview = canvas;
@@ -415,9 +424,14 @@ export class Map2D {
 
   /* Шаг мира: реальные секунды → игровые часы (F-120). */
   tick(dtSec) {
-    if (this.transport) advanceTransport(this.transport, dtSec);
+    // §76: погода замедляет движение, а не только рисуется. Сцепление берём по камере —
+    // именно ту погоду, которую игрок сейчас видит.
+    const wx = this.showWeather ? this.weatherNow() : null;
+    const grip = wx ? gripFactor(wx) : 1;
+    this.weatherSec += Math.max(0, dtSec);
+    if (this.transport) advanceTransport(this.transport, dtSec * grip);
     this.updateLight();
-    if (this.showPeds) for (const pack of this.pedCache.values()) advancePeds(pack, dtSec);
+    if (this.showPeds) for (const pack of this.pedCache.values()) advancePeds(pack, dtSec * (0.72 + 0.28 * grip));
     if (this.transport) {
       const day = Math.floor(this.transport.minutes / 1440);
       if (this.economy && day > this.lastEconomyDay) {
@@ -441,12 +455,14 @@ export class Map2D {
       }
     }
     if (this.showTrains && this.roads) stepRail(this.buildRailLayer(), dtSec);
-    if (this.showAir) stepAir(this.buildAirLayer(), dtSec);
+    if (this.showAir) stepAir(this.buildAirLayer(), dtSec, airfieldClosed(wx) ? wx : null);
     if (this.showSeaTraffic && this.water) {
       const sea = this.buildSeaLayer();
       const tides = this.buildTides();
       const bridges = (this.water.bridges && this.water.bridges.list) || [];
-      stepSea(sea, tides.ports, dtSec, bridges, this.transport ? this.transport.minutes : 0);
+      // R-76.4: в туман и снег суда идут тише
+      const slow = wx && (wx.kind === 'fog' || wx.kind === 'snow') ? WEATHER.shipSlow : 1;
+      stepSea(sea, tides.ports, dtSec * slow, bridges, this.transport ? this.transport.minutes : 0);
     }
     if (this.showPedAI && this.showPeds) this.stepCrowds(dtSec);
     this.updatePlay(dtSec);
@@ -500,6 +516,18 @@ export class Map2D {
       ctx.restore();
     }
 
+    /* §76: погода. Сначала тени облаков по земле — они лежат на карте, но под светом ночи;
+       осадки и туман идут поверх, иначе дождь гасил бы огни. */
+    const wx = this.showWeather ? this.weatherNow() : null;
+    if (wx) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
+      ctx.clip();
+      this.drawWeatherGround(ctx, originX, originY, s);
+      ctx.restore();
+    }
+
     /* §14: ночь и огни. Сначала всё притухает наложением, потом поверх зажигаются окна
        и фонари — так город ночью читается, а не просто «темнеет». */
     const light = this.light || this.updateLight();
@@ -520,6 +548,7 @@ export class Map2D {
       ctx.restore();
     }
     if (night > 0.04) this.drawNightLight(ctx, originX, originY, s, light, night);
+    if (wx) this.drawWeatherFront(ctx, s, wx);
     if (this.playCtx && this.showPlay && (this.frames % 2 === 0)) this.renderPlayDock();
 
     this.frames++;
@@ -887,7 +916,7 @@ export class Map2D {
   drawTrains(ctx, originX, originY, s) {
     const X = (x) => originX + x * s;
     const Y = (y) => originY - y * s;
-    const pad = 60;
+    const view = this.view, pad = 60;
     for (const t of this.rail.trains) {
       const pts = trainPoints(this.rail, t);
       if (!pts) continue;
@@ -2392,12 +2421,18 @@ export class Map2D {
   updateWhyPanel(events) {
     const el = this.hud.whyList;
     if (!el) return;
-    const rows = (events || []).slice(-3);
+    let rows = (events || []).slice(-3);
     if (!rows.length) {
-      if (this.why.length) rows.push(...this.why.slice(-3));
-      else { el.innerHTML = '<li>пока тихо</li>'; return; }
+      if (this.why.length) rows = this.why.slice(-3);
+      else rows = [{ text: 'пока тихо' }];
     }
-    el.innerHTML = rows.map((e) => '<li>' + e.text + '</li>').join('');
+    // R-76.7: журнал собирается узлами, а текст мэра идёт через textContent — без разметки.
+    el.textContent = '';
+    for (const e of rows) {
+      const li = document.createElement('li');
+      li.textContent = e.text;
+      el.appendChild(li);
+    }
     this.updateAiHud();
     if (this.hud.mayors) {
       const s = mayorStats(this.mayors || []);
@@ -2451,6 +2486,108 @@ export class Map2D {
     if (full && typeof el.setAttribute === 'function') el.setAttribute('title', full);
   }
 
+  /* §76: погода в точке камеры — одна на кадр, с кэшем по клетке и пятиминутке. */
+  weatherNow(day = null) {
+    if (!this.weather) return null;
+    const minutes = this.transport ? this.transport.minutes : 8 * 60;
+    const d = day === null ? Math.floor(minutes / 1440) : day;
+    return weatherCached(this.center.x, this.center.y, minutes, d, this.weather);
+  }
+
+  /* Тень облака рисуется спрайтом: градиент создаётся один раз, дальше только drawImage. */
+  cloudTileFor() {
+    if (this.cloudTile === null) {
+      this.cloudTile = cloudSprite((n) => {
+        const c = document.createElement('canvas');
+        c.width = c.height = n;
+        return c;
+      }) || false;
+    }
+    return this.cloudTile || null;
+  }
+
+  /* §76: облака на земле. Крупные пятна тени идут вместе с полем погоды; в зуме — мягче. */
+  drawWeatherGround(ctx, originX, originY, s) {
+    const minutes = this.transport ? this.transport.minutes : 8 * 60;
+    const day = Math.floor(minutes / 1440);
+    const stepPx = Math.max(96, Math.min(300, WEATHER.cellKm * s * 0.55));
+    const cols = Math.ceil(this.view.w / stepPx) + 2;
+    const rows = Math.ceil(this.view.h / stepPx) + 2;
+    const leftKm = this.center.x - this.view.w / 2 / s;
+    const topKm = this.center.y + this.view.h / 2 / s;
+    const tile = this.cloudTileFor();
+    let drawn = 0;
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const sx = i * stepPx - stepPx * 0.6 + (stepPx * 0.1);
+        const sy = j * stepPx - stepPx * 0.6;
+        const xKm = leftKm + sx / s, yKm = topKm - sy / s;
+        const c = cloud01(xKm, yKm, minutes);
+        if (c < 0.18) continue;
+        const size = stepPx * (1.5 + 0.9 * c);
+        if (tile && typeof ctx.drawImage === 'function') {
+          ctx.globalAlpha = c * WEATHER.cloudAlpha * 1.15;
+          ctx.drawImage(tile, sx - size / 2, sy - size / 2, size, size);
+        } else {
+          ctx.fillStyle = 'rgba(12,18,26,' + (c * WEATHER.cloudAlpha).toFixed(3) + ')';
+          ctx.beginPath();
+          ctx.arc(sx, sy, size / 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        drawn++;
+      }
+    }
+    ctx.globalAlpha = 1;
+    return drawn;
+  }
+
+  /* §76: дождь, снег и туман поверх карты. Капли не хранят состояние — их место считается
+     из номера и времени, поэтому картинка не зависит от частоты кадров. */
+  drawWeatherFront(ctx, s, wx) {
+    const { view } = this;
+    if (!wx) return;
+    if (wx.fog01 > 0.12 || wx.kind === 'fog') {
+      const a = Math.min(0.34, wx.fog01 * WEATHER.fogAlpha * 0.7 + (wx.kind === 'fog' ? 0.12 : 0));
+      const g = ctx.createLinearGradient ? ctx.createLinearGradient(0, 0, 0, view.h) : null;
+      if (g && g.addColorStop) {
+        g.addColorStop(0, 'rgba(206,218,228,' + (a * 0.8).toFixed(3) + ')');
+        g.addColorStop(0.5, 'rgba(214,226,234,' + a.toFixed(3) + ')');
+        g.addColorStop(1, 'rgba(206,218,228,' + (a * 0.9).toFixed(3) + ')');
+        ctx.fillStyle = g;
+      } else {
+        ctx.fillStyle = 'rgba(212,222,230,' + a.toFixed(3) + ')';
+      }
+      ctx.fillRect(0, 0, view.w, view.h);
+    }
+    if (s < 1.6) return;                                  // с высоты страны капли — шум
+    if (wx.kind !== 'rain' && wx.kind !== 'snow') return;
+    const isSnow = wx.kind === 'snow';
+    const total = Math.round((isSnow ? WEATHER.snowFlakes : WEATHER.rainDrops) *
+      (0.35 + 0.65 * wx.intensity));
+    const n = Math.min(total, 900);
+    ctx.save();
+    if (isSnow) {
+      ctx.fillStyle = 'rgba(244,248,252,0.85)';
+      for (let i = 0; i < n; i++) {
+        const d = dropAt(i, view.w, view.h, this.weatherSec, wx.windKmh, true);
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, d.len, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else {
+      ctx.strokeStyle = 'rgba(190,212,232,0.5)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) {
+        const d = dropAt(i, view.w, view.h, this.weatherSec, wx.windKmh, false);
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x - d.len * d.drift, d.y - d.len);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   /* §16.6 и §16.8: строки HUD про толпу и стройку — обновляются и по дням, и по кадрам. */
   updateAiHud() {
     if (this.hud.crowd) {
@@ -2500,6 +2637,20 @@ export class Map2D {
           formatReport(r) + (r.capped ? ' (дальше не считаем)' : ''));
       } else if (!this.hud.offline.textContent || this.hud.offline.textContent === '—') {
         this.hudLine('offline', 'всё под контролем', 'страна идёт и без вашего окна');
+      }
+    }
+    if (this.hud.weather) {
+      if (!this.showWeather) this.hudLine('weather', 'выключена');
+      else {
+        const wx = this.weatherNow();
+        const names = { clear: 'ясно', cloudy: 'облачно', rain: 'дождь', snow: 'снег', fog: 'туман' };
+        const day = this.transport ? Math.floor(this.transport.minutes / 1440) : 0;
+        const st = weatherStats(this.weather, this.transport ? this.transport.minutes : 480, day, this.settlements.slice(0, 24));
+        const temp = Math.round(wx.tempC);
+        this.hudLine('weather', (names[wx.kind] || wx.kind) + ' · +' + temp + '°',
+          'видно ' + wx.visibilityKm.toFixed(1) + ' км · ветер ' + Math.round(wx.windKmh) + ' км/ч · ' +
+          'сцепление ' + Math.round(wx.grip * 100) + '% · по стране: дождь ' + st.rain +
+          ', снег ' + st.snow + ', туман ' + st.fog + ', ясно ' + st.clear + ' · ' + st.season);
       }
     }
     if (this.hud.growth) {
