@@ -132,7 +132,8 @@ export function advancePeds(pack, dtSec) {
 /* Положение всех пешеходов города, готовое к отрисовке. */
 export function pedPositions(pack) {
   const out = [];
-  for (const p of pack.peds) {
+  for (let idx = 0; idx < pack.peds.length; idx++) {
+    const p = pack.peds[idx];
     let m = pack.measures.get(p.streetIdx);
     if (!m) {
       const st = pack.list[p.streetIdx];
@@ -151,7 +152,8 @@ export function pedPositions(pack) {
       tone: p.tone,
       stride: Math.sin(p.phase),
       bike: !!PED[p.kind].bike,
-      dog: !!PED[p.kind].dog
+      dog: !!PED[p.kind].dog,
+      idx                                  // номер в пакете — для социальных сил §16.6
     });
   }
   return out;
