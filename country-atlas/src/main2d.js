@@ -1,6 +1,7 @@
 /* РАТГРАД 2D: карта 7000 × 7000 км, простое движение, без поворотов и без 3D. */
 import { Map2D } from './map2d.js';
 import { WORLD2D } from './world2d.js';
+import { loadFrom, saveTo, elapsedMinutes, formatReport, OFFLINE } from './offline2d.js';
 
 const canvas = document.getElementById('map');
 const hud = {
@@ -17,6 +18,10 @@ const hud = {
   play: document.getElementById('hud-play'),
   crowd: document.getElementById('hud-crowd'),
   growth: document.getElementById('hud-growth'),
+  trains: document.getElementById('hud-trains'),
+  air: document.getElementById('hud-air'),
+  sea: document.getElementById('hud-sea'),
+  offline: document.getElementById('hud-offline'),
   whyList: document.getElementById('why-list'),
   hint: document.getElementById('hint'),
   clock: document.getElementById('hud-clock'),
@@ -76,11 +81,57 @@ map.init((done, total) => {
         map.buildWater();
         map.buildEconomy();
         map.updateEconomyPanel();
+        map.buildRailLayer();
+        map.buildAirLayer();
+        if (map.water) map.buildSeaLayer();
         map.draw();
+        restoreOffline();
       } catch (err) {
         if (hud.status) hud.status.textContent = 'границы не собрались: ' + err.message;
       }
     }, 30);
+  });
+}
+
+/* §16.7 и §16.8 без нас: страна живёт числами, когда окно свёрнуто или закрыто.
+   Пока вкладка открыта, но не видна — тик раз в секунду; пока закрыта — догоняем по сейву. */
+function restoreOffline() {
+  const saved = loadFrom(window.localStorage);
+  if (!saved || !map.transport) return;
+  const el = elapsedMinutes(saved);
+  if (el.minutes <= 0) { saveTo(window.localStorage, map.transport); return; }
+  map.transport.minutes = Math.max(map.transport.minutes, saved.minutes);
+  const before = map.transport.minutes;
+  const report = map.catchUpOffline(el.minutes);
+  map.transport.minutes = Math.max(map.transport.minutes, before + el.minutes);
+  map.catchUpReport = { ...report, capped: el.capped };
+  if (hud.offline) hud.offline.textContent = formatReport(map.catchUpReport) || '—';
+  saveTo(window.localStorage, map.transport);
+  map.draw();
+  map.updateHud();
+}
+
+if (typeof window !== 'undefined' && typeof window.setInterval === 'function') {
+  setInterval(() => {
+    if (document.hidden) return;
+    saveTo(window.localStorage, map.transport);
+  }, OFFLINE.autosaveSec * 1000);
+
+  // скрытая вкладка: мир идёт раз в секунду, но рисуется только HUD-числами
+  setInterval(() => {
+    if (!document.hidden || !map.transport) return;
+    map.tick(OFFLINE.hiddenTickSec);
+    saveTo(window.localStorage, map.transport);
+    if (hud.offline) {
+      const total = Math.floor(map.transport.minutes / 1440);
+      hud.offline.textContent = 'идёт фоном · день ' + (total + 1);
+    }
+  }, OFFLINE.hiddenTickSec * 1000);
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { saveTo(window.localStorage, map.transport); return; }
+    map.draw();
+    map.updateHud();
   });
 }
 
@@ -200,6 +251,9 @@ const toggles = {
   'toggle-play': (v) => { map.showPlay = v; map.draw(); map.updateHud(); },
   'toggle-pedai': (v) => { map.showPedAI = v; map.draw(); map.updateHud(); },
   'toggle-growth': (v) => { map.showGrowth = v; map.draw(); map.updateHud(); },
+  'toggle-trains': (v) => { map.showTrains = v; map.draw(); map.updateHud(); },
+  'toggle-airport': (v) => { map.showAir = v; map.draw(); map.updateHud(); },
+  'toggle-seatraffic': (v) => { map.showSeaTraffic = v; map.draw(); map.updateHud(); },
   'toggle-towns': (v) => { map.showSettlements = v; map.draw(); },
   'toggle-q': (v) => { map.showQ = v; map.draw(); },
   'toggle-cars': (v) => { map.showVehicles = v; map.draw(); },

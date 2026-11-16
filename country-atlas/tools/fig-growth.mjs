@@ -116,7 +116,7 @@ function drawCity(px0, withGrowth) {
   };
   for (const h of g.houses) box(h, [250, 206, 110], [255, 236, 160]);
   for (const w of g.industry) box(w, [150, 176, 190], [186, 210, 224]);
-  for (const c of g.civic) box(c, c.kind === 'school' ? [252, 238, 150] : [242, 250, 255], c.kind === 'school' ? [255, 246, 186] : [226, 244, 255]);
+  for (const c of g.civic) box(c, c.type === 'school' ? [252, 238, 150] : [242, 250, 255], c.type === 'school' ? [255, 246, 186] : [226, 244, 255]);
   // расширение кольца
   if (g.widen > 0) {
     const n = 96, r = g.radiusKm * 0.995;
