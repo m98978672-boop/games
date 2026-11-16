@@ -1,3 +1,4 @@
+import { unsafeRest, safeRestGoal } from './rest_positions.js';
 // Индивидуальный ИИ солдата: Behavior Tree с приоритетами из спецификации,
 // мораль, укрытия, медики, инженеры, а также ручное управление игроком.
 import { clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp } from '../core/mathx.js';
@@ -19,6 +20,12 @@ export function updateSoldier(game, u, dt) {
   if (u.thinkTimer <= 0) {
     u.thinkTimer = interval;
     thinkSoldier(game, u);
+  }
+  // A bot that has no travel goal must vacate an opening before working or idling.
+  // Never teleport, and do not interrupt a unit that is traversing a doorway.
+  if (!u.isVehicle && (!u.goal || u.arrived) && unsafeRest(game, u.x, u.y, u.radius)) {
+    const safe = safeRestGoal(game, u, { x: u.x, y: u.y });
+    if (safe) { u.goal = safe; u.arrived = false; u.healBusy = false; u.buildBusy = false; moveAlongFlow(game, u, dt); return; }
   }
   if (u.isVehicle) updateVehicle(game, u, dt);
   else actSoldier(game, u, dt);
@@ -278,7 +285,8 @@ function garrisonSlot(game, u, sq, units) {
   const idx = units.indexOf(u);
   if (idx < 0 || idx >= count) return null;
   const slot = slots[idx % slots.length];
-  return { x: slot.x, y: slot.y };
+  // Keep the window garrison on the inside of its building, not in the opening.
+  return safeRestGoal(game, { x: slot.x, y: slot.y, radius: u.radius }, { x: slot.x, y: slot.y });
 }
 
 function squadSlot(game, u, sq) {
@@ -312,6 +320,8 @@ function requestResupply(game, u) {
 
 // ---------- Действия (движение, лечение, стройка) ----------
 function actSoldier(game, u, dt) {
+  // Do not start work or treatment while occupying a passage.
+  if (unsafeRest(game, u.x, u.y, u.radius)) { if (u.goal) moveAlongFlow(game, u, dt); return; }
   // медик: поднимает и лечит раненых рядом
   if (u.role === 'medic') { medicAct(game, u, dt); if (u.healBusy) return; }
   // Боевой контакт имеет приоритет: стройка не должна отменять цель боя

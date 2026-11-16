@@ -1,9 +1,10 @@
+import { unsafeRest, safeRestGoal } from './rest_positions.js';
 import { motionWallSweepFree } from './motion_wall_sweep.js';
 // Юнит: данные, движение, Perception, урон и стрельба. Один код для игрока, ботов и врага.
 import {
   clamp, dist, dist2, angleTo, angleDiff, degToRad, lerp, TAU, normAngle, approachAngle,
 } from '../core/mathx.js';
-import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute } from './smart_route.js';
+import { updateSmartRoute, discardSmartRoute, cancelSelectedSmartRoute, smartRouteSearching } from './smart_route.js';
 import { doorPairWaypoint, doorPairPositionFree } from './door_pair.js';
 import { solidUnitMoveFree, occupiedDetour, blockingUnit } from './solid_units.js';
 import { courtesyYield } from './door_courtesy.js';
@@ -676,7 +677,8 @@ export function updateTimers(game, u, dt) {
       u.goal && wait && wait.goalX===u.goal.x && wait.goalY===u.goal.y && game.time-wait.lastBlocked<=0.5 &&
       game.time-wait.since<10 && blocker?.alive && !blocker.downed &&
       dist(u.x,u.y,blocker.x,blocker.y)<=u.radius+blocker.radius+Math.max(u.speed,1)*(game.dt||0.1)+3;
-    if (u.goal && moved < 6 && u.alive && !u.downed && !arrivedAtCurrentGoal && !waitingForUnit) {
+    const planningRoute = smartRouteSearching(game, u);
+    if (u.goal && moved < 6 && u.alive && !u.downed && !arrivedAtCurrentGoal && !waitingForUnit && !planningRoute) {
       u.stuck += 1;
       if (u.stuck >= 2) {
         if (game.cfg.flag('alg_deadlock', false)) {
@@ -716,6 +718,19 @@ export function moveAlongFlow(game, u, dt) {
     }
     u.goal = safe;
   }
+  // Bot destinations are parking places, not waypoints: keep door transit legal.
+  if (!u.playerControlled && game.walls?.enabled() && unsafeRest(game, u.goal.x, u.goal.y, u.radius)) {
+    const goal = u.goal, safe = safeRestGoal(game, u, goal);
+    cancelSelectedSmartRoute(game, u);
+    if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u);
+    if (!safe) {
+      u.goal = null; u.flowDir = null; u.pathFailed = true;
+      game.events?.emit('pathFailed', {t:game.time,unitId:u.id,faction:u.faction,role:u.role,
+        x:u.x,y:u.y,goalX:goal.x,goalY:goal.y,reason:'no_safe_rest_position'});
+      return;
+    }
+    u.goal = safe; u.flowDir = null; u.stuck = 0;
+  }
   // updateTimers при отказе удаляет цель. Новая цель бойца или танка — новая
   // попытка; F8 не должен игнорировать её из-за прошлого отказа. Грузовики
   // управляются отдельно логистикой, которая сама обрабатывает этот статус.
@@ -742,13 +757,20 @@ export function moveAlongFlow(game, u, dt) {
   // с выключенным флагом — прежние 24 px, чтобы поведение не менялось.
   const arrive = game.cfg.navBudget?.arriveRadius || { legacy: 24, walls: 34 };
   const arriveD = game.walls && game.walls.enabled() ? arrive.walls : arrive.legacy;
-  if (d < arriveD && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) {
+  const inPassage = !u.playerControlled && unsafeRest(game, u.x, u.y, u.radius);
+  if (d < arriveD && !inPassage && (!u._crowdActive || !u._crowdPoint || Math.hypot(u.x-u._crowdPoint.x,u.y-u._crowdPoint.y)<2)) {
     // A unit can reach its goal while its incremental search is still active.
     // Release that job immediately; otherwise another unit may wait six seconds.
     if (u._smartRoute || game._smartRouteState?.active?.unit === u) cancelSelectedSmartRoute(game,u);
     u.arrived = true; u.flowDir = null; return;
   }
   u.arrived = false;
+  // Near a safe goal, step directly out of a doorway if the swept path is clear.
+  if (inPassage && d > 0.01 && d < 80 && game.walls.blocksMoveSweep &&
+      !game.walls.blocksMoveSweep(u.x,u.y,u.goal.x,u.goal.y,u.radius,u)) {
+    moveUnit(game,u,u.goal.x-u.x,u.goal.y-u.y,dt,null,{skipDoorWaypoint:true});
+    return;
+  }
   if (visionChoice && (visionChoice.mode === 'combat' || ((visionChoice.mode === 'group' || visionChoice.mode === 'pair') && u._crowdActive))) cancelSelectedSmartRoute(game,u);
   else if (game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false)) {
     if (!visionChoice || visionChoice.obstacle || (u.stuck || 0) >= 1 || u._smartRoute || game._smartRouteState?.active?.unit === u)
