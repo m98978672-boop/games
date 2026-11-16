@@ -15,6 +15,8 @@ import { MARK_LOD, JUNCTION_LOD, LANES, markingWidthPx, dashPattern, turnRadiusM
   junctionType, ringDiameterM, zebra, junctions, roadFill, clipPolyline } from './markings2d.js';
 import { lightAt, overlayCss, cityLights, clockText, phaseAt, sunAltitudeDeg, seasonOf, snowCover01, DAY_MINUTES, dayOfYearOf, hourWithPhase } from './light2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
+import { buildMayors, advanceMayors, mayorStats, DRIVER } from './ai2d.js';
+import { buildPlay, stepPlay, playStats, PROFILE_COLOR, PLAY2D } from './play2d.js';
 
 export class Map2D {
   constructor(canvas, hud) {
@@ -56,6 +58,12 @@ export class Map2D {
     this.light = lightAt(8 * 60, dayOfYearOf(0));   // время суток §14; обновляется из tick
     this.economy = null;        // экономика §31.33
     this.lastEconomyDay = 0;
+    this.showAI = true;        // мэры и журнал «почему» §16.8
+    this.mayors = null;
+    this.why = [];             // последние решения мэров — то самое «почему»
+    this.lastMayorDay = 0;
+    this.showPlay = true;      // полигон IDM и светофор §16.4
+    this.play = null;
     this.showWater = true;      // реки, озёра и мосты §5
     this.water = null;
     this.worker = null;
@@ -392,14 +400,22 @@ export class Map2D {
     if (this.transport) advanceTransport(this.transport, dtSec);
     this.updateLight();
     if (this.showPeds) for (const pack of this.pedCache.values()) advancePeds(pack, dtSec);
-    if (this.transport && this.economy) {
+    if (this.transport) {
       const day = Math.floor(this.transport.minutes / 1440);
-      if (day > this.lastEconomyDay) {
+      if (this.economy && day > this.lastEconomyDay) {
         advanceEconomy(this.economy, day - this.lastEconomyDay);
         this.lastEconomyDay = day;
         this.updateEconomyPanel();
       }
+      // §16.8: мэр думает раз в игровой день — свои часы, независимо от панели страны
+      if (this.showAI && day > this.lastMayorDay) {
+        const mayors = this.buildMayorsLayer();
+        const events = advanceMayors(mayors, this.why, day - this.lastMayorDay);
+        this.lastMayorDay = day;
+        this.updateWhyPanel(events);
+      }
     }
+    this.updatePlay(dtSec);
   }
 
   /* ---------------- отрисовка ---------------- */
@@ -531,6 +547,7 @@ export class Map2D {
     ctx.restore();
 
     this.drawScaleBar(ctx);
+    if (this.showPlay && this.play) this.drawPlayPanel(ctx);
     this.paintedKey = key;
   }
 
@@ -687,6 +704,20 @@ export class Map2D {
 
   /* Пешеходы §13: точка с подшагом ног. Видны с 40 px/км и не больше 400 в кадре,
      иначе на карте не жизнь, а «крупа» (R-13.1 в редакции 2D). */
+  /* §16.8: мэры строятся один раз при первом дне — 39 городов от 25 000 жителей. */
+  buildMayorsLayer() {
+    if (this.mayors) return this.mayors;
+    this.mayors = buildMayors(this.settlements, this.ranks);
+    return this.mayors;
+  }
+
+  /* §16.4: полигон IDM — 12 машин на кольце и светофор, живой кусок тех же мозгов. */
+  updatePlay(dtSec) {
+    if (!this.play) this.play = buildPlay();
+    if (this.showPlay) stepPlay(this.play, Math.min(0.5, dtSec));
+    return this.play;
+  }
+
   /* Время суток §14: минуты мира → фаза, сила света и расписание огней. */
   updateLight() {
     const m = this.transport ? this.transport.minutes : 8 * 60;
@@ -1417,12 +1448,20 @@ export class Map2D {
       ctx.moveTo(sx - ca * len * 0.5, sy + sa * len * 0.5);
       ctx.lineTo(sx + ca * len * 0.5, sy - sa * len * 0.5);
       ctx.stroke();
-      ctx.strokeStyle = v.tone;
+      // §16.6: в близком зуме видно, кто за рулём — спокойный, агрессивный, новичок
+      ctx.strokeStyle = (s >= 18 && v.profile) ? PROFILE_COLOR[v.profile.id] : v.tone;
       ctx.lineWidth = w;
       ctx.beginPath();
       ctx.moveTo(sx - ca * len * 0.5, sy + sa * len * 0.5);
       ctx.lineTo(sx + ca * len * 0.5, sy - sa * len * 0.5);
       ctx.stroke();
+      if (s >= 40 && v.kind === 'car') {
+        // характер читается и точкой у капота: цвет = школа вождения
+        ctx.fillStyle = PROFILE_COLOR[v.profile.id];
+        ctx.beginPath();
+        ctx.arc(sx + ca * len * 0.62, sy - sa * len * 0.62, Math.max(1.4, w * 0.42), 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 
@@ -1506,6 +1545,110 @@ export class Map2D {
     ctx.setLineDash([]);
   }
 
+  /* §16.4: полигон ИИ в кадре — 12 машин на кольце, светофор по F-193, очередь и «прошло».
+     Коробка живёт в правом нижнем углу над линейкой масштаба и стоит 12 машин, а не 966. */
+  drawPlayPanel(ctx) {
+    const play = this.play;
+    const st = playStats(play);
+    const w = 246, h = 108;
+    // внизу по центру: слева легенда и HUD, справа колонка и линейка — там тесно
+    const x = Math.max(12, (this.view.w - w) / 2), y = this.view.h - h - 42;
+    ctx.save();
+    ctx.fillStyle = 'rgba(8,16,24,0.72)';
+    ctx.strokeStyle = 'rgba(150,190,220,0.35)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(206,226,240,0.92)';
+    ctx.font = '10.5px ui-monospace, monospace';
+    ctx.textBaseline = 'top';
+    ctx.fillText('ИИ §16.4 · IDM, полигон', x + 9, y + 7);
+
+    // полоса: кольцо 700 м укладывается в 220 px
+    const roadX = x + 13, roadY = y + 40, roadW = w - 26;
+    const k = roadW / PLAY2D.ringM;
+    ctx.strokeStyle = 'rgba(120,140,155,0.85)';
+    ctx.lineWidth = 9;
+    ctx.beginPath();
+    ctx.moveTo(roadX, roadY);
+    ctx.lineTo(roadX + roadW, roadY);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(232,238,244,0.35)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 6]);
+    ctx.beginPath();
+    ctx.moveTo(roadX, roadY);
+    ctx.lineTo(roadX + roadW, roadY);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // стоп-линия и светофор
+    const stopX = roadX + PLAY2D.stopM * k;
+    ctx.strokeStyle = 'rgba(245,245,240,0.9)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(stopX, roadY - 8);
+    ctx.lineTo(stopX, roadY + 8);
+    ctx.stroke();
+    const lamp = st.state === 'green' ? '#5ddc84' : st.state === 'yellow' ? '#ffd75e' : '#ff6a52';
+    ctx.fillStyle = 'rgba(6,10,14,0.9)';
+    ctx.beginPath();
+    ctx.arc(stopX + 9, roadY - 15, 5.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = lamp;
+    ctx.beginPath();
+    ctx.arc(stopX + 9, roadY - 15, 3.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // машины: короткие штрихи по характеру; тормозящие — с красной искрой
+    for (const c of play.cars) {
+      const cx = roadX + c.x * k;
+      ctx.strokeStyle = PROFILE_COLOR[c.profile.id];
+      ctx.lineWidth = 4.4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx - 2.4, roadY - 1);
+      ctx.lineTo(cx + 2.4, roadY - 1);
+      ctx.stroke();
+      if (c.braking > 0.15) {
+        ctx.fillStyle = 'rgba(255,90,70,' + (0.3 + 0.6 * c.braking).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.arc(cx + 2.6, roadY - 5.2, 1.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.lineCap = 'butt';
+
+    ctx.fillStyle = 'rgba(196,214,228,0.85)';
+    ctx.font = '10px ui-monospace, monospace';
+    const names = { green: 'зелёный', yellow: 'жёлтый', red: 'красный' };
+    ctx.fillText('свет ' + names[st.state] + ' · очередь ' + st.queue + ' · зелёный ' + st.green.toFixed(0) + ' с', x + 9, y + 58);
+    ctx.fillText('прошло ' + st.passed + ' · в среднем ' + st.avgKmh.toFixed(0) + ' км/ч · зазор ' +
+      (st.minGap === null ? '—' : st.minGap.toFixed(1) + ' м'), x + 9, y + 73);
+    const byProf = Object.entries(st.byProfile).filter(([, n]) => n > 0)
+      .map(([id, n]) => (DRIVER[id] ? DRIVER[id].name : id) + ' ' + n).join(' · ');
+    ctx.fillStyle = 'rgba(150,172,188,0.9)';
+    ctx.fillText(byProf, x + 9, y + 88);
+    ctx.restore();
+  }
+
+  /* §16.8: журнал «почему» — последние решения мэров с решающими факторами. */
+  updateWhyPanel(events) {
+    const el = this.hud.whyList;
+    if (!el) return;
+    const rows = (events || []).slice(-3);
+    if (!rows.length) {
+      if (this.why.length) rows.push(...this.why.slice(-3));
+      else { el.innerHTML = '<li>пока тихо</li>'; return; }
+    }
+    el.innerHTML = rows.map((e) => '<li>' + e.text + '</li>').join('');
+    if (this.hud.mayors) {
+      const s = mayorStats(this.mayors || []);
+      this.hud.mayors.textContent = s.count + ' мэр · ' + s.decisions + ' решений';
+    }
+  }
+
   drawScaleBar(ctx) {
     const km = scaleBarKm(this.scale);
     const w = km * this.scale;
@@ -1583,6 +1726,24 @@ export class Map2D {
       this.hud.hint.textContent = 'тяните — сдвиг · колесо и щипок — зум · двойной клик — ближе · клик по городу — выбрать' +
         (t ? ' · §44: ' + t.vehicles.length + ' ед. в пути' : '') +
         (this.pedsInFrame ? ' · §13: ' + this.pedsInFrame + ' пешеходов' : '');
+    }
+    if (this.hud.play) {
+      const p2 = this.play;
+      if (!p2 || !this.showPlay) this.hud.play.textContent = this.showPlay ? '—' : 'выключен';
+      else {
+        const st = playStats(p2);
+        const names = { green: 'зелёный', yellow: 'жёлтый', red: 'красный' };
+        this.hud.play.textContent = 'свет ' + names[st.state] + ' · очередь ' + st.queue + ' · прошло ' + st.passed;
+      }
+    }
+    if (this.hud.mayors) {
+      if (!this.showAI) this.hud.mayors.textContent = 'выключены';
+      else if (!this.mayors) this.hud.mayors.textContent = '— (с первого дня)';
+      else {
+        const s2 = mayorStats(this.mayors);
+        this.hud.mayors.textContent = s2.count + ' мэр · ' + s2.decisions + ' решений · пробки ' +
+          Math.round(s2.jams * 100) + '%';
+      }
     }
     if (this.hud.cars) {
       const t = this.transport;

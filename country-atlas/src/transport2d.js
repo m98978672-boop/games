@@ -3,6 +3,7 @@
    точки — A и B (F-117). Всё детерминировано: только сид мира, ни одного Math.random. */
 import { WORLD2D, heightKm, settlements, rankSettlements } from './world2d.js';
 import { buildRoads, ROAD_CLASS } from './roads2d.js';
+import { DRIVER, pickProfile, speedLimitKmh } from './ai2d.js';
 
 /* Типы единиц §44.6: длина в метрах, своя скорость, запас хода и цвет. */
 export const VEHICLE = {
@@ -225,19 +226,34 @@ function pickGround(rand) {
   return 'bus';
 }
 
+/* F-192: полоса, в которой человек держит скорость относительно предела класса. */
+const PROFILE_BAND = {
+  calm: [0.86, 0.98],
+  normal: [0.94, 1.06],
+  aggressive: [1.02, 1.14],
+  novice: [0.8, 0.94],
+  truck: [0.9, 1.0]
+};
+
 function makeVehicle(kind, route, rand, index) {
   const spec = VEHICLE[kind];
   const dir = kind === 'plane' ? (index % 2 === 0 ? 1 : -1) : (rand() < 0.5 ? 1 : -1);
   // F-119: скорость — минимум из класса дороги и предела машины
   const cap = route.kind === 'ground' ? Math.min(spec.speedKmh, route.speedKmh) : spec.speedKmh;
   const lane = route.kind === 'ground' ? (ROAD_CLASS[route.cls].widthM / 2000) : 0;
+  // F-192: за рулём живой человек — агрессивный жмёт к пределу, новичок отстаёт
+  const profile = route.kind === 'ground' ? pickProfile(kind, index, rand) : DRIVER.truck;
+  const band = PROFILE_BAND[profile.id] || PROFILE_BAND.normal;
+  const factor = route.kind === 'ground' ? band[0] + (band[1] - band[0]) * rand() : 0.85 + 0.3 * rand();
   return {
     kind, route, dir,
     fuel: 0.35 + 0.65 * rand(),                 // F-123: кто-то только заправился, кто-то на исходе
     refuelMin: 0,                               // сколько игровых минут ещё стоять у колонки
     stops: 0,                                   // сколько раз заправлялся
     t: rand(),                                  // доля пройденного пути A → B
-    speedKmh: cap * (0.85 + 0.3 * rand()),      // живая скорость вокруг предела
+    speedKmh: cap * factor,                     // живая скорость вокруг предела, по характеру
+    profile,                                    // характер водителя — для слоя ИИ §16
+    limitKmh: route.kind === 'ground' ? speedLimitKmh(route.cls, profile) : spec.speedKmh,
     offsetKm: dir > 0 ? lane : -lane,           // своя половина дороги
     lengthM: spec.lengthM,
     tone: spec.tone
@@ -256,10 +272,12 @@ export function buildTransport(net = buildRoads(), towns = settlements(), seed =
       vehicles.push(v);
     }
   }
-  const counts = { ground: 0, sea: 0, air: 0, byKind: { car: 0, truck: 0, bus: 0, ship: 0, plane: 0 } };
+  const counts = { ground: 0, sea: 0, air: 0, byKind: { car: 0, truck: 0, bus: 0, ship: 0, plane: 0 },
+    byProfile: { calm: 0, normal: 0, aggressive: 0, novice: 0, truck: 0 } };
   for (const v of vehicles) {
     counts[VEHICLE[v.kind].kind]++;
     counts.byKind[v.kind]++;
+    counts.byProfile[v.profile.id]++;
   }
   return { routes, vehicles, counts, towns, ranks, minutes: 8 * 60 };   // мир стартует в 8:00
 }

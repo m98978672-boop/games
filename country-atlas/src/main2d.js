@@ -13,6 +13,9 @@ const hud = {
   town: document.getElementById('hud-town'),
   cars: document.getElementById('hud-cars'),
   peds: document.getElementById('hud-peds'),
+  mayors: document.getElementById('hud-mayors'),
+  play: document.getElementById('hud-play'),
+  whyList: document.getElementById('why-list'),
   hint: document.getElementById('hint'),
   clock: document.getElementById('hud-clock'),
   country: document.getElementById('hud-country'),
@@ -191,6 +194,8 @@ const toggles = {
   'toggle-dams': (v) => { map.showDams = v; map.draw(); },
   'toggle-ice': (v) => { map.showIce = v; map.iceKey = null; map.draw(); },
   'toggle-tides': (v) => { map.showTides = v; map.draw(); },
+  'toggle-ai': (v) => { map.showAI = v; if (v) map.buildMayorsLayer(); map.draw(); map.updateHud(); },
+  'toggle-play': (v) => { map.showPlay = v; map.draw(); map.updateHud(); },
   'toggle-towns': (v) => { map.showSettlements = v; map.draw(); },
   'toggle-q': (v) => { map.showQ = v; map.draw(); },
   'toggle-cars': (v) => { map.showVehicles = v; map.draw(); },
@@ -229,7 +234,7 @@ let lastTick = 0;
 let lastDraw = 0;
 function liveLoop(now) {
   requestAnimationFrame(liveLoop);
-  if (document.hidden || !map.showVehicles || !map.transport) { lastTick = now; return; }
+  if (document.hidden || !map.transport || (!map.showVehicles && !map.showPlay)) { lastTick = now; return; }
   const dt = Math.min(0.5, (now - lastTick) / 1000);
   lastTick = now;
   map.tick(dt);
