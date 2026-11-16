@@ -39,7 +39,8 @@ export const AIR = {
   vCruise: 780,
   vFinal: 260,
   runwayKm: 2.6,
-  runwayM: 45
+  runwayM: 45,
+  minVisibilityKm: 3.0      // R-76.4: в туман вышка закрыта
 };
 
 export const SEA = {
@@ -297,17 +298,31 @@ export function glideAt(t01) {
 
 /* F-214: шаг самолётов и диспетчера вышки. Полоса — один самолёт за раз: если она занята,
    заходящий уходит на круг ожидания над аэродромом и ждёт своей очереди. */
-export function stepAir(air, dtSec) {
+export function stepAir(air, dtSec, wx = null) {
   const sec = microSec(dtSec, MICRO.air);
   const minutes = sec / 60;
   let holding = 0, busy = 0;
+  // R-76.4: если видно меньше 3 км, полоса закрыта: борта на земле ждут, а те, что в воздухе,
+  // уходят на круг. Без второго аргумента поведение прежнее — тесты §16.7 не меняются.
+  const closed = !!wx && wx.visibilityKm < AIR.minVisibilityKm;
+  if (closed) air.closedMin = (air.closedMin || 0) + minutes;
   for (const p of air.planes) {
     const from = air.airports.find((a) => a.index === p.from);
     const to = air.airports.find((a) => a.index === p.to);
     if (!from || !to) continue;
     const dist = Math.max(1, Math.hypot(to.x - from.x, to.y - from.y));
 
+    if (closed && (p.state === 'taxi' || p.state === 'takeoff' || p.state === 'runway')) {
+      p.delayMin = (p.delayMin || 0) + minutes;
+      if (p.state === 'runway') continue;        // полоса занята, но взлёта нет
+      continue;
+    }
+    if (closed && p.state === 'approach') {
+      p.state = 'hold'; p.holding++; busy++;
+      continue;
+    }
     if (p.state === 'cruise') {
+      if (closed) { p.alt = 9800; p.v = AIR.vCruise; p.holding++; holding++; continue; }
       p.prog += (p.v * sec) / 3600 / dist;
       p.alt = 9800;
       p.v = AIR.vCruise;
