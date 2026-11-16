@@ -22,6 +22,7 @@ const hud = {
   air: document.getElementById('hud-air'),
   sea: document.getElementById('hud-sea'),
   offline: document.getElementById('hud-offline'),
+  playFoot: document.getElementById('play-foot'),
   whyList: document.getElementById('why-list'),
   hint: document.getElementById('hint'),
   clock: document.getElementById('hud-clock'),
@@ -97,6 +98,7 @@ map.init((done, total) => {
         map.buildRailLayer();
         map.buildAirLayer();
         if (map.water) map.buildSeaLayer();
+        map.attachPlayCanvas(document.getElementById('play-map'));
         map.draw();
         restoreOffline();
       } catch (err) {
@@ -261,7 +263,12 @@ const toggles = {
   'toggle-ice': (v) => { map.showIce = v; map.iceKey = null; map.draw(); },
   'toggle-tides': (v) => { map.showTides = v; map.draw(); },
   'toggle-ai': (v) => { map.showAI = v; if (v) map.buildMayorsLayer(); map.draw(); map.updateHud(); },
-  'toggle-play': (v) => { map.showPlay = v; map.draw(); map.updateHud(); },
+  'toggle-play': (v) => {
+    map.showPlay = v;
+    const dock = document.getElementById('play-dock');
+    if (dock) dock.style.display = v ? '' : 'none';
+    map.draw(); map.updateHud();
+  },
   'toggle-pedai': (v) => { map.showPedAI = v; map.draw(); map.updateHud(); },
   'toggle-growth': (v) => { map.showGrowth = v; map.draw(); map.updateHud(); },
   'toggle-trains': (v) => { map.showTrains = v; map.draw(); map.updateHud(); },
