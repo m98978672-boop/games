@@ -381,8 +381,11 @@
     <div class="hub-shell">
       <header class="hub-header">
         <div class="hub-title-wrap">
-          <h3>🔌 Подключить MAX и другие сервисы</h3>
-          <p class="hub-sub">Выбери мессенджер слева — ниже откроется понятная пошаговая инструкция, проверка токена и подключение в 1 клик.</p>
+          <div class="hub-title-line">
+            <h3>🔌 Центр подключений</h3>
+            <span class="hub-counter-pill" id="hubConnectedCounter"><span class="live-dot"></span> 0 из 12 LIVE</span>
+          </div>
+          <p class="hub-sub">Актуальные протоколы 2026 года (MAX API v2, Telegram, VK, Discord, WhatsApp, Matrix) · ключи хранятся локально в SecretVault.</p>
         </div>
         <button type="button" class="icon-btn" id="btnCloseConnectHub" aria-label="Закрыть Центр подключений">✕</button>
       </header>
@@ -394,9 +397,9 @@
           <span class="hub-agent-note" id="hubAgentStatusText"></span>
         </div>
         <details class="hub-agent-details" id="hubAgentDetails">
-          <summary>💻 Подключить ПК-агент с телефона / GitHub Pages (нужен для MAX, VK и приёма входящих)</summary>
+          <summary>💻 Подключить ПК-агент с телефона / GitHub Pages (нужен для MAX, VK и автоприёма входящих)</summary>
           <div class="hub-agent-body">
-            <p class="muted-text">На компьютере в папке <code>games/ratmes</code> запусти локальный помощник — он обходит CORS браузера, хранит токены в <code>SecretVault</code> и сохраняет чаты в реальные файлы <code>RatMes-Vault/</code>:</p>
+            <p class="muted-text">На компьютере в папке <code>games/ratmes</code> запусти локальный помощник — он обходит CORS браузера, хранит токены в <code>SecretVault</code> и сохраняет чаты в <code>RatMes-Vault/</code>:</p>
             <div class="hub-cmd-row">
               <code id="hubAgentCmdCode">cd ratmes &amp;&amp; RATMES_SERVE_GAMES=1 npm start</code>
               <button type="button" class="btn btn-sm btn-ghost" id="btnCopyAgentCmd">📋 Копировать</button>
@@ -412,76 +415,104 @@
 
       <!-- Мобильный переключатель внутри Мастера: Список сервисов / Настройка -->
       <div class="hub-mobile-tabs" id="hubMobileTabs">
-        <button type="button" class="hub-mtab is-active" data-hub-step="list">1. Выбрать сервис</button>
-        <button type="button" class="hub-mtab" data-hub-step="setup">2. Настройка (<span id="hubSelectedNameShort">MAX</span>)</button>
+        <button type="button" class="hub-mtab is-active" data-hub-step="list">1. Сервисы (12)</button>
+        <button type="button" class="hub-mtab" data-hub-step="setup">2. Настройка · <span id="hubSelectedNameShort">MAX</span></button>
       </div>
 
       <div class="hub-layout" id="hubLayout" data-hub-step="list">
-        <!-- Левая панель: карточки всех 12 сервисов -->
+        <!-- Левая панель: фильтры + карточки всех 12 сервисов с SVG-логотипами -->
         <aside class="hub-services-col">
-          <input type="search" id="hubServiceSearch" class="text-input" placeholder="Поиск сервиса: MAX, Telegram, VK, Discord…" autocomplete="off">
+          <input type="search" id="hubServiceSearch" class="text-input hub-search-input" placeholder="Поиск: MAX, Telegram, VK, Discord, WhatsApp…" autocomplete="off">
+          <div class="hub-filter-pills" id="hubFilterPills" role="tablist" aria-label="Фильтр сервисов">
+            <button type="button" class="hub-fpill is-active" data-hub-filter="all">Все (12)</button>
+            <button type="button" class="hub-fpill" data-hub-filter="ru">🔥 В РФ</button>
+            <button type="button" class="hub-fpill" data-hub-filter="connected">🟢 LIVE</button>
+            <button type="button" class="hub-fpill" data-hub-filter="global">🌐 Мир</button>
+          </div>
           <div class="hub-service-grid" id="hubServiceGrid"></div>
         </aside>
 
-        <!-- Правая панель: пошаговая настройка выбранного сервиса -->
+        <!-- Правая панель: брендированный экран настройки выбранного сервиса -->
         <section class="hub-guide-col" id="hubGuideCol">
-          <div class="hub-guide-head">
-            <div class="hub-guide-identity">
-              <span class="net-avatar" id="hubGuideAvatar">MX</span>
-              <div>
-                <h4 id="hubGuideTitle">MAX</h4>
-                <div class="hub-guide-badges">
-                  <span class="pill accent" id="hubGuideDifficulty">Просто · 2 мин</span>
-                  <span class="pill" id="hubGuideStatePill">Не подключён</span>
+          <div class="hub-hero-banner" id="hubHeroBanner">
+            <div class="hub-guide-head">
+              <div class="hub-guide-identity">
+                <span class="net-avatar net-avatar-lg" id="hubGuideAvatar"></span>
+                <div>
+                  <h4 id="hubGuideTitle">MAX</h4>
+                  <div class="hub-guide-badges">
+                    <span class="pill hub-proto-pill" id="hubGuideProto">MAX Bot API v2</span>
+                    <span class="pill accent" id="hubGuideDifficulty">Просто · 2 мин</span>
+                    <span class="pill" id="hubGuideStatePill">Не подключён</span>
+                  </div>
+                </div>
+              </div>
+              <div class="hub-guide-links">
+                <a class="btn btn-sm btn-glass" id="hubGuideWebLink" href="https://web.max.ru/" target="_blank" rel="noopener noreferrer">🌐 Открыть ↗</a>
+                <a class="btn btn-sm btn-glass" id="hubGuideDocsLink" href="https://dev.max.ru/docs-api" target="_blank" rel="noopener noreferrer">📖 Docs ↗</a>
+              </div>
+            </div>
+            <p class="hub-guide-summary" id="hubGuideSummary"></p>
+
+            <!-- Визуальная схема маршрута из 3 узлов -->
+            <div class="hub-route-diagram" id="hubRouteDiagram" aria-label="Схема подключения">
+              <div class="route-node" id="hubRouteNodeClient">
+                <span class="route-node-ico" id="hubRouteClientIco">💻</span>
+                <div>
+                  <strong id="hubRouteClientTitle">RatMes Agent</strong>
+                  <span id="hubRouteClientSub">SecretVault · без CORS</span>
+                </div>
+              </div>
+              <div class="route-link" id="hubRouteLink">
+                <span class="route-line"></span>
+                <span class="route-pill" id="hubRoutePill">⚡ Прямой HTTPS</span>
+                <span class="route-line"></span>
+              </div>
+              <div class="route-node route-node-target" id="hubRouteNodeTarget">
+                <span class="route-node-brand" id="hubRouteTargetIcon"></span>
+                <div>
+                  <strong id="hubRouteTargetTitle">MAX</strong>
+                  <span id="hubRouteTargetHost">platform-api2.max.ru</span>
                 </div>
               </div>
             </div>
-            <div class="hub-guide-links">
-              <a class="btn btn-sm btn-ghost" id="hubGuideWebLink" href="https://web.max.ru/" target="_blank" rel="noopener noreferrer">🌐 Веб-версия ↗</a>
-              <a class="btn btn-sm btn-ghost" id="hubGuideDocsLink" href="https://dev.max.ru/" target="_blank" rel="noopener noreferrer">📖 Инструкция ↗</a>
-            </div>
           </div>
 
-          <p class="hub-guide-summary" id="hubGuideSummary"></p>
           <div class="hub-warn-box" id="hubGuideE2eeWarn" hidden></div>
 
           <div class="hub-vpn-box" id="hubGuideVpnBox" hidden>
             <div class="hub-vpn-copy">
-              <strong>🔒 Для выбранной страны (<span id="hubVpnCountry">RU</span>) этому сервису нужен VPN/прокси</strong>
-              <span id="hubVpnDesc">Привяжи маршрут VPN заранее, чтобы сообщения не останавливались в Outbox (RM-301).</span>
+              <strong>🔒 Для страны <span id="hubVpnCountry">RU</span> этому сервису нужен VPN/прокси</strong>
+              <span id="hubVpnDesc">Привяжи маршрут VPN заранее, чтобы сообщения не встали в паузу Outbox (RM-301).</span>
             </div>
             <button type="button" class="btn btn-sm btn-primary" id="btnHubBindVpn">Привязать VPN</button>
           </div>
 
+          <!-- Пресеты способа подключения -->
+          <div class="hub-presets-wrap" id="hubPresetsWrap" hidden>
+            <div class="hub-section-label">Способ подключения</div>
+            <div class="hub-preset-chips" id="hubPresetChips"></div>
+          </div>
+
+          <!-- Нумерованная пошаговая лента -->
           <div class="hub-steps-card">
-            <div class="hub-steps-title">Пошаговое подключение:</div>
+            <div class="hub-steps-title">Пошаговое подключение</div>
             <ol class="hub-steps-list" id="hubStepsList"></ol>
           </div>
 
           <form class="hub-connect-form" id="hubConnectForm">
             <input type="hidden" id="hubFormNetwork" value="max">
-            <label class="field-label">
-              Режим подключения (драйвер)
-              <select id="hubFormKind" class="select-input">
-                <option value="max">MAX Bot API (platform-api.max.ru)</option>
-                <option value="telegram">Telegram Bot API</option>
-                <option value="discord">Discord Webhook (1 ссылка)</option>
-                <option value="vk">VK Messages API</option>
-                <option value="whatsapp">WhatsApp Cloud API (Meta)</option>
-                <option value="matrix">Matrix Client-Server API</option>
-                <option value="viber">Viber Bot API</option>
-                <option value="signal">Signal (signal-cli REST API)</option>
-                <option value="webhook">Универсальный HTTP Webhook / n8n / шлюз</option>
-              </select>
-            </label>
 
-            <label class="field-label" id="hubFieldEndpointWrap">
-              <span id="hubLabelEndpoint">Адрес API / Webhook URL</span>
-              <input type="url" id="hubFormEndpoint" class="text-input" placeholder="https://platform-api.max.ru">
+            <label class="field-label" id="hubFieldPrimaryEndpointWrap" hidden>
+              <span id="hubLabelPrimaryEndpoint">Webhook URL / адрес шлюза</span>
+              <input type="url" id="hubFormPrimaryEndpoint" class="text-input" placeholder="https://...">
             </label>
 
             <label class="field-label" id="hubFieldTokenWrap">
-              <span id="hubLabelToken">Секретный токен (кладётся в закрытый SecretVault)</span>
+              <div class="field-label-top">
+                <span id="hubLabelToken">Секретный токен (кладётся в закрытый SecretVault)</span>
+                <span class="sanitize-hint" id="hubSanitizeHint" hidden>✓ Очищено автоматически</span>
+              </div>
               <div class="token-input-row">
                 <input type="password" id="hubFormToken" class="text-input" placeholder="Вставь токен бота" autocomplete="off">
                 <button type="button" class="icon-btn" id="btnHubToggleTokenVis" title="Показать/скрыть токен">👁</button>
@@ -494,7 +525,7 @@
             </label>
 
             <div class="hub-suggested-wrap" id="hubSuggestedWrap" hidden>
-              <span class="muted-text">Найденные чаты (нажми, чтобы подставить ID):</span>
+              <span class="muted-text">✨ Найденные чаты (нажми, чтобы подставить ID):</span>
               <div class="hub-suggested-chips" id="hubSuggestedChips"></div>
             </div>
 
@@ -503,24 +534,53 @@
               <span>Включить автоприём входящих сообщений (Long Polling через ПК-агент)</span>
             </label>
 
+            <!-- Скрытые технические настройки (драйвер и кастомный API URL) -->
+            <details class="hub-advanced-details" id="hubAdvancedDetails">
+              <summary>⚙ Расширенные настройки (адрес API и тип драйвера)</summary>
+              <div class="hub-advanced-body">
+                <label class="field-label">
+                  Тип драйвера протокола
+                  <select id="hubFormKind" class="select-input">
+                    <option value="max">MAX Bot API v2 (platform-api2.max.ru)</option>
+                    <option value="telegram">Telegram Bot API</option>
+                    <option value="discord">Discord Webhook (1 ссылка)</option>
+                    <option value="vk">VK Messages API v5.199</option>
+                    <option value="whatsapp">WhatsApp Cloud API (Meta)</option>
+                    <option value="matrix">Matrix Client-Server API v3</option>
+                    <option value="viber">Viber Bot API</option>
+                    <option value="signal">Signal (signal-cli REST API)</option>
+                    <option value="webhook">Универсальный HTTP Webhook / n8n / шлюз</option>
+                  </select>
+                </label>
+                <label class="field-label" id="hubFieldEndpointWrap">
+                  <span id="hubLabelEndpoint">Адрес API / Webhook URL</span>
+                  <input type="url" id="hubFormEndpoint" class="text-input" placeholder="https://platform-api2.max.ru">
+                </label>
+              </div>
+            </details>
+
             <div class="callout" id="hubTestResult" hidden></div>
 
             <div class="hub-form-actions">
-              <button type="button" class="btn btn-ghost" id="btnHubTestBridge">🔍 Проверить токен</button>
-              <button type="submit" class="btn btn-primary" id="btnHubSaveBridge">✅ Подключить сервис</button>
-              <button type="button" class="btn btn-ghost" id="btnHubQuickSandbox">💬 Тестовый чат</button>
-              <button type="button" class="btn btn-danger" id="btnHubDisableBridge" hidden>Отключить Live</button>
+              <button type="button" class="btn btn-ghost" id="btnHubTestBridge">🔍 Проверить</button>
+              <button type="button" class="btn btn-ghost" id="btnHubSendTestMsg" title="Отправить реальное пробное сообщение в указанный чат">✉ Тест в чат</button>
+              <button type="submit" class="btn btn-brand" id="btnHubSaveBridge">✅ Подключить сервис</button>
+              <button type="button" class="btn btn-ghost" id="btnHubQuickSandbox">💬 Песочница</button>
+              <button type="button" class="btn btn-danger" id="btnHubDisableBridge" hidden>Отключить</button>
             </div>
           </form>
 
-          <div class="hub-webhook-card">
-            <div class="hub-webhook-top">
-              <span>Входящий Webhook URL (если сервис шлёт события по callback):</span>
-              <button type="button" class="btn btn-sm btn-ghost" id="btnCopyHubWebhook">📋 Копировать</button>
+          <details class="hub-webhook-card" id="hubWebhookDetails">
+            <summary>🔗 Входящий Webhook URL и заметки по подключению</summary>
+            <div class="hub-webhook-inner">
+              <div class="hub-webhook-top">
+                <span>Callback URL для входящих событий:</span>
+                <button type="button" class="btn btn-sm btn-ghost" id="btnCopyHubWebhook">📋 Копировать</button>
+              </div>
+              <code id="hubWebhookUrl"></code>
+              <p class="muted-text" id="hubDirectHint"></p>
             </div>
-            <code id="hubWebhookUrl"></code>
-            <p class="muted-text" id="hubDirectHint"></p>
-          </div>
+          </details>
         </section>
       </div>
     </div>

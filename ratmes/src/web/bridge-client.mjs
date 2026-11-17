@@ -6,7 +6,7 @@
 import { createRatMesEngine } from '../engine/ratmes-engine.mjs';
 import { createMemoryVault } from '../engine/vault-store.mjs';
 import { SUPABASE_PUBLIC_CONFIG } from '../engine/cloud-hub.mjs';
-import { getServiceGuide } from '../engine/service-guides.mjs';
+import { getServiceGuide, sanitizeBridgeInput } from '../engine/service-guides.mjs';
 
 const CLOUD_SYNCED_ROOMS = new Set(['games-lobby', 'games-coop', 'games-dev', 'ratmes-main']);
 const REMOTE_AGENT_KEY = 'ratmes-remote-agent-url-v1';
@@ -288,7 +288,7 @@ export async function createBridgeClient() {
         const res = await fetch(`${apiBase}/messages?${paramName}=${encodeURIComponent(cleanId)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: token },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text, format: 'markdown' }),
         });
         const j = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(j.message || `MAX HTTP ${res.status}`);
@@ -339,9 +339,10 @@ export async function createBridgeClient() {
   }
 
   async function testBrowserBridge({ network = 'max', kind = null, endpoint = null, targetId = null, secretToken = null } = {}) {
-    const k = kind || network;
-    const base = (endpoint || '').replace(/\/+$/, '');
-    const token = secretToken || browserBridges.get(network)?.getSecret?.() || '';
+    const clean = sanitizeBridgeInput({ kind: kind || network, endpoint, targetId, secretToken });
+    const k = clean.kind;
+    const base = (clean.endpoint || '').replace(/\/+$/, '');
+    const token = clean.secretToken || browserBridges.get(network)?.getSecret?.() || '';
     const started = performance.now();
     try {
       if (k === 'telegram') {
@@ -351,7 +352,7 @@ export async function createBridgeClient() {
         if (!me.ok) throw new Error(me.description || 'Неверный токен');
         const suggestedChats = [];
         try {
-          const u = await (await fetch(`${apiBase}/bot${token}/getUpdates?limit=10`)).json();
+          const u = await (await fetch(`${apiBase}/bot${token}/getUpdates?limit=15`)).json();
           const seen = new Set();
           for (const item of (u.result || [])) {
             const c = item?.message?.chat || item?.channel_post?.chat;
@@ -366,6 +367,7 @@ export async function createBridgeClient() {
           data: {
             kind: 'telegram',
             botName: me.result?.first_name || 'Telegram Bot',
+            username: me.result?.username ? `@${me.result.username}` : null,
             rttMs: Math.round(performance.now() - started),
             suggestedChats,
             message: `Telegram бот @${me.result?.username || 'bot'} проверен прямо из браузера!`,
@@ -379,14 +381,41 @@ export async function createBridgeClient() {
         const res = await fetch(`${apiBase}/me`, { headers: { Authorization: token } });
         const me = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(me.message || `MAX HTTP ${res.status}`);
+        const suggestedChats = [];
+        const seen = new Set();
+        if (clean.targetId && !/^u(ser)?:/i.test(clean.targetId) && /^-?\d+$/.test(clean.targetId)) {
+          try {
+            const cRes = await fetch(`${apiBase}/chats/${encodeURIComponent(clean.targetId)}`, { headers: { Authorization: token } });
+            if (cRes.ok) {
+              const cInfo = await cRes.json();
+              seen.add(`c:${clean.targetId}`);
+              suggestedChats.push({ id: clean.targetId, label: `${cInfo.title || `Чат ${clean.targetId}`} (${clean.targetId})` });
+            }
+          } catch { /* ignore */ }
+        }
+        try {
+          const updRes = await fetch(`${apiBase}/updates?limit=15&timeout=0`, { headers: { Authorization: token } });
+          if (updRes.ok) {
+            const upd = await updRes.json();
+            for (const u of (upd.updates || [])) {
+              const cid = u?.message?.recipient?.chat_id ?? u?.chat_id;
+              const title = u?.message?.recipient?.chat_title || u?.message?.sender?.name || 'Чат MAX';
+              if (cid != null && !seen.has(`c:${cid}`)) {
+                seen.add(`c:${cid}`);
+                suggestedChats.push({ id: String(cid), label: `${title} (${cid})` });
+              }
+            }
+          }
+        } catch { /* ignore */ }
         return {
           ok: true,
           data: {
             kind: 'max',
             botName: me.name || me.username || 'MAX Bot',
+            username: me.username ? `@${me.username}` : null,
             rttMs: Math.round(performance.now() - started),
-            suggestedChats: [],
-            message: `MAX бот ${me.name || me.username || 'OK'} подтверждён!`,
+            suggestedChats,
+            message: `MAX бот «${me.name || me.username || 'OK'}» подтверждён!`,
           },
         };
       }
@@ -403,7 +432,7 @@ export async function createBridgeClient() {
             kind: 'discord',
             botName: info.name || 'Discord Webhook',
             rttMs: Math.round(performance.now() - started),
-            suggestedChats: [],
+            suggestedChats: info.channel_id ? [{ id: String(info.channel_id), label: `Канал ${info.channel_id}` }] : [],
             message: `Discord Webhook «${info.name || 'OK'}» активен!`,
           },
         };
@@ -428,7 +457,7 @@ export async function createBridgeClient() {
           kind: k,
           botName: `${k.toUpperCase()} (${u.host})`,
           rttMs: Math.round(performance.now() - started),
-          suggestedChats: targetId ? [{ id: String(targetId), label: String(targetId) }] : [],
+          suggestedChats: clean.targetId ? [{ id: String(clean.targetId), label: String(clean.targetId) }] : [],
           message: `Адрес ${u.host} проверен. Для стабильной работы VK/MAX/WhatsApp без CORS подключи ПК-агент выше.`,
         },
       };
@@ -565,6 +594,39 @@ export async function createBridgeClient() {
       return testBrowserBridge(cfg);
     },
 
+    async sendTestBridgeMessage(cfg) {
+      if (mode === 'agent') {
+        const res = await fetch(apiPath('/api/bridges/send-test'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg),
+        });
+        return res.json();
+      }
+      const net = String(cfg.network || 'max').toLowerCase();
+      const clean = sanitizeBridgeInput({ kind: cfg.kind || net, endpoint: cfg.endpoint, targetId: cfg.targetId, secretToken: cfg.secretToken });
+      const prev = browserBridges.get(net);
+      const tempCfg = {
+        network: net,
+        kind: clean.kind,
+        endpoint: clean.endpoint || prev?.endpoint || getServiceGuide(net).defaultEndpoint,
+        targetId: clean.targetId || prev?.targetId || '',
+        getSecret: () => clean.secretToken || prev?.getSecret?.() || '',
+        stats: { sentLive: 0, recvLive: 0, lastError: null },
+      };
+      const text = cfg.text || `✅ RatMes подключён к ${net.toUpperCase()}!`;
+      const res = await deliverBrowserBridge(tempCfg, { envelopeRecord: { body: { text } } });
+      if (!res.ok) return res;
+      return {
+        ok: true,
+        data: {
+          remoteId: res.remoteId,
+          rttMs: res.rttMs,
+          message: `Тестовое сообщение отправлено в ${net.toUpperCase()} за ${res.rttMs} мс!`,
+        },
+      };
+    },
+
     async configureLiveBridge(cfg) {
       if (mode === 'agent') {
         const res = await fetch(apiPath('/api/bridges/configure'), {
@@ -576,20 +638,22 @@ export async function createBridgeClient() {
       }
       await initLocalEngineIfNeeded();
       const net = String(cfg.network || '').toLowerCase();
+      const clean = sanitizeBridgeInput({ kind: cfg.kind || net, endpoint: cfg.endpoint, targetId: cfg.targetId, secretToken: cfg.secretToken });
       const prev = browserBridges.get(net);
-      const closedSecret = cfg.secretToken || prev?.getSecret?.() || '';
-      if (cfg.secretToken) {
+      const closedSecret = clean.secretToken || prev?.getSecret?.() || '';
+      if (clean.secretToken) {
         await localEngine.tools.crypto.storeSession({
           network: net,
-          accountLabel: `browser:${cfg.kind || net}:${cfg.targetId || 'live'}`,
-          secretToken: cfg.secretToken,
+          accountLabel: `browser:${clean.kind}:${clean.targetId || 'live'}`,
+          secretToken: clean.secretToken,
         });
       }
       const entry = {
         network: net,
-        kind: cfg.kind || net,
-        endpoint: cfg.endpoint || '',
-        targetId: cfg.targetId || '',
+        kind: clean.kind,
+        endpoint: clean.endpoint || prev?.endpoint || getServiceGuide(net).defaultEndpoint,
+        targetId: clean.targetId || prev?.targetId || '',
+        botName: cfg.botName || prev?.botName || null,
         enabled: cfg.enabled !== false,
         getSecret: () => closedSecret,
         stats: prev?.stats || { sentLive: 0, recvLive: 0, lastError: null },

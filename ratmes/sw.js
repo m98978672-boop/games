@@ -1,6 +1,6 @@
 // Лёгкий Service Worker для PWA RatMes (офлайн-кэш статической оболочки без вмешательства в /api/*).
 
-const CACHE_NAME = 'ratmes-shell-v5';
+const CACHE_NAME = 'ratmes-shell-v6';
 const SHELL_ASSETS = [
   './',
   './index.html',
@@ -8,6 +8,7 @@ const SHELL_ASSETS = [
   './manifest.webmanifest',
   './src/engine/cloud-hub.mjs',
   './src/engine/service-guides.mjs',
+  './src/web/brand-icons.mjs',
   './src/web/app.js',
   './src/web/bridge-client.mjs',
   './src/web/audio.mjs',

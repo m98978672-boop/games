@@ -159,7 +159,27 @@ export async function startRatMesAgent({
   const engine = createRatMesEngine({ vault: diskVault, country, seedDemoChats });
   await engine.ensureStarterChats();
 
-  const liveBridges = createLiveBridgeManager({ engine });
+  const bridgesMetaPath = path.join(vaultDir, 'meta', 'bridges.json');
+  let initialBridgeMeta = [];
+  try {
+    if (fs.existsSync(bridgesMetaPath)) {
+      const parsed = JSON.parse(fs.readFileSync(bridgesMetaPath, 'utf8'));
+      if (Array.isArray(parsed)) initialBridgeMeta = parsed;
+    }
+  } catch { /* стартуем с чистым списком метаданных */ }
+
+  const liveBridges = createLiveBridgeManager({
+    engine,
+    initialMeta: initialBridgeMeta,
+    onPersistMeta: (list) => {
+      try {
+        fs.mkdirSync(path.dirname(bridgesMetaPath), { recursive: true });
+        const tmp = `${bridgesMetaPath}.tmp`;
+        fs.writeFileSync(tmp, JSON.stringify(list, null, 2), 'utf8');
+        fs.renameSync(tmp, bridgesMetaPath);
+      } catch { /* игнорируем ошибку диска, чтобы не ронять агент */ }
+    },
+  });
   const resolvedNodeId = nodeId || `node-${crypto.randomBytes(4).toString('hex')}`;
   const lanMesh = createLanMesh({
     nodeId: resolvedNodeId,
@@ -325,6 +345,16 @@ export async function startRatMesAgent({
       try {
         const body = await readJsonBody(req);
         const result = await liveBridges.testBridge(body);
+        sendJson(res, result.ok ? 200 : 400, result);
+      } catch (err) {
+        sendJson(res, 400, { ok: false, error: { code: 'RM-105', message: err.message } });
+      }
+      return;
+    }
+    if (pathname === '/api/bridges/send-test' && req.method === 'POST') {
+      try {
+        const body = await readJsonBody(req);
+        const result = await liveBridges.sendTestMessage(body);
         sendJson(res, result.ok ? 200 : 400, result);
       } catch (err) {
         sendJson(res, 400, { ok: false, error: { code: 'RM-105', message: err.message } });
