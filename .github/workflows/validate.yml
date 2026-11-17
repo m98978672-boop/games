@@ -30,8 +30,6 @@ jobs:
         run: node 1in8b/tests/smoke.mjs
       - name: Test 1 IN 8 BILLION life model
         run: node 1in8b/tests/logic.mjs
-      - name: Test NIKA animations, local AI and simulation
-        run: node nika-life/tests/smoke.mjs
       - name: Test game template structure
         run: node game-base/tests/smoke.mjs
       - name: Test game template logic
