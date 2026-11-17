@@ -1,11 +1,37 @@
 {
   "schema": "ratcore-index/1",
   "engine": "RatCore",
-  "status": "design-complete-awaiting-build-command",
+  "status": "stage1-v0.1-implemented",
+  "stage": "stage1-v0.1",
   "updatedAt": "2026-11-16",
   "branch": "arena/99666b55-games",
-  "codeStarted": false,
+  "codeStarted": true,
   "integratedIntoGamesShowcase": false,
+  "implementation": {
+    "entrypoint": "ratcore/ratcore.js",
+    "toolsManifest": "ratcore/tools-manifest.json",
+    "modules": [
+      "ratcore/src/core/math.js",
+      "ratcore/src/core/clock.js",
+      "ratcore/src/core/seal.js",
+      "ratcore/src/core/code-auditor.js",
+      "ratcore/src/core/modules.js",
+      "ratcore/src/world/coords.js",
+      "ratcore/src/world/face-id.js",
+      "ratcore/src/world/layers.js",
+      "ratcore/src/world/spatial.js",
+      "ratcore/src/world/graph.js",
+      "ratcore/src/assets/raster.js",
+      "ratcore/src/assets/textures.js",
+      "ratcore/src/assets/mesh-builder.js",
+      "ratcore/src/render/software-3d.js",
+      "ratcore/src/tools/toolkit.js"
+    ],
+    "tests": [
+      "ratcore/tests/tool-contract.mjs",
+      "ratcore/tests/stage1.mjs"
+    ]
+  },
   "counts": {
     "toolBranches": 36,
     "coreBranches": 10,
@@ -27,7 +53,7 @@
     { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.8-draft", "role": "185 formulas (F-01..F-185) and 125 algorithms (A-01..A-125)" },
     { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.4-draft", "role": "12-level compression, ratcore-wire/2, Power & Thermal Guard (40/60/75%), Dynamic Resolution, Async Shader Pre-Warm, Self-Healing, WebGPU/WASM packs" },
     { "id": "bridge", "path": "ratcore/BRIDGE.md", "version": "0.2-draft", "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC, RCW2 binary streaming)" },
-    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#010" }
+    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#011" }
   ],
   "toolBranches": [
     "build", "move", "remove", "watch", "look", "see", "hear", "think", "guess",
@@ -58,7 +84,7 @@
       "pack:ai-team": ["think", "guess", "comm", "bugs", "bridge"]
     },
     "presets": [
-      "minimal-2d", "arcade-3d", "shooter-fps", "citybuilder",
+      "minimal-2d", "arcade-3d", "rpg-3d", "shooter-fps", "citybuilder",
       "survival", "multiplayer-sandbox", "ai-dev-full"
     ]
   },

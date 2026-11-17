@@ -20,6 +20,12 @@ jobs:
           node-version: 22
       - name: Validate community catalog and local files
         run: node site/tests/community-catalog.mjs
+      - name: Validate storefront portal and 10-pass antivirus shield
+        run: node site/tests/portal.mjs
+      - name: Test RatCore v0.1 Stage 1 (ToolGuard Barriers 1-5 + Foundation)
+        run: |
+          node ratcore/tests/tool-contract.mjs
+          node ratcore/tests/stage1.mjs
       - name: Self-test the bug-hunting bot
         run: node tools/bughunt/tests/selftest.mjs
       - name: Check the bug-code table covers 000–999

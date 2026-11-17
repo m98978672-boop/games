@@ -258,3 +258,35 @@
 
 ### Итог спецификации
 **36 веток инструментов v2.0 · 14 опциональных пакетов по выбору · 185 формул (`F-01..F-185`) · 125 алгоритмов (`A-01..A-125`) · 12-уровневый стек сжатия, плавности и надёжности.** Код `RatCore` по-прежнему не начинается до прямой команды владельца.
+
+---
+
+## Запись #011 — 2026-11-16 · Этап 1 (`v0.1` Foundation) реализован и верифицирован (изолированно в `ratcore/`)
+
+По прямой команде владельца («Допиливай и начинай работу») написана и проверена первая рабочая версия ядра `RatCore v0.1` на чистых ES-модулях без внешних зависимостей (работает одинаково в браузере и Node.js 22), строго изолированная внутри `ratcore/` (без подключения к `index.html` и `site/`):
+
+1. **Слой 1 (`ratcore/src/core/`):**
+   - `math.js`: детерминированный `Mulberry32`, `FNV-1a` 32-бит, `fbm2D` / `ridged2D` / `domainWarp2D`, векторная математика.
+   - `clock.js`: фиксированный шаг `createClock({ fixedDt | tickHz })` с защитой от спирали смерти (`F-01`).
+   - `seal.js`: `ToolGuard` Барьеры 1–2 — одноразовый `claimMintAuthority()` (`RC-105`), закрытый `AssetVault` на `WeakMap`, замороженные хэндлы, контроль целостности (`RC-101`, `RC-102`, `RC-106`).
+   - `code-auditor.js`: `ToolGuard` Барьер 4 — статический аудит исходного кода игр против ручных `Float32Array`, WebGL-буферов, Three.js геометрии и ручных 2D Canvas текстур (`RC-107`).
+   - `modules.js`: 3-уровневый резолвер `Zero-Cost Opt-In` (`10 core + 10 standard + 14 optional packs + 8 presets`), `createDisabledBranchProxy` с единым §0-конвертом `RC-108` и точным `autoFixHint`.
+2. **Слой 2 (`ratcore/src/world/`):**
+   - `coords.js`: `(X, Y, H, h)`, `worldToScene` / `sceneToWorld`, `azimuthDeg`, билинейное `HeightField` с проверками воды/подземья (`RC-304`/`RC-305`).
+   - `face-id.js`: 64-битный `BigInt` `faceId` со встроенными состояниями `intact / damaged / broken` (`packFaceId`, `unpackFaceId`, `damageFaceId`, `breakFaceId`).
+   - `layers.js`: парсер и валидатор слоевой записи `(X;Y)Hp(...)` и `(X;Y)hp(...)` с проверками `RC-302` и `RC-303`.
+   - `spatial.js`: `SpatialHashGrid`, 3D `ddaRaycast3D`, палитровый чанк `PalettedChunk16` (0→12 бит) и 64-битный кирпич `OccupancyBrick64` (`8 Б` на 64 вокселя).
+   - `graph.js`: `WorldGraph` + `A*` с учётом уклона рельефа + детерминированный `generateWorldMap`.
+3. **Слой 3 (`ratcore/src/assets/`):**
+   - `raster.js`: DOM-free `RasterSurface` (`Uint32Array` ABGR, Брезенхэм, дизеринг Бейера 4×4, экспорт в ASCII).
+   - `textures.js`: процедурные текстуры + карта нормалей Собеля + генератор битой копии (трещины/гарь).
+   - `mesh-builder.js`: примитивы (`box`, `cylinder`, `cone`, `roof`, `sphere`), `extrude` (Ear-Clipping), `lathe`, воксели с **Hidden Face Culling + Greedy Meshing** (плита 4×1×4 → ровно 12 треугольников вместо 192!), `combine`, валидатор `RC-201..204` и `packVertex64` (8 байт/вершина).
+4. **Слой 4 (`ratcore/src/render/software-3d.js`):**
+   - Программный 3D-рендерер с Z-буфером, Lambert-освещением и **Object-ID буфером** для `tools.see.visibleEntities()`, жёстко требующий запечатанные меши `vault.readSealedMesh()`.
+5. **Слой 5 (`ratcore/tools-manifest.json`, `ratcore/src/tools/toolkit.js`, `ratcore/ratcore.js`):**
+   - Единый шлюз `createEngine(config)`, конвейер §0 (`pipe` с атомарным откатом, `dryRun`, `memoize`, `idempotencyKey`, `undo`), `tools.help()`, BM25-поисковик `tools.discover({ intent })`, динамические `enablePack`/`disablePack`, `stream.setPowerProfile` (`eco 40% / balanced 60% / turbo 75%`).
+6. **Верификация и CI:**
+   - `ratcore/tests/tool-contract.mjs` — Барьеры 1–5 и `RC-101/102/105/107/108` (`OK`).
+   - `ratcore/tests/stage1.mjs` — все слои Этапа 1 (`OK`).
+   - `.github/workflows/validate.yml` расширен прогоном `site/tests/portal.mjs`, `ratcore/tests/tool-contract.mjs` и `ratcore/tests/stage1.mjs`.
+
