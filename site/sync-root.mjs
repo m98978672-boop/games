@@ -18,6 +18,7 @@ export function renderRootIndex(siteHtml) {
     .replace(/href="assets\//g, 'href="site/assets/')
     .replace(/href="site\.css"/g, 'href="site/site.css"')
     .replace(/href="site\.webmanifest"/g, 'href="site/site.webmanifest"')
+    .replace(/href="\.\.\/opensearch\.xml"/g, 'href="opensearch.xml"')
     .replace(/src="games-data\.js"/g, 'src="site/games-data.js"')
     .replace(/src="game-antivirus\.js"/g, 'src="site/game-antivirus.js"')
     .replace(/src="user-games\.js"/g, 'src="site/user-games.js"')

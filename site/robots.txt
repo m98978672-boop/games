@@ -1,2 +1,6 @@
 User-agent: *
 Allow: /
+
+Clean-param: sort&cat&importGame /games/
+
+Sitemap: https://m98978672-boop.github.io/games/sitemap.xml

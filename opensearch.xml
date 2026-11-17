@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Games · Библ Игры</ShortName>
+  <Description>Поиск по библиотеке браузерных 2D и 3D игр Games (Библиотека игр / Библ Игры)</Description>
+  <Tags>games библиотека игр библ игры браузерные игры</Tags>
+  <InputEncoding>UTF-8</InputEncoding>
+  <OutputEncoding>UTF-8</OutputEncoding>
+  <Language>ru</Language>
+  <Image width="32" height="32" type="image/svg+xml">https://m98978672-boop.github.io/games/site/assets/icon.svg</Image>
+  <Url type="text/html" method="get" template="https://m98978672-boop.github.io/games/?q={searchTerms}"/>
+</OpenSearchDescription>

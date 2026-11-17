@@ -209,4 +209,26 @@ assert.equal(hub.getAll().length, 1);
 // Проверка безопасного sandbox-плеера (строго БЕЗ allow-same-origin)
 assert.ok(siteHtml.includes('sandbox="allow-scripts allow-pointer-lock"'), 'sandbox iframe must isolate scripts without allow-same-origin');
 
-console.log(`Portal checks passed (${catalog.length} games, ${spotlightIds.length} spotlight items, root/site synced, 10-pass antivirus & user-games verified).`);
+// 5. Проверка SEO и находимости в поисковиках (robots.txt, sitemap.xml, opensearch.xml, JSON-LD)
+const robotsTxt = await readFile(path.join(repositoryRoot, 'robots.txt'), 'utf8');
+assert.ok(robotsTxt.includes('Sitemap: https://m98978672-boop.github.io/games/sitemap.xml'), 'root robots.txt must declare sitemap');
+
+const sitemapXml = await readFile(path.join(repositoryRoot, 'sitemap.xml'), 'utf8');
+assert.ok(sitemapXml.includes('<loc>https://m98978672-boop.github.io/games/</loc>'), 'sitemap.xml must include root URL');
+for (const game of catalog) {
+  assert.ok(sitemapXml.includes(`https://m98978672-boop.github.io/games/${game.play}`), `sitemap.xml missing game ${game.id}`);
+}
+
+const opensearchXml = await readFile(path.join(repositoryRoot, 'opensearch.xml'), 'utf8');
+assert.ok(opensearchXml.includes('template="https://m98978672-boop.github.io/games/?q={searchTerms}"'), 'opensearch.xml must target ?q={searchTerms}');
+assert.ok(rootHtml.includes('href="opensearch.xml"'), 'root index.html must link opensearch.xml');
+assert.ok(rootHtml.includes('property="og:image" content="https://m98978672-boop.github.io/games/'), 'og:image must be an absolute URL');
+
+const ldMatch = rootHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+assert.ok(ldMatch, 'index.html must include JSON-LD structured data');
+const ldJson = JSON.parse(ldMatch[1]);
+const webSiteNode = ldJson['@graph']?.find((n) => n['@type'] === 'WebSite');
+assert.ok(webSiteNode, 'JSON-LD must contain WebSite node');
+assert.ok(Array.isArray(webSiteNode.alternateName) && webSiteNode.alternateName.includes('Библиотека игр') && webSiteNode.alternateName.includes('Библ Игры'), 'JSON-LD WebSite must declare alternateName aliases');
+
+console.log(`Portal checks passed (${catalog.length} games, ${spotlightIds.length} spotlight items, root/site synced, SEO/sitemap/JSON-LD, 10-pass antivirus & user-games verified).`);
