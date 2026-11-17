@@ -193,12 +193,16 @@ assert.equal(parsedAtom[0].link, 'https://habr.com/ru/news/999999/', 'Atom link 
 const siteHtml = await readFile(path.join(repoRoot, 'site/index.html'), 'utf8');
 const rootHtml = await readFile(path.join(repoRoot, 'index.html'), 'utf8');
 for (const [label, html] of [['site/index.html', siteHtml], ['index.html', rootHtml]]) {
-  for (const marker of ['portal-news-panel', 'news-teaser-strip', 'news-reader-modal', 'news-compose-modal', 'data-portal-tab="news"', 'data-open-antivirus="file"']) {
+  for (const marker of ['portal-main-tabs', 'portal-tab-news', 'role="tablist"', 'portal-news-panel', 'news-teaser-strip', 'news-reader-modal', 'news-compose-modal', 'data-portal-tab="news"', 'data-open-antivirus="file"']) {
     assert.ok(html.includes(marker), `${label} must include ${marker}`);
   }
   const forbiddenEngineRe = new RegExp(['rat', 'core'].join(''), 'i');
   assert.equal(forbiddenEngineRe.test(html), false, `${label} must stay strictly isolated from internal engine`);
 }
+const newsEntryHtml = await readFile(path.join(repoRoot, 'news/index.html'), 'utf8');
+assert.ok(newsEntryHtml.includes('../index.html#news'), 'news/index.html must redirect to the News tab');
+const sitemapXml = await readFile(path.join(repoRoot, 'sitemap.xml'), 'utf8');
+assert.ok(sitemapXml.includes('/games/news/'), 'sitemap.xml must include /games/news/');
 assert.ok(siteHtml.includes('src="news-hub.js"'), 'site/index.html must load news-hub.js');
 assert.ok(rootHtml.includes('src="site/news-hub.js"'), 'root index.html must load site/news-hub.js');
 

@@ -862,9 +862,13 @@
       renderNewsView();
 
       const h = window.location.hash || '';
+      const params = new URLSearchParams(window.location.search || '');
+      const qNews = params.get('news') || params.get('code') || '';
       if (h.startsWith('#news=')) {
         const targetId = decodeURIComponent(h.slice(6));
         if (targetId) openArticle(targetId, { updateHash: false });
+      } else if (qNews) {
+        openArticle(qNews, { updateHash: false });
       }
     } catch {
       renderTeaserStrip();

@@ -2553,6 +2553,88 @@ body.chat-fullscreen .portal-chat-frame-wrap {
 }
 
 /* ==========================================================================
+   Главная панель вкладок портала (Игры | Новости | Общение) — всегда видна
+   ========================================================================== */
+.portal-main-tabs-wrap {
+  position: relative;
+  z-index: 48;
+  background: linear-gradient(180deg, rgba(20, 31, 46, 0.98), rgba(14, 23, 35, 0.96));
+  border-bottom: 1px solid rgba(102, 192, 244, 0.24);
+  backdrop-filter: blur(10px);
+}
+body.chat-fullscreen .portal-main-tabs-wrap {
+  display: none;
+}
+.portal-main-tabs {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 18px;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.portal-main-tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: none;
+  border-bottom: 3px solid transparent;
+  background: transparent;
+  color: #b7c8da;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  white-space: nowrap;
+}
+.portal-main-tab:hover {
+  color: #ffffff;
+  background: rgba(102, 192, 244, 0.1);
+}
+.portal-main-tab.is-active {
+  color: #ffffff;
+  border-bottom-color: #66c0f4;
+  background: linear-gradient(180deg, rgba(102, 192, 244, 0.16), rgba(102, 192, 244, 0.04));
+}
+.portal-main-tab.is-news-tab.is-active {
+  border-bottom-color: #38bdf8;
+  background: linear-gradient(180deg, rgba(14, 165, 233, 0.22), rgba(34, 197, 94, 0.08));
+}
+.portal-main-tab-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+.portal-main-tab-meta {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(102, 192, 244, 0.16);
+  color: #8fd0f7;
+  border: 1px solid rgba(102, 192, 244, 0.28);
+}
+
+@media (max-width: 640px) {
+  .portal-main-tabs {
+    padding: 0 8px;
+    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .portal-main-tab {
+    padding: 10px 6px;
+    gap: 5px;
+    font-size: 13px;
+  }
+  .portal-main-tab-meta {
+    display: none;
+  }
+}
+
+/* ==========================================================================
    Вкладка «Новости» (автопост по 6 темам), тизер на главной, читалка
    и усиленный Drag & Drop антивируса
    ========================================================================== */

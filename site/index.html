@@ -157,6 +157,52 @@
   </div>
 </header>
 
+<!-- Главная панель вкладок портала: видна всегда на ПК и телефоне -->
+<nav class="portal-main-tabs-wrap" aria-label="Главные вкладки портала Games">
+  <div class="portal-main-tabs" role="tablist" aria-label="Разделы Games">
+    <button
+      id="portal-tab-games"
+      class="portal-main-tab is-active"
+      type="button"
+      role="tab"
+      aria-selected="true"
+      data-portal-tab="games"
+    >
+      <span class="portal-main-tab-icon" aria-hidden="true">🎮</span>
+      <span class="portal-main-tab-label">Игры</span>
+      <span class="portal-main-tab-meta" data-games-total>16</span>
+    </button>
+
+    <button
+      id="portal-tab-news"
+      class="portal-main-tab is-news-tab"
+      type="button"
+      role="tab"
+      aria-selected="false"
+      aria-controls="portal-news-panel"
+      data-portal-tab="news"
+    >
+      <span class="portal-main-tab-icon" aria-hidden="true">📰</span>
+      <span class="portal-main-tab-label">Новости</span>
+      <span class="news-nav-badge" data-news-badge hidden>0</span>
+    </button>
+
+    <button
+      id="portal-tab-chat"
+      class="portal-main-tab is-chat-tab"
+      type="button"
+      role="tab"
+      aria-selected="false"
+      aria-controls="portal-chat-panel"
+      data-portal-tab="chat"
+    >
+      <span class="portal-main-tab-icon" aria-hidden="true">💬</span>
+      <span class="portal-main-tab-label">Общение</span>
+      <span class="portal-main-tab-meta">RatMes</span>
+    </button>
+  </div>
+</nav>
+
 <!-- Фирменная градиентная лента магазина (Store Ribbon) -->
 <div class="store-ribbon-wrap" data-portal-store-section>
   <nav class="store-ribbon" aria-label="Навигация по магазину">
@@ -199,7 +245,7 @@
 </div>
 
 <!-- Вкладка «Общение» — встроенный мессенджер RatMes + 9 облачных сервисов -->
-<section id="portal-chat-panel" class="portal-chat-panel" hidden aria-label="Вкладка Общение — RatMes">
+<section id="portal-chat-panel" class="portal-chat-panel" role="tabpanel" aria-labelledby="portal-tab-chat" hidden aria-label="Вкладка Общение — RatMes">
   <div class="portal-chat-bar">
     <div class="portal-chat-bar-left">
       <button type="button" class="btn btn-steam-ghost portal-back-btn" data-portal-tab="games">← Магазин</button>
@@ -237,7 +283,7 @@
 </section>
 
 <!-- Вкладка «Новости» — мультикатегорийная лента с автопостом каждые 6 часов -->
-<section id="portal-news-panel" class="portal-news-panel" hidden aria-label="Вкладка Новости Games">
+<section id="portal-news-panel" class="portal-news-panel" role="tabpanel" aria-labelledby="portal-tab-news" hidden aria-label="Вкладка Новости Games">
   <div class="news-shell">
     <div class="news-topbar">
       <div class="news-topbar-left">

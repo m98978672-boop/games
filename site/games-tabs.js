@@ -102,7 +102,12 @@
       const target = btn.getAttribute('data-portal-tab');
       const active = target === normalized;
       btn.classList.toggle('is-active', active);
-      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      if (btn.getAttribute('role') === 'tab') {
+        btn.setAttribute('aria-selected', active ? 'true' : 'false');
+        btn.tabIndex = active ? 0 : -1;
+      } else {
+        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      }
     }
 
     if (isChat) {
@@ -188,13 +193,37 @@
     });
   }
 
+  const tablistEl = document.querySelector('.portal-main-tabs[role="tablist"]');
+  if (tablistEl) {
+    const tabEls = Array.from(tablistEl.querySelectorAll('[role="tab"][data-portal-tab]'));
+    tablistEl.addEventListener('keydown', (e) => {
+      const idx = tabEls.indexOf(document.activeElement);
+      if (idx < 0) return;
+      let nextIdx = -1;
+      if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabEls.length;
+      else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabEls.length) % tabEls.length;
+      else if (e.key === 'Home') nextIdx = 0;
+      else if (e.key === 'End') nextIdx = tabEls.length - 1;
+      if (nextIdx >= 0) {
+        e.preventDefault();
+        const nextBtn = tabEls[nextIdx];
+        nextBtn.focus();
+        setTab(nextBtn.getAttribute('data-portal-tab'));
+      }
+    });
+  }
+
   function syncFromHash() {
     const raw = window.location.hash || '';
     const h = raw.toLowerCase();
-    if (h === '#chat' || h === '#obshchenie' || h === '#ratmes' || h === '#connect') {
+    const params = new URLSearchParams(window.location.search || '');
+    const qTab = (params.get('tab') || '').toLowerCase();
+    const qNews = params.get('news') || params.get('code') || '';
+
+    if (h === '#chat' || h === '#obshchenie' || h === '#ratmes' || h === '#connect' || qTab === 'chat') {
       setTab(TAB_CHAT, { updateHash: false, connect: h === '#connect' ? 'max' : null });
-    } else if (h === '#news' || h === '#novosti' || h.startsWith('#news=')) {
-      const articleId = h.startsWith('#news=') ? decodeURIComponent(raw.slice(6)) : null;
+    } else if (h === '#news' || h === '#novosti' || h.startsWith('#news=') || qTab === 'news' || Boolean(qNews)) {
+      const articleId = h.startsWith('#news=') ? decodeURIComponent(raw.slice(6)) : (qNews || null);
       setTab(TAB_NEWS, { updateHash: false, articleId });
     } else {
       setTab(TAB_GAMES, { updateHash: false });
