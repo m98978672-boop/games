@@ -1,6 +1,9 @@
 /* РАТГРАД 2D: карта 7000 × 7000 км, простое движение, без поворотов и без 3D. */
 import { Map2D } from './map2d.js';
 import { isPhone, startCenter, FIT } from './fit2d.js';
+import { WorldView, overviewScale } from './worldview.js';
+import { buildWorld, advanceWars, worldStats, hottestWar, WM } from './worldmap2d.js';
+import { Intro } from './intro.js';
 import { WORLD2D } from './world2d.js';
 import { loadFrom, saveTo, elapsedMinutes, formatReport, OFFLINE } from './offline2d.js';
 
@@ -142,10 +145,225 @@ map.init((done, total) => {
         if (map.water) map.buildSeaLayer();
         map.draw();
         restoreOffline();
+        setupWorld();
+        // карта страны готова — пролёт можно заканчивать
+        if (intro) {
+          intro.ready = true;
+          const btn = document.getElementById('intro-start');
+          if (btn) btn.disabled = false;
+          if (hud.loadingText) hud.loadingText.textContent = 'мир ' + WM.countries + ' стран · можно начинать';
+        }
       } catch (err) {
         if (hud.status) hud.status.textContent = 'границы не собрались: ' + err.message;
       }
     }, 30);
+  });
+}
+
+/* §86: карта мира. Отдельный экран со своей камерой; игрок здесь ничего не решает —
+   войны идут сами, а он смотрит. Переход — анимация: камера улетает от страны к планете,
+   и ровно в это время базовый слой мира дорисовывается по проходам. */
+let worldView = null, world = null, worldScreen = null;
+let worldRaf = 0, worldLast = 0, worldStatsT = 0;
+let sharedWorld = null, intro = null;
+
+/* §87: начальная сцена. Пролёт над своей страной идёт, пока грузится карта;
+   кнопка «начать игру» появляется только когда всё готово. */
+function setupIntro() {
+  const canvas = document.getElementById('intro-map');
+  const startBtn = document.getElementById('intro-start');
+  const overlay = hud.loading;
+  if (!canvas) return;
+  // мир для пролёта тот же, что откроется по кнопке «карта мира» — второго не строим
+  try {
+    sharedWorld = buildWorld(424242);
+    intro = new Intro(canvas, sharedWorld, {});
+    intro.start();
+  } catch (err) {
+    // без пролёта игра открывается как раньше — заставка просто гаснет
+    if (hud.loading) hud.loading.classList.add('done');
+    if (hud.status) hud.status.textContent = 'пролёт не собрался: ' + err.message;
+    return;
+  }
+  window.__ratgradIntro = intro;
+  const begin = () => {
+    if (!intro || !intro.ready) return;
+    intro.stop();
+    if (overlay) overlay.classList.add('done');
+    if (overlay) setTimeout(() => { overlay.style.display = 'none'; }, 500);
+    map.draw();
+  };
+  if (startBtn) {
+    startBtn.addEventListener('click', begin);
+    startBtn.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') begin(); });
+  }
+  window.addEventListener('resize', () => { if (intro && intro.running) { intro.resize(); intro.draw(); } });
+  // страховка: если загрузка почему-то не дошла, кнопка всё равно оживёт
+  setTimeout(() => {
+    if (!intro || intro.ready) return;
+    intro.ready = true;
+    if (startBtn) startBtn.disabled = false;
+  }, 15000);
+  return { intro, begin };
+}
+
+function setupWorld() {
+  worldScreen = document.getElementById('world-screen');
+  const canvas = document.getElementById('world-map');
+  const back = document.getElementById('world-back');
+  const sat = document.getElementById('world-satellite');
+  const openBtn = document.getElementById('world-open');
+  const statsEl = document.getElementById('world-stats');
+  const loadEl = document.getElementById('world-load');
+  if (!worldScreen || !canvas || !openBtn) return;
+
+  worldView = new WorldView(canvas, {});
+  if (window.__ratgrad) { window.__ratgrad.worldView = worldView; window.__ratgrad.getWorld = ensureWorld; }
+  worldView.onStats = (text) => { if (statsEl) statsEl.textContent = text; };
+
+  /* мир считается один раз и дальше идёт вместе с часами игры */
+  const ensureWorld = () => {
+    if (world) return world;
+    world = sharedWorld || buildWorld(424242);
+    const target = map.transport ? map.transport.minutes : 0;
+    // догоняем войну до текущего часа: шагами по 45 игровых минут
+    while (world.minutes + 45 <= target) advanceWars(world, world.minutes + 45);
+    if (target > world.minutes) advanceWars(world, target);
+    worldView.setWorld(world);
+    return world;
+  };
+
+  const drawStats = () => {
+    if (!world) return null;
+    const st = worldStats(world);
+    const hot = hottestWar(world);
+    const nf = (n) => n.toLocaleString('ru-RU');
+    const lines = [
+      'стран ' + st.countries + ' · войн сейчас ' + st.wars + ' · боёв ' + nf(st.battles),
+      'взрывов на карте ' + st.explosions + ' · всего ' + nf(st.explosionsTotal),
+      'разрушено: городов ' + st.destroyedCities + ', дорог ' + st.destroyedRoads + ', мостов ' + st.destroyedBridges,
+      'оккупировано: ' + st.occupiedZones + ' зон · ' + nf(st.occupiedKm2) + ' км²',
+      'потери ' + nf(st.killed) + ' · армий видно ' + st.armiesVisible,
+      hot ? 'бои: ' + hot.a + ' — ' + hot.b + ' · ' + hot.battles + ' боёв' : 'сейчас тихо',
+      st.ownAtWar ? 'наша страна воюет' : 'наша страна не воюет'
+    ];
+    if (statsEl) statsEl.textContent = lines.join('\n');
+    if (statsEl) statsEl.style.whiteSpace = 'pre-line';
+    if (loadEl) loadEl.textContent = worldView.loading ? 'рисуем мир…' : 'мир: ' + WM.countries + ' стран';
+    return st;
+  };
+
+  const isOpen = () => !!(worldScreen && worldScreen.classList && worldScreen.classList.contains('open'));
+  const loop = (now) => {
+    if (!isOpen() || !worldView) { worldRaf = 0; return; }
+    worldRaf = requestAnimationFrame(loop);
+    const dt = Math.min(0.1, (now - worldLast) / 1000 || 0.016);
+    worldLast = now;
+    // часы игры продолжают идти: война живёт и пока мы смотрим
+    const target = map.transport ? map.transport.minutes : 0;
+    if (target > world.minutes) advanceWars(world, target);
+    try {
+      worldView.step(dt);
+      worldView.draw();
+    } catch (err) {
+      if (hud.status) hud.status.textContent = 'карта мира не нарисовалась: ' + err.message;
+      worldRaf = 0;
+      return;
+    }
+    worldStatsT += dt;
+    if (worldStatsT > 0.4) { worldStatsT = 0; drawStats(); }
+  };
+
+  const openWorld = () => {
+    if (!worldScreen || !worldView) return;
+    try {
+      ensureWorld();
+    } catch (err) {
+      if (hud.status) hud.status.textContent = 'мир не собрался: ' + err.message;
+      return;
+    }
+    worldScreen.classList.add('open');
+    worldScreen.setAttribute('aria-hidden', 'false');
+    worldView.resize();
+    // камера стартует от игрового кадра — отсюда и «пролёт» к планете
+    const start = map.center || { x: 0, y: 0 };
+    const scale = Number.isFinite(map.scale) ? Math.max(0.05, map.scale) : 0.05;
+    worldView.open({ x: start.x || 0, y: start.y || 0, scale });
+    drawStats();
+    worldLast = performance.now();
+    if (!worldRaf) worldRaf = requestAnimationFrame(loop);
+  };
+  const closeWorld = () => {
+    if (!worldScreen || !worldView) return;
+    worldScreen.classList.remove('open');
+    worldScreen.setAttribute('aria-hidden', 'true');
+    worldView.close();
+    if (worldRaf) { cancelAnimationFrame(worldRaf); worldRaf = 0; }
+    try { map.draw(); } catch (err) { /* карта страны могла ещё не собраться — это не повод падать */ }
+  };
+
+  openBtn.addEventListener('click', openWorld);
+  if (back) back.addEventListener('click', closeWorld);
+  if (sat) sat.addEventListener('click', () => {
+    worldView.showArmies = !worldView.showArmies;
+    sat.textContent = 'спутник: ' + (worldView.showArmies ? 'вкл' : 'выкл');
+    drawStats();
+    worldView.draw();
+  });
+
+  /* указатели: панорама одним пальцем, щипок и колесо — масштаб */
+  const touches = new Map();
+  let drag = null, pinch = null;
+  const local = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  };
+  canvas.addEventListener('pointerdown', (e) => {
+    if (!worldView) return;
+    const p = local(e);
+    touches.set(e.pointerId, p);
+    drag = { x: p.x, y: p.y, id: e.pointerId };
+    if (touches.size === 2) {
+      const [a, b] = [...touches.values()];
+      pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), scale: worldView.cam.scale };
+    }
+    canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!worldView) return;
+    const p = local(e);
+    if (!touches.has(e.pointerId)) return;
+    touches.set(e.pointerId, p);
+    if (touches.size >= 2 && pinch) {
+      const [a, b] = [...touches.values()];
+      const d = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+      worldView.cam.scale = Math.max(0.004, Math.min(0.9, pinch.scale * (d / Math.max(1, pinch.d))));
+      worldView.clampCam();
+      return;
+    }
+    if (drag && e.pointerId === drag.id) {
+      worldView.panBy(p.x - drag.x, p.y - drag.y);
+      drag.x = p.x; drag.y = p.y;
+    }
+  });
+  const up = (e) => {
+    touches.delete(e.pointerId);
+    if (touches.size < 2) pinch = null;
+    if (drag && e.pointerId === drag.id) drag = null;
+  };
+  canvas.addEventListener('pointerup', up);
+  canvas.addEventListener('pointercancel', up);
+  canvas.addEventListener('wheel', (e) => {
+    if (!worldView) return;
+    e.preventDefault();
+    const p = local(e);
+    worldView.zoomAt(p.x, p.y, e.deltaY < 0 ? 1.18 : 1 / 1.18);
+  }, { passive: false });
+  window.addEventListener('keydown', (e) => {
+    try { if (e.key === 'Escape' && isOpen()) closeWorld(); } catch (err) { /* клавиша не должна ронять игру */ }
+  });
+  window.addEventListener('resize', () => {
+    if (isOpen()) { worldView.resize(); worldView.draw(); }
   });
 }
 
@@ -364,4 +582,5 @@ if (typeof requestAnimationFrame === 'function') {
 }
 
 if (hud.loadingText) hud.loadingText.textContent = 'мир ' + WORLD2D.sizeKm + ' × ' + WORLD2D.sizeKm + ' км…';
+setupIntro();
 boot();

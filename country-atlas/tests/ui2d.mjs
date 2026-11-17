@@ -107,11 +107,13 @@ const visible = html
   ok(/<details class="panel" id="legend">/.test(html), 'легенда — раскрывающийся блок');
   ok(!/<details[^>]*id="legend"[^>]*open/.test(html), 'легенда по умолчанию свёрнута');
   ok(/<summary>легенда<\/summary>/.test(html), 'у легенды есть заголовок «легенда»');
-  const caps = [...html.matchAll(/<div class="cap">([^<]+)<\/div>/g)].map((m) => m[1].trim());
+  // легенда — свой блок: карта мира приносит ещё и свои подписи, их не путаем
+  const legendHtml = html.slice(html.indexOf('id="legend"'), html.indexOf('</details>', html.indexOf('id="legend"')));
+  const caps = [...legendHtml.matchAll(/<div class="cap">([^<]+)<\/div>/g)].map((m) => m[1].trim());
   ok(caps.length >= 5, 'в легенде есть группы: ' + caps.join(' · '));
   ok(caps.includes('вода') && caps.includes('дороги') && caps.includes('рельсы и небо'),
     'вода, дороги и рельсы подписаны');
-  const rows = [...html.matchAll(/<div class="cap">[^<]+<\/div>\s*(?:<div class="row">[\s\S]*?<\/div>\s*)+/g)];
+  const rows = [...legendHtml.matchAll(/<div class="cap">[^<]+<\/div>\s*(?:<div class="row">[\s\S]*?<\/div>\s*)+/g)];
   ok(rows.length === caps.length, 'каждая группа не пустая');
   ok(!/§/.test(html.slice(html.indexOf('id="legend"'), html.indexOf('</details>', html.indexOf('id="legend"')))), 'в легенде нет §');
   // старые дубли убраны
@@ -231,4 +233,35 @@ const visible = html
   ok(/touch-action:none/.test(html) && /pointerdown/.test(main), 'панорама и щипок на указателях');
 }
 
-console.log('OK: 8 групп проверок интерфейса §72, раскладки §74 и телефона §83 (F-222…F-224, F-279…F-286, проверок ' + checks + ')');
+
+/* R-86.6, R-87.3: карта мира и начальная сцена — свои кнопки, свои подписи */
+{
+  ok(/id="world-open"/.test(html), 'есть кнопка «карта мира»');
+  ok(/id="world-screen"/.test(html), 'есть отдельный экран карты мира');
+  ok(/id="world-map"/.test(html), 'у карты мира своя канва');
+  ok(/id="world-back"/.test(html), 'с карты мира можно вернуться');
+  ok(/id="world-satellite"/.test(html), 'есть тумблер «спутник»');
+  ok(/id="world-stats"/.test(html), 'есть строка состояния мира');
+  ok(/id="world-legend"/.test(html), 'у карты мира своя легенда');
+  const worldHtml = html.slice(html.indexOf('id="world-screen"'), html.indexOf('<div id="loading">'));
+  ok(worldHtml.length > 200, 'экран карты мира описан разметкой');
+  ok(!/§/.test(worldHtml), 'на карте мира нет номеров параграфов');
+  ok(!/транспорт|дерев|пешеход/.test(worldHtml.toLowerCase()), 'на карте мира нет мелкой жизни');
+  const css = html.slice(html.indexOf('#world-screen{'), html.indexOf('#loading{'));
+  ok(/#world-panel\{[^}]*max-height:44vh/.test(css), 'панель мира не выше 44 %');
+  ok(/#world-map\{[^}]*touch-action:none/.test(css), 'карта мира не скроллит страницу жестами');
+  ok(/@media \(max-width: 820px\)[\s\S]*#world-panel\{[^}]*max-width:78vw/.test(html), 'на телефоне панель мира уже');
+  ok(/@media \(max-width: 820px\)[\s\S]*#world-top button\{[^}]*min-height:40px/.test(html), 'кнопки мира не мельче пальца');
+  // начальная сцена
+  ok(/id="intro-map"/.test(html), 'в заставке есть канва пролёта');
+  ok(/id="intro-start"/.test(html), 'есть кнопка «начать игру»');
+  ok(/id="intro-start"[^>]*disabled/.test(html), 'кнопка ждёт загрузки');
+  ok(/id="loading-text"/.test(html), 'строка загрузки на месте');
+  ok(main.includes('setupIntro'), 'начальная сцена включается из main2d');
+  ok(main.includes('worldView.open('), 'переход на карту мира — анимация камеры');
+  ok(main.includes("advanceWars(world, target)"), 'война идёт вместе с часами игры');
+  ok(main.includes('showArmies'), 'тумблер спутника связан с армиями');
+  ok(!/§/.test(html.slice(html.indexOf('id="loading"'), html.indexOf('id="left-rail"'))), 'в заставке нет номеров параграфов');
+}
+
+console.log('OK: 9 групп проверок интерфейса §72, раскладки §74, телефона §83 и карты мира §86–§87 (F-222…F-224, F-279…F-286, F-301…F-306, проверок ' + checks + ')');
