@@ -3,7 +3,7 @@
 // 0% симуляции · 0 innerHTML · 0 прямых сетевых вызовов (TransferGuard RM-107).
 
 import { createBridgeClient } from './bridge-client.mjs';
-import { createAudioBus } from './audio.mjs';
+import { createAudioCue } from './audio.mjs';
 import { renderMarkdownToFragment } from './markdown-render.mjs';
 import { createVoiceRecorder } from './voice-recorder.mjs';
 import { createCommandPalette } from './command-palette.mjs';
@@ -88,7 +88,7 @@ function avatarHue(str) {
   return Math.abs(hash) % 360;
 }
 
-const audio = createAudioBus();
+const audio = createAudioCue();
 
 const state = {
   client: null,
@@ -240,7 +240,6 @@ function setInspectorOpen(open) {
 // ---------------- Загрузка и обновление состояния ----------------
 async function refreshAll({ reloadMessages = true } = {}) {
   const [
-    countriesRes,
     matrixRes,
     chatsRes,
     vaultRes,
@@ -249,21 +248,18 @@ async function refreshAll({ reloadMessages = true } = {}) {
     cloudRes,
   ] = await Promise.all([
     state.client.call('route.getMatrix', {}),
-    state.client.call('connect.list', {}),
     state.client.call('vault.listChats', {}),
     state.client.call('vault.listPlainFiles', {}),
-    state.client.call('transfer.list', {}),
+    state.client.call('transfer.inspect', {}),
     state.client.listLiveBridges(),
     state.client.call('cloud.status', {}),
   ]);
 
-  if (countriesRes.ok) {
-    state.countries = countriesRes.data.countries;
-    state.countryProfile = countriesRes.data.profile;
-    renderCountrySelector();
-  }
   if (matrixRes.ok) {
-    state.networks = matrixRes.data.networks;
+    state.countries = matrixRes.data.countries || [];
+    state.countryProfile = matrixRes.data.profile || null;
+    state.networks = matrixRes.data.networks || [];
+    renderCountrySelector();
   }
   if (bridgesRes?.ok) {
     state.liveBridges = bridgesRes.data.bridges || [];
@@ -286,7 +282,7 @@ async function refreshAll({ reloadMessages = true } = {}) {
     renderVaultTab(vaultRes.data);
   }
   if (transfersRes.ok) {
-    state.transfers = transfersRes.data.transfers;
+    state.transfers = transfersRes.data.activeTransfers || [];
     renderTransfers();
   }
 
@@ -815,8 +811,7 @@ async function loadActiveChatMessages() {
   const res = await state.client.call('vault.readPage', { chatId: state.activeChatId, limit: 150 });
   if (!res.ok) return;
   state.messages = res.data.messages || [];
-  state.pinnedIds = res.data.pinnedMessageIds || [];
-  state.reactionsMap = res.data.reactions || {};
+  state.pinnedIds = state.messages.filter((m) => m.pinned).map((m) => m.msgId);
   renderPinnedBanner();
   renderMessages();
 }
@@ -878,8 +873,8 @@ function renderMessages() {
   const myPeerId = state.client?.getCloudPeerId?.() || '';
 
   for (const m of state.messages) {
-    const isPinned = state.pinnedIds.includes(m.msgId);
-    const reactions = state.reactionsMap[m.msgId] || {};
+    const isPinned = Boolean(m.pinned) || state.pinnedIds.includes(m.msgId);
+    const reactions = Array.isArray(m.reactions) ? m.reactions : [];
     const statusLabel = m.status === 'delivered' ? '✓✓'
       : m.status === 'queued' ? '⏳'
         : m.status === 'received' ? ''
@@ -922,8 +917,9 @@ function renderMessages() {
       }));
     }
 
-    if (m.replyToId && byId.has(m.replyToId)) {
-      const target = byId.get(m.replyToId);
+    const replyId = m.replyTo || m.replyToId;
+    if (replyId && byId.has(replyId)) {
+      const target = byId.get(replyId);
       bubble.appendChild(h('div', {
         className: 'msg-reply-box',
         text: `↩ ${target.senderName}: ${(target.text || 'Вложение').slice(0, 72)}`,
@@ -935,35 +931,38 @@ function renderMessages() {
     bubble.appendChild(bodyNode);
 
     if (m.attachment && !m.deleted) {
+      const attName = m.attachment.filename || m.attachment.name || 'Файл';
       const mediaUrl = m.attachment.mediaRelPath ? state.client.getVaultMediaUrl(m.attachment.mediaRelPath) : null;
+      const isImg = m.attachment.mediaKind === 'image' || Boolean(m.attachment.isImage);
+      const durMs = m.attachment.durationMs || ((m.attachment.durationSec || 0) * 1000);
       if (m.attachment.isVoice) {
         const voiceBox = h('div', { className: 'msg-voice' },
           h('span', { className: 'voice-ico', text: '🎙️' }),
-          h('span', { text: `Голосовое · ${fmtDuration(m.attachment.durationMs)}` }),
+          h('span', { text: `Голосовое · ${fmtDuration(durMs)}` }),
         );
         if (mediaUrl) voiceBox.appendChild(h('audio', { controls: 'true', src: mediaUrl, className: 'voice-player' }));
         bubble.appendChild(voiceBox);
-      } else if (m.attachment.isImage && mediaUrl) {
+      } else if (isImg && mediaUrl) {
         bubble.appendChild(h('div', { className: 'msg-image-wrap' },
-          h('img', { src: mediaUrl, alt: m.attachment.name || 'Фото', className: 'msg-image', loading: 'lazy' }),
+          h('img', { src: mediaUrl, alt: attName, className: 'msg-image', loading: 'lazy' }),
         ));
       } else {
         bubble.appendChild(h('div', { className: 'msg-attachment' },
-          h('span', { text: `📎 ${m.attachment.name} (${fmtBytes(m.attachment.sizeBytes)})` }),
-          mediaUrl ? h('a', { href: mediaUrl, download: m.attachment.name, className: 'btn btn-sm btn-ghost', text: 'Скачать' }) : null,
+          h('span', { text: `📎 ${attName} (${fmtBytes(m.attachment.sizeBytes)})` }),
+          mediaUrl ? h('a', { href: mediaUrl, download: attName, className: 'btn btn-sm btn-ghost', text: 'Скачать' }) : null,
         ));
       }
     }
 
-    const reactEntries = Object.entries(reactions).filter(([, arr]) => Array.isArray(arr) && arr.length > 0);
-    if (reactEntries.length > 0) {
+    if (reactions.length > 0) {
       const row = h('div', { className: 'msg-reactions' });
-      for (const [emoji, users] of reactEntries) {
+      for (const r of reactions) {
+        if (!r || !r.emoji || !r.count) continue;
         row.appendChild(h('button', {
           type: 'button',
-          className: `react-pill${users.includes('ui-user') ? ' mine' : ''}`,
-          text: `${emoji} ${users.length}`,
-          onClick: () => toggleReaction(m.msgId, emoji),
+          className: `react-pill${r.mine ? ' mine' : ''}`,
+          text: `${r.emoji} ${r.count}`,
+          onClick: () => toggleReaction(m.msgId, r.emoji),
         }));
       }
       bubble.appendChild(row);
@@ -1100,38 +1099,70 @@ async function sendMessage(e) {
   }
 
   const chat = state.activeChat;
-  let attachmentHandleId = null;
+  const att = state.pendingAttachment;
+  let packRes;
 
-  if (state.pendingAttachment) {
-    const attRes = await state.client.call('pack.attachment', state.pendingAttachment);
-    if (!attRes.ok) {
-      showToast('Ошибка вложения', attRes.error?.message || '', 'error');
-      return;
-    }
-    attachmentHandleId = attRes.data.attachmentHandle.handleId;
+  if (att?.isVoice) {
+    packRes = await state.client.call('pack.voice', {
+      chatId: chat.chatId,
+      chatTitle: chat.title,
+      network: chat.network,
+      base64: att.base64Data || null,
+      mimeType: att.mimeType || 'audio/webm',
+      durationSec: att.durationSec || 2,
+      waveform: att.waveform || null,
+      caption: text || '🎙️ Голосовое сообщение',
+    });
+  } else if (att) {
+    packRes = await state.client.call('pack.media', {
+      chatId: chat.chatId,
+      chatTitle: chat.title,
+      network: chat.network,
+      filename: att.name || 'file.bin',
+      mimeType: att.mimeType || 'application/octet-stream',
+      base64: att.base64Data || null,
+      caption: text || `📎 ${att.name || 'Вложение'}`,
+      senderName: state.displayName,
+    });
+  } else if (state.replyTo?.msgId) {
+    packRes = await state.client.call('pack.reply', {
+      chatId: chat.chatId,
+      chatTitle: chat.title,
+      network: chat.network,
+      targetMsgId: state.replyTo.msgId,
+      text,
+      senderName: state.displayName,
+    });
+  } else {
+    packRes = await state.client.call('pack.text', {
+      chatId: chat.chatId,
+      chatTitle: chat.title,
+      network: chat.network,
+      text,
+      senderName: state.displayName,
+    });
   }
 
-  const envRes = await state.client.call('pack.envelope', {
-    network: chat.network,
-    chatId: chat.chatId,
-    chatTitle: chat.title,
-    text: text || (state.pendingAttachment?.isVoice ? '🎙️ Голосовое сообщение' : '📎 Вложение'),
-    senderName: state.displayName,
-    replyToId: state.replyTo?.msgId || null,
-    attachmentHandleId,
-  });
-  if (!envRes.ok) {
-    showToast('Не удалось упаковать сообщение', envRes.error?.message || '', 'error');
+  if (!packRes?.ok) {
+    showToast('Не удалось упаковать сообщение', packRes?.error?.message || '', 'error');
     return;
   }
-  const envelopeHandleId = envRes.data.envelopeHandle.handleId;
+
+  const handleId = packRes.data.envelope.handleId;
+  const msgId = packRes.data.msgId || `${state.client.getCloudPeerId()}-${Date.now()}`;
+  const bodyText = text || (att?.isVoice ? '🎙️ Голосовое сообщение' : `📎 ${att?.name || 'Вложение'}`);
 
   const pipeRes = await state.client.pipeline([
-    { tool: 'pack.validate', args: { envelopeHandleId } },
-    { tool: 'vault.append', args: { envelopeHandleId } },
-    { tool: 'transfer.enqueue', args: { envelopeHandleId } },
-    { tool: 'transfer.dispatch', args: { envelopeHandleId, simulateVpnDrop: false } },
+    { tool: 'pack.validate', args: { handleId } },
+    { tool: 'vault.append', args: { handleId } },
+    { tool: 'transfer.enqueue', args: { handleId } },
   ]);
+
+  const enqueueStep = pipeRes.steps?.[2];
+  const transferId = enqueueStep?.data?.transferId;
+  const dispatchRes = transferId
+    ? await state.client.call('transfer.dispatch', { transferId })
+    : { ok: false, error: enqueueStep?.error };
 
   input.value = '';
   state.pendingAttachment = null;
@@ -1143,9 +1174,6 @@ async function sendMessage(e) {
 
   // В облачных комнатах (общих, личных DM и комнатах по ссылке) сразу пушим в живой Supabase!
   if (isCloud) {
-    const appendStep = pipeRes.steps?.find((s) => s.tool === 'vault.append');
-    const msgId = appendStep?.data?.msgId || `${state.client.getCloudPeerId()}-${Date.now()}`;
-    const bodyText = text || (state.pendingAttachment?.isVoice ? '🎙️ Голосовое сообщение' : '📎 Вложение');
     const pushRes = await state.client.pushSupabaseMessage({
       msgId,
       roomId: chat.chatId,
@@ -1154,19 +1182,16 @@ async function sendMessage(e) {
       text: bodyText,
     });
     if (pushRes?.ok) {
-      audio.playSent();
+      audio.sent();
     } else {
       showToast('Сохранено локально', 'Облако временно недоступно — повтори чуть позже', 'warn');
     }
-  } else {
-    const dispatchStep = pipeRes.steps?.[3];
-    if (dispatchStep?.ok) {
-      audio.playSent();
-      showToast('Отправлено в ' + (NETWORK_LABELS[chat.network] || chat.network), '', 'good');
-    } else if (dispatchStep?.error) {
-      audio.playError();
-      showToast(dispatchStep.error.code, dispatchStep.error.message, 'warn');
-    }
+  } else if (dispatchRes?.ok) {
+    audio.sent();
+    showToast('Отправлено в ' + (NETWORK_LABELS[chat.network] || chat.network), '', 'good');
+  } else if (dispatchRes?.error) {
+    audio.warn();
+    showToast(dispatchRes.error.code || 'Ошибка', dispatchRes.error.message || '', 'warn');
   }
 
   await refreshAll({ reloadMessages: true });
@@ -1495,11 +1520,11 @@ async function testHubBridge() {
     } else {
       wrap.hidden = true;
     }
-    audio.playSent();
+    audio.sent();
   } else {
     box.className = 'callout bad';
     box.textContent = `❌ ${res.error?.message || 'Проверка не прошла'}`;
-    audio.playError();
+    audio.warn();
   }
 }
 
@@ -1517,11 +1542,11 @@ async function sendHubTestMessage() {
   if (res.ok) {
     box.className = 'callout good';
     box.textContent = `✅ ${res.data.message || 'Пробное сообщение доставлено!'}`;
-    audio.playSent();
+    audio.sent();
   } else {
     box.className = 'callout bad';
     box.textContent = `❌ ${res.error?.message || 'Не удалось отправить пробное сообщение'}`;
-    audio.playError();
+    audio.warn();
   }
 }
 
@@ -1538,7 +1563,7 @@ async function saveHubBridge(e) {
   if (!res.ok) {
     box.className = 'callout bad';
     box.textContent = `❌ ${res.error?.message || 'Не удалось сохранить мост'}`;
-    audio.playError();
+    audio.warn();
     return;
   }
 
@@ -1557,7 +1582,7 @@ async function saveHubBridge(e) {
   }
 
   showToast(`${guide.name} подключён LIVE!`, res.data?.note || 'Готов к отправке сообщений', 'good');
-  audio.playSent();
+  audio.sent();
   el('connectHubModal').close();
   await refreshAll({ reloadMessages: false });
   if (existingChat?.chatId) await selectChat(existingChat.chatId);
@@ -2017,14 +2042,14 @@ function bindEvents() {
 
   // Голосовые сообщения
   const voiceRecorder = createVoiceRecorder({
-    canvas: el('voiceRecCanvas'),
+    canvasEl: el('voiceRecCanvas'),
     timerEl: el('voiceRecTimer'),
   });
   el('btnRecordVoice')?.addEventListener('click', async () => {
     if (voiceRecorder.isRecording()) return;
     const res = await voiceRecorder.start();
-    if (!res.ok) {
-      showToast('Микрофон недоступен', res.error || '', 'warn');
+    if (!res?.started) {
+      showToast('Микрофон недоступен', res?.reason || '', 'warn');
       return;
     }
     el('voiceRecordBar').hidden = false;
@@ -2036,14 +2061,15 @@ function bindEvents() {
   el('btnStopSendVoice')?.addEventListener('click', async () => {
     const rec = await voiceRecorder.stop();
     el('voiceRecordBar').hidden = true;
-    if (!rec.ok) return;
+    if (!rec) return;
     state.pendingAttachment = {
-      name: rec.name,
-      mimeType: rec.mimeType,
-      sizeBytes: rec.sizeBytes,
-      base64Data: rec.base64Data,
+      name: `voice-${Date.now()}.webm`,
+      mimeType: rec.mimeType || 'audio/webm',
+      sizeBytes: rec.sizeBytes || 0,
+      base64Data: rec.base64,
       isVoice: true,
-      durationMs: rec.durationMs,
+      durationSec: rec.durationSec,
+      waveform: rec.waveform,
     };
     el('composerForm')?.requestSubmit();
   });
@@ -2057,21 +2083,21 @@ function bindEvents() {
     const targetChat = state.chats.find((c) => c.chatId === targetChatId);
     if (!targetChat) return;
     const res = await state.client.call('pack.forward', {
-      sourceChatId: state.activeChatId,
-      sourceMsgId: state.forwardingMessage.msgId,
-      targetChatId: targetChat.chatId,
-      targetNetwork: targetChat.network,
-      targetChatTitle: targetChat.title,
+      fromChatId: state.activeChatId,
+      msgIds: [state.forwardingMessage.msgId],
+      toChatId: targetChat.chatId,
+      toNetwork: targetChat.network,
       hideAuthor: el('chkForwardHideAuthor').checked,
     });
-    if (res.ok) {
-      const hid = res.data.envelopeHandle.handleId;
-      await state.client.pipeline([
-        { tool: 'pack.validate', args: { envelopeHandleId: hid } },
-        { tool: 'vault.append', args: { envelopeHandleId: hid } },
-        { tool: 'transfer.enqueue', args: { envelopeHandleId: hid } },
-        { tool: 'transfer.dispatch', args: { envelopeHandleId: hid } },
+    if (res.ok && res.data.envelopes?.[0]) {
+      const hid = res.data.envelopes[0].handleId;
+      const pipe = await state.client.pipeline([
+        { tool: 'pack.validate', args: { handleId: hid } },
+        { tool: 'vault.append', args: { handleId: hid } },
+        { tool: 'transfer.enqueue', args: { handleId: hid } },
       ]);
+      const tid = pipe.steps?.[2]?.data?.transferId;
+      if (tid) await state.client.call('transfer.dispatch', { transferId: tid });
       if (state.client.isCloudRoom(targetChat.chatId)) {
         await state.client.pushSupabaseMessage({
           roomId: targetChat.chatId,
@@ -2088,7 +2114,7 @@ function bindEvents() {
 
   // Страна, VPN, Облака, Архив, Защита
   el('countrySelect')?.addEventListener('change', async (e) => {
-    await state.client.call('route.setCountry', { country: e.target.value });
+    await state.client.call('route.setCountry', { countryCode: e.target.value });
     await refreshAll({ reloadMessages: false });
   });
   el('btnCancelProxy')?.addEventListener('click', () => el('proxyModal')?.close());
@@ -2150,8 +2176,9 @@ function bindEvents() {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
-      const bundle = JSON.parse(await file.text());
-      const res = await state.client.call('vault.importBundle', { bundle });
+      const parsed = JSON.parse(await file.text());
+      const files = parsed?.files && typeof parsed.files === 'object' ? parsed.files : parsed;
+      const res = await state.client.call('vault.importBundle', { files });
       if (res.ok) {
         showToast('Архив импортирован', `Сообщений: ${res.data.importedMessages}`, 'good');
         await refreshAll({ reloadMessages: true });
@@ -2176,9 +2203,9 @@ function bindEvents() {
       : `Найдено нарушений: ${res.data?.violationsCount}`;
   });
   el('btnPumpOutbox')?.addEventListener('click', async () => {
-    const res = await state.client.call('transfer.pumpOutbox', { maxSteps: 20 });
+    const res = await state.client.call('transfer.pumpOutbox', { maxPerTick: 20, forceNow: true });
     if (res.ok) {
-      showToast('Очередь проверена', `Доставлено: ${res.data.delivered}`, 'good');
+      showToast('Очередь проверена', `Обработано: ${res.data.processedCount ?? 0}`, 'good');
       await refreshAll({ reloadMessages: true });
     }
   });
@@ -2241,11 +2268,11 @@ function bindEvents() {
 
   // Командная палитра (Ctrl+K)
   const palette = createCommandPalette({
-    dialog: el('paletteModal'),
-    input: el('paletteInput'),
+    dialogEl: el('paletteModal'),
+    inputEl: el('paletteInput'),
     resultsEl: el('paletteResults'),
-    onSearch: (q) => state.client.call('search.query', { query: q, limit: 25 }),
-    onSelectMessage: async (hit) => {
+    onSearchQuery: (q) => state.client.call('search.query', { query: q, limit: 25 }),
+    onSelectHit: async (hit) => {
       await selectChat(hit.chatId);
       const node = document.querySelector(`[data-msg-id="${CSS.escape(hit.msgId)}"]`);
       if (node) {
@@ -2254,19 +2281,12 @@ function bindEvents() {
         setTimeout(() => node.classList.remove('highlight'), 1400);
       }
     },
-    onRunCommand: async (cmdId) => {
-      if (cmdId === 'connect-hub') openConnectHub();
-      else if (cmdId === 'share-me') shareMyPersonalLink();
-      else if (cmdId === 'new-room') openRoomModal(false);
-      else if (cmdId === 'people') setSidebarTab('people');
-      else if (cmdId === 'settings') setInspectorOpen(true);
-    },
-    commands: [
-      { id: 'people', label: '👥 Открыть каталог людей (написать в личку)' },
-      { id: 'share-me', label: '🔗 Скопировать мою ссылку для личного чата' },
-      { id: 'new-room', label: '➕ Создать свою комнату для друзей' },
-      { id: 'connect-hub', label: '🔌 Центр подключений (MAX, Telegram, VK, Discord…)' },
-      { id: 'settings', label: '⚙️ Настройки, облака и архив' },
+    getQuickCommands: () => [
+      { icon: '👥', label: 'Открыть каталог людей', hint: 'Написать в личку 1-на-1', run: () => setSidebarTab('people') },
+      { icon: '🔗', label: 'Скопировать мою ссылку', hint: 'Пригласить друга', run: () => shareMyPersonalLink() },
+      { icon: '➕', label: 'Создать комнату для друзей', hint: 'Комната по ссылке', run: () => openRoomModal(false) },
+      { icon: '🔌', label: 'Центр подключений', hint: 'MAX, Telegram, VK, Discord…', run: () => openConnectHub() },
+      { icon: '⚙️', label: 'Настройки, облака и архив', hint: '9 облаков · VPN · файлы', run: () => setInspectorOpen(true) },
     ],
   });
   el('btnCommandPalette')?.addEventListener('click', () => palette.open());
@@ -2355,7 +2375,7 @@ async function bootstrap() {
       return;
     }
     if (evt?.event === 'transfer.received' || evt?.event === 'cloud.messages') {
-      audio.playReceived();
+      audio.received();
     }
     scheduleRefresh();
   });
@@ -2440,5 +2460,7 @@ async function bootstrap() {
 }
 
 bootstrap().catch((err) => {
-  showToast('Ошибка запуска', String(err?.message || err), 'error');
+  const msg = String(err?.message || err);
+  updateCloudProgressUI({ phase: 'error', percent: 100, label: `Ошибка запуска: ${msg}` });
+  showToast('Ошибка запуска', msg, 'error');
 });

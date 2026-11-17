@@ -278,7 +278,7 @@ export function createRatMesEngine({
     // 1. tools.pack.*
     pack: {
       async text(args, ctx) {
-        const { chatId, network = 'ratmes', text = '', chatTitle, replyTo = null, mentions = [] } = args || {};
+        const { chatId, network = 'ratmes', text = '', chatTitle, senderName = 'Я', replyTo = null, mentions = [] } = args || {};
         if (!chatId || typeof text !== 'string' || !text.trim()) {
           return { ok: false, error: makeError('RM-105', 'Для pack.text требуются непустые chatId и text') };
         }
@@ -299,7 +299,7 @@ export function createRatMesEngine({
             network,
             direction: 'out',
             senderId: ctx.actorId,
-            senderName: 'Я',
+            senderName: String(senderName || 'Я').slice(0, 48),
             text: text.trim(),
             replyTo,
             mentions,
@@ -353,6 +353,7 @@ export function createRatMesEngine({
           caption = '',
           chunkSize = 65536,
           chatTitle,
+          senderName = 'Я',
         } = args || {};
         if (!chatId) return { ok: false, error: makeError('RM-105', 'Для pack.media требуется chatId') };
         const rawBytes = bytes instanceof Uint8Array
@@ -390,7 +391,7 @@ export function createRatMesEngine({
             network,
             direction: 'out',
             senderId: ctx.actorId,
-            senderName: 'Я',
+            senderName: String(senderName || 'Я').slice(0, 48),
             text: caption || `Вложение: ${filename}`,
             attachment: {
               handleId: attHandle.handleId,
