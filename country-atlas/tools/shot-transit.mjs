@@ -56,8 +56,7 @@ const mkMap = (w = SW, h = SH) => {
   map.borders = borders;
   map.rail = rail;
   map.hour = 11;
-  map.showPlay = false;          // панель полигона в кадр не берём
-  map.showCities = false;        // в кадре только микро-слой, без застройки
+    map.showCities = false;        // в кадре только микро-слой, без застройки
   map.showPeds = false;
   map.buildTransport();
   map.buildEconomy();
