@@ -870,6 +870,7 @@
       theme,
       icon,
       customCoverData: state.studioCustomCover,
+      coverDataUrl: state.studioCustomCover,
     };
   }
 
@@ -1382,6 +1383,23 @@
         return;
       }
 
+      const avTrigger = target.closest('[data-open-antivirus]');
+      if (avTrigger) {
+        e.preventDefault();
+        openAddGameModal('create', null);
+        const mode = avTrigger.getAttribute('data-open-antivirus');
+        if (mode === 'file' || mode === 'url' || mode === 'code') {
+          setStudioSourceMode(mode);
+        }
+        const avEl = document.getElementById('av-panel');
+        if (avEl) {
+          setTimeout(() => {
+            avEl.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'center' });
+          }, 80);
+        }
+        return;
+      }
+
       if (target.closest('[data-open-save-hub]')) {
         e.preventDefault();
         openSaveHub();
@@ -1637,38 +1655,98 @@
         showToast('Готовый шаблон вставлен — запущена 10-кратная проверка антивирусом!');
       });
 
-      document.getElementById('ug-html-file')?.addEventListener('change', (ev) => {
-        const file = ev.target.files && ev.target.files[0];
+      function handleGameHtmlFile(file) {
         if (!file) return;
         const label = document.getElementById('ug-html-file-label');
+        if (/\.(exe|msi|scr|bat|cmd|ps1|apk|dll|zip|rar|7z|dmg|pkg|sh)$/i.test(file.name)) {
+          showToast('🛑 Антивирус заблокировал файл: исполняемые файлы и архивы запрещены — нужен .html файл.');
+          return;
+        }
         const reader = new FileReader();
         reader.onload = () => {
           const text = String(reader.result || '');
           const codeEl = document.getElementById('ug-html-code');
           if (codeEl) codeEl.value = text;
-          if (label) label.textContent = `Загружен файл: ${file.name} (${(file.size / 1024).toFixed(1)} КБ)`;
+          if (label) label.textContent = `Загружен файл: ${file.name} (${(file.size / 1024).toFixed(1)} КБ) — проверяем 10×…`;
           const titleEl = document.getElementById('ug-title');
           if (titleEl && !titleEl.value.trim()) {
             titleEl.value = file.name.replace(/\.(?:html|htm)$/i, '').slice(0, 60);
           }
+          setStudioSourceMode('file');
           refreshStudioPreviewAndPublish();
           runStudioAntivirusScan(true);
         };
         reader.readAsText(file);
+      }
+
+      document.getElementById('ug-html-file')?.addEventListener('change', (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        handleGameHtmlFile(file);
       });
+
+      const fileDropZone = document.querySelector('.file-drop');
+      if (fileDropZone) {
+        ['dragenter', 'dragover'].forEach((evt) => {
+          fileDropZone.addEventListener(evt, (ev) => {
+            ev.preventDefault();
+            fileDropZone.classList.add('is-dragover');
+          });
+        });
+        ['dragleave', 'drop'].forEach((evt) => {
+          fileDropZone.addEventListener(evt, (ev) => {
+            ev.preventDefault();
+            fileDropZone.classList.remove('is-dragover');
+          });
+        });
+        fileDropZone.addEventListener('drop', (ev) => {
+          const file = ev.dataTransfer && ev.dataTransfer.files && ev.dataTransfer.files[0];
+          if (file) handleGameHtmlFile(file);
+        });
+      }
 
       document.getElementById('ug-cover-file')?.addEventListener('change', (ev) => {
         const file = ev.target.files && ev.target.files[0];
         if (!file) return;
-        userHub.compressImageFile(file)
-          .then((dataUrl) => {
-            state.studioCustomCover = dataUrl;
-            const resetCover = document.getElementById('ug-cover-reset');
-            if (resetCover) resetCover.hidden = false;
-            refreshStudioPreviewAndPublish();
-            showToast('Обложка сжата и применена!');
-          })
-          .catch((err) => showToast(err.message || 'Не удалось загрузить картинку.'));
+
+        const proceedCompress = () => {
+          userHub.compressImageFile(file)
+            .then((dataUrl) => {
+              if (antivirus && typeof antivirus.scanCoverDataUrl === 'function') {
+                const check = antivirus.scanCoverDataUrl(dataUrl);
+                if (!check.ok) {
+                  showToast(`🛑 Антивирус заблокировал обложку: ${check.reasons.join('; ')}`);
+                  return;
+                }
+              }
+              state.studioCustomCover = dataUrl;
+              const resetCover = document.getElementById('ug-cover-reset');
+              if (resetCover) resetCover.hidden = false;
+              refreshStudioPreviewAndPublish();
+              runStudioAntivirusScan(false);
+              showToast('🛡️ Обложка проверена антивирусом, сжата и применена!');
+            })
+            .catch((err) => showToast(err.message || 'Не удалось загрузить картинку.'));
+        };
+
+        // Для SVG сначала проверяем исходный текст до отрисовки (защита от SVG XSS)
+        if (/\.svg$/i.test(file.name) || file.type === 'image/svg+xml') {
+          const r = new FileReader();
+          r.onload = () => {
+            const svgDataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(String(r.result || ''))}`;
+            if (antivirus && typeof antivirus.scanCoverDataUrl === 'function') {
+              const check = antivirus.scanCoverDataUrl(svgDataUrl);
+              if (!check.ok) {
+                showToast(`🛑 Антивирус заблокировал SVG-обложку: ${check.reasons.join('; ')}`);
+                ev.target.value = '';
+                return;
+              }
+            }
+            proceedCompress();
+          };
+          r.readAsText(file);
+          return;
+        }
+        proceedCompress();
       });
 
       document.getElementById('ug-cover-reset')?.addEventListener('click', () => {

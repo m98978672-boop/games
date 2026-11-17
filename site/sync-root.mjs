@@ -24,6 +24,7 @@ export function renderRootIndex(siteHtml) {
     .replace(/src="user-games\.js"/g, 'src="site/user-games.js"')
     .replace(/src="portal\.js"/g, 'src="site/portal.js"')
     .replace(/src="games-tabs\.js"/g, 'src="site/games-tabs.js"')
+    .replace(/src="news-hub\.js"/g, 'src="site/news-hub.js"')
     .replace(/src="\.\.\/site\/community-games\.js"/g, 'src="site/community-games.js"')
     .replace(/data-root="\.\.\/"/g, 'data-root=""')
     .replace(/data-src="\.\.\/([a-z0-9-]+)\//g, 'data-src="$1/')

@@ -1,0 +1,44 @@
+name: Auto-post fresh news to Games
+
+on:
+  schedule:
+    # Автопост свежих новостей каждые 6 часов (4 раза в день)
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: games-auto-news
+  cancel-in-progress: true
+
+jobs:
+  auto-post-news:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch multi-category RSS & community news with antivirus filter
+        run: node site/scripts/auto-post-news.mjs
+
+      - name: Verify updated news feed with 10-pass Games Antivirus
+        run: node site/scripts/scan-submission-antivirus.mjs
+
+      - name: Commit and push updated site/news-feed.json if changed
+        run: |
+          if git diff --quiet site/news-feed.json; then
+            echo "No new news articles to publish."
+            exit 0
+          fi
+          git config user.name "Games News AutoPoster"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/news-feed.json
+          git commit -m "chore(news): auto-post fresh multi-category news feed"
+          git push
