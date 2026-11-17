@@ -142,15 +142,9 @@ body {
   animation: none;
 }
 
-/* После успешного подключения сворачивается в аккуратную 3px-индикаторную линию сверху */
+/* После успешного подключения полностью исчезает с экрана, чтобы не занимать место */
 .cloud-progress-banner.is-compact {
-  border-bottom: 0;
-}
-.cloud-progress-banner.is-compact .cloud-progress-row {
-  display: none;
-}
-.cloud-progress-banner.is-compact .cloud-progress-track {
-  height: 3px;
+  display: none !important;
 }
 
 @keyframes cloudPulse {
@@ -541,10 +535,24 @@ body {
 
 .chat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
 .chat-header-meta { min-width: 0; flex: 1 1 auto; overflow: hidden; }
-.chat-header-meta h2 { margin: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-subbadges { display: flex; flex-wrap: nowrap; gap: 5px; margin-top: 3px; overflow: hidden; }
-.chat-subbadges .pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-header-meta h2 { margin: 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-subbadges { display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 1px; overflow: hidden; }
+.chat-status-sub {
+  font-size: 11.5px;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.chat-status-sub.is-online { color: #86efac; }
+.chat-status-sub.is-warn { color: #fde68a; }
 .chat-header-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.icon-btn-accent {
+  background: rgba(37, 99, 235, 0.25);
+  border-color: rgba(96, 165, 250, 0.5);
+  color: #ffffff;
+}
+.icon-btn-accent:hover { background: rgba(37, 99, 235, 0.42); }
 
 .pill {
   display: inline-flex;
@@ -2293,11 +2301,11 @@ body.embed-games .brand-bar {
   flex-shrink: 0;
   z-index: 55;
   min-height: calc(54px + env(safe-area-inset-bottom, 0px));
-  padding: 4px 6px calc(4px + env(safe-area-inset-bottom, 0px));
+  padding: 4px 8px calc(4px + env(safe-area-inset-bottom, 0px));
   background: rgba(14, 18, 27, 0.98);
   border-top: 1px solid var(--border);
-  grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
 .mnav-btn {
   appearance: none;
@@ -2370,6 +2378,7 @@ body.mobile-chat-open .mobile-bottom-nav { display: none !important; }
   }
 
   .mobile-bottom-nav { display: grid; }
+  .sidebar-main-tabs { display: none !important; }
   .hide-mobile { display: none !important; }
   .mobile-only { display: grid; }
 
@@ -2943,12 +2952,11 @@ body.mobile-chat-open .mobile-bottom-nav { display: none !important; }
 .cloud-link-open { font-size: 11.5px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
 
 /* --- Пустые состояния, кликабельное имя автора, шторка действий сообщения --- */
-.empty-hint-card,
-.empty-feed-state {
-  padding: 18px 16px;
-  border-radius: 14px;
+.empty-hint-card {
+  padding: 14px 12px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.025);
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border);
   text-align: center;
   display: flex;
   flex-direction: column;
@@ -2957,9 +2965,16 @@ body.mobile-chat-open .mobile-bottom-nav { display: none !important; }
 }
 .empty-feed-state {
   margin: auto;
-  max-width: 400px;
+  max-width: 300px;
+  padding: 14px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-2);
 }
-.empty-feed-icon { font-size: 30px; line-height: 1; }
+.empty-feed-icon { font-size: 26px; line-height: 1; opacity: 0.85; }
 
 .msg-sender-btn {
   background: transparent;

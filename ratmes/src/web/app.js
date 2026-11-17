@@ -366,12 +366,12 @@ function buildChatListItem(chat) {
   const preview = chat.draftText
     ? `Черновик: ${chat.draftText}`
     : (chat.lastText || (isSelf
-      ? 'Личные заметки и сохранённые сообщения'
+      ? 'Личные заметки'
       : isDm
-        ? 'Личный чат 1-на-1 — напиши привет!'
+        ? 'Личный чат'
         : isCloud
-          ? 'Живая комната — напиши первым!'
-          : 'Чат открыт'));
+          ? 'Напиши первым…'
+          : 'Настроить мост'));
 
   return h('button', {
     type: 'button',
@@ -390,19 +390,6 @@ function buildChatListItem(chat) {
           text: preview,
         }),
         chat.unreadCount > 0 ? h('span', { className: 'unread-badge', text: String(chat.unreadCount) }) : null,
-      ),
-      h('div', { className: 'chat-item-tags' },
-        isSelf
-          ? h('span', { className: 'tag-mini dm', text: '⭐ Избранное' })
-          : isDm
-            ? h('span', { className: 'tag-mini dm', text: '👤 Личный 1-на-1' })
-            : isGroup
-              ? h('span', { className: 'tag-mini ok', text: '🔗 Комната' })
-              : isCloud
-                ? h('span', { className: 'tag-mini ok', text: '🟢 Онлайн' })
-                : liveBridge
-                  ? h('span', { className: 'tag-mini ok', text: `🔌 ${NETWORK_LABELS[chat.network] || chat.network} LIVE` })
-                  : h('span', { className: 'tag-mini warn', text: '🔌 Нужен токен' }),
       ),
     ),
   );
@@ -470,26 +457,20 @@ function renderChatList() {
     const roomChats = visible.filter((c) => !(c.roomType === 'dm' || c.chatId.startsWith('dm-')) && c.network === 'ratmes');
     const bridgeChats = visible.filter((c) => c.network !== 'ratmes');
 
-    list.appendChild(h('div', { className: 'chat-section-head' },
-      h('span', { text: `👤 Личные чаты (${dmChats.length})` }),
-      h('button', { type: 'button', className: 'chat-section-cta', text: '+ Написать', onClick: () => openDmModal() }),
-    ));
-    if (dmChats.length === 0) {
-      list.appendChild(h('button', {
-        type: 'button',
-        className: 'dm-empty-banner',
-        onClick: () => openDmModal(),
-      },
-        h('span', { text: '👤 Начать личный чат 1-на-1 или Избранное' }),
-        h('span', { text: '→' }),
+    if (dmChats.length > 0) {
+      list.appendChild(h('div', { className: 'chat-section-head' },
+        h('span', { text: `Личные (${dmChats.length})` }),
+        h('button', { type: 'button', className: 'chat-section-cta', text: '+ Новый', onClick: () => openDmModal() }),
       ));
-    } else {
       for (const chat of dmChats) list.appendChild(buildChatListItem(chat));
     }
 
     if (roomChats.length > 0) {
       list.appendChild(h('div', { className: 'chat-section-head' },
-        h('span', { text: `💬 Общие и групповые (${roomChats.length})` }),
+        h('span', { text: `Комнаты (${roomChats.length})` }),
+        dmChats.length === 0
+          ? h('button', { type: 'button', className: 'chat-section-cta', text: '👤 Личный чат', onClick: () => openDmModal() })
+          : null,
       ));
       for (const chat of roomChats) list.appendChild(buildChatListItem(chat));
     }
@@ -940,8 +921,8 @@ function renderChatHeader() {
   const warnBanner = el('trustWarningBanner');
 
   if (isSelf) {
-    routePill.textContent = '⭐ Личные заметки · только для тебя';
-    routePill.className = 'pill accent';
+    routePill.textContent = 'Личные заметки';
+    routePill.className = 'chat-status-sub';
     if (trustPill) trustPill.hidden = true;
     if (headerConnectBtn) headerConnectBtn.hidden = true;
     if (inviteBtn) inviteBtn.hidden = true;
@@ -951,34 +932,34 @@ function renderChatHeader() {
       : null;
     const otherPeer = otherPeerId ? onlinePeers.find((p) => p.peerId === otherPeerId) : null;
     routePill.textContent = otherPeer?.isOnline
-      ? '🟢 В сети · Личный чат 1-на-1'
+      ? 'в сети'
       : otherPeer?.lastSeen
-        ? `👤 Личный чат · ${fmtRelativeTime(otherPeer.lastSeen)}`
-        : '👤 Личный чат 1-на-1';
-    routePill.className = 'pill good';
+        ? fmtRelativeTime(otherPeer.lastSeen)
+        : 'личный чат';
+    routePill.className = `chat-status-sub${otherPeer?.isOnline ? ' is-online' : ''}`;
     if (trustPill) trustPill.hidden = true;
     if (headerConnectBtn) headerConnectBtn.hidden = true;
     if (inviteBtn) inviteBtn.hidden = false;
   } else if (isCloud) {
-    routePill.textContent = onlinePeersCount > 0 ? `🟢 Живой чат · ${onlinePeersCount} онлайн` : '🟢 Живой онлайн-чат';
-    routePill.className = 'pill good';
+    routePill.textContent = onlinePeersCount > 0 ? `${onlinePeersCount} в сети` : 'в сети';
+    routePill.className = 'chat-status-sub is-online';
     if (trustPill) trustPill.hidden = true;
     if (headerConnectBtn) headerConnectBtn.hidden = true;
     if (inviteBtn) inviteBtn.hidden = false;
   } else if (liveBridge) {
-    routePill.textContent = `🔌 ${NETWORK_LABELS[chat.network] || chat.network} LIVE`;
-    routePill.className = 'pill good';
+    routePill.textContent = `${NETWORK_LABELS[chat.network] || chat.network} · подключён`;
+    routePill.className = 'chat-status-sub is-online';
     if (headerConnectBtn) {
       headerConnectBtn.hidden = false;
       headerConnectBtn.textContent = '⚙ Мост';
     }
     if (inviteBtn) inviteBtn.hidden = true;
   } else {
-    routePill.textContent = `🔌 ${NETWORK_LABELS[chat.network] || chat.network} не подключён`;
-    routePill.className = 'pill warn';
+    routePill.textContent = `${NETWORK_LABELS[chat.network] || chat.network} · не подключён`;
+    routePill.className = 'chat-status-sub is-warn';
     if (headerConnectBtn) {
       headerConnectBtn.hidden = false;
-      headerConnectBtn.textContent = `🔌 Подключить ${NETWORK_LABELS[chat.network] || ''}`;
+      headerConnectBtn.textContent = 'Подключить';
     }
     if (inviteBtn) inviteBtn.hidden = true;
   }
@@ -1001,44 +982,21 @@ function renderChatHeader() {
   const canWriteAction = el('btnCanWriteAction');
   const msgInput = el('messageInput');
 
+  if (msgInput) {
+    msgInput.placeholder = isSelf ? 'Заметка…' : isDm ? 'Личное сообщение…' : 'Сообщение…';
+  }
+  // Никакой лишней полосы над полем ввода в обычных и личных чатах! Показываем только если нужно подключить внешний мост.
   if (canWriteBar && canWriteText && canWriteAction) {
-    if (isSelf) {
-      canWriteBar.className = 'chat-can-write-bar is-live';
-      canWriteText.textContent = '⭐ Избранное · только для тебя';
-      canWriteAction.hidden = false;
-      canWriteAction.textContent = '👤 Личный чат';
-      canWriteAction.onclick = () => openDmModal();
-      if (msgInput) msgInput.placeholder = 'Заметка себе…';
-    } else if (isDm) {
-      canWriteBar.className = 'chat-can-write-bar is-live';
-      canWriteText.textContent = '🟢 Личный чат 1-на-1';
-      canWriteAction.hidden = false;
-      canWriteAction.textContent = '🔗 Моя ссылка';
-      canWriteAction.onclick = () => shareMyPersonalLink();
-      if (msgInput) msgInput.placeholder = 'Личное сообщение…';
-    } else if (isCloud) {
-      canWriteBar.className = 'chat-can-write-bar is-live';
-      canWriteText.textContent = isGroup
-        ? `🟢 Комната · Вы: ${state.displayName}`
-        : `🟢 Онлайн · Вы: ${state.displayName}`;
-      canWriteAction.hidden = false;
-      canWriteAction.textContent = isGroup ? '🔗 Ссылка' : '✏️ Имя';
-      canWriteAction.onclick = () => (isGroup ? shareActiveRoomLink() : openProfileModal());
-      if (msgInput) msgInput.placeholder = 'Сообщение…';
-    } else if (liveBridge) {
-      canWriteBar.className = 'chat-can-write-bar is-live';
-      canWriteText.textContent = `🟢 Мост ${NETWORK_LABELS[chat.network] || chat.network}`;
-      canWriteAction.hidden = false;
-      canWriteAction.textContent = '⚙ Настроить';
-      canWriteAction.onclick = () => openConnectHub(chat.network);
-      if (msgInput) msgInput.placeholder = 'Сообщение…';
-    } else {
+    if (!isCloud && !isDm && !isSelf && !liveBridge) {
+      canWriteBar.hidden = false;
       canWriteBar.className = 'chat-can-write-bar is-warn';
-      canWriteText.textContent = `🔌 ${NETWORK_LABELS[chat.network] || chat.network} не подключён`;
+      canWriteText.textContent = `Подключи ${NETWORK_LABELS[chat.network] || chat.network}, чтобы отправлять сюда`;
       canWriteAction.hidden = false;
-      canWriteAction.textContent = '🔌 Подключить';
+      canWriteAction.textContent = 'Подключить';
       canWriteAction.onclick = () => openConnectHub(chat.network);
-      if (msgInput) msgInput.placeholder = 'Подключи мост…';
+    } else {
+      canWriteBar.hidden = true;
+      canWriteAction.hidden = true;
     }
   }
 }
@@ -1089,24 +1047,11 @@ function renderMessages() {
     const isSelf = state.activeChat?.chatId?.startsWith('dm-self-');
     const isDm = state.activeChat?.chatId?.startsWith('dm-');
     feed.appendChild(h('div', { className: 'empty-feed-state' },
-      h('div', { className: 'empty-feed-icon', text: isSelf ? '⭐' : isDm ? '👋' : '💬' }),
-      h('strong', { text: isSelf ? 'Твоё личное Избранное' : isDm ? 'Личный чат 1-на-1 готов!' : 'Здесь пока нет сообщений' }),
-      h('p', {
+      h('strong', { text: isSelf ? 'Избранное' : isDm ? 'Личный чат' : 'Сообщений пока нет' }),
+      h('span', {
         className: 'muted-text',
-        text: isSelf
-          ? 'Сохраняй сюда заметки, ссылки и файлы — их видишь только ты.'
-          : isDm
-            ? 'Напиши первое сообщение — твои сообщения будут синими справа, а ответы собеседника — слева с его аватаром.'
-            : 'Напиши первым или отправь другу ссылку-приглашение, чтобы общаться вместе в реальном времени.',
+        text: isSelf ? 'Сохраняй сюда заметки и файлы' : 'Напиши первое сообщение ниже',
       }),
-      isSelf
-        ? null
-        : h('button', {
-          type: 'button',
-          className: 'btn btn-sm btn-primary',
-          text: '🔗 Пригласить по ссылке',
-          onClick: () => shareActiveRoomLink(),
-        }),
     ));
     return;
   }
@@ -2664,7 +2609,7 @@ function updateCloudProgressUI({ phase = 'connecting', percent = 10, label = 'П
     banner.classList.add('is-ready');
     cloudBannerHideTimer = setTimeout(() => {
       banner.classList.add('is-compact');
-    }, 1800);
+    }, 800);
   } else if (phase === 'error') {
     banner.classList.add('is-error');
   } else {
@@ -2771,7 +2716,17 @@ async function bootstrap() {
   }));
 
   if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    navigator.serviceWorker.register('./sw.js?v=15').then((reg) => {
+      reg.update().catch(() => {});
+    }).catch(() => {});
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      try {
+        if (!sessionStorage.getItem('ratmes-sw-reloaded-v15')) {
+          sessionStorage.setItem('ratmes-sw-reloaded-v15', '1');
+          location.reload();
+        }
+      } catch { /* ignore */ }
+    });
   }
 }
 

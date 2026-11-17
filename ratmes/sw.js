@@ -1,37 +1,17 @@
-// Лёгкий Service Worker для PWA RatMes (офлайн-кэш статической оболочки без вмешательства в /api/*).
+// Service Worker для RatMes — Network-First с немедленным обновлением кэша без устаревших стилей.
 
-const CACHE_NAME = 'ratmes-shell-v14';
-const SHELL_ASSETS = [
-  './',
-  './index.html',
-  './styles.css',
-  './manifest.webmanifest',
-  './src/engine/cloud-hub.mjs',
-  './src/engine/service-guides.mjs',
-  './src/web/brand-icons.mjs',
-  './src/web/app.js',
-  './src/web/bridge-client.mjs',
-  './src/web/audio.mjs',
-  './src/web/voice-recorder.mjs',
-  './src/web/markdown-render.mjs',
-  './src/web/telemetry-canvas.mjs',
-  './src/web/command-palette.mjs',
-];
+const CACHE_NAME = 'ratmes-shell-v15';
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)).catch(() => {})
-  );
+self.addEventListener('install', () => {
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches.keys()
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -39,7 +19,20 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.includes('/api/') || url.pathname.endsWith('/ws')) return;
   if (event.request.method !== 'GET') return;
 
+  const isAppAsset =
+    event.request.mode === 'navigate'
+    || /\.(html|css|js|mjs)$/i.test(url.pathname)
+    || url.pathname.endsWith('/ratmes/');
+
   event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
+    fetch(event.request, isAppAsset ? { cache: 'no-cache' } : undefined)
+      .then((res) => {
+        if (res && res.ok && isAppAsset && url.origin === self.location.origin) {
+          const copy = res.clone();
+          caches.open(CACHE_NAME).then((c) => c.put(event.request, copy)).catch(() => {});
+        }
+        return res;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
