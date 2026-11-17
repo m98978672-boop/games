@@ -241,7 +241,7 @@ function setupWorld() {
     const lines = [
       'стран ' + st.countries + ' · войн сейчас ' + st.wars + ' · боёв ' + nf(st.battles),
       'взрывов на карте ' + st.explosions + ' · всего ' + nf(st.explosionsTotal),
-      'разрушено: городов ' + st.destroyedCities + ', дорог ' + st.destroyedRoads,
+      'разрушено: городов ' + st.destroyedCities + ', дорог ' + st.destroyedRoads + ', мостов ' + st.destroyedBridges,
       'оккупировано: ' + st.occupiedZones + ' зон · ' + nf(st.occupiedKm2) + ' км²',
       'потери ' + nf(st.killed) + ' · армий видно ' + st.armiesVisible,
       hot ? 'бои: ' + hot.a + ' — ' + hot.b + ' · ' + hot.battles + ' боёв' : 'сейчас тихо',

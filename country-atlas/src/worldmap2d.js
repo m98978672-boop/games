@@ -267,12 +267,12 @@ export function borderTowns(country, seed, n = 2) {
 export function countryRoads(country, cities) {
   const roads = [];
   for (let i = 1; i < cities.length; i++) {
-    roads.push({ id: country.id + '-r' + i, country: country.id, a: cities[i - 1].id, b: cities[i].id, x1: cities[i - 1].x, y1: cities[i - 1].y, x2: cities[i].x, y2: cities[i].y, kind: i === 1 ? 'main' : 'local' });
+    roads.push({ id: country.id + '-r' + i, country: country.id, a: cities[i - 1].id, b: cities[i].id, x1: cities[i - 1].x, y1: cities[i - 1].y, x2: cities[i].x, y2: cities[i].y, kind: i === 1 ? 'main' : 'local', bridge: i === 1 });
   }
   // замыкаем кольцо: страна не висит на одной нитке
   if (cities.length > 3) {
     const last = cities[cities.length - 1], first = cities[0];
-    roads.push({ id: country.id + '-ring', country: country.id, a: last.id, b: first.id, x1: last.x, y1: last.y, x2: first.x, y2: first.y, kind: 'local' });
+    roads.push({ id: country.id + '-ring', country: country.id, a: last.id, b: first.id, x1: last.x, y1: last.y, x2: first.x, y2: first.y, kind: 'local', bridge: false });
   }
   return roads;
 }
@@ -383,7 +383,7 @@ export function buildWorld(seed = 424242) {
     .slice(0, 2);
   for (const c of near) {
     allRoads.push({
-      id: 'int-' + c.id, country: 'own', a: 'own-cap', b: c.cities[0].id, x1: 0, y1: 0, x2: c.cities[0].x, y2: c.cities[0].y, kind: 'international'
+      id: 'int-' + c.id, country: 'own', a: 'own-cap', b: c.cities[0].id, x1: 0, y1: 0, x2: c.cities[0].x, y2: c.cities[0].y, kind: 'international', bridge: true
     });
   }
   // каждый город помнит свою страну — так проще и проверять, и рисовать
@@ -404,7 +404,7 @@ export function buildWorld(seed = 424242) {
     wars: [],
     pairs: adjacency(countries),
     explosions: [],
-    destroyed: { cities: [], roads: [] },
+    destroyed: { cities: [], roads: [], bridges: [] },
     occupied: [],
     stats: { battles: 0, explosions: 0, killed: 0, big: 0 },
     rev: 0,                 // сколько раз мир менялся — по нему перерисовывается слой подробностей
@@ -573,7 +573,12 @@ export function advanceWars(world, minutes) {
       const victim = nearestCity(world, ex.x, ex.y, 800);
       if (victim && !world.destroyed.cities.includes(victim.id)) { world.destroyed.cities.push(victim.id); world.rev++; }
       const road = nearestRoad(world, ex.x, ex.y, 600);
-      if (road && !world.destroyed.roads.includes(road.id)) { world.destroyed.roads.push(road.id); world.rev++; }
+      if (road && !world.destroyed.roads.includes(road.id)) {
+        world.destroyed.roads.push(road.id);
+        // дорога с мостом, разорванная войной, — это ещё и разрушенный мост
+        if (road.bridge && !world.destroyed.bridges.includes(road.id)) world.destroyed.bridges.push(road.id);
+        world.rev++;
+      }
     }
     // оккупация: полоса вокруг сместившегося фронта
     if (Math.abs(war.sway + war.drift) > WM.war.occupationKm) {
@@ -670,6 +675,7 @@ export function worldStats(world, observerId = 'own') {
     explosionsTotal: world.stats.explosions,
     destroyedCities: world.destroyed.cities.length,
     destroyedRoads: world.destroyed.roads.length,
+    destroyedBridges: world.destroyed.bridges.length,
     occupiedZones: world.occupied.length,
     occupiedKm2: Math.round(occupiedKm2),
     killed: world.stats.killed,

@@ -332,6 +332,19 @@ export class WorldView {
       ctx.stroke();
     }
     ctx.setLineDash([]);
+    // разрушенные мосты: короткая перечёркнутая перемычка на середине дороги
+    for (const id of world.destroyed.bridges) {
+      const r = world.roads.find((k) => k.id === id);
+      if (!r) continue;
+      const mx = (r.x1 + r.x2) / 2 * k + ox, my = (r.y1 + r.y2) / 2 * k + oy;
+      if (mx < -20 || my < -20 || mx > view.w + 20 + 2 * this.detailPad || my > view.h + 20 + 2 * this.detailPad) continue;
+      ctx.strokeStyle = 'rgba(214,64,48,0.85)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(mx - 4, my - 3); ctx.lineTo(mx + 4, my + 3);
+      ctx.moveTo(mx + 4, my - 3); ctx.lineTo(mx - 4, my + 3);
+      ctx.stroke();
+    }
     const showLabels = this.labels && cam.scale >= WV.labelScale;
     ctx.font = '11px sans-serif';
     for (const city of world.cities) {

@@ -147,6 +147,13 @@ ok('бои шли', w4.battles > 10, w4.battles);
 ok('разрушенных городов не больше десяти', w4.destroyed.cities.length <= 10, w4.destroyed.cities.length);
 ok('разрушенные города не повторяются', !dupDestroyed);
 ok('разрушенная дорога существует', w4.destroyed.roads.every((id) => world.roads.some((r) => r.id === id)));
+ok('разрушенный мост — это дорога с мостом', w4.destroyed.bridges.every((id) => {
+  const r = world.roads.find((k) => k.id === id);
+  return r && r.bridge;
+}));
+ok('мост считается только вместе с дорогой', w4.destroyed.bridges.every((id) => w4.destroyed.roads.includes(id)));
+ok('главные дороги имеют мосты', world.roads.filter((r) => r.kind === 'main').every((r) => r.bridge));
+ok('местные дороги без мостов', world.roads.filter((r) => r.kind === 'local').every((r) => !r.bridge));
 ok('разрушенный город существует', w4.destroyed.cities.every((id) => world.cities.some((c) => c.id === id)));
 ok('взрывы не старше своего срока', w4.explosions.every((e) => w4.minutes - e.at <= WM.war.explosionMin), w4.explosions.length);
 ok('взрывы внутри мира', w4.explosions.every((e) => Math.abs(e.x) <= WM.sizeKm / 2 && Math.abs(e.y) <= WM.sizeKm / 2));
@@ -172,11 +179,12 @@ ok('статистика знает страны', st0.countries === WM.countrie
 ok('статистика знает войны', typeof st0.wars === 'number');
 ok('статистика знает бои', st0.battles === world.battles);
 ok('статистика знает разрушения', st0.destroyedCities === world.destroyed.cities.length && st0.destroyedRoads === world.destroyed.roads.length);
+ok('статистика знает мосты', st0.destroyedBridges === world.destroyed.bridges.length);
 ok('статистика знает оккупацию', st0.occupiedZones === world.occupied.length);
 ok('статистика знает потери', st0.killed === world.killed);
 ok('статистика знает армии', st0.armiesVisible === world.armies.length);
 ok('статистика знает про свою войну', st0.ownAtWar === world.wars.some((w) => w.a === 'own' || w.b === 'own'));
-ok('в статистике 14 полей', Object.keys(st0).length === 14, Object.keys(st0).join(','));
+ok('в статистике 15 полей', Object.keys(st0).length === 15, Object.keys(st0).join(','));
 ok('без войн hottestWar пуст', hottestWar(world) === null);
 const hot = hottestWar(w4);
 ok('hottestWar знает имена сторон', !hot || (hot.a && hot.b));

@@ -49,7 +49,7 @@ function overviewPanel() {
   g.font = '13px sans-serif';
   g.fillStyle = 'rgba(220,230,236,0.95)';
   g.fillText(hot ? `бои: ${hot.a} — ${hot.b} · фронт ${hot.swayKm} км` : 'сейчас тихо', 16, y + 58);
-  g.fillText(`разрушено городов ${st.destroyedCities} · дорог ${st.destroyedRoads} · оккупация ${st.occupiedZones} зон`, 16, y + 80);
+  g.fillText(`разрушено городов ${st.destroyedCities} · дорог ${st.destroyedRoads} · мостов ${st.destroyedBridges} · оккупация ${st.occupiedZones} зон`, 16, y + 80);
   return cv;
 }
 

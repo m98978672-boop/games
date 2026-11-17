@@ -69,7 +69,7 @@ const shots = frames.map((f) => {
   g.font = '10.5px sans-serif';
   const lines = [
     `стран ${st.countries} · войн ${st.wars} · боёв ${st.battles}`,
-    `разрушено: городов ${st.destroyedCities}, дорог ${st.destroyedRoads}`,
+    `разрушено: городов ${st.destroyedCities}, дорог ${st.destroyedRoads}, мостов ${st.destroyedBridges}`,
     `оккупация: ${st.occupiedZones} зон`,
     `потери ${st.killed.toLocaleString('ru-RU')} · армий ${st.armiesVisible}`,
     hot ? `бои: ${hot.a} — ${hot.b}` : 'сейчас тихо'
