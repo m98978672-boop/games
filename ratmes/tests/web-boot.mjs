@@ -62,8 +62,17 @@ function makeEl(tag, id = '') {
   };
 }
 
+const cssSrc = fs.readFileSync(path.join(rootDir, 'styles.css'), 'utf8');
+assert.match(cssSrc, /\[hidden\]\s*\{\s*display:\s*none\s*!important;\s*\}/, 'styles.css обязан содержать [hidden] { display: none !important; }, чтобы скрытые панели не перебивались display: flex');
+
 const byId = new Map();
 for (const id of idMatches) byId.set(id, makeEl('div', id));
+// Инициализируем начальные hidden-атрибуты прямо из index.html
+for (const m of html.matchAll(/<[^>]*\bid="([^"]+)"[^>]*>/g)) {
+  if (/\bhidden(?:\s|=|>|\/)/.test(m[0]) && byId.has(m[1])) {
+    byId.get(m[1]).hidden = true;
+  }
+}
 const bodyEl = makeEl('body', 'body');
 
 const store = new Map();
@@ -142,7 +151,10 @@ assert.ok(byId.get('cloudProgressBanner').classList.contains('is-ready'), 'Ба�
 assert.ok(byId.get('chatList').children.length >= 3, 'Список реальных чатов должен отрендериться');
 assert.ok(byId.get('peopleDirectoryList').children.length >= 2, 'Каталог людей должен отрендериться');
 assert.ok(byId.get('sidebarLinksList').children.length >= 12, 'Ссылки подключений должны отрендериться');
-console.log('  ✓ app.js загрузился без ошибок импорта, полоса облака дошла до 100% (is-ready)');
+for (const hiddenId of ['pinnedBanner', 'replyBar', 'voiceRecordBar', 'attachmentBar', 'btnQuickBindVpn', 'btnHeaderConnect', 'chatMoreBar']) {
+  assert.equal(byId.get(hiddenId).hidden, true, `Элемент #${hiddenId} должен оставаться скрытым в обычном чате`);
+}
+console.log('  ✓ app.js загрузился без ошибок импорта, полоса облака дошла до 100%, скрытые панели не вылезают');
 
 // Отправка сообщения и проверка чёткого разделения «Собеседник слева (.is-in) / Моё справа (.is-out)»
 byId.get('messageInput').value = 'Тест отправки сообщения';
