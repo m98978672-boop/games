@@ -39,7 +39,17 @@ jobs:
       - name: Install Frontline Command test dependencies
         run: npm ci --prefix frontline-command --no-audit --no-fund
       - name: Test Frontline Command (логика, симуляция, производительность)
-        run: npm run test:fast --prefix frontline-command
+        run: |
+          set +e
+          npm run test:fast --prefix frontline-command > "$RUNNER_TEMP/frontline-test.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/frontline-test.log"
+          if [ "$status" -ne 0 ]; then
+            tail -25 "$RUNNER_TEMP/frontline-test.log" | while IFS= read -r line; do
+              printf '::error::%s\n' "$line"
+            done
+          fi
+          exit "$status"
       - name: Test Frontline battlefield visuals (Chromium)
         run: npm run test:battlefield:browser --prefix frontline-command
       - name: Test shooter-2 structure and offline rules
