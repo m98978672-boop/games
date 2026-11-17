@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Games — магазин и библиотека браузерных игр</title>
 <meta name="description" content="Стильная витрина браузерных 2D и 3D игр без установки: карта страны РАТГРАД, зомби-выживалка DEAD DISTRICT, 3D-шутер СЕКТОР «ПЕПЕЛ», симуляторы, а также возможность каждому добавить свою игру.">
 <meta name="theme-color" content="#171a21">
@@ -111,7 +111,7 @@
 <section id="portal-chat-panel" class="portal-chat-panel" hidden aria-label="Вкладка Общение — RatMes">
   <div class="portal-chat-bar">
     <div class="portal-chat-bar-left">
-      <button type="button" class="btn btn-steam-ghost" data-portal-tab="games">← Магазин</button>
+      <button type="button" class="btn btn-steam-ghost portal-back-btn" data-portal-tab="games">← Магазин</button>
       <span class="portal-chat-badge">RatMes · Supabase Live</span>
       <div class="portal-chat-rooms" role="group" aria-label="Быстрые комнаты">
         <button type="button" class="portal-room-btn is-active" data-ratmes-room="games-lobby">🎮 Общий чат</button>
@@ -121,8 +121,10 @@
       </div>
     </div>
     <div class="portal-chat-actions">
+      <button type="button" class="btn btn-portal-connect" id="btnPortalConnectServices">🔌 MAX и сервисы</button>
       <button type="button" class="btn btn-steam-ghost" id="btnToggleCloudsStrip" aria-expanded="false">☁ 9 облаков</button>
-      <a class="btn btn-steam-blue" href="ratmes/index.html" target="_blank" rel="noopener">Отдельное окно ↗</a>
+      <button type="button" class="btn btn-steam-ghost" id="btnChatFullscreen" aria-pressed="false" title="На весь экран (удобно на телефоне)">⛶</button>
+      <a class="btn btn-steam-blue portal-popout-link" href="ratmes/index.html" target="_blank" rel="noopener">Отдельное окно ↗</a>
     </div>
   </div>
 

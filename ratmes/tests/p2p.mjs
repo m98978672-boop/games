@@ -9,6 +9,7 @@ import path from 'node:path';
 import http from 'node:http';
 
 import { startRatMesAgent } from '../src/agent/server.mjs';
+import { SERVICE_GUIDES, getServiceGuide } from '../src/engine/service-guides.mjs';
 
 console.log('=== RatMes 2-Node Live E2EE P2P Mesh & Live Bridges Tests ===');
 
@@ -178,6 +179,98 @@ try {
   assert.equal(searchAfterHook.ok, true);
   assert.equal(searchAfterHook.data.totalMatches, 1);
   console.log('  ✓ Входящий webhook /api/hooks/telegram сохранён в Vault и мгновенно найден через BM25');
+
+  // 7. Полный тест живого драйвера MAX Bot API (GET /me, GET /updates, POST /messages?chat_id=..., /api/hooks/max) + service-guides.mjs
+  assert.ok(SERVICE_GUIDES.length >= 12);
+  assert.equal(getServiceGuide('max').driverKind, 'max');
+  assert.ok(getServiceGuide('max').steps.length >= 3);
+
+  const maxReceived = [];
+  const mockMaxServer = http.createServer((req, res) => {
+    const u = new URL(req.url || '/', 'http://127.0.0.1');
+    if (u.pathname === '/me' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ user_id: 777, name: 'RatMes MAX Bot', username: 'ratmes_bot' }));
+      return;
+    }
+    if (u.pathname === '/updates' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        marker: 42,
+        updates: [{
+          update_type: 'message_created',
+          message: { recipient: { chat_id: -70123456 }, sender: { user_id: 505, name: 'Алексей MAX' }, body: { mid: 'm-1', text: 'Привет боту!' } },
+        }],
+      }));
+      return;
+    }
+    if (u.pathname === '/messages' && req.method === 'POST') {
+      let body = '';
+      req.on('data', (c) => { body += c; });
+      req.on('end', () => {
+        maxReceived.push({ auth: req.headers.authorization, chatId: u.searchParams.get('chat_id'), body: JSON.parse(body) });
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ message: { body: { mid: 'max-mid-99', seq: 12 } } }));
+      });
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
+  await new Promise((r) => mockMaxServer.listen(0, '127.0.0.1', r));
+  const maxEndpoint = `http://127.0.0.1:${mockMaxServer.address().port}`;
+  const maxToken = 'MAX_BOT_SECRET_ABC_123';
+
+  try {
+    const testMax = await (await fetch(`${aliceUrl}/api/bridges/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ network: 'max', kind: 'max', endpoint: maxEndpoint, secretToken: maxToken }),
+    })).json();
+    assert.equal(testMax.ok, true);
+    assert.equal(testMax.data.botName, 'RatMes MAX Bot');
+    assert.equal(testMax.data.suggestedChats[0].id, '-70123456');
+    assert.equal(JSON.stringify(testMax).includes(maxToken), false);
+
+    const cfgMax = await (await fetch(`${aliceUrl}/api/bridges/configure`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ network: 'max', kind: 'max', endpoint: maxEndpoint, targetId: '-70123456', secretToken: maxToken, enabled: true }),
+    })).json();
+    assert.equal(cfgMax.ok, true);
+
+    const sendMax = await (await fetch(`${aliceUrl}/api/tool`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        pipeline: [
+          { tool: 'pack.text', args: { chatId: 'max-live-room', network: 'max', text: 'Привет в MAX из RatMes!' } },
+          { tool: 'pack.validate', args: { handleId: '$envelopeId', targetNetwork: 'max' } },
+          { tool: 'vault.append', args: { handleId: '$envelopeId' } },
+          { tool: 'transfer.enqueue', args: { handleId: '$envelopeId' } },
+          { tool: 'transfer.dispatch', args: { transferId: '$transferId' } },
+        ],
+      }),
+    })).json();
+    assert.equal(sendMax.ok, true);
+    assert.equal(maxReceived.length, 1);
+    assert.equal(maxReceived[0].auth, maxToken);
+    assert.equal(maxReceived[0].chatId, '-70123456');
+    assert.equal(maxReceived[0].body.text, 'Привет в MAX из RatMes!');
+
+    const maxIn = await (await fetch(`${aliceUrl}/api/hooks/max`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        update_type: 'message_created',
+        message: { recipient: { chat_id: -70123456, chat_title: 'MAX Семья' }, sender: { name: 'Мария MAX' }, body: { mid: 'm-in-7', text: 'Ответ из MAX!' } },
+      }),
+    })).json();
+    assert.equal(maxIn.ok, true);
+    console.log('  ✓ Живой мост MAX Bot API (/me + автопоиск chat_id + /messages + /api/hooks/max) работает');
+  } finally {
+    await new Promise((r) => mockMaxServer.close(r));
+  }
 
   console.log('\n✅ Все тесты P2P LAN Mesh и живых мостов пройдены!');
 } finally {
