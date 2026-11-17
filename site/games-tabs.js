@@ -1,19 +1,19 @@
-// Переключатель вкладок портала Games: «Игры» и «Общение» (встроенный мессенджер RatMes + 9 подключённых облаков).
+// Переключатель вкладок портала Games: «Магазин / Игры» и «Общение» (встроенный мессенджер RatMes + 9 облаков).
 (function () {
   const TAB_GAMES = 'games';
   const TAB_CHAT = 'chat';
 
   const navButtons = Array.from(document.querySelectorAll('[data-portal-tab]'));
+  const storeNavLinks = Array.from(document.querySelectorAll('[data-store-nav]'));
   const chatTriggers = Array.from(document.querySelectorAll('[data-open-chat]'));
-  const gamesView = document.getElementById('portal-games-view');
+  const storeSections = Array.from(document.querySelectorAll('[data-portal-store-section]'));
   const chatView = document.getElementById('portal-chat-panel');
-  const hero = document.querySelector('header.hero');
   const frame = document.getElementById('ratmesEmbedFrame');
   const roomButtons = Array.from(document.querySelectorAll('[data-ratmes-room]'));
   const cloudsToggle = document.getElementById('btnToggleCloudsStrip');
   const cloudsStrip = document.getElementById('portalCloudsStrip');
 
-  if (!gamesView || !chatView || !frame) return;
+  if (!storeSections.length || !chatView || !frame) return;
 
   const baseSrc = frame.getAttribute('data-src') || 'ratmes/index.html?embed=games';
   let loaded = false;
@@ -30,15 +30,15 @@
     const options = opts || {};
     const isChat = tab === TAB_CHAT;
 
-    gamesView.hidden = isChat;
+    for (const sec of storeSections) sec.hidden = isChat;
     chatView.hidden = !isChat;
-    if (hero) hero.hidden = isChat;
     document.body.classList.toggle('portal-chat-active', isChat);
 
     for (const btn of navButtons) {
-      const active = btn.getAttribute('data-portal-tab') === (isChat ? TAB_CHAT : TAB_GAMES);
+      const target = btn.getAttribute('data-portal-tab');
+      const active = target === (isChat ? TAB_CHAT : TAB_GAMES);
       btn.classList.toggle('is-active', active);
-      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
 
     if (isChat) {
@@ -53,11 +53,14 @@
           // ignore history restrictions
         }
       }
-    } else if (options.updateHash !== false && (window.location.hash === '#chat' || window.location.hash === '#obshchenie')) {
-      try {
-        window.history.replaceState(null, '', '#games');
-      } catch {
-        // ignore
+    } else if (options.updateHash !== false) {
+      const cur = (window.location.hash || '').toLowerCase();
+      if (cur === '#chat' || cur === '#obshchenie' || cur === '#ratmes') {
+        try {
+          window.history.replaceState(null, '', '#top');
+        } catch {
+          // ignore
+        }
       }
     }
   }
@@ -66,6 +69,14 @@
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       setTab(btn.getAttribute('data-portal-tab'));
+    });
+  }
+
+  for (const link of storeNavLinks) {
+    link.addEventListener('click', () => {
+      if (document.body.classList.contains('portal-chat-active')) {
+        setTab(TAB_GAMES, { updateHash: false });
+      }
     });
   }
 

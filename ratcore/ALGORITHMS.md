@@ -1,0 +1,1040 @@
+# RatCore — справочник формул и алгоритмов (`ALGORITHMS.md`)
+
+**Версия:** 0.6-draft (2026-11-16)  
+**Назначение:** единая математическая и алгоритмическая база движка `RatCore` на все случаи жизни.
+Содержит ровно **150 формул (`F-01`…`F-150`)** и **100 алгоритмов (`A-01`…`A-100`)** с номерами
+для ссылок из `SPEC.md`, `TOOLS.md`, `COMPRESSION.md`, `BRIDGE.md`, кода и автотестов.
+
+---
+
+# Часть I. Формулы (`F-01` … `F-150`)
+
+## 1. Время, детерминизм и базовая математика (`F-01` … `F-04`)
+
+- **`F-01` Фиксированный шаг симуляции (аккумулятор + интерполяция):**
+  ```
+  acc'   = min(acc + min(dtReal, 0.1), FIXED_DT * MAX_SUBSTEPS)
+  steps  = floor(acc' / FIXED_DT)
+  acc''  = acc' - steps * FIXED_DT
+  alpha  = acc'' / FIXED_DT        // ∈ [0, 1)
+  posVis = posPrev * (1 - alpha) + posCurr * alpha
+  ```
+- **`F-02` Детерминированный PRNG (`mulberry32`) и 2D-хеш клетки:**
+  ```
+  // mulberry32(state):
+  t = (state += 0x6D2B79F5) | 0
+  t = imul(t ^ (t >>> 15), t | 1)
+  t ^= t + imul(t ^ (t >>> 7), t | 61)
+  u = ((t ^ (t >>> 14)) >>> 0) / 4294967296    // ∈ [0, 1)
+
+  // hash2D(ix, iy, seed):
+  h = imul(ix, 374761393) ^ imul(iy, 668265263) ^ imul(seed, 1442695041)
+  h = imul(h ^ (h >>> 13), 1274126177)
+  u = ((h ^ (h >>> 16)) >>> 0) / 4294967296
+  ```
+- **`F-03` Матрица трансформации модели (TRS) и проекция вершины:**
+  ```
+  M = T(tx, ty, tz) · Ry(yaw) · Rx(pitch) · Rz(roll) · S(sx, sy, sz)
+  v_clip = P · V · M · [x, y, z, 1]^T
+  v_ndc  = v_clip.xyz / v_clip.w
+  ```
+- **`F-04` Floating Origin и единая проекция координат `2D (X,Y,h) ↔ 3D (x,y,z)`:**
+  ```
+  // Хранение: Float64 / Int32 (дециметры); рендер относительно камеры:
+  dx = Float64(X) - Float64(camX)
+  dy = Float64(Y) - Float64(camY)
+  dh = Float64(h) - Float64(camH)
+
+  // Проекция в правосторонний 3D (WebGL2 / Three.js / Godot):
+  scene.x =  Float32(dx)
+  scene.y =  Float32(dh)
+  scene.z = -Float32(dy)
+
+  // Азимут от A к B (0° = север +Y, по часовой):
+  azimuthRad = atan2(B.X - A.X, B.Y - A.Y)
+  ```
+
+---
+
+## 2. Мир, высоты, 64-битный ID грани и слои `(X;Y)Hp(...)` (`F-05` … `F-15`)
+
+- **`F-05` Билинейная интерполяция высоты `H(X, Y)` (аналог `F-71` из РАТГРАД):**
+  ```
+  u = clamp((X - x0) / d, 0, 1)
+  v = clamp((Y - y0) / d, 0, 1)
+  H(X, Y) = H00*(1-u)*(1-v) + H10*u*(1-v) + H01*(1-u)*v + H11*u*v
+  // Гарантия: min(H00..H11) <= H(X,Y) <= max(H00..H11)
+  ```
+- **`F-06` Правило склона и высота объекта `h`:**
+  ```
+  slope = sqrt((∂H/∂X)² + (∂H/∂Y)²)
+  if slope > 1.0 (круче 45°):
+      H_base_building = max(H00, H10, H01, H11)   // дом не тонет в склоне
+      H_base_road     = min(H00, H10, H01, H11)   // дорога не висит в воздухе
+  h_vertex = H_base + Δ
+  // Инвариант: h_vertex >= H(X,Y) - 0.05; для зданий H >= 0.5
+  ```
+- **`F-07` Упаковка и распаковка 64-битного `BigInt` ID грани (аналог `F-72`/`F-73`):**
+  ```
+  // Поля: s ∈ [0..4] (3b), i ∈ [0..65535] (16b), j ∈ [0..65535] (16b),
+  //       k ∈ [0..8191] (13b), t ∈ [0..4095] (12b), n ∈ [0..15] (4b) → итого 64 бита
+  ID = (BigInt(n) << 60n) | (BigInt(t) << 48n) | (BigInt(k) << 35n)
+     | (BigInt(j) << 19n) | (BigInt(i) << 3n)  | BigInt(s)
+
+  // Обратная распаковка:
+  s = Number( ID         & 7n)
+  i = Number((ID >>  3n) & 65535n)
+  j = Number((ID >> 19n) & 65535n)
+  k = Number((ID >> 35n) & 8191n)
+  t = Number((ID >> 48n) & 4095n)
+  n = Number((ID >> 60n) & 15n)
+  ```
+- **`F-08` Износ и автоматический код поломки грани в поле `t`:**
+  ```
+  w' = clamp(w + dt * (kN*Load + kW*Water + kF*Frost - kM*Repair), 0, 1)
+  t_effective =
+      4095              если w' >= 0.70   (облом — грани нет)
+      (t_base + 2048)   если w' >= 0.45   (повреждённая версия текстуры)
+      t_base            иначе             (целая текстура, t_base ∈ [0..2047])
+  ```
+- **`F-09` Проверка слоевой записи `(X;Y)Hp(X₁,Y₁; ...)`:**
+  ```
+  pairs.length === p - 1,  p >= 1,  H > 0
+  Если литера большая 'H': ∀m: (Xm === X && Ym === Y)   // иначе ошибка RC-302
+  Если литера малая 'h': допускается дрейф слоёв
+  ```
+- **`F-10` Суммарный дрейф слоёв `D`:**
+  ```
+  D = Σ_{m=1}^{p-1} sqrt((Xm - X_{m-1})² + (Ym - Y_{m-1})²)
+  ```
+- **`F-11` Длина наклонного столба `h` и угол наклона `θ`:**
+  ```
+  h_len = sqrt(H² + D²)
+  θ     = atan2(D, H)
+  ```
+- **`F-12` Толщина слоя `τ` и координата верха столба:**
+  ```
+  τ_m = H / p   (для равномерного H) или H_m (для переменного h)
+  top = (X_{p-1}, Y_{p-1}, H_ground(X, Y) + H)
+  ```
+- **`F-13` Квантование координат в целые (дециметры/сантиметры):**
+  ```
+  Xi = Math.round(X * 10)      // Int32, точность 0.1 м (±214 748 км!)
+  Yi = Math.round(Y * 10)
+  Hi = Math.round(H * 100)     // Int32, точность 0.01 м
+  ```
+- **`F-14` Индекс ячейки Spatial Hash и чанка:**
+  ```
+  cellX  = Math.floor(X / CELL_SIZE)
+  cellY  = Math.floor(Y / CELL_SIZE)
+  chunkX = Math.floor(X / CHUNK_SIZE)
+  chunkY = Math.floor(Y / CHUNK_SIZE)
+  key    = (BigInt(cellX + 0x80000000) << 32n) | BigInt(cellY + 0x80000000)
+  ```
+- **`F-15` Уровень LOD по дистанции до камеры:**
+  ```
+  lod = clamp(floor(log2(max(dist / R_LOD0, 1))), 0, LOD_MAX)
+  // Кольца: R_LOD0, 2·R_LOD0, 4·R_LOD0, 8·R_LOD0...
+  ```
+
+---
+
+## 3. Генерация карт, рельефа, рек и дорог (`F-16` … `F-22`)
+
+- **`F-16` Фрактальный шум FBM (Fractal Brownian Motion):**
+  ```
+  FBM(x, y) = (Σ_{o=0}^{O-1} gain^o · noise(x · lac^o, y · lac^o)) / (Σ gain^o)
+  ```
+- **`F-17` Гребневый шум (Ridged Multifractal) для гор:**
+  ```
+  R(x, y) = Σ_{o=0}^{O-1} gain^o · (1 - |noise(x · lac^o, y · lac^o)|)²
+  ```
+- **`F-18` Domain Warp (геологическая складчатость):**
+  ```
+  wx = x + amp · FBM(x + 5.2, y + 1.3)
+  wy = y + amp · FBM(x + 1.7, y + 9.2)
+  H_warped(x, y) = H_raw(wx, wy)
+  ```
+- **`F-19` Нормаль рельефа и светотень (Hillshade):**
+  ```
+  gx = (H(x+d, y) - H(x-d, y)) / (2d)
+  gy = (H(x, y+d) - H(x, y-d)) / (2d)
+  N  = normalize(-gx, -gy, 1)
+  L  = normalize(sunX, sunY, sunZ)
+  shade = clamp(ambient + (1 - ambient) * max(dot(N, L), 0), 0, 1)
+  ```
+- **`F-20` Ширина русла реки из накопленного стока `Q`:**
+  ```
+  widthM = clamp(k_w * Q^0.45, 3, 600)
+  widthPx = max(minPx, (widthM / 1000) * pxPerKm)   // масштабное чтение без «синих пятен»
+  ```
+- **`F-21` Стоимость ребра дороги для `A*` по рельефу:**
+  ```
+  grade = |H(b) - H(a)| / dist(a, b)
+  cost(a → b) = dist(a, b) · (1 + c_slope · grade² + c_water · isWater + c_bridge · isBridge)
+  // Если grade > gradeMax (напр. 0.08) — серпантин, тоннель или запрет
+  ```
+- **`F-22` Климат и выбор биома:**
+  ```
+  temp(Y, H) = T_eq - k_lat * |Y - Y_south| / L_world - 0.0065 * max(H, 0)
+  moist(X, Y) = clamp(M_base(X,Y) + k_sea * exp(-distToSea / L_coast), 0, 1)
+  ```
+
+---
+
+## 4. Меши, геометрия, растр и текстуры (`F-23` … `F-33`)
+
+- **`F-23` Ориентированная площадь 2D-контура (проверка обхода CCW/CW):**
+  ```
+  Area = 0.5 · Σ_{i=0}^{n-1} (x_i · y_{i+1} - x_{i+1} · y_i)
+  // Area > 0 → CCW (против часовой); |Area| < ε → вырожденный контур (RC-201)
+  ```
+- **`F-24` Нормаль треугольника `(p0, p1, p2)` и площадь:**
+  ```
+  e1 = p1 - p0,  e2 = p2 - p0
+  cross = e1 × e2
+  area  = 0.5 · |cross|
+  N     = cross / |cross|
+  ```
+- **`F-25` Автоматическая трипланарная / боксовая UV-развёртка:**
+  ```
+  если |N.y| >= max(|N.x|, |N.z|): (u, v) = (x / tileM, z / tileM)
+  если |N.x| >= |N.z|:             (u, v) = (z / tileM, y / tileM)
+  иначе:                           (u, v) = (x / tileM, y / tileM)
+  ```
+- **`F-26` Упаковка/распаковка 32-битного пикселя ABGR (little-endian `Uint32Array`):**
+  ```
+  rgba32 = ((a & 255) << 24) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255)
+  ```
+- **`F-27` Быстрое альфа-смешивание пикселя (`src over dst`):**
+  ```
+  out_c = (src_c * a + dst_c * (255 - a) + 127) >> 8
+  ```
+- **`F-28` Упорядоченный дизеринг (матрица Байера 4×4):**
+  ```
+  threshold = (BAYER4[(y & 3) * 4 + (x & 3)] + 0.5) / 16 - 0.5
+  c_dithered = clamp(c + threshold * spread, 0, 255)
+  ```
+- **`F-29` Квантование цвета в палитру (евклидово расстояние в RGB с весами яркости):**
+  ```
+  d² = 2*(r1-r2)² + 4*(g1-g2)² + 3*(b1-b2)²
+  paletteIdx = argmin_k d²(c, palette[k])
+  ```
+- **`F-30` Оператор Собеля для генерации Normal Map из растровой карты высот:**
+  ```
+  dx = (h[x+1,y-1] + 2*h[x+1,y] + h[x+1,y+1]) - (h[x-1,y-1] + 2*h[x-1,y] + h[x-1,y+1])
+  dy = (h[x-1,y+1] + 2*h[x,y+1] + h[x+1,y+1]) - (h[x-1,y-1] + 2*h[x,y-1] + h[x+1,y-1])
+  N  = normalize(-dx * strength, -dy * strength, 1)
+  rgb = floor((N * 0.5 + 0.5) * 255)
+  ```
+- **`F-31` Барицентрические координаты треугольника `(A, B, C)` для точки `(px, py)`:**
+  ```
+  edge(a, b, p) = (p.x - a.x)*(b.y - a.y) - (p.y - a.y)*(b.x - a.x)
+  area = edge(A, B, C)
+  w0 = edge(B, C, P) / area,  w1 = edge(C, A, P) / area,  w2 = edge(A, B, P) / area
+  // Точка внутри ⇔ w0 >= 0 && w1 >= 0 && w2 >= 0
+  ```
+- **`F-32` Перспективно-корректная интерполяция Z и UV в растровом 3D:**
+  ```
+  invW = w0*(1/wA) + w1*(1/wB) + w2*(1/wC)
+  z    = w0*zA + w1*zB + w2*zC
+  u    = (w0*(uA/wA) + w1*(uB/wB) + w2*(uC/wC)) / invW
+  v    = (w0*(vA/wA) + w1*(vB/wB) + w2*(vC/wC)) / invW
+  ```
+- **`F-33` Освещение Ламберта + суточный свет:**
+  ```
+  sunElev = asin(sin(lat)*sin(decl) + cos(lat)*cos(decl)*cos(hourAngle))
+  diff    = max(dot(N, L_sun), 0)
+  litRGB  = albedo * (ambientSky(sunElev) + sunColor(sunElev) * diff) + emissive(sunElev)
+  ```
+
+---
+
+## 5. `ToolGuard`, чувства (`see`, `hear`), гипотезы (`guess`) и мосты (`F-34` … `F-48`)
+
+- **`F-34` Контрольный хеш целостности `AssetVault` (`FNV-1a` 64-bit по буферам и рецепту):**
+  ```
+  h = 0xcbf29ce484222325n
+  for each byte b in [positionsBytes, indicesBytes, normalsBytes, recipeUtf8]:
+      h = ((h ^ BigInt(b)) * 0x100000001b3n) & 0xFFFFFFFFFFFFFFFFn
+  ```
+- **`F-35` Покрытие объекта на экране (для `tools.see.frame`):**
+  ```
+  coveragePct(entity) = 100 · count(objectIdBuf[p] === entity) / (width · height)
+  ```
+- **`F-36` Коэффициент перекрытия (окклюзии) объекта:**
+  ```
+  occludedPct = clamp(100 · (1 - visiblePixels / projectedBBoxPixels), 0, 100)
+  ```
+- **`F-37` Проверка висящего / утопленного объекта (`tools.see.diagnose`):**
+  ```
+  clearance = entity.boundsMinH - H(entity.X, entity.Y)
+  if clearance < -0.05  → RC-305 (утоплен в землю)
+  if clearance >  0.25 && !entity.canFloat → RC-306 (висит в воздухе без опоры)
+  ```
+- **`F-38` Проверка чёрного/пустого кадра:**
+  ```
+  meanLuma = (1/N) · Σ (0.299*R + 0.587*G + 0.114*B)
+  nonBgRatio = count(objectIdBuf[p] !== 0) / N
+  if meanLuma < 2.0 && nonBgRatio === 0 → RC-401 (пустой кадр)
+  ```
+- **`F-39` Пространственное затухание звука (`-6.02 дБ` на удвоение дистанции):**
+  ```
+  r = max(dist(listener, source), r_ref)     // r_ref = 1.0 м
+  dbAtListener = dbSource - 20 * log10(r / r_ref) - occlusionLossDb
+  // Проверка: при удвоении r → -20 * log10(2) = -6.0206 дБ
+  ```
+- **`F-40` Ослабление звука преградами (по лучу DDA):**
+  ```
+  occlusionLossDb = Σ_{wall ∈ rayHits} absorptionDb(wall.material)
+  // Напр.: дерево 8 дБ, кирпич 16 дБ, бетон 22 дБ, грунт/гора 35 дБ
+  ```
+- **`F-41` Азимут источника звука относительно слушателя:**
+  ```
+  azSource = atan2(src.X - lst.X, src.Y - lst.Y)
+  relAz    = wrapAnglePi(azSource - lst.yaw)   // 0 = спереди, +π/2 = справа, -π/2 = слева
+  ```
+- **`F-42` Статистика прогонов гипотезы (`tools.guess.hypothesize`):**
+  ```
+  mean   = (1/K) · Σ x_k
+  stddev = sqrt((1/K) · Σ (x_k - mean)²)
+  passRate = count(satisfies(x_k, target)) / K
+  ```
+- **`F-43` Уверенность и вердикт гипотезы:**
+  ```
+  confidence = clamp(passRate * (1 - exp(-K / 3)) * (1 - penaltyViolations), 0, 1)
+  verdict =
+      'confirmed'  если passRate >= 0.80 && violations === 0
+      'refuted'    если passRate <= 0.25 || criticalViolation
+      'uncertain'  иначе
+  ```
+- **`F-44` Критерий выигрыша при сравнении вариантов (`tools.guess.compare`):**
+  ```
+  score(variant) = w_metric * norm(mean) - w_var * norm(stddev) - w_err * violations - w_cost * costMs
+  ```
+- **`F-45` Конвертация осей при соединении с внешними движками (`tools.bridge`):**
+  ```
+  RatCore (X=восток, Y=север, h=вверх):
+    → Three.js / WebGL2: ( X,  h, -Y), масштаб 1:1 м
+    → Godot 4 (Y-up, -Z=север): ( X,  h, -Y), масштаб 1:1 м
+    → Canvas 2D Top-Down: px = (X - camX)*scale + W/2, py = (camY - Y)*scale + H/2
+  ```
+- **`F-46` Компрессия дельты синхронизации между движками:**
+  ```
+  deltaPacket = { fromTick, toTick, changedEntities[], changedFaces[], stateHash }
+  // Передаются только изменившиеся поля, а не весь мир
+  ```
+- **`F-47` Проверка детерминированного расхождения (Desync Check при Lockstep):**
+  ```
+  desync = (localStateHash(tick) !== peerStateHash(tick))
+  // При desync === true → код RC-604 + автоматический снимок diff
+  ```
+- **`F-48` Бюджет кадра и оценка цены генерации горы/чанка:**
+  ```
+  frameBudgetMs = 1000 / targetFps    // 16.67 мс для 60 FPS
+  genOpsEstimate = K² · (12 + E · (L + 1))
+  ```
+
+---
+
+## 6. Анимация, скелеты, IK и куклы Verlet (`F-49` … `F-54`)
+
+- **`F-49` Линейная и сферическая интерполяция позы (`lerp` / `slerp` кватернионов):**
+  ```
+  lerp(a, b, t) = a + (b - a) · t
+  cosΩ = dot(q1, q2)   (если cosΩ < 0, инвертируем q2 для кратчайшей дуги)
+  Ω    = acos(clamp(cosΩ, -1, 1))
+  slerp(q1, q2, t) = (sin((1-t)Ω)/sinΩ) · q1 + (sin(tΩ)/sinΩ) · q2
+  ```
+- **`F-50` Кубический сплайн Катмулла–Рома (плавные кривые ключевых кадров и камер):**
+  ```
+  P(t) = 0.5 · [ (2·P1) + (-P0 + P2)·t + (2·P0 - 5·P1 + 4·P2 - P3)·t² + (-P0 + 3·P1 - 3·P2 + P3)·t³ ]
+  ```
+- **`F-51` 2-костная обратная кинематика (2-Bone IK по теореме косинусов):**
+  ```
+  d = clamp(|target - root|, |L1 - L2| + ε, L1 + L2 - ε)
+  cosA = clamp((L1² + d² - L2²) / (2·L1·d), -1, 1)
+  cosB = clamp((L1² + L2² - d²) / (2·L1·L2), -1, 1)
+  angleShoulder = atan2_to_target - acos(cosA)
+  angleElbow    = π - acos(cosB)
+  ```
+- **`F-52` Демпфированная пружина Гука (отдача, подвеска, мягкая камера):**
+  ```
+  a = -k_stiff · (x - x_target) - c_damp · v
+  v' = v + a · dt
+  x' = x + v' · dt
+  // Критическое демпфирование (без лишних колебаний): c_crit = 2 · sqrt(k_stiff)
+  ```
+- **`F-53` Интегратор Верле (позиционная динамика точек регдола/ткани):**
+  ```
+  x_next = x_curr + (x_curr - x_prev) · (1 - drag) + a · dt²
+  ```
+- **`F-54` Проекция ограничения длины связи Верле:**
+  ```
+  δ = p_b - p_a,  dist = |δ|
+  diff = (dist - L_rest) / (dist · (invM_a + invM_b))
+  p_a += δ · (invM_a · diff · stiffness)
+  p_b -= δ · (invM_b · diff · stiffness)
+  ```
+
+---
+
+## 7. Физика, столкновения, баллистика, транспорт и жидкости SWE (`F-55` … `F-62`)
+
+- **`F-55` Полунеявный Эйлер (стабильная динамика твёрдых тел):**
+  ```
+  v' = v + (F / m + g) · dt
+  x' = x + v' · dt
+  ```
+- **`F-56` Импульс столкновения двух тел с коэффициентом упругости `e`:**
+  ```
+  v_rel = dot(v_b - v_a, n)
+  j = -(1 + e) · v_rel / (invM_a + invM_b)   (при v_rel < 0)
+  v_a -= j · invM_a · n,   v_b += j · invM_b · n
+  ```
+- **`F-57` Кулоново трение (тангенциальный импульс):**
+  ```
+  t_dir = normalize((v_b - v_a) - dot(v_b - v_a, n) · n)
+  jt = -dot(v_b - v_a, t_dir) / (invM_a + invM_b)
+  jt_clamped = clamp(jt, -μ · j, μ · j)
+  ```
+- **`F-58` Баллистика с квадратичным сопротивлением воздуха и энергией удара:**
+  ```
+  v_rel = v - v_wind
+  F_drag = -0.5 · ρ_air · C_d · A · |v_rel| · v_rel
+  a = g + F_drag / m
+  E_kinetic = 0.5 · m · |v|²
+  ```
+- **`F-59` Упрощённая физика шины и тяги (коэффициент проскальзывания + Magic Formula):**
+  ```
+  slip = (ω · R_wheel - v_long) / max(|v_long|, 0.5)
+  F_tire = μ · F_normal · sin(C · atan(B · slip))
+  torqueWheel = torqueEngine(rpm) · gearRatio · finalDrive · efficiency
+  ```
+- **`F-60` Уравнения мелкой воды SWE (Well-Balanced Shallow Water Equations):**
+  ```
+  ∂h/∂t + ∂(h·u)/∂x + ∂(h·v)/∂y = R_rain - E_evap
+  ∂(h·u)/∂t + ∂(h·u² + 0.5·g·h²)/∂x + ∂(h·u·v)/∂y = -g·h·∂H_bed/∂x - g·n²·u·|V|/h^(1/3)
+  // n — коэффициент шероховатости Маннинга; H_bed — отметка дна
+  ```
+- **`F-61` Условие устойчивости Куранта–Фридрихса–Леви (CFL) для воды:**
+  ```
+  c_max = max(|u| + sqrt(g·h), |v| + sqrt(g·h))
+  dt_safe <= 0.45 · Δx / max(c_max, 0.001)
+  ```
+- **`F-62` Давление ветра и парусность:**
+  ```
+  F_wind = 0.5 · ρ_air · C_w · A_proj · |v_wind - v_obj| · (v_wind - v_obj)
+  // Давление по высоте (барометрическая формула): P(H) = 1013.25 · (1 - 2.25577e-5 · H)^5.25588 гПа
+  ```
+
+---
+
+## 8. Навигация, толпы и транспортный поток (`F-63` … `F-67`)
+
+- **`F-63` Октильная эвристика `A*` для 8-связной сетки (допустимая и точная):**
+  ```
+  dx = |x2 - x1|,  dy = |y2 - y1|
+  h_octile = (dx + dy) + (sqrt(2) - 2) · min(dx, dy)
+  ```
+- **`F-64` Поле интегрирования и вектор Flow Field (для 1000+ агентов):**
+  ```
+  I(cell) = min_{nb} (I(nb) + cost(cell))    // волна Дейкстры от целей
+  flow(cell) = normalize(I(x-1,y) - I(x+1,y),  I(x,y-1) - I(x,y+1))
+  ```
+- **`F-65` Модель социальных сил толпы (Helbing Social Forces):**
+  ```
+  F_goal = (v_des · e_goal - v_i) / τ
+  F_rep(i, j) = A_rep · exp((r_i + r_j - d_ij) / B_rep) · n_ij
+  a_i = F_goal + Σ F_rep(i, j) + Σ F_wall(i, w)
+  ```
+- **`F-66` Модель водителя IDM (Intelligent Driver Model):**
+  ```
+  s*(v, Δv) = s0 + max(0, v·T_headway + (v·Δv) / (2·sqrt(a_max·b_comf)))
+  a_IDM = a_max · [ 1 - (v / v0)^δ - (s*(v, Δv) / max(s_gap, 0.1))² ]
+  ```
+- **`F-67` Тормозной путь транспортного средства:**
+  ```
+  d_stop = v · t_react + v² / (2 · μ · g)
+  ```
+
+---
+
+## 9. Атмосфера, приливы, свет и эффекты (`F-68` … `F-77`)
+
+- **`F-68` Солнечное склонение и высота солнца по дню года и широте:**
+  ```
+  decl = -23.44° · cos(360°/365 · (dayOfYear + 10))
+  hourAngle = 15° · (hour - 12)
+  sinElev = sin(lat)·sin(decl) + cos(lat)·cos(decl)·cos(hourAngle)
+  ```
+- **`F-69` Гармоническая формула прилива (лунная M2 + солнечная S2):**
+  ```
+  Δsea(t) = A_M2 · sin(2π·t / 12.4206 + φ1) + A_S2 · sin(2π·t / 12.0 + φ2)
+  ```
+- **`F-70` Экспоненциальный атмосферный туман (Beer–Lambert):**
+  ```
+  fogFactor = 1 - exp(-(dist · density)²)
+  finalColor = lerp(sceneColor, fogColor, fogFactor)
+  ```
+- **`F-71` Накопление и таяние снега/льда (градусо-дни):**
+  ```
+  if T_air < 0°C: snow' = snow + precipSnow;  ice' = ice + k_freeze · |T_air| · dt
+  if T_air > 0°C: melt  = k_melt · T_air · dt;  snow' = max(0, snow - melt)
+  ```
+- **`F-72` Гладкое затухание точечного света с конечным радиусом `R`:**
+  ```
+  att = clamp(1 - (d / R)², 0, 1)² / (1 + k_lin·d + k_quad·d²)
+  ```
+- **`F-73` Условие видимости клетки в 8-октантном Shadowcasting FOV:**
+  ```
+  slopeStart = (col - 0.5) / (row + 0.5)
+  slopeEnd   = (col + 0.5) / (row - 0.5)
+  // Клетка видима, если [slopeStart, slopeEnd] пересекается с окном [minSlope, maxSlope]
+  ```
+- **`F-74` Тряска камеры от «травмы» (`trauma²`):**
+  ```
+  trauma' = max(0, trauma - decay · dt)
+  shake   = trauma'²
+  offsetX = maxOffset · shake · noise1D(t · freq + 11)
+  rollDeg = maxRoll   · shake · noise1D(t · freq + 37)
+  ```
+- **`F-75` Кривая жизни частицы (fade-in / fade-out):**
+  ```
+  u = age / lifetime    // ∈ [0, 1]
+  alpha(u) = smoothstep(0, 0.12, u) · (1 - smoothstep(0.65, 1, u))
+  ```
+- **`F-76` Порог яркости Bloom (Soft-Knee):**
+  ```
+  luma = 0.2126·R + 0.7152·G + 0.0722·B
+  bloomMask = max(luma - threshold, 0) / max(luma, 1e-4)
+  ```
+- **`F-77` Кинематографический тонемаппинг ACES Filmic:**
+  ```
+  ACES(x) = clamp((x·(2.51·x + 0.03)) / (x·(2.43·x + 0.59) + 0.14), 0, 1)
+  ```
+
+---
+
+## 10. Игровой ИИ, экономика, выживание, UI, ввод, звук, сохранения и бенчмарки (`F-78` … `F-100`)
+
+- **`F-78` Кривые полезности Utility AI и агрегация с компенсацией:**
+  ```
+  // Сигмоида: U(x) = 1 / (1 + exp(-k · (x - mid)))
+  // Компенсация произведения N кривых (Dave Mark):
+  mod = 1 - 1 / N
+  score = Π_i U_i,   finalScore = score + (1 - score) · score · mod
+  ```
+- **`F-79` Угасание памяти агента о цели:**
+  ```
+  confidence' = confidence · exp(-dt / τ_memory)
+  ```
+- **`F-80` Тактическая оценка укрытия:**
+  ```
+  coverScore = w_occ·isOccluded + w_dist·bell(dist, d_opt) + w_flank·(1 - |cos(angleThreat)|) - w_exp·exposedSides
+  ```
+- **`F-81` Когнитивная усталость («больно думать»):**
+  ```
+  fatigue' = clamp(fatigue + dt · (k_think · complexity - k_rest · isIdle), 0, 1)
+  reactionDelayMs = baseDelayMs · (1 + 2.2 · fatigue'²)
+  aimSpreadRad    = baseSpread  · (1 + 1.8 · fatigue')
+  ```
+- **`F-82` Косинусное сходство TF-IDF векторов (локальный NLU намерений):**
+  ```
+  sim(q, d) = dot(v_q, v_d) / (|v_q| · |v_d| + 1e-9)
+  ```
+- **`F-83` Рыночная цена ресурса от баланса спроса и предложения:**
+  ```
+  price = basePrice · clamp((demand / max(supply, 1e-3))^elasticity, 0.25, 6.0)
+  ```
+- **`F-84` Денежный поток с налогом, инфляцией и кредитным процентом:**
+  ```
+  netProfit = (revenue - expenses) · (1 - taxRate) - debt · (apr / 365) · dtDays
+  realValue = nominalValue / (1 + inflation)^years
+  ```
+- **`F-85` Терморегуляция тела (гипотермия / гипертермия):**
+  ```
+  dT_body/dt = (Q_metabolic(activity) - (T_body - T_ambient) / R_insulation - Q_wet) / C_body
+  ```
+- **`F-86` Кровопотеря (5000 мл нормы) и пороги шока:**
+  ```
+  bloodMl' = clamp(bloodMl - Σ_wounds bleedRate(w) · (1 - bandageEff(w)) · dt + regenRate · dt, 0, 5000)
+  // < 3500 мл — слабость, < 2500 мл — тяжёлый шок, < 1800 мл — критический риск
+  ```
+- **`F-87` Кривая смертности Гомперца–Мейкема (демография и симулятор жизни):**
+  ```
+  μ(age) = α_ext + β · exp(γ · age)      // мгновенный риск смерти в возрасте age
+  P_die_year = 1 - exp(-μ(age))
+  ```
+- **`F-88` Проекция 3D-точки на экран HUD и мини-карту:**
+  ```
+  sx = (ndc.x * 0.5 + 0.5) · viewportW
+  sy = (0.5 - ndc.y * 0.5) · viewportH
+  behind = (clip.w <= 0)
+  ```
+- **`F-89` Экспоненциальное сглаживание индикаторов и камеры (независимое от FPS):**
+  ```
+  y' = target + (y - target) · exp(-lambda · dt)
+  ```
+- **`F-90` Радиальная мёртвая зона стика геймпада с перемасштабированием:**
+  ```
+  mag = hypot(ax, ay)
+  if mag < deadzone: out = (0, 0)
+  else: scale = (min(mag, 1) - deadzone) / (1 - deadzone);  out = (ax/mag, ay/mag) · scale
+  ```
+- **`F-91` Зум к точке курсора/щипка без смещения карты:**
+  ```
+  worldUnderCursor = screenToWorld(cursorPx, camOld)
+  camNew.zoom = clamp(camOld.zoom · factor, minZoom, maxZoom)
+  camNew.pos  = camOld.pos + (worldUnderCursor - screenToWorld(cursorPx, camNew))
+  ```
+- **`F-92` Огибающая ADSR процедурного звука:**
+  ```
+  Attack:  t / A                   (0 <= t < A)
+  Decay:   1 - (1 - S)·(t-A)/D     (A <= t < A+D)
+  Sustain: S                       (пока нота держится)
+  Release: S · (1 - t_rel / R)     (после отпускания)
+  ```
+- **`F-93` Перевод ноты MIDI в частоту (равномерная темперация 12-TET):**
+  ```
+  freqHz(midi) = 440 · 2^((midi - 69) / 12)
+  ```
+- **`F-94` Стерео-панорамирование равной мощности (Constant-Power Panning):**
+  ```
+  pan = clamp(sin(relAz), -1, 1)    // из азимута F-41
+  θ   = (pan + 1) · π / 4
+  gainL = cos(θ),   gainR = sin(θ)
+  ```
+- **`F-95` Мягкий лимитер микшера (защита от клиппинга звука):**
+  ```
+  outSample = tanh(drive · inSample) / tanh(drive)
+  ```
+- **`F-96` Коэффициент сжатия RLE/дельта-сохранения чанка:**
+  ```
+  ratio = rawBytes / max(compressedBytes, 1)
+  ```
+- **`F-97` Контрольная сумма сохранения (`CRC32` / `FNV-1a`):**
+  ```
+  validSave = (computeHash(payloadBytes) === header.checksum)
+  ```
+- **`F-98` Перцентили времени кадра `P50 / P95 / P99`:**
+  ```
+  sorted = sortAsc(frameTimesMs)
+  P_q = sorted[min(N - 1, floor((q / 100) · N))]
+  ```
+- **`F-99` Показатель `1% Low FPS` (реальная плавность без микрофризов):**
+  ```
+  onePctLowFps = 1000 / max(mean(top1PctSlowestFramesMs), 0.001)
+  ```
+- **`F-100` Детектор утечки памяти (наклон линейной регрессии кучи по кадрам):**
+  ```
+  slope = Σ((i - ī)·(mem_i - mem̄)) / Σ((i - ī)²)    // КБ/кадр; slope > порога → подозрение на утечку
+  ```
+
+---
+
+## 11. Сжатие невидимой информации, куллинг и стриминг мира (`F-101` … `F-112`) — см. [`COMPRESSION.md`](./COMPRESSION.md)
+
+- **`F-101` Размер мира в модели `Seed + Delta`:**
+  ```
+  S_world = 8 + Σ_{c ∈ TouchedChunks} S_delta(c)    // нетронутые чанки = 0 байт
+  ```
+- **`F-102` Палитровое битовое сжатие подчанка `16×16×16` (Minecraft `Paletted Container`):**
+  ```
+  P = palette.length
+  bitsPerEntry = (P <= 1) ? 0 : max(1, ceil(log2(P)))
+  bytesSection = (P <= 1) ? 4 : ceil(4096 · bitsPerEntry / 8) + 4 · P
+  indexInU32   = (i * bitsPerEntry) >>> 5,   bitOffset = (i * bitsPerEntry) & 31
+  ```
+- **`F-103` Коэффициент отсечения замурованных граней (`Surface-Only Shell`):**
+  ```
+  // 6-битная маска непрозрачных соседей: если mask6 == 0b111111 → 0 открытых граней
+  cullRatio = 1 - exposedFaces / max(6 · solidVoxels, 1)
+  ```
+- **`F-104` Коэффициент сжатия разреженного ациклического октографа (`SVDAG`):**
+  ```
+  nodeKey = fnv1a64(childMask || childPtr[0..popcount(childMask)-1])
+  R_dag   = rawVoxelsBytes / max(uniqueNodes · bytesPerNode, 1)
+  ```
+- **`F-105` 15-битная таблица сквозной видимости граней подчанка (Minecraft Cave Culling):**
+  ```
+  // 6 сторон куба (N,S,E,W,U,D) → C(6,2) = 15 неупорядоченных пар (a < b):
+  pairBit(a, b) = a * (11 - a) / 2 + (b - a - 1)      // ∈ [0..14], хранится в Uint16 (2 байта!)
+  canPass(a, b) = ((visibilityMask15 >>> pairBit(min(a,b), max(a,b))) & 1) === 1
+  ```
+- **`F-106` Проверка перекрытия по иерархической Z-пирамиде (`Hi-Z Occlusion Culling`):**
+  ```
+  mip = clamp(ceil(log2(max(screenBoxW, screenBoxH))), 0, maxMip)
+  hiZMax = max4(HiZ[mip][x0,y0], HiZ[mip][x1,y0], HiZ[mip][x0,y1], HiZ[mip][x1,y1])
+  isOccluded = (objectMinZ > hiZMax + ε_bias)
+  ```
+- **`F-107` Экранная геометрическая ошибка для выбора уровня `LOD` (как *Distant Horizons*):**
+  ```
+  screenErrorPx = (geoErrorM · focalPx) / max(distM, 0.1)
+  lodLevel = smallest L where screenErrorPx(L) <= τ_px    // обычно τ_px = 1.5 px
+  ```
+- **`F-108` Аналитический догон спящей симуляции (`Sleep & Catch-up`):**
+  ```
+  ΔT = currentTick - chunk.lastActiveTick
+  // Линейно-экспоненциальное восстановление без пошагового прогона:
+  res(t + ΔT) = clamp(res(t) + rate · ΔT, 0, cap)
+  pop(t + ΔT) = pop(t) · exp(r_growth · ΔT)
+  ```
+- **`F-109` 3D-код Мортона (`Z-order Curve`) для пространственной локальности перед сжатием:**
+  ```
+  part1By2(n) = раздвижка 10 бит числа n через 2 нуля (0b...cba → 0b...c00b00a)
+  morton3D(x, y, z) = part1By2(x) | (part1By2(y) << 1) | (part1By2(z) << 2)
+  ```
+- **`F-110` Кодирование `ZigZag + Varint` для дельт координат и высот:**
+  ```
+  zigzag(n) = (n << 1) ^ (n >> 31)           // -1→1, 1→2, -2→3, 2→4...
+  // Далее запись по 7 бит с флагом продолжения 0x80 в старшем бите каждого байта
+  ```
+- **`F-111` Сжатие кватерниона `Smallest-Three` (16 байт → 4 байта, 32 бита):**
+  ```
+  k = argmax_i |q_i|    // 2 бита индекса; если q_k < 0, инвертируем q
+  // Остальные 3 компоненты лежат в [-1/√2, +1/√2] → квантуем каждую в 10 бит:
+  q_enc_j = round((q_j · √2 + 1) · 511.5)    // 2 + 3·10 = 32 бита!
+  q_k_rec = sqrt(max(0, 1 - Σ_{j≠k} q_j²))
+  ```
+- **`F-112` Оценка приоритета вытеснения чанка в 3-ярусном кэше (`HOT / WARM / COLD`):**
+  ```
+  evictScore = w_dist·(distM / viewRadius) + w_age·(idleTicks / 600) + w_view·(inFrustum ? 0 : 1)
+  // Чанки с наибольшим evictScore первыми переводятся HOT → WARM (Paletted/SVDAG) → COLD (диск)
+  ```
+- **`F-113` Упакованная 8-байтная вершина (`PackedVertex64` вместо 36 байт — сжатие `4.5×`):**
+  ```
+  word0 = (x & 31) | ((y & 31) << 5) | ((z & 31) << 10) | ((normDir & 7) << 15) | ((ao & 3) << 18) | ((matId & 4095) << 20)
+  word1 = (u8 & 255) | ((v8 & 255) << 8) | ((light8 & 255) << 16) | ((flags8 & 255) << 24)
+  ```
+- **`F-114` 64-битный кирпич занятости `4×4×4` (`64-bit Occupancy Brick`, побитовый поиск открытых граней):**
+  ```
+  bitIdx(x, y, z) = x | (y << 2) | (z << 4)        // ∈ [0..63], все 64 блока в 1 BigUint64 (8 байт!)
+  exposedPosX = brick & ~( (brick >> 1n) & 0x7777777777777777n )
+  exposedNegX = brick & ~( (brick << 1n) & 0xEEEEEEEEEEEEEEEEn )
+  isEmpty     = (brick === 0n),   isFull = (brick === 0xFFFFFFFFFFFFFFFFn)
+  ```
+- **`F-115` Шахматный многочастотный планировщик (`Multi-Rate Staggered Ticking`):**
+  ```
+  shouldRun(entityId, tick, stride) = ((entityId + phaseOffset) % stride) === (tick % stride)
+  // stride = 1 (60 Гц), 4 (15 Гц), 15 (4 Гц), 60 (1 Гц) → ровная нагрузка без пиков!
+  ```
+- **`F-116` Автоподбор числа потоков под 75 % ядер CPU (`CoreGovernor Pool Sizing`):**
+  ```
+  C = hardwareConcurrency
+  activeThreads = max(1, floor(C * U_target))      // по умолчанию U_target = 0.75
+  workerCount   = max(0, activeThreads - 1)        // 1 поток — главный, остальные воркеры
+  // 4 ядра → 3 потока (75%), 8 ядер → 6 потоков (75%), 16 ядер → 12 потоков (75%)
+  ```
+- **`F-117` Бюджет рабочего окна потока (`Duty-Cycle <= 75 %`):**
+  ```
+  actualCoreShare = (activeThreads / max(C, 1))
+  dutyPerThread   = clamp(U_target / max(actualCoreShare, 0.01), 0.15, 0.75)
+  workBudgetMs    = windowMs * dutyPerThread       // остальное время (≥25%) поток спит!
+  ```
+- **`F-118` ПИ-регулятор удержания 75 % нагрузки ядер (`CoreGovernor Feedback`):**
+  ```
+  U_ema'  = (1 - α)·U_ema + α·(busyMs / windowMs)     // α = 0.2
+  err     = U_target - U_ema'                         // U_target = 0.75
+  I_acc'  = clamp(I_acc + err, -0.5, 0.5)
+  quota'  = clamp(quota + K_p·err + K_i·I_acc', 0.15, 1.0)
+  ```
+- **`F-119` Пропускная способность шины RAM→CPU и КПД данных:**
+  ```
+  ramBandwidthMBs = (bytesReadPerTick + bytesWrittenPerTick) * tickHz / 1e6
+  // Цель RatCore: <= 50 МБ/с (< 0.8 МБ/кадр) вместо сотен МБ/кадр в наивных движках
+  ```
+- **`F-120` Индекс запаса (Headroom) и детектор теплового троттлинга CPU:**
+  ```
+  headroomPct   = (1 - U_total) * 100              // норма >= 25 %
+  thermalRatio  = probeOpMs / baselineProbeMs      // > 1.25 → обнаружен троттлинг → снизить P2/P3 квоты!
+  ```
+
+---
+
+## 12. Потоковая передача сжатых файлов (`ratcore-wire/2`) и усиление инструментов (`F-121` … `F-128`)
+
+- **`F-121` Скользящий Gear-хеш контент-нарезки `FastCDC` (дедупликация кусков `4–64 КБ`):**
+  ```
+  fp = ((fp << 1) + GEAR_TABLE[byte]) >>> 0
+  // Граница куска: если len < avgSize → проверяем (fp & maskS) === 0, иначе (fp & maskL) === 0
+  dedupSavingPct = (1 - transferredChunks / max(totalChunks, 1)) * 100
+  ```
+- **`F-122` Выигрыш сжатия короткого пакета с общим словарём `ratcore-dict-v1`:**
+  ```
+  dictGain = rawBytes / max(deflateWithDictBytes(payload, dict32KB), 1)   // обычно 3×–6× на 50..2000 Б
+  ```
+- **`F-123` Управление окном потока `Backpressure` (`AIMD`, как в TCP/QUIC):**
+  ```
+  // При своевременном ACK:  cwnd' = min(cwnd + 1, maxWindowFrames)
+  // При задержке/переполнении буфера получателя: cwnd' = max(2, floor(cwnd * 0.5))
+  inFlightBytes = cwnd · frameBytes <= 262144     // жёсткий потолок 256 КБ RAM на соединение
+  ```
+- **`F-124` Прямое исправление ошибок `XOR-FEC` (1 паритетный пакет на группу из `N` пакетов):**
+  ```
+  P_parity[i] = F_0[i] ^ F_1[i] ^ ... ^ F_{N-1}[i]
+  // При потере любого одного пакета F_k: F_k[i] = P_parity[i] ^ XOR_{j≠k} F_j[i]
+  overheadPct = 100 / N                           // при N = 8: +12.5% трафика, 0 повторных ожиданий
+  ```
+- **`F-125` Оценка полного времени передачи для автовыбора кодека (`Codec Cost Function`):**
+  ```
+  T_total(codec) = (rawBytes / v_encode(codec)) + (rawBytes / ratio(codec)) / B_channel + (rawBytes / v_decode(codec))
+  // Выбираем кодек с min T_total, при ограничении CPU_encode <= headroomBudget (75 % ядер!)
+  ```
+- **`F-126` Байесовское обновление вероятности гипотезы (`tools.guess`):**
+  ```
+  P(H | E) = (P(E | H) · P(H)) / (P(E | H)·P(H) + P(E | ¬H)·(1 - P(H)))
+  ```
+- **`F-127` Адаптивный фильтр сглаживания указателя `One-Euro Filter` (`tools.input`):**
+  ```
+  fc = fc_min + beta · |dx_filtered / dt|         // низкая частота в покое, высокая при резком рывке!
+  α(fc, dt) = 1 / (1 + 1 / (2π · fc · dt))
+  x_hat' = α · x + (1 - α) · x_hat
+  ```
+- **`F-128` Иерархическое ускорение пути `HPA*` (`tools.nav`):**
+  ```
+  // Карта разбивается на кластеры K×K; вместо V вершин ищем по графу порталов V_abs ≈ 4·(V / K)
+  speedupHPA ≈ (V / V_abs) · log(V) / log(V_abs)  // на карте 1024×1024 ускорение в 20×–50×
+  ```
+
+---
+
+## 13. Сеть/Rollback, разрушаемость, ИИ-Режиссёр, моды, кино, Машина времени, автобаланс и 1-файловый бандл (`F-129` … `F-150`)
+
+- **`F-129` Битовый пакет сетевого ввода (`InputBitPack`, `tools.net`):**
+  ```
+  // tick(4Б) + buttonsMask(2Б) + axes_q8(4Б) + yawPitch_q12(3Б) + ackMask(2Б) + crc16(2Б)
+  packetBytes = 17 + extraFlagsBytes    // итого 12–24 байта/тик (<= 1.4 КБ/с при 60 Гц!)
+  ```
+- **`F-130` Буфер задержки и максимальное окно отката `RollbackWindow`:**
+  ```
+  inputDelayTicks = clamp(ceil((RTT_ms / 2 + jitter_ms) / (1000 / tickRate)) - maxRollback, 0, 4)
+  rollbackDepth   = clamp(ceil((RTT_ms / 2 + 2·jitter_ms) / (1000 / tickRate)) - inputDelayTicks, 0, maxRollback)
+  ```
+- **`F-131` Сглаживание визуальной коррекции после отката (Exponential Error Decay):**
+  ```
+  err_vis(t + dt) = err_vis(t) · exp(-dt / tau_smooth)     // tau_smooth ≈ 0.06..0.12 с
+  pos_render      = pos_sim + err_vis
+  ```
+- **`F-132` Коэффициент запаса прочности опоры (Structural Load / Stress Ratio, `tools.destroy`):**
+  ```
+  stressRatio(u) = (massAbove(u) · g + lateralLoad(u)) / max(supportCapacity(u), ε)
+  // u выдерживает нагрузку при stressRatio <= 1.0
+  ```
+- **`F-133` Порог обрушения и раскол графа опор:**
+  ```
+  collapse(u) ⇔ (stressRatio(u) > 1.0) ∨ (distToGround(u) = ∞)
+  ```
+- **`F-134` Скорость распространения огня с ветром и влажностью (упрощённая модель Ротермела):**
+  ```
+  R_fire = R_base(mat) · (1 + k_wind · max(0, dot(dir, windVec))) · (1 + k_slope · max(0, slope)) · clamp(1 - moisture / M_ext, 0, 1)
+  ```
+- **`F-135` Тепловой баланс тушения водой/пеной (Heat-Flux Quenching):**
+  ```
+  Q_net = Q_combustion(fuel, O2) - (V_water · ρ_w · (c_w · ΔT + L_vap)) / dt
+  // При Q_net <= 0 очаг затухает и порождает пар пропорционально V_water
+  ```
+- **`F-136` Интенсивность / кривая напряжения игрока (`AI Director Intensity`, `tools.story`):**
+  ```
+  I' = clamp(I · exp(-λ_decay · dt) + w_dmg · dmgNorm + w_prox · nearThreats + w_scarcity · (1 - resRatio), 0, 1)
+  ```
+- **`F-137` Вероятностный выбор события ИИ-Режиссёра по фазе цикла:**
+  ```
+  P(event_i | phase, I) ∝ baseWeight_i · exp(-|targetIntensity_i - I_goal(phase)| / τ) · cooldownFactor_i
+  ```
+- **`F-138` Бюджет CPU и RAM песочницы модов (`ModQuota` внутри 75 % `CoreGovernor`, `tools.mod`):**
+  ```
+  modBudgetMs  = min(quotaPct · frameBudgetMs, 0.15 · coreGovernorWorkBudgetMs)
+  modRamLimit  = min(modDeclaredMB, 0.20 · engineRamCapMB)
+  ```
+- **`F-139` Топологический порядок загрузки модов и разрешение конфликтов:**
+  ```
+  loadRank(m) = max_{d ∈ deps(m)} (loadRank(d) + 1),  без циклов (DAG);
+  при конфликте ключа побеждает max(explicitPriority, loadRank)
+  ```
+- **`F-140` Дуговая параметризация рельсы камеры (`Arc-Length Spline`, `tools.cutscene`):**
+  ```
+  s(u) = ∫_0^u ||P'(t)|| dt,   u(s_target) = s^{-1}(v_const · t)   // LUT + бинарный поиск → постоянная скорость камеры
+  ```
+- **`F-141` Оценка автокомпозиции 16:9 обложки (Auto-Cover Framing Score):**
+  ```
+  score = w_rule3 · ruleOfThirds(focalXY) + w_fill · gauss(bboxFill, 0.42, 0.14) + w_contrast · lumContrast + w_clear · (1 - occlusionPct)
+  ```
+- **`F-142` Шаг кадров живого таймлапса мира:**
+  ```
+  strideTicks = max(1, floor(totalSimTicks / (targetDurationSec · outputFps)))
+  ```
+- **`F-143` Оптимальный интервал COW-ключевых кадров «Машины времени» (`tools.save`):**
+  ```
+  // Баланс стоимости снимка C_snap и доигрывания K/2 тиков при перемотке
+  K* = clamp(round(sqrt(2 · C_snap / max(C_tick, ε))), 15, 300)   // обычно ~60 тиков (1 с)
+  ```
+- **`F-144` Верхняя граница памяти дерева ветвлений истории (Branching COW Tree):**
+  ```
+  RAM_timeline <= S_base + Σ_{node ∈ tree} |Δ_COW(node)| <= maxBranchRamMB   // при переполнении схлопываются старые листья
+  ```
+- **`F-145` Индекс доминирования стратегии в автобалансировщике (`tools.test.autoBalance`):**
+  ```
+  domSkew = max_i(winRate_i) - (1 / N_strategies)     // цель баланса: domSkew <= 0.08
+  ```
+- **`F-146` Нормализованная энтропия мета-игры Шеннона (Meta-Diversity Score):**
+  ```
+  H_meta = - Σ_{i=1..N} p_i · log2(p_i) / log2(N)     // ∈ [0, 1]; цель: H_meta >= 0.78
+  ```
+- **`F-147` Конечно-разностная чувствительность баланса по параметру `θ_k`:**
+  ```
+  ∂WinRate / ∂θ_k ≈ (E[WinRate(θ + δ·e_k)] - E[WinRate(θ - δ·e_k)]) / (2·δ)
+  ```
+- **`F-148` Сводный индекс «честного удовольствия» (Balance Fitness Score):**
+  ```
+  Fitness = w1·(1 - domSkew) + w2·H_meta + w3·(1 - deadlockRate) + w4·gauss(avgMatchSec, targetSec, σ)
+  ```
+- **`F-149` Оценка веса автономного 1-файлового `.html`-бандла (`tools.build.exportSingleHtml`):**
+  ```
+  bundleBytes = runtimeTreeShakenBytes + base85(RCW2(recipes + palette + audio)) + htmlShellBytes <= 300 * 1024
+  ```
+- **`F-150` Индекс целостности бандла и `ToolGuard`-манифеста (`BundleDigest`):**
+  ```
+  bundleDigest = SHA256(runtimeHash || recipesHash || toolGuardManifestHash || version)
+  ```
+
+---
+
+# Часть II. Алгоритмы (`A-01` … `A-100`)
+
+## Группа 1. Ядро и `ToolGuard` (`A-01` … `A-03`)
+- **`A-01` Цикл фиксированного шага + буфер интерполяции:** отделяет логику от частоты кадров (`F-01`), защищает от «спирали смерти» (лимит 4 подшага), хранит `prevState` и `currState` для плавного рендера.
+- **`A-02` Одноразовая печать и `AssetVault` (`ToolGuard`):** `claimMintAuthority()` выполняется один раз при инициализации `toolkit.js`, блокирует повтор (`RC-105`), кладёт буферы в приватный `Map`, считает `FNV-1a` (`F-34`), запечатывает хэндл в приватный `WeakMap`, на каждом входе рендера/мира проверяет `assertSealed + verifyHash` (`RC-101`, `RC-106`).
+- **`A-03` Статический аудитор обхода кода (`code-auditor`):** разбирает исходники сцен/игр на `RatCore`, проверяет запрещённые импорты внутренних модулей и ручное создание вершинных/WebGL буферов, при нарушении генерирует `RC-107` и создаёт баг-тикет.
+
+## Группа 2. Пространство, чанки и лучи (`A-04` … `A-06`)
+- **`A-04` Spatial Hash Grid (`O(1)`-поиск):** раскладывает AABB сущностей по ячейкам (`F-14`); запрос радиуса `R` обходит `ceil(2R/cell)²` ячеек с дедупликацией по `visitStamp` (ноль аллокаций `Set`).
+- **`A-05` 3D DDA-Raycast (Amanatides & Woo):** шагает лучом строго по граням метровой сетки `(i, j, k)` с вычислением `tMaxX/Y/Z` и `tDeltaX/Y/Z` — за десятки операций находит первую непустую грань (`faceId`) и пересечение с поверхностью `H(X, Y)`.
+- **`A-06` Парсер и валидатор слоёв `(X;Y)Hp(...)`:** токенизатор строки, проверка `p` (`1..9` или `[N]`), проверка числа пар `p - 1` (`F-09`), вычисление дрейфа `D` (`F-10`), `h` и `θ` (`F-11`), генерация `p` записей с уникальными 64-битными `faceId` (`F-07`).
+
+## Группа 3. Постройка карт (`A-07` … `A-11`)
+- **`A-07` 12-шаговый конвейер рельефа:** FBM (`F-16`) → Ridged (`F-17`) → Domain Warp (`F-18`) → континентальная маска → гидравлическая эрозия (частицы-капли со скоростью и наносами) → террасы → нормали и hillshade (`F-19`).
+- **`A-08` Гидрология (Priority-Flood + D8 + порядок Стралера):** заполнение локальных впадин мин-кучей (гарантия стока до моря `H=0` без застоя), вычисление D8-направлений, накопление площади водосбора `Q`, отсечение рек по порогу, расчёт ширины (`F-20`) и границ озёр.
+- **`A-09` Поселения и регионы Вороного:** расстановка столицы, хабов и городов с проверкой минимальной дистанции и высоты (`H ∈ [12..1200]`), разбиение карты на регионы по ближайшему центру Вороного и выделение береговой линии методом Marching Squares на уровне `H = 0`.
+- **`A-10` Планировка города (кольца, радиальные проспекты, кварталы, дома Г/П/Т):** генерация уличной сетки + бульварных колец, зонирование кварталов (центр, жильё, промзона, парк), расстановка пятен домов Г/П/Т по периметру с привязкой к `H(X,Y)`.
+- **`A-11` Маршрутизатор дорог `A*` по рельефу:** бинарная мин-куча, эвристика евклидовой дистанции, стоимость шага по `F-21`, автоматическое выделение мостов (пролив ≤ лимита) и паромов, сглаживание ломаной (Дуглас-Пеккер + контроль уклона).
+
+## Группа 4. Построение моделек, мешей и текстур (`A-12` … `A-25`)
+- **`A-12` Триангуляция 2D-контура (Ear Clipping):** нормализация обхода по `F-23`, проверка самопересечений, последовательное отрезание выпуклых «ушей» без чужих вершин внутри — `O(n²)` для простых контуров зданий и деталей.
+- **`A-13` Extrude + Bevel:** смещение контура внутрь/наружу по биссектрисам углов на шагах фаски, сшивание боковых стенок, накрытие крышкой/дном из `A-12`, расчёт нормалей (`F-24`) и UV (`F-25`).
+- **`A-14` Loft по сечениям:** приведение числа точек соседних сечений, соединение четырёхугольников по кратчайшему скручиванию, опциональные торцы.
+- **`A-15` Lathe (тело вращения):** вращение 2D-профиля `(r, y)` вокруг вертикальной оси на `segments` шагов, схлопывание полюсов при `r = 0`.
+- **`A-16` Hidden Face Culling + Greedy Meshing (воксели и слои):** для каждого кубика отбрасывает скрытые соседние грани и нижнюю грань (`s` вне `0..4`); по каждому 2D-срезу жадно склеивает прямоугольники с одинаковым `texId` в 1 квад (2 треугольника) — сжатие геометрии в 5–20×.
+- **`A-17` Surface Nets (гладкий меш из скалярного поля / точек):** находит пересечения рёбер сетки изоуровнем, ставит одну вершину в центре масс пересечений ячейки и соединяет соседние активные ячейки квадами.
+- **`A-18` Валидатор меша (`build.validate`):** проверяет отсутствие `NaN`/`Infinity`, ненулевые площади треугольников, согласованность ориентации граней (подсчёт открытых рёбер для поиска дыр), бюджет треугольников, AABB; при успехе выставляет `validated = true`.
+- **`A-19` Растровая линия (Брезенхэм) и заливка полигона (Scanline):** целочисленная отрисовка без разрывов прямо в `Uint32Array` буфер `RasterSurface`.
+- **`A-20` Процедурный шум (Value/Simplex + Voronoi/Worley):** тайлящийся (бесшовный по модулю `width`, `height`) шум для текстур камня, земли, штукатурки, воды и трещин.
+- **`A-21` Генераторы архитектурных растровых паттернов:** кирпичная кладка со смещением ряда и швами, панельные стыки, сетка окон с дневным/ночным свечением, асфальт с разметкой, доски.
+- **`A-22` Палитровое квантование и дизеринг Bayer 4×4:** применяет `F-28` + `F-29` для создания чёткой растровой / пиксель-арт графики в заданной палитре.
+- **`A-23` Автогенерация Normal Map:** проход фильтра Собеля (`F-30`) по карте высот текстуры с циклическим заворотом на краях (бесшовность).
+- **`A-24` Автогенерация повреждённой текстуры (`t + 2048`):** наложение трещин по границам ячеек Вороного + затемнение сколов + шум грязи поверх базовой текстуры.
+- **`A-25` Упаковщик текстурного атласа (Grid / Shelf Bin Packing):** раскладывает растровые текстуры в один атлас (с отступом 1–2 px против «кровотечения» мипмапов) и строит таблицу UV-координат по `texId`.
+
+## Группа 5. Рендер 2D / 3D (`A-26` … `A-29`)
+- **`A-26` Прогрессивный 2D-растровый рендер карты:** рендерит обзорный тайл быстро + уточняет видимую область в Web Worker, накладывает слои (рельеф, вода, дороги, города, ночь) по текущему `pxPerKm`.
+- **`A-27` Программный 3D-растеризатор + Z-buffer + Object-ID (`software-3d`):** трансформация вершин (`F-03`, `F-04`), отсечение по ближней плоскости (near-plane clip), backface culling, обход bbox треугольника по `F-31`, тест глубины `z < zBuf[p]`, запись цвета (`F-32`, `F-33`) и запись `(entityId << 16) | faceLocalId` в `objectIdBuf[p]`.
+- **`A-28` Чистый WebGL2-рендерер (`renderer-3d`):** компиляция шейдеров (атлас + направленный свет + туман + опциональный растровый пост-шейдер), загрузка VAO/VBO из `AssetVault`, группировка повторяемых объектов в `drawElementsInstanced`.
+- **`A-29` Отсечение пирамидой видимости (Frustum Culling):** извлечение 6 плоскостей из `P·V` (метод Грибба-Хартманна) и отбраковка чанков/сущностей по AABB до отправки в рендер.
+
+## Группа 6. Чувства, мышление и прогнозирование (`A-30` … `A-33`)
+- **`A-30` Автоматический визуальный диагност (`tools.see.diagnose`):** анализирует кадр и Object-ID буфер + сцену: проверяет `F-38` (чёрный кадр), `F-37` (висящие/утопленные объекты), наличие `NaN`, вывернутые нормали и перекрытие камеры грунтом.
+- **`A-31` Акустический решатель (`tools.hear.listen`):** фильтрует активные звуки по окну тиков и радиусу, прогоняет луч `A-05` от источника до слушателя для подсчёта преград (`F-40`), вычисляет громкость `dbAtListener` (`F-39`) и азимут (`F-41`), сортирует по громкости.
+- **`A-32` Детерминированное клонирование мира и расчёт Diff (`sandboxRun` / `watch.diff`):** снимает компактную копию `TypedArray`-слоёв, графа и сущностей (Copy-on-Write для неизменённых чанков), сравнивает хеши и строит минимальный список изменений.
+- **`A-33` Исполнитель гипотез (`tools.guess.hypothesize`):** клонирует мир (`A-32`), применяет `setupOps`, прогоняет `horizonTicks` × `trials` сидов с детерминированным PRNG (`F-02`), собирает метрики (`F-42`) и выносит вердикт (`F-43`).
+
+## Группа 7. Соединение с другими движками и мультиагентность (`A-34` … `A-36`)
+- **`A-34` Рукопожатие моста (`Bridge Handshake`):** обмен манифестом версии `RatCore`, поддерживаемыми форматами (координаты, единицы измерения, права `read-only` / `rpc`), проверка совместимости и регистрация `linkId`.
+- **`A-35` Дельта-синхронизация и Lockstep (`bridge.syncTick`):** упаковка изменений за тик (`F-46`), проверка совпадения `stateHash` (`F-47`), при расхождении — выдача `RC-604` и отчёт с diff.
+- **`A-36` Универсальный RPC-диспетчер (`bridge.rpcCall` / `serveRpc`):** валидация входящего конверта, проверка разрешённых групп инструментов (`allowGroups`), проксирование в `RatCore.tools.*` через `ToolGuard` (любая геометрия снаружи обязана быть рецептом!) и возврат стандартизированного ответа.
+
+## Группа 8. Анимация, скелеты и Verlet (`A-37` … `A-39`)
+- **`A-37` Послойный скелетный блендер:** обход дерева костей от корня, выборка ключей (`F-49`/`F-50`), наложение масок костей (`override`/`add`) и сборка финальных мировых матриц костей.
+- **`A-38` Решатель 2-Bone IK с полюсным вектором:** вычисление плоскости сгиба по полюсу (колени/локти не выворачиваются), расчёт углов по `F-51`, постановка стоп на реальную `H(X, Y)` и кистей на точки хвата оружия.
+- **`A-39` Регдол и ткань Verlet со сном:** шаг позиций (`F-53`), `N` итераций проекции связей (`F-54`), отскок от `H(X, Y)` и стен, трение о пол и перевод в сон при низкой кинетической энергии.
+
+## Группа 9. Физика, баллистика, транспорт и вода (`A-40` … `A-43`)
+- **`A-40` Физический солвер твёрдых тел:** Broadphase в Spatial Hash (`A-04`) → Narrowphase (AABB/Sphere/Capsule/SAT) → итеративный импульсный солвер (`F-56`, `F-57`) + позиционная коррекция проваливания + засыпание тел.
+- **`A-41` Баллистический шаг с подшагами и рикошетом:** интегрирование `F-58` по малым интервалам, проверка луча `A-05` по сегменту шага, расчёт угла падения (рикошет при скользящем ударе или пробитие с потерей энергии).
+- **`A-42` Модель колёсного транспорта и автопоезда:** 4–6 точек подвески (`F-52`), расчёт сцепления шин (`F-59`), переключение КПП/ретардера, сочленение седла полуприцепа с ограничением угла складывания.
+- **`A-43` Гидродинамический решатель мелкой воды SWE:** конечные объёмы (Lax–Friedrichs / HLL) по сетке с учётом рельефа дна (`F-60`), адаптивным шагом CFL (`F-61`), граничными условиями истоков/моря и пересчётом напора плотин/ГЭС.
+
+## Группа 10. Навигация, толпы, трафик и свет (`A-44` … `A-50`)
+- **`A-44` Jump Point Search (JPS) + сглаживание пути:** ускорение `A*` на равномерной сетке за счёт пропуска симметричных клеток + String Pulling / Line-of-Sight сглаживание.
+- **`A-45` Генератор Flow Field:** один обратный проход Дейкстры по полю стоимости до целей → вычисление нормализованных векторов градиента (`F-64`), обслуживает тысячи юнитов за `O(1)` на агента.
+- **`A-46` Движение толпы (Social Forces / ORCA):** поиск соседей в Spatial Hash (`A-04`), суммирование сил стремления к цели и отталкивания (`F-65`), клиппинг максимальной скорости.
+- **`A-47` Симулятор дорожного трафика (IDM + перекрёстки):** привязка машин к полосам рёбер графа, поиск лидера впереди, шаг ускорения IDM (`F-66`), фазы светофоров, учёт тормозного пути (`F-67`) и обнаружение заторов.
+- **`A-48` 8-октантный Shadowcasting FOV:** рекурсивное сканирование 8 октантов вокруг игрока с сужением окна наклонов (`F-73`) — точный туман войны без артефактов лучей за доли миллисекунды.
+- **`A-49` Пул частиц на `TypedArrays`:** фиксированный буфер (swap-with-last при смерти частицы), обновление позиций/размера/альфы (`F-75`) без единого `new` в кадре.
+- **`A-50` Пайплайн постобработки (растр и WebGL2):** порог Bloom (`F-76`) → разделяемое гауссово размытие → тонемаппинг ACES (`F-77`) → виньетка/зерно/палитра.
+
+## Группа 11. Игровой ИИ, экономика, выживание и диалоги (`A-51` … `A-59`)
+- **`A-51` Исполнитель конечных автоматов (FSM):** таблица состояний, проверка приоритетных переходов, хуки `onEnter`/`onTick`/`onExit` без утечек.
+- **`A-52` Исполнитель деревьев поведения (Behavior Tree):** обход узлов со статусами `RUNNING`/`SUCCESS`/`FAILURE` и общей доской памяти (`Blackboard`).
+- **`A-53` Решатель Utility AI:** оценка всех действий по кривым полезности (`F-78`) с гистерезисом (защита от «дёргания» между двумя почти равными целями).
+- **`A-54` Планировщик целей GOAP:** обратный `A*` от целевого состояния к текущему по предусловиям и эффектам действий с кэшированием планов.
+- **`A-55` Локальный офлайн-классификатор намерений (NLU):** нормализация/стемминг текста, символьные n-граммы + слова, взвешивание TF-IDF и ранжирование косинусным сходством (`F-82`) с извлечением сущностей-слотов.
+- **`A-56` Экономический цикл и балансировщик ресурсов:** сбор производств/потреблений за тик, пересчёт цен (`F-83`), налогов и кредитов (`F-84`), триггеры дефицитов и экономических кризисов.
+- **`A-57` Медико-биологический цикл выживания:** обновление калорий, гидратации, терморегуляции (`F-85`), 6 зон тела, кровопотери (`F-86`), инфекций и эффектов лекарств/бинтов.
+- **`A-58` Демографический цикл:** расчёт смертности по таблице Гомперца–Мейкема (`F-87`), рождаемости, старения когорт, миграции и роста/сжатия границ городов.
+- **`A-59` Графовый движок диалогов и квестов:** проверка булевых/числовых условий веток, применение транзакционных эффектов к состоянию мира и запись в летопись.
+
+## Группа 12. Реплеи, звук, сохранения и автотесты (`A-60` … `A-64`)
+- **`A-60` Запись и детерминированный реплей ввода:** сохранение только `seed` + дельт нажатий по номеру тика + периодических контрольных хешей для мгновенного воспроизведения бага.
+- **`A-61` Процедурный синтезатор с пулом голосов:** граф узлов WebAudio (осциллятор/шум → фильтр → ADSR `F-92` → панорама `F-94` → шина с лимитером `F-95`) с вытеснением самых тихих голосов при достижении лимита.
+- **`A-62` Дельта-сериализатор + RLE-сжатие чанков:** вычитание базового сгенерированного состояния по сиду → RLE-упаковка изменённых слоёв (`F-96`) → подпись контрольной суммой (`F-97`).
+- **`A-63` Конвейер миграций сохранений:** последовательное применение чистых функций `migrate_vK_to_vK1(save)` от версии файла до текущей версии схемы.
+- **`A-64` Встроенный бот-тестировщик и фаззер (`tools.test`):** headless-прогон симуляции, клик-обход всех действий, фаззинг граничных значений, расчёт перцентилей и утечек (`F-98..F-100`) и автоматическая запись багов в `ratcore/reports/bugs/`.
+
+## Группа 13. Сжатие невидимой информации, куллинг и стриминг (`A-65` … `A-74`)
+- **`A-65` Разреженный слой дельт (`Seed + Delta`):** все чтения идут через наложение `deltaMap.get(key) ?? genFromSeed(key)`; запись мутирует только `deltaMap`; если новое значение совпало с базовым из сида, запись удаляется из `deltaMap` (возврат к 0 байт!).
+- **`A-66` Палитровый контейнер подчанка `16×16×16`:** динамическое расширение/сжатие разрядности (`0 → 1 → 2 → 4 → 8 → 12 бит`, `F-102`) с периодической сборкой мусора неиспользуемых записей палитры; чтение и запись за `O(1)` без распаковки.
+- **`A-67` Ленивое вскрытие оболочки (`Surface-Only Shell + Lazy Reveal`):** хранение только граничных граней с `mask6 != 0b111111` (`F-103`) и жадным слиянием (`A-19`); при удалении грани из `seed` материализуются только вновь открывшиеся соседи.
+- **`A-68` Сборка и лучевой обход `SVDAG`:** построение октодерева снизу вверх → контент-хеширование (`F-104`) в единую таблицу уникальных узлов → трассировка луча прямо по графу с пропуском пустых узлов за `O(log N)`.
+- **`A-69` Minecraft Cave Culling (алгоритм Tommo/Mojang):**
+  1. При обновлении подчанка 3D FloodFill по прозрачным ячейкам находит связные компоненты и отмечает все достижимые пары сторон в 15-битной маске (`F-105`).
+  2. На кадре BFS от чанка камеры добавляет соседа через сторону `outDir`, только если `canPass(inDir, outDir) === true`, чанк попадает в усечённую пирамиду камеры (`A-29`) и не противоречит направлению обхода от камеры.
+- **`A-70` Hi-Z Occlusion Culling:** построение пирамиды `max-depth` из Z-буфера предыдущего кадра (`2×2 → max`) → тест AABB каждого кандидата на вычисленном мип-уровне (`F-106`) → пропуск полностью закрытых чанков и зданий.
+- **`A-71` Построение и плавное переключение `LOD`-пирамиды:** иерархическая свёртка `2×2×2` (выбор доминирующего непрозрачного материала + осреднение цвета), выбор уровня по экранной ошибке (`F-107`) и «юбки» на стыках разных LOD против трещин.
+- **`A-72` Заморозка и аналитический догон (`Sleep & Catch-up`):** при выходе чанка из активной зоны сущности сворачиваются в статистическую сводку; при возвращении вызывается аналитический шаг (`F-108`) за `O(1)` и пересоздаются локальные агенты.
+- **`A-73` Упаковщик Region-файлов (`Morton + RLE + ZigZag + Deflate`):** перестановка ячеек по коду Мортона (`F-109`) → RLE повторов → дельта-кодирование + ZigZag Varint (`F-110`) → нативный `Deflate` (`CompressionStream` / `node:zlib`) → запись в индексную таблицу региона `32×32`.
+- **`A-74` 3-ярусный менеджер памяти (`HOT / WARM / COLD`):** контроль лимита RAM по `evictScore` (`F-112`) — вытеснение невидимых GPU-мешей в сжатый `Paletted`/`SVDAG` (`WARM`), а затем в `Seed+Delta` на диск (`COLD`) без фризов кадра (не более `2 мс` бюджета на тик).
+
+## Группа 14. Ультра-лёгкая RAM/CPU архитектура и регулятор 75 % ядер (`A-75` … `A-80`)
+- **`A-75` Очередь микрозадач с кражей работы (`Work-Stealing Priority Job System`):** нарезка генерации чанков, мешинга, SVDAG, физики и сжатия на кванты `<= 1.5 мс` в 4 приоритетных очередях `P0..P3`; свободный воркер забирает квант с хвоста занятого → равномерная загрузка выделенных ядер без перекоса.
+- **`A-76` Регулятор загрузки ядер 75 % (`CoreGovernor`):**
+  1. При старте открывает `workerCount` (`F-116`, Web Workers в браузере / `worker_threads` в Node.js) так, чтобы активные потоки покрывали ровно `75 %` логических ядер.
+  2. В каждом окне ограничивает работу потока по `workBudgetMs` (`F-117`) и каждые `100 мс` подстраивает квоты по ПИ-регулятору (`F-118`) и детектору троттлинга (`F-120`).
+  3. При росте нагрузки сверх `78 %` или `P95 > 14 мс` мягко замедляет `P3` → `P2`, гарантируя неприкосновенность `P0`/`P1` и запас `>= 25 %`.
+- **`A-77` Безаллокационная арена и `Upload-and-Drop` пул:** единый `ArrayBuffer` с плоскими `SoA`-колонками (`12–16 байт/сущность`) и общим кольцевым scratch-буфером; после `gl.bufferData` вершин `PackedVertex64` (`F-113`) CPU-буфер сразу возвращается в пул (0 копий меша в RAM, 0 пауз GC).
+- **`A-78` Побитовый движок `64-bit Occupancy Brick`:** упаковка `4×4×4` блоков в один `BigUint64` (`F-114`), побитовое вычисление открытых граней без вложенных циклов и быстрый пропуск пустых кирпичей (`brick === 0n`) при DDA-рейкасте и коллизиях.
+- **`A-79` Шахматный многочастотный планировщик (`Multi-Rate Staggered Scheduler`):** распределение подсистем по частотам `60 / 15 / 4 / 1 Гц` с фазовым сдвигом `F-115` — исключает «тяжёлые кадры» и снижает трафик RAM→CPU в `4×–12×`.
+- **`A-80` `Dirty-Bitset` + `Idle-Skip` конвейер:** проверка 64-битных флагов грязных чанков перед любым проходом; при `dirtyMask === 0n` и неподвижной камере пропускаются физика чанка, мешинг и перерисовка кадра (0 байт чтения из RAM).
+
+## Группа 15. Потоковая передача сжатых файлов и алгоритмы усиления инструментов (`A-81` … `A-86`)
+- **`A-81` `FastCDC` контент-дедупликация и дифф-обмен:** нарезка файла скользящим Gear-хешем (`F-121`) → обмен списком 64-битных хешей `haveHashes` ↔ битовая маска `needMask` → передача только отсутствующих у получателя кусков в фреймах `RCW2` (экономия до `99.9 %` при повторной пересылке).
+- **`A-82` Мультиплексированный поток с `Backpressure` (`ratcore-wire/2`):** передача фреймов `16–64 КБ` в фиксированном кольцевом буфере `<= 256 КБ` с управлением окном `AIMD` (`F-123`) и вытеснением по приоритетам `P0..P3` (срочные команды обгоняют фоновые чанки; сквозная передача `Transferable` без распаковки).
+- **`A-83` Возобновляемый приёмник с `CRC32` и `XOR-FEC`:** ведение `resumeBitmap` полученных номеров `seq`, мгновенная проверка `CRC32` каждого фрейма, восстановление 1 потерянного пакета на группу из `N` через XOR (`F-124`) и дозапрос только реально недостающих фреймов.
+- **`A-84` Адаптивный селектор кодека под канал и 75 % CPU:** измерение пропускной способности канала `B_channel` и текущего запаса `CoreGovernor` (`F-120`) → минимизация полного времени `T_total` (`F-125`): `RAW Transferable` (в памяти) / `RLE+LZ4-fast` (средний канал) / `Dict+Deflate+FastCDC` (сеть/диск).
+- **`A-85` Иерархический поиск пути `HPA*` + `Dirty-Nav`:** предрасчёт порталов между кластерами `32×32` (`F-128`) → быстрый поиск по графу порталов → детализация только в текущем кластере; при изменении рельефа/стены пересчитывается только 1 грязный кластер.
+- **`A-86` Уменьшение падающего теста (`Delta Debugging / ddmin`):** автоматическое бинарное отсечение шагов в длинном падающем `ReplayStream` до минимального воспроизводимого набора `reproOps` (например, 1000 тиков → 4 шага) для записи в `ratcore/reports/bugs/`.
+
+## Группа 16. Мультиплеер, разрушаемость, ИИ-Режиссёр, моды, кино, Машина времени, автобаланс и 1-файловый бандл (`A-87` … `A-100`)
+- **`A-87` Rollback Netcode с кольцевым буфером COW-снимков:** хранение снимков последних `maxRollbackFrames` тиков (`F-130`), немедленное предсказание локального ввода (`F-129`), откат и детерминированный перепрогон при приходе запоздалого удалённого пакета + экспоненциальное сглаживание визуальной ошибки (`F-131`).
+- **`A-88` Интерполяция удалённых сущностей и компенсация лага (`Lag Compensation`):** рендер удалённых игроков с буфером `RTT/2` и точной интерполяцией; при проверке попадания выстрела сервер/хост временно проверяет хитбоксы по историческому снимку на тик выстрела.
+- **`A-89` WebRTC DataChannel P2P-меш и детерминированный выбор хоста:** установление прямых каналов (unordered/unreliable для тиков `P0`, reliable для `FastCDC`-снапшотов), выбор хоста по наименьшему `(pingMs, peerId)` и бесшовная миграция при отключении.
+- **`A-90` Структурная связность опор и расщепление на обломки:** при разрушении вокселей/блоков запускается локальный `BFS` от заземлённых узлов с оценкой нагрузки (`F-132`, `F-133`); все недостижимые связные компоненты вырезаются из статического чанка и спавнятся как динамические твёрдые тела в `tools.phys`.
+- **`A-91` Клеточно-воксельное распространение огня, дыма и тушения:** активное множество горящих граней (`activeFireSet`) пересчитывает скорость фронта по ветру и влажности (`F-134`), излучает дым в `fx` и мгновенно гасится потоками воды из `phys.fluidStep` по тепловому балансу (`F-135`).
+- **`A-92` ИИ-Режиссёр темпа (`AI Director FSM`):** конечный автомат `Build-Up → Peak → Sustain → Relax`, отслеживающий кривую напряжения `I` (`F-136`) и взвешенно выбирающий события (`F-137`) с защитой от повторов и записью в живую летопись мира.
+- **`A-93` Безопасный загрузчик модов `.ratmod.rcw2` (`ToolGuard` + `ModQuota` + `Hot-Reload`):** проверка подписи/CRC32 → аудит рецептов через `ToolGuard` → топологическая сортировка зависимостей (`F-139`) → запуск в изолированной песочнице с жёстким лимитом CPU/RAM (`F-138`) и горячей подменой таблиц без перезапуска.
+- **`A-94` Исполнитель кат-сцен и сплайновых рельс камеры:** предрасчёт таблицы длин дуг (`F-140`), детерминированное воспроизведение параллельных треков камеры, анимаций, погоды, титров и звука с поддержкой мгновенного `seek` и пропуска.
+- **`A-95` Генератор живых таймлапсов и авто-съёмщик 16:9 обложек:** запись ключевых ракурсов раз в `strideTicks` (`F-142`) в фоновом воркере без падения FPS; для обложки — прогон 12 кандидат-камер, скоринг по правилу третей и контрасту (`F-141`) и экспорт сжатого `640×360` кадра.
+- **`A-96` «Машина времени» (`Time-Scrubbing Debugger` с ветвлением истории):** периодические COW-снимки через `K*` тиков (`F-143`) + лог ввода образуют дерево веток (`F-144`); при перемотке движок прыгает в ближайший снимок `< T` и доигрывает остаток за `< 4 мс`, позволяя ответвлять альтернативные сценарии с изменёнными параметрами.
+- **`A-97` Автобалансировщик игр на 75 % CPU (`Multi-Worker Monte-Carlo + Coordinate/CMA-ES`):** параллельный прогон сотен headless-партий в воркерах `CoreGovernor`, расчёт фитнеса (`F-145..F-148`) и итеративная подстройка параметров баланса с отчётом улучшений «до/после».
+- **`A-98` Детектор эксплойтов и тупиков экономики:** автоматический поиск односторонних стратегий (`domSkew > 0.20`), бесконечных циклов крафта/арбитража и неразрешимых дефицитов с минимизацией реплея через `ddmin` (`A-86`).
+- **`A-99` Сборщик автономного 1-файлового `.html` (`Single-File Tree-Shaking + RCW2 Self-Extractor`):** статический граф зависимостей оставляет только используемые ветки `RatCore`, упаковывает рецепты и ассеты в `RCW2` + Base85 (`F-149`) и вшивает лёгкий самораспаковщик в один офлайн `.html`-файл (`< 300 КБ`).
+- **`A-100` Верификатор автономной сборки (`Bundle ToolGuard & Offline Sandbox Check`):** проверяет контрольный дайджест (`F-150`), отсутствие внешних ссылок/CDN, совместимость с `<iframe sandbox="allow-scripts allow-pointer-lock">` и прохождение headless-дымового теста перед выдачей готового файла.

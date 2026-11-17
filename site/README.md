@@ -1,49 +1,40 @@
-# Витрина сайта
+# Витрина сайта Games
 
-`index.html` в корне репозитория — копия этого файла с путями, поправленными под корень
-(`site/site.css`, `site/assets/…`, `last-shore/index.html`). Так GitHub Pages отдаёт витрину
-по адресу https://m98978672-boop.github.io/games/, а исходник лежит рядом с ассетами.
+`index.html` в корне репозитория генерируется из `site/index.html` скриптом `site/sync-root.mjs`.
+Так GitHub Pages отдаёт витрину по адресу https://m98978672-boop.github.io/games/,
+а исходник и оптимизированные обложки живут рядом в `site/`.
 
 ```
 site/
-├── index.html        витрина (исходник; ссылки на ../last-shore/…)
-├── site.css          стили витрины
-├── site.webmanifest  манифест (установка как приложение)
+├── index.html          витрина (исходник)
+├── site.css            стили витрины (тёмный обсидиан + тёплое золото)
+├── games-data.js       единый реестр 17 игр и проектов (работает и с file://)
+├── portal.js           поиск, фильтры, новинки, избранное, недавние, модалка и фон
+├── sync-root.mjs       синхронизация site/index.html → ../index.html
+├── site.webmanifest    манифест PWA
 ├── community-games.json реестр принятых игр сообщества
-├── community-games.js  безопасная отрисовка карточек из реестра
+├── community-games.js  безопасная отрисовка карточек из реестра сообщества
 ├── tests/
-│   └── community-catalog.mjs проверка формата и файлов игр
-├── assets/
-│   ├── last-shore.jpg обложка LAST SHORE (скриншот игры)
-│   ├── frontline.jpg  обложка «Линии Фронта» (скриншот игры)
-│   └── icon.svg       иконка сайта
-└── 404.html          страница «не найдено» (используется только при custom 404)
-```
-
-## Игры сообщества
-
-Для новой игры не нужно вручную добавлять карточку в оба HTML-файла: после проверки Pull Request добавь запись в `community-games.json`. `community-games.js` безопасно строит карточки на корневой витрине и в этом исходнике. Требования и процесс описаны в [`../CONTRIBUTING.md`](../CONTRIBUTING.md); проверка реестра запускается командой `node site/tests/community-catalog.mjs`.
-
-## Как обновить обложки
-
-Обложки — настоящие кадры из игр. Снимаются скриптом:
-
-```bash
-cd last-shore
-node tests/covers.mjs        # кладёт две .jpg в site/assets
+│   ├── community-catalog.mjs проверка реестра сообщества и форм
+│   └── portal.mjs            проверка витрины, путей ассетов и синхронности index.html
+├── assets/             обложки (WebP + JPEG fallback) и иконка сайта
+└── 404.html            страница «не найдено»
 ```
 
 ## Правило правок
 
-Меняешь витрину — правь `site/index.html`, потом скопируй в корень, поправив пути:
+Меняешь витрину — правь `site/index.html`, `site/games-data.js`, `site/portal.js` или `site/site.css`,
+а затем синхронизируй корневой `index.html` и прогони проверки:
 
 ```bash
-# из корня репозитория
-sed -e 's|src="assets/|src="site/assets/|g' \
-    -e 's|href="assets/|href="site/assets/|g' \
-    -e 's|href="site.css"|href="site/site.css"|' \
-    -e 's|href="site.webmanifest"|href="site/site.webmanifest"|' \
-    -e 's|href="\.\./\([a-z0-9-]*\)/|href="\1/|g' \
-    -e 's|src="\.\./\([a-z0-9-]*\)/|src="\1/|g' \
-    site/index.html > index.html
+node site/sync-root.mjs
+node site/tests/community-catalog.mjs
+node site/tests/portal.mjs
+node tools/bughunt/bughunt.mjs --play --only site
 ```
+
+## Игры сообщества
+
+Для новой игры сообщества добавь запись в `community-games.json` — `community-games.js` безопасно
+отрисует карточку и на корневой витрине, и в `site/index.html`. Требования описаны в
+[`../CONTRIBUTING.md`](../CONTRIBUTING.md).

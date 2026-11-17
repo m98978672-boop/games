@@ -19,7 +19,9 @@ jobs:
         with:
           node-version: 22
       - name: Validate community catalog and local files
-        run: node site/tests/community-catalog.mjs
+        run: |
+          node site/tests/community-catalog.mjs
+          node site/tests/portal.mjs
       - name: Self-test the bug-hunting bot
         run: node tools/bughunt/tests/selftest.mjs
       - name: Check the bug-code table covers 000–999
