@@ -150,6 +150,26 @@ export class Walls {
     }
   }
 
+  // Exact bounding-box broad phase for rest/placement checks. Each wall ref
+  // is inserted into every cell of its thickness-expanded bounds, so scanning
+  // cells touched by the query box cannot omit a geometrically relevant ref.
+  refsInBox(x, y, radius = 48) {
+    if (!this.enabled()) return [];
+    const found = [], stamp = ++this._stamp;
+    const x0 = Math.floor((x - radius) / CELL), x1 = Math.floor((x + radius) / CELL);
+    const y0 = Math.floor((y - radius) / CELL), y1 = Math.floor((y + radius) / CELL);
+    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
+      const list = this.grid.get(cellKey(cx, cy));
+      if (!list) continue;
+      for (let k = 0; k < list.length; k++) {
+        const ref = list[k];
+        if (ref.stamp === stamp) continue;
+        ref.stamp = stamp; found.push(ref);
+      }
+    }
+    return found;
+  }
+
   refsNear(x, y, radius = 48) {
     if (!this.enabled()) return [];
     const found = [];

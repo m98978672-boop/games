@@ -24,9 +24,14 @@ export function occupiedDetour(game,u,dx,dy,grid,candidates=null) {
 export function blockingUnit(game,u,x,y,clearance=0,grid=game.unitGrid,candidates=null) {
   const dx=x-u.x,dy=y-u.y,den=dx*dx+dy*dy;
   const reach=Math.sqrt(den)+u.radius+128+clearance;
+  const minX=Math.min(u.x,x),maxX=Math.max(u.x,x),minY=Math.min(u.y,y),maxY=Math.max(u.y,y);
   for(const o of candidates || grid.query(u.x,u.y,reach)) {
     if(o===u || !o.alive || o.downed) continue;
-    const ox=u.x-o.x,oy=u.y-o.y,r=u.radius+o.radius+clearance;
+    const r=u.radius+o.radius+clearance;
+    // If the center is outside the swept segment's expanded bounding box,
+    // the circles cannot intersect; avoid the more expensive projection.
+    if(o.x<minX-r || o.x>maxX+r || o.y<minY-r || o.y>maxY+r)continue;
+    const ox=u.x-o.x,oy=u.y-o.y;
     const start2=ox*ox+oy*oy,end2=(x-o.x)**2+(y-o.y)**2;
     if(start2<r*r) {
       if(end2<start2 || ox*dx+oy*dy<0) return o;

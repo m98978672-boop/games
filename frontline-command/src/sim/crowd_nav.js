@@ -27,10 +27,10 @@ export function prepareCrowdNavigation(game, u, distance, maxMembers=MAX_GROUP, 
   if (u._crowdGroupGoal && Math.hypot(u._crowdGroupGoal.x-u.goal.x,u._crowdGroupGoal.y-u.goal.y) >= 1) clearCrowdState(u);
   if (!u._crowdGroupGoal) {
     // Сначала дешёвая проверка соседа: одиночные юниты не сканируют здания.
-    const near = game.unitGrid.query(u.x,u.y,160).some(o => o !== u && o.alive && !o.downed &&
+    const near = game.unitGrid.queryRange(u.x,u.y,160).some(o => o !== u && o.alive && !o.downed &&
       !o.isVehicle && o.faction === u.faction && sameGoal(o) && Math.hypot(o.x-u.x,o.y-u.y) < 160);
     if (near && game.walls?.buildingAtPoint?.(u.goal.x,u.goal.y)) {
-      const members=game.unitGrid.query(u.x,u.y,450).filter(o => o.alive && !o.downed && !o.isVehicle &&
+      const members=game.unitGrid.queryRange(u.x,u.y,450).filter(o => o.alive && !o.downed && !o.isVehicle &&
         !o.playerControlled && !o.perception.hasContact && o.faction === u.faction && sameGoal(o) &&
         Math.hypot(o.x-u.x,o.y-u.y) < 450)
         .sort((a,b) => Math.hypot(a.x-u.goal.x,a.y-u.goal.y)-Math.hypot(b.x-u.goal.x,b.y-u.goal.y) || a.id-b.id);
