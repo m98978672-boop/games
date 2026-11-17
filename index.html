@@ -3,366 +3,228 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Games — браузерные игры и PLAYBRIDGE</title>
-<meta name="description" content="Коллекция браузерных игр и PLAYBRIDGE — Steam OpenID, устанавливаемая PWA с автообновлением; собственный GPU-хост возможен, но стриминг пока не включён.">
-<meta name="theme-color" content="#0b0d0c">
+<title>Games — браузерные игры без установки</title>
+<meta name="description" content="Коллекция 17 браузерных игр и интерактивных проектов: карта страны РАТГРАД, пиксельная зомби-выживалка DEAD DISTRICT, 3D-шутер СЕКТОР «ПЕПЕЛ», симуляторы жизни, ГЭС, дорог и Европы. Без установки и CDN.">
+<meta name="theme-color" content="#070908">
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="Games — игры и PLAYBRIDGE">
-<meta property="og:description" content="Браузерные игры и PLAYBRIDGE — Steam OpenID, библиотека через Steam API и устанавливаемая PWA. Собственный GPU-хост рассматривается; поток пока не реализован.">
-<meta property="og:image" content="assets/last-shore.jpg">
+<meta property="og:title" content="Games — браузерные игры без установки">
+<meta property="og:description" content="17 браузерных 2D и 3D игр, симуляторов, стратегий и инструментов. Работают сразу по ссылке и офлайн.">
+<meta property="og:image" content="site/assets/country-atlas.jpg">
 
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23111312'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23e8b45a' stroke-width='2.2'/%3E%3Cpath d='M16 7v18M7 16h18' stroke='%23e8b45a' stroke-width='1.6'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c100f'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23e8b45a' stroke-width='2.2'/%3E%3Cpath d='M16 7v18M7 16h18' stroke='%23e8b45a' stroke-width='1.6'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="site/site.css">
 <link rel="manifest" href="site/site.webmanifest">
-<script src="site/community-games.js" defer></script>
 <link rel="canonical" href="https://m98978672-boop.github.io/games/">
+<script src="site/games-data.js" defer></script>
+<script src="site/portal.js" defer></script>
+<script src="site/community-games.js" defer></script>
 </head>
-<body>
+<body data-root="">
 
-<header class="hero">
+<nav class="site-nav" aria-label="Основная навигация">
+  <div class="site-nav-inner">
+    <a class="nav-brand" href="#top">
+      <span class="nav-logo" aria-hidden="true">G</span>
+      <span class="nav-brand-name">Games</span>
+      <span class="nav-count"><span data-games-total>17</span> игр</span>
+    </a>
+
+    <div class="nav-links">
+      <a href="#new-releases">Новинки</a>
+      <a href="#games">Каталог</a>
+      <a href="#community-games">Сообщество</a>
+      <a href="#about">О платформе</a>
+      <a href="developers/index.html">Разработчикам ↗</a>
+    </div>
+
+    <div class="nav-actions">
+      <button class="nav-search-btn" type="button" data-focus-search aria-label="Перейти к поиску по каталогу">
+        <span aria-hidden="true">⌕</span>
+        <span>Поиск</span>
+        <kbd>/</kbd>
+      </button>
+      <button class="nav-random-btn" type="button" data-random-game aria-label="Открыть случайную игру">
+        <span aria-hidden="true">🎲</span>
+        <span>Случайная</span>
+      </button>
+    </div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-inner">
-    <p class="kicker">браузерные игры · без установки</p>
-    <h1>Games</h1>
-    <p class="lede">Браузерные игры, которые открываются сразу по ссылке: симулятор одной случайной жизни на Земле,
-      экономическая стратегия про строительство дорог, симулятор грузоперевозок по Европе, 3D-симулятор ГЭС
-      с живой физикой воды, 3D-выживание на острове и стратегия современной войны.</p>
-    <a class="cta" href="#games">Выбрать игру</a>
-    <a class="cta cta-community" href="developers/index.html">Для разработчиков ↗</a>
-    <a class="cta" href="night-taxi/index.html" style="margin-left:10px;background:#e4b65f;color:#18201c;">🚕 НОЧНОЕ ТАКСИ</a>
-    <a class="cta" href="cloud-play/index.html" style="margin-left:10px;background:linear-gradient(180deg,#d0ff8a,#89cf4a);color:#14210c;">☁ PLAYBRIDGE</a>
-    <a class="cta" href="road-tycoon/index.html" style="margin-left:10px;background:linear-gradient(180deg,#ffcf7a,#e09a3c);color:#2a1a05;">🛣 ТРАССА</a>
-    <a class="cta" href="euro-haul/index.html" style="margin-left:10px;background:linear-gradient(180deg,#6fe0c6,#2f9f88);color:#04201a;">🚛 ЕВРОТРАК</a>
-    <a class="cta" href="cascade-hydro/index.html" style="margin-left:10px;background:linear-gradient(180deg,#5eead4,#0284c7);color:#06131f;">Играть в КАСКАД (ГЭС)</a>
-    <a class="cta" href="nika-life/index.html" style="margin-left:10px;background:linear-gradient(180deg,#ffd0dc,#e78fa6);color:#2a1420;">🌸 НИКА: ЖИВАЯ</a>
-    <a class="cta" href="1in8b/index.html" style="margin-left:10px;background:linear-gradient(180deg,#ffe9b4,#e8b45a);color:#2a2008;">🌍 1 ИЗ 8 МИЛЛИАРДОВ</a>
-    <a class="cta" href="dead-district/index.html" style="margin-left:10px;background:linear-gradient(180deg,#c9cb9f,#679a73);color:#0f2935;">🧟 DEAD DISTRICT</a>
-    <a class="cta" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener" style="margin-left:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(242,236,223,0.28);color:#f2ecdf;">Сайт на GitHub Pages ↗</a>
+    <div class="hero-copy">
+      <p class="kicker"><span class="kicker-dot" aria-hidden="true"></span>браузерные игры · без установки · офлайн</p>
+      <h1>Games</h1>
+      <p class="lede">Коллекция самостоятельных 2D и 3D игр, которые открываются за секунду прямо в браузере:
+        карта целой страны, пиксельная зомби-выживалка, тактический шутер, симуляторы жизни, ГЭС, дорог и Европы —
+        без скачивания, рекламы и внешних CDN.</p>
+
+      <div class="hero-actions">
+        <a class="cta" href="#games">Открыть каталог</a>
+        <button class="cta cta-secondary" type="button" data-random-game>Случайная игра 🎲</button>
+        <a class="cta cta-community" href="developers/index.html">Для разработчиков ↗</a>
+      </div>
+
+      <div class="hero-metrics" aria-label="Сводка платформы">
+        <div class="metric">
+          <strong data-games-total>17</strong>
+          <span>игр и проектов</span>
+        </div>
+        <div class="metric">
+          <strong data-games-new>6</strong>
+          <span>крупных новинок</span>
+        </div>
+        <div class="metric">
+          <strong>2D / 3D</strong>
+          <span>WebGL и Canvas</span>
+        </div>
+        <div class="metric">
+          <strong>0 МБ</strong>
+          <span>офлайн и file://</span>
+        </div>
+      </div>
+    </div>
+
+    <aside class="spotlight" id="hero-spotlight" aria-label="Главные новинки">
+      <div class="spotlight-bar">
+        <span class="spotlight-label">Главное сейчас</span>
+        <div class="spotlight-nav">
+          <button class="spot-arrow" type="button" data-spot-prev aria-label="Предыдущая игра">‹</button>
+          <button class="spot-arrow" type="button" data-spot-next aria-label="Следующая игра">›</button>
+        </div>
+      </div>
+
+      <div class="spotlight-art-wrap">
+        <div data-spot-art>
+          <picture>
+            <source type="image/webp" srcset="site/assets/country-atlas.webp">
+            <img src="site/assets/country-atlas.jpg" alt="РАТГРАД — карта страны 7000×7000 км" width="1280" height="720" fetchpriority="high">
+          </picture>
+        </div>
+        <div class="spotlight-overlay-tags">
+          <span class="gcard-badge is-new" data-spot-badge>Новинка · 7000×7000 км</span>
+          <span class="gcard-dim" data-spot-dim>2D · Карта</span>
+        </div>
+      </div>
+
+      <div class="spotlight-body">
+        <h2 data-spot-title>РАТГРАД</h2>
+        <p class="spotlight-sub" data-spot-sub>Карта целой страны 7000 × 7000 км</p>
+        <p class="spotlight-note" data-spot-note>Ночь и огни городов, поезда, суда, диспетчеры и рост городов</p>
+
+        <div class="spotlight-footer">
+          <div class="spotlight-btns">
+            <a class="btn btn-primary" href="country-atlas/index.html" data-spot-play data-track-game="country-atlas">Играть</a>
+            <button class="btn" type="button" data-spot-info data-open-modal="country-atlas">Подробнее</button>
+          </div>
+          <div class="spot-dots" data-spot-dots role="group" aria-label="Выбор игры в витрине"></div>
+        </div>
+      </div>
+    </aside>
   </div>
 </header>
 
 <main>
-  <section id="games" class="games">
-    <article class="card card-zombie">
-      <div class="card-art">
-        <img src="dead-district/cover.svg" alt="DEAD DISTRICT — пиксельная зомби-выживалка" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">новое · 480x270 Nearest · браузер + Godot 4.3</span>
-      </div>
-      <div class="card-body">
-        <h2>DEAD DISTRICT<span>пиксельная зомби-выживалка в процедурном городе</span></h2>
-        <p class="desc">Выживите в заражённом городе: исследуйте процедурные районы 32×32 чанков, баррикадируйте дома,
-          следите за голодом, жаждой, температурой тела и ранами на 6 частях тела, водите транспорт и отбивайтесь от орд.
-          Баланс построен по реальным справочникам USDA, NOAA и медицины; в папке также лежит полная гибридная версия для Godot 4.3.</p>
-        <ul class="features">
-          <li>Пиксель-арт 480×270 Nearest в 32-цветной палитре Survival Horror 32</li>
-          <li>Чанки 32×32 (Voronoi + Simplex + L-System + BSP), Flow Field и 8-октантный FOV</li>
-          <li>5 типов зомби (10 состояний FSM, LOD до 1200) и выжившие NPC на Utility AI</li>
-          <li>6 частей тела, крафт, стройка, фермерство, транспорт и проект Godot 4.3</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="dead-district/index.html">Играть</a>
-          <a class="btn" href="dead-district/README.md">Об игре</a>
-        </div>
-      </div>
-    </article>
-    <article class="card card-life">
-      <div class="card-art">
-        <img src="1in8b/cover.svg" alt="1 ИЗ 8 МИЛЛИАРДОВ — симулятор одной случайной жизни на Земле" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">новое · 173 страны · реальная статистика</span>
-      </div>
-      <div class="card-body">
-        <h2>1 ИЗ 8 МИЛЛИАРДОВ<span>симулятор одной случайной жизни</span></h2>
-        <p class="desc">Вы рождаетесь случайным человеком на Земле: 17,6 % — Индия, 5,7 % — Нигерия, 1 % — Россия,
-          0,06 % — Швейцария. Дальше одна жизнь идёт год за годом — школа или работа с двенадцати,
-          деньги, которые надо на что-то тратить, болезни, любовь, дети, война, переезд
-          и смерть по таблицам смертности своей страны.</p>
-        <ul class="features">
-          <li>Жребий по числу рождений или по населению: 173 страны и территории</li>
-          <li>Эпохи: прошлое с 1950 года, сегодня, будущее до 2100 — мир пересчитывается на год рождения</li>
-          <li>Здоровье, счастье, знания, отношения — и семь статей расходов на ползунках</li>
-          <li>Живой портрет: человек стареет прямо на экране, 136 анимаций без единой картинки</li>
-          <li>Меню «Траты»: 69 покупок в 9 разделах — от тетрадей и репетитора до операции, жилья и своего кафе</li>
-          <li>21 карточка решений, 49 событий и вопросы-паузы в 5, 15, 30, 50 и 70 лет</li>
-          <li>Летопись жизни, карта прожитых лет, четверо «родившихся в ту же секунду»</li>
-          <li>Финал: запись о смерти, кривая выживаемости сверстников, карточка в PNG</li>
-          <li>Модель сверена с данными: средняя ошибка продолжительности жизни — 0,66 года</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="1in8b/index.html">Родиться</a>
-          <a class="btn" href="1in8b/README.md">Об игре</a>
-        </div>
-      </div>
-    </article>
-    <article class="card card-showroom">
-      <div class="card-art">
-        <img src="truck-showroom/cover.png" alt="ГАРАЖ 3D — тягач, собранный из точек: контур тушью, ямки золотом" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">64 модели · точки с контуром и ямками · меш и 4D</span>
-      </div>
-      <div class="card-body">
-        <h2>ГАРАЖ 3D<span>шоурум тягачей, прицепов, автомобилей и зданий</span></h2>
-        <p class="desc">Интерактивный 3D-шоурум: 10 седельных тягачей, 20 типов полуприцепов, 10 автомобилей
-          и 24 здания. Любую модель можно обойти со всех сторон, сесть в кабину, перекрасить кузов,
-          сравнить две машины рядом и сохранить скриншот. Отдельно — режим точек: контур обводится
-          тушью, ямки и ниши золотом, и из этих же точек собирается меш.</p>
-        <ul class="features">
-          <li>64 модели: 10 тягачей, 20 полуприцепов (шторка, реф, трал, цистерна, автовоз, B-double), 10 автомобилей, 24 здания</li>
-          <li>Точечный трафарет: контур тушью, ямки и ниши (арки, решётки, откосы окон) золотом, заливка поверхности</li>
-          <li>Меш из точек: Surface Nets по тем же обводкам, 43 тыс. треугольников у тягача и 164 тыс. у здания</li>
-          <li>4D-точки: у каждой точки четвёртая координата, облако «дышит», оставаясь собой</li>
-          <li>Вид из салона: приборная панель, руль, КПП, педали, спальник со шторками</li>
-          <li>4 схемы света, осмотр по точкам, 18 цветов покраски, избранное, сравнение и скриншоты</li>
-          <li>Листы со всех сторон: <a href="truck-showroom/sheets/index.html">галерея</a> — шесть ракурсов на модель, точки и меш</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="truck-showroom/index.html">Открыть шоурум</a>
-          <a class="btn" href="truck-showroom/sheets/index.html">Картинки со всех сторон</a>
-          <a class="btn" href="truck-showroom/README.md">Об шоуруме</a>
-        </div>
-      </div>
-    </article>
-    <article class="card card-taxi">
-      <div class="card-art">
-        <img src="night-taxi/city.png" alt="Ночной город глазами водителя такси" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">прототип · ночные заказы · сенсорное управление</span>
-      </div>
-      <div class="card-body">
-        <h2>НОЧНОЕ ТАКСИ<span>Последний район — ночная смена водителя</span></h2>
-        <p class="desc">Браузерный прототип о ночном таксисте: принимайте заказы диспетчера, объезжайте препятствия, возите пассажиров и собирайте их истории. Следите за топливом, рейтингом и состоянием машины, платите счета и выбирайте автомобиль в гараже.</p>
-        <ul class="features">
-          <li>Заказы, пассажиры, истории и журнал смены</li>
-          <li>3D-город с дорожной сеткой, управлением автомобилем и транспортом</li>
-          <li>Три автомобиля, заправка, ремонт и простая экономика</li>
-          <li>Клавиатура и сенсорные кнопки, авто-газ и локальное сохранение</li>
-          <li>Прототип: упрощённый 3D-город, не полная версия по ТЗ</li>
-        </ul>
-        <div class="card-actions"><a class="btn btn-primary" href="night-taxi/index.html">Играть</a><a class="btn" href="night-taxi/README.md">Об игре</a></div>
-      </div>
-    </article>
-    <article class="card card-base">
-      <div class="card-art">
-        <img src="game-base/cover.svg" alt="БАЗА — каркас всех игр: золотые светлячки на тёмном ночном фоне" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">шаблон · единый дизайн · база для новых игр</span>
-      </div>
-      <div class="card-body">
-        <h2>БАЗА<span>каркас, на основе которого делаются все игры</span></h2>
-        <p class="desc">Самая простая игра коллекции и главный шаблон репозитория: мини-игра «Светлячки»
-          (кликай по светлячкам, собирай комбо, ставь рекорд за 60 секунд). Весь общий дизайн всех игр
-          вынесен в единый файл <code>shared/theme.css</code>, а HUD-скелет и структура кода — в эту папку.</p>
-        <ul class="features">
-          <li>Единый дизайн всех игр: <code>shared/theme.css</code> — тёмная тема, золотой акцент, стеклянные панели, один HUD</li>
-          <li>Одинаковый скелет: topbar со статистикой, боковая панель, чипы-подсказки, тосты, модалки, пауза, автосохранение</li>
-          <li><code>game-base/TEMPLATE.md</code> — пошаговая инструкция, как ИИ создаёт новую игру на базе БАЗЫ за 9 шагов</li>
-          <li>Проверки: <code>node game-base/tests/smoke.mjs</code> и <code>node game-base/tests/logic.mjs</code></li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="game-base/index.html">Играть</a>
-          <a class="btn" href="game-base/TEMPLATE.md">Как создать игру</a>
-          <a class="btn" href="shared/README.md">Дизайн-система</a>
-        </div>
-      </div>
-    </article>
-    <article class="card card-cloudplay">
-      <div class="card-art">
-        <img src="cloud-play/cover.svg" alt="PLAYBRIDGE — схема установки игры и будущего облачного потока" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">PWA с автообновлением · Steam backend нужен отдельно</span>
-      </div>
-      <div class="card-body">
-        <h2>PLAYBRIDGE<span>Steam-вход и библиотека · PWA + автообновление</span></h2>
-        <p class="desc">Вместо вымышленных игр — серверная авторизация через Steam OpenID и запрос видимой библиотеки через Steam Web API. Устанавливаемая PWA обновляет интерфейс автоматически; собственный GPU-хост возможен, но host-agent и видеопоток ещё не реализованы.</p>
-        <ul class="features">
-          <li>Настоящий SteamID после проверки OpenID-ответа на backend; пароль сервис не получает</li>
-          <li>Список игр и время запуска только из Steam API, если настройки приватности это разрешают</li>
-          <li>Кнопка установки открывает Steam; локальную передачу LAN выполняет сам клиент Steam</li>
-          <li>Собственный GPU может быть хостом; host-agent и видеопоток пока не реализованы</li>
-          <li>GitHub Pages статический: для входа нужен Node backend и HTTPS-домен</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="cloud-play/index.html">Открыть PLAYBRIDGE</a>
-          <a class="btn" href="cloud-play/README.md">Запуск и план реализации</a>
-        </div>
-      </div>
-    </article>
-    <article class="card card-road">
-      <div class="card-art">
-        <img src="road-tycoon/cover.svg" alt="ТРАССА — закат над трассой, АЗС, кафе и машины" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">v1.3 · 3D · 500 моделей · железная дорога · удобно на телефоне</span>
-      </div>
-      <div class="card-body">
-        <h2>ТРАССА<span>Дорожная империя: от гравийки до трассы</span></h2>
-        <p class="desc">Экономическая стратегия про компанию, которая строит дороги между городами и объекты вдоль них.
-          Начните с двух гравийных дорог и одной придорожной палатки — и зарабатывайте на мелочах: кофе, заправка, мойка,
-          шиномонтаж. Прокладывайте трассы к новым городам, переводите их в асфальт, ставьте АЗС, кафе, мотели и платные
-          участки, берите госзаказы и кредиты — и превратите маленькую бригаду в дорожную империю.</p>
-        <ul class="features">
-          <li>Настоящий 3D: карта 1000×1000 км, города из сотен домов и улиц, мосты через реки, машины строго по своим полосам</li>
-          <li>15 типов объектов: АЗС, кафе, магазин, шиномонтаж, мойка, мотель, кемпинг, СТО, зарядка, платный пункт, щиты, озеленение</li>
-          <li>4 покрытия — грунт, гравий, асфальт, магистраль: скорость, трафик, износ и плата за проезд</li>
-          <li>Живая экономика: спрос по типам клиентов, население городов, содержание дорог, зарплаты бригад, налоги, кредиты</li>
-          <li>Работает на телефоне: кнопка «ПК / ТЕЛ» переключает раскладку под большой палец, прогресс сохраняется сам</li>
-          <li>Кризисы: топливный шок, спад перевозок, шторм, инфляция — экономику трясёт каждые 1–2 недели</li>
-          <li>Города растут, чахнут и гибнут от кризисов; у трассы сами появляются посёлки, которые могут стать городами</li>
-          <li>9 целей, госзаказы, уровни компании и наём новых бригад — от первого объекта до миллионного капитала</li>
-          <li>Смена суток, погода, машины и пешеходы на карте; мышь, клавиатура и сенсор, автосохранение в браузере</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="road-tycoon/index.html">Играть</a>
-          <a class="btn" href="road-tycoon/README.md">Об игре</a>
-        </div>
-      </div>
-    </article>
-    <article class="card card-truck">
-      <div class="card-art">
-        <img src="euro-haul/cover.svg" alt="ЕВРОТРАК — тягач с полуприцепом на европейской трассе" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">v1.0 · 152 города · 28 стран · карьера и экономика</span>
-      </div>
-      <div class="card-body">
-        <h2>ЕВРОТРАК<span>Симулятор грузоперевозок по Европе</span></h2>
-        <p class="desc">Полноценный 3D-симулятор дальнобойщика в браузере: настоящая карта Европы, междугородние рейсы по сети дорог, живой трафик, смена суток и погода. Берите контракты, везите груз из Берлина в Рим, следите за топливом, износом и сроками — и растите от подержанного тягача до собственного автопарка.</p>
-        <ul class="features">
-          <li>152 города в 28 странах: Германия, Франция, Испания, Италия, Скандинавия, Балтия, Балканы, Британия</li>
-          <li>Рынок грузов: 30 видов груза, 6 типов полуприцепов, срочные рейсы и ADR</li>
-          <li>12-ступенчатая КПП, круиз-контроль, ретардер, расход топлива и износ узлов</li>
-          <li>Вид из кабины с приборной панелью и навигацией, камеры снаружи, трафик и столкновения</li>
-          <li>Физика тягача и полуприцепа: сцепка, складывание, крен в поворотах, тормоза</li>
-          <li>Карта Европы по реальным координатам: береговая линия и границы из Natural Earth</li>
-          <li>Карьера: уровни, навыки, автосалон, гаражи, наёмные водители, достижения</li>
-          <li>ПК, ноутбук, планшет и телефон: клавиатура, геймпад или экранные педали, качество графики подстраивается само</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="euro-haul/index.html">Играть</a>
-          <a class="btn" href="euro-haul/README.md">Об игре</a>
-        </div>
-      </div>
-    </article>
-    <article class="card card-lastshore">
-      <div class="card-art">
-        <img src="site/assets/last-shore.jpg" alt="LAST SHORE: герой на пляже острова у костра" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">v0.19.1 · полное плавание, гладкие стволы, LOD крон, дома зверей, чистые обводки</span>
-      </div>
-      <div class="card-body">
-        <h2>LAST SHORE<span>Последний берег</span></h2>
-        <p class="desc">3D-выживание: вид от третьего лица и от первого (клавиша V). Один большой остров, полные сутки за 12 минут,
-          жажда, голод и холод. Добывай дерево и камень, охоться на кабанов, крафти снасти, спускайся в шахту за рудой
-          и куй собственные клинки на верстаке — разводи костёр и держись до сигнального маяка.</p>
-        <ul class="features">
-          <li>Живой остров: пляжи, джунгли, горы, родники</li>
-          <li>Процедурные текстуры, ветер в листве, вода с прибоем</li>
-          <li>Шахта: каменный слой и магма с обсидианом</li>
-          <li>Звери: кабаны, крабы, чайки и змеи</li>
-          <li>Крафт + верстак: выкуй свой клинок и заточи</li>
-          <li>Хотбар на 10 слотов, костёр и готовка</li>
-          <li>Прицел в центре экрана: бей и бери по нему</li>
-          <li>Процедурный звук: удары, звери, огонь, птицы</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="last-shore/index.html">Играть</a>
-          <a class="btn" href="last-shore/PLAN.md">План игры</a>
-        </div>
-      </div>
-    </article>
-
-    <article class="card card-frontline">
-      <div class="card-art">
-        <img src="site/assets/frontline.jpg" alt="Линия Фронта: карта боя с техникой и окопами" loading="lazy" width="1440" height="810">
-        <span class="badge">v0.19.1 · играбельно</span>
-      </div>
-      <div class="card-body">
-        <h2>ЛИНИЯ ФРОНТА<span>Сталь и Дроны</span></h2>
-        <p class="desc">Стратегия современной войны в реальном времени, вид сверху. Симметричный арсенал:
-          пехота, БТР, танки, РСЗО, FPV-камикадзе, дроны-бомбардировщики, ПВО, РЭБ и крылатые ракеты.
-          Три города противника, прогнозирующий ИИ и ручное управление дроном от первого лица.</p>
-        <ul class="features">
-          <li>Ручной полёт FPV-дрона (клавиша F)</li>
-          <li>ПВО и РЭБ против дронов и ракет</li>
-          <li>Отряды, фланги, резерв и строй</li>
-          <li>Постройки, строители, три уровня сложности</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="frontline-steel-and-drones/play.html">Играть</a>
-          <a class="btn" href="frontline-steel-and-drones/PLAN.md">План игры</a>
-        </div>
-      </div>
-    </article>
-
-    <article class="card card-cascade">
-      <div class="card-art">
-        <img src="site/assets/cascade-hydro.jpg" alt="КАСКАД: Живая Вода — плотина ГЭС, изумрудная река, собственный канал и растущий город" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">v0.4.0 · 3D-гроты истоков рек, тонкая стройка, БСУ/Насосная/ВЭС, физика ветра и климата, 48 зданий и 480 текстур</span>
-      </div>
-      <div class="card-body">
-        <h2>КАСКАД<span>Живая Вода</span></h2>
-        <p class="desc">Масштабный 3D-симулятор гидроэнергетики на речных бассейнах 0.8×0.8 км, 5×5 км (25 км²) и 10×10 км (100 км²). Ледниковые 3D-гроты и каскады истоков всех 3 рек без застоя воды, тонкая послойная стройка плотин, Бетонозавод БСУ [B], насосная [G] и Метео-ВЭС [N], связанная физика динамического ветра и микроклимата, каноническая ГЭС/ГАЭС в нижнем бьефе, 12 доходов, межгородские трассы с мостами и 8 городов из 48 типов зданий.</p>
-        <ul class="features">
-          <li>Выбор масштаба бассейна: 0.8×0.8 км, 5×5 км (25 км²) и гигантские 10×10 км (100 км²)</li>
-          <li>3D-гроты истоков рек («Белый Ледник» и ключи) + безостановочный гравитационный сток до моря</li>
-          <li>Тонкая стройка (4 кисти, 4 яруса высоты, шаг 15°) + [B] Бетонозавод, [G] Насосная и [N] Метео-ВЭС</li>
-          <li>Тонкая физика ветра, горно-долинного бриза, давления гПа, температуры воды, Маннинга и Кориолиса</li>
-          <li>12 видов заработка: ОРЭМ, арбитраж ГАЭС, шлюзы [L], рыбхозы [F], Алюмград, ЦОД ИИ, CO₂ и щебень</li>
-          <li>8 растущих городов (48 типов зданий, мега-атлас 1024px), 300 анимаций и 480 текстур (~1.4 мс шаг SWE)</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="cascade-hydro/index.html">Играть</a>
-          <a class="btn" href="cascade-hydro/PLAN.md">План игры</a>
-        </div>
-      </div>
-    </article>
-
-    <article class="card card-folderos">
-      <div class="card-art">
-        <img src="site/assets/folder-os.png" alt="Folder OS: эмуляция операционной системы из папок и файлов" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">v1.0.0 · эмуляция ОС на папках и файлах</span>
-      </div>
-      <div class="card-body">
-        <h2>FOLDER OS<span>ОС из папок и файлов</span></h2>
-        <p class="desc">Эмуляция операционной системы, где вместо ядра — папка <code>/sys/kernel</code>, вместо процессора — папки <code>/sys/cpu/core0..3</code>, а всё работает на файлах. Файловый менеджер, терминал, текстовый редактор, настройки. Сохраняется в браузере и восстанавливается после перезагрузки.</p>
-        <ul class="features">
-          <li>Ядро <code>/sys/kernel</code> — папка с модулями vfs.js и scheduler.js</li>
-          <li>Процессор <code>/sys/cpu</code> — ядра-папки с файлами load и current</li>
-          <li>Терминал: ls, cd, pwd, cat, echo, mkdir, touch, rm, cp, mv, ps, exec, help, sysinfo</li>
-          <li>Файловый менеджер и текстовый редактор в окнах</li>
-          <li>Диск — localStorage: всё остаётся после перезагрузки страницы</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="folder-os/index.html">Играть</a>
-          <a class="btn" href="folder-os/PLAN.md">План игры</a>
-        </div>
-      </div>
-    </article>
-
-    <article class="card card-shooter">
-      <div class="card-art">
-        <img src="shooter-2/cover.svg" alt="СЕКТОР «ПЕПЕЛ» — тактический шутер от первого лица: модели по обведённым контурам, 1760 анимаций, умные боевики" loading="lazy" width="1200" height="680">
-        <span class="badge badge-new">шутер · модели по контурам · карты-полигоны · 1760 анимаций · кукла из точек</span>
-      </div>
-      <div class="card-body">
-        <h2>СЕКТОР «ПЕПЕЛ»<span>тактический шутер от первого лица</span></h2>
-        <p class="desc">Шесть миссий против боевиков, которым больно думать. Каждая деталь обведена точками и превращена в объём: выдавливание с фаской для оружия, лофт по сечениям для тела, тела вращения для шлема и стволов. Карты — полигоны зданий, вышек и укрытий. Каждая часть тела анимируется отдельно: 22 части × 20 анимаций × 4 варианта = 1760 клипов.</p>
-        <ul class="features">
-          <li>1760 анимаций: 22 части тела × 20 анимаций × 4 варианта, слои и IK-хват оружия</li>
-          <li>Боевики «больно думают»: тики размышлений, укрытия, фланги, приказы командира, память о вас</li>
-          <li>Кукла из точек (17 точек, Verlet) — импульс от пули, сон и адаптивные подшаги</li>
-          <li>Модели по обведённым контурам: контур → объём с фаской, лофт по сечениям, тела вращения</li>
-          <li>Карты из полигонов: здания с двускатными крышами, решётчатые вышки, блоки и мешки</li>
-          <li>Оптимизация без потери картинки: LOD, пулы частиц, адаптивное разрешение, лимит трупов</li>
-          <li>6 миссий: зачистка, диверсия, оборона волнами, эвакуация и босс «Архитектор»</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="shooter-2/index.html">Играть</a>
-          <a class="btn" href="shooter-2/README.md">Об игре</a>
-          <a class="btn" href="shooter/index.html">Старая версия</a>
-        </div>
-      </div>
-    </article>
+  <section class="recent-bar" id="recent-section" hidden aria-label="Недавно открытые игры">
+    <span class="recent-title">Недавно открывали</span>
+    <div class="recent-list" id="recent-list"></div>
+    <button class="recent-clear" id="recent-clear" type="button">Очистить</button>
   </section>
 
-  <section class="panel community-panel" id="community-games" aria-labelledby="community-games-title">
+  <section class="section" id="new-releases" aria-labelledby="new-releases-title">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">СВЕЖИЕ РЕЛИЗЫ И КРУПНЫЕ ОБНОВЛЕНИЯ</p>
+        <h2 id="new-releases-title">Новинки <span class="section-count-badge" data-games-new>6</span></h2>
+        <p class="section-sub">Самые новые проекты и крупные апдейты — готовы к запуску в один клик.</p>
+      </div>
+      <a class="btn btn-ghost" href="#games">Весь каталог ↓</a>
+    </div>
+    <div class="releases-grid" id="new-releases-grid"></div>
+  </section>
+
+  <section class="section section-bordered" id="games" aria-labelledby="catalog-title">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">ВСЯ КОЛЛЕКЦИЯ · ПОИСК И ФИЛЬТРЫ</p>
+        <h2 id="catalog-title">Каталог игр <span class="section-count-badge" data-games-total>17</span></h2>
+        <p class="section-sub">Ищите по названию, жанру или технологии, сохраняйте любимые в избранное и открывайте превью прямо на странице.</p>
+      </div>
+    </div>
+
+    <div class="catalog-toolbar" role="search" aria-label="Поиск и фильтрация каталога">
+      <div class="toolbar-top">
+        <label class="search-box" for="catalog-search">
+          <span class="sr-only">Поиск по играм</span>
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="catalog-search" type="search" placeholder="Найти игру: ратград, зомби, 3D, шутер, ГЭС, дороги…" autocomplete="off" spellcheck="false">
+          <button class="search-clear" id="catalog-search-clear" type="button" hidden aria-label="Очистить поиск">×</button>
+          <kbd class="search-kbd" aria-hidden="true">/</kbd>
+        </label>
+
+        <div class="toolbar-controls">
+          <label class="sr-only" for="catalog-sort">Сортировка</label>
+          <select class="sort-select" id="catalog-sort" aria-label="Сортировка каталога">
+            <option value="new">Сначала новинки</option>
+            <option value="featured">Выбор редакции</option>
+            <option value="alpha">По алфавиту (А–Я)</option>
+            <option value="recent">Недавно открытые</option>
+          </select>
+
+          <div class="view-toggle" role="group" aria-label="Режим отображения каталога">
+            <button class="view-btn active" type="button" data-view-mode="grid" aria-pressed="true">Сетка</button>
+            <button class="view-btn" type="button" data-view-mode="list" aria-pressed="false">Список</button>
+          </div>
+
+          <span class="catalog-status" id="catalog-status" aria-live="polite">Показано 17 из 17</span>
+        </div>
+      </div>
+
+      <div class="category-pills" id="category-pills" role="group" aria-label="Фильтр по категориям"></div>
+    </div>
+
+    <div class="catalog-grid" id="catalog-grid" aria-live="polite"></div>
+
+    <div class="catalog-empty" id="catalog-empty" hidden>
+      <p>По вашему запросу ничего не нашлось. Попробуйте другое слово или сбросьте фильтры.</p>
+      <button class="btn btn-primary" id="catalog-reset-btn" type="button">Сбросить фильтры</button>
+    </div>
+
+    <noscript>
+      <div class="noscript-fallback">
+        <strong>Для интерактивного поиска нужен JavaScript. Все игры доступны напрямую:</strong>
+        <ul>
+          <li><a href="country-atlas/index.html">РАТГРАД — карта страны 7000×7000 км</a></li>
+          <li><a href="dead-district/index.html">DEAD DISTRICT — пиксельная зомби-выживалка</a></li>
+          <li><a href="shooter-2/index.html">СЕКТОР «ПЕПЕЛ» — тактический 3D-шутер</a></li>
+          <li><a href="1in8b/index.html">1 ИЗ 8 МИЛЛИАРДОВ — симулятор одной жизни</a></li>
+          <li><a href="frontline-command/index.html">FRONTLINE: COMMAND — тактическая 2D-песочница</a></li>
+          <li><a href="nika-life/index.html">НИКА: ЖИВАЯ — симулятор жизни с локальным ИИ</a></li>
+          <li><a href="cascade-hydro/index.html">КАСКАД: Живая Вода — 3D-симулятор ГЭС</a></li>
+          <li><a href="truck-showroom/index.html">ГАРАЖ 3D — шоурум 64 моделей</a></li>
+          <li><a href="road-tycoon/index.html">ТРАССА — 3D дорожная империя</a></li>
+          <li><a href="euro-haul/index.html">ЕВРОТРАК — грузоперевозки по Европе</a></li>
+          <li><a href="last-shore/index.html">LAST SHORE — 3D-выживание на острове</a></li>
+          <li><a href="frontline-steel-and-drones/play.html">ЛИНИЯ ФРОНТА — Сталь и Дроны</a></li>
+          <li><a href="night-taxi/index.html">НОЧНОЕ ТАКСИ — ночная смена</a></li>
+          <li><a href="folder-os/index.html">FOLDER OS — ОС на папках и файлах</a></li>
+          <li><a href="game-base/index.html">БАЗА — шаблон и дизайн-система</a></li>
+          <li><a href="cloud-play/index.html">PLAYBRIDGE — Steam OpenID и PWA</a></li>
+        </ul>
+      </div>
+    </noscript>
+  </section>
+
+  <section class="community-panel" id="community-games" aria-labelledby="community-games-title">
     <div class="community-heading">
       <div>
         <p class="community-kicker">АВТОРСКИЕ ИГРЫ · ПОСЛЕ ПРОВЕРКИ</p>
         <h2 id="community-games-title">Игры сообщества <span id="community-game-count">—</span></h2>
-        <p class="community-intro">Новые проекты разработчиков появляются здесь после проверки Pull Request. Код и данные загружаются только из локального каталога сайта.</p>
+        <p class="community-intro">Проекты разработчиков, прошедшие проверку Pull Request и автотесты. Код и метаданные загружаются строго из локального реестра репозитория.</p>
       </div>
       <a class="btn btn-primary" href="developers/index.html">Добавить игру ↗</a>
     </div>
@@ -370,50 +232,57 @@
     <p class="community-empty" id="community-empty">Пока нет опубликованных игр сообщества. <a href="developers/index.html">Стань первым автором ↗</a></p>
   </section>
 
-  <section class="panel">
-    <h2>Как это устроено</h2>
+  <section class="section section-bordered" id="about" aria-labelledby="about-title">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">ПРИНЦИПЫ ПЛАТФОРМЫ</p>
+        <h2 id="about-title">Как это устроено</h2>
+      </div>
+    </div>
     <div class="grid">
       <div class="tile">
-        <b>Только браузер</b>
-        <p>Ничего не нужно скачивать и ставить. Хватит современного Chrome, Firefox, Edge или Safari
-          с включённым аппаратным ускорением.</p>
+        <b>Мгновенный запуск</b>
+        <p>Никаких установок, лаунчеров и регистраций. Открывается за секунду в Chrome, Firefox, Edge и Safari на ПК и телефоне.</p>
       </div>
       <div class="tile">
-        <b>Без внешних ассетов</b>
-        <p>Графика рисуется кодом: модели, вода, небо и звук синтезируются на месте. Поэтому игры
-          грузятся быстро и работают офлайн после загрузки.</p>
+        <b>Процедурная графика и звук</b>
+        <p>Модели по контурам, города, рельеф, вода, текстуры и WebAudio-звук генерируются кодом — без CDN и гигабайтных ассетов.</p>
       </div>
       <div class="tile">
-        <b>Сохранения в браузере</b>
-        <p>Прогресс «Последнего берега» хранится в localStorage: закрыл вкладку — вернулся на то же место.</p>
+        <b>Автосохранения и офлайн</b>
+        <p>Прогресс, избранное и недавние игры хранятся локально в браузере. Большинство проектов работает прямо с диска (<code>file://</code>).</p>
       </div>
       <div class="tile">
-        <b>Технологии</b>
-        <p>КАСКАД и LAST SHORE — Three.js + WebGL (автономные бандлы без CDN). Линия Фронта — Canvas 2D.</p>
+        <b>Проверено автотестами</b>
+        <p>Реестр, логика игр и бот-багоискатель <code>tools/bughunt</code> проверяют проекты в CI перед каждой публикацией.</p>
       </div>
     </div>
   </section>
 
-  <section class="panel panel-notes">
-    <h2>Что дальше</h2>
+  <section class="section section-bordered" aria-labelledby="roadmap-title">
+    <div class="section-head">
+      <div>
+        <p class="section-kicker">ВЕКТОР РАЗВИТИЯ</p>
+        <h2 id="roadmap-title">Что в работе</h2>
+      </div>
+    </div>
     <div class="roadmap">
       <div class="road">
-        <span class="tag ch">КАСКАД: ЖИВАЯ ВОДА</span>
-        <p>Гидроаккумулирующие станции (ГАЭС) с ночной закачкой в верхний бассейн, судоходные шлюзы и многоступенчатый каскад плотин.</p>
+        <span class="tag ls">РАТГРАД</span>
+        <p>Развитие живой карты 7000 × 7000 км: железнодорожные и морские диспетчеры, рост городов, ночной мир, климат и локальный ИИ.</p>
       </div>
       <div class="road">
-        <span class="tag ls">LAST SHORE</span>
-        <p>Этап 3: живность и бой — кабаны, змеи, ночные волки; бинты, готовка мяса, кипячение воды.
-          Дальше — база, маяк и три ночи обороны.</p>
+        <span class="tag ch">КАСКАД И 3D-СИМУЛЯТОРЫ</span>
+        <p>Многоступенчатые каскады ГЭС/ГАЭС, расширение процедурных моделей и единой системы сохранений в 3D-проектах.</p>
       </div>
       <div class="road">
-        <span class="tag fl">ЛИНИЯ ФРОНТА</span>
-        <p>Полировка ИИ и баланса, новые виды техники и карты, режимы на скорость.</p>
+        <span class="tag fl">ЕДИНЫЙ КАРКАС И ИНСТРУМЕНТЫ</span>
+        <p>Развитие дизайн-системы <code>shared/theme.css</code>, шаблона <code>game-base</code> и инструментов автоматической проверки игр.</p>
       </div>
     </div>
   </section>
 
-  <section class="panel bug-report-panel" id="report-bug" aria-labelledby="bug-report-title">
+  <section class="bug-report-panel" id="report-bug" aria-labelledby="bug-report-title">
     <div class="bug-report-icon" aria-hidden="true">!</div>
     <div class="bug-report-copy">
       <p class="community-kicker">ПОМОГИ СДЕЛАТЬ ИГРЫ ЛУЧШЕ</p>
@@ -424,132 +293,21 @@
   </section>
 </main>
 
+<div class="gmodal-root" id="game-modal" hidden role="dialog" aria-modal="true" aria-labelledby="game-modal-title">
+  <div class="gmodal-backdrop" data-modal-backdrop></div>
+  <div class="gmodal-dialog">
+    <button class="gmodal-close" id="game-modal-close" type="button" aria-label="Закрыть окно">×</button>
+    <div id="game-modal-content"></div>
+  </div>
+</div>
+
 <footer>
-  <p>Онлайн-витрина со всеми играми на GitHub Pages:
+  <p>Онлайн-витрина Games на GitHub Pages:
     <a href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener">m98978672-boop.github.io/games</a>
-    · Исходники и планы в репозитории:
-    <a href="https://github.com/m98978672-boop/games" target="_blank" rel="noopener">github.com/m98978672-boop/games</a>.</p>
+    · Исходники и планы:
+    <a href="https://github.com/m98978672-boop/games" target="_blank" rel="noopener">github.com/m98978672-boop/games</a></p>
+  <p>Подсказка: нажми <code>/</code> для быстрого поиска по каталогу · <code>Esc</code> закрывает предпросмотр.</p>
 </footer>
 
-<script>
-// Лёгкий фон героя: звёздное небо и линии горизонта на canvas, без библиотек.
-(function () {
-  const canvas = document.getElementById('hero-canvas');
-  if (!canvas) return;
-  const ctx = canvas.getContext('2d');
-  let w = 0, h = 0, stars = [], dpr = 1;
-
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    w = canvas.clientWidth;
-    h = canvas.clientHeight;
-    canvas.width = Math.floor(w * dpr);
-    canvas.height = Math.floor(h * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    stars = [];
-    const count = Math.min(170, Math.round((w * h) / 9000));
-    for (let i = 0; i < count; i++) {
-      stars.push({
-        x: Math.random() * w,
-        y: Math.random() * h * 0.75,
-        r: 0.4 + Math.random() * 1.3,
-        a: 0.15 + Math.random() * 0.55,
-        s: 0.2 + Math.random() * 0.6,
-      });
-    }
-  }
-
-  let t = 0;
-  function draw() {
-    t += 0.006;
-    ctx.clearRect(0, 0, w, h);
-
-    // ночное небо
-    const sky = ctx.createLinearGradient(0, 0, 0, h);
-    sky.addColorStop(0, '#070c14');
-    sky.addColorStop(0.55, '#0d1a22');
-    sky.addColorStop(1, '#12303a');
-    ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, w, h);
-
-    // звёзды
-    for (const s of stars) {
-      const tw = 0.65 + Math.sin(t * 2 + s.x) * 0.35;
-      ctx.globalAlpha = s.a * tw;
-      ctx.fillStyle = '#dfe9ff';
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-
-    // луна: на широком экране справа, на узком — за краем, чтобы не спорить с заголовком
-    const mx = w > 760 ? w * 0.80 : w * 1.02;
-    const my = h * (w > 760 ? 0.20 : 0.10);
-    const glow = ctx.createRadialGradient(mx, my, 2, mx, my, 120);
-    glow.addColorStop(0, 'rgba(230,240,255,0.35)');
-    glow.addColorStop(1, 'rgba(230,240,255,0)');
-    ctx.fillStyle = glow;
-    ctx.fillRect(mx - 130, my - 130, 260, 260);
-    ctx.fillStyle = '#e8eeff';
-    ctx.beginPath();
-    ctx.arc(mx, my, 16, 0, Math.PI * 2);
-    ctx.fill();
-
-    // лёгкое затемнение под текстом
-    const veil = ctx.createRadialGradient(w * 0.22, h * 0.42, 40, w * 0.22, h * 0.42, Math.max(w, h) * 0.7);
-    veil.addColorStop(0, 'rgba(6, 10, 12, 0.55)');
-    veil.addColorStop(1, 'rgba(6, 10, 12, 0)');
-    ctx.fillStyle = veil;
-    ctx.fillRect(0, 0, w, h);
-
-    // море и блики
-    const seaY = h * 0.62;
-    const sea = ctx.createLinearGradient(0, seaY, 0, h);
-    sea.addColorStop(0, '#14424f');
-    sea.addColorStop(1, '#07181e');
-    ctx.fillStyle = sea;
-    ctx.fillRect(0, seaY, w, h - seaY);
-
-    for (let i = 0; i < 26; i++) {
-      const y = seaY + (i / 26) * (h - seaY);
-      const amp = 2 + (i / 26) * 9;
-      const speed = 0.6 + (i / 26) * 1.4;
-      ctx.strokeStyle = `rgba(120, 200, 220, ${0.05 + (i / 26) * 0.07})`;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      for (let x = 0; x <= w; x += 14) {
-        const yy = y + Math.sin(x * 0.012 + t * speed * 6 + i) * amp * 0.35;
-        x === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy);
-      }
-      ctx.stroke();
-    }
-
-    requestAnimationFrame(draw);
-  }
-
-  resize();
-  window.addEventListener('resize', resize);
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    // без анимации: один статичный кадр
-    ctx.clearRect(0, 0, w, h);
-    resize();
-  } else {
-    requestAnimationFrame(draw);
-  }
-})();
-
-// Отметка текущей игры в адресе для аналитики без трекеров не нужна — оставляем только плавный скролл.
-document.querySelectorAll('a[href^="#"]').forEach((a) => {
-  a.addEventListener('click', (e) => {
-    const target = document.querySelector(a.getAttribute('href'));
-    if (target) {
-      e.preventDefault();
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-  });
-});
-</script>
 </body>
 </html>

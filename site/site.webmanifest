@@ -1,11 +1,11 @@
 {
   "name": "Games — браузерные игры",
   "short_name": "Games",
-  "description": "3D-выживание «Последний берег» и стратегия «Линия Фронта»",
+  "description": "17 браузерных 2D и 3D игр, симуляторов и стратегий без установки",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#0a0c0b",
-  "theme_color": "#0b0d0c",
+  "background_color": "#070908",
+  "theme_color": "#070908",
   "icons": [
     {
       "src": "assets/icon.svg",
