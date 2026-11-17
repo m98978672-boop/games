@@ -38,7 +38,15 @@ jobs:
       - name: Check the bug-code table covers 000–999
         run: node tools/bughunt/tests/codes.mjs
       - name: Hunt for bugs across the repository (critical only)
-        run: node tools/bughunt/bughunt.mjs --play --level критично --fail-on критично
+        run: |
+          set +e
+          node tools/bughunt/bughunt.mjs --play --level критично --fail-on критично > "$RUNNER_TEMP/bughunt.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/bughunt.log"
+          if [ "$status" -ne 0 ]; then
+            python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"bughunt.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit "$status"
       - name: Test 1 IN 8 BILLION structure
         run: node 1in8b/tests/smoke.mjs
       - name: Test 1 IN 8 BILLION life model
@@ -50,7 +58,17 @@ jobs:
       - name: Install Frontline Command test dependencies
         run: npm ci --prefix frontline-command --no-audit --no-fund
       - name: Test Frontline Command (логика, симуляция, производительность)
-        run: npm run test:fast --prefix frontline-command
+        run: |
+          set +e
+          npm run test:fast --prefix frontline-command > "$RUNNER_TEMP/frontline-test.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/frontline-test.log"
+          if [ "$status" -ne 0 ]; then
+            python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"frontline-test.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
+          fi
+          exit "$status"
+      - name: Test Frontline battlefield visuals (Chromium)
+        run: npm run test:battlefield:browser --prefix frontline-command
       - name: Test shooter-2 structure and offline rules
         run: node shooter-2/tests/smoke.mjs
       - name: Test shooter-2 animation library (1760 clips), world, AI, ragdoll

@@ -56,7 +56,11 @@ function parseJsonFiles(root, p) {
 export function checkDataDuplicates(root, p) {
   const out = [];
   const walkData = (node, file, path) => {
-    if (Array.isArray(node)) {
+    if (typeof node === 'number' && !Number.isFinite(node)) {
+      out.push(f('нечисло-в-json', 'критично', p.name, file, 1,
+        'поле «' + (path || 'корень') + '» разбирается как ' + node,
+        'слишком большая экспонента в JSON теряет конечное числовое значение'));
+    } else if (Array.isArray(node)) {
       const seen = new Set();
       for (const item of node) {
         if (!item || typeof item !== 'object') continue;
@@ -99,10 +103,6 @@ export function checkDataDuplicates(root, p) {
     if (empty) {
       out.push(f('пустые-данные', 'важно', p.name, file, 1, 'файл данных пуст',
         'данные не загрузились или потерялись'));
-    }
-    for (const m of hits(src, /\b(-?Infinity|NaN)\b/g)) {
-      out.push(f('нечисло-в-json', 'критично', p.name, file, lineAt(src, m.index),
-        'в JSON стоит ' + m[1] + ' — это невалидный JSON', 'JSON.parse упадёт или поле станет null'));
     }
     walkData(data, file, '');
   }

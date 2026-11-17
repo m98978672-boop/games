@@ -1,3 +1,4 @@
+import { solidUnitMoveFree } from './solid_units.js';
 import { unsafeRest, safeRestGoal } from './rest_positions.js';
 // Индивидуальный ИИ солдата: Behavior Tree с приоритетами из спецификации,
 // мораль, укрытия, медики, инженеры, а также ручное управление игроком.
@@ -51,6 +52,29 @@ function moraleTick(game, u, dt) {
   u.morale = clamp(u.morale + delta * dt, 0, 100);
 }
 
+// Local, bounded withdrawal: only directly observed nearby threats and a
+// clearly traversable path. This is not a strategic retreat or global planner.
+export function tacticalRetreatPoint(game, u, target) {
+  const d = dist(u.x, u.y, target.x, target.y);
+  if (d < 1 || d > 150 || !game.world.hasLOS(u.x, u.y, target.x, target.y, true)) return null;
+  const away = angleTo(target.x, target.y, u.x, u.y), r = u.radius;
+  for (const offset of [0, 0.45, -0.45, 0.8, -0.8]) {
+    const x = u.x + Math.cos(away + offset) * 80, y = u.y + Math.sin(away + offset) * 80;
+    if (x < r || y < r || x >= game.world.W-r || y >= game.world.H-r || unsafeRest(game, x, y, r)) continue;
+    if (game.walls?.enabled() && game.walls.blocksMoveSweep(u.x, u.y, x, y, r, u)) continue;
+    if (!solidUnitMoveFree(game, u, x, y, 0.01, game.cfg.flag('movement_occupancy_v1', false) ? game.occupancyGrid : game.unitGrid)) continue;
+    let clear = true;
+    for (let i = 0; i <= 16 && clear; i++) {
+      const px = u.x + (x-u.x)*i/16, py = u.y + (y-u.y)*i/16;
+      for (const [ox,oy] of [[0,0],[-r,-r],[r,-r],[-r,r],[r,r]]) {
+        if (!game.world.isBaseWalkable(px+ox, py+oy)) { clear = false; break; }
+      }
+    }
+    if (clear) return {x,y};
+  }
+  return null;
+}
+
 // ---------- Behavior Tree ----------
 export function thinkSoldier(game, u) {
   if (u.downed) return;
@@ -87,6 +111,33 @@ export function thinkSoldier(game, u) {
       }
     }
     return;
+  }
+  // Hold/retreat/regroup orders have priority; never replace the player's
+  // explicit hold with an automatic local withdrawal.
+  const target = game.unitById(u.targetId);
+  const canWithdraw = game.cfg.flag('tactical_withdraw_v1', true) && !u.isVehicle &&
+    squadNow?.state !== 'hold' && squadNow?.behavior !== 'hold';
+  if (canWithdraw && u._withdrawUntil > game.time && u.goal && u.goal === u._withdrawGoal) {
+    state(u, 'withdraw', 'отходит под огнём'); u.activity = 'retreat';
+    if (target && u.perception.hasContact) {
+      u.aimAngle = angleTo(u.x, u.y, target.x, target.y);
+      tryShoot(game, u, target, game.dt);
+    }
+    return;
+  }
+  if (canWithdraw && (u._withdrawCooldown || 0) <= game.time && u.perception.hasContact && target &&
+      (u.hp < u.maxHp * 0.4 || u.suppression > 0.7 || u.ammoRatio() <= 0.02)) {
+    const point = tacticalRetreatPoint(game, u, target);
+    if (point) {
+      u._withdrawUntil = game.time + 2; u._withdrawCooldown = game.time + 8;
+      u.goal = point; u._withdrawGoal = point; u.arrived = false; u.flowDir = null;
+      u.healBusy = false; u.buildBusy = false;
+      state(u, 'withdraw', 'отходит под огнём'); u.activity = 'retreat';
+      game.events.emit('tacticalWithdraw', { unit: u, target, goal: point, t: game.time });
+      u.aimAngle = angleTo(u.x, u.y, target.x, target.y);
+      tryShoot(game, u, target, game.dt);
+      return;
+    }
   }
   // 1c. Патроны кончились и врага не видно — идём на склад
   if (u.ammoRatio() <= 0.02 && !u.perception.hasContact) {
@@ -325,6 +376,11 @@ function requestResupply(game, u) {
 
 // ---------- Действия (движение, лечение, стройка) ----------
 function actSoldier(game, u, dt) {
+  if (u.state === 'withdraw' && u.goal && u.goal === u._withdrawGoal && u._withdrawUntil > game.time) {
+    const dx = u.goal.x-u.x, dy = u.goal.y-u.y;
+    if (Math.hypot(dx,dy) > 4) moveUnit(game, u, dx, dy, dt, null, { skipDoorWaypoint: true });
+    return;
+  }
   // Do not start work or treatment while occupying a passage.
   if (unsafeRest(game, u.x, u.y, u.radius)) { if (u.goal) moveAlongFlow(game, u, dt); return; }
   // медик: поднимает и лечит раненых рядом

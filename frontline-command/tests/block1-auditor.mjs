@@ -1,6 +1,8 @@
 // Проверка самого независимого аудита: отсутствие доказательств — не успех.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
+const projectRoot = fileURLToPath(new URL('../', import.meta.url));
 import { requirements, validateEvidence, validateUVariants, validateUnitGrid, verdict, skippedLines, summarize, hasSkippedEvidence } from '../tools/block1-auditor.mjs';
 
 // A passing process exit must never conceal an explicit skipped test.
@@ -114,7 +116,7 @@ const soak = { passed: true, clock: 'wall', wallSeconds: 1800, memoryGrowthPerce
 assert.equal(validateEvidence('soak', soak, 1_800_000), true);
 assert.equal(validateEvidence('soak', soak, 1000), false, 'заявленные 30 минут не подменяют реально прошедшее время');
 assert.equal(validateEvidence('soak', { ...soak, stuck: 1 }, 1_800_000), false);
-const quick = spawnSync(process.execPath, ['tools/block1-auditor.mjs', '--quick'], { encoding: 'utf8', timeout: 60_000 });
+const quick = spawnSync(process.execPath, ['tools/block1-auditor.mjs', '--quick'], { cwd: projectRoot, encoding: 'utf8', timeout: 60_000 });
 assert.equal(quick.status, 1);
 const report = JSON.parse(quick.stdout);
 assert.equal(report.verdict, 'NOT_ACCEPTED');
@@ -129,7 +131,7 @@ if (trap.status !== 'not_run') {
 }
 // Прогоняет реальный маршрут хотя бы один раз: все юниты должны сначала
 // пересечь плоскость, а не засчитаться по начальному Unit.arrived=true.
-const doors = spawnSync(process.execPath, ['tests/acceptance/block1-doorways.mjs', '--attempts=1'], { encoding: 'utf8', timeout: 60_000 });
+const doors = spawnSync(process.execPath, ['tests/acceptance/block1-doorways.mjs', '--attempts=1'], { cwd: projectRoot, encoding: 'utf8', timeout: 60_000 });
 assert.ok(doors.status === 0 || doors.status === 1);
 const doorReport = JSON.parse(doors.stdout);
 assert.equal(doorReport.scenarios.length, 9);
@@ -139,7 +141,7 @@ for (const s of doorReport.scenarios) {
   assert.equal(s.factions.length, 2);
 }
 assert.equal(doors.status, doorReport.passed ? 0 : 1);
-const opposing = spawnSync(process.execPath, ['tests/acceptance/block1-deadlocks.mjs', '--attempts=1'], { encoding: 'utf8', timeout: 60_000 });
+const opposing = spawnSync(process.execPath, ['tests/acceptance/block1-deadlocks.mjs', '--attempts=1'], { cwd: projectRoot, encoding: 'utf8', timeout: 60_000 });
 assert.ok(opposing.status === 0 || opposing.status === 1);
 const opposingReport = JSON.parse(opposing.stdout);
 assert.equal(opposingReport.scenarios, 2);
