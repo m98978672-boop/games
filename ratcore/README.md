@@ -1,25 +1,79 @@
-# RatCore — собственный 2D/3D-движок с инструментами ИИ и `ToolGuard`
+# RatCore v1.0.0 — собственный 2D/3D-движок с инструментами ИИ и `ToolGuard`
 
-> **Статус:** Полное проектирование отполировано до **v0.9-draft** (**36 усиленных веток инструментов v2.0, 185 формул, 125 алгоритмов, 3-уровневая система модулей по выбору (`Core` + `10 Standard Modules` + `14 Optional Opt-In Packs`, `0 Б` у выключенных + `RC-108`), 12-уровневый стек сжатия/плавности + `ratcore-wire/2` + `Power & Thermal Guard (40/60/75 %)` + `Dynamic Resolution` + `Self-Healing Watchdog` + `tools.discover` + `RatStudio`**).  
-> **Закон очереди:** Исходный код движка (`src/`) **не пишется до прямой команды владельца**.  
-> **Изоляция:** `RatCore` строится отдельно и **пока не интегрируется в витрину `Games`**.
+> **Статус:** **Релиз `v1.0.0` полностью реализован и протестирован** (**47 ES-модулей**, **0 внешних зависимостей**, **10/10 базовых веток ядра**, **10/10 стандартных жанровых модулей**, **14/14 опциональных пакетов по выбору `Zero-Cost Opt-In`**, **39 активных веток `RatCore.tools.*`**, **89 инструментов в `tools-manifest.json`**, **7/7 зелёных тестовых наборов в CI**, живая песочница с `RatStudio Dev-Overlay` и первая 3D-игра **«Стража Цитадели»**).  
+> **Изоляция:** `RatCore` полностью изолирован внутри папки `ratcore/` (`0` ссылок в `index.html`, `sw.js` и `site/`). Интеграция с витриной `Games` включается строго по отдельному решению владельца.
 
-## Карта документов
+---
 
-| Документ | Назначение |
+## Быстрый старт (Node.js 22 и браузер без сборщиков)
+
+```js
+import { createEngine } from './ratcore.js';
+
+const engine = createEngine({
+  preset: 'survival',
+  packs: ['pack:destruction', 'pack:voice', 'pack:companion', 'pack:studio'],
+  seed: 2026,
+});
+
+// 100 % процедурная геометрия через запечатанный ToolGuard
+const tower = engine.tools.build.fromRecipe({
+  modelId: 'citadel',
+  ops: [
+    { tool: 'build.primitive', args: { shape: 'box', w: 3, h: 4, d: 3, color: '#60a5fa' } },
+    { tool: 'build.primitive', args: { shape: 'roof', w: 3.4, h: 2, d: 3.4, color: '#f59e0b' }, offset: [0, 4, 0] },
+  ],
+}).data;
+
+engine.tools.build.placeEntity({ id: 'citadel_main', mesh: tower, x: 0, y: 0, h: 1 });
+const frame = engine.tools.look.capture({ format: 'ascii' });
+const packed = engine.tools.save.exportWire2(); // ratcore-wire/2 + FastCDC + CRC32
+```
+
+### Запуск живых стендов и тестов
+
+```bash
+# Запустить все 7 тестовых наборов RatCore v1.0.0
+node ratcore/tests/tool-contract.mjs
+node ratcore/tests/stage1.mjs
+node ratcore/tests/stage2.mjs
+node ratcore/tests/stage3.mjs
+node ratcore/tests/stage4.mjs
+node ratcore/tests/stage5.mjs
+node ratcore/tests/demo-game.mjs
+
+# Поднять изолированный dev-сервер для песочницы и 3D-игры (http://0.0.0.0:8081)
+node ratcore/playground/dev-server.mjs
+# Песочница + RatStudio:  /ratcore/playground/index.html
+# 3D-игра «Стража Цитадели»: /ratcore/demos/citadel-watch/index.html
+```
+
+---
+
+## Архитектура (`47` модулей, 3-уровневый Zero-Cost Opt-In)
+
+| Уровень | Состав | Код при отключении |
+|---|---|---|
+| **Уровень 0 · Ядро (`core`, всегда включено)** | `build`, `move`, `remove`, `watch`, `look` (Software 3D + WebGL2 + Async Pre-Warm), `see` (Object-ID), `input` (ремап, буфер, запись/реплей), `ui` (декларативный HUD, тосты, диалоги), `save` (`JSON` + `RCW2` + COW Timeline), `stream` (`CoreGovernor 40/60/75 %` + `RatCoreWorkerPool`), 5-барьерный `ToolGuard` | — |
+| **Уровень 1 · 10 стандартных модулей (`modules`)** | `anim` (2-костная IK + Verlet), `phys`, `nav` (A* + RVO), `env` (день/ночь + погода), `fx` (SoA частицы + декали + shake), `ai` (Utility + GOAP + NLU), `sim` (экономика + крафт + лимит веса), `audio` (PCM 0 КБ), `hear` (3D-слух), `test` (инварианты + фаззер + автобаланс) | `RC-108` (`0 Б` RAM/CPU) |
+| **Уровень 2 · 14 опциональных пакетов (`packs`)** | `pack:ai-team`, `pack:destruction`, `pack:multiplayer`, `pack:narrative`, `pack:ecology`, `pack:styles`, `pack:webgpu`, `pack:wasm-accel` (442 Б WASM + SIMD v128), `pack:mods` (`.ratmod.rcw2`), `pack:cinema` (рельсы + авто-обложка 16:9), `pack:voice` (3-формантный PCM + виземы), `pack:companion`, `pack:assist` (дальтонизм 3×3 + субтитры + 1 рука), `pack:studio` (`RatStudio`, COW «Машина времени», Автобаланс, экспорт `.html` `< 300 КБ`) | `RC-108` (`0 Б` RAM/CPU) |
+
+---
+
+## Карта документов и каталогов
+
+| Файл / Папка | Назначение |
 |---|---|
-| [`INDEX.json`](./INDEX.json) | Машиночитаемый индекс для других нейросетей и скриптов (включая список 14 опциональных пакетов) |
-| [`SPEC.md`](./SPEC.md) | Главная спецификация (v0.9-draft): архитектура, 5-барьерный `ToolGuard`, 3-уровневая модульность, `2D↔3D`, мир координат/слоёв, коды `RC-100..999`, этапы сборки |
-| [`AI_CONTRACT.md`](./AI_CONTRACT.md) | Строгий контракт для ИИ: запрет обхода `RatCore.tools.*`, правила `BridgeGuard`, протокол общения и отчётов |
-| [`TOOLS.md`](./TOOLS.md) | Все **36 усиленных веток инструментов v2.0** + `tools.discover` + **`RatStudio`** + **таблица 14 модулей по выбору (`packs` и пресеты)** + шпаргалка жанров |
-| [`ALGORITHMS.md`](./ALGORITHMS.md) | **185 формул (`F-01..F-185`)** и **125 алгоритмов (`A-01..A-125`)** |
-| [`COMPRESSION.md`](./COMPRESSION.md) | **12-уровневый стек ультра-сжатия RAM/CPU, `ratcore-wire/2`, `Power & Thermal Guard (40/60/75 %)`, `Dynamic Resolution`, `Self-Healing` и `pack:webgpu`/`pack:wasm-accel`** |
-| [`BRIDGE.md`](./BRIDGE.md) | Соединение `RatCore` с Three.js, Godot 4, Canvas 2D, `pereplet-prototype/`, другими `RatCore` и внешними ИИ (поверх `ratcore-wire/2`) |
-| [`DEVLOG.md`](./DEVLOG.md) | Инженерный дневник всех решений (`D-01..D-17`, Записи `#001..#010`) |
-
-## Папки общения нейросетей и отчётов
-
-- [`comms/`](./comms/README.md) — рабочее пространство для обмена сообщениями, задачами и передачами смен (`handoffs`) между разными ИИ-агентами.
-- `reports/bugs/` — структурированные тикеты багов (`.json` + `.md`) с воспроизведением через `reproOps`.
-- `reports/audits/` — автоматические отчёты `ToolGuard` и `BridgeGuard`.
-- `reports/summaries/` — сводки прогресса.
+| [`ratcore.js`](./ratcore.js) | Главная публичная ES-точка входа `RatCore v1.0.0` |
+| [`tools-manifest.json`](./tools-manifest.json) | Офлайн-манифест **89 инструментов** для BM25-поиска `tools.discover()` |
+| [`INDEX.json`](./INDEX.json) | Машиночитаемый реестр всех 47 модулей, 7 тестов, 14 пакетов и облачной экосистемы |
+| [`playground/index.html`](./playground/index.html) | Интерактивная 3D-песочница `v1.0.0` с живым **RatStudio Dev-Overlay** |
+| [`demos/citadel-watch/index.html`](./demos/citadel-watch/index.html) | Первая полноценная 3D-игра на `RatCore v1.0.0` — **«Стража Цитадели»** |
+| [`SPEC.md`](./SPEC.md) | Главная архитектурная спецификация, 5-барьерный `ToolGuard`, решения `D-01..D-17` |
+| [`AI_CONTRACT.md`](./AI_CONTRACT.md) | Строгий контракт для ИИ: запрет обхода `RatCore.tools.*`, правила `BridgeGuard` |
+| [`TOOLS.md`](./TOOLS.md) | Каталог всех веток инструментов, пресетов и рецептов по жанрам |
+| [`ALGORITHMS.md`](./ALGORITHMS.md) | 185 формул (`F-01..F-185`) и 125 алгоритмов (`A-01..A-125`) |
+| [`COMPRESSION.md`](./COMPRESSION.md) | 12-уровневый стек сжатия, `ratcore-wire/2`, `CoreGovernor 40/60/75 %`, WebGPU/WASM |
+| [`BRIDGE.md`](./BRIDGE.md) | Протокол моста с Three.js, Godot 4 `.tscn`, Canvas 2D, `pereplet-prototype/` и ИИ |
+| [`DEVLOG.md`](./DEVLOG.md) | Полный инженерный дневник (`#001..#016`) |
+| [`comms/`](./comms/README.md) | Обмен сообщениями, задачами и сменами (`handoffs`) между ИИ-агентами |

@@ -87,6 +87,12 @@
     { "id": "fx.emitBurst", "branch": "fx", "tier": "module", "tags": ["fx", "particles", "decal", "shake", "частицы", "эффекты"], "summary": "Испустить детерминированный залп частиц из SoA-пула с поддержкой декалей и тряски камеры" },
     { "id": "ai.evaluateUtility", "branch": "ai", "tier": "module", "tags": ["ai", "npc", "utility", "goap", "nlu", "ии", "нпс"], "summary": "Выбрать оптимальное тактическое действие NPC по кривым полезности Utility AI" },
     { "id": "sim.craft", "branch": "sim", "tier": "module", "tags": ["sim", "economy", "craft", "inventory", "экономика", "крафт"], "summary": "Выполнить крафт по рецепту в инвентаре с проверкой ресурсов и лимита веса" },
-    { "id": "test.checkInvariants", "branch": "test", "tier": "module", "tags": ["test", "invariants", "fuzz", "qa", "тест", "инварианты"], "summary": "Проверить инварианты сцены (NaN, провалы под рельеф, подписи ToolGuard)" }
+    { "id": "test.checkInvariants", "branch": "test", "tier": "module", "tags": ["test", "invariants", "fuzz", "qa", "тест", "инварианты"], "summary": "Проверить инварианты сцены (NaN, провалы под рельеф, подписи ToolGuard)" },
+    { "id": "input.bind", "branch": "input", "tier": "core", "tags": ["input", "keys", "bind", "remap", "клавиши", "управление"], "summary": "Привязать или переназначить клавиши действия с поддержкой буфера нажатий" },
+    { "id": "input.poll", "branch": "input", "tier": "core", "tags": ["input", "poll", "wasd", "buttons", "ввод", "вектор"], "summary": "Получить вектор движения и битовую маску действий (совместимо с 12-байтным пакетом net)" },
+    { "id": "input.startRecord", "branch": "input", "tier": "core", "tags": ["input", "record", "replay", "timeline", "запись", "реплей"], "summary": "Начать детерминированную запись потока ввода для реплея и Машины времени (A-60)" },
+    { "id": "ui.setWidget", "branch": "ui", "tier": "core", "tags": ["ui", "hud", "widget", "bar", "интерфейс", "виджет"], "summary": "Создать или обновить декларативный HUD-виджет (полоса, счётчик, компас, панель) без сырого DOM" },
+    { "id": "ui.notify", "branch": "ui", "tier": "core", "tags": ["ui", "toast", "notify", "alert", "уведомление"], "summary": "Показать экранное уведомление-тост с таймером и уровнем важности" },
+    { "id": "ui.openDialog", "branch": "ui", "tier": "core", "tags": ["ui", "dialog", "choices", "диалог", "выбор"], "summary": "Открыть диалоговое окно с репликой и интерактивными вариантами ответа" }
   ]
 }

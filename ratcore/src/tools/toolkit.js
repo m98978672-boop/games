@@ -3,6 +3,8 @@
 
 import { createClock } from '../core/clock.js';
 import { createToolGuardVault, RatCoreError } from '../core/seal.js';
+import { InputManager } from '../core/input.js';
+import { UiHudManager } from '../core/ui.js';
 import {
   CORE_BRANCHES,
   STANDARD_MODULES,
@@ -73,6 +75,8 @@ export function createRatCoreEngine(config = {}) {
   // Барьер 1: одноразовый захват печати исключительно официальным toolkit
   const mint = vault.claimMintAuthority('ratcore-toolkit');
   const clock = createClock(config.clock || {});
+  const inputMgr = new InputManager();
+  const uiMgr = new UiHudManager();
   const governor = new CoreGovernor({
     profile: config.powerProfile || 'turbo',
     targetFps: config.targetFps || 60,
@@ -627,11 +631,25 @@ export function createRatCoreEngine(config = {}) {
     },
 
     input: {
-      state: wrapTool('input.state', () => ({ mode: 'headless', coalescedZeroLag: true })),
+      bind: wrapTool('input.bind', (args) => inputMgr.bind(args)),
+      remap: wrapTool('input.remap', (args) => inputMgr.remap(args)),
+      pushEvent: wrapTool('input.pushEvent', (args) => inputMgr.pushEvent({ tick: clock.tick, ...args })),
+      poll: wrapTool('input.poll', (args) => inputMgr.poll({ tick: clock.tick, ...args })),
+      consumeBuffered: wrapTool('input.consumeBuffered', (args) => inputMgr.consumeBuffered({ tick: clock.tick, ...args })),
+      startRecord: wrapTool('input.startRecord', () => inputMgr.startRecord()),
+      stopRecord: wrapTool('input.stopRecord', () => inputMgr.stopRecord()),
+      replayAt: wrapTool('input.replayAt', (args) => inputMgr.replayAt(args)),
+      state: wrapTool('input.state', () => inputMgr.getState()),
     },
 
     ui: {
-      hudSummary: wrapTool('ui.hudSummary', () => ({ tick: clock.tick, entities: entities.size, governor: governor.getStats() })),
+      setWidget: wrapTool('ui.setWidget', (args) => uiMgr.setWidget(args)),
+      removeWidget: wrapTool('ui.removeWidget', (args) => uiMgr.removeWidget(args)),
+      notify: wrapTool('ui.notify', (args) => uiMgr.notify(args)),
+      openDialog: wrapTool('ui.openDialog', (args) => uiMgr.openDialog(args)),
+      chooseDialog: wrapTool('ui.chooseDialog', (args) => uiMgr.chooseDialog(args)),
+      tick: wrapTool('ui.tick', (args) => uiMgr.tick(args)),
+      hudSummary: wrapTool('ui.hudSummary', () => uiMgr.getSummary({ tick: clock.tick, entities: entities.size, governor: governor.getStats() })),
     },
 
     save: {

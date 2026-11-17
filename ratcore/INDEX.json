@@ -11,19 +11,20 @@
     "entrypoint": "ratcore/ratcore.js",
     "toolsManifest": "ratcore/tools-manifest.json",
     "playground": "ratcore/playground/index.html",
+    "demoGame": "ratcore/demos/citadel-watch/index.html",
     "cloudBackend": {
       "provider": "supabase",
       "project": "games-cloud-save",
       "tables": ["public.ratcore_cloud_snapshots", "public.ratcore_ai_messages"]
     },
     "cloudEcosystem": {
-      "linearProject": "RatCore Engine (GAM-8..GAM-12)",
-      "notionHub": "RatCore — Центр управления движком (v0.3)",
+      "linearProject": "RatCore Engine (GAM-8..GAM-12 — all Done)",
+      "notionHub": "RatCore — Центр управления движком (v1.0.0)",
       "dropboxVault": "/RatCore-Vault",
       "googleDriveVault": "RatCore-Vault (Games Движок)",
-      "googleSheetsRegistry": "RatCore — Реестр движка, пакетов и тестов (v0.3)",
-      "googleDocsReport": "RatCore — Архитектура и технический отчёт движка (v0.3)",
-      "googleSlidesDeck": "RatCore Engine v0.3 — Архитектура и экосистема"
+      "googleSheetsRegistry": "RatCore — Реестр движка, пакетов и тестов (v1.0.0)",
+      "googleDocsReport": "RatCore — Архитектура и технический отчёт движка (v1.0.0)",
+      "googleSlidesDeck": "RatCore Engine v1.0.0 — Архитектура и экосистема"
     },
     "modules": [
       "ratcore/src/core/math.js",
@@ -31,6 +32,8 @@
       "ratcore/src/core/seal.js",
       "ratcore/src/core/code-auditor.js",
       "ratcore/src/core/modules.js",
+      "ratcore/src/core/input.js",
+      "ratcore/src/core/ui.js",
       "ratcore/src/world/coords.js",
       "ratcore/src/world/face-id.js",
       "ratcore/src/world/layers.js",
@@ -78,7 +81,8 @@
       "ratcore/tests/stage2.mjs",
       "ratcore/tests/stage3.mjs",
       "ratcore/tests/stage4.mjs",
-      "ratcore/tests/stage5.mjs"
+      "ratcore/tests/stage5.mjs",
+      "ratcore/tests/demo-game.mjs"
     ]
   },
   "counts": {
@@ -102,7 +106,7 @@
     { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.8-draft", "role": "185 formulas (F-01..F-185) and 125 algorithms (A-01..A-125)" },
     { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.4-draft", "role": "12-level compression, ratcore-wire/2, Power & Thermal Guard (40/60/75%), Dynamic Resolution, Async Shader Pre-Warm, Self-Healing, WebGPU/WASM packs" },
     { "id": "bridge", "path": "ratcore/BRIDGE.md", "version": "0.2-draft", "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC, RCW2 binary streaming)" },
-    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#015" }
+    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#016" }
   ],
   "toolBranches": [
     "build", "move", "remove", "watch", "look", "see", "hear", "think", "guess",

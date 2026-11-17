@@ -383,6 +383,24 @@
 8. **Верификация и CI:**
    - `ratcore/tests/stage5.mjs` добавлен в `.github/workflows/validate.yml`; все `6/6` тестов `RatCore`, `portal.mjs`, `community-catalog.mjs`, 10-проходный антивирус на экспортированном HTML (`clean 10/10`, риск `0`) и `bughunt --play --only site` (`0/0/0`) — **PASS**.
 
+---
+
+## Запись #016 — 2026-11-16 · Полировка `v1.0.0`: полноценные `core/input` и `core/ui`, первая 3D-игра «Стража Цитадели» (`citadel-watch`), актуализация `README.md` и PR
+
+Закрыты все оставшиеся технические хвосты релиза `v1.0.0` (`47` модулей, `89` инструментов в `tools-manifest.json`, `7` тестовых наборов в CI):
+
+1. **Полноценные ветки ядра `tools.input.*` и `tools.ui.*`:**
+   - `ratcore/src/core/input.js` (`InputManager`, 9 методов): привязка/ремап клавиш (`bind`, `remap`), буфер нажатий (`consumeBuffered`), битовая маска действий (совместимая с 12-байтным пакетом `net.encodeInput12`) и детерминированная запись/реплей потока ввода (`startRecord`, `stopRecord`, `replayAt`, `A-60`).
+   - `ratcore/src/core/ui.js` (`UiHudManager`, 7 методов): декларативные HUD-виджеты (`bar`/`counter`/`compass`/`panel`/`minimap`), экранные тосты с таймерами (`notify`, `tick`) и диалоги с вариантами ответа (`openDialog`, `chooseDialog`) без прямого обращения к DOM.
+   - Теперь **все 39 активных веток** имеют от 3 до 12 полноценных методов.
+2. **Первая полноценная 3D-игра на `RatCore v1.0.0` — «Стража Цитадели» (`ratcore/demos/citadel-watch/`):**
+   - Чистая игровая логика (`game-core.js`) проходит строгий аудит **Барьера 4 `ToolGuard`** с `0` нарушений и одинаково работает в браузере (`index.html`, доступна на `:8081/ratcore/demos/citadel-watch/index.html`) и в Node.js.
+   - В игре работают 5 волн дронов, стрельба с частицами `fx` и WebAudio-звуками, постройка защитных башен через крафт `sim.craft`, опорный граф `pack:destruction`, ИИ-напарник Барсик (`pack:companion`), 3-формантная рация (`pack:voice`) с живой виземой рта, 6 визуальных стилей (`pack:styles`), коррекция дальтонизма и направленные субтитры (`pack:assist`), зимний лёд (`pack:ecology`), откат в прошлое COW (`save.scrubTo`), сжатие `RCW2` и экспорт крепости в автономный `.html` (`< 3 КБ`, **10/10 чистый вердикт антивируса Games**).
+3. **Документация и тесты:**
+   - `ratcore/README.md` и `ratcore/INDEX.json` полностью переведены с черновиков `v0.9-draft`/`v0.3` на актуальное состояние `v1.0.0`.
+   - Добавлен тест `ratcore/tests/demo-game.mjs` и подключён в `.github/workflows/validate.yml`.
+
+
 
 
 
