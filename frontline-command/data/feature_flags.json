@@ -116,6 +116,12 @@
       "enabled": true
     },
     {
+      "id": "tank_detour_v1",
+      "desc": "Эксперимент: ограниченный локальный обход препятствий для танков вне боя и зданий",
+      "group": "ai",
+      "enabled": false
+    },
+    {
       "id": "vehicle_detour_v2",
       "desc": "Экспериментальный локальный обход техники вне зданий; требует pathing_v2 и wall_collision_v2",
       "group": "ai",
@@ -315,9 +321,9 @@
     },
     {
       "id": "door_occupied_guard_v1",
-      "desc": "Эксперимент: запрет закрытия двери на живом юните",
+      "desc": "Не закрывать дверь или ворота на проходящем живом юните",
       "group": "ai",
-      "enabled": false
+      "enabled": true
     },
     {
       "id": "crowd_slot_exchange_v1",

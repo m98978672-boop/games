@@ -442,10 +442,11 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
   // Работает только со стенами: с выключенным флагом остаётся прежняя логика.
   const anti = game.cfg.navBudget?.antiStuck || { stuckThreshold: 1.5, detourSeconds: 1.6 };
   const wallsOn = !!(game.walls && game.walls.enabled());
-  if (wallsOn && u.isVehicle && u.goal && game.cfg.flag('pathing_v2', false) && game.cfg.flag('vehicle_detour_v2', false) &&
+  const tankDetour = u.role === 'tank' && !u.playerControlled && game.cfg.flag('tank_detour_v1', false);
+  if (wallsOn && u.isVehicle && u.goal && game.cfg.flag('pathing_v2', false) && (game.cfg.flag('vehicle_detour_v2', false) || tankDetour) &&
       !u.perception.hasContact && (u.stuck || 0) >= (anti.vehicleDetourThreshold ?? 1) && (!u.detour || game.time >= u.detour.until) &&
       !game.walls.buildingAtPoint?.(u.x, u.y) && !game.walls.buildingAtPoint?.(u.goal.x, u.goal.y)) {
-    // Только экспериментальный маршрут вне зданий. Точки доступны обычным
+    // Ограниченный маршрут вне зданий. Точки доступны обычным
     // движением, а их порядок определяется общим полем стоимости без RNG.
     const field = game.nav.field(u.goal.x, u.goal.y);
     // Включённый эксперимент применяется лишь когда поле требует движения
@@ -472,6 +473,7 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
       }
       if (best && Number.isFinite(bestScore)) {
         u.detour = { ...best, until: game.time + (anti.detourSeconds ?? 1.6) };
+        if (game._detourMetrics) game._detourMetrics.fieldDetours++;
         u.stuck = anti.stuckAfterDetour ?? 0.8;
       }
     }

@@ -1,0 +1,417 @@
+{
+  "seeds": 8,
+  "seconds": 300,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          102,
+          81
+        ],
+        "kills": [
+          55,
+          55
+        ],
+        "deliveries": [
+          3,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          21,
+          15
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          29,
+          121
+        ],
+        "kills": [
+          51,
+          85
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          18,
+          20
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          90,
+          118
+        ],
+        "kills": [
+          57,
+          74
+        ],
+        "deliveries": [
+          1,
+          2
+        ],
+        "blockedClose": 0,
+        "alive": [
+          14,
+          22
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 257.1,
+        "warOver": true,
+        "outcome": {
+          "winner": 0,
+          "reason": "Все ключевые города Легион потеряны",
+          "t": 257.09999999998996
+        },
+        "failures": [
+          129,
+          75
+        ],
+        "kills": [
+          69,
+          44
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          35,
+          14
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          116,
+          181
+        ],
+        "kills": [
+          34,
+          54
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          17,
+          24
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          54,
+          129
+        ],
+        "kills": [
+          74,
+          60
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "blockedClose": 0,
+        "alive": [
+          30,
+          11
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          152,
+          67
+        ],
+        "kills": [
+          65,
+          50
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          21,
+          16
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          169,
+          118
+        ],
+        "kills": [
+          62,
+          40
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "blockedClose": 0,
+        "alive": [
+          29,
+          16
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          139,
+          120
+        ],
+        "kills": [
+          72,
+          43
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "blockedClose": 0,
+        "alive": [
+          28,
+          7
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          121,
+          73
+        ],
+        "kills": [
+          43,
+          54
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "blockedClose": 0,
+        "alive": [
+          20,
+          17
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          183,
+          108
+        ],
+        "kills": [
+          57,
+          58
+        ],
+        "deliveries": [
+          1,
+          2
+        ],
+        "blockedClose": 0,
+        "alive": [
+          24,
+          17
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          123,
+          142
+        ],
+        "kills": [
+          28,
+          65
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          14,
+          38
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          104,
+          126
+        ],
+        "kills": [
+          72,
+          53
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          22,
+          16
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          33,
+          199
+        ],
+        "kills": [
+          52,
+          74
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          16,
+          33
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          187,
+          138
+        ],
+        "kills": [
+          55,
+          54
+        ],
+        "deliveries": [
+          2,
+          1
+        ],
+        "blockedClose": 0,
+        "alive": [
+          9,
+          29
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 300,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          145,
+          147
+        ],
+        "kills": [
+          46,
+          61
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "blockedClose": 0,
+        "alive": [
+          20,
+          29
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Flags motion_slide_guard_v1 and door_occupied_guard_v1 are changed together; attribution is not possible",
+    "Short observation horizon is not an adjudicated draw; random streams and game state diverge",
+    "No guarantee of collision-free movement, victory balance, or browser FPS"
+  ],
+  "experimentalSource": "tools/slide-infantry.patch",
+  "reproduction": "With patch applied: node tools/slide-infantry-wars.mjs --seeds=8 --seconds=300"
+}
