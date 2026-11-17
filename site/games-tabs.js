@@ -1,5 +1,6 @@
-// Переключатель вкладок портала Games: «Магазин / Игры», «Новости» (автопост по категориям)
-// и «Общение» (встроенный мессенджер RatMes + 9 облаков + Мастер MAX).
+// Переключатель вкладок портала Games:
+// «Магазин / Игры», отдельный отдел «Новости» (Games News в iframe + 8 облаков)
+// и отдельный мессенджер «Общение» (RatMes в iframe + 9 облаков).
 (function () {
   const TAB_GAMES = 'games';
   const TAB_NEWS = 'news';
@@ -10,8 +11,8 @@
   const chatTriggers = Array.from(document.querySelectorAll('[data-open-chat]'));
   const newsTriggers = Array.from(document.querySelectorAll('[data-open-news]'));
   const storeSections = Array.from(document.querySelectorAll('[data-portal-store-section]'));
+
   const chatView = document.getElementById('portal-chat-panel');
-  const newsView = document.getElementById('portal-news-panel');
   const frame = document.getElementById('ratmesEmbedFrame');
   const roomButtons = Array.from(document.querySelectorAll('[data-ratmes-room]'));
   const cloudsToggle = document.getElementById('btnToggleCloudsStrip');
@@ -19,12 +20,26 @@
   const connectBtn = document.getElementById('btnPortalConnectServices');
   const fullscreenBtn = document.getElementById('btnChatFullscreen');
 
+  const newsView = document.getElementById('portal-news-panel');
+  const newsFrame = document.getElementById('newsEmbedFrame');
+  const newsCatButtons = Array.from(document.querySelectorAll('[data-news-cat-btn]'));
+  const newsCloudsToggle = document.getElementById('btnToggleNewsCloudsStrip');
+  const newsCloudsStrip = document.getElementById('portalNewsCloudsStrip');
+  const newsComposeBtn = document.getElementById('btnPortalNewsCompose');
+  const newsFullscreenBtn = document.getElementById('btnNewsFullscreen');
+
   if (!storeSections.length || !chatView || !frame) return;
 
-  const baseSrc = frame.getAttribute('data-src') || 'ratmes/index.html?embed=games';
-  let loaded = false;
-  let frameReady = false;
-  let pendingPostMsg = null;
+  const baseChatSrc = frame.getAttribute('data-src') || 'ratmes/index.html?embed=games';
+  const baseNewsSrc = newsFrame?.getAttribute('data-src') || 'news/index.html?embed=games';
+
+  let chatLoaded = false;
+  let chatReady = false;
+  let pendingChatMsg = null;
+
+  let newsLoaded = false;
+  let newsReady = false;
+  let pendingNewsMsg = null;
 
   function safePostMessage(win, msg) {
     try {
@@ -45,38 +60,99 @@
   }
 
   frame.addEventListener('load', () => {
-    frameReady = true;
-    if (pendingPostMsg) {
-      safePostMessage(frame.contentWindow, pendingPostMsg);
-      pendingPostMsg = null;
+    chatReady = true;
+    if (pendingChatMsg) {
+      safePostMessage(frame.contentWindow, pendingChatMsg);
+      pendingChatMsg = null;
     }
   });
 
-  function postToFrame(msg) {
-    if (frameReady && frame.contentWindow) {
+  newsFrame?.addEventListener('load', () => {
+    newsReady = true;
+    if (pendingNewsMsg) {
+      safePostMessage(newsFrame.contentWindow, pendingNewsMsg);
+      pendingNewsMsg = null;
+    }
+  });
+
+  function postToChatFrame(msg) {
+    if (chatReady && frame.contentWindow) {
       safePostMessage(frame.contentWindow, msg);
     } else {
-      pendingPostMsg = msg;
+      pendingChatMsg = msg;
     }
   }
 
-  function loadFrame(opts) {
+  function postToNewsFrame(msg) {
+    if (!newsFrame) return;
+    if (newsReady && newsFrame.contentWindow) {
+      safePostMessage(newsFrame.contentWindow, msg);
+    } else {
+      pendingNewsMsg = msg;
+    }
+  }
+
+  function loadChatFrame(opts) {
     const o = opts || {};
     const params = [];
     if (o.room) params.push(`room=${encodeURIComponent(o.room)}`);
     if (o.connect) params.push(`connect=${encodeURIComponent(o.connect)}`);
     const suffix = params.length ? `&${params.join('&')}` : '';
-    const url = `${baseSrc}${suffix}`;
+    const url = `${baseChatSrc}${suffix}`;
 
-    if (!loaded) {
+    if (!chatLoaded) {
       frame.setAttribute('src', url);
-      loaded = true;
+      chatLoaded = true;
       return;
     }
     if (o.connect) {
-      postToFrame({ type: 'ratmes:openConnectHub', service: o.connect === '1' ? 'max' : o.connect });
+      postToChatFrame({ type: 'ratmes:openConnectHub', service: o.connect === '1' ? 'max' : o.connect });
     } else if (o.room) {
-      postToFrame({ type: 'ratmes:selectRoom', room: o.room });
+      postToChatFrame({ type: 'ratmes:selectRoom', room: o.room });
+    }
+  }
+
+  function loadNewsFrame(opts) {
+    if (!newsFrame) return;
+    const o = opts || {};
+    const params = [];
+    if (o.category && o.category !== 'all') params.push(`cat=${encodeURIComponent(o.category)}`);
+    if (o.articleId) params.push(`code=${encodeURIComponent(o.articleId)}`);
+    const suffix = params.length ? `&${params.join('&')}` : '';
+    const url = `${baseNewsSrc}${suffix}`;
+
+    if (!newsLoaded) {
+      newsFrame.setAttribute('src', url);
+      newsLoaded = true;
+      if (o.compose) pendingNewsMsg = { type: 'news:openCompose' };
+      return;
+    }
+    if (o.compose) {
+      postToNewsFrame({ type: 'news:openCompose' });
+    } else if (o.articleId) {
+      postToNewsFrame({ type: 'news:openArticle', articleId: o.articleId });
+    } else if (o.category) {
+      postToNewsFrame({ type: 'news:selectCategory', category: o.category });
+    }
+  }
+
+  function updateNewsBadge(unreadCount) {
+    const n = Number(unreadCount);
+    document.querySelectorAll('[data-news-badge]').forEach((badge) => {
+      if (Number.isFinite(n) && n > 0) {
+        badge.textContent = n > 9 ? '9+' : String(n);
+        badge.hidden = false;
+      } else {
+        badge.textContent = '0';
+        badge.hidden = true;
+      }
+    });
+  }
+
+  function highlightNewsCat(catId) {
+    const activeCat = catId || 'all';
+    for (const b of newsCatButtons) {
+      b.classList.toggle('is-active', b.getAttribute('data-news-cat-btn') === activeCat);
     }
   }
 
@@ -95,34 +171,42 @@
     document.body.classList.toggle('portal-news-active', isNews);
     if (!isChat) {
       document.body.classList.remove('chat-fullscreen');
-      if (fullscreenBtn) fullscreenBtn.setAttribute('aria-pressed', 'false');
+      if (fullscreenBtn) {
+        fullscreenBtn.setAttribute('aria-pressed', 'false');
+        fullscreenBtn.textContent = '⛶';
+      }
+    }
+    if (!isNews) {
+      document.body.classList.remove('news-fullscreen');
+      if (newsFullscreenBtn) {
+        newsFullscreenBtn.setAttribute('aria-pressed', 'false');
+        newsFullscreenBtn.textContent = '⛶';
+      }
     }
 
     for (const btn of navButtons) {
       const target = btn.getAttribute('data-portal-tab');
       const active = target === normalized;
       btn.classList.toggle('is-active', active);
-      if (btn.getAttribute('role') === 'tab') {
-        btn.setAttribute('aria-selected', active ? 'true' : 'false');
-        btn.tabIndex = active ? 0 : -1;
-      } else {
-        btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-      }
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
 
     if (isChat) {
-      loadFrame({ room: options.room || null, connect: options.connect || null });
+      loadChatFrame({ room: options.room || null, connect: options.connect || null });
       if (!options.keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
       if (options.updateHash !== false && window.location.hash !== '#chat') {
         safeReplaceHash('#chat');
       }
     } else if (isNews) {
+      loadNewsFrame({
+        category: options.category || null,
+        articleId: options.articleId || null,
+        compose: Boolean(options.compose),
+      });
       if (!options.keepScroll) window.scrollTo({ top: 0, behavior: 'auto' });
-      if (options.updateHash !== false && !String(window.location.hash || '').startsWith('#news')) {
-        safeReplaceHash('#news');
-      }
-      if (options.articleId && window.GamesNewsHub && typeof window.GamesNewsHub.openArticle === 'function') {
-        window.GamesNewsHub.openArticle(options.articleId, { updateHash: false });
+      if (options.updateHash !== false) {
+        const targetHash = options.articleId ? `#news=${encodeURIComponent(options.articleId)}` : '#news';
+        if (window.location.hash !== targetHash) safeReplaceHash(targetHash);
       }
     } else if (options.updateHash !== false) {
       const cur = (window.location.hash || '').toLowerCase();
@@ -171,9 +255,23 @@
     });
   }
 
+  for (const cBtn of newsCatButtons) {
+    cBtn.addEventListener('click', () => {
+      const category = cBtn.getAttribute('data-news-cat-btn') || 'all';
+      highlightNewsCat(category);
+      setTab(TAB_NEWS, { category, keepScroll: true });
+    });
+  }
+
   if (connectBtn) {
     connectBtn.addEventListener('click', () => {
       setTab(TAB_CHAT, { connect: 'max', keepScroll: true });
+    });
+  }
+
+  if (newsComposeBtn) {
+    newsComposeBtn.addEventListener('click', () => {
+      setTab(TAB_NEWS, { compose: true, keepScroll: true });
     });
   }
 
@@ -185,6 +283,14 @@
     });
   }
 
+  if (newsFullscreenBtn) {
+    newsFullscreenBtn.addEventListener('click', () => {
+      const active = document.body.classList.toggle('news-fullscreen');
+      newsFullscreenBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      newsFullscreenBtn.textContent = active ? '✕' : '⛶';
+    });
+  }
+
   if (cloudsToggle && cloudsStrip) {
     cloudsToggle.addEventListener('click', () => {
       const willOpen = cloudsStrip.hidden;
@@ -193,25 +299,23 @@
     });
   }
 
-  const tablistEl = document.querySelector('.portal-main-tabs[role="tablist"]');
-  if (tablistEl) {
-    const tabEls = Array.from(tablistEl.querySelectorAll('[role="tab"][data-portal-tab]'));
-    tablistEl.addEventListener('keydown', (e) => {
-      const idx = tabEls.indexOf(document.activeElement);
-      if (idx < 0) return;
-      let nextIdx = -1;
-      if (e.key === 'ArrowRight') nextIdx = (idx + 1) % tabEls.length;
-      else if (e.key === 'ArrowLeft') nextIdx = (idx - 1 + tabEls.length) % tabEls.length;
-      else if (e.key === 'Home') nextIdx = 0;
-      else if (e.key === 'End') nextIdx = tabEls.length - 1;
-      if (nextIdx >= 0) {
-        e.preventDefault();
-        const nextBtn = tabEls[nextIdx];
-        nextBtn.focus();
-        setTab(nextBtn.getAttribute('data-portal-tab'));
-      }
+  if (newsCloudsToggle && newsCloudsStrip) {
+    newsCloudsToggle.addEventListener('click', () => {
+      const willOpen = newsCloudsStrip.hidden;
+      newsCloudsStrip.hidden = !willOpen;
+      newsCloudsToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
   }
+
+  window.addEventListener('message', (ev) => {
+    const data = ev.data;
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'news:unreadCount') {
+      updateNewsBadge(data.count);
+    } else if (data.type === 'news:categoryChanged') {
+      highlightNewsCat(data.category);
+    }
+  });
 
   function syncFromHash() {
     const raw = window.location.hash || '';

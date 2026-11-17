@@ -1,60 +1,204 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Новости Games — проверенные новости игр, технологий, науки и космоса</title>
-<meta name="description" content="Отдельная вкладка «Новости» портала Games: проверенные материалы по 6 темам с короткими кодами поиска, реальными фото, доказательствами и комментариями.">
-<meta property="og:type" content="website">
-<meta property="og:title" content="Новости Games — лента проверенных новостей">
-<meta property="og:description" content="19 перепроверенных новостей 2026 года с кодами (G-101..F-603), фото, доказательствами и автопостом.">
-<meta property="og:url" content="https://m98978672-boop.github.io/games/news/">
-<link rel="canonical" href="https://m98978672-boop.github.io/games/#news">
-<style>
-  body {
-    margin: 0;
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    background: #101926;
-    color: #e2e8f0;
-    font: 16px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    padding: 24px;
-    text-align: center;
-  }
-  .card {
-    max-width: 440px;
-    padding: 24px;
-    border-radius: 14px;
-    background: #172434;
-    border: 1px solid rgba(102, 192, 244, 0.35);
-  }
-  a {
-    display: inline-block;
-    margin-top: 12px;
-    padding: 10px 18px;
-    border-radius: 8px;
-    background: #1a9fff;
-    color: #fff;
-    font-weight: 700;
-    text-decoration: none;
-  }
-</style>
-<script>
-  (function () {
-    var params = new URLSearchParams(window.location.search || '');
-    var rawCode = params.get('code') || params.get('news') || (window.location.hash || '').replace(/^#/, '');
-    var cleanCode = rawCode.replace(/^news=/i, '').trim();
-    var target = cleanCode ? '../index.html#news=' + encodeURIComponent(cleanCode) : '../index.html#news';
-    window.location.replace(target);
-  })();
-</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#121721">
+  <title>Games News — Отдельный новостной отдел портала Games</title>
+  <meta name="description" content="Отдельный новостной отдел Games News: 19 проверенных новостей 2026 года по 6 категориям с короткими кодами поиска (G-101..F-603), реальными фото, доказательствами и комментариями.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Games News — Отдельный новостной отдел">
+  <meta property="og:description" content="Проверенные новости игр, технологий, космоса, мира и кибербезопасности с кодами поиска, фото и доказательствами.">
+  <meta property="og:url" content="https://m98978672-boop.github.io/games/news/">
+  <meta property="og:image" content="https://m98978672-boop.github.io/games/site/assets/news/s301-voyager1.jpg">
+  <link rel="canonical" href="https://m98978672-boop.github.io/games/news/">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23121721'/%3E%3Ctext x='16' y='21' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='14' fill='%2338bdf8'%3EGN%3C/text%3E%3C/svg%3E">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="../site/game-antivirus.js" defer></script>
+  <script src="./app.js" defer></script>
 </head>
 <body>
-  <main class="card">
-    <h1>📰 Новости Games</h1>
-    <p>Открываем отдельную вкладку новостей портала Games…</p>
-    <a href="../index.html#news">Открыть вкладку «Новости» →</a>
-  </main>
+  <!-- Верхняя живая лента статуса (в едином стиле с RatMes) -->
+  <div class="live-status-banner" id="liveStatusBanner" role="status" aria-live="polite">
+    <div class="live-status-row">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="live-status-text" id="newsStatusText">Загрузка проверенной ленты Games News…</span>
+      <span class="live-shield-pill">🛡️ Фактчек · Antivirus v1.1</span>
+    </div>
+  </div>
+
+  <div class="news-app-shell" id="newsAppShell">
+    <!-- Мобильная подложка выезжающей левой панели -->
+    <div class="sidebar-backdrop" id="sidebarBackdrop" hidden></div>
+
+    <!-- Левая колонка редакции (как у RatMes: бренд, поиск по коду, разделы, быстрые коды, облака) -->
+    <aside class="news-sidebar" id="newsSidebar" aria-label="Навигация отдела новостей">
+      <header class="brand-bar">
+        <div class="brand-mark">
+          <span class="brand-badge">GN</span>
+          <div>
+            <h1>Games News</h1>
+            <p class="brand-sub" id="brandSub">Отдельный отдел новостей</p>
+          </div>
+        </div>
+        <div class="brand-actions">
+          <a class="icon-btn standalone-only" href="../index.html" title="Вернуться в магазин Games" aria-label="Вернуться в магазин Games">🎮</a>
+          <button class="icon-btn" id="btnRefreshFeed" type="button" title="Обновить ленту новостей" aria-label="Обновить ленту">🔄</button>
+          <button class="icon-btn is-primary" id="btnOpenCompose" type="button" title="Опубликовать свою новость" aria-label="Написать новость">✍</button>
+        </div>
+      </header>
+
+      <!-- Поиск по короткому коду, заголовку или тегу -->
+      <section class="sidebar-search-box">
+        <label class="search-field">
+          <span class="search-icon" aria-hidden="true">🔎</span>
+          <input
+            type="search"
+            id="newsSearchInput"
+            class="search-input"
+            placeholder="Код (S-301, G-101) или тема…"
+            autocomplete="off"
+            aria-label="Поиск по коду новости, теме или тегу"
+          >
+          <button type="button" class="search-clear" id="btnClearSearch" hidden aria-label="Очистить поиск">×</button>
+        </label>
+        <p class="search-hint">Нажмите <kbd>Enter</kbd> по коду (например <code>S-301</code>), чтобы сразу открыть статью</p>
+      </section>
+
+      <!-- Рубрики новостей -->
+      <section class="sidebar-section">
+        <div class="sidebar-section-head">
+          <span>РУБРИКИ</span>
+          <span class="sidebar-counter" id="totalArticlesBadge">0</span>
+        </div>
+        <nav class="cat-nav" id="sidebarCategoryList" aria-label="Рубрики новостей"></nav>
+      </section>
+
+      <!-- Быстрый справочник коротких кодов -->
+      <section class="sidebar-section">
+        <div class="sidebar-section-head">
+          <span>🔑 БЫСТРЫЕ КОДЫ</span>
+          <span class="sidebar-counter" id="codesCountBadge">19</span>
+        </div>
+        <div class="quick-codes-grid" id="quickCodesGrid" aria-label="Короткие коды всех проверенных новостей"></div>
+      </section>
+
+      <!-- Облачная синхронизация комментариев и реестра -->
+      <section class="sidebar-section sidebar-clouds">
+        <div class="sidebar-section-head">
+          <span>☁ 8 ОБЛАКОВ НОВОСТЕЙ</span>
+        </div>
+        <div class="sidebar-cloud-links">
+          <a href="https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda" target="_blank" rel="noopener noreferrer">Supabase · 19 комм.</a>
+          <a href="https://app.notion.com/p/Games-2026-41b5c62035e48124a33cc11b2cfb725b" target="_blank" rel="noopener noreferrer">Notion · Сводка</a>
+          <a href="https://linear.app/gamebobli/issue/GAM-7/vkladka-obshenie-v-portale-games-s-vstroennym-ratmes-i-igrovymi#comment-fa01ccaf" target="_blank" rel="noopener noreferrer">Linear · GAM-7</a>
+          <a href="https://docs.google.com/spreadsheets/d/16vFasgolSX0RDGNvJ2bLF-JEgOAXwWZOuHcOfPFLn58/edit" target="_blank" rel="noopener noreferrer">Sheets · Реестр</a>
+          <a href="https://docs.google.com/document/d/1EKn7seFqCa7yENNC9zqfsrozjsHUlJaiPYQZpR0OCps/edit" target="_blank" rel="noopener noreferrer">Docs · Дайджест</a>
+          <a href="https://www.google.com/calendar/event?eid=YXFraHZrcTZlbGhkdDFpMzdvanJrOGk4cmsgbTk4OTc4NjcyQG0" target="_blank" rel="noopener noreferrer">Calendar · Даты</a>
+          <a href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener noreferrer">Gmail · Сводка</a>
+          <a href="https://www.dropbox.com/home/Games-News" target="_blank" rel="noopener noreferrer">Dropbox · Бэкап</a>
+        </div>
+      </section>
+    </aside>
+
+    <!-- Правая основная рабочая зона: красивая журнальная лента -->
+    <main class="news-workspace" id="newsWorkspace">
+      <header class="workspace-topbar">
+        <div class="workspace-topbar-left">
+          <button type="button" class="icon-btn mobile-menu-btn" id="btnMobileMenu" aria-label="Открыть разделы и коды">☰</button>
+          <div>
+            <p class="workspace-kicker" id="workspaceKicker">ОТДЕЛ НОВОСТЕЙ GAMES · ПРОВЕРЕНО ПО ПЕРВОИСТОЧНИКАМ</p>
+            <h2 class="workspace-title" id="workspaceTitle">✨ Все новости</h2>
+          </div>
+        </div>
+        <div class="workspace-topbar-right">
+          <select id="newsSortSelect" class="sort-select" aria-label="Сортировка новостей">
+            <option value="fresh">Сначала свежие</option>
+            <option value="popular">Обсуждаемое и интересное</option>
+          </select>
+          <button type="button" class="btn-compose-main" id="btnComposeMain">✍ Написать пост</button>
+        </div>
+      </header>
+
+      <!-- Горизонтальная полоса рубрик для мобильных экранов -->
+      <div class="mobile-cat-strip" id="mobileCategoryStrip" aria-label="Быстрые рубрики"></div>
+
+      <!-- Прокручиваемое тело ленты -->
+      <div class="news-scroll-area" id="newsScrollArea">
+        <div class="news-content-inner">
+          <div id="heroArticleSlot" class="hero-article-slot"></div>
+          <div id="articlesGrid" class="articles-grid"></div>
+          <div id="emptyState" class="empty-state" hidden>
+            <div class="empty-icon">🔍</div>
+            <h3>По этому запросу статей не найдено</h3>
+            <p>Попробуйте ввести короткий код (например <code>S-301</code>, <code>G-101</code>, <code>C-501</code>) или сбросить фильтр.</p>
+            <button type="button" class="btn-accent" id="btnResetFilters">Показать все новости</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Полноценная читалка статьи (фото, фактчек, доказательства, комментарии) -->
+  <div class="modal-root" id="readerModal" hidden role="dialog" aria-modal="true" aria-labelledby="readerArticleTitle">
+    <div class="modal-backdrop" data-close-reader></div>
+    <div class="modal-sheet reader-sheet">
+      <div class="reader-sticky-bar">
+        <div class="reader-sticky-left" id="readerStickyMeta"></div>
+        <button type="button" class="modal-close-btn" data-close-reader aria-label="Закрыть статью">✕</button>
+      </div>
+      <div class="reader-scroll-body" id="readerContent"></div>
+    </div>
+  </div>
+
+  <!-- Модалка публикации пользовательского поста (с 10-проходным антивирусом) -->
+  <div class="modal-root" id="composeModal" hidden role="dialog" aria-modal="true" aria-labelledby="composeModalTitle">
+    <div class="modal-backdrop" data-close-compose></div>
+    <div class="modal-sheet compose-sheet">
+      <div class="reader-sticky-bar">
+        <div class="reader-sticky-left">
+          <span class="code-pill">🛡️ GamesAntivirus v1.1</span>
+          <strong id="composeModalTitle">Опубликовать новость</strong>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-compose aria-label="Закрыть окно">✕</button>
+      </div>
+      <form id="composeForm" class="compose-form" novalidate>
+        <p class="compose-lead">Материал сразу получит короткий код (<code>U-9xx</code>) и пройдёт антивирусную проверку текста и ссылки.</p>
+        <label class="form-field">
+          <span>Рубрика</span>
+          <select id="composeCategory">
+            <option value="games">🎮 Игры и релизы</option>
+            <option value="tech">🤖 Технологии и ИИ</option>
+            <option value="science">🚀 Наука и космос</option>
+            <option value="world">🌍 Мир и культура</option>
+            <option value="security">🛡️ Кибербезопасность</option>
+            <option value="facts">⚡ Факты и рекорды</option>
+          </select>
+        </label>
+        <label class="form-field">
+          <span>Заголовок *</span>
+          <input id="composeTitle" type="text" maxlength="140" required placeholder="О чём интересная новость?">
+        </label>
+        <label class="form-field">
+          <span>Краткий анонс</span>
+          <input id="composeSummary" type="text" maxlength="220" placeholder="1–2 предложения для карточки в ленте">
+        </label>
+        <label class="form-field">
+          <span>Текст статьи *</span>
+          <textarea id="composeBody" rows="5" maxlength="2000" required placeholder="Подробности по абзацам…"></textarea>
+        </label>
+        <label class="form-field">
+          <span>Первоисточник https:// (необязательно)</span>
+          <input id="composeUrl" type="url" maxlength="300" placeholder="https://...">
+        </label>
+        <p class="form-status" id="composeStatus" role="status" aria-live="polite"></p>
+        <div class="compose-actions">
+          <button type="submit" class="btn-accent">🛡️ Проверить и опубликовать</button>
+          <button type="button" class="btn-ghost" data-close-compose>Отмена</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </body>
 </html>

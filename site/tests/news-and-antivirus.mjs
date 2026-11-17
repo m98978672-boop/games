@@ -142,9 +142,9 @@ for (const item of feed.items) {
 }
 assert.ok(commentTools.size >= 6, `Owner comments must span at least 6 connected tools (found ${commentTools.size})`);
 
-const newsHubSrc = await readFile(path.join(repoRoot, 'site/news-hub.js'), 'utf8');
-for (const token of ['findArticleByIdOrCode', 'news-code-chip', 'news-reader-figure', 'news-proofs-box', 'addCommentForItem', 'news-comments-section']) {
-  assert.ok(newsHubSrc.includes(token), `site/news-hub.js must implement ${token}`);
+const newsAppSrc = await readFile(path.join(repoRoot, 'news/app.js'), 'utf8');
+for (const token of ['../site/news-feed.json', 'findArticleByIdOrCode', 'code-pill', 'reader-figure', 'proofs-box', 'addComment', 'comments-section', 'news:selectCategory', 'news:unreadCount']) {
+  assert.ok(newsAppSrc.includes(token), `news/app.js must implement ${token}`);
 }
 
 const newsScanResults = await scanNewsFeedFile(av);
@@ -189,26 +189,36 @@ const parsedAtom = parseRssOrAtom(atomSample);
 assert.equal(parsedAtom.length, 1, 'Atom parser must extract entries');
 assert.equal(parsedAtom[0].link, 'https://habr.com/ru/news/999999/', 'Atom link must be extracted');
 
-// 8. Проверка HTML-витрины (site/index.html + корневой index.html) и GitHub workflow автопоста
+// 8. Проверка HTML-витрины (site/index.html + корневой index.html), отдельного отдела news/ и GitHub workflow автопоста
 const siteHtml = await readFile(path.join(repoRoot, 'site/index.html'), 'utf8');
 const rootHtml = await readFile(path.join(repoRoot, 'index.html'), 'utf8');
 for (const [label, html] of [['site/index.html', siteHtml], ['index.html', rootHtml]]) {
-  for (const marker of ['portal-main-tabs', 'portal-tab-news', 'role="tablist"', 'portal-news-panel', 'news-teaser-strip', 'news-reader-modal', 'news-compose-modal', 'data-portal-tab="news"', 'data-open-antivirus="file"']) {
+  for (const marker of ['portal-news-panel', 'newsEmbedFrame', 'portalNewsCloudsStrip', 'data-portal-tab="news"', 'data-open-news="true"', 'data-open-antivirus="file"']) {
     assert.ok(html.includes(marker), `${label} must include ${marker}`);
   }
+  assert.equal(html.includes('news-teaser-strip'), false, `${label} must NOT mix news teaser into games storefront`);
+  assert.equal(html.includes('portal-main-tabs'), false, `${label} must NOT add extra tab bar above store ribbon`);
   const forbiddenEngineRe = new RegExp(['rat', 'core'].join(''), 'i');
   assert.equal(forbiddenEngineRe.test(html), false, `${label} must stay strictly isolated from internal engine`);
 }
-const newsEntryHtml = await readFile(path.join(repoRoot, 'news/index.html'), 'utf8');
-assert.ok(newsEntryHtml.includes('../index.html#news'), 'news/index.html must redirect to the News tab');
+assert.ok(siteHtml.includes('data-src="../news/index.html?embed=games"'), 'site/index.html must embed ../news/index.html?embed=games');
+assert.ok(rootHtml.includes('data-src="news/index.html?embed=games"'), 'root index.html must embed news/index.html?embed=games');
+
+for (const rel of ['news/index.html', 'news/styles.css', 'news/app.js', 'news/manifest.webmanifest']) {
+  assert.equal(existsSync(path.join(repoRoot, rel)), true, `Standalone news app file must exist: ${rel}`);
+}
+const newsAppHtml = await readFile(path.join(repoRoot, 'news/index.html'), 'utf8');
+for (const marker of ['../site/game-antivirus.js', './styles.css', './app.js', 'newsSidebar', 'newsWorkspace', 'quickCodesGrid', 'readerModal', 'composeModal']) {
+  assert.ok(newsAppHtml.includes(marker), `news/index.html must include ${marker}`);
+}
 const sitemapXml = await readFile(path.join(repoRoot, 'sitemap.xml'), 'utf8');
 assert.ok(sitemapXml.includes('/games/news/'), 'sitemap.xml must include /games/news/');
-assert.ok(siteHtml.includes('src="news-hub.js"'), 'site/index.html must load news-hub.js');
-assert.ok(rootHtml.includes('src="site/news-hub.js"'), 'root index.html must load site/news-hub.js');
+const swJs = await readFile(path.join(repoRoot, 'sw.js'), 'utf8');
+assert.ok(swJs.includes("url.pathname.includes('/news/')"), 'sw.js must exclude standalone /news/ app just like /ratmes/');
 
 const workflowYml = await readFile(path.join(repoRoot, '.github/workflows/auto-news.yml'), 'utf8');
 assert.ok(workflowYml.includes("cron: '0 */6 * * *'"), 'auto-news workflow must schedule cron every 6 hours');
 assert.ok(workflowYml.includes('auto-post-news.mjs'), 'auto-news workflow must run auto-post-news.mjs');
 assert.ok(workflowYml.includes('scan-submission-antivirus.mjs'), 'auto-news workflow must verify feed with antivirus');
 
-console.log('OK: Games Antivirus v1.1, CI submission scanner, News Hub (6 categories) & Auto-Poster tests passed.');
+console.log('OK: Games Antivirus v1.1, CI submission scanner, standalone News app (/news/) & Auto-Poster tests passed.');

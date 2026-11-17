@@ -1,5 +1,5 @@
 /* Games — лёгкий Service Worker для мгновенного старта и офлайн-витрины. */
-const CACHE_NAME = 'games-store-v9';
+const CACHE_NAME = 'games-store-v10';
 const PRECACHE = [
   './',
   './index.html',
@@ -8,8 +8,6 @@ const PRECACHE = [
   './site/game-antivirus.js',
   './site/portal.js',
   './site/games-tabs.js',
-  './site/news-hub.js',
-  './site/news-feed.json',
   './site/user-games.js',
   './site/community-games.js',
   './site/community-games.json',
@@ -38,14 +36,31 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.includes('/ratmes/')) return;
+  if (url.pathname.includes('/ratmes/') || url.pathname.includes('/news/')) return;
 
-  // Stale-While-Revalidate для витрины и ассетов
-  const isStoreAsset =
+  const isHtmlDoc =
+    req.mode === 'navigate' ||
     url.pathname.endsWith('/index.html') ||
-    url.pathname.endsWith('/') ||
-    url.pathname.includes('/site/');
-  if (!isStoreAsset) return;
+    url.pathname.endsWith('/');
+
+  // Network-First для HTML — чтобы новые вкладки и обновления появлялись с первого открытия
+  if (isHtmlDoc) {
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.ok && res.type === 'basic') {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy).catch((err) => err));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate для статических ассетов витрины
+  if (!url.pathname.includes('/site/')) return;
 
   event.respondWith(
     caches.open(CACHE_NAME).then((cache) =>
