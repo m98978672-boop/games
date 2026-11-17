@@ -997,41 +997,41 @@ function renderChatHeader() {
   if (canWriteBar && canWriteText && canWriteAction) {
     if (isSelf) {
       canWriteBar.className = 'chat-can-write-bar is-live';
-      canWriteText.textContent = '⭐ Избранное — твои личные заметки и файлы, видны только тебе';
+      canWriteText.textContent = '⭐ Избранное · только для тебя';
       canWriteAction.hidden = false;
-      canWriteAction.textContent = '👤 Новый личный чат';
+      canWriteAction.textContent = '👤 Личный чат';
       canWriteAction.onclick = () => openDmModal();
-      if (msgInput) msgInput.placeholder = 'Записать заметку себе…';
+      if (msgInput) msgInput.placeholder = 'Заметка себе…';
     } else if (isDm) {
       canWriteBar.className = 'chat-can-write-bar is-live';
-      canWriteText.textContent = '🟢 Личный чат 1-на-1 — твои сообщения синие справа, собеседник слева';
+      canWriteText.textContent = '🟢 Личный чат 1-на-1';
       canWriteAction.hidden = false;
-      canWriteAction.textContent = '🔗 Ссылка на меня';
+      canWriteAction.textContent = '🔗 Моя ссылка';
       canWriteAction.onclick = () => shareMyPersonalLink();
-      if (msgInput) msgInput.placeholder = 'Написать личное сообщение…';
+      if (msgInput) msgInput.placeholder = 'Личное сообщение…';
     } else if (isCloud) {
       canWriteBar.className = 'chat-can-write-bar is-live';
       canWriteText.textContent = isGroup
-        ? '🟢 Живая комната по ссылке — пригласи друзей кнопкой «🔗 Пригласить»'
-        : `🟢 Живой чат как «${state.displayName}» — твои сообщения сразу видят все участники`;
+        ? `🟢 Комната · Вы: ${state.displayName}`
+        : `🟢 Онлайн · Вы: ${state.displayName}`;
       canWriteAction.hidden = false;
-      canWriteAction.textContent = isGroup ? '🔗 Поделиться комнатой' : '👤 Сменить имя';
+      canWriteAction.textContent = isGroup ? '🔗 Ссылка' : '✏️ Имя';
       canWriteAction.onclick = () => (isGroup ? shareActiveRoomLink() : openProfileModal());
-      if (msgInput) msgInput.placeholder = `Написать в ${chat.title}…`;
+      if (msgInput) msgInput.placeholder = 'Сообщение…';
     } else if (liveBridge) {
       canWriteBar.className = 'chat-can-write-bar is-live';
-      canWriteText.textContent = `🟢 Подключён реальный мост ${NETWORK_LABELS[chat.network] || chat.network}`;
+      canWriteText.textContent = `🟢 Мост ${NETWORK_LABELS[chat.network] || chat.network}`;
       canWriteAction.hidden = false;
       canWriteAction.textContent = '⚙ Настроить';
       canWriteAction.onclick = () => openConnectHub(chat.network);
-      if (msgInput) msgInput.placeholder = `Отправить в ${NETWORK_LABELS[chat.network] || chat.network}…`;
+      if (msgInput) msgInput.placeholder = 'Сообщение…';
     } else {
       canWriteBar.className = 'chat-can-write-bar is-warn';
-      canWriteText.textContent = `🔌 ${NETWORK_LABELS[chat.network] || chat.network} ещё не подключён — добавь токен или открой веб-версию`;
+      canWriteText.textContent = `🔌 ${NETWORK_LABELS[chat.network] || chat.network} не подключён`;
       canWriteAction.hidden = false;
-      canWriteAction.textContent = `🔌 Подключить ${NETWORK_LABELS[chat.network] || ''}`;
+      canWriteAction.textContent = '🔌 Подключить';
       canWriteAction.onclick = () => openConnectHub(chat.network);
-      if (msgInput) msgInput.placeholder = `Сначала подключи ${NETWORK_LABELS[chat.network] || chat.network}…`;
+      if (msgInput) msgInput.placeholder = 'Подключи мост…';
     }
   }
 }
