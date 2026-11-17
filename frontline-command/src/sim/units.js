@@ -725,7 +725,14 @@ export function moveAlongFlow(game, u, dt) {
   if (u.isVehicle && !u.playerControlled && game.cfg.flag('vehicle_exterior_v1', true) &&
       game.walls?.enabled() && game.walls.buildingAtPoint && game.logistics?.exteriorPoint) {
     const b = game.walls.buildingAtPoint(u.goal.x,u.goal.y);
-    if (b && game.walls.state(b) && game.walls.buildingAtPoint(u.x,u.y) !== b) {
+    const st = b && game.walls.state(b);
+    // Preserve the original target only if a real, sufficiently wide gate
+    // exists. Infantry-only doors must still send vehicles to the exterior.
+    const usableGate = st && game.cfg.flag('vehicle_gate_access_v1', false) &&
+      st.outline.openings.some(o => game.walls.vehicleFitsGate(u, o, st.outline));
+    const outside = !!(st && game.walls.buildingAtPoint(u.x,u.y) !== b);
+    if (outside && game._vehicleGateMetrics && usableGate) game._vehicleGateMetrics.preserved++;
+    if (outside && !usableGate) {
       const safe = game.logistics.exteriorPoint(u,b);
       cancelSelectedSmartRoute(game,u);
       if (u._crowdActive || u._crowdGroupGoal) clearCrowdState(u);

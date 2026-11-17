@@ -727,6 +727,14 @@ export class Walls {
     return null;
   }
 
+  // The conservative extra thickness provides room for the vehicle footprint
+  // and wall ends; the normal collision check remains authoritative.
+  vehicleFitsGate(u, opening, outline) {
+    return opening.type === 'gate' && opening.move &&
+      Math.hypot(opening.p2[0] - opening.p1[0], opening.p2[1] - opening.p1[1]) >
+        2 * u.radius + (outline.thickness || 0);
+  }
+
   // Путевая точка «через проём»: если юнит и цель разделены стеной здания,
   // направление движения ведёт к ближайшей двери/воротам (обычный шаг, не телепорт).
   doorWaypoint(u, gx, gy) {
@@ -743,6 +751,7 @@ export class Walls {
     for (const o of st.outline.openings || []) {
       if (o.type !== 'door' && o.type !== 'gate') continue;
       if (u.isVehicle && o.type !== 'gate') continue;
+      if (u.isVehicle && this.cfg.flag('vehicle_gate_access_v1', false) && !this.vehicleFitsGate(u, o, st.outline)) continue;
       const px = b.x + o.cx, py = b.y + o.cy;
       const cost = dist(u.x, u.y, px, py) + dist(px, py, gx, gy);
       if (cost < bd) {

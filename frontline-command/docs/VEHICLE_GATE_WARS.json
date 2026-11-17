@@ -1,0 +1,508 @@
+{
+  "seeds": 8,
+  "seconds": 180,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 6,
+        "tankFailures": 27,
+        "failures": [
+          32,
+          39
+        ],
+        "kills": [
+          27,
+          38
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          26,
+          30
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 1100,
+        "truckFailures": 4,
+        "tankFailures": 14,
+        "failures": [
+          43,
+          42
+        ],
+        "kills": [
+          13,
+          39
+        ],
+        "captures": [
+          3,
+          4
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          29,
+          34
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 2,
+        "tankFailures": 10,
+        "failures": [
+          21,
+          27
+        ],
+        "kills": [
+          15,
+          36
+        ],
+        "captures": [
+          6,
+          7
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "alive": [
+          24,
+          33
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 308,
+        "truckFailures": 5,
+        "tankFailures": 27,
+        "failures": [
+          24,
+          39
+        ],
+        "kills": [
+          23,
+          32
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "alive": [
+          28,
+          20
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 15,
+        "tankFailures": 9,
+        "failures": [
+          29,
+          80
+        ],
+        "kills": [
+          8,
+          28
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          29,
+          45
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 650,
+        "truckFailures": 1,
+        "tankFailures": 14,
+        "failures": [
+          26,
+          90
+        ],
+        "kills": [
+          8,
+          30
+        ],
+        "captures": [
+          3,
+          5
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          22,
+          38
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 8,
+        "tankFailures": 29,
+        "failures": [
+          101,
+          36
+        ],
+        "kills": [
+          45,
+          2
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          43,
+          24
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 1194,
+        "truckFailures": 6,
+        "tankFailures": 17,
+        "failures": [
+          74,
+          28
+        ],
+        "kills": [
+          43,
+          8
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          2,
+          0
+        ],
+        "alive": [
+          32,
+          41
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 0,
+        "tankFailures": 44,
+        "failures": [
+          116,
+          50
+        ],
+        "kills": [
+          31,
+          17
+        ],
+        "captures": [
+          4,
+          3
+        ],
+        "deliveries": [
+          2,
+          0
+        ],
+        "alive": [
+          40,
+          20
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 437,
+        "truckFailures": 1,
+        "tankFailures": 41,
+        "failures": [
+          81,
+          22
+        ],
+        "kills": [
+          34,
+          15
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          2,
+          0
+        ],
+        "alive": [
+          40,
+          17
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 1,
+        "tankFailures": 42,
+        "failures": [
+          52,
+          41
+        ],
+        "kills": [
+          48,
+          13
+        ],
+        "captures": [
+          4,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          32,
+          25
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 1593,
+        "truckFailures": 1,
+        "tankFailures": 22,
+        "failures": [
+          60,
+          41
+        ],
+        "kills": [
+          42,
+          19
+        ],
+        "captures": [
+          4,
+          3
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          29,
+          22
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 1,
+        "tankFailures": 4,
+        "failures": [
+          27,
+          21
+        ],
+        "kills": [
+          29,
+          45
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          31,
+          30
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 254,
+        "truckFailures": 1,
+        "tankFailures": 5,
+        "failures": [
+          26,
+          20
+        ],
+        "kills": [
+          28,
+          44
+        ],
+        "captures": [
+          5,
+          5
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "alive": [
+          32,
+          28
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 0,
+        "truckFailures": 8,
+        "tankFailures": 31,
+        "failures": [
+          12,
+          54
+        ],
+        "kills": [
+          9,
+          30
+        ],
+        "captures": [
+          3,
+          4
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          12,
+          33
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "gateGoalSamples": 1109,
+        "truckFailures": 3,
+        "tankFailures": 15,
+        "failures": [
+          22,
+          52
+        ],
+        "kills": [
+          13,
+          27
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          20,
+          34
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "Only vehicle_gate_access_v1 differs; diagnostics enabled in both",
+    "Goal samples count repeated moveAlongFlow checks, not completed gate crossings",
+    "Fixed horizon is not a draw, diverging decisions alter the RNG stream",
+    "Deliveries include virtual deliveries; no proof of balance, unimpeded routes or FPS"
+  ]
+}
