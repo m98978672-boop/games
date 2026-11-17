@@ -278,7 +278,7 @@ export function createRatMesEngine({
     // 1. tools.pack.*
     pack: {
       async text(args, ctx) {
-        const { chatId, network = 'ratmes', text = '', chatTitle, senderName = 'Я', replyTo = null, mentions = [] } = args || {};
+        const { chatId, network = 'ratmes', text = '', chatTitle, senderId = null, senderName = 'Я', replyTo = null, mentions = [] } = args || {};
         if (!chatId || typeof text !== 'string' || !text.trim()) {
           return { ok: false, error: makeError('RM-105', 'Для pack.text требуются непустые chatId и text') };
         }
@@ -298,7 +298,7 @@ export function createRatMesEngine({
             chatTitle: chatTitle || chatMetaExtra.get(chatId)?.title || chatId,
             network,
             direction: 'out',
-            senderId: ctx.actorId,
+            senderId: senderId ? String(senderId) : ctx.actorId,
             senderName: String(senderName || 'Я').slice(0, 48),
             text: text.trim(),
             replyTo,
@@ -353,6 +353,7 @@ export function createRatMesEngine({
           caption = '',
           chunkSize = 65536,
           chatTitle,
+          senderId = null,
           senderName = 'Я',
         } = args || {};
         if (!chatId) return { ok: false, error: makeError('RM-105', 'Для pack.media требуется chatId') };
@@ -390,7 +391,7 @@ export function createRatMesEngine({
             chatTitle: chatTitle || chatMetaExtra.get(chatId)?.title || chatId,
             network,
             direction: 'out',
-            senderId: ctx.actorId,
+            senderId: senderId ? String(senderId) : ctx.actorId,
             senderName: String(senderName || 'Я').slice(0, 48),
             text: caption || `Вложение: ${filename}`,
             attachment: {
@@ -454,6 +455,8 @@ export function createRatMesEngine({
           chatId,
           network,
           chatTitle,
+          senderId: args.senderId || null,
+          senderName: args.senderName || 'Я',
           filename,
           mimeType: finalMime,
           bytes: finalBytes,
@@ -2193,24 +2196,45 @@ export function createRatMesEngine({
       async ingestRemote(args, ctx) {
         const rows = Array.isArray(args?.messages) ? args.messages : [];
         const remoteRooms = Array.isArray(args?.rooms) ? args.rooms : [];
-        const onlinePeers = Array.isArray(args?.onlinePeers) ? args.onlinePeers : null;
+        const rawPeers = Array.isArray(args?.onlinePeers) ? args.onlinePeers : null;
         const myPeerId = args?.myPeerId ? String(args.myPeerId) : null;
         const peerNameMap = new Map();
-        if (onlinePeers) {
-          for (const p of onlinePeers) {
+        const peerSeen = new Set();
+        const mergedPeers = rawPeers ? [...rawPeers] : null;
+        if (mergedPeers) {
+          for (const p of mergedPeers) {
             const pid = String(p.peer_id || p.peerId || '');
             const pname = String(p.display_name || p.displayName || '').trim();
+            if (pid) peerSeen.add(pid);
             if (pid && pname) peerNameMap.set(pid, pname);
           }
         }
-        // Регистрируем все реальные комнаты (публичные, личные DM и комнаты по ссылке)
+        for (const row of rows) {
+          const pid = String(row?.sender_id || '').trim();
+          const pname = String(row?.sender_name || '').trim();
+          if (pid && pname && !peerNameMap.has(pid)) peerNameMap.set(pid, pname);
+          if (mergedPeers && pid && !pid.includes(':') && !peerSeen.has(pid)) {
+            peerSeen.add(pid);
+            mergedPeers.push({
+              peer_id: pid,
+              display_name: pname || 'Участник',
+              bio: '',
+              room_id: row.room_id || 'games-lobby',
+              last_seen: row.created_at || new Date(0).toISOString(),
+            });
+          }
+        }
+        // Регистрируем все реальные комнаты (публичные, личные DM, Избранное и комнаты по ссылке)
         for (const r of remoteRooms) {
           const roomId = String(r.room_id || r.roomId || '').trim();
           if (!roomId) continue;
+          const isSelfChat = roomId.startsWith('dm-self-');
           const roomType = String(r.room_type || r.roomType || (roomId.startsWith('dm-') ? 'dm' : roomId.startsWith('room-') ? 'group' : 'public'));
           const participants = Array.isArray(r.participants) ? r.participants.map(String) : [];
           let title = String(r.title || roomId);
-          if (roomType === 'dm' && myPeerId && participants.length >= 2) {
+          if (isSelfChat) {
+            title = '⭐ Избранное';
+          } else if (roomType === 'dm' && myPeerId && participants.length >= 2) {
             const otherPeerId = participants.find((pid) => pid !== myPeerId);
             const otherName = otherPeerId ? peerNameMap.get(otherPeerId) : null;
             if (otherName) title = `👤 ${otherName}`;
@@ -2252,7 +2276,7 @@ export function createRatMesEngine({
         cloudHub.recordSync({
           reachable: true,
           pulled: ingested,
-          onlinePeers,
+          onlinePeers: mergedPeers,
           rooms: remoteRooms.length > 0 ? remoteRooms : null,
         });
         return {

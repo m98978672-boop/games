@@ -81,8 +81,8 @@
             <button type="button" class="cfpill" data-chat-filter="bridges">🔌 Мосты</button>
           </div>
           <div class="sidebar-cta-row">
-            <button class="btn btn-primary" id="btnCreateRoomQuick" type="button">➕ Новая комната</button>
-            <button class="btn btn-connect-hub" id="btnOpenConnectHub" type="button">🔌 Подключить</button>
+            <button class="btn btn-primary" id="btnNewDmQuick" type="button">👤 Личный чат</button>
+            <button class="btn btn-ghost" id="btnCreateRoomQuick" type="button">➕ Комната</button>
           </div>
         </section>
 
@@ -359,7 +359,7 @@
         <input type="text" id="profileBioInput" class="text-input" placeholder="Например: Ищу напарника в кооп или просто пообщаться" maxlength="80">
       </label>
       <div class="invite-share-box">
-        <div class="invite-share-label">🔗 Твоя ссылка для личного чата 1-на-1:</div>
+        <div class="invite-share-label">🔗 Твоя ссылка для личного чата 1-на-1 (ID: <code id="profileMyPeerIdCode"></code>):</div>
         <div class="hub-cmd-row">
           <code id="profileMyLinkCode"></code>
           <button type="button" class="btn btn-sm btn-primary" id="btnCopyMyLinkModal">📋 Копировать</button>
@@ -372,6 +372,52 @@
         <button type="submit" class="btn btn-primary">Сохранить профиль</button>
       </div>
     </form>
+  </dialog>
+
+  <!-- Модальное окно: Личный чат 1-на-1 (выбор собеседника, Избранное, ссылка или ID) -->
+  <dialog class="modal modal-write" id="dmActionModal">
+    <div class="modal-card write-card">
+      <div class="card-title-row">
+        <div>
+          <h3>👤 Новый личный чат 1-на-1</h3>
+          <p class="muted-text" style="margin:2px 0 0;">Приватная переписка только между тобой и собеседником</p>
+        </div>
+        <button type="button" class="icon-btn" id="btnCloseDmAction" aria-label="Закрыть">✕</button>
+      </div>
+
+      <div class="write-section">
+        <div class="write-section-title">👥 Выбери собеседника</div>
+        <input type="search" id="dmPeopleSearchInput" class="text-input" placeholder="Поиск человека по имени…" autocomplete="off">
+        <div class="dm-modal-people-list" id="dmModalPeopleList"></div>
+      </div>
+
+      <div class="write-section">
+        <button type="button" class="write-room-btn dm-saved-btn" id="btnOpenSavedMessages">
+          <div>
+            <strong>⭐ Избранное (личный чат с собой)</strong>
+            <span>Заметки, ссылки, файлы — видно только тебе и синхронизируется в облаке</span>
+          </div>
+          <span class="pill accent">Открыть →</span>
+        </button>
+      </div>
+
+      <form id="openDmByCodeForm" class="write-section">
+        <div class="write-section-title">🔑 Открыть личный чат по ссылке или ID друга</div>
+        <div class="inline-form">
+          <input type="text" id="dmTargetCodeInput" class="text-input" placeholder="Вставь ссылку (?dm=...) или ID друга (games-...)" required>
+          <button type="submit" class="btn btn-primary">Написать</button>
+        </div>
+      </form>
+
+      <div class="invite-share-box">
+        <div class="invite-share-label">🔗 Или отправь другу свою ссылку (твой ID: <code id="dmMyPeerIdCode"></code>):</div>
+        <div class="hub-cmd-row">
+          <code id="dmMyLinkCode"></code>
+          <button type="button" class="btn btn-sm btn-primary" id="btnCopyDmMyLink">📋 Поделиться</button>
+        </div>
+        <a class="btn btn-sm btn-second-tab" id="btnOpenSecondTabDmModal" href="?acc=2" target="_blank" rel="noopener">🪟 Проверить чат 1-на-1 во 2-й вкладке ↗</a>
+      </div>
+    </div>
   </dialog>
 
   <!-- Модальное окно: создать реальную комнату или войти по ссылке / коду -->
