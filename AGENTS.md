@@ -8,14 +8,14 @@
 | Файл / папка | Что внутри |
 |---|---|
 | [`ratcore/README.md`](./ratcore/README.md) | Главный вход и обзор `RatCore` |
-| [`ratcore/INDEX.json`](./ratcore/INDEX.json) | Машиночитаемый индекс всех документов, 25 веток инструментов, 120 формул и 80 алгоритмов |
-| [`ratcore/SPEC.md`](./ratcore/SPEC.md) | Полная спецификация движка, `ToolGuard` (5 барьеров в коде), коды ошибок `RC-100..999`, план этапов |
+| [`ratcore/INDEX.json`](./ratcore/INDEX.json) | Машиночитаемый индекс всех документов, 25 усиленных веток v2.0, 128 формул и 86 алгоритмов |
+| [`ratcore/SPEC.md`](./ratcore/SPEC.md) | Полная спецификация движка (v0.6-draft), `ToolGuard` (5 барьеров в коде), коды ошибок `RC-100..999`, план этапов |
 | [`ratcore/AI_CONTRACT.md`](./ratcore/AI_CONTRACT.md) | Обязательный свод правил для всех ИИ, работающих с `RatCore` |
-| [`ratcore/TOOLS.md`](./ratcore/TOOLS.md) | Все **25 веток инструментов** `RatCore.tools.*` на все случаи жизни + шпаргалка жанров |
-| [`ratcore/ALGORITHMS.md`](./ratcore/ALGORITHMS.md) | Все **120 формул (`F-01..F-120`)** и **80 алгоритмов (`A-01..A-80`)** |
-| [`ratcore/COMPRESSION.md`](./ratcore/COMPRESSION.md) | 10-уровневое ультра-сжатие RAM/CPU (`SoA`, `PackedVertex64`, `64-bit Bricks`, `Upload-and-Drop`, `Paletted 16³`, `SVDAG`, `Cave/Hi-Z`) + **регулятор ядер на 75 %** |
-| [`ratcore/BRIDGE.md`](./ratcore/BRIDGE.md) | Соединение `RatCore` с Three.js, Godot 4, Canvas 2D, `pereplet-prototype`, другими `RatCore` и внешними ИИ |
-| [`ratcore/DEVLOG.md`](./ratcore/DEVLOG.md) | Инженерный дневник принятых решений (Записи `#001..#006`) |
+| [`ratcore/TOOLS.md`](./ratcore/TOOLS.md) | Все **25 усиленных веток инструментов v2.0** + универсальный конвейер §0 (`pipe`, `dryRun`, `RCW2`, `memoize`, `autoFixHint`) |
+| [`ratcore/ALGORITHMS.md`](./ratcore/ALGORITHMS.md) | Все **128 формул (`F-01..F-128`)** и **86 алгоритмов (`A-01..A-86`)** |
+| [`ratcore/COMPRESSION.md`](./ratcore/COMPRESSION.md) | 11-уровневое ультра-сжатие RAM/CPU + **бинарная потоковая передача `ratcore-wire/2`** (`FastCDC`, `Backpressure`, `XOR-FEC`) + **регулятор ядер 75 %** |
+| [`ratcore/BRIDGE.md`](./ratcore/BRIDGE.md) | Соединение `RatCore` с Three.js, Godot 4, Canvas 2D, `pereplet-prototype`, другими `RatCore` и внешними ИИ (поверх `ratcore-wire/2`) |
+| [`ratcore/DEVLOG.md`](./ratcore/DEVLOG.md) | Инженерный дневник принятых решений (Записи `#001..#007`) |
 | [`ratcore/comms/`](./ratcore/comms/README.md) | **Папки общения между нейросетями** (`registry`, `channels`, `inbox`, `outbox`, `tasks`, `handoffs`, `bridges`) |
 | [`ratcore/reports/`](./ratcore/reports/) | Баг-трекер (`bugs/`), аудиты `ToolGuard` (`audits/`) и сводки (`summaries/`) |
 
