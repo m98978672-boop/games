@@ -249,6 +249,13 @@ requestAnimationFrame(loop);
       features,
       controls: cleanText(raw.controls || 'Клавиатура / мышь / сенсор — зависит от игры', 140),
       addedAt: Number(raw.addedAt) || Date.now(),
+      avSummary: raw.avSummary && typeof raw.avSummary === 'object' ? {
+        verdict: cleanText(raw.avSummary.verdict || 'clean', 16),
+        riskScore: Math.max(0, Math.min(100, Number(raw.avSummary.riskScore) || 0)),
+        sha256: cleanText(raw.avSummary.sha256 || '', 64),
+        passCount: Number(raw.avSummary.passCount) || 10,
+        scannedAt: cleanText(raw.avSummary.scannedAt || '', 40),
+      } : null,
       updateNote: `Добавил(а): ${author} · ${sourceType === 'html' ? 'встроенный HTML5-пакет' : 'веб-ссылка'}`,
     };
   }
@@ -290,6 +297,7 @@ requestAnimationFrame(loop);
       features: g.features,
       controls: g.controls,
       addedAt: g.addedAt,
+      avSummary: g.avSummary || null,
     }));
     try {
       if (window.localStorage) {
@@ -494,12 +502,32 @@ requestAnimationFrame(loop);
       if (!normalized) {
         return { ok: false, error: 'Проверьте название, описание и корректный веб-адрес HTTPS или HTML-код игры.' };
       }
+      const av = window.GamesAntivirus && typeof window.GamesAntivirus.scanGameSync === 'function'
+        ? window.GamesAntivirus.scanGameSync(normalized)
+        : null;
+      if (av && av.verdict === 'blocked') {
+        return {
+          ok: false,
+          blocked: true,
+          avReport: av,
+          error: `🛡️ Антивирус заблокировал игру (10 проходов): ${av.blockedReasons[0] || av.verdictLabel}`,
+        };
+      }
+      if (av) {
+        normalized.avSummary = {
+          verdict: av.verdict,
+          riskScore: av.riskScore,
+          sha256: av.sha256,
+          passCount: av.passCount,
+          scannedAt: av.scannedAt,
+        };
+      }
       const next = [normalized, ...list.filter((g) => g.id !== normalized.id)].slice(0, MAX_USER_GAMES);
       const saved = persistAll(next);
       if (!saved.ok) return saved;
       list = next;
       emitChange();
-      return { ok: true, game: normalized };
+      return { ok: true, game: normalized, avReport: av };
     },
     remove(id) {
       const next = list.filter((g) => g.id !== id);
@@ -539,19 +567,45 @@ requestAnimationFrame(loop);
         const parsed = JSON.parse(jsonText);
         const items = Array.isArray(parsed) ? parsed : (Array.isArray(parsed?.games) ? parsed.games : [parsed]);
         let added = 0;
+        let blocked = 0;
         let next = list.slice();
+        const avEngine = window.GamesAntivirus && typeof window.GamesAntivirus.scanGameSync === 'function'
+          ? window.GamesAntivirus
+          : null;
         for (const item of items) {
           const rec = normalizeRecord(item);
           if (!rec) continue;
+          if (avEngine) {
+            const av = avEngine.scanGameSync(rec);
+            if (av.verdict === 'blocked') {
+              blocked++;
+              continue;
+            }
+            rec.avSummary = {
+              verdict: av.verdict,
+              riskScore: av.riskScore,
+              sha256: av.sha256,
+              passCount: av.passCount,
+              scannedAt: av.scannedAt,
+            };
+          }
           next = [rec, ...next.filter((g) => g.id !== rec.id)].slice(0, MAX_USER_GAMES);
           added++;
         }
-        if (!added) return { ok: false, error: 'В файле не найдено корректных игр.' };
+        if (!added) {
+          return {
+            ok: false,
+            blocked,
+            error: blocked > 0
+              ? `🛡️ Антивирус заблокировал все игры в пакете (${blocked} шт.) после 10-кратной перепроверки.`
+              : 'В файле не найдено корректных игр.',
+          };
+        }
         const saved = persistAll(next);
         if (!saved.ok) return saved;
         list = next;
         emitChange();
-        return { ok: true, added };
+        return { ok: true, added, blocked };
       } catch (err) {
         return { ok: false, error: 'Не удалось прочитать JSON-пакет игры.', details: String(err) };
       }

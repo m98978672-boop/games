@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Стража Цитадели — Первая 3D-игра на RatCore v1.0.0</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070d17;
+      --panel: #101928;
+      --border: #23334e;
+      --accent: #38bdf8;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: radial-gradient(circle at top, #13223b 0%, var(--bg) 62%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px;
+      gap: 12px;
+    }
+    header {
+      width: 100%;
+      max-width: 1040px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 16px;
+    }
+    header h1 { margin: 0; font-size: 19px; }
+    header a { color: var(--accent); text-decoration: none; font-size: 13px; }
+    .game-shell {
+      width: 100%;
+      max-width: 1040px;
+      display: grid;
+      grid-template-columns: 1fr 310px;
+      gap: 12px;
+    }
+    @media (max-width: 900px) { .game-shell { grid-template-columns: 1fr; } }
+    .viewport-card {
+      position: relative;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    canvas {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      display: block;
+      image-rendering: pixelated;
+      background: #0a1220;
+      cursor: crosshair;
+    }
+    .hud-top {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      pointer-events: none;
+    }
+    .hud-chip {
+      background: rgba(7, 13, 23, 0.82);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 8px;
+      padding: 5px 9px;
+      font-size: 12px;
+    }
+    .hud-chip b { color: var(--ok); }
+    .hud-chip.danger b { color: var(--danger); }
+    .hud-subtitles {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      pointer-events: none;
+    }
+    .sub-pill {
+      background: rgba(7, 13, 23, 0.86);
+      border-left: 3px solid var(--warn);
+      padding: 4px 8px;
+      font-size: 12px;
+      border-radius: 4px;
+    }
+    .viseme-pill {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(16, 25, 40, 0.9);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      display: none;
+    }
+    .side {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .side h2 { margin: 0; font-size: 12.5px; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; }
+    .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    button {
+      background: #18253b;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+    }
+    button:hover { border-color: var(--accent); background: #21324e; }
+    button.primary { background: rgba(56, 189, 248, 0.18); border-color: var(--accent); font-weight: 600; }
+    .toasts {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 120px;
+      max-height: 190px;
+      overflow-y: auto;
+    }
+    .toast {
+      background: #0a1220;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .toast.success { border-left-color: var(--ok); }
+    .toast.warn { border-left-color: var(--warn); }
+    .toast.danger { border-left-color: var(--danger); }
+    .keys-hint { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>Стража Цитадели — 3D-игра на RatCore v1.0.0</h1>
+      <small style="color:var(--muted)">100 % процедурный 3D через ToolGuard · разрушаемость · ИИ-напарник · 3-формантная рация · Машина времени · экспорт в 1 .html</small>
+    </div>
+    <a href="../../playground/index.html">← Вернуться в песочницу RatStudio</a>
+  </header>
+
+  <section class="game-shell">
+    <div class="viewport-card">
+      <canvas id="gameCanvas" width="320" height="180"></canvas>
+      <canvas id="gameCanvasGl" width="640" height="360" style="display:none"></canvas>
+      <div id="hudTop" class="hud-top"></div>
+      <div id="hudSubs" class="hud-subtitles"></div>
+      <div id="visemePill" class="viseme-pill"></div>
+    </div>
+
+    <aside class="side">
+      <h2>Тактические команды</h2>
+      <div class="actions">
+        <button id="btnFire" class="primary">Огонь [Space]</button>
+        <button id="btnTurret">Башня [1] (6д 4к)</button>
+        <button id="btnBuddy">Барсик: прикрой! [2]</button>
+        <button id="btnRadio">Рация PCM [3]</button>
+        <button id="btnStyle">Стиль кадра [4]</button>
+        <button id="btnBlind">Дальтонизм [5]</button>
+        <button id="btnWinter">Зима / лёд [F]</button>
+        <button id="btnRewind">Откат времени [T]</button>
+        <button id="btnGl">Software ↔ WebGL2</button>
+        <button id="btnExport">Экспорт .html [X]</button>
+        <button id="btnRestart">Новая игра [R]</button>
+      </div>
+
+      <h2>События боя (tools.ui.hudSummary)</h2>
+      <div id="toasts" class="toasts"></div>
+
+      <div class="keys-hint">
+        <b>Управление:</b> <code>WASD</code> / стрелки — вращение камеры и зум · <code>Space</code> или клик по 3D-окну — залп по ближайшему дрону · <code>1</code> — башня · <code>2</code> — приказ Барсику · <code>3</code> — рация.
+      </div>
+    </aside>
+  </section>
+
+  <script type="module">
+    import { createCitadelWatchGame } from './game-core.js';
+
+    const canvas = document.getElementById('gameCanvas');
+    const canvasGl = document.getElementById('gameCanvasGl');
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(320, 180);
+    const hudTop = document.getElementById('hudTop');
+    const hudSubs = document.getElementById('hudSubs');
+    const toastsEl = document.getElementById('toasts');
+    const visemePill = document.getElementById('visemePill');
+
+    let game = createCitadelWatchGame({ viewport: { width: 320, height: 180 } });
+    let useWebGL2 = false;
+    let audioCtx = null;
+
+    function playPcm(samples, sampleRate) {
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC || !samples) return;
+        if (!audioCtx) audioCtx = new AC();
+        const buf = audioCtx.createBuffer(1, samples.length, sampleRate);
+        buf.getChannelData(0).set(samples);
+        const src = audioCtx.createBufferSource();
+        src.buffer = buf;
+        src.connect(audioCtx.destination);
+        src.start();
+      } catch (_) {}
+    }
+
+    function doFire() {
+      const r = game.fireCannon();
+      if (r.fired && r.sfx) playPcm(r.sfx.pcm, r.sfx.sampleRate);
+    }
+
+    function doRadio() {
+      const sp = game.speakRadio();
+      if (sp) playPcm(sp.samples, sp.sampleRate);
+    }
+
+    function doExport() {
+      const exp = game.exportFortressHtml();
+      const blob = new Blob([exp.html], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'citadel-watch-fortress.html';
+      a.click();
+      URL.revokeObjectURL(url);
+      game.engine.tools.ui.notify({ text: `Экспортирован автономный .html (${exp.sizeKB} КБ, RCW2)!`, level: 'success', ttlSec: 4 });
+    }
+
+    document.getElementById('btnFire').onclick = doFire;
+    canvas.onclick = doFire;
+    canvasGl.onclick = doFire;
+    document.getElementById('btnTurret').onclick = () => game.buildTurret();
+    document.getElementById('btnBuddy').onclick = () => game.orderCompanion();
+    document.getElementById('btnRadio').onclick = doRadio;
+    document.getElementById('btnStyle').onclick = () => game.cycleStyle();
+    document.getElementById('btnBlind').onclick = () => game.cycleColorblind();
+    document.getElementById('btnWinter').onclick = () => game.freezeRiverWinter();
+    document.getElementById('btnRewind').onclick = () => game.rewindTimeline();
+    document.getElementById('btnExport').onclick = doExport;
+    document.getElementById('btnRestart').onclick = () => {
+      game = createCitadelWatchGame({ viewport: { width: 320, height: 180 } });
+      useWebGL2 = false;
+      canvasGl.style.display = 'none';
+      canvas.style.display = 'block';
+    };
+    document.getElementById('btnGl').onclick = () => {
+      if (!useWebGL2) {
+        const sw = game.engine.tools.look.setBackend({ backend: 'webgl2', canvas: canvasGl, width: 640, height: 360 });
+        if (sw.ok && sw.data.available) {
+          useWebGL2 = true;
+          canvas.style.display = 'none';
+          canvasGl.style.display = 'block';
+        }
+      } else {
+        useWebGL2 = false;
+        game.engine.tools.look.setBackend({ backend: 'software' });
+        canvasGl.style.display = 'none';
+        canvas.style.display = 'block';
+      }
+    };
+
+    window.addEventListener('keydown', (ev) => {
+      game.engine.tools.input.pushEvent({ keyCode: ev.code, pressed: true });
+      if (ev.code === 'Space') { ev.preventDefault(); doFire(); }
+      else if (ev.code === 'Digit1') game.buildTurret();
+      else if (ev.code === 'Digit2') game.orderCompanion();
+      else if (ev.code === 'Digit3') doRadio();
+      else if (ev.code === 'Digit4') game.cycleStyle();
+      else if (ev.code === 'Digit5') game.cycleColorblind();
+      else if (ev.code === 'KeyF') game.freezeRiverWinter();
+      else if (ev.code === 'KeyT') game.rewindTimeline();
+      else if (ev.code === 'KeyX') doExport();
+      else if (ev.code === 'KeyR') document.getElementById('btnRestart').click();
+    });
+    window.addEventListener('keyup', (ev) => {
+      game.engine.tools.input.pushEvent({ keyCode: ev.code, pressed: false });
+    });
+
+    let lastTs = performance.now();
+    function loop(now) {
+      const dt = Math.min(0.06, (now - lastTs) / 1000);
+      lastTs = now;
+      const tickOut = game.step(dt);
+
+      if (useWebGL2) {
+        game.engine.tools.look.shaderPrewarm({});
+        game.engine.tools.look.renderWebGL2({ objectIdPass: false });
+      } else {
+        const cap = game.engine.tools.look.capture({ includePixels: true });
+        if (cap.ok && cap.data.pixels) {
+          imgData.data.set(new Uint8ClampedArray(cap.data.pixels.buffer));
+          ctx.putImageData(imgData, 0, 0);
+        }
+      }
+
+      // Декларативный HUD из tools.ui.hudSummary()
+      hudTop.innerHTML = tickOut.hud.widgets.map((w) =>
+        `<div class="hud-chip ${w.tone === 'danger' ? 'danger' : ''}">${w.label}: <b>${w.value}${w.kind === 'bar' ? `/${w.max}` : ''}</b></div>`
+      ).join('') + `<div class="hud-chip">Дроны: <b>${tickOut.dronesAlive}</b></div>`;
+
+      hudSubs.innerHTML = tickOut.subtitles.map((s) => `<div class="sub-pill">${s.text}</div>`).join('');
+
+      toastsEl.innerHTML = [...tickOut.hud.toasts].reverse().map((t) =>
+        `<div class="toast ${t.level}">${t.text}</div>`
+      ).join('');
+
+      if (tickOut.activeViseme) {
+        visemePill.style.display = 'block';
+        visemePill.textContent = `Рация · Визема: ${tickOut.activeViseme.viseme} (рот ${Math.round(tickOut.activeViseme.mouthOpen * 100)}%)`;
+      } else {
+        visemePill.style.display = 'none';
+      }
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

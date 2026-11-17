@@ -18,10 +18,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate community catalog and local files
+      - name: Validate community catalog, storefront portal and 10-pass antivirus shield
         run: |
           node site/tests/community-catalog.mjs
           node site/tests/portal.mjs
+      - name: Test RatCore v1.0.0 Stage 1-5 + Demo Game (All 10 Standard Modules + All 14 Opt-In Packs + RatStudio + ToolGuard)
+        run: |
+          node ratcore/tests/tool-contract.mjs
+          node ratcore/tests/stage1.mjs
+          node ratcore/tests/stage2.mjs
+          node ratcore/tests/stage3.mjs
+          node ratcore/tests/stage4.mjs
+          node ratcore/tests/stage5.mjs
+          node ratcore/tests/demo-game.mjs
       - name: Self-test the bug-hunting bot
         run: node tools/bughunt/tests/selftest.mjs
       - name: Check the bug-code table covers 000–999

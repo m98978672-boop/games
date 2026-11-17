@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RatCore v1.0.0 — Интерактивная песочница + RatStudio</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b111b;
+      --panel: #131c2b;
+      --border: #25344d;
+      --accent: #38bdf8;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --err: #f87171;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-columns: 1fr 390px;
+      min-height: 100vh;
+    }
+    @media (max-width: 960px) {
+      body { grid-template-columns: 1fr; }
+    }
+    .stage {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    .viewport-wrap {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+    }
+    canvas {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #0d1624;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      image-rendering: pixelated;
+      display: block;
+    }
+    /* RatStudio v1.0 Dev-Overlay (dev-only, <= 0.8 мс/кадр) */
+    .studio-overlay {
+      position: absolute;
+      inset: 10px;
+      background: rgba(11, 17, 27, 0.9);
+      backdrop-filter: blur(6px);
+      border: 1px solid var(--accent);
+      border-radius: 10px;
+      padding: 12px;
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      overflow: auto;
+      z-index: 10;
+    }
+    .studio-overlay.open { display: flex; }
+    .studio-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 8px;
+    }
+    .studio-tabs { display: flex; gap: 6px; flex-wrap: wrap; }
+    .studio-tabs button { padding: 5px 10px; font-size: 12px; }
+    .studio-tabs button.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.22); }
+    .studio-body { font-size: 12.5px; line-height: 1.45; }
+    .bar-row { display: grid; grid-template-columns: 90px 1fr 48px; align-items: center; gap: 8px; margin: 4px 0; }
+    .bar-track { height: 10px; background: #1e293b; border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; background: var(--accent); }
+    .panel {
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    h1 { margin: 0; font-size: 18px; }
+    h2 { margin: 0 0 6px; font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+    button {
+      background: #1b283d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 9px;
+      font-size: 12px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    button:hover { border-color: var(--accent); background: #22324c; }
+    button.accent { border-color: rgba(56, 189, 248, 0.65); background: rgba(56, 189, 248, 0.16); color: #bae6fd; font-weight: 600; }
+    button.danger { border-color: rgba(248, 113, 113, 0.45); color: #fecaca; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-width: 800px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .metric b { display: block; font-size: 15px; color: var(--ok); margin-top: 2px; }
+    input[type="text"], input[type="range"] {
+      width: 100%;
+      background: #0d1522;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+    pre {
+      margin: 0;
+      background: #080d15;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11px;
+      line-height: 1.4;
+      max-height: 240px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="topbar">
+      <div>
+        <h1>RatCore v1.0.0 — Песочница движка + RatStudio</h1>
+        <small style="color:var(--muted)">10/10 стандартных модулей · 14/14 опциональных пакетов · ToolGuard · RCW2 · WebGL2 · WebGPU · WASM/SIMD · Workers 75 %</small>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <a href="../demos/citadel-watch/index.html" style="text-decoration:none;background:rgba(52,211,153,0.16);border:1px solid rgba(52,211,153,0.55);color:#a7f3d0;padding:6px 10px;border-radius:8px;font-size:12px;font-weight:600">Играть: Стража Цитадели (3D-игра)</a>
+        <button id="btnStudioToggle" class="accent">RatStudio Оверлей</button>
+        <span class="badge" id="profileBadge">v1.0.0 · Zero-Cost Opt-In</span>
+      </div>
+    </div>
+
+    <div class="viewport-wrap">
+      <canvas id="viewport" width="320" height="180"></canvas>
+      <canvas id="viewportGl" width="640" height="360" style="display:none"></canvas>
+
+      <section id="studioOverlay" class="studio-overlay" aria-label="RatStudio Dev-Overlay">
+        <div class="studio-header">
+          <strong>RatStudio Dev-Overlay (v1.0 · dev-only, 0 Б в релизе)</strong>
+          <div class="studio-tabs">
+            <button data-tab="inspector" class="active">Инспектор</button>
+            <button data-tab="timeline">Машина времени</button>
+            <button data-tab="balancer">Автобаланс</button>
+            <button id="btnStudioClose" class="danger">Закрыть</button>
+          </div>
+        </div>
+        <div id="studioBody" class="studio-body"></div>
+      </section>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">Рендер / Треугольников<b id="mTris">Software · 0</b></div>
+      <div class="metric">Видно (Object-ID)<b id="mVis">0</b></div>
+      <div class="metric">CPU / Workers (75 %)<b id="mCpu">turbo 75 %</b></div>
+    </div>
+  </main>
+
+  <aside class="panel">
+    <div>
+      <h2>1. Строительство, Рендер и Ускорение</h2>
+      <div class="btn-grid">
+        <button id="btnBackend">Рендер: Software ↔ WebGL2</button>
+        <button id="btnTower">Построить башню</button>
+        <button id="btnGreedy">Greedy Voxels (4×1×4)</button>
+        <button id="btnDrop">Сбросить куб (phys)</button>
+        <button id="btnWasm">WASM + SIMD бенчмарк</button>
+        <button id="btnWebGpu">WebGPU Compute куллинг</button>
+        <button id="btnWorkers">Worker Pool (75 % CPU)</button>
+        <button id="btnWeather">Сменить время/погоду</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>2. Пакеты v1.0 (Голос, Кино, ИИ, Моды, Доступность)</h2>
+      <div class="btn-grid">
+        <button id="btnVoice">Рация (3-формантный PCM)</button>
+        <button id="btnCover">Авто-обложка 16:9 (12 рак.)</button>
+        <button id="btnCompanion">ИИ-Напарник: «Прикрой!»</button>
+        <button id="btnColorblind">Дальтонизм: none → прото</button>
+        <button id="btnMod">Мод .ratmod.rcw2 + аудит</button>
+        <button id="btnStyle">Стиль: none → PS1/CRT/Терм</button>
+        <button id="btnWire2">Сжать мир в RCW2</button>
+        <button id="btnSingleHtml">Экспорт 1 офлайн .html</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>3. Защита ToolGuard и Zero-Cost Opt-In</h2>
+      <div class="btn-grid">
+        <button id="btnCheat" class="danger">Атака: сырой меш (RC-101)</button>
+        <button id="btnOptIn" class="danger">Выключенный пакет (RC-108)</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>4. Поиск инструментов (tools.discover)</h2>
+      <input id="discoverInput" type="text" placeholder="Например: машина времени / голос / обложка / мод" value="машина времени">
+    </div>
+
+    <div>
+      <h2>Журнал вызовов RatCore.tools.*</h2>
+      <pre id="log"></pre>
+    </div>
+  </aside>
+
+  <script type="module">
+    import { createEngine } from '../ratcore.js';
+
+    const manifest = await fetch('../tools-manifest.json').then((r) => r.json());
+    const engine = createEngine({
+      preset: 'survival',
+      packs: [
+        'pack:ai-team', 'pack:styles', 'pack:ecology', 'pack:studio',
+        'pack:webgpu', 'pack:wasm-accel', 'pack:mods', 'pack:cinema',
+        'pack:voice', 'pack:companion', 'pack:assist',
+      ],
+      seed: 2026,
+      viewport: { width: 320, height: 180 },
+      manifest,
+    });
+
+    const canvas = document.getElementById('viewport');
+    const canvasGl = document.getElementById('viewportGl');
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(320, 180);
+    const logEl = document.getElementById('log');
+    const mTris = document.getElementById('mTris');
+    const mVis = document.getElementById('mVis');
+    const mCpu = document.getElementById('mCpu');
+    const studioOverlay = document.getElementById('studioOverlay');
+    const studioBody = document.getElementById('studioBody');
+    let useWebGL2 = false;
+    let activeStudioTab = 'inspector';
+    let studioOpen = false;
+    let timelineTick = 0;
+
+    function log(title, payload) {
+      const line = `[${new Date().toLocaleTimeString()}] ${title}\n${JSON.stringify(payload, null, 2)}\n\n`;
+      logEl.textContent = (line + logEl.textContent).slice(0, 7000);
+    }
+
+    // Стартовая сцена строго через RatCore.tools.build.*
+    const baseTower = engine.tools.build.fromRecipe({
+      modelId: 'citadel',
+      ops: [
+        { tool: 'build.primitive', args: { shape: 'box', w: 3, h: 4, d: 3, color: '#60a5fa' } },
+        { tool: 'build.primitive', args: { shape: 'roof', w: 3.4, h: 2, d: 3.4, color: '#f59e0b' }, offset: [0, 4, 0] },
+      ],
+    });
+    engine.tools.build.placeEntity({ id: 'citadel_main', mesh: baseTower.data, x: 0, y: 0, h: 1, allowWater: true });
+    engine.tools.save.timelineInit({ keyframeInterval: 5 });
+    engine.tools.coopAi.spawn({ id: 'barsik', name: 'Барсик', x: 2, y: -2, h: 1 });
+
+    let angle = 0;
+    let towerCount = 1;
+    let timeIdx = 0;
+    const times = [12, 18.5, 2, 7.5];
+    const weathers = ['clear', 'cloudy', 'storm', 'snow'];
+
+    function renderStudioPanel() {
+      if (!studioOpen) return;
+      if (activeStudioTab === 'inspector') {
+        const info = engine.tools.studio.inspectScene().data;
+        const rows = info.entities.map((e) => `<li><code>${e.id}</code> — ${e.triCount} треуг. · меш <code>${e.sealedMeshId}</code></li>`).join('');
+        studioBody.innerHTML = `
+          <div><b>Инспектор сцены и ToolGuard</b></div>
+          <p>Сущностей: <b>${info.entityCount}</b> · Треугольников: <b>${info.totalTris}</b> · Бюджет CPU: <b>${info.governorCpuCapPct}%</b> · Профиль: <b>${info.estBundleKB} КБ</b></p>
+          <ul style="margin:6px 0;padding-left:18px">${rows}</ul>
+        `;
+      } else if (activeStudioTab === 'timeline') {
+        const sum = engine.tools.studio.timelineSummary().data;
+        studioBody.innerHTML = `
+          <div><b>Машина времени (COW-снимки и ветвление)</b></div>
+          <p>Активная ветка: <code>${sum.activeBranchId}</code> · Всего веток: <b>${sum.branches.length}</b> · Записанный тик: <b>${timelineTick}</b></p>
+          <div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap">
+            <button id="stRecTick">Записать снимок (+5 тиков)</button>
+            <button id="stBranch">Ответвиться (патч гравитации)</button>
+            <button id="stScrub0">Перемотать на тик 0</button>
+          </div>
+          <pre>${JSON.stringify(sum.branches, null, 2)}</pre>
+        `;
+        document.getElementById('stRecTick').onclick = () => {
+          timelineTick += 5;
+          const r = engine.tools.save.timelineRecord({ tick: timelineTick, forceKeyframe: true });
+          log('save.timelineRecord', r.data);
+          renderStudioPanel();
+        };
+        document.getElementById('stBranch').onclick = () => {
+          const b = engine.tools.save.branchFrom({ tick: timelineTick, patchParams: { gravity: -4.9 }, label: `Ветка @t${timelineTick}` });
+          log('save.branchFrom (COW)', b.data);
+          renderStudioPanel();
+        };
+        document.getElementById('stScrub0').onclick = () => {
+          const s = engine.tools.save.scrubTo({ tick: 0, branchId: 'main' });
+          log('save.scrubTo(tick=0)', { requestedTick: s.data.requestedTick, entitiesAtTick0: s.data.snapshot.entities.length });
+          renderStudioPanel();
+        };
+      } else if (activeStudioTab === 'balancer') {
+        const rep = engine.tools.studio.findExploits({
+          runs: 300,
+          params: { aggroDmg: 2.25, defenseArmor: 0.95, economyRate: 1.0, stealthCrit: 0.9 },
+        }).data;
+        const bars = Object.entries(rep.suggestedPatch).map(([k, v]) =>
+          `<div class="bar-row"><span>${k}</span><div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, Math.round(v * 40))}%"></div></div><span>${v}</span></div>`
+        ).join('');
+        studioBody.innerHTML = `
+          <div><b>Автобалансировщик (300 headless-партий · F-145..F-148)</b></div>
+          <p>Эксплойтов найдено: <b style="color:var(--warn)">${rep.exploitsFound}</b> · Индекс доминирования: <b>${rep.dominanceIndex}</b> · Энтропия: <b>${rep.metaEntropy}</b> · Фитнес после патча: <b style="color:var(--ok)">${rep.projectedFitness}</b></p>
+          <div>Рекомендуемый патч параметров:</div>
+          ${bars}
+        `;
+      }
+    }
+
+    document.getElementById('btnStudioToggle').onclick = () => {
+      studioOpen = !studioOpen;
+      if (studioOpen) engine.tools.studio.open({});
+      else engine.tools.studio.close();
+      studioOverlay.classList.toggle('open', studioOpen);
+      renderStudioPanel();
+    };
+    document.getElementById('btnStudioClose').onclick = () => {
+      studioOpen = false;
+      engine.tools.studio.close();
+      studioOverlay.classList.remove('open');
+    };
+    studioOverlay.querySelectorAll('[data-tab]').forEach((btn) => {
+      btn.onclick = () => {
+        activeStudioTab = btn.dataset.tab;
+        studioOverlay.querySelectorAll('[data-tab]').forEach((b) => b.classList.toggle('active', b === btn));
+        renderStudioPanel();
+      };
+    });
+
+    function renderFrame() {
+      angle += 0.014;
+      engine.tools.phys.step({ dt: 1 / 30 });
+      engine.tools.look.at({
+        x: Math.sin(angle) * 14,
+        y: -Math.cos(angle) * 14,
+        h: 7.5,
+        targetX: 0,
+        targetY: 0,
+        targetH: 2.5,
+      });
+      if (useWebGL2) {
+        engine.tools.look.shaderPrewarm({});
+        const glFrame = engine.tools.look.renderWebGL2({ objectIdPass: false });
+        if (glFrame.ok && glFrame.data.backend === 'webgl2') {
+          mTris.textContent = `WebGL2 · ${glFrame.data.drawnTris}`;
+        }
+      } else {
+        const cap = engine.tools.look.capture({ includePixels: true });
+        if (cap.ok && cap.data.pixels) {
+          imgData.data.set(new Uint8ClampedArray(cap.data.pixels.buffer));
+          ctx.putImageData(imgData, 0, 0);
+          mTris.textContent = `Software · ${cap.data.drawnTris}`;
+        }
+      }
+      const vis = engine.tools.see.visibleEntities();
+      mVis.textContent = vis.ok ? `${vis.data.visibleCount} (${vis.data.visible.map((v) => v.id).join(', ')})` : '0';
+      const gov = engine.tools.stream.governorStats().data;
+      const wp = engine.tools.stream.workerPoolStats().data;
+      mCpu.textContent = `${gov.profile.mode} ${gov.profile.targetCpuPct}% (${wp.activeWorkers}/${gov.targetWorkers}w)`;
+      requestAnimationFrame(renderFrame);
+    }
+
+    document.getElementById('btnBackend').onclick = () => {
+      if (!useWebGL2) {
+        const sw = engine.tools.look.setBackend({ backend: 'webgl2', canvas: canvasGl, width: 640, height: 360 });
+        if (sw.ok && sw.data.available) {
+          useWebGL2 = true;
+          canvas.style.display = 'none';
+          canvasGl.style.display = 'block';
+          log('look.setBackend -> WebGL2 + Async Shader Pre-Warm', sw.data);
+          return;
+        }
+        log('WebGL2 недоступен, остаёмся на Software 3D', sw.data);
+      } else {
+        useWebGL2 = false;
+        engine.tools.look.setBackend({ backend: 'software' });
+        canvasGl.style.display = 'none';
+        canvas.style.display = 'block';
+        log('look.setBackend -> Software 3D', { backend: 'software' });
+      }
+    };
+
+    document.getElementById('btnWasm').onclick = () => {
+      const b = engine.tools.wasm.benchmark({ count: 4096 });
+      log('pack:wasm-accel -> WebAssembly + SIMD v128', b.data);
+    };
+
+    document.getElementById('btnWebGpu').onclick = () => {
+      const spheres = new Float32Array(256 * 4);
+      for (let i = 0; i < 256; i++) {
+        spheres[i * 4] = (i % 16) - 8;
+        spheres[i * 4 + 1] = 2;
+        spheres[i * 4 + 2] = i < 160 ? 12 + (i % 24) : -140 - i;
+        spheres[i * 4 + 3] = 1.5;
+      }
+      const planes = new Float32Array([1, 0, 0, 50, -1, 0, 0, 50, 0, 1, 0, 50, 0, -1, 0, 50, 0, 0, 1, 0, 0, 0, -1, 100]);
+      const res = engine.tools.webgpu.frustumCull({ spheres, planes });
+      log('pack:webgpu -> WGSL Compute Frustum Cull', {
+        backend: res.data.backend,
+        visibleCount: res.data.visibleCount,
+        culledCount: res.data.culledCount,
+        workgroups: res.data.workgroups,
+      });
+    };
+
+    document.getElementById('btnWorkers').onclick = async () => {
+      const buf = new Uint8Array(8192);
+      for (let i = 0; i < buf.length; i++) buf[i] = (i * 17) & 0xff;
+      const out = await engine.tools.stream.dispatchWorkerTask({
+        task: 'hashChunk',
+        priority: 'P1',
+        payload: buf,
+        transfer: [buf.buffer],
+      }).data;
+      log('RatCoreWorkerPool (75 % CPU / Transferable)', { result: out, pool: engine.tools.stream.workerPoolStats().data });
+    };
+
+    document.getElementById('btnVoice').onclick = () => {
+      const res = engine.tools.voice.speak({ profileId: 'commander-radio', text: 'Сектор чист, приём!', emotion: 'urgent' }).data;
+      // Проигрываем сгенерированный PCM в браузере (0 КБ внешних файлов!)
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          const ac = new AudioCtx();
+          const buf = ac.createBuffer(1, res.samples.length, res.sampleRate);
+          buf.getChannelData(0).set(res.samples);
+          const src = ac.createBufferSource();
+          src.buffer = buf;
+          src.connect(ac.destination);
+          src.start();
+        }
+      } catch (_) {}
+      const vis = engine.tools.voice.getViseme({ voiceId: res.voiceId, timeSec: res.durationSec * 0.35 }).data;
+      log('pack:voice -> 3-формантный PCM + визема рта (0 КБ ассетов)', {
+        style: res.style, durationSec: res.durationSec, sampleCount: res.sampleCount,
+        peakAmplitude: res.peakAmplitude, visemeAt35Pct: vis,
+      });
+    };
+
+    document.getElementById('btnCover').onclick = () => {
+      const res = engine.tools.cutscene.autoCover({ target: { x: 0, y: 0, h: 2.5 }, radius: 12, candidates: 12 });
+      log('pack:cinema -> Авто-обложка 16:9 (12 ракурсов)', res.data);
+    };
+
+    document.getElementById('btnCompanion').onclick = () => {
+      engine.tools.hear.emit({ kind: 'explosion', x: -8, y: 1, h: 1, loudnessDb: 94 });
+      const ord = engine.tools.coopAi.order({ companionId: 'barsik', text: 'Прикрой слева у башни!', playerPos: { x: 0, y: 0, h: 1 } });
+      log('pack:companion -> Локальный ИИ-напарник', ord.data);
+    };
+
+    let cbIdx = 0;
+    const cbModes = ['none', 'protanopia', 'deuteranopia', 'tritanopia'];
+    document.getElementById('btnColorblind').onclick = () => {
+      cbIdx = (cbIdx + 1) % cbModes.length;
+      const res = engine.tools.assist.setVisualMode({ colorblind: cbModes[cbIdx], highContrast: cbIdx > 0 });
+      log('pack:assist -> Дальтоническая матрица (F-164)', res.data);
+    };
+
+    document.getElementById('btnMod').onclick = () => {
+      const p = engine.tools.mod.pack({
+        manifest: { id: 'demo-bridges', name: 'Мосты v1', version: '1.0.0' },
+        recipes: [{ id: 'arch', op: 'build.extrude' }],
+      }).data;
+      const v = engine.tools.mod.validate({ packageBytes: p.packageBytes }).data;
+      log('pack:mods -> .ratmod.rcw2 + ToolGuard аудит', { fileName: p.fileName, packedBytes: p.packedBytes, valid: v.valid, stats: v.stats });
+    };
+
+    document.getElementById('btnTower').onclick = () => {
+      towerCount++;
+      const a = towerCount * 1.4;
+      const r = 4.5 + (towerCount % 3) * 1.5;
+      const res = engine.tools.build.placeEntity({
+        id: `tower_${towerCount}`,
+        mesh: baseTower.data,
+        x: Number((Math.cos(a) * r).toFixed(2)),
+        y: Number((Math.sin(a) * r).toFixed(2)),
+        h: 1,
+        scale: 0.75,
+        allowWater: true,
+      });
+      log('tools.build.placeEntity', res.data || res.error);
+      renderStudioPanel();
+    };
+
+    document.getElementById('btnGreedy').onclick = () => {
+      const voxels = [];
+      for (let x = 0; x < 4; x++) for (let z = 0; z < 4; z++) voxels.push({ x, y: 0, z, mat: 1 });
+      const vMesh = engine.tools.build.voxels({ voxels, voxelSize: 0.8, color: '#34d399' });
+      const id = `slab_${++towerCount}`;
+      engine.tools.build.placeEntity({ id, mesh: vMesh.data, x: -4.5, y: 2.5, h: 1, allowWater: true });
+      log('Greedy Meshing (16 вокселей -> 12 треуг.)', { id, triCount: vMesh.data.triCount });
+    };
+
+    document.getElementById('btnDrop').onclick = () => {
+      const id = `drop_${++towerCount}`;
+      const cube = engine.tools.build.primitive({ shape: 'box', w: 1.4, h: 1.4, d: 1.4, color: '#f472b6' });
+      const x = Number(((Math.random() - 0.5) * 6).toFixed(2));
+      const y = Number(((Math.random() - 0.5) * 6).toFixed(2));
+      engine.tools.build.placeEntity({ id, mesh: cube.data, x, y, h: 9, allowWater: true });
+      const body = engine.tools.phys.addBody({ id, x, y, h: 9, radius: 0.7, restitution: 0.45 });
+      log('tools.phys.addBody', body.data);
+    };
+
+    document.getElementById('btnWeather').onclick = () => {
+      timeIdx = (timeIdx + 1) % times.length;
+      engine.tools.env.setTime({ hours: times[timeIdx] });
+      const st = engine.tools.env.setWeather({ kind: weathers[timeIdx], intensity: 0.7 }).data;
+      log('tools.env', { timeHours: st.timeHours, phase: st.phase, weather: st.weather, tempC: st.seaLevelTempC });
+    };
+
+    document.getElementById('btnWire2').onclick = () => {
+      const w = engine.tools.save.exportWire2().data;
+      log('ratcore-wire/2 (RCW2 + FastCDC + CRC32)', { rawBytes: w.rawBytes, wireBytes: w.wireBytes, savedPct: `${w.savedPct}%` });
+    };
+
+    let styleIdx = 0;
+    const styleCycle = ['none', 'ps1', 'crt', 'thermal', 'nightvision', 'cel'];
+    document.getElementById('btnStyle').onclick = () => {
+      styleIdx = (styleIdx + 1) % styleCycle.length;
+      log('pack:styles', engine.tools.shader.applyPreset({ preset: styleCycle[styleIdx] }).data);
+    };
+
+    document.getElementById('btnSingleHtml').onclick = () => {
+      const res = engine.tools.studio.exportSingleHtml({ title: 'RatCore v1.0 Export' });
+      log('pack:studio -> exportSingleHtml (< 300 КБ)', { sizeKB: res.data.sizeKB, under300KB: res.data.under300KB, wireBytes: res.data.wireBytes });
+    };
+
+    document.getElementById('btnCheat').onclick = () => {
+      const fake = { id: 'mesh_fake', buffers: { positions: new Float32Array([0, 0, 0]) } };
+      log('ToolGuard Барьер 2 ОТБИЛ атаку!', engine.tools.build.placeEntity({ id: 'cheater', mesh: fake, x: 0, y: 0, h: 1 }).error);
+    };
+
+    document.getElementById('btnOptIn').onclick = () => {
+      log('Zero-Cost Opt-In (RC-108)', engine.tools.destroy.damage({ target: 'citadel_main' }).error);
+    };
+
+    const discoverInput = document.getElementById('discoverInput');
+    discoverInput.addEventListener('change', () => {
+      log(`tools.discover("${discoverInput.value}")`, engine.tools.discover({ intent: discoverInput.value, limit: 4 }).data);
+    });
+
+    log('RatCore v1.0.0 запущен (10/10 модулей, 14/14 пакетов, RatStudio готов)', engine.getProfile());
+    requestAnimationFrame(renderFrame);
+  </script>
+</body>
+</html>

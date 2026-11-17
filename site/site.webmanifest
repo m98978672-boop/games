@@ -1,11 +1,14 @@
 {
-  "name": "Games — магазин и библиотека браузерных игр",
-  "short_name": "Games",
-  "description": "17 браузерных 2D и 3D игр в стиле Steam + мастерская добавления своих игр для всех",
-  "start_url": "./index.html",
+  "name": "Games — Библиотека игр (Библ Игры)",
+  "short_name": "Games · Библ Игры",
+  "description": "Games (Библиотека игр / Библ Игры) — 16 бесплатных браузерных 2D и 3D игр без установки в стиле Steam + мастерская добавления своих игр",
+  "start_url": "../index.html",
+  "scope": "../",
+  "lang": "ru",
   "display": "standalone",
   "background_color": "#1b2838",
   "theme_color": "#171a21",
+  "categories": ["games", "entertainment"],
   "icons": [
     {
       "src": "assets/icon.svg",

@@ -220,3 +220,188 @@
 
 ### Итог спецификации
 **30 веток инструментов v2.0 · 150 формул (`F-01..F-150`) · 100 алгоритмов (`A-01..A-100`) · 11 уровней сжатия, передачи `ratcore-wire/2` и управления CPU 75 %.**
+
+---
+
+## Запись #009 — 2026-11-16 · Расширение v0.8-draft: 36 веток, `RatStudio` и 3-уровневая модульность «по выбору» (`Zero-Cost Opt-In`, Решение `D-16`)
+
+По прямому указанию владельца добавлены все 7 новых предложений **с обязательным разделением на ядро и опциональные пакеты по выбору** (чтобы лишние для конкретной игры подсистемы не тратили ни байта RAM/бандла и ни тика CPU):
+1. **6 новых веток + `RatStudio`:**
+   - `31. tools.shader.*` (`pack:styles`) — граф стилей PS1 / Cel / CRT / Тепловизор / ПНВ / Голограмма для WebGL2 и Software 2D/3D (`F-151..F-153`, `A-101`);
+   - `32. tools.quest.*` (`pack:narrative`) — процедурные квесты и фракции с математической проверкой отсутствия софтлоков (`F-154..F-155`, `A-102..A-103`);
+   - `33. tools.voice.*` (`pack:voice`) — офлайн 3-формантный синтез голосов/рации и липсинк с `0 КБ` аудиофайлов (`F-156..F-157`, `A-104`);
+   - `34. tools.eco.*` (`pack:ecology`) — эрозия, сезоны, замерзание рек с формулой Стефана/Гольда (проламывание льда техникой!) и фауна на `1 Гц` (`F-158..F-160`, `A-105..A-106`);
+   - `35. tools.coopAi.*` (`pack:companion`) — локальный ИИ-напарник поверх `see` + `hear` + `ai.nluParse` (`F-161..F-162`, `A-107`);
+   - `36. tools.assist.*` (`pack:assist`) — умный наставник (детектор застревания > 20 с), коррекция дальтонизма, субтитры звуков и режим 1 руки (`F-163..F-165`, `A-108..A-109`);
+   - **`RatStudio`** (`pack:studio`) — лёгкий dev-оверлей (`<= 0.8 мс/кадр`, `0 Б` в релизе, `F-169`, `A-112`).
+2. **Архитектура модулей по выбору (`F-166..F-170`, `A-110..A-114`, `RC-108`):**
+   - **Уровень 0 · Ядро (`core`, 10 веток, ~28–35 КБ)** — всегда активно;
+   - **Уровень 1 · Жанровые модули (`modules`, 10 веток)** — по жанру/пресету;
+   - **Уровень 2 · 12 опциональных пакетов по выбору (`packs`)** — выключены по умолчанию (`0 Б` RAM, `0 %` CPU, `0 Б` в `build.exportSingleHtml`), включаются в `createEngine({ preset, modules, packs })` или лениво `engine.enablePack(...)`; вызов отключённого модуля возвращает `RC-108` с готовым `autoFixHint`.
+
+### Итог спецификации
+**36 веток инструментов v2.0 · 170 формул (`F-01..F-170`) · 114 алгоритмов (`A-01..A-114`) · 12 опциональных пакетов по выбору · 11 уровней сжатия + `ratcore-wire/2` + `CoreGovernor 75 %`.** Код `RatCore` по-прежнему не начинается до прямой команды владельца.
+
+---
+
+## Запись #010 — 2026-11-16 · Рантайм-полировка v0.9-draft: плавность, термозащита, самовосстановление, WebGPU/WASM по выбору и `tools.discover` (Решение `D-17`)
+
+Добавлены все 8 улучшений работы движка (документация, без написания исходного кода `RatCore`):
+1. `Dynamic Resolution Scaler` (`F-171`, `A-115`) в ядре + опциональный **`pack:webgpu`** (`F-176`, `A-120`);
+2. Холодный старт `< 120 мс` и `Async Shader Pre-Warm` по `<= 2 мс`/кадр (`F-172`, `A-116`);
+3. `Self-Healing Watchdog` (`RC-906`) + восстановление потерянного WebGL-контекста из `AssetVault` (`RC-905`, `F-173`, `F-182`, `A-117`);
+4. `OffscreenCanvas` рендер в воркере + `Coalesced Input` (`-16..-33 мс` лага, `F-174`, `A-118`);
+5. `Power & Thermal Guard`: профили `Eco 40 %` / `Balanced 60 %` / `Turbo 75 %` + мгновенный сон воркеров на `visibilitychange` (`F-175`, `A-119`);
+6. Опциональный **`pack:wasm-accel`** (`< 25 КБ` WASM+SIMD для 4 горячих циклов с битовым совпадением с JS, `F-177`, `A-121`);
+7. Авто-диагност тормозов `watch.bottleneckReport` + `Memory Leak Sentinel` (`F-178..F-181`, `A-122..A-123`);
+8. Офлайн-поиск инструментов для ИИ `tools.discover(intent)` по `tools-manifest.json` (`F-183..F-185`, `A-124..A-125`, `-92..96 %` расхода контекста).
+
+### Итог спецификации
+**36 веток инструментов v2.0 · 14 опциональных пакетов по выбору · 185 формул (`F-01..F-185`) · 125 алгоритмов (`A-01..A-125`) · 12-уровневый стек сжатия, плавности и надёжности.** Код `RatCore` по-прежнему не начинается до прямой команды владельца.
+
+---
+
+## Запись #011 — 2026-11-16 · Этап 1 (`v0.1` Foundation) реализован и верифицирован (изолированно в `ratcore/`)
+
+По прямой команде владельца («Допиливай и начинай работу») написана и проверена первая рабочая версия ядра `RatCore v0.1` на чистых ES-модулях без внешних зависимостей (работает одинаково в браузере и Node.js 22), строго изолированная внутри `ratcore/` (без подключения к `index.html` и `site/`):
+
+1. **Слой 1 (`ratcore/src/core/`):**
+   - `math.js`: детерминированный `Mulberry32`, `FNV-1a` 32-бит, `fbm2D` / `ridged2D` / `domainWarp2D`, векторная математика.
+   - `clock.js`: фиксированный шаг `createClock({ fixedDt | tickHz })` с защитой от спирали смерти (`F-01`).
+   - `seal.js`: `ToolGuard` Барьеры 1–2 — одноразовый `claimMintAuthority()` (`RC-105`), закрытый `AssetVault` на `WeakMap`, замороженные хэндлы, контроль целостности (`RC-101`, `RC-102`, `RC-106`).
+   - `code-auditor.js`: `ToolGuard` Барьер 4 — статический аудит исходного кода игр против ручных `Float32Array`, WebGL-буферов, Three.js геометрии и ручных 2D Canvas текстур (`RC-107`).
+   - `modules.js`: 3-уровневый резолвер `Zero-Cost Opt-In` (`10 core + 10 standard + 14 optional packs + 8 presets`), `createDisabledBranchProxy` с единым §0-конвертом `RC-108` и точным `autoFixHint`.
+2. **Слой 2 (`ratcore/src/world/`):**
+   - `coords.js`: `(X, Y, H, h)`, `worldToScene` / `sceneToWorld`, `azimuthDeg`, билинейное `HeightField` с проверками воды/подземья (`RC-304`/`RC-305`).
+   - `face-id.js`: 64-битный `BigInt` `faceId` со встроенными состояниями `intact / damaged / broken` (`packFaceId`, `unpackFaceId`, `damageFaceId`, `breakFaceId`).
+   - `layers.js`: парсер и валидатор слоевой записи `(X;Y)Hp(...)` и `(X;Y)hp(...)` с проверками `RC-302` и `RC-303`.
+   - `spatial.js`: `SpatialHashGrid`, 3D `ddaRaycast3D`, палитровый чанк `PalettedChunk16` (0→12 бит) и 64-битный кирпич `OccupancyBrick64` (`8 Б` на 64 вокселя).
+   - `graph.js`: `WorldGraph` + `A*` с учётом уклона рельефа + детерминированный `generateWorldMap`.
+3. **Слой 3 (`ratcore/src/assets/`):**
+   - `raster.js`: DOM-free `RasterSurface` (`Uint32Array` ABGR, Брезенхэм, дизеринг Бейера 4×4, экспорт в ASCII).
+   - `textures.js`: процедурные текстуры + карта нормалей Собеля + генератор битой копии (трещины/гарь).
+   - `mesh-builder.js`: примитивы (`box`, `cylinder`, `cone`, `roof`, `sphere`), `extrude` (Ear-Clipping), `lathe`, воксели с **Hidden Face Culling + Greedy Meshing** (плита 4×1×4 → ровно 12 треугольников вместо 192!), `combine`, валидатор `RC-201..204` и `packVertex64` (8 байт/вершина).
+4. **Слой 4 (`ratcore/src/render/software-3d.js`):**
+   - Программный 3D-рендерер с Z-буфером, Lambert-освещением и **Object-ID буфером** для `tools.see.visibleEntities()`, жёстко требующий запечатанные меши `vault.readSealedMesh()`.
+5. **Слой 5 (`ratcore/tools-manifest.json`, `ratcore/src/tools/toolkit.js`, `ratcore/ratcore.js`):**
+   - Единый шлюз `createEngine(config)`, конвейер §0 (`pipe` с атомарным откатом, `dryRun`, `memoize`, `idempotencyKey`, `undo`), `tools.help()`, BM25-поисковик `tools.discover({ intent })`, динамические `enablePack`/`disablePack`, `stream.setPowerProfile` (`eco 40% / balanced 60% / turbo 75%`).
+6. **Верификация и CI:**
+   - `ratcore/tests/tool-contract.mjs` — Барьеры 1–5 и `RC-101/102/105/107/108` (`OK`).
+   - `ratcore/tests/stage1.mjs` — все слои Этапа 1 (`OK`).
+   - `.github/workflows/validate.yml` расширен прогоном `site/tests/portal.mjs`, `ratcore/tests/tool-contract.mjs` и `ratcore/tests/stage1.mjs`.
+
+---
+
+## Запись #012 — 2026-11-16 · Этап 2 (`v0.2`): `ratcore-wire/2`, `CoreGovernor 75 %`, Opt-In модули, `pack:ai-team`, облако Supabase и живая 3D-песочница
+
+Реализованы и верифицированы все ключевые подсистемы Этапа 2 (`v0.2`, строго внутри `ratcore/`, `0` внешних зависимостей):
+
+1. **Сжатие и бинарный транспорт (`ratcore/src/compress/`):**
+   - `codec.js`: IEEE 802.3 `CRC32`, `ZigZag` + `LEB128 Varint`, `Delta-of-Delta`, `PackBits RLE`, `LZ77` со встроенным словарём `RATCORE_DICT_V1` (`F-122`).
+   - `wire2.js`: 24-байтный бинарный фрейм `RCW2` с `CRC32` и автовыбором кодека (`F-125`), контент-дедупликация `FastCDC` на Gear-хеше (`F-121`), восстановление одиночных потерь `XOR-FEC` (`F-124`) и потоковое окно `Wire2StreamWindow` `<= 256 КБ` RAM с AIMD и `resumeBitmap` (`F-123`).
+   - `cloud-adapter.js`: офлайн-first клиент `RatCoreCloudSync` для синхронизации `RCW2` + `FastCDC` снимков с облаком (секреты не хранятся в коде).
+2. **Облачная база `Supabase` (`games-cloud-save`, `eu-central-1`):**
+   - Выполнена аддитивная миграция `create_ratcore_cloud_tables`: созданы защищённые RLS таблицы `public.ratcore_cloud_snapshots` и `public.ratcore_ai_messages` без затрагивания существующих таблиц (`game_saves`, `ratmes_*`); выполнена живая контрольная запись вехи `v0.2.0-stage2`.
+3. **Управление CPU 75 % и надёжность (`ratcore/src/runtime/governor.js`):**
+   - `CoreGovernor`: профили `eco 40 %` / `balanced 60 %` / `turbo 75 %`, мгновенный сон воркеров (`0`) при скрытии вкладки, очереди `P0..P3`, ПИ-регулятор + тепловой троттлинг, `DynamicResolutionScaler`, `SelfHealingWatchdog` (`RC-906`) и `MemoryLeakSentinel` (`RC-907`).
+4. **Стандартные Opt-In модули (`ratcore/src/modules/`):**
+   - `phys.js` (`tools.phys.*`): твёрдые тела, гравитация, коллизии сфер и рельефа `HeightField`, трение, острова сна и `CCD`-рейкаст.
+   - `nav.js` (`tools.nav.*`): сеточный `A*` по рельефу с обходом воды и крутых склонов, упрощение пути и `RVO`-уклонение агентов.
+   - `env.js` (`tools.env.*`): цикл день/ночь, вектор солнца и неба (подключён к `Software3DRenderer`), погода, ветер и температура по высоте.
+   - `audio.js` (`tools.audio.*` + `tools.hear.*`): процедурный PCM-синтез звуков (`0 КБ` аудиофайлов) и 3D-слух ИИ с затуханием `1/r²` и окклюзией холмами.
+5. **Опциональный пакет ИИ-команды (`ratcore/src/packs/ai-team.js`, `pack:ai-team`):**
+   - `tools.think.*`, `tools.guess.*` (Байес `F-126`), `tools.comm.*` (каналы/inbox + CRDT-задачи), `tools.bugs.*` (`ddmin` дельта-отладка `A-86`), `tools.bridge.*` (`BridgeGuard` экспорт в `Three.js JSON`, `Godot 4 .tscn`, `Canvas 2D`, `RCW2`).
+6. **Интерактивная 3D-песочница и тесты:**
+   - `ratcore/playground/index.html` + `ratcore/playground/dev-server.mjs` (отдельный Live Preview стенд `0.0.0.0:8081` для живой проверки Software 3D, Greedy Meshing, физики, погоды, RCW2, Godot-моста и ToolGuard).
+   - `ratcore/tests/stage2.mjs` добавлен и подключён в `.github/workflows/validate.yml` (`OK`).
+
+---
+
+## Запись #013 — 2026-11-16 · Этап 3 (`v0.3`): 6 Opt-In пакетов, офлайн-экспорт 10/10 Antivirus и полная облачная экосистема
+
+Реализованы и верифицированы 6 подключаемых по выбору пакетов (`Zero-Cost Opt-In`, `RC-108` при отключении, `0` внешних зависимостей, полная изоляция внутри `ratcore/`):
+
+1. **`pack:destruction` (`ratcore/src/packs/destruction.js`, `tools.destroy.*`):**
+   - Регистрация построек как графов блоков с фундаментами (`isFoundation`), BFS-обрушение неподпёртых фрагментов в физические обломки и распространение огня по вектору ветра с тушением дождём (`F-132..F-135`, `A-90..A-91`).
+2. **`pack:multiplayer` (`ratcore/src/packs/multiplayer.js`, `tools.net.*`):**
+   - Комнаты P2P/WS, ультракомпактный 12-байтный кодек ввода (`encodeInput12`/`decodeInput12`), детерминированный **Rollback Netcode** с окном снимков и перепроигрыванием расхождений, а также статистика `RTT` и `jitter` (`F-129..F-131`, `A-87..A-89`).
+3. **`pack:narrative` (`ratcore/src/packs/narrative.js`, `tools.story.*` + `tools.quest.*`):**
+   - ИИ-Режиссёр темпа (`build-up → peak → sustain → relax`), летопись мира, дипломатия фракций и **двойной BFS** математической проверки графа квестов на полное отсутствие софтлоков (`verifyNoSoftlocks`, `F-154..F-155`, `A-102..A-103`).
+4. **`pack:ecology` (`ratcore/src/packs/ecology.js`, `tools.eco.*`):**
+   - Формула Стефана нарастания/таяния речного льда (`F-158`), формула Гольда `P_max = A·h²` расчёта проламывания льда под техникой (`F-159`, `A-105`), гидравлическая эрозия `HeightField` (`F-160`, `A-106`) и фауна на `1 Гц`.
+5. **`pack:styles` (`ratcore/src/packs/styles.js`, `tools.shader.*`):**
+   - Пост-обработка `RasterSurface` без GPU-зависимостей: `ps1` (Bayer 4×4), `crt` (scanlines + vignette), `thermal`, `nightvision`, `cel` (`F-151..F-153`, `A-101`), встроенная в цикл рендера `toolkit.js` и живую песочницу `:8081`.
+6. **`pack:studio` (`ratcore/src/packs/exporter.js`, `tools.studio.*`):**
+   - `exportSingleHtml` генерирует 1 автономный офлайн `.html` (`< 300 КБ`) со встроенным `RCW2` снимком. В тесте `ratcore/tests/stage3.mjs` экспортированный HTML прогнан через реальный **10-проходный антивирус `site/game-antivirus.js`**: вердикт `clean`, **10/10 проходов чисты, риск `0/100`**!
+7. **Тесты, CI и облачная экосистема:**
+   - `ratcore/tests/stage3.mjs` подключён в `.github/workflows/validate.yml` (все 4 набора `RatCore` зелёные; `30` модулей, `55` инструментов в `tools-manifest.json`).
+   - Развёрнута синхронизированная облачная инфраструктура `RatCore`: **Supabase** (`games-cloud-save`), **Linear** (`RatCore Engine`, `GAM-8..GAM-12`), **Notion** (`RatCore — Центр управления движком`), **Google Drive / Docs / Sheets / Slides**, **Google Calendar** и **Dropbox** (`/RatCore-Vault`).
+
+---
+
+## Запись #014 — 2026-11-16 · Этап 4 (`v0.4`): Аппаратный WebGL2 + Async Shader Pre-Warm, `pack:webgpu`, `pack:wasm-accel` (442 Б + SIMD) и многоядерный `RatCoreWorkerPool` (75 % CPU)
+
+Реализованы и верифицированы 4 производительных подсистемы Этапа 4 (`v0.4.0-stage4`, `34` модуля, `61` инструмент в `tools-manifest.json`, `5` тестовых наборов, `0` внешних зависимостей, полная изоляция внутри `ratcore/`):
+
+1. **Аппаратный `WebGL2Renderer` (`ratcore/src/render/webgl2-renderer.js`, `tools.look.setBackend/shaderPrewarm/renderWebGL2/rendererStats`):**
+   - GLSL ES 3.00 шейдеры основного освещения (Lambert + 5 встроенных пост-стилей `PS1/CRT/Thermal/Nightvision/Cel`) и второго прохода `Object-ID`.
+   - Пошаговый **Async Shader Pre-Warm** (`F-172`, `A-114`) без фриза первого кадра, кэширование VAO/VBO по схеме **Upload-and-Drop** (`A-77`, повторный кадр `0` новых буферов) и жёсткий **Барьер 2 ToolGuard** (`vault.readSealedMesh` до обращения к GPU).
+   - В комплекте `createHeadlessWebGL2Context()` для детерминированной headless-проверки в CI без браузера.
+2. **Опциональный пакет `pack:webgpu` (`ratcore/src/packs/webgpu.js`, `tools.webgpu.*`):**
+   - Zero-Cost Opt-In (`RC-108` до подключения), WGSL Compute-шейдеры `@compute @workgroup_size(64)` для фрустум-куллинга сфер чанков (`F-176`, `A-120`) и батчевой симуляции частиц (`A-122`), автоматическая проба `navigator.gpu` и побитово совместимый SoA fallback.
+3. **Опциональный пакет `pack:wasm-accel` (`ratcore/src/packs/wasm-accel.js`, `tools.wasm.*`):**
+   - Runtime-сборщик чистого бинарного **WebAssembly-модуля весом всего 442 байта** (проходит `WebAssembly.validate`, `0` внешних инструментов компиляции), экспортирующий `memory`, `fnv1a32`, `deltaEncodeI32`, `deltaDecodeI32`, `stepGravityF32`, плюс встроенную пробу **`WASM SIMD v128`**.
+   - Побитовое совпадение `FNV-1a` с JS-эталоном, round-trip без потерь для `Delta-Int32` и ускорение горячего цикла в WASM (`0.01 мс` против `0.196 мс` в JS на 4096 байт).
+4. **Многоядерный `RatCoreWorkerPool` (`ratcore/src/runtime/worker-pool.js`, `tools.stream.workerPoolStats/dispatchWorkerTask/syncWorkers/shutdownWorkers`):**
+   - Настоящие потоки ОС **`node:worker_threads`** в Node.js 22 и **Blob Web Workers** в браузере, Zero-Cost ленивый старт (`uninitialized` до первой задачи), жёсткое подчинение лимиту **`CoreGovernor` (`eco 40 % / balanced 60 % / turbo 75 % CPU`)**, приоритеты `P0..P3` и zero-copy **`Transferable`** буферы.
+5. **Песочница `v0.4`, автотесты и CI:**
+   - В `ratcore/playground/index.html` добавлены живой переключатель **`Software 3D ↔ WebGL2`** и кнопки запуска **WASM + SIMD**, **WebGPU Compute** и **Worker Pool 75 % CPU**.
+   - `ratcore/tests/stage4.mjs` добавлен и включён в `.github/workflows/validate.yml` (`PASS`).
+
+---
+
+## Запись #015 — 2026-11-16 · Этап 5 (`v1.0.0`): Полная комплектация — 14/14 опциональных пакетов, 10/10 стандартных модулей, RatStudio Dev-Overlay, «Машина времени» COW и Автобалансировщик
+
+Завершён **Этап 5 (`RatCore v1.0.0`)** — все **10 стандартных жанровых модулей**, все **14 опциональных пакетов по выбору** и все **39 веток инструментов** (`ai-dev-full`) полностью реализованы в рабочем коде (`45` модулей, `83` инструмента в `tools-manifest.json`, `6` тестовых наборов, `0` заглушек, полная изоляция внутри `ratcore/`, `0` ссылок в `index.html` и `site/`):
+
+1. **`pack:mods` (`ratcore/src/packs/mods.js`, `tools.mod.*`):**
+   - Упаковка модов в `.ratmod.rcw2` (`RCW2 + CRC32`), валидация `ToolGuard` (отбивает `eval`/сеть с `RC-102` и сырые вершины с `RC-101`), топологическая сортировка зависимостей (алгоритм Кана, `RC-106` при циклах/пропусках), учёт квоты CPU **`ModQuota`** с авто-паузой без падения игры и безопасный **`hotReload`** / `unmount`.
+2. **`pack:cinema` (`ratcore/src/packs/cinema.js`, `tools.cutscene.*`):**
+   - Catmull-Rom рельсы камеры с таблицей длин дуги (`F-140`, `A-94`) для равномерной скорости, синхронные титры и события погоды, съёмка **таймлапса мира** (`F-142`) и реальная **авто-обложка 16:9** (`F-141`), оценивающая 12 отрендеренных ракурсов по правилу третей, контрасту и заполненности.
+3. **`pack:voice` (`ratcore/src/packs/voice.js`, `tools.voice.*`):**
+   - Офлайн 3-формантный `(F1/F2/F3)` PCM-синтезатор речи (`0 КБ` внешних аудиофайлов, `F-156`) со стилями `natural`, `radio` (squelch + шум эфира), `robot`, `megaphone`, `whisper`, `gibberish-cute` и покадровым потоком визем рта (`F-157`, `voice.getViseme`).
+4. **`pack:companion` (`ratcore/src/packs/companion.js`, `tools.coopAi.*`):**
+   - Локальный ИИ-напарник с двуязычным NLU (`RU/EN`), реальным подключением к зрению `see` и слуху `hear` (`AcousticWorld`), расчётом доверия и риска (`F-161..F-162`), пошаговым выполнением плана и понятным объяснением решений (`explainLastAction`).
+5. **`pack:assist` (`ratcore/src/packs/assist.js`, `tools.assist.*`):**
+   - Детектор застревания игрока > 20 / 28 / 40 с (`F-163`, 3 уровня подсказок без спойлеров), реальная 3×3 дальтоническая коррекция пикселей `RasterSurface` (`protanopia`/`deuteranopia`/`tritanopia`, `F-164`), направленные субтитры звуков `hear → UI` (`F-165`: *«← Шаги слева»*) и тач-раскладка под 1 руку (`A-109`).
+6. **Полный `pack:studio` (`ratcore/src/packs/studio.js`, `tools.studio.*` + `save.timeline*`):**
+   - **«Машина времени» (`TimelineDebugger`, `F-143..F-144`, `A-96`)**: COW-дерево снимков с соблюдением `forkTick`, мгновенный `scrubTo`, ветвление `branchFrom` и сравнение веток `timelineCompare` (под защитой `RC-108` без `pack:studio`).
+   - **Автобалансировщик (`F-145..F-148`, `A-97..A-98`)**: headless-симуляции, индекс доминирования стратегий, энтропия мета-игры Шеннона, детектор автопобедных эксплойтов (`findExploits`) и автогенерация дифф-патча баланса.
+   - **Живой `RatStudio Dev-Overlay`** интегрирован прямо в `ratcore/playground/index.html` (`v1.0.0`) вместе с кнопками WebAudio-рации, авто-обложки, ИИ-напарника, дальтонизма и модов.
+7. **Доукомплектованы все 5 оставшихся стандартных модулей Уровня 1 (`ratcore/src/modules/`):**
+   - `anim.js` (2-костная аналитическая IK по закону косинусов, клипы, Verlet-цепи), `fx.js` (пул частиц SoA, декали, тряска камеры), `ai.js` (Utility AI, GOAP-планировщик, NLU), `sim.js` (экономика, крафт, лимит веса `RC-603`, демография), `test.js` (инварианты сцены, фаззер, автобаланс).
+8. **Верификация и CI:**
+   - `ratcore/tests/stage5.mjs` добавлен в `.github/workflows/validate.yml`; все `6/6` тестов `RatCore`, `portal.mjs`, `community-catalog.mjs`, 10-проходный антивирус на экспортированном HTML (`clean 10/10`, риск `0`) и `bughunt --play --only site` (`0/0/0`) — **PASS**.
+
+---
+
+## Запись #016 — 2026-11-16 · Полировка `v1.0.0`: полноценные `core/input` и `core/ui`, первая 3D-игра «Стража Цитадели» (`citadel-watch`), актуализация `README.md` и PR
+
+Закрыты все оставшиеся технические хвосты релиза `v1.0.0` (`47` модулей, `89` инструментов в `tools-manifest.json`, `7` тестовых наборов в CI):
+
+1. **Полноценные ветки ядра `tools.input.*` и `tools.ui.*`:**
+   - `ratcore/src/core/input.js` (`InputManager`, 9 методов): привязка/ремап клавиш (`bind`, `remap`), буфер нажатий (`consumeBuffered`), битовая маска действий (совместимая с 12-байтным пакетом `net.encodeInput12`) и детерминированная запись/реплей потока ввода (`startRecord`, `stopRecord`, `replayAt`, `A-60`).
+   - `ratcore/src/core/ui.js` (`UiHudManager`, 7 методов): декларативные HUD-виджеты (`bar`/`counter`/`compass`/`panel`/`minimap`), экранные тосты с таймерами (`notify`, `tick`) и диалоги с вариантами ответа (`openDialog`, `chooseDialog`) без прямого обращения к DOM.
+   - Теперь **все 39 активных веток** имеют от 3 до 12 полноценных методов.
+2. **Первая полноценная 3D-игра на `RatCore v1.0.0` — «Стража Цитадели» (`ratcore/demos/citadel-watch/`):**
+   - Чистая игровая логика (`game-core.js`) проходит строгий аудит **Барьера 4 `ToolGuard`** с `0` нарушений и одинаково работает в браузере (`index.html`, доступна на `:8081/ratcore/demos/citadel-watch/index.html`) и в Node.js.
+   - В игре работают 5 волн дронов, стрельба с частицами `fx` и WebAudio-звуками, постройка защитных башен через крафт `sim.craft`, опорный граф `pack:destruction`, ИИ-напарник Барсик (`pack:companion`), 3-формантная рация (`pack:voice`) с живой виземой рта, 6 визуальных стилей (`pack:styles`), коррекция дальтонизма и направленные субтитры (`pack:assist`), зимний лёд (`pack:ecology`), откат в прошлое COW (`save.scrubTo`), сжатие `RCW2` и экспорт крепости в автономный `.html` (`< 3 КБ`, **10/10 чистый вердикт антивируса Games**).
+3. **Документация и тесты:**
+   - `ratcore/README.md` и `ratcore/INDEX.json` полностью переведены с черновиков `v0.9-draft`/`v0.3` на актуальное состояние `v1.0.0`.
+   - Добавлен тест `ratcore/tests/demo-game.mjs` и подключён в `.github/workflows/validate.yml`.
+
+
+
+
+
+

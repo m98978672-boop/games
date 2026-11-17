@@ -11,6 +11,7 @@
   const baseCategories = Array.isArray(window.GAMES_CATEGORIES) ? window.GAMES_CATEGORIES : [];
   const spotlightIds = Array.isArray(window.GAMES_SPOTLIGHT_IDS) ? window.GAMES_SPOTLIGHT_IDS : [];
   const userHub = window.GamesUserHub || null;
+  const antivirus = window.GamesAntivirus || null;
   if (!baseCatalog.length) return;
 
   const rootPrefix = (document.body && document.body.getAttribute('data-root')) || '';
@@ -141,6 +142,9 @@
     pendingImportGame: null,
     studioSourceMode: 'url',
     studioCustomCover: '',
+    lastAvReport: null,
+    lastAvOnlineBlocked: false,
+    avPassesExpanded: false,
   };
 
   // Читаем параметры URL (?q=&cat=&sort=&importGame=)
@@ -731,6 +735,28 @@
     }
 
     body.append(actions);
+
+    // Антивирусная карточка на пользовательских играх (10 проходов + известные сайты)
+    if (game.isUserGame && antivirus) {
+      const avNow = antivirus.scanGameSync(game);
+      const avCard = el('div', 'av-modal-card');
+      const avLine = el('div', 'av-meta-row');
+      avLine.append(
+        el('span', `av-verdict-pill is-${avNow.verdict}`, `🛡️ ${avNow.verdictLabel}`),
+        el('code', 'av-sha-chip', `SHA-256: ${avNow.sha256.slice(0, 18)}…`)
+      );
+      const avLinks = el('div', 'av-partners-grid');
+      for (const p of avNow.partnerLinks.slice(0, 4)) {
+        const a = el('a', 'av-partner-link', `${p.name} ↗`);
+        a.href = p.href;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        avLinks.append(a);
+      }
+      avCard.append(avLine, avLinks);
+      body.append(avCard);
+    }
+
     frag.append(hero, body);
     content.replaceChildren(frag);
   }
@@ -787,8 +813,17 @@
     const author = document.getElementById('sandbox-player-author');
     if (!root || !iframe || !game || !game.htmlCode) return;
 
+    // Обязательная повторная 10-кратная антивирусная перепроверка перед запуском
+    if (antivirus) {
+      const check = antivirus.scanGameSync(game);
+      if (check.verdict === 'blocked') {
+        showToast(`🛡️ Запуск заблокирован антивирусом: ${check.blockedReasons[0] || check.verdictLabel}`);
+        return;
+      }
+    }
+
     if (title) title.textContent = game.title;
-    if (author) author.textContent = `Автор: ${game.author || 'Сообщество'}`;
+    if (author) author.textContent = `Автор: ${game.author || 'Сообщество'} · 🛡️ 10/10`;
     iframe.srcdoc = game.htmlCode;
     root.hidden = false;
     document.body.classList.add('modal-open');
@@ -894,6 +929,143 @@
     });
   }
 
+  // ---------------------------- 10-кратный Антивирус UI в Студии ----------------------------
+  function resetStudioAntivirusUi() {
+    state.lastAvReport = null;
+    state.lastAvOnlineBlocked = false;
+    state.avPassesExpanded = false;
+
+    const panel = document.getElementById('av-panel');
+    const pill = document.getElementById('av-verdict-pill');
+    const bar = document.getElementById('av-progress-bar');
+    const meta = document.getElementById('av-meta-row');
+    const listEl = document.getElementById('av-pass-list');
+    const partners = document.getElementById('av-partners');
+    const onlineEl = document.getElementById('av-online-status');
+    const toggleBtn = document.getElementById('av-toggle-passes-btn');
+    const warnWrap = document.getElementById('av-warn-confirm-wrap');
+    const warnBox = document.getElementById('av-warn-confirm');
+
+    if (panel) panel.className = 'av-panel';
+    if (pill) {
+      pill.className = 'av-verdict-pill is-idle';
+      pill.textContent = 'Ожидает 10× проверки';
+    }
+    if (bar) bar.style.width = '0%';
+    if (meta) meta.hidden = true;
+    if (listEl) {
+      listEl.hidden = true;
+      listEl.replaceChildren();
+    }
+    if (partners) partners.hidden = true;
+    if (onlineEl) {
+      onlineEl.hidden = true;
+      onlineEl.textContent = '';
+      onlineEl.className = 'av-online-status';
+    }
+    if (toggleBtn) toggleBtn.hidden = true;
+    if (warnWrap) warnWrap.hidden = true;
+    if (warnBox) warnBox.checked = false;
+  }
+
+  function renderAntivirusReport(report) {
+    if (!report) return;
+    const panel = document.getElementById('av-panel');
+    const pill = document.getElementById('av-verdict-pill');
+    const bar = document.getElementById('av-progress-bar');
+    const meta = document.getElementById('av-meta-row');
+    const riskChip = document.getElementById('av-risk-chip');
+    const shaChip = document.getElementById('av-sha-chip');
+    const listEl = document.getElementById('av-pass-list');
+    const partnersWrap = document.getElementById('av-partners');
+    const partnersGrid = document.getElementById('av-partners-grid');
+    const toggleBtn = document.getElementById('av-toggle-passes-btn');
+    const warnWrap = document.getElementById('av-warn-confirm-wrap');
+    const effectiveVerdict = state.lastAvOnlineBlocked ? 'blocked' : report.verdict;
+
+    if (panel) panel.className = `av-panel is-${effectiveVerdict}`;
+    if (pill) {
+      pill.className = `av-verdict-pill is-${effectiveVerdict}`;
+      pill.textContent = state.lastAvOnlineBlocked
+        ? '🛑 ЗАБЛОКИРОВАНО ОНЛАЙН-БАЗОЙ'
+        : report.verdictLabel;
+    }
+    if (bar) bar.style.width = '100%';
+    if (meta) meta.hidden = false;
+    if (riskChip) riskChip.textContent = `Риск: ${state.lastAvOnlineBlocked ? 100 : report.riskScore}/100 · ${report.passCount}/10 алгоритмов`;
+    if (shaChip) shaChip.textContent = `SHA-256: ${report.sha256.slice(0, 24)}…`;
+
+    if (listEl) {
+      const rows = report.passes.map((pass) => {
+        const row = el('div', `av-pass-row is-${pass.status}`);
+        const ic = pass.status === 'block' ? '✕' : (pass.status === 'warn' ? '!' : '✓');
+        const info = el('div', '');
+        info.append(
+          el('span', 'av-pass-name', pass.name),
+          el('span', 'av-pass-msg', pass.summary)
+        );
+        row.append(el('span', 'av-pass-ic', ic), info);
+        return row;
+      });
+      listEl.replaceChildren(...rows);
+      const autoExpand = effectiveVerdict !== 'clean' || state.avPassesExpanded;
+      listEl.hidden = !autoExpand;
+      if (toggleBtn) {
+        toggleBtn.hidden = false;
+        toggleBtn.textContent = listEl.hidden ? 'Показать все 10 алгоритмов ▾' : 'Скрыть 10 алгоритмов ▴';
+      }
+    }
+
+    if (partnersWrap && partnersGrid && Array.isArray(report.partnerLinks) && report.partnerLinks.length) {
+      partnersWrap.hidden = false;
+      partnersGrid.replaceChildren(
+        ...report.partnerLinks.map((p) => {
+          const link = el('a', 'av-partner-link');
+          link.href = p.href;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          link.title = p.desc;
+          link.append(
+            el('span', '', `${p.name} ↗`),
+            el('span', 'av-partner-badge', p.badge)
+          );
+          return link;
+        })
+      );
+    }
+
+    if (warnWrap) {
+      warnWrap.hidden = effectiveVerdict !== 'warn';
+    }
+  }
+
+  async function runStudioAntivirusScan(animated) {
+    if (!antivirus) return null;
+    const draft = readStudioDraft();
+    const pill = document.getElementById('av-verdict-pill');
+    const bar = document.getElementById('av-progress-bar');
+    state.lastAvOnlineBlocked = false;
+
+    if (animated) {
+      if (pill) {
+        pill.className = 'av-verdict-pill is-scanning';
+        pill.textContent = 'Проверка 1/10…';
+      }
+      const report = await antivirus.scanGameAnimated(draft, (pass, idx, total) => {
+        if (pill) pill.textContent = `Проход ${idx}/${total}: ${pass.id}`;
+        if (bar) bar.style.width = `${Math.round((idx / total) * 100)}%`;
+      });
+      state.lastAvReport = report;
+      renderAntivirusReport(report);
+      return report;
+    }
+
+    const report = antivirus.scanGameSync(draft);
+    state.lastAvReport = report;
+    renderAntivirusReport(report);
+    return report;
+  }
+
   function openAddGameModal(initialTab, existingGame) {
     const root = document.getElementById('add-game-modal');
     if (!root) return;
@@ -920,16 +1092,18 @@
       document.getElementById('ug-submit-btn').textContent = '✓ Сохранить изменения';
     } else {
       document.getElementById('ug-edit-id').value = '';
-      document.getElementById('ug-submit-btn').textContent = '▶ Добавить на витрину';
+      document.getElementById('ug-submit-btn').textContent = '🛡️ Проверить 10× и добавить';
     }
 
     const resetBtn = document.getElementById('ug-cover-reset');
     if (resetBtn) resetBtn.hidden = !state.studioCustomCover;
 
+    resetStudioAntivirusUi();
     setStudioTab(initialTab === 'publish' ? 'publish' : 'create');
     root.hidden = false;
     document.body.classList.add('modal-open');
     refreshStudioPreviewAndPublish();
+    if (existingGame) runStudioAntivirusScan(false);
   }
 
   function closeAddGameModal() {
@@ -1341,6 +1515,35 @@
         }
 
         const draft = readStudioDraft();
+
+        // Обязательная 10-кратная антивирусная перепроверка перед добавлением
+        if (antivirus) {
+          const avReport = antivirus.scanGameSync(draft);
+          state.lastAvReport = avReport;
+          renderAntivirusReport(avReport);
+
+          if (state.lastAvOnlineBlocked || avReport.verdict === 'blocked') {
+            if (status) {
+              status.textContent = state.lastAvOnlineBlocked
+                ? '🛑 Добавление заблокировано: домен числится вредоносным в Cloudflare Malware Intelligence.'
+                : `🛑 Антивирус заблокировал игру после 10-кратной проверки: ${avReport.blockedReasons[0] || avReport.verdictLabel}`;
+              status.classList.add('is-error');
+            }
+            return;
+          }
+
+          if (avReport.verdict === 'warn') {
+            const confirmBox = document.getElementById('av-warn-confirm');
+            if (!confirmBox || !confirmBox.checked) {
+              if (status) {
+                status.textContent = '⚠️ Антивирус нашёл предупреждения (см. список 10 алгоритмов и ссылки VirusTotal / Safe Browsing). Поставьте галочку подтверждения, если доверяете источнику.';
+                status.classList.add('is-error');
+              }
+              return;
+            }
+          }
+        }
+
         const res = userHub.upsert(draft);
         if (!res.ok) {
           if (status) {
@@ -1350,13 +1553,69 @@
           return;
         }
         if (status) {
-          status.textContent = `Игра «${res.game.title}» добавлена на витрину!`;
+          status.textContent = `🛡️ 10/10 проверено! Игра «${res.game.title}» добавлена на витрину!`;
           status.classList.remove('is-error');
         }
         state.studioCustomCover = '';
         addForm.reset();
+        resetStudioAntivirusUi();
         closeAddGameModal();
-        showToast(`✓ Игра «${res.game.title}» добавлена в каталог!`);
+        showToast(`🛡️ 10/10 проверено! Игра «${res.game.title}» добавлена в каталог!`);
+      });
+
+      // Кнопки панели антивируса в Студии
+      document.getElementById('av-run-scan-btn')?.addEventListener('click', () => {
+        runStudioAntivirusScan(true).then((rep) => {
+          if (rep) showToast(`🛡️ 10-кратная проверка завершена: ${rep.verdictLabel}`);
+        }).catch((err) => recordNonFatal('av-scan', err));
+      });
+
+      document.getElementById('av-toggle-passes-btn')?.addEventListener('click', () => {
+        const listEl = document.getElementById('av-pass-list');
+        const btn = document.getElementById('av-toggle-passes-btn');
+        if (!listEl) return;
+        listEl.hidden = !listEl.hidden;
+        state.avPassesExpanded = !listEl.hidden;
+        if (btn) btn.textContent = listEl.hidden ? 'Показать все 10 алгоритмов ▾' : 'Скрыть 10 алгоритмов ▴';
+      });
+
+      document.getElementById('av-copy-sha')?.addEventListener('click', () => {
+        const sha = state.lastAvReport && state.lastAvReport.sha256;
+        if (sha && navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(sha)
+            .then(() => showToast('SHA-256 скопирован — можно вставить в VirusTotal или Hybrid Analysis!'))
+            .catch(() => showToast('Скопируйте SHA-256 из поля вручную.'));
+        }
+      });
+
+      document.getElementById('av-online-check-btn')?.addEventListener('click', () => {
+        const onlineEl = document.getElementById('av-online-status');
+        const urlVal = (document.getElementById('ug-url')?.value || '').trim();
+        if (!antivirus) return;
+        if (state.studioSourceMode !== 'url' || !urlVal) {
+          if (onlineEl) {
+            onlineEl.hidden = false;
+            onlineEl.className = 'av-online-status is-clean';
+            onlineEl.textContent = 'Для локального HTML-кода онлайн-проверка домена не нужна — все 10 алгоритмов работают локально, а SHA-256 можно сверить на VirusTotal ниже.';
+          }
+          runStudioAntivirusScan(false);
+          return;
+        }
+        if (onlineEl) {
+          onlineEl.hidden = false;
+          onlineEl.className = 'av-online-status';
+          onlineEl.textContent = '🌐 Сверяю домен с Cloudflare Malware DNS (1.1.1.2) и Google DNS…';
+        }
+        antivirus.crossCheckDomainOnline(urlVal).then((res) => {
+          state.lastAvOnlineBlocked = res.status === 'blocked';
+          if (onlineEl) {
+            onlineEl.hidden = false;
+            onlineEl.className = `av-online-status is-${res.status === 'blocked' ? 'blocked' : (res.status === 'clean' ? 'clean' : 'warn')}`;
+            onlineEl.textContent = res.message;
+          }
+          if (state.lastAvReport) renderAntivirusReport(state.lastAvReport);
+          else runStudioAntivirusScan(false);
+        }).catch((err) => recordNonFatal('av-online', err));
       });
 
       document.getElementById('ug-to-publish-btn')?.addEventListener('click', () => setStudioTab('publish'));
@@ -1374,7 +1633,8 @@
         if (codeEl) codeEl.value = userHub.STARTER_MINI_GAME;
         setStudioSourceMode('code');
         refreshStudioPreviewAndPublish();
-        showToast('Готовый шаблон мини-игры вставлен — жми «Добавить на витрину»!');
+        runStudioAntivirusScan(true);
+        showToast('Готовый шаблон вставлен — запущена 10-кратная проверка антивирусом!');
       });
 
       document.getElementById('ug-html-file')?.addEventListener('change', (ev) => {
@@ -1392,6 +1652,7 @@
             titleEl.value = file.name.replace(/\.(?:html|htm)$/i, '').slice(0, 60);
           }
           refreshStudioPreviewAndPublish();
+          runStudioAntivirusScan(true);
         };
         reader.readAsText(file);
       });
@@ -1459,21 +1720,27 @@
         const reader = new FileReader();
         reader.onload = () => {
           const res = userHub.importPack(String(reader.result || ''));
-          showToast(res.ok ? `Импортировано игр: ${res.added}!` : (res.error || 'Ошибка импорта.'));
+          if (res.ok) {
+            const extra = res.blocked ? ` (🛡️ заблокировано антивирусом: ${res.blocked})` : ' (🛡️ 10/10 проверено)';
+            showToast(`Импортировано игр: ${res.added}${extra}!`);
+          } else {
+            showToast(res.error || 'Ошибка импорта.');
+          }
           packInput.value = '';
         };
         reader.readAsText(file);
       });
     }
 
-    // Баннер импорта из ссылки друга
+    // Баннер импорта из ссылки друга (проходит 10-кратную проверку антивируса!)
     document.getElementById('import-banner-accept')?.addEventListener('click', () => {
       if (!userHub || !state.pendingImportGame) return;
       const res = userHub.upsert(state.pendingImportGame);
       const banner = document.getElementById('import-banner');
       if (banner) banner.hidden = true;
       state.pendingImportGame = null;
-      if (res.ok) showToast(`Игра «${res.game.title}» от друга добавлена в каталог!`);
+      if (res.ok) showToast(`🛡️ 10/10 проверено! Игра «${res.game.title}» от друга добавлена!`);
+      else showToast(res.error || '🛡️ Антивирус заблокировал импорт игры.');
     });
     document.getElementById('import-banner-dismiss')?.addEventListener('click', () => {
       const banner = document.getElementById('import-banner');

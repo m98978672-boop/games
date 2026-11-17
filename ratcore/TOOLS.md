@@ -1,9 +1,9 @@
 # RatCore — полный каталог инструментов на все случаи жизни (`TOOLS.md`)
 
-**Версия:** 0.7-draft (2026-11-16)  
-**Охват:** **30 усиленных веток инструментов v2.0** `engine.tools.<группа>.<метод>(args, ctx?)` + универсальный конвейер (`pipe`, `dryRun`, `compact/RCW2`, `memoize`, `checkpoint/rollback`, `autoFixHint`, `budgetMs/priority`) + **«Машина времени» (`Time-Scrubbing`), Автобалансировщик на 75 % CPU, экспорт в 1 `.html` (`Single-File Bundler`)** + **11-уровневое ультра-сжатие RAM/CPU, потоковая передача `ratcore-wire/2` и регулятор ядер 75 %**.  
-**Связанные документы:** [`ALGORITHMS.md`](./ALGORITHMS.md) (`F-01..F-150`, `A-01..A-100`) · [`COMPRESSION.md`](./COMPRESSION.md) · [`BRIDGE.md`](./BRIDGE.md).  
-**Принцип:** единый формат ответа, обязательная проверка `ToolGuard`, автоматическое логирование в журнал операций и поддержка отката (`undo`/`redo`).
+**Версия:** 0.9-draft (2026-11-16)  
+**Охват:** **36 усиленных веток инструментов v2.0** `engine.tools.<группа>.<метод>(args, ctx?)` + **3-уровневая система модулей по выбору (`Core` / `10 Standard Modules` / `14 Optional Opt-In Packs`, `0 Б` у выключенных пакетов)** + **умный поиск инструментов для ИИ (`tools.discover`)** + универсальный конвейер (`pipe`, `dryRun`, `compact/RCW2`, `memoize`, `checkpoint/rollback`, `autoFixHint`, `budgetMs/priority`) + **`RatStudio`**, **«Машина времени», Автобалансировщик, 1-файловый `.html`** + **12-уровневый стек сжатия, `ratcore-wire/2`, `CoreGovernor` (`Eco 40% / Balanced 60% / Turbo 75%`), `Dynamic Resolution`, `Async Shader Pre-Warm`, `OffscreenCanvas`, `Self-Healing Watchdog`, `pack:webgpu` и `pack:wasm-accel`**.  
+**Связанные документы:** [`ALGORITHMS.md`](./ALGORITHMS.md) (`F-01..F-185`, `A-01..A-125`) · [`COMPRESSION.md`](./COMPRESSION.md) · [`BRIDGE.md`](./BRIDGE.md).  
+**Принцип:** единый формат ответа, обязательная проверка `ToolGuard`, автоматическое логирование в журнал операций, поддержка отката (`undo`/`redo`) и строгий принцип **«не используешь — не платишь» (`Zero-Cost Opt-In`, `RC-108`)**.
 
 ---
 
@@ -29,6 +29,8 @@
 - **`priority: 0..3` и `budgetMs`** — встраивает тяжёлый вызов напрямую в Work-Stealing очередь `CoreGovernor 75 %` (`A-75`, `A-76`) без единого фриза!
 - **`idempotencyKey` и `memoize: true`** — повторный чистый вызов на том же `worldTick` отдаёт кэш за **`0.01 мс`** (и защищает от дублей при сбое сети/моста).
 - **`autoFixHint`** — при любой ошибке инструмент возвращает не только код, но и **готовую исправленную команду** для мгновенного повтора!
+- **`tools.discover({ intent, limit: 5 })` (v0.9-draft, `F-183..F-185`, `A-124..A-125`)** — мгновенный офлайн-поиск по компактному `tools-manifest.json` (`< 1 мс`): нейросеть описывает задачу словами (*«разрушаемый мост над замерзающей рекой»*) и получает ровно нужные 5 методов, их схемы аргументов и нужные `packs` без чтения всего каталога на 36 веток!
+- **`watch.bottleneckReport({ windowSec: 5 })` и `watch.leakSentinel()` (v0.9-draft, `F-178..F-182`, `A-122..A-123`)** — 1 вызов выдаёт топ-3 узких места кадра с конкретным советом оптимизации и ловит утечки массивов/слушателей ещё до просадки FPS.
 
 ### Единый формат ответа каждого инструмента
 ```json
@@ -506,7 +508,13 @@
 | **27** | `destroy.*` | **Структурная разрушаемость, огонь и цепные реакции**: граф несущих опор на `64-bit Bricks` (`F-132..F-133`, `A-90`), раскол на физические осколки, пожар по ветру (`F-134`, `A-91`) и тушение водой (`F-135` + `phys.fluidStep`). |
 | **28** | `story.*` | **ИИ-Режиссёр темпа и живая летопись (`AI Director`)**: кривая напряжения `tension` (`F-136..F-137`, `A-92`), фазы `build-up → peak → sustain → relax`, процедурные события, кризисы и летопись мира. |
 | **29** | `mod.*` | **Безопасная система модов (`.ratmod.rcw2`)**: песочница строго поверх `ToolGuard` + квота `ModQuota` внутри 75 % `CoreGovernor` (`F-138..F-139`, `A-93`), новые здания/биомы/рецепты/звуки и `Hot-Reload` без перезапуска. |
-| **30** | `cutscene.*` | **Режиссура камеры, таймлапсы и авто-обложки**: дуговые рельсы камеры (`F-140`, `A-94`), таймлайн титров/погоды/аудио, съёмка **таймлапса мира** (`F-142`, `A-95`) и авто-съёмка 16:9 обложек (`F-141`) для витрины. |
+| **30** | `cutscene.*` | **Режиссура камеры, таймлапсы и авто-обложки** *(по выбору: `pack:cinema`)*: дуговые рельсы камеры (`F-140`, `A-94`), таймлайн титров/погоды/аудио, съёмка **таймлапса мира** (`F-142`, `A-95`) и авто-съёмка 16:9 обложек (`F-141`) для витрины. |
+| **31** | `shader.*` | **Граф визуальных стилей и материалов** *(по выбору: `pack:styles`)*: ретро-PS1 (Бейер 4×4 `F-151`), комикс `cel-shading` + контуры (`F-152`), CRT/VHS, тепловизор/ПНВ (`F-153`), мокрый асфальт и голограммы — работает в WebGL2, Software 3D и 2D (`A-101`). |
+| **32** | `quest.*` | **Процедурные квесты, тайны и живые фракции** *(по выбору: `pack:narrative`)*: генератор цепочек улик/заданий, математическое доказательство проходимости без софтлоков (`F-154`, `A-102`) и дипломатия фракций (`F-155`, `A-103`). |
+| **33** | `voice.*` | **Офлайн-синтез голосов, рации и липсинка** *(по выбору: `pack:voice`)*: 3-формантный синтезатор (`F-156`, `0 КБ` аудиофайлов), тембры (командир по рации, робот, мегафон, шёпот, стили *Undertale*/*Animal Crossing*) + виземы рта в реальном времени (`F-157`, `A-104`). |
+| **34** | `eco.*` | **Живая экосистема, эрозия, сезоны и лёд на `1 Гц`** *(по выбору: `pack:ecology`)*: гидравлическая эрозия (`F-158`, `A-105`), зарастание лесом, замерзание рек с несущей прочностью льда (`F-159`, `A-106` — лёд трескается под тяжёлой техникой!) и миграция фауны (`F-160`). |
+| **35** | `coopAi.*` | **Локальный ИИ-Напарник внутри игры** *(по выбору: `pack:companion`)*: реально смотрит через `see`, слышит через `hear`, понимает команды игрока через `ai.nluParse` (*«прикрой слева»*, *«построй мост»*, `F-161..F-162`, `A-107`) и кратко объясняет свои действия. |
+| **36** | `assist.*` | **Умный наставник и доступность (`Accessibility`)** *(по выбору: `pack:assist`)*: детектор застревания > 20 с (`F-163`, `A-108`), коррекция дальтонизма (`F-164`), визуальные субтитры звуков (`hear → UI`, `F-165`), крупный шрифт и режим 1 руки (`A-109`). |
 
 ---
 
@@ -586,15 +594,122 @@
 
 ---
 
-# Шпаргалка: какие ветки инструментов комбинировать «на любой случай жизни»
+# 32. Новые модульные ветки v0.8-draft (подключаются строго по выбору!)
 
-| Тип игры / задачи | Какие ветки `RatCore.tools.*` работают вместе |
-|---|---|
-| **Карта страны / градострой** *(как РАТГРАД)* | `build.map` + `build.layer` + `nav.trafficStep` + `nav.dispatch` + `env` + `sim.ledgerStep` + `sim.demographyStep` + `story` + `cutscene.timelapse*` + `look`/`see` + `save` |
-| **3D-шутер от 1-го лица** *(как СЕКТОР «ПЕПЕЛ»)* | `build.extrude`/`loft`/`lathe` + `anim` (слои + IK + Verlet) + `phys.ballistics` + `destroy` + `net` (кооп/PvP) + `ai` (укрытия + «больно думать») + `fx` + `hear` + `audio` + `input` |
-| **Пиксельная зомби-выживалка** *(как DEAD DISTRICT)* | `build.voxels` + `build.tex` (палитра/дизеринг) + `env.computeFOV` + `nav.buildFlowField` + `destroy` (пожары/баррикады) + `story` (AI Director) + `ai` + `sim.bodyStep` + `sim.craft` + `hear` |
-| **3D-симулятор ГЭС / экономики / дорог** *(КАСКАД, ТРАССА)* | `build.map` + `phys.fluidInit`/`fluidStep` + `phys.windAt` + `destroy` (прорыв дамбы/аварии) + `nav.trafficStep` + `sim.ledgerStep` + `test.autoBalance` + `save.scrubTo` + `ui` |
-| **Автосимулятор / 3D-шоурум** *(ЕВРОТРАК, ГАРАЖ 3D)* | `build.combine`/`surface` + `phys.vehicleCreate`/`vehicleInput` + `mod` (пользовательские машины) + `cutscene.autoCover` + `env.setWeather` + `look.inspectModel` + `audio` + `bridge.exportMesh` |
-| **Симулятор жизни с локальным ИИ** *(НИКА, 1 ИЗ 8 МЛРД)* | `anim` + `ai.nluTrain`/`nluParse` + `ai.utilityPick` + `story` + `sim.demographyStep` + `sim.ledgerStep` + `ui.dialogueStart` + `test.autoBalance` |
-| **Мультиплеер / песочница с модами и публикацией** | `net` (Rollback P2P) + `mod` (`.ratmod.rcw2`) + `destroy` + `cutscene` + `save.timeline*` + `build.exportSingleHtml` |
-| **Команда из нескольких нейросетей** | `comm` (папки общения) + `think` + `guess` + `build` (`ToolGuard`) + `look`/`see`/`hear` + `bugs`/`report` + `save.branchFrom` + `test.autoBalance` + `bridge` (RPC + синхронизация) |
+### 32.1. Ветка 31 · `tools.shader.*` (`pack:styles`) — Граф визуальных стилей и материалов
+- **`shader.createGraph({ name, nodes, outputs, target: 'auto' | 'webgl2' | 'software' })`** — строит безопасный граф визуальных эффектов поверх `ToolGuard` (без сырых неконтролируемых шейдеров; автоматический fallback в Software 3D / 2D LUT, `A-101`).
+- **`shader.applyPreset({ preset: 'ps1-retro' | 'cel-comic' | 'crt-vhs' | 'thermal' | 'nightvision' | 'wet-asphalt' | 'hologram', intensity })`** — мгновенно включает единый стиль кадра (`F-151..F-153`).
+- **`shader.bindMaterial({ materialId, graphId, params })`** — вешает стиль на конкретный материал (вода, стекло, экран, голограмма).
+
+### 32.2. Ветка 32 · `tools.quest.*` (`pack:narrative`) — Процедурные квесты, тайны и живые фракции
+- **`quest.generate({ archetype: 'mystery' | 'escort' | 'heist' | 'diplomacy' | 'rescue', worldState, seed })`** — строит граф целей, улик и развилок (`A-102`).
+- **`quest.verifySolvable({ questId, worldState })`** — математически доказывает достижимость финала без софтлоков (`F-154`, `A-102`); если путь сломан — возвращает минимальный фикс мира.
+- **`quest.factionInit({ factions, relationsMatrix })`** / **`quest.factionEvent({ actorA, actorB, kind, weight })`** — симулирует союзы, торговлю, обиды и предательства (`F-155`, `A-103`).
+
+### 32.3. Ветка 33 · `tools.voice.*` (`pack:voice`) — Офлайн-синтез голосов, рации и липсинка (`0 КБ` сэмплов)
+- **`voice.createProfile({ id, pitchHz, formants: [F1, F2, F3], style: 'radio' | 'robot' | 'megaphone' | 'whisper' | 'gibberish-cute' })`** — задаёт уникальный голосовой паспорт персонажа (`F-156`, `A-104`).
+- **`voice.speak({ profileId, text, emotion, spatialPos? })`** — синтезирует выразительную речевую мелодику и радиошум в WebAudio (`0 КБ` файлов) и возвращает поток визем рта для анимации лица (`F-157`).
+- **`voice.getViseme({ voiceHandle, timeSec })`** — выдаёт точный вес открытия рта и формы губ на текущий кадр.
+
+### 32.4. Ветка 34 · `tools.eco.*` (`pack:ecology`) — Живая экосистема, эрозия, сезоны и лёд на `1 Гц`
+- **`eco.setSeason({ season: 'spring' | 'summer' | 'autumn' | 'winter', tempC, snowCover })`** — перестраивает температуру, растительность и замерзание водоёмов.
+- **`eco.erosionStep({ dt, rainfallMap })`** — выполняет шахматный шаг гидравлической эрозии русел и зарастания пустырей лесом (`F-158`, `F-160`, `A-105`) на `1 Гц`.
+- **`eco.iceThicknessAt({ x, y })`** / **`eco.iceStressTest({ x, y, massKg, footprintM2 })`** — считает толщину льда по формуле Стефана и предельную нагрузку по формуле Гольда (`F-159`, `A-106`): лёгкий пешеход пройдёт по реке зимой, а тяжёлый грузовик расколет лёд и провалится!
+- **`eco.faunaStep({ dt })`** — управляет стадами, миграциями и пищевыми цепочками на `1 Гц`.
+
+### 32.5. Ветка 35 · `tools.coopAi.*` (`pack:companion`) — Локальный ИИ-Напарник внутри игры
+- **`coopAi.spawn({ id, personality, skills })`** — создаёт дружественного агента, подключённого к настоящему зрению `see` и слуху `hear`.
+- **`coopAi.order({ companionId, textOrCommand })`** — разбирает естественную команду игрока (*«прикрой слева»*, *«построй мост здесь»*, *«добудь дерево»*) через `ai.nluParse`, строит план с учётом доверия (`F-161..F-162`, `A-107`) и приступает к выполнению.
+- **`coopAi.explainLastAction({ companionId })`** — коротко и понятно объясняет игроку, почему напарник выбрал именно это действие.
+
+### 32.6. Ветка 36 · `tools.assist.*` (`pack:assist`) — Умный наставник и доступность (`Accessibility`)
+- **`assist.trackPlayer({ playerPos, activeGoalId, dt })`** — оценивает индекс застревания `stuckScore` (`F-163`); если игрок кружится на месте > 20 с, мягко эскалирует подсказку без спойлеров (`A-108`).
+- **`assist.setVisualMode({ colorblind: 'none' | 'protanopia' | 'deuteranopia' | 'tritanopia', highContrast, fontScale })`** — включает матричную коррекцию дальтонизма (`F-164`) и крупный HUD (`A-109`).
+- **`assist.setAudioSubtitles({ enabled, showDirection: true })`** — переводит важные события `tools.hear` в направленные экранные подписи (`F-165`: *«← Шаги слева»*, *«↑ Взрыв впереди»*).
+- **`assist.setOneHandMobile({ enabled, dominantHand: 'right' | 'left' })`** — перестраивает сенсорное управление под одну руку.
+
+### 32.7. Встроенная мини-студия `RatStudio` (`pack:studio`, только dev/authoring!)
+- **`studio.open({ panels: ['inspector', 'timeline', 'balancer', 'exporter'] })`** — открывает лёгкий оверлей поверх движка (`<= 0.8 мс/кадр`, `F-169`, `A-112`):
+  - **Инспектор ассетов:** вращение любой 3D/2D-модели, сетка, бюджет треугольников и аудит `ToolGuard`;
+  - **Ползунок «Машины времени»:** живое перетаскивание `save.scrubTo` + ветвление `save.branchFrom`;
+  - **Кнопка Автобаланса:** запуск `test.autoBalance` на 75 % CPU с графиком винрейтов;
+  - **Сборка в 1 клик:** экспорт мода `.ratmod.rcw2` (`mod.pack`) или автономной игры `.html` (`build.exportSingleHtml`).
+- В релизной сборке `pack:studio` **полностью вырезается** tree-shaking'ом (`A-113`, `0 Б` в финальном файле!).
+
+---
+
+# 33. Система модулей «по выбору» (`RatCore Modular Profiles / Opt-In Packs`, Решение `D-16`)
+
+**Главный принцип — «Не используешь — не платишь» (`Zero-Cost Opt-In`, `F-166..F-170`, `A-110..A-114`):**  
+То, что нужно не в каждой игре (мультиплеер, разрушаемость, квесты, моды, кино, стили, голос, экосистема, ИИ-напарник, `RatStudio`, мультиагентные инструменты ИИ), **выключено по умолчанию** и включается осознанным выбором разработчика или ИИ. Выключенный пакет занимает **0 байт RAM**, **0 % CPU** и **0 байт в итоговом бандле**.
+
+### 3 уровня подключения
+| Уровень | Что входит | Когда включается | Поведение по умолчанию |
+|---|---|---|---|
+| **Уровень 0 · Ядро (`core`)** | `build`, `move`, `remove`, `watch`, `look`, `see`, `input`, `ui`, `save` (базовый), `stream` (ядро RAM + `CoreGovernor 75 %`), `ToolGuard` | Всегда (~28–35 КБ) | **Включено всегда** |
+| **Уровень 1 · Стандартные жанровые модули (`modules`)** | `anim`, `phys`, `nav`, `env`, `fx`, `ai`, `sim`, `audio`, `hear`, `test` (базовый) | По жанру через `preset` или список `modules: [...]` | Подключаются только нужные жанру |
+| **Уровень 2 · Опциональные пакеты по выбору (`packs`)** | 14 независимых пакетов ниже (16 веток + `RatStudio` + GPU/WASM-ускорители + dev-надстройки) | Явно через `packs: [...]` или лениво `engine.enablePack(id)` | **Выключены (`0 Б`, `RC-108` при случайном вызове)** |
+
+### Каталог опциональных пакетов по выбору (`packs`)
+| ID пакета | Ветки / возможности внутри | Кому нужен | Можно включать в рантайме (`enablePack`)? |
+|---|---|---|---|
+| `pack:multiplayer` | `net.*` (`Rollback P2P` + WebRTC/WS) | Кооп, PvP, комнаты по коду | Да |
+| `pack:destruction` | `destroy.*` (опоры, обломки, огонь/вода) | Шутеры, симуляторы катастроф, песочницы | Да |
+| `pack:narrative` | `story.*` + `quest.*` (ИИ-Режиссёр, квесты, фракции) | Выживалки, RPG, стратегии с событиями | Да |
+| `pack:mods` | `mod.*` (`.ratmod.rcw2`, `ModQuota`, `Hot-Reload`) | Песочницы и игры с мастерской игроков | Да |
+| `pack:cinema` | `cutscene.*` (рельсы камеры, таймлапсы, авто-обложки) | Градострои, сюжетные игры, трейлеры | Да |
+| `pack:styles` | `shader.*` (PS1, Cel, CRT, тепловизор, голограммы) | Стилизованные 2D/3D игры | Да |
+| `pack:voice` | `voice.*` (формантный синтез, рация, липсинк) | Диалоговые, сюжетные, тактические игры | Да |
+| `pack:ecology` | `eco.*` (эрозия, сезоны, лёд, фауна на 1 Гц) | Карты мира, выживалки, гидросимуляторы | Да |
+| `pack:companion` | `coopAi.*` (локальный ИИ-напарник) | Выживалки, тактика, кооп с ботом | Да |
+| `pack:assist` | `assist.*` (умный наставник, дальтонизм, субтитры, 1 рука) | Любая игра (может включать сам игрок в настройках!) | Да (рекомендуется) |
+| `pack:webgpu` | Аппаратные `Compute Shaders` (вода, толпы, частицы — `10×–30×` с автооткатом на WebGL2/растр) | Тяжёлые 3D-миры и массовые симуляции | Да (с автодетектом GPU) |
+| `pack:wasm-accel` | Компактный (`< 25 КБ`) WASM+SIMD ускоритель (`Greedy Meshing`, `SVDAG`, `SWE`, `FastCDC`/`HPA*`, битовое совпадение с JS) | Огромные воксельные и гидрокарты | Да (с автооткатом на JS) |
+| `pack:studio` | `RatStudio` + `save.timeline*` + `test.autoBalance` + `build.exportSingleHtml` | Только разработка, отладка и упаковка | Только в dev-режиме (`0 Б` в релизе!) |
+| `pack:ai-team` | `think.*`, `guess.*`, `comm.*`, `bugs.*`, `bridge.*` | Совместная работа нескольких нейросетей и мосты с другими движками | Только когда нужна ИИ-команда или мост |
+
+### Встроенные в ядро (`core`) механизмы плавности и надёжности (v0.9-draft)
+- **`stream.setPowerProfile({ mode: 'eco' | 'balanced' | 'turbo' | 'auto' })`** — задаёт потолок `CoreGovernor` (`40 %` / `60 %` / `75 %` CPU + мгновенный сон при сворачивании вкладки и термоохлаждение, `F-175`, `A-119`).
+- **`stream.setDynamicResolution({ enabled: true, minScale: 0.55, maxScale: 1.0, targetFps: 60 })`** — авто-масштаб 3D-буфера при сохранении 100 % чёткого UI (`F-171`, `A-115`).
+- **`stream.prewarmShaders({ budgetMsPerFrame: 2, cacheIndexedDb: true })`** — асинхронный прогрев шейдеров и старт `< 120 мс` без микрофризов (`F-172`, `A-116`).
+- **`watch.enableSelfHealing({ recoverWebGLContext: true, isolateFaultyModule: true })`** — восстановление потерянного WebGL-контекста прямо из `AssetVault` + изоляция сбойных модулей без чёрного экрана (`F-173`, `A-117`, `RC-905`, `RC-906`).
+- **`input.enableCoalescedZeroLag({ offscreenRender: 'auto' })`** — чтение `getCoalescedEvents()` перед кадром + рендер в `OffscreenCanvas` воркере (`F-174`, `A-118`).
+
+### Пример подключения (чисто, в 1 объект конфигурации)
+```js
+// 1) Лёгкая 2D-аркада (~45 КБ, 0 лишних модулей!)
+const arcade = createEngine({ preset: 'minimal-2d', modules: ['audio', 'fx'], packs: ['pack:assist'] });
+
+// 2) Градострой с таймлапсами, сезонами и модами (без шутерного мультиплеера и голосов)
+const city = createEngine({
+  preset: 'citybuilder',
+  packs: ['pack:ecology', 'pack:cinema', 'pack:mods', 'pack:assist'],
+});
+
+// 3) Выключенный модуль защищён кодом RC-108 с готовым autoFixHint:
+// city.tools.net.createRoom(...) -> { ok: false, code: 'RC-108', autoFixHint: "Добавь 'pack:multiplayer' в packs или вызови engine.enablePack('pack:multiplayer')" }
+```
+
+### Готовые пресеты (`preset`)
+- `minimal-2d` — только `core` (идеально для микроигр `< 60 КБ`);
+- `arcade-3d` — `core` + `anim`, `phys`, `fx`, `audio`;
+- `shooter-fps` — `core` + `anim`, `phys`, `nav`, `fx`, `ai`, `audio`, `hear` *(опционально: `pack:destruction`, `pack:multiplayer`, `pack:styles`, `pack:companion`)*;
+- `citybuilder` — `core` + `nav`, `env`, `sim`, `audio` *(опционально: `pack:ecology`, `pack:cinema`, `pack:mods`, `pack:narrative`)*;
+- `survival` — `core` + `anim`, `phys`, `nav`, `env`, `fx`, `ai`, `sim`, `audio`, `hear` *(опционально: `pack:narrative`, `pack:destruction`, `pack:ecology`, `pack:companion`)*;
+- `multiplayer-sandbox` — `core` + `phys`, `nav`, `fx`, `audio` + `pack:multiplayer`, `pack:mods`;
+- `ai-dev-full` — всё + `pack:studio` + `pack:ai-team` *(для разработки и команд ИИ)*.
+
+---
+
+# Шпаргалка: какие ветки и пакеты комбинировать «на любой случай жизни»
+
+| Тип игры / задачи | Пресет + стандартные модули | Опциональные пакеты по выбору (`packs`) |
+|---|---|---|
+| **Карта страны / градострой** *(как РАТГРАД)* | `citybuilder` (`core` + `nav`, `env`, `sim`, `audio`) | `+ pack:ecology`, `+ pack:cinema` (таймлапсы), `+ pack:narrative`, `+ pack:mods` |
+| **3D-шутер от 1-го лица** *(как СЕКТОР «ПЕПЕЛ»)* | `shooter-fps` (`core` + `anim`, `phys`, `nav`, `fx`, `ai`, `audio`, `hear`) | `+ pack:destruction`, `+ pack:multiplayer`, `+ pack:styles`, `+ pack:voice` (рация), `+ pack:companion` |
+| **Пиксельная зомби-выживалка** *(как DEAD DISTRICT)* | `survival` (`core` + `anim`, `phys`, `nav`, `env`, `fx`, `ai`, `sim`, `audio`, `hear`) | `+ pack:narrative` (AI Director + квесты), `+ pack:destruction` (пожары), `+ pack:ecology` (сезоны/лёд), `+ pack:styles` |
+| **3D-симулятор ГЭС / экономики / дорог** *(КАСКАД, ТРАССА)* | `citybuilder` + `phys` | `+ pack:ecology` (эрозия/лёд), `+ pack:destruction` (аварии), `+ pack:cinema` |
+| **Автосимулятор / 3D-шоурум** *(ЕВРОТРАК, ГАРАЖ 3D)* | `arcade-3d` + `env` | `+ pack:mods` (свои машины), `+ pack:cinema` (авто-обложки), `+ pack:styles` |
+| **Симулятор жизни / текстовые и сюжетные игры** *(1 ИЗ 8 МЛРД)* | `minimal-2d` + `sim`, `ai`, `audio` | `+ pack:narrative`, `+ pack:voice`, `+ pack:assist` |
+| **Мультиплеер / песочница с модами и публикацией** | `multiplayer-sandbox` | `+ pack:destruction`, `+ pack:cinema`, `+ pack:studio` (dev) |
+| **Команда из нескольких нейросетей** | `ai-dev-full` | `pack:ai-team` + `pack:studio` + нужные игровые пакеты |

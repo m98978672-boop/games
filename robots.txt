@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# Яндекс: игнорировать служебные параметры сортировки/фильтрации, чтобы не плодить дубли
+Clean-param: sort&cat&importGame /games/
+
+Sitemap: https://m98978672-boop.github.io/games/sitemap.xml
