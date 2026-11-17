@@ -2,6 +2,7 @@
 // Автотесты усиленного антивируса Games (v1.1), CI-сканера заявок,
 // новостной ленты по 6 категориям и RSS/Atom автопостера.
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -109,14 +110,43 @@ assert.equal(
   'Shortened URL in news item must be blocked'
 );
 
-// 5. Проверка site/news-feed.json (6 категорий, автопост, 0 угроз)
+// 5. Проверка site/news-feed.json (19 верифицированных статей, 6 категорий, уникальные коды, фото, доказательства, комментарии, 0 угроз)
 const feed = JSON.parse(await readFile(path.join(repoRoot, 'site/news-feed.json'), 'utf8'));
 assert.equal(feed.autoPost?.enabled, true, 'autoPost must be enabled in news-feed.json');
-assert.ok(Array.isArray(feed.items) && feed.items.length >= 10, 'news-feed.json must have at least 10 seed articles');
+assert.ok(Array.isArray(feed.items) && feed.items.length >= 19, 'news-feed.json must have at least 19 verified articles');
 const presentCats = new Set(feed.items.map((x) => x.category));
 for (const reqCat of ['games', 'tech', 'science', 'world', 'security', 'facts']) {
   assert.ok(presentCats.has(reqCat), `news-feed.json must cover category "${reqCat}"`);
 }
+const seenCodes = new Set();
+const commentTools = new Set();
+for (const item of feed.items) {
+  assert.match(String(item.code || ''), /^[A-Z]-\d{3}$/, `Article ${item.id} must have short code like G-101`);
+  assert.equal(seenCodes.has(item.code), false, `Duplicate news code: ${item.code}`);
+  seenCodes.add(item.code);
+
+  assert.ok(item.image && /^site\/assets\//.test(item.image), `Article ${item.code} must declare local site/assets/ image`);
+  assert.equal(existsSync(path.join(repoRoot, item.image)), true, `Image file for ${item.code} must exist on disk: ${item.image}`);
+
+  assert.equal(item.factCheck?.verified, true, `Article ${item.code} must carry verified factCheck`);
+  assert.ok(Array.isArray(item.proofs) && item.proofs.length >= 1, `Article ${item.code} must include at least 1 proof link`);
+  for (const proof of item.proofs) {
+    assert.match(String(proof.url || ''), /^https:\/\//, `Proof URL for ${item.code} must be HTTPS`);
+  }
+
+  assert.ok(Array.isArray(item.comments) && item.comments.length >= 1, `Article ${item.code} must have at least 1 owner comment`);
+  for (const c of item.comments) {
+    assert.ok(c.author && c.text && c.tool, `Comment on ${item.code} must specify author, tool, and text`);
+    commentTools.add(c.tool);
+  }
+}
+assert.ok(commentTools.size >= 6, `Owner comments must span at least 6 connected tools (found ${commentTools.size})`);
+
+const newsHubSrc = await readFile(path.join(repoRoot, 'site/news-hub.js'), 'utf8');
+for (const token of ['findArticleByIdOrCode', 'news-code-chip', 'news-reader-figure', 'news-proofs-box', 'addCommentForItem', 'news-comments-section']) {
+  assert.ok(newsHubSrc.includes(token), `site/news-hub.js must implement ${token}`);
+}
+
 const newsScanResults = await scanNewsFeedFile(av);
 assert.equal(newsScanResults.filter((r) => r.verdict === 'blocked').length, 0, 'All news-feed.json items must pass antivirus');
 

@@ -155,12 +155,15 @@ export function makeSafeNewsItem(raw, source) {
   const readMin = Math.max(1, Math.min(8, Math.round(words / 130) || 1));
 
   const idHash = crypto.createHash('sha1').update(`${source.id}|${raw.link}`).digest('hex').slice(0, 10);
+  const codeNum = 700 + (parseInt(idHash.slice(0, 4), 16) % 299);
+  const catPrefix = { games: 'G', tech: 'T', science: 'S', world: 'W', security: 'C', facts: 'F' }[source.category] || 'A';
   const tags = (Array.isArray(raw.tags) && raw.tags.length ? raw.tags : [source.name])
     .map((t) => t.slice(0, 26))
     .slice(0, 4);
 
   return {
     id: `auto-${source.id}-${idHash}`,
+    code: `${catPrefix}-${codeNum}`,
     category: source.category,
     title,
     summary,
@@ -172,6 +175,8 @@ export function makeSafeNewsItem(raw, source) {
     readMin,
     icon: source.icon,
     accent: source.accent,
+    proofs: [{ label: `Первоисточник (${source.name})`, url: raw.link }],
+    comments: [],
     pinned: false,
     autoPosted: true,
   };

@@ -1,8 +1,9 @@
 /* ==========================================================================
    Games — Вкладка «Новости» (site/news-hub.js)
-   Мультикатегорийная лента (игры, технологии/ИИ, наука/космос, мир,
-   кибербезопасность, факты), тизер на главной, читалка, закладки, лайки,
-   живой статус автопоста и антивирусная проверка пользовательских постов.
+   Мультикатегорийная лента с короткими кодами поиска (G-101..F-603),
+   реальными локальными фото, блоком фактчека и доказательств,
+   комментариями (включая синхронизацию с внешними инструментами + живую
+   форму с проверкой GamesAntivirus), закладками, лайками и автопостом.
    ========================================================================== */
 (function () {
   'use strict';
@@ -11,6 +12,7 @@
   const STORAGE_LIKES = 'games_news_likes_v1';
   const STORAGE_READ = 'games_news_read_v1';
   const STORAGE_LOCAL_POSTS = 'games_news_local_posts_v1';
+  const STORAGE_USER_COMMENTS = 'games_news_comments_v1';
 
   const DEFAULT_CATEGORIES = [
     { id: 'all', label: 'Все темы', icon: '✨' },
@@ -19,7 +21,7 @@
     { id: 'science', label: 'Наука и космос', icon: '🚀' },
     { id: 'world', label: 'Мир и культура', icon: '🌍' },
     { id: 'security', label: 'Кибербезопасность', icon: '🛡️' },
-    { id: 'facts', label: 'Факты и подборки', icon: '⚡' },
+    { id: 'facts', label: 'Факты и рекорды', icon: '⚡' },
   ];
 
   const CATEGORY_ACCENT = {
@@ -60,6 +62,13 @@
     const ts = Date.parse(isoStr || '');
     if (!Number.isFinite(ts)) return 'Недавно';
     const diffMin = Math.floor((Date.now() - ts) / 60000);
+    if (diffMin < 0) {
+      try {
+        return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(ts));
+      } catch {
+        return String(isoStr).slice(0, 10);
+      }
+    }
     if (diffMin < 2) return 'Только что';
     if (diffMin < 60) return `${diffMin} мин назад`;
     const diffH = Math.floor(diffMin / 60);
@@ -68,7 +77,7 @@
     if (diffD === 1) return 'Вчера';
     if (diffD < 7) return `${diffD} дн назад`;
     try {
-      return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short' }).format(new Date(ts));
+      return new Intl.DateTimeFormat('ru-RU', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(ts));
     } catch {
       return String(isoStr).slice(0, 10);
     }
@@ -85,13 +94,29 @@
     }
   }
 
+  function normalizeCode(val) {
+    return String(val || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
   const rootPrefix = document.body?.getAttribute('data-root') || '';
   const feedUrl = `${rootPrefix}site/news-feed.json`;
 
+  function resolveAssetUrl(relPath) {
+    const raw = String(relPath || '').trim();
+    if (!raw) return '';
+    if (!/^site\/assets\/[a-z0-9/_.-]+\.(jpg|jpeg|png|webp|svg)$/i.test(raw)) return '';
+    if (rootPrefix === '../') {
+      return raw.replace(/^site\//i, '');
+    }
+    return `${rootPrefix}${raw}`;
+  }
+
+  const storedComments = safeReadJson(STORAGE_USER_COMMENTS, {});
   const state = {
     categories: DEFAULT_CATEGORIES.slice(),
     remoteItems: [],
     localPosts: Array.isArray(safeReadJson(STORAGE_LOCAL_POSTS, [])) ? safeReadJson(STORAGE_LOCAL_POSTS, []) : [],
+    userComments: storedComments && typeof storedComments === 'object' && !Array.isArray(storedComments) ? storedComments : {},
     autoPost: null,
     updatedAt: '',
     activeCategory: 'all',
@@ -116,12 +141,44 @@
     return out;
   }
 
+  function getItemComments(item) {
+    const seeded = Array.isArray(item?.comments) ? item.comments : [];
+    const keyById = state.userComments[item?.id];
+    const keyByCode = item?.code ? state.userComments[item.code] : null;
+    const local = [
+      ...(Array.isArray(keyById) ? keyById : []),
+      ...(Array.isArray(keyByCode) ? keyByCode : []),
+    ];
+    const seen = new Set();
+    const all = [];
+    for (const c of [...seeded, ...local]) {
+      if (!c || !c.text) continue;
+      const cid = c.id || `${c.author}|${c.createdAt}|${c.text.slice(0, 24)}`;
+      if (seen.has(cid)) continue;
+      seen.add(cid);
+      all.push(c);
+    }
+    return all;
+  }
+
+  function findArticleByIdOrCode(idOrCode) {
+    const raw = String(idOrCode || '').trim();
+    if (!raw) return null;
+    const items = getAllItems();
+    const exactId = items.find((it) => it.id === raw);
+    if (exactId) return exactId;
+    const norm = normalizeCode(raw);
+    if (!norm) return null;
+    return items.find((it) => normalizeCode(it.code) === norm) || null;
+  }
+
   function getCategoryMeta(catId) {
     return state.categories.find((c) => c.id === catId) || { id: catId, label: 'Новости', icon: '📰' };
   }
 
   function getFilteredItems() {
     const q = state.query.trim().toLowerCase();
+    const qCode = normalizeCode(state.query);
     let list = getAllItems();
 
     if (state.activeCategory === 'bookmarks') {
@@ -132,7 +189,12 @@
 
     if (q) {
       list = list.filter((it) => {
+        const itemCodeNorm = normalizeCode(it.code);
+        if (qCode && itemCodeNorm && itemCodeNorm.includes(qCode)) {
+          return true;
+        }
         const hay = [
+          it.code || '',
           it.title || '',
           it.summary || '',
           ...(Array.isArray(it.tags) ? it.tags : []),
@@ -140,12 +202,22 @@
         ].join(' ').toLowerCase();
         return hay.includes(q);
       });
+
+      if (qCode) {
+        list = list.slice().sort((a, b) => {
+          const exactA = normalizeCode(a.code) === qCode ? 2 : (normalizeCode(a.code).startsWith(qCode) ? 1 : 0);
+          const exactB = normalizeCode(b.code) === qCode ? 2 : (normalizeCode(b.code).startsWith(qCode) ? 1 : 0);
+          if (exactB !== exactA) return exactB - exactA;
+          return Date.parse(b.publishedAt || 0) - Date.parse(a.publishedAt || 0);
+        });
+        return list;
+      }
     }
 
     if (state.sort === 'popular') {
       list = list.slice().sort((a, b) => {
-        const scoreA = (state.likes.has(a.id) ? 3 : 0) + (a.featured ? 2 : 0) + (a.pinned ? 1 : 0);
-        const scoreB = (state.likes.has(b.id) ? 3 : 0) + (b.featured ? 2 : 0) + (b.pinned ? 1 : 0);
+        const scoreA = (state.likes.has(a.id) ? 3 : 0) + getItemComments(a).length + (a.featured ? 2 : 0) + (a.pinned ? 1 : 0);
+        const scoreB = (state.likes.has(b.id) ? 3 : 0) + getItemComments(b).length + (b.featured ? 2 : 0) + (b.pinned ? 1 : 0);
         if (scoreB !== scoreA) return scoreB - scoreA;
         return Date.parse(b.publishedAt || 0) - Date.parse(a.publishedAt || 0);
       });
@@ -173,12 +245,28 @@
   function renderStatusBar() {
     const statusEl = document.getElementById('news-autopost-status');
     if (!statusEl) return;
-    const total = getAllItems().length;
+    const all = getAllItems();
+    const total = all.length;
+    const verifiedCount = all.filter((it) => it.factCheck && it.factCheck.verified).length;
     const ap = state.autoPost || {};
     const interval = ap.intervalHours || 6;
     const updated = formatRelativeDate(ap.lastRunAt || state.updatedAt);
-    const sources = ap.sourcesCount || 11;
-    statusEl.textContent = `⚡ Автопост каждые ${interval} ч · ${sources} источников · ${total} материалов · обновлено: ${updated}`;
+    statusEl.textContent = `✓ ${verifiedCount} проверенных статей с кодами и фото · ⚡ Автопост каждые ${interval} ч · всего ${total} · обновлено: ${updated}`;
+  }
+
+  function copyCodeText(code, btn) {
+    const clean = String(code || '').trim();
+    if (!clean) return;
+    const orig = btn.textContent;
+    const done = () => {
+      btn.textContent = `✓ ${clean}`;
+      setTimeout(() => { btn.textContent = orig; }, 1600);
+    };
+    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+      navigator.clipboard.writeText(clean).then(done).catch(done);
+    } else {
+      done();
+    }
   }
 
   function renderTeaserStrip() {
@@ -192,7 +280,6 @@
       return;
     }
 
-    // Берём 3 самые свежие статьи из разных категорий, чтобы тизер на главной сразу показывал разнообразие
     const picked = [];
     const usedCats = new Set();
     for (const item of all) {
@@ -213,11 +300,15 @@
         const cat = getCategoryMeta(item.category);
         const card = el('button', 'news-teaser-card');
         card.type = 'button';
-        card.setAttribute('data-open-news-article', item.id);
+        card.setAttribute('data-open-news-article', item.code || item.id);
 
         const top = el('span', 'news-teaser-top');
-        top.appendChild(el('span', `news-cat-chip accent-${item.accent || CATEGORY_ACCENT[item.category] || 'blue'}`, `${cat.icon} ${cat.label}`));
-        top.appendChild(el('span', 'news-teaser-time', `${item.readMin || 2} мин`));
+        const leftChips = el('span', 'news-teaser-chips');
+        if (item.code) {
+          leftChips.appendChild(el('span', 'news-code-chip is-compact', item.code));
+        }
+        leftChips.appendChild(el('span', `news-cat-chip accent-${item.accent || CATEGORY_ACCENT[item.category] || 'blue'}`, `${cat.icon} ${cat.label}`));
+        top.append(leftChips, el('span', 'news-teaser-time', `${item.readMin || 2} мин`));
 
         const title = el('strong', 'news-teaser-title', item.title);
         card.append(top, title);
@@ -266,11 +357,43 @@
     const isLiked = state.likes.has(item.id);
     const isSaved = state.bookmarks.has(item.id);
     const isRead = state.readIds.has(item.id);
+    const imgSrc = resolveAssetUrl(item.image);
+    const commentsCount = getItemComments(item).length;
+    const proofsCount = Array.isArray(item.proofs) ? item.proofs.length : 0;
 
     const card = el('article', `${isHero ? 'news-hero-card' : 'news-card'} accent-${accent}${isRead ? ' is-read' : ''}`);
+    if (item.code) card.setAttribute('data-news-code', item.code);
 
-    const banner = el('div', 'news-card-banner');
-    banner.appendChild(el('span', 'news-card-icon', item.icon || cat.icon));
+    const banner = el('div', `news-card-banner${imgSrc ? ' has-photo' : ''}`);
+    if (imgSrc) {
+      const img = document.createElement('img');
+      img.className = 'news-card-photo';
+      img.src = imgSrc;
+      img.alt = item.imageCaption || item.title;
+      img.loading = isHero ? 'eager' : 'lazy';
+      img.decoding = 'async';
+      banner.appendChild(img);
+      banner.appendChild(el('div', 'news-card-photo-scrim'));
+    } else {
+      banner.appendChild(el('span', 'news-card-icon', item.icon || cat.icon));
+    }
+
+    const topOverlay = el('div', 'news-banner-top');
+    if (item.code) {
+      const codeBtn = el('button', 'news-code-chip', `🔑 ${item.code}`);
+      codeBtn.type = 'button';
+      codeBtn.title = `Скопировать короткий код ${item.code} для быстрого поиска`;
+      codeBtn.setAttribute('aria-label', `Скопировать код новости ${item.code}`);
+      codeBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        copyCodeText(item.code, codeBtn);
+      });
+      topOverlay.appendChild(codeBtn);
+    }
+    if (item.factCheck && item.factCheck.verified) {
+      topOverlay.appendChild(el('span', 'news-verified-chip', proofsCount > 0 ? `✓ Фактчек (${proofsCount})` : '✓ Фактчек'));
+    }
+
     const bannerBadges = el('div', 'news-banner-badges');
     bannerBadges.appendChild(el('span', `news-cat-chip accent-${accent}`, `${cat.icon} ${cat.label}`));
     if (item.autoPosted) {
@@ -278,7 +401,7 @@
     } else if (item.isLocal) {
       bannerBadges.appendChild(el('span', 'news-auto-chip is-local', '✍ Мой пост'));
     }
-    banner.appendChild(bannerBadges);
+    banner.append(topOverlay, bannerBadges);
 
     const body = el('div', 'news-card-body');
     const meta = el('div', 'news-card-meta');
@@ -287,7 +410,7 @@
       el('span', '', '·'),
       el('span', '', formatRelativeDate(item.publishedAt)),
       el('span', '', '·'),
-      el('span', '', `${item.readMin || 2} мин чтения`)
+      el('span', '', `${item.readMin || 2} мин`)
     );
 
     const heading = el(isHero ? 'h2' : 'h3', 'news-card-title', item.title);
@@ -299,11 +422,17 @@
     });
 
     const foot = el('div', 'news-card-foot');
-    const readBtn = el('button', 'btn btn-steam-blue btn-sm', isHero ? '📖 Читать статью →' : 'Читать →');
+    const readBtn = el('button', 'btn btn-steam-blue btn-sm', isHero ? '📖 Читать и доказательства →' : 'Читать →');
     readBtn.type = 'button';
-    readBtn.setAttribute('data-open-news-article', item.id);
+    readBtn.setAttribute('data-open-news-article', item.code || item.id);
 
     const actions = el('div', 'news-card-actions');
+    const commentsPill = el('button', 'news-mini-btn', `💬 ${commentsCount}`);
+    commentsPill.type = 'button';
+    commentsPill.title = 'Открыть комментарии к новости';
+    commentsPill.setAttribute('aria-label', `Комментарии: ${commentsCount}`);
+    commentsPill.setAttribute('data-open-news-article', item.code || item.id);
+
     const likeBtn = el('button', `news-mini-btn${isLiked ? ' is-active' : ''}`, isLiked ? '👍 1' : '👍');
     likeBtn.type = 'button';
     likeBtn.title = 'Нравится';
@@ -316,7 +445,7 @@
     bmBtn.setAttribute('aria-label', 'Сохранить в закладки');
     bmBtn.setAttribute('data-news-bookmark', item.id);
 
-    actions.append(likeBtn, bmBtn);
+    actions.append(commentsPill, likeBtn, bmBtn);
     foot.append(readBtn, actions);
 
     body.append(meta, heading, summary, tagsRow, foot);
@@ -324,7 +453,7 @@
 
     card.addEventListener('click', (ev) => {
       if (ev.target.closest('button, a')) return;
-      openArticle(item.id);
+      openArticle(item.code || item.id);
     });
 
     return card;
@@ -361,9 +490,163 @@
     }
   }
 
-  function openArticle(articleId, opts) {
+  function buildProofsSection(item) {
+    const proofs = (Array.isArray(item.proofs) ? item.proofs : [])
+      .map((p) => ({ label: String(p?.label || '').trim(), url: safeExternalUrl(p?.url) }))
+      .filter((p) => p.url);
+    const hasFactCheck = Boolean(item.factCheck && item.factCheck.verified);
+    if (!hasFactCheck && !proofs.length) return null;
+
+    const box = el('section', 'news-proofs-box');
+    const head = el('div', 'news-proofs-head');
+    head.append(
+      el('strong', 'news-proofs-title', '✓ Проверка фактов и доказательства'),
+      item.factCheck?.checkedAt ? el('span', 'news-proofs-date', `Проверено: ${item.factCheck.checkedAt}`) : el('span')
+    );
+    box.appendChild(head);
+
+    if (item.factCheck?.method) {
+      box.appendChild(el('p', 'news-proofs-method', item.factCheck.method));
+    }
+
+    if (proofs.length) {
+      const list = el('ul', 'news-proofs-list');
+      proofs.forEach((p) => {
+        const li = el('li');
+        const a = el('a', 'news-proof-link', `${p.label || p.url} ↗`);
+        a.href = p.url;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        li.appendChild(a);
+        list.appendChild(li);
+      });
+      box.appendChild(list);
+    }
+
+    return box;
+  }
+
+  function addCommentForItem(item, authorRaw, textRaw) {
+    const author = String(authorRaw || '').trim().slice(0, 48) || 'Читатель Games';
+    const text = String(textRaw || '').trim().slice(0, 600);
+    if (text.length < 3) {
+      return { ok: false, error: 'Напишите комментарий минимум из 3 символов.' };
+    }
+
+    const av = window.GamesAntivirus;
+    if (av && typeof av.scanNewsItemSync === 'function') {
+      const check = av.scanNewsItemSync({
+        title: `Комментарий ${author} к ${item.code || item.id}`,
+        summary: text,
+        body: [text],
+        sourceUrl: '',
+      });
+      if (!check.ok) {
+        return { ok: false, error: `🛑 Антивирус заблокировал комментарий: ${check.reasons.join('; ')}` };
+      }
+    }
+
+    const entry = {
+      id: `ucom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      author,
+      tool: 'Games Портал',
+      toolUrl: '',
+      text,
+      createdAt: new Date().toISOString(),
+    };
+
+    const list = Array.isArray(state.userComments[item.id]) ? state.userComments[item.id].slice() : [];
+    list.push(entry);
+    state.userComments[item.id] = list.slice(-50);
+    safeWriteJson(STORAGE_USER_COMMENTS, state.userComments);
+    return { ok: true, entry };
+  }
+
+  function buildCommentsSection(item) {
+    const section = el('section', 'news-comments-section');
+    const comments = getItemComments(item);
+
+    const head = el('div', 'news-comments-head');
+    head.append(
+      el('h3', 'news-comments-title', `💬 Комментарии (${comments.length})`),
+      el('span', 'news-comments-sync-note', 'Синхронизировано с облачными инструментами · проверено GamesAntivirus')
+    );
+    section.appendChild(head);
+
+    const listWrap = el('div', 'news-comments-list');
+    if (!comments.length) {
+      listWrap.appendChild(el('p', 'news-comments-empty', 'Пока нет комментариев — будьте первым!'));
+    } else {
+      comments.forEach((c) => {
+        const card = el('div', 'news-comment-card');
+        const top = el('div', 'news-comment-top');
+        top.appendChild(el('strong', 'news-comment-author', c.author || 'Читатель Games'));
+
+        const toolLabel = String(c.tool || '').trim();
+        const safeToolUrl = safeExternalUrl(c.toolUrl);
+        if (toolLabel) {
+          if (safeToolUrl) {
+            const link = el('a', 'news-comment-tool-badge', `☁ ${toolLabel} ↗`);
+            link.href = safeToolUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            top.appendChild(link);
+          } else {
+            top.appendChild(el('span', 'news-comment-tool-badge', `💬 ${toolLabel}`));
+          }
+        }
+        top.appendChild(el('span', 'news-comment-time', formatRelativeDate(c.createdAt)));
+
+        const body = el('p', 'news-comment-text', c.text);
+        card.append(top, body);
+        listWrap.appendChild(card);
+      });
+    }
+    section.appendChild(listWrap);
+
+    const form = el('form', 'news-comment-form');
+    const row = el('div', 'news-comment-form-row');
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'news-comment-input';
+    nameInput.placeholder = 'Ваше имя (например, Максим)';
+    nameInput.maxLength = 48;
+    nameInput.setAttribute('aria-label', 'Ваше имя');
+
+    const submitBtn = el('button', 'btn btn-steam-blue btn-sm', '💬 Отправить');
+    submitBtn.type = 'submit';
+    row.append(nameInput, submitBtn);
+
+    const textArea = document.createElement('textarea');
+    textArea.className = 'news-comment-textarea';
+    textArea.rows = 2;
+    textArea.maxLength = 600;
+    textArea.placeholder = `Добавить комментарий к новости ${item.code || ''}…`;
+    textArea.setAttribute('aria-label', 'Текст комментария');
+
+    const status = el('div', 'form-status');
+    form.append(textArea, row, status);
+
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      const res = addCommentForItem(item, nameInput.value, textArea.value);
+      if (!res.ok) {
+        status.textContent = res.error;
+        status.className = 'form-status is-error';
+        return;
+      }
+      openArticle(item.code || item.id, { updateHash: false });
+    });
+
+    section.appendChild(form);
+    return section;
+  }
+
+  function openArticle(articleIdOrCode, opts) {
     const items = getAllItems();
-    const idx = items.findIndex((it) => it.id === articleId);
+    const found = findArticleByIdOrCode(articleIdOrCode);
+    if (!found) return;
+    const idx = items.findIndex((it) => it.id === found.id);
     if (idx < 0) return;
 
     const item = items[idx];
@@ -381,11 +664,19 @@
     const isLiked = state.likes.has(item.id);
     const isSaved = state.bookmarks.has(item.id);
     const safeUrl = safeExternalUrl(item.sourceUrl);
+    const imgSrc = resolveAssetUrl(item.image);
 
     const wrap = el('div', 'news-reader-wrap');
 
     const header = el('div', `news-reader-head accent-${accent}`);
     const topMeta = el('div', 'news-reader-meta');
+    if (item.code) {
+      const codeBtn = el('button', 'news-code-chip', `🔑 Код: ${item.code}`);
+      codeBtn.type = 'button';
+      codeBtn.title = `Скопировать код ${item.code}`;
+      codeBtn.addEventListener('click', () => copyCodeText(item.code, codeBtn));
+      topMeta.appendChild(codeBtn);
+    }
     topMeta.append(
       el('span', `news-cat-chip accent-${accent}`, `${cat.icon} ${cat.label}`),
       el('span', '', `${item.sourceName || 'Games'} · ${formatRelativeDate(item.publishedAt)} · ${item.readMin || 2} мин чтения`)
@@ -393,38 +684,61 @@
     const h2 = el('h2', 'news-reader-title', item.title);
     h2.id = 'news-reader-title';
     header.append(topMeta, h2);
+    wrap.appendChild(header);
+
+    if (imgSrc) {
+      const fig = el('figure', 'news-reader-figure');
+      const img = document.createElement('img');
+      img.className = 'news-reader-photo';
+      img.src = imgSrc;
+      img.alt = item.imageCaption || item.title;
+      fig.appendChild(img);
+      if (item.imageCaption || item.imageCredit) {
+        const cap = el('figcaption', 'news-reader-figcaption');
+        if (item.imageCaption) cap.appendChild(el('span', '', item.imageCaption));
+        if (item.imageCredit) cap.appendChild(el('span', 'news-reader-credit', `Фото: ${item.imageCredit}`));
+        fig.appendChild(cap);
+      }
+      wrap.appendChild(fig);
+    }
 
     const articleBody = el('div', 'news-reader-body');
     const paragraphs = Array.isArray(item.body) && item.body.length ? item.body : [item.summary || ''];
     paragraphs.forEach((p) => {
       articleBody.appendChild(el('p', '', p));
     });
+    wrap.appendChild(articleBody);
+
+    const proofsBox = buildProofsSection(item);
+    if (proofsBox) wrap.appendChild(proofsBox);
 
     const tags = el('div', 'news-tags-row');
     (Array.isArray(item.tags) ? item.tags : []).forEach((t) => tags.appendChild(el('span', 'news-tag', `#${t}`)));
+    wrap.appendChild(tags);
 
     const toolbar = el('div', 'news-reader-actions');
     const likeBtn = el('button', `btn btn-steam-ghost btn-sm${isLiked ? ' is-active' : ''}`, isLiked ? '👍 Понравилось' : '👍 Интересно');
     likeBtn.type = 'button';
     likeBtn.addEventListener('click', () => {
       toggleLike(item.id);
-      openArticle(item.id, { updateHash: false });
+      openArticle(item.code || item.id, { updateHash: false });
     });
 
     const bmBtn = el('button', `btn btn-steam-ghost btn-sm${isSaved ? ' is-active' : ''}`, isSaved ? '🔖 В закладках' : '📑 В закладки');
     bmBtn.type = 'button';
     bmBtn.addEventListener('click', () => {
       toggleBookmark(item.id);
-      openArticle(item.id, { updateHash: false });
+      openArticle(item.code || item.id, { updateHash: false });
     });
 
-    const copyBtn = el('button', 'btn btn-steam-ghost btn-sm', '🔗 Скопировать ссылку');
+    const hashSlug = item.code || item.id;
+    const copyBtn = el('button', 'btn btn-steam-ghost btn-sm', item.code ? `🔗 Ссылка #${item.code}` : '🔗 Скопировать ссылку');
     copyBtn.type = 'button';
     copyBtn.addEventListener('click', () => {
-      const shareUrl = `${window.location.origin}${window.location.pathname}#news=${encodeURIComponent(item.id)}`;
+      const shareUrl = `${window.location.origin}${window.location.pathname}#news=${encodeURIComponent(hashSlug)}`;
       if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         navigator.clipboard.writeText(shareUrl).then(() => {
-          copyBtn.textContent = '✓ Ссылка скопирована';
+          copyBtn.textContent = `✓ Скопировано (${hashSlug})`;
         }).catch(() => {
           copyBtn.textContent = shareUrl;
         });
@@ -439,26 +753,29 @@
       srcLink.rel = 'noopener noreferrer';
       toolbar.appendChild(srcLink);
     }
+    wrap.appendChild(toolbar);
+
+    wrap.appendChild(buildCommentsSection(item));
 
     const pager = el('div', 'news-reader-pager');
     const prevItem = idx > 0 ? items[idx - 1] : null;
     const nextItem = idx < items.length - 1 ? items[idx + 1] : null;
     if (prevItem) {
-      const prevBtn = el('button', 'btn btn-steam-ghost btn-sm', `← ${prevItem.title.slice(0, 36)}…`);
+      const prevBtn = el('button', 'btn btn-steam-ghost btn-sm', `← ${prevItem.code ? `[${prevItem.code}] ` : ''}${prevItem.title.slice(0, 32)}…`);
       prevBtn.type = 'button';
-      prevBtn.addEventListener('click', () => openArticle(prevItem.id));
+      prevBtn.addEventListener('click', () => openArticle(prevItem.code || prevItem.id));
       pager.appendChild(prevBtn);
     } else {
       pager.appendChild(el('span'));
     }
     if (nextItem) {
-      const nextBtn = el('button', 'btn btn-steam-ghost btn-sm', `${nextItem.title.slice(0, 36)}… →`);
+      const nextBtn = el('button', 'btn btn-steam-ghost btn-sm', `${nextItem.code ? `[${nextItem.code}] ` : ''}${nextItem.title.slice(0, 32)}… →`);
       nextBtn.type = 'button';
-      nextBtn.addEventListener('click', () => openArticle(nextItem.id));
+      nextBtn.addEventListener('click', () => openArticle(nextItem.code || nextItem.id));
       pager.appendChild(nextBtn);
     }
+    wrap.appendChild(pager);
 
-    wrap.append(header, articleBody, tags, toolbar, pager);
     content.replaceChildren(wrap);
 
     modal.hidden = false;
@@ -466,7 +783,7 @@
 
     if (!opts || opts.updateHash !== false) {
       try {
-        window.history.replaceState(null, '', `#news=${encodeURIComponent(item.id)}`);
+        window.history.replaceState(null, '', `#news=${encodeURIComponent(hashSlug)}`);
       } catch (err) {
         if (err && typeof console !== 'undefined') console.debug(err.message);
       }
@@ -605,9 +922,19 @@
       }
     });
 
-    document.getElementById('news-search')?.addEventListener('input', (ev) => {
+    const searchInput = document.getElementById('news-search');
+    searchInput?.addEventListener('input', (ev) => {
       state.query = String(ev.target.value || '');
       renderNewsView();
+    });
+    searchInput?.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Enter') {
+        const exact = findArticleByIdOrCode(state.query);
+        if (exact) {
+          ev.preventDefault();
+          openArticle(exact.code || exact.id);
+        }
+      }
     });
 
     document.getElementById('news-sort')?.addEventListener('change', (ev) => {
@@ -642,8 +969,10 @@
 
       const catMeta = getCategoryMeta(category);
       const paragraphs = bodyRaw.split(/\n+/).map((p) => p.trim()).filter(Boolean).slice(0, 6);
+      const userNum = 901 + state.localPosts.length;
       const candidate = {
         id: `local-${Date.now().toString(36)}`,
+        code: `U-${userNum}`,
         category,
         title: title.slice(0, 140),
         summary: (summary || paragraphs[0] || title).slice(0, 220),
@@ -655,6 +984,7 @@
         readMin: Math.max(1, Math.round(bodyRaw.split(/\s+/).length / 130) || 1),
         icon: catMeta.icon,
         accent: CATEGORY_ACCENT[category] || 'blue',
+        comments: [],
         isLocal: true,
         autoPosted: false,
       };
@@ -693,6 +1023,8 @@
     loadFeed,
     openArticle,
     closeArticle,
+    findArticleByIdOrCode,
+    addCommentForItem,
     getAllItems,
   };
 

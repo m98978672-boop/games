@@ -1,5 +1,5 @@
 /* Games — лёгкий Service Worker для мгновенного старта и офлайн-витрины. */
-const CACHE_NAME = 'games-store-v7';
+const CACHE_NAME = 'games-store-v8';
 const PRECACHE = [
   './',
   './index.html',
