@@ -7,9 +7,12 @@ let browser;try{
  browser=await playwright.launch({executablePath:process.env.FRONTLINE_CHROMIUM_PATH||await chromium.executablePath(),args:chromium.args,headless:true,env:{...process.env,LD_LIBRARY_PATH:[libs,process.env.LD_LIBRARY_PATH].filter(Boolean).join(':')}});
  const page=await browser.newPage({viewport:{width:1280,height:900}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.goto(`http://127.0.0.1:${server.address().port}/frontline-command/index.html`,{waitUntil:'load'});await page.waitForFunction(()=>!!window.__frontline);
- await page.locator('[data-act="settings"]').click();const check=page.locator('#set-occupancy');assert.equal(await check.isChecked(),false);await check.check();
+ await page.locator('[data-act="settings"]').click();const check=page.locator('#set-occupancy');assert.equal(await check.isChecked(),true,'new settings default on');await check.uncheck();
+ assert.equal(await page.evaluate(()=>window.__frontline.cfg.flag('movement_occupancy_v1')),false);
+ await page.reload();await page.waitForFunction(()=>!!window.__frontline);assert.equal(await page.evaluate(()=>window.__frontline.cfg.flag('movement_occupancy_v1')),false,'explicit opt-out survives reload');
+ await page.locator('[data-act="settings"]').click();assert.equal(await check.isChecked(),false);await check.check();
  assert.equal(await page.evaluate(()=>window.__frontline.cfg.flag('movement_occupancy_v1')),true);
- await page.reload();await page.waitForFunction(()=>!!window.__frontline);assert.equal(await page.evaluate(()=>window.__frontline.cfg.flag('movement_occupancy_v1')),true,'setting survives reload');
+ await page.reload();await page.waitForFunction(()=>!!window.__frontline);assert.equal(await page.evaluate(()=>window.__frontline.cfg.flag('movement_occupancy_v1')),true,'opt-in survives reload');
  await page.evaluate(()=>{let g=window.__frontline.newGame({mode:'commander',aiVsAi:true,seed:7});g.paused=true;});
  const initial=await page.evaluate(()=>{const u=[...window.__frontline.game.units.values()].filter(v=>v.alive&&!v.downed);let overlaps=0;for(let i=0;i<u.length;i++)for(let j=i+1;j<u.length;j++)if(Math.hypot(u[i].x-u[j].x,u[i].y-u[j].y)<u[i].radius+u[j].radius)overlaps++;return {count:u.length,overlaps};});
  assert.equal(initial.count,52);assert.equal(initial.overlaps,0,'normal browser game spawns without overlap');

@@ -26,6 +26,7 @@ try{
     const {chooseVisionNavigation}=await import('/src/sim/vision_nav_policy.js');
     const {moveAlongFlow}=await import('/src/sim/units.js');
     const cfg=buildConfig(structuredClone(window.__frontline.cfg.raw));
+    cfg.flags.movement_occupancy_v1=false; // isolate selector and crowd flags
     const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.world.hasLOS=()=>true;
     const u=g.spawnUnit(0,'infantry',2000,2000);u.goal={x:2200,y:2000};
     const a=g.spawnUnit(0,'infantry',2050,2000);a.goal={...u.goal};const b=g.spawnUnit(0,'infantry',2080,2000);b.goal={...u.goal};

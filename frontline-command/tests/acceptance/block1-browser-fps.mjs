@@ -12,6 +12,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const quick = process.argv.includes('--quick');
 // Candidate workload only: it cannot satisfy the original acceptance scene.
 const warmed = process.argv.includes('--warmed');
+// Diagnostic comparison only; an override cannot pass default acceptance.
+const occupancyOff = process.argv.includes('--occupancy-off');
 const mime = { '.html': 'text/html', '.js': 'text/javascript', '.json': 'application/json',
   '.css': 'text/css', '.png': 'image/png', '.svg': 'image/svg+xml' };
 const server = http.createServer(async (request, response) => {
@@ -48,10 +50,13 @@ try {
     page.on('pageerror', (error) => errors.push(error.message));
     await page.goto(`http://127.0.0.1:${server.address().port}/index.html`, { waitUntil: 'load', timeout: 60_000 });
     await page.waitForFunction(() => !!window.__frontline, { timeout: 60_000 });
-    const result = await page.evaluate(async ({ target, quick, warmed }) => {
+    const result = await page.evaluate(async ({ target, quick, warmed, occupancyOff }) => {
       const { createPopulationMonitor } = await import('/tests/acceptance/population-monitor.js');
       const app = window.__frontline;
+      if (occupancyOff) app.cfg.flags.movement_occupancy_v1 = false;
       const game = app.newGame({ seed: 5, aiVsAi: true, difficulty: 'regular' });
+      // newGame reapplies saved UI settings, so retain the diagnostic override.
+      if (occupancyOff) app.cfg.flags.movement_occupancy_v1 = false;
       const renderer = app.renderer;
       const count = (f = null) => [...game.units.values()].filter((u) => u.alive && (f === null || u.faction === f)).length;
       // Candidate mode performs 5s of ordinary simulation before topping up;
@@ -142,7 +147,7 @@ try {
       const worstCount = Math.max(1, Math.ceil(sorted.length * 0.01));
       const worstTime = sorted.slice(0, worstCount).reduce((a, b) => a + b, 0);
       const populationSummary = population.summary();
-      return { target, initial, warmup, minAlive: populationSummary.minAlive, maxAlive: populationSummary.maxAlive,
+      return { target, initial, occupancyEnabled: game.cfg.flag('movement_occupancy_v1', false), warmup, minAlive: populationSummary.minAlive, maxAlive: populationSummary.maxAlive,
         frameMinAlive: measurement.minAlive, frameMaxAlive: measurement.maxAlive, population: populationSummary,
         minVisible: measurement.minVisible, spritesReady,
         elapsedMs: measurement.durationMs, frames: sorted.length, worstCount, worstTimeMs: worstTime,
@@ -152,7 +157,7 @@ try {
         sameGame: app.game === game,
         warOver: game.warOver, screen: app.state.screen, userAgent: navigator.userAgent,
         timings: { step: stats(samples.step), draw: stats(samples.draw), hud: stats(samples.hud) } };
-    }, { target, quick, warmed });
+    }, { target, quick, warmed, occupancyOff });
     // Читаем настоящий Canvas после измерения; это не screenshot-регрессия.
     result.canvasDataLength = await page.evaluate(() => {
       window.__frontline.game.paused = true;
@@ -168,11 +173,11 @@ try {
     r.canvasDataLength > 1000 && r.spritesReady && r.minVisible >= r.target / 4 && r.screen === 'game' &&
     r.sameGame && r.gameSeconds > r.gameTimeStart && r.timings.step.samples > 0);
   // Existing acceptance requires exact population, not merely the diagnostic 2% bound.
-  const passed = !quick && !warmed && rendered && a.population.strictExact && b.population.strictExact && a.initial === 400 && b.initial === 500 && a.minAlive === 400 && a.maxAlive === 400 && b.minAlive === 500 && b.maxAlive === 500 &&
+  const passed = !quick && !warmed && !occupancyOff && rendered && a.population.strictExact && b.population.strictExact && a.initial === 400 && b.initial === 500 && a.minAlive === 400 && a.maxAlive === 400 && b.minAlive === 500 && b.maxAlive === 500 &&
     a.averageFps >= 60 && a.low1Fps >= 45 && b.averageFps >= 45 &&
     measurements.every((r) => r.elapsedMs >= 12_000 && r.frames > 0 && r.pageErrors.length === 0 && r.warOver === false);
   const report = { passed, environment: 'browser', measurement: 'requestAnimationFrame', rendered,
-    browser: `Chromium ${version}`, mode: 'headless software rendering', quick, warmed, viewport: '1280x900 DPR 1',
+    browser: `Chromium ${version}`, mode: 'headless software rendering', quick, warmed, occupancyOff, viewport: '1280x900 DPR 1',
     frames400: a.frames, average400: a.averageFps, low1_400: a.low1Fps, minAlive400: a.minAlive, maxAlive400: a.maxAlive,
     duration400Ms: a.elapsedMs, frames500: b.frames, average500: b.averageFps, low1_500: b.low1Fps,
     minAlive500: b.minAlive, maxAlive500: b.maxAlive, duration500Ms: b.elapsedMs, measurements };

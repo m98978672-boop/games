@@ -6,6 +6,7 @@ import {
   tryShoot, startReload, moveUnit, moveAlongFlow, updateTimers, reviveUnit, applyDamage, updatePerception, tryShootBuilding, vehicleHasCurrentSight,
 } from './units.js';
 
+const tankTactics = (game) => game.cfg.flag('tank_tactical_v1', true) && !!game.walls?.enabled();
 const state = (u, s, label) => { if (u.state !== s) { u.state = s; u.stateLabel = label; } };
 
 export function updateSoldier(game, u, dt) {
@@ -55,7 +56,7 @@ export function thinkSoldier(game, u) {
   if (u.downed) return;
   updatePerception(game, u, game.dt);
   // Vehicle target memory and legacy close-awareness are not line of sight.
-  const vehicleCanEngage = !u.isVehicle || !game.cfg.flag('vehicle_visible_fire_v1', false) ||
+  const vehicleCanEngage = !u.isVehicle || !(game.cfg.flag('vehicle_visible_fire_v1', false) || tankTactics(game)) ||
     vehicleHasCurrentSight(game, u, game.unitById(u.targetId));
   // 1. Паника
   if (u.morale < game.cfg.ai.morale.panicBelow) {
@@ -217,9 +218,13 @@ export function thinkSoldier(game, u) {
         if (spot) slot = { x: spot.x, y: spot.y };
       }
     }
+    if (slot && u.isVehicle && game.cfg.flag('vehicle_exterior_v1', true) && game.walls?.enabled()) {
+      const b = game.walls.buildingAtPoint(slot.x,slot.y);
+      if (b) slot = game.logistics.exteriorPoint(u,b);
+    }
     if (slot) {
       u.goal = slot;
-      if (u.activity === 'defend' || sq.behavior === 'hold') {
+      if ((!u.isVehicle || !game.cfg.flag('vehicle_exterior_v1', true) || !game.walls?.enabled()) && (u.activity === 'defend' || sq.behavior === 'hold')) {
         const cover = game.world.bestCover(slot.x, slot.y, expectedThreatAngle(game, u), 150, (b) => (b.occupants || 0) > 1 ? 1 : 0);
         if (cover) u.goal = { x: cover.x, y: cover.y };
       }
@@ -492,19 +497,34 @@ export function playerInteract(game, u) {
 
 // ---------- Техника ----------
 function updateVehicleThink(game, u) {
+  const tactical = tankTactics(game);
   if (u.isVehicle && u.weapon.kind === 'shell') {
     const target = game.unitById(u.targetId);
-    if (target && target.alive && (!game.cfg.flag('vehicle_visible_fire_v1', false) || vehicleHasCurrentSight(game, u, target))) { u.goal = null; return; }
+    const visible = target && target.alive &&
+      (!(game.cfg.flag('vehicle_visible_fire_v1', false) || tactical) || vehicleHasCurrentSight(game, u, target));
+    if (visible) {
+      if (!tactical || dist(u.x,u.y,target.x,target.y) <= u.weapon.range * 0.9) { u.goal = null; return; }
+      // Close distance on a visible target instead of freezing out of range.
+      u.goal = {x:target.x,y:target.y}; u.activity = 'advance'; return;
+    }
+  }
+  if (tactical && u.arrived && u._tankPatrolPoint != null) {
+    const p = game.world.pointById(u._tankPatrolPoint);
+    if (!p || p.owner === u.faction || p.hp <= 0) { u.goal = null; u._tankPatrolPoint = null; }
   }
   if (!u.goal) {
-    const p = game.world.nearestPoint(u.x, u.y, (pt) => pt.owner === u.faction).point;
-    if (p) u.goal = { x: p.x + game.rng.range(-200, 200), y: p.y + game.rng.range(-200, 200) };
+    const p = game.world.nearestPoint(u.x, u.y, (pt) => tactical ? pt.owner !== u.faction && pt.hp > 0 : pt.owner === u.faction).point;
+    if (p && tactical) {
+      const b = game.world.buildingAtPoint(p.id);
+      const goal = b && game.walls?.enabled() && game.walls.state(b) ? game.logistics.exteriorPoint(u,b) : p;
+      if (goal) { u.goal = {x:goal.x,y:goal.y}; u._tankPatrolPoint = p.id; u.activity = 'advance'; }
+    } else if (p) u.goal = { x: p.x + game.rng.range(-200, 200), y: p.y + game.rng.range(-200, 200) };
   }
 }
 
 function updateVehicle(game, u, dt) {
   const target = game.unitById(u.targetId);
-  if (target && target.alive && (!game.cfg.flag('vehicle_visible_fire_v1', false) || vehicleHasCurrentSight(game, u, target))) {
+  if (target && target.alive && (!(game.cfg.flag('vehicle_visible_fire_v1', false) || tankTactics(game)) || vehicleHasCurrentSight(game, u, target))) {
     const d = dist(u.x, u.y, target.x, target.y);
     if (d < u.weapon.range) {
       tryShoot(game, u, target, dt);

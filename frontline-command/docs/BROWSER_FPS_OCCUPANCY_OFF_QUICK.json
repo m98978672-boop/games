@@ -1,0 +1,178 @@
+{
+  "passed": false,
+  "environment": "browser",
+  "measurement": "requestAnimationFrame",
+  "rendered": true,
+  "browser": "Chromium 153.0.8010.0",
+  "mode": "headless software rendering",
+  "quick": true,
+  "warmed": false,
+  "occupancyOff": true,
+  "viewport": "1280x900 DPR 1",
+  "frames400": 166,
+  "average400": 53.55011451982321,
+  "low1_400": 7.059654076950225,
+  "minAlive400": 402,
+  "maxAlive400": 422,
+  "duration400Ms": 3099.9000000000005,
+  "frames500": 150,
+  "average500": 49.724855797918195,
+  "low1_500": 10.911074740861965,
+  "minAlive500": 502,
+  "maxAlive500": 522,
+  "duration500Ms": 3016.5999999999995,
+  "measurements": [
+    {
+      "target": 400,
+      "initial": 400,
+      "occupancyEnabled": false,
+      "warmup": {
+        "ticks": 0,
+        "gameTime": 0,
+        "aliveByFaction": [
+          26,
+          26
+        ]
+      },
+      "minAlive": 402,
+      "maxAlive": 422,
+      "frameMinAlive": 402,
+      "frameMaxAlive": 422,
+      "population": {
+        "target": 400,
+        "initial": 400,
+        "frameRequired": true,
+        "samples": 516,
+        "beforeStepSamples": 174,
+        "afterStepSamples": 174,
+        "frameSamples": 167,
+        "minAlive": 402,
+        "maxAlive": 422,
+        "firstOutside2Percent": {
+          "sample": 107,
+          "phase": "after-step",
+          "alive": 412
+        },
+        "strictExact": false,
+        "within2Percent": false
+      },
+      "minVisible": 373,
+      "spritesReady": true,
+      "elapsedMs": 3099.9000000000005,
+      "frames": 166,
+      "worstCount": 2,
+      "worstTimeMs": 283.3000000000002,
+      "averageFps": 53.55011451982321,
+      "low1Fps": 7.059654076950225,
+      "drawFrames": 167,
+      "canvas": {
+        "width": 1280,
+        "height": 900
+      },
+      "gameTimeStart": 0.49999999999999994,
+      "gameSeconds": 3.399999999999993,
+      "sameGame": true,
+      "warOver": false,
+      "screen": "game",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+      "timings": {
+        "step": {
+          "samples": 174,
+          "meanMs": 3.737,
+          "p95Ms": 11.4,
+          "maxMs": 18.1
+        },
+        "draw": {
+          "samples": 167,
+          "meanMs": 1.567,
+          "p95Ms": 4.1,
+          "maxMs": 9
+        },
+        "hud": {
+          "samples": 167,
+          "meanMs": 0.231,
+          "p95Ms": 0.7,
+          "maxMs": 6.9
+        }
+      },
+      "canvasDataLength": 3342054,
+      "pageErrors": []
+    },
+    {
+      "target": 500,
+      "initial": 500,
+      "occupancyEnabled": false,
+      "warmup": {
+        "ticks": 0,
+        "gameTime": 0,
+        "aliveByFaction": [
+          26,
+          26
+        ]
+      },
+      "minAlive": 502,
+      "maxAlive": 522,
+      "frameMinAlive": 502,
+      "frameMaxAlive": 522,
+      "population": {
+        "target": 500,
+        "initial": 500,
+        "frameRequired": true,
+        "samples": 506,
+        "beforeStepSamples": 177,
+        "afterStepSamples": 177,
+        "frameSamples": 151,
+        "minAlive": 502,
+        "maxAlive": 522,
+        "firstOutside2Percent": {
+          "sample": 101,
+          "phase": "after-step",
+          "alive": 512
+        },
+        "strictExact": false,
+        "within2Percent": false
+      },
+      "minVisible": 466,
+      "spritesReady": true,
+      "elapsedMs": 3016.5999999999995,
+      "frames": 150,
+      "worstCount": 2,
+      "worstTimeMs": 183.30000000000018,
+      "averageFps": 49.724855797918195,
+      "low1Fps": 10.911074740861965,
+      "drawFrames": 151,
+      "canvas": {
+        "width": 1280,
+        "height": 900
+      },
+      "gameTimeStart": 0.5333333333333333,
+      "gameSeconds": 3.483333333333326,
+      "sameGame": true,
+      "warOver": false,
+      "screen": "game",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
+      "timings": {
+        "step": {
+          "samples": 177,
+          "meanMs": 5.889,
+          "p95Ms": 15.5,
+          "maxMs": 44.2
+        },
+        "draw": {
+          "samples": 151,
+          "meanMs": 2.162,
+          "p95Ms": 6.6,
+          "maxMs": 20
+        },
+        "hud": {
+          "samples": 151,
+          "meanMs": 0.205,
+          "p95Ms": 0.7,
+          "maxMs": 1.7
+        }
+      },
+      "canvasDataLength": 3343546,
+      "pageErrors": []
+    }
+  ]
+}

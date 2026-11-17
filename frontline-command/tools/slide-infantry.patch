@@ -1,0 +1,11 @@
+--- a/src/sim/units.js
++++ b/src/sim/units.js
+@@ -562,7 +562,7 @@
+     (occupancy || !(solid || groupSweep) || solidUnitMoveFree(game, u, x, y, groupSweep ? 0.01 : 0));
+   const probe = game._motionDiagnostic, startX = probe && u.x, startY = probe && u.y;
+   // A zero-length axis slide must not suppress the alternate-direction search.
+-  const avoidNoopSlide = occupancy || game.cfg.flag('motion_slide_guard_v1', false);
++  const avoidNoopSlide = occupancy || (!u.isVehicle && wallsOn && game.cfg.flag('pathing_v2', false) && game.cfg.flag('motion_slide_guard_v1', false));
+   if (free(nx, ny)) { u.x = nx; u.y = ny; }
+   else if ((!avoidNoopSlide || Math.abs(nx-u.x)>1e-9) && free(nx, u.y)) { u.x = nx; }
+   else if ((!avoidNoopSlide || Math.abs(ny-u.y)>1e-9) && free(u.x, ny)) { u.y = ny; }

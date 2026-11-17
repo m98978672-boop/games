@@ -1,0 +1,63 @@
+{
+  "passed": true,
+  "baselineHashes": {
+    "src/sim/walls.js": "55bf02a835da03dd02baf68f72bdc493ff0016e9cab7ba5ddd9770bd8da75fbb",
+    "src/sim/rest_positions.js": "1eeca2749d1de0555102b9c7311943e24983e5655aadbc187fc1fcc0b75cbd9d",
+    "src/sim/crowd_nav.js": "c5015b955bf258285bae651151d62011bc3146d807412786513bfc3c6655e6b9",
+    "src/sim/solid_units.js": "d6f893294ec336a17b6f490ecb23eece5e10b38c20aaaaf050cba5d34246b31c"
+  },
+  "runs": [
+    {
+      "seed": 1,
+      "occupancy": false,
+      "compared": 301,
+      "mismatch": null
+    },
+    {
+      "seed": 1,
+      "occupancy": true,
+      "compared": 301,
+      "mismatch": null
+    },
+    {
+      "seed": 2,
+      "occupancy": false,
+      "compared": 301,
+      "mismatch": null
+    },
+    {
+      "seed": 2,
+      "occupancy": true,
+      "compared": 301,
+      "mismatch": null
+    },
+    {
+      "seed": 5,
+      "occupancy": false,
+      "compared": 301,
+      "mismatch": null
+    },
+    {
+      "seed": 5,
+      "occupancy": true,
+      "compared": 301,
+      "mismatch": null
+    },
+    {
+      "seed": 7,
+      "occupancy": false,
+      "compared": 301,
+      "mismatch": null
+    },
+    {
+      "seed": 7,
+      "occupancy": true,
+      "compared": 301,
+      "mismatch": null
+    }
+  ],
+  "caveats": [
+    "Snapshots compare specified state fields only, not the complete object graph",
+    "4 seeds and 30 seconds per game, two movement settings, no external player input or browser rendering"
+  ]
+}

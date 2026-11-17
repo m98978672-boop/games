@@ -150,6 +150,26 @@ export class Walls {
     }
   }
 
+  // Exact bounding-box broad phase for rest/placement checks. Each wall ref
+  // is inserted into every cell of its thickness-expanded bounds, so scanning
+  // cells touched by the query box cannot omit a geometrically relevant ref.
+  refsInBox(x, y, radius = 48) {
+    if (!this.enabled()) return [];
+    const found = [], stamp = ++this._stamp;
+    const x0 = Math.floor((x - radius) / CELL), x1 = Math.floor((x + radius) / CELL);
+    const y0 = Math.floor((y - radius) / CELL), y1 = Math.floor((y + radius) / CELL);
+    for (let cx = x0; cx <= x1; cx++) for (let cy = y0; cy <= y1; cy++) {
+      const list = this.grid.get(cellKey(cx, cy));
+      if (!list) continue;
+      for (let k = 0; k < list.length; k++) {
+        const ref = list[k];
+        if (ref.stamp === stamp) continue;
+        ref.stamp = stamp; found.push(ref);
+      }
+    }
+    return found;
+  }
+
   refsNear(x, y, radius = 48) {
     if (!this.enabled()) return [];
     const found = [];
@@ -774,6 +794,8 @@ export class Walls {
     if (!st) return { ok: false };
     const d = st.doors[openingId];
     if (!d) return { ok: false };
+    // A destroyed door is an open breach, not a functional closable door.
+    if (d.broken) return { ok: false, reason: 'broken', state: d.state };
     if (this.cfg.flag('door_occupied_guard_v1', false) && d.state === 'open') {
       const o=st.outline.openings.find(o=>o.id===openingId);
       const occupant=o && this.doorOccupant(building,o,st.outline.thickness || 12);
@@ -906,7 +928,7 @@ export class Walls {
       if (!b) continue;
       out[`${b.type}:${Math.round(b.x)}:${Math.round(b.y)}`] = {
         segs: st.segs.map((s) => ({ id: s.id, hp: Math.round(s.hp), breached: !!s.breached })),
-        doors: Object.fromEntries(Object.entries(st.doors).map(([k, v]) => [k, { state: v.state }])),
+        doors: Object.fromEntries(Object.entries(st.doors).map(([k, v]) => [k, { state: v.state, broken: !!v.broken, ...(Number.isFinite(v.hp) ? { hp: v.hp } : {}) }])),
       };
     }
     return out;
@@ -929,8 +951,13 @@ export class Walls {
       }
       for (const [k, v] of Object.entries(data.doors || {})) {
         if (st.doors[k]) {
-          st.doors[k].state = v.state === 'open' ? 'open' : 'closed';
-          st.doors[k].anim = st.doors[k].state === 'open' ? 1 : 0;
+          const d = st.doors[k];
+          d.broken = v.broken === true;
+          if (Number.isFinite(v.hp)) d.hp = Math.max(0, v.hp); else delete d.hp;
+          if (d.broken) d.hp = 0;
+          d.state = d.broken || v.state === 'open' ? 'open' : 'closed';
+          d.anim = d.state === 'open' ? 1 : 0;
+          d.closeAt = 0;
         }
       }
       this.reindex(b.id, st);

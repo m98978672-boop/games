@@ -6,7 +6,7 @@ assert.equal(cfg.flag('safe_logistics_v2'),false,'unproven routing is off by def
 cfg.flags.safe_logistics_v2=true;
 for (const faction of [0,1]) {
   const game=new Game({cfg,seed:7,aiVsAi:true});
-  game.units.clear();game.unitGrid.clear();game.nearbyEnemies=()=>[];
+  game.units.clear();game.unitGrid.clear();game.occupancyGrid.clear();game.nearbyEnemies=()=>[];
   const hq=game.world.hqOf(faction), a=game.spawnUnit(faction,'truck',hq.x,hq.y), b=game.spawnUnit(faction,'truck',hq.x+55,hq.y);
   const logistics=game.logistics, stock=logistics.supply(faction);
   stock.ammo=1000;stock.fuel=200;
@@ -67,7 +67,7 @@ console.log('logistics: exclusive requests, failed path, threat, delivery and re
 // Незавершённый груз из повреждённого сохранения не назначается на новый рейс.
 {
   const game=new Game({cfg,seed:5,aiVsAi:true});
-  game.units.clear();game.unitGrid.clear();game.nearbyEnemies=()=>[];
+  game.units.clear();game.unitGrid.clear();game.occupancyGrid.clear();game.nearbyEnemies=()=>[];
   const hq=game.world.hqOf(0),u=game.spawnUnit(0,'truck',hq.x,hq.y);
   u.truckTask={state:'idleTruck'};u.cargo=100;u.cargoType='ammo';
   const s=game.world.sectorAt(hq.x,hq.y);
@@ -81,7 +81,7 @@ console.log('logistics: orphaned saved cargo is not overwritten');
 // погрузкой и разгрузкой. Два одиночных рейса — не доказательство нагрузки.
 for (const faction of [0,1]) {
   const game=new Game({cfg,seed:5,aiVsAi:true});
-  game.units.clear();game.unitGrid.clear();game.nearbyEnemies=()=>[];
+  game.units.clear();game.unitGrid.clear();game.occupancyGrid.clear();game.nearbyEnemies=()=>[];
   const hq=game.world.hqOf(faction), u=game.spawnUnit(faction,'truck',hq.x,hq.y+240);
   const req={faction,kind:'sector',sectorId:game.world.sectorAt(hq.x,hq.y).id,x:hq.x,y:hq.y+380,created:0,priority:1};
   game.logistics.requests=[req];let loaded=false;

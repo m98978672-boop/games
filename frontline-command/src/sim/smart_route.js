@@ -20,12 +20,18 @@ function eligible(game, u) {
   // Не подменяем штатные маршруты внутрь и из зданий (особенно дверные).
   return !game.walls.buildingAtPoint?.(u.x, u.y) && !game.walls.buildingAtPoint?.(u.goal.x, u.goal.y);
 }
+// Scoped alternative: only logistics trucks can opt into the same short-range
+// obstacle sensor without enabling the experiment for every combat unit.
+export function truckRouteAssist(game, u) {
+  return u.role === 'truck' && game.cfg.flag('vehicle_exterior_v1', true) && game.cfg.flag('truck_route_assist_v1', false) &&
+    !!game.walls?.enabled() && game.cfg.flag('pathing_v2', false);
+}
 // A bounded active search may need several seconds to build its grid. Do not
 // let the legacy stuck timer discard the very goal it is searching for. A
 // stale, cancelled or timed-out job never grants this grace period.
 export function smartRouteSearching(game, u) {
   if (!game.cfg.flag('smart_route_wait_v1', true) ||
-      (!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false))) return false;
+      (!game.cfg.flag('smart_route_v2', false) && !game.cfg.flag('bot_obstacle_vision_v1', false) && !truckRouteAssist(game,u))) return false;
   const job = game._smartRouteState?.active, p = job?.planner;
   return !!(job?.unit === u && p?.status === 'running' && eligible(game,u) &&
     game.time >= job.started && game.time - job.started <= 6 &&
@@ -79,8 +85,8 @@ export function updateSmartRoute(game, u) {
     state.active=null;
   }
   if (!state.active && eligible(game,u) && game.time >= (u._smartRetryAt || 0) && !game.walls.navQueue?.size &&
-      (((game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false)) && (u.stuck || 0)>=1) ||
-       (game.cfg.flag('bot_obstacle_vision_v1', false) && seesObstacle(game,u)))) {
+      (((game.cfg.flag('smart_route_v2', false) || game.cfg.flag('bot_obstacle_vision_v1', false) || truckRouteAssist(game,u)) && (u.stuck || 0)>=1) ||
+       ((game.cfg.flag('bot_obstacle_vision_v1', false) || truckRouteAssist(game,u)) && seesObstacle(game,u)))) {
     try { state.active={ unit:u, started:game.time, planner:new EasyStarPlanner(game,u) }; }
     catch { u._smartRetryAt=game.time+3; }
   }

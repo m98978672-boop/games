@@ -3,7 +3,7 @@ import {loadConfig} from '../src/core/config.js';
 import {Game} from '../src/sim/game.js';
 import {moveUnit} from '../src/sim/units.js';
 const cfg=await loadConfig();
-assert.equal(cfg.flag('movement_occupancy_v1',false),false,'experimental and off until accepted');
+assert.equal(cfg.flag('movement_occupancy_v1',false),true,'collision avoidance enabled for new games');
 cfg.flags.movement_occupancy_v1=true;
 function fixture(){
  const g=new Game({cfg,seed:7,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.occupancyGrid.clear();

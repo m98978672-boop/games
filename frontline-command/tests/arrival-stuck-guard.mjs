@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';import {updateTimers} from '../src/sim/units.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('arrival_stuck_guard_v1',false),false);
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+assert.equal(cfg.flag('arrival_stuck_guard_v1',false),false);
 function make(enabled,faction=0){cfg.flags.arrival_stuck_guard_v1=enabled;const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();
  const u=g.spawnUnit(faction,'infantry',2000,2000);u.goal={x:2000,y:2000};u.arrived=true;return {g,u};}
 function wait(g,u,seconds=8){for(let i=0;i<seconds*20;i++){g.time+=.05;updateTimers(g,u,.05);}}

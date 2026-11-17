@@ -1,0 +1,237 @@
+{
+  "seeds": 4,
+  "seconds": 180,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 6,
+        "overlapFrames": 1782,
+        "pairFrames": 21998,
+        "maxPairs": 54,
+        "swept": 6436,
+        "segments": 62834,
+        "truckFailures": 36,
+        "failures": [
+          41,
+          37
+        ],
+        "kills": [
+          35,
+          38
+        ],
+        "deliveries": [
+          1,
+          0
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 0,
+        "overlapFrames": 0,
+        "pairFrames": 0,
+        "maxPairs": 0,
+        "swept": 0,
+        "segments": 55426,
+        "truckFailures": 6,
+        "failures": [
+          32,
+          39
+        ],
+        "kills": [
+          27,
+          38
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 3,
+        "overlapFrames": 1800,
+        "pairFrames": 21656,
+        "maxPairs": 39,
+        "swept": 4460,
+        "segments": 60495,
+        "truckFailures": 15,
+        "failures": [
+          46,
+          62
+        ],
+        "kills": [
+          39,
+          43
+        ],
+        "deliveries": [
+          0,
+          2
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 0,
+        "overlapFrames": 0,
+        "pairFrames": 0,
+        "maxPairs": 0,
+        "swept": 0,
+        "segments": 51752,
+        "truckFailures": 2,
+        "failures": [
+          21,
+          27
+        ],
+        "kills": [
+          15,
+          36
+        ],
+        "deliveries": [
+          0,
+          2
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 8,
+        "overlapFrames": 1800,
+        "pairFrames": 23111,
+        "maxPairs": 33,
+        "swept": 10147,
+        "segments": 60761,
+        "truckFailures": 15,
+        "failures": [
+          52,
+          96
+        ],
+        "kills": [
+          22,
+          47
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 0,
+        "overlapFrames": 0,
+        "pairFrames": 0,
+        "maxPairs": 0,
+        "swept": 0,
+        "segments": 49826,
+        "truckFailures": 15,
+        "failures": [
+          29,
+          80
+        ],
+        "kills": [
+          8,
+          28
+        ],
+        "deliveries": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 1,
+        "overlapFrames": 1791,
+        "pairFrames": 15928,
+        "maxPairs": 23,
+        "swept": 3930,
+        "segments": 58824,
+        "truckFailures": 15,
+        "failures": [
+          72,
+          38
+        ],
+        "kills": [
+          36,
+          44
+        ],
+        "deliveries": [
+          1,
+          0
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "steps": 1800,
+        "warOver": false,
+        "outcome": null,
+        "initial": 0,
+        "overlapFrames": 0,
+        "pairFrames": 0,
+        "maxPairs": 0,
+        "swept": 0,
+        "segments": 49681,
+        "truckFailures": 8,
+        "failures": [
+          101,
+          36
+        ],
+        "kills": [
+          45,
+          2
+        ],
+        "deliveries": [
+          1,
+          0
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "Only movement_occupancy_v1 differs; algorithm diagnostics on in both",
+    "Sequential segments tested against live standing bodies, excluding pairs already overlapping at segment start",
+    "At game-step boundaries alive standing overlaps are counted; events between moves that do not use moveUnit are not swept",
+    "Different unit creation and RNG consumption change trajectories; limited seeds and horizon are not balance, progress or FPS acceptance",
+    "Old saves and toggling mid-game can start with overlaps; downed and dead bodies are non-solid; deliveries can include virtual delivery"
+  ]
+}

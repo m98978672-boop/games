@@ -516,7 +516,7 @@ fs.writeFileSync(path.resolve('assets/manifest.json'), JSON.stringify(written.ma
 fs.writeFileSync(path.resolve('assets/README.md'), `# Ассеты Frontline: Command
 
 Большинство PNG в этом каталоге сгенерированы процедурно скриптом \`tools/gen-assets.mjs\`
-(растровые, 32×32 юниты, 64×64 техника, 32×32 тайлы). Трава, земля, грязь и вода заменены текстурами, созданными ИИ (исходники и подготовленные тайлы: \`assets/source\`). Остальные ассеты — **PLACEHOLDER_REPLACE** —
+(растровые, 32×32 юниты, 64×64 техника, 32×32 тайлы). Трава, земля, грязь, вода и модели пехоты, танка и грузовика заменены изображениями, созданными ИИ (исходники и подготовленные тайлы: \`assets/source\`). Остальные ассеты — **PLACEHOLDER_REPLACE** —
 замените на CC0/CC-BY пиксель-арт из \`docs/ASSETS_CREDITS.md\` на этапе 9.
 
 Перегенерация: \`node tools/gen-assets.mjs\`.
@@ -528,5 +528,13 @@ const curatedTiles = path.join('assets', 'source', 'tiles');
 if (fs.existsSync(curatedTiles)) {
   for (const name of fs.readdirSync(curatedTiles).filter((n) => n.endsWith('.png'))) {
     fs.copyFileSync(path.join(curatedTiles, name), path.join('assets', 'tiles', name));
+  }
+}
+
+// Curated unit artwork (direction and faction variants) survives regeneration.
+const curatedSprites = path.join('assets', 'source', 'sprites');
+if (fs.existsSync(curatedSprites)) {
+  for (const name of fs.readdirSync(curatedSprites).filter((n) => n.endsWith('.png'))) {
+    fs.copyFileSync(path.join(curatedSprites, name), path.join('assets', 'sprites', name));
   }
 }
