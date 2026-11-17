@@ -8,7 +8,8 @@ import { createVoiceRecorder } from './voice-recorder.mjs';
 import { renderMarkdownToFragment } from './markdown-render.mjs';
 import { TelemetrySparkline, renderChunkMapElement, renderWaveformBarsElement } from './telemetry-canvas.mjs';
 import { createCommandPalette } from './command-palette.mjs';
-import { SERVICE_GUIDES, getServiceGuide } from '../engine/service-guides.mjs';
+import { SERVICE_GUIDES, getServiceGuide, sanitizeBridgeInput } from '../engine/service-guides.mjs';
+import { getBrandTheme, applyBrandBadge } from './brand-icons.mjs';
 
 const TOOL_SAMPLE_ARGS = {
   'search.query': { q: 'RatMes', limit: 15 },
@@ -71,6 +72,8 @@ const state = {
   hubSelectedService: 'max',
   hubStep: 'list',
   hubSearch: '',
+  hubFilter: 'all',
+  hubLastTestedBotName: null,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -297,14 +300,23 @@ function renderSidebar() {
 
   for (const chat of filtered) {
     const spec = findNetworkSpec(chat.network);
+    const live = findLiveBridgeStatus(chat.network);
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = `chat-item${chat.chatId === state.activeChatId ? ' active' : ''}`;
 
+    const avWrap = document.createElement('span');
+    avWrap.className = 'net-avatar-wrap';
     const av = document.createElement('span');
     av.className = 'net-avatar';
-    av.style.background = spec?.color || '#e8b45a';
-    av.textContent = spec?.short || chat.network.slice(0, 2).toUpperCase();
+    applyBrandBadge(av, chat.network, 22);
+    avWrap.appendChild(av);
+    if (live?.enabled) {
+      const ldot = document.createElement('span');
+      ldot.className = 'avatar-live-dot';
+      ldot.title = 'Подключён живой мост';
+      avWrap.appendChild(ldot);
+    }
 
     const body = document.createElement('div');
     body.className = 'chat-item-body';
@@ -337,13 +349,15 @@ function renderSidebar() {
       dr.textContent = `Черновик: ${chat.draftText.slice(0, 24)}`;
       sub.appendChild(dr);
     } else {
-      const routeTag = spec?.routeReady ? (spec.activeRoute === 'direct' ? 'Напрямую' : spec.activeRoute) : 'Нужен VPN';
+      const routeTag = live?.enabled
+        ? '● LIVE'
+        : (spec?.routeReady ? (spec.activeRoute === 'direct' ? 'Напрямую' : spec.activeRoute) : 'Нужен VPN');
       const e2eeTag = spec?.e2ee ? 'E2EE' : (spec?.e2eeWarning ? 'Без E2EE!' : 'TLS');
       sub.textContent = `${routeTag} · ${e2eeTag}`;
     }
 
     body.append(top, sub);
-    btn.append(av, body);
+    btn.append(avWrap, body);
     btn.addEventListener('click', () => selectChat(chat.chatId));
     listHost.appendChild(btn);
   }
@@ -440,8 +454,7 @@ function renderActiveChat({ keepScroll = false } = {}) {
   $('activeChatTitle').textContent = chat.title;
   $('btnPinChat').textContent = chat.pinnedChat ? '📍' : '📌';
   const badge = $('activeChatBadge');
-  badge.textContent = spec?.short || 'RM';
-  badge.style.background = spec?.color || '#e8b45a';
+  applyBrandBadge(badge, chat.network, 22);
 
   const routePill = $('activeRoutePill');
   const quickVpn = $('btnQuickBindVpn');
@@ -979,12 +992,17 @@ function renderCloudTab() {
 
     const head = document.createElement('div');
     head.className = 'cloud-service-head';
+    const titleWrap = document.createElement('div');
+    titleWrap.className = 'cloud-service-title';
+    const liveDot = document.createElement('span');
+    liveDot.className = 'live-dot is-on';
     const title = document.createElement('strong');
     title.textContent = svc.name;
+    titleWrap.append(liveDot, title);
     const badge = document.createElement('span');
     badge.className = 'pill good';
     badge.textContent = svc.category;
-    head.append(title, badge);
+    head.append(titleWrap, badge);
 
     const resLine = document.createElement('div');
     resLine.className = 'cloud-service-cat';
@@ -1074,31 +1092,35 @@ function renderNetworksTab() {
 
   for (const net of state.matrix.networks) {
     const live = findLiveBridgeStatus(net.id);
+    const theme = getBrandTheme(net.id);
     const card = document.createElement('div');
-    card.className = 'net-card';
+    card.className = `net-card${live?.enabled ? ' is-live' : ''}`;
+    card.style.setProperty('--brand-accent', theme.accent);
 
     const top = document.createElement('div');
     top.className = 'net-card-top';
 
     const nameBox = document.createElement('div');
     nameBox.className = 'net-card-name';
-    const dot = document.createElement('span');
-    dot.className = 'net-dot';
-    dot.style.background = net.color;
+    const iconBadge = document.createElement('span');
+    iconBadge.className = 'net-avatar net-avatar-sm';
+    applyBrandBadge(iconBadge, net.id, 16);
     const lbl = document.createElement('span');
-    lbl.textContent = `${net.name} (${net.short})`;
-    nameBox.append(dot, lbl);
+    lbl.textContent = net.name;
+    nameBox.append(iconBadge, lbl);
 
     const statePill = document.createElement('span');
-    statePill.className = `pill ${live?.enabled ? 'accent' : (net.bridgeState === 'ACTIVE' ? 'good' : 'accent')}`;
+    statePill.className = `pill ${live?.enabled ? 'good' : (net.bridgeState === 'ACTIVE' ? 'accent' : '')}`;
     statePill.textContent = live?.enabled
-      ? `LIVE · ${live.sentLive}↑/${live.recvLive}↓`
+      ? `● LIVE · ${live.sentLive}↑/${live.recvLive}↓`
       : (net.bridgeState === 'ACTIVE' ? `ACTIVE · ${net.ramMb.toFixed(0)} МБ` : 'СПИТ · 64 Б');
     top.append(nameBox, statePill);
 
     const routeLine = document.createElement('div');
     routeLine.className = 'muted-text';
-    routeLine.textContent = net.routeNote;
+    routeLine.textContent = live?.botName
+      ? `${live.botName} · ${net.routeNote}`
+      : (live?.needsTokenReauth ? `Требуется повторно вставить токен · ${net.routeNote}` : net.routeNote);
 
     const actions = document.createElement('div');
     actions.className = 'net-card-actions';
@@ -1128,9 +1150,9 @@ function renderNetworksTab() {
     if (net.id !== 'ratmes') {
       const btnLive = document.createElement('button');
       btnLive.type = 'button';
-      btnLive.className = 'btn btn-sm btn-ghost';
-      btnLive.textContent = live?.enabled ? 'Настр. Live' : 'Живой API';
-      btnLive.addEventListener('click', () => openLiveBridgeModal(net, live));
+      btnLive.className = live?.enabled ? 'btn btn-sm btn-ghost' : 'btn btn-sm btn-primary';
+      btnLive.textContent = live?.enabled ? '⚙ Настр. LIVE' : '🔌 Подключить';
+      btnLive.addEventListener('click', () => openConnectHub(net.id, 'setup'));
       actions.appendChild(btnLive);
 
       const btnSleep = document.createElement('button');
@@ -1520,7 +1542,71 @@ function openConnectHub(serviceId = null, step = null) {
   if (dlg && !dlg.open) dlg.showModal();
 }
 
+function extractHostLabel(urlStr, fallback = 'API') {
+  try {
+    if (!urlStr) return fallback;
+    return new URL(urlStr).host;
+  } catch {
+    return fallback;
+  }
+}
+
+function getHubEndpointValue() {
+  const primWrap = $('hubFieldPrimaryEndpointWrap');
+  if (primWrap && !primWrap.hidden) {
+    return $('hubFormPrimaryEndpoint').value.trim();
+  }
+  return $('hubFormEndpoint').value.trim();
+}
+
+function setHubEndpointValue(val) {
+  if ($('hubFormEndpoint')) $('hubFormEndpoint').value = val || '';
+  if ($('hubFormPrimaryEndpoint')) $('hubFormPrimaryEndpoint').value = val || '';
+}
+
+function renderHubRouteDiagram(guide, spec, live) {
+  const mode = state.client.getMode();
+  $('hubRouteClientIco').textContent = mode === 'agent' ? '💻' : '📱';
+  $('hubRouteClientTitle').textContent = mode === 'agent' ? 'RatMes PC Agent' : 'Браузер / PWA';
+  $('hubRouteClientSub').textContent = mode === 'agent' ? 'SecretVault · без CORS' : (guide.directBrowserOk ? 'Прямой запрос' : 'CORS → лучше ПК-агент');
+
+  const routeLink = $('hubRouteLink');
+  const routePill = $('hubRoutePill');
+  routeLink.classList.remove('is-ok', 'is-vpn', 'is-warn');
+
+  if (spec && spec.needsVpn && !spec.routeReady) {
+    routeLink.classList.add('is-warn');
+    routePill.textContent = '⚠ Нужен VPN';
+  } else if (spec && spec.needsVpn && spec.routeReady) {
+    routeLink.classList.add('is-vpn');
+    routePill.textContent = `🔒 ${spec.activeRoute}`;
+  } else if (live?.enabled) {
+    routeLink.classList.add('is-ok');
+    routePill.textContent = '● LIVE TLS';
+  } else {
+    routeLink.classList.add('is-ok');
+    routePill.textContent = '⚡ Прямой HTTPS';
+  }
+
+  const targetIcon = $('hubRouteTargetIcon');
+  applyBrandBadge(targetIcon, guide.id, 18);
+  $('hubRouteTargetTitle').textContent = guide.name;
+  const ep = getHubEndpointValue() || live?.endpoint || guide.defaultEndpoint;
+  $('hubRouteTargetHost').textContent = extractHostLabel(ep, guide.protocolLabel || guide.id);
+}
+
 function renderConnectHub() {
+  // 0. Счётчик живых подключений
+  const liveCount = state.liveBridges.filter((b) => b.enabled).length;
+  const counterEl = $('hubConnectedCounter');
+  if (counterEl) {
+    counterEl.replaceChildren();
+    const dot = document.createElement('span');
+    dot.className = `live-dot${liveCount > 0 ? ' is-on' : ''}`;
+    counterEl.append(dot, document.createTextNode(` ${liveCount} из ${SERVICE_GUIDES.length} LIVE`));
+    counterEl.classList.toggle('has-live', liveCount > 0);
+  }
+
   // 1. Статус режима ПК-агента / телефона
   const mode = state.client.getMode();
   const pill = $('hubAgentStatusPill');
@@ -1530,43 +1616,76 @@ function renderConnectHub() {
   const savedRemote = state.client.getSavedRemoteAgentUrl();
 
   if (mode === 'agent') {
-    pill.textContent = '🟢 ПК-агент подключён';
+    pill.textContent = '🟢 ПК-агент активен';
     pill.className = 'pill good';
     const base = state.client.getAgentBaseUrl();
     note.textContent = savedRemote
-      ? `Связь с удалённым ПК-агентом (${savedRemote}) · MAX, VK, Telegram и Long Polling работают без CORS`
-      : `Локальный ПК-агент активен (${base || 'локально'}) · все живые мосты, SecretVault и RatMes-Vault/ работают напрямую`;
+      ? `Удалённый ПК (${savedRemote}) · MAX API v2, VK, Telegram и Long Polling работают без CORS`
+      : `Локальный ПК-агент (${base || 'локально'}) · SecretVault + RatMes-Vault/ + все мосты без CORS`;
     if (remoteInput && !remoteInput.value) remoteInput.value = savedRemote;
     if (disconnectBtn) disconnectBtn.hidden = !savedRemote;
   } else {
-    pill.textContent = '📱 Автономный режим телефона/браузера';
+    pill.textContent = '📱 Автономный браузер / PWA';
     pill.className = 'pill accent';
-    note.textContent = 'Discord, Telegram, Matrix и тестовые чаты доступны сразу. Для MAX, VK и автоприёма входящих раскрой блок ниже и укажи свой ПК-агент.';
+    note.textContent = 'Discord, Telegram, Matrix и песочница работают сразу. Для MAX, VK и автоприёма входящих подключи ПК-агент ниже.';
     if (remoteInput && !remoteInput.value) remoteInput.value = savedRemote;
     if (disconnectBtn) disconnectBtn.hidden = true;
   }
 
-  // 2. Сетка всех 12 сервисов
+  // Обновляем активную пилюлю фильтра
+  for (const btn of document.querySelectorAll('#hubFilterPills [data-hub-filter]')) {
+    btn.classList.toggle('is-active', btn.dataset.hubFilter === state.hubFilter);
+  }
+
+  // 2. Сетка всех 12 сервисов с SVG-логотипами и категориями
   const grid = $('hubServiceGrid');
   if (grid) {
     grid.replaceChildren();
     const q = state.hubSearch.trim().toLowerCase();
     const filtered = SERVICE_GUIDES.filter((g) => {
+      const live = findLiveBridgeStatus(g.id);
+      if (state.hubFilter === 'ru' && g.group !== 'ru') return false;
+      if (state.hubFilter === 'global' && g.group !== 'global') return false;
+      if (state.hubFilter === 'connected' && !live?.enabled) return false;
       if (!q) return true;
-      return g.name.toLowerCase().includes(q) || g.id.includes(q) || g.summary.toLowerCase().includes(q);
+      return (
+        g.name.toLowerCase().includes(q)
+        || g.id.includes(q)
+        || (g.protocolLabel || '').toLowerCase().includes(q)
+        || g.summary.toLowerCase().includes(q)
+      );
     });
+
+    if (!filtered.length) {
+      const empty = document.createElement('div');
+      empty.className = 'hub-empty-filter';
+      empty.textContent = state.hubFilter === 'connected'
+        ? 'Пока нет активных LIVE-подключений. Выбери вкладку «Все (12)» или «🔥 В РФ», чтобы подключить MAX, Telegram или Discord.'
+        : 'Ничего не найдено — попробуй очистить поиск.';
+      grid.appendChild(empty);
+    }
 
     for (const g of filtered) {
       const live = findLiveBridgeStatus(g.id);
       const spec = findNetworkSpec(g.id);
+      const theme = getBrandTheme(g.id);
       const card = document.createElement('button');
       card.type = 'button';
-      card.className = `hub-service-card${g.id === state.hubSelectedService ? ' is-selected' : ''}`;
+      card.className = `hub-service-card${g.id === state.hubSelectedService ? ' is-selected' : ''}${live?.enabled ? ' is-live' : ''}`;
+      card.style.setProperty('--brand-accent', theme.accent);
+      card.style.setProperty('--brand-glow', theme.glow);
 
+      const avWrap = document.createElement('span');
+      avWrap.className = 'net-avatar-wrap';
       const av = document.createElement('span');
       av.className = 'net-avatar';
-      av.style.background = g.color;
-      av.textContent = g.short;
+      applyBrandBadge(av, g.id, 22);
+      avWrap.appendChild(av);
+      if (live?.enabled) {
+        const ldot = document.createElement('span');
+        ldot.className = 'avatar-live-dot';
+        avWrap.appendChild(ldot);
+      }
 
       const info = document.createElement('div');
       info.className = 'hub-service-info';
@@ -1578,24 +1697,25 @@ function renderConnectHub() {
       const badge = document.createElement('span');
       if (live?.enabled) {
         badge.className = 'pill good';
-        badge.textContent = 'LIVE';
+        badge.textContent = '● LIVE';
       } else if (spec && spec.needsVpn && !spec.routeReady) {
         badge.className = 'pill warn';
-        badge.textContent = 'Нужен VPN';
+        badge.textContent = 'VPN';
       } else {
         badge.className = 'pill';
-        badge.textContent = g.difficulty;
+        badge.textContent = g.protocolLabel || g.difficulty;
       }
       top.append(nameEl, badge);
 
       const meta = document.createElement('div');
       meta.className = 'hub-service-meta';
-      meta.textContent = g.summary;
+      meta.textContent = live?.botName ? `${live.botName} · ${live.sentLive || 0}↑ / ${live.recvLive || 0}↓` : g.summary;
 
       info.append(top, meta);
-      card.append(av, info);
+      card.append(avWrap, info);
       card.addEventListener('click', () => {
         state.hubSelectedService = g.id;
+        state.hubLastTestedBotName = null;
         setHubMobileStep('setup');
         renderConnectHub();
       });
@@ -1603,31 +1723,40 @@ function renderConnectHub() {
     }
   }
 
-  // 3. Пошаговая правая панель выбранного сервиса
+  // 3. Брендированная правая панель выбранного сервиса
   const guide = getServiceGuide(state.hubSelectedService);
+  const theme = getBrandTheme(guide.id);
   const live = findLiveBridgeStatus(guide.id);
   const spec = findNetworkSpec(guide.id);
 
+  const guideCol = $('hubGuideCol');
+  if (guideCol) {
+    guideCol.style.setProperty('--brand-accent', theme.accent);
+    guideCol.style.setProperty('--brand-glow', theme.glow);
+    guideCol.style.setProperty('--brand-gradient', theme.gradient);
+  }
+
   $('hubSelectedNameShort').textContent = guide.name;
-  const avatar = $('hubGuideAvatar');
-  avatar.textContent = guide.short;
-  avatar.style.background = guide.color;
+  applyBrandBadge($('hubGuideAvatar'), guide.id, 30);
   $('hubGuideTitle').textContent = guide.name;
+  $('hubGuideProto').textContent = guide.protocolLabel || guide.driverKind.toUpperCase();
   $('hubGuideDifficulty').textContent = guide.difficulty;
 
   const statePill = $('hubGuideStatePill');
   if (live?.enabled) {
-    statePill.textContent = `🟢 Подключён (${live.sentLive || 0}↑ / ${live.recvLive || 0}↓)`;
+    const botTag = live.botName ? ` · ${live.botName}` : '';
+    statePill.textContent = `● LIVE${botTag} (${live.sentLive || 0}↑/${live.recvLive || 0}↓)`;
     statePill.className = 'pill good';
+  } else if (live?.needsTokenReauth) {
+    statePill.textContent = '🔑 Вставь токен повторно';
+    statePill.className = 'pill warn';
   } else {
-    statePill.textContent = 'Песочница / не подключён';
+    statePill.textContent = 'Не подключён';
     statePill.className = 'pill';
   }
 
-  const webLink = $('hubGuideWebLink');
-  webLink.href = guide.webAppUrl;
-  const docsLink = $('hubGuideDocsLink');
-  docsLink.href = guide.docsUrl;
+  $('hubGuideWebLink').href = guide.webAppUrl;
+  $('hubGuideDocsLink').href = guide.docsUrl;
   $('hubGuideSummary').textContent = guide.summary;
 
   const e2eeWarn = $('hubGuideE2eeWarn');
@@ -1647,19 +1776,63 @@ function renderConnectHub() {
     vpnBox.hidden = true;
   }
 
+  // Пресеты режима подключения
+  const presetsWrap = $('hubPresetsWrap');
+  const presetsHost = $('hubPresetChips');
+  presetsHost.replaceChildren();
+  const presets = Array.isArray(guide.presets) ? guide.presets : [];
+  if (presets.length > 0) {
+    presetsWrap.hidden = false;
+    const currentKind = $('hubFormKind').dataset.forNet === guide.id
+      ? $('hubFormKind').value
+      : (live?.kind || guide.driverKind);
+    for (const preset of presets) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      const isSelected = preset.kind === currentKind;
+      chip.className = `hub-preset-chip${isSelected ? ' is-active' : ''}`;
+      const lbl = document.createElement('strong');
+      lbl.textContent = preset.label;
+      const desc = document.createElement('span');
+      desc.textContent = preset.desc;
+      chip.append(lbl, desc);
+      chip.addEventListener('click', () => {
+        $('hubFormKind').value = preset.kind;
+        $('hubFormKind').dataset.forNet = guide.id;
+        if (preset.endpoint !== undefined) setHubEndpointValue(preset.endpoint);
+        applyHubFormFieldLabels(guide, live);
+        renderConnectHub();
+      });
+      presetsHost.appendChild(chip);
+    }
+  } else {
+    presetsWrap.hidden = true;
+  }
+
+  // Нумерованная пошаговая лента
   const stepsList = $('hubStepsList');
   stepsList.replaceChildren();
-  for (const stepText of guide.steps) {
+  guide.steps.forEach((stepText, idx) => {
     const li = document.createElement('li');
-    li.textContent = stepText;
+    const num = document.createElement('span');
+    num.className = 'hub-step-num';
+    num.textContent = String(idx + 1);
+    const body = document.createElement('span');
+    body.className = 'hub-step-text';
+    body.textContent = stepText;
+    li.append(num, body);
     stepsList.appendChild(li);
-  }
+  });
 
   // Заполняем форму с учётом выбранного сервиса
   $('hubFormNetwork').value = guide.id;
   const kindSel = $('hubFormKind');
-  kindSel.value = live?.kind || guide.driverKind;
+  if (kindSel.dataset.forNet !== guide.id) {
+    kindSel.value = live?.kind || guide.driverKind;
+    kindSel.dataset.forNet = guide.id;
+  }
   applyHubFormFieldLabels(guide, live);
+  renderHubRouteDiagram(guide, spec, live);
 
   $('hubWebhookUrl').textContent = state.client.getWebhookUrl(guide.id);
   $('hubDirectHint').textContent = guide.directBrowserHint || '';
@@ -1670,13 +1843,23 @@ function applyHubFormFieldLabels(guide, live) {
   const f = guide.fields;
   const kind = $('hubFormKind').value;
   const isWebhookOverride = kind === 'webhook' && guide.driverKind !== 'webhook';
+  const showEndpointOnMain = isWebhookOverride || (f.showEndpoint && !guide.hideEndpointByDefault);
+
+  // Главный input для endpoint (на виду для Discord/Matrix/Signal/WhatsApp/Webhook) vs в Расширенных настройках (для MAX/Telegram/VK)
+  const primWrap = $('hubFieldPrimaryEndpointWrap');
+  primWrap.hidden = !showEndpointOnMain;
+  $('hubLabelPrimaryEndpoint').textContent = isWebhookOverride ? 'URL Webhook-шлюза (n8n / Evolution API / свой сервер)' : f.endpointLabel;
+  $('hubFormPrimaryEndpoint').placeholder = isWebhookOverride ? 'https://your-gateway.example/send' : f.endpointPlaceholder;
 
   $('hubFieldEndpointWrap').hidden = !f.showEndpoint && !isWebhookOverride;
-  $('hubLabelEndpoint').textContent = isWebhookOverride ? 'URL Webhook-шлюза (n8n / Evolution API / свой сервер)' : f.endpointLabel;
+  $('hubLabelEndpoint').textContent = isWebhookOverride ? 'URL Webhook-шлюза' : f.endpointLabel;
   $('hubFormEndpoint').placeholder = isWebhookOverride ? 'https://your-gateway.example/send' : f.endpointPlaceholder;
+
   if ($('hubFormEndpoint').dataset.forNet !== guide.id) {
-    $('hubFormEndpoint').value = live?.endpoint || guide.defaultEndpoint || '';
+    const initialEp = live?.endpoint || guide.defaultEndpoint || '';
+    setHubEndpointValue(initialEp);
     $('hubFormEndpoint').dataset.forNet = guide.id;
+    $('hubSanitizeHint').hidden = true;
   }
 
   $('hubFieldTokenWrap').hidden = !f.showToken && !isWebhookOverride;
@@ -1705,6 +1888,38 @@ function applyHubFormFieldLabels(guide, live) {
     $('hubSuggestedWrap').hidden = true;
     $('hubTestResult').dataset.forNet = guide.id;
   }
+}
+
+function collectSanitizedHubPayload() {
+  const guide = getServiceGuide(state.hubSelectedService);
+  const rawEndpoint = getHubEndpointValue();
+  const rawToken = $('hubFormToken').value.trim();
+  const rawTarget = $('hubFormTarget').value.trim();
+  const clean = sanitizeBridgeInput({
+    kind: $('hubFormKind').value,
+    endpoint: rawEndpoint,
+    targetId: rawTarget,
+    secretToken: rawToken,
+  });
+  const changed = (clean.endpoint !== rawEndpoint) || (clean.secretToken !== rawToken) || (clean.targetId !== rawTarget);
+  if (changed) {
+    if (clean.endpoint) setHubEndpointValue(clean.endpoint);
+    $('hubFormToken').value = clean.secretToken;
+    $('hubFormTarget').value = clean.targetId;
+    const hint = $('hubSanitizeHint');
+    if (hint) hint.hidden = false;
+  }
+  return {
+    guide,
+    payload: {
+      network: guide.id,
+      kind: clean.kind,
+      endpoint: clean.endpoint || null,
+      targetId: clean.targetId || null,
+      secretToken: clean.secretToken || null,
+      botName: state.hubLastTestedBotName || null,
+    },
+  };
 }
 
 // ---------------- Привязка событий ----------------
@@ -1952,6 +2167,12 @@ function bindEvents() {
   for (const btn of document.querySelectorAll('#hubMobileTabs [data-hub-step]')) {
     btn.addEventListener('click', () => setHubMobileStep(btn.dataset.hubStep));
   }
+  for (const btn of document.querySelectorAll('#hubFilterPills [data-hub-filter]')) {
+    btn.addEventListener('click', () => {
+      state.hubFilter = btn.dataset.hubFilter;
+      renderConnectHub();
+    });
+  }
   $('hubServiceSearch').addEventListener('input', (e) => {
     state.hubSearch = e.target.value;
     renderConnectHub();
@@ -1959,8 +2180,26 @@ function bindEvents() {
   $('hubFormKind').addEventListener('change', () => {
     const guide = getServiceGuide(state.hubSelectedService);
     const live = findLiveBridgeStatus(guide.id);
+    $('hubFormKind').dataset.forNet = guide.id;
     applyHubFormFieldLabels(guide, live);
+    renderConnectHub();
   });
+  $('hubFormPrimaryEndpoint').addEventListener('input', (e) => {
+    $('hubFormEndpoint').value = e.target.value;
+    const guide = getServiceGuide(state.hubSelectedService);
+    renderHubRouteDiagram(guide, findNetworkSpec(guide.id), findLiveBridgeStatus(guide.id));
+  });
+  $('hubFormEndpoint').addEventListener('input', (e) => {
+    $('hubFormPrimaryEndpoint').value = e.target.value;
+    const guide = getServiceGuide(state.hubSelectedService);
+    renderHubRouteDiagram(guide, findNetworkSpec(guide.id), findLiveBridgeStatus(guide.id));
+  });
+  // Автоочистка токена / ID / URL при потере фокуса
+  for (const inpId of ['hubFormToken', 'hubFormTarget', 'hubFormPrimaryEndpoint', 'hubFormEndpoint']) {
+    $(inpId)?.addEventListener('blur', () => {
+      collectSanitizedHubPayload();
+    });
+  }
   $('btnHubToggleTokenVis').addEventListener('click', () => {
     const inp = $('hubFormToken');
     inp.type = inp.type === 'password' ? 'text' : 'password';
@@ -1996,16 +2235,13 @@ function bindEvents() {
   $('btnHubTestBridge').addEventListener('click', async () => {
     const box = $('hubTestResult');
     box.hidden = false;
+    box.className = 'callout';
     box.textContent = '⏳ Проверяю соединение и ищу доступные чаты…';
-    const guide = getServiceGuide(state.hubSelectedService);
-    const res = await state.client.testLiveBridge({
-      network: guide.id,
-      kind: $('hubFormKind').value,
-      endpoint: $('hubFormEndpoint').value.trim() || null,
-      targetId: $('hubFormTarget').value.trim() || null,
-      secretToken: $('hubFormToken').value.trim() || null,
-    });
+    const { payload } = collectSanitizedHubPayload();
+    const res = await state.client.testLiveBridge(payload);
     if (res.ok) {
+      state.hubLastTestedBotName = res.data.botName || null;
+      box.className = 'callout is-ok';
       box.textContent = `✅ ${res.data.message}${res.data.rttMs != null ? ` (${res.data.rttMs} мс)` : ''}`;
       const chats = res.data.suggestedChats || [];
       const wrap = $('hubSuggestedWrap');
@@ -2028,23 +2264,43 @@ function bindEvents() {
         wrap.hidden = true;
       }
     } else {
+      box.className = 'callout is-err';
       box.textContent = `⚠️ ${res.error?.message || 'Не удалось проверить подключение'}`;
       $('hubSuggestedWrap').hidden = true;
     }
   });
+  $('btnHubSendTestMsg').addEventListener('click', async () => {
+    const box = $('hubTestResult');
+    box.hidden = false;
+    box.className = 'callout';
+    box.textContent = '✉ Отправляю проверочное сообщение в реальный чат…';
+    const { guide, payload } = collectSanitizedHubPayload();
+    const res = await state.client.sendTestBridgeMessage({
+      ...payload,
+      text: `✅ RatMes подключён к ${guide.name}! Сообщения синхронизируются с RatMes-Vault/.`,
+    });
+    if (res.ok) {
+      box.className = 'callout is-ok';
+      box.textContent = `🎉 ${res.data.message}`;
+      toast(`Тестовое сообщение доставлено в ${guide.name}!`);
+    } else {
+      box.className = 'callout is-err';
+      box.textContent = `⚠️ ${res.error?.message || 'Не удалось отправить тестовое сообщение'}`;
+    }
+  });
   $('hubConnectForm').addEventListener('submit', async (e) => {
     e.preventDefault();
-    const guide = getServiceGuide(state.hubSelectedService);
+    const { guide, payload } = collectSanitizedHubPayload();
     const res = await state.client.configureLiveBridge({
-      network: guide.id,
-      kind: $('hubFormKind').value,
-      endpoint: $('hubFormEndpoint').value.trim() || null,
-      targetId: $('hubFormTarget').value.trim() || null,
-      secretToken: $('hubFormToken').value.trim() || null,
+      ...payload,
       enabled: true,
       enablePolling: !$('hubPollingWrap').hidden && $('hubFormPolling').checked,
     });
     if (!res.ok) {
+      const box = $('hubTestResult');
+      box.hidden = false;
+      box.className = 'callout is-err';
+      box.textContent = `⚠️ ${res.error?.message || 'Ошибка подключения сервиса'}`;
       toast(res.error?.message || 'Ошибка подключения сервиса');
       return;
     }
@@ -2058,7 +2314,7 @@ function bindEvents() {
         chatId: slug,
         chatTitle: `${guide.name} · Подключённый чат`,
         senderName: 'RatMes',
-        text: `Сервис **${guide.name}** подключён (${$('hubFormKind').value.toUpperCase()}). Токен защищён в \`SecretVault\`, все сообщения сохраняются в \`RatMes-Vault/\`.`,
+        text: `Сервис **${guide.name}** подключён (${payload.kind.toUpperCase()}). Токен защищён в \`SecretVault\`, все сообщения сохраняются в \`RatMes-Vault/\`.`,
       });
       await refreshAll({ keepScroll: true });
       targetChat = state.chats.find((c) => c.chatId === slug);

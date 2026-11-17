@@ -9,7 +9,8 @@ import path from 'node:path';
 import http from 'node:http';
 
 import { startRatMesAgent } from '../src/agent/server.mjs';
-import { SERVICE_GUIDES, getServiceGuide } from '../src/engine/service-guides.mjs';
+import { SERVICE_GUIDES, getServiceGuide, sanitizeBridgeInput } from '../src/engine/service-guides.mjs';
+import { BRAND_THEMES, getBrandTheme } from '../src/web/brand-icons.mjs';
 
 console.log('=== RatMes 2-Node Live E2EE P2P Mesh & Live Bridges Tests ===');
 
@@ -180,17 +181,40 @@ try {
   assert.equal(searchAfterHook.data.totalMatches, 1);
   console.log('  ✓ Входящий webhook /api/hooks/telegram сохранён в Vault и мгновенно найден через BM25');
 
-  // 7. Полный тест живого драйвера MAX Bot API (GET /me, GET /updates, POST /messages?chat_id=..., /api/hooks/max) + service-guides.mjs
+  // 7. Полный тест живого драйвера MAX Bot API v2 (platform-api2.max.ru, GET /me, GET /chats/{chatId}, GET /updates, POST /messages?chat_id=... + format:markdown, send-test, bridges.json) + санитайзер + brand-icons
   assert.ok(SERVICE_GUIDES.length >= 12);
   assert.equal(getServiceGuide('max').driverKind, 'max');
+  assert.equal(getServiceGuide('max').defaultEndpoint, 'https://platform-api2.max.ru');
   assert.ok(getServiceGuide('max').steps.length >= 3);
+  assert.ok(Object.keys(BRAND_THEMES).length >= 13);
+  assert.equal(getBrandTheme('max').accent, '#8b5cf6');
+  assert.ok(getBrandTheme('max').gradient.includes('linear-gradient'));
+
+  // Проверяем умную автоочистку пользовательского ввода sanitizeBridgeInput
+  const sanMax = sanitizeBridgeInput({ kind: 'max', endpoint: 'https://platform-api.max.ru/', secretToken: 'Authorization: Bearer   MAX_RAW_TOK  ', targetId: ' -701 ' });
+  assert.equal(sanMax.endpoint, 'https://platform-api2.max.ru');
+  assert.equal(sanMax.secretToken, 'MAX_RAW_TOK');
+  assert.equal(sanMax.targetId, '-701');
+  const sanTg = sanitizeBridgeInput({ kind: 'telegram', secretToken: 'bot123456:AA_TOKEN' });
+  assert.equal(sanTg.secretToken, '123456:AA_TOKEN');
+  const sanDc = sanitizeBridgeInput({ kind: 'discord', endpoint: '', secretToken: 'https://discord.com/api/webhooks/1/abc' });
+  assert.equal(sanDc.endpoint, 'https://discord.com/api/webhooks/1/abc');
+  assert.equal(sanDc.secretToken, '');
+  const sanWa = sanitizeBridgeInput({ kind: 'whatsapp', targetId: '+7 (999) 123-45-67' });
+  assert.equal(sanWa.targetId, '79991234567');
+  console.log('  ✓ sanitizeBridgeInput корректно очищает MAX/Telegram/Discord/WhatsApp и обновляет platform-api2.max.ru');
 
   const maxReceived = [];
   const mockMaxServer = http.createServer((req, res) => {
     const u = new URL(req.url || '/', 'http://127.0.0.1');
     if (u.pathname === '/me' && req.method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ user_id: 777, name: 'RatMes MAX Bot', username: 'ratmes_bot' }));
+      res.end(JSON.stringify({ user_id: 777, name: 'RatMes MAX Bot', username: 'ratmes_bot', is_bot: true }));
+      return;
+    }
+    if (u.pathname === '/chats/-70123456' && req.method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ chat_id: -70123456, type: 'chat', status: 'active', title: 'MAX Семья (из /chats/{id})' }));
       return;
     }
     if (u.pathname === '/updates' && req.method === 'GET') {
@@ -225,19 +249,39 @@ try {
     const testMax = await (await fetch(`${aliceUrl}/api/bridges/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ network: 'max', kind: 'max', endpoint: maxEndpoint, secretToken: maxToken }),
+      body: JSON.stringify({ network: 'max', kind: 'max', endpoint: maxEndpoint, targetId: '-70123456', secretToken: `Bearer ${maxToken}` }),
     })).json();
     assert.equal(testMax.ok, true);
     assert.equal(testMax.data.botName, 'RatMes MAX Bot');
     assert.equal(testMax.data.suggestedChats[0].id, '-70123456');
+    assert.ok(testMax.data.suggestedChats[0].label.includes('MAX Семья'));
     assert.equal(JSON.stringify(testMax).includes(maxToken), false);
+
+    // Тест нового эндпоинта POST /api/bridges/send-test (живая отправка пробного сообщения из Мастера!)
+    const sendTestRes = await (await fetch(`${aliceUrl}/api/bridges/send-test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ network: 'max', kind: 'max', endpoint: maxEndpoint, targetId: '-70123456', secretToken: maxToken }),
+    })).json();
+    assert.equal(sendTestRes.ok, true);
+    assert.equal(maxReceived.length, 1);
+    assert.equal(maxReceived[0].body.format, 'markdown');
 
     const cfgMax = await (await fetch(`${aliceUrl}/api/bridges/configure`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ network: 'max', kind: 'max', endpoint: maxEndpoint, targetId: '-70123456', secretToken: maxToken, enabled: true }),
+      body: JSON.stringify({ network: 'max', kind: 'max', endpoint: maxEndpoint, targetId: '-70123456', secretToken: maxToken, botName: 'RatMes MAX Bot', enabled: true }),
     })).json();
     assert.equal(cfgMax.ok, true);
+
+    // Проверяем персистентность RatMes-Vault/meta/bridges.json БЕЗ записи секретных токенов
+    const bridgesJsonPath = path.join(vaultAlice, 'meta', 'bridges.json');
+    assert.equal(fs.existsSync(bridgesJsonPath), true);
+    const bridgesRaw = fs.readFileSync(bridgesJsonPath, 'utf8');
+    assert.equal(bridgesRaw.includes(maxToken), false);
+    assert.equal(bridgesRaw.includes(secretTok), false);
+    assert.ok(bridgesRaw.includes('RatMes MAX Bot'));
+    assert.ok(bridgesRaw.includes('-70123456'));
 
     const sendMax = await (await fetch(`${aliceUrl}/api/tool`, {
       method: 'POST',
@@ -253,10 +297,11 @@ try {
       }),
     })).json();
     assert.equal(sendMax.ok, true);
-    assert.equal(maxReceived.length, 1);
-    assert.equal(maxReceived[0].auth, maxToken);
-    assert.equal(maxReceived[0].chatId, '-70123456');
-    assert.equal(maxReceived[0].body.text, 'Привет в MAX из RatMes!');
+    assert.equal(maxReceived.length, 2);
+    assert.equal(maxReceived[1].auth, maxToken);
+    assert.equal(maxReceived[1].chatId, '-70123456');
+    assert.equal(maxReceived[1].body.text, 'Привет в MAX из RatMes!');
+    assert.equal(maxReceived[1].body.format, 'markdown');
 
     const maxIn = await (await fetch(`${aliceUrl}/api/hooks/max`, {
       method: 'POST',
@@ -267,7 +312,7 @@ try {
       }),
     })).json();
     assert.equal(maxIn.ok, true);
-    console.log('  ✓ Живой мост MAX Bot API (/me + автопоиск chat_id + /messages + /api/hooks/max) работает');
+    console.log('  ✓ Живой мост MAX Bot API v2 (/me + /chats/{id} + /updates + send-test + markdown + bridges.json без токенов) работает');
   } finally {
     await new Promise((r) => mockMaxServer.close(r));
   }

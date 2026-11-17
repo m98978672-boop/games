@@ -1,24 +1,72 @@
-// Санкционированный транспортный драйвер живых мостов ПК-агента:
-// MAX Bot API, Telegram Bot API, Discord Webhook, VK Messages API, WhatsApp Cloud API,
-// Matrix Client-Server API, Viber Bot API, Signal (signal-cli REST API) и Custom HTTP Webhook.
-// Секретные токены НИКОГДА не возвращаются в UI — драйвер подписывает запросы напрямую,
-// а наружу отдаёт только статус соединения, маску конфигурации и метрики доставки.
+// Санкционированный транспортный драйвер живых мостов ПК-агента (протоколы 2026):
+// MAX Bot API v2 (platform-api2.max.ru), Telegram Bot API, Discord Webhook, VK Messages API v5.199,
+// WhatsApp Cloud API, Matrix C-S API v3, Viber Bot API, Signal (signal-cli REST API) и HTTP Webhook.
+// Секретные токены НИКОГДА не возвращаются в UI и не сохраняются открытым текстом.
 
-export function createLiveBridgeManager({ engine }) {
-  // network -> { enabled, kind, endpoint, targetId, getSecret, pollTimer, lastOffset, lastMarker, stats }
+import { sanitizeBridgeInput } from '../engine/service-guides.mjs';
+
+export function createLiveBridgeManager({ engine, initialMeta = [], onPersistMeta = null }) {
+  // network -> { enabled, kind, endpoint, targetId, botName, connectedAt, getSecret, pollTimer, lastOffset, lastMarker, stats }
   const configs = new Map();
+
+  // Восстанавливаем сохранённые публичные метаданные (endpoint, targetId, botName) после перезапуска агента
+  if (Array.isArray(initialMeta)) {
+    for (const item of initialMeta) {
+      if (!item || !item.network) continue;
+      const net = String(item.network).toLowerCase();
+      configs.set(net, {
+        network: net,
+        kind: item.kind || defaultKindFor(net),
+        endpoint: item.endpoint || defaultEndpointFor(item.kind || defaultKindFor(net)),
+        targetId: item.targetId || '',
+        botName: item.botName || null,
+        connectedAt: item.connectedAt || null,
+        // Токен хранится только в оперативной памяти SecretVault текущей сессии; после рестарта статус «требует токен» если был live
+        enabled: false,
+        needsTokenReauth: Boolean(item.wasEnabled && item.kind !== 'discord' && item.kind !== 'signal'),
+        sessionHandleId: null,
+        getSecret: () => '',
+        pollTimer: null,
+        lastOffset: 0,
+        lastMarker: null,
+        stats: { sentLive: 0, recvLive: 0, lastLiveAt: null, lastError: null },
+      });
+    }
+  }
+
+  function persistAllMeta() {
+    if (typeof onPersistMeta !== 'function') return;
+    const list = [];
+    for (const cfg of configs.values()) {
+      list.push({
+        network: cfg.network,
+        kind: cfg.kind,
+        endpoint: cfg.endpoint,
+        targetId: cfg.targetId,
+        botName: cfg.botName || null,
+        wasEnabled: Boolean(cfg.enabled),
+        polling: Boolean(cfg.pollTimer),
+        connectedAt: cfg.connectedAt || null,
+      });
+    }
+    try { onPersistMeta(list); } catch { /* ignore */ }
+  }
 
   function getStatus(network) {
     const cfg = configs.get(network);
     if (!cfg) {
+      const k = defaultKindFor(network);
       return {
         network,
         mode: 'sandbox',
         enabled: false,
-        kind: defaultKindFor(network),
-        endpoint: defaultEndpointFor(defaultKindFor(network)),
+        kind: k,
+        endpoint: defaultEndpointFor(k),
         targetId: null,
+        botName: null,
         polling: false,
+        needsTokenReauth: false,
+        connectedAt: null,
         sentLive: 0,
         recvLive: 0,
         lastError: null,
@@ -31,7 +79,10 @@ export function createLiveBridgeManager({ engine }) {
       kind: cfg.kind,
       endpoint: cfg.endpoint,
       targetId: cfg.targetId,
+      botName: cfg.botName || null,
       polling: Boolean(cfg.pollTimer),
+      needsTokenReauth: Boolean(cfg.needsTokenReauth),
+      connectedAt: cfg.connectedAt || null,
       sentLive: cfg.stats.sentLive,
       recvLive: cfg.stats.recvLive,
       lastLiveAt: cfg.stats.lastLiveAt,
@@ -50,19 +101,25 @@ export function createLiveBridgeManager({ engine }) {
     endpoint = null,
     targetId = null,
     secretToken = null,
+    botName = null,
     enabled = true,
     enablePolling = false,
   }) {
     const net = String(network || '').toLowerCase();
-    const bridgeKind = kind || defaultKindFor(net);
+    const clean = sanitizeBridgeInput({
+      kind: kind || defaultKindFor(net),
+      endpoint,
+      targetId,
+      secretToken,
+    });
+    const bridgeKind = clean.kind;
 
-    // Если передан секрет — кладём его строго в SecretVault!
     let sessionHandle = null;
-    if (secretToken) {
+    if (clean.secretToken) {
       const stored = await engine.tools.crypto.storeSession({
         network: net,
-        accountLabel: `${bridgeKind}:${targetId || 'live'}`,
-        secretToken,
+        accountLabel: `${bridgeKind}:${clean.targetId || 'live'}`,
+        secretToken: clean.secretToken,
       });
       if (!stored.ok) return stored;
       sessionHandle = stored.data.sessionHandle;
@@ -71,14 +128,16 @@ export function createLiveBridgeManager({ engine }) {
     const prev = configs.get(net);
     if (prev?.pollTimer) clearInterval(prev.pollTimer);
 
-    // Секрет хранится только в замыкании драйвера (никогда не сериализуется наружу!)
-    const closedSecret = secretToken || prev?.getSecret?.() || '';
+    const closedSecret = clean.secretToken || prev?.getSecret?.() || '';
     const cfg = {
       network: net,
       kind: bridgeKind,
-      endpoint: endpoint || defaultEndpointFor(bridgeKind),
-      targetId: targetId || prev?.targetId || '',
+      endpoint: clean.endpoint || prev?.endpoint || defaultEndpointFor(bridgeKind),
+      targetId: clean.targetId || prev?.targetId || '',
+      botName: botName || prev?.botName || null,
+      connectedAt: enabled ? Date.now() : (prev?.connectedAt || null),
       enabled: Boolean(enabled),
+      needsTokenReauth: false,
       sessionHandleId: sessionHandle?.handleId || prev?.sessionHandleId || null,
       getSecret: () => closedSecret,
       pollTimer: null,
@@ -88,7 +147,6 @@ export function createLiveBridgeManager({ engine }) {
     };
     configs.set(net, cfg);
 
-    // Привязываем живой транспорт к актору моста в BridgeSupervisor
     const actor = engine.supervisor?.getActor(net);
     if (actor) {
       actor.customTransport = cfg.enabled
@@ -101,6 +159,7 @@ export function createLiveBridgeManager({ engine }) {
       if (bridgeKind === 'max') startMaxPolling(cfg);
     }
 
+    persistAllMeta();
     return { ok: true, data: { status: getStatus(net), sessionHandle } };
   }
 
@@ -109,6 +168,7 @@ export function createLiveBridgeManager({ engine }) {
     const cfg = configs.get(net);
     if (cfg) {
       cfg.enabled = false;
+      cfg.needsTokenReauth = false;
       if (cfg.pollTimer) {
         clearInterval(cfg.pollTimer);
         cfg.pollTimer = null;
@@ -116,16 +176,23 @@ export function createLiveBridgeManager({ engine }) {
     }
     const actor = engine.supervisor?.getActor(net);
     if (actor) actor.customTransport = null;
+    persistAllMeta();
     return { ok: true, data: { status: getStatus(net) } };
   }
 
   // Проверка подключения и автопоиск доступных chat_id ДО сохранения (секрет не возвращается наружу!)
   async function testBridge({ network = 'max', kind = null, endpoint = null, targetId = null, secretToken = null } = {}) {
     const net = String(network || '').toLowerCase();
-    const bridgeKind = kind || defaultKindFor(net);
+    const clean = sanitizeBridgeInput({
+      kind: kind || defaultKindFor(net),
+      endpoint,
+      targetId,
+      secretToken,
+    });
+    const bridgeKind = clean.kind;
     const prev = configs.get(net);
-    const token = secretToken || prev?.getSecret?.() || '';
-    const base = (endpoint || prev?.endpoint || defaultEndpointFor(bridgeKind)).replace(/\/$/, '');
+    const token = clean.secretToken || prev?.getSecret?.() || '';
+    const base = (clean.endpoint || prev?.endpoint || defaultEndpointFor(bridgeKind)).replace(/\/$/, '');
     const started = performance.now();
 
     try {
@@ -136,41 +203,60 @@ export function createLiveBridgeManager({ engine }) {
         });
         const me = await meRes.json().catch(() => ({}));
         if (!meRes.ok) {
-          throw new Error(me.message || me.code || `MAX HTTP ${meRes.status}`);
+          throw new Error(formatHttpError('MAX', meRes.status, me.message || me.code));
         }
-        // Пытаемся подсказать найденные chat_id из последних обновлений (/updates)
+
         const suggestedChats = [];
+        const seen = new Set();
+
+        // Если пользователь уже ввёл chat_id (число), проверим сам чат через GET /chats/{chatId}
+        const tid = clean.targetId;
+        if (tid && !/^u(ser)?:/i.test(tid) && /^-?\d+$/.test(tid)) {
+          try {
+            const cRes = await fetch(`${base}/chats/${encodeURIComponent(tid)}`, { headers: { Authorization: token } });
+            if (cRes.ok) {
+              const cInfo = await cRes.json();
+              seen.add(`c:${tid}`);
+              suggestedChats.push({
+                id: tid,
+                label: `${cInfo.title || `Чат ${tid}`} · ${cInfo.type || 'chat'} (${tid})`,
+              });
+            }
+          } catch { /* опционально */ }
+        }
+
+        // Извлекаем активные чаты из /updates (с июня 2026 GET /chats отключён MAX — чаты берутся из /updates)
         try {
-          const updRes = await fetch(`${base}/updates?limit=10&timeout=0`, {
+          const updRes = await fetch(`${base}/updates?limit=15&timeout=0`, {
             headers: { Authorization: token },
           });
           if (updRes.ok) {
             const updJson = await updRes.json();
-            const seen = new Set();
             for (const u of (updJson.updates || [])) {
               const cid = u?.message?.recipient?.chat_id ?? u?.chat_id;
               const uid = u?.message?.sender?.user_id ?? u?.user?.user_id;
-              const title = u?.message?.sender?.name || u?.user?.name || (cid ? `Чат ${cid}` : '');
+              const title = u?.message?.recipient?.chat_title || u?.message?.sender?.name || u?.user?.name || '';
               if (cid != null && !seen.has(`c:${cid}`)) {
                 seen.add(`c:${cid}`);
-                suggestedChats.push({ id: String(cid), label: `${title || 'Чат MAX'} (chat_id: ${cid})` });
+                suggestedChats.push({ id: String(cid), label: `${title || 'Чат MAX'} (${cid})` });
               } else if (uid != null && !seen.has(`u:${uid}`)) {
                 seen.add(`u:${uid}`);
                 suggestedChats.push({ id: `user:${uid}`, label: `${title || 'Пользователь MAX'} (user:${uid})` });
               }
             }
           }
-        } catch { /* опциональный поиск чатов */ }
+        } catch { /* опционально */ }
 
         return {
           ok: true,
           data: {
             kind: 'max',
+            endpointUsed: base,
             botName: me.name || me.username || `MAX Bot #${me.user_id || ''}`,
             username: me.username ? `@${me.username}` : null,
             rttMs: Math.round(performance.now() - started),
             suggestedChats,
-            message: `MAX бот подключён: ${me.name || me.username || 'OK'}${suggestedChats.length ? ` · найдено чатов: ${suggestedChats.length}` : ' · напиши боту в MAX, чтобы увидеть chat_id'}`,
+            message: `MAX бот «${me.name || me.username || 'OK'}» подтверждён (${base.replace(/^https?:\/\//, '')})${suggestedChats.length ? ` · найдено чатов: ${suggestedChats.length}` : ' · напиши боту в MAX, чтобы подхватился chat_id'}`,
           },
         };
       }
@@ -180,15 +266,25 @@ export function createLiveBridgeManager({ engine }) {
         const meRes = await fetch(`${base}/bot${token}/getMe`);
         const me = await meRes.json().catch(() => ({}));
         if (!meRes.ok || !me.ok) {
-          throw new Error(me.description || `Telegram HTTP ${meRes.status}`);
+          throw new Error(formatHttpError('Telegram', meRes.status, me.description));
         }
+
+        let webhookWarning = '';
+        try {
+          const whRes = await fetch(`${base}/bot${token}/getWebhookInfo`);
+          const wh = await whRes.json().catch(() => ({}));
+          if (wh.ok && wh.result?.url) {
+            webhookWarning = ` · Внимание: у бота активен webhook (${wh.result.url}), он может перехватывать Long Polling`;
+          }
+        } catch { /* ignore */ }
+
         const suggestedChats = [];
         try {
-          const updRes = await fetch(`${base}/bot${token}/getUpdates?limit=10`);
+          const updRes = await fetch(`${base}/bot${token}/getUpdates?limit=15`);
           const updJson = await updRes.json().catch(() => ({}));
           const seen = new Set();
           for (const u of (updJson.result || [])) {
-            const c = u?.message?.chat || u?.channel_post?.chat;
+            const c = u?.message?.chat || u?.channel_post?.chat || u?.my_chat_member?.chat;
             if (c?.id != null && !seen.has(String(c.id))) {
               seen.add(String(c.id));
               const label = c.title || [c.first_name, c.last_name].filter(Boolean).join(' ') || (c.username ? `@${c.username}` : `Чат ${c.id}`);
@@ -205,7 +301,7 @@ export function createLiveBridgeManager({ engine }) {
             username: me.result?.username ? `@${me.result.username}` : null,
             rttMs: Math.round(performance.now() - started),
             suggestedChats,
-            message: `Telegram бот @${me.result?.username || 'bot'} проверен${suggestedChats.length ? ` · найдено чатов: ${suggestedChats.length}` : ' · напиши боту «привет», чтобы получить chat_id'}`,
+            message: `Telegram бот @${me.result?.username || 'bot'} проверен${suggestedChats.length ? ` · найдено чатов: ${suggestedChats.length}` : ' · напиши боту «привет» для автопоиска chat_id'}${webhookWarning}`,
           },
         };
       }
@@ -213,9 +309,12 @@ export function createLiveBridgeManager({ engine }) {
       if (bridgeKind === 'discord') {
         const webhookUrl = base || token;
         if (!webhookUrl) return { ok: false, error: { code: 'RM-401', message: 'Вставь ссылку Discord Webhook URL' } };
+        if (!/^https?:\/\/.+/i.test(webhookUrl)) {
+          return { ok: false, error: { code: 'RM-105', message: 'Неверный формат URL — скопируй ссылку из Настройки канала → Интеграции → Вебхуки' } };
+        }
         const res = await fetch(webhookUrl);
         const info = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(info.message || `Discord HTTP ${res.status}`);
+        if (!res.ok) throw new Error(formatHttpError('Discord', res.status, info.message));
         return {
           ok: true,
           data: {
@@ -223,7 +322,7 @@ export function createLiveBridgeManager({ engine }) {
             botName: info.name || 'Discord Webhook',
             rttMs: Math.round(performance.now() - started),
             suggestedChats: info.channel_id ? [{ id: String(info.channel_id), label: `Канал ${info.channel_id}` }] : [],
-            message: `Discord Webhook «${info.name || 'OK'}» активен и готов к отправке!`,
+            message: `Discord Webhook «${info.name || 'OK'}» активен — можно отправлять сообщения!`,
           },
         };
       }
@@ -234,7 +333,7 @@ export function createLiveBridgeManager({ engine }) {
           headers: { Authorization: `Bearer ${token}` },
         });
         const info = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(info.error || `Matrix HTTP ${res.status}`);
+        if (!res.ok) throw new Error(formatHttpError('Matrix', res.status, info.error));
         return {
           ok: true,
           data: {
@@ -252,21 +351,36 @@ export function createLiveBridgeManager({ engine }) {
         const params = new URLSearchParams({ access_token: token, v: '5.199' });
         const res = await fetch(`${base}/method/groups.getById`, { method: 'POST', body: params });
         const info = await res.json().catch(() => ({}));
-        if (info.error) throw new Error(info.error.error_msg || 'VK API error');
-        const g = info.response?.groups?.[0] || info.response?.[0];
+        if (!info.error) {
+          const g = info.response?.groups?.[0] || info.response?.[0];
+          return {
+            ok: true,
+            data: {
+              kind: 'vk',
+              botName: g?.name || 'VK Сообщество',
+              rttMs: Math.round(performance.now() - started),
+              suggestedChats: [],
+              message: `Ключ VK сообщества подтверждён${g?.name ? `: «${g.name}»` : ''}!`,
+            },
+          };
+        }
+        // Фолбэк на проверку пользовательского токена
+        const uRes = await fetch(`${base}/method/users.get`, { method: 'POST', body: params });
+        const uInfo = await uRes.json().catch(() => ({}));
+        if (uInfo.error) throw new Error(uInfo.error.error_msg || info.error.error_msg || 'VK API error');
+        const u = uInfo.response?.[0];
         return {
           ok: true,
           data: {
             kind: 'vk',
-            botName: g?.name || 'VK API',
+            botName: u ? `${u.first_name} ${u.last_name}` : 'VK Аккаунт',
             rttMs: Math.round(performance.now() - started),
-            suggestedChats: [],
-            message: `Ключ VK подтверждён${g?.name ? ` (${g.name})` : ''}!`,
+            suggestedChats: u?.id ? [{ id: String(u.id), label: `Личный ID (${u.id})` }] : [],
+            message: `Ключ VK подтверждён (${u ? `${u.first_name} ${u.last_name}` : 'OK'})!`,
           },
         };
       }
 
-      // Для WhatsApp / Viber / Signal / Custom Webhook проверяем корректность URL
       if (!base) {
         return { ok: false, error: { code: 'RM-401', message: 'Укажи URL API или Webhook-шлюза' } };
       }
@@ -277,19 +391,56 @@ export function createLiveBridgeManager({ engine }) {
           kind: bridgeKind,
           botName: `${bridgeKind.toUpperCase()} (${parsed.host})`,
           rttMs: Math.round(performance.now() - started),
-          suggestedChats: targetId ? [{ id: String(targetId), label: String(targetId) }] : [],
-          message: `Адрес ${parsed.host} корректен — можно сохранять подключение и отправлять тестовое сообщение.`,
+          suggestedChats: clean.targetId ? [{ id: String(clean.targetId), label: String(clean.targetId) }] : [],
+          message: `Адрес ${parsed.host} корректен — нажми «✉ Тест в чат» или «✅ Подключить».`,
         },
       };
     } catch (err) {
+      const tlsHint = /CERT|UNABLE_TO_VERIFY|SELF_SIGNED|certificate/i.test(String(err?.message || '')) && bridgeKind === 'max'
+        ? ' (для platform-api2.max.ru убедись, что в системе добавлен корневой сертификат Минцифры)'
+        : '';
       return {
         ok: false,
         error: {
           code: 'RM-302',
-          message: `Проверка ${bridgeKind.toUpperCase()} не прошла: ${err.message}`,
+          message: `Проверка ${bridgeKind.toUpperCase()} не прошла: ${err.message}${tlsHint}`,
         },
       };
     }
+  }
+
+  // Реальная отправка тестового сообщения прямо из Мастера подключений!
+  async function sendTestMessage({ network = 'max', kind = null, endpoint = null, targetId = null, secretToken = null, text = null } = {}) {
+    const net = String(network || '').toLowerCase();
+    const clean = sanitizeBridgeInput({
+      kind: kind || defaultKindFor(net),
+      endpoint,
+      targetId,
+      secretToken,
+    });
+    const prev = configs.get(net);
+    const tempCfg = {
+      network: net,
+      kind: clean.kind,
+      endpoint: clean.endpoint || prev?.endpoint || defaultEndpointFor(clean.kind),
+      targetId: clean.targetId || prev?.targetId || '',
+      getSecret: () => clean.secretToken || prev?.getSecret?.() || '',
+      stats: { sentLive: 0, recvLive: 0, lastLiveAt: null, lastError: null },
+    };
+    const msgText = text || `✅ RatMes подключён к ${net.toUpperCase()}! Сообщения синхронизируются с RatMes-Vault/.`;
+    const res = await deliverLive(tempCfg, {
+      envelopeRecord: { chatId: `${net}-test`, body: { msgId: `test-${Date.now()}`, text: msgText, ts: Date.now() } },
+      routePlan: { activeRoute: 'direct' },
+    });
+    if (!res.ok) return res;
+    return {
+      ok: true,
+      data: {
+        remoteId: res.remoteId,
+        rttMs: res.rttMs,
+        message: `Тестовое сообщение доставлено в ${net.toUpperCase()} за ${res.rttMs} мс! Проверь свой чат.`,
+      },
+    };
   }
 
   async function deliverLive(cfg, { envelopeRecord, routePlan }) {
@@ -298,7 +449,7 @@ export function createLiveBridgeManager({ engine }) {
     const started = performance.now();
 
     try {
-      // 1. MAX Bot API (https://platform-api.max.ru)
+      // 1. MAX Bot API v2 (https://platform-api2.max.ru)
       if (cfg.kind === 'max') {
         if (!token || !cfg.targetId) {
           throw new Error('Для живого MAX нужны access_token от @MasterBot и chat_id (или user:ID)');
@@ -314,10 +465,10 @@ export function createLiveBridgeManager({ engine }) {
             'Content-Type': 'application/json',
             Authorization: token,
           },
-          body: JSON.stringify({ text }),
+          body: JSON.stringify({ text, format: 'markdown' }),
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json.message || json.code || `MAX HTTP ${res.status}`);
+        if (!res.ok) throw new Error(formatHttpError('MAX', res.status, json.message || json.code));
         cfg.stats.sentLive += 1;
         cfg.stats.lastLiveAt = Date.now();
         cfg.stats.lastError = null;
@@ -335,13 +486,22 @@ export function createLiveBridgeManager({ engine }) {
       if (cfg.kind === 'telegram') {
         if (!token || !cfg.targetId) throw new Error('Для живого Telegram нужны Bot Token и targetId (chat_id)');
         const url = `${cfg.endpoint.replace(/\/$/, '')}/bot${token}/sendMessage`;
-        const res = await fetch(url, {
+        let res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ chat_id: cfg.targetId, text }),
+          body: JSON.stringify({ chat_id: cfg.targetId, text, parse_mode: 'Markdown' }),
         });
-        const json = await res.json();
-        if (!res.ok || !json.ok) throw new Error(json.description || `HTTP ${res.status}`);
+        let json = await res.json().catch(() => ({}));
+        // Если Markdown не распарсился Telegram — повторяем обычным текстом
+        if (!res.ok && /parse entities/i.test(String(json.description || ''))) {
+          res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: cfg.targetId, text }),
+          });
+          json = await res.json().catch(() => ({}));
+        }
+        if (!res.ok || !json.ok) throw new Error(formatHttpError('Telegram', res.status, json.description));
         cfg.stats.sentLive += 1;
         cfg.stats.lastLiveAt = Date.now();
         cfg.stats.lastError = null;
@@ -362,9 +522,9 @@ export function createLiveBridgeManager({ engine }) {
         const res = await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ content: text, username: 'RatMes Bridge' }),
+          body: JSON.stringify({ content: text, username: 'RatMes' }),
         });
-        if (!res.ok) throw new Error(`Discord HTTP ${res.status}`);
+        if (!res.ok) throw new Error(formatHttpError('Discord', res.status));
         cfg.stats.sentLive += 1;
         cfg.stats.lastLiveAt = Date.now();
         cfg.stats.lastError = null;
@@ -378,9 +538,9 @@ export function createLiveBridgeManager({ engine }) {
         };
       }
 
-      // 4. Matrix Client-Server API
+      // 4. Matrix Client-Server API v3
       if (cfg.kind === 'matrix') {
-        if (!cfg.endpoint || !cfg.targetId || !token) throw new Error('Для Matrix нужны homeserver endpoint, roomId и access_token');
+        if (!cfg.endpoint || !cfg.targetId || !token) throw new Error('Для Matrix нужны Homeserver, Room ID и Access Token');
         const txnId = `rm-${Date.now()}-${cfg.stats.sentLive + 1}`;
         const url = `${cfg.endpoint.replace(/\/$/, '')}/_matrix/client/v3/rooms/${encodeURIComponent(cfg.targetId)}/send/m.room.message/${txnId}`;
         const res = await fetch(url, {
@@ -388,8 +548,8 @@ export function createLiveBridgeManager({ engine }) {
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({ msgtype: 'm.text', body: text }),
         });
-        const json = await res.json();
-        if (!res.ok) throw new Error(json.error || `Matrix HTTP ${res.status}`);
+        const json = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(formatHttpError('Matrix', res.status, json.error));
         cfg.stats.sentLive += 1;
         cfg.stats.lastLiveAt = Date.now();
         cfg.stats.lastError = null;
@@ -403,7 +563,7 @@ export function createLiveBridgeManager({ engine }) {
         };
       }
 
-      // 5. VK Messages API
+      // 5. VK Messages API v5.199
       if (cfg.kind === 'vk') {
         if (!token || !cfg.targetId) throw new Error('Для живого VK нужны access_token и peer_id');
         const params = new URLSearchParams({
@@ -417,7 +577,7 @@ export function createLiveBridgeManager({ engine }) {
           method: 'POST',
           body: params,
         });
-        const json = await res.json();
+        const json = await res.json().catch(() => ({}));
         if (json.error) throw new Error(json.error.error_msg || 'VK API error');
         cfg.stats.sentLive += 1;
         cfg.stats.lastLiveAt = Date.now();
@@ -440,10 +600,7 @@ export function createLiveBridgeManager({ engine }) {
         const url = cfg.endpoint.endsWith('/messages') ? cfg.endpoint : `${cfg.endpoint.replace(/\/$/, '')}/messages`;
         const res = await fetch(url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify({
             messaging_product: 'whatsapp',
             to: String(cfg.targetId).replace(/[^\d]/g, ''),
@@ -452,7 +609,7 @@ export function createLiveBridgeManager({ engine }) {
           }),
         });
         const json = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(json.error?.message || `WhatsApp HTTP ${res.status}`);
+        if (!res.ok) throw new Error(formatHttpError('WhatsApp', res.status, json.error?.message));
         cfg.stats.sentLive += 1;
         cfg.stats.lastLiveAt = Date.now();
         cfg.stats.lastError = null;
@@ -472,16 +629,8 @@ export function createLiveBridgeManager({ engine }) {
         const url = `${cfg.endpoint.replace(/\/$/, '')}/pa/send_message`;
         const res = await fetch(url, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Viber-Auth-Token': token,
-          },
-          body: JSON.stringify({
-            receiver: cfg.targetId,
-            type: 'text',
-            text,
-            sender: { name: 'RatMes' },
-          }),
+          headers: { 'Content-Type': 'application/json', 'X-Viber-Auth-Token': token },
+          body: JSON.stringify({ receiver: cfg.targetId, type: 'text', text, sender: { name: 'RatMes' } }),
         });
         const json = await res.json().catch(() => ({}));
         if (!res.ok || (json.status && json.status !== 0)) {
@@ -509,13 +658,9 @@ export function createLiveBridgeManager({ engine }) {
         const res = await fetch(`${cfg.endpoint.replace(/\/$/, '')}/v2/send`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            message: text,
-            number: senderNum,
-            recipients: [recipientNum || senderNum],
-          }),
+          body: JSON.stringify({ message: text, number: senderNum, recipients: [recipientNum || senderNum] }),
         });
-        if (!res.ok) throw new Error(`Signal HTTP ${res.status}`);
+        if (!res.ok) throw new Error(formatHttpError('Signal', res.status));
         cfg.stats.sentLive += 1;
         cfg.stats.lastLiveAt = Date.now();
         cfg.stats.lastError = null;
@@ -529,7 +674,7 @@ export function createLiveBridgeManager({ engine }) {
         };
       }
 
-      // 9. Универсальный HTTP Webhook-мост (подходит для локальных шлюзов, n8n, WeChat, LINE, KakaoTalk, Zalo)
+      // 9. Универсальный HTTP Webhook-мост (n8n, WeChat, LINE, KakaoTalk, Zalo, Evolution API)
       if (!cfg.endpoint) throw new Error('Не указан endpoint webhook-моста');
       const headers = { 'Content-Type': 'application/json' };
       if (token) headers.Authorization = `Bearer ${token}`;
@@ -546,7 +691,7 @@ export function createLiveBridgeManager({ engine }) {
           ts: envelopeRecord.body.ts,
         }),
       });
-      if (!res.ok) throw new Error(`Webhook HTTP ${res.status}`);
+      if (!res.ok) throw new Error(formatHttpError('Webhook', res.status));
       cfg.stats.sentLive += 1;
       cfg.stats.lastLiveAt = Date.now();
       cfg.stats.lastError = null;
@@ -605,7 +750,7 @@ export function createLiveBridgeManager({ engine }) {
         if (json.marker != null) cfg.lastMarker = json.marker;
         if (!Array.isArray(json.updates)) return;
         for (const upd of json.updates) {
-          if (upd.update_type === 'message_created' || upd.message) {
+          if (upd.update_type === 'message_created' || upd.update_type === 'bot_added' || upd.message) {
             await ingestWebhook('max', upd);
           }
         }
@@ -616,7 +761,6 @@ export function createLiveBridgeManager({ engine }) {
     if (cfg.pollTimer.unref) cfg.pollTimer.unref();
   }
 
-  // Приём входящего webhook от внешней сети и прогон строго через engine.tools.transfer.receive()!
   async function ingestWebhook(network, payload = {}) {
     const net = String(network || 'custom').toLowerCase();
     let chatId = `${net}-live`;
@@ -625,13 +769,13 @@ export function createLiveBridgeManager({ engine }) {
     let text = '';
     let msgId = null;
 
-    if (net === 'max' && (payload.message || payload.body)) {
+    if (net === 'max' && (payload.message || payload.body || payload.update_type === 'bot_added')) {
       const m = payload.message || payload;
       const cid = m.recipient?.chat_id ?? m.chat_id ?? 'live';
       chatId = `max-${cid}`;
       chatTitle = m.recipient?.chat_title || m.sender?.name || `MAX · чат ${cid}`;
       senderName = m.sender?.name || (m.sender?.username ? `@${m.sender.username}` : 'MAX');
-      text = m.body?.text || m.text || '[вложение MAX]';
+      text = m.body?.text || m.text || (payload.update_type === 'bot_added' ? 'Бот добавлен в чат MAX' : '[вложение MAX]');
       msgId = m.body?.mid ? `max-in-${m.body.mid}` : null;
     } else if (net === 'telegram' && payload.message) {
       const m = payload.message;
@@ -695,11 +839,19 @@ export function createLiveBridgeManager({ engine }) {
     configureBridge,
     disableBridge,
     testBridge,
+    sendTestMessage,
     getStatus,
     listStatuses,
     ingestWebhook,
     closeAll,
   };
+}
+
+function formatHttpError(service, status, detail = '') {
+  if (status === 401) return `${service} вернул 401 (неверный или просроченный токен)${detail ? `: ${detail}` : ''}`;
+  if (status === 403) return `${service} вернул 403 (у токена нет прав писать в этот чат)${detail ? `: ${detail}` : ''}`;
+  if (status === 404) return `${service} вернул 404 (проверь адрес API или chat_id)${detail ? `: ${detail}` : ''}`;
+  return detail || `${service} HTTP ${status}`;
 }
 
 function defaultKindFor(net) {
@@ -710,7 +862,7 @@ function defaultKindFor(net) {
 }
 
 function defaultEndpointFor(kind) {
-  if (kind === 'max') return 'https://platform-api.max.ru';
+  if (kind === 'max') return 'https://platform-api2.max.ru';
   if (kind === 'telegram') return 'https://api.telegram.org';
   if (kind === 'vk') return 'https://api.vk.com';
   if (kind === 'matrix') return 'https://matrix-client.matrix.org';
