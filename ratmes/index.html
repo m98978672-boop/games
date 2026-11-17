@@ -32,11 +32,14 @@
         <button type="button" class="profile-main" id="btnEditProfile" title="Изменить имя и статус">
           <span class="profile-avatar" id="myProfileAvatar">Я</span>
           <span class="profile-text">
-            <strong id="myProfileName">Участник</strong>
+            <span class="profile-name-row">
+              <strong id="myProfileName">Участник</strong>
+              <span class="profile-slot-pill" id="myProfileSlotBadge" hidden>Профиль #2</span>
+            </span>
             <span id="myProfileBio">Нажми, чтобы задать имя</span>
           </span>
         </button>
-        <button type="button" class="btn btn-sm btn-invite-self" id="btnShareMyLink" title="Скопировать ссылку на личный чат со мной">🔗 Моя ссылка</button>
+        <button type="button" class="btn btn-sm btn-invite-self" id="btnShareMyLink" title="Скопировать ссылку на личный чат со мной">🔗 Ссылка</button>
       </section>
 
       <!-- Главные 3 вкладки левой панели: Чаты / Люди / Подключения -->
@@ -81,6 +84,7 @@
             <button class="btn btn-primary" id="btnShareMyLinkPeople" type="button">🔗 Пригласить друга</button>
             <button class="btn btn-ghost" id="btnJoinByCodeOpen" type="button">🔑 Код комнаты</button>
           </div>
+          <a class="btn btn-second-tab btn-full" id="btnOpenSecondTabPeople" href="?acc=2" target="_blank" rel="noopener">🪟 Открыть 2-й профиль (тест в 1 браузере) ↗</a>
         </section>
         <div class="people-list" id="peopleDirectoryList" aria-label="Люди онлайн и недавние"></div>
       </div>
@@ -347,7 +351,8 @@
           <code id="profileMyLinkCode"></code>
           <button type="button" class="btn btn-sm btn-primary" id="btnCopyMyLinkModal">📋 Копировать</button>
         </div>
-        <p class="muted-text" style="margin:4px 0 0;">Отправь эту ссылку другу — он откроет её на телефоне или ПК и сразу начнёт реальный личный чат с тобой.</p>
+        <p class="muted-text" style="margin:4px 0 0;">Отправь ссылку другу или проверь прямо сейчас в соседней вкладке этого же браузера как 2-й реальный аккаунт:</p>
+        <a class="btn btn-sm btn-second-tab" id="btnOpenSecondTabModal" href="?acc=2" target="_blank" rel="noopener">🪟 Открыть 2-й аккаунт в новой вкладке ↗</a>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn btn-ghost" id="btnCancelProfile">Отмена</button>

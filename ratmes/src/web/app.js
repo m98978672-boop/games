@@ -88,19 +88,6 @@ function avatarHue(str) {
   return Math.abs(hash) % 360;
 }
 
-function readStoredString(key, fallback = '') {
-  try {
-    return (typeof localStorage !== 'undefined' && localStorage.getItem(key)) || fallback;
-  } catch {
-    return fallback;
-  }
-}
-function writeStoredString(key, val) {
-  try {
-    if (typeof localStorage !== 'undefined') localStorage.setItem(key, String(val ?? ''));
-  } catch { /* ignore */ }
-}
-
 const audio = createAudioBus();
 
 const state = {
@@ -118,8 +105,8 @@ const state = {
   vaultFiles: [],
   transfers: [],
   cloudStatus: null,
-  displayName: readStoredString('ratmes-cloud-display-name', '').trim() || 'Участник',
-  bio: readStoredString('ratmes-cloud-bio', '').trim(),
+  displayName: 'Участник',
+  bio: '',
   messages: [],
   pinnedIds: [],
   reactionsMap: {},
@@ -179,13 +166,30 @@ function renderProfileBar() {
   const av = el('myProfileAvatar');
   const nm = el('myProfileName');
   const bioEl = el('myProfileBio');
+  const slotBadge = el('myProfileSlotBadge');
+  const accCtx = state.client?.getAccountContext?.();
   if (av) {
     av.textContent = avatarInitials(state.displayName);
     av.style.background = `hsl(${avatarHue(state.displayName)} 62% 42%)`;
   }
   if (nm) nm.textContent = state.displayName;
+  if (slotBadge) {
+    if (accCtx?.isSecondary) {
+      slotBadge.hidden = false;
+      slotBadge.textContent = accCtx.label;
+    } else {
+      slotBadge.hidden = true;
+    }
+  }
   if (bioEl) {
     bioEl.textContent = state.bio || (state.displayName === 'Участник' ? 'Нажми, чтобы задать имя' : 'В сети · личная ссылка готова');
+  }
+  if (state.client?.buildSecondProfileUrl) {
+    const secondUrl = state.client.buildSecondProfileUrl(state.displayName);
+    const pBtn = el('btnOpenSecondTabPeople');
+    const mBtn = el('btnOpenSecondTabModal');
+    if (pBtn) pBtn.href = secondUrl;
+    if (mBtn) mBtn.href = secondUrl;
   }
 }
 
@@ -449,20 +453,30 @@ function renderPeopleDirectory() {
   ));
 
   if (others.length === 0) {
+    const secondUrl = state.client?.buildSecondProfileUrl?.(state.displayName) || '?acc=2';
     list.appendChild(h('div', { className: 'empty-hint-card' },
-      h('strong', { text: q ? 'Никого не найдено' : 'Пригласи друзей общаться здесь!' }),
+      h('strong', { text: q ? 'Никого не найдено' : 'Пригласи друга или проверь прямо сейчас!' }),
       h('p', {
         className: 'muted-text',
         text: q
           ? 'Попробуй другое имя или отправь человеку свою личную ссылку.'
-          : 'Отправь другу свою ссылку — как только он её откроет, вы сразу окажетесь в личном чате 1-на-1, и он появится в этом списке.',
+          : 'Отправь другу свою ссылку — или нажми кнопку ниже, чтобы открыть 2-й реальный аккаунт в соседней вкладке этого браузера и проверить живой чат 1-на-1.',
       }),
-      h('button', {
-        type: 'button',
-        className: 'btn btn-sm btn-primary',
-        text: '🔗 Скопировать мою ссылку',
-        onClick: () => shareMyPersonalLink(),
-      }),
+      h('div', { className: 'action-row' },
+        h('button', {
+          type: 'button',
+          className: 'btn btn-sm btn-primary',
+          text: '🔗 Моя ссылка',
+          onClick: () => shareMyPersonalLink(),
+        }),
+        h('a', {
+          className: 'btn btn-sm btn-second-tab',
+          href: secondUrl,
+          target: '_blank',
+          rel: 'noopener',
+          text: '🪟 2-й аккаунт ↗',
+        }),
+      ),
     ));
     return;
   }
@@ -653,6 +667,8 @@ function openProfileModal() {
     dmName: state.displayName,
   });
   el('profileMyLinkCode').textContent = myUrl;
+  const mBtn = el('btnOpenSecondTabModal');
+  if (mBtn) mBtn.href = state.client.buildSecondProfileUrl(state.displayName);
   el('profileModal')?.showModal();
   el('profileNameInput')?.focus();
 }
@@ -1813,8 +1829,8 @@ function bindEvents() {
     if (!name) return;
     state.displayName = name;
     state.bio = bio;
-    writeStoredString('ratmes-cloud-display-name', name);
-    writeStoredString('ratmes-cloud-bio', bio);
+    state.client.writeProfilePref('ratmes-cloud-display-name', name);
+    state.client.writeProfilePref('ratmes-cloud-bio', bio);
     await state.client.call('cloud.setDisplayName', { displayName: name, bio });
     el('profileModal')?.close();
     renderProfileBar();
@@ -2091,7 +2107,7 @@ function bindEvents() {
     const val = (el('cloudDisplayNameInput')?.value || '').trim().slice(0, 48);
     if (!val) return;
     state.displayName = val;
-    writeStoredString('ratmes-cloud-display-name', val);
+    state.client.writeProfilePref('ratmes-cloud-display-name', val);
     await state.client.call('cloud.setDisplayName', { displayName: val, bio: state.bio });
     renderProfileBar();
     renderChatHeader();
@@ -2259,8 +2275,16 @@ function bindEvents() {
 // ---------------- Старт приложения ----------------
 async function bootstrap() {
   state.client = await createBridgeClient();
+  const accCtx = state.client.getAccountContext();
+  state.displayName = state.client.readProfilePref('ratmes-cloud-display-name', '').trim() || accCtx.defaultDisplayName;
+  state.bio = state.client.readProfilePref('ratmes-cloud-bio', '').trim();
+  if (accCtx.isSecondary) {
+    document.title = `RatMes · ${accCtx.label}`;
+  }
   const modeLabel = el('connectionModeLabel');
-  if (state.client.getMode() === 'agent') {
+  if (accCtx.isSecondary) {
+    modeLabel.textContent = `Онлайн · ${accCtx.label}`;
+  } else if (state.client.getMode() === 'agent') {
     modeLabel.textContent = 'Онлайн · Облако + ПК-агент';
   } else {
     modeLabel.textContent = 'Онлайн · Живое облако';

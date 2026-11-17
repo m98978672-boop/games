@@ -398,7 +398,7 @@ export async function createNodeDiskVault(vaultDir) {
 }
 
 // ---------- Бэкенд 2: Автономный Memory/Browser Vault (работает без сервера в браузере и тестах) ----------
-export function createMemoryVault({ storageKey = null } = {}) {
+export function createMemoryVault({ storageKey = null, storage = null } = {}) {
   const indexByChat = new Map();
   const chatsMeta = new Map();
   const jsonlFiles = new Map();
@@ -408,10 +408,16 @@ export function createMemoryVault({ storageKey = null } = {}) {
   const outboxMap = new Map();
   let workspaceSnapshot = null;
 
+  function getBackingStorage() {
+    if (storage) return storage;
+    return typeof globalThis.localStorage !== 'undefined' ? globalThis.localStorage : null;
+  }
+
   function loadLocalStorage() {
-    if (!storageKey || typeof globalThis.localStorage === 'undefined') return;
+    const store = getBackingStorage();
+    if (!storageKey || !store) return;
     try {
-      const raw = globalThis.localStorage.getItem(storageKey);
+      const raw = store.getItem(storageKey);
       if (!raw) return;
       const parsed = JSON.parse(raw);
       for (const [k, v] of Object.entries(parsed.jsonlFiles || {})) jsonlFiles.set(k, v);
@@ -423,7 +429,8 @@ export function createMemoryVault({ storageKey = null } = {}) {
   }
 
   function saveLocalStorage() {
-    if (!storageKey || typeof globalThis.localStorage === 'undefined') return;
+    const store = getBackingStorage();
+    if (!storageKey || !store) return;
     try {
       const payload = {
         jsonlFiles: Object.fromEntries(jsonlFiles),
@@ -431,7 +438,7 @@ export function createMemoryVault({ storageKey = null } = {}) {
         outbox: Array.from(outboxMap.values()),
         workspace: workspaceSnapshot,
       };
-      globalThis.localStorage.setItem(storageKey, JSON.stringify(payload));
+      store.setItem(storageKey, JSON.stringify(payload));
     } catch { /* quota */ }
   }
 

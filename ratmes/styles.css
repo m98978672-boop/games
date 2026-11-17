@@ -2137,6 +2137,37 @@ body.keyboard-open .mobile-bottom-nav { display: none !important; }
   flex-direction: column;
   min-width: 0;
 }
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.profile-slot-pill {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+  background: rgba(111, 78, 246, 0.28);
+  border: 1px solid rgba(155, 130, 255, 0.55);
+  color: #e3dcff;
+}
+.btn-second-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  text-decoration: none;
+  background: rgba(111, 78, 246, 0.2);
+  border: 1px solid rgba(155, 130, 255, 0.45);
+  color: #e4ddff;
+  font-weight: 700;
+}
+.btn-second-tab:hover {
+  background: rgba(111, 78, 246, 0.34);
+  color: #ffffff;
+}
 .profile-text strong {
   font-size: 13px;
   color: var(--text-0);

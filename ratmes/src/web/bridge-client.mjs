@@ -41,10 +41,62 @@ function makeDmRoomId(peerA, peerB) {
   return `dm-${first}--${second}`;
 }
 
-function readJoinedRoomIds() {
+function resolveAccountContext() {
+  const fallback = {
+    slot: 'main',
+    isSecondary: false,
+    useSession: false,
+    keyPrefix: '',
+    label: 'Основной профиль',
+    defaultDisplayName: 'Участник',
+  };
+  if (typeof location === 'undefined') return fallback;
   try {
-    if (typeof localStorage === 'undefined') return [];
-    const raw = localStorage.getItem(JOINED_ROOMS_KEY);
+    const params = new URLSearchParams(location.search);
+    const rawAcc = sanitizePeerToken(params.get('acc') || '');
+    const rawDm = sanitizePeerToken(params.get('dm') || '');
+    const primaryPeerId = typeof localStorage !== 'undefined'
+      ? sanitizePeerToken(localStorage.getItem('ratmes-games-peer-id-v1') || '')
+      : '';
+
+    // 1. Явный слот профиля в URL (?acc=2, ?acc=3, ?acc=guest)
+    if (rawAcc && rawAcc !== '1' && rawAcc !== 'main') {
+      return {
+        slot: rawAcc,
+        isSecondary: true,
+        useSession: false,
+        keyPrefix: `acc-${rawAcc}:`,
+        label: `Профиль #${rawAcc}`,
+        defaultDisplayName: `Собеседник #${rawAcc}`,
+      };
+    }
+
+    // 2. Авто-режим: пользователь открыл СВОЮ же ссылку ?dm=... во 2-й вкладке этого же браузера!
+    if (rawDm && primaryPeerId && rawDm === primaryPeerId) {
+      return {
+        slot: 'tab',
+        isSecondary: true,
+        useSession: true,
+        keyPrefix: 'tab-peer:',
+        label: '2-я вкладка (тест)',
+        defaultDisplayName: 'Собеседник #2',
+      };
+    }
+  } catch { /* ignore */ }
+  return fallback;
+}
+
+function getAccountStorage(accountCtx) {
+  if (accountCtx?.useSession && typeof sessionStorage !== 'undefined') return sessionStorage;
+  if (typeof localStorage !== 'undefined') return localStorage;
+  return null;
+}
+
+function readJoinedRoomIds(accountCtx) {
+  try {
+    const store = getAccountStorage(accountCtx);
+    if (!store) return [];
+    const raw = store.getItem(`${accountCtx.keyPrefix}${JOINED_ROOMS_KEY}`);
     if (!raw) return [];
     const arr = JSON.parse(raw);
     return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string' && /^(dm-|room-)[a-zA-Z0-9_-]{3,80}$/.test(x)) : [];
@@ -53,27 +105,30 @@ function readJoinedRoomIds() {
   }
 }
 
-function rememberJoinedRoomId(roomId) {
+function rememberJoinedRoomId(roomId, accountCtx) {
   const clean = String(roomId || '').trim();
   if (!/^(dm-|room-)[a-zA-Z0-9_-]{3,80}$/.test(clean)) return;
   try {
-    if (typeof localStorage === 'undefined') return;
-    const set = new Set(readJoinedRoomIds());
+    const store = getAccountStorage(accountCtx);
+    if (!store) return;
+    const set = new Set(readJoinedRoomIds(accountCtx));
     set.add(clean);
-    localStorage.setItem(JOINED_ROOMS_KEY, JSON.stringify(Array.from(set).slice(-60)));
+    store.setItem(`${accountCtx.keyPrefix}${JOINED_ROOMS_KEY}`, JSON.stringify(Array.from(set).slice(-60)));
   } catch { /* ignore */ }
 }
 
-function getOrCreatePeerId() {
+function getOrCreatePeerId(accountCtx) {
   try {
-    const key = 'ratmes-games-peer-id-v1';
-    const existing = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+    const store = getAccountStorage(accountCtx);
+    const key = `${accountCtx.keyPrefix}ratmes-games-peer-id-v1`;
+    const existing = store ? store.getItem(key) : null;
     if (existing) return existing;
-    const created = `u-${randomHex(6)}`;
-    if (typeof localStorage !== 'undefined') localStorage.setItem(key, created);
+    const tag = accountCtx.isSecondary ? `u-${accountCtx.slot}-` : 'u-';
+    const created = `${tag}${randomHex(6)}`;
+    if (store) store.setItem(key, created);
     return created;
   } catch {
-    return 'u-browser-peer';
+    return `u-browser-${randomHex(4)}`;
   }
 }
 
@@ -95,20 +150,30 @@ function normalizeAgentUrl(raw) {
 
 export async function createBridgeClient() {
   const listeners = new Set();
+  const accountCtx = resolveAccountContext();
   let mode = 'browser-offline';
   let agentBase = ''; // '' означает относительный ./api/*, иначе 'https://host:port'
   let localEngine = null;
   let eventSource = null;
   let ws = null;
   let broadcastChannel = null;
+  let cloudPingChannel = null;
   let agentHealth = null;
   let wsReqSeq = 0;
   let cloudPollTimer = null;
   let cloudEnabled = true;
-  const peerId = getOrCreatePeerId();
+  let cloudSyncGetOpts = null;
+  const peerId = getOrCreatePeerId(accountCtx);
   const wsPending = new Map();
   // Локальные браузерные мосты (для автономного режима с телефона / GitHub Pages)
   const browserBridges = new Map();
+
+  function pingOtherTabs(roomId) {
+    if (!cloudPingChannel) return;
+    try {
+      cloudPingChannel.postMessage({ type: 'supabase-updated', roomId, fromPeer: peerId, ts: Date.now() });
+    } catch { /* ignore */ }
+  }
 
   function emit(evt) {
     for (const fn of listeners) {
@@ -130,13 +195,16 @@ export async function createBridgeClient() {
 
   async function initLocalEngineIfNeeded() {
     if (localEngine) return;
-    const memVault = createMemoryVault({ storageKey: 'ratmes-pwa-vault-v2' });
+    const memVault = createMemoryVault({
+      storageKey: `${accountCtx.keyPrefix}ratmes-pwa-vault-v2`,
+      storage: getAccountStorage(accountCtx),
+    });
     localEngine = createRatMesEngine({ vault: memVault, country: 'RU', seedDemoChats: false });
     await localEngine.ensureStarterChats();
     localEngine.core.watch.subscribe((evt) => {
       emit({ kind: 'event', event: evt.type, data: evt.payload, stateHash: localEngine.getStateHash() });
     });
-    if (typeof BroadcastChannel !== 'undefined' && !broadcastChannel) {
+    if (typeof BroadcastChannel !== 'undefined' && !broadcastChannel && !accountCtx.isSecondary) {
       broadcastChannel = new BroadcastChannel('ratmes-sync-v1');
       broadcastChannel.onmessage = (ev) => {
         emit({ kind: 'event', event: 'tab.sync', data: ev.data });
@@ -212,27 +280,30 @@ export async function createBridgeClient() {
     }
   }
 
-  // 1. Пробуем локальный ./api/health, затем сохранённый пользовательский адрес ПК-агента
-  try {
-    const localHealth = await probeAgent('');
-    if (localHealth) {
-      agentHealth = localHealth;
-      agentBase = '';
-      mode = 'agent';
-    }
-  } catch { /* пробуем дальше */ }
+  // 1. Для 2-го тестового профиля в том же браузере всегда используем изолированный браузерный vault + живой Supabase,
+  // чтобы 2 вкладки одного браузера были двумя полностью независимыми реальными пользователями.
+  if (!accountCtx.isSecondary) {
+    try {
+      const localHealth = await probeAgent('');
+      if (localHealth) {
+        agentHealth = localHealth;
+        agentBase = '';
+        mode = 'agent';
+      }
+    } catch { /* пробуем дальше */ }
 
-  if (mode !== 'agent') {
-    const saved = readSavedRemoteAgent();
-    if (saved) {
-      try {
-        const remoteHealth = await probeAgent(saved);
-        if (remoteHealth) {
-          agentHealth = remoteHealth;
-          agentBase = saved;
-          mode = 'agent';
-        }
-      } catch { /* остаёмся в автономном режиме */ }
+    if (mode !== 'agent') {
+      const saved = readSavedRemoteAgent();
+      if (saved) {
+        try {
+          const remoteHealth = await probeAgent(saved);
+          if (remoteHealth) {
+            agentHealth = remoteHealth;
+            agentBase = saved;
+            mode = 'agent';
+          }
+        } catch { /* остаёмся в автономном режиме */ }
+      }
     }
   }
 
@@ -770,11 +841,26 @@ export async function createBridgeClient() {
     },
 
     // Живая облачная синхронизация с Supabase (games-cloud-save) — работает и в локальном агенте, и на статическом GitHub Pages!
+    getAccountContext: () => ({ ...accountCtx }),
+    readProfilePref(key, fallback = '') {
+      try {
+        const store = getAccountStorage(accountCtx);
+        return (store && store.getItem(`${accountCtx.keyPrefix}${key}`)) || fallback;
+      } catch {
+        return fallback;
+      }
+    },
+    writeProfilePref(key, val) {
+      try {
+        const store = getAccountStorage(accountCtx);
+        if (store) store.setItem(`${accountCtx.keyPrefix}${key}`, String(val ?? ''));
+      } catch { /* ignore */ }
+    },
     getCloudPeerId: () => peerId,
     isCloudRoom: (chatId) => isCloudRoomId(chatId),
     makeDmRoomId: (otherPeerId) => makeDmRoomId(peerId, otherPeerId),
 
-    buildInviteUrl({ dmPeerId = null, dmName = '', joinRoomId = null } = {}) {
+    buildInviteUrl({ dmPeerId = null, dmName = '', joinRoomId = null, accSlot = null } = {}) {
       if (typeof location === 'undefined') return '';
       const base = `${location.origin}${location.pathname}`;
       const params = new URLSearchParams();
@@ -784,7 +870,13 @@ export async function createBridgeClient() {
       } else if (joinRoomId) {
         params.set('join', joinRoomId);
       }
+      if (accSlot) params.set('acc', String(accSlot));
       return `${base}?${params.toString()}`;
+    },
+
+    buildSecondProfileUrl(myName = 'Участник') {
+      const nextSlot = accountCtx.slot === '2' ? '3' : '2';
+      return this.buildInviteUrl({ dmPeerId: peerId, dmName: myName, accSlot: nextSlot });
     },
 
     async createOrOpenCloudDm({ targetPeerId, targetName = 'Собеседник', myName = 'Участник' } = {}) {
@@ -819,12 +911,13 @@ export async function createBridgeClient() {
           const txt = await res.text().catch(() => '');
           return { ok: false, error: `Не удалось создать личный чат (HTTP ${res.status}): ${txt.slice(0, 120)}` };
         }
-        rememberJoinedRoomId(roomId);
+        rememberJoinedRoomId(roomId, accountCtx);
         await this.call('cloud.ingestRemote', {
           rooms: [{ ...payload, title: cleanTitle }],
           messages: [],
           myPeerId: peerId,
         });
+        pingOtherTabs(roomId);
         return { ok: true, data: { roomId, title: cleanTitle, targetPeerId: target } };
       } catch (err) {
         return { ok: false, error: err?.message || 'Нет соединения с облаком' };
@@ -860,12 +953,13 @@ export async function createBridgeClient() {
           const txt = await res.text().catch(() => '');
           return { ok: false, error: `Ошибка создания комнаты (HTTP ${res.status}): ${txt.slice(0, 120)}` };
         }
-        rememberJoinedRoomId(roomId);
+        rememberJoinedRoomId(roomId, accountCtx);
         await this.call('cloud.ingestRemote', {
           rooms: [payload],
           messages: [],
           myPeerId: peerId,
         });
+        pingOtherTabs(roomId);
         return {
           ok: true,
           data: {
@@ -898,7 +992,7 @@ export async function createBridgeClient() {
         if (!Array.isArray(rows) || rows.length === 0) {
           return { ok: false, error: `Комната «${roomId}» не найдена` };
         }
-        rememberJoinedRoomId(roomId);
+        rememberJoinedRoomId(roomId, accountCtx);
         const room = rows[0];
         const msgRes = await fetch(
           `${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?room_id=eq.${encodeURIComponent(roomId)}&select=msg_id,room_id,network,sender_id,sender_name,body_text,created_at&order=created_at.desc&limit=80`,
@@ -936,7 +1030,7 @@ export async function createBridgeClient() {
           body: JSON.stringify(presenceBody),
         }).catch(() => {});
 
-        const joined = readJoinedRoomIds();
+        const joined = readJoinedRoomIds(accountCtx);
         if (isCloudRoomId(roomId) && !PUBLIC_CLOUD_ROOMS.has(roomId) && !joined.includes(roomId)) {
           joined.push(roomId);
         }
@@ -956,7 +1050,7 @@ export async function createBridgeClient() {
         for (const r of (pubRoomsRes.ok ? await pubRoomsRes.json() : [])) roomMap.set(r.room_id, r);
         for (const r of (dmRoomsRes.ok ? await dmRoomsRes.json() : [])) {
           roomMap.set(r.room_id, r);
-          rememberJoinedRoomId(r.room_id);
+          rememberJoinedRoomId(r.room_id, accountCtx);
         }
         if (joinedRoomsRes && joinedRoomsRes.ok) {
           for (const r of await joinedRoomsRes.json()) roomMap.set(r.room_id, r);
@@ -1020,6 +1114,7 @@ export async function createBridgeClient() {
           return { ok: false, error: `HTTP ${res.status}` };
         }
         await this.call('cloud.recordSync', { reachable: true, pushed: 1 });
+        pingOtherTabs(roomId);
         return { ok: true };
       } catch (err) {
         await this.call('cloud.recordSync', { reachable: false, error: err?.message || 'offline' });
@@ -1028,10 +1123,11 @@ export async function createBridgeClient() {
     },
 
     startCloudAutoSync(getOpts) {
+      cloudSyncGetOpts = typeof getOpts === 'function' ? getOpts : null;
       if (cloudPollTimer) clearInterval(cloudPollTimer);
       const run = () => {
         if (typeof document !== 'undefined' && document.hidden) return;
-        const opts = typeof getOpts === 'function' ? getOpts() : {};
+        const opts = cloudSyncGetOpts ? cloudSyncGetOpts() : {};
         this.syncSupabaseCloud(opts).catch(() => {});
       };
       run();
@@ -1040,6 +1136,16 @@ export async function createBridgeClient() {
         document.addEventListener('visibilitychange', () => {
           if (!document.hidden) run();
         });
+      }
+      // Мгновенное уведомление между вкладками одного браузера, что в Supabase появилось новое реальное сообщение
+      if (typeof BroadcastChannel !== 'undefined' && !cloudPingChannel) {
+        cloudPingChannel = new BroadcastChannel('ratmes-supabase-ping-v1');
+        cloudPingChannel.onmessage = (ev) => {
+          if (ev?.data?.fromPeer && ev.data.fromPeer !== peerId) {
+            const opts = cloudSyncGetOpts ? cloudSyncGetOpts() : {};
+            this.syncSupabaseCloud(opts).catch(() => {});
+          }
+        };
       }
     },
 
@@ -1057,6 +1163,7 @@ export async function createBridgeClient() {
       if (cloudPollTimer) clearInterval(cloudPollTimer);
       disconnectAgentRealtime();
       if (broadcastChannel) broadcastChannel.close();
+      if (cloudPingChannel) cloudPingChannel.close();
     },
   };
 }
