@@ -32,6 +32,12 @@ import { NavigationSystem } from '../modules/nav.js';
 import { EnvironmentSystem } from '../modules/env.js';
 import { synthesizeSoundPCM, AcousticWorld } from '../modules/audio.js';
 import { AiTeamSuite } from '../packs/ai-team.js';
+import { DestructionSystem } from '../packs/destruction.js';
+import { MultiplayerSession, encodeInput12, decodeInput12 } from '../packs/multiplayer.js';
+import { NarrativeSuite } from '../packs/narrative.js';
+import { EcologySystem } from '../packs/ecology.js';
+import { StyleShaderPipeline } from '../packs/styles.js';
+import { exportSingleHtmlGame } from '../packs/exporter.js';
 
 const ALL_BRANCH_NAMES = [
   ...CORE_BRANCHES,
@@ -80,6 +86,11 @@ export function createRatCoreEngine(config = {}) {
   let envSystem = null;
   let acousticWorld = null;
   let aiTeamSuite = null;
+  let destructionSys = null;
+  let multiplayerSys = null;
+  let narrativeSys = null;
+  let ecologySys = null;
+  let stylePipeline = null;
 
   let nextEntityNumericId = 1;
   let nextTraceNum = 1;
@@ -172,7 +183,11 @@ export function createRatCoreEngine(config = {}) {
       renderer3D.sunDir = light.sunDir;
       bgColor = packRGBA(light.skyRgb[0], light.skyRgb[1], light.skyRgb[2], 255);
     }
-    return renderer3D.renderScene({ vault, entities: [...entities.values()], camera, bgColor });
+    const frame = renderer3D.renderScene({ vault, entities: [...entities.values()], camera, bgColor });
+    if (stylePipeline && profile.activeBranches.has('shader')) {
+      stylePipeline.processSurface(frame.surface);
+    }
+    return frame;
   }
 
   // ---------------------------- Уровень 0: Ядровые ветки (Core Always-On) ----------------------------
@@ -689,8 +704,103 @@ export function createRatCoreEngine(config = {}) {
       }
     }
 
+    // Пакет pack:destruction (граф опор + обрушение + огонь по ветру)
+    if (branch === 'destroy') {
+      if (!destructionSys) destructionSys = new DestructionSystem();
+      return {
+        registerStructure: wrapTool('destroy.registerStructure', (args) => destructionSys.registerStructure(args)),
+        damage: wrapTool('destroy.damage', (args) => destructionSys.damageBlock(args)),
+        ignite: wrapTool('destroy.ignite', (args) => destructionSys.ignite(args)),
+        extinguish: wrapTool('destroy.extinguish', (args) => destructionSys.extinguish(args)),
+        tickFire: wrapTool('destroy.tickFire', (args) => {
+          const wind = envSystem ? envSystem.getWindVector() : { dx: args.windDx ?? 2, dy: args.windDy ?? 0 };
+          const isRaining = args.isRaining !== undefined
+            ? Boolean(args.isRaining)
+            : (envSystem ? (envSystem.weather === 'rain' || envSystem.weather === 'storm') : false);
+          return destructionSys.tickFire({ dt: args.dt ?? 1, windDx: args.windDx ?? wind.dx, windDy: args.windDy ?? wind.dy, isRaining });
+        }),
+        debris: wrapTool('destroy.debris', () => ({ count: destructionSys.debris.length, items: destructionSys.debris.slice(-32) })),
+        status: wrapTool('destroy.status', () => ({ branch: 'destroy', enabled: true, structures: destructionSys.structures.size, fires: destructionSys.fires.size })),
+      };
+    }
+
+    // Пакет pack:multiplayer (комнаты + 12-байтный ввод + Rollback Netcode)
+    if (branch === 'net') {
+      if (!multiplayerSys) multiplayerSys = new MultiplayerSession();
+      return {
+        createRoom: wrapTool('net.createRoom', (args) => multiplayerSys.createRoom(args)),
+        joinRoom: wrapTool('net.joinRoom', (args) => multiplayerSys.joinRoom(args)),
+        encodeInput12: wrapTool('net.encodeInput12', (args) => ({ bytes: encodeInput12(args) })),
+        decodeInput12: wrapTool('net.decodeInput12', (args) => decodeInput12(args.bytes)),
+        commitTick: wrapTool('net.commitTick', (args) => multiplayerSys.commitTick(args)),
+        receiveRemoteInput: wrapTool('net.receiveRemoteInput', (args) => multiplayerSys.receiveRemoteInput(args)),
+        recordRtt: wrapTool('net.recordRtt', (args) => multiplayerSys.recordRtt(args.rttMs ?? 25)),
+        status: wrapTool('net.status', () => ({ branch: 'net', enabled: true, rooms: multiplayerSys.rooms.size, rollbacks: multiplayerSys.rollbacks })),
+      };
+    }
+
+    // Пакет pack:narrative (story + quest без софтлоков)
+    if (branch === 'story' || branch === 'quest') {
+      if (!narrativeSys) narrativeSys = new NarrativeSuite(seed);
+      if (branch === 'story') {
+        return {
+          directorTick: wrapTool('story.directorTick', (args) => narrativeSys.directorTick(args)),
+          addChronicle: wrapTool('story.addChronicle', (args) => narrativeSys.addChronicle({ ...args, tick: clock.tick })),
+          setFactionRelation: wrapTool('story.setFactionRelation', (args) => narrativeSys.setFactionRelation(args)),
+          chronicle: wrapTool('story.chronicle', () => [...narrativeSys.chronicle]),
+          status: wrapTool('story.status', () => ({ branch: 'story', enabled: true, tension: narrativeSys.tension })),
+        };
+      }
+      return {
+        generate: wrapTool('quest.generate', (args) => narrativeSys.generateQuest(args)),
+        verifyNoSoftlocks: wrapTool('quest.verifyNoSoftlocks', (args) => narrativeSys.verifyNoSoftlocks(args.stages || [])),
+        status: wrapTool('quest.status', () => ({ branch: 'quest', enabled: true, quests: narrativeSys.quests.size })),
+      };
+    }
+
+    // Пакет pack:ecology (Стефан/Гольд лёд, эрозия, фауна)
+    if (branch === 'eco') {
+      if (!ecologySys) ecologySys = new EcologySystem();
+      return {
+        setSeason: wrapTool('eco.setSeason', (args) => ecologySys.setSeason(args.season)),
+        stepIce: wrapTool('eco.stepIce', (args) => ecologySys.stepIce(args)),
+        iceStressTest: wrapTool('eco.iceStressTest', (args) => ecologySys.iceStressTest(args)),
+        erodeTerrain: wrapTool('eco.erodeTerrain', (args) => ecologySys.erodeTerrain(heightField, args)),
+        tickFauna: wrapTool('eco.tickFauna', () => ecologySys.tickFauna()),
+        status: wrapTool('eco.status', () => ({ branch: 'eco', enabled: true, iceThicknessCm: ecologySys.iceThicknessCm })),
+      };
+    }
+
+    // Пакет pack:styles (PS1 / CRT / Thermal / Nightvision / Cel)
+    if (branch === 'shader') {
+      if (!stylePipeline) stylePipeline = new StyleShaderPipeline();
+      return {
+        applyPreset: wrapTool('shader.applyPreset', (args) => stylePipeline.applyPreset(args)),
+        state: wrapTool('shader.state', () => ({ activePreset: stylePipeline.activePreset, params: { ...stylePipeline.params } })),
+        status: wrapTool('shader.status', () => ({ branch: 'shader', enabled: true, activePreset: stylePipeline.activePreset })),
+      };
+    }
+
+    // Пакет pack:studio (автономный экспорт в 1 .html < 300 КБ + диагностика)
+    if (branch === 'studio') {
+      return {
+        exportSingleHtml: wrapTool('studio.exportSingleHtml', (args) => exportSingleHtmlGame({
+          title: args.title || 'RatCore Game',
+          author: args.author || 'RatCore Studio',
+          snapshot: buildWorldSnapshotObj(),
+        })),
+        diagnostics: wrapTool('studio.diagnostics', () => ({
+          version: '0.3.0-stage3',
+          profile: { preset: profile.preset, activePacks: [...profile.packs], savingsPct: profile.savingsPct },
+          vault: vault.getStats(),
+          governor: governor.getStats(),
+        })),
+        status: wrapTool('studio.status', () => ({ branch: 'studio', enabled: true })),
+      };
+    }
+
     return {
-      status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v0.2-ready' })),
+      status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v0.3-ready' })),
     };
   }
 
@@ -810,7 +920,7 @@ export function createRatCoreEngine(config = {}) {
   }
 
   return Object.freeze({
-    version: '0.2.0-stage2',
+    version: '0.3.0-stage3',
     seed,
     clock,
     governor,

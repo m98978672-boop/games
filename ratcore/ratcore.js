@@ -1,6 +1,7 @@
-// RatCore — Главная публичная точка входа движка (v0.2 Этап 2, изолированно внутри ratcore/)
+// RatCore — Главная публичная точка входа движка (v0.3 Этап 3, изолированно внутри ratcore/)
 // Работает в браузере и в Node.js 22 без сборщиков и внешних зависимостей.
 
+export const RATCORE_VERSION = '0.3.0-stage3';
 export { createRatCoreEngine as createEngine } from './src/tools/toolkit.js';
 export { auditSourceCode } from './src/core/code-auditor.js';
 export { CORE_BRANCHES, STANDARD_MODULES, OPTIONAL_PACKS, PRESETS, resolveModuleProfile } from './src/core/modules.js';
@@ -16,3 +17,6 @@ export { crc32, zigzagEncode, zigzagDecode, encodeVarints, decodeVarints, encode
 export { RCW2_MAGIC, RCW2_CODEC, RCW2_CHANNEL, encodeWire2Frame, decodeWire2Frame, fastCdcSplit, diffFastCdcChunks, xorFecParity, xorFecRecover, Wire2StreamWindow } from './src/compress/wire2.js';
 export { RatCoreCloudSync } from './src/compress/cloud-adapter.js';
 export { CoreGovernor, POWER_PROFILES } from './src/runtime/governor.js';
+export { encodeInput12, decodeInput12 } from './src/packs/multiplayer.js';
+export { STYLE_PRESETS } from './src/packs/styles.js';
+export { exportSingleHtmlGame } from './src/packs/exporter.js';

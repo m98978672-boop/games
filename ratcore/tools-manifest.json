@@ -1,6 +1,6 @@
 {
   "schema": "ratcore-tools-manifest/1",
-  "version": "0.2.0-stage2",
+  "version": "0.3.0-stage3",
   "engine": "RatCore",
   "modularityPolicy": "zero-cost-opt-in",
   "disabledErrorCode": "RC-108",
@@ -54,6 +54,11 @@
     { "id": "voice.speak", "branch": "voice", "tier": "pack", "pack": "pack:voice", "tags": ["voice", "radio", "lipsync", "голос", "рация", "липсинк"], "summary": "Синтезировать офлайн-голос и виземы липсинка без аудиофайлов" },
     { "id": "eco.iceStressTest", "branch": "eco", "tier": "pack", "pack": "pack:ecology", "tags": ["ecology", "ice", "river", "erosion", "seasons", "лёд", "река", "эрозия"], "summary": "Проверить прочность речного льда под весом техники и шаг эрозии на 1 Гц" },
     { "id": "coopAi.order", "branch": "coopAi", "tier": "pack", "pack": "pack:companion", "tags": ["companion", "ally", "bot", "order", "напарник", "приказ"], "summary": "Отдать приказ локальному ИИ-напарнику на естественном языке" },
-    { "id": "assist.setVisualMode", "branch": "assist", "tier": "pack", "pack": "pack:assist", "tags": ["accessibility", "colorblind", "subtitles", "hints", "доступность", "подсказки"], "summary": "Включить фильтры дальтонизма, субтитры звуков и умного наставника" }
+    { "id": "assist.setVisualMode", "branch": "assist", "tier": "pack", "pack": "pack:assist", "tags": ["accessibility", "colorblind", "subtitles", "hints", "доступность", "подсказки"], "summary": "Включить фильтры дальтонизма, субтитры звуков и умного наставника" },
+    { "id": "destroy.registerStructure", "branch": "destroy", "tier": "pack", "pack": "pack:destruction", "tags": ["destruction", "structure", "pillars", "bfs", "опоры", "строение"], "summary": "Зарегистрировать граф опор постройки для физического обрушения (BFS)" },
+    { "id": "net.receiveRemoteInput", "branch": "net", "tier": "pack", "pack": "pack:multiplayer", "tags": ["rollback", "netcode", "sync", "откат", "сеть"], "summary": "Применить удалённый ввод с автоматическим Rollback Netcode при расхождении" },
+    { "id": "quest.verifyNoSoftlocks", "branch": "quest", "tier": "pack", "pack": "pack:narrative", "tags": ["quest", "softlock", "bfs", "verify", "софтлок", "проверка"], "summary": "Проверить граф стадий квеста на отсутствие тупиков и софтлоков (BFS)" },
+    { "id": "eco.stepIce", "branch": "eco", "tier": "pack", "pack": "pack:ecology", "tags": ["ice", "stefan", "freeze", "winter", "лёд", "стефан"], "summary": "Рассчитать нарастание или таяние льда по формуле Стефана (F-158)" },
+    { "id": "studio.exportSingleHtml", "branch": "studio", "tier": "pack", "pack": "pack:studio", "tags": ["export", "html", "offline", "build", "single", "экспорт", "офлайн"], "summary": "Собрать автономную игру в один офлайн .html (< 300 КБ) со встроенным RCW2" }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "schema": "ratcore-index/1",
   "engine": "RatCore",
-  "status": "stage2-v0.2-implemented",
-  "stage": "stage2-v0.2",
+  "status": "stage3-v0.3-implemented",
+  "stage": "stage3-v0.3",
   "updatedAt": "2026-11-16",
   "branch": "arena/99666b55-games",
   "codeStarted": true,
@@ -15,6 +15,15 @@
       "provider": "supabase",
       "project": "games-cloud-save",
       "tables": ["public.ratcore_cloud_snapshots", "public.ratcore_ai_messages"]
+    },
+    "cloudEcosystem": {
+      "linearProject": "RatCore Engine (GAM-8..GAM-12)",
+      "notionHub": "RatCore — Центр управления движком (v0.3)",
+      "dropboxVault": "/RatCore-Vault",
+      "googleDriveVault": "RatCore-Vault (Games Движок)",
+      "googleSheetsRegistry": "RatCore — Реестр движка, пакетов и тестов (v0.3)",
+      "googleDocsReport": "RatCore — Архитектура и технический отчёт движка (v0.3)",
+      "googleSlidesDeck": "RatCore Engine v0.3 — Архитектура и экосистема"
     },
     "modules": [
       "ratcore/src/core/math.js",
@@ -40,12 +49,19 @@
       "ratcore/src/modules/env.js",
       "ratcore/src/modules/audio.js",
       "ratcore/src/packs/ai-team.js",
+      "ratcore/src/packs/destruction.js",
+      "ratcore/src/packs/multiplayer.js",
+      "ratcore/src/packs/narrative.js",
+      "ratcore/src/packs/ecology.js",
+      "ratcore/src/packs/styles.js",
+      "ratcore/src/packs/exporter.js",
       "ratcore/src/tools/toolkit.js"
     ],
     "tests": [
       "ratcore/tests/tool-contract.mjs",
       "ratcore/tests/stage1.mjs",
-      "ratcore/tests/stage2.mjs"
+      "ratcore/tests/stage2.mjs",
+      "ratcore/tests/stage3.mjs"
     ]
   },
   "counts": {
@@ -69,7 +85,7 @@
     { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.8-draft", "role": "185 formulas (F-01..F-185) and 125 algorithms (A-01..A-125)" },
     { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.4-draft", "role": "12-level compression, ratcore-wire/2, Power & Thermal Guard (40/60/75%), Dynamic Resolution, Async Shader Pre-Warm, Self-Healing, WebGPU/WASM packs" },
     { "id": "bridge", "path": "ratcore/BRIDGE.md", "version": "0.2-draft", "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC, RCW2 binary streaming)" },
-    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#012" }
+    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#013" }
   ],
   "toolBranches": [
     "build", "move", "remove", "watch", "look", "see", "hear", "think", "guess",

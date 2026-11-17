@@ -22,11 +22,12 @@ jobs:
         run: node site/tests/community-catalog.mjs
       - name: Validate storefront portal and 10-pass antivirus shield
         run: node site/tests/portal.mjs
-      - name: Test RatCore v0.2 Stage 1-2 (ToolGuard + Foundation + RCW2 + CoreGovernor + Modules + AI-Team)
+      - name: Test RatCore v0.3 Stage 1-3 (ToolGuard + Foundation + RCW2 + CoreGovernor + Opt-In Packs + Antivirus Export)
         run: |
           node ratcore/tests/tool-contract.mjs
           node ratcore/tests/stage1.mjs
           node ratcore/tests/stage2.mjs
+          node ratcore/tests/stage3.mjs
       - name: Self-test the bug-hunting bot
         run: node tools/bughunt/tests/selftest.mjs
       - name: Check the bug-code table covers 000–999

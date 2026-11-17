@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RatCore v0.2 — Интерактивная песочница движка</title>
+  <title>RatCore v0.3 — Интерактивная песочница движка</title>
   <style>
     :root {
       color-scheme: dark;
@@ -135,10 +135,10 @@
   <main class="stage">
     <div class="topbar">
       <div>
-        <h1>RatCore v0.2 — Песочница движка</h1>
-        <small style="color:var(--muted)">Изолированный стенд · Software 3D + Object-ID + ToolGuard + RCW2 + CoreGovernor 75 %</small>
+        <h1>RatCore v0.3 — Песочница движка</h1>
+        <small style="color:var(--muted)">Изолированный стенд · Software 3D + Object-ID + ToolGuard + RCW2 + CoreGovernor 75 % + Opt-In Packs</small>
       </div>
-      <span class="badge" id="profileBadge">preset: survival + pack:ai-team</span>
+      <span class="badge" id="profileBadge">preset: survival + ai-team / styles / ecology / studio</span>
     </div>
 
     <canvas id="viewport" width="320" height="180"></canvas>
@@ -162,10 +162,13 @@
     </div>
 
     <div>
-      <h2>2. Сжатие, Мост и Защита</h2>
+      <h2>2. Сжатие, Стили, Лёд и Защита</h2>
       <div class="btn-grid">
         <button id="btnWire2">Сжать мир в RCW2</button>
         <button id="btnBridge">Экспорт Godot .tscn</button>
+        <button id="btnStyle">Стиль: none → PS1/CRT/Thermal</button>
+        <button id="btnIce">Тест льда (Гольд 5 т)</button>
+        <button id="btnSingleHtml">Экспорт 1 офлайн .html</button>
         <button id="btnCheat" class="danger">Атака: сырой меш (RC-101)</button>
         <button id="btnOptIn" class="danger">Отключённый пакет (RC-108)</button>
       </div>
@@ -188,7 +191,7 @@
     const manifest = await fetch('../tools-manifest.json').then((r) => r.json());
     const engine = createEngine({
       preset: 'survival',
-      packs: ['pack:ai-team'],
+      packs: ['pack:ai-team', 'pack:styles', 'pack:ecology', 'pack:studio'],
       seed: 2026,
       viewport: { width: 320, height: 180 },
       manifest,
@@ -303,6 +306,30 @@
     document.getElementById('btnBridge').onclick = () => {
       const exp = engine.tools.bridge.exportScene({ format: 'godot-tscn' }).data;
       log('BridgeGuard -> Godot 4 .tscn', exp);
+    };
+
+    let styleIdx = 0;
+    const styleCycle = ['none', 'ps1', 'crt', 'thermal', 'nightvision', 'cel'];
+    document.getElementById('btnStyle').onclick = () => {
+      styleIdx = (styleIdx + 1) % styleCycle.length;
+      const res = engine.tools.shader.applyPreset({ preset: styleCycle[styleIdx] });
+      log('pack:styles -> shader.applyPreset', res.data);
+    };
+
+    document.getElementById('btnIce').onclick = () => {
+      engine.tools.eco.stepIce({ tempC: -18, hours: 12 });
+      const res = engine.tools.eco.iceStressTest({ massKg: 5000 });
+      log('pack:ecology -> Стефан + Гольд (5000 кг)', res.data);
+    };
+
+    document.getElementById('btnSingleHtml').onclick = () => {
+      const res = engine.tools.studio.exportSingleHtml({ title: 'RatCore Playground Export' });
+      log('pack:studio -> exportSingleHtml (< 300 КБ)', {
+        title: res.data.title,
+        sizeKB: res.data.sizeKB,
+        under300KB: res.data.under300KB,
+        wireBytes: res.data.wireBytes,
+      });
     };
 
     document.getElementById('btnCheat').onclick = () => {

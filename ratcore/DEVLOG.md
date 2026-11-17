@@ -315,4 +315,27 @@
    - `ratcore/playground/index.html` + `ratcore/playground/dev-server.mjs` (отдельный Live Preview стенд `0.0.0.0:8081` для живой проверки Software 3D, Greedy Meshing, физики, погоды, RCW2, Godot-моста и ToolGuard).
    - `ratcore/tests/stage2.mjs` добавлен и подключён в `.github/workflows/validate.yml` (`OK`).
 
+---
+
+## Запись #013 — 2026-11-16 · Этап 3 (`v0.3`): 6 Opt-In пакетов, офлайн-экспорт 10/10 Antivirus и полная облачная экосистема
+
+Реализованы и верифицированы 6 подключаемых по выбору пакетов (`Zero-Cost Opt-In`, `RC-108` при отключении, `0` внешних зависимостей, полная изоляция внутри `ratcore/`):
+
+1. **`pack:destruction` (`ratcore/src/packs/destruction.js`, `tools.destroy.*`):**
+   - Регистрация построек как графов блоков с фундаментами (`isFoundation`), BFS-обрушение неподпёртых фрагментов в физические обломки и распространение огня по вектору ветра с тушением дождём (`F-132..F-135`, `A-90..A-91`).
+2. **`pack:multiplayer` (`ratcore/src/packs/multiplayer.js`, `tools.net.*`):**
+   - Комнаты P2P/WS, ультракомпактный 12-байтный кодек ввода (`encodeInput12`/`decodeInput12`), детерминированный **Rollback Netcode** с окном снимков и перепроигрыванием расхождений, а также статистика `RTT` и `jitter` (`F-129..F-131`, `A-87..A-89`).
+3. **`pack:narrative` (`ratcore/src/packs/narrative.js`, `tools.story.*` + `tools.quest.*`):**
+   - ИИ-Режиссёр темпа (`build-up → peak → sustain → relax`), летопись мира, дипломатия фракций и **двойной BFS** математической проверки графа квестов на полное отсутствие софтлоков (`verifyNoSoftlocks`, `F-154..F-155`, `A-102..A-103`).
+4. **`pack:ecology` (`ratcore/src/packs/ecology.js`, `tools.eco.*`):**
+   - Формула Стефана нарастания/таяния речного льда (`F-158`), формула Гольда `P_max = A·h²` расчёта проламывания льда под техникой (`F-159`, `A-105`), гидравлическая эрозия `HeightField` (`F-160`, `A-106`) и фауна на `1 Гц`.
+5. **`pack:styles` (`ratcore/src/packs/styles.js`, `tools.shader.*`):**
+   - Пост-обработка `RasterSurface` без GPU-зависимостей: `ps1` (Bayer 4×4), `crt` (scanlines + vignette), `thermal`, `nightvision`, `cel` (`F-151..F-153`, `A-101`), встроенная в цикл рендера `toolkit.js` и живую песочницу `:8081`.
+6. **`pack:studio` (`ratcore/src/packs/exporter.js`, `tools.studio.*`):**
+   - `exportSingleHtml` генерирует 1 автономный офлайн `.html` (`< 300 КБ`) со встроенным `RCW2` снимком. В тесте `ratcore/tests/stage3.mjs` экспортированный HTML прогнан через реальный **10-проходный антивирус `site/game-antivirus.js`**: вердикт `clean`, **10/10 проходов чисты, риск `0/100`**!
+7. **Тесты, CI и облачная экосистема:**
+   - `ratcore/tests/stage3.mjs` подключён в `.github/workflows/validate.yml` (все 4 набора `RatCore` зелёные; `30` модулей, `55` инструментов в `tools-manifest.json`).
+   - Развёрнута синхронизированная облачная инфраструктура `RatCore`: **Supabase** (`games-cloud-save`), **Linear** (`RatCore Engine`, `GAM-8..GAM-12`), **Notion** (`RatCore — Центр управления движком`), **Google Drive / Docs / Sheets / Slides**, **Google Calendar** и **Dropbox** (`/RatCore-Vault`).
+
+
 
