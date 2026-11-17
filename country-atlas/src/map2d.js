@@ -21,6 +21,10 @@ import { buildMayors, advanceMayors, mayorStats, DRIVER } from './ai2d.js';
 import { PROFILE_COLOR } from './play2d.js';
 import { stepAccidents, accidentStats, fleetRisk, weatherRisk, ACCIDENT } from './accidents2d.js';
 import { Dormancy, DORMANT } from './dormant2d.js';
+import { NEWS, makeItem, mergeNews, trimNews, newsStats, newsTime } from './news2d.js';
+import { MAYOR_ACTIONS } from './ai2d.js';
+import { nearestTown } from './transport2d.js';
+import { autoScale, clampScale, isPhone, spanKmAt, chooseMode } from './fit2d.js';
 import { buildRail, stepRail, trainPoints, buildAir, stepAir, buildSea, stepSea, shipPoint,
   transitStats, RAIL, AIR, SEA } from './transit2d.js';
 import { loadFrom, saveTo, elapsedMinutes, catchUp, formatReport, OFFLINE } from './offline2d.js';
@@ -59,7 +63,13 @@ export class Map2D {
     this.junctionCache = null;
     this.showVehicles = true;   // слой транспорта §44
     this.showAccidents = true;  // §78: ошибки водителя и ДТП
+    this.autoFit = false;       // §83: масштаб из кадра
+    this.fitMode = 'region';
     this.dormant = new Dormancy();  // §79: невидимые города сжимаются, а не тикают
+    this.showNews = true;           // §82: газета пересказывает случившееся
+    this.news = [];
+    this.lastNewsMin = -1e9;
+    this.newsWxKey = null;
     this.transport = null;
     this.showBorders = true;    // границы §7
     this.borders = null;
@@ -119,6 +129,28 @@ export class Map2D {
     this.view.w = rect.width;
     this.view.h = rect.height;
     this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    // §83: в режиме «авто» поворот телефона не обрезает карту — масштаб пересчитывается
+    if (this.autoFit) this.scale = this.fitScaleFor(this.fitMode);
+  }
+
+  /* §83: масштаб под кадр: 7000 км страны, 900 — области или 26 — города. */
+  fitScaleFor(mode = 'region') {
+    const phone = isPhone(this.view.w, this.view.h);
+    return clampScale(autoScale(this.view, mode, phone));
+  }
+
+  applyFit(mode = null) {
+    if (mode) this.fitMode = mode;
+    this.autoFit = true;
+    this.scale = this.fitScaleFor(this.fitMode);
+    this.paintedKey = null;            // статичный слой перерисовать под новый масштаб
+    return this.scale;
+  }
+
+  /* §83: что сейчас видно — для строки HUD и подсказки. */
+  fitInfo() {
+    const span = spanKmAt(this.scale, this.view, isPhone(this.view.w, this.view.h) ? 16 : 26);
+    return { auto: !!this.autoFit, mode: this.fitMode, spanKm: span, guessed: chooseMode(this.scale, this.view) };
   }
 
   /* ---------------- обзор мира ---------------- */
@@ -438,6 +470,7 @@ export class Map2D {
     if (this.transport && this.showAccidents) {
       stepAccidents(this.transport, dtSec * grip, wx, Math.floor(this.transport.minutes / 1440));
     }
+    if (this.showNews) this.collectNews(wx);
     this.updateLight();
     // §79: пешеходы видны только в близком кадре; остальные города спят одним числом,
     // а через 45 с уходят в архив — память освобождается, положение при возврате то же.
@@ -454,6 +487,7 @@ export class Map2D {
         const mayors = this.buildMayorsLayer();
         const events = advanceMayors(mayors, this.why, day - this.lastMayorDay);
         this.lastMayorDay = day;
+        this.mayorEvents = events.slice(-8);        // §82: из них собирается газета
         // R-16.28: решение видно в мире — дома, парк, объездная
         if (this.showGrowth) {
           for (const e of events) {
@@ -2128,6 +2162,92 @@ export class Map2D {
     }
   }
 
+  /* §82: газета. Раз в полчаса игры собираем то, что случилось: аварии, погоду,
+     решения мэров, стройку. Ничего не придумываем — только пересказ событий. */
+  collectNews(wx = null) {
+    const m = this.transport ? this.transport.minutes : 0;
+    const quiet = this.news.length > 0 && m - this.lastNewsMin < NEWS.bucketMin * 6;
+    if (quiet) return this.news;
+    const fresh = [];
+    // F-276: место — ближайший город; если его нет, пишем «страна»
+    const townOf = (p) => {
+      if (!p) return 'страна';
+      const i = nearestTown(this.settlements, p.x, p.y);
+      const t = i >= 0 ? this.settlements[i] : null;
+      return t ? t.name : 'страна';
+    };
+
+    const acc = this.transport && this.transport.accidents;
+    if (acc && acc.events && acc.events.length) {
+      const byId = new Map(this.transport.vehicles.map((v) => [v.id, v]));
+      for (const e of acc.events.slice(-NEWS.freshPerHour)) {
+        if (e.at < this.lastNewsMin) continue;
+        const v = byId.get(e.id);
+        const p = v ? vehiclePosition(v) : null;
+        fresh.push(makeItem('accident', e.at, townOf(p), { name: e.name, min: e.minutes, tag: e.id }));
+      }
+    }
+    // погода — только когда она меняется или становится опасно видно
+    if (wx) {
+      const key = wx.kind + ':' + (wx.visibilityKm < 3 ? 'bad' : 'ok');
+      if (key !== this.newsWxKey) {
+        this.newsWxKey = key;
+        fresh.push(makeItem('weather', m, townOf(this.center), {
+          kind: { clear: 'ясно', cloudy: 'облачно', rain: 'дождь', snow: 'снег', fog: 'туман' }[wx.kind] || wx.kind,
+          vis: wx.visibilityKm.toFixed(1), grip: Math.round(wx.grip * 100), wind: Math.round(wx.windKmh),
+          tag: key
+        }));
+      }
+    }
+    // решения мэров и стройка — события дня §16.8
+    for (const e of (this.mayorEvents || []).slice(-NEWS.freshPerHour)) {
+      const at = (e.day || 0) * 1440;
+      if (at < this.lastNewsMin) continue;
+      const action = (MAYOR_ACTIONS.find((a) => a.id === e.action) || {}).name || e.action || 'решение';
+      fresh.push(makeItem('mayor', at, e.city, { action, tag: e.action + ':' + at }));
+      if (e.action === 'housing' || e.action === 'park') {
+        fresh.push(makeItem('growth', at, e.city, { what: e.action === 'park' ? 'парк' : 'новые дома', tag: 'g' + e.action + at }));
+      }
+    }
+    // затор: если в стране реально стоят
+    const st = this.transport && this.transport.accidents ? accidentStats(this.transport) : null;
+    if (st && st.jammed >= 3) {
+      fresh.push(makeItem('traffic', m, townOf(this.center), { km: st.jamKm.toFixed(1), tag: 'jam' + Math.round(m / 30) }));
+    }
+
+    this.lastNewsMin = m;
+    this.news = trimNews(mergeNews(this.news, fresh), m);
+    if (fresh.length) this.updateNewsPanel();
+    return this.news;
+  }
+
+  /* §82: панель газеты — короткий список, время и место. */
+  updateNewsPanel() {
+    const list = this.hud && this.hud.newsList;
+    const counter = this.hud && this.hud.newsCount;
+    if (!list) return;
+    const items = this.news.slice(0, 8);
+    if (typeof list.appendChild !== 'function') {
+      list.textContent = items.map((it) => it.text).join(' · ');
+    } else {
+      list.textContent = '';
+      for (const it of items) {
+        const li = document.createElement('li');
+        const when = document.createElement('b');
+        when.textContent = newsTime(it) + ' · ';
+        li.appendChild(when);
+        li.appendChild(document.createTextNode(it.text));
+        list.appendChild(li);
+      }
+    }
+    if (counter) {
+      const s = newsStats(this.news);
+      counter.textContent = String(s.count);
+      if (counter.setAttribute) counter.setAttribute('title', 'заметок ' + s.count + ' · городов ' + s.towns +
+        ' · происшествий ' + s.accidents + ' · погода ' + s.weather);
+    }
+  }
+
   /* §78: место ДТП видно с 12 px/км — красный ромб с белым крестом и кольцо вокруг.
      Машина, что стоит, уже нарисована в своей полосе: ромб ставится поверх неё. */
   drawAccidents(ctx, originX, originY, s) {
@@ -2629,9 +2749,18 @@ export class Map2D {
     const h = heightKm(w.x, w.y);
     if (this.hud.pos) this.hud.pos.textContent = w.x.toFixed(0) + '; ' + w.y.toFixed(0) + ' км';
     if (this.hud.height) this.hud.height.textContent = Math.round(h) + ' м';
-    if (this.hud.zoom) this.hud.zoom.textContent = this.scale < 1
-      ? (1 / this.scale).toFixed(1) + ' км/px'
-      : this.scale.toFixed(1) + ' px/км';
+    if (this.hud.zoom) {
+      const fit = this.fitInfo();
+      const names = { country: 'страна', region: 'область', city: 'город' };
+      const base = this.scale < 1 ? (1 / this.scale).toFixed(1) + ' км/px' : this.scale.toFixed(1) + ' px/км';
+      // §83: в авто-режиме видно, что масштаб подобран под экран, и сколько это километров
+      this.hud.zoom.textContent = (fit.auto ? 'авто · ' : '') + base;
+      if (this.hud.zoom.setAttribute) {
+        this.hud.zoom.setAttribute('title',
+          (fit.auto ? 'масштаб под экран, режим «' + (names[fit.mode] || fit.mode) + '»' : 'масштаб задан вручную') +
+          ' · в кадре ' + Math.round(fit.spanKm) + ' км по короткой стороне');
+      }
+    }
     if (this.hud.fps) this.hud.fps.textContent = this.fps;
     if (this.hud.center) this.hud.center.textContent = this.center.x.toFixed(0) + '; ' + this.center.y.toFixed(0) + ' км';
     if (this.hud.roads) {

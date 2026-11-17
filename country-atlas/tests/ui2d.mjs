@@ -186,4 +186,49 @@ const visible = html
   ok(bundle.includes(' бортов · сели '), 'короткая строка авиации в бандле');
 }
 
-console.log('OK: 6 групп проверок интерфейса §72 и раскладки §74 (F-222…F-224, проверок ' + checks + ')');
+
+/* §82: газета и §83: телефон и авто-масштаб (F-279…F-286) */
+{
+  ok(/id="news"/.test(html), 'панель газеты есть');
+  ok(/id="news-list"/.test(html), 'список заметок есть');
+  ok(/<summary>газета/.test(html), 'газета подписана по-русски');
+  ok(/id="news-count"/.test(html), 'у газеты есть счётчик');
+  ok(main.includes("document.getElementById('news-list')"), 'main2d находит список заметок');
+  const leftRail = html.slice(html.indexOf('<div id="left-rail">'), html.indexOf('<div id="right-rail">'));
+  ok(leftRail.includes('id="news"'), 'газета — в левой рейке');
+  ok(map.includes('collectNews'), 'карта собирает заметки');
+  ok(map.includes('updateNewsPanel'), 'панель газеты обновляется');
+  ok(!/innerHTML\s*=\s*''\s*;\s*for/.test(map), 'лента собирается без innerHTML');
+
+  /* авто-масштаб: кнопки, обработчики, пересчёт при повороте */
+  ok(/id="auto"/.test(html), 'кнопка «авто» есть');
+  ok(/id="fit-country"/.test(html) && /id="fit-region"/.test(html) && /id="fit-city"/.test(html),
+    'кнопки страны, области и города есть');
+  ok(main.includes("['fit-country', 'country']"), 'кнопка страны подключена');
+  ok(main.includes("['fit-city', 'city']"), 'кнопка города подключена');
+  ok(main.includes('applyFit'), 'авто-масштаб применяется');
+  ok(main.includes('refreshAutoFit'), 'кадр пересчитывается при смене размера');
+  ok(main.includes("addEventListener('orientationchange'"), 'поворот телефона обработан');
+  ok(map.includes('fitScaleFor'), 'карта умеет считать масштаб из кадра');
+  ok(map.includes('if (this.autoFit) this.scale'), 'resize пересчитывает масштаб в авто-режиме');
+  ok(main.includes('isPhone(window.innerWidth'), 'на телефоне старт — в режиме страны');
+  ok(main.includes('startCenter(map.settlements'), 'карта центрируется по стране');
+
+  /* телефонная раскладка: рейки сверху и снизу, высоты не пересекаются */
+  ok(/@media \(max-width: 820px\)/.test(html), 'есть телефонная раскладка');
+  const media = html.slice(html.indexOf('@media (max-width: 820px)'), html.indexOf('#loading{'));
+  ok(/#left-rail\{[^}]*top:auto/.test(media), 'слева рейка уезжает вниз');
+  ok(/#left-rail\{[^}]*flex-direction:row/.test(media), 'внизу панели в одну строку');
+  ok(/#hud\{[^}]*max-height:46vh/.test(media), 'HUD на телефоне не выше 46 % экрана');
+  ok(/#right-rail\{[^}]*max-height:34vh/.test(media), 'верхняя рейка не выше 34 %');
+  ok(/#controls label\{[^}]*min-height:34px/.test(media), 'подписи не мельче пальца');
+  ok(/#controls input\[type=checkbox\]\{[^}]*width:18px/.test(media), 'галочки крупные');
+  ok(/#controls \.rowbtn button\{[^}]*min-width:40px/.test(media), 'кнопки не уже 40 px');
+  ok(/@media \(max-width: 430px\)/.test(html), 'на узком экране своя раскладка');
+  ok(media.includes('overflow-x:auto'), 'верхняя рейка прокручивается вбок');
+  ok(/<meta name="viewport" content="width=device-width/.test(html), 'страница объявлена мобильной');
+  ok(/touch-action:none/.test(html), 'жесты не скроллят страницу');
+  ok(/touch-action:none/.test(html) && /pointerdown/.test(main), 'панорама и щипок на указателях');
+}
+
+console.log('OK: 8 групп проверок интерфейса §72, раскладки §74 и телефона §83 (F-222…F-224, F-279…F-286, проверок ' + checks + ')');
