@@ -1,4 +1,4 @@
-// Пошаговые инструкции, актуальные протоколы API 2026 и пресеты подключения для всех мессенджеров в RatMes.
+// Пошаговые инструкции, прямые ссылки и актуальные протоколы API 2026 для всех мессенджеров в RatMes.
 // Чистый декларативный модуль без сетевых вызовов (TransferGuard RM-107).
 
 export const SERVICE_GUIDES = Object.freeze([
@@ -14,16 +14,22 @@ export const SERVICE_GUIDES = Object.freeze([
     driverKind: 'max',
     supportsPolling: true,
     hideEndpointByDefault: true,
-    directBrowserHint: 'Для MAX Bot API (platform-api2.max.ru) рекомендуем ПК-агент RatMes Agent: он обходит CORS, принимает входящие (Long Polling) и при необходимости работает с сертификатом Минцифры.',
+    directBrowserHint: 'Для MAX Bot API (platform-api2.max.ru) рекомендуем ПК-агент RatMes Agent: он обходит CORS, принимает входящие (Long Polling) и работает с сертификатом Минцифры.',
     defaultEndpoint: 'https://platform-api2.max.ru',
     webAppUrl: 'https://web.max.ru/',
     docsUrl: 'https://dev.max.ru/docs-api',
-    e2eeWarning: 'MAX не использует сквозное шифрование E2EE (RM-603). Для секретной переписки выбирай родной RatMes.',
-    summary: 'Российский мессенджер (прямой доступ в РФ без VPN). Подключается через официальный MAX Bot API 2026 (домен platform-api2.max.ru, заголовок Authorization).',
+    quickLinks: Object.freeze([
+      { icon: '💬', label: 'Открыть MAX Web', url: 'https://web.max.ru/', primary: true },
+      { icon: '🤖', label: 'Создать бота (@MasterBot)', url: 'https://max.ru/MasterBot' },
+      { icon: '📥', label: 'Скачать MAX', url: 'https://download.max.ru/' },
+      { icon: '📖', label: 'MAX Bot API Docs', url: 'https://dev.max.ru/docs-api' },
+    ]),
+    e2eeWarning: 'MAX не использует сквозное шифрование E2EE (RM-603). Для приватной переписки используй личные чаты RatMes.',
+    summary: 'Российский мессенджер (прямой доступ в РФ без VPN). Подключается через официальный MAX Bot API 2026 (platform-api2.max.ru, заголовок Authorization).',
     webhookPath: '/api/hooks/max',
     presets: Object.freeze([
-      { id: 'max', label: '🤖 Официальный MAX Bot API', endpoint: 'https://platform-api2.max.ru', hint: 'Домен platform-api2.max.ru (актуально с июля 2026), токен от @MasterBot в заголовке Authorization.' },
-      { id: 'webhook', label: '🔗 Свой Webhook-шлюз (n8n / мост)', endpoint: '', hint: 'Отправка и приём через твой собственный HTTP-мост.' },
+      { id: 'max', kind: 'max', label: '🤖 Официальный MAX Bot API', desc: 'Домен platform-api2.max.ru · токен от @MasterBot', endpoint: 'https://platform-api2.max.ru' },
+      { id: 'webhook', kind: 'webhook', label: '🔗 Свой Webhook-шлюз (n8n)', desc: 'Отправка и приём через собственный HTTP-мост', endpoint: '' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -34,13 +40,13 @@ export const SERVICE_GUIDES = Object.freeze([
       targetPlaceholder: 'Например: -70123456789 или user:123456',
       showToken: true,
       tokenLabel: 'Токен бота MAX (access_token от @MasterBot)',
-      tokenPlaceholder: 'Вставь токен из @MasterBot / MAX для партнёров',
+      tokenPlaceholder: 'Вставь токен из @MasterBot / dev.max.ru',
     }),
     steps: Object.freeze([
-      'Открой MAX на телефоне или web.max.ru, найди официального бота @MasterBot (или кабинет dev.max.ru) и создай бота.',
-      'Скопируй выданный access_token и вставь его в поле «Токен бота MAX» ниже (передаётся строго в заголовке Authorization).',
-      'Напиши своему боту в MAX или добавь его в нужный чат, затем нажми «🔍 Проверить токен» — RatMes проверит GET /me и сам покажет chat_id из /updates кнопкой.',
-      'Оставь включённым «Автоприём входящих (Long Polling)», нажми «✉ Тест в чат» для проверки и затем «✅ Подключить MAX».',
+      'Нажми кнопку «🤖 Создать бота (@MasterBot)» выше (или открой web.max.ru), создай бота и скопируй access_token.',
+      'Вставь токен в поле «Токен бота MAX» ниже (передаётся строго в заголовке Authorization).',
+      'Напиши боту в MAX или добавь его в чат, затем нажми «🔍 Проверить» — RatMes найдёт chat_id из /updates кнопкой.',
+      'Нажми «✉ Тест в чат» для проверки доставки и затем «✅ Подключить MAX».',
     ]),
   }),
 
@@ -56,15 +62,21 @@ export const SERVICE_GUIDES = Object.freeze([
     driverKind: 'telegram',
     supportsPolling: true,
     hideEndpointByDefault: true,
-    directBrowserHint: 'Telegram Bot API часто работает даже напрямую с телефона; через ПК-агент добавляется автоприём входящих (Long Polling) и локальный архив.',
+    directBrowserHint: 'Telegram Bot API работает даже напрямую с телефона; через ПК-агент добавляется автоприём входящих (Long Polling).',
     defaultEndpoint: 'https://api.telegram.org',
     webAppUrl: 'https://web.telegram.org/',
     docsUrl: 'https://core.telegram.org/bots/api',
-    summary: 'Двустороннее подключение через официальный Telegram Bot API с автопоиском chat_id, проверкой старых webhook-ов и Long Polling.',
+    quickLinks: Object.freeze([
+      { icon: '✈️', label: 'Открыть Telegram Web', url: 'https://web.telegram.org/', primary: true },
+      { icon: '🤖', label: 'Создать бота (@BotFather)', url: 'https://t.me/BotFather' },
+      { icon: '🆔', label: 'Узнать chat_id (@userinfobot)', url: 'https://t.me/userinfobot' },
+      { icon: '📖', label: 'Bot API Docs', url: 'https://core.telegram.org/bots/api' },
+    ]),
+    summary: 'Двустороннее подключение через официальный Telegram Bot API с автопоиском chat_id, проверкой webhook и Long Polling.',
     webhookPath: '/api/hooks/telegram',
     presets: Object.freeze([
-      { id: 'telegram', label: '✈ Официальный Bot API (@BotFather)', endpoint: 'https://api.telegram.org', hint: 'Автопоиск chat_id, проверка getMe + getWebhookInfo и Long Polling.' },
-      { id: 'webhook', label: '🔗 Свой прокси / Webhook-шлюз', endpoint: '', hint: 'Укажи собственный прокси-сервер или шлюз n8n.' },
+      { id: 'telegram', kind: 'telegram', label: '✈ Официальный Bot API (@BotFather)', desc: 'Автопоиск chat_id + проверка getMe + Long Polling', endpoint: 'https://api.telegram.org' },
+      { id: 'webhook', kind: 'webhook', label: '🔗 Свой прокси / Webhook', desc: 'Отправка через собственный прокси-сервер или n8n', endpoint: '' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -72,16 +84,16 @@ export const SERVICE_GUIDES = Object.freeze([
       endpointPlaceholder: 'https://api.telegram.org',
       showTargetId: true,
       targetLabel: 'Chat ID (куда отправлять сообщения)',
-      targetPlaceholder: 'Нажми «Проверить токен» — найдётся автоматически',
+      targetPlaceholder: 'Нажми «Проверить» — найдётся автоматически',
       showToken: true,
       tokenLabel: 'Bot Token от @BotFather',
       tokenPlaceholder: '123456789:AAHxxxxxxxxxxxxxxxxxxxxxxxx',
     }),
     steps: Object.freeze([
-      'Открой @BotFather в Telegram, отправь /newbot, задай имя бота и скопируй Bot Token.',
-      'Открой своего нового бота и нажми «Запустить» (отправь ему любое слово «привет»).',
-      'Вставь токен ниже и нажми «🔍 Проверить токен» — RatMes проверит бота и покажет найденные чаты кнопками для подстановки chat_id.',
-      'Если в твоей стране Telegram требует VPN — привяжи VPN-маршрут, проверь «✉ Тест в чат» и нажми «✅ Подключить Telegram».',
+      'Нажми «🤖 Создать бота (@BotFather)» выше → отправь /newbot → скопируй Bot Token.',
+      'Открой своего нового бота и отправь ему любое сообщение («привет»).',
+      'Вставь токен ниже и нажми «🔍 Проверить» — RatMes покажет найденные чаты кнопками для подстановки chat_id.',
+      'Нажми «✉ Тест в чат», затем «✅ Подключить Telegram».',
     ]),
   }),
 
@@ -100,12 +112,17 @@ export const SERVICE_GUIDES = Object.freeze([
     directBrowserHint: 'Самый быстрый способ: достаточно одной ссылки Webhook из настроек канала Discord — без токенов и ботов.',
     defaultEndpoint: '',
     webAppUrl: 'https://discord.com/app',
-    docsUrl: 'https://discord.com/developers/docs/resources/webhook',
+    docsUrl: 'https://support.discord.com/hc/ru/articles/228383668',
+    quickLinks: Object.freeze([
+      { icon: '🎮', label: 'Открыть Discord Web', url: 'https://discord.com/app', primary: true },
+      { icon: '🔗', label: 'Как создать Webhook', url: 'https://support.discord.com/hc/ru/articles/228383668' },
+      { icon: '⚙️', label: 'Developer Portal', url: 'https://discord.com/developers/applications' },
+    ]),
     summary: 'Мгновенное подключение к любому каналу Discord: нужна всего одна ссылка Webhook, без регистрации бота.',
     webhookPath: '/api/hooks/discord',
     presets: Object.freeze([
-      { id: 'discord', label: '🎮 Discord Channel Webhook (1 ссылка)', endpoint: '', hint: 'Скопируй URL вебхука из настроек канала → Интеграции → Вебхуки.' },
-      { id: 'webhook', label: '🔗 Свой Webhook-шлюз / бот', endpoint: '', hint: 'Промежуточный сервер для двустороннего обмена.' },
+      { id: 'discord', kind: 'discord', label: '🎮 Discord Webhook (1 ссылка)', desc: 'Настройки канала → Интеграции → Вебхуки', endpoint: '' },
+      { id: 'webhook', kind: 'webhook', label: '🔗 Свой бот / шлюз', desc: 'Промежуточный сервер для двустороннего обмена', endpoint: '' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -119,9 +136,9 @@ export const SERVICE_GUIDES = Object.freeze([
       tokenPlaceholder: '',
     }),
     steps: Object.freeze([
-      'Открой Discord → Настройки нужного текстового канала (шестерёнка) → «Интеграции» → «Вебхуки».',
+      'Нажми «🎮 Открыть Discord Web» → Настройки текстового канала (шестерёнка) → «Интеграции» → «Вебхуки».',
       'Нажми «Новый вебхук» → «Копировать URL вебхука».',
-      'Вставь ссылку в поле ниже → нажми «🔍 Проверить» → «✉ Тест в чат» → «✅ Подключить Discord».',
+      'Вставь ссылку ниже → «🔍 Проверить» → «✉ Тест в чат» → «✅ Подключить Discord».',
     ]),
   }),
 
@@ -141,11 +158,16 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: 'https://api.vk.com',
     webAppUrl: 'https://vk.com/im',
     docsUrl: 'https://dev.vk.com/ru/api/bots/getting-started',
+    quickLinks: Object.freeze([
+      { icon: '💙', label: 'Открыть VK Мессенджер', url: 'https://vk.com/im', primary: true },
+      { icon: '⚙️', label: 'Мои сообщества (ключ API)', url: 'https://vk.com/groups?tab=admin' },
+      { icon: '📖', label: 'VK Bots API Docs', url: 'https://dev.vk.com/ru/api/bots/getting-started' },
+    ]),
     summary: 'Прямой доступ в РФ без VPN. Отправка через VK Messages API (v5.199), входящие через Callback API (/api/hooks/vk).',
     webhookPath: '/api/hooks/vk',
     presets: Object.freeze([
-      { id: 'vk', label: '💬 VK API сообщества (v5.199)', endpoint: 'https://api.vk.com', hint: 'Ключ доступа сообщества с правом messages + peer_id диалога или беседы.' },
-      { id: 'webhook', label: '🔗 Свой Callback / Webhook-мост', endpoint: '', hint: 'Подходит для n8n или своего бота.' },
+      { id: 'vk', kind: 'vk', label: '💬 VK API сообщества (v5.199)', desc: 'Ключ доступа сообщества с правом messages + peer_id', endpoint: 'https://api.vk.com' },
+      { id: 'webhook', kind: 'webhook', label: '🔗 Свой Callback / Webhook-мост', desc: 'Подходит для n8n или своего бота', endpoint: '' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -155,14 +177,14 @@ export const SERVICE_GUIDES = Object.freeze([
       targetLabel: 'peer_id пользователя или беседы',
       targetPlaceholder: 'ID пользователя (напр. 12345678) или беседа 2000000001',
       showToken: true,
-      tokenLabel: 'Ключ доступа сообщества (access_token с правом messages)',
+      tokenLabel: 'Ключ доступа сообщества (access_token)',
       tokenPlaceholder: 'vk1.a.xxxxxxxxxxxxxxxxxxxx',
     }),
     steps: Object.freeze([
-      'Открой своё сообщество VK → Управление → Настройки → Работа с API → «Создать ключ».',
-      'Включи разрешение «Доступ к сообщениям сообщества» и скопируй ключ (начинается с vk1.a....).',
-      'Вставь ключ и peer_id получателя, нажми «🔍 Проверить токен» (проверит имя сообщества) и «✅ Подключить VK».',
-      'Для входящих сообщений в разделе «Callback API» укажи адрес вебхука /api/hooks/vk.',
+      'Нажми «⚙️ Мои сообщества» → выбери сообщество → Управление → Работа с API → «Создать ключ».',
+      'Включи право «Доступ к сообщениям сообщества» и скопируй ключ (vk1.a....).',
+      'Вставь ключ и peer_id получателя → «🔍 Проверить» → «✉ Тест в чат» → «✅ Подключить VK».',
+      'Для входящих в «Callback API» укажи адрес вебхука /api/hooks/vk.',
     ]),
   }),
 
@@ -178,15 +200,21 @@ export const SERVICE_GUIDES = Object.freeze([
     driverKind: 'whatsapp',
     supportsPolling: false,
     hideEndpointByDefault: false,
-    directBrowserHint: 'Выбери официальный Meta Cloud API либо простой шлюз для личного номера (Evolution API / WAHA / Green-API / n8n).',
+    directBrowserHint: 'Выбери официальный Meta Cloud API либо шлюз личного номера (Evolution API / WAHA / n8n).',
     defaultEndpoint: 'https://graph.facebook.com/v21.0/PHONE_NUMBER_ID/messages',
     webAppUrl: 'https://web.whatsapp.com/',
     docsUrl: 'https://developers.facebook.com/docs/whatsapp/cloud-api',
+    quickLinks: Object.freeze([
+      { icon: '💚', label: 'Открыть WhatsApp Web', url: 'https://web.whatsapp.com/', primary: true },
+      { icon: '⚙️', label: 'Meta Developers (Cloud API)', url: 'https://developers.facebook.com/apps/' },
+      { icon: '📱', label: 'Evolution API (личный QR)', url: 'https://github.com/EvolutionAPI/evolution-api' },
+      { icon: '📖', label: 'Cloud API Docs', url: 'https://developers.facebook.com/docs/whatsapp/cloud-api' },
+    ]),
     summary: 'Два способа подключения: официальный WhatsApp Cloud API (Meta) или шлюз для личного номера (Evolution API / WAHA / n8n).',
     webhookPath: '/api/hooks/whatsapp',
     presets: Object.freeze([
-      { id: 'whatsapp', label: '🏢 Официальный WhatsApp Cloud API', endpoint: 'https://graph.facebook.com/v21.0/PHONE_NUMBER_ID/messages', hint: 'Укажи свой PHONE_NUMBER_ID в адресе, Permanent Token и номер получателя.' },
-      { id: 'webhook', label: '📱 Шлюз личного номера (Evolution / WAHA / n8n)', endpoint: '', hint: 'Подключи собственный шлюз, привязанный по QR-коду к личному WhatsApp.' },
+      { id: 'whatsapp', kind: 'whatsapp', label: '🏢 Официальный Cloud API (Meta)', desc: 'URL с PHONE_NUMBER_ID, Permanent Token и номер', endpoint: 'https://graph.facebook.com/v21.0/PHONE_NUMBER_ID/messages' },
+      { id: 'webhook', kind: 'webhook', label: '📱 Шлюз личного номера (Evolution / WAHA)', desc: 'Подключение по QR-коду к личному WhatsApp', endpoint: '' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -194,16 +222,16 @@ export const SERVICE_GUIDES = Object.freeze([
       endpointPlaceholder: 'https://graph.facebook.com/v21.0/10987654321/messages',
       showTargetId: true,
       targetLabel: 'Номер получателя (международный формат)',
-      targetPlaceholder: '+7 999 123-45-67 (формат очистится сам)',
+      targetPlaceholder: '+7 999 123-45-67 (очистится сам)',
       showToken: true,
       tokenLabel: 'Access Token (Meta / ключ шлюза)',
       tokenPlaceholder: 'EAAGxxxxxxxxxxxxxxxxxxxx',
     }),
     steps: Object.freeze([
-      'Если ты в РФ — сначала привяжи VPN-маршрут кнопкой выше (иначе WhatsApp задержится в Outbox с кодом RM-301).',
-      'Выбери режим: «Официальный Cloud API» (из кабинета Meta developers.facebook.com) или «Шлюз личного номера» (Evolution API / WAHA / Green-API / n8n).',
-      'Вставь URL, токен и номер получателя (лишние символы «+», пробелы и скобки уберутся автоматически).',
-      'Нажми «🔍 Проверить» → «✅ Подключить WhatsApp».',
+      'Нажми «⚙️ Meta Developers» (для Cloud API) или подними «📱 Evolution API» для личного номера.',
+      'Если ты в РФ — привяжи VPN-маршрут кнопкой выше.',
+      'Вставь URL, токен и номер получателя (лишние символы уберутся автоматически).',
+      'Нажми «🔍 Проверить» → «✉ Тест в чат» → «✅ Подключить WhatsApp».',
     ]),
   }),
 
@@ -223,10 +251,15 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: 'https://matrix-client.matrix.org',
     webAppUrl: 'https://app.element.io/',
     docsUrl: 'https://spec.matrix.org/latest/client-server-api/',
+    quickLinks: Object.freeze([
+      { icon: '🟢', label: 'Открыть Element Web', url: 'https://app.element.io/', primary: true },
+      { icon: '🌐', label: 'Выбрать сервер Matrix', url: 'https://joinmatrix.org/servers/' },
+      { icon: '📖', label: 'Matrix C-S API Spec', url: 'https://spec.matrix.org/latest/client-server-api/' },
+    ]),
     summary: 'Открытый федеративный мессенджер (Element, Cinny, собственный сервер Synapse / Conduit).',
     webhookPath: '/api/hooks/matrix',
     presets: Object.freeze([
-      { id: 'matrix', label: '🟢 Matrix Homeserver (Element)', endpoint: 'https://matrix-client.matrix.org', hint: 'Укажи свой homeserver, Room ID (!room:domain) и Access Token.' },
+      { id: 'matrix', kind: 'matrix', label: '🟢 Matrix Homeserver (Element)', desc: 'Homeserver, Room ID (!room:domain) и Access Token', endpoint: 'https://matrix-client.matrix.org' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -240,9 +273,9 @@ export const SERVICE_GUIDES = Object.freeze([
       tokenPlaceholder: 'syt_xxxxxxxxxxxxxxxxxxxx',
     }),
     steps: Object.freeze([
-      'Открой Element (app.element.io) → Настройки → «Справка и сведения» → скопируй Access Token.',
+      'Нажми «🟢 Открыть Element Web» → Настройки → «Справка и сведения» → скопируй Access Token.',
       'В нужной комнате открой Настройки → «Дополнительно» → скопируй Внутренний ID (!...:matrix.org).',
-      'Нажми «🔍 Проверить токен» (проверит /account/whoami) → «✅ Подключить Matrix».',
+      'Нажми «🔍 Проверить» → «✉ Тест в чат» → «✅ Подключить Matrix».',
     ]),
   }),
 
@@ -262,10 +295,15 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: 'https://chatapi.viber.com',
     webAppUrl: 'https://www.viber.com/',
     docsUrl: 'https://developers.viber.com/docs/api/rest-bot-api/',
+    quickLinks: Object.freeze([
+      { icon: '📞', label: 'Открыть Viber', url: 'https://www.viber.com/', primary: true },
+      { icon: '🤖', label: 'Viber Partners (создать бота)', url: 'https://partners.viber.com/' },
+      { icon: '📖', label: 'Viber REST Bot API Docs', url: 'https://developers.viber.com/docs/api/rest-bot-api/' },
+    ]),
     summary: 'Подключение через Viber Bot API (заголовок X-Viber-Auth-Token) и входящие на /api/hooks/viber.',
     webhookPath: '/api/hooks/viber',
     presets: Object.freeze([
-      { id: 'viber', label: '📞 Viber REST Bot API', endpoint: 'https://chatapi.viber.com', hint: 'Auth Token из partners.viber.com и Receiver ID.' },
+      { id: 'viber', kind: 'viber', label: '📞 Viber REST Bot API', desc: 'Auth Token из partners.viber.com и Receiver ID', endpoint: 'https://chatapi.viber.com' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -279,9 +317,9 @@ export const SERVICE_GUIDES = Object.freeze([
       tokenPlaceholder: '445da6az1s345z78-...',
     }),
     steps: Object.freeze([
-      'Создай бота на partners.viber.com и скопируй Auth Token.',
-      'Привяжи VPN-маршрут (если нужно в твоей стране), вставь Auth Token и Receiver ID.',
-      'Для входящих сообщений укажи webhook /api/hooks/viber.',
+      'Нажми «🤖 Viber Partners» → создай бота и скопируй Auth Token.',
+      'Вставь Auth Token и Receiver ID ниже.',
+      'Для входящих сообщений укажи webhook /api/hooks/viber и нажми «✅ Подключить Viber».',
     ]),
   }),
 
@@ -301,10 +339,14 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: 'http://192.168.1.10:8080',
     webAppUrl: 'https://signal.org/',
     docsUrl: 'https://github.com/bbernhard/signal-cli-rest-api',
+    quickLinks: Object.freeze([
+      { icon: '🛡️', label: 'Сайт Signal', url: 'https://signal.org/', primary: true },
+      { icon: '🐳', label: 'signal-cli-rest-api (GitHub)', url: 'https://github.com/bbernhard/signal-cli-rest-api' },
+    ]),
     summary: 'Приватный мост к Signal через собственный локальный шлюз signal-cli-rest-api (POST /v2/send).',
     webhookPath: '/api/hooks/signal',
     presets: Object.freeze([
-      { id: 'signal', label: '🛡 signal-cli REST API (Docker)', endpoint: 'http://192.168.1.10:8080', hint: 'Твой локальный шлюз, привязанный по QR-коду к приложению Signal.' },
+      { id: 'signal', kind: 'signal', label: '🛡 signal-cli REST API (Docker)', desc: 'Локальный шлюз, привязанный по QR-коду к Signal', endpoint: 'http://192.168.1.10:8080' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -318,7 +360,7 @@ export const SERVICE_GUIDES = Object.freeze([
       tokenPlaceholder: '',
     }),
     steps: Object.freeze([
-      'Запусти контейнер bbernhard/signal-cli-rest-api дома и отсканируй QR-код в приложении Signal.',
+      'Запусти контейнер signal-cli-rest-api (ссылка выше) и отсканируй QR-код в приложении Signal.',
       'Укажи адрес шлюза (например http://192.168.1.10:8080) и пару номеров «отправитель,получатель».',
       'Нажми «✅ Подключить Signal».',
     ]),
@@ -340,10 +382,14 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: '',
     webAppUrl: 'https://www.wechat.com/',
     docsUrl: 'https://developers.weixin.qq.com/doc/',
+    quickLinks: Object.freeze([
+      { icon: '💬', label: 'Открыть WeChat', url: 'https://www.wechat.com/', primary: true },
+      { icon: '📖', label: 'WeChat Developers', url: 'https://developers.weixin.qq.com/doc/' },
+    ]),
     summary: 'Интеграция через Webhook-бот WeCom / WeChat Official Account или мост Wechaty.',
     webhookPath: '/api/hooks/wechat',
     presets: Object.freeze([
-      { id: 'webhook', label: '🔗 WeCom / Wechaty Webhook', endpoint: '', hint: 'Вставь URL группового бота WeCom или своего шлюза.' },
+      { id: 'webhook', kind: 'webhook', label: '🔗 WeCom / Wechaty Webhook', desc: 'URL группового бота WeCom или своего шлюза', endpoint: '' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -378,10 +424,15 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: 'https://api.line.me/v2/bot/message/push',
     webAppUrl: 'https://line.me/',
     docsUrl: 'https://developers.line.biz/en/docs/messaging-api/',
+    quickLinks: Object.freeze([
+      { icon: '💚', label: 'Открыть LINE', url: 'https://line.me/', primary: true },
+      { icon: '⚙️', label: 'LINE Developers Console', url: 'https://developers.line.biz/console/' },
+      { icon: '📖', label: 'Messaging API Docs', url: 'https://developers.line.biz/en/docs/messaging-api/' },
+    ]),
     summary: 'Подключение через LINE Developers Messaging API или собственный шлюз.',
     webhookPath: '/api/hooks/line',
     presets: Object.freeze([
-      { id: 'webhook', label: '💬 LINE Messaging API / шлюз', endpoint: 'https://api.line.me/v2/bot/message/push', hint: 'Channel Access Token и LINE User/Group ID.' },
+      { id: 'webhook', kind: 'webhook', label: '💬 LINE Messaging API / шлюз', desc: 'Channel Access Token и LINE User/Group ID', endpoint: 'https://api.line.me/v2/bot/message/push' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -395,7 +446,7 @@ export const SERVICE_GUIDES = Object.freeze([
       tokenPlaceholder: '',
     }),
     steps: Object.freeze([
-      'В LINE Developers Console создай канал Messaging API и выпусти Channel Access Token.',
+      'Нажми «⚙️ LINE Developers Console» → создай канал Messaging API → выпусти Channel Access Token.',
       'Вставь User/Group ID и нажми «✅ Подключить LINE».',
     ]),
   }),
@@ -416,10 +467,14 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: '',
     webAppUrl: 'https://www.kakaocorp.com/page/service/service/KakaoTalk',
     docsUrl: 'https://developers.kakao.com/docs/latest/en/message/rest-api',
+    quickLinks: Object.freeze([
+      { icon: '💛', label: 'Открыть KakaoTalk', url: 'https://www.kakaocorp.com/page/service/service/KakaoTalk', primary: true },
+      { icon: '⚙️', label: 'Kakao Developers', url: 'https://developers.kakao.com/' },
+    ]),
     summary: 'Подключение через Kakao Developers API или локальный шлюз Webhook.',
     webhookPath: '/api/hooks/kakaotalk',
     presets: Object.freeze([
-      { id: 'webhook', label: '💛 Kakao Webhook-шлюз', endpoint: '', hint: 'Укажи адрес своего шлюза и Access Token.' },
+      { id: 'webhook', kind: 'webhook', label: '💛 Kakao Webhook-шлюз', desc: 'Адрес своего шлюза и Access Token', endpoint: '' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -454,10 +509,14 @@ export const SERVICE_GUIDES = Object.freeze([
     defaultEndpoint: 'https://openapi.zalo.me/v3.0/oa/message/cs',
     webAppUrl: 'https://chat.zalo.me/',
     docsUrl: 'https://developers.zalo.me/docs/official-account',
+    quickLinks: Object.freeze([
+      { icon: '💙', label: 'Открыть Zalo Web', url: 'https://chat.zalo.me/', primary: true },
+      { icon: '⚙️', label: 'Zalo Developers', url: 'https://developers.zalo.me/' },
+    ]),
     summary: 'Подключение через Zalo Official Account API или шлюз Webhook.',
     webhookPath: '/api/hooks/zalo',
     presets: Object.freeze([
-      { id: 'webhook', label: '💙 Zalo OA API / шлюз', endpoint: 'https://openapi.zalo.me/v3.0/oa/message/cs', hint: 'OA Access Token и Zalo User ID.' },
+      { id: 'webhook', kind: 'webhook', label: '💙 Zalo OA API / шлюз', desc: 'OA Access Token и Zalo User ID', endpoint: 'https://openapi.zalo.me/v3.0/oa/message/cs' },
     ]),
     fields: Object.freeze({
       showEndpoint: true,
@@ -471,7 +530,7 @@ export const SERVICE_GUIDES = Object.freeze([
       tokenPlaceholder: '',
     }),
     steps: Object.freeze([
-      'В Zalo Developers создай Official Account и выпусти OA Access Token.',
+      'Открой «⚙️ Zalo Developers», создай Official Account и выпусти OA Access Token.',
       'Вставь User ID и нажми «✅ Подключить Zalo».',
     ]),
   }),
@@ -493,22 +552,17 @@ export function sanitizeBridgeInput({ kind, endpoint = '', targetId = '', secret
   let tok = String(secretToken || '').trim();
   let tid = String(targetId || '').trim();
 
-  // Убираем случайный префикс "Bearer " или "Authorization: "
   tok = tok.replace(/^Authorization:\s*/i, '').replace(/^Bearer\s+/i, '').trim();
-  // Для Telegram: если пользователь вставил "bot123456:AAH...", убираем лишнее "bot"
   if (k === 'telegram') {
     tok = tok.replace(/^bot(?=\d+:)/i, '');
   }
-  // Для Discord: если пользователь вставил Webhook URL в поле токена, переносим в endpoint
   if (k === 'discord' && !ep && /^https:\/\/(discord|discordapp)\.com\/api\/webhooks\//i.test(tok)) {
     ep = tok;
     tok = '';
   }
-  // Для MAX: автоматически обновляем устаревший домен platform-api.max.ru -> platform-api2.max.ru
   if (k === 'max' && /^https?:\/\/platform-api\.max\.ru\/?$/i.test(ep)) {
     ep = 'https://platform-api2.max.ru';
   }
-  // Для WhatsApp: очищаем форматирование номера телефона
   if (k === 'whatsapp' && tid && /^[\d+\s()-]+$/.test(tid)) {
     tid = tid.replace(/[^\d]/g, '');
   }

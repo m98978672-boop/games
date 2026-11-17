@@ -183,7 +183,8 @@ try {
     assert.ok(gamesHtml.includes('data-portal-tab="chat"'), 'Главная Games должна содержать вкладку «Общение»');
     assert.ok(gamesHtml.includes('ratmes/index.html?embed=games'), 'Главная Games должна встраивать RatMes');
     const rmHtml = await (await fetch(`${portalBase}/ratmes/`)).text();
-    assert.ok(rmHtml.includes('Инспектор RatMes Engine'), '/ratmes/ должен отдавать RatMes UI');
+    assert.ok(rmHtml.includes('id="sidebarMainTabs"') && rmHtml.includes('Центр подключений'), '/ratmes/ должен отдавать RatMes UI');
+    assert.ok(!rmHtml.includes('Симулятор стресс-сбоев') && !rmHtml.includes('btnSimIncoming'), 'В UI RatMes не должно быть симуляции');
     const rmHealth = await (await fetch(`${portalBase}/ratmes/api/health`)).json();
     assert.equal(rmHealth.ok, true);
     const cloudTool = await (await fetch(`${portalBase}/ratmes/api/tool`, {

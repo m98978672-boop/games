@@ -23,44 +23,25 @@ export const GAMES_CHAT_ROOMS = Object.freeze([
     chatId: 'games-lobby',
     network: 'ratmes',
     title: '🎮 Общий чат Games',
-    description: 'Главный канал игроков портала Games с облачной синхронизацией Supabase',
+    description: 'Живой общий чат всех пользователей онлайн',
     cloudSynced: true,
-    starterMessages: [
-      {
-        author: 'Games Bot',
-        text: 'Добро пожаловать во вкладку «Общение» портала Games! Здесь работает RatMes: локальный файловый резерв RatMes-Vault/, облачная синхронизация Supabase (games-cloud-save) и подключённые облачные сервисы.',
-      },
-      {
-        author: 'Алексей (Dead District)',
-        text: 'Кто-нибудь пробовал выживать 7 ночей в Dead District или строить каскад ГЭС в «Каскаде»? Кидайте скриншоты и советы сюда!',
-      },
-    ],
+    starterMessages: [],
   }),
   Object.freeze({
     chatId: 'games-coop',
     network: 'ratmes',
-    title: '🤝 Кооператив и напарники',
-    description: 'Поиск команды, обсуждение стратегий Frontline: Command, Ратград, Last Shore и PLAYBRIDGE',
+    title: '🤝 Кооператив и знакомства',
+    description: 'Поиск напарников для совместных игр и общения',
     cloudSynced: true,
-    starterMessages: [
-      {
-        author: 'Мария (Ратград)',
-        text: 'Собрала связную сеть всех 120 поселений и 4 паромов в Ратграде. Можно кинуть файл маршрута прямо через RatMes с докачкой RM-302!',
-      },
-    ],
+    starterMessages: [],
   }),
   Object.freeze({
     chatId: 'games-dev',
     network: 'ratmes',
-    title: '🛠 Разработчики Games',
-    description: 'Идеи новых браузерных игр, баг-репорты, задачи Linear GAM-5..7 и документация Notion/Docs',
+    title: '🛠 Идеи и разработка',
+    description: 'Предложения по играм, баг-репорты и обсуждение новинок',
     cloudSynced: true,
-    starterMessages: [
-      {
-        author: 'Максим (Gamebobli)',
-        text: 'Задачи по RatMes и вкладке «Общение» заведены в Linear (GAM-5, GAM-6, GAM-7), ТЗ и матрица стран лежат в Google Drive, Dropbox, Notion, Docs и Sheets.',
-      },
-    ],
+    starterMessages: [],
   }),
 ]);
 
@@ -164,12 +145,21 @@ export function createCloudHub({ core }) {
     pulledCount: 0,
     pushedCount: 0,
     onlinePeers: [],
+    cloudRooms: [],
     lastError: null,
     syncRounds: 0,
     displayName: 'Игрок Games',
+    bio: '',
   };
 
   function getStatus() {
+    const nowMs = Date.now();
+    const peersWithOnline = syncState.onlinePeers.map((p) => {
+      const seenMs = p.lastSeen ? Date.parse(p.lastSeen) : 0;
+      const isOnline = seenMs > 0 && (nowMs - seenMs) < 120_000;
+      return { ...p, isOnline };
+    });
+    const onlineActiveCount = peersWithOnline.filter((p) => p.isOnline).length;
     return {
       totalConnected: CONNECTED_CLOUD_SERVICES.length,
       services: CONNECTED_CLOUD_SERVICES.map((s) => ({ ...s })),
@@ -184,11 +174,14 @@ export function createCloudHub({ core }) {
         pulledCount: syncState.pulledCount,
         pushedCount: syncState.pushedCount,
         syncRounds: syncState.syncRounds,
-        onlinePeersCount: syncState.onlinePeers.length,
-        onlinePeers: syncState.onlinePeers.slice(0, 24),
+        onlinePeersCount: onlineActiveCount || peersWithOnline.length,
+        totalKnownPeersCount: peersWithOnline.length,
+        onlinePeers: peersWithOnline.slice(0, 64),
+        cloudRooms: syncState.cloudRooms.slice(0, 80),
         lastError: syncState.lastError,
       },
       displayName: syncState.displayName,
+      bio: syncState.bio,
       gamesRooms: GAMES_CHAT_ROOMS.map((r) => ({
         chatId: r.chatId,
         network: r.network,
@@ -204,6 +197,7 @@ export function createCloudHub({ core }) {
     pulled = 0,
     pushed = 0,
     onlinePeers = null,
+    rooms = null,
     error = null,
     at = null,
   } = {}) {
@@ -214,21 +208,37 @@ export function createCloudHub({ core }) {
     syncState.syncRounds += 1;
     syncState.lastError = error ? String(error) : null;
     if (Array.isArray(onlinePeers)) {
-      syncState.onlinePeers = onlinePeers.slice(0, 32).map((p) => ({
+      syncState.onlinePeers = onlinePeers.slice(0, 64).map((p) => ({
         peerId: String(p.peerId || p.peer_id || ''),
-        displayName: String(p.displayName || p.display_name || 'Игрок'),
+        displayName: String(p.displayName || p.display_name || 'Участник'),
+        bio: String(p.bio || ''),
         roomId: String(p.roomId || p.room_id || 'games-lobby'),
+        country: String(p.country || 'RU'),
         status: String(p.status || 'online'),
         lastSeen: p.lastSeen || p.last_seen || null,
       }));
     }
+    if (Array.isArray(rooms)) {
+      syncState.cloudRooms = rooms.slice(0, 80).map((r) => ({
+        roomId: String(r.roomId || r.room_id || ''),
+        title: String(r.title || r.room_id || 'Комната'),
+        roomType: String(r.roomType || r.room_type || 'public'),
+        network: String(r.network || 'ratmes'),
+        description: String(r.description || ''),
+        participants: Array.isArray(r.participants) ? r.participants.map(String) : [],
+        createdBy: r.createdBy || r.created_by || null,
+      })).filter((r) => r.roomId);
+    }
     return getStatus();
   }
 
-  function setDisplayName(name) {
+  function setDisplayName(name, bio = null) {
     const clean = String(name || '').trim().slice(0, 48);
     if (clean) syncState.displayName = clean;
-    return { displayName: syncState.displayName };
+    if (bio !== null && bio !== undefined) {
+      syncState.bio = String(bio).trim().slice(0, 80);
+    }
+    return { displayName: syncState.displayName, bio: syncState.bio };
   }
 
   function buildBackupManifest({ chats = [], stats = {} } = {}) {
