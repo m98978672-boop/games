@@ -148,6 +148,19 @@ function normalizeAgentUrl(raw) {
   return s;
 }
 
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 10000) {
+  if (typeof AbortController === 'undefined') {
+    return fetch(url, opts);
+  }
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...opts, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function createBridgeClient() {
   const listeners = new Set();
   const accountCtx = resolveAccountContext();
@@ -1006,14 +1019,24 @@ export async function createBridgeClient() {
       }
     },
 
-    async syncSupabaseCloud({ roomId = 'games-lobby', displayName = 'Участник', bio = '', country = 'RU' } = {}) {
+    async syncSupabaseCloud({ roomId = 'games-lobby', displayName = 'Участник', bio = '', country = 'RU', silent = false, onProgress = null } = {}) {
       if (!cloudEnabled) return { ok: false, error: 'Облачная синхронизация отключена' };
+      const started = performance.now();
+      const reportProgress = (phase, percent, label, extra = {}) => {
+        const payload = { phase, percent, label, silent: Boolean(silent), ...extra };
+        if (typeof onProgress === 'function') {
+          try { onProgress(payload); } catch { /* ignore */ }
+        }
+        emit({ kind: 'event', event: 'cloud.progress', data: payload });
+      };
+
       const headers = {
         apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
         Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
         'Content-Type': 'application/json',
       };
       try {
+        reportProgress('connecting', 25, 'Соединение с облаком Supabase…');
         const presenceRoom = PUBLIC_CLOUD_ROOMS.has(roomId) ? roomId : 'games-lobby';
         const presenceBody = {
           peer_id: peerId,
@@ -1024,12 +1047,13 @@ export async function createBridgeClient() {
           status: 'online',
           last_seen: new Date().toISOString(),
         };
-        await fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.presence}?on_conflict=peer_id`, {
+        await fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.presence}?on_conflict=peer_id`, {
           method: 'POST',
           headers: { ...headers, Prefer: 'resolution=merge-duplicates,return=minimal' },
           body: JSON.stringify(presenceBody),
-        }).catch(() => {});
+        }, 8000).catch(() => {});
 
+        reportProgress('rooms', 55, 'Загрузка людей и комнат…');
         const joined = readJoinedRoomIds(accountCtx);
         if (isCloudRoomId(roomId) && !PUBLIC_CLOUD_ROOMS.has(roomId) && !joined.includes(roomId)) {
           joined.push(roomId);
@@ -1037,11 +1061,11 @@ export async function createBridgeClient() {
 
         const roomSelect = 'room_id,network,title,description,room_type,participants,created_by,created_at';
         const [peersRes, pubRoomsRes, dmRoomsRes, joinedRoomsRes] = await Promise.all([
-          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.presence}?select=peer_id,display_name,bio,room_id,country,status,last_seen&order=last_seen.desc&limit=50`, { headers }),
-          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?room_type=eq.public&select=${roomSelect}&order=created_at.asc`, { headers }),
-          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?participants=cs.${encodeURIComponent(`{"${peerId}"}`)}&select=${roomSelect}&order=created_at.desc&limit=40`, { headers }),
+          fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.presence}?select=peer_id,display_name,bio,room_id,country,status,last_seen&order=last_seen.desc&limit=50`, { headers }, 10000),
+          fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?room_type=eq.public&select=${roomSelect}&order=created_at.asc`, { headers }, 10000),
+          fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?participants=cs.${encodeURIComponent(`{"${peerId}"}`)}&select=${roomSelect}&order=created_at.desc&limit=40`, { headers }, 10000),
           joined.length > 0
-            ? fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?room_id=in.(${joined.map((id) => encodeURIComponent(id)).join(',')})&select=${roomSelect}`, { headers })
+            ? fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?room_id=in.(${joined.map((id) => encodeURIComponent(id)).join(',')})&select=${roomSelect}`, { headers }, 10000)
             : Promise.resolve(null),
         ]);
 
@@ -1058,12 +1082,14 @@ export async function createBridgeClient() {
         const allRooms = Array.from(roomMap.values());
         const roomIds = Array.from(new Set([...PUBLIC_CLOUD_ROOMS, ...roomMap.keys()]));
 
+        reportProgress('messages', 82, 'Загрузка сообщений…');
         const msgUrl = `${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?room_id=in.(${roomIds.map((id) => encodeURIComponent(id)).join(',')})&select=msg_id,room_id,network,sender_id,sender_name,body_text,created_at&order=created_at.desc&limit=160`;
-        const msgRes = await fetch(msgUrl, { headers });
+        const msgRes = await fetchWithTimeout(msgUrl, { headers }, 10000);
 
         if (!msgRes.ok) {
           const errText = `HTTP ${msgRes.status}`;
           await this.call('cloud.recordSync', { reachable: false, error: errText });
+          reportProgress('error', 100, `Облако недоступно (${errText})`, { error: errText });
           return { ok: false, error: errText };
         }
 
@@ -1074,13 +1100,23 @@ export async function createBridgeClient() {
           onlinePeers,
           myPeerId: peerId,
         });
+        const rttMs = Math.max(1, Math.round(performance.now() - started));
+        const onlineCount = ingestRes.data?.status?.supabase?.onlinePeersCount || onlinePeers.length || 1;
+        reportProgress('ready', 100, `Облако подключено · ${onlineCount} онлайн`, { rttMs, onlineCount });
         if (ingestRes.ok && ingestRes.data?.ingested > 0) {
           emit({ kind: 'event', event: 'cloud.messages', data: { ingested: ingestRes.data.ingested } });
         }
-        return ingestRes;
+        return { ...ingestRes, rttMs };
       } catch (err) {
-        const msg = err?.message || 'Supabase недоступен офлайн';
+        const isAbort = err?.name === 'AbortError';
+        const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;
+        const msg = isOffline
+          ? 'Нет подключения к интернету'
+          : isAbort
+            ? 'Облако не ответило за 10 сек (таймаут)'
+            : (err?.message || 'Supabase недоступен офлайн');
         await this.call('cloud.recordSync', { reachable: false, error: msg });
+        reportProgress('error', 100, msg, { error: msg });
         return { ok: false, error: msg };
       }
     },
@@ -1125,16 +1161,25 @@ export async function createBridgeClient() {
     startCloudAutoSync(getOpts) {
       cloudSyncGetOpts = typeof getOpts === 'function' ? getOpts : null;
       if (cloudPollTimer) clearInterval(cloudPollTimer);
-      const run = () => {
+      const run = (silent = true) => {
         if (typeof document !== 'undefined' && document.hidden) return;
         const opts = cloudSyncGetOpts ? cloudSyncGetOpts() : {};
-        this.syncSupabaseCloud(opts).catch(() => {});
+        this.syncSupabaseCloud({ ...opts, silent }).catch(() => {});
       };
-      run();
-      cloudPollTimer = setInterval(run, 3000);
+      cloudPollTimer = setInterval(() => run(true), 3000);
       if (typeof document !== 'undefined') {
         document.addEventListener('visibilitychange', () => {
-          if (!document.hidden) run();
+          if (!document.hidden) run(true);
+        });
+      }
+      if (typeof window !== 'undefined') {
+        window.addEventListener('online', () => run(false));
+        window.addEventListener('offline', () => {
+          emit({
+            kind: 'event',
+            event: 'cloud.progress',
+            data: { phase: 'error', percent: 100, label: 'Нет подключения к интернету', silent: false },
+          });
         });
       }
       // Мгновенное уведомление между вкладками одного браузера, что в Supabase появилось новое реальное сообщение
@@ -1143,7 +1188,7 @@ export async function createBridgeClient() {
         cloudPingChannel.onmessage = (ev) => {
           if (ev?.data?.fromPeer && ev.data.fromPeer !== peerId) {
             const opts = cloudSyncGetOpts ? cloudSyncGetOpts() : {};
-            this.syncSupabaseCloud(opts).catch(() => {});
+            this.syncSupabaseCloud({ ...opts, silent: true }).catch(() => {});
           }
         };
       }

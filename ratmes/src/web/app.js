@@ -2272,8 +2272,73 @@ function bindEvents() {
   el('btnCommandPalette')?.addEventListener('click', () => palette.open());
 }
 
+let cloudBannerHideTimer = null;
+
+function updateCloudProgressUI({ phase = 'connecting', percent = 10, label = 'Подключение к облаку…', rttMs = null, onlineCount = null, silent = false } = {}) {
+  const banner = el('cloudProgressBanner');
+  const fill = el('cloudProgressFill');
+  const track = el('cloudProgressTrack');
+  const lbl = el('cloudProgressLabel');
+  const meta = el('cloudProgressMeta');
+  const retry = el('btnCloudRetry');
+  const modeLabel = el('connectionModeLabel');
+  const accCtx = state.client?.getAccountContext?.();
+
+  // Обновляем постоянный статус под логотипом RatMes
+  if (modeLabel) {
+    const suffix = accCtx?.isSecondary ? ` · ${accCtx.label}` : '';
+    if (phase === 'ready') {
+      modeLabel.textContent = `🟢 Облако${rttMs ? ` · ${rttMs} мс` : ''}${suffix}`;
+    } else if (phase === 'error') {
+      modeLabel.textContent = `🟠 Нет связи с облаком${suffix}`;
+    } else if (!silent) {
+      modeLabel.textContent = `${label} (${percent}%)`;
+    }
+  }
+
+  if (!banner) return;
+
+  // Фоновая тихая синхронизация каждые 3 сек не разворачивает баннер, если уже подключено и нет ошибки
+  if (silent && phase !== 'error' && banner.classList.contains('is-compact')) {
+    return;
+  }
+
+  if (cloudBannerHideTimer) {
+    clearTimeout(cloudBannerHideTimer);
+    cloudBannerHideTimer = null;
+  }
+
+  const clamped = Math.max(4, Math.min(100, Number(percent) || 0));
+  if (fill) fill.style.width = `${clamped}%`;
+  if (track) track.setAttribute('aria-valuenow', String(clamped));
+  if (lbl) lbl.textContent = label;
+  if (meta) {
+    if (phase === 'ready') {
+      meta.textContent = rttMs ? `${rttMs} мс · 100%` : '100%';
+    } else if (phase === 'error') {
+      meta.textContent = 'Ошибка';
+    } else {
+      meta.textContent = `${clamped}%`;
+    }
+  }
+  if (retry) retry.hidden = phase !== 'error';
+
+  banner.classList.remove('is-loading', 'is-ready', 'is-error', 'is-compact');
+  if (phase === 'ready') {
+    banner.classList.add('is-ready');
+    cloudBannerHideTimer = setTimeout(() => {
+      banner.classList.add('is-compact');
+    }, 1800);
+  } else if (phase === 'error') {
+    banner.classList.add('is-error');
+  } else {
+    banner.classList.add('is-loading');
+  }
+}
+
 // ---------------- Старт приложения ----------------
 async function bootstrap() {
+  updateCloudProgressUI({ phase: 'connecting', percent: 15, label: 'Запуск RatMes…' });
   state.client = await createBridgeClient();
   const accCtx = state.client.getAccountContext();
   state.displayName = state.client.readProfilePref('ratmes-cloud-display-name', '').trim() || accCtx.defaultDisplayName;
@@ -2281,18 +2346,14 @@ async function bootstrap() {
   if (accCtx.isSecondary) {
     document.title = `RatMes · ${accCtx.label}`;
   }
-  const modeLabel = el('connectionModeLabel');
-  if (accCtx.isSecondary) {
-    modeLabel.textContent = `Онлайн · ${accCtx.label}`;
-  } else if (state.client.getMode() === 'agent') {
-    modeLabel.textContent = 'Онлайн · Облако + ПК-агент';
-  } else {
-    modeLabel.textContent = 'Онлайн · Живое облако';
-  }
 
   await state.client.call('cloud.setDisplayName', { displayName: state.displayName, bio: state.bio });
 
   state.client.onEvent((evt) => {
+    if (evt?.event === 'cloud.progress' && evt.data) {
+      updateCloudProgressUI(evt.data);
+      return;
+    }
     if (evt?.event === 'transfer.received' || evt?.event === 'cloud.messages') {
       audio.playReceived();
     }
@@ -2301,12 +2362,33 @@ async function bootstrap() {
 
   bindEvents();
 
-  // Сначала подтягиваем реальные комнаты и людей из Supabase
+  el('btnCloudRetry')?.addEventListener('click', () => {
+    updateCloudProgressUI({ phase: 'connecting', percent: 20, label: 'Повторное подключение к облаку…' });
+    state.client.syncSupabaseCloud({
+      roomId: state.activeChatId || 'games-lobby',
+      displayName: state.displayName,
+      bio: state.bio,
+      country: state.countryProfile?.code || 'RU',
+      silent: false,
+    }).then(() => refreshAll({ reloadMessages: true }));
+  });
+  el('cloudProgressBanner')?.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    if (el('cloudProgressBanner')?.classList.contains('is-compact')) {
+      el('btnCloudSync')?.click();
+    }
+  });
+
+  // Сразу показываем интерфейс, пока бежит полоса подключения к облаку
+  await refreshAll({ reloadMessages: true });
+
+  // Первый живой коннект к Supabase с видимой полосой прогресса (25% -> 55% -> 82% -> 100%)
   await state.client.syncSupabaseCloud({
     roomId: 'games-lobby',
     displayName: state.displayName,
     bio: state.bio,
     country: 'RU',
+    silent: false,
   }).catch(() => {});
 
   await refreshAll({ reloadMessages: true });

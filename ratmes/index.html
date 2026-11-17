@@ -9,6 +9,19 @@
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
+  <!-- Живая полоса подключения к облаку Supabase (видна сразу при открытии на телефоне и ПК) -->
+  <div class="cloud-progress-banner is-loading" id="cloudProgressBanner" role="status" aria-live="polite">
+    <div class="cloud-progress-row">
+      <span class="cloud-progress-dot" id="cloudProgressDot" aria-hidden="true"></span>
+      <span class="cloud-progress-label" id="cloudProgressLabel">Подключение к облаку…</span>
+      <span class="cloud-progress-meta" id="cloudProgressMeta">10%</span>
+      <button type="button" class="cloud-progress-retry" id="btnCloudRetry" hidden>↻ Повторить</button>
+    </div>
+    <div class="cloud-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="10" id="cloudProgressTrack">
+      <div class="cloud-progress-fill" id="cloudProgressFill" style="width: 10%"></div>
+    </div>
+  </div>
+
   <div class="app-shell" id="appShell">
     <!-- Левая колонка: профиль, вкладки Чаты / Люди / Подключения -->
     <aside class="sidebar" id="sidebarPanel">
