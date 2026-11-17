@@ -1,8 +1,8 @@
 # RatCore — полный каталог инструментов на все случаи жизни (`TOOLS.md`)
 
-**Версия:** 0.6-draft (2026-11-16)  
-**Охват:** **25 усиленных веток инструментов v2.0** `engine.tools.<группа>.<метод>(args, ctx?)` + универсальный конвейер (`pipe`, `dryRun`, `compact/RCW2`, `memoize`, `checkpoint/rollback`, `autoFixHint`, `budgetMs/priority`) + **11-уровневое ультра-сжатие RAM/CPU, потоковая передача `ratcore-wire/2` и регулятор ядер 75 %**.  
-**Связанные документы:** [`ALGORITHMS.md`](./ALGORITHMS.md) (`F-01..F-128`, `A-01..A-86`) · [`COMPRESSION.md`](./COMPRESSION.md) · [`BRIDGE.md`](./BRIDGE.md).  
+**Версия:** 0.7-draft (2026-11-16)  
+**Охват:** **30 усиленных веток инструментов v2.0** `engine.tools.<группа>.<метод>(args, ctx?)` + универсальный конвейер (`pipe`, `dryRun`, `compact/RCW2`, `memoize`, `checkpoint/rollback`, `autoFixHint`, `budgetMs/priority`) + **«Машина времени» (`Time-Scrubbing`), Автобалансировщик на 75 % CPU, экспорт в 1 `.html` (`Single-File Bundler`)** + **11-уровневое ультра-сжатие RAM/CPU, потоковая передача `ratcore-wire/2` и регулятор ядер 75 %**.  
+**Связанные документы:** [`ALGORITHMS.md`](./ALGORITHMS.md) (`F-01..F-150`, `A-01..A-100`) · [`COMPRESSION.md`](./COMPRESSION.md) · [`BRIDGE.md`](./BRIDGE.md).  
 **Принцип:** единый формат ответа, обязательная проверка `ToolGuard`, автоматическое логирование в журнал операций и поддержка отката (`undo`/`redo`).
 
 ---
@@ -502,6 +502,87 @@
 | **23** | `save.*` | Формат `RCW2` + **`FastCDC` дедупликация между слотами** (10 слотов весят как ~1.3!), фоновое сохранение в воркере без фризов, атомарная запись `temp → CRC32 → swap`. |
 | **24** | `test.*` | Автоминимизация падающего сценария (**Delta Debugging `ddmin`**, `A-86`: 1000 шагов → 4 шага!), дифф-бенчмарк регрессий, автопроверка потолка **75 % CPU**. |
 | **25** | `stream.*` | Полный 11-уровневый стек: `Paletted 16³`, `SVDAG`, `Cave/Hi-Z`, `SoA`, `PackedVertex64`, `64-bit Bricks`, `CoreGovernor 75%` + **бинарная потоковая передача `RCW2` (`transferPack/Diff/Send/Recv`, `selectCodec`, `trainDict`)**. |
+| **26** | `net.*` | **Мультиплеер / кооп без серверов** поверх `ratcore-wire/2`: WebRTC DataChannel P2P / WS, `Client-Side Prediction`, `Rollback Netcode` (`F-129..F-131`, `A-87..A-89`), 12–24 Б/тик ввод игрока, компенсация лага и детерминированный выбор хоста. |
+| **27** | `destroy.*` | **Структурная разрушаемость, огонь и цепные реакции**: граф несущих опор на `64-bit Bricks` (`F-132..F-133`, `A-90`), раскол на физические осколки, пожар по ветру (`F-134`, `A-91`) и тушение водой (`F-135` + `phys.fluidStep`). |
+| **28** | `story.*` | **ИИ-Режиссёр темпа и живая летопись (`AI Director`)**: кривая напряжения `tension` (`F-136..F-137`, `A-92`), фазы `build-up → peak → sustain → relax`, процедурные события, кризисы и летопись мира. |
+| **29** | `mod.*` | **Безопасная система модов (`.ratmod.rcw2`)**: песочница строго поверх `ToolGuard` + квота `ModQuota` внутри 75 % `CoreGovernor` (`F-138..F-139`, `A-93`), новые здания/биомы/рецепты/звуки и `Hot-Reload` без перезапуска. |
+| **30** | `cutscene.*` | **Режиссура камеры, таймлапсы и авто-обложки**: дуговые рельсы камеры (`F-140`, `A-94`), таймлайн титров/погоды/аудио, съёмка **таймлапса мира** (`F-142`, `A-95`) и авто-съёмка 16:9 обложек (`F-141`) для витрины. |
+
+---
+
+# 26. `tools.net.*` — Мультиплеер, кооп и Rollback Netcode (P2P / WebRTC / WS)
+
+Работает прямо поверх детерминированного шага (`F-01`, `F-02`), бинарного протокола `ratcore-wire/2` и 4-байтных кватернионов (`F-111`).
+
+- **`net.createRoom({ mode: 'p2p-webrtc' | 'ws-relay', maxPlayers, tickRate: 60, maxRollbackFrames: 8 })`** — создаёт комнату и короткий код приглашения (`roomCode`) или SDP-билет для P2P без выделенного сервера (`A-89`).
+- **`net.joinRoom({ roomCode, signaling?, playerName })`** — подключает игрока, синхронизирует `worldSeed` и актуальный COW-снапшот через `stream.transferSend` (`RCW2` + `FastCDC`).
+- **`net.sendInput({ tick, bitMask, axesQuantized })`** — пакует ввод игрока в **12–24 байта/тик** (`F-129`) и рассылает с избыточностью `XOR-FEC` (`F-124`).
+- **`net.stepRollback({ targetTick })`** — исполняет цикл **`Rollback Netcode`** (`F-130`, `A-87`): при получении запоздавшего ввода откатывает мир к ближайшему COW-снимку, перепроигрывает тики и плавно сглаживает визуальную поправку (`F-131`).
+- **`net.interpolateRemote({ renderTimeMs })`** — интерполирует удалённые сущности и выполняет компенсацию лага при стрельбе (`Lag Compensation`, `A-88`).
+- **`net.checkDesync()`** — сверяет 64-битный `stateHash` между участниками; при расхождении (`RC-604`) автоматически присылает минимальный `FastCDC`-дифф и логирует тикет в `tools.bugs`.
+- **`net.hostMigrate()`** — детерминированный выбор нового хоста при обрыве текущего без сброса партии (`A-89`).
+
+---
+
+# 27. `tools.destroy.*` — Структурная разрушаемость, огонь и цепные реакции
+
+Связывает `64-bit Occupancy Bricks` (`A-78`), физику осколков (`tools.phys`) и воду/ветер (`phys.fluidStep`, `phys.windAt`).
+
+- **`destroy.buildSupportGraph({ chunkId, materials })`** — строит граф несущих опор от фундамента (`grounded = true`) и рассчитывает запас прочности (`F-132`).
+- **`destroy.damage({ pos, radius, force, damageType: 'kinetic' | 'blast' | 'heat' })`** — вырезает повреждённые воксели/элементы, проверяет порог обрушения (`F-133`), запускает BFS от земли (`A-90`) и превращает отрезанные связные компоненты в падающие физические обломки!
+- **`destroy.ignite({ pos, temperatureC, fuelTag })`** — поджигает горючий материал и запускает клеточно-воксельное распространение пламени и дыма (`A-91`) с учётом ветра и влажности (`F-134`).
+- **`destroy.quench({ pos, radius, waterVolume })`** — рассчитывает тепловой баланс тушения (`F-135`), гасит очаги, создаёт пар (`fx.emit`) и увлажняет соседние блоки.
+- **`destroy.chainReact({ origin, maxDepth })`** — обрабатывает цепные реакции (бочки, ЛЭП, дамбы, топливные баки) в рамках бюджета `CoreGovernor 75 %` без зависания кадра.
+
+---
+
+# 28. `tools.story.*` — ИИ-Режиссёр темпа и живая летопись (`AI Director`)
+
+Удерживает идеальный эмоциональный ритм игры (как в *Left 4 Dead* и *RimWorld*), не давая миру стать ни скучным, ни нечестно душным.
+
+- **`story.directorInit({ profile: 'survival' | 'citybuilder' | 'shooter' | 'sandbox', seed })`** — запускает автомат фаз `Build-Up → Peak → Sustain → Relax` (`A-92`).
+- **`story.sampleTension({ playerStats, threatDist, resourceRatio, recentEvents })`** — вычисляет текущее напряжение `tension ∈ [0, 1]` (`F-136`).
+- **`story.directorTick({ dt })`** — выбирает следующее событие по фазе и весам (`F-137`): погодный фронт, засаду, караван, редкую находку, поломку или передышку.
+- **`story.chronicleAdd({ tick, actorIds, kind, summary, impact })`** — фиксирует ключевые вехи мира в сжатую летопись (доступна для `ui.dialogueStart` и титров таймлапса).
+- **`story.chronicleQuery({ filter, limit })`** — отдаёт ИИ или игроку сжатую историю мира («почему рухнул мост на 14-м году»).
+
+---
+
+# 29. `tools.mod.*` — Безопасная система модов для игроков и ИИ (`.ratmod.rcw2`)
+
+Любой игрок или ИИ может расширить игру новыми зданиями, машинами, биомами, рецептами и звуками — строго в песочнице с защитой `ToolGuard` и квотой CPU.
+
+- **`mod.pack({ manifest, recipes, assets, rules })`** — собирает мод в 1 бинарный сжатый файл `.ratmod.rcw2` (`CRC32` + список зависимостей `F-139`).
+- **`mod.validate({ packageBytes })`** — прогоняет все модели/текстуры мода через `ToolGuard` (сырой меш без рецепта отбивается `RC-101`), проверяет отсутствие запрещённых API (`eval`, сеть, выход из песочницы) и лимит бюджета `ModQuota` (`F-138`).
+- **`mod.mount({ packageBytes, quotaPct: 10 })`** — подключает мод в изолированный контейнер с топологической сортировкой зависимостей (`F-139`, `A-93`); при превышении квоты CPU внутри 75 % `CoreGovernor` мод автоматически уходит в паузу с понятным отчётом.
+- **`mod.hotReload({ modId, packageBytes })`** — обновляет рецепты/правила/звуки на лету без перезапуска игры и без потери сохранений.
+- **`mod.unmount({ modId })`** — чисто выгружает мод, откатывая его таблицы и возвращая память в арену.
+
+---
+
+# 30. `tools.cutscene.*` — Кинематограф, рельсы камеры, таймлапсы и авто-обложки
+
+- **`cutscene.createTrack({ durationSec, keyframes, cameraSpline })`** — строит рельсу камеры с дуговой параметризацией (`F-140`, равномерная скорость без рывков на поворотах) + синхронные треки погоды, титров, анимаций и звука (`A-94`).
+- **`cutscene.play({ trackId, skippable: true })`** / **`cutscene.seek({ trackId, timeSec })`** — проигрывает и перематывает кат-сцену с сохранением 60 FPS.
+- **`cutscene.timelapseStart({ everyTicks, cameraOrbit, maxFrames: 450 })`** / **`cutscene.timelapseFinish()`** — снимает **живой таймлапс развития мира** («100 лет города за 15 секунд», `F-142`, `A-95`) с нулевым влиянием на FPS благодаря воркерному кодированию.
+- **`cutscene.autoCover({ targetId?, aspect: '16:9', lightingPreset })`** — подбирает 12 ракурсов, оценивает композицию по правилу третей и контрасту (`F-141`, `A-95`) и рендерит готовую обложку `640×360` (WebP/PNG) для витрины или модпака!
+
+---
+
+# 31. Сквозные надстройки v0.7-draft (встроены в существующие ветки)
+
+### 31.1. «Машина времени» (`Time-Scrubbing Debugger` с ветвлением истории — `tools.save.*` + `tools.input.*`)
+- **`save.timelineInit({ keyframeInterval?: 'auto', maxBranchRamMB: 24 })`** — вычисляет оптимальный шаг COW-снимков `K*` (`F-143`) и ведёт параллельную запись потока ввода (`A-60`).
+- **`save.scrubTo({ tick, branchId })`** — мгновенно перематывает мир назад или вперёд на любую секунду (`A-96`), доигрывая только остаток `< K*` тиков от ближайшего COW-снимка.
+- **`save.branchFrom({ tick, patchParams, label })`** — создаёт альтернативную ветку истории поверх того же COW-дерева (`F-144`): разработчик или ИИ меняет параметр/рецепт в момент `T` и сравнивает исход «до и после» бок о бок!
+
+### 31.2. Автобалансировщик игр на 75 % CPU (`Auto-Balancer` — `tools.test.*` + `tools.guess.*` + `tools.sim.*`)
+- **`test.autoBalance({ runs: 500, tunableParams, winMetrics, maxWorkersPct: 75 })`** — прогоняет сотни headless-партий в пуле воркеров `CoreGovernor` (`A-97`), рассчитывает индекс доминирования стратегий (`F-145`), энтропию мета-игры (`F-146`), чувствительность (`F-147`) и сводный фитнес баланса (`F-148`).
+- **`test.findExploits({ runs: 300 })`** — выявляет «кнопку автопобеды», бесконечные циклы ресурсов и экономические тупики (`A-98`) и возвращает готовый дифф-патч параметров + воспроизводимый сид.
+
+### 31.3. Экспорт игры в 1 автономный `.html`-файл (`Single-File Bundler` — `tools.build.*`)
+- **`build.exportSingleHtml({ sceneId, title, targetSizeKB: 300, includeAutoCover: true })`** — выполняет tree-shaking неиспользуемых модулей `RatCore`, пакует рецепты мира/ассетов в `RCW2` (`F-149`), встраивает минимальный рантайм-распаковщик и манифест `ToolGuard` (`F-150`, `A-99`, `A-100`).
+- Результат — **один автономный `.html`-файл (`< 300 КБ`)**, работающий полностью офлайн и в изолированном `<iframe sandbox="allow-scripts allow-pointer-lock">` (можно сразу загрузить в Мастерскую `Games` или отправить другу файлом, при этом сам исходный `RatCore` остаётся полностью изолирован от `site/`).
 
 ---
 
@@ -509,10 +590,11 @@
 
 | Тип игры / задачи | Какие ветки `RatCore.tools.*` работают вместе |
 |---|---|
-| **Карта страны / градострой** *(как РАТГРАД)* | `build.map` + `build.layer` + `nav.trafficStep` + `nav.dispatch` + `env` + `sim.ledgerStep` + `sim.demographyStep` + `look`/`see` + `save` |
-| **3D-шутер от 1-го лица** *(как СЕКТОР «ПЕПЕЛ»)* | `build.extrude`/`loft`/`lathe` + `anim` (слои + IK + Verlet) + `phys.ballistics` + `ai` (укрытия + «больно думать») + `fx` + `hear` + `audio` + `input` |
-| **Пиксельная зомби-выживалка** *(как DEAD DISTRICT)* | `build.voxels` + `build.tex` (палитра/дизеринг) + `env.computeFOV` + `nav.buildFlowField` + `ai.createFSM` + `ai.utilityPick` + `sim.bodyStep` + `sim.craft` + `hear` |
-| **3D-симулятор ГЭС / экономики / дорог** *(КАСКАД, ТРАССА)* | `build.map` + `phys.fluidInit`/`fluidStep` + `phys.windAt` + `nav.trafficStep` + `sim.ledgerStep` + `guess.compare` + `ui` + `save` |
-| **Автосимулятор / 3D-шоурум** *(ЕВРОТРАК, ГАРАЖ 3D)* | `build.combine`/`surface` + `phys.vehicleCreate`/`vehicleInput` + `env.setWeather` + `look.inspectModel` + `audio` + `bridge.exportMesh` |
-| **Симулятор жизни с локальным ИИ** *(НИКА, 1 ИЗ 8 МЛРД)* | `anim` + `ai.nluTrain`/`nluParse` + `ai.utilityPick` + `sim.demographyStep` + `sim.ledgerStep` + `ui.dialogueStart` + `test.batchSeeds` |
-| **Команда из нескольких нейросетей** | `comm` (папки общения) + `think` + `guess` + `build` (`ToolGuard`) + `look`/`see`/`hear` + `bugs`/`report` + `bridge` (RPC + синхронизация) |
+| **Карта страны / градострой** *(как РАТГРАД)* | `build.map` + `build.layer` + `nav.trafficStep` + `nav.dispatch` + `env` + `sim.ledgerStep` + `sim.demographyStep` + `story` + `cutscene.timelapse*` + `look`/`see` + `save` |
+| **3D-шутер от 1-го лица** *(как СЕКТОР «ПЕПЕЛ»)* | `build.extrude`/`loft`/`lathe` + `anim` (слои + IK + Verlet) + `phys.ballistics` + `destroy` + `net` (кооп/PvP) + `ai` (укрытия + «больно думать») + `fx` + `hear` + `audio` + `input` |
+| **Пиксельная зомби-выживалка** *(как DEAD DISTRICT)* | `build.voxels` + `build.tex` (палитра/дизеринг) + `env.computeFOV` + `nav.buildFlowField` + `destroy` (пожары/баррикады) + `story` (AI Director) + `ai` + `sim.bodyStep` + `sim.craft` + `hear` |
+| **3D-симулятор ГЭС / экономики / дорог** *(КАСКАД, ТРАССА)* | `build.map` + `phys.fluidInit`/`fluidStep` + `phys.windAt` + `destroy` (прорыв дамбы/аварии) + `nav.trafficStep` + `sim.ledgerStep` + `test.autoBalance` + `save.scrubTo` + `ui` |
+| **Автосимулятор / 3D-шоурум** *(ЕВРОТРАК, ГАРАЖ 3D)* | `build.combine`/`surface` + `phys.vehicleCreate`/`vehicleInput` + `mod` (пользовательские машины) + `cutscene.autoCover` + `env.setWeather` + `look.inspectModel` + `audio` + `bridge.exportMesh` |
+| **Симулятор жизни с локальным ИИ** *(НИКА, 1 ИЗ 8 МЛРД)* | `anim` + `ai.nluTrain`/`nluParse` + `ai.utilityPick` + `story` + `sim.demographyStep` + `sim.ledgerStep` + `ui.dialogueStart` + `test.autoBalance` |
+| **Мультиплеер / песочница с модами и публикацией** | `net` (Rollback P2P) + `mod` (`.ratmod.rcw2`) + `destroy` + `cutscene` + `save.timeline*` + `build.exportSingleHtml` |
+| **Команда из нескольких нейросетей** | `comm` (папки общения) + `think` + `guess` + `build` (`ToolGuard`) + `look`/`see`/`hear` + `bugs`/`report` + `save.branchFrom` + `test.autoBalance` + `bridge` (RPC + синхронизация) |
