@@ -346,7 +346,7 @@ export function applyDamage(game, target, amount, source = null, opts = {}) {
       if (game.rng.chance(0.5)) target.engineDamage = 1; else target.turretDamage = 1;
     }
   }
-  game.addBloodAt(target.x, target.y);
+  game.addBloodAt(target.x, target.y, !target.isVehicle);
   if (source && source.faction !== target.faction) {
     target.suppression = clamp(target.suppression + 0.25, 0, 1);
     if (source.squad) source.squad.stats.shotsHit++;
@@ -384,8 +384,7 @@ export function killUnit(game, u, source = null) {
   u.state = 'dead';
   u.stateLabel = 'убит';
   u.flowDir = null;
-  game.decals.push({ type: u.isVehicle ? 'wreck' : 'corpse', x: u.x, y: u.y, faction: u.faction, angle: u.facing, t: game.time });
-  if (game.decals.length > 160) game.decals.shift();
+  if (!u.isVehicle) game.markBloodAt(u.x, u.y);
   if (u.isVehicle) {
     game.explode(u.x, u.y, 70, 40, null, true);
     game.fxAt('wreck', u.x, u.y);
@@ -636,7 +635,7 @@ export function moveUnit(game, u, dx, dy, dt, visionChoice = null, { skipDoorWay
     u.vy = dt > 0 ? (u.y - motionY) / dt : 0;
   }
   if (probe) probe(u,rescueX,rescueY,u.x,u.y,'rescue');
-  if (Math.hypot(dx, dy) > 0.1) u.facing = approachAngle(u.facing, Math.atan2(dy, dx), dt * 8);
+  if (Math.hypot(dx, dy) > 0.1) u.facing = approachAngle(u.facing, Math.atan2(dy, dx), dt * (u.role === 'tank' && game.cfg.flag('tank_smooth_turn_v1', true) ? 2 : 8));
 }
 
 export function updateTimers(game, u, dt) {
@@ -656,6 +655,7 @@ export function updateTimers(game, u, dt) {
     if (u.perception.heard.t <= 0) u.perception.heard = null;
   }
   if (u.isVehicle) {
+    if (u.targetId == null && game.cfg.flag('tank_smooth_turn_v1', true)) u.turretAngle = approachAngle(u.turretAngle, u.facing, dt * 2.4);
     if (u.targetId != null) {
       const t = game.unitById(u.targetId);
       if (t && t.alive && dist(u.x, u.y, t.x, t.y) < u.vision &&

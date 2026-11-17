@@ -1,0 +1,480 @@
+{
+  "seeds": 8,
+  "seconds": 180,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          76,
+          51
+        ],
+        "kills": [
+          11,
+          26
+        ],
+        "captures": [
+          3,
+          4
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          22,
+          36
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 13,
+        "failures": [
+          107,
+          39
+        ],
+        "kills": [
+          8,
+          38
+        ],
+        "captures": [
+          4,
+          8
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          18,
+          42
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          43,
+          13
+        ],
+        "kills": [
+          46,
+          21
+        ],
+        "captures": [
+          6,
+          6
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          35,
+          17
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 10,
+        "failures": [
+          18,
+          18
+        ],
+        "kills": [
+          17,
+          38
+        ],
+        "captures": [
+          3,
+          4
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          23,
+          28
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          22,
+          27
+        ],
+        "kills": [
+          12,
+          47
+        ],
+        "captures": [
+          8,
+          12
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          24,
+          49
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 117.1,
+        "warOver": true,
+        "outcome": {
+          "winner": 0,
+          "reason": "Все ключевые города Легион потеряны",
+          "t": 117.09999999999762
+        },
+        "withdrawals": 15,
+        "failures": [
+          18,
+          27
+        ],
+        "kills": [
+          5,
+          25
+        ],
+        "captures": [
+          6,
+          5
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          44,
+          42
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          78,
+          32
+        ],
+        "kills": [
+          48,
+          9
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          38,
+          30
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 29,
+        "failures": [
+          41,
+          31
+        ],
+        "kills": [
+          44,
+          11
+        ],
+        "captures": [
+          5,
+          4
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          21,
+          19
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          50,
+          14
+        ],
+        "kills": [
+          25,
+          24
+        ],
+        "captures": [
+          7,
+          4
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          33,
+          16
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 30,
+        "failures": [
+          31,
+          18
+        ],
+        "kills": [
+          35,
+          41
+        ],
+        "captures": [
+          6,
+          7
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          42,
+          27
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          43,
+          35
+        ],
+        "kills": [
+          29,
+          32
+        ],
+        "captures": [
+          4,
+          8
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          21,
+          34
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 21,
+        "failures": [
+          35,
+          61
+        ],
+        "kills": [
+          19,
+          38
+        ],
+        "captures": [
+          10,
+          9
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          29,
+          46
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          74,
+          16
+        ],
+        "kills": [
+          26,
+          36
+        ],
+        "captures": [
+          6,
+          4
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          27,
+          30
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 26,
+        "failures": [
+          63,
+          34
+        ],
+        "kills": [
+          34,
+          26
+        ],
+        "captures": [
+          6,
+          5
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          29,
+          23
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 0,
+        "failures": [
+          17,
+          34
+        ],
+        "kills": [
+          25,
+          34
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          13,
+          22
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "withdrawals": 2,
+        "failures": [
+          16,
+          110
+        ],
+        "kills": [
+          16,
+          35
+        ],
+        "captures": [
+          3,
+          4
+        ],
+        "deliveries": [
+          0,
+          1
+        ],
+        "alive": [
+          12,
+          31
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "Only tactical_withdraw_v1 differs; all other current flags unchanged",
+    "Withdrawals count starts, not successful completed retreats",
+    "RNG diverges after behavior changes; fixed horizon is not a draw",
+    "Delivery may be virtual; no causal or balance claim"
+  ]
+}

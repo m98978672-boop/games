@@ -4,7 +4,7 @@ import { RNG } from '../core/rng.js';
 import { EventBus } from '../core/eventbus.js';
 import { SpatialHash } from '../core/spatial.js';
 import { clamp, dist, dist2, angleTo, angleDiff } from '../core/mathx.js';
-import { World } from './world.js';
+import { World, T_WATER, T_CITY, T_ROAD } from './world.js';
 import { Nav } from './nav.js';
 import { Unit, killUnit, applyDamage, updateTimers } from './units.js';
 import { Squad, orderLabel } from './squads.js';
@@ -614,16 +614,26 @@ export class Game {
     if (this.soundQueue.length > 48) this.soundQueue.shift();
   }
   fxAt(type, x, y, angle = 0) {
-    this.fx.push({ type, x, y, angle, t: 0, life: type === 'muzzle' ? 0.07 : type === 'explosion' ? 0.55 : type === 'blood' ? 0.3 : 0.4 });
+    this.fx.push({ type, x, y, angle, t: 0, life: type === 'muzzle' ? 0.12 : type === 'explosion' ? 0.7 : type === 'wreck' ? 12 : type === 'blood' ? 0.3 : 0.4 });
     if (this.fx.length > 260) this.fx.shift();
   }
   addTracer(x1, y1, x2, y2, unit, color = null) {
     this.tracers.push({ x1, y1, x2, y2, t: 0, life: 0.08, color: color || (unit && unit.faction === 0 ? '#ffe6a8' : '#ffb08a') });
     if (this.tracers.length > 320) this.tracers.shift();
   }
-  addBloodAt(x, y) {
-    if (this.rng.chance(0.5)) return;
-    this.fx.push({ type: 'blood', x, y, t: 0, life: 0.5, angle: 0 });
+  addBloodAt(x, y, organic = true) {
+    // Keep the existing combat RNG draw. Marks are purely visual, bounded and
+    // do not alter simulation RNG, pathfinding or save-state continuation.
+    if (this.rng.chance(0.5) || !organic) return;
+    this.fxAt('blood', x, y);
+    this.markBloodAt(x, y);
+  }
+  markBloodAt(x, y) {
+    const terrain = this.world.terrainAt(x, y);
+    if (terrain === T_WATER) return;
+    const life = terrain === T_CITY || terrain === T_ROAD ? 90 : 45;
+    this.decals.push({ type: 'blood', x, y, t: this.time, life });
+    if (this.decals.length > 160) this.decals.shift();
   }
   raycastBlocked(x1, y1, x2, y2) {
     const d = dist(x1, y1, x2, y2);
@@ -938,6 +948,10 @@ export class Game {
       const f = this.fx[i];
       f.t += dt;
       if (f.t >= f.life) this.fx.splice(i, 1);
+    }
+    for (let i = this.decals.length - 1; i >= 0; i--) {
+      const d = this.decals[i];
+      if (this.time - d.t >= (d.life || 45)) this.decals.splice(i, 1);
     }
     if (this.alertLog.length > 60) this.alertLog.splice(0, this.alertLog.length - 60);
     for (const b of this.world.buildings) if (b.dead) b.hp = 0;

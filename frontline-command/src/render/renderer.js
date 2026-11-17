@@ -235,7 +235,10 @@ export class Renderer {
     const cx = this.camera.x, cy = this.camera.y;
     for (const b of this.game.world.buildings) {
       if (b.dead || !b.built) continue;
-      if (Math.abs(b.x - cx) > halfW + 120 || Math.abs(b.y - cy) > halfH + 120) continue;
+      const deck = b.type === 'bridge' && b.deck;
+      const bx = deck ? (deck.x0 + deck.x1) / 2 : b.x, by = deck ? (deck.y0 + deck.y1) / 2 : b.y;
+      const marginX = deck ? (deck.x1 - deck.x0) / 2 : 120, marginY = deck ? (deck.y1 - deck.y0) / 2 : 120;
+      if (Math.abs(bx - cx) > halfW + marginX || Math.abs(by - cy) > halfH + marginY) continue;
       const visible = this.isVisible(b.x, b.y);
       const def = b.def || this.game.cfg.building(b.type);
       const size = Math.max(24, (def.size || 32) * (b.type === 'city' || b.type === 'hq' ? 3 : b.pointId ? 2 : 1));
@@ -250,7 +253,8 @@ export class Renderer {
       ctx.globalAlpha = visible ? 1 : 0.35;
       // A walled building is an open cutaway: its floor must match the actual
       // wall outline rather than a scaled roof sprite which obscures openings.
-      if (hasFloor) this.drawBuildingFloor(b, wallState, p, z);
+      if (b.type === 'bridge' && b.deck) this.drawBridge(b, z);
+      else if (hasFloor) this.drawBuildingFloor(b, wallState, p, z);
       else if (img) ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
       else { ctx.fillStyle = b.faction === 1 ? '#b5503a' : b.faction === 0 ? '#4a7fb5' : '#8a7d5c'; ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s); }
       ctx.globalAlpha = 1;
@@ -262,6 +266,19 @@ export class Renderer {
         ctx.fillStyle = b.hp / (def.hp || 100) > 0.5 ? '#9bbf6a' : '#d9b45a';
         ctx.fillRect(p.x - w / 2, p.y + s / 2 + 2, w * (b.hp / (def.hp || 100)), 3);
       }
+    }
+  }
+
+  // Deck bounds are identical to the navigation cells, including the banks.
+  drawBridge(b, z) {
+    const ctx = this.ctx, d = b.deck;
+    const p = this.worldToScreen(d.x0, d.y0), w = (d.x1 - d.x0) * z, h = (d.y1 - d.y0) * z;
+    ctx.fillStyle = '#615b4c'; ctx.fillRect(p.x, p.y, w, h);
+    ctx.fillStyle = '#898172'; ctx.fillRect(p.x, p.y + 5*z, w, h - 10*z);
+    ctx.fillStyle = '#56544b'; ctx.fillRect(p.x, p.y, w, 5*z); ctx.fillRect(p.x, p.y + h - 5*z, w, 5*z);
+    if (z > 0.35) {
+      ctx.fillStyle = '#655f53';
+      for (let x = 24*z; x < w; x += 24*z) ctx.fillRect(p.x + x, p.y + 5*z, Math.max(1,z), h - 10*z);
     }
   }
 
@@ -474,12 +491,19 @@ export class Renderer {
   }
 
   drawDecals() {
-    const ctx = this.ctx;
-    for (const d of this.game.decals.slice(-160)) {
+    const ctx = this.ctx, z = this.camera.zoom;
+    const img = this.bank.get('fx/blood');
+    if (!img) return;
+    for (const d of this.game.decals) {
+      if (d.type !== 'blood') continue;
       const p = this.worldToScreen(d.x, d.y);
-      const img = this.bank.get('fx/blood');
-      if (img) ctx.drawImage(img, p.x - 12 * this.camera.zoom, p.y - 12 * this.camera.zoom, 24 * this.camera.zoom, 24 * this.camera.zoom);
+      if (p.x < -30 || p.y < -30 || p.x > this.viewW + 30 || p.y > this.viewH + 30 || !this.isVisible(d.x, d.y)) continue;
+      const age = Math.max(0, this.game.time - d.t), life = d.life || 45;
+      ctx.globalAlpha = 0.65 * clamp(1 - age / life, 0, 1);
+      const s = (16 + 10 * Math.min(age / 3, 1)) * z;
+      ctx.drawImage(img, p.x - s/2, p.y - s/2, s, s);
     }
+    ctx.globalAlpha = 1;
   }
 
   drawPoints() {
@@ -553,7 +577,7 @@ export class Renderer {
       const p = this.worldToScreen(u.x, u.y);
       const dir = this.unitDir(u);
       const isVehicle = u.kind === 'vehicle';
-      const img = this.bank.get(`sprites/${u.role}_${u.faction}_${dir}`) || this.bank.get(`sprites/infantry_${u.faction}_0`);
+      const img = this.bank.get(`sprites/${u.role}_${u.faction}_${isVehicle ? 0 : dir}`) || this.bank.get(`sprites/infantry_${u.faction}_0`);
       const size = (isVehicle ? 52 : 32) * z * (u.downed ? 0.85 : 1);
       const selected = game.selectedUnits.has(u.id) || (u.squadId != null && game.selectedSquads.has(u.squadId));
       // тень/подсветка выбранного
@@ -565,7 +589,10 @@ export class Renderer {
         ctx.stroke();
       }
       ctx.globalAlpha = u.downed ? 0.55 : 1;
-      if (img) ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size);
+      if (img && isVehicle) {
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(u.turretAngle ?? u.facing);
+        ctx.drawImage(img, -size / 2, -size / 2, size, size); ctx.restore();
+      } else if (img) ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size);
       else {
         ctx.fillStyle = u.faction === 0 ? '#4a7fb5' : '#b5503a';
         ctx.beginPath(); ctx.arc(p.x, p.y, size * 0.35, 0, Math.PI * 2); ctx.fill();
@@ -730,16 +757,35 @@ export class Renderer {
       const p = this.worldToScreen(f.x, f.y);
       const k = f.t / f.life;
       if (f.type === 'muzzle') {
-        const img = this.bank.get('fx/muzzle');
-        const s = 22 * z;
-        ctx.globalAlpha = 1 - k;
-        if (img) ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
-        ctx.globalAlpha = 1;
+        // Fast directional flash, with a bright core and expanding tip.
+        const scale = z * (1 - 0.35 * k);
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(f.angle || 0);
+        ctx.globalAlpha = clamp(1 - k, 0, 1);
+        ctx.fillStyle = '#ff8e27'; ctx.beginPath();
+        ctx.moveTo(-4*scale, -5*scale); ctx.lineTo(18*scale, 0); ctx.lineTo(-4*scale, 5*scale); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#fff5be'; ctx.beginPath(); ctx.ellipse(1*scale, 0, 7*scale, 3*scale, 0, 0, Math.PI*2); ctx.fill();
+        ctx.restore();
       } else if (f.type === 'explosion') {
         const img = this.bank.get('fx/explosion');
-        const s = (40 + 90 * k) * z;
+        const s = (36 + 90 * k) * z;
         ctx.globalAlpha = 1 - k;
         if (img) ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
+        ctx.fillStyle = '#ffd266'; ctx.globalAlpha = Math.max(0, 0.75 - k * 2);
+        ctx.beginPath(); ctx.arc(p.x, p.y, (8 + 22*k)*z, 0, Math.PI*2); ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (f.type === 'wreck') {
+        // Visual fire only: it does not create an invisible damage hazard.
+        if (p.x < -80 || p.y < -80 || p.x > this.viewW + 80 || p.y > this.viewH + 80 || !this.isVisible(f.x, f.y)) continue;
+        const flicker = 0.75 + 0.25 * Math.sin(f.t * 11 + f.x * 0.03);
+        ctx.globalAlpha = Math.min(1, (1-k)*3);
+        ctx.fillStyle = '#342d29'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 24*z, 14*z, 0, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ef6a20'; ctx.beginPath();
+        ctx.moveTo(p.x - 10*z, p.y + 5*z); ctx.quadraticCurveTo(p.x - 15*z, p.y - 8*z, p.x - 3*z, p.y - 24*z*flicker);
+        ctx.quadraticCurveTo(p.x + 2*z, p.y - 9*z, p.x + 7*z, p.y - 18*z*flicker);
+        ctx.quadraticCurveTo(p.x + 16*z, p.y, p.x + 9*z, p.y + 5*z); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#ffd46a'; ctx.beginPath(); ctx.ellipse(p.x, p.y, 5*z, 9*z*flicker, 0, 0, Math.PI*2); ctx.fill();
+        const smoke = this.bank.get('fx/smoke');
+        if (smoke) { const s = (24 + 14*(f.t % 1.8))*z; ctx.globalAlpha *= 0.28; ctx.drawImage(smoke, p.x-s/2, p.y-(25+13*(f.t%1.8))*z-s/2, s, s); }
         ctx.globalAlpha = 1;
       } else if (f.type === 'blood') {
         const img = this.bank.get('fx/blood');

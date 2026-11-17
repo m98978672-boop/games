@@ -235,6 +235,7 @@ export class World {
       builders: 0, lastHit: -99, occupants: 0,
       infra: isPoint,
     };
+    if (type === 'bridge' && this.cfg.flag('bridge_deck_v1', true)) b.deck = this._bridgeDeck(x, y);
     this.buildings.push(b);
     this.buildingGrid.insert(b);
     if (pointId) {
@@ -248,16 +249,49 @@ export class World {
 
   buildingAtPoint(pointId) { return this.buildings.find((b) => b.pointId === pointId && !b.dead); }
 
+  // A straight, horizontal deck spans the nearby river across all three
+  // tile rows. Landing cells on both sides are included in the same geometry
+  // used for navigation and drawing. Do not move the capture point itself.
+  _bridgeDeck(x, y) {
+    const cy = this._tile(y), radius = 10;
+    const y0 = Math.max(0, cy - 1), y1 = Math.min(this.rows - 1, cy + 1);
+    let left = Infinity, right = -Infinity;
+    for (let row = y0; row <= y1; row++) {
+      const runs = [];
+      for (let col = Math.max(0, this._tile(x) - radius); col <= Math.min(this.cols - 1, this._tile(x) + radius);) {
+        if (this.terrain[col + row * this.cols] !== T_WATER) { col++; continue; }
+        const start = col;
+        while (col < this.cols && this.terrain[col + row * this.cols] === T_WATER) col++;
+        runs.push([start, col - 1]);
+      }
+      runs.sort((a, b) => Math.abs((a[0] + a[1] + 1) * this.T / 2 - x) - Math.abs((b[0] + b[1] + 1) * this.T / 2 - x));
+      if (runs.length) { left = Math.min(left, runs[0][0]); right = Math.max(right, runs[0][1]); }
+    }
+    if (!Number.isFinite(left)) {
+      left = this._tile(x - 88); right = this._tile(x + 88);
+    }
+    left = Math.max(0, left - 1); right = Math.min(this.cols - 1, right + 1);
+    return { x0: left * this.T, x1: (right + 1) * this.T, y0: y0 * this.T, y1: (y1 + 1) * this.T };
+  }
+
   _markBridge(b, passable) {
-    const cellsX = Math.ceil(b.w / this.T), cellsY = Math.ceil(b.h / this.T);
-    const cx = this._tile(b.x), cy = this._tile(b.y);
-    for (let j = -Math.floor(cellsY / 2); j <= Math.floor(cellsY / 2); j++) {
-      for (let i = -Math.floor(cellsX / 2); i <= Math.floor(cellsX / 2); i++) {
-        const x = cx + i, y = cy + j;
-        if (x < 0 || y < 0 || x >= this.cols || y >= this.rows) continue;
+    if (!passable) return; // rebuildNav restores the terrain when a bridge is destroyed
+    const deck = b.deck;
+    if (!deck) {
+      const cellsX = Math.ceil(b.w / this.T), cellsY = Math.ceil(b.h / this.T);
+      const cx = this._tile(b.x), cy = this._tile(b.y);
+      for (let j = -Math.floor(cellsY/2); j <= Math.floor(cellsY/2); j++) {
+        for (let i = -Math.floor(cellsX/2); i <= Math.floor(cellsX/2); i++) {
+          const x = cx+i, y = cy+j;
+          if (x >= 0 && y >= 0 && x < this.cols && y < this.rows && this.terrain[x+y*this.cols] === T_WATER) this.walk[x+y*this.cols] = 1;
+        }
+      }
+      return;
+    }
+    for (let y = deck.y0 / this.T; y < deck.y1 / this.T; y++) {
+      for (let x = deck.x0 / this.T; x < deck.x1 / this.T; x++) {
         const k = x + y * this.cols;
-        if (this.terrain[k] !== T_WATER) continue;
-        if (passable) this.walk[k] = 1;
+        if (this.terrain[k] === T_WATER) this.walk[k] = 1;
       }
     }
   }
