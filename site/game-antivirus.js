@@ -222,6 +222,7 @@
     { sev: 'block', risk: 42, label: 'Скрытый WebAssembly-майнер или пул добычи криптовалют', re: /(WebAssembly\.(instantiate|compile)[\s\S]{0,260}(cryptonight|randomx|monero|hashrate|stratum|minero)|wasm[\s\S]{0,120}stratum\+tcp)/i },
     { sev: 'block', risk: 38, label: 'Подмена криптокошелька в буфере обмена (Clipper/Hijacker)', re: /(clipboard\.writeText[\s\S]{0,160}(bc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{20,}|0x[a-fA-F0-9]{40}|T[A-Za-z1-9]{33}))/i },
     { sev: 'block', risk: 36, label: 'Кража localStorage / indexedDB через скрытый маячок Image().src', re: /((localStorage|indexedDB)[\s\S]{0,180}(new\s+Image\s*\(\s*\)[\s\S]{0,80}\.src\s*=|navigator\.sendBeacon\s*\())/i },
+    { sev: 'block', risk: 38, label: 'Принудительный редирект игрока на внешний сайт (location.href/replace/assign)', re: /\b(?:window\.|document\.)?location(?:\.href\s*=|\s*=|\.(?:replace|assign)\s*\()\s*['"`]https?:\/\//i },
     { sev: 'warn', risk: 14, label: 'Подозрительный скрытый доступ к буферу обмена (clipboard.readText)', re: /navigator\.clipboard\.read(Text)?\s*\(/i },
     { sev: 'warn', risk: 12, label: 'Запрос геолокации / камеры / микрофона (проверьте, нужно ли это игре)', re: /(navigator\.geolocation|getUserMedia\s*\(|getDisplayMedia\s*\()/i },
   ];
@@ -229,6 +230,7 @@
   const OBFUSCATION_SIGNATURES = [
     { sev: 'block', risk: 34, label: 'Динамическое исполнение строки кода (ev-al)', re: createDynamicRe(['\\bev', 'al\\s*\\('], 'i') },
     { sev: 'block', risk: 34, label: 'Конструктор динамического кода (new Func-tion)', re: createDynamicRe(['\\bnew\\s+Func', 'tion\\s*\\('], 'i') },
+    { sev: 'block', risk: 36, label: 'Скрытый скобочный вызов ev-al / Func-tion через window/globalThis', re: createDynamicRe(['\\b(window|self|globalThis|top|parent)\\s*\\[\\s*[\'"`](ev', 'al|Func', 'tion)[\'"`]\\s*\\]'], 'i') },
     { sev: 'block', risk: 30, label: 'Распаковка base64 с исполнением (atob + динамический запуск)', re: createDynamicRe(['atob\\s*\\([\\s\\S]{0,160}(ev', 'al|Func', 'tion|script|srcdoc)'], 'i') },
     { sev: 'block', risk: 32, label: 'Экстремальная JSFuck-обфускация', re: /\[\s*\]\s*\[\s*\(!\[\]\s*\+\s*\[\]\)/ },
     { sev: 'block', risk: 28, label: 'Скрытая подгрузка кода через data:-import или Blob-скрипт', re: /(import\s*\(\s*['"]data:|createObjectURL\s*\([\s\S]{0,140}(script|Worker))/i },
@@ -256,15 +258,24 @@
 
   function decodeObfuscatedLayers(text) {
     let out = String(text || '');
-    // Склейки строк 'ev' + 'al' / "doc" + "ument"
-    out = out.replace(/(['"])([a-zA-Z0-9_.$]{1,24})\1\s*\+\s*(['"])([a-zA-Z0-9_.$]{1,24})\3/g, '$2$4');
     // Комментарии внутри идентификаторов: ev/**/al
     out = out.replace(/([a-zA-Z0-9_$])\/\*[\s\S]{0,40}?\*\/([a-zA-Z0-9_$])/g, '$1$2');
     // HTML numeric entities: &#x65; / &#101;
     out = out.replace(/&#x([0-9a-f]{2,4});/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
     out = out.replace(/&#(\d{2,4});/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)));
-    // \xNN hex escapes
+    // \u{NNNN}, \uNNNN и \xNN escapes
+    out = out.replace(/\\u\{([0-9a-f]{1,5})\}/gi, (_, hex) => {
+      const cp = parseInt(hex, 16);
+      return Number.isFinite(cp) && cp <= 0x10ffff ? String.fromCodePoint(cp) : '';
+    });
+    out = out.replace(/\\u([0-9a-f]{4})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
     out = out.replace(/\\x([0-9a-f]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    // Многократная склейка строк 'e' + 'v' + 'a' + 'l' -> 'eval' (сохраняем кавычки вокруг)
+    for (let step = 0; step < 8; step++) {
+      const next = out.replace(/(['"])([a-zA-Z0-9_.$]{1,32})\1\s*\+\s*(['"])([a-zA-Z0-9_.$]{1,32})\3/g, '$1$2$4$1');
+      if (next === out) break;
+      out = next;
+    }
     // URL %XX escapes
     try {
       if (/%[0-9a-f]{2}/i.test(out)) {
@@ -321,11 +332,15 @@
     if (hostMatchesList(host, URL_SHORTENERS)) {
       addFinding(p, 'block', `Сокращатель/редиректор (${host}) запрещён — укажите прямую ссылку на игру`, 40);
     }
-    if (host.includes('xn--')) {
+    const rawAuthority = url.replace(/^[a-z][a-z0-9+.-]*:\/\//i, '').split(/[/?#]/)[0];
+    const rawHost = rawAuthority.includes('@') ? rawAuthority.split('@').pop() : rawAuthority;
+    const rawHostClean = String(rawHost || '').split(':')[0];
+    const hasMixedScriptLabel = rawHostClean.split('.').some((label) => /[a-z]/i.test(label) && /[а-яё\u0370-\u03FF]/i.test(label));
+
+    if (hasMixedScriptLabel) {
+      addFinding(p, 'block', `IDN-омоглиф в домене (${rawHostClean}): смешаны латиница и похожие буквы другого алфавита (фишинг)`, 55);
+    } else if (host.includes('xn--')) {
       addFinding(p, 'warn', `Punycode/IDN-домен (${host}) — проверьте на подмену похожих букв`, 18);
-    }
-    if (/[а-яё]/i.test(url) && /[a-z]/i.test(host)) {
-      addFinding(p, 'warn', 'Смешанный алфавит (кириллица + латиница) в адресе', 15);
     }
     if (DANGEROUS_EXT_RE.test(parsed.pathname)) {
       addFinding(p, 'block', 'Ссылка ведёт на исполняемый/системный файл вместо веб-игры', 55);
@@ -413,7 +428,7 @@
   function runPass3DomStructure(code, game) {
     const p = makePass(3, 'dom_structure', 'Проход 3/10 · Аудит HTML/DOM, SVG-обложки и скрытых тегов', 'DOM Tag, SVG XSS & Hidden-Frame Auditor');
 
-    const coverCheck = scanCoverDataUrl(game && game.coverDataUrl);
+    const coverCheck = scanCoverDataUrl(game && (game.coverDataUrl || game.customCoverData));
     if (!coverCheck.ok) {
       for (const reason of coverCheck.reasons) addFinding(p, 'block', reason, 45);
     }

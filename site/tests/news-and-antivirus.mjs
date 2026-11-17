@@ -60,6 +60,38 @@ const exfil = av.scanGameSync({
 });
 assert.equal(exfil.verdict, 'blocked', 'localStorage exfiltration via Image().src must be blocked');
 
+// 3b. Red-team обходы: IDN-омоглиф, Unicode escape \u0065val, многократная склейка "e"+"v"+"a"+"l", внешний редирект
+assert.equal(
+  av.scanGameSync({ title: 'Homograph', sourceType: 'url', playUrl: 'https://githu\u0432.io/game/' }).verdict,
+  'blocked',
+  'Mixed-script IDN homograph domain must be blocked'
+);
+assert.equal(
+  av.scanGameSync({ title: 'Clean Russian Path', sourceType: 'url', playUrl: 'https://m98978672-boop.github.io/games/игра/' }).verdict,
+  'clean',
+  'Valid HTTPS trusted domain with Cyrillic path must stay clean (no false positive)'
+);
+assert.equal(
+  av.scanGameSync({ title: 'Unicode Eval', sourceType: 'html', htmlCode: '<script>window["\\u0065val"]("alert(1)");</script>' }).verdict,
+  'blocked',
+  'Unicode-escaped bracket eval must be blocked'
+);
+assert.equal(
+  av.scanGameSync({ title: 'MultiSplit Eval', sourceType: 'html', htmlCode: '<script>window["e"+"v"+"a"+"l"]("alert(1)");</script>' }).verdict,
+  'blocked',
+  'Multi-concatenated bracket eval must be blocked'
+);
+assert.equal(
+  av.scanGameSync({ title: 'Redirect', sourceType: 'html', htmlCode: '<script>location.replace("https://evil-phish.example/steal");</script>' }).verdict,
+  'blocked',
+  'Forced external location.replace redirect must be blocked'
+);
+assert.equal(
+  av.scanGameSync({ title: 'PackPolyglot', sourceType: 'url', playUrl: 'https://m98978672-boop.github.io/games/', customCoverData: polyglotCover }).verdict,
+  'blocked',
+  'Polyglot cover passed via customCoverData (user-games.js importPack) must be blocked'
+);
+
 // 4. Антивирус для новостей (scanNewsItemSync)
 assert.equal(
   av.scanNewsItemSync({ title: 'Нормальная новость о науке', summary: 'Короткое описание', body: ['Текст статьи.'], sourceUrl: 'https://nplus1.ru/' }).ok,
