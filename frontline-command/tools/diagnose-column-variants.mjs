@@ -4,6 +4,7 @@ import { loadConfig } from '../src/core/config.js';
 import { Game } from '../src/sim/game.js';
 import { moveAlongFlow, updateTimers } from '../src/sim/units.js';
 const cfg=await loadConfig();
+cfg.flags.movement_occupancy_v1=false; // isolates crowd_nav_v2 for the historical comparison
 const enabled=!process.argv.includes('--flag-off');
 cfg.flags.crowd_nav_v2=enabled;
 function scenario(type,faction,seed,count,jitter) {

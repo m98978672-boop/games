@@ -104,6 +104,12 @@
       "enabled": true
     },
     {
+      "id": "truck_clear_opening_v1",
+      "desc": "Свободный грузовик освобождает дверной проём или ворота вне боя",
+      "group": "ai",
+      "enabled": true
+    },
+    {
       "id": "truck_route_assist_v1",
       "desc": "Грузовики используют ограниченный поиск обхода препятствий",
       "group": "ai",
@@ -335,7 +341,7 @@
       "id": "movement_occupancy_v1",
       "desc": "Эксперимент: живое резервирование занятой области и проверка траектории движения юнитов",
       "group": "ai",
-      "enabled": false
+      "enabled": true
     }
   ]
 }

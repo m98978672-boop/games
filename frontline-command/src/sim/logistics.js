@@ -1,6 +1,7 @@
 // Экономика и логистика: склады фракции, добыча на точках, грузовики, снабжение секторов.
 import { clamp, dist } from '../core/mathx.js';
 import { updateTimers, moveAlongFlow } from './units.js';
+import { unsafeRest, safeRestGoal } from './rest_positions.js';
 
 export class Logistics {
   constructor(game) {
@@ -244,6 +245,48 @@ export class Logistics {
       this.game.cfg.flag('pathing_v2', false) && this.game.cfg.flag('wall_collision_v2', true);
   }
 
+  // Parked trucks do not pass through updateSoldier's opening-clearance
+  // behaviour. Only take ownership of an idle, uncommanded truck; an active
+  // delivery, player control or nearby threat always wins over this maneuver.
+  clearIdleOpening(truck, dt) {
+    const game = this.game;
+    // Respect an externally replaced goal rather than clearing or following it
+    // as if it were our temporary maneuver.
+    if (truck._openingVacate && !truck.pathFailed && truck.goal !== truck._openingGoal) {
+      truck._openingVacate = false; truck._openingGoal = null; return;
+    }
+    if (!game.cfg.flag('truck_clear_opening_v1', true) || truck.playerControlled ||
+        !unsafeRest(game, truck.x, truck.y, truck.radius)) {
+      if (truck._openingVacate) {
+        if (!truck.playerControlled && truck.goal === truck._openingGoal) truck.goal = null;
+        truck._openingVacate = false; truck._openingGoal = null;
+      }
+      return;
+    }
+    if (game.nearbyEnemies(truck, 300).length) {
+      if (truck._openingVacate) { truck.goal = null; truck._openingVacate = false; truck._openingGoal = null; truck.flowDir = null; }
+      return;
+    }
+    if (truck.goal && !truck._openingVacate) return;
+    if (truck.pathFailed && truck._openingVacate) {
+      truck.goal = null; truck._openingVacate = false; truck._openingGoal = null; truck._openingRetryAt = game.time + 3;
+    }
+    if (!truck._openingVacate) {
+      if (game.time < (truck._openingRetryAt || 0)) return;
+      const safe = safeRestGoal(game, truck, { x: truck.x, y: truck.y });
+      if (!safe) { truck._openingRetryAt = game.time + 3; return; }
+      truck.goal = safe; truck.arrived = false; truck.pathFailed = false;
+      truck.flowDir = null; truck._openingVacate = true; truck._openingGoal = truck.goal;
+      if (game._openingMetrics) game._openingMetrics.started++;
+    }
+    moveAlongFlow(game, truck, dt);
+    truck._openingGoal = truck.goal;
+    if (!unsafeRest(game, truck.x, truck.y, truck.radius)) {
+      truck.goal = null; truck._openingVacate = false; truck._openingGoal = null; truck.flowDir = null;
+      if (game._openingMetrics) game._openingMetrics.cleared++;
+    }
+  }
+
   moveTrucks(dt) {
     if (!this.safeTransportEnabled()) return this.moveTrucksLegacy(dt);
     const game = this.game;
@@ -265,8 +308,11 @@ export class Logistics {
       }
       for (const truck of trucks) {
         updateTimers(game, truck, dt);
-        if (!truck.truckTask) continue;
+        if (!truck.truckTask) { this.clearIdleOpening(truck, dt); continue; }
         const task = truck.truckTask;
+        if (task.state !== 'idleTruck' && task.state !== 'idle' && truck._openingVacate) {
+          truck._openingVacate = false; truck._openingGoal = null;
+        }
         // При угрозе груз и заявка остаются за машиной; после ухода врага
         // рейс продолжается. Иначе вторая машина могла забрать ту же заявку,
         // пока первая всё ещё везёт груз.
@@ -320,7 +366,10 @@ export class Logistics {
           // A blocked path is not a delivery; the cargo and reservation stay.
           if (dist(truck.x, truck.y, target.x, target.y) < range) this.unloadTruck(truck, task);
         } else if (task.state === 'idleTruck') {
-          truck.goal = null;
+          if (!truck._openingVacate) truck.goal = null;
+          this.clearIdleOpening(truck, dt);
+        } else if (task.state === 'idle') {
+          this.clearIdleOpening(truck, dt);
         }
       }
       // запросы, которые никто не забрал, через 2 минуты обслуживает резервная колонна
@@ -353,11 +402,15 @@ export class Logistics {
       }
       for (const truck of trucks) {
         updateTimers(game, truck, dt);
-        if (!truck.truckTask) continue;
+        if (!truck.truckTask) { this.clearIdleOpening(truck, dt); continue; }
         const task = truck.truckTask;
+        if (task.state !== 'idleTruck' && task.state !== 'idle' && truck._openingVacate) {
+          truck._openingVacate = false; truck._openingGoal = null;
+        }
         // водитель не едет в бой: враг рядом — бросаем рейс и уходим к своей точке
         const foes = game.nearbyEnemies(truck, 300);
         if (foes.length && exterior) {
+          truck._openingVacate = false; truck._openingGoal = null;
           const home = game.world.nearestPoint(truck.x, truck.y, (p) => p.owner === truck.faction && ['hq', 'depot'].includes(p.type)).point;
           const b = home && game.world.buildingAtPoint(home.id);
           const safe = b && game.walls.state(b) ? this.exteriorPoint(truck,b) : home;
@@ -414,7 +467,10 @@ export class Logistics {
           moveAlongFlow(game, truck, dt);
           if (dist(truck.x, truck.y, target.x, target.y) < range || (!exterior && truck.pathFailed)) this.unloadTruck(truck, task);
         } else if (task.state === 'idleTruck') {
-          truck.goal = null;
+          if (!truck._openingVacate) truck.goal = null;
+          this.clearIdleOpening(truck, dt);
+        } else if (task.state === 'idle') {
+          this.clearIdleOpening(truck, dt);
         }
       }
       // запросы, которые никто не забрал, через 2 минуты обслуживает резервная колонна
@@ -475,6 +531,7 @@ export class Logistics {
       if (d < bd) { bd = d; source = p; }
     }
     truck.truckTask = { state: 'toSource', request: req, source, amount: 0 };
+    truck._openingVacate = false; truck._openingGoal = null;
     truck.goal = { x: source.x + game.rng.range(-40, 40), y: source.y + game.rng.range(-40, 40) };
     truck.pathFailed = false;
   }

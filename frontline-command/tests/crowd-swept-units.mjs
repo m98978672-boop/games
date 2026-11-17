@@ -3,7 +3,8 @@ import {loadConfig} from '../src/core/config.js';
 import {Game} from '../src/sim/game.js';
 import {moveUnit} from '../src/sim/units.js';
 import {solidUnitMoveFree} from '../src/sim/solid_units.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('crowd_swept_units_v1',false),false);
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+assert.equal(cfg.flag('crowd_swept_units_v1',false),false);
 for(const faction of [0,1]){
  function fixture(on){
   cfg.flags.crowd_swept_units_v1=on;cfg.flags.crowd_nav_v2=true;cfg.flags.wall_collision_v2=false;

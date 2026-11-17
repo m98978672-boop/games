@@ -1,7 +1,7 @@
 // Synthetic wall geometry with actual Game.step and delayed tank decisions.
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';import {Nav} from '../src/sim/nav.js';import {Walls} from '../src/sim/walls.js';
 async function scene(seed,mirrored,on) {
- const cfg=await loadConfig();cfg.flags.tank_detour_v1=on;cfg.flags.vehicle_detour_v2=false;
+ const cfg=await loadConfig();cfg.flags.tank_detour_v1=on;cfg.flags.vehicle_detour_v2=false;cfg.flags.movement_occupancy_v1=false;
  const g=new Game({cfg,seed,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.squads.clear();
  for(const obj of [g.squadAI,...g.strategic,g.autopilot,g.rules,g.logistics,g.build,g.influence,g.api])obj.update=()=>{};g.checkVictory=()=>{};g.walls.update=()=>{};
  const mirror=x=>mirrored?1280-x:x,segments=[[320,352,672,352],[672,352,672,672],[672,672,320,672]].map(([x1,y1,x2,y2])=>[mirror(x1),y1,mirror(x2),y2]);

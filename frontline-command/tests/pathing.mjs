@@ -7,6 +7,7 @@ import { moveAlongFlow, moveUnit, updateTimers } from '../src/sim/units.js';
 
 async function setup(enabled) {
   const cfg = await loadConfig();
+  cfg.flags.movement_occupancy_v1 = false; // legacy/pathing comparison, independent of occupancy
   if (process.env.SMART_ROUTE === '1') cfg.flags.smart_route_v2 = true;
   if (process.env.BOT_VISION === '1') cfg.flags.bot_obstacle_vision_v1 = true;
   cfg.flags.pathing_v2 = enabled;

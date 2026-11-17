@@ -347,6 +347,7 @@ const openPts = (o) => ({ x1: o.p1[0], y1: o.p1[1], x2: o.p2[0], y2: o.p2[1] });
 // ---------- 12. Флаг выключен = прежнее поведение ----------
 {
   const cfgOff = await loadConfig();
+  cfgOff.flags.movement_occupancy_v1 = false; // fixture predates occupancy
   cfgOff.flags.wall_collision_v2 = false;
   const gOff = new Game({ cfg: cfgOff, seed: 7, difficulty: 'regular', aiVsAi: true });
   const w = gOff.walls;

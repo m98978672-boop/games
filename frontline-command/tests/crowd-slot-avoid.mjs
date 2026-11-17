@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';
 import {adjustBlockedCrowdSlot} from '../src/sim/crowd_nav.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('crowd_slot_avoid_v1',false),false);
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+assert.equal(cfg.flag('crowd_slot_avoid_v1',false),false);
 for(const faction of [0,1]){
  const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();
  const b=g.world.buildings.find(b=>b.type==='hq'&&b.faction===faction&&g.walls.state(b));

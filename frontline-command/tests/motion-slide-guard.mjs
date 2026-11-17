@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';import {moveUnit} from '../src/sim/units.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('motion_slide_guard_v1',false),false);
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+assert.equal(cfg.flag('motion_slide_guard_v1',false),false);
 for(const axis of ['x','y'])for(const on of [false,true]){
  cfg.flags.motion_slide_guard_v1=on;const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();
  const u=g.spawnUnit(0,'infantry',200,200);u.goal=axis==='y'?{x:200,y:300}:{x:300,y:200};

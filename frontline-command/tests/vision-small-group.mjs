@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';
 import {moveAlongFlow} from '../src/sim/units.js';import {chooseVisionNavigation} from '../src/sim/vision_nav_policy.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('group_nav_3to5_v1',false),false);
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+assert.equal(cfg.flag('group_nav_3to5_v1',false),false);
 for(const faction of [0,1])for(const count of [3,4,5])for(const enabled of [false,true]){
  cfg.flags.vision_nav_policy_v1=true;cfg.flags.crowd_nav_v2=true;cfg.flags.group_nav_3to5_v1=enabled;
  const g=new Game({cfg,seed:7,aiVsAi:true});g.units.clear();g.unitGrid.clear();g.world.hasLOS=()=>true;
