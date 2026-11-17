@@ -147,7 +147,7 @@ export async function startRatMesAgent({
   port = Number(process.env.PORT || 8787),
   host = '0.0.0.0',
   vaultDir = process.env.RATMES_VAULT_DIR || path.join(RATMES_ROOT, 'RatMes-Vault'),
-  seedDemoChats = true,
+  seedDemoChats = false,
   country = 'RU',
   nodeId = null,
   nodeLabel = null,

@@ -863,10 +863,13 @@ export function createRatMesEngine({
           chatId,
           chatTitle,
           senderName = 'Собеседник',
+          senderId = null,
+          direction = 'in',
           text = '',
           incomingSeq = null,
           msgId = null,
           attachment = null,
+          ts = null,
         } = args || {};
         if (!chatId) return { ok: false, error: makeError('RM-104', 'Для transfer.receive требуется chatId') };
 
@@ -883,21 +886,25 @@ export function createRatMesEngine({
         }
         const seq = incomingSeq !== null ? incomingSeq : prevCursor + 1;
         chatCursors.set(chatId, Math.max(prevCursor, seq));
+        const finalDirection = direction === 'out' ? 'out' : 'in';
+        const parsedTs = typeof ts === 'number' && Number.isFinite(ts)
+          ? ts
+          : (typeof ts === 'string' && !Number.isNaN(Date.parse(ts)) ? Date.parse(ts) : Date.now());
 
         const record = {
           msgId: finalMsgId,
           chatId,
           chatTitle: chatTitle || chatMetaExtra.get(chatId)?.title || chatId,
           network,
-          direction: 'in',
-          senderId: `${sourceChannel}:${senderName}`,
+          direction: finalDirection,
+          senderId: senderId || `${sourceChannel}:${senderName}`,
           senderName,
           text,
           attachment,
           seq,
           hlc: nextHlc(),
-          ts: Date.now(),
-          status: 'received',
+          ts: parsedTs,
+          status: finalDirection === 'out' ? 'delivered' : 'received',
         };
         vaultStore.appendMessage(record);
         searchIndex.indexMessage(record);
@@ -1415,7 +1422,33 @@ export function createRatMesEngine({
 
       async listChats() {
         const rawChats = vaultStore.listChats();
-        const enriched = rawChats.map((c) => {
+        const seenIds = new Set(rawChats.map((c) => c.chatId));
+        const merged = rawChats.map((c) => {
+          const extra = chatMetaExtra.get(c.chatId);
+          return {
+            ...c,
+            title: extra?.title || c.title || c.chatId,
+            roomType: extra?.roomType || (c.chatId.startsWith('dm-') ? 'dm' : c.chatId.startsWith('room-') ? 'group' : 'public'),
+            participants: extra?.participants || [],
+            description: extra?.description || '',
+          };
+        });
+        for (const [chatId, extra] of chatMetaExtra.entries()) {
+          if (seenIds.has(chatId)) continue;
+          merged.push({
+            chatId,
+            title: extra.title || chatId,
+            network: extra.network || 'ratmes',
+            roomType: extra.roomType || (chatId.startsWith('dm-') ? 'dm' : chatId.startsWith('room-') ? 'group' : 'public'),
+            participants: extra.participants || [],
+            description: extra.description || '',
+            messageCount: 0,
+            lastSeq: 0,
+            lastTs: extra.lastTs || 0,
+            lastText: extra.description || '',
+          });
+        }
+        const enriched = merged.map((c) => {
           const meta = workspace.getChatMeta(c.chatId, c.lastSeq);
           return {
             ...c,
@@ -2143,7 +2176,7 @@ export function createRatMesEngine({
         return { ok: true, data: st };
       },
       async setDisplayName(args) {
-        const res = cloudHub.setDisplayName(args?.displayName || args?.name);
+        const res = cloudHub.setDisplayName(args?.displayName || args?.name, args?.bio);
         return { ok: true, data: res };
       },
       async exportManifest() {
@@ -2158,19 +2191,57 @@ export function createRatMesEngine({
       },
       async ingestRemote(args, ctx) {
         const rows = Array.isArray(args?.messages) ? args.messages : [];
+        const remoteRooms = Array.isArray(args?.rooms) ? args.rooms : [];
+        const onlinePeers = Array.isArray(args?.onlinePeers) ? args.onlinePeers : null;
+        const myPeerId = args?.myPeerId ? String(args.myPeerId) : null;
+        const peerNameMap = new Map();
+        if (onlinePeers) {
+          for (const p of onlinePeers) {
+            const pid = String(p.peer_id || p.peerId || '');
+            const pname = String(p.display_name || p.displayName || '').trim();
+            if (pid && pname) peerNameMap.set(pid, pname);
+          }
+        }
+        // Регистрируем все реальные комнаты (публичные, личные DM и комнаты по ссылке)
+        for (const r of remoteRooms) {
+          const roomId = String(r.room_id || r.roomId || '').trim();
+          if (!roomId) continue;
+          const roomType = String(r.room_type || r.roomType || (roomId.startsWith('dm-') ? 'dm' : roomId.startsWith('room-') ? 'group' : 'public'));
+          const participants = Array.isArray(r.participants) ? r.participants.map(String) : [];
+          let title = String(r.title || roomId);
+          if (roomType === 'dm' && myPeerId && participants.length >= 2) {
+            const otherPeerId = participants.find((pid) => pid !== myPeerId);
+            const otherName = otherPeerId ? peerNameMap.get(otherPeerId) : null;
+            if (otherName) title = `👤 ${otherName}`;
+          }
+          const prev = chatMetaExtra.get(roomId);
+          chatMetaExtra.set(roomId, {
+            title,
+            network: r.network || prev?.network || 'ratmes',
+            roomType,
+            participants,
+            description: r.description || prev?.description || '',
+            lastTs: prev?.lastTs || (r.created_at ? Date.parse(r.created_at) : 0),
+          });
+        }
         let ingested = 0;
         let deduplicated = 0;
         for (const row of rows) {
           if (!row || !row.room_id || !row.body_text) continue;
           const roomMeta = GAMES_CHAT_ROOMS.find((r) => r.chatId === row.room_id);
+          const extra = chatMetaExtra.get(row.room_id);
+          const isMine = Boolean(myPeerId && row.sender_id && String(row.sender_id) === myPeerId);
           const rec = await rawTools.transfer.receive({
             sourceChannel: 'supabase',
-            network: row.network || roomMeta?.network || 'ratmes',
+            network: row.network || extra?.network || roomMeta?.network || 'ratmes',
             chatId: row.room_id,
-            chatTitle: roomMeta?.title || row.room_title || row.room_id,
-            senderName: row.sender_name || 'Игрок Games',
+            chatTitle: extra?.title || roomMeta?.title || row.room_title || row.room_id,
+            senderName: row.sender_name || 'Участник',
+            senderId: row.sender_id || null,
+            direction: isMine ? 'out' : 'in',
             text: row.body_text,
             msgId: row.msg_id || null,
+            ts: row.created_at || null,
           }, ctx);
           if (rec.ok) {
             if (rec.data?.deduplicated) deduplicated += 1;
@@ -2180,7 +2251,8 @@ export function createRatMesEngine({
         cloudHub.recordSync({
           reachable: true,
           pulled: ingested,
-          onlinePeers: Array.isArray(args?.onlinePeers) ? args.onlinePeers : null,
+          onlinePeers,
+          rooms: remoteRooms.length > 0 ? remoteRooms : null,
         });
         return {
           ok: true,
@@ -2367,33 +2439,29 @@ export function createRatMesEngine({
 
   // Стартовое наполнение игровых комнат Games («Общение») и 5 чатов сетей (только если RatMes-Vault/ пуст)
   async function ensureStarterChats() {
-    if (!seedDemoChats) return;
-    const existingIds = new Set(vaultStore.listChats().map((c) => c.chatId));
-
-    // Сначала гарантируем игровые комнаты вкладки «Общение» портала Games
+    // Реальные живые комнаты Games всегда доступны (без фейковых сообщений — сообщения приходят из Supabase)
     for (const room of GAMES_CHAT_ROOMS) {
-      if (existingIds.has(room.chatId)) continue;
-      chatMetaExtra.set(room.chatId, { title: room.title, network: room.network });
-      for (const m of room.starterMessages) {
-        await tools.transfer.receive({
-          sourceChannel: 'games-starter',
+      if (!chatMetaExtra.has(room.chatId)) {
+        chatMetaExtra.set(room.chatId, {
+          title: room.title,
           network: room.network,
-          chatId: room.chatId,
-          chatTitle: room.title,
-          senderName: m.author,
-          text: m.text,
+          roomType: 'public',
+          description: room.description,
+          lastTs: 0,
         });
       }
     }
+    if (!seedDemoChats) return;
 
+    const existingIds = new Set(vaultStore.listChats().map((c) => c.chatId));
     if (existingIds.size > 0) return;
 
     const starter = [
-      { chatId: 'ratmes-main', chatTitle: 'Свой чат RatMes (E2EE)', network: 'ratmes', senderName: 'RatMes Ядро', text: 'Добро пожаловать в RatMes! Все сообщения сразу сохраняются в обычные файлы RatMes-Vault/ (.jsonl + .txt), а передача идёт строго через инструменты.' },
-      { chatId: 'vk-friends', chatTitle: 'VK · Команда', network: 'vk', senderName: 'Алексей (VK)', text: 'В профиле RU ВКонтакте идёт напрямую без VPN. Попробуй ответить — улетит за <5 мс в локальный файл и мост!' },
-      { chatId: 'max-work', chatTitle: 'MAX · Учёба / Работа', network: 'max', senderName: 'Группа MAX', text: 'MAX работает напрямую в RU, но движок честно показывает плашку RM-603: сквозного шифрования E2EE у MAX нет.' },
-      { chatId: 'tg-dev', chatTitle: 'Telegram · Разработка', network: 'telegram', senderName: 'Канал Dev (TG)', text: 'Telegram в RU настроен через VPN #1 с резервным Планом Б (VPN #2). Можешь испытать обрыв VPN и докачку файла!' },
-      { chatId: 'dc-squad', chatTitle: 'Discord · Игры', network: 'discord', senderName: 'Сервер Games (DC)', text: 'Мост Discord изолирован супервизором (Let it crash): даже если уронить его кнопкой в инспекторе, остальные чаты не моргнут.' },
+      { chatId: 'ratmes-main', chatTitle: 'Свой чат RatMes (E2EE)', network: 'ratmes', senderName: 'RatMes Ядро', text: 'Добро пожаловать в RatMes! Все сообщения сохраняются в обычные файлы RatMes-Vault/ (.jsonl + .txt).' },
+      { chatId: 'vk-friends', chatTitle: 'VK · Команда', network: 'vk', senderName: 'Алексей (VK)', text: 'Тестовое сообщение для проверки маршрута VK.' },
+      { chatId: 'max-work', chatTitle: 'MAX · Учёба / Работа', network: 'max', senderName: 'Группа MAX', text: 'Тестовое сообщение для проверки маршрута MAX (RM-603).' },
+      { chatId: 'tg-dev', chatTitle: 'Telegram · Разработка', network: 'telegram', senderName: 'Канал Dev (TG)', text: 'Тестовое сообщение для проверки маршрута Telegram с Планом Б.' },
+      { chatId: 'dc-squad', chatTitle: 'Discord · Игры', network: 'discord', senderName: 'Сервер Games (DC)', text: 'Тестовое сообщение для проверки супервизора мостов.' },
     ];
     for (const item of starter) {
       chatMetaExtra.set(item.chatId, { title: item.chatTitle, network: item.network });
@@ -2406,7 +2474,6 @@ export function createRatMesEngine({
         text: item.text,
       });
     }
-    // Засеваем 2 перехода в матрицу Маркова «Прошлого» для наглядности предсказаний
     await tools.chrono.recordPast({ kind: 'chat-switch', chatId: 'games-lobby' });
     await tools.chrono.recordPast({ kind: 'chat-switch', chatId: 'ratmes-main' });
     await tools.chrono.recordPast({ kind: 'chat-switch', chatId: 'tg-dev' });

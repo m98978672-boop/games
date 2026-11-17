@@ -8,24 +8,72 @@ import { createMemoryVault } from '../engine/vault-store.mjs';
 import { SUPABASE_PUBLIC_CONFIG } from '../engine/cloud-hub.mjs';
 import { getServiceGuide, sanitizeBridgeInput } from '../engine/service-guides.mjs';
 
-const CLOUD_SYNCED_ROOMS = new Set(['games-lobby', 'games-coop', 'games-dev', 'ratmes-main']);
+const PUBLIC_CLOUD_ROOMS = new Set(['games-lobby', 'games-coop', 'games-dev', 'ratmes-main']);
 const REMOTE_AGENT_KEY = 'ratmes-remote-agent-url-v1';
+const JOINED_ROOMS_KEY = 'ratmes-joined-rooms-v1';
+
+function isCloudRoomId(chatId) {
+  const id = String(chatId || '').trim();
+  if (!id) return false;
+  return PUBLIC_CLOUD_ROOMS.has(id) || id.startsWith('dm-') || id.startsWith('room-');
+}
+
+function randomHex(byteLen = 4) {
+  const bytes = new Uint8Array(byteLen);
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(bytes);
+  } else {
+    const t = Date.now();
+    for (let i = 0; i < byteLen; i += 1) bytes[i] = (t >> (i * 4)) & 0xff;
+  }
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+function sanitizePeerToken(raw) {
+  return String(raw || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 48);
+}
+
+function makeDmRoomId(peerA, peerB) {
+  const a = sanitizePeerToken(peerA);
+  const b = sanitizePeerToken(peerB);
+  if (!a || !b || a === b) return null;
+  const [first, second] = a < b ? [a, b] : [b, a];
+  return `dm-${first}--${second}`;
+}
+
+function readJoinedRoomIds() {
+  try {
+    if (typeof localStorage === 'undefined') return [];
+    const raw = localStorage.getItem(JOINED_ROOMS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.filter((x) => typeof x === 'string' && /^(dm-|room-)[a-zA-Z0-9_-]{3,80}$/.test(x)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberJoinedRoomId(roomId) {
+  const clean = String(roomId || '').trim();
+  if (!/^(dm-|room-)[a-zA-Z0-9_-]{3,80}$/.test(clean)) return;
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const set = new Set(readJoinedRoomIds());
+    set.add(clean);
+    localStorage.setItem(JOINED_ROOMS_KEY, JSON.stringify(Array.from(set).slice(-60)));
+  } catch { /* ignore */ }
+}
 
 function getOrCreatePeerId() {
   try {
     const key = 'ratmes-games-peer-id-v1';
     const existing = typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
     if (existing) return existing;
-    const bytes = new Uint8Array(8);
-    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-      crypto.getRandomValues(bytes);
-    }
-    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-    const created = `games-${hex}`;
+    const created = `u-${randomHex(6)}`;
     if (typeof localStorage !== 'undefined') localStorage.setItem(key, created);
     return created;
   } catch {
-    return 'games-browser-peer';
+    return 'u-browser-peer';
   }
 }
 
@@ -82,8 +130,8 @@ export async function createBridgeClient() {
 
   async function initLocalEngineIfNeeded() {
     if (localEngine) return;
-    const memVault = createMemoryVault({ storageKey: 'ratmes-pwa-vault-v1' });
-    localEngine = createRatMesEngine({ vault: memVault, country: 'RU', seedDemoChats: true });
+    const memVault = createMemoryVault({ storageKey: 'ratmes-pwa-vault-v2' });
+    localEngine = createRatMesEngine({ vault: memVault, country: 'RU', seedDemoChats: false });
     await localEngine.ensureStarterChats();
     localEngine.core.watch.subscribe((evt) => {
       emit({ kind: 'event', event: evt.type, data: evt.payload, stateHash: localEngine.getStateHash() });
@@ -723,9 +771,148 @@ export async function createBridgeClient() {
 
     // Живая облачная синхронизация с Supabase (games-cloud-save) — работает и в локальном агенте, и на статическом GitHub Pages!
     getCloudPeerId: () => peerId,
-    isCloudRoom: (chatId) => CLOUD_SYNCED_ROOMS.has(chatId),
+    isCloudRoom: (chatId) => isCloudRoomId(chatId),
+    makeDmRoomId: (otherPeerId) => makeDmRoomId(peerId, otherPeerId),
 
-    async syncSupabaseCloud({ roomId = 'games-lobby', displayName = 'Игрок Games', country = 'RU' } = {}) {
+    buildInviteUrl({ dmPeerId = null, dmName = '', joinRoomId = null } = {}) {
+      if (typeof location === 'undefined') return '';
+      const base = `${location.origin}${location.pathname}`;
+      const params = new URLSearchParams();
+      if (dmPeerId) {
+        params.set('dm', dmPeerId);
+        if (dmName) params.set('name', String(dmName).slice(0, 40));
+      } else if (joinRoomId) {
+        params.set('join', joinRoomId);
+      }
+      return `${base}?${params.toString()}`;
+    },
+
+    async createOrOpenCloudDm({ targetPeerId, targetName = 'Собеседник', myName = 'Участник' } = {}) {
+      const target = sanitizePeerToken(targetPeerId);
+      const roomId = makeDmRoomId(peerId, target);
+      if (!roomId) {
+        return { ok: false, error: 'Нельзя открыть личный чат с самим собой или пустым ID' };
+      }
+      const cleanTitle = `👤 ${String(targetName || target).trim().slice(0, 48)}`;
+      const headers = {
+        apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
+        Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=representation',
+      };
+      const payload = {
+        room_id: roomId,
+        network: 'ratmes',
+        title: `${String(myName || 'Участник').slice(0, 28)} ↔ ${String(targetName || target).slice(0, 28)}`,
+        description: 'Личный чат 1-на-1',
+        room_type: 'dm',
+        participants: [peerId, target].sort(),
+        created_by: peerId,
+      };
+      try {
+        const res = await fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          return { ok: false, error: `Не удалось создать личный чат (HTTP ${res.status}): ${txt.slice(0, 120)}` };
+        }
+        rememberJoinedRoomId(roomId);
+        await this.call('cloud.ingestRemote', {
+          rooms: [{ ...payload, title: cleanTitle }],
+          messages: [],
+          myPeerId: peerId,
+        });
+        return { ok: true, data: { roomId, title: cleanTitle, targetPeerId: target } };
+      } catch (err) {
+        return { ok: false, error: err?.message || 'Нет соединения с облаком' };
+      }
+    },
+
+    async createCloudGroupRoom({ title = '', description = '', myName = 'Участник' } = {}) {
+      const cleanTitle = String(title || '').trim().slice(0, 64);
+      if (!cleanTitle) return { ok: false, error: 'Введи название комнаты' };
+      const roomId = `room-${randomHex(4)}`;
+      const headers = {
+        apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
+        Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=representation',
+      };
+      const payload = {
+        room_id: roomId,
+        network: 'ratmes',
+        title: `💬 ${cleanTitle}`,
+        description: String(description || `Комната от ${myName}`).slice(0, 160),
+        room_type: 'group',
+        participants: [peerId],
+        created_by: peerId,
+      };
+      try {
+        const res = await fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(() => '');
+          return { ok: false, error: `Ошибка создания комнаты (HTTP ${res.status}): ${txt.slice(0, 120)}` };
+        }
+        rememberJoinedRoomId(roomId);
+        await this.call('cloud.ingestRemote', {
+          rooms: [payload],
+          messages: [],
+          myPeerId: peerId,
+        });
+        return {
+          ok: true,
+          data: {
+            roomId,
+            title: payload.title,
+            inviteUrl: this.buildInviteUrl({ joinRoomId: roomId }),
+          },
+        };
+      } catch (err) {
+        return { ok: false, error: err?.message || 'Нет соединения с облаком' };
+      }
+    },
+
+    async joinCloudRoomById(rawRoomId) {
+      const roomId = String(rawRoomId || '').trim();
+      if (!isCloudRoomId(roomId)) {
+        return { ok: false, error: 'Некорректный код комнаты' };
+      }
+      const headers = {
+        apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
+        Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
+      };
+      try {
+        const res = await fetch(
+          `${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?room_id=eq.${encodeURIComponent(roomId)}&select=room_id,network,title,description,room_type,participants,created_by,created_at`,
+          { headers },
+        );
+        if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+        const rows = await res.json();
+        if (!Array.isArray(rows) || rows.length === 0) {
+          return { ok: false, error: `Комната «${roomId}» не найдена` };
+        }
+        rememberJoinedRoomId(roomId);
+        const room = rows[0];
+        const msgRes = await fetch(
+          `${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?room_id=eq.${encodeURIComponent(roomId)}&select=msg_id,room_id,network,sender_id,sender_name,body_text,created_at&order=created_at.desc&limit=80`,
+          { headers },
+        );
+        const msgs = msgRes.ok ? (await msgRes.json()).reverse() : [];
+        await this.call('cloud.ingestRemote', { rooms: [room], messages: msgs, myPeerId: peerId });
+        return { ok: true, data: { roomId: room.room_id, title: room.title } };
+      } catch (err) {
+        return { ok: false, error: err?.message || 'Ошибка подключения к комнате' };
+      }
+    },
+
+    async syncSupabaseCloud({ roomId = 'games-lobby', displayName = 'Участник', bio = '', country = 'RU' } = {}) {
       if (!cloudEnabled) return { ok: false, error: 'Облачная синхронизация отключена' };
       const headers = {
         apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
@@ -733,10 +920,12 @@ export async function createBridgeClient() {
         'Content-Type': 'application/json',
       };
       try {
+        const presenceRoom = PUBLIC_CLOUD_ROOMS.has(roomId) ? roomId : 'games-lobby';
         const presenceBody = {
           peer_id: peerId,
-          display_name: String(displayName || 'Игрок Games').slice(0, 48),
-          room_id: CLOUD_SYNCED_ROOMS.has(roomId) ? roomId : 'games-lobby',
+          display_name: String(displayName || 'Участник').slice(0, 48),
+          bio: String(bio || '').slice(0, 80),
+          room_id: presenceRoom,
           country: String(country || 'RU').slice(0, 8),
           status: 'online',
           last_seen: new Date().toISOString(),
@@ -747,10 +936,36 @@ export async function createBridgeClient() {
           body: JSON.stringify(presenceBody),
         }).catch(() => {});
 
-        const [msgRes, peersRes] = await Promise.all([
-          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?select=msg_id,room_id,network,sender_name,body_text,created_at&order=created_at.desc&limit=80`, { headers }),
-          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.presence}?select=peer_id,display_name,room_id,status,last_seen&order=last_seen.desc&limit=24`, { headers }),
+        const joined = readJoinedRoomIds();
+        if (isCloudRoomId(roomId) && !PUBLIC_CLOUD_ROOMS.has(roomId) && !joined.includes(roomId)) {
+          joined.push(roomId);
+        }
+
+        const roomSelect = 'room_id,network,title,description,room_type,participants,created_by,created_at';
+        const [peersRes, pubRoomsRes, dmRoomsRes, joinedRoomsRes] = await Promise.all([
+          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.presence}?select=peer_id,display_name,bio,room_id,country,status,last_seen&order=last_seen.desc&limit=50`, { headers }),
+          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?room_type=eq.public&select=${roomSelect}&order=created_at.asc`, { headers }),
+          fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?participants=cs.${encodeURIComponent(`{"${peerId}"}`)}&select=${roomSelect}&order=created_at.desc&limit=40`, { headers }),
+          joined.length > 0
+            ? fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?room_id=in.(${joined.map((id) => encodeURIComponent(id)).join(',')})&select=${roomSelect}`, { headers })
+            : Promise.resolve(null),
         ]);
+
+        const onlinePeers = peersRes.ok ? await peersRes.json() : [];
+        const roomMap = new Map();
+        for (const r of (pubRoomsRes.ok ? await pubRoomsRes.json() : [])) roomMap.set(r.room_id, r);
+        for (const r of (dmRoomsRes.ok ? await dmRoomsRes.json() : [])) {
+          roomMap.set(r.room_id, r);
+          rememberJoinedRoomId(r.room_id);
+        }
+        if (joinedRoomsRes && joinedRoomsRes.ok) {
+          for (const r of await joinedRoomsRes.json()) roomMap.set(r.room_id, r);
+        }
+        const allRooms = Array.from(roomMap.values());
+        const roomIds = Array.from(new Set([...PUBLIC_CLOUD_ROOMS, ...roomMap.keys()]));
+
+        const msgUrl = `${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?room_id=in.(${roomIds.map((id) => encodeURIComponent(id)).join(',')})&select=msg_id,room_id,network,sender_id,sender_name,body_text,created_at&order=created_at.desc&limit=160`;
+        const msgRes = await fetch(msgUrl, { headers });
 
         if (!msgRes.ok) {
           const errText = `HTTP ${msgRes.status}`;
@@ -759,8 +974,12 @@ export async function createBridgeClient() {
         }
 
         const rows = (await msgRes.json()).reverse();
-        const onlinePeers = peersRes.ok ? await peersRes.json() : [];
-        const ingestRes = await this.call('cloud.ingestRemote', { messages: rows, onlinePeers });
+        const ingestRes = await this.call('cloud.ingestRemote', {
+          rooms: allRooms,
+          messages: rows,
+          onlinePeers,
+          myPeerId: peerId,
+        });
         if (ingestRes.ok && ingestRes.data?.ingested > 0) {
           emit({ kind: 'event', event: 'cloud.messages', data: { ingested: ingestRes.data.ingested } });
         }
@@ -772,8 +991,8 @@ export async function createBridgeClient() {
       }
     },
 
-    async pushSupabaseMessage({ msgId, roomId, network = 'ratmes', senderName = 'Игрок Games', text = '' } = {}) {
-      if (!cloudEnabled || !CLOUD_SYNCED_ROOMS.has(roomId) || !text.trim()) {
+    async pushSupabaseMessage({ msgId, roomId, network = 'ratmes', senderName = 'Участник', text = '' } = {}) {
+      if (!cloudEnabled || !isCloudRoomId(roomId) || !text.trim()) {
         return { ok: true, skipped: true };
       }
       const headers = {
@@ -791,7 +1010,7 @@ export async function createBridgeClient() {
             room_id: roomId,
             network,
             sender_id: peerId,
-            sender_name: String(senderName || 'Игрок Games').slice(0, 48),
+            sender_name: String(senderName || 'Участник').slice(0, 48),
             body_text: String(text).slice(0, 4000),
             kind: 'text',
           }),
@@ -816,7 +1035,12 @@ export async function createBridgeClient() {
         this.syncSupabaseCloud(opts).catch(() => {});
       };
       run();
-      cloudPollTimer = setInterval(run, 12000);
+      cloudPollTimer = setInterval(run, 3000);
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) run();
+        });
+      }
     },
 
     setCloudEnabled(flag) {
