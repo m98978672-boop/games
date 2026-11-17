@@ -18,7 +18,7 @@ async function scenario(role, seed, mirrored) {
   cfg.flags.smart_route_v2 = smartRoute;
   cfg.flags.bot_obstacle_vision_v1 = vision;
   const game = new Game({ cfg, seed, aiVsAi: true });
-  game.units.clear(); game.unitGrid.clear();
+  game.units.clear(); game.unitGrid.clear(); game.occupancyGrid.clear();
   const width = 1280;
   const mirrorX = (x) => mirrored ? width - x : x;
   const segments = [
