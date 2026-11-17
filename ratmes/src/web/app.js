@@ -348,12 +348,20 @@ function renderSidebar() {
       dr.className = 'draft-tag';
       dr.textContent = `Черновик: ${chat.draftText.slice(0, 24)}`;
       sub.appendChild(dr);
+    } else if (state.client.isCloudRoom(chat.chatId)) {
+      sub.classList.add('is-live-sub');
+      sub.textContent = '🟢 Онлайн-чат · можно писать сейчас';
+    } else if (live?.enabled) {
+      sub.classList.add('is-live-sub');
+      sub.textContent = `🟢 LIVE · уходит в ${spec?.name || chat.network.toUpperCase()}`;
+    } else if (chat.network === 'ratmes') {
+      sub.classList.add('is-live-sub');
+      sub.textContent = '🟢 Чат RatMes · можно писать';
+    } else if (spec && spec.needsVpn && !spec.routeReady) {
+      sub.classList.add('is-warn-sub');
+      sub.textContent = '🔒 Нужен VPN · нажми чтобы настроить';
     } else {
-      const routeTag = live?.enabled
-        ? '● LIVE'
-        : (spec?.routeReady ? (spec.activeRoute === 'direct' ? 'Напрямую' : spec.activeRoute) : 'Нужен VPN');
-      const e2eeTag = spec?.e2ee ? 'E2EE' : (spec?.e2eeWarning ? 'Без E2EE!' : 'TLS');
-      sub.textContent = `${routeTag} · ${e2eeTag}`;
+      sub.textContent = '📝 Тестовый чат · подключи сервис';
     }
 
     body.append(top, sub);
@@ -458,19 +466,29 @@ function renderActiveChat({ keepScroll = false } = {}) {
 
   const routePill = $('activeRoutePill');
   const quickVpn = $('btnQuickBindVpn');
+  const isCloud = state.client.isCloudRoom(chat.chatId);
   if (spec) {
-    if (live?.enabled) {
-      routePill.textContent = `LIVE МОСТ: ${live.kind.toUpperCase()}`;
-      routePill.className = 'pill accent';
+    if (isCloud) {
+      const onlineCnt = state.cloudStatus?.supabase?.onlinePeersCount || 1;
+      routePill.textContent = `🟢 Онлайн · ${onlineCnt} в сети`;
+      routePill.className = 'pill good';
       quickVpn.hidden = true;
-    } else if (spec.routeReady) {
-      routePill.textContent = spec.activeRoute === 'direct' ? 'Маршрут: Напрямую' : `VPN: ${spec.activeRoute}`;
+    } else if (live?.enabled) {
+      routePill.textContent = `🟢 LIVE · ${live.kind.toUpperCase()}`;
+      routePill.className = 'pill good';
+      quickVpn.hidden = true;
+    } else if (spec.needsVpn && !spec.routeReady) {
+      routePill.textContent = '🔒 Нужен VPN';
+      routePill.className = 'pill warn';
+      quickVpn.hidden = false;
+    } else if (chat.network === 'ratmes') {
+      routePill.textContent = '🟢 Локальный чат';
       routePill.className = 'pill good';
       quickVpn.hidden = true;
     } else {
-      routePill.textContent = 'Требуется VPN (RM-301)';
-      routePill.className = 'pill warn';
-      quickVpn.hidden = false;
+      routePill.textContent = '📝 Тест (не подключён)';
+      routePill.className = 'pill accent';
+      quickVpn.hidden = true;
     }
 
     const trustPill = $('activeTrustPill');
@@ -485,6 +503,8 @@ function renderActiveChat({ keepScroll = false } = {}) {
       banner.hidden = true;
     }
   }
+
+  renderChatCanWriteBar(chat, spec, live, isCloud);
 
   // Закреплённое сообщение наверху чата
   const pinnedMsgs = state.activeMessages.filter((m) => m.pinned && !m.deleted);
@@ -597,47 +617,80 @@ function renderActiveChat({ keepScroll = false } = {}) {
     const meta = document.createElement('div');
     meta.className = 'msg-meta';
     const timeEl = document.createElement('span');
-    timeEl.textContent = `${formatTime(msg.ts)} · #${msg.seq || '?'}${msg.edited ? ' (ред.)' : ''}`;
+    timeEl.textContent = `${formatTime(msg.ts)}${msg.edited ? ' (ред.)' : ''}`;
 
     const statusEl = document.createElement('span');
     statusEl.textContent = statusLabel(msg.status, msg.errorCode);
     if (msg.errorCode) statusEl.style.color = '#f59e0b';
     meta.append(timeEl, statusEl);
 
-    if (!msg.deleted) {
-      const quickBar = document.createElement('span');
-      quickBar.className = 'quick-react-bar';
-      for (const em of state.quickReactions.slice(0, 4)) {
-        const eb = document.createElement('button');
-        eb.type = 'button';
-        eb.textContent = em;
-        eb.title = `Реакция ${em}`;
-        eb.addEventListener('click', () => toggleReaction(msg.msgId, em));
-        quickBar.appendChild(eb);
-      }
-      meta.appendChild(quickBar);
+    if (!msg.deleted || msg.transferId) {
+      const moreBtn = document.createElement('button');
+      moreBtn.type = 'button';
+      moreBtn.className = 'msg-more-toggle';
+      moreBtn.textContent = '⋯';
+      moreBtn.title = 'Реакции и действия';
+      moreBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        row.classList.toggle('actions-open');
+      });
+      meta.appendChild(moreBtn);
 
-      meta.append(
-        makeActionBtn('Ответить', () => {
-          state.editTarget = null;
-          state.replyTarget = msg;
-          renderReplyBar();
-          $('messageInput').focus();
-        }),
-        makeActionBtn('Переслать', () => openForwardModal(msg)),
-        makeActionBtn(msg.pinned ? 'Открепить' : 'Закрепить', () => togglePinMessage(msg)),
-      );
+      const drawer = document.createElement('div');
+      drawer.className = 'msg-actions-drawer';
 
-      if (msg.direction === 'out') {
-        meta.append(
-          makeActionBtn('Править', () => startEditMessage(msg)),
-          makeActionBtn('Удалить', () => deleteMessage(msg)),
+      if (!msg.deleted) {
+        const quickBar = document.createElement('span');
+        quickBar.className = 'quick-react-bar';
+        for (const em of state.quickReactions.slice(0, 4)) {
+          const eb = document.createElement('button');
+          eb.type = 'button';
+          eb.textContent = em;
+          eb.title = `Реакция ${em}`;
+          eb.addEventListener('click', () => {
+            row.classList.remove('actions-open');
+            toggleReaction(msg.msgId, em);
+          });
+          quickBar.appendChild(eb);
+        }
+        drawer.appendChild(quickBar);
+
+        drawer.append(
+          makeActionBtn('Ответить', () => {
+            row.classList.remove('actions-open');
+            state.editTarget = null;
+            state.replyTarget = msg;
+            renderReplyBar();
+            $('messageInput').focus();
+          }),
+          makeActionBtn('Переслать', () => {
+            row.classList.remove('actions-open');
+            openForwardModal(msg);
+          }),
+          makeActionBtn(msg.pinned ? 'Открепить' : 'Закрепить', () => {
+            row.classList.remove('actions-open');
+            togglePinMessage(msg);
+          }),
         );
-      }
-    }
 
-    if (msg.transferId) {
-      meta.appendChild(makeActionBtn('Трасса', () => inspectTransferById(msg.transferId)));
+        if (msg.direction === 'out') {
+          drawer.append(
+            makeActionBtn('Править', () => {
+              row.classList.remove('actions-open');
+              startEditMessage(msg);
+            }),
+            makeActionBtn('Удалить', () => {
+              row.classList.remove('actions-open');
+              deleteMessage(msg);
+            }),
+          );
+        }
+      }
+
+      if (msg.transferId) {
+        drawer.appendChild(makeActionBtn('Трасса', () => inspectTransferById(msg.transferId)));
+      }
+      meta.appendChild(drawer);
     }
 
     row.append(bubble, meta);
@@ -646,6 +699,205 @@ function renderActiveChat({ keepScroll = false } = {}) {
 
   if (keepScroll) feed.scrollTop = prevScroll;
   else feed.scrollTop = feed.scrollHeight;
+}
+
+function renderChatCanWriteBar(chat, spec, live, isCloud) {
+  const bar = $('chatCanWriteBar');
+  const txt = $('chatCanWriteText');
+  const act = $('btnCanWriteAction');
+  const input = $('messageInput');
+  if (!bar || !txt || !act) return;
+
+  bar.classList.remove('is-live', 'is-demo', 'is-warn');
+  act.hidden = true;
+  act.onclick = null;
+
+  if (isCloud) {
+    bar.classList.add('is-live');
+    txt.textContent = `🟢 Живой онлайн-чат Games · ник: ${state.displayName}`;
+    act.hidden = false;
+    act.textContent = 'Сменить ник';
+    act.onclick = () => openQuickWriteModal(true);
+    if (input) input.placeholder = `Написать в «${chat.title}»…`;
+    return;
+  }
+
+  if (live?.enabled) {
+    bar.classList.add('is-live');
+    txt.textContent = `🟢 Подключено к ${spec?.name || chat.network}${live.botName ? ` (${live.botName})` : ''} · можно писать`;
+    act.hidden = false;
+    act.textContent = 'Настройки';
+    act.onclick = () => openConnectHub(chat.network, 'setup');
+    if (input) input.placeholder = `Написать в ${spec?.name || chat.network}…`;
+    return;
+  }
+
+  if (spec && spec.needsVpn && !spec.routeReady) {
+    bar.classList.add('is-warn');
+    txt.textContent = `🔒 Для ${spec.name} нужен VPN — иначе сообщение встанет в очередь`;
+    act.hidden = false;
+    act.textContent = 'Привязать VPN';
+    act.onclick = () => openProxyModal(spec);
+    if (input) input.placeholder = 'Написать (отправится после привязки VPN)…';
+    return;
+  }
+
+  if (chat.network === 'ratmes') {
+    bar.classList.add('is-live');
+    txt.textContent = '🟢 Чат RatMes · можно писать (сохраняется на устройстве)';
+    act.hidden = false;
+    act.textContent = 'Кому написать';
+    act.onclick = () => openQuickWriteModal();
+    if (input) input.placeholder = 'Написать сообщение…';
+    return;
+  }
+
+  bar.classList.add('is-demo');
+  txt.textContent = `📝 Тестовый чат ${spec?.name || ''} (видно только тебе)`;
+  act.hidden = false;
+  act.textContent = `Подключить ${spec?.name || 'сервис'} →`;
+  act.onclick = () => openConnectHub(chat.network, 'setup');
+  if (input) input.placeholder = `Тестовое сообщение (${spec?.name || 'сервис'} ещё не подключён)…`;
+}
+
+function openQuickWriteModal(focusNick = false) {
+  const dlg = $('quickWriteModal');
+  if (!dlg) return;
+
+  const nickInput = $('quickWriteNickInput');
+  if (nickInput) nickInput.value = state.displayName;
+
+  // 1. Живые онлайн-комнаты Games (можно писать прямо сейчас)
+  const roomsHost = $('quickWriteLiveRooms');
+  roomsHost.replaceChildren();
+  const liveRooms = [
+    { id: 'games-lobby', title: '🎮 Общий чат Games', sub: 'Все игроки сайта онлайн · сообщения видят все' },
+    { id: 'games-coop', title: '🤝 Кооператив и напарники', sub: 'Поиск команды и совместных матчей' },
+    { id: 'games-dev', title: '🛠 Разработчики и идеи', sub: 'Обсуждение новых игр и улучшений' },
+  ];
+  for (const rm of liveRooms) {
+    const existing = state.chats.find((c) => c.chatId === rm.id);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'write-room-btn';
+    const left = document.createElement('div');
+    const title = document.createElement('strong');
+    title.textContent = existing?.title || rm.title;
+    const sub = document.createElement('span');
+    sub.textContent = rm.sub;
+    left.append(title, sub);
+    const pill = document.createElement('span');
+    pill.className = 'pill good';
+    pill.textContent = 'Написать →';
+    btn.append(left, pill);
+    btn.addEventListener('click', async () => {
+      dlg.close();
+      if (existing) {
+        await selectChat(existing.chatId);
+      } else {
+        await state.client.call('transfer.receive', {
+          sourceChannel: 'system',
+          network: 'ratmes',
+          chatId: rm.id,
+          chatTitle: rm.title,
+          senderName: 'RatMes',
+          text: `Добро пожаловать в **${rm.title}**! Здесь можно писать прямо сейчас.`,
+        });
+        await refreshAll();
+        await selectChat(rm.id);
+      }
+      setTimeout(() => $('messageInput')?.focus(), 80);
+    });
+    roomsHost.appendChild(btn);
+  }
+
+  // 2. Игроки онлайн (из Supabase presence) + твои контакты
+  const peopleHost = $('quickWritePeopleList');
+  peopleHost.replaceChildren();
+  const people = [];
+  const seenNames = new Set();
+  for (const p of (state.cloudStatus?.supabase?.onlinePeers || [])) {
+    if (p?.displayName && !seenNames.has(p.displayName)) {
+      seenNames.add(p.displayName);
+      people.push({ name: p.displayName, online: true, network: 'ratmes' });
+    }
+  }
+  for (const c of state.contacts) {
+    if (c?.displayName && !seenNames.has(c.displayName)) {
+      seenNames.add(c.displayName);
+      const firstNet = Object.keys(c.identities || {})[0] || 'ratmes';
+      people.push({ name: c.displayName, online: false, network: firstNet });
+    }
+  }
+
+  if (people.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'muted-text';
+    empty.textContent = 'Введи имя выше — и сразу откроется личный чат!';
+    peopleHost.appendChild(empty);
+  } else {
+    for (const person of people.slice(0, 10)) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'write-person-chip';
+      chip.textContent = `${person.online ? '🟢 ' : '👤 '}${person.name}`;
+      chip.addEventListener('click', async () => {
+        dlg.close();
+        await startDirectChatWith(person.name, person.network);
+      });
+      peopleHost.appendChild(chip);
+    }
+  }
+
+  // 3. Быстрые кнопки подключения популярных мессенджеров (MAX, Telegram, VK, Discord, WhatsApp)
+  const svcHost = $('quickWriteServicesRow');
+  svcHost.replaceChildren();
+  for (const netId of ['max', 'telegram', 'vk', 'discord', 'whatsapp']) {
+    const g = getServiceGuide(netId);
+    const live = findLiveBridgeStatus(netId);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `write-svc-btn${live?.enabled ? ' is-live' : ''}`;
+    const ico = document.createElement('span');
+    ico.className = 'net-avatar net-avatar-sm';
+    applyBrandBadge(ico, netId, 16);
+    const lbl = document.createElement('span');
+    lbl.textContent = live?.enabled ? `${g.name} · LIVE` : g.name;
+    btn.append(ico, lbl);
+    btn.addEventListener('click', () => {
+      dlg.close();
+      openConnectHub(netId, 'setup');
+    });
+    svcHost.appendChild(btn);
+  }
+
+  if (!dlg.open) dlg.showModal();
+  if (focusNick && nickInput) {
+    setTimeout(() => { nickInput.focus(); nickInput.select(); }, 50);
+  }
+}
+
+async function startDirectChatWith(peerName, network = 'ratmes') {
+  const cleanName = String(peerName || '').trim().slice(0, 48);
+  if (!cleanName) return;
+  const existing = state.chats.find((c) => c.title.toLowerCase() === cleanName.toLowerCase());
+  if (existing) {
+    await selectChat(existing.chatId);
+    setTimeout(() => $('messageInput')?.focus(), 80);
+    return;
+  }
+  const slug = `dm-${network}-${Date.now().toString(36)}`;
+  await state.client.call('transfer.receive', {
+    sourceChannel: 'system',
+    network,
+    chatId: slug,
+    chatTitle: cleanName,
+    senderName: 'RatMes',
+    text: `Открыт чат с **${cleanName}**. Напиши первое сообщение ниже!`,
+  });
+  await refreshAll();
+  await selectChat(slug);
+  setTimeout(() => $('messageInput')?.focus(), 80);
 }
 
 function makeActionBtn(label, handler) {
@@ -2129,9 +2381,58 @@ function bindEvents() {
         openConnectHub(null, 'list');
         return;
       }
+      if (target === 'write') {
+        openQuickWriteModal();
+        return;
+      }
       setMobileView(target);
     });
   }
+  $('btnQuickWrite')?.addEventListener('click', () => openQuickWriteModal());
+  $('btnQuickWriteMobileBar')?.addEventListener('click', () => {
+    $('chatMoreBar').hidden = true;
+    openQuickWriteModal();
+  });
+  $('btnCloseQuickWrite')?.addEventListener('click', () => $('quickWriteModal').close());
+  $('btnQuickWriteSaveNick')?.addEventListener('click', async () => {
+    const clean = $('quickWriteNickInput').value.trim().slice(0, 48);
+    if (!clean) return;
+    state.displayName = clean;
+    if ($('cloudDisplayNameInput')) $('cloudDisplayNameInput').value = clean;
+    try { localStorage.setItem('ratmes-games-nick-v1', clean); } catch { /* ignore */ }
+    await state.client.call('cloud.setDisplayName', { displayName: clean });
+    toast(`Твой ник сохранён: ${clean}`);
+    await refreshAll({ keepScroll: true });
+  });
+  $('quickWriteDirectForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const peerName = $('quickWritePeerName').value.trim();
+    if (!peerName) return;
+    $('quickWritePeerName').value = '';
+    $('quickWriteModal').close();
+    await startDirectChatWith(peerName, 'ratmes');
+  });
+  $('btnCloudSyncMobile')?.addEventListener('click', () => {
+    $('chatMoreBar').hidden = true;
+    $('btnManualCloudSync').click();
+  });
+
+  // На мобилке скрываем нижнюю навигацию при фокусе в поле ввода, чтобы клавиатура никогда ничего не перекрывала
+  let kbBlurTimer = null;
+  $('messageInput').addEventListener('focus', () => {
+    if (window.innerWidth <= 900) {
+      clearTimeout(kbBlurTimer);
+      document.body.classList.add('keyboard-open');
+    }
+  });
+  $('messageInput').addEventListener('blur', () => {
+    if (window.innerWidth <= 900) {
+      kbBlurTimer = setTimeout(() => {
+        document.body.classList.remove('keyboard-open');
+      }, 150);
+    }
+  });
+
   $('btnChatMoreMobile').addEventListener('click', () => {
     const bar = $('chatMoreBar');
     bar.hidden = !bar.hidden;

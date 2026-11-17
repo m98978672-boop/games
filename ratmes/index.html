@@ -28,7 +28,7 @@
         </div>
       </header>
 
-      <section class="country-strip">
+      <section class="country-strip hide-mobile">
         <label class="country-label" for="countrySelect">Страна маршрутов</label>
         <div class="country-row">
           <select id="countrySelect" class="select-input"></select>
@@ -38,23 +38,24 @@
       </section>
 
       <!-- Папки чатов -->
-      <section class="folder-strip">
+      <section class="folder-strip hide-mobile">
         <div class="folder-tabs" id="folderTabs"></div>
         <button class="icon-btn icon-btn-xs" id="btnCreateFolder" title="Создать пользовательскую папку">+</button>
       </section>
 
       <section class="sidebar-controls">
-        <input type="search" id="chatSearchInput" class="text-input" placeholder="Фильтр чатов… (Ctrl+K для поиска по текстам)" autocomplete="off">
+        <input type="search" id="chatSearchInput" class="text-input" placeholder="Поиск чатов и контактов…" autocomplete="off">
         <div class="network-chips" id="networkFilterChips"></div>
         <div class="sidebar-cta-row">
-          <button class="btn btn-connect-hub" id="btnOpenConnectHub" type="button">🔌 Подключить MAX и сервисы</button>
-          <button class="btn btn-primary" id="btnNewChat" type="button" title="Создать новый чат">+ Чат</button>
+          <button class="btn btn-primary" id="btnQuickWrite" type="button">✏ Написать</button>
+          <button class="btn btn-connect-hub" id="btnOpenConnectHub" type="button">🔌 MAX и сервисы</button>
+          <button class="icon-btn hide-mobile" id="btnNewChat" type="button" title="Создать новый чат">+</button>
         </div>
       </section>
 
       <nav class="chat-list" id="chatList" aria-label="Список чатов"></nav>
 
-      <footer class="sidebar-footer">
+      <footer class="sidebar-footer hide-mobile">
         <div class="mini-stat">
           <span>Мосты ОЗУ:</span>
           <strong id="sidebarRamMb">0 МБ</strong>
@@ -74,30 +75,32 @@
     <main class="chat-stage" id="chatStage">
       <header class="chat-header" id="chatHeader">
         <div class="chat-header-left">
-          <button class="icon-btn mobile-only" id="btnBackChats" title="К списку чатов">←</button>
+          <button class="icon-btn mobile-only" id="btnBackChats" title="К списку чатов" aria-label="К списку чатов">←</button>
           <span class="net-avatar" id="activeChatBadge">RM</span>
           <div class="chat-header-meta">
             <h2 id="activeChatTitle">Выбери чат</h2>
             <div class="chat-subbadges">
               <span class="pill" id="activeRoutePill">—</span>
-              <span class="pill" id="activeTrustPill">—</span>
+              <span class="pill hide-mobile" id="activeTrustPill">—</span>
             </div>
           </div>
         </div>
         <div class="chat-header-actions">
-          <button class="btn btn-connect-sm btn-sm" id="btnHeaderConnect" type="button" title="Как подключить этот мессенджер (MAX, Telegram, VK, Discord…)">🔌 Подключить</button>
-          <button class="btn btn-ghost btn-sm" id="btnCloudSync" type="button" title="Синхронизировать с Supabase (games-cloud-save)">☁ <span class="hide-xs">Облако</span></button>
+          <button class="btn btn-connect-sm btn-sm" id="btnHeaderConnect" type="button" title="Как подключить этот мессенджер (MAX, Telegram, VK, Discord…)">🔌 <span class="hide-xs">Подключить</span></button>
+          <button class="btn btn-ghost btn-sm hide-mobile" id="btnCloudSync" type="button" title="Синхронизировать с Supabase (games-cloud-save)">☁ Облако</button>
           <button class="btn btn-ghost btn-sm hide-mobile" id="btnPinChat" type="button" title="Закрепить чат наверху списка">📌</button>
           <button class="btn btn-ghost btn-sm hide-mobile" id="btnSimIncoming" type="button" title="Смоделировать входящее сообщение">+ Входящее</button>
           <button class="btn btn-ghost btn-sm" id="btnQuickBindVpn" type="button" hidden>🔒 VPN</button>
           <button class="btn btn-ghost btn-sm hide-mobile" id="btnToggleInspector" type="button" title="Открыть/скрыть Инспектор ядра">Инспектор</button>
-          <button class="icon-btn mobile-only" id="btnChatMoreMobile" type="button" title="Ещё действия (закрепить / входящее / инспектор)">⋯</button>
+          <button class="icon-btn mobile-only" id="btnChatMoreMobile" type="button" title="Ещё действия" aria-label="Ещё действия">⋯</button>
         </div>
       </header>
 
       <!-- Компактная мобильная шторка доп. действий чата -->
       <div class="chat-more-bar" id="chatMoreBar" hidden>
-        <button class="btn btn-sm btn-ghost" id="btnPinChatMobile" type="button">📌 Закрепить чат</button>
+        <button class="btn btn-sm btn-ghost" id="btnCloudSyncMobile" type="button">☁ Обновить чат</button>
+        <button class="btn btn-sm btn-ghost" id="btnQuickWriteMobileBar" type="button">✏ Кому написать</button>
+        <button class="btn btn-sm btn-ghost" id="btnPinChatMobile" type="button">📌 Закрепить</button>
         <button class="btn btn-sm btn-ghost" id="btnSimIncomingMobile" type="button">+ Тест входящего</button>
         <button class="btn btn-sm btn-ghost" id="btnOpenSearchMobile" type="button">🔎 Поиск</button>
         <button class="btn btn-sm btn-ghost" id="btnOpenContactsMobile" type="button">👥 Контакты</button>
@@ -136,14 +139,23 @@
         <button class="icon-btn" id="btnClearAttachment" title="Убрать файл">✕</button>
       </div>
 
+      <!-- Понятная строка статуса: можно ли писать сейчас и куда уйдёт сообщение -->
+      <div class="chat-can-write-bar" id="chatCanWriteBar">
+        <span class="can-write-text" id="chatCanWriteText">🟢 Можно писать прямо сейчас</span>
+        <button type="button" class="can-write-action" id="btnCanWriteAction" hidden></button>
+      </div>
+
       <form class="composer" id="composerForm">
-        <label class="icon-btn file-trigger" title="Прикрепить файл (pack.media + vault.storeMedia + streamChunk)">
+        <label class="icon-btn file-trigger" title="Прикрепить файл">
           📎
           <input type="file" id="fileInput" hidden>
         </label>
-        <button type="button" class="icon-btn" id="btnRecordVoice" title="Записать голосовую заметку (или создать тестовый WAV)">🎙️</button>
-        <textarea id="messageInput" class="composer-input" rows="1" placeholder="Сообщение (поддерживается **жирный**, `код`, ```блоки```, ↑ правка последнего, Ctrl+K поиск)…"></textarea>
-        <button type="submit" class="btn btn-primary" id="btnSend">Отправить</button>
+        <button type="button" class="icon-btn" id="btnRecordVoice" title="Записать голосовое сообщение">🎙️</button>
+        <textarea id="messageInput" class="composer-input" rows="1" placeholder="Написать сообщение…"></textarea>
+        <button type="submit" class="btn btn-primary btn-send" id="btnSend" aria-label="Отправить сообщение">
+          <span class="send-label">Отправить</span>
+          <span class="send-ico" aria-hidden="true">➤</span>
+        </button>
       </form>
       <div class="composer-hint" id="composerStatus">
         Конвейер: <code>pack → validate → vault.append → transfer.enqueue → transfer.dispatch</code>
@@ -362,9 +374,9 @@
       <span class="mnav-ico" aria-hidden="true">💬</span>
       <span class="mnav-lbl">Чаты</span>
     </button>
-    <button type="button" class="mnav-btn" data-mobile-nav="chat">
-      <span class="mnav-ico" aria-hidden="true">✉</span>
-      <span class="mnav-lbl">Диалог</span>
+    <button type="button" class="mnav-btn" data-mobile-nav="write">
+      <span class="mnav-ico" aria-hidden="true">✏</span>
+      <span class="mnav-lbl">Написать</span>
     </button>
     <button type="button" class="mnav-btn mnav-accent" data-mobile-nav="connect">
       <span class="mnav-ico" aria-hidden="true">🔌</span>
@@ -375,6 +387,45 @@
       <span class="mnav-lbl">Сервисы</span>
     </button>
   </nav>
+
+  <!-- Понятное окно «Кому написать?» (убирает путаницу: видно, где живой чат, а где нужно подключить сервис) -->
+  <dialog class="modal modal-write" id="quickWriteModal">
+    <div class="modal-card write-card">
+      <div class="card-title-row">
+        <div>
+          <h3>✏ Кому написать?</h3>
+          <p class="muted-text" style="margin:2px 0 0;">Выбери живой чат, человека или подключи свой MAX / Telegram</p>
+        </div>
+        <button type="button" class="icon-btn" id="btnCloseQuickWrite" aria-label="Закрыть">✕</button>
+      </div>
+
+      <div class="write-nick-row">
+        <label class="write-nick-label" for="quickWriteNickInput">Твой ник:</label>
+        <input type="text" id="quickWriteNickInput" class="text-input" placeholder="Например: Саша" maxlength="48">
+        <button type="button" class="btn btn-sm btn-primary" id="btnQuickWriteSaveNick">Сохранить</button>
+      </div>
+
+      <div class="write-section">
+        <div class="write-section-title">🟢 Можно писать прямо сейчас (живой онлайн-чат Games)</div>
+        <div id="quickWriteLiveRooms" class="write-list"></div>
+      </div>
+
+      <div class="write-section">
+        <div class="write-section-title">👤 Написать человеку (онлайн-игроки и твои контакты)</div>
+        <form id="quickWriteDirectForm" class="inline-form">
+          <input type="text" id="quickWritePeerName" class="text-input" placeholder="Имя или ник собеседника…" required>
+          <button type="submit" class="btn btn-sm btn-primary">Открыть чат</button>
+        </form>
+        <div id="quickWritePeopleList" class="write-people-chips"></div>
+      </div>
+
+      <div class="write-section">
+        <div class="write-section-title">🔌 Написать в MAX, Telegram, VK, Discord, WhatsApp</div>
+        <p class="muted-text" style="margin:0;">Чтобы отправлять реальные сообщения во внешние мессенджеры, подключи их за 1 минуту в Центре подключений:</p>
+        <div id="quickWriteServicesRow" class="write-services-row"></div>
+      </div>
+    </div>
+  </dialog>
 
   <!-- Пошаговый Центр подключений: MAX, Telegram, Discord, VK, WhatsApp и другие сервисы -->
   <dialog class="modal modal-hub" id="connectHubModal">
