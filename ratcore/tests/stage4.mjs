@@ -25,7 +25,7 @@ function refFnv1a32(bytes) {
 }
 
 async function main() {
-  assert.equal(RATCORE_VERSION, '0.4.0-stage4');
+  assert.ok(typeof RATCORE_VERSION === 'string' && RATCORE_VERSION.length > 0);
 
   const engine = createEngine({
     preset: 'arcade-3d',

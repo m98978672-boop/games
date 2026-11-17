@@ -42,6 +42,17 @@ import { WebGL2Renderer } from '../render/webgl2-renderer.js';
 import { WebGpuComputePipeline } from '../packs/webgpu.js';
 import { WasmAccelerator } from '../packs/wasm-accel.js';
 import { RatCoreWorkerPool } from '../runtime/worker-pool.js';
+import { ModSandboxManager } from '../packs/mods.js';
+import { CinemaDirector } from '../packs/cinema.js';
+import { VoiceSynthSuite } from '../packs/voice.js';
+import { CompanionAiSystem } from '../packs/companion.js';
+import { AccessibilityAssistSystem } from '../packs/assist.js';
+import { RatStudioController, runAutoBalance, findBalanceExploits } from '../packs/studio.js';
+import { AnimationSystem, solveTwoBoneIK } from '../modules/anim.js';
+import { FxSystem } from '../modules/fx.js';
+import { GameAiSystem } from '../modules/ai.js';
+import { SimulationEconomy } from '../modules/sim.js';
+import { TestAutomationSuite } from '../modules/test.js';
 
 const ALL_BRANCH_NAMES = [
   ...CORE_BRANCHES,
@@ -99,6 +110,17 @@ export function createRatCoreEngine(config = {}) {
   let activeRenderBackend = 'software';
   let webgpuPipeline = null;
   let wasmAccel = null;
+  let modManager = null;
+  let cinemaDirector = null;
+  let voiceSuite = null;
+  let companionSys = null;
+  let assistSys = null;
+  let studioCtrl = null;
+  let animSys = null;
+  let fxSys = null;
+  let gameAiSys = null;
+  let simEconomy = null;
+  let testSuite = null;
   const workerPool = new RatCoreWorkerPool({ governor });
 
   let nextEntityNumericId = 1;
@@ -185,18 +207,37 @@ export function createRatCoreEngine(config = {}) {
     };
   }
 
-  function renderCurrentFrame() {
+  function renderFrameWithCamera(camOverride = camera) {
     let bgColor = packRGBA(18, 28, 42, 255);
     if (envSystem) {
       const light = envSystem.getLightingState();
       renderer3D.sunDir = light.sunDir;
       bgColor = packRGBA(light.skyRgb[0], light.skyRgb[1], light.skyRgb[2], 255);
     }
-    const frame = renderer3D.renderScene({ vault, entities: [...entities.values()], camera, bgColor });
+    const frame = renderer3D.renderScene({ vault, entities: [...entities.values()], camera: camOverride, bgColor });
     if (stylePipeline && profile.activeBranches.has('shader')) {
       stylePipeline.processSurface(frame.surface);
     }
+    if (assistSys && profile.activeBranches.has('assist')) {
+      assistSys.transformSurface(frame.surface);
+    }
     return frame;
+  }
+
+  function renderCurrentFrame() {
+    return renderFrameWithCamera(camera);
+  }
+
+  function requireStudioPack(toolName) {
+    if (!profile.activeBranches.has('studio')) {
+      throw new RatCoreError(
+        'RC-108',
+        `OPTIONAL_MODULE_DISABLED: ${toolName} требует пакет pack:studio (Zero-Cost Opt-In)`,
+        `Добавь 'pack:studio' в createEngine({ packs: ['pack:studio'] }) или вызови engine.enablePack('pack:studio').`,
+      );
+    }
+    if (!studioCtrl) studioCtrl = new RatStudioController();
+    return studioCtrl;
   }
 
   // ---------------------------- Уровень 0: Ядровые ветки (Core Always-On) ----------------------------
@@ -615,6 +656,39 @@ export function createRatCoreEngine(config = {}) {
         if (!args.frame) throw new RatCoreError('RC-701', 'Не передан бинарный буфер frame', 'Передай Uint8Array из save.exportWire2().');
         return decodeWire2Frame(args.frame, { asJson: true });
       }),
+
+      // Сквозная надстройка «Машина времени» (F-143..F-144, A-96 — требует pack:studio)
+      timelineInit: wrapTool('save.timelineInit', (args) => {
+        const st = requireStudioPack('save.timelineInit');
+        const res = st.timeline.init(args);
+        st.timeline.record({ tick: clock.tick, snapshot: buildWorldSnapshotObj(), forceKeyframe: true });
+        return res;
+      }),
+
+      timelineRecord: wrapTool('save.timelineRecord', (args) => {
+        const st = requireStudioPack('save.timelineRecord');
+        return st.timeline.record({
+          tick: args.tick ?? clock.tick,
+          snapshot: buildWorldSnapshotObj(),
+          branchId: args.branchId,
+          forceKeyframe: Boolean(args.forceKeyframe),
+        });
+      }),
+
+      scrubTo: wrapTool('save.scrubTo', (args) => {
+        const st = requireStudioPack('save.scrubTo');
+        return st.timeline.scrubTo(args);
+      }),
+
+      branchFrom: wrapTool('save.branchFrom', (args) => {
+        const st = requireStudioPack('save.branchFrom');
+        return st.timeline.branchFrom(args);
+      }),
+
+      timelineCompare: wrapTool('save.timelineCompare', (args) => {
+        const st = requireStudioPack('save.timelineCompare');
+        return st.timeline.compareBranches(args);
+      }),
     },
 
     stream: {
@@ -852,22 +926,197 @@ export function createRatCoreEngine(config = {}) {
       };
     }
 
-    // Пакет pack:studio (автономный экспорт в 1 .html < 300 КБ + диагностика)
+    // Пакет pack:studio (RatStudio dev-оверлей + Машина времени + Автобалансировщик + экспорт 1 .html < 300 КБ)
     if (branch === 'studio') {
+      if (!studioCtrl) studioCtrl = new RatStudioController();
       return {
+        open: wrapTool('studio.open', (args) => studioCtrl.open(args)),
+        close: wrapTool('studio.close', () => studioCtrl.close()),
+        inspectScene: wrapTool('studio.inspectScene', () => studioCtrl.inspectScene({
+          entities: [...entities.values()],
+          vaultStats: vault.getStats(),
+          governorStats: governor.getStats(),
+          profile,
+        })),
+        timelineSummary: wrapTool('studio.timelineSummary', () => studioCtrl.timeline.summary()),
+        autoBalance: wrapTool('studio.autoBalance', (args) => runAutoBalance({ seed, ...args })),
+        findExploits: wrapTool('studio.findExploits', (args) => findBalanceExploits({ seed, ...args })),
         exportSingleHtml: wrapTool('studio.exportSingleHtml', (args) => exportSingleHtmlGame({
           title: args.title || 'RatCore Game',
           author: args.author || 'RatCore Studio',
           snapshot: buildWorldSnapshotObj(),
         })),
         diagnostics: wrapTool('studio.diagnostics', () => ({
-          version: '0.4.0-stage4',
+          version: '1.0.0',
+          studioOpen: studioCtrl.isOpen,
+          panels: [...studioCtrl.panels],
           profile: { preset: profile.preset, activePacks: [...profile.packs], savingsPct: profile.savingsPct },
           vault: vault.getStats(),
           governor: governor.getStats(),
           workerPool: workerPool.getStats(),
         })),
-        status: wrapTool('studio.status', () => ({ branch: 'studio', enabled: true })),
+        status: wrapTool('studio.status', () => ({ branch: 'studio', enabled: true, open: studioCtrl.isOpen })),
+      };
+    }
+
+    // Пакет pack:mods (.ratmod.rcw2, ToolGuard аудит, ModQuota, Hot-Reload)
+    if (branch === 'mod') {
+      if (!modManager) modManager = new ModSandboxManager();
+      return {
+        pack: wrapTool('mod.pack', (args) => modManager.pack(args)),
+        validate: wrapTool('mod.validate', (args) => modManager.validate(args)),
+        mount: wrapTool('mod.mount', (args) => modManager.mount(args)),
+        recordCpu: wrapTool('mod.recordCpu', (args) => modManager.recordModCpu(args)),
+        hotReload: wrapTool('mod.hotReload', (args) => modManager.hotReload(args)),
+        unmount: wrapTool('mod.unmount', (args) => modManager.unmount(args)),
+        list: wrapTool('mod.list', () => modManager.list()),
+        status: wrapTool('mod.status', () => ({ branch: 'mod', enabled: true, mounted: modManager.mounted.size, loadOrder: [...modManager.loadOrder] })),
+      };
+    }
+
+    // Пакет pack:cinema (рельсы камеры по длине дуги, таймлапсы, авто-обложка 16:9)
+    if (branch === 'cutscene') {
+      if (!cinemaDirector) cinemaDirector = new CinemaDirector();
+      return {
+        createTrack: wrapTool('cutscene.createTrack', (args) => cinemaDirector.createTrack(args)),
+        play: wrapTool('cutscene.play', (args) => {
+          const res = cinemaDirector.play(args);
+          if (args.applyCamera !== false && res.camera) Object.assign(camera, res.camera);
+          return res;
+        }),
+        seek: wrapTool('cutscene.seek', (args) => {
+          const res = cinemaDirector.seek(args);
+          if (args.applyCamera !== false && res.camera) Object.assign(camera, res.camera);
+          return res;
+        }),
+        timelapseStart: wrapTool('cutscene.timelapseStart', (args) => cinemaDirector.timelapseStart(args)),
+        timelapseCapture: wrapTool('cutscene.timelapseCapture', (args) => cinemaDirector.timelapseCapture({
+          tick: args.tick ?? clock.tick,
+          renderAtCamera: (cam) => renderFrameWithCamera(cam),
+        })),
+        timelapseFinish: wrapTool('cutscene.timelapseFinish', () => cinemaDirector.timelapseFinish()),
+        autoCover: wrapTool('cutscene.autoCover', (args) => cinemaDirector.autoCover({
+          ...args,
+          renderAtCamera: (cam) => renderFrameWithCamera(cam),
+        })),
+        status: wrapTool('cutscene.status', () => ({ branch: 'cutscene', enabled: true, tracks: cinemaDirector.tracks.size })),
+      };
+    }
+
+    // Пакет pack:voice (офлайн 3-формантный синтез, рация и липсинк 0 КБ сэмплов)
+    if (branch === 'voice') {
+      if (!voiceSuite) voiceSuite = new VoiceSynthSuite();
+      return {
+        createProfile: wrapTool('voice.createProfile', (args) => voiceSuite.createProfile(args)),
+        speak: wrapTool('voice.speak', (args) => voiceSuite.speak({ seed, ...args })),
+        getViseme: wrapTool('voice.getViseme', (args) => voiceSuite.getViseme(args)),
+        status: wrapTool('voice.status', () => ({ branch: 'voice', enabled: true, profiles: voiceSuite.profiles.size, utterances: voiceSuite.utterances.size })),
+      };
+    }
+
+    // Пакет pack:companion (локальный ИИ-напарник со зрением see и слухом hear)
+    if (branch === 'coopAi') {
+      if (!companionSys) companionSys = new CompanionAiSystem();
+      return {
+        spawn: wrapTool('coopAi.spawn', (args) => companionSys.spawn(args)),
+        order: wrapTool('coopAi.order', (args) => {
+          const visibleRes = coreImpl.see.visibleEntities();
+          const heardEvents = args.heardEvents || (acousticWorld ? acousticWorld.listen({
+            x: args.playerPos?.x ?? 0,
+            y: args.playerPos?.y ?? 0,
+            h: args.playerPos?.h ?? 1,
+            currentTick: clock.tick,
+            heightField,
+          }) : []);
+          return companionSys.order({
+            ...args,
+            visibleEntities: visibleRes.ok ? visibleRes.data.visible : [],
+            heardEvents,
+          });
+        }),
+        step: wrapTool('coopAi.step', (args) => companionSys.step(args)),
+        explainLastAction: wrapTool('coopAi.explainLastAction', (args) => companionSys.explainLastAction(args)),
+        status: wrapTool('coopAi.status', () => ({ branch: 'coopAi', enabled: true, companions: companionSys.companions.size })),
+      };
+    }
+
+    // Пакет pack:assist (умный наставник, дальтонизм, аудио-субтитры, режим 1 руки)
+    if (branch === 'assist') {
+      if (!assistSys) assistSys = new AccessibilityAssistSystem();
+      return {
+        trackPlayer: wrapTool('assist.trackPlayer', (args) => assistSys.trackPlayer(args)),
+        setVisualMode: wrapTool('assist.setVisualMode', (args) => assistSys.setVisualMode(args)),
+        setAudioSubtitles: wrapTool('assist.setAudioSubtitles', (args) => assistSys.setAudioSubtitles(args)),
+        audioSubtitles: wrapTool('assist.audioSubtitles', (args) => {
+          const hearEvents = args.hearEvents || (acousticWorld ? acousticWorld.listen({
+            x: args.listenerPos?.x ?? camera.x,
+            y: args.listenerPos?.y ?? camera.y,
+            h: args.listenerPos?.h ?? camera.h,
+            currentTick: clock.tick,
+            heightField,
+          }) : []);
+          return assistSys.formatAudioSubtitles({ listenerPos: args.listenerPos || camera, hearEvents });
+        }),
+        setOneHandMobile: wrapTool('assist.setOneHandMobile', (args) => assistSys.setOneHandMobile(args)),
+        status: wrapTool('assist.status', () => ({ branch: 'assist', enabled: true, visual: { ...assistSys.visual }, oneHand: { ...assistSys.oneHand } })),
+      };
+    }
+
+    // Стандартные жанровые модули Уровня 1: anim, fx, ai, sim, test
+    if (branch === 'anim') {
+      if (!animSys) animSys = new AnimationSystem();
+      return {
+        solveTwoBoneIK: wrapTool('anim.solveTwoBoneIK', (args) => solveTwoBoneIK(args)),
+        defineClip: wrapTool('anim.defineClip', (args) => animSys.defineClip(args)),
+        sampleClip: wrapTool('anim.sampleClip', (args) => animSys.sampleClip(args)),
+        createVerletChain: wrapTool('anim.createVerletChain', (args) => animSys.createVerletChain(args)),
+        stepVerletChain: wrapTool('anim.stepVerletChain', (args) => animSys.stepVerletChain(args)),
+        status: wrapTool('anim.status', () => ({ branch: 'anim', enabled: true, clips: animSys.clips.size, chains: animSys.chains.size })),
+      };
+    }
+
+    if (branch === 'fx') {
+      if (!fxSys) fxSys = new FxSystem({ seed });
+      return {
+        emitBurst: wrapTool('fx.emitBurst', (args) => fxSys.emitBurst(args)),
+        addDecal: wrapTool('fx.addDecal', (args) => fxSys.addDecal(args)),
+        addCameraShake: wrapTool('fx.addCameraShake', (args) => fxSys.addCameraShake(args)),
+        step: wrapTool('fx.step', (args) => fxSys.step(args)),
+        status: wrapTool('fx.status', () => ({ branch: 'fx', enabled: true, activeParticles: fxSys.activeCount, decals: fxSys.decals.length })),
+      };
+    }
+
+    if (branch === 'ai') {
+      if (!gameAiSys) gameAiSys = new GameAiSystem();
+      return {
+        registerAgent: wrapTool('ai.registerAgent', (args) => gameAiSys.registerAgent(args)),
+        evaluateUtility: wrapTool('ai.evaluateUtility', (args) => gameAiSys.evaluateUtility(args)),
+        planGoal: wrapTool('ai.planGoal', (args) => gameAiSys.planGoal(args)),
+        nluParse: wrapTool('ai.nluParse', (args) => gameAiSys.nluParse(args)),
+        status: wrapTool('ai.status', () => ({ branch: 'ai', enabled: true, agents: gameAiSys.agents.size })),
+      };
+    }
+
+    if (branch === 'sim') {
+      if (!simEconomy) simEconomy = new SimulationEconomy();
+      return {
+        setResource: wrapTool('sim.setResource', (args) => simEconomy.setResource(args)),
+        defineRecipe: wrapTool('sim.defineRecipe', (args) => simEconomy.defineRecipe(args)),
+        craft: wrapTool('sim.craft', (args) => simEconomy.craft(args)),
+        tickEconomy: wrapTool('sim.tickEconomy', (args) => simEconomy.tickEconomy(args)),
+        state: wrapTool('sim.state', () => simEconomy.getState()),
+        status: wrapTool('sim.status', () => ({ branch: 'sim', enabled: true, population: simEconomy.population })),
+      };
+    }
+
+    if (branch === 'test') {
+      if (!testSuite) testSuite = new TestAutomationSuite();
+      return {
+        checkInvariants: wrapTool('test.checkInvariants', () => testSuite.checkInvariants({ entities: [...entities.values()], heightField, vault })),
+        fuzzWalk: wrapTool('test.fuzzWalk', (args) => testSuite.fuzzWalk({ seed, ...args, heightField })),
+        autoBalance: wrapTool('test.autoBalance', (args) => testSuite.autoBalance({ seed, ...args })),
+        findExploits: wrapTool('test.findExploits', (args) => testSuite.findExploits({ seed, ...args })),
+        status: wrapTool('test.status', () => ({ branch: 'test', enabled: true, runsCompleted: testSuite.runsCompleted })),
       };
     }
 
@@ -897,7 +1146,7 @@ export function createRatCoreEngine(config = {}) {
     }
 
     return {
-      status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v0.4-ready' })),
+      status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v1.0.0' })),
     };
   }
 
@@ -1017,7 +1266,7 @@ export function createRatCoreEngine(config = {}) {
   }
 
   return Object.freeze({
-    version: '0.4.0-stage4',
+    version: '1.0.0',
     seed,
     clock,
     governor,

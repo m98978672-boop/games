@@ -1,8 +1,8 @@
 {
   "schema": "ratcore-index/1",
   "engine": "RatCore",
-  "status": "stage4-v0.4-implemented",
-  "stage": "stage4-v0.4",
+  "status": "v1.0.0-implemented",
+  "stage": "stage5-v1.0",
   "updatedAt": "2026-11-16",
   "branch": "arena/99666b55-games",
   "codeStarted": true,
@@ -50,6 +50,11 @@
       "ratcore/src/modules/nav.js",
       "ratcore/src/modules/env.js",
       "ratcore/src/modules/audio.js",
+      "ratcore/src/modules/anim.js",
+      "ratcore/src/modules/fx.js",
+      "ratcore/src/modules/ai.js",
+      "ratcore/src/modules/sim.js",
+      "ratcore/src/modules/test.js",
       "ratcore/src/packs/ai-team.js",
       "ratcore/src/packs/destruction.js",
       "ratcore/src/packs/multiplayer.js",
@@ -59,6 +64,12 @@
       "ratcore/src/packs/exporter.js",
       "ratcore/src/packs/webgpu.js",
       "ratcore/src/packs/wasm-accel.js",
+      "ratcore/src/packs/mods.js",
+      "ratcore/src/packs/cinema.js",
+      "ratcore/src/packs/voice.js",
+      "ratcore/src/packs/companion.js",
+      "ratcore/src/packs/assist.js",
+      "ratcore/src/packs/studio.js",
       "ratcore/src/tools/toolkit.js"
     ],
     "tests": [
@@ -66,7 +77,8 @@
       "ratcore/tests/stage1.mjs",
       "ratcore/tests/stage2.mjs",
       "ratcore/tests/stage3.mjs",
-      "ratcore/tests/stage4.mjs"
+      "ratcore/tests/stage4.mjs",
+      "ratcore/tests/stage5.mjs"
     ]
   },
   "counts": {
@@ -90,7 +102,7 @@
     { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.8-draft", "role": "185 formulas (F-01..F-185) and 125 algorithms (A-01..A-125)" },
     { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.4-draft", "role": "12-level compression, ratcore-wire/2, Power & Thermal Guard (40/60/75%), Dynamic Resolution, Async Shader Pre-Warm, Self-Healing, WebGPU/WASM packs" },
     { "id": "bridge", "path": "ratcore/BRIDGE.md", "version": "0.2-draft", "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC, RCW2 binary streaming)" },
-    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#014" }
+    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#015" }
   ],
   "toolBranches": [
     "build", "move", "remove", "watch", "look", "see", "hear", "think", "guess",

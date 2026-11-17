@@ -1,6 +1,6 @@
 {
   "schema": "ratcore-tools-manifest/1",
-  "version": "0.4.0-stage4",
+  "version": "1.0.0",
   "engine": "RatCore",
   "modularityPolicy": "zero-cost-opt-in",
   "disabledErrorCode": "RC-108",
@@ -65,6 +65,28 @@
     { "id": "stream.dispatchWorkerTask", "branch": "stream", "tier": "core", "tags": ["worker", "threads", "multicore", "75%", "governor", "потоки", "воркеры"], "summary": "Отправить задачу в многоядерный пул Web Workers / worker_threads с zero-copy Transferable" },
     { "id": "webgpu.frustumCull", "branch": "webgpu", "tier": "pack", "pack": "pack:webgpu", "tags": ["webgpu", "wgsl", "compute", "culling", "gpu", "куллинг"], "summary": "Запустить Compute-куллинг сфер чанков (WGSL @workgroup_size(64) / SoA fallback)" },
     { "id": "wasm.benchmark", "branch": "wasm", "tier": "pack", "pack": "pack:wasm-accel", "tags": ["wasm", "simd", "webassembly", "hotloop", "speed", "ускорение"], "summary": "Запустить встроенный бинарный WebAssembly-модуль горячих циклов и проверить SIMD v128" },
-    { "id": "wasm.stepGravity", "branch": "wasm", "tier": "pack", "pack": "pack:wasm-accel", "tags": ["wasm", "physics", "gravity", "soa", "физика", "ускорение"], "summary": "Выполнить батчевый шаг гравитации SoA-буфера в линейной памяти WebAssembly" }
+    { "id": "wasm.stepGravity", "branch": "wasm", "tier": "pack", "pack": "pack:wasm-accel", "tags": ["wasm", "physics", "gravity", "soa", "физика", "ускорение"], "summary": "Выполнить батчевый шаг гравитации SoA-буфера в линейной памяти WebAssembly" },
+    { "id": "mod.pack", "branch": "mod", "tier": "pack", "pack": "pack:mods", "tags": ["mod", "rcw2", "sandbox", "pack", "мод", "упаковка"], "summary": "Упаковать мод игрока или ИИ в защищённый бинарный контейнер .ratmod.rcw2 (CRC32)" },
+    { "id": "mod.validate", "branch": "mod", "tier": "pack", "pack": "pack:mods", "tags": ["mod", "toolguard", "audit", "quota", "мод", "проверка"], "summary": "Проверить мод .ratmod.rcw2 через ToolGuard (Барьер 4), запрет eval/сети и ModQuota" },
+    { "id": "mod.hotReload", "branch": "mod", "tier": "pack", "pack": "pack:mods", "tags": ["mod", "hotreload", "live", "мод", "перезагрузка"], "summary": "Горячее обновление подключённого мода без перезапуска мира и с откатом при ошибке" },
+    { "id": "cutscene.createTrack", "branch": "cutscene", "tier": "pack", "pack": "pack:cinema", "tags": ["cutscene", "spline", "camera", "arclength", "камера", "рельсы"], "summary": "Построить рельсу камеры Catmull-Rom с равномерной дуговой параметризацией (F-140)" },
+    { "id": "cutscene.autoCover", "branch": "cutscene", "tier": "pack", "pack": "pack:cinema", "tags": ["cover", "16:9", "thirds", "camera", "обложка", "скриншот"], "summary": "Подобрать лучший ракурс обложки 16:9 из 12 кандидатов по правилу третей и контрасту (F-141)" },
+    { "id": "voice.createProfile", "branch": "voice", "tier": "pack", "pack": "pack:voice", "tags": ["voice", "formant", "radio", "robot", "голос", "рация"], "summary": "Создать голосовой паспорт персонажа для 3-формантного офлайн-синтеза (0 КБ сэмплов)" },
+    { "id": "voice.getViseme", "branch": "voice", "tier": "pack", "pack": "pack:voice", "tags": ["lipsync", "viseme", "mouth", "voice", "липсинк", "визема"], "summary": "Получить точную визему рта и раскрытие губ в момент времени для лицевой анимации (F-157)" },
+    { "id": "coopAi.spawn", "branch": "coopAi", "tier": "pack", "pack": "pack:companion", "tags": ["companion", "ally", "bot", "ai", "напарник", "бот"], "summary": "Создать локального ИИ-напарника с доверием, зрением see и слухом hear" },
+    { "id": "coopAi.explainLastAction", "branch": "coopAi", "tier": "pack", "pack": "pack:companion", "tags": ["companion", "explain", "trust", "напарник", "объяснение"], "summary": "Получить понятное объяснение последнего тактического решения ИИ-напарника" },
+    { "id": "assist.trackPlayer", "branch": "assist", "tier": "pack", "pack": "pack:assist", "tags": ["assist", "stuck", "hint", "mentor", "наставник", "подсказка"], "summary": "Отследить застревание игрока > 20 с и выдать мягкую поэтапную подсказку без спойлеров" },
+    { "id": "assist.audioSubtitles", "branch": "assist", "tier": "pack", "pack": "pack:assist", "tags": ["subtitles", "hear", "accessibility", "субтитры", "звук"], "summary": "Преобразовать акустические события tools.hear в направленные экранные подписи (F-165)" },
+    { "id": "assist.setOneHandMobile", "branch": "assist", "tier": "pack", "pack": "pack:assist", "tags": ["mobile", "onehand", "touch", "accessibility", "одна рука"], "summary": "Перестроить раскладку сенсорного управления под правую или левую руку (A-109)" },
+    { "id": "studio.open", "branch": "studio", "tier": "pack", "pack": "pack:studio", "tags": ["studio", "overlay", "inspector", "dev", "студия", "оверлей"], "summary": "Открыть лёгкий dev-оверлей RatStudio (<= 0.8 мс/кадр, вырезается в релизе)" },
+    { "id": "studio.autoBalance", "branch": "studio", "tier": "pack", "pack": "pack:studio", "tags": ["balance", "exploit", "monte-carlo", "entropy", "баланс", "автобаланс"], "summary": "Прогнать headless-симуляции для расчёта энтропии мета-игры, эксплойтов и дифф-патча баланса" },
+    { "id": "save.timelineInit", "branch": "save", "tier": "pack", "pack": "pack:studio", "tags": ["timeline", "rewind", "scrub", "cow", "branch", "машина времени"], "summary": "Инициализировать Машину времени с COW-снимками и ветвлением истории (F-143..F-144)" },
+    { "id": "save.scrubTo", "branch": "save", "tier": "pack", "pack": "pack:studio", "tags": ["timeline", "scrub", "rewind", "перемотка", "машина времени"], "summary": "Мгновенно перемотать состояние мира на произвольный тик по COW-дереву истории" },
+    { "id": "save.branchFrom", "branch": "save", "tier": "pack", "pack": "pack:studio", "tags": ["timeline", "branch", "fork", "ветвление", "сравнение"], "summary": "Создать альтернативную ветку истории с патчем параметров поверх COW-снимка" },
+    { "id": "anim.solveTwoBoneIK", "branch": "anim", "tier": "module", "tags": ["anim", "ik", "skeleton", "verlet", "анимация", "кинематика"], "summary": "Решить аналитическую 2-костную инверсную кинематику по закону косинусов" },
+    { "id": "fx.emitBurst", "branch": "fx", "tier": "module", "tags": ["fx", "particles", "decal", "shake", "частицы", "эффекты"], "summary": "Испустить детерминированный залп частиц из SoA-пула с поддержкой декалей и тряски камеры" },
+    { "id": "ai.evaluateUtility", "branch": "ai", "tier": "module", "tags": ["ai", "npc", "utility", "goap", "nlu", "ии", "нпс"], "summary": "Выбрать оптимальное тактическое действие NPC по кривым полезности Utility AI" },
+    { "id": "sim.craft", "branch": "sim", "tier": "module", "tags": ["sim", "economy", "craft", "inventory", "экономика", "крафт"], "summary": "Выполнить крафт по рецепту в инвентаре с проверкой ресурсов и лимита веса" },
+    { "id": "test.checkInvariants", "branch": "test", "tier": "module", "tags": ["test", "invariants", "fuzz", "qa", "тест", "инварианты"], "summary": "Проверить инварианты сцены (NaN, провалы под рельеф, подписи ToolGuard)" }
   ]
 }

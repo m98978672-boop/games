@@ -58,14 +58,15 @@ export class AcousticWorld {
     this.nextId = 1;
   }
 
-  emit({ kind = 'step', x = 0, y = 0, h = 0, loudnessDb = 70, sourceId = null, tick = 0, ttlTicks = 30 } = {}) {
+  emit({ kind = 'step', x = 0, y = 0, h = 0, loudnessDb, volumeDb, sourceId = null, tick = 0, ttlTicks = 30 } = {}) {
+    const db = loudnessDb ?? volumeDb ?? 70;
     const ev = {
       id: `snd_${this.nextId++}`,
       kind: String(kind),
       x: Number(x),
       y: Number(y),
       h: Number(h),
-      loudnessDb: clamp(Number(loudnessDb), 10, 140),
+      loudnessDb: clamp(Number(db), 10, 140),
       sourceId,
       tick,
       expiresTick: tick + Math.max(1, ttlTicks | 0),
@@ -100,6 +101,8 @@ export class AcousticWorld {
           id: ev.id,
           kind: ev.kind,
           sourceId: ev.sourceId,
+          x: ev.x,
+          y: ev.y,
           distance: Number(dist.toFixed(2)),
           azimuthDeg: Number(az.toFixed(1)),
           perceivedDb: Number(perceivedDb.toFixed(1)),

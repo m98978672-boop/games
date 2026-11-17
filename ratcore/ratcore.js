@@ -1,7 +1,7 @@
-// RatCore — Главная публичная точка входа движка (v0.4 Этап 4, изолированно внутри ratcore/)
+// RatCore — Главная публичная точка входа движка (v1.0.0 — все 10 модулей и 14 пакетов по выбору, изолированно внутри ratcore/)
 // Работает в браузере и в Node.js 22 без сборщиков и внешних зависимостей.
 
-export const RATCORE_VERSION = '0.4.0-stage4';
+export const RATCORE_VERSION = '1.0.0';
 export { createRatCoreEngine as createEngine } from './src/tools/toolkit.js';
 export { auditSourceCode } from './src/core/code-auditor.js';
 export { CORE_BRANCHES, STANDARD_MODULES, OPTIONAL_PACKS, PRESETS, resolveModuleProfile } from './src/core/modules.js';
@@ -17,10 +17,21 @@ export { crc32, zigzagEncode, zigzagDecode, encodeVarints, decodeVarints, encode
 export { RCW2_MAGIC, RCW2_CODEC, RCW2_CHANNEL, encodeWire2Frame, decodeWire2Frame, fastCdcSplit, diffFastCdcChunks, xorFecParity, xorFecRecover, Wire2StreamWindow } from './src/compress/wire2.js';
 export { RatCoreCloudSync } from './src/compress/cloud-adapter.js';
 export { CoreGovernor, POWER_PROFILES } from './src/runtime/governor.js';
+export { RatCoreWorkerPool } from './src/runtime/worker-pool.js';
+export { WebGL2Renderer, createHeadlessWebGL2Context, WEBGL2_VERT_MAIN, WEBGL2_FRAG_MAIN } from './src/render/webgl2-renderer.js';
+export { AnimationSystem, solveTwoBoneIK } from './src/modules/anim.js';
+export { FxSystem } from './src/modules/fx.js';
+export { GameAiSystem } from './src/modules/ai.js';
+export { SimulationEconomy } from './src/modules/sim.js';
+export { TestAutomationSuite } from './src/modules/test.js';
 export { encodeInput12, decodeInput12 } from './src/packs/multiplayer.js';
 export { STYLE_PRESETS } from './src/packs/styles.js';
 export { exportSingleHtmlGame } from './src/packs/exporter.js';
-export { WebGL2Renderer, createHeadlessWebGL2Context, WEBGL2_VERT_MAIN, WEBGL2_FRAG_MAIN } from './src/render/webgl2-renderer.js';
 export { WebGpuComputePipeline, WGSL_FRUSTUM_CULL_SHADER, WGSL_PARTICLE_STEP_SHADER } from './src/packs/webgpu.js';
 export { WasmAccelerator, buildRatCoreWasmBytes } from './src/packs/wasm-accel.js';
-export { RatCoreWorkerPool } from './src/runtime/worker-pool.js';
+export { ModSandboxManager } from './src/packs/mods.js';
+export { CinemaDirector, scoreCoverComposition } from './src/packs/cinema.js';
+export { VoiceSynthSuite, VOICE_STYLES } from './src/packs/voice.js';
+export { CompanionAiSystem, parseNaturalCommand } from './src/packs/companion.js';
+export { AccessibilityAssistSystem, COLORBLIND_MODES } from './src/packs/assist.js';
+export { TimelineDebugger, RatStudioController, runAutoBalance, findBalanceExploits } from './src/packs/studio.js';
