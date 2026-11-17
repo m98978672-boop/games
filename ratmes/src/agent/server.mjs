@@ -251,7 +251,7 @@ export async function startRatMesAgent({
       res.writeHead(204, {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       });
       res.end();
       return;
@@ -316,9 +316,19 @@ export async function startRatMesAgent({
       return;
     }
 
-    // 4b. Живые мосты (Telegram Bot API / Discord / Matrix / VK / Webhook)
+    // 4b. Живые мосты (MAX / Telegram / Discord / Matrix / VK / WhatsApp / Viber / Signal / Webhook)
     if (pathname === '/api/bridges' && req.method === 'GET') {
       sendJson(res, 200, { ok: true, data: { bridges: liveBridges.listStatuses() } });
+      return;
+    }
+    if (pathname === '/api/bridges/test' && req.method === 'POST') {
+      try {
+        const body = await readJsonBody(req);
+        const result = await liveBridges.testBridge(body);
+        sendJson(res, result.ok ? 200 : 400, result);
+      } catch (err) {
+        sendJson(res, 400, { ok: false, error: { code: 'RM-105', message: err.message } });
+      }
       return;
     }
     if (pathname === '/api/bridges/configure' && req.method === 'POST') {

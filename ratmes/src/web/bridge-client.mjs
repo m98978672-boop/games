@@ -1,12 +1,15 @@
 // Единственный санкционированный клиентский драйвер связи браузера/PWA с ПК-агентом RatMes Agent.
-// Использует ТОЛЬКО относительные URL (совместимо с Arena Live Preview и любым прокси)
-// и автоматически переключается в автономный браузерный режим (PWA + BroadcastChannel), если агент недоступен.
+// Использует относительные URL (совместимо с Arena Live Preview и любым прокси),
+// поддерживает подключение с телефона к пользовательскому адресу ПК-агента,
+// а при отсутствии агента автоматически работает автономно в браузере (PWA + Supabase + браузерные мосты).
 
 import { createRatMesEngine } from '../engine/ratmes-engine.mjs';
 import { createMemoryVault } from '../engine/vault-store.mjs';
 import { SUPABASE_PUBLIC_CONFIG } from '../engine/cloud-hub.mjs';
+import { getServiceGuide } from '../engine/service-guides.mjs';
 
 const CLOUD_SYNCED_ROOMS = new Set(['games-lobby', 'games-coop', 'games-dev', 'ratmes-main']);
+const REMOTE_AGENT_KEY = 'ratmes-remote-agent-url-v1';
 
 function getOrCreatePeerId() {
   try {
@@ -26,9 +29,26 @@ function getOrCreatePeerId() {
   }
 }
 
+function readSavedRemoteAgent() {
+  try {
+    if (typeof localStorage === 'undefined') return '';
+    return (localStorage.getItem(REMOTE_AGENT_KEY) || '').trim().replace(/\/+$/, '');
+  } catch {
+    return '';
+  }
+}
+
+function normalizeAgentUrl(raw) {
+  const s = String(raw || '').trim().replace(/\/+$/, '');
+  if (!s) return '';
+  if (!/^https?:\/\//i.test(s)) return `http://${s}`;
+  return s;
+}
+
 export async function createBridgeClient() {
   const listeners = new Set();
-  let mode = 'agent';
+  let mode = 'browser-offline';
+  let agentBase = ''; // '' означает относительный ./api/*, иначе 'https://host:port'
   let localEngine = null;
   let eventSource = null;
   let ws = null;
@@ -39,6 +59,8 @@ export async function createBridgeClient() {
   let cloudEnabled = true;
   const peerId = getOrCreatePeerId();
   const wsPending = new Map();
+  // Локальные браузерные мосты (для автономного режима с телефона / GitHub Pages)
+  const browserBridges = new Map();
 
   function emit(evt) {
     for (const fn of listeners) {
@@ -46,34 +68,27 @@ export async function createBridgeClient() {
     }
   }
 
-  // Пробуем подключиться к локальному ПК-агенту по относительному URL ./api/health
-  try {
-    const res = await fetch('./api/health', { cache: 'no-store' });
-    if (res.ok) {
-      const json = await res.json();
-      if (json && json.ok) {
-        agentHealth = json;
-        mode = 'agent';
-      } else {
-        mode = 'browser-offline';
-      }
-    } else {
-      mode = 'browser-offline';
-    }
-  } catch {
-    mode = 'browser-offline';
+  function apiPath(sub) {
+    return agentBase ? `${agentBase}${sub}` : `.${sub}`;
   }
 
-  if (mode === 'agent') {
-    connectAgentRealtime();
-  } else {
+  async function probeAgent(base) {
+    const url = base ? `${base}/api/health` : './api/health';
+    const res = await fetch(url, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json && json.ok ? json : null;
+  }
+
+  async function initLocalEngineIfNeeded() {
+    if (localEngine) return;
     const memVault = createMemoryVault({ storageKey: 'ratmes-pwa-vault-v1' });
     localEngine = createRatMesEngine({ vault: memVault, country: 'RU', seedDemoChats: true });
     await localEngine.ensureStarterChats();
     localEngine.core.watch.subscribe((evt) => {
       emit({ kind: 'event', event: evt.type, data: evt.payload, stateHash: localEngine.getStateHash() });
     });
-    if (typeof BroadcastChannel !== 'undefined') {
+    if (typeof BroadcastChannel !== 'undefined' && !broadcastChannel) {
       broadcastChannel = new BroadcastChannel('ratmes-sync-v1');
       broadcastChannel.onmessage = (ev) => {
         emit({ kind: 'event', event: 'tab.sync', data: ev.data });
@@ -81,11 +96,23 @@ export async function createBridgeClient() {
     }
   }
 
+  function disconnectAgentRealtime() {
+    if (eventSource) {
+      try { eventSource.close(); } catch { /* ignore */ }
+      eventSource = null;
+    }
+    if (ws) {
+      try { ws.close(); } catch { /* ignore */ }
+      ws = null;
+    }
+  }
+
   function connectAgentRealtime() {
+    disconnectAgentRealtime();
     // 1. SSE поток событий
     if (typeof EventSource !== 'undefined') {
       try {
-        eventSource = new EventSource('./api/events');
+        eventSource = new EventSource(apiPath('/api/events'));
         eventSource.addEventListener('ratmes', (ev) => {
           try {
             const parsed = JSON.parse(ev.data);
@@ -95,14 +122,21 @@ export async function createBridgeClient() {
       } catch { /* ignore */ }
     }
 
-    // 2. WebSocket ratcore-bridge/1 по относительному хосту (без localhost/127.0.0.1!)
+    // 2. WebSocket ratcore-bridge/1 (только для same-origin или явного пользовательского remoteAgentUrl)
     if (typeof WebSocket !== 'undefined' && typeof location !== 'undefined') {
       try {
-        const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const basePath = location.pathname.endsWith('/')
-          ? location.pathname
-          : location.pathname.replace(/[^/]*$/, '');
-        const wsUrl = `${wsProto}//${location.host}${basePath}ws`;
+        let wsUrl = '';
+        if (agentBase) {
+          const u = new URL(agentBase);
+          const wsProto = u.protocol === 'https:' ? 'wss:' : 'ws:';
+          wsUrl = `${wsProto}//${u.host}${u.pathname.replace(/\/+$/, '')}/ws`;
+        } else {
+          const wsProto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const basePath = location.pathname.endsWith('/')
+            ? location.pathname
+            : location.pathname.replace(/[^/]*$/, '');
+          wsUrl = `${wsProto}//${location.host}${basePath}ws`;
+        }
         ws = new WebSocket(wsUrl);
         ws.onmessage = (ev) => {
           try {
@@ -117,7 +151,6 @@ export async function createBridgeClient() {
           } catch { /* ignore */ }
         };
         ws.onerror = () => {
-          // Если прокси не пробрасывает WS, все вызовы прозрачно работают через HTTP ./api/tool + SSE
           for (const [, p] of wsPending) p.reject(new Error('WS fallback to HTTP'));
           wsPending.clear();
           ws = null;
@@ -131,8 +164,37 @@ export async function createBridgeClient() {
     }
   }
 
+  // 1. Пробуем локальный ./api/health, затем сохранённый пользовательский адрес ПК-агента
+  try {
+    const localHealth = await probeAgent('');
+    if (localHealth) {
+      agentHealth = localHealth;
+      agentBase = '';
+      mode = 'agent';
+    }
+  } catch { /* пробуем дальше */ }
+
+  if (mode !== 'agent') {
+    const saved = readSavedRemoteAgent();
+    if (saved) {
+      try {
+        const remoteHealth = await probeAgent(saved);
+        if (remoteHealth) {
+          agentHealth = remoteHealth;
+          agentBase = saved;
+          mode = 'agent';
+        }
+      } catch { /* остаёмся в автономном режиме */ }
+    }
+  }
+
+  if (mode === 'agent') {
+    connectAgentRealtime();
+  } else {
+    await initLocalEngineIfNeeded();
+  }
+
   async function callViaAgent(payload) {
-    // Предпочитаем WebSocket если соединение открыто, иначе HTTP POST ./api/tool
     if (ws && ws.readyState === 1) {
       try {
         wsReqSeq += 1;
@@ -150,11 +212,11 @@ export async function createBridgeClient() {
         });
         return result;
       } catch {
-        // Плавный откат на HTTP ./api/tool
+        // Плавный откат на HTTP /api/tool
       }
     }
 
-    const res = await fetch('./api/tool', {
+    const res = await fetch(apiPath('/api/tool'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -163,6 +225,7 @@ export async function createBridgeClient() {
   }
 
   async function callLocal(payload) {
+    await initLocalEngineIfNeeded();
     const actor = payload.actorId && payload.role
       ? localEngine.tools.asActor(payload.actorId, payload.role)
       : localEngine.tools;
@@ -180,9 +243,257 @@ export async function createBridgeClient() {
     return res;
   }
 
+  // Прямая отправка из браузера (если пользователь включил мост без ПК-агента)
+  async function deliverBrowserBridge(cfg, { envelopeRecord }) {
+    const token = cfg.getSecret();
+    const text = envelopeRecord?.body?.text || '';
+    const started = performance.now();
+    const base = (cfg.endpoint || '').replace(/\/+$/, '');
+
+    try {
+      if (cfg.kind === 'discord') {
+        const url = base || token;
+        if (!url) throw new Error('Укажи Discord Webhook URL');
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ content: text, username: 'RatMes' }),
+        });
+        if (!res.ok) throw new Error(`Discord HTTP ${res.status}`);
+        cfg.stats.sentLive += 1;
+        return { ok: true, remoteId: `dc-web-${Date.now()}`, serverSeq: cfg.stats.sentLive, routeUsed: 'browser-discord', rttMs: Math.round(performance.now() - started), signed: true };
+      }
+
+      if (cfg.kind === 'telegram') {
+        if (!token || !cfg.targetId) throw new Error('Нужны Bot Token и chat_id');
+        const apiBase = base || getServiceGuide('telegram').defaultEndpoint;
+        const res = await fetch(`${apiBase}/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: cfg.targetId, text }),
+        });
+        const j = await res.json();
+        if (!res.ok || !j.ok) throw new Error(j.description || `Telegram HTTP ${res.status}`);
+        cfg.stats.sentLive += 1;
+        return { ok: true, remoteId: `tg-web-${j.result.message_id}`, serverSeq: j.result.message_id, routeUsed: 'browser-telegram', rttMs: Math.round(performance.now() - started), signed: true };
+      }
+
+      if (cfg.kind === 'max') {
+        if (!token || !cfg.targetId) throw new Error('Нужны access_token от @MasterBot и chat_id');
+        const apiBase = base || getServiceGuide('max').defaultEndpoint;
+        const rawTarget = String(cfg.targetId).trim();
+        const isUser = /^u(ser)?:/i.test(rawTarget);
+        const cleanId = rawTarget.replace(/^u(ser)?:/i, '').trim();
+        const paramName = isUser ? 'user_id' : 'chat_id';
+        const res = await fetch(`${apiBase}/messages?${paramName}=${encodeURIComponent(cleanId)}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: token },
+          body: JSON.stringify({ text }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(j.message || `MAX HTTP ${res.status}`);
+        cfg.stats.sentLive += 1;
+        return { ok: true, remoteId: `max-web-${Date.now()}`, serverSeq: cfg.stats.sentLive, routeUsed: 'browser-max', rttMs: Math.round(performance.now() - started), signed: true };
+      }
+
+      if (cfg.kind === 'matrix') {
+        if (!base || !cfg.targetId || !token) throw new Error('Нужны Homeserver, Room ID и Access Token');
+        const txnId = `rm-web-${Date.now()}`;
+        const res = await fetch(`${base}/_matrix/client/v3/rooms/${encodeURIComponent(cfg.targetId)}/send/m.room.message/${txnId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ msgtype: 'm.text', body: text }),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(j.error || `Matrix HTTP ${res.status}`);
+        cfg.stats.sentLive += 1;
+        return { ok: true, remoteId: j.event_id || txnId, serverSeq: cfg.stats.sentLive, routeUsed: 'browser-matrix', rttMs: Math.round(performance.now() - started), signed: true };
+      }
+
+      if (!base) throw new Error('Укажи URL Webhook-шлюза');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      const res = await fetch(base, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ protocol: 'ratmes-bridge-hook/1', network: cfg.network, targetId: cfg.targetId, text }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      cfg.stats.sentLive += 1;
+      return { ok: true, remoteId: `web-${cfg.network}-${Date.now()}`, serverSeq: cfg.stats.sentLive, routeUsed: 'browser-webhook', rttMs: Math.round(performance.now() - started), signed: true };
+    } catch (err) {
+      const corsHint = /Failed to fetch|NetworkError|CORS/i.test(String(err?.message || ''))
+        ? ' (браузер заблокировал CORS — подключи свой ПК-агент RatMes Agent в Мастере подключений)'
+        : '';
+      cfg.stats.lastError = `${err.message}${corsHint}`;
+      return {
+        ok: false,
+        error: {
+          code: 'RM-302',
+          category: 'route',
+          recoverable: true,
+          message: `Мост ${cfg.network}: ${err.message}${corsHint}`,
+        },
+      };
+    }
+  }
+
+  async function testBrowserBridge({ network = 'max', kind = null, endpoint = null, targetId = null, secretToken = null } = {}) {
+    const k = kind || network;
+    const base = (endpoint || '').replace(/\/+$/, '');
+    const token = secretToken || browserBridges.get(network)?.getSecret?.() || '';
+    const started = performance.now();
+    try {
+      if (k === 'telegram') {
+        if (!token) return { ok: false, error: { code: 'RM-401', message: 'Вставь Bot Token от @BotFather' } };
+        const apiBase = base || getServiceGuide('telegram').defaultEndpoint;
+        const me = await (await fetch(`${apiBase}/bot${token}/getMe`)).json();
+        if (!me.ok) throw new Error(me.description || 'Неверный токен');
+        const suggestedChats = [];
+        try {
+          const u = await (await fetch(`${apiBase}/bot${token}/getUpdates?limit=10`)).json();
+          const seen = new Set();
+          for (const item of (u.result || [])) {
+            const c = item?.message?.chat || item?.channel_post?.chat;
+            if (c?.id != null && !seen.has(String(c.id))) {
+              seen.add(String(c.id));
+              suggestedChats.push({ id: String(c.id), label: `${c.title || c.first_name || c.username || 'Чат'} (${c.id})` });
+            }
+          }
+        } catch { /* ignore */ }
+        return {
+          ok: true,
+          data: {
+            kind: 'telegram',
+            botName: me.result?.first_name || 'Telegram Bot',
+            rttMs: Math.round(performance.now() - started),
+            suggestedChats,
+            message: `Telegram бот @${me.result?.username || 'bot'} проверен прямо из браузера!`,
+          },
+        };
+      }
+
+      if (k === 'max') {
+        if (!token) return { ok: false, error: { code: 'RM-401', message: 'Вставь access_token бота MAX от @MasterBot' } };
+        const apiBase = base || getServiceGuide('max').defaultEndpoint;
+        const res = await fetch(`${apiBase}/me`, { headers: { Authorization: token } });
+        const me = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(me.message || `MAX HTTP ${res.status}`);
+        return {
+          ok: true,
+          data: {
+            kind: 'max',
+            botName: me.name || me.username || 'MAX Bot',
+            rttMs: Math.round(performance.now() - started),
+            suggestedChats: [],
+            message: `MAX бот ${me.name || me.username || 'OK'} подтверждён!`,
+          },
+        };
+      }
+
+      if (k === 'discord') {
+        const url = base || token;
+        if (!url) return { ok: false, error: { code: 'RM-401', message: 'Вставь Discord Webhook URL' } };
+        const res = await fetch(url);
+        const info = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(info.message || `Discord HTTP ${res.status}`);
+        return {
+          ok: true,
+          data: {
+            kind: 'discord',
+            botName: info.name || 'Discord Webhook',
+            rttMs: Math.round(performance.now() - started),
+            suggestedChats: [],
+            message: `Discord Webhook «${info.name || 'OK'}» активен!`,
+          },
+        };
+      }
+
+      if (k === 'matrix') {
+        if (!base || !token) return { ok: false, error: { code: 'RM-401', message: 'Укажи Homeserver и Access Token' } };
+        const res = await fetch(`${base}/_matrix/client/v3/account/whoami`, { headers: { Authorization: `Bearer ${token}` } });
+        const info = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(info.error || `Matrix HTTP ${res.status}`);
+        return {
+          ok: true,
+          data: { kind: 'matrix', botName: info.user_id || 'Matrix', rttMs: Math.round(performance.now() - started), suggestedChats: [], message: `Matrix аккаунт ${info.user_id} подтверждён!` },
+        };
+      }
+
+      if (!base) return { ok: false, error: { code: 'RM-401', message: 'Укажи URL API или Webhook' } };
+      const u = new URL(base);
+      return {
+        ok: true,
+        data: {
+          kind: k,
+          botName: `${k.toUpperCase()} (${u.host})`,
+          rttMs: Math.round(performance.now() - started),
+          suggestedChats: targetId ? [{ id: String(targetId), label: String(targetId) }] : [],
+          message: `Адрес ${u.host} проверен. Для стабильной работы VK/MAX/WhatsApp без CORS подключи ПК-агент выше.`,
+        },
+      };
+    } catch (err) {
+      const isCors = /Failed to fetch|NetworkError|Load failed|CORS/i.test(String(err?.message || ''));
+      return {
+        ok: false,
+        error: {
+          code: 'RM-302',
+          message: isCors
+            ? `Браузер ограничил прямой запрос к ${k.toUpperCase()} (политика CORS). Запусти ПК-агент RatMes Agent на компьютере и укажи его адрес вверху окна — тогда MAX, VK и все остальные мессенджеры заработают без ограничений!`
+            : `Проверка ${k.toUpperCase()} не прошла: ${err.message}`,
+        },
+      };
+    }
+  }
+
   return {
     getMode: () => mode,
     getAgentHealth: () => agentHealth,
+    getAgentBaseUrl: () => (mode === 'agent' ? (agentBase || (typeof location !== 'undefined' ? location.origin : '')) : ''),
+    getSavedRemoteAgentUrl: () => readSavedRemoteAgent(),
+
+    getWebhookUrl(network) {
+      const net = encodeURIComponent(String(network || 'custom').toLowerCase());
+      if (mode === 'agent') {
+        if (agentBase) return `${agentBase}/api/hooks/${net}`;
+        if (typeof location !== 'undefined') {
+          const basePath = location.pathname.includes('/ratmes') ? '/ratmes' : '';
+          return `${location.origin}${basePath}/api/hooks/${net}`;
+        }
+      }
+      return `http://<IP-твоего-ПК>:8787/api/hooks/${net}`;
+    },
+
+    async setRemoteAgentUrl(rawUrl) {
+      const normalized = normalizeAgentUrl(rawUrl);
+      if (!normalized) return { ok: false, error: { code: 'RM-105', message: 'Введи адрес ПК-агента, например http://192.168.1.15:8787' } };
+      try {
+        const health = await probeAgent(normalized);
+        if (!health) {
+          return { ok: false, error: { code: 'RM-303', message: `По адресу ${normalized} не найден RatMes Agent` } };
+        }
+        agentBase = normalized;
+        agentHealth = health;
+        mode = 'agent';
+        try { if (typeof localStorage !== 'undefined') localStorage.setItem(REMOTE_AGENT_KEY, normalized); } catch { /* ignore */ }
+        connectAgentRealtime();
+        emit({ kind: 'event', event: 'agent.connected', data: { base: normalized } });
+        return { ok: true, data: { base: normalized, health } };
+      } catch (err) {
+        return { ok: false, error: { code: 'RM-303', message: `Не удалось подключиться к ${normalized}: ${err.message}` } };
+      }
+    },
+
+    async clearRemoteAgentUrl() {
+      try { if (typeof localStorage !== 'undefined') localStorage.removeItem(REMOTE_AGENT_KEY); } catch { /* ignore */ }
+      agentBase = '';
+      agentHealth = null;
+      mode = 'browser-offline';
+      disconnectAgentRealtime();
+      await initLocalEngineIfNeeded();
+      emit({ kind: 'event', event: 'agent.disconnected', data: {} });
+      return { ok: true };
+    },
 
     async call(tool, args = {}, opts = {}) {
       const payload = { tool, args, ...opts };
@@ -196,7 +507,7 @@ export async function createBridgeClient() {
 
     async runStaticAudit() {
       if (mode === 'agent') {
-        const res = await fetch('./api/audit/code', { method: 'POST' });
+        const res = await fetch(apiPath('/api/audit/code'), { method: 'POST' });
         return res.json();
       }
       return {
@@ -214,55 +525,119 @@ export async function createBridgeClient() {
 
     getVaultDownloadUrl(relPath) {
       if (mode !== 'agent') return null;
-      return `./api/vault/download?path=${encodeURIComponent(relPath)}`;
+      return `${apiPath('/api/vault/download')}?path=${encodeURIComponent(relPath)}`;
     },
 
     getVaultMediaUrl(relPath) {
       if (mode !== 'agent' || !relPath) return null;
-      return `./api/vault/media?path=${encodeURIComponent(relPath)}`;
+      return `${apiPath('/api/vault/media')}?path=${encodeURIComponent(relPath)}`;
     },
 
     async listLiveBridges() {
-      if (mode !== 'agent') return { ok: true, data: { bridges: [] } };
-      const res = await fetch('./api/bridges', { cache: 'no-store' });
-      return res.json();
+      if (mode === 'agent') {
+        const res = await fetch(apiPath('/api/bridges'), { cache: 'no-store' });
+        return res.json();
+      }
+      const bridges = Array.from(browserBridges.values()).map((c) => ({
+        network: c.network,
+        mode: c.enabled ? 'live-browser' : 'sandbox',
+        enabled: c.enabled,
+        kind: c.kind,
+        endpoint: c.endpoint,
+        targetId: c.targetId,
+        polling: false,
+        sentLive: c.stats.sentLive,
+        recvLive: c.stats.recvLive,
+        lastError: c.stats.lastError,
+      }));
+      return { ok: true, data: { bridges } };
+    },
+
+    async testLiveBridge(cfg) {
+      if (mode === 'agent') {
+        const res = await fetch(apiPath('/api/bridges/test'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg),
+        });
+        return res.json();
+      }
+      return testBrowserBridge(cfg);
     },
 
     async configureLiveBridge(cfg) {
-      if (mode !== 'agent') {
-        return { ok: false, error: { code: 'RM-104', message: 'Живые внешние мосты требуют локального ПК-агента RatMes Agent' } };
+      if (mode === 'agent') {
+        const res = await fetch(apiPath('/api/bridges/configure'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(cfg),
+        });
+        return res.json();
       }
-      const res = await fetch('./api/bridges/configure', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cfg),
-      });
-      return res.json();
+      await initLocalEngineIfNeeded();
+      const net = String(cfg.network || '').toLowerCase();
+      const prev = browserBridges.get(net);
+      const closedSecret = cfg.secretToken || prev?.getSecret?.() || '';
+      if (cfg.secretToken) {
+        await localEngine.tools.crypto.storeSession({
+          network: net,
+          accountLabel: `browser:${cfg.kind || net}:${cfg.targetId || 'live'}`,
+          secretToken: cfg.secretToken,
+        });
+      }
+      const entry = {
+        network: net,
+        kind: cfg.kind || net,
+        endpoint: cfg.endpoint || '',
+        targetId: cfg.targetId || '',
+        enabled: cfg.enabled !== false,
+        getSecret: () => closedSecret,
+        stats: prev?.stats || { sentLive: 0, recvLive: 0, lastError: null },
+      };
+      browserBridges.set(net, entry);
+      const actor = localEngine.supervisor?.getActor(net);
+      if (actor) {
+        actor.customTransport = entry.enabled ? (p) => deliverBrowserBridge(entry, p) : null;
+      }
+      return {
+        ok: true,
+        data: {
+          mode: 'live-browser',
+          note: 'Подключено в браузерном режиме (токен в памяти SecretVault). Для автоприёма входящих и обхода CORS можно подключить ПК-агент.',
+        },
+      };
     },
 
     async disableLiveBridge(network) {
-      if (mode !== 'agent') return { ok: true, data: {} };
-      const res = await fetch('./api/bridges/disable', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ network }),
-      });
-      return res.json();
+      if (mode === 'agent') {
+        const res = await fetch(apiPath('/api/bridges/disable'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ network }),
+        });
+        return res.json();
+      }
+      const net = String(network || '').toLowerCase();
+      const entry = browserBridges.get(net);
+      if (entry) entry.enabled = false;
+      const actor = localEngine?.supervisor?.getActor(net);
+      if (actor) actor.customTransport = null;
+      return { ok: true, data: {} };
     },
 
     async listP2pPeers() {
       if (mode !== 'agent') {
         return callLocal({ tool: 'relay.lanDiscover', args: {} });
       }
-      const res = await fetch('./api/p2p/peers', { cache: 'no-store' });
+      const res = await fetch(apiPath('/api/p2p/peers'), { cache: 'no-store' });
       return res.json();
     },
 
     async connectP2pPeer(endpoint) {
       if (mode !== 'agent') {
-        return { ok: false, error: { code: 'RM-303', message: 'Прямой LAN/P2P требует ПК-агента RatMes Agent' } };
+        return { ok: false, error: { code: 'RM-303', message: 'Прямой LAN/P2P требует подключённого ПК-агента RatMes Agent' } };
       }
-      const res = await fetch('./api/p2p/connect', {
+      const res = await fetch(apiPath('/api/p2p/connect'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ endpoint }),
@@ -272,9 +647,9 @@ export async function createBridgeClient() {
 
     async sendP2pMessage(payload) {
       if (mode !== 'agent') {
-        return { ok: false, error: { code: 'RM-303', message: 'Прямой LAN/P2P требует ПК-агента RatMes Agent' } };
+        return { ok: false, error: { code: 'RM-303', message: 'Прямой LAN/P2P требует подключённого ПК-агента RatMes Agent' } };
       }
-      const res = await fetch('./api/p2p/send', {
+      const res = await fetch(apiPath('/api/p2p/send'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -294,7 +669,6 @@ export async function createBridgeClient() {
         'Content-Type': 'application/json',
       };
       try {
-        // 1. Обновляем присутствие игрока в Games «Общение»
         const presenceBody = {
           peer_id: peerId,
           display_name: String(displayName || 'Игрок Games').slice(0, 48),
@@ -309,7 +683,6 @@ export async function createBridgeClient() {
           body: JSON.stringify(presenceBody),
         }).catch(() => {});
 
-        // 2. Забираем свежие сообщения и список игроков онлайн
         const [msgRes, peersRes] = await Promise.all([
           fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.messages}?select=msg_id,room_id,network,sender_name,body_text,created_at&order=created_at.desc&limit=80`, { headers }),
           fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.presence}?select=peer_id,display_name,room_id,status,last_seen&order=last_seen.desc&limit=24`, { headers }),
@@ -394,8 +767,7 @@ export async function createBridgeClient() {
 
     close() {
       if (cloudPollTimer) clearInterval(cloudPollTimer);
-      if (eventSource) eventSource.close();
-      if (ws) ws.close();
+      disconnectAgentRealtime();
       if (broadcastChannel) broadcastChannel.close();
     },
   };

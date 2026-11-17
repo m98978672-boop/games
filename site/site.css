@@ -2208,8 +2208,8 @@ body.portal-chat-active { background: #0b121c; }
 
 .portal-chat-frame-wrap {
   width: 100%;
-  height: calc(100vh - 156px);
-  min-height: 620px;
+  height: calc(100dvh - 150px);
+  min-height: 540px;
   border-radius: var(--radius);
   overflow: hidden;
   border: 1px solid var(--line-strong);
@@ -2224,7 +2224,117 @@ body.portal-chat-active { background: #0b121c; }
   background: #0b1019;
 }
 
-@media (max-width: 640px) {
-  .portal-chat-panel { padding: 10px 12px 18px; }
-  .portal-chat-frame-wrap { height: calc(100vh - 180px); min-height: 520px; }
+.btn-portal-connect {
+  background: linear-gradient(135deg, #6f4ef6, #4b8bff);
+  color: #ffffff;
+  border: 1px solid rgba(164, 196, 255, 0.4);
+  font-weight: 700;
+}
+.btn-portal-connect:hover {
+  filter: brightness(1.08);
+}
+
+/* Полноэкранный режим чата (прячет верхнюю шапку Steam — максимум экрана на телефоне) */
+body.chat-fullscreen .steam-topbar { display: none; }
+body.chat-fullscreen .portal-chat-panel {
+  max-width: none;
+  padding: 6px;
+  gap: 6px;
+}
+body.chat-fullscreen .portal-chat-frame-wrap {
+  height: calc(100dvh - 64px - env(safe-area-inset-bottom, 0px));
+  min-height: 0;
+}
+
+/* Автомасштаб портала Games и вкладки «Общение» под телефоны (320px .. 720px) */
+@media (max-width: 720px) {
+  html {
+    font-size: clamp(13.5px, 3.6vw, 15.5px);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .steam-topbar-inner {
+    padding: 8px 10px;
+    gap: 8px;
+  }
+  .nav-brand-sub,
+  .nav-count { display: none; }
+  .nav-logo { width: 30px; height: 30px; font-size: 15px; }
+  .nav-brand-name { font-size: 14px; }
+  .nav-actions { gap: 5px; }
+  .btn-steam-add { padding: 7px 10px; font-size: 12px; }
+  .nav-icon-btn { padding: 7px 8px; min-height: 36px; min-width: 36px; }
+
+  /* Горизонтальный скролл категорий в Store Ribbon без 3-этажного переноса */
+  .store-ribbon-links {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .store-ribbon-links::-webkit-scrollbar { display: none; }
+  .ribbon-link { flex: 0 0 auto; white-space: nowrap; }
+
+  .hero-heading { font-size: clamp(20px, 6vw, 28px); }
+  .hero-stage-stats { width: 100%; justify-content: space-between; }
+
+  /* Полноценный мобильный чат во вкладке «Общение» */
+  .portal-chat-panel {
+    padding: 6px 6px calc(6px + env(safe-area-inset-bottom, 0px));
+    gap: 6px;
+  }
+  .portal-chat-bar {
+    padding: 6px 8px;
+    gap: 6px;
+    border-radius: 8px;
+  }
+  .portal-chat-bar-left {
+    width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .portal-chat-bar-left::-webkit-scrollbar { display: none; }
+  .portal-chat-badge,
+  .portal-popout-link { display: none; }
+  .portal-chat-rooms { flex-wrap: nowrap; }
+  .portal-room-btn,
+  .portal-back-btn { flex: 0 0 auto; white-space: nowrap; padding: 6px 9px; font-size: 12px; }
+  .portal-chat-actions {
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+  }
+  .portal-chat-actions .btn {
+    padding: 6px 10px;
+    font-size: 12px;
+    flex: 1;
+    justify-content: center;
+  }
+  .portal-chat-actions #btnChatFullscreen {
+    flex: 0 0 auto;
+    min-width: 38px;
+  }
+  .portal-chat-frame-wrap {
+    height: calc(100dvh - 152px - env(safe-area-inset-bottom, 0px));
+    min-height: 440px;
+    border-radius: 8px;
+  }
+  .portal-clouds-strip {
+    grid-template-columns: 1fr;
+    max-height: 45dvh;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 390px) {
+  .btn-steam-add span:last-child { display: none; }
+  .btn-steam-add { padding: 7px 11px; }
+  .portal-chat-frame-wrap {
+    height: calc(100dvh - 146px - env(safe-area-inset-bottom, 0px));
+    min-height: 390px;
+  }
 }

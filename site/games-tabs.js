@@ -1,4 +1,4 @@
-// Переключатель вкладок портала Games: «Магазин / Игры» и «Общение» (встроенный мессенджер RatMes + 9 облаков).
+// Переключатель вкладок портала Games: «Магазин / Игры» и «Общение» (встроенный мессенджер RatMes + 9 облаков + Мастер MAX).
 (function () {
   const TAB_GAMES = 'games';
   const TAB_CHAT = 'chat';
@@ -12,17 +12,49 @@
   const roomButtons = Array.from(document.querySelectorAll('[data-ratmes-room]'));
   const cloudsToggle = document.getElementById('btnToggleCloudsStrip');
   const cloudsStrip = document.getElementById('portalCloudsStrip');
+  const connectBtn = document.getElementById('btnPortalConnectServices');
+  const fullscreenBtn = document.getElementById('btnChatFullscreen');
 
   if (!storeSections.length || !chatView || !frame) return;
 
   const baseSrc = frame.getAttribute('data-src') || 'ratmes/index.html?embed=games';
   let loaded = false;
+  let frameReady = false;
+  let pendingPostMsg = null;
 
-  function loadFrame(roomId) {
-    const url = roomId ? `${baseSrc}&room=${encodeURIComponent(roomId)}` : baseSrc;
-    if (!loaded || (roomId && frame.getAttribute('src') !== url)) {
+  frame.addEventListener('load', () => {
+    frameReady = true;
+    if (pendingPostMsg) {
+      try { frame.contentWindow?.postMessage(pendingPostMsg, '*'); } catch { /* ignore */ }
+      pendingPostMsg = null;
+    }
+  });
+
+  function postToFrame(msg) {
+    if (frameReady && frame.contentWindow) {
+      try { frame.contentWindow.postMessage(msg, '*'); } catch { /* ignore */ }
+    } else {
+      pendingPostMsg = msg;
+    }
+  }
+
+  function loadFrame(opts) {
+    const o = opts || {};
+    const params = [];
+    if (o.room) params.push(`room=${encodeURIComponent(o.room)}`);
+    if (o.connect) params.push(`connect=${encodeURIComponent(o.connect)}`);
+    const suffix = params.length ? `&${params.join('&')}` : '';
+    const url = `${baseSrc}${suffix}`;
+
+    if (!loaded) {
       frame.setAttribute('src', url);
       loaded = true;
+      return;
+    }
+    if (o.connect) {
+      postToFrame({ type: 'ratmes:openConnectHub', service: o.connect === '1' ? 'max' : o.connect });
+    } else if (o.room) {
+      postToFrame({ type: 'ratmes:selectRoom', room: o.room });
     }
   }
 
@@ -33,6 +65,10 @@
     for (const sec of storeSections) sec.hidden = isChat;
     chatView.hidden = !isChat;
     document.body.classList.toggle('portal-chat-active', isChat);
+    if (!isChat) {
+      document.body.classList.remove('chat-fullscreen');
+      if (fullscreenBtn) fullscreenBtn.setAttribute('aria-pressed', 'false');
+    }
 
     for (const btn of navButtons) {
       const target = btn.getAttribute('data-portal-tab');
@@ -42,7 +78,7 @@
     }
 
     if (isChat) {
-      loadFrame(options.room || null);
+      loadFrame({ room: options.room || null, connect: options.connect || null });
       if (!options.keepScroll) {
         window.scrollTo({ top: 0, behavior: 'auto' });
       }
@@ -96,6 +132,20 @@
     });
   }
 
+  if (connectBtn) {
+    connectBtn.addEventListener('click', () => {
+      setTab(TAB_CHAT, { connect: 'max', keepScroll: true });
+    });
+  }
+
+  if (fullscreenBtn) {
+    fullscreenBtn.addEventListener('click', () => {
+      const active = document.body.classList.toggle('chat-fullscreen');
+      fullscreenBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+      fullscreenBtn.textContent = active ? '✕' : '⛶';
+    });
+  }
+
   if (cloudsToggle && cloudsStrip) {
     cloudsToggle.addEventListener('click', () => {
       const willOpen = cloudsStrip.hidden;
@@ -106,8 +156,8 @@
 
   function syncFromHash() {
     const h = (window.location.hash || '').toLowerCase();
-    if (h === '#chat' || h === '#obshchenie' || h === '#ratmes') {
-      setTab(TAB_CHAT, { updateHash: false });
+    if (h === '#chat' || h === '#obshchenie' || h === '#ratmes' || h === '#connect') {
+      setTab(TAB_CHAT, { updateHash: false, connect: h === '#connect' ? 'max' : null });
     } else {
       setTab(TAB_GAMES, { updateHash: false });
     }

@@ -8,6 +8,7 @@ import { createVoiceRecorder } from './voice-recorder.mjs';
 import { renderMarkdownToFragment } from './markdown-render.mjs';
 import { TelemetrySparkline, renderChunkMapElement, renderWaveformBarsElement } from './telemetry-canvas.mjs';
 import { createCommandPalette } from './command-palette.mjs';
+import { SERVICE_GUIDES, getServiceGuide } from '../engine/service-guides.mjs';
 
 const TOOL_SAMPLE_ARGS = {
   'search.query': { q: 'RatMes', limit: 15 },
@@ -66,6 +67,10 @@ const state = {
   highlightMsgId: null,
   incomingSeqCounter: 0,
   draftTimer: null,
+  mobileView: 'chats',
+  hubSelectedService: 'max',
+  hubStep: 'list',
+  hubSearch: '',
 };
 
 const $ = (id) => document.getElementById(id);
@@ -350,7 +355,7 @@ async function selectChat(chatId, highlightMsgId = null) {
   state.replyTarget = null;
   state.editTarget = null;
   renderReplyBar();
-  $('appShell').classList.add('mobile-chat-open');
+  setMobileView('chat');
 
   const chat = state.chats.find((c) => c.chatId === chatId);
   await Promise.all([
@@ -362,10 +367,59 @@ async function selectChat(chatId, highlightMsgId = null) {
   const draftRes = await state.client.call('workspace.getDraft', { chatId });
   if (draftRes.ok) {
     $('messageInput').value = draftRes.data.text || '';
+    autoResizeComposer();
   }
 
   await refreshAll();
   if (highlightMsgId) scrollToMessage(highlightMsgId);
+}
+
+function setMobileView(view) {
+  const allowed = ['chats', 'chat', 'inspector'];
+  const next = allowed.includes(view) ? view : 'chats';
+  state.mobileView = next;
+  const shell = $('appShell');
+  if (shell) {
+    shell.setAttribute('data-mobile-view', next);
+    shell.classList.toggle('mobile-chat-open', next === 'chat');
+  }
+  const moreBar = $('chatMoreBar');
+  if (moreBar && next !== 'chat') moreBar.hidden = true;
+
+  for (const btn of document.querySelectorAll('#mobileBottomNav [data-mobile-nav]')) {
+    btn.classList.toggle('is-active', btn.dataset.mobileNav === next);
+  }
+}
+
+function autoResizeComposer() {
+  const el = $('messageInput');
+  if (!el) return;
+  el.style.height = 'auto';
+  const maxH = window.innerWidth <= 900 ? 110 : 120;
+  el.style.height = `${Math.min(el.scrollHeight, maxH)}px`;
+}
+
+async function copyTextSafe(text, okMsg) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      toast(okMsg || 'Скопировано в буфер обмена');
+      return;
+    }
+  } catch { /* fallback ниже */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    document.execCommand('copy');
+    toast(okMsg || 'Скопировано в буфер обмена');
+  } catch {
+    toast('Скопируй строку вручную');
+  }
+  ta.remove();
 }
 
 function scrollToMessage(msgId) {
@@ -1010,6 +1064,10 @@ function renderNetworksTab() {
   }
 
   // Матрица 12 мессенджеров + Живые мосты
+  const liveCount = state.liveBridges.filter((b) => b.enabled).length;
+  const livePill = $('liveBridgesCountPill');
+  if (livePill) livePill.textContent = `${liveCount} LIVE`;
+
   const host = $('networksList');
   if (!state.matrix) return;
   host.replaceChildren();
@@ -1430,14 +1488,223 @@ function openProxyModal(net) {
   $('proxyModal').showModal();
 }
 
-function openLiveBridgeModal(net, live) {
-  $('liveBridgeTitle').textContent = `Живой мост: ${net.name} (токен -> SecretVault)`;
-  $('liveBridgeNetwork').value = net.id;
-  $('liveBridgeKind').value = ['telegram', 'discord', 'matrix', 'vk'].includes(net.id) ? net.id : 'webhook';
-  $('liveBridgeEndpoint').value = live?.endpoint || '';
-  $('liveBridgeTargetId').value = live?.targetId || '';
-  $('liveBridgeToken').value = '';
-  $('liveBridgeModal').showModal();
+function openLiveBridgeModal(net, _live) {
+  openConnectHub(net.id, 'setup');
+}
+
+// ---------------- Пошаговый Центр подключений (MAX, Telegram, Discord, VK, WhatsApp и др.) ----------------
+function setHubMobileStep(step) {
+  state.hubStep = step === 'setup' ? 'setup' : 'list';
+  const layout = $('hubLayout');
+  if (layout) layout.setAttribute('data-hub-step', state.hubStep);
+  for (const btn of document.querySelectorAll('#hubMobileTabs [data-hub-step]')) {
+    btn.classList.toggle('is-active', btn.dataset.hubStep === state.hubStep);
+  }
+}
+
+function openConnectHub(serviceId = null, step = null) {
+  if (serviceId && SERVICE_GUIDES.some((g) => g.id === serviceId)) {
+    state.hubSelectedService = serviceId;
+  } else {
+    const activeChat = state.chats.find((c) => c.chatId === state.activeChatId);
+    if (activeChat && SERVICE_GUIDES.some((g) => g.id === activeChat.network)) {
+      state.hubSelectedService = activeChat.network;
+    } else if (!state.hubSelectedService) {
+      state.hubSelectedService = 'max';
+    }
+  }
+  const desiredStep = step || (serviceId ? 'setup' : 'list');
+  setHubMobileStep(desiredStep);
+  renderConnectHub();
+  const dlg = $('connectHubModal');
+  if (dlg && !dlg.open) dlg.showModal();
+}
+
+function renderConnectHub() {
+  // 1. Статус режима ПК-агента / телефона
+  const mode = state.client.getMode();
+  const pill = $('hubAgentStatusPill');
+  const note = $('hubAgentStatusText');
+  const remoteInput = $('hubRemoteAgentInput');
+  const disconnectBtn = $('btnDisconnectRemoteAgent');
+  const savedRemote = state.client.getSavedRemoteAgentUrl();
+
+  if (mode === 'agent') {
+    pill.textContent = '🟢 ПК-агент подключён';
+    pill.className = 'pill good';
+    const base = state.client.getAgentBaseUrl();
+    note.textContent = savedRemote
+      ? `Связь с удалённым ПК-агентом (${savedRemote}) · MAX, VK, Telegram и Long Polling работают без CORS`
+      : `Локальный ПК-агент активен (${base || 'локально'}) · все живые мосты, SecretVault и RatMes-Vault/ работают напрямую`;
+    if (remoteInput && !remoteInput.value) remoteInput.value = savedRemote;
+    if (disconnectBtn) disconnectBtn.hidden = !savedRemote;
+  } else {
+    pill.textContent = '📱 Автономный режим телефона/браузера';
+    pill.className = 'pill accent';
+    note.textContent = 'Discord, Telegram, Matrix и тестовые чаты доступны сразу. Для MAX, VK и автоприёма входящих раскрой блок ниже и укажи свой ПК-агент.';
+    if (remoteInput && !remoteInput.value) remoteInput.value = savedRemote;
+    if (disconnectBtn) disconnectBtn.hidden = true;
+  }
+
+  // 2. Сетка всех 12 сервисов
+  const grid = $('hubServiceGrid');
+  if (grid) {
+    grid.replaceChildren();
+    const q = state.hubSearch.trim().toLowerCase();
+    const filtered = SERVICE_GUIDES.filter((g) => {
+      if (!q) return true;
+      return g.name.toLowerCase().includes(q) || g.id.includes(q) || g.summary.toLowerCase().includes(q);
+    });
+
+    for (const g of filtered) {
+      const live = findLiveBridgeStatus(g.id);
+      const spec = findNetworkSpec(g.id);
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `hub-service-card${g.id === state.hubSelectedService ? ' is-selected' : ''}`;
+
+      const av = document.createElement('span');
+      av.className = 'net-avatar';
+      av.style.background = g.color;
+      av.textContent = g.short;
+
+      const info = document.createElement('div');
+      info.className = 'hub-service-info';
+
+      const top = document.createElement('div');
+      top.className = 'hub-service-top';
+      const nameEl = document.createElement('strong');
+      nameEl.textContent = g.name;
+      const badge = document.createElement('span');
+      if (live?.enabled) {
+        badge.className = 'pill good';
+        badge.textContent = 'LIVE';
+      } else if (spec && spec.needsVpn && !spec.routeReady) {
+        badge.className = 'pill warn';
+        badge.textContent = 'Нужен VPN';
+      } else {
+        badge.className = 'pill';
+        badge.textContent = g.difficulty;
+      }
+      top.append(nameEl, badge);
+
+      const meta = document.createElement('div');
+      meta.className = 'hub-service-meta';
+      meta.textContent = g.summary;
+
+      info.append(top, meta);
+      card.append(av, info);
+      card.addEventListener('click', () => {
+        state.hubSelectedService = g.id;
+        setHubMobileStep('setup');
+        renderConnectHub();
+      });
+      grid.appendChild(card);
+    }
+  }
+
+  // 3. Пошаговая правая панель выбранного сервиса
+  const guide = getServiceGuide(state.hubSelectedService);
+  const live = findLiveBridgeStatus(guide.id);
+  const spec = findNetworkSpec(guide.id);
+
+  $('hubSelectedNameShort').textContent = guide.name;
+  const avatar = $('hubGuideAvatar');
+  avatar.textContent = guide.short;
+  avatar.style.background = guide.color;
+  $('hubGuideTitle').textContent = guide.name;
+  $('hubGuideDifficulty').textContent = guide.difficulty;
+
+  const statePill = $('hubGuideStatePill');
+  if (live?.enabled) {
+    statePill.textContent = `🟢 Подключён (${live.sentLive || 0}↑ / ${live.recvLive || 0}↓)`;
+    statePill.className = 'pill good';
+  } else {
+    statePill.textContent = 'Песочница / не подключён';
+    statePill.className = 'pill';
+  }
+
+  const webLink = $('hubGuideWebLink');
+  webLink.href = guide.webAppUrl;
+  const docsLink = $('hubGuideDocsLink');
+  docsLink.href = guide.docsUrl;
+  $('hubGuideSummary').textContent = guide.summary;
+
+  const e2eeWarn = $('hubGuideE2eeWarn');
+  if (guide.e2eeWarning) {
+    e2eeWarn.hidden = false;
+    e2eeWarn.textContent = `⚠️ ${guide.e2eeWarning}`;
+  } else {
+    e2eeWarn.hidden = true;
+  }
+
+  const vpnBox = $('hubGuideVpnBox');
+  if (spec && spec.needsVpn && !spec.routeReady) {
+    vpnBox.hidden = false;
+    $('hubVpnCountry').textContent = state.matrix?.activeCountry?.code || 'RU';
+    $('hubVpnDesc').textContent = spec.routeNote || 'Привяжи маршрут VPN/прокси, чтобы сообщения не останавливались в Outbox (RM-301).';
+  } else {
+    vpnBox.hidden = true;
+  }
+
+  const stepsList = $('hubStepsList');
+  stepsList.replaceChildren();
+  for (const stepText of guide.steps) {
+    const li = document.createElement('li');
+    li.textContent = stepText;
+    stepsList.appendChild(li);
+  }
+
+  // Заполняем форму с учётом выбранного сервиса
+  $('hubFormNetwork').value = guide.id;
+  const kindSel = $('hubFormKind');
+  kindSel.value = live?.kind || guide.driverKind;
+  applyHubFormFieldLabels(guide, live);
+
+  $('hubWebhookUrl').textContent = state.client.getWebhookUrl(guide.id);
+  $('hubDirectHint').textContent = guide.directBrowserHint || '';
+  $('btnHubDisableBridge').hidden = !live?.enabled;
+}
+
+function applyHubFormFieldLabels(guide, live) {
+  const f = guide.fields;
+  const kind = $('hubFormKind').value;
+  const isWebhookOverride = kind === 'webhook' && guide.driverKind !== 'webhook';
+
+  $('hubFieldEndpointWrap').hidden = !f.showEndpoint && !isWebhookOverride;
+  $('hubLabelEndpoint').textContent = isWebhookOverride ? 'URL Webhook-шлюза (n8n / Evolution API / свой сервер)' : f.endpointLabel;
+  $('hubFormEndpoint').placeholder = isWebhookOverride ? 'https://your-gateway.example/send' : f.endpointPlaceholder;
+  if ($('hubFormEndpoint').dataset.forNet !== guide.id) {
+    $('hubFormEndpoint').value = live?.endpoint || guide.defaultEndpoint || '';
+    $('hubFormEndpoint').dataset.forNet = guide.id;
+  }
+
+  $('hubFieldTokenWrap').hidden = !f.showToken && !isWebhookOverride;
+  $('hubLabelToken').textContent = isWebhookOverride ? 'Bearer-токен шлюза (необязательно)' : f.tokenLabel;
+  $('hubFormToken').placeholder = isWebhookOverride ? 'Секрет (если требуется)' : f.tokenPlaceholder;
+  if ($('hubFormToken').dataset.forNet !== guide.id) {
+    $('hubFormToken').value = '';
+    $('hubFormToken').dataset.forNet = guide.id;
+  }
+
+  $('hubFieldTargetWrap').hidden = !f.showTargetId && !isWebhookOverride;
+  $('hubLabelTarget').textContent = isWebhookOverride ? 'Target ID / номер / чат (необязательно)' : f.targetLabel;
+  $('hubFormTarget').placeholder = isWebhookOverride ? 'ID чата или получателя' : f.targetPlaceholder;
+  if ($('hubFormTarget').dataset.forNet !== guide.id) {
+    $('hubFormTarget').value = live?.targetId || '';
+    $('hubFormTarget').dataset.forNet = guide.id;
+  }
+
+  const pollWrap = $('hubPollingWrap');
+  pollWrap.hidden = !guide.supportsPolling || isWebhookOverride;
+  if (live) $('hubFormPolling').checked = Boolean(live.polling || guide.supportsPolling);
+
+  // Сбрасываем старый результат проверки при смене сервиса
+  if ($('hubTestResult').dataset.forNet !== guide.id) {
+    $('hubTestResult').hidden = true;
+    $('hubSuggestedWrap').hidden = true;
+    $('hubTestResult').dataset.forNet = guide.id;
+  }
 }
 
 // ---------------- Привязка событий ----------------
@@ -1462,8 +1729,9 @@ function bindEvents() {
     }
   });
 
-  // Автосохранение черновиков по чатам
+  // Автосохранение черновиков и авто-рост поля ввода
   $('messageInput').addEventListener('input', () => {
+    autoResizeComposer();
     if (!state.activeChatId || state.editTarget) return;
     clearTimeout(state.draftTimer);
     const chatId = state.activeChatId;
@@ -1624,12 +1892,210 @@ function bindEvents() {
   }
 
   $('btnToggleInspector').addEventListener('click', () => {
-    if (window.innerWidth <= 1120) $('inspectorPanel').classList.toggle('open');
+    if (window.innerWidth <= 900) setMobileView(state.mobileView === 'inspector' ? 'chat' : 'inspector');
+    else if (window.innerWidth <= 1180) $('inspectorPanel').classList.toggle('open');
     else $('appShell').classList.toggle('inspector-hidden');
   });
-  $('btnToggleInspectorMobile').addEventListener('click', () => $('inspectorPanel').classList.toggle('open'));
-  $('btnCloseInspector').addEventListener('click', () => $('inspectorPanel').classList.remove('open'));
-  $('btnBackChats').addEventListener('click', () => $('appShell').classList.remove('mobile-chat-open'));
+  $('btnToggleInspectorMobile').addEventListener('click', () => {
+    if (window.innerWidth <= 900) setMobileView('inspector');
+    else $('inspectorPanel').classList.toggle('open');
+  });
+  $('btnCloseInspector').addEventListener('click', () => {
+    if (window.innerWidth <= 900) setMobileView('chat');
+    else $('inspectorPanel').classList.remove('open');
+  });
+  $('btnBackChats').addEventListener('click', () => setMobileView('chats'));
+
+  // Мобильная нижняя навигация и мобильное меню действий чата
+  for (const btn of document.querySelectorAll('#mobileBottomNav [data-mobile-nav]')) {
+    btn.addEventListener('click', () => {
+      const target = btn.dataset.mobileNav;
+      if (target === 'connect') {
+        openConnectHub(null, 'list');
+        return;
+      }
+      setMobileView(target);
+    });
+  }
+  $('btnChatMoreMobile').addEventListener('click', () => {
+    const bar = $('chatMoreBar');
+    bar.hidden = !bar.hidden;
+  });
+  $('btnPinChatMobile').addEventListener('click', () => {
+    $('chatMoreBar').hidden = true;
+    $('btnPinChat').click();
+  });
+  $('btnSimIncomingMobile').addEventListener('click', () => {
+    $('chatMoreBar').hidden = true;
+    $('btnSimIncoming').click();
+  });
+  $('btnOpenSearchMobile').addEventListener('click', () => {
+    $('chatMoreBar').hidden = true;
+    state.palette.open();
+  });
+  $('btnOpenContactsMobile').addEventListener('click', () => {
+    $('chatMoreBar').hidden = true;
+    renderContactsModal();
+    $('contactsModal').showModal();
+  });
+
+  // Центр подключений MAX и других сервисов
+  $('btnOpenConnectHub').addEventListener('click', () => openConnectHub('max', 'list'));
+  $('btnOpenConnectHubFromInspector').addEventListener('click', () => openConnectHub('max', 'list'));
+  $('btnHeaderConnect').addEventListener('click', () => {
+    const chat = state.chats.find((c) => c.chatId === state.activeChatId);
+    const net = chat && SERVICE_GUIDES.some((g) => g.id === chat.network) ? chat.network : 'max';
+    openConnectHub(net, 'setup');
+  });
+  $('btnCloseConnectHub').addEventListener('click', () => $('connectHubModal').close());
+
+  for (const btn of document.querySelectorAll('#hubMobileTabs [data-hub-step]')) {
+    btn.addEventListener('click', () => setHubMobileStep(btn.dataset.hubStep));
+  }
+  $('hubServiceSearch').addEventListener('input', (e) => {
+    state.hubSearch = e.target.value;
+    renderConnectHub();
+  });
+  $('hubFormKind').addEventListener('change', () => {
+    const guide = getServiceGuide(state.hubSelectedService);
+    const live = findLiveBridgeStatus(guide.id);
+    applyHubFormFieldLabels(guide, live);
+  });
+  $('btnHubToggleTokenVis').addEventListener('click', () => {
+    const inp = $('hubFormToken');
+    inp.type = inp.type === 'password' ? 'text' : 'password';
+  });
+  $('btnCopyAgentCmd').addEventListener('click', () => {
+    copyTextSafe($('hubAgentCmdCode').textContent, 'Команда запуска ПК-агента скопирована');
+  });
+  $('btnCopyHubWebhook').addEventListener('click', () => {
+    copyTextSafe($('hubWebhookUrl').textContent, 'Webhook URL скопирован');
+  });
+  $('btnConnectRemoteAgent').addEventListener('click', async () => {
+    const url = $('hubRemoteAgentInput').value.trim();
+    const res = await state.client.setRemoteAgentUrl(url);
+    if (res.ok) {
+      toast(`🟢 Подключено к ПК-агенту (${res.data.base})!`);
+      await refreshAll({ keepScroll: true });
+      renderConnectHub();
+    } else {
+      toast(res.error?.message || 'Не удалось подключиться к ПК-агенту');
+    }
+  });
+  $('btnDisconnectRemoteAgent').addEventListener('click', async () => {
+    await state.client.clearRemoteAgentUrl();
+    $('hubRemoteAgentInput').value = '';
+    toast('Отключено от удалённого ПК-агента (автономный режим)');
+    await refreshAll({ keepScroll: true });
+    renderConnectHub();
+  });
+  $('btnHubBindVpn').addEventListener('click', () => {
+    const spec = findNetworkSpec(state.hubSelectedService);
+    if (spec) openProxyModal(spec);
+  });
+  $('btnHubTestBridge').addEventListener('click', async () => {
+    const box = $('hubTestResult');
+    box.hidden = false;
+    box.textContent = '⏳ Проверяю соединение и ищу доступные чаты…';
+    const guide = getServiceGuide(state.hubSelectedService);
+    const res = await state.client.testLiveBridge({
+      network: guide.id,
+      kind: $('hubFormKind').value,
+      endpoint: $('hubFormEndpoint').value.trim() || null,
+      targetId: $('hubFormTarget').value.trim() || null,
+      secretToken: $('hubFormToken').value.trim() || null,
+    });
+    if (res.ok) {
+      box.textContent = `✅ ${res.data.message}${res.data.rttMs != null ? ` (${res.data.rttMs} мс)` : ''}`;
+      const chats = res.data.suggestedChats || [];
+      const wrap = $('hubSuggestedWrap');
+      const chips = $('hubSuggestedChips');
+      chips.replaceChildren();
+      if (chats.length > 0) {
+        wrap.hidden = false;
+        for (const ch of chats) {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.className = 'hub-suggested-chip';
+          b.textContent = ch.label;
+          b.addEventListener('click', () => {
+            $('hubFormTarget').value = ch.id;
+            toast(`Подставлен ID: ${ch.id}`);
+          });
+          chips.appendChild(b);
+        }
+      } else {
+        wrap.hidden = true;
+      }
+    } else {
+      box.textContent = `⚠️ ${res.error?.message || 'Не удалось проверить подключение'}`;
+      $('hubSuggestedWrap').hidden = true;
+    }
+  });
+  $('hubConnectForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const guide = getServiceGuide(state.hubSelectedService);
+    const res = await state.client.configureLiveBridge({
+      network: guide.id,
+      kind: $('hubFormKind').value,
+      endpoint: $('hubFormEndpoint').value.trim() || null,
+      targetId: $('hubFormTarget').value.trim() || null,
+      secretToken: $('hubFormToken').value.trim() || null,
+      enabled: true,
+      enablePolling: !$('hubPollingWrap').hidden && $('hubFormPolling').checked,
+    });
+    if (!res.ok) {
+      toast(res.error?.message || 'Ошибка подключения сервиса');
+      return;
+    }
+    // Если чата этой сети ещё нет — сразу создаём его и открываем!
+    let targetChat = state.chats.find((c) => c.network === guide.id);
+    if (!targetChat) {
+      const slug = `${guide.id}-live-${Date.now().toString(36)}`;
+      await state.client.call('transfer.receive', {
+        sourceChannel: 'system',
+        network: guide.id,
+        chatId: slug,
+        chatTitle: `${guide.name} · Подключённый чат`,
+        senderName: 'RatMes',
+        text: `Сервис **${guide.name}** подключён (${$('hubFormKind').value.toUpperCase()}). Токен защищён в \`SecretVault\`, все сообщения сохраняются в \`RatMes-Vault/\`.`,
+      });
+      await refreshAll({ keepScroll: true });
+      targetChat = state.chats.find((c) => c.chatId === slug);
+    } else {
+      await refreshAll({ keepScroll: true });
+    }
+    $('connectHubModal').close();
+    toast(`✅ ${guide.name} подключён! ${res.data?.note || 'Токен сохранён в SecretVault.'}`);
+    if (targetChat) await selectChat(targetChat.chatId);
+  });
+  $('btnHubQuickSandbox').addEventListener('click', async () => {
+    const guide = getServiceGuide(state.hubSelectedService);
+    let existing = state.chats.find((c) => c.network === guide.id);
+    if (!existing) {
+      const slug = `${guide.id}-${Date.now().toString(36)}`;
+      await state.client.call('transfer.receive', {
+        sourceChannel: 'system',
+        network: guide.id,
+        chatId: slug,
+        chatTitle: `${guide.name} · Тестовый чат`,
+        senderName: 'RatMes',
+        text: `Открыт тестовый чат **${guide.name}** (без токена). В любой момент нажми «🔌 Подключить» вверху, чтобы привязать настоящий аккаунт/бота.`,
+      });
+      await refreshAll({ keepScroll: true });
+      existing = state.chats.find((c) => c.chatId === slug);
+    }
+    $('connectHubModal').close();
+    if (existing) await selectChat(existing.chatId);
+    toast(`Открыт чат ${guide.name}`);
+  });
+  $('btnHubDisableBridge').addEventListener('click', async () => {
+    const guide = getServiceGuide(state.hubSelectedService);
+    await state.client.disableLiveBridge(guide.id);
+    toast(`${guide.name}: переведён обратно в песочницу`);
+    await refreshAll({ keepScroll: true });
+    renderConnectHub();
+  });
 
   // Новый чат
   $('btnNewChat').addEventListener('click', () => $('newChatModal').showModal());
@@ -1697,6 +2163,7 @@ function bindEvents() {
     if (r.ok) {
       toast(`Маршрут для ${network} сохранён: ${primaryRoute}`);
       await refreshAll({ keepScroll: true });
+      if ($('connectHubModal')?.open) renderConnectHub();
     }
   });
 
@@ -1902,7 +2369,8 @@ function bindEvents() {
   };
   $('btnCloudSync').addEventListener('click', () => {
     switchInspectorTab('cloud');
-    $('inspectorPanel').classList.add('open');
+    if (window.innerWidth <= 900) setMobileView('inspector');
+    else $('inspectorPanel').classList.add('open');
     triggerCloudSync();
   });
   $('btnManualCloudSync').addEventListener('click', triggerCloudSync);
@@ -1958,6 +2426,7 @@ async function boot() {
     resultsEl: $('paletteResults'),
     onSearchQuery: (q) => state.client.call('search.query', { q, limit: 20 }),
     getQuickCommands: () => [
+      { icon: '🔌', label: 'Подключить MAX, Telegram, VK, Discord, WhatsApp…', hint: 'Мастер', run: () => openConnectHub('max', 'list') },
       { icon: '☁️', label: 'Синхронизировать облако Supabase (games-cloud-save)', hint: 'tools.cloud', run: () => $('btnManualCloudSync').click() },
       { icon: '🔎', label: 'Найти все голосовые сообщения', hint: 'has:voice', run: () => state.palette.open('has:voice') },
       { icon: '📎', label: 'Найти все сообщения с файлами', hint: 'has:file', run: () => state.palette.open('has:file') },
@@ -1981,12 +2450,38 @@ async function boot() {
   });
 
   await refreshAll();
+  setMobileView('chats');
+
+  // Приём команд из родительского портала Games (например, открыть Мастер подключений MAX/сервисов)
+  window.addEventListener('message', (ev) => {
+    const msg = ev.data;
+    if (!msg || typeof msg !== 'object') return;
+    if (msg.type === 'ratmes:openConnectHub') {
+      openConnectHub(msg.service || 'max', msg.service ? 'setup' : 'list');
+    } else if (msg.type === 'ratmes:selectRoom' && msg.room && state.chats.some((c) => c.chatId === msg.room)) {
+      selectChat(msg.room);
+    }
+  });
+
+  // Автоопределение экранной клавиатуры телефона (прячет нижнюю навигацию при вводе текста)
+  if (window.visualViewport) {
+    const checkKeyboard = () => {
+      const ratio = window.visualViewport.height / Math.max(window.innerHeight, 1);
+      document.body.classList.toggle('keyboard-open', window.innerWidth <= 900 && ratio < 0.74);
+    };
+    window.visualViewport.addEventListener('resize', checkKeyboard);
+  }
 
   const requestedRoom = params.get('room');
   if (requestedRoom && state.chats.some((c) => c.chatId === requestedRoom)) {
     await selectChat(requestedRoom);
   } else if (params.get('embed') === 'games' && state.chats.some((c) => c.chatId === 'games-lobby')) {
     await selectChat('games-lobby');
+  }
+
+  const requestedConnect = params.get('connect');
+  if (requestedConnect) {
+    openConnectHub(requestedConnect === '1' ? 'max' : requestedConnect, requestedConnect === '1' ? 'list' : 'setup');
   }
 
   state.client.startCloudAutoSync(() => ({
