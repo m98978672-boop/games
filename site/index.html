@@ -2,9 +2,9 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Games — Библиотека игр (Библ Игры): бесплатные браузерные 2D и 3D игры онлайн</title>
-<meta name="description" content="Games (Библиотека игр / Библ Игры) — бесплатные браузерные 2D и 3D игры онлайн без установки: карта страны РАТГРАД, зомби-выживалка DEAD DISTRICT, 3D-шутер СЕКТОР «ПЕПЕЛ», симуляторы, стратегии и добавление своих игр.">
+<meta name="description" content="Games (Библиотека игр / Библ Игры) — бесплатные браузерные 2D и 3D игры онлайн без установки: карта страны РАТГРАД, зомби-выживалка DEAD DISTRICT, 3D-шутер СЕКТОР «ПЕПЕЛ», симуляторы, стратегии, встроенный мессенджер «Общение» и добавление своих игр.">
 <meta name="keywords" content="Games, Библиотека игр, Библ Игры, Библ игры, Игры, браузерные игры, игры онлайн бесплатно, игры без установки, 3D игры в браузере, 2D игры, магазин игр, РАТГРАД, DEAD DISTRICT, СЕКТОР ПЕПЕЛ">
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
 <meta name="google-site-verification" content="wXwEVIFNz0375kwNzaRtQ46LZZDWx4jT00SdCsuNT5I">
@@ -18,7 +18,7 @@
 <meta property="og:site_name" content="Games — Библиотека игр (Библ Игры)">
 <meta property="og:url" content="https://m98978672-boop.github.io/games/">
 <meta property="og:title" content="Games — Библиотека игр (Библ Игры): браузерные 2D и 3D игры онлайн">
-<meta property="og:description" content="16 бесплатных браузерных 2D и 3D игр, симуляторов и стратегий в стиле Steam без установки. Можно играть офлайн и добавить свою игру с 10-кратной антивирусной проверкой.">
+<meta property="og:description" content="16 бесплатных браузерных 2D и 3D игр, симуляторов и стратегий в стиле Steam без установки, встроенный мессенджер «Общение» (RatMes) и добавление своих игр с 10-кратной антивирусной проверкой.">
 <meta property="og:image" content="https://m98978672-boop.github.io/games/site/assets/country-atlas.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="720">
@@ -102,6 +102,7 @@
 <script src="game-antivirus.js" defer></script>
 <script src="user-games.js" defer></script>
 <script src="portal.js" defer></script>
+<script src="games-tabs.js" defer></script>
 <script src="../site/community-games.js" defer></script>
 </head>
 <body data-root="../">
@@ -109,7 +110,7 @@
 <!-- Глобальная шапка в стиле Steam -->
 <header class="steam-topbar">
   <div class="steam-topbar-inner">
-    <a class="nav-brand" href="#top">
+    <a class="nav-brand" href="#top" data-portal-tab="games">
       <span class="nav-logo" aria-hidden="true">G</span>
       <span class="nav-brand-wrap">
         <span class="nav-brand-name">GAMES</span>
@@ -119,15 +120,20 @@
     </a>
 
     <nav class="nav-links" aria-label="Основная навигация">
-      <a class="is-active" href="#top">Магазин</a>
-      <a href="#new-releases">Новинки</a>
-      <a href="#games">Каталог</a>
-      <a href="#user-games-section">Мои игры</a>
-      <a href="#community-games">Сообщество</a>
+      <a class="is-active" href="#top" data-portal-tab="games">Магазин</a>
+      <a href="#new-releases" data-store-nav>Новинки</a>
+      <a href="#games" data-store-nav>Каталог</a>
+      <a href="#user-games-section" data-store-nav>Мои игры</a>
+      <a href="#community-games" data-store-nav>Сообщество</a>
+      <a class="nav-link-chat" href="#chat" data-portal-tab="chat">💬 Общение <span class="nav-chat-pill">RatMes</span></a>
       <a href="../developers/index.html">Разработчикам ↗</a>
     </nav>
 
     <div class="nav-actions">
+      <button class="nav-icon-btn nav-chat-btn" type="button" data-portal-tab="chat" title="Вкладка «Общение» — RatMes" aria-label="Открыть вкладку Общение">
+        <span aria-hidden="true">💬</span>
+        <span class="nav-icon-label">Общение</span>
+      </button>
       <button class="btn-steam-add" type="button" data-open-add-game>
         <span aria-hidden="true">+</span>
         <span>Добавить игру</span>
@@ -145,7 +151,7 @@
 </header>
 
 <!-- Фирменная градиентная лента магазина (Store Ribbon) -->
-<div class="store-ribbon-wrap">
+<div class="store-ribbon-wrap" data-portal-store-section>
   <nav class="store-ribbon" aria-label="Навигация по магазину">
     <div class="store-ribbon-links">
       <button class="ribbon-link" type="button" data-quick-cat="all">Все игры</button>
@@ -156,6 +162,7 @@
       <button class="ribbon-link" type="button" data-quick-cat="sim">Симуляторы</button>
       <button class="ribbon-link" type="button" data-quick-cat="strategy">Стратегии</button>
       <button class="ribbon-link is-highlight" type="button" data-quick-cat="user">От игроков <span class="ribbon-pill" data-user-games-count>0</span></button>
+      <button class="ribbon-link is-chat" type="button" data-open-chat="games-lobby">💬 Общение <span class="ribbon-pill">9 облаков</span></button>
     </div>
 
     <div class="ribbon-search">
@@ -182,8 +189,46 @@
   </div>
 </div>
 
+<!-- Вкладка «Общение» — встроенный мессенджер RatMes + 9 облачных сервисов -->
+<section id="portal-chat-panel" class="portal-chat-panel" hidden aria-label="Вкладка Общение — RatMes">
+  <div class="portal-chat-bar">
+    <div class="portal-chat-bar-left">
+      <button type="button" class="btn btn-steam-ghost portal-back-btn" data-portal-tab="games">← Магазин</button>
+      <span class="portal-chat-badge">RatMes · Supabase Live</span>
+      <div class="portal-chat-rooms" role="group" aria-label="Быстрые комнаты">
+        <button type="button" class="portal-room-btn is-active" data-ratmes-room="games-lobby">🎮 Общий чат</button>
+        <button type="button" class="portal-room-btn" data-ratmes-room="games-scores">🏆 Рекорды</button>
+        <button type="button" class="portal-room-btn" data-ratmes-room="games-dev">🛠 Разработчики</button>
+        <button type="button" class="portal-room-btn" data-ratmes-room="games-cloud-hub">☁ Облака</button>
+      </div>
+    </div>
+    <div class="portal-chat-actions">
+      <button type="button" class="btn btn-portal-connect" id="btnPortalConnectServices">🔌 MAX и сервисы</button>
+      <button type="button" class="btn btn-steam-ghost" id="btnToggleCloudsStrip" aria-expanded="false">☁ 9 облаков</button>
+      <button type="button" class="btn btn-steam-ghost" id="btnChatFullscreen" aria-pressed="false" title="На весь экран (удобно на телефоне)">⛶</button>
+      <a class="btn btn-steam-blue portal-popout-link" href="../ratmes/index.html" target="_blank" rel="noopener">Отдельное окно ↗</a>
+    </div>
+  </div>
+
+  <div id="portalCloudsStrip" class="portal-clouds-strip" hidden>
+    <a class="cloud-chip-link" href="https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda" target="_blank" rel="noopener noreferrer"><strong>Supabase · games-cloud-save</strong><span>Живые комнаты и sync «Общения»</span></a>
+    <a class="cloud-chip-link" href="https://drive.google.com/drive/folders/1tQi82o2fHBMpBDq-0Zg5hSM4DkLOANxB" target="_blank" rel="noopener noreferrer"><strong>Google Drive · RatMes-Vault</strong><span>Облачный резерв и ТЗ/инструменты</span></a>
+    <a class="cloud-chip-link" href="https://www.dropbox.com/home/RatMes-Vault" target="_blank" rel="noopener noreferrer"><strong>Dropbox · /RatMes-Vault</strong><span>Второй резерв документации</span></a>
+    <a class="cloud-chip-link" href="https://app.notion.com/p/RatMes-Games-41b5c62035e481878f46e7c171e6fd09" target="_blank" rel="noopener noreferrer"><strong>Notion · Центр управления</strong><span>Архитектура и хаб ссылок</span></a>
+    <a class="cloud-chip-link" href="https://linear.app/gamebobli/issue/GAM-6/podklyuchit-oblachnuyu-sinhronizaciyu-supabase-dlya-vkladki-obshenie-v" target="_blank" rel="noopener noreferrer"><strong>Linear · Gamebobli (GAM-5..7)</strong><span>Проект RatMes и дорожная карта</span></a>
+    <a class="cloud-chip-link" href="https://docs.google.com/document/d/1VOo2S1G5Q4NU-gM87zdEdy0uhIVkJ4-emWveXL5OwTM/edit" target="_blank" rel="noopener noreferrer"><strong>Google Docs · Архитектура</strong><span>Описание 15 веток и TransferGuard</span></a>
+    <a class="cloud-chip-link" href="https://docs.google.com/spreadsheets/d/1hrJnWI0YjM9RWzMX0ORYF46Xaz_Y-NeaGZ2y9xQ23QM/edit" target="_blank" rel="noopener noreferrer"><strong>Google Sheets · Матрица 2026</strong><span>Страны, сети и каталог инструментов</span></a>
+    <a class="cloud-chip-link" href="https://www.google.com/calendar/event?eid=bWk1ZG5rM3NzNDdjc2JkZ2g0Z2lyZGYwcW8gbTk4OTc4NjcyQG0" target="_blank" rel="noopener noreferrer"><strong>Google Calendar · Веха</strong><span>Проверка синхронизации v1.0</span></a>
+    <a class="cloud-chip-link" href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener noreferrer"><strong>Gmail · Черновик сводки</strong><span>Все ссылки экосистемы в черновиках</span></a>
+  </div>
+
+  <div class="portal-chat-frame-wrap">
+    <iframe id="ratmesEmbedFrame" class="portal-chat-frame" title="RatMes — вкладка Общение портала Games" data-src="../ratmes/index.html?embed=games" allow="microphone; clipboard-read; clipboard-write"></iframe>
+  </div>
+</section>
+
 <!-- Главная витрина: Steam Featured & Recommended -->
-<section class="hero-stage" id="top" aria-label="Главное и рекомендуемое">
+<section class="hero-stage" id="top" data-portal-store-section aria-label="Главное и рекомендуемое">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-ambient" id="hero-ambient" aria-hidden="true"></div>
 
@@ -195,7 +240,7 @@
       </div>
       <div class="hero-stage-stats" aria-label="Сводка платформы">
         <div class="hstat"><strong data-games-total>16</strong><span>игр</span></div>
-        <div class="hstat"><strong data-games-new>6</strong><span>новинок</span></div>
+        <div class="hstat"><strong data-games-new>5</strong><span>новинок</span></div>
         <div class="hstat"><strong data-user-games-count>0</strong><span>добавлено</span></div>
         <div class="hstat"><strong id="device-mode-badge">ПК</strong><span>офлайн</span></div>
       </div>
@@ -259,10 +304,14 @@
 </section>
 
 <!-- Двухколоночная раскладка магазина в стиле Steam -->
-<div class="store-shell">
+<div class="store-shell" data-portal-store-section>
   <aside class="steam-sidebar" id="steam-sidebar" aria-label="Библиотека и категории">
     <div class="sidebar-group">
       <h3>Ваша библиотека</h3>
+      <button class="side-link is-chat" type="button" data-open-chat="games-lobby">
+        <span>💬 Общение (RatMes)</span>
+        <span class="side-badge">9 облаков</span>
+      </button>
       <button class="side-link" type="button" data-quick-cat="fav">
         <span>★ Желаемое / Избранное</span>
         <span class="side-badge" data-fav-count>0</span>
@@ -308,7 +357,7 @@
       <div class="section-head">
         <div>
           <p class="section-kicker">ПОПУЛЯРНЫЕ НОВИНКИ И КРУПНЫЕ ОБНОВЛЕНИЯ</p>
-          <h2 id="new-releases-title">Новинки <span class="section-count-badge" data-games-new>6</span></h2>
+          <h2 id="new-releases-title">Новинки <span class="section-count-badge" data-games-new>5</span></h2>
         </div>
         <a class="btn btn-steam-ghost" href="#games">Весь каталог ↓</a>
       </div>
@@ -320,7 +369,7 @@
       <div class="section-head">
         <div>
           <p class="section-kicker">КАТАЛОГ МАГАЗИНА · ПОИСК, ТЕГИ И БИБЛИОТЕКА</p>
-          <h2 id="catalog-title">Все игры <span class="section-count-badge" data-games-total>17</span></h2>
+          <h2 id="catalog-title">Все игры <span class="section-count-badge" data-games-total>16</span></h2>
           <p class="section-sub">Наведи курсор на игру для мгновенной предзагрузки, сохраняй в желаемое ★ или переключись в табличный режим Steam.</p>
         </div>
       </div>
@@ -349,7 +398,7 @@
               <button class="view-btn" type="button" data-view-mode="list" aria-pressed="false">Список Steam</button>
             </div>
 
-            <span class="catalog-status" id="catalog-status" aria-live="polite">Показано 17 из 17</span>
+            <span class="catalog-status" id="catalog-status" aria-live="polite">Показано 16 из 16</span>
           </div>
         </div>
 

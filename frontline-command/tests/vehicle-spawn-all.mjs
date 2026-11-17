@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/game.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('vehicle_spawn_all_v1',false),false);cfg.flags.vehicle_spawn_all_v1=true;cfg.flags.safe_vehicle_spawn_v1=true;
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+assert.equal(cfg.flag('vehicle_spawn_all_v1',false),false);cfg.flags.vehicle_spawn_all_v1=true;cfg.flags.safe_vehicle_spawn_v1=true;
 function clear(g,u){assert.equal(g.walls.blocksMove(u.x,u.y,u.radius,u),false);assert.equal(g.walls.buildingAtPoint(u.x,u.y),null);for(const v of g.units.values())if(v!==u&&v.alive&&!v.downed)assert.ok(Math.hypot(u.x-v.x,u.y-v.y)>=u.radius+v.radius,`vehicle ${u.id} overlaps ${v.id}`);}
 for(const faction of [0,1]){
  const g=new Game({cfg,seed:1,aiVsAi:true});for(const u of g.units.values())if(u.isVehicle)clear(g,u);

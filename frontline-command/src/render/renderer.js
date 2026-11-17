@@ -242,9 +242,16 @@ export class Renderer {
       const key = `${b.type}_${b.faction >= 0 ? b.faction : 'n'}`;
       const img = this.bank.get('sprites/' + key);
       const p = this.worldToScreen(b.x, b.y);
-      const s = size * z * (def.category === 'point' ? 1 : 1);
+      const wallState = this.game.walls?.enabled() ? this.game.walls.state(b) : null;
+      // A single sandbag/wood segment is not an enclosed room. Keep its
+      // original sprite instead of painting a solid concrete floor over it.
+      const hasFloor = wallState?.outline.mode === 'ring';
+      const s = (hasFloor ? Math.max(wallState.outline.w || wallState.outline.size, wallState.outline.h || wallState.outline.size) : size) * z;
       ctx.globalAlpha = visible ? 1 : 0.35;
-      if (img) ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
+      // A walled building is an open cutaway: its floor must match the actual
+      // wall outline rather than a scaled roof sprite which obscures openings.
+      if (hasFloor) this.drawBuildingFloor(b, wallState, p, z);
+      else if (img) ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
       else { ctx.fillStyle = b.faction === 1 ? '#b5503a' : b.faction === 0 ? '#4a7fb5' : '#8a7d5c'; ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s); }
       ctx.globalAlpha = 1;
       // полоска здоровья построек, которым нанесли урон
@@ -256,6 +263,26 @@ export class Renderer {
         ctx.fillRect(p.x - w / 2, p.y + s / 2 + 2, w * (b.hp / (def.hp || 100)), 3);
       }
     }
+  }
+
+  drawBuildingFloor(b, st, p, z) {
+    const ctx = this.ctx, outline = st.outline;
+    const w = (outline.w || outline.size) * z, h = (outline.h || outline.size) * z;
+    const inset = (outline.thickness || 10) * z * 0.5;
+    const x = p.x - w / 2 + inset, y = p.y - h / 2 + inset;
+    const iw = Math.max(0, w - inset * 2), ih = Math.max(0, h - inset * 2);
+    ctx.fillStyle = b.type === 'farm' ? '#806e52' : b.type === 'depot' ? '#827c69' : '#77776d';
+    ctx.fillRect(x, y, iw, ih);
+    // Restrained paving seams are clipped arithmetically to the interior.
+    if (z >= 0.36) {
+      const step = 32 * z;
+      ctx.fillStyle = '#20272130';
+      for (let xx = step; xx < iw; xx += step) ctx.fillRect(x + xx, y, Math.max(0.5, z), ih);
+      for (let yy = step; yy < ih; yy += step) ctx.fillRect(x, y + yy, iw, Math.max(0.5, z));
+    }
+    ctx.fillStyle = b.faction === 0 ? '#6ca2cf' : b.faction === 1 ? '#d67a62' : '#d1c3a1';
+    const mark = Math.max(2, 5 * z);
+    ctx.fillRect(x + 5*z, y + 5*z, mark, mark);
   }
 
   // Стены зданий v2: сегменты по материалу, стадии урона (трещины), проломы,
@@ -295,10 +322,12 @@ export class Renderer {
         const stage = state ? walls.stageOf(state) : 'intact';
         const alpha = stage === 'critical' ? 0.55 : stage === 'damaged' ? 0.8 : 1;
         ctx.globalAlpha = (visible ? 1 : 0.3) * alpha;
-        ctx.strokeStyle = m.color || '#8d9096';
-        ctx.lineWidth = tb;
         const a = this.worldToScreen(b.x + seg.points[0][0], b.y + seg.points[0][1]);
         const c = this.worldToScreen(b.x + seg.points[1][0], b.y + seg.points[1][1]);
+        // Dark outer edge makes the actual collision wall distinct from floor.
+        ctx.strokeStyle = '#292c28'; ctx.lineWidth = tb + Math.max(1, 2 * z);
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(c.x, c.y); ctx.stroke();
+        ctx.strokeStyle = m.color || '#8d9096'; ctx.lineWidth = tb;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(c.x, c.y);
@@ -334,26 +363,26 @@ export class Renderer {
         const p1 = this.worldToScreen(b.x + o.p1[0], b.y + o.p1[1]);
         const p2 = this.worldToScreen(b.x + o.p2[0], b.y + o.p2[1]);
         const door = st.doors[o.id];
-        if (o.type === 'door' || o.type === 'gate') {
-          const anim = door?.anim ?? 1;
-          // створка «уезжает» в сторону при открытии
-          const t = 1 - anim;
+        if (o.type === 'door' || o.type === 'gate' || o.type === 'door_closed') {
+          const anim = Math.max(0, Math.min(1, door?.anim ?? 1));
+          const dx = p2.x - p1.x, dy = p2.y - p1.y, length = Math.hypot(dx, dy);
+          const angle = anim * Math.PI / 2;
+          // A physical leaf swings from the hinge: across the threshold when
+          // closed, against its side when open. anim is the real wall state.
+          const lx = p1.x + dx * Math.cos(angle) + (o.nx || 0) * length * Math.sin(angle);
+          const ly = p1.y + dy * Math.cos(angle) + (o.ny || 0) * length * Math.sin(angle);
+          ctx.strokeStyle = '#c6b89a'; ctx.lineWidth = Math.max(1, tb * 0.17);
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
           ctx.strokeStyle = door?.state === 'open' ? '#7c6a4a' : '#5b4529';
-          ctx.lineWidth = tb * 0.5;
-          if (t > 0.02) {
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p1.x + (p2.x - p1.x) * t, p1.y + (p2.y - p1.y) * t);
-            ctx.stroke();
-          }
-          // косяки
-          ctx.strokeStyle = '#3c3a35';
-          ctx.lineWidth = Math.max(1.5, tb * 0.3);
+          ctx.lineWidth = Math.max(1.5, tb * 0.5);
+          ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(lx, ly); ctx.stroke();
+          ctx.strokeStyle = '#3c3a35'; ctx.lineWidth = Math.max(1, tb * 0.18);
           for (const p of [p1, p2]) {
-            ctx.beginPath();
-            ctx.arc(p.x, p.y, tb * 0.5, 0, Math.PI * 2);
-            ctx.stroke();
+            ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(1.5, tb * 0.22), 0, Math.PI * 2); ctx.stroke();
           }
+          // A tiny colour cue stays visible even at a zoomed-out scale.
+          ctx.fillStyle = door?.state === 'open' ? '#83b778' : '#d88b65';
+          ctx.fillRect(p1.x - Math.max(1, z), p1.y - Math.max(1, z), Math.max(2, 2*z), Math.max(2, 2*z));
         } else if (o.type === 'window' || o.type === 'embrasure') {
           ctx.strokeStyle = o.type === 'window' ? '#c9d3da' : '#9aa4ab';
           ctx.lineWidth = Math.max(1, tb * (o.type === 'window' ? 0.3 : 0.45));

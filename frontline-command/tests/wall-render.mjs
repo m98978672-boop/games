@@ -31,6 +31,20 @@ Object.assign(renderer, {
   camera: { x: building.x, y: building.y, zoom: 1 }, showWallsDebug: false,
   isVisible: () => true,
 });
+// A cover-line outline is not a room: retain the actual sandbag artwork.
+const sandbag = game.world.addBuilding({type:'sandbags',faction:0,x:building.x+290,y:building.y,instant:true});
+walls.attach(sandbag);
+const originalBuildings=game.world.buildings;
+game.world.buildings=[sandbag];
+let images=0, floors=0;
+renderer.bank={get:()=>({})};ctx.drawImage=()=>{images++;};
+const originalFloor=renderer.drawBuildingFloor;
+renderer.drawBuildingFloor=()=>{floors++;};
+renderer.drawBuildings();
+assert.equal(images,1,'single cover-line uses its sprite');
+assert.equal(floors,0,'single wall is not drawn as a room');
+renderer.drawBuildingFloor=originalFloor;game.world.buildings=originalBuildings;
+walls.instances = new Map([[building.id, st]]);
 const render = () => { calls.length = 0; renderer.drawWalls(); return [...calls]; };
 const line = (calls, color, start) => calls.find((c) => c.op === 'stroke' && c.color === color &&
   c.path[0]?.[0] === 'moveTo' && c.path[0][1] === start.x && c.path[0][2] === start.y);
@@ -72,13 +86,16 @@ assert.ok(Math.abs(doorState.anim - 0.5) < 1e-9, 'дверь закрывает�
 frame = render();
 let leaf = line(frame, '#5b4529', doorStart);
 assert.ok(leaf, 'створка появляется при закрытии');
-assert.equal(leaf.path[1][1], (doorStart.x + doorEnd.x) / 2, 'створка наполовину закрыта');
+assert.ok(Math.hypot(leaf.path[1][1]-doorStart.x,leaf.path[1][2]-doorStart.y)>Math.hypot(doorEnd.x-doorStart.x,doorEnd.y-doorStart.y)*.9, 'створка поворачивается, сохраняя длину');
 walls.update(cfg.wallMaterials.doorAnimSeconds / 2);
 assert.equal(doorState.anim, 0, 'дверь полностью закрыта');
 walls.openDoor(building, door.id);
 walls.update(cfg.wallMaterials.doorAnimSeconds);
 assert.equal(doorState.anim, 1, 'дверь открывается за заданное время');
-assert.ok(!line(render(), '#7c6a4a', doorStart), 'открытая створка скрыта');
+const openLeaf = line(render(), '#7c6a4a', doorStart);
+assert.ok(openLeaf, 'открытая створка видна сбоку');
+const dot=(openLeaf.path[1][1]-doorStart.x)*(doorEnd.x-doorStart.x)+(openLeaf.path[1][2]-doorStart.y)*(doorEnd.y-doorStart.y);
+assert.ok(Math.abs(dot)<1e-6, 'открытая створка не перекрывает проход');
 
 walls.closeDoor(building, door.id);
 const saved = walls.serialize();

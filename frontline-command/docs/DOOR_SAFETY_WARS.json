@@ -1,0 +1,411 @@
+{
+  "seeds": 8,
+  "seconds": 180,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          41,
+          37
+        ],
+        "kills": [
+          35,
+          38
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          38,
+          30
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          41,
+          37
+        ],
+        "kills": [
+          35,
+          38
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          38,
+          30
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          46,
+          62
+        ],
+        "kills": [
+          39,
+          43
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "blockedClose": 0,
+        "alive": [
+          29,
+          38
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          46,
+          62
+        ],
+        "kills": [
+          39,
+          43
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "blockedClose": 0,
+        "alive": [
+          29,
+          38
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          52,
+          96
+        ],
+        "kills": [
+          22,
+          47
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          24,
+          31
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          52,
+          96
+        ],
+        "kills": [
+          22,
+          47
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          24,
+          31
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          72,
+          38
+        ],
+        "kills": [
+          36,
+          44
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          24,
+          35
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          72,
+          38
+        ],
+        "kills": [
+          36,
+          44
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          24,
+          35
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          51,
+          78
+        ],
+        "kills": [
+          34,
+          31
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "blockedClose": 0,
+        "alive": [
+          41,
+          39
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          51,
+          78
+        ],
+        "kills": [
+          34,
+          31
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "blockedClose": 0,
+        "alive": [
+          41,
+          39
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          81,
+          41
+        ],
+        "kills": [
+          40,
+          41
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "blockedClose": 0,
+        "alive": [
+          39,
+          27
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          81,
+          41
+        ],
+        "kills": [
+          40,
+          41
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "blockedClose": 0,
+        "alive": [
+          39,
+          27
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          34,
+          61
+        ],
+        "kills": [
+          58,
+          33
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          30,
+          24
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          34,
+          61
+        ],
+        "kills": [
+          58,
+          33
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          30,
+          24
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          91,
+          34
+        ],
+        "kills": [
+          49,
+          32
+        ],
+        "deliveries": [
+          2,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          29,
+          36
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "failures": [
+          91,
+          34
+        ],
+        "kills": [
+          49,
+          32
+        ],
+        "deliveries": [
+          2,
+          0
+        ],
+        "blockedClose": 0,
+        "alive": [
+          29,
+          36
+        ]
+      }
+    }
+  ],
+  "limitations": [
+    "Only the door occupied guard flag differs; motion_slide_guard_v1 is off in both runs",
+    "Short observation horizon is not an adjudicated draw; random streams and game state diverge",
+    "No guarantee of collision-free movement, victory balance, or browser FPS"
+  ]
+}

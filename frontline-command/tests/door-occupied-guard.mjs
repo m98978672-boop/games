@@ -59,7 +59,7 @@ for(const faction of [0,1]) {
 }
 // Legacy behavior remains available when the experimental guard is off.
 {
- const cfg=await loadConfig();assert.equal(cfg.flag('door_occupied_guard_v1',false),false);
+ const cfg=await loadConfig();assert.equal(cfg.flag('door_occupied_guard_v1',false),true);cfg.flags.door_occupied_guard_v1=false;
  const g=new Game({cfg,seed:7,aiVsAi:true});g.units.clear();g.unitGrid.clear();
  const b=g.world.buildings.find(b=>g.walls.state(b)?.outline.openings.some(o=>o.type==='door'));
  const o=g.walls.state(b).outline.openings.find(o=>o.type==='door');g.spawnUnit(0,'infantry',b.x+o.cx,b.y+o.cy);

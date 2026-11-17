@@ -1,0 +1,540 @@
+{
+  "seeds": 8,
+  "seconds": 180,
+  "pairs": [
+    {
+      "seed": 1,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 36,
+        "failures": [
+          41,
+          37
+        ],
+        "kills": [
+          35,
+          38
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          38,
+          30
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 36,
+        "failures": [
+          41,
+          37
+        ],
+        "kills": [
+          35,
+          38
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          38,
+          30
+        ]
+      }
+    },
+    {
+      "seed": 2,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 15,
+        "failures": [
+          46,
+          62
+        ],
+        "kills": [
+          39,
+          43
+        ],
+        "captures": [
+          4,
+          4
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "alive": [
+          29,
+          38
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 15,
+        "failures": [
+          46,
+          62
+        ],
+        "kills": [
+          39,
+          43
+        ],
+        "captures": [
+          4,
+          4
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "alive": [
+          29,
+          38
+        ]
+      }
+    },
+    {
+      "seed": 3,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 15,
+        "failures": [
+          52,
+          96
+        ],
+        "kills": [
+          22,
+          47
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          24,
+          31
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 15,
+        "failures": [
+          52,
+          96
+        ],
+        "kills": [
+          22,
+          47
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "deliveries": [
+          0,
+          0
+        ],
+        "alive": [
+          24,
+          31
+        ]
+      }
+    },
+    {
+      "seed": 4,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 15,
+        "failures": [
+          72,
+          38
+        ],
+        "kills": [
+          36,
+          44
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          24,
+          35
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 15,
+        "failures": [
+          72,
+          38
+        ],
+        "kills": [
+          36,
+          44
+        ],
+        "captures": [
+          4,
+          5
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          24,
+          35
+        ]
+      }
+    },
+    {
+      "seed": 5,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 5,
+        "failures": [
+          51,
+          78
+        ],
+        "kills": [
+          34,
+          31
+        ],
+        "captures": [
+          4,
+          4
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "alive": [
+          41,
+          39
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 5,
+        "failures": [
+          51,
+          78
+        ],
+        "kills": [
+          34,
+          31
+        ],
+        "captures": [
+          4,
+          4
+        ],
+        "deliveries": [
+          1,
+          1
+        ],
+        "alive": [
+          41,
+          39
+        ]
+      }
+    },
+    {
+      "seed": 6,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 28,
+        "failures": [
+          81,
+          41
+        ],
+        "kills": [
+          40,
+          41
+        ],
+        "captures": [
+          6,
+          5
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "alive": [
+          39,
+          27
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 28,
+        "failures": [
+          81,
+          41
+        ],
+        "kills": [
+          40,
+          41
+        ],
+        "captures": [
+          6,
+          5
+        ],
+        "deliveries": [
+          0,
+          2
+        ],
+        "alive": [
+          39,
+          27
+        ]
+      }
+    },
+    {
+      "seed": 7,
+      "swap": false,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 19,
+        "failures": [
+          34,
+          61
+        ],
+        "kills": [
+          58,
+          33
+        ],
+        "captures": [
+          6,
+          4
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          30,
+          24
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 19,
+        "failures": [
+          34,
+          61
+        ],
+        "kills": [
+          58,
+          33
+        ],
+        "captures": [
+          6,
+          4
+        ],
+        "deliveries": [
+          1,
+          0
+        ],
+        "alive": [
+          30,
+          24
+        ]
+      }
+    },
+    {
+      "seed": 8,
+      "swap": true,
+      "off": {
+        "on": false,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 32,
+        "failures": [
+          91,
+          34
+        ],
+        "kills": [
+          49,
+          32
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "deliveries": [
+          2,
+          0
+        ],
+        "alive": [
+          29,
+          36
+        ]
+      },
+      "on": {
+        "on": true,
+        "seconds": 180,
+        "warOver": false,
+        "outcome": null,
+        "opening": {
+          "started": 0,
+          "cleared": 0
+        },
+        "truckFailures": 32,
+        "failures": [
+          91,
+          34
+        ],
+        "kills": [
+          49,
+          32
+        ],
+        "captures": [
+          5,
+          6
+        ],
+        "deliveries": [
+          2,
+          0
+        ],
+        "alive": [
+          29,
+          36
+        ]
+      }
+    }
+  ],
+  "caveats": [
+    "Only truck_clear_opening_v1 differs; alg_deadlock is on in both",
+    "A fixed horizon is not a draw; divergence affects all outcomes and random streams",
+    "Stats deliveries may include virtual deliveries; startup/clear counters do not prove other units passed",
+    "Does not prove freedom from jams, unit overlaps in default mode, balance, or browser FPS"
+  ]
+}

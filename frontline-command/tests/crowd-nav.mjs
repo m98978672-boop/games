@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url';
 import { loadConfig } from '../src/core/config.js';
 import { Game } from '../src/sim/game.js';
 import { prepareCrowdNavigation, setCrowdDetour, clearCrowdState, crowdPositionFree } from '../src/sim/crowd_nav.js';
-const cfg=await loadConfig();
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+
 assert.equal(cfg.flag('crowd_nav_v2'),false,'experiment is off by default');
 const root=fileURLToPath(new URL('..',import.meta.url));
 for(const [arg,expected] of [['--flag-off',false],[null,true]]) {

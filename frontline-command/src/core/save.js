@@ -85,7 +85,7 @@ function saveTransport(game) {
     const t = u.truckTask;
     return {
       id: u.id, cargo: u.cargo, cargoType: u.cargoType,
-      goal: u.goal ? { x: u.goal.x, y: u.goal.y } : null,
+      goal: u.goal && !(u._openingVacate && u.goal === u._openingGoal) ? { x: u.goal.x, y: u.goal.y } : null,
       arrived: !!u.arrived, pathFailed: !!u.pathFailed,
       task: t ? { state: t.state, request: requestId(t.request), source: t.source?.id ?? null, amount: t.amount ?? 0 } : null,
     };
@@ -216,6 +216,7 @@ export const Save = {
     colorblind: false,
     showHints: true,
     autosave: true,
+    movementOccupancy: true,
   },
   meta: { xp: 0, learned: [], spent: 0, warCount: 0, bestContribution: 0 },
 

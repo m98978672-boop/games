@@ -1,0 +1,10 @@
+{
+  "name": "route-engine-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node tests/router.mjs && node tests/frontline-adapter.mjs",
+    "test:browser": "node tests/browser.mjs"
+  }
+}

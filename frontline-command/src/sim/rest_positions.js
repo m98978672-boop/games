@@ -15,7 +15,8 @@ function unsafeInRefs(refs, x, y, radius) {
 export function unsafeRest(game, x, y, radius = 0) {
   const walls = game.walls;
   if (!walls?.enabled() || !walls.refsNear) return false;
-  return unsafeInRefs(walls.refsNear(x, y, radius + 24), x, y, radius);
+  const refs = walls.refsInBox ? walls.refsInBox(x, y, radius + 24) : walls.refsNear(x, y, radius + 24);
+  return unsafeInRefs(refs, x, y, radius);
 }
 
 export function safeRestGoal(game, u, goal) {
@@ -23,7 +24,7 @@ export function safeRestGoal(game, u, goal) {
   if (!walls?.enabled() || !walls.refsNear) return goal;
   // One broad phase for the entire bounded search; do not allocate and scan
   // the spatial grid anew for every one of the candidate positions.
-  const refs = walls.refsNear(goal.x, goal.y, 120 + r + 24);
+  const refs = walls.refsInBox ? walls.refsInBox(goal.x, goal.y, 120 + r + 24) : walls.refsNear(goal.x, goal.y, 120 + r + 24);
   if (!unsafeInRefs(refs, goal.x, goal.y, r)) return goal;
   const origin = walls.buildingAtPoint(u.x, u.y);
   const fromGoal = Math.hypot(goal.x-u.x,goal.y-u.y);

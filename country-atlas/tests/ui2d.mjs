@@ -61,7 +61,7 @@ const visible = html
 
   // все элементы, которые ищет main2d, есть в разметке
   const wanted = [...main.matchAll(/(\w+):\s*document\.getElementById\('([\w-]+)'\)/g)];
-  ok(wanted.length >= 20, 'main2d ищет ' + wanted.length + ' элементов');
+  ok(wanted.length >= 18, 'main2d ищет ' + wanted.length + ' элементов');
   for (const [, name, id] of wanted) {
     ok(html.includes('id="' + id + '"'), 'элемент ' + id + ' (' + name + ') есть в разметке');
   }
@@ -125,7 +125,6 @@ const visible = html
   ok(/<div id="left-rail">/.test(html), 'левая рейка есть');
   ok(left.includes('id="hud"'), 'карта мира — в левой рейке');
   ok(left.includes('id="legend"'), 'легенда — в левой рейке, под картой');
-  ok(right.includes('id="play-dock"'), 'полигон — в правой рейке');
   ok(right.includes('id="controls"') && right.includes('id="country"') && right.includes('id="why"'),
     'тумблеры, страна и решения — в правой рейке');
   ok(!/position:\s*fixed/.test(left.replace(/<div id="left-rail">/, '')), 'внутри левой рейки нет position:fixed');
@@ -134,10 +133,8 @@ const visible = html
   ok(/#hud\{[^}]*max-height:62%/.test(html), 'карта не растягивает рейку на весь экран');
   ok(/#legend\{[^}]*flex:0 1 auto/.test(html), 'легенда занимает остаток рейки');
   ok(/#legend \.body\{[^}]*overflow:auto/.test(html), 'тело легенды прокручивается');
-  ok(/<canvas id="play-map"/.test(html), 'у полигона свой канвас');
-  ok(/id="play-foot"/.test(html), 'подпись полигона на месте');
-  ok(map.includes('attachPlayCanvas'), 'карта умеет рисовать в док');
-  ok(map.includes('renderPlayDock'), 'док перерисовывается');
+  ok(!/play-dock|play-map/.test(html + map), 'полигона вождения больше нет ни в разметке, ни в карте');
+  ok(/id="toggle-accidents"/.test(html), 'вместо полигона — тумблер ДТП');
   ok(!/drawPlayPanel/.test(map), 'панель больше не рисуется поверх карты');
   ok(/night > 0\.04/.test(map), 'ночной свет вызывается из кадра');
   const hudRow = html.slice(html.indexOf('<div id="left-rail">'), html.indexOf('<div id="right-rail">'));
@@ -156,7 +153,8 @@ const visible = html
 {
   ok(/<h2 id="country-title">страна<\/h2>/.test(html), 'панель страны подписана «страна»');
   ok(/<h2>что решили мэры<\/h2>/.test(html), 'панель решений подписана «что решили мэры»');
-  ok(/полигон вождения/.test(html), 'панель полигона подписана по-русски');
+  ok(!/полигон вождения/.test(html), 'полигон вождения убран из разметки');
+  ok(/ДТП и ошибки водителя/.test(html), 'тумблер ДТП подписан по-русски');
   ok(!/ИИ §16\.4/.test(map + html), 'старый заголовок полигона убран');
   ok(/тяните — сдвиг/.test(visible), 'подсказка управления на месте');
 }
@@ -182,12 +180,55 @@ const visible = html
   ok(bundle.length > 10000, 'бандл собран: ' + Math.round(raw.length / 1024) + ' kb');
   ok(!bundle.includes('§'), 'F-224: в бандле нет §');
   ok(!/ИИ §16\.4/.test(bundle), 'старый заголовок полигона не попал в бандл');
-  ok(bundle.includes('attachPlayCanvas'), 'док полигона в бандле');
-  ok(bundle.includes('renderPlayDock'), 'отрисовка дока в бандле');
   ok(bundle.includes('что решили мэры') === false, 'заголовки панелей остались в разметке, а не в коде');
   ok(bundle.includes(' составов · '), 'короткая строка поездов в бандле: «8 составов · 110 377 км»');
   ok(bundle.includes(' судна · у моста '), 'короткая строка судов в бандле');
   ok(bundle.includes(' бортов · сели '), 'короткая строка авиации в бандле');
 }
 
-console.log('OK: 6 групп проверок интерфейса §72 и раскладки §74 (F-222…F-224, проверок ' + checks + ')');
+
+/* §82: газета и §83: телефон и авто-масштаб (F-279…F-286) */
+{
+  ok(/id="news"/.test(html), 'панель газеты есть');
+  ok(/id="news-list"/.test(html), 'список заметок есть');
+  ok(/<summary>газета/.test(html), 'газета подписана по-русски');
+  ok(/id="news-count"/.test(html), 'у газеты есть счётчик');
+  ok(main.includes("document.getElementById('news-list')"), 'main2d находит список заметок');
+  const leftRail = html.slice(html.indexOf('<div id="left-rail">'), html.indexOf('<div id="right-rail">'));
+  ok(leftRail.includes('id="news"'), 'газета — в левой рейке');
+  ok(map.includes('collectNews'), 'карта собирает заметки');
+  ok(map.includes('updateNewsPanel'), 'панель газеты обновляется');
+  ok(!/innerHTML\s*=\s*''\s*;\s*for/.test(map), 'лента собирается без innerHTML');
+
+  /* авто-масштаб: кнопки, обработчики, пересчёт при повороте */
+  ok(/id="auto"/.test(html), 'кнопка «авто» есть');
+  ok(/id="fit-country"/.test(html) && /id="fit-region"/.test(html) && /id="fit-city"/.test(html),
+    'кнопки страны, области и города есть');
+  ok(main.includes("['fit-country', 'country']"), 'кнопка страны подключена');
+  ok(main.includes("['fit-city', 'city']"), 'кнопка города подключена');
+  ok(main.includes('applyFit'), 'авто-масштаб применяется');
+  ok(main.includes('refreshAutoFit'), 'кадр пересчитывается при смене размера');
+  ok(main.includes("addEventListener('orientationchange'"), 'поворот телефона обработан');
+  ok(map.includes('fitScaleFor'), 'карта умеет считать масштаб из кадра');
+  ok(map.includes('if (this.autoFit) this.scale'), 'resize пересчитывает масштаб в авто-режиме');
+  ok(main.includes('isPhone(window.innerWidth'), 'на телефоне старт — в режиме страны');
+  ok(main.includes('startCenter(map.settlements'), 'карта центрируется по стране');
+
+  /* телефонная раскладка: рейки сверху и снизу, высоты не пересекаются */
+  ok(/@media \(max-width: 820px\)/.test(html), 'есть телефонная раскладка');
+  const media = html.slice(html.indexOf('@media (max-width: 820px)'), html.indexOf('#loading{'));
+  ok(/#left-rail\{[^}]*top:auto/.test(media), 'слева рейка уезжает вниз');
+  ok(/#left-rail\{[^}]*flex-direction:row/.test(media), 'внизу панели в одну строку');
+  ok(/#hud\{[^}]*max-height:46vh/.test(media), 'HUD на телефоне не выше 46 % экрана');
+  ok(/#right-rail\{[^}]*max-height:34vh/.test(media), 'верхняя рейка не выше 34 %');
+  ok(/#controls label\{[^}]*min-height:34px/.test(media), 'подписи не мельче пальца');
+  ok(/#controls input\[type=checkbox\]\{[^}]*width:18px/.test(media), 'галочки крупные');
+  ok(/#controls \.rowbtn button\{[^}]*min-width:40px/.test(media), 'кнопки не уже 40 px');
+  ok(/@media \(max-width: 430px\)/.test(html), 'на узком экране своя раскладка');
+  ok(media.includes('overflow-x:auto'), 'верхняя рейка прокручивается вбок');
+  ok(/<meta name="viewport" content="width=device-width/.test(html), 'страница объявлена мобильной');
+  ok(/touch-action:none/.test(html), 'жесты не скроллят страницу');
+  ok(/touch-action:none/.test(html) && /pointerdown/.test(main), 'панорама и щипок на указателях');
+}
+
+console.log('OK: 8 групп проверок интерфейса §72, раскладки §74 и телефона §83 (F-222…F-224, F-279…F-286, проверок ' + checks + ')');

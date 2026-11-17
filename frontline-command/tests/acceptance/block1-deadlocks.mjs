@@ -18,7 +18,7 @@ if (process.env.DOOR_COURTESY === '1') cfg.flags.door_courtesy_v1 = true;
 if (process.env.WALL_GOAL_GUARD === '1') cfg.flags.wall_goal_guard_v1 = true;
 function scene(seed, faction) {
   const game = new Game({ cfg, seed, difficulty: 'regular', aiVsAi: true });
-  game.units.clear(); game.unitGrid.clear();
+  game.units.clear(); game.unitGrid.clear(); game.occupancyGrid.clear();
   const building = game.world.buildings.find((b) => b.type === 'hq' && b.faction === faction && game.walls.state(b));
   if (!building) throw new Error(`hq ${faction} отсутствует`);
   const opening = game.walls.state(building).outline.openings.find((o) => o.type === 'door');

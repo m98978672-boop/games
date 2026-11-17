@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import { loadConfig } from '../../frontline-command/src/core/config.js';
+import { Game } from '../../frontline-command/src/sim/game.js';
+import { frontlineDoorEdge } from '../adapters/frontline-door.mjs';
+import { createSnapshot, beginSearch } from '../src/router.mjs';
+const cfg=await loadConfig();
+for(const faction of [0,1]) {
+  const g=new Game({cfg,seed:7,aiVsAi:true});
+  const b=g.world.buildings.find(x=>x.type==='hq'&&x.faction===faction&&g.walls.state(x));
+  const opening=g.walls.state(b).outline.openings.find(x=>x.type==='door');
+  assert.equal(g.walls.closeDoor(b,opening.id).ok,true);
+  g.walls.flushNav();
+  const e=frontlineDoorEdge(g,b,opening.id,{id:'cross',from:'inside',to:'outside',cost:1,openCost:2});
+  assert.equal(e.portal.state,'closed'); assert.equal(e.portal.width,opening.width);
+  const revision=()=>g.walls.navQueue.size ? 'pending' : String(g.world.navVersion);
+  const snap=createSnapshot({nodes:['inside','outside'],edges:[e],revision:revision()});
+  const initial=beginSearch(snap,{from:'inside',to:'outside',radius:8,hostRevision:revision});
+  const planned=initial.step(10);
+  assert.equal(planned.status,'found');
+  assert.equal(planned.actions[0].action,'open-and-cross');
+  assert.equal(g.walls.state(b).doors[opening.id].state,'closed','planning has no side effects');
+  const search=beginSearch(snap,{from:'inside',to:'outside',radius:8,hostRevision:revision});
+  assert.equal(search.step(1).status,'running');
+  g.walls.openDoor(b,opening.id);
+  assert.equal(search.step(1).status,'stale','queued door rebuild invalidates search immediately');
+  const refreshed=frontlineDoorEdge(g,b,opening.id,{id:'cross',from:'inside',to:'outside',cost:1});
+  assert.equal(refreshed.portal.state,'open');
+  assert.throws(()=>frontlineDoorEdge(g,b,'not-a-door',{id:'x',from:'a',to:'b',cost:1}));
+}
+console.log('Frontline adapter: real HQ doors and queued state changes, both factions passed (no movement integration)');

@@ -18,10 +18,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Validate community catalog and local files
-        run: node site/tests/community-catalog.mjs
-      - name: Validate storefront portal and 10-pass antivirus shield
-        run: node site/tests/portal.mjs
+      - name: Validate community catalog, storefront portal and 10-pass antivirus shield
+        run: |
+          node site/tests/community-catalog.mjs
+          node site/tests/portal.mjs
       - name: Test RatCore v1.0.0 Stage 1-5 + Demo Game (All 10 Standard Modules + All 14 Opt-In Packs + RatStudio + ToolGuard)
         run: |
           node ratcore/tests/tool-contract.mjs
@@ -68,6 +68,10 @@ jobs:
           node dead-district/tools/static_gd_check.mjs
       - name: Test PLAYBRIDGE backend
         run: npm test --prefix cloud-play
+      - name: Test RatMes engine, server, P2P, stress and TransferGuard audit
+        run: |
+          npm test --prefix ratmes
+          npm run audit --prefix ratmes
 
   malware-scan:
     name: Scan changed files with ClamAV

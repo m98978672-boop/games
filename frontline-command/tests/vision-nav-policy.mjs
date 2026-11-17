@@ -3,7 +3,8 @@ import {loadConfig} from '../src/core/config.js';import {Game} from '../src/sim/
 import {chooseVisionNavigation} from '../src/sim/vision_nav_policy.js';
 import {courtesyYield} from '../src/sim/door_courtesy.js';
 import {moveAlongFlow} from '../src/sim/units.js';
-const cfg=await loadConfig();assert.equal(cfg.flag('vision_nav_policy_v1',false),false);
+const cfg=await loadConfig();cfg.flags.movement_occupancy_v1=false; // isolate this legacy flag from occupancy
+assert.equal(cfg.flag('vision_nav_policy_v1',false),false);
 for(const faction of [0,1]){
  const g=new Game({cfg,seed:1,aiVsAi:true});g.units.clear();g.unitGrid.clear();
  const u=g.spawnUnit(faction,'infantry',2000,2000);u.goal={x:2250,y:2000};

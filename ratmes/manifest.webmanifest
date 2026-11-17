@@ -1,0 +1,11 @@
+{
+  "name": "RatMes — Единый мессенджер и файловый архив",
+  "short_name": "RatMes",
+  "description": "Быстрый local-first мессенджер-комбайн с вечным файловым резервом RatMes-Vault/, 3-фазным движком времени и передачей строго через инструменты RatMes.tools.*",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0e1116",
+  "theme_color": "#161b23",
+  "lang": "ru",
+  "icons": []
+}

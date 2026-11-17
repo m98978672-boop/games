@@ -23,8 +23,10 @@ export function renderRootIndex(siteHtml) {
     .replace(/src="game-antivirus\.js"/g, 'src="site/game-antivirus.js"')
     .replace(/src="user-games\.js"/g, 'src="site/user-games.js"')
     .replace(/src="portal\.js"/g, 'src="site/portal.js"')
+    .replace(/src="games-tabs\.js"/g, 'src="site/games-tabs.js"')
     .replace(/src="\.\.\/site\/community-games\.js"/g, 'src="site/community-games.js"')
     .replace(/data-root="\.\.\/"/g, 'data-root=""')
+    .replace(/data-src="\.\.\/([a-z0-9-]+)\//g, 'data-src="$1/')
     .replace(/href="\.\.\/([a-z0-9-]+)\//g, 'href="$1/')
     .replace(/src="\.\.\/([a-z0-9-]+)\//g, 'src="$1/');
 }
