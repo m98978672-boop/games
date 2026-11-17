@@ -265,10 +265,12 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 
-.chat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.chat-header-left { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.chat-header-meta { min-width: 0; flex: 1 1 auto; overflow: hidden; }
 .chat-header-meta h2 { margin: 0; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-subbadges { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
-.chat-header-actions { display: flex; gap: 5px; flex-shrink: 0; }
+.chat-subbadges { display: flex; flex-wrap: nowrap; gap: 5px; margin-top: 3px; overflow: hidden; }
+.chat-subbadges .pill { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-header-actions { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
 
 .pill {
   display: inline-flex;
@@ -328,7 +330,7 @@ html, body {
   gap: 11px;
 }
 
-.msg-row { display: flex; flex-direction: column; max-width: 80%; transition: transform 0.18s ease; }
+.msg-row { display: flex; flex-direction: column; max-width: 80%; min-width: 0; transition: transform 0.18s ease; }
 .msg-row.out { align-self: flex-end; align-items: flex-end; }
 .msg-row.in { align-self: flex-start; align-items: flex-start; }
 .msg-row.highlight .msg-bubble { box-shadow: 0 0 0 2px var(--accent); }
@@ -338,6 +340,8 @@ html, body {
   border-radius: 14px;
   background: var(--bg-2);
   border: 1px solid var(--border);
+  max-width: 100%;
+  overflow-wrap: anywhere;
   word-break: break-word;
 }
 
@@ -482,6 +486,79 @@ html, body {
 .quick-react-bar button { font-size: 12px; opacity: 0.65; }
 .quick-react-bar button:hover { opacity: 1; transform: scale(1.15); }
 
+.msg-more-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 22px;
+  padding: 0 6px !important;
+  border-radius: 999px;
+  border: 1px solid var(--border) !important;
+  background: var(--bg-2) !important;
+  color: var(--text-1) !important;
+  font-weight: 700;
+}
+.msg-actions-drawer {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.chat-item-sub.is-live-sub { color: #8ff0b5; font-weight: 500; }
+.chat-item-sub.is-warn-sub { color: #fbbf24; font-weight: 500; }
+
+/* Понятная строка «Можно ли писать и кому» над полем ввода */
+.chat-can-write-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  font-size: 11.5px;
+  background: rgba(18, 24, 36, 0.96);
+  border-top: 1px solid var(--border);
+  color: var(--text-1);
+  min-width: 0;
+}
+.chat-can-write-bar.is-live {
+  background: rgba(24, 46, 37, 0.45);
+  border-top-color: rgba(61, 220, 132, 0.25);
+  color: #c2f5d4;
+}
+.chat-can-write-bar.is-demo {
+  background: rgba(58, 43, 20, 0.45);
+  border-top-color: rgba(232, 180, 90, 0.28);
+  color: #f6dca6;
+}
+.chat-can-write-bar.is-warn {
+  background: rgba(68, 34, 24, 0.5);
+  border-top-color: rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+}
+.can-write-text {
+  min-width: 0;
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.can-write-action {
+  appearance: none;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.can-write-action:hover { background: rgba(255, 255, 255, 0.18); }
+
 /* Composer & Voice Recording */
 .reply-bar, .attachment-bar, .voice-record-bar {
   display: flex;
@@ -512,10 +589,13 @@ html, body {
   padding: 9px 12px 5px;
   background: var(--bg-1);
   border-top: 1px solid var(--border);
+  min-width: 0;
 }
 
 .composer-input {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
   background: var(--bg-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -526,6 +606,84 @@ html, body {
   resize: none;
   max-height: 120px;
 }
+
+.btn-send { flex-shrink: 0; }
+.btn-send .send-ico { display: none; }
+
+/* Модалка «Кому написать?» */
+.modal-write {
+  width: min(560px, 95vw);
+  max-height: min(88dvh, 720px);
+  overflow-y: auto;
+}
+.write-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.write-nick-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+}
+.write-nick-label { font-size: 12px; font-weight: 700; color: var(--text-1); white-space: nowrap; }
+.write-nick-row .text-input { flex: 1; min-width: 0; }
+.write-section { display: flex; flex-direction: column; gap: 7px; }
+.write-section-title { font-size: 12px; font-weight: 700; color: var(--text-0); }
+.write-list { display: flex; flex-direction: column; gap: 6px; }
+.write-room-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 11px;
+  border: 1px solid rgba(61, 220, 132, 0.28);
+  background: rgba(61, 220, 132, 0.08);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.write-room-btn:hover { background: rgba(61, 220, 132, 0.15); border-color: rgba(61, 220, 132, 0.55); }
+.write-room-btn strong { display: block; font-size: 13px; color: #f2f7ff; }
+.write-room-btn span { display: block; font-size: 11.5px; color: var(--text-1); margin-top: 2px; }
+.write-people-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.write-person-chip {
+  padding: 6px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-0);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.write-person-chip:hover { border-color: var(--accent); color: var(--accent); }
+.write-services-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.write-svc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 6px 6px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-0);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.write-svc-btn.is-live { border-color: rgba(61, 220, 132, 0.45); background: rgba(61, 220, 132, 0.12); }
+.write-svc-btn:hover { border-color: rgba(130, 164, 255, 0.55); }
 
 .composer-input:focus { outline: none; border-color: var(--accent); }
 
@@ -1749,27 +1907,107 @@ body.keyboard-open .mobile-bottom-nav { display: none !important; }
 
   .btn { min-height: 38px; }
   .btn-sm { min-height: 34px; padding: 6px 10px; }
-  .icon-btn { width: 38px; height: 38px; }
+  .icon-btn { width: 38px; height: 38px; flex-shrink: 0; }
   .chat-item { padding: 11px 10px; }
   .composer-hint { display: none; }
 
-  .chat-header {
+  /* Компактный чистый список чатов без 4-этажных фильтров */
+  .sidebar-controls {
     padding: 8px 10px;
+    gap: 7px;
+  }
+  .network-chips {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+  .network-chips::-webkit-scrollbar { display: none; }
+  .network-chips .chip {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+  .sidebar-cta-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 6px;
   }
-  .chat-header-meta h2 { font-size: 14.5px; }
-  .chat-subbadges .pill { font-size: 10px; padding: 2px 6px; }
-  .messages-feed { padding: 10px 10px 14px; }
-  .msg-bubble { max-width: 90%; }
+  .sidebar-cta-row .btn {
+    width: 100%;
+    justify-content: center;
+    padding: 8px 8px;
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+
+  /* Чистая 1-строчная шапка чата без наложений */
+  .chat-header {
+    padding: 7px 8px;
+    gap: 6px;
+  }
+  .chat-header-left { gap: 7px; }
+  .chat-header-meta h2 { font-size: 14.5px; line-height: 1.2; }
+  .chat-subbadges { margin-top: 2px; }
+  .chat-subbadges .pill { font-size: 10.5px; padding: 1px 7px; }
+  .btn-connect-sm { padding: 5px 9px; font-size: 12px; white-space: nowrap; }
+
+  /* Чистая лента сообщений (действия раскрываются по кнопке ⋯) */
+  .messages-feed { padding: 10px 10px 14px; gap: 10px; }
+  .msg-row { max-width: 88%; }
+  .msg-bubble { padding: 9px 11px; }
+  .msg-more-toggle { display: inline-flex; }
+  .msg-actions-drawer { display: none; }
+  .msg-row.actions-open .msg-actions-drawer {
+    display: flex;
+    width: 100%;
+    padding: 5px 8px;
+    margin-top: 3px;
+    border-radius: 9px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  /* Компактная плашка «Можно ли писать» + просторный композер с кнопкой ➤ */
+  .chat-can-write-bar {
+    padding: 6px 9px;
+    font-size: 11px;
+    gap: 6px;
+  }
   .composer {
+    align-items: center;
     padding: 7px 8px;
     gap: 6px;
   }
   .composer-input {
     min-height: 40px;
-    max-height: 110px;
+    max-height: 104px;
     padding: 8px 10px;
+    border-radius: 20px;
   }
+  .btn-send {
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+  }
+  .btn-send .send-label { display: none; }
+  .btn-send .send-ico { display: block; font-size: 17px; line-height: 1; transform: translateX(1px); }
+
+  .modal-write {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 92dvh;
+    margin: auto 0 0;
+    border-radius: 18px 18px 0 0;
+  }
+  .write-nick-row { flex-wrap: wrap; }
 
   .inspector-tabs {
     display: flex;
