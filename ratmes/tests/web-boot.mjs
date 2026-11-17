@@ -151,7 +151,7 @@ assert.ok(byId.get('cloudProgressBanner').classList.contains('is-ready'), 'Ба�
 assert.ok(byId.get('chatList').children.length >= 3, 'Список реальных чатов должен отрендериться');
 assert.ok(byId.get('peopleDirectoryList').children.length >= 2, 'Каталог людей должен отрендериться');
 assert.ok(byId.get('sidebarLinksList').children.length >= 12, 'Ссылки подключений должны отрендериться');
-for (const hiddenId of ['pinnedBanner', 'replyBar', 'voiceRecordBar', 'attachmentBar', 'btnQuickBindVpn', 'btnHeaderConnect', 'chatMoreBar']) {
+for (const hiddenId of ['pinnedBanner', 'replyBar', 'voiceRecordBar', 'attachmentBar', 'chatCanWriteBar', 'btnQuickBindVpn', 'btnHeaderConnect', 'chatMoreBar']) {
   assert.equal(byId.get(hiddenId).hidden, true, `Элемент #${hiddenId} должен оставаться скрытым в обычном чате`);
 }
 console.log('  ✓ app.js загрузился без ошибок импорта, полоса облака дошла до 100%, скрытые панели не вылезают');

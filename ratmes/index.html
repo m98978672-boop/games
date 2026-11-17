@@ -4,16 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#131720">
-  <title>RatMes — Живое общение и единые подключения</title>
+  <title>RatMes</title>
   <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=15">
 </head>
 <body>
-  <!-- Живая полоса подключения к облаку Supabase (видна сразу при открытии на телефоне и ПК) -->
+  <!-- Полоса подключения к облаку: видна только во время загрузки или при ошибке, после подключения полностью скрывается -->
   <div class="cloud-progress-banner is-loading" id="cloudProgressBanner" role="status" aria-live="polite">
     <div class="cloud-progress-row">
       <span class="cloud-progress-dot" id="cloudProgressDot" aria-hidden="true"></span>
-      <span class="cloud-progress-label" id="cloudProgressLabel">Подключение к облаку…</span>
+      <span class="cloud-progress-label" id="cloudProgressLabel">Подключение…</span>
       <span class="cloud-progress-meta" id="cloudProgressMeta">10%</span>
       <button type="button" class="cloud-progress-retry" id="btnCloudRetry" hidden>↻ Повторить</button>
     </div>
@@ -23,131 +23,115 @@
   </div>
 
   <div class="app-shell" id="appShell">
-    <!-- Левая колонка: профиль, вкладки Чаты / Люди / Подключения -->
+    <!-- Левая колонка: чистый список чатов и людей (как в Telegram) -->
     <aside class="sidebar" id="sidebarPanel">
       <header class="brand-bar">
-        <div class="brand-mark">
-          <span class="brand-badge">RM</span>
-          <div>
-            <h1>RatMes</h1>
-            <p class="brand-sub" id="connectionModeLabel">Подключение к облаку…</p>
-          </div>
-        </div>
-        <div class="brand-actions">
-          <button class="icon-btn" id="btnCommandPalette" type="button" title="Поиск по сообщениям (Ctrl+K)">🔎</button>
-          <button class="icon-btn" id="btnMute" type="button" title="Звук уведомлений">🔊</button>
-          <button class="icon-btn" id="btnToggleInspectorTop" type="button" title="Настройки, облака и архив">⚙️</button>
-        </div>
-      </header>
-
-      <!-- Личный профиль пользователя + ссылка на личный чат со мной -->
-      <section class="profile-strip" id="myProfileBar">
-        <button type="button" class="profile-main" id="btnEditProfile" title="Изменить имя и статус">
+        <button type="button" class="profile-main" id="btnEditProfile" title="Профиль и имя">
           <span class="profile-avatar" id="myProfileAvatar">Я</span>
           <span class="profile-text">
             <span class="profile-name-row">
               <strong id="myProfileName">Участник</strong>
-              <span class="profile-slot-pill" id="myProfileSlotBadge" hidden>Профиль #2</span>
+              <span class="profile-slot-pill" id="myProfileSlotBadge" hidden>#2</span>
             </span>
-            <span id="myProfileBio">Нажми, чтобы задать имя</span>
+            <span class="brand-sub" id="connectionModeLabel">Подключение…</span>
           </span>
         </button>
-        <button type="button" class="btn btn-sm btn-invite-self" id="btnShareMyLink" title="Скопировать ссылку на личный чат со мной">🔗 Ссылка</button>
-      </section>
+        <div class="brand-actions">
+          <button class="icon-btn icon-btn-accent" id="btnNewDmQuick" type="button" title="Новый личный чат">✉️</button>
+          <button class="icon-btn" id="btnCreateRoomQuick" type="button" title="Новая комната или вход по ссылке">➕</button>
+          <button class="icon-btn hide-mobile" id="btnCommandPalette" type="button" title="Поиск (Ctrl+K)">🔎</button>
+          <button class="icon-btn hide-mobile" id="btnMute" type="button" title="Звук">🔊</button>
+          <button class="icon-btn hide-mobile" id="btnToggleInspectorTop" type="button" title="Настройки и подключения">⚙️</button>
+        </div>
+      </header>
 
-      <!-- Главные 3 вкладки левой панели: Чаты / Люди / Подключения -->
-      <nav class="sidebar-main-tabs" id="sidebarMainTabs" role="tablist" aria-label="Разделы мессенджера">
+      <!-- Вкладки для ПК (на телефоне скрыты, чтобы не дублировать нижнюю панель) -->
+      <nav class="sidebar-main-tabs" id="sidebarMainTabs" role="tablist" aria-label="Разделы">
         <button type="button" class="smtab is-active" data-sidebar-tab="chats" role="tab" aria-selected="true">
-          <span>💬 Чаты</span>
+          <span>Чаты</span>
           <span class="smtab-badge" id="badgeChatsCount" hidden>0</span>
         </button>
         <button type="button" class="smtab" data-sidebar-tab="people" role="tab" aria-selected="false">
-          <span>👥 Люди</span>
+          <span>Люди</span>
           <span class="smtab-badge is-online" id="badgeOnlineCount">0</span>
         </button>
         <button type="button" class="smtab" data-sidebar-tab="connect" role="tab" aria-selected="false">
-          <span>🔌 Ссылки</span>
+          <span>Мосты</span>
         </button>
       </nav>
 
       <!-- Панель 1: ЧАТЫ -->
       <div class="sidebar-pane is-active" id="sidebarPaneChats">
         <section class="sidebar-controls">
-          <input type="search" id="chatSearchInput" class="text-input" placeholder="Поиск чатов и людей…" autocomplete="off">
+          <input type="search" id="chatSearchInput" class="text-input" placeholder="Поиск…" autocomplete="off">
           <div class="chat-filter-pills" id="chatFilterPills">
             <button type="button" class="cfpill is-active" data-chat-filter="all">Все</button>
-            <button type="button" class="cfpill" data-chat-filter="dm">👤 Личные</button>
-            <button type="button" class="cfpill" data-chat-filter="rooms">💬 Комнаты</button>
-            <button type="button" class="cfpill" data-chat-filter="bridges">🔌 Мосты</button>
-          </div>
-          <div class="sidebar-cta-row">
-            <button class="btn btn-primary" id="btnNewDmQuick" type="button">👤 Личный чат</button>
-            <button class="btn btn-ghost" id="btnCreateRoomQuick" type="button">➕ Комната</button>
+            <button type="button" class="cfpill" data-chat-filter="dm">Личные</button>
+            <button type="button" class="cfpill" data-chat-filter="rooms">Комнаты</button>
           </div>
         </section>
 
-        <nav class="chat-list" id="chatList" aria-label="Список реальных чатов"></nav>
+        <nav class="chat-list" id="chatList" aria-label="Список чатов"></nav>
       </div>
 
-      <!-- Панель 2: ЛЮДИ (живой каталог из Supabase + 1-на-1 чат + вход по коду) -->
+      <!-- Панель 2: ЛЮДИ -->
       <div class="sidebar-pane" id="sidebarPanePeople" hidden>
         <section class="sidebar-controls">
-          <input type="search" id="peopleSearchInput" class="text-input" placeholder="Найти человека по имени…" autocomplete="off">
+          <input type="search" id="peopleSearchInput" class="text-input" placeholder="Найти человека…" autocomplete="off">
           <div class="sidebar-cta-row">
-            <button class="btn btn-primary" id="btnShareMyLinkPeople" type="button">🔗 Пригласить друга</button>
-            <button class="btn btn-ghost" id="btnJoinByCodeOpen" type="button">🔑 Код комнаты</button>
+            <button class="btn btn-primary" id="btnShareMyLinkPeople" type="button">🔗 Моя ссылка</button>
+            <button class="btn btn-ghost" id="btnJoinByCodeOpen" type="button">🔑 По коду</button>
           </div>
-          <a class="btn btn-second-tab btn-full" id="btnOpenSecondTabPeople" href="?acc=2" target="_blank" rel="noopener">🪟 Открыть 2-й профиль (тест в 1 браузере) ↗</a>
         </section>
-        <div class="people-list" id="peopleDirectoryList" aria-label="Люди онлайн и недавние"></div>
+        <div class="people-list" id="peopleDirectoryList" aria-label="Люди"></div>
       </div>
 
-      <!-- Панель 3: УДОБНЫЕ ПОДКЛЮЧЕНИЯ СО ССЫЛКАМИ (12 мессенджеров + 9 облаков) -->
+      <!-- Панель 3: МОСТЫ И ССЫЛКИ -->
       <div class="sidebar-pane" id="sidebarPaneConnect" hidden>
         <section class="sidebar-controls">
-          <input type="search" id="sidebarLinksSearch" class="text-input" placeholder="Найти: MAX, Telegram, VK, Discord, Drive…" autocomplete="off">
-          <button class="btn btn-connect-hub btn-full" id="btnOpenConnectHubFromLinks" type="button">⚙️ Мастер подключения API (MAX, TG, VK…)</button>
+          <input type="search" id="sidebarLinksSearch" class="text-input" placeholder="MAX, Telegram, VK, Discord…" autocomplete="off">
+          <button class="btn btn-connect-hub btn-full" id="btnOpenConnectHubFromLinks" type="button">⚙️ Подключить API</button>
         </section>
-        <div class="links-hub-list" id="sidebarLinksList" aria-label="Прямые ссылки на мессенджеры и облака"></div>
+        <div class="links-hub-list" id="sidebarLinksList" aria-label="Ссылки и мосты"></div>
       </div>
     </aside>
 
-    <!-- Центральная колонка: живой чат -->
+    <!-- Центральная колонка: чистый чат без мусора -->
     <main class="chat-stage" id="chatStage">
       <header class="chat-header" id="chatHeader">
         <div class="chat-header-left">
-          <button class="icon-btn mobile-only" id="btnBackChats" type="button" title="К списку чатов" aria-label="К списку чатов">←</button>
+          <button class="icon-btn mobile-only" id="btnBackChats" type="button" title="Назад к чатам" aria-label="Назад к чатам">←</button>
           <span class="net-avatar" id="activeChatBadge">RM</span>
           <div class="chat-header-meta">
             <h2 id="activeChatTitle">Общий чат Games</h2>
             <div class="chat-subbadges">
-              <span class="pill" id="activeRoutePill">🟢 Онлайн</span>
+              <span class="chat-status-sub" id="activeRoutePill">В сети</span>
               <span class="pill hide-mobile" id="activeTrustPill" hidden>—</span>
             </div>
           </div>
         </div>
         <div class="chat-header-actions">
-          <button class="btn btn-invite-sm btn-sm" id="btnInviteRoom" type="button" title="Скопировать ссылку-приглашение в этот чат">🔗 <span class="hide-xs">Пригласить</span></button>
-          <button class="btn btn-ghost btn-sm hide-mobile" id="btnCloudSync" type="button" title="Обновить сообщения сейчас">↻</button>
-          <button class="btn btn-ghost btn-sm hide-mobile" id="btnPinChat" type="button" title="Закрепить чат наверху списка">📌</button>
-          <button class="btn btn-ghost btn-sm" id="btnQuickBindVpn" type="button" hidden>🔒 VPN</button>
-          <button class="btn btn-connect-sm btn-sm" id="btnHeaderConnect" type="button" hidden>🔌 Подключить</button>
-          <button class="icon-btn mobile-only" id="btnChatMoreMobile" type="button" title="Ещё действия" aria-label="Ещё действия">⋯</button>
+          <button class="btn btn-ghost btn-sm hide-mobile" id="btnInviteRoom" type="button" title="Ссылка-приглашение">🔗</button>
+          <button class="btn btn-ghost btn-sm hide-mobile" id="btnCloudSync" type="button" title="Обновить">↻</button>
+          <button class="btn btn-ghost btn-sm hide-mobile" id="btnPinChat" type="button" title="Закрепить чат">📌</button>
+          <button class="btn btn-ghost btn-sm" id="btnQuickBindVpn" type="button" hidden>VPN</button>
+          <button class="btn btn-connect-sm btn-sm" id="btnHeaderConnect" type="button" hidden>Подключить</button>
+          <button class="icon-btn mobile-only" id="btnChatMoreMobile" type="button" title="Меню чата" aria-label="Меню чата">⋯</button>
         </div>
       </header>
 
-      <!-- Компактная мобильная шторка доп. действий чата (только реальные действия) -->
+      <!-- Компактное меню чата по нажатию ⋯ -->
       <div class="chat-more-bar" id="chatMoreBar" hidden>
-        <button class="btn btn-sm btn-ghost" id="btnInviteRoomMobile" type="button">🔗 Ссылка на чат</button>
+        <button class="btn btn-sm btn-ghost" id="btnInviteRoomMobile" type="button">🔗 Пригласить</button>
         <button class="btn btn-sm btn-ghost" id="btnCloudSyncMobile" type="button">↻ Обновить</button>
         <button class="btn btn-sm btn-ghost" id="btnPinChatMobile" type="button">📌 Закрепить</button>
         <button class="btn btn-sm btn-ghost" id="btnOpenSearchMobile" type="button">🔎 Поиск</button>
-        <button class="btn btn-sm btn-ghost" id="btnOpenSettingsMobile" type="button">⚙️ Настройки</button>
+        <button class="btn btn-sm btn-ghost" id="btnOpenSettingsMobile" type="button">⚙️ Ещё</button>
       </div>
 
       <div class="trust-banner" id="trustWarningBanner" hidden></div>
       <div class="pinned-banner" id="pinnedBanner" hidden>
-        <span class="pinned-label">📌 Закреплено:</span>
+        <span class="pinned-label">📌</span>
         <button type="button" class="pinned-jump" id="btnJumpPinned"></button>
       </div>
 
@@ -155,15 +139,15 @@
 
       <div class="reply-bar" id="replyBar" hidden>
         <span id="replyBarText"></span>
-        <button class="icon-btn" id="btnCancelReply" type="button" title="Отменить ответ / правку">✕</button>
+        <button class="icon-btn" id="btnCancelReply" type="button" title="Отмена">✕</button>
       </div>
 
       <div class="voice-record-bar" id="voiceRecordBar" hidden>
         <span class="rec-dot"></span>
         <span id="voiceRecTimer">0:00</span>
-        <canvas id="voiceRecCanvas" width="220" height="30"></canvas>
-        <button type="button" class="btn btn-sm btn-primary" id="btnStopSendVoice">Отправить голос</button>
-        <button type="button" class="btn btn-sm btn-ghost" id="btnCancelVoice">Отмена</button>
+        <canvas id="voiceRecCanvas" width="160" height="28"></canvas>
+        <button type="button" class="btn btn-sm btn-primary" id="btnStopSendVoice">Отправить</button>
+        <button type="button" class="btn btn-sm btn-ghost" id="btnCancelVoice">✕</button>
       </div>
 
       <div class="attachment-bar" id="attachmentBar" hidden>
@@ -174,20 +158,20 @@
         <button class="icon-btn" id="btnClearAttachment" type="button" title="Убрать файл">✕</button>
       </div>
 
-      <!-- Понятная строка статуса отправки -->
-      <div class="chat-can-write-bar" id="chatCanWriteBar">
-        <span class="can-write-text" id="chatCanWriteText">🟢 Живой онлайн-чат — сообщения видны собеседникам в реальном времени</span>
+      <!-- Показывается ТОЛЬКО для неподключённых внешних мостов (скрыта в обычных и личных чатах) -->
+      <div class="chat-can-write-bar" id="chatCanWriteBar" hidden>
+        <span class="can-write-text" id="chatCanWriteText"></span>
         <button type="button" class="can-write-action" id="btnCanWriteAction" hidden></button>
       </div>
 
       <form class="composer" id="composerForm">
-        <label class="icon-btn file-trigger" title="Прикрепить файл">
+        <label class="icon-btn file-trigger" title="Файл">
           📎
           <input type="file" id="fileInput" hidden>
         </label>
-        <button type="button" class="icon-btn" id="btnRecordVoice" title="Записать голосовое сообщение">🎙️</button>
-        <textarea id="messageInput" class="composer-input" rows="1" placeholder="Написать сообщение…"></textarea>
-        <button type="submit" class="btn btn-primary btn-send" id="btnSend" aria-label="Отправить сообщение">
+        <textarea id="messageInput" class="composer-input" rows="1" placeholder="Сообщение…"></textarea>
+        <button type="button" class="icon-btn" id="btnRecordVoice" title="Голосовое">🎙️</button>
+        <button type="submit" class="btn btn-primary btn-send" id="btnSend" aria-label="Отправить">
           <span class="send-label">Отправить</span>
           <span class="send-ico" aria-hidden="true">➤</span>
         </button>
@@ -319,8 +303,8 @@
     </aside>
   </div>
 
-  <!-- Нижняя мобильная панель навигации (видна на экранах ≤900px) -->
-  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Мобильная навигация">
+  <!-- Нижняя мобильная панель (3 чистые кнопки, скрыта внутри открытого чата) -->
+  <nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Навигация">
     <button type="button" class="mnav-btn is-active" data-mobile-nav="chats">
       <span class="mnav-ico" aria-hidden="true">💬</span>
       <span class="mnav-lbl">Чаты</span>
@@ -329,10 +313,6 @@
       <span class="mnav-ico" aria-hidden="true">👥</span>
       <span class="mnav-lbl">Люди</span>
       <span class="mnav-dot" id="mobileOnlineCountBadge" hidden>0</span>
-    </button>
-    <button type="button" class="mnav-btn mnav-accent" data-mobile-nav="connect">
-      <span class="mnav-ico" aria-hidden="true">🔌</span>
-      <span class="mnav-lbl">Ссылки</span>
     </button>
     <button type="button" class="mnav-btn" data-mobile-nav="settings">
       <span class="mnav-ico" aria-hidden="true">⚙️</span>
@@ -702,6 +682,6 @@
   </dialog>
 
   <div class="toast-host" id="toastHost" aria-live="polite"></div>
-  <script type="module" src="./src/web/app.js"></script>
+  <script type="module" src="./src/web/app.js?v=15"></script>
 </body>
 </html>
