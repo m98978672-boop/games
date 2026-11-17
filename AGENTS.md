@@ -8,14 +8,14 @@
 | Файл / папка | Что внутри |
 |---|---|
 | [`ratcore/README.md`](./ratcore/README.md) | Главный вход и обзор `RatCore` |
-| [`ratcore/INDEX.json`](./ratcore/INDEX.json) | Машиночитаемый индекс всех документов, 25 веток инструментов, 112 формул и 74 алгоритмов |
+| [`ratcore/INDEX.json`](./ratcore/INDEX.json) | Машиночитаемый индекс всех документов, 25 веток инструментов, 120 формул и 80 алгоритмов |
 | [`ratcore/SPEC.md`](./ratcore/SPEC.md) | Полная спецификация движка, `ToolGuard` (5 барьеров в коде), коды ошибок `RC-100..999`, план этапов |
 | [`ratcore/AI_CONTRACT.md`](./ratcore/AI_CONTRACT.md) | Обязательный свод правил для всех ИИ, работающих с `RatCore` |
 | [`ratcore/TOOLS.md`](./ratcore/TOOLS.md) | Все **25 веток инструментов** `RatCore.tools.*` на все случаи жизни + шпаргалка жанров |
-| [`ratcore/ALGORITHMS.md`](./ratcore/ALGORITHMS.md) | Все **112 формул (`F-01..F-112`)** и **74 алгоритма (`A-01..A-74`)** |
-| [`ratcore/COMPRESSION.md`](./ratcore/COMPRESSION.md) | 7-уровневая система сжатия невидимой информации (Minecraft `Paletted 16³`, `Cave Culling`, `SVDAG`, `Hi-Z`, `LOD`, `Catch-up`) |
+| [`ratcore/ALGORITHMS.md`](./ratcore/ALGORITHMS.md) | Все **120 формул (`F-01..F-120`)** и **80 алгоритмов (`A-01..A-80`)** |
+| [`ratcore/COMPRESSION.md`](./ratcore/COMPRESSION.md) | 10-уровневое ультра-сжатие RAM/CPU (`SoA`, `PackedVertex64`, `64-bit Bricks`, `Upload-and-Drop`, `Paletted 16³`, `SVDAG`, `Cave/Hi-Z`) + **регулятор ядер на 75 %** |
 | [`ratcore/BRIDGE.md`](./ratcore/BRIDGE.md) | Соединение `RatCore` с Three.js, Godot 4, Canvas 2D, `pereplet-prototype`, другими `RatCore` и внешними ИИ |
-| [`ratcore/DEVLOG.md`](./ratcore/DEVLOG.md) | Инженерный дневник принятых решений (Записи `#001..#005`) |
+| [`ratcore/DEVLOG.md`](./ratcore/DEVLOG.md) | Инженерный дневник принятых решений (Записи `#001..#006`) |
 | [`ratcore/comms/`](./ratcore/comms/README.md) | **Папки общения между нейросетями** (`registry`, `channels`, `inbox`, `outbox`, `tasks`, `handoffs`, `bridges`) |
 | [`ratcore/reports/`](./ratcore/reports/) | Баг-трекер (`bugs/`), аудиты `ToolGuard` (`audits/`) и сводки (`summaries/`) |
 

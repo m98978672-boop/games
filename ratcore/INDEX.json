@@ -8,20 +8,22 @@
   "integratedIntoGamesShowcase": false,
   "counts": {
     "toolBranches": 25,
-    "formulas": 112,
-    "algorithms": 74,
+    "formulas": 120,
+    "algorithms": 80,
+    "compressionLevels": 10,
+    "targetCpuCoreUtilPct": 75,
     "errorCodeRange": "RC-100..RC-999"
   },
   "documents": [
     { "id": "agents-root", "path": "AGENTS.md", "role": "Universal AI entrypoint at repository root" },
     { "id": "readme", "path": "ratcore/README.md", "role": "Project overview and document map" },
-    { "id": "spec", "path": "ratcore/SPEC.md", "version": "0.4-draft", "role": "Master specification, 5-barrier ToolGuard, roadmap, decisions D-01..D-11" },
+    { "id": "spec", "path": "ratcore/SPEC.md", "version": "0.5-draft", "role": "Master specification, 5-barrier ToolGuard, roadmap, decisions D-01..D-12" },
     { "id": "ai-contract", "path": "ratcore/AI_CONTRACT.md", "role": "Mandatory AI rulebook including ToolGuard and BridgeGuard" },
-    { "id": "tools", "path": "ratcore/TOOLS.md", "version": "0.4-draft", "role": "All 25 RatCore.tools.* branches and genre recipes" },
-    { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.3-draft", "role": "112 formulas (F-01..F-112) and 74 algorithms (A-01..A-74)" },
-    { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.1-draft", "role": "7-level invisible information compression (Minecraft Paletted + Cave Culling + SVDAG + Hi-Z + LOD + Catch-up)" },
+    { "id": "tools", "path": "ratcore/TOOLS.md", "version": "0.5-draft", "role": "All 25 RatCore.tools.* branches and genre recipes" },
+    { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.4-draft", "role": "120 formulas (F-01..F-120) and 80 algorithms (A-01..A-80)" },
+    { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.2-draft", "role": "10-level ultra-low RAM/CPU compression + 75% CPU CoreGovernor" },
     { "id": "bridge", "path": "ratcore/BRIDGE.md", "version": "0.1-draft", "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC)" },
-    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#005" }
+    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#006" }
   ],
   "toolBranches": [
     "build", "move", "remove", "watch", "look", "see", "hear", "think", "guess",

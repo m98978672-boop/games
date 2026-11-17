@@ -1,8 +1,8 @@
 # RatCore — полный каталог инструментов на все случаи жизни (`TOOLS.md`)
 
-**Версия:** 0.4-draft (2026-11-16)  
-**Охват:** **25 веток инструментов** `engine.tools.<группа>.<метод>(args, ctx?)` — от сборки моделей и карт до анимации, физики, навигации, погоды, эффектов, игрового ИИ, экономики, UI, ввода, звука, сохранений, автотестов, чувств ИИ, общения нейросетей, мостов с другими движками и **7-уровневого сжатия невидимой информации** (`tools.stream.*`).  
-**Связанные документы:** [`ALGORITHMS.md`](./ALGORITHMS.md) (`F-01..F-112`, `A-01..A-74`) · [`COMPRESSION.md`](./COMPRESSION.md) · [`BRIDGE.md`](./BRIDGE.md).  
+**Версия:** 0.5-draft (2026-11-16)  
+**Охват:** **25 веток инструментов** `engine.tools.<группа>.<метод>(args, ctx?)` — от сборки моделей и карт до анимации, физики, навигации, погоды, эффектов, игрового ИИ, экономики, UI, ввода, звука, сохранений, автотестов, чувств ИИ, общения нейросетей, мостов с другими движками и **10-уровневого ультра-сжатия RAM/CPU + регулятора ядер 75 %** (`tools.stream.*`).  
+**Связанные документы:** [`ALGORITHMS.md`](./ALGORITHMS.md) (`F-01..F-120`, `A-01..A-80`) · [`COMPRESSION.md`](./COMPRESSION.md) · [`BRIDGE.md`](./BRIDGE.md).  
 **Принцип:** единый формат ответа, обязательная проверка `ToolGuard`, автоматическое логирование в журнал операций и поддержка отката (`undo`/`redo`).
 
 ---
@@ -436,6 +436,12 @@
 | `stream.packRegion` | `{ chunks[], compress?: 'deflate' }` | `F-109`, `F-110`, `A-73` (Morton Z-order + RLE + ZigZag Varint + Deflate + Region `32×32`) | `{ bytes, ratio }` |
 | `stream.encodeQuat32` | `{ q: [x,y,z,w] }` | `F-111` (сжатие кватерниона `Smallest-Three`: 16 байт → 4 байта для сети/мостов) | `{ u32 }` |
 | `stream.memoryTick` | `{ budgetMb, camera, tick }` | `F-112`, `A-74` (3-ярусный кэш `HOT / WARM / COLD` с плавным вытеснением до 2 мс/тик) | `{ hotCount, warmCount, coldCount, ramMb }` |
+| `stream.packVertex64` | `{ vertices, chunkOrigin }` | `F-113`, `A-77` (упаковка вершин `36 байт → 8 байт` `2×Uint32` + `Upload-and-Drop` пул) | `{ buffer, bytesPerVertex: 8, savedPct }` |
+| `stream.buildBrick64` | `{ voxels4x4x4 }` | `F-114`, `A-78` (64 блока в 1 `BigUint64` = 8 байт + побитовый поиск открытых граней) | `{ brick64, exposedCount }` |
+| `stream.setCpuGovernor` | `{ targetUtil?: 0.75, maxCeiling?: 0.80, sliceMs?: 1.5, enableThermalGuard?: true }` | `F-116..F-118`, `F-120`, `A-75`, `A-76` (пул воркеров на 75 % ядер + ПИ-регулятор скважности + защита `P0/P1`) | `{ workers, targetUtil, workBudgetMs }` |
+| `stream.scheduleJobs` | `{ jobs: [{ priority: 0|1|2|3, kind, payload }] }` | `A-75`, `A-79` (Work-Stealing очередь `P0..P3` + многочастотное разнесение `F-115`) | `{ queued, stolenCount }` |
+| `stream.setMemoryBudget` | `{ ramCapMb, soaCapacity, dropCpuAfterUpload?: true, idleSkip?: true }` | `A-77`, `A-80` (безаллокационная арена SoA `12–16 байт/сущность` + `Dirty-Bitset` + `Idle-Skip`) | `{ ramCapMb, arenaBytes, gcAllocsPerFrame: 0 }` |
+| `stream.perfReport` | — | `F-119`, `F-120` (реальный трафик `RAM→CPU МБ/с`, загрузка ядер %, `headroomPct`, троттлинг) | `{ cpuUtilPct, headroomPct, ramMb, ramBwMBs, thermalRatio }` |
 
 ---
 
