@@ -8,8 +8,9 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.0';
+  const VERSION = '1.1';
   const MAX_SAFE_BYTES = 750 * 1024;
+  const MAX_COVER_BYTES = 512 * 1024;
   const HTTPS_PROTO = 'https:';
 
   // Известные проверенные игровые площадки и статические хостинги
@@ -218,6 +219,9 @@
     { sev: 'block', risk: 35, label: 'Принудительное скачивание исполняемого файла (.exe/.apk/.bat/.ps1)', re: /\.(exe|msi|scr|bat|cmd|ps1|apk|hta|vbs)['"`\s>]/i },
     { sev: 'block', risk: 35, label: 'Фишинг-сбор секретных данных (пароли / карты / seed-фразы)', re: /((type\s*=\s*['"]password['"]|seed\s*phrase|recovery\s*phrase|private\s*key|cvv|card\s*number)[\s\S]{0,220}(fetch|XMLHttpRequest|sendBeacon|action\s*=\s*['"]https?:))/i },
     { sev: 'block', risk: 35, label: 'Скрытый кейлоггер с отправкой нажатий наружу', re: /(keydown|keypress|keyup)[\s\S]{0,240}(fetch\s*\(|sendBeacon\s*\(|XMLHttpRequest|new\s+WebSocket)/i },
+    { sev: 'block', risk: 42, label: 'Скрытый WebAssembly-майнер или пул добычи криптовалют', re: /(WebAssembly\.(instantiate|compile)[\s\S]{0,260}(cryptonight|randomx|monero|hashrate|stratum|minero)|wasm[\s\S]{0,120}stratum\+tcp)/i },
+    { sev: 'block', risk: 38, label: 'Подмена криптокошелька в буфере обмена (Clipper/Hijacker)', re: /(clipboard\.writeText[\s\S]{0,160}(bc1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]{20,}|0x[a-fA-F0-9]{40}|T[A-Za-z1-9]{33}))/i },
+    { sev: 'block', risk: 36, label: 'Кража localStorage / indexedDB через скрытый маячок Image().src', re: /((localStorage|indexedDB)[\s\S]{0,180}(new\s+Image\s*\(\s*\)[\s\S]{0,80}\.src\s*=|navigator\.sendBeacon\s*\())/i },
     { sev: 'warn', risk: 14, label: 'Подозрительный скрытый доступ к буферу обмена (clipboard.readText)', re: /navigator\.clipboard\.read(Text)?\s*\(/i },
     { sev: 'warn', risk: 12, label: 'Запрос геолокации / камеры / микрофона (проверьте, нужно ли это игре)', re: /(navigator\.geolocation|getUserMedia\s*\(|getDisplayMedia\s*\()/i },
   ];
@@ -351,9 +355,72 @@
     return finishPass(p, 'Вредоносные сигнатуры, майнеры и эксплойты не найдены');
   }
 
-  function runPass3DomStructure(code) {
-    const p = makePass(3, 'dom_structure', 'Проход 3/10 · Аудит HTML/DOM и скрытых тегов', 'DOM Tag & Hidden-Frame Auditor');
-    if (!code) return finishPass(p, 'HTML-документ отсутствует (режим внешней ссылки)');
+  function scanCoverDataUrl(dataUrl) {
+    const raw = String(dataUrl || '').trim();
+    if (!raw) return { ok: true, verdict: 'clean', risk: 0, reasons: [] };
+
+    const reasons = [];
+    let risk = 0;
+
+    if (utf8Bytes(raw).length > MAX_COVER_BYTES) {
+      reasons.push('Размер обложки превышает 512 КБ');
+      risk += 30;
+    }
+    if (!/^data:image\/(png|jpeg|jpg|webp|gif|svg\+xml)(;charset=[^;,]+)?(;base64)?,/i.test(raw)) {
+      reasons.push('Недопустимый формат обложки (разрешены только PNG, JPG, WebP, GIF, чистый SVG)');
+      risk += 45;
+      return { ok: false, verdict: 'blocked', risk: Math.min(100, risk), reasons };
+    }
+
+    let decoded = raw;
+    if (/^data:image\/svg\+xml/i.test(raw)) {
+      const commaIdx = raw.indexOf(',');
+      const body = commaIdx >= 0 ? raw.slice(commaIdx + 1) : '';
+      try {
+        if (/;base64,/i.test(raw.slice(0, commaIdx + 1))) {
+          decoded = typeof atob === 'function' ? atob(body) : Buffer.from(body, 'base64').toString('utf8');
+        } else {
+          decoded = decodeURIComponent(body);
+        }
+      } catch (err) {
+        decoded = body;
+      }
+      if (/<script\b/i.test(decoded)) {
+        reasons.push('SVG-обложка содержит исполняемый тег <script> (SVG XSS)');
+        risk += 55;
+      }
+      if (/\bon(load|error|click|mouseover|focus|begin)\s*=/i.test(decoded)) {
+        reasons.push('SVG-обложка содержит обработчик событий on*= (SVG XSS)');
+        risk += 50;
+      }
+      if (/(javascript:|<foreignObject\b|<iframe\b|<object\b)/i.test(decoded)) {
+        reasons.push('SVG-обложка содержит опасные теги foreignObject/iframe или javascript: URI');
+        risk += 50;
+      }
+    } else if (/;base64,(TVqQ|f0VM|UEsDB)/i.test(raw)) {
+      reasons.push('Внутри обложки замаскирован бинарный файл или архив (Polyglot)');
+      risk += 60;
+    }
+
+    return {
+      ok: reasons.length === 0,
+      verdict: reasons.length ? 'blocked' : 'clean',
+      risk: Math.min(100, risk),
+      reasons,
+    };
+  }
+
+  function runPass3DomStructure(code, game) {
+    const p = makePass(3, 'dom_structure', 'Проход 3/10 · Аудит HTML/DOM, SVG-обложки и скрытых тегов', 'DOM Tag, SVG XSS & Hidden-Frame Auditor');
+
+    const coverCheck = scanCoverDataUrl(game && game.coverDataUrl);
+    if (!coverCheck.ok) {
+      for (const reason of coverCheck.reasons) addFinding(p, 'block', reason, 45);
+    }
+
+    if (!code) {
+      return finishPass(p, coverCheck.ok ? 'HTML-документ отсутствует (режим внешней ссылки), обложка чиста' : undefined);
+    }
 
     if (/<(object|embed|applet)\b/i.test(code)) {
       addFinding(p, 'block', 'Обнаружены опасные плагинные теги <object>/<embed>/<applet>', 38);
@@ -608,7 +675,7 @@
 
     const p1 = runPass1UrlReputation(game);
     const p2 = runPass2MalwareSignatures(code);
-    const p3 = runPass3DomStructure(code);
+    const p3 = runPass3DomStructure(code, game);
     const p4 = runPass4Deobfuscation(code);
     const p5 = runPass5ShannonEntropy(code);
     const p6 = runPass6NetworkExfil(code, game);
@@ -741,13 +808,59 @@
     }
   }
 
+  // ---------------------------- Антивирусная проверка новостей и автопостов ----------------------------
+  function scanNewsItemSync(item) {
+    const entry = item && typeof item === 'object' ? item : {};
+    const reasons = [];
+    let risk = 0;
+
+    const textBlob = [
+      entry.title || '',
+      entry.summary || '',
+      Array.isArray(entry.body) ? entry.body.join('\n') : (entry.body || ''),
+      entry.sourceName || '',
+    ].join('\n');
+
+    if (/<script\b|javascript:|vbscript:|on(load|error|click)\s*=/i.test(textBlob)) {
+      reasons.push('Обнаружен HTML/JS-скрипт в тексте новости');
+      risk += 55;
+    }
+    if (/[\u202A-\u202E\u2066-\u2069]/.test(textBlob)) {
+      reasons.push('Обнаружены скрытые BiDi-символы (Trojan Source)');
+      risk += 45;
+    }
+    if (/(coinhive|cryptonight|stratum\+tcp|seed\s*phrase|private\s*key)/i.test(textBlob)) {
+      reasons.push('Обнаружена фишинговая или майнерская сигнатура');
+      risk += 50;
+    }
+
+    const url = String(entry.sourceUrl || '').trim();
+    if (url) {
+      const urlPass = runPass1UrlReputation({ sourceType: 'url', playUrl: url });
+      if (urlPass.status === 'block') {
+        reasons.push(`Небезопасная ссылка источника: ${urlPass.summary}`);
+        risk += Math.max(40, urlPass.risk);
+      }
+    }
+
+    return {
+      ok: reasons.length === 0,
+      verdict: reasons.length ? 'blocked' : 'clean',
+      risk: Math.min(100, risk),
+      reasons,
+      sha256: sha256HexSync(`${entry.title || ''}|${url}`),
+    };
+  }
+
   window.GamesAntivirus = {
     VERSION,
     TRUSTED_GAME_HOSTS,
     SECURITY_PARTNERS,
     sha256HexSync,
+    scanCoverDataUrl,
     scanGameSync,
     scanGameAnimated,
+    scanNewsItemSync,
     crossCheckDomainOnline,
   };
 })();

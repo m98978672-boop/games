@@ -103,6 +103,7 @@
 <script src="site/user-games.js" defer></script>
 <script src="site/portal.js" defer></script>
 <script src="site/games-tabs.js" defer></script>
+<script src="site/news-hub.js" defer></script>
 <script src="site/community-games.js" defer></script>
 </head>
 <body data-root="">
@@ -121,6 +122,7 @@
 
     <nav class="nav-links" aria-label="Основная навигация">
       <a class="is-active" href="#top" data-portal-tab="games">Магазин</a>
+      <a class="nav-link-news" href="#news" data-portal-tab="news">📰 Новости <span class="news-nav-badge" data-news-badge hidden>0</span></a>
       <a href="#new-releases" data-store-nav>Новинки</a>
       <a href="#games" data-store-nav>Каталог</a>
       <a href="#user-games-section" data-store-nav>Мои игры</a>
@@ -130,6 +132,11 @@
     </nav>
 
     <div class="nav-actions">
+      <button class="nav-icon-btn nav-news-btn" type="button" data-portal-tab="news" title="Вкладка «Новости» — свежие темы и автопост" aria-label="Открыть вкладку Новости">
+        <span aria-hidden="true">📰</span>
+        <span class="nav-icon-label">Новости</span>
+        <span class="news-nav-badge" data-news-badge hidden>0</span>
+      </button>
       <button class="nav-icon-btn nav-chat-btn" type="button" data-portal-tab="chat" title="Вкладка «Общение» — RatMes" aria-label="Открыть вкладку Общение">
         <span aria-hidden="true">💬</span>
         <span class="nav-icon-label">Общение</span>
@@ -162,6 +169,8 @@
       <button class="ribbon-link" type="button" data-quick-cat="sim">Симуляторы</button>
       <button class="ribbon-link" type="button" data-quick-cat="strategy">Стратегии</button>
       <button class="ribbon-link is-highlight" type="button" data-quick-cat="user">От игроков <span class="ribbon-pill" data-user-games-count>0</span></button>
+      <button class="ribbon-link is-news" type="button" data-open-news="true">📰 Новости <span class="ribbon-pill">Автопост</span></button>
+      <button class="ribbon-link is-antivirus" type="button" data-open-antivirus="file">🛡️ Антивирус <span class="ribbon-pill">10×</span></button>
       <button class="ribbon-link is-chat" type="button" data-open-chat="games-lobby">💬 Общение <span class="ribbon-pill">9 облаков</span></button>
     </div>
 
@@ -224,6 +233,48 @@
 
   <div class="portal-chat-frame-wrap">
     <iframe id="ratmesEmbedFrame" class="portal-chat-frame" title="RatMes — вкладка Общение портала Games" data-src="ratmes/index.html?embed=games" allow="microphone; clipboard-read; clipboard-write"></iframe>
+  </div>
+</section>
+
+<!-- Вкладка «Новости» — мультикатегорийная лента с автопостом каждые 6 часов -->
+<section id="portal-news-panel" class="portal-news-panel" hidden aria-label="Вкладка Новости Games">
+  <div class="news-shell">
+    <div class="news-topbar">
+      <div class="news-topbar-left">
+        <button type="button" class="btn btn-steam-ghost portal-back-btn" data-portal-tab="games">← Магазин</button>
+        <div>
+          <p class="news-kicker">НОВОСТИ GAMES · РАЗНЫЕ ТЕМЫ · АВТОПОСТ 24/7</p>
+          <h2 class="news-heading">Лента новостей и подборок</h2>
+        </div>
+      </div>
+      <div class="news-topbar-actions">
+        <button type="button" class="btn btn-steam-ghost btn-sm" id="btn-news-refresh">🔄 Обновить</button>
+        <button type="button" class="btn btn-steam-blue btn-sm" id="btn-news-compose">✍ Написать пост</button>
+      </div>
+    </div>
+
+    <div class="news-status-bar">
+      <span id="news-autopost-status">⚡ Автопост каждые 6 ч · загрузка ленты…</span>
+      <span class="news-shield-tag">🛡️ Проверено GamesAntivirus</span>
+    </div>
+
+    <div class="news-controls-bar">
+      <div class="news-cat-pills" id="news-category-pills" role="group" aria-label="Темы новостей"></div>
+      <div class="news-search-wrap">
+        <input type="search" id="news-search" class="news-search-input" placeholder="Поиск по новостям и тегам…" aria-label="Поиск по новостям">
+        <select id="news-sort" class="news-sort-select" aria-label="Сортировка новостей">
+          <option value="fresh">Сначала свежие</option>
+          <option value="popular">Интересное</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="news-hero-slot" class="news-hero-slot"></div>
+    <div id="news-cards-grid" class="news-cards-grid"></div>
+    <div id="news-empty-state" class="news-empty-state" hidden>
+      <p>По вашему фильтру новостей пока нет.</p>
+      <button type="button" class="btn btn-steam-blue btn-sm" data-news-cat="all">Показать все темы</button>
+    </div>
   </div>
 </section>
 
@@ -303,14 +354,37 @@
   </div>
 </section>
 
+<!-- Тизер-полоска свежих новостей на главной витрине (сразу привлекает внимание) -->
+<section id="news-teaser-strip" class="news-teaser-strip" data-portal-store-section hidden aria-label="Свежие новости Games">
+  <div class="news-teaser-inner">
+    <div class="news-teaser-head">
+      <div class="news-teaser-label">
+        <span class="news-live-dot" aria-hidden="true"></span>
+        <strong>📰 Новости Games</strong>
+        <span class="news-teaser-sub">Игры · Технологии · Наука · Мир · Безопасность · Автопост</span>
+      </div>
+      <button type="button" class="btn btn-steam-ghost btn-sm" data-open-news="true">Все новости →</button>
+    </div>
+    <div class="news-teaser-items" id="news-teaser-items"></div>
+  </div>
+</section>
+
 <!-- Двухколоночная раскладка магазина в стиле Steam -->
 <div class="store-shell" data-portal-store-section>
   <aside class="steam-sidebar" id="steam-sidebar" aria-label="Библиотека и категории">
     <div class="sidebar-group">
       <h3>Ваша библиотека</h3>
+      <button class="side-link is-news" type="button" data-open-news="true">
+        <span>📰 Новости (разные темы)</span>
+        <span class="side-badge">Автопост</span>
+      </button>
       <button class="side-link is-chat" type="button" data-open-chat="games-lobby">
         <span>💬 Общение (RatMes)</span>
         <span class="side-badge">9 облаков</span>
+      </button>
+      <button class="side-link is-antivirus" type="button" data-open-antivirus="file">
+        <span>🛡️ Антивирус для игр</span>
+        <span class="side-badge">10×</span>
       </button>
       <button class="side-link" type="button" data-quick-cat="fav">
         <span>★ Желаемое / Избранное</span>
@@ -642,10 +716,10 @@
 
             <div class="source-pane" data-source-pane="file" hidden>
               <label class="file-drop" for="ug-html-file">
-                <span id="ug-html-file-label">Выбрать готовый .html файл игры (до 750 КБ)</span>
+                <span id="ug-html-file-label">📁 Перетащите .html файл сюда или нажмите (до 750 КБ) — 10× антивирус проверит сразу</span>
                 <input id="ug-html-file" type="file" accept=".html,.htm,text/html">
               </label>
-              <p class="field-hint">Запускается в безопасном изолированном Steam-плеере прямо на странице, без сервера.</p>
+              <p class="field-hint">Исполняемые файлы (.exe, .apk, архивы) блокируются автоматически. Игра запускается в изолированном sandbox-плеере.</p>
             </div>
 
             <div class="source-pane" data-source-pane="code" hidden>
@@ -824,6 +898,62 @@
         <button class="btn btn-steam-blue" type="button" id="savehub-import-btn">⬆ Восстановить из файла</button>
         <input id="savehub-import-input" type="file" accept=".json,application/json" hidden>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Модалка: Читалка новости -->
+<div class="gmodal-root" id="news-reader-modal" hidden role="dialog" aria-modal="true" aria-labelledby="news-reader-title">
+  <div class="gmodal-backdrop" data-close-news-reader></div>
+  <div class="gmodal-dialog gmodal-news-reader">
+    <button class="gmodal-close" type="button" data-close-news-reader aria-label="Закрыть статью">×</button>
+    <div id="news-reader-content"></div>
+  </div>
+</div>
+
+<!-- Модалка: Написать / предложить новость (с проверкой антивирусом) -->
+<div class="gmodal-root" id="news-compose-modal" hidden role="dialog" aria-modal="true" aria-labelledby="news-compose-title">
+  <div class="gmodal-backdrop" data-close-news-compose></div>
+  <div class="gmodal-dialog">
+    <button class="gmodal-close" type="button" data-close-news-compose aria-label="Закрыть окно публикации">×</button>
+    <div class="savehub-wrap">
+      <p class="section-kicker">НОВОСТИ GAMES · ЗАЩИЩЕНО АНТИВИРУСОМ</p>
+      <h2 id="news-compose-title">Написать пост в ленту новостей</h2>
+      <p class="savehub-sub">Пост появится в вашей ленте сразу после антивирусной проверки текста и ссылки.</p>
+      <form id="news-compose-form" class="news-compose-form" novalidate>
+        <label class="field">
+          <span>Тема / категория</span>
+          <select id="nc-category">
+            <option value="games">🎮 Игры и релизы</option>
+            <option value="tech">🤖 Технологии и ИИ</option>
+            <option value="science">🚀 Наука и космос</option>
+            <option value="world">🌍 Мир и культура</option>
+            <option value="security">🛡️ Кибербезопасность</option>
+            <option value="facts">⚡ Факты и подборки</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Заголовок *</span>
+          <input id="nc-title" type="text" maxlength="140" required placeholder="О чём интересная новость?">
+        </label>
+        <label class="field">
+          <span>Краткий анонс</span>
+          <input id="nc-summary" type="text" maxlength="220" placeholder="1–2 предложения, чтобы читатель сразу понял суть">
+        </label>
+        <label class="field">
+          <span>Текст статьи *</span>
+          <textarea id="nc-body" rows="4" maxlength="1800" required placeholder="Подробности по абзацам…"></textarea>
+        </label>
+        <label class="field">
+          <span>Ссылка на первоисточник https:// (необязательно)</span>
+          <input id="nc-url" type="url" maxlength="300" placeholder="https://...">
+        </label>
+        <p class="form-status" id="news-compose-status" role="status" aria-live="polite"></p>
+        <div class="savehub-actions">
+          <button class="btn btn-steam-play" type="submit">🛡️ Проверить и опубликовать</button>
+          <button class="btn btn-steam-ghost" type="button" data-close-news-compose>Отмена</button>
+        </div>
+      </form>
     </div>
   </div>
 </div>
