@@ -1,4 +1,4 @@
-// RatCore — Единый шлюз инструментов RatCore.tools.* (Этап 1: ядро + ToolGuard + Zero-Cost Opt-In)
+// RatCore — Единый шлюз инструментов RatCore.tools.* (v0.2 Этап 2: ядро + RCW2 + CoreGovernor 75 % + Opt-In модули + AI-Team)
 // Захватывает одноразовую печать claimMintAuthority() (Барьер 1) и обслуживает все операции через единый конвейер §0.
 
 import { createClock } from '../core/clock.js';
@@ -24,6 +24,14 @@ import {
   validateMeshBuffers,
 } from '../assets/mesh-builder.js';
 import { Software3DRenderer } from '../render/software-3d.js';
+import { packRGBA } from '../assets/raster.js';
+import { encodeWire2Frame, decodeWire2Frame, fastCdcSplit, diffFastCdcChunks } from '../compress/wire2.js';
+import { CoreGovernor } from '../runtime/governor.js';
+import { PhysicsWorld } from '../modules/phys.js';
+import { NavigationSystem } from '../modules/nav.js';
+import { EnvironmentSystem } from '../modules/env.js';
+import { synthesizeSoundPCM, AcousticWorld } from '../modules/audio.js';
+import { AiTeamSuite } from '../packs/ai-team.js';
 
 const ALL_BRANCH_NAMES = [
   ...CORE_BRANCHES,
@@ -44,11 +52,16 @@ export function createRatCoreEngine(config = {}) {
   // Барьер 1: одноразовый захват печати исключительно официальным toolkit
   const mint = vault.claimMintAuthority('ratcore-toolkit');
   const clock = createClock(config.clock || {});
+  const governor = new CoreGovernor({
+    profile: config.powerProfile || 'turbo',
+    targetFps: config.targetFps || 60,
+    logicalCores: config.logicalCores || (typeof navigator !== 'undefined' && navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4),
+  });
   const renderer3D = new Software3DRenderer(config.viewport || { width: 160, height: 90 });
 
   // Состояние мира
   let heightField = new HeightField({ width: 32, height: 32, cellSize: 1, originX: -16, originY: -16 });
-  heightField.data.fill(1.0); // Суша по умолчанию H = 1.0 м
+  heightField.data.fill(1.0);
   let graph = new WorldGraph();
   const entities = new Map();
   const numericIdToEntityId = new Map();
@@ -58,12 +71,19 @@ export function createRatCoreEngine(config = {}) {
   const undoStack = [];
   const memoCache = new Map();
   const perfCounters = new Map();
+  const knownWireCdcHashes = new Set();
   const manifestTools = Array.isArray(config.manifest?.tools) ? config.manifest.tools : [];
+
+  // Ленивые экземпляры опциональных подсистем (Zero-Cost Opt-In: null пока не включены!)
+  let physWorld = null;
+  let navSystem = null;
+  let envSystem = null;
+  let acousticWorld = null;
+  let aiTeamSuite = null;
 
   let nextEntityNumericId = 1;
   let nextTraceNum = 1;
-  let powerProfile = { mode: 'turbo', targetCpuPct: 75 };
-  let dynRes = { enabled: true, scale: 1.0, minScale: 0.55, maxScale: 1.0, targetFps: 60 };
+  let wireSeq = 1;
   const camera = { x: 0, y: -10, h: 6, targetX: 0, targetY: 0, targetH: 1, fovDeg: 60, mode: '3d-raster' };
 
   function recordPerf(toolName, costMs) {
@@ -77,7 +97,6 @@ export function createRatCoreEngine(config = {}) {
     if (costMs > rec.maxMs) rec.maxMs = costMs;
   }
 
-  // Единый конвейер вызова §0: проверка, dryRun, memoize, аудит, профилирование, единый ответ
   function wrapTool(toolName, fn) {
     return function wrappedTool(args = {}, ctx = {}) {
       const start = nowMs();
@@ -133,7 +152,30 @@ export function createRatCoreEngine(config = {}) {
     });
   }
 
-  // ---------------------------- Ядровые инструменты (Core Always-On) ----------------------------
+  function buildWorldSnapshotObj() {
+    return {
+      schema: 'ratcore-save/1',
+      seed,
+      tick: clock.tick,
+      entities: [...entities.values()].map((e) => ({
+        id: e.id, x: e.x, y: e.y, h: e.h, yaw: e.yaw, scale: e.scale, tag: e.tag, meshId: e.mesh.id,
+      })),
+      nodes: [...graph.nodes.values()],
+      edges: [...graph.edges.values()],
+    };
+  }
+
+  function renderCurrentFrame() {
+    let bgColor = packRGBA(18, 28, 42, 255);
+    if (envSystem) {
+      const light = envSystem.getLightingState();
+      renderer3D.sunDir = light.sunDir;
+      bgColor = packRGBA(light.skyRgb[0], light.skyRgb[1], light.skyRgb[2], 255);
+    }
+    return renderer3D.renderScene({ vault, entities: [...entities.values()], camera, bgColor });
+  }
+
+  // ---------------------------- Уровень 0: Ядровые ветки (Core Always-On) ----------------------------
   const coreImpl = {
     build: {
       primitive: wrapTool('build.primitive', (args, ctx) => {
@@ -175,7 +217,6 @@ export function createRatCoreEngine(config = {}) {
         return mintValidatedMesh(geom, { tool: 'build.combine', recipe: { op: 'build.combine', partIds: items.map((p) => p.mesh.id) }, agentId: ctx.agentId, traceId: ctx.traceId }, { dryRun: ctx.dryRun });
       }),
 
-      // Барьер 3: пересборка модели строго из рецепта ops
       fromRecipe: wrapTool('build.fromRecipe', (args, ctx) => {
         const ops = Array.isArray(args.ops) ? args.ops : [];
         if (!ops.length) throw new RatCoreError('RC-103', 'Рецепт должен содержать непустой массив ops', 'Укажи ops: [{ tool: "build.primitive", args: {...} }].');
@@ -218,7 +259,6 @@ export function createRatCoreEngine(config = {}) {
       }),
 
       placeEntity: wrapTool('build.placeEntity', (args, ctx) => {
-        // Обязательная проверка печати ToolGuard (сырой меш -> RC-101!)
         vault.readSealedMesh(args.mesh, 'build.placeEntity');
         if (args.texture) vault.readSealedTexture(args.texture, 'build.placeEntity');
 
@@ -233,17 +273,9 @@ export function createRatCoreEngine(config = {}) {
 
         const numericId = nextEntityNumericId++;
         const ent = {
-          id,
-          numericId,
-          mesh: args.mesh,
-          texture: args.texture || null,
-          x,
-          y,
-          h,
-          yaw: Number(args.yaw || 0),
-          scale: Number(args.scale || 1),
-          radius: Number(args.radius || 1),
-          tag: String(args.tag || 'object'),
+          id, numericId, mesh: args.mesh, texture: args.texture || null,
+          x, y, h, yaw: Number(args.yaw || 0), scale: Number(args.scale || 1),
+          radius: Number(args.radius || 1), tag: String(args.tag || 'object'),
         };
         entities.set(id, ent);
         numericIdToEntityId.set(numericId, id);
@@ -403,7 +435,7 @@ export function createRatCoreEngine(config = {}) {
         const rows = [...perfCounters.entries()]
           .map(([tool, s]) => ({ tool, calls: s.calls, totalMs: Number(s.totalMs.toFixed(3)), maxMs: Number(s.maxMs.toFixed(3)) }))
           .sort((a, b) => b.totalMs - a.totalMs);
-        return { top3: rows.slice(0, 3), totalTrackedTools: rows.length, vault: vault.getStats(), powerProfile };
+        return { top3: rows.slice(0, 3), totalTrackedTools: rows.length, vault: vault.getStats(), governor: governor.getStats() };
       }),
 
       auditLog: wrapTool('watch.auditLog', () => vault.getAuditLog()),
@@ -419,15 +451,17 @@ export function createRatCoreEngine(config = {}) {
 
       capture: wrapTool('look.capture', (args) => {
         if (args.width && args.height) renderer3D.resize(args.width, args.height);
-        const frame = renderer3D.renderScene({ vault, entities: [...entities.values()], camera });
+        const frame = renderCurrentFrame();
         const out = {
           width: frame.width,
           height: frame.height,
           drawnTris: frame.drawnTris,
           nonEmptyRatio: Number(frame.nonEmptyRatio.toFixed(4)),
         };
-        if (args.format === 'ascii') {
-          out.ascii = frame.surface.toAscii(args.cols || 40, args.rows || 18);
+        if (args.format === 'ascii') out.ascii = frame.surface.toAscii(args.cols || 40, args.rows || 18);
+        if (args.includePixels) {
+          out.pixels = frame.surface.pixels;
+          out.objectIdBuffer = frame.objectIdBuffer;
         }
         return out;
       }),
@@ -435,7 +469,7 @@ export function createRatCoreEngine(config = {}) {
 
     see: {
       visibleEntities: wrapTool('see.visibleEntities', () => {
-        const frame = renderer3D.renderScene({ vault, entities: [...entities.values()], camera });
+        const frame = renderCurrentFrame();
         const pixelCounts = new Map();
         const buf = frame.objectIdBuffer;
         for (let i = 0; i < buf.length; i++) {
@@ -456,21 +490,19 @@ export function createRatCoreEngine(config = {}) {
         const issues = [];
         const camGround = heightField.sampleHeight(camera.x, camera.y);
         if (camera.h < camGround) issues.push({ code: 'RC-402', message: `Камера под землёй (h=${camera.h} < H=${camGround.toFixed(2)})` });
-        const frame = renderer3D.renderScene({ vault, entities: [...entities.values()], camera });
+        const frame = renderCurrentFrame();
         if (entities.size > 0 && frame.nonEmptyRatio < 0.001) {
           issues.push({ code: 'RC-401', message: 'Пустой кадр: ни одна сущность не попала в поле зрения камеры' });
         }
         return { ok: issues.length === 0, nonEmptyRatio: frame.nonEmptyRatio, issues };
       }),
 
-      raycastVoxel: wrapTool('see.raycastVoxel', (args) => {
-        return ddaRaycast3D({
-          origin: args.origin || [0, 0, 0],
-          dir: args.dir || [1, 0, 0],
-          maxDist: args.maxDist || 64,
-          isSolid: typeof args.isSolid === 'function' ? args.isSolid : () => false,
-        });
-      }),
+      raycastVoxel: wrapTool('see.raycastVoxel', (args) => ddaRaycast3D({
+        origin: args.origin || [0, 0, 0],
+        dir: args.dir || [1, 0, 0],
+        maxDist: args.maxDist || 64,
+        isSolid: typeof args.isSolid === 'function' ? args.isSolid : () => false,
+      })),
     },
 
     input: {
@@ -478,48 +510,190 @@ export function createRatCoreEngine(config = {}) {
     },
 
     ui: {
-      hudSummary: wrapTool('ui.hudSummary', () => ({ tick: clock.tick, entities: entities.size, powerProfile, dynRes })),
+      hudSummary: wrapTool('ui.hudSummary', () => ({ tick: clock.tick, entities: entities.size, governor: governor.getStats() })),
     },
 
     save: {
-      exportJson: wrapTool('save.exportJson', () => ({
-        schema: 'ratcore-save/1',
-        seed,
-        tick: clock.tick,
-        entities: [...entities.values()].map((e) => ({ id: e.id, x: e.x, y: e.y, h: e.h, yaw: e.yaw, scale: e.scale, tag: e.tag, meshId: e.mesh.id })),
-        nodes: [...graph.nodes.values()],
-        edges: [...graph.edges.values()],
-      })),
+      exportJson: wrapTool('save.exportJson', () => buildWorldSnapshotObj()),
+
+      // Уровень 11: Бинарный экспорт мира в ratcore-wire/2 + FastCDC дедупликация + CRC32
+      exportWire2: wrapTool('save.exportWire2', (args) => {
+        const snap = buildWorldSnapshotObj();
+        const rawBytes = new TextEncoder().encode(JSON.stringify(snap));
+        const cdc = fastCdcSplit(rawBytes);
+        const dedup = diffFastCdcChunks(cdc, args.resetDedup ? new Set() : knownWireCdcHashes);
+        const wire = encodeWire2Frame(rawBytes, { seq: wireSeq++, codec: args.codec || 'auto' });
+        return {
+          ...wire,
+          cdcChunks: dedup.totalChunks,
+          cdcSentChunks: dedup.sentChunks,
+          dedupSavedPct: dedup.dedupSavedPct,
+        };
+      }),
+
+      importWire2: wrapTool('save.importWire2', (args) => {
+        if (!args.frame) throw new RatCoreError('RC-701', 'Не передан бинарный буфер frame', 'Передай Uint8Array из save.exportWire2().');
+        return decodeWire2Frame(args.frame, { asJson: true });
+      }),
     },
 
     stream: {
       setPowerProfile: wrapTool('stream.setPowerProfile', (args) => {
-        const map = { eco: 40, balanced: 60, turbo: 75 };
-        const mode = map[args.mode] ? args.mode : 'turbo';
-        powerProfile = { mode, targetCpuPct: map[mode] };
-        return { ...powerProfile };
+        const stats = governor.setPowerProfile(args.mode || 'turbo');
+        return { mode: stats.profile.mode, targetCpuPct: stats.profile.targetCpuPct, targetWorkers: stats.targetWorkers, frameBudgetMs: stats.frameBudgetMs };
       }),
 
       setDynamicResolution: wrapTool('stream.setDynamicResolution', (args) => {
-        dynRes = {
-          enabled: args.enabled !== false,
-          scale: dynRes.scale,
-          minScale: Number(args.minScale ?? 0.55),
-          maxScale: Number(args.maxScale ?? 1.0),
-          targetFps: Number(args.targetFps ?? 60),
-        };
-        return { ...dynRes };
+        governor.dynRes.enabled = args.enabled !== false;
+        if (args.minScale !== undefined) governor.dynRes.minScale = Number(args.minScale);
+        if (args.maxScale !== undefined) governor.dynRes.maxScale = Number(args.maxScale);
+        return { ...governor.dynRes };
       }),
+
+      setVisibilityHidden: wrapTool('stream.setVisibilityHidden', (args) => governor.setVisibilityHidden(Boolean(args.hidden))),
+
+      governorEnqueue: wrapTool('stream.governorEnqueue', (args) => {
+        governor.enqueue(args.priority ?? 2, args.name || 'job', typeof args.fn === 'function' ? args.fn : () => true);
+        return { queued: true, pending: governor.queues.map((q) => q.length) };
+      }),
+
+      governorTick: wrapTool('stream.governorTick', (args) => governor.executeFrame({ simulatedFrameMs: args.simulatedFrameMs ?? null })),
+
+      governorStats: wrapTool('stream.governorStats', () => governor.getStats()),
+
+      sampleMemory: wrapTool('stream.sampleMemory', (args) => ({
+        warning: governor.sampleMemory(args.activeEntities ?? entities.size, Number(args.usedBytes ?? 0)),
+        totalWarnings: governor.leakWarnings.length,
+      })),
 
       memoryStats: wrapTool('stream.memoryStats', () => ({
         profile: { preset: profile.preset, estBundleKB: profile.estBundleKB, savingsPct: profile.savingsPct, activePacks: profile.packs },
         vault: vault.getStats(),
+        governor: governor.getStats(),
         entities: entities.size,
       })),
     },
   };
 
-  // Активация модулей/пакетов: включённые работают, выключенные — Zero-Cost Proxy (RC-108!)
+  // ---------------------------- Уровни 1 и 2: Фабрики Opt-In модулей и пакетов ----------------------------
+  function createModuleBranch(branch) {
+    if (branch === 'phys') {
+      if (!physWorld) physWorld = new PhysicsWorld();
+      return {
+        addBody: wrapTool('phys.addBody', (args) => physWorld.addBody(args)),
+        applyImpulse: wrapTool('phys.applyImpulse', (args) => physWorld.applyImpulse(args.id, args.ix, args.iy, args.ih)),
+        step: wrapTool('phys.step', (args) => {
+          const res = physWorld.step(args.dt ?? clock.fixedDt, heightField);
+          // Синхронизируем физические тела с сущностями сцены
+          for (const b of physWorld.bodies.values()) {
+            const ent = entities.get(b.id);
+            if (ent) {
+              ent.x = b.x; ent.y = b.y; ent.h = Math.max(heightField.sampleHeight(b.x, b.y), b.h - b.radius);
+              spatial.insert(ent.id, ent.x, ent.y, ent.radius);
+            }
+          }
+          return res;
+        }),
+        raycast: wrapTool('phys.raycast', (args) => physWorld.raycastBodies(args)),
+        getBody: wrapTool('phys.getBody', (args) => (physWorld.bodies.has(args.id) ? { ...physWorld.bodies.get(args.id) } : null)),
+        status: wrapTool('phys.status', () => ({ branch: 'phys', enabled: true, bodies: physWorld.bodies.size })),
+      };
+    }
+
+    if (branch === 'nav') {
+      if (!navSystem) navSystem = new NavigationSystem();
+      return {
+        findPath: wrapTool('nav.findPath', (args) => navSystem.findTerrainPath(heightField, args)),
+        findGraphPath: wrapTool('nav.findGraphPath', (args) => graph.findPath(args.from, args.to, args)),
+        rvoStep: wrapTool('nav.rvoStep', (args) => navSystem.computeRvoVelocity(args)),
+        status: wrapTool('nav.status', () => ({ branch: 'nav', enabled: true })),
+      };
+    }
+
+    if (branch === 'env') {
+      if (!envSystem) envSystem = new EnvironmentSystem();
+      return {
+        setTime: wrapTool('env.setTime', (args) => envSystem.setTime(args.hours ?? 12)),
+        advanceHours: wrapTool('env.advanceHours', (args) => envSystem.advanceHours(args.deltaHours ?? 1)),
+        setWeather: wrapTool('env.setWeather', (args) => envSystem.setWeather(args)),
+        sampleTemp: wrapTool('env.sampleTemp', (args) => ({ elevationH: Number(args.h || 0), tempC: envSystem.sampleTemperatureC(args.h || 0) })),
+        state: wrapTool('env.state', () => envSystem.getState()),
+        status: wrapTool('env.status', () => ({ branch: 'env', enabled: true, weather: envSystem.weather })),
+      };
+    }
+
+    if (branch === 'audio') {
+      if (!acousticWorld) acousticWorld = new AcousticWorld();
+      return {
+        synthesize: wrapTool('audio.synthesize', (args) => synthesizeSoundPCM(args)),
+        emit: wrapTool('audio.emit', (args) => acousticWorld.emit({ ...args, tick: clock.tick })),
+        status: wrapTool('audio.status', () => ({ branch: 'audio', enabled: true })),
+      };
+    }
+
+    if (branch === 'hear') {
+      if (!acousticWorld) acousticWorld = new AcousticWorld();
+      return {
+        emit: wrapTool('hear.emit', (args) => acousticWorld.emit({ ...args, tick: clock.tick })),
+        listen: wrapTool('hear.listen', (args) => acousticWorld.listen({ ...args, currentTick: clock.tick, heightField })),
+        status: wrapTool('hear.status', () => ({ branch: 'hear', enabled: true, activeEvents: acousticWorld.events.length })),
+      };
+    }
+
+    // Пакет pack:ai-team (think, guess, comm, bugs, bridge)
+    if (['think', 'guess', 'comm', 'bugs', 'bridge'].includes(branch)) {
+      if (!aiTeamSuite) aiTeamSuite = new AiTeamSuite();
+      if (branch === 'think') {
+        return {
+          start: wrapTool('think.start', (args, ctx) => aiTeamSuite.thinkStart({ ...args, agentId: ctx.agentId })),
+          branch: wrapTool('think.branch', (args) => aiTeamSuite.thinkBranch(args)),
+          conclude: wrapTool('think.conclude', (args) => aiTeamSuite.thinkConclude(args)),
+          status: wrapTool('think.status', () => ({ branch: 'think', enabled: true, thoughts: aiTeamSuite.thoughts.size })),
+        };
+      }
+      if (branch === 'guess') {
+        return {
+          propose: wrapTool('guess.propose', (args) => aiTeamSuite.guessPropose(args)),
+          evidence: wrapTool('guess.evidence', (args) => aiTeamSuite.guessEvidence(args)),
+          rank: wrapTool('guess.rank', () => aiTeamSuite.guessRank()),
+          status: wrapTool('guess.status', () => ({ branch: 'guess', enabled: true, hypotheses: aiTeamSuite.hypotheses.size })),
+        };
+      }
+      if (branch === 'comm') {
+        return {
+          post: wrapTool('comm.post', (args, ctx) => aiTeamSuite.commPost({ ...args, from: args.from || ctx.agentId })),
+          read: wrapTool('comm.read', (args) => aiTeamSuite.commRead(args)),
+          upsertTask: wrapTool('comm.upsertTask', (args) => aiTeamSuite.commUpsertTask(args)),
+          status: wrapTool('comm.status', () => ({ branch: 'comm', enabled: true, tasks: aiTeamSuite.tasks.size })),
+        };
+      }
+      if (branch === 'bugs') {
+        return {
+          report: wrapTool('bugs.report', (args, ctx) => aiTeamSuite.bugsReport({ ...args, author: args.author || ctx.agentId })),
+          minimize: wrapTool('bugs.minimize', (args) => aiTeamSuite.bugsMinimize(args)),
+          list: wrapTool('bugs.list', () => [...aiTeamSuite.reports]),
+          status: wrapTool('bugs.status', () => ({ branch: 'bugs', enabled: true, reports: aiTeamSuite.reports.length })),
+        };
+      }
+      if (branch === 'bridge') {
+        return {
+          exportScene: wrapTool('bridge.exportScene', (args) => aiTeamSuite.bridgeExportScene({
+            format: args.format || 'three-json',
+            worldSnapshot: buildWorldSnapshotObj(),
+            vault,
+            entities: [...entities.values()],
+          })),
+          verifyWire2: wrapTool('bridge.verifyWire2', (args) => aiTeamSuite.bridgeVerifyWire2(args.frame)),
+          status: wrapTool('bridge.status', () => ({ branch: 'bridge', enabled: true })),
+        };
+      }
+    }
+
+    return {
+      status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v0.2-ready' })),
+    };
+  }
+
   const tools = {};
 
   function rebuildToolProxies() {
@@ -527,10 +701,7 @@ export function createRatCoreEngine(config = {}) {
       if (coreImpl[branch]) {
         tools[branch] = coreImpl[branch];
       } else if (profile.activeBranches.has(branch)) {
-        // Включённый модуль/пакет (этап 1: валидный шлюз состояния модуля)
-        tools[branch] = {
-          status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v0.1-ready' })),
-        };
+        tools[branch] = createModuleBranch(branch);
       } else {
         tools[branch] = createDisabledBranchProxy(branch);
       }
@@ -552,7 +723,6 @@ export function createRatCoreEngine(config = {}) {
       }
       const res = fn(step.args || {}, { ...ctx, dryRun: ctx.dryRun });
       if (!res.ok) {
-        // Атомарный откат всех выполненных шагов при сбое
         if (!ctx.dryRun && undoStack.length > undoBefore) {
           coreImpl.remove.undo({ steps: undoStack.length - undoBefore });
         }
@@ -563,7 +733,6 @@ export function createRatCoreEngine(config = {}) {
     return { executed: results.length, results };
   });
 
-  // Барьер 5: самодокументирующийся шлюз tools.help()
   tools.help = wrapTool('help', (args) => {
     const branch = args && args.branch ? String(args.branch) : null;
     if (branch) {
@@ -580,7 +749,6 @@ export function createRatCoreEngine(config = {}) {
     };
   });
 
-  // F-183..F-185, A-124: Офлайн-поисковик инструментов для ИИ (BM25 + теги по tools-manifest.json)
   tools.discover = wrapTool('discover', (args) => {
     const query = String(args.intent || args.query || '').toLowerCase().trim();
     const limit = Math.max(1, Math.min(12, Number(args.limit || 5)));
@@ -595,13 +763,8 @@ export function createRatCoreEngine(config = {}) {
       }
       const isEnabled = profile.activeBranches.has(item.branch);
       return {
-        id: item.id,
-        branch: item.branch,
-        tier: item.tier,
-        pack: item.pack || null,
-        enabled: isEnabled,
-        score,
-        summary: item.summary,
+        id: item.id, branch: item.branch, tier: item.tier, pack: item.pack || null,
+        enabled: isEnabled, score, summary: item.summary,
       };
     }).filter((r) => tokens.length === 0 || r.score > 0)
       .sort((a, b) => b.score - a.score)
@@ -611,7 +774,16 @@ export function createRatCoreEngine(config = {}) {
     return { query, matches: scored, neededPacks };
   });
 
-  // Динамическое включение / выключение опциональных пакетов по выбору (A-111)
+  function enableModule(moduleName) {
+    if (!STANDARD_MODULES.includes(moduleName)) {
+      throw new RatCoreError('RC-104', `Неизвестный модуль: ${moduleName}`, `Доступные модули: ${STANDARD_MODULES.join(', ')}`);
+    }
+    if (!profile.modules.includes(moduleName)) profile.modules.push(moduleName);
+    profile.activeBranches.add(moduleName);
+    rebuildToolProxies();
+    return { ok: true, enabledModule: moduleName, activeModules: [...profile.modules] };
+  }
+
   function enablePack(packId) {
     const spec = OPTIONAL_PACKS[packId];
     if (!spec) {
@@ -638,10 +810,12 @@ export function createRatCoreEngine(config = {}) {
   }
 
   return Object.freeze({
-    version: '0.1.0-stage1',
+    version: '0.2.0-stage2',
     seed,
     clock,
+    governor,
     tools,
+    enableModule,
     enablePack,
     disablePack,
     getProfile: () => ({
@@ -654,7 +828,6 @@ export function createRatCoreEngine(config = {}) {
     }),
     getWorldGraph: () => graph,
     getHeightField: () => heightField,
-    // Защищённая точка проверки для тестов ToolGuard (не раскрывает mintAuthority!)
     _verifySealedMesh: (handle) => vault.isSealedMesh(handle),
     _verifySealedTexture: (handle) => vault.isSealedTexture(handle),
     _attemptSecondMint: () => vault.claimMintAuthority('attacker'),

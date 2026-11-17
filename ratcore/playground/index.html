@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RatCore v0.2 — Интерактивная песочница движка</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b111b;
+      --panel: #131c2b;
+      --border: #25344d;
+      --accent: #38bdf8;
+      --ok: #34d399;
+      --warn: #fbbf24;
+      --err: #f87171;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: grid;
+      grid-template-columns: 1fr 370px;
+      min-height: 100vh;
+    }
+    @media (max-width: 960px) {
+      body { grid-template-columns: 1fr; }
+    }
+    .stage {
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 12px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+    canvas {
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16 / 9;
+      background: #0d1624;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      image-rendering: pixelated;
+    }
+    .panel {
+      background: var(--panel);
+      border-left: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      overflow-y: auto;
+    }
+    h1 { margin: 0; font-size: 18px; }
+    h2 { margin: 0 0 6px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    button {
+      background: #1b283d;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12.5px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    button:hover { border-color: var(--accent); background: #22324c; }
+    button.danger { border-color: rgba(248, 113, 113, 0.45); color: #fecaca; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-width: 800px;
+    }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .metric b { display: block; font-size: 16px; color: var(--ok); margin-top: 2px; }
+    input {
+      width: 100%;
+      background: #0d1522;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 13px;
+    }
+    pre {
+      margin: 0;
+      background: #080d15;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 11.5px;
+      line-height: 1.4;
+      max-height: 280px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <div class="topbar">
+      <div>
+        <h1>RatCore v0.2 — Песочница движка</h1>
+        <small style="color:var(--muted)">Изолированный стенд · Software 3D + Object-ID + ToolGuard + RCW2 + CoreGovernor 75 %</small>
+      </div>
+      <span class="badge" id="profileBadge">preset: survival + pack:ai-team</span>
+    </div>
+
+    <canvas id="viewport" width="320" height="180"></canvas>
+
+    <div class="metrics">
+      <div class="metric">Треугольников<b id="mTris">0</b></div>
+      <div class="metric">Видно (Object-ID)<b id="mVis">0</b></div>
+      <div class="metric">CPU Профиль<b id="mCpu">turbo 75 %</b></div>
+    </div>
+  </main>
+
+  <aside class="panel">
+    <div>
+      <h2>1. Строительство и Мир</h2>
+      <div class="btn-grid">
+        <button id="btnTower">Построить башню</button>
+        <button id="btnGreedy">Greedy Voxels (4×1×4)</button>
+        <button id="btnDrop">Сбросить куб (phys)</button>
+        <button id="btnWeather">Сменить время/погоду</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>2. Сжатие, Мост и Защита</h2>
+      <div class="btn-grid">
+        <button id="btnWire2">Сжать мир в RCW2</button>
+        <button id="btnBridge">Экспорт Godot .tscn</button>
+        <button id="btnCheat" class="danger">Атака: сырой меш (RC-101)</button>
+        <button id="btnOptIn" class="danger">Отключённый пакет (RC-108)</button>
+      </div>
+    </div>
+
+    <div>
+      <h2>3. Поиск инструментов (tools.discover)</h2>
+      <input id="discoverInput" type="text" placeholder="Например: разрушить мост огонь / маршрут / сжатие" value="разрушить мост огонь">
+    </div>
+
+    <div>
+      <h2>Журнал вызовов RatCore.tools.*</h2>
+      <pre id="log"></pre>
+    </div>
+  </aside>
+
+  <script type="module">
+    import { createEngine } from '../ratcore.js';
+
+    const manifest = await fetch('../tools-manifest.json').then((r) => r.json());
+    const engine = createEngine({
+      preset: 'survival',
+      packs: ['pack:ai-team'],
+      seed: 2026,
+      viewport: { width: 320, height: 180 },
+      manifest,
+    });
+
+    const canvas = document.getElementById('viewport');
+    const ctx = canvas.getContext('2d');
+    const imgData = ctx.createImageData(320, 180);
+    const logEl = document.getElementById('log');
+    const mTris = document.getElementById('mTris');
+    const mVis = document.getElementById('mVis');
+    const mCpu = document.getElementById('mCpu');
+
+    function log(title, payload) {
+      const line = `[${new Date().toLocaleTimeString()}] ${title}\n${JSON.stringify(payload, null, 2)}\n\n`;
+      logEl.textContent = (line + logEl.textContent).slice(0, 6000);
+    }
+
+    // Стартовая сцена строго через RatCore.tools.build.*
+    const baseTower = engine.tools.build.fromRecipe({
+      modelId: 'citadel',
+      ops: [
+        { tool: 'build.primitive', args: { shape: 'box', w: 3, h: 4, d: 3, color: '#60a5fa' } },
+        { tool: 'build.primitive', args: { shape: 'roof', w: 3.4, h: 2, d: 3.4, color: '#f59e0b' }, offset: [0, 4, 0] },
+      ],
+    });
+    engine.tools.build.placeEntity({ id: 'citadel_main', mesh: baseTower.data, x: 0, y: 0, h: 1, allowWater: true });
+
+    let angle = 0;
+    let towerCount = 1;
+    let timeIdx = 0;
+    const times = [12, 18.5, 2, 7.5];
+    const weathers = ['clear', 'cloudy', 'storm', 'snow'];
+
+    function renderFrame() {
+      angle += 0.015;
+      engine.tools.phys.step({ dt: 1 / 30 });
+      engine.tools.look.at({
+        x: Math.sin(angle) * 14,
+        y: -Math.cos(angle) * 14,
+        h: 7.5,
+        targetX: 0,
+        targetY: 0,
+        targetH: 2.5,
+      });
+      const cap = engine.tools.look.capture({ includePixels: true });
+      if (cap.ok && cap.data.pixels) {
+        imgData.data.set(new Uint8ClampedArray(cap.data.pixels.buffer));
+        ctx.putImageData(imgData, 0, 0);
+        mTris.textContent = String(cap.data.drawnTris);
+      }
+      const vis = engine.tools.see.visibleEntities();
+      mVis.textContent = vis.ok ? `${vis.data.visibleCount} (${vis.data.visible.map((v) => v.id).join(', ')})` : '0';
+      const gov = engine.tools.stream.governorStats().data;
+      mCpu.textContent = `${gov.profile.mode} ${gov.profile.targetCpuPct}% (${gov.targetWorkers}w)`;
+      requestAnimationFrame(renderFrame);
+    }
+
+    document.getElementById('btnTower').onclick = () => {
+      towerCount++;
+      const a = towerCount * 1.4;
+      const r = 4.5 + (towerCount % 3) * 1.5;
+      const res = engine.tools.build.placeEntity({
+        id: `tower_${towerCount}`,
+        mesh: baseTower.data,
+        x: Number((Math.cos(a) * r).toFixed(2)),
+        y: Number((Math.sin(a) * r).toFixed(2)),
+        h: 1,
+        scale: 0.75,
+        allowWater: true,
+      });
+      log('tools.build.placeEntity', res.data || res.error);
+    };
+
+    document.getElementById('btnGreedy').onclick = () => {
+      const voxels = [];
+      for (let x = 0; x < 4; x++) for (let z = 0; z < 4; z++) voxels.push({ x, y: 0, z, mat: 1 });
+      const vMesh = engine.tools.build.voxels({ voxels, voxelSize: 0.8, color: '#34d399' });
+      const id = `slab_${++towerCount}`;
+      engine.tools.build.placeEntity({ id, mesh: vMesh.data, x: -4.5, y: 2.5, h: 1, allowWater: true });
+      log('Greedy Meshing (16 вокселей -> 12 треуг.)', { id, triCount: vMesh.data.triCount, meshId: vMesh.data.id });
+    };
+
+    document.getElementById('btnDrop').onclick = () => {
+      const id = `drop_${++towerCount}`;
+      const cube = engine.tools.build.primitive({ shape: 'box', w: 1.4, h: 1.4, d: 1.4, color: '#f472b6' });
+      const x = Number(((Math.random() - 0.5) * 6).toFixed(2));
+      const y = Number(((Math.random() - 0.5) * 6).toFixed(2));
+      engine.tools.build.placeEntity({ id, mesh: cube.data, x, y, h: 9, allowWater: true });
+      const body = engine.tools.phys.addBody({ id, x, y, h: 9, radius: 0.7, restitution: 0.45 });
+      log('tools.phys.addBody (сброс с высоты 9 м)', body.data);
+    };
+
+    document.getElementById('btnWeather').onclick = () => {
+      timeIdx = (timeIdx + 1) % times.length;
+      engine.tools.env.setTime({ hours: times[timeIdx] });
+      const st = engine.tools.env.setWeather({ kind: weathers[timeIdx], intensity: 0.7 }).data;
+      log('tools.env (день/ночь + погода)', { timeHours: st.timeHours, phase: st.phase, weather: st.weather, tempC: st.seaLevelTempC });
+    };
+
+    document.getElementById('btnWire2').onclick = () => {
+      const w = engine.tools.save.exportWire2().data;
+      log('ratcore-wire/2 (RCW2 + FastCDC + CRC32)', {
+        rawBytes: w.rawBytes,
+        wireBytes: w.wireBytes,
+        savedPct: `${w.savedPct}%`,
+        dedupSavedPct: `${w.dedupSavedPct}%`,
+        crc32: `0x${w.crc32.toString(16)}`,
+      });
+    };
+
+    document.getElementById('btnBridge').onclick = () => {
+      const exp = engine.tools.bridge.exportScene({ format: 'godot-tscn' }).data;
+      log('BridgeGuard -> Godot 4 .tscn', exp);
+    };
+
+    document.getElementById('btnCheat').onclick = () => {
+      const fake = { id: 'mesh_fake', buffers: { positions: new Float32Array([0, 0, 0]) } };
+      const res = engine.tools.build.placeEntity({ id: 'cheater', mesh: fake, x: 0, y: 0, h: 1 });
+      log('ToolGuard Барьер 2 ОТБИЛ атаку!', res.error);
+    };
+
+    document.getElementById('btnOptIn').onclick = () => {
+      const res = engine.tools.destroy.damage({ target: 'citadel_main' });
+      log('Zero-Cost Opt-In (RC-108)', res.error);
+    };
+
+    const discoverInput = document.getElementById('discoverInput');
+    function runDiscover() {
+      const res = engine.tools.discover({ intent: discoverInput.value, limit: 4 });
+      log(`tools.discover("${discoverInput.value}")`, res.data);
+    }
+    discoverInput.addEventListener('change', runDiscover);
+
+    log('RatCore v0.2 запущен', engine.getProfile());
+    requestAnimationFrame(renderFrame);
+  </script>
+</body>
+</html>

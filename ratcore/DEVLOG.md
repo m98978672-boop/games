@@ -290,3 +290,29 @@
    - `ratcore/tests/stage1.mjs` — все слои Этапа 1 (`OK`).
    - `.github/workflows/validate.yml` расширен прогоном `site/tests/portal.mjs`, `ratcore/tests/tool-contract.mjs` и `ratcore/tests/stage1.mjs`.
 
+---
+
+## Запись #012 — 2026-11-16 · Этап 2 (`v0.2`): `ratcore-wire/2`, `CoreGovernor 75 %`, Opt-In модули, `pack:ai-team`, облако Supabase и живая 3D-песочница
+
+Реализованы и верифицированы все ключевые подсистемы Этапа 2 (`v0.2`, строго внутри `ratcore/`, `0` внешних зависимостей):
+
+1. **Сжатие и бинарный транспорт (`ratcore/src/compress/`):**
+   - `codec.js`: IEEE 802.3 `CRC32`, `ZigZag` + `LEB128 Varint`, `Delta-of-Delta`, `PackBits RLE`, `LZ77` со встроенным словарём `RATCORE_DICT_V1` (`F-122`).
+   - `wire2.js`: 24-байтный бинарный фрейм `RCW2` с `CRC32` и автовыбором кодека (`F-125`), контент-дедупликация `FastCDC` на Gear-хеше (`F-121`), восстановление одиночных потерь `XOR-FEC` (`F-124`) и потоковое окно `Wire2StreamWindow` `<= 256 КБ` RAM с AIMD и `resumeBitmap` (`F-123`).
+   - `cloud-adapter.js`: офлайн-first клиент `RatCoreCloudSync` для синхронизации `RCW2` + `FastCDC` снимков с облаком (секреты не хранятся в коде).
+2. **Облачная база `Supabase` (`games-cloud-save`, `eu-central-1`):**
+   - Выполнена аддитивная миграция `create_ratcore_cloud_tables`: созданы защищённые RLS таблицы `public.ratcore_cloud_snapshots` и `public.ratcore_ai_messages` без затрагивания существующих таблиц (`game_saves`, `ratmes_*`); выполнена живая контрольная запись вехи `v0.2.0-stage2`.
+3. **Управление CPU 75 % и надёжность (`ratcore/src/runtime/governor.js`):**
+   - `CoreGovernor`: профили `eco 40 %` / `balanced 60 %` / `turbo 75 %`, мгновенный сон воркеров (`0`) при скрытии вкладки, очереди `P0..P3`, ПИ-регулятор + тепловой троттлинг, `DynamicResolutionScaler`, `SelfHealingWatchdog` (`RC-906`) и `MemoryLeakSentinel` (`RC-907`).
+4. **Стандартные Opt-In модули (`ratcore/src/modules/`):**
+   - `phys.js` (`tools.phys.*`): твёрдые тела, гравитация, коллизии сфер и рельефа `HeightField`, трение, острова сна и `CCD`-рейкаст.
+   - `nav.js` (`tools.nav.*`): сеточный `A*` по рельефу с обходом воды и крутых склонов, упрощение пути и `RVO`-уклонение агентов.
+   - `env.js` (`tools.env.*`): цикл день/ночь, вектор солнца и неба (подключён к `Software3DRenderer`), погода, ветер и температура по высоте.
+   - `audio.js` (`tools.audio.*` + `tools.hear.*`): процедурный PCM-синтез звуков (`0 КБ` аудиофайлов) и 3D-слух ИИ с затуханием `1/r²` и окклюзией холмами.
+5. **Опциональный пакет ИИ-команды (`ratcore/src/packs/ai-team.js`, `pack:ai-team`):**
+   - `tools.think.*`, `tools.guess.*` (Байес `F-126`), `tools.comm.*` (каналы/inbox + CRDT-задачи), `tools.bugs.*` (`ddmin` дельта-отладка `A-86`), `tools.bridge.*` (`BridgeGuard` экспорт в `Three.js JSON`, `Godot 4 .tscn`, `Canvas 2D`, `RCW2`).
+6. **Интерактивная 3D-песочница и тесты:**
+   - `ratcore/playground/index.html` + `ratcore/playground/dev-server.mjs` (отдельный Live Preview стенд `0.0.0.0:8081` для живой проверки Software 3D, Greedy Meshing, физики, погоды, RCW2, Godot-моста и ToolGuard).
+   - `ratcore/tests/stage2.mjs` добавлен и подключён в `.github/workflows/validate.yml` (`OK`).
+
+
