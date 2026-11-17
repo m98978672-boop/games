@@ -1,4 +1,5 @@
-// Реальный headless-тест загрузки веб-клиента RatMes (app.js + все ES-импорты + bootstrap + полоса облака + отправка).
+// Реальный headless-тест загрузки веб-клиента RatMes:
+// ES-импорты + bootstrap + полоса облака 100% + разделение «Моё справа / Собеседник слева» + личные чаты 1-на-1 и Избранное.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -63,6 +64,7 @@ function makeEl(tag, id = '') {
 
 const byId = new Map();
 for (const id of idMatches) byId.set(id, makeEl('div', id));
+const bodyEl = makeEl('body', 'body');
 
 const store = new Map();
 globalThis.window = { innerWidth: 1200, addEventListener() {} };
@@ -76,6 +78,7 @@ globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {}
 globalThis.document = {
   hidden: false,
   title: '',
+  body: bodyEl,
   activeElement: null,
   getElementById: (id) => byId.get(id) || null,
   createElement: (tag) => makeEl(tag),
@@ -88,6 +91,7 @@ globalThis.document = {
 };
 
 let pushedMessages = 0;
+let createdRooms = [];
 globalThis.fetch = async (url, opts = {}) => {
   const s = String(url);
   if (s.includes('/api/health')) return { ok: false, status: 404, json: async () => ({}) };
@@ -99,6 +103,11 @@ globalThis.fetch = async (url, opts = {}) => {
     };
   }
   if (s.includes('/ratmes_rooms')) {
+    if (opts.method === 'POST' && opts.body) {
+      const parsed = JSON.parse(opts.body);
+      createdRooms.push(parsed);
+      return { ok: true, status: 201, json: async () => [parsed] };
+    }
     return {
       ok: true,
       status: 200,
@@ -123,7 +132,7 @@ const unhandled = [];
 process.on('unhandledRejection', (e) => unhandled.push(String(e?.stack || e)));
 process.on('uncaughtException', (e) => unhandled.push(String(e?.stack || e)));
 
-console.log('=== RatMes Web Client Boot & Cloud Progress Bar Tests ===');
+console.log('=== RatMes Web Client Boot, Bubbles & Private Chats Tests ===');
 await import('../src/web/app.js');
 await new Promise((r) => setTimeout(r, 350));
 
@@ -135,13 +144,36 @@ assert.ok(byId.get('peopleDirectoryList').children.length >= 2, 'Каталог 
 assert.ok(byId.get('sidebarLinksList').children.length >= 12, 'Ссылки подключений должны отрендериться');
 console.log('  ✓ app.js загрузился без ошибок импорта, полоса облака дошла до 100% (is-ready)');
 
+// Отправка сообщения и проверка чёткого разделения «Собеседник слева (.is-in) / Моё справа (.is-out)»
 byId.get('messageInput').value = 'Тест отправки сообщения';
 byId.get('composerForm').requestSubmit();
 await new Promise((r) => setTimeout(r, 300));
 
 assert.equal(unhandled.length, 0, `Ошибки при отправке сообщения: ${unhandled.join('; ')}`);
 assert.equal(pushedMessages, 1, 'Сообщение должно отправиться в Supabase');
-assert.ok(byId.get('messagesFeed').children.length >= 2, 'Отправленное сообщение должно появиться в ленте');
-console.log('  ✓ Полный конвейер отправки текста (pack.text -> validate -> vault -> enqueue -> dispatch -> Supabase) работает');
+const feedChildren = byId.get('messagesFeed').children;
+const inRows = feedChildren.filter((n) => n.classList?.contains('is-in'));
+const outRows = feedChildren.filter((n) => n.classList?.contains('is-out'));
+assert.equal(inRows.length, 1, 'Сообщение собеседника должно иметь класс msg-row is-in (слева)');
+assert.equal(outRows.length, 1, 'Моё сообщение должно иметь класс msg-row is-out (справа)');
+assert.ok(inRows[0].children.some((c) => c.classList?.contains('msg-peer-avatar')), 'У сообщения собеседника слева должен быть аватар');
+console.log('  ✓ Чёткое разделение сообщений: собеседник слева (.is-in + аватар) и моё справа (.is-out)');
+
+// Открытие окна «Новый личный чат», создание 1-на-1 DM по ID и «⭐ Избранное»
+byId.get('btnNewDmQuick').click();
+assert.equal(byId.get('dmActionModal').open, true, 'Окно «Новый личный чат» должно открываться');
+assert.ok(byId.get('dmModalPeopleList').children.length >= 1, 'В окне личных чатов должен отображаться собеседник Аня');
+
+byId.get('dmTargetCodeInput').value = 'u-peer-test';
+byId.get('openDmByCodeForm').requestSubmit();
+await new Promise((r) => setTimeout(r, 250));
+assert.ok(createdRooms.some((r) => r.room_type === 'dm' && String(r.room_id).startsWith('dm-') && !String(r.room_id).startsWith('dm-self-')), 'Должен создаться личный чат 1-на-1 (dm-...)');
+assert.ok(bodyEl.classList.contains('mobile-chat-open'), 'body должен получить mobile-chat-open для скрытия bottom-nav в чате');
+
+byId.get('btnOpenSavedMessages').click();
+await new Promise((r) => setTimeout(r, 250));
+assert.ok(createdRooms.some((r) => String(r.room_id).startsWith('dm-self-')), 'Должен открыться личный чат «⭐ Избранное» (dm-self-...)');
+assert.equal(unhandled.length, 0, `Необработанные ошибки в сценарии личных чатов: ${unhandled.join('; ')}`);
+console.log('  ✓ Личные чаты 1-на-1 (dm-...) и «⭐ Избранное» (dm-self-...) работают');
 console.log('\n✅ Веб-клиент RatMes проверен полностью!');
 process.exit(0);

@@ -892,6 +892,40 @@ export async function createBridgeClient() {
       return this.buildInviteUrl({ dmPeerId: peerId, dmName: myName, accSlot: nextSlot });
     },
 
+    async createOrOpenSelfChat({ myName = 'Участник' } = {}) {
+      const roomId = `dm-self-${sanitizePeerToken(peerId)}`;
+      const payload = {
+        room_id: roomId,
+        network: 'ratmes',
+        title: '⭐ Избранное',
+        description: `Личные заметки и сохранённые сообщения (${String(myName || 'Участник').slice(0, 32)})`,
+        room_type: 'dm',
+        participants: [peerId],
+        created_by: peerId,
+      };
+      const headers = {
+        apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
+        Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=representation',
+      };
+      try {
+        await fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+        }, 8000).catch(() => {});
+      } catch { /* можно работать и локально */ }
+      rememberJoinedRoomId(roomId, accountCtx);
+      await this.call('cloud.ingestRemote', {
+        rooms: [payload],
+        messages: [],
+        myPeerId: peerId,
+      });
+      pingOtherTabs(roomId);
+      return { ok: true, data: { roomId, title: '⭐ Избранное' } };
+    },
+
     async createOrOpenCloudDm({ targetPeerId, targetName = 'Собеседник', myName = 'Участник' } = {}) {
       const target = sanitizePeerToken(targetPeerId);
       const roomId = makeDmRoomId(peerId, target);
