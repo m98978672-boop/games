@@ -186,7 +186,8 @@ export class Intro {
       const dt = Math.min(0.1, (now - (this.last || now)) / 1000 || 0.016);
       this.last = now;
       this.t += Number.isFinite(dt) ? dt : 0.016;
-      this.draw();
+      // пролёт — украшение: если канва не умеет чего-то, игра всё равно должна открыться
+      try { this.draw(); } catch (err) { this.stop(); }
     };
     this.raf = requestAnimationFrame(loop);
     return this;

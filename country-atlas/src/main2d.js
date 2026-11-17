@@ -175,9 +175,16 @@ function setupIntro() {
   const overlay = hud.loading;
   if (!canvas) return;
   // мир для пролёта тот же, что откроется по кнопке «карта мира» — второго не строим
-  sharedWorld = buildWorld(424242);
-  intro = new Intro(canvas, sharedWorld, {});
-  intro.start();
+  try {
+    sharedWorld = buildWorld(424242);
+    intro = new Intro(canvas, sharedWorld, {});
+    intro.start();
+  } catch (err) {
+    // без пролёта игра открывается как раньше — заставка просто гаснет
+    if (hud.loading) hud.loading.classList.add('done');
+    if (hud.status) hud.status.textContent = 'пролёт не собрался: ' + err.message;
+    return;
+  }
   window.__ratgradIntro = intro;
   const begin = () => {
     if (!intro || !intro.ready) return;
@@ -255,8 +262,14 @@ function setupWorld() {
     // часы игры продолжают идти: война живёт и пока мы смотрим
     const target = map.transport ? map.transport.minutes : 0;
     if (target > world.minutes) advanceWars(world, target);
-    worldView.step(dt);
-    worldView.draw();
+    try {
+      worldView.step(dt);
+      worldView.draw();
+    } catch (err) {
+      if (hud.status) hud.status.textContent = 'карта мира не нарисовалась: ' + err.message;
+      worldRaf = 0;
+      return;
+    }
     worldStatsT += dt;
     if (worldStatsT > 0.4) { worldStatsT = 0; drawStats(); }
   };
