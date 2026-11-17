@@ -1,10 +1,11 @@
 /* Games — лёгкий Service Worker для мгновенного старта и офлайн-витрины. */
-const CACHE_NAME = 'games-store-v2';
+const CACHE_NAME = 'games-store-v3';
 const PRECACHE = [
   './',
   './index.html',
   './site/site.css',
   './site/games-data.js',
+  './site/game-antivirus.js',
   './site/portal.js',
   './site/user-games.js',
   './site/community-games.js',

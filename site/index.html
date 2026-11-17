@@ -10,7 +10,7 @@
 <!-- Open Graph -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="Games — магазин и библиотека браузерных игр">
-<meta property="og:description" content="17 браузерных 2D и 3D игр, симуляторов и стратегий в стиле Steam. Запускаются мгновенно и позволяют каждому добавить свою игру.">
+<meta property="og:description" content="16 браузерных 2D и 3D игр, симуляторов и стратегий в стиле Steam. Запускаются мгновенно и позволяют каждому добавить свою игру с 10-кратной антивирусной проверкой.">
 <meta property="og:image" content="assets/country-atlas.jpg">
 
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23171a21'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%2366c0f4' stroke-width='2.4'/%3E%3Cpolygon points='13,11 22,16 13,21' fill='%23a4d007'/%3E%3C/svg%3E">
@@ -18,6 +18,7 @@
 <link rel="manifest" href="site.webmanifest">
 <link rel="canonical" href="https://m98978672-boop.github.io/games/">
 <script src="games-data.js" defer></script>
+<script src="game-antivirus.js" defer></script>
 <script src="user-games.js" defer></script>
 <script src="portal.js" defer></script>
 <script src="../site/community-games.js" defer></script>
@@ -33,7 +34,7 @@
         <span class="nav-brand-name">GAMES</span>
         <span class="nav-brand-sub">WEB STORE &amp; LIBRARY</span>
       </span>
-      <span class="nav-count"><span data-games-total>17</span></span>
+      <span class="nav-count"><span data-games-total>16</span></span>
     </a>
 
     <nav class="nav-links" aria-label="Основная навигация">
@@ -548,10 +549,53 @@
               </label>
             </div>
 
+            <div class="av-panel" id="av-panel" aria-live="polite">
+              <div class="av-head">
+                <div class="av-title-wrap">
+                  <span class="av-shield-ic" aria-hidden="true">🛡️</span>
+                  <div>
+                    <strong class="av-title">Антивирус Games · 10-кратная перепроверка</strong>
+                    <p class="av-sub">10 независимых алгоритмов + сверка с VirusTotal, Google Safe Browsing, URLhaus, URLScan, Hybrid Analysis, Cloudflare Malware DNS и ClamAV CI</p>
+                  </div>
+                </div>
+                <span class="av-verdict-pill is-idle" id="av-verdict-pill">Ожидает проверки</span>
+              </div>
+
+              <div class="av-progress-track" aria-hidden="true">
+                <div class="av-progress-bar" id="av-progress-bar"></div>
+              </div>
+
+              <div class="av-meta-row" id="av-meta-row" hidden>
+                <span class="av-risk-chip" id="av-risk-chip">Риск: 0/100</span>
+                <code class="av-sha-chip" id="av-sha-chip" title="SHA-256 отпечаток игры">SHA-256: —</code>
+                <button class="link-btn" type="button" id="av-copy-sha">Копировать SHA-256</button>
+              </div>
+
+              <div class="av-actions-row">
+                <button class="btn btn-steam-blue btn-sm" type="button" id="av-run-scan-btn">🛡️ Перепроверить 10 раз</button>
+                <button class="btn btn-steam-ghost btn-sm" type="button" id="av-online-check-btn">🌐 Сверить домен онлайн (Cloudflare Malware DNS + Google DNS)</button>
+                <button class="link-btn" type="button" id="av-toggle-passes-btn" hidden>Показать все 10 алгоритмов ▾</button>
+              </div>
+
+              <p class="av-online-status" id="av-online-status" hidden></p>
+
+              <div class="av-pass-list" id="av-pass-list" hidden></div>
+
+              <div class="av-partners" id="av-partners" hidden>
+                <span class="av-partners-label">Перекрёстная проверка на известных антивирусных сайтах:</span>
+                <div class="av-partners-grid" id="av-partners-grid"></div>
+              </div>
+
+              <label class="av-warn-confirm" id="av-warn-confirm-wrap" hidden>
+                <input type="checkbox" id="av-warn-confirm">
+                <span>Я изучил(а) предупреждения 10-кратной проверки и беру ответственность за запуск в изолированном <code>sandbox</code></span>
+              </label>
+            </div>
+
             <p class="form-status" id="ug-form-status" role="status" aria-live="polite"></p>
 
             <div class="studio-submit-row">
-              <button class="btn btn-steam-play" type="submit" id="ug-submit-btn">▶ Добавить на витрину</button>
+              <button class="btn btn-steam-play" type="submit" id="ug-submit-btn">🛡️ Проверить 10× и добавить</button>
               <button class="btn btn-steam-blue" type="button" id="ug-to-publish-btn">🌍 Опубликовать для всех →</button>
             </div>
           </div>
@@ -604,7 +648,7 @@
               </div>
             </div>
           </div>
-          <p class="preview-hint">Все пользовательские HTML-игры открываются в изолированном <code>sandbox</code>-плеере, а ссылки проверяются на <code>https://</code>.</p>
+          <p class="preview-hint">Каждая игра автоматически проходит <strong>10-кратную антивирусную проверку</strong> (URL/омоглифы, сигнатуры, DOM, обфускация, энтропия Шеннона, сетевые утечки, polyglot/BiDi, анти-DoS, SHA-256 + известные антивирусные базы и декодированный рескан) и запускается в изолированном <code>sandbox</code>.</p>
         </aside>
       </div>
     </div>
