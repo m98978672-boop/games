@@ -38,6 +38,10 @@ import { NarrativeSuite } from '../packs/narrative.js';
 import { EcologySystem } from '../packs/ecology.js';
 import { StyleShaderPipeline } from '../packs/styles.js';
 import { exportSingleHtmlGame } from '../packs/exporter.js';
+import { WebGL2Renderer } from '../render/webgl2-renderer.js';
+import { WebGpuComputePipeline } from '../packs/webgpu.js';
+import { WasmAccelerator } from '../packs/wasm-accel.js';
+import { RatCoreWorkerPool } from '../runtime/worker-pool.js';
 
 const ALL_BRANCH_NAMES = [
   ...CORE_BRANCHES,
@@ -91,6 +95,11 @@ export function createRatCoreEngine(config = {}) {
   let narrativeSys = null;
   let ecologySys = null;
   let stylePipeline = null;
+  let webgl2Renderer = null;
+  let activeRenderBackend = 'software';
+  let webgpuPipeline = null;
+  let wasmAccel = null;
+  const workerPool = new RatCoreWorkerPool({ governor });
 
   let nextEntityNumericId = 1;
   let nextTraceNum = 1;
@@ -470,6 +479,7 @@ export function createRatCoreEngine(config = {}) {
         const out = {
           width: frame.width,
           height: frame.height,
+          backend: activeRenderBackend,
           drawnTris: frame.drawnTris,
           nonEmptyRatio: Number(frame.nonEmptyRatio.toFixed(4)),
         };
@@ -480,6 +490,61 @@ export function createRatCoreEngine(config = {}) {
         }
         return out;
       }),
+
+      setBackend: wrapTool('look.setBackend', (args) => {
+        const requested = String(args.backend || 'software');
+        if (requested === 'webgl2') {
+          if (!webgl2Renderer || args.canvas || args.gl) {
+            webgl2Renderer = new WebGL2Renderer({
+              canvas: args.canvas || null,
+              gl: args.gl || null,
+              width: args.width || renderer3D.width,
+              height: args.height || renderer3D.height,
+              uploadAndDrop: args.uploadAndDrop !== false,
+            });
+          }
+          if (webgl2Renderer.gl) {
+            activeRenderBackend = 'webgl2';
+            return { backend: 'webgl2', available: true, stats: webgl2Renderer.getStats() };
+          }
+          activeRenderBackend = 'software';
+          return { backend: 'software', available: false, reason: 'webgl2-context-unavailable' };
+        }
+        activeRenderBackend = 'software';
+        return { backend: 'software', available: true };
+      }),
+
+      shaderPrewarm: wrapTool('look.shaderPrewarm', (args) => {
+        if (!webgl2Renderer) return { done: true, available: false, prewarmedShaders: 0 };
+        return args.all ? webgl2Renderer.prewarmAll() : webgl2Renderer.stepShaderPrewarm();
+      }),
+
+      renderWebGL2: wrapTool('look.renderWebGL2', (args) => {
+        if (!webgl2Renderer || !webgl2Renderer.gl) {
+          return { ok: false, backend: 'unavailable', reason: 'Call look.setBackend({ backend: "webgl2", canvas|gl }) first' };
+        }
+        let bgRgb = [18 / 255, 28 / 255, 42 / 255];
+        if (envSystem) {
+          const light = envSystem.getLightingState();
+          webgl2Renderer.sunDir = light.sunDir;
+          bgRgb = [light.skyRgb[0] / 255, light.skyRgb[1] / 255, light.skyRgb[2] / 255];
+        }
+        const stylePreset = stylePipeline && profile.activeBranches.has('shader') ? stylePipeline.activePreset : 'none';
+        return webgl2Renderer.renderScene({
+          vault,
+          entities: [...entities.values()],
+          camera,
+          bgRgb,
+          stylePreset,
+          objectIdPass: Boolean(args.objectIdPass),
+        });
+      }),
+
+      rendererStats: wrapTool('look.rendererStats', () => ({
+        activeBackend: activeRenderBackend,
+        software: { width: renderer3D.width, height: renderer3D.height },
+        webgl2: webgl2Renderer ? webgl2Renderer.getStats() : WebGL2Renderer.probe(),
+      })),
     },
 
     see: {
@@ -585,8 +650,14 @@ export function createRatCoreEngine(config = {}) {
         profile: { preset: profile.preset, estBundleKB: profile.estBundleKB, savingsPct: profile.savingsPct, activePacks: profile.packs },
         vault: vault.getStats(),
         governor: governor.getStats(),
+        workerPool: workerPool.getStats(),
         entities: entities.size,
       })),
+
+      workerPoolStats: wrapTool('stream.workerPoolStats', () => workerPool.getStats()),
+      syncWorkers: wrapTool('stream.syncWorkers', () => workerPool.syncWithGovernor()),
+      dispatchWorkerTask: wrapTool('stream.dispatchWorkerTask', (args) => workerPool.dispatch(args)),
+      shutdownWorkers: wrapTool('stream.shutdownWorkers', () => workerPool.terminate()),
     },
   };
 
@@ -790,17 +861,43 @@ export function createRatCoreEngine(config = {}) {
           snapshot: buildWorldSnapshotObj(),
         })),
         diagnostics: wrapTool('studio.diagnostics', () => ({
-          version: '0.3.0-stage3',
+          version: '0.4.0-stage4',
           profile: { preset: profile.preset, activePacks: [...profile.packs], savingsPct: profile.savingsPct },
           vault: vault.getStats(),
           governor: governor.getStats(),
+          workerPool: workerPool.getStats(),
         })),
         status: wrapTool('studio.status', () => ({ branch: 'studio', enabled: true })),
       };
     }
 
+    // Пакет pack:webgpu (Compute-шейдеры WGSL frustum-куллинга и частиц с SoA fallback)
+    if (branch === 'webgpu') {
+      if (!webgpuPipeline) webgpuPipeline = new WebGpuComputePipeline();
+      return {
+        probe: wrapTool('webgpu.probe', () => webgpuPipeline.probe()),
+        frustumCull: wrapTool('webgpu.frustumCull', (args) => webgpuPipeline.dispatchFrustumCull(args)),
+        stepParticles: wrapTool('webgpu.stepParticles', (args) => webgpuPipeline.dispatchParticles(args)),
+        shaders: wrapTool('webgpu.shaders', () => webgpuPipeline.getShaderSources()),
+        status: wrapTool('webgpu.status', () => ({ branch: 'webgpu', enabled: true, ...webgpuPipeline.getStats() })),
+      };
+    }
+
+    // Пакет pack:wasm-accel (встроенный бинарный WebAssembly-модуль горячих циклов + проба SIMD v128)
+    if (branch === 'wasm') {
+      if (!wasmAccel) wasmAccel = new WasmAccelerator();
+      return {
+        fnv1a32: wrapTool('wasm.fnv1a32', (args) => ({ hash: wasmAccel.fnv1a32(args.bytes || args.data || new Uint8Array(0)) })),
+        deltaEncode: wrapTool('wasm.deltaEncode', (args) => ({ encoded: wasmAccel.deltaEncodeInt32(args.values || []) })),
+        deltaDecode: wrapTool('wasm.deltaDecode', (args) => ({ decoded: wasmAccel.deltaDecodeInt32(args.encoded || []) })),
+        stepGravity: wrapTool('wasm.stepGravity', (args) => wasmAccel.stepGravitySoA(args)),
+        benchmark: wrapTool('wasm.benchmark', (args) => wasmAccel.benchmark(args)),
+        status: wrapTool('wasm.status', () => ({ branch: 'wasm', enabled: true, ...wasmAccel.getStats() })),
+      };
+    }
+
     return {
-      status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v0.3-ready' })),
+      status: wrapTool(`${branch}.status`, () => ({ branch, enabled: true, stage: 'v0.4-ready' })),
     };
   }
 
@@ -920,7 +1017,7 @@ export function createRatCoreEngine(config = {}) {
   }
 
   return Object.freeze({
-    version: '0.3.0-stage3',
+    version: '0.4.0-stage4',
     seed,
     clock,
     governor,

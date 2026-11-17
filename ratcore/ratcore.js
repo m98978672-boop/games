@@ -1,7 +1,7 @@
-// RatCore — Главная публичная точка входа движка (v0.3 Этап 3, изолированно внутри ratcore/)
+// RatCore — Главная публичная точка входа движка (v0.4 Этап 4, изолированно внутри ratcore/)
 // Работает в браузере и в Node.js 22 без сборщиков и внешних зависимостей.
 
-export const RATCORE_VERSION = '0.3.0-stage3';
+export const RATCORE_VERSION = '0.4.0-stage4';
 export { createRatCoreEngine as createEngine } from './src/tools/toolkit.js';
 export { auditSourceCode } from './src/core/code-auditor.js';
 export { CORE_BRANCHES, STANDARD_MODULES, OPTIONAL_PACKS, PRESETS, resolveModuleProfile } from './src/core/modules.js';
@@ -20,3 +20,7 @@ export { CoreGovernor, POWER_PROFILES } from './src/runtime/governor.js';
 export { encodeInput12, decodeInput12 } from './src/packs/multiplayer.js';
 export { STYLE_PRESETS } from './src/packs/styles.js';
 export { exportSingleHtmlGame } from './src/packs/exporter.js';
+export { WebGL2Renderer, createHeadlessWebGL2Context, WEBGL2_VERT_MAIN, WEBGL2_FRAG_MAIN } from './src/render/webgl2-renderer.js';
+export { WebGpuComputePipeline, WGSL_FRUSTUM_CULL_SHADER, WGSL_PARTICLE_STEP_SHADER } from './src/packs/webgpu.js';
+export { WasmAccelerator, buildRatCoreWasmBytes } from './src/packs/wasm-accel.js';
+export { RatCoreWorkerPool } from './src/runtime/worker-pool.js';

@@ -337,5 +337,27 @@
    - `ratcore/tests/stage3.mjs` подключён в `.github/workflows/validate.yml` (все 4 набора `RatCore` зелёные; `30` модулей, `55` инструментов в `tools-manifest.json`).
    - Развёрнута синхронизированная облачная инфраструктура `RatCore`: **Supabase** (`games-cloud-save`), **Linear** (`RatCore Engine`, `GAM-8..GAM-12`), **Notion** (`RatCore — Центр управления движком`), **Google Drive / Docs / Sheets / Slides**, **Google Calendar** и **Dropbox** (`/RatCore-Vault`).
 
+---
+
+## Запись #014 — 2026-11-16 · Этап 4 (`v0.4`): Аппаратный WebGL2 + Async Shader Pre-Warm, `pack:webgpu`, `pack:wasm-accel` (442 Б + SIMD) и многоядерный `RatCoreWorkerPool` (75 % CPU)
+
+Реализованы и верифицированы 4 производительных подсистемы Этапа 4 (`v0.4.0-stage4`, `34` модуля, `61` инструмент в `tools-manifest.json`, `5` тестовых наборов, `0` внешних зависимостей, полная изоляция внутри `ratcore/`):
+
+1. **Аппаратный `WebGL2Renderer` (`ratcore/src/render/webgl2-renderer.js`, `tools.look.setBackend/shaderPrewarm/renderWebGL2/rendererStats`):**
+   - GLSL ES 3.00 шейдеры основного освещения (Lambert + 5 встроенных пост-стилей `PS1/CRT/Thermal/Nightvision/Cel`) и второго прохода `Object-ID`.
+   - Пошаговый **Async Shader Pre-Warm** (`F-172`, `A-114`) без фриза первого кадра, кэширование VAO/VBO по схеме **Upload-and-Drop** (`A-77`, повторный кадр `0` новых буферов) и жёсткий **Барьер 2 ToolGuard** (`vault.readSealedMesh` до обращения к GPU).
+   - В комплекте `createHeadlessWebGL2Context()` для детерминированной headless-проверки в CI без браузера.
+2. **Опциональный пакет `pack:webgpu` (`ratcore/src/packs/webgpu.js`, `tools.webgpu.*`):**
+   - Zero-Cost Opt-In (`RC-108` до подключения), WGSL Compute-шейдеры `@compute @workgroup_size(64)` для фрустум-куллинга сфер чанков (`F-176`, `A-120`) и батчевой симуляции частиц (`A-122`), автоматическая проба `navigator.gpu` и побитово совместимый SoA fallback.
+3. **Опциональный пакет `pack:wasm-accel` (`ratcore/src/packs/wasm-accel.js`, `tools.wasm.*`):**
+   - Runtime-сборщик чистого бинарного **WebAssembly-модуля весом всего 442 байта** (проходит `WebAssembly.validate`, `0` внешних инструментов компиляции), экспортирующий `memory`, `fnv1a32`, `deltaEncodeI32`, `deltaDecodeI32`, `stepGravityF32`, плюс встроенную пробу **`WASM SIMD v128`**.
+   - Побитовое совпадение `FNV-1a` с JS-эталоном, round-trip без потерь для `Delta-Int32` и ускорение горячего цикла в WASM (`0.01 мс` против `0.196 мс` в JS на 4096 байт).
+4. **Многоядерный `RatCoreWorkerPool` (`ratcore/src/runtime/worker-pool.js`, `tools.stream.workerPoolStats/dispatchWorkerTask/syncWorkers/shutdownWorkers`):**
+   - Настоящие потоки ОС **`node:worker_threads`** в Node.js 22 и **Blob Web Workers** в браузере, Zero-Cost ленивый старт (`uninitialized` до первой задачи), жёсткое подчинение лимиту **`CoreGovernor` (`eco 40 % / balanced 60 % / turbo 75 % CPU`)**, приоритеты `P0..P3` и zero-copy **`Transferable`** буферы.
+5. **Песочница `v0.4`, автотесты и CI:**
+   - В `ratcore/playground/index.html` добавлены живой переключатель **`Software 3D ↔ WebGL2`** и кнопки запуска **WASM + SIMD**, **WebGPU Compute** и **Worker Pool 75 % CPU**.
+   - `ratcore/tests/stage4.mjs` добавлен и включён в `.github/workflows/validate.yml` (`PASS`).
+
+
 
 

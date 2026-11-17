@@ -135,29 +135,36 @@
   <main class="stage">
     <div class="topbar">
       <div>
-        <h1>RatCore v0.3 — Песочница движка</h1>
-        <small style="color:var(--muted)">Изолированный стенд · Software 3D + Object-ID + ToolGuard + RCW2 + CoreGovernor 75 % + Opt-In Packs</small>
+        <h1>RatCore v0.4 — Песочница движка</h1>
+        <small style="color:var(--muted)">Изолированный стенд · Software 3D ↔ WebGL2 + ToolGuard + RCW2 + WebGPU Compute + WASM/SIMD + Worker Pool 75 %</small>
       </div>
-      <span class="badge" id="profileBadge">preset: survival + ai-team / styles / ecology / studio</span>
+      <span class="badge" id="profileBadge">preset: survival + webgpu / wasm-accel / ai-team / styles / ecology / studio</span>
     </div>
 
-    <canvas id="viewport" width="320" height="180"></canvas>
+    <div style="position:relative">
+      <canvas id="viewport" width="320" height="180"></canvas>
+      <canvas id="viewportGl" width="640" height="360" style="display:none"></canvas>
+    </div>
 
     <div class="metrics">
-      <div class="metric">Треугольников<b id="mTris">0</b></div>
+      <div class="metric">Рендер / Треугольников<b id="mTris">Software · 0</b></div>
       <div class="metric">Видно (Object-ID)<b id="mVis">0</b></div>
-      <div class="metric">CPU Профиль<b id="mCpu">turbo 75 %</b></div>
+      <div class="metric">CPU / Workers (75 %)<b id="mCpu">turbo 75 %</b></div>
     </div>
   </main>
 
   <aside class="panel">
     <div>
-      <h2>1. Строительство и Мир</h2>
+      <h2>1. Строительство и Рендер (Этап 4)</h2>
       <div class="btn-grid">
+        <button id="btnBackend">Рендер: Software ↔ WebGL2</button>
         <button id="btnTower">Построить башню</button>
         <button id="btnGreedy">Greedy Voxels (4×1×4)</button>
         <button id="btnDrop">Сбросить куб (phys)</button>
         <button id="btnWeather">Сменить время/погоду</button>
+        <button id="btnWasm">WASM + SIMD бенчмарк</button>
+        <button id="btnWebGpu">WebGPU Compute куллинг</button>
+        <button id="btnWorkers">Worker Pool (75 % CPU)</button>
       </div>
     </div>
 
@@ -191,19 +198,21 @@
     const manifest = await fetch('../tools-manifest.json').then((r) => r.json());
     const engine = createEngine({
       preset: 'survival',
-      packs: ['pack:ai-team', 'pack:styles', 'pack:ecology', 'pack:studio'],
+      packs: ['pack:ai-team', 'pack:styles', 'pack:ecology', 'pack:studio', 'pack:webgpu', 'pack:wasm-accel'],
       seed: 2026,
       viewport: { width: 320, height: 180 },
       manifest,
     });
 
     const canvas = document.getElementById('viewport');
+    const canvasGl = document.getElementById('viewportGl');
     const ctx = canvas.getContext('2d');
     const imgData = ctx.createImageData(320, 180);
     const logEl = document.getElementById('log');
     const mTris = document.getElementById('mTris');
     const mVis = document.getElementById('mVis');
     const mCpu = document.getElementById('mCpu');
+    let useWebGL2 = false;
 
     function log(title, payload) {
       const line = `[${new Date().toLocaleTimeString()}] ${title}\n${JSON.stringify(payload, null, 2)}\n\n`;
@@ -237,18 +246,86 @@
         targetY: 0,
         targetH: 2.5,
       });
-      const cap = engine.tools.look.capture({ includePixels: true });
-      if (cap.ok && cap.data.pixels) {
-        imgData.data.set(new Uint8ClampedArray(cap.data.pixels.buffer));
-        ctx.putImageData(imgData, 0, 0);
-        mTris.textContent = String(cap.data.drawnTris);
+      if (useWebGL2) {
+        engine.tools.look.shaderPrewarm({});
+        const glFrame = engine.tools.look.renderWebGL2({ objectIdPass: false });
+        if (glFrame.ok && glFrame.data.backend === 'webgl2') {
+          mTris.textContent = `WebGL2 · ${glFrame.data.drawnTris}`;
+        }
+      } else {
+        const cap = engine.tools.look.capture({ includePixels: true });
+        if (cap.ok && cap.data.pixels) {
+          imgData.data.set(new Uint8ClampedArray(cap.data.pixels.buffer));
+          ctx.putImageData(imgData, 0, 0);
+          mTris.textContent = `Software · ${cap.data.drawnTris}`;
+        }
       }
       const vis = engine.tools.see.visibleEntities();
       mVis.textContent = vis.ok ? `${vis.data.visibleCount} (${vis.data.visible.map((v) => v.id).join(', ')})` : '0';
       const gov = engine.tools.stream.governorStats().data;
-      mCpu.textContent = `${gov.profile.mode} ${gov.profile.targetCpuPct}% (${gov.targetWorkers}w)`;
+      const wp = engine.tools.stream.workerPoolStats().data;
+      mCpu.textContent = `${gov.profile.mode} ${gov.profile.targetCpuPct}% (${wp.activeWorkers}/${gov.targetWorkers}w)`;
       requestAnimationFrame(renderFrame);
     }
+
+    document.getElementById('btnBackend').onclick = () => {
+      if (!useWebGL2) {
+        const sw = engine.tools.look.setBackend({ backend: 'webgl2', canvas: canvasGl, width: 640, height: 360 });
+        if (sw.ok && sw.data.available) {
+          useWebGL2 = true;
+          canvas.style.display = 'none';
+          canvasGl.style.display = 'block';
+          log('look.setBackend -> WebGL2 + Async Shader Pre-Warm', sw.data);
+          return;
+        }
+        log('WebGL2 недоступен, остаёмся на Software 3D', sw.data);
+      } else {
+        useWebGL2 = false;
+        engine.tools.look.setBackend({ backend: 'software' });
+        canvasGl.style.display = 'none';
+        canvas.style.display = 'block';
+        log('look.setBackend -> Software 3D', { backend: 'software' });
+      }
+    };
+
+    document.getElementById('btnWasm').onclick = () => {
+      const b = engine.tools.wasm.benchmark({ count: 4096 });
+      log('pack:wasm-accel -> WebAssembly + SIMD v128 проба', b.data);
+    };
+
+    document.getElementById('btnWebGpu').onclick = () => {
+      const spheres = new Float32Array(256 * 4);
+      for (let i = 0; i < 256; i++) {
+        spheres[i * 4] = (i % 16) - 8;
+        spheres[i * 4 + 1] = 2;
+        spheres[i * 4 + 2] = i < 160 ? 12 + (i % 24) : -140 - i;
+        spheres[i * 4 + 3] = 1.5;
+      }
+      const planes = new Float32Array([1, 0, 0, 50, -1, 0, 0, 50, 0, 1, 0, 50, 0, -1, 0, 50, 0, 0, 1, 0, 0, 0, -1, 100]);
+      const res = engine.tools.webgpu.frustumCull({ spheres, planes });
+      log('pack:webgpu -> WGSL Compute Frustum Cull (256 сфер)', {
+        backend: res.data.backend,
+        totalSpheres: res.data.totalSpheres,
+        visibleCount: res.data.visibleCount,
+        culledCount: res.data.culledCount,
+        workgroups: res.data.workgroups,
+      });
+    };
+
+    document.getElementById('btnWorkers').onclick = async () => {
+      const buf = new Uint8Array(8192);
+      for (let i = 0; i < buf.length; i++) buf[i] = (i * 17) & 0xff;
+      const out = await engine.tools.stream.dispatchWorkerTask({
+        task: 'hashChunk',
+        priority: 'P1',
+        payload: buf,
+        transfer: [buf.buffer],
+      }).data;
+      log('RatCoreWorkerPool (75 % CPU / Transferable)', {
+        result: out,
+        pool: engine.tools.stream.workerPoolStats().data,
+      });
+    };
 
     document.getElementById('btnTower').onclick = () => {
       towerCount++;
@@ -350,7 +427,7 @@
     }
     discoverInput.addEventListener('change', runDiscover);
 
-    log('RatCore v0.2 запущен', engine.getProfile());
+    log('RatCore v0.4 запущен (Stage 4: WebGL2 + WebGPU + WASM/SIMD + Worker Pool)', engine.getProfile());
     requestAnimationFrame(renderFrame);
   </script>
 </body>

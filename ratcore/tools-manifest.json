@@ -1,6 +1,6 @@
 {
   "schema": "ratcore-tools-manifest/1",
-  "version": "0.3.0-stage3",
+  "version": "0.4.0-stage4",
   "engine": "RatCore",
   "modularityPolicy": "zero-cost-opt-in",
   "disabledErrorCode": "RC-108",
@@ -59,6 +59,12 @@
     { "id": "net.receiveRemoteInput", "branch": "net", "tier": "pack", "pack": "pack:multiplayer", "tags": ["rollback", "netcode", "sync", "откат", "сеть"], "summary": "Применить удалённый ввод с автоматическим Rollback Netcode при расхождении" },
     { "id": "quest.verifyNoSoftlocks", "branch": "quest", "tier": "pack", "pack": "pack:narrative", "tags": ["quest", "softlock", "bfs", "verify", "софтлок", "проверка"], "summary": "Проверить граф стадий квеста на отсутствие тупиков и софтлоков (BFS)" },
     { "id": "eco.stepIce", "branch": "eco", "tier": "pack", "pack": "pack:ecology", "tags": ["ice", "stefan", "freeze", "winter", "лёд", "стефан"], "summary": "Рассчитать нарастание или таяние льда по формуле Стефана (F-158)" },
-    { "id": "studio.exportSingleHtml", "branch": "studio", "tier": "pack", "pack": "pack:studio", "tags": ["export", "html", "offline", "build", "single", "экспорт", "офлайн"], "summary": "Собрать автономную игру в один офлайн .html (< 300 КБ) со встроенным RCW2" }
+    { "id": "studio.exportSingleHtml", "branch": "studio", "tier": "pack", "pack": "pack:studio", "tags": ["export", "html", "offline", "build", "single", "экспорт", "офлайн"], "summary": "Собрать автономную игру в один офлайн .html (< 300 КБ) со встроенным RCW2" },
+    { "id": "look.setBackend", "branch": "look", "tier": "core", "tags": ["webgl2", "renderer", "gpu", "backend", "software", "рендер"], "summary": "Переключить рендерер между Software 3D и аппаратным WebGL2 поверх ToolGuard" },
+    { "id": "look.shaderPrewarm", "branch": "look", "tier": "core", "tags": ["shader", "prewarm", "webgl2", "async", "шейдеры", "прогрев"], "summary": "Выполнить неблокирующий пошаговый Async Shader Pre-Warm программ GLSL ES 3.00" },
+    { "id": "stream.dispatchWorkerTask", "branch": "stream", "tier": "core", "tags": ["worker", "threads", "multicore", "75%", "governor", "потоки", "воркеры"], "summary": "Отправить задачу в многоядерный пул Web Workers / worker_threads с zero-copy Transferable" },
+    { "id": "webgpu.frustumCull", "branch": "webgpu", "tier": "pack", "pack": "pack:webgpu", "tags": ["webgpu", "wgsl", "compute", "culling", "gpu", "куллинг"], "summary": "Запустить Compute-куллинг сфер чанков (WGSL @workgroup_size(64) / SoA fallback)" },
+    { "id": "wasm.benchmark", "branch": "wasm", "tier": "pack", "pack": "pack:wasm-accel", "tags": ["wasm", "simd", "webassembly", "hotloop", "speed", "ускорение"], "summary": "Запустить встроенный бинарный WebAssembly-модуль горячих циклов и проверить SIMD v128" },
+    { "id": "wasm.stepGravity", "branch": "wasm", "tier": "pack", "pack": "pack:wasm-accel", "tags": ["wasm", "physics", "gravity", "soa", "физика", "ускорение"], "summary": "Выполнить батчевый шаг гравитации SoA-буфера в линейной памяти WebAssembly" }
   ]
 }
