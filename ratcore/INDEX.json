@@ -1,0 +1,46 @@
+{
+  "schema": "ratcore-index/1",
+  "engine": "RatCore",
+  "status": "design-complete-awaiting-build-command",
+  "updatedAt": "2026-11-16",
+  "branch": "arena/5b278e22-games",
+  "codeStarted": false,
+  "integratedIntoGamesShowcase": false,
+  "counts": {
+    "toolBranches": 30,
+    "formulas": 150,
+    "algorithms": 100,
+    "compressionLevels": 11,
+    "wireProtocol": "ratcore-wire/2",
+    "targetCpuCoreUtilPct": 75,
+    "errorCodeRange": "RC-100..RC-999"
+  },
+  "documents": [
+    { "id": "agents-root", "path": "AGENTS.md", "role": "Universal AI entrypoint at repository root" },
+    { "id": "readme", "path": "ratcore/README.md", "role": "Project overview and document map" },
+    { "id": "spec", "path": "ratcore/SPEC.md", "version": "0.7-draft", "role": "Master specification, 5-barrier ToolGuard, roadmap, decisions D-01..D-15" },
+    { "id": "ai-contract", "path": "ratcore/AI_CONTRACT.md", "role": "Mandatory AI rulebook including ToolGuard and BridgeGuard" },
+    { "id": "tools", "path": "ratcore/TOOLS.md", "version": "0.7-draft", "role": "All 30 upgraded RatCore.tools.* v2.0 branches, universal pipeline, Time-Scrubbing, Auto-Balancer, Single-File HTML Bundler and genre recipes" },
+    { "id": "algorithms", "path": "ratcore/ALGORITHMS.md", "version": "0.6-draft", "role": "150 formulas (F-01..F-150) and 100 algorithms (A-01..A-100)" },
+    { "id": "compression", "path": "ratcore/COMPRESSION.md", "version": "0.3-draft", "role": "11-level ultra-low RAM/CPU compression, ratcore-wire/2 transfer protocol and 75% CoreGovernor" },
+    { "id": "bridge", "path": "ratcore/BRIDGE.md", "version": "0.2-draft", "role": "Cross-engine bridge protocol (Three.js, Godot 4, Canvas 2D, Pereplet, RatCore federation, AI RPC, RCW2 binary streaming)" },
+    { "id": "devlog", "path": "ratcore/DEVLOG.md", "role": "Engineering log entries #001..#008" }
+  ],
+  "toolBranches": [
+    "build", "move", "remove", "watch", "look", "see", "hear", "think", "guess",
+    "comm", "bugs", "bridge", "anim", "phys", "nav", "env", "fx", "ai", "sim",
+    "ui", "input", "audio", "save", "test", "stream",
+    "net", "destroy", "story", "mod", "cutscene"
+  ],
+  "directories": {
+    "comms": "ratcore/comms/",
+    "agentsRegistry": "ratcore/comms/registry/agents.json",
+    "generalChannel": "ratcore/comms/channels/general/",
+    "inbox": "ratcore/comms/inbox/",
+    "outbox": "ratcore/comms/outbox/",
+    "tasks": "ratcore/comms/tasks/",
+    "handoffs": "ratcore/comms/handoffs/",
+    "bridges": "ratcore/comms/bridges/",
+    "reports": "ratcore/reports/"
+  }
+}

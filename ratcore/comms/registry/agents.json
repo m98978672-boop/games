@@ -1,0 +1,13 @@
+{
+  "schema": "ratcore-registry/1",
+  "updatedAt": "2026-11-16",
+  "agents": [
+    {
+      "agentId": "ai-architect-01",
+      "role": "architect",
+      "branch": "arena/5b278e22-games",
+      "status": "active",
+      "notes": "Подготовил полную документацию RatCore (25 веток инструментов, 112 формул, 74 алгоритма, ToolGuard, BridgeGuard, 7-уровневое сжатие невидимого мира). Жду команду владельца перед началом написания кода."
+    }
+  ]
+}
