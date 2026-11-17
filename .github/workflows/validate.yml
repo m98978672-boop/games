@@ -33,9 +33,7 @@ jobs:
           status=$?
           cat "$RUNNER_TEMP/bughunt.log"
           if [ "$status" -ne 0 ]; then
-            tail -25 "$RUNNER_TEMP/bughunt.log" | while IFS= read -r line; do
-              printf '::error::%s\n' "$line"
-            done
+            python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"bughunt.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
           fi
           exit "$status"
       - name: Test 1 IN 8 BILLION structure
@@ -55,9 +53,7 @@ jobs:
           status=$?
           cat "$RUNNER_TEMP/frontline-test.log"
           if [ "$status" -ne 0 ]; then
-            tail -25 "$RUNNER_TEMP/frontline-test.log" | while IFS= read -r line; do
-              printf '::error::%s\n' "$line"
-            done
+            python3 -c 'import os; p=os.path.join(os.environ["RUNNER_TEMP"],"frontline-test.log"); s="".join(open(p,errors="replace").readlines()[-50:]); print("::error::"+s.replace("%","%25").replace("\r","%0D").replace("\n","%0A"))'
           fi
           exit "$status"
       - name: Test Frontline battlefield visuals (Chromium)
