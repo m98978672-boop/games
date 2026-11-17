@@ -1,5 +1,6 @@
 /* РАТГРАД 2D: карта 7000 × 7000 км, простое движение, без поворотов и без 3D. */
 import { Map2D } from './map2d.js';
+import { isPhone, startCenter, FIT } from './fit2d.js';
 import { WORLD2D } from './world2d.js';
 import { loadFrom, saveTo, elapsedMinutes, formatReport, OFFLINE } from './offline2d.js';
 
@@ -15,6 +16,8 @@ const hud = {
   cars: document.getElementById('hud-cars'),
   accidents: document.getElementById('hud-accidents'),
   hidden: document.getElementById('hud-hidden'),
+  newsList: document.getElementById('news-list'),
+  newsCount: document.getElementById('news-count'),
   peds: document.getElementById('hud-peds'),
   mayors: document.getElementById('hud-mayors'),
   crowd: document.getElementById('hud-crowd'),
@@ -56,8 +59,46 @@ function wireButton(id, fn) {
 const mid = () => ({ x: map.view.w / 2, y: map.view.h / 2 });
 wireButton('zoom-in', () => map.setZoom(map.scale * 1.6, mid()));
 wireButton('zoom-out', () => map.setZoom(map.scale / 1.6, mid()));
-wireButton('fit', () => map.fitWorld());
+wireButton('fit', () => { map.autoFit = false; map.fitWorld(); });
 wireButton('center', () => { map.center = { x: 0, y: 0 }; });
+
+/* §83: авто-масштаб. Три режима и выключатель: «авто» держит масштаб под экран,
+   поворот телефона пересчитывает кадр, а не обрезает карту. */
+const fitButtons = [
+  ['auto', null],
+  ['fit-country', 'country'],
+  ['fit-region', 'region'],
+  ['fit-city', 'city']
+];
+for (const [id, mode] of fitButtons) {
+  const el = document.getElementById(id);
+  if (!el) continue;
+  el.addEventListener('click', () => {
+    if (!mode) {
+      map.autoFit = !map.autoFit;
+      if (map.autoFit) map.applyFit(map.fitMode);
+    } else {
+      map.applyFit(mode);
+      if (mode === 'country') map.center = startCenter(map.settlements, 'country');
+    }
+    map.clampCenter();
+    map.draw();
+    map.requestDetail();
+    map.updateHud();
+  });
+}
+function refreshAutoFit() {
+  map.resize();
+  if (map.autoFit) map.applyFit(map.fitMode);
+  map.clampCenter();
+  map.draw();
+  map.updateHud();
+}
+/* телефон: стартуем страной, а не «0.16 px/км» — иначе видно четыре километра мира */
+if (isPhone(window.innerWidth, window.innerHeight)) {
+  map.applyFit('country');
+  map.center = startCenter(map.settlements, 'country');
+}
 
 /* R-72.5: панель карты складывается — на маленьком экране игрок оставляет только заголовок. */
 {
@@ -283,7 +324,8 @@ for (const [id, fn] of Object.entries(toggles)) {
   if (el) el.addEventListener('change', () => fn(el.checked));
 }
 
-window.addEventListener('resize', () => { map.resize(); map.draw(); map.requestDetail(); });
+window.addEventListener('resize', () => refreshAutoFit());
+window.addEventListener('orientationchange', () => setTimeout(refreshAutoFit, 120));
 window.addEventListener('keydown', (e) => {
   if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
   const step = 40 * (e.shiftKey ? 3 : 1);
