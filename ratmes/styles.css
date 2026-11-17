@@ -1476,14 +1476,24 @@ body {
 }
 
 .toast {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: min(360px, calc(100vw - 24px));
   padding: 9px 13px;
   border-radius: 10px;
   background: var(--bg-3);
   border: 1px solid var(--accent);
   color: var(--text-0);
   font-size: 12px;
+  line-height: 1.38;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
+.toast strong { font-weight: 700; }
+.toast span { color: var(--text-1); overflow-wrap: anywhere; }
+.toast.good { border-color: rgba(61, 220, 132, 0.65); }
+.toast.error { border-color: rgba(239, 83, 80, 0.75); }
+.toast.warn { border-color: rgba(245, 158, 11, 0.7); }
 
 .inspector-tabs {
   display: grid;

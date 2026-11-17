@@ -907,7 +907,7 @@ export async function createBridgeClient() {
         apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
         Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
         'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=representation',
+        Prefer: 'resolution=ignore-duplicates,return=representation',
       };
       try {
         await fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
@@ -937,7 +937,7 @@ export async function createBridgeClient() {
         apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
         Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
         'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=representation',
+        Prefer: 'resolution=ignore-duplicates,return=representation',
       };
       const payload = {
         room_id: roomId,
@@ -949,14 +949,18 @@ export async function createBridgeClient() {
         created_by: peerId,
       };
       try {
-        const res = await fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
+        const res = await fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
           method: 'POST',
           headers,
           body: JSON.stringify(payload),
-        });
+        }, 10000);
         if (!res.ok) {
-          const txt = await res.text().catch(() => '');
-          return { ok: false, error: `Не удалось создать личный чат (HTTP ${res.status}): ${txt.slice(0, 120)}` };
+          let errMsg = `HTTP ${res.status}`;
+          try {
+            const j = await res.json();
+            if (j?.message) errMsg = j.message;
+          } catch { /* ignore */ }
+          return { ok: false, error: `Ошибка облака (${errMsg})` };
         }
         rememberJoinedRoomId(roomId, accountCtx);
         await this.call('cloud.ingestRemote', {
@@ -979,7 +983,7 @@ export async function createBridgeClient() {
         apikey: SUPABASE_PUBLIC_CONFIG.publishableKey,
         Authorization: `Bearer ${SUPABASE_PUBLIC_CONFIG.publishableKey}`,
         'Content-Type': 'application/json',
-        Prefer: 'resolution=merge-duplicates,return=representation',
+        Prefer: 'resolution=ignore-duplicates,return=representation',
       };
       const payload = {
         room_id: roomId,
@@ -991,14 +995,18 @@ export async function createBridgeClient() {
         created_by: peerId,
       };
       try {
-        const res = await fetch(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
+        const res = await fetchWithTimeout(`${SUPABASE_PUBLIC_CONFIG.restUrl}/${SUPABASE_PUBLIC_CONFIG.tables.rooms}?on_conflict=room_id`, {
           method: 'POST',
           headers,
           body: JSON.stringify(payload),
-        });
+        }, 10000);
         if (!res.ok) {
-          const txt = await res.text().catch(() => '');
-          return { ok: false, error: `Ошибка создания комнаты (HTTP ${res.status}): ${txt.slice(0, 120)}` };
+          let errMsg = `HTTP ${res.status}`;
+          try {
+            const j = await res.json();
+            if (j?.message) errMsg = j.message;
+          } catch { /* ignore */ }
+          return { ok: false, error: `Ошибка создания комнаты (${errMsg})` };
         }
         rememberJoinedRoomId(roomId, accountCtx);
         await this.call('cloud.ingestRemote', {

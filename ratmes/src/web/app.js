@@ -131,12 +131,19 @@ const state = {
 function showToast(title, body = '', kind = 'info') {
   const host = el('toastHost');
   if (!host) return;
-  const t = h('div', { className: `toast ${kind}` },
+  const sig = `${kind}:${title}:${body}`;
+  for (const prev of [...host.children]) {
+    if (prev.dataset?.toastSig === sig) prev.remove();
+  }
+  while (host.children.length >= 2) {
+    host.firstChild?.remove();
+  }
+  const t = h('div', { className: `toast ${kind}`, dataset: { toastSig: sig } },
     h('strong', { text: title }),
-    body ? h('span', { text: body }) : null,
+    body ? h('span', { text: String(body).slice(0, 140) }) : null,
   );
   host.appendChild(t);
-  setTimeout(() => t.remove(), 4200);
+  setTimeout(() => t.remove(), 3600);
 }
 
 async function shareOrCopyUrl(url, title, text) {
