@@ -88,6 +88,7 @@ a:hover { text-decoration: underline; }
 
 .cta {
   display: inline-block;
+  margin-top: 8px;
   padding: 13px 30px;
   border-radius: 10px;
   background: linear-gradient(180deg, #f3cf88, #d9a04c);
@@ -209,6 +210,16 @@ main { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
 
 .card-lastshore .features li::before { background: var(--ls); }
 .card-frontline .features li::before { background: var(--fl); }
+.card-fc .features li::before { background: #e8a45a; }
+.card-fc:hover { border-color: rgba(232, 164, 90, 0.42); }
+.card-atlas .features li::before { background: #7dd3a8; }
+.card-atlas .badge-new { color: #8be6b9; border-color: rgba(125, 211, 168, 0.45); }
+.card-atlas:hover { border-color: rgba(125, 211, 168, 0.42); }
+.card-shooter .features li::before { background: #e07a5f; }
+.card-shooter:hover { border-color: rgba(224, 122, 95, 0.42); }
+.card-zombie .features li::before { background: #7eb88c; }
+.card-zombie:hover { border-color: rgba(126, 184, 140, 0.42); }
+.card-taxi .features li::before { background: #e4b65f; }
 .card-cascade .features li::before { background: var(--ch); }
 .card-folderos .features li::before { background: var(--accent); }
 .card-cloudplay .features li::before { background: #b7f36b; }
@@ -403,3 +414,242 @@ footer {
   .bug-report-panel { gap: 12px; padding: 17px; }
   .bug-report-panel > .btn { width: 100%; }
 }
+
+/* --------------------- Вкладки портала Games (Игры / Общение · RatMes) --------------------- */
+
+.portal-nav {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgba(10, 12, 11, 0.9);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line);
+}
+
+.portal-nav-inner {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.portal-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-weight: 800;
+  letter-spacing: 2.2px;
+  text-transform: uppercase;
+  color: var(--ink);
+  font-size: 14px;
+}
+.portal-brand:hover { text-decoration: none; color: var(--accent); }
+.portal-brand-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3cf88, #5eead4);
+  box-shadow: 0 0 12px rgba(94, 234, 212, 0.55);
+}
+
+.portal-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+}
+
+.portal-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-dim);
+  padding: 7px 15px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.18s, color 0.18s, border-color 0.18s;
+}
+.portal-tab:hover { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
+.portal-tab.is-active {
+  background: linear-gradient(180deg, #f3cf88, #d9a04c);
+  color: #161108;
+  border-color: rgba(243, 207, 136, 0.65);
+}
+.portal-tab-chat.is-active {
+  background: linear-gradient(135deg, #5eead4, #38bdf8);
+  color: #06141d;
+  border-color: rgba(94, 234, 212, 0.7);
+}
+.portal-tab-pill {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(94, 234, 212, 0.16);
+  color: #8af5e3;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+.portal-tab.is-active .portal-tab-pill {
+  background: rgba(6, 20, 29, 0.18);
+  color: #06141d;
+}
+
+.portal-nav-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.portal-nav-link {
+  color: var(--ink-dim);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+.portal-nav-link:hover { color: var(--ink); border-color: rgba(232, 180, 90, 0.4); text-decoration: none; }
+
+.cta-chat {
+  margin-left: 10px;
+  background: linear-gradient(135deg, #5eead4, #38bdf8) !important;
+  color: #06151f !important;
+  box-shadow: 0 10px 30px rgba(56, 189, 248, 0.28);
+}
+
+/* --------------------- Панель вкладки «Общение» (встроенный RatMes) --------------------- */
+
+body.portal-chat-active footer { display: none; }
+
+.portal-chat-panel {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 12px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: calc(100vh - 60px);
+}
+
+.portal-chat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border-radius: 13px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+}
+
+.portal-chat-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.portal-chat-title-group h2 {
+  font-size: 16px;
+  letter-spacing: 0.4px;
+  color: var(--ink);
+  margin: 0;
+}
+
+.portal-room-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.room-pill {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-dim);
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.room-pill:hover,
+.room-pill.is-active {
+  color: #8af5e3;
+  border-color: rgba(94, 234, 212, 0.55);
+  background: rgba(94, 234, 212, 0.1);
+}
+
+.portal-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.portal-clouds-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  border-radius: 13px;
+  background: rgba(16, 20, 19, 0.95);
+  border: 1px solid rgba(94, 234, 212, 0.25);
+}
+
+.cloud-chip-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  transition: border-color 0.16s, transform 0.16s;
+}
+.cloud-chip-link:hover {
+  border-color: rgba(94, 234, 212, 0.55);
+  transform: translateY(-1px);
+  text-decoration: none;
+}
+.cloud-chip-link strong { font-size: 12.5px; color: #f2ecdf; }
+.cloud-chip-link span { font-size: 11px; color: var(--ink-dim); }
+
+.ratmes-frame-wrap {
+  flex: 1;
+  min-height: 76vh;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(94, 234, 212, 0.24);
+  background: #0d1017;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.48);
+}
+
+.ratmes-frame {
+  width: 100%;
+  height: calc(100vh - 156px);
+  min-height: 640px;
+  border: 0;
+  display: block;
+  background: #0d1017;
+}
+
+@media (max-width: 760px) {
+  .portal-nav-inner { padding: 8px 12px; }
+  .portal-nav-right { display: none; }
+  .portal-chat-panel { padding: 8px; }
+  .ratmes-frame { height: calc(100vh - 185px); min-height: 540px; }
+}
+

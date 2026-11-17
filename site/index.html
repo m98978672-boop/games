@@ -17,32 +17,101 @@
 <link rel="stylesheet" href="site.css">
 <link rel="manifest" href="site.webmanifest">
 <script src="../site/community-games.js" defer></script>
+<script src="../site/games-tabs.js" defer></script>
 <link rel="canonical" href="https://m98978672-boop.github.io/games/">
 </head>
 <body>
 
+<nav class="portal-nav" aria-label="Разделы портала Games">
+  <div class="portal-nav-inner">
+    <a class="portal-brand" href="#games" data-portal-tab="games">
+      <span class="portal-brand-dot" aria-hidden="true"></span>
+      <span>Games</span>
+    </a>
+    <div class="portal-tabs" role="tablist" aria-label="Основные вкладки">
+      <button type="button" class="portal-tab is-active" role="tab" aria-selected="true" data-portal-tab="games">🎮 Игры</button>
+      <button type="button" class="portal-tab portal-tab-chat" role="tab" aria-selected="false" data-portal-tab="chat">
+        💬 Общение <span class="portal-tab-pill">RatMes · 9 облаков</span>
+      </button>
+    </div>
+    <div class="portal-nav-right">
+      <a class="portal-nav-link" href="../ratmes/index.html" target="_blank" rel="noopener">RatMes во весь экран ↗</a>
+      <a class="portal-nav-link" href="../developers/index.html">Для разработчиков ↗</a>
+    </div>
+  </div>
+</nav>
+
+<section id="portal-chat-panel" class="portal-chat-panel" aria-label="Вкладка Общение — мессенджер RatMes" hidden>
+  <div class="portal-chat-toolbar">
+    <div class="portal-chat-title-group">
+      <h2>💬 Общение · RatMes</h2>
+      <div class="portal-room-pills" role="group" aria-label="Игровые комнаты">
+        <button type="button" class="room-pill is-active" data-ratmes-room="games-lobby">🎮 Общий чат Games</button>
+        <button type="button" class="room-pill" data-ratmes-room="games-coop">🤝 Кооператив</button>
+        <button type="button" class="room-pill" data-ratmes-room="games-dev">🛠 Разработчики</button>
+        <button type="button" class="room-pill" data-ratmes-room="ratmes-main">⚡ RatMes E2EE</button>
+      </div>
+    </div>
+    <div class="portal-chat-actions">
+      <button type="button" class="btn" id="btnToggleCloudsStrip" aria-expanded="false">☁ 9 облаков</button>
+      <a class="btn btn-primary" href="../ratmes/index.html" target="_blank" rel="noopener">Отдельное окно ↗</a>
+    </div>
+  </div>
+
+  <div id="portalCloudsStrip" class="portal-clouds-strip" hidden>
+    <a class="cloud-chip-link" href="https://supabase.com/dashboard/project/cuhfnzgytndyntpbnbda" target="_blank" rel="noopener noreferrer"><strong>Supabase · games-cloud-save</strong><span>Живые комнаты и sync «Общения»</span></a>
+    <a class="cloud-chip-link" href="https://drive.google.com/drive/folders/1tQi82o2fHBMpBDq-0Zg5hSM4DkLOANxB" target="_blank" rel="noopener noreferrer"><strong>Google Drive · RatMes-Vault</strong><span>Облачный резерв и ТЗ/инструменты</span></a>
+    <a class="cloud-chip-link" href="https://www.dropbox.com/home/RatMes-Vault" target="_blank" rel="noopener noreferrer"><strong>Dropbox · /RatMes-Vault</strong><span>Второй резерв документации</span></a>
+    <a class="cloud-chip-link" href="https://app.notion.com/p/RatMes-Games-41b5c62035e481878f46e7c171e6fd09" target="_blank" rel="noopener noreferrer"><strong>Notion · Центр управления</strong><span>Архитектура и хаб ссылок</span></a>
+    <a class="cloud-chip-link" href="https://linear.app/gamebobli/issue/GAM-6/podklyuchit-oblachnuyu-sinhronizaciyu-supabase-dlya-vkladki-obshenie-v" target="_blank" rel="noopener noreferrer"><strong>Linear · Gamebobli (GAM-5..7)</strong><span>Проект RatMes и дорожная карта</span></a>
+    <a class="cloud-chip-link" href="https://docs.google.com/document/d/1VOo2S1G5Q4NU-gM87zdEdy0uhIVkJ4-emWveXL5OwTM/edit" target="_blank" rel="noopener noreferrer"><strong>Google Docs · Архитектура</strong><span>Описание 15 веток и TransferGuard</span></a>
+    <a class="cloud-chip-link" href="https://docs.google.com/spreadsheets/d/1hrJnWI0YjM9RWzMX0ORYF46Xaz_Y-NeaGZ2y9xQ23QM/edit" target="_blank" rel="noopener noreferrer"><strong>Google Sheets · Матрица 2026</strong><span>Страны, сети и каталог инструментов</span></a>
+    <a class="cloud-chip-link" href="https://www.google.com/calendar/event?eid=bWk1ZG5rM3NzNDdjc2JkZ2g0Z2lyZGYwcW8gbTk4OTc4NjcyQG0" target="_blank" rel="noopener noreferrer"><strong>Google Calendar · Веха</strong><span>Проверка синхронизации v1.0</span></a>
+    <a class="cloud-chip-link" href="https://mail.google.com/mail/u/0/#drafts" target="_blank" rel="noopener noreferrer"><strong>Gmail · Черновик сводки</strong><span>Все ссылки экосистемы в черновиках</span></a>
+  </div>
+
+  <div class="ratmes-frame-wrap">
+    <iframe
+      id="ratmesEmbedFrame"
+      class="ratmes-frame"
+      data-src="../ratmes/index.html?embed=games"
+      title="Мессенджер RatMes — вкладка Общение портала Games"
+      allow="microphone; clipboard-write"
+    ></iframe>
+  </div>
+</section>
+
 <header class="hero">
   <canvas id="hero-canvas" aria-hidden="true"></canvas>
   <div class="hero-inner">
-    <p class="kicker">браузерные игры · без установки</p>
+    <p class="kicker">браузерные игры · без установки · встроенный мессенджер</p>
     <h1>Games</h1>
-    <p class="lede">Браузерные игры, которые открываются сразу по ссылке: экономическая стратегия про строительство дорог,
-      симулятор грузоперевозок по Европе, 3D-симулятор ГЭС с живой физикой воды, 3D-выживание на острове и стратегия современной войны.</p>
+    <p class="lede">Браузерные игры, которые открываются сразу по ссылке: симулятор одной случайной жизни на Земле,
+      живая карта страны, тактические стратегии и шутер, экономическая стратегия про строительство дорог,
+      симулятор грузоперевозок по Европе, 3D-симулятор ГЭС с живой физикой воды, 3D-выживание на острове и вкладка «Общение» на движке RatMes.</p>
     <a class="cta" href="#games">Выбрать игру</a>
+    <a class="cta cta-chat" href="#chat" data-open-chat="games-lobby">💬 Общение (RatMes)</a>
     <a class="cta cta-community" href="../developers/index.html">Для разработчиков ↗</a>
-    <a class="cta" href="../night-taxi/index.html" style="margin-left:10px;background:#e4b65f;color:#18201c;">🚕 НОЧНОЕ ТАКСИ</a>
+    <a class="cta" href="../dead-district/index.html" style="margin-left:10px;background:linear-gradient(180deg,#c9cb9f,#679a73);color:#0f2935;">🧟 DEAD DISTRICT</a>
+    <a class="cta" href="../country-atlas/index.html" style="margin-left:10px;background:linear-gradient(180deg,#a6e7c5,#4aa879);color:#072216;">🗺 РАТГРАД</a>
+    <a class="cta" href="../frontline-command/index.html" style="margin-left:10px;background:linear-gradient(180deg,#f0b878,#c77a38);color:#231304;">⚔ FRONTLINE: COMMAND</a>
+    <a class="cta" href="../shooter-2/index.html" style="margin-left:10px;background:linear-gradient(180deg,#f2a68d,#c95f44);color:#240c06;">🎯 СЕКТОР «ПЕПЕЛ»</a>
+    <a class="cta" href="../1in8b/index.html" style="margin-left:10px;background:linear-gradient(180deg,#ffe9b4,#e8b45a);color:#2a2008;">🌍 1 ИЗ 8 МИЛЛИАРДОВ</a>
     <a class="cta" href="../truck-showroom/index.html" style="margin-left:10px;background:linear-gradient(180deg,#a8cdf0,#5b8fc4);color:#0a1520;">🚛 ГАРАЖ 3D</a>
-    <a class="cta" href="../cloud-play/index.html" style="margin-left:10px;background:linear-gradient(180deg,#d0ff8a,#89cf4a);color:#14210c;">☁ PLAYBRIDGE</a>
+    <a class="cta" href="../night-taxi/index.html" style="margin-left:10px;background:#e4b65f;color:#18201c;">🚕 НОЧНОЕ ТАКСИ</a>
     <a class="cta" href="../road-tycoon/index.html" style="margin-left:10px;background:linear-gradient(180deg,#ffcf7a,#e09a3c);color:#2a1a05;">🛣 ТРАССА</a>
     <a class="cta" href="../euro-haul/index.html" style="margin-left:10px;background:linear-gradient(180deg,#6fe0c6,#2f9f88);color:#04201a;">🚛 ЕВРОТРАК</a>
-    <a class="cta" href="../cascade-hydro/index.html" style="margin-left:10px;background:linear-gradient(180deg,#5eead4,#0284c7);color:#06131f;">Играть в КАСКАД (ГЭС)</a>
-    <a class="cta" href="../nika-life/index.html" style="margin-left:10px;background:linear-gradient(180deg,#ffd0dc,#e78fa6);color:#2a1420;">🌸 НИКА: ЖИВАЯ</a>
-    <a class="cta" href="../dead-district/index.html" style="margin-left:10px;background:linear-gradient(180deg,#c9cb9f,#679a73);color:#0f2935;">🧟 DEAD DISTRICT</a>
+    <a class="cta" href="../cascade-hydro/index.html" style="margin-left:10px;background:linear-gradient(180deg,#5eead4,#0284c7);color:#06131f;">⚡ КАСКАД (ГЭС)</a>
+    <a class="cta" href="../last-shore/index.html" style="margin-left:10px;background:linear-gradient(180deg,#9de0b3,#4b9b6a);color:#082012;">🏝 LAST SHORE</a>
+    <a class="cta" href="../frontline-steel-and-drones/play.html" style="margin-left:10px;background:linear-gradient(180deg,#e9ad86,#c26c40);color:#240f05;">🚁 СТАЛЬ И ДРОНЫ</a>
+    <a class="cta" href="../folder-os/index.html" style="margin-left:10px;background:linear-gradient(180deg,#e2d5b8,#a89572);color:#1a150b;">🗂 FOLDER OS</a>
+    <a class="cta" href="../game-base/index.html" style="margin-left:10px;background:linear-gradient(180deg,#f5d896,#d49c42);color:#1e1506;">✨ БАЗА</a>
+    <a class="cta" href="../cloud-play/index.html" style="margin-left:10px;background:linear-gradient(180deg,#d0ff8a,#89cf4a);color:#14210c;">☁ PLAYBRIDGE</a>
     <a class="cta" href="https://m98978672-boop.github.io/games/" target="_blank" rel="noopener" style="margin-left:10px;background:rgba(255,255,255,0.08);border:1px solid rgba(242,236,223,0.28);color:#f2ecdf;">Сайт на GitHub Pages ↗</a>
   </div>
 </header>
 
-<main>
+<main id="portal-games-view">
   <section id="games" class="games">
     <article class="card card-zombie">
       <div class="card-art">
@@ -63,6 +132,105 @@
         <div class="card-actions">
           <a class="btn btn-primary" href="../dead-district/index.html">Играть</a>
           <a class="btn" href="../dead-district/README.md">Об игре</a>
+        </div>
+      </div>
+    </article>
+    <article class="card card-atlas">
+      <div class="card-art">
+        <img src="../country-atlas/docs/map-7000.png" alt="РАТГРАД — живая карта страны 7000 × 7000 км с городами, реками и дорогами" loading="lazy" width="1024" height="1024">
+        <span class="badge badge-new">7000 × 7000 км · 120 поселений · 5294 реки · 1002 транспорта</span>
+      </div>
+      <div class="card-body">
+        <h2>РАТГРАД<span>живая 2D-карта целой страны сверху</span></h2>
+        <p class="desc">Игра-карта страны площадью 49 млн км² (7000 × 7000 км): море, горы, 5294 реки и 25 озёр,
+          14 регионов, 120 поселений от деревень до столицы Крутич с 11 056 домами, дорожная сеть, паромы,
+          живой транспорт с дозаправкой, пешеходы, смена суток, зима со снегом и баланс ресурсов страны.</p>
+        <ul class="features">
+          <li>Мир 7000 × 7000 км с прогрессивной отрисовкой и патчами видимой области в воркере</li>
+          <li>120 поселений, 207 дорог (178 938 км) и 4 парома — единая связная сеть</li>
+          <li>1002 единицы транспорта: легковые, грузовики, автобусы, суда и самолёты</li>
+          <li>Города с кварталами и домами, пешеходы, день/ночь, сезоны и экономика 8 ресурсов</li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="../country-atlas/index.html">Открыть карту</a>
+          <a class="btn" href="../country-atlas/README.md">Об игре</a>
+        </div>
+      </div>
+    </article>
+    <article class="card card-fc">
+      <div class="card-art">
+        <img src="../frontline-command/cover.svg" alt="FRONTLINE: COMMAND — тактическая 2D-песочница двух армий" loading="lazy" width="1440" height="810">
+        <span class="badge badge-new">v0.11.0 · Command API · 3 уровня ИИ · разрушаемые стены</span>
+      </div>
+      <div class="card-body">
+        <h2>FRONTLINE: COMMAND<span>тактическая 2D-песочница: две армии по одним правилам</span></h2>
+        <p class="desc">Война двух равноправных армий на карте 4096×4096: играйте одним бойцом, отрядом или
+          всей армией сразу, переключаясь по Tab. Каждый приказ проходит через единый Command API с задержкой
+          радиосвязи, ответом и причиной отказа — ИИ противника воюет точно тем же кодом, без скрытых бонусов.</p>
+        <ul class="features">
+          <li>Стены зданий с толщиной, HP, пробитием пуль, направленным укрытием и проломами</li>
+          <li>Командирская стройка: одиночная, линии протяжкой, зоны обороны и шаблоны</li>
+          <li>Три уровня ИИ (стратег, отряд, боец), мораль 0–100, снабжение и туман войны</li>
+          <li>Единый Command API с журналом приказов, режим ИИ против ИИ, JSON-конфиги</li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="../frontline-command/index.html">Играть</a>
+          <a class="btn" href="../frontline-command/README.md">Об игре</a>
+        </div>
+      </div>
+    </article>
+    <article class="card card-life">
+      <div class="card-art">
+        <img src="../1in8b/cover.svg" alt="1 ИЗ 8 МИЛЛИАРДОВ — симулятор одной случайной жизни на Земле" loading="lazy" width="1440" height="810">
+        <span class="badge badge-new">новое · 173 страны · реальная статистика</span>
+      </div>
+      <div class="card-body">
+        <h2>1 ИЗ 8 МИЛЛИАРДОВ<span>симулятор одной случайной жизни</span></h2>
+        <p class="desc">Вы рождаетесь случайным человеком на Земле: 17,6 % — Индия, 5,7 % — Нигерия, 1 % — Россия,
+          0,06 % — Швейцария. Дальше одна жизнь идёт год за годом — школа или работа с двенадцати,
+          деньги, которые надо на что-то тратить, болезни, любовь, дети, война, переезд
+          и смерть по таблицам смертности своей страны.</p>
+        <ul class="features">
+          <li>Жребий по числу рождений или по населению: 173 страны и территории</li>
+          <li>Эпохи: прошлое с 1950 года, сегодня, будущее до 2100 — мир пересчитывается на год рождения</li>
+          <li>Здоровье, счастье, знания, отношения — и семь статей расходов на ползунках</li>
+          <li>Живой портрет: человек стареет прямо на экране, 136 анимаций без единой картинки</li>
+          <li>Меню «Траты»: 69 покупок в 9 разделах — от тетрадей и репетитора до операции, жилья и своего кафе</li>
+          <li>21 карточка решений, 49 событий и вопросы-паузы в 5, 15, 30, 50 и 70 лет</li>
+          <li>Летопись жизни, карта прожитых лет, четверо «родившихся в ту же секунду»</li>
+          <li>Финал: запись о смерти, кривая выживаемости сверстников, карточка в PNG</li>
+          <li>Модель сверена с данными: средняя ошибка продолжительности жизни — 0,66 года</li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="../1in8b/index.html">Родиться</a>
+          <a class="btn" href="../1in8b/README.md">Об игре</a>
+        </div>
+      </div>
+    </article>
+    <article class="card card-showroom">
+      <div class="card-art">
+        <img src="../truck-showroom/cover.png" alt="ГАРАЖ 3D — тягач, собранный из точек: контур тушью, ямки золотом" loading="lazy" width="1440" height="810">
+        <span class="badge badge-new">64 модели · точки с контуром и ямками · меш и 4D</span>
+      </div>
+      <div class="card-body">
+        <h2>ГАРАЖ 3D<span>шоурум тягачей, прицепов, автомобилей и зданий</span></h2>
+        <p class="desc">Интерактивный 3D-шоурум: 10 седельных тягачей, 20 типов полуприцепов, 10 автомобилей
+          и 24 здания. Любую модель можно обойти со всех сторон, сесть в кабину, перекрасить кузов,
+          сравнить две машины рядом и сохранить скриншот. Отдельно — режим точек: контур обводится
+          тушью, ямки и ниши золотом, и из этих же точек собирается меш.</p>
+        <ul class="features">
+          <li>64 модели: 10 тягачей, 20 полуприцепов (шторка, реф, трал, цистерна, автовоз, B-double), 10 автомобилей, 24 здания</li>
+          <li>Точечный трафарет: контур тушью, ямки и ниши (арки, решётки, откосы окон) золотом, заливка поверхности</li>
+          <li>Меш из точек: Surface Nets по тем же обводкам, 43 тыс. треугольников у тягача и 164 тыс. у здания</li>
+          <li>4D-точки: у каждой точки четвёртая координата, облако «дышит», оставаясь собой</li>
+          <li>Вид из салона: приборная панель, руль, КПП, педали, спальник со шторками</li>
+          <li>4 схемы света, осмотр по точкам, 18 цветов покраски, избранное, сравнение и скриншоты</li>
+          <li>Листы со всех сторон: <a href="../truck-showroom/sheets/index.html">галерея</a> — шесть ракурсов на модель, точки и меш</li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="../truck-showroom/index.html">Открыть шоурум</a>
+          <a class="btn" href="../truck-showroom/sheets/index.html">Картинки со всех сторон</a>
+          <a class="btn" href="../truck-showroom/README.md">Об шоуруме</a>
         </div>
       </div>
     </article>
@@ -180,31 +348,6 @@
         </div>
       </div>
     </article>
-    <article class="card card-showroom">
-      <div class="card-art">
-        <img src="../truck-showroom/cover.svg" alt="ГАРАЖ 3D — 3D-шоурум тягачей, прицепов и автомобилей" loading="lazy" width="1440" height="810">
-        <span class="badge badge-new">40 моделей · вид из салона · телефон и планшет</span>
-      </div>
-      <div class="card-body">
-        <h2>ГАРАЖ 3D<span>Шоурум тягачей, прицепов и автомобилей</span></h2>
-        <p class="desc">Интерактивный 3D-шоурум: 10 седельных тягачей, 20 типов полуприцепов и 10 автомобилей.
-          Любую модель можно обойти снаружи, сесть в кабину и осмотреться изнутри, перекрасить кузов,
-          сравнить две машины рядом и сохранить скриншот.</p>
-        <ul class="features">
-          <li>10 тягачей: евро, мега, капотник 6×4, карьерный 8×4, электромобиль, низкопольный, люкс</li>
-          <li>20 прицепов: шторка, фургон, реф, трал, цистерна, силос, самосвал, контейнер, автовоз, B-double</li>
-          <li>10 автомобилей: от микрокара до спорткара, с настоящим салоном</li>
-          <li>Вид из салона: приборная панель, руль, КПП, педали, сиденья, спальник со шторками</li>
-          <li>4 схемы света, осмотр по точкам, 18 цветов покраски, избранное и сравнение</li>
-          <li>Телефон и планшет: жесты, крупные кнопки, адаптивное качество картинки</li>
-          <li>Все модели собраны кодом на Three.js — без внешних 3D-файлов и CDN, работает офлайн</li>
-        </ul>
-        <div class="card-actions">
-          <a class="btn btn-primary" href="../truck-showroom/index.html">Открыть шоурум</a>
-          <a class="btn" href="../truck-showroom/README.md">Об шоуруме</a>
-        </div>
-      </div>
-    </article>
     <article class="card card-lastshore">
       <div class="card-art">
         <img src="assets/last-shore.jpg" alt="LAST SHORE: герой на пляже острова у костра" loading="lazy" width="1440" height="810">
@@ -296,6 +439,31 @@
         <div class="card-actions">
           <a class="btn btn-primary" href="../folder-os/index.html">Играть</a>
           <a class="btn" href="../folder-os/PLAN.md">План игры</a>
+        </div>
+      </div>
+    </article>
+
+    <article class="card card-shooter">
+      <div class="card-art">
+        <img src="../shooter-2/cover.svg" alt="СЕКТОР «ПЕПЕЛ» — тактический шутер от первого лица: модели по обведённым контурам, 1760 анимаций, умные боевики" loading="lazy" width="1200" height="680">
+        <span class="badge badge-new">шутер · модели по контурам · карты-полигоны · 1760 анимаций · кукла из точек</span>
+      </div>
+      <div class="card-body">
+        <h2>СЕКТОР «ПЕПЕЛ»<span>тактический шутер от первого лица</span></h2>
+        <p class="desc">Шесть миссий против боевиков, которым больно думать. Каждая деталь обведена точками и превращена в объём: выдавливание с фаской для оружия, лофт по сечениям для тела, тела вращения для шлема и стволов. Карты — полигоны зданий, вышек и укрытий. Каждая часть тела анимируется отдельно: 22 части × 20 анимаций × 4 варианта = 1760 клипов.</p>
+        <ul class="features">
+          <li>1760 анимаций: 22 части тела × 20 анимаций × 4 варианта, слои и IK-хват оружия</li>
+          <li>Боевики «больно думают»: тики размышлений, укрытия, фланги, приказы командира, память о вас</li>
+          <li>Кукла из точек (17 точек, Verlet) — импульс от пули, сон и адаптивные подшаги</li>
+          <li>Модели по обведённым контурам: контур → объём с фаской, лофт по сечениям, тела вращения</li>
+          <li>Карты из полигонов: здания с двускатными крышами, решётчатые вышки, блоки и мешки</li>
+          <li>Оптимизация без потери картинки: LOD, пулы частиц, адаптивное разрешение, лимит трупов</li>
+          <li>6 миссий: зачистка, диверсия, оборона волнами, эвакуация и босс «Архитектор»</li>
+        </ul>
+        <div class="card-actions">
+          <a class="btn btn-primary" href="../shooter-2/index.html">Играть</a>
+          <a class="btn" href="../shooter-2/README.md">Об игре</a>
+          <a class="btn" href="../shooter-2-godot/README.md">Версия Godot 4</a>
         </div>
       </div>
     </article>
