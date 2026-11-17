@@ -13,9 +13,10 @@ const hud = {
   roads: document.getElementById('hud-roads'),
   town: document.getElementById('hud-town'),
   cars: document.getElementById('hud-cars'),
+  accidents: document.getElementById('hud-accidents'),
+  hidden: document.getElementById('hud-hidden'),
   peds: document.getElementById('hud-peds'),
   mayors: document.getElementById('hud-mayors'),
-  play: document.getElementById('hud-play'),
   crowd: document.getElementById('hud-crowd'),
   growth: document.getElementById('hud-growth'),
   trains: document.getElementById('hud-trains'),
@@ -23,7 +24,6 @@ const hud = {
   sea: document.getElementById('hud-sea'),
   weather: document.getElementById('hud-weather'),
   offline: document.getElementById('hud-offline'),
-  playFoot: document.getElementById('play-foot'),
   whyList: document.getElementById('why-list'),
   hint: document.getElementById('hint'),
   clock: document.getElementById('hud-clock'),
@@ -99,7 +99,6 @@ map.init((done, total) => {
         map.buildRailLayer();
         map.buildAirLayer();
         if (map.water) map.buildSeaLayer();
-        map.attachPlayCanvas(document.getElementById('play-map'));
         map.draw();
         restoreOffline();
       } catch (err) {
@@ -264,12 +263,7 @@ const toggles = {
   'toggle-ice': (v) => { map.showIce = v; map.iceKey = null; map.draw(); },
   'toggle-tides': (v) => { map.showTides = v; map.draw(); },
   'toggle-ai': (v) => { map.showAI = v; if (v) map.buildMayorsLayer(); map.draw(); map.updateHud(); },
-  'toggle-play': (v) => {
-    map.showPlay = v;
-    const dock = document.getElementById('play-dock');
-    if (dock) dock.style.display = v ? '' : 'none';
-    map.draw(); map.updateHud();
-  },
+  'toggle-accidents': (v) => { map.showAccidents = v; map.draw(); map.updateHud(); },
   'toggle-pedai': (v) => { map.showPedAI = v; map.draw(); map.updateHud(); },
   'toggle-growth': (v) => { map.showGrowth = v; map.draw(); map.updateHud(); },
   'toggle-trains': (v) => { map.showTrains = v; map.draw(); map.updateHud(); },
@@ -314,7 +308,7 @@ let lastTick = 0;
 let lastDraw = 0;
 function liveLoop(now) {
   requestAnimationFrame(liveLoop);
-  if (document.hidden || !map.transport || (!map.showVehicles && !map.showPlay)) { lastTick = now; return; }
+  if (document.hidden || !map.transport || !map.showVehicles) { lastTick = now; return; }
   const dt = Math.min(0.5, (now - lastTick) / 1000);
   lastTick = now;
   map.tick(dt);

@@ -49,9 +49,6 @@
   #country tr.bad td:last-child{ color:#e8896a; }
 
   #controls{ width:100%; }
-  #play-dock h2{ margin:0 0 6px; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--mute); }
-  #play-map{ display:block; width:100%; height:auto; border:1px solid rgba(0,0,0,.12); background:#0b141c; }
-  #play-dock .foot{ margin-top:5px; font-size:10.5px; color:var(--mute); line-height:1.35; }
   #controls label{ display:flex; align-items:center; gap:7px; margin:4px 0; font-size:12px; }
   #controls input{ accent-color:#333; }
   #controls .group{ margin:9px 0 2px; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase;
@@ -90,7 +87,6 @@
     #country{ display:none; }
     #right-rail{ width:150px; }
     #legend{ display:none; }
-    #play-dock .foot{ display:none; }
   }
 </style>
 </head>
@@ -115,9 +111,10 @@
     <tr><td>центр</td><td id="hud-center">0; 0 км</td></tr>
     <tr><td>дороги</td><td id="hud-roads">—</td></tr>
     <tr><td>транспорт</td><td id="hud-cars">—</td></tr>
+    <tr><td>ДТП</td><td id="hud-accidents">—</td></tr>
+    <tr><td>невидимое</td><td id="hud-hidden">—</td></tr>
     <tr><td>пешеходы</td><td id="hud-peds">—</td></tr>
     <tr><td>мэры</td><td id="hud-mayors">—</td></tr>
-    <tr><td>полигон</td><td id="hud-play">—</td></tr>
     <tr><td>толпа</td><td id="hud-crowd">—</td></tr>
     <tr><td>стройка</td><td id="hud-growth">—</td></tr>
     <tr><td>поезда</td><td id="hud-trains">—</td></tr>
@@ -168,6 +165,8 @@
     <div class="row"><i style="background:#cfd8de"></i> туман</div>
 
     <div class="cap">транспорт и люди</div>
+    <div class="row"><i style="background:#d64030"></i> место ДТП, полоса закрыта</div>
+    <div class="row"><i style="background:#e8a24a"></i> затор позади аварии</div>
     <div class="row"><i style="background:#f4f6f8"></i> легковая и фура</div>
     <div class="row"><i style="background:#8fd0a0"></i> автобус</div>
     <div class="row"><i style="background:#e6f2f8"></i> судно и самолёт</div>
@@ -234,13 +233,7 @@
   <label><input type="checkbox" id="toggle-ai" checked> мэры и журнал решений</label>
   <label><input type="checkbox" id="toggle-growth" checked> рост городов</label>
   <label><input type="checkbox" id="toggle-pedai" checked> толпа: силы и переходы</label>
-  <label><input type="checkbox" id="toggle-play" checked> полигон вождения</label>
-</section>
-
-<section class="panel" id="play-dock">
-  <h2>полигон вождения</h2>
-  <canvas id="play-map" width="236" height="116"></canvas>
-  <div class="foot" id="play-foot">12 машин · светофор · очередь</div>
+  <label><input type="checkbox" id="toggle-accidents" checked> ДТП и ошибки водителя</label>
 </section>
 
 <section class="panel" id="country">

@@ -6,6 +6,7 @@
    Модуль ничего не знает о канве: рисует map2d, а здесь — числа и функции. */
 
 import { noise2, fbm, heightKm, temperature01, moistureKm, WORLD2D } from './world2d.js';
+import { packKey } from './dormant2d.js';
 import { seasonOf, snowCover01, dayOfYearOf } from './light2d.js';
 
 export const WEATHER = {
@@ -105,8 +106,10 @@ export function weatherAt(x, y, minutes, day) {
 /* F-243: кэш поля на клетку и пятиминутку. Погода за 5 минут не меняется, а спрашивают её
    каждый кадр и для каждого города — без кэша это 0.31 мс на кадр. */
 export function weatherCached(x, y, minutes, day, cache) {
-  const key = Math.round(x / (WEATHER.cellKm / 2)) + ':' + Math.round(y / (WEATHER.cellKm / 2)) +
-    ':' + Math.floor(minutes / WEATHER.cacheMinutes) + ':' + day;
+  // F-268: ключ клетки — одно число (48 бит), а не строка из четырёх полей:
+  // на 4000 записях это меньше памяти и быстрее сравнение.
+  const key = packKey(Math.round(x / (WEATHER.cellKm / 2)), Math.round(y / (WEATHER.cellKm / 2)),
+    Math.floor(minutes / WEATHER.cacheMinutes), day);
   if (cache && cache.map.has(key)) { cache.hits++; return cache.map.get(key); }
   const w = weatherAt(x, y, minutes, day);
   if (cache) {

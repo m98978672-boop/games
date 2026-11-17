@@ -60,7 +60,6 @@ const frame = (index, spot, scale, ticks = 6) => {
   map.roads = roads;
   map.water = water;
   map.borders = borders;
-  map.showPlay = false;
   map.buildTransport();
   map.buildEconomy();
   map.buildRailLayer();

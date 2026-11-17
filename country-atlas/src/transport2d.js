@@ -299,6 +299,7 @@ function stepOnce(transport, dtSec) {
   transport.minutes += dtSec * TIME_SCALE / 60;
   const minutes = dtSec * TIME_SCALE / 60;
   transport.refueling = 0;
+  transport.blocked = 0;                 // §78: сколько единиц стоит из-за ДТП
   for (const v of transport.vehicles) {
     const r = v.route;
     if (!r.lengthKm) continue;
@@ -309,9 +310,17 @@ function stepOnce(transport, dtSec) {
       transport.refueling++;
       continue;
     }
+    // F-256: полосу перекрыли после аварии — стоим, бак не тратим
+    if (v.blockedMin > 0) {
+      v.blockedMin = Math.max(0, v.blockedMin - minutes);
+      if (v.blockedMin === 0) { v.accident = null; v.slow = 1; }
+      transport.blocked++;
+      continue;
+    }
     const range = VEHICLE[v.kind].rangeKm;
-    // за один шаг нельзя уехать дальше, чем осталось в баке
-    const step = Math.min((v.speedKmh * hours) / r.lengthKm, (v.fuel * range) / r.lengthKm);
+    // F-254: в заторе позади аварии едем медленнее; F-119: и не уехать дальше бака
+    const slow = v.slow && v.slow > 0 ? v.slow : 1;
+    const step = Math.min((v.speedKmh * slow * hours) / r.lengthKm, (v.fuel * range) / r.lengthKm);
     const km = step * r.lengthKm;
     v.fuel -= km / range;
     if (v.fuel <= FUEL_LOW) {

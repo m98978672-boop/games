@@ -18,7 +18,9 @@ import { NIGHT, nightAmount, nightVeilCss, starsVisibility, starField, lightPoin
   headlightPoly, strobeOn, lighthouseAngle, h01 as nightHash } from './night2d.js';
 import { screenToWorld, worldToScreen, clampCenter, zoomAt, shiftBy, gridStep, scaleBarKm, patchPixels, fitScale } from './view2d.js';
 import { buildMayors, advanceMayors, mayorStats, DRIVER } from './ai2d.js';
-import { buildPlay, stepPlay, playStats, PROFILE_COLOR, PLAY2D } from './play2d.js';
+import { PROFILE_COLOR } from './play2d.js';
+import { stepAccidents, accidentStats, fleetRisk, weatherRisk, ACCIDENT } from './accidents2d.js';
+import { Dormancy, DORMANT } from './dormant2d.js';
 import { buildRail, stepRail, trainPoints, buildAir, stepAir, buildSea, stepSea, shipPoint,
   transitStats, RAIL, AIR, SEA } from './transit2d.js';
 import { loadFrom, saveTo, elapsedMinutes, catchUp, formatReport, OFFLINE } from './offline2d.js';
@@ -56,6 +58,8 @@ export class Map2D {
     this.dams = null;
     this.junctionCache = null;
     this.showVehicles = true;   // слой транспорта §44
+    this.showAccidents = true;  // §78: ошибки водителя и ДТП
+    this.dormant = new Dormancy();  // §79: невидимые города сжимаются, а не тикают
     this.transport = null;
     this.showBorders = true;    // границы §7
     this.borders = null;
@@ -71,7 +75,6 @@ export class Map2D {
     this.mayors = null;
     this.why = [];             // последние решения мэров — то самое «почему»
     this.lastMayorDay = 0;
-    this.showPlay = true;      // полигон IDM и светофор §16.4
     this.showTrains = true;    // железная дорога и поезда §16.7
     this.rail = null;
     this.showAir = true;       // аэропорты, самолёты и вышка §16.7
@@ -87,7 +90,6 @@ export class Map2D {
     this.growth = new Map();   // индекс города → что там выросло
     this.showPedAI = true;     // социальные силы и переходы §16.6
     this.crowds = new Map();   // индекс города → толпа
-    this.play = null;
     this.showWater = true;      // реки, озёра и мосты §5
     this.water = null;
     this.worker = null;
@@ -144,7 +146,9 @@ export class Map2D {
     const paintTile = (buffer, tileSize, i, j) => {
       const tmp = document.createElement('canvas');
       tmp.width = tileSize; tmp.height = tileSize;
-      tmp.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(buffer), tileSize, tileSize), 0, 0);
+      const tctx = tmp.getContext('2d');
+      if (!tctx) return;                       // без 2d-контекста плитку не нарисовать
+      tctx.putImageData(new ImageData(new Uint8ClampedArray(buffer), tileSize, tileSize), 0, 0);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(tmp, i * tileSize, j * tileSize);
       this.overview = canvas;
@@ -430,8 +434,14 @@ export class Map2D {
     const grip = wx ? gripFactor(wx) : 1;
     this.weatherSec += Math.max(0, dtSec);
     if (this.transport) advanceTransport(this.transport, dtSec * grip);
+    // §78: авария отнимает полосу; риск считается от характера, скорости и сцепления
+    if (this.transport && this.showAccidents) {
+      stepAccidents(this.transport, dtSec * grip, wx, Math.floor(this.transport.minutes / 1440));
+    }
     this.updateLight();
-    if (this.showPeds) for (const pack of this.pedCache.values()) advancePeds(pack, dtSec * (0.72 + 0.28 * grip));
+    // §79: пешеходы видны только в близком кадре; остальные города спят одним числом,
+    // а через 45 с уходят в архив — память освобождается, положение при возврате то же.
+    if (this.showPeds) this.dormant.step(this, dtSec * (0.72 + 0.28 * grip));
     if (this.transport) {
       const day = Math.floor(this.transport.minutes / 1440);
       if (this.economy && day > this.lastEconomyDay) {
@@ -465,7 +475,6 @@ export class Map2D {
       stepSea(sea, tides.ports, dtSec * slow, bridges, this.transport ? this.transport.minutes : 0);
     }
     if (this.showPedAI && this.showPeds) this.stepCrowds(dtSec);
-    this.updatePlay(dtSec);
   }
 
   /* ---------------- отрисовка ---------------- */
@@ -505,6 +514,7 @@ export class Map2D {
       ctx.rect(originX - WORLD2D.halfKm * s, originY - WORLD2D.halfKm * s, WORLD2D.sizeKm * s, WORLD2D.sizeKm * s);
       ctx.clip();
       this.drawVehicles(ctx, originX, originY, s);
+      this.drawAccidents(ctx, originX, originY, s);
       ctx.restore();
     }
     if (this.showPeds && s >= PED_LOD) {
@@ -549,7 +559,6 @@ export class Map2D {
     }
     if (night > 0.04) this.drawNightLight(ctx, originX, originY, s, light, night);
     if (wx) this.drawWeatherFront(ctx, s, wx);
-    if (this.playCtx && this.showPlay && (this.frames % 2 === 0)) this.renderPlayDock();
 
     this.frames++;
     const now = performance.now();
@@ -1106,13 +1115,6 @@ export class Map2D {
     return this.crowds.get(index);
   }
 
-  /* §16.4: полигон IDM — 12 машин на кольце и светофор, живой кусок тех же мозгов. */
-  updatePlay(dtSec) {
-    if (!this.play) this.play = buildPlay();
-    if (this.showPlay) stepPlay(this.play, Math.min(0.5, dtSec));
-    return this.play;
-  }
-
   /* Время суток §14: минуты мира → фаза, сила света и расписание огней. */
   updateLight() {
     const m = this.transport ? this.transport.minutes : 8 * 60;
@@ -1164,7 +1166,10 @@ export class Map2D {
     const dt = this.crowdAcc;
     this.crowdAcc = 0;
     const hour = ((this.transport ? this.transport.minutes : 480) % 1440) / 60;
-    const lightState = this.play ? this.play.light.state : 'green';
+    // §79: пешеходный свет считается из часов мира — 45 с зелёного, 45 с красного,
+    // без всякого полигона: цикл тот же у всех городов и не зависит от кадров.
+    const secOfDay = ((this.transport ? this.transport.minutes : 480) * 60) % 90;
+    const lightState = secOfDay < 45 ? 'green' : 'red';
     const halfW = this.view.w / (2 * this.scale) + 8, halfH = this.view.h / (2 * this.scale) + 8;
     let n = 0;
     for (let i = 0; i < this.settlements.length && n < 12; i++) {
@@ -2123,6 +2128,48 @@ export class Map2D {
     }
   }
 
+  /* §78: место ДТП видно с 12 px/км — красный ромб с белым крестом и кольцо вокруг.
+     Машина, что стоит, уже нарисована в своей полосе: ромб ставится поверх неё. */
+  drawAccidents(ctx, originX, originY, s) {
+    if (!this.showAccidents || !this.transport || s < 12) return;
+    const view = this.view, pad = 30;
+    let drawn = 0;
+    for (const v of this.transport.vehicles) {
+      if (!v.blockedMin || v.blockedMin <= 0) continue;
+      const p = vehiclePosition(v);
+      const sx = originX + p.x * s, sy = originY - p.y * s;
+      if (sx < -pad || sy < -pad || sx > view.w + pad || sy > view.h + pad) continue;
+      const r = Math.max(4.5, Math.min(9, 0.9 + s * 0.06));
+      // дымок/мигалка: медленно пульсирующее кольцо, чтобы место читалось и без легенды
+      const pulse = 0.5 + 0.5 * Math.sin(this.weatherSec * 2.2);
+      ctx.strokeStyle = 'rgba(214,64,48,' + (0.25 + 0.35 * pulse).toFixed(3) + ')';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r + 2.5 + pulse * 1.6, 0, Math.PI * 2);
+      ctx.stroke();
+      // ромб
+      ctx.fillStyle = '#d64030';
+      ctx.strokeStyle = 'rgba(12,18,24,0.85)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy - r); ctx.lineTo(sx + r, sy); ctx.lineTo(sx, sy + r); ctx.lineTo(sx - r, sy);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      // белый крест внутри
+      if (r >= 5) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 1.3;
+        const q = r * 0.42;
+        ctx.beginPath();
+        ctx.moveTo(sx - q, sy - q); ctx.lineTo(sx + q, sy + q);
+        ctx.moveTo(sx + q, sy - q); ctx.lineTo(sx - q, sy + q);
+        ctx.stroke();
+      }
+      drawn++;
+    }
+    this.accidentsInFrame = drawn;
+  }
+
   /* §16.8: то, что выросло от решений мэра (R-16.28). Дома, парк, склады, школа/больница;
      недостроенное стоит в лесах. Всё считается от прогресса стройки в игровых днях. */
   drawGrowth(ctx, X, Y, s, lod, growth, small) {
@@ -2316,107 +2363,6 @@ export class Map2D {
     ctx.setLineDash([]);
   }
 
-  /* §16.4: полигон ИИ в кадре — 12 машин на кольце, светофор по F-193, очередь и «прошло».
-     Коробка живёт в правом нижнем углу над линейкой масштаба и стоит 12 машин, а не 966. */
-  /* R-74.5: полигон живёт в правой рейке, в своём канвасе — на карту он больше не наезжает. */
-  attachPlayCanvas(el) {
-    if (!el || typeof el.getContext !== 'function') return;
-    this.playCanvas = el;
-    this.playCtx = el.getContext('2d');
-    this.renderPlayDock();
-  }
-
-  renderPlayDock() {
-    const ctx = this.playCtx, el = this.playCanvas;
-    if (!ctx || !el || !this.play) return;
-    const dpr = Math.min(2, (typeof window !== 'undefined' && window.devicePixelRatio) || 1);
-    const w = el.clientWidth || 236, h = 116;
-    if (el.width !== Math.round(w * dpr) || el.height !== Math.round(h * dpr)) {
-      el.width = Math.round(w * dpr);
-      el.height = Math.round(h * dpr);
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, w, h);
-    const st = playStats(this.play);
-
-    // полоса: кольцо 700 м укладывается в ширину дока
-    const roadX = 12, roadY = 26, roadW = w - 24;
-    const k = roadW / PLAY2D.ringM;
-    ctx.fillStyle = 'rgba(11,20,28,1)';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = 'rgba(120,140,155,0.85)';
-    ctx.lineWidth = 9;
-    ctx.beginPath();
-    ctx.moveTo(roadX, roadY);
-    ctx.lineTo(roadX + roadW, roadY);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(232,238,244,0.35)';
-    ctx.lineWidth = 1;
-    ctx.setLineDash([5, 6]);
-    ctx.beginPath();
-    ctx.moveTo(roadX, roadY);
-    ctx.lineTo(roadX + roadW, roadY);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    const stopX = roadX + PLAY2D.stopM * k;
-    ctx.strokeStyle = 'rgba(245,245,240,0.9)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(stopX, roadY - 8);
-    ctx.lineTo(stopX, roadY + 8);
-    ctx.stroke();
-    const lamp = st.state === 'green' ? '#5ddc84' : st.state === 'yellow' ? '#ffd75e' : '#ff6a52';
-    ctx.fillStyle = 'rgba(6,10,14,0.9)';
-    ctx.beginPath();
-    ctx.arc(stopX + 9, roadY - 16, 5.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = lamp;
-    ctx.beginPath();
-    ctx.arc(stopX + 9, roadY - 16, 3.8, 0, Math.PI * 2);
-    ctx.fill();
-
-    for (const c of this.play.cars) {
-      const cx = roadX + c.x * k;
-      ctx.strokeStyle = PROFILE_COLOR[c.profile.id];
-      ctx.lineWidth = 4.6;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(cx - 2.4, roadY - 1);
-      ctx.lineTo(cx + 2.4, roadY - 1);
-      ctx.stroke();
-      if (c.braking > 0.15) {
-        ctx.fillStyle = 'rgba(255,90,70,' + (0.3 + 0.6 * c.braking).toFixed(2) + ')';
-        ctx.beginPath();
-        ctx.arc(cx + 2.8, roadY - 5.4, 1.7, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-    ctx.lineCap = 'butt';
-
-    // замер дистанции в очереди
-    if (st.minGap !== null) {
-      ctx.strokeStyle = 'rgba(150,200,235,0.35)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(stopX, roadY + 12);
-      ctx.lineTo(roadX + roadW, roadY + 12);
-      ctx.stroke();
-    }
-    ctx.fillStyle = 'rgba(196,214,228,0.85)';
-    ctx.font = '10px ui-monospace, monospace';
-    ctx.textBaseline = 'bottom';
-    ctx.fillText('прошло ' + st.passed + ' · зазор ' +
-      (st.minGap === null ? '—' : st.minGap.toFixed(1) + ' м'), 10, h - 8);
-    ctx.textBaseline = 'alphabetic';
-
-    if (this.hud.playFoot) {
-      const names = { green: 'зелёный', yellow: 'жёлтый', red: 'красный' };
-      this.hud.playFoot.textContent = 'свет ' + names[st.state] + ' · очередь ' + st.queue +
-        ' · зелёный ' + st.green.toFixed(0) + ' с';
-    }
-  }
-
   /* §16.8: журнал «почему» — последние решения мэров с решающими факторами. */
   updateWhyPanel(events) {
     const el = this.hud.whyList;
@@ -2426,12 +2372,16 @@ export class Map2D {
       if (this.why.length) rows = this.why.slice(-3);
       else rows = [{ text: 'пока тихо' }];
     }
-    // R-76.7: журнал собирается узлами, а текст мэра идёт через textContent — без разметки.
-    el.textContent = '';
-    for (const e of rows) {
-      const li = document.createElement('li');
-      li.textContent = e.text;
-      el.appendChild(li);
+    // журнал собирается узлами, а текст мэра идёт через textContent — без разметки.
+    // Если узел не умеет детей (стенды, тесты), кладём простым текстом.
+    if (typeof el.appendChild !== 'function') { el.textContent = rows.map((e) => e.text).join(' · '); }
+    else {
+      el.textContent = '';
+      for (const e of rows) {
+        const li = document.createElement('li');
+        li.textContent = e.text;
+        el.appendChild(li);
+      }
     }
     this.updateAiHud();
     if (this.hud.mayors) {
@@ -2647,10 +2597,13 @@ export class Map2D {
         const day = this.transport ? Math.floor(this.transport.minutes / 1440) : 0;
         const st = weatherStats(this.weather, this.transport ? this.transport.minutes : 480, day, this.settlements.slice(0, 24));
         const temp = Math.round(wx.tempC);
-        this.hudLine('weather', (names[wx.kind] || wx.kind) + ' · +' + temp + '°',
+        const tempText = (temp > 0 ? '+' : '') + temp + '°';        // зимой бывает и минус
+        const seasons = { winter: 'зима', spring: 'весна', summer: 'лето', autumn: 'осень' };
+        this.hudLine('weather', (names[wx.kind] || wx.kind) + ' · ' + tempText,
           'видно ' + wx.visibilityKm.toFixed(1) + ' км · ветер ' + Math.round(wx.windKmh) + ' км/ч · ' +
           'сцепление ' + Math.round(wx.grip * 100) + '% · по стране: дождь ' + st.rain +
-          ', снег ' + st.snow + ', туман ' + st.fog + ', ясно ' + st.clear + ' · ' + st.season);
+          ', снег ' + st.snow + ', туман ' + st.fog + ', ясно ' + st.clear +
+          ' · ' + (seasons[st.season] || st.season));
       }
     }
     if (this.hud.growth) {
@@ -2711,16 +2664,6 @@ export class Map2D {
         (t ? ' · в пути ' + t.vehicles.length + ' ед.' : '') +
         (this.pedsInFrame ? ' · пешеходов ' + this.pedsInFrame : '');
     }
-    if (this.hud.play) {
-      const p2 = this.play;
-      if (!p2 || !this.showPlay) this.hud.play.textContent = this.showPlay ? '—' : 'выключен';
-      else {
-        const st = playStats(p2);
-        const names = { green: 'зелёный', yellow: 'жёлтый', red: 'красный' };
-        this.hudLine('play', 'свет ' + names[st.state] + ' · прошло ' + st.passed,
-          'очередь ' + st.queue + ' · в среднем ' + st.avgKmh.toFixed(0) + ' км/ч');
-      }
-    }
     if (this.hud.mayors) {
       if (!this.showAI) this.hud.mayors.textContent = 'выключены';
       else if (!this.mayors) this.hudLine('mayors', '— (день первый)', 'мэры приступят со второго дня');
@@ -2738,6 +2681,29 @@ export class Map2D {
         const ref = t.refueling || 0;
         this.hudLine('cars', t.vehicles.length + ' ед. · ' + k.car + ' авто',
           k.ship + ' судов · ' + k.plane + ' самолётов' + (ref ? ' · на заправке ' + ref : ''));
+      }
+    }
+    if (this.hud.hidden) {
+      const d = this.dormant.stats();
+      const kb = (n) => (n / 1024).toFixed(0) + ' КБ';
+      this.hudLine('hidden', 'в кадре ' + d.awakeCities + ' · спят ' + Math.max(0, d.sleepingCities) + ' · в архиве ' + d.archivedCities,
+        'пешеходов сжато ' + d.archivedPeds + ' · освобождено ' + kb(Math.max(0, d.savedBytes)) +
+        ' · проспано ' + (d.sleepSec / 60).toFixed(1) + ' мин · поднято из архива ' + d.restored +
+        ' · догон ' + (d.restSec / 60).toFixed(1) + ' мин · память пешеходов ' + kb(d.liveBytes));
+    }
+    if (this.hud.accidents) {
+      if (!this.showAccidents) this.hudLine('accidents', 'выключены', 'ошибки водителя и ДТП не считаются');
+      else if (!this.transport) this.hud.accidents.textContent = '—';
+      else {
+        const a = accidentStats(this.transport);
+        const wx = this.showWeather ? this.weatherNow() : null;
+        const kindsRu = { rear: 'сзади', side: 'боковой', road: 'съезд', ped: 'переход', cargo: 'груз' };
+        const worst = a.worstKind ? (kindsRu[a.worstKind] || a.worstKind) : '—';
+        this.hudLine('accidents', a.active + ' сейчас · сегодня ' + a.today,
+          'в заторе ' + a.jammed + ' ед. · затор ≈ ' + a.jamKm.toFixed(1) + ' км · стоят в среднем ' +
+          a.avgBlockMin.toFixed(0) + ' мин · чаще всего ' + worst +
+          ' · риск погоды ×' + weatherRisk(wx).toFixed(1) +
+          ' · всего за игру ' + a.total);
       }
     }
   }

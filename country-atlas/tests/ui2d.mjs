@@ -61,7 +61,7 @@ const visible = html
 
   // все элементы, которые ищет main2d, есть в разметке
   const wanted = [...main.matchAll(/(\w+):\s*document\.getElementById\('([\w-]+)'\)/g)];
-  ok(wanted.length >= 20, 'main2d ищет ' + wanted.length + ' элементов');
+  ok(wanted.length >= 18, 'main2d ищет ' + wanted.length + ' элементов');
   for (const [, name, id] of wanted) {
     ok(html.includes('id="' + id + '"'), 'элемент ' + id + ' (' + name + ') есть в разметке');
   }
@@ -125,7 +125,6 @@ const visible = html
   ok(/<div id="left-rail">/.test(html), 'левая рейка есть');
   ok(left.includes('id="hud"'), 'карта мира — в левой рейке');
   ok(left.includes('id="legend"'), 'легенда — в левой рейке, под картой');
-  ok(right.includes('id="play-dock"'), 'полигон — в правой рейке');
   ok(right.includes('id="controls"') && right.includes('id="country"') && right.includes('id="why"'),
     'тумблеры, страна и решения — в правой рейке');
   ok(!/position:\s*fixed/.test(left.replace(/<div id="left-rail">/, '')), 'внутри левой рейки нет position:fixed');
@@ -134,10 +133,8 @@ const visible = html
   ok(/#hud\{[^}]*max-height:62%/.test(html), 'карта не растягивает рейку на весь экран');
   ok(/#legend\{[^}]*flex:0 1 auto/.test(html), 'легенда занимает остаток рейки');
   ok(/#legend \.body\{[^}]*overflow:auto/.test(html), 'тело легенды прокручивается');
-  ok(/<canvas id="play-map"/.test(html), 'у полигона свой канвас');
-  ok(/id="play-foot"/.test(html), 'подпись полигона на месте');
-  ok(map.includes('attachPlayCanvas'), 'карта умеет рисовать в док');
-  ok(map.includes('renderPlayDock'), 'док перерисовывается');
+  ok(!/play-dock|play-map/.test(html + map), 'полигона вождения больше нет ни в разметке, ни в карте');
+  ok(/id="toggle-accidents"/.test(html), 'вместо полигона — тумблер ДТП');
   ok(!/drawPlayPanel/.test(map), 'панель больше не рисуется поверх карты');
   ok(/night > 0\.04/.test(map), 'ночной свет вызывается из кадра');
   const hudRow = html.slice(html.indexOf('<div id="left-rail">'), html.indexOf('<div id="right-rail">'));
@@ -156,7 +153,8 @@ const visible = html
 {
   ok(/<h2 id="country-title">страна<\/h2>/.test(html), 'панель страны подписана «страна»');
   ok(/<h2>что решили мэры<\/h2>/.test(html), 'панель решений подписана «что решили мэры»');
-  ok(/полигон вождения/.test(html), 'панель полигона подписана по-русски');
+  ok(!/полигон вождения/.test(html), 'полигон вождения убран из разметки');
+  ok(/ДТП и ошибки водителя/.test(html), 'тумблер ДТП подписан по-русски');
   ok(!/ИИ §16\.4/.test(map + html), 'старый заголовок полигона убран');
   ok(/тяните — сдвиг/.test(visible), 'подсказка управления на месте');
 }
@@ -182,8 +180,6 @@ const visible = html
   ok(bundle.length > 10000, 'бандл собран: ' + Math.round(raw.length / 1024) + ' kb');
   ok(!bundle.includes('§'), 'F-224: в бандле нет §');
   ok(!/ИИ §16\.4/.test(bundle), 'старый заголовок полигона не попал в бандл');
-  ok(bundle.includes('attachPlayCanvas'), 'док полигона в бандле');
-  ok(bundle.includes('renderPlayDock'), 'отрисовка дока в бандле');
   ok(bundle.includes('что решили мэры') === false, 'заголовки панелей остались в разметке, а не в коде');
   ok(bundle.includes(' составов · '), 'короткая строка поездов в бандле: «8 составов · 110 377 км»');
   ok(bundle.includes(' судна · у моста '), 'короткая строка судов в бандле');
