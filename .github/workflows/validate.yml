@@ -27,7 +27,17 @@ jobs:
       - name: Check the bug-code table covers 000–999
         run: node tools/bughunt/tests/codes.mjs
       - name: Hunt for bugs across the repository (critical only)
-        run: node tools/bughunt/bughunt.mjs --play --level критично --fail-on критично
+        run: |
+          set +e
+          node tools/bughunt/bughunt.mjs --play --level критично --fail-on критично > "$RUNNER_TEMP/bughunt.log" 2>&1
+          status=$?
+          cat "$RUNNER_TEMP/bughunt.log"
+          if [ "$status" -ne 0 ]; then
+            tail -25 "$RUNNER_TEMP/bughunt.log" | while IFS= read -r line; do
+              printf '::error::%s\n' "$line"
+            done
+          fi
+          exit "$status"
       - name: Test 1 IN 8 BILLION structure
         run: node 1in8b/tests/smoke.mjs
       - name: Test 1 IN 8 BILLION life model
