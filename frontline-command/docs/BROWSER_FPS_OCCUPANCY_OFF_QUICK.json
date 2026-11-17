@@ -9,22 +9,23 @@
   "warmed": false,
   "occupancyOff": true,
   "viewport": "1280x900 DPR 1",
-  "frames400": 128,
-  "average400": 42.43187694755685,
-  "low1_400": 15.00375093773431,
+  "frames400": 166,
+  "average400": 53.55011451982321,
+  "low1_400": 7.059654076950225,
   "minAlive400": 402,
   "maxAlive400": 422,
-  "duration400Ms": 3016.6,
-  "frames500": 71,
-  "average500": 23.28021509607187,
-  "low1_500": 8.568980291345277,
+  "duration400Ms": 3099.9000000000005,
+  "frames500": 150,
+  "average500": 49.724855797918195,
+  "low1_500": 10.911074740861965,
   "minAlive500": 502,
-  "maxAlive500": 517,
-  "duration500Ms": 3049.8,
+  "maxAlive500": 522,
+  "duration500Ms": 3016.5999999999995,
   "measurements": [
     {
       "target": 400,
       "initial": 400,
+      "occupancyEnabled": false,
       "warmup": {
         "ticks": 0,
         "gameTime": 0,
@@ -41,65 +42,66 @@
         "target": 400,
         "initial": 400,
         "frameRequired": true,
-        "samples": 486,
-        "beforeStepSamples": 178,
-        "afterStepSamples": 178,
-        "frameSamples": 129,
+        "samples": 516,
+        "beforeStepSamples": 174,
+        "afterStepSamples": 174,
+        "frameSamples": 167,
         "minAlive": 402,
         "maxAlive": 422,
         "firstOutside2Percent": {
-          "sample": 115,
+          "sample": 107,
           "phase": "after-step",
           "alive": 412
         },
         "strictExact": false,
         "within2Percent": false
       },
-      "minVisible": 365,
+      "minVisible": 373,
       "spritesReady": true,
-      "elapsedMs": 3016.6,
-      "frames": 128,
+      "elapsedMs": 3099.9000000000005,
+      "frames": 166,
       "worstCount": 2,
-      "worstTimeMs": 133.3000000000011,
-      "averageFps": 42.43187694755685,
-      "low1Fps": 15.00375093773431,
-      "drawFrames": 129,
+      "worstTimeMs": 283.3000000000002,
+      "averageFps": 53.55011451982321,
+      "low1Fps": 7.059654076950225,
+      "drawFrames": 167,
       "canvas": {
         "width": 1280,
         "height": 900
       },
-      "gameTimeStart": 0.41666666666666663,
-      "gameSeconds": 3.383333333333326,
+      "gameTimeStart": 0.49999999999999994,
+      "gameSeconds": 3.399999999999993,
       "sameGame": true,
       "warOver": false,
       "screen": "game",
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
       "timings": {
         "step": {
-          "samples": 178,
-          "meanMs": 11.11,
-          "p95Ms": 21.3,
-          "maxMs": 25
+          "samples": 174,
+          "meanMs": 3.737,
+          "p95Ms": 11.4,
+          "maxMs": 18.1
         },
         "draw": {
-          "samples": 129,
-          "meanMs": 1.546,
-          "p95Ms": 3.6,
-          "maxMs": 8.8
+          "samples": 167,
+          "meanMs": 1.567,
+          "p95Ms": 4.1,
+          "maxMs": 9
         },
         "hud": {
-          "samples": 129,
-          "meanMs": 0.202,
+          "samples": 167,
+          "meanMs": 0.231,
           "p95Ms": 0.7,
-          "maxMs": 2.3
+          "maxMs": 6.9
         }
       },
-      "canvasDataLength": 3344002,
+      "canvasDataLength": 3342054,
       "pageErrors": []
     },
     {
       "target": 500,
       "initial": 500,
+      "occupancyEnabled": false,
       "warmup": {
         "ticks": 0,
         "gameTime": 0,
@@ -109,67 +111,67 @@
         ]
       },
       "minAlive": 502,
-      "maxAlive": 517,
+      "maxAlive": 522,
       "frameMinAlive": 502,
-      "frameMaxAlive": 517,
+      "frameMaxAlive": 522,
       "population": {
         "target": 500,
         "initial": 500,
         "frameRequired": true,
-        "samples": 393,
-        "beforeStepSamples": 160,
-        "afterStepSamples": 160,
-        "frameSamples": 72,
+        "samples": 506,
+        "beforeStepSamples": 177,
+        "afterStepSamples": 177,
+        "frameSamples": 151,
         "minAlive": 502,
-        "maxAlive": 517,
+        "maxAlive": 522,
         "firstOutside2Percent": {
-          "sample": 97,
+          "sample": 101,
           "phase": "after-step",
           "alive": 512
         },
         "strictExact": false,
         "within2Percent": false
       },
-      "minVisible": 450,
+      "minVisible": 466,
       "spritesReady": true,
-      "elapsedMs": 3049.8,
-      "frames": 71,
-      "worstCount": 1,
-      "worstTimeMs": 116.70000000000073,
-      "averageFps": 23.28021509607187,
-      "low1Fps": 8.568980291345277,
-      "drawFrames": 72,
+      "elapsedMs": 3016.5999999999995,
+      "frames": 150,
+      "worstCount": 2,
+      "worstTimeMs": 183.30000000000018,
+      "averageFps": 49.724855797918195,
+      "low1Fps": 10.911074740861965,
+      "drawFrames": 151,
       "canvas": {
         "width": 1280,
         "height": 900
       },
-      "gameTimeStart": 0.49999999999999994,
-      "gameSeconds": 3.1666666666666603,
+      "gameTimeStart": 0.5333333333333333,
+      "gameSeconds": 3.483333333333326,
       "sameGame": true,
       "warOver": false,
       "screen": "game",
       "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/153.0.8010.0 Safari/537.36",
       "timings": {
         "step": {
-          "samples": 160,
-          "meanMs": 14.778,
-          "p95Ms": 29.9,
-          "maxMs": 53.7
+          "samples": 177,
+          "meanMs": 5.889,
+          "p95Ms": 15.5,
+          "maxMs": 44.2
         },
         "draw": {
-          "samples": 72,
-          "meanMs": 1.872,
-          "p95Ms": 5,
-          "maxMs": 14.3
+          "samples": 151,
+          "meanMs": 2.162,
+          "p95Ms": 6.6,
+          "maxMs": 20
         },
         "hud": {
-          "samples": 72,
-          "meanMs": 0.339,
-          "p95Ms": 1.2,
-          "maxMs": 6.8
+          "samples": 151,
+          "meanMs": 0.205,
+          "p95Ms": 0.7,
+          "maxMs": 1.7
         }
       },
-      "canvasDataLength": 3346802,
+      "canvasDataLength": 3343546,
       "pageErrors": []
     }
   ]

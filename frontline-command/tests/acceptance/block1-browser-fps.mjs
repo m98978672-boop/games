@@ -55,6 +55,8 @@ try {
       const app = window.__frontline;
       if (occupancyOff) app.cfg.flags.movement_occupancy_v1 = false;
       const game = app.newGame({ seed: 5, aiVsAi: true, difficulty: 'regular' });
+      // newGame reapplies saved UI settings, so retain the diagnostic override.
+      if (occupancyOff) app.cfg.flags.movement_occupancy_v1 = false;
       const renderer = app.renderer;
       const count = (f = null) => [...game.units.values()].filter((u) => u.alive && (f === null || u.faction === f)).length;
       // Candidate mode performs 5s of ordinary simulation before topping up;
@@ -145,7 +147,7 @@ try {
       const worstCount = Math.max(1, Math.ceil(sorted.length * 0.01));
       const worstTime = sorted.slice(0, worstCount).reduce((a, b) => a + b, 0);
       const populationSummary = population.summary();
-      return { target, initial, warmup, minAlive: populationSummary.minAlive, maxAlive: populationSummary.maxAlive,
+      return { target, initial, occupancyEnabled: game.cfg.flag('movement_occupancy_v1', false), warmup, minAlive: populationSummary.minAlive, maxAlive: populationSummary.maxAlive,
         frameMinAlive: measurement.minAlive, frameMaxAlive: measurement.maxAlive, population: populationSummary,
         minVisible: measurement.minVisible, spritesReady,
         elapsedMs: measurement.durationMs, frames: sorted.length, worstCount, worstTimeMs: worstTime,
